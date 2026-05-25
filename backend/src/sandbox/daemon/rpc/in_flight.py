@@ -23,7 +23,6 @@ class InFlightInvocation:
     task: asyncio.Task[object]
     agent_id: str
     op: str
-    started_at: float
     last_seen: float
     background: bool = False
     ttl_reaped: bool = False
@@ -69,7 +68,6 @@ class InFlightInvocationRegistry:
             task=task,
             agent_id=agent_id,
             op=op,
-            started_at=now,
             last_seen=now,
             background=background,
         )
@@ -78,9 +76,6 @@ class InFlightInvocationRegistry:
     def deregister(self, invocation_id: str) -> None:
         if invocation_id:
             self._by_invocation.pop(invocation_id, None)
-
-    def cancel(self, invocation_id: str) -> bool:
-        return self.cancel_task(invocation_id) is not None
 
     def cancel_task(self, invocation_id: str) -> asyncio.Task[object] | None:
         entry = self._by_invocation.get(invocation_id)
@@ -179,17 +174,7 @@ def get_in_flight_registry() -> InFlightInvocationRegistry:
     return _REGISTRY
 
 
-def reset_in_flight_registry() -> InFlightInvocationRegistry:
-    global _REGISTRY
-    if _REGISTRY is not None:
-        _REGISTRY.shutdown()
-    _REGISTRY = InFlightInvocationRegistry()
-    return _REGISTRY
-
-
 __all__ = [
-    "InFlightInvocation",
     "InFlightInvocationRegistry",
     "get_in_flight_registry",
-    "reset_in_flight_registry",
 ]

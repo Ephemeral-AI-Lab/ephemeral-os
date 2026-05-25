@@ -122,7 +122,7 @@ async def daemon_kill_and_respawn(
     poll_interval_s: float = 0.5,
     timeout_s: float = 60.0,
 ) -> None:
-    """SIGKILL the daemon then trigger a respawn so ``startup_gc`` runs.
+    """SIGKILL the daemon then trigger a respawn so startup orphan recovery runs.
 
     Steps:
 
@@ -131,8 +131,8 @@ async def daemon_kill_and_respawn(
        about).
     2. Wait briefly for the process to vanish.
     3. Issue an ``api.isolated_workspace.enter`` RPC for a throwaway agent —
-       this triggers ``_ensure_manager`` which calls
-       ``IsolatedPipeline.initialize() → startup_gc()``.
+       this triggers ``ensure_pipeline`` which calls
+       ``IsolatedPipeline.initialize() -> reap_startup_orphans()``.
     4. ``exit_`` the throwaway agent so the post-test cleanup stays sane.
     """
     from sandbox.api import raw_exec
@@ -157,11 +157,11 @@ async def daemon_kill_and_respawn(
         await asyncio.sleep(poll_interval_s)
 
     # The first daemon RPC after kill respawns the process via launch_daemon.sh.
-    # Use ``enter`` so ``_ensure_manager`` fires (status/exit don't bootstrap).
+    # Use ``enter`` so ``ensure_pipeline`` fires (status/exit don't bootstrap).
     # The bootstrap enter is allowed to "fail" — tests that set
     # ``EOS_ISOLATED_WORKSPACE_TEST_FAIL_AT=<phase>`` before respawning expect
     # subsequent enter() calls to fail at that phase, including this probe.
-    # The manager IS bootstrapped (initialize/startup_gc run before _wire_handle)
+    # The pipeline IS bootstrapped (initialize/reap_startup_orphans run before _wire_handle)
     # regardless of whether _wire_handle errors out — that's what we need.
     from sandbox.host.daemon_client import _DaemonDispatchError
 
@@ -174,7 +174,7 @@ async def daemon_kill_and_respawn(
         )
     except _DaemonDispatchError as exc:
         # Any domain error from the bootstrap enter is acceptable — the
-        # manager IS bootstrapped (initialize/startup_gc run before
+        # pipeline IS bootstrapped (initialize/reap_startup_orphans run before
         # _wire_handle), which is all daemon_kill_and_respawn needs. Tests
         # that set inject env vars (TEST_FAIL_AT, TEST_HOLDER_CRASH, …)
         # before respawning expect the FIRST enter to fail; the actual test
@@ -201,7 +201,7 @@ async def list_host_eos_iws_resources(sandbox_id: str) -> dict[str, list[str]]:
 
     queries = {
         "veth": "ip -o link show 2>/dev/null | awk -F': ' '{print $2}' "
-                "| awk '{print $1}' | sed 's/@.*//' | grep '^eos-iws-' || true",
+        "| awk '{print $1}' | sed 's/@.*//' | grep '^eos-iws-' || true",
         "cgroup": "ls -1 /sys/fs/cgroup/ 2>/dev/null | grep '^eos-iws-' || true",
         "netns": "ip netns list 2>/dev/null | awk '{print $1}' | grep '^eos-iws-' || true",
     }
@@ -254,7 +254,8 @@ async def set_daemon_env(
             sandbox_id,
             f"sed -i '/^{key}=/d' /etc/environment 2>/dev/null; "
             f"echo '{key}={value}' >> /etc/environment",
-            cwd="/", timeout=10,
+            cwd="/",
+            timeout=10,
         )
     await daemon_kill_and_respawn(sandbox_id, layer_stack_root=layer_stack_root)
 
@@ -272,7 +273,8 @@ async def clear_daemon_env(
         await raw_exec(
             sandbox_id,
             f"sed -i '/^{key}=/d' /etc/environment 2>/dev/null || true",
-            cwd="/", timeout=10,
+            cwd="/",
+            timeout=10,
         )
     await daemon_kill_and_respawn(sandbox_id, layer_stack_root=layer_stack_root)
 

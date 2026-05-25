@@ -6,14 +6,14 @@ import asyncio
 
 import pytest
 
-from sandbox.daemon import handlers as cancel_handler
+from sandbox.daemon import operation_handlers as cancel_handler
 from sandbox.daemon.rpc.in_flight import InFlightInvocationRegistry
 
 
 pytestmark = pytest.mark.asyncio
 
 
-async def test_cancel_cancels_registered_invocation() -> None:
+async def test_cancel_task_cancels_registered_invocation() -> None:
     task = asyncio.create_task(asyncio.sleep(60))
     registry = InFlightInvocationRegistry(ttl_seconds=60, reaper_interval_s=60)
     registry.register(
@@ -23,7 +23,7 @@ async def test_cancel_cancels_registered_invocation() -> None:
         op="api.v1.shell",
     )
 
-    assert registry.cancel("invocation-1") is True
+    assert registry.cancel_task("invocation-1") is task
     await asyncio.gather(task, return_exceptions=True)
     assert task.cancelled()
 
@@ -121,7 +121,9 @@ async def test_bad_env_overrides_fall_back_to_defaults(
     assert registry._reaper_interval_s == 30.0  # noqa: SLF001
 
 
-async def test_cancel_handler_targets_payload_invocation_id(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_cancel_handler_targets_payload_invocation_id(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     task = asyncio.create_task(asyncio.sleep(60))
     registry = InFlightInvocationRegistry(ttl_seconds=60, reaper_interval_s=60)
     registry.register(
@@ -131,7 +133,7 @@ async def test_cancel_handler_targets_payload_invocation_id(monkeypatch: pytest.
         op="api.v1.shell",
     )
     monkeypatch.setattr(
-        "sandbox.daemon.handlers.get_in_flight_registry",
+        "sandbox.daemon.operation_handlers.get_in_flight_registry",
         lambda: registry,
     )
 

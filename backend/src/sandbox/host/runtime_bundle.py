@@ -36,6 +36,7 @@ __all__ = [
 
 logger = logging.getLogger(__name__)
 
+
 def _src_root() -> Path:
     """Return the orchestrator's ``backend/src/`` directory."""
     return Path(__file__).resolve().parent.parent.parent
@@ -131,8 +132,9 @@ def _add_top_level_audit(tar: tarfile.TarFile, *, src: Path) -> None:
     """Add the top-level ``audit/`` package to the bundle.
 
     Isolated-workspace bootstrap imports
-    ``sandbox.isolated_workspace.helper.manager._JsonlAuditSink``, which uses
-    ``audit.jsonl.append_jsonl_event`` (top-level, not ``sandbox.audit``).
+    ``sandbox.isolated_workspace._control_plane.pipeline_registry._JsonlAuditSink``,
+    which uses ``audit.jsonl.append_jsonl_event`` (top-level, not
+    ``sandbox.audit``).
     Several existing ``sandbox/audit/*.py`` modules also ``from audit.base
     import ...``. Bundle the top-level package so those imports resolve.
     """
@@ -163,9 +165,7 @@ def _runtime_bundle_bytes() -> bytes:
     sandbox_dir = src / "sandbox"
     raw = io.BytesIO()
     with tarfile.open(fileobj=raw, mode="w") as tar:
-        _add_if_exists(
-            tar, sandbox_dir / "__init__.py", arcname="sandbox/__init__.py"
-        )
+        _add_if_exists(tar, sandbox_dir / "__init__.py", arcname="sandbox/__init__.py")
 
         shared_dir = sandbox_dir / "_shared"
         _add_python_tree(
@@ -208,19 +208,16 @@ def _runtime_bundle_bytes() -> bytes:
         for name in (
             "__init__.py",
             "events.py",
+            "operation_overlay.py",
+            "overlay_registry.py",
             "pipeline.py",
+            "workspace_publish.py",
         ):
             _add_if_exists(
                 tar,
                 ephemeral_dir / name,
                 arcname=f"sandbox/ephemeral_workspace/{name}",
             )
-        # Phase 2.6 C3.9: private internals live under ``helper/``.
-        _add_python_tree(
-            tar,
-            ephemeral_dir / "helper",
-            sandbox_dir=sandbox_dir,
-        )
 
         layer_stack_dir = sandbox_dir / "layer_stack"
         _add_python_tree(
@@ -238,7 +235,7 @@ def _runtime_bundle_bytes() -> bytes:
 
         # sandbox/isolated_workspace/ — daemon-native per-agent isolation
         # feature. Its handlers are registered by
-        # ``sandbox.daemon.rpc.dispatcher._load_peer_bootstraps``, so the
+        # ``sandbox.daemon.rpc.dispatcher._register_builtin_operations``, so the
         # extracted daemon must be able to import the package on startup.
         iws_dir = sandbox_dir / "isolated_workspace"
         _add_python_tree(
@@ -248,20 +245,20 @@ def _runtime_bundle_bytes() -> bytes:
         )
 
         # Bundle only the in-sandbox parts of sandbox/ephemeral_workspace/plugin/ — install.py
-        # and session.py are host-only (they import from sandbox.host and
+        # and host_dispatch.py are host-only (they import from sandbox.host and
         # sandbox.provider). The daemon imports
         # sandbox.ephemeral_workspace.plugin.op_registry,
-        # sandbox.ephemeral_workspace.plugin.handler, and
+        # sandbox.ephemeral_workspace.plugin.runtime_api, and
         # sandbox.ephemeral_workspace.plugin.projection.
         plugin_dir = ephemeral_dir / "plugin"
         for name in (
             "__init__.py",
-            "handler.py",
             "op_context.py",
             "op_registry.py",
             "overlay_child.py",
             "overlay_dispatch.py",
             "projection.py",
+            "runtime_api.py",
         ):
             _add_if_exists(
                 tar,
@@ -327,9 +324,7 @@ async def _ensure_runtime_uploaded_with_exec(
     )
     existing = (getattr(marker_check, "stdout", "") or "").strip()
     if _exit_code(marker_check) == 0 and existing == digest:
-        logger.debug(
-            "sandbox runtime bundle already uploaded (%s) on %s", digest[:8], sandbox_id
-        )
+        logger.debug("sandbox runtime bundle already uploaded (%s) on %s", digest[:8], sandbox_id)
         return digest
 
     bundle = _runtime_bundle_bytes()
@@ -337,10 +332,7 @@ async def _ensure_runtime_uploaded_with_exec(
 
     setup = await exec_fn(
         sandbox_id,
-        (
-            f"mkdir -p {shlex.quote(_BUNDLE_REMOTE_DIR)} && "
-            f": > {shlex.quote(staging_tarball)}"
-        ),
+        (f"mkdir -p {shlex.quote(_BUNDLE_REMOTE_DIR)} && : > {shlex.quote(staging_tarball)}"),
         timeout=30,
     )
     if _exit_code(setup) != 0:
@@ -356,8 +348,7 @@ async def _ensure_runtime_uploaded_with_exec(
         remote_path=staging_tarball,
         check_result=_check_chunk_write,
         failure_message=lambda offset: (
-            f"runtime bundle chunk write failed at offset {offset} "
-            f"(sandbox={sandbox_id!r})"
+            f"runtime bundle chunk write failed at offset {offset} (sandbox={sandbox_id!r})"
         ),
     )
 
@@ -365,7 +356,7 @@ async def _ensure_runtime_uploaded_with_exec(
         f"cd {shlex.quote(_BUNDLE_REMOTE_DIR)} && "
         f"tar -xzf {shlex.quote(staging_tarball)} && "
         f"rm -f {shlex.quote(staging_tarball)} && "
-            f"printf %s {shlex.quote(digest)} > {shlex.quote(_BUNDLE_HASH_MARKER)}"
+        f"printf %s {shlex.quote(digest)} > {shlex.quote(_BUNDLE_HASH_MARKER)}"
     )
     result = await exec_fn(sandbox_id, finalize_cmd, timeout=60)
     if _exit_code(result) != 0:
@@ -397,6 +388,4 @@ def _exit_code(result: object) -> int:
     try:
         return int(raw)
     except (TypeError, ValueError) as exc:
-        raise RuntimeError(
-            f"runtime bundle exec result has invalid exit_code: {raw!r}"
-        ) from exc
+        raise RuntimeError(f"runtime bundle exec result has invalid exit_code: {raw!r}") from exc

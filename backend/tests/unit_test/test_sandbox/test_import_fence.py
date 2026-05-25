@@ -212,7 +212,7 @@ def test_occ_policy_modules_depend_on_layer_stack_ports_not_manager() -> None:
         "sandbox.layer_stack.view",
         "sandbox.layer_stack.publisher",
         "sandbox.layer_stack.lease",
-        "sandbox.daemon.workspace_server",
+        "sandbox.daemon.layer_stack_runtime",
     )
     for module in _python_files(occ_root):
         if module in allowed:
@@ -277,7 +277,7 @@ def test_command_exec_imports_only_client_protocol_boundaries() -> None:
         "sandbox.occ.path_staging",
         "sandbox.occ.changeset_preparation",
         "sandbox.occ.content_hashing",
-        "sandbox.daemon.workspace_server",
+        "sandbox.daemon.layer_stack_runtime",
     )
     for module in _python_files(command_exec_root):
         for imported in _imports(module):
@@ -301,8 +301,7 @@ def test_ephemeral_publish_mixin_owns_occ_publish_internals() -> None:
         BACKEND_SRC_ROOT
         / "sandbox"
         / "ephemeral_workspace"
-        / "helper"
-        / "publishing.py"
+        / "workspace_publish.py"
     )
     imports = _imports(publish_module)
 

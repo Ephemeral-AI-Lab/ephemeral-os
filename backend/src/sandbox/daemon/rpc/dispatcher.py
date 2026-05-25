@@ -21,7 +21,8 @@ from uuid import uuid4
 from audit.jsonl import append_jsonl_event
 from sandbox._shared.clock import monotonic_now
 from sandbox.daemon.rpc.in_flight import get_in_flight_registry
-from sandbox.isolated_workspace.helper.manager import get_active_pipeline
+from sandbox.isolated_workspace._control_plane.pipeline_registry import get_active_pipeline
+from sandbox.isolated_workspace._control_plane.pipeline_state import IsolatedWorkspaceError
 
 logger = logging.getLogger("sandbox.daemon.rpc.dispatcher")
 
@@ -172,9 +173,7 @@ def _attach_runtime_boot_timings(
         response["timings"] = timings
     origin = boot_t0 if boot_t0 is not None else _BOOT_T0
     timings["runtime.boot_to_dispatch_s"] = max(0.0, dispatch_entered_at - origin)
-    timings["runtime.dispatch_s"] = max(
-        0.0, monotonic_now() - dispatch_entered_at
-    )
+    timings["runtime.dispatch_s"] = max(0.0, monotonic_now() - dispatch_entered_at)
 
 
 def _error(
@@ -244,7 +243,7 @@ def _emit_plugin_gate_audit(op_name: str, agent_id: str) -> None:
     append_jsonl_event(os.environ.get("EOS_WORKSPACE_LIFECYCLE_AUDIT_PATH"), event)
 
 
-def _iws_error_payload(exc: object) -> dict[str, Any]:
+def _isolated_workspace_error_payload(exc: object) -> dict[str, Any]:
     return {
         "success": False,
         "error": {
@@ -255,18 +254,17 @@ def _iws_error_payload(exc: object) -> dict[str, Any]:
     }
 
 
-async def _iws_enter(args: dict[str, Any]) -> dict[str, Any]:
-    from sandbox.isolated_workspace.helper.manager import (
-        IsolatedWorkspaceError,
-        _ensure_manager,
-        require_arg,
+async def _isolated_workspace_enter(args: dict[str, Any]) -> dict[str, Any]:
+    from sandbox.isolated_workspace._control_plane.pipeline_registry import (
+        ensure_pipeline,
+        require_isolated_workspace_arg,
     )
 
     try:
-        manager = await _ensure_manager(args)
-        handle = await manager.enter(require_arg(args, "agent_id"))
+        pipeline = await ensure_pipeline(args)
+        handle = await pipeline.enter(require_isolated_workspace_arg(args, "agent_id"))
     except IsolatedWorkspaceError as exc:
-        return _iws_error_payload(exc)
+        return _isolated_workspace_error_payload(exc)
     return {
         "success": True,
         "manifest_version": handle.manifest_version,
@@ -274,31 +272,29 @@ async def _iws_enter(args: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-async def _iws_exit(args: dict[str, Any]) -> dict[str, Any]:
-    from sandbox.isolated_workspace.helper.manager import (
-        IsolatedWorkspaceError,
-        require_arg,
+async def _isolated_workspace_exit(args: dict[str, Any]) -> dict[str, Any]:
+    from sandbox.isolated_workspace._control_plane.pipeline_registry import (
+        require_isolated_workspace_arg,
         require_pipeline,
     )
 
     try:
-        return await require_pipeline().exit(require_arg(args, "agent_id"))
+        return await require_pipeline().exit(require_isolated_workspace_arg(args, "agent_id"))
     except IsolatedWorkspaceError as exc:
-        return _iws_error_payload(exc)
+        return _isolated_workspace_error_payload(exc)
 
 
-async def _iws_status(args: dict[str, Any]) -> dict[str, Any]:
-    from sandbox.isolated_workspace.helper.manager import (
-        IsolatedWorkspaceError,
-        require_arg,
+async def _isolated_workspace_status(args: dict[str, Any]) -> dict[str, Any]:
+    from sandbox.isolated_workspace._control_plane.pipeline_registry import (
+        require_isolated_workspace_arg,
         require_pipeline,
     )
 
     try:
-        manager = require_pipeline()
+        pipeline = require_pipeline()
     except IsolatedWorkspaceError as exc:
-        return _iws_error_payload(exc)
-    handle = manager.get_handle(require_arg(args, "agent_id"))
+        return _isolated_workspace_error_payload(exc)
+    handle = pipeline.get_handle(require_isolated_workspace_arg(args, "agent_id"))
     if handle is None:
         return {"success": True, "open": False}
     return {
@@ -310,23 +306,20 @@ async def _iws_status(args: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-async def _iws_list_open(args: dict[str, Any]) -> dict[str, Any]:
-    from sandbox.isolated_workspace.helper.manager import (
-        IsolatedWorkspaceError,
+async def _isolated_workspace_list_open(args: dict[str, Any]) -> dict[str, Any]:
+    from sandbox.isolated_workspace._control_plane.pipeline_registry import (
         require_pipeline,
     )
 
     try:
-        manager = require_pipeline()
+        pipeline = require_pipeline()
     except IsolatedWorkspaceError:
         return {"success": True, "open_agent_ids": []}
-    return {"success": True, "open_agent_ids": manager.list_open_agents()}
+    return {"success": True, "open_agent_ids": pipeline.list_open_agents()}
 
 
-async def _iws_test_reset(args: dict[str, Any]) -> dict[str, Any]:
-    if os.environ.get(
-        "EOS_ISOLATED_WORKSPACE_TEST_HARNESS", ""
-    ).strip().lower() != "true":
+async def _isolated_workspace_test_reset(args: dict[str, Any]) -> dict[str, Any]:
+    if os.environ.get("EOS_ISOLATED_WORKSPACE_TEST_HARNESS", "").strip().lower() != "true":
         return {
             "success": False,
             "error": {
@@ -338,59 +331,58 @@ async def _iws_test_reset(args: dict[str, Any]) -> dict[str, Any]:
                 "details": {},
             },
         }
-    from sandbox.isolated_workspace.helper.manager import (
-        IsolatedWorkspaceError,
+    from sandbox.isolated_workspace._control_plane.pipeline_registry import (
         require_pipeline,
     )
 
     try:
-        manager = require_pipeline()
+        pipeline = require_pipeline()
     except IsolatedWorkspaceError:
         return {"success": True, "exited_agents": []}
-    result = await manager.test_reset()
+    result = await pipeline.test_reset()
     return {"success": True, **result}
 
 
-def _load_peer_bootstraps() -> None:
-    from sandbox.daemon import handlers
-    from sandbox.ephemeral_workspace.plugin import handler as plugin_handler
+def _register_builtin_operations() -> None:
+    from sandbox.daemon import operation_handlers
+    from sandbox.ephemeral_workspace.plugin import runtime_api
 
-    bootstrap: dict[str, Handler] = {
-        "api.isolated_workspace.enter": _iws_enter,
-        "api.isolated_workspace.exit": _iws_exit,
-        "api.isolated_workspace.status": _iws_status,
-        "api.isolated_workspace.list_open": _iws_list_open,
-        "api.isolated_workspace.test_reset": _iws_test_reset,
-        "api.ensure_workspace_base": handlers.ensure_workspace_base,
-        "api.build_workspace_base": handlers.build_workspace_base,
-        "api.prepare_workspace_snapshot": handlers.prepare_workspace_snapshot,
-        "api.release_lease": handlers.release_lease,
-        "api.layer_stack.fence_stale_staging": handlers.fence_stale_staging,
-        "api.edit_file": handlers.edit_file,
-        "api.v1.edit_file": handlers.edit_file,
-        "api.glob": handlers.glob,
-        "api.v1.glob": handlers.glob,
-        "api.grep": handlers.grep,
-        "api.v1.grep": handlers.grep,
-        "api.layer_metrics": handlers.layer_metrics,
-        "api.plugin.ensure": plugin_handler.plugin_ensure,
-        "api.plugin.status": plugin_handler.plugin_status,
-        "api.read_file": handlers.read_file,
-        "api.v1.read_file": handlers.read_file,
-        "api.runtime.ready": handlers.runtime_ready,
-        "api.v1.shell": handlers.shell,
-        "api.v1.cancel": handlers.cancel,
-        "api.v1.heartbeat": handlers.heartbeat,
-        "api.v1.inflight_count": handlers.inflight_count,
-        "api.workspace_binding": handlers.workspace_binding,
-        "api.write_file": handlers.write_file,
-        "api.v1.write_file": handlers.write_file,
+    builtin_ops: dict[str, Handler] = {
+        "api.isolated_workspace.enter": _isolated_workspace_enter,
+        "api.isolated_workspace.exit": _isolated_workspace_exit,
+        "api.isolated_workspace.status": _isolated_workspace_status,
+        "api.isolated_workspace.list_open": _isolated_workspace_list_open,
+        "api.isolated_workspace.test_reset": _isolated_workspace_test_reset,
+        "api.ensure_workspace_base": operation_handlers.ensure_workspace_base,
+        "api.build_workspace_base": operation_handlers.build_workspace_base,
+        "api.prepare_workspace_snapshot": operation_handlers.prepare_workspace_snapshot,
+        "api.release_lease": operation_handlers.release_lease,
+        "api.layer_stack.fence_stale_staging": operation_handlers.fence_stale_staging,
+        "api.edit_file": operation_handlers.edit_file,
+        "api.v1.edit_file": operation_handlers.edit_file,
+        "api.glob": operation_handlers.glob,
+        "api.v1.glob": operation_handlers.glob,
+        "api.grep": operation_handlers.grep,
+        "api.v1.grep": operation_handlers.grep,
+        "api.layer_metrics": operation_handlers.layer_metrics,
+        "api.plugin.ensure": runtime_api.plugin_ensure,
+        "api.plugin.status": runtime_api.plugin_status,
+        "api.read_file": operation_handlers.read_file,
+        "api.v1.read_file": operation_handlers.read_file,
+        "api.runtime.ready": operation_handlers.runtime_ready,
+        "api.v1.shell": operation_handlers.shell,
+        "api.v1.cancel": operation_handlers.cancel,
+        "api.v1.heartbeat": operation_handlers.heartbeat,
+        "api.v1.inflight_count": operation_handlers.inflight_count,
+        "api.workspace_binding": operation_handlers.workspace_binding,
+        "api.write_file": operation_handlers.write_file,
+        "api.v1.write_file": operation_handlers.write_file,
     }
-    for op, handler in bootstrap.items():
+    for op, handler in builtin_ops.items():
         register_op(op, handler)
 
 
-_load_peer_bootstraps()
+_register_builtin_operations()
 
 
 __all__ = [

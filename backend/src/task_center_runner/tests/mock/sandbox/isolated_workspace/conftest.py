@@ -34,11 +34,7 @@ import pytest
 
 
 _IWS_APT_CACHE_DIR = (
-    Path(__file__).resolve().parents[6]
-    / "tests"
-    / "_assets"
-    / "iws_apt_cache"
-    / "jammy-amd64"
+    Path(__file__).resolve().parents[6] / "tests" / "_assets" / "iws_apt_cache" / "jammy-amd64"
 )
 _IWS_TEST_UPPERDIR_BYTES = 67_108_864
 _IWS_TEST_ENV_KEYS = (
@@ -48,7 +44,6 @@ _IWS_TEST_ENV_KEYS = (
     "EOS_ISOLATED_WORKSPACE_TEST_HOLDER_CRASH",
     "EOS_ISOLATED_WORKSPACE_TTL_S",
     "EOS_ISOLATED_WORKSPACE_TOTAL_CAP",
-    "EOS_ISOLATED_WORKSPACE_PER_AGENT",
     "EOS_ISOLATED_WORKSPACE_MEMAVAIL_FRACTION",
     "EOS_ISOLATED_WORKSPACE_SETUP_TIMEOUT_S",
     "EOS_ISOLATED_WORKSPACE_EXIT_GRACE_S",
@@ -147,13 +142,17 @@ async def _try_install_from_cache(sandbox_id: str) -> bool:
     # the sweevo provider is docker-only for this test surface, and a host
     # without docker would already have failed at the sweevo fixture layer.
     cp_cmd = [
-        "docker", "cp",
+        "docker",
+        "cp",
         f"{_IWS_APT_CACHE_DIR}/.",
         f"{sandbox_id}:/tmp/iws-debs/",
     ]
     try:
         result = subprocess.run(
-            cp_cmd, check=False, capture_output=True, timeout=60,
+            cp_cmd,
+            check=False,
+            capture_output=True,
+            timeout=60,
         )
     except (subprocess.TimeoutExpired, FileNotFoundError):
         return False
@@ -210,7 +209,7 @@ async def iws_sandbox(
       2. ``pkill -f sandbox.daemon`` so the next host RPC re-runs
          ``launch_daemon.sh``. Because the launcher uses ``bash -lc`` and the
          daemon module reads ``os.environ`` once at startup via
-         ``_ManagerConfig.from_env()``, sourcing ``/etc/environment`` is
+         ``_PipelineConfig.from_env()``, sourcing ``/etc/environment`` is
          sufficient to carry the flag.
 
     Modifying the underlying sweevo sandbox would change behavior for
@@ -219,11 +218,7 @@ async def iws_sandbox(
     """
     from sandbox.api import raw_exec
 
-    sandbox_id = str(
-        sweevo_image_sandbox.get("sandbox_id")
-        or sweevo_image_sandbox.get("id")
-        or ""
-    )
+    sandbox_id = str(sweevo_image_sandbox.get("sandbox_id") or sweevo_image_sandbox.get("id") or "")
     if sandbox_id:
         # Install iproute2 + nftables if missing. SWE-EVO base images (incl.
         # the dask test fixture) don't ship them, but iws bridge/veth/MASQUERADE
@@ -256,6 +251,7 @@ async def iws_sandbox(
                 )
             except (TimeoutError, asyncio.TimeoutError):
                 import warnings
+
                 warnings.warn(
                     "iws_sandbox: iproute2+nftables install timed out; tests "
                     "exercising bridge/veth/MASQUERADE will fail with missing "
@@ -405,7 +401,7 @@ async def iws_clean_sandbox(iws_sandbox: dict[str, Any]) -> dict[str, Any]:
         "then sed -i '/^EOS_ISOLATED_WORKSPACE_UPPERDIR_BYTES=/d' /etc/environment; "
         f"echo 'EOS_ISOLATED_WORKSPACE_UPPERDIR_BYTES={_IWS_TEST_UPPERDIR_BYTES}' "
         ">> /etc/environment; changed=1; fi; "
-        "if [ \"$changed\" = 1 ]; "
+        'if [ "$changed" = 1 ]; '
         "then pkill -9 -f '^.*python.*-m sandbox\\.daemon' || true; "
         "echo PURGED; else echo OK; fi",
         cwd="/",
@@ -450,7 +446,7 @@ async def iws_audit_jsonl(iws_clean_sandbox: dict[str, Any], tmp_path):
 
     The daemon writes lifecycle events to ``_IN_CONTAINER_AUDIT_PATH`` inside
     the sandbox (wired by
-    ``sandbox.isolated_workspace.helper.manager._JsonlAuditSink``).
+    ``sandbox.isolated_workspace._control_plane.pipeline_registry._JsonlAuditSink``).
     The file is truncated at fixture entry so each test sees only its own
     events; ``await snapshot()`` returns a ``pathlib.Path`` on the host with
     the bytes read at that moment.
@@ -462,7 +458,10 @@ async def iws_audit_jsonl(iws_clean_sandbox: dict[str, Any], tmp_path):
     # test into the assertion window. ``: > path`` is idempotent and creates
     # the file if missing.
     await raw_exec(
-        sandbox_id, f": > {_IN_CONTAINER_AUDIT_PATH}", cwd="/", timeout=10,
+        sandbox_id,
+        f": > {_IN_CONTAINER_AUDIT_PATH}",
+        cwd="/",
+        timeout=10,
     )
 
     async def snapshot():
@@ -569,7 +568,8 @@ async def iws_latency_baseline(iws_sandbox) -> dict[str, float]:
     await raw_exec(
         sandbox_id,
         f": > {_IN_CONTAINER_AUDIT_PATH}",
-        cwd="/", timeout=10,
+        cwd="/",
+        timeout=10,
     )
 
     for _ in range(runs):
@@ -579,7 +579,10 @@ async def iws_latency_baseline(iws_sandbox) -> dict[str, float]:
         await asyncio.sleep(0.05)
 
     raw = await raw_exec(
-        sandbox_id, f"cat {_IN_CONTAINER_AUDIT_PATH}", cwd="/", timeout=10,
+        sandbox_id,
+        f"cat {_IN_CONTAINER_AUDIT_PATH}",
+        cwd="/",
+        timeout=10,
     )
     rows: list[dict] = []
     for line in (getattr(raw, "stdout", "") or "").splitlines():
@@ -604,11 +607,7 @@ async def iws_latency_baseline(iws_sandbox) -> dict[str, float]:
             if kh:
                 samples["kill_holder"].append(float(kh))
 
-    return {
-        op: _iws_invariants.median(values)
-        for op, values in samples.items()
-        if values
-    }
+    return {op: _iws_invariants.median(values) for op, values in samples.items() if values}
 
 
 @pytest.fixture(scope="session")
@@ -620,9 +619,7 @@ def iws_latency_budget_path():
     """
     from pathlib import Path
 
-    candidate = (
-        Path(__file__).resolve().parent / "_data" / "latency_budget.json"
-    )
+    candidate = Path(__file__).resolve().parent / "_data" / "latency_budget.json"
     return candidate if candidate.exists() else None
 
 
@@ -633,4 +630,5 @@ def reference_ci_host() -> bool:
     a skip. Toggled by ``EOS_CI_REFERENCE_HOST=true``.
     """
     import os as _os
+
     return _os.environ.get("EOS_CI_REFERENCE_HOST", "").lower() == "true"

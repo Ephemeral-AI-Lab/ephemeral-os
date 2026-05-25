@@ -12,7 +12,7 @@ from pathlib import Path
 
 import pytest
 
-from sandbox._shared.shell_contract import CommandExecRequest
+from sandbox._shared.command_exec_contract import CommandExecRequest
 from sandbox.overlay.subprocess_runner import resolve_workspace_cwd
 
 

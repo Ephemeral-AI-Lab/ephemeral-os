@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 
 from sandbox.layer_stack.workspace_base import build_workspace_base
-from sandbox.daemon.workspace_server import get_layer_stack_manager
+from sandbox.daemon.layer_stack_runtime import get_layer_stack_manager
 from sandbox.layer_stack.workspace_binding import (
     WorkspaceBinding,
     WorkspaceBindingError,
@@ -15,8 +15,8 @@ from sandbox.layer_stack.workspace_binding import (
     validate_workspace_binding_paths,
     write_workspace_binding_atomic,
 )
-from sandbox.daemon import occ_backend
-from sandbox.daemon import handlers as read
+from sandbox.daemon import occ_runtime_services
+from sandbox.daemon import operation_handlers as read
 
 
 def test_binding_rejects_layer_stack_inside_workspace(tmp_path: Path) -> None:
@@ -48,17 +48,14 @@ def test_binding_round_trips_and_translates_workspace_paths(tmp_path: Path) -> N
     loaded = require_workspace_binding(stack)
     assert loaded == binding
     assert loaded.layer_path_from_relative("pkg/a.py") == "pkg/a.py"
-    assert (
-        loaded.layer_path_from_absolute((workspace / "pkg" / "a.py").as_posix())
-        == "pkg/a.py"
-    )
+    assert loaded.layer_path_from_absolute((workspace / "pkg" / "a.py").as_posix()) == "pkg/a.py"
     with pytest.raises(WorkspaceBindingError, match="outside bound workspace"):
         loaded.layer_path_from_absolute("/other/pkg/a.py")
 
 
 @pytest.mark.asyncio
 async def test_read_file_fails_closed_without_workspace_binding(tmp_path: Path) -> None:
-    occ_backend.clear_backend_cache()
+    occ_runtime_services.clear_occ_runtime_services()
 
     with pytest.raises(WorkspaceBindingError, match="workspace binding is missing"):
         await read.read_file(
@@ -74,7 +71,7 @@ async def test_read_file_uses_workspace_base_not_real_workspace(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    occ_backend.clear_backend_cache()
+    occ_runtime_services.clear_occ_runtime_services()
     workspace = tmp_path / "workspace"
     workspace.mkdir()
     file_path = workspace / "a.txt"
@@ -122,7 +119,7 @@ async def test_read_file_returns_exists_false_for_empty_manifest(
     guard already covers the no-binding case; an empty manifest is a valid
     runtime state — newest-first merged reads return ``("", False)`` for
     every path uniformly."""
-    occ_backend.clear_backend_cache()
+    occ_runtime_services.clear_occ_runtime_services()
     workspace = tmp_path / "workspace"
     workspace.mkdir()
     stack = tmp_path / "stack"

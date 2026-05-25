@@ -10,7 +10,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Protocol
 
-from sandbox._shared.shell_contract import (
+from sandbox._shared.command_exec_contract import (
     SnapshotManifest,
     WorkspaceSnapshotLease,
 )

@@ -6,8 +6,8 @@ from typing import Any
 
 from sandbox.host.bootstrap import ensure_running as _ensure_running
 from sandbox.host.bootstrap import setup_after_create, setup_after_start
+from sandbox.ephemeral_workspace.plugin import host_dispatch as plugin_host_dispatch
 from sandbox.ephemeral_workspace.plugin import install as plugin_install
-from sandbox.ephemeral_workspace.plugin import session as plugin_session
 from sandbox.provider.registry import (
     dispose_adapter,
     get_adapter,
@@ -55,7 +55,7 @@ def stop_sandbox(sandbox_id: str) -> dict[str, Any]:
 
 def delete_sandbox(sandbox_id: str) -> None:
     get_adapter(sandbox_id).delete(sandbox_id)
-    plugin_session.forget(sandbox_id)
+    plugin_host_dispatch.forget(sandbox_id)
     plugin_install.forget(sandbox_id)
     dispose_adapter(sandbox_id)
 
@@ -73,7 +73,7 @@ __all__ = [
     "delete_sandbox",
     "ensure_sandbox_running",
     "plugin_install",
-    "plugin_session",
+    "plugin_host_dispatch",
     "set_sandbox_labels",
     "setup_after_create",
     "setup_after_start",

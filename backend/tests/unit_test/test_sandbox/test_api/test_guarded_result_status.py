@@ -4,53 +4,12 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
-from sandbox.daemon.result_projection import (
-    committed_paths,
+from sandbox.daemon.changeset_projection import (
     conflict_and_status,
     conflict_to_dict,
     gitignore_cache_timings,
 )
 from sandbox.occ.changeset import FileResult, FileStatus
-
-
-def test_committed_paths_returns_committed_when_present() -> None:
-    files = (
-        FileResult(path="/ws/a.py", status=FileStatus.COMMITTED),
-        FileResult(path="/ws/b.py", status=FileStatus.ABORTED_VERSION, message="content"),
-    )
-    assert committed_paths(files, fallback_path="/ws/x.py") == ("/ws/a.py",)
-
-
-def test_committed_paths_treats_accepted_as_published() -> None:
-    files = (
-        FileResult(path="/ws/a.py", status=FileStatus.ACCEPTED),
-        FileResult(path="/ws/.git/config", status=FileStatus.DROPPED),
-    )
-    assert committed_paths(files, fallback_path="/ws/x.py") == ("/ws/a.py",)
-
-
-def test_committed_paths_falls_back_to_aborted_path() -> None:
-    files = (
-        FileResult(
-            path="/ws/app.py",
-            status=FileStatus.ABORTED_OVERLAP,
-            message="concurrent edit overlaps the operation window",
-        ),
-    )
-    assert committed_paths(files, fallback_path="/ws/x.py") == ("/ws/app.py",)
-
-
-def test_committed_paths_uses_fallback_when_no_files() -> None:
-    assert committed_paths((), fallback_path="/ws/x.py") == ("/ws/x.py",)
-
-
-def test_committed_paths_uses_fallback_when_all_file_paths_are_empty() -> None:
-    files = (
-        FileResult(path="", status=FileStatus.ACCEPTED),
-        FileResult(path="", status=FileStatus.ABORTED_VERSION),
-    )
-
-    assert committed_paths(files, fallback_path="/ws/x.py") == ("/ws/x.py",)
 
 
 def test_conflict_and_status_returns_committed_when_no_failures() -> None:
@@ -90,9 +49,7 @@ def test_conflict_and_status_surfaces_first_failure() -> None:
 
 
 def test_conflict_and_status_falls_back_to_status_string_when_message_empty() -> None:
-    conflict, status = conflict_and_status(
-        (FileResult(path="/ws/a.py", status=FileStatus.FAILED),)
-    )
+    conflict, status = conflict_and_status((FileResult(path="/ws/a.py", status=FileStatus.FAILED),))
     assert status == "failed"
     assert conflict is not None
     assert conflict.message == "failed"

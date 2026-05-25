@@ -32,9 +32,8 @@ def acquire(
     * ``release_hook=None`` (default) binds the handle's release to
       ``layer_stack.release_lease(lease_id=...)``. Suitable for projection
       callers that do not need ``LeaseGuard``/audit routing.
-    * Daemon callers pass their own ``self._release_lease`` so the released
-      handle still emits ``LeaseGuard``/audit entries identical to direct
-      operation-overlay release callers today.
+    * Operation-overlay callers pass their own release function when handles
+      can be released directly instead of through a pipeline destroy guard.
 
     On any exception after ``prepare_workspace_snapshot`` succeeds, this
     function releases the lease AND ``rmtree(run_dir)`` before re-raising so
@@ -76,20 +75,6 @@ def acquire(
         _release_lease_silently(layer_stack, lease_id, release_hook=release_hook)
         shutil.rmtree(run_dir, ignore_errors=True)
         raise
-
-
-async def create(
-    layer_stack: LayerStackPort,
-    *,
-    agent_id: str,
-    workspace_root: str = "/testbed",
-) -> OverlayHandle:
-    """Per-call api.shell overlay handle (legacy entry point, delegates to ``acquire``)."""
-    return acquire(
-        layer_stack,
-        invocation_id=f"overlay:{agent_id}:{uuid4().hex[:8]}",
-        workspace_root=workspace_root,
-    )
 
 
 async def capture_changes(handle: OverlayHandle) -> Sequence[OverlayPathChange]:
@@ -161,4 +146,4 @@ def _release_lease_silently(
         pass
 
 
-__all__ = ["acquire", "capture_changes", "create", "destroy"]
+__all__ = ["acquire", "capture_changes", "destroy"]

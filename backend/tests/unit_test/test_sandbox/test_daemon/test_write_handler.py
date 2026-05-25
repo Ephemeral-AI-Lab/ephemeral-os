@@ -4,7 +4,7 @@ import os
 
 import pytest
 
-from sandbox._shared.tool_primitives.write import compute as write_compute
+from sandbox._shared.tool_primitives.write import write_file
 
 
 def test_write_out_of_workspace_refuses_terminal_symlink(tmp_path) -> None:
@@ -14,6 +14,6 @@ def test_write_out_of_workspace_refuses_terminal_symlink(tmp_path) -> None:
     os.symlink(target, link)
 
     with pytest.raises(ValueError, match="refusing to follow symlink"):
-        write_compute(str(link), "replacement\n", overwrite=True)
+        write_file(str(link), "replacement\n", overwrite=True)
 
     assert target.read_text(encoding="utf-8") == "existing\n"

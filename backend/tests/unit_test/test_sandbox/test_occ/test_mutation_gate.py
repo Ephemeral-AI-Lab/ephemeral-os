@@ -15,14 +15,14 @@ from pathlib import Path
 
 import pytest
 
-from sandbox.daemon import occ_backend
+from sandbox.daemon import occ_runtime_services
 
 
 # ---------------------------------------------------------------------------
 def test_occ_server_module_does_not_classify_paths() -> None:
     """occ-server must not own the in-workspace classifier — single source of
-    truth lives on command-exec (handlers/request_context.py)."""
-    occ_server_source = Path(occ_backend.__file__).read_text()
+    truth lives on command-exec (operation_handlers/operation_payloads.py)."""
+    occ_server_source = Path(occ_runtime_services.__file__).read_text()
 
     assert ".workspace_root" not in occ_server_source
     assert "workspace_root =" not in occ_server_source
@@ -33,10 +33,10 @@ def test_data_api_ops_do_not_dispatch_to_occ_server() -> None:
     """Data API ops must never route directly to occ-server."""
     from sandbox.daemon.rpc import dispatcher as server
 
-    server._load_peer_bootstraps()
+    server._register_builtin_operations()
     for op in ("api.write_file", "api.edit_file", "api.read_file", "api.v1.shell"):
         handler = server.OP_TABLE[op]
-        assert handler.__module__ != "sandbox.daemon.occ_backend"
+        assert handler.__module__ != "sandbox.daemon.occ_runtime_services"
 
 
 # ---------------------------------------------------------------------------
@@ -63,11 +63,11 @@ async def test_cas_retry_loop_bounded_under_no_contention(
     retry loop turning into a busy spin."""
     import asyncio
 
-    from sandbox.daemon import occ_backend
-    from sandbox.daemon import handlers as write
+    from sandbox.daemon import occ_runtime_services
+    from sandbox.daemon import operation_handlers as write
     from sandbox.layer_stack.workspace_base import build_workspace_base
 
-    occ_backend.clear_backend_cache()
+    occ_runtime_services.clear_occ_runtime_services()
     workspace = tmp_path / "ws"
     workspace.mkdir()
     stack = tmp_path / "stack"
@@ -110,10 +110,10 @@ async def test_cas_retry_exhaustion_returns_conflict_result(
     from sandbox.layer_stack.manifest import ManifestConflictError
     from sandbox.layer_stack.workspace_base import build_workspace_base
     from sandbox.occ.commit_queue import MAX_OCC_CAS_RETRIES
-    from sandbox.daemon import occ_backend
-    from sandbox.daemon import handlers as write
+    from sandbox.daemon import occ_runtime_services
+    from sandbox.daemon import operation_handlers as write
 
-    occ_backend.clear_backend_cache()
+    occ_runtime_services.clear_occ_runtime_services()
     workspace = tmp_path / "ws"
     workspace.mkdir()
     stack = tmp_path / "stack"
@@ -130,7 +130,7 @@ async def test_cas_retry_exhaustion_returns_conflict_result(
         fake_run_in_namespace,
     )
 
-    services = occ_backend.build_occ_backend(stack.as_posix())
+    services = occ_runtime_services.get_occ_runtime_services(stack.as_posix())
     publisher = services.manager._publisher  # type: ignore[attr-defined]
 
     call_counter = {"n": 0}
@@ -165,22 +165,22 @@ async def test_cas_retry_exhaustion_returns_conflict_result(
 
 
 # ---------------------------------------------------------------------------
-# Phase 05.5 — single OCC backend per layer_stack_root across all peers
+# Phase 05.5 — single OCC runtime service bundle per layer_stack_root across peers
 # ---------------------------------------------------------------------------
 
 
-def test_single_occ_backend_cache_per_layer_stack_root(
+def test_single_occ_runtime_services_cache_per_layer_stack_root(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """All runtime peers share one OccBackend per layer_stack_root.
+    """All runtime peers share one OccRuntimeServices per layer_stack_root.
 
-    After Phase 05.5 the OCC backend tuple is owned by ``occ_backend``;
+    After Phase 05.5 the OCC service bundle is owned by ``occ_runtime_services``;
     the per-verb handler scaffolding (write/edit/read/shell) and the
     api-handler manager helper all resolve through the same factory.
     """
-    from sandbox.daemon import occ_backend
+    from sandbox.daemon import occ_runtime_services
 
-    occ_backend.clear_backend_cache()
+    occ_runtime_services.clear_occ_runtime_services()
 
     class _FakeManager:
         def __init__(self, root: str) -> None:
@@ -199,23 +199,23 @@ def test_single_occ_backend_cache_per_layer_stack_root(
             return self.manager.storage_root
 
     monkeypatch.setattr(
-        occ_backend,
+        occ_runtime_services,
         "get_layer_stack_manager",
         lambda root: _FakeManager(str(root)),
     )
-    monkeypatch.setattr(occ_backend, "LayerStackClient", _FakeLayerStack)
+    monkeypatch.setattr(occ_runtime_services, "LayerStackClient", _FakeLayerStack)
     monkeypatch.setattr(
-        occ_backend,
+        occ_runtime_services,
         "SnapshotGitignoreOracle",
         lambda layer_stack: ("oracle", layer_stack),
     )
     monkeypatch.setattr(
-        occ_backend,
+        occ_runtime_services,
         "OccService",
         lambda *, gitignore, **kwargs: ("service", gitignore, kwargs),
     )
     monkeypatch.setattr(
-        occ_backend,
+        occ_runtime_services,
         "OccClient",
         lambda service, *, binding_reader, workspace_ref: (
             binding_reader,
@@ -223,10 +223,10 @@ def test_single_occ_backend_cache_per_layer_stack_root(
         )[1],
     )
 
-    backend_a = occ_backend.build_occ_backend("/tmp/a")
+    backend_a = occ_runtime_services.get_occ_runtime_services("/tmp/a")
 
-    # Every per-verb scaffolding path resolves to the cached OccBackend
-    # regardless of trailing path noise; handlers (edit/read/write/shell)
+    # Every per-verb scaffolding path resolves to the cached OccRuntimeServices
+    # regardless of trailing path noise; operation handlers (edit/read/write/shell)
     # all dereference fields off this single instance.
-    assert occ_backend.build_occ_backend("/tmp/a") is backend_a
-    assert occ_backend.build_occ_backend("/tmp/a/.") is backend_a
+    assert occ_runtime_services.get_occ_runtime_services("/tmp/a") is backend_a
+    assert occ_runtime_services.get_occ_runtime_services("/tmp/a/.") is backend_a

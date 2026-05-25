@@ -3,16 +3,16 @@
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
-from pathlib import Path
 
 from sandbox._shared.models import EditFileResult
-from sandbox._shared.tool_primitives.file_ops import (
+from sandbox._shared.tool_primitives.workspace_filesystem import (
     read_bytes_no_follow,
+    required_workspace_path,
     write_bytes_no_follow,
 )
 
 
-def compute(
+def edit_file(
     args: Mapping[str, object] | str,
     *,
     old_text: str | None = None,
@@ -52,10 +52,10 @@ def _normalize_args(
         if old_text is None or new_text is None:
             raise ValueError("old_text and new_text are required")
         return (
-            _absolute_no_escape(args),
+            required_workspace_path(args),
             ((old_text, new_text, expected_occurrences),),
         )
-    path = _absolute_no_escape(str(args.get("path") or ""))
+    path = required_workspace_path(args.get("path"))
     edits_raw = args.get("edits")
     if edits_raw is None and "old_text" in args:
         edits_raw = [args]
@@ -79,16 +79,4 @@ def _normalize_args(
     return path, tuple(edits)
 
 
-def _absolute_no_escape(path: str) -> str:
-    path = str(path or "").strip()
-    if not path:
-        raise ValueError("path is required")
-    candidate = Path(path)
-    if not candidate.is_absolute():
-        if ".." in candidate.parts:
-            raise ValueError(f"path escapes workspace via '..': {path}")
-        candidate = Path.cwd() / candidate
-    return candidate.as_posix()
-
-
-__all__ = ["compute"]
+__all__ = ["edit_file"]

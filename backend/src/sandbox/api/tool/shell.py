@@ -3,20 +3,20 @@
 from __future__ import annotations
 
 from audit.base import AuditSink
-from sandbox.api.tool.core.audit import audited_operation
-from sandbox.api.tool.core.conflicts import is_shell_conflict
-from sandbox.api.tool.core.daemon_response import (
-    error_message,
-    timings_from_daemon_response,
+from sandbox.api.tool._conflict_detection import is_shell_conflict
+from sandbox.api.tool._daemon_payload import daemon_request_identity
+from sandbox.api.tool._daemon_response_fields import (
+    timing_map_from_daemon_field,
+    user_visible_error_message,
 )
-from sandbox.api.tool.core.results import (
+from sandbox.api.tool._operation_audit import run_audited_operation
+from sandbox.api.tool._result_projection import (
     shell_conflict_result,
     shell_error_result,
     shell_result_from_daemon_response,
 )
-from sandbox.api.protocol import SandboxTransport
 from sandbox.api.timeouts import shell_dispatch_timeout
-from sandbox.api.transport import DAEMON_OP_SHELL, DaemonSandboxTransport
+from sandbox.api.transport import DAEMON_OP_SHELL, DaemonSandboxTransport, SandboxTransport
 from sandbox._shared.clock import monotonic_now
 from sandbox._shared.models import ShellRequest, ShellResult
 
@@ -31,7 +31,7 @@ async def shell(
     """Run a shell command through sandbox-local overlay and OCC."""
     total_start = monotonic_now()
     cwd = (request.cwd or "").strip() or "."
-    selected_transport = transport or DaemonSandboxTransport()
+    daemon_transport = transport or DaemonSandboxTransport()
 
     async def _call() -> ShellResult:
         if request.stdin is not None:
@@ -40,37 +40,33 @@ async def shell(
                 message="snapshot overlay shell does not accept stdin",
                 timings={"api.shell.total_s": monotonic_now() - total_start},
             )
-        payload: dict[str, object] = {
-            "agent_id": request.caller.agent_id,
+        payload = daemon_request_identity(request) | {
             "command": request.command,
             "cwd": cwd,
             "timeout_seconds": request.timeout,
-            "caller": request.caller.audit_fields(),
             "description": request.default_description("shell"),
         }
         if request.background:
             payload["background"] = True
-        if request.invocation_id:
-            payload["invocation_id"] = request.invocation_id
-        raw = await selected_transport.call(
+        response = await daemon_transport.call(
             sandbox_id,
             DAEMON_OP_SHELL,
             payload,
             timeout=shell_dispatch_timeout(request.timeout),
         )
-        timings = timings_from_daemon_response(raw.get("timings"))
+        timings = timing_map_from_daemon_field(response.get("timings"))
         timings["api.shell.dispatch_total_s"] = monotonic_now() - total_start
-        return shell_result_from_daemon_response(raw, timings=timings)
+        return shell_result_from_daemon_response(response, timings=timings)
 
     def _conflict_from_error(exc: BaseException) -> ShellResult | None:
         if not is_shell_conflict(exc):
             return None
         return shell_conflict_result(
-            error_message(exc),
+            user_visible_error_message(exc),
             timings={"api.shell.dispatch_total_s": monotonic_now() - total_start},
         )
 
-    return await audited_operation(
+    return await run_audited_operation(
         audit_sink=audit_sink,
         sandbox_id=sandbox_id,
         operation="shell",

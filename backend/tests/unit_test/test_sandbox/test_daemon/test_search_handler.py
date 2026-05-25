@@ -8,8 +8,8 @@ from pathlib import Path
 import pytest
 
 from sandbox._shared.tool_primitives.glob import DEFAULT_GLOB_LIMIT
-from sandbox._shared.tool_primitives.glob import compute as glob_compute
-from sandbox._shared.tool_primitives.grep import compute as grep_compute
+from sandbox._shared.tool_primitives.glob import glob_files
+from sandbox._shared.tool_primitives.grep import grep_files
 
 
 def _seed_workspace(tmp_path: Path, *, files: dict[str, str]) -> Path:
@@ -37,7 +37,7 @@ def test_glob_basic_pattern_returns_sorted_matches(
     )
     monkeypatch.chdir(workspace)
 
-    result = glob_compute({"pattern": "**/*.py", "path": "."})
+    result = glob_files({"pattern": "**/*.py", "path": "."})
 
     assert result.success is True
     assert result.filenames == ("a.py", "pkg/b.py")
@@ -59,7 +59,7 @@ def test_glob_excludes_vcs_directories(
     )
     monkeypatch.chdir(workspace)
 
-    result = glob_compute({"pattern": "**/*", "path": "."})
+    result = glob_files({"pattern": "**/*", "path": "."})
 
     assert "src/main.py" in result.filenames
     assert all(not name.startswith(".git/") for name in result.filenames)
@@ -75,7 +75,7 @@ def test_glob_truncates_at_one_hundred(
     )
     monkeypatch.chdir(workspace)
 
-    result = glob_compute({"pattern": "item_*.txt", "path": "."})
+    result = glob_files({"pattern": "item_*.txt", "path": "."})
 
     assert result.num_files == DEFAULT_GLOB_LIMIT
     assert len(result.filenames) == DEFAULT_GLOB_LIMIT
@@ -86,7 +86,7 @@ def test_glob_missing_pattern_raises(tmp_path: Path) -> None:
     _seed_workspace(tmp_path, files={"a.txt": "a"})
 
     with pytest.raises(ValueError, match="pattern is required"):
-        glob_compute({"path": "."})
+        glob_files({"path": "."})
 
 
 def test_grep_files_with_matches_mode(
@@ -103,7 +103,7 @@ def test_grep_files_with_matches_mode(
     )
     monkeypatch.chdir(workspace)
 
-    result = grep_compute({"pattern": "hello", "path": "."})
+    result = grep_files({"pattern": "hello", "path": "."})
 
     assert result.success is True
     assert result.output_mode == "files_with_matches"
@@ -121,7 +121,7 @@ def test_grep_accepts_single_file_path(
     )
     monkeypatch.chdir(workspace)
 
-    result = grep_compute(
+    result = grep_files(
         {
             "pattern": re.escape("# fixtures\n"),
             "path": (workspace / "conftest.py").as_posix(),
@@ -148,7 +148,7 @@ def test_grep_count_mode_returns_per_file_counts(
     )
     monkeypatch.chdir(workspace)
 
-    result = grep_compute({"pattern": "hello", "path": ".", "output_mode": "count"})
+    result = grep_files({"pattern": "hello", "path": ".", "output_mode": "count"})
 
     assert result.output_mode == "count"
     assert result.filenames == ("a.py", "b.py")
@@ -169,7 +169,7 @@ def test_grep_content_mode_emits_filename_line_pairs(
     )
     monkeypatch.chdir(workspace)
 
-    result = grep_compute(
+    result = grep_files(
         {
             "pattern": "hello",
             "path": ".",
@@ -198,7 +198,7 @@ def test_grep_case_insensitive_and_glob_filter(
     )
     monkeypatch.chdir(workspace)
 
-    result = grep_compute(
+    result = grep_files(
         {
             "pattern": "hello",
             "path": ".",
@@ -213,18 +213,18 @@ def test_grep_case_insensitive_and_glob_filter(
 def test_search_handlers_do_not_call_occ_client() -> None:
     """Read-only by construction: ``grep`` and ``glob`` must not touch OCC.
 
-    Post-Phase-2.6 C4 both handlers live in ``sandbox.daemon.handlers`` as
-    1-line wrappers around ``run_tool_handler``; check the function source
+    Post-Phase-2.6 C4 both operation_handlers live in ``sandbox.daemon.operation_handlers`` as
+    1-line wrappers around ``route_workspace_tool_call``; check the function source
     rather than the module file (the module also hosts OCC-touching control
-    handlers like ``layer_metrics``).
+    operation_handlers like ``layer_metrics``).
     """
     import inspect
 
-    from sandbox.daemon import handlers
+    from sandbox.daemon import operation_handlers
 
-    for fn in (handlers.grep, handlers.glob):
+    for fn in (operation_handlers.grep, operation_handlers.glob):
         code = inspect.getsource(fn)
-        name = f"handlers.{fn.__name__}"
+        name = f"operation_handlers.{fn.__name__}"
         assert "occ_client." not in code, f"{name} must not access occ_client"
         assert "OccClient" not in code, f"{name} must not reference OccClient"
         assert ".commit_" not in code, f"{name} must not call commit_* methods"

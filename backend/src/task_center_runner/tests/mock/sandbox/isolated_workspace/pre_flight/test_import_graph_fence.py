@@ -13,7 +13,7 @@ def test_isolated_workspace_tool_op_module_was_deleted() -> None:
 
 
 def test_iws_tool_ops_route_through_api_v1_only() -> None:
-    dispatcher._load_peer_bootstraps()
+    dispatcher._register_builtin_operations()
     prefix = "api.isolated_workspace."
     obsolete = {
         prefix + "shell",

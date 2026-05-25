@@ -18,10 +18,10 @@ from typing import Any
 
 import pytest
 
-import sandbox.ephemeral_workspace.helper.publishing as publishing
+import sandbox.ephemeral_workspace.workspace_publish as publishing
 import sandbox.ephemeral_workspace.pipeline as pipeline_mod
 from sandbox.ephemeral_workspace.pipeline import EphemeralPipeline
-from sandbox._shared.shell_contract import CommandExecRequest
+from sandbox._shared.command_exec_contract import CommandExecRequest
 from sandbox.occ.changeset import CommitOptions
 from sandbox.occ.changeset import ChangesetResult, WriteChange
 

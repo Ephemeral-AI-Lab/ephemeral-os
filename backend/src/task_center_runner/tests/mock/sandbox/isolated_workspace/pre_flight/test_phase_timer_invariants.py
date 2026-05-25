@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import pytest
 
-from sandbox.isolated_workspace.helper.types import (
+from sandbox.isolated_workspace._control_plane.pipeline_state import (
     _PHASE_TIMER_OVERHEAD_BUDGET_MS,
     _PhaseTimer,
 )

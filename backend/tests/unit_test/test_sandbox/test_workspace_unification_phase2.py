@@ -18,8 +18,7 @@ from sandbox.overlay.lifecycle import destroy
 from sandbox.overlay.namespace_entrypoint import execute_tool_payload
 from sandbox.overlay.path_change import OverlayPathChange, content_hash
 import sandbox.overlay.writable_dirs as writable_dirs_mod
-from sandbox.isolated_workspace.helper.types import IsolatedWorkspaceHandle
-from sandbox.isolated_workspace.pipeline import IsolatedPipeline
+from sandbox.isolated_workspace import IsolatedWorkspaceHandle, IsolatedPipeline
 
 
 def test_workspace_pipeline_protocol_has_one_method() -> None:

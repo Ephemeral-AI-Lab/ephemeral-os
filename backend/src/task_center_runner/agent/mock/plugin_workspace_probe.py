@@ -34,7 +34,7 @@ from sandbox.ephemeral_workspace.plugin.op_registry import (
     flush_plugin_registrations,
     register_plugin_op,
 )
-from sandbox.ephemeral_workspace.plugin import session as plugin_session
+from sandbox.ephemeral_workspace.plugin import host_dispatch as plugin_host_dispatch
 from sandbox.host.daemon_client import (
     DEFAULT_LAYER_STACK_ROOT,
     _DaemonDispatchError,
@@ -832,9 +832,9 @@ register_plugin_op("demo", "write", intent=Intent.WRITE_ALLOWED)(write_handler)
 
 async def _run_setup_failure_checks(sandbox_id: str) -> tuple[dict[str, Any], dict[str, Any]]:
     plugin_name = "netfail"
-    old_cache = plugin_session._manifest_cache
-    plugin_session.reset_session_cache()
-    plugin_session._manifest_cache = {plugin_name: _fake_manifest(plugin_name)}
+    old_cache = plugin_host_dispatch._PLUGIN_MANIFESTS_BY_NAME
+    plugin_host_dispatch.reset_host_dispatch_cache()
+    plugin_host_dispatch._PLUGIN_MANIFESTS_BY_NAME = {plugin_name: _fake_manifest(plugin_name)}
     install_attempts = 0
     dispatch_calls: list[str] = []
     try:
@@ -848,7 +848,7 @@ async def _run_setup_failure_checks(sandbox_id: str) -> tuple[dict[str, Any], di
                 stderr_excerpt="curl: (6) Could not resolve host: registry.npmjs.org",
             )
 
-        failure = await plugin_session.call_plugin(
+        failure = await plugin_host_dispatch.call_plugin(
             _plugin_context(sandbox_id),
             plugin=plugin_name,
             op="run",
@@ -873,7 +873,7 @@ async def _run_setup_failure_checks(sandbox_id: str) -> tuple[dict[str, Any], di
                 return {"success": True, "registered_ops": [f"plugin.{plugin_name}.run"]}
             return {"success": True, "result": "ok", "args": args}
 
-        retry = await plugin_session.call_plugin(
+        retry = await plugin_host_dispatch.call_plugin(
             _plugin_context(sandbox_id),
             plugin=plugin_name,
             op="run",
@@ -882,8 +882,8 @@ async def _run_setup_failure_checks(sandbox_id: str) -> tuple[dict[str, Any], di
             daemon_dispatcher=retry_dispatch,
         )
     finally:
-        plugin_session._manifest_cache = old_cache
-        plugin_session.reset_session_cache()
+        plugin_host_dispatch._PLUGIN_MANIFESTS_BY_NAME = old_cache
+        plugin_host_dispatch.reset_host_dispatch_cache()
 
     return (
         {

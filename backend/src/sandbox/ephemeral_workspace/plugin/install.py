@@ -39,8 +39,6 @@ __all__ = [
     "forget",
     "plugin_install_dir",
     "plugin_marker_path",
-    "register_trusted_setup_root",
-    "trusted_setup_roots",
 ]
 
 
@@ -86,16 +84,6 @@ def _initial_trusted_setup_roots() -> set[Path]:
 
 
 _TRUSTED_SETUP_ROOTS: set[Path] = _initial_trusted_setup_roots()
-
-
-def register_trusted_setup_root(path: str | Path) -> None:
-    """Add *path* to the trusted-setup allowlist (test/operator helper)."""
-    _TRUSTED_SETUP_ROOTS.add(Path(path).resolve(strict=False))
-
-
-def trusted_setup_roots() -> tuple[Path, ...]:
-    """Return the current trusted-setup allowlist (debugging helper)."""
-    return tuple(sorted(_TRUSTED_SETUP_ROOTS))
 
 
 def _is_trusted_setup_source(source_dir: Path) -> bool:
@@ -350,8 +338,8 @@ async def _upload_and_run_setup(
                 raise PluginInstallError(
                     f"plugin {manifest.name!r} setup.sh refused: "
                     f"source_dir {manifest.source_dir} is not under any "
-                    f"trusted root; add to EOS_PLUGIN_TRUSTED_SETUP_ROOTS or "
-                    f"register_trusted_setup_root() to permit",
+                    "trusted root; add it to EOS_PLUGIN_TRUSTED_SETUP_ROOTS "
+                    "to permit setup execution",
                     kind="plugin_setup_refused",
                     plugin_name=manifest.name,
                     setup_step="setup.sh",

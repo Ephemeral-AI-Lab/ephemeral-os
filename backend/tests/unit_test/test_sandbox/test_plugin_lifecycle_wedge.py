@@ -1,12 +1,12 @@
 """Regression test for BL-01: failed warm must not wedge the plugin registry.
 
-Before the fix, ``plugin_ensure`` wrote ``_LOADED`` *before*
+Before the fix, ``plugin_ensure`` wrote ``_LOADED_PLUGIN_RUNTIMES`` *before*
 awaiting ``_warm_plugin_runtime``. When warm raised, those mutations were not
 rolled back, so every subsequent call (with the same digest) took the
 "already loaded" branch and re-invoked warm, which kept failing forever — only
 a host process restart escaped the wedge.
 
-After the fix, a failed warm leaves ``_LOADED`` empty so the next call retries
+After the fix, a failed warm leaves ``_LOADED_PLUGIN_RUNTIMES`` empty so the next call retries
 the full ensure path. The plugin recovers without restart.
 """
 
@@ -20,22 +20,22 @@ from collections.abc import Iterator
 
 import pytest
 
-from sandbox.ephemeral_workspace.plugin import handler as handler_mod
+from sandbox.ephemeral_workspace.plugin import runtime_api as runtime_api_mod
 from sandbox.ephemeral_workspace.plugin import op_registry as registry_mod
 from sandbox.ephemeral_workspace.plugin.op_registry import register_plugin_op
 
 
 @pytest.fixture(autouse=True)
 def _isolate_plugin_state() -> Iterator[None]:
-    handler_mod._LOADED.clear()
-    handler_mod._PROJECTIONS.clear()
+    runtime_api_mod._LOADED_PLUGIN_RUNTIMES.clear()
+    runtime_api_mod._WORKSPACE_PROJECTIONS.clear()
     registry_mod._PENDING.clear()
     pre_existing = [
         name for name in sys.modules if name.startswith("plugins.catalog.")
     ]
     yield
-    handler_mod._LOADED.clear()
-    handler_mod._PROJECTIONS.clear()
+    runtime_api_mod._LOADED_PLUGIN_RUNTIMES.clear()
+    runtime_api_mod._WORKSPACE_PROJECTIONS.clear()
     registry_mod._PENDING.clear()
     for name in [n for n in sys.modules if n.startswith("plugins.catalog.")]:
         if name not in pre_existing:
@@ -46,7 +46,7 @@ def _inject_runtime(plugin: str, op: str) -> types.ModuleType:
     """Build a synthetic plugins.catalog.<plugin>.runtime.server module.
 
     The module exposes one op handler and no warm hook; warm behavior is
-    controlled by monkeypatching ``handler_mod._warm_plugin_runtime`` in the
+    controlled by monkeypatching ``runtime_api_mod._warm_plugin_runtime`` in the
     test so we can deterministically fail-then-succeed.
     """
     from sandbox._shared.models import Intent
@@ -85,20 +85,20 @@ def test_plugin_ensure_recovers_from_transient_warm_failure(
     ) -> dict[str, object]:
         calls.append(len(calls) + 1)
         if len(calls) == 1:
-            raise handler_mod.PluginEnsureError("simulated warm failure")
+            raise runtime_api_mod.PluginEnsureError("simulated warm failure")
         return {"runtime_warmed": True, "warm_result": {"ok": True}}
 
-    monkeypatch.setattr(handler_mod, "_warm_plugin_runtime", flaky_warm)
+    monkeypatch.setattr(runtime_api_mod, "_warm_plugin_runtime", flaky_warm)
 
     # First call raises — warm fails.
-    with pytest.raises(handler_mod.PluginEnsureError, match="simulated warm"):
+    with pytest.raises(runtime_api_mod.PluginEnsureError, match="simulated warm"):
         asyncio.run(
-            handler_mod.plugin_ensure({"plugin": "wedge_demo", "digest": "a"})
+            runtime_api_mod.plugin_ensure({"plugin": "wedge_demo", "digest": "a"})
         )
 
     # Registry MUST be empty after the failed warm.
-    assert "wedge_demo" not in handler_mod._LOADED, (
-        "BL-01: _LOADED was written before warm completed; registry is wedged"
+    assert "wedge_demo" not in runtime_api_mod._LOADED_PLUGIN_RUNTIMES, (
+        "BL-01: _LOADED_PLUGIN_RUNTIMES was written before warm completed; registry is wedged"
     )
     assert "plugins.catalog.wedge_demo.runtime.server" not in sys.modules
 
@@ -107,7 +107,7 @@ def test_plugin_ensure_recovers_from_transient_warm_failure(
     # Second call must take the full ensure path (not "already loaded") and
     # succeed because warm now returns normally.
     response = asyncio.run(
-        handler_mod.plugin_ensure({"plugin": "wedge_demo", "digest": "a"})
+        runtime_api_mod.plugin_ensure({"plugin": "wedge_demo", "digest": "a"})
     )
     assert response["success"] is True
     assert response["already_loaded"] is False
@@ -115,8 +115,8 @@ def test_plugin_ensure_recovers_from_transient_warm_failure(
     assert response["runtime_warmed"] is True
 
     # Now the registry is populated.
-    assert "wedge_demo" in handler_mod._LOADED
-    assert handler_mod._LOADED["wedge_demo"].digest == "a"
+    assert "wedge_demo" in runtime_api_mod._LOADED_PLUGIN_RUNTIMES
+    assert runtime_api_mod._LOADED_PLUGIN_RUNTIMES["wedge_demo"].digest == "a"
 
     # Warm was invoked exactly twice (once failed, once succeeded).
     assert calls == [1, 2]

@@ -7,8 +7,7 @@ from pathlib import Path
 import pytest
 
 from sandbox._shared.models import Intent, ToolCallRequest
-from sandbox.isolated_workspace.helper.types import IsolatedWorkspaceHandle
-from sandbox.isolated_workspace.pipeline import IsolatedPipeline
+from sandbox.isolated_workspace import IsolatedWorkspaceHandle, IsolatedPipeline
 from sandbox.overlay.path_change import OverlayPathChange, content_hash
 
 

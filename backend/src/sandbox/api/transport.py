@@ -1,9 +1,9 @@
-"""Default transport for sandbox daemon API calls."""
+"""Daemon transport contracts and default public sandbox API transport."""
 
 from __future__ import annotations
 
 from collections.abc import Mapping
-from typing import Any
+from typing import Any, Protocol
 
 from sandbox.host.daemon_client import (
     call_daemon_api,
@@ -19,6 +19,26 @@ DAEMON_OP_INVOCATION_HEARTBEAT = "api.v1.heartbeat"
 DAEMON_OP_INFLIGHT_COUNT = "api.v1.inflight_count"
 DAEMON_OP_GLOB = "api.v1.glob"
 DAEMON_OP_GREP = "api.v1.grep"
+
+
+class SandboxTransport(Protocol):
+    """Transport used by public workspace operations to call the sandbox daemon."""
+
+    async def call(
+        self,
+        sandbox_id: str,
+        op: str,
+        payload: Mapping[str, object],
+        *,
+        timeout: int,
+    ) -> dict[str, Any]:
+        """Call one sandbox RPC.
+
+        Implementations put a wire-level ``invocation_id`` on the daemon envelope.
+        If ``payload`` already has ``invocation_id``, the same id is used for
+        correlation between engine background tasks and daemon in-flight state.
+        """
+        ...
 
 
 class DaemonSandboxTransport:
@@ -51,4 +71,5 @@ __all__ = [
     "DAEMON_OP_SHELL",
     "DAEMON_OP_WRITE_FILE",
     "DaemonSandboxTransport",
+    "SandboxTransport",
 ]

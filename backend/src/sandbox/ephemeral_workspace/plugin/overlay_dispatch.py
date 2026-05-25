@@ -12,7 +12,7 @@ from typing import Any
 from uuid import uuid4
 
 from sandbox._shared.models import Intent
-from sandbox._shared.shell_contract import CommandExecRequest
+from sandbox._shared.command_exec_contract import CommandExecRequest
 from sandbox.overlay import lifecycle as overlay_lifecycle
 from sandbox.overlay.capability import mount_syscalls_supported
 from sandbox.overlay.namespace_runner import detect_private_mount_namespace
@@ -27,7 +27,7 @@ PluginOpHandler = Callable[..., Awaitable[Any]]
 
 
 async def run_plugin_op_with_workspace_overlay(
-    plugin_handler: PluginOpHandler,
+    registered_handler: PluginOpHandler,
     args: dict[str, Any],
     ctx: PluginOpContext,
     plugin_name: str,
@@ -39,7 +39,7 @@ async def run_plugin_op_with_workspace_overlay(
     release. The child process only sees a normal filesystem where the bound
     workspace root is replaced by the leased snapshot plus a private upperdir.
     """
-    del plugin_handler
+    del registered_handler
     if not _overlay_namespace_available():
         raise RuntimeError(
             "automatic plugin workspace overlay requires private mount namespace "

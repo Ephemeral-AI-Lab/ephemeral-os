@@ -10,10 +10,10 @@ from typing import Any
 import pytest
 
 from sandbox._shared.models import Intent, ToolCallRequest
-from sandbox.isolated_workspace.helper.types import (
+from sandbox.isolated_workspace._control_plane.pipeline_state import (
     IsolatedWorkspaceError,
     IsolatedWorkspaceHandle,
-    _ManagerConfig,
+    _PipelineConfig,
 )
 from sandbox.isolated_workspace.pipeline import IsolatedPipeline
 
@@ -49,7 +49,7 @@ class _Network:
         return None
 
 
-class _Runtime:
+class _FakeNamespaceRuntime:
     def __init__(self) -> None:
         self.active_calls = 0
         self.max_active_calls = 0
@@ -113,11 +113,10 @@ class _Runtime:
             self.active_calls -= 1
 
 
-def _config(**overrides: Any) -> _ManagerConfig:
+def _config(**overrides: Any) -> _PipelineConfig:
     values = {
         "enabled": True,
         "ttl_s": 0.0,
-        "per_agent_quota": 1,
         "total_cap": 5,
         "upperdir_bytes": 1024,
         "memavail_fraction": 0.5,
@@ -127,14 +126,14 @@ def _config(**overrides: Any) -> _ManagerConfig:
         "fallback_dns": "1.1.1.1",
     }
     values.update(overrides)
-    return _ManagerConfig(**values)
+    return _PipelineConfig(**values)
 
 
 def _pipeline(
     tmp_path: Path,
     *,
-    config: _ManagerConfig | None = None,
-    runtime: _Runtime | None = None,
+    config: _PipelineConfig | None = None,
+    runtime: _FakeNamespaceRuntime | None = None,
     meminfo_reader=None,
 ) -> IsolatedPipeline:
     return IsolatedPipeline(
@@ -142,21 +141,23 @@ def _pipeline(
         layer_stack=_LayerStack(),
         config=config or _config(),
         network=_Network(),
-        runtime=runtime or _Runtime(),
+        runtime=runtime or _FakeNamespaceRuntime(),
         meminfo_reader=meminfo_reader,
     )
 
 
-def test_manager_config_exit_grace_defaults_to_short_escalation_window() -> None:
-    config = _ManagerConfig.from_env({"EOS_ISOLATED_WORKSPACE_ENABLED": "true"})
+def test_pipeline_config_exit_grace_defaults_to_short_escalation_window() -> None:
+    config = _PipelineConfig.from_env({"EOS_ISOLATED_WORKSPACE_ENABLED": "true"})
     assert config.exit_grace_s == pytest.approx(0.25)
 
 
-def test_manager_config_exit_grace_env_override() -> None:
-    config = _ManagerConfig.from_env({
-        "EOS_ISOLATED_WORKSPACE_ENABLED": "true",
-        "EOS_ISOLATED_WORKSPACE_EXIT_GRACE_S": "1.5",
-    })
+def test_pipeline_config_exit_grace_env_override() -> None:
+    config = _PipelineConfig.from_env(
+        {
+            "EOS_ISOLATED_WORKSPACE_ENABLED": "true",
+            "EOS_ISOLATED_WORKSPACE_EXIT_GRACE_S": "1.5",
+        }
+    )
     assert config.exit_grace_s == pytest.approx(1.5)
 
 
@@ -194,7 +195,7 @@ async def test_same_session_tool_calls_do_not_share_per_call_lock(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    runtime = _Runtime()
+    runtime = _FakeNamespaceRuntime()
     pipeline = _pipeline(tmp_path, runtime=runtime)
     handle = IsolatedWorkspaceHandle(
         handle_id="h1",

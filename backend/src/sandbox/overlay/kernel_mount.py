@@ -15,7 +15,7 @@ from contextlib import suppress
 from dataclasses import dataclass
 from pathlib import Path
 
-from sandbox._shared.env_policy import (
+from sandbox._shared.command_exec_policy import (
     DEFAULT_COMMAND_EXEC_POLICY,
     CommandExecPolicy,
 )

@@ -43,7 +43,7 @@ def main(argv: list[str] | None = None) -> int:
 
 
 async def _run(payload: dict[str, Any]) -> int:
-    request = _Request(payload)
+    request = _PluginOverlayRequest(payload)
     _validate_binding(request)
     mount_inputs: MountInputs | None = None
     try:
@@ -71,7 +71,7 @@ async def _run(payload: dict[str, Any]) -> int:
         umount(request.workspace_root)
 
 
-class _Request:
+class _PluginOverlayRequest:
     def __init__(self, payload: dict[str, Any]) -> None:
         self.plugin_name = str(payload["plugin_name"])
         self.op_name = str(payload["op_name"])
@@ -100,7 +100,7 @@ class _Request:
         self.metadata = raw_metadata if isinstance(raw_metadata, dict) else {}
 
 
-def _validate_binding(request: _Request) -> None:
+def _validate_binding(request: _PluginOverlayRequest) -> None:
     binding = require_workspace_binding(request.layer_stack_root)
     if Path(binding.workspace_root) != request.workspace_root:
         raise ValueError(
@@ -109,7 +109,7 @@ def _validate_binding(request: _Request) -> None:
         )
 
 
-async def _invoke_plugin_handler(request: _Request) -> Any:
+async def _invoke_plugin_handler(request: _PluginOverlayRequest) -> Any:
     handler = _load_handler(request.plugin_name, request.op_name)
     ctx = PluginOpContext(
         layer_stack_root=request.layer_stack_root,
@@ -132,8 +132,8 @@ async def _invoke_plugin_handler(request: _Request) -> Any:
             tool_name=str(request.caller.get("tool_name") or ""),
             tool_id=str(request.caller.get("tool_id") or ""),
         ),
-        projection=_ChildProjection(request),
-        overlay=_ChildOverlay(request),
+        projection=_MountedPluginProjection(request),
+        overlay=_MountedPluginWorkspace(request),
         intent=request.intent,
         metadata=dict(request.metadata),
     )
@@ -159,8 +159,8 @@ def _load_handler(plugin_name: str, op_name: str) -> Any:
     return matches[0]
 
 
-class _ChildProjection:
-    def __init__(self, request: _Request) -> None:
+class _MountedPluginProjection:
+    def __init__(self, request: _PluginOverlayRequest) -> None:
         self._request = request
         self.layer_stack_root = Path(request.layer_stack_root)
 
@@ -180,8 +180,8 @@ class _ChildProjection:
         )
 
 
-class _ChildOverlay:
-    def __init__(self, request: _Request) -> None:
+class _MountedPluginWorkspace:
+    def __init__(self, request: _PluginOverlayRequest) -> None:
         self._request = request
         self.workspace_root = request.workspace_root.as_posix()
 

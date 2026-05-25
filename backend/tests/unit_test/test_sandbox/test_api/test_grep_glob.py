@@ -281,4 +281,4 @@ async def test_glob_audit_sink_receives_start_and_result(
         transport=transport,
     )
 
-    assert events, "audited_operation must publish at least one event"
+    assert events, "run_audited_operation must publish at least one event"

@@ -14,22 +14,24 @@ from typing import Any
 
 from sandbox._shared.layer_stack_port import LayerStackPort
 from sandbox._shared.models import Intent, ToolCallRequest, ToolCallResult
-from sandbox.isolated_workspace.helper.gc import _IsolatedGcMixin
-from sandbox.isolated_workspace.helper.lifecycle import _IsolatedLifecycleMixin
-from sandbox.isolated_workspace.helper.quota import _IsolatedQuotaMixin
-from sandbox.isolated_workspace.helper.runtime import (
-    _LinuxRuntime,
-    _read_memavailable_kb,
+from sandbox.isolated_workspace._control_plane.orphan_reaper import (
+    _OrphanResourceReaperMixin,
 )
-from sandbox.isolated_workspace.helper.ttl import _IsolatedTtlMixin
-from sandbox.isolated_workspace.helper.types import (
+from sandbox.isolated_workspace._control_plane.handle_lifecycle import (
+    _WorkspaceHandleLifecycleMixin,
+)
+from sandbox.isolated_workspace._control_plane.linux_runtime import (
+    _LinuxNamespaceRuntime,
+    _read_linux_memavailable_kb,
+)
+from sandbox.isolated_workspace._control_plane.pipeline_state import (
     AuditSink,
     IsolatedWorkspaceError,
     IsolatedWorkspaceHandle,
     SCHEMA_VERSION,
-    _ManagerConfig,
-    _Runtime,
     _PhaseTimer,
+    _NamespaceRuntime,
+    _PipelineConfig,
     logger,
 )
 from sandbox.isolated_workspace.network import IsolatedNetwork, IsolatedNetworkUnavailable
@@ -39,16 +41,15 @@ from sandbox.overlay.namespace_runner import run_in_namespace
 
 
 class IsolatedPipeline(
-    _IsolatedLifecycleMixin,
-    _IsolatedGcMixin,
-    _IsolatedTtlMixin,
-    _IsolatedQuotaMixin,
+    _WorkspaceHandleLifecycleMixin,
+    _OrphanResourceReaperMixin,
 ):
-    """Owns isolated workspace lifecycle, runtime, quota, TTL, and GC state.
+    """Owns isolated workspace lifecycle, namespace runtime, capacity, TTL, and GC state.
 
     Audit/event divergence vs ``EphemeralPipeline``:
-        ``IsolatedPipeline`` uses ``_JsonlAuditSink`` (in ``_manager.py``)
-        writing ``sandbox_isolated_workspace_*`` events to a JSONL file.
+        ``IsolatedPipeline`` uses ``_JsonlAuditSink`` (in
+        ``_control_plane.pipeline_registry``) to write
+        ``sandbox_isolated_workspace_*`` events to a JSONL file.
         This is AUDIT (consumed by 20+ tier-3 tests parsing exact
         event-type strings), not runtime control flow. For runtime events,
         see ``EphemeralPipeline``'s ``event_bus`` pattern.
@@ -56,7 +57,7 @@ class IsolatedPipeline(
     Body-length divergence vs ``EphemeralPipeline.run_tool_call``:
         ``IsolatedPipeline.run_tool_call`` is intentionally short (~15
         lines) because the isolated handle is persistent — there is no
-        per-call ``overlay_lifecycle.create`` / ``destroy`` pair to wrap.
+        per-call ``overlay_lifecycle.acquire`` / ``destroy`` pair to wrap.
         Honest divergence; do not force-fit the ephemeral 5-step shape
         (Phase 2.6 P1).
     """
@@ -67,9 +68,9 @@ class IsolatedPipeline(
         scratch_root: Path,
         layer_stack: LayerStackPort,
         audit: AuditSink | None = None,
-        config: _ManagerConfig | None = None,
+        config: _PipelineConfig | None = None,
         network: IsolatedNetwork | None = None,
-        runtime: _Runtime | None = None,
+        runtime: _NamespaceRuntime | None = None,
         clock: Callable[[], float] = time.monotonic,
         id_factory: Callable[[], str] = lambda: uuid.uuid4().hex[:16],
         meminfo_reader: Callable[[], int] | None = None,
@@ -77,37 +78,66 @@ class IsolatedPipeline(
         self._scratch_root = Path(scratch_root)
         self._layer_stack = layer_stack
         self._audit = audit
-        self._config = config or _ManagerConfig.from_env()
+        self._config = config or _PipelineConfig.from_env()
         self._network = network or IsolatedNetwork(rfc1918_egress=self._config.rfc1918_egress)
-        self._runtime: _Runtime = runtime or _LinuxRuntime()
+        self._runtime: _NamespaceRuntime = runtime or _LinuxNamespaceRuntime()
         self._clock = clock
         self._id_factory = id_factory
-        self._meminfo_reader = meminfo_reader or _read_memavailable_kb
+        self._meminfo_reader = meminfo_reader or _read_linux_memavailable_kb
         self._handles: dict[str, IsolatedWorkspaceHandle] = {}
         self._by_agent: dict[str, str] = {}
         self._map_lock = asyncio.Lock()
-        # Default-set: a freshly constructed manager (without ``initialize``)
-        # is usable. ``initialize`` clears the event around ``startup_gc`` so
-        # concurrent ``enter`` calls block until IP-pool reconciliation
+        # Default-set: a freshly constructed pipeline (without ``initialize``)
+        # is usable. ``initialize`` clears the event around startup orphan
+        # recovery so concurrent ``enter`` calls block until IP-pool reconciliation
         # completes (plan §5 step 0).
         self._init_complete = asyncio.Event()
         self._init_complete.set()
         self._ttl_task: asyncio.Task[None] | None = None
 
     @property
-    def enabled(self) -> bool:
-        return self._config.enabled
-
-    @property
     def scratch_root(self) -> Path:
         return self._scratch_root / "runtime" / "isolated-workspace"
 
     @property
-    def manager_json_path(self) -> Path:
+    def persisted_handles_path(self) -> Path:
         return self.scratch_root / "manager.json"
 
-    def active_count(self) -> int:
-        return len(self._handles)
+    def _check_host_capacity(self) -> None:
+        budget = self._compute_host_budget()
+        required = (len(self._handles) + 1) * self._config.upperdir_bytes
+        if required > budget:
+            raise IsolatedWorkspaceError(
+                "host_ram_pressure",
+                "host RAM gate refuses new isolated workspace",
+                required_bytes=required,
+                budget_bytes=budget,
+            )
+
+    def _compute_host_budget(self) -> int:
+        try:
+            memavail_kb = self._meminfo_reader()
+        except Exception:
+            return 2**62
+        return int(memavail_kb * 1024 * self._config.memavail_fraction)
+
+    def _read_persisted_handles(self) -> dict[str, Any]:
+        path = self.persisted_handles_path
+        if not path.exists():
+            return {"schema_version": SCHEMA_VERSION, "handles": []}
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            logger.warning("isolated_workspace_handles_unreadable path=%s", path)
+            return {"schema_version": SCHEMA_VERSION, "handles": []}
+        if data.get("schema_version") != SCHEMA_VERSION:
+            logger.warning(
+                "isolated_workspace_handles_schema_mismatch expected=%s found=%s",
+                SCHEMA_VERSION,
+                data.get("schema_version"),
+            )
+            return {"schema_version": SCHEMA_VERSION, "handles": []}
+        return data
 
     def get_handle(self, agent_id: str) -> IsolatedWorkspaceHandle | None:
         handle_id = self._by_agent.get(agent_id)
@@ -174,7 +204,8 @@ class IsolatedPipeline(
         """One-shot setup: ensure scratch root, install network, run GC pass.
 
         Clears the init-complete event so concurrent ``enter`` calls block
-        until startup_gc finishes the IP-pool reconciliation (plan §5 step 0).
+        until startup orphan recovery finishes the IP-pool reconciliation
+        (plan §5 step 0).
         """
         self._init_complete.clear()
         try:
@@ -185,15 +216,61 @@ class IsolatedPipeline(
                 logger.warning("isolated_network unavailable: %s", exc)
             if self._network.initialized:
                 for subnet in self._network.reachable_rfc1918_subnets():
-                    logger.warning(
-                        "isolated_workspace_rfc1918_reachable subnet=%s", subnet
-                    )
-            await self.startup_gc()
+                    logger.warning("isolated_workspace_rfc1918_reachable subnet=%s", subnet)
+            await self.reap_startup_orphans()
         finally:
             self._init_complete.set()
         if self._ttl_task is None and self._config.ttl_s > 0:
             self._ttl_task = asyncio.create_task(self._ttl_loop())
 
+    async def _ttl_loop(self) -> None:
+        """Background task started by ``initialize`` that runs periodic sweeps.
+
+        Tick interval = ``max(0.5 s, min(ttl_s / 2, 30 s))`` so short TTLs
+        (Tier 5's ``test_ttl_evict_and_audit`` sets ``TTL_S=1``) still see a
+        sweep inside the test budget while the default 1800 s TTL stays at a
+        modest 30 s heartbeat.
+        """
+        interval = max(0.5, min(self._config.ttl_s / 2.0, 30.0))
+        while True:
+            try:
+                await asyncio.sleep(interval)
+                await self.ttl_sweep()
+            except asyncio.CancelledError:
+                return
+            except Exception:  # pragma: no cover - background task
+                logger.exception("ttl_loop tick failed")
+
+    async def ttl_sweep(self) -> int:
+        now = self._clock()
+        evicted = 0
+        async with self._map_lock:
+            stale = [
+                h
+                for h in self._handles.values()
+                if now - h.last_activity > self._config.ttl_s and h.active_calls == 0
+            ]
+        for handle in stale:
+            try:
+                stats = await self.exit(handle.agent_id)
+                self._emit(
+                    "sandbox_isolated_workspace_evicted",
+                    {
+                        "handle_id": handle.handle_id,
+                        "reason": "ttl",
+                        "lifetime_s": stats.get("lifetime_s", 0.0),
+                        "upperdir_bytes_discarded": stats.get(
+                            "evicted_upperdir_bytes",
+                            0,
+                        ),
+                        "total_ms": stats.get("total_ms", 0.0),
+                        "phases_ms": stats.get("phases_ms", {}),
+                    },
+                )
+                evicted += 1
+            except Exception:  # pragma: no cover - logging only
+                logger.exception("ttl_sweep failed for %s", handle.handle_id)
+        return evicted
 
     async def run_in_handle(
         self,
@@ -206,7 +283,8 @@ class IsolatedPipeline(
         handle = self.get_handle(agent_id)
         if handle is None:
             raise IsolatedWorkspaceError(
-                "no_isolated_workspace", "no open isolated workspace for agent",
+                "no_isolated_workspace",
+                "no open isolated workspace for agent",
             )
         timer = _PhaseTimer(self._clock)
         start = self._clock()
@@ -221,21 +299,27 @@ class IsolatedPipeline(
                 exit_code, out, err = await loop.run_in_executor(
                     None,
                     lambda: self._runtime.run_in_handle(
-                        handle, argv=argv, stdin=stdin, timeout_s=timeout_s,
+                        handle,
+                        argv=argv,
+                        stdin=stdin,
+                        timeout_s=timeout_s,
                     ),
                 )
         finally:
             handle.active_calls = max(0, handle.active_calls - 1)
             handle.last_activity = self._clock()
         duration = self._clock() - start
-        self._emit("sandbox_isolated_workspace_tool_call", {
-            "handle_id": handle.handle_id,
-            "argv0": argv[0] if argv else "",
-            "exit_code": exit_code,
-            "duration_s": duration,
-            "total_ms": timer.total_ms(),
-            "phases_ms": timer.phases_ms,
-        })
+        self._emit(
+            "sandbox_isolated_workspace_tool_call",
+            {
+                "handle_id": handle.handle_id,
+                "argv0": argv[0] if argv else "",
+                "exit_code": exit_code,
+                "duration_s": duration,
+                "total_ms": timer.total_ms(),
+                "phases_ms": timer.phases_ms,
+            },
+        )
         return {
             "success": exit_code == 0,
             "exit_code": exit_code,
@@ -243,7 +327,6 @@ class IsolatedPipeline(
             "stderr": err.decode("utf-8", errors="replace"),
             "duration_s": duration,
         }
-
 
     async def shutdown(self) -> None:
         """Tear down every active handle on daemon stop."""
@@ -293,10 +376,9 @@ class IsolatedPipeline(
     # Internals
     # ------------------------------------------------------------------
 
-
     def _persist(self) -> None:
         self.scratch_root.mkdir(parents=True, exist_ok=True)
-        path = self.manager_json_path
+        path = self.persisted_handles_path
         tmp = path.with_suffix(".json.tmp")
         payload = {
             "schema_version": SCHEMA_VERSION,
@@ -310,7 +392,6 @@ class IsolatedPipeline(
             return
         with contextlib.suppress(Exception):
             self._audit.emit(event_type, payload)
-
 
 
 __all__ = ["IsolatedPipeline"]

@@ -7,11 +7,11 @@ from pathlib import Path
 
 import pytest
 
-from sandbox._shared.tool_primitives.edit import compute as edit_compute
-from sandbox._shared.tool_primitives.glob import compute as glob_compute
-from sandbox._shared.tool_primitives.grep import compute as grep_compute
-from sandbox._shared.tool_primitives.read import compute as read_compute
-from sandbox._shared.tool_primitives.write import compute as write_compute
+from sandbox._shared.tool_primitives.edit import edit_file
+from sandbox._shared.tool_primitives.glob import glob_files
+from sandbox._shared.tool_primitives.grep import grep_files
+from sandbox._shared.tool_primitives.read import read_file
+from sandbox._shared.tool_primitives.write import write_file
 
 _CORPUS = (
     Path(__file__).resolve().parents[3]
@@ -66,16 +66,16 @@ def test_representative_corpus_cases_replay_against_shared_primitives(
     monkeypatch.chdir(workspace)
 
     if case_id == "read.in_workspace_utf8":
-        result = read_compute({"path": "docs/readme.txt"})
+        result = read_file({"path": "docs/readme.txt"})
         assert result.content == "hello world\n"
         return
     if case_id == "write.in_workspace_create":
-        result = write_compute({"path": "created.txt", "content": "created\n"})
+        result = write_file({"path": "created.txt", "content": "created\n"})
         assert result.success is True
         assert (workspace / "created.txt").read_text(encoding="utf-8") == "created\n"
         return
     if case_id == "edit.in_workspace_single_replace":
-        result = edit_compute(
+        result = edit_file(
             {
                 "path": "docs/readme.txt",
                 "edits": [
@@ -91,11 +91,11 @@ def test_representative_corpus_cases_replay_against_shared_primitives(
         assert (workspace / "docs/readme.txt").read_text(encoding="utf-8") == "hi world\n"
         return
     if case_id == "grep.files_with_matches":
-        result = grep_compute({"path": ".", "pattern": "hello"})
+        result = grep_files({"path": ".", "pattern": "hello"})
         assert result.filenames == ("docs/readme.txt", "src/app.py", "src/other.py")
         return
     if case_id == "glob.basic_pattern":
-        result = glob_compute({"path": ".", "pattern": "**/*.py"})
+        result = glob_files({"path": ".", "pattern": "**/*.py"})
         assert result.filenames == ("src/app.py", "src/other.py")
         return
     raise AssertionError(f"unhandled corpus case: {case_id}")

@@ -1,4 +1,4 @@
-"""Daemon dispatch contracts for direct layer-stack file verbs."""
+"""Daemon tool_call_router contracts for direct layer-stack file verbs."""
 
 from __future__ import annotations
 
@@ -8,7 +8,7 @@ from typing import Any
 import pytest
 
 from sandbox._shared.models import Intent
-from sandbox.daemon import dispatch, occ_backend
+from sandbox.daemon import occ_runtime_services, tool_call_router
 from sandbox.layer_stack import LayerStack
 from sandbox.layer_stack.workspace_base import build_workspace_base
 
@@ -23,43 +23,43 @@ async def test_ephemeral_file_verbs_use_direct_occ_path(
     (workspace / "note.txt").write_text("alpha\n", encoding="utf-8")
     stack = tmp_path / "stack"
     build_workspace_base(workspace_root=workspace, layer_stack_root=stack)
-    occ_backend.clear_backend_cache()
+    occ_runtime_services.clear_occ_runtime_services()
 
     async def fail_overlay(*_args: Any, **_kwargs: Any) -> None:
         raise AssertionError("file verbs should not mount an ephemeral overlay")
 
-    monkeypatch.setattr(dispatch, "get_sandbox_overlay", fail_overlay)
+    monkeypatch.setattr(tool_call_router, "get_sandbox_overlay", fail_overlay)
 
     common: dict[str, object] = {
         "agent_id": "agent",
         "caller": {"agent_id": "agent"},
         "layer_stack_root": stack.as_posix(),
     }
-    write = await dispatch.run_tool_handler(
+    write = await tool_call_router.route_workspace_tool_call(
         {
             **common,
             "path": (workspace / "created.txt").as_posix(),
             "content": "created\n",
         },
         verb="write_file",
-        intent=dispatch.Intent.WRITE_ALLOWED,
+        intent=tool_call_router.Intent.WRITE_ALLOWED,
     )
-    edit = await dispatch.run_tool_handler(
+    edit = await tool_call_router.route_workspace_tool_call(
         {
             **common,
             "path": (workspace / "note.txt").as_posix(),
             "edits": [{"old_text": "alpha\n", "new_text": "beta\n"}],
         },
         verb="edit_file",
-        intent=dispatch.Intent.WRITE_ALLOWED,
+        intent=tool_call_router.Intent.WRITE_ALLOWED,
     )
-    read = await dispatch.run_tool_handler(
+    read = await tool_call_router.route_workspace_tool_call(
         {
             **common,
             "path": (workspace / "note.txt").as_posix(),
         },
         verb="read_file",
-        intent=dispatch.Intent.READ_ONLY,
+        intent=tool_call_router.Intent.READ_ONLY,
     )
 
     manager = LayerStack(stack)
@@ -92,9 +92,9 @@ async def test_ephemeral_file_fast_path_omits_changed_paths_on_conflict(
     (workspace / "note.txt").write_text("alpha\n", encoding="utf-8")
     stack = tmp_path / "stack"
     build_workspace_base(workspace_root=workspace, layer_stack_root=stack)
-    occ_backend.clear_backend_cache()
+    occ_runtime_services.clear_occ_runtime_services()
 
-    result = await dispatch.run_tool_handler(
+    result = await tool_call_router.route_workspace_tool_call(
         {
             "agent_id": "agent",
             "caller": {"agent_id": "agent"},
@@ -121,12 +121,12 @@ async def test_ephemeral_file_verbs_fall_back_for_outside_workspace_paths(
     workspace.mkdir()
     stack = tmp_path / "stack"
     build_workspace_base(workspace_root=workspace, layer_stack_root=stack)
-    occ_backend.clear_backend_cache()
+    occ_runtime_services.clear_occ_runtime_services()
     seen: list[tuple[str, str]] = []
 
     class _Pipeline:
         async def run_tool_call(self, req: object) -> dict[str, object]:
-            assert isinstance(req, dispatch.ToolCallRequest)
+            assert isinstance(req, tool_call_router.ToolCallRequest)
             seen.append((req.verb, str(req.args.get("path") or "")))
             return {
                 "success": True,
@@ -139,9 +139,9 @@ async def test_ephemeral_file_verbs_fall_back_for_outside_workspace_paths(
     async def fake_overlay(*_args: Any, **_kwargs: Any) -> _Pipeline:
         return _Pipeline()
 
-    monkeypatch.setattr(dispatch, "get_sandbox_overlay", fake_overlay)
+    monkeypatch.setattr(tool_call_router, "get_sandbox_overlay", fake_overlay)
 
-    result = await dispatch.run_tool_handler(
+    result = await tool_call_router.route_workspace_tool_call(
         {
             "agent_id": "agent",
             "caller": {"agent_id": "agent"},

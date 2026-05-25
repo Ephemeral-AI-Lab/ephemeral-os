@@ -20,7 +20,7 @@ from pathlib import Path
 
 _SRC_ROOT = Path(__file__).resolve().parents[7] / "src"
 _PIPELINE_PATH = _SRC_ROOT / "sandbox/isolated_workspace/pipeline.py"
-_LIFECYCLE_PATH = _SRC_ROOT / "sandbox/isolated_workspace/helper/lifecycle.py"
+_LIFECYCLE_PATH = _SRC_ROOT / "sandbox/isolated_workspace/_control_plane/handle_lifecycle.py"
 
 # Anything that smells like an OCC publish call. Substring match — a literal
 # in a method body is enough to fail.
@@ -32,6 +32,7 @@ _FORBIDDEN_TOKENS = (
     "apply_sync",  # the CommitQueue's sync entrypoint
 )
 
+
 def test_exit_and_teardown_methods_have_no_occ_calls() -> None:
     offenders = _method_token_offenders(
         _PIPELINE_PATH,
@@ -41,13 +42,12 @@ def test_exit_and_teardown_methods_have_no_occ_calls() -> None:
     offenders.extend(
         _method_token_offenders(
             _LIFECYCLE_PATH,
-            class_names={"_IsolatedLifecycleMixin"},
+            class_names={"_WorkspaceHandleLifecycleMixin"},
             method_names={"_teardown", "_rollback_partial"},
         )
     )
     assert offenders == [], (
-        "exit/teardown/rollback paths must not invoke OCC publish primitives: "
-        f"{offenders}"
+        f"exit/teardown/rollback paths must not invoke OCC publish primitives: {offenders}"
     )
 
 
@@ -72,8 +72,7 @@ def _method_token_offenders(
             for token in _FORBIDDEN_TOKENS:
                 if re.search(rf"\b{re.escape(token)}\b", body_segment):
                     offenders.append(
-                        f"{path.relative_to(_SRC_ROOT)}:{cls.name}.{member.name} "
-                        f"references {token}"
+                        f"{path.relative_to(_SRC_ROOT)}:{cls.name}.{member.name} references {token}"
                     )
     return offenders
 
@@ -99,6 +98,5 @@ def test_isolated_workspace_pipeline_modules_do_not_import_commit_queue() -> Non
                             f"{path.relative_to(_SRC_ROOT)} from {target} import CommitQueue"
                         )
     assert offenders == [], (
-        "isolated workspace pipeline modules must not import the OCC CommitQueue: "
-        f"{offenders}"
+        f"isolated workspace pipeline modules must not import the OCC CommitQueue: {offenders}"
     )

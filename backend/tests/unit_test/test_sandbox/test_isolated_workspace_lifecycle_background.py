@@ -43,12 +43,16 @@ async def test_enter_rejects_before_pipeline_when_background_tasks_exist(
 ) -> None:
     called = False
 
-    async def _ensure_manager(args: dict[str, object]) -> object:
+    async def ensure_pipeline(args: dict[str, object]) -> object:
         nonlocal called
         called = True
         return object()
 
-    monkeypatch.setattr(enter_module.iws_manager, "_ensure_manager", _ensure_manager)
+    monkeypatch.setattr(
+        enter_module.iws_pipeline_registry,
+        "ensure_pipeline",
+        ensure_pipeline,
+    )
 
     result = await enter_isolated_workspace(
         EnterIsolatedWorkspaceRequest(
@@ -86,7 +90,7 @@ async def test_exit_drains_background_tasks_before_pipeline_exit(
 
     bg.cancel_by_agent = _cancel_by_agent  # type: ignore[method-assign]
     monkeypatch.setattr(
-        exit_module.iws_manager,
+        exit_module.iws_pipeline_registry,
         "require_pipeline",
         lambda: SimpleNamespace(exit=_exit),
     )
@@ -125,7 +129,7 @@ async def test_exit_drains_agent_background_tasks(
 
     bg.cancel_by_agent = _cancel_by_agent  # type: ignore[method-assign]
     monkeypatch.setattr(
-        exit_module.iws_manager,
+        exit_module.iws_pipeline_registry,
         "require_pipeline",
         lambda: SimpleNamespace(exit=_exit),
     )

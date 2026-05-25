@@ -4,7 +4,7 @@ import os
 
 import pytest
 
-from sandbox._shared.tool_primitives.edit import compute as edit_compute
+from sandbox._shared.tool_primitives.edit import edit_file
 
 
 def test_edit_anchor_miss_raises_without_writing(tmp_path) -> None:
@@ -12,7 +12,7 @@ def test_edit_anchor_miss_raises_without_writing(tmp_path) -> None:
     target.write_text("alpha\n", encoding="utf-8")
 
     with pytest.raises(ValueError, match="anchor not found"):
-        edit_compute(
+        edit_file(
             str(target),
             old_text="missing\n",
             new_text="replacement\n",
@@ -31,7 +31,7 @@ def test_edit_out_of_workspace_expected_zero_with_absent_anchor_succeeds(
     original = "alpha\n"
     target.write_text(original, encoding="utf-8")
 
-    result = edit_compute(
+    result = edit_file(
         {
             "path": str(target),
             "edits": [
@@ -60,7 +60,7 @@ def test_edit_out_of_workspace_expected_zero_with_present_anchor_rejects(
     target.write_text("alpha\n", encoding="utf-8")
 
     with pytest.raises(ValueError, match="expected 0 occurrences"):
-        edit_compute(
+        edit_file(
             {
                 "path": str(target),
                 "edits": [
@@ -83,7 +83,7 @@ def test_edit_out_of_workspace_refuses_terminal_symlink(tmp_path) -> None:
     os.symlink(target, link)
 
     with pytest.raises(ValueError, match="refusing to follow symlink"):
-        edit_compute(str(link), old_text="alpha", new_text="beta")
+        edit_file(str(link), old_text="alpha", new_text="beta")
 
     assert target.read_text(encoding="utf-8") == "alpha\n"
 
@@ -94,7 +94,7 @@ async def test_edit_file_rejects_negative_expected_occurrences(tmp_path) -> None
     target = tmp_path / "probe.txt"
     target.write_text("alpha\n", encoding="utf-8")
     with pytest.raises(ValueError, match="expected_occurrences must be >= 0"):
-        edit_compute(
+        edit_file(
             {
                 "path": str(target),
                 "edits": [

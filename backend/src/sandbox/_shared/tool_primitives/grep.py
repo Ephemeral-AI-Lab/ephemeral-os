@@ -8,16 +8,17 @@ from collections.abc import Mapping
 from pathlib import Path
 
 from sandbox._shared.models import GrepResult
-from sandbox._shared.tool_primitives.file_ops import (
+from sandbox._shared.tool_primitives.workspace_filesystem import (
     is_regular_file_no_follow,
     read_bytes_no_follow,
+    search_root_path,
     walk_dirs_no_follow,
 )
 
 _MAX_FILE_BYTES = 2 * 1024 * 1024
 
 
-def compute(
+def grep_files(
     args: Mapping[str, object] | str,
     pattern: str | None = None,
     *,
@@ -85,7 +86,7 @@ def _options(
         pattern = str(args.get("pattern") or "")
         case_insensitive = bool(args.get("case_insensitive", case_insensitive))
         return {
-            "root": _absolute_no_escape(str(raw_root)),
+            "root": search_root_path(raw_root),
             "pattern": pattern,
             "case_insensitive": case_insensitive,
             "glob_filter": args.get("glob_filter") or args.get("include_pattern"),
@@ -96,7 +97,7 @@ def _options(
     if pattern is None:
         raise ValueError("pattern is required")
     return {
-        "root": _absolute_no_escape(args),
+        "root": search_root_path(args),
         "pattern": pattern,
         "case_insensitive": case_insensitive,
         "glob_filter": None,
@@ -129,13 +130,4 @@ def _display_path(path: Path) -> str:
         return path.as_posix()
 
 
-def _absolute_no_escape(path: str) -> str:
-    candidate = Path(str(path or "."))
-    if not candidate.is_absolute():
-        if ".." in candidate.parts:
-            raise ValueError(f"path escapes workspace via '..': {path}")
-        candidate = Path.cwd() / candidate
-    return candidate.as_posix()
-
-
-__all__ = ["compute"]
+__all__ = ["grep_files"]

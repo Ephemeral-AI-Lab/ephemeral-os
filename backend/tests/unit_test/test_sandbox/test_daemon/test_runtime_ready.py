@@ -7,19 +7,19 @@ from pathlib import Path
 import pytest
 
 from sandbox.layer_stack.workspace_base import build_workspace_base
-from sandbox.daemon import handlers as health
-from sandbox.daemon import occ_backend, workspace_server
+from sandbox.daemon import operation_handlers as health
+from sandbox.daemon import layer_stack_runtime, occ_runtime_services
 
 
 @pytest.fixture(autouse=True)
 def _clear_runtime_caches() -> None:
-    occ_backend.clear_backend_cache()
-    workspace_server.clear_layer_stack_server_caches_for_tests()
+    occ_runtime_services.clear_occ_runtime_services()
+    layer_stack_runtime.clear_layer_stack_runtime_caches_for_tests()
     try:
         yield
     finally:
-        occ_backend.clear_backend_cache()
-        workspace_server.clear_layer_stack_server_caches_for_tests()
+        occ_runtime_services.clear_occ_runtime_services()
+        layer_stack_runtime.clear_layer_stack_runtime_caches_for_tests()
 
 
 def _probe(response: dict[str, object], name: str) -> dict[str, object]:
@@ -75,11 +75,9 @@ def test_daemon_ready_reports_data_plane_failure(
     def fail_backend(_layer_stack_root: str) -> object:
         raise RuntimeError("synthetic data-plane failure")
 
-    monkeypatch.setattr(health.occ_backend, "build_occ_backend", fail_backend)
+    monkeypatch.setattr(health.occ_runtime_services, "get_occ_runtime_services", fail_backend)
 
-    response = health.runtime_ready(
-        {"layer_stack_root": (tmp_path / "stack").as_posix()}
-    )
+    response = health.runtime_ready({"layer_stack_root": (tmp_path / "stack").as_posix()})
 
     assert response["success"] is True
     assert response["ready"] is False
@@ -101,13 +99,9 @@ def test_daemon_ready_reports_incomplete_data_plane_backend(
     def incomplete_backend(_layer_stack_root: str) -> _Backend:
         return _Backend()
 
-    monkeypatch.setattr(
-        health.occ_backend, "build_occ_backend", incomplete_backend
-    )
+    monkeypatch.setattr(health.occ_runtime_services, "get_occ_runtime_services", incomplete_backend)
 
-    response = health.runtime_ready(
-        {"layer_stack_root": (tmp_path / "stack").as_posix()}
-    )
+    response = health.runtime_ready({"layer_stack_root": (tmp_path / "stack").as_posix()})
 
     assert response["success"] is True
     assert response["ready"] is False
@@ -116,7 +110,7 @@ def test_daemon_ready_reports_incomplete_data_plane_backend(
     details = data_plane["details"]
     assert isinstance(details, dict)
     assert details["error_type"] == "RuntimeError"
-    assert "handler services returned" in str(details["error"])
+    assert "operation services returned" in str(details["error"])
 
 
 def test_daemon_ready_reports_mutation_gate_failure(
@@ -126,11 +120,9 @@ def test_daemon_ready_reports_mutation_gate_failure(
     def fail_backend(_layer_stack_root: str) -> object:
         raise RuntimeError("synthetic mutation-gate failure")
 
-    monkeypatch.setattr(health.occ_backend, "build_occ_backend", fail_backend)
+    monkeypatch.setattr(health.occ_runtime_services, "get_occ_runtime_services", fail_backend)
 
-    response = health.runtime_ready(
-        {"layer_stack_root": (tmp_path / "stack").as_posix()}
-    )
+    response = health.runtime_ready({"layer_stack_root": (tmp_path / "stack").as_posix()})
 
     assert response["success"] is True
     assert response["ready"] is False
@@ -155,14 +147,12 @@ def test_daemon_ready_reports_incomplete_mutation_gate_backend(
         return _Backend()
 
     monkeypatch.setattr(
-        health.occ_backend,
-        "build_occ_backend",
+        health.occ_runtime_services,
+        "get_occ_runtime_services",
         fake_backend,
     )
 
-    response = health.runtime_ready(
-        {"layer_stack_root": (tmp_path / "stack").as_posix()}
-    )
+    response = health.runtime_ready({"layer_stack_root": (tmp_path / "stack").as_posix()})
 
     assert response["success"] is True
     assert response["ready"] is False
@@ -171,13 +161,11 @@ def test_daemon_ready_reports_incomplete_mutation_gate_backend(
     details = mutation_gate["details"]
     assert isinstance(details, dict)
     assert details["error_type"] == "RuntimeError"
-    assert "OCC backend type mismatch" in str(details["error"])
+    assert "OCC runtime services type mismatch" in str(details["error"])
 
 
 def test_daemon_ready_reports_explicit_workspace_mount_mode(tmp_path: Path) -> None:
-    response = health.runtime_ready(
-        {"layer_stack_root": (tmp_path / "stack").as_posix()}
-    )
+    response = health.runtime_ready({"layer_stack_root": (tmp_path / "stack").as_posix()})
 
     data_plane = _probe(response, "data_plane")
     assert data_plane["status"] == "ok"

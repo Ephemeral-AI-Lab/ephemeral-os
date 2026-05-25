@@ -32,8 +32,8 @@ from sandbox._shared.models import (
 )
 from sandbox.audit.lifecycle import lifecycle_operation
 from sandbox.host.daemon_client import _DaemonDispatchError, call_daemon_api
-from sandbox.isolated_workspace.helper import manager as iws_manager
-from sandbox.isolated_workspace.helper.types import IsolatedWorkspaceError
+from sandbox.isolated_workspace._control_plane import pipeline_registry as iws_pipeline_registry
+from sandbox.isolated_workspace._control_plane.pipeline_state import IsolatedWorkspaceError
 
 
 async def enter_isolated_workspace(
@@ -63,10 +63,10 @@ async def enter_isolated_workspace(
         ) as timings:
             if sandbox_id:
                 return await _daemon_enter(sandbox_id, req, timings=dict(timings))
-            manager = await iws_manager._ensure_manager(  # noqa: SLF001
+            pipeline = await iws_pipeline_registry.ensure_pipeline(
                 {"layer_stack_root": req.layer_stack_root}
             )
-            handle = await manager.enter(agent_id)
+            handle = await pipeline.enter(agent_id)
             return EnterIsolatedWorkspaceResult(
                 success=True,
                 manifest_version=str(handle.manifest_version),
@@ -118,8 +118,9 @@ async def exit_isolated_workspace(
                     evicted_background_tasks=evicted_background_tasks,
                     timings=dict(timings),
                 )
-            result = await iws_manager.require_pipeline().exit(
-                agent_id, grace_s=0.0,
+            result = await iws_pipeline_registry.require_pipeline().exit(
+                agent_id,
+                grace_s=0.0,
             )
             phases = dict(result.get("phases_ms", {}))
             phases["evicted_background_tasks"] = float(evicted_background_tasks)
@@ -234,10 +235,7 @@ def _lifecycle_error_from_mapping(error: object) -> LifecycleError:
     return LifecycleError(
         kind=str(error.get("kind") or "internal_error"),
         message=str(error.get("message") or ""),
-        details={
-            str(k): str(v)
-            for k, v in (details if isinstance(details, dict) else {}).items()
-        },
+        details={str(k): str(v) for k, v in (details if isinstance(details, dict) else {}).items()},
     )
 
 

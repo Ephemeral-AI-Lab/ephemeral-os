@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import asyncio
+from dataclasses import dataclass
+import hashlib
 import os
 from collections.abc import Sequence
 from contextlib import asynccontextmanager, suppress
@@ -15,26 +17,19 @@ from sandbox._shared.clock import monotonic_now
 from sandbox._shared.layer_stack_port import LayerStackPort
 from sandbox._shared.lease_guard import LeaseGuard
 from sandbox._shared.models import Intent, ToolCallRequest, ToolCallResult
-from sandbox.ephemeral_workspace.helper.manager import (
-    clear_overlay_manager_for_tests,
+from sandbox.ephemeral_workspace.overlay_registry import (
+    clear_overlay_registry_for_tests,
     get_sandbox_overlay,
     stop_all_overlays,
     stop_sandbox_overlay,
 )
-from sandbox.ephemeral_workspace.helper.operation import EphemeralOperationMixin
-from sandbox.ephemeral_workspace.helper.publishing import EphemeralPublishMixin
-from sandbox.ephemeral_workspace.helper.types import (
-    _OverlaySnapshot,
-)
-from sandbox.ephemeral_workspace.helper.utils import (
-    foreign_watch_interval_s,
-    runtime_key,
-)
+from sandbox.ephemeral_workspace.operation_overlay import OperationOverlayMixin
+from sandbox.ephemeral_workspace.workspace_publish import WorkspacePublishMixin
 from sandbox.ephemeral_workspace.events import (
-    EphemeralPipelineEventBus,
+    WorkspaceChangeEventBus,
     WorkspaceChangeEvent,
 )
-from sandbox._shared.shell_contract import (
+from sandbox._shared.command_exec_contract import (
     OCCMutationClient,
     SnapshotManifest,
 )
@@ -51,7 +46,14 @@ from sandbox.overlay.path_change import OverlayPathChange
 from sandbox.overlay.writable_dirs import overlay_writable_root
 
 
-class EphemeralPipeline(EphemeralOperationMixin, EphemeralPublishMixin):
+@dataclass(frozen=True)
+class _PreparedOverlaySnapshot:
+    lease_id: str
+    manifest: SnapshotManifest
+    layer_paths: tuple[Path, ...]
+
+
+class EphemeralPipeline(OperationOverlayMixin, WorkspacePublishMixin):
     """Facade hiding overlay freshness, capture, and OCC behind the daemon boundary.
 
     Audit/event divergence vs ``IsolatedPipeline``:
@@ -69,13 +71,13 @@ class EphemeralPipeline(EphemeralOperationMixin, EphemeralPublishMixin):
         workspace_ref: str,
         layer_stack: LayerStackPort | None = None,
         workspace_root: str = "/testbed",
-        event_bus: EphemeralPipelineEventBus | None = None,
+        event_bus: WorkspaceChangeEventBus | None = None,
     ) -> None:
         self._occ_client = occ_client
         self._workspace_ref = workspace_ref
         self._layer_stack = layer_stack
         self._workspace_root = workspace_root.rstrip("/") or "/"
-        self.event_bus = event_bus or EphemeralPipelineEventBus()
+        self.event_bus = event_bus or WorkspaceChangeEventBus()
         self._active_manifest_key = ""
         self._active_manifest_version = 0
         self._mounted = False
@@ -89,10 +91,10 @@ class EphemeralPipeline(EphemeralOperationMixin, EphemeralPublishMixin):
             self._writable_root
             / "runtime"
             / "sandbox-overlay"
-            / self._runtime_key(workspace_ref, self._workspace_root)
+            / _pipeline_runtime_key(workspace_ref, self._workspace_root)
         )
-        self._upperdir = self._runtime_dir / "upper"
-        self._workdir = self._runtime_dir / "work"
+        self._upperdir = self._runtime_dir_path / "upper"
+        self._workdir = self._runtime_dir_path / "work"
         if layer_stack is not None and hasattr(layer_stack, "read_active_manifest"):
             self._mark_active(layer_stack.read_active_manifest())
 
@@ -114,10 +116,6 @@ class EphemeralPipeline(EphemeralOperationMixin, EphemeralPublishMixin):
 
     @property
     def runtime_dir(self) -> Path:
-        return self._runtime_dir
-
-    @property
-    def _runtime_dir(self) -> Path:
         return self._runtime_dir_path
 
     @asynccontextmanager
@@ -138,9 +136,9 @@ class EphemeralPipeline(EphemeralOperationMixin, EphemeralPublishMixin):
         pre_mount_timings: dict[str, float] = {}
         if req.verb == "shell":
             pre_mount_timings = await self._run_shell_pre_mount_maintenance()
-        handle = await overlay_lifecycle.create(
+        handle = overlay_lifecycle.acquire(
             self._layer_stack,
-            agent_id=req.agent_id,
+            invocation_id=f"overlay:{req.agent_id}:{req.invocation_id}",
             workspace_root=self._workspace_root,
         )
         try:
@@ -281,7 +279,7 @@ class EphemeralPipeline(EphemeralOperationMixin, EphemeralPublishMixin):
         self._mounted = False
         self._release_lease(self._active_lease_id)
         self._active_lease_id = ""
-        shutil.rmtree(self._runtime_dir, ignore_errors=True)
+        shutil.rmtree(self._runtime_dir_path, ignore_errors=True)
 
     def subscribe_workspace_changes(
         self, subscriber_id: str
@@ -326,9 +324,6 @@ class EphemeralPipeline(EphemeralOperationMixin, EphemeralPublishMixin):
         except Exception:
             root_hash = "unknown"
         return f"{root_hash}@{int(manifest.version)}"
-
-    def _runtime_key(self, workspace_ref: str, workspace_root: str) -> str:
-        return runtime_key(workspace_ref, workspace_root)
 
     def _prepare_mount_dirs(self) -> None:
         self._upperdir.mkdir(parents=True, exist_ok=True)
@@ -380,7 +375,7 @@ class EphemeralPipeline(EphemeralOperationMixin, EphemeralPublishMixin):
         finally:
             mount_inputs.close()
 
-    def _prepare_overlay_snapshot(self, invocation_id: str) -> _OverlaySnapshot:
+    def _prepare_overlay_snapshot(self, invocation_id: str) -> _PreparedOverlaySnapshot:
         if self._layer_stack is None:
             raise RuntimeError("snapshot requires layer_stack")
         snapshot = self._layer_stack.prepare_workspace_snapshot(
@@ -391,7 +386,7 @@ class EphemeralPipeline(EphemeralOperationMixin, EphemeralPublishMixin):
         if raw_paths is None:
             self._release_lease(lease_id)
             raise RuntimeError("overlay snapshot did not provide layer paths")
-        return _OverlaySnapshot(
+        return _PreparedOverlaySnapshot(
             lease_id=lease_id,
             manifest=getattr(snapshot, "manifest"),
             layer_paths=tuple(Path(path) for path in raw_paths),
@@ -436,7 +431,7 @@ class EphemeralPipeline(EphemeralOperationMixin, EphemeralPublishMixin):
             await task
 
     async def _watch_foreign_publishes(self) -> None:
-        interval = foreign_watch_interval_s()
+        interval = _foreign_watch_interval_s()
         while True:
             await asyncio.sleep(interval)
             if not self._mounted:
@@ -448,7 +443,7 @@ class EphemeralPipeline(EphemeralOperationMixin, EphemeralPublishMixin):
 __all__ = [
     "EphemeralPipeline",
     "LayerStackPort",
-    "clear_overlay_manager_for_tests",
+    "clear_overlay_registry_for_tests",
     "get_sandbox_overlay",
     "stop_all_overlays",
     "stop_sandbox_overlay",
@@ -479,3 +474,18 @@ def _api_total_timing_key(verb: str) -> str:
         "glob": "glob",
     }.get(verb)
     return f"api.{suffix}.total_s" if suffix else ""
+
+
+def _foreign_watch_interval_s() -> float:
+    raw = os.environ.get("EOS_OVERLAY_FOREIGN_WATCH_INTERVAL_S", "").strip()
+    if not raw:
+        return 0.25
+    try:
+        return max(0.05, float(raw))
+    except ValueError:
+        return 0.25
+
+
+def _pipeline_runtime_key(workspace_ref: str, workspace_root: str) -> str:
+    raw = f"{workspace_ref}\0{workspace_root}".encode("utf-8", "surrogateescape")
+    return hashlib.sha256(raw).hexdigest()[:16]

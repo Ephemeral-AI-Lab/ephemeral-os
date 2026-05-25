@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Any
 
 from sandbox._shared.clock import monotonic_now
-from sandbox._shared.env_policy import CommandExecPolicy
+from sandbox._shared.command_exec_policy import CommandExecPolicy
 from sandbox._shared.models import Intent, ToolCallRequest
 from sandbox._shared.tool_primitives import VERB_TABLE, shell
 from sandbox.overlay.kernel_mount import (
@@ -159,8 +159,8 @@ def execute_tool_payload(
             )
             result_payload = _jsonable_result(result)
         else:
-            compute = VERB_TABLE[req.verb]
-            result_payload = _jsonable_result(compute(req.args))
+            run_primitive = VERB_TABLE[req.verb]
+            result_payload = _jsonable_result(run_primitive(req.args))
     finally:
         os.chdir(old_cwd)
     elapsed = monotonic_now() - run_start

@@ -15,7 +15,7 @@ from collections.abc import Awaitable, Callable, Mapping
 from pathlib import Path
 from typing import Any
 
-from sandbox._shared.env_policy import CommandExecPolicy
+from sandbox._shared.command_exec_policy import CommandExecPolicy
 from sandbox._shared.models import ToolCallRequest, ToolCallResult
 from sandbox._shared.tool_primitives.cancellation import (
     NO_OP_CANCELLATION,

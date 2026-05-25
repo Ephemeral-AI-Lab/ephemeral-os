@@ -8,7 +8,7 @@ from typing import Any
 
 import pytest
 
-from sandbox.isolated_workspace.helper import runtime as runtime_module
+from sandbox.isolated_workspace._control_plane import linux_runtime as runtime_module
 
 
 class _FakePopen:
@@ -47,7 +47,7 @@ def test_kill_holder_reaps_tracked_process_without_sigkill(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     signals = _patch_process_primitives(monkeypatch)
-    runtime = runtime_module._LinuxRuntime()
+    runtime = runtime_module._LinuxNamespaceRuntime()
     proc = _FakePopen()
     runtime._holders[1234] = proc  # type: ignore[assignment]
 
@@ -62,7 +62,7 @@ def test_kill_holder_signals_tracked_grandchild_for_graceful_exit(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     signals = _patch_process_primitives(monkeypatch, reaped_pid=5678)
-    runtime = runtime_module._LinuxRuntime()
+    runtime = runtime_module._LinuxNamespaceRuntime()
     proc = _FakePopen()
     runtime._holders[1234] = proc  # type: ignore[assignment]
     runtime._grandchildren[1234] = 5678
@@ -79,7 +79,7 @@ def test_kill_holder_sigkills_tracked_process_after_grace_timeout(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     signals = _patch_process_primitives(monkeypatch)
-    runtime = runtime_module._LinuxRuntime()
+    runtime = runtime_module._LinuxNamespaceRuntime()
     proc = _FakePopen(timeout_first_wait=True)
     runtime._holders[1234] = proc  # type: ignore[assignment]
 

@@ -6,24 +6,24 @@ from pathlib import Path
 
 import pytest
 
-from sandbox.daemon import occ_backend, request_context
-from sandbox.daemon import handlers as edit
-from sandbox.daemon import handlers as metrics
-from sandbox.daemon import handlers as read
-from sandbox.daemon import handlers as shell
-from sandbox.daemon import handlers as write
+from sandbox.daemon import occ_runtime_services, operation_payloads
+from sandbox.daemon import operation_handlers as edit
+from sandbox.daemon import operation_handlers as metrics
+from sandbox.daemon import operation_handlers as read
+from sandbox.daemon import operation_handlers as shell
+from sandbox.daemon import operation_handlers as write
 from sandbox.daemon.rpc import dispatcher as server
-from sandbox.daemon.workspace_server import get_layer_stack_manager
+from sandbox.daemon.layer_stack_runtime import get_layer_stack_manager
 from sandbox.layer_stack.workspace_base import build_workspace_base
 
 
-def test_request_context_classifier_helpers_removed() -> None:
-    assert not hasattr(request_context, "ClassifiedPath")
-    assert not hasattr(request_context, "classify_path")
+def test_operation_payload_classifier_helpers_removed() -> None:
+    assert not hasattr(operation_payloads, "ClassifiedPath")
+    assert not hasattr(operation_payloads, "classify_path")
 
 
 def test_op_table_dispatches_data_ops_to_unified_handlers() -> None:
-    server._load_peer_bootstraps()
+    server._register_builtin_operations()
     assert server.OP_TABLE["api.write_file"] is write.write_file
     assert server.OP_TABLE["api.v1.write_file"] is write.write_file
     assert server.OP_TABLE["api.edit_file"] is edit.edit_file
@@ -73,14 +73,14 @@ async def test_read_file_rejects_list_path_argument() -> None:
 @pytest.mark.asyncio
 async def test_layer_stack_services_share_lease_registry(tmp_path: Path) -> None:
     """Layer-stack services still share one manager/LeaseRegistry instance."""
-    occ_backend.clear_backend_cache()
+    occ_runtime_services.clear_occ_runtime_services()
     workspace = tmp_path / "ws"
     workspace.mkdir()
     (workspace / "a.txt").write_text("base\n", encoding="utf-8")
     stack = tmp_path / "stack"
     build_workspace_base(workspace_root=workspace, layer_stack_root=stack)
 
-    write_services = occ_backend.build_occ_backend(stack.as_posix())
+    write_services = occ_runtime_services.get_occ_runtime_services(stack.as_posix())
     manager_via_singleton = get_layer_stack_manager(stack.as_posix())
 
     assert write_services.manager is manager_via_singleton
@@ -100,7 +100,7 @@ async def test_layer_stack_services_share_lease_registry(tmp_path: Path) -> None
 
 @pytest.mark.asyncio
 async def test_layer_metrics_reports_no_cache_storage_fields(tmp_path: Path) -> None:
-    occ_backend.clear_backend_cache()
+    occ_runtime_services.clear_occ_runtime_services()
     workspace = tmp_path / "ws"
     workspace.mkdir()
     (workspace / "seed.txt").write_text("seed\n", encoding="utf-8")
@@ -134,7 +134,7 @@ async def test_layer_metrics_reports_no_cache_storage_fields(tmp_path: Path) -> 
 
 @pytest.mark.asyncio
 async def test_layer_metrics_reports_active_lease_pins(tmp_path: Path) -> None:
-    occ_backend.clear_backend_cache()
+    occ_runtime_services.clear_occ_runtime_services()
     workspace = tmp_path / "ws"
     workspace.mkdir()
     (workspace / "seed.txt").write_text("seed\n", encoding="utf-8")

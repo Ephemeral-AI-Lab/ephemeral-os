@@ -5,8 +5,8 @@ that the daemon offers via ``api.isolated_workspace.{enter, exit, status}``.
 
 Submodules
 ----------
-- :mod:`.pipeline` — lifecycle state machine, quota / TTL / host-RAM gate,
-  ``manager.json`` persistence, GC pass, ``_PhaseTimer``, ``_LinuxRuntime``.
+- :mod:`.pipeline` — lifecycle state machine, capacity / TTL / host-RAM gate,
+  ``manager.json`` persistence, orphan reaping, and phase timing.
 - :mod:`.network` — bridge + nftables + per-workspace veth + IP pool.
 - :mod:`sandbox.daemon.rpc.dispatcher` — inline lifecycle RPC handlers
   (``api.isolated_workspace.{enter,exit,status,list_open,test_reset}``).
@@ -20,10 +20,10 @@ Cross-package reuse
   :func:`sandbox.overlay.kernel_mount.mount_overlay` after setns —
   a deferred import keeps R10 (single-thread for ``setns(CLONE_NEWUSER)``).
 - Lease / snapshot calls go through
-  ``sandbox.daemon.workspace_server`` (layer-stack-only; OCC is unreachable).
+  ``sandbox.daemon.layer_stack_runtime`` (layer-stack-only; OCC is unreachable).
 """
 
-from sandbox.isolated_workspace.helper.types import (
+from sandbox.isolated_workspace._control_plane.pipeline_state import (
     AuditSink,
     IsolatedWorkspaceError,
     IsolatedWorkspaceHandle,

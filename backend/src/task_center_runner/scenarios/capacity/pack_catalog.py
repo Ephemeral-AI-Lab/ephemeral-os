@@ -126,7 +126,7 @@ CAPACITY_PACK_SPECS: tuple[CapacityPackSpec, ...] = (
         "B",
         "sandbox",
         "T1",
-        test_path="backend/tests/unit_test/test_sandbox/test_tool_primitives_file_ops.py",
+        test_path="backend/tests/unit_test/test_sandbox/test_tool_primitives_workspace_filesystem.py",
     ),
     CapacityPackSpec(
         "sandbox.layerstack_lease_protection",
@@ -149,7 +149,7 @@ CAPACITY_PACK_SPECS: tuple[CapacityPackSpec, ...] = (
         "T1",
         test_path=(
             "backend/tests/unit_test/test_sandbox/test_command_exec/"
-            "test_env_policy.py"
+            "test_command_exec_policy.py"
         ),
     ),
     CapacityPackSpec(

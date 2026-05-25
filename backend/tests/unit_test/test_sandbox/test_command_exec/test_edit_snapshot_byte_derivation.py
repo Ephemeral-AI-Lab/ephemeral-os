@@ -6,19 +6,19 @@ from pathlib import Path
 
 import pytest
 
-from sandbox._shared.tool_primitives.edit import compute as edit_compute
+from sandbox._shared.tool_primitives.edit import edit_file
 from sandbox.layer_stack import LayerStack, WriteLayerChange
 from sandbox.layer_stack.workspace_base import build_workspace_base
 from sandbox.occ.changeset import CommitOptions, FileStatus, build_api_write_change
 from sandbox.occ.content_hashing import ContentHasher
-from sandbox.daemon import occ_backend
+from sandbox.daemon import occ_runtime_services
 
 
 def test_edit_primitive_derives_final_bytes_before_overlay_capture(tmp_path: Path) -> None:
     target = tmp_path / "config.toml"
     target.write_text('name = "old"\n', encoding="utf-8")
 
-    result = edit_compute(
+    result = edit_file(
         {
             "path": target.as_posix(),
             "edits": [{"old_text": "old", "new_text": "new"}],
@@ -35,7 +35,7 @@ def test_edit_primitive_anchor_miss_preserves_file(tmp_path: Path) -> None:
     target.write_text("foo\n", encoding="utf-8")
 
     with pytest.raises(ValueError, match="anchor not found"):
-        edit_compute(
+        edit_file(
             {
                 "path": target.as_posix(),
                 "edits": [{"old_text": "missing", "new_text": "anything"}],
@@ -50,22 +50,20 @@ async def test_in_workspace_edit_same_path_M_gt_N_surfaces_hard_conflict(
     tmp_path: Path,
 ) -> None:
     """Same-path M>N race still aborts at OCC commit time."""
-    occ_backend.clear_backend_cache()
+    occ_runtime_services.clear_occ_runtime_services()
     workspace = tmp_path / "ws"
     workspace.mkdir()
     (workspace / "shared.txt").write_text("hello world\n", encoding="utf-8")
     stack = tmp_path / "stack"
     build_workspace_base(workspace_root=workspace, layer_stack_root=stack)
 
-    services = occ_backend.build_occ_backend(stack.as_posix())
+    services = occ_runtime_services.get_occ_runtime_services(stack.as_posix())
     manager: LayerStack = services.manager
     occ_service = services.occ_client._service  # type: ignore[attr-defined]
 
     lease = manager.acquire_snapshot_lease("test-edit-N")
     try:
-        bytes_n, exists_n = services.layer_stack.read_bytes(
-            "shared.txt", lease.manifest
-        )
+        bytes_n, exists_n = services.layer_stack.read_bytes("shared.txt", lease.manifest)
         assert exists_n and bytes_n is not None
         derived_final = bytes_n.replace(b"hello", b"hi")
 

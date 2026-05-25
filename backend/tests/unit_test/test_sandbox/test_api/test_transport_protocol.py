@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from sandbox.api.protocol import SandboxTransport
 from sandbox.api.transport import (
     DAEMON_OP_EDIT_FILE,
     DAEMON_OP_INFLIGHT_COUNT,
@@ -11,6 +10,7 @@ from sandbox.api.transport import (
     DAEMON_OP_READ_FILE,
     DAEMON_OP_SHELL,
     DAEMON_OP_WRITE_FILE,
+    SandboxTransport,
 )
 
 

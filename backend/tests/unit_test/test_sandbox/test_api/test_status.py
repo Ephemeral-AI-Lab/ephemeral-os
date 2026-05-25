@@ -47,7 +47,7 @@ def _stub_provider() -> MagicMock:
 def test_create_registers_per_id_adapter_and_runs_setup(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    from sandbox.api import _sandbox_control as sb_lifecycle
+    from sandbox.api import _provider_control as provider_control
     from sandbox.host import lifecycle as host_lifecycle
     from sandbox.provider.registry import get_adapter, set_default_provider
 
@@ -61,7 +61,7 @@ def test_create_registers_per_id_adapter_and_runs_setup(
         lambda sid, ws: setup_calls.append((sid, ws)),
     )
 
-    info = sb_lifecycle.create_sandbox(name="demo")
+    info = provider_control.create_sandbox(name="demo")
 
     provider.create.assert_called_once()
     assert info["id"] == "sb-1"
@@ -70,7 +70,7 @@ def test_create_registers_per_id_adapter_and_runs_setup(
 
 
 def test_start_runs_setup_after_start(monkeypatch: pytest.MonkeyPatch) -> None:
-    from sandbox.api import _sandbox_control as sb_lifecycle
+    from sandbox.api import _provider_control as provider_control
     from sandbox.host import lifecycle as host_lifecycle
     from sandbox.provider.registry import register_adapter
 
@@ -84,7 +84,7 @@ def test_start_runs_setup_after_start(monkeypatch: pytest.MonkeyPatch) -> None:
         lambda sid, ws: setup_calls.append((sid, ws)),
     )
 
-    info = sb_lifecycle.start_sandbox("sb-1")
+    info = provider_control.start_sandbox("sb-1")
 
     provider.start.assert_called_once_with("sb-1")
     assert info["state"] == "started"
@@ -94,7 +94,7 @@ def test_start_runs_setup_after_start(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_delete_disposes_adapter_and_plugin_host_caches(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    from sandbox.api import _sandbox_control as sb_lifecycle
+    from sandbox.api import _provider_control as provider_control
     from sandbox.host import lifecycle as host_lifecycle
     from sandbox.provider.registry import get_adapter, register_adapter
 
@@ -102,9 +102,9 @@ def test_delete_disposes_adapter_and_plugin_host_caches(
     register_adapter("sb-1", provider)
     forgotten: list[tuple[str, str]] = []
     monkeypatch.setattr(
-        host_lifecycle.plugin_session,
+        host_lifecycle.plugin_host_dispatch,
         "forget",
-        lambda sandbox_id: forgotten.append(("session", sandbox_id)),
+        lambda sandbox_id: forgotten.append(("host_dispatch", sandbox_id)),
     )
     monkeypatch.setattr(
         host_lifecycle.plugin_install,
@@ -112,65 +112,64 @@ def test_delete_disposes_adapter_and_plugin_host_caches(
         lambda sandbox_id: forgotten.append(("install", sandbox_id)),
     )
 
-    sb_lifecycle.delete_sandbox("sb-1")
+    provider_control.delete_sandbox("sb-1")
 
     provider.delete.assert_called_once_with("sb-1")
-    assert forgotten == [("session", "sb-1"), ("install", "sb-1")]
+    assert forgotten == [("host_dispatch", "sb-1"), ("install", "sb-1")]
     with pytest.raises(KeyError):
         get_adapter("sb-1")
 
 
 def test_read_helpers_route_through_registry(monkeypatch: pytest.MonkeyPatch) -> None:
-    from sandbox.api import _sandbox_control as sb_discovery
-    from sandbox.api import _sandbox_control as sb_preview_urls
+    from sandbox.api import _provider_control as provider_control
     from sandbox.provider.registry import register_adapter, set_default_provider
 
     default = _stub_provider()
     set_default_provider(default)
     monkeypatch.setattr(
-        sb_discovery,
+        provider_control,
         "configured_sandbox_defaults",
         lambda: (None, None),
     )
 
-    assert sb_discovery.list_sandboxes() == [{"id": "sb-1"}]
-    assert sb_discovery.get_health() == {
+    assert provider_control.list_sandboxes() == [{"id": "sb-1"}]
+    assert provider_control.get_health() == {
         "available": True,
         "default_snapshot": None,
         "default_image": None,
     }
-    assert sb_discovery.list_snapshots() == [{"name": "snap"}]
+    assert provider_control.list_snapshots() == [{"name": "snap"}]
 
     per_id = _stub_provider()
     register_adapter("sb-1", per_id)
-    assert sb_discovery.get_sandbox("sb-1")["id"] == "sb-1"
+    assert provider_control.get_sandbox("sb-1")["id"] == "sb-1"
     per_id.get.assert_called_once_with("sb-1")
-    assert sb_preview_urls.get_signed_preview_url("sb-1", 3000) == {
+    assert provider_control.get_signed_preview_url("sb-1", 3000) == {
         "url": "https://"
     }
-    assert sb_preview_urls.get_build_logs_url("sb-1") == "https://logs"
+    assert provider_control.get_build_logs_url("sb-1") == "https://logs"
 
 
 def test_instance_scoped_helpers_fall_back_to_default_provider() -> None:
-    from sandbox.api import _sandbox_control as sb_discovery
+    from sandbox.api import _provider_control as provider_control
     from sandbox.provider.registry import get_adapter, set_default_provider
 
     provider = _stub_provider()
     set_default_provider(provider)
 
-    assert sb_discovery.get_sandbox("sb-existing")["id"] == "sb-1"
+    assert provider_control.get_sandbox("sb-existing")["id"] == "sb-1"
     assert get_adapter("sb-existing") is provider
     provider.get.assert_called_once_with("sb-existing")
 
 
 def test_set_sandbox_labels_routes_through_provider() -> None:
-    from sandbox.api import _sandbox_control as sb_lifecycle
+    from sandbox.api import _provider_control as provider_control
     from sandbox.provider.registry import register_adapter
 
     provider = _stub_provider()
     register_adapter("sb-1", provider)
 
-    result = sb_lifecycle.set_sandbox_labels("sb-1", {"project_dir": "/testbed"})
+    result = provider_control.set_sandbox_labels("sb-1", {"project_dir": "/testbed"})
 
     assert result["labels"] == {"project_dir": "/testbed"}
     provider.set_labels.assert_called_once_with("sb-1", {"project_dir": "/testbed"})
@@ -186,7 +185,7 @@ def test_create_sandbox_invokes_ensure_git_via_setup_hook(
     downstream code that assumes git is installed (sweevo, any consumer
     running ``git ...`` on a minimal-image sandbox).
     """
-    from sandbox.api import _sandbox_control as sb_lifecycle
+    from sandbox.api import _provider_control as provider_control
     from sandbox.host import bootstrap as bootstrap_mod
     from sandbox.provider.registry import set_default_provider
 
@@ -216,7 +215,7 @@ def test_create_sandbox_invokes_ensure_git_via_setup_hook(
         lambda sid, ws: calls.append(f"ensure_workspace({sid},{ws})"),
     )
 
-    sb_lifecycle.create_sandbox(name="demo")
+    provider_control.create_sandbox(name="demo")
 
     assert calls == [
         "start_upload(sb-1,/workspace/demo)",
@@ -231,7 +230,7 @@ def test_start_sandbox_invokes_ensure_git_via_setup_hook(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Same regression guard for the start path."""
-    from sandbox.api import _sandbox_control as sb_lifecycle
+    from sandbox.api import _provider_control as provider_control
     from sandbox.host import bootstrap as bootstrap_mod
     from sandbox.provider.registry import register_adapter
 
@@ -261,7 +260,7 @@ def test_start_sandbox_invokes_ensure_git_via_setup_hook(
         lambda sid, ws: calls.append(f"ensure_workspace({sid},{ws})"),
     )
 
-    sb_lifecycle.start_sandbox("sb-1")
+    provider_control.start_sandbox("sb-1")
 
     assert calls == [
         "start_upload(sb-1,/workspace/demo)",
@@ -275,20 +274,20 @@ def test_start_sandbox_invokes_ensure_git_via_setup_hook(
 def test_create_sandbox_uses_configured_default_image(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    from sandbox.api import _sandbox_control as sb_lifecycle
+    from sandbox.api import _provider_control as provider_control
     from sandbox.host import lifecycle as host_lifecycle
     from sandbox.provider.registry import set_default_provider
 
     provider = _stub_provider()
     set_default_provider(provider)
     monkeypatch.setattr(
-        sb_lifecycle,
+        provider_control,
         "configured_sandbox_defaults",
         lambda: (None, "ghcr.io/example/default:latest"),
     )
     monkeypatch.setattr(host_lifecycle, "setup_after_create", lambda sid, ws: None)
 
-    sb_lifecycle.create_sandbox(name="demo")
+    provider_control.create_sandbox(name="demo")
 
     provider.create.assert_called_once()
     assert provider.create.call_args.kwargs["snapshot"] is None
@@ -301,20 +300,20 @@ def test_create_sandbox_uses_configured_default_image(
 def test_create_sandbox_explicit_image_overrides_configured_default(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    from sandbox.api import _sandbox_control as sb_lifecycle
+    from sandbox.api import _provider_control as provider_control
     from sandbox.host import lifecycle as host_lifecycle
     from sandbox.provider.registry import set_default_provider
 
     provider = _stub_provider()
     set_default_provider(provider)
     monkeypatch.setattr(
-        sb_lifecycle,
+        provider_control,
         "configured_sandbox_defaults",
         lambda: (None, "ghcr.io/example/default:latest"),
     )
     monkeypatch.setattr(host_lifecycle, "setup_after_create", lambda sid, ws: None)
 
-    sb_lifecycle.create_sandbox(name="demo", image="ghcr.io/example/custom:latest")
+    provider_control.create_sandbox(name="demo", image="ghcr.io/example/custom:latest")
 
     provider.create.assert_called_once()
     assert provider.create.call_args.kwargs["image"] == "ghcr.io/example/custom:latest"
@@ -323,20 +322,20 @@ def test_create_sandbox_explicit_image_overrides_configured_default(
 def test_create_sandbox_snapshot_skips_configured_default_image(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    from sandbox.api import _sandbox_control as sb_lifecycle
+    from sandbox.api import _provider_control as provider_control
     from sandbox.host import lifecycle as host_lifecycle
     from sandbox.provider.registry import set_default_provider
 
     provider = _stub_provider()
     set_default_provider(provider)
     monkeypatch.setattr(
-        sb_lifecycle,
+        provider_control,
         "configured_sandbox_defaults",
         lambda: (None, "ghcr.io/example/default:latest"),
     )
     monkeypatch.setattr(host_lifecycle, "setup_after_create", lambda sid, ws: None)
 
-    sb_lifecycle.create_sandbox(name="demo", snapshot="snap-1")
+    provider_control.create_sandbox(name="demo", snapshot="snap-1")
 
     provider.create.assert_called_once()
     assert provider.create.call_args.kwargs["snapshot"] == "snap-1"
@@ -346,20 +345,20 @@ def test_create_sandbox_snapshot_skips_configured_default_image(
 def test_create_sandbox_uses_configured_default_snapshot(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    from sandbox.api import _sandbox_control as sb_lifecycle
+    from sandbox.api import _provider_control as provider_control
     from sandbox.host import lifecycle as host_lifecycle
     from sandbox.provider.registry import set_default_provider
 
     provider = _stub_provider()
     set_default_provider(provider)
     monkeypatch.setattr(
-        sb_lifecycle,
+        provider_control,
         "configured_sandbox_defaults",
         lambda: ("sweevo-psf-requests-3738", None),
     )
     monkeypatch.setattr(host_lifecycle, "setup_after_create", lambda sid, ws: None)
 
-    sb_lifecycle.create_sandbox(name="demo")
+    provider_control.create_sandbox(name="demo")
 
     provider.create.assert_called_once()
     assert (
@@ -372,20 +371,20 @@ def test_create_sandbox_uses_configured_default_snapshot(
 def test_create_sandbox_explicit_image_overrides_configured_default_snapshot(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    from sandbox.api import _sandbox_control as sb_lifecycle
+    from sandbox.api import _provider_control as provider_control
     from sandbox.host import lifecycle as host_lifecycle
     from sandbox.provider.registry import set_default_provider
 
     provider = _stub_provider()
     set_default_provider(provider)
     monkeypatch.setattr(
-        sb_lifecycle,
+        provider_control,
         "configured_sandbox_defaults",
         lambda: ("sweevo-psf-requests-3738", None),
     )
     monkeypatch.setattr(host_lifecycle, "setup_after_create", lambda sid, ws: None)
 
-    sb_lifecycle.create_sandbox(name="demo", image="ghcr.io/example/custom:latest")
+    provider_control.create_sandbox(name="demo", image="ghcr.io/example/custom:latest")
 
     provider.create.assert_called_once()
     assert provider.create.call_args.kwargs["snapshot"] is None
@@ -396,7 +395,7 @@ def test_configured_default_snapshot_takes_precedence_over_default_image(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     from config import CentralConfig, DaytonaConfig, SandboxConfig, override_central_config
-    from sandbox.api import _sandbox_control as sb_lifecycle
+    from sandbox.api import _provider_control as provider_control
     from sandbox.host import lifecycle as host_lifecycle
     from sandbox.provider.registry import set_default_provider
 
@@ -414,7 +413,7 @@ def test_configured_default_snapshot_takes_precedence_over_default_image(
         )
     )
     with override_central_config(config):
-        sb_lifecycle.create_sandbox(name="demo")
+        provider_control.create_sandbox(name="demo")
 
     provider.create.assert_called_once()
     assert (
@@ -433,19 +432,19 @@ def test_configured_default_snapshot_takes_precedence_over_default_image(
 def test_health_reports_configured_default_image(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    from sandbox.api import _sandbox_control as sb_discovery
+    from sandbox.api import _provider_control as provider_control
     from sandbox.provider.registry import set_default_provider
 
     provider = _stub_provider()
     provider.get_health.return_value = {"available": True, "default_image": None}
     set_default_provider(provider)
     monkeypatch.setattr(
-        sb_discovery,
+        provider_control,
         "configured_sandbox_defaults",
         lambda: (None, "ghcr.io/example/default:latest"),
     )
 
-    assert sb_discovery.get_health() == {
+    assert provider_control.get_health() == {
         "available": True,
         "default_snapshot": None,
         "default_image": "ghcr.io/example/default:latest",
@@ -455,7 +454,7 @@ def test_health_reports_configured_default_image(
 def test_health_reports_configured_default_snapshot(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    from sandbox.api import _sandbox_control as sb_discovery
+    from sandbox.api import _provider_control as provider_control
     from sandbox.provider.registry import set_default_provider
 
     provider = _stub_provider()
@@ -466,12 +465,12 @@ def test_health_reports_configured_default_snapshot(
     }
     set_default_provider(provider)
     monkeypatch.setattr(
-        sb_discovery,
+        provider_control,
         "configured_sandbox_defaults",
         lambda: ("sweevo-psf-requests-3738", None),
     )
 
-    assert sb_discovery.get_health() == {
+    assert provider_control.get_health() == {
         "available": True,
         "default_snapshot": "sweevo-psf-requests-3738",
         "default_image": None,

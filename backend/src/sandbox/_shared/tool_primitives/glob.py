@@ -7,18 +7,19 @@ from collections.abc import Mapping
 from pathlib import Path, PurePosixPath
 
 from sandbox._shared.models import GlobResult
-from sandbox._shared.tool_primitives.file_ops import (
+from sandbox._shared.tool_primitives.workspace_filesystem import (
     is_regular_file_no_follow,
+    search_root_path,
     walk_dirs_no_follow,
 )
 
 DEFAULT_GLOB_LIMIT = 100
 
 
-def compute(args: Mapping[str, object] | str) -> GlobResult:
+def glob_files(args: Mapping[str, object] | str) -> GlobResult:
     if isinstance(args, Mapping):
         pattern = str(args.get("pattern") or "").strip()
-        root = _absolute_no_escape(str(args.get("path") or "."))
+        root = search_root_path(args.get("path") or ".")
     else:
         pattern = str(args or "").strip()
         root = Path.cwd().as_posix()
@@ -64,13 +65,4 @@ def _display_path(path: Path) -> str:
         return path.as_posix()
 
 
-def _absolute_no_escape(path: str) -> str:
-    candidate = Path(str(path or "."))
-    if not candidate.is_absolute():
-        if ".." in candidate.parts:
-            raise ValueError(f"path escapes workspace via '..': {path}")
-        candidate = Path.cwd() / candidate
-    return candidate.as_posix()
-
-
-__all__ = ["compute"]
+__all__ = ["glob_files"]

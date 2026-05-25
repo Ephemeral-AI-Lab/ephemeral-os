@@ -19,11 +19,11 @@ __all__ = ["call_plugin", "call_plugin_write"]
 
 def __getattr__(name: str) -> Any:
     if name == "call_plugin":
-        from sandbox.ephemeral_workspace.plugin.session import call_plugin
+        from sandbox.ephemeral_workspace.plugin.host_dispatch import call_plugin
 
         return call_plugin
     if name == "call_plugin_write":
-        from sandbox.ephemeral_workspace.plugin.session import call_plugin_write
+        from sandbox.ephemeral_workspace.plugin.host_dispatch import call_plugin_write
 
         return call_plugin_write
     raise AttributeError(name)

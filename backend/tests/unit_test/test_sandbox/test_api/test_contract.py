@@ -24,18 +24,16 @@ from sandbox.api import (
 _API_ROOT = Path(sandbox_api.__file__).parent
 _EXPECTED_API_ROOT_ENTRIES = {
     "__init__.py",
-    "_sandbox_control.py",
-    "_raw_exec.py",
+    "_provider_control.py",
+    "_provider_raw_exec.py",
+    "daemon_invocation_control.py",
     "tool",
-    "protocol.py",
-    "request_lifecycle.py",
     "timeouts.py",
     "transport.py",
 }
 _MODEL_ONLY_MODULES = {
     "__init__.py",
     "tool/__init__.py",
-    "tool/core/__init__.py",
 }
 _PUBLIC_VERB_IMPORT_ALLOWLIST = {
     "tool/read.py": {
@@ -58,7 +56,7 @@ _PUBLIC_VERB_IMPORT_ALLOWLIST = {
         "sandbox._shared.models",
         "sandbox._shared.clock",
     },
-    "_raw_exec.py": {
+    "_provider_raw_exec.py": {
         "audit.base",
         "sandbox._shared.models",
         "sandbox.provider.registry",
@@ -112,7 +110,6 @@ def test_api_package_uses_module_level_default_wrappers() -> None:
             [
                 *_API_ROOT.glob("*.py"),
                 *(_API_ROOT / "tool").glob("*.py"),
-                *(_API_ROOT / "tool" / "core").glob("*.py"),
             ]
         ),
     )

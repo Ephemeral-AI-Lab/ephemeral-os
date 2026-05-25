@@ -5,7 +5,7 @@ from __future__ import annotations
 import signal
 from pathlib import Path
 
-from sandbox.isolated_workspace.helper import gc as gc_module
+from sandbox.isolated_workspace._control_plane import orphan_reaper as reaper_module
 
 
 def _proc(
@@ -26,7 +26,7 @@ def _proc(
     (proc / "cmdline").write_bytes(cmdline.encode("utf-8").replace(b" ", b"\0"))
 
 
-def test_iter_iws_holder_processes_reads_unshare_and_child(tmp_path: Path) -> None:
+def test_iter_namespace_holder_processes_reads_unshare_and_child(tmp_path: Path) -> None:
     _proc(
         tmp_path,
         pid=11,
@@ -55,7 +55,7 @@ def test_iter_iws_holder_processes_reads_unshare_and_child(tmp_path: Path) -> No
         cmdline="/usr/bin/python3.10 -m unrelated",
     )
 
-    processes = gc_module._iter_iws_holder_processes(tmp_path)
+    processes = reaper_module._iter_namespace_holder_processes(tmp_path)
 
     assert [(proc.pid, proc.ppid, proc.state, proc.comm) for proc in processes] == [
         (11, 1, "S", "unshare"),
@@ -63,13 +63,16 @@ def test_iter_iws_holder_processes_reads_unshare_and_child(tmp_path: Path) -> No
     ]
 
 
-def test_holder_signal_order_terminates_child_before_unshare_parent() -> None:
+def test_namespace_holder_signal_order_terminates_child_before_unshare_parent() -> None:
     processes = [
-        gc_module._HolderProcess(11, 1, "S", "unshare", "holder"),
-        gc_module._HolderProcess(12, 11, "S", "python3.10", "holder"),
+        reaper_module._NamespaceHolderProcess(11, 1, "S", "unshare", "holder"),
+        reaper_module._NamespaceHolderProcess(12, 11, "S", "python3.10", "holder"),
     ]
 
-    assert [proc.pid for proc in gc_module._holder_signal_order(processes)] == [12, 11]
+    assert [proc.pid for proc in reaper_module._namespace_holder_signal_order(processes)] == [
+        12,
+        11,
+    ]
 
 
 def test_reap_orphan_holder_processes_continues_then_kills(
@@ -78,17 +81,17 @@ def test_reap_orphan_holder_processes_continues_then_kills(
     signals: list[tuple[int, int]] = []
     snapshots = [
         [
-            gc_module._HolderProcess(11, 1, "T", "unshare", "holder"),
-            gc_module._HolderProcess(12, 11, "T", "python3.10", "holder"),
+            reaper_module._NamespaceHolderProcess(11, 1, "T", "unshare", "holder"),
+            reaper_module._NamespaceHolderProcess(12, 11, "T", "python3.10", "holder"),
         ],
         [
-            gc_module._HolderProcess(11, 1, "T", "unshare", "holder"),
-            gc_module._HolderProcess(12, 11, "T", "python3.10", "holder"),
+            reaper_module._NamespaceHolderProcess(11, 1, "T", "unshare", "holder"),
+            reaper_module._NamespaceHolderProcess(12, 11, "T", "python3.10", "holder"),
         ],
         [],
     ]
 
-    class Harness(gc_module._IsolatedGcMixin):
+    class Harness(reaper_module._OrphanResourceReaperMixin):
         _handles = {}
 
         def __init__(self) -> None:
@@ -100,15 +103,15 @@ def test_reap_orphan_holder_processes_continues_then_kills(
         def _emit(self, _event_type: str, payload: dict[str, object]) -> None:
             self.events.append(payload)
 
-    def fake_iter() -> list[gc_module._HolderProcess]:
+    def fake_iter() -> list[reaper_module._NamespaceHolderProcess]:
         return snapshots.pop(0) if snapshots else []
 
     def fake_kill(pid: int, sig: int) -> None:
         signals.append((pid, sig))
 
-    monkeypatch.setattr(gc_module, "_iter_iws_holder_processes", fake_iter)
-    monkeypatch.setattr(gc_module.os, "kill", fake_kill)
-    monkeypatch.setattr(gc_module.time, "sleep", lambda _seconds: None)
+    monkeypatch.setattr(reaper_module, "_iter_namespace_holder_processes", fake_iter)
+    monkeypatch.setattr(reaper_module.os, "kill", fake_kill)
+    monkeypatch.setattr(reaper_module.time, "sleep", lambda _seconds: None)
 
     harness = Harness()
     harness._reap_orphan_holder_processes()

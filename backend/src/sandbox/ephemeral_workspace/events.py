@@ -11,20 +11,19 @@ from sandbox.overlay.path_change import OverlayPathChange
 WorkspaceChangeReason = Literal[
     "publish",
     "foreign_publish",
-    "flush",
     "remount",
     "full_resync",
 ]
 
 
 @dataclass(frozen=True)
-class PathChange:
+class WorkspacePathChange:
     path: str
     kind: Literal["write", "delete", "symlink", "opaque_dir"]
     existed_before: bool
 
     @classmethod
-    def from_overlay_change(cls, change: OverlayPathChange) -> PathChange:
+    def from_overlay_change(cls, change: OverlayPathChange) -> WorkspacePathChange:
         return cls(
             path=change.path,
             kind=change.kind,
@@ -32,19 +31,27 @@ class PathChange:
         )
 
 
+def workspace_path_change_from_overlay_change(
+    change: object,
+) -> WorkspacePathChange:
+    if hasattr(change, "path") and hasattr(change, "kind"):
+        return WorkspacePathChange.from_overlay_change(change)  # type: ignore[arg-type]
+    return WorkspacePathChange(path=str(change), kind="write", existed_before=False)
+
+
 @dataclass(frozen=True)
 class WorkspaceChangeEvent:
     reason: WorkspaceChangeReason
     from_version: int
     to_version: int
-    changes: tuple[PathChange, ...] = ()
+    changes: tuple[WorkspacePathChange, ...] = ()
 
 
-class EphemeralPipelineEventBus:
+class WorkspaceChangeEventBus:
     """Small bounded fanout bus for daemon-local workspace change events."""
 
     def __init__(self) -> None:
-        self._subscribers: dict[str, _Subscriber] = {}
+        self._subscribers: dict[str, _WorkspaceChangeSubscriber] = {}
 
     def subscribe(
         self,
@@ -54,7 +61,7 @@ class EphemeralPipelineEventBus:
     ) -> asyncio.Queue[WorkspaceChangeEvent]:
         if max_queue <= 0:
             raise ValueError("max_queue must be positive")
-        subscriber = _Subscriber(max_queue=max_queue)
+        subscriber = _WorkspaceChangeSubscriber(max_queue=max_queue)
         self._subscribers[subscriber_id] = subscriber
         return subscriber.queue
 
@@ -66,7 +73,7 @@ class EphemeralPipelineEventBus:
             subscriber.put(event)
 
 
-class _Subscriber:
+class _WorkspaceChangeSubscriber:
     def __init__(self, *, max_queue: int) -> None:
         self.queue: asyncio.Queue[WorkspaceChangeEvent] = asyncio.Queue(
             maxsize=max_queue
@@ -95,8 +102,9 @@ class _Subscriber:
 
 
 __all__ = [
-    "PathChange",
-    "EphemeralPipelineEventBus",
+    "WorkspacePathChange",
+    "WorkspaceChangeEventBus",
     "WorkspaceChangeEvent",
     "WorkspaceChangeReason",
+    "workspace_path_change_from_overlay_change",
 ]

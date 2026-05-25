@@ -1,7 +1,7 @@
-"""Contract test: tool intent labels stay in sync with the daemon handlers table.
+"""Contract test: tool intent labels stay in sync with daemon operation routes.
 
 For every BaseTool whose ``name`` matches a verb served by
-``sandbox.daemon.handlers``, the tool's declared ``intent`` MUST equal the
+``sandbox.daemon.operation_handlers``, the tool's declared ``intent`` MUST equal the
 intent the daemon dispatches that verb with. This catches drift where
 ``@tool(intent=READ_ONLY)`` for a verb the daemon routes as
 ``WRITE_ALLOWED`` (or vice versa).
@@ -23,10 +23,10 @@ from sandbox._shared.models import Intent
 from tools._framework.core.base import BaseTool
 
 
-# Canonical source: backend/src/sandbox/daemon/handlers.py — the lines that
-# call run_tool_handler(args, verb=..., intent=...). Tests pin this table so
+# Canonical source: backend/src/sandbox/daemon/operation_handlers.py — the lines that
+# call route_workspace_tool_call(args, verb=..., intent=...). Tests pin this table so
 # any silent edit there must come paired with an update here.
-DAEMON_HANDLERS_TABLE: dict[str, Intent] = {
+DAEMON_TOOL_ROUTE_INTENTS: dict[str, Intent] = {
     "edit_file": Intent.WRITE_ALLOWED,
     "glob": Intent.READ_ONLY,
     "grep": Intent.READ_ONLY,
@@ -94,16 +94,14 @@ def test_every_decorated_tool_has_intent_attribute() -> None:
     assert not missing, f"@tool callsites missing intent=: {missing}"
 
 
-@pytest.mark.parametrize("verb,daemon_intent", sorted(DAEMON_HANDLERS_TABLE.items()))
-def test_tool_intent_matches_daemon_handlers_table(
-    verb: str, daemon_intent: Intent
-) -> None:
+@pytest.mark.parametrize("verb,daemon_intent", sorted(DAEMON_TOOL_ROUTE_INTENTS.items()))
+def test_tool_intent_matches_daemon_handlers_table(verb: str, daemon_intent: Intent) -> None:
     """Sibling @tool and daemon handler for the same verb MUST agree on intent."""
     matching = [t for t in _iter_decorated_tools() if t.name == verb]
     assert matching, f"no @tool with name={verb!r}"
     tool = matching[0]
     assert tool.intent == daemon_intent, (
         f"@tool {verb!r} declares intent={tool.intent.value} but daemon "
-        f"handlers.py dispatches verb={verb!r} with intent={daemon_intent.value}; "
+        f"operation_handlers.py dispatches verb={verb!r} with intent={daemon_intent.value}; "
         "edit both or neither"
     )

@@ -13,7 +13,7 @@ from urllib.parse import unquote, urlparse
 from uuid import uuid4
 
 from sandbox.overlay import lifecycle as overlay_lifecycle
-from sandbox._shared.shell_contract import CommandExecRequest
+from sandbox._shared.command_exec_contract import CommandExecRequest
 from sandbox.overlay.capability import mount_syscalls_supported
 from sandbox.overlay.namespace_runner import detect_private_mount_namespace
 

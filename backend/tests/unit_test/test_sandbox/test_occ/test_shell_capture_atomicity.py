@@ -16,7 +16,7 @@ from sandbox._shared.models import Intent, ToolCallRequest
 from sandbox.layer_stack.workspace_base import build_workspace_base
 from sandbox.occ.client import OccClient
 from sandbox.overlay.path_change import OverlayPathChange, content_hash
-from sandbox.daemon import occ_backend
+from sandbox.daemon import occ_runtime_services
 from sandbox.ephemeral_workspace.pipeline import EphemeralPipeline
 import sandbox.ephemeral_workspace.pipeline as pipeline_mod
 
@@ -27,14 +27,14 @@ async def test_shell_uses_occ_client_apply_changeset(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """The shell handler must call OccClient.apply_changeset (not bypass it)."""
-    occ_backend.clear_backend_cache()
+    occ_runtime_services.clear_occ_runtime_services()
     workspace = tmp_path / "ws"
     workspace.mkdir()
     (workspace / "input.txt").write_text("base\n", encoding="utf-8")
     stack = tmp_path / "stack"
     build_workspace_base(workspace_root=workspace, layer_stack_root=stack)
 
-    backend = occ_backend.build_occ_backend(stack.as_posix())
+    backend = occ_runtime_services.get_occ_runtime_services(stack.as_posix())
     occ_client = backend.occ_client
     assert isinstance(occ_client, OccClient), (
         "Shell capture must reach OCC through OccClient — direct OccService "

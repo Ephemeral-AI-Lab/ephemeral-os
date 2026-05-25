@@ -239,7 +239,7 @@ def _dispatch_runner_for_entry(entry: _PendingRegistration) -> DispatchRunner | 
 
 
 def _wrap_with_context(
-    plugin_handler: PluginOpHandler,
+    registered_handler: PluginOpHandler,
     *,
     context_factory: ContextFactory,
     plugin_name: str,
@@ -250,13 +250,13 @@ def _wrap_with_context(
         ctx = await context_factory(args, plugin_name, op_name)
         if dispatch_runner is not None:
             return await dispatch_runner(
-                plugin_handler,
+                registered_handler,
                 args,
                 ctx,
                 plugin_name,
                 op_name,
             )
-        return await plugin_handler(args, ctx)
+        return await registered_handler(args, ctx)
 
     return dispatcher_handler
 
