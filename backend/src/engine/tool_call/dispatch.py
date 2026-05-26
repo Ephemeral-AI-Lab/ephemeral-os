@@ -7,6 +7,10 @@ import logging
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
+from engine.tool_call.phase_buffer import (
+    finish_phase_buffer,
+    start_phase_buffer,
+)
 from engine.tool_call.streaming import StreamingToolExecutor
 from engine.background.dispatch import dispatch_background_tool_call
 from engine.background.task_supervisor import BackgroundTaskSupervisor
@@ -16,6 +20,12 @@ from message.stream_events import (
     ToolExecutionCancelled,
     ToolExecutionCompleted,
 )
+from sandbox._shared.clock import monotonic_now
+from sandbox.daemon.audit_schema import (
+    ToolCallSection,
+    build_tool_call_event,
+    safe_emit,
+)
 from tools import ToolResult, execute_tool_call_streaming
 
 if TYPE_CHECKING:
@@ -23,6 +33,56 @@ if TYPE_CHECKING:
 
 
 logger = logging.getLogger(__name__)
+
+
+def _emit_tool_call_started(tool_call: ToolUseBlock) -> None:
+    safe_emit(
+        build_tool_call_event(
+            "tool_call.started",
+            ToolCallSection(tool_id=tool_call.id, tool_name=tool_call.name),
+        ),
+        lane="normal",
+    )
+
+
+def _emit_tool_call_phase_and_finished(
+    tool_call: ToolUseBlock,
+    *,
+    total_ms: float,
+    exit_status: str,
+) -> None:
+    decision = finish_phase_buffer(total_ms)
+    if decision.flush:
+        for entry in decision.phases:
+            safe_emit(
+                build_tool_call_event(
+                    "tool_call.phase",
+                    ToolCallSection(
+                        tool_id=tool_call.id,
+                        tool_name=tool_call.name,
+                        phase=entry.phase,
+                        duration_ms=entry.duration_ms,
+                    ),
+                ),
+                lane="sample",
+            )
+    safe_emit(
+        build_tool_call_event(
+            "tool_call.finished",
+            ToolCallSection(
+                tool_id=tool_call.id,
+                tool_name=tool_call.name,
+                total_ms=total_ms,
+                exit_status=exit_status,
+                phase_totals_rollup=decision.rollup or None,
+            ),
+        ),
+        lane="normal",
+    )
+
+
+def _exit_status_from_result(result: ToolResult | ToolResultBlock) -> str:
+    return "error" if getattr(result, "is_error", False) else "ok"
 
 
 @dataclass(frozen=True)
@@ -262,15 +322,27 @@ async def _dispatch_single_foreground_tool(
     async def emit(event: StreamEvent) -> None:
         emitted_events.append(event)
 
-    result = await execute_tool_call_streaming(
-        context,
-        tool_call.name,
-        tool_call.id,
-        tool_call.input,
-        emit=emit,
-        conversation_messages=messages,
-        consume_budget=tool_call.id not in streamed_tool_use_ids,
-    )
+    start_phase_buffer(tool_id=tool_call.id, tool_name=tool_call.name)
+    _emit_tool_call_started(tool_call)
+    started_at = monotonic_now()
+    exit_status = "error"
+    try:
+        result = await execute_tool_call_streaming(
+            context,
+            tool_call.name,
+            tool_call.id,
+            tool_call.input,
+            emit=emit,
+            conversation_messages=messages,
+            consume_budget=tool_call.id not in streamed_tool_use_ids,
+        )
+        exit_status = _exit_status_from_result(result)
+    finally:
+        total_ms = (monotonic_now() - started_at) * 1000.0
+        _emit_tool_call_phase_and_finished(
+            tool_call, total_ms=total_ms, exit_status=exit_status
+        )
+
     tool_results.append(result)
     events: list[StreamEvent] = list(emitted_events)
     events.append(_completion_event_from_tool_result_block(tool_call, result))
@@ -292,26 +364,37 @@ async def _dispatch_many_foreground_tools(
         async def emit(event: StreamEvent) -> None:
             await queue.put(event)
 
+        start_phase_buffer(tool_id=tool_call.id, tool_name=tool_call.name)
+        _emit_tool_call_started(tool_call)
+        started_at = monotonic_now()
+        exit_status = "error"
         try:
-            result = await execute_tool_call_streaming(
-                context,
-                tool_call.name,
-                tool_call.id,
-                tool_call.input,
-                emit=emit,
-                conversation_messages=messages,
-                consume_budget=tool_call.id not in streamed_tool_use_ids,
-            )
-        except Exception as exc:
-            logger.exception(
-                "Foreground tool dispatch failed: tool_id=%s tool_name=%s",
-                tool_call.id,
-                tool_call.name,
-            )
-            result = ToolResultBlock(
-                tool_use_id=tool_call.id,
-                content=f"Tool execution failed: {exc}",
-                is_error=True,
+            try:
+                result = await execute_tool_call_streaming(
+                    context,
+                    tool_call.name,
+                    tool_call.id,
+                    tool_call.input,
+                    emit=emit,
+                    conversation_messages=messages,
+                    consume_budget=tool_call.id not in streamed_tool_use_ids,
+                )
+                exit_status = _exit_status_from_result(result)
+            except Exception as exc:
+                logger.exception(
+                    "Foreground tool dispatch failed: tool_id=%s tool_name=%s",
+                    tool_call.id,
+                    tool_call.name,
+                )
+                result = ToolResultBlock(
+                    tool_use_id=tool_call.id,
+                    content=f"Tool execution failed: {exc}",
+                    is_error=True,
+                )
+        finally:
+            total_ms = (monotonic_now() - started_at) * 1000.0
+            _emit_tool_call_phase_and_finished(
+                tool_call, total_ms=total_ms, exit_status=exit_status
             )
         await queue.put((tool_call, result))
 

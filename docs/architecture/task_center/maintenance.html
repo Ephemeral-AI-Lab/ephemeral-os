@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TaskCenter Maintenance - EphemeralOS Architecture</title>
+<link rel="stylesheet" href="../assets/styles.css">
+</head>
+<body data-module="task-center" data-page="maintenance" data-root="../">
+<nav class="toc">
+  <h2>EphemeralOS Architecture</h2>
+  <a class="home-link" href="../index.html">All Modules</a>
+  <div class="search-box">
+    <input type="search" placeholder="Search architecture" data-doc-search aria-label="Search architecture">
+    <div class="search-results" data-doc-search-results></div>
+  </div>
+  <h2>Modules</h2>
+  <ol class="module-list">
+    <li><a href="../sandbox/index.html" data-doc-module="sandbox">Sandbox Workspace</a></li>
+    <li><a href="../tools/index.html" data-doc-module="tools">Tools</a></li>
+    <li><a href="../agent_loops/index.html" data-doc-module="agent-loops">Agent Loops</a></li>
+    <li><a href="index.html" data-doc-module="task-center" class="active">TaskCenter</a></li>
+  </ol>
+  <h2>TaskCenter Pages</h2>
+  <ol>
+    <li><a href="index.html" data-doc-module="task-center" data-doc-section="index" data-doc-page="index.html">Overview</a></li>
+    <li><a href="lifecycle.html" data-doc-module="task-center" data-doc-section="lifecycle" data-doc-page="lifecycle.html">Lifecycle</a></li>
+    <li><a href="attempt-harness.html" data-doc-module="task-center" data-doc-section="attempt-harness" data-doc-page="attempt-harness.html">Attempt Harness</a></li>
+    <li><a href="context-engine.html" data-doc-module="task-center" data-doc-section="context-engine" data-doc-page="context-engine.html">Context Engine</a></li>
+    <li><a href="agent-roles.html" data-doc-module="task-center" data-doc-section="agent-roles" data-doc-page="agent-roles.html">Agent Roles</a></li>
+    <li><a href="terminal-tools.html" data-doc-module="task-center" data-doc-section="terminal-tools" data-doc-page="terminal-tools.html">Terminal Tools</a></li>
+    <li><a href="bridges.html" data-doc-module="task-center" data-doc-section="bridges" data-doc-page="bridges.html">Engine Tools Sandbox</a></li>
+    <li><a href="maintenance.html" data-doc-module="task-center" data-doc-section="maintenance" data-doc-page="maintenance.html" class="active">Maintenance</a></li>
+  </ol>
+</nav>
+<main>
+<div class="doc-actions">
+  <span><a href="index.html">TaskCenter</a> / Maintenance</span>
+  <span class="nav-pair"><a href="bridges.html">Engine Tools Sandbox</a><a href="../index.html">Architecture Root</a></span>
+</div>
+<h1>TaskCenter Maintenance</h1>
+<nav class="page-toc" aria-labelledby="page-toc-heading">
+  <h3 id="page-toc-heading">Contents</h3>
+  <ol>
+    <li><a href="#delegation-log"><span>1</span> Delegation Log</a></li>
+    <li><a href="#validation-loop"><span>2</span> Validation Loop</a></li>
+    <li><a href="#refresh-triggers"><span>3</span> Refresh Triggers</a></li>
+    <li><a href="#stale-claims"><span>4</span> Stale Claims</a></li>
+    <li><a href="#change-log"><span>5</span> Change Log</a></li>
+  </ol>
+</nav>
+
+<p class="lead">This support page records how the TaskCenter wiki was built and how future agents should refresh it. It is documentation metadata only; runtime code is not owned here.</p>
+
+<section id="delegation-log" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths=".agents/skills/codebase-wiki-builder/SKILL.md .agents/skills/codebase-wiki-builder/agents/graph_explorer.md .agents/skills/codebase-wiki-builder/agents/wiki_builder.md backend/src/task_center backend/src/agents/profile backend/src/tools/submission backend/src/tools/ask_helper backend/src/engine backend/src/sandbox docs/task_center_harness_and_context_engine.html">
+<h2>Delegation Log <a class="anchor" href="#delegation-log">#</a></h2>
+<div class="edge-list">
+  <div><b>coordinator/reducer</b><span>Owned scope, page taxonomy, shared assets, source-truth merge, stale-claim decisions, overview, maintenance, and final validation.</span></div>
+  <div><b>graph explorer: lifecycle</b><span>Mapped GoalStarter, GoalLifecycle, IterationAttemptCoordinator, AttemptOrchestrator, generator DAG, retry, deferral, delegated child goals, closure routing, tests, and stale older-doc claims.</span></div>
+  <div><b>graph explorer: context</b><span>Mapped ContextEngine, recipes, packets, renderer, task guidance, skill rows, profile frontmatter, and launch message rows.</span></div>
+  <div><b>graph explorer: terminals</b><span>Mapped submission tools, terminal descriptor registry, advisor/resolver helper pattern, terminal exclusivity, output validation, and engine stop behavior.</span></div>
+  <div><b>graph explorer: bridges</b><span>Mapped TaskCenter entry bootstrap, sandbox binding, engine run launch, tool metadata, message artifacts, task_center_runner audit, and cross-module boundaries.</span></div>
+  <div><b>wiki builder lanes</b><span>Parallel write lanes owned non-overlapping TaskCenter pages. Shared navigation, search, root index, and maintenance remained serial coordinator-owned.</span></div>
+</div>
+</section>
+
+<section id="validation-loop" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths=".agents/skills/codebase-wiki-builder/scripts/check_html_wiki.py docs/architecture/task_center docs/architecture/assets docs/architecture/index.html">
+<h2>Validation Loop <a class="anchor" href="#validation-loop">#</a></h2>
+<div class="sequence" aria-label="TaskCenter wiki validation loop">
+  <ol>
+    <li><span>Run the static HTML validator over every changed TaskCenter page.</span></li>
+    <li><span>Run <code>git diff --check</code> over changed TaskCenter HTML pages and shared support assets.</span></li>
+    <li><span>Search changed TaskCenter pages for Obsidian-only syntax, inline styles, page-local style blocks, and missing baseline attributes.</span></li>
+    <li><span>Verify each HTML page has exactly one <code>page-toc</code> and one tail <code>page-baseline</code> component.</span></li>
+    <li><span>Sample key symbols with <code>rg</code> when a claim mentions a mutable source path or terminal tool name.</span></li>
+  </ol>
+</div>
+<div class="summary">
+  <ul>
+    <li><code>python3 .agents/skills/codebase-wiki-builder/scripts/check_html_wiki.py docs/architecture/task_center/*.html</code></li>
+    <li><code>git diff --check -- docs/architecture/task_center docs/architecture/assets/search-index.js docs/architecture/assets/nav.js docs/architecture/index.html</code></li>
+    <li><code>rg -n "\\[\\[|\\]\\]|style=|&lt;style" docs/architecture/task_center</code></li>
+    <li><code>rg -n "GoalLifecycle|IterationAttemptCoordinator|AttemptOrchestrator|TerminalToolRouter|ask_advisor" backend/src/task_center backend/src/tools backend/tests/unit_test</code></li>
+  </ul>
+</div>
+</section>
+
+<section id="refresh-triggers" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="backend/src/task_center backend/src/agents/profile backend/src/tools/submission backend/src/tools/ask_helper backend/src/tools/_terminals backend/src/engine backend/src/sandbox backend/src/task_center_runner docs/architecture/tools docs/architecture/agent_loops docs/architecture/sandbox">
+<h2>Refresh Triggers <a class="anchor" href="#refresh-triggers">#</a></h2>
+<div class="evidence-grid">
+  <div class="evidence-card">
+    <h3>Lifecycle</h3>
+    <p>Refresh when Goal, Iteration, Attempt, retry, deferral, delegated-goal routing, close-report delivery, or store protocol methods change.</p>
+  </div>
+  <div class="evidence-card">
+    <h3>Attempt Harness</h3>
+    <p>Refresh when planner submission schemas, generator DAG semantics, evaluator launch, launch failure, exhaustion, or audit event behavior changes.</p>
+  </div>
+  <div class="evidence-card">
+    <h3>Context Engine</h3>
+    <p>Refresh when recipes, packet block kinds, renderer compression, tag dictionary, what-in-context output, task guidance, skills, or launch message row rules change.</p>
+  </div>
+  <div class="evidence-card">
+    <h3>Agent Roles</h3>
+    <p>Refresh when profile frontmatter, allowed tools, terminal sets, notification triggers, main role contract, helper profiles, or validation changes.</p>
+  </div>
+  <div class="evidence-card">
+    <h3>Terminal Tools</h3>
+    <p>Refresh when submission tool names, schemas, terminal descriptors, advisor review focus, resolver behavior, output validation, or terminal exclusivity changes.</p>
+  </div>
+  <div class="evidence-card">
+    <h3>Cross-Module Bridges</h3>
+    <p>Refresh when TaskCenter entry bootstrap, sandbox binding, <code>run_ephemeral_agent</code>, ExecutionMetadata, message artifacts, or sandbox API routing changes.</p>
+  </div>
+</div>
+</section>
+
+<section id="stale-claims" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="docs/task_center_harness_and_context_engine.html docs/architecture/agent_loops/prompt-context.html docs/architecture/tools/submission.html backend/src/task_center backend/src/tools/submission backend/src/tools/_terminals/registry.py">
+<h2>Stale Claims <a class="anchor" href="#stale-claims">#</a></h2>
+<div class="summary">
+  <ul>
+    <li><code>docs/task_center_harness_and_context_engine.html</code> remains historical reference material, not the canonical current wiki. Use this module for refreshed source-backed TaskCenter claims.</li>
+    <li>Current lifecycle naming is <code>GoalLifecycle</code> plus <code>IterationAttemptCoordinator</code>, not <code>GoalHandler</code>, <code>IterationManager</code>, <code>IterationFactory</code>, or <code>IterationClosureRouter</code>.</li>
+    <li>Current child-goal closure completes the parent generator task as <code>DONE</code> or <code>FAILED</code>. Do not document it as returning the parent to <code>RUNNING</code>.</li>
+    <li>Current nested-depth terminal routing can remove <code>submit_execution_handoff</code> from nested executors. Do not repeat older claims that executor handoff is available at every nesting depth.</li>
+    <li>Current helper agents use direct launch prompt assembly through <code>ask_advisor</code> and <code>ask_resolver</code>; the Context Engine is not involved in helper prompt composition.</li>
+  </ul>
+</div>
+</section>
+
+<section id="change-log" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="docs/architecture/task_center docs/architecture/assets/search-index.js docs/architecture/assets/nav.js docs/architecture/index.html">
+<h2>Change Log <a class="anchor" href="#change-log">#</a></h2>
+<div class="summary">
+  <ul>
+    <li><span><strong>2026-05-26.</strong> Created the TaskCenter architecture module under <code>docs/architecture/task_center</code>, covering Goal/Iteration/Attempt lifecycle, planner-generator-evaluator harness, context engine, agent roles, terminal tools, advisor/resolver patterns, engine/tools/sandbox bridges, and maintenance rules.</span></li>
+    <li><span><strong>2026-05-26.</strong> Recorded stale claims from the older standalone TaskCenter HTML and linked this module into the shared architecture navigation/search layer.</span></li>
+  </ul>
+</div>
+</section>
+
+<div class="page-baseline" data-page-baseline-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa">
+  <strong>Maintenance baseline</strong>
+  <span>TaskCenter maintenance metadata reviewed against <code>e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa</code>.</span>
+  <code>git diff e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa..HEAD -- &lt;section data-evidence-paths&gt;</code>
+</div>
+<div class="page-footer-nav"><span><a href="bridges.html">Engine Tools Sandbox</a></span><span><a href="../index.html">Architecture Root</a></span></div>
+</main>
+<script src="../assets/search-index.js"></script>
+<script src="../assets/nav.js"></script>
+</body>
+</html>

@@ -11,6 +11,7 @@ from sandbox.occ.changeset import (
     PreparedChangeset,
     PreparedPathGroup,
     RouteDecision,
+    compute_changeset_id,
 )
 from sandbox.occ.changeset import (
     Change,
@@ -61,6 +62,11 @@ class ChangesetPreparer:
             for path, route, path_changes, message in grouped
         )
         prepare_end = monotonic_now()
+        changeset_id = compute_changeset_id(
+            snapshot=snapshot,
+            path_groups=prepared,
+            atomic=options.atomic,
+        )
         return PreparedChangeset(
             snapshot=snapshot,
             path_groups=prepared,
@@ -69,6 +75,7 @@ class ChangesetPreparer:
                 TimingKey.PREPARE_GROUP_BY_ROUTE: groups_end - group_start,
                 TimingKey.PREPARE_GROUPS: prepare_end - groups_end,
             },
+            changeset_id=changeset_id,
         )
 
     def _group_by_route(

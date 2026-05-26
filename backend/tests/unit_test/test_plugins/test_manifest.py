@@ -256,3 +256,51 @@ def test_description_required(tmp_path: Path) -> None:
     (plugin_dir / "tools" / "run.py").write_text("x=1\n", encoding="utf-8")
     with pytest.raises(PluginManifestError, match="description"):
         parse_plugin_manifest(plugin_dir)
+
+
+# ----------------------------------------------------------------------
+# Phase 2.6 Closer D — PluginManifest.kind
+# ----------------------------------------------------------------------
+
+
+def test_plugin_manifest_parses_kind_when_present(tmp_path: Path) -> None:
+    plugin_dir = _write_plugin(
+        tmp_path,
+        "demo",
+        frontmatter=_frontmatter() + "kind: indexer\n",
+        extra_files={"tools/run.py": "x = 1\n"},
+    )
+    manifest = parse_plugin_manifest(plugin_dir)
+    assert manifest.kind == "indexer"
+
+
+def test_plugin_manifest_rejects_unknown_kind(tmp_path: Path) -> None:
+    plugin_dir = _write_plugin(
+        tmp_path,
+        "demo",
+        frontmatter=_frontmatter() + "kind: nope\n",
+        extra_files={"tools/run.py": "x = 1\n"},
+    )
+    with pytest.raises(PluginManifestError, match="not one of"):
+        parse_plugin_manifest(plugin_dir)
+
+
+def test_plugin_manifest_defaults_kind_to_none(tmp_path: Path) -> None:
+    plugin_dir = _write_plugin(
+        tmp_path,
+        "demo",
+        frontmatter=_frontmatter(),
+        extra_files={"tools/run.py": "x = 1\n"},
+    )
+    manifest = parse_plugin_manifest(plugin_dir)
+    assert manifest.kind is None
+
+
+def test_lsp_plugin_audit_carries_kind_language_server() -> None:
+    """Real LSP manifest declares ``kind: language_server`` after Closer D."""
+    from plugins.core.discovery import default_catalog_dir, discover_plugins
+
+    catalog = default_catalog_dir()
+    manifests = list(discover_plugins(catalog))
+    lsp = next(m for m in manifests if m.name == "lsp")
+    assert lsp.kind == "language_server"

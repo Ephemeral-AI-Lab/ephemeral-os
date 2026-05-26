@@ -68,6 +68,7 @@ markers = [
     "sandbox_integration: mocked-agent sandbox connection, stability, and load tests",
     "task_center_integration: mocked-agent TaskCenter workflow correctness tests",
     "real_agent: tests that run real LLM agents",
+    "slow: long-running tests (heavy-run regressions, 1 M-event mock suites)",
     "timeout(seconds): per-test timeout budget when pytest-timeout is available",
 ]
 

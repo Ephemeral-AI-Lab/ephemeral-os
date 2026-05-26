@@ -20,6 +20,7 @@ from typing import Any
 import yaml
 
 __all__ = [
+    "ALLOWED_PLUGIN_KINDS",
     "PluginManifest",
     "PluginManifestError",
     "ToolEntry",
@@ -35,6 +36,21 @@ _NAME_PATTERN = re.compile(r"^[a-z][a-z0-9_]*$")
 _FRONTMATTER_RE = re.compile(
     r"\A---\s*\n(?P<frontmatter>.*?)\n---\s*(?:\n(?P<body>.*))?\Z",
     re.DOTALL,
+)
+
+# V3 README §Requirement 2 enum — values for ``plugin_kind`` in the audit
+# payload. Closer D (Phase 2.6): manifest authors may declare ``kind`` so
+# the plugin shim can stamp the real value on ``plugin.*`` events instead of
+# defaulting to ``"custom"``.
+ALLOWED_PLUGIN_KINDS: frozenset[str] = frozenset(
+    {
+        "language_server",
+        "formatter",
+        "indexer",
+        "build_daemon",
+        "mcp_bridge",
+        "custom",
+    }
 )
 
 
@@ -57,6 +73,7 @@ class PluginManifest:
     runtime: Path | None  # absolute path or None
     source_dir: Path  # absolute path to the plugin directory
     body: str  # markdown body after the frontmatter (informational)
+    kind: str | None = None  # one of ALLOWED_PLUGIN_KINDS, or None for unset
 
 
 def parse_plugin_manifest(plugin_dir: Path) -> PluginManifest:
@@ -103,6 +120,7 @@ def parse_plugin_manifest(plugin_dir: Path) -> PluginManifest:
     runtime = _resolve_optional_path(
         data, "runtime", plugin_dir, manifest_path
     )
+    kind = _parse_kind(data, manifest_path)
 
     body_match = match.group("body")
     body = (body_match or "").strip()
@@ -115,7 +133,35 @@ def parse_plugin_manifest(plugin_dir: Path) -> PluginManifest:
         runtime=runtime,
         source_dir=plugin_dir,
         body=body,
+        kind=kind,
     )
+
+
+def _parse_kind(
+    data: dict[str, Any],
+    manifest_path: Path,
+) -> str | None:
+    """Validate the optional ``kind`` field against the V3 enum.
+
+    Closer D (Phase 2.6): authors declare one of
+    :data:`ALLOWED_PLUGIN_KINDS` so the audit shim stamps the right value
+    on ``plugin.*`` events. Unknown values are a hard error — silent typos
+    would broaden the schema invisibly.
+    """
+    raw = data.get("kind")
+    if raw is None:
+        return None
+    if not isinstance(raw, str) or not raw.strip():
+        raise PluginManifestError(
+            f"plugin.md kind must be a non-empty string when set: {manifest_path}"
+        )
+    value = raw.strip()
+    if value not in ALLOWED_PLUGIN_KINDS:
+        allowed = ", ".join(sorted(ALLOWED_PLUGIN_KINDS))
+        raise PluginManifestError(
+            f"plugin.md kind {value!r} is not one of [{allowed}]: {manifest_path}"
+        )
+    return value
 
 
 def _parse_tools(

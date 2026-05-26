@@ -6,9 +6,17 @@ from collections.abc import Awaitable, Callable
 from dataclasses import replace
 from typing import TYPE_CHECKING, Any
 
+from engine.tool_call.phase_buffer import (
+    PHASE_CAPTURE,
+    PHASE_EXEC,
+    PHASE_QUEUED,
+    PHASE_RELEASE,
+    record_phase,
+)
 from message.messages import ConversationMessage
 from message.messages import ToolResultBlock
 from message.stream_events import StreamEvent, ToolExecutionStarted
+from sandbox._shared.clock import monotonic_now
 from tools._framework.core.base import BaseTool
 from tools._framework.core.context import ToolExecutionContextService
 from tools._framework.execution.hook_pipeline import ToolHookExecutionPipeline
@@ -135,15 +143,25 @@ async def execute_tool_once(
     emit: EmitStreamEvent,
     emit_started: bool = True,
 ) -> ToolResult:
-    """Validate input, emit start, execute the tool, and validate output."""
+    """Validate input, emit start, execute the tool, and validate output.
+
+    Records phase entries (queued/exec/capture/release) into the per-call
+    phase buffer set up by the dispatcher. Phases that happen below the
+    framework (overlay mount, OCC publish) call :func:`record_phase`
+    directly when an active buffer is present — they do not need to be
+    aware of this function.
+    """
+    queued_start = monotonic_now()
     hook_pipeline = ToolHookExecutionPipeline(tool, context, emit)
     parsed = parse_tool_input(tool, raw_input)
     if parsed.error is not None:
+        record_phase(PHASE_QUEUED, (monotonic_now() - queued_start) * 1000.0)
         return parsed.error
     assert parsed.args is not None
 
     parsed_input, hook_failure = await hook_pipeline.run_pre_hooks(parsed.args)
     if hook_failure is not None:
+        record_phase(PHASE_QUEUED, (monotonic_now() - queued_start) * 1000.0)
         return hook_failure
     assert parsed_input is not None
 
@@ -154,11 +172,20 @@ async def execute_tool_once(
                 tool_input=parsed_input.model_dump(mode="json"),
             )
         )
+    record_phase(PHASE_QUEUED, (monotonic_now() - queued_start) * 1000.0)
 
+    exec_start = monotonic_now()
     result = await execute_tool_body(tool, parsed_input, context)
+    record_phase(PHASE_EXEC, (monotonic_now() - exec_start) * 1000.0)
+
+    capture_start = monotonic_now()
     validated = validate_tool_output(tool, result)
     hooked = await hook_pipeline.run_post_hooks(parsed_input, validated)
+    record_phase(PHASE_CAPTURE, (monotonic_now() - capture_start) * 1000.0)
+
+    release_start = monotonic_now()
     final = hook_pipeline.finalize_result(hooked, effective_input=parsed_input)
     if tool.is_terminal_tool and not final.is_error:
-        return replace(final, does_terminate=True)
+        final = replace(final, does_terminate=True)
+    record_phase(PHASE_RELEASE, (monotonic_now() - release_start) * 1000.0)
     return final

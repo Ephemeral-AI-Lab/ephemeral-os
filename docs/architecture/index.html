@@ -18,6 +18,8 @@
   <ol class="module-list">
     <li><a href="./sandbox/index.html" data-doc-module="sandbox">Sandbox Workspace</a></li>
     <li><a href="./tools/index.html" data-doc-module="tools">Tools</a></li>
+    <li><a href="./agent_loops/index.html" data-doc-module="agent-loops">Agent Loops</a></li>
+    <li><a href="./task_center/index.html" data-doc-module="task-center">TaskCenter</a></li>
   </ol>
 </nav>
 <main>
@@ -31,22 +33,30 @@
   </ol>
 </nav>
 <p class="lead">Merged architecture wiki for EphemeralOS modules. Use the module layer for broad ownership, the page layer for local concepts, and cross-module links for real runtime edges.</p>
-<section id="modules" data-last-reviewed-commit="2a3e6cc7c" data-evidence-paths="docs/architecture/sandbox docs/architecture/tools docs/architecture/assets">
+<section id="modules" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="docs/architecture/sandbox docs/architecture/tools docs/architecture/agent_loops docs/architecture/assets">
 <h2>Modules <a class="anchor" href="#modules">§</a></h2>
 <div class="module-card-grid">
 <a class="module-card" href="sandbox/index.html"><strong>Sandbox Workspace</strong><span>LayerStack, overlay, OCC, daemon routing, providers, plugins, and workspace execution modes.</span></a>
 <a class="module-card" href="tools/index.html"><strong>Tools</strong><span>Agent-facing tool definitions, framework lifecycle, terminals, helpers, background tasks, and TaskCenter submission surfaces.</span></a>
+<a class="module-card" href="agent_loops/index.html"><strong>Agent Loops</strong><span>Engine run lifecycle, model-provider streaming, prompt/context assembly, background operations, sandbox-provider bridges, notifications, and message artifacts.</span></a>
+<a class="module-card" href="task_center/index.html"><strong>TaskCenter</strong><span>Goal, iteration, attempt lifecycle, planner-generator-evaluator harness, context engine, role profiles, and terminal state submissions.</span></a>
 </div>
 </section>
-<section id="cross-module-map" data-last-reviewed-commit="2a3e6cc7c" data-evidence-paths="backend/src/tools backend/src/sandbox backend/src/engine backend/src/task_center">
+<section id="cross-module-map" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="backend/src/tools backend/src/sandbox backend/src/engine backend/src/task_center backend/src/message backend/src/notification backend/src/prompt">
 <h2>Cross-Module Map <a class="anchor" href="#cross-module-map">§</a></h2>
 <div class="edge-list">
   <div><b>tools to sandbox</b><span><a class="wiki-link" href="tools/sandbox.html">Sandbox tools</a> call typed sandbox APIs whose runtime semantics are explained by <a class="wiki-link" href="sandbox/overview.html">Sandbox Workspace</a>.</span></div>
   <div><b>tools to daemon</b><span><a class="wiki-link" href="tools/background.html">Background tools</a>, <a class="wiki-link" href="tools/subagent.html">subagents</a>, and helper tools interact with engine and sandbox daemon lifecycles documented in <a class="wiki-link" href="sandbox/daemon.html">Daemon and Background Tasks</a>.</span></div>
   <div><b>private scratch</b><span><a class="wiki-link" href="tools/isolated-workspace.html">Isolated workspace tools</a> are the agent-facing entry points for the private scratch lifecycle detailed in <a class="wiki-link" href="sandbox/workspaces.html#isolated-workspace">isolated_workspace</a>.</span></div>
+  <div><b>agent loop to tools</b><span><a class="wiki-link" href="agent_loops/main-loop.html">Main agent loop</a> defers, dispatches, and terminates tool calls whose framework contracts are documented in <a class="wiki-link" href="tools/framework.html">Tools Framework</a>.</span></div>
+  <div><b>agent loop to model providers</b><span><a class="wiki-link" href="agent_loops/model-provider.html">Model Provider Bridge</a> follows <code>backend/src/providers</code> active model resolution, <code>ApiMessageRequest</code>, stream event translation, auth, retry, and provider errors.</span></div>
+  <div><b>agent loop to sandbox</b><span><a class="wiki-link" href="agent_loops/provider-sandbox-bridge.html">Provider Sandbox Bridge</a> follows sandbox-backed tools through public API transport, daemon routing, provider adapters, OCC, overlay, and isolated workspace gates.</span></div>
+  <div><b>agent loop to TaskCenter</b><span><a class="wiki-link" href="agent_loops/prompt-context.html">Prompt and Context</a> shows how TaskCenter profiles, context recipes, terminal routing, task guidance, and skill rows become launch-time prompt rows.</span></div>
+  <div><b>TaskCenter to tools</b><span><a class="wiki-link" href="task_center/terminal-tools.html">TaskCenter Terminal Tools</a> explains how planner, executor, verifier, evaluator, advisor, resolver, and explorer submissions enter the tool framework and engine terminal stop path.</span></div>
+  <div><b>TaskCenter to sandbox</b><span><a class="wiki-link" href="task_center/bridges.html">TaskCenter Bridges</a> traces run bootstrap, sandbox binding, agent launch metadata, workspace tools, and live harness artifacts across engine, tools, and sandbox modules.</span></div>
 </div>
 </section>
-<section id="maintenance" data-last-reviewed-commit="2a3e6cc7c" data-evidence-paths="docs/architecture/assets/search-index.js docs/architecture/assets/nav.js .agents/skills/codebase-wiki-builder/SKILL.md">
+<section id="maintenance" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="docs/architecture/assets/search-index.js docs/architecture/assets/nav.js docs/architecture/agent_loops/maintenance.html .agents/skills/codebase-wiki-builder/SKILL.md">
 <h2>Maintenance <a class="anchor" href="#maintenance">§</a></h2>
 <div class="summary"><ul>
   <li>Shared assets live in <code>docs/architecture/assets</code>.</li>
@@ -54,10 +64,10 @@
   <li>Cross-module links are allowed when they express a real code path, ownership edge, workflow dependency, or diagnostic route.</li>
 </ul></div>
 </section>
-<div class="page-baseline" data-page-baseline-commit="2a3e6cc7c">
+<div class="page-baseline" data-page-baseline-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa">
   <strong>Maintenance baseline</strong>
-  <span>Root architecture index introduced at <code>2a3e6cc7c</code>.</span>
-  <code>git diff 2a3e6cc7c..HEAD -- docs/architecture .agents/skills/codebase-wiki-builder</code>
+  <span>Root architecture index refreshed for Agent Loops at <code>e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa</code>.</span>
+  <code>git diff e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa..HEAD -- docs/architecture .agents/skills/codebase-wiki-builder</code>
 </div>
 </main>
 <script src="assets/search-index.js"></script>

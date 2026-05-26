@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Main Agent Query Loop - EphemeralOS Architecture</title>
+<link rel="stylesheet" href="../assets/styles.css">
+</head>
+<body data-module="agent-loops" data-page="main-loop" data-root="../">
+<nav class="toc">
+  <h2>EphemeralOS Architecture</h2>
+  <a class="home-link" href="../index.html">All Modules</a>
+  <div class="search-box">
+    <input type="search" placeholder="Search architecture" data-doc-search aria-label="Search architecture">
+    <div class="search-results" data-doc-search-results></div>
+  </div>
+  <h2>Modules</h2>
+  <ol class="module-list">
+    <li><a href="../sandbox/index.html" data-doc-module="sandbox">Sandbox Workspace</a></li>
+    <li><a href="../tools/index.html" data-doc-module="tools">Tools</a></li>
+    <li><a href="index.html" data-doc-module="agent-loops" class="active">Agent Loops</a></li>
+  </ol>
+  <h2>Agent Loops Pages</h2>
+  <ol>
+    <li><a href="index.html" data-doc-module="agent-loops" data-doc-section="index" data-doc-page="index.html">Overview</a></li>
+    <li><a href="main-loop.html" data-doc-module="agent-loops" data-doc-section="main-loop" data-doc-page="main-loop.html" class="active">Main Loop</a></li>
+    <li><a href="model-provider.html" data-doc-module="agent-loops" data-doc-section="model-provider" data-doc-page="model-provider.html">Model Provider Bridge</a></li>
+    <li><a href="background-operations.html" data-doc-module="agent-loops" data-doc-section="background-operations" data-doc-page="background-operations.html">Background Operations</a></li>
+    <li><a href="prompt-context.html" data-doc-module="agent-loops" data-doc-section="prompt-context" data-doc-page="prompt-context.html">Prompt and Context</a></li>
+    <li><a href="provider-sandbox-bridge.html" data-doc-module="agent-loops" data-doc-section="provider-sandbox-bridge" data-doc-page="provider-sandbox-bridge.html">Provider Sandbox Bridge</a></li>
+    <li><a href="notifications-messages.html" data-doc-module="agent-loops" data-doc-section="notifications-messages" data-doc-page="notifications-messages.html">Notifications and Messages</a></li>
+    <li><a href="maintenance.html" data-doc-module="agent-loops" data-doc-section="maintenance" data-doc-page="maintenance.html">Maintenance</a></li>
+  </ol>
+</nav>
+<main>
+<div class="doc-actions">
+  <span><a href="index.html">Agent Loops</a> / Main Loop</span>
+  <span class="nav-pair"><a href="index.html">Overview</a><a href="model-provider.html">Model Provider Bridge</a></span>
+</div>
+<h1>Main Agent Query Loop</h1>
+<nav class="page-toc" aria-labelledby="page-toc-heading">
+  <h3 id="page-toc-heading">Contents</h3>
+  <ol>
+    <li><a href="#provider-turn-workflow"><span>1</span> Provider Turn Workflow</a></li>
+    <li><a href="#streaming-and-deferral"><span>2</span> Streaming and Deferral</a></li>
+    <li><a href="#tool-dispatch-and-terminal-stop"><span>3</span> Tool Dispatch and Terminal Stop</a></li>
+    <li><a href="#budget-and-terminal-refusal"><span>4</span> Budget and Terminal Refusal</a></li>
+    <li><a href="#run-lifecycle-boundary"><span>5</span> Run Lifecycle Boundary</a></li>
+    <li><a href="#tests-and-failure-modes"><span>6</span> Tests and Failure Modes</a></li>
+  </ol>
+</nav>
+
+<section id="provider-turn-workflow" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="backend/src/engine/query/loop.py backend/src/engine/query/context.py backend/src/engine/query/request.py backend/src/engine/query/provider_history.py backend/src/providers backend/src/message/messages.py backend/src/message/stream_events.py backend/src/notification">
+<h2>Provider Turn Workflow</h2>
+<div class="summary">
+  <p>The query loop owns one provider-visible turn at a time. It prepares tool metadata, background supervision, terminal-tool names, notification state, provider-safe history, and prompt-report rows before the model-provider stream starts.</p>
+  <p>The durable transcript remains local to the agent. Provider requests receive a sanitized copy from <code>prepare_provider_messages()</code>, which compacts stale background snapshots and drops malformed tool-use/result pairs without mutating the run transcript.</p>
+</div>
+<div class="diagram" aria-label="Provider turn workflow">
+  <div class="flow-row">
+    <div class="node"><strong>Prepare runtime</strong><small><code>ExecutionMetadata</code>, notifications, background supervisor, terminal names</small></div>
+    <div class="node"><strong>Build request</strong><small><code>ApiMessageRequest</code>, provider-safe messages, decorated background schemas</small></div>
+    <div class="node"><strong>Consume stream</strong><small><code>ApiStreamEvent</code>: thinking, text, tool-use deltas, final assistant</small></div>
+  </div>
+  <div class="flow-row">
+    <div class="node"><strong>Append assistant</strong><small>record usage and message completion</small></div>
+    <div class="node"><strong>Dispatch tools</strong><small>foreground, deferred, background, terminal validation</small></div>
+    <div class="node"><strong>Loop or stop</strong><small>tool stop, resource limit, terminal refusal, text response</small></div>
+  </div>
+</div>
+<div class="sequence" aria-label="Main query loop sequence">
+  <ol>
+    <li><span><code>_prepare_query_loop_runtime()</code> coerces or creates <code>ExecutionMetadata</code>, registers a run-scoped notification service, creates <code>BackgroundTaskSupervisor</code> when background tools are enabled, and derives <code>context.terminal_tools</code> from the registry.</span></li>
+    <li><span><code>_build_stream_executor()</code> builds a <code>ToolExecutionContextService</code> over the current transcript and installs a deferral predicate for terminal and background cases.</span></li>
+    <li><span><code>build_query_run_request()</code> calls <code>prepare_provider_messages()</code>, records the LLM request, and creates the <code>providers.types.ApiMessageRequest</code> sent to the active <code>SupportsStreamingMessages</code> client.</span></li>
+    <li><span><code>_consume_provider_stream()</code> maps provider-neutral <code>ApiStreamEvent</code> objects into engine stream events, records streamed tool-use ids, and requires a final assistant message before dispatch can continue.</span></li>
+    <li><span>The final assistant message is appended to the transcript before tool dispatch, so prehooks and background tasks receive the same conversation shape the model produced.</span></li>
+  </ol>
+</div>
+</section>
+
+<section id="streaming-and-deferral" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="backend/src/engine/query/loop.py backend/src/engine/tool_call/streaming.py backend/src/engine/tool_call/dispatch.py backend/src/engine/background/dispatch.py backend/src/tools/background backend/src/message/stream_events.py backend/tests/unit_test/test_tools/test_tool_execution.py">
+<h2>Streaming and Deferral</h2>
+<p><code>StreamingToolExecutor</code> can execute normal foreground tools as soon as tool-use deltas arrive. The executor itself does not know background or terminal policy; the query loop passes a <code>should_defer</code> predicate.</p>
+<div class="edge-list">
+  <div><b>Terminal-capable run</b><span>If <code>context.terminal_tools</code> is non-empty, every streamed tool is deferred until the final assistant message is available. This lets the final batch validator reject a terminal tool batched with siblings before any sibling side effect runs.</span></div>
+  <div><b>Background-bound call</b><span><code>defer_background_dispatch()</code> returns true for <code>background=&quot;always&quot;</code>, or for <code>background=&quot;optional&quot;</code> when the tool input carries <code>background=true</code>. The final dispatcher later launches it through the background path.</span></div>
+  <div><b>Foreground call</b><span>Non-deferred tools start mid-stream, emit lifecycle/progress events, and are gathered by <code>executor.get_remaining()</code> before final dispatch decides which final-message tool ids remain unresolved.</span></div>
+  <div><b>Failure mode</b><span>If the provider stream ends without an <code>ApiMessageCompleteEvent</code>, the executor cancels in-flight streamed tools and the loop raises a provider-facing runtime error instead of dispatching a partial assistant message.</span></div>
+</div>
+</section>
+
+<section id="tool-dispatch-and-terminal-stop" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="backend/src/engine/query/loop.py backend/src/engine/query/context.py backend/src/engine/tool_call/dispatch.py backend/src/tools/_framework/execution/tool_call.py backend/src/message/messages.py backend/src/message/stream_events.py backend/tests/unit_test/test_tools/test_tool_execution.py">
+<h2>Tool Dispatch and Terminal Stop</h2>
+<p>Terminal tools are ordinary registered tools with <code>is_terminal_tool=True</code>, but successful execution is stamped with <code>does_terminate=True</code> in <code>execute_tool_once()</code>. That marker is local engine state on <code>ToolResultBlock</code> and stream events; it is not serialized back to providers.</p>
+<div class="diagram" aria-label="Terminal dispatch path">
+  <div class="flow-row">
+    <div class="node"><strong>Full batch visible</strong><small>final assistant message has all tool uses</small></div>
+    <div class="node"><strong>Batch validator</strong><small>terminal tool must be called alone</small></div>
+    <div class="node"><strong>Tool body</strong><small>validation, hooks, start event, output validation</small></div>
+  </div>
+  <div class="flow-row">
+    <div class="node"><strong>Terminate marker</strong><small>successful terminal result sets <code>does_terminate</code></small></div>
+    <div class="node"><strong>Dispatch outcome</strong><small>first terminating result becomes <code>terminal_result</code></small></div>
+    <div class="node"><strong>Loop stop</strong><small><code>QueryExitReason.TOOL_STOP</code></small></div>
+  </div>
+</div>
+<div class="sequence" aria-label="Terminal dispatch sequence">
+  <ol>
+    <li><span><code>dispatch_assistant_tools()</code> gathers streamed foreground results, then validates the complete final-message tool batch.</span></li>
+    <li><span>If any terminal tool is batched with any sibling tool, <code>_validate_tool_batch()</code> returns one error <code>ToolResultBlock</code> per tool-use id, cancels streamed work, and executes none of the batch.</span></li>
+    <li><span>If the batch is valid, pending calls are split into background launches and foreground execution. A successful terminal foreground call is stamped at the tool framework boundary.</span></li>
+    <li><span><code>_first_terminal_tool_result()</code> projects the first <code>does_terminate</code> block into a <code>ToolResult</code>. The query loop stores it on <code>context.terminal_result</code>, sets <code>TOOL_STOP</code>, and exits without appending another tool-result user message.</span></li>
+  </ol>
+</div>
+</section>
+
+<section id="budget-and-terminal-refusal" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="backend/src/engine/query/context.py backend/src/engine/query/loop.py backend/src/engine/agent/factory.py backend/src/notification backend/src/tools/_framework/execution/tool_call.py backend/tests/unit_test/test_tools/test_tool_execution.py backend/tests/unit_test/test_engine/test_tool_call_limit.py backend/tests/unit_test/test_engine/test_soft_limit_behavior.py backend/tests/unit_test/test_engine/test_loop_resource_limit_transcript.py backend/tests/unit_test/test_notification/test_overshoot_rules.py">
+<h2>Budget and Terminal Refusal</h2>
+<p><code>tool_call_limit</code> is a soft threshold. Tool execution only increments <code>tool_calls_used</code>; it does not reject calls and it no longer reserves the last call for a terminal tool. Recovery pressure is delivered through notification rules and the query loop's shared overshoot ceiling.</p>
+<div class="edge-list">
+  <div><b>Soft warning</b><span><code>make_budget_warning()</code> fires at configured fractions of the limit. <code>make_budget_overflow_reminder()</code> fires after positive tool overshoot and repeats on configured overshoot boundaries.</span></div>
+  <div><b>Shared overshoot</b><span><code>QueryContext.overshoot_units</code> equals tool calls beyond the soft limit plus text-only turns that still omit a terminal call. This prevents an agent from avoiding the cap by alternating between extra tools and plain text.</span></div>
+  <div><b>Resource limit</b><span>After tool dispatch, if <code>overshoot_units &gt; max_tolerance_after_max_tool_call</code>, the loop sets <code>RESOURCE_LIMIT</code>, cancels pending background tasks, appends the tool results that pair the assistant tool-use blocks, and emits an error completion event.</span></div>
+  <div><b>Terminal refused</b><span>When a terminal-capable run returns text without any tool calls, the loop injects missing-terminal reminders while tolerance remains. If text-only overshoot exceeds tolerance, it exits with <code>TERMINAL_REFUSED</code>.</span></div>
+  <div><b>Terminal wins</b><span>The loop checks <code>dispatch.terminal_result</code> before the hard overshoot branch. A successful terminal call ends the run even when the agent already exceeded the soft budget.</span></div>
+</div>
+</section>
+
+<section id="run-lifecycle-boundary" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="backend/src/engine/agent/lifecycle.py backend/src/engine/agent/factory.py backend/src/engine/query/loop.py backend/src/engine/query/context.py backend/src/tools/background backend/src/message/messages.py backend/tests/unit_test/test_task_center/test_agent_launch/test_attempt_launcher_retry.py">
+<h2>Run Lifecycle Boundary</h2>
+<p><code>run_ephemeral_agent()</code> is the single lifecycle entry point for top-level agent runs and subagent launches. It spawns the agent, drives <code>agent.run(..., auto_close=False)</code>, forwards stream events, persists the agent run, closes the provider client, and returns an <code>EphemeralRunResult</code>.</p>
+<div class="summary">
+  <p>There is no retry-with-fresh-budget mechanism at this layer. If the query loop exits without a terminal result because of <code>RESOURCE_LIMIT</code>, <code>TERMINAL_REFUSED</code>, text response, or crash, <code>run_ephemeral_agent()</code> returns no terminal result; only unhandled exceptions set <code>status=&quot;failed&quot;</code> directly through <code>run_error</code>.</p>
+  <p>Soft recovery remains in-band. The factory attaches default budget-overflow and missing-terminal notification rules when an agent definition has a tool-call limit and at least one terminal tool. Those reminders are user-message blocks in the same transcript, not a hidden outer retry.</p>
+</div>
+<div class="edge-list">
+  <div><b>Factory owns setup</b><span><code>spawn_agent()</code> builds the tool registry, registers background management tools only when needed and not for subagents, appends terminal guidance, and constructs the <code>QueryContext</code>.</span></div>
+  <div><b>Query loop owns stop reason</b><span><code>QueryExitReason</code> distinguishes <code>TEXT_RESPONSE</code>, <code>TOOL_STOP</code>, <code>RESOURCE_LIMIT</code>, and <code>TERMINAL_REFUSED</code>.</span></div>
+  <div><b>Lifecycle owns persistence</b><span>The run tracker receives the final transcript, terminal tool payload if present, token count, and crash error. It does not reinterpret background results or retry budget failure.</span></div>
+</div>
+</section>
+
+<section id="tests-and-failure-modes" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="backend/src/engine/query/loop.py backend/src/engine/query/context.py backend/src/engine/tool_call/streaming.py backend/src/engine/tool_call/dispatch.py backend/src/engine/agent/lifecycle.py backend/tests/unit_test/test_tools/test_tool_execution.py backend/tests/unit_test/test_engine/test_tool_call_limit.py backend/tests/unit_test/test_engine/test_soft_limit_behavior.py backend/tests/unit_test/test_engine/test_loop_resource_limit_transcript.py backend/tests/unit_test/test_notification/test_overshoot_rules.py backend/tests/unit_test/test_task_center/test_agent_launch/test_attempt_launcher_retry.py">
+<h2>Tests and Failure Modes</h2>
+<div class="evidence-grid">
+  <div><strong>Streaming and terminal dispatch</strong><p><code>backend/tests/unit_test/test_tools/test_tool_execution.py</code> covers non-terminal continuation, terminal result capture without a follow-up tool-result prompt, terminal batch rejection, terminal marker propagation, and background dispatch hooks.</p></div>
+  <div><strong>Soft budget model</strong><p><code>test_tool_call_limit.py</code>, <code>test_soft_limit_behavior.py</code>, <code>test_loop_resource_limit_transcript.py</code>, and notification rule tests cover counter-only tool dispatch, tolerance boundary behavior, resource-limit transcript pairing, overflow reminders, and missing-terminal reminders.</p></div>
+  <div><strong>No outer retry</strong><p><code>test_attempt_launcher_retry.py</code> includes static coverage that the TaskCenter launcher no longer passes the deleted <code>max_terminal_retries</code> argument to <code>run_ephemeral_agent()</code>.</p></div>
+  <div><strong>Failure modes</strong><p>Refresh this page when provider message sanitation, terminal-tool exclusivity, background deferral, budget tolerance arithmetic, notification injection, or the lifecycle return contract changes.</p></div>
+</div>
+</section>
+
+<div class="page-baseline" data-page-baseline-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa">
+  <strong>Maintenance baseline</strong>
+  <span>Technical sections reviewed against <code>e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa</code>.</span>
+  <code>git diff e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa..HEAD -- &lt;section data-evidence-paths&gt;</code>
+</div>
+<div class="page-footer-nav"><span><a href="index.html">Overview</a></span><span><a href="model-provider.html">Model Provider Bridge</a></span></div>
+</main>
+<script src="../assets/search-index.js"></script>
+<script src="../assets/nav.js"></script>
+</body>
+</html>

@@ -117,16 +117,6 @@ _TERMINAL_EVENT_TYPE: dict[str, str] = {
 }
 
 
-def _emit_background_tool_terminal(
-    tracked: BackgroundTaskRecord, status: "BackgroundTaskStatus"
-) -> None:
-    event_type = _TERMINAL_EVENT_TYPE.get(status.value)
-    if event_type is None:
-        return
-    duration_ms = max(0.0, (time.monotonic() - tracked.started_at) * 1000.0)
-    _emit_background_tool(event_type, tracked, duration_ms=duration_ms)
-
-
 def _emit_background_tool(
     event_type: str,
     tracked: BackgroundTaskRecord,
@@ -490,7 +480,10 @@ class BackgroundTaskSupervisor:
             tracked.status = new_status
             if new_result is not None:
                 tracked.result = new_result
-        _emit_background_tool_terminal(tracked, new_status)
+        event_type = _TERMINAL_EVENT_TYPE.get(new_status.value)
+        if event_type is not None:
+            duration_ms = max(0.0, (time.monotonic() - tracked.started_at) * 1000.0)
+            _emit_background_tool(event_type, tracked, duration_ms=duration_ms)
         return True
 
     async def _cancel_sandbox_invocation_if_bound(

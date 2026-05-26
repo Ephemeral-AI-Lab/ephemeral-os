@@ -101,6 +101,7 @@ class IsolatedPipeline(
         self._init_complete = asyncio.Event()
         self._init_complete.set()
         self._ttl_task: asyncio.Task[None] | None = None
+        self._sampler_task: asyncio.Task[None] | None = None
 
     @property
     def scratch_root(self) -> Path:
@@ -233,6 +234,16 @@ class IsolatedPipeline(
             self._init_complete.set()
         if self._ttl_task is None and self._config.ttl_s > 0:
             self._ttl_task = asyncio.create_task(self._ttl_loop())
+        # Closer C (Phase 2.6): dedicated sampler asyncio task — NOT a new
+        # thread — for the ``isolated_workspace.sampled`` cadence. Gated on
+        # ``enabled`` so disabling the feature creates no task at all (tests
+        # rely on this for ``asyncio.all_tasks()`` assertions).
+        if (
+            self._sampler_task is None
+            and self._config.enabled
+            and self._config.sample_interval_s > 0
+        ):
+            self._sampler_task = asyncio.create_task(self._sampler_loop())
 
     async def _ttl_loop(self) -> None:
         """Background task started by ``initialize`` that runs periodic sweeps.
@@ -241,19 +252,40 @@ class IsolatedPipeline(
         (Tier 5's ``test_ttl_evict_and_audit`` sets ``TTL_S=1``) still see a
         sweep inside the test budget while the default 1800 s TTL stays at a
         modest 30 s heartbeat.
+
+        Sample-lane emission has moved to :meth:`_sampler_loop` (Phase 2.6
+        Closer C); this loop owns TTL eviction only.
         """
         interval = max(0.5, min(self._config.ttl_s / 2.0, 30.0))
         while True:
             try:
                 await asyncio.sleep(interval)
-                # Piggyback sample emission on the existing tick — no new thread.
-                for handle in list(self._handles.values()):
-                    self._emit_isolated_workspace_sample(handle)
                 await self.ttl_sweep()
             except asyncio.CancelledError:
                 return
             except Exception:  # pragma: no cover - background task
                 logger.exception("ttl_loop tick failed")
+
+    async def _sampler_loop(self) -> None:
+        """Periodic ``isolated_workspace.sampled`` emitter task.
+
+        Cadence = ``EOS_ISOLATED_WORKSPACE_SAMPLE_INTERVAL_S`` (default 0.5 s).
+        The loop guards on ``_init_complete`` so we never sample a handle
+        mid-teardown (V3 plan §Risk notes for Closer C). The task is started
+        in :meth:`initialize` and cancelled in :meth:`shutdown`.
+        """
+        interval = max(0.01, self._config.sample_interval_s)
+        while True:
+            try:
+                await asyncio.sleep(interval)
+                if not self._init_complete.is_set():
+                    continue
+                for handle in list(self._handles.values()):
+                    self._emit_isolated_workspace_sample(handle)
+            except asyncio.CancelledError:
+                return
+            except Exception:  # pragma: no cover - background task
+                logger.exception("isolated_workspace sampler tick failed")
 
     async def ttl_sweep(self) -> int:
         now = self._clock()
@@ -380,6 +412,10 @@ class IsolatedPipeline(
     async def shutdown(self) -> None:
         """Tear down every active handle on daemon stop."""
         await self._exit_open_agents(grace_s=1.0)
+        if self._sampler_task is not None:
+            self._sampler_task.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await self._sampler_task
         if self._ttl_task is not None:
             self._ttl_task.cancel()
             with contextlib.suppress(asyncio.CancelledError):

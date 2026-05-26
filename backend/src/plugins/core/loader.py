@@ -108,14 +108,13 @@ def _install_plugin_audit_shim(
 ) -> None:
     """Wrap ``tool.execute`` with generic ``plugin.*`` daemon-ring emits.
 
-    Generic by construction (V3 Principle 2): the emitted event family carries
-    ``plugin_kind`` as a value, never a key — see V3 README §Subsystem section
-    keys. Lookup of ``plugin_kind`` is best-effort; the loader manifest does
-    not yet expose ``kind``, so we default to ``"custom"`` until a real
-    plugin-session model lands (follow-up FU#2).
+    Generic by construction (V3 Principle 2): the emitted event family
+    carries ``plugin_kind`` as a value, never a key — see V3 README
+    §Subsystem section keys. Manifests declare ``kind`` via the frontmatter
+    (Phase 2.6 Closer D); when absent we fall back to ``"custom"``.
     """
     plugin_id = manifest.name
-    plugin_kind = getattr(manifest, "kind", None) or "custom"
+    plugin_kind = manifest.kind or "custom"
     tool_name = entry.name
     original_execute = tool.execute
 

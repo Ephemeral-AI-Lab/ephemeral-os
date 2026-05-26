@@ -57,7 +57,7 @@ class _FakeTool(BaseTool):
         return ToolResult(output=str(arguments.value))
 
 
-def _fake_manifest(name: str) -> PluginManifest:
+def _fake_manifest(name: str, *, kind: str | None = None) -> PluginManifest:
     return PluginManifest(
         name=name,
         description="fake",
@@ -66,6 +66,7 @@ def _fake_manifest(name: str) -> PluginManifest:
         runtime=None,
         source_dir=Path("/tmp"),
         body="",
+        kind=kind,
     )
 
 
@@ -133,3 +134,18 @@ def test_plugin_error_carries_error_kind() -> None:
     assert section["error_kind"] == "ValueError"
     assert section["plugin_kind"] == "custom"
     assert section["plugin_id"] == "indexer_demo"
+
+
+def test_plugin_shim_stamps_manifest_kind_when_present() -> None:
+    """Closer D: when ``manifest.kind`` is set, the shim uses it instead of ``"custom"``."""
+    tool = _FakeTool()
+    manifest = _fake_manifest("lsp", kind="language_server")
+    entry = ToolEntry(name="indexer.echo", module=Path("/tmp/x.py"))
+    _install_plugin_audit_shim(tool, manifest=manifest, entry=entry)
+    asyncio.run(tool.execute(_Args(value=1), None))  # type: ignore[arg-type]
+
+    events = _drain_plugin_events()
+    invoked = next(e for e in events if e["type"] == "plugin.tool_invoked")
+    completed = next(e for e in events if e["type"] == "plugin.tool_completed")
+    assert invoked["payload"]["plugin"]["plugin_kind"] == "language_server"
+    assert completed["payload"]["plugin"]["plugin_kind"] == "language_server"

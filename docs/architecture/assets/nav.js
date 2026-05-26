@@ -4,12 +4,31 @@
   const currentModule = body.dataset.module || '';
   const currentPage = body.dataset.page || (window.location.pathname.split('/').pop() || 'index');
   const currentFile = currentPage.endsWith('.html') ? currentPage : currentPage + '.html';
+  const moduleLinks = [
+    { module: 'sandbox', href: 'sandbox/index.html', title: 'Sandbox Workspace' },
+    { module: 'tools', href: 'tools/index.html', title: 'Tools' },
+    { module: 'agent-loops', href: 'agent_loops/index.html', title: 'Agent Loops' },
+    { module: 'task-center', href: 'task_center/index.html', title: 'TaskCenter' }
+  ];
 
   function withRoot(path) {
     if (!path || path.startsWith('#') || /^(https?:|mailto:|tel:)/.test(path)) return path;
     if (path.startsWith('../') || path.startsWith('./')) return path;
     return root + path;
   }
+
+  document.querySelectorAll('.module-list').forEach((list) => {
+    for (const item of moduleLinks) {
+      if (list.querySelector('[data-doc-module="' + item.module + '"]')) continue;
+      const li = document.createElement('li');
+      const a = document.createElement('a');
+      a.href = withRoot(item.href);
+      a.dataset.docModule = item.module;
+      a.textContent = item.title;
+      li.appendChild(a);
+      list.appendChild(li);
+    }
+  });
 
   document.querySelectorAll('[data-doc-module]').forEach((link) => {
     if (!link.hasAttribute('data-doc-section') && link.dataset.docModule === currentModule) {

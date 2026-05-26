@@ -280,6 +280,7 @@ class OccService:
                 "occ.changeset_prepared",
                 OccSection(
                     operation_step=70,
+                    changeset_id=prepared.changeset_id or None,
                     changed_path_count=sum(
                         len(group.changes) for group in prepared.path_groups
                     ),
@@ -312,11 +313,7 @@ def _emit_occ_commit_events(
     already populated on ``result``.
     """
     operation_id = getattr(prepared, "request_id", None) or None
-    changeset_id = (
-        getattr(prepared, "changeset_id", None)
-        or getattr(prepared, "id", None)
-        or None
-    )
+    changeset_id = prepared.changeset_id or None
     base_version = (
         prepared.snapshot.version if prepared.snapshot is not None else None
     )

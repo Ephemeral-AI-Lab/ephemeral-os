@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Model Provider Bridge - EphemeralOS Agent Loops</title>
+<link rel="stylesheet" href="../assets/styles.css">
+</head>
+<body data-module="agent-loops" data-page="model-provider" data-root="../">
+<nav class="toc">
+  <h2>EphemeralOS Architecture</h2>
+  <a class="home-link" href="../index.html">All Modules</a>
+  <div class="search-box">
+    <input type="search" placeholder="Search architecture" data-doc-search aria-label="Search architecture">
+    <div class="search-results" data-doc-search-results></div>
+  </div>
+  <h2>Modules</h2>
+  <ol class="module-list">
+    <li><a href="../sandbox/index.html" data-doc-module="sandbox">Sandbox Workspace</a></li>
+    <li><a href="../tools/index.html" data-doc-module="tools">Tools</a></li>
+    <li><a href="index.html" data-doc-module="agent-loops" class="active">Agent Loops</a></li>
+  </ol>
+  <h2>Agent Loops Pages</h2>
+  <ol>
+    <li><a href="index.html" data-doc-module="agent-loops" data-doc-section="index" data-doc-page="index.html">Overview</a></li>
+    <li><a href="main-loop.html" data-doc-module="agent-loops" data-doc-section="main-loop" data-doc-page="main-loop.html">Main Loop</a></li>
+    <li><a href="model-provider.html" data-doc-module="agent-loops" data-doc-section="model-provider" data-doc-page="model-provider.html" class="active">Model Provider Bridge</a></li>
+    <li><a href="background-operations.html" data-doc-module="agent-loops" data-doc-section="background-operations" data-doc-page="background-operations.html">Background Operations</a></li>
+    <li><a href="prompt-context.html" data-doc-module="agent-loops" data-doc-section="prompt-context" data-doc-page="prompt-context.html">Prompt and Context</a></li>
+    <li><a href="provider-sandbox-bridge.html" data-doc-module="agent-loops" data-doc-section="provider-sandbox-bridge" data-doc-page="provider-sandbox-bridge.html">Provider Sandbox Bridge</a></li>
+    <li><a href="notifications-messages.html" data-doc-module="agent-loops" data-doc-section="notifications-messages" data-doc-page="notifications-messages.html">Notifications and Messages</a></li>
+    <li><a href="maintenance.html" data-doc-module="agent-loops" data-doc-section="maintenance" data-doc-page="maintenance.html">Maintenance</a></li>
+  </ol>
+</nav>
+<main>
+<div class="doc-actions">
+  <span><a href="index.html">Agent Loops</a> / Model Provider Bridge</span>
+  <span class="nav-pair"><a href="main-loop.html">Main Loop</a><a href="background-operations.html">Background Operations</a></span>
+</div>
+<h1>Model Provider Bridge</h1>
+<nav class="page-toc" aria-labelledby="page-toc-heading">
+  <h3 id="page-toc-heading">Contents</h3>
+  <ol>
+    <li><a href="#package-boundary"><span>1</span> Package Boundary</a></li>
+    <li><a href="#active-model-resolution"><span>2</span> Active Model Resolution</a></li>
+    <li><a href="#request-stream-contract"><span>3</span> Request And Stream Contract</a></li>
+    <li><a href="#anthropic-native"><span>4</span> Anthropic Native Client</a></li>
+    <li><a href="#coding-plan-clients"><span>5</span> Coding Plan Clients</a></li>
+    <li><a href="#errors-retry-auth"><span>6</span> Errors Retry And Auth</a></li>
+    <li><a href="#tests-and-failures"><span>7</span> Tests And Failures</a></li>
+  </ol>
+</nav>
+
+<p class="lead">This page covers the model-provider package used by the agent query loop. In the current checkout the source package is <code>backend/src/providers</code>, not a singular <code>backend/src/provider</code>. It is separate from <code>backend/src/sandbox/provider</code>, which owns Docker/Daytona sandbox lifecycle.</p>
+
+<section id="package-boundary" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="backend/src/providers/__init__.py backend/src/providers/provider.py backend/src/providers/types.py backend/src/providers/errors.py backend/src/engine/agent/factory.py backend/src/engine/query/context.py backend/src/engine/query/loop.py backend/src/engine/query/request.py">
+<h2>Package Boundary <a class="anchor" href="#package-boundary">#</a></h2>
+<div class="summary">
+  <ul>
+    <li><code>providers</code> owns the LLM API client contract: request dataclasses, stream event dataclasses, error hierarchy, auth strategies, and client factory.</li>
+    <li><code>engine.agent.factory.spawn_agent()</code> constructs the provider client through <code>make_api_client()</code> unless a test or caller supplies an external <code>SupportsStreamingMessages</code> client.</li>
+    <li><code>engine.query.loop</code> consumes only the protocol and event types. It does not know whether the stream came from Anthropic-native API mode, Anthropic coding-plan mode, Codex Responses API mode, or a fake test client.</li>
+    <li><code>sandbox.provider</code> is a different provider axis: container/sandbox providers. Use <a class="wiki-link" href="provider-sandbox-bridge.html">Provider Sandbox Bridge</a> for that boundary.</li>
+  </ul>
+</div>
+<div class="diagram" aria-label="Model provider package boundary">
+  <div class="flow-row">
+    <div class="node info"><strong>Agent factory</strong><small><code>make_api_client()</code></small></div>
+    <div class="node"><strong>Provider request</strong><small><code>ApiMessageRequest</code></small></div>
+    <div class="node"><strong>Streaming client</strong><small><code>SupportsStreamingMessages</code></small></div>
+    <div class="node good"><strong>Query loop</strong><small>provider events become stream events and dispatch decisions</small></div>
+  </div>
+</div>
+</section>
+
+<section id="active-model-resolution" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="backend/src/config/model_config.py backend/src/db/models/model_registration.py backend/src/db/stores/model_store.py backend/src/providers/provider.py backend/tests/unit_test/test_config/test_model_store.py backend/tests/unit_test/test_config/test_model_config_class_path_thread.py backend/tests/unit_test/test_providers/test_provider_routing.py backend/tests/unit_test/test_providers/test_class_path_dispatch.py">
+<h2>Active Model Resolution <a class="anchor" href="#active-model-resolution">#</a></h2>
+<p>The active LLM model is DB-backed. <code>ModelRegistrationRecord</code> stores <code>key</code>, <code>label</code>, <code>class_path</code>, JSON kwargs, active flag, and timestamps. <code>ModelStore</code> handles CRUD, active selection, environment-placeholder resolution, secret redaction, and registry seeding.</p>
+<div class="sequence" aria-label="Active model resolution sequence">
+  <ol>
+    <li><span><code>make_api_client()</code> returns an explicit external client unchanged when tests or callers provide one.</span></li>
+    <li><span>Otherwise it calls <code>config.model_config.get_active_model_kwargs()</code>, which resolves the active model row through <code>runtime.app_factory.model_store</code>.</span></li>
+    <li><span>If <code>class_path</code> contains <code>module.path:ClassName</code>, <code>_resolve_class_path()</code> imports and instantiates that class with <code>db_kwargs</code>.</span></li>
+    <li><span>If <code>class_path</code> is empty or legacy dot-format without a colon, the factory falls back to <code>AnthropicClient(api_key=..., base_url=...)</code>.</span></li>
+    <li><span><code>EOS_DISABLE_CODING_PLAN_MODE=1</code> rejects classes under <code>providers.clients.coding_plan.*</code> before construction.</span></li>
+  </ol>
+</div>
+<div class="edge-list">
+  <div><b>tested by</b><span><code>test_provider_routing.py</code> covers external passthrough, explicit DB kwargs, and missing API key failures.</span></div>
+  <div><b>tested by</b><span><code>test_class_path_dispatch.py</code> covers empty class paths, legacy no-colon class paths, import failures, non-class attributes, and the coding-plan kill switch.</span></div>
+</div>
+</section>
+
+<section id="request-stream-contract" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="backend/src/providers/types.py backend/src/engine/query/request.py backend/src/engine/query/loop.py backend/src/message/messages.py backend/src/message/stream_events.py backend/tests/unit_test/test_providers/test_anthropic_client.py backend/tests/unit_test/test_providers/test_codex_event_translation.py">
+<h2>Request And Stream Contract <a class="anchor" href="#request-stream-contract">#</a></h2>
+<p><code>ApiMessageRequest</code> is the engine-to-provider boundary. It carries the model id, provider-safe conversation messages, system prompt, max tokens, tool schemas, and optional tool choice. The provider client yields <code>ApiStreamEvent</code> values back to the query loop.</p>
+<div class="trace-grid">
+  <div>Request input</div><div><code>build_query_run_request()</code> supplies sanitized messages from <code>prepare_provider_messages()</code>, the run system prompt, registered tool schemas, and prompt-report recording.</div>
+  <div>Text and thinking</div><div><code>ApiTextDeltaEvent</code> and <code>ApiThinkingDeltaEvent</code> map directly to user-visible stream deltas.</div>
+  <div>Tool deltas</div><div><code>ApiToolUseDeltaEvent</code> is the early-execution seam. The query loop can start foreground tools before the final assistant message when deferral policy permits it.</div>
+  <div>Completion</div><div><code>ApiMessageCompleteEvent</code> is required before final dispatch. It carries the canonical assistant <code>ConversationMessage</code>, <code>UsageSnapshot</code>, and provider stop reason.</div>
+</div>
+</section>
+
+<section id="anthropic-native" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="backend/src/providers/clients/anthropic_native.py backend/src/providers/auth_strategy.py backend/src/message/messages.py backend/tests/unit_test/test_providers/test_anthropic_client.py backend/tests/unit_test/test_providers/test_anthropic_refresh_replay.py backend/tests/unit_test/test_providers/test_anthropic_plan_mode_error_log.py">
+<h2>Anthropic Native Client <a class="anchor" href="#anthropic-native">#</a></h2>
+<p><code>AnthropicClient</code> uses the official async Anthropic SDK. Its main architecture role is translating Anthropic content-block streams into the provider-neutral events above.</p>
+<div class="edge-list">
+  <div><b>serializes</b><span>Request messages become provider API params through <code>ConversationMessage.to_api_param()</code>. Tool schemas drop <code>output_schema</code> because the Anthropic API does not accept it in tool definitions.</span></div>
+  <div><b>streams</b><span>Text and thinking deltas are yielded immediately. Tool-use input JSON is buffered until the Anthropic content block stops, then emitted as <code>ApiToolUseDeltaEvent</code>.</span></div>
+  <div><b>reassembles</b><span>After the SDK stream completes, <code>stream.get_final_message()</code> is converted back into the canonical assistant message and usage snapshot.</span></div>
+  <div><b>retries</b><span>Transient API failures are retried only before any stream event has been emitted. Once text/tool events have escaped to the engine, failures are translated and raised rather than replaying duplicate deltas.</span></div>
+</div>
+</section>
+
+<section id="coding-plan-clients" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="backend/src/providers/clients/coding_plan/anthropic.py backend/src/providers/clients/coding_plan/codex.py backend/src/providers/auth_strategy.py backend/tests/unit_test/test_providers/test_anthropic_plan_client.py backend/tests/unit_test/test_providers/test_codex_event_translation.py backend/tests/unit_test/test_providers/test_codex_request_headers.py backend/tests/unit_test/test_providers/test_codex_jwt_decode.py backend/tests/unit_test/test_providers/test_codex_refresh_replay.py">
+<h2>Coding Plan Clients <a class="anchor" href="#coding-plan-clients">#</a></h2>
+<p>Coding-plan mode is selected by DB <code>class_path</code>, not by the query loop. The package currently contains two plan-mode clients.</p>
+<div class="evidence-grid">
+  <div class="evidence-card">
+    <h4>Anthropic plan mode</h4>
+    <p><code>AnthropicPlanClient</code> subclasses <code>AnthropicClient</code>, reads the Claude Code OAuth token from the macOS Keychain entry <code>Claude Code-credentials</code>, and prepends the Anthropic-required Claude Code identity system block.</p>
+  </div>
+  <div class="evidence-card">
+    <h4>Codex Responses mode</h4>
+    <p><code>CodexResponsesClient</code> reads <code>~/.codex/auth.json</code>, extracts <code>ChatGPT-Account-Id</code> from the JWT, builds a flat Responses-API function-tool envelope, and translates SSE events into provider-neutral stream events.</p>
+  </div>
+  <div class="evidence-card">
+    <h4>Mode notice</h4>
+    <p>When <code>make_api_client()</code> resolves a <code>providers.clients.coding_plan.*</code> class, it prints a short <code>[coding-plan-mode]</code> notice before construction so credential failures still show the intended route.</p>
+  </div>
+</div>
+</section>
+
+<section id="errors-retry-auth" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="backend/src/providers/errors.py backend/src/providers/auth_strategy.py backend/src/providers/clients/anthropic_native.py backend/src/providers/clients/coding_plan/codex.py backend/src/config/sections/providers.py backend/tests/unit_test/test_providers/test_anthropic_plan_mode_error_log.py backend/tests/unit_test/test_providers/test_codex_plan_mode_error_log.py backend/tests/unit_test/test_providers/test_anthropic_refresh_replay.py backend/tests/unit_test/test_providers/test_codex_refresh_replay.py">
+<h2>Errors Retry And Auth <a class="anchor" href="#errors-retry-auth">#</a></h2>
+<div class="edge-list">
+  <div><b>typed failures</b><span><code>AuthenticationFailure</code>, <code>RateLimitFailure</code>, and <code>RequestFailure</code> share <code>EphemeralOSApiError</code> with optional <code>status_code</code> and <code>request_id</code>.</span></div>
+  <div><b>auth strategies</b><span>API-key mode can use API key or bearer-token auth depending on <code>base_url</code>. Claude coding-plan mode uses a refreshable Keychain OAuth strategy.</span></div>
+  <div><b>refresh-on-401</b><span>Anthropic and Codex plan-mode clients both retry once after refreshing credentials when an initial 401 occurs.</span></div>
+  <div><b>coding-plan logs</b><span>Plan-mode failures emit <code>coding_plan_mode_error</code> log entries categorized by auth, rate limit, server, content-filter, model rejection, schema rejection, or Cloudflare challenge paths.</span></div>
+  <div><b>config caveat</b><span><code>config.sections.providers.RetryConfig</code> defines provider retry defaults, but the current Anthropic client has local retry constants. Treat config and client behavior as separate evidence until unified.</span></div>
+</div>
+</section>
+
+<section id="tests-and-failures" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="backend/src/providers backend/src/config/model_config.py backend/src/db/stores/model_store.py backend/tests/unit_test/test_providers backend/tests/unit_test/test_config/test_model_store.py backend/tests/unit_test/test_config/test_model_config_class_path_thread.py backend/tests/unit_test/test_engine/test_provider_history.py">
+<h2>Tests And Failures <a class="anchor" href="#tests-and-failures">#</a></h2>
+<div class="evidence-grid">
+  <div class="evidence-card">
+    <h4>Provider client tests</h4>
+    <p><code>backend/tests/unit_test/test_providers</code> covers routing, class-path dispatch, Anthropic streaming, Anthropic plan mode, Codex request headers/body, Codex event translation, JWT account extraction, credential refresh, and plan-mode error logs.</p>
+  </div>
+  <div class="evidence-card">
+    <h4>Config tests</h4>
+    <p><code>test_model_store.py</code> and <code>test_model_config_class_path_thread.py</code> cover active model row behavior, environment placeholder resolution, and class-path threading into active kwargs.</p>
+  </div>
+  <div class="evidence-card">
+    <h4>Query-loop adjacency</h4>
+    <p><code>test_provider_history.py</code> covers sanitation of the message history copied into <code>ApiMessageRequest</code>, which is the last engine-owned step before provider streaming.</p>
+  </div>
+  <div class="evidence-card">
+    <h4>Refresh triggers</h4>
+    <p>Refresh this page when model registration fields, <code>make_api_client()</code> dispatch, stream event dataclasses, provider retry behavior, tool-envelope translation, auth storage, or coding-plan class paths change.</p>
+  </div>
+</div>
+</section>
+
+<div class="page-baseline" data-page-baseline-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa">
+  <strong>Maintenance baseline</strong>
+  <span>Model provider bridge reviewed against <code>e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa</code>.</span>
+  <code>git diff e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa..HEAD -- &lt;section data-evidence-paths&gt;</code>
+</div>
+<div class="page-footer-nav"><span><a href="main-loop.html">Main Loop</a></span><span><a href="background-operations.html">Background Operations</a></span></div>
+</main>
+<script src="../assets/search-index.js"></script>
+<script src="../assets/nav.js"></script>
+</body>
+</html>

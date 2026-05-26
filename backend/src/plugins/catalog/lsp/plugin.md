@@ -1,6 +1,7 @@
 ---
 name: lsp
 description: Pyright-backed LSP tools for Python - hover, find_definitions, find_references, diagnostics, query_symbols, rename, format, code_actions, apply_code_action, apply_workspace_edit.
+kind: language_server
 tools:
   - name: lsp.hover
     module: tools/hover.py

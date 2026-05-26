@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Provider Sandbox Bridge - EphemeralOS Agent Loops</title>
+<link rel="stylesheet" href="../assets/styles.css">
+</head>
+<body data-module="agent-loops" data-page="provider-sandbox-bridge" data-root="../">
+<nav class="toc">
+  <h2>EphemeralOS Architecture</h2>
+  <a class="home-link" href="../index.html">All Modules</a>
+  <div class="search-box">
+    <input type="search" placeholder="Search architecture" data-doc-search aria-label="Search architecture">
+    <div class="search-results" data-doc-search-results></div>
+  </div>
+  <h2>Modules</h2>
+  <ol class="module-list">
+    <li><a href="../sandbox/index.html" data-doc-module="sandbox">Sandbox Workspace</a></li>
+    <li><a href="../tools/index.html" data-doc-module="tools">Tools</a></li>
+    <li><a href="index.html" data-doc-module="agent-loops" class="active">Agent Loops</a></li>
+  </ol>
+  <h2>Agent Loop Pages</h2>
+  <ol>
+    <li><a href="index.html" data-doc-module="agent-loops" data-doc-section="index" data-doc-page="index.html">Overview</a></li>
+    <li><a href="main-loop.html" data-doc-module="agent-loops" data-doc-section="main-loop" data-doc-page="main-loop.html">Main Loop</a></li>
+    <li><a href="model-provider.html" data-doc-module="agent-loops" data-doc-section="model-provider" data-doc-page="model-provider.html">Model Provider Bridge</a></li>
+    <li><a href="background-operations.html" data-doc-module="agent-loops" data-doc-section="background-operations" data-doc-page="background-operations.html">Background Operations</a></li>
+    <li><a href="prompt-context.html" data-doc-module="agent-loops" data-doc-section="prompt-context" data-doc-page="prompt-context.html">Prompt and Context</a></li>
+    <li><a href="provider-sandbox-bridge.html" data-doc-module="agent-loops" data-doc-section="provider-sandbox-bridge" data-doc-page="provider-sandbox-bridge.html" class="active">Provider Sandbox Bridge</a></li>
+    <li><a href="notifications-messages.html" data-doc-module="agent-loops" data-doc-section="notifications-messages" data-doc-page="notifications-messages.html">Notifications and Messages</a></li>
+    <li><a href="maintenance.html" data-doc-module="agent-loops" data-doc-section="maintenance" data-doc-page="maintenance.html">Maintenance</a></li>
+  </ol>
+</nav>
+<main>
+<div class="doc-actions">
+  <span><a href="../index.html">Index</a> / Agent Loops / Provider Sandbox Bridge</span>
+  <span class="nav-pair"><a href="prompt-context.html">Prompt and Context Engine</a><a href="../sandbox/daemon.html">Sandbox Daemon</a></span>
+</div>
+
+<section id="provider-sandbox-bridge" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="backend/src/sandbox/provider backend/src/sandbox/api backend/src/sandbox/host backend/src/sandbox/daemon backend/src/sandbox/ephemeral_workspace backend/src/sandbox/occ backend/src/tools/sandbox backend/src/engine/background">
+<h1>Provider Sandbox Bridge <a class="anchor" href="#provider-sandbox-bridge">#</a></h1>
+<nav class="page-toc" aria-labelledby="page-toc-heading">
+  <h3 id="page-toc-heading">Contents</h3>
+  <ol>
+    <li><a href="#provider-selection"><span>1</span> Provider Selection</a></li>
+    <li><a href="#exec-transports"><span>2</span> Exec Transports</a></li>
+    <li><a href="#tool-api-daemon-path"><span>3</span> Tool To Daemon Path</a></li>
+    <li><a href="#workspace-routing"><span>4</span> Workspace Routing</a></li>
+    <li><a href="#background-control"><span>5</span> Background Control</a></li>
+    <li><a href="#tests-failures"><span>6</span> Tests And Failures</a></li>
+  </ol>
+</nav>
+
+<p class="lead">This page follows one sandbox-backed tool call from an agent-facing wrapper through <code>sandbox.api</code>, the host daemon client, provider exec or daemon TCP, the in-sandbox daemon, and the workspace execution path. Current verdict: sandbox providers own containers and primitive exec; sandbox runtime owns workspace semantics, direct file fast paths, overlay publish, isolated scratch, and daemon in-flight control. For LLM model providers under <code>backend/src/providers</code>, use <a class="wiki-link" href="model-provider.html">Model Provider Bridge</a>.</p>
+<div class="summary">
+  <ul>
+    <li>Provider bootstrap picks Docker or Daytona once per process, then the registry supplies the default adapter and per-sandbox bindings.</li>
+    <li><code>raw_exec</code> calls provider <code>exec</code> directly; guarded workspace operations call the resident daemon through <code>call_daemon_api()</code>.</li>
+    <li>Daemon transport prefers a Docker TCP endpoint when exposed and falls back to provider exec plus the AF_UNIX thin client.</li>
+    <li>Daemon workspace routing tries active isolated workspace first, then direct LayerStack/OCC for single-file verbs, then ephemeral overlay execution.</li>
+  </ul>
+</div>
+<div class="diagram" aria-label="Provider sandbox bridge">
+  <div class="flow-row">
+    <div class="node info"><strong>Agent tool</strong><small><code>tools.sandbox</code></small></div>
+    <div class="node"><strong>Public API</strong><small><code>sandbox.api.tool</code></small></div>
+    <div class="node"><strong>Host daemon client</strong><small>envelope, protocol, layer stack root</small></div>
+    <div class="node good"><strong>Provider adapter</strong><small>exec primitive or TCP endpoint lookup</small></div>
+  </div>
+  <div class="flow-row">
+    <div class="node"><strong>Resident daemon</strong><small>OP_TABLE and in-flight registry</small></div>
+    <div class="node"><strong>Workspace router</strong><small>isolated, direct, overlay</small></div>
+    <div class="node warn"><strong>OCC publish</strong><small>changeset, commit queue, LayerStack</small></div>
+    <div class="node"><strong>Typed result</strong><small>API result -> ToolResult</small></div>
+  </div>
+</div>
+<div class="wiki-links" aria-label="Provider sandbox bridge links">
+  <a href="../sandbox/provider.html">Sandbox Provider</a>
+  <a href="../sandbox/daemon.html">Sandbox Daemon</a>
+  <a href="../sandbox/workspaces.html">Workspace Modes</a>
+  <a href="../tools/background.html">Background Tools</a>
+</div>
+</section>
+
+<section id="provider-selection" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="backend/src/sandbox/provider/protocol.py backend/src/sandbox/provider/bootstrap.py backend/src/sandbox/provider/registry.py backend/src/sandbox/provider/docker/bootstrap.py backend/src/sandbox/provider/daytona/bootstrap.py backend/src/sandbox/provider/docker/adapter.py backend/src/sandbox/provider/daytona/adapter.py backend/src/sandbox/host/lifecycle.py backend/src/sandbox/api/provider_control.py backend/tests/integration_test/test_sandbox/test_provider_parity.py backend/tests/integration_test/test_sandbox/test_docker_post_lifecycle.py">
+<h2>Provider Selection <a class="anchor" href="#provider-selection">#</a></h2>
+<p><code>bootstrap_sandbox_provider()</code> resolves <code>EOS_SANDBOX_PROVIDER</code> first, then central <code>sandbox.default_provider</code>. Valid values are <code>docker</code> and <code>daytona</code>. A process-level sentinel makes the first resolved provider sticky; later calls with the same value are no-ops, and later calls with a different value warn and return.</p>
+<p><code>ProviderAdapter</code> is the common protocol: health, snapshots, create/get/list/start/stop/delete/set-labels, preview and build-log URLs, async <code>exec</code>, and <code>context_preparer()</code>. Provider lifecycle orchestration is outside the provider package: <code>sandbox.host.lifecycle.create_sandbox()</code> uses the default adapter, registers the minted sandbox id, then runs post-create setup; start runs post-start setup; delete forgets plugin state and disposes the adapter binding.</p>
+<div class="trace-grid">
+  <div>Default provider</div><div><code>set_default_provider()</code> and <code>get_default_provider()</code> handle create/list/health paths before a sandbox id exists.</div>
+  <div>Per-sandbox adapter</div><div><code>register_adapter(sandbox_id, adapter)</code> records explicit process-local ownership for exec and instance operations.</div>
+  <div>Fallback lookup</div><div><code>get_adapter()</code> falls back to the default provider for unknown ids but intentionally does not cache that fallback.</div>
+  <div>Runtime setup</div><div><code>setup_post_lifecycle()</code> uploads the runtime bundle, ensures git, runs runtime bootstrap, and ensures the workspace base.</div>
+</div>
+<div class="edge-list">
+  <div><b>implements</b><span><code>DockerProviderAdapter</code> creates long-running containers, may expose daemon TCP on loopback, and implements exec with <code>container.exec_run()</code>.</span></div>
+  <div><b>implements</b><span><code>DaytonaProviderAdapter</code> creates SDK sandboxes, wraps bash commands, exposes preview/log methods, and implements exec through <code>sandbox.process.exec()</code>.</span></div>
+  <div><b>tests</b><span><code>test_provider_parity.py</code> checks adapter exec signature parity; Docker post-lifecycle integration is gated to Linux plus Docker.</span></div>
+</div>
+</section>
+
+<section id="exec-transports" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="backend/src/sandbox/api/raw_exec.py backend/src/sandbox/api/transport.py backend/src/sandbox/api/daemon_invocations.py backend/src/sandbox/host/daemon_client.py backend/src/sandbox/daemon/rpc/server.py backend/src/sandbox/daemon/__main__.py backend/src/sandbox/provider/docker/adapter.py backend/src/sandbox/provider/daytona/adapter.py backend/tests/unit_test/test_sandbox/test_api/test_raw_exec.py backend/tests/unit_test/test_sandbox/test_api/test_transport_protocol.py backend/tests/unit_test/test_sandbox/test_daemon/test_daemon_transport.py backend/tests/unit_test/test_sandbox/test_daemon/test_server_hardening.py">
+<h2>Exec Transports <a class="anchor" href="#exec-transports">#</a></h2>
+<p>There are two execution surfaces. <code>sandbox.api.raw_exec()</code> is the unguarded provider primitive: it gets the registered adapter and calls <code>adapter.exec(sandbox_id, command, cwd, timeout)</code>. Workspace tools do not use this path directly; they use the daemon transport so workspace binding, OCC, overlay, in-flight cancellation, and typed response parsing all stay inside the sandbox runtime.</p>
+<p><code>call_daemon_api()</code> builds daemon args with <code>layer_stack_root</code>, resolves the adapter, optionally resolves a Docker daemon TCP endpoint, and sends one JSON envelope. If TCP is unavailable or stale, it falls back to provider exec of the bundled thin client, which talks to the daemon's AF_UNIX socket inside the sandbox. The daemon can be relaunched on connect failure, then <code>api.runtime.ready</code> probes control plane, data plane, and mutation gate before retrying the original request.</p>
+<div class="sequence" aria-label="Daemon transport order">
+  <ol>
+    <li><span>Public API adds daemon protocol version and operation payload.</span></li>
+    <li><span>Host client chooses an invocation id, preserving the payload id when the tool provided one.</span></li>
+    <li><span>If the adapter exposes <code>get_daemon_tcp_endpoint()</code>, the host calls the daemon over TCP with auth token injection.</span></li>
+    <li><span>On TCP connect failure, the endpoint cache is invalidated and the request falls back to provider exec plus the AF_UNIX thin client.</span></li>
+    <li><span>On AF_UNIX connect failure or retryable empty response, the host respawns the daemon and checks <code>api.runtime.ready</code>.</span></li>
+    <li><span>The daemon returns one JSON response envelope, which public API parsing converts into typed result models.</span></li>
+  </ol>
+</div>
+<div class="callout warn">
+  <span class="label">Trust boundary</span>
+  Provider exec is a transport primitive. It is not the workspace mutation boundary. Durable workspace writes must publish through daemon workspace routing and OCC unless the caller explicitly uses <code>raw_exec</code>.
+</div>
+</section>
+
+<section id="tool-api-daemon-path" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="backend/src/tools/sandbox/_lib/tool_context.py backend/src/tools/sandbox/_lib/registry.py backend/src/tools/sandbox/read_file/read_file.py backend/src/tools/sandbox/write_file/write_file.py backend/src/tools/sandbox/edit_file/edit_file.py backend/src/tools/sandbox/shell/shell.py backend/src/sandbox/api/tool/_daemon_request_payloads.py backend/src/sandbox/api/tool/_daemon_response_parsing.py backend/src/sandbox/api/tool/read.py backend/src/sandbox/api/tool/write.py backend/src/sandbox/api/tool/edit.py backend/src/sandbox/api/tool/shell.py backend/src/sandbox/api/tool/glob.py backend/src/sandbox/api/tool/grep.py backend/src/sandbox/daemon/rpc/dispatcher.py backend/src/sandbox/daemon/builtin_operations.py backend/tests/unit_test/test_sandbox/test_api backend/tests/unit_test/test_sandbox/test_daemon/test_routing_invariants.py">
+<h2>Tool To Daemon Path <a class="anchor" href="#tool-api-daemon-path">#</a></h2>
+<p>Agent-facing sandbox tools are thin wrappers around typed public API calls. <code>tools.sandbox._lib.registry</code> marks each sandbox tool with <code>SANDBOX_CONTEXT</code>, allowing the engine to inject provider context and allowing background launch code to recognize sandbox-bound work. The wrapper resolves repo-relative paths, builds <code>SandboxCaller</code> identity from tool metadata, and calls <code>sandbox.api</code>.</p>
+<div class="flow">
+  <div class="flow-step">
+    <span class="num">1</span>
+    <div><strong>Tool wrapper</strong><p><code>read_file</code>, <code>write_file</code>, <code>edit_file</code>, <code>grep</code>, <code>glob</code>, and <code>shell</code> create request models with caller identity, path/cwd, description, and audit metadata.</p></div>
+  </div>
+  <div class="flow-step">
+    <span class="num">2</span>
+    <div><strong>Public API</strong><p><code>sandbox.api.tool</code> builds daemon payload identity fields, selects an <code>api.v1.*</code> op, dispatches with <code>call_sandbox_daemon()</code>, and parses the result.</p></div>
+  </div>
+  <div class="flow-step">
+    <span class="num">3</span>
+    <div><strong>Host daemon client</strong><p><code>call_daemon_api()</code> adds <code>layer_stack_root</code>, sends the envelope over TCP or thin client, and converts daemon transport failures into structured dispatch errors.</p></div>
+  </div>
+  <div class="flow-step">
+    <span class="num">4</span>
+    <div><strong>Daemon operation table</strong><p><code>dispatcher._register_builtin_operations()</code> registers workspace ops, isolated lifecycle ops, daemon control ops, layer-stack control, runtime readiness, plugin ops, and audit ops.</p></div>
+  </div>
+</div>
+<p>Shell is the important background-aware wrapper. When the engine launches a background sandbox tool, it injects <code>sandbox_invocation_id</code> and <code>background_task_id</code> into <code>ExecutionMetadata</code>. <code>tools.sandbox.shell</code> copies that invocation id into <code>ShellRequest</code> and sets <code>background=True</code>, so the daemon in-flight registry can track it as cancellable background work.</p>
+</section>
+
+<section id="workspace-routing" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="backend/src/sandbox/daemon/workspace_tool_dispatch.py backend/src/sandbox/daemon/workspace_tool_payloads.py backend/src/sandbox/daemon/builtin_operations.py backend/src/sandbox/ephemeral_workspace/pipeline.py backend/src/sandbox/ephemeral_workspace/operation_overlay.py backend/src/sandbox/ephemeral_workspace/workspace_publish.py backend/src/sandbox/ephemeral_workspace/overlay_registry.py backend/src/sandbox/occ/service.py backend/src/sandbox/occ/changeset_preparation.py backend/src/sandbox/occ/client.py backend/src/sandbox/host/isolated_workspace_lifecycle.py backend/src/sandbox/daemon/rpc/dispatcher.py backend/tests/unit_test/test_sandbox/test_daemon/test_file_dispatch.py backend/tests/unit_test/test_sandbox/test_daemon/test_routing_invariants.py backend/tests/unit_test/test_sandbox/test_occ backend/tests/unit_test/test_sandbox/test_isolated_workspace_no_publish.py backend/tests/live_e2e_test/sandbox/layer_stack_overlay_occ">
+<h2>Workspace Routing <a class="anchor" href="#workspace-routing">#</a></h2>
+<p>The first workspace decision point is <code>dispatch_workspace_tool_call()</code>. It normalizes the request into <code>ToolCallRequest</code>, identifies the agent, checks active isolated workspace state, and then applies the routing order below. This order matters because isolated mode is explicit private scratch, direct file fast paths avoid overlay cost for normal file APIs, and shell/search need a real filesystem view.</p>
+<div class="sequence" aria-label="Daemon workspace routing order">
+  <ol>
+    <li><span><strong>Isolated first.</strong> If <code>get_active_pipeline()</code> has a handle for the agent id, the request runs through the isolated pipeline. Direct fast paths are skipped.</span></li>
+    <li><span><strong>Single-file fast path.</strong> Outside isolated mode, <code>read_file</code>, <code>write_file</code>, and <code>edit_file</code> require one path and try the bound LayerStack/OCC route.</span></li>
+    <li><span><strong>Fallback overlay.</strong> If the file path is outside the workspace binding, or the verb is shell/search/plugin-style, the request runs through <code>EphemeralPipeline</code>.</span></li>
+    <li><span><strong>Publish gate.</strong> Write-capable overlay results are captured from upperdir, converted to typed OCC changes, and published through <code>OccClient</code>/<code>OccService</code>.</span></li>
+  </ol>
+</div>
+<div class="trace-grid">
+  <div>Direct read</div><div>Reads merged text from <code>services.manager.read_text(path)</code> and returns zero overlay resource metrics.</div>
+  <div>Direct write/edit</div><div>Builds typed API write/edit changes and calls <code>services.occ_service.apply_changeset()</code>; published paths project back into guarded mutation results.</div>
+  <div>Ephemeral overlay</div><div>Acquires a latest snapshot lease, runs the tool in a private namespace, captures upperdir changes, and publishes through OCC.</div>
+  <div>Isolated workspace</div><div>Host enter rejects when sandbox-bound background work is still running, daemon enter creates an agent handle, and exit tears down private state after draining background work.</div>
+</div>
+<p><code>OccService</code> prepares changesets lock-free, infers base hashes against the chosen snapshot, then serializes commit through <code>CommitQueue</code> and <code>CommitTransaction</code>. The transaction revalidates against the live active manifest, so a stale prepared changeset receives normal OCC rejection instead of silently overwriting concurrent work.</p>
+</section>
+
+<section id="background-control" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="backend/src/engine/background/dispatch.py backend/src/engine/background/task_supervisor.py backend/src/sandbox/api/daemon_invocations.py backend/src/sandbox/api/transport.py backend/src/sandbox/daemon/rpc/dispatcher.py backend/src/sandbox/daemon/rpc/in_flight.py backend/src/sandbox/daemon/builtin_operations.py backend/src/sandbox/host/isolated_workspace_lifecycle.py backend/src/tools/sandbox/shell/shell.py backend/src/tools/background/cancel_background_task/cancel_background_task.py backend/tests/unit_test/test_engine/test_background_tasks.py backend/tests/unit_test/test_engine/test_background_task_emitters.py backend/tests/unit_test/test_sandbox/test_api/test_shell_background_dispatch.py backend/tests/unit_test/test_sandbox/test_daemon/test_in_flight_registry.py backend/tests/unit_test/test_sandbox/test_isolated_workspace_lifecycle_background.py">
+<h2>Background Control <a class="anchor" href="#background-control">#</a></h2>
+<p>Background sandbox control is split between the engine supervisor and the daemon in-flight registry. <code>launch_background_tool()</code> detects tools that require <code>SANDBOX_CONTEXT</code>, assigns a <code>bg_N</code> alias, generates a fresh <code>sandbox_invocation_id</code>, and passes that id into tool execution metadata. The public shell API forwards it in the daemon payload when the request is backgrounded.</p>
+<div class="edge-list">
+  <div><b>tracks</b><span><code>BackgroundTaskSupervisor</code> stores <code>uses_sandbox</code>, <code>sandbox_id</code>, <code>sandbox_invocation_id</code>, and <code>agent_id</code> on the engine-side task record.</span></div>
+  <div><b>registers</b><span><code>dispatch_envelope_async()</code> registers the current daemon asyncio task by invocation id, agent id, op, and background flag before invoking the handler.</span></div>
+  <div><b>cancels</b><span>Engine cancellation calls <code>sandbox.api.cancel(sandbox_id, invocation_id)</code>, which routes to <code>api.v1.cancel</code> and cancels the daemon task before local asyncio cancellation.</span></div>
+  <div><b>heartbeats</b><span>The supervisor periodically groups running sandbox invocation ids by sandbox and calls <code>sandbox.api.heartbeat()</code>; the daemon refreshes <code>last_seen</code> and TTL reaps stale background invocations.</span></div>
+  <div><b>gates</b><span><code>enter_isolated_workspace()</code> checks both local background count and daemon <code>inflight_count</code> before opening private scratch.</span></div>
+</div>
+<p>The daemon exposes <code>api.v1.cancel</code>, <code>api.v1.heartbeat</code>, and <code>api.v1.inflight_count</code> in the same operation table as workspace tools. <code>InFlightInvocationRegistry</code> counts only background invocations for an agent, so foreground requests do not block isolated entry through the daemon count path.</p>
+</section>
+
+<section id="tests-failures" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="backend/tests/unit_test/test_sandbox/test_api/test_raw_exec.py backend/tests/unit_test/test_sandbox/test_api/test_transport_protocol.py backend/tests/unit_test/test_sandbox/test_api/test_shell_background_dispatch.py backend/tests/unit_test/test_sandbox/test_daemon/test_file_dispatch.py backend/tests/unit_test/test_sandbox/test_daemon/test_routing_invariants.py backend/tests/unit_test/test_sandbox/test_daemon/test_in_flight_registry.py backend/tests/unit_test/test_sandbox/test_isolated_workspace_lifecycle_background.py backend/tests/unit_test/test_engine/test_background_tasks.py backend/tests/integration_test/test_sandbox/test_provider_parity.py backend/tests/integration_test/test_sandbox/test_docker_post_lifecycle.py backend/tests/live_e2e_test/sandbox/layer_stack_overlay_occ backend/tests/live_e2e_test/sandbox/phase-05-public-file-ops-report.md">
+<h2>Tests And Failures <a class="anchor" href="#tests-failures">#</a></h2>
+<div class="evidence-grid">
+  <div class="evidence-card">
+    <h3>Focused tests</h3>
+    <ul>
+      <li><span class="file-ref">backend/tests/unit_test/test_sandbox/test_api/test_raw_exec.py</span> provider raw exec delegation.</li>
+      <li><span class="file-ref">backend/tests/unit_test/test_sandbox/test_daemon/test_file_dispatch.py</span> direct file fast path and overlay fallback.</li>
+      <li><span class="file-ref">backend/tests/unit_test/test_sandbox/test_daemon/test_in_flight_registry.py</span> cancel, heartbeat, count, TTL reaper.</li>
+      <li><span class="file-ref">backend/tests/unit_test/test_engine/test_background_tasks.py</span> engine-side sandbox cancel ordering and agent-scoped cancellation.</li>
+    </ul>
+  </div>
+  <div class="evidence-card">
+    <h3>Live coverage</h3>
+    <ul>
+      <li><span class="file-ref">backend/tests/live_e2e_test/sandbox/layer_stack_overlay_occ</span> LayerStack/OCC/overlay correctness and load families.</li>
+      <li><span class="file-ref">backend/tests/live_e2e_test/sandbox/phase-05-public-file-ops-report.md</span> public file operation report anchor.</li>
+      <li><span class="file-ref">backend/tests/integration_test/test_sandbox/test_provider_parity.py</span> provider signature parity smoke.</li>
+    </ul>
+  </div>
+  <div class="evidence-card">
+    <h3>Failure modes</h3>
+    <ul>
+      <li>No default provider registered: bootstrap did not run before provider-control or raw-exec use.</li>
+      <li>Unknown or changed provider value after bootstrap: first provider wins until process restart.</li>
+      <li>Daemon connect failure: host respawns daemon, checks readiness, and retries; repeated failure surfaces transport error.</li>
+      <li>Outside-workspace file path: direct file fast path returns <code>None</code> and daemon falls back to overlay.</li>
+      <li>Stale background invocation: daemon TTL reaper cancels background tasks that miss heartbeats.</li>
+      <li>Isolated entry with running sandbox background work: host returns <code>ephemeral_jobs_in_flight</code> or <code>inflight_count_unavailable</code>.</li>
+    </ul>
+  </div>
+</div>
+<div class="refresh-list">
+  <div><strong>Refresh when provider protocol changes</strong><span>Update provider selection, lifecycle, raw exec, and context preparer claims together.</span></div>
+  <div><strong>Refresh when daemon transport changes</strong><span>Check TCP endpoint behavior, thin-client fallback, readiness probes, and server hardening tests.</span></div>
+  <div><strong>Refresh when routing order changes</strong><span>Update workspace modes, daemon, OCC, overlay, isolated, and tool wrapper pages together.</span></div>
+</div>
+</section>
+
+<div class="page-baseline" data-page-baseline-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa">
+  <strong>Maintenance baseline</strong>
+  <span>Technical sections reviewed against <code>e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa</code>.</span>
+  <code>git diff e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa..HEAD -- &lt;section data-evidence-paths&gt;</code>
+</div>
+<div class="page-footer-nav"><span><a href="prompt-context.html">Prompt and Context Engine</a></span><span><a href="../sandbox/daemon.html">Sandbox Daemon</a></span></div>
+</main>
+<script src="../assets/search-index.js"></script>
+<script src="../assets/nav.js"></script>
+</body>
+</html>

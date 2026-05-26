@@ -52,11 +52,12 @@ def _reset_audit_cursor() -> None:
     yield
 
 
-def _prepared(version: int = 5) -> PreparedChangeset:
+def _prepared(version: int = 5, changeset_id: str = "cs_abc1234567890fa") -> PreparedChangeset:
     return PreparedChangeset(
         snapshot=_FakeManifest(version),  # type: ignore[arg-type]
         path_groups=(),
         atomic=True,
+        changeset_id=changeset_id,
     )
 
 
@@ -101,14 +102,85 @@ def test_occ_conflict_rejected_carries_both_manifest_versions_and_critical_lane(
     assert section["current_manifest_version"] == 12
 
 
-def test_occ_apply_committed_omits_changeset_id_when_prepared_has_no_id() -> None:
-    """PreparedChangeset has no changeset_id today; emit should tolerate that."""
+def test_occ_apply_committed_carries_changeset_id() -> None:
+    """Closer A: every OCC apply emit MUST carry the prepared changeset_id."""
     result = ChangesetResult(
         files=(FileResult(path="x", status=FileStatus.COMMITTED),),
         timings={},
         published_manifest_version=3,
     )
-    _emit_occ_commit_events(result, prepared=_prepared(), commit_elapsed=0.0)
+    _emit_occ_commit_events(
+        result, prepared=_prepared(changeset_id="cs_apply_id_aaaa"), commit_elapsed=0.0
+    )
     events = _drain_occ_events()
     apply = next(e for e in events if e["type"] == "occ.apply_committed")
-    assert "changeset_id" not in apply["payload"]["occ"]
+    publish = next(e for e in events if e["type"] == "occ.publish_layer")
+    assert apply["payload"]["occ"]["changeset_id"] == "cs_apply_id_aaaa"
+    assert publish["payload"]["occ"]["changeset_id"] == "cs_apply_id_aaaa"
+
+
+def test_occ_conflict_rejected_carries_changeset_id() -> None:
+    """Closer A: conflict emits MUST also carry the prepared changeset_id."""
+    result = ChangesetResult(
+        files=(
+            FileResult(
+                path="x",
+                status=FileStatus.ABORTED_OVERLAP,
+                message="base hash drifted",
+            ),
+        ),
+        timings={},
+        published_manifest_version=4,
+    )
+    _emit_occ_commit_events(
+        result, prepared=_prepared(changeset_id="cs_conflict_id_b"), commit_elapsed=0.0
+    )
+    events = _drain_occ_events()
+    conflict = next(e for e in events if e["type"] == "occ.conflict_rejected")
+    assert conflict["payload"]["occ"]["changeset_id"] == "cs_conflict_id_b"
+
+
+def test_prepared_changeset_id_is_stable_across_replay() -> None:
+    """Closer A: same inputs MUST produce the same changeset_id across replays."""
+    from sandbox.occ.changeset import (
+        ChangeSource,
+        PreparedPathGroup,
+        RouteDecision,
+        WriteChange,
+        WritePayload,
+        compute_changeset_id,
+    )
+
+    payload = WritePayload(content=b"hello world\n")
+    change = WriteChange(
+        path="src/foo.py", source=ChangeSource.API_WRITE, payload=payload
+    )
+    group = PreparedPathGroup(
+        path="src/foo.py",
+        route=RouteDecision.GATED,
+        changes=(change,),
+    )
+    id_a = compute_changeset_id(
+        snapshot=_FakeManifest(7), path_groups=(group,), atomic=True
+    )
+    id_b = compute_changeset_id(
+        snapshot=_FakeManifest(7), path_groups=(group,), atomic=True
+    )
+    assert id_a == id_b
+    assert len(id_a) == 16
+
+    # Distinct inputs MUST hash to a different id (collision domain check).
+    change_alt = WriteChange(
+        path="src/foo.py",
+        source=ChangeSource.API_WRITE,
+        payload=WritePayload(content=b"DIFFERENT\n"),
+    )
+    group_alt = PreparedPathGroup(
+        path="src/foo.py",
+        route=RouteDecision.GATED,
+        changes=(change_alt,),
+    )
+    id_c = compute_changeset_id(
+        snapshot=_FakeManifest(7), path_groups=(group_alt,), atomic=True
+    )
+    assert id_a != id_c

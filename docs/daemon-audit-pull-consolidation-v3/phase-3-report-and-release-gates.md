@@ -2,7 +2,13 @@
 
 > **Prerequisites:** Read [`README.md`](README.md) first — it owns the
 > cross-cutting contracts and the ADR. Phase 3 consumes everything
-> [Phase 1](phase-1-audit-buffer-and-pull-rpc.md) and [Phase 2](phase-2-emitters-and-puller.md) produce.
+> [Phase 1](phase-1-audit-buffer-and-pull-rpc.md),
+> [Phase 2](phase-2-emitters-and-puller.md), and the Phase 2 closers in
+> [Phase 2.5](phase-2.5-remaining-emitters-and-wiring.md) +
+> [Phase 2.6](phase-2.6-dispatcher-heavy-run-and-closers.md) produce.
+> Phase 2 is closed when
+> [`phase-2.6-implementation-report.md`](phase-2.6-implementation-report.md)
+> ships; Phase 3 begins from there.
 
 ## Goal
 

@@ -5,6 +5,8 @@ Source-tagged mutation intent objects for the layer-stack OCC path.
 
 from __future__ import annotations
 
+import hashlib
+import json
 from dataclasses import dataclass, field, replace
 from enum import Enum
 from pathlib import Path
@@ -208,12 +210,21 @@ class CommitOptions:
 
 @dataclass(frozen=True)
 class PreparedChangeset:
-    """Routed changeset consumed by the commit transaction."""
+    """Routed changeset consumed by the commit transaction.
+
+    ``changeset_id`` is a stable content-hash derived from
+    ``(snapshot.version, atomic flag, path_groups)`` — see
+    :func:`compute_changeset_id`. Stable across replays of identical inputs
+    so the OCC half of the V3 causal chain (Principle 3) survives. The
+    constructor in :mod:`sandbox.occ.changeset_preparation` is the only
+    site that populates this; downstream readers consume it as-is.
+    """
 
     snapshot: Manifest | None
     path_groups: tuple[PreparedPathGroup, ...]
     atomic: bool
     timings: dict[str, float] = field(default_factory=dict)
+    changeset_id: str = ""
 
 
 # ---- builders ------
@@ -282,6 +293,73 @@ def build_overlay_delete_change(
     return DeleteChange(path=path, source=source, base_hash=base_hash)
 
 
+def _change_signature(change: Change) -> dict[str, str | int | None]:
+    """Return a stable dict signature for one change (no Python object reprs).
+
+    Avoids :func:`repr` on dataclass tuples — dict ordering and identity
+    reprs sneak in across processes; an explicit per-field encoding keeps
+    the signature deterministic.
+    """
+    sig: dict[str, str | int | None] = {
+        "kind": type(change).__name__,
+        "path": change.path,
+        "source": change.source.value,
+    }
+    if isinstance(change, WriteChange):
+        sig["base_hash"] = change.base_hash
+        sig["precomputed_hash"] = change.precomputed_hash
+        # When content lives only on disk and no hash is precomputed, hash the
+        # bytes lazily so the id reflects content (the replay-stability claim).
+        if change.precomputed_hash is None:
+            try:
+                content_hash = hashlib.sha256(change.final_content).hexdigest()
+            except (OSError, ValueError):
+                content_hash = ""
+            sig["content_hash"] = content_hash
+    elif isinstance(change, DeleteChange):
+        sig["base_hash"] = change.base_hash
+    elif isinstance(change, EditChange):
+        sig["old_text"] = change.old_text
+        sig["new_text"] = change.new_text
+        sig["expected_occurrences"] = change.expected_occurrences
+    elif isinstance(change, SymlinkChange):
+        sig["target"] = change.target
+    return sig
+
+
+def compute_changeset_id(
+    *,
+    snapshot: Manifest | None,
+    path_groups: tuple[PreparedPathGroup, ...],
+    atomic: bool,
+) -> str:
+    """Derive a stable 16-hex-char changeset id for replay matching.
+
+    Determinism contract:
+
+    * Same ``(snapshot.version, atomic, path_groups)`` inputs MUST produce
+      the same id across processes — enforced by
+      ``test_prepared_changeset_id_is_stable_across_replay``.
+    * Distinct inputs (different paths, different content, different
+      route decisions) MUST produce distinct ids with high probability —
+      sha256 collision domain.
+    """
+    canonical: dict[str, object] = {
+        "snapshot_version": snapshot.version if snapshot is not None else None,
+        "atomic": bool(atomic),
+        "path_groups": [
+            {
+                "path": pg.path,
+                "route": pg.route.value,
+                "changes": [_change_signature(ch) for ch in pg.changes],
+            }
+            for pg in path_groups
+        ],
+    }
+    encoded = json.dumps(canonical, sort_keys=True, default=str).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()[:16]
+
+
 __all__ = [
     "Change",
     "ChangeSource",
@@ -301,6 +379,7 @@ __all__ = [
     "build_api_write_change",
     "build_overlay_delete_change",
     "build_overlay_write_change",
+    "compute_changeset_id",
     "is_published_status",
     "is_success_status",
 ]

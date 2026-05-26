@@ -152,6 +152,11 @@ class _PipelineConfig:
     exit_grace_s: float
     rfc1918_egress: Literal["allow", "deny"]
     fallback_dns: str
+    # V3 plan §Per-tool phase sampling rule / Closer C (Phase 2.6): dedicated
+    # asyncio sampler task ticks every ``sample_interval_s`` seconds while an
+    # isolated workspace is open. Default 500 ms — well under the 50 000-event
+    # ring cap up to ~6 concurrent isolated workspaces.
+    sample_interval_s: float = 0.5
 
     @classmethod
     def from_env(cls, env: dict[str, str] | None = None) -> _PipelineConfig:
@@ -173,6 +178,10 @@ class _PipelineConfig:
             if env.get("EOS_ISOLATED_WORKSPACE_RFC1918_EGRESS", "allow").lower() == "deny"
             else "allow",
             fallback_dns=env.get("EOS_ISOLATED_WORKSPACE_FALLBACK_DNS", "1.1.1.1"),
+            sample_interval_s=max(
+                0.01,
+                float(env.get("EOS_ISOLATED_WORKSPACE_SAMPLE_INTERVAL_S", "0.5")),
+            ),
         )
 
 

@@ -383,8 +383,34 @@ class AuditRecorder:
         if puller is not None:
             await puller.stop()
 
+    async def aclose(self) -> None:
+        """Single async teardown path for live callers (Closer F).
+
+        Awaits the daemon-audit puller's final drain (if attached) and
+        then runs the synchronous dispose body. Live callers (the runner)
+        MUST use this. Sync :meth:`dispose` is preserved for test stubs
+        that never attach a puller — see its docstring for the contract.
+        """
+        await self.stop_daemon_audit_puller()
+        self._dispose_sync()
+
     def dispose(self) -> None:
-        """Unregister listeners, flush message recorders, write final files."""
+        """Synchronous teardown forwarder.
+
+        Raises ``RuntimeError`` when a daemon-audit puller is still
+        attached — live runtimes must call :meth:`aclose` so the puller's
+        final drain runs before the sink + listeners flush. Test stubs
+        that never attach a puller continue to work unchanged.
+        """
+        if self._daemon_audit_puller is not None:
+            raise RuntimeError(
+                "AuditRecorder.dispose() cannot reclaim an active daemon-"
+                "audit puller; call AuditRecorder.aclose() instead."
+            )
+        self._dispose_sync()
+
+    def _dispose_sync(self) -> None:
+        """Shared sync teardown body for :meth:`dispose` and :meth:`aclose`."""
         for handle in self._listeners:
             try:
                 event.remove(handle.target, handle.identifier, handle.fn)

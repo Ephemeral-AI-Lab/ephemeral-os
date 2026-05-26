@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TaskCenter Terminal Tools - EphemeralOS Architecture</title>
+<link rel="stylesheet" href="../assets/styles.css">
+</head>
+<body data-module="task-center" data-page="terminal-tools" data-root="../">
+<nav class="toc">
+  <h2>EphemeralOS Architecture</h2>
+  <a class="home-link" href="../index.html">All Modules</a>
+  <div class="search-box">
+    <input type="search" placeholder="Search architecture" data-doc-search aria-label="Search architecture">
+    <div class="search-results" data-doc-search-results></div>
+  </div>
+  <h2>Modules</h2>
+  <ol class="module-list">
+    <li><a href="../sandbox/index.html" data-doc-module="sandbox">Sandbox Workspace</a></li>
+    <li><a href="../tools/index.html" data-doc-module="tools">Tools</a></li>
+    <li><a href="../agent_loops/index.html" data-doc-module="agent-loops">Agent Loops</a></li>
+    <li><a href="index.html" data-doc-module="task-center" class="active">TaskCenter</a></li>
+  </ol>
+  <h2>TaskCenter Pages</h2>
+  <ol>
+    <li><a href="index.html" data-doc-module="task-center" data-doc-section="index" data-doc-page="index.html">Overview</a></li>
+    <li><a href="lifecycle.html" data-doc-module="task-center" data-doc-section="lifecycle" data-doc-page="lifecycle.html">Lifecycle</a></li>
+    <li><a href="attempt-harness.html" data-doc-module="task-center" data-doc-section="attempt-harness" data-doc-page="attempt-harness.html">Attempt Harness</a></li>
+    <li><a href="context-engine.html" data-doc-module="task-center" data-doc-section="context-engine" data-doc-page="context-engine.html">Context Engine</a></li>
+    <li><a href="agent-roles.html" data-doc-module="task-center" data-doc-section="agent-roles" data-doc-page="agent-roles.html">Agent Roles</a></li>
+    <li><a href="terminal-tools.html" data-doc-module="task-center" data-doc-section="terminal-tools" data-doc-page="terminal-tools.html" class="active">Terminal Tools</a></li>
+    <li><a href="bridges.html" data-doc-module="task-center" data-doc-section="bridges" data-doc-page="bridges.html">Engine Tools Sandbox</a></li>
+    <li><a href="maintenance.html" data-doc-module="task-center" data-doc-section="maintenance" data-doc-page="maintenance.html">Maintenance</a></li>
+  </ol>
+</nav>
+<main>
+<div class="doc-actions">
+  <span><a href="index.html">TaskCenter</a> / Terminal Tools</span>
+  <span class="nav-pair"><a href="agent-roles.html">Agent Roles</a><a href="bridges.html">Engine Tools Sandbox</a></span>
+</div>
+<h1>TaskCenter Terminal Tools</h1>
+<nav class="page-toc" aria-labelledby="page-toc-heading">
+  <h3 id="page-toc-heading">Contents</h3>
+  <ol>
+    <li><a href="#terminal-contract-map"><span>1</span> Terminal Contract Map</a></li>
+    <li><a href="#descriptor-registry"><span>2</span> Descriptor Registry</a></li>
+    <li><a href="#role-submission-terminals"><span>3</span> Role Submission Terminals</a></li>
+    <li><a href="#validation-and-stop"><span>4</span> Validation And Stop Path</a></li>
+    <li><a href="#advisor-before-terminal"><span>5</span> Advisor Before Terminal</a></li>
+    <li><a href="#helper-results-notifications"><span>6</span> Helper Results And Notifications</a></li>
+    <li><a href="#tests-maintenance"><span>7</span> Tests And Maintenance</a></li>
+  </ol>
+</nav>
+
+<p class="lead">TaskCenter terminal tools are agent-facing submission endpoints. They are normal registered tools until a successful call crosses the tool framework, where the result is stamped as terminating and the engine loop stops the agent run.</p>
+<div class="summary">
+  <p>The current shape is intentionally layered: descriptors tell agents when to choose each terminal, submission tools validate and project role payloads, the framework validates output and stamps <code>does_terminate</code>, and the engine owns terminal exclusivity. Advisor and resolver helpers use the same terminal contract for their own child runs, but their results return to the caller instead of mutating the parent attempt directly.</p>
+</div>
+
+<section id="terminal-contract-map" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="backend/src/tools/submission/_factory.py backend/src/tools/_terminals/registry.py backend/src/tools/_framework/execution/tool_call.py backend/src/tools/_framework/core/validation.py backend/src/engine/tool_call/dispatch.py backend/src/engine/query/loop.py docs/architecture/tools/submission.html docs/architecture/tools/terminals.html">
+<h2>Terminal Contract Map <a class="anchor" href="#terminal-contract-map">#</a></h2>
+<div class="diagram" aria-label="Terminal submission contract">
+  <div class="flow-row">
+    <div class="node info"><strong>Agent profile</strong><small>effective terminal set selected for this launch</small></div>
+    <div class="node"><strong>Descriptor registry</strong><small>selection guidance and advisor review focus</small></div>
+    <div class="node"><strong>Submission tool</strong><small>pydantic payload validation and role-specific projection</small></div>
+    <div class="node warn"><strong>Framework</strong><small>input, hooks, body, output validation, terminal stamp</small></div>
+  </div>
+  <div class="flow-row">
+    <div class="node"><strong>Dispatcher</strong><small>terminal must be called alone</small></div>
+    <div class="node good"><strong>Query loop</strong><small>stores terminal result and exits with <code>TOOL_STOP</code></small></div>
+    <div class="node"><strong>Lifecycle owner</strong><small>TaskCenter attempt, helper caller, or run tracker consumes metadata</small></div>
+  </div>
+</div>
+<div class="sequence" aria-label="Terminal execution sequence">
+  <ol>
+    <li><span><code>make_submission_tools()</code> registers planner, executor, verifier, evaluator, advisor, resolver, and explorer submission tools as one framework tool set.</span></li>
+    <li><span>Each terminal tool is decorated with <code>is_terminal_tool=True</code> and a concrete pydantic input model. Most use <code>TextToolOutput</code>, so non-error output must validate as text before the result can terminate the run.</span></li>
+    <li><span><code>engine.query.loop</code> derives <code>context.terminal_tools</code> from the active tool registry. If a run has any terminals, streamed tool calls are deferred until the final assistant message is available.</span></li>
+    <li><span><code>engine.tool_call.dispatch</code> rejects any final batch that mixes a terminal tool with sibling tool calls. The rejection returns one error tool result per tool-use id and executes none of the batch.</span></li>
+    <li><span><code>execute_tool_once()</code> validates input, runs prehooks, emits start, executes the body, validates output, runs posthooks, and stamps non-error terminal results with <code>does_terminate=True</code>.</span></li>
+    <li><span>The dispatcher projects the first terminating result into <code>terminal_result</code>. The query loop sets <code>QueryExitReason.TOOL_STOP</code> and returns without another model turn.</span></li>
+  </ol>
+</div>
+</section>
+
+<section id="descriptor-registry" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="backend/src/tools/_terminals/registry.py backend/src/task_center/agent_launch/skill_message.py backend/src/task_center/_core/terminal_tool_routing.py backend/src/task_center/attempt/launch.py backend/tests/unit_test/test_tools/test_terminals/test_descriptor_registry.py backend/tests/unit_test/test_task_center/test_agent_launch/test_terminal_tool_router.py backend/src/task_center_runner/tests/mock/task_center/test_initial_messages_capture.py">
+<h2>Descriptor Registry <a class="anchor" href="#descriptor-registry">#</a></h2>
+<p><code>TERMINAL_DESCRIPTORS</code> is the shared terminal prose registry. Each <code>TerminalToolDescriptor</code> has a parent-facing <code>selection_guidance</code> field and an advisor-facing <code>advisor_review_focus</code> field; <code>render_terminal_catalog()</code> renders either view for a selected terminal list.</p>
+<div class="edge-list">
+  <div><b>parent guidance</b><span><code>task_center.agent_launch.skill_message</code> renders the selected terminal list into launch guidance and skill rows so the agent sees exactly the terminals allowed for this launch.</span></div>
+  <div><b>advisor guidance</b><span><code>ask_advisor</code> renders the same terminal names with <code>focus=&quot;advisor_review_focus&quot;</code>, so the audit prompt reviews the parent's choices through the same registry.</span></div>
+  <div><b>launch-specific set</b><span><code>TerminalToolRouter</code> computes an effective agent definition. The registered profile remains unchanged, while the launched copy carries filtered terminals such as planner close-only or executor no-handoff at deeper goal depth.</span></div>
+  <div><b>runtime metadata</b><span><code>EphemeralAttemptAgentLauncher</code> places the selected terminals into <code>ExecutionMetadata</code> under <code>active_terminals</code>. Mock/live message capture tests read that metadata from <code>message.jsonl</code> rows.</span></div>
+  <div><b>drift tests</b><span>Descriptor tests require every main-profile terminal to have nonblank selection and advisor text; initial-message capture verifies row-level terminal catalog rendering from the registry.</span></div>
+</div>
+</section>
+
+<section id="role-submission-terminals" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="backend/src/tools/submission/_factory.py backend/src/tools/submission/context/attempt.py backend/src/tools/submission/context/executor.py backend/src/tools/submission/planner backend/src/tools/submission/executor backend/src/tools/submission/verifier backend/src/tools/submission/evaluator backend/src/task_center/attempt/orchestrator.py backend/src/task_center/goal/starter.py backend/src/task_center/goal/close_report_router.py backend/tests/unit_test/test_tools/test_submission_tool_registration.py backend/tests/unit_test/test_tools/test_submission_planner_tools.py backend/tests/unit_test/test_task_center/test_lifecycle">
+<h2>Role Submission Terminals <a class="anchor" href="#role-submission-terminals">#</a></h2>
+<p>The role submission terminals are adapters over TaskCenter state owners. They do not coordinate peer agents directly; they resolve the current task, build typed submissions, and call the lifecycle owner for the current attempt or delegated goal.</p>
+<div class="evidence-grid">
+  <div class="evidence-card">
+    <h3>Planner</h3>
+    <p><code>submit_plan_closes_goal</code> and <code>submit_plan_defers_goal</code> validate <code>plan_spec</code>, <code>evaluation_criteria</code>, generator tasks, task specs, dependencies, and optional <code>deferred_goal_for_next_iteration</code>. Accepted payloads call <code>AttemptOrchestrator.apply_plan_submission()</code>.</p>
+  </div>
+  <div class="evidence-card">
+    <h3>Executor</h3>
+    <p><code>submit_execution_success</code> and <code>submit_execution_blocker</code> resolve <code>ExecutorSubmissionContext</code> and call <code>apply_generator_submission()</code> with <code>generator_role=&quot;executor&quot;</code>. <code>submit_execution_handoff</code> starts a child goal through <code>GoalStarter.start(GoalOrigin.task(...))</code>.</p>
+  </div>
+  <div class="evidence-card">
+    <h3>Verifier</h3>
+    <p><code>submit_verification_success</code> and <code>submit_verification_failure</code> are generator submissions with <code>generator_role=&quot;verifier&quot;</code>. The success path carries checks; the failure path carries unresolved issues for retry or failure handling.</p>
+  </div>
+  <div class="evidence-card">
+    <h3>Evaluator</h3>
+    <p><code>submit_evaluation_success</code> and <code>submit_evaluation_failure</code> call <code>AttemptOrchestrator.apply_evaluator_submission()</code>. The orchestrator and stage advancer, not the tool body, decide whether the attempt closes, retries, or advances.</p>
+  </div>
+</div>
+<div class="sequence" aria-label="Executor handoff sequence">
+  <ol>
+    <li><span>The executor submits a nonblank delegated <code>goal</code> through <code>submit_execution_handoff</code>.</span></li>
+    <li><span><code>ExecutorSubmissionContext.start_delegated_goal()</code> creates <code>GoalStarter(runtime=...)</code> and starts a task-origin goal for the current generator task.</span></li>
+    <li><span><code>GoalStarter</code> creates the child goal, initial iteration, and initial attempt, then marks the parent generator task <code>WAITING_GOAL</code>.</span></li>
+    <li><span>When the child goal closes, <code>GoalClosureReportRouter</code> routes the close report back to the parent task, and <code>AttemptOrchestrator.apply_goal_closure_report()</code> resumes the parent generator state.</span></li>
+  </ol>
+</div>
+</section>
+
+<section id="validation-and-stop" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="backend/src/tools/_framework/core/validation.py backend/src/tools/_framework/execution/tool_call.py backend/src/tools/_framework/core/runtime.py backend/src/engine/tool_call/dispatch.py backend/src/engine/query/loop.py backend/src/engine/query/context.py backend/tests/unit_test/test_tools/test_tool_execution.py backend/tests/unit_test/test_engine/test_loop_resource_limit_transcript.py">
+<h2>Validation And Stop Path <a class="anchor" href="#validation-and-stop">#</a></h2>
+<p>Terminal tools terminate only after the normal tool validation pipeline succeeds. A pydantic input failure, a prehook failure, a body exception, an invalid output shape, or a posthook failure returns an error <code>ToolResult</code>; error results are deliberately not stamped as terminal.</p>
+<div class="trace-grid">
+  <div>Input validation</div><div><code>parse_tool_input()</code> strips engine runtime-control fields such as <code>background</code>, validates the pydantic input model, and returns a retryable invalid-input message on validation errors.</div>
+  <div>Body execution</div><div><code>execute_tool_body()</code> catches tool exceptions, logs the traceback, and returns bounded error text with the exception type.</div>
+  <div>Output validation</div><div><code>validate_tool_output()</code> validates non-error output against the tool's output model. Invalid JSON or pydantic mismatch becomes an error result with <code>output_validation_error</code> metadata.</div>
+  <div>Terminal stamping</div><div><code>execute_tool_once()</code> uses <code>dataclasses.replace()</code> to set <code>does_terminate=True</code> only when <code>tool.is_terminal_tool</code> and the final result is not an error.</div>
+  <div>Runtime metadata</div><div><code>ExecutionMetadata</code> carries TaskCenter ids, <code>attempt_runtime</code>, <code>composer</code>, conversation messages, tool registry, background manager, sandbox invocation ids, and extras such as <code>active_terminals</code>.</div>
+  <div>Loop stop</div><div><code>dispatch_assistant_tools()</code> returns the first terminating result. <code>engine.query.loop</code> stores it on <code>context.terminal_result</code>, sets <code>QueryExitReason.TOOL_STOP</code>, and stops the run.</div>
+</div>
+<div class="callout warn">
+  <span class="label">Failure mode</span>
+  A terminal tool batched with siblings is rejected before any sibling foreground, background, sandbox, or TaskCenter side effect runs. A terminal tool that returns an invalid output shape is also non-terminal because output validation converts it to an error.
+</div>
+</section>
+
+<section id="advisor-before-terminal" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="backend/src/tools/ask_helper/ask_advisor/ask_advisor.py backend/src/tools/ask_helper/_lib/_compose.py backend/src/tools/ask_helper/_lib/_transcript.py backend/src/tools/submission/advisor/submit_advisor_feedback/submit_advisor_feedback.py backend/src/tools/_terminals/registry.py backend/tests/unit_test/test_tools/test_submission_helper_tools.py backend/tests/unit_test/test_tools/test_ask_advisor_retry.py docs/architecture/tools/ask-helper.html">
+<h2>Advisor Before Terminal <a class="anchor" href="#advisor-before-terminal">#</a></h2>
+<p><code>ask_advisor</code> is the read-only validation pattern for terminal outputs before the parent makes its own terminal submission. The parent sends the intended terminal name and payload; the helper receives the parent's original context, original task, filtered transcript, terminal catalog rendered with advisor review focus, and the pending submission JSON.</p>
+<div class="diagram" aria-label="Advisor-before-terminal workflow">
+  <div class="flow-row">
+    <div class="node info"><strong>Parent agent</strong><small>prepares terminal payload</small></div>
+    <div class="node"><strong><code>ask_advisor</code></strong><small>direct helper launch through <code>run_ephemeral_agent</code></small></div>
+    <div class="node"><strong>Advisor terminal</strong><small><code>submit_advisor_feedback</code> returns approve or reject metadata</small></div>
+    <div class="node good"><strong>Parent decision</strong><small>retry, fix, or submit parent terminal</small></div>
+  </div>
+</div>
+<div class="edge-list">
+  <div><b>message builder</b><span><code>build_helper_messages()</code> requires the parent's first two user messages and renders a prompt-injection guard before evidence sections. If the parent transcript shape is missing, the tool returns a normal error result instead of launching a weak helper.</span></div>
+  <div><b>transcript filter</b><span>Advisor mode drops the first two parent user messages from the transcript because they are shown separately, strips state-mutating edit/write inputs, caps Bash command text, drops thinking blocks, and enforces byte/message caps.</span></div>
+  <div><b>terminal output</b><span><code>submit_advisor_feedback</code> accepts only <code>approve</code> or <code>reject</code> plus summary text. Its metadata carries <code>helper_role=&quot;advisor&quot;</code> and <code>verdict</code>.</span></div>
+  <div><b>error return</b><span>If the child helper crashes or exits without <code>submit_advisor_feedback</code>, <code>ask_advisor</code> returns an error result to the parent. It does not silently convert helper failure into approval.</span></div>
+</div>
+</section>
+
+<section id="helper-results-notifications" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="backend/src/tools/ask_helper/ask_resolver/ask_resolver.py backend/src/tools/submission/resolver/submit_resolver_result/submit_resolver_result.py backend/src/tools/submission/explorer/submit_exploration_result/submit_exploration_result.py backend/src/tools/submission/notification_triggers/request_goal_after_edit.py backend/src/tools/submission/notification_triggers/resolver_limit.py backend/src/tools/submission/resolver_history.py backend/tests/unit_test/test_tools/test_submission_helper_tools.py backend/tests/unit_test/test_tools/test_submission_soft_reminders.py backend/tests/unit_test/test_tools/test_ask_resolver_retry.py docs/architecture/tools/ask-helper.html">
+<h2>Helper Results And Notifications <a class="anchor" href="#helper-results-notifications">#</a></h2>
+<p>Helper terminal outputs are terminal inside the helper run, then ordinary tool results for the parent. This lets helpers use the same engine stop contract while keeping parent TaskCenter state under the parent submission tools and orchestrator.</p>
+<div class="evidence-grid">
+  <div class="evidence-card">
+    <h3>Resolver</h3>
+    <p><code>ask_resolver</code> launches an edit-capable helper with issue text and optional issue context. The helper terminates via <code>submit_resolver_result</code>, which returns <code>resolver.resolved</code>, <code>remaining_issues</code>, and <code>changed_files</code> metadata to the parent.</p>
+  </div>
+  <div class="evidence-card">
+    <h3>Explorer</h3>
+    <p><code>submit_exploration_result</code> terminates explorer-style work and returns <code>subagent_role=&quot;explorer&quot;</code>, findings, and references. It does not resolve attempt context or call TaskCenter mutators.</p>
+  </div>
+  <div class="evidence-card">
+    <h3>Resolver limit reminder</h3>
+    <p><code>make_resolver_limit_reminder()</code> counts unresolved <code>ask_resolver</code> results through <code>unresolved_resolver_call_count()</code>. At the warning threshold it injects a notification that one unresolved resolver call remains before success is blocked.</p>
+  </div>
+  <div class="evidence-card">
+    <h3>Handoff-after-edit reminder</h3>
+    <p><code>make_goal_request_after_edit_reminder()</code> watches for generator edit tools such as <code>write_file</code>, <code>edit_file</code>, and <code>shell</code>. After edits start, it nudges the executor away from <code>submit_execution_handoff</code> and toward success or blocker terminals.</p>
+  </div>
+</div>
+<div class="summary">
+  <ul>
+    <li>Advisor and resolver direct launches call <code>engine.api.run_ephemeral_agent</code> with <code>persist_agent_run=False</code> and inherit the active sandbox id when one exists.</li>
+    <li>Resolver edits still use ordinary tool permissions and sandbox routing; <code>ask_resolver</code> does not create a separate workspace pipeline.</li>
+    <li>Helper results are evidence for the parent. The parent still must call its own TaskCenter terminal to mutate parent attempt state.</li>
+  </ul>
+</div>
+</section>
+
+<section id="tests-maintenance" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="backend/tests/unit_test/test_tools/test_submission_tool_registration.py backend/tests/unit_test/test_tools/test_submission_planner_tools.py backend/tests/unit_test/test_tools/test_submission_terminal_routing.py backend/tests/unit_test/test_tools/test_submission_helper_tools.py backend/tests/unit_test/test_tools/test_submission_soft_reminders.py backend/tests/unit_test/test_tools/test_tool_execution.py backend/tests/unit_test/test_tools/test_terminals/test_descriptor_registry.py backend/tests/unit_test/test_task_center/test_agent_launch/test_terminal_tool_router.py docs/architecture/tools/submission.html docs/architecture/tools/terminals.html docs/architecture/tools/ask-helper.html">
+<h2>Tests And Maintenance <a class="anchor" href="#tests-maintenance">#</a></h2>
+<div class="evidence-grid">
+  <div class="evidence-card">
+    <h3>Registration and routing</h3>
+    <p><code>test_submission_tool_registration.py</code> pins the registered submission names and asserts helper request tools are non-terminal while submission tools are terminal. Terminal router tests pin launch-specific filtering.</p>
+  </div>
+  <div class="evidence-card">
+    <h3>Validation and stop behavior</h3>
+    <p><code>test_tool_execution.py</code> covers terminal result capture, terminal batch rejection, framework stamping, and non-terminal continuation behavior.</p>
+  </div>
+  <div class="evidence-card">
+    <h3>Planner and role submissions</h3>
+    <p>Planner submission tests cover duplicate tasks, dependency validation, task spec matching, close and defer variants, and lifecycle handoff through the attempt orchestrator.</p>
+  </div>
+  <div class="evidence-card">
+    <h3>Helpers and reminders</h3>
+    <p>Helper tests cover advisor/resolver direct launch shape, missing terminal-result errors, helper terminal metadata, explorer output metadata, and resolver/handoff soft reminders.</p>
+  </div>
+</div>
+<div class="refresh-list">
+  <div><strong>Refresh when terminal names change</strong><span>Update descriptors, role profiles, submission registration tests, helper prompts, and TaskCenter terminal routing together.</span></div>
+  <div><strong>Refresh when framework validation changes</strong><span>Re-check input parsing, runtime control stripping, output validation, posthooks, and <code>does_terminate</code> stamping.</span></div>
+  <div><strong>Refresh when helper prompts change</strong><span>Re-check transcript filtering, prompt-injection guard text, terminal catalog rendering, and helper terminal result metadata.</span></div>
+</div>
+</section>
+
+<div class="page-baseline" data-page-baseline-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa">
+  <strong>Maintenance baseline</strong>
+  <span>Technical sections reviewed against <code>e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa</code>.</span>
+  <code>git diff e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa..HEAD -- &lt;section data-evidence-paths&gt;</code>
+</div>
+<div class="page-footer-nav"><span><a href="agent-roles.html">Agent Roles</a></span><span><a href="bridges.html">Engine Tools Sandbox</a></span></div>
+</main>
+<script src="../assets/search-index.js"></script>
+<script src="../assets/nav.js"></script>
+</body>
+</html>

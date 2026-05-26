@@ -150,6 +150,73 @@ def test_background_tool_emitter_adds_no_new_threads_on_launch() -> None:
     assert after == before
 
 
+@pytest.mark.asyncio
+async def test_background_tool_heartbeat_reuses_existing_timer(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Phase 2.6 backfill — heartbeat reuses one asyncio task; no new threads.
+
+    Closes the §Tests gap from phase 2.5 (which wired the heartbeat emit but
+    did not pin the no-new-thread + existing-timer-reuse invariants).
+    """
+    import engine.background.task_supervisor as task_supervisor
+
+    monkeypatch.setattr(task_supervisor, "_HEARTBEAT_INTERVAL_S", 0.05)
+    # Heartbeat path tries to call ``sandbox.api.heartbeat`` — stub it so the
+    # test does not depend on a live sandbox.
+    import sys
+
+    fake = type(sys)("sandbox.api")
+
+    async def _fake_heartbeat(sandbox_id: str, invocation_ids: list[str]) -> None:
+        del sandbox_id, invocation_ids
+        return None
+
+    fake.heartbeat = _fake_heartbeat  # type: ignore[attr-defined]
+    monkeypatch.setitem(sys.modules, "sandbox.api", fake)
+
+    sup = task_supervisor.BackgroundTaskSupervisor()
+    thread_before = threading.active_count()
+    task_count_before = len(asyncio.all_tasks())
+
+    async def _long() -> ToolResult:
+        await asyncio.sleep(0.3)
+        return ToolResult(output="done")
+
+    sup.launch(
+        task_id="bg_hb",
+        tool_name="shell",
+        tool_input={},
+        coro=_long(),
+        agent_id="agent-hb",
+        uses_sandbox=True,
+        sandbox_id="sb-x",
+        sandbox_invocation_id="inv-y",
+    )
+    # Two ticks of the heartbeat (0.05 s × 2 + slack).
+    await asyncio.sleep(0.18)
+    events = _drain_background_events()
+    heartbeats = [e for e in events if e["type"] == "background_tool.heartbeat"]
+    assert heartbeats, "expected at least one background_tool.heartbeat emit"
+    for evt in heartbeats:
+        section = evt["payload"]["background_tool"]
+        assert section["background_task_id"] == "bg_hb"
+        assert evt["lane"] == "sample"
+
+    # Invariant (a): thread count unchanged. The heartbeat is an asyncio
+    # task on the existing loop — NOT a new thread.
+    assert threading.active_count() == thread_before
+    # Invariant (c): supervisor owns exactly ONE heartbeat task.
+    assert sup._heartbeat_task is not None  # noqa: SLF001
+    delta_tasks = len(asyncio.all_tasks()) - task_count_before
+    # Exactly two tasks added: the background task + the heartbeat. The
+    # heartbeat is NOT respawned per tick (would surface as > 2).
+    assert delta_tasks == 2
+
+    # Cancel so the test finishes promptly.
+    await sup.cancel_all()
+
+
 def test_audit_recorder_attach_daemon_audit_puller_starts_and_stops(
     tmp_path,
 ) -> None:

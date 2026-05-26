@@ -15,6 +15,8 @@
 | `phase-2-slice-1-report.md` | Implementation report for the slice-1 (foundation) cut of Phase 2 — puller library, normalizer, sink, layer_stack emitters |
 | `phase-2.5-remaining-emitters-and-wiring.md` | Slice-by-slice plan that completes Phase 2's overall goal: overlay / isolated_workspace / occ / os_resource emitters, plugin shim, background tool, dispatcher slow-tail flush, puller-to-recorder wiring |
 | `phase-2.5-implementation-report.md` | Implementation report for Phase 2.5 slices 1–6 (every emitter family + recorder puller wiring surface). Slices 7 and 8 deferred. |
+| `phase-2.6-dispatcher-heavy-run-and-closers.md` | Phase 2.6 plan: closes Phase 2's overall goal — dispatcher slow-tail (slice 7), heavy-run regression (slice 8), plus four 2.5 closers (changeset_id, real isolated_workspace sampler cadence, PluginManifest.kind, async aclose). |
+| `phase-2.6-implementation-report.md` | Implementation report for Phase 2.6 — slice 7, slice 8, and closers A/C/D/F. With this report, Phase 2 is closed; Phase 3 is the only remaining V3 work. |
 | `phase-3-report-and-release-gates.md` | Consolidated performance & resource report (§1–§13), 4 release gates, default-on rollout |
 
 ## Lineage

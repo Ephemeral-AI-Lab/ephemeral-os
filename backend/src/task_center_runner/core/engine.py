@@ -204,10 +204,15 @@ async def run_pipeline(config: RunConfig) -> PipelineReport:
         duration_s = time.perf_counter() - started
     finally:
         await config.sandbox.release(lease)
-        stop_puller = getattr(recorder, "stop_daemon_audit_puller", None)
-        if callable(stop_puller):
-            await stop_puller()
-        recorder.dispose()
+        # Closer F (Phase 2.6): single async teardown awaits puller drain
+        # before the sink + listener flush runs. ``getattr`` guard keeps
+        # test stubs without ``aclose`` working — they fall back to sync
+        # ``dispose`` (which raises if a puller is somehow still attached).
+        aclose = getattr(recorder, "aclose", None)
+        if callable(aclose):
+            await aclose()
+        else:
+            recorder.dispose()
         if owns_stores:
             bundle.close()
         lifecycle_unsub()

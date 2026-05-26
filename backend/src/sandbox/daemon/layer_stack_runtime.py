@@ -7,10 +7,10 @@ import threading
 import time
 from pathlib import Path
 
-from sandbox.daemon.audit_buffer import get_audit_buffer
 from sandbox.daemon.audit_schema import (
     LayerStackSection,
     build_layer_stack_event,
+    safe_emit,
 )
 from sandbox.layer_stack.stack import (
     LayerStack,
@@ -219,13 +219,10 @@ def _emit_layer_stack(
     *,
     lane: str,
 ) -> None:
-    try:
-        get_audit_buffer().append(
-            build_layer_stack_event(event_type, section),
-            lane=lane,  # type: ignore[arg-type]
-        )
-    except Exception:  # noqa: BLE001 — audit emits never break the hot path
-        pass
+    safe_emit(
+        build_layer_stack_event(event_type, section),
+        lane=lane,  # type: ignore[arg-type]
+    )
 
 
 def emit_squash_event(
