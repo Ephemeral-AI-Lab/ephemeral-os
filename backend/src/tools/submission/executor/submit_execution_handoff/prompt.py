@@ -10,34 +10,30 @@ from tools._names import (
 
 def get_submit_execution_handoff_description() -> str:
     return f"""\
-Request a delegated complex-task solution for the current generator task.
-This terminates your executor run and bounces the task back to the
-planner.
+Hand the current task back to the planner for decomposition into smaller
+sub-goals. This terminates your executor run.
 
 Call this when:
-- The task is genuinely too complex for a single executor pass (requires
-  multi-step planning, fan-out to subagents, or cross-file
-  coordination).
-- You've assessed the scope before making edits — and have not yet
+- The current goal's scope is too large for a single executor pass and
+  would be more reliably completed as several smaller sub-goals.
+- You've assessed the scope BEFORE making edits — and have not yet
   edited.
-- A cleaner break-up into smaller sub-tasks would produce a more
-  reliable outcome.
 
 You MUST call this BEFORE making edits. If you've already started
-editing, finish what you can and use `{SUBMIT_EXECUTION_SUCCESS_TOOL_NAME}` or
-`{SUBMIT_EXECUTION_BLOCKER_TOOL_NAME}` instead.
+editing, finish what you can and use `{SUBMIT_EXECUTION_SUCCESS_TOOL_NAME}`
+or `{SUBMIT_EXECUTION_BLOCKER_TOOL_NAME}` instead.
 
 Do NOT call this when:
 - The task is bounded and doable — just do it.
-- You're stuck on an environment issue — that's
-  `{SUBMIT_EXECUTION_BLOCKER_TOOL_NAME}`, not a handoff.
+- You're stuck on an environment or dependency issue — that's
+  `{SUBMIT_EXECUTION_BLOCKER_TOOL_NAME}`, not a decomposition request.
 
 Inputs:
-- `goal`: the higher-level goal the planner should re-plan against. Be
-  specific about what's hard and what shape of decomposition you'd
-  suggest.
+- `goal_handoff`: the original goal statement (verbatim or paraphrased
+  without information loss), plus your findings and the reasons it
+  needs to be decomposed by the planner.
 
 Behavior:
-- Hands the task back to the planner with the proposed goal; spawns a
-  fresh planning iteration.\
+- Spawns a fresh planning iteration with the handed-off goal as the new
+  goal statement.\
 """

@@ -69,13 +69,13 @@ class ExecutorSubmissionContext:
         )
 
     def start_delegated_goal(
-        self, *, goal: str
+        self, *, goal_handoff: str
     ) -> StartedGoal:
         from task_center import GoalOrigin, GoalStarter
 
         coordinator = GoalStarter(runtime=self.runtime)
         return coordinator.start(
-            prompt=goal,
+            prompt=goal_handoff,
             origin=GoalOrigin.task(task_id=self.task_center_task_id),
         )
 

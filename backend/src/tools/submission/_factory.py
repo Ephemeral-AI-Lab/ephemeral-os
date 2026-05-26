@@ -9,9 +9,9 @@ from tools.submission.evaluator import (
     submit_evaluation_failure,
     submit_evaluation_success,
 )
-from tools.submission.executor import submit_execution_handoff
 from tools.submission.executor import (
     submit_execution_blocker,
+    submit_execution_handoff,
     submit_execution_success,
 )
 from tools.submission.verifier import (

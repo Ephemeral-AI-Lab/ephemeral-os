@@ -184,7 +184,7 @@ async def test_submit_execution_handoff_starts_delegated_request(
 
     result = await execute_tool_once(
         submit_execution_handoff,
-        {"goal": "solve delegated task"},
+        {"goal_handoff": "solve delegated task"},
         make_tool_context(fixture, generator_id),
         emit=_noop_emit,
     )
@@ -243,7 +243,7 @@ async def test_submit_execution_handoff_accepts_any_generator_agent_profile(
 
     result = await execute_tool_once(
         submit_execution_handoff,
-        {"goal": "delegate broad custom generator work"},
+        {"goal_handoff": "delegate broad custom generator work"},
         make_tool_context(fixture, generator_id),
         emit=_noop_emit,
     )
@@ -269,7 +269,7 @@ async def test_submit_execution_handoff_return_updates_outer_generator(
 
     result = await execute_tool_once(
         submit_execution_handoff,
-        {"goal": "solve delegated task"},
+        {"goal_handoff": "solve delegated task"},
         make_tool_context(fixture, outer_generator_id),
         emit=_noop_emit,
     )

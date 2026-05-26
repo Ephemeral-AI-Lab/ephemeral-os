@@ -155,7 +155,7 @@
 </pre>
 <div class="sequence" aria-label="Executor handoff sequence">
   <ol>
-    <li><span>The executor submits a nonblank delegated <code>goal</code> through <code>submit_execution_handoff</code>.</span></li>
+    <li><span>The executor submits a nonblank <code>goal_handoff</code> through <code>submit_execution_handoff</code>.</span></li>
     <li><span><code>ExecutorSubmissionContext.start_delegated_goal()</code> creates <code>GoalStarter(runtime=...)</code> and starts a task-origin goal for the current generator task.</span></li>
     <li><span><code>GoalStarter</code> creates the child goal, initial iteration, and initial attempt, then marks the parent generator task <code>WAITING_GOAL</code>.</span></li>
     <li><span>When the child goal closes, <code>GoalClosureReportRouter</code> routes the close report back to the parent task, and <code>AttemptOrchestrator.apply_goal_closure_report()</code> resumes the parent generator state.</span></li>
