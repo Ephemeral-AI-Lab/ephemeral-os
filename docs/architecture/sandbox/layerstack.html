@@ -51,7 +51,8 @@
     <li><a href="#layerstack-data-model"><span>2.2</span> Data Model</a></li>
     <li><a href="#layerstack-projection"><span>2.3</span> Projection</a></li>
     <li><a href="#layerstack-publish"><span>2.4</span> Publish</a></li>
-    <li><a href="#layerstack-evidence-refresh"><span>2.5</span> Evidence and Refresh</a></li>
+    <li><a href="#layerstack-squash-gc"><span>2.5</span> Squash and Deferred GC</a></li>
+    <li><a href="#layerstack-evidence-refresh"><span>2.6</span> Evidence and Refresh</a></li>
   </ol>
 </nav>
 
@@ -103,7 +104,7 @@
 
 </section>
 <section id="layerstack-data-model"
-  data-last-reviewed-commit="2a3e6cc7c"
+  data-last-reviewed-commit="ab32582f7"
   data-evidence-paths="backend/src/sandbox/layer_stack/manifest.py backend/src/sandbox/layer_stack/lease.py backend/src/sandbox/layer_stack/view.py backend/src/sandbox/layer_stack/transaction.py">
 <h3>2.2 Data Model <a class="anchor" href="#layerstack-data-model">§</a></h3>
 <table>
@@ -112,15 +113,15 @@
     <tr><td><code>Manifest</code></td><td>Ordered list of layer refs plus version/depth. Newest layer is first, so overlay mounts and merged reads see the latest changes first.</td><td>One active file at <code>manifest.json</code>, atomically replaced on publish/squash/flush.</td><td><a class="wiki-link" href="#layerstack-projection">Projection</a>, <a class="wiki-link" href="overlay.html">Overlay</a></td></tr>
     <tr><td><code>LayerRef</code></td><td>Names one immutable directory under <code>layers/</code>. Base layers start with <code>B</code>; published delta/checkpoint layers start with <code>L</code> or checkpoint labels.</td><td>Referenced until no active manifest or lease pins it.</td><td><a class="wiki-link" href="#layerstack-publish">Publish</a>, <a class="wiki-link" href="#layerstack-storage">Storage</a></td></tr>
     <tr><td><code>WorkspaceBinding</code></td><td>Binds a real workspace root to a layer-stack root and records base root hashes so path translation remains explicit.</td><td>Written during base creation and read by daemon routing.</td><td><a class="wiki-link" href="daemon.html#workspace-routing-and-state">Workspace Routing and State</a></td></tr>
-    <tr><td><code>WorkspaceLease</code></td><td>Pins the manifest that a live overlay/projection is using so cleanup and squash do not remove needed lowerdirs.</td><td>Created for snapshots, released by overlay destroy, isolated exit, or projection teardown.</td><td><a class="wiki-link" href="overlay.html">Overlay</a>, <a class="wiki-link" href="workspaces.html#isolated-lifecycle-detail">Enter, Run, Exit Details</a></td></tr>
-    <tr><td><code>MergedView</code></td><td>Logical reader over the active manifest. It answers direct reads/listing and can materialize a full tree when maintenance explicitly asks.</td><td>Cached by the LayerStack manager and evicts layer indexes when layers disappear.</td><td><a class="wiki-link" href="workflow-cookbook.html#cookbook-layerstack-read">Direct LayerStack Read</a></td></tr>
+    <tr><td><code>WorkspaceLease</code></td><td>Captures the entire active manifest at acquire time. Every layer in that frozen manifest is retained on disk (<code>leased_layers()</code> for GC); the head layer of the lease (<code>lease_head_layers()</code>) bounds squash so the snapshot cut stays visible in active.</td><td>Created for snapshots, released by overlay destroy, isolated exit, or projection teardown.</td><td><a class="wiki-link" href="overlay.html">Overlay</a>, <a class="wiki-link" href="workspaces.html#isolated-lifecycle-detail">Enter, Run, Exit Details</a></td></tr>
+    <tr><td><code>MergedView</code></td><td>Logical reader over the active manifest. It answers direct reads/listing and can project a full tree when maintenance explicitly asks.</td><td>Cached by the LayerStack manager and evicts layer indexes when layers disappear.</td><td><a class="wiki-link" href="workflow-cookbook.html#cookbook-layerstack-read">Direct LayerStack Read</a></td></tr>
     <tr><td><code>LayerStackTransaction</code></td><td>Storage writer boundary used by OCC to publish exactly one accepted changeset against the live manifest.</td><td>Per commit transaction.</td><td><a class="wiki-link" href="occ.html#occ-technical-workflow">OCC Technical Workflow</a></td></tr>
   </tbody>
 </table>
 
 </section>
 <section id="layerstack-projection"
-  data-last-reviewed-commit="2a3e6cc7c"
+  data-last-reviewed-commit="ab32582f7"
   data-evidence-paths="backend/src/sandbox/layer_stack/stack.py backend/src/sandbox/layer_stack/view.py backend/src/sandbox/ephemeral_workspace/pipeline.py backend/src/sandbox/isolated_workspace/pipeline.py">
 <h3>2.3 Projection <a class="anchor" href="#layerstack-projection">§</a></h3>
 <div class="summary">
@@ -132,7 +133,7 @@
   </ul>
 </div>
 
-<p><strong>A snapshot is O(1): a lease plus a list of existing layer paths, not a rendered tree.</strong> <code>LayerStack.prepare_workspace_snapshot()</code> reads the manifest, acquires a lease, and returns <code>layer_paths</code> copied from the manifest. It sets <code>layer_stack.materialize_s</code> to <code>0.0</code> and does not build a transient lowerdir for normal operations <span class="file-ref">backend/src/sandbox/layer_stack/stack.py:105-129</span>. The result object contains <code>lease_id</code>, <code>manifest_version</code>, <code>root_hash</code>, <code>manifest</code>, timings, and optional <code>layer_paths</code> <span class="file-ref">backend/src/sandbox/layer_stack/stack.py:43-62</span>. This is what makes N concurrent agents cheap: every snapshot is constant-cost regardless of repository size.</p>
+<p><strong>A snapshot is O(1): a lease plus a list of existing layer paths, not a rendered tree.</strong> <code>LayerStack.prepare_workspace_snapshot()</code> reads the manifest, acquires a lease, and returns <code>layer_paths</code> copied from the manifest. It does not project a transient lowerdir for normal operations <span class="file-ref">backend/src/sandbox/layer_stack/stack.py:105-129</span>. The result object contains <code>lease_id</code>, <code>manifest_version</code>, <code>root_hash</code>, <code>manifest</code>, timings, and optional <code>layer_paths</code> <span class="file-ref">backend/src/sandbox/layer_stack/stack.py:43-62</span>. This is what makes N concurrent agents cheap: every snapshot is constant-cost regardless of repository size.</p>
 
 <div class="stack-viz" aria-label="LayerStack projection">
   <div class="layer lower"><strong>L000005-...</strong><div class="desc">newest layer, highest priority lowerdir</div></div>
@@ -141,12 +142,12 @@
   <div class="layer merged"><strong>Projection handle</strong><div class="desc">lease_id + layer_paths + manifest_key, no full tree copy</div></div>
 </div>
 
-<p><code>MergedView</code> still exists for direct logical reads and materialization. It reads newest-first, honors whiteouts and opaque directories, and can list directories or iterate paths <span class="file-ref">backend/src/sandbox/layer_stack/view.py:60-193</span>. Its <code>materialize()</code> method applies layers oldest-first into a destination <span class="file-ref">backend/src/sandbox/layer_stack/view.py:195-219</span>. That rendered tree is used by flush/squash/special paths, not by normal per-tool overlay lowerdirs.</p>
+<p><code>MergedView</code> still exists for direct logical reads and projection. It reads newest-first, honors whiteouts and opaque directories, and can list directories or iterate paths <span class="file-ref">backend/src/sandbox/layer_stack/view.py:60-193</span>. Its <code>project()</code> method applies layers oldest-first into a fresh destination <span class="file-ref">backend/src/sandbox/layer_stack/view.py:195-219</span>. That rendered tree is used by commit-to-workspace, squash checkpoint builds, and special-path maintenance — not by normal per-tool overlay lowerdirs.</p>
 
 </section>
 <section id="layerstack-publish"
-  data-last-reviewed-commit="2a3e6cc7c"
-  data-evidence-paths="backend/src/sandbox/layer_stack/publisher.py backend/src/sandbox/layer_stack/changes.py backend/src/sandbox/layer_stack/lease.py backend/src/sandbox/layer_stack/squash.py backend/src/sandbox/layer_stack/stack.py">
+  data-last-reviewed-commit="ab32582f7"
+  data-evidence-paths="backend/src/sandbox/layer_stack/publisher.py backend/src/sandbox/layer_stack/changes.py backend/src/sandbox/layer_stack/lease.py backend/src/sandbox/layer_stack/squash.py backend/src/sandbox/layer_stack/stack.py backend/src/sandbox/layer_stack/workspace_commit.py">
 <h3>2.4 Publish <a class="anchor" href="#layerstack-publish">§</a></h3>
 <div class="summary">
   <ul>
@@ -159,7 +160,7 @@
 
 <p>This is the <strong>atomic-pointer-swap commit pattern</strong> used by Git (HEAD updates), Apache Iceberg (metadata.json swap), Delta Lake, and Hudi: a single mutable pointer over a tree of immutable content-addressed objects, swapped via CAS. The active <code>manifest.json</code> is the single linearization point; everything else is append-only.</p>
 
-<p>The publisher performs a CAS check before writing, writes changes into a staging layer, moves it into <code>layers/</code>, then re-checks the manifest before writing the new active manifest <span class="file-ref">backend/src/sandbox/layer_stack/publisher.py:49-132</span>. Delete and opaque directory semantics use overlay-style marker files <span class="file-ref">backend/src/sandbox/layer_stack/changes.py:123-142</span>. Leases pin layers by refcount and expose pinned layers to squash/GC <span class="file-ref">backend/src/sandbox/layer_stack/lease.py:38-86</span>.</p>
+<p>The publisher performs a CAS check before writing, writes changes into a staging layer, moves it into <code>layers/</code>, then re-checks the manifest before writing the new active manifest <span class="file-ref">backend/src/sandbox/layer_stack/publisher.py:49-132</span>. Delete and opaque directory semantics use overlay-style marker files <span class="file-ref">backend/src/sandbox/layer_stack/changes.py:123-142</span>. Leases refcount every layer in the captured manifest for GC retention (<code>leased_layers()</code>) and expose each lease's head as a squash barrier (<code>lease_head_layers()</code>) <span class="file-ref">backend/src/sandbox/layer_stack/lease.py:38-86</span>.</p>
 
 <div class="callout">
   <span class="label">Why auto-squash exists</span>
@@ -202,29 +203,126 @@
   <tbody>
     <tr><td>Initialization</td><td>Creates root, writer lock, <code>layers/</code>, <code>staging/</code>, manifest store, lease registry, merged view, publisher, and squash service.</td><td><span class="file-ref">backend/src/sandbox/layer_stack/stack.py:65-94</span></td></tr>
     <tr><td>Snapshot release</td><td>Releases the lease, checks current manifest reachability, removes unreferenced layer candidates, removes digest sidecars, and evicts view indexes.</td><td><span class="file-ref">backend/src/sandbox/layer_stack/stack.py:135-147</span>, <span class="file-ref">backend/src/sandbox/layer_stack/stack.py:322-338</span></td></tr>
-    <tr><td>Squash planning</td><td>Segments unpinned layer runs so pinned layers from live overlays remain in place; no-op or tiny compactions are refused.</td><td><span class="file-ref">backend/src/sandbox/layer_stack/squash.py:69-101</span>, <span class="file-ref">backend/src/sandbox/layer_stack/squash.py:150-184</span></td></tr>
-    <tr><td>Checkpoint build</td><td>Materializes a segment into a checkpoint layer and moves it into <code>layers/</code>.</td><td><span class="file-ref">backend/src/sandbox/layer_stack/squash.py:103-121</span></td></tr>
-    <tr><td>Workspace flush</td><td>Materializes the active merged view back into the bound workspace, resets storage, and rebuilds a base layer.</td><td><span class="file-ref">backend/src/sandbox/layer_stack/stack.py:287-312</span></td></tr>
+    <tr><td>Squash planning</td><td>Segments runs around each lease's head layer so the snapshot cut stays visible in active; older leased layers below the head are foldable. No-op or tiny compactions are refused.</td><td><span class="file-ref">backend/src/sandbox/layer_stack/squash.py:69-101</span>, <span class="file-ref">backend/src/sandbox/layer_stack/squash.py:150-184</span></td></tr>
+    <tr><td>Checkpoint build</td><td>Projects a segment into a checkpoint layer and moves it into <code>layers/</code>.</td><td><span class="file-ref">backend/src/sandbox/layer_stack/squash.py:103-121</span></td></tr>
+    <tr><td>Workspace commit</td><td>Projects the active manifest back into the bound workspace, resets storage, and rebuilds a base layer.</td><td><span class="file-ref">backend/src/sandbox/layer_stack/stack.py:287-312</span>, <span class="file-ref">backend/src/sandbox/layer_stack/workspace_commit.py</span></td></tr>
   </tbody>
 </table>
 
 <div class="callout">
   <span class="label">Projection detail</span>
-  The normal operation projection is a lease-backed list of existing layer directories. A full rendered tree only appears when <code>MergedView.materialize()</code> is intentionally called for maintenance or flush, not during normal ephemeral/isolated lowerdir preparation.
+  The normal operation projection is a lease-backed list of existing layer directories. A full rendered tree only appears when <code>MergedView.project()</code> is intentionally called for maintenance, squash checkpoints, or workspace commit, not during normal ephemeral/isolated lowerdir preparation.
 </div>
+
+</section>
+<section id="layerstack-squash-gc"
+  data-last-reviewed-commit="ab32582f7"
+  data-evidence-paths="backend/src/sandbox/layer_stack/squash.py backend/src/sandbox/layer_stack/stack.py backend/src/sandbox/layer_stack/lease.py">
+<h3>2.5 Squash and Deferred GC <a class="anchor" href="#layerstack-squash-gc">§</a></h3>
+<div class="summary">
+  <ul>
+    <li>OCC publishes append layers without bound; both overlay <code>mount(8)</code> and <code>MergedView</code> read-amp force a depth cap.</li>
+    <li><code>LayerStack.squash()</code> folds runs of non-barrier layers into checkpoint layers and rewrites the active manifest to use them.</li>
+    <li>Squash is non-destructive: original layer directories stay on disk and remain readable through any lease that still references them. Deletion is deferred to the lease that retains them releasing.</li>
+    <li>Leases hold their full frozen manifest for reads (<code>leased_layers()</code> GC retention); only each lease's <strong>head</strong> acts as a squash barrier (<code>lease_head_layers()</code>).</li>
+  </ul>
+</div>
+
+<div class="callout">
+  <span class="label">Two lease-derived sets</span>
+  <strong><code>leased_layers()</code></strong> is the union of every layer in every active lease's manifest — the on-disk retention set used by <code>_unreferenced_layers</code> at lease release. <strong><code>lease_head_layers()</code></strong> is the newest layer of each lease's manifest — the squash barrier set. They are different things and used by different code paths: GC vs. squash planning.
+</div>
+
+<p><strong>Algorithm.</strong> <code>LayerStack.squash(max_depth=...)</code> takes the storage-writer guard, reads the active manifest under the lock, asks the squasher for a plan using <code>barrier_layers=self._leases.lease_head_layers()</code>, and refuses if the plan is <code>None</code> <span class="file-ref">backend/src/sandbox/layer_stack/stack.py:231-293</span>. Plan acceptance criteria <span class="file-ref">backend/src/sandbox/layer_stack/squash.py:61-93</span>:</p>
+
+<ol>
+  <li>Active depth must exceed <code>max_depth</code>.</li>
+  <li>Segmenting around the barrier set must produce at least one run of ≥ 2 contiguous non-barrier layers (a <code>CheckpointSegment</code>).</li>
+  <li>Number of plan entries must be strictly less than the current depth.</li>
+  <li>Reduction must meet <code>min_reduction</code> (default 1; <code>can_squash()</code> uses 2).</li>
+  <li>If post-segmentation entry count still exceeds <code>max_depth</code> and no single segment is larger than <code>max_depth</code>, the plan is rejected — squashing wouldn't reach the cap.</li>
+</ol>
+
+<p>When accepted, squash acquires a synthetic lease against the active manifest (prevents GC racing the checkpoint build), then calls <code>build_checkpoint</code> per segment: allocate a <code>B{v+1:06d}-...</code> staging dir, <code>MergedView.project(staging, Manifest(segment.layers))</code>, and <code>os.replace</code> into <code>layers/</code>. Under the lock again, it verifies the active manifest's prefix is still compatible (<code>manifest_prefix_before_plan</code>), assembles <code>new_layers = live_prefix + [checkpoint | barrier-passthrough]</code>, bumps the version, and writes the manifest atomically. If any check fails, partial checkpoints are discarded via <code>discard_checkpoint</code>. On success, the synthetic squash lease is released, which triggers <code>_unreferenced_layers</code> and removes any layer no longer referenced by the active manifest or any other lease <span class="file-ref">backend/src/sandbox/layer_stack/stack.py:138-150</span>, <span class="file-ref">backend/src/sandbox/layer_stack/stack.py:333-346</span>.</p>
+
+<div class="callout">
+  <span class="label">Worked example</span>
+  <strong>Setup.</strong> Active manifest <code>[L7, L6, L5, L4, L3, L2, L1]</code>. Lease A holds <code>[L6, L5, L4, L3, L2, L1]</code> (head L6). Call <code>squash(max_depth=2)</code>.
+  <br/><br/>
+  <strong>Plan.</strong> <code>barrier_layers = {L6}</code>. Segmenting around the barrier produces entries <code>[L7]</code>, <code>L6</code>, <code>CheckpointSegment(L5, L4, L3, L2, L1)</code>. The third entry is foldable (length 5 ≥ 2).
+  <br/><br/>
+  <strong>Result.</strong> Active becomes <code>[L7, L6, C]</code>. On disk: L1..L7 <em>and</em> C all coexist — L5..L1 dirs survive because lease A still references them through its frozen manifest. Reads through lease A continue to walk <code>[L6, L5, L4, L3, L2, L1]</code>; new readers using active walk <code>[L7, L6, C]</code>.
+  <br/><br/>
+  <strong>Eventual deletion.</strong> When lease A releases, <code>_unreferenced_layers</code> computes <code>skip = active.layers ∪ leased_layers</code> = <code>{L7, L6, C}</code>. Of lease A's layers <code>{L6, L5, L4, L3, L2, L1}</code>, L6 is in active and is kept; L5..L1 are no longer referenced anywhere and are deleted along with their digest sidecars and view-index cache entries.
+</div>
+
+<pre class="diagram" aria-label="Squash and deferred GC workflow">
+LayerStack.squash(max_depth)
+        |
+        v
+[ acquire storage-writer guard ]
+        |
+        v
+under lock:
+  active   = read_active_manifest
+  barriers = leases.lease_head_layers()
+  plan     = squasher.plan(active, max_depth, barrier_layers=barriers)
+        |
+        +-- plan is None ------------------&gt; return None
+        |
+        v
+  squash_lease = leases.acquire(active, "squash-&lt;uuid&gt;")   # synthetic GC pin
+        |
+        v
+for each CheckpointSegment in plan:
+  build_checkpoint:
+    stage = allocate B{v+1:06d}-&lt;id&gt;
+    MergedView.project(stage, Manifest(segment.layers))
+    os.replace(stage -&gt; layers/&lt;id&gt;)
+        |
+        v
+under lock:
+  current = read_active_manifest
+  live_prefix = manifest_prefix_before_plan(current, plan)
+        |
+        +-- diverged -----&gt; discard_checkpoint(...) ; return None
+        |
+        v
+  new_layers = live_prefix + [checkpoint | barrier-passthrough per entry]
+  write_manifest_atomic(new_manifest)
+        |
+        v
+release_lease(squash_lease)
+        |
+        v
+_unreferenced_layers(squash_lease.manifest.layers,
+                     current=read_active_manifest)
+   skip = active.layers | leases.leased_layers()
+   removable = candidates - skip
+        |
+        v
+_remove_layers(removable): rm -rf layer dirs + digest sidecars + evict view cache
+</pre>
+
+<p><strong>Why leases hold the full manifest, not just the head.</strong> Reads through a snapshot lease walk <em>its</em> frozen manifest newest-first <span class="file-ref">backend/src/sandbox/layer_stack/view.py:60-118</span>. The bytes answering <code>read_bytes("foo.py")</code> can live in any layer of the chain; a single head ref does not contain a lower layer's contents. Snapshot-by-reference (cheap O(1) acquire + GC-retain the chain) is the design trade vs. snapshot-by-copy (expensive O(workspace) acquire, head ref only).</p>
+
+<p><strong>Concurrency invariants.</strong> Storage-writer exclusive guard held end-to-end; manifest-version compare between plan and publish via <code>manifest_prefix_before_plan</code> makes squash OCC-safe against concurrent <code>LayerPublisher.publish_layer</code>; synthetic squash lease prevents <code>_unreferenced_layers</code> from racing the checkpoint build window <span class="file-ref">backend/src/sandbox/layer_stack/stack.py:242-293</span>.</p>
 
 </section>
 <section id="layerstack-evidence-refresh"
   data-last-reviewed-commit="2a3e6cc7c"
   data-evidence-paths="backend/src/sandbox/layer_stack backend/tests/live_e2e_test/sandbox/layer_stack backend/tests/live_e2e_test/sandbox/workspace_base backend/tests/live_e2e_test/sandbox/layer_stack_overlay_occ">
-<h3>2.5 Evidence and Refresh <a class="anchor" href="#layerstack-evidence-refresh">§</a></h3>
+<h3>2.6 Evidence and Refresh <a class="anchor" href="#layerstack-evidence-refresh">§</a></h3>
 <div class="evidence-grid">
   <div class="evidence-card">
     <h4>Source files</h4>
     <ul>
-      <li><span class="file-ref">backend/src/sandbox/layer_stack/stack.py</span> public facade, leases, snapshots, squash, flush.</li>
+      <li><span class="file-ref">backend/src/sandbox/layer_stack/stack.py</span> public facade, leases, snapshots, squash, commit_to_workspace.</li>
       <li><span class="file-ref">backend/src/sandbox/layer_stack/publisher.py</span> staged layer publish and manifest CAS.</li>
-      <li><span class="file-ref">backend/src/sandbox/layer_stack/view.py</span> newest-first logical reads and materialization.</li>
+      <li><span class="file-ref">backend/src/sandbox/layer_stack/view.py</span> newest-first logical reads and manifest projection.</li>
+      <li><span class="file-ref">backend/src/sandbox/layer_stack/squash.py</span> checkpoint segmentation, projection, and atomic manifest rewrite.</li>
+      <li><span class="file-ref">backend/src/sandbox/layer_stack/workspace_commit.py</span> projection + workspace swap + base rebuild.</li>
+      <li><span class="file-ref">backend/src/sandbox/layer_stack/lease.py</span> <code>leased_layers()</code> retention set and <code>lease_head_layers()</code> barrier set.</li>
       <li><span class="file-ref">backend/src/sandbox/layer_stack/workspace_base.py</span> base import and workspace binding write.</li>
     </ul>
   </div>
@@ -253,16 +351,17 @@
 <div class="refresh-list">
   <div><strong>Manifest or layer layout changes</strong><span>Update Storage, Data Model, Space Model, and any direct file refs in Daemon routing.</span></div>
   <div><strong>Snapshot semantics change</strong><span>Update Projection, Overlay Handle, isolated lifecycle, and plugin projection refresh.</span></div>
-  <div><strong>Publish or squash changes</strong><span>Update Publish, OCC Technical Workflow, and shell pre-mount maintenance notes.</span></div>
+  <div><strong>Publish or squash changes</strong><span>Update Publish, Squash and Deferred GC, OCC Technical Workflow, and shell pre-mount maintenance notes.</span></div>
+  <div><strong>Lease semantics change</strong><span>Update Squash and Deferred GC's "Two lease-derived sets" callout, Data Model row for WorkspaceLease, and the lease.py evidence link.</span></div>
 </div>
 <div class="maintenance-note">
   Backlinks: <a class="wiki-link" href="overview.html#overview-invariants">Core Invariants</a> names LayerStack as durable truth; <a class="wiki-link" href="overlay.html">Overlay</a> consumes <code>layer_paths</code>; <a class="wiki-link" href="occ.html">OCC</a> publishes into LayerStack; <a class="wiki-link" href="plugins.html#plugin-refresh-detail">Projection Refresh and LSP Writes</a> watches manifest keys derived from this page.
 </div>
 </section>
-<div class="page-baseline" data-page-baseline-commit="2a3e6cc7c">
+<div class="page-baseline" data-page-baseline-commit="ab32582f7">
   <strong>Maintenance baseline</strong>
-  <span>Local section metadata reviewed at <code>2a3e6cc7c</code>.</span>
-  <code>git diff 2a3e6cc7c..HEAD -- &lt;section data-evidence-paths&gt;</code>
+  <span>Sections updated to layer_stack vocabulary rename at <code>ab32582f7</code>.</span>
+  <code>git diff ab32582f7..HEAD -- &lt;section data-evidence-paths&gt;</code>
 </div>
 <div class="page-footer-nav"><span><a href="overview.html">← 1. Overview</a></span><span><a href="overlay.html">3. Overlay →</a></span></div>
 </main>
