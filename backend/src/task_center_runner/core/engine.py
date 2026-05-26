@@ -204,6 +204,9 @@ async def run_pipeline(config: RunConfig) -> PipelineReport:
         duration_s = time.perf_counter() - started
     finally:
         await config.sandbox.release(lease)
+        stop_puller = getattr(recorder, "stop_daemon_audit_puller", None)
+        if callable(stop_puller):
+            await stop_puller()
         recorder.dispose()
         if owns_stores:
             bundle.close()

@@ -285,7 +285,46 @@ class AuditRecorder:
                 self._record_sandbox_event
             )
 
+        self._maybe_auto_start_daemon_audit_puller()
         self._write_run_json()
+
+    def _maybe_auto_start_daemon_audit_puller(self) -> None:
+        """Auto-construct + start the daemon audit puller when ``sandbox_id`` is set.
+
+        Slice 6 contract: ``AuditRecorder.start()`` flips
+        ``sandbox_events.jsonl`` from the stream-bridge to the pull path
+        whenever it has a sandbox to point at. Callers that need explicit
+        control (custom transport, custom pull callable) may still use
+        :meth:`attach_daemon_audit_puller` — auto-start is a no-op once a
+        puller has been attached.
+        """
+        if not self._sandbox_id or self._daemon_audit_puller is not None:
+            return
+        try:
+            import asyncio
+
+            asyncio.get_running_loop()
+        except RuntimeError:
+            # Recorder constructed outside an event loop (test fixtures,
+            # synchronous host paths). Caller can still attach manually.
+            return
+
+        sandbox_id = self._sandbox_id
+
+        async def _pull(after_seq: int, limit: int) -> dict[str, Any]:
+            from sandbox.api.daemon_audit import audit_pull as _api_audit_pull
+
+            return await _api_audit_pull(
+                sandbox_id,
+                after_seq=after_seq,
+                limit=limit,
+            )
+
+        try:
+            self.attach_daemon_audit_puller(pull=_pull)
+        except Exception:  # noqa: BLE001 — audit never breaks the host path
+            self._daemon_audit_puller = None
+            self._sandbox_events_sink = None
 
     def attach_daemon_audit_puller(
         self,

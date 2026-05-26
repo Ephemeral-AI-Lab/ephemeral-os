@@ -7,6 +7,17 @@
 > [`phase-2-slice-1-report.md`](phase-2-slice-1-report.md) for what is
 > already shipped.
 
+## Status (2026-05-26)
+
+Slices 1–6 (`overlay_workspace`, `isolated_workspace`, `occ`,
+`os_resource.sampled`, generic plugin shim, background tool emitters +
+puller-to-recorder wiring surface) shipped. See
+[`phase-2.5-implementation-report.md`](phase-2.5-implementation-report.md)
+for what landed, contracts honored, and deferred items. Slices 7
+(per-tool phase slow-tail flush) and 8 (end-to-end heavy-run regression)
+remain open; both carry their own non-trivial design surface and ship
+independently per the plan's "one PR per slice" guidance.
+
 ## Goal
 
 Close out the Phase 2 deliverables that were deferred from slice 1. When
