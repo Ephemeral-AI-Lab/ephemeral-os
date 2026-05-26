@@ -145,7 +145,8 @@ async def ensure_installed(
 ) -> str:
     """Ensure *manifest*'s plugin bundle is installed on *sandbox_id*."""
     key = (sandbox_id, manifest.name)
-    digest = _bundle_hash(manifest)
+    bundle_files = _bundle_files(manifest)
+    digest = _bundle_hash_from_files(bundle_files)
     if _installed_digests.get(key) == digest:
         return digest
 
@@ -162,6 +163,7 @@ async def ensure_installed(
             sandbox_id=sandbox_id,
             manifest=manifest,
             digest=digest,
+            bundle_files=bundle_files,
             setup_timeout=setup_timeout,
         )
         _installed_digests[key] = digest
@@ -178,8 +180,12 @@ def forget(sandbox_id: str) -> None:
 
 
 def _bundle_hash(manifest: PluginManifest) -> str:
+    return _bundle_hash_from_files(_bundle_files(manifest))
+
+
+def _bundle_hash_from_files(bundle_files: list[tuple[str, Path]]) -> str:
     hasher = hashlib.sha256()
-    for label, path in _bundle_files(manifest):
+    for label, path in bundle_files:
         hasher.update(label.encode("utf-8"))
         hasher.update(b"\0")
         hasher.update(path.read_bytes())
@@ -210,10 +216,10 @@ def _is_bundle_file(path: Path) -> bool:
     return True
 
 
-def _build_tar(manifest: PluginManifest) -> bytes:
+def _build_tar(bundle_files: list[tuple[str, Path]]) -> bytes:
     raw = io.BytesIO()
     with tarfile.open(fileobj=raw, mode="w") as tar:
-        for rel, path in _bundle_files(manifest):
+        for rel, path in bundle_files:
             tar.add(
                 path,
                 arcname=rel,
@@ -256,6 +262,7 @@ async def _upload_and_run_setup(
     sandbox_id: str,
     manifest: PluginManifest,
     digest: str,
+    bundle_files: list[tuple[str, Path]],
     setup_timeout: int,
 ) -> None:
     install_dir = plugin_install_dir(manifest.name)
@@ -263,8 +270,6 @@ async def _upload_and_run_setup(
     lock_dir = f"{install_dir}.lock"
     staging_dir = f"{install_dir}.staging-{digest[:12]}-{uuid.uuid4().hex[:8]}"
     tar_path = f"{staging_dir}/.bundle.tar.gz"
-
-    bundle = _build_tar(manifest)
 
     acquire_lock = await exec_fn(
         sandbox_id,
@@ -283,6 +288,7 @@ async def _upload_and_run_setup(
     try:
         if await _marker_present(exec_fn, sandbox_id, manifest.name, digest):
             return
+        bundle = _build_tar(bundle_files)
         setup_dir = await exec_fn(
             sandbox_id,
             (

@@ -41,9 +41,9 @@ def _seed_demo_manifest(tmp_path: Path) -> PluginManifest:
 
 @pytest.fixture(autouse=True)
 def _isolate_session() -> Iterator[None]:
-    host_dispatch_mod.reset_host_dispatch_cache()
+    host_dispatch_mod.reset_host_dispatch_cache_for_tests()
     yield
-    host_dispatch_mod.reset_host_dispatch_cache()
+    host_dispatch_mod.reset_host_dispatch_cache_for_tests()
 
 
 def test_call_plugin_happy_path(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

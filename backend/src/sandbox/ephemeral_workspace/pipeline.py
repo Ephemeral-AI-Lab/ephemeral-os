@@ -457,7 +457,6 @@ class EphemeralPipeline(OperationOverlayMixin, WorkspacePublishMixin):
 
 __all__ = [
     "EphemeralPipeline",
-    "LayerStackPort",
     "clear_overlay_registry_for_tests",
     "get_sandbox_overlay",
     "stop_all_overlays",

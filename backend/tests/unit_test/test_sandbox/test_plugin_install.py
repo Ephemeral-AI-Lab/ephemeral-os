@@ -126,6 +126,47 @@ def test_marker_hit_short_circuits(tmp_path: Path) -> None:
     assert not any("setup.sh" in c and "EOS_PLUGIN_DIR" in c for c in fake.calls)
 
 
+def test_marker_hit_after_remote_lock_skips_bundle_build(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    plugin_dir = _seed_demo_plugin(tmp_path)
+    manifest = parse_plugin_manifest(plugin_dir)
+
+    class _SecondMarkerExec(_FakeExec):
+        marker_checks = 0
+
+        async def __call__(
+            self,
+            sandbox_id: str,
+            command: str,
+            *,
+            cwd: str | None = None,
+            timeout: int | None = None,
+        ) -> _FakeResult:
+            if command.startswith("test -f"):
+                self.marker_checks += 1
+                return _FakeResult(exit_code=0 if self.marker_checks == 2 else 1)
+            return await super().__call__(
+                sandbox_id,
+                command,
+                cwd=cwd,
+                timeout=timeout,
+            )
+
+    def fail_build(_bundle_files: list[tuple[str, Path]]) -> bytes:
+        raise AssertionError("bundle should not be built after locked marker hit")
+
+    fake = _SecondMarkerExec(marker_present=False)
+    monkeypatch.setattr(install_mod, "_build_tar", fail_build)
+
+    digest = asyncio.run(ensure_installed("sb-1", manifest, exec_fn=fake))
+
+    assert digest
+    assert fake.marker_checks == 2
+    assert not any("base64 -d" in c for c in fake.calls)
+
+
 def test_marker_miss_uploads_and_runs_setup(tmp_path: Path) -> None:
     plugin_dir = _seed_demo_plugin(tmp_path)
     manifest = parse_plugin_manifest(plugin_dir)

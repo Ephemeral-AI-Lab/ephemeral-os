@@ -833,7 +833,7 @@ register_plugin_op("demo", "write", intent=Intent.WRITE_ALLOWED)(write_handler)
 async def _run_setup_failure_checks(sandbox_id: str) -> tuple[dict[str, Any], dict[str, Any]]:
     plugin_name = "netfail"
     old_cache = plugin_host_dispatch._PLUGIN_MANIFESTS_BY_NAME
-    plugin_host_dispatch.reset_host_dispatch_cache()
+    plugin_host_dispatch.reset_host_dispatch_cache_for_tests()
     plugin_host_dispatch._PLUGIN_MANIFESTS_BY_NAME = {plugin_name: _fake_manifest(plugin_name)}
     install_attempts = 0
     dispatch_calls: list[str] = []
@@ -883,7 +883,7 @@ async def _run_setup_failure_checks(sandbox_id: str) -> tuple[dict[str, Any], di
         )
     finally:
         plugin_host_dispatch._PLUGIN_MANIFESTS_BY_NAME = old_cache
-        plugin_host_dispatch.reset_host_dispatch_cache()
+        plugin_host_dispatch.reset_host_dispatch_cache_for_tests()
 
     return (
         {

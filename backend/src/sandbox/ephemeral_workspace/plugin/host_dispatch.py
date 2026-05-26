@@ -293,7 +293,7 @@ def _plugin_install_error_details(
     }
 
 
-def reset_host_dispatch_cache() -> None:
+def reset_host_dispatch_cache_for_tests() -> None:
     """Reset module-level caches. Used by tests to isolate state."""
     global _PLUGIN_MANIFESTS_BY_NAME
     _PLUGIN_MANIFESTS_BY_NAME = None
