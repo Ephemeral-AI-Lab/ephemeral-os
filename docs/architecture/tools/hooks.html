@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tool Hooks - EphemeralOS Tools Architecture</title>
+<link rel="stylesheet" href="../assets/styles.css">
+</head>
+<body data-module="tools" data-page="hooks" data-root="../">
+<nav class="toc">
+  <h2>EphemeralOS Architecture</h2>
+  <a class="home-link" href="../index.html">All Modules</a>
+  <div class="search-box">
+    <input type="search" placeholder="Search architecture" data-doc-search aria-label="Search architecture">
+    <div class="search-results" data-doc-search-results></div>
+  </div>
+  <h2>Modules</h2>
+  <ol class="module-list">
+    <li><a href="../sandbox/index.html" data-doc-module="sandbox">Sandbox Workspace</a></li>
+    <li><a href="../tools/index.html" data-doc-module="tools" class="active">Tools</a></li>
+  </ol>
+  <h2>Tools Pages</h2>
+  <ol>
+    <li><a href="index.html" data-doc-module="tools" data-doc-section="index" data-doc-page="index.html">Overview</a></li>
+    <li><a href="framework.html" data-doc-module="tools" data-doc-section="framework" data-doc-page="framework.html">Framework</a></li>
+    <li><a href="hooks.html" data-doc-module="tools" data-doc-section="hooks" data-doc-page="hooks.html" class="active">Hooks</a></li>
+    <li><a href="terminals.html" data-doc-module="tools" data-doc-section="terminals" data-doc-page="terminals.html">Terminals</a></li>
+    <li><a href="sandbox.html" data-doc-module="tools" data-doc-section="sandbox" data-doc-page="sandbox.html">Sandbox Tools</a></li>
+    <li><a href="isolated-workspace.html" data-doc-module="tools" data-doc-section="isolated-workspace" data-doc-page="isolated-workspace.html">Isolated Workspace Tools</a></li>
+    <li><a href="background.html" data-doc-module="tools" data-doc-section="background" data-doc-page="background.html">Background</a></li>
+    <li><a href="subagent.html" data-doc-module="tools" data-doc-section="subagent" data-doc-page="subagent.html">Subagent</a></li>
+    <li><a href="ask-helper.html" data-doc-module="tools" data-doc-section="ask-helper" data-doc-page="ask-helper.html">Ask Helper</a></li>
+    <li><a href="submission.html" data-doc-module="tools" data-doc-section="submission" data-doc-page="submission.html">Submission</a></li>
+    <li><a href="skills.html" data-doc-module="tools" data-doc-section="skills" data-doc-page="skills.html">Skills</a></li>
+    <li><a href="maintenance.html" data-doc-module="tools" data-doc-section="maintenance" data-doc-page="maintenance.html">Maintenance</a></li>
+  </ol>
+</nav>
+<main>
+<div class="doc-actions">
+  <span><a href="index.html">Index</a> / Hooks</span>
+  <span class="nav-pair"><a href="framework.html">Framework</a><a href="sandbox.html">Sandbox Tools</a></span>
+</div>
+
+<h1>Tool Hooks</h1>
+<nav class="page-toc" aria-labelledby="page-toc-heading">
+  <h3 id="page-toc-heading">Contents</h3>
+  <ol>
+    <li><a href="#hook-boundary"><span>1</span> Hook Boundary</a></li>
+    <li><a href="#registration-contract"><span>2</span> Registration Contract</a></li>
+    <li><a href="#execution-pipeline"><span>3</span> Execution Pipeline</a></li>
+    <li><a href="#sandbox-shell-prehooks"><span>4</span> Sandbox Shell Pre-Hooks</a></li>
+    <li><a href="#evidence-refresh"><span>5</span> Evidence and Refresh</a></li>
+  </ol>
+</nav>
+
+<p class="lead">
+  Tool hooks are explicit per-tool gates in <code>backend/src/tools/_framework</code>. They are not a
+  global orchestrator, not provider schema fields, and not TaskCenter lifecycle state. The current
+  implementation has a small contract module for hook results and target validation, plus a runtime
+  pipeline that runs hooks around one validated tool body call.
+</p>
+
+<section id="hook-boundary"
+  data-last-reviewed-commit="6c45d4565cc912df20e5e688185982fdbe237550"
+  data-evidence-paths="backend/src/tools/_framework/core/hooks.py backend/src/tools/_framework/core/base.py backend/src/tools/_framework/execution/hook_pipeline.py backend/src/tools/_framework/execution/tool_call.py backend/src/tools/__init__.py">
+<h2>Hook Boundary</h2>
+<div class="diagram" aria-label="Tool hook module boundary">
+  <div class="flow-row">
+    <div class="node info"><strong><code>BaseTool</code></strong><small>stores explicit pre/post hook tuples</small></div>
+    <div class="node"><strong><code>core.hooks</code></strong><small><code>HookResult</code>, protocols, names, target checks</small></div>
+    <div class="node good"><strong><code>hook_pipeline</code></strong><small>runs sequential phases and builds failures</small></div>
+  </div>
+  <div class="flow-row">
+    <div class="node"><strong><code>execute_tool_once</code></strong><small>pre-hooks, body, validation, post-hooks</small></div>
+    <div class="node warn"><strong>Concrete hook owner</strong><small>for example sandbox shell policy</small></div>
+  </div>
+</div>
+<div class="edge-list">
+  <div><b>exports</b><span><code>tools.__init__</code> and <code>tools._framework.core</code> expose <code>HookResult</code> with the core tool primitives.</span></div>
+  <div><b>exports</b><span><code>core.hooks</code> defines <code>HookResult</code>, <code>ToolPreHook</code>, <code>ToolPostHook</code>, <code>hook_name</code>, and <code>validate_hook_targets</code>.</span></div>
+  <div><b>calls</b><span><code>execute_tool_once</code> creates <code>ToolHookExecutionPipeline</code> for every tool call and delegates both hook phases to it.</span></div>
+  <div><b>documented-by</b><span>This page records that hooks do not own provider schema decoration, background task dispatch, terminal stamping, TaskCenter mutation, or sandbox workspace routing.</span></div>
+</div>
+</section>
+
+<section id="registration-contract"
+  data-last-reviewed-commit="6c45d4565cc912df20e5e688185982fdbe237550"
+  data-evidence-paths="backend/src/tools/_framework/core/hooks.py backend/src/tools/_framework/core/base.py backend/src/tools/_framework/core/decorator.py backend/src/tools/subagent/_factory.py backend/tests/unit_test/test_tools/test_tool_execution.py">
+<h2>Registration Contract</h2>
+<p>
+  A hook is attached by passing <code>pre_hooks</code> or <code>post_hooks</code> to the <code>@tool</code>
+  decorator or by setting the same immutable metadata on a <code>BaseTool</code> instance. Hook entries
+  must declare <code>target_tool</code>, and the decorator rejects hooks whose target does not match the
+  tool name. That keeps hook policy explicit at the tool definition instead of allowing a broad,
+  name-sniffing policy layer.
+</p>
+<div class="trace-grid">
+  <div>Input contract</div>
+  <div><code>ToolPreHook.run(tool_input, context)</code> returns <code>HookResult</code> and may replace the parsed input.</div>
+  <div>Output contract</div>
+  <div><code>ToolPostHook.run(tool_input, result, context)</code> returns <code>HookResult</code> and may replace the result.</div>
+  <div>Target guard</div>
+  <div><code>validate_hook_targets()</code> fails construction when <code>target_tool</code> is missing or mismatched.</div>
+  <div>Display name</div>
+  <div><code>hook_name()</code> uses an explicit <code>name</code> attribute when present, otherwise the hook class name.</div>
+</div>
+<p>
+  Caller-scoped wrapper tools must preserve the same invariant. <code>tools.subagent._factory</code>
+  re-validates hook targets when it wraps a base tool name, even though the current subagent tool has
+  no hook list, so future wrappers keep the same explicit target rule.
+</p>
+</section>
+
+<section id="execution-pipeline"
+  data-last-reviewed-commit="6c45d4565cc912df20e5e688185982fdbe237550"
+  data-evidence-paths="backend/src/tools/_framework/execution/tool_call.py backend/src/tools/_framework/execution/hook_pipeline.py backend/src/tools/_framework/core/validation.py backend/src/tools/_framework/core/results.py backend/src/tools/_framework/execution/trace.py backend/tests/unit_test/test_tools/test_tool_execution.py">
+<h2>Execution Pipeline</h2>
+<div class="sequence" aria-label="Hook execution sequence">
+  <ol>
+    <li><span><code>execute_tool_once()</code> parses raw input through the tool input model before any hook runs.</span></li>
+    <li><span><code>run_pre_hooks()</code> executes each pre-hook in tuple order. A pass can replace input; a fail returns a structured hook failure before the tool body starts.</span></li>
+    <li><span>The framework emits <code>ToolExecutionStarted</code> using the effective input and calls the tool body.</span></li>
+    <li><span>The normal output validator checks the body result against the tool output model.</span></li>
+    <li><span><code>run_post_hooks()</code> executes each post-hook in tuple order. A pass can replace the result; a fail replaces it with a hook failure.</span></li>
+    <li><span><code>finalize_result()</code> appends <code>hook_trace</code>, <code>effective_tool_input</code>, and pending system notification metadata unless the result is already a hook failure.</span></li>
+  </ol>
+</div>
+<p>
+  Hook failures are tool errors with provider-readable permission metadata: <code>hookEventName</code>
+  is <code>PreToolUse</code> or <code>PostToolUse</code>, <code>permissionDecision</code> is
+  <code>deny</code>, and the metadata includes the hook name, phase, tool name, and reason. Exceptions
+  and malformed hook returns are converted to the same failure shape, so the tool body is not needed
+  to explain hook denial.
+</p>
+<div class="summary">
+  <ul>
+    <li>Pre-hooks can prevent the body from running, so they are the right place for local deny gates.</li>
+    <li>Post-hooks run after output validation and are re-validated if they replace a successful result.</li>
+    <li>Background dispatch still uses the same hook pipeline because background workers call <code>execute_tool_call_streaming()</code>.</li>
+  </ul>
+</div>
+</section>
+
+<section id="sandbox-shell-prehooks"
+  data-last-reviewed-commit="6c45d4565cc912df20e5e688185982fdbe237550"
+  data-evidence-paths="backend/src/tools/sandbox/shell/shell.py backend/src/tools/sandbox/_lib/shell_policy.py backend/tests/unit_test/test_tools/test_sandbox_toolkit/test_shell_prehooks.py backend/tests/unit_test/test_sandbox/test_api/test_shell.py docs/architecture/tools/sandbox.html">
+<h2>Sandbox Shell Pre-Hooks</h2>
+<p>
+  The main concrete hook family is the sandbox shell policy. <code>shell</code> registers
+  <code>DestructiveGitShellPreHook()</code> and <code>DestructiveShellPreHook()</code> as pre-hooks.
+  They inspect the shell command before sandbox API dispatch and block destructive git mutations or
+  high-risk filesystem commands that would bypass the intended write/audit path.
+</p>
+<div class="edge-list">
+  <div><b>registers</b><span><code>tools.sandbox.shell.shell</code> passes both pre-hook instances to the <code>@tool</code> decorator for <code>shell</code>.</span></div>
+  <div><b>calls</b><span>Each shell pre-hook reads the command field from the parsed input and returns <code>HookResult.fail(...)</code> with policy metadata when blocked.</span></div>
+  <div><b>tested-by</b><span><code>test_shell_prehooks.py</code> checks blocked git commands, allowed read-only git commands, destructive shell commands, and the before-sandbox-requirement failure path.</span></div>
+</div>
+<div class="callout warn">
+  <span class="label">Boundary</span>
+  Shell pre-hooks are a front-door policy gate for obvious command forms. The sandbox write/audit
+  and OCC publish boundaries remain the authoritative isolation boundary for commands that evade a
+  regular-expression pre-check.
+</div>
+</section>
+
+<section id="evidence-refresh"
+  data-last-reviewed-commit="6c45d4565cc912df20e5e688185982fdbe237550"
+  data-evidence-paths="backend/src/tools/_framework/core/hooks.py backend/src/tools/_framework/execution/hook_pipeline.py backend/src/tools/_framework/execution/tool_call.py backend/src/tools/sandbox/_lib/shell_policy.py backend/src/tools/sandbox/shell/shell.py backend/tests/unit_test/test_tools/test_tool_execution.py backend/tests/unit_test/test_tools/test_sandbox_toolkit/test_shell_prehooks.py docs/architecture/tools/framework.html docs/architecture/tools/sandbox.html">
+<h2>Evidence and Refresh</h2>
+<div class="evidence-grid">
+  <div class="evidence-card">
+    <h3>Primary source</h3>
+    <ul>
+      <li><code>backend/src/tools/_framework/core/hooks.py</code> for the hook contract.</li>
+      <li><code>backend/src/tools/_framework/execution/hook_pipeline.py</code> for runtime execution and hook-failure metadata.</li>
+      <li><code>backend/src/tools/_framework/execution/tool_call.py</code> for hook placement in the tool lifecycle.</li>
+      <li><code>backend/src/tools/sandbox/_lib/shell_policy.py</code> for concrete shell pre-hook policy.</li>
+    </ul>
+  </div>
+  <div class="evidence-card">
+    <h3>Tests</h3>
+    <ul>
+      <li><code>backend/tests/unit_test/test_tools/test_tool_execution.py</code></li>
+      <li><code>backend/tests/unit_test/test_tools/test_sandbox_toolkit/test_shell_prehooks.py</code></li>
+    </ul>
+  </div>
+  <div class="evidence-card">
+    <h3>Refresh triggers</h3>
+    <p>
+      Re-check this page when hook target validation, hook trace metadata, system notification
+      capture, background tool execution, shell pre-hook policy, or the tool execution order changes.
+    </p>
+  </div>
+</div>
+<div class="wiki-links">
+  <a href="framework.html">Tools Framework</a>
+  <a href="sandbox.html#shell-background-policy">Sandbox Shell Policy</a>
+  <a href="background.html">Background Tools</a>
+  <a href="../agent_loops/main-loop.html#tool-dispatch-and-terminal-stop">Agent Loop Dispatch</a>
+</div>
+</section>
+
+<div class="page-baseline" data-page-baseline-commit="6c45d4565cc912df20e5e688185982fdbe237550">
+  <strong>Maintenance baseline</strong>
+  <span>Technical sections reviewed against <code>6c45d4565cc912df20e5e688185982fdbe237550</code>.</span>
+  <code>git diff 6c45d4565cc912df20e5e688185982fdbe237550..HEAD -- &lt;section data-evidence-paths&gt;</code>
+</div>
+<div class="page-footer-nav"><span><a href="framework.html">Framework</a></span><span><a href="sandbox.html">Sandbox Tools</a></span></div>
+</main>
+<script src="../assets/search-index.js"></script>
+<script src="../assets/nav.js"></script>
+</body>
+</html>

@@ -120,7 +120,9 @@ def stubbed_engine(monkeypatch: pytest.MonkeyPatch) -> None:
 
     monkeypatch.setattr(engine_module, "AuditRecorder", _StubRecorder)
 
-    async def _stub_write_perf_report(run_dir: Path, _snapshot: Any) -> Path:
+    async def _stub_write_perf_report(
+        run_dir: Path, _snapshot: Any, **_kwargs: Any
+    ) -> Path:
         return run_dir / "performance_report.json"
 
     monkeypatch.setattr(

@@ -24,7 +24,7 @@
   <h2>TaskCenter Pages</h2>
   <ol>
     <li><a href="index.html" data-doc-module="task-center" data-doc-section="index" data-doc-page="index.html">Overview</a></li>
-    <li><a href="lifecycle.html" data-doc-module="task-center" data-doc-section="lifecycle" data-doc-page="lifecycle.html">Lifecycle</a></li>
+    <li><a href="lifecycle.html" data-doc-module="task-center" data-doc-section="lifecycle" data-doc-page="lifecycle.html">Goal Iteration Attempt</a></li>
     <li><a href="attempt-harness.html" data-doc-module="task-center" data-doc-section="attempt-harness" data-doc-page="attempt-harness.html">Attempt Harness</a></li>
     <li><a href="context-engine.html" data-doc-module="task-center" data-doc-section="context-engine" data-doc-page="context-engine.html">Context Engine</a></li>
     <li><a href="agent-roles.html" data-doc-module="task-center" data-doc-section="agent-roles" data-doc-page="agent-roles.html">Agent Roles</a></li>
@@ -69,7 +69,7 @@
   <div class="flow-row">
     <div class="node"><strong>Dispatcher</strong><small>terminal must be called alone</small></div>
     <div class="node good"><strong>Query loop</strong><small>stores terminal result and exits with <code>TOOL_STOP</code></small></div>
-    <div class="node"><strong>Lifecycle owner</strong><small>TaskCenter attempt, helper caller, or run tracker consumes metadata</small></div>
+    <div class="node"><strong>State owner</strong><small>TaskCenter attempt, helper caller, or run tracker consumes metadata</small></div>
   </div>
 </div>
 <div class="sequence" aria-label="Terminal execution sequence">
@@ -98,7 +98,7 @@
 
 <section id="role-submission-terminals" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="backend/src/tools/submission/_factory.py backend/src/tools/submission/context/attempt.py backend/src/tools/submission/context/executor.py backend/src/tools/submission/planner backend/src/tools/submission/executor backend/src/tools/submission/verifier backend/src/tools/submission/evaluator backend/src/task_center/attempt/orchestrator.py backend/src/task_center/goal/starter.py backend/src/task_center/goal/close_report_router.py backend/tests/unit_test/test_tools/test_submission_tool_registration.py backend/tests/unit_test/test_tools/test_submission_planner_tools.py backend/tests/unit_test/test_task_center/test_lifecycle">
 <h2>Role Submission Terminals <a class="anchor" href="#role-submission-terminals">#</a></h2>
-<p>The role submission terminals are adapters over TaskCenter state owners. They do not coordinate peer agents directly; they resolve the current task, build typed submissions, and call the lifecycle owner for the current attempt or delegated goal.</p>
+<p>The role submission terminals are adapters over TaskCenter state owners. They do not coordinate peer agents directly; they resolve the current task, build typed submissions, and call the Goal -> Iteration -> Attempt owner for the current attempt or delegated goal.</p>
 <div class="evidence-grid">
   <div class="evidence-card">
     <h3>Planner</h3>
@@ -206,7 +206,7 @@
   </div>
   <div class="evidence-card">
     <h3>Planner and role submissions</h3>
-    <p>Planner submission tests cover duplicate tasks, dependency validation, task spec matching, close and defer variants, and lifecycle handoff through the attempt orchestrator.</p>
+    <p>Planner submission tests cover duplicate tasks, dependency validation, task spec matching, close and defer variants, and Goal -> Iteration -> Attempt handoff through the attempt orchestrator.</p>
   </div>
   <div class="evidence-card">
     <h3>Helpers and reminders</h3>

@@ -78,13 +78,22 @@
 <section id="status-progress-and-delivery" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="backend/src/engine/background/task_supervisor.py backend/src/engine/background/history.py backend/src/message/messages.py backend/src/message/stream_events.py backend/tests/unit_test/test_engine/test_background_tasks.py backend/tests/unit_test/test_engine/test_background_unit.py backend/tests/unit_test/test_engine/test_background_terminal_latch.py">
 <h2>Status Progress and Delivery</h2>
 <p><code>BackgroundTaskSupervisor</code> owns the in-memory records for the current agent run. Each record stores the alias, tool name, clean input, task type, agent id, sandbox binding, status, final result, progress lines, and an optional progress provider.</p>
-<div class="sequence" aria-label="Background status lifecycle">
-  <ol>
-    <li><span><code>running</code> begins at launch and gets a <code>[started: tool]</code> progress line.</span></li>
-    <li><span><code>completed</code>, <code>failed</code>, or <code>cancelled</code> is chosen by the done callback or cancel path. The terminal-status latch orders outcomes as completed over failed over cancelled over running.</span></li>
-    <li><span><code>delivered</code> is applied only by <code>collect_completed()</code>, which prevents the same terminal task from being surfaced twice.</span></li>
-    <li><span>Running progress comes from <code>append_progress()</code>, a metadata callback from the background tool, or a pull-style <code>progress_provider</code> used by structured tools such as subagents.</span></li>
-  </ol>
+<div class="diagram" aria-label="Background status lifecycle">
+  <div class="flow-row">
+    <div class="node"><strong>Launch record</strong><small><code>running</code>; append <code>[started: tool]</code></small></div>
+    <div class="node"><strong>Progress input</strong><small><code>append_progress()</code>, metadata callback, or <code>progress_provider</code></small></div>
+    <div class="node"><strong>Terminal latch</strong><small><code>completed</code> &gt; <code>failed</code> &gt; <code>cancelled</code> &gt; <code>running</code></small></div>
+  </div>
+  <div class="flow-row">
+    <div class="node"><strong>Done callback</strong><small>stores final result or failure status</small></div>
+    <div class="node"><strong>Cancel path</strong><small>requests cancellation without overwriting stronger terminal status</small></div>
+    <div class="node"><strong>Collector</strong><small><code>collect_completed()</code> applies <code>delivered</code> once</small></div>
+  </div>
+</div>
+<div class="edge-list">
+  <div><b><code>running</code></b><span>Created at launch with the initial progress line and updated while the asyncio task is active.</span></div>
+  <div><b><code>completed</code> <code>failed</code> <code>cancelled</code></b><span>Chosen by the done callback or cancel path, with the latch preserving the highest-precedence terminal outcome during races.</span></div>
+  <div><b><code>delivered</code></b><span>Set only by <code>collect_completed()</code>, which keeps terminal background output from being surfaced twice.</span></div>
 </div>
 <div class="edge-list">
   <div><b>Provider history</b><span><code>reduce_background_task_history()</code> keeps provider input compact by retaining only the latest meaningful background snapshots, preferring terminal snapshots over stale running snapshots.</span></div>

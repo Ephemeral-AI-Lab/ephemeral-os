@@ -110,15 +110,27 @@
 <section id="composer-rows" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="backend/src/task_center/agent_launch/composer.py backend/src/task_center/agent_launch/entry_messages.py backend/src/task_center/agent_launch/skill_message.py backend/src/task_center/agent_launch/task_guidance_dispatch.py backend/src/task_center/_core/terminal_tool_routing.py backend/src/task_center/attempt/launch.py backend/src/task_center/attempt/runtime.py backend/src/tools/_terminals/registry.py backend/tests/unit_test/test_task_center/test_agent_launch/test_composer.py backend/tests/unit_test/test_task_center/test_agent_launch/test_terminal_tool_router.py backend/tests/unit_test/test_task_center/test_lifecycle/test_planner_capability_fork.py">
 <h2>Composer Rows <a class="anchor" href="#composer-rows">#</a></h2>
 <p><code>AgentEntryComposer.compose()</code> is the TaskCenter launch seam. It does not build the system prompt row; the engine does that in <code>spawn_agent()</code>. It does build the launch user-message rows from the effective profile and <code>ContextPacket</code>: <code>&lt;context&gt;</code>, optional <code>&lt;Task Guidance&gt;</code>, and optional skill message.</p>
-<div class="sequence" aria-label="AgentEntryComposer workflow">
-  <ol>
-    <li><span><code>TerminalToolRouter.resolve()</code> loads the registered base definition, requires <code>context_recipe</code>, computes nested-goal depth, and returns an effective profile copy when terminal filtering is needed.</span></li>
-    <li><span><code>ContextEngine.build(recipe, scope)</code> validates required scope fields and produces a typed <code>ContextPacket</code>.</span></li>
-    <li><span>If <code>context_packet_store</code> exists, the packet is persisted and the returned id is stored on <code>AgentLaunch.context_packet_id</code>.</span></li>
-    <li><span><code>XmlPromptRenderer.render_context()</code> renders packet blocks, and <code>_wrap_context()</code> surrounds non-empty output with <code>&lt;context&gt;</code>.</span></li>
-    <li><span><code>task_guidance_builder_for()</code> emits row 3 only for <code>planner</code>, <code>executor</code>, <code>verifier</code>, and <code>evaluator</code>.</span></li>
-    <li><span><code>build_skill_message()</code> emits row 4 only when the effective profile declares a skill path.</span></li>
-  </ol>
+<div class="diagram" aria-label="AgentEntryComposer workflow">
+  <div class="flow-row">
+    <div class="node"><strong><code>TerminalToolRouter.resolve()</code></strong><small>base definition, <code>context_recipe</code>, nested-goal depth</small></div>
+    <div class="node"><strong>Effective profile</strong><small>terminal-filtered copy when routing requires it</small></div>
+    <div class="node"><strong><code>ContextEngine.build()</code></strong><small>scope validation plus typed <code>ContextPacket</code></small></div>
+  </div>
+  <div class="flow-row">
+    <div class="node"><strong>Packet persistence</strong><small>optional store writes <code>AgentLaunch.context_packet_id</code></small></div>
+    <div class="node"><strong><code>XmlPromptRenderer</code></strong><small>render blocks then wrap non-empty output in <code>&lt;context&gt;</code></small></div>
+    <div class="node"><strong>Task guidance branch</strong><small>row 3 for planner, executor, verifier, evaluator</small></div>
+  </div>
+  <div class="flow-row">
+    <div class="node"><strong>Skill branch</strong><small>row 4 only when the effective profile declares a skill path</small></div>
+    <div class="node"><strong><code>AgentEntryMessages</code></strong><small>context row, guidance row, optional skill row</small></div>
+    <div class="node"><strong>Launcher mapping</strong><small>runner prompt plus optional <code>initial_messages</code></small></div>
+  </div>
+</div>
+<div class="edge-list">
+  <div><b>Profile immutability</b><span>Terminal filtering returns an effective profile copy; the registered base profile is not mutated.</span></div>
+  <div><b>Context ownership</b><span>The composer asks <code>ContextEngine</code> for a packet and renders it; lifecycle decisions stay outside context construction.</span></div>
+  <div><b>Row selection</b><span>Task guidance and skill rows are conditional branches, and the attempt launcher decides which row becomes the runner prompt.</span></div>
 </div>
 <table>
   <thead><tr><th>Launch row</th><th>Owner</th><th>Current shape</th></tr></thead>
@@ -189,14 +201,22 @@
 <section id="retry-deferred-context" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="backend/src/task_center/attempt/state.py backend/src/task_center/attempt/orchestrator.py backend/src/task_center/attempt/stage_advancer.py backend/src/task_center/iteration/state.py backend/src/task_center/_core/invariants.py backend/src/task_center/_core/persistence.py backend/src/task_center/context_engine/recipes/planner.py backend/src/task_center/context_engine/recipes/evaluator.py backend/src/task_center/context_engine/recipes/attempts.py backend/src/agents/profile/main/planner.md backend/tests/unit_test/test_task_center/test_context_engine/test_recipes_planner_closes_or_defers.py backend/tests/unit_test/test_task_center/test_context_engine/test_recipes_other.py backend/tests/unit_test/test_task_center/test_lifecycle/test_attempt_orchestrator.py">
 <h2>Retry And Deferred Context <a class="anchor" href="#retry-deferred-context">#</a></h2>
 <p>Retry and continuation are TaskCenter lifecycle concepts. <code>AttemptOrchestrator</code> validates planner submissions, persists <code>plan_spec</code>, <code>evaluation_criteria</code>, and optional <code>deferred_goal_for_next_iteration</code>, then creates generator task rows. The context engine later reads that persisted state; it does not decide whether to retry, continue, or close the goal.</p>
-<div class="sequence" aria-label="Retry and continuation context">
-  <ol>
-    <li><span>A failed attempt closes with persisted plan, generator summaries, evaluator summary, and failure reason.</span></li>
-    <li><span>The next planner attempt in the same iteration gets prior failed attempts under <code>&lt;iteration status="current"&gt;</code> as retry evidence.</span></li>
-    <li><span>A planner can submit a deferring plan only when its effective terminal list includes <code>submit_plan_defers_goal</code>.</span></li>
-    <li><span>On evaluator pass, lifecycle code closes the current iteration and creates the next iteration from <code>deferred_goal_for_next_iteration</code>.</span></li>
-    <li><span>The next iteration planner sees prior accepted plans and summaries as orientation, while the current <code>&lt;iteration_goal&gt;</code> is the authoritative scope.</span></li>
-  </ol>
+<div class="diagram" aria-label="Retry and continuation context">
+  <div class="flow-row">
+    <div class="node"><strong>Failed attempt closes</strong><small>persisted plan, generator summaries, evaluator summary, failure reason</small></div>
+    <div class="node"><strong>Same-iteration retry</strong><small>next planner sees failed attempts under <code>&lt;iteration status="current"&gt;</code></small></div>
+    <div class="node"><strong>Deferral gate</strong><small><code>submit_plan_defers_goal</code> must be in effective terminals</small></div>
+  </div>
+  <div class="flow-row">
+    <div class="node"><strong>Evaluator pass</strong><small>lifecycle code closes the current iteration</small></div>
+    <div class="node"><strong>Next iteration</strong><small>created from <code>deferred_goal_for_next_iteration</code></small></div>
+    <div class="node"><strong>Planner context</strong><small>prior accepted plans orient; current <code>&lt;iteration_goal&gt;</code> scopes work</small></div>
+  </div>
+</div>
+<div class="edge-list">
+  <div><b>Retry evidence</b><span>Failed attempts are context inputs for the next planner attempt in the same iteration.</span></div>
+  <div><b>Continuation gate</b><span>A deferring plan is possible only when launch routing leaves <code>submit_plan_defers_goal</code> available.</span></div>
+  <div><b>Lifecycle boundary</b><span>The orchestrator and stage advancement create the next iteration; the context engine only reads the persisted result.</span></div>
 </div>
 <div class="callout ok">
   <span class="label">Current contract</span>

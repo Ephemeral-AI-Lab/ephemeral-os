@@ -876,33 +876,56 @@ pre.diagram {
 }
 
 .sequence {
-  overflow: hidden;
-  margin: 16px 0 22px;
+  position: relative;
+  overflow: visible;
+  margin: 18px 0 24px;
+  padding: 16px;
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
-  background: var(--surface);
+  background: var(--surface-soft);
   box-shadow: var(--shadow-sm);
 }
 
 .sequence ol {
   counter-reset: step;
+  position: relative;
+  display: grid;
+  gap: 12px;
   list-style: none;
   margin: 0;
   padding: 0;
 }
 
-.sequence li {
-  counter-increment: step;
-  display: grid;
-  grid-template-columns: 36px minmax(0, 1fr);
-  gap: 12px;
-  margin: 0;
-  padding: 12px 14px;
-  border-bottom: 1px solid var(--border);
+.sequence ol::before {
+  content: "";
+  position: absolute;
+  top: 26px;
+  bottom: 26px;
+  left: 17px;
+  width: 2px;
+  background: var(--accent-border);
 }
 
-.sequence li:last-child {
-  border-bottom: 0;
+.sequence li {
+  counter-increment: step;
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+  margin: 0;
+  padding: 0;
+}
+
+.sequence li:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  bottom: -9px;
+  left: 12px;
+  border-top: 7px solid var(--accent-border);
+  border-right: 6px solid transparent;
+  border-left: 6px solid transparent;
 }
 
 .sequence li::before,
@@ -922,11 +945,28 @@ pre.diagram {
 
 .sequence li::before {
   content: counter(step);
+  width: 34px;
+  height: 34px;
+  border: 2px solid var(--surface);
+  box-shadow: 0 0 0 1px var(--accent-border);
 }
 
 .sequence li > *,
 .flow-step > * {
   min-width: 0;
+}
+
+.sequence li > * {
+  display: block;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.sequence li strong {
+  color: var(--text);
 }
 
 .flow {
@@ -1093,6 +1133,10 @@ pre.diagram {
   }
 
   .sequence li {
-    grid-template-columns: 32px minmax(0, 1fr);
+    grid-template-columns: 38px minmax(0, 1fr);
+  }
+
+  .sequence {
+    padding: 12px;
   }
 }

@@ -24,7 +24,7 @@
   <h2>TaskCenter Pages</h2>
   <ol>
     <li><a href="index.html" data-doc-module="task-center" data-doc-section="index" data-doc-page="index.html">Overview</a></li>
-    <li><a href="lifecycle.html" data-doc-module="task-center" data-doc-section="lifecycle" data-doc-page="lifecycle.html">Lifecycle</a></li>
+    <li><a href="lifecycle.html" data-doc-module="task-center" data-doc-section="lifecycle" data-doc-page="lifecycle.html">Goal Iteration Attempt</a></li>
     <li><a href="attempt-harness.html" data-doc-module="task-center" data-doc-section="attempt-harness" data-doc-page="attempt-harness.html">Attempt Harness</a></li>
     <li><a href="context-engine.html" data-doc-module="task-center" data-doc-section="context-engine" data-doc-page="context-engine.html">Context Engine</a></li>
     <li><a href="agent-roles.html" data-doc-module="task-center" data-doc-section="agent-roles" data-doc-page="agent-roles.html">Agent Roles</a></li>
@@ -52,7 +52,7 @@
   </ol>
 </nav>
 
-<p class="lead">This page maps how TaskCenter crosses into the engine loop, tool framework, sandbox API, and live runner artifacts. Current verdict: TaskCenter owns persisted goal, iteration, attempt, and task lifecycle; engine owns provider turns and tool execution; sandbox owns workspace execution; the runner records the live artifact tree around those seams.</p>
+<p class="lead">This page maps how TaskCenter crosses into the engine loop, tool framework, sandbox API, and live runner artifacts. Current verdict: TaskCenter owns persisted Goal -> Iteration -> Attempt state plus task rows; engine owns provider turns and tool execution; sandbox owns workspace execution; the runner records the live artifact tree around those seams.</p>
 <div class="summary">
   <p>The bridge is deliberately not a global orchestrator. TaskCenter starts a run, prepares one sandbox binding, composes launch messages, schedules attempt-scoped agents, and receives terminal submissions through persisted state. The engine loop remains the enforcement layer for terminal tools, and sandbox operations still pass through <code>tools/sandbox</code>, <code>sandbox.api</code>, and daemon workspace routing.</p>
 </div>
@@ -62,7 +62,7 @@
 <div class="diagram" aria-label="TaskCenter engine tools sandbox boundary map">
   <div class="flow-row">
     <div class="node info"><strong>TaskCenter entry</strong><small>request, run, sandbox binding, first goal</small></div>
-    <div class="node"><strong>Goal lifecycle</strong><small>goal, iteration, attempt stores</small></div>
+    <div class="node"><strong>Goal Iteration Attempt</strong><small>goal, iteration, attempt stores</small></div>
     <div class="node"><strong>Attempt launcher</strong><small>composer output, metadata, runner fallback</small></div>
     <div class="node warn"><strong>Engine loop</strong><small>provider turn, terminal enforcement, tool dispatch</small></div>
   </div>
@@ -74,7 +74,7 @@
   </div>
 </div>
 <div class="edge-list">
-  <div><b>TaskCenter owns lifecycle state</b><span><code>start_task_center_run()</code> creates the top-level run and delegates normal progress to <code>GoalStarter</code>, iteration coordinators, and per-attempt orchestrators.</span></div>
+  <div><b>TaskCenter owns state</b><span><code>start_task_center_run()</code> creates the top-level run and delegates normal progress to <code>GoalStarter</code>, iteration coordinators, and per-attempt orchestrators.</span></div>
   <div><b>Engine owns agent execution</b><span><code>EphemeralAttemptAgentLauncher</code> calls a supplied runner or falls back to <code>engine.api.run_ephemeral_agent</code>. The query loop drives provider turns and terminal-tool stop conditions.</span></div>
   <div><b>Tools own call adaptation</b><span>Terminal submission tools convert validated payloads into TaskCenter submissions. Sandbox tools convert agent-facing inputs into <code>sandbox.api</code> requests.</span></div>
   <div><b>Sandbox owns workspace effects</b><span><code>dispatch_workspace_tool_call()</code> routes file, shell, search, and isolated-workspace work through daemon-owned workspace pipelines and OCC publish paths.</span></div>
@@ -84,15 +84,27 @@
 
 <section id="entry-sandbox-provisioning" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="backend/src/task_center/entry/bootstrap.py backend/src/task_center/entry/sandbox_bridge.py backend/src/task_center/goal/starter.py backend/src/task_center/goal/state.py backend/src/task_center/attempt/runtime.py backend/tests/unit_test/test_task_center/test_lifecycle/test_entry_bootstrap.py backend/tests/unit_test/test_task_center/test_lifecycle/test_sandbox_bridge.py backend/src/sandbox/api/provider_control.py">
 <h2>Entry And Sandbox Provisioning <a class="anchor" href="#entry-sandbox-provisioning">#</a></h2>
-<p><code>start_task_center_run()</code> is the entry seam for top-level TaskCenter work. It receives stores, runtime config, prompt, optional sandbox id, event callback, optional runner, optional context packet store, and optional sandbox bridge. It does not run an agent directly; it constructs the run shell and lets the goal lifecycle launch the initial planner.</p>
-<div class="sequence" aria-label="TaskCenter entry sequence">
-  <ol>
-    <li><span><code>TaskCenterEntry.start()</code> verifies the task, goal, iteration, and attempt stores are ready.</span></li>
-    <li><span><code>_create_top_level_run()</code> generates request/run ids, prepares a sandbox binding, creates the request row with <code>cwd</code>, sandbox id, and original prompt, then creates the run row.</span></li>
-    <li><span><code>_create_runtime()</code> wires <code>AttemptDeps</code> with stores, <code>EphemeralAttemptAgentLauncher</code>, orchestrator registry, iteration coordinators, lifecycle config, and an <code>AgentEntryComposer</code>.</span></li>
-    <li><span><code>GoalStarter.start(prompt=..., origin=GoalOrigin.entry(...))</code> creates the first goal, iteration, and attempt. Normal attempt lifecycle then schedules the planner.</span></li>
-    <li><span>The returned <code>TaskCenterEntryHandle</code> exposes request id, run id, sandbox binding, goal/iteration/attempt ids, and launcher for <code>wait_for_idle()</code>.</span></li>
-  </ol>
+<p><code>start_task_center_run()</code> is the entry seam for top-level TaskCenter work. It receives stores, runtime config, prompt, optional sandbox id, event callback, optional runner, optional context packet store, and optional sandbox bridge. It does not run an agent directly; it constructs the run shell and lets Goal -> Iteration -> Attempt startup launch the initial planner.</p>
+<div class="diagram" aria-label="TaskCenter entry workflow diagram">
+  <div class="flow-row">
+    <div class="node"><strong>Entry start</strong><small>store readiness check</small></div>
+    <div class="node"><strong>Top-level run</strong><small>request id, run id, <code>cwd</code>, prompt</small></div>
+    <div class="node"><strong>Sandbox binding</strong><small>explicit id start or task-center sandbox create</small></div>
+    <div class="node"><strong>Runtime deps</strong><small>stores, launcher, registry, coordinators, config, composer</small></div>
+  </div>
+  <div class="flow-row">
+    <div class="node"><strong>Entry Goal</strong><small><code>GoalStarter.start(..., GoalOrigin.entry(...))</code></small></div>
+    <div class="node"><strong>Initial chain</strong><small>Goal, Iteration 1, Attempt 1</small></div>
+    <div class="node"><strong>Planner launch</strong><small>normal attempt startup schedules the planner</small></div>
+    <div class="node"><strong>Entry handle</strong><small>ids, sandbox binding, launcher idle wait</small></div>
+  </div>
+</div>
+<div class="edge-list" aria-label="TaskCenter entry transitions">
+  <div><b>preflight</b><span><code>TaskCenterEntry.start()</code> verifies task, goal, iteration, and attempt stores before mutating run state.</span></div>
+  <div><b>run shell</b><span><code>_create_top_level_run()</code> generates ids, prepares the sandbox binding, creates the request row, then creates the run row.</span></div>
+  <div><b>runtime</b><span><code>_create_runtime()</code> builds <code>AttemptDeps</code> around stores, <code>EphemeralAttemptAgentLauncher</code>, registry, coordinators, config, and <code>AgentEntryComposer</code>.</span></div>
+  <div><b>state start</b><span><code>GoalStarter</code> creates the first Goal -> Iteration -> Attempt chain; attempt startup, not entry bootstrap, schedules the planner.</span></div>
+  <div><b>handle</b><span><code>TaskCenterEntryHandle</code> exposes request/run ids, sandbox binding, Goal/Iteration/Attempt ids, and the launcher used by <code>wait_for_idle()</code>.</span></div>
 </div>
 <div class="trace-grid">
   <div>Explicit sandbox id</div><div><code>TaskCenterSandboxBridge.prepare_for_run()</code> trims the id, calls <code>start_sandbox</code>, and returns <code>owned_by_task_center=False</code>.</div>
@@ -125,15 +137,26 @@
 <section id="tool-and-sandbox-routing" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="backend/src/engine/agent/lifecycle.py backend/src/engine/query/loop.py backend/src/engine/tool_call/dispatch.py backend/src/tools/_framework/execution/tool_call.py backend/src/tools/_framework/core/runtime.py backend/src/tools/sandbox/_lib/registry.py backend/src/tools/sandbox/_lib/tool_context.py backend/src/tools/sandbox/read_file/read_file.py backend/src/tools/sandbox/write_file/write_file.py backend/src/tools/sandbox/edit_file/edit_file.py backend/src/tools/sandbox/shell/shell.py backend/src/sandbox/api/tool backend/src/sandbox/api/transport.py backend/src/sandbox/daemon/workspace_tool_dispatch.py docs/architecture/tools/sandbox.html docs/architecture/sandbox/workspaces.html docs/architecture/agent_loops/provider-sandbox-bridge.html">
 <h2>Tool And Sandbox Routing <a class="anchor" href="#tool-and-sandbox-routing">#</a></h2>
 <p>The engine does not special-case TaskCenter sandbox work. TaskCenter metadata enters the normal <code>ExecutionMetadata</code> object, the tool framework exposes it through <code>ToolExecutionContextService</code>, and sandbox tools build typed <code>sandbox.api</code> requests with caller identity.</p>
-<div class="sequence" aria-label="TaskCenter sandbox tool sequence">
-  <ol>
-    <li><span><code>run_ephemeral_agent()</code> updates the spawned agent's query context metadata with the TaskCenter launch metadata and sets the run id to the task id or agent run id.</span></li>
-    <li><span><code>engine.query.loop</code> creates a <code>ToolExecutionContextService</code> for each provider turn, preserving conversation messages and TaskCenter identifiers.</span></li>
-    <li><span><code>tools.sandbox._lib.registry</code> marks sandbox tools with <code>SANDBOX_CONTEXT</code>, so runtime preparation can attach provider context and background dispatch can identify sandbox-bound work.</span></li>
-    <li><span><code>sandbox_caller_from_tool_context()</code> builds <code>SandboxCaller</code> from agent/run/task/attempt/goal ids, including TaskCenter ids and the per-call tool id.</span></li>
-    <li><span><code>sandbox.api.tool</code> sends <code>api.v1.read_file</code>, <code>api.v1.write_file</code>, <code>api.v1.edit_file</code>, <code>api.v1.shell</code>, <code>api.v1.grep</code>, or <code>api.v1.glob</code> through <code>call_sandbox_daemon()</code>.</span></li>
-    <li><span><code>dispatch_workspace_tool_call()</code> routes active isolated workspace handles first, direct LayerStack/OCC file fast paths second, and overlay pipeline execution for shell/search or fallback paths.</span></li>
-  </ol>
+<div class="diagram" aria-label="TaskCenter sandbox tool routing diagram">
+  <div class="flow-row">
+    <div class="node"><strong>Agent metadata</strong><small><code>run_ephemeral_agent()</code> seeds TaskCenter ids</small></div>
+    <div class="node"><strong>Tool context</strong><small><code>ToolExecutionContextService</code> per provider turn</small></div>
+    <div class="node"><strong>Sandbox registry</strong><small><code>SANDBOX_CONTEXT</code> marks workspace tools</small></div>
+    <div class="node"><strong>Caller identity</strong><small><code>SandboxCaller</code> from agent/run/task/attempt/goal/tool ids</small></div>
+  </div>
+  <div class="flow-row">
+    <div class="node"><strong>API facade</strong><small><code>api.v1.read_file</code>, write, edit, shell, grep, glob</small></div>
+    <div class="node"><strong>Daemon dispatcher</strong><small><code>call_sandbox_daemon()</code> envelope</small></div>
+    <div class="node"><strong>Workspace router</strong><small>isolated handle first, then direct file fast path</small></div>
+    <div class="node"><strong>Overlay fallback</strong><small>shell, search, unbound, outside-workspace paths</small></div>
+  </div>
+</div>
+<div class="edge-list" aria-label="TaskCenter sandbox tool routing branches">
+  <div><b>metadata</b><span>The spawned agent receives TaskCenter launch metadata; the query loop preserves identifiers and conversation messages in each tool execution context.</span></div>
+  <div><b>registry</b><span>Sandbox tools carry <code>SANDBOX_CONTEXT</code>, letting runtime preparation attach provider context and background dispatch identify sandbox-bound work.</span></div>
+  <div><b>caller</b><span><code>sandbox_caller_from_tool_context()</code> builds typed caller identity that includes TaskCenter ids and the per-call tool id.</span></div>
+  <div><b>daemon ops</b><span><code>sandbox.api.tool</code> sends typed file, shell, grep, and glob operations through <code>call_sandbox_daemon()</code>.</span></div>
+  <div><b>routing</b><span><code>dispatch_workspace_tool_call()</code> tries active isolated handles, direct LayerStack/OCC file paths, then overlay execution for shell/search and fallback paths.</span></div>
 </div>
 <div class="callout warn">
   <span class="label">Workspace boundary</span>
@@ -147,7 +170,7 @@
 <div class="trace-grid">
   <div>Run directory</div><div>The default path is <code>audit_dir / run_label / utc_self_id</code>. Reports store the run dir on <code>PipelineReport.run_dir</code>.</div>
   <div>Stream bridge</div><div><code>stream_bridge()</code> converts <code>ToolExecutionStarted</code> and <code>ToolExecutionCompleted</code> into audit events, preserving tool id, metadata, error state, and <code>does_terminate</code>.</div>
-  <div>Lifecycle snapshots</div><div><code>AuditRecorder</code> listens to goal, iteration, attempt, task, and agent-run ORM events, then writes <code>goal.json</code>, <code>iteration.json</code>, <code>attempt.json</code>, <code>task.json</code>, <code>run.json</code>, and <code>metrics.json</code>.</div>
+  <div>State snapshots</div><div><code>AuditRecorder</code> listens to Goal, Iteration, Attempt, task, and agent-run ORM events, then writes <code>goal.json</code>, <code>iteration.json</code>, <code>attempt.json</code>, <code>task.json</code>, <code>run.json</code>, and <code>metrics.json</code>.</div>
   <div>Message capture</div><div>Primary role task directories get <code>message.jsonl</code>. Initial rows are recorded once from system prompt, seeded <code>initial_messages</code>, and the spawn prompt.</div>
   <div>Sandbox events</div><div>Sandbox audit events are mirrored to <code>sandbox_events.jsonl</code>, either from daemon event pulling or stream-derived sandbox event projection.</div>
   <div>Initial-message regression</div><div><code>test_initial_messages_capture.py</code> asserts captured <code>message.jsonl</code> rows include <code>&lt;context&gt;</code>, <code>&lt;Task Guidance&gt;</code>, skill rows, and terminal-selection catalog metadata for planner/executor/evaluator launches.</div>
@@ -156,7 +179,7 @@
   <ul>
     <li>Real engine paths write initial messages via <code>engine.query.request._record_initial_messages_once()</code> and the global agent-run recorder registry.</li>
     <li>Mock runner paths call <code>AgentMessageJsonlRecorder.record_initial_messages()</code> directly with launch metadata so live scenario assertions inspect the same row shape.</li>
-    <li>The artifact tree is diagnostic evidence, not lifecycle authority. TaskCenter state remains in the stores and is mirrored to files by listeners.</li>
+    <li>The artifact tree is diagnostic evidence, not state authority. TaskCenter Goal -> Iteration -> Attempt state remains in the stores and is mirrored to files by listeners.</li>
   </ul>
 </div>
 </section>
@@ -164,10 +187,10 @@
 <section id="boundary-rules-failure-modes" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="backend/src/task_center/entry/bootstrap.py backend/src/task_center/attempt/launch.py backend/src/task_center/attempt/runtime.py backend/src/task_center/goal/starter.py backend/src/task_center/goal/close_report_router.py backend/src/tools/submission/context/attempt.py backend/src/tools/submission/context/executor.py backend/src/tools/submission/executor/submit_execution_handoff/submit_execution_handoff.py backend/src/engine/agent/lifecycle.py backend/src/engine/query/loop.py backend/src/sandbox/daemon/workspace_tool_dispatch.py">
 <h2>Boundary Rules And Failure Modes <a class="anchor" href="#boundary-rules-failure-modes">#</a></h2>
 <div class="edge-list">
-  <div><b>No global orchestrator</b><span><code>AttemptOrchestrator</code> is per attempt. Entry bootstrap wires registries and stores, but lifecycle mutation still flows through goal, iteration, attempt, task, and terminal-submission state.</span></div>
+  <div><b>No global orchestrator</b><span><code>AttemptOrchestrator</code> is per Attempt. Entry bootstrap wires registries and stores, but mutation still flows through Goal, Iteration, Attempt, task, and terminal-submission state.</span></div>
   <div><b>No peer-to-peer handoff</b><span><code>submit_execution_handoff</code> starts a persisted child goal. The parent generator moves to <code>WAITING_GOAL</code> and resumes only when a close report routes back through <code>GoalClosureReportRouter</code> and <code>AttemptOrchestrator.apply_goal_closure_report()</code>.</span></div>
   <div><b>Missing attempt runtime</b><span>Submission context resolvers require <code>ExecutionMetadata.attempt_runtime</code>, a task id, a persisted task row, matching attempt metadata, and a registered orchestrator. Missing pieces return terminal tool errors instead of guessing state.</span></div>
-  <div><b>Runner exhaustion</b><span>When an agent run ends without moving its TaskCenter task off <code>RUNNING</code>, the launcher synthesizes a planner, generator, or evaluator failure submission so the attempt remains owned by TaskCenter lifecycle code.</span></div>
+  <div><b>Runner exhaustion</b><span>When an agent run ends without moving its TaskCenter task off <code>RUNNING</code>, the launcher synthesizes a planner, generator, or evaluator failure submission so the Attempt remains owned by TaskCenter state code.</span></div>
   <div><b>Terminal refusal</b><span>The engine may return no terminal result for text-only refusal, resource limit, or crash. TaskCenter treats that as runner exhaustion unless a terminal submission already changed the task state.</span></div>
   <div><b>Workspace routing surprise</b><span>Sandbox calls can route isolated, direct, or overlay depending on active isolated handles, file verb, workspace binding, path shape, and daemon availability. TaskCenter should not assume a file mutation bypasses OCC.</span></div>
 </div>

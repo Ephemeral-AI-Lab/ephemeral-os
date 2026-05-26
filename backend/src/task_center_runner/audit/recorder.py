@@ -11,6 +11,7 @@ events are mirrored into ``sandbox_events.jsonl``.
 
 from __future__ import annotations
 
+import os
 import time
 from collections.abc import Callable
 from dataclasses import asdict, dataclass
@@ -38,6 +39,22 @@ from message.agent_message_recorder import (
     clear_recorder_for_agent_run,
     register_recorder_for_agent_run,
 )
+
+DAEMON_AUDIT_PULL_ENABLED_ENV = "EOS_DAEMON_AUDIT_PULL_ENABLED"
+
+
+def _daemon_audit_pull_enabled() -> bool:
+    """V3 §Default-on rollout: opt-out env gate, default True.
+
+    The recorder already auto-starts the puller whenever a ``sandbox_id`` is
+    bound; this gate is the operator escape hatch promoted by Phase 3. The
+    runtime invariant in :func:`engine.run_pipeline` refuses to start when
+    this gate is off AND ``EOS_AUDIT_STREAM_FALLBACK=false`` AND
+    ``EOS_ISOLATED_WORKSPACE_ENABLED=true`` (see V3 README
+    §Safety-gate-vs-toggle resolution).
+    """
+    raw = os.environ.get(DAEMON_AUDIT_PULL_ENABLED_ENV, "true").strip().lower()
+    return raw not in {"false", "0", "no", "off"}
 
 
 PRIMARY_ROLES: frozenset[str] = frozenset(
@@ -190,6 +207,10 @@ class AuditRecorder:
         self._daemon_audit_puller: DaemonAuditPuller | None = None
         self._sandbox_events_sink: RotatingJsonlSink | None = None
         self._daemon_audit_boot_epoch_id: int | None = None
+        # Stashed AFTER `puller.stop()` so final-drain `events_pulled` /
+        # `final_cursor` land in the perf-report's §11. Engine.run_pipeline
+        # reads this post-aclose and threads it into _write_perf_report_safe.
+        self._final_daemon_audit_puller_stats: dict[str, Any] | None = None
 
     # ------------------------------------------------------------------
     # Public API
@@ -297,8 +318,14 @@ class AuditRecorder:
         control (custom transport, custom pull callable) may still use
         :meth:`attach_daemon_audit_puller` — auto-start is a no-op once a
         puller has been attached.
+
+        Phase 3 §Default-on rollout: ``EOS_DAEMON_AUDIT_PULL_ENABLED=false``
+        skips auto-start so operators can fall back to the stream-bridge
+        without code changes (e.g. when the overhead gate fails post-ship).
         """
         if not self._sandbox_id or self._daemon_audit_puller is not None:
+            return
+        if not _daemon_audit_pull_enabled():
             return
         try:
             import asyncio
@@ -371,17 +398,33 @@ class AuditRecorder:
         """Return the live puller stats if a puller has been attached."""
         return None if self._daemon_audit_puller is None else self._daemon_audit_puller.stats
 
+    def final_daemon_audit_puller_stats(self) -> dict[str, Any] | None:
+        """Final puller stats captured post-``stop()`` (Phase 3).
+
+        Snapshot lives here so the perf-report's §11 sees ``final_cursor``
+        and any final-drain ``events_pulled`` that landed AFTER the puller
+        loop exited. Returns ``None`` if no puller was ever attached.
+        """
+        return self._final_daemon_audit_puller_stats
+
     async def stop_daemon_audit_puller(self) -> None:
         """Stop the attached puller and run its final drain.
 
-        Callers wishing to honor the plan's ``dispose()`` ordering should
-        await this BEFORE ``dispose()`` so the final drain populates the
-        sink ahead of the recorder's other flush steps.
+        Live callers should normally use :meth:`aclose` (Closer F) which
+        chains this method with the sync dispose body in the correct
+        order. This method stays public for tests that want to drain
+        without tearing the whole recorder down.
+
+        Final stats are stashed via
+        :meth:`final_daemon_audit_puller_stats` AFTER ``await
+        puller.stop()`` so the final drain's ``events_pulled`` /
+        ``final_cursor`` land in the snapshot (Phase 3 §11).
         """
         puller = self._daemon_audit_puller
-        self._daemon_audit_puller = None
         if puller is not None:
             await puller.stop()
+            self._final_daemon_audit_puller_stats = puller.stats.as_dict()
+        self._daemon_audit_puller = None
 
     async def aclose(self) -> None:
         """Single async teardown path for live callers (Closer F).

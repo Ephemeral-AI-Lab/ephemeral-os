@@ -65,14 +65,22 @@
 
 <section id="validation-loop" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths=".agents/skills/codebase-wiki-builder/scripts/check_html_wiki.py docs/architecture/agent_loops docs/architecture/assets">
 <h2>Validation Loop <a class="anchor" href="#validation-loop">#</a></h2>
-<div class="sequence" aria-label="Agent loops wiki validation loop">
-  <ol>
-    <li><span>Run the HTML validator on every changed Agent Loops page.</span></li>
-    <li><span>Run <code>git diff --check</code> over changed HTML and shared asset files.</span></li>
-    <li><span>Search changed pages for Obsidian-only syntax, inline styles, page-local CSS, missing baselines, and duplicate local TOCs.</span></li>
-    <li><span>Check that every section has <code>data-last-reviewed-commit</code> and <code>data-evidence-paths</code>, and that the tail <code>page-baseline</code> matches the page's local baseline.</span></li>
-    <li><span>Sample referenced source symbols with <code>rg</code> when an implementation claim is changed.</span></li>
-  </ol>
+<div class="diagram" aria-label="Agent loops wiki validation loop">
+  <div class="flow-row">
+    <div class="node"><strong>Changed pages</strong><small>only Agent Loops HTML ownership set</small></div>
+    <div class="node"><strong>HTML validator</strong><small><code>check_html_wiki.py</code> over each changed page</small></div>
+    <div class="node"><strong>Whitespace gate</strong><small><code>git diff --check</code> for HTML and touched support assets</small></div>
+  </div>
+  <div class="flow-row">
+    <div class="node"><strong>Syntax scan</strong><small>Obsidian links, inline styles, page-local CSS, duplicate TOCs</small></div>
+    <div class="node"><strong>Baseline scan</strong><small>section evidence attributes plus tail <code>page-baseline</code></small></div>
+    <div class="node"><strong>Source sample</strong><small><code>rg</code> referenced symbols only when claims change</small></div>
+  </div>
+</div>
+<div class="edge-list">
+  <div><b>Structure</b><span>Every changed page must stay valid HTML and keep one local page TOC.</span></div>
+  <div><b>Evidence</b><span>Each section keeps <code>data-last-reviewed-commit</code> and <code>data-evidence-paths</code>; page baselines stay aligned with section baselines.</span></div>
+  <div><b>Claim refresh</b><span>Implementation claims require a targeted source sample only when the documentation changes the behavior being claimed.</span></div>
 </div>
 <div class="summary">
   <ul>

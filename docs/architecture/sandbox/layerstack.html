@@ -159,6 +159,25 @@
 
 <p>The publisher performs a CAS check before writing, writes changes into a staging layer, moves it into <code>layers/</code>, then re-checks the manifest before writing the new active manifest <span class="file-ref">backend/src/sandbox/layer_stack/publisher.py:49-132</span>. Delete and opaque directory semantics use overlay-style marker files <span class="file-ref">backend/src/sandbox/layer_stack/changes.py:123-142</span>. Leases pin layers by refcount and expose pinned layers to squash/GC <span class="file-ref">backend/src/sandbox/layer_stack/lease.py:38-86</span>.</p>
 
+<div class="diagram" aria-label="LayerStack publish CAS workflow">
+  <div class="flow-row">
+    <div class="node"><strong>Prepared deltas</strong><small>OCC passes expected manifest</small></div>
+    <span>-&gt;</span>
+    <div class="node"><strong>Pre-write CAS</strong><small>active manifest must match</small></div>
+    <span>-&gt;</span>
+    <div class="node"><strong>Staging layer</strong><small>write files, whiteouts, opaque dirs</small></div>
+    <span>-&gt;</span>
+    <div class="node"><strong>Move to layers</strong><small>fsync and digest sidecar</small></div>
+  </div>
+  <div class="flow-row">
+    <div class="node"><strong>Post-write CAS</strong><small>re-read active manifest</small></div>
+    <span>-&gt;</span>
+    <div class="node"><strong>Race lost</strong><small>remove staged layer and retry upstream</small></div>
+    <span>-&gt;</span>
+    <div class="node"><strong>Race won</strong><small>prepend immutable layer in new manifest</small></div>
+  </div>
+</div>
+
 <div class="sequence" aria-label="LayerStack publish lifecycle">
   <ol>
     <li><span>OCC enters a LayerStack commit transaction and passes the expected manifest to the publisher.</span></li>

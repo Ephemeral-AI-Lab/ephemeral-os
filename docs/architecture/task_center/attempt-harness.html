@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TaskCenter Attempt Harness - EphemeralOS Architecture</title>
+<link rel="stylesheet" href="../assets/styles.css">
+</head>
+<body data-module="task-center" data-page="attempt-harness" data-root="../">
+<nav class="toc">
+  <h2>EphemeralOS Architecture</h2>
+  <a class="home-link" href="../index.html">All Modules</a>
+  <div class="search-box">
+    <input type="search" placeholder="Search architecture" data-doc-search aria-label="Search architecture">
+    <div class="search-results" data-doc-search-results></div>
+  </div>
+  <h2>Modules</h2>
+  <ol class="module-list">
+    <li><a href="../sandbox/index.html" data-doc-module="sandbox">Sandbox Workspace</a></li>
+    <li><a href="../tools/index.html" data-doc-module="tools">Tools</a></li>
+    <li><a href="../agent_loops/index.html" data-doc-module="agent-loops">Agent Loops</a></li>
+    <li><a href="index.html" data-doc-module="task-center" class="active">TaskCenter</a></li>
+  </ol>
+  <h2>TaskCenter Pages</h2>
+  <ol>
+    <li><a href="index.html" data-doc-module="task-center" data-doc-section="index" data-doc-page="index.html">Overview</a></li>
+    <li><a href="lifecycle.html" data-doc-module="task-center" data-doc-section="lifecycle" data-doc-page="lifecycle.html">Goal Iteration Attempt</a></li>
+    <li><a href="attempt-harness.html" data-doc-module="task-center" data-doc-section="attempt-harness" data-doc-page="attempt-harness.html" class="active">Attempt Harness</a></li>
+    <li><a href="context-engine.html" data-doc-module="task-center" data-doc-section="context-engine" data-doc-page="context-engine.html">Context Engine</a></li>
+    <li><a href="agent-roles.html" data-doc-module="task-center" data-doc-section="agent-roles" data-doc-page="agent-roles.html">Agent Roles</a></li>
+    <li><a href="terminal-tools.html" data-doc-module="task-center" data-doc-section="terminal-tools" data-doc-page="terminal-tools.html">Terminal Tools</a></li>
+    <li><a href="bridges.html" data-doc-module="task-center" data-doc-section="bridges" data-doc-page="bridges.html">Engine Tools Sandbox</a></li>
+    <li><a href="maintenance.html" data-doc-module="task-center" data-doc-section="maintenance" data-doc-page="maintenance.html">Maintenance</a></li>
+  </ol>
+</nav>
+<main>
+<div class="doc-actions">
+  <span><a href="../index.html">Architecture</a> / TaskCenter / Attempt Harness</span>
+  <span class="nav-pair"><a href="lifecycle.html">Goal Iteration Attempt</a><a href="context-engine.html">Context Engine</a></span>
+</div>
+<h1>TaskCenter Attempt Harness</h1>
+<nav class="page-toc" aria-labelledby="page-toc-heading">
+  <h3 id="page-toc-heading">Contents</h3>
+  <ol>
+    <li><a href="#attempt-state-machine"><span>1</span> Attempt State Machine</a></li>
+    <li><a href="#planner-dag-persistence"><span>2</span> Planner And DAG Persistence</a></li>
+    <li><a href="#generator-waves-quiescence"><span>3</span> Generator Waves And Quiescence</a></li>
+    <li><a href="#evaluator-closure"><span>4</span> Evaluator And Closure</a></li>
+    <li><a href="#launcher-failures-exhaustion"><span>5</span> Launcher Failures And Exhaustion</a></li>
+    <li><a href="#audit-events"><span>6</span> Audit Events</a></li>
+    <li><a href="#evidence-refresh"><span>7</span> Evidence And Refresh</a></li>
+  </ol>
+</nav>
+
+<p class="lead">The attempt harness is the Attempt layer of <code>Goal -> Iteration -> Attempt</code>: planner submission, persisted generator DAG, evaluator submission, then closed Attempt. It owns one Attempt, not the whole Goal or a global agent orchestration layer.</p>
+
+<section id="attempt-state-machine" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="backend/src/task_center/attempt/state.py backend/src/task_center/attempt/orchestrator.py backend/src/task_center/attempt/stage_advancer.py backend/src/task_center/attempt/orchestrator_registry.py backend/src/task_center/task_state.py backend/src/task_center/_core/invariants.py backend/tests/unit_test/test_task_center/test_lifecycle/test_attempt_orchestrator.py">
+<h2>Attempt State Machine <a class="anchor" href="#attempt-state-machine">#</a></h2>
+<div class="summary">
+  <ul>
+    <li><code>AttemptStage</code> is <code>PLAN</code> to <code>GENERATE</code> to <code>EVALUATE</code> to <code>CLOSED</code>.</li>
+    <li><code>AttemptStatus</code> is running until the close path marks the attempt <code>PASSED</code> or <code>FAILED</code>.</li>
+    <li><code>AttemptFailReason</code> distinguishes planner failure, generator failure, evaluator failure, and startup failure.</li>
+    <li><code>AttemptOrchestratorRegistry</code> is process-local lookup for active attempts, used by launch/exhaustion and delegated-goal close-report delivery.</li>
+  </ul>
+</div>
+<div class="diagram" aria-label="Attempt state machine">
+  <div class="flow-row">
+    <div class="node info"><strong>PLAN</strong><small>planner task running, waits for plan or exhaustion</small></div>
+    <div class="node"><strong>GENERATE</strong><small>ready generator waves from persisted DAG</small></div>
+    <div class="node"><strong>EVALUATE</strong><small>single evaluator task reviews completed DAG</small></div>
+    <div class="node good"><strong>CLOSED</strong><small>passed or failed, registry deregistered</small></div>
+  </div>
+</div>
+<div class="diagram" aria-label="Attempt orchestration workflow diagram">
+  <div class="flow-row">
+    <div class="node"><strong>Start gate</strong><small>running Attempt in <code>PLAN</code></small></div>
+    <div class="node"><strong>Planner launch</strong><small>registry entry, planner task row, <code>planner_task_id</code></small></div>
+    <div class="node"><strong>Plan terminal</strong><small><code>apply_plan_submission()</code> or planner exhaustion</small></div>
+    <div class="node"><strong>Generator DAG</strong><small>ready waves through <code>AttemptStageAdvancer</code></small></div>
+  </div>
+  <div class="flow-row">
+    <div class="node"><strong>Evaluator</strong><small><code>apply_evaluator_submission()</code></small></div>
+    <div class="node"><strong>Attempt close</strong><small>validated status and failure reason</small></div>
+    <div class="node"><strong>Registry exit</strong><small>deregister before coordinator callback</small></div>
+    <div class="node"><strong>Iteration callback</strong><small>retry, terminal success, or failure</small></div>
+  </div>
+</div>
+<div class="edge-list" aria-label="Attempt orchestration transitions">
+  <div><b>start</b><span><code>start()</code> asserts the attempt is running in <code>PLAN</code>, registers the orchestrator, creates the planner task, and schedules the planner launch.</span></div>
+  <div><b>plan branch</b><span>Planner terminal submission calls <code>apply_plan_submission()</code>; launch exhaustion calls <code>apply_planner_failure()</code>.</span></div>
+  <div><b>generate branch</b><span>Each generator terminal submission marks one task, then the stage advancer launches newly ready nodes or closes when the DAG is quiescent.</span></div>
+  <div><b>evaluate branch</b><span>Evaluator terminal submission closes the attempt as passed or failed after evaluator task status is visible to the stage advancer.</span></div>
+  <div><b>close</b><span><code>_close_attempt()</code> writes terminal attempt state, deregisters the orchestrator, and hands ownership back to the iteration coordinator.</span></div>
+</div>
+</section>
+
+<section id="planner-dag-persistence" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="backend/src/task_center/attempt/orchestrator.py backend/src/task_center/attempt/generator_dag.py backend/src/task_center/task_state.py backend/src/task_center/_core/primitives.py backend/tests/unit_test/test_task_center/test_lifecycle/test_attempt_orchestrator.py backend/tests/unit_test/test_task_center/test_lifecycle/test_generator_dag.py">
+<h2>Planner And DAG Persistence <a class="anchor" href="#planner-dag-persistence">#</a></h2>
+<p>A planner submission is accepted only for the current attempt planner task while the attempt is in <code>PLAN</code>. Full plans cannot set <code>deferred_goal_for_next_iteration</code>; deferring plans must set it. After validation, the orchestrator marks the planner task done, persists the plan contract, persists generator rows, records their ids on the attempt, moves the attempt to <code>GENERATE</code>, and advances ready work.</p>
+<div class="edge-list">
+  <div><b>DAG validation</b><span><code>ordered_generator_tasks()</code> rejects duplicate local ids, dependencies on unknown local ids, and dependency cycles before any runtime generator rows are used.</span></div>
+  <div><b>topological order</b><span>The helper uses a stable Kahn sort. Runtime task ids are derived from attempt id plus planner local id, and dependency ids are normalized into persisted <code>needs</code>.</span></div>
+  <div><b>plan contract</b><span><code>AttemptStoreProtocol.set_plan_contract()</code> stores <code>plan_spec</code>, <code>evaluation_criteria</code>, and optional deferred-goal text. Later context recipes read that persisted state.</span></div>
+  <div><b>stage move</b><span><code>attempt_store.set_stage(..., AttemptStage.GENERATE)</code> happens only after the planner task and generator rows have been persisted.</span></div>
+</div>
+<div class="diagram" aria-label="Planner to generator DAG workflow">
+  <div class="flow-row">
+    <div class="node info"><strong>PlannerSubmission</strong><small>plan spec, criteria, generator tasks</small></div>
+    <div class="node"><strong>Validate DAG</strong><small>unique ids, known deps, acyclic order</small></div>
+    <div class="node"><strong>Persist rows</strong><small><code>attempt_id:local_id</code>, <code>needs[]</code></small></div>
+    <div class="node good"><strong>Advance</strong><small>launch first ready wave</small></div>
+  </div>
+</div>
+</section>
+
+<section id="generator-waves-quiescence" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="backend/src/task_center/attempt/stage_advancer.py backend/src/task_center/attempt/generator_dag.py backend/src/task_center/attempt/orchestrator.py backend/src/task_center/task_state.py backend/tests/unit_test/test_task_center/test_lifecycle/test_attempt_orchestrator.py backend/tests/unit_test/test_task_center/test_lifecycle/test_generator_dag.py">
+<h2>Generator Waves And Quiescence <a class="anchor" href="#generator-waves-quiescence">#</a></h2>
+<p><code>AttemptStageAdvancer</code> is store-driven. On every generator submission or launch failure, it lists persisted generator tasks for the attempt, launches every pending task whose dependencies are done, and otherwise summarizes whether the DAG is still active, failed, blocked, or fully done.</p>
+<div class="diagram" aria-label="Generator stage advancement workflow diagram">
+  <div class="flow-row">
+    <div class="node"><strong>Read DAG rows</strong><small>persisted generator tasks for the attempt</small></div>
+    <div class="node"><strong>Ready query</strong><small><code>needs[]</code> all <code>DONE</code></small></div>
+    <div class="node"><strong>Launch ready task</strong><small>mark <code>RUNNING</code>, audit, compose <code>AgentLaunch</code></small></div>
+    <div class="node"><strong>Launch failure</strong><small>mark <code>FAILED</code>, emit failed audit, re-enter</small></div>
+  </div>
+  <div class="flow-row">
+    <div class="node"><strong>No ready task</strong><small><code>summarize_generator_dag()</code></small></div>
+    <div class="node"><strong>Active wait</strong><small>running or <code>WAITING_GOAL</code> keeps attempt open</small></div>
+    <div class="node"><strong>Failure quiesced</strong><small>failed or blocked upstream closes as generator failure</small></div>
+    <div class="node"><strong>All done</strong><small>start evaluator stage</small></div>
+  </div>
+</div>
+<div class="edge-list" aria-label="Generator stage advancement branches">
+  <div><b>ready</b><span><code>ready_pending_generator_ids()</code> selects pending tasks only after the entire dependency set is <code>DONE</code>.</span></div>
+  <div><b>launch</b><span>Ready tasks move to <code>RUNNING</code>, emit launch audit events, receive composed launch context, and are handed to the launcher.</span></div>
+  <div><b>settle</b><span>Failed launches re-enter advancement so remaining runnable siblings, unreachable descendants, or terminal closure can settle from store state.</span></div>
+  <div><b>quiesce</b><span>Pending descendants of failed or blocked upstreams are unreachable but persisted; once runnable siblings finish, the attempt closes with <code>GENERATOR_FAILED</code>.</span></div>
+  <div><b>evaluate</b><span>Only when every generator is <code>DONE</code> does stage advancement create and launch the evaluator task.</span></div>
+</div>
+<div class="edge-list">
+  <div><b>waiting goal</b><span><code>WAITING_GOAL</code> is not quiescent and not done. A parent generator waiting on a child goal keeps the parent attempt from advancing until a close report is delivered.</span></div>
+  <div><b>blocked descendants</b><span>Pending descendants of <code>FAILED</code> or <code>BLOCKED</code> tasks remain persisted as pending not-started work. They are counted as unreachable for quiescence, not launched.</span></div>
+  <div><b>blocker semantics</b><span><code>GeneratorSubmission(outcome=&quot;blocker&quot;)</code> marks the task <code>BLOCKED</code>. The attempt waits for runnable siblings, then fails with <code>GENERATOR_FAILED</code>.</span></div>
+</div>
+</section>
+
+<section id="evaluator-closure" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="backend/src/task_center/attempt/stage_advancer.py backend/src/task_center/attempt/orchestrator.py backend/src/task_center/attempt/launch.py backend/src/task_center/iteration/attempt_coordinator.py backend/src/task_center/attempt/state.py backend/tests/unit_test/test_task_center/test_lifecycle/test_attempt_orchestrator.py backend/tests/unit_test/test_task_center/test_lifecycle/test_iteration_attempt_coordinator.py">
+<h2>Evaluator And Closure <a class="anchor" href="#evaluator-closure">#</a></h2>
+<p>The evaluator is spawned exactly once after all generator tasks are done. <code>_start_evaluator_stage()</code> builds the evaluator launch, emits task-ready and task-launched audit events, persists the evaluator task row as running, records <code>evaluator_task_id</code>, moves the attempt to <code>EVALUATE</code>, and launches the evaluator.</p>
+<div class="edge-list">
+  <div><b>evaluator success</b><span>An evaluator task marked <code>DONE</code> closes the attempt as <code>PASSED</code>. The iteration coordinator then closes the iteration as succeeded and either emits terminal success or success deferred.</span></div>
+  <div><b>evaluator failure</b><span>An evaluator task marked <code>FAILED</code> closes the attempt as <code>FAILED</code> with <code>EVALUATOR_FAILED</code>. The iteration coordinator decides retry or failed iteration based on budget.</span></div>
+  <div><b>close owner</b><span><code>AttemptOrchestrator._close_attempt()</code> is the only attempt-closing path used by stage advancement. It deregisters the orchestrator before notifying the iteration coordinator.</span></div>
+  <div><b>retry handoff</b><span>The orchestrator never creates retry attempts. Retry is handled after closure by <code>IterationAttemptCoordinator.handle_attempt_closed()</code>.</span></div>
+</div>
+<div class="callout good">
+  <span class="label">Boundary</span>
+  The attempt harness closes only one Attempt. Iteration retry, deferred continuation, nested child Goals, and Goal closure live one level up in the Goal Iteration Attempt page.
+</div>
+</section>
+
+<section id="launcher-failures-exhaustion" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="backend/src/task_center/attempt/launch.py backend/src/task_center/attempt/stage_advancer.py backend/src/task_center/attempt/orchestrator.py backend/src/task_center/attempt/orchestrator_registry.py backend/src/task_center/iteration/attempt_coordinator.py backend/tests/unit_test/test_task_center/test_agent_launch/test_attempt_launcher_retry.py backend/tests/unit_test/test_task_center/test_lifecycle/test_attempt_orchestrator.py backend/tests/unit_test/test_task_center/test_lifecycle/test_launcher_exhaustion_parametrized.py">
+<h2>Launcher Failures And Exhaustion <a class="anchor" href="#launcher-failures-exhaustion">#</a></h2>
+<p><code>EphemeralAttemptAgentLauncher</code> schedules role-specific agent runs. Terminal submission tools are expected to move the task out of <code>RUNNING</code> during the run. If the runner returns, crashes, returns <code>None</code>, or exits without a terminal submission while the task remains running, the launcher reports role-specific exhaustion back into the same orchestrator API.</p>
+<div class="diagram" aria-label="Launcher exhaustion workflow diagram">
+  <div class="flow-row">
+    <div class="node"><strong>Launch request</strong><small>resolve agent definition and active loop</small></div>
+    <div class="node"><strong>Async run task</strong><small>tracked in launcher pending set</small></div>
+    <div class="node"><strong>Execution metadata</strong><small>run, task, attempt, goal, runtime, composer, terminals</small></div>
+    <div class="node"><strong>Runner rows</strong><small>prompt plus optional <code>initial_messages</code></small></div>
+  </div>
+  <div class="flow-row">
+    <div class="node"><strong>Task no longer running</strong><small>terminal submission already owned state</small></div>
+    <div class="node"><strong>Still running</strong><small>runner returned, crashed, or yielded <code>None</code></small></div>
+    <div class="node"><strong>Active orchestrator</strong><small>role-specific exhaustion submission</small></div>
+    <div class="node"><strong>Missing orchestrator</strong><small>fail unowned task and close attempt directly</small></div>
+  </div>
+</div>
+<div class="edge-list" aria-label="Launcher exhaustion branches">
+  <div><b>schedule</b><span><code>launch()</code> resolves the role definition, requires an active asyncio loop, creates an async task, and tracks it until completion.</span></div>
+  <div><b>metadata</b><span><code>_run_launch()</code> builds <code>ExecutionMetadata</code> and maps <code>AgentLaunch</code> rows into the runner prompt shape.</span></div>
+  <div><b>normal terminal</b><span>If a terminal submission moved the TaskCenter task out of <code>RUNNING</code>, launcher completion does not synthesize another state change.</span></div>
+  <div><b>exhaustion</b><span>If the task remains <code>RUNNING</code>, <code>_report_exhaustion()</code> calls the planner, generator, or evaluator failure path on the active orchestrator.</span></div>
+  <div><b>unowned</b><span>If the orchestrator is missing, <code>_fail_unowned_attempt()</code> marks the task failed, closes the attempt directly, and notifies a registered iteration coordinator when present.</span></div>
+</div>
+<div class="edge-list">
+  <div><b>no launcher retry</b><span>The launcher invokes the runner once per launch and does not pass the deleted <code>max_terminal_retries</code> kwarg. Query-loop soft warnings and overshoot tolerance own in-run recovery.</span></div>
+  <div><b>startup failures</b><span>Planner startup failure in <code>AttemptOrchestrator.start()</code> deregisters the orchestrator and marks the planner task failed; <code>IterationAttemptCoordinator</code> owns closing the inserted attempt as <code>STARTUP_FAILED</code>.</span></div>
+  <div><b>role-parametrized exhaustion</b><span>Current source uses one <code>_report_exhaustion()</code> branch tree plus <code>_ROLE_FAIL_REASONS</code>. The older per-role reporter helper table is intentionally gone.</span></div>
+  <div><b>evaluator spawn failure</b><span>Evaluator compose or launch failure closes the attempt with <code>EVALUATOR_FAILED</code>. Generator launch failure marks the generator failed and closes with <code>GENERATOR_FAILED</code>.</span></div>
+</div>
+</section>
+
+<section id="audit-events" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="backend/src/task_center/_core/audit.py backend/src/task_center/attempt/stage_advancer.py backend/src/task_center/attempt/runtime.py backend/tests/unit_test/test_task_center/test_audit/test_emitter.py backend/tests/unit_test/test_task_center/test_audit/test_emission_shape.py">
+<h2>Audit Events <a class="anchor" href="#audit-events">#</a></h2>
+<p>TaskCenter attempt advancement emits a small set of audit events through <code>TaskCenterAuditEmitter</code>. The emitter is a write-only facade over the shared audit sink; it shapes node identity and payload fields so stage advancement does not repeat audit plumbing.</p>
+<div class="edge-list">
+  <div><b><code>task_center.task.ready</code></b><span>Emitted before a generator or evaluator launch with satisfied dependency ids and the task identity payload.</span></div>
+  <div><b><code>task_center.task.launched</code></b><span>Emitted after a task row moves into running launch state, carrying run id, attempt id, task id, role, agent name, needs, and context packet id.</span></div>
+  <div><b><code>task_center.task.failed</code></b><span>Emitted when stage advancement marks a launched task failed because agent launch failed.</span></div>
+  <div><b>audit sink</b><span><code>AttemptDeps.audit_sink</code> defaults to <code>NoopAuditSink</code>, so production wiring can observe events without making attempt logic depend on a concrete recorder.</span></div>
+</div>
+</section>
+
+<section id="evidence-refresh" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="backend/src/task_center/attempt/orchestrator.py backend/src/task_center/attempt/stage_advancer.py backend/src/task_center/attempt/generator_dag.py backend/src/task_center/attempt/launch.py backend/src/task_center/attempt/runtime.py backend/src/task_center/attempt/orchestrator_registry.py backend/src/task_center/attempt/state.py backend/src/task_center/task_state.py backend/src/task_center/_core/invariants.py backend/src/task_center/_core/audit.py backend/tests/unit_test/test_task_center/test_lifecycle/test_attempt_orchestrator.py backend/tests/unit_test/test_task_center/test_lifecycle/test_generator_dag.py backend/tests/unit_test/test_task_center/test_agent_launch/test_attempt_launcher_retry.py backend/tests/unit_test/test_task_center/test_lifecycle/test_launcher_exhaustion_parametrized.py">
+<h2>Evidence And Refresh <a class="anchor" href="#evidence-refresh">#</a></h2>
+<div class="evidence-grid">
+  <div class="evidence-card">
+    <h4>Primary Code</h4>
+    <p><code>attempt/orchestrator.py</code> owns submission entry points and attempt close. <code>attempt/stage_advancer.py</code> owns generator and evaluator advancement. <code>attempt/generator_dag.py</code> owns DAG validation and quiescence.</p>
+  </div>
+  <div class="evidence-card">
+    <h4>Launch Code</h4>
+    <p><code>attempt/launch.py</code> owns agent scheduling, row mapping, exhaustion reporting, and <code>AgentLaunchFactory</code>. <code>attempt/runtime.py</code> carries runtime dependencies and delegated-goal parent task behavior.</p>
+  </div>
+  <div class="evidence-card">
+    <h4>Verification Anchors</h4>
+    <p><code>test_attempt_orchestrator.py</code>, <code>test_generator_dag.py</code>, <code>test_attempt_launcher_retry.py</code>, and <code>test_launcher_exhaustion_parametrized.py</code> cover the current harness contract.</p>
+  </div>
+</div>
+<div class="summary">
+  <ul>
+    <li>Refresh command shape: <code>git diff e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa..HEAD -- backend/src/task_center/attempt backend/src/task_center/task_state.py backend/src/task_center/_core backend/tests/unit_test/test_task_center/test_lifecycle backend/tests/unit_test/test_task_center/test_agent_launch</code></li>
+    <li>Focused verification: <code>uv run pytest backend/tests/unit_test/test_task_center/test_lifecycle/test_attempt_orchestrator.py backend/tests/unit_test/test_task_center/test_lifecycle/test_generator_dag.py backend/tests/unit_test/test_task_center/test_agent_launch/test_attempt_launcher_retry.py backend/tests/unit_test/test_task_center/test_lifecycle/test_launcher_exhaustion_parametrized.py -q</code></li>
+    <li>Refresh this page when planner submission schemas, generator status semantics, launch row mapping, audit event payloads, or the registry lifetime changes.</li>
+  </ul>
+</div>
+</section>
+
+<div class="page-baseline" data-page-baseline-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa">
+  <strong>Maintenance baseline</strong>
+  <span>TaskCenter attempt harness technical sections reviewed against <code>e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa</code>.</span>
+  <code>git diff e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa..HEAD -- &lt;section data-evidence-paths&gt;</code>
+</div>
+<div class="page-footer-nav"><span><a href="lifecycle.html">Goal Iteration Attempt</a></span><span><a href="context-engine.html">Context Engine</a></span></div>
+</main>
+<script src="../assets/search-index.js"></script>
+<script src="../assets/nav.js"></script>
+</body>
+</html>

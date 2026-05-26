@@ -31,6 +31,7 @@ caller goes through it yet — Phases 4e and 4f slim ``run_scenario`` /
 from __future__ import annotations
 
 import asyncio
+import os
 import time
 import uuid
 from datetime import UTC, datetime
@@ -44,11 +45,55 @@ from task_center_runner.audit.bus import AuditEventBus
 from task_center_runner.audit.events import Event, EventType
 from task_center_runner.audit.node_id import NodeId
 from task_center_runner.audit.performance_report import _write_perf_report_safe
-from task_center_runner.audit.recorder import AuditRecorder
+from task_center_runner.audit.recorder import (
+    DAEMON_AUDIT_PULL_ENABLED_ENV,
+    AuditRecorder,
+    _daemon_audit_pull_enabled,
+)
 from task_center_runner.audit.stream_bridge import stream_bridge
 from task_center_runner.core.config import RunConfig, RunContext
 from task_center_runner.core.report import PipelineReport
 from task_center_runner.core.stores import create_per_test_task_center_stores
+
+STREAM_FALLBACK_ENV = "EOS_AUDIT_STREAM_FALLBACK"
+ISOLATED_WORKSPACE_ENABLED_ENV = "EOS_ISOLATED_WORKSPACE_ENABLED"
+
+
+def _env_true(name: str, *, default: bool) -> bool:
+    raw = os.environ.get(name)
+    if raw is None or raw == "":
+        return default
+    return raw.strip().lower() not in {"false", "0", "no", "off"}
+
+
+def _refuse_dual_disable_when_isolated_workspace_enabled() -> None:
+    """V3 Phase 3 §Safety-gate-vs-toggle: hard-fail the startup.
+
+    When ``EOS_ISOLATED_WORKSPACE_ENABLED=true``, at least one of the audit
+    paths (daemon pull OR stream-bridge fallback) MUST stay on so the
+    orphan-detection invariants in the isolated_workspace exit gate stay
+    observable. Disabling both is a silent safety regression — the engine
+    refuses to start so the operator sees the misconfig immediately.
+    """
+    isolated_enabled = _env_true(ISOLATED_WORKSPACE_ENABLED_ENV, default=False)
+    if not isolated_enabled:
+        return
+    pull_enabled = _daemon_audit_pull_enabled()
+    # Stream-bridge defaults to ON (FU#1 retirement gate has not fired yet).
+    stream_enabled = _env_true(STREAM_FALLBACK_ENV, default=True)
+    if pull_enabled or stream_enabled:
+        return
+    raise RuntimeError(
+        "task_center_runner refuses to start: "
+        f"{DAEMON_AUDIT_PULL_ENABLED_ENV}=false AND "
+        f"{STREAM_FALLBACK_ENV}=false AND "
+        f"{ISOLATED_WORKSPACE_ENABLED_ENV}=true "
+        "would silently disable both isolated-workspace orphan audit paths. "
+        "Re-enable one of the audit paths or set "
+        f"{ISOLATED_WORKSPACE_ENABLED_ENV}=false. "
+        "See docs/daemon-audit-pull-consolidation-v3/phase-3-report-and-release-gates.md "
+        "§Safety-gate-vs-toggle resolution."
+    )
 
 
 def _default_run_dir(audit_dir: Path, ctx: RunContext) -> Path:
@@ -96,6 +141,8 @@ async def run_pipeline(config: RunConfig) -> PipelineReport:
      10. ``config.lifecycle.after_run(ctx, report)`` — may mutate
          ``report.lifecycle_extras``.
     """
+    _refuse_dual_disable_when_isolated_workspace_enabled()
+
     if config.bootstrap is not None:
         config.bootstrap()
 
@@ -217,8 +264,22 @@ async def run_pipeline(config: RunConfig) -> PipelineReport:
             bundle.close()
         lifecycle_unsub()
 
+    # Phase 3 §11: final puller stats live on the recorder post-aclose
+    # so the perf-report sees the post-final-drain cursor + events_pulled.
+    # ``getattr`` keeps older test stubs without the accessor working.
+    final_puller_stats_fn = getattr(
+        recorder, "final_daemon_audit_puller_stats", None
+    )
+    final_puller_stats = (
+        final_puller_stats_fn() if callable(final_puller_stats_fn) else None
+    )
+
     perf_task = asyncio.create_task(
-        _write_perf_report_safe(run_dir, perf_snapshot),
+        _write_perf_report_safe(
+            run_dir,
+            perf_snapshot,
+            daemon_audit_puller_stats=final_puller_stats,
+        ),
         name=f"perf_report:{tcrid}",
     )
 

@@ -24,7 +24,7 @@
   <h2>TaskCenter Pages</h2>
   <ol>
     <li><a href="index.html" data-doc-module="task-center" data-doc-section="index" data-doc-page="index.html">Overview</a></li>
-    <li><a href="lifecycle.html" data-doc-module="task-center" data-doc-section="lifecycle" data-doc-page="lifecycle.html">Lifecycle</a></li>
+    <li><a href="lifecycle.html" data-doc-module="task-center" data-doc-section="lifecycle" data-doc-page="lifecycle.html">Goal Iteration Attempt</a></li>
     <li><a href="attempt-harness.html" data-doc-module="task-center" data-doc-section="attempt-harness" data-doc-page="attempt-harness.html">Attempt Harness</a></li>
     <li><a href="context-engine.html" data-doc-module="task-center" data-doc-section="context-engine" data-doc-page="context-engine.html">Context Engine</a></li>
     <li><a href="agent-roles.html" data-doc-module="task-center" data-doc-section="agent-roles" data-doc-page="agent-roles.html">Agent Roles</a></li>
@@ -56,7 +56,7 @@
 <h2>Delegation Log <a class="anchor" href="#delegation-log">#</a></h2>
 <div class="edge-list">
   <div><b>coordinator/reducer</b><span>Owned scope, page taxonomy, shared assets, source-truth merge, stale-claim decisions, overview, maintenance, and final validation.</span></div>
-  <div><b>graph explorer: lifecycle</b><span>Mapped GoalStarter, GoalLifecycle, IterationAttemptCoordinator, AttemptOrchestrator, generator DAG, retry, deferral, delegated child goals, closure routing, tests, and stale older-doc claims.</span></div>
+  <div><b>graph explorer: goal-iteration-attempt</b><span>Mapped GoalStarter, GoalLifecycle, IterationAttemptCoordinator, AttemptOrchestrator, generator DAG, retry, deferral, delegated child goals, nested planning, closure routing, tests, and stale older-doc claims.</span></div>
   <div><b>graph explorer: context</b><span>Mapped ContextEngine, recipes, packets, renderer, task guidance, skill rows, profile frontmatter, and launch message rows.</span></div>
   <div><b>graph explorer: terminals</b><span>Mapped submission tools, terminal descriptor registry, advisor/resolver helper pattern, terminal exclusivity, output validation, and engine stop behavior.</span></div>
   <div><b>graph explorer: bridges</b><span>Mapped TaskCenter entry bootstrap, sandbox binding, engine run launch, tool metadata, message artifacts, task_center_runner audit, and cross-module boundaries.</span></div>
@@ -89,8 +89,8 @@
 <h2>Refresh Triggers <a class="anchor" href="#refresh-triggers">#</a></h2>
 <div class="evidence-grid">
   <div class="evidence-card">
-    <h3>Lifecycle</h3>
-    <p>Refresh when Goal, Iteration, Attempt, retry, deferral, delegated-goal routing, close-report delivery, or store protocol methods change.</p>
+    <h3>Goal Iteration Attempt</h3>
+    <p>Refresh when Goal, Iteration, Attempt, nested planning depth rules, retry, deferral, delegated-goal routing, close-report delivery, or store protocol methods change.</p>
   </div>
   <div class="evidence-card">
     <h3>Attempt Harness</h3>
@@ -120,7 +120,7 @@
 <div class="summary">
   <ul>
     <li><code>docs/task_center_harness_and_context_engine.html</code> remains historical reference material, not the canonical current wiki. Use this module for refreshed source-backed TaskCenter claims.</li>
-    <li>Current lifecycle naming is <code>GoalLifecycle</code> plus <code>IterationAttemptCoordinator</code>, not <code>GoalHandler</code>, <code>IterationManager</code>, <code>IterationFactory</code>, or <code>IterationClosureRouter</code>.</li>
+    <li>Current state-service naming is <code>GoalLifecycle</code> plus <code>IterationAttemptCoordinator</code>, not <code>GoalHandler</code>, <code>IterationManager</code>, <code>IterationFactory</code>, or <code>IterationClosureRouter</code>.</li>
     <li>Current child-goal closure completes the parent generator task as <code>DONE</code> or <code>FAILED</code>. Do not document it as returning the parent to <code>RUNNING</code>.</li>
     <li>Current nested-depth terminal routing can remove <code>submit_execution_handoff</code> from nested executors. Do not repeat older claims that executor handoff is available at every nesting depth.</li>
     <li>Current helper agents use direct launch prompt assembly through <code>ask_advisor</code> and <code>ask_resolver</code>; the Context Engine is not involved in helper prompt composition.</li>
@@ -132,7 +132,7 @@
 <h2>Change Log <a class="anchor" href="#change-log">#</a></h2>
 <div class="summary">
   <ul>
-    <li><span><strong>2026-05-26.</strong> Created the TaskCenter architecture module under <code>docs/architecture/task_center</code>, covering Goal/Iteration/Attempt lifecycle, planner-generator-evaluator harness, context engine, agent roles, terminal tools, advisor/resolver patterns, engine/tools/sandbox bridges, and maintenance rules.</span></li>
+    <li><span><strong>2026-05-26.</strong> Created the TaskCenter architecture module under <code>docs/architecture/task_center</code>, covering the Goal -> Iteration -> Attempt model, planner-generator-evaluator harness, context engine, agent roles, terminal tools, advisor/resolver patterns, engine/tools/sandbox bridges, and maintenance rules.</span></li>
     <li><span><strong>2026-05-26.</strong> Recorded stale claims from the older standalone TaskCenter HTML and linked this module into the shared architecture navigation/search layer.</span></li>
   </ul>
 </div>

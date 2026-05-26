@@ -76,14 +76,27 @@
 <section id="active-model-resolution" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="backend/src/config/model_config.py backend/src/db/models/model_registration.py backend/src/db/stores/model_store.py backend/src/providers/provider.py backend/tests/unit_test/test_config/test_model_store.py backend/tests/unit_test/test_config/test_model_config_class_path_thread.py backend/tests/unit_test/test_providers/test_provider_routing.py backend/tests/unit_test/test_providers/test_class_path_dispatch.py">
 <h2>Active Model Resolution <a class="anchor" href="#active-model-resolution">#</a></h2>
 <p>The active LLM model is DB-backed. <code>ModelRegistrationRecord</code> stores <code>key</code>, <code>label</code>, <code>class_path</code>, JSON kwargs, active flag, and timestamps. <code>ModelStore</code> handles CRUD, active selection, environment-placeholder resolution, secret redaction, and registry seeding.</p>
-<div class="sequence" aria-label="Active model resolution sequence">
-  <ol>
-    <li><span><code>make_api_client()</code> returns an explicit external client unchanged when tests or callers provide one.</span></li>
-    <li><span>Otherwise it calls <code>config.model_config.get_active_model_kwargs()</code>, which resolves the active model row through <code>runtime.app_factory.model_store</code>.</span></li>
-    <li><span>If <code>class_path</code> contains <code>module.path:ClassName</code>, <code>_resolve_class_path()</code> imports and instantiates that class with <code>db_kwargs</code>.</span></li>
-    <li><span>If <code>class_path</code> is empty or legacy dot-format without a colon, the factory falls back to <code>AnthropicClient(api_key=..., base_url=...)</code>.</span></li>
-    <li><span><code>EOS_DISABLE_CODING_PLAN_MODE=1</code> rejects classes under <code>providers.clients.coding_plan.*</code> before construction.</span></li>
-  </ol>
+<div class="diagram" aria-label="Active model resolution sequence">
+  <div class="flow-row">
+    <div class="node"><strong>External client?</strong><small>tests or callers can provide <code>SupportsStreamingMessages</code></small></div>
+    <div class="node"><strong>Passthrough branch</strong><small><code>make_api_client()</code> returns it unchanged</small></div>
+    <div class="node"><strong>DB-backed branch</strong><small><code>get_active_model_kwargs()</code> reads <code>model_store</code></small></div>
+  </div>
+  <div class="flow-row">
+    <div class="node"><strong>Active row</strong><small><code>key</code>, <code>class_path</code>, kwargs, active flag</small></div>
+    <div class="node"><strong>Class-path branch</strong><small><code>module.path:ClassName</code> imports through <code>_resolve_class_path()</code></small></div>
+    <div class="node"><strong>Legacy branch</strong><small>empty or no-colon path falls back to <code>AnthropicClient</code></small></div>
+  </div>
+  <div class="flow-row">
+    <div class="node"><strong>Coding-plan guard</strong><small><code>EOS_DISABLE_CODING_PLAN_MODE=1</code> rejects plan-mode classes</small></div>
+    <div class="node"><strong>Construct client</strong><small>resolved class receives DB kwargs</small></div>
+    <div class="node"><strong>Query loop protocol</strong><small>client streams <code>ApiStreamEvent</code> values</small></div>
+  </div>
+</div>
+<div class="edge-list">
+  <div><b>External override</b><span>Injected clients bypass DB resolution and class-path loading entirely.</span></div>
+  <div><b>Class dispatch</b><span>Colon-form <code>class_path</code> values select explicit provider classes; empty or legacy dot-format values select the Anthropic-native fallback.</span></div>
+  <div><b>Mode kill switch</b><span>The coding-plan disable flag is checked before construction for classes under <code>providers.clients.coding_plan.*</code>.</span></div>
 </div>
 <div class="edge-list">
   <div><b>tested by</b><span><code>test_provider_routing.py</code> covers external passthrough, explicit DB kwargs, and missing API key failures.</span></div>

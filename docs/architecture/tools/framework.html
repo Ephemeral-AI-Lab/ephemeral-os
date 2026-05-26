@@ -23,6 +23,7 @@
   <ol>
     <li><a href="index.html" data-doc-module="tools" data-doc-section="index" data-doc-page="index.html">Overview</a></li>
     <li><a href="framework.html" data-doc-module="tools" data-doc-section="framework" data-doc-page="framework.html" class="active">Framework</a></li>
+    <li><a href="hooks.html" data-doc-module="tools" data-doc-section="hooks" data-doc-page="hooks.html">Hooks</a></li>
     <li><a href="terminals.html" data-doc-module="tools" data-doc-section="terminals" data-doc-page="terminals.html">Terminals</a></li>
     <li><a href="sandbox.html" data-doc-module="tools" data-doc-section="sandbox" data-doc-page="sandbox.html">Sandbox Tools</a></li>
     <li><a href="isolated-workspace.html" data-doc-module="tools" data-doc-section="isolated-workspace" data-doc-page="isolated-workspace.html">Isolated Workspace Tools</a></li>
@@ -47,7 +48,7 @@
   </ol>
 </nav>
 
-<p class="lead">Code-backed map of <code>backend/src/tools/_framework</code> and the public facade in <code>backend/src/tools/__init__.py</code>. The framework converts typed tool definitions into provider schemas, runtime dispatch, hook execution, terminal stamping, and engine query-loop behavior.</p>
+<p class="lead">Code-backed map of <code>backend/src/tools/_framework</code> and the public facade in <code>backend/src/tools/__init__.py</code>. The framework converts typed tool definitions into provider schemas, runtime dispatch, hook execution, terminal stamping, and engine query-loop behavior. The hook contract and runtime pipeline are split out in <a class="wiki-link" href="hooks.html">Tool Hooks</a>.</p>
 
 <section id="source-graph" data-last-reviewed-commit="569f12c3f39471dbaa643906856a8daf81a21a2d" data-evidence-paths="backend/src/tools/_framework/core/base.py backend/src/tools/_framework/core/registry.py backend/src/tools/_framework/core/decorator.py backend/src/tools/_framework/core/validation.py backend/src/tools/_framework/execution/tool_call.py backend/src/tools/_framework/execution/hook_pipeline.py backend/src/tools/_framework/factory.py backend/src/tools/__init__.py backend/src/engine/query/loop.py backend/src/engine/tool_call/dispatch.py backend/tests/unit_test/test_tools/test_tool_execution.py">
 <h2>Source Graph <a class="anchor" href="#source-graph">#</a></h2>

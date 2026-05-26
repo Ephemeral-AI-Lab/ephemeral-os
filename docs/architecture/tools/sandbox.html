@@ -23,6 +23,7 @@
   <ol>
     <li><a href="index.html" data-doc-module="tools" data-doc-section="index" data-doc-page="index.html">Overview</a></li>
     <li><a href="framework.html" data-doc-module="tools" data-doc-section="framework" data-doc-page="framework.html">Framework</a></li>
+    <li><a href="hooks.html" data-doc-module="tools" data-doc-section="hooks" data-doc-page="hooks.html">Hooks</a></li>
     <li><a href="terminals.html" data-doc-module="tools" data-doc-section="terminals" data-doc-page="terminals.html">Terminals</a></li>
     <li><a href="sandbox.html" data-doc-module="tools" data-doc-section="sandbox" data-doc-page="sandbox.html" class="active">Sandbox Tools</a></li>
     <li><a href="isolated-workspace.html" data-doc-module="tools" data-doc-section="isolated-workspace" data-doc-page="isolated-workspace.html">Isolated Workspace Tools</a></li>
@@ -135,7 +136,7 @@
   data-evidence-paths="backend/src/tools/sandbox/shell/shell.py backend/src/tools/sandbox/_lib/shell_policy.py backend/src/tools/_framework/core/registry.py backend/src/tools/background/check_background_task_result/check_background_task_result.py backend/src/tools/background/wait_background_tasks/wait_background_tasks.py backend/src/tools/background/cancel_background_task/cancel_background_task.py backend/src/sandbox/api/tool/shell.py backend/src/sandbox/daemon/rpc/in_flight.py backend/src/sandbox/daemon/builtin_operations.py">
 <h2>Shell Background and Policy</h2>
 <p><code>shell</code> is declared <code>WRITE_ALLOWED</code> and <code>background="optional"</code>. The tool wrapper does not expose a separate background parameter in its input model; instead, it reads <code>background_task_id</code> from the tool execution context and sets <code>ShellRequest.background</code>. The API facade forwards that as <code>background=true</code> in the daemon payload, and the daemon in-flight registry tracks the invocation by agent id and background flag.</p>
-<p>Before daemon dispatch, <code>shell</code> runs destructive git and destructive shell pre-hooks. These hooks block command forms that would bypass the sandbox write/audit path or destructively mutate workspace/system state. That policy keeps shell useful for builds and tests while steering file edits toward <code>edit_file</code> and <code>write_file</code>.</p>
+<p>Before daemon dispatch, <code>shell</code> runs destructive git and destructive shell pre-hooks through the <a class="wiki-link" href="hooks.html">Tool Hooks</a> pipeline. These hooks block command forms that would bypass the sandbox write/audit path or destructively mutate workspace/system state. That policy keeps shell useful for builds and tests while steering file edits toward <code>edit_file</code> and <code>write_file</code>.</p>
 <div class="callout">
   <span class="label">Background connection</span>
   Background management tools live outside <code>backend/src/tools/sandbox</code>, but the sandbox shell is one of their main producers. <code>wait_background_tasks</code>, <code>check_background_task_result</code>, and <code>cancel_background_task</code> operate on the background task manager state that the engine/tool framework attaches to the execution context.

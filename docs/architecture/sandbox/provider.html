@@ -94,6 +94,22 @@
   data-last-reviewed-commit="2a3e6cc7c"
   data-evidence-paths="backend/src/sandbox/provider/bootstrap.py backend/src/sandbox/provider/protocol.py backend/src/sandbox/provider/docker/adapter.py backend/src/sandbox/provider/daytona/adapter.py backend/src/sandbox/host/bootstrap.py backend/src/sandbox/host/daemon_client.py">
 <h3>7.2 Bootstrap Workflow <a class="anchor" href="#provider-bootstrap-workflow">§</a></h3>
+<div class="diagram" aria-label="Provider bootstrap technical route">
+  <div class="flow-row">
+    <div class="node"><strong>Config selection</strong><small>Docker or Daytona adapter</small></div>
+    <span>-&gt;</span>
+    <div class="node"><strong>Provider registry</strong><small>global or sandbox-scoped binding</small></div>
+    <span>-&gt;</span>
+    <div class="node"><strong>Container lifecycle</strong><small>create/start and provider metadata</small></div>
+  </div>
+  <div class="flow-row">
+    <div class="node"><strong>Host bootstrap</strong><small>runtime bundle, git, bootstrap script</small></div>
+    <span>-&gt;</span>
+    <div class="node"><strong>Workspace base</strong><small>ensure LayerStack root and binding</small></div>
+    <span>-&gt;</span>
+    <div class="node"><strong>Daemon transport</strong><small>TCP endpoint or AF_UNIX thin client</small></div>
+  </div>
+</div>
 <div class="sequence" aria-label="Provider bootstrap workflow">
   <ol>
     <li><span>Provider bootstrap chooses and initializes a Docker or Daytona adapter, then the registry binds the adapter globally or per sandbox.</span></li>

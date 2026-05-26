@@ -23,6 +23,7 @@
   <ol>
     <li><a href="index.html" data-doc-module="tools" data-doc-section="index" data-doc-page="index.html" class="active">Overview</a></li>
     <li><a href="framework.html" data-doc-module="tools" data-doc-section="framework" data-doc-page="framework.html">Framework</a></li>
+    <li><a href="hooks.html" data-doc-module="tools" data-doc-section="hooks" data-doc-page="hooks.html">Hooks</a></li>
     <li><a href="terminals.html" data-doc-module="tools" data-doc-section="terminals" data-doc-page="terminals.html">Terminals</a></li>
     <li><a href="sandbox.html" data-doc-module="tools" data-doc-section="sandbox" data-doc-page="sandbox.html">Sandbox Tools</a></li>
     <li><a href="isolated-workspace.html" data-doc-module="tools" data-doc-section="isolated-workspace" data-doc-page="isolated-workspace.html">Isolated Workspace Tools</a></li>
@@ -49,9 +50,9 @@
 </nav>
 
 <p class="lead">
-          This wiki maps every immediate tool folder to the engine dispatch loop, sandbox workspace routing,
-          TaskCenter terminal state, and background execution behavior. It is a documentation artifact only;
-          the runtime code was not refactored as part of this pass.
+          This wiki maps every immediate tool folder plus the shared hook modules to the engine dispatch loop,
+          sandbox workspace routing, TaskCenter terminal state, and background execution behavior. It is a
+          documentation artifact only; the runtime code was not refactored as part of this pass.
         </p>
       </header>
 
@@ -162,7 +163,7 @@
         </div>
       </section>
 
-      <section id="folder-pages" data-last-reviewed-commit="569f12c3f39471dbaa643906856a8daf81a21a2d" data-evidence-paths="backend/src/tools/_framework;backend/src/tools/_terminals;backend/src/tools/sandbox;backend/src/tools/isolated_workspace;backend/src/tools/background;backend/src/tools/subagent;backend/src/tools/ask_helper;backend/src/tools/submission;backend/src/tools/skills">
+      <section id="folder-pages" data-last-reviewed-commit="6c45d4565cc912df20e5e688185982fdbe237550" data-evidence-paths="backend/src/tools/_framework;backend/src/tools/_terminals;backend/src/tools/sandbox;backend/src/tools/isolated_workspace;backend/src/tools/background;backend/src/tools/subagent;backend/src/tools/ask_helper;backend/src/tools/submission;backend/src/tools/skills">
         <h3>Folder Page Matrix</h3>
         <div class="table-wrap">
           <table>
@@ -180,6 +181,12 @@
                 <td><a href="framework.html">Framework</a></td>
                 <td>Tool contract, registry, factories, decorator, execution lifecycle.</td>
                 <td>Engine registry construction, schema exposure, hooks, terminal stamping.</td>
+              </tr>
+              <tr>
+                <td><code>_framework/core/hooks.py</code><br><code>_framework/execution/hook_pipeline.py</code></td>
+                <td><a href="hooks.html">Hooks</a></td>
+                <td>Explicit pre/post hook contracts, target validation, hook trace, and hook-failure metadata.</td>
+                <td>Decorator construction, <code>execute_tool_once</code> lifecycle, sandbox shell pre-hooks.</td>
               </tr>
               <tr>
                 <td><code>_terminals</code></td>
@@ -271,7 +278,7 @@
 
       <div class="page-baseline" data-page-baseline-commit="mixed">
         <strong>Maintenance Baseline</strong>
-        <span>Most sections were reviewed against <code>569f12c3f39471dbaa643906856a8daf81a21a2d</code>; sections that cite currently dirty sandbox paths are marked <code>HEAD-plus-worktree</code>.</span>
+        <span>Clean sections are reviewed against their section metadata commits, including <code>569f12c3f39471dbaa643906856a8daf81a21a2d</code> and <code>6c45d4565cc912df20e5e688185982fdbe237550</code>; sections that cite currently dirty sandbox paths are marked <code>HEAD-plus-worktree</code>.</span>
         <code>git diff 569f12c3f39471dbaa643906856a8daf81a21a2d..HEAD -- backend/src/tools backend/src/engine backend/src/sandbox backend/src/task_center docs/architecture/tools docs/architecture/assets</code>
       </div>
     </main>

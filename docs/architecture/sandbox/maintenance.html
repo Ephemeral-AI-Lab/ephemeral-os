@@ -130,6 +130,22 @@ rg -n "\[\[|\]\]" docs/architecture/sandbox</code></pre>
 
 <section id="change-log" data-last-reviewed-commit="2a3e6cc7c" data-evidence-paths="docs/architecture/sandbox docs/architecture/assets/search-index.js">
 <h3>11.5 Change Log <a class="anchor" href="#change-log">§</a></h3>
+<div class="diagram" aria-label="Wiki maintenance update workflow">
+  <div class="flow-row">
+    <div class="node"><strong>Source delta</strong><small>routing, storage, provider, plugin, isolated change</small></div>
+    <span>-&gt;</span>
+    <div class="node"><strong>Page owner</strong><small>refresh affected sandbox HTML page</small></div>
+    <span>-&gt;</span>
+    <div class="node"><strong>Evidence metadata</strong><small>section baseline and evidence paths</small></div>
+  </div>
+  <div class="flow-row">
+    <div class="node"><strong>Support surfaces</strong><small>index, search, sidebar only when scope allows</small></div>
+    <span>-&gt;</span>
+    <div class="node"><strong>Validation</strong><small>HTML checker, diff check, wiki-link scan</small></div>
+    <span>-&gt;</span>
+    <div class="node"><strong>Change log</strong><small>append durable refresh memory</small></div>
+  </div>
+</div>
 <div class="sequence" aria-label="Wiki maintenance change log">
   <ol>
     <li><span><strong>2026-05-26.</strong> Added per-section baseline metadata with <code>data-last-reviewed-commit</code> and <code>data-evidence-paths</code> so future wiki refreshes can use Git deltas before deeper graph exploration.</span></li>

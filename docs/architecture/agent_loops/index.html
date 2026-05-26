@@ -88,16 +88,27 @@
     <div class="node good"><strong>Terminal submission</strong><small>TaskCenter state mutation</small></div>
   </div>
 </div>
-<div class="sequence" aria-label="High-level agent loop sequence">
-  <ol>
-    <li><span>TaskCenter builds an <code>AgentLaunch</code> with an effective agent profile and context packet when a planner, generator, verifier, or evaluator task becomes runnable.</span></li>
-    <li><span>The engine factory resolves the active model, builds the tool registry, appends termination guidance for terminal tools, and creates run-scoped metadata.</span></li>
-    <li><span>The query loop repeatedly builds provider requests from the durable transcript, injecting pending system notifications before each provider call.</span></li>
-    <li><span>The active model provider translates <code>ApiMessageRequest</code> into upstream calls and streams provider-neutral text, thinking, tool-use, and completion events back to the loop.</span></li>
-    <li><span>Tool-use deltas may run mid-stream only when safe. Terminal-capable runs and background-bound tools defer execution until the complete assistant message is available.</span></li>
-    <li><span>Foreground tool results are appended as a user message unless a terminal tool ends the run. Background launches return an immediate ack and are managed through check, wait, or cancel tools.</span></li>
-    <li><span>Sandbox tools cross into daemon workspace routing, where reads/writes/edits use direct LayerStack/OCC when possible and shell/search use overlay or isolated workspace paths.</span></li>
-  </ol>
+<div class="diagram" aria-label="High-level agent loop sequence">
+  <div class="flow-row">
+    <div class="node"><strong>Runnable TaskCenter task</strong><small>planner, generator, verifier, or evaluator</small></div>
+    <div class="node"><strong><code>AgentLaunch</code></strong><small>effective profile plus context packet rows</small></div>
+    <div class="node"><strong>Engine factory</strong><small>model client, tool registry, terminal guidance, run metadata</small></div>
+  </div>
+  <div class="flow-row">
+    <div class="node"><strong>Provider turn</strong><small>durable transcript copy plus pending notifications</small></div>
+    <div class="node"><strong>Model stream</strong><small>text, thinking, tool-use deltas, completion event</small></div>
+    <div class="node"><strong>Deferral gate</strong><small>terminal-capable or background-bound calls wait for final assistant</small></div>
+  </div>
+  <div class="flow-row">
+    <div class="node"><strong>Dispatch outcome</strong><small>foreground result, background ack, or terminal result</small></div>
+    <div class="node"><strong>Sandbox routing</strong><small>isolated, direct LayerStack/OCC, or overlay path</small></div>
+    <div class="node"><strong>TaskCenter state</strong><small>terminal submission advances persisted lifecycle</small></div>
+  </div>
+</div>
+<div class="edge-list">
+  <div><b>Provider loop</b><span>The query loop rebuilds provider requests from a sanitized transcript copy before each model call, without mutating the durable transcript.</span></div>
+  <div><b>Tool branch</b><span>Safe foreground tool-use deltas can execute mid-stream; terminal-capable runs and background-bound tools wait for the complete assistant message.</span></div>
+  <div><b>Completion branch</b><span>Non-terminal foreground results append a user-message tool result, background launches return an immediate alias ack, and terminal tools stop the run.</span></div>
 </div>
 </section>
 

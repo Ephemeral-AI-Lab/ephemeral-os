@@ -68,14 +68,22 @@
     <div class="node"><strong>Loop or stop</strong><small>tool stop, resource limit, terminal refusal, text response</small></div>
   </div>
 </div>
-<div class="sequence" aria-label="Main query loop sequence">
-  <ol>
-    <li><span><code>_prepare_query_loop_runtime()</code> coerces or creates <code>ExecutionMetadata</code>, registers a run-scoped notification service, creates <code>BackgroundTaskSupervisor</code> when background tools are enabled, and derives <code>context.terminal_tools</code> from the registry.</span></li>
-    <li><span><code>_build_stream_executor()</code> builds a <code>ToolExecutionContextService</code> over the current transcript and installs a deferral predicate for terminal and background cases.</span></li>
-    <li><span><code>build_query_run_request()</code> calls <code>prepare_provider_messages()</code>, records the LLM request, and creates the <code>providers.types.ApiMessageRequest</code> sent to the active <code>SupportsStreamingMessages</code> client.</span></li>
-    <li><span><code>_consume_provider_stream()</code> maps provider-neutral <code>ApiStreamEvent</code> objects into engine stream events, records streamed tool-use ids, and requires a final assistant message before dispatch can continue.</span></li>
-    <li><span>The final assistant message is appended to the transcript before tool dispatch, so prehooks and background tasks receive the same conversation shape the model produced.</span></li>
-  </ol>
+<div class="diagram" aria-label="Main query loop sequence">
+  <div class="flow-row">
+    <div class="node"><strong><code>_prepare_query_loop_runtime()</code></strong><small>metadata, notifications, background supervisor, terminal names</small></div>
+    <div class="node"><strong><code>_build_stream_executor()</code></strong><small>tool context over transcript plus deferral predicate</small></div>
+    <div class="node"><strong><code>build_query_run_request()</code></strong><small>provider-safe messages, prompt report, <code>ApiMessageRequest</code></small></div>
+  </div>
+  <div class="flow-row">
+    <div class="node"><strong><code>_consume_provider_stream()</code></strong><small>provider events become engine stream events</small></div>
+    <div class="node"><strong>Assistant complete</strong><small>streamed tool ids recorded; final message required</small></div>
+    <div class="node"><strong>Transcript append</strong><small>prehooks and background tasks see the model-produced shape</small></div>
+  </div>
+</div>
+<div class="edge-list">
+  <div><b>Runtime setup</b><span>The loop coerces or creates <code>ExecutionMetadata</code>, installs the run-scoped notification service, and creates <code>BackgroundTaskSupervisor</code> only when background tools are enabled.</span></div>
+  <div><b>Request copy</b><span><code>prepare_provider_messages()</code> sanitizes the provider-visible history and feeds <code>ApiMessageRequest</code> without changing the durable transcript.</span></div>
+  <div><b>Dispatch precondition</b><span>Final tool dispatch waits for <code>ApiMessageCompleteEvent</code> so the complete assistant message is available before side effects continue.</span></div>
 </div>
 </section>
 
@@ -105,13 +113,27 @@
     <div class="node"><strong>Loop stop</strong><small><code>QueryExitReason.TOOL_STOP</code></small></div>
   </div>
 </div>
-<div class="sequence" aria-label="Terminal dispatch sequence">
-  <ol>
-    <li><span><code>dispatch_assistant_tools()</code> gathers streamed foreground results, then validates the complete final-message tool batch.</span></li>
-    <li><span>If any terminal tool is batched with any sibling tool, <code>_validate_tool_batch()</code> returns one error <code>ToolResultBlock</code> per tool-use id, cancels streamed work, and executes none of the batch.</span></li>
-    <li><span>If the batch is valid, pending calls are split into background launches and foreground execution. A successful terminal foreground call is stamped at the tool framework boundary.</span></li>
-    <li><span><code>_first_terminal_tool_result()</code> projects the first <code>does_terminate</code> block into a <code>ToolResult</code>. The query loop stores it on <code>context.terminal_result</code>, sets <code>TOOL_STOP</code>, and exits without appending another tool-result user message.</span></li>
-  </ol>
+<div class="diagram" aria-label="Terminal dispatch sequence">
+  <div class="flow-row">
+    <div class="node"><strong><code>dispatch_assistant_tools()</code></strong><small>gather streamed foreground results</small></div>
+    <div class="node"><strong>Final batch validation</strong><small>terminal tool must be called alone</small></div>
+    <div class="node"><strong>Invalid batch</strong><small>one error <code>ToolResultBlock</code> per tool-use id; cancel streamed work</small></div>
+  </div>
+  <div class="flow-row">
+    <div class="node"><strong>Valid batch</strong><small>split background launches from foreground execution</small></div>
+    <div class="node"><strong>Terminal foreground call</strong><small>tool framework stamps <code>does_terminate</code></small></div>
+    <div class="node"><strong><code>_first_terminal_tool_result()</code></strong><small>projects first terminal block into <code>ToolResult</code></small></div>
+  </div>
+  <div class="flow-row">
+    <div class="node"><strong>Context update</strong><small><code>context.terminal_result</code> is set</small></div>
+    <div class="node"><strong>Loop exit</strong><small><code>QueryExitReason.TOOL_STOP</code></small></div>
+    <div class="node"><strong>No provider echo</strong><small>no extra tool-result user message is appended</small></div>
+  </div>
+</div>
+<div class="edge-list">
+  <div><b>Batch rejection</b><span>If a terminal tool is batched with any sibling tool, none of the batch executes and streamed work is cancelled.</span></div>
+  <div><b>Background split</b><span>For a valid batch, background launches are acknowledged separately while foreground calls execute through the normal tool framework.</span></div>
+  <div><b>Terminal stop</b><span>The first <code>does_terminate</code> block becomes the run terminal result and stops the query loop.</span></div>
 </div>
 </section>
 

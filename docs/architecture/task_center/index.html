@@ -24,7 +24,7 @@
   <h2>TaskCenter Pages</h2>
   <ol>
     <li><a href="index.html" data-doc-module="task-center" data-doc-section="index" data-doc-page="index.html" class="active">Overview</a></li>
-    <li><a href="lifecycle.html" data-doc-module="task-center" data-doc-section="lifecycle" data-doc-page="lifecycle.html">Lifecycle</a></li>
+    <li><a href="lifecycle.html" data-doc-module="task-center" data-doc-section="lifecycle" data-doc-page="lifecycle.html">Goal Iteration Attempt</a></li>
     <li><a href="attempt-harness.html" data-doc-module="task-center" data-doc-section="attempt-harness" data-doc-page="attempt-harness.html">Attempt Harness</a></li>
     <li><a href="context-engine.html" data-doc-module="task-center" data-doc-section="context-engine" data-doc-page="context-engine.html">Context Engine</a></li>
     <li><a href="agent-roles.html" data-doc-module="task-center" data-doc-section="agent-roles" data-doc-page="agent-roles.html">Agent Roles</a></li>
@@ -50,7 +50,7 @@
   </ol>
 </nav>
 
-<p class="lead">TaskCenter is the persisted multi-agent control plane for complex coding work. It turns a user prompt or delegated task into a Goal, runs one open Iteration at a time, and executes each Attempt through a planner -> generator DAG -> evaluator harness. Current verdict: lifecycle authority is in TaskCenter state and terminal submissions, while engine, tools, and sandbox provide execution surfaces.</p>
+<p class="lead">TaskCenter is the persisted multi-agent control plane for complex coding work. Its most important model is <code>Goal -> Iteration -> Attempt</code>: a Goal owns the objective, an Iteration owns one bounded planning slice, and an Attempt owns one planner -> generator DAG -> evaluator try. Engine, tools, and sandbox provide execution surfaces around that state model.</p>
 
 <section id="scope-verdict" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="backend/src/task_center backend/src/agents/profile backend/src/tools/submission backend/src/tools/ask_helper backend/src/engine/query/loop.py backend/src/engine/tool_call/dispatch.py backend/src/sandbox docs/task_center_harness_and_context_engine.html docs/architecture/tools docs/architecture/agent_loops">
 <h2>Scope And Verdict <a class="anchor" href="#scope-verdict">#</a></h2>
@@ -58,13 +58,13 @@
   <ul>
     <li>The durable state model is <code>Goal -> Iteration -> Attempt</code>. A Goal has ordered Iterations; an Iteration owns sequential retry Attempts; an Attempt owns one planner task, a persisted generator DAG, and one evaluator task.</li>
     <li>TaskCenter does not add peer-to-peer agent communication. Delegation is persisted as a task-origin child Goal; the parent generator waits in <code>WAITING_GOAL</code> and later resumes through a closure report.</li>
-    <li>The AttemptOrchestrator is per-attempt lifecycle machinery, not a global orchestrator. It persists the planner contract, generator rows, generator outcomes, evaluator outcomes, and attempt close.</li>
+    <li>The AttemptOrchestrator is per-Attempt machinery, not a global orchestrator. It persists the planner contract, generator rows, generator outcomes, evaluator outcomes, and Attempt close.</li>
     <li>The Context Engine builds and renders role-specific packets from stores. It does not decide retry, continuation, goal closure, launch policy, or sandbox behavior.</li>
     <li>Terminal tools are the agent-facing state boundary. Successful terminal tool calls are stamped <code>does_terminate=true</code> by the tool framework, and their payloads mutate TaskCenter through TaskCenter services.</li>
   </ul>
 </div>
 <div class="wiki-links" aria-label="TaskCenter related pages">
-  <a href="lifecycle.html">Lifecycle</a>
+  <a href="lifecycle.html">Goal Iteration Attempt</a>
   <a href="attempt-harness.html">Attempt Harness</a>
   <a href="context-engine.html">Context Engine</a>
   <a href="terminal-tools.html">Terminal Tools</a>
@@ -84,20 +84,30 @@
     <div class="node"><strong>Iteration coordinator</strong><small>attempt creation, retry budget, closure report</small></div>
     <div class="node warn"><strong>AttemptOrchestrator</strong><small>planner, generator DAG, evaluator, close</small></div>
     <div class="node"><strong>Agent launcher</strong><small>context rows, engine run, terminal exhaustion</small></div>
-    <div class="node good"><strong>Terminal tools</strong><small>validated payloads mutate lifecycle state</small></div>
+    <div class="node good"><strong>Terminal tools</strong><small>validated payloads mutate Goal -> Iteration -> Attempt state</small></div>
   </div>
 </div>
-<div class="sequence" aria-label="TaskCenter lifecycle sequence">
-  <ol>
-    <li><span><code>start_task_center_run()</code> validates stores, creates a top-level request/run, prepares a sandbox binding, registers context recipes, and constructs <code>AttemptDeps</code>.</span></li>
-    <li><span><code>GoalStarter.start()</code> creates an entry-origin Goal, initial Iteration, and initial unstarted Attempt, then starts the attempt through the iteration coordinator.</span></li>
-    <li><span><code>AttemptOrchestrator.start()</code> registers itself, composes planner launch messages, upserts the planner task, stores the planner task id on the Attempt, and schedules the planner agent.</span></li>
-    <li><span>The planner must terminate with <code>submit_plan_closes_goal</code> or <code>submit_plan_defers_goal</code>. The submission persists the attempt plan contract and generator DAG rows.</span></li>
-    <li><span><code>AttemptStageAdvancer</code> launches ready generator waves. Dependencies are task ids derived from the planner's local ids, and failed or blocked ancestors make downstream pending tasks unreachable but quiescent.</span></li>
-    <li><span>When every generator is done, TaskCenter starts one evaluator. Evaluator success closes the Attempt as passed; evaluator failure closes it as failed.</span></li>
-    <li><span>The iteration coordinator either emits terminal success, emits success with deferred continuation, or starts the next retry Attempt within the same Iteration budget.</span></li>
-    <li><span>GoalLifecycle starts the next Iteration for deferred continuation, or closes the Goal and delivers a GoalClosureReport to either the top-level run or the parent generator task.</span></li>
-  </ol>
+<div class="diagram" aria-label="TaskCenter lifecycle state-machine diagram">
+  <div class="flow-row">
+    <div class="node"><strong>Bootstrap</strong><small>stores, request/run, sandbox binding, recipes, <code>AttemptDeps</code></small></div>
+    <div class="node"><strong>Goal start</strong><small>entry Goal, Iteration 1, Attempt 1</small></div>
+    <div class="node"><strong>Planner</strong><small>planner task row, context, terminal plan</small></div>
+    <div class="node"><strong>Generator DAG</strong><small>persisted tasks, dependency waves, blockers, handoff</small></div>
+  </div>
+  <div class="flow-row">
+    <div class="node"><strong>Evaluator</strong><small>single final judge for the attempt</small></div>
+    <div class="node"><strong>Attempt close</strong><small>passed or failed</small></div>
+    <div class="node"><strong>Iteration decision</strong><small>retry, terminal success, or deferred continuation</small></div>
+    <div class="node"><strong>Goal closure</strong><small>top-level run finish or parent close report</small></div>
+  </div>
+</div>
+<div class="edge-list" aria-label="TaskCenter lifecycle transitions">
+  <div><b>bootstrap</b><span><code>start_task_center_run()</code> validates stores, creates request/run rows, prepares the sandbox binding, registers recipes, and constructs <code>AttemptDeps</code>.</span></div>
+  <div><b>start</b><span><code>GoalStarter.start()</code> creates an entry-origin Goal, initial Iteration, and initial Attempt, then starts the attempt through the iteration coordinator.</span></div>
+  <div><b>plan</b><span><code>AttemptOrchestrator.start()</code> registers the orchestrator, writes planner task state, composes launch rows, and expects a close or defer plan terminal.</span></div>
+  <div><b>generate</b><span><code>AttemptStageAdvancer</code> launches ready generator waves; failed or blocked ancestors make descendants unreachable but quiescent.</span></div>
+  <div><b>evaluate</b><span>When all generators are done, TaskCenter launches one evaluator whose verdict closes the Attempt as passed or failed.</span></div>
+  <div><b>finish</b><span>The iteration coordinator chooses retry, terminal success, or deferred continuation; <code>GoalLifecycle</code> then starts the next Iteration or delivers the Goal closure report.</span></div>
 </div>
 </section>
 
@@ -105,8 +115,8 @@
 <h2>Reading Paths <a class="anchor" href="#reading-paths">#</a></h2>
 <div class="evidence-grid">
   <div class="evidence-card">
-    <h3>Lifecycle</h3>
-    <p>Use <a class="wiki-link" href="lifecycle.html">Lifecycle</a> for Goal, Iteration, Attempt ownership, retry, deferral, delegated child goals, and close-report routing.</p>
+    <h3>Goal Iteration Attempt</h3>
+    <p>Use <a class="wiki-link" href="lifecycle.html">Goal Iteration Attempt</a> for the core state model, retry, deferral, delegated child goals, nested planning, and close-report routing.</p>
   </div>
   <div class="evidence-card">
     <h3>Attempt Harness</h3>
@@ -138,7 +148,7 @@
   <div><b>owns-state</b><span><code>IterationAttemptCoordinator</code> owns one open Iteration's attempt creation, retry budget, and IterationClosureReport.</span></div>
   <div><b>owns-state</b><span><code>AttemptOrchestrator</code> owns attempt stage mutation and task outcome persistence for planner, generators, evaluator, and delegated-goal parent completion.</span></div>
   <div><b>owns-state</b><span><code>AttemptStageAdvancer</code> owns generator wave readiness, evaluator task creation, and attempt quiescence decisions.</span></div>
-  <div><b>imports</b><span>Submission tools import TaskCenter submission contexts and delegate lifecycle mutation to <code>AttemptOrchestrator</code> or <code>GoalStarter</code>; they are adapters, not state owners.</span></div>
+  <div><b>imports</b><span>Submission tools import TaskCenter submission contexts and delegate Goal -> Iteration -> Attempt mutation to <code>AttemptOrchestrator</code> or <code>GoalStarter</code>; they are adapters, not state owners.</span></div>
   <div><b>calls</b><span>The engine query loop calls tools and stops on terminal results, but it does not know Goal, Iteration, or Attempt policy.</span></div>
   <div><b>calls</b><span>Sandbox tools mutate or inspect workspace state. Their results become evidence that generator, verifier, or evaluator terminal submissions summarize.</span></div>
 </div>
@@ -161,7 +171,7 @@
   <span>TaskCenter overview reviewed against <code>e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa</code>.</span>
   <code>git diff e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa..HEAD -- &lt;section data-evidence-paths&gt;</code>
 </div>
-<div class="page-footer-nav"><span><a href="../index.html">Architecture Root</a></span><span><a href="lifecycle.html">Lifecycle</a></span></div>
+<div class="page-footer-nav"><span><a href="../index.html">Architecture Root</a></span><span><a href="lifecycle.html">Goal Iteration Attempt</a></span></div>
 </main>
 <script src="../assets/search-index.js"></script>
 <script src="../assets/nav.js"></script>

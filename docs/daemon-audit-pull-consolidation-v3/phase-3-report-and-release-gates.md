@@ -212,10 +212,15 @@ EOS_DAEMON_AUDIT_PULL_ENABLED=true \
 - All 4 release gates pass on `EOS_SWEEVO_INSTANCE=dask__dask_2023.3.2_2023.4.0` heavy live-e2e run.
 - `daemon_audit_pull.enabled=true` set as default in sandbox-backed runner config.
 - Stream-bridge retirement countdown begins (K=5 consecutive clean heavy runs).
-- ADR follow-up issues 1–4 filed in the issue tracker and linked from the [README ADR](README.md#follow-ups-out-of-scope-for-this-plan) section.
+- ADR follow-up issues 1–6 filed in the issue tracker and linked from the [README ADR](README.md#follow-ups-out-of-scope-for-this-plan) section.
 
 ## What this phase does NOT do
 
-- Does NOT remove the stream-bridge fallback. Per [README §Stream-bridge fallback sunset](README.md#stream-bridge-fallback-sunset), removal is a follow-up after the K=5 retirement gate.
-- Does NOT introduce a real plugin session lifecycle. Per ADR follow-up #2.
-- Does NOT add per-subsystem ring sharding. Per ADR follow-up #4 (only if the overhead gate fails post-ship).
+All items below are tracked in [README §Follow-ups (out of scope for this plan)](README.md#follow-ups-out-of-scope-for-this-plan); Phase 3 is the last in-scope V3 phase and explicitly defers each item below.
+
+- Does NOT remove the stream-bridge fallback. Per ADR follow-up #1 — removal is a follow-up after the K=5 retirement gate.
+- Does NOT introduce a real plugin session lifecycle. Per ADR follow-up #2 — triggered by a second plugin kind landing in `plugins/catalog/`.
+- Does NOT expand the plugin-kind catalog itself. Per ADR follow-up #3 — opportunistic.
+- Does NOT add per-subsystem ring sharding. Per ADR follow-up #4 — only if the overhead gate fails post-ship.
+- Does NOT add `mount` / `publish` phase recording from `sandbox/overlay/lifecycle.py` and `sandbox/occ/service.py`. Per ADR follow-up #5 — Phase 2.6 slice 7 wired the four framework-boundary phases; report §2 renders "—" for the two columns until those `record_phase` call sites land. Schema is additive, so this is a drop-in change post-Phase 3.
+- Does NOT correct the cosmetic plan-doc slips (slice-3 file list in phase-2.5; §Deliverable 6 module names in phase-2). Per ADR follow-up #6 — doc-only, no functional impact, deferred to a future revision pass.

@@ -40,7 +40,7 @@ async def test_write_perf_report_safe_produces_report_file(
     import json
 
     payload = json.loads(result.read_text())
-    assert payload["schema"] == REPORT_SCHEMA == "task_center_runner.performance_report.v2"
+    assert payload["schema"] == REPORT_SCHEMA == "task_center_runner.performance_report.v3"
 
 
 @pytest.mark.asyncio
@@ -72,6 +72,6 @@ async def test_write_perf_report_safe_swallows_writer_failures(
     assert matching, "expected a WARNING log entry from the safe wrapper"
 
 
-def test_report_schema_constant_is_v2() -> None:
+def test_report_schema_constant_is_v3() -> None:
     """Phase 3 bumps the perf-report schema string."""
-    assert REPORT_SCHEMA == "task_center_runner.performance_report.v2"
+    assert REPORT_SCHEMA == "task_center_runner.performance_report.v3"
