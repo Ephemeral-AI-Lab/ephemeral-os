@@ -306,7 +306,12 @@ def _assert_sandbox_monitor_events(report: Any) -> None:
     event_log = report.run_dir / "sandbox_events.jsonl"
     assert event_log.exists()
     rows = _jsonl_rows(event_log)
-    logged = {EventType(row["event_type"]) for row in rows}
+    runner_event_values = {event.value for event in EventType}
+    logged = {
+        EventType(event_type)
+        for row in rows
+        if (event_type := row.get("event_type")) in runner_event_values
+    }
     assert required <= logged
 
 

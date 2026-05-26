@@ -483,8 +483,14 @@ command line.
 ## Autonomous Run Loop
 
 While tests run, operate an artifact-backed monitoring loop instead of waiting
-for pytest summaries. Repeat the loop every 30 seconds until the run finishes or
-the first actionable failure appears.
+for pytest summaries. The first step of every loop is to read the current
+iteration tracker so the last finding, hypothesis, fix, verification result,
+and next target are fresh. Repeat the loop every 30 seconds until the run
+finishes or the first actionable failure appears.
+
+0. Read the iteration tracker before starting or resuming a run. If it does not
+   exist yet, decide where it will live using the Iteration Finding Notes rules
+   below.
 
 1. Resolve the active run directory. Prefer the newest `run.json` under
    `.sweevo_runs/scenario_logs`.
@@ -600,7 +606,53 @@ signal when any of these happen:
 - Sandbox-local IWS audit JSONL grows without bound across direct pytest tiers.
 - Resource metrics show workspace copies in namespace mode or upperdir/scratch growth proportional to repository size.
 
-After every fix, rerun the narrowest scenario that exposed it, inspect artifacts, then resume the broader sweep.
+After every fix, write the iteration tracker entry described below, rerun the
+narrowest scenario that exposed it, inspect artifacts, then resume the broader
+sweep.
+
+## Iteration Finding Notes
+
+Maintain an iteration tracker during any multi-step performance/debugging run.
+This is mandatory for sandbox audit, performance, resource, and live-E2E work.
+The tracker is both the first and last step of the iteration loop:
+
+- First step: read the existing tracker before running or inspecting anything.
+  Use it to recover the last finding, current hypothesis, fix already applied,
+  verification result, and next target.
+- Last step: write or update the tracker after the run/inspection/fix/verify
+  cycle and before starting the next test iteration.
+
+Do not start a new iteration until the previous iteration's note has been
+written.
+
+Where to write it:
+
+- Prefer an existing task-owned report such as `IMPLEMENTATION-REPORT.md`,
+  `NEXT-FIXES.md`, a plan-specific iteration report, or the user-specified
+  handoff file.
+- If no report exists, create `ITERATION-REPORT.md` beside the targeted test
+  directory or under the smallest task-owned artifact directory. Do not write
+  it into unrelated docs or the generated `.sweevo_runs` run directory unless
+  the user explicitly asked for run-local notes.
+
+Each iteration entry must include:
+
+- Iteration number and timestamp.
+- Exact command run.
+- Exact run directory or artifact paths inspected.
+- Pass/fail/skip status.
+- Findings summary: what changed, what progressed, and what evidence proves it.
+- Issues found: first concrete failure, warning, hang, bottleneck, or resource
+  regression.
+- Why it failed: current causal hypothesis, tied to code paths or artifact
+  fields. Mark it as a hypothesis when not proven.
+- Fix applied: files/functions changed and why that fix addresses the finding.
+- Verification result after the fix, including the next command to run.
+- Remaining risk or next iteration target.
+
+Do not start the next iteration with only terminal scrollback as memory. If the
+next run fails, the tracker should let a new agent reconstruct the previous
+state without rereading the entire conversation.
 
 ## Artifact Analysis
 

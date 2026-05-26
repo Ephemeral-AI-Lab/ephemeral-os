@@ -253,7 +253,12 @@ def _assert_sandbox_monitor_events(events: list[Event], run_dir: Path) -> None:
 
     sandbox_log = run_dir / "sandbox_events.jsonl"
     assert sandbox_log.exists()
-    logged = {EventType(row["event_type"]) for row in _jsonl_rows(sandbox_log)}
+    runner_event_values = {event.value for event in EventType}
+    logged = {
+        EventType(event_type)
+        for row in _jsonl_rows(sandbox_log)
+        if (event_type := row.get("event_type")) in runner_event_values
+    }
     missing_logged = sorted(event.value for event in required - logged)
     assert not missing_logged, f"missing persisted sandbox events: {missing_logged}"
 

@@ -102,9 +102,11 @@ async def test_auto_squash_commit_resume_crosses_depth_threshold(
 
     sandbox_log = report.run_dir / "sandbox_events.jsonl"
     assert sandbox_log.exists()
+    runner_event_values = {event.value for event in EventType}
     logged_events = {
-        EventType(row["event_type"])
+        EventType(event_type)
         for row in jsonl_rows(sandbox_log)
+        if (event_type := row.get("event_type")) in runner_event_values
     }
     missing_logged = sorted(
         event.value

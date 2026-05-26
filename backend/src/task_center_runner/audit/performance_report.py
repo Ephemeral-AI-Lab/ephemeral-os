@@ -294,6 +294,7 @@ def _build_v3_sections(
         occ=occ,
         os_resource=os_resource,
         event_count=len(rows),
+        daemon_event_count=_daemon_event_count(rows),
     )
     return {
         "summary": summary,
@@ -326,10 +327,9 @@ def _section_summary(
     Phase 3 deferral D8: ``event_count`` is the raw count of normalized
     rows in ``sandbox_events.jsonl`` (live + rotated history), while
     ``audit_summary.events_pulled`` (mirrored from §11) reflects the
-    runner-side puller's counter. After a daemon restart or partial
-    flush these can drift; the §13 ``audit.events_count_drift`` warning
-    surfaces the divergence and points at §11's
-    ``daemon_restarts_observed`` for root-cause.
+    runner-side puller's daemon-event counter. Host-side sandbox rows may
+    coexist in the same JSONL artifact, so §13 drift warnings compare
+    daemon-pulled rows only against the puller counter.
     """
     tool_finished = indexed.get("tool_call.finished", [])
     tools_called = len(tool_finished)
@@ -1282,6 +1282,7 @@ def _collect_warnings(
     occ: Mapping[str, Any],
     os_resource: Mapping[str, Any],
     event_count: int,
+    daemon_event_count: int,
 ) -> dict[str, Any]:
     warnings: list[dict[str, Any]] = []
     audit = _as_mapping(summary.get("audit_summary"))
@@ -1305,18 +1306,19 @@ def _collect_warnings(
                 "detail": f"max buffer pressure {pressure:.2f} > 0.80",
             }
         )
-    # Phase 3 deferral D8: divergence between JSONL row count and the
-    # puller's events_pulled counter indicates a daemon restart or partial
-    # flush; surface it so operators can resolve the §1 vs §11 numbers
-    # without source reading.
+    # Phase 3 deferral D8: divergence between daemon-pulled JSONL rows and
+    # the puller's events_pulled counter indicates a daemon restart or partial
+    # flush. Total JSONL row count may include host-side sandbox stream rows,
+    # so it is too broad for daemon-loss claims.
     events_pulled = int(daemon_audit_pull.get("events_pulled") or 0)
-    delta = event_count - events_pulled
+    delta = daemon_event_count - events_pulled
     if events_pulled and abs(delta) > 0:
         warnings.append(
             {
                 "kind": "audit.events_count_drift",
                 "detail": (
-                    f"JSONL row count {event_count} vs puller events_pulled "
+                    f"daemon JSONL row count {daemon_event_count} "
+                    f"(total rows {event_count}) vs puller events_pulled "
                     f"{events_pulled} (delta {delta}); likely daemon restart "
                     "or partial-flush — check §11 daemon_restarts_observed"
                 ),
@@ -1412,6 +1414,14 @@ def _collect_warnings(
             }
         )
     return {"rows": warnings}
+
+
+def _daemon_event_count(rows: Sequence[Mapping[str, Any]]) -> int:
+    return sum(
+        1
+        for row in rows
+        if row.get("schema") == "sandbox.daemon.audit.pull.v1"
+    )
 
 
 def _memory_peak_warn_bytes() -> int:

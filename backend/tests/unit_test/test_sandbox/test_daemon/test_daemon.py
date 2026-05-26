@@ -73,6 +73,43 @@ async def test_dispatch_envelope_async_unknown_op_returns_structured_error() -> 
     assert response["error"]["kind"] == "unknown_op"
 
 
+async def test_dispatch_plugin_op_without_agent_id_only_audits_when_unbootstrapped(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    audits: list[dict[str, object]] = []
+
+    async def handler(_: dict[str, object]) -> dict[str, object]:
+        return {"success": True}
+
+    class _BootstrappedPipeline:
+        @staticmethod
+        def get_handle(agent_id: str) -> object | None:
+            assert agent_id == ""
+            return None
+
+    server.register_op("api.plugin.ensure", handler)
+    monkeypatch.setattr(server, "append_jsonl_event", lambda _path, event: audits.append(event))
+    monkeypatch.setattr(server, "get_active_pipeline", lambda: None)
+
+    unbootstrapped = await server.dispatch_envelope_async({"op": "api.plugin.ensure", "args": {}})
+
+    assert unbootstrapped["success"] is True
+    assert audits == [
+        {
+            "type": "workspace_lifecycle.plugin_check_unbootstrapped",
+            "payload": {"op": "api.plugin.ensure", "agent_id": ""},
+        }
+    ]
+
+    audits.clear()
+    monkeypatch.setattr(server, "get_active_pipeline", lambda: _BootstrappedPipeline())
+
+    bootstrapped = await server.dispatch_envelope_async({"op": "api.plugin.ensure", "args": {}})
+
+    assert bootstrapped["success"] is True
+    assert audits == []
+
+
 async def test_dispatch_envelope_async_honors_boot_t0_override() -> None:
     """``boot_t0`` overrides module-level ``_BOOT_T0`` so daemon-mode dispatch
     measures per-call boot, not daemon uptime."""

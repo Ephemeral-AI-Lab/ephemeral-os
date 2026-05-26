@@ -7,7 +7,7 @@ import os
 import sys
 from collections.abc import Mapping
 from dataclasses import asdict, dataclass, is_dataclass
-from enum import StrEnum
+from enum import Enum
 from pathlib import Path
 from typing import Any
 
@@ -23,9 +23,12 @@ from sandbox.overlay.kernel_mount import (
 )
 
 
-class WorkspaceMountMode(StrEnum):
+class WorkspaceMountMode(str, Enum):
     MOUNT_OVERLAY = "mount_overlay"
     EXISTING_MOUNT = "existing_mount"
+
+    def __str__(self) -> str:
+        return self.value
 
 
 def main(argv: list[str] | None = None) -> int:

@@ -374,9 +374,11 @@ async def _assert_complex_build_contract(
 
     sandbox_log = report.run_dir / "sandbox_events.jsonl"
     assert sandbox_log.exists()
+    runner_event_values = {event.value for event in EventType}
     logged_events = {
-        EventType(row["event_type"])
+        EventType(event_type)
         for row in _jsonl_rows(sandbox_log)
+        if (event_type := row.get("event_type")) in runner_event_values
     }
     missing_logged = sorted(
         event.value

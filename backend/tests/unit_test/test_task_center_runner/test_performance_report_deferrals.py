@@ -301,7 +301,7 @@ def test_d7_upperdir_cap_warning_fires(tmp_path: Path) -> None:
 
 
 # ---------------------------------------------------------------------------
-# D8 — events_count_drift warning when JSONL vs puller diverge
+# D8 — events_count_drift warning when daemon JSONL rows vs puller diverge
 # ---------------------------------------------------------------------------
 
 
@@ -337,6 +337,38 @@ def test_d8_events_count_drift_warning(tmp_path: Path) -> None:
     )
     assert drift is not None
     assert "delta 2" in drift["detail"]
+
+
+def test_d8_events_count_drift_ignores_host_side_rows(tmp_path: Path) -> None:
+    daemon_rows = [
+        {
+            "event_type": "overlay_workspace.mounted",
+            "schema": "sandbox.daemon.audit.pull.v1",
+            "lane": "normal",
+            "seq": i,
+            "payload": {"overlay_workspace": {"mount_ms": 1.0}},
+        }
+        for i in range(1, 4)
+    ]
+    host_rows = [
+        {
+            "event_type": "sandbox_resource_snapshot",
+            "payload": {
+                "operation": "shell",
+                "timings": {"resource.command_exec.workspace_tree_bytes": 0.0},
+            },
+        }
+        for _ in range(2)
+    ]
+    _write_jsonl(tmp_path / "sandbox_events.jsonl", [*daemon_rows, *host_rows])
+    report = build_performance_report(
+        tmp_path,
+        _empty_tool_performance(),
+        daemon_audit_puller_stats={"events_pulled": 3},
+    )
+
+    warnings = report["sandbox"]["sections"]["warnings"]["rows"]
+    assert not any(w["kind"] == "audit.events_count_drift" for w in warnings)
 
 
 # ---------------------------------------------------------------------------
