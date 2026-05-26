@@ -19,6 +19,7 @@
 | `phase-2.6-implementation-report.md` | Implementation report for Phase 2.6 — slice 7, slice 8, and closers A/C/D/F. With this report, Phase 2 is closed; Phase 3 is the only remaining V3 work. |
 | `phase-3-report-and-release-gates.md` | Consolidated performance & resource report (§1–§13), 4 release gates, default-on rollout |
 | `phase-3-implementation-report.md` | Implementation report for Phase 3 — V3 report layout, release-gate evaluator harness, default-on opt-out env gate, engine dual-disable refusal. **With this report, V3 is code-complete**; remaining work is operational (gate evidence + K=5 countdown). |
+| `phase-3-implementation-deferrals.md` | Code-side closers for Phase 3 — 16 deferrals (D1–D16) shipped as stubs / placeholders during Phase 3, each with file:line + verification recipe. Excludes live-e2e + operator hand-off items (those live in the implementation report and V3 §Follow-ups). |
 
 ## Lineage
 
