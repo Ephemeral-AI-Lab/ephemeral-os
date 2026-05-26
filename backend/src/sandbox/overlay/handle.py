@@ -41,6 +41,7 @@ class OverlayHandle:
     manifest_key: str = ""
     manifest_version: int = 0
     root_hash: str = ""
+    operation_id: str = ""
     _destroyed: bool = False
     _destroy_lock: threading.Lock = field(
         default_factory=threading.Lock,

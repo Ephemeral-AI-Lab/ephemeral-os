@@ -1,16 +1,17 @@
-"""Typed dataclass helpers for daemon audit emitters (Phase 1).
+"""Typed dataclass helpers for daemon audit emitters (Phase 1 + 2 + 2.5).
 
 The full event-family catalog and lane assignments are documented inline at
 the top of :mod:`sandbox.daemon.audit_buffer`. This module owns *typed*
-construction helpers for the smoke emitters defined in Phase 1. Additional
-section dataclasses (overlay_workspace, layer_stack, occ, isolated_workspace,
-plugin, background_tool, tool_call) land additively in Phase 2 emitters.
+construction helpers for every emitter family. Each section is additive
+(schema v1) per V3 cross-cutting contracts.
 """
 
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass
-from typing import Any
+from dataclasses import asdict, dataclass, field
+from typing import Any, Literal
+
+Lane = Literal["critical", "normal", "sample"]
 
 
 @dataclass
@@ -29,12 +30,7 @@ class DaemonSection:
 
 @dataclass
 class LayerStackSection:
-    """Payload shape for ``layer_stack.*`` events.
-
-    Carries the causal-chain identifiers (``operation_id``, ``lease_id``,
-    ``manifest_root_hash``) so the report can reconstruct
-    ``lease → lock → squash → release`` per V3 Principle 3.
-    """
+    """Payload shape for ``layer_stack.*`` events."""
 
     operation_id: str | None = None
     operation_step: int | None = None
@@ -66,6 +62,225 @@ def build_layer_stack_event(
 
 
 @dataclass
+class OverlayWorkspaceSection:
+    """Payload shape for ``overlay_workspace.*`` events (ephemeral mode)."""
+
+    operation_id: str | None = None
+    workspace_mode: str = "ephemeral"
+    workspace_handle_id: str | None = None
+    lease_id: str | None = None
+    manifest_root_hash: str | None = None
+    mount_ms: float | None = None
+    cleanup_ms: float | None = None
+    scratch_removed: bool | None = None
+    cleanup_failure_kind: str | None = None
+    committed_layer_id: str | None = None
+    publish_layer_ms: float | None = None
+
+    def as_dict(self) -> dict[str, Any]:
+        out: dict[str, Any] = {}
+        for k, v in asdict(self).items():
+            if v is None:
+                continue
+            out[k] = v
+        return out
+
+
+def build_overlay_workspace_event(
+    event_type: str, section: OverlayWorkspaceSection
+) -> dict[str, Any]:
+    return {
+        "type": event_type,
+        "payload": {"overlay_workspace": section.as_dict()},
+    }
+
+
+@dataclass
+class IsolatedWorkspaceSection:
+    """Payload shape for ``isolated_workspace.*`` events."""
+
+    operation_id: str | None = None
+    workspace_mode: str = "isolated"
+    workspace_handle_id: str | None = None
+    agent_id: str | None = None
+    holder_pid: int | None = None
+    holder_pid_alive: bool | None = None
+    cgroup_id: str | None = None
+    cgroup_removed: bool | None = None
+    scratch_removed: bool | None = None
+    upperdir_bytes: int | None = None
+    upperdir_cap_bytes: int | None = None
+    memory_current_bytes: int | None = None
+    memory_peak_bytes: int | None = None
+    cpu_usage_usec_delta: int | None = None
+    orphan_holder_count: int = 0
+    orphan_cgroup_count: int = 0
+    orphan_scratch_count: int = 0
+    sampled_at_monotonic_s: float | None = None
+
+    def as_dict(self) -> dict[str, Any]:
+        out: dict[str, Any] = {}
+        for k, v in asdict(self).items():
+            if v is None:
+                continue
+            out[k] = v
+        return out
+
+
+def build_isolated_workspace_event(
+    event_type: str, section: IsolatedWorkspaceSection
+) -> dict[str, Any]:
+    return {
+        "type": event_type,
+        "payload": {"isolated_workspace": section.as_dict()},
+    }
+
+
+@dataclass
+class OccSection:
+    """Payload shape for ``occ.*`` events."""
+
+    operation_id: str | None = None
+    operation_step: int | None = None
+    changeset_id: str | None = None
+    changed_path_count: int | None = None
+    transaction_lock_wait_ms: float | None = None
+    apply_ms: float | None = None
+    commit_ms: float | None = None
+    committed_layer_id: str | None = None
+    publish_layer_ms: float | None = None
+    committed_layer_bytes: int | None = None
+    conflict_kind: str | None = None
+    conflict_path: str | None = None
+    conflict_reason: str | None = None
+    base_manifest_version: int | None = None
+    current_manifest_version: int | None = None
+
+    def as_dict(self) -> dict[str, Any]:
+        return {k: v for k, v in asdict(self).items() if v is not None}
+
+
+def build_occ_event(event_type: str, section: OccSection) -> dict[str, Any]:
+    return {
+        "type": event_type,
+        "payload": {"occ": section.as_dict()},
+    }
+
+
+@dataclass
+class PluginSection:
+    """Payload shape for ``plugin.*`` events. Generic — no vendor names."""
+
+    plugin_id: str
+    plugin_kind: str
+    plugin_version: str | None = None
+    plugin_tool_name: str | None = None
+    request_bytes: int | None = None
+    response_bytes: int | None = None
+    duration_ms: float | None = None
+    status: str | None = None
+    error_kind: str | None = None
+    message_hash: str | None = None
+    workspace_handle_id: str | None = None
+    agent_id: str | None = None
+    peak_resident_bytes: int | None = None
+
+    def as_dict(self) -> dict[str, Any]:
+        # plugin_id and plugin_kind are required, always emit them
+        out: dict[str, Any] = {
+            "plugin_id": self.plugin_id,
+            "plugin_kind": self.plugin_kind,
+        }
+        for k, v in asdict(self).items():
+            if k in ("plugin_id", "plugin_kind"):
+                continue
+            if v is not None:
+                out[k] = v
+        return out
+
+
+def build_plugin_event(event_type: str, section: PluginSection) -> dict[str, Any]:
+    return {
+        "type": event_type,
+        "payload": {"plugin": section.as_dict()},
+    }
+
+
+@dataclass
+class BackgroundToolSection:
+    """Payload shape for ``background_tool.*`` events."""
+
+    background_task_id: str
+    task_kind: str | None = None
+    tool_name: str | None = None
+    agent_id: str | None = None
+    uptime_ms: float | None = None
+    status: str | None = None
+    exit_code: int | None = None
+    duration_ms: float | None = None
+    error_kind: str | None = None
+    cancel_reason: str | None = None
+    delivery_latency_ms: float | None = None
+
+    def as_dict(self) -> dict[str, Any]:
+        out: dict[str, Any] = {"background_task_id": self.background_task_id}
+        for k, v in asdict(self).items():
+            if k == "background_task_id":
+                continue
+            if v is not None:
+                out[k] = v
+        return out
+
+
+def build_background_tool_event(
+    event_type: str, section: BackgroundToolSection
+) -> dict[str, Any]:
+    return {
+        "type": event_type,
+        "payload": {"background_tool": section.as_dict()},
+    }
+
+
+@dataclass
+class ToolCallSection:
+    """Payload shape for ``tool_call.*`` events."""
+
+    tool_id: str
+    tool_name: str
+    agent_id: str | None = None
+    workspace_mode: str | None = None
+    workspace_handle_id: str | None = None
+    phase: str | None = None
+    duration_ms: float | None = None
+    total_ms: float | None = None
+    exit_status: str | None = None
+    bytes_in: int | None = None
+    bytes_out: int | None = None
+    phase_totals_rollup: dict[str, float] | None = field(default=None)
+
+    def as_dict(self) -> dict[str, Any]:
+        out: dict[str, Any] = {
+            "tool_id": self.tool_id,
+            "tool_name": self.tool_name,
+        }
+        for k, v in asdict(self).items():
+            if k in ("tool_id", "tool_name"):
+                continue
+            if v is not None:
+                out[k] = v
+        return out
+
+
+def build_tool_call_event(
+    event_type: str, section: ToolCallSection
+) -> dict[str, Any]:
+    return {
+        "type": event_type,
+        "payload": {"tool_call": section.as_dict()},
+    }
+
+
+@dataclass
 class OsResourceSection:
     """Payload shape for ``os_resource.sampled`` events."""
 
@@ -92,11 +307,41 @@ def build_os_resource_event(os_resource: OsResourceSection) -> dict[str, Any]:
     }
 
 
+def safe_emit(event: dict[str, Any], lane: Lane) -> None:
+    """Append ``event`` to the daemon ring, swallowing any error.
+
+    Audit emits never break the hot path. Subsystems use this single helper
+    so the try/except discipline lives in one place.
+    """
+    try:
+        # Lazy import to avoid an import cycle between audit_buffer (which
+        # may import schema helpers in tests) and this module.
+        from sandbox.daemon.audit_buffer import get_audit_buffer
+
+        get_audit_buffer().append(event, lane=lane)  # type: ignore[arg-type]
+    except Exception:  # noqa: BLE001
+        pass
+
+
 __all__ = [
+    "BackgroundToolSection",
     "DaemonSection",
+    "IsolatedWorkspaceSection",
+    "Lane",
     "LayerStackSection",
+    "OccSection",
     "OsResourceSection",
+    "OverlayWorkspaceSection",
+    "PluginSection",
+    "ToolCallSection",
+    "build_background_tool_event",
     "build_daemon_event",
+    "build_isolated_workspace_event",
     "build_layer_stack_event",
+    "build_occ_event",
     "build_os_resource_event",
+    "build_overlay_workspace_event",
+    "build_plugin_event",
+    "build_tool_call_event",
+    "safe_emit",
 ]

@@ -7,7 +7,13 @@ from collections.abc import Callable, Sequence
 from pathlib import Path
 from uuid import uuid4
 
+from sandbox._shared.clock import monotonic_now
 from sandbox._shared.layer_stack_port import LayerStackPort
+from sandbox.daemon.audit_schema import (
+    OverlayWorkspaceSection,
+    build_overlay_workspace_event,
+    safe_emit,
+)
 from sandbox.overlay.capture import walk_upperdir
 from sandbox.overlay.handle import OverlayHandle
 from sandbox.overlay.path_change import OverlayPathChange
@@ -40,6 +46,7 @@ def acquire(
     no lease or scratch directory leaks past the error boundary.
     """
     run_dir = _allocate_run_dir(invocation_id)
+    mount_started = monotonic_now()
     snapshot = layer_stack.prepare_workspace_snapshot(request_id=invocation_id)
     lease_id = str(getattr(snapshot, "lease_id"))
     try:
@@ -50,6 +57,19 @@ def acquire(
         manifest = getattr(snapshot, "manifest", None)
         manifest_version = int(getattr(snapshot, "manifest_version", 0))
         root_hash = str(getattr(snapshot, "root_hash", "") or "")
+        safe_emit(
+            build_overlay_workspace_event(
+                "overlay_workspace.mounted",
+                OverlayWorkspaceSection(
+                    operation_id=invocation_id,
+                    workspace_handle_id=lease_id,
+                    lease_id=lease_id,
+                    manifest_root_hash=root_hash or None,
+                    mount_ms=(monotonic_now() - mount_started) * 1000.0,
+                ),
+            ),
+            lane="critical",
+        )
         return OverlayHandle(
             workspace_root=str(workspace_root).rstrip("/") or "/",
             layer_paths=tuple(str(path) for path in layer_paths),
@@ -64,6 +84,7 @@ def acquire(
             manifest_key=f"{root_hash}@{manifest_version}",
             manifest_version=manifest_version,
             root_hash=root_hash,
+            operation_id=invocation_id,
             _release=_build_release_closure(
                 layer_stack=layer_stack,
                 lease_id=lease_id,
@@ -84,7 +105,94 @@ async def capture_changes(handle: OverlayHandle) -> Sequence[OverlayPathChange]:
 async def destroy(handle: OverlayHandle) -> None:
     """Idempotently mark an overlay handle destroyed and clean upper/work dirs."""
     handle.release()
-    shutil.rmtree(handle.run_dir, ignore_errors=True)
+    cleanup_started = monotonic_now()
+    cleanup_errors: list[OSError] = []
+
+    def _onerror(_func, _path, exc_info) -> None:
+        exc = exc_info[1] if exc_info else None
+        if isinstance(exc, FileNotFoundError):
+            return  # release closure may have already removed run_dir
+        if isinstance(exc, OSError):
+            cleanup_errors.append(exc)
+
+    if handle.run_dir.exists():
+        shutil.rmtree(handle.run_dir, onerror=_onerror)
+    elapsed_ms = (monotonic_now() - cleanup_started) * 1000.0
+    scratch_removed = not handle.run_dir.exists()
+    if cleanup_errors or not scratch_removed:
+        kind = (
+            type(cleanup_errors[0]).__name__
+            if cleanup_errors
+            else "scratch_path_persisted"
+        )
+        emit_overlay_workspace_cleanup_failed(
+            handle, cleanup_failure_kind=kind, cleanup_ms=elapsed_ms
+        )
+    else:
+        emit_overlay_workspace_cleaned(handle, cleanup_ms=elapsed_ms)
+
+
+def emit_overlay_workspace_published(
+    handle: OverlayHandle,
+    *,
+    committed_layer_id: str | None,
+    publish_layer_ms: float | None,
+) -> None:
+    """Emit the ``overlay_workspace.published`` event after a successful commit."""
+    safe_emit(
+        build_overlay_workspace_event(
+            "overlay_workspace.published",
+            OverlayWorkspaceSection(
+                operation_id=handle.operation_id or None,
+                workspace_handle_id=handle.lease_id or None,
+                lease_id=handle.lease_id or None,
+                manifest_root_hash=handle.root_hash or None,
+                committed_layer_id=committed_layer_id,
+                publish_layer_ms=publish_layer_ms,
+            ),
+        ),
+        lane="critical",
+    )
+
+
+def emit_overlay_workspace_cleaned(
+    handle: OverlayHandle, *, cleanup_ms: float
+) -> None:
+    safe_emit(
+        build_overlay_workspace_event(
+            "overlay_workspace.cleaned",
+            OverlayWorkspaceSection(
+                operation_id=handle.operation_id or None,
+                workspace_handle_id=handle.lease_id or None,
+                lease_id=handle.lease_id or None,
+                cleanup_ms=cleanup_ms,
+                scratch_removed=True,
+            ),
+        ),
+        lane="critical",
+    )
+
+
+def emit_overlay_workspace_cleanup_failed(
+    handle: OverlayHandle,
+    *,
+    cleanup_failure_kind: str,
+    cleanup_ms: float,
+) -> None:
+    safe_emit(
+        build_overlay_workspace_event(
+            "overlay_workspace.cleanup_failed",
+            OverlayWorkspaceSection(
+                operation_id=handle.operation_id or None,
+                workspace_handle_id=handle.lease_id or None,
+                lease_id=handle.lease_id or None,
+                cleanup_failure_kind=cleanup_failure_kind,
+                cleanup_ms=cleanup_ms,
+                scratch_removed=False,
+            ),
+        ),
+        lane="critical",
+    )
 
 
 def _allocate_run_dir(invocation_id: str) -> Path:
@@ -141,4 +249,11 @@ def _release_lease_silently(
         pass
 
 
-__all__ = ["acquire", "capture_changes", "destroy"]
+__all__ = [
+    "acquire",
+    "capture_changes",
+    "destroy",
+    "emit_overlay_workspace_cleaned",
+    "emit_overlay_workspace_cleanup_failed",
+    "emit_overlay_workspace_published",
+]

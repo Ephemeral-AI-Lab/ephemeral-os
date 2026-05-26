@@ -87,7 +87,7 @@
 
 <section id="exit-tool"
   data-last-reviewed-commit="2a3e6cc7c41405603d025721ad3cf5a31c7d05b0"
-  data-evidence-paths="backend/src/tools/isolated_workspace/exit_isolated_workspace/definition.py backend/src/sandbox/host/isolated_workspace_lifecycle.py backend/src/sandbox/isolated_workspace/pipeline.py backend/src/sandbox/isolated_workspace/_control_plane/workspace_handle_lifecycle.py backend/src/sandbox/isolated_workspace/_control_plane/orphan_reaper.py backend/src/task_center_runner/tests/mock/sandbox/isolated_workspace/pre_flight/test_exit_path_no_occ.py backend/src/task_center_runner/tests/mock/sandbox/isolated_workspace/pre_flight/test_handle_shape_no_publish.py backend/src/task_center_runner/tests/mock/sandbox/isolated_workspace/pre_flight/test_import_graph_fence.py">
+  data-evidence-paths="backend/src/tools/isolated_workspace/exit_isolated_workspace/definition.py backend/src/sandbox/host/isolated_workspace_lifecycle.py backend/src/sandbox/isolated_workspace/pipeline.py backend/src/sandbox/isolated_workspace/_control_plane backend/src/task_center_runner/tests/mock/sandbox/isolated_workspace/pre_flight">
 <h2>Exit Tool</h2>
 <p><code>exit_isolated_workspace</code> accepts <code>grace_s</code>, builds an <code>ExitIsolatedWorkspaceRequest</code>, and delegates to the host lifecycle layer. The host first asks the background manager to cancel and drain per-agent background work, then calls daemon op <code>api.isolated_workspace.exit</code> when running against a sandbox daemon.</p>
 <p>The daemon-side exit path tears down the handle: namespace/runtime resources are closed, the snapshot lease is released, scratch upper/work data is removed, and lifecycle metrics such as evicted upperdir bytes and lifetime seconds are returned. Pre-flight tests enforce that exit and teardown do not call OCC publish-shaped primitives.</p>
@@ -99,7 +99,7 @@
 
 <section id="plugin-lsp-background"
   data-last-reviewed-commit="2a3e6cc7c41405603d025721ad3cf5a31c7d05b0"
-  data-evidence-paths="backend/src/sandbox/host/isolated_workspace_lifecycle.py backend/src/sandbox/daemon/rpc/dispatcher.py backend/src/sandbox/daemon/rpc/in_flight.py backend/src/tools/background/check_background_task_result/check_background_task_result.py backend/src/tools/background/wait_background_tasks/wait_background_tasks.py backend/src/tools/background/cancel_background_task/cancel_background_task.py backend/src/task_center_runner/tests/mock/sandbox/plugin/test_plugin_blocked_in_open_isolated_workspace.py backend/tests/unit_test/test_sandbox/test_isolated_workspace_lifecycle_background.py">
+  data-evidence-paths="backend/src/sandbox/host/isolated_workspace_lifecycle.py backend/src/sandbox/daemon/rpc/dispatcher.py backend/src/sandbox/daemon/rpc/in_flight.py backend/src/tools/background backend/src/task_center_runner/tests/mock/sandbox/plugin backend/tests/unit_test/test_sandbox/test_isolated_workspace_lifecycle_background.py">
 <h2>Plugin, LSP, and Background Gates</h2>
 <p>The lifecycle layer protects the transition into and out of isolated mode. Enter rejects active sandbox-bound background work for the same agent by combining the local background manager count with daemon in-flight count. Exit cancels and drains per-agent background tasks before tearing down the isolated handle.</p>
 <p>The daemon dispatcher blocks plugin-family operations when the same agent has an open isolated workspace, returning <code>forbidden_in_isolated_workspace</code>. This includes the plugin/LSP path because those operations maintain their own projection and long-lived state that should not be mixed with the private scratch namespace.</p>
@@ -124,7 +124,7 @@
 
 <section id="isolated-evidence-refresh"
   data-last-reviewed-commit="2a3e6cc7c41405603d025721ad3cf5a31c7d05b0"
-  data-evidence-paths="backend/src/tools/isolated_workspace backend/src/sandbox/host/isolated_workspace_lifecycle.py backend/src/sandbox/daemon/workspace_tool_dispatch.py backend/src/sandbox/daemon/rpc/dispatcher.py backend/src/sandbox/isolated_workspace backend/src/sandbox/overlay/namespace_runner.py backend/tests/unit_test/test_sandbox/test_isolated_workspace_lifecycle_background.py backend/tests/unit_test/test_sandbox/test_isolated_workspace_no_publish.py backend/src/task_center_runner/tests/mock/sandbox/plugin/test_plugin_blocked_in_open_isolated_workspace.py backend/src/task_center_runner/tests/mock/sandbox/isolated_workspace">
+  data-evidence-paths="backend/src/tools/isolated_workspace backend/src/sandbox/host/isolated_workspace_lifecycle.py backend/src/sandbox/daemon/workspace_tool_dispatch.py backend/src/sandbox/daemon/rpc/dispatcher.py backend/src/sandbox/isolated_workspace backend/src/sandbox/overlay/namespace_runner.py backend/tests/unit_test/test_sandbox backend/src/task_center_runner/tests/mock/sandbox/plugin backend/src/task_center_runner/tests/mock/sandbox/isolated_workspace">
 <h2>Evidence and Refresh</h2>
 <div class="evidence-grid">
   <div class="evidence-card">
@@ -140,11 +140,11 @@
   <div class="evidence-card">
     <h3>Tests to refresh with lifecycle changes</h3>
     <ul>
-      <li><code>backend/tests/unit_test/test_sandbox/test_isolated_workspace_lifecycle_background.py</code></li>
+      <li><code>backend/tests/unit_test/test_sandbox</code> for lifecycle background coverage.</li>
       <li><code>backend/tests/unit_test/test_sandbox/test_isolated_workspace_no_publish.py</code></li>
-      <li><code>backend/src/task_center_runner/tests/mock/sandbox/plugin/test_plugin_blocked_in_open_isolated_workspace.py</code></li>
+      <li><code>backend/src/task_center_runner/tests/mock/sandbox/plugin</code> for plugin-blocking coverage.</li>
       <li><code>backend/src/task_center_runner/tests/mock/sandbox/isolated_workspace/pre_flight</code></li>
-      <li><code>backend/src/task_center_runner/tests/mock/sandbox/isolated_workspace/behavior_upgrade</code></li>
+      <li><code>backend/src/task_center_runner/tests/mock/sandbox/isolated_workspace</code> for behavior upgrade coverage.</li>
     </ul>
   </div>
   <div class="evidence-card">

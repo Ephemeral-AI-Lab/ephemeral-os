@@ -155,11 +155,25 @@ class EphemeralPipeline(OperationOverlayMixin, WorkspacePublishMixin):
                     if req.verb in {"write_file", "edit_file"} and len(paths) == 1
                     else "overlay_capture"
                 )
+                publish_started = monotonic_now()
                 result = await self._commit_and_attach(
                     result,
                     path_changes=path_changes,
                     snapshot=handle.snapshot_manifest,
                     source=source,
+                )
+                committed_layer_id = None
+                committed_section = result.get("committed") if isinstance(result, dict) else None
+                if isinstance(committed_section, dict):
+                    committed_layer_id = (
+                        committed_section.get("committed_layer_id")
+                        or committed_section.get("layer_id")
+                        or None
+                    )
+                overlay_lifecycle.emit_overlay_workspace_published(
+                    handle,
+                    committed_layer_id=committed_layer_id,
+                    publish_layer_ms=(monotonic_now() - publish_started) * 1000.0,
                 )
             result = self._attach_operation_timing_aliases(
                 result,
