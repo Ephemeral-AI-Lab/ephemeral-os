@@ -157,22 +157,26 @@
   </tbody>
 </table>
 
-<div class="diagram" aria-label="Ephemeral direct write edit fast path route">
-  <div class="flow-row">
-    <div class="node"><strong>write_file/edit_file</strong><small>default workspace and no isolated handle</small></div>
-    <span>-&gt;</span>
-    <div class="node"><strong>Path binding</strong><small>workspace root to LayerStack path</small></div>
-    <span>-&gt;</span>
-    <div class="node"><strong>Typed OCC change</strong><small>API write or ordered edit group</small></div>
-  </div>
-  <div class="flow-row">
-    <div class="node"><strong>OCC publish</strong><small>prepare, queue, validate, stage, layer</small></div>
-    <span>-&gt;</span>
-    <div class="node"><strong>Public result</strong><small>conflict status, published paths, timings</small></div>
-    <span>-&gt;</span>
-    <div class="node"><strong>Skipped work</strong><small>no namespace, overlay, child process, or capture</small></div>
-  </div>
-</div>
+<pre class="diagram" aria-label="Ephemeral direct write edit fast path route">
+[write_file / edit_file API]
+        |
+        v
+[workspace binding lookup]
+        |
+        +--&gt; [no binding]
+        |       -&gt; [provider filesystem fallback]
+        |
+        +--&gt; [binding present]
+                |
+                v
+        [direct OCC service]
+                |  bypass overlay process startup
+                v
+        [commit queue serializes mutation]
+                |
+                v
+        [LayerStack publish + latest projection]
+</pre>
 
 <div class="sequence" aria-label="Ephemeral direct write/edit fast path">
   <ol>
@@ -226,22 +230,24 @@
 <section id="isolated-lifecycle-detail" data-last-reviewed-commit="2a3e6cc7c" data-evidence-paths="backend/src/sandbox/isolated_workspace/_control_plane/pipeline_registry.py backend/src/sandbox/isolated_workspace/_control_plane/workspace_handle_lifecycle.py backend/src/sandbox/isolated_workspace/_control_plane/pipeline_state.py backend/src/sandbox/isolated_workspace/_control_plane/linux_runtime.py backend/src/sandbox/isolated_workspace/pipeline.py backend/src/sandbox/isolated_workspace/network.py">
 <h3>5.4.1 Enter, Run, Exit Details <a class="anchor" href="#isolated-lifecycle-detail">§</a></h3>
 
-<div class="diagram" aria-label="Isolated enter technical lifecycle route">
-  <div class="flow-row">
-    <div class="node"><strong>Host enter gate</strong><small>local and daemon background checks</small></div>
-    <span>-&gt;</span>
-    <div class="node"><strong>Lazy pipeline</strong><small>singleton, config, audit sink</small></div>
-    <span>-&gt;</span>
-    <div class="node"><strong>Admission checks</strong><small>enabled, agent, cap, RAM budget</small></div>
-  </div>
-  <div class="flow-row">
-    <div class="node"><strong>Snapshot lease</strong><small>manifest, layer paths, scratch dirs</small></div>
-    <span>-&gt;</span>
-    <div class="node"><strong>Linux runtime phases</strong><small>ns holder, fds, veth, overlay, DNS, cgroup</small></div>
-    <span>-&gt;</span>
-    <div class="node"><strong>Persist and audit</strong><small>manager.json and enter event timings</small></div>
-  </div>
-</div>
+<pre class="diagram" aria-label="Isolated enter technical lifecycle route">
+[enter_isolated_workspace tool]
+        |
+        v
+[host lifecycle service]
+        |
+        v
+[daemon control-plane enter request]
+        |
+        v
+[workspace_handle_lifecycle]
+        |  snapshot lease, scratch root, metadata
+        v
+[pipeline_registry.ensure_pipeline]
+        |
+        v
+[return isolated_workspace_id to agent]
+</pre>
 
 <div class="sequence" aria-label="Isolated enter technical lifecycle">
   <ol>

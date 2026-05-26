@@ -87,20 +87,23 @@
     <div class="node good"><strong>Terminal tools</strong><small>validated payloads mutate Goal -> Iteration -> Attempt state</small></div>
   </div>
 </div>
-<div class="diagram" aria-label="TaskCenter lifecycle state-machine diagram">
-  <div class="flow-row">
-    <div class="node"><strong>Bootstrap</strong><small>stores, request/run, sandbox binding, recipes, <code>AttemptDeps</code></small></div>
-    <div class="node"><strong>Goal start</strong><small>entry Goal, Iteration 1, Attempt 1</small></div>
-    <div class="node"><strong>Planner</strong><small>planner task row, context, terminal plan</small></div>
-    <div class="node"><strong>Generator DAG</strong><small>persisted tasks, dependency waves, blockers, handoff</small></div>
-  </div>
-  <div class="flow-row">
-    <div class="node"><strong>Evaluator</strong><small>single final judge for the attempt</small></div>
-    <div class="node"><strong>Attempt close</strong><small>passed or failed</small></div>
-    <div class="node"><strong>Iteration decision</strong><small>retry, terminal success, or deferred continuation</small></div>
-    <div class="node"><strong>Goal closure</strong><small>top-level run finish or parent close report</small></div>
-  </div>
-</div>
+<pre class="diagram" aria-label="TaskCenter lifecycle state-machine diagram">
+[goal created]
+        |
+        v
+[iteration created]
+        |
+        v
+[attempt runs]
+        |
+        +--&gt; [planner] -&gt; [generator DAG] -&gt; [evaluator]
+        |
+        +--&gt; [delegated child goal]
+        |       -&gt; [parent waits] -&gt; [closure report resumes parent]
+        |
+        +--&gt; [terminal submission]
+                -&gt; [state transition and next lifecycle step]
+</pre>
 <div class="edge-list" aria-label="TaskCenter lifecycle transitions">
   <div><b>bootstrap</b><span><code>start_task_center_run()</code> validates stores, creates request/run rows, prepares the sandbox binding, registers recipes, and constructs <code>AttemptDeps</code>.</span></div>
   <div><b>start</b><span><code>GoalStarter.start()</code> creates an entry-origin Goal, initial Iteration, and initial Attempt, then starts the attempt through the iteration coordinator.</span></div>

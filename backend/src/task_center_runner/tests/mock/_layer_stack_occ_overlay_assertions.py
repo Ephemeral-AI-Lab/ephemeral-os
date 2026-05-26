@@ -14,7 +14,7 @@ def load_performance_report(run_dir: Path) -> Mapping[str, Any]:
     perf_path = run_dir / "performance_report.json"
     assert perf_path.exists(), f"missing performance report: {perf_path}"
     perf = json.loads(perf_path.read_text(encoding="utf-8"))
-    assert perf["schema"] == "task_center_runner.performance_report.v2"
+    assert perf["schema"] == "task_center_runner.performance_report.v3"
     return mapping(perf)
 
 

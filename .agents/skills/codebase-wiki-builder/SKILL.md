@@ -257,7 +257,7 @@ A good codebase wiki page should answer:
 - What breaks when this page goes stale?
 - Which tests or artifacts should be checked after changes?
 
-Use diagrams, cards, and ordered sequences for workflows. Workflow sections should be diagram-driven first: lead with a visual map or `sequence` component, then use prose only to explain evidence, caveats, and diagnostics. Use tables only for compact comparisons. If a table contains long paragraphs or file paths, turn the reader-facing part into cards/sequences and keep evidence in a compact list or details block.
+Use source-backed diagrams and ordered sequences for workflows. Workflow sections should be diagram-driven first: lead with an ASCII `<pre class="diagram">` map, Mermaid diagram, or compact sequence component, then use prose only to explain evidence, caveats, and diagnostics. Use tables only for compact comparisons. If a table contains long paragraphs or file paths, turn the reader-facing part into a diagram/sequence and keep evidence in a compact list or details block.
 
 For module wikis that have sibling modules, hold the detail bar consistent across modules. If one module page explains workflows with diagrams, the adjacent module pages should also include source-backed workflow diagrams for their major lifecycle paths instead of only prose summaries or tables.
 
@@ -321,19 +321,21 @@ flowchart LR
   B -. tested by .-> T["Focused test"]
 ```
 
-For static HTML without Mermaid support, use the repo's existing diagram/card components or a compact text graph:
+For static HTML without Mermaid support, prefer an ASCII text graph in `<pre class="diagram">` for detailed technical workflows. Use card or row components only for very small 2-4 node summaries where wrapping cannot damage the logical order:
 
-```text
+```html
+<pre class="diagram" aria-label="Request lifecycle workflow">
 Public entry point
   calls -> handler
   registers -> operation table
   owns-state -> cache/lease/handle
   tested-by -> focused test
+</pre>
 ```
 
-Every diagram should correspond to evidence in the technical dive. Do not add decorative diagrams.
+Every edge in a diagram should correspond to evidence in the technical dive. Do not add decorative diagrams, and do not blindly convert an existing `sequence` list into boxes without checking the current source path.
 
-For static HTML module pages, prefer the shared stylesheet's existing diagram/card classes such as `diagram`, `flow-row`, `node`, `sequence`, `edge-list`, `summary`, `evidence-grid`, and `page-baseline`. Do not add inline `style` attributes or page-local `<style>` blocks unless the shared stylesheet cannot express the layout; if a new reusable pattern is needed, add it once to the shared `assets/styles.css`.
+For static HTML module pages, prefer the shared stylesheet's existing `pre.diagram` rendering for complex control flow. The shared `diagram`, `flow-row`, `node`, `sequence`, `edge-list`, `summary`, `evidence-grid`, and `page-baseline` classes remain available, but avoid arrow-spaced card rows for branching or multi-line workflows because they are easy to misread and wrap poorly. Do not add inline `style` attributes or page-local `<style>` blocks unless the shared stylesheet cannot express the layout; if a new reusable pattern is needed, add it once to the shared `assets/styles.css`.
 
 `sequence` blocks are workflow diagrams, not prose dumps. Use them when the reader needs to follow ordered ownership or state transitions through time. Each item should be a short step card with a concrete owner/action label and concise evidence-backed detail; avoid long paragraph-only list items. For static HTML, use this shape:
 
@@ -347,7 +349,7 @@ For static HTML module pages, prefer the shared stylesheet's existing diagram/ca
 </div>
 ```
 
-When updating an existing workflow page that already has prose-only ordered steps, convert the reader-facing part into `diagram`, `flow-row`, `node`, or `sequence` components before adding more explanatory paragraphs. Keep detailed source references in the evidence ledger or nearby technical dive.
+When updating an existing workflow page that already has prose-only ordered steps, first verify the actual call path or state transition from source, then add an ASCII `pre.diagram`, Mermaid diagram, or compact `sequence` before adding more explanatory paragraphs. Keep detailed source references in the evidence ledger or nearby technical dive.
 
 ### 9. Link The Wiki
 
@@ -426,7 +428,7 @@ Check for:
 - missing or stale HTML tail maintenance components for page-local baseline commits;
 - missing, duplicate, or page-specific local TOC components on HTML pages with section anchors;
 - active-page sidebar links that fail to mirror local TOC links;
-- workflow or lifecycle sections that rely on paragraphs/tables without a diagram, `sequence`, `flow-row`, or edge map;
+- workflow or lifecycle sections that rely on paragraphs/tables without an ASCII `pre.diagram`, Mermaid diagram, compact `sequence`, or edge map;
 - `sequence` blocks whose items read as long prose paragraphs instead of short workflow step cards;
 - stale paths, renamed symbols, deleted tests, or old env vars;
 - broken local links and missing anchors;
@@ -489,11 +491,11 @@ For HTML tail maintenance components, verify that every page with section baseli
 
 For HTML table-of-contents components, verify that every page with section anchors has exactly one `page-toc`, that it links only to anchors present in that same file, that all pages use the same shared component shape, and that the sidebar displays the active page's same local TOC links.
 
-For workflow visualization, verify that changed workflow/lifecycle sections include a `diagram`, `flow-row`, `sequence`, or `edge-list` component before dense prose or evidence tables:
+For workflow visualization, verify that changed workflow/lifecycle sections include an ASCII `pre.diagram`, Mermaid diagram, compact `sequence`, or `edge-list` component before dense prose or evidence tables:
 
 ```bash
 rg -n "workflow|lifecycle|sequence|dispatch|handoff|routing" <changed-html-pages>
-rg -n '<div class="(diagram|sequence|edge-list)"' <changed-html-pages>
+rg -n '<pre class="diagram"|<div class="(sequence|edge-list)"' <changed-html-pages>
 ```
 
 When browser inspection is blocked for local files, report that constraint and list the static checks run.

@@ -72,20 +72,24 @@
     <div class="node good"><strong>CLOSED</strong><small>passed or failed, registry deregistered</small></div>
   </div>
 </div>
-<div class="diagram" aria-label="Attempt orchestration workflow diagram">
-  <div class="flow-row">
-    <div class="node"><strong>Start gate</strong><small>running Attempt in <code>PLAN</code></small></div>
-    <div class="node"><strong>Planner launch</strong><small>registry entry, planner task row, <code>planner_task_id</code></small></div>
-    <div class="node"><strong>Plan terminal</strong><small><code>apply_plan_submission()</code> or planner exhaustion</small></div>
-    <div class="node"><strong>Generator DAG</strong><small>ready waves through <code>AttemptStageAdvancer</code></small></div>
-  </div>
-  <div class="flow-row">
-    <div class="node"><strong>Evaluator</strong><small><code>apply_evaluator_submission()</code></small></div>
-    <div class="node"><strong>Attempt close</strong><small>validated status and failure reason</small></div>
-    <div class="node"><strong>Registry exit</strong><small>deregister before coordinator callback</small></div>
-    <div class="node"><strong>Iteration callback</strong><small>retry, terminal success, or failure</small></div>
-  </div>
-</div>
+<pre class="diagram" aria-label="Attempt orchestration workflow diagram">
+[AttemptOrchestrator]
+        |
+        v
+[planner stage]
+        |
+        v
+[generator DAG stage]
+        |  may launch one or more generator tasks
+        v
+[evaluator stage]
+        |
+        +--&gt; [accepted] -&gt; [attempt success]
+        |
+        +--&gt; [needs retry] -&gt; [AttemptCoordinator schedules retry]
+        |
+        +--&gt; [deferred] -&gt; [iteration continuation path]
+</pre>
 <div class="edge-list" aria-label="Attempt orchestration transitions">
   <div><b>start</b><span><code>start()</code> asserts the attempt is running in <code>PLAN</code>, registers the orchestrator, creates the planner task, and schedules the planner launch.</span></div>
   <div><b>plan branch</b><span>Planner terminal submission calls <code>apply_plan_submission()</code>; launch exhaustion calls <code>apply_planner_failure()</code>.</span></div>
@@ -117,20 +121,25 @@
 <section id="generator-waves-quiescence" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="backend/src/task_center/attempt/stage_advancer.py backend/src/task_center/attempt/generator_dag.py backend/src/task_center/attempt/orchestrator.py backend/src/task_center/task_state.py backend/tests/unit_test/test_task_center/test_lifecycle/test_attempt_orchestrator.py backend/tests/unit_test/test_task_center/test_lifecycle/test_generator_dag.py">
 <h2>Generator Waves And Quiescence <a class="anchor" href="#generator-waves-quiescence">#</a></h2>
 <p><code>AttemptStageAdvancer</code> is store-driven. On every generator submission or launch failure, it lists persisted generator tasks for the attempt, launches every pending task whose dependencies are done, and otherwise summarizes whether the DAG is still active, failed, blocked, or fully done.</p>
-<div class="diagram" aria-label="Generator stage advancement workflow diagram">
-  <div class="flow-row">
-    <div class="node"><strong>Read DAG rows</strong><small>persisted generator tasks for the attempt</small></div>
-    <div class="node"><strong>Ready query</strong><small><code>needs[]</code> all <code>DONE</code></small></div>
-    <div class="node"><strong>Launch ready task</strong><small>mark <code>RUNNING</code>, audit, compose <code>AgentLaunch</code></small></div>
-    <div class="node"><strong>Launch failure</strong><small>mark <code>FAILED</code>, emit failed audit, re-enter</small></div>
-  </div>
-  <div class="flow-row">
-    <div class="node"><strong>No ready task</strong><small><code>summarize_generator_dag()</code></small></div>
-    <div class="node"><strong>Active wait</strong><small>running or <code>WAITING_GOAL</code> keeps attempt open</small></div>
-    <div class="node"><strong>Failure quiesced</strong><small>failed or blocked upstream closes as generator failure</small></div>
-    <div class="node"><strong>All done</strong><small>start evaluator stage</small></div>
-  </div>
-</div>
+<pre class="diagram" aria-label="Generator stage advancement workflow diagram">
+[generator stage state]
+        |
+        v
+[stage_advancer selects ready generator]
+        |
+        v
+[build AgentLaunch]
+        |
+        v
+[run ephemeral agent]
+        |
+        v
+[terminal submission captured]
+        |
+        +--&gt; [more generators ready] -&gt; [advance next generator]
+        |
+        +--&gt; [all generator work closed] -&gt; [advance evaluator stage]
+</pre>
 <div class="edge-list" aria-label="Generator stage advancement branches">
   <div><b>ready</b><span><code>ready_pending_generator_ids()</code> selects pending tasks only after the entire dependency set is <code>DONE</code>.</span></div>
   <div><b>launch</b><span>Ready tasks move to <code>RUNNING</code>, emit launch audit events, receive composed launch context, and are handed to the launcher.</span></div>
@@ -163,20 +172,26 @@
 <section id="launcher-failures-exhaustion" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="backend/src/task_center/attempt/launch.py backend/src/task_center/attempt/stage_advancer.py backend/src/task_center/attempt/orchestrator.py backend/src/task_center/attempt/orchestrator_registry.py backend/src/task_center/iteration/attempt_coordinator.py backend/tests/unit_test/test_task_center/test_agent_launch/test_attempt_launcher_retry.py backend/tests/unit_test/test_task_center/test_lifecycle/test_attempt_orchestrator.py backend/tests/unit_test/test_task_center/test_lifecycle/test_launcher_exhaustion_parametrized.py">
 <h2>Launcher Failures And Exhaustion <a class="anchor" href="#launcher-failures-exhaustion">#</a></h2>
 <p><code>EphemeralAttemptAgentLauncher</code> schedules role-specific agent runs. Terminal submission tools are expected to move the task out of <code>RUNNING</code> during the run. If the runner returns, crashes, returns <code>None</code>, or exits without a terminal submission while the task remains running, the launcher reports role-specific exhaustion back into the same orchestrator API.</p>
-<div class="diagram" aria-label="Launcher exhaustion workflow diagram">
-  <div class="flow-row">
-    <div class="node"><strong>Launch request</strong><small>resolve agent definition and active loop</small></div>
-    <div class="node"><strong>Async run task</strong><small>tracked in launcher pending set</small></div>
-    <div class="node"><strong>Execution metadata</strong><small>run, task, attempt, goal, runtime, composer, terminals</small></div>
-    <div class="node"><strong>Runner rows</strong><small>prompt plus optional <code>initial_messages</code></small></div>
-  </div>
-  <div class="flow-row">
-    <div class="node"><strong>Task no longer running</strong><small>terminal submission already owned state</small></div>
-    <div class="node"><strong>Still running</strong><small>runner returned, crashed, or yielded <code>None</code></small></div>
-    <div class="node"><strong>Active orchestrator</strong><small>role-specific exhaustion submission</small></div>
-    <div class="node"><strong>Missing orchestrator</strong><small>fail unowned task and close attempt directly</small></div>
-  </div>
-</div>
+<pre class="diagram" aria-label="Launcher exhaustion workflow diagram">
+[launch_attempt]
+        |
+        v
+[start ephemeral agent process]
+        |
+        v
+[engine loop runs until stop condition]
+        |
+        +--&gt; [terminal submission received]
+        |       -&gt; [persist attempt event]
+        |
+        +--&gt; [agent exits / tool budget exhausted]
+                |
+                v
+        [launcher records exhaustion/failure]
+                |
+                v
+        [AttemptOrchestrator applies closure]
+</pre>
 <div class="edge-list" aria-label="Launcher exhaustion branches">
   <div><b>schedule</b><span><code>launch()</code> resolves the role definition, requires an active asyncio loop, creates an async task, and tracks it until completion.</span></div>
   <div><b>metadata</b><span><code>_run_launch()</code> builds <code>ExecutionMetadata</code> and maps <code>AgentLaunch</code> rows into the runner prompt shape.</span></div>

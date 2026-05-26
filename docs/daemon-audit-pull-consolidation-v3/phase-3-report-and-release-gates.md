@@ -1,5 +1,11 @@
 # Phase 3 — Consolidated Performance & Resource Report + Release Gates
 
+> **Status:** Implementation **landed** 2026-05-26 — see
+> [`phase-3-implementation-report.md`](phase-3-implementation-report.md)
+> for the per-deliverable change log + test catalog + deferred items.
+> What remains is operational: gate-suite execution on the dask-heavy
+> live-e2e fixture and the K=5 stream-bridge retirement countdown.
+>
 > **Prerequisites:** Read [`README.md`](README.md) first — it owns the
 > cross-cutting contracts and the ADR. Phase 3 consumes everything
 > [Phase 1](phase-1-audit-buffer-and-pull-rpc.md),

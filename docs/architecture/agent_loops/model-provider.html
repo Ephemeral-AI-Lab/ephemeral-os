@@ -76,23 +76,26 @@
 <section id="active-model-resolution" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="backend/src/config/model_config.py backend/src/db/models/model_registration.py backend/src/db/stores/model_store.py backend/src/providers/provider.py backend/tests/unit_test/test_config/test_model_store.py backend/tests/unit_test/test_config/test_model_config_class_path_thread.py backend/tests/unit_test/test_providers/test_provider_routing.py backend/tests/unit_test/test_providers/test_class_path_dispatch.py">
 <h2>Active Model Resolution <a class="anchor" href="#active-model-resolution">#</a></h2>
 <p>The active LLM model is DB-backed. <code>ModelRegistrationRecord</code> stores <code>key</code>, <code>label</code>, <code>class_path</code>, JSON kwargs, active flag, and timestamps. <code>ModelStore</code> handles CRUD, active selection, environment-placeholder resolution, secret redaction, and registry seeding.</p>
-<div class="diagram" aria-label="Active model resolution sequence">
-  <div class="flow-row">
-    <div class="node"><strong>External client?</strong><small>tests or callers can provide <code>SupportsStreamingMessages</code></small></div>
-    <div class="node"><strong>Passthrough branch</strong><small><code>make_api_client()</code> returns it unchanged</small></div>
-    <div class="node"><strong>DB-backed branch</strong><small><code>get_active_model_kwargs()</code> reads <code>model_store</code></small></div>
-  </div>
-  <div class="flow-row">
-    <div class="node"><strong>Active row</strong><small><code>key</code>, <code>class_path</code>, kwargs, active flag</small></div>
-    <div class="node"><strong>Class-path branch</strong><small><code>module.path:ClassName</code> imports through <code>_resolve_class_path()</code></small></div>
-    <div class="node"><strong>Legacy branch</strong><small>empty or no-colon path falls back to <code>AnthropicClient</code></small></div>
-  </div>
-  <div class="flow-row">
-    <div class="node"><strong>Coding-plan guard</strong><small><code>EOS_DISABLE_CODING_PLAN_MODE=1</code> rejects plan-mode classes</small></div>
-    <div class="node"><strong>Construct client</strong><small>resolved class receives DB kwargs</small></div>
-    <div class="node"><strong>Query loop protocol</strong><small>client streams <code>ApiStreamEvent</code> values</small></div>
-  </div>
-</div>
+<pre class="diagram" aria-label="Active model resolution sequence">
+[agent launch config]
+        |
+        v
+[active_model_name + provider settings]
+        |
+        +--&gt; [explicit class_path configured]
+        |       -&gt; [load custom API client]
+        |
+        +--&gt; [standard provider]
+                |
+                v
+        [make_api_client]
+                |  auth, base URL, retry/timeout policy
+                v
+        [streaming provider client]
+                |
+                v
+        [query loop consumes provider events]
+</pre>
 <div class="edge-list">
   <div><b>External override</b><span>Injected clients bypass DB resolution and class-path loading entirely.</span></div>
   <div><b>Class dispatch</b><span>Colon-form <code>class_path</code> values select explicit provider classes; empty or legacy dot-format values select the Anthropic-native fallback.</span></div>

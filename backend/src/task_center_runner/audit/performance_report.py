@@ -448,7 +448,7 @@ def _section_per_tool_phase_breakdown(
 ) -> dict[str, Any]:
     finished = indexed.get("tool_call.finished", [])
     phase_totals: dict[tuple[str, str], dict[str, float]] = defaultdict(
-        lambda: {phase: 0.0 for phase in _PHASE_ORDER}
+        lambda: dict.fromkeys(_PHASE_ORDER, 0.0)
     )
     overall_total: dict[tuple[str, str], float] = defaultdict(float)
     for event_row in finished:
@@ -1013,22 +1013,20 @@ def _section_overhead(
     """Audit overhead measurement payload + gate verdict.
 
     ``overhead_metadata`` is produced by the release-gate harness
-    (paired-run runner). Shape:
+    (paired-run runner). Recognised keys:
 
-        {
-            "daemon_ring_memory_retained_bytes": int,
-            "daemon_ring_memory_max_bytes": int,
-            "daemon_cpu_pct_p99": float,
-            "runner_cpu_pct_p99": float,
-            "tool_latency_p95_delta_ms": float,
-            "p95_delta_ci_upper": float,
-            "artifact_disk_live_bytes": int,
-            "artifact_disk_rotated_bytes": int,
-            "n_calls": int,
-            "n_paired_runs": int,
-            "warmup_s": float,
-            "bootstrap_resamples": int,
-        }
+    - ``daemon_ring_memory_retained_bytes`` (int)
+    - ``daemon_ring_memory_max_bytes`` (int)
+    - ``daemon_cpu_pct_p99`` (float)
+    - ``runner_cpu_pct_p99`` (float)
+    - ``tool_latency_p95_delta_ms`` (float)
+    - ``p95_delta_ci_upper`` (float — paired-bootstrap 95% CI upper bound)
+    - ``daemon_rss_delta_mib`` (float)
+    - ``sandbox_disk_delta_bytes`` (int)
+    - ``artifact_disk_live_bytes`` (int)
+    - ``artifact_disk_rotated_bytes`` (int)
+    - Methodology block: ``n_calls`` (int), ``n_paired_runs`` (int),
+      ``warmup_s`` (float), ``bootstrap_resamples`` (int)
 
     When ``None``, the section renders with the methodology metadata
     keys present but zero-valued so the
@@ -2093,7 +2091,7 @@ def _slowest_sandbox_events(
 
 def _looks_like_duration(key: object) -> bool:
     text = str(key)
-    return text.endswith("_s") or text.endswith(".total_s") or text.endswith(".s")
+    return text.endswith(("_s", ".total_s", ".s"))
 
 
 def _float_mapping(value: object) -> dict[str, float]:

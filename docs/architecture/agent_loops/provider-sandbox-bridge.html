@@ -104,23 +104,28 @@
 <h2>Exec Transports <a class="anchor" href="#exec-transports">#</a></h2>
 <p>There are two execution surfaces. <code>sandbox.api.raw_exec()</code> is the unguarded provider primitive: it gets the registered adapter and calls <code>adapter.exec(sandbox_id, command, cwd, timeout)</code>. Workspace tools do not use this path directly; they use the daemon transport so workspace binding, OCC, overlay, in-flight cancellation, and typed response parsing all stay inside the sandbox runtime.</p>
 <p><code>call_daemon_api()</code> builds daemon args with <code>layer_stack_root</code>, resolves the adapter, optionally resolves a Docker daemon TCP endpoint, and sends one JSON envelope. If TCP is unavailable or stale, it falls back to provider exec of the bundled thin client, which talks to the daemon's AF_UNIX socket inside the sandbox. The daemon can be relaunched on connect failure, then <code>api.runtime.ready</code> probes control plane, data plane, and mutation gate before retrying the original request.</p>
-<div class="diagram" aria-label="Daemon transport order">
-  <div class="flow-row">
-    <div class="node"><strong>Public API envelope</strong><small>protocol version plus operation payload</small></div>
-    <div class="node"><strong>Invocation id</strong><small>host preserves payload id when supplied</small></div>
-    <div class="node"><strong>TCP branch</strong><small><code>get_daemon_tcp_endpoint()</code> plus auth token injection</small></div>
-  </div>
-  <div class="flow-row">
-    <div class="node"><strong>TCP failure</strong><small>invalidate endpoint cache</small></div>
-    <div class="node"><strong>Thin-client branch</strong><small>provider exec talks to daemon AF_UNIX socket</small></div>
-    <div class="node"><strong>Daemon recovery</strong><small>respawn on AF_UNIX failure or retryable empty response</small></div>
-  </div>
-  <div class="flow-row">
-    <div class="node"><strong>Readiness probe</strong><small><code>api.runtime.ready</code> checks control, data, mutation gates</small></div>
-    <div class="node"><strong>Response envelope</strong><small>one daemon JSON result</small></div>
-    <div class="node"><strong>Typed API result</strong><small>public parsing converts to result models</small></div>
-  </div>
-</div>
+<pre class="diagram" aria-label="Daemon transport order">
+[engine sandbox API call]
+        |
+        v
+[daemon client envelope]
+        |  invocation id, workspace id, timeout
+        v
+[transport selection]
+        |
+        +--&gt; [TCP endpoint configured] -&gt; [HTTP/TCP daemon request]
+        |
+        +--&gt; [no TCP endpoint]
+                |
+                v
+        [provider exec thin client]
+                |
+                v
+        [AF_UNIX daemon socket in sandbox]
+                |
+                v
+        [daemon RPC dispatcher]
+</pre>
 <div class="edge-list">
   <div><b>Preferred path</b><span>Docker TCP transport is used when the adapter exposes an endpoint and the connection succeeds.</span></div>
   <div><b>Fallback path</b><span>TCP failure falls back to provider exec plus the AF_UNIX thin client after invalidating the cached endpoint.</span></div>
@@ -159,23 +164,26 @@
 <section id="workspace-routing" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="backend/src/sandbox/daemon/workspace_tool_dispatch.py backend/src/sandbox/daemon/workspace_tool_payloads.py backend/src/sandbox/daemon/builtin_operations.py backend/src/sandbox/ephemeral_workspace/pipeline.py backend/src/sandbox/ephemeral_workspace/operation_overlay.py backend/src/sandbox/ephemeral_workspace/workspace_publish.py backend/src/sandbox/ephemeral_workspace/overlay_registry.py backend/src/sandbox/occ/service.py backend/src/sandbox/occ/changeset_preparation.py backend/src/sandbox/occ/client.py backend/src/sandbox/host/isolated_workspace_lifecycle.py backend/src/sandbox/daemon/rpc/dispatcher.py backend/tests/unit_test/test_sandbox/test_daemon/test_file_dispatch.py backend/tests/unit_test/test_sandbox/test_daemon/test_routing_invariants.py backend/tests/unit_test/test_sandbox/test_occ backend/tests/unit_test/test_sandbox/test_isolated_workspace_no_publish.py backend/tests/live_e2e_test/sandbox/layer_stack_overlay_occ">
 <h2>Workspace Routing <a class="anchor" href="#workspace-routing">#</a></h2>
 <p>The first workspace decision point is <code>dispatch_workspace_tool_call()</code>. It normalizes the request into <code>ToolCallRequest</code>, identifies the agent, checks active isolated workspace state, and then applies the routing order below. This order matters because isolated mode is explicit private scratch, direct file fast paths avoid overlay cost for normal file APIs, and shell/search need a real filesystem view.</p>
-<div class="diagram" aria-label="Daemon workspace routing order">
-  <div class="flow-row">
-    <div class="node"><strong><code>ToolCallRequest</code></strong><small>normalized request plus agent identity</small></div>
-    <div class="node"><strong>Isolated handle?</strong><small><code>get_active_pipeline()</code> is checked first</small></div>
-    <div class="node"><strong>Isolated pipeline</strong><small>direct fast paths skipped for private scratch</small></div>
-  </div>
-  <div class="flow-row">
-    <div class="node"><strong>Single-file verb?</strong><small><code>read_file</code>, <code>write_file</code>, <code>edit_file</code> with one path</small></div>
-    <div class="node"><strong>Direct route</strong><small>workspace binding uses LayerStack/OCC fast path</small></div>
-    <div class="node"><strong>Overlay route</strong><small>outside binding, shell, search, and plugin-style operations</small></div>
-  </div>
-  <div class="flow-row">
-    <div class="node"><strong>Overlay capture</strong><small>upperdir changes become typed OCC changes</small></div>
-    <div class="node"><strong>Publish gate</strong><small><code>OccClient</code>/<code>OccService</code> serializes mutation</small></div>
-    <div class="node"><strong>Guarded result</strong><small>published paths project into tool response</small></div>
-  </div>
-</div>
+<pre class="diagram" aria-label="Daemon workspace routing order">
+[daemon workspace_tool_call]
+        |
+        v
+[dispatch_workspace_tool_call]
+        |
+        +--&gt; [isolated_workspace_id present]
+        |       -&gt; [isolated workspace pipeline]
+        |
+        +--&gt; [read/write/edit with bound workspace]
+        |       -&gt; [LayerStack read or OCC-gated write]
+        |
+        +--&gt; [shell/search/plugin/other]
+                |
+                v
+        [ephemeral overlay pipeline]
+                |
+                +--&gt; [read-only result]
+                +--&gt; [write result] -&gt; [OCC publish path]
+</pre>
 <div class="edge-list">
   <div><b>Isolated first</b><span>Active isolated workspace handles take precedence and skip direct fast paths.</span></div>
   <div><b>Direct fast path</b><span>Outside isolated mode, single-path read, write, and edit requests try the bound LayerStack/OCC route.</span></div>

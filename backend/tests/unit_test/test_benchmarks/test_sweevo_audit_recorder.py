@@ -605,7 +605,10 @@ def test_write_performance_reports_produces_detailed_report(tmp_path: Path) -> N
     write_performance_reports(recorder.run_dir, snapshot)
 
     report = _read_json(recorder.run_dir / "performance_report.json")
-    assert report["schema"] == "task_center_runner.performance_report.v2"
+    # Phase 3 bumped the perf-report schema string; legacy ``tools`` /
+    # ``hotspots`` / ``sandbox.families`` blocks remain populated for
+    # back-compat (see ``performance_report._build_legacy_sandbox_report``).
+    assert report["schema"] == "task_center_runner.performance_report.v3"
     assert report["totals"]["tool_calls_total"] == 1
     assert report["tools"]["per_tool"]["write_file"]["p95_ms"] == 125.0
     assert report["tools"]["per_tool"]["write_file"]["samples"][0][
@@ -647,10 +650,15 @@ def test_write_performance_reports_produces_detailed_report(tmp_path: Path) -> N
     markdown = (recorder.run_dir / "performance_report.md").read_text(
         encoding="utf-8"
     )
-    assert "Tool Latency By Total Time" in markdown
-    assert "Sandbox Subsystems" in markdown
-    assert "Sandbox Resource Keys" in markdown
-    assert "write_file" in markdown
+    # V3 fixed §1-§13 layout — headers are stable per the phase-3 spec.
+    assert "## 1. Summary" in markdown
+    assert "## 2. Per-tool timing" in markdown
+    assert "## 10. OS resource" in markdown
+    # Tool names continue to surface in §2's per-tool table when their
+    # ``tool_call.*`` events are pulled (mocks emit none here, but the
+    # legacy ``tools`` block populates `performance_report.json` via
+    # `tool_performance` so the v2 surface stays observable).
+    assert report["tools"]["per_tool"]["write_file"]["count"] == 1
 
 
 def test_agent_run_id_to_task_id_mapping(

@@ -83,22 +83,26 @@
   <div><b>guards</b><span>The daemon dispatcher blocks plugin operations for an agent with an open isolated workspace <span class="file-ref">backend/src/sandbox/daemon/rpc/dispatcher.py:214-233</span>.</span></div>
 </div>
 
-<div class="diagram" aria-label="Plugin host daemon dispatch branches">
-  <div class="flow-row">
-    <div class="node"><strong>Host call_plugin</strong><small>resolve sandbox, caller, digest, op</small></div>
-    <span>-&gt;</span>
-    <div class="node"><strong>Bundle install</strong><small>refresh runtime files when digest changes</small></div>
-    <span>-&gt;</span>
-    <div class="node"><strong>api.plugin.ensure</strong><small>import runtime and register daemon ops</small></div>
-  </div>
-  <div class="flow-row">
-    <div class="node"><strong>plugin.name.op</strong><small>normal daemon envelope</small></div>
-    <span>-&gt;</span>
-    <div class="node"><strong>Isolated gate</strong><small>block shared projection while scratch is open</small></div>
-    <span>-&gt;</span>
-    <div class="node"><strong>Plugin context</strong><small>projection, overlay facade, caller, workspace root</small></div>
-  </div>
-</div>
+<pre class="diagram" aria-label="Plugin host daemon dispatch branches">
+[plugin tool call]
+        |
+        v
+[workspace router]
+        |
+        +--&gt; [read-only plugin op]
+        |       -&gt; [daemon plugin host] -&gt; [result]
+        |
+        +--&gt; [write-capable plugin op]
+                |
+                v
+        [plugin host executes in workspace view]
+                |
+                v
+        [projection/diff capture]
+                |
+                v
+        [OCC-gated publish]
+</pre>
 
 <div class="sequence" aria-label="Plugin host daemon workflow">
   <ol>
@@ -142,22 +146,26 @@
   data-evidence-paths="backend/src/sandbox/ephemeral_workspace/plugin/projection.py backend/src/sandbox/ephemeral_workspace/pipeline.py backend/src/sandbox/ephemeral_workspace/events.py backend/src/plugins/catalog/lsp/runtime/session_manager.py backend/src/plugins/catalog/lsp/runtime/pyright_session.py backend/src/plugins/catalog/lsp/runtime/apply.py backend/src/sandbox/daemon/rpc/dispatcher.py">
 <h3>8.3 Projection Refresh and LSP Writes <a class="anchor" href="#plugin-refresh-detail">§</a></h3>
 
-<div class="diagram" aria-label="Plugin projection refresh and write branches">
-  <div class="flow-row">
-    <div class="node"><strong>WorkspaceProjection</strong><small>cached by layer-stack root</small></div>
-    <span>-&gt;</span>
-    <div class="node"><strong>Read-only LSP op</strong><small>session keyed by manifest identity</small></div>
-    <span>-&gt;</span>
-    <div class="node"><strong>Refresh branch</strong><small>acquire overlay or remount namespace</small></div>
-  </div>
-  <div class="flow-row">
-    <div class="node"><strong>Publish event</strong><small>ephemeral pipeline event bus</small></div>
-    <span>-&gt;</span>
-    <div class="node"><strong>Pyright sync</strong><small>watched files and open documents</small></div>
-    <span>-&gt;</span>
-    <div class="node"><strong>LSP write branch</strong><small>separate operation overlay and OCC publish</small></div>
-  </div>
-</div>
+<pre class="diagram" aria-label="Plugin projection refresh and write branches">
+[plugin write result]
+        |
+        v
+[collect touched paths]
+        |
+        v
+[refresh latest projection for plugin view]
+        |
+        +--&gt; [projection changed during run]
+        |       -&gt; [conflict / retry decision]
+        |
+        +--&gt; [projection still compatible]
+                |
+                v
+        [changeset prepared]
+                |
+                v
+        [OCC commit -&gt; LayerStack publish]
+</pre>
 
 <div class="sequence" aria-label="Plugin projection refresh workflow">
   <ol>

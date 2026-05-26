@@ -87,17 +87,25 @@
 </section>
 <section id="cookbook-layerstack-read" data-last-reviewed-commit="2a3e6cc7c" data-evidence-paths="backend/src/sandbox/daemon/workspace_tool_dispatch.py backend/src/sandbox/layer_stack/view.py">
 <h3>10.1 Direct LayerStack Read <a class="anchor" href="#cookbook-layerstack-read">§</a></h3>
-<div class="diagram" aria-label="Direct LayerStack read technical route">
-  <div class="flow-row">
-    <div class="node"><strong>read_file op</strong><small>daemon router, no isolated handle</small></div>
-    <span>-&gt;</span>
-    <div class="node"><strong>WorkspaceBinding</strong><small>absolute or relative path to layer path</small></div>
-    <span>-&gt;</span>
-    <div class="node"><strong>Active manifest</strong><small>LayerStack merged view lookup</small></div>
-    <span>-&gt;</span>
-    <div class="node"><strong>Tool result</strong><small>content plus direct timing metrics</small></div>
-  </div>
-</div>
+<pre class="diagram" aria-label="Direct LayerStack read technical route">
+[read_file request]
+        |
+        v
+[daemon workspace router]
+        |
+        +--&gt; [workspace binding exists]
+        |       |
+        |       v
+        |   [LayerStack projection lookup]
+        |       |
+        |       v
+        |   [read content blob / base file]
+        |       |
+        |       v
+        |   [return file contents]
+        |
+        +--&gt; [no binding] -&gt; [fallback provider file read path]
+</pre>
 <div class="sequence" aria-label="Direct LayerStack read workflow">
   <ol>
     <li><span>The daemon router receives a single-path <code>read_file</code> request and confirms no isolated handle is active for the caller.</span></li>
@@ -113,22 +121,26 @@
 </section>
 <section id="cookbook-ephemeral-shell" data-last-reviewed-commit="2a3e6cc7c" data-evidence-paths="backend/src/sandbox/ephemeral_workspace/pipeline.py backend/src/sandbox/overlay/namespace_entrypoint.py backend/src/sandbox/ephemeral_workspace/workspace_publish.py">
 <h3>10.2 Ephemeral Shell or Search Operation <a class="anchor" href="#cookbook-ephemeral-shell">§</a></h3>
-<div class="diagram" aria-label="Ephemeral shell operation branches">
-  <div class="flow-row">
-    <div class="node"><strong>Router branch</strong><small>no isolated handle, non-direct operation</small></div>
-    <span>-&gt;</span>
-    <div class="node"><strong>Overlay lease</strong><small>layer snapshot plus upper/work dirs</small></div>
-    <span>-&gt;</span>
-    <div class="node"><strong>Namespace child</strong><small>mount overlay and run payload</small></div>
-  </div>
-  <div class="flow-row">
-    <div class="node"><strong>Read-only intent</strong><small>release lease, no publish</small></div>
-    <span>-&gt;</span>
-    <div class="node"><strong>Write intent</strong><small>capture upperdir and convert changes</small></div>
-    <span>-&gt;</span>
-    <div class="node"><strong>Publish cycle</strong><small>OCC, events, destroy run dir</small></div>
-  </div>
-</div>
+<pre class="diagram" aria-label="Ephemeral shell operation branches">
+[shell command request]
+        |
+        v
+[daemon workspace router]
+        |
+        v
+[ephemeral overlay pipeline]
+        |
+        v
+[run command in overlay workspace]
+        |
+        +--&gt; [stdout/stderr/status only]
+        |       -&gt; [return tool result]
+        |
+        +--&gt; [filesystem writes captured]
+                |
+                v
+        [overlay diff -&gt; OCC changeset -&gt; publish]
+</pre>
 <div class="sequence" aria-label="Ephemeral shell operation workflow">
   <ol>
     <li><span>The router selects the ephemeral pipeline because the caller has no open isolated handle.</span></li>
@@ -146,24 +158,25 @@
 </section>
 <section id="cookbook-occ-publish" data-last-reviewed-commit="2a3e6cc7c" data-evidence-paths="backend/src/sandbox/daemon/workspace_tool_dispatch.py backend/src/sandbox/occ/changeset_preparation.py backend/src/sandbox/occ/commit_queue.py backend/src/sandbox/occ/commit_transaction.py backend/src/sandbox/daemon/changeset_projection.py">
 <h3>10.3 OCC Publish from API Write/Edit <a class="anchor" href="#cookbook-occ-publish">§</a></h3>
-<div class="diagram" aria-label="API write edit OCC technical route">
-  <div class="flow-row">
-    <div class="node"><strong>write_file/edit_file</strong><small>router builds typed OCC changes</small></div>
-    <span>-&gt;</span>
-    <div class="node"><strong>Prepare</strong><small>path route, gitignore, base hash</small></div>
-    <span>-&gt;</span>
-    <div class="node"><strong>Queue</strong><small>serialized publish worker</small></div>
-    <span>-&gt;</span>
-    <div class="node"><strong>Transaction</strong><small>live manifest validation</small></div>
-  </div>
-  <div class="flow-row">
-    <div class="node"><strong>Conflict branch</strong><small>project status into public result</small></div>
-    <span>-&gt;</span>
-    <div class="node"><strong>Publish branch</strong><small>append immutable layer</small></div>
-    <span>-&gt;</span>
-    <div class="node"><strong>Response</strong><small>published paths and timings</small></div>
-  </div>
-</div>
+<pre class="diagram" aria-label="API write edit OCC technical route">
+[write_file / edit_file]
+        |
+        v
+[workspace router detects direct API write]
+        |
+        v
+[prepare OCC changeset]
+        |  path safety, base hash, content delta
+        v
+[commit queue]
+        |
+        v
+[transaction revalidation]
+        |
+        +--&gt; [valid] ----&gt; [LayerStack publish -&gt; projection refresh]
+        |
+        +--&gt; [conflict] -&gt; [structured conflict result]
+</pre>
 <div class="sequence" aria-label="API write/edit OCC workflow">
   <ol>
     <li><span>The router converts <code>write_file</code> or <code>edit_file</code> arguments into typed OCC changes.</span></li>
@@ -180,22 +193,27 @@
 </section>
 <section id="cookbook-isolated" data-last-reviewed-commit="2a3e6cc7c" data-evidence-paths="backend/src/tools/sandbox/_lib/registry.py backend/src/tools/isolated_workspace/enter_isolated_workspace/definition.py backend/src/tools/isolated_workspace/exit_isolated_workspace/definition.py backend/src/sandbox/host/isolated_workspace_lifecycle.py backend/src/sandbox/daemon/rpc/dispatcher.py backend/src/sandbox/isolated_workspace/_control_plane/pipeline_registry.py backend/src/sandbox/isolated_workspace/_control_plane/workspace_handle_lifecycle.py backend/src/sandbox/isolated_workspace/pipeline.py backend/src/sandbox/isolated_workspace/scripts/setns_overlay_mount.py backend/src/sandbox/isolated_workspace/_control_plane/linux_runtime.py">
 <h3>10.4 Isolated Workspace Tool Lifecycle <a class="anchor" href="#cookbook-isolated">§</a></h3>
-<div class="diagram" aria-label="Isolated workspace lifecycle branches">
-  <div class="flow-row">
-    <div class="node"><strong>Tool registry</strong><small>enter and exit are normal sandbox tools</small></div>
-    <span>-&gt;</span>
-    <div class="node"><strong>Host gate</strong><small>local and daemon background counts</small></div>
-    <span>-&gt;</span>
-    <div class="node"><strong>Daemon lifecycle op</strong><small>enter, exit, status, list_open</small></div>
-  </div>
-  <div class="flow-row">
-    <div class="node"><strong>Lazy pipeline</strong><small>LayerStack client and audit sink</small></div>
-    <span>-&gt;</span>
-    <div class="node"><strong>Persistent handle</strong><small>lease, namespace, upper, work, network</small></div>
-    <span>-&gt;</span>
-    <div class="node"><strong>Run or exit</strong><small>audit-only writes, then discard scratch</small></div>
-  </div>
-</div>
+<pre class="diagram" aria-label="Isolated workspace lifecycle branches">
+[enter_isolated_workspace]
+        |
+        v
+[allocate snapshot lease + scratch directory]
+        |
+        v
+[create isolated namespace / pipeline]
+        |
+        v
+[foreground tools route by isolated_workspace_id]
+        |
+        v
+[exit_isolated_workspace]
+        |
+        v
+[teardown namespace, release lease, remove scratch]
+        |
+        v
+[changes discarded]
+</pre>
 <div class="sequence" aria-label="Isolated workspace lifecycle workflow">
   <ol>
     <li><span>The public tools are normal sandbox tools: <code>make_sandbox_tools()</code> includes <code>enter_isolated_workspace</code> and <code>exit_isolated_workspace</code>, and each definition calls the host lifecycle with caller identity, background manager, layer-stack root, and sandbox id.</span></li>
@@ -214,22 +232,24 @@
 </section>
 <section id="cookbook-plugin-write" data-last-reviewed-commit="2a3e6cc7c" data-evidence-paths="backend/src/sandbox/ephemeral_workspace/plugin/host_dispatch.py backend/src/sandbox/ephemeral_workspace/plugin/op_registry.py backend/src/sandbox/ephemeral_workspace/plugin/overlay_dispatch.py backend/src/sandbox/ephemeral_workspace/workspace_publish.py">
 <h3>10.5 Plugin Write Operation <a class="anchor" href="#cookbook-plugin-write">§</a></h3>
-<div class="diagram" aria-label="Plugin write operation technical route">
-  <div class="flow-row">
-    <div class="node"><strong>Host dispatch</strong><small>install bundle and ensure digest</small></div>
-    <span>-&gt;</span>
-    <div class="node"><strong>WRITE_ALLOWED op</strong><small>daemon plugin wrapper</small></div>
-    <span>-&gt;</span>
-    <div class="node"><strong>Operation overlay</strong><small>fresh namespace for plugin child</small></div>
-  </div>
-  <div class="flow-row">
-    <div class="node"><strong>Child writes</strong><small>workspace root is overlay projection</small></div>
-    <span>-&gt;</span>
-    <div class="node"><strong>Parent capture</strong><small>upperdir to path changes</small></div>
-    <span>-&gt;</span>
-    <div class="node"><strong>Publish metadata</strong><small>OCC result attached to plugin response</small></div>
-  </div>
-</div>
+<pre class="diagram" aria-label="Plugin write operation technical route">
+[plugin write tool]
+        |
+        v
+[daemon plugin host]
+        |
+        v
+[execute against workspace projection]
+        |
+        v
+[capture plugin output + touched files]
+        |
+        v
+[prepare OCC changeset]
+        |
+        v
+[commit queue -&gt; LayerStack publish -&gt; refreshed projection]
+</pre>
 <div class="sequence" aria-label="Plugin write operation workflow">
   <ol>
     <li><span>Host dispatch resolves plugin manifest, installs/refreshes the bundle, and ensures daemon runtime for the plugin digest.</span></li>
@@ -245,22 +265,24 @@
 </section>
 <section id="cookbook-pyright-refresh" data-last-reviewed-commit="2a3e6cc7c" data-evidence-paths="backend/src/plugins/catalog/lsp/runtime/session_manager.py backend/src/plugins/catalog/lsp/runtime/pyright_session.py backend/src/plugins/catalog/lsp/runtime/apply.py">
 <h3>10.6 Pyright Latest-Projection Refresh <a class="anchor" href="#cookbook-pyright-refresh">§</a></h3>
-<div class="diagram" aria-label="Pyright latest projection refresh route">
-  <div class="flow-row">
-    <div class="node"><strong>LSP read op</strong><small>session manager request</small></div>
-    <span>-&gt;</span>
-    <div class="node"><strong>Manifest key check</strong><small>active projection versus cached session</small></div>
-    <span>-&gt;</span>
-    <div class="node"><strong>Refresh branch</strong><small>acquire overlay or remount namespace</small></div>
-  </div>
-  <div class="flow-row">
-    <div class="node"><strong>Workspace event</strong><small>publish or full-resync marker</small></div>
-    <span>-&gt;</span>
-    <div class="node"><strong>Pyright sync</strong><small>watch notifications and open docs</small></div>
-    <span>-&gt;</span>
-    <div class="node"><strong>Write op branch</strong><small>separate overlay, expected key, OCC publish</small></div>
-  </div>
-</div>
+<pre class="diagram" aria-label="Pyright latest projection refresh route">
+[Pyright / LSP request]
+        |
+        v
+[resolve latest workspace projection]
+        |
+        v
+[start or reuse language-server session]
+        |
+        v
+[apply projection refresh to server view]
+        |
+        +--&gt; [diagnostics / hover / references]
+        |       -&gt; [return read-only result]
+        |
+        +--&gt; [LSP edit action]
+                -&gt; [OCC changeset -&gt; publish]
+</pre>
 <div class="sequence" aria-label="Pyright latest projection refresh workflow">
   <ol>
     <li><span>A read-only LSP tool asks the session manager for the current session.</span></li>

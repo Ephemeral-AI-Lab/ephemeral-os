@@ -66,6 +66,24 @@
 
 <section id="validation-loop" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths=".agents/skills/codebase-wiki-builder/scripts/check_html_wiki.py docs/architecture/task_center docs/architecture/assets docs/architecture/index.html">
 <h2>Validation Loop <a class="anchor" href="#validation-loop">#</a></h2>
+<pre class="diagram" aria-label="TaskCenter wiki validation ASCII workflow">
+[TaskCenter code/docs change]
+        |
+        v
+[inspect source anchors]
+        |  goal, iteration, attempt, context_engine, tools
+        v
+[update lifecycle/role diagrams]
+        |
+        v
+[validate HTML structure]
+        |
+        v
+[scan stale paths and line-sensitive claims]
+        |
+        v
+[record maintenance entry]
+</pre>
 <div class="sequence" aria-label="TaskCenter wiki validation loop">
   <ol>
     <li><span>Run the static HTML validator over every changed TaskCenter page.</span></li>

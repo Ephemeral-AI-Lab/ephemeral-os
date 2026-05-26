@@ -68,18 +68,29 @@
     <div class="node"><strong>Loop or stop</strong><small>tool stop, resource limit, terminal refusal, text response</small></div>
   </div>
 </div>
-<div class="diagram" aria-label="Main query loop sequence">
-  <div class="flow-row">
-    <div class="node"><strong><code>_prepare_query_loop_runtime()</code></strong><small>metadata, notifications, background supervisor, terminal names</small></div>
-    <div class="node"><strong><code>_build_stream_executor()</code></strong><small>tool context over transcript plus deferral predicate</small></div>
-    <div class="node"><strong><code>build_query_run_request()</code></strong><small>provider-safe messages, prompt report, <code>ApiMessageRequest</code></small></div>
-  </div>
-  <div class="flow-row">
-    <div class="node"><strong><code>_consume_provider_stream()</code></strong><small>provider events become engine stream events</small></div>
-    <div class="node"><strong>Assistant complete</strong><small>streamed tool ids recorded; final message required</small></div>
-    <div class="node"><strong>Transcript append</strong><small>prehooks and background tasks see the model-produced shape</small></div>
-  </div>
-</div>
+<pre class="diagram" aria-label="Main query loop sequence">
+[QueryContext]
+        |
+        v
+[prepare turn budget + tool context]
+        |
+        v
+[build provider request from sanitized history]
+        |
+        v
+[stream assistant response]
+        |
+        v
+[append assistant message]
+        |
+        +--&gt; [no tool calls] ---------------------&gt; [return assistant text]
+        |
+        +--&gt; [tool calls] -&gt; [dispatch_assistant_tools]
+                              |
+                              +--&gt; [foreground results] -&gt; [append tool results]
+                              |
+                              +--&gt; [terminal result] ----&gt; [TOOL_STOP]
+</pre>
 <div class="edge-list">
   <div><b>Runtime setup</b><span>The loop coerces or creates <code>ExecutionMetadata</code>, installs the run-scoped notification service, and creates <code>BackgroundTaskSupervisor</code> only when background tools are enabled.</span></div>
   <div><b>Request copy</b><span><code>prepare_provider_messages()</code> sanitizes the provider-visible history and feeds <code>ApiMessageRequest</code> without changing the durable transcript.</span></div>
@@ -113,23 +124,29 @@
     <div class="node"><strong>Loop stop</strong><small><code>QueryExitReason.TOOL_STOP</code></small></div>
   </div>
 </div>
-<div class="diagram" aria-label="Terminal dispatch sequence">
-  <div class="flow-row">
-    <div class="node"><strong><code>dispatch_assistant_tools()</code></strong><small>gather streamed foreground results</small></div>
-    <div class="node"><strong>Final batch validation</strong><small>terminal tool must be called alone</small></div>
-    <div class="node"><strong>Invalid batch</strong><small>one error <code>ToolResultBlock</code> per tool-use id; cancel streamed work</small></div>
-  </div>
-  <div class="flow-row">
-    <div class="node"><strong>Valid batch</strong><small>split background launches from foreground execution</small></div>
-    <div class="node"><strong>Terminal foreground call</strong><small>tool framework stamps <code>does_terminate</code></small></div>
-    <div class="node"><strong><code>_first_terminal_tool_result()</code></strong><small>projects first terminal block into <code>ToolResult</code></small></div>
-  </div>
-  <div class="flow-row">
-    <div class="node"><strong>Context update</strong><small><code>context.terminal_result</code> is set</small></div>
-    <div class="node"><strong>Loop exit</strong><small><code>QueryExitReason.TOOL_STOP</code></small></div>
-    <div class="node"><strong>No provider echo</strong><small>no extra tool-result user message is appended</small></div>
-  </div>
-</div>
+<pre class="diagram" aria-label="Terminal dispatch sequence">
+[assistant tool-call batch]
+        |
+        v
+[terminal policy check]
+        |
+        +--&gt; [terminal mixed with other tools]
+        |       -&gt; [tool error results] -&gt; [continue provider loop]
+        |
+        +--&gt; [single valid terminal call]
+                |
+                v
+        [execute_tool_once]
+                |
+                v
+        [terminal executor returns submission result]
+                |
+                v
+        [_first_terminal_tool_result captures final state]
+                |
+                v
+        [loop exits with TOOL_STOP]
+</pre>
 <div class="edge-list">
   <div><b>Batch rejection</b><span>If a terminal tool is batched with any sibling tool, none of the batch executes and streamed work is cancelled.</span></div>
   <div><b>Background split</b><span>For a valid batch, background launches are acknowledged separately while foreground calls execute through the normal tool framework.</span></div>

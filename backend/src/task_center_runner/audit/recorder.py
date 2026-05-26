@@ -44,7 +44,14 @@ DAEMON_AUDIT_PULL_ENABLED_ENV = "EOS_DAEMON_AUDIT_PULL_ENABLED"
 
 
 def _daemon_audit_pull_enabled() -> bool:
-    """V3 §Default-on rollout: opt-out env gate, default True.
+    """V3 §Default-on rollout: opt-out toggle, default True.
+
+    Source precedence (highest first):
+
+    1. ``EOS_DAEMON_AUDIT_PULL_ENABLED`` env var when explicitly set.
+    2. ``RunnerConfig.daemon_audit_pull.enabled`` from central config
+       (also bindable as ``EOS__RUNNER__DAEMON_AUDIT_PULL__ENABLED``).
+    3. Hard default ``True``.
 
     The recorder already auto-starts the puller whenever a ``sandbox_id`` is
     bound; this gate is the operator escape hatch promoted by Phase 3. The
@@ -53,8 +60,27 @@ def _daemon_audit_pull_enabled() -> bool:
     ``EOS_ISOLATED_WORKSPACE_ENABLED=true`` (see V3 README
     §Safety-gate-vs-toggle resolution).
     """
-    raw = os.environ.get(DAEMON_AUDIT_PULL_ENABLED_ENV, "true").strip().lower()
-    return raw not in {"false", "0", "no", "off"}
+    raw = os.environ.get(DAEMON_AUDIT_PULL_ENABLED_ENV)
+    if raw is not None and raw.strip() != "":
+        return raw.strip().lower() not in {"false", "0", "no", "off"}
+    return _runner_config_daemon_audit_pull_enabled()
+
+
+def _runner_config_daemon_audit_pull_enabled() -> bool:
+    """Read ``RunnerConfig.daemon_audit_pull.enabled`` defensively.
+
+    Central config may not be initialized in unit-test contexts where the
+    env-var fallback is the source of truth; we treat any access failure
+    as "use the default (True)" rather than raising into the recorder.
+    """
+    try:
+        from config import get_central_config
+
+        return bool(
+            get_central_config().runner.daemon_audit_pull.enabled
+        )
+    except Exception:  # noqa: BLE001 — central config is best-effort here
+        return True
 
 
 PRIMARY_ROLES: frozenset[str] = frozenset(

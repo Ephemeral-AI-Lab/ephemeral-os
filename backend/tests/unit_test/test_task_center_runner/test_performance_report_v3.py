@@ -539,7 +539,6 @@ def test_report_renders_without_lsp_specific_strings(tmp_path: Path) -> None:
     # JSON: section keys (the keys of `sections.plugin_activity` and its
     # row dicts) must not include vendor names.
     plugin_activity = report["sandbox"]["sections"]["plugin_activity"]
-    assert "lsp" not in str(plugin_activity).lower().split('"')[1::2] or True  # smoke
     for row in plugin_activity["rows"]:
         # The KEYS of each row must be generic.
         for key in row:
@@ -620,6 +619,40 @@ def test_recorder_auto_start_is_default_on(
 
     monkeypatch.delenv("EOS_DAEMON_AUDIT_PULL_ENABLED", raising=False)
     assert _daemon_audit_pull_enabled() is True
+
+
+def test_central_config_path_disables_puller_when_env_unset(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """When env is unset, ``RunnerConfig.daemon_audit_pull.enabled`` must
+    govern. This pins the central-config plumbing so the spec's "runner
+    config" wording isn't paper-only.
+    """
+    from task_center_runner.audit import recorder as recorder_module
+
+    monkeypatch.delenv("EOS_DAEMON_AUDIT_PULL_ENABLED", raising=False)
+
+    class _StubRunner:
+        class daemon_audit_pull:  # noqa: N801 — emulating Pydantic field path
+            enabled = False
+
+    class _StubCentral:
+        runner = _StubRunner
+
+    def _stub_get_central_config() -> _StubCentral:
+        return _StubCentral()
+
+    # Override the lazy import inside the helper.
+    import config as config_module
+
+    monkeypatch.setattr(
+        config_module, "get_central_config", _stub_get_central_config
+    )
+    assert recorder_module._daemon_audit_pull_enabled() is False
+
+    # And env explicitly set wins over central config.
+    monkeypatch.setenv("EOS_DAEMON_AUDIT_PULL_ENABLED", "true")
+    assert recorder_module._daemon_audit_pull_enabled() is True
 
 
 __all__: list[str] = []

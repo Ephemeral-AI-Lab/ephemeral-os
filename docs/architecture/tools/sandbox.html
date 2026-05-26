@@ -105,6 +105,25 @@
   data-evidence-paths="backend/src/sandbox/api/__init__.py backend/src/sandbox/api/tool/read.py backend/src/sandbox/api/tool/write.py backend/src/sandbox/api/tool/edit.py backend/src/sandbox/api/tool/shell.py backend/src/sandbox/api/tool/glob.py backend/src/sandbox/api/tool/grep.py backend/src/sandbox/api/transport.py backend/src/sandbox/daemon/builtin_operations.py backend/src/sandbox/daemon/rpc/dispatcher.py">
 <h2>API and Daemon Hop</h2>
 <p><code>sandbox.api.tool</code> is the public facade between tools and the in-sandbox daemon. Each verb builds a JSON-safe daemon payload from the typed request identity fields, calls the transport operation, parses the daemon response back into a typed result, and wraps the call in audited operation metadata.</p>
+<pre class="diagram" aria-label="Sandbox tool dispatch ASCII workflow">
+[agent sandbox tool]
+        |
+        v
+[engine tool dispatch]
+        |
+        v
+[sandbox tool registry]
+        |
+        v
+[daemon client call]
+        |
+        v
+[workspace_tool_dispatch]
+        |
+        +--&gt; [LayerStack/OCC fast path]
+        +--&gt; [overlay pipeline]
+        +--&gt; [isolated workspace pipeline]
+</pre>
 <div class="sequence" aria-label="Sandbox tool dispatch sequence">
   <ol>
     <li><span>The engine dispatches a tool call through the tool framework with <code>SANDBOX_CONTEXT</code>.</span></li>

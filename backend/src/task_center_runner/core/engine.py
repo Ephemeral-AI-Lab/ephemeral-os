@@ -48,7 +48,7 @@ from task_center_runner.audit.performance_report import _write_perf_report_safe
 from task_center_runner.audit.recorder import (
     DAEMON_AUDIT_PULL_ENABLED_ENV,
     AuditRecorder,
-    _daemon_audit_pull_enabled,
+    _daemon_audit_pull_enabled,  # consults env + central RunnerConfig
 )
 from task_center_runner.audit.stream_bridge import stream_bridge
 from task_center_runner.core.config import RunConfig, RunContext

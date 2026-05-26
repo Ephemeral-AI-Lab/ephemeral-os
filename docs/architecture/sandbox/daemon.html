@@ -126,24 +126,26 @@
 
 <p>The host has two ways to reach the same daemon contract. Docker can expose a cached TCP endpoint; providers that cannot publish a port use <code>provider.exec</code> to run the bundled thin client inside the sandbox. Both paths send the same JSON envelope and receive the same JSON response.</p>
 
-<div class="diagram" aria-label="Daemon startup transport routes">
-  <div class="flow-row">
-    <div class="node"><strong>Host request</strong><small>op, invocation_id, args, layer_stack_root</small></div>
-    <span>-&gt;</span>
-    <div class="node"><strong>Provider adapter</strong><small>resolve daemon endpoint capability</small></div>
-    <span>-&gt;</span>
-    <div class="node"><strong>TCP path</strong><small>Docker endpoint, auth token, cached address</small></div>
-    <span>-&gt;</span>
-    <div class="node"><strong>Daemon server</strong><small>newline JSON envelope to dispatcher</small></div>
-  </div>
-  <div class="flow-row">
-    <div class="node"><strong>No TCP endpoint</strong><small>provider.exec thin client inside sandbox</small></div>
-    <span>-&gt;</span>
-    <div class="node"><strong>runtime.sock</strong><small>AF_UNIX request/response bridge</small></div>
-    <span>-&gt;</span>
-    <div class="node"><strong>Connect failed</strong><small>launch daemon, probe ready, retry envelope</small></div>
-  </div>
-</div>
+<pre class="diagram" aria-label="Daemon startup transport routes">
+[provider bootstrap]
+        |
+        v
+[start sandbox daemon process]
+        |
+        v
+[bind RPC transports]
+        |-------------------------------+
+        |                               |
+        v                               v
+[AF_UNIX socket]                [optional TCP bridge]
+        |                               |
+        +---------------+---------------+
+                        v
+             [readiness probe / retry]
+                        |
+                        v
+              [daemon RPC dispatcher]
+</pre>
 
 <div class="sequence" aria-label="Daemon startup and transport workflow">
   <ol>
@@ -190,24 +192,30 @@
   <div><b>tested-by</b><span><code>test_payload_helpers.py</code> pins caller audit fields, strict daemon integer parsing, internal-error cleanup, and structured conflict detection so public result semantics do not depend on fragile message wording <span class="file-ref">backend/tests/unit_test/test_sandbox/test_api/test_payload_helpers.py:18-61</span>.</span></div>
 </div>
 
-<div class="diagram" aria-label="Daemon request lifecycle routes">
-  <div class="flow-row">
-    <div class="node"><strong>Public tool API</strong><small>typed payload plus caller fields</small></div>
-    <span>-&gt;</span>
-    <div class="node"><strong>Transport wrapper</strong><small>protocol version and invocation id</small></div>
-    <span>-&gt;</span>
-    <div class="node"><strong>Host daemon client</strong><small>TCP or thin-client envelope</small></div>
-    <span>-&gt;</span>
-    <div class="node"><strong>Server validation</strong><small>auth, JSON shape, size, timeout</small></div>
-  </div>
-  <div class="flow-row">
-    <div class="node"><strong>Dispatcher</strong><small>OP_TABLE lookup and in-flight registration</small></div>
-    <span>-&gt;</span>
-    <div class="node"><strong>Handler branch</strong><small>built-in op, plugin op, or lifecycle op</small></div>
-    <span>-&gt;</span>
-    <div class="node"><strong>Response projection</strong><small>handler result, timing, or transport error</small></div>
-  </div>
-</div>
+<pre class="diagram" aria-label="Daemon request lifecycle routes">
+[host client request]
+        |
+        v
+[daemon transport]
+        |  TCP if configured, otherwise provider exec -&gt; AF_UNIX
+        v
+[RPC dispatcher]
+        |
+        v
+[OP_TABLE handler]
+        |
+        +--&gt; [workspace_tool_call]
+        |       -&gt; [workspace router / pipeline]
+        |
+        +--&gt; [control op]
+                -&gt; [daemon state or health handler]
+        |
+        v
+[typed response]
+        |
+        v
+[host-side result / error mapping]
+</pre>
 
 <div class="sequence" aria-label="Daemon request lifecycle">
   <ol>
@@ -360,22 +368,26 @@
   </div>
 </div>
 
-<div class="diagram" aria-label="Isolated foreground routing branch">
-  <div class="flow-row">
-    <div class="node"><strong>enter_isolated_workspace</strong><small>host and daemon gates pass</small></div>
-    <span>-&gt;</span>
-    <div class="node"><strong>Agent handle map</strong><small>persistent namespace, upperdir, lease</small></div>
-    <span>-&gt;</span>
-    <div class="node"><strong>Later tool op</strong><small>router checks handle before fast paths</small></div>
-  </div>
-  <div class="flow-row">
-    <div class="node"><strong>Isolated branch</strong><small>reuse namespace and scratch upperdir</small></div>
-    <span>-&gt;</span>
-    <div class="node"><strong>Audit-only writes</strong><small>changed_paths, no OCC publish</small></div>
-    <span>-&gt;</span>
-    <div class="node"><strong>Exit teardown</strong><small>discard scratch and release lease</small></div>
-  </div>
-</div>
+<pre class="diagram" aria-label="Isolated foreground routing branch">
+[foreground tool call]
+        |
+        v
+[workspace_tool_dispatch]
+        |
+        +--&gt; [isolated_workspace_id absent]
+        |       -&gt; [normal workspace routing]
+        |
+        +--&gt; [isolated_workspace_id present]
+                |
+                v
+        [control-plane registry ensures pipeline]
+                |
+                v
+        [isolated pipeline executes tool]
+                |  persistent scratch namespace for this session
+                v
+        [result returned to engine]
+</pre>
 
 <div class="sequence" aria-label="Isolated workspace foreground tool workflow">
   <ol>
@@ -415,22 +427,26 @@
   </tbody>
 </table>
 
-<div class="diagram" aria-label="Background task lifecycle bridge">
-  <div class="flow-row">
-    <div class="node"><strong>background=true</strong><small>tool layer validates and allocates bg id</small></div>
-    <span>-&gt;</span>
-    <div class="node"><strong>Engine record</strong><small>alias, status, result, agent, sandbox</small></div>
-    <span>-&gt;</span>
-    <div class="node"><strong>sandbox_invocation_id</strong><small>stable daemon correlation id</small></div>
-  </div>
-  <div class="flow-row">
-    <div class="node"><strong>Daemon registry</strong><small>task, op, agent_id, heartbeat timestamp</small></div>
-    <span>-&gt;</span>
-    <div class="node"><strong>Workspace route</strong><small>normal shell path or isolated branch</small></div>
-    <span>-&gt;</span>
-    <div class="node"><strong>Result tools</strong><small>read engine state, not daemon internals</small></div>
-  </div>
-</div>
+<pre class="diagram" aria-label="Background task lifecycle bridge">
+[engine starts background tool]
+        |
+        v
+[daemon schedules background task]
+        |
+        v
+[task registry: pending -&gt; running]
+        |
+        +--&gt; [poll/status request]
+        |       -&gt; [current progress snapshot]
+        |
+        +--&gt; [task finishes]
+                |
+                v
+        [completed / failed / cancelled state]
+                |
+                v
+        [result fetched once and marked delivered]
+</pre>
 
 <div class="sequence" aria-label="Background task lifecycle">
   <ol>
@@ -461,22 +477,22 @@
 
 <p>Cancellation is intentionally two-stage for sandbox-bound background tasks. The supervisor first asks the daemon to cancel the sandbox invocation, then it updates the local task state and cancels the host asyncio task when the task type permits it <span class="file-ref">backend/src/engine/background/task_supervisor.py:317-339</span>, <span class="file-ref">backend/src/engine/background/task_supervisor.py:432-449</span>. The daemon control handler cancels the registered task and waits briefly for cleanup, reporting whether the task was found and whether cleanup completed <span class="file-ref">backend/src/sandbox/daemon/builtin_operations.py:94-110</span>.</p>
 
-<div class="diagram" aria-label="Daemon heartbeat and TTL branch">
-  <div class="flow-row">
-    <div class="node"><strong>Supervisor loop</strong><small>group running sandbox invocation ids</small></div>
-    <span>-&gt;</span>
-    <div class="node"><strong>api.v1.heartbeat</strong><small>per-sandbox daemon call</small></div>
-    <span>-&gt;</span>
-    <div class="node"><strong>Registry refresh</strong><small>touch tracked background entries</small></div>
-  </div>
-  <div class="flow-row">
-    <div class="node"><strong>Heartbeat present</strong><small>task remains eligible for normal completion</small></div>
-    <span>-&gt;</span>
-    <div class="node"><strong>Heartbeat missing</strong><small>TTL reaper cancels stale daemon task</small></div>
-    <span>-&gt;</span>
-    <div class="node"><strong>Gating count</strong><small>isolated enter sees unfinished background work</small></div>
-  </div>
-</div>
+<pre class="diagram" aria-label="Daemon heartbeat and TTL branch">
+[daemon starts]
+        |
+        v
+[heartbeat loop]
+        |
+        +--&gt; [client heartbeat received]
+        |       -&gt; [refresh last_seen / lease timestamp]
+        |
+        +--&gt; [TTL check]
+                |
+                +--&gt; [lease fresh] -&gt; [continue serving]
+                |
+                +--&gt; [lease expired]
+                        -&gt; [cancel work, release resources, shutdown]
+</pre>
 
 <div class="sequence" aria-label="Daemon heartbeat and TTL lifecycle">
   <ol>

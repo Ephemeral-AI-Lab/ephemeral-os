@@ -85,20 +85,24 @@
 <section id="entry-sandbox-provisioning" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="backend/src/task_center/entry/bootstrap.py backend/src/task_center/entry/sandbox_bridge.py backend/src/task_center/goal/starter.py backend/src/task_center/goal/state.py backend/src/task_center/attempt/runtime.py backend/tests/unit_test/test_task_center/test_lifecycle/test_entry_bootstrap.py backend/tests/unit_test/test_task_center/test_lifecycle/test_sandbox_bridge.py backend/src/sandbox/api/provider_control.py">
 <h2>Entry And Sandbox Provisioning <a class="anchor" href="#entry-sandbox-provisioning">#</a></h2>
 <p><code>start_task_center_run()</code> is the entry seam for top-level TaskCenter work. It receives stores, runtime config, prompt, optional sandbox id, event callback, optional runner, optional context packet store, and optional sandbox bridge. It does not run an agent directly; it constructs the run shell and lets Goal -> Iteration -> Attempt startup launch the initial planner.</p>
-<div class="diagram" aria-label="TaskCenter entry workflow diagram">
-  <div class="flow-row">
-    <div class="node"><strong>Entry start</strong><small>store readiness check</small></div>
-    <div class="node"><strong>Top-level run</strong><small>request id, run id, <code>cwd</code>, prompt</small></div>
-    <div class="node"><strong>Sandbox binding</strong><small>explicit id start or task-center sandbox create</small></div>
-    <div class="node"><strong>Runtime deps</strong><small>stores, launcher, registry, coordinators, config, composer</small></div>
-  </div>
-  <div class="flow-row">
-    <div class="node"><strong>Entry Goal</strong><small><code>GoalStarter.start(..., GoalOrigin.entry(...))</code></small></div>
-    <div class="node"><strong>Initial chain</strong><small>Goal, Iteration 1, Attempt 1</small></div>
-    <div class="node"><strong>Planner launch</strong><small>normal attempt startup schedules the planner</small></div>
-    <div class="node"><strong>Entry handle</strong><small>ids, sandbox binding, launcher idle wait</small></div>
-  </div>
-</div>
+<pre class="diagram" aria-label="TaskCenter entry workflow diagram">
+[user / external task request]
+        |
+        v
+[TaskCenter entry bootstrap]
+        |
+        v
+[GoalStarter.start]
+        |  creates goal, first iteration, first attempt
+        v
+[AttemptOrchestrator]
+        |
+        v
+[AgentLaunch through engine]
+        |
+        v
+[terminal submission updates TaskCenter state]
+</pre>
 <div class="edge-list" aria-label="TaskCenter entry transitions">
   <div><b>preflight</b><span><code>TaskCenterEntry.start()</code> verifies task, goal, iteration, and attempt stores before mutating run state.</span></div>
   <div><b>run shell</b><span><code>_create_top_level_run()</code> generates ids, prepares the sandbox binding, creates the request row, then creates the run row.</span></div>
@@ -137,20 +141,25 @@
 <section id="tool-and-sandbox-routing" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="backend/src/engine/agent/lifecycle.py backend/src/engine/query/loop.py backend/src/engine/tool_call/dispatch.py backend/src/tools/_framework/execution/tool_call.py backend/src/tools/_framework/core/runtime.py backend/src/tools/sandbox/_lib/registry.py backend/src/tools/sandbox/_lib/tool_context.py backend/src/tools/sandbox/read_file/read_file.py backend/src/tools/sandbox/write_file/write_file.py backend/src/tools/sandbox/edit_file/edit_file.py backend/src/tools/sandbox/shell/shell.py backend/src/sandbox/api/tool backend/src/sandbox/api/transport.py backend/src/sandbox/daemon/workspace_tool_dispatch.py docs/architecture/tools/sandbox.html docs/architecture/sandbox/workspaces.html docs/architecture/agent_loops/provider-sandbox-bridge.html">
 <h2>Tool And Sandbox Routing <a class="anchor" href="#tool-and-sandbox-routing">#</a></h2>
 <p>The engine does not special-case TaskCenter sandbox work. TaskCenter metadata enters the normal <code>ExecutionMetadata</code> object, the tool framework exposes it through <code>ToolExecutionContextService</code>, and sandbox tools build typed <code>sandbox.api</code> requests with caller identity.</p>
-<div class="diagram" aria-label="TaskCenter sandbox tool routing diagram">
-  <div class="flow-row">
-    <div class="node"><strong>Agent metadata</strong><small><code>run_ephemeral_agent()</code> seeds TaskCenter ids</small></div>
-    <div class="node"><strong>Tool context</strong><small><code>ToolExecutionContextService</code> per provider turn</small></div>
-    <div class="node"><strong>Sandbox registry</strong><small><code>SANDBOX_CONTEXT</code> marks workspace tools</small></div>
-    <div class="node"><strong>Caller identity</strong><small><code>SandboxCaller</code> from agent/run/task/attempt/goal/tool ids</small></div>
-  </div>
-  <div class="flow-row">
-    <div class="node"><strong>API facade</strong><small><code>api.v1.read_file</code>, write, edit, shell, grep, glob</small></div>
-    <div class="node"><strong>Daemon dispatcher</strong><small><code>call_sandbox_daemon()</code> envelope</small></div>
-    <div class="node"><strong>Workspace router</strong><small>isolated handle first, then direct file fast path</small></div>
-    <div class="node"><strong>Overlay fallback</strong><small>shell, search, unbound, outside-workspace paths</small></div>
-  </div>
-</div>
+<pre class="diagram" aria-label="TaskCenter sandbox tool routing diagram">
+[agent sandbox tool call]
+        |
+        v
+[engine tool-call dispatch]
+        |
+        v
+[tools sandbox registry]
+        |
+        v
+[sandbox daemon client]
+        |
+        v
+[workspace_tool_dispatch]
+        |
+        +--&gt; [direct LayerStack/OCC fast path]
+        +--&gt; [ephemeral overlay pipeline]
+        +--&gt; [isolated workspace pipeline]
+</pre>
 <div class="edge-list" aria-label="TaskCenter sandbox tool routing branches">
   <div><b>metadata</b><span>The spawned agent receives TaskCenter launch metadata; the query loop preserves identifiers and conversation messages in each tool execution context.</span></div>
   <div><b>registry</b><span>Sandbox tools carry <code>SANDBOX_CONTEXT</code>, letting runtime preparation attach provider context and background dispatch identify sandbox-bound work.</span></div>

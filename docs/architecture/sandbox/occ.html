@@ -115,24 +115,28 @@
   data-evidence-paths="backend/src/sandbox/occ/service.py backend/src/sandbox/occ/changeset_preparation.py backend/src/sandbox/occ/commit_queue.py backend/src/sandbox/occ/commit_transaction.py backend/src/sandbox/occ/path_staging.py backend/src/sandbox/occ/maintenance.py">
 <h3>4.2 Technical Workflow <a class="anchor" href="#occ-technical-workflow">§</a></h3>
 
-<div class="diagram" aria-label="OCC prepare commit branch workflow">
-  <div class="flow-row">
-    <div class="node"><strong>Change source</strong><small>api_write, api_edit, overlay_capture, LSP apply</small></div>
-    <span>-&gt;</span>
-    <div class="node"><strong>Prepare</strong><small>normalize path, route, base hash</small></div>
-    <span>-&gt;</span>
-    <div class="node"><strong>Commit queue</strong><small>serialize publish and batch safe paths</small></div>
-    <span>-&gt;</span>
-    <div class="node"><strong>Transaction</strong><small>live manifest revalidation</small></div>
-  </div>
-  <div class="flow-row">
-    <div class="node"><strong>Accepted paths</strong><small>stage content and layer deltas</small></div>
-    <span>-&gt;</span>
-    <div class="node"><strong>Conflict branch</strong><small>rejected, dropped, or aborted statuses</small></div>
-    <span>-&gt;</span>
-    <div class="node"><strong>Publish branch</strong><small>LayerStack layer and result projection</small></div>
-  </div>
-</div>
+<pre class="diagram" aria-label="OCC prepare commit branch workflow">
+[change source]
+  api_write / api_edit / overlay capture / LSP apply
+        |
+        v
+[prepare changeset]
+  normalize path, check workspace route, record base hash
+        |
+        v
+[commit queue serializes publish]
+        |
+        v
+[transaction revalidates live manifest]
+        |
+        +--&gt; [base hash matches]
+        |       -&gt; [stage content + layer deltas]
+        |       -&gt; [LayerStack publish]
+        |       -&gt; [result projection refresh]
+        |
+        +--&gt; [base changed / unsafe path / stale manifest]
+                -&gt; [reject, drop, or abort status]
+</pre>
 
 <div class="sequence" aria-label="OCC prepare and commit lifecycle">
   <ol>

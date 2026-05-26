@@ -18,6 +18,7 @@
 | `phase-2.6-dispatcher-heavy-run-and-closers.md` | Phase 2.6 plan: closes Phase 2's overall goal — dispatcher slow-tail (slice 7), heavy-run regression (slice 8), plus four 2.5 closers (changeset_id, real isolated_workspace sampler cadence, PluginManifest.kind, async aclose). |
 | `phase-2.6-implementation-report.md` | Implementation report for Phase 2.6 — slice 7, slice 8, and closers A/C/D/F. With this report, Phase 2 is closed; Phase 3 is the only remaining V3 work. |
 | `phase-3-report-and-release-gates.md` | Consolidated performance & resource report (§1–§13), 4 release gates, default-on rollout |
+| `phase-3-implementation-report.md` | Implementation report for Phase 3 — V3 report layout, release-gate evaluator harness, default-on opt-out env gate, engine dual-disable refusal. **With this report, V3 is code-complete**; remaining work is operational (gate evidence + K=5 countdown). |
 
 ## Lineage
 
@@ -33,6 +34,19 @@
   - **P2 fixes:** added pre-merge requirement to file follow-up tracking issues; renamed `peak_rss_*` → `peak_resident_*` (multi-process futureproof); added `retained_bytes`/`retained_events`/per-lane drop counters explicitly; added Pull RPC trust model + daemon-restart epoch handling sections.
 - **V3.2 (iteration-2 polish)** — Architect re-review verdict: PROCEED; Critic re-review verdict: APPROVE (consensus reached). 3 micro-corrections applied: (a) per-`tool_name` lock semantics for dispatcher rolling-window; (b) `daemon.restart_observed` added to lane-assignment table (critical lane); (c) stale traceability-row label corrected (golden-file → schema-shape).
 - **V3.3 (split)** — single-file V3 plan reorganized into per-phase files under `docs/daemon-audit-pull-consolidation-v3/`. Content is byte-equivalent to V3.2; only the layout changed.
+
+### Phase progress
+
+| Phase | Status | Implementation report |
+|---|---|---|
+| Phase 1 — bounded daemon ring + pull/snapshot/reset_floor RPCs + frozen v1 schema | ✅ landed | (no separate report; covered by tests in `test_sandbox/test_daemon`) |
+| Phase 2 (slices 1–6) — daemon emitters + puller + normalizer + rotation | ✅ landed | [`phase-2-slice-1-report.md`](phase-2-slice-1-report.md), [`phase-2.5-implementation-report.md`](phase-2.5-implementation-report.md) |
+| Phase 2.6 — dispatcher slow-tail (slice 7) + heavy-run regression (slice 8) + closers A/C/D/F | ✅ landed | [`phase-2.6-implementation-report.md`](phase-2.6-implementation-report.md) |
+| Phase 3 — V3 report layout (§1–§13) + release-gate evaluator + default-on opt-out + dual-disable refusal | ✅ landed | [`phase-3-implementation-report.md`](phase-3-implementation-report.md) |
+| Release-gate evidence on dask-heavy live-e2e fixture | ⚠ operator hand-off | n/a (synthetic-event tests pin the evaluator math; live-fixture run is operational work) |
+| FU#1 stream-bridge retirement (K=5 clean heavy runs → flip default) | ⚠ operational | n/a |
+
+**With Phase 3's implementation report, V3 is code-complete.** Remaining work is operational: execute the 4-gate suite on the dask-heavy fixture, then start the K=5 retirement countdown for the stream-bridge.
 
 ---
 

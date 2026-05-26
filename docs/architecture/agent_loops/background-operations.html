@@ -78,18 +78,27 @@
 <section id="status-progress-and-delivery" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="backend/src/engine/background/task_supervisor.py backend/src/engine/background/history.py backend/src/message/messages.py backend/src/message/stream_events.py backend/tests/unit_test/test_engine/test_background_tasks.py backend/tests/unit_test/test_engine/test_background_unit.py backend/tests/unit_test/test_engine/test_background_terminal_latch.py">
 <h2>Status Progress and Delivery</h2>
 <p><code>BackgroundTaskSupervisor</code> owns the in-memory records for the current agent run. Each record stores the alias, tool name, clean input, task type, agent id, sandbox binding, status, final result, progress lines, and an optional progress provider.</p>
-<div class="diagram" aria-label="Background status lifecycle">
-  <div class="flow-row">
-    <div class="node"><strong>Launch record</strong><small><code>running</code>; append <code>[started: tool]</code></small></div>
-    <div class="node"><strong>Progress input</strong><small><code>append_progress()</code>, metadata callback, or <code>progress_provider</code></small></div>
-    <div class="node"><strong>Terminal latch</strong><small><code>completed</code> &gt; <code>failed</code> &gt; <code>cancelled</code> &gt; <code>running</code></small></div>
-  </div>
-  <div class="flow-row">
-    <div class="node"><strong>Done callback</strong><small>stores final result or failure status</small></div>
-    <div class="node"><strong>Cancel path</strong><small>requests cancellation without overwriting stronger terminal status</small></div>
-    <div class="node"><strong>Collector</strong><small><code>collect_completed()</code> applies <code>delivered</code> once</small></div>
-  </div>
-</div>
+<pre class="diagram" aria-label="Background status lifecycle">
+[background launch]
+        |
+        v
+[BackgroundTaskSupervisor registers task]
+        |  id/alias -&gt; status/progress/result
+        v
+[running state]
+        |  progress from callbacks, metadata, or provider
+        +------------------------------+
+        |                              |
+        v                              v
+[completed result]              [failed/cancelled]
+        |                              |
+        +--------------+---------------+
+                       v
+[collect_completed_tasks marks delivered]
+                       |
+                       v
+[provider history omits delivered background updates]
+</pre>
 <div class="edge-list">
   <div><b><code>running</code></b><span>Created at launch with the initial progress line and updated while the asyncio task is active.</span></div>
   <div><b><code>completed</code> <code>failed</code> <code>cancelled</code></b><span>Chosen by the done callback or cancel path, with the latch preserving the highest-precedence terminal outcome during races.</span></div>

@@ -124,22 +124,28 @@
   data-last-reviewed-commit="2a3e6cc7c"
   data-evidence-paths="backend/src/sandbox/overlay/capture.py backend/src/sandbox/occ/overlay_change_conversion.py backend/src/sandbox/ephemeral_workspace/pipeline.py">
 <h3>3.3 Upperdir Capture <a class="anchor" href="#overlay-capture">§</a></h3>
-<div class="diagram" aria-label="Overlay capture technical path">
-  <div class="flow-row">
-    <div class="node"><strong>Operation exits</strong><small>parent keeps overlay handle alive</small></div>
-    <span>-&gt;</span>
-    <div class="node"><strong>Write intent?</strong><small>read-only releases without capture</small></div>
-    <span>-&gt;</span>
-    <div class="node"><strong>Walk upperdir</strong><small>sorted traversal, O(changed tree)</small></div>
-  </div>
-  <div class="flow-row">
-    <div class="node"><strong>Artifact mapping</strong><small>files, whiteouts, symlinks, opaque dirs</small></div>
-    <span>-&gt;</span>
-    <div class="node"><strong>OCC conversion</strong><small>path changes become typed changes</small></div>
-    <span>-&gt;</span>
-    <div class="node"><strong>Cleanup</strong><small>publish path destroys handle afterward</small></div>
-  </div>
-</div>
+<pre class="diagram" aria-label="Overlay capture technical path">
+[ephemeral shell/tool process]
+        |
+        v
+[overlay upperdir records writes]
+        |
+        v
+[capture overlay diff]
+        |  created, modified, deleted, metadata
+        v
+[path safety + workspace filtering]
+        |
+        +--&gt; [no accepted write] -&gt; [read-only tool result]
+        |
+        +--&gt; [accepted writes]
+                |
+                v
+        [build OCC changeset]
+                |
+                v
+        [commit queue -&gt; LayerStack publish]
+</pre>
 <div class="sequence" aria-label="Overlay capture lifecycle">
   <ol>
     <li><span>The operation finishes and the parent pipeline keeps the overlay handle alive.</span></li>

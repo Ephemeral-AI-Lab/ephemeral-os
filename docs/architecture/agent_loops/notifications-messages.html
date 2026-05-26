@@ -74,18 +74,26 @@
 <section id="provider-history" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="backend/src/engine/query/request.py backend/src/engine/query/provider_history.py backend/src/engine/background/history.py backend/src/message/messages.py">
 <h2>Provider History <a class="anchor" href="#provider-history">#</a></h2>
 <p>The query loop keeps a canonical in-memory transcript, but provider calls receive a sanitized copy. <code>build_query_run_request()</code> calls <code>prepare_provider_messages()</code>, records prompt reports, decorates background-capable tool schemas, and records the initial prompt rows once for message artifacts.</p>
-<div class="diagram" aria-label="Provider message preparation">
-  <div class="flow-row">
-    <div class="node"><strong>Canonical transcript</strong><small>durable run-local messages stay unchanged</small></div>
-    <div class="node"><strong>Background compaction</strong><small><code>reduce_background_task_history()</code> keeps newest visible snapshot</small></div>
-    <div class="node"><strong>Tool-pair sanitation</strong><small><code>sanitize_tool_sequence()</code> drops malformed provider-copy pairs</small></div>
-  </div>
-  <div class="flow-row">
-    <div class="node"><strong>API serialization</strong><small><code>ConversationMessage.to_api_param()</code></small></div>
-    <div class="node"><strong>Provider blocks</strong><small>text, tool-use, tool-result; no thinking or local terminal metadata</small></div>
-    <div class="node"><strong>Artifacts</strong><small>prompt report and message recorder stay aligned to emitted rows</small></div>
-  </div>
-</div>
+<pre class="diagram" aria-label="Provider message preparation">
+[engine transcript]
+        |
+        v
+[background updates folded into history]
+        |
+        v
+[prepare_provider_messages]
+        |
+        +--&gt; [sanitize tool-call/result adjacency]
+        |       ensures provider-valid tool pairs
+        |
+        +--&gt; [preserve terminal and sandbox evidence]
+                |
+                v
+        [provider message list]
+                |
+                v
+        [API request + observable message.jsonl stream]
+</pre>
 <div class="edge-list">
   <div><b>Background snapshots</b><span>Only the latest provider-visible status for each background task is retained from <code>wait_background_tasks</code> output.</span></div>
   <div><b>Transcript safety</b><span>Malformed historical tool-use/result pairs are removed from the provider copy without mutating the durable transcript.</span></div>

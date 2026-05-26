@@ -72,6 +72,24 @@
     <div class="node"><strong>State owner</strong><small>TaskCenter attempt, helper caller, or run tracker consumes metadata</small></div>
   </div>
 </div>
+<pre class="diagram" aria-label="Terminal execution ASCII workflow">
+[agent emits submission tool call]
+        |
+        v
+[engine dispatch validates terminal-only batch]
+        |
+        v
+[execute_tool_once]
+        |
+        v
+[submission executor persists TaskCenter result]
+        |
+        v
+[terminal tool result returned to engine]
+        |
+        v
+[query loop stops and lifecycle continues]
+</pre>
 <div class="sequence" aria-label="Terminal execution sequence">
   <ol>
     <li><span><code>make_submission_tools()</code> registers planner, executor, verifier, evaluator, advisor, resolver, and explorer submission tools as one framework tool set.</span></li>
@@ -117,6 +135,24 @@
     <p><code>submit_evaluation_success</code> and <code>submit_evaluation_failure</code> call <code>AttemptOrchestrator.apply_evaluator_submission()</code>. The orchestrator and stage advancer, not the tool body, decide whether the attempt closes, retries, or advances.</p>
   </div>
 </div>
+<pre class="diagram" aria-label="Executor handoff ASCII workflow">
+[generator needs delegated work]
+        |
+        v
+[submit_execution_handoff executor]
+        |
+        v
+[GoalStarter.start child task origin]
+        |
+        v
+[parent generator attempt waits on child goal]
+        |
+        v
+[child terminal closure report]
+        |
+        v
+[parent AttemptOrchestrator applies report]
+</pre>
 <div class="sequence" aria-label="Executor handoff sequence">
   <ol>
     <li><span>The executor submits a nonblank delegated <code>goal</code> through <code>submit_execution_handoff</code>.</span></li>
