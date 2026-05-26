@@ -4,12 +4,13 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from agents import AgentKind, load_agents_dir, load_agents_tree
+from agents import AgentKind, AgentType, load_agents_dir, load_agents_tree
 
 
 BACKEND_ROOT = Path(__file__).resolve().parents[3]
 AGENTS_ROOT = BACKEND_ROOT / "src" / "agents"
 MAIN_PROFILE_DIR = AGENTS_ROOT / "profile" / "main"
+SUBAGENT_PROFILE_DIR = AGENTS_ROOT / "profile" / "subagent"
 
 
 def _load_named(directory: Path, name: str):
@@ -44,6 +45,7 @@ def test_recursive_agent_loader_finds_harness_profiles() -> None:
         "evaluator",
     } <= set(by_name)
     assert by_name["executor"].agent_kind == AgentKind.EXECUTOR
+    assert by_name["executor"].agent_type == AgentType.AGENT
     assert by_name["executor"].terminals == [
         "submit_execution_handoff",
         "submit_execution_success",
@@ -56,3 +58,9 @@ def test_executor_profile_uses_goal_solution_terminal() -> None:
 
     assert "submit_execution_handoff" in executor.terminals
     assert "ask_resolver" not in executor.allowed_tools
+
+
+def test_subagent_profile_uses_subagent_agent_type() -> None:
+    explorer = _load_named(SUBAGENT_PROFILE_DIR, "explorer")
+
+    assert explorer.agent_type == AgentType.SUBAGENT

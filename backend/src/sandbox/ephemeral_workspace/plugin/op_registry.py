@@ -27,7 +27,7 @@ from __future__ import annotations
 
 import inspect
 import re
-from collections.abc import Awaitable, Callable, Iterable
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from typing import Any
 
@@ -202,7 +202,10 @@ def flush_plugin_registrations(
     if not trusted_caller:
         _validate_plugin_caller(plugin_name, "flush_plugin_registrations")
     registered: list[str] = []
-    for entry in _filter_pending(plugin_name):
+    for entry in [
+        entry for entry in _PENDING.values()
+        if entry.plugin_name == plugin_name
+    ]:
         public_op = f"plugin.{entry.plugin_name}.{entry.op_name}"
         if context_factory is None:
             handler: DispatcherHandler = entry.handler
@@ -258,14 +261,6 @@ def _wrap_with_context(
         return await registered_handler(args, ctx)
 
     return dispatcher_handler
-
-
-def _filter_pending(plugin_name: str) -> Iterable[_PendingRegistration]:
-    return [
-        entry
-        for entry in _PENDING.values()
-        if entry.plugin_name == plugin_name
-    ]
 
 
 def _validate_plugin_caller(plugin_name: str, operation: str) -> None:

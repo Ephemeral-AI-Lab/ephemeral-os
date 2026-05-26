@@ -24,10 +24,10 @@
   <ol>
     <li><a href="index.html" data-doc-module="agent-loops" data-doc-section="index" data-doc-page="index.html">Overview</a></li>
     <li><a href="main-loop.html" data-doc-module="agent-loops" data-doc-section="main-loop" data-doc-page="main-loop.html">Main Loop</a></li>
-    <li><a href="model-provider.html" data-doc-module="agent-loops" data-doc-section="model-provider" data-doc-page="model-provider.html">Model Provider Bridge</a></li>
+    <li><a href="model-provider.html" data-doc-module="agent-loops" data-doc-section="model-provider" data-doc-page="model-provider.html">Model Provider Runtime</a></li>
     <li><a href="background-operations.html" data-doc-module="agent-loops" data-doc-section="background-operations" data-doc-page="background-operations.html">Background Operations</a></li>
-    <li><a href="prompt-context.html" data-doc-module="agent-loops" data-doc-section="prompt-context" data-doc-page="prompt-context.html">Prompt and Context</a></li>
-    <li><a href="provider-sandbox-bridge.html" data-doc-module="agent-loops" data-doc-section="provider-sandbox-bridge" data-doc-page="provider-sandbox-bridge.html">Provider Sandbox Bridge</a></li>
+    <li><a href="prompt-context.html" data-doc-module="agent-loops" data-doc-section="prompt-context" data-doc-page="prompt-context.html">Prompt Assembly</a></li>
+    <li><a href="provider-sandbox-bridge.html" data-doc-module="agent-loops" data-doc-section="provider-sandbox-bridge" data-doc-page="provider-sandbox-bridge.html">Sandbox Tool Dispatch Path</a></li>
     <li><a href="notifications-messages.html" data-doc-module="agent-loops" data-doc-section="notifications-messages" data-doc-page="notifications-messages.html">Notifications and Messages</a></li>
     <li><a href="maintenance.html" data-doc-module="agent-loops" data-doc-section="maintenance" data-doc-page="maintenance.html" class="active">Maintenance</a></li>
   </ol>
@@ -58,7 +58,7 @@
   <div><b>coordinator/reducer</b><span>Owned scope, taxonomy, graph reduction, index, shared assets, maintenance page, validation, and final integration.</span></div>
   <div><b>graph explorer: engine/message/notification</b><span>Read-only shard mapped the provider turn loop, terminal stops, background dispatch, notification runtime, message model, output artifacts, tests, and stale retry claims.</span></div>
   <div><b>graph explorer: provider/sandbox</b><span>Read-only shard mapped provider selection, provider protocol and registry, tool wrappers, public sandbox API, daemon transport, workspace routing, OCC/overlay publication, background invocation ids, tests, and stale shell-batch claims.</span></div>
-  <div><b>graph explorer: prompt/context</b><span>Read-only shard mapped runtime prompt assembly, profile frontmatter, TaskCenter context engine recipes, renderer behavior, task guidance, skill rows, terminal filtering, retry/deferred context, tests, and stale TaskCenter HTML claims.</span></div>
+  <div><b>graph explorer: prompt</b><span>Read-only shard mapped runtime prompt assembly, profile frontmatter, TaskCenter context engine recipes, renderer behavior, task guidance, skill rows, terminal filtering, retry/deferred context, tests, and stale TaskCenter HTML claims.</span></div>
   <div><b>wiki builder lanes</b><span>Write lanes were assigned non-overlapping page sets under <code>docs/architecture/agent_loops</code>; shared navigation/search assets remained serial coordinator-owned.</span></div>
 </div>
 </section>
@@ -76,7 +76,7 @@
         |  every control-flow sequence has a source-backed diagram
         v
 [source evidence pass]
-        |  engine/query, tool_call, providers, sandbox bridge
+        |  engine/query, tool_call, providers, sandbox dispatch path
         v
 [stale-claim scan]
         |  paths, symbols, and line-sensitive anchors
@@ -114,7 +114,7 @@
     <p>Refresh when profile frontmatter fields, terminal filtering, context recipes, renderer tag/compression policy, task guidance, skills, or TaskCenter retry/deferred lifecycle changes.</p>
   </div>
   <div class="evidence-card">
-    <h4>Provider Bridge</h4>
+    <h4>Provider Runtime</h4>
     <p>Refresh when provider bootstrap, registry fallback, raw exec, daemon transport, workspace routing order, OCC publication, overlay capture, or isolated pipeline gates change.</p>
   </div>
   <div class="evidence-card">
@@ -132,10 +132,10 @@
 <h2>Component Gap Sweep <a class="anchor" href="#component-gap-sweep">#</a></h2>
 <div class="summary">
   <ul>
-    <li><code>backend/src/providers</code> is now covered by <a class="wiki-link" href="model-provider.html">Model Provider Bridge</a>. It was the main missing source module from the original engine/notification/message/provider/prompt scope.</li>
+    <li><code>backend/src/providers</code> is now covered by <a class="wiki-link" href="model-provider.html">Model Provider Runtime</a>. It was the main missing source module from the original engine/notification/message/provider/prompt scope.</li>
     <li><code>backend/src/engine/audit</code>, <code>AgentRunTracker</code>, and <code>PromptReportRecorder</code> are now covered by <a class="wiki-link" href="notifications-messages.html#observability-persistence">Observability And Persistence</a>.</li>
     <li><code>backend/src/prompt/environment.py</code> is now called out in <a class="wiki-link" href="prompt-context.html#runtime-and-profiles">Runtime And Profiles</a> as an exported helper that current runtime prompt assembly does not inject by default.</li>
-    <li><code>backend/src/sandbox/provider</code> remains covered separately by <a class="wiki-link" href="provider-sandbox-bridge.html">Provider Sandbox Bridge</a> to avoid mixing model-provider and sandbox-provider ownership.</li>
+    <li><code>backend/src/sandbox/provider</code> remains covered separately by <a class="wiki-link" href="provider-sandbox-bridge.html">Sandbox Tool Dispatch Path</a> to avoid mixing model-provider and sandbox-provider ownership.</li>
   </ul>
 </div>
 </section>
@@ -158,8 +158,8 @@
 <h2>Change Log <a class="anchor" href="#change-log">#</a></h2>
 <div class="summary">
   <ul>
-    <li><span><strong>2026-05-26.</strong> Created the Agent Loops architecture module from three graph-explorer shards plus parallel write lanes, covering engine run lifecycle, background operations, prompt/context assembly, provider/sandbox bridge, notifications, messages, stale claims, and validation rules.</span></li>
-    <li><span><strong>2026-05-26.</strong> Added the model-provider bridge for <code>backend/src/providers</code> and filled the observability/persistence and prompt-environment gaps found during the component sweep.</span></li>
+    <li><span><strong>2026-05-26.</strong> Created the Agent Loops architecture module from three graph-explorer shards plus parallel write lanes, covering engine run lifecycle, background operations, prompt assembly, provider/sandbox dispatch path, notifications, messages, stale claims, and validation rules.</span></li>
+    <li><span><strong>2026-05-26.</strong> Added the model-provider runtime for <code>backend/src/providers</code> and filled the observability/persistence and prompt-environment gaps found during the component sweep.</span></li>
   </ul>
 </div>
 </section>

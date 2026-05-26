@@ -24,7 +24,11 @@ from sandbox._shared.tool_primitives.cancellation import (
 )
 from sandbox.overlay.handle import OverlayHandle
 from sandbox.overlay.namespace_entrypoint import WorkspaceMountMode
-from sandbox.overlay.subprocess_runner import kill_process_group
+from sandbox.overlay.subprocess_runner import (
+    CANCEL_POLL_INTERVAL_S,
+    CANCEL_SIGKILL_GRACE_S,
+    kill_process_group,
+)
 
 TOOL_CALL_COMMAND_POLICY = CommandExecPolicy(
     host_env_keys=frozenset(
@@ -259,8 +263,8 @@ async def _run_namespace_entrypoint_async(
             )
         except subprocess.TimeoutExpired:
             kill_process_group(proc.pid, signal.SIGKILL)
-            with contextlib.suppress(asyncio.TimeoutError):
-                await asyncio.wait_for(proc.wait(), timeout=2.0)
+            with contextlib.suppress(asyncio.TimeoutError, TimeoutError):
+                await asyncio.wait_for(proc.wait(), timeout=CANCEL_SIGKILL_GRACE_S)
             raise
         finally:
             if proc.returncode is None:
@@ -277,7 +281,7 @@ async def _wait_for_process_with_cancel_async(
     if cancel_event is None:
         try:
             return int(await asyncio.wait_for(proc.wait(), timeout=timeout_seconds))
-        except asyncio.TimeoutError as exc:
+        except (asyncio.TimeoutError, TimeoutError) as exc:
             raise subprocess.TimeoutExpired(command, timeout_seconds) from exc
 
     loop = asyncio.get_running_loop()
@@ -286,17 +290,25 @@ async def _wait_for_process_with_cancel_async(
         if cancel_event.is_set():
             kill_process_group(proc.pid, signal.SIGTERM)
             try:
-                return int(await asyncio.wait_for(proc.wait(), timeout=2.0))
-            except asyncio.TimeoutError:
+                return int(
+                    await asyncio.wait_for(
+                        proc.wait(), timeout=CANCEL_SIGKILL_GRACE_S
+                    )
+                )
+            except (asyncio.TimeoutError, TimeoutError):
                 kill_process_group(proc.pid, signal.SIGKILL)
-                with contextlib.suppress(asyncio.TimeoutError):
-                    return int(await asyncio.wait_for(proc.wait(), timeout=2.0))
+                with contextlib.suppress(asyncio.TimeoutError, TimeoutError):
+                    return int(
+                        await asyncio.wait_for(
+                            proc.wait(), timeout=CANCEL_SIGKILL_GRACE_S
+                        )
+                    )
                 return -int(signal.SIGKILL)
         if proc.returncode is not None:
             return int(proc.returncode)
         if deadline is not None and loop.time() > deadline:
             raise subprocess.TimeoutExpired(command, timeout_seconds)
-        await asyncio.sleep(0.1)
+        await asyncio.sleep(CANCEL_POLL_INTERVAL_S)
 
 
 def detect_private_mount_namespace() -> bool:

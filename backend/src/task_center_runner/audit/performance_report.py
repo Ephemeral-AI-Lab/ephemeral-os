@@ -27,7 +27,15 @@ from pathlib import Path
 from statistics import median
 from typing import Any
 
+from task_center_runner.audit.daemon_event_normalizer import collect_forensic_deltas
 from task_center_runner.audit.io import atomic_write_pretty_json, atomic_write_text
+from task_center_runner.audit.release_gates import (
+    evaluate_artifact_bound_gate,
+    evaluate_audit_overhead_gate,
+    evaluate_drop_free_pull_gate,
+    evaluate_isolated_workspace_gate,
+    summarize_isolated_workspace_handles,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -67,7 +75,6 @@ _OVERHEAD_GATE_RUNNER_CPU_DELTA_PCT = 0.5
 _OVERHEAD_GATE_SANDBOX_DISK_DELTA_BYTES = 0
 _BUFFER_PRESSURE_WARNING = 0.8
 _UPPERDIR_FRACTION_WARNING = 0.8
-_FLOOR_ESCALATED_DEFAULT_MS = 100  # daemon_pull.DEFAULT_FLOOR_MS
 
 # Legacy v2 family mapping — kept so the back-compat ``sandbox.families``
 # block continues to populate for dashboards that still read it.
@@ -145,7 +152,10 @@ def build_performance_report(
         overhead_metadata=overhead_metadata,
         artifact_inventory=artifact_inventory,
     )
-    forensic_deltas = _collect_forensic_deltas(rows)
+    # Phase 3 deferral D15 — opt-in forensic-raw drift surfacer. The helper
+    # lives in the normalizer module so the forensic-raw reader stays inside
+    # the boundary enforced by ``test_daemon_event_writer_module_boundary``.
+    forensic_deltas = collect_forensic_deltas(rows)
     if forensic_deltas:
         sections["forensic_deltas"] = forensic_deltas
     report: dict[str, Any] = {
@@ -258,6 +268,7 @@ def _build_v3_sections(
         daemon_audit_puller_stats, indexed
     )
     overhead = _section_overhead(
+        rows,
         overhead_metadata,
         daemon_audit_pull,
         artifact_inventory=artifact_inventory,
@@ -342,7 +353,7 @@ def _section_summary(
         )
     )
     durations = [
-        _tool_call_total_ms(_payload_section(row, "tool_call"))
+        _tool_call_total_ms(_promoted_payload_section(row, "tool_call"))
         for row in tool_finished
     ]
     duration_total_ms = float(sum(d or 0.0 for d in durations))
@@ -361,7 +372,7 @@ def _section_summary(
     pressure_events = indexed.get("daemon.audit_buffer_pressure", [])
     max_buffer_pressure = 0.0
     for event_row in pressure_events:
-        daemon = _payload_section(event_row, "daemon")
+        daemon = _promoted_payload_section(event_row, "daemon")
         if not daemon:
             continue
         try:
@@ -408,7 +419,7 @@ def _section_per_tool_timing(
     """
     rows: dict[tuple[str, str], dict[str, Any]] = {}
     for event_row in indexed.get("tool_call.finished", []):
-        section = _payload_section(event_row, "tool_call")
+        section = _promoted_payload_section(event_row, "tool_call")
         if not section:
             continue
         tool_name = str(section.get("tool_name") or "")
@@ -469,18 +480,23 @@ def _section_per_tool_phase_breakdown(
     )
     overall_total: dict[tuple[str, str], float] = defaultdict(float)
     for event_row in finished:
-        section = _payload_section(event_row, "tool_call")
+        section = _promoted_payload_section(event_row, "tool_call")
         if not section:
             continue
         tool_name = str(section.get("tool_name") or "")
         workspace_mode = str(section.get("workspace_mode") or "default")
         key = (tool_name, workspace_mode)
         rollup = _as_mapping(section.get("phase_totals_rollup"))
+        row_phase_total = 0.0
         for phase in _PHASE_ORDER:
             value = rollup.get(f"{phase}_ms")
             if isinstance(value, (int, float)):
                 phase_totals[key][phase] += float(value)
-                overall_total[key] += float(value)
+                row_phase_total += float(value)
+        total_ms = _tool_call_total_ms(section)
+        overall_total[key] += (
+            float(total_ms) if total_ms is not None else row_phase_total
+        )
     ranked = sorted(
         overall_total.items(), key=lambda kv: kv[1], reverse=True
     )[:_PHASE_BREAKDOWN_TOP_N]
@@ -521,7 +537,7 @@ def _section_background_tool_calls(
 
     rows_by_task: dict[str, dict[str, Any]] = {}
     for event_row in started:
-        section = _payload_section(event_row, "background_tool")
+        section = _promoted_payload_section(event_row, "background_tool")
         task_id = str(section.get("background_task_id") or "")
         if not task_id:
             continue
@@ -543,7 +559,7 @@ def _section_background_tool_calls(
             },
         )
     for event_row in terminal:
-        section = _payload_section(event_row, "background_tool")
+        section = _promoted_payload_section(event_row, "background_tool")
         task_id = str(section.get("background_task_id") or "")
         if not task_id:
             continue
@@ -566,7 +582,7 @@ def _section_background_tool_calls(
         row["tool_name"] = row["tool_name"] or section.get("tool_name") or ""
         row["task_kind"] = row["task_kind"] or section.get("task_kind") or ""
     for event_row in delivered:
-        section = _payload_section(event_row, "background_tool")
+        section = _promoted_payload_section(event_row, "background_tool")
         task_id = str(section.get("background_task_id") or "")
         if not task_id:
             continue
@@ -582,7 +598,7 @@ def _section_background_tool_calls(
 
     heartbeat_by_task: Counter[str] = Counter()
     for event_row in heartbeats:
-        section = _payload_section(event_row, "background_tool")
+        section = _promoted_payload_section(event_row, "background_tool")
         task_id = str(section.get("background_task_id") or "")
         if task_id:
             heartbeat_by_task[task_id] += 1
@@ -624,7 +640,7 @@ def _section_plugin_activity(
         indexed.get("plugin.tool_invoked", [])
         + indexed.get("plugin.tool_completed", [])
     ):
-        section = _payload_section(event_row, "plugin")
+        section = _promoted_payload_section(event_row, "plugin")
         plugin_id = str(section.get("plugin_id") or "")
         plugin_kind = str(section.get("plugin_kind") or "custom")
         if plugin_kind not in _ALLOWED_PLUGIN_KINDS:
@@ -647,7 +663,7 @@ def _section_plugin_activity(
         if isinstance(duration_ms, (int, float)):
             bucket["_duration_samples"].append(float(duration_ms))
     for event_row in indexed.get("plugin.error", []):
-        section = _payload_section(event_row, "plugin")
+        section = _promoted_payload_section(event_row, "plugin")
         plugin_id = str(section.get("plugin_id") or "")
         plugin_kind = str(section.get("plugin_kind") or "custom")
         if plugin_kind not in _ALLOWED_PLUGIN_KINDS:
@@ -665,7 +681,7 @@ def _section_plugin_activity(
         )
         bucket["errors"] += 1
     for event_row in indexed.get("plugin.peak_resident_sampled", []):
-        section = _payload_section(event_row, "plugin")
+        section = _promoted_payload_section(event_row, "plugin")
         plugin_id = str(section.get("plugin_id") or "")
         plugin_kind = str(section.get("plugin_kind") or "custom")
         if plugin_kind not in _ALLOWED_PLUGIN_KINDS:
@@ -740,14 +756,14 @@ def _section_overlay_workspace(
     )
     ephemeral_changed_paths = sum(
         int(
-            _payload_section(row, "overlay_workspace").get("changed_path_count")
+            _promoted_payload_section(row, "overlay_workspace").get("changed_path_count")
             or 0
         )
         for row in indexed.get("overlay_workspace.published", [])
     )
     isolated_changed_paths = sum(
         int(
-            _payload_section(row, "isolated_workspace").get("changed_path_count")
+            _promoted_payload_section(row, "isolated_workspace").get("changed_path_count")
             or 0
         )
         for row in indexed.get("isolated_workspace.exited", [])
@@ -811,7 +827,7 @@ def _section_layer_stack(
         indexed.get("layer_stack.lease_acquired", [])
         + indexed.get("layer_stack.snapshot_prepared", [])
     ):
-        section = _payload_section(event_row, "layer_stack")
+        section = _promoted_payload_section(event_row, "layer_stack")
         depth = section.get("layer_count")
         if isinstance(depth, (int, float)):
             manifest_depth.append(int(depth))
@@ -832,7 +848,7 @@ def _section_layer_stack(
             "failed": len(indexed.get("layer_stack.squash_failed", [])),
             "input_layers": [
                 int(
-                    _payload_section(row, "layer_stack").get(
+                    _promoted_payload_section(row, "layer_stack").get(
                         "squash_input_layers"
                     )
                     or 0
@@ -841,7 +857,7 @@ def _section_layer_stack(
             ],
             "result_layers": [
                 int(
-                    _payload_section(row, "layer_stack").get(
+                    _promoted_payload_section(row, "layer_stack").get(
                         "squash_result_layers"
                     )
                     or 0
@@ -863,7 +879,7 @@ def _section_occ(
     conflict_kinds: Counter[str] = Counter()
     conflict_paths: Counter[str] = Counter()
     for event_row in indexed.get("occ.conflict_rejected", []):
-        section = _payload_section(event_row, "occ")
+        section = _promoted_payload_section(event_row, "occ")
         kind = str(section.get("conflict_kind") or "unknown")
         conflict_kinds[kind] += 1
         path = section.get("conflict_path")
@@ -906,9 +922,13 @@ def _section_occ(
 def _section_isolated_workspace(
     indexed: Mapping[str, list[Mapping[str, Any]]],
 ) -> dict[str, Any]:
-    handles_opened = len(indexed.get("isolated_workspace.entered", []))
-    handles_closed = len(indexed.get("isolated_workspace.exited", []))
-    handles_evicted = len(indexed.get("isolated_workspace.evicted", []))
+    handle_summary = summarize_isolated_workspace_handles(
+        [
+            *indexed.get("isolated_workspace.entered", []),
+            *indexed.get("isolated_workspace.exited", []),
+            *indexed.get("isolated_workspace.evicted", []),
+        ]
+    )
     orphan_holder = 0
     orphan_cgroup = 0
     orphan_scratch = 0
@@ -916,19 +936,19 @@ def _section_isolated_workspace(
     upperdir_samples: list[float] = []
     upperdir_cap_max = 0
     for event_row in indexed.get("isolated_workspace.exited", []):
-        section = _payload_section(event_row, "isolated_workspace")
+        section = _promoted_payload_section(event_row, "isolated_workspace")
         orphan_holder += int(section.get("orphan_holder_count") or 0)
         orphan_cgroup += int(section.get("orphan_cgroup_count") or 0)
         orphan_scratch += int(section.get("orphan_scratch_count") or 0)
         if bool(section.get("holder_pid_alive")):
             holder_pid_alive_after_exit += 1
     for event_row in indexed.get("isolated_workspace.orphan_check_completed", []):
-        section = _payload_section(event_row, "isolated_workspace")
+        section = _promoted_payload_section(event_row, "isolated_workspace")
         orphan_holder += int(section.get("orphan_holder_count") or 0)
         orphan_cgroup += int(section.get("orphan_cgroup_count") or 0)
         orphan_scratch += int(section.get("orphan_scratch_count") or 0)
     for event_row in indexed.get("isolated_workspace.sampled", []):
-        section = _payload_section(event_row, "isolated_workspace")
+        section = _promoted_payload_section(event_row, "isolated_workspace")
         upperdir = section.get("upperdir_bytes")
         if isinstance(upperdir, (int, float)):
             upperdir_samples.append(float(upperdir))
@@ -937,10 +957,16 @@ def _section_isolated_workspace(
             upperdir_cap_max = int(cap)
     return {
         "handles": {
-            "opened": handles_opened,
-            "closed": handles_closed,
-            "evicted": handles_evicted,
-            "open_handle_count": handles_opened - handles_closed - handles_evicted,
+            "opened": handle_summary["opened"],
+            "closed": handle_summary["closed"],
+            "evicted": handle_summary["evicted"],
+            "open_handle_count": handle_summary["open_handle_count"],
+            "terminal_without_enter_count": handle_summary[
+                "terminal_without_enter_count"
+            ],
+            "missing_handle_event_count": handle_summary[
+                "missing_handle_event_count"
+            ],
         },
         "upperdir_bytes": _percentile_record(upperdir_samples),
         # Phase 3 deferral D7 — max ``upperdir_cap_bytes`` across sampled
@@ -972,7 +998,7 @@ def _section_os_resource(
     io_read_ops_samples: list[int] = []
     io_write_ops_samples: list[int] = []
     for event_row in indexed.get("os_resource.sampled", []):
-        section = _payload_section(event_row, "os_resource")
+        section = _promoted_payload_section(event_row, "os_resource")
         rss = section.get("rss_bytes")
         if isinstance(rss, (int, float)):
             rss_samples.append(int(rss))
@@ -1072,6 +1098,7 @@ def _section_daemon_audit_pull(
 
 
 def _section_overhead(
+    rows: Sequence[Mapping[str, Any]],
     overhead_metadata: Mapping[str, Any] | None,
     daemon_audit_pull: Mapping[str, Any],
     artifact_inventory: Mapping[str, Any] | None = None,
@@ -1147,8 +1174,6 @@ def _section_overhead(
     # four V3 release gates surface in the verdict block. When
     # ``artifact_inventory`` is None the verdict reflects the absence by
     # reporting passed=True (no JSONL → 0 bytes ≤ cap is trivially OK).
-    from task_center_runner.audit.release_gates import evaluate_artifact_bound_gate
-
     inventory = artifact_inventory or {
         "live_bytes": 0,
         "rotated_bytes": 0,
@@ -1159,9 +1184,27 @@ def _section_overhead(
         rotated_bytes=int(inventory.get("rotated_bytes") or 0),
         rotated_file_count=int(inventory.get("rotated_file_count") or 0),
     )
+    overhead_verdict = evaluate_audit_overhead_gate(overhead_metadata)
+    drop_free_input = (
+        daemon_audit_pull if daemon_audit_pull.get("puller_attached") else None
+    )
+    drop_free_verdict = evaluate_drop_free_pull_gate(drop_free_input)
+    isolated_workspace_verdict = evaluate_isolated_workspace_gate(rows)
     gate_verdict = {
+        # One Boolean per V3 release gate. The component Booleans below remain
+        # for backwards-compatible drill-down in tests and dashboards.
+        "overhead_pass": bool(overhead_verdict.get("passed")),
+        "isolated_workspace_pass": bool(
+            isolated_workspace_verdict.get("passed")
+        ),
+        "drop_free_pull_pass": bool(drop_free_verdict.get("passed")),
+        "artifact_bound_pass": bool(artifact_verdict.get("passed")),
         "latency_p95_delta_pass": (
             p95_delta_ci_upper <= _OVERHEAD_GATE_LATENCY_DELTA_MS
+        ),
+        "daemon_rss_delta_pass": (
+            float(overhead_verdict.get("daemon_rss_delta_mib") or 0.0)
+            <= _OVERHEAD_GATE_DAEMON_RSS_DELTA_MIB
         ),
         "runner_cpu_pass": runner_cpu <= _OVERHEAD_GATE_RUNNER_CPU_DELTA_PCT,
         "daemon_cpu_pass": daemon_cpu < 1.0,
@@ -1169,7 +1212,6 @@ def _section_overhead(
             overhead_metadata.get("sandbox_disk_delta_bytes") or 0
         )
         == 0,
-        "artifact_bound_pass": bool(artifact_verdict.get("passed")),
         "puller_attached": bool(daemon_audit_pull.get("puller_attached")),
     }
     return {
@@ -1186,6 +1228,9 @@ def _section_overhead(
         "gate": {
             "thresholds": gate_thresholds,
             "verdict": gate_verdict,
+            "overhead": overhead_verdict,
+            "drop_free_pull": drop_free_verdict,
+            "isolated_workspace": isolated_workspace_verdict,
             "artifact_bound": artifact_verdict,
         },
     }
@@ -1306,6 +1351,22 @@ def _collect_warnings(
                 "detail": "isolated_workspace exit observed holder_pid_alive=true",
             }
         )
+    handles = _as_mapping(isolated_workspace.get("handles"))
+    open_handles = int(handles.get("open_handle_count") or 0)
+    unmatched_terminal = int(handles.get("terminal_without_enter_count") or 0)
+    missing_handle_id = int(handles.get("missing_handle_event_count") or 0)
+    if open_handles or unmatched_terminal or missing_handle_id:
+        warnings.append(
+            {
+                "kind": "isolated_workspace.gate_failure",
+                "detail": (
+                    "isolated_workspace handle lifecycle mismatch: "
+                    f"open={open_handles} "
+                    f"terminal_without_enter={unmatched_terminal} "
+                    f"missing_handle_id={missing_handle_id}"
+                ),
+            }
+        )
     if int(layer_stack.get("squashes", {}).get("failed") or 0) > 0:
         warnings.append(
             {
@@ -1319,7 +1380,7 @@ def _collect_warnings(
                 "kind": "audit.floor_escalated",
                 "detail": (
                     f"pull floor escalated {daemon_audit_pull['floor_raises']} "
-                    f"times above default {_FLOOR_ESCALATED_DEFAULT_MS} ms"
+                    "times under sustained buffer pressure"
                 ),
             }
         )
@@ -1745,11 +1806,15 @@ def _render_section_12_overhead(
         f"n_paired_runs={int(methodology.get('n_paired_runs') or 0)} "
         f"warmup_s={float(methodology.get('warmup_s') or 0.0):.1f} "
         f"bootstrap_resamples={int(methodology.get('bootstrap_resamples') or 0)}",
-        f"- gate verdict: latency_p95_delta_pass={bool(verdict.get('latency_p95_delta_pass'))} "
+        f"- release gates: overhead_pass={bool(verdict.get('overhead_pass'))} "
+        f"isolated_workspace_pass={bool(verdict.get('isolated_workspace_pass'))} "
+        f"drop_free_pull_pass={bool(verdict.get('drop_free_pull_pass'))} "
+        f"artifact_bound_pass={bool(verdict.get('artifact_bound_pass'))}",
+        f"- overhead components: latency_p95_delta_pass={bool(verdict.get('latency_p95_delta_pass'))} "
+        f"daemon_rss_delta_pass={bool(verdict.get('daemon_rss_delta_pass'))} "
         f"runner_cpu_pass={bool(verdict.get('runner_cpu_pass'))} "
         f"daemon_cpu_pass={bool(verdict.get('daemon_cpu_pass'))} "
-        f"sandbox_disk_pass={bool(verdict.get('sandbox_disk_pass'))} "
-        f"artifact_bound_pass={bool(verdict.get('artifact_bound_pass'))}",
+        f"sandbox_disk_pass={bool(verdict.get('sandbox_disk_pass'))}",
         "",
     ]
 
@@ -1798,25 +1863,8 @@ def _render_section_13_warnings(
     return lines
 
 
-def _collect_forensic_deltas(
-    rows: Sequence[Mapping[str, Any]],
-) -> dict[str, Any] | None:
-    """Phase 3 deferral D15 — opt-in forensic-raw delta surfacer.
-
-    Delegates to the normalizer module so the daemon-event boundary stays
-    enforced (only :mod:`daemon_event_normalizer` may read the forensic
-    raw field). Returns ``None`` unless
-    ``EOS_AUDIT_FORENSIC_RAW_ENABLED=true``.
-    """
-    from task_center_runner.audit.daemon_event_normalizer import (
-        collect_forensic_deltas,
-    )
-
-    return collect_forensic_deltas(rows)
-
-
 # ---------------------------------------------------------------------------
-# Indexing + payload helpers — these are the ONLY readers of
+# Indexing + promoted-payload helpers — these are the ONLY readers of
 # ``payload["<section>"]``. They never touch ``payload.daemon_event``.
 # ---------------------------------------------------------------------------
 
@@ -1832,9 +1880,10 @@ def _index_rows_by_event_type(
     return index
 
 
-def _payload_section(
+def _promoted_payload_section(
     row: Mapping[str, Any], section_key: str
 ) -> Mapping[str, Any]:
+    """Return the authoritative ``payload.<section>`` view for a row."""
     payload = row.get("payload")
     if not isinstance(payload, Mapping):
         return {}
@@ -1849,7 +1898,7 @@ def _samples(
 ) -> list[float]:
     out: list[float] = []
     for row in rows:
-        value = _payload_section(row, section_key).get(field_name)
+        value = _promoted_payload_section(row, section_key).get(field_name)
         if isinstance(value, (int, float)):
             out.append(float(value))
     return out
@@ -1870,7 +1919,7 @@ def _peak_int(
     for row in rows:
         payload = row.get("payload") if isinstance(row.get("payload"), Mapping) else {}
         if section_key is not None:
-            value = _payload_section(row, section_key).get(field_name)
+            value = _promoted_payload_section(row, section_key).get(field_name)
         else:
             value = None
             for section_value in payload.values():
@@ -1927,8 +1976,8 @@ def _ensure_percentile_record(value: object) -> dict[str, float | int]:
 def _format_phase_cell(percentiles: Mapping[str, Any]) -> str:
     """`"p50/p95/p99"` ms, or `"—"` when no samples were recorded.
 
-    The dash here is by-design: per FU#5, the framework does not yet
-    record ``mount`` / ``publish`` from overlay/OCC.
+    The dash here is by-design for any phase missing from the current
+    event cohort; populated phases render as percentile triples.
     """
     count = int(percentiles.get("count") or 0)
     if count == 0:

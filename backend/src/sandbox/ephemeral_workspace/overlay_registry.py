@@ -88,7 +88,7 @@ async def stop_sandbox_overlay(
     cache_entries = [
         (key, pipeline)
         for key, pipeline in list(_PIPELINES.items())
-        if _cache_key_root(key) == key_root.as_posix()
+        if key.partition("\0")[0] == key_root.as_posix()
     ]
     for key, _pipeline in cache_entries:
         _PIPELINES.pop(key, None)
@@ -127,24 +127,15 @@ def _workspace_unmount_candidates(
     binding = read_workspace_binding(layer_stack_root)
     if binding is not None:
         candidates.append(Path(binding.workspace_root))
-    return _dedupe_paths(candidates)
-
-
-def _dedupe_paths(paths: list[Path]) -> list[Path]:
     seen: set[str] = set()
     result: list[Path] = []
-    for path in paths:
-        key = path.as_posix()
+    for candidate in candidates:
+        key = candidate.as_posix()
         if key in seen:
             continue
         seen.add(key)
-        result.append(path)
+        result.append(candidate)
     return result
-
-
-def _cache_key_root(key: str) -> str:
-    root, _, _workspace = key.partition("\0")
-    return root
 
 
 def _reap_stale_runtime_overlay_dirs_once() -> None:

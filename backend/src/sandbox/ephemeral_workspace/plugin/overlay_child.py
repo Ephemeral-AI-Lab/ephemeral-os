@@ -21,8 +21,8 @@ from sandbox.overlay.kernel_mount import (
 from sandbox.layer_stack.workspace_binding import require_workspace_binding
 from sandbox.ephemeral_workspace.plugin.op_context import (
     PluginOpContext,
-    caller_from_audit_payload,
-    plugin_intent_from_payload,
+    plugin_intent_from_envelope,
+    sandbox_caller_from_plugin_envelope,
 )
 from sandbox.ephemeral_workspace.plugin.op_registry import (
     clear_plugin_registrations,
@@ -46,15 +46,15 @@ def main(argv: list[str] | None = None) -> int:
 
 
 async def _run(payload: dict[str, Any]) -> int:
-    request = _PluginOverlayRequest(payload)
-    _validate_binding(request)
+    invocation = _PluginOverlayInvocation(payload)
+    _validate_binding(invocation)
     mount_inputs: MountInputs | None = None
     try:
         mount_inputs = validate_mount_inputs(
-            workspace_root=request.workspace_root,
-            layer_paths=request.layer_paths,
-            upperdir=request.upperdir,
-            workdir=request.workdir,
+            workspace_root=invocation.workspace_root,
+            layer_paths=invocation.layer_paths,
+            upperdir=invocation.upperdir,
+            workdir=invocation.workdir,
         )
         mount_overlay(
             workspace_root=mount_inputs.workspace_root,
@@ -62,8 +62,8 @@ async def _run(payload: dict[str, Any]) -> int:
             upperdir=mount_inputs.upperdir,
             workdir=mount_inputs.workdir,
         )
-        result = await _invoke_plugin_handler(request)
-        request.output_ref.write_text(
+        result = await _invoke_registered_plugin_handler(invocation)
+        invocation.output_ref.write_text(
             json.dumps(_to_jsonable(result), separators=(",", ":"), sort_keys=True),
             encoding="utf-8",
         )
@@ -71,10 +71,10 @@ async def _run(payload: dict[str, Any]) -> int:
     finally:
         if mount_inputs is not None:
             mount_inputs.close()
-        umount(request.workspace_root)
+        umount(invocation.workspace_root)
 
 
-class _PluginOverlayRequest:
+class _PluginOverlayInvocation:
     def __init__(self, payload: dict[str, Any]) -> None:
         self.plugin_name = str(payload["plugin_name"])
         self.op_name = str(payload["op_name"])
@@ -92,39 +92,39 @@ class _PluginOverlayRequest:
         self.manifest_key = str(payload.get("manifest_key") or "")
         self.manifest_version = int(payload.get("manifest_version") or 0)
         self.root_hash = str(payload.get("root_hash") or "")
-        self.intent = plugin_intent_from_payload(payload.get("intent"))
+        self.intent = plugin_intent_from_envelope(payload.get("intent"))
         raw_caller = payload.get("caller")
         self.caller = raw_caller if isinstance(raw_caller, dict) else {}
         raw_metadata = payload.get("metadata")
         self.metadata = raw_metadata if isinstance(raw_metadata, dict) else {}
 
 
-def _validate_binding(request: _PluginOverlayRequest) -> None:
-    binding = require_workspace_binding(request.layer_stack_root)
-    if Path(binding.workspace_root) != request.workspace_root:
+def _validate_binding(invocation: _PluginOverlayInvocation) -> None:
+    binding = require_workspace_binding(invocation.layer_stack_root)
+    if Path(binding.workspace_root) != invocation.workspace_root:
         raise ValueError(
             "plugin overlay child workspace_root does not match binding: "
-            f"{request.workspace_root} != {binding.workspace_root}"
+            f"{invocation.workspace_root} != {binding.workspace_root}"
         )
 
 
-async def _invoke_plugin_handler(request: _PluginOverlayRequest) -> Any:
-    handler = _load_handler(request.plugin_name, request.op_name)
+async def _invoke_registered_plugin_handler(invocation: _PluginOverlayInvocation) -> Any:
+    handler = _load_registered_plugin_handler(invocation.plugin_name, invocation.op_name)
     ctx = PluginOpContext(
-        layer_stack_root=request.layer_stack_root,
-        caller=caller_from_audit_payload(request.caller),
-        projection=_MountedPluginProjection(request),
-        overlay=_MountedPluginWorkspace(request),
-        intent=request.intent,
-        metadata=dict(request.metadata),
+        layer_stack_root=invocation.layer_stack_root,
+        caller=sandbox_caller_from_plugin_envelope(invocation.caller),
+        projection=_MountedPluginProjection(invocation),
+        overlay=_MountedPluginWorkspace(invocation),
+        intent=invocation.intent,
+        metadata=dict(invocation.metadata),
     )
-    result = handler(request.args, ctx)
+    result = handler(invocation.args, ctx)
     if asyncio.iscoroutine(result) or hasattr(result, "__await__"):
         result = await result
     return result
 
 
-def _load_handler(plugin_name: str, op_name: str) -> Any:
+def _load_registered_plugin_handler(plugin_name: str, op_name: str) -> Any:
     clear_plugin_registrations(plugin_name)
     importlib.import_module(f"plugins.catalog.{plugin_name}.runtime.server")
     matches = [
@@ -141,40 +141,40 @@ def _load_handler(plugin_name: str, op_name: str) -> Any:
 
 
 class _MountedPluginProjection:
-    def __init__(self, request: _PluginOverlayRequest) -> None:
-        self._request = request
-        self.layer_stack_root = Path(request.layer_stack_root)
+    def __init__(self, invocation: _PluginOverlayInvocation) -> None:
+        self._invocation = invocation
+        self.layer_stack_root = Path(invocation.layer_stack_root)
 
     def active_manifest_key(self) -> str:
-        return self._request.manifest_key
+        return self._invocation.manifest_key
 
     def acquire(self, owner_request_id: str) -> Any:
         del owner_request_id
         return SimpleNamespace(
             lease_id="plugin-overlay-child",
-            manifest_key=self._request.manifest_key,
-            manifest_version=self._request.manifest_version,
-            root_hash=self._request.root_hash,
-            manifest=SimpleNamespace(version=self._request.manifest_version),
+            manifest_key=self._invocation.manifest_key,
+            manifest_version=self._invocation.manifest_version,
+            root_hash=self._invocation.root_hash,
+            manifest=SimpleNamespace(version=self._invocation.manifest_version),
             layer_paths=None,
             release=lambda: None,
         )
 
 
 class _MountedPluginWorkspace:
-    def __init__(self, request: _PluginOverlayRequest) -> None:
-        self._request = request
-        self.workspace_root = request.workspace_root.as_posix()
+    def __init__(self, invocation: _PluginOverlayInvocation) -> None:
+        self._invocation = invocation
+        self.workspace_root = invocation.workspace_root.as_posix()
 
     def active_manifest_key(self) -> str:
-        return self._request.manifest_key
+        return self._invocation.manifest_key
 
     async def ensure_current(self, *, reason: str = "ensure_current") -> str:
         del reason
-        return self._request.manifest_key
+        return self._invocation.manifest_key
 
     def current_manifest(self) -> Any:
-        return SimpleNamespace(version=self._request.manifest_version)
+        return SimpleNamespace(version=self._invocation.manifest_version)
 
     @asynccontextmanager
     async def workspace_operation(self, *, reason: str = "operation") -> Any:

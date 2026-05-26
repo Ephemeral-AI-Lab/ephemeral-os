@@ -19,6 +19,7 @@ def stream_bridge(
     bus: AuditEventBus,
     *,
     task_center_run_id: str,
+    sandbox_fallback_enabled: bool = True,
 ) -> Callable[[object], Awaitable[None]]:
     """Return an async on_agent_event callable that translates StreamEvents to audit Events."""
 
@@ -68,15 +69,17 @@ def stream_bridge(
                     },
                 )
             )
-            for sandbox_event in sandbox_events_from_tool_completion(
-                stream_event,
-                task_center_run_id=task_center_run_id,
-            ):
-                if (
-                    not metadata.get("sandbox_audit_emitted")
-                    or sandbox_event.type is EventType.SANDBOX_LAYER_STACK_LEASE_ACQUIRED
+            if sandbox_fallback_enabled:
+                for sandbox_event in sandbox_events_from_tool_completion(
+                    stream_event,
+                    task_center_run_id=task_center_run_id,
                 ):
-                    bus.publish(sandbox_event)
+                    if (
+                        not metadata.get("sandbox_audit_emitted")
+                        or sandbox_event.type
+                        is EventType.SANDBOX_LAYER_STACK_LEASE_ACQUIRED
+                    ):
+                        bus.publish(sandbox_event)
         # All other StreamEvent subtypes are silently ignored.
 
     return _on_event

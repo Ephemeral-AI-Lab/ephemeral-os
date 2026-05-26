@@ -18,7 +18,7 @@ from sandbox.ephemeral_workspace.pipeline import EphemeralPipeline
 
 
 class _FakeLayerStack:
-    """Minimal stand-in for ``LayerStackClient`` that just counts releases."""
+    """Minimal stand-in for ``LayerStackPortAdapter`` that just counts releases."""
 
     storage_root = Path("/tmp/fake-storage")
 

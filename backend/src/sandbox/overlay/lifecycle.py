@@ -141,18 +141,11 @@ async def destroy(handle: OverlayHandle) -> None:
 def emit_overlay_workspace_cleaned(
     handle: OverlayHandle, *, cleanup_ms: float
 ) -> None:
-    safe_emit(
-        build_overlay_workspace_event(
-            "overlay_workspace.cleaned",
-            OverlayWorkspaceSection(
-                operation_id=handle.operation_id or None,
-                workspace_handle_id=handle.lease_id or None,
-                lease_id=handle.lease_id or None,
-                cleanup_ms=cleanup_ms,
-                scratch_removed=True,
-            ),
-        ),
-        lane="critical",
+    _emit_overlay_workspace_cleanup_event(
+        "overlay_workspace.cleaned",
+        handle,
+        cleanup_ms=cleanup_ms,
+        scratch_removed=True,
     )
 
 
@@ -162,16 +155,33 @@ def emit_overlay_workspace_cleanup_failed(
     cleanup_failure_kind: str,
     cleanup_ms: float,
 ) -> None:
+    _emit_overlay_workspace_cleanup_event(
+        "overlay_workspace.cleanup_failed",
+        handle,
+        cleanup_failure_kind=cleanup_failure_kind,
+        cleanup_ms=cleanup_ms,
+        scratch_removed=False,
+    )
+
+
+def _emit_overlay_workspace_cleanup_event(
+    event_type: str,
+    handle: OverlayHandle,
+    *,
+    cleanup_ms: float,
+    scratch_removed: bool,
+    cleanup_failure_kind: str | None = None,
+) -> None:
     safe_emit(
         build_overlay_workspace_event(
-            "overlay_workspace.cleanup_failed",
+            event_type,
             OverlayWorkspaceSection(
                 operation_id=handle.operation_id or None,
                 workspace_handle_id=handle.lease_id or None,
                 lease_id=handle.lease_id or None,
                 cleanup_failure_kind=cleanup_failure_kind,
                 cleanup_ms=cleanup_ms,
-                scratch_removed=False,
+                scratch_removed=scratch_removed,
             ),
         ),
         lane="critical",

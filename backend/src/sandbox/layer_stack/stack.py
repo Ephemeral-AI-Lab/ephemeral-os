@@ -46,7 +46,7 @@ from sandbox._shared.clock import monotonic_now
 
 
 @dataclass(frozen=True)
-class PrepareWorkspaceSnapshotResult:
+class LayerStackSnapshotLease:
     lease_id: str
     manifest_version: int
     root_hash: str
@@ -64,6 +64,10 @@ class PrepareWorkspaceSnapshotResult:
         }
         result["layer_paths"] = list(self.layer_paths)
         return result
+
+
+# Compatibility for current direct imports; new code should use the lease name.
+PrepareWorkspaceSnapshotResult = LayerStackSnapshotLease
 
 
 class LayerStack:
@@ -104,7 +108,7 @@ class LayerStack:
     def prepare_workspace_snapshot(
         self,
         owner_request_id: str,
-    ) -> PrepareWorkspaceSnapshotResult:
+    ) -> LayerStackSnapshotLease:
         total_start = monotonic_now()
         with self._lock:
             manifest = self.read_active_manifest()
@@ -113,7 +117,7 @@ class LayerStack:
             layer_paths = tuple(
                 self._layer_path(layer).as_posix() for layer in manifest.layers
             )
-            return PrepareWorkspaceSnapshotResult(
+            return LayerStackSnapshotLease(
                 lease_id=lease.lease_id,
                 manifest_version=manifest.version,
                 root_hash=manifest_root_hash(manifest),

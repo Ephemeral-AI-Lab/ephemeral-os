@@ -24,6 +24,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
+from agents import AgentType
 from sandbox._shared.models import Intent
 from engine.background.task_supervisor import SUBAGENT_TASK_TYPE
 from message.messages import (
@@ -131,7 +132,7 @@ def _validate_run_subagent_request(
         )
 
     caller_agent_type = context.get("agent_type")
-    if caller_agent_type == "subagent":
+    if caller_agent_type == AgentType.SUBAGENT.value:
         return ToolResult(
             output=(
                 "run_subagent: subagents may not spawn further subagents. "
@@ -147,11 +148,11 @@ def _validate_run_subagent_request(
             output=f"run_subagent: agent '{agent_name}' is not registered.",
             is_error=True,
         )
-    if sub_def.agent_type != "subagent":
+    if sub_def.agent_type != AgentType.SUBAGENT:
         return ToolResult(
             output=(
                 f"run_subagent: agent '{agent_name}' is not a subagent "
-                f"(agent_type={sub_def.agent_type!r}); "
+                f"(agent_type={sub_def.agent_type.value!r}); "
                 "only subagent-typed agents may be dispatched here."
             ),
             is_error=True,
@@ -193,7 +194,7 @@ async def run_subagent(
     bg_task_id = context.background_task_id
 
     sub_meta = ExecutionMetadata()
-    sub_meta["agent_type"] = "subagent"
+    sub_meta["agent_type"] = AgentType.SUBAGENT.value
     sub_meta["role"] = sub_def.agent_kind.value
 
     def _on_spawned(agent: Any) -> None:

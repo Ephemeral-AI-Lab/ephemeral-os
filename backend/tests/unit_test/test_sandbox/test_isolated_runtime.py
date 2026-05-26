@@ -9,6 +9,7 @@ from typing import Any
 import pytest
 
 from sandbox.isolated_workspace._control_plane import linux_runtime as runtime_module
+from sandbox.isolated_workspace.scripts import ns_holder as ns_holder_module
 
 
 class _FakePopen:
@@ -88,3 +89,34 @@ def test_kill_holder_sigkills_tracked_process_after_grace_timeout(
     assert signals == [(1234, signal.SIGTERM), (1234, signal.SIGKILL)]
     assert proc.wait_calls == [0.25, 2.0]
     assert runtime._holders == {}
+
+
+def test_ns_holder_disables_router_advertisements_on_actual_interfaces(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    commands: list[list[str]] = []
+
+    def fake_run(
+        args: list[str],
+        **_kwargs: Any,
+    ) -> subprocess.CompletedProcess[str]:
+        commands.append(args)
+        return subprocess.CompletedProcess(args=args, returncode=0)
+
+    monkeypatch.setattr(ns_holder_module.subprocess, "run", fake_run)
+    monkeypatch.setattr(
+        ns_holder_module.os,
+        "listdir",
+        lambda path: ["all", "default", "lo", "eos-iws-abc123n"]
+        if path == "/proc/sys/net/ipv6/conf"
+        else [],
+    )
+
+    ns_holder_module._purge_ipv6_default_routes()
+
+    sysctl_keys = [
+        command[2]
+        for command in commands
+        if command[:2] == ["sysctl", "-w"]
+    ]
+    assert "net.ipv6.conf.eos-iws-abc123n.accept_ra=0" in sysctl_keys

@@ -196,7 +196,7 @@ def test_plugin_context_rejects_workspace_root_mismatch(tmp_path: Path) -> None:
 
     with pytest.raises(runtime_api_mod.PluginEnsureError, match="workspace_root"):
         asyncio.run(
-            runtime_api_mod._plugin_op_context_factory(
+            runtime_api_mod._build_plugin_op_context(
                 {
                     "layer_stack_root": str(layer_stack_root),
                     "workspace_root": "/other",
@@ -237,7 +237,7 @@ def test_plugin_context_does_not_start_persistent_overlay_mount(
     )
 
     overlay = asyncio.run(
-        runtime_api_mod._overlay_pipeline_for_root(
+        runtime_api_mod._ephemeral_pipeline_for_layer_stack_root(
             str(layer_stack_root),
             workspace_root="/testbed",
         )

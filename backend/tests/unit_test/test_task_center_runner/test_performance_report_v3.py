@@ -60,8 +60,10 @@ def _tool_call_finished(
 ) -> dict[str, Any]:
     rollup = rollup or {
         "queued_ms": 1.0,
-        "exec_ms": total_ms - 2.0,
+        "mount_ms": 0.5,
+        "exec_ms": total_ms - 3.0,
         "capture_ms": 0.5,
+        "publish_ms": 0.5,
         "release_ms": 0.5,
     }
     return {
@@ -111,6 +113,21 @@ def _isolated_workspace_exited(
 def _isolated_workspace_entered(*, seq: int, handle_id: str = "h1") -> dict[str, Any]:
     return {
         "event_type": "isolated_workspace.entered",
+        "schema": "sandbox.daemon.audit.pull.v1",
+        "lane": "critical",
+        "seq": seq,
+        "payload": {
+            "isolated_workspace": {
+                "workspace_handle_id": handle_id,
+                "workspace_mode": "isolated",
+            }
+        },
+    }
+
+
+def _isolated_workspace_evicted(*, seq: int, handle_id: str = "h1") -> dict[str, Any]:
+    return {
+        "event_type": "isolated_workspace.evicted",
         "schema": "sandbox.daemon.audit.pull.v1",
         "lane": "critical",
         "seq": seq,
@@ -256,28 +273,26 @@ def test_per_tool_phase_breakdown_matches_emitted_phases(
 ) -> None:
     """Emit calls with a known phase split; assert the §3 fractions
     reflect the same split."""
+    phase_rollup = {
+        "queued_ms": 10.0,
+        "mount_ms": 5.0,
+        "exec_ms": 70.0,
+        "capture_ms": 5.0,
+        "publish_ms": 5.0,
+        "release_ms": 5.0,
+    }
     rows = [
         _tool_call_finished(
             seq=1,
             tool_name="edit_file",
             total_ms=100.0,
-            rollup={
-                "queued_ms": 10.0,
-                "exec_ms": 80.0,
-                "capture_ms": 5.0,
-                "release_ms": 5.0,
-            },
+            rollup=phase_rollup,
         ),
         _tool_call_finished(
             seq=2,
             tool_name="edit_file",
             total_ms=100.0,
-            rollup={
-                "queued_ms": 10.0,
-                "exec_ms": 80.0,
-                "capture_ms": 5.0,
-                "release_ms": 5.0,
-            },
+            rollup=phase_rollup,
         ),
     ]
     _write_jsonl(tmp_path / "sandbox_events.jsonl", rows)
@@ -286,13 +301,60 @@ def test_per_tool_phase_breakdown_matches_emitted_phases(
     assert rows_section, "expected at least one breakdown row"
     edit_row = next(r for r in rows_section if r["tool_name"] == "edit_file")
     fractions = edit_row["phases_fraction"]
-    assert fractions["exec"] == pytest.approx(0.80, abs=0.01)
+    assert fractions["exec"] == pytest.approx(0.70, abs=0.01)
     assert fractions["queued"] == pytest.approx(0.10, abs=0.01)
+    assert fractions["mount"] == pytest.approx(0.05, abs=0.01)
     assert fractions["capture"] == pytest.approx(0.05, abs=0.01)
+    assert fractions["publish"] == pytest.approx(0.05, abs=0.01)
     assert fractions["release"] == pytest.approx(0.05, abs=0.01)
-    # mount/publish remain 0 — FU#5 (not recorded yet).
-    assert fractions["mount"] == 0.0
-    assert fractions["publish"] == 0.0
+
+
+def test_phase_breakdown_ranks_by_tool_total_not_phase_sum(
+    tmp_path: Path,
+) -> None:
+    rows = [
+        _tool_call_finished(
+            seq=1,
+            tool_name="slow_partial",
+            total_ms=100.0,
+            rollup={"exec_ms": 30.0},
+        ),
+        _tool_call_finished(
+            seq=2,
+            tool_name="fast_full",
+            total_ms=50.0,
+            rollup={"exec_ms": 50.0},
+        ),
+    ]
+    _write_jsonl(tmp_path / "sandbox_events.jsonl", rows)
+
+    report = build_performance_report(tmp_path, _empty_tool_performance())
+    rows_section = report["sandbox"]["sections"]["per_tool_phase_breakdown"]["rows"]
+
+    assert rows_section[0]["tool_name"] == "slow_partial"
+    assert rows_section[0]["total_ms"] == pytest.approx(100.0)
+    assert rows_section[0]["phases_fraction"]["exec"] == pytest.approx(0.30)
+
+
+def test_phase_breakdown_keeps_overlap_fraction_before_bar_normalization(
+    tmp_path: Path,
+) -> None:
+    rows = [
+        _tool_call_finished(
+            seq=1,
+            tool_name="overlap",
+            total_ms=100.0,
+            rollup={"exec_ms": 100.0, "mount_ms": 20.0},
+        ),
+    ]
+    _write_jsonl(tmp_path / "sandbox_events.jsonl", rows)
+
+    report = build_performance_report(tmp_path, _empty_tool_performance())
+    row = report["sandbox"]["sections"]["per_tool_phase_breakdown"]["rows"][0]
+
+    assert row["total_ms"] == pytest.approx(100.0)
+    assert row["phases_fraction"]["exec"] == pytest.approx(1.0)
+    assert row["phases_fraction"]["mount"] == pytest.approx(0.2)
 
 
 # ---------------------------------------------------------------------------
@@ -385,10 +447,20 @@ def test_overhead_gate_metrics_present_and_below_thresholds(
     report = build_performance_report(
         tmp_path,
         _empty_tool_performance(),
+        daemon_audit_puller_stats={
+            "pull_count": 3,
+            "events_pulled": 10,
+            "dropped_event_count": 0,
+            "lost_before_seq": 0,
+        },
         overhead_metadata=overhead_metadata,
     )
     overhead = report["sandbox"]["sections"]["overhead"]
     verdict = overhead["gate"]["verdict"]
+    assert verdict["overhead_pass"] is True
+    assert verdict["isolated_workspace_pass"] is True
+    assert verdict["drop_free_pull_pass"] is True
+    assert verdict["artifact_bound_pass"] is True
     assert verdict["latency_p95_delta_pass"] is True
     assert verdict["runner_cpu_pass"] is True
     assert verdict["daemon_cpu_pass"] is True
@@ -396,6 +468,35 @@ def test_overhead_gate_metrics_present_and_below_thresholds(
     # release_gates evaluator must agree
     gate_eval = evaluate_audit_overhead_gate(overhead_metadata)
     assert gate_eval["passed"] is True
+
+
+def test_drop_free_pull_gate_requires_puller_stats(tmp_path: Path) -> None:
+    _write_jsonl(tmp_path / "sandbox_events.jsonl", [])
+    report = build_performance_report(
+        tmp_path,
+        _empty_tool_performance(),
+        overhead_metadata={
+            "daemon_ring_memory_retained_bytes": 1_000_000,
+            "daemon_ring_memory_max_bytes": 8_388_608,
+            "daemon_cpu_pct_p99": 0.4,
+            "runner_cpu_pct_p99": 0.1,
+            "tool_latency_p95_delta_ms": 1.0,
+            "p95_delta_ci_upper": 1.4,
+            "daemon_rss_delta_mib": 8.0,
+            "sandbox_disk_delta_bytes": 0,
+            "n_calls": 2000,
+            "n_paired_runs": 3,
+            "warmup_s": 60.0,
+            "bootstrap_resamples": 10000,
+        },
+    )
+
+    overhead = report["sandbox"]["sections"]["overhead"]
+    verdict = overhead["gate"]["verdict"]
+    drop_free = overhead["gate"]["drop_free_pull"]
+    assert verdict["puller_attached"] is False
+    assert verdict["drop_free_pull_pass"] is False
+    assert drop_free["stats_present"] is False
 
 
 # ---------------------------------------------------------------------------
@@ -453,6 +554,49 @@ def test_isolated_workspace_gate_evaluable_via_snapshot_when_puller_off() -> Non
     verdict = evaluate_isolated_workspace_gate(direct_pull_response_events)
     assert verdict["passed"] is True
     assert verdict["open_handle_count"] == 0
+
+
+def test_isolated_workspace_gate_does_not_double_count_evicted_exit(
+    tmp_path: Path,
+) -> None:
+    rows = [
+        _isolated_workspace_entered(seq=1, handle_id="ws-ttl"),
+        _isolated_workspace_exited(seq=2, handle_id="ws-ttl"),
+        _isolated_workspace_evicted(seq=3, handle_id="ws-ttl"),
+    ]
+    _write_jsonl(tmp_path / "sandbox_events.jsonl", rows)
+
+    report = build_performance_report(tmp_path, _empty_tool_performance())
+    handles = report["sandbox"]["sections"]["isolated_workspace"]["handles"]
+    verdict = evaluate_isolated_workspace_gate(rows)
+
+    assert handles["open_handle_count"] == 0
+    assert handles["terminal_without_enter_count"] == 0
+    assert verdict["passed"] is True
+    assert verdict["open_handle_count"] == 0
+
+
+def test_isolated_workspace_gate_fails_on_mismatched_handle_ids(
+    tmp_path: Path,
+) -> None:
+    rows = [
+        _isolated_workspace_entered(seq=1, handle_id="ws-a"),
+        _isolated_workspace_exited(seq=2, handle_id="ws-b"),
+    ]
+    _write_jsonl(tmp_path / "sandbox_events.jsonl", rows)
+
+    report = build_performance_report(tmp_path, _empty_tool_performance())
+    handles = report["sandbox"]["sections"]["isolated_workspace"]["handles"]
+    warnings = report["sandbox"]["sections"]["warnings"]["rows"]
+    verdict = evaluate_isolated_workspace_gate(rows)
+
+    assert handles["open_handle_count"] == 1
+    assert handles["terminal_without_enter_count"] == 1
+    assert verdict["passed"] is False
+    assert verdict["verdict"]["handle_ids_consistent"] is False
+    assert any(
+        w["kind"] == "isolated_workspace.gate_failure" for w in warnings
+    )
 
 
 # ---------------------------------------------------------------------------

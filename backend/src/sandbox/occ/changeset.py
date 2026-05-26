@@ -230,7 +230,7 @@ class PreparedChangeset:
 # ---- builders ------
 
 
-def _eager_payload(content: bytes | str) -> WritePayload:
+def _eager_write_payload(content: bytes | str) -> WritePayload:
     if isinstance(content, bytes):
         return WritePayload(content=content)
     return WritePayload(content=content.encode("utf-8"))
@@ -246,7 +246,7 @@ def build_api_write_change(
     return WriteChange(
         path=path,
         source=ChangeSource.API_WRITE,
-        payload=_eager_payload(final_content),
+        payload=_eager_write_payload(final_content),
         base_hash=base_hash,
     )
 
@@ -272,7 +272,7 @@ def build_overlay_write_change(
             precomputed_hash=precomputed_hash,
         )
     elif final_content is not None:
-        payload = _eager_payload(final_content)
+        payload = _eager_write_payload(final_content)
     else:
         raise ValueError("build_overlay_write_change needs final_content or content_path")
     return WriteChange(

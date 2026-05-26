@@ -149,7 +149,11 @@ async def test_overlay_child_preserves_write_intent(
         assert ctx.intent is Intent.WRITE_ALLOWED
         return {"success": True}
 
-    monkeypatch.setattr(overlay_child, "_load_handler", lambda *_args: handler)
+    monkeypatch.setattr(
+        overlay_child,
+        "_load_registered_plugin_handler",
+        lambda *_args: handler,
+    )
     request = SimpleNamespace(
         plugin_name="demo",
         op_name="write",
@@ -164,7 +168,7 @@ async def test_overlay_child_preserves_write_intent(
         intent=Intent.WRITE_ALLOWED,
     )
 
-    assert await overlay_child._invoke_plugin_handler(request) == {"success": True}
+    assert await overlay_child._invoke_registered_plugin_handler(request) == {"success": True}
 
 
 def _context(
@@ -212,7 +216,7 @@ class _WriteOverlay:
             manifest_key="root@1",
             manifest_version=1,
             root_hash="root",
-            manifest=SimpleNamespace(version=1),
+            snapshot_manifest=SimpleNamespace(version=1),
             layer_paths=("/layers/L1",),
             run_dir=run_dir.as_posix(),
             upperdir=upperdir.as_posix(),

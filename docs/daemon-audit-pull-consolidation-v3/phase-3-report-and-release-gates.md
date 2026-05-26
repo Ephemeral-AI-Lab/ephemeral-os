@@ -2,7 +2,9 @@
 
 > **Status:** Implementation **landed** 2026-05-26 — see
 > [`phase-3-implementation-report.md`](phase-3-implementation-report.md)
-> for the per-deliverable change log + test catalog + deferred items.
+> for the initial per-deliverable change log and test catalog, and
+> [`phase-3-implementation-deferrals-report.md`](phase-3-implementation-deferrals-report.md)
+> for the landed D1-D16 closers.
 > What remains is operational: gate-suite execution on the dask-heavy
 > live-e2e fixture and the K=5 stream-bridge retirement countdown.
 >
@@ -75,11 +77,11 @@ Promote `daemon_audit_pull.enabled=true` as default in the sandbox-backed runner
    - Phase columns show "—" if all phase events for that cohort were sampled out; total_ms always present (from phase_totals_rollup)
 
 ## 3. Per-tool phase breakdown (top-10 by total_ms)
-   - Stacked ASCII bar per tool showing queued/mount/exec/capture/publish/release proportions
+   - Ranked by emitted tool-call `total_ms`; stacked ASCII bar per tool shows queued/mount/exec/capture/publish/release proportions
    - Numbers in the JSON mirror
 
 ## 4. Background tool calls
-   | task_id | tool_name | task_kind | started_at | duration_ms | status | delivery_latency_ms |
+   | task_id | tool_name | task_kind | started_seq | duration_ms | status | delivery_latency_ms |
    - heartbeat coverage: <heartbeats_emitted> / <expected> = NN %
    - longest-running task and its tool_name
 
@@ -134,6 +136,7 @@ Promote `daemon_audit_pull.enabled=true` as default in the sandbox-backed runner
    - runner CPU attributable to puller: < 0.5 % p99 (gate)
    - tool latency delta with vs without puller: < 1 ms p95 (gate)
    - artifact disk: live + rotated, total bytes
+   - release gates: overhead, isolated_workspace, drop_free_pull, artifact_bound
 
 ## 13. Warnings
    - audit dropped (any lane)
@@ -162,7 +165,7 @@ Promote `daemon_audit_pull.enabled=true` as default in the sandbox-backed runner
 | Gate | Threshold (95 % CI upper bound) | Fallback if not met |
 |---|---|---|
 | **Audit overhead gate** | tool-call wall-time p95 delta ≤ 5 ms; daemon RSS delta ≤ 16 MiB at steady state (post-60s warmup); runner CPU delta ≤ 0.5 % averaged over a ≥ 5 min window; sandbox disk delta = 0 bytes | Raise pull floor (don't raise ring caps); if still failing after floor escalation, ship Phase 3 with `daemon_audit_pull.enabled=false` as default + open follow-up plan |
-| **Isolated workspace gate** | Every isolated_workspace exit reports `orphan_holder_count == 0`, `orphan_cgroup_count == 0`, `orphan_scratch_count == 0`; at run completion `open_handle_count == 0`; after each exit `holder_pid_alive == false`. **The gate is evaluated against the daemon-side ring via `api.audit.snapshot` AND the puller's recorded events** (so it does not depend on the puller toggle — see below) | **HARD BLOCK** — do not ship; isolated workspace is the highest-risk safety surface; fix root cause |
+| **Isolated workspace gate** | Every isolated_workspace exit reports `orphan_holder_count == 0`, `orphan_cgroup_count == 0`, `orphan_scratch_count == 0`; at run completion handle-ID accounting reports `open_handle_count == 0`, no terminal event without a matching enter, and no lifecycle event missing `workspace_handle_id`; after each exit `holder_pid_alive == false`. **The gate is evaluated against the daemon-side ring via `api.audit.snapshot` AND the puller's recorded events** (so it does not depend on the puller toggle — see below) | **HARD BLOCK** — do not ship; isolated workspace is the highest-risk safety surface; fix root cause |
 | **Drop-free pull gate** | `dropped_event_count == 0` and `lost_before_seq == 0` across the gate suite (95 % CI upper bound) | Raise pull floor (more frequent pulls); do not raise ring caps as a workaround |
 | **Artifact bound gate** | Rotation kicks in correctly during synthetic 1 M-event run; total host-side footprint stays within `64 MiB + 8 × rotated` cap; gzip succeeds for every rotation | Tune retention cap down; do not relax rotation threshold |
 
@@ -173,7 +176,7 @@ The isolated-workspace HARD BLOCK gate is evaluated during the release-gate suit
 Runtime invariant after ship:
 
 - `isolated_workspace.{exited, orphan_check_completed, orphan_reaped}` are emitted by the daemon **unconditionally** on the `critical` lane (the emission site is in the orphan reaper, not the puller).
-- When the puller is disabled at runtime, orphan evidence is still captured in the daemon ring (recoverable via `api.audit.snapshot` for live diagnostics) AND mirrored by the existing stream-bridge fallback into `sandbox_events.jsonl` (until stream-bridge sunset gate fires).
+- When the puller is disabled at runtime, orphan evidence is still captured in the daemon ring (recoverable via `api.audit.snapshot` for live diagnostics) AND mirrored by the existing stream-bridge fallback into `sandbox_events.jsonl` while `EOS_AUDIT_STREAM_FALLBACK=true`.
 - Operators MUST NOT disable both puller AND stream-bridge simultaneously while isolated_workspace is enabled — a Phase 2 startup check (`task_center_runner/core/engine.py`) refuses to start when `daemon_audit_pull.enabled=false` AND `EOS_AUDIT_STREAM_FALLBACK=false` AND `EOS_ISOLATED_WORKSPACE_ENABLED=true`.
 
 ## Gate verification commands (pinned to V1 reproducibility anchor)
@@ -214,19 +217,30 @@ EOS_DAEMON_AUDIT_PULL_ENABLED=true \
 
 ## Acceptance criteria
 
-- All tests above pass under `.venv/bin/pytest`.
+Implementation acceptance is recorded in
+[`phase-3-implementation-report.md`](phase-3-implementation-report.md)
+and completed by
+[`phase-3-implementation-deferrals-report.md`](phase-3-implementation-deferrals-report.md).
+The deferrals report is the current record for the D1-D16 data-completeness
+closers, including `started_seq`, `mount_ms`, `publish_ms`, and the plan-doc
+fixes.
+
+Current remaining acceptance work is operational:
+
 - All 4 release gates pass on `EOS_SWEEVO_INSTANCE=dask__dask_2023.3.2_2023.4.0` heavy live-e2e run.
-- `daemon_audit_pull.enabled=true` set as default in sandbox-backed runner config.
-- Stream-bridge retirement countdown begins (K=5 consecutive clean heavy runs).
-- ADR follow-up issues 1–6 filed in the issue tracker and linked from the [README ADR](README.md#follow-ups-out-of-scope-for-this-plan) section.
+- Stream-bridge retirement countdown begins after the gate suite is clean (K=5 consecutive clean heavy runs).
+- Still-open operator-owned follow-up issues are filed in the issue tracker and linked from the [README ADR](README.md#follow-ups-out-of-scope-for-this-plan) section.
 
-## What this phase does NOT do
+## Operational follow-ups still out of scope
 
-All items below are tracked in [README §Follow-ups (out of scope for this plan)](README.md#follow-ups-out-of-scope-for-this-plan); Phase 3 is the last in-scope V3 phase and explicitly defers each item below.
+The open items below are tracked in
+[README §Follow-ups (out of scope for this plan)](README.md#follow-ups-out-of-scope-for-this-plan).
+The code-side D1-D16 deferrals are closed by
+[`phase-3-implementation-deferrals-report.md`](phase-3-implementation-deferrals-report.md).
 
-- Does NOT remove the stream-bridge fallback. Per ADR follow-up #1 — removal is a follow-up after the K=5 retirement gate.
-- Does NOT introduce a real plugin session lifecycle. Per ADR follow-up #2 — triggered by a second plugin kind landing in `plugins/catalog/`.
-- Does NOT expand the plugin-kind catalog itself. Per ADR follow-up #3 — opportunistic.
-- Does NOT add per-subsystem ring sharding. Per ADR follow-up #4 — only if the overhead gate fails post-ship.
-- Does NOT add `mount` / `publish` phase recording from `sandbox/overlay/lifecycle.py` and `sandbox/occ/service.py`. Per ADR follow-up #5 — Phase 2.6 slice 7 wired the four framework-boundary phases; report §2 renders "—" for the two columns until those `record_phase` call sites land. Schema is additive, so this is a drop-in change post-Phase 3.
-- Does NOT correct the cosmetic plan-doc slips (slice-3 file list in phase-2.5; §Deliverable 6 module names in phase-2). Per ADR follow-up #6 — doc-only, no functional impact, deferred to a future revision pass.
+- Does NOT provide live dask-heavy gate evidence; the release-gate suite remains an operator hand-off.
+- Does NOT complete the K=5 stream-bridge retirement countdown.
+- Does NOT remove the stream-bridge fallback; removal follows the K=5 retirement gate.
+- Does NOT introduce a real plugin session lifecycle; that is triggered by a second plugin kind landing in `plugins/catalog/`.
+- Does NOT expand the plugin-kind catalog itself; expansion remains opportunistic.
+- Does NOT add per-subsystem ring sharding; investigate only if the overhead gate fails post-ship.

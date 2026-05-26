@@ -17,8 +17,8 @@ __all__ = [
     "EphemeralPipelineLike",
     "WorkspaceChangeEvent",
     "WorkspaceProjectionLike",
-    "caller_from_audit_payload",
-    "plugin_intent_from_payload",
+    "plugin_intent_from_envelope",
+    "sandbox_caller_from_plugin_envelope",
 ]
 
 AuditFieldReader = Callable[[Mapping[str, Any], str], str]
@@ -37,7 +37,7 @@ _CALLER_AUDIT_FIELDS = (
 )
 
 
-def caller_from_audit_payload(
+def sandbox_caller_from_plugin_envelope(
     payload: object,
     *,
     field_reader: AuditFieldReader | None = None,
@@ -50,7 +50,7 @@ def caller_from_audit_payload(
     )
 
 
-def plugin_intent_from_payload(value: object) -> Intent:
+def plugin_intent_from_envelope(value: object) -> Intent:
     raw = str(value or "")
     if not raw:
         return Intent.READ_ONLY

@@ -73,7 +73,11 @@ class _WorkspaceChangeSubscriber:
 
     def put(self, event: WorkspaceChangeEvent) -> None:
         if self.queue.full():
-            self._drop_all()
+            while True:
+                try:
+                    self.queue.get_nowait()
+                except asyncio.QueueEmpty:
+                    break
             self.queue.put_nowait(
                 WorkspaceChangeEvent(
                     reason="full_resync",
@@ -84,13 +88,6 @@ class _WorkspaceChangeSubscriber:
             )
             return
         self.queue.put_nowait(event)
-
-    def _drop_all(self) -> None:
-        while True:
-            try:
-                self.queue.get_nowait()
-            except asyncio.QueueEmpty:
-                return
 
 
 __all__ = [

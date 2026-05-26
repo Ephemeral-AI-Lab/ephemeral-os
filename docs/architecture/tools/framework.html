@@ -44,7 +44,7 @@
     <li><a href="#base-tool-contract"><span>2</span> BaseTool Contract</a></li>
     <li><a href="#decorator-and-factory"><span>3</span> Decorator and Factory</a></li>
     <li><a href="#execution-lifecycle"><span>4</span> Execution Lifecycle</a></li>
-    <li><a href="#engine-bridges"><span>5</span> Engine Bridges</a></li>
+    <li><a href="#engine-bridges"><span>5</span> Engine Integration Points</a></li>
   </ol>
 </nav>
 
@@ -94,7 +94,7 @@
 <section id="decorator-and-factory" data-last-reviewed-commit="569f12c3f39471dbaa643906856a8daf81a21a2d" data-evidence-paths="backend/src/tools/_framework/core/decorator.py backend/src/tools/_framework/factory.py backend/src/tools/sandbox backend/src/tools/submission backend/src/tools/ask_helper backend/src/tools/subagent backend/src/tools/skills backend/tests/unit_test/test_tools/test_submission_tool_registration.py backend/tests/unit_test/test_tools/test_no_claude_code_collision.py">
 <h2>Decorator and Factory <a class="anchor" href="#decorator-and-factory">#</a></h2>
 <p>The <code>@tool</code> decorator converts a Python function into a concrete <code>FunctionTool</code> instance. It requires explicit Pydantic models and explicit <code>intent</code>; validates hook targets once at construction; preserves the original entrypoint for tests; and sets all control metadata on the instance.</p>
-<p>When the decorated function accepts <code>context</code> or <code>**kwargs</code>, <code>FunctionTool.execute()</code> writes the tool intent into <code>context["__intent"]</code> before invoking the function. This is the bridge from LLM-facing tool metadata into sandbox/plugin execution policy.</p>
+<p>When the decorated function accepts <code>context</code> or <code>**kwargs</code>, <code>FunctionTool.execute()</code> writes the tool intent into <code>context["__intent"]</code> before invoking the function. This is the handoff from LLM-facing tool metadata into sandbox/plugin execution policy.</p>
 <p><code>tools._framework.factory</code> owns built-in tool factory registration. It registers sandbox tools, submission tools, ask-helper tools, <code>run_subagent</code>, <code>load_skill_reference</code>, and optional plugin tools unless <code>EOS_SKIP_PLUGIN_IMPORTS_FOR_TESTS</code> is set. <code>register_tool_factory()</code> rejects accidental shadowing unless <code>override=True</code>, while <code>create_tool()</code> ensures the factory returns a tool with the requested name.</p>
 </section>
 
@@ -111,12 +111,12 @@
 </section>
 
 <section id="engine-bridges" data-last-reviewed-commit="569f12c3f39471dbaa643906856a8daf81a21a2d" data-evidence-paths="backend/src/engine/query/loop.py backend/src/engine/query/context.py backend/src/engine/tool_call/dispatch.py backend/src/engine/tool_call/streaming.py backend/src/engine/background/dispatch.py backend/src/engine/background/task_supervisor.py backend/src/tools/_framework/execution/tool_call.py backend/tests/unit_test/test_tools/test_tool_execution.py">
-<h2>Engine Bridges <a class="anchor" href="#engine-bridges">#</a></h2>
+<h2>Engine Integration Points <a class="anchor" href="#engine-bridges">#</a></h2>
 <p>The query loop treats terminal capability as a property of the registered tools. During runtime preparation it derives <code>context.terminal_tools</code> from tools whose <code>is_terminal_tool</code> flag is true. Once any terminal tool is available, the stream dispatcher defers all tool bodies until the complete assistant message is available, so terminal exclusivity can be validated before sibling calls mutate state.</p>
 <p><code>engine.tool_call.dispatch</code> rejects any assistant batch where a terminal tool appears with siblings. For valid batches, background-eligible calls are handed to the background dispatcher and foreground calls use <code>execute_tool_call_streaming()</code>. The first returned block with <code>does_terminate=True</code> becomes the terminal result. The query loop records that result, sets <code>QueryExitReason.TOOL_STOP</code>, and the loop's <code>finally</code> block cancels pending background work before exit.</p>
 <div class="summary">
   <ul>
-    <li><code>BaseTool</code> metadata is the bridge: schema for providers, intent for sandbox/plugin policy, terminal flag for query-loop lifecycle, and hooks for tool-local gates.</li>
+    <li><code>BaseTool</code> metadata is the shared contract: schema for providers, intent for sandbox/plugin policy, terminal flag for query-loop lifecycle, and hooks for tool-local gates.</li>
     <li>The framework owns validation and result stamping; TaskCenter and sandbox tools should delegate domain mutation to their own subsystems instead of bypassing the execution lifecycle.</li>
   </ul>
 </div>

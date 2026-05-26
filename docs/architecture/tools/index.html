@@ -67,7 +67,7 @@
             </p>
           </div>
           <div class="card">
-            <h3>Engine bridge</h3>
+            <h3>Engine integration</h3>
             <p>
               <code>engine.query.loop</code>, <code>engine.tool_call.streaming</code>, and
               <code>engine.tool_call.dispatch</code> decide when tool calls execute, defer, run in background,
@@ -75,14 +75,14 @@
             </p>
           </div>
           <div class="card">
-            <h3>Sandbox bridge</h3>
+            <h3>Sandbox dispatch</h3>
             <p>
               Sandbox wrappers call typed <code>sandbox.api.tool</code> requests, then daemon routing chooses
               layer-stack/OCC, per-call ephemeral overlay, or explicit isolated workspace execution.
             </p>
           </div>
           <div class="card">
-            <h3>TaskCenter bridge</h3>
+            <h3>TaskCenter boundary</h3>
             <p>
               Submission and terminal tools are the persistent handoff channel between agents and TaskCenter
               state: planner rows, generator DAG tasks, delegated goals, evaluator outcomes, and helper outputs.

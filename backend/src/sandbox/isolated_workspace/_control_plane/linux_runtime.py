@@ -139,7 +139,7 @@ class _LinuxNamespaceRuntime:
                 "workdir": handle.workdir.as_posix(),
             }
         ).encode("utf-8")
-        returncode, _stdout, stderr_bytes = await _run_helper_subprocess(
+        returncode, _stdout, stderr_bytes = await _run_setns_helper_subprocess(
             argv=[
                 sys.executable,
                 "-m",
@@ -169,7 +169,7 @@ class _LinuxNamespaceRuntime:
                 "fallback_dns": fallback_dns,
             }
         ).encode("utf-8")
-        returncode, stdout_bytes, stderr_bytes = await _run_helper_subprocess(
+        returncode, stdout_bytes, stderr_bytes = await _run_setns_helper_subprocess(
             argv=[
                 sys.executable,
                 "-m",
@@ -295,7 +295,7 @@ class _LinuxNamespaceRuntime:
         return proc.returncode, proc.stdout, proc.stderr
 
 
-async def _run_helper_subprocess(
+async def _run_setns_helper_subprocess(
     *,
     argv: list[str],
     stdin_bytes: bytes,

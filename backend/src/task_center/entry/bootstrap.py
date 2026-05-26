@@ -30,9 +30,9 @@ from task_center.attempt.orchestrator_registry import AttemptOrchestratorRegistr
 from task_center.attempt.runtime import AttemptDeps
 from task_center.context_engine.core import ContextEngine, ContextEngineDeps
 from task_center.context_engine.recipes import register_builtin_recipes
-from task_center.entry.sandbox_bridge import (
+from task_center.entry.sandbox_provisioning import (
     TaskCenterSandboxBinding,
-    TaskCenterSandboxBridge,
+    TaskCenterSandboxProvisioner,
 )
 from task_center.goal.starter import GoalStarter
 from task_center.goal.state import GoalOrigin
@@ -69,7 +69,7 @@ def start_task_center_run(
     attempt_store: AttemptStore,
     runner: AttemptAgentRunner | None = None,
     context_packet_store: ContextPacketStore | None = None,
-    sandbox_bridge: TaskCenterSandboxBridge | None = None,
+    sandbox_provisioner: TaskCenterSandboxProvisioner | None = None,
 ) -> TaskCenterEntryHandle:
     """Start a TaskCenter run by converting *prompt* into the first Goal."""
     return TaskCenterEntry(
@@ -83,7 +83,7 @@ def start_task_center_run(
         attempt_store=attempt_store,
         runner=runner,
         context_packet_store=context_packet_store,
-        sandbox_bridge=sandbox_bridge,
+        sandbox_provisioner=sandbox_provisioner,
     ).start()
 
 
@@ -103,7 +103,7 @@ class TaskCenterEntry:
         attempt_store: AttemptStore,
         runner: AttemptAgentRunner | None = None,
         context_packet_store: ContextPacketStore | None = None,
-        sandbox_bridge: TaskCenterSandboxBridge | None = None,
+        sandbox_provisioner: TaskCenterSandboxProvisioner | None = None,
     ) -> None:
         self._config = config
         self._prompt = prompt
@@ -115,7 +115,7 @@ class TaskCenterEntry:
         self._attempt_store = attempt_store
         self._runner = runner
         self._context_packet_store = context_packet_store
-        self._sandbox_bridge = sandbox_bridge or TaskCenterSandboxBridge()
+        self._sandbox_provisioner = sandbox_provisioner or TaskCenterSandboxProvisioner()
 
     def start(self) -> TaskCenterEntryHandle:
         _assert_stores_ready(
@@ -150,7 +150,7 @@ class TaskCenterEntry:
     def _create_top_level_run(self) -> tuple[str, str, TaskCenterSandboxBinding]:
         request_id = str(uuid.uuid4())
         run_id = str(uuid.uuid4())
-        binding = self._sandbox_bridge.prepare_for_run(
+        binding = self._sandbox_provisioner.prepare_for_run(
             task_center_run_id=run_id,
             sandbox_id=self._sandbox_id,
         )

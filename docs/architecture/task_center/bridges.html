@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>TaskCenter Engine Tools Sandbox Bridge - EphemeralOS Architecture</title>
+<title>TaskCenter Runtime Boundaries - EphemeralOS Architecture</title>
 <link rel="stylesheet" href="../assets/styles.css">
 </head>
 <body data-module="task-center" data-page="bridges" data-root="../">
@@ -29,22 +29,22 @@
     <li><a href="context-engine.html" data-doc-module="task-center" data-doc-section="context-engine" data-doc-page="context-engine.html">Context Engine</a></li>
     <li><a href="agent-roles.html" data-doc-module="task-center" data-doc-section="agent-roles" data-doc-page="agent-roles.html">Agent Roles</a></li>
     <li><a href="terminal-tools.html" data-doc-module="task-center" data-doc-section="terminal-tools" data-doc-page="terminal-tools.html">Terminal Tools</a></li>
-    <li><a href="bridges.html" data-doc-module="task-center" data-doc-section="bridges" data-doc-page="bridges.html" class="active">Engine Tools Sandbox</a></li>
+    <li><a href="bridges.html" data-doc-module="task-center" data-doc-section="bridges" data-doc-page="bridges.html" class="active">Runtime Boundaries</a></li>
     <li><a href="maintenance.html" data-doc-module="task-center" data-doc-section="maintenance" data-doc-page="maintenance.html">Maintenance</a></li>
   </ol>
 </nav>
 <main>
 <div class="doc-actions">
-  <span><a href="index.html">TaskCenter</a> / Engine Tools Sandbox</span>
+  <span><a href="index.html">TaskCenter</a> / Runtime Boundaries</span>
   <span class="nav-pair"><a href="terminal-tools.html">Terminal Tools</a><a href="maintenance.html">Maintenance</a></span>
 </div>
-<h1>Engine Tools Sandbox Bridge</h1>
+<h1>TaskCenter Runtime Boundaries</h1>
 <nav class="page-toc" aria-labelledby="page-toc-heading">
   <h3 id="page-toc-heading">Contents</h3>
   <ol>
-    <li><a href="#bridge-boundary-map"><span>1</span> Bridge Boundary Map</a></li>
+    <li><a href="#bridge-boundary-map"><span>1</span> Runtime Boundary Map</a></li>
     <li><a href="#entry-sandbox-provisioning"><span>2</span> Entry And Sandbox Provisioning</a></li>
-    <li><a href="#launch-engine-bridge"><span>3</span> Launch To Engine Bridge</a></li>
+    <li><a href="#launch-engine-bridge"><span>3</span> Launch To Engine Path</a></li>
     <li><a href="#tool-and-sandbox-routing"><span>4</span> Tool And Sandbox Routing</a></li>
     <li><a href="#runner-live-artifacts"><span>5</span> Runner And Live Artifacts</a></li>
     <li><a href="#boundary-rules-failure-modes"><span>6</span> Boundary Rules And Failure Modes</a></li>
@@ -54,11 +54,11 @@
 
 <p class="lead">This page maps how TaskCenter crosses into the engine loop, tool framework, sandbox API, and live runner artifacts. Current verdict: TaskCenter owns persisted Goal -> Iteration -> Attempt state plus task rows; engine owns provider turns and tool execution; sandbox owns workspace execution; the runner records the live artifact tree around those seams.</p>
 <div class="summary">
-  <p>The bridge is deliberately not a global orchestrator. TaskCenter starts a run, prepares one sandbox binding, composes launch messages, schedules attempt-scoped agents, and receives terminal submissions through persisted state. The engine loop remains the enforcement layer for terminal tools, and sandbox operations still pass through <code>tools/sandbox</code>, <code>sandbox.api</code>, and daemon workspace routing.</p>
+  <p>This boundary map is deliberately not a global orchestrator. TaskCenter starts a run, prepares one sandbox binding, composes launch messages, schedules attempt-scoped agents, and receives terminal submissions through persisted state. The engine loop remains the enforcement layer for terminal tools, and sandbox operations still pass through <code>tools/sandbox</code>, <code>sandbox.api</code>, and daemon workspace routing.</p>
 </div>
 
-<section id="bridge-boundary-map" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="backend/src/task_center/entry/bootstrap.py backend/src/task_center/entry/sandbox_bridge.py backend/src/task_center/attempt/launch.py backend/src/task_center/attempt/runtime.py backend/src/engine/api.py backend/src/engine/agent/lifecycle.py backend/src/engine/query/loop.py backend/src/tools/_framework/core/runtime.py backend/src/tools/sandbox backend/src/sandbox/api backend/src/sandbox/daemon/workspace_tool_dispatch.py docs/architecture/agent_loops/main-loop.html docs/architecture/agent_loops/prompt-context.html docs/architecture/agent_loops/provider-sandbox-bridge.html">
-<h2>Bridge Boundary Map <a class="anchor" href="#bridge-boundary-map">#</a></h2>
+<section id="bridge-boundary-map" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="backend/src/task_center/entry/bootstrap.py backend/src/task_center/entry/sandbox_provisioning.py backend/src/task_center/attempt/launch.py backend/src/task_center/attempt/runtime.py backend/src/engine/api.py backend/src/engine/agent/lifecycle.py backend/src/engine/query/loop.py backend/src/tools/_framework/core/runtime.py backend/src/tools/sandbox backend/src/sandbox/api backend/src/sandbox/daemon/workspace_tool_dispatch.py docs/architecture/agent_loops/main-loop.html docs/architecture/agent_loops/prompt-context.html docs/architecture/agent_loops/provider-sandbox-bridge.html">
+<h2>Runtime Boundary Map <a class="anchor" href="#bridge-boundary-map">#</a></h2>
 <div class="diagram" aria-label="TaskCenter engine tools sandbox boundary map">
   <div class="flow-row">
     <div class="node info"><strong>TaskCenter entry</strong><small>request, run, sandbox binding, first goal</small></div>
@@ -82,9 +82,9 @@
 </div>
 </section>
 
-<section id="entry-sandbox-provisioning" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="backend/src/task_center/entry/bootstrap.py backend/src/task_center/entry/sandbox_bridge.py backend/src/task_center/goal/starter.py backend/src/task_center/goal/state.py backend/src/task_center/attempt/runtime.py backend/tests/unit_test/test_task_center/test_lifecycle/test_entry_bootstrap.py backend/tests/unit_test/test_task_center/test_lifecycle/test_sandbox_bridge.py backend/src/sandbox/api/provider_control.py">
+<section id="entry-sandbox-provisioning" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="backend/src/task_center/entry/bootstrap.py backend/src/task_center/entry/sandbox_provisioning.py backend/src/task_center/goal/starter.py backend/src/task_center/goal/state.py backend/src/task_center/attempt/runtime.py backend/tests/unit_test/test_task_center/test_lifecycle/test_entry_bootstrap.py backend/tests/unit_test/test_task_center/test_lifecycle/test_sandbox_provisioning.py backend/src/sandbox/api/provider_control.py">
 <h2>Entry And Sandbox Provisioning <a class="anchor" href="#entry-sandbox-provisioning">#</a></h2>
-<p><code>start_task_center_run()</code> is the entry seam for top-level TaskCenter work. It receives stores, runtime config, prompt, optional sandbox id, event callback, optional runner, optional context packet store, and optional sandbox bridge. It does not run an agent directly; it constructs the run shell and lets Goal -> Iteration -> Attempt startup launch the initial planner.</p>
+<p><code>start_task_center_run()</code> is the entry seam for top-level TaskCenter work. It receives stores, runtime config, prompt, optional sandbox id, event callback, optional runner, optional context packet store, and optional sandbox provisioner. It does not run an agent directly; it constructs the run shell and lets Goal -> Iteration -> Attempt startup launch the initial planner.</p>
 <pre class="diagram" aria-label="TaskCenter entry workflow diagram">
 [user / external task request]
         |
@@ -111,15 +111,15 @@
   <div><b>handle</b><span><code>TaskCenterEntryHandle</code> exposes request/run ids, sandbox binding, Goal/Iteration/Attempt ids, and the launcher used by <code>wait_for_idle()</code>.</span></div>
 </div>
 <div class="trace-grid">
-  <div>Explicit sandbox id</div><div><code>TaskCenterSandboxBridge.prepare_for_run()</code> trims the id, calls <code>start_sandbox</code>, and returns <code>owned_by_task_center=False</code>.</div>
-  <div>No sandbox id</div><div>The bridge calls <code>create_sandbox</code> with a generated <code>task-center-*</code> name and labels <code>origin=task_center</code> plus <code>task_center_run_id</code>.</div>
-  <div>Missing created id</div><div>If the create response has no id, the bridge raises <code>RuntimeError(&quot;create_sandbox returned no id&quot;)</code>.</div>
+  <div>Explicit sandbox id</div><div><code>TaskCenterSandboxProvisioner.prepare_for_run()</code> trims the id, calls <code>start_sandbox</code>, and returns <code>owned_by_task_center=False</code>.</div>
+  <div>No sandbox id</div><div>The provisioner calls <code>create_sandbox</code> with a generated <code>task-center-*</code> name and labels <code>origin=task_center</code> plus <code>task_center_run_id</code>.</div>
+  <div>Missing created id</div><div>If the create response has no id, the provisioner raises <code>RuntimeError(&quot;create_sandbox returned no id&quot;)</code>.</div>
   <div>Bootstrap failure</div><div>If initial goal start fails after run creation, <code>_finish_run_if_open()</code> marks the run failed before re-raising.</div>
 </div>
 </section>
 
 <section id="launch-engine-bridge" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="backend/src/task_center/attempt/launch.py backend/src/task_center/attempt/runtime.py backend/src/task_center/agent_launch/composer.py backend/src/task_center/agent_launch/entry_messages.py backend/src/task_center/agent_launch/skill_message.py backend/src/task_center/context_engine/core.py backend/src/tools/_framework/core/runtime.py backend/src/engine/api.py backend/src/engine/agent/lifecycle.py backend/src/engine/query/request.py backend/tests/unit_test/test_task_center/test_agent_launch/test_runner_kwargs_contract.py backend/tests/unit_test/test_task_center/test_agent_launch/test_attempt_launcher_retry.py backend/src/task_center_runner/tests/mock/task_center/test_initial_messages_capture.py">
-<h2>Launch To Engine Bridge <a class="anchor" href="#launch-engine-bridge">#</a></h2>
+<h2>Launch To Engine Path <a class="anchor" href="#launch-engine-bridge">#</a></h2>
 <p>The attempt launcher is the TaskCenter-to-engine adapter. It receives an <code>AgentLaunch</code> record from <code>AgentLaunchFactory</code>, attaches TaskCenter runtime metadata, chooses the launch message shape, and awaits the runner. If no runner is injected, it imports <code>engine.api.run_ephemeral_agent</code> lazily and uses the real engine path.</p>
 <div class="diagram" aria-label="Attempt launch to engine path">
   <div class="flow-row">
@@ -178,7 +178,7 @@
 <p><code>task_center_runner.core.engine.run_pipeline()</code> is the live/mock/benchmark harness entrypoint around TaskCenter. It provisions the sandbox, opens an audit bus, starts <code>AuditRecorder</code>, injects a runner if the mode has one, starts TaskCenter, waits for the launcher to go idle, releases the sandbox, and writes a performance report task.</p>
 <div class="trace-grid">
   <div>Run directory</div><div>The default path is <code>audit_dir / run_label / utc_self_id</code>. Reports store the run dir on <code>PipelineReport.run_dir</code>.</div>
-  <div>Stream bridge</div><div><code>stream_bridge()</code> converts <code>ToolExecutionStarted</code> and <code>ToolExecutionCompleted</code> into audit events, preserving tool id, metadata, error state, and <code>does_terminate</code>.</div>
+  <div>Stream audit adapter</div><div><code>stream_bridge()</code> converts <code>ToolExecutionStarted</code> and <code>ToolExecutionCompleted</code> into audit events, preserving tool id, metadata, error state, and <code>does_terminate</code>.</div>
   <div>State snapshots</div><div><code>AuditRecorder</code> listens to Goal, Iteration, Attempt, task, and agent-run ORM events, then writes <code>goal.json</code>, <code>iteration.json</code>, <code>attempt.json</code>, <code>task.json</code>, <code>run.json</code>, and <code>metrics.json</code>.</div>
   <div>Message capture</div><div>Primary role task directories get <code>message.jsonl</code>. Initial rows are recorded once from system prompt, seeded <code>initial_messages</code>, and the spawn prompt.</div>
   <div>Sandbox events</div><div>Sandbox audit events are mirrored to <code>sandbox_events.jsonl</code>, either from daemon event pulling or stream-derived sandbox event projection.</div>
@@ -205,12 +205,12 @@
 </div>
 </section>
 
-<section id="tests-maintenance" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="backend/tests/unit_test/test_task_center/test_lifecycle/test_entry_bootstrap.py backend/tests/unit_test/test_task_center/test_lifecycle/test_sandbox_bridge.py backend/tests/unit_test/test_task_center/test_agent_launch/test_runner_kwargs_contract.py backend/tests/unit_test/test_task_center/test_agent_launch/test_attempt_launcher_retry.py backend/src/task_center_runner/tests/mock/task_center/test_initial_messages_capture.py backend/src/task_center_runner/tests/mock/task_center/test_correctness.py backend/src/task_center_runner/tests/mock/task_center/test_full_case_user_input.py docs/architecture/agent_loops/main-loop.html docs/architecture/agent_loops/prompt-context.html docs/architecture/agent_loops/provider-sandbox-bridge.html docs/architecture/tools/sandbox.html docs/architecture/sandbox/workspaces.html">
+<section id="tests-maintenance" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="backend/tests/unit_test/test_task_center/test_lifecycle/test_entry_bootstrap.py backend/tests/unit_test/test_task_center/test_lifecycle/test_sandbox_provisioning.py backend/tests/unit_test/test_task_center/test_agent_launch/test_runner_kwargs_contract.py backend/tests/unit_test/test_task_center/test_agent_launch/test_attempt_launcher_retry.py backend/src/task_center_runner/tests/mock/task_center/test_initial_messages_capture.py backend/src/task_center_runner/tests/mock/task_center/test_correctness.py backend/src/task_center_runner/tests/mock/task_center/test_full_case_user_input.py docs/architecture/agent_loops/main-loop.html docs/architecture/agent_loops/prompt-context.html docs/architecture/agent_loops/provider-sandbox-bridge.html docs/architecture/tools/sandbox.html docs/architecture/sandbox/workspaces.html">
 <h2>Tests And Maintenance <a class="anchor" href="#tests-maintenance">#</a></h2>
 <div class="evidence-grid">
   <div class="evidence-card">
     <h3>Entry bootstrap</h3>
-    <p><code>test_entry_bootstrap.py</code> verifies prompt to initial goal conversion, run task creation, planner task spawn, and launcher idle behavior. <code>test_sandbox_bridge.py</code> pins explicit sandbox start, new sandbox create labels, and missing-id rejection.</p>
+    <p><code>test_entry_bootstrap.py</code> verifies prompt to initial goal conversion, run task creation, planner task spawn, and launcher idle behavior. <code>test_sandbox_provisioning.py</code> pins explicit sandbox start, new sandbox create labels, and missing-id rejection.</p>
   </div>
   <div class="evidence-card">
     <h3>Launcher contract</h3>
@@ -222,13 +222,13 @@
   </div>
   <div class="evidence-card">
     <h3>Adjacent pages</h3>
-    <p>Refresh with <a class="wiki-link" href="../agent_loops/main-loop.html">Main Agent Query Loop</a>, <a class="wiki-link" href="../agent_loops/prompt-context.html">Prompt and Context</a>, <a class="wiki-link" href="../agent_loops/provider-sandbox-bridge.html">Provider Sandbox Bridge</a>, <a class="wiki-link" href="../tools/sandbox.html">Sandbox Tools</a>, and <a class="wiki-link" href="../sandbox/workspaces.html">Sandbox Workspaces</a>.</p>
+    <p>Refresh with <a class="wiki-link" href="../agent_loops/main-loop.html">Main Agent Query Loop</a>, <a class="wiki-link" href="../agent_loops/prompt-context.html">Prompt Assembly</a>, <a class="wiki-link" href="../agent_loops/provider-sandbox-bridge.html">Sandbox Tool Dispatch Path</a>, <a class="wiki-link" href="../tools/sandbox.html">Sandbox Tools</a>, and <a class="wiki-link" href="../sandbox/workspaces.html">Sandbox Workspaces</a>.</p>
   </div>
 </div>
 <div class="refresh-list">
-  <div><strong>Refresh when launch kwargs change</strong><span>Update the runner contract, benchmark delegate expectations, and this page's launch bridge section together.</span></div>
+  <div><strong>Refresh when launch kwargs change</strong><span>Update the runner contract, benchmark delegate expectations, and this page's launch path section together.</span></div>
   <div><strong>Refresh when message rows change</strong><span>Re-check <code>AgentEntryComposer</code>, <code>engine.query.request</code>, <code>AgentMessageJsonlRecorder</code>, mock runner capture, and initial-message live tests.</span></div>
-  <div><strong>Refresh when sandbox routing changes</strong><span>Update this bridge page with tools/sandbox and sandbox/workspaces pages so TaskCenter boundaries still point at the real workspace owner.</span></div>
+  <div><strong>Refresh when sandbox routing changes</strong><span>Update this boundary page with tools/sandbox and sandbox/workspaces pages so TaskCenter boundaries still point at the real workspace owner.</span></div>
 </div>
 </section>
 

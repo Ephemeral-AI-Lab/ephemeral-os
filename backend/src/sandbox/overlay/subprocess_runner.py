@@ -18,9 +18,9 @@ from sandbox._shared.command_exec_policy import (
 # Polling step for cancel-aware subprocess wait. Small enough to keep
 # cancel-to-SIGTERM latency low (AC-3: ≤100 ms next mount), large enough to
 # keep CPU overhead negligible for long-running shells.
-_CANCEL_POLL_INTERVAL_S = 0.1
+CANCEL_POLL_INTERVAL_S = 0.1
 # Grace window between SIGTERM (cancel observed) and SIGKILL escalation.
-_CANCEL_SIGKILL_GRACE_S = 2.0
+CANCEL_SIGKILL_GRACE_S = 2.0
 
 
 def kill_process_group(pid: int, signal_number: int) -> None:
@@ -125,7 +125,7 @@ def subprocess_to_refs(
             except subprocess.TimeoutExpired:
                 kill_process_group(proc.pid, signal.SIGKILL)
                 try:
-                    proc.wait(timeout=2.0)
+                    proc.wait(timeout=CANCEL_SIGKILL_GRACE_S)
                 except subprocess.TimeoutExpired:
                     pass
                 if timeout_exit_code is None:
@@ -148,9 +148,8 @@ def wait_for_process_with_cancel(
     foreground path keeps its single ``proc.wait(timeout=...)`` syscall — no
     100 ms polling tax on synchronous shells.
 
-    Public because :class:`PrivateNamespaceStrategy` reuses this for its outer
-    unshare process (the kernel-mount holder); we want the same SIGTERM+grace
-    semantics there as the inner bash.
+    Shared with the async namespace runner so foreground and namespace tool
+    calls use the same SIGTERM+grace cancellation policy.
     """
     if cancel_event is None:
         return int(proc.wait(timeout=timeout_seconds))
@@ -160,11 +159,11 @@ def wait_for_process_with_cancel(
         if cancel_event.is_set():
             kill_process_group(proc.pid, signal.SIGTERM)
             try:
-                return int(proc.wait(timeout=_CANCEL_SIGKILL_GRACE_S))
+                return int(proc.wait(timeout=CANCEL_SIGKILL_GRACE_S))
             except subprocess.TimeoutExpired:
                 kill_process_group(proc.pid, signal.SIGKILL)
                 try:
-                    return int(proc.wait(timeout=2.0))
+                    return int(proc.wait(timeout=CANCEL_SIGKILL_GRACE_S))
                 except subprocess.TimeoutExpired:
                     return -int(signal.SIGKILL)
         rc = proc.poll()
@@ -172,7 +171,7 @@ def wait_for_process_with_cancel(
             return int(rc)
         if deadline is not None and time.monotonic() > deadline:
             raise subprocess.TimeoutExpired(proc.args, timeout_seconds)
-        cancel_event.wait(timeout=_CANCEL_POLL_INTERVAL_S)
+        cancel_event.wait(timeout=CANCEL_POLL_INTERVAL_S)
 
 
 def run_command_to_refs(
@@ -217,6 +216,8 @@ def _relative_to_declared_workspace(candidate: Path, declared_root: Path) -> Pat
 
 __all__ = [
     "kill_process_group",
+    "CANCEL_POLL_INTERVAL_S",
+    "CANCEL_SIGKILL_GRACE_S",
     "resolve_workspace_cwd",
     "run_command_to_refs",
     "subprocess_to_refs",

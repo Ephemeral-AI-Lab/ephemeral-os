@@ -179,7 +179,7 @@ def forget(sandbox_id: str) -> None:
 
 def _bundle_hash(manifest: PluginManifest) -> str:
     hasher = hashlib.sha256()
-    for label, path in _hash_inputs(manifest):
+    for label, path in _bundle_files(manifest):
         hasher.update(label.encode("utf-8"))
         hasher.update(b"\0")
         hasher.update(path.read_bytes())
@@ -187,23 +187,19 @@ def _bundle_hash(manifest: PluginManifest) -> str:
     return hasher.hexdigest()
 
 
-def _hash_inputs(manifest: PluginManifest) -> list[tuple[str, Path]]:
-    """Every regular file under the plugin's source_dir, sorted by relpath.
-
-    Mirrors :func:`_build_tar` so the hash invalidates exactly when the
-    bundle does. Skips ``__pycache__`` and dotfiles starting with ``.``
-    (e.g. an editor-leftover ``.DS_Store``).
-    """
-    inputs: list[tuple[str, Path]] = []
+def _bundle_files(manifest: PluginManifest) -> list[tuple[str, Path]]:
+    """Files included in the plugin bundle, sorted by relative path."""
+    source_dir = manifest.source_dir
+    files: list[tuple[str, Path]] = []
     for path in sorted(manifest.source_dir.rglob("*")):
-        if not _bundle_includes(path):
+        if not _is_bundle_file(path):
             continue
-        rel = path.relative_to(manifest.source_dir).as_posix()
-        inputs.append((rel, path))
-    return inputs
+        rel = path.relative_to(source_dir).as_posix()
+        files.append((rel, path))
+    return files
 
 
-def _bundle_includes(path: Path) -> bool:
+def _is_bundle_file(path: Path) -> bool:
     if not path.is_file():
         return False
     parts = path.parts
@@ -217,10 +213,7 @@ def _bundle_includes(path: Path) -> bool:
 def _build_tar(manifest: PluginManifest) -> bytes:
     raw = io.BytesIO()
     with tarfile.open(fileobj=raw, mode="w") as tar:
-        for path in sorted(manifest.source_dir.rglob("*")):
-            if not _bundle_includes(path):
-                continue
-            rel = path.relative_to(manifest.source_dir).as_posix()
+        for rel, path in _bundle_files(manifest):
             tar.add(
                 path,
                 arcname=rel,

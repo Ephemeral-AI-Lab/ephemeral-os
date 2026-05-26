@@ -18,7 +18,7 @@
 | `phase-2.6-dispatcher-heavy-run-and-closers.md` | Phase 2.6 plan: closes Phase 2's overall goal — dispatcher slow-tail (slice 7), heavy-run regression (slice 8), plus four 2.5 closers (changeset_id, real isolated_workspace sampler cadence, PluginManifest.kind, async aclose). |
 | `phase-2.6-implementation-report.md` | Implementation report for Phase 2.6 — slice 7, slice 8, and closers A/C/D/F. With this report, Phase 2 is closed; Phase 3 is the only remaining V3 work. |
 | `phase-3-report-and-release-gates.md` | Consolidated performance & resource report (§1–§13), 4 release gates, default-on rollout |
-| `phase-3-implementation-report.md` | Implementation report for Phase 3 — V3 report layout, release-gate evaluator harness, default-on opt-out env gate, engine dual-disable refusal. **With this report, V3 is code-complete**; remaining work is operational (gate evidence + K=5 countdown). |
+| `phase-3-implementation-report.md` | Implementation report for the initial Phase 3 landing — V3 report layout, release-gate evaluator harness, default-on opt-out env gate, engine dual-disable refusal. Superseded for D1-D16 completion status by `phase-3-implementation-deferrals-report.md`. |
 | `phase-3-implementation-deferrals.md` | Code-side closers for Phase 3 — 16 deferrals (D1–D16) shipped as stubs / placeholders during Phase 3, each with file:line + verification recipe. Excludes live-e2e + operator hand-off items (those live in the implementation report and V3 §Follow-ups). |
 | `phase-3-implementation-deferrals-report.md` | Implementation report for the 16 deferrals (D1–D16). With this report, every JSON field and Markdown column in the V3 §1–§13 report carries real data when its emitter is active — no remaining `"—"` / `0` placeholders. |
 
@@ -49,7 +49,7 @@
 | Release-gate evidence on dask-heavy live-e2e fixture | ⚠ operator hand-off | n/a (synthetic-event tests pin the evaluator math; live-fixture run is operational work) |
 | FU#1 stream-bridge retirement (K=5 clean heavy runs → flip default) | ⚠ operational | n/a |
 
-**With Phase 3's implementation report, V3 is code-complete.** Remaining work is operational: execute the 4-gate suite on the dask-heavy fixture, then start the K=5 retirement countdown for the stream-bridge.
+**With Phase 3's deferrals report, V3 is code-complete and report-data-complete.** Remaining work is operational: execute the 4-gate suite on the dask-heavy fixture, then start the K=5 retirement countdown for the stream-bridge.
 
 ---
 
@@ -132,8 +132,8 @@ rather than duplicating — single source of truth.
 - `payload.<section>` (promoted, structured) = **consumer surface, always written**. Report builder, downstream notebooks, live health checks MUST read from here. This is the only authoritative view.
 - `payload.daemon_event` (verbatim raw) = **forensic-only, opt-in**. Written ONLY when `EOS_AUDIT_FORENSIC_RAW_ENABLED=true` (default: `false`). Used for manual audit replay and debugging when the promoted view looks wrong. Operators flip the env var per-run when investigating a specific incident.
 - Consumer-divergence enforcement (closes Architect A2 / Critic P1):
-  1. Module-boundary: the normalizer (`task_center_runner/audit/sandbox_events.py`) is the only writer of `payload.daemon_event`.
-  2. CI lint rule: a repo-level grep job fails CI if any file outside `task_center_runner/audit/sandbox_events.py` or test files references `payload["daemon_event"]` / `payload.get("daemon_event")` / `["daemon_event"]` outside an opt-in test fixture.
+  1. Module-boundary: the normalizer (`task_center_runner/audit/daemon_event_normalizer.py`) is the only writer of `payload.daemon_event`.
+  2. CI lint rule: a repo-level grep job fails CI if any file outside `task_center_runner/audit/daemon_event_normalizer.py` or test files references `payload["daemon_event"]` / `payload.get("daemon_event")` / `["daemon_event"]` outside an opt-in test fixture.
   3. Default-off test: `test_no_consumer_reads_daemon_event_under_default_config` runs a full mock suite with `EOS_AUDIT_FORENSIC_RAW_ENABLED` unset and asserts `daemon_event` key absent from every recorded payload.
   4. Negative test: `test_report_consumer_reads_promoted_payload_section_not_daemon_event` corrupts `payload.daemon_event` (with the env enabled); asserts the report is unchanged.
 
@@ -231,6 +231,8 @@ Interval table (target intervals are clamped to floor):
 V1 Decision #6 keeps stream-derived sandbox events as a fallback alongside daemon-pulled events; V2 inherits this without a retirement gate. V3:
 
 - Retirement gate: after Phase 3 ships, if `dropped_event_count == 0` AND `lost_before_seq == 0` across **K = 5 consecutive heavy live-e2e runs** (one per week minimum), flip `EOS_AUDIT_STREAM_FALLBACK=false` as default.
+- `EOS_AUDIT_STREAM_FALLBACK=false` disables stream-derived sandbox fallback
+  events while leaving ordinary tool-call stream events intact.
 - Stream-bridge code removal is a **follow-up phase OUT OF SCOPE** for this plan; a tracking issue MUST be filed before this plan merges (see ADR §Follow-ups).
 
 ### Pull RPC trust model
@@ -283,16 +285,34 @@ The audit ring is in-memory; daemon restart loses all retained events. The pulle
 
 ### Follow-ups (out of scope for this plan)
 
-**Pre-merge requirement** (closes Critic P2): the following tracking issues MUST be filed and linked in this ADR BEFORE this plan merges. Without filed issues, "follow-up" becomes "permanent regression".
+**Tracking requirement** (closes Critic P2): still-open operator-owned follow-ups
+need filed and linked issues. Without filed issues, "follow-up" becomes
+"permanent regression".
 
-1. **Stream-bridge code removal** after retirement gate passes (K=5 consecutive clean heavy runs). Issue title: `[Audit] Remove stream-bridge fallback after K=5 clean runs (post-V3)`. Trigger: retirement gate observed in 5 weekly heavy runs.
-2. **Real plugin session model** + `plugin.session_*` events (additive, no schema bump). Issue title: `[Plugins] Introduce per-workspace plugin session lifecycle`. Trigger: any second plugin kind added to `plugins/catalog/` (forces the question).
-3. **Plugin-kind catalog expansion** (Ruff daemon, `tsc --watch`, mypy daemon — each new kind drops into the existing schema). No specific trigger; opportunistic.
-4. **Ring-by-lane separation** if audit overhead gate fails permanently — investigate per-subsystem ring sharding. Trigger: overhead gate failure post-ship.
-5. **`mount` / `publish` phase recording** from `sandbox/overlay/lifecycle.py` and `sandbox/occ/service.py` via the `engine.tool_call.phase_buffer.record_phase` API. Phase 2.6 slice 7 wired the four framework-boundary phases (`queued` / `exec` / `capture` / `release`); the two remaining phases live below the framework and need a one-call hook at each emit site. Issue title: `[Audit] Surface mount/publish phases via record_phase from overlay+OCC`. Trigger: Phase 3 report §2 renders "—" for the two columns until this lands (per phase-3 spec; not a regression). Schema is additive (no new event family); per-tool-name rolling P95 / slow-tail decision is unaffected because the four phases the framework already records dominate envelope total_ms; rollup picks up the two extras automatically once the call sites are added.
-6. **Plan-doc cosmetic corrections** — (a) `phase-2.5-remaining-emitters-and-wiring.md` §slice-3 file list still names `sandbox/daemon/occ_runtime_services.py` and `sandbox/daemon/changeset_projection.py`; the actual emitters live in `sandbox/occ/service.py`. (b) `phase-2-emitters-and-puller.md` §Deliverable 6 names `task_center_runner/audit/sandbox_events.py`; slice 1 split it into `daemon_event_normalizer.py` + `sandbox_events_sink.py`. Both are doc-only fixes — code already ships against the real file names and CI lints enforce the contracts. Trigger: opportunistic; no functional impact.
+- **Live dask-heavy release-gate evidence** for the 4-gate suite. Trigger:
+  operator execution of `EOS_SWEEVO_INSTANCE=dask__dask_2023.3.2_2023.4.0`
+  under the pinned Phase 3 gate configuration.
+- **Stream-bridge retirement default flip** after K=5 consecutive clean heavy
+  runs. Trigger: `dropped_event_count == 0` and `lost_before_seq == 0` across
+  five weekly heavy runs.
+- **Stream-bridge code removal** after the retirement gate passes. Issue title:
+  `[Audit] Remove stream-bridge fallback after K=5 clean runs (post-V3)`.
+- **Real plugin session model** + `plugin.session_*` events (additive, no schema
+  bump). Issue title: `[Plugins] Introduce per-workspace plugin session
+  lifecycle`. Trigger: any second plugin kind added to `plugins/catalog/`.
+- **Plugin-kind catalog expansion** (Ruff daemon, `tsc --watch`, mypy daemon —
+  each new kind drops into the existing schema). No specific trigger;
+  opportunistic.
+- **Ring-by-lane separation** only if the audit overhead gate fails permanently;
+  investigate per-subsystem ring sharding after a post-ship overhead failure.
 
-Each follow-up issue references this plan by path and version (V3) so future readers can trace the original decision context.
+Closed former follow-ups are now covered by
+[`phase-3-implementation-deferrals-report.md`](phase-3-implementation-deferrals-report.md):
+D1 landed the two missing tool-call timing hooks, and D16 landed the plan-doc
+file-name fixes.
+
+Each still-open follow-up issue references this plan by path and version (V3)
+so future readers can trace the original decision context.
 
 ---
 

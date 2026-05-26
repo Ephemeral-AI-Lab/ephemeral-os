@@ -26,22 +26,14 @@ from sandbox.isolated_workspace._control_plane.pipeline_state import (
 )
 
 
-def _emit_orphan_reaped(
-    *,
-    holder_pid: int | None = None,
-    cgroup_id: str | None = None,
-    scratch_id: str | None = None,
-) -> None:
-    """Emit ``isolated_workspace.orphan_reaped`` for a reaped orphan."""
+def _emit_reaped_holder_process(holder_pid: int) -> None:
+    """Emit ``isolated_workspace.orphan_reaped`` for a reaped holder."""
     safe_emit(
         build_isolated_workspace_event(
             "isolated_workspace.orphan_reaped",
             IsolatedWorkspaceSection(
                 holder_pid=holder_pid,
-                cgroup_id=cgroup_id,
-                orphan_holder_count=1 if holder_pid is not None else 0,
-                orphan_cgroup_count=1 if cgroup_id is not None else 0,
-                orphan_scratch_count=1 if scratch_id is not None else 0,
+                orphan_holder_count=1,
             ),
         ),
         lane="critical",
@@ -316,7 +308,7 @@ class _OrphanResourceReaperMixin:
                     },
                 },
             )
-            _emit_orphan_reaped(holder_pid=proc.pid)
+            _emit_reaped_holder_process(proc.pid)
 
 
 def _iter_namespace_holder_processes(

@@ -14,68 +14,79 @@ not as a reason to stop.
 - Main backend areas are `backend/src/task_center`, `backend/src/engine`, and
   `backend/src/sandbox`.
 
-## Project References
+## Codebase Memory And Architecture
 
-- TaskCenter harness and context-engine reference:
-  `docs/task_center_harness_and_context_engine.html`.
-- Architecture wiki reference:
-  `docs/architecture`, with sandbox workspace pages under
-  `docs/architecture/sandbox` and tools pages under `docs/architecture/tools`.
+Use `docs/architecture/index.html` as the maintained codebase-memory and
+architecture bundle before making architecture-shaped changes. The root page
+links the module pages for `docs/architecture/task_center`,
+`docs/architecture/agent_loops`, `docs/architecture/tools`, and
+`docs/architecture/sandbox`; those pages are the first stop for ownership,
+workflow, invariants, diagnostics, and refresh triggers. Treat the older
+TaskCenter harness reference at `docs/task_center_harness_and_context_engine.html`
+as historical background and stale-claim comparison material; the maintained
+cross-module map now lives under `docs/architecture`.
 
-## Backend Architecture
-
-- TaskCenter is the multi-agent coding control plane. Its core idea is task
-  handoff: tasks advance through persisted state rather than direct
-  agent-to-agent communication.
-- Do not introduce peer-to-peer agent communication or a global agent
-  orchestrator. Coordination should flow through TaskCenter state, terminal
-  submissions, context packets, and lifecycle reports.
-- The TaskCenter state model is goal -> iteration -> attempt, with attempts
-  driving planner, generator, and evaluator task roles.
-- `context_engine` builds the context for different task states and harness
-  phases. It supports retrying attempts, deferred iterations, and evaluation
-  gates; lifecycle policy should stay in the TaskCenter handlers/managers rather
-  than being hidden inside context construction.
-- Sandbox is the main tool-execution environment. Docker is the default sandbox
-  provider unless `EOS_SANDBOX_PROVIDER` or central config selects Daytona.
-  Agents run outside the sandbox and call provider-backed sandbox APIs to
-  perform file, shell, plugin, and workspace actions.
-- Shared ephemeral workspace file operations use daemon-owned layer-stack plus
-  OCC fast paths for `read_file`, `write_file`, and `edit_file` when a workspace
-  binding exists. Shell/search/plugin-style operations use the overlay pipeline;
-  write-capable overlay results publish through OCC-gated paths.
-- Isolated workspace mode is an explicit `enter_isolated_workspace` /
-  `exit_isolated_workspace` lifecycle. It gives an agent a persistent workspace
-  for that isolated session, and its changes are discarded after exit.
-- The engine loop is responsible for forcing agents to submit terminal tools that
-  mark task completion and state. Those terminal results are part of TaskCenter
-  context and state management, not just user-facing messages.
-
-## Code Anchors
-
-- TaskCenter state is grounded in `task_center/goal/state.py`,
-  `task_center/iteration/state.py`, and `task_center/attempt/state.py`.
-- Handoff is implemented by `submit_execution_handoff` through
-  `GoalStarter.start(GoalOrigin.task(...))`; parent generator tasks move to
-  `WAITING_GOAL` and resume through `GoalClosureReportRouter` plus
+- Treat the code checkout as source truth and `docs/architecture` as the
+  curated memory layer. If an architectural claim matters, verify the current
+  code anchor and update the smallest affected architecture page rather than
+  adding disconnected notes. When refreshing architecture docs, follow each
+  page's `data-last-reviewed-commit` and `data-evidence-paths` metadata.
+- TaskCenter is the persisted multi-agent control plane. Coordination flows
+  through TaskCenter state, terminal submissions, context packets, and lifecycle
+  reports; do not introduce peer-to-peer agent communication or a global agent
+  orchestrator. Its durable model is Goal -> Iteration -> Attempt, with each
+  Attempt owning one planner -> generator DAG -> evaluator try.
+- `ContextEngine` builds recipe-driven packets from store state for role,
+  retry, deferral, and evaluation contexts. Keep lifecycle policy in TaskCenter
+  handlers/managers, not hidden in context construction. Recipes live under
+  `backend/src/task_center/context_engine/recipes`.
+- TaskCenter state is grounded in `backend/src/task_center/goal/state.py`,
+  `backend/src/task_center/iteration/state.py`, and
+  `backend/src/task_center/attempt/state.py`. Handoff runs through
+  `submit_execution_handoff`, `GoalStarter.start(GoalOrigin.task(...))`,
+  `GoalClosureReportRouter`, and
   `AttemptOrchestrator.apply_goal_closure_report`.
-- The code does contain `AttemptOrchestrator`, but it is a per-attempt
-  planner -> generator DAG -> evaluator state machine. Treat it as lifecycle
-  machinery, not permission to add a global orchestration layer.
-- `ContextEngine` only builds recipe-driven packets from store state. Planner,
-  generator, and evaluator recipes live under `task_center/context_engine/recipes`.
-- Terminal-tool enforcement lives in `engine/query/loop.py`,
-  `engine/tool_call/dispatch.py`, and `tools/_framework/execution/tool_call.py`.
-- Sandbox provider selection lives in `sandbox/provider/bootstrap.py` and
-  `config/sections/sandbox.py`; Docker's provider implementation is under
-  `sandbox/provider/docker`.
-- Workspace routing lives in `sandbox/daemon/workspace_tool_dispatch.py`.
-  Layer-stack/OCC services live in `sandbox/layer_stack` and `sandbox/occ`;
-  overlay execution lives in `sandbox/ephemeral_workspace` and `sandbox/overlay`.
-- Isolated workspace lifecycle is implemented by
-  `tools/isolated_workspace`, `sandbox/host/isolated_workspace_lifecycle.py`,
-  and `sandbox/isolated_workspace`. Its exit path tears down the namespace,
-  releases the snapshot lease, and removes the scratch directory.
+- `AttemptOrchestrator` is per-Attempt lifecycle machinery, not permission to
+  add a global orchestration layer. Related launch, stage-advance, and close
+  behavior lives under `backend/src/task_center/attempt`.
+- The engine loop owns agent execution and terminal-tool enforcement.
+  Successful terminal tools are stamped as terminating by
+  `backend/src/tools/_framework/execution/tool_call.py`; dispatch and loop exit
+  run through `backend/src/engine/tool_call/dispatch.py` and
+  `backend/src/engine/query/loop.py`. Terminal tools must be called alone;
+  those terminal results are TaskCenter state inputs, not just user-facing
+  messages. Background execution is an engine dispatch mode, not a provider-level
+  persistent shell session.
+- Sandbox is the tool-execution environment. Agents run outside the sandbox and
+  call provider-backed sandbox APIs for file, shell, plugin, and workspace
+  actions. Provider selection lives in
+  `backend/src/sandbox/provider/bootstrap.py` and
+  `backend/src/config/sections/sandbox.py`; Docker is default unless
+  `EOS_SANDBOX_PROVIDER` or central config selects Daytona. Provider bootstrap
+  is process-global and first-call-wins.
+- Workspace routing lives in
+  `backend/src/sandbox/daemon/workspace_tool_dispatch.py`. Shared workspace
+  `read_file`, `write_file`, and `edit_file` use daemon-owned LayerStack/OCC
+  fast paths when a workspace binding exists. Shell, search, and plugin-style
+  operations use the overlay pipeline; write-capable overlay results publish
+  through OCC-gated paths. LayerStack/OCC services live in
+  `backend/src/sandbox/layer_stack` and `backend/src/sandbox/occ`; overlay
+  execution lives in `backend/src/sandbox/ephemeral_workspace` and
+  `backend/src/sandbox/overlay`.
+- Isolated workspace mode is an explicit `enter_isolated_workspace` /
+  `exit_isolated_workspace` lifecycle. It gives an agent a persistent private
+  workspace for that isolated session through the active `agent_id` handle, not
+  a separate public `isolated_workspace_id` routing parameter. Writes are
+  captured and audited but not OCC-published; exit tears down the namespace,
+  releases the snapshot lease, and removes scratch state. Enter rejects active
+  sandbox-bound background work, exit cancels or drains it, and plugin/LSP
+  operations are blocked while isolated mode is active for that agent. The code
+  lives in
+  `backend/src/tools/isolated_workspace`,
+  `backend/src/sandbox/host/isolated_workspace_lifecycle.py`, and
+  `backend/src/sandbox/isolated_workspace`; the architecture references are
+  `docs/architecture/tools/isolated-workspace.html` and
+  `docs/architecture/sandbox/workspaces.html`.
 
 ## Parallel Agent Work
 

@@ -19,7 +19,7 @@ from pathlib import Path
 from typing import Literal, Protocol
 
 from sandbox._shared.models import Intent, ToolCallRequest
-from sandbox.occ.layer_stack_client import LayerStackClient
+from sandbox.occ.layer_stack_client import LayerStackPortAdapter
 from sandbox.overlay.capability import mount_syscalls_supported
 from sandbox.ephemeral_workspace.pipeline import EphemeralPipeline
 from sandbox.occ.changeset import ChangesetResult
@@ -166,7 +166,7 @@ async def run_shell_batch(
     pipeline = EphemeralPipeline(
         occ_client=_NoopOccClient(),
         workspace_ref=str(stack.storage_root),
-        layer_stack=LayerStackClient(stack),
+        layer_stack=LayerStackPortAdapter(stack),
         workspace_root=workspace_root.as_posix(),
     )
     expected_mode = "private_namespace"

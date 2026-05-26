@@ -246,7 +246,7 @@ def test_services_cached_per_layer_stack_root(
     )
     monkeypatch.setattr(
         occ_runtime_services,
-        "LayerStackClient",
+        "LayerStackPortAdapter",
         lambda manager: ("layer-stack", manager),
     )
     monkeypatch.setattr(
@@ -293,7 +293,11 @@ def test_drop_occ_runtime_services_removes_only_requested_root(
         "get_layer_stack_manager",
         lambda _root: object(),
     )
-    monkeypatch.setattr(occ_runtime_services, "LayerStackClient", lambda _manager: object())
+    monkeypatch.setattr(
+        occ_runtime_services,
+        "LayerStackPortAdapter",
+        lambda _manager: object(),
+    )
     monkeypatch.setattr(
         occ_runtime_services,
         "SnapshotGitignoreOracle",
@@ -336,7 +340,11 @@ def test_runtime_service_cache_close_paths_close_owned_occ_services(
             closed.append(self.service_id)
 
     monkeypatch.setattr(occ_runtime_services, "get_layer_stack_manager", lambda _root: object())
-    monkeypatch.setattr(occ_runtime_services, "LayerStackClient", lambda _manager: object())
+    monkeypatch.setattr(
+        occ_runtime_services,
+        "LayerStackPortAdapter",
+        lambda _manager: object(),
+    )
     monkeypatch.setattr(
         occ_runtime_services, "SnapshotGitignoreOracle", lambda _layer_stack: object()
     )

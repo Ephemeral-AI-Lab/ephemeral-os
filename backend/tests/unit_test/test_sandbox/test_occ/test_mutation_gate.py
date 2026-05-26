@@ -201,7 +201,7 @@ def test_single_occ_runtime_services_cache_per_layer_stack_root(
         "get_layer_stack_manager",
         lambda root: _FakeManager(str(root)),
     )
-    monkeypatch.setattr(occ_runtime_services, "LayerStackClient", _FakeLayerStack)
+    monkeypatch.setattr(occ_runtime_services, "LayerStackPortAdapter", _FakeLayerStack)
     monkeypatch.setattr(
         occ_runtime_services,
         "SnapshotGitignoreOracle",

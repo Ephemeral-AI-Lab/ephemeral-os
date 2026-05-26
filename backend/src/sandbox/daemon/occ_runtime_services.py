@@ -20,8 +20,8 @@ from sandbox.occ.client import OccClient
 from sandbox.occ.gitignore import SnapshotGitignoreOracle
 from sandbox.occ.maintenance import AutoSquashMaintenancePolicy
 from sandbox.occ.service import AUTO_SQUASH_MAX_DEPTH, OccService
-from sandbox.occ.layer_stack_client import LayerStackClient
-from sandbox.main_workspace.workspace_binding import RuntimeWorkspaceBindingReader
+from sandbox.occ.layer_stack_client import LayerStackPortAdapter
+from sandbox.main_workspace.workspace_binding import MainWorkspaceBindingReader
 from sandbox.daemon.layer_stack_runtime import get_layer_stack_manager
 
 
@@ -33,7 +33,7 @@ class OccRuntimeServices:
     code all read these attributes. A typo here silently breaks every consumer.
     """
 
-    layer_stack: LayerStackClient
+    layer_stack: LayerStackPortAdapter
     occ_service: OccService
     occ_client: OccClient
     gitignore: SnapshotGitignoreOracle
@@ -54,7 +54,7 @@ def get_occ_runtime_services(layer_stack_root: str) -> OccRuntimeServices:
             _RUNTIME_SERVICE_CACHE.move_to_end(cache_key)
             return cached
     manager = get_layer_stack_manager(cache_key)
-    layer_stack = LayerStackClient(manager)
+    layer_stack = LayerStackPortAdapter(manager)
     gitignore = SnapshotGitignoreOracle(layer_stack)
     occ_service = OccService(
         gitignore=gitignore,
@@ -67,7 +67,7 @@ def get_occ_runtime_services(layer_stack_root: str) -> OccRuntimeServices:
     )
     occ_client = OccClient(
         occ_service,
-        binding_reader=RuntimeWorkspaceBindingReader(),
+        binding_reader=MainWorkspaceBindingReader(),
         workspace_ref=cache_key,
     )
     services = OccRuntimeServices(

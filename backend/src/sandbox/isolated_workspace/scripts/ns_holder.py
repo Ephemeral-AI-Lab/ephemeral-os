@@ -22,6 +22,10 @@ import subprocess
 import sys
 
 
+_IPV6_CONF_ROOT = "/proc/sys/net/ipv6/conf"
+_FALLBACK_IPV6_CONF_INTERFACES = ("all", "default", "lo", "eth0")
+
+
 def _purge_ipv6_default_routes() -> None:
     """Remove IPv6 default routes + disable router-advertisement acceptance.
 
@@ -30,7 +34,7 @@ def _purge_ipv6_default_routes() -> None:
     Best-effort: every command is run with ``check=False`` because some
     images strip ``ip -6`` or the sysctl write path entirely.
     """
-    for iface in ("eth0", "lo", "all", "default"):
+    for iface in _ipv6_conf_interfaces():
         subprocess.run(
             ["sysctl", "-w", f"net.ipv6.conf.{iface}.accept_ra=0"],
             check=False,
@@ -43,6 +47,18 @@ def _purge_ipv6_default_routes() -> None:
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
     )
+
+
+def _ipv6_conf_interfaces() -> tuple[str, ...]:
+    try:
+        names = sorted(
+            name
+            for name in os.listdir(_IPV6_CONF_ROOT)
+            if name and "/" not in name and name not in {".", ".."}
+        )
+    except OSError:
+        return _FALLBACK_IPV6_CONF_INTERFACES
+    return tuple(names) or _FALLBACK_IPV6_CONF_INTERFACES
 
 
 def _rbind_proc_into_new_mntns() -> None:

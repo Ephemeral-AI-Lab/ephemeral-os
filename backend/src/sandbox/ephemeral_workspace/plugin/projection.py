@@ -7,7 +7,7 @@ from pathlib import Path
 
 from sandbox.layer_stack.manifest import manifest_root_hash
 from sandbox.layer_stack.stack import LayerStack
-from sandbox.occ.layer_stack_client import LayerStackClient
+from sandbox.occ.layer_stack_client import LayerStackPortAdapter
 from sandbox.overlay import lifecycle as overlay_lifecycle
 from sandbox.overlay.handle import OverlayHandle
 
@@ -89,7 +89,7 @@ class WorkspaceProjection:
         workspace_root: str,
     ) -> OverlayHandle:
         return overlay_lifecycle.acquire(
-            LayerStackClient(self._manager),
+            LayerStackPortAdapter(self._manager),
             invocation_id=owner_request_id,
             workspace_root=workspace_root,
         )

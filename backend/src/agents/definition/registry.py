@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from .model import AgentDefinition
+from .model import AgentDefinition, AgentType
 
 # ---------------------------------------------------------------------------
 # Registry
@@ -36,5 +36,5 @@ def list_dispatchable_subagent_names() -> list[str]:
     return sorted(
         defn.name
         for defn in _DEFINITIONS.values()
-        if defn.agent_type == "subagent"
+        if defn.agent_type == AgentType.SUBAGENT
     )

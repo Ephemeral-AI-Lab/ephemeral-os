@@ -116,7 +116,7 @@ _GATED_PROFILE = _StagingRouteProfile(
 
 
 @dataclass
-class _PathStageState:
+class _StagedPathState:
     content: bytes | None
     initial_exists: bool
     final_kind: FinalLayerChangeKind
@@ -210,7 +210,7 @@ class _PathGroupStager:
         )
         timings[profile.timing_read] = monotonic_now() - read_start
 
-        state = _PathStageState(
+        state = _StagedPathState(
             content=current_content or b"",
             initial_exists=current_exists,
             final_kind="write" if current_exists else "delete",
@@ -236,7 +236,7 @@ class _PathGroupStager:
     def _apply_change(
         self,
         change: Change,
-        state: _PathStageState,
+        state: _StagedPathState,
         path: str,
     ) -> FileResult | None:
         if isinstance(change, OpaqueDirChange):
@@ -292,7 +292,7 @@ class _PathGroupStager:
 
     def _hash_mismatch(
         self,
-        state: _PathStageState,
+        state: _StagedPathState,
         base_hash: str | None,
     ) -> FileStatus | None:
         """Return ABORTED_VERSION if the gated hash chain disagrees, else None."""
@@ -317,7 +317,7 @@ class _PathGroupStager:
     def _build_delta(
         self,
         path: str,
-        state: _PathStageState,
+        state: _StagedPathState,
         stage_write: StageWriteBytes,
         stage_write_from_path: StageWriteFile | None,
     ) -> StagedLayerChanges | None:

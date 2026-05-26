@@ -49,7 +49,7 @@ if TYPE_CHECKING:
         TaskCenterEntryHandle,
         start_task_center_run,
     )
-    from task_center.entry import TaskCenterSandboxBridge
+    from task_center.entry import TaskCenterSandboxProvisioner
     from task_center.iteration.state import (
         Iteration,
         IterationCreationReason,
@@ -115,9 +115,9 @@ _EXPORTS: dict[str, tuple[str, str]] = {
         "task_center._core.primitives",
         "TaskCenterInvariantViolation",
     ),
-    "TaskCenterSandboxBridge": (
+    "TaskCenterSandboxProvisioner": (
         "task_center.entry",
-        "TaskCenterSandboxBridge",
+        "TaskCenterSandboxProvisioner",
     ),
     "TaskCenterEntry": ("task_center.entry.bootstrap", "TaskCenterEntry"),
     "TaskCenterEntryHandle": (

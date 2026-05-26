@@ -79,6 +79,41 @@ def test_stream_bridge_derives_sandbox_subsystem_events() -> None:
     }
 
 
+def test_stream_bridge_sandbox_fallback_flag_blocks_derived_sandbox_events() -> None:
+    bus = AuditEventBus()
+    events: list[Event] = []
+    bus.subscribe(events.append)
+    bridge = stream_bridge(
+        bus,
+        task_center_run_id="run-1",
+        sandbox_fallback_enabled=False,
+    )
+
+    asyncio.run(
+        bridge(
+            ToolExecutionCompleted(
+                tool_name="shell",
+                output="{}",
+                is_error=False,
+                tool_id="toolu_1",
+                agent_name="executor",
+                run_id="task-1",
+                metadata={
+                    "status": "ok",
+                    "changed_paths": ["a.txt"],
+                    "timings": {
+                        "overlay.total_s": 0.02,
+                        "occ.prepare.total_s": 0.03,
+                        "occ.apply.total_s": 0.06,
+                    },
+                },
+            )
+        )
+    )
+
+    assert [event.type for event in events] == [EventType.TOOL_CALL_COMPLETED]
+
+
 def test_stream_bridge_skips_metadata_derivation_when_sandbox_audit_emitted() -> None:
     bus = AuditEventBus()
     events: list[Event] = []

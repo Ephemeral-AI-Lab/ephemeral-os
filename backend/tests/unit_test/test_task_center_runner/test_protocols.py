@@ -56,7 +56,7 @@ def test_run_config_documented_fields_present() -> None:
         "audit_dir",
         "run_label",
         "run_dir_factory",
-        "bridge_factory",
+        "sandbox_provisioner_factory",
         "instance_id",
         "max_duration_s",
         "extras",

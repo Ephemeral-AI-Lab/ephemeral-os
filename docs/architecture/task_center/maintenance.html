@@ -29,14 +29,14 @@
     <li><a href="context-engine.html" data-doc-module="task-center" data-doc-section="context-engine" data-doc-page="context-engine.html">Context Engine</a></li>
     <li><a href="agent-roles.html" data-doc-module="task-center" data-doc-section="agent-roles" data-doc-page="agent-roles.html">Agent Roles</a></li>
     <li><a href="terminal-tools.html" data-doc-module="task-center" data-doc-section="terminal-tools" data-doc-page="terminal-tools.html">Terminal Tools</a></li>
-    <li><a href="bridges.html" data-doc-module="task-center" data-doc-section="bridges" data-doc-page="bridges.html">Engine Tools Sandbox</a></li>
+    <li><a href="bridges.html" data-doc-module="task-center" data-doc-section="bridges" data-doc-page="bridges.html">Runtime Boundaries</a></li>
     <li><a href="maintenance.html" data-doc-module="task-center" data-doc-section="maintenance" data-doc-page="maintenance.html" class="active">Maintenance</a></li>
   </ol>
 </nav>
 <main>
 <div class="doc-actions">
   <span><a href="index.html">TaskCenter</a> / Maintenance</span>
-  <span class="nav-pair"><a href="bridges.html">Engine Tools Sandbox</a><a href="../index.html">Architecture Root</a></span>
+  <span class="nav-pair"><a href="bridges.html">Runtime Boundaries</a><a href="../index.html">Architecture Root</a></span>
 </div>
 <h1>TaskCenter Maintenance</h1>
 <nav class="page-toc" aria-labelledby="page-toc-heading">
@@ -59,7 +59,7 @@
   <div><b>graph explorer: goal-iteration-attempt</b><span>Mapped GoalStarter, GoalLifecycle, IterationAttemptCoordinator, AttemptOrchestrator, generator DAG, retry, deferral, delegated child goals, nested planning, closure routing, tests, and stale older-doc claims.</span></div>
   <div><b>graph explorer: context</b><span>Mapped ContextEngine, recipes, packets, renderer, task guidance, skill rows, profile frontmatter, and launch message rows.</span></div>
   <div><b>graph explorer: terminals</b><span>Mapped submission tools, terminal descriptor registry, advisor/resolver helper pattern, terminal exclusivity, output validation, and engine stop behavior.</span></div>
-  <div><b>graph explorer: bridges</b><span>Mapped TaskCenter entry bootstrap, sandbox binding, engine run launch, tool metadata, message artifacts, task_center_runner audit, and cross-module boundaries.</span></div>
+  <div><b>graph explorer: runtime boundaries</b><span>Mapped TaskCenter entry bootstrap, sandbox binding, engine run launch, tool metadata, message artifacts, task_center_runner audit, and cross-module boundaries.</span></div>
   <div><b>wiki builder lanes</b><span>Parallel write lanes owned non-overlapping TaskCenter pages. Shared navigation, search, root index, and maintenance remained serial coordinator-owned.</span></div>
 </div>
 </section>
@@ -150,7 +150,7 @@
 <h2>Change Log <a class="anchor" href="#change-log">#</a></h2>
 <div class="summary">
   <ul>
-    <li><span><strong>2026-05-26.</strong> Created the TaskCenter architecture module under <code>docs/architecture/task_center</code>, covering the Goal -> Iteration -> Attempt model, planner-generator-evaluator harness, context engine, agent roles, terminal tools, advisor/resolver patterns, engine/tools/sandbox bridges, and maintenance rules.</span></li>
+    <li><span><strong>2026-05-26.</strong> Created the TaskCenter architecture module under <code>docs/architecture/task_center</code>, covering the Goal -> Iteration -> Attempt model, planner-generator-evaluator harness, context engine, agent roles, terminal tools, advisor/resolver patterns, engine/tools/sandbox dispatch paths, and maintenance rules.</span></li>
     <li><span><strong>2026-05-26.</strong> Recorded stale claims from the older standalone TaskCenter HTML and linked this module into the shared architecture navigation/search layer.</span></li>
   </ul>
 </div>
@@ -161,7 +161,7 @@
   <span>TaskCenter maintenance metadata reviewed against <code>e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa</code>.</span>
   <code>git diff e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa..HEAD -- &lt;section data-evidence-paths&gt;</code>
 </div>
-<div class="page-footer-nav"><span><a href="bridges.html">Engine Tools Sandbox</a></span><span><a href="../index.html">Architecture Root</a></span></div>
+<div class="page-footer-nav"><span><a href="bridges.html">Runtime Boundaries</a></span><span><a href="../index.html">Architecture Root</a></span></div>
 </main>
 <script src="../assets/search-index.js"></script>
 <script src="../assets/nav.js"></script>

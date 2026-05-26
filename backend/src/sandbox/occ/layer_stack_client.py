@@ -1,4 +1,4 @@
-"""In-process LayerStack adapter implementing narrow OCC ports."""
+"""In-process LayerStack port adapter for OCC and workspace pipelines."""
 
 from __future__ import annotations
 
@@ -10,14 +10,14 @@ from sandbox.layer_stack.commit_staging import CommitStagingArea
 from sandbox.layer_stack.lease import WorkspaceLease
 from sandbox.layer_stack.manifest import Manifest
 from sandbox.layer_stack.stack import (
+    LayerStackSnapshotLease,
     LayerStack,
-    PrepareWorkspaceSnapshotResult,
 )
 from sandbox.occ.ports import LayerCommitTransaction
 
 
-class LayerStackClient:
-    """Client boundary around the in-process layer-stack manager.
+class LayerStackPortAdapter:
+    """Adapter from the in-process layer-stack manager to OCC/pipeline ports.
 
     Forwards OCC port calls to the manager and adapts the per-workspace
     lease API onto the manager's positional signature.
@@ -33,9 +33,6 @@ class LayerStackClient:
     def read_active_manifest(self) -> Manifest:
         return self.manager.read_active_manifest()
 
-    def acquire_snapshot_lease(self, owner_request_id: str) -> WorkspaceLease:
-        return self.manager.acquire_snapshot_lease(owner_request_id)
-
     def read_bytes(
         self,
         path: str,
@@ -50,16 +47,6 @@ class LayerStackClient:
     ) -> tuple[str, bool]:
         return self.manager.read_text(path, manifest)
 
-    def iter_paths(self, manifest: Manifest) -> Iterator[str]:
-        return self.manager.iter_paths(manifest)
-
-    def materialize(
-        self,
-        destination: str | Path,
-        manifest: Manifest,
-    ) -> None:
-        self.manager.materialize(destination, manifest)
-
     def commit_transaction(self) -> AbstractContextManager[LayerCommitTransaction]:
         return self.manager.commit_transaction()
 
@@ -73,13 +60,40 @@ class LayerStackClient:
         self,
         *,
         request_id: str,
-    ) -> PrepareWorkspaceSnapshotResult:
+    ) -> LayerStackSnapshotLease:
         return self.manager.prepare_workspace_snapshot(
             request_id,
         )
 
     def release_lease(self, *, lease_id: str) -> bool:
         return self.manager.release_lease(lease_id)
+
+    def can_squash(self, *, max_depth: int) -> bool:
+        return self.manager.can_squash(max_depth=max_depth)
+
+    def squash(self, *, max_depth: int) -> Manifest | None:
+        return self.manager.squash(max_depth=max_depth)
+
+
+class LayerStackClient(LayerStackPortAdapter):
+    """Legacy adapter name preserving the previous direct-import method surface.
+
+    New code should use :class:`LayerStackPortAdapter`; these extra forwarders
+    stay only because ``LayerStackClient`` is exported from this module.
+    """
+
+    def acquire_snapshot_lease(self, owner_request_id: str) -> WorkspaceLease:
+        return self.manager.acquire_snapshot_lease(owner_request_id)
+
+    def iter_paths(self, manifest: Manifest) -> Iterator[str]:
+        return self.manager.iter_paths(manifest)
+
+    def materialize(
+        self,
+        destination: str | Path,
+        manifest: Manifest,
+    ) -> None:
+        self.manager.materialize(destination, manifest)
 
     def flush_to_workspace(
         self,
@@ -92,11 +106,5 @@ class LayerStackClient:
             timings=timings,
         )
 
-    def can_squash(self, *, max_depth: int) -> bool:
-        return self.manager.can_squash(max_depth=max_depth)
 
-    def squash(self, *, max_depth: int) -> Manifest | None:
-        return self.manager.squash(max_depth=max_depth)
-
-
-__all__ = ["LayerStackClient"]
+__all__ = ["LayerStackClient", "LayerStackPortAdapter"]

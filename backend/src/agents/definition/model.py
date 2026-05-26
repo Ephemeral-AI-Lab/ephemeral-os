@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from enum import StrEnum
 from pathlib import Path
-from typing import Any, Literal, Protocol, runtime_checkable
+from typing import Any, Protocol, runtime_checkable
 
 from pydantic import (
     BaseModel,
@@ -14,7 +14,11 @@ from pydantic import (
     field_validator,
 )
 
-AgentType = Literal["agent", "subagent"]
+class AgentType(StrEnum):
+    """Runtime class of an agent profile."""
+
+    AGENT = "agent"
+    SUBAGENT = "subagent"
 
 
 class AgentKind(StrEnum):
@@ -99,7 +103,7 @@ class AgentDefinition(BaseModel):
     dispatchable_by_planner: bool = False
 
     # --- agent type: regular agent or subagent (worker) ---
-    agent_type: AgentType = "agent"
+    agent_type: AgentType = AgentType.AGENT
 
     # --- run tool surface ---
     # Tools the agent may call during a run. The agent's tool registry is

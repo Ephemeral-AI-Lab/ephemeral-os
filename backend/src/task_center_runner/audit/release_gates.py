@@ -30,28 +30,26 @@ def evaluate_isolated_workspace_gate(
 
     Per §Gate matrix: passes iff every ``isolated_workspace.exited``
     reports zero orphan counts AND zero ``holder_pid_alive`` AND the
-    final ``open_handle_count == 0`` (computed from entered/exited/
-    evicted).
+    final handle-id accounting reports zero open handles, no terminal event
+    without a matching enter, and no lifecycle event missing a handle id.
     """
     exits: list[Mapping[str, Any]] = []
     holder_alive_after_exit = 0
     orphan_holder = 0
     orphan_cgroup = 0
     orphan_scratch = 0
-    entered = 0
-    exited = 0
-    evicted = 0
+    lifecycle_events: list[Mapping[str, Any]] = []
     for event_row in events:
         event_type = event_row.get("event_type")
         if event_type == "isolated_workspace.entered":
-            entered += 1
+            lifecycle_events.append(event_row)
             continue
         if event_type == "isolated_workspace.evicted":
-            evicted += 1
+            lifecycle_events.append(event_row)
             continue
         if event_type == "isolated_workspace.exited":
-            exited += 1
-            section = _payload_section(event_row, "isolated_workspace")
+            lifecycle_events.append(event_row)
+            section = _promoted_payload_section(event_row, "isolated_workspace")
             exits.append(section)
             orphan_holder += int(section.get("orphan_holder_count") or 0)
             orphan_cgroup += int(section.get("orphan_cgroup_count") or 0)
@@ -60,30 +58,94 @@ def evaluate_isolated_workspace_gate(
                 holder_alive_after_exit += 1
             continue
         if event_type == "isolated_workspace.orphan_check_completed":
-            section = _payload_section(event_row, "isolated_workspace")
+            section = _promoted_payload_section(event_row, "isolated_workspace")
             orphan_holder += int(section.get("orphan_holder_count") or 0)
             orphan_cgroup += int(section.get("orphan_cgroup_count") or 0)
             orphan_scratch += int(section.get("orphan_scratch_count") or 0)
             continue
-    open_handle_count = entered - exited - evicted
+    handle_summary = summarize_isolated_workspace_handles(lifecycle_events)
+    open_handle_count = int(handle_summary["open_handle_count"])
     pass_orphan = (
         orphan_holder == 0 and orphan_cgroup == 0 and orphan_scratch == 0
     )
     pass_holder_pid = holder_alive_after_exit == 0
-    pass_handles = open_handle_count == 0
+    pass_handles = (
+        open_handle_count == 0
+        and int(handle_summary["terminal_without_enter_count"]) == 0
+        and int(handle_summary["missing_handle_event_count"]) == 0
+    )
     return {
         "passed": pass_orphan and pass_holder_pid and pass_handles,
-        "exits_observed": exited,
+        "exits_observed": handle_summary["closed"],
         "orphan_holder_count": orphan_holder,
         "orphan_cgroup_count": orphan_cgroup,
         "orphan_scratch_count": orphan_scratch,
         "holder_pid_alive_after_exit": holder_alive_after_exit,
         "open_handle_count": open_handle_count,
+        "terminal_without_enter_count": handle_summary[
+            "terminal_without_enter_count"
+        ],
+        "missing_handle_event_count": handle_summary[
+            "missing_handle_event_count"
+        ],
         "verdict": {
             "orphan_counts_zero": pass_orphan,
             "holder_pid_dead_after_exit": pass_holder_pid,
             "open_handles_zero": pass_handles,
+            "handle_ids_consistent": pass_handles,
         },
+    }
+
+
+def summarize_isolated_workspace_handles(
+    events: Iterable[Mapping[str, Any]],
+) -> dict[str, int]:
+    """Summarize isolated-workspace lifecycle state by handle id.
+
+    TTL eviction emits both ``isolated_workspace.exited`` and
+    ``isolated_workspace.evicted`` for the same handle. Counting events as
+    ``entered - exited - evicted`` turns that clean lifecycle into ``-1``.
+    Matching terminal events by ``workspace_handle_id`` keeps the count at zero
+    and also catches mismatched IDs that scalar counts can hide.
+    """
+    entered_ids: set[str] = set()
+    exited_ids: set[str] = set()
+    evicted_ids: set[str] = set()
+    entered_count = 0
+    exited_count = 0
+    evicted_count = 0
+    missing_handle_event_count = 0
+    for event_row in events:
+        event_type = event_row.get("event_type")
+        if event_type not in {
+            "isolated_workspace.entered",
+            "isolated_workspace.exited",
+            "isolated_workspace.evicted",
+        }:
+            continue
+        handle_id = _workspace_handle_id(event_row)
+        if not handle_id:
+            missing_handle_event_count += 1
+            continue
+        if event_type == "isolated_workspace.entered":
+            entered_count += 1
+            entered_ids.add(handle_id)
+        elif event_type == "isolated_workspace.exited":
+            exited_count += 1
+            exited_ids.add(handle_id)
+        else:
+            evicted_count += 1
+            evicted_ids.add(handle_id)
+    terminal_ids = exited_ids | evicted_ids
+    open_ids = entered_ids - terminal_ids
+    terminal_without_enter = terminal_ids - entered_ids
+    return {
+        "opened": entered_count,
+        "closed": exited_count,
+        "evicted": evicted_count,
+        "open_handle_count": len(open_ids),
+        "terminal_without_enter_count": len(terminal_without_enter),
+        "missing_handle_event_count": missing_handle_event_count,
     }
 
 
@@ -92,10 +154,12 @@ def evaluate_drop_free_pull_gate(
 ) -> dict[str, Any]:
     """Per §Gate matrix: ``dropped_event_count == 0`` AND ``lost_before_seq == 0``."""
     stats = puller_stats or {}
+    stats_present = bool(puller_stats)
     dropped = int(stats.get("dropped_event_count") or 0)
     lost = int(stats.get("lost_before_seq") or 0)
     return {
-        "passed": dropped == 0 and lost == 0,
+        "passed": stats_present and dropped == 0 and lost == 0,
+        "stats_present": stats_present,
         "dropped_event_count": dropped,
         "lost_before_seq": lost,
     }
@@ -189,9 +253,10 @@ def evaluate_artifact_bound_gate(
     }
 
 
-def _payload_section(
+def _promoted_payload_section(
     row: Mapping[str, Any], section_key: str
 ) -> Mapping[str, Any]:
+    """Return the authoritative ``payload.<section>`` view for gate checks."""
     payload = row.get("payload")
     if not isinstance(payload, Mapping):
         return {}
@@ -199,9 +264,15 @@ def _payload_section(
     return section if isinstance(section, Mapping) else {}
 
 
+def _workspace_handle_id(row: Mapping[str, Any]) -> str:
+    section = _promoted_payload_section(row, "isolated_workspace")
+    return str(section.get("workspace_handle_id") or "")
+
+
 __all__ = [
     "evaluate_artifact_bound_gate",
     "evaluate_audit_overhead_gate",
     "evaluate_drop_free_pull_gate",
     "evaluate_isolated_workspace_gate",
+    "summarize_isolated_workspace_handles",
 ]

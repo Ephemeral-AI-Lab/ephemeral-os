@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Model Provider Bridge - EphemeralOS Agent Loops</title>
+<title>Model Provider Runtime - EphemeralOS Agent Loops</title>
 <link rel="stylesheet" href="../assets/styles.css">
 </head>
 <body data-module="agent-loops" data-page="model-provider" data-root="../">
@@ -24,20 +24,20 @@
   <ol>
     <li><a href="index.html" data-doc-module="agent-loops" data-doc-section="index" data-doc-page="index.html">Overview</a></li>
     <li><a href="main-loop.html" data-doc-module="agent-loops" data-doc-section="main-loop" data-doc-page="main-loop.html">Main Loop</a></li>
-    <li><a href="model-provider.html" data-doc-module="agent-loops" data-doc-section="model-provider" data-doc-page="model-provider.html" class="active">Model Provider Bridge</a></li>
+    <li><a href="model-provider.html" data-doc-module="agent-loops" data-doc-section="model-provider" data-doc-page="model-provider.html" class="active">Model Provider Runtime</a></li>
     <li><a href="background-operations.html" data-doc-module="agent-loops" data-doc-section="background-operations" data-doc-page="background-operations.html">Background Operations</a></li>
-    <li><a href="prompt-context.html" data-doc-module="agent-loops" data-doc-section="prompt-context" data-doc-page="prompt-context.html">Prompt and Context</a></li>
-    <li><a href="provider-sandbox-bridge.html" data-doc-module="agent-loops" data-doc-section="provider-sandbox-bridge" data-doc-page="provider-sandbox-bridge.html">Provider Sandbox Bridge</a></li>
+    <li><a href="prompt-context.html" data-doc-module="agent-loops" data-doc-section="prompt-context" data-doc-page="prompt-context.html">Prompt Assembly</a></li>
+    <li><a href="provider-sandbox-bridge.html" data-doc-module="agent-loops" data-doc-section="provider-sandbox-bridge" data-doc-page="provider-sandbox-bridge.html">Sandbox Tool Dispatch Path</a></li>
     <li><a href="notifications-messages.html" data-doc-module="agent-loops" data-doc-section="notifications-messages" data-doc-page="notifications-messages.html">Notifications and Messages</a></li>
     <li><a href="maintenance.html" data-doc-module="agent-loops" data-doc-section="maintenance" data-doc-page="maintenance.html">Maintenance</a></li>
   </ol>
 </nav>
 <main>
 <div class="doc-actions">
-  <span><a href="index.html">Agent Loops</a> / Model Provider Bridge</span>
+  <span><a href="index.html">Agent Loops</a> / Model Provider Runtime</span>
   <span class="nav-pair"><a href="main-loop.html">Main Loop</a><a href="background-operations.html">Background Operations</a></span>
 </div>
-<h1>Model Provider Bridge</h1>
+<h1>Model Provider Runtime</h1>
 <nav class="page-toc" aria-labelledby="page-toc-heading">
   <h3 id="page-toc-heading">Contents</h3>
   <ol>
@@ -60,7 +60,7 @@
     <li><code>providers</code> owns the LLM API client contract: request dataclasses, stream event dataclasses, error hierarchy, auth strategies, and client factory.</li>
     <li><code>engine.agent.factory.spawn_agent()</code> constructs the provider client through <code>make_api_client()</code> unless a test or caller supplies an external <code>SupportsStreamingMessages</code> client.</li>
     <li><code>engine.query.loop</code> consumes only the protocol and event types. It does not know whether the stream came from Anthropic-native API mode, Anthropic coding-plan mode, Codex Responses API mode, or a fake test client.</li>
-    <li><code>sandbox.provider</code> is a different provider axis: container/sandbox providers. Use <a class="wiki-link" href="provider-sandbox-bridge.html">Provider Sandbox Bridge</a> for that boundary.</li>
+    <li><code>sandbox.provider</code> is a different provider axis: container/sandbox providers. Use <a class="wiki-link" href="provider-sandbox-bridge.html">Sandbox Tool Dispatch Path</a> for that boundary.</li>
   </ul>
 </div>
 <div class="diagram" aria-label="Model provider package boundary">
@@ -183,7 +183,7 @@
 
 <div class="page-baseline" data-page-baseline-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa">
   <strong>Maintenance baseline</strong>
-  <span>Model provider bridge reviewed against <code>e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa</code>.</span>
+  <span>Model provider runtime reviewed against <code>e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa</code>.</span>
   <code>git diff e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa..HEAD -- &lt;section data-evidence-paths&gt;</code>
 </div>
 <div class="page-footer-nav"><span><a href="main-loop.html">Main Loop</a></span><span><a href="background-operations.html">Background Operations</a></span></div>

@@ -305,7 +305,7 @@ class MockSquadRunner:
         metadata.cwd = str(getattr(config, "cwd", self._repo_dir) or self._repo_dir)
         metadata.exec_cwd = self._repo_dir
         metadata["role"] = str(agent_def.agent_kind.value or "")
-        metadata["agent_type"] = agent_def.agent_type
+        metadata["agent_type"] = agent_def.agent_type.value
         metadata["run_id"] = str(metadata.task_center_run_id or "")
         metadata["task_id"] = str(metadata.task_center_task_id or "")
         return metadata

@@ -159,7 +159,7 @@ operator no longer has to call `evaluate_artifact_bound_gate` separately.
 |---|---|
 | `backend/src/config/sections/runner.py` | Added `floor_ms: int = 100` and `stream_fallback: bool = True` to `DaemonAuditPullConfig`. |
 | `backend/src/task_center_runner/audit/daemon_pull.py` | `DaemonAuditPuller.__init__` now resolves the floor with explicit precedence: explicit kwarg → `EOS_DAEMON_AUDIT_PULL_FLOOR_MS` env (when set) → `RunnerConfig.daemon_audit_pull.floor_ms` via central config → `DEFAULT_FLOOR_MS` (100 ms). New `_runner_config_floor_ms()` helper handles the central-config read defensively. |
-| `backend/src/task_center_runner/core/engine.py` | New `_stream_fallback_enabled()` helper mirrors the recorder's `_daemon_audit_pull_enabled` precedence (env wins; central config is the default). `_refuse_dual_disable_when_isolated_workspace_enabled` now consults it instead of the raw env helper, so flipping `RunnerConfig.daemon_audit_pull.stream_fallback = false` in central config is enough to opt out without an env var. |
+| `backend/src/task_center_runner/core/engine.py` | New `_stream_fallback_enabled()` helper mirrors the recorder's `_daemon_audit_pull_enabled` precedence (env wins; central config is the default). `_refuse_dual_disable_when_isolated_workspace_enabled` now consults it instead of the raw env helper, so flipping `RunnerConfig.daemon_audit_pull.stream_fallback = false` in central config is enough to opt out without an env var. The resolved flag is also passed to `stream_bridge`, where it gates stream-derived sandbox fallback events while preserving ordinary tool-call stream events. |
 
 <a id="d14"></a>
 ### D14 — `methodology_present` sentinel + gate guard

@@ -88,7 +88,7 @@ async def call_plugin(
     try:
         manifest = manifest_for(plugin)
     except KeyError as exc:
-        return _error_result("manifest", plugin, op, str(exc))
+        return _plugin_error_result("manifest", plugin, op, str(exc))
 
     install_fn = install_runner or ensure_installed
     dispatch_fn = daemon_dispatcher or call_daemon_api
@@ -105,7 +105,7 @@ async def call_plugin(
                 op,
                 exc,
             )
-            return _error_result(
+            return _plugin_error_result(
                 "install",
                 plugin,
                 op,
@@ -120,7 +120,7 @@ async def call_plugin(
                 op,
                 exc,
             )
-            return _error_result("install", plugin, op, _exception_message(exc))
+            return _plugin_error_result("install", plugin, op, _exception_message(exc))
 
         if _RUNTIME_DIGEST_BY_SANDBOX_PLUGIN.get((sandbox_id, plugin)) != digest:
             try:
@@ -143,7 +143,7 @@ async def call_plugin(
                     op,
                     exc,
                 )
-                return _error_result("ensure-runtime", plugin, op, _exception_message(exc))
+                return _plugin_error_result("ensure-runtime", plugin, op, _exception_message(exc))
             _RUNTIME_DIGEST_BY_SANDBOX_PLUGIN[(sandbox_id, plugin)] = digest
 
     caller = sandbox_caller_from_tool_context(context)
@@ -175,7 +175,7 @@ async def call_plugin(
             op,
             exc,
         )
-        return _error_result("dispatch", plugin, op, _exception_message(exc))
+        return _plugin_error_result("dispatch", plugin, op, _exception_message(exc))
 
     return _wrap_response(response, plugin=plugin, op=op)
 
@@ -192,7 +192,7 @@ async def call_plugin_write(
 ) -> ToolResult:
     """Dispatch a mutating plugin op only from a WRITE_ALLOWED tool."""
     if context.get("__intent") is not Intent.WRITE_ALLOWED:
-        return _error_result(
+        return _plugin_error_result(
             "intent",
             plugin,
             op,
@@ -216,7 +216,7 @@ def _wrap_response(
     op: str,
 ) -> ToolResult:
     if not isinstance(response, Mapping):
-        return _error_result(
+        return _plugin_error_result(
             "decode",
             plugin,
             op,
@@ -229,16 +229,16 @@ def _wrap_response(
             if isinstance(err, Mapping)
             else str(err)
         )
-        return _error_result("dispatch", plugin, op, str(message))
+        return _plugin_error_result("dispatch", plugin, op, str(message))
     payload_dict = {
         key: value for key, value in response.items() if key != "timings"
     }
     try:
         output = json.dumps(payload_dict, sort_keys=True)
     except TypeError as exc:
-        return _error_result("decode", plugin, op, str(exc))
+        return _plugin_error_result("decode", plugin, op, str(exc))
     if len(output.encode("utf-8")) > _MAX_RESPONSE_BYTES:
-        return _error_result(
+        return _plugin_error_result(
             "decode",
             plugin,
             op,
@@ -251,7 +251,7 @@ def _wrap_response(
     return ToolResult(output=output, is_error=False, metadata=metadata)
 
 
-def _error_result(
+def _plugin_error_result(
     step: str,
     plugin: str,
     op: str,

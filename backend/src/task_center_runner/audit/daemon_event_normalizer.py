@@ -83,43 +83,6 @@ def normalize_pulled_event(
     return row
 
 
-def dedupe_key(row: dict[str, Any]) -> tuple[Any, ...]:
-    """Stable key used to dedupe pull-derived vs stream-derived events.
-
-    Per V3 README §Dual-write authoritativeness: ``seq`` first, then
-    ``(operation_id, event_type, operation_step, tool_id)`` for non-pulled rows
-    that lack a seq.
-    """
-    seq = row.get("seq")
-    if isinstance(seq, int):
-        return ("seq", seq)
-    payload = row.get("payload") if isinstance(row.get("payload"), dict) else {}
-    op_id = payload.get("operation_id")
-    op_step = payload.get("operation_step")
-    tool_id = payload.get("tool_id")
-    return (
-        "logical",
-        row.get("event_type"),
-        op_id,
-        op_step,
-        tool_id,
-    )
-
-
-def merge_streams(
-    pulled: Iterable[dict[str, Any]],
-    streamed: Iterable[dict[str, Any]],
-) -> list[dict[str, Any]]:
-    """Merge pull-derived and stream-derived rows; pull is authoritative on collision."""
-    merged: dict[tuple[Any, ...], dict[str, Any]] = {}
-    for row in streamed:
-        merged.setdefault(dedupe_key(row), row)
-    for row in pulled:
-        # Pull supersedes stream — overwrite unconditionally.
-        merged[dedupe_key(row)] = row
-    return list(merged.values())
-
-
 def collect_forensic_deltas(
     rows: Iterable[dict[str, Any]],
 ) -> dict[str, Any] | None:
@@ -171,8 +134,6 @@ def collect_forensic_deltas(
 __all__ = [
     "FORENSIC_RAW_ENV",
     "collect_forensic_deltas",
-    "dedupe_key",
     "forensic_raw_enabled",
-    "merge_streams",
     "normalize_pulled_event",
 ]

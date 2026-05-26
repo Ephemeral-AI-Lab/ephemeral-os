@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Provider Sandbox Bridge - EphemeralOS Agent Loops</title>
+<title>Sandbox Tool Dispatch Path - EphemeralOS Agent Loops</title>
 <link rel="stylesheet" href="../assets/styles.css">
 </head>
 <body data-module="agent-loops" data-page="provider-sandbox-bridge" data-root="../">
@@ -20,26 +20,26 @@
     <li><a href="../tools/index.html" data-doc-module="tools">Tools</a></li>
     <li><a href="index.html" data-doc-module="agent-loops" class="active">Agent Loops</a></li>
   </ol>
-  <h2>Agent Loop Pages</h2>
+  <h2>Agent Loops Pages</h2>
   <ol>
     <li><a href="index.html" data-doc-module="agent-loops" data-doc-section="index" data-doc-page="index.html">Overview</a></li>
     <li><a href="main-loop.html" data-doc-module="agent-loops" data-doc-section="main-loop" data-doc-page="main-loop.html">Main Loop</a></li>
-    <li><a href="model-provider.html" data-doc-module="agent-loops" data-doc-section="model-provider" data-doc-page="model-provider.html">Model Provider Bridge</a></li>
+    <li><a href="model-provider.html" data-doc-module="agent-loops" data-doc-section="model-provider" data-doc-page="model-provider.html">Model Provider Runtime</a></li>
     <li><a href="background-operations.html" data-doc-module="agent-loops" data-doc-section="background-operations" data-doc-page="background-operations.html">Background Operations</a></li>
-    <li><a href="prompt-context.html" data-doc-module="agent-loops" data-doc-section="prompt-context" data-doc-page="prompt-context.html">Prompt and Context</a></li>
-    <li><a href="provider-sandbox-bridge.html" data-doc-module="agent-loops" data-doc-section="provider-sandbox-bridge" data-doc-page="provider-sandbox-bridge.html" class="active">Provider Sandbox Bridge</a></li>
+    <li><a href="prompt-context.html" data-doc-module="agent-loops" data-doc-section="prompt-context" data-doc-page="prompt-context.html">Prompt Assembly</a></li>
+    <li><a href="provider-sandbox-bridge.html" data-doc-module="agent-loops" data-doc-section="provider-sandbox-bridge" data-doc-page="provider-sandbox-bridge.html" class="active">Sandbox Tool Dispatch Path</a></li>
     <li><a href="notifications-messages.html" data-doc-module="agent-loops" data-doc-section="notifications-messages" data-doc-page="notifications-messages.html">Notifications and Messages</a></li>
     <li><a href="maintenance.html" data-doc-module="agent-loops" data-doc-section="maintenance" data-doc-page="maintenance.html">Maintenance</a></li>
   </ol>
 </nav>
 <main>
 <div class="doc-actions">
-  <span><a href="../index.html">Index</a> / Agent Loops / Provider Sandbox Bridge</span>
-  <span class="nav-pair"><a href="prompt-context.html">Prompt and Context Engine</a><a href="../sandbox/daemon.html">Sandbox Daemon</a></span>
+  <span><a href="../index.html">Index</a> / Agent Loops / Sandbox Tool Dispatch Path</span>
+  <span class="nav-pair"><a href="prompt-context.html">Agent Prompt Assembly</a><a href="../sandbox/daemon.html">Sandbox Daemon</a></span>
 </div>
 
 <section id="provider-sandbox-bridge" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="backend/src/sandbox/provider backend/src/sandbox/api backend/src/sandbox/host backend/src/sandbox/daemon backend/src/sandbox/ephemeral_workspace backend/src/sandbox/occ backend/src/tools/sandbox backend/src/engine/background">
-<h1>Provider Sandbox Bridge <a class="anchor" href="#provider-sandbox-bridge">#</a></h1>
+<h1>Sandbox Tool Dispatch Path <a class="anchor" href="#provider-sandbox-bridge">#</a></h1>
 <nav class="page-toc" aria-labelledby="page-toc-heading">
   <h3 id="page-toc-heading">Contents</h3>
   <ol>
@@ -52,7 +52,7 @@
   </ol>
 </nav>
 
-<p class="lead">This page follows one sandbox-backed tool call from an agent-facing wrapper through <code>sandbox.api</code>, the host daemon client, provider exec or daemon TCP, the in-sandbox daemon, and the workspace execution path. Current verdict: sandbox providers own containers and primitive exec; sandbox runtime owns workspace semantics, direct file fast paths, overlay publish, isolated scratch, and daemon in-flight control. For LLM model providers under <code>backend/src/providers</code>, use <a class="wiki-link" href="model-provider.html">Model Provider Bridge</a>.</p>
+<p class="lead">This page follows one sandbox-backed tool call from an agent-facing wrapper through <code>sandbox.api</code>, the host daemon client, provider exec or daemon TCP, the in-sandbox daemon, and the workspace execution path. Current verdict: sandbox providers own containers and primitive exec; sandbox runtime owns workspace semantics, direct file fast paths, overlay publish, isolated scratch, and daemon in-flight control. For LLM model providers under <code>backend/src/providers</code>, use <a class="wiki-link" href="model-provider.html">Model Provider Runtime</a>.</p>
 <div class="summary">
   <ul>
     <li>Provider bootstrap picks Docker or Daytona once per process, then the registry supplies the default adapter and per-sandbox bindings.</li>
@@ -61,7 +61,7 @@
     <li>Daemon workspace routing tries active isolated workspace first, then direct LayerStack/OCC for single-file verbs, then ephemeral overlay execution.</li>
   </ul>
 </div>
-<div class="diagram" aria-label="Provider sandbox bridge">
+<div class="diagram" aria-label="Provider sandbox dispatch path">
   <div class="flow-row">
     <div class="node info"><strong>Agent tool</strong><small><code>tools.sandbox</code></small></div>
     <div class="node"><strong>Public API</strong><small><code>sandbox.api.tool</code></small></div>
@@ -75,7 +75,7 @@
     <div class="node"><strong>Typed result</strong><small>API result -> ToolResult</small></div>
   </div>
 </div>
-<div class="wiki-links" aria-label="Provider sandbox bridge links">
+<div class="wiki-links" aria-label="Provider sandbox dispatch path links">
   <a href="../sandbox/provider.html">Sandbox Provider</a>
   <a href="../sandbox/daemon.html">Sandbox Daemon</a>
   <a href="../sandbox/workspaces.html">Workspace Modes</a>
@@ -255,7 +255,7 @@
   <span>Technical sections reviewed against <code>e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa</code>.</span>
   <code>git diff e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa..HEAD -- &lt;section data-evidence-paths&gt;</code>
 </div>
-<div class="page-footer-nav"><span><a href="prompt-context.html">Prompt and Context Engine</a></span><span><a href="../sandbox/daemon.html">Sandbox Daemon</a></span></div>
+<div class="page-footer-nav"><span><a href="prompt-context.html">Agent Prompt Assembly</a></span><span><a href="../sandbox/daemon.html">Sandbox Daemon</a></span></div>
 </main>
 <script src="../assets/search-index.js"></script>
 <script src="../assets/nav.js"></script>

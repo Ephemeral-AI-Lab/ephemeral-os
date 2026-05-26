@@ -187,9 +187,9 @@ instrumentation, and dispatcher slow-tail flush land in subsequent slices.
   **sole writer** of `payload["daemon_event"]`, env-gated by
   `EOS_AUDIT_FORENSIC_RAW_ENABLED`. Promotes subsystem sections to
   `payload[<section>]` unconditionally; preserves raw under
-  `payload["daemon_event"]` only when forensic raw is enabled. Dedupe key:
-  `seq` first, else `(event_type, operation_id, operation_step, tool_id)`.
-  `merge_streams()` makes pull authoritative on overlap.
+  `payload["daemon_event"]` only when forensic raw is enabled. The pull path
+  writes the canonical rows directly; no stream/pull merge helper is retained
+  after the daemon-ring pull path became authoritative.
 - `backend/src/task_center_runner/audit/sandbox_events_sink.py` — synchronous
   rotating + gzipping JSONL sink. 64 MiB live cap, gzip on rotation,
   `EOS_AUDIT_ARTIFACT_RETENTION_FILES` (default 8) historical files.

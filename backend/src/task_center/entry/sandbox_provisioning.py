@@ -1,9 +1,9 @@
-"""Sandbox provisioning bridge for one TaskCenter run.
+"""Sandbox provisioning for one TaskCenter run.
 
-:class:`TaskCenterSandboxBridge` is the seam between the entry coordinator
-and the underlying ``sandbox`` API: it either starts a caller-provided
-sandbox (and reports the run does not own it) or creates a fresh one
-labelled with the run id (and reports the run does own it).
+:class:`TaskCenterSandboxProvisioner` prepares the sandbox binding for entry
+startup: it either starts a caller-provided sandbox and reports the run does not
+own it, or creates a fresh sandbox labelled with the run id and reports the run
+does own it.
 """
 
 from __future__ import annotations
@@ -37,7 +37,7 @@ def _default_start(sandbox_id: str) -> dict[str, Any]:
     return sandbox_api.start_sandbox(sandbox_id)
 
 
-class TaskCenterSandboxBridge:
+class TaskCenterSandboxProvisioner:
     """Prepare the sandbox binding used by one TaskCenter run."""
 
     def __init__(
@@ -83,4 +83,4 @@ class TaskCenterSandboxBridge:
         )
 
 
-__all__ = ["TaskCenterSandboxBinding", "TaskCenterSandboxBridge"]
+__all__ = ["TaskCenterSandboxBinding", "TaskCenterSandboxProvisioner"]

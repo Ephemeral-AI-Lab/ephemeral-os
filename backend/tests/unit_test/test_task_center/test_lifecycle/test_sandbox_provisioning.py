@@ -1,21 +1,21 @@
-"""Tests for TaskCenter sandbox binding and setup policy."""
+"""Tests for TaskCenter sandbox provisioning policy."""
 
 from __future__ import annotations
 
 import pytest
 
-from task_center.entry import TaskCenterSandboxBridge
+from task_center.entry import TaskCenterSandboxProvisioner
 
 
 def test_prepares_explicit_sandbox_id_without_create() -> None:
     create_calls: list[dict[str, object]] = []
     start_calls: list[str] = []
-    bridge = TaskCenterSandboxBridge(
+    provisioner = TaskCenterSandboxProvisioner(
         create_fn=lambda **kwargs: create_calls.append(kwargs) or {},
         start_fn=lambda sandbox_id: start_calls.append(sandbox_id) or {},
     )
 
-    binding = bridge.prepare_for_run(
+    binding = provisioner.prepare_for_run(
         task_center_run_id="run-1",
         sandbox_id=" sbx-explicit ",
     )
@@ -35,12 +35,12 @@ def test_creates_sandbox_when_id_is_missing() -> None:
         create_calls.append(kwargs)
         return {"id": "sbx-created"}
 
-    bridge = TaskCenterSandboxBridge(
+    provisioner = TaskCenterSandboxProvisioner(
         create_fn=fake_create,
         start_fn=lambda sandbox_id: start_calls.append(sandbox_id) or {},
     )
 
-    binding = bridge.prepare_for_run(task_center_run_id="run-2", sandbox_id=None)
+    binding = provisioner.prepare_for_run(task_center_run_id="run-2", sandbox_id=None)
 
     assert binding.sandbox_id == "sbx-created"
     assert binding.task_center_run_id == "run-2"
@@ -55,7 +55,7 @@ def test_creates_sandbox_when_id_is_missing() -> None:
 
 
 def test_create_without_id_is_rejected() -> None:
-    bridge = TaskCenterSandboxBridge(create_fn=lambda **_: {"name": "missing-id"})
+    provisioner = TaskCenterSandboxProvisioner(create_fn=lambda **_: {"name": "missing-id"})
 
     with pytest.raises(RuntimeError, match="create_sandbox returned no id"):
-        bridge.prepare_for_run(task_center_run_id="run-3", sandbox_id=None)
+        provisioner.prepare_for_run(task_center_run_id="run-3", sandbox_id=None)

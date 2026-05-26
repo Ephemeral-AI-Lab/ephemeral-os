@@ -18,7 +18,7 @@ if TYPE_CHECKING:
     from notification import NotificationRule
     from tools import ToolRegistry
 
-from agents import AgentDefinition
+from agents import AgentDefinition, AgentType
 from config import Settings
 from message.messages import ConversationMessage
 from message.stream_events import StreamEvent
@@ -116,7 +116,7 @@ def _finalize_tool_registry_and_prompt(
     tool_registry: ToolRegistry,
     system_prompt: str,
     *,
-    agent_type: str = "agent",
+    agent_type: AgentType | str = AgentType.AGENT,
 ) -> tuple[str, bool]:
     """Finalize runtime tool registry and append terminal-tool guidance.
 
@@ -141,7 +141,7 @@ def _finalize_tool_registry_and_prompt(
         if getattr(t, "background", "forbidden") != "forbidden"
     ]
     has_background_tools = (
-        bool(background_capable_tool_names) and agent_type != "subagent"
+        bool(background_capable_tool_names) and agent_type != AgentType.SUBAGENT
     )
     if has_background_tools:
         tool_registry.register_many(make_background_tools())
@@ -190,7 +190,7 @@ def _resolve_agent_identity(
 
     # Subagents get their own httpx pool so concurrent workers do not
     # contend over a shared connection pool.
-    needs_fresh_client = bool(agent_def and agent_def.agent_type == "subagent")
+    needs_fresh_client = bool(agent_def and agent_def.agent_type == AgentType.SUBAGENT)
     api_client = make_api_client(
         None if needs_fresh_client else config.external_api_client,
         db_kwargs=db_kwargs,
@@ -379,7 +379,7 @@ def spawn_agent(
     system_prompt, has_background_tools = _finalize_tool_registry_and_prompt(
         tool_registry,
         base_system_prompt,
-        agent_type=agent_def.agent_type if agent_def else "agent",
+        agent_type=agent_def.agent_type if agent_def else AgentType.AGENT,
     )
 
     tool_call_limit = agent_def.tool_call_limit if agent_def else None
@@ -396,7 +396,7 @@ def spawn_agent(
         context_preparers=_build_sandbox_context_preparers(tool_registry, sandbox_id),
     )
     if agent_def is not None:
-        initial_tool_metadata["agent_type"] = agent_def.agent_type
+        initial_tool_metadata["agent_type"] = agent_def.agent_type.value
         initial_tool_metadata["role"] = agent_def.agent_kind.value
 
     notification_rules = list(agent_def.notification_rules) if agent_def else []

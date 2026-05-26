@@ -1,6 +1,6 @@
 """Single canonical layer-stack Protocol for workspace pipelines.
 
-The iws pipeline binds a :class:`sandbox.occ.layer_stack_client.LayerStackClient`
+The iws pipeline binds a :class:`sandbox.occ.layer_stack_client.LayerStackPortAdapter`
 at construction time, so both eph and iws speak the same kwarg-only contract
 defined here.
 """
@@ -20,7 +20,7 @@ class LayerStackPort(Protocol):
     """Layer-stack surface a workspace pipeline needs.
 
     The kwarg-only signature lets concrete implementations (e.g.
-    ``LayerStackClient`` wrapping the in-process ``LayerStack``) keep their
+    ``LayerStackPortAdapter`` wrapping the in-process ``LayerStack``) keep their
     own positional-arg internal call shape without leaking it through this
     Protocol.
     """

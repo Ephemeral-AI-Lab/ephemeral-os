@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Prompt and Context Engine - EphemeralOS Agent Loops</title>
+<title>Agent Prompt Assembly - EphemeralOS Agent Loops</title>
 <link rel="stylesheet" href="../assets/styles.css">
 </head>
 <body data-module="agent-loops" data-page="prompt-context" data-root="../">
@@ -20,26 +20,26 @@
     <li><a href="../tools/index.html" data-doc-module="tools">Tools</a></li>
     <li><a href="index.html" data-doc-module="agent-loops" class="active">Agent Loops</a></li>
   </ol>
-  <h2>Agent Loop Pages</h2>
+  <h2>Agent Loops Pages</h2>
   <ol>
     <li><a href="index.html" data-doc-module="agent-loops" data-doc-section="index" data-doc-page="index.html">Overview</a></li>
     <li><a href="main-loop.html" data-doc-module="agent-loops" data-doc-section="main-loop" data-doc-page="main-loop.html">Main Loop</a></li>
-    <li><a href="model-provider.html" data-doc-module="agent-loops" data-doc-section="model-provider" data-doc-page="model-provider.html">Model Provider Bridge</a></li>
+    <li><a href="model-provider.html" data-doc-module="agent-loops" data-doc-section="model-provider" data-doc-page="model-provider.html">Model Provider Runtime</a></li>
     <li><a href="background-operations.html" data-doc-module="agent-loops" data-doc-section="background-operations" data-doc-page="background-operations.html">Background Operations</a></li>
-    <li><a href="prompt-context.html" data-doc-module="agent-loops" data-doc-section="prompt-context" data-doc-page="prompt-context.html" class="active">Prompt and Context</a></li>
-    <li><a href="provider-sandbox-bridge.html" data-doc-module="agent-loops" data-doc-section="provider-sandbox-bridge" data-doc-page="provider-sandbox-bridge.html">Provider Sandbox Bridge</a></li>
+    <li><a href="prompt-context.html" data-doc-module="agent-loops" data-doc-section="prompt-context" data-doc-page="prompt-context.html" class="active">Prompt Assembly</a></li>
+    <li><a href="provider-sandbox-bridge.html" data-doc-module="agent-loops" data-doc-section="provider-sandbox-bridge" data-doc-page="provider-sandbox-bridge.html">Sandbox Tool Dispatch Path</a></li>
     <li><a href="notifications-messages.html" data-doc-module="agent-loops" data-doc-section="notifications-messages" data-doc-page="notifications-messages.html">Notifications and Messages</a></li>
     <li><a href="maintenance.html" data-doc-module="agent-loops" data-doc-section="maintenance" data-doc-page="maintenance.html">Maintenance</a></li>
   </ol>
 </nav>
 <main>
 <div class="doc-actions">
-  <span><a href="../index.html">Index</a> / Agent Loops / Prompt and Context Engine</span>
-  <span class="nav-pair"><a href="../tools/terminals.html">Tools Terminals</a><a href="provider-sandbox-bridge.html">Provider Sandbox Bridge</a></span>
+  <span><a href="../index.html">Index</a> / Agent Loops / Agent Prompt Assembly</span>
+  <span class="nav-pair"><a href="../tools/terminals.html">Tools Terminals</a><a href="provider-sandbox-bridge.html">Sandbox Tool Dispatch Path</a></span>
 </div>
 
 <section id="prompt-context" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="backend/src/prompt/runtime_prompt.py backend/src/engine/agent/factory.py backend/src/agents/definition/loader.py backend/src/agents/profile/main backend/src/task_center/agent_launch/composer.py backend/src/task_center/attempt/launch.py backend/src/task_center/context_engine">
-<h1>Prompt and Context Engine <a class="anchor" href="#prompt-context">#</a></h1>
+<h1>Agent Prompt Assembly <a class="anchor" href="#prompt-context">#</a></h1>
 <nav class="page-toc" aria-labelledby="page-toc-heading">
   <h3 id="page-toc-heading">Contents</h3>
   <ol>
@@ -62,7 +62,7 @@
     <li><code>ContextEngine</code> is a packet builder. It does not own lifecycle, retries, iteration closure, or provider execution.</li>
   </ul>
 </div>
-<div class="diagram" aria-label="Prompt and context graph">
+<div class="diagram" aria-label="Agent prompt assembly graph">
   <div class="flow-row">
     <div class="node info"><strong>settings.system_prompt</strong><small><code>prompt.runtime_prompt</code></small></div>
     <div class="node"><strong>profile frontmatter/body</strong><small><code>agents/profile/main/*.md</code></small></div>
@@ -81,11 +81,11 @@
     <div class="node"><strong>AgentEntryMessages</strong><small>context, guidance, skill</small></div>
   </div>
 </div>
-<div class="wiki-links" aria-label="Prompt context links">
+<div class="wiki-links" aria-label="Agent prompt assembly links">
   <a href="../tools/terminals.html">Terminal Tools</a>
   <a href="../tools/submission.html">Submission Tools</a>
   <a href="../tools/background.html">Background Tools</a>
-  <a href="provider-sandbox-bridge.html">Provider Sandbox Bridge</a>
+  <a href="provider-sandbox-bridge.html">Sandbox Tool Dispatch Path</a>
 </div>
 </section>
 
@@ -278,7 +278,7 @@
   <span>Technical sections reviewed against <code>e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa</code>.</span>
   <code>git diff e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa..HEAD -- &lt;section data-evidence-paths&gt;</code>
 </div>
-<div class="page-footer-nav"><span><a href="../tools/terminals.html">Tools Terminals</a></span><span><a href="provider-sandbox-bridge.html">Provider Sandbox Bridge</a></span></div>
+<div class="page-footer-nav"><span><a href="../tools/terminals.html">Tools Terminals</a></span><span><a href="provider-sandbox-bridge.html">Sandbox Tool Dispatch Path</a></span></div>
 </main>
 <script src="../assets/search-index.js"></script>
 <script src="../assets/nav.js"></script>

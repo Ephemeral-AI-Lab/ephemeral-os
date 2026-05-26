@@ -28,11 +28,11 @@ plumbing.
 | File | Purpose |
 |---|---|
 | `backend/src/task_center_runner/audit/daemon_pull.py` | `DaemonAuditPuller` — adaptive cadence + floor enforcement + epoch handling + final drain. |
-| `backend/src/task_center_runner/audit/daemon_event_normalizer.py` | Sole writer of `payload["daemon_event"]` (env-gated forensic raw); section promotion; dedupe key + `merge_streams()`. |
+| `backend/src/task_center_runner/audit/daemon_event_normalizer.py` | Sole writer of `payload["daemon_event"]` (env-gated forensic raw); section promotion; forensic-drift surfacing. |
 | `backend/src/task_center_runner/audit/sandbox_events_sink.py` | `RotatingJsonlSink` (64 MiB roll + gzip + retention cap) and `iter_rotated_jsonl()`. |
 | `backend/tests/unit_test/test_task_center_runner/test_daemon_pull.py` | 6 puller tests. |
 | `backend/tests/unit_test/test_task_center_runner/test_sandbox_events_sink.py` | 4 rotation/sink tests. |
-| `backend/tests/unit_test/test_task_center_runner/test_daemon_event_normalizer.py` | 4 normalizer tests (incl. CI grep boundary lint). |
+| `backend/tests/unit_test/test_task_center_runner/test_daemon_event_normalizer.py` | 3 normalizer tests (incl. CI grep boundary lint). |
 | `backend/tests/unit_test/test_sandbox/test_daemon/test_layer_stack_emitters.py` | 3 squash-emit tests. |
 
 ### Modified files

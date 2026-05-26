@@ -414,20 +414,20 @@
   data-evidence-paths="backend/src/engine/background/task_supervisor.py backend/src/engine/background/dispatch.py backend/src/tools/sandbox/shell/shell.py backend/src/sandbox/daemon/rpc/dispatcher.py backend/src/tools/background">
 <h3>6.7 Background Task Lifecycle <a class="anchor" href="#background-lifecycle-detail">§</a></h3>
 
-<p>Background execution is split across two control planes. The engine owns user-visible task aliases, result delivery, progress snapshots, and task status. The daemon owns the sandbox invocation that may still be running inside the sandbox. The bridge between them is the sandbox invocation id passed in execution metadata and then into the daemon envelope.</p>
+<p>Background execution is split across two control planes. The engine owns user-visible task aliases, result delivery, progress snapshots, and task status. The daemon owns the sandbox invocation that may still be running inside the sandbox. The correlation key between them is the sandbox invocation id passed in execution metadata and then into the daemon envelope.</p>
 
 <table>
   <thead><tr><th>State</th><th>Owner</th><th>Purpose</th><th>Evidence</th></tr></thead>
   <tbody>
     <tr><td><code>bg_1</code>, <code>bg_2</code> aliases</td><td>Engine <code>BackgroundTaskSupervisor</code></td><td>User-facing ids for result, wait, and cancel tools.</td><td><span class="file-ref">backend/src/engine/background/task_supervisor.py:154-161</span></td></tr>
     <tr><td>Task status and terminal result</td><td>Engine <code>BackgroundTaskRecord</code></td><td>Tracks running/completed/failed/cancelled/delivered state, progress lines, and the final tool result.</td><td><span class="file-ref">backend/src/engine/background/task_supervisor.py:70-105</span>, <span class="file-ref">backend/src/engine/background/task_supervisor.py:163-240</span></td></tr>
-    <tr><td><code>sandbox_invocation_id</code></td><td>Engine launch path, then daemon envelope</td><td>Stable bridge between a background task alias and the daemon task that must receive heartbeat/cancel.</td><td><span class="file-ref">backend/src/engine/background/dispatch.py:101-141</span>, <span class="file-ref">backend/src/tools/sandbox/shell/shell.py:169-180</span></td></tr>
+    <tr><td><code>sandbox_invocation_id</code></td><td>Engine launch path, then daemon envelope</td><td>Stable correlation id between a background task alias and the daemon task that must receive heartbeat/cancel.</td><td><span class="file-ref">backend/src/engine/background/dispatch.py:101-141</span>, <span class="file-ref">backend/src/tools/sandbox/shell/shell.py:169-180</span></td></tr>
     <tr><td>In-flight daemon entry</td><td>Daemon registry</td><td>Tracks asyncio task, agent id, op, last heartbeat time, background flag, and TTL reaped flag.</td><td><span class="file-ref">backend/src/sandbox/daemon/rpc/in_flight.py:20-74</span></td></tr>
     <tr><td>Visible result snapshots</td><td>Background result tools</td><td>Expose current or terminal state without reading daemon internals directly.</td><td><span class="file-ref">backend/src/tools/background/check_background_task_result/check_background_task_result.py:79-128</span>, <span class="file-ref">backend/src/tools/background/wait_background_tasks/wait_background_tasks.py:48-123</span></td></tr>
   </tbody>
 </table>
 
-<pre class="diagram" aria-label="Background task lifecycle bridge">
+<pre class="diagram" aria-label="Background task lifecycle correlation">
 [engine starts background tool]
         |
         v

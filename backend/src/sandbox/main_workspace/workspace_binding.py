@@ -9,8 +9,8 @@ from sandbox.layer_stack.workspace_binding import require_workspace_binding
 from sandbox.occ.ports import WorkspaceBindingSnapshot
 
 
-class RuntimeWorkspaceBindingReader:
-    """Binding reader that fails closed before OCC mutation dispatch."""
+class MainWorkspaceBindingReader:
+    """Binding reader that fails closed before main-workspace OCC dispatch."""
 
     def require_workspace_binding(
         self,
@@ -35,4 +35,4 @@ class RuntimeWorkspaceBindingReader:
         )
 
 
-__all__ = ["RuntimeWorkspaceBindingReader"]
+__all__ = ["MainWorkspaceBindingReader"]

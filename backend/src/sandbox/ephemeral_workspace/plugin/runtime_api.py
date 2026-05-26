@@ -32,8 +32,8 @@ from sandbox.layer_stack.workspace_binding import (
 )
 from sandbox.ephemeral_workspace.plugin.op_context import (
     PluginOpContext,
-    caller_from_audit_payload,
-    plugin_intent_from_payload,
+    plugin_intent_from_envelope,
+    sandbox_caller_from_plugin_envelope,
 )
 from sandbox.ephemeral_workspace.plugin.op_registry import (
     clear_plugin_registrations,
@@ -125,7 +125,7 @@ async def _plugin_ensure_locked(
     registered_ops = flush_plugin_registrations(
         plugin_name,
         register_op,
-        context_factory=_plugin_op_context_factory,
+        context_factory=_build_plugin_op_context,
         trusted_caller=True,
     )
     # Warm before writing _LOADED_PLUGIN_RUNTIMES so a failed warm doesn't
@@ -193,7 +193,7 @@ async def _warm_plugin_runtime(
     if not callable(warm):
         return {"runtime_warmed": False}
 
-    ctx = await _plugin_op_context_factory(args, plugin_name, "__warm__")
+    ctx = await _build_plugin_op_context(args, plugin_name, "__warm__")
     try:
         result = warm(args, ctx)
         if inspect.isawaitable(result):
@@ -258,7 +258,7 @@ def _import_dispatcher_register_op() -> Any:
     return _idempotent_register_op
 
 
-async def _plugin_op_context_factory(
+async def _build_plugin_op_context(
     args: dict[str, Any], _plugin_name: str, op_name: str
 ) -> PluginOpContext:
     """Build a PluginOpContext from the daemon-envelope args.
@@ -269,12 +269,12 @@ async def _plugin_op_context_factory(
     in registry._wrap_with_context forwards the same dict).
     """
     layer_stack_root = str(args.get("layer_stack_root", "")).strip()
-    caller = caller_from_audit_payload(
+    caller = sandbox_caller_from_plugin_envelope(
         args.get("caller"),
         field_reader=_audit_field,
     )
-    projection = _workspace_projection_for_root(layer_stack_root)
-    overlay = await _overlay_pipeline_for_root(
+    projection = _workspace_projection_for_layer_stack_root(layer_stack_root)
+    overlay = await _ephemeral_pipeline_for_layer_stack_root(
         layer_stack_root,
         workspace_root=str(args.get("workspace_root", "")),
     )
@@ -283,7 +283,7 @@ async def _plugin_op_context_factory(
         caller=caller,
         projection=projection,
         overlay=overlay,
-        intent=plugin_intent_from_payload(args.get("intent")),
+        intent=plugin_intent_from_envelope(args.get("intent")),
         metadata={
             "op_name": op_name,
             "workspace_root": str(args.get("workspace_root", "")),
@@ -291,7 +291,7 @@ async def _plugin_op_context_factory(
     )
 
 
-def _workspace_projection_for_root(layer_stack_root: str) -> WorkspaceProjection:
+def _workspace_projection_for_layer_stack_root(layer_stack_root: str) -> WorkspaceProjection:
     key = _validated_layer_stack_root(layer_stack_root)
     projection = _WORKSPACE_PROJECTIONS.get(key)
     if projection is None:
@@ -309,7 +309,7 @@ def _workspace_projection_for_root(layer_stack_root: str) -> WorkspaceProjection
     return projection
 
 
-async def _overlay_pipeline_for_root(
+async def _ephemeral_pipeline_for_layer_stack_root(
     layer_stack_root: str,
     *,
     workspace_root: str,

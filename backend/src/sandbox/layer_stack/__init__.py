@@ -14,6 +14,7 @@ from sandbox.layer_stack.changes import (
 from sandbox.layer_stack.commit_staging import CommitStagingArea
 from sandbox.layer_stack.stack import (
     LayerStack,
+    LayerStackSnapshotLease,
     PrepareWorkspaceSnapshotResult,
 )
 from sandbox.layer_stack.manifest import (
@@ -38,6 +39,7 @@ __all__ = [
     "LayerChange",
     "LayerRef",
     "LayerStack",
+    "LayerStackSnapshotLease",
     "LayerStackStorageError",
     "LayerStackTransaction",
     "MANIFEST_SCHEMA_VERSION",

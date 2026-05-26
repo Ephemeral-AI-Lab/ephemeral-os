@@ -75,7 +75,7 @@ Before writing new code, check whether one of these already does the job.
 | Probe kernel overlay support | `sandbox.overlay.capability.mount_syscalls_supported` — the same hard precondition used by daemon startup | yes (`_iws_fixtures.can_mount_overlay_natively`) |
 | Walk upperdir for change capture | `sandbox.overlay.capture.walk_upperdir` — handles whiteouts, opaque dirs, sparse files | **not yet** — `_control_plane.linux_runtime._directory_file_bytes` is byte-count only. If you need anything beyond byte counting (e.g., for the Tier 7 `test_upperdir_fully_discarded_on_normal_exit`), use `walk_upperdir` instead of reinventing |
 | Mount syscall syscall constants | `sandbox.overlay.mount_syscalls` (`SYS_fsopen`, `SYS_fsconfig`, `SYS_fsmount`, `SYS_move_mount`, etc.) | yes, through deferred reuse of `kernel_mount.mount_overlay`; do not inline raw syscall constants in iws helpers |
-| Lease + snapshot lifecycle | `sandbox.daemon.layer_stack_runtime.prepare_workspace_snapshot` / `release_lease` | yes (`LayerStackClient` is bound during `_control_plane.pipeline_registry.ensure_pipeline`) |
+| Lease + snapshot lifecycle | `sandbox.daemon.layer_stack_runtime.prepare_workspace_snapshot` / `release_lease` | yes (`LayerStackPortAdapter` is bound during `_control_plane.pipeline_registry.ensure_pipeline`) |
 | Overlay writable-root resolution | `sandbox.overlay.writable_dirs.overlay_writable_root` | yes (`_control_plane.pipeline_registry.ensure_pipeline`) |
 | Daemon RPC client | `sandbox.host.daemon_client.call_daemon_api` | yes (`_iws_rpc`) |
 | Audit event types | `task_center_runner.audit.events.EventType` — the 5 `SANDBOX_ISOLATED_WORKSPACE_*` enum members are already defined | yes (events emitted via `IsolatedPipeline._emit`) |
@@ -435,7 +435,7 @@ runtime test; the async refactor that unblocks N=5 fan-out lands first.
   (`ip link` / `mkdir`); Tier 8's contention-bound test will be the
   forcing function if more need to widen.
 - `_LinuxNamespaceRuntime.mount_overlay` / `configure_dns` reuse a new shared
-  module-level `_run_helper_subprocess` coroutine
+  module-level `_run_setns_helper_subprocess` coroutine
   (`asyncio.create_subprocess_exec` + `asyncio.wait_for`) so 5 enters
   no longer queue on a single `subprocess.run`.
 - **Production gap closed:** `IsolatedPipeline.initialize()` now
@@ -533,7 +533,7 @@ in `IMPLEMENTATION-REPORT.md` Session 4 deferred items.
 | ~~Cgroup/lease/netns reap on startup_gc~~ | **DONE** (2026-05-23 session 3 — `_release_orphan_lease`, `_reap_orphan_cgroup`, and cgroup naming sweeps in `_control_plane.orphan_reaper`). |
 | ~~IPv6 default-route purge~~ | **DONE** (2026-05-23 session 3 — `_purge_ipv6_default_routes` in `scripts/ns_holder.py`). |
 | ~~Test-only failure-injection env knobs~~ | **DONE** (2026-05-23 session 3 — `_maybe_inject_failure` in `pipeline.py` / extracted modules, holder crash knob in `ns_holder.py`). |
-| ~~Async `subprocess` migration for `_LinuxNamespaceRuntime` (§4.2/7.7)~~ | **DONE** (2026-05-23 session 4 — `mount_overlay` + `configure_dns` are `async def`; shared `_run_helper_subprocess` coroutine). |
+| ~~Async `subprocess` migration for `_LinuxNamespaceRuntime` (§4.2/7.7)~~ | **DONE** (2026-05-23 session 4 — `mount_overlay` + `configure_dns` are `async def`; shared `_run_setns_helper_subprocess` coroutine). |
 | ~~`_ttl_loop` background task wired by `initialize()`~~ | **DONE** (2026-05-23 session 4 — Tier 5 prerequisite; adaptive cadence `max(0.5 s, min(ttl_s / 2, 30 s))`). |
 | ~~`EOS_ISOLATED_WORKSPACE_TEST_PHASE_DELAY` test-only knob~~ | **DONE** (2026-05-23 session 4 — drives Tier 9's `test_latency_regression_band`). |
 | ~~`LatencyBudget` helper + `latency_baseline` fixture (PR 6)~~ | **DONE** (2026-05-23 session 4 — `_iws_invariants.LatencyBudget`, `conftest.iws_latency_baseline`). |

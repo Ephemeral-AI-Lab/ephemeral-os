@@ -47,7 +47,7 @@
     <li><a href="#dispatch-policy"><span>1</span> Dispatch Policy</a></li>
     <li><a href="#record-lifecycle"><span>2</span> Record Lifecycle</a></li>
     <li><a href="#management-tools"><span>3</span> Management Tools</a></li>
-    <li><a href="#sandbox-bridge"><span>4</span> Sandbox Bridge</a></li>
+    <li><a href="#sandbox-bridge"><span>4</span> Sandbox Dispatch</a></li>
     <li><a href="#engine-workflows"><span>5</span> Engine Workflows</a></li>
     <li><a href="#verification"><span>6</span> Verification</a></li>
   </ol>
@@ -107,7 +107,7 @@
 </section>
 
 <section id="sandbox-bridge" data-last-reviewed-commit="569f12c3f39471dbaa643906856a8daf81a21a2d" data-evidence-paths="backend/src/engine/background/dispatch.py backend/src/engine/background/task_supervisor.py backend/src/sandbox/api/__init__.py backend/src/sandbox/api/tool backend/src/sandbox/daemon/workspace_tool_dispatch.py backend/tests/unit_test/test_engine/test_background_tasks.py">
-<h2>Sandbox Bridge <a class="anchor" href="#sandbox-bridge">#</a></h2>
+<h2>Sandbox Dispatch <a class="anchor" href="#sandbox-bridge">#</a></h2>
 <p>The background launcher marks a task as sandbox-bound when its tool definition requires <code>SANDBOX_CONTEXT</code>. It then records <code>uses_sandbox</code>, <code>sandbox_id</code>, and a fresh <code>sandbox_invocation_id</code> on the task record, and passes the invocation id through <code>ExecutionMetadata</code> into the actual tool execution.</p>
 <p>The supervisor uses that binding for two control paths. Cancellation calls <code>sandbox.api.cancel(sandbox_id, sandbox_invocation_id)</code> before cancelling the asyncio task. While sandbox-bound background tasks are running, a heartbeat loop periodically calls <code>sandbox.api.heartbeat()</code> with active invocation ids so the sandbox side can keep in-flight work visible and cancellable.</p>
 <p>This is separate from the workspace execution mode itself. A backgrounded sandbox tool can still be routed by the sandbox daemon into direct LayerStack/OCC fast paths, the <a class="wiki-link" href="sandbox.html">ephemeral sandbox workspace</a> overlay pipeline, or the <a class="wiki-link" href="isolated-workspace.html">isolated workspace</a> lifecycle depending on the tool and active workspace binding.</p>

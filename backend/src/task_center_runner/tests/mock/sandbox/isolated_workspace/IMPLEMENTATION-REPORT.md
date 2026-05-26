@@ -18,7 +18,7 @@ prerequisite (`_LinuxRuntime.mount_overlay` / `configure_dns` async refactor
 
 | Slice | File(s) | Status |
 |---|---|---|
-| Phase 7 prerequisite — async `mount_overlay` + `configure_dns` (NEXT-AGENT-GUIDE §4.2/7.7) | `sandbox/isolated_workspace/pipeline.py + extracted modules` (`_Runtime` protocol, `_LinuxRuntime`, shared `_run_helper_subprocess` helper) | landed |
+| Phase 7 prerequisite — async `mount_overlay` + `configure_dns` (NEXT-AGENT-GUIDE §4.2/7.7) | `sandbox/isolated_workspace/pipeline.py + extracted modules` (`_Runtime` protocol, `_LinuxRuntime`, shared `_run_setns_helper_subprocess` helper) | landed |
 | Production gap — `_ttl_loop` background task wired by `initialize()` | `sandbox/isolated_workspace/pipeline.py + extracted modules` | landed |
 | Test-only `EOS_ISOLATED_WORKSPACE_TEST_PHASE_DELAY` knob for Tier 9 regression-band test | `sandbox/isolated_workspace/pipeline.py + extracted modules:_maybe_inject_failure` | landed |
 | Phase 7 — Tier 5 resource controls (7 tests) | `resource_controls/` | landed |
@@ -43,7 +43,7 @@ prerequisite (`_LinuxRuntime.mount_overlay` / `configure_dns` async refactor
   (`test_5_concurrent_isolated_workspaces`) will be the forcing function
   if more need to widen.
 - `_LinuxRuntime.mount_overlay` / `configure_dns` rewritten to delegate
-  to a new shared `_run_helper_subprocess` (module-level coroutine) that
+  to a new shared `_run_setns_helper_subprocess` (module-level coroutine) that
   uses `asyncio.create_subprocess_exec` + `asyncio.wait_for`. Timeouts
   raise `IsolatedWorkspaceError(setup_timeout, failed_step=...)` so the
   rollback path still triggers correctly.
@@ -395,7 +395,7 @@ tools now flow through ``api.v1.<verb>`` and daemon pipeline resolution.
 |---|---|---|
 | ``sandbox.overlay.kernel_mount.mount_overlay`` | ``scripts/setns_overlay_mount.py`` — deferred-import *after* setns so R10 single-thread discipline is preserved at module-load time | ~80 LoC of duplicated ``fsopen / fsconfig / fsmount / move_mount`` syscall wrappers. One source of truth for overlay mount mechanics across the daemon. |
 | ``sandbox.overlay.capability.mount_syscalls_supported`` | ``_iws_fixtures.can_mount_overlay_natively`` | A bespoke ``/proc/filesystems`` scan. Uses the same hard precondition as daemon startup. |
-| ``sandbox.daemon.layer_stack_runtime.prepare_workspace_snapshot`` / ``release_lease`` | ``LayerStackClient`` bound during ``_control_plane.pipeline_registry.ensure_pipeline`` | Existing lease/snapshot lifecycle — no parallel implementation. |
+| ``sandbox.daemon.layer_stack_runtime.prepare_workspace_snapshot`` / ``release_lease`` | ``LayerStackPortAdapter`` bound during ``_control_plane.pipeline_registry.ensure_pipeline`` | Existing lease/snapshot lifecycle — no parallel implementation. |
 | ``sandbox.host.daemon_client.call_daemon_api`` | ``_iws_rpc`` | Existing daemon RPC client. |
 | ``sandbox.overlay.writable_dirs.overlay_writable_root`` | ``_control_plane.pipeline_registry.ensure_pipeline`` | Canonical overlay writable-root resolution. |
 

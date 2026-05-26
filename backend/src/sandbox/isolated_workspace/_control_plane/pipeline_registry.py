@@ -19,7 +19,7 @@ from typing import TYPE_CHECKING, Any
 from audit.jsonl import append_jsonl_event
 from sandbox.daemon import layer_stack_runtime
 from sandbox.isolated_workspace._control_plane.pipeline_state import IsolatedWorkspaceError
-from sandbox.occ.layer_stack_client import LayerStackClient
+from sandbox.occ.layer_stack_client import LayerStackPortAdapter
 from sandbox.overlay.writable_dirs import overlay_writable_root
 
 if TYPE_CHECKING:
@@ -73,19 +73,16 @@ class _JsonlAuditSink:
 async def ensure_pipeline(args: dict[str, Any]) -> "IsolatedPipeline":
     """Lazily construct the IsolatedPipeline on the first ``enter`` RPC.
 
-    Subsequent calls reuse the singleton via :func:`require_pipeline`. The
-    ``_bootstrap_lock`` covers two concurrent first-time callers; only one
-    constructs the pipeline and runs ``initialize`` / startup orphan recovery.
+    Subsequent calls reuse the active singleton directly. The ``_bootstrap_lock``
+    covers two concurrent first-time callers; only one constructs the pipeline
+    and runs ``initialize`` / startup orphan recovery.
     """
-    try:
-        return require_pipeline()
-    except IsolatedWorkspaceError:
-        pass
+    global _active_pipeline
+    if _active_pipeline is not None:
+        return _active_pipeline
     async with _bootstrap_lock:
-        try:
-            return require_pipeline()  # racing caller may have constructed it
-        except IsolatedWorkspaceError:
-            pass
+        if _active_pipeline is not None:
+            return _active_pipeline
         # Local import avoids a circular at module-load time: pipeline.py
         # would otherwise import pipeline_registry (for the registry accessors)
         # and pipeline_registry would import pipeline (for the class). Pipeline
@@ -93,11 +90,11 @@ async def ensure_pipeline(args: dict[str, Any]) -> "IsolatedPipeline":
         from sandbox.isolated_workspace.pipeline import IsolatedPipeline
 
         layer_stack_root = require_isolated_workspace_arg(args, "layer_stack_root")
-        # Phase 2.6 C3.5b: bind a LayerStackClient ONCE at construction so
+        # Phase 2.6 C3.5b: bind a LayerStackPortAdapter ONCE at construction so
         # the iws pipeline speaks the same kwarg-only LayerStackPort
         # contract as eph (no per-call ``layer_stack_root`` arg threaded
         # through the lease/release call sites).
-        layer_stack = LayerStackClient(
+        layer_stack = LayerStackPortAdapter(
             layer_stack_runtime.get_layer_stack_manager(layer_stack_root),
         )
         pipeline = IsolatedPipeline(
@@ -108,7 +105,6 @@ async def ensure_pipeline(args: dict[str, Any]) -> "IsolatedPipeline":
                 or DEFAULT_AUDIT_JSONL_PATH
             ),
         )
-        global _active_pipeline
         _active_pipeline = pipeline
         await pipeline.initialize()
         return pipeline

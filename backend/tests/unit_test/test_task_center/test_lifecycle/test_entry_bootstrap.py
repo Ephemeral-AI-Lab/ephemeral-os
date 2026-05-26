@@ -8,7 +8,7 @@ from types import SimpleNamespace
 import pytest
 
 from task_center import start_task_center_run
-from task_center.entry import TaskCenterSandboxBridge
+from task_center.entry import TaskCenterSandboxProvisioner
 from task_center.goal.state import GoalOriginKind
 from task_center.task_state import TaskCenterTaskRole, SpawnReason
 
@@ -46,7 +46,7 @@ async def test_entry_bootstrap_converts_prompt_to_initial_goal(
         attempt_store=attempt_store,
         context_packet_store=context_packet_store,
         runner=runner,
-        sandbox_bridge=TaskCenterSandboxBridge(
+        sandbox_provisioner=TaskCenterSandboxProvisioner(
             create_fn=lambda **_kwargs: {"id": "sandbox-entry-test"}
         ),
     )

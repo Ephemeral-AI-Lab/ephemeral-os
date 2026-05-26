@@ -13,8 +13,8 @@ from sandbox.daemon.audit_schema import (
     safe_emit,
 )
 from sandbox.layer_stack.stack import (
+    LayerStackSnapshotLease,
     LayerStack,
-    PrepareWorkspaceSnapshotResult,
 )
 from sandbox.layer_stack.manifest import manifest_path, read_manifest
 from sandbox.layer_stack.workspace_base import (
@@ -138,7 +138,7 @@ def prepare_workspace_snapshot(
     layer_stack_root: str | Path,
     *,
     owner_request_id: str,
-) -> PrepareWorkspaceSnapshotResult:
+) -> LayerStackSnapshotLease:
     """Prepare a workspace snapshot lease for a bound, manifest-valid root."""
     require_workspace_binding(layer_stack_root)
     _validate_manifest_for_root(Path(layer_stack_root))

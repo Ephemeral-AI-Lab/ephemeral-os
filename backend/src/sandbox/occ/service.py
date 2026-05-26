@@ -99,7 +99,7 @@ class OccService:
         maintenance_timings = (
             await self._maintenance_after_publish(result) if run_maintenance else {}
         )
-        return self._wrap_commit_result(
+        return self._finalize_commit_result(
             result,
             prepared=prepared,
             total_start=total_start,
@@ -144,7 +144,7 @@ class OccService:
         maintenance_timings = (
             self._maintenance_after_publish_sync(result) if run_maintenance else {}
         )
-        return self._wrap_commit_result(
+        return self._finalize_commit_result(
             result,
             prepared=prepared,
             total_start=total_start,
@@ -178,7 +178,7 @@ class OccService:
             return {}
         return self._maintenance.after_publish_sync(result)
 
-    def _wrap_commit_result(
+    def _finalize_commit_result(
         self,
         result: ChangesetResult,
         *,
@@ -259,7 +259,7 @@ class OccService:
         assert effective_snapshot is not None
         snapshot_reader = self._snapshot_reader
 
-        def base_hash_reader(path: str) -> str | None:
+        def read_snapshot_base_hash(path: str) -> str | None:
             return infer_snapshot_base_hash(
                 snapshot_reader=snapshot_reader,
                 manifest=effective_snapshot,
@@ -271,7 +271,7 @@ class OccService:
             changes,
             snapshot=effective_snapshot,
             options=commit_options,
-            base_hash_reader=base_hash_reader,
+            base_hash_reader=read_snapshot_base_hash,
         )
         timings[TimingKey.PREPARE_ROUTE_AND_BASE_HASH] = monotonic_now() - prepare_start
         prepare_total_s = monotonic_now() - total_start
@@ -312,7 +312,7 @@ def _emit_occ_commit_events(
 ) -> None:
     """Emit ``occ.apply_committed`` / ``occ.publish_layer`` / ``occ.conflict_rejected``.
 
-    Called from ``_wrap_commit_result`` so the timings + manifest version are
+    Called from ``_finalize_commit_result`` so the timings + manifest version are
     already populated on ``result``.
     """
     operation_id = getattr(prepared, "request_id", None) or None
@@ -320,20 +320,21 @@ def _emit_occ_commit_events(
     base_version = (
         prepared.snapshot.version if prepared.snapshot is not None else None
     )
-    bad = next(
+    failed_file = next(
         (f for f in result.files if f.status != FileStatus.COMMITTED),
         None,
     )
-    if bad is not None:
+    if failed_file is not None:
+        conflict_reason = failed_file.message or failed_file.status.value
         safe_emit(
             build_occ_event(
                 "occ.conflict_rejected",
                 OccSection(
                     operation_id=operation_id,
                     changeset_id=changeset_id,
-                    conflict_kind=bad.status.value,
-                    conflict_path=bad.path or None,
-                    conflict_reason=(bad.message or bad.status.value) or None,
+                    conflict_kind=failed_file.status.value,
+                    conflict_path=failed_file.path or None,
+                    conflict_reason=conflict_reason or None,
                     base_manifest_version=base_version,
                     current_manifest_version=result.published_manifest_version,
                 ),

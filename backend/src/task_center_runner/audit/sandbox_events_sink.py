@@ -58,10 +58,6 @@ class RotatingJsonlSink:
         self._lock = threading.Lock()
         self._path.parent.mkdir(parents=True, exist_ok=True)
 
-    @property
-    def live_path(self) -> Path:
-        return self._path
-
     def append_event(self, event: Mapping[str, Any]) -> None:
         encoded = (
             json.dumps(event, default=_json_default, ensure_ascii=False) + "\n"
@@ -73,10 +69,6 @@ class RotatingJsonlSink:
                 os.write(fd, encoded)
             finally:
                 os.close(fd)
-
-    def append_many(self, events: Iterable[Mapping[str, Any]]) -> None:
-        for event in events:
-            self.append_event(event)
 
     # ------------------------------------------------------------------
 

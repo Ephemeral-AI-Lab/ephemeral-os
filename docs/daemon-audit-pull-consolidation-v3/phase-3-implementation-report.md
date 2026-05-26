@@ -27,8 +27,8 @@ the dask-heavy live-e2e fixture is an operator hand-off (see
 The §1-§13 sections produced:
 
 - **§1 Summary** — duration_total_ms, tools_called, background_tools, sandbox_ops; peak rss / upperdir / layer_count; mirrored `audit_summary` (events_pulled / dropped / pressure / floor_raises).
-- **§2 Per-tool timing** — split by `workspace_mode`. Phase columns render `"—"` for `mount` / `publish` until FU#5 lands. `total_ms` always present from `phase_totals_rollup`.
-- **§3 Per-tool phase breakdown** — top-10 by total_ms with stacked ASCII glyph bar (`Q`/`M`/`E`/`C`/`P`/`R`) proportional to phase fractions.
+- **§2 Per-tool timing** — split by `workspace_mode`. Phase columns render emitted phase data from `phase_totals_rollup`; the later deferrals report records the `mount` / `publish` hook completion.
+- **§3 Per-tool phase breakdown** — top-10 by emitted tool-call `total_ms` with stacked ASCII glyph bar (`Q`/`M`/`E`/`C`/`P`/`R`) proportional to phase fractions.
 - **§4 Background tool calls** — per-`background_task_id` row with status / duration_ms / delivery_latency_ms; heartbeat coverage row.
 - **§5 Plugin activity** — per (plugin_id × plugin_kind). Column names are vendor-free (`plugin_id`, `plugin_kind`, `invocations`, `p50_ms`, `p95_ms`, `p99_ms`, `peak_resident_bytes`, `errors`). `plugin_kind` value enum locked to V3 README §Requirement 2.
 - **§6 Overlay workspace** — ephemeral vs isolated side-by-side; mount_ms / cleanup_ms totals, upperdir_bytes percentiles, changed_path_count, lifecycle distribution.
@@ -59,7 +59,7 @@ The §1-§13 sections produced:
 
 | File | Change |
 |---|---|
-| `backend/src/task_center_runner/core/engine.py` | Added `_refuse_dual_disable_when_isolated_workspace_enabled()` invoked at the very top of `run_pipeline`. Raises `RuntimeError` with an actionable diagnostic when `EOS_DAEMON_AUDIT_PULL_ENABLED=false` AND `EOS_AUDIT_STREAM_FALLBACK=false` AND `EOS_ISOLATED_WORKSPACE_ENABLED=true`. Both negative branches (only one audit path off; isolated workspace also off) are pinned by tests so operators can disable either path individually without tripping the safety gate. |
+| `backend/src/task_center_runner/core/engine.py` | Added `_refuse_dual_disable_when_isolated_workspace_enabled()` invoked at the very top of `run_pipeline`. Raises `RuntimeError` with an actionable diagnostic when `EOS_DAEMON_AUDIT_PULL_ENABLED=false` AND `EOS_AUDIT_STREAM_FALLBACK=false` AND `EOS_ISOLATED_WORKSPACE_ENABLED=true`. Both negative branches (only one audit path off; isolated workspace also off) are pinned by tests so operators can disable either path individually without tripping the safety gate. The stream fallback flag now also gates stream-derived sandbox fallback events at execution time. |
 
 ### 5. Tests
 
@@ -134,14 +134,16 @@ These are EXPLICIT follow-ups — none were promised by Phase 3 to land in code,
 
 ### Code follow-ups already filed (V3 README §Follow-ups)
 
-These were flagged out-of-scope for Phase 3 in advance and are unchanged by this slice:
+These were flagged out-of-scope for the initial Phase 3 landing. Current status:
+FU#1-FU#4 remain operational/product follow-ups; FU#5-FU#6 are closed by
+[`phase-3-implementation-deferrals-report.md`](phase-3-implementation-deferrals-report.md).
 
 - **FU#1 — stream-bridge code removal.** Trigger: K=5 consecutive clean heavy runs post-Phase 3.
 - **FU#2 — real plugin session lifecycle (`plugin.session_*`).** Trigger: a second plugin kind landing in `plugins/catalog/`.
 - **FU#3 — plugin-kind catalog expansion.** Opportunistic.
 - **FU#4 — ring-by-lane separation.** Only if the audit-overhead gate fails permanently post-ship.
-- **FU#5 — `mount` / `publish` framework-boundary phase recording.** §2 table renders `"—"` for those columns until overlay/OCC call `record_phase`. The renderer already handles missing phases gracefully; this is a drop-in change.
-- **FU#6 — plan-doc cosmetic corrections.** Doc-only.
+- **FU#5 — `mount` / `publish` framework-boundary phase recording.** Closed by D1 in the deferrals report.
+- **FU#6 — plan-doc cosmetic corrections.** Closed by D16 in the deferrals report.
 
 ### New observations (not in V3 README §Follow-ups)
 

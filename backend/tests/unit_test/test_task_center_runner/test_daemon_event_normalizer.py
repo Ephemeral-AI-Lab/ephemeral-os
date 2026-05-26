@@ -6,8 +6,6 @@ from pathlib import Path
 
 from task_center_runner.audit.daemon_event_normalizer import (
     FORENSIC_RAW_ENV,
-    dedupe_key,
-    merge_streams,
     normalize_pulled_event,
 )
 
@@ -37,23 +35,6 @@ def test_forensic_raw_present_when_env_enabled(monkeypatch) -> None:
     row = normalize_pulled_event(raw)
     assert "daemon_event" in row["payload"]
     assert row["payload"]["daemon_event"]["type"] == "occ.changeset_prepared"
-
-
-def test_dedupe_pull_supersedes_stream_when_both_present() -> None:
-    pull = {
-        "seq": 42,
-        "event_type": "occ.apply_committed",
-        "payload": {"occ": {"apply_ms": 5.0, "operation_id": "op-1"}},
-    }
-    stream = {
-        "event_type": "occ.apply_committed",
-        "payload": {"occ": {"apply_ms": 99.0, "operation_id": "op-1"}},
-    }
-    merged = merge_streams([pull], [stream])
-    # Pull wins on overlap via seq key. Both keys differ in this scenario
-    # (stream lacks seq) so we get both — pull's seq beats the logical key.
-    seqs = {dedupe_key(row) for row in merged}
-    assert ("seq", 42) in seqs
 
 
 def test_daemon_event_writer_module_boundary() -> None:

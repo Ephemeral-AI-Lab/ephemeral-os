@@ -38,7 +38,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from types import SimpleNamespace
 
-from task_center import TaskCenterSandboxBridge, start_task_center_run
+from task_center import TaskCenterSandboxProvisioner, start_task_center_run
 
 from config.model_config import try_get_active_model_kwargs
 from task_center_runner.audit.bus import AuditEventBus
@@ -133,9 +133,9 @@ def _default_run_dir(audit_dir: Path, ctx: RunContext) -> Path:
     return Path(audit_dir) / ctx.config.run_label / f"{utc_stamp}_{self_run_id}"
 
 
-def _default_bridge() -> TaskCenterSandboxBridge:
-    """Permissive bridge — accepts whatever sandbox id the caller supplied."""
-    return TaskCenterSandboxBridge(start_fn=lambda existing_id: {"id": existing_id})
+def _default_sandbox_provisioner() -> TaskCenterSandboxProvisioner:
+    """Permissive provisioner that accepts the caller-supplied sandbox id."""
+    return TaskCenterSandboxProvisioner(start_fn=lambda existing_id: {"id": existing_id})
 
 
 def _count_task_outcomes(task_rows: list[dict]) -> tuple[int, int, int]:
@@ -206,13 +206,20 @@ async def run_pipeline(config: RunConfig) -> PipelineReport:
     bind_audit_recorder = getattr(runner, "bind_audit_recorder", None)
     if callable(bind_audit_recorder):
         bind_audit_recorder(recorder)
-    bridge_factory = config.bridge_factory or _default_bridge
-    bridge = bridge_factory()
-    bridge_run_id = ""
+    sandbox_provisioner_factory = (
+        config.sandbox_provisioner_factory or _default_sandbox_provisioner
+    )
+    sandbox_provisioner = sandbox_provisioner_factory()
+    stream_task_center_run_id = ""
+    sandbox_stream_fallback_enabled = _stream_fallback_enabled()
 
     async def _on_agent_event(event) -> None:  # type: ignore[no-untyped-def]
-        bridge_cb = stream_bridge(bus, task_center_run_id=bridge_run_id)
-        await bridge_cb(event)
+        stream_callback = stream_bridge(
+            bus,
+            task_center_run_id=stream_task_center_run_id,
+            sandbox_fallback_enabled=sandbox_stream_fallback_enabled,
+        )
+        await stream_callback(event)
         agent_run_id = str(getattr(event, "run_id", "") or "")
         if not agent_run_id:
             return
@@ -244,10 +251,10 @@ async def run_pipeline(config: RunConfig) -> PipelineReport:
             attempt_store=bundle.attempt_store,
             context_packet_store=bundle.context_packet_store,
             runner=runner,
-            sandbox_bridge=bridge,
+            sandbox_provisioner=sandbox_provisioner,
         )
         tcrid = str(handle.task_center_run_id)
-        bridge_run_id = tcrid
+        stream_task_center_run_id = tcrid
         recorder.bind_task_center_run_id(tcrid)
         bus.publish(Event(type=EventType.RUN_STARTED, node=NodeId(task_center_run_id=tcrid)))
 
