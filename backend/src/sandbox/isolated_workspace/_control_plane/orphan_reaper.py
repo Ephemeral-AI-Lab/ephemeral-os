@@ -14,11 +14,38 @@ from pathlib import Path
 from typing import Any
 
 from sandbox.audit.events import IsolatedWorkspaceAuditEvent
+from sandbox.daemon.audit_schema import (
+    IsolatedWorkspaceSection,
+    build_isolated_workspace_event,
+    safe_emit,
+)
 from sandbox.isolated_workspace._control_plane.pipeline_state import (
     CGROUP_ROOT,
     HANDLE_PREFIX,
     logger,
 )
+
+
+def _emit_orphan_reaped(
+    *,
+    holder_pid: int | None = None,
+    cgroup_id: str | None = None,
+    scratch_id: str | None = None,
+) -> None:
+    """Emit ``isolated_workspace.orphan_reaped`` for a reaped orphan."""
+    safe_emit(
+        build_isolated_workspace_event(
+            "isolated_workspace.orphan_reaped",
+            IsolatedWorkspaceSection(
+                holder_pid=holder_pid,
+                cgroup_id=cgroup_id,
+                orphan_holder_count=1 if holder_pid is not None else 0,
+                orphan_cgroup_count=1 if cgroup_id is not None else 0,
+                orphan_scratch_count=1 if scratch_id is not None else 0,
+            ),
+        ),
+        lane="critical",
+    )
 
 _NS_HOLDER_MARKER = "sandbox.isolated_workspace.scripts.ns_holder"
 
@@ -289,6 +316,7 @@ class _OrphanResourceReaperMixin:
                     },
                 },
             )
+            _emit_orphan_reaped(holder_pid=proc.pid)
 
 
 def _iter_namespace_holder_processes(

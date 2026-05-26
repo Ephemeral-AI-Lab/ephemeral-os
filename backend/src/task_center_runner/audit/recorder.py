@@ -22,9 +22,12 @@ from sqlalchemy import event
 
 from audit.jsonl import append_jsonl_event
 from task_center_runner.audit.bus import AuditEventBus
+from task_center_runner.audit.daemon_event_normalizer import normalize_pulled_event
+from task_center_runner.audit.daemon_pull import DaemonAuditPuller, PullerStats
 from task_center_runner.audit.events import Event as AuditEvent
 from task_center_runner.audit.io import atomic_write_json
 from task_center_runner.audit.metrics import MetricsAggregator
+from task_center_runner.audit.sandbox_events_sink import RotatingJsonlSink
 from db.models.agent_run import AgentRunRecord
 from db.models.attempt import AttemptRecord
 from db.models.iteration import IterationRecord
@@ -184,6 +187,10 @@ class AuditRecorder:
         self._finished_ts: float | None = None
         self._status: str = "pending"
 
+        self._daemon_audit_puller: DaemonAuditPuller | None = None
+        self._sandbox_events_sink: RotatingJsonlSink | None = None
+        self._daemon_audit_boot_epoch_id: int | None = None
+
     # ------------------------------------------------------------------
     # Public API
     # ------------------------------------------------------------------
@@ -279,6 +286,63 @@ class AuditRecorder:
             )
 
         self._write_run_json()
+
+    def attach_daemon_audit_puller(
+        self,
+        *,
+        pull: Callable[[int, int], Any],
+        sink_path: Path | None = None,
+    ) -> DaemonAuditPuller:
+        """Wire a ``DaemonAuditPuller`` whose events feed the rotating sink.
+
+        Slice 6: ``sandbox_events.jsonl`` switches from the stream-bridge
+        (``_record_sandbox_event``) to the daemon-ring pull path. The
+        stream-bridge stays as fallback until follow-up FU#1 retires it.
+
+        ``pull`` is expected to return a coroutine resolving to the daemon
+        pull RPC response. The caller (host runtime) owns the sandbox_id
+        binding; the recorder owns the sink + final-drain coordination.
+        """
+        if self._daemon_audit_puller is not None:
+            return self._daemon_audit_puller
+        sink_target = sink_path or (self._run_dir / "sandbox_events.jsonl")
+        sink = RotatingJsonlSink(sink_target)
+        self._sandbox_events_sink = sink
+
+        def _emit(events: list[dict[str, Any]], response: dict[str, Any]) -> None:
+            snapshot = response.get("snapshot") or {}
+            daemon = snapshot.get("daemon") or {}
+            boot_epoch_id = daemon.get("boot_epoch_id")
+            if isinstance(boot_epoch_id, int):
+                self._daemon_audit_boot_epoch_id = boot_epoch_id
+            for event_payload in events:
+                normalized = normalize_pulled_event(
+                    event_payload,
+                    boot_epoch_id=self._daemon_audit_boot_epoch_id,
+                    task_center_run_id=self._task_center_run_id,
+                )
+                sink.append_event(normalized)
+
+        puller = DaemonAuditPuller(pull, emit=_emit)
+        self._daemon_audit_puller = puller
+        puller.start()
+        return puller
+
+    def daemon_audit_puller_stats(self) -> PullerStats | None:
+        """Return the live puller stats if a puller has been attached."""
+        return None if self._daemon_audit_puller is None else self._daemon_audit_puller.stats
+
+    async def stop_daemon_audit_puller(self) -> None:
+        """Stop the attached puller and run its final drain.
+
+        Callers wishing to honor the plan's ``dispose()`` ordering should
+        await this BEFORE ``dispose()`` so the final drain populates the
+        sink ahead of the recorder's other flush steps.
+        """
+        puller = self._daemon_audit_puller
+        self._daemon_audit_puller = None
+        if puller is not None:
+            await puller.stop()
 
     def dispose(self) -> None:
         """Unregister listeners, flush message recorders, write final files."""

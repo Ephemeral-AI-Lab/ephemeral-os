@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Background Tools - EphemeralOS Tools Architecture</title>
+<link rel="stylesheet" href="../assets/styles.css">
+</head>
+<body data-module="tools" data-page="background" data-root="../">
+<nav class="toc">
+  <h2>EphemeralOS Architecture</h2>
+  <a class="home-link" href="../index.html">All Modules</a>
+  <div class="search-box">
+    <input type="search" placeholder="Search architecture" data-doc-search aria-label="Search architecture">
+    <div class="search-results" data-doc-search-results></div>
+  </div>
+  <h2>Modules</h2>
+  <ol class="module-list">
+    <li><a href="../sandbox/index.html" data-doc-module="sandbox">Sandbox Workspace</a></li>
+    <li><a href="../tools/index.html" data-doc-module="tools" class="active">Tools</a></li>
+  </ol>
+  <h2>Tools Pages</h2>
+  <ol>
+    <li><a href="index.html" data-doc-module="tools" data-doc-section="index" data-doc-page="index.html">Overview</a></li>
+    <li><a href="framework.html" data-doc-module="tools" data-doc-section="framework" data-doc-page="framework.html">Framework</a></li>
+    <li><a href="terminals.html" data-doc-module="tools" data-doc-section="terminals" data-doc-page="terminals.html">Terminals</a></li>
+    <li><a href="sandbox.html" data-doc-module="tools" data-doc-section="sandbox" data-doc-page="sandbox.html">Sandbox Tools</a></li>
+    <li><a href="isolated-workspace.html" data-doc-module="tools" data-doc-section="isolated-workspace" data-doc-page="isolated-workspace.html">Isolated Workspace Tools</a></li>
+    <li><a href="background.html" data-doc-module="tools" data-doc-section="background" data-doc-page="background.html" class="active">Background</a></li>
+    <li><a href="subagent.html" data-doc-module="tools" data-doc-section="subagent" data-doc-page="subagent.html">Subagent</a></li>
+    <li><a href="ask-helper.html" data-doc-module="tools" data-doc-section="ask-helper" data-doc-page="ask-helper.html">Ask Helper</a></li>
+    <li><a href="submission.html" data-doc-module="tools" data-doc-section="submission" data-doc-page="submission.html">Submission</a></li>
+    <li><a href="skills.html" data-doc-module="tools" data-doc-section="skills" data-doc-page="skills.html">Skills</a></li>
+    <li><a href="maintenance.html" data-doc-module="tools" data-doc-section="maintenance" data-doc-page="maintenance.html">Maintenance</a></li>
+  </ol>
+</nav>
+<main>
+<div class="doc-actions">
+  <span><a href="index.html">Index</a> / Background</span>
+  <span class="nav-pair"><a href="isolated-workspace.html">Isolated Workspace</a><a href="subagent.html">Subagent</a></span>
+</div>
+<h1>Background Tools</h1>
+<nav class="page-toc" aria-labelledby="page-toc-heading">
+  <h3 id="page-toc-heading">Contents</h3>
+  <ol>
+    <li><a href="#dispatch-policy"><span>1</span> Dispatch Policy</a></li>
+    <li><a href="#record-lifecycle"><span>2</span> Record Lifecycle</a></li>
+    <li><a href="#management-tools"><span>3</span> Management Tools</a></li>
+    <li><a href="#sandbox-bridge"><span>4</span> Sandbox Bridge</a></li>
+    <li><a href="#engine-workflows"><span>5</span> Engine Workflows</a></li>
+    <li><a href="#verification"><span>6</span> Verification</a></li>
+  </ol>
+</nav>
+
+<p class="lead">Engine-owned async task plumbing for long-running tools, plus the user-facing tools that check, wait for, and cancel those tasks.</p>
+<section id="dispatch-policy" data-last-reviewed-commit="569f12c3f39471dbaa643906856a8daf81a21a2d" data-evidence-paths="backend/src/engine/tool_call/streaming.py backend/src/engine/tool_call/dispatch.py backend/src/engine/background/dispatch.py backend/src/tools/_framework/core/base.py backend/tests/unit_test/test_engine/test_background_tasks.py backend/tests/unit_test/test_engine/test_background_unit.py">
+<h2>Dispatch Policy <a class="anchor" href="#dispatch-policy">#</a></h2>
+<p>Background execution is an engine dispatch mode, not a separate tool runtime. <code>StreamingToolExecutor</code> defers tools whose schema says <code>background=&quot;always&quot;</code>, or <code>background=&quot;optional&quot;</code> when the model supplies <code>background=true</code>. The final assistant-message dispatcher then routes deferred calls through <code>dispatch_background_tool_call()</code> when a <code>BackgroundTaskSupervisor</code> exists.</p>
+<div class="diagram" aria-label="Background dispatch workflow">
+  <div class="flow-row">
+    <div class="node info"><strong>Tool metadata</strong><small><code>background=optional</code> or <code>always</code></small></div>
+    <div class="node"><strong>Streaming deferral</strong><small>foreground executor skips background-bound calls</small></div>
+    <div class="node"><strong>Final dispatcher</strong><small>validates clean input and assigns <code>bg_N</code></small></div>
+    <div class="node good"><strong>Supervisor record</strong><small>task, status, progress, sandbox binding</small></div>
+  </div>
+  <div class="flow-row">
+    <div class="node"><strong>Running task</strong><small>progress callback or provider snapshot</small></div>
+    <div class="node"><strong>Check / wait</strong><small>collects completed or renders running status</small></div>
+    <div class="node warn"><strong>Cancel</strong><small>asyncio cancel plus sandbox cancel when bound</small></div>
+    <div class="node"><strong>Delivered</strong><small>terminal state is surfaced once</small></div>
+  </div>
+</div>
+<div class="trace-grid">
+  <div>Optional background</div><div>A tool with <code>background=&quot;optional&quot;</code> runs normally unless its input contains <code>background=true</code>. The background dispatcher strips that flag before validating and executing the real tool input.</div>
+  <div>Always background</div><div>A tool with <code>background=&quot;always&quot;</code> is always deferred from foreground streaming and launched through the supervisor. <a class="wiki-link" href="subagent.html">run_subagent</a> is the main current example.</div>
+  <div>Forbidden background</div><div>A tool with no background support, or <code>background=&quot;forbidden&quot;</code>, is rejected by <code>launch_background_tool()</code> if it reaches the background path.</div>
+  <div>Executor boundary</div><div>The streaming executor only asks a predicate whether to defer. Tool policy remains in engine dispatch and tool metadata rather than in the provider stream consumer.</div>
+</div>
+</section>
+
+<section id="record-lifecycle" data-last-reviewed-commit="569f12c3f39471dbaa643906856a8daf81a21a2d" data-evidence-paths="backend/src/engine/background/dispatch.py backend/src/engine/background/task_supervisor.py backend/src/engine/background/history.py backend/src/message/stream_events.py backend/tests/unit_test/test_engine/test_background_terminal_latch.py backend/tests/unit_test/test_engine/test_background_unit.py">
+<h2>Record Lifecycle <a class="anchor" href="#record-lifecycle">#</a></h2>
+<p><code>BackgroundTaskSupervisor</code> owns the in-memory record map for the current query loop. It creates short aliases such as <code>bg_1</code>, stores the original tool name and clean input, records <code>task_type</code>, agent identity, sandbox binding, live progress, and the final <code>ToolResult</code>.</p>
+<table>
+  <thead><tr><th>Status</th><th>Meaning</th><th>Delivery rule</th></tr></thead>
+  <tbody>
+    <tr><td><code>RUNNING</code></td><td>The asyncio task is still active.</td><td><code>check_background_task_result</code> returns progress lines or a progress-provider snapshot.</td></tr>
+    <tr><td><code>COMPLETED</code></td><td>The task produced a successful <code>ToolResult</code>.</td><td>Undelivered until <code>collect_completed()</code> is called by check/wait or other engine delivery code.</td></tr>
+    <tr><td><code>FAILED</code></td><td>The task raised or returned an error result through the done callback.</td><td>Undelivered until collected.</td></tr>
+    <tr><td><code>CANCELLED</code></td><td>The supervisor marked the task cancelled.</td><td>Undelivered until collected; completion has higher terminal precedence than cancellation in races.</td></tr>
+    <tr><td><code>DELIVERED</code></td><td>The terminal state has already been surfaced to the model.</td><td>Not collected again.</td></tr>
+  </tbody>
+</table>
+<p>The terminal-status latch orders terminal states as completed over failed over cancelled over running. That keeps a near-complete sandbox command from being overwritten by a late cancel acknowledgement. <code>progress_provider</code> is a pull callback for structured progress; <code>run_subagent</code> uses it to expose the child agent's latest rendered messages.</p>
+</section>
+
+<section id="management-tools" data-last-reviewed-commit="569f12c3f39471dbaa643906856a8daf81a21a2d" data-evidence-paths="backend/src/tools/background/__init__.py backend/src/tools/background/check_background_task_result/check_background_task_result.py backend/src/tools/background/wait_background_tasks/wait_background_tasks.py backend/src/tools/background/cancel_background_task/cancel_background_task.py backend/src/tools/background/_lib/task_output.py backend/tests/unit_test/test_engine/test_background_tasks.py backend/tests/unit_test/test_engine/test_background_unit.py">
+<h2>Management Tools <a class="anchor" href="#management-tools">#</a></h2>
+<p><code>backend/src/tools/background</code> exposes three management tools. They operate on the supervisor stored in <code>ToolExecutionContextService</code> metadata for the current agent run.</p>
+<div class="edge-list">
+  <div><b><code>check_background_task_result</code></b><span>Returns JSON with <code>id</code>, normalized <code>status</code>, rendered <code>tool_command</code>, and either the terminal result or a running progress snapshot. For subagents, a completed task is only reported as finished when <code>subagent_terminal_called</code> metadata is true.</span></div>
+  <div><b><code>wait_background_tasks</code></b><span>Blocks until all running tasks settle or the bounded timeout expires. It returns compact status rows, not result bodies; callers use <code>check_background_task_result</code> for each result they need.</span></div>
+  <div><b><code>cancel_background_task</code></b><span>Cancels one task by alias. <code>task_id=&quot;auto&quot;</code> resolves only when exactly one task is running, and <code>task_id=&quot;all&quot;</code> is rejected so cancellation remains explicit.</span></div>
+</div>
+<p>Current completion delivery is polling through these tools. The code still contains historical comments and prompt wording about duplicate <code>[BACKGROUND COMPLETED]</code> messages, but no current automatic <code>BackgroundTaskCompleted</code> event path was found in the inspected engine code.</p>
+</section>
+
+<section id="sandbox-bridge" data-last-reviewed-commit="569f12c3f39471dbaa643906856a8daf81a21a2d" data-evidence-paths="backend/src/engine/background/dispatch.py backend/src/engine/background/task_supervisor.py backend/src/sandbox/api/__init__.py backend/src/sandbox/api/tool backend/src/sandbox/daemon/workspace_tool_dispatch.py backend/tests/unit_test/test_engine/test_background_tasks.py">
+<h2>Sandbox Bridge <a class="anchor" href="#sandbox-bridge">#</a></h2>
+<p>The background launcher marks a task as sandbox-bound when its tool definition requires <code>SANDBOX_CONTEXT</code>. It then records <code>uses_sandbox</code>, <code>sandbox_id</code>, and a fresh <code>sandbox_invocation_id</code> on the task record, and passes the invocation id through <code>ExecutionMetadata</code> into the actual tool execution.</p>
+<p>The supervisor uses that binding for two control paths. Cancellation calls <code>sandbox.api.cancel(sandbox_id, sandbox_invocation_id)</code> before cancelling the asyncio task. While sandbox-bound background tasks are running, a heartbeat loop periodically calls <code>sandbox.api.heartbeat()</code> with active invocation ids so the sandbox side can keep in-flight work visible and cancellable.</p>
+<p>This is separate from the workspace execution mode itself. A backgrounded sandbox tool can still be routed by the sandbox daemon into direct LayerStack/OCC fast paths, the <a class="wiki-link" href="sandbox.html">ephemeral sandbox workspace</a> overlay pipeline, or the <a class="wiki-link" href="isolated-workspace.html">isolated workspace</a> lifecycle depending on the tool and active workspace binding.</p>
+</section>
+
+<section id="engine-workflows" data-last-reviewed-commit="569f12c3f39471dbaa643906856a8daf81a21a2d" data-evidence-paths="backend/src/engine/query/loop.py backend/src/engine/tool_call/streaming.py backend/src/engine/tool_call/dispatch.py backend/src/engine/background/dispatch.py backend/src/engine/agent/factory.py backend/src/task_center/attempt/launch.py">
+<h2>Engine Workflows <a class="anchor" href="#engine-workflows">#</a></h2>
+<ol>
+  <li>The agent factory enables background tasks only when the agent tool registry includes background management tools.</li>
+  <li>The query loop creates one <code>BackgroundTaskSupervisor</code> for the run and stores it on <code>context.tool_metadata.background_task_manager</code>.</li>
+  <li>Provider streaming defers always-background and requested optional-background calls so the final assistant batch can still enforce terminal-tool exclusivity.</li>
+  <li>Deferred background calls are validated, given a <code>bg_N</code> alias, launched as asyncio tasks, and acknowledged with a <code>[BACKGROUND LAUNCHED]</code> tool result.</li>
+  <li>The model continues the same run and may call check, wait, or cancel. Terminal tools remain TaskCenter-facing completion signals and must still be called through the normal terminal-tool path.</li>
+  <li>On resource-limit exit or query-loop finalization, pending background tasks are cancelled so engine exits do not leave orphaned sandbox work.</li>
+</ol>
+</section>
+
+<section id="verification" data-last-reviewed-commit="569f12c3f39471dbaa643906856a8daf81a21a2d" data-evidence-paths="backend/tests/unit_test/test_engine/test_background_tasks.py backend/tests/unit_test/test_engine/test_background_unit.py backend/tests/unit_test/test_engine/test_background_terminal_latch.py backend/tests/unit_test/test_tools/test_subagent_retry.py">
+<h2>Verification <a class="anchor" href="#verification">#</a></h2>
+<p>Unit coverage is concentrated in <code>backend/tests/unit_test/test_engine/test_background_tasks.py</code>, <code>test_background_unit.py</code>, and <code>test_background_terminal_latch.py</code>. Subagent-specific background behavior is also covered by <code>backend/tests/unit_test/test_tools/test_subagent_retry.py</code>. Refresh this page when background schema policy, supervisor state transitions, sandbox heartbeat/cancel wiring, or check/wait/cancel output shapes change.</p>
+</section>
+
+<div class="page-baseline" data-page-baseline-commit="569f12c3f39471dbaa643906856a8daf81a21a2d">
+  <strong>Maintenance baseline</strong>
+  <span>Technical sections reviewed against <code>569f12c3f39471dbaa643906856a8daf81a21a2d</code>.</span>
+  <code>git diff 569f12c3f39471dbaa643906856a8daf81a21a2d..HEAD -- &lt;section data-evidence-paths&gt;</code>
+</div>
+</main>
+<script src="../assets/search-index.js"></script>
+<script src="../assets/nav.js"></script>
+</body>
+</html>

@@ -8,9 +8,14 @@ from typing import cast
 
 from sandbox._shared.clock import monotonic_now
 from sandbox._shared.timing_keys import TimingKey
+from sandbox.daemon.audit_schema import (
+    OccSection,
+    build_occ_event,
+    safe_emit,
+)
 from sandbox.layer_stack.manifest import Manifest
 from sandbox.occ.changeset import CommitOptions, PreparedChangeset
-from sandbox.occ.changeset import Change, ChangesetResult
+from sandbox.occ.changeset import Change, ChangesetResult, FileStatus
 from sandbox.occ.changeset_preparation import ChangesetPreparer
 from sandbox.occ.commit_queue import CommitQueue
 from sandbox.occ.commit_transaction import CommitTransaction
@@ -204,11 +209,17 @@ class OccService:
         snapshot = prepared.snapshot
         if snapshot is not None and published is not None:
             timings[TimingKey.APPLY_MANIFEST_LAG] = max(0, published - snapshot.version - 1)
-        return ChangesetResult(
+        wrapped = ChangesetResult(
             files=result.files,
             timings=timings,
             published_manifest_version=published,
         )
+        _emit_occ_commit_events(
+            wrapped,
+            prepared=prepared,
+            commit_elapsed=commit_elapsed,
+        )
+        return wrapped
 
     async def prepare_changeset(
         self,
@@ -263,12 +274,103 @@ class OccService:
         )
         timings[TimingKey.PREPARE_ROUTE_AND_BASE_HASH] = monotonic_now() - prepare_start
         timings[TimingKey.PREPARE_TOTAL] = monotonic_now() - total_start
-        return replace(prepared, timings={**prepared.timings, **timings})
+        prepared = replace(prepared, timings={**prepared.timings, **timings})
+        safe_emit(
+            build_occ_event(
+                "occ.changeset_prepared",
+                OccSection(
+                    operation_step=70,
+                    changed_path_count=sum(
+                        len(group.changes) for group in prepared.path_groups
+                    ),
+                    base_manifest_version=(
+                        prepared.snapshot.version
+                        if prepared.snapshot is not None
+                        else None
+                    ),
+                ),
+            ),
+            lane="normal",
+        )
+        return prepared
 
     def close(self) -> None:
         """Stop owned background resources."""
         if self._owns_commit_queue:
             self._commit_queue.close()
+
+
+def _emit_occ_commit_events(
+    result: ChangesetResult,
+    *,
+    prepared: PreparedChangeset,
+    commit_elapsed: float,
+) -> None:
+    """Emit ``occ.apply_committed`` / ``occ.publish_layer`` / ``occ.conflict_rejected``.
+
+    Called from ``_wrap_commit_result`` so the timings + manifest version are
+    already populated on ``result``.
+    """
+    operation_id = getattr(prepared, "request_id", None) or None
+    changeset_id = (
+        getattr(prepared, "changeset_id", None)
+        or getattr(prepared, "id", None)
+        or None
+    )
+    base_version = (
+        prepared.snapshot.version if prepared.snapshot is not None else None
+    )
+    bad = next(
+        (f for f in result.files if f.status != FileStatus.COMMITTED),
+        None,
+    )
+    if bad is not None:
+        safe_emit(
+            build_occ_event(
+                "occ.conflict_rejected",
+                OccSection(
+                    operation_id=operation_id,
+                    changeset_id=changeset_id,
+                    conflict_kind=bad.status.value,
+                    conflict_path=bad.path or None,
+                    conflict_reason=(bad.message or bad.status.value) or None,
+                    base_manifest_version=base_version,
+                    current_manifest_version=result.published_manifest_version,
+                ),
+            ),
+            lane="critical",
+        )
+        return
+    apply_ms = commit_elapsed * 1000.0
+    safe_emit(
+        build_occ_event(
+            "occ.apply_committed",
+            OccSection(
+                operation_id=operation_id,
+                operation_step=110,
+                changeset_id=changeset_id,
+                changed_path_count=len(result.files),
+                apply_ms=apply_ms,
+                commit_ms=apply_ms,
+                base_manifest_version=base_version,
+                current_manifest_version=result.published_manifest_version,
+            ),
+        ),
+        lane="normal",
+    )
+    if result.published_manifest_version is not None:
+        safe_emit(
+            build_occ_event(
+                "occ.publish_layer",
+                OccSection(
+                    operation_id=operation_id,
+                    changeset_id=changeset_id,
+                    committed_layer_id=str(result.published_manifest_version),
+                    current_manifest_version=result.published_manifest_version,
+                ),
+            ),
+            lane="normal",
+        )
 
 
 __all__ = [

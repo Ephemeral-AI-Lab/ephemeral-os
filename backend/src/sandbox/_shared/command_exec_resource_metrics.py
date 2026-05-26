@@ -11,6 +11,11 @@ from pathlib import Path
 from typing import Any
 
 from sandbox._shared.clock import monotonic_now
+from sandbox.daemon.audit_schema import (
+    OsResourceSection,
+    build_os_resource_event,
+    safe_emit,
+)
 
 _DEFAULT_TREE_ENTRY_LIMIT = 2_000
 
@@ -50,7 +55,30 @@ def collect_command_exec_resource_metrics(
     _add_tree_stats(timings, "resource.command_exec.upperdir", upperdir)
     _add_memory_stats(timings)
     timings["resource.audit.collect_s"] = monotonic_now() - started
+    _emit_os_resource_sample(timings)
     return timings
+
+
+def _emit_os_resource_sample(timings: dict[str, float]) -> None:
+    """Push one ``os_resource.sampled`` event from the existing tick.
+
+    Zero new threads — reuses the per-tool-call collection cadence per V3
+    cross-cutting contract.
+    """
+    rss = timings.get("resource.process.rss_bytes")
+    user_us = timings.get("resource.process.user_cpu_usec")
+    sys_us = timings.get("resource.process.system_cpu_usec")
+    safe_emit(
+        build_os_resource_event(
+            OsResourceSection(
+                sampled_at_monotonic_s=monotonic_now(),
+                rss_bytes=int(rss) if rss is not None else None,
+                cpu_user_s=user_us / 1_000_000.0 if user_us is not None else None,
+                cpu_system_s=sys_us / 1_000_000.0 if sys_us is not None else None,
+            ),
+        ),
+        lane="sample",
+    )
 
 
 def _add_manifest_stats(timings: dict[str, float], manifest: Any | None) -> None:

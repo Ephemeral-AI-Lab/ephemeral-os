@@ -33,6 +33,11 @@ from sandbox._shared.command_exec_contract import (
     OCCMutationClient,
     SnapshotManifest,
 )
+from sandbox.daemon.audit_schema import (
+    OverlayWorkspaceSection,
+    build_overlay_workspace_event,
+    safe_emit,
+)
 from sandbox.layer_stack.manifest import manifest_root_hash
 from sandbox.overlay import lifecycle as overlay_lifecycle
 from sandbox.overlay.handle import OverlayHandle
@@ -170,10 +175,19 @@ class EphemeralPipeline(OperationOverlayMixin, WorkspacePublishMixin):
                         or committed_section.get("layer_id")
                         or None
                     )
-                overlay_lifecycle.emit_overlay_workspace_published(
-                    handle,
-                    committed_layer_id=committed_layer_id,
-                    publish_layer_ms=(monotonic_now() - publish_started) * 1000.0,
+                safe_emit(
+                    build_overlay_workspace_event(
+                        "overlay_workspace.published",
+                        OverlayWorkspaceSection(
+                            operation_id=handle.operation_id or None,
+                            workspace_handle_id=handle.lease_id or None,
+                            lease_id=handle.lease_id or None,
+                            manifest_root_hash=handle.root_hash or None,
+                            committed_layer_id=committed_layer_id,
+                            publish_layer_ms=(monotonic_now() - publish_started) * 1000.0,
+                        ),
+                    ),
+                    lane="critical",
                 )
             result = self._attach_operation_timing_aliases(
                 result,

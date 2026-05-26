@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EphemeralOS Architecture Wiki</title>
+<link rel="stylesheet" href="assets/styles.css">
+</head>
+<body data-module="home" data-page="index" data-root="./">
+<nav class="toc">
+  <h2>EphemeralOS Architecture</h2>
+  <a class="home-link" href="./index.html">All Modules</a>
+  <div class="search-box">
+    <input type="search" placeholder="Search architecture" data-doc-search aria-label="Search architecture">
+    <div class="search-results" data-doc-search-results></div>
+  </div>
+  <h2>Modules</h2>
+  <ol class="module-list">
+    <li><a href="./sandbox/index.html" data-doc-module="sandbox">Sandbox Workspace</a></li>
+    <li><a href="./tools/index.html" data-doc-module="tools">Tools</a></li>
+  </ol>
+</nav>
+<main>
+<h1>EphemeralOS Architecture Wiki</h1>
+<nav class="page-toc" aria-labelledby="page-toc-heading">
+  <h3 id="page-toc-heading">Contents</h3>
+  <ol>
+    <li><a href="#modules"><span>1</span> Modules</a></li>
+    <li><a href="#cross-module-map"><span>2</span> Cross-Module Map</a></li>
+    <li><a href="#maintenance"><span>3</span> Maintenance</a></li>
+  </ol>
+</nav>
+<p class="lead">Merged architecture wiki for EphemeralOS modules. Use the module layer for broad ownership, the page layer for local concepts, and cross-module links for real runtime edges.</p>
+<section id="modules" data-last-reviewed-commit="2a3e6cc7c" data-evidence-paths="docs/architecture/sandbox docs/architecture/tools docs/architecture/assets">
+<h2>Modules <a class="anchor" href="#modules">§</a></h2>
+<div class="module-card-grid">
+<a class="module-card" href="sandbox/index.html"><strong>Sandbox Workspace</strong><span>LayerStack, overlay, OCC, daemon routing, providers, plugins, and workspace execution modes.</span></a>
+<a class="module-card" href="tools/index.html"><strong>Tools</strong><span>Agent-facing tool definitions, framework lifecycle, terminals, helpers, background tasks, and TaskCenter submission surfaces.</span></a>
+</div>
+</section>
+<section id="cross-module-map" data-last-reviewed-commit="2a3e6cc7c" data-evidence-paths="backend/src/tools backend/src/sandbox backend/src/engine backend/src/task_center">
+<h2>Cross-Module Map <a class="anchor" href="#cross-module-map">§</a></h2>
+<div class="edge-list">
+  <div><b>tools to sandbox</b><span><a class="wiki-link" href="tools/sandbox.html">Sandbox tools</a> call typed sandbox APIs whose runtime semantics are explained by <a class="wiki-link" href="sandbox/overview.html">Sandbox Workspace</a>.</span></div>
+  <div><b>tools to daemon</b><span><a class="wiki-link" href="tools/background.html">Background tools</a>, <a class="wiki-link" href="tools/subagent.html">subagents</a>, and helper tools interact with engine and sandbox daemon lifecycles documented in <a class="wiki-link" href="sandbox/daemon.html">Daemon and Background Tasks</a>.</span></div>
+  <div><b>private scratch</b><span><a class="wiki-link" href="tools/isolated-workspace.html">Isolated workspace tools</a> are the agent-facing entry points for the private scratch lifecycle detailed in <a class="wiki-link" href="sandbox/workspaces.html#isolated-workspace">isolated_workspace</a>.</span></div>
+</div>
+</section>
+<section id="maintenance" data-last-reviewed-commit="2a3e6cc7c" data-evidence-paths="docs/architecture/assets/search-index.js docs/architecture/assets/nav.js .agents/skills/codebase-wiki-builder/SKILL.md">
+<h2>Maintenance <a class="anchor" href="#maintenance">§</a></h2>
+<div class="summary"><ul>
+  <li>Shared assets live in <code>docs/architecture/assets</code>.</li>
+  <li>Module pages live in module folders; future modules should add a sibling directory and global search entries.</li>
+  <li>Cross-module links are allowed when they express a real code path, ownership edge, workflow dependency, or diagnostic route.</li>
+</ul></div>
+</section>
+<div class="page-baseline" data-page-baseline-commit="2a3e6cc7c">
+  <strong>Maintenance baseline</strong>
+  <span>Root architecture index introduced at <code>2a3e6cc7c</code>.</span>
+  <code>git diff 2a3e6cc7c..HEAD -- docs/architecture .agents/skills/codebase-wiki-builder</code>
+</div>
+</main>
+<script src="assets/search-index.js"></script>
+<script src="assets/nav.js"></script>
+</body>
+</html>

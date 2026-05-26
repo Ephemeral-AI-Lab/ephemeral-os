@@ -12,6 +12,7 @@ diagnosable from the traceback alone.
 
 from __future__ import annotations
 
+import functools
 import importlib.util
 import sys
 from collections.abc import Iterable
@@ -20,6 +21,12 @@ from typing import Any
 
 from plugins.core.discovery import default_catalog_dir, discover_plugins
 from plugins.core.manifest import PluginManifest, ToolEntry
+from sandbox._shared.clock import monotonic_now
+from sandbox.daemon.audit_schema import (
+    PluginSection,
+    build_plugin_event,
+    safe_emit,
+)
 from tools._framework.core.base import BaseTool
 
 __all__ = [
@@ -92,7 +99,79 @@ def _load_tool_entry(
             f"plugin tool module BaseTool name {tool.name!r} does not match "
             f"manifest entry name {entry.name!r}: {entry.module}"
         )
+    _install_plugin_audit_shim(tool, manifest=manifest, entry=entry)
     return tool
+
+
+def _install_plugin_audit_shim(
+    tool: BaseTool, *, manifest: PluginManifest, entry: ToolEntry
+) -> None:
+    """Wrap ``tool.execute`` with generic ``plugin.*`` daemon-ring emits.
+
+    Generic by construction (V3 Principle 2): the emitted event family carries
+    ``plugin_kind`` as a value, never a key — see V3 README §Subsystem section
+    keys. Lookup of ``plugin_kind`` is best-effort; the loader manifest does
+    not yet expose ``kind``, so we default to ``"custom"`` until a real
+    plugin-session model lands (follow-up FU#2).
+    """
+    plugin_id = manifest.name
+    plugin_kind = getattr(manifest, "kind", None) or "custom"
+    tool_name = entry.name
+    original_execute = tool.execute
+
+    @functools.wraps(original_execute)
+    async def _audited_execute(
+        arguments: Any,
+        context: Any,
+    ) -> Any:
+        started = monotonic_now()
+        safe_emit(
+            build_plugin_event(
+                "plugin.tool_invoked",
+                PluginSection(
+                    plugin_id=plugin_id,
+                    plugin_kind=plugin_kind,
+                    plugin_tool_name=tool_name,
+                ),
+            ),
+            lane="normal",
+        )
+        try:
+            result = await original_execute(arguments, context)
+        except Exception as exc:
+            duration_ms = (monotonic_now() - started) * 1000.0
+            safe_emit(
+                build_plugin_event(
+                    "plugin.error",
+                    PluginSection(
+                        plugin_id=plugin_id,
+                        plugin_kind=plugin_kind,
+                        plugin_tool_name=tool_name,
+                        duration_ms=duration_ms,
+                        status="error",
+                        error_kind=type(exc).__name__,
+                    ),
+                ),
+                lane="normal",
+            )
+            raise
+        duration_ms = (monotonic_now() - started) * 1000.0
+        safe_emit(
+            build_plugin_event(
+                "plugin.tool_completed",
+                PluginSection(
+                    plugin_id=plugin_id,
+                    plugin_kind=plugin_kind,
+                    plugin_tool_name=tool_name,
+                    duration_ms=duration_ms,
+                    status="ok",
+                ),
+            ),
+            lane="normal",
+        )
+        return result
+
+    tool.execute = _audited_execute  # type: ignore[method-assign]
 
 
 def _module_name(manifest: PluginManifest, entry: ToolEntry) -> str:

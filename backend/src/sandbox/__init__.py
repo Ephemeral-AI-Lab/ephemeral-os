@@ -9,7 +9,7 @@ Sub-packages:
 - ``sandbox.ephemeral_workspace`` — per-tool-call pipeline and plugin dispatch
 - ``sandbox.isolated_workspace`` — opt-in per-agent pinned workspace handles
 
-The public API surface is documented in ``docs/sandbox-workspace-architecture``.
+The public API surface is documented in ``docs/architecture/sandbox``.
 """
 
 from __future__ import annotations

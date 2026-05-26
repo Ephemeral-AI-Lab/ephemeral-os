@@ -8,6 +8,11 @@ import shutil
 from typing import Any
 
 from sandbox.audit.events import IsolatedWorkspaceAuditEvent
+from sandbox.daemon.audit_schema import (
+    IsolatedWorkspaceSection,
+    build_isolated_workspace_event,
+    safe_emit,
+)
 from sandbox.isolated_workspace._control_plane.linux_runtime import _directory_file_bytes
 from sandbox.isolated_workspace._control_plane.pipeline_state import (
     ISOLATED_WORKSPACE_ROOT,
@@ -16,6 +21,18 @@ from sandbox.isolated_workspace._control_plane.pipeline_state import (
     _maybe_inject_failure,
     _PhaseTimer,
 )
+
+
+def _emit_isolated_workspace(
+    event_type: str,
+    section: IsolatedWorkspaceSection,
+    *,
+    lane: str = "critical",
+) -> None:
+    safe_emit(
+        build_isolated_workspace_event(event_type, section),
+        lane=lane,  # type: ignore[arg-type]
+    )
 
 
 class _WorkspaceHandleLifecycleMixin:
@@ -98,6 +115,20 @@ class _WorkspaceHandleLifecycleMixin:
                 "total_ms": timer.total_ms(),
                 "phases_ms": timer.phases_ms,
             },
+        )
+        _emit_isolated_workspace(
+            "isolated_workspace.entered",
+            IsolatedWorkspaceSection(
+                operation_id=handle.lease_id,
+                workspace_handle_id=handle.handle_id,
+                agent_id=agent_id,
+                holder_pid=handle.root_pid or None,
+                holder_pid_alive=bool(handle.root_pid),
+                cgroup_id=(
+                    handle.cgroup_path.as_posix() if handle.cgroup_path else None
+                ),
+                upperdir_cap_bytes=self._config.upperdir_bytes,
+            ),
         )
         return handle
 
@@ -208,6 +239,39 @@ class _WorkspaceHandleLifecycleMixin:
                 "phases_ms": phases_ms,
             },
         )
+        orphan_counts = self._post_exit_orphan_check(handle)
+        _emit_isolated_workspace(
+            "isolated_workspace.exited",
+            IsolatedWorkspaceSection(
+                operation_id=handle.lease_id,
+                workspace_handle_id=handle.handle_id,
+                agent_id=agent_id,
+                holder_pid=handle.root_pid or None,
+                cgroup_id=(
+                    handle.cgroup_path.as_posix() if handle.cgroup_path else None
+                ),
+                cgroup_removed=(
+                    handle.cgroup_path is not None and not handle.cgroup_path.exists()
+                ),
+                scratch_removed=not handle.scratch_dir.exists(),
+                upperdir_bytes=upperdir_bytes,
+                upperdir_cap_bytes=self._config.upperdir_bytes,
+                orphan_holder_count=orphan_counts["holder"],
+                orphan_cgroup_count=orphan_counts["cgroup"],
+                orphan_scratch_count=orphan_counts["scratch"],
+            ),
+        )
+        _emit_isolated_workspace(
+            "isolated_workspace.orphan_check_completed",
+            IsolatedWorkspaceSection(
+                operation_id=handle.lease_id,
+                workspace_handle_id=handle.handle_id,
+                agent_id=agent_id,
+                orphan_holder_count=orphan_counts["holder"],
+                orphan_cgroup_count=orphan_counts["cgroup"],
+                orphan_scratch_count=orphan_counts["scratch"],
+            ),
+        )
         return {
             "success": True,
             "evicted_upperdir_bytes": upperdir_bytes,
@@ -215,6 +279,23 @@ class _WorkspaceHandleLifecycleMixin:
             "total_ms": total_ms,
             "phases_ms": phases_ms,
         }
+
+    def _post_exit_orphan_check(
+        self, handle: IsolatedWorkspaceHandle
+    ) -> dict[str, int]:
+        """Best-effort post-exit residue check; no kernel calls beyond stat."""
+        counts = {"holder": 0, "cgroup": 0, "scratch": 0}
+        if handle.root_pid:
+            try:
+                os.kill(handle.root_pid, 0)
+                counts["holder"] = 1
+            except (ProcessLookupError, PermissionError, OSError):
+                pass
+        if handle.cgroup_path is not None and handle.cgroup_path.exists():
+            counts["cgroup"] = 1
+        if handle.scratch_dir.exists():
+            counts["scratch"] = 1
+        return counts
 
     async def _teardown(
         self,

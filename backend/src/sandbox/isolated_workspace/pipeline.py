@@ -14,7 +14,13 @@ from typing import Any
 
 from sandbox.audit.events import IsolatedWorkspaceAuditEvent
 from sandbox._shared.layer_stack_port import LayerStackPort
+from sandbox._shared.clock import monotonic_now
 from sandbox._shared.models import Intent, ToolCallRequest, ToolCallResult
+from sandbox.daemon.audit_schema import (
+    IsolatedWorkspaceSection,
+    build_isolated_workspace_event,
+    safe_emit,
+)
 from sandbox.isolated_workspace._control_plane.orphan_reaper import (
     _OrphanResourceReaperMixin,
 )
@@ -240,6 +246,9 @@ class IsolatedPipeline(
         while True:
             try:
                 await asyncio.sleep(interval)
+                # Piggyback sample emission on the existing tick — no new thread.
+                for handle in list(self._handles.values()):
+                    self._emit_isolated_workspace_sample(handle)
                 await self.ttl_sweep()
             except asyncio.CancelledError:
                 return
@@ -272,10 +281,50 @@ class IsolatedPipeline(
                         "phases_ms": stats.get("phases_ms", {}),
                     },
                 )
+                safe_emit(
+                    build_isolated_workspace_event(
+                        "isolated_workspace.evicted",
+                        IsolatedWorkspaceSection(
+                            operation_id=handle.lease_id,
+                            workspace_handle_id=handle.handle_id,
+                            agent_id=handle.agent_id,
+                            upperdir_bytes=int(stats.get("evicted_upperdir_bytes", 0)),
+                            upperdir_cap_bytes=self._config.upperdir_bytes,
+                        ),
+                    ),
+                    lane="critical",
+                )
                 evicted += 1
             except Exception:  # pragma: no cover - logging only
                 logger.exception("ttl_sweep failed for %s", handle.handle_id)
         return evicted
+
+    def _emit_isolated_workspace_sample(
+        self, handle: IsolatedWorkspaceHandle
+    ) -> None:
+        """Best-effort daemon-ring sample tick (sample lane, no kernel calls)."""
+        holder_alive: bool | None = None
+        if handle.root_pid:
+            try:
+                os.kill(handle.root_pid, 0)
+                holder_alive = True
+            except (ProcessLookupError, PermissionError, OSError):
+                holder_alive = False
+        safe_emit(
+            build_isolated_workspace_event(
+                "isolated_workspace.sampled",
+                IsolatedWorkspaceSection(
+                    operation_id=handle.lease_id,
+                    workspace_handle_id=handle.handle_id,
+                    agent_id=handle.agent_id,
+                    holder_pid=handle.root_pid or None,
+                    holder_pid_alive=holder_alive,
+                    upperdir_cap_bytes=self._config.upperdir_bytes,
+                    sampled_at_monotonic_s=monotonic_now(),
+                ),
+            ),
+            lane="sample",
+        )
 
     async def run_in_handle(
         self,

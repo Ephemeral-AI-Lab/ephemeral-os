@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Maintenance - Tools Architecture Wiki</title>
+  <link rel="stylesheet" href="../assets/styles.css">
+</head>
+<body data-module="tools" data-page="maintenance" data-root="../">
+<nav class="toc">
+  <h2>EphemeralOS Architecture</h2>
+  <a class="home-link" href="../index.html">All Modules</a>
+  <div class="search-box">
+    <input type="search" placeholder="Search architecture" data-doc-search aria-label="Search architecture">
+    <div class="search-results" data-doc-search-results></div>
+  </div>
+  <h2>Modules</h2>
+  <ol class="module-list">
+    <li><a href="../sandbox/index.html" data-doc-module="sandbox">Sandbox Workspace</a></li>
+    <li><a href="../tools/index.html" data-doc-module="tools" class="active">Tools</a></li>
+  </ol>
+  <h2>Tools Pages</h2>
+  <ol>
+    <li><a href="index.html" data-doc-module="tools" data-doc-section="index" data-doc-page="index.html">Overview</a></li>
+    <li><a href="framework.html" data-doc-module="tools" data-doc-section="framework" data-doc-page="framework.html">Framework</a></li>
+    <li><a href="terminals.html" data-doc-module="tools" data-doc-section="terminals" data-doc-page="terminals.html">Terminals</a></li>
+    <li><a href="sandbox.html" data-doc-module="tools" data-doc-section="sandbox" data-doc-page="sandbox.html">Sandbox Tools</a></li>
+    <li><a href="isolated-workspace.html" data-doc-module="tools" data-doc-section="isolated-workspace" data-doc-page="isolated-workspace.html">Isolated Workspace Tools</a></li>
+    <li><a href="background.html" data-doc-module="tools" data-doc-section="background" data-doc-page="background.html">Background</a></li>
+    <li><a href="subagent.html" data-doc-module="tools" data-doc-section="subagent" data-doc-page="subagent.html">Subagent</a></li>
+    <li><a href="ask-helper.html" data-doc-module="tools" data-doc-section="ask-helper" data-doc-page="ask-helper.html">Ask Helper</a></li>
+    <li><a href="submission.html" data-doc-module="tools" data-doc-section="submission" data-doc-page="submission.html">Submission</a></li>
+    <li><a href="skills.html" data-doc-module="tools" data-doc-section="skills" data-doc-page="skills.html">Skills</a></li>
+    <li><a href="maintenance.html" data-doc-module="tools" data-doc-section="maintenance" data-doc-page="maintenance.html" class="active">Maintenance</a></li>
+  </ol>
+</nav>
+<main>
+      <header class="page-header">
+        <p class="eyebrow">Maintenance</p>
+        <h1>Baselines, Validation, And Delegation Log</h1>
+<nav class="page-toc" aria-labelledby="page-toc-heading">
+  <h3 id="page-toc-heading">Contents</h3>
+  <ol>
+    <li><a href="#subagent-delegation"><span>1</span> Subagent Delegation Used</a></li>
+    <li><a href="#validation-loop"><span>2</span> Validation Loop</a></li>
+    <li><a href="#baseline-refresh"><span>3</span> Baseline Refresh Rule</a></li>
+    <li><a href="#no-refactoring-findings"><span>4</span> No Refactoring Findings Filed</a></li>
+  </ol>
+</nav>
+
+<p class="lead">
+          This page records how the wiki was built and how to keep it current without mixing documentation
+          work with runtime refactoring.
+        </p>
+      </header>
+
+      <section id="subagent-delegation" data-last-reviewed-commit="569f12c3f39471dbaa643906856a8daf81a21a2d" data-evidence-paths=".agents/skills/codebase-wiki-builder/SKILL.md;.agents/skills/codebase-wiki-builder/agents/graph_explorer.md;.agents/skills/codebase-wiki-builder/agents/wiki_builder.md;backend/src/tools">
+        <h3>Subagent Delegation Used</h3>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Shard</th>
+                <th>Scope</th>
+                <th>Output Applied</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Framework and terminals explorer</td>
+                <td><code>tools/_framework</code>, <code>tools/_terminals</code>, engine query and tool dispatch.</td>
+                <td>Registry lifecycle, terminal exclusivity, and dispatch loop pages.</td>
+              </tr>
+              <tr>
+                <td>Sandbox workspace explorer</td>
+                <td><code>tools/sandbox</code>, sandbox API, daemon routing, layer-stack/OCC, ephemeral and isolated workspaces.</td>
+                <td>Sandbox route and isolated workspace pages.</td>
+              </tr>
+              <tr>
+                <td>Background/helper explorer</td>
+                <td><code>tools/background</code>, <code>tools/subagent</code>, <code>tools/ask_helper</code>, <code>tools/skills</code>, engine background.</td>
+                <td>Background, subagent, ask-helper, and skills pages.</td>
+              </tr>
+              <tr>
+                <td>TaskCenter submission explorer</td>
+                <td><code>tools/submission</code>, TaskCenter terminal routing, goal closure, attempts, and evaluators.</td>
+                <td>Submission and terminal workflow pages.</td>
+              </tr>
+              <tr>
+                <td>Parallel page writers</td>
+                <td>Disjoint HTML write sets under <code>docs/architecture/tools</code>.</td>
+                <td>Folder pages only; source files remained untouched.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="validation-loop" data-last-reviewed-commit="569f12c3f39471dbaa643906856a8daf81a21a2d" data-evidence-paths=".agents/skills/codebase-wiki-builder/scripts/check_html_wiki.py;docs/architecture/tools;docs/architecture/assets">
+        <h3>Validation Loop</h3>
+        <div class="diagram" aria-label="Tools wiki maintenance workflow">
+          <div class="flow-row">
+            <div class="node info"><strong>Read section baseline</strong><small><code>data-last-reviewed-commit</code> plus evidence paths</small></div>
+            <div class="node"><strong>Compare source delta</strong><small><code>git diff &lt;baseline&gt;..HEAD -- &lt;paths&gt;</code></small></div>
+            <div class="node"><strong>Refresh page section</strong><small>claim, diagram, evidence, links</small></div>
+            <div class="node good"><strong>Update support layer</strong><small>search, links, CSS validation</small></div>
+          </div>
+        </div>
+        <p>Run these checks after source or wiki changes:</p>
+        <pre class="diagram">python3 .agents/skills/codebase-wiki-builder/scripts/check_html_wiki.py docs/architecture/tools/*.html
+git diff --check -- docs/architecture/tools docs/architecture/assets
+rg -n "\[\[|\]\]" docs/architecture/tools
+rg -n "data-last-reviewed-commit=\"\"" docs/architecture/tools/*.html</pre>
+        <p>
+          The HTML checker covers missing section baselines, broken local page links, unresolved placeholders,
+          repeated ids, and missing page baseline markers.
+        </p>
+      </section>
+
+      <section id="baseline-refresh" data-last-reviewed-commit="569f12c3f39471dbaa643906856a8daf81a21a2d" data-evidence-paths="backend/src/tools;backend/src/engine/query;backend/src/engine/tool_call;backend/src/engine/background;backend/src/sandbox;backend/src/task_center;docs/architecture/tools">
+        <h3>Baseline Refresh Rule</h3>
+        <ol>
+          <li>Run <code>git diff &lt;baseline&gt;..HEAD -- &lt;evidence paths&gt;</code> before changing a page claim.</li>
+          <li>Update only the sections whose evidence paths changed or whose claim was proven stale.</li>
+          <li>Move the section <code>data-last-reviewed-commit</code> to the reviewed commit after verification.</li>
+          <li>Keep runtime refactoring out of wiki refreshes unless a separate user request explicitly asks for it.</li>
+        </ol>
+      </section>
+
+      <section id="no-refactoring-findings" data-last-reviewed-commit="569f12c3f39471dbaa643906856a8daf81a21a2d" data-evidence-paths="backend/src/tools;docs/architecture/tools">
+        <h3>No Refactoring Findings Filed</h3>
+        <div class="callout ok">
+          <p>
+            This pass intentionally created documentation only. Explorer shards noted a few adjacent stale
+            documentation claims in existing docs, but no runtime refactoring point was filed or implemented
+            in <code>backend/src/tools</code>.
+          </p>
+        </div>
+      </section>
+
+      <div class="page-baseline" data-page-baseline-commit="569f12c3f39471dbaa643906856a8daf81a21a2d">
+        <strong>Maintenance Baseline</strong>
+        <span>This page records the loop and should be updated whenever validation rules or page ownership changes.</span>
+        <code>git diff 569f12c3f39471dbaa643906856a8daf81a21a2d..HEAD -- docs/architecture/tools docs/architecture/assets .agents/skills/codebase-wiki-builder</code>
+      </div>
+    </main>
+<script src="../assets/search-index.js"></script>
+<script src="../assets/nav.js"></script>
+</body>
+</html>

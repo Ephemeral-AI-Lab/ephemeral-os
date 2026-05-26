@@ -12,6 +12,11 @@ from dataclasses import dataclass, field
 from enum import StrEnum
 from typing import Any
 
+from sandbox.daemon.audit_schema import (
+    BackgroundToolSection,
+    build_background_tool_event,
+    safe_emit,
+)
 from tools import ToolResult
 from message.stream_events import BackgroundTaskStarted
 
@@ -105,6 +110,63 @@ class BackgroundTaskRecord:
     _terminal_lock: threading.Lock = field(default_factory=threading.Lock)
 
 
+_TERMINAL_EVENT_TYPE: dict[str, str] = {
+    "completed": "background_tool.completed",
+    "failed": "background_tool.failed",
+    "cancelled": "background_tool.cancelled",
+}
+
+
+def _emit_background_tool_terminal(
+    tracked: BackgroundTaskRecord, status: "BackgroundTaskStatus"
+) -> None:
+    event_type = _TERMINAL_EVENT_TYPE.get(status.value)
+    if event_type is None:
+        return
+    duration_ms = max(0.0, (time.monotonic() - tracked.started_at) * 1000.0)
+    _emit_background_tool(event_type, tracked, duration_ms=duration_ms)
+
+
+def _emit_background_tool(
+    event_type: str,
+    tracked: BackgroundTaskRecord,
+    *,
+    lane: str = "normal",
+    duration_ms: float | None = None,
+    delivery_latency_ms: float | None = None,
+    uptime_ms: float | None = None,
+) -> None:
+    """Emit one ``background_tool.*`` event into the daemon ring."""
+    result = tracked.result
+    safe_emit(
+        build_background_tool_event(
+            event_type,
+            BackgroundToolSection(
+                background_task_id=tracked.task_id,
+                task_kind=tracked.task_type,
+                tool_name=tracked.tool_name,
+                agent_id=tracked.agent_id,
+                uptime_ms=uptime_ms,
+                status=tracked.status.value,
+                exit_code=(
+                    0
+                    if result is not None and not result.is_error
+                    else (1 if result is not None else None)
+                ),
+                duration_ms=duration_ms,
+                error_kind=(
+                    "error"
+                    if result is not None and result.is_error
+                    else None
+                ),
+                cancel_reason=tracked.cancel_reason,
+                delivery_latency_ms=delivery_latency_ms,
+            ),
+        ),
+        lane=lane,  # type: ignore[arg-type]
+    )
+
+
 def _running_sandbox_task(
     tracked: BackgroundTaskRecord,
     agent_id: str | None = None,
@@ -179,6 +241,7 @@ class BackgroundTaskSupervisor:
         start_line = f"[started: {tool_name}]"
         tracked.progress_lines.append(start_line)
         self._tasks[task_id] = tracked
+        _emit_background_tool("background_tool.started", tracked)
 
         def _done_callback(task: asyncio.Task[ToolResult]) -> None:
             try:
@@ -242,6 +305,14 @@ class BackgroundTaskSupervisor:
         for tracked in self._tasks.values():
             if tracked.status in _TERMINAL_UNDELIVERED:
                 tracked.status = BackgroundTaskStatus.DELIVERED
+                delivery_latency_ms = max(
+                    0.0, (time.monotonic() - tracked.started_at) * 1000.0
+                )
+                _emit_background_tool(
+                    "background_tool.delivered",
+                    tracked,
+                    delivery_latency_ms=delivery_latency_ms,
+                )
                 ready.append(tracked)
         return ready
 
@@ -419,7 +490,8 @@ class BackgroundTaskSupervisor:
             tracked.status = new_status
             if new_result is not None:
                 tracked.result = new_result
-            return True
+        _emit_background_tool_terminal(tracked, new_status)
+        return True
 
     async def _cancel_sandbox_invocation_if_bound(
         self, tracked: BackgroundTaskRecord
@@ -461,6 +533,18 @@ class BackgroundTaskSupervisor:
             if not by_sandbox:
                 self._heartbeat_task = None
                 return
+            for tracked in list(self._tasks.values()):
+                if not _running_sandbox_task(tracked):
+                    continue
+                uptime_ms = max(
+                    0.0, (time.monotonic() - tracked.started_at) * 1000.0
+                )
+                _emit_background_tool(
+                    "background_tool.heartbeat",
+                    tracked,
+                    lane="sample",
+                    uptime_ms=uptime_ms,
+                )
             try:
                 import sandbox.api as sandbox_api
 

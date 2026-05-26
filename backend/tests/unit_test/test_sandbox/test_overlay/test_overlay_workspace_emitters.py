@@ -43,23 +43,35 @@ class _FakeLayerStack:
         self.released.append(lease_id)
 
 
+_AUDIT_CURSOR = {"seq": -1}
+
+
 def _drain_overlay_events() -> list[dict[str, Any]]:
     buf = get_audit_buffer()
-    snap = buf.pull(after_seq=-1, limit=1000)
+    snap = buf.pull(after_seq=_AUDIT_CURSOR["seq"], limit=10_000)
+    events = snap.get("events", [])
+    if events:
+        _AUDIT_CURSOR["seq"] = int(events[-1]["seq"])
     return [
         evt
-        for evt in snap.get("events", [])
+        for evt in events
         if str(evt.get("type", "")).startswith("overlay_workspace.")
     ]
 
 
 @pytest.fixture(autouse=True)
-def _reset_audit_buffer() -> None:
+def _reset_audit_cursor() -> None:
     buf = get_audit_buffer()
+    # Advance cursor past whatever is currently retained so each test starts
+    # at a known empty slice without an infinite drain loop.
+    cursor = -1
     while True:
-        snap = buf.pull(after_seq=-1, limit=1000)
-        if not snap.get("events"):
+        snap = buf.pull(after_seq=cursor, limit=10_000)
+        events = snap.get("events", [])
+        if not events:
             break
+        cursor = int(events[-1]["seq"])
+    _AUDIT_CURSOR["seq"] = cursor
     yield
 
 

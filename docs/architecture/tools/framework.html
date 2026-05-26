@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tools Framework Architecture</title>
+<link rel="stylesheet" href="../assets/styles.css">
+</head>
+<body data-module="tools" data-page="framework" data-root="../">
+<nav class="toc">
+  <h2>EphemeralOS Architecture</h2>
+  <a class="home-link" href="../index.html">All Modules</a>
+  <div class="search-box">
+    <input type="search" placeholder="Search architecture" data-doc-search aria-label="Search architecture">
+    <div class="search-results" data-doc-search-results></div>
+  </div>
+  <h2>Modules</h2>
+  <ol class="module-list">
+    <li><a href="../sandbox/index.html" data-doc-module="sandbox">Sandbox Workspace</a></li>
+    <li><a href="../tools/index.html" data-doc-module="tools" class="active">Tools</a></li>
+  </ol>
+  <h2>Tools Pages</h2>
+  <ol>
+    <li><a href="index.html" data-doc-module="tools" data-doc-section="index" data-doc-page="index.html">Overview</a></li>
+    <li><a href="framework.html" data-doc-module="tools" data-doc-section="framework" data-doc-page="framework.html" class="active">Framework</a></li>
+    <li><a href="terminals.html" data-doc-module="tools" data-doc-section="terminals" data-doc-page="terminals.html">Terminals</a></li>
+    <li><a href="sandbox.html" data-doc-module="tools" data-doc-section="sandbox" data-doc-page="sandbox.html">Sandbox Tools</a></li>
+    <li><a href="isolated-workspace.html" data-doc-module="tools" data-doc-section="isolated-workspace" data-doc-page="isolated-workspace.html">Isolated Workspace Tools</a></li>
+    <li><a href="background.html" data-doc-module="tools" data-doc-section="background" data-doc-page="background.html">Background</a></li>
+    <li><a href="subagent.html" data-doc-module="tools" data-doc-section="subagent" data-doc-page="subagent.html">Subagent</a></li>
+    <li><a href="ask-helper.html" data-doc-module="tools" data-doc-section="ask-helper" data-doc-page="ask-helper.html">Ask Helper</a></li>
+    <li><a href="submission.html" data-doc-module="tools" data-doc-section="submission" data-doc-page="submission.html">Submission</a></li>
+    <li><a href="skills.html" data-doc-module="tools" data-doc-section="skills" data-doc-page="skills.html">Skills</a></li>
+    <li><a href="maintenance.html" data-doc-module="tools" data-doc-section="maintenance" data-doc-page="maintenance.html">Maintenance</a></li>
+  </ol>
+</nav>
+<main>
+<h1>Tools Framework</h1>
+<nav class="page-toc" aria-labelledby="page-toc-heading">
+  <h3 id="page-toc-heading">Contents</h3>
+  <ol>
+    <li><a href="#source-graph"><span>1</span> Source Graph</a></li>
+    <li><a href="#base-tool-contract"><span>2</span> BaseTool Contract</a></li>
+    <li><a href="#decorator-and-factory"><span>3</span> Decorator and Factory</a></li>
+    <li><a href="#execution-lifecycle"><span>4</span> Execution Lifecycle</a></li>
+    <li><a href="#engine-bridges"><span>5</span> Engine Bridges</a></li>
+  </ol>
+</nav>
+
+<p class="lead">Code-backed map of <code>backend/src/tools/_framework</code> and the public facade in <code>backend/src/tools/__init__.py</code>. The framework converts typed tool definitions into provider schemas, runtime dispatch, hook execution, terminal stamping, and engine query-loop behavior.</p>
+
+<section id="source-graph" data-last-reviewed-commit="569f12c3f39471dbaa643906856a8daf81a21a2d" data-evidence-paths="backend/src/tools/_framework/core/base.py backend/src/tools/_framework/core/registry.py backend/src/tools/_framework/core/decorator.py backend/src/tools/_framework/core/validation.py backend/src/tools/_framework/execution/tool_call.py backend/src/tools/_framework/execution/hook_pipeline.py backend/src/tools/_framework/factory.py backend/src/tools/__init__.py backend/src/engine/query/loop.py backend/src/engine/tool_call/dispatch.py backend/tests/unit_test/test_tools/test_tool_execution.py">
+<h2>Source Graph <a class="anchor" href="#source-graph">#</a></h2>
+<div class="diagram" aria-label="Tool framework source graph">
+  <div class="flow-row">
+    <div class="node info"><strong><code>@tool</code> callsite</strong><small>Pydantic models, intent, hooks, terminal flag</small></div>
+    <div class="node"><strong><code>FunctionTool</code></strong><small>runtime BaseTool implementation</small></div>
+    <div class="node"><strong><code>ToolFactory</code></strong><small>registers builtins and caller-scoped shims</small></div>
+    <div class="node"><strong><code>ToolRegistry</code></strong><small>active run name-to-tool map</small></div>
+  </div>
+  <div class="flow-row">
+    <div class="node"><strong>Engine query loop</strong><small>builds execution context and terminal set</small></div>
+    <div class="node good"><strong>Execution lifecycle</strong><small>parse input, run hooks, call body, validate output</small></div>
+    <div class="node warn"><strong>Result stamping</strong><small>effective input, trace metadata, terminal stop</small></div>
+  </div>
+</div>
+<div class="edge-list">
+  <div><b>exports</b><span><code>tools.__init__</code> is the runtime facade for <code>BaseTool</code>, <code>ToolRegistry</code>, <code>tool</code>, <code>ExecutionMetadata</code>, execution helpers, factories, background helpers, sandbox context, and submission notification triggers.</span></div>
+  <div><b>owns-schema</b><span><code>BaseTool</code> owns the tool name, descriptions, Pydantic input/output models, API schema rendering, foreground <code>intent</code>, <code>background</code> policy, <code>task_type</code>, terminal flag, context requirements, and explicit pre/post hooks.</span></div>
+  <div><b>registers</b><span><code>ToolRegistry</code> is a name-to-instance map used by engine dispatch, while <code>tools._framework.factory</code> is the name-to-factory catalog used during agent setup.</span></div>
+  <div><b>calls</b><span><code>engine.query.loop</code> builds a <code>ToolExecutionContextService</code>, prepares runtime context, and routes assistant tool calls through <code>engine.tool_call.dispatch</code> into <code>execute_tool_call_streaming</code>.</span></div>
+  <div><b>tested-by</b><span><code>backend/tests/unit_test/test_tools/test_tool_execution.py</code> covers direct execution, terminal stamping, query-loop terminal stop behavior, and dispatch propagation into <code>ToolResultBlock.does_terminate</code>.</span></div>
+</div>
+</section>
+
+<section id="base-tool-contract" data-last-reviewed-commit="569f12c3f39471dbaa643906856a8daf81a21a2d" data-evidence-paths="backend/src/tools/_framework/core/base.py backend/src/tools/_framework/core/decorator.py backend/src/tools/_framework/core/validation.py backend/src/tools/__init__.py">
+<h2>BaseTool Contract <a class="anchor" href="#base-tool-contract">#</a></h2>
+<p><code>BaseTool</code> is deliberately small: a tool is metadata plus one async <code>execute(arguments, context)</code> method. Its metadata is not decorative. The engine and sandbox consume it as control-plane data.</p>
+<table>
+  <thead><tr><th>Field</th><th>Purpose</th><th>Downstream connection</th></tr></thead>
+  <tbody>
+    <tr><td><code>name</code>, <code>description</code>, <code>input_model</code>, <code>output_model</code></td><td>Defines provider-facing schema and validation contract.</td><td><code>to_api_schema()</code>, <code>parse_tool_input()</code>, and <code>validate_tool_output()</code>.</td></tr>
+    <tr><td><code>intent</code></td><td>Declares foreground access mode: read-only, write-allowed, or lifecycle.</td><td>The decorator injects <code>context["__intent"]</code> before calling functions that accept context, letting sandbox/plugin dispatch distinguish read-only from write-capable work.</td></tr>
+    <tr><td><code>background</code></td><td>Controls whether a tool may or must run through background dispatch.</td><td><code>decorate_schemas_for_background()</code> adds the optional input flag only for eligible non-terminal tools; <code>engine.tool_call.dispatch</code> routes background requests.</td></tr>
+    <tr><td><code>task_type</code></td><td>Classifies background/audit task shape without sniffing names.</td><td>Used by monitoring and UI paths that need to distinguish ordinary agent work from subagent-style tasks.</td></tr>
+    <tr><td><code>is_terminal_tool</code></td><td>Marks successful results that end the agent run.</td><td><code>execute_tool_once()</code> stamps <code>does_terminate=True</code>; <code>engine.query.loop</code> exits with <code>TOOL_STOP</code>.</td></tr>
+    <tr><td><code>context_requirements</code></td><td>Declares runtime service requirements for tools.</td><td><code>engine.tool_call.context.prepare_tool_execution_context()</code> can attach provider-specific services without hard-coding tool names in the query loop.</td></tr>
+    <tr><td><code>pre_hooks</code>, <code>post_hooks</code></td><td>Tool-local policy and output gates.</td><td><code>ToolHookExecutionPipeline</code> runs them around the tool body and merges hook trace/notification metadata into the result.</td></tr>
+  </tbody>
+</table>
+</section>
+
+<section id="decorator-and-factory" data-last-reviewed-commit="569f12c3f39471dbaa643906856a8daf81a21a2d" data-evidence-paths="backend/src/tools/_framework/core/decorator.py backend/src/tools/_framework/factory.py backend/src/tools/sandbox backend/src/tools/submission backend/src/tools/ask_helper backend/src/tools/subagent backend/src/tools/skills backend/tests/unit_test/test_tools/test_submission_tool_registration.py backend/tests/unit_test/test_tools/test_no_claude_code_collision.py">
+<h2>Decorator and Factory <a class="anchor" href="#decorator-and-factory">#</a></h2>
+<p>The <code>@tool</code> decorator converts a Python function into a concrete <code>FunctionTool</code> instance. It requires explicit Pydantic models and explicit <code>intent</code>; validates hook targets once at construction; preserves the original entrypoint for tests; and sets all control metadata on the instance.</p>
+<p>When the decorated function accepts <code>context</code> or <code>**kwargs</code>, <code>FunctionTool.execute()</code> writes the tool intent into <code>context["__intent"]</code> before invoking the function. This is the bridge from LLM-facing tool metadata into sandbox/plugin execution policy.</p>
+<p><code>tools._framework.factory</code> owns built-in tool factory registration. It registers sandbox tools, submission tools, ask-helper tools, <code>run_subagent</code>, <code>load_skill_reference</code>, and optional plugin tools unless <code>EOS_SKIP_PLUGIN_IMPORTS_FOR_TESTS</code> is set. <code>register_tool_factory()</code> rejects accidental shadowing unless <code>override=True</code>, while <code>create_tool()</code> ensures the factory returns a tool with the requested name.</p>
+</section>
+
+<section id="execution-lifecycle" data-last-reviewed-commit="569f12c3f39471dbaa643906856a8daf81a21a2d" data-evidence-paths="backend/src/tools/_framework/execution/tool_call.py backend/src/tools/_framework/execution/hook_pipeline.py backend/src/tools/_framework/core/validation.py backend/src/tools/_framework/core/results.py backend/src/tools/_framework/execution/trace.py backend/tests/unit_test/test_tools/test_tool_execution.py">
+<h2>Execution Lifecycle <a class="anchor" href="#execution-lifecycle">#</a></h2>
+<ol>
+  <li><code>execute_tool_call_streaming()</code> looks up the named tool in the active <code>ToolRegistry</code>, copies or creates <code>ExecutionMetadata</code>, stamps the tool id, task-center task id, and conversation messages, then builds <code>ToolExecutionContextService</code>.</li>
+  <li><code>execute_tool_once()</code> parses raw input through the tool input model after stripping runtime-only fields such as <code>background</code>.</li>
+  <li><code>ToolHookExecutionPipeline.run_pre_hooks()</code> can transform the parsed input or deny execution with a structured tool error.</li>
+  <li>The framework optionally emits <code>ToolExecutionStarted</code>, runs the tool body, catches exceptions as bounded <code>ToolResult</code> errors, and validates successful output against the declared output model.</li>
+  <li>Post-hooks can validate or replace the <code>ToolResult</code>. Finalization adds effective input, hook trace, and system-notification metadata unless a hook failure already owns the result.</li>
+  <li>If the tool is terminal and the final result is successful, <code>execute_tool_once()</code> returns a copy with <code>does_terminate=True</code>. Errors and non-terminal tools are not stamped.</li>
+</ol>
+</section>
+
+<section id="engine-bridges" data-last-reviewed-commit="569f12c3f39471dbaa643906856a8daf81a21a2d" data-evidence-paths="backend/src/engine/query/loop.py backend/src/engine/query/context.py backend/src/engine/tool_call/dispatch.py backend/src/engine/tool_call/streaming.py backend/src/engine/background/dispatch.py backend/src/engine/background/task_supervisor.py backend/src/tools/_framework/execution/tool_call.py backend/tests/unit_test/test_tools/test_tool_execution.py">
+<h2>Engine Bridges <a class="anchor" href="#engine-bridges">#</a></h2>
+<p>The query loop treats terminal capability as a property of the registered tools. During runtime preparation it derives <code>context.terminal_tools</code> from tools whose <code>is_terminal_tool</code> flag is true. Once any terminal tool is available, the stream dispatcher defers all tool bodies until the complete assistant message is available, so terminal exclusivity can be validated before sibling calls mutate state.</p>
+<p><code>engine.tool_call.dispatch</code> rejects any assistant batch where a terminal tool appears with siblings. For valid batches, background-eligible calls are handed to the background dispatcher and foreground calls use <code>execute_tool_call_streaming()</code>. The first returned block with <code>does_terminate=True</code> becomes the terminal result. The query loop records that result, sets <code>QueryExitReason.TOOL_STOP</code>, and the loop's <code>finally</code> block cancels pending background work before exit.</p>
+<div class="summary">
+  <ul>
+    <li><code>BaseTool</code> metadata is the bridge: schema for providers, intent for sandbox/plugin policy, terminal flag for query-loop lifecycle, and hooks for tool-local gates.</li>
+    <li>The framework owns validation and result stamping; TaskCenter and sandbox tools should delegate domain mutation to their own subsystems instead of bypassing the execution lifecycle.</li>
+  </ul>
+</div>
+</section>
+<div class="page-baseline" data-page-baseline-commit="569f12c3f39471dbaa643906856a8daf81a21a2d">
+  <strong>Maintenance baseline</strong>
+  <span>Technical sections reviewed against <code>569f12c3f39471dbaa643906856a8daf81a21a2d</code>.</span>
+  <code>git diff 569f12c3f39471dbaa643906856a8daf81a21a2d..HEAD -- &lt;section data-evidence-paths&gt;</code>
+</div>
+</main>
+<script src="../assets/search-index.js"></script>
+<script src="../assets/nav.js"></script>
+</body>
+</html>

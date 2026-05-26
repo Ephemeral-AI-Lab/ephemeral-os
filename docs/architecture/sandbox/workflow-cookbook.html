@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>10. Workflow Cookbook - EphemeralOS Sandbox Workspace Architecture</title>
+<link rel="stylesheet" href="../assets/styles.css">
+</head>
+<body data-module="sandbox" data-page="workflow-cookbook" data-root="../">
+<nav class="toc">
+  <h2>EphemeralOS Architecture</h2>
+<a class="home-link" href="../index.html">All Modules</a>
+  <div class="search-box">
+    <input type="search" placeholder="Search architecture" data-doc-search aria-label="Search architecture">
+    <div class="search-results" data-doc-search-results></div>
+  </div>
+  <h2>Modules</h2>
+  <ol class="module-list">
+    <li><a href="../sandbox/index.html" data-doc-module="sandbox" class="active">Sandbox Workspace</a></li>
+    <li><a href="../tools/index.html" data-doc-module="tools">Tools</a></li>
+  </ol>
+  <h2>Sandbox Workspace Pages</h2>
+  <ol>
+    <li><a href="index.html" data-doc-module="sandbox" data-doc-section="index" data-doc-page="index.html">Index</a></li>
+    <li><a href="overview.html" data-doc-module="sandbox" data-doc-section="overview" data-doc-page="overview.html">1. Overview</a></li>
+    <li><a href="layerstack.html" data-doc-module="sandbox" data-doc-section="layerstack" data-doc-page="layerstack.html">2. LayerStack</a></li>
+    <li><a href="overlay.html" data-doc-module="sandbox" data-doc-section="overlay" data-doc-page="overlay.html">3. Overlay</a></li>
+    <li><a href="occ.html" data-doc-module="sandbox" data-doc-section="occ" data-doc-page="occ.html">4. OCC</a></li>
+    <li><a href="workspaces.html" data-doc-module="sandbox" data-doc-section="workspaces" data-doc-page="workspaces.html">5. Workspace Modes</a></li>
+    <li><a href="daemon.html" data-doc-module="sandbox" data-doc-section="daemon" data-doc-page="daemon.html">6. Daemon and Background Tasks</a></li>
+    <li><a href="provider.html" data-doc-module="sandbox" data-doc-section="provider" data-doc-page="provider.html">7. Provider</a></li>
+    <li><a href="plugins.html" data-doc-module="sandbox" data-doc-section="plugins" data-doc-page="plugins.html">8. Plugin in ephemeral_workspace</a></li>
+    <li><a href="space-model.html" data-doc-module="sandbox" data-doc-section="space-model" data-doc-page="space-model.html">9. Space Model</a></li>
+    <li><a href="workflow-cookbook.html" data-doc-module="sandbox" data-doc-section="workflow-cookbook" data-doc-page="workflow-cookbook.html" class="active">10. Workflow Cookbook</a></li>
+    <li><a href="maintenance.html" data-doc-module="sandbox" data-doc-section="maintenance" data-doc-page="maintenance.html">11. Wiki Maintenance</a></li>
+  </ol>
+</nav>
+<main>
+<div class="doc-actions">
+  <span><a href="index.html">Index</a> / 10. Workflow Cookbook</span>
+  <span class="nav-pair"><a href="space-model.html">← 9. Space Model</a><a href="maintenance.html">11. Wiki Maintenance →</a></span>
+</div>
+<section id="workflow-cookbook" data-last-reviewed-commit="2a3e6cc7c" data-evidence-paths="backend/src/sandbox/api/tool/_daemon_request_payloads.py backend/src/sandbox/api/transport.py backend/src/sandbox/daemon/workspace_tool_dispatch.py backend/src/sandbox/layer_stack/stack.py backend/src/sandbox/occ/service.py backend/src/sandbox/isolated_workspace/pipeline.py">
+<h2>10. Workflow Cookbook <a class="anchor" href="#workflow-cookbook">§</a></h2>
+<nav class="page-toc" aria-labelledby="page-toc-heading">
+  <h3 id="page-toc-heading">Contents</h3>
+  <ol>
+    <li><a href="#cookbook-layerstack-read"><span>10.1</span> Direct LayerStack Read</a></li>
+    <li><a href="#cookbook-ephemeral-shell"><span>10.2</span> Ephemeral Shell or Search Operation</a></li>
+    <li><a href="#cookbook-occ-publish"><span>10.3</span> OCC Publish from API Write/Edit</a></li>
+    <li><a href="#cookbook-isolated"><span>10.4</span> Isolated Workspace Tool Lifecycle</a></li>
+    <li><a href="#cookbook-plugin-write"><span>10.5</span> Plugin Write Operation</a></li>
+    <li><a href="#cookbook-pyright-refresh"><span>10.6</span> Pyright Latest-Projection Refresh</a></li>
+    <li><a href="#cookbook-evidence-refresh"><span>10.7</span> Cross-workflow Evidence and Refresh</a></li>
+  </ol>
+</nav>
+
+<div class="summary">
+  <ul>
+    <li>This section restates the main runtime paths as end-to-end traces so a reader can follow one request from API/tool entrypoint to storage effect.</li>
+    <li>Each trace names the component that owns the next state transition instead of describing the architecture as abstract boxes.</li>
+    <li>The traces are intentionally redundant with earlier sections: they are meant to be useful while debugging a concrete workflow.</li>
+  </ul>
+</div>
+<div class="callout">
+  <span class="label">How to Use</span>
+  Pick the trace by the external symptom first, then follow its backlinks to the owner page. The cookbook is intentionally operational: it names the state handoff points where bugs usually appear.
+</div>
+
+<div class="edge-list">
+  <div><b>entry</b><span>Public tools and plugin calls enter through host-side API/dispatch code, then become daemon envelopes with <code>op</code>, <code>invocation_id</code>, <code>layer_stack_root</code>, and caller identity.</span></div>
+  <div><b>decision</b><span>The daemon router is the main fork: isolated handle, direct LayerStack/OCC file path, or ephemeral overlay pipeline.</span></div>
+  <div><b>state</b><span>Durable mutations always pass through OCC and LayerStack; isolated mutations remain private upperdir state until discarded.</span></div>
+  <div><b>proof</b><span>Use the evidence sections on owner pages for code anchors and tests, then use this cookbook to follow timing/resource handoffs in one workflow.</span></div>
+</div>
+
+<table>
+  <thead><tr><th>Symptom or question</th><th>Trace</th><th>Owner pages</th></tr></thead>
+  <tbody>
+    <tr><td>Read returned stale or missing content.</td><td><a class="wiki-link" href="#cookbook-layerstack-read">Direct LayerStack Read</a></td><td><a class="wiki-link" href="layerstack.html">LayerStack</a>, <a class="wiki-link" href="daemon.html#workspace-routing-and-state">Workspace Routing and State</a></td></tr>
+    <tr><td>Shell/search saw different files than direct read.</td><td><a class="wiki-link" href="#cookbook-ephemeral-shell">Ephemeral Shell or Search Operation</a></td><td><a class="wiki-link" href="overlay.html">Overlay</a>, <a class="wiki-link" href="workspaces.html#ephemeral-workspace">ephemeral_workspace</a></td></tr>
+    <tr><td>Write/edit conflicted or did not publish.</td><td><a class="wiki-link" href="#cookbook-occ-publish">OCC Publish from API Write/Edit</a></td><td><a class="wiki-link" href="occ.html">OCC</a>, <a class="wiki-link" href="layerstack.html#layerstack-publish">Publish</a></td></tr>
+    <tr><td>Private scratch leaked, failed to enter, or lost state early.</td><td><a class="wiki-link" href="#cookbook-isolated">Isolated Workspace Tool Lifecycle</a></td><td><a class="wiki-link" href="workspaces.html#isolated-workspace">isolated_workspace</a>, <a class="wiki-link" href="daemon.html#isolated-background-gate">Isolated Background Gate</a></td></tr>
+    <tr><td>Plugin or LSP saw stale projection.</td><td><a class="wiki-link" href="#cookbook-pyright-refresh">Pyright Latest-Projection Refresh</a></td><td><a class="wiki-link" href="plugins.html">Plugin in ephemeral_workspace</a></td></tr>
+  </tbody>
+</table>
+</section>
+<section id="cookbook-layerstack-read" data-last-reviewed-commit="2a3e6cc7c" data-evidence-paths="backend/src/sandbox/daemon/workspace_tool_dispatch.py backend/src/sandbox/layer_stack/view.py">
+<h3>10.1 Direct LayerStack Read <a class="anchor" href="#cookbook-layerstack-read">§</a></h3>
+<div class="sequence" aria-label="Direct LayerStack read workflow">
+  <ol>
+    <li><span>The daemon router receives a single-path <code>read_file</code> request and confirms no isolated handle is active for the caller.</span></li>
+    <li><span>The router converts the sandbox path to a workspace-relative path through the current <code>WorkspaceBinding</code>.</span></li>
+    <li><span>LayerStack reads the active manifest and asks <code>MergedView</code> for the file content.</span></li>
+    <li><span><code>MergedView</code> searches newest-first through layer indexes, applying whiteout/opaque semantics during lookup.</span></li>
+    <li><span>The router returns content with direct fast-path timings and zero overlay resource metrics.</span></li>
+  </ol>
+</div>
+
+<p>Relevant code: router fast path <span class="file-ref">backend/src/sandbox/daemon/workspace_tool_dispatch.py:94-110</span>, path binding <span class="file-ref">backend/src/sandbox/daemon/workspace_tool_dispatch.py:208-224</span>, direct resource metrics <span class="file-ref">backend/src/sandbox/daemon/workspace_tool_dispatch.py:232-260</span>, and merged-view reads <span class="file-ref">backend/src/sandbox/layer_stack/view.py:60-114</span>.</p>
+
+</section>
+<section id="cookbook-ephemeral-shell" data-last-reviewed-commit="2a3e6cc7c" data-evidence-paths="backend/src/sandbox/ephemeral_workspace/pipeline.py backend/src/sandbox/overlay/namespace_entrypoint.py backend/src/sandbox/ephemeral_workspace/workspace_publish.py">
+<h3>10.2 Ephemeral Shell or Search Operation <a class="anchor" href="#cookbook-ephemeral-shell">§</a></h3>
+<div class="sequence" aria-label="Ephemeral shell operation workflow">
+  <ol>
+    <li><span>The router selects the ephemeral pipeline because the caller has no open isolated handle.</span></li>
+    <li><span>The pipeline optionally performs shell pre-mount maintenance when manifest depth is high.</span></li>
+    <li><span>Overlay lifecycle leases the active LayerStack snapshot and allocates one run dir with <code>upper</code>/<code>work</code>.</span></li>
+    <li><span>The namespace runner launches a fresh user/mount namespace and sends the operation payload to the namespace entrypoint.</span></li>
+    <li><span>The entrypoint mounts overlayfs onto the workspace root and runs the primitive command inside that view.</span></li>
+    <li><span>For read-only intent, the parent releases the overlay handle without publishing.</span></li>
+    <li><span>For write intent, the parent captures upperdir changes, converts them to OCC changes, publishes if accepted, emits workspace events, and destroys the run dir.</span></li>
+  </ol>
+</div>
+
+<p>Relevant code: pipeline run loop <span class="file-ref">backend/src/sandbox/ephemeral_workspace/pipeline.py:131-179</span>, shell pre-mount maintenance <span class="file-ref">backend/src/sandbox/ephemeral_workspace/pipeline.py:219-250</span>, namespace entrypoint <span class="file-ref">backend/src/sandbox/overlay/namespace_entrypoint.py:85-175</span>, and publish helper <span class="file-ref">backend/src/sandbox/ephemeral_workspace/workspace_publish.py:157-217</span>.</p>
+
+</section>
+<section id="cookbook-occ-publish" data-last-reviewed-commit="2a3e6cc7c" data-evidence-paths="backend/src/sandbox/daemon/workspace_tool_dispatch.py backend/src/sandbox/occ/changeset_preparation.py backend/src/sandbox/occ/commit_queue.py backend/src/sandbox/occ/commit_transaction.py backend/src/sandbox/daemon/changeset_projection.py">
+<h3>10.3 OCC Publish from API Write/Edit <a class="anchor" href="#cookbook-occ-publish">§</a></h3>
+<div class="sequence" aria-label="API write/edit OCC workflow">
+  <ol>
+    <li><span>The router converts <code>write_file</code> or <code>edit_file</code> arguments into typed OCC changes.</span></li>
+    <li><span>OCC prepare normalizes the path, checks gitignore state from the snapshot, and attaches base hashes for gated paths.</span></li>
+    <li><span>The prepared changeset enters the commit queue, which keeps publish work serialized and only batches safe disjoint requests.</span></li>
+    <li><span>The transaction reads the current active manifest, revalidates the path group, writes accepted content into OCC staging, and builds layer deltas.</span></li>
+    <li><span>The publisher appends one immutable layer and writes the new manifest if the expected manifest still matches.</span></li>
+    <li><span>The daemon projects OCC statuses into public tool result conflicts and published path metadata.</span></li>
+  </ol>
+</div>
+
+<p>Relevant code: direct write/edit router <span class="file-ref">backend/src/sandbox/daemon/workspace_tool_dispatch.py:113-179</span>, preparer <span class="file-ref">backend/src/sandbox/occ/changeset_preparation.py:41-174</span>, commit queue <span class="file-ref">backend/src/sandbox/occ/commit_queue.py:55-239</span>, transaction <span class="file-ref">backend/src/sandbox/occ/commit_transaction.py:65-141</span>, and result projection <span class="file-ref">backend/src/sandbox/daemon/changeset_projection.py:16-60</span>.</p>
+
+</section>
+<section id="cookbook-isolated" data-last-reviewed-commit="2a3e6cc7c" data-evidence-paths="backend/src/tools/sandbox/_lib/registry.py backend/src/tools/isolated_workspace/enter_isolated_workspace/definition.py backend/src/tools/isolated_workspace/exit_isolated_workspace/definition.py backend/src/sandbox/host/isolated_workspace_lifecycle.py backend/src/sandbox/daemon/rpc/dispatcher.py backend/src/sandbox/isolated_workspace/_control_plane/pipeline_registry.py backend/src/sandbox/isolated_workspace/_control_plane/workspace_handle_lifecycle.py backend/src/sandbox/isolated_workspace/pipeline.py backend/src/sandbox/isolated_workspace/scripts/setns_overlay_mount.py backend/src/sandbox/isolated_workspace/_control_plane/linux_runtime.py">
+<h3>10.4 Isolated Workspace Tool Lifecycle <a class="anchor" href="#cookbook-isolated">§</a></h3>
+<div class="sequence" aria-label="Isolated workspace lifecycle workflow">
+  <ol>
+    <li><span>The public tools are normal sandbox tools: <code>make_sandbox_tools()</code> includes <code>enter_isolated_workspace</code> and <code>exit_isolated_workspace</code>, and each definition calls the host lifecycle with caller identity, background manager, layer-stack root, and sandbox id.</span></li>
+    <li><span>Host enter is the gate before private scratch exists. It counts local background tasks and daemon-visible in-flight work for the same agent; any nonzero count returns <code>ephemeral_jobs_in_flight</code> instead of racing an isolated namespace transition.</span></li>
+    <li><span>Daemon RPC registers <code>api.isolated_workspace.enter</code>, <code>exit</code>, <code>status</code>, <code>list_open</code>, and gated <code>test_reset</code>. The enter/exit handlers catch <code>IsolatedWorkspaceError</code> and return structured handler-level error payloads.</span></li>
+    <li><span>The first daemon enter lazily constructs the resident <code>IsolatedPipeline</code>: it binds the LayerStack client from the requested root, uses the overlay writable root for scratch, installs the JSONL audit sink, publishes the singleton, then runs pipeline initialization.</span></li>
+    <li><span>Pipeline enter prepares one LayerStack snapshot lease, allocates scratch <code>upper</code>/<code>work</code>, builds the handle, wires the namespace holder, namespace fds, veth, overlay mount, DNS, and cgroup, then persists the handle map and emits an enter audit event.</span></li>
+    <li><span>The overlay mount reuses the shared kernel mount path: <code>linux_runtime.mount_overlay()</code> passes user and mount namespace fds to the setns helper, and the helper enters those namespaces before calling <code>sandbox.overlay.kernel_mount.validate_mount_inputs()</code> and <code>mount_overlay()</code>.</span></li>
+    <li><span>Subsequent foreground tool calls reuse the open handle. <code>run_tool_call()</code> wraps the handle as an <code>OverlayHandle</code>, executes in the existing namespace, marks <code>workspace=isolated</code>, and records write-intent <code>changed_paths</code> for audit only.</span></li>
+    <li><span>No isolated write publishes through OCC. Exit first cancels per-agent background work, then daemon exit removes the handle, measures discarded upperdir bytes, kills the holder, tears down veth, closes fds, releases the lease, removes cgroup/scratch, and emits an exit audit event.</span></li>
+  </ol>
+</div>
+
+<p>Relevant code: tools registry <span class="file-ref">backend/src/tools/sandbox/_lib/registry.py:17-31</span>, enter tool <span class="file-ref">backend/src/tools/isolated_workspace/enter_isolated_workspace/definition.py:24-47</span>, exit tool <span class="file-ref">backend/src/tools/isolated_workspace/exit_isolated_workspace/definition.py:24-46</span>, host enter/exit gates <span class="file-ref">backend/src/sandbox/host/isolated_workspace_lifecycle.py:41-77</span>, <span class="file-ref">backend/src/sandbox/host/isolated_workspace_lifecycle.py:98-136</span>, daemon in-flight check <span class="file-ref">backend/src/sandbox/host/isolated_workspace_lifecycle.py:267-275</span>, daemon RPC registration <span class="file-ref">backend/src/sandbox/daemon/rpc/dispatcher.py:255-353</span>, lazy pipeline construction <span class="file-ref">backend/src/sandbox/isolated_workspace/_control_plane/pipeline_registry.py:73-113</span>, handle lifecycle <span class="file-ref">backend/src/sandbox/isolated_workspace/_control_plane/workspace_handle_lifecycle.py:21-260</span>, isolated run/no-publish path <span class="file-ref">backend/src/sandbox/isolated_workspace/pipeline.py:156-188</span>, <span class="file-ref">backend/src/sandbox/isolated_workspace/pipeline.py:280-329</span>, setns overlay helper <span class="file-ref">backend/src/sandbox/isolated_workspace/scripts/setns_overlay_mount.py:55-85</span>, and runtime helper invocation <span class="file-ref">backend/src/sandbox/isolated_workspace/_control_plane/linux_runtime.py:121-159</span>.</p>
+
+</section>
+<section id="cookbook-plugin-write" data-last-reviewed-commit="2a3e6cc7c" data-evidence-paths="backend/src/sandbox/ephemeral_workspace/plugin/host_dispatch.py backend/src/sandbox/ephemeral_workspace/plugin/op_registry.py backend/src/sandbox/ephemeral_workspace/plugin/overlay_dispatch.py backend/src/sandbox/ephemeral_workspace/workspace_publish.py">
+<h3>10.5 Plugin Write Operation <a class="anchor" href="#cookbook-plugin-write">§</a></h3>
+<div class="sequence" aria-label="Plugin write operation workflow">
+  <ol>
+    <li><span>Host dispatch resolves plugin manifest, installs/refreshes the bundle, and ensures daemon runtime for the plugin digest.</span></li>
+    <li><span>The daemon plugin registry dispatches a <code>WRITE_ALLOWED</code> op through the generic workspace overlay wrapper unless the plugin opted out.</span></li>
+    <li><span>The wrapper acquires an operation overlay from the ephemeral pipeline and runs the plugin child in a fresh namespace.</span></li>
+    <li><span>The child sees the workspace root as the overlay projection and writes only into that operation's upperdir.</span></li>
+    <li><span>The daemon parent captures the upperdir, publishes through <code>publish_cycle()</code>, attaches publish metadata, and destroys the overlay.</span></li>
+  </ol>
+</div>
+
+<p>Relevant code: host dispatch <span class="file-ref">backend/src/sandbox/ephemeral_workspace/plugin/host_dispatch.py:70-186</span>, plugin registry <span class="file-ref">backend/src/sandbox/ephemeral_workspace/plugin/op_registry.py:85-220</span>, operation overlay dispatch <span class="file-ref">backend/src/sandbox/ephemeral_workspace/plugin/overlay_dispatch.py:29-173</span>, and workspace publish cycle <span class="file-ref">backend/src/sandbox/ephemeral_workspace/workspace_publish.py:84-99</span>.</p>
+
+</section>
+<section id="cookbook-pyright-refresh" data-last-reviewed-commit="2a3e6cc7c" data-evidence-paths="backend/src/plugins/catalog/lsp/runtime/session_manager.py backend/src/plugins/catalog/lsp/runtime/pyright_session.py backend/src/plugins/catalog/lsp/runtime/apply.py">
+<h3>10.6 Pyright Latest-Projection Refresh <a class="anchor" href="#cookbook-pyright-refresh">§</a></h3>
+<div class="sequence" aria-label="Pyright latest projection refresh workflow">
+  <ol>
+    <li><span>A read-only LSP tool asks the session manager for the current session.</span></li>
+    <li><span>The manager compares the session's manifest key with the active key from projection or overlay.</span></li>
+    <li><span>If different, it acquires or remounts a private overlay handle so Pyright sees the latest LayerStack projection.</span></li>
+    <li><span>The ephemeral pipeline's workspace event bus also sends publish/full-resync events to the session manager.</span></li>
+    <li><span>Pyright receives watched-file notifications, closes deleted open documents, and syncs changed open documents.</span></li>
+    <li><span>LSP write operations, such as applying workspace edits, use a separate operation overlay and publish through OCC.</span></li>
+  </ol>
+</div>
+
+<p>Relevant code: session reconciliation <span class="file-ref">backend/src/plugins/catalog/lsp/runtime/session_manager.py:34-98</span>, overlay acquisition <span class="file-ref">backend/src/plugins/catalog/lsp/runtime/session_manager.py:176-221</span>, event pump <span class="file-ref">backend/src/plugins/catalog/lsp/runtime/session_manager.py:294-360</span>, Pyright remount/notification <span class="file-ref">backend/src/plugins/catalog/lsp/runtime/pyright_session.py:374-415</span>, <span class="file-ref">backend/src/plugins/catalog/lsp/runtime/pyright_session.py:583-650</span>, and LSP apply path <span class="file-ref">backend/src/plugins/catalog/lsp/runtime/apply.py:21-148</span>.</p>
+</section>
+<section id="cookbook-evidence-refresh" data-last-reviewed-commit="2a3e6cc7c" data-evidence-paths="backend/tests/live_e2e_test/sandbox/layer_stack_overlay_occ backend/src/task_center_runner/tests/mock/sandbox/ephemeral_workspace backend/src/task_center_runner/tests/mock/sandbox/background_tool backend/src/task_center_runner/tests/mock/sandbox/isolated_workspace backend/src/task_center_runner/tests/mock/sandbox/plugin backend/src/sandbox/isolated_workspace/_control_plane/pipeline_registry.py backend/src/task_center_runner/tests/mock/sandbox/isolated_workspace/conftest.py">
+<h3>10.7 Cross-workflow Evidence and Refresh <a class="anchor" href="#cookbook-evidence-refresh">§</a></h3>
+<div class="evidence-grid">
+  <div class="evidence-card">
+    <h4>Behavior suites</h4>
+    <ul>
+      <li><span class="file-ref">backend/tests/live_e2e_test/sandbox/layer_stack_overlay_occ</span> integrated public file, shell, OCC, and overlay workflows.</li>
+      <li><span class="file-ref">backend/src/task_center_runner/tests/mock/sandbox/ephemeral_workspace</span> ephemeral-mode cleanup and conflict workflows.</li>
+      <li><span class="file-ref">backend/src/task_center_runner/tests/mock/sandbox/background_tool</span> background shell heartbeat/cancel/isolated-gate workflows.</li>
+      <li><span class="file-ref">backend/src/task_center_runner/tests/mock/sandbox/isolated_workspace</span> direct daemon RPC lifecycle, isolation, GC, networking, stress, and performance workflows.</li>
+      <li><span class="file-ref">backend/src/task_center_runner/tests/mock/sandbox/plugin</span> plugin/LSP runtime workflows.</li>
+    </ul>
+  </div>
+  <div class="evidence-card">
+    <h4>Live artifacts</h4>
+    <p>Scenario-style runs write under <code>.sweevo_runs/scenario_logs</code>. Direct isolated-workspace pytest/soak paths do not rely on those scenario logs; they read daemon JSONL audit from <code>EOS_ISOLATED_WORKSPACE_AUDIT_PATH</code> or the default <code>/tmp/sandbox_isolated_workspace_events.jsonl</code> inside the active sandbox.</p>
+  </div>
+  <div class="evidence-card">
+    <h4>Isolated audit sequence</h4>
+    <p>The daemon audit sink appends <code>sandbox_isolated_workspace_enter</code>, <code>sandbox_isolated_workspace_tool_call</code>, <code>sandbox_isolated_workspace_exit</code>, and GC/eviction events. Test fixtures truncate and snapshot the in-container JSONL via <code>raw_exec</code>, then derive phase/latency assertions from the copied file.</p>
+    <p>Evidence anchors: <span class="file-ref">backend/src/sandbox/isolated_workspace/_control_plane/pipeline_registry.py:55-70</span>, <span class="file-ref">backend/src/sandbox/isolated_workspace/_control_plane/pipeline_registry.py:103-113</span>, <span class="file-ref">backend/src/task_center_runner/tests/mock/sandbox/isolated_workspace/conftest.py:440-465</span>, and <span class="file-ref">backend/src/task_center_runner/tests/mock/sandbox/isolated_workspace/conftest.py:596-610</span>.</p>
+  </div>
+  <div class="evidence-card">
+    <h4>Refresh triggers</h4>
+    <p>Add or refresh a trace when an externally visible workflow crosses a new owner module, gains a new daemon op, changes publish/discard semantics, changes audit event names, or moves its proof artifact between <code>.sweevo_runs/scenario_logs</code> and daemon JSONL.</p>
+  </div>
+</div>
+<div class="maintenance-note">
+  Backlinks: each trace should have one owner page and at least one storage/workspace page. If a new workflow appears, add it here, add a search-index entry, and add backlinks from the owner node.
+</div>
+</section>
+<div class="page-baseline" data-page-baseline-commit="2a3e6cc7c">
+  <strong>Maintenance baseline</strong>
+  <span>Local section metadata reviewed at <code>2a3e6cc7c</code>.</span>
+  <code>git diff 2a3e6cc7c..HEAD -- &lt;section data-evidence-paths&gt;</code>
+</div>
+<div class="page-footer-nav"><span><a href="space-model.html">← 9. Space Model</a></span><span><a href="maintenance.html">11. Wiki Maintenance →</a></span></div>
+</main>
+<script src="../assets/search-index.js"></script>
+<script src="../assets/nav.js"></script>
+</body>
+</html>

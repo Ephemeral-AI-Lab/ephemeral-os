@@ -18,8 +18,9 @@ not as a reason to stop.
 
 - TaskCenter harness and context-engine reference:
   `docs/task_center_harness_and_context_engine.html`.
-- Sandbox workspace architecture reference:
-  `docs/sandbox-workspace-architecture`.
+- Architecture wiki reference:
+  `docs/architecture`, with sandbox workspace pages under
+  `docs/architecture/sandbox` and tools pages under `docs/architecture/tools`.
 
 ## Backend Architecture
 

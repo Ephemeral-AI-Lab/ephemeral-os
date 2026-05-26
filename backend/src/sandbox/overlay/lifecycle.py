@@ -132,29 +132,6 @@ async def destroy(handle: OverlayHandle) -> None:
         emit_overlay_workspace_cleaned(handle, cleanup_ms=elapsed_ms)
 
 
-def emit_overlay_workspace_published(
-    handle: OverlayHandle,
-    *,
-    committed_layer_id: str | None,
-    publish_layer_ms: float | None,
-) -> None:
-    """Emit the ``overlay_workspace.published`` event after a successful commit."""
-    safe_emit(
-        build_overlay_workspace_event(
-            "overlay_workspace.published",
-            OverlayWorkspaceSection(
-                operation_id=handle.operation_id or None,
-                workspace_handle_id=handle.lease_id or None,
-                lease_id=handle.lease_id or None,
-                manifest_root_hash=handle.root_hash or None,
-                committed_layer_id=committed_layer_id,
-                publish_layer_ms=publish_layer_ms,
-            ),
-        ),
-        lane="critical",
-    )
-
-
 def emit_overlay_workspace_cleaned(
     handle: OverlayHandle, *, cleanup_ms: float
 ) -> None:
@@ -255,5 +232,4 @@ __all__ = [
     "destroy",
     "emit_overlay_workspace_cleaned",
     "emit_overlay_workspace_cleanup_failed",
-    "emit_overlay_workspace_published",
 ]
