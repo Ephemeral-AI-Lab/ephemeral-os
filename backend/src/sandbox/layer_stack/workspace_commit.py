@@ -1,4 +1,4 @@
-"""Flush active layer-stack state back into the bound workspace base."""
+"""Commit active layer-stack state back into the bound workspace base."""
 
 from __future__ import annotations
 
@@ -20,14 +20,14 @@ from sandbox.layer_stack.workspace_base import build_workspace_base
 
 
 @dataclass(frozen=True)
-class WorkspaceFlushResult:
+class WorkspaceCommitResult:
     manifest: Manifest
     view: MergedView
     publisher: LayerPublisher
     checkpoint_squasher: LayerCheckpointSquasher
 
 
-def flush_to_workspace(
+def commit_to_workspace(
     *,
     storage_root: Path,
     workspace_root: str | Path,
@@ -36,32 +36,42 @@ def flush_to_workspace(
     leases: LeaseRegistry,
     lock: threading.RLock,
     timings: dict[str, float] | None = None,
-) -> WorkspaceFlushResult:
-    """Collapse the active merged view into ``workspace_root`` and rebuild base."""
+) -> WorkspaceCommitResult:
+    """Collapse the active manifest into ``workspace_root`` and rebuild base.
+
+    Projects the active manifest into a temp tree, atomically swaps the
+    workspace contents to that projection, resets layer storage, and rebuilds
+    a fresh base layer from the workspace bytes. Refuses to run while any
+    snapshot lease is active.
+    """
     total_start = monotonic_now()
     workspace = Path(workspace_root)
     if not workspace.is_dir():
         raise ValueError(f"workspace_root does not exist: {workspace}")
     with lock:
         if leases.active_count() > 0:
-            raise RuntimeError("flush_to_workspace blocked by active leases")
+            raise RuntimeError("commit_to_workspace blocked by active leases")
         active = read_manifest(manifest_path)
 
-    materialize_parent = storage_root / "runtime" / "flush"
-    materialize_parent.mkdir(parents=True, exist_ok=True)
-    materialized = Path(tempfile.mkdtemp(prefix="merged-", dir=str(materialize_parent)))
+    projection_parent = storage_root / "runtime" / "commit"
+    projection_parent.mkdir(parents=True, exist_ok=True)
+    projected = Path(tempfile.mkdtemp(prefix="projected-", dir=str(projection_parent)))
     try:
         project_start = monotonic_now()
-        view.project(materialized, active, share_inodes=False)
-        record_elapsed(timings, "layer_stack.flush.project_s", project_start)
+        view.project(projected, active, share_inodes=False)
+        record_elapsed(timings, "layer_stack.commit_to_workspace.project_s", project_start)
 
         replace_start = monotonic_now()
-        _replace_directory_contents(workspace, materialized)
-        record_elapsed(timings, "layer_stack.flush.replace_workspace_s", replace_start)
+        _replace_directory_contents(workspace, projected)
+        record_elapsed(
+            timings,
+            "layer_stack.commit_to_workspace.replace_workspace_s",
+            replace_start,
+        )
 
         reset_start = monotonic_now()
         with lock:
-            _clear_storage_root_for_flush(storage_root)
+            _clear_storage_root_for_commit(storage_root)
             build_workspace_base(
                 workspace_root=workspace,
                 layer_stack_root=storage_root,
@@ -70,16 +80,20 @@ def flush_to_workspace(
             next_publisher = LayerPublisher(storage_root)
             next_checkpoint_squasher = LayerCheckpointSquasher(storage_root)
             new_manifest = read_manifest(manifest_path)
-        record_elapsed(timings, "layer_stack.flush.rebuild_base_s", reset_start)
-        record_elapsed(timings, "layer_stack.flush.total_s", total_start)
-        return WorkspaceFlushResult(
+        record_elapsed(
+            timings,
+            "layer_stack.commit_to_workspace.rebuild_base_s",
+            reset_start,
+        )
+        record_elapsed(timings, "layer_stack.commit_to_workspace.total_s", total_start)
+        return WorkspaceCommitResult(
             manifest=new_manifest,
             view=next_view,
             publisher=next_publisher,
             checkpoint_squasher=next_checkpoint_squasher,
         )
     finally:
-        shutil.rmtree(materialized, ignore_errors=True)
+        shutil.rmtree(projected, ignore_errors=True)
 
 
 def _replace_directory_contents(destination: Path, source: Path) -> None:
@@ -90,7 +104,7 @@ def _replace_directory_contents(destination: Path, source: Path) -> None:
         os.replace(child, destination / child.name)
 
 
-def _clear_storage_root_for_flush(storage_root: Path) -> None:
+def _clear_storage_root_for_commit(storage_root: Path) -> None:
     storage_root.mkdir(parents=True, exist_ok=True)
     for child in storage_root.iterdir():
         if child.name == ".storage-writer.lock":
@@ -98,4 +112,4 @@ def _clear_storage_root_for_flush(storage_root: Path) -> None:
         remove_path(child)
 
 
-__all__ = ["WorkspaceFlushResult", "flush_to_workspace"]
+__all__ = ["WorkspaceCommitResult", "commit_to_workspace"]

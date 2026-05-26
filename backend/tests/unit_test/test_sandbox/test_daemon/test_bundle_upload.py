@@ -96,7 +96,7 @@ def test_bundle_layout_includes_required_paths(tmp_path: Path) -> None:
         "sandbox/layer_stack/commit_staging.py",
         "sandbox/layer_stack/manifest.py",
         "sandbox/layer_stack/stack.py",
-        "sandbox/layer_stack/workspace_flush.py",
+        "sandbox/layer_stack/workspace_commit.py",
         "sandbox/layer_stack/workspace_binding.py",
         "sandbox/occ/changeset.py",
         "sandbox/occ/changeset_preparation.py",

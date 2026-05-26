@@ -17,7 +17,7 @@ def _source(tmp_path: Path, name: str, content: bytes) -> str:
     return path.as_posix()
 
 
-def test_flush_to_workspace_rebuilds_base_from_active_manifest(tmp_path: Path) -> None:
+def test_commit_to_workspace_rebuilds_base_from_active_manifest(tmp_path: Path) -> None:
     workspace = tmp_path / "workspace"
     workspace.mkdir()
     (workspace / "old.txt").write_text("old\n", encoding="utf-8")
@@ -35,7 +35,7 @@ def test_flush_to_workspace_rebuilds_base_from_active_manifest(tmp_path: Path) -
     )
 
     timings: dict[str, float] = {}
-    manifest = manager.flush_to_workspace(
+    manifest = manager.commit_to_workspace(
         workspace_root=workspace,
         timings=timings,
     )
@@ -45,10 +45,10 @@ def test_flush_to_workspace_rebuilds_base_from_active_manifest(tmp_path: Path) -
     assert not (workspace / "old.txt").exists()
     assert (workspace / "new.txt").read_text(encoding="utf-8") == "new\n"
     assert manager.read_text("new.txt") == ("new\n", True)
-    assert "layer_stack.flush.total_s" in timings
+    assert "layer_stack.commit_to_workspace.total_s" in timings
 
 
-def test_flush_to_workspace_rejects_active_snapshot_leases(tmp_path: Path) -> None:
+def test_commit_to_workspace_rejects_active_snapshot_leases(tmp_path: Path) -> None:
     workspace = tmp_path / "workspace"
     workspace.mkdir()
     (workspace / "value.txt").write_text("value\n", encoding="utf-8")
@@ -58,6 +58,6 @@ def test_flush_to_workspace_rejects_active_snapshot_leases(tmp_path: Path) -> No
     lease = manager.acquire_snapshot_lease("test")
 
     with pytest.raises(RuntimeError, match="active leases"):
-        manager.flush_to_workspace(workspace_root=workspace)
+        manager.commit_to_workspace(workspace_root=workspace)
 
     manager.release_lease(lease.lease_id)

@@ -95,13 +95,13 @@ class LayerStackClient(LayerStackPortAdapter):
     ) -> None:
         self.manager.project(destination, manifest)
 
-    def flush_to_workspace(
+    def commit_to_workspace(
         self,
         *,
         workspace_root: str | Path,
         timings: dict[str, float] | None = None,
     ) -> Manifest:
-        return self.manager.flush_to_workspace(
+        return self.manager.commit_to_workspace(
             workspace_root=workspace_root,
             timings=timings,
         )

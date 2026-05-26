@@ -41,7 +41,7 @@ from sandbox.layer_stack.manifest import (
 )
 from sandbox.layer_stack.transaction import LayerStackTransaction
 from sandbox.layer_stack.view import MergedView, SymlinkLookup
-from sandbox.layer_stack.workspace_flush import flush_to_workspace
+from sandbox.layer_stack.workspace_commit import commit_to_workspace
 from sandbox._shared.clock import monotonic_now
 
 
@@ -291,7 +291,7 @@ class LayerStack:
                         self._checkpoint_squasher.discard_checkpoint(checkpoint)
                 self.release_lease(squash_lease.lease_id)
 
-    def flush_to_workspace(
+    def commit_to_workspace(
         self,
         *,
         workspace_root: str | Path,
@@ -300,11 +300,12 @@ class LayerStack:
         """Collapse the active manifest back into the bound workspace base.
 
         The caller must ensure any live overlay mount is detached first. This
-        method rewrites the workspace to the active merged view, resets layer
-        storage, and rebuilds a fresh base layer from the workspace bytes.
+        method rewrites the workspace to the active manifest's projection,
+        resets layer storage, and rebuilds a fresh base layer from the
+        workspace bytes.
         """
         with self._storage_write_guard():
-            result = flush_to_workspace(
+            result = commit_to_workspace(
                 storage_root=self.storage_root,
                 workspace_root=workspace_root,
                 manifest_path=self._manifest_file,
