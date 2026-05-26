@@ -22,7 +22,7 @@ from tools.submission.planner import (
 )
 
 from task_center_runner.audit.events import EventType
-from task_center_runner.scenarios._utils import (
+from task_center_runner.scenarios._scenario_helpers import (
     is_recursive_goal,
     minimal_full_plan,
     preflight_full_plan,
@@ -152,7 +152,7 @@ class DeferredParentPlannerTerminalRouting(ScenarioBase):
             },
         )
 
-    def recursive_goal_goal(self, ctx: ScenarioContext) -> str | None:  # noqa: ARG002
+    def recursive_handoff_goal(self, ctx: ScenarioContext) -> str | None:  # noqa: ARG002
         return _CHILD_GOAL
 
 

@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Any, Protocol
 
 from sandbox.occ.service import AUTO_SQUASH_MAX_DEPTH
+from task_center_runner.scenarios._scenario_helpers import context_message_field
 from task_center_runner.scenarios.base import ScenarioContext
 from message.stream_events import AssistantTextDelta, StreamEvent
 from tools._framework.core.base import BaseTool
@@ -79,7 +80,7 @@ class ToolScriptResult:
     results: tuple[ToolResult, ...]
 
 
-class MockToolScriptEngine:
+class PreparedToolScriptEngine:
     """Execute prepared scripts through the same tool path real agents use."""
 
     def __init__(self, call_tool: CallTool) -> None:
@@ -127,9 +128,6 @@ class MockToolScriptEngine:
             artifact=script.artifact,
             results=tuple(results),
         )
-
-
-PreparedToolScriptEngine = MockToolScriptEngine
 
 
 def inspect_user_input_script(ctx: ScenarioContext) -> PreparedToolScript:
@@ -246,11 +244,12 @@ def execute_package_script(
     payload = {
         "task_id": ctx.task_id,
         "package_id": package_id,
-        "wave": _field(ctx.context_message or "", "wave"),
-        "subsystem": _field(ctx.context_message or "", "subsystem")
+        "wave": context_message_field(ctx.context_message or "", "wave"),
+        "subsystem": context_message_field(ctx.context_message or "", "subsystem")
         or package.get("subsystem"),
-        "risk": _field(ctx.context_message or "", "risk") or package.get("risk"),
-        "item_count": _field(ctx.context_message or "", "item_count")
+        "risk": context_message_field(ctx.context_message or "", "risk")
+        or package.get("risk"),
+        "item_count": context_message_field(ctx.context_message or "", "item_count")
         or len(package.get("item_ids") or ()),
         "item_ids": list(package.get("item_ids") or ()),
         "edited": False,
@@ -309,8 +308,8 @@ def recursive_step_script(ctx: ScenarioContext) -> PreparedToolScript:
     payload = {
         "task_id": ctx.task_id,
         "action": context_message,
-        "checkpoint": _field(context_message, "checkpoint"),
-        "slice": _field(context_message, "slice"),
+        "checkpoint": context_message_field(context_message, "checkpoint"),
+        "slice": context_message_field(context_message, "slice"),
         "close_report": is_close,
     }
     steps: list[ToolScriptStep] = [
@@ -367,8 +366,10 @@ def recursive_step_script(ctx: ScenarioContext) -> PreparedToolScript:
 
 def final_reconciliation_script(ctx: ScenarioContext) -> PreparedToolScript:
     """Write and verify final release-bundle reconciliation evidence."""
-    stage = _field(ctx.context_message or "", "stage") or "final"
-    high_risk_count = _field(ctx.context_message or "", "high_risk_count")
+    stage = context_message_field(ctx.context_message or "", "stage") or "final"
+    high_risk_count = context_message_field(
+        ctx.context_message or "", "high_risk_count"
+    )
     payload = {
         "task_id": ctx.task_id,
         "stage": stage,
@@ -429,7 +430,10 @@ def final_reconciliation_script(ctx: ScenarioContext) -> PreparedToolScript:
 
 def verifier_checkpoint_script(ctx: ScenarioContext) -> PreparedToolScript:
     """Run verifier readback checks for the requested checkpoint."""
-    checkpoint = _field(ctx.context_message or "", "checkpoint") or "checkpoint"
+    checkpoint = (
+        context_message_field(ctx.context_message or "", "checkpoint")
+        or "checkpoint"
+    )
     if checkpoint == "inventory":
         read_path = _LEDGER_PATH
     elif checkpoint == "recursive_return":
@@ -501,14 +505,6 @@ def _find_package(ctx: ScenarioContext, package_id: str) -> dict[str, Any]:
     return {"id": package_id, "item_ids": (), "risk": "unknown"}
 
 
-def _field(text: str, name: str) -> str | None:
-    prefix = f"{name}="
-    for part in text.split():
-        if part.startswith(prefix):
-            return part[len(prefix) :].strip()
-    return None
-
-
 def _safe_slug(value: str) -> str:
     return "".join(ch if ch.isalnum() or ch in "-_" else "_" for ch in value)
 
@@ -518,7 +514,6 @@ def _json(payload: dict[str, Any]) -> str:
 
 
 __all__ = [
-    "MockToolScriptEngine",
     "PreparedToolScriptEngine",
     "PreparedToolScript",
     "ToolScriptResult",

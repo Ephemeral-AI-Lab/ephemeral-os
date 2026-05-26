@@ -18,7 +18,7 @@ from tools.submission.evaluator import submit_evaluation_success
 from tools.submission.planner import submit_plan_closes_goal
 
 from task_center_runner.audit.events import EventType
-from task_center_runner.scenarios._utils import preflight_full_plan
+from task_center_runner.scenarios._scenario_helpers import preflight_full_plan
 from task_center_runner.scenarios.base import ScenarioBase, ScenarioContext, ToolCallSpec
 
 

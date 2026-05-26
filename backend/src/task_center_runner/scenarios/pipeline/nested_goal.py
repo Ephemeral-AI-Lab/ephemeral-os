@@ -15,7 +15,7 @@ from tools.submission.verifier import (
 from tools.submission.planner import submit_plan_closes_goal
 
 from task_center_runner.audit.events import EventType
-from task_center_runner.scenarios._utils import is_recursive_goal
+from task_center_runner.scenarios._scenario_helpers import is_recursive_goal
 from task_center_runner.scenarios.base import ScenarioBase, ScenarioContext, ToolCallSpec
 
 
@@ -127,7 +127,7 @@ class NestedGoal(ScenarioBase):
             },
         )
 
-    def recursive_goal_goal(self, ctx: ScenarioContext) -> str | None:  # noqa: ARG002
+    def recursive_handoff_goal(self, ctx: ScenarioContext) -> str | None:  # noqa: ARG002
         return "Run the delegated child goal and return a close report."
 
 
@@ -175,7 +175,7 @@ class NestedGoalFailure(ScenarioBase):
             },
         )
 
-    def recursive_goal_goal(self, ctx: ScenarioContext) -> str | None:  # noqa: ARG002
+    def recursive_handoff_goal(self, ctx: ScenarioContext) -> str | None:  # noqa: ARG002
         return "Run a child goal that intentionally exhausts attempts."
 
 

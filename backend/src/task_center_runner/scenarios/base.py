@@ -1,8 +1,8 @@
-"""Scenario protocol + ScenarioContext + ToolCallSpec + CompositeScenario.
+"""Scenario protocol + ScenarioContext + ToolCallSpec.
 
-Per plan §10. Scenarios are pure descriptions; the squad runner translates
-them into actual tool calls. The protocol is intentionally narrow — the four
-decision methods plus a ``hooks()`` declaration.
+Scenarios are pure descriptions; the mock runner translates them into actual
+tool calls. The protocol is intentionally narrow: planner/executor/verifier/
+evaluator decisions, optional recursive-handoff goal text, and hooks.
 """
 
 from __future__ import annotations
@@ -58,27 +58,16 @@ class Scenario(Protocol):
 
     def evaluator_response(self, ctx: ScenarioContext) -> ToolCallSpec: ...
 
-    def recursive_goal(self, ctx: ScenarioContext) -> str | None: ...
+    def recursive_handoff_goal(self, ctx: ScenarioContext) -> str | None: ...
 
     def hooks(self) -> Sequence[Hook]: ...
-
-
-@dataclass(frozen=True, slots=True)
-class CompositeScenario:
-    """Trivial composition placeholder — phase-1 ships only one scenario.
-
-    The fields and ``compose`` classmethod are exposed so next-phase code can
-    bolt actual composition logic onto this surface without breaking imports.
-    """
-
-    parts: tuple[Scenario, ...]
 
 
 class ScenarioBase:
     """Default implementation of the Scenario protocol.
 
-    Subclasses override the four decision methods. ``hooks()`` defaults to no
-    hooks. ``compose`` returns a :class:`CompositeScenario` carrying the parts.
+    Subclasses override the decision methods they need. ``hooks()`` defaults to
+    no hooks.
     """
 
     name: str = ""
@@ -96,19 +85,14 @@ class ScenarioBase:
     def evaluator_response(self, ctx: ScenarioContext) -> ToolCallSpec:  # noqa: ARG002
         raise NotImplementedError
 
-    def recursive_goal(self, ctx: ScenarioContext) -> str | None:  # noqa: ARG002
+    def recursive_handoff_goal(self, ctx: ScenarioContext) -> str | None:  # noqa: ARG002
         return None
 
     def hooks(self) -> Sequence[Hook]:
         return ()
 
-    @classmethod
-    def compose(cls, *parts: Scenario) -> CompositeScenario:
-        return CompositeScenario(parts=tuple(parts))
-
 
 __all__ = [
-    "CompositeScenario",
     "Scenario",
     "ScenarioBase",
     "ScenarioContext",

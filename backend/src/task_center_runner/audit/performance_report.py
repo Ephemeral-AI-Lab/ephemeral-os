@@ -264,9 +264,7 @@ def _build_v3_sections(
     occ = _section_occ(indexed)
     isolated_workspace = _section_isolated_workspace(indexed)
     os_resource = _section_os_resource(indexed)
-    daemon_audit_pull = _section_daemon_audit_pull(
-        daemon_audit_puller_stats, indexed
-    )
+    daemon_audit_pull = _section_daemon_audit_pull(daemon_audit_puller_stats)
     overhead = _section_overhead(
         rows,
         overhead_metadata,
@@ -292,7 +290,6 @@ def _build_v3_sections(
         summary=summary,
         daemon_audit_pull=daemon_audit_pull,
         isolated_workspace=isolated_workspace,
-        overlay_workspace=overlay_workspace,
         layer_stack=layer_stack,
         occ=occ,
         os_resource=os_resource,
@@ -1063,7 +1060,6 @@ def _section_os_resource(
 
 def _section_daemon_audit_pull(
     puller_stats: Mapping[str, Any] | None,
-    indexed: Mapping[str, list[Mapping[str, Any]]],
 ) -> dict[str, Any]:
     """Materialize the puller-side observability block.
 
@@ -1282,7 +1278,6 @@ def _collect_warnings(
     summary: Mapping[str, Any],
     daemon_audit_pull: Mapping[str, Any],
     isolated_workspace: Mapping[str, Any],
-    overlay_workspace: Mapping[str, Any],
     layer_stack: Mapping[str, Any],
     occ: Mapping[str, Any],
     os_resource: Mapping[str, Any],

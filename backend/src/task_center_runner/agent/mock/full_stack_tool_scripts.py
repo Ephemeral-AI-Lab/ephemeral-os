@@ -7,6 +7,7 @@ from collections.abc import Sequence
 from typing import Any
 
 from sandbox.occ.service import AUTO_SQUASH_MAX_DEPTH
+from task_center_runner.scenarios._scenario_helpers import context_message_field
 from task_center_runner.scenarios.base import ScenarioContext
 from task_center_runner.agent.mock.tool_scripts import (
     PreparedToolScript,
@@ -764,8 +765,11 @@ def lsp_refresh_semantics_script(ctx: ScenarioContext) -> PreparedToolScript:
 def recursive_oversized_matrix_script(ctx: ScenarioContext) -> PreparedToolScript:
     """Persist recursive goal evidence and close report through tools."""
     context_message = ctx.context_message or ""
-    slice_id = _field(context_message, "slice") or "slice"
-    is_close = _field(context_message, "close") == "true" or slice_id == "close"
+    slice_id = context_message_field(context_message, "slice") or "slice"
+    is_close = (
+        context_message_field(context_message, "close") == "true"
+        or slice_id == "close"
+    )
     evidence_path = f"{_RECURSIVE_ROOT}/oversized-{_safe_slug(slice_id)}.json"
     payload = {
         "scenario": "full_stack_adversarial",
@@ -863,7 +867,7 @@ def final_reconciliation_script(ctx: ScenarioContext) -> PreparedToolScript:
     payload = {
         **summary,
         "task_id": ctx.task_id,
-        "stage": _field(ctx.context_message or "", "stage") or "final",
+        "stage": context_message_field(ctx.context_message or "", "stage") or "final",
         "metrics_artifact": full_stack_metrics_path(ctx),
         "matrix_cells": matrix_cells,
     }
@@ -931,7 +935,10 @@ def final_reconciliation_script(ctx: ScenarioContext) -> PreparedToolScript:
 
 def verifier_checkpoint_script(ctx: ScenarioContext) -> PreparedToolScript:
     """Verifier-side readback for full-stack checkpoints."""
-    checkpoint = _field(ctx.context_message or "", "checkpoint") or "checkpoint"
+    checkpoint = (
+        context_message_field(ctx.context_message or "", "checkpoint")
+        or "checkpoint"
+    )
     read_paths = {
         "inventory": _LEDGER_PATH,
         "subsystem_wave_guard": _OCC_PATH,
@@ -1152,14 +1159,6 @@ def _dict_list(value: Any) -> list[dict[str, Any]]:
         return []
     items: Sequence[Any] = value if isinstance(value, Sequence) else ()
     return [dict(item) for item in items if isinstance(item, dict)]
-
-
-def _field(text: str, name: str) -> str | None:
-    prefix = f"{name}="
-    for part in text.split():
-        if part.startswith(prefix):
-            return part[len(prefix) :].strip()
-    return None
 
 
 def _safe_slug(value: str) -> str:

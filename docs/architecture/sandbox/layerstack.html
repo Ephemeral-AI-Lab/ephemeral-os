@@ -132,7 +132,7 @@
   </ul>
 </div>
 
-<p>Current <code>LayerStack.prepare_workspace_snapshot()</code> reads the manifest, acquires a lease, and returns <code>layer_paths</code> copied from the manifest. It sets <code>layer_stack.materialize_s</code> to <code>0.0</code> and does not build a transient lowerdir for normal operations <span class="file-ref">backend/src/sandbox/layer_stack/stack.py:105-129</span>. The result object contains <code>lease_id</code>, <code>manifest_version</code>, <code>root_hash</code>, <code>manifest</code>, timings, and optional <code>layer_paths</code> <span class="file-ref">backend/src/sandbox/layer_stack/stack.py:43-62</span>.</p>
+<p><strong>A snapshot is O(1): a lease plus a list of existing layer paths, not a rendered tree.</strong> <code>LayerStack.prepare_workspace_snapshot()</code> reads the manifest, acquires a lease, and returns <code>layer_paths</code> copied from the manifest. It sets <code>layer_stack.materialize_s</code> to <code>0.0</code> and does not build a transient lowerdir for normal operations <span class="file-ref">backend/src/sandbox/layer_stack/stack.py:105-129</span>. The result object contains <code>lease_id</code>, <code>manifest_version</code>, <code>root_hash</code>, <code>manifest</code>, timings, and optional <code>layer_paths</code> <span class="file-ref">backend/src/sandbox/layer_stack/stack.py:43-62</span>. This is what makes N concurrent agents cheap: every snapshot is constant-cost regardless of repository size.</p>
 
 <div class="stack-viz" aria-label="LayerStack projection">
   <div class="layer lower"><strong>L000005-...</strong><div class="desc">newest layer, highest priority lowerdir</div></div>
@@ -157,7 +157,14 @@
   </ul>
 </div>
 
+<p>This is the <strong>atomic-pointer-swap commit pattern</strong> used by Git (HEAD updates), Apache Iceberg (metadata.json swap), Delta Lake, and Hudi: a single mutable pointer over a tree of immutable content-addressed objects, swapped via CAS. The active <code>manifest.json</code> is the single linearization point; everything else is append-only.</p>
+
 <p>The publisher performs a CAS check before writing, writes changes into a staging layer, moves it into <code>layers/</code>, then re-checks the manifest before writing the new active manifest <span class="file-ref">backend/src/sandbox/layer_stack/publisher.py:49-132</span>. Delete and opaque directory semantics use overlay-style marker files <span class="file-ref">backend/src/sandbox/layer_stack/changes.py:123-142</span>. Leases pin layers by refcount and expose pinned layers to squash/GC <span class="file-ref">backend/src/sandbox/layer_stack/lease.py:38-86</span>.</p>
+
+<div class="callout">
+  <span class="label">Why auto-squash exists</span>
+  Manifest depth is bounded for two concrete reasons: (1) util-linux <code>mount(8)</code> rejects overlay mounts beyond ~16 layers even though the kernel <code>mount(2)</code> syscall tolerates ~200; (2) <code>MergedView</code> reads walk newest-first across every layer until a hit, so per-path read cost grows with depth (LSM-tree read amplification). Auto-squash after publish compacts unpinned segments to keep both constraints satisfied.
+</div>
 
 <pre class="diagram" aria-label="LayerStack publish CAS workflow">
 [accepted file deltas]

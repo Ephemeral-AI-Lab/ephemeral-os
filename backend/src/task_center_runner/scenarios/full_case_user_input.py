@@ -23,6 +23,11 @@ from task_center_runner.scenarios.base import (
     ScenarioContext,
     ToolCallSpec,
 )
+from task_center_runner.scenarios._scenario_helpers import (
+    context_message_field,
+    is_entry_origin_goal,
+    is_recursive_goal,
+)
 from task_center_runner.scenarios.user_input import (
     UserInputPlan,
     WorkPackage,
@@ -66,7 +71,7 @@ class FullCaseUserInput(ScenarioBase):
         return [asdict(package) for package in plan.packages]
 
     def planner_response(self, ctx: ScenarioContext) -> ToolCallSpec:
-        if _is_recursive_goal(ctx):
+        if is_recursive_goal(ctx):
             return self._recursive_planner_response(ctx)
         return self._entry_origin_planner_response(ctx)
 
@@ -75,10 +80,14 @@ class FullCaseUserInput(ScenarioBase):
         if "ACTION inspect_user_input" in context_message:
             return ("inspect_user_input",)
         if "ACTION request_recursive_goal" in context_message:
-            package_id = _field(context_message, "package") or self._recursive_package_id or ""
+            package_id = (
+                context_message_field(context_message, "package")
+                or self._recursive_package_id
+                or ""
+            )
             return (f"request_recursive_goal:{package_id}",)
         if "ACTION execute_package" in context_message:
-            package_id = _field(context_message, "package") or "unknown"
+            package_id = context_message_field(context_message, "package") or "unknown"
             return (f"execute_package:{package_id}",)
         if "ACTION final_reconciliation" in context_message:
             return ("final_reconciliation",)
@@ -88,7 +97,7 @@ class FullCaseUserInput(ScenarioBase):
 
     def verifier_response(self, ctx: ScenarioContext) -> ToolCallSpec:
         context_message = ctx.context_message or ""
-        checkpoint = _field(context_message, "checkpoint") or "checkpoint"
+        checkpoint = context_message_field(context_message, "checkpoint") or "checkpoint"
         failed_by_hook = bool(
             ctx.mutable_state is not None
             and ctx.mutable_state.consume_failure(
@@ -114,7 +123,8 @@ class FullCaseUserInput(ScenarioBase):
                 "summary": f"Verifier accepted {checkpoint}.",
                 "checks": [
                     f"checkpoint:{checkpoint}",
-                    f"dependencies:{_field(context_message, 'dependency_count') or '0'}",
+                    "dependencies:"
+                    f"{context_message_field(context_message, 'dependency_count') or '0'}",
                 ],
             },
         )
@@ -129,9 +139,12 @@ class FullCaseUserInput(ScenarioBase):
             },
         )
 
-    def recursive_goal_goal(self, ctx: ScenarioContext) -> str | None:
+    def recursive_handoff_goal(self, ctx: ScenarioContext) -> str | None:
         context_message = ctx.context_message or ""
-        package_id = _field(context_message, "package") or self._recursive_package_id
+        package_id = (
+            context_message_field(context_message, "package")
+            or self._recursive_package_id
+        )
         if not package_id:
             return None
         plan = self._ensure_user_input_plan(ctx)
@@ -374,7 +387,7 @@ class FullCaseUserInput(ScenarioBase):
         if self._user_input_plan is not None:
             return self._user_input_plan
         prompt = ""
-        if ctx.goal is not None and _is_entry_origin_goal(ctx):
+        if ctx.goal is not None and is_entry_origin_goal(ctx):
             prompt = str(ctx.goal.goal or "")
         if not prompt:
             prompt = ctx.prompt or ctx.context_message or ""
@@ -387,7 +400,7 @@ class FullCaseUserInput(ScenarioBase):
         ctx: ScenarioContext,
         checkpoint: str,
     ) -> bool:
-        if not _is_entry_origin_goal(ctx):
+        if not is_entry_origin_goal(ctx):
             return False
         iteration = ctx.iteration
         attempt = ctx.attempt
@@ -448,29 +461,6 @@ def _chunked(
         tuple(packages[index : index + size])
         for index in range(0, len(packages), size)
     )
-
-
-def _field(text: str, name: str) -> str | None:
-    prefix = f"{name}="
-    for part in text.split():
-        if part.startswith(prefix):
-            return part[len(prefix) :].strip()
-    return None
-
-
-def _is_entry_origin_goal(ctx: ScenarioContext) -> bool:
-    goal = ctx.goal
-    if goal is None:
-        return True
-    origin_kind = getattr(goal, "origin_kind", None)
-    if str(getattr(origin_kind, "value", origin_kind) or "") == "entry":
-        return True
-    requested_by = str(goal.requested_by_task_id or "")
-    return not requested_by
-
-
-def _is_recursive_goal(ctx: ScenarioContext) -> bool:
-    return not _is_entry_origin_goal(ctx)
 
 
 __all__ = ["FullCaseUserInput"]

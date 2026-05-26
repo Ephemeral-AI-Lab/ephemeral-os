@@ -26,6 +26,11 @@ from task_center_runner.scenarios.base import (
     ScenarioContext,
     ToolCallSpec,
 )
+from task_center_runner.scenarios._scenario_helpers import (
+    context_message_field,
+    is_entry_origin_goal,
+    is_recursive_goal,
+)
 from task_center_runner.scenarios.user_input import (
     UserInputPlan,
     WorkPackage,
@@ -85,7 +90,7 @@ class FullStackAdversarial(ScenarioBase):
         return [asdict(cell) for cell in self._matrix_cells]
 
     def planner_response(self, ctx: ScenarioContext) -> ToolCallSpec:
-        if _is_recursive_goal(ctx):
+        if is_recursive_goal(ctx):
             return self._recursive_planner_response(ctx)
         return self._entry_origin_planner_response(ctx)
 
@@ -102,7 +107,11 @@ class FullStackAdversarial(ScenarioBase):
         if "ACTION lsp_refresh_semantics" in context_message:
             return ("lsp_refresh_semantics",)
         if "ACTION request_recursive_matrix" in context_message:
-            package_id = _field(context_message, "package") or self._recursive_package_id or ""
+            package_id = (
+                context_message_field(context_message, "package")
+                or self._recursive_package_id
+                or ""
+            )
             return (f"request_recursive_matrix:{package_id}",)
         if "ACTION recursive_oversized_matrix" in context_message:
             return ("recursive_oversized_matrix",)
@@ -112,7 +121,7 @@ class FullStackAdversarial(ScenarioBase):
 
     def verifier_response(self, ctx: ScenarioContext) -> ToolCallSpec:
         context_message = ctx.context_message or ""
-        checkpoint = _field(context_message, "checkpoint") or "checkpoint"
+        checkpoint = context_message_field(context_message, "checkpoint") or "checkpoint"
         failed_by_hook = bool(
             ctx.mutable_state is not None
             and ctx.mutable_state.consume_failure(
@@ -138,13 +147,14 @@ class FullStackAdversarial(ScenarioBase):
                 "summary": f"Verifier accepted {checkpoint}.",
                 "checks": [
                     f"checkpoint:{checkpoint}",
-                    f"dependencies:{_field(context_message, 'dependency_count') or '0'}",
+                    "dependencies:"
+                    f"{context_message_field(context_message, 'dependency_count') or '0'}",
                 ],
             },
         )
 
     def evaluator_response(self, ctx: ScenarioContext) -> ToolCallSpec:
-        if _is_entry_origin_goal(ctx) and ctx.iteration.sequence_no == 1:
+        if is_entry_origin_goal(ctx) and ctx.iteration.sequence_no == 1:
             if ctx.attempt.attempt_sequence_no == 1:
                 return ToolCallSpec(
                     submit_evaluation_failure,
@@ -166,9 +176,12 @@ class FullStackAdversarial(ScenarioBase):
             },
         )
 
-    def recursive_goal_goal(self, ctx: ScenarioContext) -> str | None:
+    def recursive_handoff_goal(self, ctx: ScenarioContext) -> str | None:
         context_message = ctx.context_message or ""
-        package_id = _field(context_message, "package") or self._recursive_package_id
+        package_id = (
+            context_message_field(context_message, "package")
+            or self._recursive_package_id
+        )
         if not package_id:
             return None
         plan = self._ensure_user_input_plan(ctx)
@@ -442,7 +455,7 @@ class FullStackAdversarial(ScenarioBase):
         if self._user_input_plan is not None:
             return self._user_input_plan
         prompt = ""
-        if ctx.goal is not None and _is_entry_origin_goal(ctx):
+        if ctx.goal is not None and is_entry_origin_goal(ctx):
             prompt = str(ctx.goal.goal or "")
         if not prompt:
             prompt = ctx.prompt or ctx.context_message or ""
@@ -492,7 +505,7 @@ class FullStackAdversarial(ScenarioBase):
         ctx: ScenarioContext,
         checkpoint: str,
     ) -> bool:
-        if not _is_entry_origin_goal(ctx):
+        if not is_entry_origin_goal(ctx):
             return False
         if checkpoint != "subsystem_wave_guard" or self._forced_failure_seen:
             return False
@@ -580,29 +593,6 @@ def _package_id(package: WorkPackage | None) -> str:
     if package is None:
         return "pkg_unknown"
     return package.id
-
-
-def _field(text: str, name: str) -> str | None:
-    prefix = f"{name}="
-    for part in text.split():
-        if part.startswith(prefix):
-            return part[len(prefix) :].strip()
-    return None
-
-
-def _is_entry_origin_goal(ctx: ScenarioContext) -> bool:
-    goal = ctx.goal
-    if goal is None:
-        return True
-    origin_kind = getattr(goal, "origin_kind", None)
-    if str(getattr(origin_kind, "value", origin_kind) or "") == "entry":
-        return True
-    requested_by = str(goal.requested_by_task_id or "")
-    return not requested_by
-
-
-def _is_recursive_goal(ctx: ScenarioContext) -> bool:
-    return not _is_entry_origin_goal(ctx)
 
 
 _OCC_CELLS: tuple[tuple[str, tuple[str, ...]], ...] = (

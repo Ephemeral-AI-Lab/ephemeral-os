@@ -63,6 +63,12 @@
     <li>All modes start from LayerStack truth but choose different temporary writable lifetimes.</li>
   </ul>
 </div>
+
+<div class="callout">
+  <span class="label">Why two non-main modes exist</span>
+  <p><strong>ephemeral_workspace</strong> exists because most tool calls are <em>collaborative</em>: an agent's write should be visible to co-worker agents on their next snapshot. Per-operation overlays plus OCC publish make every accepted write part of shared truth without forcing agents to message each other. This is what eliminates the A2A / P2P coordination layer that degrades other multi-agent coding frameworks &mdash; the artifact is the channel.</p>
+  <p><strong>isolated_workspace</strong> exists because some tool calls are <em>experimental</em>: an agent needs a persistent private workbench to try a destructive script, install a package, or attempt a refactor that may fail. Writes inside an isolated handle are captured for audit but never published, and the upperdir is destroyed on <code>exit_isolated_workspace</code>. This is the explicit safety valve for the otherwise-shared blackboard.</p>
+</div>
 <div class="wiki-links" aria-label="Workspace mode links">
   <a href="daemon.html#workspace-routing-and-state">Workspace Routing and State</a>
 </div>
@@ -147,6 +153,13 @@
 </section>
 <section id="ephemeral-fast-paths" data-last-reviewed-commit="2a3e6cc7c" data-evidence-paths="backend/src/sandbox/daemon/workspace_tool_dispatch.py backend/src/sandbox/layer_stack/workspace_binding.py backend/src/sandbox/daemon/changeset_projection.py">
 <h3>5.3.1 Fast-path Technical Workflows <a class="anchor" href="#ephemeral-fast-paths">§</a></h3>
+
+<div class="callout good">
+  <span class="label">Why the fast path matters</span>
+  <p>The fast path skips overlay mount, mount-namespace allocation, the <code>unshare</code> child process, and upperdir capture entirely. <code>read_file</code> reads merged LayerStack directly; <code>write_file</code> and <code>edit_file</code> build typed OCC changes from tool args and submit them straight to the commit queue.</p>
+  <p>The throughput consequence: <strong>N agents writing N disjoint files publish in parallel with no CAS contention</strong>. The OCC commit queue batches disjoint non-atomic changes into one transaction with one manifest CAS, so N file-API writes cost one publish rather than N serialized publishes. Shell and search cannot use this path because their captured write set is not known until the operation finishes &mdash; those go through full overlay capture and serialize per atomic capture.</p>
+  <p>Practical impact: an agent loop dominated by <code>read</code>/<code>write</code>/<code>edit</code> verbs scales near-linearly with concurrent agents. An agent loop dominated by shell turns hits the OCC publish ceiling earlier and is the main candidate for batching or multi-manifest fan-out work.</p>
+</div>
 
 <table>
   <thead><tr><th>Verb</th><th>Workflow</th><th>Conflict / result behavior</th><th>Skipped work</th></tr></thead>

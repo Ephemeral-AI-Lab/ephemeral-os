@@ -7,12 +7,10 @@ conventions, and per-subpackage coverage matrix.
 ## Layout
 
 - `base.py` — `Scenario` protocol, `ScenarioBase`, `ScenarioContext`, `ToolCallSpec`.
-- `_utils/` — shared helpers (plan factories, goal/recursive predicates, task_input parsers).
+- `_scenario_helpers/` — shared plan shapes, goal-origin predicates, and context-message token parsers.
 - `pipeline/` — task_center state-machine scenarios (goal/iteration/attempt control flow).
 - `sandbox/` — sandbox subsystem scenarios (OCC, overlay, layerstack, LSP, daemon).
 - `capacity/` — composite scenarios that intentionally span multiple subsystem owners.
-- `tools/` — tool execution, gate hooks, notifications, max-step.
-- `context/` — context engine recipe rendering.
 - `planner_validation/` — invalid plan rejection.
 - `correctness_testing.py`, `full_case_user_input.py`, `full_stack_adversarial.py` —
   composite end-to-end scenarios (existing). Slated to move under `composite/`

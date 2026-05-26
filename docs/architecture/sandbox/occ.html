@@ -50,7 +50,8 @@
     <li><a href="#occ-change-sources"><span>4.1</span> Change Sources</a></li>
     <li><a href="#occ-technical-workflow"><span>4.2</span> Technical Workflow</a></li>
     <li><a href="#occ-routes-statuses"><span>4.3</span> Routes and Statuses</a></li>
-    <li><a href="#occ-evidence-refresh"><span>4.4</span> Evidence and Refresh</a></li>
+    <li><a href="#occ-throughput"><span>4.4</span> Throughput Model</a></li>
+    <li><a href="#occ-evidence-refresh"><span>4.5</span> Evidence and Refresh</a></li>
   </ol>
 </nav>
 
@@ -61,6 +62,11 @@
     <li>LayerStack provides live manifests; overlay capture converts filesystem changes into typed OCC mutations.</li>
     <li>OCC is the gate that decides whether temporary workspace changes become durable truth.</li>
   </ul>
+</div>
+
+<div class="callout">
+  <span class="label">Lineage</span>
+  This is <strong>optimistic concurrency control</strong> as used by PostgreSQL MVCC, Apache Iceberg snapshot commits, Git <code>push --force-with-lease</code>, and Google Piper / Perforce submit. Writers prepare changes against a base version, validate at commit time that the base is still current, and retry on stale-base rejection. OCC owns the <em>decision</em> to publish (validation, queueing, conflict statuses); <a class="wiki-link" href="layerstack.html#layerstack-publish">LayerStack Publish</a> owns the <em>act</em> of publishing (staging move, manifest CAS).
 </div>
 <div class="wiki-links" aria-label="OCC page links">
   <a href="layerstack.html#layerstack-publish">LayerStack Publish</a>
@@ -168,13 +174,13 @@
 <h3>4.3 Routes and Statuses <a class="anchor" href="#occ-routes-statuses">§</a></h3>
 <div class="trace-grid" aria-label="OCC route semantics">
   <div><code>DROP</code></div>
-  <div>Used for paths under <code>.git</code>; the mutation is intentionally not published.</div>
+  <div>Used for paths under <code>.git</code>; the mutation is intentionally not published. <em>Intent:</em> <code>.git</code> is provider/runtime metadata, not user-visible workspace state; agents publishing it would corrupt the LayerStack base.</div>
   <div><code>DIRECT</code></div>
-  <div>Used for gitignored paths; it skips base-hash checks and behaves like last-writer-wins for those paths.</div>
+  <div>Used for gitignored paths; it skips base-hash checks and behaves like last-writer-wins for those paths. <em>Intent:</em> gitignored paths are almost always build artifacts (<code>node_modules</code>, <code>target/</code>, <code>__pycache__</code>); hash-validating them would cost CPU without preventing meaningful conflicts.</div>
   <div><code>GATED</code></div>
-  <div>Used for normal tracked/non-ignored paths; it compares expected base hashes against the live manifest before publishing.</div>
+  <div>Used for normal tracked/non-ignored paths; it compares expected base hashes against the live manifest before publishing. <em>Intent:</em> tracked source files are where multi-agent byte-level conflicts actually matter; strict validation prevents one agent's edit from silently clobbering another's.</div>
   <div><code>REJECT</code></div>
-  <div>Used when path normalization or route validation fails before a publishable change exists.</div>
+  <div>Used when path normalization or route validation fails before a publishable change exists. <em>Intent:</em> unsafe or malformed paths (traversal, unsupported symlink targets) never enter the queue.</div>
 </div>
 
 <table>
@@ -191,10 +197,41 @@
   Backlinks: direct writes from <a class="wiki-link" href="workspaces.html#ephemeral-fast-paths">Fast-path Technical Workflows</a> and captured writes from <a class="wiki-link" href="overlay.html#overlay-capture">Upperdir Capture</a> both converge here before <a class="wiki-link" href="layerstack.html#layerstack-publish">LayerStack Publish</a>.
 </div>
 </section>
+<section id="occ-throughput"
+  data-last-reviewed-commit="2a3e6cc7c"
+  data-evidence-paths="backend/src/sandbox/occ/commit_queue.py backend/src/sandbox/occ/commit_transaction.py backend/src/sandbox/occ/service.py">
+<h3>4.4 Throughput Model <a class="anchor" href="#occ-throughput">§</a></h3>
+<div class="summary">
+  <ul>
+    <li>One <code>CommitQueue</code> worker serializes publishes; disjoint non-atomic non-overlay changes batch into a single transaction.</li>
+    <li>N agents writing N disjoint files through the file-API fast path cost <em>one</em> CAS, not N.</li>
+    <li>Shell and plugin operations capture as atomic units and serialize one publish per captured operation.</li>
+    <li>The single-worker queue is the publish-side bottleneck; batching is what restores near-linear throughput on file-API workloads.</li>
+  </ul>
+</div>
+
+<table>
+  <thead><tr><th>Workload</th><th>Publishes</th><th>CAS contention</th><th>Notes</th></tr></thead>
+  <tbody>
+    <tr><td>N agents writing N disjoint files (fast path)</td><td>1 batched publish per drain window</td><td>None &mdash; one CAS amortized over N path groups</td><td>Best case: file-API only, no overlapping paths.</td></tr>
+    <tr><td>N agents editing the same file</td><td>1 per accepted write; N&minus;1 conflicts</td><td>High &mdash; losers see <code>ABORTED_VERSION</code> and must re-read</td><td>Strict GATED hash-compare is intentional; agents are expected to re-plan on conflict.</td></tr>
+    <tr><td>N agents running shell with writes</td><td>N serialized publishes (one per atomic capture)</td><td>Low per-publish, but no batching</td><td>Atomic capture cannot merge with other captures &mdash; this is the inter-op serialization ceiling.</td></tr>
+    <tr><td>Mixed file-API + shell</td><td>1 batched + K shell publishes</td><td>Mixed</td><td>Shell captures split atomic-or-overlay-capture changes away from unrelated batches (see <span class="file-ref">commit_queue.py:55-239</span>).</td></tr>
+  </tbody>
+</table>
+
+<p>The single-worker design is correct for safety: it ensures every accepted publish observes the same linearization point and that atomic capture sets remain all-or-nothing. CAS retries are bounded by <code>MAX_OCC_CAS_RETRIES</code> &mdash; if a writer loses the race that many times, the result is surfaced as <code>ABORTED_VERSION</code> and the caller (agent) is expected to refresh its snapshot and retry at its layer.</p>
+
+<div class="callout">
+  <span class="label">Known limit</span>
+  Shell-heavy multi-agent workloads hit a publish-side throughput ceiling of roughly <code>1 / (transaction + manifest-CAS latency)</code> regardless of agent fanout. Mitigations under consideration: multi-manifest fan-out (Iceberg-style; one snapshot referencing N independently-written manifests), per-operation validation predicates (cheaper checks for append-only or disjoint writes), and disjointness-aware batching of overlay captures. None of these are required for correctness today.
+</div>
+
+</section>
 <section id="occ-evidence-refresh"
   data-last-reviewed-commit="2a3e6cc7c"
   data-evidence-paths="backend/src/sandbox/occ backend/tests/live_e2e_test/sandbox/occ backend/tests/live_e2e_test/sandbox/layer_stack_overlay_occ">
-<h3>4.4 Evidence and Refresh <a class="anchor" href="#occ-evidence-refresh">§</a></h3>
+<h3>4.5 Evidence and Refresh <a class="anchor" href="#occ-evidence-refresh">§</a></h3>
 <div class="evidence-grid">
   <div class="evidence-card">
     <h4>Source files</h4>

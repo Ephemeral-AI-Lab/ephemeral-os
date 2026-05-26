@@ -60,6 +60,18 @@
     <li>Each operation starts from a clear snapshot and can only publish through the controlled OCC path unless it is explicitly isolated scratch.</li>
   </ul>
 </div>
+
+<div class="callout">
+  <span class="label">Design Philosophy</span>
+  The sandbox is the substrate for a <strong>shared-state, blackboard-style multi-agent runtime</strong>, not a per-agent sandbox vendor. Default <a class="wiki-link" href="workspaces.html#ephemeral-workspace">ephemeral_workspace</a> publishes every accepted write back into LayerStack, so co-worker agents read each other's output on their next snapshot. This replaces brittle A2A / P2P message protocols with implicit coordination through the artifact itself. <a class="wiki-link" href="workspaces.html#isolated-workspace">isolated_workspace</a> is the explicit opt-out for low-confidence experimentation, where writes are captured for audit but never published.
+</div>
+
+<div class="concept-grid">
+  <div class="concept-card"><strong>Shared-state collaboration</strong><p>Agent A writes a file; on agent B's next read, B sees A's published version. No A2A messaging required; the filesystem is the coordination channel. This is the classical blackboard pattern (Hayes-Roth, HEARSAY-II) applied to LLM agents, with overlayfs + OCC providing the concurrent-write substrate.</p></div>
+  <div class="concept-card"><strong>O(1) space for N concurrent operations</strong><p>The repository is copied once into <code>B000001-base</code>. N parallel agents share that base as read-only lowerdir; each operation pays only for its changed bytes in its private upperdir. Disk cost is <code>O(repo) + O(N &times; changed_bytes)</code>, not <code>O(N &times; repo)</code>. Contrast with git-worktree-per-agent designs that pay <code>O(N &times; checkout)</code> and still miss gitignored deps (<code>node_modules</code>, <code>.venv</code>, <code>target/</code>).</p></div>
+  <div class="concept-card"><strong>Two workspace modes by intent</strong><p><a class="wiki-link" href="workspaces.html#ephemeral-workspace">ephemeral_workspace</a> is transient per tool call so co-workers see writes immediately through OCC publish. <a class="wiki-link" href="workspaces.html#isolated-workspace">isolated_workspace</a> is persistent per <code>enter</code>/<code>exit</code> lifecycle for an agent's private experimentation; writes are upperdir-only and discarded on exit. The same OverlayFS + LayerStack primitives back both modes.</p></div>
+  <div class="concept-card"><strong>Fast path for file APIs</strong><p><code>read_file</code> / <code>write_file</code> / <code>edit_file</code> skip overlay mount, namespace, and upperdir capture entirely. They bind through <code>workspace.json</code> and submit typed changes straight to OCC. Disjoint-path writes from N agents merge into one batched publish &mdash; near-linear throughput with no CAS contention. Shell and search still take the full overlay path because their causal write set isn't known upfront.</p></div>
+</div>
 <div class="wiki-links" aria-label="Overview page links">
   <a href="layerstack.html">LayerStack</a>
   <a href="overlay.html">Overlay</a>

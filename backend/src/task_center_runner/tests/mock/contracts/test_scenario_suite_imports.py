@@ -112,11 +112,9 @@ def test_subpackage_imports_are_clean() -> None:
     # implemented scenarios via __all__.
     from task_center_runner.scenarios import (  # noqa: PLC0415
         capacity,
-        context,
         pipeline,
         planner_validation,
         sandbox,
-        tools,
     )
 
     assert pipeline.__all__ == [
@@ -151,6 +149,3 @@ def test_subpackage_imports_are_clean() -> None:
         "CapacityPackSpec",
         "FullSystemCapacityMatrix",
     ]
-    # tools/ and context/ are scaffold-only in this PR.
-    assert tools.__all__ == []
-    assert context.__all__ == []

@@ -1,15 +1,14 @@
-"""Task-input parsing helpers shared across executor-action scenarios.
+"""Task-input token parsing for executor-action scenarios.
 
 The mock executor receives a `context_message` string built by the planner and
-formatted by the squad runner. Scenarios read scalar fields from the string
-via `key=value` tokens. This helper centralizes the parser used in the
-existing composite scenarios so new scenarios don't reinvent it.
+formatted by the mock runner. Scenarios read scalar fields from the string
+via `key=value` tokens.
 """
 
 from __future__ import annotations
 
 
-def field(text: str, name: str) -> str | None:
+def context_message_field(text: str, name: str) -> str | None:
     """Return the value of `<name>=<value>` token from a space-separated string."""
     prefix = f"{name}="
     for part in text.split():
@@ -18,4 +17,4 @@ def field(text: str, name: str) -> str | None:
     return None
 
 
-__all__ = ["field"]
+__all__ = ["context_message_field"]

@@ -103,6 +103,11 @@
 
 <p>Fresh ephemeral calls write a JSON payload and launch <code>unshare -Urm python -m sandbox.overlay.namespace_entrypoint</code> <span class="file-ref">backend/src/sandbox/overlay/namespace_runner.py:66-128</span>. The entrypoint validates/mounts the overlay, runs the tool from <code>workspace_root</code>, unmounts, and writes timings <span class="file-ref">backend/src/sandbox/overlay/namespace_entrypoint.py:85-175</span>. For isolated workspaces, the runner passes <code>mount_overlay=false</code> and executes inside the already-mounted namespace <span class="file-ref">backend/src/sandbox/overlay/namespace_runner.py:131-197</span>.</p>
 
+<div class="callout">
+  <span class="label">Per-op fixed cost</span>
+  Every fresh ephemeral overlay pays a non-trivial fixed cost: <code>unshare -Urm</code> + Python interpreter startup + mount-syscall sequence + upperdir capture walk + cleanup. Empirically this is in the tens to low hundreds of milliseconds even before the tool's own work runs. <code>isolated_workspace</code> amortizes this by mounting once at <code>enter</code> and reusing the namespace across many tool calls. The file-API fast path avoids it entirely. Choose mode by call-shape: many small writes &rarr; fast path; multi-step exploration &rarr; isolated; one-shot shell with required write capture &rarr; fresh ephemeral.
+</div>
+
 <div class="edge-list">
   <div><b>calls</b><span><code>EphemeralPipeline.run_tool_call()</code> acquires an <code>OverlayHandle</code>, calls <code>run_in_namespace()</code>, captures upperdir for write-intent calls, then destroys the handle <span class="file-ref">backend/src/sandbox/ephemeral_workspace/pipeline.py:131-178</span>.</span></div>
   <div><b>calls</b><span><code>IsolatedPipeline.run_tool_call()</code> wraps an existing handle as an <code>OverlayHandle</code> and supplies an isolated runner; no per-call mount or destroy happens <span class="file-ref">backend/src/sandbox/isolated_workspace/pipeline.py:156-188</span>.</span></div>
@@ -168,6 +173,11 @@
 </table>
 
 <p>The upperdir walk uses <code>os.walk()</code> and avoids loading the entire tree into memory <span class="file-ref">backend/src/sandbox/overlay/capture.py:49-93</span>. Whiteout and opaque handling are explicit helpers <span class="file-ref">backend/src/sandbox/overlay/capture.py:95-128</span>. This is why changed-data cost is tied to the operation's writes rather than repository size.</p>
+
+<div class="callout good">
+  <span class="label">Atomicity invariant</span>
+  Capture and publish form <strong>one atomic unit per operation</strong>. The overlay runs to completion, then capture walks the upperdir once, then OCC commits the entire captured changeset as a single new layer. Other agents never see a partial write set from a shell command in progress; they see the state before the capture started or the state after the publish completed. This is why shell operations cannot use the file-API fast path &mdash; their write set is only known after the command finishes, so they must serialize through one atomic publish per captured operation. See <a class="wiki-link" href="workspaces.html#ephemeral-fast-paths">Fast-path Technical Workflows</a> for the contrasting file-API path that submits typed changes without capture.
+</div>
 </section>
 <section id="overlay-evidence-refresh"
   data-last-reviewed-commit="2a3e6cc7c"

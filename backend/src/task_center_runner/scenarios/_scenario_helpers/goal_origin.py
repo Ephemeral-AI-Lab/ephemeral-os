@@ -1,4 +1,4 @@
-"""Goal predicate helpers used by recursive-goal-aware scenarios."""
+"""Goal-origin predicates used by recursive-handoff scenarios."""
 
 from __future__ import annotations
 

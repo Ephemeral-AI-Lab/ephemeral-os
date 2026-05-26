@@ -73,6 +73,7 @@ from task_center_runner.scenarios.base import (
     Scenario,
     ScenarioContext,
 )
+from task_center_runner.scenarios._scenario_helpers import context_message_field
 from task_center_runner.hooks.registry import MutableMockState
 from task_center_runner.agent.mock.prompt_inspector import (
     LaunchRecord,
@@ -375,7 +376,7 @@ class MockSquadRunner:
                 "request_recursive_goal:"
             ):
                 package_id = action.split(":", 1)[1]
-                goal = self._scenario.recursive_goal_goal(ctx) or (
+                goal = self._scenario.recursive_handoff_goal(ctx) or (
                     f"Resolve recursive package {package_id}."
                 )
                 result = await self._call_tool(
@@ -397,7 +398,7 @@ class MockSquadRunner:
                 "request_recursive_matrix:"
             ):
                 package_id = action.split(":", 1)[1]
-                goal = self._scenario.recursive_goal_goal(ctx) or (
+                goal = self._scenario.recursive_handoff_goal(ctx) or (
                     f"Resolve recursive matrix package {package_id}."
                 )
                 result = await self._call_tool(
@@ -800,7 +801,7 @@ class MockSquadRunner:
     ) -> ToolResult:
         ctx = self._scenario_context(prompt=prompt, metadata=metadata)
         context_message = ctx.context_message or prompt
-        checkpoint = self._spec_field(context_message, "checkpoint") or "checkpoint"
+        checkpoint = context_message_field(context_message, "checkpoint") or "checkpoint"
         if checkpoint == "recursive_return":
             self._publish(
                 EventType.RECURSIVE_GOAL_COMPLETED,
@@ -1895,9 +1896,11 @@ class MockSquadRunner:
         return payload
 
     def _verifier_payload(self, context_message: str) -> dict[str, Any]:
-        checkpoint = self._spec_field(context_message, "checkpoint")
-        wave_id = self._spec_field(context_message, "wave")
-        dependency_count = self._spec_field(context_message, "dependency_count")
+        checkpoint = context_message_field(context_message, "checkpoint")
+        wave_id = context_message_field(context_message, "wave")
+        dependency_count = context_message_field(
+            context_message, "dependency_count"
+        )
         payload: dict[str, Any] = {}
         if checkpoint is not None:
             payload["checkpoint"] = checkpoint
@@ -1944,14 +1947,6 @@ class MockSquadRunner:
             metadata=metadata,
             payload={"script_name": script_name},
         )
-
-    @staticmethod
-    def _spec_field(text: str, name: str) -> str | None:
-        prefix = f"{name}="
-        for part in text.split():
-            if part.startswith(prefix):
-                return part[len(prefix) :].strip()
-        return None
 
     def _publish(
         self,

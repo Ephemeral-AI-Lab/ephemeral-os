@@ -62,7 +62,7 @@ from tools.submission.planner import (
 )
 
 from task_center_runner.audit.events import EventType
-from task_center_runner.scenarios._utils import (
+from task_center_runner.scenarios._scenario_helpers import (
     preflight_full_plan,
     preflight_defers_plan,
 )
