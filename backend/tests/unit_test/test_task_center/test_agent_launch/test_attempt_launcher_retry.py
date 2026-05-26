@@ -34,7 +34,7 @@ from task_center.attempt.launch import EphemeralAttemptAgentLauncher
 from task_center.attempt.orchestrator_registry import AttemptOrchestratorRegistry
 from task_center.attempt.runtime import AgentLaunch, AttemptDeps
 from task_center.iteration.state import IterationCreationReason
-from task_center.task_state import TaskCenterTaskRole, TaskCenterBackgroundTaskStatus
+from task_center.task_state import TaskCenterTaskRole, TaskCenterTaskStatus
 from tools._framework.core.base import ToolResult
 
 
@@ -73,7 +73,7 @@ def _seed_planner_attempt(
         role=TaskCenterTaskRole.PLANNER.value,
         agent_name="planner",
         context_message="plan",
-        status=TaskCenterBackgroundTaskStatus.RUNNING.value,
+        status=TaskCenterTaskStatus.RUNNING.value,
         summaries=[],
         needs=[],
         task_center_attempt_id=attempt.id,
@@ -149,7 +149,7 @@ async def test_main_planner_engine_retry_keeps_attempt_sequence_no_at_one(
         # the task off RUNNING — real submission tools do this via
         # ``set_task_status``.
         task_store.set_task_status(
-            task_id, status=TaskCenterBackgroundTaskStatus.DONE.value, summary={}
+            task_id, status=TaskCenterTaskStatus.DONE.value, summary={}
         )
         return EphemeralRunResult(
             status="completed",
@@ -178,7 +178,7 @@ async def test_main_planner_engine_retry_keeps_attempt_sequence_no_at_one(
     # Task moved off RUNNING via the simulated terminal submission.
     refreshed_task = task_store.get_task(task_id)
     assert refreshed_task is not None
-    assert refreshed_task["status"] == TaskCenterBackgroundTaskStatus.DONE.value
+    assert refreshed_task["status"] == TaskCenterTaskStatus.DONE.value
 
 
 @pytest.mark.asyncio
@@ -249,7 +249,7 @@ async def test_main_planner_no_terminal_result_marks_attempt_failed(
     assert refreshed_attempt.fail_reason == AttemptFailReason.PLANNER_FAILED
     refreshed_task = task_store.get_task(task_id)
     assert refreshed_task is not None
-    assert refreshed_task["status"] == TaskCenterBackgroundTaskStatus.FAILED.value
+    assert refreshed_task["status"] == TaskCenterTaskStatus.FAILED.value
 
 
 @pytest.mark.asyncio
@@ -298,7 +298,7 @@ async def test_attempt_harness_records_runner_token_usage(
         )
         captured_results.append(result)
         task_store.set_task_status(
-            task_id, status=TaskCenterBackgroundTaskStatus.DONE.value, summary={}
+            task_id, status=TaskCenterTaskStatus.DONE.value, summary={}
         )
         return result
 
@@ -355,7 +355,7 @@ async def test_continuation_planner_attempt_does_not_pass_retry_kwarg(
     async def _runner(*args: Any, **kwargs: Any) -> EphemeralRunResult:
         captured_kwargs.append(kwargs)
         task_store.set_task_status(
-            task_id, status=TaskCenterBackgroundTaskStatus.DONE.value, summary={}
+            task_id, status=TaskCenterTaskStatus.DONE.value, summary={}
         )
         return EphemeralRunResult(
             status="completed",
@@ -438,7 +438,7 @@ async def test_main_agent_launches_with_two_user_messages(
     async def _spy_runner(*args: Any, **kwargs: Any) -> EphemeralRunResult:
         captured.append({"args": args, "kwargs": kwargs})
         task_store.set_task_status(
-            task_id, status=TaskCenterBackgroundTaskStatus.DONE.value, summary={}
+            task_id, status=TaskCenterTaskStatus.DONE.value, summary={}
         )
         return EphemeralRunResult(
             status="completed",
@@ -521,7 +521,7 @@ async def test_launch_without_task_guidance_falls_back_to_single_user_message(
     async def _spy_runner(*args: Any, **kwargs: Any) -> EphemeralRunResult:
         captured.append({"args": args, "kwargs": kwargs})
         task_store.set_task_status(
-            task_id, status=TaskCenterBackgroundTaskStatus.DONE.value, summary={}
+            task_id, status=TaskCenterTaskStatus.DONE.value, summary={}
         )
         return EphemeralRunResult(
             status="completed",

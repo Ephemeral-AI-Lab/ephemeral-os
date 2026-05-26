@@ -26,7 +26,7 @@ from task_center.iteration.state import (
     IterationCreationReason,
     IterationStatus,
 )
-from task_center.task_state import TaskCenterTaskRole, TaskCenterBackgroundTaskStatus
+from task_center.task_state import TaskCenterTaskRole, TaskCenterTaskStatus
 from task_center._core.primitives import planner_task_id
 
 
@@ -95,7 +95,7 @@ def _seed_outer_generator_task(
         role=TaskCenterTaskRole.GENERATOR.value,
         agent_name="executor",
         context_message="execute the outer task",
-        status=TaskCenterBackgroundTaskStatus.RUNNING.value,
+        status=TaskCenterTaskStatus.RUNNING.value,
         summaries=[],
         needs=[],
         task_center_attempt_id=outer_attempt.id,
@@ -139,7 +139,7 @@ def test_goal_start_creates_request_segment_graph_and_marks_parent_waiting(
     assert initial_graph is not None
     assert initial_graph.iteration_id == initial_iteration.id
     assert parent_task is not None
-    assert parent_task["status"] == TaskCenterBackgroundTaskStatus.WAITING_GOAL.value
+    assert parent_task["status"] == TaskCenterTaskStatus.WAITING_GOAL.value
     # Delegated orchestrator was started.
     assert runtime.orchestrator_registry.get(initial_graph.id) is not None
 
@@ -171,17 +171,17 @@ def test_goal_start_startup_failure_leaves_parent_running(
 
     parent_task = task_store.get_task(parent_task_id)
     assert parent_task is not None
-    assert parent_task["status"] == TaskCenterBackgroundTaskStatus.RUNNING.value
+    assert parent_task["status"] == TaskCenterTaskStatus.RUNNING.value
     # The compensation path must mark the request and iteration cancelled.
     open_requests = [
         r
-        for r in goal_store.list_for_requesting_task(parent_task_id)
+        for r in goal_store.list_for_parent_task(parent_task_id)
         if r.is_open
     ]
     assert open_requests == []
     cancelled = [
         r
-        for r in goal_store.list_for_requesting_task(parent_task_id)
+        for r in goal_store.list_for_parent_task(parent_task_id)
         if r.status == GoalStatus.CANCELLED
     ]
     assert len(cancelled) == 1
@@ -221,7 +221,7 @@ def test_goal_start_startup_failure_closes_started_graph_and_deregisters_orchest
 
     [cancelled_request] = [
         r
-        for r in goal_store.list_for_requesting_task(parent_task_id)
+        for r in goal_store.list_for_parent_task(parent_task_id)
         if r.status == GoalStatus.CANCELLED
     ]
     [cancelled_segment] = iteration_store.list_for_goal(cancelled_request.id)
@@ -233,7 +233,7 @@ def test_goal_start_startup_failure_closes_started_graph_and_deregisters_orchest
     assert runtime.iteration_coordinators.get(cancelled_segment.id) is None
     planner_task = task_store.get_task(planner_task_id(failed_attempt.id))
     assert planner_task is not None
-    assert planner_task["status"] == TaskCenterBackgroundTaskStatus.FAILED.value
+    assert planner_task["status"] == TaskCenterTaskStatus.FAILED.value
 
 
 def test_goal_start_rejects_second_open_child_request_for_same_executor(
@@ -259,7 +259,7 @@ def test_goal_start_rejects_second_open_child_request_for_same_executor(
     # but is rejected by the duplicate-open-request check.
     task_store.set_task_status(
         parent_task_id,
-        status=TaskCenterBackgroundTaskStatus.RUNNING.value,
+        status=TaskCenterTaskStatus.RUNNING.value,
     )
 
     with pytest.raises(TaskCenterInvariantViolation) as exc:
@@ -284,7 +284,7 @@ def test_goal_start_rejects_non_running_parent(
         task_center_run_id=task_center_run_id,
     )
     task_store.set_task_status(
-        parent_task_id, status=TaskCenterBackgroundTaskStatus.DONE.value
+        parent_task_id, status=TaskCenterTaskStatus.DONE.value
     )
 
     coordinator = GoalStarter(runtime=runtime)

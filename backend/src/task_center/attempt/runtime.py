@@ -23,7 +23,7 @@ from task_center._core.persistence import (
     GoalStoreProtocol,
     TaskStoreProtocol,
 )
-from task_center.task_state import TaskCenterTaskRole, TaskCenterBackgroundTaskStatus
+from task_center.task_state import TaskCenterTaskRole, TaskCenterTaskStatus
 
 if TYPE_CHECKING:
     from task_center.agent_launch.composer import AgentEntryComposer
@@ -75,7 +75,7 @@ class AttemptDeps:
     orchestrator_registry: AttemptOrchestratorRegistry
     iteration_coordinators: OpenIterationCoordinatorRegistry | None = None
     lifecycle_config: TaskCenterLifecycleConfig = field(default_factory=TaskCenterLifecycleConfig)
-    # When set, orchestrator + task dispatcher route launches through the composer
+    # When set, orchestrator + stage advancer route launches through the composer
     # to obtain a rendered context envelope + selected agent definition.
     # Optional so existing tests can continue without composer wiring.
     composer: AgentEntryComposer | None = None
@@ -156,8 +156,8 @@ class AttemptDelegatedGoalParentTask:
         }
         updated = self.task_store.set_task_status_if_current(
             self.task_id,
-            expected_status=TaskCenterBackgroundTaskStatus.RUNNING.value,
-            status=TaskCenterBackgroundTaskStatus.WAITING_GOAL.value,
+            expected_status=TaskCenterTaskStatus.RUNNING.value,
+            status=TaskCenterTaskStatus.WAITING_GOAL.value,
             summary=summary,
         )
         if updated is None:
@@ -169,6 +169,6 @@ class AttemptDelegatedGoalParentTask:
     def restore_running_after_failed_goal_start(self) -> None:
         self.task_store.set_task_status_if_current(
             self.task_id,
-            expected_status=TaskCenterBackgroundTaskStatus.WAITING_GOAL.value,
-            status=TaskCenterBackgroundTaskStatus.RUNNING.value,
+            expected_status=TaskCenterTaskStatus.WAITING_GOAL.value,
+            status=TaskCenterTaskStatus.RUNNING.value,
         )

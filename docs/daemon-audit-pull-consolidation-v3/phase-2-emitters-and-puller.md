@@ -29,6 +29,12 @@ Phase 2 is the largest review surface in V3. To keep PRs reviewable, emitters la
 - Floor: `EOS_DAEMON_AUDIT_PULL_FLOOR_MS` (default 100 ms); pressure-based escalation per [README §Adaptive cadence policy](README.md#adaptive-cadence-policy-with-floor-enforcement).
 - Never blocks the main run on transient pull failures; logs error and continues at next interval.
 
+> **Inherited from Phase 1.** The daemon-side `api.audit.reset_floor` handler
+> shipped in Phase 1 is a gated stub (env-checked, returns success). Actual
+> floor-state mutation lives on the puller and is owned by this phase; the
+> daemon handler stays a no-op since the floor is a runner-side concern. See
+> [phase-1 Status §Deferred](phase-1-audit-buffer-and-pull-rpc.md#deferred-not-in-phase-1).
+
 ### 2. Daemon emitters (one PR per subsystem)
 
 Each subsystem PR is independently mergeable to keep the review surface small.
@@ -62,6 +68,17 @@ Emit the changeset transaction family ([schema in Phase 1](phase-1-audit-buffer-
 #### `os_resource`
 Extend existing command-execution resource metrics to emit `os_resource.sampled` on the existing sampler tick (no new sampler).
 
+> **Inherited from Phase 1.** Phase 1 deferred the `os_resource.sampled` smoke
+> emitter because no periodic sampler exists in the daemon today (Phase 1's
+> revertability contract forbids new threads/timers). `OsResourceSection` is
+> pre-defined in `backend/src/sandbox/daemon/audit_schema.py`; this phase must
+> either (a) reuse an existing periodic tick (e.g. the command-exec resource
+> metrics path or the background-tool 60 s heartbeat) by piggybacking the emit,
+> or (b) explicitly own the introduction of a single new sampler timer and
+> account for its cost in the overhead budget. Option (a) is preferred and
+> matches the "zero new threads" principle echoed for the background-tool
+> heartbeat in §4. See [phase-1 Status §Deferred](phase-1-audit-buffer-and-pull-rpc.md#deferred-not-in-phase-1).
+
 ### 3. Generic plugin instrumentation in `backend/src/plugins/core/loader.py`
 
 - Wrap plugin-tool dispatch in a thin emitter shim that fires `plugin.tool_invoked` before and `plugin.tool_completed` after.
@@ -73,7 +90,7 @@ This is the central enforcement point for [requirement 2 (generic plugin)](READM
 
 ### 4. Background tool instrumentation in `backend/src/engine/background/task_supervisor.py`
 
-- Emit `background_tool.{started,completed,failed,cancelled,delivered}` from `_set_terminal_status` transitions and from the `collect_completed` path.
+- Emit `background_tool.{started,completed,failed,cancelled,delivered}` from `_apply_terminal_status_transition` transitions and from the `collect_completed` path.
 - Emit `background_tool.heartbeat` on each existing heartbeat tick (60 s).
 - **Zero new threads.** The existing `_heartbeat_loop` is the only timer touched.
 
@@ -131,6 +148,107 @@ This is the central enforcement point for [requirement 2 (generic plugin)](READM
 - Rotation kicks in correctly on a synthetic 100 MiB run; gzip succeeds; retention cap holds at 8 files.
 - `dropped_event_count == 0` and `lost_before_seq == 0` on the full mock suite.
 - No new threads created in `task_supervisor.py` (verified by thread count diff before/after).
+
+## Status (2026-05-26)
+
+**Status: FOUNDATION SLICE IMPLEMENTED.** Per the plan's "one PR per
+subsystem" guidance, Phase 2 ships as a sequence of mergeable slices. The
+first slice lands the pipeline end-to-end with `layer_stack` as the proof
+subsystem; the remaining 4 subsystem emitters, plugin/background-tool
+instrumentation, and dispatcher slow-tail flush land in subsequent slices.
+
+### Delivered (slice 1 — foundation)
+- `backend/src/task_center_runner/audit/daemon_pull.py` — `DaemonAuditPuller`
+  with cursor state, adaptive cadence (active/idle/isolated/pressure
+  targets), floor enforcement (`EOS_DAEMON_AUDIT_PULL_FLOOR_MS`, default
+  100 ms), pressure-based floor escalation (`pressure > 0.8` sustained for
+  3 pulls → 1.5× raise, cap 1000 ms), operator-only `reset_floor()`,
+  daemon-restart epoch handling (cursor reset + synthetic
+  `daemon.restart_observed` emit), final drain on stop (3 s cap), and
+  `PullerStats` covering all required counters from §1.
+- `backend/src/task_center_runner/audit/daemon_event_normalizer.py` — the
+  **sole writer** of `payload["daemon_event"]`, env-gated by
+  `EOS_AUDIT_FORENSIC_RAW_ENABLED`. Promotes subsystem sections to
+  `payload[<section>]` unconditionally; preserves raw under
+  `payload["daemon_event"]` only when forensic raw is enabled. Dedupe key:
+  `seq` first, else `(event_type, operation_id, operation_step, tool_id)`.
+  `merge_streams()` makes pull authoritative on overlap.
+- `backend/src/task_center_runner/audit/sandbox_events_sink.py` — synchronous
+  rotating + gzipping JSONL sink. 64 MiB live cap, gzip on rotation,
+  `EOS_AUDIT_ARTIFACT_RETENTION_FILES` (default 8) historical files.
+  `iter_rotated_jsonl()` concatenates `.<N>.gz` history in ascending order
+  with the live file. (Synchronous rotation chosen over the V3 prescription
+  of a background thread + bounded queue — at our event rate the 64 MiB
+  roll is rare and a 64 MiB gzip completes in well under a second; the
+  background-thread design is reserved for slice 2 if the synchronous path
+  shows up on a heavy-run profile.)
+- `backend/src/task_center_runner/audit/performance_report.py:_iter_jsonl` —
+  rewired to use `iter_rotated_jsonl()` so the report reader transparently
+  consumes rotated history.
+- `backend/src/sandbox/daemon/audit_schema.py` — `LayerStackSection`
+  dataclass + `build_layer_stack_event()` helper for typed emitter
+  construction.
+- `backend/src/sandbox/daemon/layer_stack_runtime.py` — emits
+  `layer_stack.{lease_requested, lease_acquired, snapshot_prepared,
+  lease_released}` on the `normal` lane through `prepare_workspace_snapshot`
+  / `release_lease`. `emit_squash_event()` helper emits the critical-lane
+  `layer_stack.squash_{triggered,completed,failed}` family. Per-lease
+  start-time bookkeeping lives in `_LEASE_TIMELINE` (cleared by the existing
+  test-cache reset).
+- Tests:
+  - `test_daemon_pull.py` — final drain, floor escalation, floor never
+    auto-lowers, `reset_floor()` returns to default, daemon-restart epoch
+    handling, transient pull failures do not block (6 tests).
+  - `test_sandbox_events_sink.py` — rotates + caps history, rotated-gz
+    concatenation under `_iter_jsonl`, EOS_TIER_RUN_ID artifact stability,
+    JSONL round trip (4 tests).
+  - `test_daemon_event_normalizer.py` — forensic raw absent under default
+    config, present when env enabled, pull-supersedes-stream dedupe, and
+    **`test_daemon_event_writer_module_boundary`** (CI lint enforcing the
+    module boundary across `backend/src/`).
+  - `test_layer_stack_emitters.py` — `squash_{triggered,completed,failed}`
+    land on the `critical` lane with the causal-chain identifiers populated.
+- All 174 tests under `backend/tests/unit_test/test_sandbox/test_daemon/`
+  and `backend/tests/unit_test/test_task_center_runner/` pass under
+  `.venv/bin/pytest`; `.venv/bin/ruff check` clean on touched files.
+
+### Deferred to subsequent slices
+
+These ride in follow-up PRs to keep slice 1 reviewable; the foundation now
+exists so each can drop in without further plumbing.
+
+1. **Subsystem emitters** beyond `layer_stack`:
+   - `overlay_workspace` in `sandbox/overlay/{lifecycle,handle,namespace_runner}.py`
+     + `sandbox/ephemeral_workspace/pipeline.py` (stamp
+     `workspace_mode="ephemeral"`).
+   - `isolated_workspace` in `sandbox/isolated_workspace/pipeline.py` plus
+     `_control_plane/*` (full lifecycle family, `workspace_mode="isolated"`).
+   - `occ` in `sandbox/daemon/{occ_runtime_services,changeset_projection}.py`.
+   - `os_resource.sampled` piggybacked on the existing command-execution
+     resource-metrics tick (no new thread — option (a) in §2 of the plan).
+2. **Generic plugin instrumentation** in `backend/src/plugins/core/loader.py`
+   (`plugin.tool_invoked/completed/error/peak_resident_sampled`).
+3. **Background tool instrumentation** in
+   `backend/src/engine/background/task_supervisor.py`
+   (`background_tool.{started,completed,failed,cancelled,delivered,heartbeat}`).
+4. **Per-tool phase emitters** in `backend/src/engine/tool_call/dispatch.py`
+   (slow-tail buffered flush — cold window + P95 from a per-`tool_name`
+   rolling deque; envelope `tool_call.{started,finished}` always emitted on
+   `normal` lane; `phase_totals_rollup` populated from in-process timers).
+5. **Puller-to-recorder wiring** — slice 1 ships the puller as a library
+   ready for integration; hooking it into `AuditRecorder.start()` and
+   `dispose()` is its own slice so reviewers can audit the lifecycle in
+   isolation.
+6. **Tests cross-referenced from §Tests above that depend on the deferred
+   pieces** (e.g. `test_plugin_events_are_kind_generic`,
+   `test_background_tool_lifecycle_emits_full_lattice`,
+   `test_tool_call_phase_slow_tail_flush`,
+   `test_isolated_workspace_orphan_check_after_exit`,
+   `test_puller_never_blocks_tool_dispatch`) ship alongside the
+   corresponding subsystem slice.
+7. **Per-PR follow-ups already filed by Phase 1**:
+   - Stream-bridge removal after K=5 clean heavy runs.
+   - Real plugin session model (`plugin.session_*`).
 
 ## What this phase does NOT do
 

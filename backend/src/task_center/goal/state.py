@@ -101,15 +101,17 @@ class GoalClosureReport:
         }
 
 
-CloseReportDeliveryStatus = Literal["delivered", "already_delivered"]
-GoalClosureDeliveryStatus = CloseReportDeliveryStatus
+GoalClosureDeliveryStatus = Literal["delivered", "already_delivered"]
+CloseReportDeliveryStatus = GoalClosureDeliveryStatus
 
 
 @dataclass(frozen=True, slots=True)
-class CloseReportDeliveryResult:
-    status: CloseReportDeliveryStatus
+class GoalClosureDeliveryResult:
+    status: GoalClosureDeliveryStatus
     requested_by_task_id: str | None
     parent_attempt_id: str | None
 
 
-GoalClosureDeliveryResult = CloseReportDeliveryResult
+# Preserve the old facade name for direct imports while internal code uses the
+# goal-closure name.
+CloseReportDeliveryResult = GoalClosureDeliveryResult

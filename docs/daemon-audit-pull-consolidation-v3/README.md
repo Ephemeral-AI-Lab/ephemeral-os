@@ -12,6 +12,8 @@
 | `README.md` (this file) | Lineage, RALPLAN-DR summary, V2 review, **cross-cutting contracts**, ADR, requirement traceability |
 | `phase-1-audit-buffer-and-pull-rpc.md` | Bounded daemon ring + `api.audit.{pull,snapshot,reset_floor}` + frozen v1 schema + smoke emitters |
 | `phase-2-emitters-and-puller.md` | Daemon emitters (layer_stack / overlay / occ / isolated_workspace / os_resource), runner puller, generic plugin + background tool instrumentation, normalizer, rotation/gzip |
+| `phase-2-slice-1-report.md` | Implementation report for the slice-1 (foundation) cut of Phase 2 — puller library, normalizer, sink, layer_stack emitters |
+| `phase-2.5-remaining-emitters-and-wiring.md` | Slice-by-slice plan that completes Phase 2's overall goal: overlay / isolated_workspace / occ / os_resource emitters, plugin shim, background tool, dispatcher slow-tail flush, puller-to-recorder wiring |
 | `phase-3-report-and-release-gates.md` | Consolidated performance & resource report (§1–§13), 4 release gates, default-on rollout |
 
 ## Lineage

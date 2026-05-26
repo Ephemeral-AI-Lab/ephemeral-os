@@ -32,7 +32,7 @@ from task_center._core.primitives import evaluator_task_id
 from task_center.task_state import (
     SpawnReason,
     TaskCenterTaskRole,
-    TaskCenterBackgroundTaskStatus,
+    TaskCenterTaskStatus,
 )
 
 logger = logging.getLogger(__name__)
@@ -109,10 +109,10 @@ class AttemptStageAdvancer:
             raise TaskCenterInvariantViolation(
                 f"Evaluator task {attempt.evaluator_task_id!r} not found"
             )
-        status = TaskCenterBackgroundTaskStatus(evaluator_task["status"])
-        if status == TaskCenterBackgroundTaskStatus.DONE:
+        status = TaskCenterTaskStatus(evaluator_task["status"])
+        if status == TaskCenterTaskStatus.DONE:
             self._close_attempt(AttemptStatus.PASSED, None)
-        elif status == TaskCenterBackgroundTaskStatus.FAILED:
+        elif status == TaskCenterTaskStatus.FAILED:
             self._close_attempt(
                 AttemptStatus.FAILED,
                 AttemptFailReason.EVALUATOR_FAILED,
@@ -124,8 +124,8 @@ class AttemptStageAdvancer:
         runtime = self._runtime
         runtime.task_store.set_task_status_if_current(
             task_id,
-            expected_status=TaskCenterBackgroundTaskStatus.RUNNING.value,
-            status=TaskCenterBackgroundTaskStatus.FAILED.value,
+            expected_status=TaskCenterTaskStatus.RUNNING.value,
+            status=TaskCenterTaskStatus.FAILED.value,
             summary={"fail_reason": "agent_launch_failed", "summary": summary},
         )
         failed_task = runtime.task_store.get_task(task_id)
@@ -153,7 +153,7 @@ class AttemptStageAdvancer:
             satisfied_dependency_ids=tuple(str(dep) for dep in current.get("needs", ()) or ()),
         )
         task = runtime.task_store.set_task_status(
-            task_id, status=TaskCenterBackgroundTaskStatus.RUNNING.value
+            task_id, status=TaskCenterTaskStatus.RUNNING.value
         )
         self._audit.task_launched(task, attempt_id=attempt.id)
         try:
@@ -212,7 +212,7 @@ class AttemptStageAdvancer:
                 "task_center_run_id": launch.task_center_run_id,
                 "role": TaskCenterTaskRole.EVALUATOR.value,
                 "agent_name": launch.agent_name,
-                "status": TaskCenterBackgroundTaskStatus.PENDING.value,
+                "status": TaskCenterTaskStatus.PENDING.value,
                 "needs": list(attempt.generator_task_ids),
                 "task_center_attempt_id": attempt.id,
                 "context_packet_id": launch.context_packet_id,
@@ -228,7 +228,7 @@ class AttemptStageAdvancer:
                 role=TaskCenterTaskRole.EVALUATOR.value,
                 agent_name=launch.agent_name,
                 context_message=launch.context,
-                status=TaskCenterBackgroundTaskStatus.RUNNING.value,
+                status=TaskCenterTaskStatus.RUNNING.value,
                 summaries=[],
                 needs=list(attempt.generator_task_ids),
                 task_center_attempt_id=attempt.id,
@@ -249,8 +249,8 @@ class AttemptStageAdvancer:
             try:
                 runtime.task_store.set_task_status_if_current(
                     task_id,
-                    expected_status=TaskCenterBackgroundTaskStatus.RUNNING.value,
-                    status=TaskCenterBackgroundTaskStatus.FAILED.value,
+                    expected_status=TaskCenterTaskStatus.RUNNING.value,
+                    status=TaskCenterTaskStatus.FAILED.value,
                     summary={
                         "fail_reason": "agent_launch_failed",
                         "summary": "Evaluator agent startup failed.",

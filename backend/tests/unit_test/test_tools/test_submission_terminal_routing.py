@@ -11,7 +11,7 @@ from task_center.task_state import (
     GeneratorSubmission,
     PlannedGeneratorTask,
     PlannerSubmission,
-    TaskCenterBackgroundTaskStatus,
+    TaskCenterTaskStatus,
 )
 from task_center._core.primitives import evaluator_task_id, generator_task_id, planner_task_id
 from tools._framework.execution.tool_call import execute_tool_once
@@ -65,7 +65,7 @@ async def test_submit_execution_success_calls_apply_generator_submission(
     assert not result.is_error
     assert result.does_terminate
     assert task is not None
-    assert task["status"] == TaskCenterBackgroundTaskStatus.DONE.value
+    assert task["status"] == TaskCenterTaskStatus.DONE.value
     assert task["summaries"][-1]["payload"]["generator_role"] == "executor"
 
 
@@ -91,7 +91,7 @@ async def test_submit_execution_blocker_calls_apply_generator_submission(
     task = task_store.get_task(generator_id)
     assert not result.is_error
     assert task is not None
-    assert task["status"] == TaskCenterBackgroundTaskStatus.BLOCKED.value
+    assert task["status"] == TaskCenterTaskStatus.BLOCKED.value
     assert task["summaries"][-1]["outcome"] == "blocker"
 
 
@@ -197,7 +197,7 @@ async def test_submit_execution_handoff_starts_delegated_request(
     assert not result.is_error
     assert result.does_terminate
     assert task is not None
-    assert task["status"] == TaskCenterBackgroundTaskStatus.WAITING_GOAL.value
+    assert task["status"] == TaskCenterTaskStatus.WAITING_GOAL.value
     assert delegated_request is not None
     assert delegated_request.status == GoalStatus.OPEN
     assert delegated_request.requested_by_task_id == generator_id
@@ -252,7 +252,7 @@ async def test_submit_execution_handoff_accepts_any_generator_agent_profile(
     assert not result.is_error
     assert result.does_terminate
     assert task is not None
-    assert task["status"] == TaskCenterBackgroundTaskStatus.WAITING_GOAL.value
+    assert task["status"] == TaskCenterTaskStatus.WAITING_GOAL.value
 
 
 async def test_submit_execution_handoff_return_updates_outer_generator(
@@ -324,7 +324,7 @@ async def test_submit_execution_handoff_return_updates_outer_generator(
     delegated_request = goal_store.get(result.metadata["goal_id"])
 
     assert outer_task is not None
-    assert outer_task["status"] == TaskCenterBackgroundTaskStatus.DONE.value
+    assert outer_task["status"] == TaskCenterTaskStatus.DONE.value
     assert outer_task["summaries"][-1]["payload"]["goal_closure_report"][
         "final_attempt_id"
     ] == delegated_attempt_id

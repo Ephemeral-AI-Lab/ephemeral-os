@@ -35,9 +35,18 @@
   <span class="nav-pair"><a href="plugins.html">← 8. Plugin in ephemeral_workspace</a><a href="workflow-cookbook.html">10. Workflow Cookbook →</a></span>
 </div>
 <section id="space-model"
-  data-last-reviewed-commit="29c334921"
+  data-last-reviewed-commit="2a3e6cc7c"
   data-evidence-paths="backend/src/sandbox/layer_stack/stack.py backend/src/sandbox/overlay/writable_dirs.py backend/src/sandbox/overlay/capture.py backend/src/sandbox/occ/commit_transaction.py backend/src/sandbox/isolated_workspace/_control_plane/workspace_handle_lifecycle.py">
 <h2>9. Space Model <a class="anchor" href="#space-model">§</a></h2>
+<nav class="page-toc" aria-labelledby="page-toc-heading">
+  <h3 id="page-toc-heading">Contents</h3>
+  <ol>
+    <li><a href="#space-cost-model"><span>9.1</span> Cost Model</a></li>
+    <li><a href="#space-by-mode"><span>9.2</span> Mode Cost Table</a></li>
+    <li><a href="#space-myths"><span>9.3</span> Non-goals and Myths</a></li>
+    <li><a href="#space-evidence-refresh"><span>9.4</span> Evidence and Refresh</a></li>
+  </ol>
+</nav>
 <div class="summary">
   <ul>
     <li>The design avoids copying a large repository for every tool call or background job.</li>
@@ -47,17 +56,13 @@
   </ul>
 </div>
 <div class="wiki-links" aria-label="Space model links">
-  <a href="#space-cost-model">Cost Model</a>
-  <a href="#space-by-mode">Mode Cost Table</a>
-  <a href="#space-myths">Non-goals and Myths</a>
   <a href="layerstack.html#layerstack-projection">LayerStack Projection</a>
   <a href="overlay.html#overlay-handle">Overlay Handle</a>
   <a href="workspaces.html">Workspace Modes</a>
 </div>
-
 </section>
 <section id="space-cost-model"
-  data-last-reviewed-commit="29c334921"
+  data-last-reviewed-commit="2a3e6cc7c"
   data-evidence-paths="backend/src/sandbox/layer_stack/stack.py backend/src/sandbox/ephemeral_workspace/pipeline.py backend/src/sandbox/overlay/writable_dirs.py backend/src/sandbox/overlay/capture.py backend/src/sandbox/occ/commit_transaction.py">
 <h3>9.1 Cost Model <a class="anchor" href="#space-cost-model">§</a></h3>
 <div class="diagram" aria-label="Space scaling model">
@@ -86,7 +91,7 @@
 
 </section>
 <section id="space-by-mode"
-  data-last-reviewed-commit="29c334921"
+  data-last-reviewed-commit="2a3e6cc7c"
   data-evidence-paths="backend/src/sandbox/layer_stack/stack.py backend/src/sandbox/ephemeral_workspace/pipeline.py backend/src/sandbox/isolated_workspace/pipeline.py backend/src/sandbox/ephemeral_workspace/plugin/overlay_dispatch.py backend/src/plugins/catalog/lsp/runtime/pyright_session.py backend/src/plugins/catalog/lsp/runtime/apply.py">
 <h3>9.2 Mode Cost Table <a class="anchor" href="#space-by-mode">§</a></h3>
 <table>
@@ -102,7 +107,7 @@
 
 </section>
 <section id="space-myths"
-  data-last-reviewed-commit="29c334921"
+  data-last-reviewed-commit="2a3e6cc7c"
   data-evidence-paths="backend/src/sandbox/layer_stack/stack.py backend/src/sandbox/overlay/writable_dirs.py backend/src/sandbox/overlay/capture.py backend/src/sandbox/occ/service.py backend/src/sandbox/isolated_workspace/_control_plane/workspace_handle_lifecycle.py">
 <h3>9.3 Non-goals and Myths <a class="anchor" href="#space-myths">§</a></h3>
 <table>
@@ -120,7 +125,7 @@
 </div>
 </section>
 <section id="space-evidence-refresh"
-  data-last-reviewed-commit="29c334921"
+  data-last-reviewed-commit="2a3e6cc7c"
   data-evidence-paths="backend/src/sandbox/layer_stack/stack.py backend/src/sandbox/overlay/writable_dirs.py backend/src/sandbox/overlay/capture.py backend/src/sandbox/isolated_workspace/_control_plane/workspace_handle_lifecycle.py backend/src/task_center_runner/tests/mock/sandbox/ephemeral_workspace/test_ephemeral_lowerdir_disk_is_o1_under_100_calls.py backend/src/task_center_runner/tests/mock/sandbox/isolated_workspace/gc_and_persistence/test_lowerdir_disk_usage_is_o1.py backend/tests/live_e2e_test/sandbox/overlay/native/test_o1_memory_bound.py backend/tests/live_e2e_test/sandbox/overlay/syscall/test_heavy_write_copy_up.py">
 <h3>9.4 Evidence and Refresh <a class="anchor" href="#space-evidence-refresh">§</a></h3>
 <div class="evidence-grid">
@@ -148,6 +153,11 @@
   </div>
 </div>
 </section>
+<div class="page-baseline" data-page-baseline-commit="2a3e6cc7c">
+  <strong>Maintenance baseline</strong>
+  <span>Local section metadata reviewed at <code>2a3e6cc7c</code>.</span>
+  <code>git diff 2a3e6cc7c..HEAD -- &lt;section data-evidence-paths&gt;</code>
+</div>
 <div class="page-footer-nav"><span><a href="plugins.html">← 8. Plugin in ephemeral_workspace</a></span><span><a href="workflow-cookbook.html">10. Workflow Cookbook →</a></span></div>
 </main>
 <script src="assets/search-index.js"></script>

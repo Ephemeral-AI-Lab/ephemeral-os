@@ -44,7 +44,18 @@
   <div>Maintenance loop</div><div>When code changes, update the smallest affected node, then update nearby backlinks and the search catalog. Do not bury contradictions: link the newer evidence and explain the mismatch.</div>
 </div>
 
-<section id="source-graph" data-last-reviewed-commit="29c334921" data-evidence-paths="backend/src/sandbox/api/tool/_daemon_request_payloads.py backend/src/sandbox/api/tool/_daemon_response_parsing.py backend/src/sandbox/daemon/rpc/dispatcher.py backend/src/sandbox/daemon/workspace_tool_dispatch.py backend/src/sandbox/layer_stack/stack.py backend/src/sandbox/isolated_workspace/pipeline.py backend/tests/live_e2e_test/sandbox backend/src/task_center_runner/tests/mock/sandbox">
+
+<nav class="page-toc" aria-labelledby="page-toc-heading">
+  <h3 id="page-toc-heading">Contents</h3>
+  <ol>
+    <li><a href="#source-graph"><span>1</span> Source Graph</a></li>
+    <li><a href="#reading-paths"><span>2</span> Reading Paths</a></li>
+    <li><a href="#concept-index"><span>3</span> Concept Index</a></li>
+    <li><a href="#question-map"><span>4</span> Question Map</a></li>
+  </ol>
+</nav>
+
+<section id="source-graph" data-last-reviewed-commit="2a3e6cc7c" data-evidence-paths="backend/src/sandbox/api/tool/_daemon_request_payloads.py backend/src/sandbox/api/tool/_daemon_response_parsing.py backend/src/sandbox/daemon/rpc/dispatcher.py backend/src/sandbox/daemon/workspace_tool_dispatch.py backend/src/sandbox/layer_stack/stack.py backend/src/sandbox/isolated_workspace/pipeline.py backend/tests/live_e2e_test/sandbox backend/src/task_center_runner/tests/mock/sandbox">
 <h2>Source Graph <a class="anchor" href="#source-graph">§</a></h2>
 <p>The current sandbox workspace runtime is best read as a graph of ownership boundaries rather than a stack of folders. The daemon receives tool/API envelopes, routes work into direct LayerStack/OCC paths, per-operation overlay paths, or isolated private scratch, and every durable mutation converges on OCC before LayerStack publishes a new manifest.</p>
 <div class="edge-list">
@@ -57,7 +68,7 @@
 </div>
 </section>
 
-<section id="reading-paths" data-last-reviewed-commit="29c334921" data-evidence-paths="docs/sandbox-workspace-architecture/overview.html docs/sandbox-workspace-architecture/workflow-cookbook.html docs/sandbox-workspace-architecture/layerstack.html docs/sandbox-workspace-architecture/overlay.html docs/sandbox-workspace-architecture/occ.html docs/sandbox-workspace-architecture/workspaces.html docs/sandbox-workspace-architecture/daemon.html docs/sandbox-workspace-architecture/provider.html docs/sandbox-workspace-architecture/plugins.html docs/sandbox-workspace-architecture/space-model.html">
+<section id="reading-paths" data-last-reviewed-commit="2a3e6cc7c" data-evidence-paths="docs/sandbox-workspace-architecture/overview.html docs/sandbox-workspace-architecture/workflow-cookbook.html docs/sandbox-workspace-architecture/layerstack.html docs/sandbox-workspace-architecture/overlay.html docs/sandbox-workspace-architecture/occ.html docs/sandbox-workspace-architecture/workspaces.html docs/sandbox-workspace-architecture/daemon.html docs/sandbox-workspace-architecture/provider.html docs/sandbox-workspace-architecture/plugins.html docs/sandbox-workspace-architecture/space-model.html">
 <h2>Reading Paths <a class="anchor" href="#reading-paths">§</a></h2>
 <div class="wiki-map">
   <div class="wiki-node">
@@ -93,7 +104,7 @@
 </div>
 </section>
 
-<section id="concept-index" data-last-reviewed-commit="29c334921" data-evidence-paths="docs/sandbox-workspace-architecture/*.html docs/sandbox-workspace-architecture/assets/search-index.js docs/sandbox-workspace-architecture/assets/nav.js">
+<section id="concept-index" data-last-reviewed-commit="2a3e6cc7c" data-evidence-paths="docs/sandbox-workspace-architecture/*.html docs/sandbox-workspace-architecture/assets/search-index.js docs/sandbox-workspace-architecture/assets/nav.js">
 <h2>Concept Index <a class="anchor" href="#concept-index">§</a></h2>
 <div class="section-card-grid">
 <a class="section-card" href="overview.html"><strong>1. Overview</strong><span>Many agents and plugins inspect or mutate one repository while sharing a single durable workspace history.</span></a>
@@ -110,7 +121,7 @@
 </div>
 </section>
 
-<section id="question-map" data-last-reviewed-commit="29c334921" data-evidence-paths="docs/sandbox-workspace-architecture/workspaces.html docs/sandbox-workspace-architecture/daemon.html docs/sandbox-workspace-architecture/occ.html docs/sandbox-workspace-architecture/overlay.html docs/sandbox-workspace-architecture/workflow-cookbook.html docs/sandbox-workspace-architecture/space-model.html docs/sandbox-workspace-architecture/plugins.html docs/sandbox-workspace-architecture/provider.html">
+<section id="question-map" data-last-reviewed-commit="2a3e6cc7c" data-evidence-paths="docs/sandbox-workspace-architecture/workspaces.html docs/sandbox-workspace-architecture/daemon.html docs/sandbox-workspace-architecture/occ.html docs/sandbox-workspace-architecture/overlay.html docs/sandbox-workspace-architecture/workflow-cookbook.html docs/sandbox-workspace-architecture/space-model.html docs/sandbox-workspace-architecture/plugins.html docs/sandbox-workspace-architecture/provider.html">
 <h2>Question Map <a class="anchor" href="#question-map">§</a></h2>
 <table>
   <thead><tr><th>Question</th><th>Start here</th><th>Then follow</th></tr></thead>
@@ -131,6 +142,11 @@
     <li>Use <code>workflow-cookbook.html</code> when tracing a concrete request from tool call to storage effect.</li>
     <li>This split directory is the canonical sandbox workspace wiki root; if a legacy redirect file is reintroduced, keep it pointed at this index.</li>
   </ul>
+</div>
+<div class="page-baseline" data-page-baseline-commit="2a3e6cc7c">
+  <strong>Maintenance baseline</strong>
+  <span>Local section metadata reviewed at <code>2a3e6cc7c</code>.</span>
+  <code>git diff 2a3e6cc7c..HEAD -- &lt;section data-evidence-paths&gt;</code>
 </div>
 <div class="page-footer-nav"><span></span><span><a href="overview.html">Start: 1. Overview →</a></span></div>
 </main>

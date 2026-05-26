@@ -103,8 +103,8 @@ def task_center_run_id() -> str:
 # Composer fixture for harness-attempt lifecycle tests
 # ---------------------------------------------------------------------------
 #
-# Production paths (orchestrator + task dispatcher + entry bootstrap) require a
-# ``ContextComposer`` on ``AttemptDeps``. Lifecycle tests that exercise
+# Production paths (orchestrator + stage advancer + entry bootstrap) require an
+# ``AgentEntryComposer`` on ``AttemptDeps``. Lifecycle tests that exercise
 # planner/generator/evaluator launches need (a) a composer wired into the
 # runtime, (b) registered context recipes, and (c) minimal test agent
 # definitions so the router can look up a target agent.

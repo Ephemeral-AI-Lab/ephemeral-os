@@ -2,12 +2,12 @@
 
 from task_center.goal.state import (
     Goal,
-    GoalClosureReport,
-    GoalStatus,
     CloseReportDeliveryResult,
     CloseReportDeliveryStatus,
     GoalClosureDeliveryResult,
+    GoalClosureReport,
     GoalClosureDeliveryStatus,
+    GoalStatus,
 )
 
 __all__ = [

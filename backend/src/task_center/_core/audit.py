@@ -9,23 +9,14 @@ only need to call ``emitter.task_ready(...)`` / ``task_launched(...)`` /
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
-from enum import StrEnum
 from typing import Any
 
 from audit.base import AuditEvent, AuditNode, AuditSink, NoopAuditSink
 
 
-class TaskCenterAuditEventType(StrEnum):
-    """Every audit event type the TaskCenter package emits."""
-
-    TASK_READY = "task_center.task.ready"
-    TASK_LAUNCHED = "task_center.task.launched"
-    TASK_FAILED = "task_center.task.failed"
-
-
-TASK_READY: str = TaskCenterAuditEventType.TASK_READY.value
-TASK_LAUNCHED: str = TaskCenterAuditEventType.TASK_LAUNCHED.value
-TASK_FAILED: str = TaskCenterAuditEventType.TASK_FAILED.value
+TASK_READY = "task_center.task.ready"
+TASK_LAUNCHED = "task_center.task.launched"
+TASK_FAILED = "task_center.task.failed"
 
 
 class TaskCenterAuditEmitter:
@@ -140,5 +131,4 @@ __all__ = [
     "TASK_LAUNCHED",
     "TASK_READY",
     "TaskCenterAuditEmitter",
-    "TaskCenterAuditEventType",
 ]

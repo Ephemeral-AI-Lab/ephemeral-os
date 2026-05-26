@@ -1,4 +1,4 @@
-"""Composer output bundle (formerly ``LaunchBundle``).
+"""Composer output bundle.
 
 The composer's output: agent definition, rendered context envelope, optional
 task-guidance and skill rows, and the packet itself for downstream persistence.

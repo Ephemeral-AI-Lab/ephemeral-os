@@ -29,8 +29,3 @@ def test_for_generator_signature() -> None:
 def test_for_evaluator_signature() -> None:
     sig = inspect.signature(AgentLaunchFactory.for_evaluator)
     assert set(sig.parameters) == {"self", "attempt", "task_id"}
-
-
-def test_shared_build_helper_exists() -> None:
-    assert hasattr(AgentLaunchFactory, "_build")
-    assert callable(AgentLaunchFactory._build)

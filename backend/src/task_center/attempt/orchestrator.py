@@ -43,7 +43,7 @@ from task_center.task_state import (
     PlannerSubmission,
     SpawnReason,
     TaskCenterTaskRole,
-    TaskCenterBackgroundTaskStatus,
+    TaskCenterTaskStatus,
 )
 
 logger = logging.getLogger(__name__)
@@ -91,7 +91,7 @@ class AttemptOrchestrator:
                 role=TaskCenterTaskRole.PLANNER.value,
                 agent_name=launch.agent_name,
                 context_message=launch.context,
-                status=TaskCenterBackgroundTaskStatus.RUNNING.value,
+                status=TaskCenterTaskStatus.RUNNING.value,
                 summaries=[],
                 needs=[],
                 task_center_attempt_id=attempt.id,
@@ -123,7 +123,7 @@ class AttemptOrchestrator:
         runtime = self._runtime
         runtime.task_store.set_task_status(
             submission.planner_task_id,
-            status=TaskCenterBackgroundTaskStatus.DONE.value,
+            status=TaskCenterTaskStatus.DONE.value,
             summary={"kind": submission.kind, "summary": submission.summary},
         )
         self._persist_plan_contract(submission)
@@ -137,7 +137,7 @@ class AttemptOrchestrator:
         self._validate_planner_submission(submission.planner_task_id)
         self._runtime.task_store.set_task_status(
             submission.planner_task_id,
-            status=TaskCenterBackgroundTaskStatus.FAILED.value,
+            status=TaskCenterTaskStatus.FAILED.value,
             summary={
                 "fail_reason": submission.fail_reason,
                 "summary": submission.summary,
@@ -171,7 +171,7 @@ class AttemptOrchestrator:
         task = runtime.task_store.get_task(parent_task_id)
         if task is None:
             raise TaskCenterInvariantViolation(f"Generator task {parent_task_id!r} not found")
-        if task.get("status") != TaskCenterBackgroundTaskStatus.WAITING_GOAL.value:
+        if task.get("status") != TaskCenterTaskStatus.WAITING_GOAL.value:
             # Already delivered; no further action.
             return
 
@@ -179,15 +179,15 @@ class AttemptOrchestrator:
         assert_generator_task_for_submission(task, attempt)
 
         if report.outcome == "success":
-            status = TaskCenterBackgroundTaskStatus.DONE
+            status = TaskCenterTaskStatus.DONE
             summary = f"Delegated goal {report.goal_id} succeeded."
         else:
-            status = TaskCenterBackgroundTaskStatus.FAILED
+            status = TaskCenterTaskStatus.FAILED
             summary = f"Delegated goal {report.goal_id} failed."
 
         updated = runtime.task_store.set_task_status_if_current(
             parent_task_id,
-            expected_status=TaskCenterBackgroundTaskStatus.WAITING_GOAL.value,
+            expected_status=TaskCenterTaskStatus.WAITING_GOAL.value,
             status=status.value,
             summary={
                 "outcome": report.outcome,
@@ -244,7 +244,7 @@ class AttemptOrchestrator:
                 role=TaskCenterTaskRole.GENERATOR.value,
                 agent_name=task.agent_name,
                 context_message=task.task_spec,
-                status=TaskCenterBackgroundTaskStatus.PENDING.value,
+                status=TaskCenterTaskStatus.PENDING.value,
                 summaries=[],
                 needs=list(needs),
                 task_center_attempt_id=attempt.id,
@@ -298,14 +298,14 @@ class AttemptOrchestrator:
         summary: str,
         payload: object,
     ) -> None:
-        if task["status"] != TaskCenterBackgroundTaskStatus.RUNNING.value:
+        if task["status"] != TaskCenterTaskStatus.RUNNING.value:
             raise TaskCenterInvariantViolation(f"{role} task {task_id!r} is not running")
         if outcome == "success":
-            status = TaskCenterBackgroundTaskStatus.DONE
+            status = TaskCenterTaskStatus.DONE
         elif outcome == "blocker":
-            status = TaskCenterBackgroundTaskStatus.BLOCKED
+            status = TaskCenterTaskStatus.BLOCKED
         else:
-            status = TaskCenterBackgroundTaskStatus.FAILED
+            status = TaskCenterTaskStatus.FAILED
         self._runtime.task_store.set_task_status(
             task_id,
             status=status.value,
@@ -341,8 +341,8 @@ class AttemptOrchestrator:
         try:
             runtime.task_store.set_task_status_if_current(
                 planner_task_id,
-                expected_status=TaskCenterBackgroundTaskStatus.RUNNING.value,
-                status=TaskCenterBackgroundTaskStatus.FAILED.value,
+                expected_status=TaskCenterTaskStatus.RUNNING.value,
+                status=TaskCenterTaskStatus.FAILED.value,
                 summary={
                     "fail_reason": AttemptFailReason.STARTUP_FAILED.value,
                 },

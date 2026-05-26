@@ -203,7 +203,7 @@ def test_create_sandbox_invokes_ensure_git_via_setup_hook(
     )
     monkeypatch.setattr(
         bootstrap_mod, "finish_runtime_bundle_upload",
-        lambda fut, sid: calls.append(f"finish_upload({sid})"),
+        lambda _future, sid: calls.append(f"finish_upload({sid})"),
     )
     monkeypatch.setattr(
         bootstrap_mod, "run_runtime_bootstrap",
@@ -248,7 +248,7 @@ def test_start_sandbox_invokes_ensure_git_via_setup_hook(
     )
     monkeypatch.setattr(
         bootstrap_mod, "finish_runtime_bundle_upload",
-        lambda fut, sid: calls.append(f"finish_upload({sid})"),
+        lambda _future, sid: calls.append(f"finish_upload({sid})"),
     )
     monkeypatch.setattr(
         bootstrap_mod, "run_runtime_bootstrap",

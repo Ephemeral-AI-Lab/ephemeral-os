@@ -11,10 +11,7 @@ from __future__ import annotations
 
 from task_center.agent_launch.composer import AgentEntryComposer
 from task_center.agent_launch.entry_messages import AgentEntryMessages
-from task_center.agent_launch.skill_message import (
-    build_skill_message,
-    _wrap_task_guidance,
-)
+from task_center.agent_launch.skill_message import build_skill_message
 from task_center.agent_launch.task_guidance_dispatch import (
     task_guidance_builder_for,
 )
@@ -24,5 +21,4 @@ __all__ = [
     "AgentEntryMessages",
     "build_skill_message",
     "task_guidance_builder_for",
-    "_wrap_task_guidance",
 ]

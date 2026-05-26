@@ -25,6 +25,7 @@ from sandbox.provider.daytona.client import (
     load_credentials,
     paginate_all,
 )
+from sandbox.provider._payloads import normalize_string_dict
 
 logger = logging.getLogger(__name__)
 
@@ -34,16 +35,6 @@ def _normalize_optional_text(value: str | None) -> str | None:
         return None
     normalized = value.strip()
     return normalized or None
-
-
-def _normalize_dict(payload: dict[str, str] | None) -> dict[str, str]:
-    if not payload:
-        return {}
-    return {
-        str(k).strip(): str(v).strip()
-        for k, v in payload.items()
-        if str(k).strip()
-    }
 
 
 def _serialize_raw(raw: Any, *, assigned_agents: list[str] | None = None) -> dict[str, Any]:
@@ -207,8 +198,8 @@ class DaytonaProviderAdapter:
         if normalized_snapshot and normalized_image:
             raise ValueError("Pass either snapshot or image, not both.")
 
-        clean_env = _normalize_dict(env_vars)
-        clean_labels = _normalize_dict(labels)
+        clean_env = normalize_string_dict(env_vars)
+        clean_labels = normalize_string_dict(labels)
         clean_labels["managed_by"] = APP_MANAGED_BY
         clean_labels["created_via"] = APP_CREATED_VIA
         if normalized_snapshot:
@@ -284,7 +275,7 @@ class DaytonaProviderAdapter:
 
     def set_labels(self, sandbox_id: str, labels: dict[str, str]) -> dict[str, Any]:
         raw = fetch_sandbox(sandbox_id)
-        raw.set_labels(_normalize_dict(labels))
+        raw.set_labels(normalize_string_dict(labels))
         _refresh(raw)
         return _serialize_raw(raw)
 

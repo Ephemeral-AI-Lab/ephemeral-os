@@ -29,7 +29,7 @@ from task_center.iteration import OrchestratorFactory
 from task_center.attempt.state import AttemptFailReason, AttemptStatus
 from task_center.attempt.runtime import AttemptDeps
 from task_center.iteration.state import Iteration, IterationStatus
-from task_center.task_state import TaskCenterBackgroundTaskStatus
+from task_center.task_state import TaskCenterTaskStatus
 
 logger = logging.getLogger(__name__)
 
@@ -162,13 +162,13 @@ class GoalStarter:
         task = self._runtime.task_store.get_task(parent_task_id)
         if task is None:
             raise TaskCenterInvariantViolation(f"TaskCenter task {parent_task_id!r} was not found.")
-        if task.get("status") != TaskCenterBackgroundTaskStatus.RUNNING.value:
+        if task.get("status") != TaskCenterTaskStatus.RUNNING.value:
             raise TaskCenterInvariantViolation(
                 f"TaskCenter task {parent_task_id!r} is not running; "
                 "delegated goal start requires a running generator task."
             )
         open_goals = [
-            r for r in self._runtime.goal_store.list_for_requesting_task(parent_task_id) if r.is_open
+            r for r in self._runtime.goal_store.list_for_parent_task(parent_task_id) if r.is_open
         ]
         if open_goals:
             raise TaskCenterInvariantViolation(
@@ -285,8 +285,8 @@ class GoalStarter:
             return
         self._runtime.task_store.set_task_status_if_current(
             parent_task_id,
-            expected_status=TaskCenterBackgroundTaskStatus.WAITING_GOAL.value,
-            status=TaskCenterBackgroundTaskStatus.RUNNING.value,
+            expected_status=TaskCenterTaskStatus.WAITING_GOAL.value,
+            status=TaskCenterTaskStatus.RUNNING.value,
         )
 
     def _close_unstarted_attempt(self, attempt_id: str | None, *, now: datetime) -> None:

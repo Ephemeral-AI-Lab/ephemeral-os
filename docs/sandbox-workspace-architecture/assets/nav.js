@@ -8,16 +8,31 @@
   const active = document.querySelector('[data-doc-section].active');
   const activeLi = active ? active.closest('li') : null;
   if (activeLi && !activeLi.querySelector('ol.sub')) {
-    const headings = Array.from(document.querySelectorAll('main h2[id], main h3[id]'))
-      .filter((heading) => heading.id && !heading.closest('.doc-actions'));
-    if (headings.length > 1) {
+    const sections = Array.from(document.querySelectorAll('main section[id]'));
+    const tocLinks = Array.from(document.querySelectorAll('.page-toc a[href^="#"]'));
+    const links = tocLinks.length
+      ? tocLinks.map((link) => {
+          const href = link.getAttribute('href') || '';
+          return {
+            id: href.slice(1),
+            text: link.textContent.replace(/\s+/g, ' ').trim()
+          };
+        })
+      : sections.slice(1).map((section) => {
+          const heading = section.querySelector('h2, h3');
+          return {
+            id: section.id,
+            text: heading ? heading.textContent.replace('§', '').replace(/\s+/g, ' ').trim() : section.id
+          };
+        });
+    if (links.length) {
       const sub = document.createElement('ol');
       sub.className = 'sub';
-      for (const heading of headings.slice(1, 12)) {
+      for (const item of links.slice(0, 12)) {
         const li = document.createElement('li');
         const a = document.createElement('a');
-        a.href = path + '#' + heading.id;
-        a.textContent = heading.textContent.replace('§', '').trim();
+        a.href = path + '#' + item.id;
+        a.textContent = item.text;
         li.appendChild(a);
         sub.appendChild(li);
       }

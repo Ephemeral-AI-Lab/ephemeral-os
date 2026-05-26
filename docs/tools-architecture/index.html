@@ -1,0 +1,255 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tools Architecture Wiki</title>
+  <link rel="stylesheet" href="assets/styles.css">
+  <script src="assets/search-index.js" defer></script>
+</head>
+<body>
+  <div class="wiki-shell">
+    <aside class="sidebar">
+      <h1>Tools Architecture</h1>
+      <div class="baseline">Reviewed at <code>2a3e6cc7c41405603d025721ad3cf5a31c7d05b0</code></div>
+      <nav>
+        <div class="nav-group">
+          <strong>Map</strong>
+          <a href="index.html" aria-current="page">Overview</a>
+          <a href="maintenance.html">Maintenance</a>
+        </div>
+        <div class="nav-group">
+          <strong>Tool Folders</strong>
+          <a href="framework.html">_framework</a>
+          <a href="terminals.html">_terminals</a>
+          <a href="sandbox.html">sandbox</a>
+          <a href="isolated-workspace.html">isolated_workspace</a>
+          <a href="background.html">background</a>
+          <a href="subagent.html">subagent</a>
+          <a href="ask-helper.html">ask_helper</a>
+          <a href="submission.html">submission</a>
+          <a href="skills.html">skills</a>
+        </div>
+      </nav>
+    </aside>
+
+    <main class="content">
+      <header class="page-header">
+        <p class="eyebrow">backend/src/tools</p>
+        <h2>Tools Architecture Wiki</h2>
+        <p class="lead">
+          This wiki maps every immediate tool folder to the engine dispatch loop, sandbox workspace routing,
+          TaskCenter terminal state, and background execution behavior. It is a documentation artifact only;
+          the runtime code was not refactored as part of this pass.
+        </p>
+      </header>
+
+      <section id="wiki-scope" data-last-reviewed-commit="2a3e6cc7c41405603d025721ad3cf5a31c7d05b0" data-evidence-paths="backend/src/tools;backend/src/engine/query;backend/src/engine/tool_call;backend/src/engine/background;backend/src/sandbox;backend/src/task_center">
+        <h3>Scope And Ownership</h3>
+        <div class="grid">
+          <div class="card">
+            <h3>Tool surface</h3>
+            <p>
+              <code>backend/src/tools</code> owns the agent-facing tool definitions, factories, terminal submissions,
+              helper launches, background management tools, and sandbox wrappers.
+            </p>
+          </div>
+          <div class="card">
+            <h3>Engine bridge</h3>
+            <p>
+              <code>engine.query.loop</code>, <code>engine.tool_call.streaming</code>, and
+              <code>engine.tool_call.dispatch</code> decide when tool calls execute, defer, run in background,
+              or terminate the agent loop.
+            </p>
+          </div>
+          <div class="card">
+            <h3>Sandbox bridge</h3>
+            <p>
+              Sandbox wrappers call typed <code>sandbox.api.tool</code> requests, then daemon routing chooses
+              layer-stack/OCC, per-call ephemeral overlay, or explicit isolated workspace execution.
+            </p>
+          </div>
+          <div class="card">
+            <h3>TaskCenter bridge</h3>
+            <p>
+              Submission and terminal tools are the persistent handoff channel between agents and TaskCenter
+              state: planner rows, generator DAG tasks, delegated goals, evaluator outcomes, and helper outputs.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section id="end-to-end-flow" data-last-reviewed-commit="2a3e6cc7c41405603d025721ad3cf5a31c7d05b0" data-evidence-paths="backend/src/tools/_framework;backend/src/tools/submission;backend/src/tools/sandbox;backend/src/engine/query/loop.py;backend/src/engine/tool_call/dispatch.py;backend/src/engine/tool_call/streaming.py;backend/src/sandbox/daemon/workspace_tool_dispatch.py;backend/src/task_center">
+        <h3>End-To-End Tool Workflow</h3>
+        <div class="flow">
+          <div class="flow-step">
+            <span class="num">1</span>
+            <div>
+              <strong>Agent registry is built.</strong>
+              <p>
+                <code>engine.agent.factory</code> asks the tools facade and factory for allowed tool instances.
+                Tool metadata comes from <code>BaseTool</code>: intent, background policy, task type,
+                terminal flag, hooks, and context requirements.
+              </p>
+            </div>
+          </div>
+          <div class="flow-step">
+            <span class="num">2</span>
+            <div>
+              <strong>Provider request exposes schemas.</strong>
+              <p>
+                The query request converts registered tools to API schemas. Optional non-terminal background
+                tools receive an LLM-facing <code>background</code> input; terminal tools remain exclusive.
+              </p>
+            </div>
+          </div>
+          <div class="flow-step">
+            <span class="num">3</span>
+            <div>
+              <strong>Streaming and final-message dispatch are coordinated.</strong>
+              <p>
+                Mid-stream execution is allowed only when deferral rules permit it. If terminal tools are present,
+                the query loop defers all tool calls until the full assistant message can be validated.
+              </p>
+            </div>
+          </div>
+          <div class="flow-step">
+            <span class="num">4</span>
+            <div>
+              <strong>One tool lifecycle runs.</strong>
+              <p>
+                <code>execute_tool_once</code> parses input, runs pre-hooks, executes the body, validates output,
+                runs post-hooks, and stamps successful terminal tools with <code>does_terminate=True</code>.
+              </p>
+            </div>
+          </div>
+          <div class="flow-step">
+            <span class="num">5</span>
+            <div>
+              <strong>Result ownership branches.</strong>
+              <p>
+                Terminal results stop the agent loop. Background launches create <code>bg_N</code> records.
+                Sandbox tools cross into daemon workspace routing. Submission tools mutate TaskCenter state or
+                return helper metadata.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="folder-pages" data-last-reviewed-commit="2a3e6cc7c41405603d025721ad3cf5a31c7d05b0" data-evidence-paths="backend/src/tools/_framework;backend/src/tools/_terminals;backend/src/tools/sandbox;backend/src/tools/isolated_workspace;backend/src/tools/background;backend/src/tools/subagent;backend/src/tools/ask_helper;backend/src/tools/submission;backend/src/tools/skills">
+        <h3>Folder Page Matrix</h3>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Folder</th>
+                <th>Page</th>
+                <th>Primary Ownership</th>
+                <th>Key Connections</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>_framework</code></td>
+                <td><a href="framework.html">Framework</a></td>
+                <td>Tool contract, registry, factories, decorator, execution lifecycle.</td>
+                <td>Engine registry construction, schema exposure, hooks, terminal stamping.</td>
+              </tr>
+              <tr>
+                <td><code>_terminals</code></td>
+                <td><a href="terminals.html">Terminals</a></td>
+                <td>Terminal descriptor catalog and prompt rendering.</td>
+                <td>TaskCenter launch profiles, batch exclusivity, query loop stop condition.</td>
+              </tr>
+              <tr>
+                <td><code>sandbox</code></td>
+                <td><a href="sandbox.html">Sandbox</a></td>
+                <td>Agent-facing read/write/edit/shell/search wrappers.</td>
+                <td>Typed sandbox API, daemon workspace routing, layer-stack/OCC, ephemeral overlay.</td>
+              </tr>
+              <tr>
+                <td><code>isolated_workspace</code></td>
+                <td><a href="isolated-workspace.html">Isolated Workspace</a></td>
+                <td>Explicit enter/exit lifecycle tools.</td>
+                <td>Persistent private scratch namespace, background gates, plugin blocking, no publish.</td>
+              </tr>
+              <tr>
+                <td><code>background</code></td>
+                <td><a href="background.html">Background</a></td>
+                <td>Polling, waiting, and cancellation tools for engine background records.</td>
+                <td>Supervisor status lattice, sandbox heartbeat/cancel, query loop cleanup.</td>
+              </tr>
+              <tr>
+                <td><code>subagent</code></td>
+                <td><a href="subagent.html">Subagent</a></td>
+                <td>Always-background nested agent launch.</td>
+                <td><code>run_ephemeral_agent</code>, progress provider, terminal result projection.</td>
+              </tr>
+              <tr>
+                <td><code>ask_helper</code></td>
+                <td><a href="ask-helper.html">Ask Helper</a></td>
+                <td>Blocking advisor and resolver helper launches.</td>
+                <td>Helper transcripts, terminal catalog focus, helper terminal submissions.</td>
+              </tr>
+              <tr>
+                <td><code>submission</code></td>
+                <td><a href="submission.html">Submission</a></td>
+                <td>Planner, executor, verifier, evaluator, helper, and explorer terminal tools.</td>
+                <td>AttemptOrchestrator, GoalStarter, GoalClosureReportRouter, TaskCenter state.</td>
+              </tr>
+              <tr>
+                <td><code>skills</code></td>
+                <td><a href="skills.html">Skills</a></td>
+                <td>Scoped skill reference loading.</td>
+                <td>ToolFactoryContext metadata and explicit reference availability errors.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="critical-routes" data-last-reviewed-commit="2a3e6cc7c41405603d025721ad3cf5a31c7d05b0" data-evidence-paths="backend/src/engine/background;backend/src/tools/background;backend/src/tools/subagent;backend/src/tools/isolated_workspace;backend/src/sandbox/host/isolated_workspace_lifecycle.py;backend/src/sandbox/ephemeral_workspace/pipeline.py">
+        <h3>Critical Routes To Keep Straight</h3>
+        <div class="grid">
+          <div class="callout ok">
+            <h3>Terminal tools</h3>
+            <p>
+              A successful terminal call becomes <code>does_terminate=True</code>, wins the query-loop stop
+              condition, and must not be batched with sibling tool calls.
+            </p>
+          </div>
+          <div class="callout ok">
+            <h3>Background tools</h3>
+            <p>
+              <code>run_subagent</code> is always background. <code>shell</code> is optional background.
+              Completion is delivered by <code>check_background_task_result</code> or
+              <code>wait_background_tasks</code> in current code.
+            </p>
+          </div>
+          <div class="callout ok">
+            <h3>Ephemeral workspace</h3>
+            <p>
+              Without an isolated handle, shell/search and non-fast-path operations use a per-call overlay.
+              Write-capable captures publish through OCC when they should affect the shared workspace.
+            </p>
+          </div>
+          <div class="callout ok">
+            <h3>Isolated workspace</h3>
+            <p>
+              <code>enter_isolated_workspace</code> is explicit, persistent for the session, and scratch-only.
+              Writes are audited as changed paths but discarded on exit instead of published through OCC.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <div class="page-baseline" data-page-baseline-commit="2a3e6cc7c41405603d025721ad3cf5a31c7d05b0">
+        <strong>Maintenance Baseline</strong>
+        <span>All technical sections in this page carry section-level evidence metadata.</span>
+        <code>git diff 2a3e6cc7c41405603d025721ad3cf5a31c7d05b0..HEAD -- backend/src/tools backend/src/engine backend/src/sandbox backend/src/task_center docs/tools-architecture</code>
+      </div>
+    </main>
+  </div>
+</body>
+</html>

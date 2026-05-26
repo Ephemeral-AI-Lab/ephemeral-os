@@ -1,1 +1,1 @@
-"""TaskCenter cross-cutting infrastructure (Phase 2 relocation)."""
+"""TaskCenter cross-cutting infrastructure."""

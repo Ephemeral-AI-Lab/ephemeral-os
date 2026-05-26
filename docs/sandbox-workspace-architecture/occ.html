@@ -35,9 +35,18 @@
   <span class="nav-pair"><a href="overlay.html">← 3. Overlay</a><a href="workspaces.html">5. Workspace Modes →</a></span>
 </div>
 <section id="occ"
-  data-last-reviewed-commit="29c334921"
+  data-last-reviewed-commit="2a3e6cc7c"
   data-evidence-paths="backend/src/sandbox/occ backend/src/sandbox/layer_stack backend/src/sandbox/overlay">
 <h2>4. OCC <a class="anchor" href="#occ">§</a></h2>
+<nav class="page-toc" aria-labelledby="page-toc-heading">
+  <h3 id="page-toc-heading">Contents</h3>
+  <ol>
+    <li><a href="#occ-change-sources"><span>4.1</span> Change Sources</a></li>
+    <li><a href="#occ-technical-workflow"><span>4.2</span> Technical Workflow</a></li>
+    <li><a href="#occ-routes-statuses"><span>4.3</span> Routes and Statuses</a></li>
+    <li><a href="#occ-evidence-refresh"><span>4.4</span> Evidence and Refresh</a></li>
+  </ol>
+</nav>
 <div class="summary">
   <ul>
     <li>Multiple operations can edit overlapping files from different snapshots.</li>
@@ -47,17 +56,13 @@
   </ul>
 </div>
 <div class="wiki-links" aria-label="OCC page links">
-  <a href="#occ-change-sources">Change Sources</a>
-  <a href="#occ-technical-workflow">Technical Workflow</a>
-  <a href="#occ-routes-statuses">Routes and Statuses</a>
   <a href="layerstack.html#layerstack-publish">LayerStack Publish</a>
   <a href="overlay.html#overlay-capture">Upperdir Capture</a>
   <a href="workflow-cookbook.html#cookbook-occ-publish">OCC Publish from API Write/Edit</a>
 </div>
-
 </section>
 <section id="occ-change-sources"
-  data-last-reviewed-commit="29c334921"
+  data-last-reviewed-commit="2a3e6cc7c"
   data-evidence-paths="backend/src/sandbox/occ/changeset.py backend/src/sandbox/occ/changeset_preparation.py backend/src/sandbox/occ/path_staging.py backend/src/sandbox/occ/commit_transaction.py backend/src/sandbox/occ/commit_queue.py backend/src/sandbox/occ/overlay_change_conversion.py backend/src/sandbox/occ/service.py">
 <h3>4.1 Change Sources <a class="anchor" href="#occ-change-sources">§</a></h3>
 <p>OCC accepts typed changes tagged as <code>api_write</code>, <code>api_edit</code>, or <code>overlay_capture</code> <span class="file-ref">backend/src/sandbox/occ/changeset.py:15-125</span>. The preparer groups changes by normalized path, drops <code>.git</code>, routes gitignored paths to <code>DIRECT</code>, routes tracked paths to <code>GATED</code>, and attaches base hashes when needed <span class="file-ref">backend/src/sandbox/occ/changeset_preparation.py:41-158</span>.</p>
@@ -99,7 +104,7 @@
 
 </section>
 <section id="occ-technical-workflow"
-  data-last-reviewed-commit="29c334921"
+  data-last-reviewed-commit="2a3e6cc7c"
   data-evidence-paths="backend/src/sandbox/occ/service.py backend/src/sandbox/occ/changeset_preparation.py backend/src/sandbox/occ/commit_queue.py backend/src/sandbox/occ/commit_transaction.py backend/src/sandbox/occ/path_staging.py backend/src/sandbox/occ/maintenance.py">
 <h3>4.2 Technical Workflow <a class="anchor" href="#occ-technical-workflow">§</a></h3>
 
@@ -128,7 +133,7 @@
 
 </section>
 <section id="occ-routes-statuses"
-  data-last-reviewed-commit="29c334921"
+  data-last-reviewed-commit="2a3e6cc7c"
   data-evidence-paths="backend/src/sandbox/occ/changeset.py backend/src/sandbox/occ/changeset_preparation.py backend/src/sandbox/occ/path_staging.py">
 <h3>4.3 Routes and Statuses <a class="anchor" href="#occ-routes-statuses">§</a></h3>
 <div class="trace-grid" aria-label="OCC route semantics">
@@ -157,7 +162,7 @@
 </div>
 </section>
 <section id="occ-evidence-refresh"
-  data-last-reviewed-commit="29c334921"
+  data-last-reviewed-commit="2a3e6cc7c"
   data-evidence-paths="backend/src/sandbox/occ backend/tests/live_e2e_test/sandbox/occ backend/tests/live_e2e_test/sandbox/layer_stack_overlay_occ">
 <h3>4.4 Evidence and Refresh <a class="anchor" href="#occ-evidence-refresh">§</a></h3>
 <div class="evidence-grid">
@@ -185,6 +190,11 @@
   </div>
 </div>
 </section>
+<div class="page-baseline" data-page-baseline-commit="2a3e6cc7c">
+  <strong>Maintenance baseline</strong>
+  <span>Local section metadata reviewed at <code>2a3e6cc7c</code>.</span>
+  <code>git diff 2a3e6cc7c..HEAD -- &lt;section data-evidence-paths&gt;</code>
+</div>
 <div class="page-footer-nav"><span><a href="overlay.html">← 3. Overlay</a></span><span><a href="workspaces.html">5. Workspace Modes →</a></span></div>
 </main>
 <script src="assets/search-index.js"></script>

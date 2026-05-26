@@ -90,13 +90,13 @@ class GoalStore(SyncStoreMixin):
             db.refresh(record)
             return self._to_dto(record)
 
-    def list_for_requesting_task(self, requesting_task_id: str) -> list[Goal]:
+    def list_for_parent_task(self, parent_task_id: str) -> list[Goal]:
         with self._sf() as db:
             q = (
                 db.query(GoalRecord)
                 .filter(
                     GoalRecord.requested_by_task_id
-                    == requesting_task_id
+                    == parent_task_id
                 )
                 .order_by(GoalRecord.created_at.asc())
             )

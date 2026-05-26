@@ -19,6 +19,7 @@ from sandbox.provider.docker.client import (
     get_docker_client,
     host_config_kwargs,
 )
+from sandbox.provider._payloads import normalize_string_dict
 
 logger = logging.getLogger(__name__)
 
@@ -31,16 +32,6 @@ DAEMON_TCP_ENV_HOST = "EOS_DAEMON_TCP_HOST"
 DAEMON_TCP_ENV_PORT = "EOS_DAEMON_TCP_PORT"
 DAEMON_AUTH_ENV = "EOS_DAEMON_AUTH_TOKEN"
 DOCKER_INIT_ENABLED_LABEL = "eos.docker.init.enabled"
-
-
-def _normalize_dict(payload: dict[str, str] | None) -> dict[str, str]:
-    if not payload:
-        return {}
-    return {
-        str(k).strip(): str(v).strip()
-        for k, v in payload.items()
-        if str(k).strip()
-    }
 
 
 def _serialize_container(container: Any) -> dict[str, Any]:
@@ -170,10 +161,10 @@ class DockerProviderAdapter:
         }
         if snapshot:
             merged_labels["snapshot"] = snapshot
-        merged_labels.update(_normalize_dict(labels))
+        merged_labels.update(normalize_string_dict(labels))
         merged_labels[DOCKER_INIT_ENABLED_LABEL] = "1"
 
-        environment = _normalize_dict(env_vars)
+        environment = normalize_string_dict(env_vars)
         host_kwargs = host_config_kwargs()
         if _docker_daemon_tcp_enabled():
             environment.update(
@@ -267,7 +258,7 @@ class DockerProviderAdapter:
             str(key): str(value)
             for key, value in (config.get("Labels") or {}).items()
         }
-        requested_labels = _normalize_dict(labels)
+        requested_labels = normalize_string_dict(labels)
         merged_labels = {**current_labels, **requested_labels}
         if merged_labels != current_labels:
             logger.warning(

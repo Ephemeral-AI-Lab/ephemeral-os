@@ -3,19 +3,11 @@
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
-from dataclasses import dataclass
-from typing import AsyncIterator, Mapping
+from typing import AsyncIterator
 
 from audit.jsonl import append_jsonl_event
 from sandbox._shared.clock import monotonic_now
 from sandbox.audit import events
-
-
-@dataclass(frozen=True)
-class WorkspaceLifecycle:
-    kind: str
-    agent_id: str
-    timings: Mapping[str, float]
 
 
 @asynccontextmanager
@@ -61,4 +53,4 @@ def _emit(path: str | None, event_type: str, payload: dict[str, object]) -> None
     append_jsonl_event(path, {"type": event_type, "payload": payload})
 
 
-__all__ = ["WorkspaceLifecycle", "lifecycle_operation"]
+__all__ = ["lifecycle_operation"]

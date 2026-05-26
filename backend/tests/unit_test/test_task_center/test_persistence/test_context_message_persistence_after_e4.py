@@ -27,7 +27,7 @@ def test_orchestrator_persists_task_spec_for_generator_tasks_unchanged_by_e4():
     """``_persist_generator_tasks`` keeps writing ``context_message=task.task_spec``.
 
     Before E4 this site read ``task.task_spec``; nothing about the
-    LaunchBundle split changed that contract. Static grep so a future
+    AgentEntryMessages split changed that contract. Static grep so a future
     refactor that wires ``launch.context_message`` here gets caught
     immediately.
     """

@@ -18,7 +18,7 @@ def test_bump_nofile_raises_soft_limit_when_below_target() -> None:
     soft, hard = 1024, 65536
     new_soft_limit: list[tuple[int, int]] = []
 
-    def fake_setrlimit(res: int, limits: tuple[int, int]) -> None:
+    def fake_setrlimit(_resource: int, limits: tuple[int, int]) -> None:
         new_soft_limit.append(limits)
 
     with patch("resource.getrlimit", return_value=(soft, hard)), \

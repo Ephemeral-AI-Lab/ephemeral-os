@@ -1,4 +1,4 @@
-"""Agent-entry composer (formerly ``ContextComposer``).
+"""Agent-entry composer.
 
 Threads ``base_agent_name`` + :class:`ContextScope` through the terminal-tool
 router, the context engine, and the renderer to produce an

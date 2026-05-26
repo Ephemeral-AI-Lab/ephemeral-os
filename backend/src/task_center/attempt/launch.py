@@ -22,7 +22,7 @@ from task_center.task_state import (
     GeneratorSubmission,
     PlannerFailureSubmission,
     TaskCenterTaskRole,
-    TaskCenterBackgroundTaskStatus,
+    TaskCenterTaskStatus,
 )
 from tools import ExecutionMetadata
 
@@ -194,7 +194,7 @@ class EphemeralAttemptAgentLauncher:
         if runtime is None:
             return
         task = runtime.task_store.get_task(launch.task_id)
-        if task is None or task.get("status") != TaskCenterBackgroundTaskStatus.RUNNING.value:
+        if task is None or task.get("status") != TaskCenterTaskStatus.RUNNING.value:
             # The lifecycle owner has already moved the task off RUNNING.
             return
 
@@ -221,7 +221,7 @@ def _fail_unowned_attempt(
     )
     runtime.task_store.set_task_status(
         launch.task_id,
-        status=TaskCenterBackgroundTaskStatus.FAILED.value,
+        status=TaskCenterTaskStatus.FAILED.value,
         summary={"fail_reason": "run_exhausted", "summary": summary},
     )
     if launch.attempt_id is None:

@@ -1,4 +1,4 @@
-"""US-014: orchestrator + task dispatcher composer wiring.
+"""US-014: orchestrator + stage advancer composer wiring.
 
 Confirms that when ``AttemptDeps.composer`` is set, the orchestrator
 asks the composer for the planner agent name and context_message, and that

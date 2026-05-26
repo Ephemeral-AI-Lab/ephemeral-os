@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Skills Tool - EphemeralOS Tools Architecture</title>
+<link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+<nav class="toc">
+  <h2>Tools Architecture</h2>
+  <a class="home-link" href="index.html">Index</a>
+  <h2>Sections</h2>
+  <ol>
+    <li><a href="index.html">Index</a></li>
+    <li><a href="framework.html">Framework</a></li>
+    <li><a href="terminals.html">Terminals</a></li>
+    <li><a href="sandbox.html">Sandbox</a></li>
+    <li><a href="isolated-workspace.html">Isolated Workspace</a></li>
+    <li><a href="background.html">Background</a></li>
+    <li><a href="subagent.html">Subagent</a></li>
+    <li><a href="ask-helper.html">Ask Helper</a></li>
+    <li><a href="submission.html">Submission</a></li>
+    <li><a href="skills.html">Skills</a></li>
+    <li><a href="maintenance.html">Maintenance</a></li>
+  </ol>
+</nav>
+<main>
+<div class="doc-actions">
+  <span><a href="index.html">Index</a> / Skills</span>
+  <span class="nav-pair"><a href="submission.html">Submission</a><a href="maintenance.html">Maintenance</a></span>
+</div>
+<h1>Skills Tool</h1>
+<p class="lead"><code>load_skill_reference</code> is a caller-scoped read-only tool for loading named reference files from the agent's own skill.</p>
+
+<nav class="page-toc" aria-labelledby="page-toc-heading">
+  <h3 id="page-toc-heading">Contents</h3>
+  <ol>
+    <li><a href="#factory-scoping">Factory Scoping</a></li>
+    <li><a href="#runtime-behavior">Runtime Behavior</a></li>
+    <li><a href="#architecture-connections">Architecture Connections</a></li>
+    <li><a href="#verification">Verification</a></li>
+  </ol>
+</nav>
+
+<section id="factory-scoping" data-last-reviewed-commit="2a3e6cc7c41405603d025721ad3cf5a31c7d05b0" data-evidence-paths="backend/src/tools/skills/_factory.py backend/src/tools/skills/load_skill_reference.py backend/src/tools/_framework/factory.py backend/src/agents/definition/model.py backend/src/agents/definition/registry.py backend/src/task_center/agent_launch/skill_message.py backend/tests/unit_test/test_tools/test_skills_toolkit.py backend/tests/unit_test/test_agents/test_planner_tool_exposure.py">
+<h2>Factory Scoping <a class="anchor" href="#factory-scoping">#</a></h2>
+<p><code>load_skill_reference</code> is registered as a per-agent factory, not a shared stateless instance. <code>tools._framework.factory</code> registers <code>make_load_skill_reference_from_context</code>; that factory reads <code>ToolFactoryContext.metadata[&quot;agent_name&quot;]</code>, resolves the agent definition, and scopes the tool to the folder name of that agent's declared <code>skill</code>.</p>
+<p>The loaded skill body itself is supplied at agent launch by TaskCenter skill-message construction. This tool only handles on-demand references under that skill's <code>references/</code> collection. If no agent skill resolves, the factory intentionally creates a no-op scoped tool with an empty availability map so calls return explicit errors.</p>
+</section>
+
+<section id="runtime-behavior" data-last-reviewed-commit="2a3e6cc7c41405603d025721ad3cf5a31c7d05b0" data-evidence-paths="backend/src/tools/skills/load_skill_reference.py backend/src/tools/skills/_factory.py backend/src/skills/core/registry.py backend/src/skills/core/loader.py backend/tests/unit_test/test_tools/test_skills_toolkit.py">
+<h2>Runtime Behavior <a class="anchor" href="#runtime-behavior">#</a></h2>
+<p>The runtime tool is read-only and accepts two strings: <code>skill_name</code> and <code>reference_name</code>. It does not accept arbitrary paths, directory traversal, or a request for the main skill body. The reference name must match a named reference already indexed for the scoped skill.</p>
+<table>
+  <thead><tr><th>Case</th><th>Output</th><th>Why it matters</th></tr></thead>
+  <tbody>
+    <tr><td>Skill outside the scoped availability map</td><td>JSON error with <code>available</code> skill names.</td><td>Prevents one agent from reading another skill's references.</td></tr>
+    <tr><td>Scoped skill missing from registry</td><td>Plain error naming the missing skill.</td><td>Surfaces registry/config drift directly.</td></tr>
+    <tr><td>Reference name missing</td><td>JSON error with <code>available_references</code>.</td><td>Makes typo recovery explicit without exposing unrelated files.</td></tr>
+    <tr><td>Reference found</td><td>Raw reference content in the tool result.</td><td>Keeps reference loading cheap and targeted after the main skill instructions are already loaded.</td></tr>
+  </tbody>
+</table>
+</section>
+
+<section id="architecture-connections" data-last-reviewed-commit="2a3e6cc7c41405603d025721ad3cf5a31c7d05b0" data-evidence-paths="backend/src/tools/skills/_factory.py backend/src/tools/_framework/factory.py backend/src/task_center/agent_launch/skill_message.py backend/src/task_center/context_engine backend/src/engine/agent/factory.py backend/tests/unit_test/test_agents/test_skill_message.py backend/tests/unit_test/test_agents/test_planner_tool_exposure.py">
+<h2>Architecture Connections <a class="anchor" href="#architecture-connections">#</a></h2>
+<div class="edge-list">
+  <div><b>tool framework</b><span>The framework creates the tool with caller metadata, so scope is fixed before the model can call it.</span></div>
+  <div><b>engine</b><span>The tool is a normal foreground read-only tool. It has no background policy, no sandbox context requirement, and no isolated-workspace lifecycle.</span></div>
+  <div><b>TaskCenter</b><span>TaskCenter/agent launch supplies the main skill message. <code>load_skill_reference</code> supplements that launch context with named reference files only.</span></div>
+  <div><b>terminal tools</b><span>Skill references can guide terminal-submission quality, but the tool does not submit or mutate TaskCenter state.</span></div>
+  <div><b>sandbox</b><span>Reference loading reads the process skill registry, not repository files inside a sandbox workspace. It does not publish through OCC and does not allocate an ephemeral or isolated workspace overlay.</span></div>
+</div>
+</section>
+
+<section id="verification" data-last-reviewed-commit="2a3e6cc7c41405603d025721ad3cf5a31c7d05b0" data-evidence-paths="backend/tests/unit_test/test_tools/test_skills_toolkit.py backend/tests/unit_test/test_agents/test_planner_tool_exposure.py backend/tests/unit_test/test_agents/test_skill_message.py backend/tests/unit_test/test_engine/test_spawn_agent.py">
+<h2>Verification <a class="anchor" href="#verification">#</a></h2>
+<p><code>test_skills_toolkit.py</code> covers successful named-reference resolution, rejection of unscoped skills, no-skill behavior, and context-derived agent-skill scoping. Agent tests cover planner exposure and the main skill-message path. Refresh this page when skill declaration shape, factory metadata, registry loading, or reference error payloads change.</p>
+</section>
+
+<div class="page-baseline" data-page-baseline-commit="2a3e6cc7c41405603d025721ad3cf5a31c7d05b0">
+  <strong>Maintenance baseline</strong>
+  <span>Technical sections reviewed against <code>2a3e6cc7c41405603d025721ad3cf5a31c7d05b0</code>.</span>
+</div>
+</main>
+</body>
+</html>

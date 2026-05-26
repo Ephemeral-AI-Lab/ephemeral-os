@@ -155,19 +155,6 @@ def write_bytes_no_follow(
         handle.write(data)
 
 
-def write_text_no_follow(
-    path: str | Path,
-    content: str,
-    *,
-    create_only: bool = False,
-) -> None:
-    write_bytes_no_follow(
-        path,
-        content.encode("utf-8"),
-        overwrite=not create_only,
-    )
-
-
 def walk_dirs_no_follow(root: str | Path) -> Iterator[Path]:
     """Yield files under ``root`` without descending through symlink dirs."""
     for current_root, dirs, files in os.walk(root, followlinks=False):
@@ -207,5 +194,4 @@ __all__ = [
     "search_root_path",
     "walk_dirs_no_follow",
     "write_bytes_no_follow",
-    "write_text_no_follow",
 ]

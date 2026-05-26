@@ -2,8 +2,7 @@
 
 ``ContextEngine`` looks up a registered :class:`ContextRecipe` by id and runs
 it against the caller's :class:`ContextScope`, producing a
-:class:`ContextPacket`. Composer + launch wiring (the previous ``LaunchBundle``
-+ ``ContextComposer`` types) now live in
+:class:`ContextPacket`. Composer + launch wiring live in
 :mod:`task_center.agent_launch`.
 
 Exceptions are re-exported from :mod:`.exceptions` so existing callers that
@@ -47,8 +46,6 @@ __all__ = [
 
 class ContextPacketStoreProtocol(Protocol):
     def insert(self, packet: ContextPacket) -> str: ...
-
-    def get(self, context_packet_id: str) -> ContextPacket | None: ...
 
 
 @dataclass(frozen=True, slots=True)

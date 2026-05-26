@@ -2,7 +2,7 @@
 
 Each ``assert_*`` validates one harness lifecycle invariant and raises
 :class:`TaskCenterInvariantViolation` on breach. Used by the goal lifecycle,
-iteration attempt coordinator, and attempt orchestrator/task dispatcher to fail fast on
+iteration attempt coordinator, attempt orchestrator, and stage advancer to fail fast on
 illegal transitions instead of silently corrupting state.
 """
 

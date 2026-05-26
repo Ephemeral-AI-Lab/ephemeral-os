@@ -12,7 +12,7 @@ from task_center.attempt import AttemptFailReason, AttemptStatus
 from task_center.attempt.orchestrator_registry import AttemptOrchestratorRegistry
 from task_center.attempt.runtime import AgentLaunch, AttemptDeps
 from task_center.iteration.state import IterationCreationReason
-from task_center.task_state import TaskCenterTaskRole, TaskCenterBackgroundTaskStatus
+from task_center.task_state import TaskCenterTaskRole, TaskCenterTaskStatus
 from task_center._core.primitives import planner_task_id
 
 
@@ -62,7 +62,7 @@ async def test_missing_orchestrator_exhaustion_closes_attempt(
         role=TaskCenterTaskRole.PLANNER.value,
         agent_name="planner",
         context_message="plan",
-        status=TaskCenterBackgroundTaskStatus.RUNNING.value,
+        status=TaskCenterTaskStatus.RUNNING.value,
         summaries=[],
         needs=[],
         task_center_attempt_id=attempt.id,
@@ -99,7 +99,7 @@ async def test_missing_orchestrator_exhaustion_closes_attempt(
     task = task_store.get_task(task_id)
     refreshed = attempt_store.get(attempt.id)
     assert task is not None
-    assert task["status"] == TaskCenterBackgroundTaskStatus.FAILED.value
+    assert task["status"] == TaskCenterTaskStatus.FAILED.value
     assert refreshed is not None
     assert refreshed.status == AttemptStatus.FAILED
     assert refreshed.fail_reason == AttemptFailReason.PLANNER_FAILED

@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Subagent Tool - EphemeralOS Tools Architecture</title>
+<link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+<nav class="toc">
+  <h2>Tools Architecture</h2>
+  <a class="home-link" href="index.html">Index</a>
+  <h2>Sections</h2>
+  <ol>
+    <li><a href="index.html">Index</a></li>
+    <li><a href="framework.html">Framework</a></li>
+    <li><a href="terminals.html">Terminals</a></li>
+    <li><a href="sandbox.html">Sandbox</a></li>
+    <li><a href="isolated-workspace.html">Isolated Workspace</a></li>
+    <li><a href="background.html">Background</a></li>
+    <li><a href="subagent.html">Subagent</a></li>
+    <li><a href="ask-helper.html">Ask Helper</a></li>
+    <li><a href="submission.html">Submission</a></li>
+    <li><a href="skills.html">Skills</a></li>
+    <li><a href="maintenance.html">Maintenance</a></li>
+  </ol>
+</nav>
+<main>
+<div class="doc-actions">
+  <span><a href="index.html">Index</a> / Subagent</span>
+  <span class="nav-pair"><a href="background.html">Background</a><a href="ask-helper.html">Ask Helper</a></span>
+</div>
+<h1>Subagent Tool</h1>
+<p class="lead"><code>run_subagent</code> is the always-background tool for launching focused worker agents without creating peer-to-peer orchestration.</p>
+
+<nav class="page-toc" aria-labelledby="page-toc-heading">
+  <h3 id="page-toc-heading">Contents</h3>
+  <ol>
+    <li><a href="#registration">Registration</a></li>
+    <li><a href="#launch-workflow">Launch Workflow</a></li>
+    <li><a href="#progress-and-results">Progress and Results</a></li>
+    <li><a href="#taskcenter-boundary">TaskCenter Boundary</a></li>
+    <li><a href="#verification">Verification</a></li>
+  </ol>
+</nav>
+
+<section id="registration" data-last-reviewed-commit="2a3e6cc7c41405603d025721ad3cf5a31c7d05b0" data-evidence-paths="backend/src/tools/subagent/_factory.py backend/src/tools/subagent/run_subagent/run_subagent.py backend/src/tools/_framework/factory.py backend/src/agents/definition/registry.py backend/tests/unit_test/test_engine/test_spawn_agent.py backend/tests/unit_test/test_prompt/test_runtime_prompt.py">
+<h2>Registration <a class="anchor" href="#registration">#</a></h2>
+<p><code>backend/src/tools/subagent</code> registers one caller-aware tool: <code>run_subagent</code>. The framework factory uses <code>make_subagent_tool_from_context()</code>, which wraps the base tool in <code>RestrictedRunSubagentTool</code> and narrows <code>agent_name</code> to registered dispatchable subagents.</p>
+<p>The underlying tool is declared with <code>intent=Intent.WRITE_ALLOWED</code>, <code>background=&quot;always&quot;</code>, and <code>task_type=SUBAGENT_TASK_TYPE</code>. That declaration is why the engine defers it from foreground streaming and gives the background supervisor a subagent-specific cancellation path.</p>
+</section>
+
+<section id="launch-workflow" data-last-reviewed-commit="2a3e6cc7c41405603d025721ad3cf5a31c7d05b0" data-evidence-paths="backend/src/tools/subagent/run_subagent/run_subagent.py backend/src/engine/background/dispatch.py backend/src/engine/agent/lifecycle.py backend/src/task_center/task_guidance/builders.py backend/src/engine/agent/factory.py">
+<h2>Launch Workflow <a class="anchor" href="#launch-workflow">#</a></h2>
+<ol>
+  <li>The parent calls <code>run_subagent(agent_name, prompt)</code>. Engine background dispatch strips no user payload fields except any generic background flag, validates the input, assigns <code>bg_N</code>, and starts the tool body as a supervised asyncio task.</li>
+  <li>The tool rejects missing runtime config, blank prompts, unknown targets, targets that are not <code>agent_type=&quot;subagent&quot;</code>, and recursive calls from a caller whose metadata says <code>agent_type=&quot;subagent&quot;</code>.</li>
+  <li>The tool imports <code>run_ephemeral_agent</code> through <code>engine.api</code>, builds subagent metadata with <code>agent_type=&quot;subagent&quot;</code> and role information, and forwards the active sandbox id.</li>
+  <li>The child does not inherit a TaskCenter context packet from the parent. It receives the parent's free-text prompt as its initial user message and a static subagent guidance prompt as the run prompt.</li>
+  <li><code>persist_agent_run=False</code> keeps the helper run ephemeral. The parent remains responsible for final TaskCenter submission through its own terminal tools.</li>
+</ol>
+</section>
+
+<section id="progress-and-results" data-last-reviewed-commit="2a3e6cc7c41405603d025721ad3cf5a31c7d05b0" data-evidence-paths="backend/src/tools/subagent/run_subagent/run_subagent.py backend/src/tools/background/check_background_task_result/check_background_task_result.py backend/src/engine/background/task_supervisor.py backend/src/message/messages.py backend/tests/unit_test/test_engine/test_background_unit.py backend/tests/unit_test/test_tools/test_subagent_retry.py">
+<h2>Progress and Results <a class="anchor" href="#progress-and-results">#</a></h2>
+<p>When the child agent is spawned, <code>run_subagent</code> registers a supervisor progress provider for the current <code>background_task_id</code>. The provider snapshots the child agent's latest conversation messages and renders text, thinking, tool-use, and tool-result blocks for <code>check_background_task_result</code>.</p>
+<p>The child must call one of its registered terminal tools. <code>run_ephemeral_agent</code> returns an <code>EphemeralRunResult</code>; <code>run_subagent</code> forwards <code>terminal_result.output</code>, <code>is_error</code>, and terminal metadata to the parent, adding <code>subagent_terminal_called=true</code>. If the child crashes or exits without a terminal result, the metadata marks <code>subagent_terminal_called=false</code>, and the background check tool reports the task as failed with the latest peek instead of pretending the findings were delivered.</p>
+<p>Cancellation is also subagent-aware. <code>cancel_background_task</code> asks the supervisor to request an early stop, cancel the child task, and allow the child path to salvage a partial result before it settles.</p>
+</section>
+
+<section id="taskcenter-boundary" data-last-reviewed-commit="2a3e6cc7c41405603d025721ad3cf5a31c7d05b0" data-evidence-paths="backend/src/tools/subagent/run_subagent/run_subagent.py backend/src/task_center/attempt/launch.py backend/src/task_center/agent_launch/task_guidance_dispatch.py backend/src/task_center/task_guidance/builders.py backend/src/tools/submission backend/src/engine/query/loop.py">
+<h2>TaskCenter Boundary <a class="anchor" href="#taskcenter-boundary">#</a></h2>
+<p><code>run_subagent</code> is a worker launch tool, not a global orchestrator. It lets the parent ask for focused exploration or implementation help while TaskCenter state still advances through persisted terminal submissions, context packets, lifecycle reports, and attempt state machines.</p>
+<p>The parent receives the subagent's terminal output as a normal background task result. The parent then decides whether to continue, call another tool, ask a helper, or submit a TaskCenter terminal tool. This keeps task handoff and completion state in TaskCenter rather than creating direct agent-to-agent control flow.</p>
+<p>Sandbox behavior follows the child run's ordinary tool execution. If the child uses sandbox tools, those calls still route through sandbox APIs, the daemon workspace dispatcher, the ephemeral workspace overlay pipeline, direct LayerStack/OCC fast paths, or isolated workspace lifecycle according to the active workspace mode.</p>
+</section>
+
+<section id="verification" data-last-reviewed-commit="2a3e6cc7c41405603d025721ad3cf5a31c7d05b0" data-evidence-paths="backend/tests/unit_test/test_tools/test_subagent_retry.py backend/tests/unit_test/test_engine/test_background_unit.py backend/tests/unit_test/test_engine/test_spawn_agent.py backend/tests/unit_test/test_prompt/test_runtime_prompt.py backend/tests/unit_test/test_message/test_event_printer.py">
+<h2>Verification <a class="anchor" href="#verification">#</a></h2>
+<p>Key tests cover factory policy, always-background exposure, retry behavior through <code>run_ephemeral_agent</code>, terminal metadata projection, failed/no-terminal outcomes, concurrent subagent calls, background status rendering, and event-printer display. Refresh this page when subagent target registration, terminal metadata, progress-provider rendering, or background cancellation semantics change.</p>
+</section>
+
+<div class="page-baseline" data-page-baseline-commit="2a3e6cc7c41405603d025721ad3cf5a31c7d05b0">
+  <strong>Maintenance baseline</strong>
+  <span>Technical sections reviewed against <code>2a3e6cc7c41405603d025721ad3cf5a31c7d05b0</code>.</span>
+</div>
+</main>
+</body>
+</html>

@@ -570,17 +570,10 @@ def _build_observations(report: Mapping[str, Any]) -> list[str]:
 
 
 def _iter_jsonl(path: Path) -> Iterable[dict[str, Any]]:
-    if not path.exists():
-        return
-    for line in path.read_text(encoding="utf-8").splitlines():
-        if not line.strip():
-            continue
-        try:
-            value = json.loads(line)
-        except json.JSONDecodeError:
-            continue
-        if isinstance(value, dict):
-            yield value
+    """Concatenate the live JSONL file with any ``.<N>.gz`` rotated history."""
+    from task_center_runner.audit.sandbox_events_sink import iter_rotated_jsonl
+
+    yield from iter_rotated_jsonl(path)
 
 
 def _read_json(path: Path) -> dict[str, Any]:

@@ -1,4 +1,4 @@
-"""Invariant tests across request, iteration, and attempt levels."""
+"""Invariant tests across goal, iteration, and attempt levels."""
 
 from __future__ import annotations
 
@@ -36,7 +36,7 @@ from task_center.iteration.state import (
 from task_center._core.primitives import TaskCenterInvariantViolation
 
 
-def _request(
+def _goal(
     status: GoalStatus = GoalStatus.OPEN,
     iteration_ids: tuple[str, ...] = (),
 ) -> Goal:
@@ -55,17 +55,17 @@ def _request(
     )
 
 
-def _segment(
+def _iteration(
     *,
     status: IterationStatus = IterationStatus.OPEN,
     attempt_ids: tuple[str, ...] = (),
     deferred_goal_for_next_iteration: str | None = None,
     attempt_budget: int = 2,
-    sid: str = "s1",
+    iteration_id: str = "s1",
 ) -> Iteration:
     now = datetime.now(UTC)
     return Iteration(
-        id=sid,
+        id=iteration_id,
         goal_id="r1",
         sequence_no=1,
         creation_reason=IterationCreationReason.INITIAL,
@@ -80,16 +80,16 @@ def _segment(
     )
 
 
-def _graph(
+def _attempt(
     *,
     status: AttemptStatus = AttemptStatus.RUNNING,
     fail_reason: AttemptFailReason | None = None,
     iteration_id: str = "s1",
-    gid: str = "g1",
+    attempt_id: str = "g1",
 ) -> Attempt:
     now = datetime.now(UTC)
     return Attempt(
-        id=gid,
+        id=attempt_id,
         iteration_id=iteration_id,
         attempt_sequence_no=1,
         stage=AttemptStage.PLAN,
@@ -107,11 +107,11 @@ def _graph(
     )
 
 
-# ---- Request-level ------------------------------------------------------
+# ---- Goal-level ---------------------------------------------------------
 
 
 def test_assert_goal_open_passes_for_open():
-    assert_goal_open(_request(status=GoalStatus.OPEN))
+    assert_goal_open(_goal(status=GoalStatus.OPEN))
 
 
 def test_assert_goal_open_fails_for_closed():
@@ -121,101 +121,101 @@ def test_assert_goal_open_fails_for_closed():
         GoalStatus.CANCELLED,
     ):
         with pytest.raises(TaskCenterInvariantViolation):
-            assert_goal_open(_request(status=status))
+            assert_goal_open(_goal(status=status))
 
 
 def test_assert_iteration_id_unique_in_goal():
     assert_iteration_id_unique_in_goal(
-        _request(iteration_ids=("s1", "s2")), "s3"
+        _goal(iteration_ids=("s1", "s2")), "s3"
     )
     with pytest.raises(TaskCenterInvariantViolation):
         assert_iteration_id_unique_in_goal(
-            _request(iteration_ids=("s1",)), "s1"
+            _goal(iteration_ids=("s1",)), "s1"
         )
 
 
 def test_assert_iteration_sequence_contiguous():
-    assert_iteration_sequence_contiguous(_request(iteration_ids=()), 1)
-    assert_iteration_sequence_contiguous(_request(iteration_ids=("s1",)), 2)
+    assert_iteration_sequence_contiguous(_goal(iteration_ids=()), 1)
+    assert_iteration_sequence_contiguous(_goal(iteration_ids=("s1",)), 2)
     with pytest.raises(TaskCenterInvariantViolation):
-        assert_iteration_sequence_contiguous(_request(iteration_ids=("s1",)), 1)
+        assert_iteration_sequence_contiguous(_goal(iteration_ids=("s1",)), 1)
     with pytest.raises(TaskCenterInvariantViolation):
-        assert_iteration_sequence_contiguous(_request(iteration_ids=("s1",)), 3)
+        assert_iteration_sequence_contiguous(_goal(iteration_ids=("s1",)), 3)
 
 
 def test_assert_continuation_iteration_predecessor_requires_succeeded_with_goal():
-    succeeded_with_goal = _segment(
+    succeeded_with_goal = _iteration(
         status=IterationStatus.SUCCEEDED, deferred_goal_for_next_iteration="next"
     )
     assert_predecessor_has_deferred_goal_for_next_iteration(succeeded_with_goal)
 
     with pytest.raises(TaskCenterInvariantViolation):
         assert_predecessor_has_deferred_goal_for_next_iteration(
-            _segment(status=IterationStatus.OPEN, deferred_goal_for_next_iteration="next")
+            _iteration(status=IterationStatus.OPEN, deferred_goal_for_next_iteration="next")
         )
     with pytest.raises(TaskCenterInvariantViolation):
         assert_predecessor_has_deferred_goal_for_next_iteration(
-            _segment(status=IterationStatus.SUCCEEDED, deferred_goal_for_next_iteration=None)
+            _iteration(status=IterationStatus.SUCCEEDED, deferred_goal_for_next_iteration=None)
         )
 
 
-# ---- Segment-level ------------------------------------------------------
+# ---- Iteration-level ----------------------------------------------------
 
 
 def test_assert_iteration_open():
-    assert_iteration_open(_segment(status=IterationStatus.OPEN))
+    assert_iteration_open(_iteration(status=IterationStatus.OPEN))
     with pytest.raises(TaskCenterInvariantViolation):
-        assert_iteration_open(_segment(status=IterationStatus.SUCCEEDED))
+        assert_iteration_open(_iteration(status=IterationStatus.SUCCEEDED))
 
 
 def test_assert_iteration_has_budget():
-    assert_iteration_has_budget(_segment(attempt_budget=2, attempt_ids=()))
+    assert_iteration_has_budget(_iteration(attempt_budget=2, attempt_ids=()))
     assert_iteration_has_budget(
-        _segment(attempt_budget=2, attempt_ids=("g1",))
+        _iteration(attempt_budget=2, attempt_ids=("g1",))
     )
     with pytest.raises(TaskCenterInvariantViolation):
         assert_iteration_has_budget(
-            _segment(attempt_budget=2, attempt_ids=("g1", "g2"))
+            _iteration(attempt_budget=2, attempt_ids=("g1", "g2"))
         )
 
 
 def test_assert_attempt_belongs_to_iteration():
     assert_attempt_belongs_to_iteration(
-        _graph(iteration_id="s1"), _segment(sid="s1")
+        _attempt(iteration_id="s1"), _iteration(iteration_id="s1")
     )
     with pytest.raises(TaskCenterInvariantViolation):
         assert_attempt_belongs_to_iteration(
-            _graph(iteration_id="s1"), _segment(sid="s2")
+            _attempt(iteration_id="s1"), _iteration(iteration_id="s2")
         )
 
 
-# ---- Graph-level --------------------------------------------------------
+# ---- Attempt-level ------------------------------------------------------
 
 
 def test_assert_attempt_sequence_contiguous():
-    assert_attempt_sequence_contiguous(_segment(attempt_ids=()), 1)
-    assert_attempt_sequence_contiguous(_segment(attempt_ids=("g1",)), 2)
+    assert_attempt_sequence_contiguous(_iteration(attempt_ids=()), 1)
+    assert_attempt_sequence_contiguous(_iteration(attempt_ids=("g1",)), 2)
     with pytest.raises(TaskCenterInvariantViolation):
-        assert_attempt_sequence_contiguous(_segment(attempt_ids=("g1",)), 1)
+        assert_attempt_sequence_contiguous(_iteration(attempt_ids=("g1",)), 1)
 
 
 def test_assert_fail_reason_present_on_failure():
     assert_fail_reason_present_on_failure(
-        _graph(status=AttemptStatus.PASSED)
+        _attempt(status=AttemptStatus.PASSED)
     )
     assert_fail_reason_present_on_failure(
-        _graph(
+        _attempt(
             status=AttemptStatus.FAILED,
             fail_reason=AttemptFailReason.GENERATOR_FAILED,
         )
     )
     with pytest.raises(TaskCenterInvariantViolation):
         assert_fail_reason_present_on_failure(
-            _graph(status=AttemptStatus.FAILED, fail_reason=None)
+            _attempt(status=AttemptStatus.FAILED, fail_reason=None)
         )
 
 
-# ---- Manager registry ---------------------------------------------------
+# ---- Coordinator registry -----------------------------------------------
 
 
 def test_open_iteration_coordinators_enforces_uniqueness():

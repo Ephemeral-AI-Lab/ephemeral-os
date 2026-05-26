@@ -35,9 +35,19 @@
   <span class="nav-pair"><a href="overview.html">← 1. Overview</a><a href="overlay.html">3. Overlay →</a></span>
 </div>
 <section id="layerstack"
-  data-last-reviewed-commit="29c334921"
+  data-last-reviewed-commit="2a3e6cc7c"
   data-evidence-paths="backend/src/sandbox/layer_stack backend/src/sandbox/daemon/layer_stack_runtime.py backend/src/sandbox/occ">
 <h2>2. LayerStack <a class="anchor" href="#layerstack">§</a></h2>
+<nav class="page-toc" aria-labelledby="page-toc-heading">
+  <h3 id="page-toc-heading">Contents</h3>
+  <ol>
+    <li><a href="#layerstack-storage"><span>2.1</span> Storage</a></li>
+    <li><a href="#layerstack-data-model"><span>2.2</span> Data Model</a></li>
+    <li><a href="#layerstack-projection"><span>2.3</span> Projection</a></li>
+    <li><a href="#layerstack-publish"><span>2.4</span> Publish</a></li>
+    <li><a href="#layerstack-evidence-refresh"><span>2.5</span> Evidence and Refresh</a></li>
+  </ol>
+</nav>
 <div class="summary">
   <ul>
     <li>Overlay users need a stable snapshot while other calls keep publishing new changes.</li>
@@ -47,23 +57,17 @@
   </ul>
 </div>
 <div class="wiki-links" aria-label="LayerStack page links">
-  <a href="#layerstack-storage">Storage</a>
-  <a href="#layerstack-data-model">Data Model</a>
-  <a href="#layerstack-projection">Projection</a>
-  <a href="#layerstack-publish">Publish</a>
   <a href="overlay.html">Overlay</a>
   <a href="occ.html">OCC</a>
   <a href="space-model.html">Space Model</a>
 </div>
-
 <div class="callout">
   <span class="label">Reading Path</span>
   If the question is "where are the bytes?", read <a class="wiki-link" href="#layerstack-storage">Storage</a>. If the question is "why does this not copy the repo?", read <a class="wiki-link" href="#layerstack-projection">Projection</a> and then <a class="wiki-link" href="space-model.html">Space Model</a>. If the question is "how did my write become durable?", jump to <a class="wiki-link" href="#layerstack-publish">Publish</a> and <a class="wiki-link" href="occ.html#occ-technical-workflow">OCC Technical Workflow</a>.
 </div>
-
 </section>
 <section id="layerstack-storage"
-  data-last-reviewed-commit="29c334921"
+  data-last-reviewed-commit="2a3e6cc7c"
   data-evidence-paths="backend/src/sandbox/daemon/paths.py backend/src/sandbox/layer_stack/workspace_binding.py backend/src/sandbox/layer_stack/workspace_base.py">
 <h3>2.1 Storage <a class="anchor" href="#layerstack-storage">§</a></h3>
 <div class="summary">
@@ -92,7 +96,7 @@
 
 </section>
 <section id="layerstack-data-model"
-  data-last-reviewed-commit="29c334921"
+  data-last-reviewed-commit="2a3e6cc7c"
   data-evidence-paths="backend/src/sandbox/layer_stack/manifest.py backend/src/sandbox/layer_stack/lease.py backend/src/sandbox/layer_stack/view.py backend/src/sandbox/layer_stack/transaction.py">
 <h3>2.2 Data Model <a class="anchor" href="#layerstack-data-model">§</a></h3>
 <table>
@@ -109,7 +113,7 @@
 
 </section>
 <section id="layerstack-projection"
-  data-last-reviewed-commit="29c334921"
+  data-last-reviewed-commit="2a3e6cc7c"
   data-evidence-paths="backend/src/sandbox/layer_stack/stack.py backend/src/sandbox/layer_stack/view.py backend/src/sandbox/ephemeral_workspace/pipeline.py backend/src/sandbox/isolated_workspace/pipeline.py">
 <h3>2.3 Projection <a class="anchor" href="#layerstack-projection">§</a></h3>
 <div class="summary">
@@ -134,7 +138,7 @@
 
 </section>
 <section id="layerstack-publish"
-  data-last-reviewed-commit="29c334921"
+  data-last-reviewed-commit="2a3e6cc7c"
   data-evidence-paths="backend/src/sandbox/layer_stack/publisher.py backend/src/sandbox/layer_stack/changes.py backend/src/sandbox/layer_stack/lease.py backend/src/sandbox/layer_stack/squash.py backend/src/sandbox/layer_stack/stack.py">
 <h3>2.4 Publish <a class="anchor" href="#layerstack-publish">§</a></h3>
 <div class="summary">
@@ -177,7 +181,7 @@
 
 </section>
 <section id="layerstack-evidence-refresh"
-  data-last-reviewed-commit="29c334921"
+  data-last-reviewed-commit="2a3e6cc7c"
   data-evidence-paths="backend/src/sandbox/layer_stack backend/tests/live_e2e_test/sandbox/layer_stack backend/tests/live_e2e_test/sandbox/workspace_base backend/tests/live_e2e_test/sandbox/layer_stack_overlay_occ">
 <h3>2.5 Evidence and Refresh <a class="anchor" href="#layerstack-evidence-refresh">§</a></h3>
 <div class="evidence-grid">
@@ -221,6 +225,11 @@
   Backlinks: <a class="wiki-link" href="overview.html#overview-invariants">Core Invariants</a> names LayerStack as durable truth; <a class="wiki-link" href="overlay.html">Overlay</a> consumes <code>layer_paths</code>; <a class="wiki-link" href="occ.html">OCC</a> publishes into LayerStack; <a class="wiki-link" href="plugins.html#plugin-refresh-detail">Projection Refresh and LSP Writes</a> watches manifest keys derived from this page.
 </div>
 </section>
+<div class="page-baseline" data-page-baseline-commit="2a3e6cc7c">
+  <strong>Maintenance baseline</strong>
+  <span>Local section metadata reviewed at <code>2a3e6cc7c</code>.</span>
+  <code>git diff 2a3e6cc7c..HEAD -- &lt;section data-evidence-paths&gt;</code>
+</div>
 <div class="page-footer-nav"><span><a href="overview.html">← 1. Overview</a></span><span><a href="overlay.html">3. Overlay →</a></span></div>
 </main>
 <script src="assets/search-index.js"></script>

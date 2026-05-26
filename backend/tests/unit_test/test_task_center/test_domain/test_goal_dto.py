@@ -65,11 +65,11 @@ def test_closure_report_constructs():
 def test_goal_closure_delivery_keeps_legacy_facade_names():
     legacy_status: CloseReportDeliveryStatus = "delivered"
     new_status: GoalClosureDeliveryStatus = legacy_status
-    result = CloseReportDeliveryResult(
+    result = GoalClosureDeliveryResult(
         status=new_status,
         requested_by_task_id="t1",
         parent_attempt_id="a1",
     )
 
     assert result.status == "delivered"
-    assert GoalClosureDeliveryResult is CloseReportDeliveryResult
+    assert CloseReportDeliveryResult is GoalClosureDeliveryResult

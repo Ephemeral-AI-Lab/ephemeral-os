@@ -1,12 +1,12 @@
-"""Tests for shared Daytona client helpers (post-SandboxProxy deletion)."""
+"""Tests for provider normalization helpers (post-SandboxProxy deletion)."""
 
 from __future__ import annotations
 
 from sandbox.provider.daytona.adapter import (
-    _normalize_dict as normalize_dict,
     _normalize_optional_text as normalize_optional_text,
 )
 from sandbox.provider.daytona.client import timeout_seconds_from_env
+from sandbox.provider._payloads import normalize_string_dict
 
 
 class TestNormalizeHelpers:
@@ -19,14 +19,14 @@ class TestNormalizeHelpers:
     def test_normalize_optional_text_empty_returns_none(self):
         assert normalize_optional_text("   ") is None
 
-    def test_normalize_dict(self):
-        assert normalize_dict({"  key  ": "  value  "}) == {"key": "value"}
+    def test_normalize_string_dict(self):
+        assert normalize_string_dict({"  key  ": "  value  "}) == {"key": "value"}
 
-    def test_normalize_dict_skips_empty_keys(self):
-        assert normalize_dict({"  ": "value"}) == {}
+    def test_normalize_string_dict_skips_empty_keys(self):
+        assert normalize_string_dict({"  ": "value"}) == {}
 
-    def test_normalize_dict_none_returns_empty(self):
-        assert normalize_dict(None) == {}
+    def test_normalize_string_dict_none_returns_empty(self):
+        assert normalize_string_dict(None) == {}
 
 
 class TestTimeoutConfig:

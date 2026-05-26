@@ -59,9 +59,6 @@ class _StubPacketStore:
         self.inserted.append(packet)
         return f"packet-{len(self.inserted)}"
 
-    def get(self, context_packet_id: str) -> ContextPacket | None:  # noqa: ARG002
-        return None
-
 
 def _make_deps(*, packet_store=None) -> ContextEngineDeps:
     return ContextEngineDeps(

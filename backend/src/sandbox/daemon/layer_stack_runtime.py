@@ -7,6 +7,11 @@ import threading
 import time
 from pathlib import Path
 
+from sandbox.daemon.audit_buffer import get_audit_buffer
+from sandbox.daemon.audit_schema import (
+    LayerStackSection,
+    build_layer_stack_event,
+)
 from sandbox.layer_stack.stack import (
     LayerStack,
     PrepareWorkspaceSnapshotResult,
@@ -90,6 +95,7 @@ def clear_layer_stack_runtime_caches_for_tests() -> None:
     with _MANAGER_CACHE_LOCK:
         _MANAGER_CACHE.clear()
         _FENCED_STAGING_ROOTS.clear()
+        _LEASE_TIMELINE.clear()
 
 
 def build_workspace_base(
@@ -136,9 +142,48 @@ def prepare_workspace_snapshot(
     """Prepare a workspace snapshot lease for a bound, manifest-valid root."""
     require_workspace_binding(layer_stack_root)
     _validate_manifest_for_root(Path(layer_stack_root))
-    return get_layer_stack_manager(layer_stack_root).prepare_workspace_snapshot(
+    started = monotonic_now()
+    _emit_layer_stack(
+        "layer_stack.lease_requested",
+        LayerStackSection(
+            operation_id=owner_request_id,
+            operation_step=20,
+            owner_request_id=owner_request_id,
+        ),
+        lane="normal",
+    )
+    result = get_layer_stack_manager(layer_stack_root).prepare_workspace_snapshot(
         owner_request_id,
     )
+    elapsed_ms = (monotonic_now() - started) * 1000.0
+    _emit_layer_stack(
+        "layer_stack.lease_acquired",
+        LayerStackSection(
+            operation_id=owner_request_id,
+            operation_step=20,
+            owner_request_id=owner_request_id,
+            lease_id=result.lease_id,
+            manifest_version=result.manifest_version,
+            manifest_root_hash=result.root_hash,
+            lease_wait_ms=elapsed_ms,
+        ),
+        lane="normal",
+    )
+    _emit_layer_stack(
+        "layer_stack.snapshot_prepared",
+        LayerStackSection(
+            operation_id=owner_request_id,
+            operation_step=40,
+            lease_id=result.lease_id,
+            manifest_version=result.manifest_version,
+            manifest_root_hash=result.root_hash,
+            layer_count=len(result.layer_paths),
+            prepare_snapshot_ms=elapsed_ms,
+        ),
+        lane="normal",
+    )
+    _LEASE_TIMELINE[result.lease_id] = (owner_request_id, monotonic_now())
+    return result
 
 
 def release_lease(
@@ -147,7 +192,86 @@ def release_lease(
     lease_id: str,
 ) -> bool:
     """Release a previously-prepared workspace snapshot lease."""
-    return get_layer_stack_manager(layer_stack_root).release_lease(lease_id)
+    released = get_layer_stack_manager(layer_stack_root).release_lease(lease_id)
+    if released:
+        operation_id, started = _LEASE_TIMELINE.pop(
+            lease_id, (None, monotonic_now())
+        )
+        _emit_layer_stack(
+            "layer_stack.lease_released",
+            LayerStackSection(
+                operation_id=operation_id,
+                operation_step=130,
+                lease_id=lease_id,
+                lease_hold_ms=(monotonic_now() - started) * 1000.0,
+            ),
+            lane="normal",
+        )
+    return released
+
+
+_LEASE_TIMELINE: dict[str, tuple[str | None, float]] = {}
+
+
+def _emit_layer_stack(
+    event_type: str,
+    section: LayerStackSection,
+    *,
+    lane: str,
+) -> None:
+    try:
+        get_audit_buffer().append(
+            build_layer_stack_event(event_type, section),
+            lane=lane,  # type: ignore[arg-type]
+        )
+    except Exception:  # noqa: BLE001 — audit emits never break the hot path
+        pass
+
+
+def emit_squash_event(
+    *,
+    triggered: bool = False,
+    completed: bool = False,
+    failed: bool = False,
+    trigger_reason: str | None = None,
+    input_layers: int | None = None,
+    result_layers: int | None = None,
+    manifest_root_hash_value: str | None = None,
+    failure_kind: str | None = None,
+) -> None:
+    """Emit one of the ``layer_stack.squash_*`` critical-lane events.
+
+    Callers in the squash plan path invoke this so the audit ring sees a
+    contiguous ``triggered → {completed | failed}`` pair.
+    """
+    if triggered:
+        _emit_layer_stack(
+            "layer_stack.squash_triggered",
+            LayerStackSection(
+                squash_trigger_reason=trigger_reason,
+                squash_input_layers=input_layers,
+            ),
+            lane="critical",
+        )
+    if completed:
+        _emit_layer_stack(
+            "layer_stack.squash_completed",
+            LayerStackSection(
+                squash_input_layers=input_layers,
+                squash_result_layers=result_layers,
+                manifest_root_hash=manifest_root_hash_value,
+            ),
+            lane="critical",
+        )
+    if failed:
+        _emit_layer_stack(
+            "layer_stack.squash_failed",
+            LayerStackSection(
+                squash_failure_kind=failure_kind,
+                manifest_root_hash=manifest_root_hash_value,
+            ),
+            lane="critical",
+        )
 
 
 def _validate_manifest_for_root(layer_stack_root: Path) -> None:
@@ -167,6 +291,7 @@ __all__ = [
     "build_workspace_base",
     "clear_layer_stack_runtime_caches_for_tests",
     "drop_layer_stack_manager",
+    "emit_squash_event",
     "ensure_workspace_base",
     "fence_stale_staging",
     "get_layer_stack_manager",

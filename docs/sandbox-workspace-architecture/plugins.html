@@ -35,9 +35,18 @@
   <span class="nav-pair"><a href="provider.html">← 7. Provider</a><a href="space-model.html">9. Space Model →</a></span>
 </div>
 <section id="plugins"
-  data-last-reviewed-commit="29c334921"
+  data-last-reviewed-commit="2a3e6cc7c"
   data-evidence-paths="backend/src/sandbox/ephemeral_workspace/plugin/host_dispatch.py backend/src/sandbox/ephemeral_workspace/plugin/runtime_api.py backend/src/sandbox/ephemeral_workspace/plugin/op_registry.py backend/src/sandbox/ephemeral_workspace/plugin/overlay_dispatch.py backend/src/plugins/catalog/lsp/runtime/session_manager.py">
 <h2>8. Plugin in ephemeral_workspace <a class="anchor" href="#plugins">§</a></h2>
+<nav class="page-toc" aria-labelledby="page-toc-heading">
+  <h3 id="page-toc-heading">Contents</h3>
+  <ol>
+    <li><a href="#plugin-host-daemon-flow"><span>8.1</span> Host and Daemon Flow</a></li>
+    <li><a href="#plugin-operation-classes"><span>8.2</span> Operation Classes</a></li>
+    <li><a href="#plugin-refresh-detail"><span>8.3</span> Projection Refresh and LSP Writes</a></li>
+    <li><a href="#plugin-evidence-refresh"><span>8.4</span> Evidence and Refresh</a></li>
+  </ol>
+</nav>
 <div class="summary">
   <ul>
     <li>Plugins need current workspace state without bypassing LayerStack/OCC ownership.</li>
@@ -47,17 +56,13 @@
   </ul>
 </div>
 <div class="wiki-links" aria-label="Plugin page links">
-  <a href="#plugin-host-daemon-flow">Host and Daemon Flow</a>
-  <a href="#plugin-operation-classes">Operation Classes</a>
-  <a href="#plugin-refresh-detail">Projection Refresh and LSP Writes</a>
   <a href="daemon.html#operation-surface">Operation Surface</a>
   <a href="overlay.html#overlay-capture">Upperdir Capture</a>
   <a href="workflow-cookbook.html#cookbook-plugin-write">Plugin Write Operation</a>
 </div>
-
 </section>
 <section id="plugin-host-daemon-flow"
-  data-last-reviewed-commit="29c334921"
+  data-last-reviewed-commit="2a3e6cc7c"
   data-evidence-paths="backend/src/sandbox/ephemeral_workspace/plugin/host_dispatch.py backend/src/sandbox/ephemeral_workspace/plugin/runtime_api.py backend/src/sandbox/ephemeral_workspace/plugin/overlay_dispatch.py backend/src/sandbox/daemon/rpc/dispatcher.py">
 <h3>8.1 Host and Daemon Flow <a class="anchor" href="#plugin-host-daemon-flow">§</a></h3>
 <p>Host-side <code>call_plugin</code> is the single entrypoint: resolve sandbox/layer stack/caller, install the plugin bundle, call <code>api.plugin.ensure</code>, dispatch <code>plugin.&lt;name&gt;.&lt;op&gt;</code>, and wrap the response <span class="file-ref">backend/src/sandbox/ephemeral_workspace/plugin/host_dispatch.py:1-15</span>. The implementation ensures runtime only when the digest changes, then dispatches the plugin op with caller, workspace root, and intent metadata <span class="file-ref">backend/src/sandbox/ephemeral_workspace/plugin/host_dispatch.py:70-186</span>.</p>
@@ -83,7 +88,7 @@
 
 </section>
 <section id="plugin-operation-classes"
-  data-last-reviewed-commit="29c334921"
+  data-last-reviewed-commit="2a3e6cc7c"
   data-evidence-paths="backend/src/sandbox/ephemeral_workspace/plugin/op_registry.py backend/src/sandbox/ephemeral_workspace/plugin/overlay_dispatch.py backend/src/plugins/catalog/lsp/runtime/server.py backend/src/plugins/catalog/lsp/runtime/session_manager.py backend/src/plugins/catalog/lsp/runtime/pyright_session.py">
 <h3>8.2 Operation Classes <a class="anchor" href="#plugin-operation-classes">§</a></h3>
 <div class="diagram" aria-label="Plugin operation flow">
@@ -109,7 +114,7 @@
 
 </section>
 <section id="plugin-refresh-detail"
-  data-last-reviewed-commit="29c334921"
+  data-last-reviewed-commit="2a3e6cc7c"
   data-evidence-paths="backend/src/sandbox/ephemeral_workspace/plugin/projection.py backend/src/sandbox/ephemeral_workspace/pipeline.py backend/src/sandbox/ephemeral_workspace/events.py backend/src/plugins/catalog/lsp/runtime/session_manager.py backend/src/plugins/catalog/lsp/runtime/pyright_session.py backend/src/plugins/catalog/lsp/runtime/apply.py backend/src/sandbox/daemon/rpc/dispatcher.py">
 <h3>8.3 Projection Refresh and LSP Writes <a class="anchor" href="#plugin-refresh-detail">§</a></h3>
 
@@ -141,7 +146,7 @@
 </div>
 </section>
 <section id="plugin-evidence-refresh"
-  data-last-reviewed-commit="29c334921"
+  data-last-reviewed-commit="2a3e6cc7c"
   data-evidence-paths="backend/src/sandbox/ephemeral_workspace/plugin/host_dispatch.py backend/src/sandbox/ephemeral_workspace/plugin/runtime_api.py backend/src/sandbox/ephemeral_workspace/plugin/op_registry.py backend/src/plugins/catalog/lsp/runtime/session_manager.py backend/src/task_center_runner/tests/mock/sandbox/plugin/test_plugin_write_allowed_apply_workspace_edit_publishes.py backend/src/task_center_runner/tests/mock/sandbox/plugin/test_plugin_read_only_lsp_refresh_without_publish.py backend/src/task_center_runner/tests/mock/sandbox/plugin/test_plugin_blocked_in_open_isolated_workspace.py backend/src/task_center_runner/tests/mock/sandbox/plugin/test_plugin_intent_mislabel_fails_fast.py">
 <h3>8.4 Evidence and Refresh <a class="anchor" href="#plugin-evidence-refresh">§</a></h3>
 <div class="evidence-grid">
@@ -172,6 +177,11 @@
   Backlinks: <a class="wiki-link" href="daemon.html#operation-surface">Operation Surface</a> owns daemon op registration, <a class="wiki-link" href="workspaces.html#ephemeral-workspace">ephemeral_workspace</a> owns the overlay facade, and <a class="wiki-link" href="workspaces.html#isolated-workspace">isolated_workspace</a> explains why plugin access is blocked during private scratch.
 </div>
 </section>
+<div class="page-baseline" data-page-baseline-commit="2a3e6cc7c">
+  <strong>Maintenance baseline</strong>
+  <span>Local section metadata reviewed at <code>2a3e6cc7c</code>.</span>
+  <code>git diff 2a3e6cc7c..HEAD -- &lt;section data-evidence-paths&gt;</code>
+</div>
 <div class="page-footer-nav"><span><a href="provider.html">← 7. Provider</a></span><span><a href="space-model.html">9. Space Model →</a></span></div>
 </main>
 <script src="assets/search-index.js"></script>

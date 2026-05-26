@@ -35,9 +35,17 @@
   <span class="nav-pair"><a href="daemon.html">← 6. Daemon and Background Tasks</a><a href="plugins.html">8. Plugin in ephemeral_workspace →</a></span>
 </div>
 <section id="provider"
-  data-last-reviewed-commit="29c334921"
+  data-last-reviewed-commit="2a3e6cc7c"
   data-evidence-paths="backend/src/sandbox/provider/protocol.py backend/src/sandbox/provider/bootstrap.py backend/src/sandbox/provider/registry.py backend/src/sandbox/host/bootstrap.py backend/src/sandbox/host/daemon_client.py">
 <h2>7. Provider <a class="anchor" href="#provider">§</a></h2>
+<nav class="page-toc" aria-labelledby="page-toc-heading">
+  <h3 id="page-toc-heading">Contents</h3>
+  <ol>
+    <li><a href="#provider-boundary"><span>7.1</span> Provider Boundary</a></li>
+    <li><a href="#provider-bootstrap-workflow"><span>7.2</span> Bootstrap Workflow</a></li>
+    <li><a href="#provider-evidence-refresh"><span>7.3</span> Evidence and Refresh</a></li>
+  </ol>
+</nav>
 <div class="summary">
   <ul>
     <li>The sandbox runtime can run on different backends without changing workspace logic.</li>
@@ -47,16 +55,13 @@
   </ul>
 </div>
 <div class="wiki-links" aria-label="Provider page links">
-  <a href="#provider-boundary">Provider Boundary</a>
-  <a href="#provider-bootstrap-workflow">Bootstrap Workflow</a>
   <a href="daemon.html#startup-transport">Startup and Transport</a>
   <a href="layerstack.html#layerstack-storage">LayerStack Storage</a>
   <a href="workspaces.html#main-workspace">main_workspace</a>
 </div>
-
 </section>
 <section id="provider-boundary"
-  data-last-reviewed-commit="29c334921"
+  data-last-reviewed-commit="2a3e6cc7c"
   data-evidence-paths="backend/src/sandbox/provider/protocol.py backend/src/sandbox/provider/registry.py backend/src/sandbox/provider/bootstrap.py backend/src/sandbox/provider/docker/adapter.py backend/src/sandbox/provider/daytona/adapter.py backend/src/sandbox/host/bootstrap.py backend/src/sandbox/host/daemon_client.py">
 <h3>7.1 Provider Boundary <a class="anchor" href="#provider-boundary">§</a></h3>
 <p><code>ProviderAdapter</code> is the single protocol for Docker and Daytona. It includes health/discovery, container CRUD, preview/build logs, async <code>exec</code>, and <code>context_preparer()</code> <span class="file-ref">backend/src/sandbox/provider/protocol.py:21-79</span>. The registry supports one process-wide default plus explicit per-sandbox bindings; fallback to default is intentionally uncached <span class="file-ref">backend/src/sandbox/provider/registry.py:1-95</span>. Startup chooses <code>EOS_SANDBOX_PROVIDER</code> or central config and bootstraps Docker or Daytona once <span class="file-ref">backend/src/sandbox/provider/bootstrap.py:33-77</span>.</p>
@@ -79,7 +84,7 @@
 
 </section>
 <section id="provider-bootstrap-workflow"
-  data-last-reviewed-commit="29c334921"
+  data-last-reviewed-commit="2a3e6cc7c"
   data-evidence-paths="backend/src/sandbox/provider/bootstrap.py backend/src/sandbox/provider/protocol.py backend/src/sandbox/provider/docker/adapter.py backend/src/sandbox/provider/daytona/adapter.py backend/src/sandbox/host/bootstrap.py backend/src/sandbox/host/daemon_client.py">
 <h3>7.2 Bootstrap Workflow <a class="anchor" href="#provider-bootstrap-workflow">§</a></h3>
 <div class="sequence" aria-label="Provider bootstrap workflow">
@@ -104,7 +109,7 @@
 
 </section>
 <section id="provider-evidence-refresh"
-  data-last-reviewed-commit="29c334921"
+  data-last-reviewed-commit="2a3e6cc7c"
   data-evidence-paths="backend/src/sandbox/provider/protocol.py backend/src/sandbox/provider/docker/adapter.py backend/src/sandbox/provider/daytona/adapter.py backend/src/sandbox/host/bootstrap.py backend/tests/live_e2e_test/sandbox/_harness/workspace_base_public.py backend/tests/live_e2e_test/sandbox/phase-01-workspace-base-report.md backend/tests/live_e2e_test/sandbox/phase-04-pure-sandbox-api-load-report.md">
 <h3>7.3 Evidence and Refresh <a class="anchor" href="#provider-evidence-refresh">§</a></h3>
 <div class="evidence-grid">
@@ -134,6 +139,11 @@
   Backlinks: daemon transport details live in <a class="wiki-link" href="daemon.html#startup-transport">Startup and Transport</a>; workspace base and binding details live in <a class="wiki-link" href="layerstack.html#layerstack-storage">Storage</a> and <a class="wiki-link" href="workspaces.html#main-workspace">main_workspace</a>.
 </div>
 </section>
+<div class="page-baseline" data-page-baseline-commit="2a3e6cc7c">
+  <strong>Maintenance baseline</strong>
+  <span>Local section metadata reviewed at <code>2a3e6cc7c</code>.</span>
+  <code>git diff 2a3e6cc7c..HEAD -- &lt;section data-evidence-paths&gt;</code>
+</div>
 <div class="page-footer-nav"><span><a href="daemon.html">← 6. Daemon and Background Tasks</a></span><span><a href="plugins.html">8. Plugin in ephemeral_workspace →</a></span></div>
 </main>
 <script src="assets/search-index.js"></script>

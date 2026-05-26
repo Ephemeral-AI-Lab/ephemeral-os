@@ -28,6 +28,44 @@ class DaemonSection:
 
 
 @dataclass
+class LayerStackSection:
+    """Payload shape for ``layer_stack.*`` events.
+
+    Carries the causal-chain identifiers (``operation_id``, ``lease_id``,
+    ``manifest_root_hash``) so the report can reconstruct
+    ``lease → lock → squash → release`` per V3 Principle 3.
+    """
+
+    operation_id: str | None = None
+    operation_step: int | None = None
+    lease_id: str | None = None
+    owner_request_id: str | None = None
+    manifest_version: int | None = None
+    manifest_root_hash: str | None = None
+    layer_count: int | None = None
+    lease_wait_ms: float | None = None
+    lock_wait_ms: float | None = None
+    lease_hold_ms: float | None = None
+    prepare_snapshot_ms: float | None = None
+    squash_trigger_reason: str | None = None
+    squash_input_layers: int | None = None
+    squash_result_layers: int | None = None
+    squash_failure_kind: str | None = None
+
+    def as_dict(self) -> dict[str, Any]:
+        return {k: v for k, v in asdict(self).items() if v is not None}
+
+
+def build_layer_stack_event(
+    event_type: str, layer_stack: LayerStackSection
+) -> dict[str, Any]:
+    return {
+        "type": event_type,
+        "payload": {"layer_stack": layer_stack.as_dict()},
+    }
+
+
+@dataclass
 class OsResourceSection:
     """Payload shape for ``os_resource.sampled`` events."""
 
@@ -56,7 +94,9 @@ def build_os_resource_event(os_resource: OsResourceSection) -> dict[str, Any]:
 
 __all__ = [
     "DaemonSection",
+    "LayerStackSection",
     "OsResourceSection",
     "build_daemon_event",
+    "build_layer_stack_event",
     "build_os_resource_event",
 ]

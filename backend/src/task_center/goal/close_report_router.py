@@ -18,7 +18,7 @@ from task_center.goal.state import (
     GoalClosureReport,
     GoalOriginKind,
 )
-from task_center.task_state import TaskCenterBackgroundTaskStatus
+from task_center.task_state import TaskCenterTaskStatus
 
 
 class GoalClosureReportRouter:
@@ -42,15 +42,15 @@ class GoalClosureReportRouter:
         attempt_id = task.get("task_center_attempt_id") or None
         status = task.get("status") or ""
         if status in (
-            TaskCenterBackgroundTaskStatus.DONE.value,
-            TaskCenterBackgroundTaskStatus.FAILED.value,
+            TaskCenterTaskStatus.DONE.value,
+            TaskCenterTaskStatus.FAILED.value,
         ):
             return GoalClosureDeliveryResult(
                 status="already_delivered",
                 requested_by_task_id=report.requested_by_task_id,
                 parent_attempt_id=attempt_id,
             )
-        if status != TaskCenterBackgroundTaskStatus.WAITING_GOAL.value:
+        if status != TaskCenterTaskStatus.WAITING_GOAL.value:
             raise TaskCenterInvariantViolation(
                 f"TaskCenter task {report.requested_by_task_id!r} is not waiting on a goal."
             )
