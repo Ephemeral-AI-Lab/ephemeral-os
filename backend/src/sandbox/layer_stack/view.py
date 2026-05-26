@@ -193,14 +193,19 @@ class MergedView:
 
         yield from sorted(visible)
 
-    def materialize(
+    def project(
         self,
         destination: str | Path,
         manifest: Manifest,
         *,
         share_inodes: bool = False,
     ) -> None:
-        """Materialise *manifest* into *destination*.
+        """Project *manifest* into *destination* as an owned tree.
+
+        Applies layers oldest-first into *destination*, honoring whiteouts and
+        opaque-dir markers, to produce a self-contained merged tree. The caller
+        owns the resulting directory. Pure read of layer storage; never mutates
+        active layers.
 
         ``share_inodes=True`` hardlinks regular files from source layers. Only safe
         when the caller treats *destination* as read-only (e.g. a layer-stack
@@ -308,7 +313,7 @@ def _stale_layer_error(layer: LayerRef, rel: str) -> LayerStackStorageError:
 
 def _clear_directory(path: Path) -> None:
     # If an upper layer converts a file/symlink path into an opaque dir,
-    # the merged view materializer hits this with `path` already pointing
+    # the merged view projection hits this with `path` already pointing
     # at the previous-layer file or symlink. `mkdir(exist_ok=True)` would
     # raise FileExistsError in that case (a legitimate transition, not an
     # error). Remove the non-directory entry first so the opaque-dir apply

@@ -175,10 +175,10 @@ def test_prepare_workspace_snapshot_does_not_materialize_projection(
             )
         ]
     )
-    def fail_if_materialized(*_args: object, **_kwargs: object) -> None:
+    def fail_if_projected(*_args: object, **_kwargs: object) -> None:
         pytest.fail("prepare_workspace_snapshot must expose layer_paths directly")
 
-    monkeypatch.setattr(manager._view, "materialize", fail_if_materialized)
+    monkeypatch.setattr(manager._view, "project", fail_if_projected)
 
     snapshot = manager.prepare_workspace_snapshot("request-direct")
 

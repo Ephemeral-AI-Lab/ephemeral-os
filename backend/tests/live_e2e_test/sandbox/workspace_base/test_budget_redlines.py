@@ -79,14 +79,14 @@ for depth in depths:
         _publish_write(manager, materialize_root, manager.read_active_manifest().depth)
     destination = materialize_root / ("materialize-%03d" % depth)
     t0 = time.perf_counter()
-    _, _, elapsed = _materialize_digest(manager, destination)
+    _, _, elapsed = _project_digest(manager, destination)
     materialize_times.append(elapsed)
     rows.append(_call_row(
         case,
         "materialize_depth_%03d" % depth,
         elapsed <= materialize_budget_s,
         t0,
-        {"layer_stack.materialize.total_s": elapsed},
+        {"layer_stack.project.total_s": elapsed},
         extra={"depth": depth, "budget_ms": materialize_budget_s * 1000.0},
     ))
 

@@ -88,12 +88,12 @@ class LayerStackClient(LayerStackPortAdapter):
     def iter_paths(self, manifest: Manifest) -> Iterator[str]:
         return self.manager.iter_paths(manifest)
 
-    def materialize(
+    def project(
         self,
         destination: str | Path,
         manifest: Manifest,
     ) -> None:
-        self.manager.materialize(destination, manifest)
+        self.manager.project(destination, manifest)
 
     def flush_to_workspace(
         self,

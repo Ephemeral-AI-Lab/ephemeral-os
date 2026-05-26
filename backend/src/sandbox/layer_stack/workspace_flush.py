@@ -51,9 +51,9 @@ def flush_to_workspace(
     materialize_parent.mkdir(parents=True, exist_ok=True)
     materialized = Path(tempfile.mkdtemp(prefix="merged-", dir=str(materialize_parent)))
     try:
-        materialize_start = monotonic_now()
-        view.materialize(materialized, active, share_inodes=False)
-        record_elapsed(timings, "layer_stack.flush.materialize_s", materialize_start)
+        project_start = monotonic_now()
+        view.project(materialized, active, share_inodes=False)
+        record_elapsed(timings, "layer_stack.flush.project_s", project_start)
 
         replace_start = monotonic_now()
         _replace_directory_contents(workspace, materialized)

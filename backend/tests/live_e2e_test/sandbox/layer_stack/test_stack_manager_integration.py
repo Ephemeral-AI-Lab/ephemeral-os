@@ -33,9 +33,9 @@ assert manager.read_text("src/app.py") == ("next\n", True)
 assert manager.read_text("src/app.py", manifest=lease.manifest) == ("base\n", True)
 assert manager.list_dir("build") == ("out.txt",)
 
-materialized = root / "materialized"
-manager.materialize(materialized)
-assert (materialized / "src" / "app.py").read_text(encoding="utf-8") == "next\n"
+projected = root / "projected"
+manager.project(projected)
+assert (projected / "src" / "app.py").read_text(encoding="utf-8") == "next\n"
 
 bad_hash_rejected = False
 try:

@@ -44,9 +44,9 @@ def test_prepare_workspace_snapshot_skips_view_materialization(tmp_path: Path) -
             )
         ]
     )
-    with patch.object(manager._view, "materialize") as mock_materialize:
+    with patch.object(manager._view, "project") as mock_project:
         result = manager.prepare_workspace_snapshot("request-a")
-        mock_materialize.assert_not_called()
+        mock_project.assert_not_called()
 
     manager.release_lease(result.lease_id)
 

@@ -64,9 +64,9 @@ def test_workspace_base_writes_full_manifest_binding(tmp_path: Path) -> None:
     content, exists = manager.read_bytes("large.bin")
     assert exists is True
     assert content == b"x" * 9
-    materialized = tmp_path / "materialized"
-    manager.materialize(materialized)
-    assert (materialized / "empty").is_dir()
+    projected = tmp_path / "projected"
+    manager.project(projected)
+    assert (projected / "empty").is_dir()
 
 
 def test_repeated_base_build_fails_unless_reset_requested(tmp_path: Path) -> None:

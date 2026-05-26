@@ -124,7 +124,6 @@ class LayerStack:
                 manifest=manifest,
                 layer_paths=layer_paths,
                 timings={
-                    "layer_stack.materialize_s": 0.0,
                     "layer_stack.prepare_workspace_snapshot.total_s": (
                         monotonic_now() - total_start
                     ),
@@ -199,8 +198,8 @@ class LayerStack:
     def iter_paths(self, manifest: Manifest | None = None) -> Iterator[str]:
         return self._view.iter_paths(manifest or self.read_active_manifest())
 
-    def materialize(self, destination: str | Path, manifest: Manifest | None = None) -> None:
-        self._view.materialize(destination, manifest or self.read_active_manifest())
+    def project(self, destination: str | Path, manifest: Manifest | None = None) -> None:
+        self._view.project(destination, manifest or self.read_active_manifest())
 
     def commit_transaction(self) -> LayerStackTransaction:
         storage_writer_lock = self._require_storage_writer_lock()

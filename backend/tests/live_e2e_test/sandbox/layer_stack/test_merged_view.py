@@ -55,11 +55,11 @@ assert manager.read_bytes("depth/010.txt") == (None, False)
 assert manager.read_bytes("opaque/old.txt") == (None, False)
 assert manager.list_dir("opaque") == ("new.txt",)
 
-materialized = root / "materialized"
-manager.materialize(materialized)
-assert (materialized / "depth" / "099.txt").read_text(encoding="utf-8") == "value-099\n"
-assert not (materialized / "depth" / "010.txt").exists()
-assert sorted(p.name for p in (materialized / "opaque").iterdir()) == ["new.txt"]
+projected = root / "projected"
+manager.project(projected)
+assert (projected / "depth" / "099.txt").read_text(encoding="utf-8") == "value-099\n"
+assert not (projected / "depth" / "010.txt").exists()
+assert sorted(p.name for p in (projected / "opaque").iterdir()) == ["new.txt"]
 
 _emit(label, started, before, {
     "manifest_depth": manifest.depth,

@@ -187,9 +187,9 @@ def test_materialize_matches_point_reads_and_preserves_symlinks(tmp_path: Path) 
             SymlinkLayerChange(path="links/current", source_path="../target.txt"),
         ]
     )
-    destination = tmp_path / "materialized"
+    destination = tmp_path / "projected"
 
-    manager.materialize(destination)
+    manager.project(destination)
 
     assert (destination / "target.txt").read_text(encoding="utf-8") == "target"
     assert (destination / "links" / "current").is_symlink()

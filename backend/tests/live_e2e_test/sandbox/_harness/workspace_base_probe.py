@@ -145,11 +145,11 @@ def _tree_digest(root):
     return digest.hexdigest(), inv
 
 
-def _materialize_digest(manager, destination, manifest=None):
+def _project_digest(manager, destination, manifest=None):
     destination = Path(destination)
-    materialize_start = time.perf_counter()
-    manager.materialize(destination, manifest)
-    elapsed = time.perf_counter() - materialize_start
+    project_start = time.perf_counter()
+    manager.project(destination, manifest)
+    elapsed = time.perf_counter() - project_start
     digest, inventory = _tree_digest(destination)
     return digest, inventory, elapsed
 

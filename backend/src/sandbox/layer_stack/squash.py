@@ -104,7 +104,7 @@ class LayerCheckpointSquasher:
             layers=segment.layers,
         )
         try:
-            self._view.materialize(staging_dir, segment_manifest)
+            self._view.project(staging_dir, segment_manifest)
             layer_dir.parent.mkdir(parents=True, exist_ok=True)
             os.replace(staging_dir, layer_dir)
         except Exception:

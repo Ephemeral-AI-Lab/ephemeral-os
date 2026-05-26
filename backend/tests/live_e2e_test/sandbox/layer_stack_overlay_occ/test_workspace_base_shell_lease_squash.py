@@ -462,7 +462,6 @@ def _assert_no_cache_shell_timings(
     require_occ: bool = True,
 ) -> None:
     required = {
-        "layer_stack.materialize_s",
         "layer_stack.prepare_workspace_snapshot.total_s",
         "command_exec.prepare_snapshot_s",
         "command_exec.mount_workspace_s",

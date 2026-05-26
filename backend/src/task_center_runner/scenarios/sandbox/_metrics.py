@@ -135,7 +135,6 @@ def _aggregate_layer_stack(
     tool_call_metadata: Sequence[dict[str, Any]],
 ) -> dict[str, Any]:
     squash_totals: list[float] = []
-    materialize_times: list[float] = []
     depth_observations: list[float] = []
     for entry in tool_call_metadata:
         timings = _timings(entry)
@@ -145,10 +144,6 @@ def _aggregate_layer_stack(
         depth_before = timings.get("layer_stack.auto_squash.depth_before")
         if isinstance(depth_before, (int, float)) and depth_before > 0:
             depth_observations.append(float(depth_before))
-        materialize = timings.get("layer_stack.materialize_s")
-        if isinstance(materialize, (int, float)) and materialize > 0:
-            materialize_times.append(float(materialize))
-
     return {
         "squash_count": len(squash_totals),
         "squash_total_s": sum(squash_totals),
@@ -157,10 +152,6 @@ def _aggregate_layer_stack(
         "squash_max_s": max(squash_totals) if squash_totals else 0.0,
         "max_depth_before": max(depth_observations) if depth_observations else 0.0,
         "depth_observation_count": len(depth_observations),
-        "materialize_s_total": sum(materialize_times),
-        "materialize_count": len(materialize_times),
-        "materialize_p50_s": _percentile(materialize_times, 0.5),
-        "materialize_p95_s": _percentile(materialize_times, 0.95),
     }
 
 

@@ -109,7 +109,7 @@ def _squash_no_lease(depth):
     _publish_depth(manager, stack_root, depth)
     before_manifest = manager.read_active_manifest()
     before_dest = stack_root / "before-squash"
-    manager.materialize(before_dest)
+    manager.project(before_dest)
     before_digest = _full_digest(before_dest)
     t0 = time.perf_counter()
     squash_start = time.perf_counter()
@@ -118,7 +118,7 @@ def _squash_no_lease(depth):
     assert squashed is not None, before_manifest
     after_manifest = manager.read_active_manifest()
     after_dest = stack_root / "after-squash"
-    manager.materialize(after_dest)
+    manager.project(after_dest)
     after_digest = _full_digest(after_dest)
     assert before_digest == after_digest
     assert after_manifest.depth < before_manifest.depth

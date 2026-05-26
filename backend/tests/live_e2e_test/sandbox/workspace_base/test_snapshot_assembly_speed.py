@@ -105,14 +105,14 @@ def _verify(workload, manager, materialized, depth):
 def _measure_materialize(workload, manager, stack_root, depth, mode):
     destination = stack_root / ("materialized-%s-%s-%03d" % (workload, mode, depth))
     t0 = time.perf_counter()
-    digest, inventory, elapsed = _materialize_digest(manager, destination)
+    digest, inventory, elapsed = _project_digest(manager, destination)
     _verify(workload, manager, destination, depth)
     rows.append(_call_row(
         case,
         "%s_depth_%03d_%s" % (workload, depth, mode),
         True,
         t0,
-        timings={"layer_stack.materialize.total_s": elapsed},
+        timings={"layer_stack.project.total_s": elapsed},
         extra={
             "workload": workload,
             "depth": depth,
@@ -148,11 +148,11 @@ for workload in ("base_only", "append", "overwrite", "delete", "symlink", "opaqu
         assert warm >= 0
 
 materialize_times = [
-    float(row["timings"].get("layer_stack.materialize.total_s", 0.0))
+    float(row["timings"].get("layer_stack.project.total_s", 0.0))
     for row in rows
 ]
 summary_timings.update({
-    "layer_stack.materialize.total_s": max(materialize_times or [0.0]),
+    "layer_stack.project.total_s": max(materialize_times or [0.0]),
     "phase01.materialize.p50_s": _percentile(materialize_times, 50),
     "phase01.materialize.p99_s": _percentile(materialize_times, 99),
 })
