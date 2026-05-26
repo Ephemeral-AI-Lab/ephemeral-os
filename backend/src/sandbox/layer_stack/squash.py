@@ -49,7 +49,7 @@ class SquashPlan:
 
 
 class LayerCheckpointSquasher:
-    """Plans runs between barrier layers and projects each run into a checkpoint layer."""
+    """Plans runs between lease heads and projects each run into a checkpoint layer."""
 
     def __init__(
         self,
@@ -63,7 +63,7 @@ class LayerCheckpointSquasher:
         active_manifest: Manifest,
         *,
         max_depth: int,
-        barrier_layers: tuple[LayerRef, ...] = (),
+        lease_head_layers: tuple[LayerRef, ...] = (),
         min_reduction: int = 1,
     ) -> SquashPlan | None:
         if max_depth <= 0:
@@ -73,7 +73,7 @@ class LayerCheckpointSquasher:
         if active_manifest.depth <= max_depth:
             return None
 
-        entries = _segment_around_barriers(active_manifest.layers, barrier_layers)
+        entries = _segment_around_lease_heads(active_manifest.layers, lease_head_layers)
         if len(entries) >= active_manifest.depth:
             return None
         if active_manifest.depth - len(entries) < min_reduction:
@@ -139,11 +139,11 @@ class LayerCheckpointSquasher:
         )
 
 
-def _segment_around_barriers(
+def _segment_around_lease_heads(
     layers: tuple[LayerRef, ...],
-    barrier_layers: tuple[LayerRef, ...],
+    lease_head_layers: tuple[LayerRef, ...],
 ) -> tuple[_SquashPlanEntry, ...]:
-    barriers = set(barrier_layers)
+    heads = set(lease_head_layers)
     entries: list[_SquashPlanEntry] = []
     run: list[LayerRef] = []
 
@@ -155,7 +155,7 @@ def _segment_around_barriers(
         run.clear()
 
     for layer in layers:
-        if layer in barriers:
+        if layer in heads:
             flush_run()
             entries.append(layer)
         else:

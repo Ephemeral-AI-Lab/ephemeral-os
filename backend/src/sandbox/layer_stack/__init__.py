@@ -15,7 +15,6 @@ from sandbox.layer_stack.commit_staging import CommitStagingArea
 from sandbox.layer_stack.stack import (
     LayerStack,
     LayerStackSnapshotLease,
-    PrepareWorkspaceSnapshotResult,
 )
 from sandbox.layer_stack.manifest import (
     LayerRef,
@@ -46,7 +45,6 @@ __all__ = [
     "Manifest",
     "ManifestConflictError",
     "OpaqueDirLayerChange",
-    "PrepareWorkspaceSnapshotResult",
     "SymlinkLayerChange",
     "WorkspaceBinding",
     "WorkspaceBindingError",

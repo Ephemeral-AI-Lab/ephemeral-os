@@ -160,7 +160,7 @@
 
 <p>This is the <strong>atomic-pointer-swap commit pattern</strong> used by Git (HEAD updates), Apache Iceberg (metadata.json swap), Delta Lake, and Hudi: a single mutable pointer over a tree of immutable content-addressed objects, swapped via CAS. The active <code>manifest.json</code> is the single linearization point; everything else is append-only.</p>
 
-<p>The publisher performs a CAS check before writing, writes changes into a staging layer, moves it into <code>layers/</code>, then re-checks the manifest before writing the new active manifest <span class="file-ref">backend/src/sandbox/layer_stack/publisher.py:49-132</span>. Delete and opaque directory semantics use overlay-style marker files <span class="file-ref">backend/src/sandbox/layer_stack/changes.py:123-142</span>. Leases refcount every layer in the captured manifest for GC retention (<code>leased_layers()</code>) and expose each lease's head as a squash barrier (<code>lease_head_layers()</code>) <span class="file-ref">backend/src/sandbox/layer_stack/lease.py:38-86</span>.</p>
+<p>The publisher performs a CAS check before writing, writes changes into a staging layer, moves it into <code>layers/</code>, then re-checks the manifest before writing the new active manifest <span class="file-ref">backend/src/sandbox/layer_stack/publisher.py:49-132</span>. Delete and opaque directory semantics use overlay-style marker files <span class="file-ref">backend/src/sandbox/layer_stack/changes.py:123-142</span>. Leases refcount every layer in the captured manifest for GC retention (<code>leased_layers()</code>) and expose each lease's head layer as the set of positions squash must keep (<code>lease_head_layers()</code>) <span class="file-ref">backend/src/sandbox/layer_stack/lease.py:38-86</span>.</p>
 
 <div class="callout">
   <span class="label">Why auto-squash exists</span>
@@ -222,34 +222,34 @@
 <div class="summary">
   <ul>
     <li>OCC publishes append layers without bound; both overlay <code>mount(8)</code> and <code>MergedView</code> read-amp force a depth cap.</li>
-    <li><code>LayerStack.squash()</code> folds runs of non-barrier layers into checkpoint layers and rewrites the active manifest to use them.</li>
+    <li><code>LayerStack.squash()</code> folds runs between lease-head layers into checkpoint layers and rewrites the active manifest to use them.</li>
     <li>Squash is non-destructive: original layer directories stay on disk and remain readable through any lease that still references them. Deletion is deferred to the lease that retains them releasing.</li>
-    <li>Leases hold their full frozen manifest for reads (<code>leased_layers()</code> GC retention); only each lease's <strong>head</strong> acts as a squash barrier (<code>lease_head_layers()</code>).</li>
+    <li>Leases hold their full frozen manifest for reads (<code>leased_layers()</code> GC retention); only each lease's <strong>head</strong> is preserved in active by squash (<code>lease_head_layers()</code>).</li>
   </ul>
 </div>
 
 <div class="callout">
   <span class="label">Two lease-derived sets</span>
-  <strong><code>leased_layers()</code></strong> is the union of every layer in every active lease's manifest — the on-disk retention set used by <code>_unreferenced_layers</code> at lease release. <strong><code>lease_head_layers()</code></strong> is the newest layer of each lease's manifest — the squash barrier set. They are different things and used by different code paths: GC vs. squash planning.
+  <strong><code>leased_layers()</code></strong> is the union of every layer in every active lease's manifest — the on-disk retention set used by <code>_unreferenced_layers</code> at lease release. <strong><code>lease_head_layers()</code></strong> is the newest layer of each lease's manifest — the set squash must keep in place in the active manifest. They are different things and used by different code paths: GC vs. squash planning.
 </div>
 
-<p><strong>Algorithm.</strong> <code>LayerStack.squash(max_depth=...)</code> takes the storage-writer guard, reads the active manifest under the lock, asks the squasher for a plan using <code>barrier_layers=self._leases.lease_head_layers()</code>, and refuses if the plan is <code>None</code> <span class="file-ref">backend/src/sandbox/layer_stack/stack.py:231-293</span>. Plan acceptance criteria <span class="file-ref">backend/src/sandbox/layer_stack/squash.py:61-93</span>:</p>
+<p><strong>Algorithm.</strong> <code>LayerStack.squash(max_depth=...)</code> takes the storage-writer guard, reads the active manifest under the lock, asks the squasher for a plan using <code>lease_head_layers=self._leases.lease_head_layers()</code>, and refuses if the plan is <code>None</code> <span class="file-ref">backend/src/sandbox/layer_stack/stack.py:231-293</span>. Plan acceptance criteria <span class="file-ref">backend/src/sandbox/layer_stack/squash.py:61-93</span>:</p>
 
 <ol>
   <li>Active depth must exceed <code>max_depth</code>.</li>
-  <li>Segmenting around the barrier set must produce at least one run of ≥ 2 contiguous non-barrier layers (a <code>CheckpointSegment</code>).</li>
+  <li>Segmenting around the lease-head set must produce at least one run of ≥ 2 contiguous non-head layers (a <code>CheckpointSegment</code>).</li>
   <li>Number of plan entries must be strictly less than the current depth.</li>
   <li>Reduction must meet <code>min_reduction</code> (default 1; <code>can_squash()</code> uses 2).</li>
   <li>If post-segmentation entry count still exceeds <code>max_depth</code> and no single segment is larger than <code>max_depth</code>, the plan is rejected — squashing wouldn't reach the cap.</li>
 </ol>
 
-<p>When accepted, squash acquires a synthetic lease against the active manifest (prevents GC racing the checkpoint build), then calls <code>build_checkpoint</code> per segment: allocate a <code>B{v+1:06d}-...</code> staging dir, <code>MergedView.project(staging, Manifest(segment.layers))</code>, and <code>os.replace</code> into <code>layers/</code>. Under the lock again, it verifies the active manifest's prefix is still compatible (<code>manifest_prefix_before_plan</code>), assembles <code>new_layers = live_prefix + [checkpoint | barrier-passthrough]</code>, bumps the version, and writes the manifest atomically. If any check fails, partial checkpoints are discarded via <code>discard_checkpoint</code>. On success, the synthetic squash lease is released, which triggers <code>_unreferenced_layers</code> and removes any layer no longer referenced by the active manifest or any other lease <span class="file-ref">backend/src/sandbox/layer_stack/stack.py:138-150</span>, <span class="file-ref">backend/src/sandbox/layer_stack/stack.py:333-346</span>.</p>
+<p>When accepted, squash acquires a synthetic lease against the active manifest (prevents GC racing the checkpoint build), then calls <code>build_checkpoint</code> per segment: allocate a <code>B{v+1:06d}-...</code> staging dir, <code>MergedView.project(staging, Manifest(segment.layers))</code>, and <code>os.replace</code> into <code>layers/</code>. Under the lock again, it verifies the active manifest's prefix is still compatible (<code>manifest_prefix_before_plan</code>), assembles <code>new_layers = live_prefix + [checkpoint | lease-head-passthrough]</code>, bumps the version, and writes the manifest atomically. If any check fails, partial checkpoints are discarded via <code>discard_checkpoint</code>. On success, the synthetic squash lease is released, which triggers <code>_unreferenced_layers</code> and removes any layer no longer referenced by the active manifest or any other lease <span class="file-ref">backend/src/sandbox/layer_stack/stack.py:138-150</span>, <span class="file-ref">backend/src/sandbox/layer_stack/stack.py:333-346</span>.</p>
 
 <div class="callout">
   <span class="label">Worked example</span>
   <strong>Setup.</strong> Active manifest <code>[L7, L6, L5, L4, L3, L2, L1]</code>. Lease A holds <code>[L6, L5, L4, L3, L2, L1]</code> (head L6). Call <code>squash(max_depth=2)</code>.
   <br/><br/>
-  <strong>Plan.</strong> <code>barrier_layers = {L6}</code>. Segmenting around the barrier produces entries <code>[L7]</code>, <code>L6</code>, <code>CheckpointSegment(L5, L4, L3, L2, L1)</code>. The third entry is foldable (length 5 ≥ 2).
+  <strong>Plan.</strong> <code>lease_head_layers = {L6}</code>. Segmenting around the head produces entries <code>[L7]</code>, <code>L6</code>, <code>CheckpointSegment(L5, L4, L3, L2, L1)</code>. The third entry is foldable (length 5 ≥ 2).
   <br/><br/>
   <strong>Result.</strong> Active becomes <code>[L7, L6, C]</code>. On disk: L1..L7 <em>and</em> C all coexist — L5..L1 dirs survive because lease A still references them through its frozen manifest. Reads through lease A continue to walk <code>[L6, L5, L4, L3, L2, L1]</code>; new readers using active walk <code>[L7, L6, C]</code>.
   <br/><br/>
@@ -265,8 +265,8 @@ LayerStack.squash(max_depth)
         v
 under lock:
   active   = read_active_manifest
-  barriers = leases.lease_head_layers()
-  plan     = squasher.plan(active, max_depth, barrier_layers=barriers)
+  heads    = leases.lease_head_layers()
+  plan     = squasher.plan(active, max_depth, lease_head_layers=heads)
         |
         +-- plan is None ------------------&gt; return None
         |
@@ -288,7 +288,7 @@ under lock:
         +-- diverged -----&gt; discard_checkpoint(...) ; return None
         |
         v
-  new_layers = live_prefix + [checkpoint | barrier-passthrough per entry]
+  new_layers = live_prefix + [checkpoint | lease-head-passthrough per entry]
   write_manifest_atomic(new_manifest)
         |
         v
@@ -322,7 +322,7 @@ _remove_layers(removable): rm -rf layer dirs + digest sidecars + evict view cach
       <li><span class="file-ref">backend/src/sandbox/layer_stack/view.py</span> newest-first logical reads and manifest projection.</li>
       <li><span class="file-ref">backend/src/sandbox/layer_stack/squash.py</span> checkpoint segmentation, projection, and atomic manifest rewrite.</li>
       <li><span class="file-ref">backend/src/sandbox/layer_stack/workspace_commit.py</span> projection + workspace swap + base rebuild.</li>
-      <li><span class="file-ref">backend/src/sandbox/layer_stack/lease.py</span> <code>leased_layers()</code> retention set and <code>lease_head_layers()</code> barrier set.</li>
+      <li><span class="file-ref">backend/src/sandbox/layer_stack/lease.py</span> <code>leased_layers()</code> retention set and <code>lease_head_layers()</code> squash-keep set.</li>
       <li><span class="file-ref">backend/src/sandbox/layer_stack/workspace_base.py</span> base import and workspace binding write.</li>
     </ul>
   </div>

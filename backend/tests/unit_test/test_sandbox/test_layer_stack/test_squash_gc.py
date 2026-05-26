@@ -131,15 +131,15 @@ def test_checkpoint_relabel_moves_prebuilt_checkpoint_to_publish_version(
             f"base/{index:02d}.txt",
             f"base-{index:02d}\n".encode("utf-8"),
         )
-    plan = manager._squash.plan(manager.read_active_manifest(), max_depth=1)
+    plan = manager._checkpoint_squasher.plan(manager.read_active_manifest(), max_depth=1)
     assert plan is not None
-    checkpoint = manager._squash.build_checkpoint(
+    checkpoint = manager._checkpoint_squasher.build_checkpoint(
         plan.checkpoint_segments[0],
         active_version=plan.active_version,
     )
     original_path = _layer_path(manager, checkpoint)
 
-    relabeled = manager._squash.relabel_checkpoint(
+    relabeled = manager._checkpoint_squasher.relabel_checkpoint(
         checkpoint,
         manifest_version=42,
     )
@@ -161,7 +161,7 @@ def test_squash_cas_keeps_concurrent_prefix_append_and_versions_checkpoint(
             f"base/{index:02d}.txt",
             f"base-{index:02d}\n".encode("utf-8"),
         )
-    real_build_checkpoint = manager._squash.build_checkpoint
+    real_build_checkpoint = manager._checkpoint_squasher.build_checkpoint
     built: list[LayerRef] = []
 
     def build_checkpoint_then_append(
@@ -175,7 +175,7 @@ def test_squash_cas_keeps_concurrent_prefix_append_and_versions_checkpoint(
         return checkpoint
 
     monkeypatch.setattr(
-        manager._squash,
+        manager._checkpoint_squasher,
         "build_checkpoint",
         build_checkpoint_then_append,
     )
@@ -210,7 +210,7 @@ def test_squash_cas_mismatch_discards_unpublished_checkpoint(
             f"base-{index:02d}\n".encode("utf-8"),
         )
     before = manager.read_active_manifest()
-    real_build_checkpoint = manager._squash.build_checkpoint
+    real_build_checkpoint = manager._checkpoint_squasher.build_checkpoint
     built: list[LayerRef] = []
 
     def build_checkpoint_then_rewrite_manifest(
@@ -227,7 +227,7 @@ def test_squash_cas_mismatch_discards_unpublished_checkpoint(
         return checkpoint
 
     monkeypatch.setattr(
-        manager._squash,
+        manager._checkpoint_squasher,
         "build_checkpoint",
         build_checkpoint_then_rewrite_manifest,
     )
@@ -253,7 +253,7 @@ def test_squash_pins_planned_layers_during_checkpoint_build(
             f"base-{index:02d}\n".encode("utf-8"),
         )
 
-    real_build_checkpoint = manager._squash.build_checkpoint
+    real_build_checkpoint = manager._checkpoint_squasher.build_checkpoint
     triggered = False
     concurrent_results: list[Manifest | None] = []
 
@@ -266,14 +266,14 @@ def test_squash_pins_planned_layers_during_checkpoint_build(
         if not triggered:
             triggered = True
             monkeypatch.setattr(
-                manager._squash,
+                manager._checkpoint_squasher,
                 "build_checkpoint",
                 real_build_checkpoint,
             )
             concurrent = manager.squash(max_depth=2)
             concurrent_results.append(concurrent)
             monkeypatch.setattr(
-                manager._squash,
+                manager._checkpoint_squasher,
                 "build_checkpoint",
                 build_checkpoint_after_concurrent_squash,
             )
@@ -282,7 +282,7 @@ def test_squash_pins_planned_layers_during_checkpoint_build(
         return real_build_checkpoint(segment, active_version=active_version)
 
     monkeypatch.setattr(
-        manager._squash,
+        manager._checkpoint_squasher,
         "build_checkpoint",
         build_checkpoint_after_concurrent_squash,
     )

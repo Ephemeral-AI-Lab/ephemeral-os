@@ -19,12 +19,6 @@ from pathlib import Path
 from typing import Literal, Protocol
 
 from sandbox._shared.models import Intent, ToolCallRequest
-from sandbox.occ.layer_stack_client import LayerStackPortAdapter
-from sandbox.overlay.capability import mount_syscalls_supported
-from sandbox.ephemeral_workspace.pipeline import EphemeralPipeline
-from sandbox.occ.changeset import ChangesetResult
-from sandbox.overlay.namespace_runner import detect_private_mount_namespace
-import sandbox.overlay.writable_dirs as writable_dirs_mod
 
 OverlayPath = Literal["mount_syscalls"]
 
@@ -44,13 +38,16 @@ class LayerStackLike(Protocol):
 
 
 class _NoopOccClient:
-    async def apply_changeset(self, *args: object, **kwargs: object) -> ChangesetResult:
+    async def apply_changeset(self, *args: object, **kwargs: object) -> object:
         del args, kwargs
-        return ChangesetResult(files=(), timings={}, published_manifest_version=None)
+        changeset_result = importlib.import_module(
+            "sandbox.occ.changeset"
+        ).ChangesetResult
+        return changeset_result(files=(), timings={}, published_manifest_version=None)
 
     async def run_maintenance_after_publish(
         self,
-        result: ChangesetResult,
+        result: object,
         *,
         workspace_ref: str | None = None,
     ) -> dict[str, float]:
@@ -97,6 +94,12 @@ def has_cap_sys_admin() -> bool:
     """Return whether the native O(1) harness can exercise mount syscalls."""
     if sys.platform != "linux":
         return False
+    detect_private_mount_namespace = importlib.import_module(
+        "sandbox.overlay.namespace_runner"
+    ).detect_private_mount_namespace
+    mount_syscalls_supported = importlib.import_module(
+        "sandbox.overlay.capability"
+    ).mount_syscalls_supported
     return detect_private_mount_namespace() and mount_syscalls_supported()
 
 
@@ -163,10 +166,16 @@ async def run_shell_batch(
     """Run commands through command-exec using the namespace-only overlay path."""
     workspace_root.mkdir(parents=True, exist_ok=True)
     writable_root.mkdir(parents=True, exist_ok=True)
-    pipeline = EphemeralPipeline(
+    ephemeral_pipeline = importlib.import_module(
+        "sandbox.ephemeral_workspace.pipeline"
+    ).EphemeralPipeline
+    layer_stack_adapter = importlib.import_module(
+        "sandbox.occ.layer_stack_client"
+    ).LayerStackPortAdapter
+    pipeline = ephemeral_pipeline(
         occ_client=_NoopOccClient(),
         workspace_ref=str(stack.storage_root),
-        layer_stack=LayerStackPortAdapter(stack),
+        layer_stack=layer_stack_adapter(stack),
         workspace_root=workspace_root.as_posix(),
     )
     expected_mode = "private_namespace"
@@ -323,6 +332,7 @@ def _assert_slope(
 
 @contextmanager
 def _overlay_writable_root(path: Path) -> Iterator[None]:
+    writable_dirs_mod = importlib.import_module("sandbox.overlay.writable_dirs")
     previous = writable_dirs_mod.OVERLAY_WRITABLE_ROOT
     path.mkdir(parents=True, exist_ok=True)
     writable_dirs_mod.OVERLAY_WRITABLE_ROOT = path

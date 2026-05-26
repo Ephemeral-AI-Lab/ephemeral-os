@@ -66,10 +66,6 @@ class LayerStackSnapshotLease:
         return result
 
 
-# Compatibility for current direct imports; new code should use the lease name.
-PrepareWorkspaceSnapshotResult = LayerStackSnapshotLease
-
-
 class LayerStack:
     """Coordinates active manifests, snapshot leases, reads, and publishes."""
 
@@ -161,7 +157,7 @@ class LayerStack:
                 self._checkpoint_squasher.plan(
                     active,
                     max_depth=max_depth,
-                    barrier_layers=self._leases.lease_head_layers(),
+                    lease_head_layers=self._leases.lease_head_layers(),
                     min_reduction=2,
                 )
                 is not None
@@ -234,7 +230,7 @@ class LayerStack:
                 plan = self._checkpoint_squasher.plan(
                     active,
                     max_depth=max_depth,
-                    barrier_layers=self._leases.lease_head_layers(),
+                    lease_head_layers=self._leases.lease_head_layers(),
                 )
                 if plan is None:
                     return None

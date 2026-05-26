@@ -68,10 +68,10 @@ class LeaseRegistry:
     def lease_head_layers(self) -> tuple[LayerRef, ...]:
         """Return the newest layer of each active lease's manifest.
 
-        Squash uses these as barriers: each lease's head is a snapshot cut
-        point that must remain visible in the active manifest. Layers below
-        the head are foldable; the lease itself keeps reading through its
-        own frozen manifest via :meth:`leased_layers` GC retention.
+        Squash uses these as the layers that must stay visible in the active
+        manifest (its ``lease_head_layers=`` parameter). Layers below each
+        head are foldable; the lease itself keeps reading through its own
+        frozen manifest via :meth:`leased_layers` GC retention.
         """
         with self._lock:
             return tuple(
