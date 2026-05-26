@@ -16,6 +16,7 @@ from sandbox.audit.events import IsolatedWorkspaceAuditEvent
 from sandbox._shared.layer_stack_port import LayerStackPort
 from sandbox._shared.clock import monotonic_now
 from sandbox._shared.models import Intent, ToolCallRequest, ToolCallResult
+from sandbox._shared.ordered_lock import OrderedLock
 from sandbox.daemon.audit_schema import (
     IsolatedWorkspaceSection,
     build_isolated_workspace_event,
@@ -93,16 +94,12 @@ class IsolatedPipeline(
         self._meminfo_reader = meminfo_reader or _read_linux_memavailable_kb
         self._handles: dict[str, IsolatedWorkspaceHandle] = {}
         self._by_agent: dict[str, str] = {}
-        # Phase 4 §AC9: the production ``_map_lock`` participates in the
-        # ``entry_lock`` outer / ``_map_lock`` inner lock-order rule. The
-        # ``_OrderedLock`` wrapper records acquisitions only when
-        # ``EOS_TEST_MODE=true``; production behaves identically to a
-        # raw ``asyncio.Lock``. Lazy import breaks the load-time cycle
-        # via ``workspace_tool_dispatch`` → ``pipeline_registry`` →
-        # ``isolated_workspace/__init__.py`` → ``pipeline.py``.
-        from sandbox.daemon.workspace_tool_dispatch import _OrderedLock
-
-        self._map_lock = _OrderedLock("_map_lock")
+        # Phase 4 §AC9: ``OrderedLock("_map_lock")`` participates in the
+        # per-task lock-order assertion under ``EOS_TEST_MODE=true``. The
+        # rule is ``entry_lock`` (per-agent, in ``workspace_tool_dispatch``)
+        # outer, ``_map_lock`` inner. Outside test mode the wrapper is a
+        # near-zero-overhead pass-through.
+        self._map_lock = OrderedLock("_map_lock")
         # Default-set: a freshly constructed pipeline (without ``initialize``)
         # is usable. ``initialize`` clears the event around startup orphan
         # recovery so concurrent ``enter`` calls block until IP-pool reconciliation

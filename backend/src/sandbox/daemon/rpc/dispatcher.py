@@ -102,10 +102,14 @@ async def dispatch_envelope_async(
             except LifecycleInProgressError as exc:
                 return _lifecycle_in_progress_response(op, exc.agent_id)
         if is_plugin_op:
-            # Plugin op without an agent_id — surface the existing
-            # ``workspace_lifecycle.plugin_check_unbootstrapped`` audit so
-            # operators can spot mis-wired plugins, but proceed.
-            _emit_plugin_gate_audit(op, agent_id)
+            # Plugin op without an agent_id — preserve the original gate
+            # behavior (emit ``workspace_lifecycle.plugin_check_unbootstrapped``
+            # only when no isolated pipeline is bootstrapped). Without an
+            # agent_id ``iws.get_handle("")`` is always None so the
+            # decision function cannot return a block, but its audit-emit
+            # side effect for the unbootstrapped case is the contract we
+            # have to keep.
+            _plugin_block_decision(op, agent_id)
         return await _run_handler_and_finalize(
             op,
             args_raw,

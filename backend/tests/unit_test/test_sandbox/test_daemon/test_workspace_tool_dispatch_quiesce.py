@@ -17,16 +17,15 @@ Covers the engine-independent half of the two-layer enforcement:
 from __future__ import annotations
 
 import asyncio
-from pathlib import Path
 
 import pytest
 
+from sandbox._shared.ordered_lock import OrderedLock
 from sandbox.daemon.rpc import dispatcher
 from sandbox.daemon.workspace_tool_dispatch import (
     LifecycleInProgressError,
-    _OrderedLock,
-    _existing_dispatch_state,
     _ensure_dispatch_state,
+    _existing_dispatch_state,
     acquire_dispatch_slot,
     begin_exit_drain,
     finalize_exit_drain,
@@ -240,8 +239,8 @@ def test_plugin_gate_exit_pending_returns_forbidden(monkeypatch):
 
 async def test_lock_order_entry_outer_map_inner_assertion(monkeypatch):
     monkeypatch.setenv("EOS_TEST_MODE", "true")
-    entry = _OrderedLock("entry_lock")
-    map_lock = _OrderedLock("_map_lock")
+    entry = OrderedLock("entry_lock")
+    map_lock = OrderedLock("_map_lock")
 
     # Correct order: entry first, then map.
     async with entry:
@@ -258,51 +257,54 @@ async def test_lock_order_entry_outer_map_inner_assertion(monkeypatch):
 
 async def test_lock_order_assertion_silent_outside_test_mode(monkeypatch):
     monkeypatch.delenv("EOS_TEST_MODE", raising=False)
-    map_lock = _OrderedLock("_map_lock")
+    map_lock = OrderedLock("_map_lock")
     # No assertion: production path stays silent.
     async with map_lock:
         pass
 
 
-# ---------------------------------------------------------------------------
-# AC9 (production wiring): the assertion fires through a real
-# ``IsolatedPipeline._map_lock`` instance, not just a synthetic wrapper.
-# ---------------------------------------------------------------------------
+async def test_real_isolated_pipeline_map_lock_participates_in_order_assertion(
+    monkeypatch, tmp_path
+):
+    """AC9 must apply to the production ``IsolatedPipeline._map_lock``.
 
-
-async def test_real_pipeline_map_lock_uses_ordered_lock(monkeypatch):
-    """Phase 4 §AC9: the production ``_map_lock`` is the wrapped variant
-    so the assertion fires when ``_map_lock`` is acquired without
-    ``entry_lock`` outer."""
+    Earlier drafts kept ``_map_lock`` as a plain ``asyncio.Lock``, which
+    silently made the lock-order rule inert against real exits. This
+    test instantiates a real ``IsolatedPipeline`` and asserts the
+    assertion fires when ``_map_lock`` is acquired without ``entry_lock``
+    outer.
+    """
     monkeypatch.setenv("EOS_TEST_MODE", "true")
-    # Import inside the test to avoid a top-level dependency on the
-    # full IsolatedPipeline construction graph; the lazy import inside
-    # ``__init__`` does the heavy lifting.
     from sandbox.isolated_workspace.pipeline import IsolatedPipeline
 
-    class _LayerStackDouble:
-        def __init__(self):
-            self.released = []
-
+    class _StubLayerStack:
         def prepare_workspace_snapshot(self, *, request_id):  # pragma: no cover
-            raise NotImplementedError
+            raise AssertionError("unused")
 
-        def release_lease(self, *, lease_id):
-            self.released.append(lease_id)
+        def release_lease(self, *, lease_id):  # pragma: no cover
+            raise AssertionError("unused")
 
     pipeline = IsolatedPipeline(
-        scratch_root=Path("/tmp/phase4-test"),
-        layer_stack=_LayerStackDouble(),
+        scratch_root=tmp_path,
+        layer_stack=_StubLayerStack(),  # type: ignore[arg-type]
     )
-    assert isinstance(pipeline._map_lock, _OrderedLock)
+
+    # Map lock is the wrapper, not the bare asyncio.Lock.
+    assert isinstance(pipeline._map_lock, OrderedLock)
     assert pipeline._map_lock.name == "_map_lock"
-    # Acquiring ``_map_lock`` alone fires the assertion because no
-    # ``entry_lock`` is held in the current task.
+
+    # Acquiring _map_lock without entry_lock outer must raise.
     with pytest.raises(AssertionError) as exc:
         async with pipeline._map_lock:
             pass
     assert "_map_lock" in str(exc.value)
     assert "entry_lock" in str(exc.value)
+
+    # The correct order (entry outer, map inner) does not raise.
+    entry = OrderedLock("entry_lock")
+    async with entry:
+        async with pipeline._map_lock:
+            pass
 
 
 __all__ = ()

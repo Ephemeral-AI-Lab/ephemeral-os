@@ -82,59 +82,6 @@ def test_tool_call_dispatch_lifecycle_siblings_rejected_lifecycle_executes():
     assert len(events_emitted) == 1
 
 
-def test_tool_call_dispatch_lifecycle_dispatches_when_paired_with_sibling(
-    monkeypatch,
-):
-    """End-to-end variant: AC1 verifier — through the full
-    ``_dispatch_deferred_tool_calls`` flow, the lifecycle call's
-    ``ToolResultBlock`` has ``is_error=False`` while the sibling's
-    has ``is_error=True``."""
-    intent_map = {
-        "enter_isolated_workspace": Intent.LIFECYCLE,
-        "write_file": Intent.WRITE_ALLOWED,
-    }
-    ctx = _ctx(intent_map)
-    tool_calls = [_tool("enter_isolated_workspace"), _tool("write_file")]
-    tool_results: list[ToolResultBlock] = []
-
-    # Stub the framework's tool executor so the lifecycle call "dispatches"
-    # to a successful no-op result. This proves the rejection envelope
-    # does not poison the lifecycle path; production wiring is exercised
-    # by the daemon-side tests.
-    async def _fake_execute(context, name, tool_id, args, *, emit, conversation_messages, consume_budget):
-        return ToolResultBlock(
-            tool_use_id=tool_id,
-            content=f"{name} ok",
-            is_error=False,
-        )
-
-    monkeypatch.setattr(
-        "engine.tool_call.dispatch.execute_tool_call_streaming", _fake_execute
-    )
-
-    events_out = asyncio.run(
-        _dispatch_deferred_tool_calls(
-            ctx,
-            messages=[],
-            tool_calls=tool_calls,
-            streamed_tool_use_ids=set(),
-            background_tasks=None,
-            tool_results=tool_results,
-        )
-    )
-
-    # The lifecycle call's result and the sibling's result both end up in
-    # ``tool_results``; identify each by tool_use_id.
-    by_id = {block.tool_use_id: block for block in tool_results}
-    lifecycle_block = by_id[tool_calls[0].id]
-    sibling_block = by_id[tool_calls[1].id]
-    assert lifecycle_block.is_error is False
-    assert sibling_block.is_error is True
-    assert "write_file" in sibling_block.content
-    # One sibling rejection event + one lifecycle completion event.
-    assert len(events_out) == 2
-
-
 # ---------------------------------------------------------------------------
 # AC2 — multiple LIFECYCLE: all lifecycle calls rejected.
 # ---------------------------------------------------------------------------
@@ -233,6 +180,72 @@ def test_lifecycle_batch_rejection_emits_counter_and_audit(
     # Audit payload mentions both rejected siblings.
     assert "write_file" in contents
     assert "read_file" in contents
+
+
+# ---------------------------------------------------------------------------
+# AC1 end-to-end: with a stubbed executor, the lifecycle call actually
+# dispatches with ``is_error=False`` and the sibling is rejected.
+# ---------------------------------------------------------------------------
+
+
+def test_tool_call_dispatch_lifecycle_actually_dispatches_when_siblings_rejected(
+    monkeypatch,
+):
+    """End-to-end: lifecycle reaches the dispatcher, sibling does not."""
+    intent_map = {
+        "enter_isolated_workspace": Intent.LIFECYCLE,
+        "write_file": Intent.WRITE_ALLOWED,
+    }
+    ctx = _ctx(intent_map)
+
+    dispatched: list[str] = []
+
+    async def _fake_execute(
+        context, name, tool_id, arguments, *, emit, conversation_messages, consume_budget
+    ):
+        dispatched.append(name)
+        return ToolResultBlock(
+            tool_use_id=tool_id,
+            content="lifecycle ok",
+            is_error=False,
+        )
+
+    monkeypatch.setattr(
+        "engine.tool_call.dispatch.execute_tool_call_streaming", _fake_execute
+    )
+
+    tool_calls = [_tool("enter_isolated_workspace"), _tool("write_file")]
+    tool_results: list[ToolResultBlock] = []
+    asyncio.run(
+        _dispatch_deferred_tool_calls(
+            ctx,
+            messages=[],
+            tool_calls=tool_calls,
+            streamed_tool_use_ids=set(),
+            background_tasks=None,
+            tool_results=tool_results,
+        )
+    )
+
+    # Sibling rejected, lifecycle dispatched.
+    assert dispatched == ["enter_isolated_workspace"]
+    by_name = {
+        # The rejected sibling produces a ToolResultBlock with the
+        # rejection wording.
+        "write_file": next(
+            block
+            for block in tool_results
+            if "write_file" in str(block.content) and block.is_error
+        ),
+        # The lifecycle call's dispatch result is appended after rejection.
+        "enter_isolated_workspace": next(
+            block
+            for block in tool_results
+            if block.content == "lifecycle ok"
+        ),
+    }
+    assert by_name["enter_isolated_workspace"].is_error is False
+    assert by_name["write_file"].is_error is True
 
 
 # ---------------------------------------------------------------------------
