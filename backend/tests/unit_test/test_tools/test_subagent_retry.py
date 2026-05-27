@@ -108,7 +108,7 @@ async def test_subagent_retry_succeeds_then_returns_terminal_to_parent(
         output="exploration findings",
         is_error=False,
         metadata={"foo": "bar"},
-        does_terminate=True,
+        is_terminal=True,
     )
     success_result = EphemeralRunResult(
         status="completed",
@@ -176,7 +176,7 @@ async def test_subagent_internal_retries_invisible_to_parent_budget(
         status="completed",
         error=None,
         terminal_result=ToolResult(
-            output="ok", is_error=False, does_terminate=True
+            output="ok", is_error=False, is_terminal=True
         ),
         agent_name=fake_subagent_definition,
         event_count=1,
@@ -222,7 +222,7 @@ async def test_parallel_subagents_retry_independently(
             terminal_result=ToolResult(
                 output=f"finding-for-{prompt}",
                 is_error=False,
-                does_terminate=True,
+                is_terminal=True,
             ),
             agent_name=fake_subagent_definition,
             event_count=2,

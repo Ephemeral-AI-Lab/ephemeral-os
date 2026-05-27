@@ -9,7 +9,7 @@ from typing import Any
 
 from pydantic import BaseModel, ValidationError
 
-from message.stream_events import StreamEvent
+from message.events import StreamEvent
 from notification import (
     SYSTEM_NOTIFICATIONS_METADATA_KEY,
     serialize_system_notifications,

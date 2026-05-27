@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from message.messages import ConversationMessage, ToolResultBlock, ToolUseBlock
+from message.message import Message, ToolResultBlock, ToolUseBlock
 
 
 def _resolver_result_is_resolved(block: ToolResultBlock) -> bool:
@@ -30,7 +30,7 @@ def _resolver_result_is_resolved(block: ToolResultBlock) -> bool:
 def unresolved_resolver_call_count(messages: list[Any]) -> int:
     tool_names_by_id: dict[str, str] = {}
     for message in messages:
-        if not isinstance(message, ConversationMessage):
+        if not isinstance(message, Message):
             continue
         for block in message.content:
             if isinstance(block, ToolUseBlock):
@@ -38,7 +38,7 @@ def unresolved_resolver_call_count(messages: list[Any]) -> int:
 
     unresolved = 0
     for message in messages:
-        if not isinstance(message, ConversationMessage):
+        if not isinstance(message, Message):
             continue
         for block in message.content:
             if not isinstance(block, ToolResultBlock):

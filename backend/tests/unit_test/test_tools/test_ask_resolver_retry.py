@@ -19,8 +19,8 @@ import pytest
 
 from agents import AgentDefinition, AgentKind
 from engine.agent.lifecycle import EphemeralRunResult
-from message.messages import (
-    ConversationMessage,
+from message.message import (
+    Message,
     TextBlock,
     ToolResultBlock,
     ToolUseBlock,
@@ -57,7 +57,7 @@ class _HelperMessagesStub:
 
 
 def _make_context(
-    *, conversation_messages: list[ConversationMessage] | None = None
+    *, conversation_messages: list[Message] | None = None
 ) -> ToolExecutionContextService:
     metadata = ExecutionMetadata()
     metadata.runtime_config = SimpleNamespace(cwd=Path("/tmp"))
@@ -119,7 +119,7 @@ async def test_resolver_returns_terminal_output_on_success(
     terminal = ToolResult(
         output="patched the failing test",
         is_error=False,
-        does_terminate=True,
+        is_terminal=True,
         metadata={"files_touched": 3},
     )
     calls = _install_runner(
@@ -213,7 +213,7 @@ async def test_resolver_launches_with_two_user_messages(
             status="completed",
             error=None,
             terminal_result=ToolResult(
-                output="ok", is_error=False, does_terminate=True
+                output="ok", is_error=False, is_terminal=True
             ),
             agent_name="resolver",
             event_count=1,
@@ -232,7 +232,7 @@ async def test_resolver_launches_with_two_user_messages(
     assert isinstance(initial_messages, list)
     assert len(initial_messages) == 1
     msg = initial_messages[0]
-    assert isinstance(msg, ConversationMessage)
+    assert isinstance(msg, Message)
     assert msg.role == "user"
     context_text = "".join(
         b.text for b in msg.content if isinstance(b, TextBlock)
@@ -260,7 +260,7 @@ async def test_resolver_omits_parent_transcript_when_no_messages(
             status="completed",
             error=None,
             terminal_result=ToolResult(
-                output="ok", is_error=False, does_terminate=True
+                output="ok", is_error=False, is_terminal=True
             ),
             agent_name="resolver",
             event_count=1,
@@ -299,7 +299,7 @@ async def test_resolver_transcript_keeps_tool_use_inputs(
             status="completed",
             error=None,
             terminal_result=ToolResult(
-                output="ok", is_error=False, does_terminate=True
+                output="ok", is_error=False, is_terminal=True
             ),
             agent_name="resolver",
             event_count=1,
@@ -311,14 +311,14 @@ async def test_resolver_transcript_keeps_tool_use_inputs(
         issue_context="ctx",
         context=_make_context(
             conversation_messages=[
-                ConversationMessage(
+                Message(
                     role="user", content=[TextBlock(text="spawn prompt")]
                 ),
-                ConversationMessage(
+                Message(
                     role="assistant",
                     content=[ToolUseBlock(name="Bash", input={"command": "pytest -x"})],
                 ),
-                ConversationMessage(
+                Message(
                     role="user",
                     content=[
                         ToolResultBlock(

@@ -136,6 +136,12 @@ async def layer_metrics(args: dict[str, object]) -> dict[str, object]:
     binding = read_workspace_binding(root)
     layer_dirs = tuple((manager.storage_root / "layers").iterdir())
     staging_dirs = tuple((manager.storage_root / "staging").iterdir())
+    on_disk_layer_ids = {entry.name for entry in layer_dirs if entry.is_dir()}
+    active_layer_ids = {layer.layer_id for layer in manifest.layers}
+    leased_layer_ids = {layer.layer_id for layer in manager.leased_layers()}
+    referenced_layer_ids = active_layer_ids | leased_layer_ids
+    orphan_layer_ids = sorted(on_disk_layer_ids - referenced_layer_ids)
+    missing_layer_ids = sorted(referenced_layer_ids - on_disk_layer_ids)
     total_bytes = 0
     for entry in manager.storage_root.rglob("*"):
         if entry.is_file() or entry.is_symlink():
@@ -145,8 +151,13 @@ async def layer_metrics(args: dict[str, object]) -> dict[str, object]:
         "manifest_version": manifest.version,
         "manifest_depth": manifest.depth,
         "active_leases": manager.active_lease_count(),
-        "leased_layers": len(manager.leased_layers()),
+        "leased_layers": len(leased_layer_ids),
         "layer_dirs": len(layer_dirs),
+        "referenced_layers": len(referenced_layer_ids),
+        "orphan_layer_count": len(orphan_layer_ids),
+        "missing_layer_count": len(missing_layer_ids),
+        "orphan_layer_ids": orphan_layer_ids[:20],
+        "missing_layer_ids": missing_layer_ids[:20],
         "staging_dirs": len(staging_dirs),
         "storage_bytes": total_bytes,
         "workspace_bound": binding is not None,

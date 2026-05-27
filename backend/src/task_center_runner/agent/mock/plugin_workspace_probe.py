@@ -16,7 +16,7 @@ from typing import Any
 from uuid import uuid4
 
 import sandbox.api as sandbox_api
-from message.stream_events import StreamEvent
+from message.events import StreamEvent
 from plugins.catalog.lsp.tools.apply_workspace_edit import (
     apply_workspace_edit as lsp_apply_workspace_edit_tool,
 )

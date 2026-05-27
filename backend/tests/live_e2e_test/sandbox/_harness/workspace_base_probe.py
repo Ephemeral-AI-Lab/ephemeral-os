@@ -14,7 +14,13 @@ from .sandbox_fixture import SandboxHandle
 WORKSPACE_BASE_PROBE_PRELUDE = (
     NATIVE_CASE_PRELUDE
     + r"""
-from sandbox.layer_stack.changes import LayerChange
+from sandbox.layer_stack.changes import (
+    DeleteLayerChange,
+    LayerChange,
+    OpaqueDirLayerChange,
+    SymlinkLayerChange,
+    WriteLayerChange,
+)
 from sandbox.layer_stack.manifest import manifest_path, read_manifest
 from sandbox.layer_stack.stack import LayerStack
 from sandbox.layer_stack.workspace_binding import workspace_binding_path
@@ -204,6 +210,7 @@ def _call_row(case, label, success, started_at, timings=None, extra=None):
         "kind": "call",
         "case": case,
         "label": label,
+        "name": label,
         "success": bool(success),
         "wall_ms": (time.perf_counter() - started_at) * 1000.0,
         "runtime_ms": 0.0,
@@ -211,6 +218,7 @@ def _call_row(case, label, success, started_at, timings=None, extra=None):
         "resource": {},
     }
     if extra:
+        row["extra"] = dict(extra)
         row.update(extra)
     return row
 

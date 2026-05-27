@@ -36,8 +36,8 @@ from db.models.goal import GoalRecord
 from db.models.task_center import TaskCenterTaskRecord
 from message.agent_message_recorder import (
     AgentMessageJsonlRecorder,
-    clear_recorder_for_agent_run,
-    register_recorder_for_agent_run,
+    clear_recorder,
+    register_recorder,
 )
 
 DAEMON_AUDIT_PULL_ENABLED_ENV = "EOS_DAEMON_AUDIT_PULL_ENABLED"
@@ -214,7 +214,7 @@ class AuditRecorder:
         self._attempt_dir: dict[str, Path] = {}
         self._task_dir: dict[str, Path] = {}
         self._task_recorder: dict[str, AgentMessageJsonlRecorder] = {}
-        self._agent_run_to_task: dict[str, str] = {}
+        self._agent_run_to_task: dict[str, tuple[str, str]] = {}
 
         self._goal_seq_counter: int = 0
         self._iteration_seq_counter: dict[str, int] = {}
@@ -264,9 +264,10 @@ class AuditRecorder:
     def message_recorder_for_agent_run(
         self, agent_run_id: str
     ) -> AgentMessageJsonlRecorder | None:
-        task_id = self._agent_run_to_task.get(agent_run_id)
-        if task_id is None:
+        entry = self._agent_run_to_task.get(agent_run_id)
+        if entry is None:
             return None
+        _, task_id = entry
         return self._task_recorder.get(task_id)
 
     def start(self) -> None:
@@ -522,8 +523,8 @@ class AuditRecorder:
             except Exception:  # noqa: BLE001
                 pass
 
-        for agent_run_id in list(self._agent_run_to_task):
-            clear_recorder_for_agent_run(agent_run_id)
+        for agent_run_id, (agent_name, _) in list(self._agent_run_to_task.items()):
+            clear_recorder(agent_name, agent_run_id)
 
         self._finished_ts = time.time()
         if self._status == "running":
@@ -599,16 +600,16 @@ class AuditRecorder:
                     },
                 )
                 self._task_recorder[target.id] = recorder
-                for agent_run_id, task_id in self._agent_run_to_task.items():
+                for agent_run_id, (agent_name, task_id) in self._agent_run_to_task.items():
                     if task_id == target.id:
-                        register_recorder_for_agent_run(agent_run_id, recorder)
+                        register_recorder(agent_name, agent_run_id, recorder)
         _atomic_write_json(task_dir / "task.json", _serialize_task(target))
 
     def _handle_agent_run(self, target: AgentRunRecord) -> None:
-        self._agent_run_to_task[target.id] = target.task_id
+        self._agent_run_to_task[target.id] = (target.agent_name, target.task_id)
         recorder = self._task_recorder.get(target.task_id)
         if recorder is not None:
-            register_recorder_for_agent_run(target.id, recorder)
+            register_recorder(target.agent_name, target.id, recorder)
 
     def _record_sandbox_event(self, audit_event: AuditEvent) -> None:
         if not (

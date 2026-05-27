@@ -26,7 +26,7 @@ import pytest
 
 from agents import AgentDefinition, AgentKind
 from engine.agent.lifecycle import EphemeralRunResult
-from message.messages import ConversationMessage, TextBlock
+from message.message import Message, TextBlock
 from tools._framework.core.base import ExecutionMetadata, ToolResult
 from tools._framework.core.context import ToolExecutionContextService
 from tools.ask_helper.ask_advisor import ask_advisor
@@ -70,13 +70,13 @@ def _make_context() -> ToolExecutionContextService:
     metadata.agent_name = "executor"
     metadata.task_center_task_id = "parent-task"
     metadata.conversation_messages = [
-        ConversationMessage(
+        Message(
             role="user", content=[TextBlock(text="parent context here")]
         ),
-        ConversationMessage(
+        Message(
             role="user", content=[TextBlock(text="parent task here")]
         ),
-        ConversationMessage(
+        Message(
             role="assistant", content=[TextBlock(text="parent did some work")]
         ),
     ]
@@ -132,7 +132,7 @@ async def test_advisor_returns_terminal_output_on_success(
     terminal = ToolResult(
         output="advisor recommends X",
         is_error=False,
-        does_terminate=True,
+        is_terminal=True,
         metadata={"verdict": "approve"},
     )
     calls = _install_runner(
@@ -226,7 +226,7 @@ async def test_advisor_launches_with_two_user_messages(
             status="completed",
             error=None,
             terminal_result=ToolResult(
-                output="ok", is_error=False, does_terminate=True
+                output="ok", is_error=False, is_terminal=True
             ),
             agent_name="advisor",
             event_count=1,
@@ -248,7 +248,7 @@ async def test_advisor_launches_with_two_user_messages(
     assert isinstance(initial_messages, list)
     assert len(initial_messages) == 1
     msg = initial_messages[0]
-    assert isinstance(msg, ConversationMessage)
+    assert isinstance(msg, Message)
     assert msg.role == "user"
     context_text = "".join(
         b.text for b in msg.content if isinstance(b, TextBlock)

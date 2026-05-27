@@ -10,8 +10,8 @@ from __future__ import annotations
 
 import logging
 
-from message.messages import (
-    ConversationMessage,
+from message.message import (
+    Message,
     TextBlock,
     ThinkingBlock,
     ToolResultBlock,
@@ -26,28 +26,28 @@ from tools.ask_helper._lib._transcript import (
 )
 
 
-def _user(text: str) -> ConversationMessage:
-    return ConversationMessage(role="user", content=[TextBlock(text=text)])
+def _user(text: str) -> Message:
+    return Message(role="user", content=[TextBlock(text=text)])
 
 
-def _assistant(text: str) -> ConversationMessage:
-    return ConversationMessage(role="assistant", content=[TextBlock(text=text)])
+def _assistant(text: str) -> Message:
+    return Message(role="assistant", content=[TextBlock(text=text)])
 
 
-def _assistant_tool(name: str, **kwargs) -> ConversationMessage:
-    return ConversationMessage(
+def _assistant_tool(name: str, **kwargs) -> Message:
+    return Message(
         role="assistant", content=[ToolUseBlock(name=name, input=kwargs)]
     )
 
 
-def _assistant_thinking() -> ConversationMessage:
-    return ConversationMessage(
+def _assistant_thinking() -> Message:
+    return Message(
         role="assistant", content=[ThinkingBlock(text="planning…")]
     )
 
 
-def _user_tool_result(content: str, *, is_error: bool = False) -> ConversationMessage:
-    return ConversationMessage(
+def _user_tool_result(content: str, *, is_error: bool = False) -> Message:
+    return Message(
         role="user",
         content=[
             ToolResultBlock(tool_use_id="t1", content=content, is_error=is_error)

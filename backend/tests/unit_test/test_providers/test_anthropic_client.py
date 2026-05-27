@@ -10,14 +10,16 @@ import pytest
 
 from providers.clients.anthropic_native import AnthropicClient, MAX_RETRIES
 from providers.types import (
-    ApiMessageCompleteEvent,
-    ApiMessageRequest,
-    ApiTextDeltaEvent,
-    ApiThinkingDeltaEvent,
-    ApiToolUseDeltaEvent,
+    MessageRequest,
+)
+from message.events import (
+    AssistantMessageCompleteEvent,
+    AssistantTextDeltaEvent,
+    ThinkingDeltaEvent,
+    ToolUseDeltaEvent,
 )
 from providers.errors import AuthenticationFailure, RateLimitFailure
-from message import ConversationMessage
+from message import Message
 
 
 # ---------------------------------------------------------------------------
@@ -97,10 +99,10 @@ def _make_thinking_block(text: str) -> MockContentBlock:
     return MockContentBlock(type="thinking", thinking=text, text=text)
 
 
-def _make_request(messages: list[ConversationMessage] | None = None) -> ApiMessageRequest:
-    """Build a minimal ApiMessageRequest for testing."""
-    msgs = messages or [ConversationMessage.from_user_text("hello")]
-    return ApiMessageRequest(model="claude-sonnet-4-20250514", messages=msgs)
+def _make_request(messages: list[Message] | None = None) -> MessageRequest:
+    """Build a minimal MessageRequest for testing."""
+    msgs = messages or [Message.from_user_text("hello")]
+    return MessageRequest(model="claude-sonnet-4-20250514", messages=msgs)
 
 
 def _build_client() -> AnthropicClient:
@@ -108,7 +110,7 @@ def _build_client() -> AnthropicClient:
     return AnthropicClient(api_key="sk-test-key")
 
 
-async def _collect_events(client: AnthropicClient, request: ApiMessageRequest) -> list[Any]:
+async def _collect_events(client: AnthropicClient, request: MessageRequest) -> list[Any]:
     """Drain all events from stream_message into a list."""
     events: list[Any] = []
     async for ev in client.stream_message(request):
@@ -119,7 +121,7 @@ async def _collect_events(client: AnthropicClient, request: ApiMessageRequest) -
 async def _run_stream(
     events: list[MockEvent],
     final: MockFinalMessage,
-    request: ApiMessageRequest | None = None,
+    request: MessageRequest | None = None,
 ) -> list[Any]:
     """Wire up a MockStream on a fresh client and collect all events."""
     client = _build_client()
@@ -158,7 +160,7 @@ def _make_api_status_error(status_code: int, message: str) -> anthropic.APIStatu
 class TestTextOnlyResponse:
     @pytest.mark.asyncio
     async def test_text_only_response(self) -> None:
-        """Text-only stream yields ApiTextDeltaEvent per delta then ApiMessageCompleteEvent."""
+        """Text-only stream yields AssistantTextDeltaEvent per delta then AssistantMessageCompleteEvent."""
         events = [
             MockEvent(
                 type="content_block_start",
@@ -190,15 +192,15 @@ class TestTextOnlyResponse:
 
         result = await _run_stream(events, final)
 
-        text_deltas = [e for e in result if isinstance(e, ApiTextDeltaEvent)]
+        text_deltas = [e for e in result if isinstance(e, AssistantTextDeltaEvent)]
         assert len(text_deltas) == 3
         assert text_deltas[0].text == "Hello"
         assert text_deltas[1].text == " world"
         assert text_deltas[2].text == "!"
 
-        complete = [e for e in result if isinstance(e, ApiMessageCompleteEvent)]
+        complete = [e for e in result if isinstance(e, AssistantMessageCompleteEvent)]
         assert len(complete) == 1
-        assert complete[0].message.text == "Hello world!"
+        assert complete[0].message.assistant_text == "Hello world!"
 
 
 class TestToolUseMidStream:
@@ -252,23 +254,23 @@ class TestToolUseMidStream:
 
         result = await _run_stream(events, final)
 
-        tool_events = [e for e in result if isinstance(e, ApiToolUseDeltaEvent)]
+        tool_events = [e for e in result if isinstance(e, ToolUseDeltaEvent)]
         assert len(tool_events) == 2
 
         # t1 before t2
-        assert tool_events[0].id == "t1"
+        assert tool_events[0].tool_use_id == "t1"
         assert tool_events[0].name == "read_file"
         assert tool_events[0].input == {"path": "foo.txt"}
 
-        assert tool_events[1].id == "t2"
+        assert tool_events[1].tool_use_id == "t2"
         assert tool_events[1].name == "write_file"
         assert tool_events[1].input == {"path": "bar.txt", "content": "hi"}
 
         # Both tool events arrive before the complete event
         complete_idx = next(
-            i for i, e in enumerate(result) if isinstance(e, ApiMessageCompleteEvent)
+            i for i, e in enumerate(result) if isinstance(e, AssistantMessageCompleteEvent)
         )
-        tool_indices = [i for i, e in enumerate(result) if isinstance(e, ApiToolUseDeltaEvent)]
+        tool_indices = [i for i, e in enumerate(result) if isinstance(e, ToolUseDeltaEvent)]
         assert all(ti < complete_idx for ti in tool_indices)
 
 
@@ -330,21 +332,21 @@ class TestMixedTextAndTools:
         meaningful = [
             e
             for e in result
-            if isinstance(e, (ApiTextDeltaEvent, ApiToolUseDeltaEvent, ApiMessageCompleteEvent))
+            if isinstance(e, (AssistantTextDeltaEvent, ToolUseDeltaEvent, AssistantMessageCompleteEvent))
         ]
-        assert isinstance(meaningful[0], ApiTextDeltaEvent)
+        assert isinstance(meaningful[0], AssistantTextDeltaEvent)
         assert meaningful[0].text == "Let me check."
-        assert isinstance(meaningful[1], ApiToolUseDeltaEvent)
+        assert isinstance(meaningful[1], ToolUseDeltaEvent)
         assert meaningful[1].name == "search"
-        assert isinstance(meaningful[2], ApiTextDeltaEvent)
+        assert isinstance(meaningful[2], AssistantTextDeltaEvent)
         assert meaningful[2].text == "Done."
-        assert isinstance(meaningful[3], ApiMessageCompleteEvent)
+        assert isinstance(meaningful[3], AssistantMessageCompleteEvent)
 
 
 class TestThinkingDelta:
     @pytest.mark.asyncio
     async def test_thinking_delta(self) -> None:
-        """Thinking content yields ApiThinkingDeltaEvent."""
+        """Thinking content yields ThinkingDeltaEvent."""
         events = [
             MockEvent(
                 type="content_block_start",
@@ -366,7 +368,7 @@ class TestThinkingDelta:
 
         result = await _run_stream(events, final)
 
-        thinking = [e for e in result if isinstance(e, ApiThinkingDeltaEvent)]
+        thinking = [e for e in result if isinstance(e, ThinkingDeltaEvent)]
         assert len(thinking) == 1
         assert thinking[0].text == "I need to reason about this."
 
@@ -392,9 +394,9 @@ class TestEmptyToolInput:
 
         result = await _run_stream(events, final)
 
-        tool_events = [e for e in result if isinstance(e, ApiToolUseDeltaEvent)]
+        tool_events = [e for e in result if isinstance(e, ToolUseDeltaEvent)]
         assert len(tool_events) == 1
-        assert tool_events[0].id == "t1"
+        assert tool_events[0].tool_use_id == "t1"
         assert tool_events[0].name == "get_time"
         assert tool_events[0].input == {}
 
@@ -423,7 +425,7 @@ class TestRetryOn429:
         with patch("providers.clients.anthropic_native.asyncio.sleep", new_callable=AsyncMock):
             result = await _collect_events(client, _make_request())
 
-        text_events = [e for e in result if isinstance(e, ApiTextDeltaEvent)]
+        text_events = [e for e in result if isinstance(e, AssistantTextDeltaEvent)]
         assert len(text_events) == 1
         assert text_events[0].text == "ok"
         assert call_count == 2
@@ -482,9 +484,9 @@ class TestOutputSchemaStripped:
                 "output_schema": {"type": "object", "properties": {"temp": {"type": "number"}}},
             },
         ]
-        request = ApiMessageRequest(
+        request = MessageRequest(
             model="claude-sonnet-4-20250514",
-            messages=[ConversationMessage.from_user_text("weather?")],
+            messages=[Message.from_user_text("weather?")],
             tools=tools_with_output_schema,
         )
 
@@ -514,9 +516,9 @@ class TestSystemPrefix:
             return MockStream(events, final)
 
         client._client.messages.stream = MagicMock(side_effect=capture_stream)
-        request = ApiMessageRequest(
+        request = MessageRequest(
             model="claude-sonnet-4-20250514",
-            messages=[ConversationMessage.from_user_text("hi")],
+            messages=[Message.from_user_text("hi")],
             system_prompt=system_prompt,
         )
         await _collect_events(client, request)
@@ -568,12 +570,12 @@ class TestSystemPrefix:
 class TestUsageSnapshot:
     @pytest.mark.asyncio
     async def test_usage_snapshot(self) -> None:
-        """ApiMessageCompleteEvent carries correct UsageSnapshot from the final message."""
+        """AssistantMessageCompleteEvent carries correct UsageSnapshot from the final message."""
         events, final = _make_single_text_stream("x", input_tokens=100, output_tokens=50)
 
         result = await _run_stream(events, final)
 
-        complete = [e for e in result if isinstance(e, ApiMessageCompleteEvent)]
+        complete = [e for e in result if isinstance(e, AssistantMessageCompleteEvent)]
         assert len(complete) == 1
         assert complete[0].usage.input_tokens == 100
         assert complete[0].usage.output_tokens == 50

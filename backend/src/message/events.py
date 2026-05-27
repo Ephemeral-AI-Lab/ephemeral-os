@@ -4,7 +4,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from providers.types import UsageSnapshot
-from message.messages import ConversationMessage
+from message.message import Message
 from notification import SystemNotification
 
 
@@ -20,7 +20,7 @@ from notification import SystemNotification
 
 
 @dataclass(frozen=True)
-class ThinkingDelta:
+class ThinkingDeltaEvent:
     """Incremental thinking/reasoning content from the model."""
 
     text: str
@@ -29,7 +29,7 @@ class ThinkingDelta:
 
 
 @dataclass(frozen=True)
-class AssistantTextDelta:
+class AssistantTextDeltaEvent:
     """Incremental assistant text."""
 
     text: str
@@ -38,42 +38,54 @@ class AssistantTextDelta:
 
 
 @dataclass(frozen=True)
-class AssistantMessageComplete:
+class AssistantMessageCompleteEvent:
     """Completed assistant message."""
 
-    message: ConversationMessage
+    message: Message
     usage: UsageSnapshot
+    stop_reason: str | None = None
     agent_name: str = ""
     run_id: str = ""
 
 
 @dataclass(frozen=True)
-class ToolExecutionStarted:
+class ToolUseDeltaEvent:
+    """A tool_use content block arrived mid-stream (pre-execution)."""
+
+    tool_use_id: str
+    name: str
+    input: dict[str, Any]
+    agent_name: str = ""
+    run_id: str = ""
+
+
+@dataclass(frozen=True)
+class ToolExecutionStartedEvent:
     """The engine is about to execute a tool."""
 
     tool_name: str
     tool_input: dict[str, Any]
-    tool_id: str = ""
+    tool_use_id: str = ""
     agent_name: str = ""
     run_id: str = ""
 
 
 @dataclass(frozen=True)
-class ToolExecutionCompleted:
+class ToolExecutionCompletedEvent:
     """A tool has finished executing."""
 
     tool_name: str
     output: str
     is_error: bool = False
-    tool_id: str = ""
+    tool_use_id: str = ""
     metadata: dict[str, Any] = field(default_factory=dict)
-    does_terminate: bool = False
+    is_terminal: bool = False
     agent_name: str = ""
     run_id: str = ""
 
 
 @dataclass(frozen=True)
-class ToolExecutionProgress:
+class ToolExecutionProgressEvent:
     """Progress update from a running tool.
 
     Emitted during long-running tool execution (e.g., bash commands,
@@ -81,7 +93,7 @@ class ToolExecutionProgress:
     whether to continue or abort.
     """
 
-    tool_id: str
+    tool_use_id: str
     tool_name: str
     output: str
     agent_name: str = ""
@@ -89,10 +101,10 @@ class ToolExecutionProgress:
 
 
 @dataclass(frozen=True)
-class ToolExecutionCancelled:
+class ToolExecutionCancelledEvent:
     """A tool was cancelled by LLM abort signal."""
 
-    tool_id: str
+    tool_use_id: str
     tool_name: str
     reason: str
     agent_name: str = ""
@@ -100,7 +112,7 @@ class ToolExecutionCancelled:
 
 
 @dataclass(frozen=True)
-class BackgroundTaskStarted:
+class BackgroundTaskStartedEvent:
     """A tool has been launched as a background task."""
 
     task_id: str
@@ -111,13 +123,14 @@ class BackgroundTaskStarted:
 
 
 StreamEvent = (
-    ThinkingDelta
-    | AssistantTextDelta
-    | AssistantMessageComplete
-    | ToolExecutionStarted
-    | ToolExecutionCompleted
-    | ToolExecutionProgress
-    | ToolExecutionCancelled
-    | BackgroundTaskStarted
+    ThinkingDeltaEvent
+    | AssistantTextDeltaEvent
+    | AssistantMessageCompleteEvent
+    | ToolUseDeltaEvent
+    | ToolExecutionStartedEvent
+    | ToolExecutionCompletedEvent
+    | ToolExecutionProgressEvent
+    | ToolExecutionCancelledEvent
+    | BackgroundTaskStartedEvent
     | SystemNotification
 )

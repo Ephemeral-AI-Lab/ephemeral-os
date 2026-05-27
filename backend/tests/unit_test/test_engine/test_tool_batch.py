@@ -5,7 +5,7 @@ from __future__ import annotations
 from types import SimpleNamespace
 
 from engine.tool_call.dispatch import _validate_tool_batch
-from message.messages import ToolUseBlock
+from message.message import ToolUseBlock
 
 
 def _ctx(
@@ -42,7 +42,7 @@ def test_validate_tool_batch_rejects_terminal_with_sibling():
     assert len(result) == len(calls)
     for block, call in zip(result, calls, strict=True):
         assert block.is_error is True
-        assert block.tool_use_id == call.id
+        assert block.tool_use_id == call.tool_use_id
         assert "Terminal tool" in block.content
         assert "submit_execution_success" in block.content
 

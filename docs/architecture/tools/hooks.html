@@ -49,7 +49,8 @@
     <li><a href="#registration-contract"><span>2</span> Registration Contract</a></li>
     <li><a href="#execution-pipeline"><span>3</span> Execution Pipeline</a></li>
     <li><a href="#sandbox-shell-prehooks"><span>4</span> Sandbox Shell Pre-Hooks</a></li>
-    <li><a href="#evidence-refresh"><span>5</span> Evidence and Refresh</a></li>
+    <li><a href="#advisor-approval-prehook"><span>5</span> Advisor Approval Pre-Hook</a></li>
+    <li><a href="#evidence-refresh"><span>6</span> Evidence and Refresh</a></li>
   </ol>
 </nav>
 
@@ -164,9 +165,63 @@
 </div>
 </section>
 
+<section id="advisor-approval-prehook"
+  data-last-reviewed-commit="b1f90277db47df4796821e86513bed67cf7afa22"
+  data-evidence-paths="backend/src/tools/submission/_advisor_approval_prehook.py backend/src/tools/ask_helper/ask_advisor/ask_advisor.py backend/src/tools/submission/advisor/submit_advisor_feedback/submit_advisor_feedback.py backend/src/tools/submission/planner/submit_plan_closes_goal/submit_plan_closes_goal.py backend/src/tools/submission/planner/submit_plan_defers_goal/submit_plan_defers_goal.py backend/src/tools/submission/executor/submit_execution_success/submit_execution_success.py backend/src/tools/submission/executor/submit_execution_blocker/submit_execution_blocker.py backend/src/tools/submission/executor/submit_execution_handoff/submit_execution_handoff.py backend/src/tools/submission/evaluator/submit_evaluation_success/submit_evaluation_success.py backend/src/tools/submission/evaluator/submit_evaluation_failure/submit_evaluation_failure.py backend/src/tools/submission/verifier/submit_verification_success/submit_verification_success.py backend/src/tools/submission/verifier/submit_verification_failure/submit_verification_failure.py backend/tests/unit_test/test_tools/test_submission/test_advisor_approval_prehook.py">
+<h2>Advisor Approval Pre-Hook</h2>
+<p>
+  The second concrete pre-hook family gates main-agent terminal submissions on an
+  advisor approval. <code>AdvisorApprovalPreHook</code> in
+  <code>backend/src/tools/submission/_advisor_approval_prehook.py</code> is wired
+  per-terminal: each of the nine main-role submission tools attaches its own
+  instance via <code>pre_hooks=(AdvisorApprovalPreHook("&lt;own_name&gt;"),)</code>
+  in the <code>@tool</code> decorator. Helper / subagent terminals
+  (<code>submit_advisor_feedback</code>, <code>submit_resolver_result</code>,
+  <code>submit_exploration_result</code>) intentionally omit the hook.
+</p>
+<div class="diagram" aria-label="Advisor approval pre-hook flow">
+  <div class="flow-row">
+    <div class="node"><strong>Main agent</strong><small>calls <code>ask_advisor(tool_name, tool_payload)</code></small></div>
+    <div class="node info"><strong>Advisor sub-run</strong><small>submits <code>submit_advisor_feedback</code> with <code>verdict</code></small></div>
+    <div class="node"><strong>Parent transcript</strong><small><code>ToolResultBlock</code> inherits <code>metadata={helper_role, verdict}</code></small></div>
+  </div>
+  <div class="flow-row">
+    <div class="node warn"><strong>Terminal call</strong><small>main agent calls e.g. <code>submit_execution_success</code></small></div>
+    <div class="node good"><strong><code>AdvisorApprovalPreHook.run</code></strong><small>reverse-walks <code>conversation_messages</code>, pairs by <code>tool_use_id</code></small></div>
+    <div class="node"><strong>Decision</strong><small><code>pass</code> only when latest advisor verdict is <code>approve</code> AND <code>tool_name == target_tool</code></small></div>
+  </div>
+</div>
+<div class="trace-grid">
+  <div>Locator</div>
+  <div>Reverse-walk user messages for the most recent <code>ToolResultBlock</code> with <code>metadata["helper_role"] == "advisor"</code>; forward-walk assistant messages to pair its <code>tool_use_id</code> with an <code>ask_advisor</code> <code>ToolUseBlock</code>.</div>
+  <div>Pass condition</div>
+  <div><code>verdict == "approve"</code> AND the originating <code>ask_advisor.input["tool_name"]</code> equals <code>self.target_tool</code>.</div>
+  <div>Fail reasons (metadata)</div>
+  <div><code>missing</code>, <code>advisor_failed</code> (<code>is_error</code>), <code>structural</code> (verdict not in <code>{approve, reject}</code>), <code>rejected</code>, <code>unpaired</code> (compaction), <code>wrong_tool</code>.</div>
+  <div>Agent-facing message</div>
+  <div>Uniform <code>BLOCKED: You must get approval from advisor ...</code> string. Per-branch detail is preserved only in <code>HookResult.metadata["reason"]</code> because the agent already has the prior exchange (reject summary, prior tool selection) in its own conversation history.</div>
+</div>
+<div class="edge-list">
+  <div><b>relies-on</b><span>The "terminal must be called alone" rule in <code>engine/tool_call/dispatch.py</code> guarantees the advisor result is at least one turn old when the hook fires, so the history-only <code>conversation_messages</code> always contains the pair.</span></div>
+  <div><b>relies-on</b><span><code>submit_advisor_feedback</code> stamps <code>metadata={"helper_role":"advisor","verdict":...}</code>; <code>ask_advisor</code> forwards that metadata verbatim into the parent <code>ToolResultBlock</code>, so the hook reads a single canonical shape.</span></div>
+  <div><b>does-not</b><span>Compare payloads. An <code>approve</code> for <code>(tool_name=X, tool_payload=stub)</code> still lets the agent submit <code>X(real_payload)</code>; payload-equivalence is out of scope.</span></div>
+  <div><b>does-not</b><span>Branch on agent role. Exemption is at the terminal-tool level (helper/subagent terminals omit the hook), so a misconfigured subagent calling a main-role terminal still trips the gate.</span></div>
+  <div><b>tested-by</b><span><code>test_advisor_approval_prehook.py</code> covers missing, approve-for-this, approve-for-other, rejected (summary echoed), most-recent-wins ordering, errored advisor, structural verdict, unpaired-after-compaction, and a static guard that helper terminals omit the hook.</span></div>
+</div>
+<div class="callout warn">
+  <span class="label">Boundary</span>
+  This gate enforces that the advisor was consulted for the exact terminal being
+  submitted. It does not enforce payload quality &mdash; the advisor's verdict is
+  authoritative for the named tool, but it does not bind the payload that the
+  agent ultimately sends. Profile prompts (<code>agents/profile/main/*.md</code>)
+  carry the contract that the agent should re-consult if the payload materially
+  changes after approval.
+</div>
+</section>
+
 <section id="evidence-refresh"
-  data-last-reviewed-commit="6c45d4565cc912df20e5e688185982fdbe237550"
-  data-evidence-paths="backend/src/tools/_framework/core/hooks.py backend/src/tools/_framework/execution/hook_pipeline.py backend/src/tools/_framework/execution/tool_call.py backend/src/tools/sandbox/_lib/shell_policy.py backend/src/tools/sandbox/shell/shell.py backend/tests/unit_test/test_tools/test_tool_execution.py backend/tests/unit_test/test_tools/test_sandbox_toolkit/test_shell_prehooks.py docs/architecture/tools/framework.html docs/architecture/tools/sandbox.html">
+  data-last-reviewed-commit="b1f90277db47df4796821e86513bed67cf7afa22"
+  data-evidence-paths="backend/src/tools/_framework/core/hooks.py backend/src/tools/_framework/execution/hook_pipeline.py backend/src/tools/_framework/execution/tool_call.py backend/src/tools/sandbox/_lib/shell_policy.py backend/src/tools/sandbox/shell/shell.py backend/src/tools/submission/_advisor_approval_prehook.py backend/tests/unit_test/test_tools/test_tool_execution.py backend/tests/unit_test/test_tools/test_sandbox_toolkit/test_shell_prehooks.py backend/tests/unit_test/test_tools/test_submission/test_advisor_approval_prehook.py docs/architecture/tools/framework.html docs/architecture/tools/sandbox.html docs/architecture/tools/submission.html">
 <h2>Evidence and Refresh</h2>
 <div class="evidence-grid">
   <div class="evidence-card">
@@ -176,6 +231,7 @@
       <li><code>backend/src/tools/_framework/execution/hook_pipeline.py</code> for runtime execution and hook-failure metadata.</li>
       <li><code>backend/src/tools/_framework/execution/tool_call.py</code> for hook placement in the tool lifecycle.</li>
       <li><code>backend/src/tools/sandbox/_lib/shell_policy.py</code> for concrete shell pre-hook policy.</li>
+      <li><code>backend/src/tools/submission/_advisor_approval_prehook.py</code> for the advisor approval gate on main-agent terminal submissions.</li>
     </ul>
   </div>
   <div class="evidence-card">
@@ -183,28 +239,32 @@
     <ul>
       <li><code>backend/tests/unit_test/test_tools/test_tool_execution.py</code></li>
       <li><code>backend/tests/unit_test/test_tools/test_sandbox_toolkit/test_shell_prehooks.py</code></li>
+      <li><code>backend/tests/unit_test/test_tools/test_submission/test_advisor_approval_prehook.py</code></li>
     </ul>
   </div>
   <div class="evidence-card">
     <h3>Refresh triggers</h3>
     <p>
       Re-check this page when hook target validation, hook trace metadata, system notification
-      capture, background tool execution, shell pre-hook policy, or the tool execution order changes.
+      capture, background tool execution, shell pre-hook policy, the advisor approval gate
+      (terminal wiring, verdict shape, or pairing logic), or the tool execution order changes.
     </p>
   </div>
 </div>
 <div class="wiki-links">
   <a href="framework.html">Tools Framework</a>
   <a href="sandbox.html#shell-background-policy">Sandbox Shell Policy</a>
+  <a href="submission.html">Submission Tools</a>
+  <a href="ask-helper.html">Ask Helper</a>
   <a href="background.html">Background Tools</a>
   <a href="../agent_loops/main-loop.html#tool-dispatch-and-terminal-stop">Agent Loop Dispatch</a>
 </div>
 </section>
 
-<div class="page-baseline" data-page-baseline-commit="6c45d4565cc912df20e5e688185982fdbe237550">
+<div class="page-baseline" data-page-baseline-commit="b1f90277db47df4796821e86513bed67cf7afa22">
   <strong>Maintenance baseline</strong>
-  <span>Technical sections reviewed against <code>6c45d4565cc912df20e5e688185982fdbe237550</code>.</span>
-  <code>git diff 6c45d4565cc912df20e5e688185982fdbe237550..HEAD -- &lt;section data-evidence-paths&gt;</code>
+  <span>Technical sections reviewed against <code>b1f90277db47df4796821e86513bed67cf7afa22</code>.</span>
+  <code>git diff b1f90277db47df4796821e86513bed67cf7afa22..HEAD -- &lt;section data-evidence-paths&gt;</code>
 </div>
 <div class="page-footer-nav"><span><a href="framework.html">Framework</a></span><span><a href="sandbox.html">Sandbox Tools</a></span></div>
 </main>

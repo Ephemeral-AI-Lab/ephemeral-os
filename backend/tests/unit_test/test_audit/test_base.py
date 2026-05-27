@@ -17,7 +17,7 @@ def test_audit_event_defaults_are_serializable_with_dataclass_projection() -> No
             task_center_task_id="task-1",
             sandbox_id="sb-1",
             tool_name="edit_file",
-            tool_id="tool-1",
+            tool_use_id="tool-1",
         ),
         payload={"operation": "edit_file", "status": "ok"},
     )

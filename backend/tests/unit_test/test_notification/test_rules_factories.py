@@ -6,7 +6,7 @@ from typing import Any
 
 import pytest
 
-from message.messages import ConversationMessage, TextBlock
+from message.message import Message, TextBlock
 from notification import make_budget_warning, make_opening_reminder
 from notification import dispatch_rules
 from notification import SystemNotificationService
@@ -40,12 +40,12 @@ class _StubContext:
         self._budget.used = used
 
 
-def _user_message(text: str = "hello") -> ConversationMessage:
-    return ConversationMessage(role="user", content=[TextBlock(text=text)])
+def _user_message(text: str = "hello") -> Message:
+    return Message(role="user", content=[TextBlock(text=text)])
 
 
-def _assistant_message(text: str = "ack") -> ConversationMessage:
-    return ConversationMessage(role="assistant", content=[TextBlock(text=text)])
+def _assistant_message(text: str = "ack") -> Message:
+    return Message(role="assistant", content=[TextBlock(text=text)])
 
 
 # ---------- make_opening_reminder --------------------------------------------

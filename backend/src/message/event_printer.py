@@ -5,7 +5,7 @@ so concurrent agents can coexist without interleaving mid-sentence.
 
 Key ideas:
 
-- **Per-agent message buffers.** ``ThinkingDelta`` / ``AssistantTextDelta``
+- **Per-agent message buffers.** ``ThinkingDeltaEvent`` / ``AssistantTextDeltaEvent``
   events from different agents are buffered independently and printed
   once per completed assistant message, so two workers streaming at once
   don't clobber each other's prose and the console shows full blocks.
@@ -21,16 +21,16 @@ import time
 from dataclasses import dataclass, field
 from typing import Any
 
-from message.stream_events import (
-    AssistantMessageComplete,
-    AssistantTextDelta,
-    BackgroundTaskStarted,
+from message.events import (
+    AssistantMessageCompleteEvent,
+    AssistantTextDeltaEvent,
+    BackgroundTaskStartedEvent,
     StreamEvent,
-    ThinkingDelta,
-    ToolExecutionCancelled,
-    ToolExecutionCompleted,
-    ToolExecutionProgress,
-    ToolExecutionStarted,
+    ThinkingDeltaEvent,
+    ToolExecutionCancelledEvent,
+    ToolExecutionCompletedEvent,
+    ToolExecutionProgressEvent,
+    ToolExecutionStartedEvent,
 )
 from notification import SystemNotification
 
@@ -196,14 +196,14 @@ class MultiAgentEventPrinter:
         lane = self._lane_for(agent, run_id)
 
         # Stream deltas into per-agent buffers; do not print yet.
-        if isinstance(event, ThinkingDelta):
+        if isinstance(event, ThinkingDeltaEvent):
             lane.thinking_buf.append(event.text)
             return
-        if isinstance(event, AssistantTextDelta):
+        if isinstance(event, AssistantTextDeltaEvent):
             lane.text_buf.append(event.text)
             return
 
-        if isinstance(event, ToolExecutionStarted):
+        if isinstance(event, ToolExecutionStartedEvent):
             totals.tool_calls += 1
             self._line(
                 agent,
@@ -211,7 +211,7 @@ class MultiAgentEventPrinter:
                 f"{self._c('cyan', '-> tool_start:')} {event.tool_name}"
                 f"({event.tool_input})",
             )
-        elif isinstance(event, ToolExecutionCompleted):
+        elif isinstance(event, ToolExecutionCompletedEvent):
             status = self._c("red", "ERROR") if event.is_error else self._c("green", "ok")
             output = _format_tool_completion_output(
                 tool_name=event.tool_name,
@@ -224,26 +224,26 @@ class MultiAgentEventPrinter:
                 f"{self._c('green' if not event.is_error else 'red', '<- tool_done:')}  {event.tool_name} [{status}]"
                 f"{output}",
             )
-        elif isinstance(event, ToolExecutionProgress):
+        elif isinstance(event, ToolExecutionProgressEvent):
             self._line(
                 agent,
                 run_id,
                 f"{self._c('yellow', '.. progress:')}   {event.tool_name} {_full_text(event.output)}",
             )
-        elif isinstance(event, ToolExecutionCancelled):
+        elif isinstance(event, ToolExecutionCancelledEvent):
             self._line(
                 agent,
                 run_id,
                 f"{self._c('red', 'x  cancelled:')}  {event.tool_name} {_full_text(event.reason)}",
             )
-        elif isinstance(event, BackgroundTaskStarted):
+        elif isinstance(event, BackgroundTaskStartedEvent):
             detail = format_background_start_detail(event.tool_name, event.tool_input)
             self._line(
                 agent,
                 run_id,
                 f"{self._c('blue', '>> bg_start:')}   {event.tool_name} task_id={event.task_id}{detail}",
             )
-        elif isinstance(event, AssistantMessageComplete):
+        elif isinstance(event, AssistantMessageCompleteEvent):
             # Print full thinking/text blocks once per completed message.
             self._flush_buffers(agent, run_id)
         elif isinstance(event, SystemNotification):

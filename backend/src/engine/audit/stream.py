@@ -9,7 +9,7 @@ from typing import Any
 
 from audit.base import AuditEvent, AuditNode
 from engine.audit import events
-from message.stream_events import ToolExecutionCompleted, ToolExecutionStarted
+from message.events import ToolExecutionCompletedEvent, ToolExecutionStartedEvent
 
 
 def audit_events_from_stream_event(
@@ -19,7 +19,7 @@ def audit_events_from_stream_event(
     task_center_run_id: str | None = None,
 ) -> tuple[AuditEvent, ...]:
     """Translate supported StreamEvent objects into engine-owned audit events."""
-    if isinstance(stream_event, ToolExecutionStarted):
+    if isinstance(stream_event, ToolExecutionStartedEvent):
         return (
             AuditEvent(
                 source="engine",
@@ -31,7 +31,7 @@ def audit_events_from_stream_event(
                 ),
                 payload={
                     "tool_name": stream_event.tool_name,
-                    "tool_id": stream_event.tool_id,
+                    "tool_id": stream_event.tool_use_id,
                     "status": "ok",
                     "input_shape": _shape(stream_event.tool_input),
                     "input_redacted": _redacted_shape(stream_event.tool_input),
@@ -40,7 +40,7 @@ def audit_events_from_stream_event(
                 },
             ),
         )
-    if isinstance(stream_event, ToolExecutionCompleted):
+    if isinstance(stream_event, ToolExecutionCompletedEvent):
         status = "error" if stream_event.is_error else "ok"
         return (
             AuditEvent(
@@ -53,14 +53,14 @@ def audit_events_from_stream_event(
                 ),
                 payload={
                     "tool_name": stream_event.tool_name,
-                    "tool_id": stream_event.tool_id,
+                    "tool_id": stream_event.tool_use_id,
                     "status": status,
                     "error_kind": "tool_result_error" if stream_event.is_error else None,
                     "output_shape": _shape(stream_event.output),
                     "output_digest": _digest(stream_event.output),
                     "output_bytes": _encoded_size(stream_event.output),
                     "is_error": stream_event.is_error,
-                    "does_terminate": stream_event.does_terminate,
+                    "is_terminal": stream_event.is_terminal,
                     "metadata": _audit_metadata_from_stream_metadata(
                         stream_event.metadata
                     ),
@@ -72,7 +72,7 @@ def audit_events_from_stream_event(
 
 
 def _node_from_stream(
-    stream_event: ToolExecutionStarted | ToolExecutionCompleted,
+    stream_event: ToolExecutionStartedEvent | ToolExecutionCompletedEvent,
     *,
     metadata: Mapping[str, Any] | None,
     task_center_run_id: str | None,
@@ -92,7 +92,7 @@ def _node_from_stream(
         agent_run_id=_first_text(stream_event.run_id, _metadata_get(metadata, "agent_run_id")),
         sandbox_id=_text_or_none(_metadata_get(metadata, "sandbox_id")),
         tool_name=_text_or_none(stream_event.tool_name),
-        tool_id=_first_text(stream_event.tool_id, _metadata_get(metadata, "tool_id")),
+        tool_use_id=_first_text(stream_event.tool_use_id, _metadata_get(metadata, "tool_id")),
     )
 
 

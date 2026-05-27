@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from message.messages import SystemNotificationBlock
+from message.message import SystemNotificationBlock
 
 
 SYSTEM_NOTIFICATIONS_METADATA_KEY = "system_notifications"

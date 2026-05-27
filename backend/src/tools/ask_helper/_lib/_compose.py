@@ -21,7 +21,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from agents import AgentDefinition, get_definition
-from message.messages import ConversationMessage, TextBlock
+from message.message import Message, TextBlock
 from tools._framework.core.context import ToolExecutionContextService
 from tools._framework.core.results import ToolResult
 from tools.ask_helper._lib._transcript import (
@@ -59,7 +59,7 @@ class HelperMessages:
 
 
 def _extract_text(msg: Any) -> str:
-    """Concatenate ``TextBlock`` contents from a ``ConversationMessage``."""
+    """Concatenate ``TextBlock`` contents from a ``Message``."""
     content = getattr(msg, "content", None) or []
     parts: list[str] = []
     for block in content:
@@ -167,9 +167,9 @@ def assemble_user_msg_1(messages: HelperMessages) -> str:
     return "\n\n".join(sections)
 
 
-def as_initial_message(text: str) -> ConversationMessage:
-    """Wrap a user_msg_1 string in a ``ConversationMessage`` for spawn."""
-    return ConversationMessage(role="user", content=[TextBlock(text=text)])
+def as_initial_message(text: str) -> Message:
+    """Wrap a user_msg_1 string in a ``Message`` for spawn."""
+    return Message(role="user", content=[TextBlock(text=text)])
 
 
 __all__ = [

@@ -55,7 +55,7 @@ class _PhaseRecord:
 
 @dataclass
 class _PhaseBuffer:
-    tool_id: str
+    tool_use_id: str
     tool_name: str
     entries: deque[_PhaseRecord] = field(
         default_factory=lambda: deque(maxlen=_PHASE_BUFFER_MAX)
@@ -131,13 +131,13 @@ def reset_for_tests() -> None:
     _registry.clear()
 
 
-def start_phase_buffer(tool_id: str, tool_name: str) -> _PhaseBuffer:
+def start_phase_buffer(tool_use_id: str, tool_name: str) -> _PhaseBuffer:
     """Install a fresh phase buffer in the current context.
 
     Returns the new buffer; the caller is expected to record phases on it
     via :func:`record_phase` and finish via :func:`finish_phase_buffer`.
     """
-    buf = _PhaseBuffer(tool_id=tool_id, tool_name=tool_name)
+    buf = _PhaseBuffer(tool_use_id=tool_use_id, tool_name=tool_name)
     _active_buffer.set(buf)
     return buf
 

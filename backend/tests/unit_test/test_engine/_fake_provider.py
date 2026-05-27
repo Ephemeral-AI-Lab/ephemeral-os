@@ -7,11 +7,11 @@ dispatch, real budget bookkeeping, and the real retry transcript.
 
 Each :class:`ScriptedTurn` describes one ``stream_message`` invocation:
 
-- ``text_deltas`` are streamed as :class:`ApiTextDeltaEvent` events first.
-- ``tool_uses`` are streamed as :class:`ApiToolUseDeltaEvent` events (so the
+- ``text_deltas`` are streamed as :class:`AssistantTextDeltaEvent` events first.
+- ``tool_uses`` are streamed as :class:`ToolUseDeltaEvent` events (so the
   loop calls ``_count_tool_dispatch`` for each before the message
   completes).
-- A trailing :class:`ApiMessageCompleteEvent` carries the assembled assistant
+- A trailing :class:`AssistantMessageCompleteEvent` carries the assembled assistant
   message containing matching :class:`ToolUseBlock` and :class:`TextBlock`
   entries plus the turn's :class:`UsageSnapshot`.
 
@@ -26,14 +26,16 @@ from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
 from typing import Any
 
-from message.messages import ConversationMessage, TextBlock, ToolUseBlock
+from message.message import Message, TextBlock, ToolUseBlock
 from providers.types import (
-    ApiMessageCompleteEvent,
-    ApiMessageRequest,
-    ApiStreamEvent,
-    ApiTextDeltaEvent,
-    ApiToolUseDeltaEvent,
+    MessageRequest,
     UsageSnapshot,
+)
+from message.events import (
+    AssistantMessageCompleteEvent,
+    StreamEvent,
+    AssistantTextDeltaEvent,
+    ToolUseDeltaEvent,
 )
 
 
@@ -53,7 +55,7 @@ class ScriptedTurn:
     text_deltas: tuple[str, ...] = ()
     tool_uses: tuple[ScriptedToolUse, ...] = ()
     usage: UsageSnapshot = field(default_factory=UsageSnapshot)
-    # Optional stop_reason on the ApiMessageCompleteEvent — most tests
+    # Optional stop_reason on the AssistantMessageCompleteEvent — most tests
     # don't care, but a few assertions inspect it.
     stop_reason: str | None = None
 
@@ -64,22 +66,22 @@ class FakeProviderClient:
     The :class:`SupportsStreamingMessages` protocol is single-method
     (``stream_message``). Each call pops one :class:`ScriptedTurn` and yields
     its delta events followed by a single
-    :class:`ApiMessageCompleteEvent`. ``calls`` records every request
+    :class:`AssistantMessageCompleteEvent`. ``calls`` records every request
     issued so tests can assert how many provider turns ran (and what the
     transcript looked like at each invocation).
     """
 
     def __init__(self, turns: list[ScriptedTurn]) -> None:
         self._turns = list(turns)
-        self.calls: list[ApiMessageRequest] = []
+        self.calls: list[MessageRequest] = []
 
     @property
     def remaining_turns(self) -> int:
         return len(self._turns)
 
     async def stream_message(
-        self, request: ApiMessageRequest
-    ) -> AsyncIterator[ApiStreamEvent]:
+        self, request: MessageRequest
+    ) -> AsyncIterator[StreamEvent]:
         # NOTE: this is intentionally an *async generator function* rather
         # than ``async def ... return self._iter_turn(...)`` — the loop
         # does ``async for event in client.stream_message(request)`` and
@@ -94,10 +96,10 @@ class FakeProviderClient:
         self.calls.append(request)
         turn = self._turns.pop(0)
         for text in turn.text_deltas:
-            yield ApiTextDeltaEvent(text=text)
+            yield AssistantTextDeltaEvent(text=text)
         for tool_use in turn.tool_uses:
-            yield ApiToolUseDeltaEvent(
-                id=tool_use.id,
+            yield ToolUseDeltaEvent(
+                tool_use_id=tool_use.tool_use_id,
                 name=tool_use.name,
                 input=dict(tool_use.input),
             )
@@ -111,13 +113,13 @@ class FakeProviderClient:
         for tool_use in turn.tool_uses:
             content.append(
                 ToolUseBlock(
-                    id=tool_use.id,
+                    tool_use_id=tool_use.tool_use_id,
                     name=tool_use.name,
                     input=dict(tool_use.input),
                 )
             )
-        yield ApiMessageCompleteEvent(
-            message=ConversationMessage(role="assistant", content=content),
+        yield AssistantMessageCompleteEvent(
+            message=Message(role="assistant", content=content),
             usage=turn.usage,
             stop_reason=turn.stop_reason,
         )

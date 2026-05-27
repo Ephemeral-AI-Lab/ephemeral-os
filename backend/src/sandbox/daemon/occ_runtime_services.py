@@ -22,7 +22,7 @@ from sandbox.occ.maintenance import AutoSquashMaintenancePolicy
 from sandbox.occ.service import AUTO_SQUASH_MAX_DEPTH, OccService
 from sandbox.occ.layer_stack_client import LayerStackPortAdapter
 from sandbox.main_workspace.workspace_binding import MainWorkspaceBindingReader
-from sandbox.daemon.layer_stack_runtime import get_layer_stack_manager
+from sandbox.daemon.layer_stack_runtime import emit_squash_event, get_layer_stack_manager
 
 
 @dataclass(frozen=True)
@@ -63,6 +63,7 @@ def get_occ_runtime_services(layer_stack_root: str) -> OccRuntimeServices:
             snapshot_reader=layer_stack,
             squasher=layer_stack,
             max_depth=AUTO_SQUASH_MAX_DEPTH,
+            audit=emit_squash_event,
         ),
     )
     occ_client = OccClient(

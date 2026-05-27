@@ -5,9 +5,9 @@ from __future__ import annotations
 import copy
 
 from engine.background.history import reduce_background_task_history
-from engine.query.provider_history import prepare_provider_messages, sanitize_tool_sequence
-from message.messages import (
-    ConversationMessage,
+from engine.query.provider_history import build_provider_messages, sanitize_tool_sequence
+from message.message import (
+    Message,
     SystemNotificationBlock,
     TextBlock,
     ToolResultBlock,
@@ -19,23 +19,23 @@ from tools.background._lib.task_output import (
 )
 
 
-def _user(text: str) -> ConversationMessage:
-    return ConversationMessage.from_user_text(text)
+def _user(text: str) -> Message:
+    return Message.from_user_text(text)
 
 
-def _assistant(text: str) -> ConversationMessage:
-    return ConversationMessage(role="assistant", content=[TextBlock(text=text)])
+def _assistant(text: str) -> Message:
+    return Message(role="assistant", content=[TextBlock(text=text)])
 
 
-def _tool_use(id: str, name: str, input: dict) -> ConversationMessage:  # noqa: A002
-    return ConversationMessage(
+def _tool_use(id: str, name: str, input: dict) -> Message:  # noqa: A002
+    return Message(
         role="assistant",
-        content=[ToolUseBlock(id=id, name=name, input=input)],
+        content=[ToolUseBlock(tool_use_id=id, name=name, input=input)],
     )
 
 
-def _tool_result(tool_use_id: str, content: str) -> ConversationMessage:
-    return ConversationMessage(
+def _tool_result(tool_use_id: str, content: str) -> Message:
+    return Message(
         role="user",
         content=[ToolResultBlock(tool_use_id=tool_use_id, content=content)],
     )
@@ -48,12 +48,12 @@ class TestPrepareProviderMessages:
         display = [_user("hello"), _user("world")]
         snapshot = copy.deepcopy(display)
 
-        provider = prepare_provider_messages(display)
+        provider = build_provider_messages(display)
 
         assert display == snapshot
         assert provider is not display
         assert provider[0] is not display[0]
-        assert [m.text for m in provider] == [m.text for m in display]
+        assert [m.assistant_text for m in provider] == [m.assistant_text for m in display]
 
     def test_sanitize_tool_sequence_drops_orphaned_tool_results(self) -> None:
         messages = [
@@ -74,7 +74,7 @@ class TestPrepareProviderMessages:
         display = [
             _user("older context"),
             _tool_use("toolu_pair", "echo", {"value": "x"}),
-            ConversationMessage(
+            Message(
                 role="user",
                 content=[
                     ToolResultBlock(
@@ -90,7 +90,7 @@ class TestPrepareProviderMessages:
             _user("newer context"),
         ]
 
-        provider = prepare_provider_messages(display)
+        provider = build_provider_messages(display)
 
         result_ids = {
             block.tool_use_id
@@ -105,7 +105,7 @@ class TestPrepareProviderMessages:
         new_statuses = [{"task_id": "bg_1", "status": "completed", "output": "done"}]
         display = [
             _tool_use("toolu_old", "wait_background_tasks", {"task_id": "all"}),
-            ConversationMessage(
+            Message(
                 role="user",
                 content=[
                     ToolResultBlock(
@@ -120,7 +120,7 @@ class TestPrepareProviderMessages:
                 ],
             ),
             _tool_use("toolu_new", "wait_background_tasks", {"task_id": "all"}),
-            ConversationMessage(
+            Message(
                 role="user",
                 content=[
                     ToolResultBlock(
@@ -141,19 +141,19 @@ class TestPrepareProviderMessages:
 
         assert display == snapshot
         assert any(
-            isinstance(block, ToolUseBlock) and block.id == "toolu_old"
+            isinstance(block, ToolUseBlock) and block.tool_use_id == "toolu_old"
             for msg in display
             for block in msg.content
         )
         assert all(
             not any(
-                isinstance(block, ToolUseBlock) and block.id == "toolu_old"
+                isinstance(block, ToolUseBlock) and block.tool_use_id == "toolu_old"
                 for block in msg.content
             )
             for msg in provider
         )
         assert any(
-            isinstance(block, ToolUseBlock) and block.id == "toolu_new"
+            isinstance(block, ToolUseBlock) and block.tool_use_id == "toolu_new"
             for msg in provider
             for block in msg.content
         )
@@ -179,7 +179,7 @@ class TestPrepareProviderMessages:
         ]
         display = [
             _tool_use("toolu_running", "wait_background_tasks", {"task_id": "all"}),
-            ConversationMessage(
+            Message(
                 role="user",
                 content=[
                     ToolResultBlock(
@@ -194,7 +194,7 @@ class TestPrepareProviderMessages:
                 ],
             ),
             _tool_use("toolu_wait", "wait_background_tasks", {"task_id": "all"}),
-            ConversationMessage(
+            Message(
                 role="user",
                 content=[
                     ToolResultBlock(
@@ -213,7 +213,7 @@ class TestPrepareProviderMessages:
         provider = reduce_background_task_history(display)
 
         assert any(
-            isinstance(block, ToolUseBlock) and block.id == "toolu_wait"
+            isinstance(block, ToolUseBlock) and block.tool_use_id == "toolu_wait"
             for msg in provider
             for block in msg.content
         )
@@ -226,7 +226,7 @@ class TestPrepareProviderMessages:
         assert any("[NO TASKS]" in content for content in result_contents)
         assert all(
             not any(
-                isinstance(block, ToolUseBlock) and block.id == "toolu_running"
+                isinstance(block, ToolUseBlock) and block.tool_use_id == "toolu_running"
                 for block in msg.content
             )
             for msg in provider
@@ -242,19 +242,19 @@ class TestSystemNotificationBlock:
         assert block.text == "hello"
 
     def test_message_with_notification_text_excludes_notification(self) -> None:
-        msg = ConversationMessage(
+        msg = Message(
             role="user",
             content=[
                 TextBlock(text="hi"),
                 SystemNotificationBlock(text="background bg_1 still running"),
             ],
         )
-        assert msg.text == "hi"
+        assert msg.assistant_text == "hi"
         assert msg.system_notification_text == "background bg_1 still running"
         assert len(msg.system_notifications) == 1
 
     def test_to_api_param_wraps_in_tags(self) -> None:
-        msg = ConversationMessage(
+        msg = Message(
             role="user",
             content=[SystemNotificationBlock(text="bg_1 done")],
         )
@@ -266,7 +266,7 @@ class TestSystemNotificationBlock:
         assert block["text"] == "<system-reminder>\nbg_1 done\n</system-reminder>"
 
     def test_to_api_param_mixed_content_preserves_order(self) -> None:
-        msg = ConversationMessage(
+        msg = Message(
             role="user",
             content=[
                 TextBlock(text="user said"),
@@ -282,14 +282,14 @@ class TestSystemNotificationBlock:
         assert api["content"][2]["text"] == "more"
 
     def test_pydantic_round_trip(self) -> None:
-        original = ConversationMessage(
+        original = Message(
             role="user",
             content=[
                 SystemNotificationBlock(text="hi"),
             ],
         )
         dumped = original.model_dump()
-        restored = ConversationMessage.model_validate(dumped)
+        restored = Message.model_validate(dumped)
         assert len(restored.content) == 1
         block = restored.content[0]
         assert isinstance(block, SystemNotificationBlock)
@@ -297,12 +297,12 @@ class TestSystemNotificationBlock:
 
     def test_empty_notification_text(self) -> None:
         block = SystemNotificationBlock(text="")
-        msg = ConversationMessage(role="user", content=[block])
+        msg = Message(role="user", content=[block])
         api = msg.to_api_param()
         assert api["content"][0]["text"] == "<system-reminder>\n\n</system-reminder>"
 
     def test_multiple_notifications_in_one_message(self) -> None:
-        msg = ConversationMessage(
+        msg = Message(
             role="user",
             content=[
                 SystemNotificationBlock(text="first"),
@@ -320,23 +320,23 @@ class TestConversationMessageMixed:
     """SystemNotificationBlock must not interfere with other block accessors."""
 
     def test_text_property_only_returns_text_blocks(self) -> None:
-        msg = ConversationMessage(
+        msg = Message(
             role="assistant",
             content=[
                 TextBlock(text="hello"),
-                ToolUseBlock(id="t1", name="bash", input={"cmd": "ls"}),
+                ToolUseBlock(tool_use_id="t1", name="bash", input={"cmd": "ls"}),
                 TextBlock(text=" world"),
             ],
         )
-        assert msg.text == "hello world"
+        assert msg.assistant_text == "hello world"
         assert msg.system_notification_text == ""
         assert msg.system_notifications == []
 
     def test_tool_uses_property_unaffected(self) -> None:
-        msg = ConversationMessage(
+        msg = Message(
             role="assistant",
             content=[
-                ToolUseBlock(id="t1", name="bash", input={"cmd": "ls"}),
+                ToolUseBlock(tool_use_id="t1", name="bash", input={"cmd": "ls"}),
                 SystemNotificationBlock(text="ignore me"),
             ],
         )
@@ -344,7 +344,7 @@ class TestConversationMessageMixed:
         assert msg.tool_uses[0].name == "bash"
 
     def test_pydantic_discriminator_distinguishes_text_vs_notification(self) -> None:
-        original = ConversationMessage(
+        original = Message(
             role="user",
             content=[
                 TextBlock(text="real user input"),
@@ -352,6 +352,6 @@ class TestConversationMessageMixed:
             ],
         )
         dumped = original.model_dump()
-        restored = ConversationMessage.model_validate(dumped)
+        restored = Message.model_validate(dumped)
         assert isinstance(restored.content[0], TextBlock)
         assert isinstance(restored.content[1], SystemNotificationBlock)

@@ -8,18 +8,18 @@ import logging
 import pytest
 
 from message import (
-    ConversationMessage,
+    Message,
     TextBlock,
     ThinkingBlock,
     ToolUseBlock,
     serialize_content_block,
-    assistant_message_from_api,
+    parse_assistant_message,
 )
-from providers.types import (
-    ApiThinkingDeltaEvent,
+from message.events import (
+    ThinkingDeltaEvent,
 )
-from message.stream_events import (
-    ThinkingDelta,
+from message.events import (
+    ThinkingDeltaEvent,
 )
 # ---------------------------------------------------------------------------
 # ThinkingBlock model tests
@@ -51,15 +51,15 @@ class TestThinkingBlock:
 
 
 # ---------------------------------------------------------------------------
-# ConversationMessage with ThinkingBlock
+# Message with ThinkingBlock
 # ---------------------------------------------------------------------------
 
 
 class TestConversationMessageThinking:
-    """Test ConversationMessage handling of ThinkingBlock content."""
+    """Test Message handling of ThinkingBlock content."""
 
     def test_thinking_property(self):
-        msg = ConversationMessage(
+        msg = Message(
             role="assistant",
             content=[
                 ThinkingBlock(text="First I'll "),
@@ -68,21 +68,21 @@ class TestConversationMessageThinking:
             ],
         )
         assert msg.thinking == "First I'll reason about this."
-        assert msg.text == "Here's my answer."
+        assert msg.assistant_text == "Here's my answer."
 
     def test_thinking_property_empty(self):
-        msg = ConversationMessage(
+        msg = Message(
             role="assistant",
             content=[TextBlock(text="No thinking here.")],
         )
         assert msg.thinking == ""
 
     def test_tool_uses_excludes_thinking(self):
-        msg = ConversationMessage(
+        msg = Message(
             role="assistant",
             content=[
                 ThinkingBlock(text="reasoning"),
-                ToolUseBlock(id="t1", name="read_file", input={"path": "/tmp/x"}),
+                ToolUseBlock(tool_use_id="t1", name="read_file", input={"path": "/tmp/x"}),
             ],
         )
         assert len(msg.tool_uses) == 1
@@ -90,7 +90,7 @@ class TestConversationMessageThinking:
 
     def test_to_api_param_strips_thinking(self):
         """Anthropic API does not accept thinking blocks back in messages."""
-        msg = ConversationMessage(
+        msg = Message(
             role="assistant",
             content=[
                 ThinkingBlock(text="internal reasoning"),
@@ -103,12 +103,12 @@ class TestConversationMessageThinking:
         assert param["content"][0] == {"type": "text", "text": "visible answer"}
 
     def test_to_api_param_strips_thinking_with_tool_calls(self):
-        msg = ConversationMessage(
+        msg = Message(
             role="assistant",
             content=[
                 ThinkingBlock(text="Let me think..."),
                 TextBlock(text="I'll read the file."),
-                ToolUseBlock(id="t1", name="read_file", input={"path": "/a"}),
+                ToolUseBlock(tool_use_id="t1", name="read_file", input={"path": "/a"}),
             ],
         )
         param = msg.to_api_param()
@@ -126,7 +126,7 @@ class TestThinkingBlockPersistence:
     """Test that ThinkingBlock survives model_dump / model_validate round-trips."""
 
     def test_round_trip_single_thinking(self):
-        msg = ConversationMessage(
+        msg = Message(
             role="assistant",
             content=[
                 ThinkingBlock(text="reasoning"),
@@ -134,7 +134,7 @@ class TestThinkingBlockPersistence:
             ],
         )
         dumped = msg.model_dump(mode="json")
-        restored = ConversationMessage.model_validate(dumped)
+        restored = Message.model_validate(dumped)
         assert len(restored.content) == 2
         assert isinstance(restored.content[0], ThinkingBlock)
         assert restored.content[0].text == "reasoning"
@@ -142,35 +142,35 @@ class TestThinkingBlockPersistence:
         assert restored.content[1].text == "answer"
 
     def test_round_trip_thinking_with_tools(self):
-        msg = ConversationMessage(
+        msg = Message(
             role="assistant",
             content=[
                 ThinkingBlock(text="I should read the file"),
                 TextBlock(text="Let me check."),
-                ToolUseBlock(id="t1", name="read_file", input={"path": "/tmp/x"}),
+                ToolUseBlock(tool_use_id="t1", name="read_file", input={"path": "/tmp/x"}),
             ],
         )
         dumped = msg.model_dump(mode="json")
-        restored = ConversationMessage.model_validate(dumped)
+        restored = Message.model_validate(dumped)
         assert len(restored.content) == 3
         assert restored.thinking == "I should read the file"
-        assert restored.text == "Let me check."
+        assert restored.assistant_text == "Let me check."
         assert len(restored.tool_uses) == 1
 
     def test_round_trip_no_thinking(self):
         """Messages without thinking still round-trip correctly."""
-        msg = ConversationMessage(
+        msg = Message(
             role="assistant",
             content=[TextBlock(text="plain answer")],
         )
         dumped = msg.model_dump(mode="json")
-        restored = ConversationMessage.model_validate(dumped)
+        restored = Message.model_validate(dumped)
         assert len(restored.content) == 1
         assert restored.thinking == ""
 
     def test_json_serializable(self):
         """Ensure the dumped form is JSON-serializable (for DB storage)."""
-        msg = ConversationMessage(
+        msg = Message(
             role="assistant",
             content=[
                 ThinkingBlock(text="step 1"),
@@ -180,7 +180,7 @@ class TestThinkingBlockPersistence:
         dumped = msg.model_dump(mode="json")
         json_str = json.dumps(dumped)
         loaded = json.loads(json_str)
-        restored = ConversationMessage.model_validate(loaded)
+        restored = Message.model_validate(loaded)
         assert restored.thinking == "step 1"
 
 
@@ -203,14 +203,14 @@ class TestSerializeContentBlock:
         assert result == {"type": "text", "text": "hello"}
 
     def test_serialize_tool_use(self):
-        block = ToolUseBlock(id="t1", name="bash", input={"cmd": "ls"})
+        block = ToolUseBlock(tool_use_id="t1", name="bash", input={"cmd": "ls"})
         result = serialize_content_block(block)
         assert result["type"] == "tool_use"
         assert result["name"] == "bash"
 
 
 # ---------------------------------------------------------------------------
-# assistant_message_from_api (Anthropic SDK response parsing)
+# parse_assistant_message (Anthropic SDK response parsing)
 # ---------------------------------------------------------------------------
 
 
@@ -226,7 +226,7 @@ class _FakeMessage:
 
 
 class TestAssistantMessageFromApiThinking:
-    """Test that assistant_message_from_api parses thinking blocks."""
+    """Test that parse_assistant_message parses thinking blocks."""
 
     def test_thinking_block_with_thinking_attr(self):
         raw = _FakeMessage(
@@ -235,7 +235,7 @@ class TestAssistantMessageFromApiThinking:
                 _FakeBlock(type="text", text="the answer is 42"),
             ]
         )
-        msg = assistant_message_from_api(raw)
+        msg = parse_assistant_message(raw)
         assert len(msg.content) == 2
         assert isinstance(msg.content[0], ThinkingBlock)
         assert msg.content[0].text == "deep thought"
@@ -247,7 +247,7 @@ class TestAssistantMessageFromApiThinking:
                 _FakeBlock(type="thinking", text="reasoning via text attr"),
             ]
         )
-        msg = assistant_message_from_api(raw)
+        msg = parse_assistant_message(raw)
         assert isinstance(msg.content[0], ThinkingBlock)
         assert msg.content[0].text == "reasoning via text attr"
 
@@ -257,7 +257,7 @@ class TestAssistantMessageFromApiThinking:
                 _FakeBlock(type="text", text="plain response"),
             ]
         )
-        msg = assistant_message_from_api(raw)
+        msg = parse_assistant_message(raw)
         assert len(msg.content) == 1
         assert isinstance(msg.content[0], TextBlock)
 
@@ -272,8 +272,8 @@ class TestAssistantMessageFromApiThinking:
             ]
         )
 
-        with caplog.at_level(logging.DEBUG, logger="message.messages"):
-            msg = assistant_message_from_api(raw)
+        with caplog.at_level(logging.DEBUG, logger="message.message"):
+            msg = parse_assistant_message(raw)
 
         assert len(msg.content) == 1
         assert isinstance(msg.content[0], TextBlock)
@@ -287,12 +287,12 @@ class TestAssistantMessageFromApiThinking:
 
 
 class TestThinkingStreamEvents:
-    """Test ThinkingDelta and ApiThinkingDeltaEvent."""
+    """Test ThinkingDeltaEvent and ThinkingDeltaEvent."""
 
     def test_thinking_delta_event(self):
-        event = ThinkingDelta(text="reasoning step")
+        event = ThinkingDeltaEvent(text="reasoning step")
         assert event.text == "reasoning step"
 
     def test_api_thinking_delta_event(self):
-        event = ApiThinkingDeltaEvent(text="api reasoning")
+        event = ThinkingDeltaEvent(text="api reasoning")
         assert event.text == "api reasoning"

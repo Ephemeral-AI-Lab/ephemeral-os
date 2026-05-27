@@ -14,7 +14,7 @@ from engine.tool_call.dispatch import (
     get_lifecycle_batch_rejection_counters,
     reset_lifecycle_batch_rejection_counters,
 )
-from message.messages import ToolResultBlock, ToolUseBlock
+from message.message import ToolResultBlock, ToolUseBlock
 from sandbox._shared.models import Intent
 from sandbox.audit import events
 
@@ -201,11 +201,11 @@ def test_tool_call_dispatch_lifecycle_actually_dispatches_when_siblings_rejected
     dispatched: list[str] = []
 
     async def _fake_execute(
-        context, name, tool_id, arguments, *, emit, conversation_messages, consume_budget
+        context, name, tool_use_id, arguments, *, emit, conversation_messages, consume_budget
     ):
         dispatched.append(name)
         return ToolResultBlock(
-            tool_use_id=tool_id,
+            tool_use_id=tool_use_id,
             content="lifecycle ok",
             is_error=False,
         )

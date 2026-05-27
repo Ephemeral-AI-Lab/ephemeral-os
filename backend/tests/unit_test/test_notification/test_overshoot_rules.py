@@ -6,7 +6,7 @@ from typing import Any
 
 import pytest
 
-from message.messages import ConversationMessage, TextBlock, ToolUseBlock
+from message.message import Message, TextBlock, ToolUseBlock
 from notification import (
     SystemNotificationService,
     dispatch_rules,
@@ -48,18 +48,18 @@ class _StubContext:
         return self.tool_overshoot + self.text_only_no_terminal_turns
 
 
-def _user(text: str = "go") -> ConversationMessage:
-    return ConversationMessage(role="user", content=[TextBlock(text=text)])
+def _user(text: str = "go") -> Message:
+    return Message(role="user", content=[TextBlock(text=text)])
 
 
-def _assistant_text(text: str = "ok") -> ConversationMessage:
-    return ConversationMessage(role="assistant", content=[TextBlock(text=text)])
+def _assistant_text(text: str = "ok") -> Message:
+    return Message(role="assistant", content=[TextBlock(text=text)])
 
 
-def _assistant_tool_use() -> ConversationMessage:
-    return ConversationMessage(
+def _assistant_tool_use() -> Message:
+    return Message(
         role="assistant",
-        content=[ToolUseBlock(id="t1", name="read_file", input={"path": "f.txt"})],
+        content=[ToolUseBlock(tool_use_id="t1", name="read_file", input={"path": "f.txt"})],
     )
 
 

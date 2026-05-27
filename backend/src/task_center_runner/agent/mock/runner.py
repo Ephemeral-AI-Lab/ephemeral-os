@@ -19,13 +19,13 @@ import sandbox.api as sandbox_api
 from sandbox._shared.clock import monotonic_now
 from agents import AgentDefinition
 from engine.api import EphemeralRunResult
-from message.messages import ConversationMessage, ToolUseBlock
-from message.stream_events import (
-    AssistantMessageComplete,
-    AssistantTextDelta,
+from message.message import Message, ToolUseBlock
+from message.events import (
+    AssistantMessageCompleteEvent,
+    AssistantTextDeltaEvent,
     StreamEvent,
-    ToolExecutionCompleted,
-    ToolExecutionStarted,
+    ToolExecutionCompletedEvent,
+    ToolExecutionStartedEvent,
 )
 from providers.types import UsageSnapshot
 from sandbox.api import (
@@ -127,10 +127,10 @@ EmitStreamEvent = Callable[[StreamEvent], Awaitable[None]]
 
 
 def _initial_message_text(message: Any) -> str:
-    """Extract the text payload from a ``ConversationMessage`` (or dict).
+    """Extract the text payload from a ``Message`` (or dict).
 
     The mock runner's ``__call__`` accepts ``initial_messages`` as either a
-    list of ``ConversationMessage`` instances (production wiring) or raw
+    list of ``Message`` instances (production wiring) or raw
     dicts (some legacy fixtures). Both shapes expose ``content`` as a list
     of blocks with ``type=="text"``.
     """
@@ -1547,23 +1547,23 @@ class MockSquadRunner:
         background_task_id: str | None = None,
         sandbox_invocation_id: str | None = None,
     ) -> ToolResult:
-        tool_id = f"toolu_{uuid4().hex}"
+        tool_use_id = f"toolu_{uuid4().hex}"
         agent_name = str(metadata.agent_name or "")
         run_id = self._stream_run_id(metadata)
         await emit(
-            AssistantTextDelta(
+            AssistantTextDeltaEvent(
                 text=f"Calling {tool_obj.name}.\n",
                 agent_name=agent_name,
                 run_id=run_id,
             )
         )
         await emit(
-            AssistantMessageComplete(
-                message=ConversationMessage(
+            AssistantMessageCompleteEvent(
+                message=Message(
                     role="assistant",
                     content=[
                         ToolUseBlock(
-                            id=tool_id,
+                            id=tool_use_id,
                             name=tool_obj.name,
                             input=dict(raw_input),
                         )
@@ -1584,17 +1584,17 @@ class MockSquadRunner:
         # timings in the sandbox-event duration aggregate.
         client_t0 = monotonic_now()
         await emit(
-            ToolExecutionStarted(
+            ToolExecutionStartedEvent(
                 tool_name=tool_obj.name,
                 tool_input=dict(raw_input),
-                tool_id=tool_id,
+                tool_use_id=tool_use_id,
                 agent_name=agent_name,
                 run_id=run_id,
             )
         )
         client_t1 = monotonic_now()
         override_kwargs: dict[str, Any] = {
-            "tool_id": tool_id,
+            "tool_id": tool_use_id,
             "sandbox_audit_sink": self._sandbox_audit_sink,
         }
         resolved_sandbox_invocation_id = ""
@@ -1628,7 +1628,7 @@ class MockSquadRunner:
                     tool_name=tool_obj.name,
                     payload={
                         "tool_name": tool_obj.name,
-                        "tool_id": tool_id,
+                        "tool_id": tool_use_id,
                         "invocation_id": resolved_sandbox_invocation_id,
                         "background_task_id": background_task_id,
                     },
@@ -1647,13 +1647,13 @@ class MockSquadRunner:
         result_metadata["timings"] = client_timings
         result = dataclasses.replace(result, metadata=result_metadata)
         await emit(
-            ToolExecutionCompleted(
+            ToolExecutionCompletedEvent(
                 tool_name=tool_obj.name,
                 output=result.output,
                 is_error=result.is_error,
-                tool_id=tool_id,
+                tool_use_id=tool_use_id,
                 metadata=dict(result.metadata or {}),
-                does_terminate=result.does_terminate,
+                is_terminal=result.is_terminal,
                 agent_name=agent_name,
                 run_id=run_id,
             )
@@ -1801,7 +1801,7 @@ class MockSquadRunner:
         agent_def: AgentDefinition,
         prompt: str,
         metadata: ExecutionMetadata,
-        seeded_initial_messages: list[ConversationMessage] | None = None,
+        seeded_initial_messages: list[Message] | None = None,
     ) -> None:
         task_id = str(metadata.get("task_center_task_id") or "")
         if not task_id or self._audit_recorder is None:
@@ -1860,7 +1860,7 @@ class MockSquadRunner:
             task_center_attempt_id=str(metadata.get("task_center_attempt_id") or ""),
             task_center_goal_id=str(metadata.get("task_center_goal_id") or ""),
             task_center_request_id=str(metadata.get("task_center_request_id") or ""),
-            tool_id=str(metadata.get("tool_id") or ""),
+            tool_use_id=str(metadata.get("tool_id") or ""),
         )
 
     @staticmethod

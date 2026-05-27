@@ -28,8 +28,8 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Literal
 
 from agents import AgentDefinition
-from message.messages import ConversationMessage, ToolResultBlock
-from message.stream_events import StreamEvent, ToolExecutionCompleted
+from message.message import Message, ToolResultBlock
+from message.events import StreamEvent, ToolExecutionCompletedEvent
 from tools import ExecutionMetadata, ToolResult
 
 if TYPE_CHECKING:
@@ -54,11 +54,11 @@ class EphemeralRunResult:
 
 
 def _last_terminal_tool_result(
-    messages: list[ConversationMessage],
+    messages: list[Message],
 ) -> ToolResult | None:
     """Walk *messages* backwards for the last terminating tool result.
 
-    Identifies the result the engine stamped with ``does_terminate=True`` when
+    Identifies the result the engine stamped with ``is_terminal=True`` when
     a ``is_terminal_tool=True`` tool returned non-error. Returns the
     corresponding :class:`ToolResult` (with
     ``output``, ``metadata``, etc.) or ``None`` if the loop exited without a
@@ -68,12 +68,12 @@ def _last_terminal_tool_result(
         if msg.role != "user":
             continue
         for block in reversed(msg.content):
-            if isinstance(block, ToolResultBlock) and block.does_terminate:
+            if isinstance(block, ToolResultBlock) and block.is_terminal:
                 return ToolResult(
                     output=str(block.content),
                     is_error=block.is_error,
                     metadata=dict(block.metadata or {}),
-                    does_terminate=True,
+                    is_terminal=True,
                 )
     return None
 
@@ -84,7 +84,7 @@ async def run_ephemeral_agent(
     *,
     agent_def: AgentDefinition | None = None,
     sandbox_id: str | None = None,
-    initial_messages: list[ConversationMessage] | None = None,
+    initial_messages: list[Message] | None = None,
     persist_agent_run: bool = True,
     task_id: str | None = None,
     on_event: AgentStreamEmitter | None = None,
@@ -155,15 +155,15 @@ async def run_ephemeral_agent(
             async for event in agent.run(prompt, auto_close=False):
                 event_count += 1
                 if (
-                    isinstance(event, ToolExecutionCompleted)
-                    and event.does_terminate
+                    isinstance(event, ToolExecutionCompletedEvent)
+                    and event.is_terminal
                     and not event.is_error
                 ):
                     terminal_result = ToolResult(
                         output=event.output,
                         is_error=event.is_error,
                         metadata=dict(event.metadata or {}),
-                        does_terminate=True,
+                        is_terminal=True,
                     )
                 if on_event is not None:
                     await on_event(event)
@@ -188,7 +188,7 @@ async def run_ephemeral_agent(
                 "output": terminal_result.output,
                 "is_error": terminal_result.is_error,
                 "metadata": terminal_result.metadata,
-                "does_terminate": terminal_result.does_terminate,
+                "is_terminal": terminal_result.is_terminal,
             }
             if terminal_result is not None
             else None

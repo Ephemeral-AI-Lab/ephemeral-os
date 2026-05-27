@@ -12,7 +12,7 @@ from task_center_runner.audit.recorder import AuditRecorder
 from task_center_runner.audit.stream_bridge import stream_bridge
 from audit.base import AuditEvent, AuditNode
 from sandbox.audit import events as sandbox_events
-from message.stream_events import ToolExecutionCompleted
+from message.events import ToolExecutionCompletedEvent
 
 
 def test_stream_bridge_derives_sandbox_subsystem_events() -> None:
@@ -23,11 +23,11 @@ def test_stream_bridge_derives_sandbox_subsystem_events() -> None:
 
     asyncio.run(
         bridge(
-            ToolExecutionCompleted(
+            ToolExecutionCompletedEvent(
                 tool_name="shell",
                 output="{}",
                 is_error=False,
-                tool_id="toolu_1",
+                tool_use_id="toolu_1",
                 agent_name="executor",
                 run_id="task-1",
                 metadata={
@@ -91,11 +91,11 @@ def test_stream_bridge_sandbox_fallback_flag_blocks_derived_sandbox_events() -> 
 
     asyncio.run(
         bridge(
-            ToolExecutionCompleted(
+            ToolExecutionCompletedEvent(
                 tool_name="shell",
                 output="{}",
                 is_error=False,
-                tool_id="toolu_1",
+                tool_use_id="toolu_1",
                 agent_name="executor",
                 run_id="task-1",
                 metadata={
@@ -122,11 +122,11 @@ def test_stream_bridge_skips_metadata_derivation_when_sandbox_audit_emitted() ->
 
     asyncio.run(
         bridge(
-            ToolExecutionCompleted(
+            ToolExecutionCompletedEvent(
                 tool_name="shell",
                 output="{}",
                 is_error=False,
-                tool_id="toolu_1",
+                tool_use_id="toolu_1",
                 agent_name="executor",
                 run_id="task-1",
                 metadata={
@@ -154,11 +154,11 @@ def test_stream_bridge_keeps_lease_event_when_sandbox_audit_emitted() -> None:
 
     asyncio.run(
         bridge(
-            ToolExecutionCompleted(
+            ToolExecutionCompletedEvent(
                 tool_name="edit_file",
                 output="{}",
                 is_error=False,
-                tool_id="toolu_1",
+                tool_use_id="toolu_1",
                 agent_name="executor",
                 run_id="task-1",
                 metadata={
@@ -188,11 +188,11 @@ def test_stream_bridge_derives_sandbox_conflict_event() -> None:
 
     asyncio.run(
         bridge(
-            ToolExecutionCompleted(
+            ToolExecutionCompletedEvent(
                 tool_name="edit_file",
                 output="{}",
                 is_error=True,
-                tool_id="toolu_conflict",
+                tool_use_id="toolu_conflict",
                 agent_name="executor",
                 run_id="task-1",
                 metadata={
@@ -252,7 +252,7 @@ def test_legacy_sandbox_audit_sink_maps_namespaced_events_once(tmp_path: Path) -
                     task_center_run_id="run-1",
                     task_center_task_id="task-1",
                     tool_name="write_file",
-                    tool_id="toolu_1",
+                    tool_use_id="toolu_1",
                 ),
                 payload={
                     "operation": "write_file",
@@ -293,7 +293,7 @@ def test_legacy_sandbox_audit_sink_maps_resource_snapshot(tmp_path: Path) -> Non
                     task_center_run_id="run-1",
                     task_center_task_id="task-1",
                     tool_name="shell",
-                    tool_id="toolu_1",
+                    tool_use_id="toolu_1",
                 ),
                 payload={
                     "operation": "shell",

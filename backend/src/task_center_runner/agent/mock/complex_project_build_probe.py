@@ -28,7 +28,7 @@ from collections.abc import Awaitable, Callable, Sequence
 from dataclasses import dataclass, field
 from typing import Any
 
-from message.stream_events import StreamEvent
+from message.events import StreamEvent
 from plugins.catalog.lsp.tools.diagnostics import diagnostics as lsp_diagnostics_tool
 from plugins.catalog.lsp.tools.find_definitions import (
     find_definitions as lsp_find_definitions_tool,

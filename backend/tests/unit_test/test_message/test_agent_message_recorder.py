@@ -4,21 +4,21 @@ import json
 
 from message.agent_message_recorder import (
     AgentMessageJsonlRecorder,
-    clear_recorder_for_agent_run,
-    recorder_for_agent_run,
-    register_recorder_for_agent_run,
+    clear_recorder,
+    recorder_for_run,
+    register_recorder,
 )
-from message.messages import (
-    ConversationMessage,
+from message.message import (
+    Message,
     TextBlock,
     ThinkingBlock,
     ToolUseBlock,
 )
-from message.stream_events import (
-    AssistantMessageComplete,
-    AssistantTextDelta,
-    ThinkingDelta,
-    ToolExecutionCompleted,
+from message.events import (
+    AssistantMessageCompleteEvent,
+    AssistantTextDeltaEvent,
+    ThinkingDeltaEvent,
+    ToolExecutionCompletedEvent,
 )
 from providers.types import UsageSnapshot
 
@@ -41,24 +41,24 @@ def test_agent_message_recorder_appends_conversation_messages(tmp_path) -> None:
         run_id="t1",
     )
     recorder.emit(
-        ThinkingDelta(text="inspect ", agent_name="executor", run_id="t1")
+        ThinkingDeltaEvent(text="inspect ", agent_name="executor", run_id="t1")
     )
-    recorder.emit(ThinkingDelta(text="repo", agent_name="executor", run_id="t1"))
+    recorder.emit(ThinkingDeltaEvent(text="repo", agent_name="executor", run_id="t1"))
     recorder.emit(
-        AssistantTextDelta(
+        AssistantTextDeltaEvent(
             text="I will run ", agent_name="executor", run_id="t1"
         )
     )
     recorder.emit(
-        AssistantTextDelta(text="tests.", agent_name="executor", run_id="t1")
+        AssistantTextDeltaEvent(text="tests.", agent_name="executor", run_id="t1")
     )
     recorder.emit(
-        AssistantMessageComplete(
-            message=ConversationMessage(
+        AssistantMessageCompleteEvent(
+            message=Message(
                 role="assistant",
                 content=[
                     ToolUseBlock(
-                        id="toolu_1",
+                        tool_use_id="toolu_1",
                         name="shell",
                         input={"cmd": "pytest -q"},
                     )
@@ -70,10 +70,10 @@ def test_agent_message_recorder_appends_conversation_messages(tmp_path) -> None:
         )
     )
     recorder.emit(
-        ToolExecutionCompleted(
+        ToolExecutionCompletedEvent(
             tool_name="shell",
             output="ok",
-            tool_id="toolu_1",
+            tool_use_id="toolu_1",
             agent_name="executor",
             run_id="t1",
         )
@@ -96,7 +96,7 @@ def test_agent_message_recorder_appends_conversation_messages(tmp_path) -> None:
     assert records[4]["content"] == [
         {
             "type": "tool_use",
-            "id": "toolu_1",
+            "tool_use_id": "toolu_1",
             "name": "shell",
             "input": {"cmd": "pytest -q"},
         }
@@ -131,23 +131,23 @@ def test_initial_messages_preserve_launch_metadata(tmp_path) -> None:
 
 
 def test_assistant_complete_with_full_blocks_does_not_duplicate(tmp_path) -> None:
-    """Real-LLM path: AssistantMessageComplete carries the same thinking/text
+    """Real-LLM path: AssistantMessageCompleteEvent carries the same thinking/text
     blocks that arrived as deltas. The buffer must be discarded, not flushed,
     so the recorder writes exactly one assistant row per provider turn."""
     path = tmp_path / "message.jsonl"
     recorder = AgentMessageJsonlRecorder(path)
 
-    recorder.emit(ThinkingDelta(text="plan ", agent_name="a", run_id="r"))
-    recorder.emit(ThinkingDelta(text="step", agent_name="a", run_id="r"))
-    recorder.emit(AssistantTextDelta(text="ok.", agent_name="a", run_id="r"))
+    recorder.emit(ThinkingDeltaEvent(text="plan ", agent_name="a", run_id="r"))
+    recorder.emit(ThinkingDeltaEvent(text="step", agent_name="a", run_id="r"))
+    recorder.emit(AssistantTextDeltaEvent(text="ok.", agent_name="a", run_id="r"))
     recorder.emit(
-        AssistantMessageComplete(
-            message=ConversationMessage(
+        AssistantMessageCompleteEvent(
+            message=Message(
                 role="assistant",
                 content=[
                     ThinkingBlock(text="plan step"),
                     TextBlock(text="ok."),
-                    ToolUseBlock(id="t1", name="shell", input={"cmd": "ls"}),
+                    ToolUseBlock(tool_use_id="t1", name="shell", input={"cmd": "ls"}),
                 ],
             ),
             usage=UsageSnapshot(),
@@ -168,11 +168,12 @@ def test_assistant_complete_with_full_blocks_does_not_duplicate(tmp_path) -> Non
 
 def test_recorder_registry_round_trip(tmp_path) -> None:
     recorder = AgentMessageJsonlRecorder(tmp_path / "message.jsonl")
-    register_recorder_for_agent_run("run-xyz", recorder)
+    register_recorder("agent-a", "run-xyz", recorder)
     try:
-        assert recorder_for_agent_run("run-xyz") is recorder
-        assert recorder_for_agent_run("") is None
-        assert recorder_for_agent_run("other") is None
+        assert recorder_for_run("agent-a", "run-xyz") is recorder
+        assert recorder_for_run("agent-a", "") is None
+        assert recorder_for_run("agent-a", "other") is None
+        assert recorder_for_run("agent-b", "run-xyz") is None
     finally:
-        clear_recorder_for_agent_run("run-xyz")
-    assert recorder_for_agent_run("run-xyz") is None
+        clear_recorder("agent-a", "run-xyz")
+    assert recorder_for_run("agent-a", "run-xyz") is None

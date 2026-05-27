@@ -20,6 +20,10 @@ from tools.submission.evaluator import submit_evaluation_success
 from tools.submission.executor import submit_execution_success
 from tools.submission.planner import submit_plan_closes_goal
 
+from tests.unit_test.test_tools.test_submission._advisor_approval_fixtures import (
+    build_advisor_approval_messages,
+)
+
 pytestmark = pytest.mark.asyncio
 
 
@@ -41,11 +45,18 @@ def _tool_context(
     task_id: str,
     *,
     role: str = "executor",
+    advisor_approves: str | None = None,
 ):
+    messages = (
+        build_advisor_approval_messages(tool_name=advisor_approves)
+        if advisor_approves is not None
+        else []
+    )
     metadata = ExecutionMetadata(
         task_center_task_id=task_id,
         task_center_attempt_id=attempt_id,
         attempt_runtime=runtime,
+        conversation_messages=messages,
     )
     metadata["role"] = role
     return ToolExecutionContextService(cwd="/tmp", services=metadata)
@@ -108,19 +119,34 @@ async def test_phase03_full_plan_through_evaluator_success(
             "tasks": [{"id": "a", "agent_name": "executor", "deps": []}],
             "task_specs": {"a": "Do the work."},
         },
-        _tool_context(runtime, attempt_id, planner_task_id(attempt_id)),
+        _tool_context(
+            runtime,
+            attempt_id,
+            planner_task_id(attempt_id),
+            advisor_approves="submit_plan_closes_goal",
+        ),
         emit=_noop_emit,
     )
     generator_result = await execute_tool_once(
         submit_execution_success,
         {"summary": "done", "artifacts": []},
-        _tool_context(runtime, attempt_id, generator_task_id(attempt_id, "a")),
+        _tool_context(
+            runtime,
+            attempt_id,
+            generator_task_id(attempt_id, "a"),
+            advisor_approves="submit_execution_success",
+        ),
         emit=_noop_emit,
     )
     evaluator_result = await execute_tool_once(
         submit_evaluation_success,
         {"summary": "passed", "passed_criteria": ["generator passed"]},
-        _tool_context(runtime, attempt_id, evaluator_task_id(attempt_id)),
+        _tool_context(
+            runtime,
+            attempt_id,
+            evaluator_task_id(attempt_id),
+            advisor_approves="submit_evaluation_success",
+        ),
         emit=_noop_emit,
     )
 

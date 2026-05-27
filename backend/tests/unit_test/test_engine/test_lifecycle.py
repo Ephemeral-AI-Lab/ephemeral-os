@@ -9,13 +9,13 @@ import pytest
 from engine.agent.factory import EphemeralAgent
 from engine.agent.lifecycle import run_ephemeral_agent
 from engine.query.context import QueryContext, QueryExitReason
-from message.messages import ConversationMessage, TextBlock
-from message.stream_events import (
-    AssistantMessageComplete,
+from message.message import Message, TextBlock
+from message.events import (
+    AssistantMessageCompleteEvent,
     StreamEvent,
-    ToolExecutionStarted,
+    ToolExecutionStartedEvent,
 )
-from providers.types import ApiMessageCompleteEvent
+from message.events import AssistantMessageCompleteEvent
 from providers.types import UsageSnapshot
 from tools._framework.core.base import ExecutionMetadata
 from tools._framework.core.registry import ToolRegistry
@@ -40,7 +40,7 @@ class _FakeAgent:
 
     async def run(self, _prompt, *, auto_close: bool = True):
         del auto_close
-        yield ToolExecutionStarted(
+        yield ToolExecutionStartedEvent(
             tool_name="shell",
             tool_input={},
             agent_name=self.agent_name,
@@ -75,7 +75,7 @@ async def test_run_ephemeral_agent_stamps_task_id_as_stream_run_id(
 
     assert fake_agent.query_context.run_id == "run-1:t2"
     assert captured == [
-        ToolExecutionStarted(
+        ToolExecutionStartedEvent(
             tool_name="shell",
             tool_input={},
             agent_name="executor",
@@ -88,12 +88,12 @@ async def test_run_ephemeral_agent_stamps_task_id_as_stream_run_id(
 async def test_ephemeral_agent_run_preserves_initial_messages() -> None:
     class _TextClient:
         async def stream_message(self, request):
-            assert [message.text for message in request.messages] == [
+            assert [message.assistant_text for message in request.messages] == [
                 "prior context",
                 "new prompt",
             ]
-            yield ApiMessageCompleteEvent(
-                message=ConversationMessage(
+            yield AssistantMessageCompleteEvent(
+                message=Message(
                     role="assistant",
                     content=[TextBlock(text="done")],
                 ),
@@ -114,18 +114,18 @@ async def test_ephemeral_agent_run_preserves_initial_messages() -> None:
         agent_name="executor",
         query_context=context,
         model="test",
-        _messages=[ConversationMessage.from_user_text("prior context")],
+        _messages=[Message.from_user_text("prior context")],
     )
 
-    completed: list[AssistantMessageComplete] = []
+    completed: list[AssistantMessageCompleteEvent] = []
     async for event in agent.run("new prompt"):
-        if isinstance(event, AssistantMessageComplete):
+        if isinstance(event, AssistantMessageCompleteEvent):
             completed.append(event)
 
     # Text response with no terminal tools registered ends the run gracefully
     # (no tolerance accounting kicks in without terminal_tools).
     assert context.exit_reason is QueryExitReason.TEXT_RESPONSE
-    assert [message.text for message in agent.messages] == [
+    assert [message.assistant_text for message in agent.messages] == [
         "prior context",
         "new prompt",
         "done",

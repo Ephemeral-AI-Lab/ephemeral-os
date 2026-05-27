@@ -16,11 +16,11 @@ from engine.tool_call.phase_buffer import (
 from engine.tool_call.streaming import StreamingToolExecutor
 from engine.background.dispatch import dispatch_background_tool_call
 from engine.background.task_supervisor import BackgroundTaskSupervisor
-from message.messages import ConversationMessage, ToolResultBlock, ToolUseBlock
-from message.stream_events import (
+from message.message import Message, ToolResultBlock, ToolUseBlock
+from message.events import (
     StreamEvent,
-    ToolExecutionCancelled,
-    ToolExecutionCompleted,
+    ToolExecutionCancelledEvent,
+    ToolExecutionCompletedEvent,
 )
 from sandbox._shared.clock import monotonic_now
 from sandbox._shared.models import Intent
@@ -70,7 +70,7 @@ def _emit_tool_call_started(tool_call: ToolUseBlock) -> None:
     safe_emit(
         build_tool_call_event(
             "tool_call.started",
-            ToolCallSection(tool_id=tool_call.id, tool_name=tool_call.name),
+            ToolCallSection(tool_id=tool_call.tool_use_id, tool_name=tool_call.name),
         ),
         lane="normal",
     )
@@ -89,7 +89,7 @@ def _emit_tool_call_phase_and_finished(
                 build_tool_call_event(
                     "tool_call.phase",
                     ToolCallSection(
-                        tool_id=tool_call.id,
+                        tool_id=tool_call.tool_use_id,
                         tool_name=tool_call.name,
                         phase=entry.phase,
                         duration_ms=entry.duration_ms,
@@ -101,7 +101,7 @@ def _emit_tool_call_phase_and_finished(
         build_tool_call_event(
             "tool_call.finished",
             ToolCallSection(
-                tool_id=tool_call.id,
+                tool_id=tool_call.tool_use_id,
                 tool_name=tool_call.name,
                 total_ms=total_ms,
                 exit_status=exit_status,
@@ -124,22 +124,22 @@ class AssistantToolDispatchOutcome:
 
 
 def _tool_result_block_from_completion(
-    completed: ToolExecutionCompleted,
+    completed: ToolExecutionCompletedEvent,
 ) -> ToolResultBlock:
     return ToolResultBlock(
-        tool_use_id=completed.tool_id,
+        tool_use_id=completed.tool_use_id,
         content=completed.output,
         is_error=completed.is_error,
         metadata=dict(completed.metadata or {}),
-        does_terminate=completed.does_terminate,
+        is_terminal=completed.is_terminal,
     )
 
 
 def _tool_result_block_from_cancellation(
-    cancelled: ToolExecutionCancelled,
+    cancelled: ToolExecutionCancelledEvent,
 ) -> ToolResultBlock:
     return ToolResultBlock(
-        tool_use_id=cancelled.tool_id,
+        tool_use_id=cancelled.tool_use_id,
         content=f"[CANCELLED] {cancelled.reason}",
         is_error=True,
     )
@@ -148,14 +148,14 @@ def _tool_result_block_from_cancellation(
 def _completion_event_from_tool_result_block(
     tool_call: ToolUseBlock,
     result: ToolResultBlock,
-) -> ToolExecutionCompleted:
-    return ToolExecutionCompleted(
+) -> ToolExecutionCompletedEvent:
+    return ToolExecutionCompletedEvent(
         tool_name=tool_call.name,
         output=result.content,
         is_error=result.is_error,
-        tool_id=tool_call.id,
+        tool_use_id=tool_call.tool_use_id,
         metadata=dict(result.metadata or {}),
-        does_terminate=result.does_terminate,
+        is_terminal=result.is_terminal,
     )
 
 
@@ -163,13 +163,13 @@ def _first_terminal_tool_result(
     tool_results: list[ToolResultBlock],
 ) -> ToolResult | None:
     for result in tool_results:
-        if not result.does_terminate:
+        if not result.is_terminal:
             continue
         return ToolResult(
             output=str(result.content),
             is_error=result.is_error,
             metadata=dict(result.metadata or {}),
-            does_terminate=True,
+            is_terminal=True,
         )
     return None
 
@@ -198,7 +198,7 @@ def _validate_tool_batch(
         f"Resubmit with only the exclusive tool in its own final batch."
     )
     return [
-        ToolResultBlock(tool_use_id=str(tool_call.id), content=message, is_error=True)
+        ToolResultBlock(tool_use_id=str(tool_call.tool_use_id), content=message, is_error=True)
         for tool_call in tool_calls
     ]
 
@@ -269,7 +269,7 @@ def _record_lifecycle_batch_rejection(
             "own batch."
         )
         rejected_pairs = [
-            (call, ToolResultBlock(tool_use_id=str(call.id), content=message, is_error=True))
+            (call, ToolResultBlock(tool_use_id=str(call.tool_use_id), content=message, is_error=True))
             for call in lifecycle_calls
         ]
         remaining = non_lifecycle_calls
@@ -291,7 +291,7 @@ def _record_lifecycle_batch_rejection(
             "tools in the next batch."
         )
         rejected_pairs = [
-            (call, ToolResultBlock(tool_use_id=str(call.id), content=message, is_error=True))
+            (call, ToolResultBlock(tool_use_id=str(call.tool_use_id), content=message, is_error=True))
             for call in non_lifecycle_calls
         ]
         remaining = [lifecycle_call]
@@ -320,8 +320,8 @@ def _batch_agent_id(context: QueryContext) -> str:
 
 async def dispatch_assistant_tools(
     context: QueryContext,
-    messages: list[ConversationMessage],
-    final_message: ConversationMessage,
+    messages: list[Message],
+    final_message: Message,
     executor: StreamingToolExecutor,
     *,
     streamed_tool_use_ids: set[str],
@@ -333,10 +333,10 @@ async def dispatch_assistant_tools(
     remaining_events = await executor.get_remaining()
     events.extend(executor.get_events())
     for completed in remaining_events:
-        if isinstance(completed, ToolExecutionCompleted):
+        if isinstance(completed, ToolExecutionCompletedEvent):
             tool_results.append(_tool_result_block_from_completion(completed))
             events.append(completed)
-        elif isinstance(completed, ToolExecutionCancelled):
+        elif isinstance(completed, ToolExecutionCancelledEvent):
             tool_results.append(_tool_result_block_from_cancellation(completed))
             events.append(completed)
 
@@ -358,7 +358,7 @@ async def dispatch_assistant_tools(
     pending_tool_calls = [
         tool_call
         for tool_call in final_message.tool_uses
-        if tool_call.id not in resolved_ids
+        if tool_call.tool_use_id not in resolved_ids
     ]
     if pending_tool_calls:
         events.extend(
@@ -381,7 +381,7 @@ async def dispatch_assistant_tools(
 
 async def _dispatch_deferred_tool_calls(
     context: QueryContext,
-    messages: list[ConversationMessage],
+    messages: list[Message],
     tool_calls: list[ToolUseBlock],
     *,
     streamed_tool_use_ids: set[str],
@@ -451,7 +451,7 @@ async def _dispatch_deferred_tool_calls(
 
 async def _dispatch_single_foreground_tool(
     context: QueryContext,
-    messages: list[ConversationMessage],
+    messages: list[Message],
     tool_call: ToolUseBlock,
     *,
     streamed_tool_use_ids: set[str],
@@ -462,7 +462,7 @@ async def _dispatch_single_foreground_tool(
     async def emit(event: StreamEvent) -> None:
         emitted_events.append(event)
 
-    start_phase_buffer(tool_id=tool_call.id, tool_name=tool_call.name)
+    start_phase_buffer(tool_use_id=tool_call.tool_use_id, tool_name=tool_call.name)
     _emit_tool_call_started(tool_call)
     started_at = monotonic_now()
     exit_status = "error"
@@ -470,11 +470,11 @@ async def _dispatch_single_foreground_tool(
         result = await execute_tool_call_streaming(
             context,
             tool_call.name,
-            tool_call.id,
+            tool_call.tool_use_id,
             tool_call.input,
             emit=emit,
             conversation_messages=messages,
-            consume_budget=tool_call.id not in streamed_tool_use_ids,
+            consume_budget=tool_call.tool_use_id not in streamed_tool_use_ids,
         )
         exit_status = _exit_status_from_result(result)
     finally:
@@ -491,7 +491,7 @@ async def _dispatch_single_foreground_tool(
 
 async def _dispatch_many_foreground_tools(
     context: QueryContext,
-    messages: list[ConversationMessage],
+    messages: list[Message],
     foreground_tool_calls: list[ToolUseBlock],
     *,
     streamed_tool_use_ids: set[str],
@@ -504,7 +504,7 @@ async def _dispatch_many_foreground_tools(
         async def emit(event: StreamEvent) -> None:
             await queue.put(event)
 
-        start_phase_buffer(tool_id=tool_call.id, tool_name=tool_call.name)
+        start_phase_buffer(tool_use_id=tool_call.tool_use_id, tool_name=tool_call.name)
         _emit_tool_call_started(tool_call)
         started_at = monotonic_now()
         exit_status = "error"
@@ -513,21 +513,21 @@ async def _dispatch_many_foreground_tools(
                 result = await execute_tool_call_streaming(
                     context,
                     tool_call.name,
-                    tool_call.id,
+                    tool_call.tool_use_id,
                     tool_call.input,
                     emit=emit,
                     conversation_messages=messages,
-                    consume_budget=tool_call.id not in streamed_tool_use_ids,
+                    consume_budget=tool_call.tool_use_id not in streamed_tool_use_ids,
                 )
                 exit_status = _exit_status_from_result(result)
             except Exception as exc:
                 logger.exception(
-                    "Foreground tool dispatch failed: tool_id=%s tool_name=%s",
-                    tool_call.id,
+                    "Foreground tool dispatch failed: tool_use_id=%s tool_name=%s",
+                    tool_call.tool_use_id,
                     tool_call.name,
                 )
                 result = ToolResultBlock(
-                    tool_use_id=tool_call.id,
+                    tool_use_id=tool_call.tool_use_id,
                     content=f"Tool execution failed: {exc}",
                     is_error=True,
                 )

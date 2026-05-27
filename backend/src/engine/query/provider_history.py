@@ -6,15 +6,15 @@ import copy
 
 from engine.background.history import reduce_background_task_history
 from message import (
-    ConversationMessage,
+    Message,
     ToolResultBlock,
     ToolUseBlock,
 )
 
 
-def prepare_provider_messages(
-    messages: list[ConversationMessage],
-) -> list[ConversationMessage]:
+def build_provider_messages(
+    messages: list[Message],
+) -> list[Message]:
     """Return a provider-safe copy of the durable message history.
 
     The query loop keeps ``messages`` as the append-only transcript.
@@ -26,19 +26,19 @@ def prepare_provider_messages(
 
 
 def sanitize_tool_sequence(
-    messages: list[ConversationMessage],
-) -> list[ConversationMessage]:
+    messages: list[Message],
+) -> list[Message]:
     """Drop malformed stale tool-use/result blocks from the provider view."""
     sanitized = copy.deepcopy(messages)
     _drop_unmatched_tool_blocks_in_place(sanitized)
     return [msg for msg in sanitized if msg.content]
 
 
-def _message_tool_use_ids(message: ConversationMessage) -> set[str]:
-    return {block.id for block in message.content if isinstance(block, ToolUseBlock)}
+def _message_tool_use_ids(message: Message) -> set[str]:
+    return {block.tool_use_id for block in message.content if isinstance(block, ToolUseBlock)}
 
 
-def _message_tool_result_ids(message: ConversationMessage) -> set[str]:
+def _message_tool_result_ids(message: Message) -> set[str]:
     return {
         block.tool_use_id
         for block in message.content
@@ -46,7 +46,7 @@ def _message_tool_result_ids(message: ConversationMessage) -> set[str]:
     }
 
 
-def _drop_unmatched_tool_blocks_in_place(messages: list[ConversationMessage]) -> None:
+def _drop_unmatched_tool_blocks_in_place(messages: list[Message]) -> None:
     pending_tool_use_ids: set[str] = set()
     pending_message_index: int | None = None
 
@@ -60,7 +60,7 @@ def _drop_unmatched_tool_blocks_in_place(messages: list[ConversationMessage]) ->
         message.content = [
             block
             for block in message.content
-            if not (isinstance(block, ToolUseBlock) and block.id in tool_use_ids)
+            if not (isinstance(block, ToolUseBlock) and block.tool_use_id in tool_use_ids)
         ]
 
     for message_index, message in enumerate(messages):
@@ -112,6 +112,6 @@ def _drop_unmatched_tool_blocks_in_place(messages: list[ConversationMessage]) ->
 
 
 __all__ = [
-    "prepare_provider_messages",
+    "build_provider_messages",
     "sanitize_tool_sequence",
 ]

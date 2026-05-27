@@ -7,7 +7,7 @@ from contextlib import suppress
 from typing import Any
 
 from engine.background.task_supervisor import BackgroundTaskSupervisor
-from message.stream_events import BackgroundTaskStarted
+from message.events import BackgroundTaskStartedEvent
 from tools.background.cancel_background_task import (
     CancelBackgroundTaskInput,
     CancelBackgroundTaskTool,
@@ -83,7 +83,7 @@ async def test_launch_creates_task() -> None:
         coro=_make_tool_coro(),
     )
 
-    assert isinstance(event, BackgroundTaskStarted)
+    assert isinstance(event, BackgroundTaskStartedEvent)
     assert event.task_id == "t1"
     assert event.tool_name == "my_tool"
     assert event.tool_input == {"key": "val"}

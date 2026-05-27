@@ -19,7 +19,7 @@ from typing import Any
 from uuid import uuid4
 
 import sandbox.api as sandbox_api
-from message.stream_events import StreamEvent
+from message.events import StreamEvent
 from sandbox.api.transport import DaemonSandboxTransport
 from tools._framework.core.base import BaseTool
 from tools._framework.core.results import ToolResult

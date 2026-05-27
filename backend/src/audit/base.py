@@ -29,7 +29,7 @@ class AuditNode:
     agent_run_id: str | None = None
     sandbox_id: str | None = None
     tool_name: str | None = None
-    tool_id: str | None = None
+    tool_use_id: str | None = None
 
 
 @dataclass(frozen=True, slots=True)

@@ -9,11 +9,11 @@ from dataclasses import dataclass, field
 from enum import StrEnum
 from typing import TYPE_CHECKING, Any
 
-from message.stream_events import (
+from message.events import (
     StreamEvent,
-    ToolExecutionCancelled,
-    ToolExecutionCompleted,
-    ToolExecutionProgress,
+    ToolExecutionCancelledEvent,
+    ToolExecutionCompletedEvent,
+    ToolExecutionProgressEvent,
 )
 from tools import (
     BaseTool,
@@ -24,7 +24,7 @@ from tools import (
 )
 
 if TYPE_CHECKING:
-    from providers.types import ApiToolUseDeltaEvent
+    from message.events import ToolUseDeltaEvent
 
 logger = logging.getLogger(__name__)
 
@@ -40,7 +40,7 @@ class StreamingToolRunPhase(StrEnum):
 
 @dataclass
 class StreamingToolRun:
-    id: str
+    tool_use_id: str
     name: str
     input: dict[str, Any]
     phase: StreamingToolRunPhase = StreamingToolRunPhase.QUEUED
@@ -102,10 +102,10 @@ class StreamingToolExecutor:
         self._tools: dict[str, StreamingToolRun] = {}
         self._events: list[StreamEvent] = []
 
-    def add_tool(self, event: ApiToolUseDeltaEvent) -> None:
+    def add_tool(self, event: ToolUseDeltaEvent) -> None:
         """Add a tool to execute as it arrives mid-stream.
 
-        Execution emits ``ToolExecutionStarted`` after input validation, so
+        Execution emits ``ToolExecutionStartedEvent`` after input validation, so
         callers should read lifecycle events through :meth:`get_events`.
         """
         tool_def = self._tool_registry.get(event.name)
@@ -116,27 +116,27 @@ class StreamingToolExecutor:
         # diffing tool_results against the assistant message's tool_uses.
         if self._should_defer is not None and self._should_defer(tool_def, event.input):
             logger.info(
-                "STREAM: Deferring tool dispatch: tool_id=%s tool_name=%s",
-                event.id,
+                "STREAM: Deferring tool dispatch: tool_use_id=%s tool_name=%s",
+                event.tool_use_id,
                 event.name,
             )
             return
 
         tracked = StreamingToolRun(
-            id=event.id,
+            id=event.tool_use_id,
             name=event.name,
             input=event.input,
         )
-        self._tools[event.id] = tracked
+        self._tools[event.tool_use_id] = tracked
         logger.debug(
-            "STREAM: Received tool_use event: tool_id=%s tool_name=%s input=%s",
-            event.id,
+            "STREAM: Received tool_use event: tool_use_id=%s tool_name=%s input=%s",
+            event.tool_use_id,
             event.name,
             event.input,
         )
         if event.input is not None:
             self._start_tool(tracked)
-            logger.debug("STREAM: Tool started: tool_id=%s tool_name=%s", event.id, event.name)
+            logger.debug("STREAM: Tool started: tool_use_id=%s tool_name=%s", event.tool_use_id, event.name)
         return
 
     def get_events(self) -> list[StreamEvent]:
@@ -145,15 +145,15 @@ class StreamingToolExecutor:
         self._events.clear()
         return events
 
-    def get_progress(self) -> list[ToolExecutionProgress]:
+    def get_progress(self) -> list[ToolExecutionProgressEvent]:
         """Get new progress events since last call."""
         events = []
         for tool in self._tools.values():
             if tool.phase == StreamingToolRunPhase.COMPLETED and tool.progress_lines:
                 for line in tool.progress_lines:
                     events.append(
-                        ToolExecutionProgress(
-                            tool_id=tool.id,
+                        ToolExecutionProgressEvent(
+                            tool_use_id=tool.tool_use_id,
                             tool_name=tool.name,
                             output=line,
                         )
@@ -161,7 +161,7 @@ class StreamingToolExecutor:
                 tool.progress_lines.clear()
         return events
 
-    async def get_remaining(self) -> list[ToolExecutionCompleted | ToolExecutionCancelled]:
+    async def get_remaining(self) -> list[ToolExecutionCompletedEvent | ToolExecutionCancelledEvent]:
         """Get final results after stream completes.
 
         Waits for any in-flight tools to finish before returning.
@@ -177,26 +177,26 @@ class StreamingToolExecutor:
         if in_flight:
             await asyncio.gather(*in_flight, return_exceptions=True)
 
-        results: list[ToolExecutionCompleted | ToolExecutionCancelled] = []
+        results: list[ToolExecutionCompletedEvent | ToolExecutionCancelledEvent] = []
         for tool in self._tools.values():
             if tool.phase == StreamingToolRunPhase.COMPLETED:
                 if tool.cancelled:
                     results.append(
-                        ToolExecutionCancelled(
-                            tool_id=tool.id,
+                        ToolExecutionCancelledEvent(
+                            tool_use_id=tool.tool_use_id,
                             tool_name=tool.name,
                             reason=tool.cancel_reason or "Cancelled by LLM",
                         )
                     )
                 elif tool.result:
                     results.append(
-                        ToolExecutionCompleted(
+                        ToolExecutionCompletedEvent(
                             tool_name=tool.name,
                             output=tool.result.output,
                             is_error=tool.result.is_error,
-                            tool_id=tool.id,
+                            tool_use_id=tool.tool_use_id,
                             metadata=dict(tool.result.metadata or {}),
-                            does_terminate=tool.result.does_terminate,
+                            is_terminal=tool.result.is_terminal,
                         )
                     )
                 tool.phase = StreamingToolRunPhase.YIELDED
@@ -209,11 +209,11 @@ class StreamingToolExecutor:
 
     async def _execute_tool(self, tool: StreamingToolRun) -> None:
         """Execute a single tool with progress tracking."""
-        logger.debug("STREAM: Executing tool: tool_id=%s tool_name=%s", tool.id, tool.name)
+        logger.debug("STREAM: Executing tool: tool_use_id=%s tool_name=%s", tool.tool_use_id, tool.name)
         try:
             tool_def = self._tool_registry.get(tool.name)
             if not tool_def:
-                logger.warning("STREAM: Unknown tool: tool_id=%s tool_name=%s", tool.id, tool.name)
+                logger.warning("STREAM: Unknown tool: tool_use_id=%s tool_name=%s", tool.tool_use_id, tool.name)
                 tool.result = ToolResult(
                     output=f"Unknown tool: {tool.name}",
                     is_error=True,
@@ -223,7 +223,7 @@ class StreamingToolExecutor:
 
             context_with_id = ToolExecutionContextService(
                 cwd=self._context.cwd,
-                services=self._context.services_with_overrides(tool_id=tool.id),
+                services=self._context.services_with_overrides(tool_use_id=tool.tool_use_id),
             )
 
             tool.result = await execute_tool_once(
@@ -233,14 +233,14 @@ class StreamingToolExecutor:
                 emit=self._emit_event,
             )
             logger.debug(
-                "STREAM: Tool completed: tool_id=%s tool_name=%s is_error=%s output_len=%d",
-                tool.id,
+                "STREAM: Tool completed: tool_use_id=%s tool_name=%s is_error=%s output_len=%d",
+                tool.tool_use_id,
                 tool.name,
                 tool.result.is_error,
                 len(tool.result.output) if tool.result.output else 0,
             )
         except asyncio.CancelledError:
-            logger.info("STREAM: Tool cancelled during execution: tool_id=%s", tool.id)
+            logger.info("STREAM: Tool cancelled during execution: tool_use_id=%s", tool.tool_use_id)
             tool.cancelled = True
             tool.cancel_reason = tool.cancel_reason or "Task cancelled"
         finally:

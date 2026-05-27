@@ -12,6 +12,7 @@ from tools._framework.core.context import ToolExecutionContextService
 from sandbox._shared.models import Intent
 from tools._framework.core.decorator import tool
 from tools._framework.core.results import TextToolOutput, ToolResult
+from tools.submission._advisor_approval_prehook import AdvisorApprovalPreHook
 from tools.submission.context import (
     AttemptSubmissionContextError,
     resolve_attempt_submission_context,
@@ -33,6 +34,7 @@ class SubmitEvaluationFailureInput(BaseModel):
     output_model=TextToolOutput,
     intent=Intent.READ_ONLY,
     is_terminal_tool=True,
+    pre_hooks=(AdvisorApprovalPreHook("submit_evaluation_failure"),),
 )
 async def submit_evaluation_failure(
     summary: str,

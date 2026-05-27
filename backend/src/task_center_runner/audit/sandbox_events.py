@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from task_center_runner.audit.events import Event, EventType
 from task_center_runner.audit.node_id import NodeId
-from message.stream_events import ToolExecutionCompleted
+from message.events import ToolExecutionCompletedEvent
 
 
 _SANDBOX_TOOLS = frozenset(
@@ -37,7 +37,7 @@ _CONFLICT_STATUSES = frozenset(
 
 
 def sandbox_events_from_tool_completion(
-    stream_event: ToolExecutionCompleted,
+    stream_event: ToolExecutionCompletedEvent,
     *,
     task_center_run_id: str,
 ) -> tuple[Event, ...]:
@@ -62,7 +62,7 @@ def sandbox_events_from_tool_completion(
     )
     base_payload = {
         "tool_name": tool_name,
-        "tool_id": stream_event.tool_id,
+        "tool_id": stream_event.tool_use_id,
         "status": status,
         "changed_paths": changed_paths,
         "changed_path_kinds": changed_path_kinds,

@@ -2,7 +2,7 @@
 
 Uses the official ``anthropic`` Python SDK directly. The key advantage over the
 OpenAI-compatible client is that tool-use blocks are yielded as
-``ApiToolUseDeltaEvent`` on ``content_block_stop`` (mid-stream), so tools can
+``ToolUseDeltaEvent`` on ``content_block_stop`` (mid-stream), so tools can
 begin executing while the model is still generating subsequent content blocks.
 """
 
@@ -21,12 +21,7 @@ if TYPE_CHECKING:
 
 from providers.auth_strategy import LLM_CLIENT_MODE_CODING_PLAN
 from providers.types import (
-    ApiMessageCompleteEvent,
-    ApiMessageRequest,
-    ApiStreamEvent,
-    ApiTextDeltaEvent,
-    ApiThinkingDeltaEvent,
-    ApiToolUseDeltaEvent,
+    MessageRequest,
     UsageSnapshot,
 )
 from providers.errors import (
@@ -35,7 +30,14 @@ from providers.errors import (
     RateLimitFailure,
     RequestFailure,
 )
-from message import assistant_message_from_api
+from message import (
+    AssistantMessageCompleteEvent,
+    AssistantTextDeltaEvent,
+    StreamEvent,
+    ThinkingDeltaEvent,
+    ToolUseDeltaEvent,
+    parse_assistant_message,
+)
 
 log = logging.getLogger(__name__)
 
@@ -129,7 +131,7 @@ class AnthropicClient:
     # Public interface (SupportsStreamingMessages)
     # ------------------------------------------------------------------
 
-    async def stream_message(self, request: ApiMessageRequest) -> AsyncIterator[ApiStreamEvent]:
+    async def stream_message(self, request: MessageRequest) -> AsyncIterator[StreamEvent]:
         """Yield streamed events for *request* with retry logic.
 
         Retries are gated on ``emitted_any`` so we never re-yield events the
@@ -182,7 +184,7 @@ class AnthropicClient:
     # Internal helpers
     # ------------------------------------------------------------------
 
-    async def _stream_once(self, request: ApiMessageRequest) -> AsyncIterator[ApiStreamEvent]:
+    async def _stream_once(self, request: MessageRequest) -> AsyncIterator[StreamEvent]:
         """Single streaming attempt against the Anthropic API."""
         messages = [msg.to_api_param() for msg in request.messages]
 
@@ -250,11 +252,11 @@ class AnthropicClient:
 
                     if delta.type == "text_delta":
                         block_state["text"] += delta.text
-                        yield ApiTextDeltaEvent(text=delta.text)
+                        yield AssistantTextDeltaEvent(text=delta.text)
 
                     elif delta.type == "thinking_delta":
                         block_state["text"] += delta.thinking
-                        yield ApiThinkingDeltaEvent(text=delta.thinking)
+                        yield ThinkingDeltaEvent(text=delta.thinking)
 
                     elif delta.type == "input_json_delta":
                         block_state["input_json"] += delta.partial_json
@@ -273,8 +275,8 @@ class AnthropicClient:
                             )
                         except (json.JSONDecodeError, TypeError):
                             args = {}
-                        yield ApiToolUseDeltaEvent(
-                            id=block_state["id"],
+                        yield ToolUseDeltaEvent(
+                            tool_use_id=block_state["id"],
                             name=block_state["name"],
                             input=args,
                         )
@@ -282,9 +284,9 @@ class AnthropicClient:
             # After the stream ends, build the final message from the SDK.
             final_msg = await stream.get_final_message()
 
-        message = assistant_message_from_api(final_msg)
+        message = parse_assistant_message(final_msg)
 
-        yield ApiMessageCompleteEvent(
+        yield AssistantMessageCompleteEvent(
             message=message,
             usage=UsageSnapshot(
                 input_tokens=final_msg.usage.input_tokens,

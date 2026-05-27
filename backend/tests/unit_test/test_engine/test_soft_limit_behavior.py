@@ -19,8 +19,8 @@ from engine.query.context import QueryContext, QueryExitReason
 from engine.query.loop import _dispatch_final_message_tools
 from engine.query.request import build_query_run_request
 from engine.tool_call.dispatch import AssistantToolDispatchOutcome
-from message.messages import (
-    ConversationMessage,
+from message.message import (
+    Message,
     ToolResultBlock,
     ToolUseBlock,
 )
@@ -55,8 +55,8 @@ def _build_context(
 
 async def _drive_dispatch_branch(
     context: QueryContext,
-    messages: list[ConversationMessage],
-    final_message: ConversationMessage,
+    messages: list[Message],
+    final_message: Message,
     dispatched_results: list[ToolResultBlock],
     monkeypatch: pytest.MonkeyPatch,
     terminal_result: ToolResult | None = None,
@@ -101,10 +101,10 @@ async def test_dispatch_continues_when_overshoot_at_tolerance_boundary(
     yet over. The loop must NOT set RESOURCE_LIMIT.
     """
     context = _build_context(used=14, limit=10, tolerance=5)
-    tool_uses = [ToolUseBlock(id="tu_1", name="read_file", input={})]
-    final_message = ConversationMessage(role="assistant", content=tool_uses)
-    messages: list[ConversationMessage] = [
-        ConversationMessage.from_user_text("go"),
+    tool_uses = [ToolUseBlock(tool_use_id="tu_1", name="read_file", input={})]
+    final_message = Message(role="assistant", content=tool_uses)
+    messages: list[Message] = [
+        Message.from_user_text("go"),
         final_message,
     ]
     dispatched_results = [ToolResultBlock(tool_use_id="tu_1", content="ok", is_error=False)]
@@ -127,10 +127,10 @@ async def test_dispatch_exits_resource_limit_when_overshoot_exceeds_tolerance(
 ) -> None:
     """One tool call past the boundary trips the hard exit."""
     context = _build_context(used=15, limit=10, tolerance=5)
-    tool_uses = [ToolUseBlock(id="tu_1", name="read_file", input={})]
-    final_message = ConversationMessage(role="assistant", content=tool_uses)
-    messages: list[ConversationMessage] = [
-        ConversationMessage.from_user_text("go"),
+    tool_uses = [ToolUseBlock(tool_use_id="tu_1", name="read_file", input={})]
+    final_message = Message(role="assistant", content=tool_uses)
+    messages: list[Message] = [
+        Message.from_user_text("go"),
         final_message,
     ]
     dispatched_results = [ToolResultBlock(tool_use_id="tu_1", content="ok", is_error=False)]
@@ -162,10 +162,10 @@ async def test_dispatch_text_only_contributes_to_shared_overshoot(
     here it's already past; one more tool call makes it 4 > 2).
     """
     context = _build_context(used=11, limit=10, tolerance=2, text_turns=2)
-    tool_uses = [ToolUseBlock(id="tu_1", name="read_file", input={})]
-    final_message = ConversationMessage(role="assistant", content=tool_uses)
-    messages: list[ConversationMessage] = [
-        ConversationMessage.from_user_text("go"),
+    tool_uses = [ToolUseBlock(tool_use_id="tu_1", name="read_file", input={})]
+    final_message = Message(role="assistant", content=tool_uses)
+    messages: list[Message] = [
+        Message.from_user_text("go"),
         final_message,
     ]
     dispatched_results = [ToolResultBlock(tool_use_id="tu_1", content="ok", is_error=False)]
@@ -186,10 +186,10 @@ async def test_dispatch_no_tolerance_means_no_hard_cap(
 ) -> None:
     """``max_tolerance_after_max_tool_call=None`` disables the hard exit entirely."""
     context = _build_context(used=100, limit=10, tolerance=None)
-    tool_uses = [ToolUseBlock(id="tu_1", name="read_file", input={})]
-    final_message = ConversationMessage(role="assistant", content=tool_uses)
-    messages: list[ConversationMessage] = [
-        ConversationMessage.from_user_text("go"),
+    tool_uses = [ToolUseBlock(tool_use_id="tu_1", name="read_file", input={})]
+    final_message = Message(role="assistant", content=tool_uses)
+    messages: list[Message] = [
+        Message.from_user_text("go"),
         final_message,
     ]
     dispatched_results = [ToolResultBlock(tool_use_id="tu_1", content="ok", is_error=False)]
@@ -214,10 +214,10 @@ async def test_dispatch_terminal_result_short_circuits_overshoot_check(
     agent burned getting there.
     """
     context = _build_context(used=100, limit=10, tolerance=5)
-    tool_uses = [ToolUseBlock(id="tu_1", name="submit_x", input={})]
-    final_message = ConversationMessage(role="assistant", content=tool_uses)
-    messages: list[ConversationMessage] = [
-        ConversationMessage.from_user_text("go"),
+    tool_uses = [ToolUseBlock(tool_use_id="tu_1", name="submit_x", input={})]
+    final_message = Message(role="assistant", content=tool_uses)
+    messages: list[Message] = [
+        Message.from_user_text("go"),
         final_message,
     ]
     dispatched_results = [
@@ -225,11 +225,11 @@ async def test_dispatch_terminal_result_short_circuits_overshoot_check(
             tool_use_id="tu_1",
             content="delivered",
             is_error=False,
-            does_terminate=True,
+            is_terminal=True,
         )
     ]
     terminal_result = ToolResult(
-        output="delivered", is_error=False, does_terminate=True
+        output="delivered", is_error=False, is_terminal=True
     )
     context.tool_calls_used += 1
 

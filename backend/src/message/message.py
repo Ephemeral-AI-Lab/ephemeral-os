@@ -22,7 +22,7 @@ class ToolUseBlock(BaseModel):
     """A request from the model to execute a named tool."""
 
     type: Literal["tool_use"] = "tool_use"
-    id: str = Field(default_factory=lambda: f"toolu_{uuid4().hex}")
+    tool_use_id: str = Field(default_factory=lambda: f"toolu_{uuid4().hex}")
     name: str
     input: dict[str, Any] = Field(default_factory=dict)
 
@@ -45,7 +45,7 @@ class ToolResultBlock(BaseModel):
     # Engine-level marker stamped when a successful terminal tool returned.
     # Consumed by the query loop to exit with TOOL_STOP. Wire-irrelevant —
     # never serialized to the provider.
-    does_terminate: bool = False
+    is_terminal: bool = False
 
 
 class SystemNotificationBlock(BaseModel):
@@ -66,7 +66,7 @@ class SystemNotificationBlock(BaseModel):
     blocks mid-conversation), this block is serialized as a ``text`` block
     whose body is wrapped in ``<system-reminder>...</system-reminder>``
     tags. See :func:`serialize_content_block`. The role of the parent
-    :class:`ConversationMessage` should be ``"user"`` because Anthropic's
+    :class:`Message` should be ``"user"`` because Anthropic's
     API does not accept arbitrary roles in the messages array.
     """
 
@@ -84,19 +84,19 @@ ContentBlock = Annotated[
 ]
 
 
-class ConversationMessage(BaseModel):
+class Message(BaseModel):
     """A single assistant or user message."""
 
     role: Literal["user", "assistant"]
     content: list[ContentBlock] = Field(default_factory=list)
 
     @classmethod
-    def from_user_text(cls, text: str) -> ConversationMessage:
+    def from_user_text(cls, text: str) -> Message:
         """Construct a user message from raw text."""
         return cls(role="user", content=[TextBlock(text=text)])
 
     @property
-    def text(self) -> str:
+    def assistant_text(self) -> str:
         """Return concatenated text blocks (excludes thinking and notifications)."""
         return "".join(
             block.text for block in self.content if isinstance(block, TextBlock)
@@ -161,7 +161,7 @@ def serialize_content_block(block: ContentBlock) -> dict[str, Any]:
     if isinstance(block, ToolUseBlock):
         return {
             "type": "tool_use",
-            "id": block.id,
+            "id": block.tool_use_id,
             "name": block.name,
             "input": block.input,
         }
@@ -174,7 +174,7 @@ def serialize_content_block(block: ContentBlock) -> dict[str, Any]:
     }
 
 
-def assistant_message_from_api(raw_message: Any) -> ConversationMessage:
+def parse_assistant_message(raw_message: Any) -> Message:
     """Convert an Anthropic SDK message object into a conversation message."""
     content: list[ContentBlock] = []
 
@@ -187,15 +187,15 @@ def assistant_message_from_api(raw_message: Any) -> ConversationMessage:
         elif block_type == "tool_use":
             content.append(
                 ToolUseBlock(
-                    id=getattr(raw_block, "id", f"toolu_{uuid4().hex}"),
+                    tool_use_id=getattr(raw_block, "id", f"toolu_{uuid4().hex}"),
                     name=getattr(raw_block, "name", ""),
                     input=dict(getattr(raw_block, "input", {}) or {}),
                 )
             )
         else:
             logger.debug(
-                "assistant_message_from_api: dropping unrecognized block type %r",
+                "parse_assistant_message: dropping unrecognized block type %r",
                 block_type,
             )
 
-    return ConversationMessage(role="assistant", content=content)
+    return Message(role="assistant", content=content)

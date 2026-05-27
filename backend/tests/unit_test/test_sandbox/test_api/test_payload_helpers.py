@@ -19,7 +19,7 @@ def test_sandbox_caller_audit_fields_keeps_required_keys_and_non_empty_fields() 
     caller = SandboxCaller(
         agent_id="agent-1",
         task_center_run_id="tc-run",
-        tool_id="tool-1",
+        tool_use_id="tool-1",
     )
 
     assert caller.audit_fields() == {

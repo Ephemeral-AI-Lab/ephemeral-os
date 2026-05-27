@@ -9,7 +9,8 @@ from collections.abc import AsyncIterator
 from pydantic import BaseModel
 
 if TYPE_CHECKING:
-    from message import ConversationMessage
+    from message import Message
+    from message.events import StreamEvent
 
 
 # ---------------------------------------------------------------------------
@@ -30,64 +31,20 @@ class UsageSnapshot(BaseModel):
 
 
 # ---------------------------------------------------------------------------
-# API message request / stream events
+# Message request
 # ---------------------------------------------------------------------------
 
 
 @dataclass(frozen=True)
-class ApiMessageRequest:
+class MessageRequest:
     """Input parameters for a model invocation."""
 
     model: str
-    messages: list[ConversationMessage] = field(default_factory=list)
+    messages: list[Message] = field(default_factory=list)
     system_prompt: str | None = None
-    max_tokens: int = 4096
+    max_tokens: int = 32768
     tools: list[dict[str, Any]] = field(default_factory=list)
     tool_choice: dict[str, Any] | None = None
-
-
-@dataclass(frozen=True)
-class ApiThinkingDeltaEvent:
-    """Incremental thinking/reasoning content from the model."""
-
-    text: str
-
-
-@dataclass(frozen=True)
-class ApiTextDeltaEvent:
-    """Incremental text produced by the model."""
-
-    text: str
-
-
-@dataclass(frozen=True)
-class ApiMessageCompleteEvent:
-    """Terminal event containing the full assistant message."""
-
-    message: ConversationMessage
-    usage: UsageSnapshot
-    stop_reason: str | None = None
-
-
-@dataclass(frozen=True)
-class ApiToolUseDeltaEvent:
-    """Tool use block arriving mid-stream.
-
-    Emitted when the API streams a tool_use content block before the
-    complete message is available. Allows early tool execution start.
-    """
-
-    id: str
-    name: str
-    input: dict[str, Any]
-
-
-ApiStreamEvent = (
-    ApiThinkingDeltaEvent
-    | ApiTextDeltaEvent
-    | ApiMessageCompleteEvent
-    | ApiToolUseDeltaEvent
-)
 
 
 # ---------------------------------------------------------------------------
@@ -98,5 +55,5 @@ ApiStreamEvent = (
 class SupportsStreamingMessages(Protocol):
     """Protocol used by the query engine in tests and production."""
 
-    def stream_message(self, request: ApiMessageRequest) -> AsyncIterator[ApiStreamEvent]:
+    def stream_message(self, request: MessageRequest) -> AsyncIterator[StreamEvent]:
         """Yield streamed events for the request."""

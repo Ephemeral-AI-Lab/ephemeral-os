@@ -20,8 +20,8 @@ if TYPE_CHECKING:
 
 from agents import AgentDefinition, AgentType
 from config import Settings
-from message.messages import ConversationMessage
-from message.stream_events import StreamEvent
+from message.message import Message
+from message.events import StreamEvent
 from providers.provider import make_api_client
 from providers.types import UsageSnapshot
 from prompt import build_runtime_system_prompt
@@ -55,11 +55,11 @@ class EphemeralAgent:
     agent_name: str
     query_context: QueryContext
     model: str
-    _messages: list[ConversationMessage]
+    _messages: list[Message]
     total_usage: UsageSnapshot | None = None
 
     @property
-    def messages(self) -> list[ConversationMessage]:
+    def messages(self) -> list[Message]:
         """Live view of the agent's run transcript.
 
         The list is owned by the agent. A run appends the current user prompt
@@ -91,7 +91,7 @@ class EphemeralAgent:
             self.total_usage = UsageSnapshot()
         try:
             if prompt is not None:
-                self._messages = [*self._messages, ConversationMessage.from_user_text(prompt)]
+                self._messages = [*self._messages, Message.from_user_text(prompt)]
             messages, event_iter = await run_query(
                 self.query_context, self._messages
             )
@@ -347,7 +347,7 @@ def _build_agent_system_prompt(
 
 def spawn_agent(
     config: RuntimeConfig,
-    messages: list[ConversationMessage],
+    messages: list[Message],
     *,
     agent_def: AgentDefinition | None = None,
     sandbox_id: str | None = None,
@@ -368,7 +368,7 @@ def spawn_agent(
     agent_name, resolved_model, api_client, db_kwargs = _resolve_agent_identity(
         config, agent_def
     )
-    max_tokens = int((db_kwargs or {}).get("max_tokens") or 16384)
+    max_tokens = int((db_kwargs or {}).get("max_tokens") or 32768)
 
     tool_registry = _build_agent_tool_registry(
         config, agent_def, sandbox_id, agent_name

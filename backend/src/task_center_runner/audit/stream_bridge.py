@@ -10,7 +10,7 @@ from task_center_runner.audit.node_id import NodeId
 from task_center_runner.audit.sandbox_events import (
     sandbox_events_from_tool_completion,
 )
-from message.stream_events import ToolExecutionCompleted, ToolExecutionStarted
+from message.events import ToolExecutionCompletedEvent, ToolExecutionStartedEvent
 
 __all__ = ["stream_bridge"]
 
@@ -24,7 +24,7 @@ def stream_bridge(
     """Return an async on_agent_event callable that translates StreamEvents to audit Events."""
 
     async def _on_event(stream_event: object) -> None:
-        if isinstance(stream_event, ToolExecutionStarted):
+        if isinstance(stream_event, ToolExecutionStartedEvent):
             node = NodeId(
                 task_center_run_id=task_center_run_id,
                 agent_name=stream_event.agent_name or None,
@@ -38,11 +38,11 @@ def stream_bridge(
                     payload={
                         "tool_name": stream_event.tool_name,
                         "tool_input": stream_event.tool_input,
-                        "tool_id": stream_event.tool_id,
+                        "tool_id": stream_event.tool_use_id,
                     },
                 )
             )
-        elif isinstance(stream_event, ToolExecutionCompleted):
+        elif isinstance(stream_event, ToolExecutionCompletedEvent):
             metadata = dict(stream_event.metadata or {})
             node = NodeId(
                 task_center_run_id=task_center_run_id,
@@ -63,9 +63,9 @@ def stream_bridge(
                         "tool_name": stream_event.tool_name,
                         "output": stream_event.output,
                         "is_error": stream_event.is_error,
-                        "tool_id": stream_event.tool_id,
+                        "tool_id": stream_event.tool_use_id,
                         "metadata": metadata,
-                        "does_terminate": stream_event.does_terminate,
+                        "is_terminal": stream_event.is_terminal,
                     },
                 )
             )

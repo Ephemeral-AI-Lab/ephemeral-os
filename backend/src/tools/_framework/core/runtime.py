@@ -63,7 +63,7 @@ class ExecutionMetadata:
 
     # Per-call tool id (set by the streaming executor so progress events
     # can be attributed back to their originating tool use).
-    tool_id: str | None = None
+    tool_use_id: str | None = None
 
     # Optional notification service injected by the execution pipeline. Tools
     # and hooks use it through ToolExecutionContextService.notify_system().

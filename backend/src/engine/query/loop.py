@@ -6,20 +6,15 @@ from collections.abc import AsyncIterator, Callable, Mapping
 from dataclasses import dataclass, field
 from typing import Any, cast
 
-from providers.types import (
-    ApiMessageCompleteEvent,
-    ApiTextDeltaEvent,
-    ApiThinkingDeltaEvent,
-    ApiToolUseDeltaEvent,
-    UsageSnapshot,
-)
-from message.messages import ConversationMessage
-from message.stream_events import (
-    AssistantMessageComplete,
-    AssistantTextDelta,
+from providers.types import UsageSnapshot
+from message.message import Message
+from message.events import (
+    AssistantMessageCompleteEvent,
+    AssistantTextDeltaEvent,
     StreamEvent,
-    ThinkingDelta,
-    ToolExecutionCompleted,
+    ThinkingDeltaEvent,
+    ToolExecutionCompletedEvent,
+    ToolUseDeltaEvent,
 )
 from engine.tool_call.streaming import StreamingToolExecutor, defer_background_dispatch
 from engine.tool_call.dispatch import dispatch_assistant_tools
@@ -74,7 +69,7 @@ def _make_stream_dispatch_deferrer(
 class _ProviderStreamAccumulator:
     """Mutable accumulator for one provider stream."""
 
-    final_message: ConversationMessage | None = None
+    final_message: Message | None = None
     usage: UsageSnapshot = field(default_factory=UsageSnapshot)
     streamed_tool_use_ids: set[str] = field(default_factory=set)
 
@@ -120,7 +115,7 @@ def _prepare_query_loop_runtime(
 async def _build_stream_executor(
     context: QueryContext,
     background_tasks: BackgroundTaskSupervisor | None,
-    messages: list[ConversationMessage],
+    messages: list[Message],
 ) -> StreamingToolExecutor:
     """Build the streaming tool executor for this provider request."""
     metadata = (
@@ -155,16 +150,8 @@ async def _consume_provider_stream(
     """Consume the provider stream, populating ``state`` along the way."""
     try:
         async for event in context.api_client.stream_message(run_request.request):
-            if isinstance(event, ApiThinkingDeltaEvent):
-                yield ThinkingDelta(text=event.text), None
-                continue
-
-            if isinstance(event, ApiTextDeltaEvent):
-                yield AssistantTextDelta(text=event.text), None
-                continue
-
-            if isinstance(event, ApiToolUseDeltaEvent):
-                state.streamed_tool_use_ids.add(event.id)
+            if isinstance(event, ToolUseDeltaEvent):
+                state.streamed_tool_use_ids.add(event.tool_use_id)
                 _count_tool_dispatch(context)
                 executor.add_tool(event)
                 for emitted in executor.get_events():
@@ -173,9 +160,12 @@ async def _consume_provider_stream(
                     yield progress, None
                 continue
 
-            if isinstance(event, ApiMessageCompleteEvent):
+            if isinstance(event, AssistantMessageCompleteEvent):
                 state.final_message = event.message
                 state.usage = event.usage
+                continue
+
+            yield event, None
 
         if state.final_message is None:
             raise RuntimeError(
@@ -190,7 +180,7 @@ async def _consume_provider_stream(
 
 async def _dispatch_final_message_tools(
     context: QueryContext,
-    messages: list[ConversationMessage],
+    messages: list[Message],
     executor: StreamingToolExecutor,
     run_request: QueryRunRequest,
     state: _ProviderStreamAccumulator,
@@ -241,9 +231,9 @@ async def _dispatch_final_message_tools(
         # assistant produced tool_uses; the guard is defensive against
         # future refactors only.
         if tool_results:
-            messages.append(ConversationMessage(role="user", content=list(tool_results)))
+            messages.append(Message(role="user", content=list(tool_results)))
         yield (
-            ToolExecutionCompleted(
+            ToolExecutionCompletedEvent(
                 tool_name="",
                 output=(
                     f"Agent stopped: overshoot ({context.overshoot_units}) "
@@ -261,13 +251,13 @@ async def _dispatch_final_message_tools(
         return
 
     if tool_results:
-        messages.append(ConversationMessage(role="user", content=list(tool_results)))
+        messages.append(Message(role="user", content=list(tool_results)))
     context.exit_reason = None
 
 
 async def _run_query_loop(
     context: QueryContext,
-    messages: list[ConversationMessage],
+    messages: list[Message],
 ) -> AsyncIterator[tuple[StreamEvent, UsageSnapshot | None]]:
     background_tasks, notification_service = _prepare_query_loop_runtime(context)
 
@@ -288,7 +278,7 @@ async def _run_query_loop(
                 pending = notification_service.pop_pending_notifications()
                 if pending:
                     messages.append(
-                        ConversationMessage(role="user", content=list(pending))
+                        Message(role="user", content=list(pending))
                     )
 
             state = _ProviderStreamAccumulator()
@@ -311,7 +301,7 @@ async def _run_query_loop(
                 message=final_message,
                 usage=state.usage,
             )
-            yield AssistantMessageComplete(
+            yield AssistantMessageCompleteEvent(
                 message=final_message,
                 usage=state.usage,
                 agent_name=context.agent_name,
@@ -376,8 +366,8 @@ async def _run_query_loop(
 
 async def run_query(
     context: QueryContext,
-    messages: list[ConversationMessage],
-) -> tuple[list[ConversationMessage], AsyncIterator[tuple[StreamEvent, UsageSnapshot | None]]]:
+    messages: list[Message],
+) -> tuple[list[Message], AsyncIterator[tuple[StreamEvent, UsageSnapshot | None]]]:
     from dataclasses import fields, is_dataclass, replace
 
     agent_name = context.agent_name

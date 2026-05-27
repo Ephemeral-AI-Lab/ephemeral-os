@@ -12,8 +12,8 @@ from providers.clients.coding_plan.codex import (
     CODEX_DEFAULT_MODEL,
     CodexResponsesClient,
 )
-from providers.types import ApiMessageRequest
-from message import ConversationMessage
+from providers.types import MessageRequest
+from message import Message
 
 
 def _b64url(data: bytes) -> str:
@@ -64,9 +64,9 @@ def test_build_body_omits_max_output_tokens_and_uses_flat_tools(
     _fake_codex_auth: dict[str, Path]
 ) -> None:
     client = CodexResponsesClient(db_kwargs=_fake_codex_auth)
-    request = ApiMessageRequest(
+    request = MessageRequest(
         model=CODEX_DEFAULT_MODEL,
-        messages=[ConversationMessage.from_user_text("hi")],
+        messages=[Message.from_user_text("hi")],
         system_prompt="be helpful",
         tools=[
             {

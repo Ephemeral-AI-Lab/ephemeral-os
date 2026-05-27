@@ -28,7 +28,7 @@ from dataclasses import dataclass, field
 from typing import Any
 from uuid import uuid4
 
-from message.messages import ConversationMessage
+from message.message import Message
 
 logger = logging.getLogger(__name__)
 
@@ -96,7 +96,7 @@ class AgentRunTracker:
     def finish(
         self,
         *,
-        messages: list[ConversationMessage] | None = None,
+        messages: list[Message] | None = None,
         terminal_tool_result: dict[str, Any] | None = None,
         token_count: int = 0,
         error: str | None = None,

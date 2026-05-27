@@ -10,10 +10,10 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Callable
 
-from message.messages import ConversationMessage
+from message.message import Message
 
 
-MessageList = list[ConversationMessage]
+MessageList = list[Message]
 
 # Note: ``body`` and ``trigger`` receive ``(messages, QueryContext)`` at
 # runtime. The type is loosened to ``Callable[..., ...]`` so that Pydantic

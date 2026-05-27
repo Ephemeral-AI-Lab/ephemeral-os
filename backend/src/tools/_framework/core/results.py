@@ -19,7 +19,7 @@ class ToolResult:
     # ``is_terminal_tool=True`` has completed. The query loop reads this on the
     # resulting ToolResultBlock to decide whether to exit with
     # QueryExitReason.TOOL_STOP.
-    does_terminate: bool = False
+    is_terminal: bool = False
 
 
 class TextToolOutput(RootModel[str]):

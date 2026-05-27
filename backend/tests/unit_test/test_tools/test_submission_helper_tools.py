@@ -8,7 +8,7 @@ import pytest
 
 from agents import AgentDefinition, AgentKind, register_definition, unregister_definition
 from engine.api import EphemeralRunResult
-from message.messages import ConversationMessage, TextBlock
+from message.message import Message, TextBlock
 from tools._framework.core.context import ToolExecutionContextService
 from tools._framework.core.results import ToolResult
 from tools._framework.core.runtime import ExecutionMetadata
@@ -38,7 +38,7 @@ def _helper_context(
     *,
     role: str,
     agent_name: str,
-    parent_messages: list[ConversationMessage] | None = None,
+    parent_messages: list[Message] | None = None,
 ) -> ToolExecutionContextService:
     metadata = ExecutionMetadata(
         runtime_config=object(),
@@ -54,16 +54,16 @@ def _helper_context(
     return ToolExecutionContextService(cwd="/tmp", services=metadata)
 
 
-def _two_msg_parent() -> list[ConversationMessage]:
+def _two_msg_parent() -> list[Message]:
     """Minimal parent conversation: user_msg_1 + user_msg_2 + one assistant turn."""
     return [
-        ConversationMessage(
+        Message(
             role="user", content=[TextBlock(text="parent's original context")]
         ),
-        ConversationMessage(
+        Message(
             role="user", content=[TextBlock(text="parent's original task")]
         ),
-        ConversationMessage(
+        Message(
             role="assistant", content=[TextBlock(text="parent does work")]
         ),
     ]

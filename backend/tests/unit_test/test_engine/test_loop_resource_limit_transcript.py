@@ -20,8 +20,8 @@ from engine.query.context import QueryContext, QueryExitReason
 from engine.query.loop import _dispatch_final_message_tools
 from engine.query.request import build_query_run_request
 from engine.tool_call.dispatch import AssistantToolDispatchOutcome
-from message.messages import (
-    ConversationMessage,
+from message.message import (
+    Message,
     TextBlock,
     ToolResultBlock,
     ToolUseBlock,
@@ -64,12 +64,12 @@ async def test_resource_limit_exit_appends_tool_results_to_transcript(
     # used = limit + tolerance + 1 → overshoot_units = tolerance + 1 > tolerance.
     context = _build_context(used=limit + tolerance + 1, limit=limit, tolerance=tolerance)
     assistant_tool_uses = [
-        ToolUseBlock(id="tu_1", name="read_file", input={"path": "foo.txt"}),
-        ToolUseBlock(id="tu_2", name="read_file", input={"path": "bar.txt"}),
+        ToolUseBlock(tool_use_id="tu_1", name="read_file", input={"path": "foo.txt"}),
+        ToolUseBlock(tool_use_id="tu_2", name="read_file", input={"path": "bar.txt"}),
     ]
-    final_message = ConversationMessage(role="assistant", content=assistant_tool_uses)
-    messages: list[ConversationMessage] = [
-        ConversationMessage.from_user_text("do the thing"),
+    final_message = Message(role="assistant", content=assistant_tool_uses)
+    messages: list[Message] = [
+        Message.from_user_text("do the thing"),
         final_message,
     ]
 

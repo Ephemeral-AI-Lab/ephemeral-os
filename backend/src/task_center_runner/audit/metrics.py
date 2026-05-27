@@ -2,7 +2,7 @@
 
 Subscribes to the in-memory ``AuditEventBus`` via :meth:`observe`. Pairs
 ``TOOL_CALL_STARTED`` with the matching ``TOOL_CALL_COMPLETED`` /
-``TOOL_CALL_ERROR`` event by ``(tool_name, tool_id)`` to compute latency.
+``TOOL_CALL_ERROR`` event by ``(tool_name, tool_use_id)`` to compute latency.
 """
 
 from __future__ import annotations
@@ -258,7 +258,7 @@ class MetricsAggregator:
             "completed_ts": event.ts.isoformat(),
             "duration_ms": duration_ms,
             "is_error": event.type is EventType.TOOL_CALL_ERROR,
-            "does_terminate": bool(event.payload.get("does_terminate")),
+            "is_terminal": bool(event.payload.get("is_terminal")),
             "status": metadata_dict.get("status"),
             "conflict_reason": metadata_dict.get("conflict_reason"),
             "changed_paths": changed_paths,

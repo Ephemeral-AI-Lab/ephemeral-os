@@ -10,8 +10,8 @@ from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 
 from agents import get_definition
-from message.messages import ConversationMessage
-from message.stream_events import StreamEvent
+from message.message import Message
+from message.events import StreamEvent
 from task_center.attempt.orchestrator_registry import RegisteredAttemptOrchestrator
 from task_center.attempt.runtime import AgentLaunch, AttemptDeps
 from task_center.attempt.state import AttemptFailReason, AttemptStatus
@@ -127,13 +127,13 @@ class EphemeralAttemptAgentLauncher:
         skill_message = launch.skill
         if task_guidance and skill_message:
             runner_prompt = skill_message
-            runner_initial_messages: list[ConversationMessage] | None = [
-                ConversationMessage.from_user_text(launch.context),
-                ConversationMessage.from_user_text(task_guidance),
+            runner_initial_messages: list[Message] | None = [
+                Message.from_user_text(launch.context),
+                Message.from_user_text(task_guidance),
             ]
         elif task_guidance:
             runner_prompt = task_guidance
-            runner_initial_messages = [ConversationMessage.from_user_text(launch.context)]
+            runner_initial_messages = [Message.from_user_text(launch.context)]
         else:
             runner_prompt = launch.context
             runner_initial_messages = None

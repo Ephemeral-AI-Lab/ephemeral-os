@@ -76,7 +76,7 @@ def _first_present(kwargs: dict[str, Any], keys: tuple[str, ...]) -> Any:
     return None
 
 
-def get_active_max_tokens(default: int = 16384) -> int:
+def get_active_max_tokens(default: int = 32768) -> int:
     kwargs = try_get_active_model_kwargs() or {}
     value = kwargs.get("max_tokens", default)
     try:

@@ -216,8 +216,8 @@
 
 </section>
 <section id="layerstack-squash-gc"
-  data-last-reviewed-commit="ab32582f7"
-  data-evidence-paths="backend/src/sandbox/layer_stack/squash.py backend/src/sandbox/layer_stack/stack.py backend/src/sandbox/layer_stack/lease.py">
+  data-last-reviewed-commit="b1f90277d"
+  data-evidence-paths="backend/src/sandbox/layer_stack/squash.py backend/src/sandbox/layer_stack/stack.py backend/src/sandbox/layer_stack/lease.py backend/src/sandbox/occ/maintenance.py backend/src/sandbox/daemon/occ_runtime_services.py backend/tests/live_e2e_test/sandbox/workspace_base/test_squash_deferred_gc_scenarios.py backend/tests/live_e2e_test/sandbox/layer_stack_overlay_occ/test_auto_squash_edge_cases.py">
 <h3>2.5 Squash and Deferred GC <a class="anchor" href="#layerstack-squash-gc">§</a></h3>
 <div class="summary">
   <ul>
@@ -231,6 +231,11 @@
 <div class="callout">
   <span class="label">Two lease-derived sets</span>
   <strong><code>leased_layers()</code></strong> is the union of every layer in every active lease's manifest — the on-disk retention set used by <code>_unreferenced_layers</code> at lease release. <strong><code>lease_head_layers()</code></strong> is the newest layer of each lease's manifest — the set squash must keep in place in the active manifest. They are different things and used by different code paths: GC vs. squash planning.
+</div>
+
+<div class="callout">
+  <span class="label">Depth math: heads plus runs</span>
+  A <strong>run</strong> is a contiguous sequence of active-manifest layers that is not a lease-head barrier. Squash walks the active manifest newest-first, flushes the current run whenever it reaches a lease head, keeps that head as a passthrough layer, and then starts the next run. The resulting depth is therefore <code>distinct lease heads + emitted runs</code>, not just the number of leases plus one. Four distinct lease heads yield depth 5 only when there is a single foldable non-head run; if the heads are spread through the stack with one run above, three runs between heads, and one run below, the post-squash depth is <code>4 + 5 = 9</code>. The workspace-base live scenario <code>s7_four_lease_heads_create_nine_entry_squash</code> fixes this case: pre-squash depth 14, four distinct lease heads, five non-head runs, post-squash depth 9, and a later no-lease squash back to depth 1 <span class="file-ref">backend/tests/live_e2e_test/sandbox/workspace_base/test_squash_deferred_gc_scenarios.py</span>.
 </div>
 
 <p><strong>Algorithm.</strong> <code>LayerStack.squash(max_depth=...)</code> takes the storage-writer guard, reads the active manifest under the lock, asks the squasher for a plan using <code>lease_head_layers=self._leases.lease_head_layers()</code>, and refuses if the plan is <code>None</code> <span class="file-ref">backend/src/sandbox/layer_stack/stack.py:231-293</span>. Plan acceptance criteria <span class="file-ref">backend/src/sandbox/layer_stack/squash.py:61-93</span>:</p>
@@ -307,6 +312,8 @@ _remove_layers(removable): rm -rf layer dirs + digest sidecars + evict view cach
 <p><strong>Why leases hold the full manifest, not just the head.</strong> Reads through a snapshot lease walk <em>its</em> frozen manifest newest-first <span class="file-ref">backend/src/sandbox/layer_stack/view.py:60-118</span>. The bytes answering <code>read_bytes("foo.py")</code> can live in any layer of the chain; a single head ref does not contain a lower layer's contents. Snapshot-by-reference (cheap O(1) acquire + GC-retain the chain) is the design trade vs. snapshot-by-copy (expensive O(workspace) acquire, head ref only).</p>
 
 <p><strong>Concurrency invariants.</strong> Storage-writer exclusive guard held end-to-end; manifest-version compare between plan and publish via <code>manifest_prefix_before_plan</code> makes squash OCC-safe against concurrent <code>LayerPublisher.publish_layer</code>; synthetic squash lease prevents <code>_unreferenced_layers</code> from racing the checkpoint build window <span class="file-ref">backend/src/sandbox/layer_stack/stack.py:242-293</span>.</p>
+
+<p><strong>Autosquash audit.</strong> OCC post-publish maintenance runs through <code>AutoSquashMaintenancePolicy</code>, which serializes autosquash attempts with a policy-local lock so at most one squash worker enters <code>LayerStack.squash()</code> at a time. The daemon runtime passes <code>emit_squash_event</code> into that policy, so every actual autosquash attempt emits focused critical-lane audit events: <code>layer_stack.squash_triggered</code> with <code>squash_trigger_reason=post_publish_depth</code> and input depth, then <code>layer_stack.squash_completed</code> with input depth, result depth, and manifest root hash, or <code>layer_stack.squash_failed</code> for a raced/aborted plan <span class="file-ref">backend/src/sandbox/occ/maintenance.py</span>, <span class="file-ref">backend/src/sandbox/daemon/occ_runtime_services.py</span>. The public edge-case suite asserts these audit events together with <code>layer_stack.auto_squash.*</code> timings, post-squash depth, and orphan/missing layer counters under complex-project, background-shell-lease, and isolated-workspace-lease conditions <span class="file-ref">backend/tests/live_e2e_test/sandbox/layer_stack_overlay_occ/test_auto_squash_edge_cases.py</span>.</p>
 
 </section>
 <section id="layerstack-evidence-refresh"

@@ -16,7 +16,7 @@ from typing import Any, Protocol
 from sandbox.occ.service import AUTO_SQUASH_MAX_DEPTH
 from task_center_runner.scenarios._scenario_helpers import context_message_field
 from task_center_runner.scenarios.base import ScenarioContext
-from message.stream_events import AssistantTextDelta, StreamEvent
+from message.events import AssistantTextDeltaEvent, StreamEvent
 from tools._framework.core.base import BaseTool
 from tools._framework.core.results import ToolResult
 from tools._framework.core.runtime import ExecutionMetadata
@@ -474,7 +474,7 @@ async def _emit_text(
     text: str,
 ) -> None:
     await emit(
-        AssistantTextDelta(
+        AssistantTextDeltaEvent(
             text=text,
             agent_name=str(metadata.agent_name or ""),
             run_id=_stream_run_id(metadata),

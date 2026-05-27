@@ -24,7 +24,7 @@ from uuid import uuid4
 
 import sandbox.api as sandbox_api
 from engine.background.task_supervisor import BackgroundTaskSupervisor
-from message.stream_events import StreamEvent
+from message.events import StreamEvent
 from tools._framework.core.base import BaseTool
 from tools._framework.core.results import ToolResult
 from tools._framework.core.runtime import ExecutionMetadata

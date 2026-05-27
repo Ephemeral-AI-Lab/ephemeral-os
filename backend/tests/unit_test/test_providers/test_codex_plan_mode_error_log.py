@@ -12,8 +12,8 @@ import pytest
 
 from providers.clients.coding_plan.codex import CodexResponsesClient
 from providers.errors import AuthenticationFailure, RequestFailure
-from providers.types import ApiMessageRequest
-from message import ConversationMessage
+from providers.types import MessageRequest
+from message import Message
 
 
 def _b64url(data: bytes) -> str:
@@ -93,9 +93,9 @@ def _install_fake_httpx(
     )
 
 
-def _request() -> ApiMessageRequest:
-    return ApiMessageRequest(
-        model="gpt-5.5", messages=[ConversationMessage.from_user_text("x")]
+def _request() -> MessageRequest:
+    return MessageRequest(
+        model="gpt-5.5", messages=[Message.from_user_text("x")]
     )
 
 

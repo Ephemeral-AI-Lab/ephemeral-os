@@ -51,13 +51,15 @@ async def test_full_plan_routes_to_apply_plan_submission(
     result = await execute_tool_once(
         submit_plan_closes_goal,
         _valid_plan_payload(),
-        make_tool_context(fixture, planner_id),
+        make_tool_context(
+            fixture, planner_id, advisor_approves="submit_plan_closes_goal"
+        ),
         emit=_noop_emit,
     )
 
     attempt = attempt_store.get(fixture.attempt_id)
     assert not result.is_error
-    assert result.does_terminate
+    assert result.is_terminal
     assert result.metadata["submission_kind"] == "planner_full"
     assert attempt is not None
     assert attempt.stage == AttemptStage.GENERATE
@@ -80,7 +82,9 @@ async def test_partial_plan_routes_to_apply_plan_submission(
     result = await execute_tool_once(
         submit_plan_defers_goal,
         payload,
-        make_tool_context(fixture, planner_id),
+        make_tool_context(
+            fixture, planner_id, advisor_approves="submit_plan_defers_goal"
+        ),
         emit=_noop_emit,
     )
 
@@ -172,7 +176,9 @@ async def test_plan_validation_errors_do_not_mutate_graph(
     result = await execute_tool_once(
         submit_plan_closes_goal,
         payload,
-        make_tool_context(fixture, planner_id),
+        make_tool_context(
+            fixture, planner_id, advisor_approves="submit_plan_closes_goal"
+        ),
         emit=_noop_emit,
     )
 

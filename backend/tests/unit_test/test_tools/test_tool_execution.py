@@ -17,25 +17,27 @@ from engine.background.task_supervisor import BackgroundTaskSupervisor
 from engine.query.context import QueryContext, QueryExitReason
 from engine.query.loop import run_query
 from engine.tool_call.streaming import StreamingToolExecutor
-from message.messages import (
-    ConversationMessage,
+from message.message import (
+    Message,
     SystemNotificationBlock,
     TextBlock,
     ToolResultBlock,
     ToolUseBlock,
 )
-from message.stream_events import (
+from message.events import (
     StreamEvent,
-    ToolExecutionCompleted,
-    ToolExecutionStarted,
+    ToolExecutionCompletedEvent,
+    ToolExecutionStartedEvent,
 )
 from notification import SystemNotification
 from notification import make_budget_warning, make_opening_reminder
 from providers.types import (
-    ApiMessageCompleteEvent,
-    ApiToolUseDeltaEvent,
     SupportsStreamingMessages,
     UsageSnapshot,
+)
+from message.events import (
+    AssistantMessageCompleteEvent,
+    ToolUseDeltaEvent,
 )
 from sandbox._shared.models import Intent
 from tools._framework.core.base import (
@@ -288,8 +290,8 @@ async def test_execute_tool_once_emits_started_and_executes_tool() -> None:
     assert result.is_error is False
     assert result.output == "hello"
     assert tool.seen == ["hello"]
-    assert [type(event) for event in events] == [ToolExecutionStarted]
-    assert isinstance(events[0], ToolExecutionStarted)
+    assert [type(event) for event in events] == [ToolExecutionStartedEvent]
+    assert isinstance(events[0], ToolExecutionStartedEvent)
     assert events[0].tool_input == {"value": "hello"}
 
 
@@ -313,7 +315,7 @@ async def test_prehooks_run_sequentially_and_mutate_input() -> None:
     assert result.output == "start-a-b"
     assert tool.seen == ["start-a-b"]
     assert order == ["a", "b"]
-    assert isinstance(events[0], ToolExecutionStarted)
+    assert isinstance(events[0], ToolExecutionStartedEvent)
     assert events[0].tool_input == {"value": "start-a-b"}
     assert result.metadata["effective_tool_input"] == {"value": "start-a-b"}
 
@@ -501,7 +503,7 @@ async def test_execute_tool_call_streaming_returns_one_tool_result_block() -> No
     assert result.tool_use_id == "toolu_1"
     assert result.content == "hi"
     assert result.is_error is False
-    assert [type(event) for event in events] == [ToolExecutionStarted]
+    assert [type(event) for event in events] == [ToolExecutionStartedEvent]
 
 
 async def test_query_loop_exposes_conversation_messages_to_prehooks() -> None:
@@ -512,12 +514,12 @@ async def test_query_loop_exposes_conversation_messages_to_prehooks() -> None:
         async def stream_message(self, request):
             self.requests.append(request)
             if len(self.requests) == 1:
-                yield ApiMessageCompleteEvent(
-                    message=ConversationMessage(
+                yield AssistantMessageCompleteEvent(
+                    message=Message(
                         role="assistant",
                         content=[
                             ToolUseBlock(
-                                id="toolu_messages",
+                                tool_use_id="toolu_messages",
                                 name="echo_tool",
                                 input={"value": "seen"},
                             )
@@ -526,8 +528,8 @@ async def test_query_loop_exposes_conversation_messages_to_prehooks() -> None:
                     usage=UsageSnapshot(),
                 )
             else:
-                yield ApiMessageCompleteEvent(
-                    message=ConversationMessage(role="assistant", content=[]),
+                yield AssistantMessageCompleteEvent(
+                    message=Message(role="assistant", content=[]),
                     usage=UsageSnapshot(),
                 )
 
@@ -544,7 +546,7 @@ async def test_query_loop_exposes_conversation_messages_to_prehooks() -> None:
         max_tokens=100,
     )
 
-    initial_messages = [ConversationMessage.from_user_text("start")]
+    initial_messages = [Message.from_user_text("start")]
     messages, stream = await run_query(context, initial_messages)
     async for _event, _usage in stream:
         pass
@@ -566,12 +568,12 @@ async def test_query_loop_emits_hook_notification_without_history_prompt() -> No
         async def stream_message(self, request):
             self.requests.append(request)
             if len(self.requests) == 1:
-                yield ApiMessageCompleteEvent(
-                    message=ConversationMessage(
+                yield AssistantMessageCompleteEvent(
+                    message=Message(
                         role="assistant",
                         content=[
                             ToolUseBlock(
-                                id="toolu_notify",
+                                tool_use_id="toolu_notify",
                                 name="echo_tool",
                                 input={"value": "hi"},
                             )
@@ -580,8 +582,8 @@ async def test_query_loop_emits_hook_notification_without_history_prompt() -> No
                     usage=UsageSnapshot(),
                 )
             else:
-                yield ApiMessageCompleteEvent(
-                    message=ConversationMessage(role="assistant", content=[]),
+                yield AssistantMessageCompleteEvent(
+                    message=Message(role="assistant", content=[]),
                     usage=UsageSnapshot(),
                 )
 
@@ -621,12 +623,12 @@ async def test_query_loop_registers_run_notification_service_for_tool_body() -> 
         async def stream_message(self, request):
             self.requests.append(request)
             if len(self.requests) == 1:
-                yield ApiMessageCompleteEvent(
-                    message=ConversationMessage(
+                yield AssistantMessageCompleteEvent(
+                    message=Message(
                         role="assistant",
                         content=[
                             ToolUseBlock(
-                                id="toolu_body_notify",
+                                tool_use_id="toolu_body_notify",
                                 name="tool_notify",
                                 input={"value": "hi"},
                             )
@@ -635,8 +637,8 @@ async def test_query_loop_registers_run_notification_service_for_tool_body() -> 
                     usage=UsageSnapshot(),
                 )
             else:
-                yield ApiMessageCompleteEvent(
-                    message=ConversationMessage(role="assistant", content=[]),
+                yield AssistantMessageCompleteEvent(
+                    message=Message(role="assistant", content=[]),
                     usage=UsageSnapshot(),
                 )
 
@@ -675,8 +677,8 @@ async def test_query_loop_injects_opening_reminder_before_first_provider_request
 
         async def stream_message(self, request):
             self.requests.append(request)
-            yield ApiMessageCompleteEvent(
-                message=ConversationMessage(role="assistant", content=[]),
+            yield AssistantMessageCompleteEvent(
+                message=Message(role="assistant", content=[]),
                 usage=UsageSnapshot(),
             )
 
@@ -693,7 +695,7 @@ async def test_query_loop_injects_opening_reminder_before_first_provider_request
 
     messages, stream = await run_query(
         context,
-        [ConversationMessage.from_user_text("solve the task")],
+        [Message.from_user_text("solve the task")],
     )
     async for _event, _usage in stream:
         pass
@@ -719,12 +721,12 @@ async def test_query_loop_injects_budget_warning_into_followup_provider_request(
         async def stream_message(self, request):
             self.requests.append(request)
             if len(self.requests) == 1:
-                yield ApiMessageCompleteEvent(
-                    message=ConversationMessage(
+                yield AssistantMessageCompleteEvent(
+                    message=Message(
                         role="assistant",
                         content=[
                             ToolUseBlock(
-                                id="toolu_echo",
+                                tool_use_id="toolu_echo",
                                 name="echo_tool",
                                 input={"value": "budgeted"},
                             )
@@ -733,8 +735,8 @@ async def test_query_loop_injects_budget_warning_into_followup_provider_request(
                     usage=UsageSnapshot(),
                 )
             else:
-                yield ApiMessageCompleteEvent(
-                    message=ConversationMessage(role="assistant", content=[]),
+                yield AssistantMessageCompleteEvent(
+                    message=Message(role="assistant", content=[]),
                     usage=UsageSnapshot(),
                 )
 
@@ -754,7 +756,7 @@ async def test_query_loop_injects_budget_warning_into_followup_provider_request(
 
     messages, stream = await run_query(
         context,
-        [ConversationMessage.from_user_text("solve the task")],
+        [Message.from_user_text("solve the task")],
     )
     async for _event, _usage in stream:
         pass
@@ -793,12 +795,12 @@ async def test_query_loop_runs_generic_context_preparers() -> None:
         async def stream_message(self, request):
             self.requests.append(request)
             if len(self.requests) == 1:
-                yield ApiMessageCompleteEvent(
-                    message=ConversationMessage(
+                yield AssistantMessageCompleteEvent(
+                    message=Message(
                         role="assistant",
                         content=[
                             ToolUseBlock(
-                                id="toolu_prepared",
+                                tool_use_id="toolu_prepared",
                                 name="prepared_context_tool",
                                 input={"value": "ignored"},
                             )
@@ -807,8 +809,8 @@ async def test_query_loop_runs_generic_context_preparers() -> None:
                     usage=UsageSnapshot(),
                 )
             else:
-                yield ApiMessageCompleteEvent(
-                    message=ConversationMessage(role="assistant", content=[]),
+                yield AssistantMessageCompleteEvent(
+                    message=Message(role="assistant", content=[]),
                     usage=UsageSnapshot(),
                 )
 
@@ -833,7 +835,7 @@ async def test_query_loop_runs_generic_context_preparers() -> None:
     completed = [
         event
         for event in stream_events
-        if isinstance(event, ToolExecutionCompleted)
+        if isinstance(event, ToolExecutionCompletedEvent)
     ]
     assert completed[-1].output == "prepared"
     assert context.tool_metadata is metadata
@@ -848,17 +850,17 @@ async def test_query_loop_continues_after_non_terminal_tool_result() -> None:
         async def stream_message(self, request):
             self.requests.append(request)
             if len(self.requests) == 1:
-                yield ApiToolUseDeltaEvent(
-                    id="toolu_echo",
+                yield ToolUseDeltaEvent(
+                    tool_use_id="toolu_echo",
                     name="echo_tool",
                     input={"value": "observed"},
                 )
-                yield ApiMessageCompleteEvent(
-                    message=ConversationMessage(
+                yield AssistantMessageCompleteEvent(
+                    message=Message(
                         role="assistant",
                         content=[
                             ToolUseBlock(
-                                id="toolu_echo",
+                                tool_use_id="toolu_echo",
                                 name="echo_tool",
                                 input={"value": "observed"},
                             )
@@ -867,12 +869,12 @@ async def test_query_loop_continues_after_non_terminal_tool_result() -> None:
                     usage=UsageSnapshot(),
                 )
             else:
-                yield ApiMessageCompleteEvent(
-                    message=ConversationMessage(
+                yield AssistantMessageCompleteEvent(
+                    message=Message(
                         role="assistant",
                         content=[
                             ToolUseBlock(
-                                id="toolu_term",
+                                tool_use_id="toolu_term",
                                 name="terminal_echo",
                                 input={"value": "done"},
                             )
@@ -918,7 +920,7 @@ async def test_execute_tool_once_stamps_does_terminate_on_terminal_success() -> 
         emit=lambda event: _capture_emit([], event),
     )
     assert result.is_error is False
-    assert result.does_terminate is True
+    assert result.is_terminal is True
 
 
 async def test_execute_tool_once_skips_does_terminate_on_terminal_error() -> None:
@@ -930,7 +932,7 @@ async def test_execute_tool_once_skips_does_terminate_on_terminal_error() -> Non
         emit=lambda event: _capture_emit([], event),
     )
     assert result.is_error is True
-    assert result.does_terminate is False
+    assert result.is_terminal is False
 
 
 async def test_execute_tool_once_skips_does_terminate_for_non_terminal_tool() -> None:
@@ -942,7 +944,7 @@ async def test_execute_tool_once_skips_does_terminate_for_non_terminal_tool() ->
         emit=lambda event: _capture_emit([], event),
     )
     assert result.is_error is False
-    assert result.does_terminate is False
+    assert result.is_terminal is False
 
 
 async def test_execute_tool_call_streaming_propagates_does_terminate_to_block() -> None:
@@ -956,18 +958,18 @@ async def test_execute_tool_call_streaming_propagates_does_terminate_to_block() 
         emit=lambda event: _capture_emit([], event),
     )
     assert result.is_error is False
-    assert result.does_terminate is True
+    assert result.is_terminal is True
 
 
 async def test_query_loop_captures_terminal_result_without_tool_result_prompt() -> None:
     class _TerminalClient(SupportsStreamingMessages):
         async def stream_message(self, request):
-            yield ApiMessageCompleteEvent(
-                message=ConversationMessage(
+            yield AssistantMessageCompleteEvent(
+                message=Message(
                     role="assistant",
                     content=[
                         ToolUseBlock(
-                            id="toolu_term",
+                            tool_use_id="toolu_term",
                             name="terminal_echo",
                             input={"value": "done"},
                         )
@@ -1009,27 +1011,27 @@ async def test_query_loop_rejects_streamed_terminal_tool_batched_with_sibling() 
             del request
             self.calls += 1
             if self.calls == 1:
-                yield ApiToolUseDeltaEvent(
-                    id="toolu_echo",
+                yield ToolUseDeltaEvent(
+                    tool_use_id="toolu_echo",
                     name="echo_tool",
                     input={"value": "should-not-run"},
                 )
-                yield ApiToolUseDeltaEvent(
-                    id="toolu_terminal",
+                yield ToolUseDeltaEvent(
+                    tool_use_id="toolu_terminal",
                     name="terminal_echo",
                     input={"value": "done"},
                 )
-                yield ApiMessageCompleteEvent(
-                    message=ConversationMessage(
+                yield AssistantMessageCompleteEvent(
+                    message=Message(
                         role="assistant",
                         content=[
                             ToolUseBlock(
-                                id="toolu_echo",
+                                tool_use_id="toolu_echo",
                                 name="echo_tool",
                                 input={"value": "should-not-run"},
                             ),
                             ToolUseBlock(
-                                id="toolu_terminal",
+                                tool_use_id="toolu_terminal",
                                 name="terminal_echo",
                                 input={"value": "done"},
                             ),
@@ -1038,8 +1040,8 @@ async def test_query_loop_rejects_streamed_terminal_tool_batched_with_sibling() 
                     usage=UsageSnapshot(),
                 )
                 return
-            yield ApiMessageCompleteEvent(
-                message=ConversationMessage(
+            yield AssistantMessageCompleteEvent(
+                message=Message(
                     role="assistant",
                     content=[TextBlock(text="retry acknowledged")],
                 ),
@@ -1089,8 +1091,8 @@ async def test_streaming_executor_propagates_terminal_completion_marker() -> Non
     )
 
     executor.add_tool(
-        ApiToolUseDeltaEvent(
-            id="toolu_streamed_terminal",
+        ToolUseDeltaEvent(
+            tool_use_id="toolu_streamed_terminal",
             name="terminal_echo",
             input={"value": "done"},
         )
@@ -1099,7 +1101,7 @@ async def test_streaming_executor_propagates_terminal_completion_marker() -> Non
     results = await executor.get_remaining()
 
     assert len(results) == 1
-    assert results[0].does_terminate is True
+    assert results[0].is_terminal is True
 
 
 async def test_background_tool_runs_hooks_and_reports_failure() -> None:
@@ -1137,7 +1139,7 @@ async def test_background_tool_runs_hooks_and_reports_failure() -> None:
         tool_metadata=context.tool_metadata,
         background_tasks=manager,
         tool_use=ToolUseBlock(
-            id="toolu_bg",
+            tool_use_id="toolu_bg",
             name="background_echo",
             input={"value": "hi", "background": True},
         ),
@@ -1188,12 +1190,12 @@ async def test_background_dispatch_exposes_conversation_messages_to_prehooks() -
     manager = BackgroundTaskSupervisor()
     tool_results: list[ToolResultBlock] = []
     conversation_messages = [
-        ConversationMessage.from_user_text("start"),
-        ConversationMessage(
+        Message.from_user_text("start"),
+        Message(
             role="assistant",
             content=[
                 ToolUseBlock(
-                    id="toolu_bg",
+                    tool_use_id="toolu_bg",
                     name="background_echo",
                     input={"value": "seen", "background": True},
                 )
@@ -1206,7 +1208,7 @@ async def test_background_dispatch_exposes_conversation_messages_to_prehooks() -
         conversation_messages,
         manager,
         ToolUseBlock(
-            id="toolu_bg",
+            tool_use_id="toolu_bg",
             name="background_echo",
             input={"value": "seen", "background": True},
         ),

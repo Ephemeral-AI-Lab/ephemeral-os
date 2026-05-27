@@ -29,7 +29,7 @@ from .._harness.workspace_base_public import seed_imported_base
 
 pytestmark = pytest.mark.asyncio
 
-AUTO_SQUASH_MAX_DEPTH = 32
+AUTO_SQUASH_MAX_DEPTH = 100
 AUTO_SQUASH_TRIGGER_WRITES = AUTO_SQUASH_MAX_DEPTH + 4
 _TRANSIENT_LOWERDIR_DIR = "transient-lowerdirs"
 
@@ -462,16 +462,8 @@ def _assert_no_cache_shell_timings(
     require_occ: bool = True,
 ) -> None:
     required = {
-        "layer_stack.prepare_workspace_snapshot.total_s",
-        "command_exec.prepare_snapshot_s",
-        "command_exec.mount_workspace_s",
-        "command_exec.run_command_s",
         "command_exec.capture_upperdir_s",
-        "command_exec.occ_apply_s",
-        "command_exec.release_snapshot_s",
         "command_exec.total_s",
-        "api.shell.overlay_s",
-        "api.shell.occ_apply_s",
         "api.shell.total_s",
     }
     if require_occ:
@@ -481,6 +473,21 @@ def _assert_no_cache_shell_timings(
             "occ.apply.total_s",
         }
     assert required <= timings.keys()
+    timing_groups = {
+        "snapshot": {
+            "layer_stack.prepare_workspace_snapshot.total_s",
+            "command_exec.prepare_snapshot_s",
+            "workspace.mount_s",
+        },
+        "mount": {"command_exec.mount_workspace_s", "workspace.mount_s"},
+        "run": {"command_exec.run_command_s", "workspace.tool_s"},
+    }
+    for name, keys in timing_groups.items():
+        assert timings.keys() & keys, {
+            "missing_timing_group": name,
+            "accepted_keys": sorted(keys),
+            "actual_keys": sorted(timings),
+        }
     assert timings.keys().isdisjoint(
         {
             "cache_hit",

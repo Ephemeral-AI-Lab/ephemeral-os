@@ -10,7 +10,7 @@ import threading
 from pathlib import Path
 
 from sandbox.layer_stack import WriteLayerChange
-from sandbox.layer_stack.manifest import LayerRef, Manifest
+from sandbox.layer_stack.manifest import LayerRef, Manifest, manifest_root_hash
 from sandbox.layer_stack.stack import LayerStack
 from sandbox.occ.changeset import ChangesetResult
 from sandbox.occ.maintenance import AutoSquashMaintenancePolicy
@@ -199,7 +199,7 @@ def test_auto_squash_uses_fixed_constant_depth(tmp_path) -> None:
     assert stack.read_active_manifest().depth <= configured_max_depth
 
 
-def test_auto_squash_policy_does_not_skip_in_flight_squash() -> None:
+def test_auto_squash_policy_serializes_in_flight_squash_workers() -> None:
     max_depth = 4
     stack = _AutoSquashOnlyLayerStack(
         depth=7,
@@ -217,11 +217,13 @@ def test_auto_squash_policy_does_not_skip_in_flight_squash() -> None:
         owner = pool.submit(policy.after_publish_sync, published)
         assert stack.squash_entered.wait(timeout=2)
         peer = pool.submit(policy.after_publish_sync, published)
+        assert stack.concurrent_squash_calls == 1
         stack.release_squash.set()
         peer_timings = peer.result(timeout=2)
         owner_timings = owner.result(timeout=2)
 
     assert stack.squash_calls == 2
+    assert stack.max_concurrent_squash_calls == 1
     assert TimingKey.LAYER_AUTO_SQUASH_SKIPPED_IN_FLIGHT not in peer_timings
     assert TimingKey.LAYER_AUTO_SQUASH_SKIPPED_IN_FLIGHT not in owner_timings
     assert TimingKey.LAYER_AUTO_SQUASH_RECHECK_TRIGGERED not in peer_timings
@@ -230,6 +232,65 @@ def test_auto_squash_policy_does_not_skip_in_flight_squash() -> None:
         owner_timings[TimingKey.LAYER_AUTO_SQUASH_DEPTH_AFTER],
         peer_timings[TimingKey.LAYER_AUTO_SQUASH_DEPTH_AFTER],
     } == {1.0, 6.0}
+
+
+def test_auto_squash_policy_rechecks_after_wait_and_skips_when_recovered() -> None:
+    max_depth = 4
+    stack = _AutoSquashOnlyLayerStack(
+        depth=7,
+        depth_after_first_squash=1,
+    )
+    policy = AutoSquashMaintenancePolicy(
+        snapshot_reader=stack,
+        squasher=stack,
+        max_depth=max_depth,
+    )
+    published = ChangesetResult(files=(), published_manifest_version=1)
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
+        owner = pool.submit(policy.after_publish_sync, published)
+        assert stack.squash_entered.wait(timeout=2)
+        peer = pool.submit(policy.after_publish_sync, published)
+        stack.release_squash.set()
+        peer_timings = peer.result(timeout=2)
+        owner_timings = owner.result(timeout=2)
+
+    assert stack.squash_calls == 1
+    assert stack.max_concurrent_squash_calls == 1
+    assert owner_timings[TimingKey.LAYER_AUTO_SQUASH_DEPTH_AFTER] == 1.0
+    assert peer_timings == {}
+
+
+def test_auto_squash_policy_emits_focused_squash_audit() -> None:
+    max_depth = 4
+    stack = _AutoSquashOnlyLayerStack(depth=7, depth_after_first_squash=1)
+    stack.release_squash.set()
+    events = []
+    policy = AutoSquashMaintenancePolicy(
+        snapshot_reader=stack,
+        squasher=stack,
+        max_depth=max_depth,
+        audit=lambda **payload: events.append(payload),
+    )
+    published = ChangesetResult(files=(), published_manifest_version=1)
+
+    timings = policy.after_publish_sync(published)
+
+    assert timings[TimingKey.LAYER_AUTO_SQUASH_DEPTH_BEFORE] == 7.0
+    assert timings[TimingKey.LAYER_AUTO_SQUASH_DEPTH_AFTER] == 1.0
+    assert events == [
+        {
+            "triggered": True,
+            "trigger_reason": "post_publish_depth",
+            "input_layers": 7,
+        },
+        {
+            "completed": True,
+            "input_layers": 7,
+            "result_layers": 1,
+            "manifest_root_hash_value": manifest_root_hash(stack.read_active_manifest()),
+        },
+    ]
 
 
 def test_removed_mode_env_is_ignored(monkeypatch) -> None:
@@ -267,6 +328,8 @@ class _AutoSquashOnlyLayerStack:
         self._depth_after_first_squash = depth_after_first_squash
         self._depth_after_later_squash = depth_after_later_squash
         self.squash_calls = 0
+        self.concurrent_squash_calls = 0
+        self.max_concurrent_squash_calls = 0
         self.squash_entered = threading.Event()
         self.release_squash = threading.Event()
 
@@ -281,15 +344,27 @@ class _AutoSquashOnlyLayerStack:
     def squash(self, *, max_depth: int) -> Manifest | None:
         del max_depth
         self.squash_entered.set()
-        assert self.release_squash.wait(timeout=2)
         with self._lock:
-            self.squash_calls += 1
-            if self.squash_calls == 1 and self._depth_after_first_squash is not None:
-                next_depth = self._depth_after_first_squash
-            else:
-                next_depth = self._depth_after_later_squash
-            self._manifest = _manifest(next_depth, version=self._manifest.version + 1)
-            return self._manifest
+            self.concurrent_squash_calls += 1
+            self.max_concurrent_squash_calls = max(
+                self.max_concurrent_squash_calls,
+                self.concurrent_squash_calls,
+            )
+        try:
+            assert self.release_squash.wait(timeout=2)
+            with self._lock:
+                self.squash_calls += 1
+                if self.squash_calls == 1 and self._depth_after_first_squash is not None:
+                    next_depth = self._depth_after_first_squash
+                else:
+                    next_depth = self._depth_after_later_squash
+                self._manifest = _manifest(
+                    next_depth, version=self._manifest.version + 1
+                )
+                return self._manifest
+        finally:
+            with self._lock:
+                self.concurrent_squash_calls -= 1
 
 
 def _manifest(depth: int, *, version: int | None = None) -> Manifest:

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import shutil
 from pathlib import Path
 from typing import Any
 
@@ -10,6 +11,7 @@ import pytest
 from sandbox.daemon import builtin_operations, occ_runtime_services, workspace_tool_payloads
 from sandbox.daemon.rpc import dispatcher as server
 from sandbox.daemon.layer_stack_runtime import get_layer_stack_manager
+from sandbox.layer_stack import WriteLayerChange
 from sandbox.layer_stack.workspace_base import build_workspace_base
 
 
@@ -149,3 +151,34 @@ async def test_layer_metrics_reports_active_lease_pins(tmp_path: Path) -> None:
 
     assert payload["active_leases"] == 1
     assert payload["leased_layers"] == len(set(lease.manifest.layers))
+
+
+@pytest.mark.asyncio
+async def test_layer_metrics_reports_orphan_and_missing_layers(tmp_path: Path) -> None:
+    occ_runtime_services.clear_occ_runtime_services()
+    workspace = tmp_path / "ws"
+    workspace.mkdir()
+    (workspace / "seed.txt").write_text("seed\n", encoding="utf-8")
+    stack = tmp_path / "stack"
+    build_workspace_base(workspace_root=workspace, layer_stack_root=stack)
+    manager = get_layer_stack_manager(stack.as_posix())
+
+    source = tmp_path / "source.txt"
+    source.write_text("changed\n", encoding="utf-8")
+    manager.publish_changes(
+        [WriteLayerChange(path="tracked.txt", source_path=source.as_posix())]
+    )
+    manifest = manager.read_active_manifest()
+    active_layer_id = manifest.layers[0].layer_id
+
+    shutil.rmtree(manager.storage_root / "layers" / active_layer_id)
+    (manager.storage_root / "layers" / "orphan-layer").mkdir()
+
+    payload = await builtin_operations.layer_metrics({"layer_stack_root": stack.as_posix()})
+
+    assert payload["referenced_layers"] == len(manifest.layers)
+    assert payload["layer_dirs"] == len(manifest.layers)
+    assert payload["missing_layer_count"] == 1
+    assert payload["missing_layer_ids"] == [active_layer_id]
+    assert payload["orphan_layer_count"] == 1
+    assert payload["orphan_layer_ids"] == ["orphan-layer"]

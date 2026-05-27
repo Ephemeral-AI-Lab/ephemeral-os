@@ -155,7 +155,7 @@ async def test_main_planner_engine_retry_keeps_attempt_sequence_no_at_one(
             status="completed",
             error=None,
             terminal_result=ToolResult(
-                output="full plan", is_error=False, does_terminate=True
+                output="full plan", is_error=False, is_terminal=True
             ),
             agent_name="planner",
             event_count=12,
@@ -291,7 +291,7 @@ async def test_attempt_harness_records_runner_token_usage(
             status="completed",
             error=None,
             terminal_result=ToolResult(
-                output="plan", is_error=False, does_terminate=True
+                output="plan", is_error=False, is_terminal=True
             ),
             agent_name="planner",
             event_count=42,  # mimics aggregated cross-attempt count
@@ -363,7 +363,7 @@ async def test_continuation_planner_attempt_does_not_pass_retry_kwarg(
             terminal_result=ToolResult(
                 output="continuation plan",
                 is_error=False,
-                does_terminate=True,
+                is_terminal=True,
             ),
             agent_name="planner",
             event_count=1,
@@ -414,7 +414,7 @@ async def test_main_agent_launches_with_two_user_messages(
     register_test_agents,
 ) -> None:
     """Non-entry agents launch with initial_messages=[<context>] + prompt=<task_guidance>."""
-    from message.messages import ConversationMessage
+    from message.message import Message
 
     goal, attempt, task_id = _seed_planner_attempt(
         goal_store=goal_store,
@@ -444,7 +444,7 @@ async def test_main_agent_launches_with_two_user_messages(
             status="completed",
             error=None,
             terminal_result=ToolResult(
-                output="plan", is_error=False, does_terminate=True
+                output="plan", is_error=False, is_terminal=True
             ),
             agent_name="planner",
             event_count=1,
@@ -468,9 +468,9 @@ async def test_main_agent_launches_with_two_user_messages(
     assert isinstance(initial_messages, list)
     assert len(initial_messages) == 1
     msg = initial_messages[0]
-    assert isinstance(msg, ConversationMessage)
+    assert isinstance(msg, Message)
     assert msg.role == "user"
-    assert msg.text == "plan context"
+    assert msg.assistant_text == "plan context"
 
 
 @pytest.mark.asyncio
@@ -527,7 +527,7 @@ async def test_launch_without_task_guidance_falls_back_to_single_user_message(
             status="completed",
             error=None,
             terminal_result=ToolResult(
-                output="ok", is_error=False, does_terminate=True
+                output="ok", is_error=False, is_terminal=True
             ),
             agent_name="planner",
             event_count=1,

@@ -48,7 +48,7 @@ class BaseTool(ABC):
     # nested agent (e.g. run_subagent) override it to "subagent".
     task_type: str = "agent"
     # When True, a successful invocation ends the agent run. The
-    # engine stamps does_terminate=True on the resulting ToolResult and the
+    # engine stamps is_terminal=True on the resulting ToolResult and the
     # query loop exits with TOOL_STOP after the response completes.
     is_terminal_tool: bool = False
     # Tool-specific hooks. These are intentionally explicit per tool and do

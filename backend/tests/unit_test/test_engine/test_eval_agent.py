@@ -5,7 +5,7 @@ from types import SimpleNamespace
 
 from . import eval_agent_support
 from .eval_agent_support import EvalAgent
-from message.stream_events import BackgroundTaskStarted
+from message.events import BackgroundTaskStartedEvent
 from notification import SystemNotification
 
 
@@ -34,7 +34,7 @@ def test_eval_agent_verbose_logging_keeps_full_background_start_and_system_messa
                     agent_name="analysis_agent",
                     run_id="wid-1",
                 ),
-                BackgroundTaskStarted(
+                BackgroundTaskStartedEvent(
                     task_id="bg_1",
                     tool_name="run_subagent",
                     tool_input={

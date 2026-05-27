@@ -18,7 +18,7 @@ from sandbox.daemon.audit_schema import (
     safe_emit,
 )
 from tools import ToolResult
-from message.stream_events import BackgroundTaskStarted
+from message.events import BackgroundTaskStartedEvent
 
 logger = logging.getLogger(__name__)
 _HEARTBEAT_INTERVAL_S = float(os.environ.get("EOS_BACKGROUND_HEARTBEAT_INTERVAL_S", "60"))
@@ -214,7 +214,7 @@ class BackgroundTaskSupervisor:
         uses_sandbox: bool = False,
         sandbox_id: str | None = None,
         sandbox_invocation_id: str | None = None,
-    ) -> BackgroundTaskStarted:
+    ) -> BackgroundTaskStartedEvent:
         """Launch *coro* as a background task and return a started event."""
         asyncio_task = asyncio.create_task(coro)
         tracked = BackgroundTaskRecord(
@@ -278,7 +278,7 @@ class BackgroundTaskSupervisor:
         if tracked.uses_sandbox and tracked.sandbox_invocation_id and tracked.sandbox_id:
             self._ensure_heartbeat_task()
 
-        return BackgroundTaskStarted(
+        return BackgroundTaskStartedEvent(
             task_id=task_id,
             tool_name=tool_name,
             tool_input=tool_input,

@@ -8,7 +8,7 @@ from typing import Any
 
 from message import (
     ContentBlock,
-    ConversationMessage,
+    Message,
     ToolResultBlock,
     ToolUseBlock,
 )
@@ -36,8 +36,8 @@ class _BackgroundSnapshot:
 
 
 def reduce_background_task_history(
-    messages: list[ConversationMessage],
-) -> list[ConversationMessage]:
+    messages: list[Message],
+) -> list[Message]:
     """Keep only the latest provider-visible state for each background task."""
     tool_use_map: dict[str, tuple[int, int, str]] = {}
     snapshot_tool_use_ids: set[str] = set()
@@ -49,7 +49,7 @@ def reduce_background_task_history(
             continue
         for block_idx, block in enumerate(msg.content):
             if isinstance(block, ToolUseBlock):
-                tool_use_map[block.id] = (msg_idx, block_idx, block.name)
+                tool_use_map[block.tool_use_id] = (msg_idx, block_idx, block.name)
 
     for msg_idx, msg in enumerate(messages):
         for block_idx, block in enumerate(msg.content):
@@ -83,11 +83,11 @@ def reduce_background_task_history(
 
     drop_tool_use_ids = snapshot_tool_use_ids - keep_snapshot_statuses.keys()
 
-    reduced: list[ConversationMessage] = []
+    reduced: list[Message] = []
     for msg in messages:
         new_content: list[ContentBlock] = []
         for block in msg.content:
-            if isinstance(block, ToolUseBlock) and block.id in drop_tool_use_ids:
+            if isinstance(block, ToolUseBlock) and block.tool_use_id in drop_tool_use_ids:
                 continue
 
             if isinstance(block, ToolResultBlock):
@@ -121,7 +121,7 @@ def reduce_background_task_history(
             new_content.append(block.model_copy(deep=True))
 
         if new_content:
-            reduced.append(ConversationMessage(role=msg.role, content=new_content))
+            reduced.append(Message(role=msg.role, content=new_content))
     return reduced
 
 

@@ -4,15 +4,15 @@ from __future__ import annotations
 
 from engine.audit import events
 from engine.audit.stream import audit_events_from_stream_event
-from message.stream_events import ToolExecutionCompleted, ToolExecutionStarted
+from message.events import ToolExecutionCompletedEvent, ToolExecutionStartedEvent
 
 
 def test_tool_started_stream_event_maps_to_engine_audit_event() -> None:
     emitted = audit_events_from_stream_event(
-        ToolExecutionStarted(
+        ToolExecutionStartedEvent(
             tool_name="edit_file",
             tool_input={"file_path": "a.py", "old_text": "x", "new_text": "y"},
-            tool_id="toolu_1",
+            tool_use_id="toolu_1",
             agent_name="executor",
             run_id="agent-run-1",
         ),
@@ -35,7 +35,7 @@ def test_tool_started_stream_event_maps_to_engine_audit_event() -> None:
     assert event.node.agent_run_id == "agent-run-1"
     assert event.node.sandbox_id == "sb-1"
     assert event.node.tool_name == "edit_file"
-    assert event.node.tool_id == "toolu_1"
+    assert event.node.tool_use_id == "toolu_1"
     assert event.payload["input_shape"] == {
         "file_path": "str",
         "old_text": "str",
@@ -52,16 +52,16 @@ def test_tool_started_stream_event_maps_to_engine_audit_event() -> None:
 
 def test_tool_completed_stream_event_preserves_domain_timings_as_metadata() -> None:
     emitted = audit_events_from_stream_event(
-        ToolExecutionCompleted(
+        ToolExecutionCompletedEvent(
             tool_name="shell",
             output='{"status": "ok"}',
             is_error=False,
-            tool_id="toolu_2",
+            tool_use_id="toolu_2",
             metadata={
                 "status": "ok",
                 "timings": {"api.shell.total_s": 0.2, "occ.apply.total_s": 0.1},
             },
-            does_terminate=False,
+            is_terminal=False,
             agent_name="executor",
             run_id="agent-run-2",
         ),
@@ -77,7 +77,7 @@ def test_tool_completed_stream_event_preserves_domain_timings_as_metadata() -> N
     assert event.type == events.TOOL_COMPLETED
     assert event.node.task_center_run_id == "run-1"
     assert event.node.agent_run_id == "agent-run-2"
-    assert event.node.tool_id == "toolu_2"
+    assert event.node.tool_use_id == "toolu_2"
     assert event.payload["status"] == "ok"
     assert event.payload["is_error"] is False
     assert event.payload["metadata"] == {
@@ -92,11 +92,11 @@ def test_tool_completed_stream_event_preserves_domain_timings_as_metadata() -> N
 
 def test_tool_error_stream_event_maps_to_failed() -> None:
     emitted = audit_events_from_stream_event(
-        ToolExecutionCompleted(
+        ToolExecutionCompletedEvent(
             tool_name="write_file",
             output="failed",
             is_error=True,
-            tool_id="toolu_3",
+            tool_use_id="toolu_3",
         ),
     )
 

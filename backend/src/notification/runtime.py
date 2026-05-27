@@ -7,7 +7,7 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from message.messages import SystemNotificationBlock
+    from message.message import SystemNotificationBlock
 
 
 @dataclass(frozen=True)
@@ -45,7 +45,7 @@ class SystemNotificationService:
     async def notify_system(self, text: str) -> None:
         if not text:
             return
-        from message.messages import SystemNotificationBlock
+        from message.message import SystemNotificationBlock
 
         event = SystemNotification(text=text)
         self._notifications.append(SystemNotificationBlock(text=text))

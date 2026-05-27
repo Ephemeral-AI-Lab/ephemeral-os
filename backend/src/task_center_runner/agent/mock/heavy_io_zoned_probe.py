@@ -21,7 +21,7 @@ import time
 from collections.abc import Awaitable, Callable
 from typing import Any
 
-from message.stream_events import StreamEvent
+from message.events import StreamEvent
 from tools._framework.core.base import BaseTool
 from tools._framework.core.results import ToolResult
 from tools._framework.core.runtime import ExecutionMetadata

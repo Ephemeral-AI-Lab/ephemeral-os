@@ -8,18 +8,18 @@ from typing import Any
 from collections.abc import Mapping
 
 from audit.jsonl import append_jsonl_event
-from message.messages import (
-    ConversationMessage,
+from message.message import (
+    Message,
     TextBlock,
     ThinkingBlock,
     ToolResultBlock,
 )
-from message.stream_events import (
-    AssistantMessageComplete,
-    AssistantTextDelta,
+from message.events import (
+    AssistantMessageCompleteEvent,
+    AssistantTextDeltaEvent,
     StreamEvent,
-    ThinkingDelta,
-    ToolExecutionCompleted,
+    ThinkingDeltaEvent,
+    ToolExecutionCompletedEvent,
 )
 
 logger = logging.getLogger(__name__)
@@ -55,25 +55,25 @@ class AgentMessageJsonlRecorder:
         """Observe one stream event and append completed messages.
 
         Thinking and text deltas are buffered per (agent, run) lane and only
-        materialized when ``AssistantMessageComplete`` arrives: if that
+        materialized when ``AssistantMessageCompleteEvent`` arrives: if that
         message already contains the corresponding block, the buffer is
         dropped (the complete message is the canonical row); otherwise the
         buffer is flushed as its own row. Buffers that survive without a
         completion event — e.g. mid-stream cancellation — are drained by
         :meth:`flush`.
         """
-        if isinstance(event, ThinkingDelta):
+        if isinstance(event, ThinkingDeltaEvent):
             self._thinking_for(event.agent_name, event.run_id).append(event.text)
             return
 
-        if isinstance(event, AssistantTextDelta):
+        if isinstance(event, AssistantTextDeltaEvent):
             self._text_for(event.agent_name, event.run_id).append(event.text)
             return
 
         agent_name = str(getattr(event, "agent_name", "") or "")
         run_id = str(getattr(event, "run_id", "") or "")
 
-        if isinstance(event, AssistantMessageComplete):
+        if isinstance(event, AssistantMessageCompleteEvent):
             block_types = {type(b).__name__ for b in event.message.content}
             if "ThinkingBlock" in block_types:
                 self._thinking.pop((agent_name, run_id), None)
@@ -90,16 +90,16 @@ class AgentMessageJsonlRecorder:
             )
             return
 
-        if isinstance(event, ToolExecutionCompleted):
-            message = ConversationMessage(
+        if isinstance(event, ToolExecutionCompletedEvent):
+            message = Message(
                 role="user",
                 content=[
                     ToolResultBlock(
-                        tool_use_id=event.tool_id,
+                        tool_use_id=event.tool_use_id,
                         content=event.output,
                         is_error=event.is_error,
                         metadata=dict(event.metadata or {}),
-                        does_terminate=event.does_terminate,
+                        is_terminal=event.is_terminal,
                     )
                 ],
             )
@@ -108,9 +108,9 @@ class AgentMessageJsonlRecorder:
                 run_id=event.run_id,
                 message=message,
                 tool_name=event.tool_name,
-                tool_id=event.tool_id,
+                tool_use_id=event.tool_use_id,
                 is_error=event.is_error,
-                does_terminate=event.does_terminate,
+                is_terminal=event.is_terminal,
             )
 
     def record_initial_messages(
@@ -120,7 +120,7 @@ class AgentMessageJsonlRecorder:
         user_prompt: str,
         agent_name: str,
         run_id: str,
-        seeded_initial_messages: list[ConversationMessage] | None = None,
+        seeded_initial_messages: list[Message] | None = None,
         metadata: Mapping[str, Any] | None = None,
     ) -> None:
         """Append the system and initial user messages once.
@@ -158,7 +158,7 @@ class AgentMessageJsonlRecorder:
                 ],
                 **initial_metadata,
             )
-        message = ConversationMessage.from_user_text(user_prompt)
+        message = Message.from_user_text(user_prompt)
         self._record_message(
             agent_name=agent_name,
             run_id=run_id,
@@ -195,7 +195,7 @@ class AgentMessageJsonlRecorder:
         self._record(
             agent_name=agent_name,
             run_id=run_id,
-            message=ConversationMessage(
+            message=Message(
                 role="assistant", content=[ThinkingBlock(text=text)]
             ),
         )
@@ -209,7 +209,7 @@ class AgentMessageJsonlRecorder:
         self._record(
             agent_name=agent_name,
             run_id=run_id,
-            message=ConversationMessage(
+            message=Message(
                 role="assistant", content=[TextBlock(text=text)]
             ),
         )
@@ -219,7 +219,7 @@ class AgentMessageJsonlRecorder:
         *,
         agent_name: str,
         run_id: str,
-        message: ConversationMessage,
+        message: Message,
         **extra: Any,
     ) -> None:
         self._record_message(
@@ -262,33 +262,35 @@ class AgentMessageJsonlRecorder:
             logger.debug("agent message append failed", exc_info=True)
 
 
-_BY_AGENT_RUN: dict[str, "AgentMessageJsonlRecorder"] = {}
+_BY_AGENT_RUN: dict[tuple[str, str], "AgentMessageJsonlRecorder"] = {}
 
 
-def register_recorder_for_agent_run(
-    agent_run_id: str, recorder: "AgentMessageJsonlRecorder"
+def register_recorder(
+    agent_name: str, run_id: str, recorder: "AgentMessageJsonlRecorder"
 ) -> None:
-    """Make ``recorder`` discoverable via ``recorder_for_agent_run``.
+    """Make ``recorder`` discoverable via ``recorder_for_run``.
 
     Lets the LLM-request layer find the per-task message recorder without a
     direct handle to the audit recorder. The audit recorder is the only
     populator; consumers must not mutate the registry directly.
     """
-    if agent_run_id:
-        _BY_AGENT_RUN[agent_run_id] = recorder
+    if run_id:
+        _BY_AGENT_RUN[(agent_name, run_id)] = recorder
 
 
-def clear_recorder_for_agent_run(agent_run_id: str) -> None:
-    _BY_AGENT_RUN.pop(agent_run_id, None)
+def clear_recorder(agent_name: str, run_id: str) -> None:
+    _BY_AGENT_RUN.pop((agent_name, run_id), None)
 
 
-def recorder_for_agent_run(agent_run_id: str) -> "AgentMessageJsonlRecorder | None":
-    return _BY_AGENT_RUN.get(agent_run_id) if agent_run_id else None
+def recorder_for_run(
+    agent_name: str, run_id: str
+) -> "AgentMessageJsonlRecorder | None":
+    return _BY_AGENT_RUN.get((agent_name, run_id)) if run_id else None
 
 
 __all__ = [
     "AgentMessageJsonlRecorder",
-    "register_recorder_for_agent_run",
-    "clear_recorder_for_agent_run",
-    "recorder_for_agent_run",
+    "register_recorder",
+    "clear_recorder",
+    "recorder_for_run",
 ]

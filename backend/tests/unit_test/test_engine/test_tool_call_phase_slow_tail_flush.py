@@ -28,7 +28,7 @@ from engine.tool_call.phase_buffer import (
     reset_for_tests,
     start_phase_buffer,
 )
-from message.messages import ToolUseBlock
+from message.message import ToolUseBlock
 from sandbox.daemon.audit_buffer import get_audit_buffer
 
 
@@ -66,11 +66,11 @@ def _reset_state() -> None:
 def _simulate_call(tool_name: str, call_index: int, *, total_ms: float) -> None:
     """Run one synthetic dispatch — 6 phases, envelope start + finish."""
     tool_call = ToolUseBlock(
-        id=f"{tool_name}-{call_index}",
+        tool_use_id=f"{tool_name}-{call_index}",
         name=tool_name,
         input={},
     )
-    start_phase_buffer(tool_id=tool_call.id, tool_name=tool_name)
+    start_phase_buffer(tool_use_id=tool_call.tool_use_id, tool_name=tool_name)
     _emit_tool_call_started(tool_call)
     # Record all 6 phases with deterministic per-phase shares.
     per_phase = total_ms / 6.0
@@ -176,14 +176,14 @@ def test_tool_call_phase_buffer_thread_local_under_many_foreground() -> None:
     leaking into another's.
     """
 
-    async def _run_one(tool_id: str, tool_name: str, phase_ms: float) -> None:
-        start_phase_buffer(tool_id=tool_id, tool_name=tool_name)
+    async def _run_one(tool_use_id: str, tool_name: str, phase_ms: float) -> None:
+        start_phase_buffer(tool_use_id=tool_use_id, tool_name=tool_name)
         record_phase(PHASE_QUEUED, phase_ms)
         # Yield to the loop so all four tasks interleave their record_phase
         # calls — proves the contextvar isolation, not just sequential calls.
         await asyncio.sleep(0)
         record_phase(PHASE_EXEC, phase_ms)
-        tool_call = ToolUseBlock(id=tool_id, name=tool_name, input={})
+        tool_call = ToolUseBlock(tool_use_id=tool_use_id, name=tool_name, input={})
         _emit_tool_call_phase_and_finished(
             tool_call, total_ms=phase_ms * 2.0, exit_status="ok"
         )
@@ -205,7 +205,7 @@ def test_tool_call_phase_buffer_thread_local_under_many_foreground() -> None:
         # Each task recorded exactly 2 phases — their rollup must reflect
         # ONLY the durations its own context recorded, never another task's.
         assert set(rollup.keys()) == {"queued", "exec"}
-        tool_id = evt["payload"]["tool_call"]["tool_id"]
-        expected = float(10 + int(tool_id.split("-")[1]))
+        tool_use_id = evt["payload"]["tool_call"]["tool_id"]
+        expected = float(10 + int(tool_use_id.split("-")[1]))
         assert rollup["queued"] == pytest.approx(expected, abs=0.001)
         assert rollup["exec"] == pytest.approx(expected, abs=0.001)

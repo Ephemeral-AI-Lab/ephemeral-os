@@ -18,6 +18,10 @@ from task_center._core.primitives import evaluator_task_id, generator_task_id, p
 from tools._framework.core.context import ToolExecutionContextService
 from tools._framework.core.runtime import ExecutionMetadata
 
+from .test_submission._advisor_approval_fixtures import (
+    build_advisor_approval_messages,
+)
+
 
 @dataclass
 class TaskCenterFixture:
@@ -94,12 +98,27 @@ def make_tool_context(
     messages: list[Any] | None = None,
     role: str | None = "executor",
     agent_type: str | None = None,
+    advisor_approves: str | None = None,
 ) -> ToolExecutionContextService:
+    """Build a tool execution context for a submission-tool test.
+
+    ``advisor_approves`` accepts a terminal-tool name and prepends a synthetic
+    ``ask_advisor`` approval pair to ``conversation_messages`` so the
+    ``AdvisorApprovalPreHook`` lets the call through. Tests that explicitly want
+    to exercise the unapproved path leave this kwarg unset.
+    """
+    base_messages: list[Any] = []
+    if advisor_approves is not None:
+        base_messages.extend(
+            build_advisor_approval_messages(tool_name=advisor_approves)
+        )
+    if messages:
+        base_messages.extend(messages)
     metadata = ExecutionMetadata(
         task_center_task_id=task_id,
         task_center_attempt_id=fixture.attempt_id,
         attempt_runtime=fixture.runtime,
-        conversation_messages=list(messages or []),
+        conversation_messages=base_messages,
     )
     if role is not None:
         metadata["role"] = role

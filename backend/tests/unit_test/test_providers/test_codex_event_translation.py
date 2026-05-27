@@ -1,4 +1,4 @@
-"""Plan §S4 — Codex SSE → ApiStreamEvent translation.
+"""Plan §S4 — Codex SSE → StreamEvent translation.
 
 Exercises the 5+ event types per the v9.2 mapping table.
 
@@ -17,13 +17,15 @@ import pytest
 
 from providers.clients.coding_plan.codex import CodexResponsesClient
 from providers.types import (
-    ApiMessageCompleteEvent,
-    ApiMessageRequest,
-    ApiTextDeltaEvent,
-    ApiThinkingDeltaEvent,
-    ApiToolUseDeltaEvent,
+    MessageRequest,
 )
-from message import ConversationMessage
+from message.events import (
+    AssistantMessageCompleteEvent,
+    AssistantTextDeltaEvent,
+    ThinkingDeltaEvent,
+    ToolUseDeltaEvent,
+)
+from message import Message
 
 
 def _b64url(data: bytes) -> str:
@@ -131,15 +133,15 @@ async def test_translates_text_delta_to_api_text_delta(
     _install_fake_httpx(monkeypatch, _FakeStreamResponse(lines))
 
     client = CodexResponsesClient(db_kwargs=_fake_codex_auth)
-    request = ApiMessageRequest(
+    request = MessageRequest(
         model="gpt-5.5",
-        messages=[ConversationMessage.from_user_text("greet")],
+        messages=[Message.from_user_text("greet")],
     )
 
     events: list[Any] = [ev async for ev in client.stream_message(request)]
-    text_deltas = [e for e in events if isinstance(e, ApiTextDeltaEvent)]
+    text_deltas = [e for e in events if isinstance(e, AssistantTextDeltaEvent)]
     assert [d.text for d in text_deltas] == ["Hello ", "world"]
-    completes = [e for e in events if isinstance(e, ApiMessageCompleteEvent)]
+    completes = [e for e in events if isinstance(e, AssistantMessageCompleteEvent)]
     assert len(completes) == 1
     assert completes[0].usage.input_tokens == 5
     assert completes[0].usage.output_tokens == 2
@@ -168,13 +170,13 @@ async def test_translates_reasoning_summary_to_thinking(
     _install_fake_httpx(monkeypatch, _FakeStreamResponse(lines))
 
     client = CodexResponsesClient(db_kwargs=_fake_codex_auth)
-    request = ApiMessageRequest(
+    request = MessageRequest(
         model="gpt-5.5",
-        messages=[ConversationMessage.from_user_text("think")],
+        messages=[Message.from_user_text("think")],
     )
 
     events = [ev async for ev in client.stream_message(request)]
-    thinking = [e for e in events if isinstance(e, ApiThinkingDeltaEvent)]
+    thinking = [e for e in events if isinstance(e, ThinkingDeltaEvent)]
     assert len(thinking) == 1
     assert thinking[0].text == "I should read the file first."
 
@@ -226,13 +228,13 @@ async def test_translates_function_call_lifecycle_to_tool_use(
     _install_fake_httpx(monkeypatch, _FakeStreamResponse(lines))
 
     client = CodexResponsesClient(db_kwargs=_fake_codex_auth)
-    request = ApiMessageRequest(
+    request = MessageRequest(
         model="gpt-5.5",
-        messages=[ConversationMessage.from_user_text("call_tool")],
+        messages=[Message.from_user_text("call_tool")],
     )
 
     events = [ev async for ev in client.stream_message(request)]
-    tools = [e for e in events if isinstance(e, ApiToolUseDeltaEvent)]
+    tools = [e for e in events if isinstance(e, ToolUseDeltaEvent)]
     assert len(tools) == 1
     assert tools[0].id == "call_1"
     assert tools[0].name == "read_file"
@@ -244,7 +246,7 @@ async def test_in_progress_and_done_events_are_no_op(
     monkeypatch: pytest.MonkeyPatch, _fake_codex_auth: dict[str, Path]
 ) -> None:
     """response.in_progress + response.output_item.done must not break the
-    stream — they're informational and have no ApiStreamEvent equivalent."""
+    stream — they're informational and have no StreamEvent equivalent."""
     lines = [
         _sse_line({"type": "response.created", "response": {"id": "resp_4"}}),
         _sse_line({"type": "response.in_progress", "response": {"id": "resp_4"}}),
@@ -268,11 +270,11 @@ async def test_in_progress_and_done_events_are_no_op(
     events = [
         ev
         async for ev in client.stream_message(
-            ApiMessageRequest(
+            MessageRequest(
                 model="gpt-5.5",
-                messages=[ConversationMessage.from_user_text("x")],
+                messages=[Message.from_user_text("x")],
             )
         )
     ]
-    assert any(isinstance(e, ApiTextDeltaEvent) for e in events)
-    assert any(isinstance(e, ApiMessageCompleteEvent) for e in events)
+    assert any(isinstance(e, AssistantTextDeltaEvent) for e in events)
+    assert any(isinstance(e, AssistantMessageCompleteEvent) for e in events)

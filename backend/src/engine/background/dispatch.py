@@ -9,11 +9,11 @@ from uuid import uuid4
 from pydantic import ValidationError
 
 from engine.background.task_supervisor import BackgroundTaskSupervisor
-from message.messages import ConversationMessage, ToolResultBlock, ToolUseBlock
-from message.stream_events import (
-    BackgroundTaskStarted,
+from message.message import Message, ToolResultBlock, ToolUseBlock
+from message.events import (
+    BackgroundTaskStartedEvent,
     StreamEvent,
-    ToolExecutionCompleted,
+    ToolExecutionCompletedEvent,
 )
 from notification import SystemNotification
 from tools import (
@@ -67,7 +67,7 @@ def launch_background_tool(
     background_tasks: BackgroundTaskSupervisor,
     tool_use: ToolUseBlock,
     execute_tool_call: ToolCallExecutor,
-) -> tuple[ToolResultBlock, BackgroundTaskStarted | None, ToolExecutionCompleted | None]:
+) -> tuple[ToolResultBlock, BackgroundTaskStartedEvent | None, ToolExecutionCompletedEvent | None]:
     """Dispatch a single tool use through the background path."""
     clean_input = {k: v for k, v in tool_use.input.items() if k != "background"}
 
@@ -75,9 +75,9 @@ def launch_background_tool(
     if tool_def is None or getattr(tool_def, "background", "forbidden") == "forbidden":
         msg = f"Tool '{tool_use.name}' does not support background execution."
         return (
-            ToolResultBlock(tool_use_id=tool_use.id, content=msg, is_error=True),
+            ToolResultBlock(tool_use_id=tool_use.tool_use_id, content=msg, is_error=True),
             None,
-            ToolExecutionCompleted(tool_name=tool_use.name, output=msg, is_error=True),
+            ToolExecutionCompletedEvent(tool_name=tool_use.name, output=msg, is_error=True),
         )
 
     validation_result = validate_background_tool_input(
@@ -87,17 +87,17 @@ def launch_background_tool(
     if validation_result is not None:
         return (
             ToolResultBlock(
-                tool_use_id=tool_use.id,
+                tool_use_id=tool_use.tool_use_id,
                 content=validation_result.output,
                 is_error=validation_result.is_error,
                 metadata=validation_result.metadata,
             ),
             None,
-            ToolExecutionCompleted(
+            ToolExecutionCompletedEvent(
                 tool_name=tool_use.name,
                 output=validation_result.output,
                 is_error=validation_result.is_error,
-                tool_id=tool_use.id,
+                tool_use_id=tool_use.tool_use_id,
                 metadata=dict(validation_result.metadata or {}),
             ),
         )
@@ -122,7 +122,7 @@ def launch_background_tool(
         )
         block = await execute_tool_call(
             tool_use.name,
-            tool_use.id,
+            tool_use.tool_use_id,
             clean_input,
             background_metadata,
         )
@@ -145,7 +145,7 @@ def launch_background_tool(
     )
     record_tool_trace(tool_metadata, tool_use.name, clean_input)
     tool_result = ToolResultBlock(
-        tool_use_id=tool_use.id,
+        tool_use_id=tool_use.tool_use_id,
         content=(
             f'[BACKGROUND LAUNCHED] task_id="{task_alias}" tool={tool_use.name}\n'
             f"Use this task_id with "
@@ -162,7 +162,7 @@ def launch_background_tool(
 
 def dispatch_background_tool_call(
     context: QueryContext,
-    conversation_messages: list[ConversationMessage],
+    conversation_messages: list[Message],
     background_tasks: BackgroundTaskSupervisor,
     tool_call: ToolUseBlock,
     tool_results: list[ToolResultBlock],

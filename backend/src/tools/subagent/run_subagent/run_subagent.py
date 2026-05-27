@@ -6,7 +6,7 @@ working while the subagent runs. Peek progress with
 ``wait_background_tasks()``.
 
 The subagent must terminate via a registered terminal tool; whatever
-``ToolResult`` the engine stamps with ``does_terminate=True`` becomes this
+``ToolResult`` the engine stamps with ``is_terminal=True`` becomes this
 tool's output. If the subagent exits without calling a terminal tool, the bg
 task is marked failed and ``check_background_task_result`` falls back to the
 message peek.
@@ -27,8 +27,8 @@ from pydantic import BaseModel, Field
 from agents import AgentType
 from sandbox._shared.models import Intent
 from engine.background.task_supervisor import SUBAGENT_TASK_TYPE
-from message.messages import (
-    ConversationMessage,
+from message.message import (
+    Message,
     TextBlock,
     ThinkingBlock,
     ToolResultBlock,
@@ -74,7 +74,7 @@ def _render_block(block: Any) -> str:
     return ""
 
 
-def format_last_n_messages(messages: list[ConversationMessage], n: int) -> str:
+def format_last_n_messages(messages: list[Message], n: int) -> str:
     """Render the last *n* messages of a subagent for the parent's peek view."""
     if not messages:
         return "(no messages yet)"
@@ -233,7 +233,7 @@ async def run_subagent(
         persist_agent_run=False,
         extra_tool_metadata=sub_meta,
         on_agent_spawned=_on_spawned,
-        initial_messages=[ConversationMessage.from_user_text(prompt)],
+        initial_messages=[Message.from_user_text(prompt)],
     )
 
     # Stamp the metadata flag check_background_task_result uses to

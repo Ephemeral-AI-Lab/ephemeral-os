@@ -21,11 +21,13 @@ import pytest
 from providers.clients.coding_plan.codex import CodexResponsesClient
 from providers.errors import AuthenticationFailure
 from providers.types import (
-    ApiMessageCompleteEvent,
-    ApiMessageRequest,
-    ApiTextDeltaEvent,
+    MessageRequest,
 )
-from message import ConversationMessage
+from message.events import (
+    AssistantMessageCompleteEvent,
+    AssistantTextDeltaEvent,
+)
+from message import Message
 
 
 def _b64url(data: bytes) -> str:
@@ -140,10 +142,10 @@ def _ok_sse_lines() -> list[str]:
     ]
 
 
-def _request() -> ApiMessageRequest:
-    return ApiMessageRequest(
+def _request() -> MessageRequest:
+    return MessageRequest(
         model="gpt-5.5",
-        messages=[ConversationMessage.from_user_text("hi")],
+        messages=[Message.from_user_text("hi")],
     )
 
 
@@ -196,9 +198,9 @@ async def test_refresh_true_retries_once_with_new_token(
     # Two httpx.AsyncClient() invocations: the 401 attempt + the retry.
     assert staged_http.calls == 2
     # The retry's SSE deltas reached the consumer.
-    text_deltas = [e for e in events if isinstance(e, ApiTextDeltaEvent)]
+    text_deltas = [e for e in events if isinstance(e, AssistantTextDeltaEvent)]
     assert [d.text for d in text_deltas] == ["after-refresh"]
-    completes = [e for e in events if isinstance(e, ApiMessageCompleteEvent)]
+    completes = [e for e in events if isinstance(e, AssistantMessageCompleteEvent)]
     assert len(completes) == 1
     # In-place mutation by _refresh_credentials rotated both fields.
     assert client._access_token == "NEW-access"

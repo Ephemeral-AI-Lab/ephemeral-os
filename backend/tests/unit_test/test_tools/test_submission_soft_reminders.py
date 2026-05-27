@@ -6,7 +6,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from message.messages import ConversationMessage, ToolResultBlock, ToolUseBlock
+from message.message import Message, ToolResultBlock, ToolUseBlock
 from notification import dispatch_rules
 from notification import SystemNotificationService
 from tools.submission.notification_triggers import (
@@ -18,31 +18,31 @@ from tools.submission.notification_triggers import (
 pytestmark = pytest.mark.asyncio
 
 
-def _edit_messages() -> list[ConversationMessage]:
+def _edit_messages() -> list[Message]:
     return [
-        ConversationMessage(
+        Message(
             role="assistant",
-            content=[ToolUseBlock(id="toolu_edit", name="shell", input={})],
+            content=[ToolUseBlock(tool_use_id="toolu_edit", name="shell", input={})],
         )
     ]
 
 
-def _resolver_messages(count: int) -> list[ConversationMessage]:
-    messages: list[ConversationMessage] = []
+def _resolver_messages(count: int) -> list[Message]:
+    messages: list[Message] = []
     for index in range(count):
-        tool_id = f"toolu_resolver_{index}"
+        tool_use_id = f"toolu_resolver_{index}"
         messages.append(
-            ConversationMessage(
+            Message(
                 role="assistant",
-                content=[ToolUseBlock(id=tool_id, name="ask_resolver", input={})],
+                content=[ToolUseBlock(tool_use_id=tool_use_id, name="ask_resolver", input={})],
             )
         )
         messages.append(
-            ConversationMessage(
+            Message(
                 role="user",
                 content=[
                     ToolResultBlock(
-                        tool_use_id=tool_id,
+                        tool_use_id=tool_use_id,
                         content="not resolved",
                         metadata={"resolver": {"resolved": False}},
                     )

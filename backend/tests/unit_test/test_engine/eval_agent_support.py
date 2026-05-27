@@ -30,17 +30,17 @@ from typing import Any
 from agents import AgentDefinition
 from config.settings import Settings, load_settings
 from engine.api import run_query
-from message.messages import ConversationMessage
+from message.message import Message
 from message.event_printer import format_background_start_detail
-from message.stream_events import (
-    AssistantMessageComplete,
-    AssistantTextDelta,
-    BackgroundTaskStarted,
+from message.events import (
+    AssistantMessageCompleteEvent,
+    AssistantTextDeltaEvent,
+    BackgroundTaskStartedEvent,
     StreamEvent,
-    ThinkingDelta,
-    ToolExecutionCancelled,
-    ToolExecutionCompleted,
-    ToolExecutionStarted,
+    ThinkingDeltaEvent,
+    ToolExecutionCancelledEvent,
+    ToolExecutionCompletedEvent,
+    ToolExecutionStartedEvent,
 )
 from notification import SystemNotification
 from providers.types import SupportsStreamingMessages, UsageSnapshot
@@ -84,7 +84,7 @@ class EvalResult:
 
         parts: list[str] = []
         for event in self.events:
-            if isinstance(event, AssistantMessageComplete):
+            if isinstance(event, AssistantMessageCompleteEvent):
                 for block in event.message.content:
                     if isinstance(block, TextBlock):
                         parts.append(block.text)
@@ -94,7 +94,7 @@ class EvalResult:
     @property
     def thinking_text(self) -> str:
         """Concatenated thinking/reasoning text."""
-        return "".join(e.text for e in self.events if isinstance(e, ThinkingDelta))
+        return "".join(e.text for e in self.events if isinstance(e, ThinkingDeltaEvent))
 
     # -- Tool helpers --
 
@@ -121,31 +121,31 @@ class EvalResult:
         """Return all events that are instances of *cls*."""
         return [e for e in self.events if isinstance(e, cls)]
 
-    def tools_started(self) -> list[ToolExecutionStarted]:
-        return self._of_type(ToolExecutionStarted)
+    def tools_started(self) -> list[ToolExecutionStartedEvent]:
+        return self._of_type(ToolExecutionStartedEvent)
 
-    def tools_completed(self) -> list[ToolExecutionCompleted]:
-        return self._of_type(ToolExecutionCompleted)
+    def tools_completed(self) -> list[ToolExecutionCompletedEvent]:
+        return self._of_type(ToolExecutionCompletedEvent)
 
-    def tools_cancelled(self) -> list[ToolExecutionCancelled]:
-        return self._of_type(ToolExecutionCancelled)
+    def tools_cancelled(self) -> list[ToolExecutionCancelledEvent]:
+        return self._of_type(ToolExecutionCancelledEvent)
 
-    def background_started(self) -> list[BackgroundTaskStarted]:
-        return self._of_type(BackgroundTaskStarted)
+    def background_started(self) -> list[BackgroundTaskStartedEvent]:
+        return self._of_type(BackgroundTaskStartedEvent)
 
     def system_notifications(self) -> list[SystemNotification]:
         return self._of_type(SystemNotification)
 
-    def assistant_messages(self) -> list[AssistantMessageComplete]:
-        return self._of_type(AssistantMessageComplete)
+    def assistant_messages(self) -> list[AssistantMessageCompleteEvent]:
+        return self._of_type(AssistantMessageCompleteEvent)
 
-    def text_deltas(self) -> list[AssistantTextDelta]:
-        return self._of_type(AssistantTextDelta)
+    def text_deltas(self) -> list[AssistantTextDeltaEvent]:
+        return self._of_type(AssistantTextDeltaEvent)
 
     # -- Error helpers --
 
     @property
-    def error_events(self) -> list[ToolExecutionCompleted]:
+    def error_events(self) -> list[ToolExecutionCompletedEvent]:
         """Tool completions that were errors."""
         return [e for e in self.tools_completed() if e.is_error]
 
@@ -154,11 +154,11 @@ class EvalResult:
         return len(self.error_events) > 0
 
     @property
-    def non_cancel_error_events(self) -> list[ToolExecutionCompleted]:
+    def non_cancel_error_events(self) -> list[ToolExecutionCompletedEvent]:
         """Error events excluding cancelled/killed process artifacts.
 
         Filters out:
-        - ToolExecutionCompleted with exit_code -1 and empty stdout (process
+        - ToolExecutionCompletedEvent with exit_code -1 and empty stdout (process
           killed by cancellation or transient SDK failure)
         """
 
@@ -172,7 +172,7 @@ class EvalResult:
             except (json.JSONDecodeError, AttributeError):
                 return False
 
-        results: list[ToolExecutionCompleted] = []
+        results: list[ToolExecutionCompletedEvent] = []
         for tool_evt in self.tools_completed():
             if tool_evt.is_error and not _is_killed_process(tool_evt.output):
                 results.append(tool_evt)
@@ -183,7 +183,7 @@ class EvalResult:
         return len(self.non_cancel_error_events) > 0
 
     @property
-    def unrecovered_error_events(self) -> list[ToolExecutionCompleted]:
+    def unrecovered_error_events(self) -> list[ToolExecutionCompletedEvent]:
         """Non-cancel errors where no later successful call to the same tool exists.
 
         An agent may hit an intermediate failure (e.g. ``cat`` on a file not yet
@@ -198,7 +198,7 @@ class EvalResult:
         all_completed = list(self.tools_completed())
         event_index: dict[int, int] = {id(e): i for i, e in enumerate(self.events)}
 
-        results: list[ToolExecutionCompleted] = []
+        results: list[ToolExecutionCompletedEvent] = []
         for err in errors:
             err_idx = event_index.get(id(err), len(self.events))
             recovered = False
@@ -246,7 +246,7 @@ class EvalAgent:
         self._settings = settings
         self._model = model
         self._api_client_ref = api_client
-        self._messages: list[ConversationMessage] = []
+        self._messages: list[Message] = []
         self._runtime_config = runtime_config
 
     # -- Static helpers for credential checks --
@@ -451,7 +451,7 @@ class EvalAgent:
             metadata: Optional dict of custom metadata to include in result.
         """
         self._messages.clear()
-        self._messages.append(ConversationMessage.from_user_text(prompt))
+        self._messages.append(Message.from_user_text(prompt))
         start = time.monotonic()
         events: list[StreamEvent] = []
         tool_calls: list[ToolCallResult] = []
@@ -474,10 +474,10 @@ class EvalAgent:
                 total_usage.input_tokens += usage.input_tokens
                 total_usage.output_tokens += usage.output_tokens
 
-            if isinstance(event, ThinkingDelta):
+            if isinstance(event, ThinkingDeltaEvent):
                 thinking_buf.append(event.text)
                 continue
-            elif isinstance(event, AssistantTextDelta):
+            elif isinstance(event, AssistantTextDeltaEvent):
                 text_buf.append(event.text)
                 continue
 
@@ -488,17 +488,17 @@ class EvalAgent:
                 _out(f"    [text] {_truncate(''.join(text_buf), 500)}")
                 text_buf.clear()
 
-            if isinstance(event, ToolExecutionStarted):
+            if isinstance(event, ToolExecutionStartedEvent):
                 _out(
                     f"    -> tool_start: {event.tool_name}({_truncate(str(event.tool_input), 120)})"
                 )
-            elif isinstance(event, ToolExecutionCompleted):
+            elif isinstance(event, ToolExecutionCompletedEvent):
                 status = "ERROR" if event.is_error else "ok"
                 _out(f"    <- tool_done:  {event.tool_name} [{status}] {event.output}")
-            elif isinstance(event, AssistantMessageComplete):
+            elif isinstance(event, AssistantMessageCompleteEvent):
                 for tb in event.message.tool_uses:
                     tool_calls.append(ToolCallResult(name=tb.name, input=tb.input))
-            elif isinstance(event, BackgroundTaskStarted):
+            elif isinstance(event, BackgroundTaskStartedEvent):
                 detail = format_background_start_detail(event.tool_name, event.tool_input)
                 _out(
                     f"    >> bg_start:   {event.tool_name} task_id={event.task_id}{detail}"

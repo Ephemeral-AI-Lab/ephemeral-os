@@ -13,9 +13,9 @@ from engine.tool_call.phase_buffer import (
     PHASE_RELEASE,
     record_phase,
 )
-from message.messages import ConversationMessage
-from message.messages import ToolResultBlock
-from message.stream_events import StreamEvent, ToolExecutionStarted
+from message.message import Message
+from message.message import ToolResultBlock
+from message.events import StreamEvent, ToolExecutionStartedEvent
 from sandbox._shared.clock import monotonic_now
 from tools._framework.core.base import BaseTool
 from tools._framework.core.context import ToolExecutionContextService
@@ -48,7 +48,7 @@ async def execute_tool_call(
     tool_use_id: str,
     tool_input: dict[str, object],
     extra_metadata: ExecutionMetadata | dict[str, Any] | None = None,
-    conversation_messages: list[ConversationMessage] | None = None,
+    conversation_messages: list[Message] | None = None,
 ) -> ToolResultBlock:
     async def _noop_emit(event: StreamEvent) -> None:
         del event
@@ -73,7 +73,7 @@ async def execute_tool_call_streaming(
     *,
     emit: "EmitStreamEvent",
     extra_metadata: ExecutionMetadata | dict[str, Any] | None = None,
-    conversation_messages: list[ConversationMessage] | None = None,
+    conversation_messages: list[Message] | None = None,
     consume_budget: bool = True,
     emit_started: bool = True,
 ) -> ToolResultBlock:
@@ -93,7 +93,7 @@ async def execute_tool_call_streaming(
         context.tool_metadata.copy() if context.tool_metadata is not None else ExecutionMetadata()
     )
     metadata.tool_registry = context.tool_registry
-    metadata.tool_id = tool_use_id
+    metadata.tool_use_id = tool_use_id
     if context.task_center_task_id:
         metadata.task_center_task_id = context.task_center_task_id
     if conversation_messages is not None:
@@ -122,7 +122,7 @@ async def execute_tool_call_streaming(
         content=result.output,
         is_error=result.is_error,
         metadata=result.metadata,
-        does_terminate=result.does_terminate,
+        is_terminal=result.is_terminal,
     )
     return tool_result
 
@@ -167,7 +167,7 @@ async def execute_tool_once(
 
     if emit_started:
         await emit(
-            ToolExecutionStarted(
+            ToolExecutionStartedEvent(
                 tool_name=tool.name,
                 tool_input=parsed_input.model_dump(mode="json"),
             )
@@ -186,6 +186,6 @@ async def execute_tool_once(
     release_start = monotonic_now()
     final = hook_pipeline.finalize_result(hooked, effective_input=parsed_input)
     if tool.is_terminal_tool and not final.is_error:
-        final = replace(final, does_terminate=True)
+        final = replace(final, is_terminal=True)
     record_phase(PHASE_RELEASE, (monotonic_now() - release_start) * 1000.0)
     return final

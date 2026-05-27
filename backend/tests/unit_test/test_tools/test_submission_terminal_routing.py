@@ -57,13 +57,15 @@ async def test_submit_execution_success_calls_apply_generator_submission(
     result = await execute_tool_once(
         submit_execution_success,
         {"summary": "done", "artifacts": ["artifact"]},
-        make_tool_context(fixture, generator_id),
+        make_tool_context(
+            fixture, generator_id, advisor_approves="submit_execution_success"
+        ),
         emit=_noop_emit,
     )
 
     task = task_store.get_task(generator_id)
     assert not result.is_error
-    assert result.does_terminate
+    assert result.is_terminal
     assert task is not None
     assert task["status"] == TaskCenterTaskStatus.DONE.value
     assert task["summaries"][-1]["payload"]["generator_role"] == "executor"
@@ -84,7 +86,9 @@ async def test_submit_execution_blocker_calls_apply_generator_submission(
     result = await execute_tool_once(
         submit_execution_blocker,
         {"summary": "blocked by missing dependency"},
-        make_tool_context(fixture, generator_id),
+        make_tool_context(
+            fixture, generator_id, advisor_approves="submit_execution_blocker"
+        ),
         emit=_noop_emit,
     )
 
@@ -110,7 +114,12 @@ async def test_submit_verification_success_calls_apply_generator_submission(
     result = await execute_tool_once(
         submit_verification_success,
         {"summary": "verified", "checks": ["pytest"]},
-        make_tool_context(fixture, generator_id, role="verifier"),
+        make_tool_context(
+            fixture,
+            generator_id,
+            role="verifier",
+            advisor_approves="submit_verification_success",
+        ),
         emit=_noop_emit,
     )
 
@@ -135,7 +144,9 @@ async def test_submit_evaluation_success_calls_apply_evaluator_submission(
     result = await execute_tool_once(
         submit_evaluation_success,
         {"summary": "passed", "passed_criteria": ["criterion"]},
-        make_tool_context(fixture, evaluator_id),
+        make_tool_context(
+            fixture, evaluator_id, advisor_approves="submit_evaluation_success"
+        ),
         emit=_noop_emit,
     )
 
@@ -160,7 +171,9 @@ async def test_submit_evaluation_failure_calls_apply_evaluator_submission(
     result = await execute_tool_once(
         submit_evaluation_failure,
         {"summary": "failed", "failed_criteria": ["criterion"]},
-        make_tool_context(fixture, evaluator_id),
+        make_tool_context(
+            fixture, evaluator_id, advisor_approves="submit_evaluation_failure"
+        ),
         emit=_noop_emit,
     )
 
@@ -185,7 +198,9 @@ async def test_submit_execution_handoff_starts_delegated_request(
     result = await execute_tool_once(
         submit_execution_handoff,
         {"goal_handoff": "solve delegated task"},
-        make_tool_context(fixture, generator_id),
+        make_tool_context(
+            fixture, generator_id, advisor_approves="submit_execution_handoff"
+        ),
         emit=_noop_emit,
     )
 
@@ -195,7 +210,7 @@ async def test_submit_execution_handoff_starts_delegated_request(
     created_attempt = attempt_store.get(result.metadata["initial_attempt_id"])
 
     assert not result.is_error
-    assert result.does_terminate
+    assert result.is_terminal
     assert task is not None
     assert task["status"] == TaskCenterTaskStatus.WAITING_GOAL.value
     assert delegated_request is not None
@@ -244,13 +259,15 @@ async def test_submit_execution_handoff_accepts_any_generator_agent_profile(
     result = await execute_tool_once(
         submit_execution_handoff,
         {"goal_handoff": "delegate broad custom generator work"},
-        make_tool_context(fixture, generator_id),
+        make_tool_context(
+            fixture, generator_id, advisor_approves="submit_execution_handoff"
+        ),
         emit=_noop_emit,
     )
 
     task = task_store.get_task(generator_id)
     assert not result.is_error
-    assert result.does_terminate
+    assert result.is_terminal
     assert task is not None
     assert task["status"] == TaskCenterTaskStatus.WAITING_GOAL.value
 
@@ -270,7 +287,11 @@ async def test_submit_execution_handoff_return_updates_outer_generator(
     result = await execute_tool_once(
         submit_execution_handoff,
         {"goal_handoff": "solve delegated task"},
-        make_tool_context(fixture, outer_generator_id),
+        make_tool_context(
+            fixture,
+            outer_generator_id,
+            advisor_approves="submit_execution_handoff",
+        ),
         emit=_noop_emit,
     )
     delegated_attempt_id = result.metadata["initial_attempt_id"]

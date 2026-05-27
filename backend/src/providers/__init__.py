@@ -3,12 +3,7 @@
 from __future__ import annotations
 
 from providers.types import (
-    ApiMessageCompleteEvent,
-    ApiMessageRequest,
-    ApiStreamEvent,
-    ApiTextDeltaEvent,
-    ApiThinkingDeltaEvent,
-    ApiToolUseDeltaEvent,
+    MessageRequest,
     SupportsStreamingMessages,
     UsageSnapshot,
 )
@@ -22,12 +17,7 @@ from providers.provider import make_api_client
 
 __all__ = [
     # Types & protocol
-    "ApiMessageRequest",
-    "ApiTextDeltaEvent",
-    "ApiThinkingDeltaEvent",
-    "ApiToolUseDeltaEvent",
-    "ApiMessageCompleteEvent",
-    "ApiStreamEvent",
+    "MessageRequest",
     "SupportsStreamingMessages",
     "UsageSnapshot",
     # Errors

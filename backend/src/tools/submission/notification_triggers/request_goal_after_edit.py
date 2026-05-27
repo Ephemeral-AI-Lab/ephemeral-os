@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from message.messages import ConversationMessage, ToolUseBlock
+from message.message import Message, ToolUseBlock
 from notification import NotificationRule
 
 
@@ -13,7 +13,7 @@ _EDIT_TOOL_NAMES = frozenset({"write_file", "edit_file", "shell"})
 
 def _generator_has_edited(messages: list[Any]) -> bool:
     for message in messages:
-        if not isinstance(message, ConversationMessage):
+        if not isinstance(message, Message):
             continue
         for block in message.content:
             if isinstance(block, ToolUseBlock) and block.name in _EDIT_TOOL_NAMES:

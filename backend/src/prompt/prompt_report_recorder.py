@@ -11,7 +11,7 @@ from audit.jsonl import append_jsonl_event
 
 if TYPE_CHECKING:
     from engine.query.context import QueryContext
-    from message.messages import ConversationMessage, ToolResultBlock
+    from message.message import Message, ToolResultBlock
     from providers.types import UsageSnapshot
 
 logger = logging.getLogger(__name__)
@@ -70,7 +70,7 @@ class PromptReportRecorder:
         self,
         *,
         seq: int,
-        message: "ConversationMessage",
+        message: "Message",
         usage: "UsageSnapshot",
     ) -> None:
         self.record(

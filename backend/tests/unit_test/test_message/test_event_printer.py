@@ -1,15 +1,15 @@
 import message.event_printer as event_printer
 from message.event_printer import MultiAgentEventPrinter
-from message.stream_events import (
-    AssistantMessageComplete,
-    BackgroundTaskStarted,
-    ThinkingDelta,
-    ToolExecutionCompleted,
-    ToolExecutionStarted,
+from message.events import (
+    AssistantMessageCompleteEvent,
+    BackgroundTaskStartedEvent,
+    ThinkingDeltaEvent,
+    ToolExecutionCompletedEvent,
+    ToolExecutionStartedEvent,
 )
 from notification import SystemNotification
 from providers.types import UsageSnapshot
-from message.messages import ConversationMessage, TextBlock
+from message.message import Message, TextBlock
 
 
 def test_printer_includes_run_id_in_prefix() -> None:
@@ -17,7 +17,7 @@ def test_printer_includes_run_id_in_prefix() -> None:
     printer = MultiAgentEventPrinter(color=False, sink=lines.append)
 
     printer.emit(
-        ToolExecutionStarted(
+        ToolExecutionStartedEvent(
             tool_name="pytest",
             tool_input={"k": "value"},
             agent_name="developer",
@@ -41,7 +41,7 @@ def test_printer_timestamps_use_module_time(monkeypatch) -> None:
     )
 
     printer.emit(
-        ToolExecutionStarted(
+        ToolExecutionStartedEvent(
             tool_name="pytest",
             tool_input={},
             agent_name="developer",
@@ -57,11 +57,11 @@ def test_printer_keeps_run_id_for_flushed_thinking() -> None:
     printer = MultiAgentEventPrinter(color=False, sink=lines.append)
 
     printer.emit(
-        ThinkingDelta(text="working", agent_name="analysis_agent", run_id="b88848c71234425a")
+        ThinkingDeltaEvent(text="working", agent_name="analysis_agent", run_id="b88848c71234425a")
     )
     printer.emit(
-        AssistantMessageComplete(
-            message=ConversationMessage(role="assistant", content=[TextBlock(text="done")]),
+        AssistantMessageCompleteEvent(
+            message=Message(role="assistant", content=[TextBlock(text="done")]),
             usage=UsageSnapshot(),
             agent_name="analysis_agent",
             run_id="b88848c71234425a",
@@ -76,7 +76,7 @@ def test_printer_renders_structured_shell_error_detail() -> None:
     printer = MultiAgentEventPrinter(color=False, sink=lines.append)
 
     printer.emit(
-        ToolExecutionCompleted(
+        ToolExecutionCompletedEvent(
             tool_name="shell",
             output=(
                 '{"cwd": "/testbed", "status": "error", '
@@ -102,7 +102,7 @@ def test_printer_renders_structured_shell_cmd_error_detail() -> None:
     printer = MultiAgentEventPrinter(color=False, sink=lines.append)
 
     printer.emit(
-        ToolExecutionCompleted(
+        ToolExecutionCompletedEvent(
             tool_name="shell",
             output=(
                 '{"cwd": "/testbed", "status": "error", '
@@ -129,7 +129,7 @@ def test_printer_keeps_plain_shell_error_payload() -> None:
     printer = MultiAgentEventPrinter(color=False, sink=lines.append)
 
     printer.emit(
-        ToolExecutionCompleted(
+        ToolExecutionCompletedEvent(
             tool_name="shell",
             output="Execution failed: sandbox unavailable",
             is_error=True,
@@ -149,7 +149,7 @@ def test_printer_renders_subagent_background_launch_context() -> None:
     printer = MultiAgentEventPrinter(color=False, sink=lines.append)
 
     printer.emit(
-        BackgroundTaskStarted(
+        BackgroundTaskStartedEvent(
             task_id="bg_1",
             tool_name="run_subagent",
             tool_input={

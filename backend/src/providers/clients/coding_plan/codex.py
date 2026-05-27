@@ -28,8 +28,8 @@ from uuid import uuid4
 
 import httpx
 
-from message import ConversationMessage
-from message.messages import TextBlock, ToolUseBlock
+from message import Message
+from message.message import TextBlock, ToolUseBlock
 from providers.auth_strategy import LLM_CLIENT_MODE_CODING_PLAN
 from providers.errors import (
     AuthenticationFailure,
@@ -38,13 +38,15 @@ from providers.errors import (
     RequestFailure,
 )
 from providers.types import (
-    ApiMessageCompleteEvent,
-    ApiMessageRequest,
-    ApiStreamEvent,
-    ApiTextDeltaEvent,
-    ApiThinkingDeltaEvent,
-    ApiToolUseDeltaEvent,
+    MessageRequest,
     UsageSnapshot,
+)
+from message.events import (
+    AssistantMessageCompleteEvent,
+    AssistantTextDeltaEvent,
+    StreamEvent,
+    ThinkingDeltaEvent,
+    ToolUseDeltaEvent,
 )
 
 
@@ -234,8 +236,8 @@ class CodexResponsesClient:
             "Content-Type": "application/json",
         }
 
-    def build_body(self, request: ApiMessageRequest) -> dict[str, Any]:
-        """Translate an ``ApiMessageRequest`` into a Codex Responses-API body.
+    def build_body(self, request: MessageRequest) -> dict[str, Any]:
+        """Translate an ``MessageRequest`` into a Codex Responses-API body.
 
         Tool envelope FLAT (plan v9.2); ``max_output_tokens`` omitted (plan v9.2).
         """
@@ -282,8 +284,8 @@ class CodexResponsesClient:
     # ------------------------------------------------------------------
 
     async def stream_message(
-        self, request: ApiMessageRequest
-    ) -> AsyncIterator[ApiStreamEvent]:
+        self, request: MessageRequest
+    ) -> AsyncIterator[StreamEvent]:
         body = self.build_body(request)
         response_id: str | None = None
         text_acc = ""
@@ -356,11 +358,11 @@ class CodexResponsesClient:
                             if event_type == "response.output_text.delta":
                                 delta = payload.get("delta", "")
                                 text_acc += delta
-                                yield ApiTextDeltaEvent(text=delta)
+                                yield AssistantTextDeltaEvent(text=delta)
                                 continue
 
                             if event_type == "response.reasoning_summary_text.delta":
-                                yield ApiThinkingDeltaEvent(text=payload.get("delta", ""))
+                                yield ThinkingDeltaEvent(text=payload.get("delta", ""))
                                 continue
 
                             if event_type == "response.output_item.added":
@@ -393,13 +395,13 @@ class CodexResponsesClient:
                                     args = {}
                                 collected_tools.append(
                                     ToolUseBlock(
-                                        id=buf["call_id"],
+                                        tool_use_id=buf["call_id"],
                                         name=buf["name"],
                                         input=args,
                                     )
                                 )
-                                yield ApiToolUseDeltaEvent(
-                                    id=buf["call_id"], name=buf["name"], input=args
+                                yield ToolUseDeltaEvent(
+                                    tool_use_id=buf["call_id"], name=buf["name"], input=args
                                 )
                                 continue
 
@@ -429,8 +431,8 @@ class CodexResponsesClient:
         if text_acc:
             content.append(TextBlock(text=text_acc))
         content.extend(collected_tools)
-        message = ConversationMessage(role="assistant", content=content)
-        yield ApiMessageCompleteEvent(
+        message = Message(role="assistant", content=content)
+        yield AssistantMessageCompleteEvent(
             message=message,
             usage=UsageSnapshot(input_tokens=usage_in, output_tokens=usage_out),
             stop_reason=stop_reason,

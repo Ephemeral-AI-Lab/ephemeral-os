@@ -17,8 +17,8 @@ import pytest
 
 from providers.clients.anthropic_native import AnthropicClient
 from providers.errors import AuthenticationFailure, RateLimitFailure
-from providers.types import ApiMessageRequest
-from message import ConversationMessage
+from providers.types import MessageRequest
+from message import Message
 
 
 def _make_api_status_error(status_code: int, message: str) -> anthropic.APIStatusError:
@@ -28,10 +28,10 @@ def _make_api_status_error(status_code: int, message: str) -> anthropic.APIStatu
     return anthropic.APIStatusError(message=message, response=mock_response, body=None)
 
 
-def _make_request() -> ApiMessageRequest:
-    return ApiMessageRequest(
+def _make_request() -> MessageRequest:
+    return MessageRequest(
         model="claude-sonnet-4-20250514",
-        messages=[ConversationMessage.from_user_text("hi")],
+        messages=[Message.from_user_text("hi")],
     )
 
 

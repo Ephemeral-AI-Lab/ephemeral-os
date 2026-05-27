@@ -73,7 +73,7 @@ def test_node_from_caller_uses_task_center_fields_before_legacy_run_id() -> None
             task_center_attempt_id="attempt-1",
             task_center_goal_id="goal-1",
             task_center_request_id="request-1",
-            tool_id="tool-1",
+            tool_use_id="tool-1",
         ),
     )
 
@@ -86,7 +86,7 @@ def test_node_from_caller_uses_task_center_fields_before_legacy_run_id() -> None
     assert node.agent_run_id == "agent-run-1"
     assert node.sandbox_id == "sb-1"
     assert node.tool_name == "edit_file"
-    assert node.tool_id == "tool-1"
+    assert node.tool_use_id == "tool-1"
 
 
 def test_events_from_result_emits_one_terminal_operation_event_plus_subsystems() -> None:
