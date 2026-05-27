@@ -63,7 +63,7 @@
   </div>
 </div>
 
-<section id="registration-map" data-last-reviewed-commit="422aa5710" data-evidence-paths="backend/src/tools/submission/_factory.py backend/src/tools/_framework/factory.py backend/src/tools/submission/planner backend/src/tools/submission/executor backend/src/tools/submission/verifier backend/src/tools/submission/evaluator backend/src/tools/submission/advisor backend/src/tools/submission/explorer backend/tests/unit_test/test_tools/test_submission_tool_registration.py">
+<section id="registration-map" data-last-reviewed-commit="422aa57100f55131995ca73977c22ea0f9402a09" data-evidence-paths="backend/src/tools/submission/_factory.py backend/src/tools/_framework/factory.py backend/src/tools/submission/planner backend/src/tools/submission/executor backend/src/tools/submission/verifier backend/src/tools/submission/evaluator backend/src/tools/submission/advisor backend/src/tools/submission/explorer backend/tests/unit_test/test_tools/test_submission_tool_registration.py">
 <h2>Registration Map <a class="anchor" href="#registration-map">#</a></h2>
 <p><code>make_submission_tools()</code> returns the submission tool set registered by the framework factory: planner submissions, executor submissions, verifier submissions, evaluator submissions, helper feedback/result tools, and exploration result submission.</p>
 <table>
@@ -100,7 +100,7 @@
 <p>This flow is the TaskCenter handoff boundary: agents do not communicate peer-to-peer. The child goal is persisted state, and the parent resumes through a closure report delivered back into the orchestrator.</p>
 </section>
 
-<section id="helper-and-explorer-results" data-last-reviewed-commit="422aa5710" data-evidence-paths="backend/src/tools/submission/advisor/submit_advisor_feedback/submit_advisor_feedback.py backend/src/tools/submission/explorer/submit_exploration_result/submit_exploration_result.py backend/tests/unit_test/test_tools/test_submission_helper_tools.py backend/tests/unit_test/test_tools/test_ask_advisor_retry.py backend/tests/unit_test/test_tools/test_submission_tool_registration.py">
+<section id="helper-and-explorer-results" data-last-reviewed-commit="422aa57100f55131995ca73977c22ea0f9402a09" data-evidence-paths="backend/src/tools/submission/advisor/submit_advisor_feedback/submit_advisor_feedback.py backend/src/tools/submission/explorer/submit_exploration_result/submit_exploration_result.py backend/tests/unit_test/test_tools/test_submission_helper_tools.py backend/tests/unit_test/test_tools/test_ask_advisor_retry.py backend/tests/unit_test/test_tools/test_submission_tool_registration.py">
 <h2>Helper and Explorer Results <a class="anchor" href="#helper-and-explorer-results">#</a></h2>
 <p><code>submit_advisor_feedback</code> and <code>submit_exploration_result</code> are terminal tools, but they do not resolve an attempt context or call TaskCenter mutators. They return bounded output text plus metadata that the caller can interpret: advisor verdict and role, or explorer findings and references.</p>
 <p>This distinction is intentional. Helper agents terminate their own helper run and provide structured metadata to the parent workflow, while the parent TaskCenter attempt state remains owned by the planner/executor/verifier/evaluator submission paths and the orchestrator.</p>
