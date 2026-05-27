@@ -54,7 +54,7 @@
 
 <p class="lead">TaskCenter terminal tools are agent-facing submission endpoints. They are normal registered tools until a successful call crosses the tool framework, where the result is stamped as terminating and the engine loop stops the agent run.</p>
 <div class="summary">
-  <p>The current shape is intentionally layered: descriptors tell agents when to choose each terminal, submission tools validate and project role payloads, the framework validates output and stamps <code>is_terminal</code>, and the engine owns terminal exclusivity. Advisor and resolver helpers use the same terminal contract for their own child runs, but their results return to the caller instead of mutating the parent attempt directly.</p>
+  <p>The current shape is intentionally layered: descriptors tell agents when to choose each terminal, submission tools validate and project role payloads, the framework validates output and stamps <code>is_terminal</code>, and the engine owns terminal exclusivity. The advisor helper uses the same terminal contract for its own child run, but its result returns to the caller instead of mutating the parent attempt directly.</p>
 </div>
 
 <section id="terminal-contract-map" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="backend/src/tools/submission/_factory.py backend/src/tools/_terminals/registry.py backend/src/tools/_framework/execution/tool_call.py backend/src/tools/_framework/core/validation.py backend/src/engine/tool_call/dispatch.py backend/src/engine/query/loop.py docs/architecture/tools/submission.html docs/architecture/tools/terminals.html">
@@ -92,7 +92,7 @@
 </pre>
 <div class="sequence" aria-label="Terminal execution sequence">
   <ol>
-    <li><span><code>make_submission_tools()</code> registers planner, executor, verifier, evaluator, advisor, resolver, and explorer submission tools as one framework tool set.</span></li>
+    <li><span><code>make_submission_tools()</code> registers planner, executor, verifier, evaluator, advisor, and explorer submission tools as one framework tool set.</span></li>
     <li><span>Each terminal tool is decorated with <code>is_terminal_tool=True</code> and a concrete pydantic input model. Most use <code>TextToolOutput</code>, so non-error output must validate as text before the result can terminate the run.</span></li>
     <li><span><code>engine.query.loop</code> derives <code>context.terminal_tools</code> from the active tool registry. If a run has any terminals, streamed tool calls are deferred until the final assistant message is available.</span></li>
     <li><span><code>engine.tool_call.dispatch</code> rejects any final batch that mixes a terminal tool with sibling tool calls. The rejection returns one error tool result per tool-use id and executes none of the batch.</span></li>
@@ -199,21 +199,13 @@
 </div>
 </section>
 
-<section id="helper-results-notifications" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="backend/src/tools/ask_helper/ask_resolver/ask_resolver.py backend/src/tools/submission/resolver/submit_resolver_result/submit_resolver_result.py backend/src/tools/submission/explorer/submit_exploration_result/submit_exploration_result.py backend/src/tools/submission/notification_triggers/request_goal_after_edit.py backend/src/tools/submission/notification_triggers/resolver_limit.py backend/src/tools/submission/resolver_history.py backend/tests/unit_test/test_tools/test_submission_helper_tools.py backend/tests/unit_test/test_tools/test_submission_soft_reminders.py backend/tests/unit_test/test_tools/test_ask_resolver_retry.py docs/architecture/tools/ask-helper.html">
+<section id="helper-results-notifications" data-last-reviewed-commit="422aa5710" data-evidence-paths="backend/src/tools/submission/explorer/submit_exploration_result/submit_exploration_result.py backend/src/tools/submission/notification_triggers/request_goal_after_edit.py backend/tests/unit_test/test_tools/test_submission_helper_tools.py backend/tests/unit_test/test_tools/test_submission_soft_reminders.py docs/architecture/tools/ask-helper.html">
 <h2>Helper Results And Notifications <a class="anchor" href="#helper-results-notifications">#</a></h2>
 <p>Helper terminal outputs are terminal inside the helper run, then ordinary tool results for the parent. This lets helpers use the same engine stop contract while keeping parent TaskCenter state under the parent submission tools and orchestrator.</p>
 <div class="evidence-grid">
   <div class="evidence-card">
-    <h3>Resolver</h3>
-    <p><code>ask_resolver</code> launches an edit-capable helper with issue text and optional issue context. The helper terminates via <code>submit_resolver_result</code>, which returns <code>resolver.resolved</code>, <code>remaining_issues</code>, and <code>changed_files</code> metadata to the parent.</p>
-  </div>
-  <div class="evidence-card">
     <h3>Explorer</h3>
     <p><code>submit_exploration_result</code> terminates explorer-style work and returns <code>subagent_role=&quot;explorer&quot;</code>, findings, and references. It does not resolve attempt context or call TaskCenter mutators.</p>
-  </div>
-  <div class="evidence-card">
-    <h3>Resolver limit reminder</h3>
-    <p><code>make_resolver_limit_reminder()</code> counts unresolved <code>ask_resolver</code> results through <code>unresolved_resolver_call_count()</code>. At the warning threshold it injects a notification that one unresolved resolver call remains before success is blocked.</p>
   </div>
   <div class="evidence-card">
     <h3>Handoff-after-edit reminder</h3>
@@ -222,8 +214,8 @@
 </div>
 <div class="summary">
   <ul>
-    <li>Advisor and resolver direct launches call <code>engine.api.run_ephemeral_agent</code> with <code>persist_agent_run=False</code> and inherit the active sandbox id when one exists.</li>
-    <li>Resolver edits still use ordinary tool permissions and sandbox routing; <code>ask_resolver</code> does not create a separate workspace pipeline.</li>
+    <li>Advisor direct launches call <code>engine.api.run_ephemeral_agent</code> with <code>persist_agent_run=False</code> and inherit the active sandbox id when one exists.</li>
+    <li>Verifier and evaluator inline edits via <code>edit_file</code> / <code>write_file</code> use ordinary tool permissions and sandbox routing; there is no separate edit-capable helper.</li>
     <li>Helper results are evidence for the parent. The parent still must call its own TaskCenter terminal to mutate parent attempt state.</li>
   </ul>
 </div>
@@ -246,7 +238,7 @@
   </div>
   <div class="evidence-card">
     <h3>Helpers and reminders</h3>
-    <p>Helper tests cover advisor/resolver direct launch shape, missing terminal-result errors, helper terminal metadata, explorer output metadata, and resolver/handoff soft reminders.</p>
+    <p>Helper tests cover advisor direct launch shape, missing terminal-result errors, helper terminal metadata, explorer output metadata, and the handoff soft reminder.</p>
   </div>
 </div>
 <div class="refresh-list">

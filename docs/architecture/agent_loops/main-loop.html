@@ -154,15 +154,97 @@
 </div>
 </section>
 
-<section id="budget-and-terminal-refusal" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="backend/src/engine/query/context.py backend/src/engine/query/loop.py backend/src/engine/agent/factory.py backend/src/notification backend/src/tools/_framework/execution/tool_call.py backend/tests/unit_test/test_tools/test_tool_execution.py backend/tests/unit_test/test_engine/test_tool_call_limit.py backend/tests/unit_test/test_engine/test_soft_limit_behavior.py backend/tests/unit_test/test_engine/test_loop_resource_limit_transcript.py backend/tests/unit_test/test_notification/test_overshoot_rules.py">
+<section id="budget-and-terminal-refusal" data-last-reviewed-commit="HEAD" data-evidence-paths="backend/src/engine/query/context.py backend/src/engine/query/loop.py backend/src/engine/agent/factory.py backend/src/notification backend/src/tools/_framework/execution/tool_call.py backend/tests/unit_test/test_tools/test_tool_execution.py backend/tests/unit_test/test_engine/test_tool_call_limit.py backend/tests/unit_test/test_engine/test_soft_limit_behavior.py backend/tests/unit_test/test_engine/test_loop_resource_limit_transcript.py backend/tests/unit_test/test_notification/test_overshoot_rules.py">
 <h2>Budget and Terminal Refusal</h2>
-<p><code>tool_call_limit</code> is a soft threshold. Tool execution only increments <code>tool_calls_used</code>; it does not reject calls and it no longer reserves the last call for a terminal tool. Recovery pressure is delivered through notification rules and the query loop's shared overshoot ceiling.</p>
+<p><code>tool_call_limit</code> is a soft threshold. Tool execution only increments <code>tool_calls_used</code>; it does not reject calls and it no longer reserves the last call for a terminal tool. Recovery pressure is delivered through notification rules and the query loop's shared overshoot ceiling. The model is <em>nudge then ceiling</em>: the agent is warned at fractions of the limit, reminded once it exceeds the limit, and only forced to stop once <code>overshoot_units</code> exceeds <code>max_tolerance_after_max_tool_call</code>.</p>
+
+<h3>Pressure Ramp</h3>
+<p>One unified budget (<code>overshoot_units = tool_overshoot + text_only_no_terminal_turns</code>) gates both retry and exit. Extra tool calls and text-only turns burn the same currency, so an agent cannot evade the ceiling by alternating modes.</p>
+<pre class="diagram" aria-label="Soft budget pressure ramp">
+tool_calls_used            overshoot_units            What the loop does
+---------------            ---------------            -----------------------------------------
+&lt; 50% of limit             0                          (silent)
+&gt;= 50% / 75% / 90%         0                          inject budget_warning (one-shot per threshold)
+== limit                   0                          (last legal turn — silent)
+&gt; limit                    1, 2, 3, ...               inject budget_overflow_reminder (every N units)
+text turn, no terminal     +1 per text-only turn      inject missing_terminal_reminder (next turn)
+&gt; tolerance, via tools     &gt; tolerance                EXIT — RESOURCE_LIMIT
+&gt; tolerance, via text      &gt; tolerance                EXIT — TERMINAL_REFUSED
+any turn, terminal_result  (any value)                EXIT — TOOL_STOP (always wins)
+</pre>
+
+<h3>Retry Workflow on Cap Reached without Terminal</h3>
+<p>When the agent burns its soft <code>tool_call_limit</code> without ever calling a terminal tool, the loop does <strong>not</strong> retry the agent with a fresh budget. Instead it injects increasing nudges through the existing transcript and only stops the run when the shared <code>overshoot_units</code> counter exceeds <code>max_tolerance_after_max_tool_call</code>. The two ways the agent can sit past the soft limit (keep calling tools, or fall back to text) route to two different exit reasons.</p>
+<div class="diagram" aria-label="Cap-reached retry decision flow">
+  <div class="flow-row">
+    <div class="node"><strong>Turn ends</strong><small>final assistant message appended</small></div>
+    <div class="node"><strong>Has tool_uses?</strong><small>branch by message shape</small></div>
+  </div>
+  <div class="flow-row">
+    <div class="node"><strong>Yes &mdash; dispatch batch</strong><small>foreground + background + terminal validator</small></div>
+    <div class="node"><strong>No &mdash; text-only turn</strong><small>only fires when terminal_tools is non-empty and tolerance is set</small></div>
+  </div>
+  <div class="flow-row">
+    <div class="node"><strong>terminal_result set?</strong><small>checked first &mdash; wins over budget</small></div>
+    <div class="node"><strong>text_only_no_terminal_turns += 1</strong><small>shared overshoot budget</small></div>
+  </div>
+  <div class="flow-row">
+    <div class="node"><strong>Yes &rarr; TOOL_STOP</strong><small>run delivers result, even past soft cap</small></div>
+    <div class="node"><strong>overshoot_units &gt; tolerance?</strong><small>same comparison on both branches</small></div>
+  </div>
+  <div class="flow-row">
+    <div class="node"><strong>Tool branch over ceiling<br>&rarr; RESOURCE_LIMIT</strong><small>append tool_results, cancel background, emit error event</small></div>
+    <div class="node"><strong>Text branch over ceiling<br>&rarr; TERMINAL_REFUSED</strong><small>no synthetic event &mdash; transcript ends with the text turn</small></div>
+    <div class="node"><strong>Still under ceiling<br>&rarr; continue loop</strong><small>next iteration dispatch_rules injects budget_overflow_reminder and/or missing_terminal_reminder</small></div>
+  </div>
+</div>
+
+<pre class="diagram" aria-label="Cap-reached retry sequence">
+                    [loop iteration N: provider stream done]
+                                       |
+                                       v
+                          [append assistant final message]
+                                       |
+              +------------------------+------------------------+
+              |                                                 |
+       [tool_uses present]                            [text only, no tool_uses]
+              |                                                 |
+              v                                                 v
+    [dispatch_assistant_tools]                  has_terminal? terminal_tools?
+              |                                  tolerance set?
+              |                                                 |
+              v                                                 v
+   terminal_result captured?              text_only_no_terminal_turns += 1
+              |                                                 |
+        +-----+-----+                                   overshoot_units &gt; tolerance ?
+        |           |                                           |
+       yes          no                                  +-------+--------+
+        |           |                                   |                |
+        v           v                                  yes               no
+   [TOOL_STOP]  overshoot_units &gt; tolerance ?           |                |
+                  |                                     v                v
+            +-----+-----+                       [TERMINAL_REFUSED]  [continue]
+            |           |                                                |
+           yes          no                                               v
+            |           |                              top of loop: dispatch_rules
+            v           v                              fires missing_terminal_reminder
+   [RESOURCE_LIMIT]  [continue]                        and (if overshoot &gt; 0)
+   append tool_results,    |                           budget_overflow_reminder
+   cancel background,      v                           &rarr; injected as user message
+   emit error event   next iteration:                  before the next provider request
+                      budget_overflow_reminder
+                      may inject as user message
+</pre>
+
+<h3>Loop Soundness Notes</h3>
 <div class="edge-list">
-  <div><b>Soft warning</b><span><code>make_budget_warning()</code> fires at configured fractions of the limit. <code>make_budget_overflow_reminder()</code> fires after positive tool overshoot and repeats on configured overshoot boundaries.</span></div>
-  <div><b>Shared overshoot</b><span><code>QueryContext.overshoot_units</code> equals tool calls beyond the soft limit plus text-only turns that still omit a terminal call. This prevents an agent from avoiding the cap by alternating between extra tools and plain text.</span></div>
-  <div><b>Resource limit</b><span>After tool dispatch, if <code>overshoot_units &gt; max_tolerance_after_max_tool_call</code>, the loop sets <code>RESOURCE_LIMIT</code>, cancels pending background tasks, appends the tool results that pair the assistant tool-use blocks, and emits an error completion event.</span></div>
-  <div><b>Terminal refused</b><span>When a terminal-capable run returns text without any tool calls, the loop injects missing-terminal reminders while tolerance remains. If text-only overshoot exceeds tolerance, it exits with <code>TERMINAL_REFUSED</code>.</span></div>
-  <div><b>Terminal wins</b><span>The loop checks <code>dispatch.terminal_result</code> before the hard overshoot branch. A successful terminal call ends the run even when the agent already exceeded the soft budget.</span></div>
+  <div><b>Soft warning rails</b><span><code>make_budget_warning()</code> fires at configured fractions of the limit. <code>make_budget_overflow_reminder()</code> fires after positive <code>tool_overshoot</code> and repeats on configured overshoot boundaries (default every 5 units). Both inject as user-message blocks at the top of the next iteration via <code>dispatch_rules</code>.</span></div>
+  <div><b>Shared overshoot</b><span><code>QueryContext.overshoot_units</code> equals tool calls beyond the soft limit plus text-only turns that still omit a terminal call. The hard ceiling is a single comparison against <code>max_tolerance_after_max_tool_call</code>, evaluated on both the tool-dispatch tail and the text-only branch of <code>_run_query_loop</code>.</span></div>
+  <div><b>Resource limit (tool branch)</b><span>After tool dispatch, if <code>overshoot_units &gt; tolerance</code> the loop sets <code>RESOURCE_LIMIT</code>, cancels pending background tasks, appends the tool results that pair the assistant tool-use blocks (Anthropic Messages API requires tool_use blocks to be paired with tool_result blocks in the next user turn), and emits a single error <code>ToolExecutionCompletedEvent</code> describing overshoot, tolerance, and counters.</span></div>
+  <div><b>Terminal refused (text branch)</b><span>A terminal-capable run that returns text only routes through the <code>continue</code> arm while tolerance remains. The next iteration's <code>dispatch_rules</code> injects <code>missing_terminal_reminder</code> as a user message before the provider request. If text-only overshoot eventually exceeds tolerance, the loop exits with <code>TERMINAL_REFUSED</code>; the transcript ends with the offending assistant text turn and no synthetic error block is appended.</span></div>
+  <div><b>Terminal wins ordering</b><span>The loop checks <code>dispatch.terminal_result</code> before the hard overshoot branch. A successful terminal call ends the run with <code>TOOL_STOP</code> even when the agent already exceeded the soft budget &mdash; finishing the work always beats burning the ceiling.</span></div>
+  <div><b>No-tolerance fall-through</b><span>If <code>tolerance is None</code>, a text-only turn cannot route through the nudge-and-continue arm: there is no upper bound on retries, so the loop exits immediately with <code>TEXT_RESPONSE</code> instead. The "retry on max_tool_call reached" workflow above only applies when an agent definition has both terminal tools and a configured tolerance.</span></div>
+  <div><b>Notification rule wiring</b><span><code>spawn_agent()</code> appends <code>budget_overflow_reminder</code> and <code>missing_terminal_reminder</code> only when the agent definition carries a <code>tool_call_limit</code> AND at least one terminal tool, and only for rule names not already present on the agent definition (user-supplied rules win).</span></div>
 </div>
 </section>
 
@@ -173,6 +255,18 @@
   <p>There is no retry-with-fresh-budget mechanism at this layer. If the query loop exits without a terminal result because of <code>RESOURCE_LIMIT</code>, <code>TERMINAL_REFUSED</code>, text response, or crash, <code>run_ephemeral_agent()</code> returns no terminal result; only unhandled exceptions set <code>status=&quot;failed&quot;</code> directly through <code>run_error</code>.</p>
   <p>Soft recovery remains in-band. The factory attaches default budget-overflow and missing-terminal notification rules when an agent definition has a tool-call limit and at least one terminal tool. Those reminders are user-message blocks in the same transcript, not a hidden outer retry.</p>
 </div>
+<pre class="diagram" aria-label="Lifecycle exit reasons">
+            QueryExitReason                EphemeralRunResult                  Caller view
+            ----------------                -------------------                 ------------
+            TOOL_STOP            ----&gt;     terminal_result = ToolResult        success
+            TEXT_RESPONSE        ----&gt;     terminal_result = None              soft fail (in-band)
+            RESOURCE_LIMIT       ----&gt;     terminal_result = None              soft fail (in-band)
+            TERMINAL_REFUSED     ----&gt;     terminal_result = None              soft fail (in-band)
+            unhandled exception  ----&gt;     status = "failed", run_error set    hard fail
+
+            * No fresh-budget retry. Soft pressure (warnings, reminders) is
+              the only retry mechanism, and it lives inside the same run.
+</pre>
 <div class="edge-list">
   <div><b>Factory owns setup</b><span><code>spawn_agent()</code> builds the tool registry, registers background management tools only when needed and not for subagents, appends terminal guidance, and constructs the <code>QueryContext</code>.</span></div>
   <div><b>Query loop owns stop reason</b><span><code>QueryExitReason</code> distinguishes <code>TEXT_RESPONSE</code>, <code>TOOL_STOP</code>, <code>RESOURCE_LIMIT</code>, and <code>TERMINAL_REFUSED</code>.</span></div>

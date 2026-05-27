@@ -47,46 +47,45 @@
     <li><a href="#tool-shape"><span>1</span> Tool Shape</a></li>
     <li><a href="#message-composition"><span>2</span> Message Composition</a></li>
     <li><a href="#advisor-flow"><span>3</span> Advisor Flow</a></li>
-    <li><a href="#resolver-flow"><span>4</span> Resolver Flow</a></li>
-    <li><a href="#connections"><span>5</span> Connections</a></li>
-    <li><a href="#verification"><span>6</span> Verification</a></li>
+    <li><a href="#connections"><span>4</span> Connections</a></li>
+    <li><a href="#verification"><span>5</span> Verification</a></li>
   </ol>
 </nav>
 
-<p class="lead"><code>ask_advisor</code> and <code>ask_resolver</code> synchronously launch helper agents and return their terminal output to the caller.</p>
-<section id="tool-shape" data-last-reviewed-commit="569f12c3f39471dbaa643906856a8daf81a21a2d" data-evidence-paths="backend/src/tools/ask_helper/__init__.py backend/src/tools/ask_helper/ask_advisor/ask_advisor.py backend/src/tools/ask_helper/ask_resolver/ask_resolver.py backend/src/tools/_framework/factory.py backend/tests/unit_test/test_tools/test_ask_advisor_retry.py backend/tests/unit_test/test_tools/test_ask_resolver_retry.py">
+<p class="lead"><code>ask_advisor</code> synchronously launches a helper agent and returns its terminal output to the caller.</p>
+<section id="tool-shape" data-last-reviewed-commit="422aa5710" data-evidence-paths="backend/src/tools/ask_helper/__init__.py backend/src/tools/ask_helper/ask_advisor/ask_advisor.py backend/src/tools/_framework/factory.py backend/tests/unit_test/test_tools/test_ask_advisor_retry.py">
 <h2>Tool Shape <a class="anchor" href="#tool-shape">#</a></h2>
-<p><code>backend/src/tools/ask_helper</code> exposes <code>ask_advisor</code> and <code>ask_resolver</code>. They are blocking helper launches, not background tasks: neither tool declares <code>background=&quot;always&quot;</code> or an optional background mode, and each awaits <code>run_ephemeral_agent()</code> directly inside its tool body.</p>
+<p><code>backend/src/tools/ask_helper</code> exposes <code>ask_advisor</code>. It is a blocking helper launch, not a background task: it does not declare <code>background=&quot;always&quot;</code> or an optional background mode, and it awaits <code>run_ephemeral_agent()</code> directly inside its tool body.</p>
 <table>
   <thead><tr><th>Tool</th><th>Intent</th><th>Helper terminal</th><th>Use case</th></tr></thead>
   <tbody>
     <tr><td><code>ask_advisor</code></td><td><code>READ_ONLY</code></td><td><code>submit_advisor_feedback</code></td><td>Audit a pending parent terminal submission before the parent submits it.</td></tr>
-    <tr><td><code>ask_resolver</code></td><td><code>WRITE_ALLOWED</code></td><td><code>submit_resolver_result</code></td><td>Fix concrete verifier or evaluator issues and report remaining gaps.</td></tr>
   </tbody>
 </table>
+<p>Verifier and evaluator agents apply trivial inline fixes themselves via <code>edit_file</code> / <code>write_file</code> on their own tool surface; there is no separate edit-capable helper. Scope is enforced by profile prose plus the advisor's pre-terminal audit, which sees full edit-input transcripts.</p>
 </section>
 
-<section id="message-composition" data-last-reviewed-commit="569f12c3f39471dbaa643906856a8daf81a21a2d" data-evidence-paths="backend/src/tools/ask_helper/_lib/_compose.py backend/src/tools/ask_helper/_lib/_transcript.py backend/src/tools/ask_helper/ask_advisor/ask_advisor.py backend/src/tools/ask_helper/ask_resolver/ask_resolver.py backend/src/message/message.py backend/tests/unit_test/test_tools/test_submission_helper_tools.py">
+<section id="message-composition" data-last-reviewed-commit="422aa5710" data-evidence-paths="backend/src/tools/ask_helper/_lib/_compose.py backend/src/tools/ask_helper/_lib/_transcript.py backend/src/tools/ask_helper/ask_advisor/ask_advisor.py backend/src/message/message.py backend/tests/unit_test/test_tools/test_submission_helper_tools.py">
 <h2>Message Composition <a class="anchor" href="#message-composition">#</a></h2>
 <div class="diagram" aria-label="Ask helper message workflow">
   <div class="flow-row">
     <div class="node info"><strong>Parent context</strong><small>first user message, task message, active terminals</small></div>
     <div class="node"><strong>Filtered transcript</strong><small>parent turns after launch prompts</small></div>
     <div class="node"><strong>Helper user msg 1</strong><small>evidence bundle with prompt-injection guard</small></div>
-    <div class="node"><strong>Helper user msg 2</strong><small>advisor pending submission or resolver issues</small></div>
+    <div class="node"><strong>Helper user msg 2</strong><small>advisor pending submission</small></div>
   </div>
   <div class="flow-row">
     <div class="node"><strong><code>run_ephemeral_agent</code></strong><small>synchronous helper run, no background alias</small></div>
-    <div class="node good"><strong>Helper terminal</strong><small>advisor feedback or resolver result</small></div>
+    <div class="node good"><strong>Helper terminal</strong><small>advisor feedback</small></div>
     <div class="node"><strong>Parent tool result</strong><small>terminal metadata returned to current agent</small></div>
   </div>
 </div>
-<p>The helper tools reconstruct the helper launch messages directly instead of using the TaskCenter context composer. <code>build_helper_messages()</code> resolves the helper agent definition, reads the parent conversation from tool context, extracts the parent's first two user messages, resolves the parent agent definition when possible, captures active terminals, and builds a filtered transcript starting after the parent launch messages.</p>
-<p><code>assemble_user_msg_1()</code> wraps the parent context, parent task, and parent transcript as evidence with a prompt-injection guard. The second helper message is tool-specific: advisor gets terminal catalog plus pending submission; resolver gets issue list plus optional issue context.</p>
+<p>The helper tool reconstructs the helper launch messages directly instead of using the TaskCenter context composer. <code>build_helper_messages()</code> resolves the helper agent definition, reads the parent conversation from tool context, extracts the parent's first two user messages, resolves the parent agent definition when possible, captures active terminals, and builds a filtered transcript starting after the parent launch messages.</p>
+<p><code>assemble_user_msg_1()</code> wraps the parent context, parent task, and parent transcript as evidence with a prompt-injection guard. The second helper message is the advisor's terminal catalog plus the pending submission.</p>
 <p>If the runtime config, helper agent definition, or parent transcript shape is missing, the tool returns an explicit error <code>ToolResult</code> rather than launching a weakly grounded helper.</p>
 </section>
 
-<section id="advisor-flow" data-last-reviewed-commit="569f12c3f39471dbaa643906856a8daf81a21a2d" data-evidence-paths="backend/src/tools/ask_helper/ask_advisor/ask_advisor.py backend/src/tools/ask_helper/ask_advisor/prompt.py backend/src/tools/_terminals/registry.py backend/src/tools/submission/advisor/submit_advisor_feedback/submit_advisor_feedback.py backend/tests/unit_test/test_tools/test_ask_advisor_retry.py backend/tests/unit_test/test_tools/test_terminals/test_descriptor_registry.py">
+<section id="advisor-flow" data-last-reviewed-commit="422aa5710" data-evidence-paths="backend/src/tools/ask_helper/ask_advisor/ask_advisor.py backend/src/tools/ask_helper/ask_advisor/prompt.py backend/src/tools/_terminals/registry.py backend/src/tools/submission/advisor/submit_advisor_feedback/submit_advisor_feedback.py backend/tests/unit_test/test_tools/test_ask_advisor_retry.py backend/tests/unit_test/test_tools/test_terminals/test_descriptor_registry.py">
 <h2>Advisor Flow <a class="anchor" href="#advisor-flow">#</a></h2>
 <ol>
   <li>The parent supplies the terminal tool it intends to call and the exact payload it intends to submit.</li>
@@ -95,39 +94,29 @@
   <li>The helper is launched with <code>role=&quot;advisor&quot;</code>, <code>agent_type=&quot;agent&quot;</code>, <code>persist_agent_run=False</code>, and the current sandbox id when present.</li>
   <li>The helper must terminate with <code>submit_advisor_feedback</code>. The parent receives the terminal output and metadata, including the advisor verdict.</li>
 </ol>
+<p>The advisor sees verifier/evaluator inline <code>edit_file</code> / <code>write_file</code> tool inputs verbatim in the parent transcript — Claude Code's literal <code>Edit</code> / <code>Write</code> / <code>NotebookEdit</code> names are stripped, but EphemeralOS's lowercase tool names are not. That visibility is how the advisor catches inline edits that exceed the typo / single-line scope.</p>
 </section>
 
-<section id="resolver-flow" data-last-reviewed-commit="569f12c3f39471dbaa643906856a8daf81a21a2d" data-evidence-paths="backend/src/tools/ask_helper/ask_resolver/ask_resolver.py backend/src/tools/ask_helper/ask_resolver/prompt.py backend/src/tools/submission/resolver/submit_resolver_result/submit_resolver_result.py backend/src/tools/sandbox backend/src/sandbox/daemon/workspace_tool_dispatch.py backend/tests/unit_test/test_tools/test_ask_resolver_retry.py">
-<h2>Resolver Flow <a class="anchor" href="#resolver-flow">#</a></h2>
-<ol>
-  <li>The parent supplies a non-empty list of concrete issues and optional context.</li>
-  <li><code>ask_resolver</code> builds a resolver task message with the issue list and instructs the helper to edit files as needed.</li>
-  <li>The helper is launched with <code>role=&quot;resolver&quot;</code>, <code>agent_type=&quot;agent&quot;</code>, <code>persist_agent_run=False</code>, and the current sandbox id when present.</li>
-  <li>The resolver uses ordinary tool registry permissions for file edits and sandbox work. Those calls still pass through the engine tool framework and sandbox daemon routing; the ask-helper wrapper does not create a custom workspace pipeline.</li>
-  <li>The helper must terminate with <code>submit_resolver_result</code>. The parent receives the terminal output and metadata, including resolution status and any remaining issues.</li>
-</ol>
-</section>
-
-<section id="connections" data-last-reviewed-commit="569f12c3f39471dbaa643906856a8daf81a21a2d" data-evidence-paths="backend/src/tools/ask_helper backend/src/engine/api.py backend/src/engine/agent/lifecycle.py backend/src/tools/_terminals/registry.py backend/src/tools/submission backend/src/task_center/context_engine backend/src/sandbox/daemon/workspace_tool_dispatch.py">
+<section id="connections" data-last-reviewed-commit="422aa5710" data-evidence-paths="backend/src/tools/ask_helper backend/src/engine/api.py backend/src/engine/agent/lifecycle.py backend/src/tools/_terminals/registry.py backend/src/tools/submission backend/src/task_center/context_engine backend/src/sandbox/daemon/workspace_tool_dispatch.py">
 <h2>Connections <a class="anchor" href="#connections">#</a></h2>
 <div class="edge-list">
-  <div><b>engine</b><span>Helpers launch through <code>engine.api.run_ephemeral_agent</code> and block until the helper run returns.</span></div>
-  <div><b>terminal tools</b><span>Helpers terminate through their own submission terminals, then the ask-helper tool forwards that terminal output to the parent as the tool result.</span></div>
-  <div><b>TaskCenter</b><span>Helper advice or fixes are evidence for the parent. They do not directly close the parent TaskCenter attempt or bypass the parent's terminal submission contract.</span></div>
-  <div><b>sandbox</b><span>Resolver edits and advisor reads use normal tool permissions and sandbox routing. Active sandbox id is forwarded, but background task supervision is not involved.</span></div>
-  <div><b>subagent contrast</b><span><a class="wiki-link" href="subagent.html">run_subagent</a> is always-background and returns through check/wait. Ask helpers are synchronous tool calls whose child terminal output is returned immediately to the current tool result.</span></div>
+  <div><b>engine</b><span>The helper launches through <code>engine.api.run_ephemeral_agent</code> and blocks until the helper run returns.</span></div>
+  <div><b>terminal tools</b><span>The helper terminates through its own submission terminal, then the ask-helper tool forwards that terminal output to the parent as the tool result.</span></div>
+  <div><b>TaskCenter</b><span>Helper advice is evidence for the parent. It does not directly close the parent TaskCenter attempt or bypass the parent's terminal submission contract.</span></div>
+  <div><b>sandbox</b><span>The advisor uses normal tool permissions and sandbox routing. Active sandbox id is forwarded, but background task supervision is not involved.</span></div>
+  <div><b>subagent contrast</b><span><a class="wiki-link" href="subagent.html">run_subagent</a> is always-background and returns through check/wait. The ask helper is a synchronous tool call whose child terminal output is returned immediately to the current tool result.</span></div>
 </div>
 </section>
 
-<section id="verification" data-last-reviewed-commit="569f12c3f39471dbaa643906856a8daf81a21a2d" data-evidence-paths="backend/tests/unit_test/test_tools/test_ask_advisor_retry.py backend/tests/unit_test/test_tools/test_ask_resolver_retry.py backend/tests/unit_test/test_tools/test_submission_helper_tools.py backend/tests/unit_test/test_tools/test_terminals/test_descriptor_registry.py backend/tests/unit_test/test_tools/test_submission_tool_registration.py">
+<section id="verification" data-last-reviewed-commit="422aa5710" data-evidence-paths="backend/tests/unit_test/test_tools/test_ask_advisor_retry.py backend/tests/unit_test/test_tools/test_submission_helper_tools.py backend/tests/unit_test/test_tools/test_terminals/test_descriptor_registry.py backend/tests/unit_test/test_tools/test_submission_tool_registration.py backend/tests/unit_test/test_tools/test_ask_helper/_lib/test_transcript_block.py">
 <h2>Verification <a class="anchor" href="#verification">#</a></h2>
-<p>Tests cover helper retry behavior through <code>run_ephemeral_agent</code>, missing terminal-result errors, transcript/message composition, terminal catalog rendering, and advisor/resolver submission metadata. Refresh this page when helper prompts, transcript filtering, helper terminal contracts, or direct-launch runtime metadata change.</p>
+<p>Tests cover helper retry behavior through <code>run_ephemeral_agent</code>, missing terminal-result errors, transcript/message composition, terminal catalog rendering, and advisor submission metadata. The strip-set freeze test (<code>test_advisor_strip_set_is_frozen_to_claude_code_literal_names</code>) protects the verifier/evaluator inline-edit visibility invariant. Refresh this page when helper prompts, transcript filtering, helper terminal contracts, or direct-launch runtime metadata change.</p>
 </section>
 
-<div class="page-baseline" data-page-baseline-commit="569f12c3f39471dbaa643906856a8daf81a21a2d">
+<div class="page-baseline" data-page-baseline-commit="422aa5710">
   <strong>Maintenance baseline</strong>
-  <span>Technical sections reviewed against <code>569f12c3f39471dbaa643906856a8daf81a21a2d</code>.</span>
-  <code>git diff 569f12c3f39471dbaa643906856a8daf81a21a2d..HEAD -- &lt;section data-evidence-paths&gt;</code>
+  <span>Technical sections reviewed against <code>422aa5710</code>.</span>
+  <code>git diff 422aa5710..HEAD -- &lt;section data-evidence-paths&gt;</code>
 </div>
 </main>
 <script src="../assets/search-index.js"></script>

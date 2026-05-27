@@ -58,7 +58,7 @@
   <div><b>coordinator/reducer</b><span>Owned scope, page taxonomy, shared assets, source-truth merge, stale-claim decisions, overview, maintenance, and final validation.</span></div>
   <div><b>graph explorer: goal-iteration-attempt</b><span>Mapped GoalStarter, GoalLifecycle, IterationAttemptCoordinator, AttemptOrchestrator, generator DAG, retry, deferral, delegated child goals, nested planning, closure routing, tests, and stale older-doc claims.</span></div>
   <div><b>graph explorer: context</b><span>Mapped ContextEngine, recipes, packets, renderer, task guidance, skill rows, profile frontmatter, and launch message rows.</span></div>
-  <div><b>graph explorer: terminals</b><span>Mapped submission tools, terminal descriptor registry, advisor/resolver helper pattern, terminal exclusivity, output validation, and engine stop behavior.</span></div>
+  <div><b>graph explorer: terminals</b><span>Mapped submission tools, terminal descriptor registry, the advisor helper pattern, terminal exclusivity, output validation, and engine stop behavior.</span></div>
   <div><b>graph explorer: runtime boundaries</b><span>Mapped TaskCenter entry bootstrap, sandbox binding, engine run launch, tool metadata, message artifacts, task_center_runner audit, and cross-module boundaries.</span></div>
   <div><b>wiki builder lanes</b><span>Parallel write lanes owned non-overlapping TaskCenter pages. Shared navigation, search, root index, and maintenance remained serial coordinator-owned.</span></div>
 </div>
@@ -124,7 +124,7 @@
   </div>
   <div class="evidence-card">
     <h3>Terminal Tools</h3>
-    <p>Refresh when submission tool names, schemas, terminal descriptors, advisor review focus, resolver behavior, output validation, or terminal exclusivity changes.</p>
+    <p>Refresh when submission tool names, schemas, terminal descriptors, advisor review focus, output validation, or terminal exclusivity changes.</p>
   </div>
   <div class="evidence-card">
     <h3>Cross-Module Bridges</h3>
@@ -141,7 +141,7 @@
     <li>Current state-service naming is <code>GoalLifecycle</code> plus <code>IterationAttemptCoordinator</code>, not <code>GoalHandler</code>, <code>IterationManager</code>, <code>IterationFactory</code>, or <code>IterationClosureRouter</code>.</li>
     <li>Current child-goal closure completes the parent generator task as <code>DONE</code> or <code>FAILED</code>. Do not document it as returning the parent to <code>RUNNING</code>.</li>
     <li>Current nested-depth terminal routing can remove <code>submit_execution_handoff</code> from nested executors. Do not repeat older claims that executor handoff is available at every nesting depth.</li>
-    <li>Current helper agents use direct launch prompt assembly through <code>ask_advisor</code> and <code>ask_resolver</code>; the Context Engine is not involved in helper prompt composition.</li>
+    <li>The current helper agent uses direct launch prompt assembly through <code>ask_advisor</code>; the Context Engine is not involved in helper prompt composition.</li>
   </ul>
 </div>
 </section>
@@ -150,7 +150,7 @@
 <h2>Change Log <a class="anchor" href="#change-log">#</a></h2>
 <div class="summary">
   <ul>
-    <li><span><strong>2026-05-26.</strong> Created the TaskCenter architecture module under <code>docs/architecture/task_center</code>, covering the Goal -> Iteration -> Attempt model, planner-generator-evaluator harness, context engine, agent roles, terminal tools, advisor/resolver patterns, engine/tools/sandbox dispatch paths, and maintenance rules.</span></li>
+    <li><span><strong>2026-05-26.</strong> Created the TaskCenter architecture module under <code>docs/architecture/task_center</code>, covering the Goal -> Iteration -> Attempt model, planner-generator-evaluator harness, context engine, agent roles, terminal tools, the advisor helper pattern, engine/tools/sandbox dispatch paths, and maintenance rules.</span></li>
     <li><span><strong>2026-05-26.</strong> Recorded stale claims from the older standalone TaskCenter HTML and linked this module into the shared architecture navigation/search layer.</span></li>
   </ul>
 </div>

@@ -31,7 +31,7 @@ from pathlib import Path
 import pytest
 
 from agents import load_agents_dir
-from benchmarks.sweevo.models import SWEEvoInstance
+from task_center_runner.benchmarks.sweevo.models import SWEEvoInstance
 from task_center_runner.audit.events import EventType
 from task_center_runner.environments.sweevo_image.fixtures import run_scenario_on_sweevo_image
 from task_center_runner.core.stores import TaskCenterStoreBundle

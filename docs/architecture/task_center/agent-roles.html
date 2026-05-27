@@ -114,8 +114,8 @@
     <tbody>
       <tr><td><code>planner.md</code></td><td><code>planner</code></td><td>Read/search, <code>run_subagent</code>, <code>ask_advisor</code>, <code>load_skill_reference</code>.</td><td><code>submit_plan_closes_goal</code>, <code>submit_plan_defers_goal</code>.</td><td><code>context_recipe: planner</code>; planner skill row; no notification triggers.</td></tr>
       <tr><td><code>executor.md</code></td><td><code>executor</code></td><td>Read/write/edit, shell/search/LSP, <code>run_subagent</code>, <code>ask_advisor</code>.</td><td><code>submit_execution_handoff</code>, <code>submit_execution_success</code>, <code>submit_execution_blocker</code>.</td><td><code>context_recipe: generator</code>; executor skill row; <code>request_goal_after_edit</code> trigger; <code>dispatchable_by_planner: true</code>.</td></tr>
-      <tr><td><code>generator_verifier.md</code></td><td><code>verifier</code></td><td>Read-only shell/search plus <code>ask_advisor</code> and <code>ask_resolver</code>.</td><td><code>submit_verification_success</code>, <code>submit_verification_failure</code>.</td><td><code>context_recipe: generator</code>; no skill row; <code>resolver_limit</code> trigger; <code>dispatchable_by_planner: true</code>.</td></tr>
-      <tr><td><code>evaluator.md</code></td><td><code>evaluator</code></td><td>Read-only shell/search plus <code>ask_advisor</code> and <code>ask_resolver</code>.</td><td><code>submit_evaluation_success</code>, <code>submit_evaluation_failure</code>.</td><td><code>context_recipe: evaluator</code>; evaluator skill row; <code>resolver_limit</code> trigger.</td></tr>
+      <tr><td><code>generator_verifier.md</code></td><td><code>verifier</code></td><td>Read/write shell/search plus <code>ask_advisor</code>; may inline-edit for trivial defects per profile prose.</td><td><code>submit_verification_success</code>, <code>submit_verification_failure</code>.</td><td><code>context_recipe: generator</code>; no skill row; no notification triggers; <code>dispatchable_by_planner: true</code>.</td></tr>
+      <tr><td><code>evaluator.md</code></td><td><code>evaluator</code></td><td>Read/write shell/search plus <code>ask_advisor</code>; may inline-edit for trivial defects per profile prose.</td><td><code>submit_evaluation_success</code>, <code>submit_evaluation_failure</code>.</td><td><code>context_recipe: evaluator</code>; evaluator skill row; no notification triggers.</td></tr>
     </tbody>
   </table>
 </div>
@@ -123,7 +123,7 @@
   <div><b>shared submission discipline</b><span>All four main profiles require an advisor approval loop before terminal submission and exactly one terminal call per run.</span></div>
   <div><b>planner is not an implementer</b><span>The planner profile says it designs and submits a single executable plan. It does not run the work itself.</span></div>
   <div><b>executor is the edit-capable generator</b><span>The executor can edit and run commands, and it can hand off only when the launch exposes <code>submit_execution_handoff</code>.</span></div>
-  <div><b>verifier and evaluator can ask resolver</b><span>The verifier checks assigned generator output; the evaluator checks the attempt against criteria. Both can call the resolver helper for edit-capable repairs.</span></div>
+  <div><b>verifier and evaluator may inline-edit</b><span>The verifier checks assigned generator output; the evaluator checks the attempt against criteria. Both may apply trivial inline fixes via <code>edit_file</code> / <code>write_file</code>; scope is enforced by profile prose and the advisor's pre-terminal audit (which sees full edit-input transcripts).</span></div>
 </div>
 </section>
 
@@ -184,20 +184,19 @@
 <div class="edge-list">
   <div><b>planner boundary</b><span>The planner writes one attempt plan, task DAG, task specs, and evaluation criteria. It does not execute tasks, close iterations, or decide final goal state.</span></div>
   <div><b>executor boundary</b><span>The executor completes <code>&lt;assigned_task&gt;</code>, reports a concrete blocker, or starts a delegated goal through <code>GoalStarter</code> when handoff is exposed.</span></div>
-  <div><b>verifier boundary</b><span>The verifier is a generator role with read-only tools plus resolver assistance. It verifies assigned output and submits verification success or failure.</span></div>
+  <div><b>verifier boundary</b><span>The verifier is a generator role with read/write tools; it may apply trivial inline fixes via <code>edit_file</code> / <code>write_file</code> and then submit verification success or failure.</span></div>
   <div><b>evaluator boundary</b><span>The evaluator runs after generator tasks pass and judges the current Attempt against <code>&lt;evaluation_criteria&gt;</code>. Its terminal result drives retry, failure, or continuation through Goal -> Iteration -> Attempt code.</span></div>
   <div><b>handoff boundary</b><span>A handoff marks the parent generator task <code>WAITING_GOAL</code>. Child completion returns as a <code>GoalClosureReport</code>; the parent orchestrator applies it and advances ready tasks.</span></div>
   <div><b>coordination boundary</b><span>No role sends peer-to-peer instructions to another role. Durable fields, task summaries, context packets, and terminal payloads are the handoff surfaces.</span></div>
 </div>
 </section>
 
-<section id="helper-profiles" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="backend/src/agents/profile/helper/advisor.md backend/src/agents/profile/helper/resolver.md backend/src/agents/profile/subagent/explorer.md backend/src/task_center/task_guidance/builders.py backend/src/tools/subagent/run_subagent.py backend/src/tools/submission/notification_triggers/resolver_limit.py backend/src/tools/submission/notification_triggers/request_goal_after_edit.py backend/tests/unit_test/test_agents/test_helper_profile_identity_sentences.py backend/tests/unit_test/test_task_center/test_context_engine/test_role_directives.py">
+<section id="helper-profiles" data-last-reviewed-commit="422aa5710" data-evidence-paths="backend/src/agents/profile/helper/advisor.md backend/src/agents/profile/subagent/explorer.md backend/src/task_center/task_guidance/builders.py backend/src/tools/subagent/run_subagent.py backend/src/tools/submission/notification_triggers/request_goal_after_edit.py backend/tests/unit_test/test_agents/test_helper_profile_identity_sentences.py backend/tests/unit_test/test_task_center/test_context_engine/test_role_directives.py">
 <h2>Helper Profiles <a class="anchor" href="#helper-profiles">#</a></h2>
 <div class="concept-grid">
   <div class="concept-card"><strong><code>advisor</code></strong><p>Blocking read-only helper. It audits a parent agent's pending terminal submission and must end with <code>submit_advisor_feedback</code>.</p></div>
-  <div class="concept-card"><strong><code>resolver</code></strong><p>Blocking edit-capable helper for verifier or evaluator issues. It may edit files and returns through <code>submit_resolver_result</code>.</p></div>
   <div class="concept-card"><strong><code>explorer</code></strong><p>Read-only subagent for focused investigation. It uses <code>read_file</code>, <code>glob</code>, and <code>submit_exploration_result</code>.</p></div>
-  <div class="concept-card"><strong>Notification triggers</strong><p><code>request_goal_after_edit</code> reminds executors about handoff timing after edits; <code>resolver_limit</code> reminds verifier/evaluator runs when resolver usage grows.</p></div>
+  <div class="concept-card"><strong>Notification triggers</strong><p><code>request_goal_after_edit</code> reminds executors about handoff timing after edits. Verifier and evaluator declare no notification triggers; their inline-edit policy is enforced by profile prose plus the advisor pre-terminal gate.</p></div>
 </div>
 <p>Helper and subagent profiles may omit <code>context_recipe</code>. <code>validate_agent_definitions_resolved()</code> allows definitions with no recipe, and <code>build_explorer_task_guidance()</code> documents that explorer subagents do not go through the TaskCenter composer path.</p>
 </section>

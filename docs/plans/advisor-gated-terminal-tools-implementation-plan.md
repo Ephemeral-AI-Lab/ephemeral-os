@@ -626,3 +626,11 @@ on entry). To split for review:
    `test_submission_terminal_routing.py`,
    `test_phase03_submission_integration.py`).
 4. Plan doc status + report update (this section).
+
+---
+
+> _Note (2026-05-27):_ The helper-terminal exemption list in this plan
+> originally included `submit_resolver_result`. That terminal and the
+> `ask_resolver` helper were deleted by the
+> [remove-ask-resolver](./remove-ask-resolver.md) plan. The current
+> exemption list is `{submit_advisor_feedback, submit_exploration_result}`.
