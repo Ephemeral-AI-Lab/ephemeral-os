@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mocked Agents - TaskCenter Runner (Testing)</title>
+<link rel="stylesheet" href="../assets/styles.css">
+</head>
+<body data-module="task-center-runner" data-page="mocked-agents" data-root="../">
+<nav class="toc">
+  <h2>EphemeralOS Architecture</h2>
+  <a class="home-link" href="../index.html">All Modules</a>
+  <div class="search-box">
+    <input type="search" placeholder="Search architecture" data-doc-search aria-label="Search architecture">
+    <div class="search-results" data-doc-search-results></div>
+  </div>
+  <h2>Modules</h2>
+  <ol class="module-list">
+    <li><a href="../sandbox/index.html" data-doc-module="sandbox">Sandbox Workspace</a></li>
+    <li><a href="../tools/index.html" data-doc-module="tools">Tools</a></li>
+    <li><a href="../agent_loops/index.html" data-doc-module="agent-loops">Agent Loops</a></li>
+    <li><a href="../task_center/index.html" data-doc-module="task-center">TaskCenter</a></li>
+    <li><a href="index.html" data-doc-module="task-center-runner" class="active">TaskCenter Runner (Testing)</a></li>
+  </ol>
+  <h2>TaskCenter Runner Pages</h2>
+  <ol>
+    <li><a href="index.html" data-doc-module="task-center-runner" data-doc-section="index" data-doc-page="index.html">Overview</a></li>
+    <li><a href="core-harness.html" data-doc-module="task-center-runner" data-doc-section="core-harness" data-doc-page="core-harness.html">Core Harness</a></li>
+    <li><a href="scenarios.html" data-doc-module="task-center-runner" data-doc-section="scenarios" data-doc-page="scenarios.html">Scenarios</a></li>
+    <li><a href="mocked-agents.html" data-doc-module="task-center-runner" data-doc-section="mocked-agents" data-doc-page="mocked-agents.html" class="active">Mocked Agents</a></li>
+    <li><a href="benchmark-sweevo.html" data-doc-module="task-center-runner" data-doc-section="benchmark-sweevo" data-doc-page="benchmark-sweevo.html">SWE-EVO Benchmark</a></li>
+    <li><a href="tests-layout.html" data-doc-module="task-center-runner" data-doc-section="tests-layout" data-doc-page="tests-layout.html">Test Suites</a></li>
+    <li><a href="maintenance.html" data-doc-module="task-center-runner" data-doc-section="maintenance" data-doc-page="maintenance.html">Maintenance</a></li>
+  </ol>
+</nav>
+<main>
+<div class="doc-actions">
+  <span><a href="../index.html">Architecture</a> / <a href="index.html">TaskCenter Runner</a> / Mocked Agents</span>
+  <span class="nav-pair"><a href="scenarios.html">Scenarios</a><a href="benchmark-sweevo.html">SWE-EVO Benchmark</a></span>
+</div>
+<h1>Mocked Agents</h1>
+<nav class="page-toc" aria-labelledby="page-toc-heading">
+  <h3 id="page-toc-heading">Contents</h3>
+  <ol>
+    <li><a href="#scope"><span>1</span> Scope</a></li>
+    <li><a href="#registry"><span>2</span> Squad Registry</a></li>
+    <li><a href="#dispatch"><span>3</span> Per-Agent Dispatch</a></li>
+    <li><a href="#tool-scripts"><span>4</span> Prepared Tool Scripts</a></li>
+    <li><a href="#probes"><span>5</span> Probe Library</a></li>
+    <li><a href="#advisor-shim"><span>6</span> Advisor-Approval Shim</a></li>
+    <li><a href="#mock-events"><span>7</span> MOCK_* Side-Channel Events</a></li>
+  </ol>
+</nav>
+
+<p class="lead">The mocked-agent squad is deterministic but behaves like a real agent: it inspects the prompt, picks a prepared sequence, calls real sandbox tools, inspects their outputs, and submits through the real terminal tool. The squad uses production main-profile markdown definitions so live e2e coverage exercises the same frontmatter, variants, terminals, and system prompts as production launches.</p>
+
+<section id="scope" data-last-reviewed-commit="c8f6bcde0c63c7ec004545128d186853df5dcde1" data-evidence-paths="backend/src/task_center_runner/agent/mock backend/src/task_center_runner/agent/mock/runner.py backend/src/task_center_runner/agent/mock/definitions.py">
+<h2>Scope <a class="anchor" href="#scope">#</a></h2>
+<div class="summary">
+  <ul>
+    <li>The mock runner lives at <code>backend/src/task_center_runner/agent/mock/runner.py</code>. It is constructed by <code>build_scenario_config</code> and never imported directly by scenarios.</li>
+    <li>Agent kind dispatch (<code>planner</code> / <code>executor</code> / <code>verifier</code> / <code>evaluator</code>) is the only branching the runner does on the scenario; everything else flows through real submission tools.</li>
+    <li>Prepared <em>tool scripts</em> and <em>probes</em> let the executor lane exercise complex sandbox surfaces (LayerStack, OCC, overlay, plugin, ephemeral workspace, background shell) without growing the scenario protocol.</li>
+    <li>The runner emits four side-channel <code>MOCK_*</code> events that <code>ScenarioLifecycle</code> decodes into the rich <code>RunReport</code>.</li>
+  </ul>
+</div>
+<div class="wiki-links" aria-label="Mocked Agents related pages">
+  <a href="scenarios.html">Scenarios</a>
+  <a href="core-harness.html">Core Harness</a>
+  <a href="../task_center/agent-roles.html">Agent Roles</a>
+  <a href="../task_center/terminal-tools.html">Terminal Tools</a>
+  <a href="../tools/submission.html">Submission Tools</a>
+</div>
+</section>
+
+<section id="registry" data-last-reviewed-commit="c8f6bcde0c63c7ec004545128d186853df5dcde1" data-evidence-paths="backend/src/task_center_runner/agent/mock/definitions.py backend/src/agents/profile/main backend/src/task_center_runner/core/runner.py">
+<h2>Squad Registry <a class="anchor" href="#registry">#</a></h2>
+<p><code>registered_mock_agents()</code> is the context manager that swaps the live agent registry to the production main-profile markdown definitions for the duration of one mock run.</p>
+<pre class="diagram" aria-label="Mock agent registry swap">
+run_scenario(...)                            agents/profile/main/
+    |                                          planner.md
+    | with registered_mock_agents():           executor.md     -&gt; name=executor
+    |     1. previous = list_definitions()     generator_verifier.md -&gt; name=verifier
+    |     2. unregister all currently          evaluator.md
+    |        registered definitions
+    |     3. for d in load_agents_dir(         |
+    |          _MAIN_PROFILE_DIR):             v
+    |            register_definition(d)     register_definition(...)
+    |     4. yield (run_pipeline executes)
+    |     5. finally:
+    |        unregister all current; reregister `previous`
+</pre>
+<div class="summary">
+  <ul>
+    <li><code>_MAIN_PROFILE_DIR</code> is <code>backend/src/agents/profile/main</code>; the launcher resolves planner/executor/verifier/evaluator from those markdown files.</li>
+    <li>Restoration on exit makes the swap reversible — pytest sessions that run multiple scenarios back-to-back leave the registry untouched between tests.</li>
+    <li>The benchmark lane does NOT use this context manager; instead <code>bootstrap_real_agent_runtime</code> loads the same markdown tree once via <code>load_agents_tree</code>.</li>
+  </ul>
+</div>
+</section>
+
+<section id="dispatch" data-last-reviewed-commit="c8f6bcde0c63c7ec004545128d186853df5dcde1" data-evidence-paths="backend/src/task_center_runner/agent/mock/runner.py backend/src/task_center_runner/scenarios/base.py">
+<h2>Per-Agent Dispatch <a class="anchor" href="#dispatch">#</a></h2>
+<p>The runner's <code>__call__</code> coroutine has the same signature as the real <code>AttemptAgentRunner</code> so TaskCenter cannot tell them apart. The dispatch fan-out is purely by <code>agent_def.agent_kind</code>.</p>
+<pre class="diagram" aria-label="MockSquadRunner per-call lifecycle">
+MockSquadRunner.__call__(config, prompt, agent_def, sandbox_id, extra_tool_metadata, ...)
+   |
+   | 1. metadata = self._metadata_for(...)
+   |        sets sandbox_id, agent_name, repo_root, cwd,
+   |        role = agent_def.agent_kind.value
+   |
+   | 2. publish MOCK_LAUNCH_RECORDED  (LaunchRecord)
+   |
+   | 3. wire_payload = prompt + "\n" + initial_messages text
+   |    publish MOCK_PROMPT_INSPECTED (PromptInspection over checks)
+   |
+   | 4. record initial_messages on the audit recorder
+   |
+   | 5. publish PLANNER_INVOKED | EXECUTOR_INVOKED |
+   |            VERIFIER_INVOKED | EVALUATOR_INVOKED
+   |
+   | 6. dispatch on agent_def.agent_kind.value:
+   |       "planner"   -&gt; _run_planner(metadata, emit)
+   |       "executor"  -&gt; _run_executor(prompt, metadata, emit)
+   |       "verifier"  -&gt; _run_verifier(prompt, metadata, emit)
+   |       "evaluator" -&gt; _run_evaluator(metadata, emit)
+   |       (anything else raises)
+   |
+   | 7. each handler builds a ScenarioContext, asks the scenario for the
+   |    decision, prepends advisor-approval shim, calls the submission
+   |    tool through execute_tool_once, publishes the *_SUCCESS or
+   |    *_FAILURE event, and returns the ToolResult.
+   |
+   v
+EphemeralRunResult(status="completed", terminal_result=&lt;ToolResult&gt;, agent_name, event_count=1)
+</pre>
+<div class="edge-list" aria-label="Handler responsibilities">
+  <div><b>_run_planner</b><span>Reads <code>scenario.planner_response(ctx)</code> (or <code>mutable_state.consume_next_planner_response()</code> when one is queued), gates the terminal with the advisor-approval shim, calls the submission tool, and emits <code>PLANNER_COMPLETES_GOAL_PLAN</code> or <code>PLANNER_DEFERS_GOAL_PLAN</code> with the plan summary.</span></div>
+  <div><b>_run_executor</b><span>Walks <code>scenario.executor_actions(ctx)</code>. <code>fail</code>/<code>fail:reason</code> submits <code>submit_execution_blocker</code>. <code>request_recursive_goal:&lt;pkg&gt;</code> or <code>request_recursive_matrix:&lt;pkg&gt;</code> submits <code>submit_execution_handoff</code> with the scenario's recursive-handoff goal. Otherwise the action name selects a probe (<code>preflight</code>, <code>sandbox_integrity</code>, <code>final_probe</code>, <code>inspect_user_input</code>, <code>execute_package:&lt;id&gt;</code>, dozens of probe-mode tokens) and ends with <code>submit_execution_success</code>.</span></div>
+  <div><b>_run_verifier</b><span>Runs the verifier-checkpoint script (a readback probe targeting the requirement ledger, recursive close report, or final reconciliation file). Calls <code>scenario.verifier_response(ctx)</code> and submits success/failure with the parsed checkpoint payload. Composite scenarios use the <code>full_stack</code> checkpoint script variant.</span></div>
+  <div><b>_run_evaluator</b><span>Plain submission of <code>scenario.evaluator_response(ctx)</code> with the advisor-approval shim prepended.</span></div>
+</div>
+</section>
+
+<section id="tool-scripts" data-last-reviewed-commit="c8f6bcde0c63c7ec004545128d186853df5dcde1" data-evidence-paths="backend/src/task_center_runner/agent/mock/tool_scripts.py backend/src/task_center_runner/agent/mock/full_stack_tool_scripts.py backend/src/task_center_runner/agent/mock/capacity_actions.py">
+<h2>Prepared Tool Scripts <a class="anchor" href="#tool-scripts">#</a></h2>
+<p><code>PreparedToolScript</code> is a deterministic sequence of real tool calls; <code>PreparedToolScriptEngine</code> walks the steps, emits a status text-delta, calls each tool, and verifies <code>expect_error</code> contracts.</p>
+<div class="edge-list" aria-label="Tool-script datatypes">
+  <div><b>ToolScriptStep</b><span>One concrete tool call: <code>label</code>, <code>tool: BaseTool</code>, <code>args: dict</code>, optional <code>expect_error</code> for negative probes.</span></div>
+  <div><b>PreparedToolScript</b><span><code>name</code>, <code>summary</code>, <code>artifact</code> path, and the tuple of steps.</span></div>
+  <div><b>PreparedToolScriptEngine</b><span>Constructed with the runner's <code>_call_tool</code>. <code>run(script, metadata, emit)</code> emits an <code>AssistantTextDeltaEvent</code> per step, calls each tool, and bails if an <code>expect_error</code> step unexpectedly succeeds.</span></div>
+  <div><b>ToolScriptResult</b><span>Returned to the runner: <code>script_name</code>, <code>summary</code>, <code>artifact</code>, and the tuple of <code>ToolResult</code> values.</span></div>
+</div>
+<p>Built-in scripts live at <code>tool_scripts.py</code> (case-style scenarios) and <code>full_stack_tool_scripts.py</code> (composite adversarial). Examples:</p>
+<div class="evidence-grid">
+  <div class="evidence-card">
+    <h3>inspect_user_input_script</h3>
+    <p>Persists and verifies the requirement ledger parsed from user input. Creates the package dir, asserts the SWE-EVO workspace at <code>/testbed</code>, writes a ledger JSON, drops a conflict-probe file, runs an intentional missing-anchor edit (negative path), seeds <code>AUTO_SQUASH_MAX_DEPTH + 4</code> writes to drive the squash path, then reads back the ledger.</p>
+  </div>
+  <div class="evidence-card">
+    <h3>execute_package_script(package_id)</h3>
+    <p>Walks one package: ensure dir, write evidence JSON, edit it to flip <code>"edited":false</code> to <code>true</code>, read it back, and shell-check the artifact exists.</p>
+  </div>
+  <div class="evidence-card">
+    <h3>recursive_step_script</h3>
+    <p>Persists evidence for one delegated recursive goal step. When the context message contains <code>recursive_reconcile</code>, also writes a close-report JSON used by the parent's verifier checkpoint.</p>
+  </div>
+  <div class="evidence-card">
+    <h3>final_reconciliation_script</h3>
+    <p>Writes the per-stage final ledger JSON and a stable <code>final-reconciliation.json</code> summary used by the verifier's <code>final_release</code> checkpoint readback.</p>
+  </div>
+  <div class="evidence-card">
+    <h3>verifier_checkpoint_script</h3>
+    <p>Readback probe — picks an artifact path by checkpoint name (<code>inventory</code> → ledger, <code>recursive_return</code> → close report, <code>final_release</code> → final reconciliation), reads it, and shell-checks the file tree.</p>
+  </div>
+  <div class="evidence-card">
+    <h3>full_stack_*_script</h3>
+    <p><code>occ_conflict_matrix_script</code>, <code>overlay_edge_matrix_script</code>, <code>layerstack_squash_lease_script</code>, <code>lsp_refresh_semantics_script</code>, <code>recursive_oversized_matrix_script</code>, <code>full_stack_final_reconciliation_script</code>, <code>full_stack_verifier_checkpoint_script</code>. These drive the composite scenarios (<code>FullStackAdversarial</code>, <code>FullCaseUserInput</code>, <code>FullSystemCapacityMatrix</code>).</p>
+  </div>
+</div>
+</section>
+
+<section id="probes" data-last-reviewed-commit="c8f6bcde0c63c7ec004545128d186853df5dcde1" data-evidence-paths="backend/src/task_center_runner/agent/mock/sandbox_probe.py backend/src/task_center_runner/agent/mock/ephemeral_workspace_probe.py backend/src/task_center_runner/agent/mock/plugin_workspace_probe.py backend/src/task_center_runner/agent/mock/background_shell_probe.py backend/src/task_center_runner/agent/mock/complex_project_build_probe.py backend/src/task_center_runner/agent/mock/complex_project_build_shell_edit_lsp_probe.py backend/src/task_center_runner/agent/mock/complex_project_build_grep_glob_probe.py backend/src/task_center_runner/agent/mock/high_concurrency_probe.py backend/src/task_center_runner/agent/mock/heavy_io_zoned_probe.py">
+<h2>Probe Library <a class="anchor" href="#probes">#</a></h2>
+<p>Probes are larger end-to-end checks that the executor lane dispatches when it sees a probe action token. The runner has dispatch tables for the families with mode parameters.</p>
+<div class="evidence-grid">
+  <div class="evidence-card">
+    <h3>Sandbox integrity probe</h3>
+    <p>Inline in <code>runner.py::_run_sandbox_integrity_probe</code>. Mkdir + shell-created file, <code>write_file</code> direct merge, read-back, <code>edit_file</code> direct merge, batch <code>sandbox_api.edit_file</code>, intentional missing-anchor conflict (negative path), shell append to drive squash, final read-back asserting the trailing line is present.</p>
+  </div>
+  <div class="evidence-card">
+    <h3>Auto-squash commit-resume probe</h3>
+    <p>Drives the OCC mutation critical path until layer-stack depth crosses <code>AUTO_SQUASH_MAX_DEPTH</code>, then issues edits, reads, a shell readback, and one intentional missing-anchor conflict. Captures timings into a summary artifact so the paired test asserts on <code>commit_resume_wait_s</code>, <code>auto_squash.total_s</code>, and <code>depth_before</code> &gt; <code>AUTO_SQUASH_MAX_DEPTH</code>.</p>
+  </div>
+  <div class="evidence-card">
+    <h3>complex_project_build_*</h3>
+    <p>Three flavors: pure build, build + shell/edit/LSP, build + grep/glob. Each has a <em>smoke</em> variant. Drives a multi-package repo through the public-tool pipeline (shell, edit_file, read_file, optionally LSP go-to-definition / references / hover). Imported lazily inside the runner to keep top-level imports light.</p>
+  </div>
+  <div class="evidence-card">
+    <h3>ephemeral_workspace_probe</h3>
+    <p>Modes: <code>all_verbs</code>, <code>concurrent_writes</code>, <code>same_path_conflict</code>, <code>policy</code>, <code>cancellation</code>, <code>o1_disk</code>. Exercises the agent-facing isolated-workspace lifecycle plus the host-side sandbox isolated-workspace machinery.</p>
+  </div>
+  <div class="evidence-card">
+    <h3>plugin_workspace_probe</h3>
+    <p>Modes: <code>read_only_lsp_refresh</code>, <code>write_allowed_publish</code>, <code>intent_contract</code>, <code>iws_policy</code>, <code>setup_failure</code>, <code>service_evict</code>. Drives the sandbox plugin pipeline through public-tool requests, asserts intent and policy.</p>
+  </div>
+  <div class="evidence-card">
+    <h3>background_shell_probe</h3>
+    <p>11 modes mapped through a dispatch dict: golden, cancel, interleave, exhaustion, partial-write cancel, cancel-during-maintenance, late-cancel-race, mixed-fg-bg same-path conflict, heartbeat loss, exit-iws drain, engine-restart no-lease-leak, many-small-writes do-not-starve-dispatcher. One mode per concurrency invariant.</p>
+  </div>
+  <div class="evidence-card">
+    <h3>high_concurrency_probe</h3>
+    <p>Three roles: <em>seed</em>, <em>worker</em> (indexed), <em>reconcile</em>. The scenario emits one seed action, several worker actions in parallel, and a reconcile action so the runner stresses LayerStack/OCC/overlay together.</p>
+  </div>
+  <div class="evidence-card">
+    <h3>heavy_io_zoned_probe</h3>
+    <p>Same seed/worker/reconcile shape but with heavy I/O zoned reads/writes. Used by <code>HeavyIoZonedConcurrent</code>.</p>
+  </div>
+</div>
+<div class="summary">
+  <ul>
+    <li>Probe-mode dispatch dicts raise on unknown tokens; the runner never silently no-ops a typo in the scenario.</li>
+    <li>Heavy probes are imported lazily inside the dispatch handler so adding a new probe does not slow scenario import.</li>
+    <li>Every probe ends with a JSON or text summary artifact whose path is returned to the runner as the executor's <code>artifacts</code> list.</li>
+  </ul>
+</div>
+</section>
+
+<section id="advisor-shim" data-last-reviewed-commit="c8f6bcde0c63c7ec004545128d186853df5dcde1" data-evidence-paths="backend/src/task_center_runner/agent/mock/_advisor_approval.py backend/src/task_center_runner/agent/mock/runner.py">
+<h2>Advisor-Approval Shim <a class="anchor" href="#advisor-shim">#</a></h2>
+<p>The mock squad bypasses the engine loop, so <code>conversation_messages</code> arrives empty and every gated terminal would trip <code>AdvisorApprovalPreHook</code>. The shim injects the same two-message pair the engine would have produced when an agent calls <code>ask_advisor</code> followed by an advisor approval verdict for the specific terminal being submitted.</p>
+<pre class="diagram" aria-label="Advisor-approval injection diagram">
+runner builds metadata for terminal tool T
+   |
+   v
+_approve_terminal(metadata, T):
+   existing = metadata.get("conversation_messages") or []
+   gated["conversation_messages"] = (
+       build_advisor_approval_messages(tool_name=T.name)
+       + existing
+   )
+   return gated
+   |
+   v
+execute_tool_once(T, args, gated_metadata, emit)
+   |
+   v
+AdvisorApprovalPreHook sees the matching approval message pair
+   and lets the terminal submission proceed.
+
+Negative path: pass the WRONG tool name to _approve_terminal and the
+hook still fires, confirming the gate is not a no-op.
+</pre>
+<p>The shim is the smallest thing that lets every gated terminal test ride the production code path without re-implementing the engine loop.</p>
+</section>
+
+<section id="mock-events" data-last-reviewed-commit="c8f6bcde0c63c7ec004545128d186853df5dcde1" data-evidence-paths="backend/src/task_center_runner/audit/events.py backend/src/task_center_runner/agent/mock/prompt_inspector.py backend/src/task_center_runner/agent/mock/sandbox_probe.py backend/src/task_center_runner/scenarios/lifecycle.py">
+<h2>MOCK_* Side-Channel Events <a class="anchor" href="#mock-events">#</a></h2>
+<p>Four <code>EventType</code> values exist only for the mock lane. Real-agent and benchmark runs never emit them; subscribers must tolerate absence.</p>
+<div class="edge-list" aria-label="Mock side-channel events">
+  <div><b>MOCK_LAUNCH_RECORDED</b><span><code>LaunchRecord(task_id, attempt_id, agent_name, role, prompt_preview)</code>. Published at the top of every <code>__call__</code> so the report shows every dispatch.</span></div>
+  <div><b>MOCK_TOOL_CALL_RECORDED</b><span><code>ToolCallRecord(task_id, tool_name, is_error, metadata)</code>. Published from <code>_record_tool_check</code> after every sandbox tool call inside a probe or script step.</span></div>
+  <div><b>MOCK_PROMPT_INSPECTED</b><span><code>PromptInspection(task_id, agent_name, role, checks, justification)</code>. Published once per dispatch; <code>passed</code> ANDs every check.</span></div>
+  <div><b>MOCK_SANDBOX_CHECK_RECORDED</b><span><code>SandboxCheck(name, passed, detail, changed_paths)</code>. Published from probes that go through <code>sandbox_api</code> directly (batch edit, conflict detection, intentional conflict).</span></div>
+</div>
+<div class="summary">
+  <ul>
+    <li><code>ScenarioLifecycle.on_event</code> decodes each payload into the typed record and appends it to the matching list; <code>run_scenario</code> copies those lists into the legacy <code>RunReport</code>.</li>
+    <li>The <code>RunReport.passed_prompt_inspections</code> and <code>passed_sandbox_checks</code> properties AND the boolean fields across every recorded item — so a single failed probe in a long scenario makes the whole report fail.</li>
+  </ul>
+</div>
+</section>
+
+<div class="page-baseline" data-page-baseline-commit="c8f6bcde0c63c7ec004545128d186853df5dcde1">
+  <strong>Maintenance baseline</strong>
+  <span>Mocked Agents page reviewed against <code>c8f6bcde0c63c7ec004545128d186853df5dcde1</code>.</span>
+  <code>git diff c8f6bcde0c63c7ec004545128d186853df5dcde1..HEAD -- backend/src/task_center_runner/agent/mock</code>
+</div>
+<div class="page-footer-nav"><span><a href="scenarios.html">Scenarios</a></span><span><a href="benchmark-sweevo.html">SWE-EVO Benchmark</a></span></div>
+</main>
+<script src="../assets/search-index.js"></script>
+<script src="../assets/nav.js"></script>
+</body>
+</html>

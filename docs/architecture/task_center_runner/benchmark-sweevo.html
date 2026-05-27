@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SWE-EVO Benchmark - TaskCenter Runner (Testing)</title>
+<link rel="stylesheet" href="../assets/styles.css">
+</head>
+<body data-module="task-center-runner" data-page="benchmark-sweevo" data-root="../">
+<nav class="toc">
+  <h2>EphemeralOS Architecture</h2>
+  <a class="home-link" href="../index.html">All Modules</a>
+  <div class="search-box">
+    <input type="search" placeholder="Search architecture" data-doc-search aria-label="Search architecture">
+    <div class="search-results" data-doc-search-results></div>
+  </div>
+  <h2>Modules</h2>
+  <ol class="module-list">
+    <li><a href="../sandbox/index.html" data-doc-module="sandbox">Sandbox Workspace</a></li>
+    <li><a href="../tools/index.html" data-doc-module="tools">Tools</a></li>
+    <li><a href="../agent_loops/index.html" data-doc-module="agent-loops">Agent Loops</a></li>
+    <li><a href="../task_center/index.html" data-doc-module="task-center">TaskCenter</a></li>
+    <li><a href="index.html" data-doc-module="task-center-runner" class="active">TaskCenter Runner (Testing)</a></li>
+  </ol>
+  <h2>TaskCenter Runner Pages</h2>
+  <ol>
+    <li><a href="index.html" data-doc-module="task-center-runner" data-doc-section="index" data-doc-page="index.html">Overview</a></li>
+    <li><a href="core-harness.html" data-doc-module="task-center-runner" data-doc-section="core-harness" data-doc-page="core-harness.html">Core Harness</a></li>
+    <li><a href="scenarios.html" data-doc-module="task-center-runner" data-doc-section="scenarios" data-doc-page="scenarios.html">Scenarios</a></li>
+    <li><a href="mocked-agents.html" data-doc-module="task-center-runner" data-doc-section="mocked-agents" data-doc-page="mocked-agents.html">Mocked Agents</a></li>
+    <li><a href="benchmark-sweevo.html" data-doc-module="task-center-runner" data-doc-section="benchmark-sweevo" data-doc-page="benchmark-sweevo.html" class="active">SWE-EVO Benchmark</a></li>
+    <li><a href="tests-layout.html" data-doc-module="task-center-runner" data-doc-section="tests-layout" data-doc-page="tests-layout.html">Test Suites</a></li>
+    <li><a href="maintenance.html" data-doc-module="task-center-runner" data-doc-section="maintenance" data-doc-page="maintenance.html">Maintenance</a></li>
+  </ol>
+</nav>
+<main>
+<div class="doc-actions">
+  <span><a href="../index.html">Architecture</a> / <a href="index.html">TaskCenter Runner</a> / SWE-EVO Benchmark</span>
+  <span class="nav-pair"><a href="core-harness.html">Core Harness</a><a href="tests-layout.html">Test Suites</a></span>
+</div>
+<h1>SWE-EVO Benchmark Pipeline</h1>
+<nav class="page-toc" aria-labelledby="page-toc-heading">
+  <h3 id="page-toc-heading">Contents</h3>
+  <ol>
+    <li><a href="#scope"><span>1</span> Scope</a></li>
+    <li><a href="#cli-entry"><span>2</span> CLI Entry</a></li>
+    <li><a href="#workflow"><span>3</span> Three-Stage Workflow</a></li>
+    <li><a href="#stage-preflight"><span>4</span> Stage 1: Preflight And Provision</a></li>
+    <li><a href="#stage-runconfig"><span>5</span> Stage 2: RunConfig Assembly</a></li>
+    <li><a href="#stage-lifecycle"><span>6</span> Stage 3: Lifecycle, Materialize, Grade</a></li>
+    <li><a href="#image-environment"><span>7</span> SWE-EVO Image Environment</a></li>
+    <li><a href="#persistent-sandbox"><span>8</span> Persistent Sandbox Model</a></li>
+    <li><a href="#models"><span>9</span> Models And Constants</a></li>
+  </ol>
+</nav>
+
+<p class="lead">SWE-EVO is one benchmark adapter on top of the generic harness. It loads a Hugging Face instance, provisions a persistent Docker sandbox at <code>sweevo-&lt;instance_id&gt;</code>, runs the real LLM agent stack through <code>run_pipeline</code>, materializes the active overlay onto <code>/testbed</code>, then runs FAIL_TO_PASS and PASS_TO_PASS pytest sets to compute <code>resolved</code> and <code>fix_rate</code>.</p>
+
+<section id="scope" data-last-reviewed-commit="c8f6bcde0c63c7ec004545128d186853df5dcde1" data-evidence-paths="backend/src/task_center_runner/benchmarks/sweevo backend/src/task_center_runner/benchmarks/sweevo/__init__.py backend/src/task_center_runner/benchmarks/sweevo/__main__.py backend/src/task_center_runner/benchmarks/sweevo/pipeline.py">
+<h2>Scope <a class="anchor" href="#scope">#</a></h2>
+<div class="summary">
+  <ul>
+    <li>The benchmark adapter lives under <code>backend/src/task_center_runner/benchmarks/sweevo/</code>. Three stages are owned by three files: <code>setup.py</code>, <code>run.py</code>, <code>eval.py</code>. <code>pipeline.py</code> wires them.</li>
+    <li>The sandbox model is <em>docker-first and persistent per instance</em>. Daytona's lifecycle vocabulary does not apply; sandbox status uses Docker's <code>status</code> key.</li>
+    <li>The adapter never touches the agent loop directly. It assembles a <code>RunConfig</code> and hands it to <code>core/engine.py::run_pipeline</code>; the runner delegate wraps <code>engine.api.run_ephemeral_agent</code>.</li>
+    <li>Grading is done by <code>SweevoLifecycle.after_run</code> against the real pytest invocation inside the container; the lifecycle materializes the active overlay onto <code>/testbed</code> before evaluating.</li>
+  </ul>
+</div>
+<div class="wiki-links" aria-label="Benchmark related pages">
+  <a href="core-harness.html">Core Harness</a>
+  <a href="tests-layout.html">Test Suites</a>
+  <a href="../sandbox/overview.html">Sandbox Workspace</a>
+  <a href="../sandbox/layerstack.html">LayerStack</a>
+</div>
+</section>
+
+<section id="cli-entry" data-last-reviewed-commit="c8f6bcde0c63c7ec004545128d186853df5dcde1" data-evidence-paths="backend/src/task_center_runner/benchmarks/sweevo/__main__.py backend/src/task_center_runner/benchmarks/sweevo/models.py backend/src/task_center_runner/benchmarks/sweevo/__init__.py">
+<h2>CLI Entry <a class="anchor" href="#cli-entry">#</a></h2>
+<pre class="diagram" aria-label="CLI usage">
+python -m task_center_runner.benchmarks.sweevo \
+    --instance-id &lt;id&gt;                            # required
+    --source     Fsoft-AIC/SWE-EVO                # default
+    --repo-dir   /testbed                         # default
+    --csv-path   &lt;PR descriptions CSV&gt;            # default: SWEEVO_PR_DESCRIPTIONS_CSV
+    --max-duration-s 10800                        # 3h default
+    --audit-dir  .sweevo_runs                     # default
+</pre>
+<div class="edge-list" aria-label="CLI bootstrapping">
+  <div><b>logging</b><span><code>_configure_logging</code> sets level to ERROR then disables WARNING globally — keeps the verdict line the dominant signal on stderr.</span></div>
+  <div><b>no-proxy</b><span>The package import auto-runs <code>ensure_default_no_proxy()</code> to bypass local HTTPS proxies for <code>open.bigmodel.cn</code>, <code>localhost</code>, and loopback addresses. Avoids TLS breakage on benchmark model calls.</span></div>
+  <div><b>asyncio.run</b><span><code>main</code> wraps <code>run_benchmark_sweevo(args)</code> in <code>asyncio.run</code>; SIGINT returns exit code 130.</span></div>
+</div>
+</section>
+
+<section id="workflow" data-last-reviewed-commit="c8f6bcde0c63c7ec004545128d186853df5dcde1" data-evidence-paths="backend/src/task_center_runner/benchmarks/sweevo/pipeline.py backend/src/task_center_runner/benchmarks/sweevo/setup.py backend/src/task_center_runner/benchmarks/sweevo/run.py backend/src/task_center_runner/benchmarks/sweevo/eval.py">
+<h2>Three-Stage Workflow <a class="anchor" href="#workflow">#</a></h2>
+<pre class="diagram" aria-label="Sweevo benchmark workflow">
+run_benchmark_sweevo(args)
+   |
+   |  Stage 1 — setup
+   v
+preflight(args)
+   - load_pr_description(instance_id, csv_path)        -&gt; goal text
+   - load_sweevo_instance(source, instance_id)         -&gt; SWEEvoInstance
+   - bootstrap_sandbox_provider()                       -&gt; EOS_SANDBOX_PROVIDER
+   - verify_sweevo_snapshot_exists(instance)            -&gt; fail-fast on missing
+   - resolve audit_dir + max_duration_s
+   - return PreContext
+   |
+provision_sandbox(ctx)
+   - name = sweevo-&lt;instance_id&gt;  (deterministic)
+   - existing = _find_existing_sandbox_by_name(...)
+   - if existing is None: _create_sandbox(...)
+     else:                _resume_sandbox(...)
+   - setup_sweevo_sandbox(instance, sandbox_id, repo_dir, install_lsp=True)
+       * wait_for_sandbox_exec_ready (6 attempts)
+       * git reset --hard / clean -fd / checkout base_commit
+       * pip install -e .
+       * rebuild sweevo workspace base via daemon
+       * conditional plugin install (LSP)
+   - return sandbox_id
+   |
+   |  Stage 2 — runtime wiring
+   v
+build_run_config(ctx, sandbox_id) -&gt; RunConfig
+   sandbox       = SweevoProvisioner(instance, sandbox_id, install_lsp=True)
+   runner_factory= build_agent_delegate(repo_dir)          -&gt; wraps run_ephemeral_agent
+   lifecycle     = SweevoLifecycle(instance, repo_dir, aggregate_jsonl_path)
+   bootstrap     = bootstrap_real_agent_runtime            -&gt; provider + stores + agents
+   audit_dir     = ctx.audit_dir
+   run_label     = benchmark/sweevo/&lt;instance_id&gt;
+   instance_id   = ctx.instance.instance_id
+   max_duration  = ctx.max_duration_s
+   extras        = {"runtime_config": RuntimeConfig(cwd=Path.cwd())}
+   |
+   |  Stage 3 — execution + grading
+   v
+run_pipeline(config)
+   |
+   v
+SweevoLifecycle.after_run(ctx, report)
+   if report.task_center_status == "done" and not timeout:
+       apply_layerstack_to_repo(sandbox_id, repo_dir)   -&gt; daemon RPC + .git check
+       evaluate_sweevo_result(instance, result, sandbox_id, repo_dir)
+            - extract combined patch (git add -A + diff HEAD)
+            - ensure_sweevo_test_patch (chunked base64 stage + git apply)
+            - _run_test_set_outcome(F2P)  -&gt; passed / runnable / dropped
+            - _run_test_set_outcome(P2P)  -&gt; passed / runnable / dropped
+            - fix_rate = F2P_passed / max(F2P_total, 1)
+            - resolved = (F2P all passed) and (P2P unchanged)
+   else:
+       result.error = "timeout" | task_center_status | "unknown"
+   atomic_write_json(run_dir/sweevo_result.json, asdict(result))
+   if aggregate_jsonl_path: append one JSON line
+   |
+   v
+format_verdict(report) -&gt; one-line stdout + exit code (0 resolved, 1 else)
+</pre>
+</section>
+
+<section id="stage-preflight" data-last-reviewed-commit="c8f6bcde0c63c7ec004545128d186853df5dcde1" data-evidence-paths="backend/src/task_center_runner/benchmarks/sweevo/setup.py backend/src/task_center_runner/benchmarks/sweevo/_provision.py backend/src/task_center_runner/benchmarks/sweevo/_snapshot.py">
+<h2>Stage 1: Preflight And Provision <a class="anchor" href="#stage-preflight">#</a></h2>
+<div class="edge-list" aria-label="Preflight subsystems">
+  <div><b>dataset loader</b><span><code>load_sweevo_dataset</code> reads from a Parquet path, a cached HF Arrow file under <code>HF_DATASETS_CACHE</code>, or falls back to <code>datasets.load_dataset</code>. <code>functools.lru_cache</code> keeps the call cheap inside a session.</span></div>
+  <div><b>PR description loader</b><span><code>load_pr_description(instance_id, csv_path)</code> is strict — missing CSV, missing row, and empty value all raise. The default CSV is <code>backend/config/benchmarks/sweevo_gpt5_2025_08_07_pr_descriptions.csv</code>; <code>SWEEVO_PR_DESCRIPTIONS_CSV</code> overrides.</span></div>
+  <div><b>prompt builder</b><span><code>build_sweevo_user_prompt</code> wraps the PR description in the canonical SWE-EVO <code>&lt;Workspace Root&gt;</code> / <code>&lt;pr_description&gt;</code> envelope plus an explicit instruction not to touch test files. Mocked-agent tests reuse this builder via <code>environments/sweevo_image/fixtures.py</code>.</span></div>
+  <div><b>provider bootstrap</b><span><code>bootstrap_sandbox_provider()</code> respects <code>EOS_SANDBOX_PROVIDER</code> + central config. Docker is default; Daytona is selected by env var.</span></div>
+  <div><b>snapshot verify</b><span><code>verify_sweevo_snapshot_exists(instance)</code> raises <code>SnapshotNotRegisteredError</code> when the snapshot is missing. Pre-register via <code>task_center_runner.benchmarks.sweevo._snapshot.register_sweevo_snapshot(instance)</code> before invoking the CLI — fails fast instead of after a 30-minute LLM run.</span></div>
+  <div><b>provision</b><span><code>provision_sandbox</code> creates or resumes the container. Docker name uniqueness rejects parallel duplicates. Resume branches: <code>running</code> reuses, <code>exited|created|paused</code> starts via <code>start_sandbox</code>, anything else deletes and recreates.</span></div>
+  <div><b>setup_sweevo_sandbox</b><span>Six exec-ready attempts, then git reset / clean / checkout to <code>instance.base_commit</code>, <code>pip install -e .</code>, daemon-side <code>api.build_workspace_base</code> with <code>reset=true</code>, optional LSP plugin install via <code>ensure_installed</code> + <code>api.plugin.ensure</code>.</span></div>
+</div>
+</section>
+
+<section id="stage-runconfig" data-last-reviewed-commit="c8f6bcde0c63c7ec004545128d186853df5dcde1" data-evidence-paths="backend/src/task_center_runner/benchmarks/sweevo/run.py">
+<h2>Stage 2: RunConfig Assembly <a class="anchor" href="#stage-runconfig">#</a></h2>
+<div class="edge-list" aria-label="Run.py exports">
+  <div><b>SweevoProvisioner</b><span>Verify-only provisioner. <code>provision(ctx)</code> re-runs <code>setup_sweevo_sandbox(instance, sandbox_id, repo_dir, install_lsp=True)</code> so retry attempts get a clean checkout, then returns a <code>SandboxLease(sandbox_id, metadata={instance_id, repo_dir})</code>. <code>release(lease)</code> is a no-op — the caller owns container lifecycle.</span></div>
+  <div><b>build_agent_delegate</b><span>Returns a <code>runner_factory(ctx)</code> that yields an <code>AttemptAgentRunner</code>-shaped coroutine. The runner wraps <code>engine.api.run_ephemeral_agent</code>, normalizes <code>ExecutionMetadata</code> (sets <code>sandbox_id</code>, <code>agent_name</code>, <code>repo_root</code>, <code>exec_cwd</code>), and forwards every other kwarg.</span></div>
+  <div><b>build_run_config</b><span>Assembles the <code>RunConfig</code> with <code>extras["runtime_config"] = RuntimeConfig(cwd=Path.cwd(), external_api_client=None)</code>, <code>bootstrap=bootstrap_real_agent_runtime</code>, <code>run_label="benchmark/sweevo/&lt;instance_id&gt;"</code>, and the SweevoProvisioner / delegate / lifecycle.</span></div>
+</div>
+</section>
+
+<section id="stage-lifecycle" data-last-reviewed-commit="c8f6bcde0c63c7ec004545128d186853df5dcde1" data-evidence-paths="backend/src/task_center_runner/benchmarks/sweevo/eval.py backend/src/task_center_runner/audit/io.py">
+<h2>Stage 3: Lifecycle, Materialize, Grade <a class="anchor" href="#stage-lifecycle">#</a></h2>
+<div class="edge-list" aria-label="SweevoLifecycle pieces">
+  <div><b>before_run / on_event / on_aborted</b><span>No-ops except <code>on_aborted</code> stashes the timeout reason for after-run reporting.</span></div>
+  <div><b>after_run</b><span>Builds <code>SWEEvoResult</code> from the report, applies the layerstack overlay to <code>/testbed</code>, runs the grader, atomically writes <code>sweevo_result.json</code> to the run dir, and appends a one-line JSON record to <code>aggregate.jsonl</code> when the aggregate path is configured.</span></div>
+  <div><b>apply_layerstack_to_repo</b><span>Calls <code>api.commit_to_workspace</code> on the daemon, then runs a sandbox-side <code>test -d &lt;repo_dir&gt;/.git</code> probe to catch the class of bugs where an overlay opaque-dir marker shadows the repo's <code>.git</code>.</span></div>
+  <div><b>ensure_sweevo_test_patch</b><span>Applies the SWE-EVO test patch via chunked base64 (because <code>sandbox_api.raw_exec</code> has no stdin and inline argv would overflow). Three states: <code>APPLYABLE</code> → apply, <code>ALREADY_APPLIED</code> → log + skip, anything else → log warning with truncated stderr.</span></div>
+  <div><b>F2P / P2P run</b><span><code>_run_test_set_outcome</code> stages test_ids JSON via <code>_write_file_via_chunked_base64</code>, writes a real-file pytest runner script (<code>python -c</code> would break multiprocessing-spawn-based test suites like Dask), and runs the file via <code>conda activate testbed &amp;&amp; cd /testbed &amp;&amp; python &lt;runner&gt;</code>. Bounded retry loop drops unfindable IDs when pytest exits with <code>EXIT_CODE=4</code> + <code>ERROR: not found:</code> lines.</span></div>
+  <div><b>scoring</b><span><code>fix_rate = F2P_passed / max(F2P_total, 1)</code>; <code>resolved</code> is <em>all F2P pass</em> AND <em>no P2P break</em>. Unfindable P2P IDs are treated as dataset artifacts (logged) and do not count as P2P_broken.</span></div>
+  <div><b>aggregate.jsonl</b><span>One line per run: <code>instance_id</code>, <code>run_id</code>, <code>resolved</code>, <code>fix_rate</code>, F2P / P2P counts, <code>duration_s</code>, task counts, <code>status</code>, <code>error</code>, <code>sandbox_id</code>, ISO UTC timestamp.</span></div>
+  <div><b>format_verdict</b><span>One-line stdout: <code>benchmark_sweevo task_center_run_id=... status=... resolved=... fix_rate=... sandbox_id=... run_dir=...</code>. Exit code 0 if resolved, else 1.</span></div>
+</div>
+</section>
+
+<section id="image-environment" data-last-reviewed-commit="c8f6bcde0c63c7ec004545128d186853df5dcde1" data-evidence-paths="backend/src/task_center_runner/environments/sweevo_image/fixtures.py backend/src/task_center_runner/environments/sweevo_image/health.py">
+<h2>SWE-EVO Image Environment <a class="anchor" href="#image-environment">#</a></h2>
+<p>The image-backed environment is shared by mocked-agent and real-agent tests. It exposes three pytest fixtures and one helper.</p>
+<div class="edge-list" aria-label="environments/sweevo_image surfaces">
+  <div><b>sweevo_image_instance (session)</b><span>Resolves <code>EOS_SWEEVO_INSTANCE</code> (default <code>dask__dask_2023.3.2_2023.4.0</code>) and selects the matching <code>SWEEvoInstance</code> via <code>select_sweevo_instance</code>.</span></div>
+  <div><b>sweevo_image_sandbox (session, async)</b><span>Provisions the persistent sweevo container under a host-side file lock (<code>.sweevo_runs/locks/sweevo-&lt;slug&gt;.lock</code>) so parallel pytest sessions cannot rebind the same workspace mid-test. Calls <code>require_sweevo_image_provider_healthy</code> first — Docker uses the SWE-EVO image directly, Daytona uses the tier-0 probe; failures skip cleanly.</span></div>
+  <div><b>workspace (function-scoped)</b><span>Returns the session-shared sandbox after running <code>reset_sweevo_workspace(sandbox_id, install_lsp=True)</code> on subsequent uses so each test sees a fresh checkout of <code>/testbed</code>.</span></div>
+  <div><b>run_scenario_on_sweevo_image</b><span>Helper that builds the SWE-EVO user prompt with <code>build_sweevo_user_prompt(instance, repo_dir)</code> and forwards to <code>core/runner.py::run_scenario</code>. Same call shape as the generic runner but pre-fills <code>repo_dir</code> and <code>instance_id</code>.</span></div>
+</div>
+<div class="summary">
+  <ul>
+    <li>The session lock is fcntl-based; lock files live under <code>.sweevo_runs/locks/</code> and carry the holder's PID. Acquisition is reentrant per process (count-tracked).</li>
+    <li>Tier-0 health is loaded dynamically from <code>backend/tests/live_e2e_test/_tools/tier0_health.py</code> so the architecture-level harness does not depend on the legacy test tree being importable as a package.</li>
+  </ul>
+</div>
+</section>
+
+<section id="persistent-sandbox" data-last-reviewed-commit="c8f6bcde0c63c7ec004545128d186853df5dcde1" data-evidence-paths="backend/src/task_center_runner/benchmarks/sweevo/__init__.py backend/src/task_center_runner/benchmarks/sweevo/models.py backend/src/task_center_runner/benchmarks/sweevo/_provision.py">
+<h2>Persistent Sandbox Model <a class="anchor" href="#persistent-sandbox">#</a></h2>
+<div class="summary">
+  <ul>
+    <li>Naming is deterministic: <code>_sweevo_sandbox_name(instance) = sweevo-&lt;instance_id&gt;</code>, truncated to 63 characters with an 8-char suffix preserved so two long-prefix instances do not collide.</li>
+    <li>Back-to-back runs reuse the same container: provision sees an <code>existing</code> match by name, calls <code>_resume_sandbox</code>, which starts the container if needed and skips creation.</li>
+    <li>The CLI does NOT destroy the container on exit. Reclaim disk with <code>docker container prune</code> or selectively: <code>docker ps -a --filter 'name=sweevo-' --format '{{.Names}}' | xargs -r docker rm -f</code>.</li>
+    <li>Sandbox status uses Docker's <code>status</code> key, not Daytona's <code>state</code>. "Dead", "removing", and "restarting" containers are detected and recreated.</li>
+    <li>Labels carry <code>purpose=sweevo-test</code>, <code>project_dir</code>, <code>sweevo_instance</code>, and <code>sweevo_repo</code> so <code>reset_sweevo_workspace</code> can resume a reused sandbox without an explicit instance argument.</li>
+  </ul>
+</div>
+</section>
+
+<section id="models" data-last-reviewed-commit="c8f6bcde0c63c7ec004545128d186853df5dcde1" data-evidence-paths="backend/src/task_center_runner/benchmarks/sweevo/models.py">
+<h2>Models And Constants <a class="anchor" href="#models">#</a></h2>
+<div class="edge-list" aria-label="Sweevo dataclasses">
+  <div><b>SWEEvoInstance</b><span>One benchmark row: <code>instance_id</code>, <code>repo</code>, <code>base_commit</code>, <code>problem_statement</code>, <code>patch</code>, <code>fail_to_pass</code>, <code>pass_to_pass</code>, <code>docker_image</code>, <code>test_cmds</code>, <code>environment_setup_commit</code>, <code>test_patch</code>, <code>start_version</code>, <code>end_version</code>, <code>instance_id_swe</code>, <code>pr_description</code>.</span></div>
+  <div><b>SWEEvoResult</b><span>One run's score: <code>plan_id</code>, <code>instance_id</code>, <code>status</code> ("pending" / "completed" / "failed"), <code>agent_patch</code>, <code>resolved</code>, <code>fix_rate</code>, F2P passed/total, P2P broken/total, <code>duration_s</code>, task counts, <code>error</code>, <code>task_summaries</code>.</span></div>
+  <div><b>PreContext</b><span>Output of <code>preflight</code>: <code>instance</code>, <code>repo_dir</code>, <code>snapshot_name</code>, <code>goal</code>, <code>audit_dir</code>, <code>max_duration_s</code>.</span></div>
+</div>
+<div class="evidence-grid">
+  <div class="evidence-card">
+    <h3>Timeouts</h3>
+    <p><code>_DEFAULT_SANDBOX_COMMAND_TIMEOUT</code> = 240s. <code>_DEFAULT_SNAPSHOT_CREATE_TIMEOUT</code> = 1200s. <code>_DEFAULT_SANDBOX_SETUP_TIMEOUT</code> = 360s. <code>_DEFAULT_SWEEVO_TEST_TIMEOUT</code> = 1200s. All multiplied by <code>_REQUEST_TIMEOUT_MULTIPLIER = 2</code>.</p>
+  </div>
+  <div class="evidence-card">
+    <h3>Conda activate</h3>
+    <p><code>_CONDA_ACTIVATE = ". /opt/miniconda3/etc/profile.d/conda.sh &amp;&amp; conda activate testbed"</code>. Prepended to every test-set command so SWE-EVO Docker images run pytest under the right environment.</p>
+  </div>
+  <div class="evidence-card">
+    <h3>Repo dir</h3>
+    <p><code>_REPO_DIR = "/testbed"</code>. SWE-EVO Docker images mount the project there.</p>
+  </div>
+  <div class="evidence-card">
+    <h3>Dataset</h3>
+    <p><code>_DEFAULT_DATASET_SOURCE = "Fsoft-AIC/SWE-EVO"</code>. <code>_DEFAULT_SWEEVO_INSTANCE_ID = "dask__dask_2023.3.2_2023.4.0"</code>.</p>
+  </div>
+  <div class="evidence-card">
+    <h3>Sizing</h3>
+    <p><code>count_sweevo_changelog_items</code> counts bullet/numbered lines in <code>problem_statement</code>; <code>classify_sweevo_instance_size</code> labels them <em>small</em> (&lt;5), <em>medium</em> (5–19), or <em>large</em> (≥20). <code>select_sweevo_instance</code> uses these to pick a representative instance when no explicit id is provided.</p>
+  </div>
+  <div class="evidence-card">
+    <h3>Snapshot policy</h3>
+    <p><code>_has_explicit_sweevo_image_version</code> rejects bare repos and <code>:latest</code>. Bare image refs skip the snapshot path entirely; explicit <code>image@digest</code> or <code>image:&lt;version&gt;</code> refs go through <code>register_sweevo_snapshot</code> + <code>verify_sweevo_snapshot_exists</code>.</p>
+  </div>
+</div>
+</section>
+
+<div class="page-baseline" data-page-baseline-commit="c8f6bcde0c63c7ec004545128d186853df5dcde1">
+  <strong>Maintenance baseline</strong>
+  <span>SWE-EVO Benchmark page reviewed against <code>c8f6bcde0c63c7ec004545128d186853df5dcde1</code>.</span>
+  <code>git diff c8f6bcde0c63c7ec004545128d186853df5dcde1..HEAD -- backend/src/task_center_runner/benchmarks/sweevo backend/src/task_center_runner/environments/sweevo_image</code>
+</div>
+<div class="page-footer-nav"><span><a href="mocked-agents.html">Mocked Agents</a></span><span><a href="tests-layout.html">Test Suites</a></span></div>
+</main>
+<script src="../assets/search-index.js"></script>
+<script src="../assets/nav.js"></script>
+</body>
+</html>
