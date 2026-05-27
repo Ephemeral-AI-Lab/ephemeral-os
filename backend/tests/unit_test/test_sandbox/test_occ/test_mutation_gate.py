@@ -129,7 +129,7 @@ async def test_cas_retry_exhaustion_returns_conflict_result(
     )
 
     services = occ_runtime_services.get_occ_runtime_services(stack.as_posix())
-    publisher = services.manager._publisher  # type: ignore[attr-defined]
+    publisher = services.layer_stack_manager._publisher  # type: ignore[attr-defined]
 
     call_counter = {"n": 0}
     real_publish = publisher.publish_layer
