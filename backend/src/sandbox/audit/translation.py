@@ -144,7 +144,7 @@ def node_from_caller(
         agent_run_id=_none_if_empty(caller.agent_run_id),
         sandbox_id=sandbox_id,
         tool_name=_none_if_empty(caller.tool_name) or operation,
-        tool_id=_none_if_empty(caller.tool_id),
+        tool_use_id=_none_if_empty(caller.tool_id),
     )
 
 
