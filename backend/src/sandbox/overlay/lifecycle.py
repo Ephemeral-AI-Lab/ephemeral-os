@@ -108,8 +108,8 @@ async def capture_changes(handle: OverlayHandle) -> Sequence[OverlayPathChange]:
     return walk_upperdir(handle.upperdir)
 
 
-async def destroy(handle: OverlayHandle) -> None:
-    """Idempotently mark an overlay handle destroyed and clean upper/work dirs."""
+async def release_overlay(handle: OverlayHandle) -> None:
+    """Idempotently release an overlay handle and clean upper/work dirs."""
     handle.release()
     cleanup_started = monotonic_now()
     cleanup_errors: list[OSError] = []
@@ -245,7 +245,7 @@ def _release_lease_silently(
 __all__ = [
     "acquire",
     "capture_changes",
-    "destroy",
+    "release_overlay",
     "emit_overlay_workspace_cleaned",
     "emit_overlay_workspace_cleanup_failed",
 ]

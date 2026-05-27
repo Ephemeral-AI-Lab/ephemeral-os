@@ -1,8 +1,8 @@
-"""Sole owner of per-pipeline lease-destroy race protection.
+"""Sole owner of per-pipeline lease-release race protection.
 
 Owns the lease-keyed lock dict and the released-lease-id set. Both
 ``EphemeralPipeline`` and any future pipeline that needs idempotent lease
-release compose one instance — single source of truth for the destroy/release
+release compose one instance — single source of truth for the release
 race semantics.
 
 Iws does not compose this class today: its per-call execution path leases
@@ -20,10 +20,10 @@ from typing import Protocol
 
 
 class _LeasedHandle(Protocol):
-    """Minimum surface ``destroy`` needs from a handle."""
+    """Minimum surface ``release`` needs from a handle."""
 
     lease_id: str
-    _destroyed: bool
+    _released: bool
 
 
 class LeaseGuard:
@@ -32,11 +32,11 @@ class LeaseGuard:
 
     Two responsibilities, one place:
 
-    * ``destroy(handle, destroy_fn)`` runs ``destroy_fn`` under the lease's
-      lock, short-circuits if the handle is already destroyed or its lease
+    * ``release(handle, release_fn)`` runs ``release_fn`` under the lease's
+      lock, short-circuits if the handle is already released or its lease
       has already been released, and pops the per-lease lock at the end.
     * ``mark_released(lease_id)`` records that the lease has been released
-      via a path other than ``destroy`` (e.g. eph's ``_release_lease``),
+      via a path other than ``release`` (e.g. eph's ``_release_lease``),
       preserving the idempotent re-release guarantee.
     """
 
@@ -50,21 +50,21 @@ class LeaseGuard:
             lock = self._lease_locks[lease_id] = asyncio.Lock()
         return lock
 
-    async def destroy(
+    async def release(
         self,
         handle: _LeasedHandle,
-        destroy_fn: Callable[[_LeasedHandle], Awaitable[None]],
+        release_fn: Callable[[_LeasedHandle], Awaitable[None]],
     ) -> None:
         async with self._lock_for(handle.lease_id):
             try:
-                if handle._destroyed:
+                if handle._released:
                     return
                 if handle.lease_id and handle.lease_id in self._released_lease_ids:
-                    handle._destroyed = True
+                    handle._released = True
                     return
                 if handle.lease_id:
                     self._released_lease_ids.add(handle.lease_id)
-                await destroy_fn(handle)
+                await release_fn(handle)
             finally:
                 self._lease_locks.pop(handle.lease_id, None)
 

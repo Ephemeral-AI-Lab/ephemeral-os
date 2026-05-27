@@ -40,7 +40,7 @@ class _NoopOccClient:
 class _Handle:
     def __init__(self, lease_id: str) -> None:
         self.lease_id = lease_id
-        self._destroyed = False
+        self._released = False
 
 
 def _make_overlay() -> tuple[EphemeralPipeline, _FakeLayerStack]:
@@ -92,43 +92,43 @@ def test_release_without_layer_stack_is_noop() -> None:
 
 
 @pytest.mark.asyncio
-async def test_lease_guard_destroy_skips_release_after_mark_released() -> None:
+async def test_lease_guard_release_skips_release_after_mark_released() -> None:
     guard = LeaseGuard()
     handle = _Handle("lease-1")
-    destroy_calls: list[str] = []
+    release_calls: list[str] = []
 
-    async def _destroy(target: _Handle) -> None:
-        destroy_calls.append(target.lease_id)
-        target._destroyed = True
+    async def _release(target: _Handle) -> None:
+        release_calls.append(target.lease_id)
+        target._released = True
 
     assert guard.mark_released(handle.lease_id) is True
     assert guard.mark_released(handle.lease_id) is False
 
-    await guard.destroy(handle, _destroy)
+    await guard.release(handle, _release)
 
-    assert destroy_calls == []
-    assert handle._destroyed is True
+    assert release_calls == []
+    assert handle._released is True
 
 
 @pytest.mark.asyncio
-async def test_lease_guard_destroy_serializes_duplicate_destroy_calls() -> None:
+async def test_lease_guard_release_serializes_duplicate_release_calls() -> None:
     guard = LeaseGuard()
     handle = _Handle("lease-2")
-    destroy_calls: list[str] = []
+    release_calls: list[str] = []
 
-    async def _destroy(target: _Handle) -> None:
-        destroy_calls.append(target.lease_id)
-        target._destroyed = True
+    async def _release(target: _Handle) -> None:
+        release_calls.append(target.lease_id)
+        target._released = True
 
-    await handle_destroy_twice(guard, handle, _destroy)
+    await release_handle_twice(guard, handle, _release)
 
-    assert destroy_calls == ["lease-2"]
+    assert release_calls == ["lease-2"]
 
 
-async def handle_destroy_twice(
+async def release_handle_twice(
     guard: LeaseGuard,
     handle: _Handle,
-    destroy_fn: Any,
+    release_fn: Any,
 ) -> None:
-    await guard.destroy(handle, destroy_fn)
-    await guard.destroy(handle, destroy_fn)
+    await guard.release(handle, release_fn)
+    await guard.release(handle, release_fn)

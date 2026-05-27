@@ -12,11 +12,22 @@ from sandbox._shared.models import (
     GrepResult,
     GuardedResultBase,
     ReadFileResult,
+    SandboxRequestBase,
     ShellResult,
 )
 
 TGuarded = TypeVar("TGuarded", bound=GuardedResultBase)
 _DAEMON_INTERNAL_ERROR_PREFIX = "internal_error: "
+
+
+def daemon_request_identity_fields(request: SandboxRequestBase) -> dict[str, object]:
+    payload: dict[str, object] = {
+        "agent_id": request.caller.agent_id,
+        "caller": request.caller.audit_fields(),
+    }
+    if request.invocation_id:
+        payload["invocation_id"] = request.invocation_id
+    return payload
 
 
 def user_visible_error_message(error: BaseException) -> str:

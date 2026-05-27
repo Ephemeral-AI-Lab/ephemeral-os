@@ -24,21 +24,21 @@ from sandbox._shared.ordered_lock import OrderedLock
 from sandbox.daemon.rpc import dispatcher
 from sandbox.daemon.workspace_tool_dispatch import (
     LifecycleInProgressError,
-    _ensure_dispatch_state,
-    _existing_dispatch_state,
+    _ensure_quiesce_state,
+    _existing_quiesce_state,
     acquire_dispatch_slot,
     begin_exit_drain,
     finalize_exit_drain,
     lifecycle_exit_critical_section,
-    reset_dispatch_states_for_test,
+    reset_quiesce_states_for_test,
 )
 
 
 @pytest.fixture(autouse=True)
 def _clean_state_between_tests():
-    reset_dispatch_states_for_test()
+    reset_quiesce_states_for_test()
     yield
-    reset_dispatch_states_for_test()
+    reset_quiesce_states_for_test()
 
 
 # ---------------------------------------------------------------------------
@@ -65,7 +65,7 @@ async def test_agent_dispatch_state_serializes_exit_against_inflight_dispatch():
     drain_task = asyncio.create_task(begin_exit_drain(agent_id, grace_s=2.0))
     # Yield to let the drain task arm exit_pending.
     await asyncio.sleep(0)
-    state = await _existing_dispatch_state(agent_id)
+    state = await _existing_quiesce_state(agent_id)
     assert state is not None
     assert state.exit_pending is True
     assert state.inflight == 1
@@ -83,7 +83,7 @@ async def test_agent_dispatch_state_serializes_exit_against_inflight_dispatch():
     async with lifecycle_exit_critical_section(agent_id):
         pass
     await finalize_exit_drain(agent_id)
-    assert await _existing_dispatch_state(agent_id) is None
+    assert await _existing_quiesce_state(agent_id) is None
 
 
 # ---------------------------------------------------------------------------
@@ -159,7 +159,7 @@ async def test_exit_drain_timeout_then_retry_succeeds():
     assert drain_mode == "timeout"
     assert observed == 1
 
-    state = await _existing_dispatch_state(agent_id)
+    state = await _existing_quiesce_state(agent_id)
     assert state is not None
     # exit_pending was reset so subsequent dispatch and retry can proceed.
     assert state.exit_pending is False
@@ -181,7 +181,7 @@ async def test_exit_drain_timeout_then_retry_succeeds():
 async def test_acquire_dispatch_slot_raises_when_exit_pending():
     agent_id = "agent-pending"
     # Touch to create state, then manually flip exit_pending.
-    state = await _ensure_dispatch_state(agent_id)
+    state = await _ensure_quiesce_state(agent_id)
     state.exit_pending = True
     with pytest.raises(LifecycleInProgressError) as exc:
         async with acquire_dispatch_slot(agent_id):
@@ -205,7 +205,7 @@ async def test_acquire_dispatch_slot_finally_decrements_on_exception():
         async with acquire_dispatch_slot(agent_id):
             raise _Boom()
 
-    state = await _existing_dispatch_state(agent_id)
+    state = await _existing_quiesce_state(agent_id)
     assert state is not None
     assert state.inflight == 0
     assert state.inflight_zero.is_set()

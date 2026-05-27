@@ -21,21 +21,12 @@ SHELL_CONFLICT_MARKERS: tuple[str, ...] = (
     "overlay capture refuses escaping symlink target",
     "unsupported tracked change kind: symlinkchange",
 )
-# OCC-level markers represent commit-stage conflicts that are surfaced as
-# `FileResult` statuses today, never raised — but the audit translator's
-# fallback path still inspects error text in case future code paths do raise
-# with these messages. Listed here so audit and api stay aligned.
-OCC_CONFLICT_MARKERS: tuple[str, ...] = (
-    "aborted_version",
-    "content changed",
-)
 ALL_CONFLICT_MARKERS: tuple[str, ...] = (
-    EDIT_CONFLICT_MARKERS + SHELL_CONFLICT_MARKERS + OCC_CONFLICT_MARKERS
+    EDIT_CONFLICT_MARKERS + SHELL_CONFLICT_MARKERS
 )
 
 __all__ = [
     "ALL_CONFLICT_MARKERS",
     "EDIT_CONFLICT_MARKERS",
-    "OCC_CONFLICT_MARKERS",
     "SHELL_CONFLICT_MARKERS",
 ]

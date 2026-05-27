@@ -148,8 +148,8 @@ class _MountedPluginProjection:
     def active_manifest_key(self) -> str:
         return self._invocation.manifest_key
 
-    def acquire(self, owner_request_id: str) -> Any:
-        del owner_request_id
+    def acquire(self, invocation_id: str) -> Any:
+        del invocation_id
         return SimpleNamespace(
             lease_id="plugin-overlay-child",
             manifest_key=self._invocation.manifest_key,

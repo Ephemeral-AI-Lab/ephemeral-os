@@ -5,13 +5,13 @@ from __future__ import annotations
 from collections.abc import Awaitable, Callable, Mapping
 from typing import TypeVar
 
-from audit.base import AuditSink, JsonValue
-from sandbox.audit.operation import (
-    publish_operation_failed,
-    publish_operation_result,
-    publish_operation_started,
+from audit.base import AuditEvent, AuditSink, JsonValue, NoopAuditSink
+from sandbox.audit.translation import (
+    SandboxOperation,
+    events_from_result,
+    failed_event,
+    started_event,
 )
-from sandbox.audit.translation import SandboxOperation
 from sandbox._shared.models import SandboxCaller, SandboxResultBase
 
 TResult = TypeVar("TResult", bound=SandboxResultBase)
@@ -28,12 +28,27 @@ async def run_audited_operation(
     conflict_from_error: Callable[[BaseException], TResult | None] | None = None,
 ) -> TResult:
     """Publish start/result/failure events around one sandbox operation."""
-    publish_operation_started(
-        audit_sink,
-        sandbox_id=sandbox_id,
-        operation=operation,
-        caller=caller,
-        payload=payload,
+    sink = audit_sink if audit_sink is not None else NoopAuditSink()
+
+    def publish(event: AuditEvent) -> None:
+        sink.publish(event)
+
+    def publish_result(result: SandboxResultBase) -> None:
+        for event in events_from_result(
+            sandbox_id=sandbox_id,
+            operation=operation,
+            caller=caller,
+            result=result,
+        ):
+            sink.publish(event)
+
+    publish(
+        started_event(
+            sandbox_id=sandbox_id,
+            operation=operation,
+            caller=caller,
+            payload=payload,
+        )
     )
     try:
         result = await call()
@@ -43,27 +58,16 @@ async def run_audited_operation(
         )
         if conflict_result is not None:
             # Recoverable: publish the conflict result and suppress the exception.
-            publish_operation_result(
-                audit_sink,
+            publish_result(conflict_result)
+            return conflict_result
+        publish(
+            failed_event(
                 sandbox_id=sandbox_id,
                 operation=operation,
                 caller=caller,
-                result=conflict_result,
+                error=exc,
             )
-            return conflict_result
-        publish_operation_failed(
-            audit_sink,
-            sandbox_id=sandbox_id,
-            operation=operation,
-            caller=caller,
-            error=exc,
         )
         raise
-    publish_operation_result(
-        audit_sink,
-        sandbox_id=sandbox_id,
-        operation=operation,
-        caller=caller,
-        result=result,
-    )
+    publish_result(result)
     return result

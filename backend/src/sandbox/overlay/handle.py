@@ -23,9 +23,9 @@ class OverlayHandle:
     - long-lived isolated-workspace overlays populate it with the namespace
       holder pid.
 
-    ``_destroyed`` is flipped by ``sandbox.overlay.lifecycle.destroy`` under
-    the per-handle ``_destroy_lock`` so cleanup is idempotent for concurrent
-    destroy callers.
+    ``_released`` is flipped by ``sandbox.overlay.lifecycle.release_overlay``
+    under the per-handle ``_release_lock`` so cleanup is idempotent for
+    concurrent release callers.
     """
 
     workspace_root: str
@@ -42,8 +42,8 @@ class OverlayHandle:
     manifest_version: int = 0
     root_hash: str = ""
     operation_id: str = ""
-    _destroyed: bool = False
-    _destroy_lock: threading.Lock = field(
+    _released: bool = False
+    _release_lock: threading.Lock = field(
         default_factory=threading.Lock,
         repr=False,
         compare=False,
@@ -56,17 +56,17 @@ class OverlayHandle:
 
     def release(self) -> None:
         """Idempotently release the captured lease and run-dir cleanup."""
-        with self._destroy_lock:
-            if self._destroyed:
+        with self._release_lock:
+            if self._released:
                 return
-            self._destroyed = True
+            self._released = True
             release = self._release
         if release is not None:
             release()
 
     @property
     def released(self) -> bool:
-        return self._destroyed
+        return self._released
 
 
 __all__ = ["OverlayHandle"]

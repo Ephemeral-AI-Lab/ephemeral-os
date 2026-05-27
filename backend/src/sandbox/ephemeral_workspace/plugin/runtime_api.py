@@ -300,7 +300,7 @@ def _workspace_projection_for_layer_stack_root(layer_stack_root: str) -> Workspa
         # same storage root; the previous behavior (constructing a fresh
         # manager) left the lock leaked on LRU eviction.
         manager = get_layer_stack_manager(key)
-        projection = WorkspaceProjection(key, manager=manager)
+        projection = WorkspaceProjection(key, layer_stack=manager)
         _WORKSPACE_PROJECTIONS[key] = projection
         if len(_WORKSPACE_PROJECTIONS) > _MAX_WORKSPACE_PROJECTIONS:
             _WORKSPACE_PROJECTIONS.popitem(last=False)

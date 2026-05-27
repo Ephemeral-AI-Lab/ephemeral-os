@@ -13,7 +13,7 @@ from sandbox.occ.overlay_change_conversion import overlay_path_changes_to_occ_ch
 from sandbox.occ.changeset import ChangesetResult, FileResult, FileStatus
 from sandbox.ephemeral_workspace.pipeline import EphemeralPipeline
 from sandbox.overlay.handle import OverlayHandle
-from sandbox.overlay.lifecycle import destroy
+from sandbox.overlay.lifecycle import release_overlay
 from sandbox.overlay.namespace_entrypoint import execute_tool_payload
 from sandbox.overlay.path_change import OverlayPathChange, content_hash
 import sandbox.overlay.writable_dirs as writable_dirs_mod
@@ -108,7 +108,7 @@ def test_overlay_change_conversion_threads_source_to_all_change_kinds(
     assert {change.source for change in changes} == {"api_write"}
 
 
-def test_overlay_destroy_is_idempotent_under_concurrent_calls(tmp_path: Path) -> None:
+def test_overlay_release_is_idempotent_under_concurrent_calls(tmp_path: Path) -> None:
     run_dir = tmp_path / "run"
     upper = run_dir / "upper"
     work = run_dir / "work"
@@ -133,13 +133,13 @@ def test_overlay_destroy_is_idempotent_under_concurrent_calls(tmp_path: Path) ->
         _release=release,
     )
 
-    async def _destroy_twice() -> None:
-        await asyncio.gather(destroy(handle), destroy(handle))
+    async def _release_twice() -> None:
+        await asyncio.gather(release_overlay(handle), release_overlay(handle))
 
-    asyncio.run(_destroy_twice())
+    asyncio.run(_release_twice())
 
     assert releases == 1
-    assert handle._destroyed is True
+    assert handle._released is True
 
 
 def test_plugin_gate_blocks_open_isolated_workspace(monkeypatch) -> None:

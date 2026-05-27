@@ -221,7 +221,7 @@ class _PhaseTimer:
 class _NamespaceRuntime(Protocol):
     """Kernel-touching operations the isolated-workspace pipeline delegates to.
 
-    The only concrete implementation is :class:`_LinuxNamespaceRuntime`; the Protocol
+    The only concrete implementation is :class:`_KernelNamespaceRuntime`; the Protocol
     exists so individual tests can swap in lightweight doubles without
     importing the kernel-touching module. ``mount_overlay`` and
     ``configure_dns`` are ``async def`` so concurrent enters (Tier 6 / Tier 8)

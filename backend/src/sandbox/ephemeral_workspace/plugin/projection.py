@@ -7,7 +7,7 @@ from pathlib import Path
 
 from sandbox.layer_stack.manifest import manifest_root_hash
 from sandbox.layer_stack.stack import LayerStack
-from sandbox.occ.layer_stack_client import LayerStackPortAdapter
+from sandbox.occ.layer_stack_adapter import LayerStackPortAdapter
 from sandbox.overlay import lifecycle as overlay_lifecycle
 from sandbox.overlay.handle import OverlayHandle
 
@@ -33,7 +33,7 @@ class ProjectionHandle:
     root_hash: str
     manifest: object | None
     layer_paths: tuple[str, ...] | None
-    _manager: LayerStack
+    _layer_stack: LayerStack
     _released: bool = False
 
     def release(self) -> None:
@@ -41,7 +41,7 @@ class ProjectionHandle:
         if self._released:
             return
         self._released = True
-        self._manager.release_lease(self.lease_id)
+        self._layer_stack.release_lease(self.lease_id)
 
     @property
     def released(self) -> bool:
@@ -55,20 +55,20 @@ class WorkspaceProjection:
         self,
         layer_stack_root: str | Path,
         *,
-        manager: LayerStack | None = None,
+        layer_stack: LayerStack | None = None,
     ) -> None:
         self._layer_stack_root = Path(layer_stack_root).resolve()
-        self._manager = (
-            manager if manager is not None else LayerStack(self._layer_stack_root)
+        self._layer_stack = (
+            layer_stack if layer_stack is not None else LayerStack(self._layer_stack_root)
         )
 
     @property
     def layer_stack_root(self) -> Path:
         return self._layer_stack_root
 
-    def acquire(self, owner_request_id: str) -> ProjectionHandle:
-        result = self._manager.prepare_workspace_snapshot(
-            owner_request_id=owner_request_id,
+    def acquire(self, invocation_id: str) -> ProjectionHandle:
+        result = self._layer_stack.prepare_workspace_snapshot(
+            owner_request_id=invocation_id,
         )
         return ProjectionHandle(
             lease_id=result.lease_id,
@@ -79,26 +79,26 @@ class WorkspaceProjection:
             root_hash=result.root_hash,
             manifest=getattr(result, "manifest", None),
             layer_paths=getattr(result, "layer_paths", None),
-            _manager=self._manager,
+            _layer_stack=self._layer_stack,
         )
 
     def acquire_overlay(
         self,
-        owner_request_id: str,
+        invocation_id: str,
         *,
         workspace_root: str,
     ) -> OverlayHandle:
         return overlay_lifecycle.acquire(
-            LayerStackPortAdapter(self._manager),
-            invocation_id=owner_request_id,
+            LayerStackPortAdapter(self._layer_stack),
+            invocation_id=invocation_id,
             workspace_root=workspace_root,
         )
 
     def active_manifest_key(self) -> str:
-        manifest = self._manager.read_active_manifest()
+        manifest = self._layer_stack.read_active_manifest()
         return build_manifest_key(
             manifest_root_hash(manifest), manifest.version
         )
 
     def active_lease_count(self) -> int:
-        return self._manager.active_lease_count()
+        return self._layer_stack.active_lease_count()

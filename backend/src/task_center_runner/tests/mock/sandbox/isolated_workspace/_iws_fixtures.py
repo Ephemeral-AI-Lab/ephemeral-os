@@ -60,18 +60,18 @@ async def publish_sentinel(sandbox_id: str) -> SentinelFile:
 
 # ---------------------------------------------------------------------------
 # Capability probes (v2 §18). Each delegates to the canonical implementation
-# in ``sandbox.overlay.capability`` where one exists.
+# in ``sandbox.overlay.mount_syscalls`` where one exists.
 # ---------------------------------------------------------------------------
 
 
 def can_mount_overlay_natively() -> bool:
     """Probe whether the kernel supports the modern overlay mount API.
 
-    Delegates to :func:`sandbox.overlay.capability.mount_syscalls_supported`
+    Delegates to :func:`sandbox.overlay.mount_syscalls.mount_syscalls_supported`
     so the iws path shares the same namespace-only overlay probe as the
     daemon's OCC overlay. Cached at the underlying layer.
     """
-    from sandbox.overlay.capability import mount_syscalls_supported
+    from sandbox.overlay.mount_syscalls import mount_syscalls_supported
 
     return mount_syscalls_supported()
 

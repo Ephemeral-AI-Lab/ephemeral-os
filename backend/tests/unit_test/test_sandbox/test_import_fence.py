@@ -231,7 +231,6 @@ def test_layer_stack_package_has_no_occ_command_exec_or_git_policy_imports() -> 
     forbidden = (
         "sandbox.occ",
         "sandbox.command_exec",
-        "sandbox.main_workspace.workspace_binding",
         "pathspec",
     )
     for module in _python_files(SRC_ROOT / "sandbox" / "layer_stack"):

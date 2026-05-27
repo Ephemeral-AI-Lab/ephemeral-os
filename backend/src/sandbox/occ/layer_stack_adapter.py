@@ -2,12 +2,10 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterator
 from contextlib import AbstractContextManager
 from pathlib import Path
 
 from sandbox.layer_stack.commit_staging import CommitStagingArea
-from sandbox.layer_stack.lease import WorkspaceLease
 from sandbox.layer_stack.manifest import Manifest
 from sandbox.layer_stack.stack import (
     LayerStackSnapshotLease,
@@ -75,36 +73,4 @@ class LayerStackPortAdapter:
         return self.manager.squash(max_depth=max_depth)
 
 
-class LayerStackClient(LayerStackPortAdapter):
-    """Legacy adapter name preserving the previous direct-import method surface.
-
-    New code should use :class:`LayerStackPortAdapter`; these extra forwarders
-    stay only because ``LayerStackClient`` is exported from this module.
-    """
-
-    def acquire_snapshot_lease(self, owner_request_id: str) -> WorkspaceLease:
-        return self.manager.acquire_snapshot_lease(owner_request_id)
-
-    def iter_paths(self, manifest: Manifest) -> Iterator[str]:
-        return self.manager.iter_paths(manifest)
-
-    def project(
-        self,
-        destination: str | Path,
-        manifest: Manifest,
-    ) -> None:
-        self.manager.project(destination, manifest)
-
-    def commit_to_workspace(
-        self,
-        *,
-        workspace_root: str | Path,
-        timings: dict[str, float] | None = None,
-    ) -> Manifest:
-        return self.manager.commit_to_workspace(
-            workspace_root=workspace_root,
-            timings=timings,
-        )
-
-
-__all__ = ["LayerStackClient", "LayerStackPortAdapter"]
+__all__ = ["LayerStackPortAdapter"]

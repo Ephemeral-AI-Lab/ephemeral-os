@@ -22,9 +22,9 @@ def test_acquire_returns_handle_with_manifest_key(tmp_path: Path) -> None:
     layer_stack_root = tmp_path / "stack"
     layer_stack_root.mkdir()
     projection = WorkspaceProjection(layer_stack_root)
-    # Publish one layer through the underlying manager so the manifest is
+    # Publish one layer through the underlying layer stack so the manifest is
     # non-empty.
-    projection._manager.publish_changes(
+    projection._layer_stack.publish_changes(
         [
             WriteLayerChange(
                 path="src/app.py",
@@ -53,7 +53,7 @@ def test_acquire_returns_handle_with_manifest_key(tmp_path: Path) -> None:
 
 def test_release_is_idempotent(tmp_path: Path) -> None:
     projection = WorkspaceProjection(tmp_path / "stack")
-    projection._manager.publish_changes(
+    projection._layer_stack.publish_changes(
         [
             WriteLayerChange(
                 path="a.txt",
@@ -69,7 +69,7 @@ def test_release_is_idempotent(tmp_path: Path) -> None:
 
 def test_manifest_key_changes_after_publish(tmp_path: Path) -> None:
     projection = WorkspaceProjection(tmp_path / "stack")
-    projection._manager.publish_changes(
+    projection._layer_stack.publish_changes(
         [
             WriteLayerChange(
                 path="a.txt",
@@ -80,7 +80,7 @@ def test_manifest_key_changes_after_publish(tmp_path: Path) -> None:
     first = projection.acquire("first")
     first_key = first.manifest_key
 
-    projection._manager.publish_changes(
+    projection._layer_stack.publish_changes(
         [
             WriteLayerChange(
                 path="b.txt",
@@ -100,7 +100,7 @@ def test_manifest_key_changes_after_publish(tmp_path: Path) -> None:
 
 def test_active_manifest_key_matches_handle(tmp_path: Path) -> None:
     projection = WorkspaceProjection(tmp_path / "stack")
-    projection._manager.publish_changes(
+    projection._layer_stack.publish_changes(
         [
             WriteLayerChange(
                 path="a.txt",

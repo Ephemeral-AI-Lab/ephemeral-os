@@ -61,7 +61,7 @@ class LifecycleInProgressError(Exception):
 
 
 @dataclass
-class AgentDispatchState:
+class AgentQuiesceState:
     """Per-agent quiesce state for daemon RPC paths that observe routing.
 
     ``entry_lock`` is short-held — it covers the ``exit_pending`` probe and
@@ -80,11 +80,11 @@ class AgentDispatchState:
         self.inflight_zero.set()
 
 
-_AGENT_DISPATCH_STATES: dict[str, AgentDispatchState] = {}
+_AGENT_QUIESCE_STATES: dict[str, AgentQuiesceState] = {}
 _STATES_DICT_LOCK = asyncio.Lock()
 
 
-async def _ensure_dispatch_state(agent_id: str) -> AgentDispatchState:
+async def _ensure_quiesce_state(agent_id: str) -> AgentQuiesceState:
     """Lazy state creation. Lives until the first successful exit drains it.
 
     Calling this on every dispatch is intentional: the plan calls for
@@ -92,22 +92,22 @@ async def _ensure_dispatch_state(agent_id: str) -> AgentDispatchState:
     ``finalize_exit_drain`` own the teardown side.
     """
     async with _STATES_DICT_LOCK:
-        state = _AGENT_DISPATCH_STATES.get(agent_id)
+        state = _AGENT_QUIESCE_STATES.get(agent_id)
         if state is None:
-            state = AgentDispatchState()
-            _AGENT_DISPATCH_STATES[agent_id] = state
+            state = AgentQuiesceState()
+            _AGENT_QUIESCE_STATES[agent_id] = state
         return state
 
 
-async def _existing_dispatch_state(agent_id: str) -> AgentDispatchState | None:
+async def _existing_quiesce_state(agent_id: str) -> AgentQuiesceState | None:
     async with _STATES_DICT_LOCK:
-        return _AGENT_DISPATCH_STATES.get(agent_id)
+        return _AGENT_QUIESCE_STATES.get(agent_id)
 
 
 @asynccontextmanager
 async def acquire_dispatch_slot(
     agent_id: str,
-) -> AsyncIterator[AgentDispatchState]:
+) -> AsyncIterator[AgentQuiesceState]:
     """Short-held entry_lock + inflight bookkeeping around any daemon RPC.
 
     The state's ``entry_lock`` is acquired ONLY for the probe + counter
@@ -116,7 +116,7 @@ async def acquire_dispatch_slot(
     ``finally`` branch decrements ``inflight`` whether the body succeeded,
     raised, or was cancelled — exit drains rely on this invariant.
     """
-    state = await _ensure_dispatch_state(agent_id)
+    state = await _ensure_quiesce_state(agent_id)
     async with state.entry_lock:
         if state.exit_pending:
             raise LifecycleInProgressError(agent_id)
@@ -150,7 +150,7 @@ async def begin_exit_drain(
       been reset so the agent can retry; the caller should NOT mutate
       maps. The returned ``inflight_observed`` is the count at timeout.
     """
-    state = await _existing_dispatch_state(agent_id)
+    state = await _existing_quiesce_state(agent_id)
     if state is None:
         return "fast_path", 0
     async with state.entry_lock:
@@ -179,7 +179,7 @@ async def lifecycle_exit_critical_section(
     this block; ``_teardown`` runs OUTSIDE this block per Phase 4 design.
     The lock-order rule (AC9) is ``entry_lock`` outer, ``_map_lock`` inner.
     """
-    state = await _existing_dispatch_state(agent_id)
+    state = await _existing_quiesce_state(agent_id)
     if state is None:
         yield
         return
@@ -194,16 +194,16 @@ async def finalize_exit_drain(agent_id: str) -> None:
     the caller MUST NOT call this — retained state is reused by the retry.
     """
     async with _STATES_DICT_LOCK:
-        _AGENT_DISPATCH_STATES.pop(agent_id, None)
+        _AGENT_QUIESCE_STATES.pop(agent_id, None)
 
 
-def reset_dispatch_states_for_test() -> None:
+def reset_quiesce_states_for_test() -> None:
     """Test helper: synchronously clear all per-agent dispatch state.
 
     Used by ``conftest`` between tests so leaked states from one test do
     not poison the next. Not safe to call while dispatches are in flight.
     """
-    _AGENT_DISPATCH_STATES.clear()
+    _AGENT_QUIESCE_STATES.clear()
 
 
 def _active_isolated_pipeline_for(agent_id: str) -> Any | None:
@@ -473,12 +473,12 @@ def _request_agent_id(args: dict[str, Any]) -> str:
 
 
 __all__ = [
-    "AgentDispatchState",
+    "AgentQuiesceState",
     "LifecycleInProgressError",
     "acquire_dispatch_slot",
     "begin_exit_drain",
     "dispatch_workspace_tool_call",
     "finalize_exit_drain",
     "lifecycle_exit_critical_section",
-    "reset_dispatch_states_for_test",
+    "reset_quiesce_states_for_test",
 ]

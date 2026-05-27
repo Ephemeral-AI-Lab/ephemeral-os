@@ -15,7 +15,7 @@ import pytest
 
 from sandbox.daemon.workspace_tool_dispatch import (
     acquire_dispatch_slot,
-    reset_dispatch_states_for_test,
+    reset_quiesce_states_for_test,
 )
 
 
@@ -27,9 +27,9 @@ ITERATIONS_PER_TASK = 50
 
 @pytest.fixture(autouse=True)
 def _clean_states():
-    reset_dispatch_states_for_test()
+    reset_quiesce_states_for_test()
     yield
-    reset_dispatch_states_for_test()
+    reset_quiesce_states_for_test()
 
 
 async def _measure_one(agent_id: str, samples: list[float]) -> None:

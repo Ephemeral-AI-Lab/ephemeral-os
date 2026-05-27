@@ -13,7 +13,7 @@ from sandbox.daemon.audit_schema import (
     build_isolated_workspace_event,
     safe_emit,
 )
-from sandbox.isolated_workspace._control_plane.linux_runtime import _directory_file_bytes
+from sandbox.isolated_workspace._control_plane.namespace_runtime import _directory_file_bytes
 from sandbox.isolated_workspace._control_plane.pipeline_state import (
     ISOLATED_WORKSPACE_ROOT,
     IsolatedWorkspaceError,

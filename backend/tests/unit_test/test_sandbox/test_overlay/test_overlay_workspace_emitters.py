@@ -92,7 +92,7 @@ def test_overlay_workspace_emits_mounted_and_cleaned(_writable_root: Path) -> No
     )
     assert handle.operation_id == "op-123"
 
-    asyncio.run(overlay_lifecycle.destroy(handle))
+    asyncio.run(overlay_lifecycle.release_overlay(handle))
 
     events = _drain_overlay_events()
     types = [e["type"] for e in events]
@@ -138,7 +138,7 @@ def test_overlay_workspace_cleanup_failed_emits_failure_kind(
 
     monkeypatch.setattr(overlay_lifecycle.shutil, "rmtree", _exploding_rmtree)
 
-    asyncio.run(overlay_lifecycle.destroy(handle))
+    asyncio.run(overlay_lifecycle.release_overlay(handle))
 
     events = _drain_overlay_events()
     failed = [e for e in events if e["type"] == "overlay_workspace.cleanup_failed"]

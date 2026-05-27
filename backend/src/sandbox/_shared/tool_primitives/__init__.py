@@ -2,7 +2,15 @@
 
 from __future__ import annotations
 
-from sandbox._shared.tool_primitives import edit, glob, grep, read, write
+from sandbox._shared.tool_primitives import (
+    edit,
+    glob,
+    grep,
+    read,
+    shell,
+    workspace_filesystem,
+    write,
+)
 
 VERB_TABLE = {
     "read_file": read.read_file,

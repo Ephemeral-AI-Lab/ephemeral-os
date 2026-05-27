@@ -98,7 +98,7 @@ def has_cap_sys_admin() -> bool:
         "sandbox.overlay.namespace_runner"
     ).detect_private_mount_namespace
     mount_syscalls_supported = importlib.import_module(
-        "sandbox.overlay.capability"
+        "sandbox.overlay.mount_syscalls"
     ).mount_syscalls_supported
     return detect_private_mount_namespace() and mount_syscalls_supported()
 
@@ -170,7 +170,7 @@ async def run_shell_batch(
         "sandbox.ephemeral_workspace.pipeline"
     ).EphemeralPipeline
     layer_stack_adapter = importlib.import_module(
-        "sandbox.occ.layer_stack_client"
+        "sandbox.occ.layer_stack_adapter"
     ).LayerStackPortAdapter
     pipeline = ephemeral_pipeline(
         occ_client=_NoopOccClient(),

@@ -14,7 +14,7 @@ from uuid import uuid4
 
 from sandbox.overlay import lifecycle as overlay_lifecycle
 from sandbox._shared.command_exec_contract import CommandExecRequest
-from sandbox.overlay.capability import mount_syscalls_supported
+from sandbox.overlay.mount_syscalls import mount_syscalls_supported
 from sandbox.overlay.namespace_runner import detect_private_mount_namespace
 
 
@@ -97,7 +97,7 @@ async def _apply_with_operation_overlay(
             timings=getattr(publish, "timings", None),
         )
     finally:
-        await _destroy_or_release(handle)
+        await _release_handle(handle)
 
 
 async def _run_apply_child(
@@ -176,9 +176,9 @@ def _format_apply_result(
     return payload
 
 
-async def _destroy_or_release(handle: Any) -> None:
-    if hasattr(handle, "_destroy_lock") and hasattr(handle, "run_dir"):
-        await overlay_lifecycle.destroy(handle)
+async def _release_handle(handle: Any) -> None:
+    if hasattr(handle, "_release_lock") and hasattr(handle, "run_dir"):
+        await overlay_lifecycle.release_overlay(handle)
         return
     release = getattr(handle, "release", None)
     if callable(release):

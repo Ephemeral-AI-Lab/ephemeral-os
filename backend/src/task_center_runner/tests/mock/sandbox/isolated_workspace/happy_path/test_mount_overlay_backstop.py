@@ -1,7 +1,7 @@
-"""PR 0 acceptance backstop: ``_LinuxNamespaceRuntime.mount_overlay`` actually fires.
+"""PR 0 acceptance backstop: ``_KernelNamespaceRuntime.mount_overlay`` actually fires.
 
 This test bypasses ``IsolatedPipeline.enter()`` entirely. It spawns
-the ns_holder + opens ns FDs + invokes ``_LinuxNamespaceRuntime.mount_overlay``
+the ns_holder + opens ns FDs + invokes ``_KernelNamespaceRuntime.mount_overlay``
 directly, then asserts the overlay line appears in
 ``/proc/<root_pid>/mountinfo`` inside the workspace mntns.
 
@@ -40,9 +40,9 @@ from pathlib import Path
 
 from sandbox.overlay.writable_dirs import overlay_writable_root
 from sandbox.isolated_workspace import IsolatedWorkspaceHandle
-from sandbox.isolated_workspace._control_plane.linux_runtime import _LinuxNamespaceRuntime
+from sandbox.isolated_workspace._control_plane.namespace_runtime import _KernelNamespaceRuntime
 
-runtime = _LinuxNamespaceRuntime()
+runtime = _KernelNamespaceRuntime()
 # Scratch MUST live on a non-overlayfs filesystem. The container's "/" is
 # overlayfs (Docker rootfs), and overlayfs refuses to be used as an upperdir
 # for another overlay mount — fsconfig returns EINVAL on the upperdir step.

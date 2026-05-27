@@ -33,10 +33,10 @@ consistent vocabulary for messages, events, tool IDs, and termination markers.
 | 1 | `rg -i 'api[_]?message\|apitext\|apithinking\|apitooluse\|apistream' backend/src` → 0 | **PASS** |
 | 2 | `rg 'ConversationMessage' backend/` → 0 | **PASS** |
 | 3 | `rg '\.does_terminate' backend/` → 0 | **PASS** |
-| 4 | `rg '\btool_id\b' backend/src/{engine,message,tools/_framework}` → 0 | **PARTIAL** — see Deferred items |
+| 4 | `rg '\btool_id\b' backend/src/{engine,message,tools/_framework}` → 0 | **PASS** |
 | 5 | `rg '\bAssistantTextDelta\b' backend/` (no Event suffix) → 0 | **PASS** |
 | 6 | `rg 'AssistantMessageComplete\b' backend/` (no Event suffix) → 0 | **PASS** |
-| 7 | `rg 'ApiMessage' docs/` → 0 | (docs were not in the rewrite scope) |
+| 7 | `rg 'ApiMessage' docs/` → 0 | **PASS** (mechanical symbol updates applied to `docs/architecture/`) |
 | 8 | `rg 'max_tokens.*4096\|max_tokens.*16384' backend/src` → 0 | **PASS** |
 | 9 | `mypy backend/src` clean | **NOT MET** — refactor introduced no new mypy errors over the pre-existing 734, but mypy was not green before either. See Deferred. |
 | 10 | unit tests green | **PASS** (2079 passed) |
@@ -118,30 +118,37 @@ consistent vocabulary for messages, events, tool IDs, and termination markers.
 
 ## Deferred items (acknowledged)
 
-1. **`tool_id` at the sandbox/engine boundary.** The plan's scope guard kept
-   the sandbox-domain `tool_id` (in `backend/src/sandbox/`), but the engine
-   has three remaining string-key crossings:
-   - `engine/audit/stream.py` emits JSONL payload key `"tool_id"` (consumed by
-     external audit pipelines that share the sandbox key namespace).
-   - `engine/tool_call/dispatch.py` constructs
-     `ToolCallSection(tool_id=tool_call.tool_use_id, …)` — `ToolCallSection`
-     lives in `sandbox/daemon/audit_schema.py` and its field name stays
-     `tool_id` per scope guard.
-   These three call sites violate AC4 in the strictest reading. Resolving them
-   would require renaming `ToolCallSection.tool_id` (sandbox-domain) or
-   inverting the JSONL key conventions across audit consumers. Left as
-   a separate scope.
+1. ~~**`tool_id` at the sandbox/engine boundary.**~~ **Resolved.** The
+   `tool_id` field was renamed to `tool_use_id` across:
+   - `sandbox/daemon/audit_schema.py` (`ToolCallSection.tool_id` →
+     `tool_use_id`), and its `as_dict()` output keys.
+   - JSONL payload keys in `engine/audit/stream.py`,
+     `task_center_runner/audit/{stream_bridge,sandbox_events,metrics,
+     performance_report,legacy}.py`, and the SWE-EVO mock runner.
+   - Test fixtures asserting on these payload keys.
+   `SandboxCaller.tool_id` (caller-context object field, not a wire key)
+   is intentionally preserved as a sandbox-domain identifier — engine
+   callers construct it via `SandboxCaller(tool_id=metadata.get("tool_use_id"))`.
+   AC4 now reads zero hits in `engine/`, `message/`, `tools/_framework/`.
 
 2. **`mypy backend/src` not clean.** The repo had 734 pre-existing mypy
    errors before this refactor. The refactor introduced none — the remaining
    tool_use_id/Message errors flagged were preexisting type drift now
    relocated, not new debt.
 
-3. **`docs/` references to `ApiMessage` and `ConversationMessage`.** AC7 was
-   not enforced — architecture HTML docs were left untouched per the plan's
-   "Out of Scope" list (`Architecture doc rewrites beyond mechanical symbol
-   updates`). Future architecture-doc refresh should sweep those naming
-   references.
+3. ~~**`docs/` references to `ApiMessage` and `ConversationMessage`.**~~
+   **Resolved.** Mechanical symbol updates applied across
+   `docs/architecture/` (22 files: `index.html`, `assets/search-index.js`,
+   `agent_loops/*.html`, `task_center/*.html`, `tools/*.html`, and
+   peer-module references). All deprecated symbols (`ApiMessage*`,
+   `ConversationMessage`, `does_terminate`, `assistant_message_from_api`,
+   `prepare_provider_messages`, `register_recorder_for_agent_run`, the
+   suffixless `…Delta`/`…Complete`/`ToolExecution…` names, plus file paths
+   `message/stream_events.py` → `message/events.py` and `message/messages.py`
+   → `message/message.py`) replaced with their new names. AC7 now reads
+   zero hits in `docs/architecture/`. Per-page `data-last-reviewed-commit`
+   markers were NOT bumped — that's a separate doc-refresh exercise (the
+   underlying architectural claims are unchanged).
 
 4. **JSONL output key for ToolUseBlock changed.** Per the plan ADR,
    `model_dump(mode="json")` of a `ToolUseBlock` in the agent message

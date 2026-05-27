@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from audit.base import AuditSink
 from sandbox.api.tool._conflict_detection import is_edit_conflict
-from sandbox.api.tool._daemon_request_payloads import daemon_request_identity_fields
 from sandbox.api.tool._daemon_response_parsing import (
+    daemon_request_identity_fields,
     parse_guarded_mutation_result,
     strict_int_from_daemon_field,
     user_visible_error_message,

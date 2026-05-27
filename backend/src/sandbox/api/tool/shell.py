@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from audit.base import AuditSink
 from sandbox.api.tool._conflict_detection import is_shell_conflict
-from sandbox.api.tool._daemon_request_payloads import daemon_request_identity_fields
 from sandbox.api.tool._operation_audit import run_audited_operation
 from sandbox.api.tool._daemon_response_parsing import (
+    daemon_request_identity_fields,
     parse_shell_result,
     parse_timing_map_field,
     user_visible_error_message,

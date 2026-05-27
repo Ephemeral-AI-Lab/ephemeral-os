@@ -23,14 +23,14 @@ from task_center.goal.ancestry import nested_goal_depth
 
 
 @dataclass(frozen=True, slots=True)
-class ResolverContext:
+class TerminalRoutingContext:
     """Identity + dependency bundle for launch-time terminal routing."""
 
     scope: ContextScope
     deps: ContextEngineDeps
 
 
-def _depth(ctx: ResolverContext) -> int:
+def _depth(ctx: TerminalRoutingContext) -> int:
     """Return the nested-goal depth for ``ctx``.
 
     Scopes without a goal have no caller-attempt ancestry by construction,
@@ -46,11 +46,6 @@ def _depth(ctx: ResolverContext) -> int:
         attempt_store=ctx.deps.attempt_store,
         task_store=ctx.deps.task_store,
     )
-
-
-def _nested_goal_depth_gt_1(ctx: ResolverContext) -> bool:
-    """True when depth > 1 — caller attempt is itself inside another goal."""
-    return _depth(ctx) > 1
 
 
 # ---------------------------------------------------------------------------
@@ -79,7 +74,7 @@ class TerminalToolRouter:
     ) -> TerminalToolSelection:
         base = self._load_definition(base_agent_name)
         recipe = self._require_recipe(base)
-        ctx = ResolverContext(scope=scope, deps=deps)
+        ctx = TerminalRoutingContext(scope=scope, deps=deps)
         effective = self._effective_definition(base, ctx)
         return TerminalToolSelection(
             agent_def=effective,
@@ -108,7 +103,7 @@ class TerminalToolRouter:
     def _effective_definition(
         self,
         definition: AgentDefinition,
-        ctx: ResolverContext,
+        ctx: TerminalRoutingContext,
     ) -> AgentDefinition:
         allowed = self._allowed_terminals(definition, ctx)
         if allowed is None:
@@ -121,14 +116,14 @@ class TerminalToolRouter:
     @staticmethod
     def _allowed_terminals(
         definition: AgentDefinition,
-        ctx: ResolverContext,
+        ctx: TerminalRoutingContext,
     ) -> frozenset[str] | None:
         if definition.agent_kind not in {AgentKind.PLANNER, AgentKind.EXECUTOR}:
             return None
         if definition.agent_kind == AgentKind.EXECUTOR and ctx.scope.goal_id is None:
             return None
 
-        depth_restricted = _nested_goal_depth_gt_1(ctx)
+        depth_restricted = _depth(ctx) > 1
         if definition.agent_kind == AgentKind.PLANNER:
             if depth_restricted:
                 return frozenset({"submit_plan_closes_goal"})

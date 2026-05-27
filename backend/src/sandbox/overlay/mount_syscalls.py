@@ -91,6 +91,21 @@ def _get_libc() -> ctypes.CDLL | None:
 # ---------------------------------------------------------------------------
 
 
+def mount_syscalls_supported() -> bool:
+    """Return True if fsopen/fsconfig/fsmount/move_mount are available."""
+    return probe_supported()
+
+
+def require_mount_syscalls() -> None:
+    """Enforce the namespace-only startup precondition."""
+    if mount_syscalls_supported():
+        return
+    raise RuntimeError(
+        "overlay mount syscalls are unavailable; sandbox startup requires "
+        "fsopen/fsconfig/fsmount and private mount namespaces"
+    )
+
+
 @cache
 def probe_supported() -> bool:
     """Return True if fsopen/fsconfig/fsmount/move_mount are usable on this host.
@@ -217,6 +232,8 @@ __all__ = [
     "OVL_MAX_STACK",
     "MountSyscallsUnavailable",
     "probe_supported",
+    "mount_syscalls_supported",
+    "require_mount_syscalls",
     "fsopen",
     "fsconfig_string",
     "fsconfig_create",

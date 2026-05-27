@@ -8,22 +8,22 @@ import pytest
 from sandbox._shared.models import Intent
 from sandbox.daemon import workspace_tool_dispatch as dispatch_mod
 from sandbox.daemon.workspace_tool_dispatch import (
-    _ensure_dispatch_state,
+    _ensure_quiesce_state,
     dispatch_workspace_tool_call,
-    reset_dispatch_states_for_test,
+    reset_quiesce_states_for_test,
 )
 
 
 @pytest.fixture(autouse=True)
 def _clean_states():
-    reset_dispatch_states_for_test()
+    reset_quiesce_states_for_test()
     yield
-    reset_dispatch_states_for_test()
+    reset_quiesce_states_for_test()
 
 
 async def test_dispatch_workspace_tool_call_returns_lifecycle_in_progress_when_pending():
     agent_id = "agent-pending-dispatch"
-    state = await _ensure_dispatch_state(agent_id)
+    state = await _ensure_quiesce_state(agent_id)
     state.exit_pending = True
     response = await dispatch_workspace_tool_call(
         {"agent_id": agent_id, "path": "/testbed/x.txt"},

@@ -2,6 +2,14 @@
 
 Iteration DTOs/enums live in :mod:`task_center.iteration.state`; lifecycle
 coordination lives in :mod:`task_center.iteration.attempt_coordinator`.
+
+The facade re-exports only the names that callers actually reach through this
+path. Internal callback aliases (``AttemptClosedCallback``,
+``IterationClosureCallback``) and per-iteration DTOs (``AttemptPlanFailed``,
+``ClosureOutcome``, ``IterationClosureReport``, ``IterationCreationReason``,
+``IterationStatus``, ``FailedAttemptEntry``, ``SuccessDeferred``,
+``TerminalSuccess``) live on the canonical ``.state`` /
+``.attempt_coordinator`` modules; import them from there.
 """
 
 from __future__ import annotations
@@ -10,46 +18,23 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from task_center.iteration.attempt_coordinator import (
-        AttemptClosedCallback as AttemptClosedCallback,
         IterationAttemptCoordinator as IterationAttemptCoordinator,
-        IterationClosureCallback as IterationClosureCallback,
         OpenIterationCoordinatorRegistry as OpenIterationCoordinatorRegistry,
         OrchestratorFactory as OrchestratorFactory,
     )
     from task_center.iteration.state import (
-        AttemptPlanFailed as AttemptPlanFailed,
-        ClosureOutcome as ClosureOutcome,
         Iteration as Iteration,
-        IterationClosureReport as IterationClosureReport,
-        IterationCreationReason as IterationCreationReason,
-        IterationStatus as IterationStatus,
-        FailedAttemptEntry as FailedAttemptEntry,
-        SuccessDeferred as SuccessDeferred,
-        TerminalSuccess as TerminalSuccess,
     )
 
 _COORDINATORS = "task_center.iteration.attempt_coordinator"
 _STATE = "task_center.iteration.state"
 
 _EXPORTS: dict[str, tuple[str, str]] = {
-    "AttemptClosedCallback": (
-        _COORDINATORS,
-        "AttemptClosedCallback",
-    ),
-    "AttemptPlanFailed": (_STATE, "AttemptPlanFailed"),
-    "ClosureOutcome": (_STATE, "ClosureOutcome"),
     "Iteration": (_STATE, "Iteration"),
-    "IterationClosureCallback": (
-        _COORDINATORS,
-        "IterationClosureCallback",
-    ),
-    "IterationClosureReport": (_STATE, "IterationClosureReport"),
-    "IterationCreationReason": (_STATE, "IterationCreationReason"),
     "IterationAttemptCoordinator": (
         _COORDINATORS,
         "IterationAttemptCoordinator",
     ),
-    "IterationStatus": (_STATE, "IterationStatus"),
     "OpenIterationCoordinatorRegistry": (
         _COORDINATORS,
         "OpenIterationCoordinatorRegistry",
@@ -58,9 +43,6 @@ _EXPORTS: dict[str, tuple[str, str]] = {
         _COORDINATORS,
         "OrchestratorFactory",
     ),
-    "FailedAttemptEntry": (_STATE, "FailedAttemptEntry"),
-    "SuccessDeferred": (_STATE, "SuccessDeferred"),
-    "TerminalSuccess": (_STATE, "TerminalSuccess"),
 }
 
 

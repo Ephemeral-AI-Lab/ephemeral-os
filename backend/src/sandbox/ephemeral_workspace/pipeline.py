@@ -205,7 +205,7 @@ class EphemeralPipeline(OperationOverlayMixin, WorkspacePublishMixin):
                 changed_path_count=len(path_changes),
             )
         finally:
-            await self._lease_guard.destroy(handle, overlay_lifecycle.destroy)
+            await self._lease_guard.release(handle, overlay_lifecycle.release_overlay)
 
     def _attach_operation_timing_aliases(
         self,
@@ -374,7 +374,7 @@ class EphemeralPipeline(OperationOverlayMixin, WorkspacePublishMixin):
         shutil.rmtree(self._workdir, ignore_errors=True)
 
     def _mount_active(self, *, reason: str) -> SnapshotManifest:
-        snapshot = self._prepare_overlay_snapshot(f"sandbox-overlay-{reason}")
+        snapshot = self._lease_overlay_snapshot(f"sandbox-overlay-{reason}")
         self._prepare_mount_dirs()
         try:
             self._mount_layer_paths(snapshot.layer_paths)
@@ -405,7 +405,7 @@ class EphemeralPipeline(OperationOverlayMixin, WorkspacePublishMixin):
         finally:
             mount_inputs.close()
 
-    def _prepare_overlay_snapshot(self, invocation_id: str) -> _PreparedOverlaySnapshot:
+    def _lease_overlay_snapshot(self, invocation_id: str) -> _PreparedOverlaySnapshot:
         if self._layer_stack is None:
             raise RuntimeError("snapshot requires layer_stack")
         snapshot = self._layer_stack.prepare_workspace_snapshot(

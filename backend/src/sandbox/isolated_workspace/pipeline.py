@@ -28,8 +28,8 @@ from sandbox.isolated_workspace._control_plane.orphan_reaper import (
 from sandbox.isolated_workspace._control_plane.workspace_handle_lifecycle import (
     _WorkspaceHandleLifecycleMixin,
 )
-from sandbox.isolated_workspace._control_plane.linux_runtime import (
-    _LinuxNamespaceRuntime,
+from sandbox.isolated_workspace._control_plane.namespace_runtime import (
+    _KernelNamespaceRuntime,
     _read_linux_memavailable_kb,
 )
 from sandbox.isolated_workspace._control_plane.pipeline_state import (
@@ -88,7 +88,7 @@ class IsolatedPipeline(
         self._audit = audit
         self._config = config or _PipelineConfig.from_env()
         self._network = network or IsolatedNetwork(rfc1918_egress=self._config.rfc1918_egress)
-        self._runtime: _NamespaceRuntime = runtime or _LinuxNamespaceRuntime()
+        self._runtime: _NamespaceRuntime = runtime or _KernelNamespaceRuntime()
         self._clock = clock
         self._id_factory = id_factory
         self._meminfo_reader = meminfo_reader or _read_linux_memavailable_kb

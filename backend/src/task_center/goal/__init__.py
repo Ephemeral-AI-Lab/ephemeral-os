@@ -1,17 +1,8 @@
-"""Goal package facade."""
+"""Goal package.
 
-from task_center.goal.state import (
-    Goal,
-    GoalClosureDeliveryResult,
-    GoalClosureReport,
-    GoalClosureDeliveryStatus,
-    GoalStatus,
-)
-
-__all__ = [
-    "Goal",
-    "GoalClosureDeliveryResult",
-    "GoalClosureDeliveryStatus",
-    "GoalClosureReport",
-    "GoalStatus",
-]
+Goal DTOs/enums live in :mod:`task_center.goal.state`; lifecycle, ancestry,
+closure-report routing, and goal-start sequencing live in their dedicated
+submodules (``lifecycle``, ``ancestry``, ``closure_report_router``,
+``starter``). Callers import from the canonical submodule path; the package
+root deliberately re-exports nothing.
+"""

@@ -1,4 +1,4 @@
-"""Linux runtime helpers for isolated workspaces."""
+"""Kernel-backed namespace runtime for isolated workspaces."""
 
 from __future__ import annotations
 
@@ -62,8 +62,14 @@ def _enable_child_subreaper() -> bool:
     return True
 
 
-class _LinuxNamespaceRuntime:
-    """Default runtime — calls real Linux syscalls / utilities."""
+class _KernelNamespaceRuntime:
+    """Default runtime — calls real Linux kernel syscalls / utilities.
+
+    Named ``_KernelNamespaceRuntime`` (not ``_HostNamespaceRuntime``) because
+    ``host`` is reserved in this codebase for the outside-sandbox process world
+    (see ``sandbox/host/``); ``Kernel`` names the actual axis of variation
+    vs. test doubles, which deliberately do not touch kernel syscalls.
+    """
 
     def __init__(self) -> None:
         self._holders: dict[int, subprocess.Popen[bytes]] = {}

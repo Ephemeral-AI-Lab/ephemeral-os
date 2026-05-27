@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Collection, Mapping
 
 from sandbox.audit.conflict_markers import (
     EDIT_CONFLICT_MARKERS as _EDIT_CONFLICT_MARKERS,
@@ -36,17 +36,22 @@ def _structured_error_code(error: BaseException) -> str | None:
     return None
 
 
-def is_edit_conflict(error: BaseException) -> bool:
+def _matches_conflict(
+    error: BaseException,
+    *,
+    codes: Collection[str],
+    markers: Collection[str],
+) -> bool:
     code = _structured_error_code(error)
-    if code in _EDIT_CONFLICT_CODES:
+    if code in codes:
         return True
     lowered = user_visible_error_message(error).lower()
-    return any(marker in lowered for marker in _EDIT_CONFLICT_MARKERS)
+    return any(marker in lowered for marker in markers)
+
+
+def is_edit_conflict(error: BaseException) -> bool:
+    return _matches_conflict(error, codes=_EDIT_CONFLICT_CODES, markers=_EDIT_CONFLICT_MARKERS)
 
 
 def is_shell_conflict(error: BaseException) -> bool:
-    code = _structured_error_code(error)
-    if code in _SHELL_CONFLICT_CODES:
-        return True
-    lowered = user_visible_error_message(error).lower()
-    return any(marker in lowered for marker in _SHELL_CONFLICT_MARKERS)
+    return _matches_conflict(error, codes=_SHELL_CONFLICT_CODES, markers=_SHELL_CONFLICT_MARKERS)

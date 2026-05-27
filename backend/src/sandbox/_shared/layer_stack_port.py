@@ -1,6 +1,6 @@
 """Single canonical layer-stack Protocol for workspace pipelines.
 
-The iws pipeline binds a :class:`sandbox.occ.layer_stack_client.LayerStackPortAdapter`
+The iws pipeline binds a :class:`sandbox.occ.layer_stack_adapter.LayerStackPortAdapter`
 at construction time, so both eph and iws speak the same kwarg-only contract
 defined here.
 """

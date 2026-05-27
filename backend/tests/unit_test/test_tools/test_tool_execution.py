@@ -911,7 +911,7 @@ async def test_query_loop_continues_after_non_terminal_tool_result() -> None:
     assert context.terminal_result.output == "done"
 
 
-async def test_execute_tool_once_stamps_does_terminate_on_terminal_success() -> None:
+async def test_execute_tool_once_stamps_is_terminal_on_terminal_success() -> None:
     tool = _TerminalEchoTool()
     result = await execute_tool_once(
         tool,
@@ -923,7 +923,7 @@ async def test_execute_tool_once_stamps_does_terminate_on_terminal_success() -> 
     assert result.is_terminal is True
 
 
-async def test_execute_tool_once_skips_does_terminate_on_terminal_error() -> None:
+async def test_execute_tool_once_skips_is_terminal_on_terminal_error() -> None:
     tool = _TerminalFailingTool()
     result = await execute_tool_once(
         tool,
@@ -935,7 +935,7 @@ async def test_execute_tool_once_skips_does_terminate_on_terminal_error() -> Non
     assert result.is_terminal is False
 
 
-async def test_execute_tool_once_skips_does_terminate_for_non_terminal_tool() -> None:
+async def test_execute_tool_once_skips_is_terminal_for_non_terminal_tool() -> None:
     tool = _EchoTool()
     result = await execute_tool_once(
         tool,
@@ -947,7 +947,7 @@ async def test_execute_tool_once_skips_does_terminate_for_non_terminal_tool() ->
     assert result.is_terminal is False
 
 
-async def test_execute_tool_call_streaming_propagates_does_terminate_to_block() -> None:
+async def test_execute_tool_call_streaming_propagates_is_terminal_to_block() -> None:
     tool = _TerminalEchoTool()
     context = _query_context(tool)
     result = await execute_tool_call_streaming(

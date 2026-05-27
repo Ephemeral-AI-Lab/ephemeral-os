@@ -15,14 +15,42 @@ from collections import OrderedDict
 from dataclasses import dataclass
 from pathlib import Path
 
+from sandbox.layer_stack.manifest import manifest_path, read_manifest
 from sandbox.layer_stack.stack import LayerStack
+from sandbox.layer_stack.workspace_binding import require_workspace_binding
 from sandbox.occ.client import OccClient
 from sandbox.occ.gitignore import SnapshotGitignoreOracle
 from sandbox.occ.maintenance import AutoSquashMaintenancePolicy
+from sandbox.occ.ports import WorkspaceBindingSnapshot
 from sandbox.occ.service import AUTO_SQUASH_MAX_DEPTH, OccService
-from sandbox.occ.layer_stack_client import LayerStackPortAdapter
-from sandbox.main_workspace.workspace_binding import MainWorkspaceBindingReader
+from sandbox.occ.layer_stack_adapter import LayerStackPortAdapter
 from sandbox.daemon.layer_stack_runtime import emit_squash_event, get_layer_stack_manager
+
+
+class _MainWorkspaceBindingReader:
+    """Binding reader that fails closed before main-workspace OCC dispatch."""
+
+    def require_workspace_binding(
+        self,
+        workspace_ref: str,
+    ) -> WorkspaceBindingSnapshot:
+        if not workspace_ref:
+            raise ValueError("workspace_ref is required")
+        binding = require_workspace_binding(workspace_ref)
+        manifest_file = manifest_path(workspace_ref)
+        if not manifest_file.exists():
+            raise RuntimeError(
+                f"active manifest is missing for workspace binding: {workspace_ref}"
+            )
+        if read_manifest(manifest_file).version <= 0:
+            raise RuntimeError(
+                f"active manifest is empty for workspace binding: {workspace_ref}"
+            )
+        return WorkspaceBindingSnapshot(
+            workspace_ref=workspace_ref,
+            workspace_root=binding.workspace_root,
+            layer_stack_root=Path(workspace_ref).as_posix(),
+        )
 
 
 @dataclass(frozen=True)
@@ -68,7 +96,7 @@ def get_occ_runtime_services(layer_stack_root: str) -> OccRuntimeServices:
     )
     occ_client = OccClient(
         occ_service,
-        binding_reader=MainWorkspaceBindingReader(),
+        binding_reader=_MainWorkspaceBindingReader(),
         workspace_ref=cache_key,
     )
     services = OccRuntimeServices(

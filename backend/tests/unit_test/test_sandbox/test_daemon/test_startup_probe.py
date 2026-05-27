@@ -71,19 +71,19 @@ def test_log_mount_syscall_capability_checks_mount_syscalls() -> None:
         call_count += 1
         return True
 
-    with patch("sandbox.overlay.capability.mount_syscalls_supported", side_effect=supported_probe):
+    with patch("sandbox.overlay.mount_syscalls.mount_syscalls_supported", side_effect=supported_probe):
         _log_mount_syscall_capability()
 
     assert call_count == 2
 
 
 def test_log_mount_capability_accepts_supported_kernel() -> None:
-    with patch("sandbox.overlay.capability.mount_syscalls_supported", return_value=True):
+    with patch("sandbox.overlay.mount_syscalls.mount_syscalls_supported", return_value=True):
         _log_mount_syscall_capability()
 
 
 def test_log_mount_capability_requires_mount_syscalls() -> None:
-    with patch("sandbox.overlay.capability.mount_syscalls_supported", return_value=False):
+    with patch("sandbox.overlay.mount_syscalls.mount_syscalls_supported", return_value=False):
         with pytest.raises(RuntimeError, match="mount syscalls"):
             _log_mount_syscall_capability()
 

@@ -68,11 +68,11 @@ class WorkspaceProjectionLike(Protocol):
     @property
     def layer_stack_root(self) -> Any: ...
 
-    def acquire(self, owner_request_id: str) -> Any: ...
+    def acquire(self, invocation_id: str) -> Any: ...
 
     def acquire_overlay(
         self,
-        owner_request_id: str,
+        invocation_id: str,
         *,
         workspace_root: str,
     ) -> OverlayHandle: ...

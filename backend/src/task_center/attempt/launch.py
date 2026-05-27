@@ -224,8 +224,6 @@ def _fail_unowned_attempt(
         status=TaskCenterTaskStatus.FAILED.value,
         summary={"fail_reason": "run_exhausted", "summary": summary},
     )
-    if launch.attempt_id is None:
-        return
     attempt = runtime.attempt_store.get(launch.attempt_id)
     if attempt is None or attempt.is_closed:
         return

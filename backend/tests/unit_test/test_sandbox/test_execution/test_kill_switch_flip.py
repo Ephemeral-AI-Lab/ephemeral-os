@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-import sandbox.overlay.capability as cap_mod
+import sandbox.overlay.mount_syscalls as cap_mod
 
 
 def test_mount_syscalls_probe_is_authoritative(monkeypatch: pytest.MonkeyPatch) -> None:

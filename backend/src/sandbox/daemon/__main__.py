@@ -85,7 +85,7 @@ def _bump_nofile(target: int = 8192) -> None:
 
 
 def _log_mount_syscall_capability() -> None:
-    from sandbox.overlay.capability import mount_syscalls_supported, require_mount_syscalls
+    from sandbox.overlay.mount_syscalls import mount_syscalls_supported, require_mount_syscalls
     require_mount_syscalls()
     supported = mount_syscalls_supported()
     logging.getLogger(__name__).info(
