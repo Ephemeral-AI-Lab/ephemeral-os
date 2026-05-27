@@ -74,7 +74,7 @@ def _register_agent(
     *,
     name: str,
     recipe: str,
-    terminals: tuple[str, ...] = (),
+    terminals: tuple[str, ...] = ("submit_x",),
     skill: Path | None = None,
 ) -> AgentDefinition:
     definition = AgentDefinition(
@@ -83,6 +83,7 @@ def _register_agent(
         agent_kind=AgentKind.PLANNER if "planner" in name else AgentKind.EXECUTOR,
         context_recipe=recipe,
         terminals=list(terminals),
+        tool_call_limit=10,
         skill=skill,
     )
     register_definition(definition)

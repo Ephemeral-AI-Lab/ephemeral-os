@@ -98,6 +98,8 @@ async def test_load_skill_reference_from_context_uses_agent_skill_folder(
     definition = AgentDefinition(
         name="planner_ctx",
         description="Planner with a skill.",
+        terminals=["submit_x"],
+        tool_call_limit=10,
         agent_kind=AgentKind.PLANNER,
         skill=skill_file,
     )

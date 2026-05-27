@@ -12,10 +12,7 @@ from notification.metadata import (
 )
 from notification.rules import NotificationRule, dispatch_rules
 from notification.rules import (
-    make_budget_overflow_reminder,
-    make_budget_warning,
-    make_missing_terminal_reminder,
-    make_opening_reminder,
+    make_terminal_call_reminder,
 )
 
 __all__ = [
@@ -26,9 +23,6 @@ __all__ = [
     "dispatch_rules",
     "ensure_system_notification_service",
     "flush_system_notification_events",
-    "make_budget_overflow_reminder",
-    "make_budget_warning",
-    "make_missing_terminal_reminder",
-    "make_opening_reminder",
+    "make_terminal_call_reminder",
     "serialize_system_notifications",
 ]

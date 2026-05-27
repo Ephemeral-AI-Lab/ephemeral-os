@@ -33,7 +33,6 @@ from tools import (
     create_default_tool_registry,
     has_tool,
     make_background_tools,
-    make_sandbox_tools,
     resolve_harness_notification_triggers,
 )
 
@@ -116,7 +115,7 @@ def _finalize_tool_registry_and_prompt(
     tool_registry: ToolRegistry,
     system_prompt: str,
     *,
-    agent_type: AgentType | str = AgentType.AGENT,
+    agent_type: AgentType,
 ) -> tuple[str, bool]:
     """Finalize runtime tool registry and append terminal-tool guidance.
 
@@ -151,6 +150,10 @@ def _finalize_tool_registry_and_prompt(
         for t in tool_registry.list_tools()
         if getattr(t, "is_terminal_tool", False)
     ]
+    assert terminal_tool_names, (
+        "Agent has no terminal-capable tool registered. Every agent must "
+        "declare at least one tool with is_terminal_tool=True."
+    )
     termination_prompt = build_termination_condition_prompt(
         terminal_tools=terminal_tool_names,
     )
@@ -162,7 +165,7 @@ def _finalize_tool_registry_and_prompt(
 
 def _resolve_agent_identity(
     config: RuntimeConfig,
-    agent_def: AgentDefinition | None,
+    agent_def: AgentDefinition,
 ) -> tuple[str, str, Any, dict[str, Any] | None]:
     """Resolve the agent's name, model id, API client, and DB model kwargs.
 
@@ -178,57 +181,52 @@ def _resolve_agent_identity(
             "model_registrations DB table before spawning agents."
         ) from exc
 
-    # ``model`` on the agent_def can be an explicit id, an ``"inherit"``
-    # sentinel meaning "use the active runtime model", or absent.
-    agent_model = agent_def.model if agent_def else None
+    # ``model`` on the agent_def can be an explicit id or the ``"inherit"``
+    # sentinel meaning "use the active runtime model".
+    agent_model = agent_def.model
     if agent_model and agent_model.strip().lower() == "inherit":
         agent_model = None
     resolved_model = agent_model or db_kwargs.get("model")
     if not resolved_model:
         raise RuntimeError("Active model registration has no 'model' id")
-    agent_name = agent_def.name if agent_def else resolved_model
 
     # Subagents get their own httpx pool so concurrent workers do not
     # contend over a shared connection pool.
-    needs_fresh_client = bool(agent_def and agent_def.agent_type == AgentType.SUBAGENT)
+    needs_fresh_client = agent_def.agent_type == AgentType.SUBAGENT
     api_client = make_api_client(
         None if needs_fresh_client else config.external_api_client,
         db_kwargs=db_kwargs,
     )
-    return agent_name, resolved_model, api_client, db_kwargs
+    return agent_def.name, resolved_model, api_client, db_kwargs
 
 
 def _build_agent_tool_registry(
     config: RuntimeConfig,
-    agent_def: AgentDefinition | None,
+    agent_def: AgentDefinition,
     sandbox_id: str | None,
     agent_name: str,
 ) -> ToolRegistry:
     """Build the tool registry for a spawning agent.
 
-    Registers tools requested by *agent_def* and sandbox tools when
-    a sandbox is selected for a default agent.
+    Registers the tools named in ``agent_def.allowed_tools ∪
+    agent_def.terminals`` and skips unknown names with a warning.
     """
     tool_registry = create_default_tool_registry()
 
     tool_ctx = ToolFactoryContext(
         metadata={
             "agent_name": agent_name,
-            "role": agent_def.agent_kind.value if agent_def else "",
+            "role": agent_def.agent_kind.value,
             "cwd": config.cwd,
             "sandbox_id": sandbox_id or "",
         },
     )
-    if agent_def:
-        _register_requested_tools(
-            tool_registry,
-            sorted(set(agent_def.allowed_tools) | set(agent_def.terminals)),
-            tool_ctx,
-            agent_name,
-        )
-    elif sandbox_id:
-        tool_registry.register_many(make_sandbox_tools())
-        logger.info("Registered sandbox tools for sandbox %s", sandbox_id)
+    _register_requested_tools(
+        tool_registry,
+        sorted(set(agent_def.allowed_tools) | set(agent_def.terminals)),
+        tool_ctx,
+        agent_name,
+    )
 
     return tool_registry
 
@@ -264,43 +262,20 @@ def _register_requested_tools(
             )
 
 
-def _attach_default_overshoot_rules(
+def _attach_default_terminal_reminder(
     notification_rules: list[Any],
-    *,
-    agent_def: AgentDefinition | None,
-    tool_registry: ToolRegistry,
 ) -> None:
-    """Append the budget-overflow and missing-terminal reminder rules.
+    """Append the terminal-call reminder rule if not already present.
 
-    No-op unless the agent declares a ``tool_call_limit`` AND the tool
-    registry exposes at least one terminal-capable tool. Dedupes by
-    ``rule.name`` so profiles that customize either rule via
-    ``notification_rules`` win.
+    Every agent has terminals and a ``tool_call_limit`` by invariant, so
+    this rule applies unconditionally. Dedupes by ``rule.name`` so
+    profiles that customize the rule via ``notification_rules`` win.
     """
-    if agent_def is None or agent_def.tool_call_limit is None:
-        return
-    has_terminal_tools = any(
-        getattr(t, "is_terminal_tool", False) for t in tool_registry.list_tools()
-    )
-    if not has_terminal_tools:
-        return
-
-    from config import get_central_config
-    from notification import (
-        make_budget_overflow_reminder,
-        make_missing_terminal_reminder,
-    )
+    from notification import make_terminal_call_reminder
 
     existing_names = {getattr(rule, "name", "") for rule in notification_rules}
-    engine_cfg = get_central_config().engine
-    if "budget_overflow_reminder" not in existing_names:
-        notification_rules.append(
-            make_budget_overflow_reminder(
-                every=engine_cfg.budget_overflow_reminder_every,
-            )
-        )
-    if "missing_terminal_reminder" not in existing_names:
-        notification_rules.append(make_missing_terminal_reminder())
+    if "terminal_call_reminder" not in existing_names:
+        notification_rules.append(make_terminal_call_reminder())
 
 
 def _build_sandbox_context_preparers(
@@ -323,7 +298,7 @@ def _build_sandbox_context_preparers(
 
 def _build_agent_system_prompt(
     config: RuntimeConfig,
-    agent_def: AgentDefinition | None,
+    agent_def: AgentDefinition,
     settings: Settings,
 ) -> str:
     """Return the instruction-only system prompt for *agent_def*.
@@ -340,7 +315,7 @@ def _build_agent_system_prompt(
     )
     if base:
         parts.append(base)
-    if agent_def is not None and agent_def.system_prompt:
+    if agent_def.system_prompt:
         parts.append(agent_def.system_prompt)
     return "\n\n".join(part for part in parts if part.strip())
 
@@ -349,12 +324,12 @@ def spawn_agent(
     config: RuntimeConfig,
     messages: list[Message],
     *,
-    agent_def: AgentDefinition | None = None,
+    agent_def: AgentDefinition,
     sandbox_id: str | None = None,
 ) -> EphemeralAgent:
     """Spawn a fresh ephemeral agent with the given message history.
 
-    If *agent_def* is provided, its fields customize the runtime defaults:
+    *agent_def* customizes the runtime:
     - ``model`` overrides the active model
     - ``system_prompt`` is appended after the runtime system prompt
     - ``allowed_tools`` + ``terminals`` declare the tool surface
@@ -379,13 +354,10 @@ def spawn_agent(
     system_prompt, has_background_tools = _finalize_tool_registry_and_prompt(
         tool_registry,
         base_system_prompt,
-        agent_type=agent_def.agent_type if agent_def else AgentType.AGENT,
+        agent_type=agent_def.agent_type,
     )
 
-    tool_call_limit = agent_def.tool_call_limit if agent_def else None
-    max_tolerance = (
-        agent_def.max_tolerance_after_max_tool_call if agent_def else None
-    )
+    tool_call_limit = agent_def.tool_call_limit
 
     # Plumb runtime_config through tool_metadata so tools (e.g. run_subagent)
     # that need to spawn nested agents can reach it without a Protocol layer.
@@ -395,20 +367,15 @@ def spawn_agent(
         agent_name=agent_name,
         context_preparers=_build_sandbox_context_preparers(tool_registry, sandbox_id),
     )
-    if agent_def is not None:
-        initial_tool_metadata["agent_type"] = agent_def.agent_type.value
-        initial_tool_metadata["role"] = agent_def.agent_kind.value
+    initial_tool_metadata["agent_type"] = agent_def.agent_type.value
+    initial_tool_metadata["role"] = agent_def.agent_kind.value
 
-    notification_rules = list(agent_def.notification_rules) if agent_def else []
-    if agent_def and agent_def.notification_triggers:
+    notification_rules = list(agent_def.notification_rules)
+    if agent_def.notification_triggers:
         notification_rules.extend(
             resolve_harness_notification_triggers(agent_def.notification_triggers)
         )
-    _attach_default_overshoot_rules(
-        notification_rules,
-        agent_def=agent_def,
-        tool_registry=tool_registry,
-    )
+    _attach_default_terminal_reminder(notification_rules)
 
     query_context = QueryContext(
         api_client=api_client,
@@ -418,7 +385,6 @@ def spawn_agent(
         system_prompt=system_prompt,
         max_tokens=max_tokens,
         tool_call_limit=tool_call_limit,
-        max_tolerance_after_max_tool_call=max_tolerance,
         tool_metadata=initial_tool_metadata,
         enable_background_tasks=has_background_tools,
         agent_name=agent_name,

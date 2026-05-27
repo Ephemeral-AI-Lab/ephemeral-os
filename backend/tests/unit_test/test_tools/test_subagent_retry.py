@@ -43,6 +43,7 @@ def fake_subagent_definition() -> Any:
             agent_kind=AgentKind.EXPLORER,
             context_recipe="subagent_recipe",
             terminals=["submit_exploration_result"],
+            tool_call_limit=10,
         )
     )
     try:

@@ -88,6 +88,7 @@ def _make_agent_def(**overrides: Any) -> AgentDefinition:
         "description": "Agent",
         "allowed_tools": overrides.pop("allowed_tools", []),
         "terminals": ["submit_execution_success"],
+        "tool_call_limit": 10,
     }
     data.update(overrides)
     return AgentDefinition(**data)
@@ -161,6 +162,7 @@ def test_build_agent_tool_registry_skips_unknown_tools() -> None:
 def test_finalize_adds_background_management_tools_for_background_capable_tool() -> None:
     registry = ToolRegistry()
     registry.register(_BackgroundCapableTool())
+    registry.register(_TerminalTool())
 
     _, has_background = _finalize_tool_registry_and_prompt(
         registry,
@@ -181,6 +183,7 @@ def test_run_subagent_factory_preserves_always_background_policy() -> None:
 
     registry = ToolRegistry()
     registry.register(tool)
+    registry.register(_TerminalTool())
 
     _, has_background = _finalize_tool_registry_and_prompt(
         registry,
@@ -196,6 +199,7 @@ def test_run_subagent_factory_preserves_always_background_policy() -> None:
 def test_finalize_skips_background_management_tools_for_subagent() -> None:
     registry = ToolRegistry()
     registry.register(_BackgroundCapableTool())
+    registry.register(_TerminalTool())
 
     _, has_background = _finalize_tool_registry_and_prompt(
         registry,
@@ -233,37 +237,6 @@ def test_build_agent_tool_registry_skips_load_skill_reference_when_not_requested
     )
 
     assert registry.get("load_skill_reference") is None
-
-
-def test_default_sandbox_agent_registers_daytona_tools() -> None:
-    registry = _build_agent_tool_registry(
-        _make_config(cwd=str(Path("/tmp/project"))),
-        None,
-        "sb-123",
-        "default",
-    )
-
-    assert registry.get("read_file") is not None
-    assert registry.get("shell") is not None
-
-
-def test_default_sandbox_agent_builds_daytona_context_preparer() -> None:
-    from sandbox.provider.daytona.bootstrap import bootstrap_daytona_provider
-
-    bootstrap_daytona_provider()
-    registry = _build_agent_tool_registry(
-        _make_config(cwd=str(Path("/tmp/project"))),
-        None,
-        "sb-123",
-        "default",
-    )
-
-    preparers = _build_sandbox_context_preparers(registry, "sb-123")
-
-    assert [type(preparer).__name__ for preparer in preparers] == [
-        "DaytonaContextPreparer"
-    ]
-    assert preparers[0].sandbox_id == "sb-123"
 
 
 def test_context_preparers_not_added_without_declared_requirement() -> None:

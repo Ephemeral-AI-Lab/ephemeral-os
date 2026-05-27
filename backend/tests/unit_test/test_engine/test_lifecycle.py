@@ -106,6 +106,10 @@ async def test_ephemeral_agent_run_preserves_initial_messages() -> None:
         model="test",
         system_prompt="",
         max_tokens=100,
+        # Already past the hard ceiling, so the loop exits after one turn.
+        tool_call_limit=1,
+        tool_calls_used=2,
+        terminal_tools={"submit_x"},
         agent_name="executor",
         run_id="run-1:t1",
     )
@@ -121,9 +125,8 @@ async def test_ephemeral_agent_run_preserves_initial_messages() -> None:
         if isinstance(event, AssistantMessageCompleteEvent):
             completed.append(event)
 
-    # Text response with no terminal tools registered ends the run gracefully
-    # (no tolerance accounting kicks in without terminal_tools).
-    assert context.exit_reason is QueryExitReason.TEXT_RESPONSE
+    # No terminal tool submitted; the hard ceiling triggers exit.
+    assert context.exit_reason is QueryExitReason.TERMINAL_NOT_SUBMITTED
     assert [message.assistant_text for message in agent.messages] == [
         "prior context",
         "new prompt",

@@ -132,6 +132,7 @@ async def test_ask_advisor_assembles_direct_launch(monkeypatch) -> None:
             description="advisor",
             agent_kind=AgentKind.ADVISOR,
             terminals=["submit_advisor_feedback"],
+            tool_call_limit=10,
         )
     )
     parent_def = AgentDefinition(
@@ -139,6 +140,7 @@ async def test_ask_advisor_assembles_direct_launch(monkeypatch) -> None:
         description="planner stub",
         agent_kind=AgentKind.PLANNER,
         terminals=["submit_plan_closes_goal"],
+        tool_call_limit=10,
     )
     register_definition(parent_def)
     seen: dict[str, Any] = {}
@@ -211,6 +213,7 @@ async def test_ask_advisor_errors_when_parent_messages_missing() -> None:
             description="advisor",
             agent_kind=AgentKind.ADVISOR,
             terminals=["submit_advisor_feedback"],
+            tool_call_limit=10,
         )
     )
     try:

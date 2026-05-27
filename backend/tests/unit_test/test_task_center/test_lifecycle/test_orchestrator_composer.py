@@ -96,6 +96,7 @@ def _register_planner_agents() -> None:
         agent_kind=AgentKind.PLANNER,
         context_recipe="planner",
         terminals=["submit_plan_closes_goal", "submit_plan_defers_goal"],
+        tool_call_limit=10,
         system_prompt="PLANNER",
     )
     register_definition(planner)

@@ -64,6 +64,8 @@ def test_validate_skill_files_raises_with_definition_name(tmp_path: Path):
     bad = AgentDefinition(
         name="bad_planner",
         description="bad",
+        terminals=["submit_x"],
+        tool_call_limit=10,
         agent_kind=AgentKind.PLANNER,
         skill=path,
     )
@@ -79,6 +81,8 @@ def test_validate_skill_files_ignores_definitions_without_skill():
     plain = AgentDefinition(
         name="plain",
         description="plain",
+        terminals=["submit_x"],
+        tool_call_limit=10,
         agent_kind=AgentKind.EXECUTOR,
     )
     validate_skill_files([plain])  # must not raise
@@ -96,12 +100,16 @@ def test_validate_skill_files_aggregates_violations(tmp_path: Path):
         AgentDefinition(
             name="planner_a",
             description="a",
+            terminals=["submit_x"],
+            tool_call_limit=10,
             agent_kind=AgentKind.PLANNER,
             skill=bad1,
         ),
         AgentDefinition(
             name="planner_b",
             description="b",
+            terminals=["submit_x"],
+            tool_call_limit=10,
             agent_kind=AgentKind.PLANNER,
             skill=bad2,
         ),

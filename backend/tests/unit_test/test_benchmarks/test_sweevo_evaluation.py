@@ -45,13 +45,15 @@ async def test_evaluate_runs_extract_then_patch_then_tests(monkeypatch):
         _repo_dir: str,
         test_ids: list[str],
         _test_cmds: str,
-    ) -> int:
+    ) -> sweevo_evaluation._TestSetOutcome:
         calls.append("run_tests")
-        return len(test_ids)
+        return sweevo_evaluation._TestSetOutcome(
+            passed=len(test_ids), runnable_total=len(test_ids)
+        )
 
     monkeypatch.setattr(sweevo_evaluation, "_extract_combined_patch", fake_extract_patch)
     monkeypatch.setattr(sweevo_evaluation, "ensure_sweevo_test_patch", fake_ensure_patch)
-    monkeypatch.setattr(sweevo_evaluation, "_run_test_set", fake_run_tests)
+    monkeypatch.setattr(sweevo_evaluation, "_run_test_set_outcome", fake_run_tests)
 
     result = await sweevo_evaluation.evaluate_sweevo_result(
         _instance(),
@@ -66,13 +68,87 @@ async def test_evaluate_runs_extract_then_patch_then_tests(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_run_test_set_uses_python_subprocess_for_weird_test_ids(monkeypatch):
-    captured: dict[str, str] = {}
+async def test_evaluate_keeps_f2p_strict_and_treats_dropped_p2p_as_neutral(
+    monkeypatch,
+):
+    instance = _instance()
+    instance.fail_to_pass = ["tests/test_fix.py::test_one", "tests/test_fix.py::test_two"]
+    instance.pass_to_pass = ["tests/test_stable.py::test_ok", "tests/test_stable.py::bad"]
 
-    async def fake_exec(_sandbox_id: str, cmd: str, *, timeout: int, check: bool = False) -> str:
-        captured["cmd"] = cmd
+    async def fake_extract_patch(_sandbox_id: str, _repo_dir: str) -> str:
+        return ""
+
+    async def fake_ensure_patch(_instance, _sandbox_id: str, _repo_dir: str) -> None:
+        return None
+
+    async def fake_run_f2p(
+        _sandbox_id: str,
+        _repo_dir: str,
+        _test_ids: list[str],
+        _test_cmds: str,
+    ) -> sweevo_evaluation._TestSetOutcome:
+        return sweevo_evaluation._TestSetOutcome(
+            passed=0,
+            runnable_total=1,
+            dropped_unfindable=1,
+        )
+
+    async def fake_run_p2p(
+        _sandbox_id: str,
+        _repo_dir: str,
+        _test_ids: list[str],
+        _test_cmds: str,
+    ) -> sweevo_evaluation._TestSetOutcome:
+        return sweevo_evaluation._TestSetOutcome(
+            passed=1,
+            runnable_total=1,
+            dropped_unfindable=1,
+        )
+
+    monkeypatch.setattr(sweevo_evaluation, "_extract_combined_patch", fake_extract_patch)
+    monkeypatch.setattr(sweevo_evaluation, "ensure_sweevo_test_patch", fake_ensure_patch)
+
+    calls = [fake_run_f2p, fake_run_p2p]
+
+    async def fake_run_test_set(*args):
+        return await calls.pop(0)(*args)
+
+    monkeypatch.setattr(sweevo_evaluation, "_run_test_set_outcome", fake_run_test_set)
+
+    result = await sweevo_evaluation.evaluate_sweevo_result(
+        instance,
+        SWEEvoResult(plan_id="plan", instance_id=instance.instance_id),
+        "sbx-1",
+        "/testbed",
+    )
+
+    assert result.fail_to_pass_passed == 0
+    assert result.fail_to_pass_total == 2
+    assert result.fix_rate == 0
+    assert result.pass_to_pass_broken == 0
+    assert result.pass_to_pass_total == 2
+    assert result.resolved is False
+
+
+@pytest.mark.asyncio
+async def test_run_test_set_stages_ids_and_real_pytest_runner_files(monkeypatch):
+    """Test IDs and pytest runner must travel via files, never inline argv.
+
+    Inlining 6000+ IDs blows the docker-exec argv limit (`exec /bin/bash:
+    argument list too long`); the helper stages the IDs as JSON in /tmp
+    and runs pytest from a real Python file so multiprocessing spawn can reload
+    the parent module.
+    """
+    captured: dict[str, object] = {"writes": [], "cmds": []}
+
+    async def fake_write(_sandbox_id, path, content, *, chunk_size: int = 4096):
+        captured["writes"].append((path, content))
+
+    async def fake_exec(_sandbox_id, cmd, **_kwargs):
+        captured["cmds"].append(cmd)
         return "EXIT_CODE=0"
 
+    monkeypatch.setattr(sweevo_evaluation, "_write_file_via_chunked_base64", fake_write)
     monkeypatch.setattr(sweevo_evaluation, "_exec", fake_exec)
 
     passed = await sweevo_evaluation._run_test_set(
@@ -83,15 +159,33 @@ async def test_run_test_set_uses_python_subprocess_for_weird_test_ids(monkeypatc
     )
 
     assert passed == 1
-    assert "subprocess.run(argv" in captured["cmd"]
-    assert 'tests/test_networks.py::test_address_invalid[\\n@example.com-None]' in captured["cmd"]
+    # The JSON IDs and Python runner are both staged as files.
+    assert len(captured["writes"]) == 2
+    ids_path, ids_blob = captured["writes"][0]
+    runner_path, runner_blob = captured["writes"][1]
+    assert ids_path.startswith("/tmp/sweevo_ids_") and ids_path.endswith(".json")
+    assert runner_path.startswith("/tmp/sweevo_pytest_runner_")
+    assert runner_path.endswith(".py")
+    decoded = ids_blob.decode("utf-8")
+    assert 'tests/test_networks.py::test_address_invalid[\\n@example.com-None]' in decoded
+    runner_script = runner_blob.decode("utf-8")
+    assert "pytest.main(pytest_argv)" in runner_script
+    assert "if __name__ == '__main__':" in runner_script
+    assert ids_path in runner_script
+    runner_cmd = next(c for c in captured["cmds"] if runner_path in c)
+    # And the test IDs themselves must NOT appear inline in the runner cmd.
+    assert "test_address_invalid" not in runner_cmd
 
 
 @pytest.mark.asyncio
 async def test_run_test_set_counts_passed_tests_from_pytest_summary(monkeypatch):
-    async def fake_exec(_sandbox_id: str, cmd: str, *, timeout: int, check: bool = False) -> str:
+    async def fake_write(_sandbox_id, path, content, *, chunk_size: int = 4096):
+        return None
+
+    async def fake_exec(_sandbox_id, cmd, **_kwargs):
         return "2 failed, 3 passed\nEXIT_CODE=1"
 
+    monkeypatch.setattr(sweevo_evaluation, "_write_file_via_chunked_base64", fake_write)
     monkeypatch.setattr(sweevo_evaluation, "_exec", fake_exec)
 
     passed = await sweevo_evaluation._run_test_set(

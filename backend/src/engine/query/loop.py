@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 from collections.abc import AsyncIterator, Callable, Mapping
 from dataclasses import dataclass, field
 from typing import Any, cast
@@ -35,6 +36,21 @@ from tools import (
     ToolExecutionContextService,
     _count_tool_dispatch,
 )
+
+
+def terminal_submission_failed(context: QueryContext) -> bool:
+    """True iff the agent has burned 1.5× its tool_call_limit without a
+    terminal submission."""
+    return context.tool_calls_used >= math.ceil(1.5 * context.tool_call_limit)
+
+
+def _terminal_not_submitted_message(context: QueryContext) -> str:
+    return (
+        f"Agent stopped: terminal tool not submitted. "
+        f"tool_calls_used={context.tool_calls_used}, "
+        f"tool_call_limit={context.tool_call_limit}, "
+        f"hard_ceiling={math.ceil(1.5 * context.tool_call_limit)}."
+    )
 
 
 def _make_stream_dispatch_deferrer(
@@ -176,83 +192,6 @@ async def _consume_provider_stream(
         raise
 
 
-async def _dispatch_final_message_tools(
-    context: QueryContext,
-    messages: list[Message],
-    executor: StreamingToolExecutor,
-    run_request: QueryRunRequest,
-    state: _ProviderStreamAccumulator,
-    background_tasks: BackgroundTaskSupervisor | None,
-    notification_service: SystemNotificationService,
-) -> AsyncIterator[tuple[StreamEvent, UsageSnapshot | None]]:
-    """Dispatch tool calls from the final assistant message and append results."""
-    final_message = state.final_message
-    assert final_message is not None  # narrowed by _consume_provider_stream
-
-    dispatch = await dispatch_assistant_tools(
-        context,
-        messages,
-        final_message,
-        executor,
-        streamed_tool_use_ids=state.streamed_tool_use_ids,
-        background_tasks=background_tasks,
-    )
-    for event in dispatch.events:
-        yield event, None
-
-    tool_results = dispatch.tool_results
-    run_request.prompt_report.record_tool_results(
-        seq=run_request.prompt_report_seq,
-        tool_results=tool_results,
-    )
-    for event in flush_system_notification_events(notification_service):
-        yield event, None
-
-    if dispatch.terminal_result is not None:
-        context.terminal_result = dispatch.terminal_result
-        context.exit_reason = QueryExitReason.TOOL_STOP
-        return
-
-    tolerance = context.max_tolerance_after_max_tool_call
-    if (
-        context.tool_call_limit is not None
-        and tolerance is not None
-        and context.overshoot_units > tolerance
-    ):
-        context.exit_reason = QueryExitReason.RESOURCE_LIMIT
-        if background_tasks is not None:
-            await background_tasks.cancel_all()
-        # Keep the transcript well-formed: tool_use blocks in the assistant
-        # message must be paired with tool_result blocks in the next user
-        # message. ``dispatch_assistant_tools`` produces one tool_result per
-        # tool_use, so ``tool_results`` is always non-empty here when the
-        # assistant produced tool_uses; the guard is defensive against
-        # future refactors only.
-        if tool_results:
-            messages.append(Message(role="user", content=list(tool_results)))
-        yield (
-            ToolExecutionCompletedEvent(
-                tool_name="",
-                output=(
-                    f"Agent stopped: overshoot ({context.overshoot_units}) "
-                    f"exceeded tolerance ({tolerance}) without a terminal "
-                    f"tool call. Soft limit={context.tool_call_limit}, "
-                    f"calls used={context.tool_calls_used}, text-only "
-                    f"turns={context.text_only_no_terminal_turns}."
-                ),
-                is_error=True,
-            ),
-            None,
-        )
-        for event in flush_system_notification_events(notification_service):
-            yield event, None
-        return
-
-    if tool_results:
-        messages.append(Message(role="user", content=list(tool_results)))
-    context.exit_reason = None
-
-
 async def _run_query_loop(
     context: QueryContext,
     messages: list[Message],
@@ -306,57 +245,48 @@ async def _run_query_loop(
                 run_id=context.run_id,
             ), state.usage
 
-            if not final_message.tool_uses:
-                has_terminal = context.terminal_result is not None
-                tolerance = context.max_tolerance_after_max_tool_call
-                # In-loop nudge requires (a) terminal tools to call, (b) no
-                # terminal result yet, and (c) a tolerance budget. Without a
-                # tolerance budget there is no upper bound, so we must not
-                # loop — fall through to the TEXT_RESPONSE exit instead.
-                if (
-                    not has_terminal
-                    and context.terminal_tools
-                    and tolerance is not None
-                ):
-                    context.text_only_no_terminal_turns += 1
-                    if context.overshoot_units > tolerance:
-                        # Distinguish text-only ceiling from tool-overflow
-                        # ceiling so post-mortem audit can separate "burned
-                        # through tools" from "refused to terminate after
-                        # being asked."
-                        context.exit_reason = QueryExitReason.TERMINAL_REFUSED
-                        for event in flush_system_notification_events(
-                            notification_service
-                        ):
-                            yield event, None
-                        break
-                    # missing_terminal_reminder will fire on the next
-                    # dispatch_rules evaluation (top of the next loop
-                    # iteration), injecting a user message that asks the
-                    # model to call a terminal tool.
-                    context.exit_reason = None
-                    continue
+            if final_message.tool_uses:
+                dispatch = await dispatch_assistant_tools(
+                    context,
+                    messages,
+                    final_message,
+                    executor,
+                    streamed_tool_use_ids=state.streamed_tool_use_ids,
+                    background_tasks=background_tasks,
+                )
+                for event in dispatch.events:
+                    yield event, None
+                tool_results = list(dispatch.tool_results)
+                run_request.prompt_report.record_tool_results(
+                    seq=run_request.prompt_report_seq,
+                    tool_results=tool_results,
+                )
                 for event in flush_system_notification_events(notification_service):
                     yield event, None
-                context.exit_reason = QueryExitReason.TEXT_RESPONSE
-                break
+                if dispatch.terminal_result is not None:
+                    context.terminal_result = dispatch.terminal_result
+                if tool_results:
+                    messages.append(Message(role="user", content=list(tool_results)))
 
-            async for event, event_usage in _dispatch_final_message_tools(
-                context,
-                messages,
-                executor,
-                run_request,
-                state,
-                background_tasks,
-                notification_service,
-            ):
-                yield event, event_usage
-
-            if context.exit_reason in {
-                QueryExitReason.TOOL_STOP,
-                QueryExitReason.RESOURCE_LIMIT,
-            }:
+            if context.terminal_result is not None:
+                context.exit_reason = QueryExitReason.TOOL_STOP
                 break
+            if terminal_submission_failed(context):
+                if background_tasks is not None:
+                    await background_tasks.cancel_all()
+                yield (
+                    ToolExecutionCompletedEvent(
+                        tool_name="",
+                        output=_terminal_not_submitted_message(context),
+                        is_error=True,
+                    ),
+                    None,
+                )
+                for event in flush_system_notification_events(notification_service):
+                    yield event, None
+                context.exit_reason = QueryExitReason.TERMINAL_NOT_SUBMITTED
+                break
+            # Otherwise: loop. terminal_call_reminder fires next iteration.
     finally:
         if background_tasks is not None and background_tasks.has_pending():
             await background_tasks.cancel_all()

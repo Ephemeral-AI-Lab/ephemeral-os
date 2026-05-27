@@ -56,6 +56,8 @@ def test_legacy_variants_field_rejected_by_definition_model():
         AgentDefinition(
             name="planner",
             description="planner",
+            terminals=["submit_x"],
+            tool_call_limit=10,
             context_recipe="planner",
             variants=[],
         )
@@ -66,6 +68,8 @@ def test_unknown_context_recipe_rejected():
     base = AgentDefinition(
         name="planner",
         description="planner",
+        terminals=["submit_x"],
+        tool_call_limit=10,
         context_recipe="not_registered_recipe",
     )
     register_definition(base)
@@ -82,12 +86,14 @@ def test_clean_setup_passes_validation():
         description="planner",
         context_recipe="planner",
         terminals=["submit_plan_closes_goal", "submit_plan_defers_goal"],
+        tool_call_limit=10,
     )
     generator = AgentDefinition(
         name="generator",
         description="generator",
         context_recipe="generator",
         terminals=["submit_execution_success", "submit_execution_blocker"],
+        tool_call_limit=10,
     )
     for d in (planner, generator):
         register_definition(d)
@@ -101,6 +107,8 @@ def test_definitions_with_no_recipe_pass_validation():
     no_recipe = AgentDefinition(
         name="no_recipe",
         description="no recipe",
+        terminals=["submit_x"],
+        tool_call_limit=10,
         context_recipe=None,
     )
     register_definition(no_recipe)
@@ -118,6 +126,8 @@ def test_skill_lint_runs_during_resolved_validation(tmp_path):
     planner = AgentDefinition(
         name="planner",
         description="planner",
+        terminals=["submit_x"],
+        tool_call_limit=10,
         context_recipe="planner",
         skill=skill_file,
     )

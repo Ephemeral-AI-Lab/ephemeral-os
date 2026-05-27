@@ -61,6 +61,8 @@ def test_ac2_dispatchable_executor_is_accepted() -> None:
         AgentDefinition(
             name="executor_alt",
             description="alt executor",
+            terminals=["submit_x"],
+            tool_call_limit=10,
             agent_kind=AgentKind.EXECUTOR,
             dispatchable_by_planner=True,
         )
@@ -73,6 +75,8 @@ def test_ac2_non_dispatchable_executor_is_rejected() -> None:
         AgentDefinition(
             name="executor_alt",
             description="alt executor",
+            terminals=["submit_x"],
+            tool_call_limit=10,
             agent_kind=AgentKind.EXECUTOR,
             dispatchable_by_planner=False,
         )
@@ -86,6 +90,8 @@ def test_ac2_non_dispatchable_named_executor_is_rejected() -> None:
         AgentDefinition(
             name="executor_shadow",
             description="shadow executor",
+            terminals=["submit_x"],
+            tool_call_limit=10,
             agent_kind=AgentKind.EXECUTOR,
             # dispatchable_by_planner defaults to False — that is the contract.
         )
@@ -105,6 +111,7 @@ def test_ac9_planner_md_shape_passes_validation() -> None:
         description="planner",
         context_recipe="planner",
         terminals=["submit_plan_closes_goal", "submit_plan_defers_goal"],
+        tool_call_limit=10,
     )
     register_definition(planner)
     # Must not raise.
@@ -130,6 +137,7 @@ def test_ac10_factory_metadata_role_matches_agent_kind_value_exactly() -> None:
             agent_kind=kind,
             allowed_tools=[],
             terminals=["submit_execution_success"],
+            tool_call_limit=10,
         )
         registry_metadata: list[dict] = []
 
@@ -175,6 +183,7 @@ def test_ac10_factory_metadata_role_matches_agent_kind_value_exactly() -> None:
                 agent_kind=agent_def.agent_kind,
                 allowed_tools=["ac10_probe"],
                 terminals=agent_def.terminals,
+                tool_call_limit=10,
             )
             _build_agent_tool_registry(
                 SimpleNamespace(cwd="/tmp"),

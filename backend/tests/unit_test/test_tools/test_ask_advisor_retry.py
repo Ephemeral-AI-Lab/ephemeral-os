@@ -38,11 +38,13 @@ _ADVISOR_DEF = AgentDefinition(
     agent_type="agent",
     agent_kind=AgentKind.ADVISOR,
     terminals=["submit_advisor_feedback"],
+    tool_call_limit=10,
 )
 
 _PARENT_EXECUTOR_DEF = AgentDefinition(
     name="executor",
     description="parent executor stub",
+    tool_call_limit=10,
     agent_type="agent",
     agent_kind=AgentKind.EXECUTOR,
     terminals=[

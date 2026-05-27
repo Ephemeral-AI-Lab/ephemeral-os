@@ -47,6 +47,3 @@ runner:
     heavy_enabled: true
     capacity_enabled: true
     real_agent_max_duration_s: 1800
-
-engine:
-  budget_overflow_reminder_every: 5

@@ -34,12 +34,11 @@ EmitStreamEvent = Callable[[StreamEvent], Awaitable[None]]
 def _count_tool_dispatch(context: QueryContext) -> None:
     """Increment the per-run tool-call counter.
 
-    Soft-limit signaling is delivered via the ``budget_overflow_reminder``
+    Soft-limit signaling is delivered via the ``terminal_call_reminder``
     notification rule; hard-failure is the loop's responsibility when
-    ``overshoot_units > max_tolerance_after_max_tool_call``.
+    ``tool_calls_used >= ceil(1.5 * tool_call_limit)``.
     """
-    if context.tool_call_limit is not None:
-        context.tool_calls_used += 1
+    context.tool_calls_used += 1
 
 
 async def execute_tool_call(

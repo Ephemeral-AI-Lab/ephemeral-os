@@ -53,7 +53,8 @@ def _make_definition(
         agent_kind=AgentKind.PLANNER,
         context_recipe=recipe,
         skill=skill,
-        terminals=terminals or [],
+        terminals=terminals or ["submit_x"],
+        tool_call_limit=10,
     )
 
 

@@ -103,6 +103,8 @@ def test_factory_omits_issue_pr_even_with_files_on_disk(tmp_path, monkeypatch):
     defn = AgentDefinition(
         name="planner",
         description="planner",
+        terminals=["submit_x"],
+        tool_call_limit=10,
         agent_kind=AgentKind.PLANNER,
         system_prompt="role body",
     )

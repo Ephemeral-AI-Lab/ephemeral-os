@@ -54,6 +54,7 @@ def test_custom_generator_agent_can_declare_goal_solution_terminal() -> None:
         description="Custom generator agent.",
         agent_kind=AgentKind.EXECUTOR,
         terminals=["submit_execution_handoff"],
+        tool_call_limit=10,
     )
     assert has_tool("submit_execution_handoff")
 

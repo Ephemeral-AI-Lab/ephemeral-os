@@ -61,6 +61,7 @@ def _register(
         agent_kind=kind,
         context_recipe=recipe,
         terminals=terminals,
+        tool_call_limit=10,
     )
     register_definition(definition)
     return definition
@@ -195,7 +196,14 @@ def test_executor_without_goal_keeps_registered_terminals(deps, monkeypatch):
 
 
 def test_missing_context_recipe_raises(deps):
-    register_definition(AgentDefinition(name="bare", description="bare"))
+    register_definition(
+        AgentDefinition(
+            name="bare",
+            description="bare",
+            terminals=["submit_x"],
+            tool_call_limit=10,
+        )
+    )
     with pytest.raises(MissingContextRecipeError):
         TerminalToolRouter().resolve(
             base_agent_name="bare",

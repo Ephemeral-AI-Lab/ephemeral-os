@@ -12,6 +12,7 @@ import dataclasses
 import json
 import logging
 import re
+import shlex
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -23,7 +24,6 @@ from task_center_runner.benchmarks.sweevo.models import (
     SWEEvoInstance,
     SWEEvoResult,
     _CONDA_ACTIVATE,
-    _DEFAULT_SANDBOX_COMMAND_TIMEOUT,
     _DEFAULT_SANDBOX_SETUP_TIMEOUT,
     _DEFAULT_SWEEVO_TEST_TIMEOUT,
     _REPO_DIR,
@@ -37,6 +37,13 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
+@dataclasses.dataclass(frozen=True)
+class _TestSetOutcome:
+    passed: int
+    runnable_total: int
+    dropped_unfindable: int = 0
+
+
 # ---------------------------------------------------------------------------
 # Materialize: commit_to_workspace RPC wrapper
 # ---------------------------------------------------------------------------
@@ -48,9 +55,11 @@ async def apply_layerstack_to_repo(
 ) -> None:
     """Project the active overlay onto ``repo_dir`` via the daemon RPC.
 
-    Postcondition: ``repo_dir/.git`` exists after the projection. The check
-    catches a class of bugs where an overlay opaque-dir marker shadowed
-    the original ``.git`` and the agent's edits silently lose history.
+    Postcondition: ``repo_dir/.git`` exists inside the sandbox after the
+    projection. The check catches a class of bugs where an overlay
+    opaque-dir marker shadowed the original ``.git`` and the agent's
+    edits silently lose history. The probe runs through ``_exec`` so it
+    inspects the container, not the host (the host has no ``/testbed``).
     """
     from sandbox.host.daemon_client import call_daemon_api
 
@@ -60,10 +69,13 @@ async def apply_layerstack_to_repo(
         {"workspace_root": repo_dir},
         timeout=_DEFAULT_SANDBOX_SETUP_TIMEOUT,
     )
-    assert (Path(repo_dir) / ".git").is_dir(), (
-        f"post-commit .git missing in {repo_dir} — overlay opaque-dir "
-        "shadowed the repo"
-    )
+    try:
+        await _exec(sandbox_id, f"test -d {repo_dir}/.git", check=True)
+    except RuntimeError as exc:
+        raise AssertionError(
+            f"post-commit .git missing in {repo_dir} — overlay opaque-dir "
+            f"shadowed the repo: {exc}"
+        ) from exc
 
 
 # ---------------------------------------------------------------------------
@@ -196,18 +208,28 @@ async def evaluate_sweevo_result(
     f2p_total = len(instance.fail_to_pass)
     f2p_passed = 0
     if f2p_total > 0:
-        f2p_passed = await _run_test_set(
+        f2p_outcome = await _run_test_set_outcome(
             sandbox_id, repo_dir, instance.fail_to_pass, instance.test_cmds
         )
+        f2p_passed = f2p_outcome.passed
 
     p2p_total = len(instance.pass_to_pass)
     p2p_passed = 0
+    p2p_runnable_total = 0
     if p2p_total > 0:
-        p2p_passed = await _run_test_set(
+        p2p_outcome = await _run_test_set_outcome(
             sandbox_id, repo_dir, instance.pass_to_pass, instance.test_cmds
         )
-
-    p2p_broken = p2p_total - p2p_passed
+        p2p_passed = p2p_outcome.passed
+        p2p_runnable_total = p2p_outcome.runnable_total
+        if p2p_outcome.dropped_unfindable:
+            logger.warning(
+                "SWE-EVO %s: treating %d unfindable P2P IDs as dataset "
+                "artifacts, not broken tests",
+                instance.instance_id,
+                p2p_outcome.dropped_unfindable,
+            )
+    p2p_broken = p2p_runnable_total - p2p_passed
 
     result.fail_to_pass_passed = f2p_passed
     result.fail_to_pass_total = f2p_total
@@ -237,35 +259,161 @@ async def _run_test_set(
     test_cmds: str,
     *,
     timeout: int = _DEFAULT_SWEEVO_TEST_TIMEOUT,
+    max_retry_drop_rounds: int = 3,
 ) -> int:
+    outcome = await _run_test_set_outcome(
+        sandbox_id,
+        repo_dir,
+        test_ids,
+        test_cmds,
+        timeout=timeout,
+        max_retry_drop_rounds=max_retry_drop_rounds,
+    )
+    return outcome.passed
+
+
+async def _run_test_set_outcome(
+    sandbox_id: str,
+    repo_dir: str,
+    test_ids: list[str],
+    test_cmds: str,
+    *,
+    timeout: int = _DEFAULT_SWEEVO_TEST_TIMEOUT,
+    max_retry_drop_rounds: int = 3,
+) -> _TestSetOutcome:
+    """Run a pytest set, tolerating unfindable IDs from a broken dataset.
+
+    SWE-EVO ships some test_ids that no longer exist at the base commit
+    (parametrize strings split across rows, etc.). Pytest exits code 4
+    ("no tests ran") when ANY id is unfindable, even with
+    ``--continue-on-collection-errors``. The retry loop parses the
+    ``ERROR: not found:`` lines, drops those IDs, and re-runs — bounded
+    so a pathological mismatch can't loop forever.
+    """
     if not test_ids:
-        return 0
+        return _TestSetOutcome(passed=0, runnable_total=0)
 
-    cmd = _build_test_set_command(repo_dir, test_ids, test_cmds)
+    candidate_ids = list(test_ids)
+    output = ""
+    for _round in range(max_retry_drop_rounds + 1):
+        if not candidate_ids:
+            return _TestSetOutcome(
+                passed=0,
+                runnable_total=0,
+                dropped_unfindable=len(test_ids),
+            )
+        # Stage test_ids as a JSON file via the chunked-base64 helper. SWE-EVO
+        # P2P sets can run into the thousands; inlining them as a Python list
+        # literal inside the heredoc blows the docker-exec argv (E2BIG / "exec
+        # /bin/bash: argument list too long"). The file-staging path keeps the
+        # heredoc tiny — see memory note `checked_batch_apply_argv_limit.md`.
+        ids_path = f"/tmp/sweevo_ids_{uuid4().hex}.json"
+        runner_path = f"/tmp/sweevo_pytest_runner_{uuid4().hex}.py"
+        await _write_file_via_chunked_base64(
+            sandbox_id, ids_path, json.dumps(candidate_ids).encode("utf-8")
+        )
+        await _write_file_via_chunked_base64(
+            sandbox_id,
+            runner_path,
+            _build_test_set_runner_script(ids_path, test_cmds).encode("utf-8"),
+        )
+        cmd = _build_test_set_command(repo_dir, runner_path)
+        try:
+            output = await _exec(sandbox_id, cmd, timeout=timeout, check=False)
+        except Exception as exc:
+            logger.warning("Test execution failed: %s", exc)
+            return _TestSetOutcome(passed=0, runnable_total=len(candidate_ids))
+        finally:
+            await _exec(
+                sandbox_id,
+                f"rm -f {shlex.quote(ids_path)} {shlex.quote(runner_path)}",
+                check=False,
+            )
 
-    try:
-        output = await _exec(sandbox_id, cmd, timeout=timeout, check=False)
-    except Exception as exc:
-        logger.warning("Test execution failed: %s", exc)
-        return 0
+        # Pytest exit 4 + "ERROR: not found:" means at least one ID was
+        # unfindable and the whole run was aborted. Drop the bad IDs and
+        # retry; anything else is a real result.
+        if "EXIT_CODE=4" not in output or "ERROR: not found:" not in output:
+            break
+        missing = _extract_pytest_not_found_ids(output, repo_dir)
+        if not missing:
+            break
+        before = len(candidate_ids)
+        candidate_ids = [t for t in candidate_ids if t not in missing]
+        if len(candidate_ids) == before:
+            # Couldn't reconcile any of the reported missing IDs (probably
+            # prefix-truncated by pytest). Bail rather than infinite-loop.
+            logger.warning(
+                "pytest reported %d unfindable IDs; could not reconcile any "
+                "against candidate set — giving up retry",
+                len(missing),
+            )
+            break
+        logger.warning(
+            "pytest could not find %d IDs; dropping them and retrying (round %d)",
+            before - len(candidate_ids),
+            _round + 1,
+        )
 
     if "EXIT_CODE=0" in output:
-        return len(test_ids)
-
-    return _parse_pytest_passed_count(output, len(test_ids))
-
-
-def _build_test_set_command(repo_dir: str, test_ids: list[str], test_cmds: str) -> str:
-    script = (
-        "import shlex, subprocess\n"
-        f"test_cmd = {json.dumps(test_cmds)}\n"
-        f"test_ids = {json.dumps(test_ids)}\n"
-        "argv = shlex.split(test_cmd) + test_ids\n"
-        "proc = subprocess.run(argv, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)\n"
-        "print(proc.stdout, end='')\n"
-        "print(f'EXIT_CODE={proc.returncode}')\n"
+        passed = len(candidate_ids)
+    else:
+        passed = _parse_pytest_passed_count(output, len(candidate_ids))
+    return _TestSetOutcome(
+        passed=passed,
+        runnable_total=len(candidate_ids),
+        dropped_unfindable=len(test_ids) - len(candidate_ids),
     )
-    return f"{_CONDA_ACTIVATE} && cd {repo_dir} && python - <<'PY'\n{script}\nPY"
+
+
+_NOT_FOUND_RE = re.compile(r"^ERROR: not found: (.+?)(?:\n|$)", re.MULTILINE)
+
+
+def _extract_pytest_not_found_ids(output: str, repo_dir: str) -> set[str]:
+    """Parse ``ERROR: not found: <id>`` lines into a set of canonical IDs.
+
+    Pytest prefixes paths with the absolute ``rootdir`` (``/testbed/`` for
+    SWE-EVO); strip that so the result can be set-subtracted against the
+    repo-relative IDs the dataset ships.
+    """
+    prefix = repo_dir.rstrip("/") + "/"
+    out: set[str] = set()
+    for match in _NOT_FOUND_RE.finditer(output):
+        raw = match.group(1).strip()
+        if raw.startswith(prefix):
+            raw = raw[len(prefix):]
+        out.add(raw)
+    return out
+
+
+def _build_test_set_runner_script(ids_path: str, test_cmds: str) -> str:
+    """Return a real-file pytest runner safe for multiprocessing spawn.
+
+    ``python - <<'PY'`` gives child processes a ``<stdin>`` main module path,
+    which breaks Dask tests that use the processes scheduler. A staged script
+    with a ``__main__`` guard lets spawn import the parent script without
+    recursively starting pytest in the child.
+    """
+    return (
+        "import json, shlex\n"
+        "\n"
+        "def main():\n"
+        f"    with open({json.dumps(ids_path)}) as _f:\n"
+        "        test_ids = json.load(_f)\n"
+        f"    test_cmd = {json.dumps(test_cmds)}\n"
+        "    pytest_argv = shlex.split(test_cmd)[1:] + test_ids\n"
+        "    import pytest\n"
+        "    exit_code = int(pytest.main(pytest_argv))\n"
+        "    print(f'EXIT_CODE={exit_code}')\n"
+        "    raise SystemExit(exit_code)\n"
+        "\n"
+        "if __name__ == '__main__':\n"
+        "    main()\n"
+    )
+
+
+def _build_test_set_command(repo_dir: str, runner_path: str) -> str:
+    return f"{_CONDA_ACTIVATE} && cd {repo_dir} && python {shlex.quote(runner_path)}"
 
 
 def _parse_pytest_passed_count(output: str, total: int) -> int:

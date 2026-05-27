@@ -33,7 +33,13 @@ from task_center.task_guidance.builders import (
 
 
 def _agent_def(name: str, kind: AgentKind = AgentKind.PLANNER) -> AgentDefinition:
-    return AgentDefinition(name=name, description=name, agent_kind=kind)
+    return AgentDefinition(
+        name=name,
+        description=name,
+        agent_kind=kind,
+        terminals=["submit_x"],
+        tool_call_limit=10,
+    )
 
 
 def _goal_block() -> ContextBlock:

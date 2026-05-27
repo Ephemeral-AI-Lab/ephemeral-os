@@ -13,6 +13,7 @@ def _make_planner_def(terminals: list[str] | None = None) -> AgentDefinition:
     return AgentDefinition(
         name="planner",
         description="planner",
+        tool_call_limit=10,
         agent_kind=AgentKind.PLANNER,
         context_recipe="planner",
         terminals=terminals
@@ -69,22 +70,6 @@ def test_terminal_tool_selection_block_matches_registry_catalog(tmp_path: Path):
     assert expected_catalog in block, (
         "row-4 <terminal_tool_selection> must include the same catalog text as row 3"
     )
-
-
-def test_terminal_tool_selection_block_skipped_when_no_terminals(tmp_path: Path):
-    skill_file = tmp_path / "planner" / "SKILL.md"
-    skill_file.parent.mkdir()
-    skill_file.write_text("# body")
-    plain_def = AgentDefinition(
-        name="plain",
-        description="plain",
-        agent_kind=AgentKind.PLANNER,
-        terminals=[],
-    )
-
-    msg = build_skill_message(skill_file, plain_def)
-    assert msg is not None
-    assert "<terminal_tool_selection>" not in msg
 
 
 def test_skill_name_derives_from_parent_folder(tmp_path: Path):

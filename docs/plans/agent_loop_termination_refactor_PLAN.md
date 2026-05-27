@@ -253,8 +253,8 @@ Catches the case where a profile declares `terminals:` but the named tools aren'
 
 - **`backend/src/engine/query/context.py`** — `QueryExitReason`: drop 3 variants, keep 2. `QueryContext`: drop 2 fields and 2 properties, tighten `tool_call_limit` type. Delete `_ToolBudgetView`.
 - **`backend/src/engine/query/loop.py`** — Rewrite `_run_query_loop` body per pseudocode above. Add `terminal_submission_failed` and `_terminal_not_submitted_message` helpers. Delete `_dispatch_final_message_tools`. `import math`.
-- **`backend/src/notification/rules/factories.py`** — Delete `make_budget_warning`, `make_budget_overflow_reminder`, `make_missing_terminal_reminder` and their module-level state keys. Add `make_terminal_call_reminder`. Keep `make_opening_reminder` untouched.
-- **`backend/src/notification/rules/__init__.py`** and **`backend/src/notification/__init__.py`** — Update exports: drop three rule factories, add one.
+- **`backend/src/notification/rules/factories.py`** — Delete the old budget, missing-terminal, and first-turn reminder factories plus related module-level state keys. Add `make_terminal_call_reminder`.
+- **`backend/src/notification/rules/__init__.py`** and **`backend/src/notification/__init__.py`** — Update exports: drop four rule factories, add one.
 - **`backend/src/agents/definition/model.py`** — Delete `max_tolerance_after_max_tool_call` field + `_coerce_nonneg_int` validator. Tighten `tool_call_limit` to required `int = Field(..., gt=0)`. Tighten `terminals` to `min_length=1` with non-empty validator.
 - **`backend/src/engine/agent/factory.py`** — Rename `_attach_default_overshoot_rules` → `_attach_default_terminal_reminder`; body appends only `make_terminal_call_reminder()`. Drop `max_tolerance` plumbing. Add `assert terminal_tool_names` in `_finalize_tool_registry_and_prompt`.
 - **`backend/src/engine/agent/lifecycle.py`** — Rewrite module docstring; remove references to deleted exit reasons.
@@ -372,7 +372,6 @@ Any profile surfaced by either command must be retrofitted or removed before the
 
 - `backend/tests/unit_test/test_engine/test_lifecycle.py::*` — `TOOL_STOP` assertions still valid.
 - `TOOL_STOP` cases in `backend/tests/unit_test/test_tools/test_tool_execution.py`.
-- `make_opening_reminder` tests in `test_rules_factories.py`.
 
 ---
 

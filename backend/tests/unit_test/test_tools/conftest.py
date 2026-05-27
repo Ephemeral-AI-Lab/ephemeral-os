@@ -124,12 +124,14 @@ def register_test_agents(isolated_agent_registries):
             agent_kind=AgentKind.PLANNER,
             context_recipe="planner",
             terminals=["submit_plan_closes_goal", "submit_plan_defers_goal"],
+            tool_call_limit=10,
         )
     )
     register_definition(
         AgentDefinition(
             name="executor",
             description="test executor",
+            tool_call_limit=10,
             agent_kind=AgentKind.EXECUTOR,
             dispatchable_by_planner=True,
             context_recipe="generator",
@@ -147,6 +149,7 @@ def register_test_agents(isolated_agent_registries):
             agent_kind=AgentKind.EXECUTOR,
             context_recipe="generator",
             terminals=["submit_execution_success", "submit_execution_blocker"],
+            tool_call_limit=10,
         )
     )
     register_definition(
@@ -157,6 +160,7 @@ def register_test_agents(isolated_agent_registries):
             dispatchable_by_planner=True,
             context_recipe="generator",
             terminals=["submit_verification_success", "submit_verification_failure"],
+            tool_call_limit=10,
         )
     )
     register_definition(
@@ -166,6 +170,7 @@ def register_test_agents(isolated_agent_registries):
             agent_kind=AgentKind.EVALUATOR,
             context_recipe="evaluator",
             terminals=["submit_evaluation"],
+            tool_call_limit=10,
         )
     )
     yield

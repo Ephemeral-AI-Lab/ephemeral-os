@@ -1,10 +1,9 @@
-"""Tests for ``tool_call_limit`` accounting.
+"""Tests for ``tool_call_limit`` accounting and AgentDefinition invariants.
 
-After Phase 2 of the agent-loop termination refactor, ``execute_tool_call``
-only counts dispatch attempts — it never rejects on budget. Hard-failure on
-overshoot lives in the loop, gated on
-``overshoot_units > max_tolerance_after_max_tool_call``; soft signaling is
-delivered by the ``budget_overflow_reminder`` notification rule.
+``execute_tool_call`` only counts dispatch attempts — it never rejects on
+budget. Hard-failure on overshoot lives in the loop, gated on
+``tool_calls_used >= ceil(1.5 * tool_call_limit)``; soft signaling is
+delivered by the ``terminal_call_reminder`` notification rule.
 """
 
 from __future__ import annotations
@@ -12,6 +11,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
+from pydantic import ValidationError
 
 from agents import AgentDefinition
 from engine.query.context import QueryContext
@@ -20,7 +20,7 @@ from tools._framework.core.runtime import ExecutionMetadata
 
 
 def _ctx(
-    limit: int | None,
+    limit: int,
     used: int = 0,
     terminal_tools: set[str] | None = None,
 ) -> QueryContext:
@@ -45,60 +45,38 @@ def _ctx(
 
 
 def test_agent_definition_accepts_tool_call_limit():
-    a = AgentDefinition(name="x", description="y", tool_call_limit=40)
+    a = AgentDefinition(
+        name="x", description="y", tool_call_limit=40, terminals=["submit_x"]
+    )
     assert a.tool_call_limit == 40
 
 
-def test_agent_definition_default_unlimited():
-    assert AgentDefinition(name="x", description="y").tool_call_limit is None
+def test_agent_definition_requires_tool_call_limit():
+    with pytest.raises(ValidationError):
+        AgentDefinition(name="x", description="y", terminals=["submit_x"])
 
 
 def test_agent_definition_coerces_string():
     a = AgentDefinition.model_validate(
-        {"name": "x", "description": "y", "tool_call_limit": "12"}
+        {
+            "name": "x",
+            "description": "y",
+            "tool_call_limit": "12",
+            "terminals": ["submit_x"],
+        }
     )
     assert a.tool_call_limit == 12
 
 
 def test_agent_definition_rejects_zero_and_negative():
-    a = AgentDefinition(name="x", description="y", tool_call_limit=0)
-    assert a.tool_call_limit is None
-    a = AgentDefinition(name="x", description="y", tool_call_limit=-3)
-    assert a.tool_call_limit is None
-
-
-def test_agent_definition_default_tolerance_is_ten():
-    a = AgentDefinition(name="x", description="y")
-    assert a.max_tolerance_after_max_tool_call == 10
-
-
-def test_agent_definition_accepts_explicit_tolerance():
-    a = AgentDefinition(
-        name="x", description="y", max_tolerance_after_max_tool_call=3
-    )
-    assert a.max_tolerance_after_max_tool_call == 3
-
-
-def test_agent_definition_allows_zero_tolerance():
-    # 0 is meaningful — "no grace, hard cap at exactly tool_call_limit".
-    a = AgentDefinition(
-        name="x", description="y", max_tolerance_after_max_tool_call=0
-    )
-    assert a.max_tolerance_after_max_tool_call == 0
-
-
-def test_agent_definition_rejects_negative_tolerance():
-    a = AgentDefinition(
-        name="x", description="y", max_tolerance_after_max_tool_call=-1
-    )
-    assert a.max_tolerance_after_max_tool_call is None
-
-
-def test_agent_definition_coerces_tolerance_string():
-    a = AgentDefinition.model_validate(
-        {"name": "x", "description": "y", "max_tolerance_after_max_tool_call": "7"}
-    )
-    assert a.max_tolerance_after_max_tool_call == 7
+    with pytest.raises(ValidationError):
+        AgentDefinition(
+            name="x", description="y", tool_call_limit=0, terminals=["submit_x"]
+        )
+    with pytest.raises(ValidationError):
+        AgentDefinition(
+            name="x", description="y", tool_call_limit=-3, terminals=["submit_x"]
+        )
 
 
 # ---------- execute_tool_call counter-only behavior --------------------------
@@ -128,32 +106,3 @@ async def test_execute_tool_call_increments_counter_on_unknown_tool():
     assert result.is_error
     assert "Unknown tool" in result.content
     assert ctx.tool_calls_used == 1
-
-
-@pytest.mark.asyncio
-async def test_execute_tool_call_does_not_reserve_last_call_for_terminal():
-    """The pre-Phase-2 "reserved last call" gate is gone — non-terminal at
-    `limit - 1` proceeds normally."""
-    ctx = _ctx(limit=2, used=1, terminal_tools={"submit_execution_success"})
-    ctx.tool_registry.get = lambda _name: None  # type: ignore[method-assign]
-
-    result = await execute_tool_call(ctx, "read_file", "id1", {})
-
-    assert "terminal call reserved" not in result.content
-    # Counter advances; reservation logic removed.
-    assert ctx.tool_calls_used == 2
-
-
-@pytest.mark.asyncio
-async def test_execute_tool_call_unlimited_budget_does_not_count():
-    ctx = _ctx(limit=None, used=0)
-    ctx.tool_registry.get = lambda _name: None  # type: ignore[method-assign]
-    await execute_tool_call(ctx, "ghost", "id1", {})
-    # ``None`` limit short-circuits the counter; counter stays put.
-    assert ctx.tool_calls_used == 0
-
-
-# ---------- budget warning ---------------------------------------------------
-# Budget warnings (50/75/90%) fire as the ``budget_warning`` notification rule;
-# overshoot reminders fire as ``budget_overflow_reminder``. Rule-level coverage
-# lives in `backend/tests/unit_test/test_notification/`.

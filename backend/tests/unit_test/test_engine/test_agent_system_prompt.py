@@ -27,6 +27,8 @@ def test_agent_system_prompt_includes_runtime_base_and_agent_body_only(monkeypat
         AgentDefinition(
             name="planner",
             description="d",
+            terminals=["submit_x"],
+            tool_call_limit=10,
             agent_kind=AgentKind.PLANNER,
             system_prompt="base prompt",
         ),
@@ -63,6 +65,8 @@ def test_main_role_base_not_injected_at_runtime(monkeypatch, name, kind):
         AgentDefinition(
             name=name,
             description="d",
+            terminals=["submit_x"],
+            tool_call_limit=10,
             agent_kind=kind,
             system_prompt="role body",
         ),
@@ -80,6 +84,8 @@ def test_main_role_base_excluded_for_subagent(monkeypatch):
         AgentDefinition(
             name="explorer",
             description="d",
+            terminals=["submit_x"],
+            tool_call_limit=10,
             agent_kind=AgentKind.EXPLORER,
             agent_type="subagent",
             system_prompt="role body",

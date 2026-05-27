@@ -19,7 +19,6 @@ from engine.query.loop import run_query
 from engine.tool_call.streaming import StreamingToolExecutor
 from message.message import (
     Message,
-    SystemNotificationBlock,
     TextBlock,
     ToolResultBlock,
     ToolUseBlock,
@@ -30,7 +29,6 @@ from message.events import (
     ToolExecutionStartedEvent,
 )
 from notification import SystemNotification
-from notification import make_budget_warning, make_opening_reminder
 from providers.types import (
     SupportsStreamingMessages,
     UsageSnapshot,
@@ -273,6 +271,7 @@ def _query_context(tool: BaseTool) -> QueryContext:
         model="test",
         system_prompt="",
         max_tokens=100,
+        tool_call_limit=1000,
     )
 
 
@@ -529,7 +528,16 @@ async def test_query_loop_exposes_conversation_messages_to_prehooks() -> None:
                 )
             else:
                 yield AssistantMessageCompleteEvent(
-                    message=Message(role="assistant", content=[]),
+                    message=Message(
+                        role="assistant",
+                        content=[
+                            ToolUseBlock(
+                                tool_use_id="toolu_term",
+                                name="terminal_echo",
+                                input={"value": "done"},
+                            )
+                        ],
+                    ),
                     usage=UsageSnapshot(),
                 )
 
@@ -537,6 +545,7 @@ async def test_query_loop_exposes_conversation_messages_to_prehooks() -> None:
     tool.pre_hooks = (_ConversationMessagesPreHook(),)
     registry = ToolRegistry()
     registry.register(tool)
+    registry.register(_TerminalEchoTool())
     context = QueryContext(
         api_client=_ConversationMessagesClient(),
         tool_registry=registry,
@@ -544,6 +553,7 @@ async def test_query_loop_exposes_conversation_messages_to_prehooks() -> None:
         model="test",
         system_prompt="",
         max_tokens=100,
+        tool_call_limit=1000,
     )
 
     initial_messages = [Message.from_user_text("start")]
@@ -556,6 +566,7 @@ async def test_query_loop_exposes_conversation_messages_to_prehooks() -> None:
         "assistant",
         "user",
         "assistant",
+        "user",
     ]
     assert tool.seen == ["seen:2"]
 
@@ -583,7 +594,16 @@ async def test_query_loop_emits_hook_notification_without_history_prompt() -> No
                 )
             else:
                 yield AssistantMessageCompleteEvent(
-                    message=Message(role="assistant", content=[]),
+                    message=Message(
+                        role="assistant",
+                        content=[
+                            ToolUseBlock(
+                                tool_use_id="toolu_term",
+                                name="terminal_echo",
+                                input={"value": "done"},
+                            )
+                        ],
+                    ),
                     usage=UsageSnapshot(),
                 )
 
@@ -591,6 +611,7 @@ async def test_query_loop_emits_hook_notification_without_history_prompt() -> No
     tool.pre_hooks = (_NotifyPreHook(),)
     registry = ToolRegistry()
     registry.register(tool)
+    registry.register(_TerminalEchoTool())
     client = _HookNotificationClient()
     context = QueryContext(
         api_client=client,
@@ -599,6 +620,7 @@ async def test_query_loop_emits_hook_notification_without_history_prompt() -> No
         model="test",
         system_prompt="",
         max_tokens=100,
+        tool_call_limit=1000,
     )
 
     messages, stream = await run_query(context, [])
@@ -611,7 +633,12 @@ async def test_query_loop_emits_hook_notification_without_history_prompt() -> No
         for event in events
     )
     assert len(client.requests) == 2
-    assert [message.role for message in messages] == ["assistant", "user", "assistant"]
+    assert [message.role for message in messages] == [
+        "assistant",
+        "user",
+        "assistant",
+        "user",
+    ]
     assert any(isinstance(block, ToolResultBlock) for block in messages[1].content)
 
 
@@ -638,13 +665,23 @@ async def test_query_loop_registers_run_notification_service_for_tool_body() -> 
                 )
             else:
                 yield AssistantMessageCompleteEvent(
-                    message=Message(role="assistant", content=[]),
+                    message=Message(
+                        role="assistant",
+                        content=[
+                            ToolUseBlock(
+                                tool_use_id="toolu_term",
+                                name="terminal_echo",
+                                input={"value": "done"},
+                            )
+                        ],
+                    ),
                     usage=UsageSnapshot(),
                 )
 
     tool = _ToolNotifyTool()
     registry = ToolRegistry()
     registry.register(tool)
+    registry.register(_TerminalEchoTool())
     client = _ToolNotificationClient()
     context = QueryContext(
         api_client=client,
@@ -653,6 +690,7 @@ async def test_query_loop_registers_run_notification_service_for_tool_body() -> 
         model="test",
         system_prompt="",
         max_tokens=100,
+        tool_call_limit=1000,
     )
 
     messages, stream = await run_query(context, [])
@@ -666,121 +704,13 @@ async def test_query_loop_registers_run_notification_service_for_tool_body() -> 
         for event in events
     )
     assert len(client.requests) == 2
-    assert [message.role for message in messages] == ["assistant", "user", "assistant"]
-    assert any(isinstance(block, ToolResultBlock) for block in messages[1].content)
-
-
-async def test_query_loop_injects_opening_reminder_before_first_provider_request() -> None:
-    class _OpeningReminderClient(SupportsStreamingMessages):
-        def __init__(self) -> None:
-            self.requests = []
-
-        async def stream_message(self, request):
-            self.requests.append(request)
-            yield AssistantMessageCompleteEvent(
-                message=Message(role="assistant", content=[]),
-                usage=UsageSnapshot(),
-            )
-
-    client = _OpeningReminderClient()
-    context = QueryContext(
-        api_client=client,
-        tool_registry=ToolRegistry(),
-        cwd=Path("/tmp"),
-        model="test",
-        system_prompt="",
-        max_tokens=100,
-        notification_rules=[make_opening_reminder("follow the distilled rules")],
-    )
-
-    messages, stream = await run_query(
-        context,
-        [Message.from_user_text("solve the task")],
-    )
-    async for _event, _usage in stream:
-        pass
-
-    assert len(client.requests) == 1
-    first_request = client.requests[0]
-    assert [message.role for message in first_request.messages] == ["user", "user"]
-    reminder_block = first_request.messages[1].content[0]
-    assert isinstance(reminder_block, SystemNotificationBlock)
-    assert reminder_block.text == "follow the distilled rules"
-    assert context.notification_fired == {"opening_reminder"}
-    assert [message.role for message in messages] == ["user", "user", "assistant"]
-    transcript_block = messages[1].content[0]
-    assert isinstance(transcript_block, SystemNotificationBlock)
-    assert transcript_block.text == "follow the distilled rules"
-
-
-async def test_query_loop_injects_budget_warning_into_followup_provider_request() -> None:
-    class _BudgetWarningClient(SupportsStreamingMessages):
-        def __init__(self) -> None:
-            self.requests = []
-
-        async def stream_message(self, request):
-            self.requests.append(request)
-            if len(self.requests) == 1:
-                yield AssistantMessageCompleteEvent(
-                    message=Message(
-                        role="assistant",
-                        content=[
-                            ToolUseBlock(
-                                tool_use_id="toolu_echo",
-                                name="echo_tool",
-                                input={"value": "budgeted"},
-                            )
-                        ],
-                    ),
-                    usage=UsageSnapshot(),
-                )
-            else:
-                yield AssistantMessageCompleteEvent(
-                    message=Message(role="assistant", content=[]),
-                    usage=UsageSnapshot(),
-                )
-
-    registry = ToolRegistry()
-    registry.register(_EchoTool())
-    client = _BudgetWarningClient()
-    context = QueryContext(
-        api_client=client,
-        tool_registry=registry,
-        cwd=Path("/tmp"),
-        model="test",
-        system_prompt="",
-        max_tokens=100,
-        tool_call_limit=2,
-        notification_rules=[make_budget_warning(thresholds=(0.5,))],
-    )
-
-    messages, stream = await run_query(
-        context,
-        [Message.from_user_text("solve the task")],
-    )
-    async for _event, _usage in stream:
-        pass
-
-    assert len(client.requests) == 2
-    assert all(
-        not isinstance(block, SystemNotificationBlock)
-        for message in client.requests[0].messages
-        for block in message.content
-    )
-    reminder_blocks = [
-        block
-        for message in client.requests[1].messages
-        for block in message.content
-        if isinstance(block, SystemNotificationBlock)
+    assert [message.role for message in messages] == [
+        "assistant",
+        "user",
+        "assistant",
+        "user",
     ]
-    assert len(reminder_blocks) == 1
-    assert reminder_blocks[0].text.startswith("Tool-call budget at 50%")
-    assert context.tool_calls_used == 1
-    assert context.notification_state["budget_warning"]["last_fired"] == 0.5
-    assert [message.role for message in messages] == ["user", "assistant", "user", "user", "assistant"]
-    transcript_block = messages[3].content[0]
-    assert isinstance(transcript_block, SystemNotificationBlock)
-    assert transcript_block.text.startswith("Tool-call budget at 50%")
+    assert any(isinstance(block, ToolResultBlock) for block in messages[1].content)
 
 
 async def test_query_loop_runs_generic_context_preparers() -> None:
@@ -810,12 +740,22 @@ async def test_query_loop_runs_generic_context_preparers() -> None:
                 )
             else:
                 yield AssistantMessageCompleteEvent(
-                    message=Message(role="assistant", content=[]),
+                    message=Message(
+                        role="assistant",
+                        content=[
+                            ToolUseBlock(
+                                tool_use_id="toolu_term",
+                                name="terminal_echo",
+                                input={"value": "done"},
+                            )
+                        ],
+                    ),
                     usage=UsageSnapshot(),
                 )
 
     registry = ToolRegistry()
     registry.register(_PreparedContextTool())
+    registry.register(_TerminalEchoTool())
     metadata = ExecutionMetadata(context_preparers=[_Preparer()])
     context = QueryContext(
         api_client=_Client(),
@@ -824,6 +764,7 @@ async def test_query_loop_runs_generic_context_preparers() -> None:
         model="test",
         system_prompt="",
         max_tokens=100,
+        tool_call_limit=1000,
         tool_metadata=metadata,
     )
 
@@ -837,7 +778,7 @@ async def test_query_loop_runs_generic_context_preparers() -> None:
         for event in stream_events
         if isinstance(event, ToolExecutionCompletedEvent)
     ]
-    assert completed[-1].output == "prepared"
+    assert any(event.output == "prepared" for event in completed)
     assert context.tool_metadata is metadata
     assert context.tool_metadata.get("prepared_by_test") == "prepared"
 
@@ -894,6 +835,7 @@ async def test_query_loop_continues_after_non_terminal_tool_result() -> None:
         model="test",
         system_prompt="",
         max_tokens=100,
+        tool_call_limit=1000,
     )
 
     messages, stream = await run_query(context, [])
@@ -905,6 +847,7 @@ async def test_query_loop_continues_after_non_terminal_tool_result() -> None:
         "assistant",
         "user",
         "assistant",
+        "user",
     ]
     assert context.exit_reason is QueryExitReason.TOOL_STOP
     assert context.terminal_result is not None
@@ -961,7 +904,7 @@ async def test_execute_tool_call_streaming_propagates_is_terminal_to_block() -> 
     assert result.is_terminal is True
 
 
-async def test_query_loop_captures_terminal_result_without_tool_result_prompt() -> None:
+async def test_query_loop_captures_terminal_result_with_tool_result_pairing() -> None:
     class _TerminalClient(SupportsStreamingMessages):
         async def stream_message(self, request):
             yield AssistantMessageCompleteEvent(
@@ -987,6 +930,7 @@ async def test_query_loop_captures_terminal_result_without_tool_result_prompt() 
         model="test",
         system_prompt="",
         max_tokens=100,
+        tool_call_limit=1000,
     )
 
     messages, stream = await run_query(context, [])
@@ -996,7 +940,7 @@ async def test_query_loop_captures_terminal_result_without_tool_result_prompt() 
     assert context.exit_reason is QueryExitReason.TOOL_STOP
     assert context.terminal_result is not None
     assert context.terminal_result.output == "done"
-    assert [message.role for message in messages] == ["assistant"]
+    assert [message.role for message in messages] == ["assistant", "user"]
 
 
 async def test_query_loop_rejects_streamed_terminal_tool_batched_with_sibling() -> None:
@@ -1058,6 +1002,10 @@ async def test_query_loop_rejects_streamed_terminal_tool_batched_with_sibling() 
         model="test",
         system_prompt="",
         max_tokens=100,
+        # Low limit so the loop exits on the second turn instead of looping
+        # forever — the streamed batch counts two tool dispatches, and
+        # ceil(1.5 * 1) = 2 trips the hard ceiling on the next exit check.
+        tool_call_limit=1,
     )
 
     messages, stream = await run_query(context, [])
@@ -1066,7 +1014,7 @@ async def test_query_loop_rejects_streamed_terminal_tool_batched_with_sibling() 
 
     assert echo.seen == []
     assert context.terminal_result is None
-    assert context.exit_reason is QueryExitReason.TEXT_RESPONSE
+    assert context.exit_reason is QueryExitReason.TERMINAL_NOT_SUBMITTED
     rejection_message = messages[1]
     assert rejection_message.role == "user"
     assert [
@@ -1186,6 +1134,7 @@ async def test_background_dispatch_exposes_conversation_messages_to_prehooks() -
         model="test",
         system_prompt="",
         max_tokens=100,
+        tool_call_limit=1000,
     )
     manager = BackgroundTaskSupervisor()
     tool_results: list[ToolResultBlock] = []

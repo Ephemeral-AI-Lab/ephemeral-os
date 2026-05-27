@@ -12,12 +12,12 @@ parent reads it directly — no envelope, no JSON wrapping, no message
 re-extraction.
 
 If the agent exits without delivering a terminal tool result — either by
-the loop hard-failing on overshoot (``RESOURCE_LIMIT`` for tool-overflow,
-``TERMINAL_REFUSED`` for text-only-no-terminal) or by an unhandled
-exception — ``terminal_result`` is ``None`` and ``status`` is ``failed``.
-The loop itself signals soft warnings (budget exhausted, missing terminal)
-via the notification-rule pathway; there is no retry-with-fresh-budget
-mechanism at this level any more.
+the loop hitting the hard ceiling
+(``TERMINAL_NOT_SUBMITTED`` when ``tool_calls_used >=
+ceil(1.5 * tool_call_limit)``) or by an unhandled exception —
+``terminal_result`` is ``None`` and ``status`` is ``failed``. The loop
+itself nudges the agent toward a terminal submission via the
+``terminal_call_reminder`` notification rule.
 """
 
 from __future__ import annotations
@@ -62,7 +62,7 @@ def _last_terminal_tool_result(
     a ``is_terminal_tool=True`` tool returned non-error. Returns the
     corresponding :class:`ToolResult` (with
     ``output``, ``metadata``, etc.) or ``None`` if the loop exited without a
-    terminal call (e.g. resource limit or a plain text response).
+    terminal call (e.g. ``TERMINAL_NOT_SUBMITTED``).
     """
     for msg in reversed(messages):
         if msg.role != "user":
@@ -100,9 +100,9 @@ async def run_ephemeral_agent(
 
     Terminal tools end the run immediately on success. When the agent exits
     without delivering a terminal result the lifecycle returns
-    ``status='failed'`` with ``terminal_result=None``; the soft-warning +
-    overshoot-budget pathway in the query loop handles the gentle nudges
-    in-band, so there is no retry-with-fresh-budget mechanism here.
+    ``status='failed'`` with ``terminal_result=None``; the
+    ``terminal_call_reminder`` notification rule handles in-band nudges
+    until the hard ceiling ``ceil(1.5 * tool_call_limit)`` is hit.
     Crashes propagate the exception message via ``error`` (also
     ``status='failed'``).
     """

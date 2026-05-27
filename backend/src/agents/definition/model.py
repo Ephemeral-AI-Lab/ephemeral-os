@@ -72,18 +72,12 @@ class AgentDefinition(BaseModel):
     model: str | None = None
 
     # --- agent loop control ---
-    # Per-ephemeral-run cap on tool dispatches. ``None`` = unlimited.
+    # Per-ephemeral-run cap on tool dispatches. Required and positive.
     # Each ``EphemeralAgent`` spawn starts with a fresh counter, so
     # nested ``run_subagent`` calls have independent budgets and the
-    # caller's counter is untouched.
-    tool_call_limit: int | None = None
-
-    # Grace allowance past ``tool_call_limit``. Hard ceiling is reached when
-    # ``overshoot_units = max(0, tool_calls_used - tool_call_limit) +
-    # text_only_no_terminal_turns`` exceeds this value. ``None`` disables
-    # tolerance — without it the hard cap is not enforced. Only meaningful
-    # when ``tool_call_limit`` is set.
-    max_tolerance_after_max_tool_call: int | None = 10
+    # caller's counter is untouched. The loop's hard ceiling is
+    # ``ceil(1.5 * tool_call_limit)``.
+    tool_call_limit: int = Field(..., gt=0)
 
     # --- agent kind ---
     # Canonical category of this profile (planner / executor / verifier /
@@ -108,9 +102,9 @@ class AgentDefinition(BaseModel):
     # Tools the agent may call during a run. The agent's tool registry is
     # filtered to ``allowed_tools ∪ terminals``; the LLM only sees those.
     allowed_tools: list[str] = Field(default_factory=list)
-    # Terminal tools — calling any of these ends the query loop. Definitions
-    # only get terminal behavior when they explicitly name a registered terminal tool.
-    terminals: list[str] = Field(default_factory=list)
+    # Terminal tools — calling any of these ends the query loop. Required and
+    # non-empty: every agent must declare at least one terminal-capable tool.
+    terminals: list[str] = Field(..., min_length=1)
     # Declarative notification trigger ids resolved into NotificationRule
     # instances by runtime-specific launch code.
     notification_triggers: list[str] = Field(default_factory=list)
@@ -140,30 +134,21 @@ class AgentDefinition(BaseModel):
 
     @field_validator("tool_call_limit", mode="before")
     @classmethod
-    def _coerce_positive_int(cls, v: Any) -> Any:
-        if v is None or isinstance(v, int):
-            return v if (v is None or v > 0) else None
+    def _coerce_int(cls, v: Any) -> Any:
+        if isinstance(v, int):
+            return v
         try:
-            n = int(v)
-            return n if n > 0 else None
+            return int(v)
         except (TypeError, ValueError):
-            return None
-
-    @field_validator("max_tolerance_after_max_tool_call", mode="before")
-    @classmethod
-    def _coerce_nonneg_int(cls, v: Any) -> Any:
-        if v is None or isinstance(v, int):
-            return v if (v is None or v >= 0) else None
-        try:
-            n = int(v)
-            return n if n >= 0 else None
-        except (TypeError, ValueError):
-            return None
+            return v
 
     @field_validator("terminals")
     @classmethod
     def _check_terminals(cls, terminals: list[str]) -> list[str]:
-        return [terminal for terminal in terminals if terminal.strip()]
+        cleaned = [terminal for terminal in terminals if terminal.strip()]
+        if not cleaned:
+            raise ValueError("AgentDefinition.terminals must be non-empty")
+        return cleaned
 
     @field_validator("notification_triggers")
     @classmethod
