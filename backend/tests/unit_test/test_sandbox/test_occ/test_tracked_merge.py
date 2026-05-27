@@ -161,5 +161,5 @@ def test_tracked_symlink_overlay_change_is_rejected(tmp_path: Path) -> None:
     )
 
     assert result.status is FileStatus.REJECTED
-    assert result.message == "unsupported tracked change kind: SymlinkChange"
+    assert result.message == "unsupported gated change kind: SymlinkChange"
     assert delta is None

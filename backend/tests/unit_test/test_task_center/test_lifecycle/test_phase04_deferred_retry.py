@@ -18,7 +18,7 @@ from task_center.attempt import (
     AttemptFailReason,
     AttemptStatus,
 )
-from task_center.attempt.runtime import AgentLaunch, AttemptDeps
+from task_center.attempt.deps import AgentLaunch, AttemptDeps
 from task_center.iteration import OpenIterationCoordinatorRegistry
 from task_center.iteration.state import (
     IterationCreationReason,

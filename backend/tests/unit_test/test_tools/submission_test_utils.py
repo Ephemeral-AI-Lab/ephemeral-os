@@ -10,7 +10,7 @@ from task_center.attempt.orchestrator import AttemptOrchestrator
 from task_center.attempt.orchestrator_registry import (
     AttemptOrchestratorRegistry,
 )
-from task_center.attempt.runtime import AgentLaunch, AttemptDeps
+from task_center.attempt.deps import AgentLaunch, AttemptDeps
 from task_center.iteration import OpenIterationCoordinatorRegistry
 from task_center.iteration.state import IterationCreationReason
 from task_center.task_state import GeneratorSubmission, PlannedGeneratorTask, PlannerSubmission

@@ -111,16 +111,16 @@ async def test_dispatch_plugin_op_without_agent_id_only_audits_when_unbootstrapp
 
 
 async def test_dispatch_envelope_async_honors_boot_t0_override() -> None:
-    """``boot_t0`` overrides module-level ``_BOOT_T0`` so daemon-mode dispatch
-    measures per-call boot, not daemon uptime."""
-    from sandbox._shared.clock import monotonic_now
+    """``boot_t0`` overrides module-level ``_DISPATCHER_BOOT_MONOTONIC`` so
+    daemon-mode dispatch measures per-call boot, not daemon uptime."""
+    from sandbox.shared.clock import monotonic_now
 
     def handler(_: dict[str, object]) -> dict[str, object]:
         return {"success": True}
 
     server.register_op("test.boot", handler)
 
-    # Pretend the daemon has been running for hours: real `_BOOT_T0` is far
+    # Pretend the daemon has been running for hours: real `_DISPATCHER_BOOT_MONOTONIC` is far
     # in the past. With the per-call override, we should still see a small
     # boot_to_dispatch.
     response = await server.dispatch_envelope_async(
@@ -165,7 +165,7 @@ async def test_daemon_serves_one_envelope_per_connection() -> None:
         assert second["value"] == 2
         # Per-connection ``boot_t0`` must keep ``boot_to_dispatch_s`` small
         # regardless of daemon uptime (regression guard for module-level
-        # ``_BOOT_T0`` leaking into daemon mode).
+        # ``_DISPATCHER_BOOT_MONOTONIC`` leaking into daemon mode).
         assert second["timings"]["runtime.boot_to_dispatch_s"] < 0.05
     finally:
         serve_task.cancel()

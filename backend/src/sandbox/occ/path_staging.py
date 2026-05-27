@@ -20,8 +20,8 @@ from sandbox.layer_stack.changes import (
     SymlinkLayerChange,
 )
 from sandbox.layer_stack.manifest import Manifest
-from sandbox._shared.clock import monotonic_now
-from sandbox._shared.timing_keys import TimingKey
+from sandbox.shared.clock import monotonic_now
+from sandbox.shared.timing_keys import TimingKey
 from sandbox.occ.changeset import (
     Change,
     DeleteChange,
@@ -105,7 +105,7 @@ _DIRECT_PROFILE = _StagingRouteProfile(
 )
 
 _GATED_PROFILE = _StagingRouteProfile(
-    name="tracked",
+    name="gated",
     check_hash=True,
     supports_symlinks=False,
     missing_file_status=FileStatus.ABORTED_VERSION,
@@ -125,7 +125,7 @@ class _StagedPathState:
     final_precomputed_hash: str | None = None
 
     @property
-    def exists(self) -> bool:
+    def is_present_after(self) -> bool:
         return self.final_kind != "delete"
 
     def materialize_content(self) -> bytes:
@@ -134,19 +134,6 @@ class _StagedPathState:
                 raise ValueError("write content is not materialized")
             self.content = Path(self.final_content_path).read_bytes()
         return self.content
-
-    def set_write(self, change: WriteChange) -> None:
-        content = (
-            None
-            if change.content_path is not None and change.precomputed_hash is not None
-            else bytes(change.final_content)
-        )
-        self.set_final(
-            kind="write",
-            content=content,
-            content_path=change.content_path,
-            precomputed_hash=change.precomputed_hash,
-        )
 
     def set_final(
         self,
@@ -247,7 +234,17 @@ class _PathGroupStager:
             mismatch = self._hash_mismatch(state, change.base_hash)
             if mismatch is not None:
                 return FileResult(path=path, status=mismatch, message="content changed")
-            state.set_write(change)
+            content = (
+                None
+                if change.content_path is not None and change.precomputed_hash is not None
+                else bytes(change.final_content)
+            )
+            state.set_final(
+                kind="write",
+                content=content,
+                content_path=change.content_path,
+                precomputed_hash=change.precomputed_hash,
+            )
             return None
 
         if isinstance(change, DeleteChange):
@@ -307,8 +304,8 @@ class _PathGroupStager:
             current = state.final_precomputed_hash
         else:
             current = self._hasher.hash_current(
-                state.materialize_content() if state.exists else None,
-                exists=state.exists,
+                state.materialize_content() if state.is_present_after else None,
+                exists=state.is_present_after,
             )
         if current != expected:
             return FileStatus.ABORTED_VERSION
@@ -353,7 +350,7 @@ class DirectStager(_PathGroupStager):
 
 
 class GatedStager(_PathGroupStager):
-    """Stage tracked changes, validating each step's base-hash chain."""
+    """Stage gated changes, validating each step's base-hash chain."""
 
     def __init__(
         self,

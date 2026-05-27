@@ -26,11 +26,11 @@ from sandbox.layer_stack.workspace_binding import (
     read_workspace_binding,
     require_workspace_binding,
 )
-from sandbox._shared.clock import monotonic_now
+from sandbox.shared.clock import monotonic_now
 
 _MANAGER_CACHE_LOCK = threading.RLock()
 _MANAGER_CACHE: dict[str, LayerStack] = {}
-_DAEMON_STARTED_AT = time.time()
+_DAEMON_STARTED_AT_WALLCLOCK = time.time()
 _FENCED_STAGING_ROOTS: set[str] = set()
 
 
@@ -67,7 +67,7 @@ def fence_stale_staging(layer_stack_root: str | Path) -> dict[str, object]:
                 mtime = child.lstat().st_mtime
             except OSError:
                 continue
-            if mtime >= _DAEMON_STARTED_AT:
+            if mtime >= _DAEMON_STARTED_AT_WALLCLOCK:
                 continue
             shutil.rmtree(child, ignore_errors=True)
             if not child.exists():
@@ -95,7 +95,7 @@ def clear_layer_stack_runtime_caches_for_tests() -> None:
     with _MANAGER_CACHE_LOCK:
         _MANAGER_CACHE.clear()
         _FENCED_STAGING_ROOTS.clear()
-        _LEASE_TIMELINE.clear()
+        _LEASE_REQUEST_TIMESTAMPS.clear()
 
 
 def build_workspace_base(
@@ -143,7 +143,7 @@ def prepare_workspace_snapshot(
     require_workspace_binding(layer_stack_root)
     _validate_manifest_for_root(Path(layer_stack_root))
     started = monotonic_now()
-    _emit_layer_stack(
+    _emit_layer_stack_event(
         "layer_stack.lease_requested",
         LayerStackSection(
             operation_id=owner_request_id,
@@ -156,7 +156,7 @@ def prepare_workspace_snapshot(
         owner_request_id,
     )
     elapsed_ms = (monotonic_now() - started) * 1000.0
-    _emit_layer_stack(
+    _emit_layer_stack_event(
         "layer_stack.lease_acquired",
         LayerStackSection(
             operation_id=owner_request_id,
@@ -169,7 +169,7 @@ def prepare_workspace_snapshot(
         ),
         lane="normal",
     )
-    _emit_layer_stack(
+    _emit_layer_stack_event(
         "layer_stack.snapshot_prepared",
         LayerStackSection(
             operation_id=owner_request_id,
@@ -182,7 +182,7 @@ def prepare_workspace_snapshot(
         ),
         lane="normal",
     )
-    _LEASE_TIMELINE[result.lease_id] = (owner_request_id, monotonic_now())
+    _LEASE_REQUEST_TIMESTAMPS[result.lease_id] = (owner_request_id, monotonic_now())
     return result
 
 
@@ -194,10 +194,10 @@ def release_lease(
     """Release a previously-prepared workspace snapshot lease."""
     released = get_layer_stack_manager(layer_stack_root).release_lease(lease_id)
     if released:
-        operation_id, started = _LEASE_TIMELINE.pop(
+        operation_id, started = _LEASE_REQUEST_TIMESTAMPS.pop(
             lease_id, (None, monotonic_now())
         )
-        _emit_layer_stack(
+        _emit_layer_stack_event(
             "layer_stack.lease_released",
             LayerStackSection(
                 operation_id=operation_id,
@@ -210,10 +210,10 @@ def release_lease(
     return released
 
 
-_LEASE_TIMELINE: dict[str, tuple[str | None, float]] = {}
+_LEASE_REQUEST_TIMESTAMPS: dict[str, tuple[str | None, float]] = {}
 
 
-def _emit_layer_stack(
+def _emit_layer_stack_event(
     event_type: str,
     section: LayerStackSection,
     *,
@@ -242,7 +242,7 @@ def emit_squash_event(
     contiguous ``triggered → {completed | failed}`` pair.
     """
     if triggered:
-        _emit_layer_stack(
+        _emit_layer_stack_event(
             "layer_stack.squash_triggered",
             LayerStackSection(
                 squash_trigger_reason=trigger_reason,
@@ -251,7 +251,7 @@ def emit_squash_event(
             lane="critical",
         )
     if completed:
-        _emit_layer_stack(
+        _emit_layer_stack_event(
             "layer_stack.squash_completed",
             LayerStackSection(
                 squash_input_layers=input_layers,
@@ -261,7 +261,7 @@ def emit_squash_event(
             lane="critical",
         )
     if failed:
-        _emit_layer_stack(
+        _emit_layer_stack_event(
             "layer_stack.squash_failed",
             LayerStackSection(
                 squash_failure_kind=failure_kind,

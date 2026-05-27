@@ -57,7 +57,7 @@ async def test_iws_daemon_restart_mid_parallel_calls(
         == agent_id,
     )
     assert enter_events, enter_jsonl.read_text(encoding="utf-8", errors="replace")
-    old_handle_id = str((enter_events[-1].get("payload") or {}).get("handle_id") or "")
+    old_handle_id = str((enter_events[-1].get("payload") or {}).get("workspace_handle_id") or "")
     assert old_handle_id, opened
 
     tasks = [
@@ -110,7 +110,7 @@ async def test_iws_daemon_restart_mid_parallel_calls(
         )
         assert reopened_events, jsonl.read_text(encoding="utf-8", errors="replace")
         new_handle_id = str(
-            (reopened_events[-1].get("payload") or {}).get("handle_id") or ""
+            (reopened_events[-1].get("payload") or {}).get("workspace_handle_id") or ""
         )
         assert new_handle_id and new_handle_id != old_handle_id, reopened_events
         for path in old_paths:

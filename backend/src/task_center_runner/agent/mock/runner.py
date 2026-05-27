@@ -16,7 +16,7 @@ from typing import Any
 from uuid import uuid4
 
 import sandbox.api as sandbox_api
-from sandbox._shared.clock import monotonic_now
+from sandbox.shared.clock import monotonic_now
 from agents import AgentDefinition
 from engine.api import EphemeralRunResult
 from message.message import Message, ToolUseBlock

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from sandbox._shared.tool_primitives import (
+from sandbox.shared.tool_primitives import (
     edit,
     glob,
     grep,

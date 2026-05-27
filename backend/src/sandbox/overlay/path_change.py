@@ -34,13 +34,6 @@ class OverlayPathChange:
         if self.final_hash is not None:
             raise ValueError(f"{self.kind} changes must not carry final_hash")
 
-    def to_dict(self) -> dict[str, str | None]:
-        return {
-            "path": self.path,
-            "kind": self.kind,
-            "content_path": self.content_path,
-            "final_hash": self.final_hash,
-        }
 
 def content_hash(path: str | Path, *, symlink: bool = False) -> str:
     data = (

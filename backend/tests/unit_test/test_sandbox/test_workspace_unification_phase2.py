@@ -6,8 +6,8 @@ import asyncio
 import os
 from pathlib import Path
 
-from sandbox._shared.models import Intent, ToolCallRequest
-from sandbox._shared.tool_primitives import VERB_TABLE
+from sandbox.shared.models import Intent, ToolCallRequest
+from sandbox.shared.tool_primitives import VERB_TABLE
 from sandbox.daemon.rpc import dispatcher
 from sandbox.occ.overlay_change_conversion import overlay_path_changes_to_occ_changes
 from sandbox.occ.changeset import ChangesetResult, FileResult, FileStatus
@@ -126,9 +126,8 @@ def test_overlay_release_is_idempotent_under_concurrent_calls(tmp_path: Path) ->
         layer_paths=(),
         upperdir=upper,
         workdir=work,
-        snapshot_version=1,
         lease_id="lease-1",
-        namespace_pid=None,
+        holder_pid=None,
         run_dir=run_dir,
         _release=release,
     )
@@ -273,7 +272,7 @@ def test_isolated_run_tool_call_uses_existing_handle_overlay(
         seen["workspace_root"] = handle.workspace_root
         seen["upperdir"] = handle.upperdir
         seen["workdir"] = handle.workdir
-        seen["namespace_pid"] = handle.namespace_pid
+        seen["holder_pid"] = handle.holder_pid
         seen["agent_id"] = req.agent_id
         return {"success": True, "status": "ok", "timings": {}}
 
@@ -295,7 +294,7 @@ def test_isolated_run_tool_call_uses_existing_handle_overlay(
         layer_stack=_LayerStack(),
     )
     handle = IsolatedWorkspaceHandle(
-        handle_id="h1",
+        workspace_handle_id="h1",
         agent_id="agent",
         lease_id="lease-iws",
         manifest_version=7,
@@ -304,10 +303,10 @@ def test_isolated_run_tool_call_uses_existing_handle_overlay(
         scratch_dir=tmp_path / "scratch",
         upperdir=tmp_path / "upper",
         workdir=tmp_path / "work",
-        root_pid=1234,
+        holder_pid=1234,
     )
-    pipeline._handles[handle.handle_id] = handle
-    pipeline._by_agent[handle.agent_id] = handle.handle_id
+    pipeline._handles[handle.workspace_handle_id] = handle
+    pipeline._by_agent[handle.agent_id] = handle.workspace_handle_id
 
     result = asyncio.run(
         pipeline.run_tool_call(
@@ -327,7 +326,7 @@ def test_isolated_run_tool_call_uses_existing_handle_overlay(
         "workspace_root": "/testbed",
         "upperdir": tmp_path / "upper",
         "workdir": tmp_path / "work",
-        "namespace_pid": 1234,
+        "holder_pid": 1234,
         "agent_id": "agent",
         "captured_upperdir": tmp_path / "upper",
     }

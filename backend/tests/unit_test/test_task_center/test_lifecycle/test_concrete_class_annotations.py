@@ -26,7 +26,7 @@ def test_prompt_renderer_protocol_gone() -> None:
 
 
 def test_attempt_agent_launcher_protocol_gone() -> None:
-    import task_center.attempt.runtime as mod
+    import task_center.attempt.deps as mod
 
     assert not hasattr(mod, "AttemptAgentLauncher")
 

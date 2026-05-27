@@ -14,6 +14,17 @@ from typing import Any, Literal
 Lane = Literal["critical", "normal", "sample"]
 
 
+def _drop_none(section: Any, *, required: tuple[str, ...] = ()) -> dict[str, Any]:
+    """Strip ``None`` values from ``asdict(section)``, preserving any keys listed
+    in ``required`` even when their value is ``None``."""
+    data = asdict(section)
+    result = {k: v for k, v in data.items() if v is not None}
+    for key in required:
+        if key not in result and key in data:
+            result[key] = data[key]
+    return result
+
+
 @dataclass
 class DaemonSection:
     """Payload shape for ``daemon.*`` events."""
@@ -25,7 +36,7 @@ class DaemonSection:
     retained_bytes: int | None = None
 
     def as_dict(self) -> dict[str, Any]:
-        return {k: v for k, v in asdict(self).items() if v is not None}
+        return _drop_none(self)
 
 
 @dataclass
@@ -49,7 +60,7 @@ class LayerStackSection:
     squash_failure_kind: str | None = None
 
     def as_dict(self) -> dict[str, Any]:
-        return {k: v for k, v in asdict(self).items() if v is not None}
+        return _drop_none(self)
 
 
 def build_layer_stack_event(
@@ -80,12 +91,7 @@ class OverlayWorkspaceSection:
     upperdir_bytes: int | None = None
 
     def as_dict(self) -> dict[str, Any]:
-        out: dict[str, Any] = {}
-        for k, v in asdict(self).items():
-            if v is None:
-                continue
-            out[k] = v
-        return out
+        return _drop_none(self)
 
 
 def build_overlay_workspace_event(
@@ -121,12 +127,7 @@ class IsolatedWorkspaceSection:
     sampled_at_monotonic_s: float | None = None
 
     def as_dict(self) -> dict[str, Any]:
-        out: dict[str, Any] = {}
-        for k, v in asdict(self).items():
-            if v is None:
-                continue
-            out[k] = v
-        return out
+        return _drop_none(self)
 
 
 def build_isolated_workspace_event(
@@ -160,7 +161,7 @@ class OccSection:
     current_manifest_version: int | None = None
 
     def as_dict(self) -> dict[str, Any]:
-        return {k: v for k, v in asdict(self).items() if v is not None}
+        return _drop_none(self)
 
 
 def build_occ_event(event_type: str, section: OccSection) -> dict[str, Any]:
@@ -189,17 +190,7 @@ class PluginSection:
     peak_resident_bytes: int | None = None
 
     def as_dict(self) -> dict[str, Any]:
-        # plugin_id and plugin_kind are required, always emit them
-        out: dict[str, Any] = {
-            "plugin_id": self.plugin_id,
-            "plugin_kind": self.plugin_kind,
-        }
-        for k, v in asdict(self).items():
-            if k in ("plugin_id", "plugin_kind"):
-                continue
-            if v is not None:
-                out[k] = v
-        return out
+        return _drop_none(self, required=("plugin_id", "plugin_kind"))
 
 
 def build_plugin_event(event_type: str, section: PluginSection) -> dict[str, Any]:
@@ -226,13 +217,7 @@ class BackgroundToolSection:
     delivery_latency_ms: float | None = None
 
     def as_dict(self) -> dict[str, Any]:
-        out: dict[str, Any] = {"background_task_id": self.background_task_id}
-        for k, v in asdict(self).items():
-            if k == "background_task_id":
-                continue
-            if v is not None:
-                out[k] = v
-        return out
+        return _drop_none(self, required=("background_task_id",))
 
 
 def build_background_tool_event(
@@ -262,16 +247,7 @@ class ToolCallSection:
     phase_totals_rollup: dict[str, float] | None = field(default=None)
 
     def as_dict(self) -> dict[str, Any]:
-        out: dict[str, Any] = {
-            "tool_use_id": self.tool_use_id,
-            "tool_name": self.tool_name,
-        }
-        for k, v in asdict(self).items():
-            if k in ("tool_use_id", "tool_name"):
-                continue
-            if v is not None:
-                out[k] = v
-        return out
+        return _drop_none(self, required=("tool_use_id", "tool_name"))
 
 
 def build_tool_call_event(
@@ -298,7 +274,7 @@ class OsResourceSection:
     io_write_ops: int | None = None
 
     def as_dict(self) -> dict[str, Any]:
-        return {k: v for k, v in asdict(self).items() if v is not None}
+        return _drop_none(self)
 
 
 def build_daemon_event(event_type: str, daemon: DaemonSection) -> dict[str, Any]:

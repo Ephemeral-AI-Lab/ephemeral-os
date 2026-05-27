@@ -113,7 +113,7 @@
     <tr><td><code>Manifest</code></td><td>Ordered list of layer refs plus version/depth. Newest layer is first, so overlay mounts and merged reads see the latest changes first.</td><td>One active file at <code>manifest.json</code>, atomically replaced on publish/squash/flush.</td><td><a class="wiki-link" href="#layerstack-projection">Projection</a>, <a class="wiki-link" href="overlay.html">Overlay</a></td></tr>
     <tr><td><code>LayerRef</code></td><td>Names one immutable directory under <code>layers/</code>. Base layers start with <code>B</code>; published delta/checkpoint layers start with <code>L</code> or checkpoint labels.</td><td>Referenced until no active manifest or lease pins it.</td><td><a class="wiki-link" href="#layerstack-publish">Publish</a>, <a class="wiki-link" href="#layerstack-storage">Storage</a></td></tr>
     <tr><td><code>WorkspaceBinding</code></td><td>Binds a real workspace root to a layer-stack root and records base root hashes so path translation remains explicit.</td><td>Written during base creation and read by daemon routing.</td><td><a class="wiki-link" href="daemon.html#workspace-routing-and-state">Workspace Routing and State</a></td></tr>
-    <tr><td><code>WorkspaceLease</code></td><td>Captures the entire active manifest at acquire time. Every layer in that frozen manifest is retained on disk (<code>leased_layers()</code> for GC); the head layer of the lease (<code>lease_head_layers()</code>) bounds squash so the snapshot cut stays visible in active.</td><td>Created for snapshots, released by overlay destroy, isolated exit, or projection teardown.</td><td><a class="wiki-link" href="overlay.html">Overlay</a>, <a class="wiki-link" href="workspaces.html#isolated-lifecycle-detail">Enter, Run, Exit Details</a></td></tr>
+    <tr><td><code>LayerStackLeaseRecord</code></td><td>Captures the entire active manifest at acquire time. Every layer in that frozen manifest is retained on disk (<code>leased_layers()</code> for GC); the head layer of the lease (<code>lease_head_layers()</code>) bounds squash so the snapshot cut stays visible in active.</td><td>Created for snapshots, released by overlay destroy, isolated exit, or projection teardown.</td><td><a class="wiki-link" href="overlay.html">Overlay</a>, <a class="wiki-link" href="workspaces.html#isolated-lifecycle-detail">Enter, Run, Exit Details</a></td></tr>
     <tr><td><code>MergedView</code></td><td>Logical reader over the active manifest. It answers direct reads/listing and can project a full tree when maintenance explicitly asks.</td><td>Cached by the LayerStack manager and evicts layer indexes when layers disappear.</td><td><a class="wiki-link" href="workflow-cookbook.html#cookbook-layerstack-read">Direct LayerStack Read</a></td></tr>
     <tr><td><code>LayerStackTransaction</code></td><td>Storage writer boundary used by OCC to publish exactly one accepted changeset against the live manifest.</td><td>Per commit transaction.</td><td><a class="wiki-link" href="occ.html#occ-technical-workflow">OCC Technical Workflow</a></td></tr>
   </tbody>
@@ -337,7 +337,7 @@ _remove_layers(removable): rm -rf layer dirs + digest sidecars + evict view cach
     <h4>Graph edges</h4>
     <ul>
       <li><code>exports</code> <code>LayerStack.prepare_workspace_snapshot()</code> to overlay and isolated workspace.</li>
-      <li><code>exports</code> <code>LayerStack.commit_transaction()</code> to OCC.</li>
+      <li><code>exports</code> <code>LayerStack.begin_transaction()</code> to OCC (opens a publish transaction; <code>LayerStackTransaction.publish_layer()</code> commits).</li>
       <li><code>owns-state</code> manifest, layers, staging, leases, digest sidecars, and merged-view cache.</li>
     </ul>
   </div>
@@ -359,7 +359,7 @@ _remove_layers(removable): rm -rf layer dirs + digest sidecars + evict view cach
   <div><strong>Manifest or layer layout changes</strong><span>Update Storage, Data Model, Space Model, and any direct file refs in Daemon routing.</span></div>
   <div><strong>Snapshot semantics change</strong><span>Update Projection, Overlay Handle, isolated lifecycle, and plugin projection refresh.</span></div>
   <div><strong>Publish or squash changes</strong><span>Update Publish, Squash and Deferred GC, OCC Technical Workflow, and shell pre-mount maintenance notes.</span></div>
-  <div><strong>Lease semantics change</strong><span>Update Squash and Deferred GC's "Two lease-derived sets" callout, Data Model row for WorkspaceLease, and the lease.py evidence link.</span></div>
+  <div><strong>Lease semantics change</strong><span>Update Squash and Deferred GC's "Two lease-derived sets" callout, Data Model row for LayerStackLeaseRecord, and the lease.py evidence link.</span></div>
 </div>
 <div class="maintenance-note">
   Backlinks: <a class="wiki-link" href="overview.html#overview-invariants">Core Invariants</a> names LayerStack as durable truth; <a class="wiki-link" href="overlay.html">Overlay</a> consumes <code>layer_paths</code>; <a class="wiki-link" href="occ.html">OCC</a> publishes into LayerStack; <a class="wiki-link" href="plugins.html#plugin-refresh-detail">Projection Refresh and LSP Writes</a> watches manifest keys derived from this page.

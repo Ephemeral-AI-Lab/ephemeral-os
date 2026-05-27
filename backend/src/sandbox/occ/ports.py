@@ -69,7 +69,7 @@ class LayerCommitTransaction(Protocol):
 class LayerCommitPublisher(Protocol):
     """Publish accepted staged changes through the storage CAS primitive."""
 
-    def commit_transaction(self) -> AbstractContextManager[LayerCommitTransaction]: ...
+    def begin_transaction(self) -> AbstractContextManager[LayerCommitTransaction]: ...
 
 
 class OccLayerStackPort(
@@ -91,7 +91,6 @@ class WorkspaceBindingReader(Protocol):
 
 
 __all__ = [
-    "CommitStagingArea",
     "LayerCommitPublisher",
     "LayerCommitTransaction",
     "LayerCommitStagingStore",

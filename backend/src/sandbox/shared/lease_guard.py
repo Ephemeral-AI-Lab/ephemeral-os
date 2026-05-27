@@ -55,6 +55,14 @@ class LeaseGuard:
         handle: _LeasedHandle,
         release_fn: Callable[[_LeasedHandle], Awaitable[None]],
     ) -> None:
+        # Idempotency is enforced by `_released_lease_ids`, not by lock
+        # persistence: the set membership is added under the lock BEFORE
+        # `release_fn` awaits, so any concurrent re-entrant caller short-
+        # circuits on the set check whether it queues behind the same lock
+        # or, after the `finally` pop, allocates a fresh one. The pop is
+        # bounded-memory GC: LayerStack lease ids are uuid4 hex and never
+        # reused, so the per-lease lock has no further role after `release_fn`
+        # returns.
         async with self._lock_for(handle.lease_id):
             try:
                 if handle._released:

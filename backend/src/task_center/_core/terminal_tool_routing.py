@@ -48,6 +48,17 @@ def _depth(ctx: TerminalRoutingContext) -> int:
     )
 
 
+def _nested_goal_depth_gt_1(ctx: TerminalRoutingContext) -> bool:
+    """True when depth > 1 — caller attempt is itself inside another goal.
+
+    Kept as a named predicate (rather than inlined as ``_depth(ctx) > 1``)
+    because router tests in ``test_terminal_tool_router.py`` patch this
+    symbol via ``monkeypatch.setattr`` on its full module path to stub the
+    depth check without constructing a real goal hierarchy.
+    """
+    return _depth(ctx) > 1
+
+
 # ---------------------------------------------------------------------------
 # Router
 # ---------------------------------------------------------------------------
@@ -123,7 +134,7 @@ class TerminalToolRouter:
         if definition.agent_kind == AgentKind.EXECUTOR and ctx.scope.goal_id is None:
             return None
 
-        depth_restricted = _depth(ctx) > 1
+        depth_restricted = _nested_goal_depth_gt_1(ctx)
         if definition.agent_kind == AgentKind.PLANNER:
             if depth_restricted:
                 return frozenset({"submit_plan_closes_goal"})

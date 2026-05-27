@@ -6,8 +6,8 @@ from collections.abc import Sequence
 from dataclasses import replace
 from typing import cast
 
-from sandbox._shared.clock import monotonic_now
-from sandbox._shared.timing_keys import TimingKey
+from sandbox.shared.clock import monotonic_now
+from sandbox.shared.timing_keys import TimingKey
 from sandbox.daemon.audit_schema import (
     OccSection,
     build_occ_event,
@@ -24,7 +24,7 @@ from sandbox.occ.content_hashing import infer_snapshot_base_hash
 from sandbox.occ.gitignore import GitignoreMatcher
 from sandbox.occ.maintenance import MaintenancePolicy
 from sandbox.occ.ports import OccLayerStackPort
-from sandbox._shared.async_bridge import run_sync_in_executor
+from sandbox.shared.async_bridge import run_sync_in_executor
 
 AUTO_SQUASH_MAX_DEPTH = 100
 
@@ -42,7 +42,7 @@ class OccService:
         commit_queue: CommitQueue | None = None,
         maintenance: MaintenancePolicy | None = None,
     ) -> None:
-        self._snapshot_reader = layer_stack
+        self._layer_stack = layer_stack
         self._preparer = preparer or ChangesetPreparer(gitignore)
         transaction = transaction or CommitTransaction(
             snapshot_reader=layer_stack,
@@ -254,10 +254,10 @@ class OccService:
         effective_snapshot = snapshot
         if effective_snapshot is None:
             snapshot_start = monotonic_now()
-            effective_snapshot = self._snapshot_reader.read_active_manifest()
+            effective_snapshot = self._layer_stack.read_active_manifest()
             timings[TimingKey.PREPARE_CURRENT_SNAPSHOT] = monotonic_now() - snapshot_start
         assert effective_snapshot is not None
-        snapshot_reader = self._snapshot_reader
+        snapshot_reader = self._layer_stack
 
         def read_snapshot_base_hash(path: str) -> str | None:
             return infer_snapshot_base_hash(

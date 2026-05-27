@@ -6,11 +6,11 @@ import threading
 from collections.abc import Callable, Mapping, Sequence
 from pathlib import Path
 
-from sandbox._shared.command_exec_policy import (
+from sandbox.shared.command_exec_policy import (
     DEFAULT_COMMAND_EXEC_POLICY,
     CommandExecPolicy,
 )
-from sandbox._shared.models import ShellResult
+from sandbox.shared.models import ShellResult
 from sandbox.overlay.subprocess_runner import run_command_to_refs
 
 

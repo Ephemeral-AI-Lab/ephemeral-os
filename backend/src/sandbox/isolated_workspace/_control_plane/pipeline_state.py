@@ -104,7 +104,7 @@ class IsolatedWorkspaceAuditSink(Protocol):
 class IsolatedWorkspaceHandle:
     """Per-workspace state. Not a subclass of ``OperationOverlayHandle`` (C1)."""
 
-    handle_id: str
+    workspace_handle_id: str
     agent_id: str
     lease_id: str
     manifest_version: int
@@ -114,7 +114,7 @@ class IsolatedWorkspaceHandle:
     upperdir: Path
     workdir: Path
     ns_fds: dict[str, int] = field(default_factory=dict)
-    root_pid: int = 0
+    holder_pid: int = 0
     # FDs into the ns_holder's readiness/control pipes. ``-1`` means "not yet
     # opened". Closed on teardown / rollback.
     readiness_fd: int = -1
@@ -127,7 +127,7 @@ class IsolatedWorkspaceHandle:
 
     def to_persisted(self) -> dict[str, Any]:
         return {
-            "handle_id": self.handle_id,
+            "workspace_handle_id": self.workspace_handle_id,
             "agent_id": self.agent_id,
             "lease_id": self.lease_id,
             "manifest_version": self.manifest_version,
@@ -136,7 +136,7 @@ class IsolatedWorkspaceHandle:
             "ns_ip": str(self.veth.ns_ip) if self.veth else None,
             "cgroup_path": self.cgroup_path.as_posix() if self.cgroup_path else None,
             "scratch_dir_path": self.scratch_dir.as_posix(),
-            "root_pid": self.root_pid,
+            "holder_pid": self.holder_pid,
             "created_at": self.created_at,
         }
 
@@ -233,7 +233,7 @@ class _NamespaceRuntime(Protocol):
     def spawn_ns_holder(
         self, handle: IsolatedWorkspaceHandle, *, setup_timeout_s: float
     ) -> int: ...
-    def open_ns_fds(self, root_pid: int) -> dict[str, int]: ...
+    def open_ns_fds(self, holder_pid: int) -> dict[str, int]: ...
     async def mount_overlay(
         self, handle: IsolatedWorkspaceHandle, *, layer_paths: tuple[str, ...]
     ) -> None: ...
@@ -244,7 +244,7 @@ class _NamespaceRuntime(Protocol):
         self, handle: IsolatedWorkspaceHandle, *, setup_timeout_s: float
     ) -> None: ...
     def create_cgroup(self, handle: IsolatedWorkspaceHandle) -> Path: ...
-    def kill_holder(self, root_pid: int, *, grace_s: float) -> None: ...
+    def kill_holder(self, holder_pid: int, *, grace_s: float) -> None: ...
     def run_in_handle(
         self,
         handle: IsolatedWorkspaceHandle,

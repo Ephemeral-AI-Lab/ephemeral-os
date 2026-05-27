@@ -7,8 +7,8 @@ State at daemon scope:
   - (Opt-in) RFC1918-deny drop rule when ``rfc1918_egress == "deny"``.
 
 Per-workspace state:
-  - One veth pair: ``eos-iws-{handle_id[:6]}h`` (host end on bridge) and
-    ``eos-iws-{handle_id[:6]}n`` (peer end moved into the netns).
+  - One veth pair: ``eos-iws-{workspace_handle_id[:6]}h`` (host end on bridge)
+    and ``eos-iws-{workspace_handle_id[:6]}n`` (peer end moved into the netns).
   - One ``/32`` allocation from ``10.244.0.2 - 10.244.0.254``.
 
 The IP pool itself is pure Python; ``ip`` / ``nft`` calls are Linux-only and
@@ -99,7 +99,7 @@ class IsolatedNetwork:
         self._install_static_rules()
         self._initialized = True
 
-    def install_veth(self, *, handle_id: str, root_pid: int) -> VethAllocation:
+    def install_veth(self, *, workspace_handle_id: str, holder_pid: int) -> VethAllocation:
         """Create veth pair, attach host end to bridge with port isolation.
 
         Also configures the ns-side end inside the iws's net namespace:
@@ -113,11 +113,11 @@ class IsolatedNetwork:
         """
         if not self._initialized:
             raise IsolatedNetworkUnavailable("isolated_network_not_initialized")
-        host, ns = _veth_names(handle_id)
+        host, ns = _veth_names(workspace_handle_id)
         ns_ip = self.pool.allocate()
         try:
             _ip("link", "add", host, "type", "veth", "peer", "name", ns)
-            _ip("link", "set", ns, "netns", str(root_pid))
+            _ip("link", "set", ns, "netns", str(holder_pid))
             _ip("link", "set", host, "master", BRIDGE_NAME)
             _ip(
                 "link",
@@ -136,9 +136,9 @@ class IsolatedNetwork:
             # only brings up ``lo`` and purges IPv6; veth-side IP+route are
             # left to the daemon (this code) so the ns_holder stays minimal.
             prefix = BRIDGE_CIDR.prefixlen
-            _ip_ns(root_pid, "link", "set", ns, "up")
-            _ip_ns(root_pid, "addr", "add", f"{ns_ip}/{prefix}", "dev", ns)
-            _ip_ns(root_pid, "route", "add", "default", "via", str(GATEWAY))
+            _ip_ns(holder_pid, "link", "set", ns, "up")
+            _ip_ns(holder_pid, "addr", "add", f"{ns_ip}/{prefix}", "dev", ns)
+            _ip_ns(holder_pid, "route", "add", "default", "via", str(GATEWAY))
         except Exception:
             self.pool.free(ns_ip)
             _ip_quiet("link", "del", host)
@@ -228,10 +228,10 @@ class IsolatedNetwork:
                 raise IsolatedNetworkUnavailable(f"missing required tool: {tool}")
 
 
-def _veth_names(handle_id: str) -> tuple[str, str]:
+def _veth_names(workspace_handle_id: str) -> tuple[str, str]:
     # Linux IFNAMSIZ caps interface names at 15 chars.
     # VETH_PREFIX (8: "eos-iws-") + short (6) + suffix (1) = 15 exactly.
-    short = handle_id[:6]
+    short = workspace_handle_id[:6]
     return f"{VETH_PREFIX}{short}h", f"{VETH_PREFIX}{short}n"
 
 
@@ -272,8 +272,8 @@ def _ip_quiet(*args: str) -> None:
     )
 
 
-def _ip_ns(root_pid: int, *args: str) -> None:
-    """Run ``ip <args>`` inside the net namespace owned by ``root_pid``.
+def _ip_ns(holder_pid: int, *args: str) -> None:
+    """Run ``ip <args>`` inside the net namespace owned by ``holder_pid``.
 
     Uses nsenter against ``/proc/<pid>/ns/net`` rather than ``setns(2)`` from
     Python so the call stays single-step and inherits the daemon's existing
@@ -282,7 +282,7 @@ def _ip_ns(root_pid: int, *args: str) -> None:
     iws net_ns — no extra capability dance needed for ip address/route ops.
     """
     subprocess.run(
-        ["nsenter", "-t", str(root_pid), "-n", "--", "ip", *args],
+        ["nsenter", "-t", str(holder_pid), "-n", "--", "ip", *args],
         check=True,
         capture_output=True,
         text=True,

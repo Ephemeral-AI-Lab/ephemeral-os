@@ -9,7 +9,7 @@ from typing import Any
 
 import pytest
 
-from sandbox._shared.models import Intent, ToolCallRequest
+from sandbox.shared.models import Intent, ToolCallRequest
 from sandbox.isolated_workspace._control_plane.pipeline_state import (
     IsolatedWorkspaceError,
     IsolatedWorkspaceHandle,
@@ -41,8 +41,8 @@ class _LayerStack:
 class _Network:
     initialized = False
 
-    def install_veth(self, *, handle_id: str, root_pid: int) -> None:
-        del handle_id, root_pid
+    def install_veth(self, *, workspace_handle_id: str, holder_pid: int) -> None:
+        del workspace_handle_id, holder_pid
         return None
 
     def teardown_veth(self, _veth) -> None:
@@ -58,8 +58,8 @@ class _FakeNamespaceRuntime:
         del handle, setup_timeout_s
         return 1234
 
-    def open_ns_fds(self, root_pid: int) -> dict[str, int]:
-        assert root_pid == 1234
+    def open_ns_fds(self, holder_pid: int) -> dict[str, int]:
+        assert holder_pid == 1234
         return {}
 
     async def mount_overlay(
@@ -92,8 +92,8 @@ class _FakeNamespaceRuntime:
         path.mkdir(parents=True, exist_ok=True)
         return path
 
-    def kill_holder(self, root_pid: int, *, grace_s: float) -> None:
-        del root_pid, grace_s
+    def kill_holder(self, holder_pid: int, *, grace_s: float) -> None:
+        del holder_pid, grace_s
 
     def run_in_handle(
         self,
@@ -198,7 +198,7 @@ async def test_same_session_tool_calls_do_not_share_per_call_lock(
     runtime = _FakeNamespaceRuntime()
     pipeline = _pipeline(tmp_path, runtime=runtime)
     handle = IsolatedWorkspaceHandle(
-        handle_id="h1",
+        workspace_handle_id="h1",
         agent_id="agent-a",
         lease_id="lease-iws",
         manifest_version=1,
@@ -207,12 +207,12 @@ async def test_same_session_tool_calls_do_not_share_per_call_lock(
         scratch_dir=tmp_path / "scratch",
         upperdir=tmp_path / "scratch" / "upper",
         workdir=tmp_path / "scratch" / "work",
-        root_pid=1234,
+        holder_pid=1234,
     )
     handle.upperdir.mkdir(parents=True)
     handle.workdir.mkdir(parents=True)
-    pipeline._handles[handle.handle_id] = handle
-    pipeline._by_agent[handle.agent_id] = handle.handle_id
+    pipeline._handles[handle.workspace_handle_id] = handle
+    pipeline._by_agent[handle.agent_id] = handle.workspace_handle_id
 
     async def fake_run_in_namespace(_handle, req, *, isolated_runner):
         response = await isolated_runner(["tool"], None, None)

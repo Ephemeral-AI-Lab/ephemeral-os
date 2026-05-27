@@ -27,7 +27,8 @@ _LIFECYCLE_PATH = _SRC_ROOT / "sandbox/isolated_workspace/_control_plane/workspa
 _FORBIDDEN_TOKENS = (
     "apply_changeset",
     "commit_prepared",
-    "commit_transaction",
+    "commit_transaction",  # OCC commit_transaction module path
+    "begin_transaction",  # LayerStackPort publish entry
     "CommitQueue",
     "apply_sync",  # the CommitQueue's sync entrypoint
 )

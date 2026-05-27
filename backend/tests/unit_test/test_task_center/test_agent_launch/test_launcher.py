@@ -10,7 +10,7 @@ import pytest
 from task_center.attempt.launch import EphemeralAttemptAgentLauncher
 from task_center.attempt import AttemptFailReason, AttemptStatus
 from task_center.attempt.orchestrator_registry import AttemptOrchestratorRegistry
-from task_center.attempt.runtime import AgentLaunch, AttemptDeps
+from task_center.attempt.deps import AgentLaunch, AttemptDeps
 from task_center.iteration.state import IterationCreationReason
 from task_center.task_state import TaskCenterTaskRole, TaskCenterTaskStatus
 from task_center._core.primitives import planner_task_id
@@ -25,7 +25,7 @@ class _NoopLauncher:
 async def test_wait_for_idle_prunes_done_tasks_before_next_loop() -> None:
     launcher = EphemeralAttemptAgentLauncher(
         config=SimpleNamespace(),
-        runtime=lambda: None,
+        deps_provider=lambda: None,
     )
     done_task = asyncio.create_task(asyncio.sleep(0))
     await done_task
@@ -78,7 +78,7 @@ async def test_missing_orchestrator_exhaustion_closes_attempt(
     )
     launcher = EphemeralAttemptAgentLauncher(
         config=SimpleNamespace(),
-        runtime=lambda: runtime,
+        deps_provider=lambda: runtime,
     )
 
     await launcher._report_unfinished_running_task(  # noqa: SLF001 - regression seam

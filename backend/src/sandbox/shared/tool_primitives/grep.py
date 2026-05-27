@@ -9,8 +9,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal, cast
 
-from sandbox._shared.models import GrepResult
-from sandbox._shared.tool_primitives.workspace_filesystem import (
+from sandbox.shared.models import GrepResult
+from sandbox.shared.tool_primitives.workspace_filesystem import (
     display_workspace_path,
     is_regular_file_no_follow,
     read_bytes_no_follow,

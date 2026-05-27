@@ -11,10 +11,10 @@ from enum import Enum
 from pathlib import Path
 from typing import Any
 
-from sandbox._shared.clock import monotonic_now
-from sandbox._shared.command_exec_policy import CommandExecPolicy
-from sandbox._shared.models import Intent, ToolCallRequest
-from sandbox._shared.tool_primitives import VERB_TABLE, shell
+from sandbox.shared.clock import monotonic_now
+from sandbox.shared.command_exec_policy import CommandExecPolicy
+from sandbox.shared.models import Intent, ToolCallRequest
+from sandbox.shared.tool_primitives import VERB_TABLE, shell
 from sandbox.overlay.kernel_mount import (
     MountInputs,
     mount_overlay,
@@ -49,7 +49,7 @@ def execute(payload: dict[str, Any]) -> int:
         sys.stderr.write("namespace helper payload is missing result_ref\n")
         return 2
     result_ref = Path(str(result_ref_raw))
-    result = execute_tool_payload_safely(payload)
+    result = mount_and_execute_tool_payload(payload)
     result_ref.parent.mkdir(parents=True, exist_ok=True)
     result_ref.write_text(
         json.dumps(result, separators=(",", ":"), sort_keys=True),
@@ -89,7 +89,7 @@ def _overlay_mount_request(payload: dict[str, Any]) -> _OverlayMountRequest:
     )
 
 
-def execute_tool_payload_safely(
+def mount_and_execute_tool_payload(
     payload: dict[str, Any],
     *,
     timings: dict[str, float] | None = None,
@@ -173,10 +173,21 @@ def execute_tool_payload(
                     payload["policy"] if isinstance(payload.get("policy"), dict) else {}
                 ),
             )
-            result_payload = _jsonable_result(result)
+            normalized = _jsonable(result)
+            if not isinstance(normalized, dict):
+                raise TypeError(
+                    f"tool primitive returned non-object result: {type(result).__name__}"
+                )
+            result_payload = normalized
         else:
             run_primitive = VERB_TABLE[req.verb]
-            result_payload = _jsonable_result(run_primitive(req.args))
+            primitive_result = run_primitive(req.args)
+            normalized = _jsonable(primitive_result)
+            if not isinstance(normalized, dict):
+                raise TypeError(
+                    f"tool primitive returned non-object result: {type(primitive_result).__name__}"
+                )
+            result_payload = normalized
     finally:
         os.chdir(old_cwd)
     elapsed = monotonic_now() - run_start
@@ -245,14 +256,6 @@ def _optional_float(raw: object) -> float | None:
     return float(raw)
 
 
-def _jsonable_result(value: Any) -> dict[str, Any]:
-    if is_dataclass(value) and not isinstance(value, type):
-        return {str(k): _jsonable(v) for k, v in asdict(value).items()}
-    if isinstance(value, Mapping):
-        return {str(k): _jsonable(v) for k, v in value.items()}
-    raise TypeError(f"tool primitive returned non-object result: {type(value).__name__}")
-
-
 def _jsonable(value: Any) -> Any:
     if is_dataclass(value) and not isinstance(value, type):
         return {str(k): _jsonable(v) for k, v in asdict(value).items()}
@@ -271,10 +274,9 @@ def _write_timings(path: Path, timings: dict[str, float]) -> None:
 
 
 __all__ = [
-    "execute",
     "execute_tool_payload",
-    "execute_tool_payload_safely",
     "main",
+    "mount_and_execute_tool_payload",
     "WorkspaceMountMode",
 ]
 

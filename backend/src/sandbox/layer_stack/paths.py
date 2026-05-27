@@ -23,7 +23,8 @@ def remove_path(path: Path) -> None:
         shutil.rmtree(path)
 
 
-def resolve_storage_path(storage_root: Path, path: str) -> Path:
+def resolve_safe_storage_path(storage_root: Path, path: str) -> Path:
+    """Join *path* under *storage_root* and reject any escape via traversal."""
     if "\0" in path:
         raise ValueError(f"layer path must not contain NUL bytes: {path!r}")
     candidate = Path(path)
@@ -117,6 +118,6 @@ __all__ = [
     "relative_symlink_target_escapes",
     "remove_path",
     "replace_via_tmp_fsynced",
-    "resolve_storage_path",
+    "resolve_safe_storage_path",
     "write_bytes_fsynced",
 ]

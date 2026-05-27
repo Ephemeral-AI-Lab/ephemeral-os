@@ -81,7 +81,7 @@ async def test_map_lock_serializes_enter_exit_only(
             intervals,
         )
         handle_ids = {
-            (row.get("payload") or {}).get("handle_id")
+            (row.get("payload") or {}).get("workspace_handle_id")
             for row in recent_tool_calls
         }
         # Both handles emitted a tool_call event.

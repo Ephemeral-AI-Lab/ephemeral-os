@@ -67,8 +67,8 @@ class _WorkspaceHandleLifecycleMixin:
             snapshot = self._layer_stack.prepare_workspace_snapshot(
                 request_id=f"isolated-{self._id_factory()}",
             )
-        handle_id = self._id_factory()
-        scratch = self.scratch_root / handle_id
+        workspace_handle_id = self._id_factory()
+        scratch = self.scratch_root / workspace_handle_id
         upper = scratch / "upper"
         work = scratch / "work"
         upper.mkdir(parents=True, exist_ok=True)
@@ -76,7 +76,7 @@ class _WorkspaceHandleLifecycleMixin:
         now = self._clock()
         layer_paths = tuple(snapshot.layer_paths or ())
         handle = IsolatedWorkspaceHandle(
-            handle_id=handle_id,
+            workspace_handle_id=workspace_handle_id,
             agent_id=agent_id,
             lease_id=snapshot.lease_id,
             manifest_version=snapshot.manifest_version,
@@ -98,13 +98,13 @@ class _WorkspaceHandleLifecycleMixin:
                 )
             raise
         async with self._map_lock:
-            self._handles[handle_id] = handle
-            self._by_agent[agent_id] = handle_id
+            self._handles[workspace_handle_id] = handle
+            self._by_agent[agent_id] = workspace_handle_id
         self._persist()
         self._emit(
             IsolatedWorkspaceAuditEvent.ENTER,
             {
-                "handle_id": handle_id,
+                "workspace_handle_id": workspace_handle_id,
                 "agent_id": agent_id,
                 "manifest_version": handle.manifest_version,
                 "manifest_root_hash": handle.manifest_root_hash,
@@ -120,10 +120,10 @@ class _WorkspaceHandleLifecycleMixin:
             "isolated_workspace.entered",
             IsolatedWorkspaceSection(
                 operation_id=handle.lease_id,
-                workspace_handle_id=handle.handle_id,
+                workspace_handle_id=handle.workspace_handle_id,
                 agent_id=agent_id,
-                holder_pid=handle.root_pid or None,
-                holder_pid_alive=bool(handle.root_pid),
+                holder_pid=handle.holder_pid or None,
+                holder_pid_alive=bool(handle.holder_pid),
                 cgroup_id=(
                     handle.cgroup_path.as_posix() if handle.cgroup_path else None
                 ),
@@ -145,25 +145,25 @@ class _WorkspaceHandleLifecycleMixin:
         t = timer or _PhaseTimer(self._clock)
         with t.measure("spawn_ns_holder"):
             _maybe_inject_failure("ns_holder_ready")
-            handle.root_pid = self._runtime.spawn_ns_holder(
+            handle.holder_pid = self._runtime.spawn_ns_holder(
                 handle,
                 setup_timeout_s=self._config.setup_timeout_s,
             )
         with t.measure("open_ns_fds"):
             # ``update`` (not assignment) so the runtime can stash auxiliary
             # FDs on the handle before this method runs without losing them.
-            handle.ns_fds.update(self._runtime.open_ns_fds(handle.root_pid))
+            handle.ns_fds.update(self._runtime.open_ns_fds(handle.holder_pid))
         with t.measure("install_veth"):
             _maybe_inject_failure("install_veth")
             try:
                 handle.veth = self._network.install_veth(
-                    handle_id=handle.handle_id,
-                    root_pid=handle.root_pid,
+                    workspace_handle_id=handle.workspace_handle_id,
+                    holder_pid=handle.holder_pid,
                 )
             except RuntimeError as exc:
                 # When the ns_holder dies between spawn_ns_holder and
                 # install_veth (e.g., HOLDER_CRASH inject, real-world race),
-                # ``ip link set ... netns <root_pid>`` fails with
+                # ``ip link set ... netns <holder_pid>`` fails with
                 # "RTNETLINK answers: No such process". Translate to
                 # setup_failed so the dispatcher surfaces a coherent error
                 # instead of the dispatcher's catch-all ``internal_error``.
@@ -196,9 +196,9 @@ class _WorkspaceHandleLifecycleMixin:
         if handle.veth is not None:
             with contextlib.suppress(Exception):
                 self._network.teardown_veth(handle.veth)
-        if handle.root_pid:
+        if handle.holder_pid:
             with contextlib.suppress(Exception):
-                self._runtime.kill_holder(handle.root_pid, grace_s=1.0)
+                self._runtime.kill_holder(handle.holder_pid, grace_s=1.0)
         _close_handle_fds(handle)
         with contextlib.suppress(Exception):
             shutil.rmtree(handle.scratch_dir, ignore_errors=True)
@@ -232,8 +232,8 @@ class _WorkspaceHandleLifecycleMixin:
             )
         async with lifecycle_exit_critical_section(agent_id):
             async with self._map_lock:
-                handle_id = self._by_agent.get(agent_id)
-                if handle_id is None:
+                workspace_handle_id = self._by_agent.get(agent_id)
+                if workspace_handle_id is None:
                     # State exists but no map entry — the agent already exited
                     # via another path. Reset exit_pending so the dispatch
                     # state does not strand future dispatches.
@@ -243,9 +243,9 @@ class _WorkspaceHandleLifecycleMixin:
                         "agent has no open isolated workspace",
                         agent_id=agent_id,
                     )
-                handle = self._handles[handle_id]
+                handle = self._handles[workspace_handle_id]
                 del self._by_agent[agent_id]
-                del self._handles[handle_id]
+                del self._handles[workspace_handle_id]
         upperdir_bytes = _directory_file_bytes(handle.upperdir)
         timer = _PhaseTimer(self._clock)
         await self._teardown(handle, grace_s=effective_grace_s, timer=timer)
@@ -257,7 +257,7 @@ class _WorkspaceHandleLifecycleMixin:
         self._emit(
             IsolatedWorkspaceAuditEvent.EXIT,
             {
-                "handle_id": handle.handle_id,
+                "workspace_handle_id": handle.workspace_handle_id,
                 "reason": "explicit",
                 "lifetime_s": lifetime_s,
                 "upperdir_bytes_discarded": upperdir_bytes,
@@ -270,9 +270,9 @@ class _WorkspaceHandleLifecycleMixin:
             "isolated_workspace.exited",
             IsolatedWorkspaceSection(
                 operation_id=handle.lease_id,
-                workspace_handle_id=handle.handle_id,
+                workspace_handle_id=handle.workspace_handle_id,
                 agent_id=agent_id,
-                holder_pid=handle.root_pid or None,
+                holder_pid=handle.holder_pid or None,
                 cgroup_id=(
                     handle.cgroup_path.as_posix() if handle.cgroup_path else None
                 ),
@@ -291,7 +291,7 @@ class _WorkspaceHandleLifecycleMixin:
             "isolated_workspace.orphan_check_completed",
             IsolatedWorkspaceSection(
                 operation_id=handle.lease_id,
-                workspace_handle_id=handle.handle_id,
+                workspace_handle_id=handle.workspace_handle_id,
                 agent_id=agent_id,
                 orphan_holder_count=orphan_counts["holder"],
                 orphan_cgroup_count=orphan_counts["cgroup"],
@@ -311,9 +311,9 @@ class _WorkspaceHandleLifecycleMixin:
     ) -> dict[str, int]:
         """Best-effort post-exit residue check; no kernel calls beyond stat."""
         counts = {"holder": 0, "cgroup": 0, "scratch": 0}
-        if handle.root_pid:
+        if handle.holder_pid:
             try:
-                os.kill(handle.root_pid, 0)
+                os.kill(handle.holder_pid, 0)
                 counts["holder"] = 1
             except (ProcessLookupError, PermissionError, OSError):
                 pass
@@ -331,10 +331,10 @@ class _WorkspaceHandleLifecycleMixin:
         timer: _PhaseTimer | None = None,
     ) -> None:
         t = timer or _PhaseTimer(self._clock)
-        if handle.root_pid:
+        if handle.holder_pid:
             with contextlib.suppress(Exception):
                 with t.measure("kill_holder"):
-                    self._runtime.kill_holder(handle.root_pid, grace_s=grace_s)
+                    self._runtime.kill_holder(handle.holder_pid, grace_s=grace_s)
         if handle.veth is not None:
             with contextlib.suppress(Exception):
                 with t.measure("teardown_veth"):

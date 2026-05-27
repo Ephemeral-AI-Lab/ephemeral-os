@@ -9,9 +9,9 @@ from typing import cast
 from pydantic import BaseModel, Field
 
 import sandbox.api as sandbox_api
-from sandbox._shared.models import Intent
+from sandbox.shared.models import Intent
 from sandbox.api import ShellRequest
-from sandbox._shared.clock import normalize_timing_map
+from sandbox.shared.clock import normalize_timing_map
 from tools._framework.core.base import ToolExecutionContextService, ToolResult
 from tools._framework.core.decorator import tool
 from tools.sandbox._lib.tool_context import (

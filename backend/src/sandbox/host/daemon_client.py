@@ -11,7 +11,7 @@ from dataclasses import dataclass
 from typing import Any, Protocol
 from uuid import uuid4
 
-from sandbox._shared.models import RawExecResult
+from sandbox.shared.models import RawExecResult
 from sandbox.daemon.paths import (
     BUNDLE_REMOTE_DIR,
     DAEMON_ENV_SIGNATURE_PATH,

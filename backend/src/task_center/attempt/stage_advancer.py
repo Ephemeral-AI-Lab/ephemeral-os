@@ -19,7 +19,7 @@ from task_center.attempt.state import (
     AttemptStage,
     AttemptStatus,
 )
-from task_center.attempt.runtime import (
+from task_center.attempt.deps import (
     AgentLaunch,
     AttemptDeps,
 )

@@ -25,7 +25,7 @@ def test_stale_staging_fence_removes_old_dirs_and_keeps_fresh_dirs(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     started_at = time.time()
-    monkeypatch.setattr(layer_stack_runtime, "_DAEMON_STARTED_AT", started_at)
+    monkeypatch.setattr(layer_stack_runtime, "_DAEMON_STARTED_AT_WALLCLOCK", started_at)
     staging = tmp_path / "stack" / "staging"
     old_layer = staging / "L000123-old.staging"
     old_occ = staging / "occ-commit-old"
@@ -56,7 +56,7 @@ def test_stale_staging_fence_second_call_is_idempotent(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     started_at = time.time()
-    monkeypatch.setattr(layer_stack_runtime, "_DAEMON_STARTED_AT", started_at)
+    monkeypatch.setattr(layer_stack_runtime, "_DAEMON_STARTED_AT_WALLCLOCK", started_at)
     old_dir = tmp_path / "stack" / "staging" / "occ-commit-old"
     old_dir.mkdir(parents=True)
     os.utime(old_dir, (started_at - 10, started_at - 10))

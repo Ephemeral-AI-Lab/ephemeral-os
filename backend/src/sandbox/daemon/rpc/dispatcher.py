@@ -19,7 +19,7 @@ from typing import Any
 from uuid import uuid4
 
 from audit.jsonl import append_jsonl_event
-from sandbox._shared.clock import monotonic_now
+from sandbox.shared.clock import monotonic_now
 from sandbox.daemon.rpc.in_flight import get_in_flight_registry
 from sandbox.daemon.workspace_tool_dispatch import (
     LifecycleInProgressError,

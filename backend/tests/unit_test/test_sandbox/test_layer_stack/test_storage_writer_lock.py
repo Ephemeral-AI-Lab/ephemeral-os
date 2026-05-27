@@ -21,7 +21,7 @@ def test_transactions_for_same_storage_root_share_process_mutex(tmp_path) -> Non
 
     def hold_first_transaction() -> None:
         try:
-            with first.commit_transaction():
+            with first.begin_transaction():
                 first_entered.set()
                 assert release_first.wait(timeout=2.0)
         finally:
@@ -30,7 +30,7 @@ def test_transactions_for_same_storage_root_share_process_mutex(tmp_path) -> Non
     def enter_second_transaction() -> None:
         try:
             assert first_entered.wait(timeout=2.0)
-            with second.commit_transaction():
+            with second.begin_transaction():
                 second_entered.set()
         finally:
             second_done.set()

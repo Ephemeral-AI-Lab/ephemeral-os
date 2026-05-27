@@ -27,7 +27,7 @@ from task_center.attempt.launch import (
     EphemeralAttemptAgentLauncher,
 )
 from task_center.attempt.orchestrator_registry import AttemptOrchestratorRegistry
-from task_center.attempt.runtime import AttemptDeps
+from task_center.attempt.deps import AttemptDeps
 from task_center.context_engine.core import ContextEngine, ContextEngineDeps
 from task_center.context_engine.recipes import register_builtin_recipes
 from task_center.entry.sandbox_provisioning import (
@@ -173,7 +173,7 @@ class TaskCenterEntry:
         runtime_ref: AttemptDeps | None = None
         launcher = EphemeralAttemptAgentLauncher(
             config=self._config,
-            runtime=lambda: runtime_ref,
+            deps_provider=lambda: runtime_ref,
             sandbox_id=self._sandbox_id,
             on_event=self._on_agent_event,
             runner=self._runner,

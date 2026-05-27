@@ -11,7 +11,7 @@ from typing import Any
 
 import sandbox.api as sandbox_api
 from benchmarks.sweevo.models import SWEEvoInstance, _REPO_DIR
-from sandbox._shared.models import ReadFileRequest, SandboxCaller
+from sandbox.shared.models import ReadFileRequest, SandboxCaller
 from sandbox.daemon.paths import DAEMON_PID_PATH, DAEMON_SOCKET_PATH
 from sandbox.host.daemon_client import call_daemon_api
 from task_center_runner.agent.mock.background_shell_probe import (

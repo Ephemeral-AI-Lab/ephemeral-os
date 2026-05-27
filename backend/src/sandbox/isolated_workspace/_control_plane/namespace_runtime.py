@@ -115,12 +115,12 @@ class _KernelNamespaceRuntime:
         handle.control_fd = c_parent
         return proc.pid
 
-    def open_ns_fds(self, root_pid: int) -> dict[str, int]:
+    def open_ns_fds(self, holder_pid: int) -> dict[str, int]:
         ns_paths = {
-            "user": f"/proc/{root_pid}/ns/user",
-            "mnt": f"/proc/{root_pid}/ns/mnt",
-            "pid": f"/proc/{root_pid}/ns/pid_for_children",
-            "net": f"/proc/{root_pid}/ns/net",
+            "user": f"/proc/{holder_pid}/ns/user",
+            "mnt": f"/proc/{holder_pid}/ns/mnt",
+            "pid": f"/proc/{holder_pid}/ns/pid_for_children",
+            "net": f"/proc/{holder_pid}/ns/net",
         }
         return {name: os.open(path, os.O_RDONLY | os.O_CLOEXEC) for name, path in ns_paths.items()}
 
@@ -214,35 +214,35 @@ class _KernelNamespaceRuntime:
         _expect_line(handle.readiness_fd, b"ready", timeout_s=setup_timeout_s)
 
     def create_cgroup(self, handle: IsolatedWorkspaceHandle) -> Path:
-        path = CGROUP_ROOT / f"{HANDLE_PREFIX}{handle.handle_id}"
+        path = CGROUP_ROOT / f"{HANDLE_PREFIX}{handle.workspace_handle_id}"
         path.mkdir(parents=True, exist_ok=True)
         return path
 
-    def kill_holder(self, root_pid: int, *, grace_s: float) -> None:
-        proc = self._holders.pop(root_pid, None)
-        grandchild = self._grandchildren.pop(root_pid, None)
-        graceful_pid = grandchild if grandchild is not None else root_pid
+    def kill_holder(self, holder_pid: int, *, grace_s: float) -> None:
+        proc = self._holders.pop(holder_pid, None)
+        grandchild = self._grandchildren.pop(holder_pid, None)
+        graceful_pid = grandchild if grandchild is not None else holder_pid
         with contextlib.suppress(ProcessLookupError, PermissionError):
             os.kill(graceful_pid, signal.SIGTERM)
         if proc is not None:
             died = self._wait_tracked_holder(proc, timeout_s=grace_s)
         else:
-            died = self._wait_untracked_holder(root_pid, timeout_s=grace_s)
+            died = self._wait_untracked_holder(holder_pid, timeout_s=grace_s)
         if not died:
             if grandchild is not None:
                 with contextlib.suppress(ProcessLookupError, PermissionError):
                     os.kill(grandchild, signal.SIGKILL)
             with contextlib.suppress(ProcessLookupError, PermissionError):
-                os.kill(root_pid, signal.SIGKILL)
+                os.kill(holder_pid, signal.SIGKILL)
             if proc is not None:
                 with contextlib.suppress(subprocess.TimeoutExpired, OSError):
                     proc.wait(timeout=2.0)
             else:
                 with contextlib.suppress(ChildProcessError, OSError):
-                    os.waitpid(root_pid, os.WNOHANG)
+                    os.waitpid(holder_pid, os.WNOHANG)
         elif proc is None:
             with contextlib.suppress(ChildProcessError, OSError):
-                os.waitpid(root_pid, os.WNOHANG)
+                os.waitpid(holder_pid, os.WNOHANG)
         if grandchild is not None:
             with contextlib.suppress(ChildProcessError, OSError):
                 _wait_pid_with_timeout(grandchild, timeout_s=2.0)
@@ -266,11 +266,11 @@ class _KernelNamespaceRuntime:
         except OSError:
             return True
 
-    def _wait_untracked_holder(self, root_pid: int, *, timeout_s: float) -> bool:
+    def _wait_untracked_holder(self, holder_pid: int, *, timeout_s: float) -> bool:
         deadline = time.monotonic() + timeout_s
         while time.monotonic() < deadline:
             try:
-                os.kill(root_pid, 0)
+                os.kill(holder_pid, 0)
             except ProcessLookupError:
                 return True
             time.sleep(0.05)

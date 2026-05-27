@@ -39,26 +39,26 @@ _MODEL_ONLY_MODULES = {
 _PUBLIC_VERB_IMPORT_ALLOWLIST = {
     "tool/read.py": {
         "audit.base",
-        "sandbox._shared.models",
+        "sandbox.shared.models",
     },
     "tool/write.py": {
         "audit.base",
-        "sandbox._shared.models",
+        "sandbox.shared.models",
     },
     "tool/edit.py": {
         "audit.base",
-        "sandbox._shared.models",
+        "sandbox.shared.models",
     },
     "tool/shell.py": {
         "audit.base",
         "sandbox.audit",
         "sandbox.audit.events",
-        "sandbox._shared.models",
-        "sandbox._shared.clock",
+        "sandbox.shared.models",
+        "sandbox.shared.clock",
     },
     "raw_exec.py": {
         "audit.base",
-        "sandbox._shared.models",
+        "sandbox.shared.models",
         "sandbox.provider.registry",
     },
 }

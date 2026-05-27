@@ -57,7 +57,7 @@ async def test_5_concurrent_audit_events_complete(
             payload = row.get("payload") or {}
             if (a := payload.get("agent_id")) in _AGENTS:
                 agent_ids.append(a)
-            if h := payload.get("handle_id"):
+            if h := payload.get("workspace_handle_id"):
                 handle_ids.append(h)
             phases = _iws_invariants.phase_timing_extractor(payload)
             if "install_veth" in phases:

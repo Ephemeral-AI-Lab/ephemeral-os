@@ -257,16 +257,16 @@ class _OrphanResourceReaperMixin:
 
     def _reap_orphan_holder_processes(self) -> None:
         """Kill stale ns_holder process trees that outlived a daemon restart."""
-        live_root_pids = {
-            int(handle.root_pid)
+        live_holder_pids = {
+            int(handle.holder_pid)
             for handle in getattr(self, "_handles", {}).values()
-            if getattr(handle, "root_pid", 0)
+            if getattr(handle, "holder_pid", 0)
         }
         t0 = self._clock()
         candidates = [
             proc
             for proc in _iter_namespace_holder_processes()
-            if proc.pid not in live_root_pids and proc.ppid not in live_root_pids
+            if proc.pid not in live_holder_pids and proc.ppid not in live_holder_pids
         ]
         discover_ms = (self._clock() - t0) * 1000.0
         if not candidates:

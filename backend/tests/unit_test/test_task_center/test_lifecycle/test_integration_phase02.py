@@ -10,7 +10,7 @@ from task_center.attempt.orchestrator import AttemptOrchestrator
 from task_center.attempt.orchestrator_registry import (
     AttemptOrchestratorRegistry,
 )
-from task_center.attempt.runtime import (
+from task_center.attempt.deps import (
     AgentLaunch,
     AttemptDeps,
 )

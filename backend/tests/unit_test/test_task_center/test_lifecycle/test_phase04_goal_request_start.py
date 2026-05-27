@@ -16,7 +16,7 @@ from task_center._core.primitives import TaskCenterInvariantViolation
 from task_center.attempt.orchestrator_registry import (
     AttemptOrchestratorRegistry,
 )
-from task_center.attempt.runtime import AgentLaunch, AttemptDeps
+from task_center.attempt.deps import AgentLaunch, AttemptDeps
 from task_center.attempt import (
     AttemptFailReason,
     AttemptStatus,

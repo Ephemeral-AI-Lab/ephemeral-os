@@ -22,7 +22,7 @@ class OccClient:
         service: OccService,
         *,
         binding_reader: WorkspaceBindingReader,
-        workspace_ref: str = "",
+        workspace_ref: str,
     ) -> None:
         self._service = service
         self._binding_reader = binding_reader

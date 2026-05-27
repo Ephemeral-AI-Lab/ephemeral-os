@@ -7,7 +7,7 @@ import os
 import time
 from typing import Any
 
-from sandbox._shared.models import Intent
+from sandbox.shared.models import Intent
 from sandbox.ephemeral_workspace.plugin.op_registry import register_plugin_op
 
 from plugins.catalog.lsp.runtime.apply import apply_workspace_edit

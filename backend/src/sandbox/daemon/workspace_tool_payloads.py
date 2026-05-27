@@ -11,7 +11,7 @@ from sandbox.daemon.changeset_projection import (
     gitignore_cache_timings,
     published_paths,
 )
-from sandbox._shared.clock import monotonic_now
+from sandbox.shared.clock import monotonic_now
 
 
 # -- argument validation ----------------------------------------------------

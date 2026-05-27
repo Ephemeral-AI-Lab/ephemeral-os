@@ -32,7 +32,7 @@ def publish_one(index):
     barrier.wait(timeout=10)
     timings = {}
     t0 = time.perf_counter()
-    with manager.commit_transaction() as transaction:
+    with manager.begin_transaction() as transaction:
         manifest = transaction.publish_layer([change], timings=timings)
     elapsed_ms = (time.perf_counter() - t0) * 1000.0
     return {

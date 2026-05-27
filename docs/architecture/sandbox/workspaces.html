@@ -40,7 +40,7 @@
   <span><a href="index.html">Index</a> / 5. Workspace Modes</span>
   <span class="nav-pair"><a href="occ.html">← 4. OCC</a><a href="daemon.html">6. Daemon and Background Tasks →</a></span>
 </div>
-<section id="workspaces" data-last-reviewed-commit="2a3e6cc7c" data-evidence-paths="backend/src/sandbox/daemon/workspace_tool_dispatch.py backend/src/sandbox/main_workspace/README.md backend/src/sandbox/ephemeral_workspace/pipeline.py backend/src/sandbox/isolated_workspace/pipeline.py">
+<section id="workspaces" data-last-reviewed-commit="2a3e6cc7c" data-evidence-paths="backend/src/sandbox/daemon/workspace_tool_dispatch.py backend/src/sandbox/daemon/occ_runtime_services.py backend/src/sandbox/ephemeral_workspace/pipeline.py backend/src/sandbox/isolated_workspace/pipeline.py">
 <h2>5. Workspace Modes <a class="anchor" href="#workspaces">§</a></h2>
 <nav class="page-toc" aria-labelledby="page-toc-heading">
   <h3 id="page-toc-heading">Contents</h3>
@@ -78,7 +78,7 @@
   <div class="lane"><h4>isolated_workspace</h4><p>Opt-in private mode: enter once, run many tools, exit and discard the upperdir.</p></div>
 </div>
 </section>
-<section id="workspace-mode-selection" data-last-reviewed-commit="2a3e6cc7c" data-evidence-paths="backend/src/sandbox/daemon/workspace_tool_dispatch.py backend/src/sandbox/main_workspace/README.md backend/src/sandbox/ephemeral_workspace/pipeline.py backend/src/sandbox/daemon/rpc/dispatcher.py backend/src/sandbox/isolated_workspace/_control_plane/pipeline_registry.py backend/src/sandbox/isolated_workspace/pipeline.py">
+<section id="workspace-mode-selection" data-last-reviewed-commit="2a3e6cc7c" data-evidence-paths="backend/src/sandbox/daemon/workspace_tool_dispatch.py backend/src/sandbox/daemon/occ_runtime_services.py backend/src/sandbox/ephemeral_workspace/pipeline.py backend/src/sandbox/daemon/rpc/dispatcher.py backend/src/sandbox/isolated_workspace/_control_plane/pipeline_registry.py backend/src/sandbox/isolated_workspace/pipeline.py">
 <h3>5.1 Mode Selection <a class="anchor" href="#workspace-mode-selection">§</a></h3>
 <table>
   <thead><tr><th>Question</th><th>Default answer</th><th>Why</th><th>Related node</th></tr></thead>
@@ -97,7 +97,7 @@
 
 <div class="edge-list">
   <div><b>calls</b><span><code>dispatch_workspace_tool_call()</code> constructs <code>ToolCallRequest</code>, checks active isolated state by <code>agent_id</code>, and falls back to the ephemeral pipeline when no direct file fast path applies <span class="file-ref">backend/src/sandbox/daemon/workspace_tool_dispatch.py:53-75</span>.</span></div>
-  <div><b>owns-state</b><span><code>main_workspace</code> is a package anchor; durable bytes and path binding live in LayerStack/OCC, not a separate persistent working tree <span class="file-ref">backend/src/sandbox/main_workspace/README.md:1-6</span>.</span></div>
+  <div><b>owns-state</b><span>The persistent main-workspace identity has no dedicated package; durable bytes and path binding live in LayerStack/OCC, with a fail-closed binding reader colocated in the daemon <span class="file-ref">backend/src/sandbox/daemon/occ_runtime_services.py:30-55</span>.</span></div>
   <div><b>owns-state</b><span><code>EphemeralPipeline</code> owns per-operation overlay execution, publish-cycle events, and optional shell pre-mount squash <span class="file-ref">backend/src/sandbox/ephemeral_workspace/pipeline.py:131-250</span>.</span></div>
   <div><b>calls</b><span><code>api.isolated_workspace.enter</code> reaches <code>ensure_pipeline()</code>; the singleton is built on the first enter under <code>_bootstrap_lock</code>, not at daemon start <span class="file-ref">backend/src/sandbox/daemon/rpc/dispatcher.py:255-263</span>, <span class="file-ref">backend/src/sandbox/isolated_workspace/_control_plane/pipeline_registry.py:73-113</span>.</span></div>
   <div><b>owns-state</b><span><code>IsolatedPipeline</code> owns private handles, TTL, startup orphan recovery, persisted handle state, namespace runtime, and network/runtime references <span class="file-ref">backend/src/sandbox/isolated_workspace/pipeline.py:44-188</span>, <span class="file-ref">backend/src/sandbox/isolated_workspace/pipeline.py:208-329</span>.</span></div>
@@ -105,18 +105,18 @@
 </div>
 
 </section>
-<section id="main-workspace" data-last-reviewed-commit="2a3e6cc7c" data-evidence-paths="backend/src/sandbox/main_workspace/README.md backend/src/sandbox/host/bootstrap.py backend/src/sandbox/main_workspace/workspace_binding.py">
+<section id="main-workspace" data-last-reviewed-commit="2a3e6cc7c" data-evidence-paths="backend/src/sandbox/daemon/occ_runtime_services.py backend/src/sandbox/host/bootstrap.py backend/src/sandbox/layer_stack/workspace_binding.py">
 <h3>5.2 main_workspace <a class="anchor" href="#main-workspace">§</a></h3>
 <div class="summary">
   <ul>
     <li>The sandbox needs one persistent repository identity to anchor every projection.</li>
-    <li><code>main_workspace</code> is a thin package anchor around LayerStack and OCC based workspace truth.</li>
+    <li>There is no dedicated <code>main_workspace</code> package; the persistent identity is the bound repo plus the active LayerStack manifest.</li>
     <li>Host bootstrap uploads runtime, ensures git, then ensures the workspace base.</li>
     <li>Main workspace is the source identity; the active LayerStack manifest is the mutable truth.</li>
   </ul>
 </div>
 
-<p>The <code>main_workspace</code> package intentionally remains a thin facade: its README says implementation remains in <code>sandbox/layer_stack</code> and <code>sandbox/occ</code> so the three workspace concepts can have sibling package anchors <span class="file-ref">backend/src/sandbox/main_workspace/README.md:1-6</span>. The host lifecycle calls <code>ensure_workspace_base</code> after uploading the runtime and ensuring git <span class="file-ref">backend/src/sandbox/host/bootstrap.py:300-312</span>. Runtime binding fails closed if the binding or manifest is missing/empty <span class="file-ref">backend/src/sandbox/main_workspace/workspace_binding.py:12-35</span>.</p>
+<p>The main-workspace concept is intentionally not a package: the binding reader lives next to its sole consumer in the daemon, and the underlying helper lives in <code>sandbox/layer_stack/workspace_binding.py</code>. The host lifecycle calls <code>ensure_workspace_base</code> after uploading the runtime and ensuring git <span class="file-ref">backend/src/sandbox/host/bootstrap.py:300-312</span>. Runtime binding fails closed if the binding or manifest is missing/empty &mdash; the daemon-side <code>_LayerStackBindingReader</code> adds the manifest-non-empty precondition on top of the base helper <span class="file-ref">backend/src/sandbox/daemon/occ_runtime_services.py:30-55</span>, <span class="file-ref">backend/src/sandbox/layer_stack/workspace_binding.py</span>.</p>
 
 </section>
 <section id="ephemeral-workspace" data-last-reviewed-commit="2a3e6cc7c" data-evidence-paths="backend/src/sandbox/daemon/workspace_tool_dispatch.py backend/src/sandbox/ephemeral_workspace/overlay_registry.py backend/src/sandbox/ephemeral_workspace/pipeline.py backend/src/sandbox/ephemeral_workspace/operation_overlay.py">

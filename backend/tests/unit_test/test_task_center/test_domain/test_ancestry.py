@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 
 from task_center._core.terminal_tool_routing import (
-    ResolverContext,
+    TerminalRoutingContext,
     _nested_goal_depth_gt_1,
 )
 from task_center.attempt import AttemptStage
@@ -229,7 +229,7 @@ def test_terminal_router_nested_depth_helper(
         task_store=task_store,
     )
 
-    top_level_ctx = ResolverContext(scope=ContextScope(), deps=deps)
+    top_level_ctx = TerminalRoutingContext(scope=ContextScope(), deps=deps)
     assert _nested_goal_depth_gt_1(top_level_ctx) is False
 
     goal_ids = _seed_nested_goal_chain(
@@ -240,7 +240,7 @@ def test_terminal_router_nested_depth_helper(
         task_center_run_id=task_center_run_id,
         depth=3,
     )
-    child_ctx = ResolverContext(
+    child_ctx = TerminalRoutingContext(
         scope=ContextScope(goal_id=goal_ids[-1]),
         deps=deps,
     )

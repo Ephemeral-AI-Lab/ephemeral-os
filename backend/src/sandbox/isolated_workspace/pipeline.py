@@ -13,10 +13,10 @@ from pathlib import Path
 from typing import Any
 
 from sandbox.audit.events import IsolatedWorkspaceAuditEvent
-from sandbox._shared.layer_stack_port import LayerStackPort
-from sandbox._shared.clock import monotonic_now
-from sandbox._shared.models import Intent, ToolCallRequest, ToolCallResult
-from sandbox._shared.ordered_lock import OrderedLock
+from sandbox.shared.layer_stack_port import LayerStackPort
+from sandbox.shared.clock import monotonic_now
+from sandbox.shared.models import Intent, ToolCallRequest, ToolCallResult
+from sandbox.shared.ordered_lock import OrderedLock
 from sandbox.daemon.audit_schema import (
     IsolatedWorkspaceSection,
     build_isolated_workspace_event,
@@ -154,8 +154,8 @@ class IsolatedPipeline(
         return data
 
     def get_handle(self, agent_id: str) -> IsolatedWorkspaceHandle | None:
-        handle_id = self._by_agent.get(agent_id)
-        return self._handles.get(handle_id) if handle_id else None
+        workspace_handle_id = self._by_agent.get(agent_id)
+        return self._handles.get(workspace_handle_id) if workspace_handle_id else None
 
     def _require_handle(self, agent_id: str) -> IsolatedWorkspaceHandle:
         handle = self.get_handle(agent_id)
@@ -206,9 +206,8 @@ class IsolatedPipeline(
             layer_paths=(),
             upperdir=handle.upperdir,
             workdir=handle.workdir,
-            snapshot_version=handle.manifest_version,
             lease_id=handle.lease_id,
-            namespace_pid=handle.root_pid or None,
+            holder_pid=handle.holder_pid or None,
             run_dir=handle.upperdir.parent,
             snapshot_manifest=None,
             _release=None,
@@ -308,7 +307,7 @@ class IsolatedPipeline(
                 self._emit(
                     IsolatedWorkspaceAuditEvent.EVICTED,
                     {
-                        "handle_id": handle.handle_id,
+                        "workspace_handle_id": handle.workspace_handle_id,
                         "reason": "ttl",
                         "lifetime_s": stats.get("lifetime_s", 0.0),
                         "upperdir_bytes_discarded": stats.get(
@@ -324,7 +323,7 @@ class IsolatedPipeline(
                         "isolated_workspace.evicted",
                         IsolatedWorkspaceSection(
                             operation_id=handle.lease_id,
-                            workspace_handle_id=handle.handle_id,
+                            workspace_handle_id=handle.workspace_handle_id,
                             agent_id=handle.agent_id,
                             upperdir_bytes=int(stats.get("evicted_upperdir_bytes", 0)),
                             upperdir_cap_bytes=self._config.upperdir_bytes,
@@ -334,7 +333,7 @@ class IsolatedPipeline(
                 )
                 evicted += 1
             except Exception:  # pragma: no cover - logging only
-                logger.exception("ttl_sweep failed for %s", handle.handle_id)
+                logger.exception("ttl_sweep failed for %s", handle.workspace_handle_id)
         return evicted
 
     def _emit_isolated_workspace_sample(
@@ -342,9 +341,9 @@ class IsolatedPipeline(
     ) -> None:
         """Best-effort daemon-ring sample tick (sample lane, no kernel calls)."""
         holder_alive: bool | None = None
-        if handle.root_pid:
+        if handle.holder_pid:
             try:
-                os.kill(handle.root_pid, 0)
+                os.kill(handle.holder_pid, 0)
                 holder_alive = True
             except (ProcessLookupError, PermissionError, OSError):
                 holder_alive = False
@@ -353,9 +352,9 @@ class IsolatedPipeline(
                 "isolated_workspace.sampled",
                 IsolatedWorkspaceSection(
                     operation_id=handle.lease_id,
-                    workspace_handle_id=handle.handle_id,
+                    workspace_handle_id=handle.workspace_handle_id,
                     agent_id=handle.agent_id,
-                    holder_pid=handle.root_pid or None,
+                    holder_pid=handle.holder_pid or None,
                     holder_pid_alive=holder_alive,
                     upperdir_cap_bytes=self._config.upperdir_bytes,
                     sampled_at_monotonic_s=monotonic_now(),
@@ -399,7 +398,7 @@ class IsolatedPipeline(
         self._emit(
             IsolatedWorkspaceAuditEvent.TOOL_CALL,
             {
-                "handle_id": handle.handle_id,
+                "workspace_handle_id": handle.workspace_handle_id,
                 "argv0": argv[0] if argv else "",
                 "exit_code": exit_code,
                 "duration_s": duration,

@@ -6,8 +6,8 @@ import fnmatch
 from collections.abc import Mapping
 from pathlib import Path, PurePosixPath
 
-from sandbox._shared.models import GlobResult
-from sandbox._shared.tool_primitives.workspace_filesystem import (
+from sandbox.shared.models import GlobResult
+from sandbox.shared.tool_primitives.workspace_filesystem import (
     display_workspace_path,
     is_regular_file_no_follow,
     search_root_path,

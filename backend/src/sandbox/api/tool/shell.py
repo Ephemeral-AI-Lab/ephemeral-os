@@ -13,8 +13,8 @@ from sandbox.api.tool._daemon_response_parsing import (
 )
 from sandbox.api.timeouts import shell_dispatch_timeout
 from sandbox.api.transport import DAEMON_OP_SHELL, SandboxTransport, call_sandbox_daemon
-from sandbox._shared.clock import monotonic_now
-from sandbox._shared.models import ConflictInfo, ShellRequest, ShellResult
+from sandbox.shared.clock import monotonic_now
+from sandbox.shared.models import ConflictInfo, ShellRequest, ShellResult
 
 
 async def shell(

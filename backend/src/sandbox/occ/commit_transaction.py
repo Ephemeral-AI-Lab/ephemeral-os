@@ -8,8 +8,8 @@ from pathlib import Path
 from types import TracebackType
 from uuid import uuid4
 
-from sandbox._shared.clock import monotonic_now
-from sandbox._shared.timing_keys import TimingKey
+from sandbox.shared.clock import monotonic_now
+from sandbox.shared.timing_keys import TimingKey
 from sandbox.layer_stack.changes import LayerChange, WriteLayerChange
 from sandbox.layer_stack.manifest import Manifest
 from sandbox.occ.changeset import (
@@ -20,6 +20,7 @@ from sandbox.occ.changeset import (
     PreparedChangeset,
     PreparedPathGroup,
     RouteDecision,
+    drop_or_reject_file_result,
 )
 from sandbox.occ.content_hashing import ContentHasher
 from sandbox.occ.ports import (
@@ -54,16 +55,14 @@ class CommitTransaction:
         self._staging = staging
         self._publisher = publisher
         self._hasher = ContentHasher()
-        self._route_stagers: dict[RouteDecision, DirectStager | GatedStager] = {
-            RouteDecision.DIRECT: DirectStager(snapshot_reader),
-            RouteDecision.GATED: GatedStager(snapshot_reader, hasher=self._hasher),
-        }
+        self._direct_stager = DirectStager(snapshot_reader)
+        self._gated_stager = GatedStager(snapshot_reader, hasher=self._hasher)
 
     def revalidate_and_publish(self, prepared: PreparedChangeset) -> ChangesetResult:
         """Validate against the current active manifest and publish accepted deltas."""
         total_start = monotonic_now()
         timings: dict[str, float] = {}
-        with self._publisher.commit_transaction() as transaction:
+        with self._publisher.begin_transaction() as transaction:
             timings[TimingKey.LAYER_TRANSACTION_LOCK_WAIT] = transaction.lock_wait_s
             snapshot_start = monotonic_now()
             active_manifest = transaction.snapshot()
@@ -144,39 +143,20 @@ class CommitTransaction:
         active_manifest: Manifest,
         stager: _FileSystemLayerChangeStager,
     ) -> tuple[FileResult, StagedLayerChanges | None]:
-        if group.route is RouteDecision.DROP:
-            return (
-                FileResult(
-                    path=group.path,
-                    status=FileStatus.DROPPED,
-                    message=group.message or "change dropped",
-                ),
-                None,
-            )
-        if group.route is RouteDecision.REJECT:
-            return (
-                FileResult(
-                    path=group.path,
-                    status=FileStatus.REJECTED,
-                    message=group.message or "change rejected",
-                ),
-                None,
-            )
-        route_stager = self._route_stagers.get(group.route)
-        if route_stager is not None:
-            return route_stager.stage_group(
-                group,
-                active_manifest=active_manifest,
-                stage_write=stager.write,
-                stage_write_from_path=stager.write_from_path,
-            )
-        return (
-            FileResult(
-                path=group.path,
-                status=FileStatus.REJECTED,
-                message=f"unsupported route: {group.route}",
-            ),
-            None,
+        drop_or_reject = drop_or_reject_file_result(group)
+        if drop_or_reject is not None:
+            return (drop_or_reject, None)
+        if group.route is RouteDecision.DIRECT:
+            route_stager: DirectStager | GatedStager = self._direct_stager
+        elif group.route is RouteDecision.GATED:
+            route_stager = self._gated_stager
+        else:
+            raise AssertionError(f"unhandled route after drop/reject filter: {group.route}")
+        return route_stager.stage_group(
+            group,
+            active_manifest=active_manifest,
+            stage_write=stager.write,
+            stage_write_from_path=stager.write_from_path,
         )
 
 

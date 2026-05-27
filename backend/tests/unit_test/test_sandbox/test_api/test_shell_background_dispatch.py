@@ -9,7 +9,7 @@ import pytest
 
 from sandbox.api.tool.shell import shell as shell_api
 from sandbox.api.transport import DAEMON_OP_SHELL
-from sandbox._shared.models import SandboxCaller, ShellRequest
+from sandbox.shared.models import SandboxCaller, ShellRequest
 
 
 pytestmark = pytest.mark.asyncio

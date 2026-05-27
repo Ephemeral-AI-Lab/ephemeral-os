@@ -58,11 +58,11 @@ async def test_disk_at_rest_bounded(iws_clean_sandbox, iws_audit_jsonl) -> None:
         enters = _iws_invariants.events_of_type(
             jsonl, "sandbox_isolated_workspace_enter",
         )
-        handle_id = next(
-            (row.get("payload") or {}).get("handle_id") for row in enters
+        workspace_handle_id = next(
+            (row.get("payload") or {}).get("workspace_handle_id") for row in enters
             if (row.get("payload") or {}).get("agent_id") == "agent-A"
         )
-        assert handle_id, enters
+        assert workspace_handle_id, enters
         scratch_root = await iws_scratch_root(sandbox_id)
         assert scratch_root, "scratch_root must be discoverable"
 
@@ -70,7 +70,7 @@ async def test_disk_at_rest_bounded(iws_clean_sandbox, iws_audit_jsonl) -> None:
         await asyncio.sleep(60.0)
 
         scratch_size = await _du_bytes(
-            sandbox_id, f"{scratch_root}/{handle_id}",
+            sandbox_id, f"{scratch_root}/{workspace_handle_id}",
         )
         assert scratch_size <= _UPPERDIR_OVERHEAD_MAX_BYTES, (
             f"at-rest scratch ballooned to {scratch_size} bytes (cap "

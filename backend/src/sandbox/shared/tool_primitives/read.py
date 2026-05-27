@@ -5,8 +5,8 @@ from __future__ import annotations
 import os
 from collections.abc import Mapping
 
-from sandbox._shared.models import ReadFileResult
-from sandbox._shared.tool_primitives.workspace_filesystem import (
+from sandbox.shared.models import ReadFileResult
+from sandbox.shared.tool_primitives.workspace_filesystem import (
     open_no_follow,
     required_workspace_path,
 )

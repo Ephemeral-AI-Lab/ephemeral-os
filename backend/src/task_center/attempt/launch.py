@@ -13,7 +13,7 @@ from agents import get_definition
 from message.message import Message
 from message.events import StreamEvent
 from task_center.attempt.orchestrator_registry import RegisteredAttemptOrchestrator
-from task_center.attempt.runtime import AgentLaunch, AttemptDeps
+from task_center.attempt.deps import AgentLaunch, AttemptDeps
 from task_center.attempt.state import AttemptFailReason, AttemptStatus
 from task_center.context_engine.scope import ContextScope
 from task_center._core.primitives import TaskCenterInvariantViolation
@@ -52,13 +52,13 @@ class EphemeralAttemptAgentLauncher:
         self,
         *,
         config: RuntimeConfig,
-        runtime: AttemptDepsProvider,
+        deps_provider: AttemptDepsProvider,
         sandbox_id: str | None = None,
         on_event: AgentStreamEmitter | None = None,
         runner: AttemptAgentRunner | None = None,
     ) -> None:
         self._config = config
-        self._runtime = runtime
+        self._deps_provider = deps_provider
         self._sandbox_id = sandbox_id
         self._on_event = on_event
         self._runner = runner
@@ -94,7 +94,7 @@ class EphemeralAttemptAgentLauncher:
         launch: AgentLaunch,
         agent_def: AgentDefinition,
     ) -> None:
-        runtime = self._runtime()
+        runtime = self._deps_provider()
         if runtime is None:
             raise TaskCenterInvariantViolation("TaskCenter attempt runtime is not initialized.")
         runner = self._runner
@@ -190,7 +190,7 @@ class EphemeralAttemptAgentLauncher:
         *,
         summary: str,
     ) -> None:
-        runtime = self._runtime()
+        runtime = self._deps_provider()
         if runtime is None:
             return
         task = runtime.task_store.get_task(launch.task_id)

@@ -12,7 +12,7 @@ from sandbox.layer_stack.manifest import LayerRef, Manifest
 
 
 @dataclass(frozen=True)
-class WorkspaceLease:
+class LayerStackLeaseRecord:
     lease_id: str
     manifest: Manifest
 
@@ -27,18 +27,18 @@ class LeaseRegistry:
     ) -> None:
         self._id_factory = id_factory or (lambda: uuid.uuid4().hex)
         self._lock = threading.RLock()
-        self._leases: dict[str, WorkspaceLease] = {}
+        self._leases: dict[str, LayerStackLeaseRecord] = {}
         self._refcounts: Counter[LayerRef] = Counter()
 
     def acquire(
         self,
         manifest: Manifest,
         owner_request_id: str,
-    ) -> WorkspaceLease:
+    ) -> LayerStackLeaseRecord:
         if not owner_request_id:
             raise ValueError("owner_request_id must not be empty")
         with self._lock:
-            lease = WorkspaceLease(
+            lease = LayerStackLeaseRecord(
                 lease_id=self._id_factory(),
                 manifest=manifest,
             )
@@ -46,7 +46,7 @@ class LeaseRegistry:
             self._refcounts.update(manifest.layers)
             return lease
 
-    def release(self, lease_id: str) -> WorkspaceLease | None:
+    def release(self, lease_id: str) -> LayerStackLeaseRecord | None:
         with self._lock:
             lease = self._leases.pop(lease_id, None)
             if lease is None:
@@ -89,4 +89,4 @@ class LeaseRegistry:
             return len(self._leases)
 
 
-__all__ = ["LeaseRegistry", "WorkspaceLease"]
+__all__ = ["LeaseRegistry", "LayerStackLeaseRecord"]

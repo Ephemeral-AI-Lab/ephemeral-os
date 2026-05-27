@@ -20,7 +20,7 @@ import asyncio
 
 import pytest
 
-from sandbox._shared.ordered_lock import OrderedLock
+from sandbox.shared.ordered_lock import OrderedLock
 from sandbox.daemon.rpc import dispatcher
 from sandbox.daemon.workspace_tool_dispatch import (
     LifecycleInProgressError,

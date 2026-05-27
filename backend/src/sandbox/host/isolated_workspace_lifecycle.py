@@ -23,7 +23,7 @@ from __future__ import annotations
 
 import os
 
-from sandbox._shared.models import (
+from sandbox.shared.models import (
     EnterIsolatedWorkspaceRequest,
     EnterIsolatedWorkspaceResult,
     ExitIsolatedWorkspaceRequest,

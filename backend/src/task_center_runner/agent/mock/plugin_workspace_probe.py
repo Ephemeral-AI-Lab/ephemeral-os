@@ -26,7 +26,7 @@ from plugins.catalog.lsp.tools.find_definitions import (
 )
 from plugins.catalog.lsp.tools.hover import hover as lsp_hover_tool
 from plugins.core.manifest import PluginManifest, ToolEntry
-from sandbox._shared.models import Intent
+from sandbox.shared.models import Intent
 from sandbox.ephemeral_workspace.plugin.install import PluginInstallError
 from sandbox.ephemeral_workspace.plugin import op_registry, overlay_dispatch
 from sandbox.ephemeral_workspace.plugin.op_registry import (

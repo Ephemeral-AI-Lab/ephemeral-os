@@ -163,7 +163,7 @@ def _project_digest(manager, destination, manifest=None):
 def _publish_changes(manager, changes):
     timings = {}
     started = time.perf_counter()
-    with manager.commit_transaction() as transaction:
+    with manager.begin_transaction() as transaction:
         manifest = transaction.publish_layer(changes, timings=timings)
         timings["layer_stack.publish.lock_wait_s"] = transaction.lock_wait_s
         timings["layer_stack.publish.lock_held_s"] = transaction.lock_held_s

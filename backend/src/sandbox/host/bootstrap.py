@@ -8,7 +8,7 @@ import logging
 from pathlib import Path
 from typing import Any, Literal
 
-from sandbox._shared.async_bridge import run_sync
+from sandbox.shared.async_bridge import run_sync
 from sandbox.host.daemon_client import _DaemonDispatchError, call_daemon_api
 from sandbox.host.runtime_bundle import ensure_runtime_uploaded
 from sandbox.provider.registry import get_adapter

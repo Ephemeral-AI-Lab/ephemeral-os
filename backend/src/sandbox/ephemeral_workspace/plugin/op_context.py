@@ -8,7 +8,7 @@ from contextlib import AbstractAsyncContextManager
 from dataclasses import dataclass, field
 from typing import Any, Protocol
 
-from sandbox._shared.models import Intent, SandboxCaller
+from sandbox.shared.models import Intent, SandboxCaller
 from sandbox.ephemeral_workspace.events import WorkspaceChangeEvent
 from sandbox.overlay.handle import OverlayHandle
 

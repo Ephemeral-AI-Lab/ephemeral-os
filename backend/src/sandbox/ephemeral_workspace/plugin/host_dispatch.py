@@ -23,7 +23,7 @@ from typing import Any
 
 from plugins.core.discovery import discover_plugins
 from plugins.core.manifest import PluginManifest
-from sandbox._shared.models import Intent
+from sandbox.shared.models import Intent
 from sandbox.host.daemon_client import (
     DEFAULT_LAYER_STACK_ROOT,
     call_daemon_api,

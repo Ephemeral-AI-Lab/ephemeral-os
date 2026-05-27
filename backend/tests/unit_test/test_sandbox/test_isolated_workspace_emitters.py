@@ -48,8 +48,8 @@ class _Network:
     def daemon_private_routes(self):  # noqa: ANN201
         return []
 
-    def install_veth(self, *, handle_id: str, root_pid: int) -> None:
-        del handle_id, root_pid
+    def install_veth(self, *, workspace_handle_id: str, holder_pid: int) -> None:
+        del workspace_handle_id, holder_pid
         return None
 
     def teardown_veth(self, _veth) -> None:
@@ -61,8 +61,8 @@ class _FakeRuntime:
         del handle, setup_timeout_s
         return 1234
 
-    def open_ns_fds(self, root_pid):
-        del root_pid
+    def open_ns_fds(self, holder_pid):
+        del holder_pid
         return {}
 
     async def mount_overlay(self, handle, *, layer_paths):
@@ -80,8 +80,8 @@ class _FakeRuntime:
         path.mkdir(parents=True, exist_ok=True)
         return path
 
-    def kill_holder(self, root_pid, *, grace_s):
-        del root_pid, grace_s
+    def kill_holder(self, holder_pid, *, grace_s):
+        del holder_pid, grace_s
 
     def run_in_handle(self, handle, *, argv, stdin=None, timeout_s=None):
         del handle, argv, stdin, timeout_s

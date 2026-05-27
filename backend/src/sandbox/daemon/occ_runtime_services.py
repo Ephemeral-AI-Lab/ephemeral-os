@@ -15,42 +15,14 @@ from collections import OrderedDict
 from dataclasses import dataclass
 from pathlib import Path
 
-from sandbox.layer_stack.manifest import manifest_path, read_manifest
 from sandbox.layer_stack.stack import LayerStack
-from sandbox.layer_stack.workspace_binding import require_workspace_binding
 from sandbox.occ.client import OccClient
 from sandbox.occ.gitignore import SnapshotGitignoreOracle
 from sandbox.occ.maintenance import AutoSquashMaintenancePolicy
-from sandbox.occ.ports import WorkspaceBindingSnapshot
 from sandbox.occ.service import AUTO_SQUASH_MAX_DEPTH, OccService
 from sandbox.occ.layer_stack_adapter import LayerStackPortAdapter
 from sandbox.daemon.layer_stack_runtime import emit_squash_event, get_layer_stack_manager
-
-
-class _MainWorkspaceBindingReader:
-    """Binding reader that fails closed before main-workspace OCC dispatch."""
-
-    def require_workspace_binding(
-        self,
-        workspace_ref: str,
-    ) -> WorkspaceBindingSnapshot:
-        if not workspace_ref:
-            raise ValueError("workspace_ref is required")
-        binding = require_workspace_binding(workspace_ref)
-        manifest_file = manifest_path(workspace_ref)
-        if not manifest_file.exists():
-            raise RuntimeError(
-                f"active manifest is missing for workspace binding: {workspace_ref}"
-            )
-        if read_manifest(manifest_file).version <= 0:
-            raise RuntimeError(
-                f"active manifest is empty for workspace binding: {workspace_ref}"
-            )
-        return WorkspaceBindingSnapshot(
-            workspace_ref=workspace_ref,
-            workspace_root=binding.workspace_root,
-            layer_stack_root=Path(workspace_ref).as_posix(),
-        )
+from sandbox.daemon.workspace_binding_reader import LayerStackBindingReader
 
 
 @dataclass(frozen=True)
@@ -68,20 +40,20 @@ class OccRuntimeServices:
     manager: LayerStack
 
 
-_MAX_RUNTIME_SERVICE_CACHE_ENTRIES = 256
+_OCC_RUNTIME_SERVICES_CACHE_MAX = 256
 _RUNTIME_SERVICE_CACHE: OrderedDict[str, OccRuntimeServices] = OrderedDict()
 _RUNTIME_SERVICE_CACHE_LOCK = threading.RLock()
 
 
 def get_occ_runtime_services(layer_stack_root: str) -> OccRuntimeServices:
     """Return daemon-local OCC services for ``layer_stack_root``."""
-    cache_key = _runtime_service_cache_key(layer_stack_root)
+    layer_stack_root_key = _runtime_service_cache_key(layer_stack_root)
     with _RUNTIME_SERVICE_CACHE_LOCK:
-        cached = _RUNTIME_SERVICE_CACHE.get(cache_key)
+        cached = _RUNTIME_SERVICE_CACHE.get(layer_stack_root_key)
         if cached is not None:
-            _RUNTIME_SERVICE_CACHE.move_to_end(cache_key)
+            _RUNTIME_SERVICE_CACHE.move_to_end(layer_stack_root_key)
             return cached
-    manager = get_layer_stack_manager(cache_key)
+    manager = get_layer_stack_manager(layer_stack_root_key)
     layer_stack = LayerStackPortAdapter(manager)
     gitignore = SnapshotGitignoreOracle(layer_stack)
     occ_service = OccService(
@@ -96,8 +68,8 @@ def get_occ_runtime_services(layer_stack_root: str) -> OccRuntimeServices:
     )
     occ_client = OccClient(
         occ_service,
-        binding_reader=_MainWorkspaceBindingReader(),
-        workspace_ref=cache_key,
+        binding_reader=LayerStackBindingReader(),
+        workspace_ref=layer_stack_root_key,
     )
     services = OccRuntimeServices(
         layer_stack=layer_stack,
@@ -109,14 +81,14 @@ def get_occ_runtime_services(layer_stack_root: str) -> OccRuntimeServices:
     close_services: OccRuntimeServices | None = None
     evicted: tuple[OccRuntimeServices, ...] = ()
     with _RUNTIME_SERVICE_CACHE_LOCK:
-        existing = _RUNTIME_SERVICE_CACHE.get(cache_key)
+        existing = _RUNTIME_SERVICE_CACHE.get(layer_stack_root_key)
         if existing is not None:
-            _RUNTIME_SERVICE_CACHE.move_to_end(cache_key)
+            _RUNTIME_SERVICE_CACHE.move_to_end(layer_stack_root_key)
             close_services = services
             services = existing
         else:
-            _RUNTIME_SERVICE_CACHE[cache_key] = services
-            evicted = _pop_oldest_runtime_services_locked()
+            _RUNTIME_SERVICE_CACHE[layer_stack_root_key] = services
+            evicted = _evict_oldest_occ_services_locked()
     if close_services is not None:
         _close_runtime_services(close_services)
     for evicted_services in evicted:
@@ -154,10 +126,13 @@ def _runtime_service_cache_key(layer_stack_root: str | Path) -> str:
     return str(Path(raw).resolve(strict=False))
 
 
-def _pop_oldest_runtime_services_locked() -> tuple[OccRuntimeServices, ...]:
-    """Caller must hold ``_RUNTIME_SERVICE_CACHE_LOCK``."""
+def _evict_oldest_occ_services_locked() -> tuple[OccRuntimeServices, ...]:
+    """Evict oldest entries until cache is within bounds.
+
+    Caller must hold ``_RUNTIME_SERVICE_CACHE_LOCK``.
+    """
     evicted: list[OccRuntimeServices] = []
-    while len(_RUNTIME_SERVICE_CACHE) > _MAX_RUNTIME_SERVICE_CACHE_ENTRIES:
+    while len(_RUNTIME_SERVICE_CACHE) > _OCC_RUNTIME_SERVICES_CACHE_MAX:
         _, services = _RUNTIME_SERVICE_CACHE.popitem(last=False)
         evicted.append(services)
     return tuple(evicted)

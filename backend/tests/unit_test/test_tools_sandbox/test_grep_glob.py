@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from sandbox._shared.models import GlobResult, GrepResult
+from sandbox.shared.models import GlobResult, GrepResult
 from tools._framework.core.base import ToolExecutionContextService
 import tools.sandbox.glob as glob_tool_module
 import tools.sandbox.grep as grep_tool_module

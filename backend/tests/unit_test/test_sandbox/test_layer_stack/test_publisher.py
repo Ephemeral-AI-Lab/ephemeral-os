@@ -34,7 +34,7 @@ def _source(tmp_path: Path, name: str, content: bytes) -> Path:
 def test_publish_empty_changes_is_noop(tmp_path: Path) -> None:
     manager = LayerStack(tmp_path / "stack")
 
-    with manager.commit_transaction() as transaction:
+    with manager.begin_transaction() as transaction:
         before = transaction.snapshot()
         after = transaction.publish_layer([])
 
@@ -142,7 +142,7 @@ def test_transaction_publish_layer_rejects_source_outside_source_root(
     trusted_root.mkdir()
     source = _source(tmp_path, "outside.txt", b"outside")
 
-    with manager.commit_transaction() as transaction:
+    with manager.begin_transaction() as transaction:
         with pytest.raises(ValueError, match="outside trusted source root"):
             transaction.publish_layer(
                 [
@@ -203,7 +203,7 @@ def test_transaction_detects_manifest_conflict_before_publish(tmp_path: Path) ->
     manager = LayerStack(tmp_path / "stack")
     source = _source(tmp_path, "created.txt", b"created")
 
-    with manager.commit_transaction() as transaction:
+    with manager.begin_transaction() as transaction:
         write_manifest_atomic(
             tmp_path / "stack" / "manifest.json",
             Manifest(version=7, layers=()),

@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from sandbox._shared.models import Intent, ToolCallRequest
+from sandbox.shared.models import Intent, ToolCallRequest
 from sandbox.isolated_workspace import IsolatedWorkspaceHandle, IsolatedPipeline
 from sandbox.overlay.path_change import OverlayPathChange, content_hash
 
@@ -47,7 +47,7 @@ async def test_iws_tool_call_never_publishes_occ(
     )
     pipeline = IsolatedPipeline(scratch_root=tmp_path, layer_stack=_LayerStack())
     handle = IsolatedWorkspaceHandle(
-        handle_id="h1",
+        workspace_handle_id="h1",
         agent_id="agent-a",
         lease_id="lease-iws",
         manifest_version=1,
@@ -56,12 +56,12 @@ async def test_iws_tool_call_never_publishes_occ(
         scratch_dir=tmp_path / "scratch",
         upperdir=tmp_path / "scratch" / "upper",
         workdir=tmp_path / "scratch" / "work",
-        root_pid=1234,
+        holder_pid=1234,
     )
     handle.upperdir.mkdir(parents=True)
     handle.workdir.mkdir(parents=True)
-    pipeline._handles[handle.handle_id] = handle
-    pipeline._by_agent[handle.agent_id] = handle.handle_id
+    pipeline._handles[handle.workspace_handle_id] = handle
+    pipeline._by_agent[handle.agent_id] = handle.workspace_handle_id
 
     result = await pipeline.run_tool_call(
         ToolCallRequest(

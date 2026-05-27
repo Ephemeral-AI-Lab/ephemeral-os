@@ -7,8 +7,8 @@ from collections.abc import Callable, Sequence
 from pathlib import Path
 from uuid import uuid4
 
-from sandbox._shared.clock import monotonic_now
-from sandbox._shared.layer_stack_port import LayerStackPort
+from sandbox.shared.clock import monotonic_now
+from sandbox.shared.layer_stack_port import LayerStackPort
 from sandbox.daemon.audit_schema import (
     OverlayWorkspaceSection,
     build_overlay_workspace_event,
@@ -81,9 +81,8 @@ def acquire(
             layer_paths=tuple(str(path) for path in layer_paths),
             upperdir=writable_dirs.upperdir,
             workdir=writable_dirs.workdir,
-            snapshot_version=manifest_version,
             lease_id=lease_id,
-            namespace_pid=None,
+            holder_pid=None,
             run_dir=run_dir,
             snapshot_manifest=manifest,
             snapshot_timings=dict(getattr(snapshot, "timings", {}) or {}),
@@ -131,14 +130,14 @@ async def release_overlay(handle: OverlayHandle) -> None:
             if cleanup_errors
             else "scratch_path_persisted"
         )
-        emit_overlay_workspace_cleanup_failed(
+        _emit_overlay_workspace_cleanup_failed(
             handle, cleanup_failure_kind=kind, cleanup_ms=elapsed_ms
         )
     else:
-        emit_overlay_workspace_cleaned(handle, cleanup_ms=elapsed_ms)
+        _emit_overlay_workspace_cleaned(handle, cleanup_ms=elapsed_ms)
 
 
-def emit_overlay_workspace_cleaned(
+def _emit_overlay_workspace_cleaned(
     handle: OverlayHandle, *, cleanup_ms: float
 ) -> None:
     _emit_overlay_workspace_cleanup_event(
@@ -149,7 +148,7 @@ def emit_overlay_workspace_cleaned(
     )
 
 
-def emit_overlay_workspace_cleanup_failed(
+def _emit_overlay_workspace_cleanup_failed(
     handle: OverlayHandle,
     *,
     cleanup_failure_kind: str,
@@ -207,11 +206,13 @@ def _build_release_closure(
     run_dir: Path,
     release_hook: Callable[[str], None] | None,
 ) -> Callable[[], None]:
+    # ``run_dir`` is rmtree'd by ``release_overlay`` itself (which owns the
+    # cleanup-event emission); the closure here only releases the lease so
+    # that we have a single owner for scratch cleanup.
+    del run_dir
+
     def _release() -> None:
-        try:
-            _release_lease(layer_stack, lease_id, release_hook=release_hook)
-        finally:
-            shutil.rmtree(run_dir, ignore_errors=True)
+        _release_lease(layer_stack, lease_id, release_hook=release_hook)
 
     return _release
 
@@ -246,6 +247,4 @@ __all__ = [
     "acquire",
     "capture_changes",
     "release_overlay",
-    "emit_overlay_workspace_cleaned",
-    "emit_overlay_workspace_cleanup_failed",
 ]

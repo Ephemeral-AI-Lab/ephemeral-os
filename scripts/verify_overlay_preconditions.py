@@ -6,7 +6,7 @@ from __future__ import annotations
 import shutil
 import sys
 
-from sandbox.overlay.capability import mount_syscalls_supported
+from sandbox.overlay.mount_syscalls import mount_syscalls_supported
 from sandbox.overlay.namespace_runner import detect_private_mount_namespace
 
 

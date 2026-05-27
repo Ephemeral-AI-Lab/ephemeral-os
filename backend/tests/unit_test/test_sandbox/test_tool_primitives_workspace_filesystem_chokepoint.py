@@ -6,7 +6,7 @@ import ast
 from pathlib import Path
 
 
-_ROOT = Path(__file__).resolve().parents[3] / "src" / "sandbox" / "_shared" / "tool_primitives"
+_ROOT = Path(__file__).resolve().parents[3] / "src" / "sandbox" / "shared" / "tool_primitives"
 
 
 def test_file_primitives_use_workspace_filesystem_chokepoint() -> None:

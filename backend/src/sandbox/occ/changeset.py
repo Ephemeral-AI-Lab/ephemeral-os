@@ -12,6 +12,7 @@ from enum import Enum
 from pathlib import Path
 
 from sandbox.layer_stack.manifest import Manifest
+from sandbox.occ.content_hashing import ContentHasher
 
 
 class ChangeSource(str, Enum):
@@ -230,12 +231,6 @@ class PreparedChangeset:
 # ---- builders ------
 
 
-def _eager_write_payload(content: bytes | str) -> WritePayload:
-    if isinstance(content, bytes):
-        return WritePayload(content=content)
-    return WritePayload(content=content.encode("utf-8"))
-
-
 def build_api_write_change(
     *,
     path: str,
@@ -246,7 +241,9 @@ def build_api_write_change(
     return WriteChange(
         path=path,
         source=ChangeSource.API_WRITE,
-        payload=_eager_write_payload(final_content),
+        payload=WritePayload(
+            content=final_content if isinstance(final_content, bytes) else final_content.encode("utf-8")
+        ),
         base_hash=base_hash,
     )
 
@@ -272,7 +269,9 @@ def build_overlay_write_change(
             precomputed_hash=precomputed_hash,
         )
     elif final_content is not None:
-        payload = _eager_write_payload(final_content)
+        payload = WritePayload(
+            content=final_content if isinstance(final_content, bytes) else final_content.encode("utf-8")
+        )
     else:
         raise ValueError("build_overlay_write_change needs final_content or content_path")
     return WriteChange(
@@ -312,7 +311,7 @@ def _change_signature(change: Change) -> dict[str, str | int | None]:
         # bytes lazily so the id reflects content (the replay-stability claim).
         if change.precomputed_hash is None:
             try:
-                content_hash = hashlib.sha256(change.final_content).hexdigest()
+                content_hash = ContentHasher().hash_bytes(change.final_content)
             except (OSError, ValueError):
                 content_hash = ""
             sig["content_hash"] = content_hash
@@ -360,6 +359,28 @@ def compute_changeset_id(
     return hashlib.sha256(encoded).hexdigest()[:16]
 
 
+def drop_or_reject_file_result(group: PreparedPathGroup) -> FileResult | None:
+    """Render the standard DROP/REJECT FileResult for a prepared path group.
+
+    Returns None when the route is neither DROP nor REJECT. Centralizes the
+    message-fallback ("change dropped" / "change rejected") used in both
+    commit-time validation and CAS-exhaustion fallback.
+    """
+    if group.route is RouteDecision.DROP:
+        return FileResult(
+            path=group.path,
+            status=FileStatus.DROPPED,
+            message=group.message or "change dropped",
+        )
+    if group.route is RouteDecision.REJECT:
+        return FileResult(
+            path=group.path,
+            status=FileStatus.REJECTED,
+            message=group.message or "change rejected",
+        )
+    return None
+
+
 __all__ = [
     "Change",
     "ChangeSource",
@@ -380,6 +401,7 @@ __all__ = [
     "build_overlay_delete_change",
     "build_overlay_write_change",
     "compute_changeset_id",
+    "drop_or_reject_file_result",
     "is_published_status",
     "is_success_status",
 ]

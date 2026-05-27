@@ -41,7 +41,7 @@ def test_runtime_bundle_contains_overlay_runtime_boundary() -> None:
 
     assert "sandbox/overlay/capture.py" in names
     assert "sandbox/overlay/path_change.py" in names
-    assert "sandbox/_shared/command_exec_contract.py" in names
+    assert "sandbox/shared/command_exec_contract.py" in names
     assert "sandbox/overlay/namespace_runner.py" in names
     assert "sandbox/overlay/namespace_entrypoint.py" in names
     assert "sandbox/overlay/mount_syscalls.py" in names

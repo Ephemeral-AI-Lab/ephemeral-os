@@ -10,11 +10,16 @@ import time
 from dataclasses import dataclass
 
 from sandbox.layer_stack.manifest import ManifestConflictError
-from sandbox.occ.changeset import ChangeSource, PreparedChangeset, RouteDecision
-from sandbox.occ.changeset import ChangesetResult, FileResult, FileStatus
+from sandbox.occ.changeset import ChangeSource, PreparedChangeset
+from sandbox.occ.changeset import (
+    ChangesetResult,
+    FileResult,
+    FileStatus,
+    drop_or_reject_file_result,
+)
 from sandbox.occ.commit_transaction import CommitTransaction
-from sandbox._shared.timing_keys import TimingKey
-from sandbox._shared.clock import monotonic_now
+from sandbox.shared.timing_keys import TimingKey
+from sandbox.shared.clock import monotonic_now
 
 _RESULT_READY_AT = TimingKey.SERIAL_RESULT_READY_AT
 
@@ -272,23 +277,9 @@ def _cas_exhaustion_result(
     message = f"CAS mismatch retry budget exhausted after {max_cas_retries} attempts: {exc}"
     files: list[FileResult] = []
     for group in prepared.path_groups:
-        if group.route is RouteDecision.DROP:
-            files.append(
-                FileResult(
-                    path=group.path,
-                    status=FileStatus.DROPPED,
-                    message=group.message or "change dropped",
-                )
-            )
-            continue
-        if group.route is RouteDecision.REJECT:
-            files.append(
-                FileResult(
-                    path=group.path,
-                    status=FileStatus.REJECTED,
-                    message=group.message or "change rejected",
-                )
-            )
+        drop_or_reject = drop_or_reject_file_result(group)
+        if drop_or_reject is not None:
+            files.append(drop_or_reject)
             continue
         files.append(
             FileResult(

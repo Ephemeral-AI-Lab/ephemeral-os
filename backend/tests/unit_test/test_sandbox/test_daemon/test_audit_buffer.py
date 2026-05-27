@@ -151,7 +151,7 @@ def test_phase_1_causal_chain_smoke() -> None:
     """Synthetic causal chain — one fake tool call + one isolated workspace lifecycle."""
     buf = AuditBuffer(max_events=200_000, max_bytes=64 * 1024 * 1024)
     op_id = "op-smoke-1"
-    handle_id = "iws-smoke"
+    workspace_handle_id = "iws-smoke"
 
     def emit(event_type: str, lane: str, extra: dict[str, Any] | None = None) -> None:
         payload = {
@@ -161,11 +161,11 @@ def test_phase_1_causal_chain_smoke() -> None:
             payload.update(extra)
         buf.append({"type": event_type, "payload": payload}, lane=lane)  # type: ignore[arg-type]
 
-    emit("isolated_workspace.entered", "critical", {"handle_id": handle_id})
+    emit("isolated_workspace.entered", "critical", {"workspace_handle_id": workspace_handle_id})
     emit(
         "tool_call.started",
         "normal",
-        {"tool_name": "smoke_tool", "workspace_handle_id": handle_id},
+        {"tool_name": "smoke_tool", "workspace_handle_id": workspace_handle_id},
     )
     emit("overlay_workspace.mounted", "critical", {})
     for phase in ("mount", "exec", "capture", "publish", "release"):

@@ -1,6 +1,6 @@
 """Lock-order-asserting ``asyncio.Lock`` wrapper for Phase 4 §AC9.
 
-Lives in ``_shared`` so both ``sandbox.daemon`` (entry-side ``entry_lock``)
+Lives in ``shared`` so both ``sandbox.daemon`` (entry-side ``entry_lock``)
 and ``sandbox.isolated_workspace`` (the pipeline ``_map_lock``) can use it
 without re-introducing the daemon-↔-pipeline import cycle.
 
@@ -20,7 +20,7 @@ from __future__ import annotations
 import asyncio
 import os
 
-from sandbox._shared.clock import monotonic_now
+from sandbox.shared.clock import monotonic_now
 
 
 _TEST_MODE_ENV = "EOS_TEST_MODE"

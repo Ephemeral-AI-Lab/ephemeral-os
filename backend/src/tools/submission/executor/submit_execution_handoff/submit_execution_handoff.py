@@ -17,7 +17,7 @@ from pydantic import BaseModel, Field, field_validator
 
 from task_center import TaskCenterInvariantViolation
 from tools._framework.core.context import ToolExecutionContextService
-from sandbox._shared.models import Intent
+from sandbox.shared.models import Intent
 from tools._framework.core.decorator import tool
 from tools._framework.core.results import TextToolOutput, ToolResult
 from tools.submission._advisor_approval_prehook import AdvisorApprovalPreHook

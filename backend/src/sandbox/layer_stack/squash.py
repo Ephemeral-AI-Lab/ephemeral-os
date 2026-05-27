@@ -11,7 +11,7 @@ from pathlib import Path
 from sandbox.layer_stack.paths import (
     allocate_unique_layer_paths,
     fsync_path,
-    resolve_storage_path,
+    resolve_safe_storage_path,
 )
 from sandbox.layer_stack.manifest import LAYERS_DIR, STAGING_DIR, LayerRef, Manifest
 from sandbox.layer_stack.view import MergedView
@@ -114,7 +114,7 @@ class LayerCheckpointSquasher:
 
     def relabel_checkpoint(self, checkpoint: LayerRef, *, manifest_version: int) -> LayerRef:
         """Rename a prebuilt checkpoint to match the manifest that will publish it."""
-        current_path = resolve_storage_path(self._storage_root, checkpoint.path)
+        current_path = resolve_safe_storage_path(self._storage_root, checkpoint.path)
         if not current_path.exists():
             raise FileNotFoundError(f"checkpoint layer is missing: {checkpoint.layer_id}")
 
@@ -126,7 +126,7 @@ class LayerCheckpointSquasher:
         return LayerRef(layer_id=layer_id, path=f"{LAYERS_DIR}/{layer_id}")
 
     def discard_checkpoint(self, checkpoint: LayerRef) -> None:
-        layer_path = resolve_storage_path(self._storage_root, checkpoint.path)
+        layer_path = resolve_safe_storage_path(self._storage_root, checkpoint.path)
         shutil.rmtree(layer_path, ignore_errors=True)
 
     def _allocate_checkpoint_paths(self, next_version: int) -> tuple[str, Path, Path]:

@@ -12,11 +12,11 @@ from pathlib import Path
 import shutil
 from typing import AsyncIterator
 
-from sandbox._shared.async_bridge import run_sync_in_executor
-from sandbox._shared.clock import monotonic_now
-from sandbox._shared.layer_stack_port import LayerStackPort
-from sandbox._shared.lease_guard import LeaseGuard
-from sandbox._shared.models import Intent, ToolCallRequest, ToolCallResult
+from sandbox.shared.async_bridge import run_sync_in_executor
+from sandbox.shared.clock import monotonic_now
+from sandbox.shared.layer_stack_port import LayerStackPort
+from sandbox.shared.lease_guard import LeaseGuard
+from sandbox.shared.models import Intent, ToolCallRequest, ToolCallResult
 from sandbox.ephemeral_workspace.overlay_registry import (
     clear_overlay_registry_for_tests,
     get_sandbox_overlay,
@@ -29,7 +29,7 @@ from sandbox.ephemeral_workspace.events import (
     WorkspaceChangeEventBus,
     WorkspaceChangeEvent,
 )
-from sandbox._shared.command_exec_contract import (
+from sandbox.shared.command_exec_contract import (
     OCCMutationClient,
     SnapshotManifest,
 )

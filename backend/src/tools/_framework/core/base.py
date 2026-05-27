@@ -7,7 +7,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel
 
-from sandbox._shared.models import Intent
+from sandbox.shared.models import Intent
 from tools._framework.core.context import ToolExecutionContextService
 from tools._framework.core.results import TextToolOutput, ToolResult
 from tools._framework.core.runtime import ExecutionMetadata

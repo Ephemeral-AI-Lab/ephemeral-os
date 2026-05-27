@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import os
+import shutil
+import tempfile
 import threading
 from contextlib import AbstractContextManager
 from collections.abc import Iterator, Sequence
@@ -9,7 +12,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from uuid import uuid4
 
-from sandbox.layer_stack.paths import remove_path, resolve_storage_path
+from sandbox.layer_stack.paths import remove_path, resolve_safe_storage_path
 from sandbox.layer_stack.storage_lock import (
     StorageWriterLockLease,
     acquire_storage_writer_lock,
@@ -21,7 +24,7 @@ from sandbox.layer_stack.commit_staging import (
     drop_commit_staging,
 )
 from sandbox.layer_stack.publisher import LayerPublisher
-from sandbox.layer_stack.lease import LeaseRegistry, WorkspaceLease
+from sandbox.layer_stack.lease import LeaseRegistry, LayerStackLeaseRecord
 from sandbox.layer_stack.squash import (
     CheckpointSegment,
     LayerCheckpointSquasher,
@@ -41,8 +44,8 @@ from sandbox.layer_stack.manifest import (
 )
 from sandbox.layer_stack.transaction import LayerStackTransaction
 from sandbox.layer_stack.view import MergedView, SymlinkLookup
-from sandbox.layer_stack.workspace_commit import commit_to_workspace
-from sandbox._shared.clock import monotonic_now
+from sandbox.layer_stack.workspace_base import build_workspace_base
+from sandbox.shared.clock import monotonic_now, record_elapsed
 
 
 @dataclass(frozen=True)
@@ -94,7 +97,7 @@ class LayerStack:
     def read_active_manifest(self) -> Manifest:
         return read_manifest(self._manifest_file)
 
-    def acquire_snapshot_lease(self, owner_request_id: str) -> WorkspaceLease:
+    def acquire_snapshot_lease(self, owner_request_id: str) -> LayerStackLeaseRecord:
         with self._lock:
             return self._leases.acquire(
                 self.read_active_manifest(),
@@ -197,7 +200,13 @@ class LayerStack:
     def project(self, destination: str | Path, manifest: Manifest | None = None) -> None:
         self._view.project(destination, manifest or self.read_active_manifest())
 
-    def commit_transaction(self) -> LayerStackTransaction:
+    def begin_transaction(self) -> LayerStackTransaction:
+        """Open a new active-manifest publish transaction.
+
+        The returned context manager holds the storage-writer guard + process
+        RLock for its lifetime and exposes :meth:`LayerStackTransaction.publish_layer`
+        as the publish primitive. Does NOT commit on its own.
+        """
         storage_writer_lock = self._require_storage_writer_lock()
         return LayerStackTransaction(
             lock=self._lock,
@@ -220,7 +229,7 @@ class LayerStack:
         tests and trusted storage-maintenance callers that already own the
         source path provenance.
         """
-        with self.commit_transaction() as transaction:
+        with self.begin_transaction() as transaction:
             return transaction.publish_layer(changes)
 
     def squash(self, *, max_depth: int) -> Manifest | None:
@@ -298,22 +307,58 @@ class LayerStack:
         The caller must ensure any live overlay mount is detached first. This
         method rewrites the workspace to the active manifest's projection,
         resets layer storage, and rebuilds a fresh base layer from the
-        workspace bytes.
+        workspace bytes. Refuses to run while any snapshot lease is active.
         """
+        total_start = monotonic_now()
+        workspace = Path(workspace_root)
+        if not workspace.is_dir():
+            raise ValueError(f"workspace_root does not exist: {workspace}")
         with self._storage_write_guard():
-            result = commit_to_workspace(
-                storage_root=self.storage_root,
-                workspace_root=workspace_root,
-                manifest_path=self._manifest_file,
-                view=self._view,
-                leases=self._leases,
-                lock=self._lock,
-                timings=timings,
-            )
-            self._view = result.view
-            self._publisher = result.publisher
-            self._checkpoint_squasher = result.checkpoint_squasher
-            return result.manifest
+            with self._lock:
+                if self._leases.active_count() > 0:
+                    raise RuntimeError("commit_to_workspace blocked by active leases")
+                active = self.read_active_manifest()
+
+            projection_parent = self.storage_root / "runtime" / "commit"
+            projection_parent.mkdir(parents=True, exist_ok=True)
+            projected = Path(tempfile.mkdtemp(prefix="projected-", dir=str(projection_parent)))
+            try:
+                project_start = monotonic_now()
+                self._view.project(projected, active, share_inodes=False)
+                record_elapsed(
+                    timings, "layer_stack.commit_to_workspace.project_s", project_start
+                )
+
+                replace_start = monotonic_now()
+                _replace_workspace_contents(workspace, projected)
+                record_elapsed(
+                    timings,
+                    "layer_stack.commit_to_workspace.replace_workspace_s",
+                    replace_start,
+                )
+
+                reset_start = monotonic_now()
+                with self._lock:
+                    _clear_storage_root_preserving_lock(self.storage_root)
+                    build_workspace_base(
+                        workspace_root=workspace,
+                        layer_stack_root=self.storage_root,
+                    )
+                    self._view = MergedView(self.storage_root)
+                    self._publisher = LayerPublisher(self.storage_root)
+                    self._checkpoint_squasher = LayerCheckpointSquasher(self.storage_root)
+                    new_manifest = self.read_active_manifest()
+                record_elapsed(
+                    timings,
+                    "layer_stack.commit_to_workspace.rebuild_base_s",
+                    reset_start,
+                )
+                record_elapsed(
+                    timings, "layer_stack.commit_to_workspace.total_s", total_start
+                )
+                return new_manifest
+            finally:
+                shutil.rmtree(projected, ignore_errors=True)
 
     def _storage_write_guard(self) -> AbstractContextManager[object]:
         return self._require_storage_writer_lock().exclusive()
@@ -324,7 +369,7 @@ class LayerStack:
         return self._storage_writer_lock
 
     def _layer_path(self, layer: LayerRef) -> Path:
-        return resolve_storage_path(self.storage_root, layer.path)
+        return resolve_safe_storage_path(self.storage_root, layer.path)
 
     def _unreferenced_layers(
         self,
@@ -345,3 +390,21 @@ class LayerStack:
         if self._storage_writer_lock is not None:
             self._storage_writer_lock.close()
             self._storage_writer_lock = None
+
+
+def _replace_workspace_contents(destination: Path, source: Path) -> None:
+    """Atomically swap *destination*'s children for *source*'s children."""
+    destination.mkdir(parents=True, exist_ok=True)
+    for child in destination.iterdir():
+        remove_path(child)
+    for child in source.iterdir():
+        os.replace(child, destination / child.name)
+
+
+def _clear_storage_root_preserving_lock(storage_root: Path) -> None:
+    """Reset *storage_root* contents but keep the writer-lock file in place."""
+    storage_root.mkdir(parents=True, exist_ok=True)
+    for child in storage_root.iterdir():
+        if child.name == ".storage-writer.lock":
+            continue
+        remove_path(child)

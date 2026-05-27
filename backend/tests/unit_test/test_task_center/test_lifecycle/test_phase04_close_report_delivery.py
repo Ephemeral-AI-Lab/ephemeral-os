@@ -6,7 +6,7 @@ from typing import Literal
 
 import pytest
 
-from task_center.goal.close_report_router import (
+from task_center.goal.closure_report_router import (
     GoalClosureReportRouter,
 )
 from task_center.goal.state import GoalClosureReport, GoalOriginKind
@@ -15,7 +15,7 @@ from task_center.attempt.orchestrator import AttemptOrchestrator
 from task_center.attempt.orchestrator_registry import (
     AttemptOrchestratorRegistry,
 )
-from task_center.attempt.runtime import AgentLaunch, AttemptDeps
+from task_center.attempt.deps import AgentLaunch, AttemptDeps
 from task_center.iteration import OpenIterationCoordinatorRegistry
 from task_center.iteration.state import IterationCreationReason
 from task_center.task_state import TaskCenterTaskStatus, PlannedGeneratorTask, PlannerSubmission

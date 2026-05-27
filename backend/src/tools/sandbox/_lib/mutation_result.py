@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from sandbox._shared.clock import normalize_timing_map
+from sandbox.shared.clock import normalize_timing_map
 from tools._framework.core.results import ToolResult
 
 

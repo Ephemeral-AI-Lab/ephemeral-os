@@ -53,7 +53,7 @@ def assert_audit_sequence(
     jsonl_path: Path,
     expected_types: Iterable[str],
     *,
-    handle_id: str | None = None,
+    workspace_handle_id: str | None = None,
 ) -> None:
     """Assert that ``expected_types`` appear in order in the audit log.
 
@@ -67,9 +67,9 @@ def assert_audit_sequence(
             break
         if row.get("type") != target[cursor]:
             continue
-        if handle_id is not None:
+        if workspace_handle_id is not None:
             payload = row.get("payload") or {}
-            if payload.get("handle_id") != handle_id:
+            if payload.get("workspace_handle_id") != workspace_handle_id:
                 continue
         cursor += 1
     assert cursor == len(target), (
@@ -102,9 +102,9 @@ def assert_event_payload(
 
 def assert_handle_ids_unique_per_enter(jsonl_path: Path) -> None:
     enters = events_of_type(jsonl_path, "sandbox_isolated_workspace_enter")
-    ids = [row.get("payload", {}).get("handle_id") for row in enters]
+    ids = [row.get("payload", {}).get("workspace_handle_id") for row in enters]
     duplicates = sorted({h for h in ids if ids.count(h) > 1})
-    assert not duplicates, f"duplicate handle_ids in enter events: {duplicates}"
+    assert not duplicates, f"duplicate workspace_handle_ids in enter events: {duplicates}"
 
 
 # ---------------------------------------------------------------------------

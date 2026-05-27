@@ -16,9 +16,9 @@ class OverlayHandle:
     overlays, and projection-direct overlays. The differences between those
     flavors live in the captured ``_release`` closure (daemon path emits
     ``LeaseGuard``/audit entries; projection path releases the lease directly)
-    and in ``namespace_pid``:
+    and in ``holder_pid``:
 
-    - per-call overlays leave ``namespace_pid`` as ``None`` because the
+    - per-call overlays leave ``holder_pid`` as ``None`` because the
       namespace child exits before the tool call returns;
     - long-lived isolated-workspace overlays populate it with the namespace
       holder pid.
@@ -32,9 +32,8 @@ class OverlayHandle:
     layer_paths: tuple[str, ...]
     upperdir: Path
     workdir: Path
-    snapshot_version: int
     lease_id: str
-    namespace_pid: int | None
+    holder_pid: int | None
     run_dir: Path
     snapshot_manifest: object | None = None
     snapshot_timings: dict[str, float] = field(default_factory=dict)

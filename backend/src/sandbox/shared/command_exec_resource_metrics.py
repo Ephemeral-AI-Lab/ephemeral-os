@@ -10,7 +10,7 @@ from collections import defaultdict
 from pathlib import Path
 from typing import Any
 
-from sandbox._shared.clock import monotonic_now
+from sandbox.shared.clock import monotonic_now
 from sandbox.daemon.audit_schema import (
     OsResourceSection,
     build_os_resource_event,

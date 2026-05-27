@@ -45,8 +45,8 @@ class LayerStackPortAdapter:
     ) -> tuple[str, bool]:
         return self.manager.read_text(path, manifest)
 
-    def commit_transaction(self) -> AbstractContextManager[LayerCommitTransaction]:
-        return self.manager.commit_transaction()
+    def begin_transaction(self) -> AbstractContextManager[LayerCommitTransaction]:
+        return self.manager.begin_transaction()
 
     def allocate_commit_staging(self, request_id: str) -> CommitStagingArea:
         return self.manager.allocate_commit_staging(request_id)

@@ -7,7 +7,7 @@ from typing import Any
 
 import pytest
 
-from sandbox._shared.models import Intent
+from sandbox.shared.models import Intent
 from sandbox.daemon import occ_runtime_services, workspace_tool_dispatch
 from sandbox.layer_stack import LayerStack
 from sandbox.layer_stack.workspace_base import build_workspace_base

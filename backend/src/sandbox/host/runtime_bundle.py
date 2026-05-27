@@ -167,7 +167,7 @@ def _runtime_bundle_bytes() -> bytes:
     with tarfile.open(fileobj=raw, mode="w") as tar:
         _add_if_exists(tar, sandbox_dir / "__init__.py", arcname="sandbox/__init__.py")
 
-        shared_dir = sandbox_dir / "_shared"
+        shared_dir = sandbox_dir / "shared"
         _add_python_tree(
             tar,
             shared_dir,

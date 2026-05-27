@@ -20,7 +20,7 @@ import pytest
 
 import sandbox.api as sandbox_api
 from sandbox.api import SandboxCaller, ShellRequest
-from sandbox._shared.clock import monotonic_now
+from sandbox.shared.clock import monotonic_now
 
 
 pytestmark = [

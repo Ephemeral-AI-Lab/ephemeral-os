@@ -31,7 +31,7 @@ if TYPE_CHECKING:
     from task_center.agent_launch.entry_messages import AgentEntryMessages
     from task_center.attempt.generator_dag import ordered_generator_tasks
     from task_center.attempt.orchestrator import AttemptOrchestrator
-    from task_center.attempt.runtime import AttemptDeps
+    from task_center.attempt.deps import AttemptDeps
     from task_center.attempt.state import (
         Attempt,
         AttemptFailReason,
@@ -73,7 +73,7 @@ _EXPORTS: dict[str, tuple[str, str]] = {
         "AgentDefinitionValidationError",
     ),
     "Attempt": ("task_center.attempt.state", "Attempt"),
-    "AttemptDeps": ("task_center.attempt.runtime", "AttemptDeps"),
+    "AttemptDeps": ("task_center.attempt.deps", "AttemptDeps"),
     "AttemptFailReason": ("task_center.attempt.state", "AttemptFailReason"),
     "AttemptOrchestrator": (
         "task_center.attempt.orchestrator",

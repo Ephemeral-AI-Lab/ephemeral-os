@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
 
-from sandbox._shared.models import EditFileResult
-from sandbox._shared.tool_primitives.workspace_filesystem import (
+from sandbox.shared.models import EditFileResult
+from sandbox.shared.tool_primitives.workspace_filesystem import (
     read_bytes_no_follow,
     required_workspace_path,
     write_bytes_no_follow,

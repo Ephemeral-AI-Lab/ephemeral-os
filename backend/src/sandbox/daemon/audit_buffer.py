@@ -322,27 +322,27 @@ class AuditBuffer:
         }
 
 
-_BUFFER: AuditBuffer | None = None
-_BUFFER_LOCK = threading.Lock()
+_AUDIT_BUFFER_SINGLETON: AuditBuffer | None = None
+_AUDIT_BUFFER_SINGLETON_LOCK = threading.Lock()
 
 
 def get_audit_buffer() -> AuditBuffer:
     """Return the process-wide singleton, creating it on first access."""
-    global _BUFFER
-    with _BUFFER_LOCK:
-        if _BUFFER is None:
-            _BUFFER = AuditBuffer()
-            _wire_pressure_emitter(_BUFFER)
-        return _BUFFER
+    global _AUDIT_BUFFER_SINGLETON
+    with _AUDIT_BUFFER_SINGLETON_LOCK:
+        if _AUDIT_BUFFER_SINGLETON is None:
+            _AUDIT_BUFFER_SINGLETON = AuditBuffer()
+            _wire_pressure_emitter(_AUDIT_BUFFER_SINGLETON)
+        return _AUDIT_BUFFER_SINGLETON
 
 
 def reset_audit_buffer_for_tests(buffer: AuditBuffer | None = None) -> AuditBuffer:
     """Replace the singleton — tests only."""
-    global _BUFFER
-    with _BUFFER_LOCK:
-        _BUFFER = buffer if buffer is not None else AuditBuffer()
-        _wire_pressure_emitter(_BUFFER)
-        return _BUFFER
+    global _AUDIT_BUFFER_SINGLETON
+    with _AUDIT_BUFFER_SINGLETON_LOCK:
+        _AUDIT_BUFFER_SINGLETON = buffer if buffer is not None else AuditBuffer()
+        _wire_pressure_emitter(_AUDIT_BUFFER_SINGLETON)
+        return _AUDIT_BUFFER_SINGLETON
 
 
 def _wire_pressure_emitter(buffer: AuditBuffer) -> None:

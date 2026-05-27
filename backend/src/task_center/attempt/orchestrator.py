@@ -27,7 +27,7 @@ from task_center.attempt.generator_dag import (
     ordered_generator_tasks,
 )
 from task_center.attempt.launch import AgentLaunchFactory
-from task_center.attempt.runtime import AttemptDeps
+from task_center.attempt.deps import AttemptDeps
 from task_center.attempt.state import (
     Attempt,
     AttemptFailReason,

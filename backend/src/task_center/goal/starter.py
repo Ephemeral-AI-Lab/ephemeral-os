@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any
 
-from task_center.goal.close_report_router import (
+from task_center.goal.closure_report_router import (
     GoalClosureReportRouter,
 )
 from task_center.goal.lifecycle import GoalLifecycle
@@ -27,7 +27,7 @@ from task_center._core.primitives import TaskCenterInvariantViolation
 from task_center.attempt.orchestrator import AttemptOrchestrator
 from task_center.iteration import OrchestratorFactory
 from task_center.attempt.state import AttemptFailReason, AttemptStatus
-from task_center.attempt.runtime import AttemptDeps
+from task_center.attempt.deps import AttemptDeps
 from task_center.iteration.state import Iteration, IterationStatus
 from task_center.task_state import TaskCenterTaskStatus
 

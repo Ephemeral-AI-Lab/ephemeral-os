@@ -48,7 +48,7 @@ async def test_manager_json_schema_mismatch_treated_as_empty(
     scratch = await iws_scratch_root(sandbox_id)
     assert scratch, "scratch_root not discovered"
     # Inject a manager.json from the future.
-    bogus = json.dumps({"schema_version": 999, "handles": [{"handle_id": "ghost"}]})
+    bogus = json.dumps({"schema_version": 999, "handles": [{"workspace_handle_id": "ghost"}]})
     await write_manager_json(sandbox_id, scratch_root=scratch, payload=bogus)
 
     await daemon_kill_and_respawn(sandbox_id, layer_stack_root=_iws_rpc.IWS_LAYER_STACK_ROOT)
@@ -65,7 +65,7 @@ async def test_manager_json_schema_mismatch_treated_as_empty(
         assert raw, "manager.json missing after enter"
         data = json.loads(raw)
         assert data.get("schema_version") == 1, data
-        ids = [h.get("handle_id") for h in data.get("handles") or []]
+        ids = [h.get("workspace_handle_id") for h in data.get("handles") or []]
         assert "ghost" not in ids, data
     finally:
         await _iws_rpc.exit_(sandbox_id, "agent-B")

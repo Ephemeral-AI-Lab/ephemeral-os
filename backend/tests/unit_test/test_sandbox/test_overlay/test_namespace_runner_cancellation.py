@@ -10,7 +10,7 @@ from typing import Callable
 
 import pytest
 
-from sandbox._shared.models import Intent, ToolCallRequest
+from sandbox.shared.models import Intent, ToolCallRequest
 from sandbox.ephemeral_workspace.pipeline import EphemeralPipeline
 from sandbox.overlay import namespace_runner as namespace_mod
 from sandbox.occ.changeset import ChangesetResult
@@ -51,9 +51,8 @@ async def test_run_in_namespace_signals_shell_cancellation(
         layer_paths=((tmp_path / "lower").as_posix(),),
         upperdir=tmp_path / "upper",
         workdir=tmp_path / "work",
-        snapshot_version=1,
         lease_id="lease-1",
-        namespace_pid=None,
+        holder_pid=None,
         run_dir=tmp_path,
         snapshot_manifest=None,
         _release=None,
@@ -212,9 +211,8 @@ async def test_run_in_namespace_does_not_use_default_threadpool(
         layer_paths=((tmp_path / "lower").as_posix(),),
         upperdir=tmp_path / "upper",
         workdir=tmp_path / "work",
-        snapshot_version=1,
         lease_id="lease-1",
-        namespace_pid=None,
+        holder_pid=None,
         run_dir=tmp_path,
         snapshot_manifest=None,
         _release=None,

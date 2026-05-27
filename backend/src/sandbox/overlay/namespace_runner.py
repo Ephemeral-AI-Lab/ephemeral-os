@@ -15,9 +15,9 @@ from collections.abc import Awaitable, Callable, Mapping
 from pathlib import Path
 from typing import Any
 
-from sandbox._shared.command_exec_policy import CommandExecPolicy
-from sandbox._shared.models import ToolCallRequest, ToolCallResult
-from sandbox._shared.tool_primitives.cancellation import (
+from sandbox.shared.command_exec_policy import CommandExecPolicy
+from sandbox.shared.models import ToolCallRequest, ToolCallResult
+from sandbox.shared.tool_primitives.cancellation import (
     NO_OP_CANCELLATION,
     ShellPgrpCancellation,
     VerbCancellation,
@@ -160,9 +160,9 @@ async def _run_tool_call_in_existing_namespace(
     script = (
         "import json,sys;"
         f"sys.path.insert(0,{src_root!r});"
-        "from sandbox.overlay.namespace_entrypoint import execute_tool_payload_safely;"
+        "from sandbox.overlay.namespace_entrypoint import mount_and_execute_tool_payload;"
         "payload=json.loads(sys.stdin.buffer.read());"
-        "print(json.dumps(execute_tool_payload_safely(payload),separators=(',',':'),sort_keys=True))"
+        "print(json.dumps(mount_and_execute_tool_payload(payload),separators=(',',':'),sort_keys=True))"
     )
     try:
         response = await isolated_runner(

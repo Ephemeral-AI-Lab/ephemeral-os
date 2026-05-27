@@ -3,7 +3,7 @@
 This test bypasses ``IsolatedPipeline.enter()`` entirely. It spawns
 the ns_holder + opens ns FDs + invokes ``_KernelNamespaceRuntime.mount_overlay``
 directly, then asserts the overlay line appears in
-``/proc/<root_pid>/mountinfo`` inside the workspace mntns.
+``/proc/<holder_pid>/mountinfo`` inside the workspace mntns.
 
 Why a backstop: a phase-2 failure in the broader ``enter()`` lifecycle can
 otherwise be ambiguous between "mount itself is broken" and "something
@@ -59,7 +59,7 @@ for d in (lower, upper, work):
 (lower / "BACKSTOP_SENTINEL").write_text("ok")
 
 handle = IsolatedWorkspaceHandle(
-    handle_id="backstop00000000",
+    workspace_handle_id="backstop00000000",
     agent_id="backstop",
     lease_id="backstop-lease",
     manifest_version=0,
@@ -72,8 +72,8 @@ handle = IsolatedWorkspaceHandle(
 
 exit_code = 0
 try:
-    handle.root_pid = runtime.spawn_ns_holder(handle, setup_timeout_s=30.0)
-    handle.ns_fds.update(runtime.open_ns_fds(handle.root_pid))
+    handle.holder_pid = runtime.spawn_ns_holder(handle, setup_timeout_s=30.0)
+    handle.ns_fds.update(runtime.open_ns_fds(handle.holder_pid))
     try:
         asyncio.run(runtime.mount_overlay(handle, layer_paths=(str(lower),)))
     except Exception as exc:
@@ -91,7 +91,7 @@ try:
         )
         raise
 
-    mi_path = "/proc/%d/mountinfo" % handle.root_pid
+    mi_path = "/proc/%d/mountinfo" % handle.holder_pid
     with open(mi_path, "r", encoding="utf-8") as fh:
         mi = fh.read()
     # mountinfo format: ... - <fstype> <source> <opts>. The fsopen/fsmount
@@ -109,8 +109,8 @@ try:
     else:
         sys.stdout.write("BACKSTOP_OK overlay mounted at /testbed\n")
 finally:
-    if handle.root_pid:
-        runtime.kill_holder(handle.root_pid, grace_s=1.0)
+    if handle.holder_pid:
+        runtime.kill_holder(handle.holder_pid, grace_s=1.0)
     for fd in handle.ns_fds.values():
         try:
             os.close(fd)

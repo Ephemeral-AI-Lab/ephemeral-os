@@ -32,7 +32,7 @@ from task_center._core.primitives import planner_task_id
 from task_center.attempt import AttemptFailReason, AttemptStatus
 from task_center.attempt.launch import EphemeralAttemptAgentLauncher
 from task_center.attempt.orchestrator_registry import AttemptOrchestratorRegistry
-from task_center.attempt.runtime import AgentLaunch, AttemptDeps
+from task_center.attempt.deps import AgentLaunch, AttemptDeps
 from task_center.iteration.state import IterationCreationReason
 from task_center.task_state import TaskCenterTaskRole, TaskCenterTaskStatus
 from tools._framework.core.base import ToolResult
@@ -163,7 +163,7 @@ async def test_main_planner_engine_retry_keeps_attempt_sequence_no_at_one(
 
     launcher = EphemeralAttemptAgentLauncher(
         config=SimpleNamespace(),
-        runtime=lambda: deps,
+        deps_provider=lambda: deps,
         runner=_success_runner,
     )
     launcher.launch(launch)
@@ -232,7 +232,7 @@ async def test_main_planner_no_terminal_result_marks_attempt_failed(
 
     launcher = EphemeralAttemptAgentLauncher(
         config=SimpleNamespace(),
-        runtime=lambda: deps,
+        deps_provider=lambda: deps,
         runner=_exhausted_runner,
     )
     launcher.launch(launch)
@@ -304,7 +304,7 @@ async def test_attempt_harness_records_runner_token_usage(
 
     launcher = EphemeralAttemptAgentLauncher(
         config=SimpleNamespace(),
-        runtime=lambda: deps,
+        deps_provider=lambda: deps,
         runner=_runner,
     )
     launcher.launch(launch)
@@ -371,7 +371,7 @@ async def test_continuation_planner_attempt_does_not_pass_retry_kwarg(
 
     launcher = EphemeralAttemptAgentLauncher(
         config=SimpleNamespace(),
-        runtime=lambda: deps,
+        deps_provider=lambda: deps,
         runner=_runner,
     )
     launcher.launch(launch)
@@ -452,7 +452,7 @@ async def test_main_agent_launches_with_two_user_messages(
 
     launcher = EphemeralAttemptAgentLauncher(
         config=SimpleNamespace(),
-        runtime=lambda: deps,
+        deps_provider=lambda: deps,
         runner=_spy_runner,
     )
     launcher.launch(launch)
@@ -535,7 +535,7 @@ async def test_launch_without_task_guidance_falls_back_to_single_user_message(
 
     launcher = EphemeralAttemptAgentLauncher(
         config=SimpleNamespace(),
-        runtime=lambda: deps,
+        deps_provider=lambda: deps,
         runner=_spy_runner,
     )
     launcher.launch(launch)
