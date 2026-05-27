@@ -178,7 +178,7 @@ async def ask_advisor(
 
     try:
         messages = build_helper_messages(
-            helper_role="advisor", mode="advisor", context=context
+            helper_role="advisor", context=context
         )
     except HelperMessageError as exc:
         return exc.to_tool_result()

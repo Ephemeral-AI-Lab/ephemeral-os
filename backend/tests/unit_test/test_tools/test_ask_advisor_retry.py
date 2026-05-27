@@ -85,9 +85,9 @@ def _make_context() -> ToolExecutionContextService:
 
 def _install_build_stub(monkeypatch: pytest.MonkeyPatch) -> None:
     def _fake_build(
-        *, helper_role: str, mode: str, context: Any
+        *, helper_role: str, context: Any
     ) -> _HelperMessagesStub:
-        del helper_role, mode, context
+        del helper_role, context
         return _HelperMessagesStub(
             helper_agent_def=_ADVISOR_DEF,
             parent_agent_def=_PARENT_EXECUTOR_DEF,

@@ -1,7 +1,7 @@
-"""Helper-tool message builder for ``ask_advisor`` / ``ask_resolver``.
+"""Helper-tool message builder for ``ask_advisor``.
 
-The helper tools no longer inherit the parent's ``ContextPacket``. Instead
-they reconstruct the helper's two user messages directly:
+The helper tool no longer inherits the parent's ``ContextPacket``. Instead
+it reconstructs the helper's two user messages directly:
 
 * ``user_msg_1`` carries the parent's verbatim ``user_msg_1`` (engineered
   context the parent received), the parent's verbatim ``user_msg_2``
@@ -9,10 +9,10 @@ they reconstruct the helper's two user messages directly:
   parent transcript that starts at ``parent_messages[2:]``.
 
 * ``user_msg_2`` is built by the helper tool itself (catalog + pending
-  submission for the advisor; issues for the resolver).
+  submission for the advisor).
 
 This module is the single source of those building blocks. The composer
-is not involved; helpers join subagents on the direct-launch path.
+is not involved; the helper joins subagents on the direct-launch path.
 """
 
 from __future__ import annotations
@@ -24,10 +24,7 @@ from agents import AgentDefinition, get_definition
 from message.message import Message, TextBlock
 from tools._framework.core.context import ToolExecutionContextService
 from tools._framework.core.results import ToolResult
-from tools.ask_helper._lib._transcript import (
-    TranscriptMode,
-    build_parent_transcript,
-)
+from tools.ask_helper._lib._transcript import build_parent_transcript
 
 
 @dataclass(frozen=True, slots=True)
@@ -45,9 +42,9 @@ class HelperMessages:
     """Building blocks the helper tool assembles into its two messages.
 
     ``parent_agent_def`` is the resolved parent profile (variant target) —
-    used to derive the parent's terminal catalog in advisor mode. May be
-    ``None`` when the parent's agent_name is missing or not registered (the
-    advisor still runs; the catalog section is just omitted).
+    used to derive the parent's terminal catalog. May be ``None`` when the
+    parent's agent_name is missing or not registered (the advisor still
+    runs; the catalog section is just omitted).
     """
 
     helper_agent_def: AgentDefinition
@@ -72,7 +69,6 @@ def _extract_text(msg: Any) -> str:
 def build_helper_messages(
     *,
     helper_role: str,
-    mode: TranscriptMode,
     context: ToolExecutionContextService,
 ) -> HelperMessages:
     """Gather the parent's verbatim prompts and a filtered transcript.
@@ -113,7 +109,7 @@ def build_helper_messages(
         str(name) for name in (context.get("active_terminals") or ())
     )
 
-    transcript = build_parent_transcript(parent_messages, mode=mode)
+    transcript = build_parent_transcript(parent_messages)
 
     return HelperMessages(
         helper_agent_def=helper_agent_def,
