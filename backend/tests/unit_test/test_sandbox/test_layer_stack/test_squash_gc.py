@@ -49,7 +49,7 @@ def test_squash_gc_keeps_active_and_leased_layers_then_release_removes_only_old_
     _publish(manager, tmp_path, "a.txt", b"a1")
     _publish(manager, tmp_path, "b.txt", b"b1")
     _publish(manager, tmp_path, "a.txt", b"a2")
-    lease = manager.acquire_snapshot_lease("leased-reader")
+    lease = manager.acquire_lease_record("leased-reader")
     leased_layers = lease.manifest.layers
 
     _publish(manager, tmp_path, "c.txt", b"c1")
@@ -111,7 +111,7 @@ def test_release_lease_does_not_delete_layers_still_in_active_manifest(
 ) -> None:
     manager = LayerStack(tmp_path / "stack")
     manifest = _publish(manager, tmp_path, "active.txt", b"still-active\n")
-    lease = manager.acquire_snapshot_lease("active-reader")
+    lease = manager.acquire_lease_record("active-reader")
 
     assert manager.release_lease(lease.lease_id) is True
 

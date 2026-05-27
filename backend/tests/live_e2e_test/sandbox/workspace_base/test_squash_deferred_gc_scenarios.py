@@ -92,11 +92,11 @@ binding_s1, timings_s1 = _build_base(s1_root)
 manager = LayerStack(s1_root)
 
 _publish_chain(manager, s1_root, 4, kind="below-b")  # depth 1..4 above base
-lease_b = manager.acquire_snapshot_lease("s1-lease-b")
+lease_b = manager.acquire_lease_record("s1-lease-b")
 lease_b_layers = lease_b.manifest.layers
 
 _publish_chain(manager, s1_root, 4, kind="between")
-lease_a = manager.acquire_snapshot_lease("s1-lease-a")
+lease_a = manager.acquire_lease_record("s1-lease-a")
 lease_a_layers = lease_a.manifest.layers
 
 _publish_chain(manager, s1_root, 6, kind="above-a")
@@ -198,7 +198,7 @@ squashed_s3 = manager.squash(max_depth=2)
 assert squashed_s3 is not None
 post_squash_layer_ids = [layer.layer_id for layer in manager.read_active_manifest().layers]
 
-new_lease = manager.acquire_snapshot_lease("s3-post-squash-reader")
+new_lease = manager.acquire_lease_record("s3-post-squash-reader")
 new_lease_ids = [layer.layer_id for layer in new_lease.manifest.layers]
 # Lease manifest must equal active manifest, not the pre-squash chain.
 assert new_lease_ids == post_squash_layer_ids
@@ -284,7 +284,7 @@ leases_dense = []
 # so every layer in active becomes a barrier — squash has no foldable run.
 for index in range(5):
     _publish_changes(manager, [_file_change(s5_root, index, "dense")])
-    leases_dense.append(manager.acquire_snapshot_lease("dense-%d" % index))
+    leases_dense.append(manager.acquire_lease_record("dense-%d" % index))
 
 # Heads = every layer in active. Squash must refuse.
 heads = set(manager.leased_layers())
@@ -329,7 +329,7 @@ for index in range(128):
     _publish_changes(manager, [_file_change(s6_root, index, "large")])
     depth = manager.read_active_manifest().depth
     if depth in lease_points:
-        leases_large.append(manager.acquire_snapshot_lease("s6-lease-%03d" % depth))
+        leases_large.append(manager.acquire_lease_record("s6-lease-%03d" % depth))
 
 pre_concurrency = _assert_layer_storage_consistent(manager)
 assert pre_concurrency["active_depth"] >= 128
@@ -474,13 +474,13 @@ def _publish_s7_run(name, count):
 
 
 _publish_s7_run("below-h0", 2)
-lease_h0 = manager.acquire_snapshot_lease("s7-lease-h0")
+lease_h0 = manager.acquire_lease_record("s7-lease-h0")
 _publish_s7_run("between-h0-h1", 3)
-lease_h1 = manager.acquire_snapshot_lease("s7-lease-h1")
+lease_h1 = manager.acquire_lease_record("s7-lease-h1")
 _publish_s7_run("between-h1-h2", 3)
-lease_h2 = manager.acquire_snapshot_lease("s7-lease-h2")
+lease_h2 = manager.acquire_lease_record("s7-lease-h2")
 _publish_s7_run("between-h2-h3", 3)
-lease_h3 = manager.acquire_snapshot_lease("s7-lease-h3")
+lease_h3 = manager.acquire_lease_record("s7-lease-h3")
 _publish_s7_run("above-h3", 2)
 
 s7_leases = [lease_h0, lease_h1, lease_h2, lease_h3]

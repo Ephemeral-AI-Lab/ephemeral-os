@@ -42,15 +42,6 @@ FinalLayerChangeKind = Literal["write", "delete", "symlink", "opaque_dir"]
 StagedLayerChanges = tuple[LayerChange, ...]
 
 
-def _with_timings(result: FileResult, timings: dict[str, float]) -> FileResult:
-    return FileResult(
-        path=result.path,
-        status=result.status,
-        message=result.message,
-        timings={**result.timings, **timings},
-    )
-
-
 def _apply_edit_content(
     path: str,
     content: bytes,
@@ -208,7 +199,13 @@ class _PathGroupStager:
             result = self._apply_change(change, state, group.path)
             if result is not None:
                 timings[profile.timing_apply] = monotonic_now() - apply_start
-                return _with_timings(result, timings), None
+                merged = FileResult(
+                    path=result.path,
+                    status=result.status,
+                    message=result.message,
+                    timings={**result.timings, **timings},
+                )
+                return merged, None
         timings[profile.timing_apply] = monotonic_now() - apply_start
 
         stage_start = monotonic_now()

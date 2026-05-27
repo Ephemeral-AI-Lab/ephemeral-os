@@ -29,7 +29,7 @@ class _LayerStack:
     def read_active_manifest(self) -> Manifest:
         return self.manifest
 
-    def prepare_workspace_snapshot(
+    def acquire_snapshot(
         self,
         *,
         request_id: str,

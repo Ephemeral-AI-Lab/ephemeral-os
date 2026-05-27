@@ -248,7 +248,7 @@ def _timings_for_signal(
                 "layer_stack.transaction_lock_wait",
                 "layer_stack.transaction_lock_held",
                 "layer_stack.transaction.",
-                "layer_stack.prepare_workspace_snapshot.",
+                "layer_stack.acquire_snapshot.",
             ),
         )
     if signal == "layer_stack_layer_published":

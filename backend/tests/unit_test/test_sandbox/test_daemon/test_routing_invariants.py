@@ -18,7 +18,7 @@ def test_daemon_op_table_routes_to_current_handler_layout() -> None:
         "api.layer_metrics": builtin_operations.layer_metrics,
         "api.ensure_workspace_base": builtin_operations.ensure_workspace_base,
         "api.build_workspace_base": builtin_operations.build_workspace_base,
-        "api.prepare_workspace_snapshot": builtin_operations.prepare_workspace_snapshot,
+        "api.acquire_snapshot": builtin_operations.acquire_snapshot,
         "api.release_lease": builtin_operations.release_lease,
         "api.workspace_binding": builtin_operations.workspace_binding,
         "api.runtime.ready": builtin_operations.runtime_ready,

@@ -613,7 +613,7 @@ Absence ≠ zero (P5).
 
 | Phase | File:line | Notes |
 |---|---|---|
-| `prepare_snapshot` | `service/isolated_workspace.py:348-352` | Calls `LayerStackPort.prepare_workspace_snapshot(...)`. Test 14.1 below asserts the kwarg via interception. |
+| `prepare_snapshot` | `service/isolated_workspace.py:348-352` | Calls `LayerStackPort.acquire_snapshot(...)`. Test 14.1 below asserts the kwarg via interception. |
 | `spawn_ns_holder` | `service/isolated_workspace.py:401-403` | Covers `unshare` exec + `ns-up` handshake read. |
 | `open_ns_fds` | `service/isolated_workspace.py:404` | 4 × `os.open` on `/proc/{pid}/ns/{user,mnt,pid,net}`. |
 | `install_veth` | `service/isolated_workspace.py:405-407` | IP pool allocate + 5 × `ip link` calls. |
@@ -798,10 +798,10 @@ Other hosts default to local-dev semantics.
 | File | Asserts | Innocent-refactor failure mode |
 |---|---|---|
 | `happy_path/test_lowerdir_symlink_traversal.py` | Lowerdir ships `/testbed/dir/symlink → ../target.txt`; inside ws, `cat /testbed/dir/symlink` returns target body. | "Optimize" overlay to pass absolute lowerdir paths — breaks relative-symlink resolution after `setns(CLONE_NEWNS)`. |
-| `happy_path/test_workspace_create_uses_layer_paths.py` | Intercepts `LayerStackPort.prepare_workspace_snapshot` via a recording adapter; asserts the call kwargs include `shared_layer_snapshot=True`. | Future `mount_overlay` PR flips per_call_tree_copy=True "to fix a path-not-found error" — disk inflates to O(N) silently. Cheap structural backstop. |
+| `happy_path/test_workspace_create_uses_layer_paths.py` | Intercepts `LayerStackPort.acquire_snapshot` via a recording adapter; asserts the call kwargs include `shared_layer_snapshot=True`. | Future `mount_overlay` PR flips per_call_tree_copy=True "to fix a path-not-found error" — disk inflates to O(N) silently. Cheap structural backstop. |
 
 Enrichment: `test_lowerdir_visible_inside_mntns` (existing) gains: assert
-`layer_paths` returned from `prepare_workspace_snapshot` is a non-empty
+`layer_paths` returned from `acquire_snapshot` is a non-empty
 tuple; assert audit `enter` event carries `lowerdir_layer_count` and
 `shared_layer_snapshot=true`.
 

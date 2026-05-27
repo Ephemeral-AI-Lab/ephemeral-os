@@ -33,7 +33,7 @@ class _FakeLayerStack:
     def __init__(self) -> None:
         self.released: list[str] = []
 
-    def prepare_workspace_snapshot(self, request_id: str) -> _FakeSnapshot:
+    def acquire_snapshot(self, request_id: str) -> _FakeSnapshot:
         return _FakeSnapshot(
             lease_id=f"lease-{request_id}",
             layer_paths=(Path("/tmp/layer-a"),),

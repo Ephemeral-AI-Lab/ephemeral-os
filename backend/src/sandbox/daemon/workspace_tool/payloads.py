@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 
 from sandbox.occ.changeset import ChangesetResult
-from sandbox.daemon.changeset_projection import (
+from sandbox.daemon.workspace_tool.changeset_projection import (
     conflict_and_status,
     conflict_to_dict,
     gitignore_cache_timings,

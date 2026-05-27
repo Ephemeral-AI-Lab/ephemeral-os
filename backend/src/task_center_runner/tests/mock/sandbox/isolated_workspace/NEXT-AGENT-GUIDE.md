@@ -75,7 +75,7 @@ Before writing new code, check whether one of these already does the job.
 | Probe kernel overlay support | `sandbox.overlay.mount_syscalls.mount_syscalls_supported` — the same hard precondition used by daemon startup | yes (`_iws_fixtures.can_mount_overlay_natively`) |
 | Walk upperdir for change capture | `sandbox.overlay.capture.walk_upperdir` — handles whiteouts, opaque dirs, sparse files | **not yet** — `_control_plane.linux_runtime._directory_file_bytes` is byte-count only. If you need anything beyond byte counting (e.g., for the Tier 7 `test_upperdir_fully_discarded_on_normal_exit`), use `walk_upperdir` instead of reinventing |
 | Mount syscall syscall constants | `sandbox.overlay.mount_syscalls` (`SYS_fsopen`, `SYS_fsconfig`, `SYS_fsmount`, `SYS_move_mount`, etc.) | yes, through deferred reuse of `kernel_mount.mount_overlay`; do not inline raw syscall constants in iws helpers |
-| Lease + snapshot lifecycle | `sandbox.daemon.layer_stack_runtime.prepare_workspace_snapshot` / `release_lease` | yes (`LayerStackPortAdapter` is bound during `_control_plane.pipeline_registry.ensure_pipeline`) |
+| Lease + snapshot lifecycle | `sandbox.daemon.layer_stack_runtime.acquire_snapshot` / `release_lease` | yes (`LayerStackPortAdapter` is bound during `_control_plane.pipeline_registry.ensure_pipeline`) |
 | Overlay writable-root resolution | `sandbox.overlay.writable_dirs.overlay_writable_root` | yes (`_control_plane.pipeline_registry.ensure_pipeline`) |
 | Daemon RPC client | `sandbox.host.daemon_client.call_daemon_api` | yes (`_iws_rpc`) |
 | Audit event types | `task_center_runner.audit.events.EventType` — the 5 `SANDBOX_ISOLATED_WORKSPACE_*` enum members are already defined | yes (events emitted via `IsolatedPipeline._emit`) |

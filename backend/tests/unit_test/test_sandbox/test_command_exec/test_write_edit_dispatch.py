@@ -8,7 +8,8 @@ from typing import Any
 
 import pytest
 
-from sandbox.daemon import builtin_operations, occ_runtime_services, workspace_tool_payloads
+from sandbox.daemon import builtin_operations, occ_runtime_services
+from sandbox.daemon.workspace_tool import payloads as workspace_tool_payloads
 from sandbox.daemon.rpc import dispatcher as server
 from sandbox.daemon.layer_stack_runtime import get_layer_stack_manager
 from sandbox.layer_stack import WriteLayerChange
@@ -89,7 +90,7 @@ async def test_layer_stack_services_share_lease_registry(tmp_path: Path) -> None
     assert write_services.layer_stack.manager is manager_via_singleton
 
     starting_active = manager_via_singleton.active_lease_count()
-    lease = manager_via_singleton.acquire_snapshot_lease("test")
+    lease = manager_via_singleton.acquire_lease_record("test")
     try:
         assert manager_via_singleton.active_lease_count() == starting_active + 1
         assert (
@@ -143,7 +144,7 @@ async def test_layer_metrics_reports_active_lease_pins(tmp_path: Path) -> None:
     stack = tmp_path / "stack"
     build_workspace_base(workspace_root=workspace, layer_stack_root=stack)
     manager = get_layer_stack_manager(stack.as_posix())
-    lease = manager.acquire_snapshot_lease("metrics-reader")
+    lease = manager.acquire_lease_record("metrics-reader")
     try:
         payload = await builtin_operations.layer_metrics({"layer_stack_root": stack.as_posix()})
     finally:

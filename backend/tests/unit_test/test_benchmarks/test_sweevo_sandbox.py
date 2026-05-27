@@ -229,7 +229,7 @@ async def test_apply_layerstack_to_repo_materializes_snapshot_and_releases(
         **_kwargs: object,
     ) -> dict[str, object]:
         daemon_calls.append((op, args))
-        if op == "api.prepare_workspace_snapshot":
+        if op == "api.acquire_snapshot":
             return {"lease_id": "lease-1", "layer_paths": ["/layers/current"]}
         return {"success": True}
 
@@ -245,7 +245,7 @@ async def test_apply_layerstack_to_repo_materializes_snapshot_and_releases(
 
     await sweevo_sandbox.apply_layerstack_to_repo("sbx-1", "/testbed")
 
-    assert daemon_calls[0][0] == "api.prepare_workspace_snapshot"
+    assert daemon_calls[0][0] == "api.acquire_snapshot"
     assert str(daemon_calls[0][1]["request_id"]).startswith("sweevo-eval-materialize-")
     assert daemon_calls[1] == (
         "api.release_lease",

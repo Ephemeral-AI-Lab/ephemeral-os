@@ -317,7 +317,7 @@ async def iws_sandbox(
         )
         # Idempotently ensure /testbed/workspace.json exists. iws.enter()
         # passes layer_stack_root=/testbed and the daemon's
-        # prepare_workspace_snapshot calls require_workspace_binding(/testbed),
+        # acquire_snapshot calls require_workspace_binding(/testbed),
         # which raises if missing. Reused sandboxes from earlier sessions may
         # have skipped this (e.g. if the daemon crashed during initial
         # provisioning), so re-establish the binding directly via

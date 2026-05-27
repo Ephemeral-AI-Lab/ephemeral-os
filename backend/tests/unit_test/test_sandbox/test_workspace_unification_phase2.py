@@ -183,7 +183,7 @@ def test_ephemeral_run_tool_call_uses_api_write_for_single_path(
         storage_root = tmp_path
 
         @staticmethod
-        def prepare_workspace_snapshot(*, request_id: str) -> _Lease:
+        def acquire_snapshot(*, request_id: str) -> _Lease:
             return _Lease()
 
         @staticmethod

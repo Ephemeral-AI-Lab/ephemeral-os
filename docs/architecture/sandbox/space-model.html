@@ -90,7 +90,7 @@
 <p>For <code>n</code> concurrent operations, writable scratch is <strong>O(n * per-operation changed bytes)</strong> plus small metadata. Each operation/session has its own <code>upper</code> and <code>work</code> directories <span class="file-ref">backend/src/sandbox/overlay/writable_dirs.py:46-52</span>. Capturing changes walks only the upperdir and emits writes/deletes/symlinks/opaque markers <span class="file-ref">backend/src/sandbox/overlay/capture.py:19-93</span>. OCC then publishes accepted changes as one new immutable layer rather than copying the whole workspace <span class="file-ref">backend/src/sandbox/occ/commit_transaction.py:113-141</span>.</p>
 
 <div class="edge-list">
-  <div><b>lower side</b><span><code>LayerStack.prepare_workspace_snapshot()</code> returns existing <code>layer_paths</code> and a lease, so lowerdir storage stays shared across operations.</span></div>
+  <div><b>lower side</b><span><code>LayerStack.acquire_snapshot()</code> returns existing <code>layer_paths</code> and a lease, so lowerdir storage stays shared across operations.</span></div>
   <div><b>writable side</b><span><code>allocate_overlay_writable_dirs()</code> creates one <code>upper</code> and one <code>work</code> directory per run dir, and capture walks only that upperdir.</span></div>
   <div><b>publish side</b><span>OCC stages accepted deltas and LayerStack appends one immutable layer, so publish cost follows changed paths and content size.</span></div>
   <div><b>private side</b><span>Isolated workspace keeps its upper/work dirs across calls, then reports discarded bytes and removes scratch on exit.</span></div>

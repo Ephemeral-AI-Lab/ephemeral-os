@@ -15,7 +15,7 @@ def _source(tmp_path: Path, name: str, content: bytes) -> str:
     return str(path)
 
 
-def test_prepare_workspace_snapshot_returns_layer_paths(tmp_path: Path) -> None:
+def test_acquire_snapshot_returns_layer_paths(tmp_path: Path) -> None:
     manager = LayerStack(tmp_path / "stack")
     manifest = manager.publish_changes(
         [
@@ -25,7 +25,7 @@ def test_prepare_workspace_snapshot_returns_layer_paths(tmp_path: Path) -> None:
             )
         ]
     )
-    result = manager.prepare_workspace_snapshot("request-a")
+    result = manager.acquire_snapshot("request-a")
 
     assert len(result.layer_paths) == len(manifest.layers)
     for layer_path in result.layer_paths:
@@ -34,7 +34,7 @@ def test_prepare_workspace_snapshot_returns_layer_paths(tmp_path: Path) -> None:
     manager.release_lease(result.lease_id)
 
 
-def test_prepare_workspace_snapshot_skips_view_materialization(tmp_path: Path) -> None:
+def test_acquire_snapshot_skips_view_materialization(tmp_path: Path) -> None:
     manager = LayerStack(tmp_path / "stack")
     manager.publish_changes(
         [
@@ -45,13 +45,13 @@ def test_prepare_workspace_snapshot_skips_view_materialization(tmp_path: Path) -
         ]
     )
     with patch.object(manager._view, "project") as mock_project:
-        result = manager.prepare_workspace_snapshot("request-a")
+        result = manager.acquire_snapshot("request-a")
         mock_project.assert_not_called()
 
     manager.release_lease(result.lease_id)
 
 
-def test_prepare_workspace_snapshot_registers_pin_via_lease_registry(
+def test_acquire_snapshot_registers_pin_via_lease_registry(
     tmp_path: Path,
 ) -> None:
     manager = LayerStack(tmp_path / "stack")
@@ -65,7 +65,7 @@ def test_prepare_workspace_snapshot_registers_pin_via_lease_registry(
     )
     assert manager.leased_layers() == ()
 
-    result = manager.prepare_workspace_snapshot("request-pin")
+    result = manager.acquire_snapshot("request-pin")
 
     leased = manager.leased_layers()
     assert set(leased) == set(manifest.layers), (
@@ -76,7 +76,7 @@ def test_prepare_workspace_snapshot_registers_pin_via_lease_registry(
     assert manager.leased_layers() == ()
 
 
-def test_prepare_workspace_snapshot_returns_all_deep_layer_paths(
+def test_acquire_snapshot_returns_all_deep_layer_paths(
     tmp_path: Path,
 ) -> None:
     manager = LayerStack(tmp_path / "stack")
@@ -91,7 +91,7 @@ def test_prepare_workspace_snapshot_returns_all_deep_layer_paths(
             ]
         )
 
-    result = manager.prepare_workspace_snapshot("request-deep")
+    result = manager.acquire_snapshot("request-deep")
 
     assert len(result.layer_paths) == layer_count
     assert manager.active_lease_count() == 1

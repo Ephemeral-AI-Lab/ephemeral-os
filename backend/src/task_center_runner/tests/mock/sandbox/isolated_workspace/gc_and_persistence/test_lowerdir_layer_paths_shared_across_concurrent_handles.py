@@ -1,6 +1,6 @@
 """All N concurrent handles share ONE snapshot's ``layer_paths`` tuple.
 
-The design property: ``prepare_workspace_snapshot(...)``
+The design property: ``acquire_snapshot(...)``
 returns layer paths that point at the SAME shared layer-stack files for
 every concurrent reader. If a future PR flips ``per_call_tree_copy=True``, each
 handle copies the layers into its own scratch — disk usage flips from

@@ -64,7 +64,7 @@ class _WorkspaceHandleLifecycleMixin:
             self._check_host_capacity()
         timer = _PhaseTimer(self._clock)
         with timer.measure("prepare_snapshot"):
-            snapshot = self._layer_stack.prepare_workspace_snapshot(
+            snapshot = self._layer_stack.acquire_snapshot(
                 request_id=f"isolated-{self._id_factory()}",
             )
         workspace_handle_id = self._id_factory()
@@ -212,7 +212,7 @@ class _WorkspaceHandleLifecycleMixin:
         # Lazy import: ``workspace_tool_dispatch`` imports the isolated
         # pipeline registry at module load, so this module cannot import
         # it at top level without a cycle.
-        from sandbox.daemon.workspace_tool_dispatch import (
+        from sandbox.daemon.workspace_tool.dispatch import (
             begin_exit_drain,
             finalize_exit_drain,
             lifecycle_exit_critical_section,

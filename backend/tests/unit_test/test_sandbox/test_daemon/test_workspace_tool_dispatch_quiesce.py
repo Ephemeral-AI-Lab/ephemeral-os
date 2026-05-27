@@ -22,7 +22,7 @@ import pytest
 
 from sandbox.shared.ordered_lock import OrderedLock
 from sandbox.daemon.rpc import dispatcher
-from sandbox.daemon.workspace_tool_dispatch import (
+from sandbox.daemon.workspace_tool.dispatch import (
     LifecycleInProgressError,
     _ensure_quiesce_state,
     _existing_quiesce_state,
@@ -278,7 +278,7 @@ async def test_real_isolated_pipeline_map_lock_participates_in_order_assertion(
     from sandbox.isolated_workspace.pipeline import IsolatedPipeline
 
     class _StubLayerStack:
-        def prepare_workspace_snapshot(self, *, request_id):  # pragma: no cover
+        def acquire_snapshot(self, *, request_id):  # pragma: no cover
             raise AssertionError("unused")
 
         def release_lease(self, *, lease_id):  # pragma: no cover

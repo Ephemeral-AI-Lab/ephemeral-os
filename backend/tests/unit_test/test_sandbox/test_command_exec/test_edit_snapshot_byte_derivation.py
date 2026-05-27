@@ -61,7 +61,7 @@ async def test_in_workspace_edit_same_path_M_gt_N_surfaces_hard_conflict(
     manager: LayerStack = services.layer_stack_manager
     occ_service = services.occ_client._service  # type: ignore[attr-defined]
 
-    lease = manager.acquire_snapshot_lease("test-edit-N")
+    lease = manager.acquire_lease_record("test-edit-N")
     try:
         bytes_n, exists_n = services.layer_stack.read_bytes("shared.txt", lease.manifest)
         assert exists_n and bytes_n is not None

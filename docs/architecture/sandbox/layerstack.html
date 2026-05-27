@@ -133,7 +133,7 @@
   </ul>
 </div>
 
-<p><strong>A snapshot is O(1): a lease plus a list of existing layer paths, not a rendered tree.</strong> <code>LayerStack.prepare_workspace_snapshot()</code> reads the manifest, acquires a lease, and returns <code>layer_paths</code> copied from the manifest. It does not project a transient lowerdir for normal operations <span class="file-ref">backend/src/sandbox/layer_stack/stack.py:105-129</span>. The result object contains <code>lease_id</code>, <code>manifest_version</code>, <code>root_hash</code>, <code>manifest</code>, timings, and optional <code>layer_paths</code> <span class="file-ref">backend/src/sandbox/layer_stack/stack.py:43-62</span>. This is what makes N concurrent agents cheap: every snapshot is constant-cost regardless of repository size.</p>
+<p><strong>A snapshot is O(1): a lease plus a list of existing layer paths, not a rendered tree.</strong> <code>LayerStack.acquire_snapshot()</code> reads the manifest, acquires a lease, and returns <code>layer_paths</code> copied from the manifest. It does not project a transient lowerdir for normal operations <span class="file-ref">backend/src/sandbox/layer_stack/stack.py:105-129</span>. The result object contains <code>lease_id</code>, <code>manifest_version</code>, <code>root_hash</code>, <code>manifest</code>, timings, and optional <code>layer_paths</code> <span class="file-ref">backend/src/sandbox/layer_stack/stack.py:43-62</span>. This is what makes N concurrent agents cheap: every snapshot is constant-cost regardless of repository size.</p>
 
 <div class="stack-viz" aria-label="LayerStack projection">
   <div class="layer lower"><strong>L000005-...</strong><div class="desc">newest layer, highest priority lowerdir</div></div>
@@ -336,7 +336,7 @@ _remove_layers(removable): rm -rf layer dirs + digest sidecars + evict view cach
   <div class="evidence-card">
     <h4>Graph edges</h4>
     <ul>
-      <li><code>exports</code> <code>LayerStack.prepare_workspace_snapshot()</code> to overlay and isolated workspace.</li>
+      <li><code>exports</code> <code>LayerStack.acquire_snapshot()</code> to overlay and isolated workspace.</li>
       <li><code>exports</code> <code>LayerStack.begin_transaction()</code> to OCC (opens a publish transaction; <code>LayerStackTransaction.publish_layer()</code> commits).</li>
       <li><code>owns-state</code> manifest, layers, staging, leases, digest sidecars, and merged-view cache.</li>
     </ul>

@@ -5,7 +5,7 @@ Behavioural backstop for ``test_lowerdir_layer_paths_shared_*``. ``du
 must grow by at most ``5 × upperdir_overhead_max`` (10 MB each by
 convention) — significantly less than 5 × the layer-stack size.
 
-If somebody flips ``prepare_workspace_snapshot(...) with a per-call tree copy``, the
+If somebody flips ``acquire_snapshot(...) with a per-call tree copy``, the
 delta balloons to O(N × layer-stack size) and this test fails loudly.
 """
 

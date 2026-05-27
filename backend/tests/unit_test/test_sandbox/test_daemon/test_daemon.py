@@ -261,7 +261,7 @@ async def test_daemon_handles_invalid_json() -> None:
 def test_peer_bootstraps_register_snapshot_ops() -> None:
     server._register_builtin_operations()
 
-    assert "api.prepare_workspace_snapshot" in server.OP_TABLE
+    assert "api.acquire_snapshot" in server.OP_TABLE
     assert "api.release_lease" in server.OP_TABLE
     assert "api.release_workspace_snapshot" not in server.OP_TABLE
 

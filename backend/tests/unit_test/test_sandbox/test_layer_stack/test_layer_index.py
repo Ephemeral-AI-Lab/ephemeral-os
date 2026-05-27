@@ -103,7 +103,7 @@ def test_indexed_read_evicts_after_layer_removal(tmp_path: Path) -> None:
         ]
     )
     # Acquire+release a lease to trigger the unreferenced-layer GC path.
-    lease = manager.acquire_snapshot_lease("test-evict")
+    lease = manager.acquire_lease_record("test-evict")
     manager.release_lease(lease.lease_id)
 
     cache = manager._view._layer_index_cache

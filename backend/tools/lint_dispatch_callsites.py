@@ -37,7 +37,7 @@ _RULES = (
     (
         "dispatch_workspace_tool_call",
         (Path("backend/src/sandbox/daemon"),),
-        Path("backend/src/sandbox/daemon/workspace_tool_dispatch.py"),
+        Path("backend/src/sandbox/daemon/workspace_tool/dispatch.py"),
     ),
     (
         "_plugin_block_decision",

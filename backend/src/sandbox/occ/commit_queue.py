@@ -134,32 +134,15 @@ class CommitQueue:
             first = self._queue.get()
             if isinstance(first, _StopItem):
                 return
-            items = [first]
-            stop_seen = False
+            items: list[_WorkItem] = [first]
             # WR-04: drain the queue non-blockingly first. Only pay the
             # batch-window latency when the drain emptied the queue AND
             # we still have headroom; otherwise the sleep is dead
             # wall-clock on the single-commit hot path.
-            while len(items) < self._max_batch_size:
-                try:
-                    item = self._queue.get_nowait()
-                except queue.Empty:
-                    break
-                if isinstance(item, _StopItem):
-                    stop_seen = True
-                    break
-                items.append(item)
+            stop_seen = self._drain_ready(items)
             if not stop_seen and self._batch_window_s > 0 and len(items) < self._max_batch_size:
                 time.sleep(self._batch_window_s)
-                while len(items) < self._max_batch_size:
-                    try:
-                        item = self._queue.get_nowait()
-                    except queue.Empty:
-                        break
-                    if isinstance(item, _StopItem):
-                        stop_seen = True
-                        break
-                    items.append(item)
+                stop_seen = self._drain_ready(items)
 
             pending = [item for item in items if not item.future.cancelled()]
             for batch in _disjoint_batches(pending):
@@ -167,9 +150,23 @@ class CommitQueue:
             if stop_seen:
                 return
 
+    def _drain_ready(self, items: list[_WorkItem]) -> bool:
+        """Pull ready items into ``items`` up to ``_max_batch_size``.
+
+        Returns True when a stop sentinel was consumed and the worker should
+        exit after the current batch.
+        """
+        while len(items) < self._max_batch_size:
+            try:
+                item = self._queue.get_nowait()
+            except queue.Empty:
+                return False
+            if isinstance(item, _StopItem):
+                return True
+            items.append(item)
+        return False
+
     def _commit_batch(self, batch: list[_WorkItem]) -> None:
-        if not batch:
-            return
         commit_start = monotonic_now()
         combined = _combine_prepared([item.prepared for item in batch])
         attempts = 0
@@ -189,11 +186,18 @@ class CommitQueue:
                         break
             commit_elapsed = monotonic_now() - commit_start
             ready_at = monotonic_now()
+            # _disjoint_batches guarantees paths are unique across the
+            # combined changeset, so a single map lets each item gather its
+            # FileResults in O(P_i) instead of rescanning all N results.
+            files_by_path = {file.path: file for file in result.files}
             for item in batch:
                 if item.future.cancelled():
                     continue
-                paths = _path_set(item.prepared)
-                files = tuple(file for file in result.files if file.path in paths)
+                files = tuple(
+                    files_by_path[group.path]
+                    for group in item.prepared.path_groups
+                    if group.path in files_by_path
+                )
                 item.future.set_result(
                     ChangesetResult(
                         files=files,

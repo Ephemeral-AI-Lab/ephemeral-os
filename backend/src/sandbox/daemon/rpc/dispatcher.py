@@ -21,12 +21,12 @@ from uuid import uuid4
 from audit.jsonl import append_jsonl_event
 from sandbox.shared.clock import monotonic_now
 from sandbox.daemon.rpc.in_flight import get_in_flight_registry
-from sandbox.daemon.workspace_tool_dispatch import (
+from sandbox.daemon.workspace_tool.dispatch import (
     LifecycleInProgressError,
     _lifecycle_in_progress_envelope,
     acquire_dispatch_slot,
 )
-from sandbox.daemon.workspace_tool_payloads import _agent_id_from_args
+from sandbox.daemon.workspace_tool.payloads import _agent_id_from_args
 from sandbox.isolated_workspace import IsolatedWorkspaceError
 from sandbox.isolated_workspace._control_plane.pipeline_registry import get_active_pipeline
 
@@ -425,7 +425,7 @@ def _register_builtin_operations() -> None:
         **builtin_operations.WORKSPACE_TOOL_OPS,
         "api.ensure_workspace_base": builtin_operations.ensure_workspace_base,
         "api.build_workspace_base": builtin_operations.build_workspace_base,
-        "api.prepare_workspace_snapshot": builtin_operations.prepare_workspace_snapshot,
+        "api.acquire_snapshot": builtin_operations.acquire_snapshot,
         "api.release_lease": builtin_operations.release_lease,
         "api.layer_stack.fence_stale_staging": builtin_operations.fence_stale_staging,
         "api.layer_metrics": builtin_operations.layer_metrics,

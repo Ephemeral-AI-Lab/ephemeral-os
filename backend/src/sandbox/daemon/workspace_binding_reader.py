@@ -3,7 +3,7 @@
 Lives separately from :mod:`sandbox.daemon.occ_runtime_services` so the
 occ-server module owns no path-classifier surface (single source of
 truth for in-workspace path classification stays in
-:mod:`sandbox.daemon.workspace_tool_payloads`).
+:mod:`sandbox.daemon.workspace_tool.payloads`).
 """
 
 from __future__ import annotations

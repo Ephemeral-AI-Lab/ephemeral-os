@@ -29,7 +29,7 @@ class _LayerStack:
     def __init__(self) -> None:
         self.released: list[str] = []
 
-    def prepare_workspace_snapshot(self, *, request_id: str) -> _Snapshot:
+    def acquire_snapshot(self, *, request_id: str) -> _Snapshot:
         assert request_id.startswith("isolated-")
         return _Snapshot()
 

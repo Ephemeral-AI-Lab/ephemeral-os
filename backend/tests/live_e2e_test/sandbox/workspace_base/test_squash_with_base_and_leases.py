@@ -156,7 +156,7 @@ manifest_a, _ = _publish_changes(manager, [
         source_path=str(_source_file(lease_stack, "lease-a", b"A\n")),
     )
 ])
-lease = manager.acquire_snapshot_lease("phase01-lease-reader")
+lease = manager.acquire_lease_record("phase01-lease-reader")
 assert lease.manifest == manifest_a
 leased_layers = lease.manifest.layers
 _publish_changes(manager, [

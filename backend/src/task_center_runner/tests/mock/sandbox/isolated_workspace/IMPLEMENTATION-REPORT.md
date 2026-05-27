@@ -395,7 +395,7 @@ tools now flow through ``api.v1.<verb>`` and daemon pipeline resolution.
 |---|---|---|
 | ``sandbox.overlay.kernel_mount.mount_overlay`` | ``scripts/setns_overlay_mount.py`` — deferred-import *after* setns so R10 single-thread discipline is preserved at module-load time | ~80 LoC of duplicated ``fsopen / fsconfig / fsmount / move_mount`` syscall wrappers. One source of truth for overlay mount mechanics across the daemon. |
 | ``sandbox.overlay.mount_syscalls.mount_syscalls_supported`` | ``_iws_fixtures.can_mount_overlay_natively`` | A bespoke ``/proc/filesystems`` scan. Uses the same hard precondition as daemon startup. |
-| ``sandbox.daemon.layer_stack_runtime.prepare_workspace_snapshot`` / ``release_lease`` | ``LayerStackPortAdapter`` bound during ``_control_plane.pipeline_registry.ensure_pipeline`` | Existing lease/snapshot lifecycle — no parallel implementation. |
+| ``sandbox.daemon.layer_stack_runtime.acquire_snapshot`` / ``release_lease`` | ``LayerStackPortAdapter`` bound during ``_control_plane.pipeline_registry.ensure_pipeline`` | Existing lease/snapshot lifecycle — no parallel implementation. |
 | ``sandbox.host.daemon_client.call_daemon_api`` | ``_iws_rpc`` | Existing daemon RPC client. |
 | ``sandbox.overlay.writable_dirs.overlay_writable_root`` | ``_control_plane.pipeline_registry.ensure_pipeline`` | Canonical overlay writable-root resolution. |
 
@@ -464,7 +464,7 @@ Phase key sets per event:
 
 `enter` additionally carries top-level `lowerdir_layer_count` (int) and
 `tree-copy` (always `false` — tripwire if anyone flips
-`prepare_workspace_snapshot(...) with a per-call tree copy` for the isolated path).
+`acquire_snapshot(...) with a per-call tree copy` for the isolated path).
 
 ---
 

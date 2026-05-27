@@ -102,7 +102,7 @@ def test_eviction_skips_layers_pinned_by_active_leases(
     # Acquire 4 leases — each pins all 5 layers in the manifest at the
     # time of acquisition. Leases acquired sequentially see the same
     # active manifest until the next publish_changes call.
-    leases = [manager.acquire_snapshot_lease(f"lease-{i}") for i in range(4)]
+    leases = [manager.acquire_lease_record(f"lease-{i}") for i in range(4)]
     leased_layer_ids = {layer.layer_id for layer in manager.leased_layers()}
     assert leased_layer_ids == set(layer_ids)
 
@@ -195,7 +195,7 @@ def test_eviction_strict_set_after_squash(
 
     # Hold a lease on the pre-squash manifest so squash CANNOT evict its
     # constituent layers.
-    held = manager.acquire_snapshot_lease("hold-pre-squash")
+    held = manager.acquire_lease_record("hold-pre-squash")
 
     # Squash to depth=1 collapses everything older than the most recent layer.
     manager.squash(max_depth=1)

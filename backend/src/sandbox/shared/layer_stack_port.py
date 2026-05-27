@@ -27,7 +27,7 @@ class LayerStackPort(Protocol):
 
     storage_root: Path
 
-    def prepare_workspace_snapshot(
+    def acquire_snapshot(
         self,
         *,
         request_id: str,

@@ -161,7 +161,7 @@ def test_iter_paths_uses_leased_manifest_not_advanced_active(tmp_path: Path) -> 
             )
         ]
     )
-    lease = manager.acquire_snapshot_lease("iter-test")
+    lease = manager.acquire_lease_record("iter-test")
     # Publish a newer layer adding a file the lease must NOT see.
     manager.publish_changes(
         [

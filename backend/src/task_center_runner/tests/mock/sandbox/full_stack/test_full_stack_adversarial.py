@@ -62,7 +62,7 @@ _REQUIRED_SANDBOX_TIMING_KEYS = (
     "command_exec.run_command_s",
     "command_exec.capture_upperdir_s",
     "command_exec.total_s",
-    "layer_stack.prepare_workspace_snapshot.total_s",
+    "layer_stack.acquire_snapshot.total_s",
     "occ.commit.total_s",
     "occ.commit.publish_layer_s",
     "occ.apply.total_s",

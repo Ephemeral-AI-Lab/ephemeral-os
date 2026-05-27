@@ -67,7 +67,7 @@ class WorkspaceProjection:
         return self._layer_stack_root
 
     def acquire(self, invocation_id: str) -> ProjectionHandle:
-        result = self._layer_stack.prepare_workspace_snapshot(
+        result = self._layer_stack.acquire_snapshot(
             owner_request_id=invocation_id,
         )
         return ProjectionHandle(

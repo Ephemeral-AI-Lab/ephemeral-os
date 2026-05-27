@@ -134,7 +134,7 @@ def ensure_workspace_base(
     return build_workspace_base(layer_stack_root, workspace_root=workspace_root), True
 
 
-def prepare_workspace_snapshot(
+def acquire_snapshot(
     layer_stack_root: str | Path,
     *,
     owner_request_id: str,
@@ -152,7 +152,7 @@ def prepare_workspace_snapshot(
         ),
         lane="normal",
     )
-    result = get_layer_stack_manager(layer_stack_root).prepare_workspace_snapshot(
+    result = get_layer_stack_manager(layer_stack_root).acquire_snapshot(
         owner_request_id,
     )
     elapsed_ms = (monotonic_now() - started) * 1000.0
@@ -292,6 +292,6 @@ __all__ = [
     "ensure_workspace_base",
     "fence_stale_staging",
     "get_layer_stack_manager",
-    "prepare_workspace_snapshot",
+    "acquire_snapshot",
     "release_lease",
 ]

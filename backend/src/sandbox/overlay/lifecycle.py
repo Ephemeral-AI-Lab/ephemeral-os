@@ -42,13 +42,13 @@ def acquire(
     * Operation-overlay callers pass their own release function when handles
       can be released directly instead of through a pipeline destroy guard.
 
-    On any exception after ``prepare_workspace_snapshot`` succeeds, this
+    On any exception after ``acquire_snapshot`` succeeds, this
     function releases the lease AND ``rmtree(run_dir)`` before re-raising so
     no lease or scratch directory leaks past the error boundary.
     """
     run_dir = _allocate_run_dir(invocation_id)
     mount_started = monotonic_now()
-    snapshot = layer_stack.prepare_workspace_snapshot(request_id=invocation_id)
+    snapshot = layer_stack.acquire_snapshot(request_id=invocation_id)
     lease_id = str(getattr(snapshot, "lease_id"))
     try:
         layer_paths = getattr(snapshot, "layer_paths", None)

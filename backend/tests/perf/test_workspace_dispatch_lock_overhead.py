@@ -13,7 +13,7 @@ import time
 
 import pytest
 
-from sandbox.daemon.workspace_tool_dispatch import (
+from sandbox.daemon.workspace_tool.dispatch import (
     acquire_dispatch_slot,
     reset_quiesce_states_for_test,
 )

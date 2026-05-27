@@ -145,7 +145,7 @@ _publish_changes(manager, [
         source_path=str(_source(c2_stack, "a-2", "alpha-2\n")),
     )
 ])
-lease = manager.acquire_snapshot_lease("c2-blocker")
+lease = manager.acquire_lease_record("c2-blocker")
 
 c2_t0 = time.perf_counter()
 refused = False

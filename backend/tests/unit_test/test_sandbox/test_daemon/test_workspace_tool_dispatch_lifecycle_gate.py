@@ -6,8 +6,8 @@ from __future__ import annotations
 import pytest
 
 from sandbox.shared.models import Intent
-from sandbox.daemon import workspace_tool_dispatch as dispatch_mod
-from sandbox.daemon.workspace_tool_dispatch import (
+from sandbox.daemon.workspace_tool import dispatch as dispatch_mod
+from sandbox.daemon.workspace_tool.dispatch import (
     _ensure_quiesce_state,
     dispatch_workspace_tool_call,
     reset_quiesce_states_for_test,

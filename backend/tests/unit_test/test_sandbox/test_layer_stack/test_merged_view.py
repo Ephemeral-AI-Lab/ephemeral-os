@@ -10,11 +10,11 @@ import pytest
 from sandbox.layer_stack import (
     DeleteLayerChange,
     LayerStack,
-    LayerStackStorageError,
     OpaqueDirLayerChange,
     SymlinkLayerChange,
     WriteLayerChange,
 )
+from sandbox.layer_stack.view import LayerStackStorageError
 
 
 def _source(tmp_path: Path, name: str, content: bytes) -> str:
@@ -34,7 +34,7 @@ def test_read_uses_leased_manifest_not_advanced_active_manifest(tmp_path: Path) 
             )
         ]
     )
-    lease = manager.acquire_snapshot_lease("request-a")
+    lease = manager.acquire_lease_record("request-a")
 
     manager.publish_changes(
         [

@@ -475,7 +475,7 @@ def _assert_no_cache_shell_timings(
     assert required <= timings.keys()
     timing_groups = {
         "snapshot": {
-            "layer_stack.prepare_workspace_snapshot.total_s",
+            "layer_stack.acquire_snapshot.total_s",
             "command_exec.prepare_snapshot_s",
             "workspace.mount_s",
         },

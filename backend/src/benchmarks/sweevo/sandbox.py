@@ -814,7 +814,7 @@ async def apply_layerstack_to_repo(
     lease_id = ""
     snapshot = await call_daemon_api(
         sandbox_id,
-        "api.prepare_workspace_snapshot",
+        "api.acquire_snapshot",
         {"request_id": request_id},
         timeout=240,
     )

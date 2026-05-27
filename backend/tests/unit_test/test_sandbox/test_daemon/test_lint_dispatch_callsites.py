@@ -60,7 +60,7 @@ def test_lint_dispatch_callsites_extra_caller_fails(tmp_path: Path):
     other = src / "other"
     other.mkdir(parents=True)
     (other / "rogue.py").write_text(
-        "from sandbox.daemon.workspace_tool_dispatch import dispatch_workspace_tool_call\n"
+        "from sandbox.daemon.workspace_tool.dispatch import dispatch_workspace_tool_call\n"
         "def caller():\n"
         "    return dispatch_workspace_tool_call({}, verb='x', intent=None)\n",
         encoding="utf-8",

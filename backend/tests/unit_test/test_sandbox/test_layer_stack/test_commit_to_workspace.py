@@ -55,7 +55,7 @@ def test_commit_to_workspace_rejects_active_snapshot_leases(tmp_path: Path) -> N
     stack = tmp_path / "stack"
     build_workspace_base(workspace_root=workspace, layer_stack_root=stack)
     manager = LayerStack(stack)
-    lease = manager.acquire_snapshot_lease("test")
+    lease = manager.acquire_lease_record("test")
 
     with pytest.raises(RuntimeError, match="active leases"):
         manager.commit_to_workspace(workspace_root=workspace)

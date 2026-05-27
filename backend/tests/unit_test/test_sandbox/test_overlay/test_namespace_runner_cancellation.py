@@ -96,7 +96,7 @@ async def test_namespace_runner_cancel_kills_child_and_discards_upperdir(
         layer_paths = ((tmp_path / "lower").as_posix(),)
 
     class _LayerStack:
-        def prepare_workspace_snapshot(self, *, request_id: str) -> _Snapshot:
+        def acquire_snapshot(self, *, request_id: str) -> _Snapshot:
             assert request_id.startswith("overlay:agent-a:")
             return _Snapshot()
 

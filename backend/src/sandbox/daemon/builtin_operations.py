@@ -6,10 +6,10 @@ Module layout:
 * Tool operation routes — ``read_file``, ``write_file``, ``edit_file``,
   ``glob``, ``grep``, ``shell``. ``WORKSPACE_TOOL_OPS`` threads ``args`` and
   the static verb/intent pair through
-  :func:`sandbox.daemon.workspace_tool_dispatch.dispatch_workspace_tool_call`.
+  :func:`sandbox.daemon.workspace_tool.dispatch.dispatch_workspace_tool_call`.
 * Layer-stack diagnostic surface — ``layer_metrics``, ``runtime_ready``.
 * Layer-stack control surface — ``build_workspace_base``, ``ensure_workspace_base``,
-  ``workspace_binding``, ``prepare_workspace_snapshot``, ``release_lease``,
+  ``workspace_binding``, ``acquire_snapshot``, ``release_lease``,
   ``fence_stale_staging``.
 """
 
@@ -27,11 +27,11 @@ from sandbox.shared.clock import monotonic_now
 from sandbox.shared.models import Intent
 from sandbox.daemon import layer_stack_runtime, occ_runtime_services
 from sandbox.daemon.occ_runtime_services import OccRuntimeServices
-from sandbox.daemon.workspace_tool_payloads import (
+from sandbox.daemon.workspace_tool.payloads import (
     require_layer_stack_root,
     require_nonempty_string_arg,
 )
-from sandbox.daemon.workspace_tool_dispatch import dispatch_workspace_tool_call
+from sandbox.daemon.workspace_tool.dispatch import dispatch_workspace_tool_call
 from sandbox.daemon.rpc.in_flight import get_in_flight_registry
 from sandbox.layer_stack.manifest import (
     manifest_path,
@@ -258,7 +258,7 @@ def _run_probe(
 
 # ---------------------------------------------------------------------------
 # Layer-stack control surface (api.{ensure,build}_workspace_base,
-# api.workspace_binding, api.prepare_workspace_snapshot, api.release_lease,
+# api.workspace_binding, api.acquire_snapshot, api.release_lease,
 # api.layer_stack.fence_stale_staging)
 # ---------------------------------------------------------------------------
 
@@ -321,9 +321,9 @@ async def workspace_binding(args: dict[str, object]) -> dict[str, object]:
     }
 
 
-async def prepare_workspace_snapshot(args: dict[str, object]) -> dict[str, object]:
+async def acquire_snapshot(args: dict[str, object]) -> dict[str, object]:
     total_start = monotonic_now()
-    result = layer_stack_runtime.prepare_workspace_snapshot(
+    result = layer_stack_runtime.acquire_snapshot(
         require_layer_stack_root(args),
         owner_request_id=require_nonempty_string_arg(args, "request_id"),
     )
@@ -333,7 +333,7 @@ async def prepare_workspace_snapshot(args: dict[str, object]) -> dict[str, objec
         timings = {}
     payload["timings"] = {
         **timings,
-        "api.prepare_workspace_snapshot.total_s": monotonic_now() - total_start,
+        "api.acquire_snapshot.total_s": monotonic_now() - total_start,
     }
     return {
         "success": True,
@@ -378,7 +378,7 @@ __all__ = [
     "heartbeat",
     "inflight_count",
     "layer_metrics",
-    "prepare_workspace_snapshot",
+    "acquire_snapshot",
     "release_lease",
     "runtime_ready",
     "workspace_binding",

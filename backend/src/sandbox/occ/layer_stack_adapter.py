@@ -54,12 +54,12 @@ class LayerStackPortAdapter:
     def drop_commit_staging(self, staging_id: str) -> None:
         self.manager.drop_commit_staging(staging_id)
 
-    def prepare_workspace_snapshot(
+    def acquire_snapshot(
         self,
         *,
         request_id: str,
     ) -> LayerStackSnapshotLease:
-        return self.manager.prepare_workspace_snapshot(
+        return self.manager.acquire_snapshot(
             request_id,
         )
 

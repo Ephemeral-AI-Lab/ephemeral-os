@@ -38,7 +38,7 @@ class _LayerStack:
         self._order = order
         (tmp_path / "lower").mkdir(exist_ok=True)
 
-    def prepare_workspace_snapshot(self, *, request_id: str) -> _Snapshot:
+    def acquire_snapshot(self, *, request_id: str) -> _Snapshot:
         assert request_id.startswith("overlay:")
         self._order.append("acquire")
         return _Snapshot(self._tmp_path)
@@ -80,7 +80,7 @@ class _DeepLayerStack:
         for index in range(depth):
             (tmp_path / f"lower-{index}").mkdir(exist_ok=True)
 
-    def prepare_workspace_snapshot(self, *, request_id: str) -> _DeepSnapshot:
+    def acquire_snapshot(self, *, request_id: str) -> _DeepSnapshot:
         assert request_id.startswith("overlay:")
         self._order.append("acquire")
         return _DeepSnapshot(self._tmp_path, self.depth)

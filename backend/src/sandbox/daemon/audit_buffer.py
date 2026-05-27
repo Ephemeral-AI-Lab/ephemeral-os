@@ -347,19 +347,18 @@ def reset_audit_buffer_for_tests(buffer: AuditBuffer | None = None) -> AuditBuff
 
 def _wire_pressure_emitter(buffer: AuditBuffer) -> None:
     def _emit(snapshot_dict: dict[str, Any]) -> None:
-        buffer.append(
-            {
-                "type": "daemon.audit_buffer_pressure",
-                "payload": {
-                    "daemon": {
-                        "pressure": snapshot_dict.get("pressure"),
-                        "retained_events": snapshot_dict.get("retained_events"),
-                        "retained_bytes": snapshot_dict.get("retained_bytes"),
-                    },
-                },
-            },
-            lane="critical",
+        # Lazy import to break the audit_schema -> audit_buffer cycle.
+        from sandbox.daemon.audit_schema import DaemonSection, build_daemon_event
+
+        event = build_daemon_event(
+            "daemon.audit_buffer_pressure",
+            DaemonSection(
+                pressure=snapshot_dict["pressure"],
+                retained_events=snapshot_dict["retained_events"],
+                retained_bytes=snapshot_dict["retained_bytes"],
+            ),
         )
+        buffer.append(event, lane="critical")
 
     buffer.register_pressure_cross_callback(_emit)
 

@@ -24,7 +24,7 @@ manager = LayerStack(root / "stack")
 base = manager.publish_changes([
     WriteLayerChange(path="src/app.py", source_path=str(_source(root, "app-base", b"base\n"))),
 ])
-lease = manager.acquire_snapshot_lease("agent-a")
+lease = manager.acquire_lease_record("agent-a")
 updated = manager.publish_changes([
     WriteLayerChange(path="src/app.py", source_path=str(_source(root, "app-next", b"next\n"))),
     WriteLayerChange(path="build/out.txt", source_path=str(_source(root, "build-out", b"build\n"))),
@@ -86,7 +86,7 @@ n = 4
 barrier = threading.Barrier(n)
 
 def agent_flow(index):
-    lease = manager.acquire_snapshot_lease("agent-%02d" % index)
+    lease = manager.acquire_lease_record("agent-%02d" % index)
     assert manager.read_text("shared/base.txt", manifest=lease.manifest) == ("base\n", True)
     barrier.wait(timeout=5)
     t0 = time.perf_counter()

@@ -91,7 +91,7 @@ def sandbox_events_from_tool_completion(
         "api.write.lease_acquire_s",
         "api.edit.lease_acquire_s",
         "command_exec.prepare_snapshot_s",
-        "layer_stack.prepare_workspace_snapshot.total_s",
+        "layer_stack.acquire_snapshot.total_s",
     ):
         events.append(
             Event(
@@ -106,7 +106,7 @@ def sandbox_events_from_tool_completion(
                         "api.edit.lease_acquire_s",
                         "command_exec.prepare_snapshot_s",
                         "command_exec.release_snapshot_s",
-                        "layer_stack.prepare_workspace_snapshot.",
+                        "layer_stack.acquire_snapshot.",
                     ),
                 },
             )

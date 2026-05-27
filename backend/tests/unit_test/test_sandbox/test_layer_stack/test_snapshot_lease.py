@@ -28,8 +28,8 @@ def test_acquire_and_release_pin_exact_layer_refs(tmp_path: Path) -> None:
     )
     top_layer = manifest.layers[0]
 
-    lease_a = manager.acquire_snapshot_lease("request-a")
-    lease_b = manager.acquire_snapshot_lease("request-b")
+    lease_a = manager.acquire_lease_record("request-a")
+    lease_b = manager.acquire_lease_record("request-b")
 
     assert lease_a.manifest == manifest
     assert lease_b.manifest == manifest
@@ -54,7 +54,7 @@ def test_releasing_old_snapshot_does_not_unpin_new_active_layer(tmp_path: Path) 
             )
         ]
     )
-    old_lease = manager.acquire_snapshot_lease("old-request")
+    old_lease = manager.acquire_lease_record("old-request")
     new_manifest = manager.publish_changes(
         [
             WriteLayerChange(
@@ -63,7 +63,7 @@ def test_releasing_old_snapshot_does_not_unpin_new_active_layer(tmp_path: Path) 
             )
         ]
     )
-    new_lease = manager.acquire_snapshot_lease("new-request")
+    new_lease = manager.acquire_lease_record("new-request")
 
     assert set(manager.leased_layers()) == set(new_manifest.layers)
 
@@ -85,7 +85,7 @@ def test_release_lease_keeps_active_layer_storage(tmp_path: Path) -> None:
         ]
     )
     active_layer = manifest.layers[0]
-    lease = manager.acquire_snapshot_lease("request-a")
+    lease = manager.acquire_lease_record("request-a")
 
     assert manager.release_lease(lease.lease_id) is True
 
@@ -107,7 +107,7 @@ def test_release_lease_removes_unreferenced_layers_outside_manager_lock(
             )
         ]
     )
-    lease = manager.acquire_snapshot_lease("old")
+    lease = manager.acquire_lease_record("old")
     manager.publish_changes(
         [
             WriteLayerChange(
@@ -130,7 +130,7 @@ def test_release_lease_removes_unreferenced_layers_outside_manager_lock(
     assert observed_unlocked is True
 
 
-def test_prepare_workspace_snapshot_returns_shared_layer_paths_per_lease(
+def test_acquire_snapshot_returns_shared_layer_paths_per_lease(
     tmp_path: Path,
 ) -> None:
     manager = LayerStack(tmp_path / "stack")
@@ -143,8 +143,8 @@ def test_prepare_workspace_snapshot_returns_shared_layer_paths_per_lease(
         ]
     )
 
-    first = manager.prepare_workspace_snapshot("request-a")
-    second = manager.prepare_workspace_snapshot("request-b")
+    first = manager.acquire_snapshot("request-a")
+    second = manager.acquire_snapshot("request-b")
 
     assert first.manifest_version == second.manifest_version
     assert first.root_hash == second.root_hash
@@ -162,7 +162,7 @@ def test_prepare_workspace_snapshot_returns_shared_layer_paths_per_lease(
     assert manager.release_lease(second.lease_id) is True
 
 
-def test_prepare_workspace_snapshot_does_not_materialize_projection(
+def test_acquire_snapshot_does_not_materialize_projection(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -176,11 +176,11 @@ def test_prepare_workspace_snapshot_does_not_materialize_projection(
         ]
     )
     def fail_if_projected(*_args: object, **_kwargs: object) -> None:
-        pytest.fail("prepare_workspace_snapshot must expose layer_paths directly")
+        pytest.fail("acquire_snapshot must expose layer_paths directly")
 
     monkeypatch.setattr(manager._view, "project", fail_if_projected)
 
-    snapshot = manager.prepare_workspace_snapshot("request-direct")
+    snapshot = manager.acquire_snapshot("request-direct")
 
     assert snapshot.layer_paths
     assert manager.active_lease_count() == 1

@@ -51,7 +51,7 @@ _REQUIRED_LATENCY_KEYS = (
     "command_exec.mount_workspace_s",
     "command_exec.run_command_s",
     "command_exec.capture_upperdir_s",
-    "layer_stack.prepare_workspace_snapshot.total_s",
+    "layer_stack.acquire_snapshot.total_s",
     "occ.apply.commit_queue_wait_s",
     "occ.apply.commit_resume_wait_s",
     "occ.apply.total_s",

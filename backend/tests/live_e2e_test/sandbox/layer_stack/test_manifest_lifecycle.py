@@ -37,7 +37,7 @@ manager = LayerStack(root / "stack")
 first = manager.publish_changes([
     WriteLayerChange(path="pkg/value.txt", source_path=str(_source(root, "value-1", b"one"))),
 ])
-lease = manager.acquire_snapshot_lease("request-a")
+lease = manager.acquire_lease_record("request-a")
 second = manager.publish_changes([
     WriteLayerChange(path="pkg/value.txt", source_path=str(_source(root, "value-2", b"two"))),
 ])

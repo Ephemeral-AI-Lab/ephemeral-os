@@ -47,7 +47,7 @@ _TIMING_KEYS = (
     "command_exec.run_command_s",
     "command_exec.capture_upperdir_s",
     "command_exec.occ_apply_s",
-    "layer_stack.prepare_workspace_snapshot.total_s",
+    "layer_stack.acquire_snapshot.total_s",
     "layer_stack.transaction.lock_wait_s",
     "occ.apply.commit_queue_wait_s",
     "occ.apply.total_s",

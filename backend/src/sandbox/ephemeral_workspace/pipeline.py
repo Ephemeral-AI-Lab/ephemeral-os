@@ -402,7 +402,7 @@ class EphemeralPipeline(OperationOverlayMixin, WorkspacePublishMixin):
     def _lease_overlay_snapshot(self, invocation_id: str) -> _PreparedOverlaySnapshot:
         if self._layer_stack is None:
             raise RuntimeError("snapshot requires layer_stack")
-        snapshot = self._layer_stack.prepare_workspace_snapshot(
+        snapshot = self._layer_stack.acquire_snapshot(
             request_id=invocation_id,
         )
         raw_paths = getattr(snapshot, "layer_paths", None)

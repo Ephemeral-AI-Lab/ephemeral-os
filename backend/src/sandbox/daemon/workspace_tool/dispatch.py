@@ -21,7 +21,7 @@ from sandbox.shared.clock import monotonic_now
 from sandbox.shared.models import Intent, ToolCallRequest, ToolCallResult
 from sandbox.shared.ordered_lock import OrderedLock
 from sandbox.daemon.occ_runtime_services import get_occ_runtime_services
-from sandbox.daemon.workspace_tool_payloads import (
+from sandbox.daemon.workspace_tool.payloads import (
     _agent_id_from_args,
     project_changeset_result,
     project_conflict_result,

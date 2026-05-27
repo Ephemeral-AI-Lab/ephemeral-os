@@ -110,7 +110,7 @@ def test_auto_squash_preserves_active_lease_view(tmp_path) -> None:
     assert isinstance(seed, ChangesetResult)
     assert seed.published_manifest_version is not None
 
-    lease = stack.acquire_snapshot_lease("held-before-auto-squash")
+    lease = stack.acquire_lease_record("held-before-auto-squash")
     try:
         for index in range(6):
             result = asyncio.run(
@@ -145,7 +145,7 @@ def test_auto_squash_collapses_active_manifest_even_with_active_lease(
     stack = LayerStack(tmp_path / "stack")
     for index in range(4):
         _publish_direct(stack, tmp_path, index)
-    lease = stack.acquire_snapshot_lease("held-reader")
+    lease = stack.acquire_lease_record("held-reader")
     try:
         _publish_direct(stack, tmp_path, 4)
         _publish_direct(stack, tmp_path, 5)

@@ -47,7 +47,7 @@ def _stack_with_file(tmp_path, rel: str, content: bytes) -> LayerStack:
 
 def test_tracked_write_without_base_hash_uses_leased_snapshot_hash(tmp_path) -> None:
     stack = _stack_with_file(tmp_path, "src/app.py", b"old\n")
-    snapshot = stack.acquire_snapshot_lease("req-1").manifest
+    snapshot = stack.acquire_lease_record("req-1").manifest
     # Advance active manifest after the lease; Phase 03 must still use M0.
     source = tmp_path / "new-payload"
     source.write_bytes(b"active\n")

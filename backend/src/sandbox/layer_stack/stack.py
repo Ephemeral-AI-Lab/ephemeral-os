@@ -97,14 +97,14 @@ class LayerStack:
     def read_active_manifest(self) -> Manifest:
         return read_manifest(self._manifest_file)
 
-    def acquire_snapshot_lease(self, owner_request_id: str) -> LayerStackLeaseRecord:
+    def acquire_lease_record(self, owner_request_id: str) -> LayerStackLeaseRecord:
         with self._lock:
             return self._leases.acquire(
                 self.read_active_manifest(),
                 owner_request_id,
             )
 
-    def prepare_workspace_snapshot(
+    def acquire_snapshot(
         self,
         owner_request_id: str,
     ) -> LayerStackSnapshotLease:
@@ -123,7 +123,7 @@ class LayerStack:
                 manifest=manifest,
                 layer_paths=layer_paths,
                 timings={
-                    "layer_stack.prepare_workspace_snapshot.total_s": (
+                    "layer_stack.acquire_snapshot.total_s": (
                         monotonic_now() - total_start
                     ),
                 },

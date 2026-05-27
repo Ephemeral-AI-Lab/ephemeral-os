@@ -125,7 +125,7 @@ def test_leased_snapshot_remains_readable_until_release_after_squash(
     _publish(manager, tmp_path, "a.txt", b"a1")
     _publish(manager, tmp_path, "b.txt", b"b1")
     _publish(manager, tmp_path, "a.txt", b"a2")
-    lease = manager.acquire_snapshot_lease("request-a")
+    lease = manager.acquire_lease_record("request-a")
     leased_layers = lease.manifest.layers
 
     _publish(manager, tmp_path, "c.txt", b"c1")
