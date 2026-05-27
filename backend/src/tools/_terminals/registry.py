@@ -155,15 +155,17 @@ TERMINAL_DESCRIPTORS: dict[str, TerminalToolDescriptor] = {
     "submit_verification_failure": TerminalToolDescriptor(
         name="submit_verification_failure",
         selection_guidance=(
-            "Call when unresolved issues remain after the resolver-edit "
-            "cycle. The attempt's failure handling reads the outcome."
+            "Call when issues remain that the verifier could not safely fix "
+            "inline (touches intent, control flow, tests, or multiple files)."
         ),
         advisor_review_focus=(
             "The verifier proposes the deliverable FAILS verification. "
             "Confirm the failing checks are real and accurately described. "
             "Flag failures that are not the verifier's responsibility (e.g. "
-            "issues that belong to a different task) so the failure routes "
-            "to the right resolver."
+            "issues that belong to a different task) so the failure surfaces "
+            "in the right scope. Also flag verifier inline edits that exceed "
+            "the typo/single-line scope (a verifier doing implementation work "
+            "should have failed the task instead)."
         ),
     ),
 }

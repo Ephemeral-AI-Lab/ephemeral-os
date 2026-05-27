@@ -30,8 +30,8 @@ def test_harness_agent_markdown_declares_notification_triggers() -> None:
     # does not carry soft reminder triggers for recursive partial plans.
     assert planner.notification_triggers == []
     assert executor.notification_triggers == ["request_goal_after_edit"]
-    assert verifier.notification_triggers == ["resolver_limit"]
-    assert evaluator.notification_triggers == ["resolver_limit"]
+    assert verifier.notification_triggers == []
+    assert evaluator.notification_triggers == []
 
 
 def test_recursive_agent_loader_finds_harness_profiles() -> None:
