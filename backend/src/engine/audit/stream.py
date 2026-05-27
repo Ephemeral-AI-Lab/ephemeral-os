@@ -92,7 +92,7 @@ def _node_from_stream(
         agent_run_id=_first_text(stream_event.run_id, _metadata_get(metadata, "agent_run_id")),
         sandbox_id=_text_or_none(_metadata_get(metadata, "sandbox_id")),
         tool_name=_text_or_none(stream_event.tool_name),
-        tool_use_id=_first_text(stream_event.tool_use_id, _metadata_get(metadata, "tool_id")),
+        tool_use_id=_first_text(stream_event.tool_use_id, _metadata_get(metadata, "tool_use_id")),
     )
 
 

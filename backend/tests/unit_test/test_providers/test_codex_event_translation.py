@@ -236,7 +236,7 @@ async def test_translates_function_call_lifecycle_to_tool_use(
     events = [ev async for ev in client.stream_message(request)]
     tools = [e for e in events if isinstance(e, ToolUseDeltaEvent)]
     assert len(tools) == 1
-    assert tools[0].id == "call_1"
+    assert tools[0].tool_use_id == "call_1"
     assert tools[0].name == "read_file"
     assert tools[0].input == {"path": "foo.txt"}
 

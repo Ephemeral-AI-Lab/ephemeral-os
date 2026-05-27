@@ -97,7 +97,7 @@ class ExecutionMetadata:
             "background_task_id",
             "sandbox_invocation_id",
             "on_progress_line",
-            "tool_id",
+            "tool_use_id",
             "system_notification_service",
         }
     )
