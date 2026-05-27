@@ -28,7 +28,7 @@ async def test_ephemeral_file_verbs_use_direct_occ_path(
     async def fail_overlay(*_args: Any, **_kwargs: Any) -> None:
         raise AssertionError("file verbs should not mount an ephemeral overlay")
 
-    monkeypatch.setattr(workspace_tool_dispatch, "get_sandbox_overlay", fail_overlay)
+    monkeypatch.setattr(workspace_tool_dispatch, "get_ephemeral_pipeline", fail_overlay)
 
     common: dict[str, object] = {
         "agent_id": "agent",
@@ -139,7 +139,7 @@ async def test_ephemeral_file_verbs_fall_back_for_outside_workspace_paths(
     async def fake_overlay(*_args: Any, **_kwargs: Any) -> _Pipeline:
         return _Pipeline()
 
-    monkeypatch.setattr(workspace_tool_dispatch, "get_sandbox_overlay", fake_overlay)
+    monkeypatch.setattr(workspace_tool_dispatch, "get_ephemeral_pipeline", fake_overlay)
 
     result = await workspace_tool_dispatch.dispatch_workspace_tool_call(
         {

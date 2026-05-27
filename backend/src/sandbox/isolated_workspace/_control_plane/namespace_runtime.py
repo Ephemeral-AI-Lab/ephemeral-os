@@ -14,7 +14,7 @@ import time
 from pathlib import Path
 from typing import Any
 
-from sandbox.isolated_workspace._control_plane.pipeline_state import (
+from sandbox.isolated_workspace._control_plane.types import (
     CGROUP_ROOT,
     HANDLE_PREFIX,
     IsolatedWorkspaceError,

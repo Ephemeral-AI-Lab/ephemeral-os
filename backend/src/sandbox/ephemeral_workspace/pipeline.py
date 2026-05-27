@@ -17,12 +17,6 @@ from sandbox.shared.clock import monotonic_now
 from sandbox.shared.layer_stack_port import LayerStackPort
 from sandbox.shared.lease_guard import LeaseGuard
 from sandbox.shared.models import Intent, ToolCallRequest, ToolCallResult
-from sandbox.ephemeral_workspace.overlay_registry import (
-    clear_overlay_registry_for_tests,
-    get_sandbox_overlay,
-    stop_all_overlays,
-    stop_sandbox_overlay,
-)
 from sandbox.ephemeral_workspace.operation_overlay import OperationOverlayMixin
 from sandbox.ephemeral_workspace.workspace_publish import WorkspacePublishMixin
 from sandbox.ephemeral_workspace.events import (
@@ -455,13 +449,7 @@ class EphemeralPipeline(OperationOverlayMixin, WorkspacePublishMixin):
                 await self.ensure_current(reason="foreign_watch")
 
 
-__all__ = [
-    "EphemeralPipeline",
-    "clear_overlay_registry_for_tests",
-    "get_sandbox_overlay",
-    "stop_all_overlays",
-    "stop_sandbox_overlay",
-]
+__all__ = ["EphemeralPipeline"]
 
 
 def _shell_mount_squash_max_depth() -> int:

@@ -24,7 +24,7 @@ from sandbox.layer_stack.workspace_binding import (
 )
 from sandbox.ephemeral_workspace.plugin import runtime_api as runtime_api_mod
 from sandbox.ephemeral_workspace.plugin import op_registry as registry_mod
-from sandbox.ephemeral_workspace.pipeline import clear_overlay_registry_for_tests
+from sandbox.ephemeral_workspace.pipeline_registry import clear_pipeline_registry_for_tests
 from sandbox.ephemeral_workspace.plugin.op_registry import register_plugin_op
 
 
@@ -32,7 +32,7 @@ from sandbox.ephemeral_workspace.plugin.op_registry import register_plugin_op
 def _isolate_plugin_state() -> Iterator[None]:
     runtime_api_mod._LOADED_PLUGIN_RUNTIMES.clear()
     runtime_api_mod._WORKSPACE_PROJECTIONS.clear()
-    clear_overlay_registry_for_tests()
+    clear_pipeline_registry_for_tests()
     registry_mod._PENDING.clear()
     pre_existing = [
         name for name in sys.modules if name.startswith("plugins.catalog.")
@@ -40,7 +40,7 @@ def _isolate_plugin_state() -> Iterator[None]:
     yield
     runtime_api_mod._LOADED_PLUGIN_RUNTIMES.clear()
     runtime_api_mod._WORKSPACE_PROJECTIONS.clear()
-    clear_overlay_registry_for_tests()
+    clear_pipeline_registry_for_tests()
     registry_mod._PENDING.clear()
     for name in [
         n for n in sys.modules if n.startswith("plugins.catalog.")
@@ -138,10 +138,10 @@ def test_plugin_ensure_runs_optional_runtime_warm_hook(
     layer_stack_root = tmp_path / "layer-stack"
     _write_binding(layer_stack_root)
 
-    async def fake_get_sandbox_overlay(*_args: object, **_kwargs: object) -> object:
+    async def fake_get_ephemeral_pipeline(*_args: object, **_kwargs: object) -> object:
         return types.SimpleNamespace(workspace_root="/testbed")
 
-    monkeypatch.setattr(runtime_api_mod, "get_sandbox_overlay", fake_get_sandbox_overlay)
+    monkeypatch.setattr(runtime_api_mod, "get_ephemeral_pipeline", fake_get_ephemeral_pipeline)
 
     response = asyncio.run(
         runtime_api_mod.plugin_ensure(
@@ -215,7 +215,7 @@ def test_plugin_context_does_not_start_persistent_overlay_mount(
     _write_binding(layer_stack_root)
     calls: list[dict[str, object]] = []
 
-    async def fake_get_sandbox_overlay(
+    async def fake_get_ephemeral_pipeline(
         layer_stack_root_arg: str,
         *,
         workspace_root: str | None = None,
@@ -232,8 +232,8 @@ def test_plugin_context_does_not_start_persistent_overlay_mount(
 
     monkeypatch.setattr(
         runtime_api_mod,
-        "get_sandbox_overlay",
-        fake_get_sandbox_overlay,
+        "get_ephemeral_pipeline",
+        fake_get_ephemeral_pipeline,
     )
 
     overlay = asyncio.run(

@@ -55,8 +55,8 @@ def stop_sandbox(sandbox_id: str) -> dict[str, Any]:
 
 def delete_sandbox(sandbox_id: str) -> None:
     get_adapter(sandbox_id).delete(sandbox_id)
-    plugin_host_dispatch.forget(sandbox_id)
-    plugin_install.forget(sandbox_id)
+    plugin_host_dispatch.forget_plugin_dispatch_state(sandbox_id)
+    plugin_install.forget_plugin_install_state(sandbox_id)
     dispose_adapter(sandbox_id)
 
 

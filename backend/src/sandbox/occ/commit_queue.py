@@ -21,7 +21,7 @@ from sandbox.occ.commit_transaction import CommitTransaction
 from sandbox.shared.timing_keys import TimingKey
 from sandbox.shared.clock import monotonic_now
 
-_RESULT_READY_AT = TimingKey.SERIAL_RESULT_READY_AT
+_RESULT_READY_AT = TimingKey.COMMIT_QUEUE_RESULT_READY_AT
 
 
 MAX_OCC_CAS_RETRIES: int = 3
@@ -29,7 +29,7 @@ MAX_OCC_CAS_RETRIES: int = 3
 
 If the layer-stack publisher returns a manifest CAS mismatch
 (:class:`ManifestConflictError`) during ``revalidate_and_publish``, the
-serial merger re-runs validation up to ``MAX_OCC_CAS_RETRIES`` times. On
+commit queue re-runs validation up to ``MAX_OCC_CAS_RETRIES`` times. On
 exhaustion, the call surfaces a conflict ``ChangesetResult`` (every path
 marked ``ABORTED_VERSION``) instead of looping indefinitely.
 
@@ -200,10 +200,10 @@ class CommitQueue:
                         timings={
                             **item.prepared.timings,
                             **result.timings,
-                            TimingKey.SERIAL_QUEUE_WAIT: commit_start - item.enqueued_at,
-                            TimingKey.SERIAL_BATCH_SIZE: float(len(batch)),
-                            TimingKey.SERIAL_COMMIT: commit_elapsed,
-                            TimingKey.SERIAL_CAS_ATTEMPTS: float(attempts + 1),
+                            TimingKey.COMMIT_QUEUE_WAIT: commit_start - item.enqueued_at,
+                            TimingKey.COMMIT_QUEUE_BATCH_SIZE: float(len(batch)),
+                            TimingKey.COMMIT_QUEUE_COMMIT: commit_elapsed,
+                            TimingKey.COMMIT_QUEUE_CAS_ATTEMPTS: float(attempts + 1),
                             _RESULT_READY_AT: ready_at,
                         },
                         published_manifest_version=result.published_manifest_version,
@@ -218,20 +218,25 @@ class CommitQueue:
 
 
 def _disjoint_batches(items: list[_WorkItem]) -> list[list[_WorkItem]]:
+    # Precompute per-item path sets and overlay-capture flags once so the
+    # outer while loop never rebuilds them when an item gets deferred.
+    pending: list[tuple[_WorkItem, set[str], bool]] = [
+        (item, _path_set(item.prepared), _contains_overlay_capture(item.prepared))
+        for item in items
+    ]
     batches: list[list[_WorkItem]] = []
-    pending = list(items)
     while pending:
         used_paths: set[str] = set()
         batch: list[_WorkItem] = []
-        rest: list[_WorkItem] = []
-        for item in pending:
-            paths = _path_set(item.prepared)
+        rest: list[tuple[_WorkItem, set[str], bool]] = []
+        for entry in pending:
+            item, paths, has_overlay_capture = entry
             if (
                 item.prepared.atomic
-                or _contains_overlay_capture(item.prepared)
+                or has_overlay_capture
                 or used_paths.intersection(paths)
             ):
-                rest.append(item)
+                rest.append(entry)
                 continue
             batch.append(item)
             used_paths.update(paths)
@@ -239,7 +244,7 @@ def _disjoint_batches(items: list[_WorkItem]) -> list[list[_WorkItem]]:
             batches.append(batch)
             pending = rest
             continue
-        batches.append([pending.pop(0)])
+        batches.append([pending.pop(0)[0]])
     return batches
 
 
@@ -290,7 +295,7 @@ def _cas_exhaustion_result(
         )
     return ChangesetResult(
         files=tuple(files),
-        timings={TimingKey.SERIAL_CAS_EXHAUSTED: 1.0},
+        timings={TimingKey.COMMIT_QUEUE_CAS_EXHAUSTED: 1.0},
         published_manifest_version=None,
     )
 

@@ -36,7 +36,7 @@ __all__ = [
     "PLUGIN_BUNDLE_REMOTE_ROOT",
     "PluginInstallError",
     "ensure_installed",
-    "forget",
+    "forget_plugin_install_state",
     "plugin_install_dir",
     "plugin_marker_path",
 ]
@@ -170,8 +170,8 @@ async def ensure_installed(
         return digest
 
 
-def forget(sandbox_id: str) -> None:
-    """Drop process-local install locks for one sandbox id."""
+def forget_plugin_install_state(sandbox_id: str) -> None:
+    """Drop process-local install locks + installed-digest cache for one sandbox id."""
     sandbox_id = str(sandbox_id or "").strip()
     for key in [key for key in _locks if key[0] == sandbox_id]:
         _locks.pop(key, None)

@@ -257,9 +257,9 @@ async def serve(
                 if exc is not None and not isinstance(exc, asyncio.CancelledError):
                     raise exc
     finally:
-        from sandbox.ephemeral_workspace.pipeline import stop_all_overlays
+        from sandbox.ephemeral_workspace.pipeline_registry import stop_all_ephemeral_pipelines
 
-        await stop_all_overlays()
+        await stop_all_ephemeral_pipelines()
         _remove_pid(pid_path)
         with contextlib.suppress(FileNotFoundError):
             socket_path.unlink()

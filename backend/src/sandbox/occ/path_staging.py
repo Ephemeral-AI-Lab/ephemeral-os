@@ -260,10 +260,15 @@ class _PathGroupStager:
 
         if isinstance(change, EditChange):
             if state.final_kind != "write":
+                message = (
+                    "file does not exist"
+                    if state.final_kind == "delete"
+                    else f"cannot edit non-regular path ({state.final_kind})"
+                )
                 return FileResult(
                     path=path,
                     status=self._profile.missing_file_status,
-                    message="file does not exist",
+                    message=message,
                 )
             edit_result = _apply_edit_content(path, state.materialize_content(), change)
             if isinstance(edit_result, FileResult):

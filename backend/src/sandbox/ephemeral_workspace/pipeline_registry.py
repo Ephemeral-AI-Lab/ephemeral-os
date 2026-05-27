@@ -1,4 +1,11 @@
-"""Process-local EphemeralPipeline registry and stop helpers."""
+"""Process-local ``EphemeralPipeline`` registry and stop helpers.
+
+Mirrors :mod:`sandbox.isolated_workspace._control_plane.pipeline_registry` on
+the ephemeral side: a daemon-process LRU keyed by
+``(layer_stack_root, workspace_root)`` that hands out one
+:class:`EphemeralPipeline` per binding, plus per-key locks so concurrent
+first callers share a single ``start()``.
+"""
 
 from __future__ import annotations
 
@@ -30,7 +37,7 @@ _PIPELINE_LOCKS: dict[str, asyncio.Lock] = {}
 _STALE_RUNTIME_OVERLAYS_REAPED = False
 
 
-async def get_sandbox_overlay(
+async def get_ephemeral_pipeline(
     layer_stack_root: str | Path,
     *,
     workspace_root: str | Path | None = None,
@@ -70,7 +77,7 @@ async def get_sandbox_overlay(
         return pipeline
 
 
-async def stop_all_overlays() -> None:
+async def stop_all_ephemeral_pipelines() -> None:
     pipelines = list(_PIPELINES.values())
     _PIPELINES.clear()
     _PIPELINE_LOCKS.clear()
@@ -78,7 +85,7 @@ async def stop_all_overlays() -> None:
         await pipeline.stop()
 
 
-async def stop_sandbox_overlay(
+async def stop_ephemeral_pipeline(
     layer_stack_root: str | Path,
     *,
     workspace_root: str | Path | None = None,
@@ -170,7 +177,7 @@ def _reap_stale_runtime_overlay_dirs_once() -> None:
             )
 
 
-def clear_overlay_registry_for_tests() -> None:
+def clear_pipeline_registry_for_tests() -> None:
     global _STALE_RUNTIME_OVERLAYS_REAPED
     _PIPELINES.clear()
     _PIPELINE_LOCKS.clear()
@@ -178,8 +185,8 @@ def clear_overlay_registry_for_tests() -> None:
 
 
 __all__ = [
-    "clear_overlay_registry_for_tests",
-    "get_sandbox_overlay",
-    "stop_all_overlays",
-    "stop_sandbox_overlay",
+    "clear_pipeline_registry_for_tests",
+    "get_ephemeral_pipeline",
+    "stop_all_ephemeral_pipelines",
+    "stop_ephemeral_pipeline",
 ]

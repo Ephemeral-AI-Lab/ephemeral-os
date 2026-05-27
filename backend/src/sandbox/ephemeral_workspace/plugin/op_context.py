@@ -2,9 +2,7 @@
 
 from __future__ import annotations
 
-import asyncio
 from collections.abc import Callable, Mapping
-from contextlib import AbstractAsyncContextManager
 from dataclasses import dataclass, field
 from typing import Any, Protocol
 
@@ -14,7 +12,6 @@ from sandbox.overlay.handle import OverlayHandle
 
 __all__ = [
     "PluginOpContext",
-    "EphemeralPipelineLike",
     "WorkspaceChangeEvent",
     "WorkspaceProjectionLike",
     "plugin_intent_from_envelope",
@@ -80,56 +77,21 @@ class WorkspaceProjectionLike(Protocol):
     def active_manifest_key(self) -> str: ...
 
 
-class EphemeralPipelineLike(Protocol):
-    @property
-    def workspace_root(self) -> str: ...
-
-    def active_manifest_key(self) -> str: ...
-
-    async def ensure_current(self, *, reason: str = "ensure_current") -> str: ...
-
-    def current_manifest(self) -> Any: ...
-
-    def acquire_operation_overlay(
-        self,
-        *,
-        invocation_id: str,
-        workspace_root: str | None = None,
-    ) -> OverlayHandle: ...
-
-    def subscribe_workspace_changes(
-        self, subscriber_id: str
-    ) -> asyncio.Queue[WorkspaceChangeEvent]: ...
-
-    def unsubscribe_workspace_changes(self, subscriber_id: str) -> None: ...
-
-    def workspace_operation(
-        self,
-        *,
-        reason: str = "operation",
-    ) -> AbstractAsyncContextManager[Any]: ...
-
-    async def publish_cycle(
-        self,
-        *,
-        request: Any,
-        upperdir: str,
-        snapshot: Any,
-        run_maintenance: bool = True,
-    ) -> object: ...
-
-
 @dataclass(frozen=True)
 class PluginOpContext:
     """Plugin handler context.
 
     READ_ONLY handlers must query a PluginService instead of doing direct
     filesystem I/O.
+
+    ``overlay`` is the daemon-side ``EphemeralPipeline`` (or a test double).
+    Typed as ``Any`` because handlers reach for attributes via ``getattr`` —
+    a static Protocol added no enforcement and drifted as the pipeline grew.
     """
 
     layer_stack_root: str
     caller: SandboxCaller
     projection: WorkspaceProjectionLike
-    overlay: EphemeralPipelineLike
+    overlay: Any
     intent: Intent = Intent.READ_ONLY
     metadata: dict[str, Any] = field(default_factory=dict)

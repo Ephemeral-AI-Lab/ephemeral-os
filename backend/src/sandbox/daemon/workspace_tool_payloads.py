@@ -14,6 +14,25 @@ from sandbox.daemon.changeset_projection import (
 from sandbox.shared.clock import monotonic_now
 
 
+def _agent_id_from_args(args: Mapping[str, object]) -> str:
+    """Extract the dispatching agent_id from a daemon RPC args mapping.
+
+    Prefers ``args["caller"]["agent_id"]`` then ``["agent_run_id"]`` when
+    the caller block is a mapping with a truthy value; otherwise falls
+    back to ``args["agent_id"]``. Returns ``str(raw)`` for the caller
+    branch (no strip, matching the historical dispatcher semantics) and
+    a stripped string for the args fallback. Callers that need a
+    ``"default"`` substitution should apply it at the call site.
+    """
+    caller = args.get("caller")
+    if isinstance(caller, Mapping):
+        raw = caller.get("agent_id") or caller.get("agent_run_id")
+        if raw:
+            return str(raw)
+    raw = args.get("agent_id")
+    return str(raw or "").strip()
+
+
 # -- argument validation ----------------------------------------------------
 
 

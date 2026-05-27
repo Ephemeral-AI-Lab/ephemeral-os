@@ -189,13 +189,13 @@ class OccService:
         extra_timings: dict[str, float] | None = None,
     ) -> ChangesetResult:
         result_timings = dict(result.timings)
-        ready_at = result_timings.pop(TimingKey.SERIAL_RESULT_READY_AT, None)
+        ready_at = result_timings.pop(TimingKey.COMMIT_QUEUE_RESULT_READY_AT, None)
         resume_wait = 0.0 if ready_at is None else max(0.0, monotonic_now() - ready_at)
         timings = {
             **result_timings,
             **(extra_timings or {}),
             TimingKey.APPLY_COMMIT_QUEUE_WAIT: result_timings.get(
-                TimingKey.SERIAL_QUEUE_WAIT,
+                TimingKey.COMMIT_QUEUE_WAIT,
                 0.0,
             ),
             TimingKey.APPLY_COMMIT_WORKER: result_timings.get(

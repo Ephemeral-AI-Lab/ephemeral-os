@@ -217,7 +217,7 @@ def test_hot_install_uses_process_cache_until_forget(tmp_path: Path) -> None:
     assert len(marker_checks) == 2
     assert len(fake.calls) == cold_call_count
 
-    install_mod.forget("sb-1")
+    install_mod.forget_plugin_install_state("sb-1")
     asyncio.run(ensure_installed("sb-1", manifest, exec_fn=fake))
 
     setup_runs = [

@@ -75,7 +75,7 @@ def test_bundle_layout_includes_required_paths(tmp_path: Path) -> None:
         "sandbox/daemon/scripts/thin_client.py",
         "sandbox/ephemeral_workspace/__init__.py",
         "sandbox/ephemeral_workspace/operation_overlay.py",
-        "sandbox/ephemeral_workspace/overlay_registry.py",
+        "sandbox/ephemeral_workspace/pipeline_registry.py",
         "sandbox/ephemeral_workspace/pipeline.py",
         "sandbox/ephemeral_workspace/workspace_publish.py",
         "sandbox/shared/command_exec_contract.py",

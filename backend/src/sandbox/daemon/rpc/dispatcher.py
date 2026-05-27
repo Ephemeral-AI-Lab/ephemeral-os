@@ -23,14 +23,16 @@ from sandbox.shared.clock import monotonic_now
 from sandbox.daemon.rpc.in_flight import get_in_flight_registry
 from sandbox.daemon.workspace_tool_dispatch import (
     LifecycleInProgressError,
+    _lifecycle_in_progress_envelope,
     acquire_dispatch_slot,
 )
+from sandbox.daemon.workspace_tool_payloads import _agent_id_from_args
+from sandbox.isolated_workspace import IsolatedWorkspaceError
 from sandbox.isolated_workspace._control_plane.pipeline_registry import get_active_pipeline
-from sandbox.isolated_workspace._control_plane.pipeline_state import IsolatedWorkspaceError
 
 logger = logging.getLogger("sandbox.daemon.rpc.dispatcher")
 
-_BOOT_T0 = monotonic_now()
+_DISPATCHER_BOOT_MONOTONIC = monotonic_now()
 
 Handler = Callable[[dict[str, Any]], Any]
 
@@ -62,7 +64,7 @@ async def dispatch_envelope_async(
 ) -> dict[str, Any]:
     """Dispatch an envelope from the daemon's running asyncio loop.
 
-    ``boot_t0`` overrides the module-level ``_BOOT_T0`` for the
+    ``boot_t0`` overrides the module-level ``_DISPATCHER_BOOT_MONOTONIC`` for the
     ``runtime.boot_to_dispatch_s`` metric. The daemon passes a per-call
     timestamp captured just before reading the request line, so the metric
     measures socket-receive + parse cost rather than the daemon's wall
@@ -80,13 +82,13 @@ async def dispatch_envelope_async(
         registry.register(
             invocation_id,
             task,
-            agent_id=_agent_id(args_raw),
+            agent_id=_agent_id_from_args(args_raw),
             op=op,
             background=bool(args_raw.get("background", False)),
         )
     try:
         is_plugin_op = _is_plugin_op(op)
-        agent_id = _agent_id(args_raw)
+        agent_id = _agent_id_from_args(args_raw)
         if is_plugin_op and agent_id:
             try:
                 async with acquire_dispatch_slot(agent_id):
@@ -100,7 +102,7 @@ async def dispatch_envelope_async(
                         boot_t0=boot_t0,
                     )
             except LifecycleInProgressError as exc:
-                return _lifecycle_in_progress_response(op, exc.agent_id)
+                return _lifecycle_in_progress_envelope(exc.agent_id, op=op)
         if is_plugin_op:
             # Plugin op without an agent_id — preserve the original gate
             # behavior (emit ``workspace_lifecycle.plugin_check_unbootstrapped``
@@ -193,16 +195,6 @@ def _validate_envelope(
     return None, op, args_raw, invocation_id
 
 
-def _agent_id(args: Mapping[str, Any]) -> str:
-    caller = args.get("caller")
-    if isinstance(caller, Mapping):
-        raw = caller.get("agent_id") or caller.get("agent_run_id")
-        if raw:
-            return str(raw)
-    raw = args.get("agent_id")
-    return str(raw or "").strip()
-
-
 def _attach_runtime_boot_timings(
     response: Any,
     *,
@@ -215,7 +207,7 @@ def _attach_runtime_boot_timings(
     if not isinstance(timings, dict):
         timings = {}
         response["timings"] = timings
-    origin = boot_t0 if boot_t0 is not None else _BOOT_T0
+    origin = boot_t0 if boot_t0 is not None else _DISPATCHER_BOOT_MONOTONIC
     timings["runtime.boot_to_dispatch_s"] = max(0.0, dispatch_entered_at - origin)
     timings["runtime.dispatch_s"] = max(0.0, monotonic_now() - dispatch_entered_at)
 
@@ -280,23 +272,6 @@ def _plugin_block_decision(op_name: str, agent_id: str) -> dict[str, Any] | None
             },
         }
     return None
-
-
-def _lifecycle_in_progress_response(op_name: str, agent_id: str) -> dict[str, Any]:
-    """Structured payload for Phase 4 §D2 lifecycle_in_progress."""
-    return {
-        "success": False,
-        "warnings": [],
-        "timings": {},
-        "error": {
-            "kind": "lifecycle_in_progress",
-            "message": (
-                "exit_isolated_workspace is draining; retry after exit "
-                "completes"
-            ),
-            "details": {"op": op_name, "agent_id": agent_id},
-        },
-    }
 
 
 def _emit_plugin_gate_audit(op_name: str, agent_id: str) -> None:

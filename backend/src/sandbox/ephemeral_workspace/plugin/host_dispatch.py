@@ -39,8 +39,7 @@ from tools.sandbox._lib.tool_context import (
 __all__ = [
     "call_plugin",
     "call_plugin_write",
-    "forget",
-    "manifest_for",
+    "forget_plugin_dispatch_state",
 ]
 
 
@@ -52,7 +51,7 @@ _PLUGIN_CALL_LOCKS: dict[tuple[str, str], asyncio.Lock] = {}
 _MAX_RESPONSE_BYTES = 8 * 1024 * 1024
 
 
-def manifest_for(plugin_name: str) -> PluginManifest:
+def _manifest_for(plugin_name: str) -> PluginManifest:
     """Look up a plugin manifest by name from the host catalog."""
     global _PLUGIN_MANIFESTS_BY_NAME
     if _PLUGIN_MANIFESTS_BY_NAME is None:
@@ -86,7 +85,7 @@ async def call_plugin(
         or DEFAULT_LAYER_STACK_ROOT
     )
     try:
-        manifest = manifest_for(plugin)
+        manifest = _manifest_for(plugin)
     except KeyError as exc:
         return _plugin_error_result("manifest", plugin, op, str(exc))
 
@@ -301,8 +300,8 @@ def reset_host_dispatch_cache_for_tests() -> None:
     _PLUGIN_CALL_LOCKS.clear()
 
 
-def forget(sandbox_id: str) -> None:
-    """Drop host-side plugin session state for one sandbox id."""
+def forget_plugin_dispatch_state(sandbox_id: str) -> None:
+    """Drop host-side runtime-digest cache + per-plugin async locks for one sandbox id."""
     sandbox_id = str(sandbox_id or "").strip()
     for key in [
         key for key in _RUNTIME_DIGEST_BY_SANDBOX_PLUGIN if key[0] == sandbox_id

@@ -7,7 +7,7 @@ from types import SimpleNamespace
 
 import pytest
 
-import sandbox.ephemeral_workspace.overlay_registry as overlay_registry
+import sandbox.ephemeral_workspace.pipeline_registry as pipeline_registry
 import sandbox.ephemeral_workspace.pipeline as overlay_mod
 import sandbox.overlay.writable_dirs as writable_dirs_mod
 from sandbox.ephemeral_workspace.pipeline import EphemeralPipeline
@@ -182,8 +182,8 @@ def test_manager_reaps_stale_runtime_overlay_dirs_once(
     stale_lsp.mkdir(parents=True)
     persistent_mount.mkdir(parents=True)
 
-    overlay_registry.clear_overlay_registry_for_tests()
-    overlay_registry._reap_stale_runtime_overlay_dirs_once()  # noqa: SLF001
+    pipeline_registry.clear_pipeline_registry_for_tests()
+    pipeline_registry._reap_stale_runtime_overlay_dirs_once()  # noqa: SLF001
 
     assert overlay_root.exists()
     assert list(overlay_root.iterdir()) == []
@@ -197,12 +197,12 @@ def test_manager_does_not_reap_runtime_overlay_dirs_after_first_pass(
     initial_stale = overlay_root / "overlay-executor-initial"
     initial_stale.mkdir(parents=True)
 
-    overlay_registry.clear_overlay_registry_for_tests()
-    overlay_registry._reap_stale_runtime_overlay_dirs_once()  # noqa: SLF001
+    pipeline_registry.clear_pipeline_registry_for_tests()
+    pipeline_registry._reap_stale_runtime_overlay_dirs_once()  # noqa: SLF001
 
     current_runtime_overlay = overlay_root / "overlay-executor-live"
     current_runtime_overlay.mkdir(parents=True)
-    overlay_registry._reap_stale_runtime_overlay_dirs_once()  # noqa: SLF001
+    pipeline_registry._reap_stale_runtime_overlay_dirs_once()  # noqa: SLF001
 
     assert current_runtime_overlay.exists()
 
@@ -297,12 +297,12 @@ async def test_manager_stop_unmounts_requested_and_bound_workspace_roots(
         async def stop(self) -> None:
             stopped.append("cached")
 
-    overlay_mod.clear_overlay_registry_for_tests()
+    pipeline_registry.clear_pipeline_registry_for_tests()
     key = f"{stack_root.resolve(strict=False).as_posix()}\0{bound_workspace.as_posix()}"
-    overlay_registry._PIPELINES[key] = _CachedOverlay()  # type: ignore[assignment]  # noqa: SLF001
-    monkeypatch.setattr(overlay_registry, "umount", lambda path: unmounts.append(path))
+    pipeline_registry._PIPELINES[key] = _CachedOverlay()  # type: ignore[assignment]  # noqa: SLF001
+    monkeypatch.setattr(pipeline_registry, "umount", lambda path: unmounts.append(path))
 
-    result = await overlay_mod.stop_sandbox_overlay(
+    result = await pipeline_registry.stop_ephemeral_pipeline(
         stack_root,
         workspace_root=requested_workspace,
     )
@@ -310,7 +310,7 @@ async def test_manager_stop_unmounts_requested_and_bound_workspace_roots(
     assert result["success"] is True
     assert stopped == ["cached"]
     assert unmounts == [requested_workspace, bound_workspace]
-    assert not overlay_registry._PIPELINES  # noqa: SLF001
+    assert not pipeline_registry._PIPELINES  # noqa: SLF001
 
 
 @pytest.mark.asyncio

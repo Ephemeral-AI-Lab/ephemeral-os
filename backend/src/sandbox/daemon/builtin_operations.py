@@ -361,9 +361,9 @@ async def _drop_peer_runtime_caches(
     *,
     workspace_root: str,
 ) -> None:
-    from sandbox.ephemeral_workspace.pipeline import stop_sandbox_overlay
+    from sandbox.ephemeral_workspace.pipeline_registry import stop_ephemeral_pipeline
 
-    await stop_sandbox_overlay(layer_stack_root, workspace_root=workspace_root)
+    await stop_ephemeral_pipeline(layer_stack_root, workspace_root=workspace_root)
     occ_runtime_services.drop_occ_runtime_services(layer_stack_root)
 
 

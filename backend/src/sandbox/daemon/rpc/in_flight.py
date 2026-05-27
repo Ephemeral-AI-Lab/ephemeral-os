@@ -134,11 +134,6 @@ class InFlightInvocationRegistry:
             entry.ttl_reaped = True
             self._ttl_reaped_total += 1
 
-    def shutdown(self) -> None:
-        if self._reaper_task is not None:
-            self._reaper_task.cancel()
-            self._reaper_task = None
-
     def _ensure_reaper_started(self) -> None:
         if self._reaper_task is not None and not self._reaper_task.done():
             return

@@ -38,7 +38,7 @@ class LayerSnapshotReader(Protocol):
     ) -> tuple[str, bool]: ...
 
 
-class LayerCommitStagingStore(Protocol):
+class LayerCommitStagingAllocator(Protocol):
     """Allocate and drop OCC-owned staging directories."""
 
     def allocate_commit_staging(self, request_id: str) -> CommitStagingArea: ...
@@ -74,7 +74,7 @@ class LayerCommitPublisher(Protocol):
 
 class OccLayerStackPort(
     LayerSnapshotReader,
-    LayerCommitStagingStore,
+    LayerCommitStagingAllocator,
     LayerCommitPublisher,
     Protocol,
 ):
@@ -93,7 +93,7 @@ class WorkspaceBindingReader(Protocol):
 __all__ = [
     "LayerCommitPublisher",
     "LayerCommitTransaction",
-    "LayerCommitStagingStore",
+    "LayerCommitStagingAllocator",
     "LayerSnapshotReader",
     "OccLayerStackPort",
     "WorkspaceBindingReader",

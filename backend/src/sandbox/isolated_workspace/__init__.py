@@ -23,7 +23,7 @@ Cross-package reuse
   ``sandbox.daemon.layer_stack_runtime`` (layer-stack-only; OCC is unreachable).
 """
 
-from sandbox.isolated_workspace._control_plane.pipeline_state import (
+from sandbox.isolated_workspace._control_plane.types import (
     IsolatedWorkspaceAuditSink,
     IsolatedWorkspaceError,
     IsolatedWorkspaceHandle,

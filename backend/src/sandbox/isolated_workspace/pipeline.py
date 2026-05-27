@@ -32,13 +32,13 @@ from sandbox.isolated_workspace._control_plane.namespace_runtime import (
     _KernelNamespaceRuntime,
     _read_linux_memavailable_kb,
 )
-from sandbox.isolated_workspace._control_plane.pipeline_state import (
+from sandbox.isolated_workspace._control_plane.types import (
     IsolatedWorkspaceAuditSink,
     IsolatedWorkspaceError,
     IsolatedWorkspaceHandle,
+    NamespaceRuntimePort,
     PERSISTED_HANDLES_SCHEMA_VERSION,
     _PhaseTimer,
-    _NamespaceRuntime,
     _PipelineConfig,
     logger,
 )
@@ -78,7 +78,7 @@ class IsolatedPipeline(
         audit: IsolatedWorkspaceAuditSink | None = None,
         config: _PipelineConfig | None = None,
         network: IsolatedNetwork | None = None,
-        runtime: _NamespaceRuntime | None = None,
+        runtime: NamespaceRuntimePort | None = None,
         clock: Callable[[], float] = time.monotonic,
         id_factory: Callable[[], str] = lambda: uuid.uuid4().hex[:16],
         meminfo_reader: Callable[[], int] | None = None,
@@ -88,7 +88,7 @@ class IsolatedPipeline(
         self._audit = audit
         self._config = config or _PipelineConfig.from_env()
         self._network = network or IsolatedNetwork(rfc1918_egress=self._config.rfc1918_egress)
-        self._runtime: _NamespaceRuntime = runtime or _KernelNamespaceRuntime()
+        self._runtime: NamespaceRuntimePort = runtime or _KernelNamespaceRuntime()
         self._clock = clock
         self._id_factory = id_factory
         self._meminfo_reader = meminfo_reader or _read_linux_memavailable_kb

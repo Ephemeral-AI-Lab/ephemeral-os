@@ -12,7 +12,7 @@ from typing import Any
 import pytest
 
 from sandbox.daemon.audit_buffer import get_audit_buffer
-from sandbox.isolated_workspace._control_plane.pipeline_state import (
+from sandbox.isolated_workspace._control_plane.types import (
     IsolatedWorkspaceHandle,
     _PipelineConfig,
 )

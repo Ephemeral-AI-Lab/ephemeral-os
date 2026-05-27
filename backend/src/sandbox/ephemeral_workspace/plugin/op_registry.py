@@ -35,10 +35,7 @@ from sandbox.shared.models import Intent
 from sandbox.ephemeral_workspace.plugin.op_context import PluginOpContext
 
 __all__ = [
-    "ContextFactory",
-    "DispatcherHandler",
     "PluginOpConflictError",
-    "PluginOpHandler",
     "PluginOpRegistrationError",
     "clear_plugin_registrations",
     "flush_plugin_registrations",

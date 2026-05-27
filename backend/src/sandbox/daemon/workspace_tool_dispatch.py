@@ -22,12 +22,13 @@ from sandbox.shared.models import Intent, ToolCallRequest, ToolCallResult
 from sandbox.shared.ordered_lock import OrderedLock
 from sandbox.daemon.occ_runtime_services import get_occ_runtime_services
 from sandbox.daemon.workspace_tool_payloads import (
+    _agent_id_from_args,
     project_changeset_result,
     project_conflict_result,
     require_layer_stack_root,
     require_single_file_path,
 )
-from sandbox.ephemeral_workspace.overlay_registry import get_sandbox_overlay
+from sandbox.ephemeral_workspace.pipeline_registry import get_ephemeral_pipeline
 from sandbox.isolated_workspace._control_plane.pipeline_registry import get_active_pipeline
 from sandbox.layer_stack.workspace_binding import (
     WorkspaceBindingError,
@@ -222,7 +223,7 @@ async def _dispatch_via_workspace_pipeline(
 ) -> ToolCallResult:
     if isolated_pipeline is not None:
         return await isolated_pipeline.run_tool_call(request)
-    pipeline = await get_sandbox_overlay(
+    pipeline = await get_ephemeral_pipeline(
         require_layer_stack_root(request.args),
         start=False,
     )
@@ -237,7 +238,7 @@ async def dispatch_workspace_tool_call(
 ) -> ToolCallResult:
     if verb in _LAYER_STACK_FILE_VERBS:
         require_single_file_path(args)
-    agent_id = _request_agent_id(args)
+    agent_id = _agent_id_from_args(args).strip() or "default"
     request = ToolCallRequest(
         invocation_id=str(args.get("invocation_id") or uuid4().hex),
         agent_id=agent_id,
@@ -255,10 +256,17 @@ async def dispatch_workspace_tool_call(
                     return layer_stack_result
             return await _dispatch_via_workspace_pipeline(request, isolated_pipeline)
     except LifecycleInProgressError as exc:
-        return _lifecycle_in_progress_payload(exc.agent_id)
+        return _lifecycle_in_progress_envelope(exc.agent_id)
 
 
-def _lifecycle_in_progress_payload(agent_id: str) -> ToolCallResult:
+def _lifecycle_in_progress_envelope(
+    agent_id: str,
+    *,
+    op: str | None = None,
+) -> ToolCallResult:
+    details: dict[str, Any] = {"agent_id": agent_id}
+    if op is not None:
+        details = {"op": op, "agent_id": agent_id}
     return {
         "success": False,
         "warnings": [],
@@ -268,7 +276,7 @@ def _lifecycle_in_progress_payload(agent_id: str) -> ToolCallResult:
             "message": (
                 "exit_isolated_workspace is draining; retry after exit completes"
             ),
-            "details": {"agent_id": agent_id},
+            "details": details,
         },
     }
 
@@ -459,17 +467,6 @@ def _layer_stack_file_resource_timings(
         "resource.command_exec.upperdir_tree_entry_count": 0.0,
         "resource.command_exec.upperdir_tree_truncated": 0.0,
     }
-
-
-def _request_agent_id(args: dict[str, Any]) -> str:
-    caller = args.get("caller")
-    raw = ""
-    if isinstance(caller, dict):
-        raw = str(caller.get("agent_id") or caller.get("agent_run_id") or "")
-    if not raw:
-        raw = str(args.get("agent_id") or "default")
-    raw = raw.strip()
-    return raw or "default"
 
 
 __all__ = [

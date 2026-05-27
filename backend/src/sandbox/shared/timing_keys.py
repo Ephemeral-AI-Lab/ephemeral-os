@@ -22,6 +22,12 @@ class TimingKey(str, Enum):
     COMMIT_GATED_READ_TOTAL = "occ.commit.gated_read_current_total_s"
     COMMIT_GATED_STAGE_TOTAL = "occ.commit.gated_stage_delta_total_s"
     COMMIT_PUBLISH_LAYER = "occ.commit.publish_layer_s"
+    COMMIT_QUEUE_BATCH_SIZE = "occ.serial.batch_size"
+    COMMIT_QUEUE_CAS_ATTEMPTS = "occ.serial.cas_attempts"
+    COMMIT_QUEUE_CAS_EXHAUSTED = "occ.serial.cas_exhausted"
+    COMMIT_QUEUE_COMMIT = "occ.serial.commit_s"
+    COMMIT_QUEUE_RESULT_READY_AT = "_occ.serial.result_ready_at_s"
+    COMMIT_QUEUE_WAIT = "occ.serial.queue_wait_s"
     COMMIT_SNAPSHOT = "occ.commit.snapshot_s"
     COMMIT_STAGER_WRITE_COUNT = "occ.commit.stager_write_count"
     COMMIT_STAGER_WRITE_TOTAL = "occ.commit.stager_write_total_s"
@@ -51,12 +57,6 @@ class TimingKey(str, Enum):
     PREPARE_GROUPS = "occ.prepare.prepare_groups_s"
     PREPARE_ROUTE_AND_BASE_HASH = "occ.prepare.route_and_base_hash_s"
     PREPARE_TOTAL = "occ.prepare.total_s"
-    SERIAL_BATCH_SIZE = "occ.serial.batch_size"
-    SERIAL_CAS_ATTEMPTS = "occ.serial.cas_attempts"
-    SERIAL_CAS_EXHAUSTED = "occ.serial.cas_exhausted"
-    SERIAL_COMMIT = "occ.serial.commit_s"
-    SERIAL_QUEUE_WAIT = "occ.serial.queue_wait_s"
-    SERIAL_RESULT_READY_AT = "_occ.serial.result_ready_at_s"
 
 
 __all__ = ["TimingKey"]

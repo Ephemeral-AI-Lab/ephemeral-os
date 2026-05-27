@@ -19,7 +19,7 @@ from sandbox.daemon.audit_schema import (
     build_isolated_workspace_event,
     safe_emit,
 )
-from sandbox.isolated_workspace._control_plane.pipeline_state import (
+from sandbox.isolated_workspace._control_plane.types import (
     CGROUP_ROOT,
     HANDLE_PREFIX,
     logger,

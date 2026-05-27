@@ -309,11 +309,11 @@ class LayerStack:
         resets layer storage, and rebuilds a fresh base layer from the
         workspace bytes. Refuses to run while any snapshot lease is active.
         """
-        total_start = monotonic_now()
-        workspace = Path(workspace_root)
-        if not workspace.is_dir():
-            raise ValueError(f"workspace_root does not exist: {workspace}")
         with self._storage_write_guard():
+            total_start = monotonic_now()
+            workspace = Path(workspace_root)
+            if not workspace.is_dir():
+                raise ValueError(f"workspace_root does not exist: {workspace}")
             with self._lock:
                 if self._leases.active_count() > 0:
                     raise RuntimeError("commit_to_workspace blocked by active leases")

@@ -25,7 +25,7 @@ from pathlib import Path
 from typing import Any
 
 from sandbox.daemon.layer_stack_runtime import get_layer_stack_manager
-from sandbox.ephemeral_workspace.pipeline import get_sandbox_overlay
+from sandbox.ephemeral_workspace.pipeline_registry import get_ephemeral_pipeline
 from sandbox.layer_stack.workspace_binding import (
     WorkspaceBindingError,
     require_workspace_binding,
@@ -316,7 +316,7 @@ async def _ephemeral_pipeline_for_layer_stack_root(
 ) -> Any:
     key = _validated_layer_stack_root(layer_stack_root)
     try:
-        return await get_sandbox_overlay(
+        return await get_ephemeral_pipeline(
             key,
             workspace_root=str(workspace_root or "").strip() or None,
             # Plugin calls use EphemeralPipeline as the daemon-owned operation

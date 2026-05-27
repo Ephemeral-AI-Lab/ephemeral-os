@@ -37,7 +37,7 @@ class OccRuntimeServices:
     occ_service: OccService
     occ_client: OccClient
     gitignore: SnapshotGitignoreOracle
-    manager: LayerStack
+    layer_stack_manager: LayerStack
 
 
 _OCC_RUNTIME_SERVICES_CACHE_MAX = 256
@@ -76,7 +76,7 @@ def get_occ_runtime_services(layer_stack_root: str) -> OccRuntimeServices:
         occ_service=occ_service,
         occ_client=occ_client,
         gitignore=gitignore,
-        manager=manager,
+        layer_stack_manager=manager,
     )
     close_services: OccRuntimeServices | None = None
     evicted: tuple[OccRuntimeServices, ...] = ()

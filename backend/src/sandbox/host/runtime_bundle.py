@@ -209,8 +209,8 @@ def _runtime_bundle_bytes() -> bytes:
             "__init__.py",
             "events.py",
             "operation_overlay.py",
-            "overlay_registry.py",
             "pipeline.py",
+            "pipeline_registry.py",
             "workspace_publish.py",
         ):
             _add_if_exists(

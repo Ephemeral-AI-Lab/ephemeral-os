@@ -32,10 +32,10 @@ from sandbox.shared.models import (
 )
 from sandbox.audit.lifecycle import lifecycle_operation
 from sandbox.host.daemon_client import _DaemonDispatchError, call_daemon_api
+from sandbox.isolated_workspace import IsolatedWorkspaceError
 from sandbox.isolated_workspace._control_plane import (
     pipeline_registry as isolated_pipeline_registry,
 )
-from sandbox.isolated_workspace._control_plane.pipeline_state import IsolatedWorkspaceError
 
 
 async def enter_isolated_workspace(

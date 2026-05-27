@@ -18,7 +18,7 @@ from typing import TYPE_CHECKING, Any
 
 from audit.jsonl import append_jsonl_event
 from sandbox.daemon import layer_stack_runtime
-from sandbox.isolated_workspace._control_plane.pipeline_state import IsolatedWorkspaceError
+from sandbox.isolated_workspace._control_plane.types import IsolatedWorkspaceError
 from sandbox.occ.layer_stack_adapter import LayerStackPortAdapter
 from sandbox.overlay.writable_dirs import overlay_writable_root
 

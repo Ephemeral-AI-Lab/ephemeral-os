@@ -107,7 +107,14 @@ class EditChange(Change):
 
 @dataclass(frozen=True)
 class DeleteChange(Change):
-    """Delete intent pinned to a base hash when known."""
+    """Delete intent pinned to a base hash when known.
+
+    Inherits ``source = ChangeSource.API_WRITE`` from :class:`Change`. There
+    is no separate ``ChangeSource.API_DELETE`` value: deletes flow through
+    the same routing branch as writes
+    (see ``changeset_preparation._requires_base_hash``), so the API_WRITE
+    label covers both write and delete intent.
+    """
 
     base_hash: str | None = None
 

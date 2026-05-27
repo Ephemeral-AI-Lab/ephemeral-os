@@ -26,7 +26,7 @@ from sandbox.occ.content_hashing import ContentHasher
 from sandbox.occ.ports import (
     LayerCommitPublisher,
     LayerCommitTransaction,
-    LayerCommitStagingStore,
+    LayerCommitStagingAllocator,
     LayerSnapshotReader,
 )
 from sandbox.occ.path_staging import (
@@ -49,7 +49,7 @@ class CommitTransaction:
         self,
         *,
         snapshot_reader: LayerSnapshotReader,
-        staging: LayerCommitStagingStore,
+        staging: LayerCommitStagingAllocator,
         publisher: LayerCommitPublisher,
     ) -> None:
         self._staging = staging
@@ -163,7 +163,7 @@ class CommitTransaction:
 class _FileSystemLayerChangeStager:
     def __init__(
         self,
-        staging: LayerCommitStagingStore,
+        staging: LayerCommitStagingAllocator,
         *,
         hasher: ContentHasher,
     ) -> None:
