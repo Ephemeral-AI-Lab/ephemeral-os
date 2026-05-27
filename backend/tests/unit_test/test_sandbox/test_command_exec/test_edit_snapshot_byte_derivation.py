@@ -58,7 +58,7 @@ async def test_in_workspace_edit_same_path_M_gt_N_surfaces_hard_conflict(
     build_workspace_base(workspace_root=workspace, layer_stack_root=stack)
 
     services = occ_runtime_services.get_occ_runtime_services(stack.as_posix())
-    manager: LayerStack = services.manager
+    manager: LayerStack = services.layer_stack_manager
     occ_service = services.occ_client._service  # type: ignore[attr-defined]
 
     lease = manager.acquire_snapshot_lease("test-edit-N")

@@ -131,7 +131,7 @@ async def inflight_count(args: dict[str, Any]) -> dict[str, object]:
 async def layer_metrics(args: dict[str, object]) -> dict[str, object]:
     """Summarize layer-stack storage and lease state for one runtime root."""
     root = require_layer_stack_root(args)
-    manager = occ_runtime_services.get_occ_runtime_services(root).manager
+    manager = occ_runtime_services.get_occ_runtime_services(root).layer_stack_manager
     manifest = manager.read_active_manifest()
     binding = read_workspace_binding(root)
     layer_dirs = tuple((manager.storage_root / "layers").iterdir())
