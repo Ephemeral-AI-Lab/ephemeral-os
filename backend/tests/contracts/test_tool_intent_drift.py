@@ -50,7 +50,6 @@ _TOOL_MODULES = (
     "tools.submission.executor.submit_execution_handoff.submit_execution_handoff",
     "tools.submission.executor.submit_execution_blocker.submit_execution_blocker",
     "tools.submission.executor.submit_execution_success.submit_execution_success",
-    "tools.submission.resolver.submit_resolver_result.submit_resolver_result",
     "plugins.catalog.lsp.tools.hover",
     "plugins.catalog.lsp.tools.find_definitions",
     "plugins.catalog.lsp.tools.find_references",

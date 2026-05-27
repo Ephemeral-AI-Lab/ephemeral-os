@@ -7,8 +7,8 @@ the advisor approved THIS specific terminal.
 
 Wiring is per-terminal: each gated tool's ``@tool`` decorator carries
 ``pre_hooks=(AdvisorApprovalPreHook("<own_name>"),)``. Helper / subagent
-terminals (``submit_advisor_feedback``, ``submit_resolver_result``,
-``submit_exploration_result``) intentionally omit the hook.
+terminals (``submit_advisor_feedback``, ``submit_exploration_result``)
+intentionally omit the hook.
 """
 
 from __future__ import annotations

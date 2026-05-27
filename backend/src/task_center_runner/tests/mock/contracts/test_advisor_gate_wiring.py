@@ -34,7 +34,6 @@ _MAIN_TERMINAL_NAMES = frozenset(
 _HELPER_TERMINAL_NAMES = frozenset(
     {
         "submit_advisor_feedback",
-        "submit_resolver_result",
         "submit_exploration_result",
     }
 )

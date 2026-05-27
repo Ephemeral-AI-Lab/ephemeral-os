@@ -25,11 +25,6 @@ def test_advisor_profile_body_contains_identity_sentence():
     assert "You are an advisor agent." in body
 
 
-def test_resolver_profile_body_contains_identity_sentence():
-    body = _read_profile("helper/resolver.md")
-    assert "You are the resolver helper agent." in body
-
-
 # ---------------------------------------------------------------------------
 # Main-agent + subagent identity-sentence pins (Phase 2 — P2.1).
 #

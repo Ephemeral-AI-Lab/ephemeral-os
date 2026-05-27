@@ -23,7 +23,6 @@ PHASE03_TOOLS = (
     "submit_evaluation_failure",
     "ask_advisor",
     "submit_advisor_feedback",
-    "submit_resolver_result",
     "submit_exploration_result",
 )
 

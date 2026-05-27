@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from tools._framework.core.base import BaseTool
 from tools.submission.advisor import submit_advisor_feedback
-from tools.submission.resolver import submit_resolver_result
 from tools.submission.evaluator import (
     submit_evaluation_failure,
     submit_evaluation_success,
@@ -37,6 +36,5 @@ def make_submission_tools() -> list[BaseTool]:
         submit_evaluation_success,
         submit_evaluation_failure,
         submit_advisor_feedback,
-        submit_resolver_result,
         submit_exploration_result,
     ]

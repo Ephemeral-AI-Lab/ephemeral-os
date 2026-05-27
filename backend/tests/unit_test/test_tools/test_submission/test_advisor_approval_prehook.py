@@ -201,7 +201,6 @@ def test_hook_wired_to_main_terminals_and_omitted_from_helpers() -> None:
     )
     helper_terminals = (
         "submit_advisor_feedback",
-        "submit_resolver_result",
         "submit_exploration_result",
     )
     ctx = ToolFactoryContext()
