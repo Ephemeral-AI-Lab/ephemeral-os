@@ -232,16 +232,6 @@ CAPACITY_PACK_SPECS: tuple[CapacityPackSpec, ...] = (
         ),
     ),
     CapacityPackSpec(
-        "context.helper_resolver_inheritance",
-        "E",
-        "context",
-        "T0",
-        test_path=(
-            "backend/tests/unit_test/test_task_center/test_context_engine/"
-            "test_recipes_other.py"
-        ),
-    ),
-    CapacityPackSpec(
         "context.goal_entry_minimal",
         "E",
         "context",
