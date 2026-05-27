@@ -13,9 +13,8 @@ from tools._framework.core.context import ToolExecutionContextService
 from tools._framework.core.results import ToolResult
 from tools._framework.core.runtime import ExecutionMetadata
 from tools._framework.execution.tool_call import execute_tool_once
-from tools.ask_helper import ask_advisor, ask_resolver
+from tools.ask_helper import ask_advisor
 from tools.submission.advisor import submit_advisor_feedback
-from tools.submission.resolver import submit_resolver_result
 from tools.submission.explorer.submit_exploration_result import submit_exploration_result
 
 pytestmark = pytest.mark.asyncio
@@ -103,25 +102,7 @@ async def test_submit_advisor_feedback_rejects_extra_fields() -> None:
         )
 
 
-# ---- submit_resolver_result / submit_exploration_result regressions ---
-
-
-async def test_submit_resolver_result_metadata_drives_unresolved_count() -> None:
-    result = await execute_tool_once(
-        submit_resolver_result,
-        {
-            "resolved": False,
-            "summary": "partially fixed",
-            "changed_files": ["a.py"],
-            "remaining_issues": ["still broken"],
-        },
-        _context(role="resolver"),
-        emit=_noop_emit,
-    )
-
-    assert not result.is_error
-    assert result.metadata["resolver"]["resolved"] is False
-    assert result.metadata["changed_files"] == ["a.py"]
+# ---- submit_exploration_result regressions ---------------------------
 
 
 async def test_submit_exploration_result_returns_subagent_findings() -> None:
@@ -253,74 +234,3 @@ async def test_ask_advisor_errors_when_parent_messages_missing() -> None:
     assert "fewer than two user messages" in result.output
 
 
-# ---- ask_resolver end-to-end direct-launch shape ----------------------
-
-
-async def test_ask_resolver_assembles_direct_launch(monkeypatch) -> None:
-    register_definition(
-        AgentDefinition(
-            name="resolver",
-            description="resolver",
-            agent_kind=AgentKind.RESOLVER,
-            terminals=["submit_resolver_result"],
-        )
-    )
-    register_definition(
-        AgentDefinition(
-            name="verifier",
-            description="verifier stub",
-            agent_kind=AgentKind.VERIFIER,
-            terminals=["submit_verification_success", "submit_verification_failure"],
-        )
-    )
-    seen: dict[str, Any] = {}
-
-    async def _fake_run(*args, **kwargs):
-        seen["prompt"] = args[1]
-        seen["initial_messages"] = kwargs.get("initial_messages")
-        return EphemeralRunResult(
-            status="completed",
-            error=None,
-            terminal_result=ToolResult(
-                output="resolved",
-                metadata={
-                    "helper_role": "resolver",
-                    "resolver": {"resolved": True, "remaining_issues": []},
-                },
-            ),
-            agent_name="resolver",
-            event_count=1,
-        )
-
-    monkeypatch.setattr("engine.api.run_ephemeral_agent", _fake_run)
-    try:
-        result = await execute_tool_once(
-            ask_resolver,
-            {"issues_to_resolve": ["fix bug"], "issue_context": "ctx"},
-            _helper_context(
-                role="verifier",
-                agent_name="verifier",
-                parent_messages=_two_msg_parent(),
-            ),
-            emit=_noop_emit,
-        )
-    finally:
-        unregister_definition("resolver")
-        unregister_definition("verifier")
-
-    assert not result.is_error
-    assert result.metadata["resolver"]["resolved"] is True
-
-    initial_messages = seen["initial_messages"]
-    assert isinstance(initial_messages, list) and len(initial_messages) == 1
-    context_text = "".join(
-        b.text for b in initial_messages[0].content if hasattr(b, "text")
-    )
-    assert "# Parent agent's original context" in context_text
-    assert "parent's original context" in context_text
-
-    user_msg_2 = str(seen["prompt"])
-    assert "# Issues to resolve" in user_msg_2
-    assert "fix bug" in user_msg_2
-    assert "ctx" in user_msg_2
-    assert "submit_resolver_result" in user_msg_2

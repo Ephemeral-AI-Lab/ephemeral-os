@@ -36,7 +36,6 @@ _TOOL_MODULES = (
     "tools.sandbox.grep.grep",
     "tools.sandbox.glob.glob",
     "tools.ask_helper.ask_advisor.ask_advisor",
-    "tools.ask_helper.ask_resolver.ask_resolver",
     "tools.subagent.run_subagent.run_subagent",
     "tools.isolated_workspace.enter_isolated_workspace.definition",
     "tools.isolated_workspace.exit_isolated_workspace.definition",

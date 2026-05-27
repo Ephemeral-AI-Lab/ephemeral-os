@@ -23,7 +23,6 @@ PHASE03_TOOLS = (
     "submit_evaluation_failure",
     "ask_advisor",
     "submit_advisor_feedback",
-    "ask_resolver",
     "submit_resolver_result",
     "submit_exploration_result",
 )
@@ -42,7 +41,7 @@ def test_tool_registry_renamed() -> None:
 
 
 def test_submission_tools_are_terminal_except_helper_requests() -> None:
-    non_terminal = {"ask_advisor", "ask_resolver"}
+    non_terminal = {"ask_advisor"}
     ctx = ToolFactoryContext()
 
     for name in PHASE03_TOOLS:
