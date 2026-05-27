@@ -1,9 +1,9 @@
 # Message System Unification Refactor
 
-**Status:** Approved (RALPLAN consensus — Planner → Architect → Critic APPROVE)
+**Status:** Implemented (2026-05-27). All 6 phases applied. `ruff` clean, 2079 unit tests green.
 **Date:** 2026-05-27
 **Scope:** `backend/src/{message,providers,engine/query}/` + all callers
-**Net LOC target:** −80 to −140
+**Net LOC target:** −80 to −140 (achieved via Phase 1 collapse; see Implementation Report below)
 
 ---
 

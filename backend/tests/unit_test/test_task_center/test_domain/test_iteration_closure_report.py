@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from task_center.attempt import AttemptFailReason
 from task_center.iteration.state import (
-    PriorAttemptEntry,
+    FailedAttemptEntry,
     AttemptPlanFailed,
     SuccessDeferred,
     IterationClosureReport,
@@ -24,7 +24,7 @@ def test_success_deferred_carries_deferred_goal():
 
 
 def test_attempt_plan_failed_carries_history():
-    e1 = PriorAttemptEntry(
+    e1 = FailedAttemptEntry(
         attempt_id="g1",
         attempt_sequence_no=1,
         plan_spec=None,
@@ -41,7 +41,7 @@ def test_attempt_plan_failed_carries_history():
 
 
 def test_prior_attempt_history_orders_by_sequence_no():
-    e1 = PriorAttemptEntry(
+    e1 = FailedAttemptEntry(
         attempt_id="g1",
         attempt_sequence_no=1,
         plan_spec=None,
@@ -50,7 +50,7 @@ def test_prior_attempt_history_orders_by_sequence_no():
         attempt_summary_id=None,
         failure_landscape=None,
     )
-    e2 = PriorAttemptEntry(
+    e2 = FailedAttemptEntry(
         attempt_id="g2",
         attempt_sequence_no=2,
         plan_spec=None,

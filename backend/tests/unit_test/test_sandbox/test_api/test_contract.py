@@ -149,7 +149,7 @@ def test_sandbox_caller_defaults_and_immutability() -> None:
     assert caller.task_center_goal_id == ""
     assert caller.task_center_request_id == ""
     assert caller.tool_name == ""
-    assert caller.tool_use_id == ""
+    assert caller.tool_id == ""
     with pytest.raises((AttributeError, TypeError)):
         caller.agent_id = "b"  # type: ignore[misc]
 

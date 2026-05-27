@@ -251,7 +251,7 @@ approve` for the planner to clear the gate.
 
 #### 3.4.3 Pass criteria
 
-1. The terminal submission succeeds (returns `does_terminate=True`,
+1. The terminal submission succeeds (returns `is_terminal=True`,
    `is_error=False`).
 2. The transcript shows an `ask_advisor` `ToolUseBlock` paired with a
    `ToolResultBlock` carrying `metadata["helper_role"] == "advisor"` and

@@ -145,7 +145,7 @@
               <strong>One tool lifecycle runs.</strong>
               <p>
                 <code>execute_tool_once</code> parses input, runs pre-hooks, executes the body, validates output,
-                runs post-hooks, and stamps successful terminal tools with <code>does_terminate=True</code>.
+                runs post-hooks, and stamps successful terminal tools with <code>is_terminal=True</code>.
               </p>
             </div>
           </div>
@@ -247,7 +247,7 @@
           <div class="callout ok">
             <h3>Terminal tools</h3>
             <p>
-              A successful terminal call becomes <code>does_terminate=True</code>, wins the query-loop stop
+              A successful terminal call becomes <code>is_terminal=True</code>, wins the query-loop stop
               condition, and must not be batched with sibling tool calls.
             </p>
           </div>

@@ -2190,7 +2190,7 @@ def _normalize_sandbox_event(row: Mapping[str, Any]) -> dict[str, Any]:
         "event_type": event_type,
         "family": _SANDBOX_FAMILY_BY_EVENT.get(event_type, "sandbox_other"),
         "tool_name": payload.get("tool_name") or node.get("tool_name"),
-        "tool_id": payload.get("tool_id"),
+        "tool_use_id": payload.get("tool_use_id"),
         "agent_name": node.get("agent_name"),
         "agent_run_id": node.get("agent_run_id"),
         "task_center_run_id": node.get("task_center_run_id"),

@@ -50,7 +50,7 @@ async def test_read_file_publishes_started_and_completed(
                 agent_id="agent-1",
                 task_center_run_id="run-1",
                 task_center_task_id="task-1",
-                tool_use_id="tool-1",
+                tool_id="tool-1",
             ),
         ),
         audit_sink=bus,

@@ -54,7 +54,7 @@ def test_d1_mount_and_publish_phases_populate_when_emitted(tmp_path: Path) -> No
             "seq": 1,
             "payload": {
                 "tool_call": {
-                    "tool_id": "t1",
+                    "tool_use_id": "t1",
                     "tool_name": "write_file",
                     "workspace_mode": "ephemeral",
                     "total_ms": 50.0,
@@ -314,7 +314,7 @@ def test_d8_events_count_drift_warning(tmp_path: Path) -> None:
             "seq": i,
             "payload": {
                 "tool_call": {
-                    "tool_id": f"t{i}",
+                    "tool_use_id": f"t{i}",
                     "tool_name": "read_file",
                     "workspace_mode": "ephemeral",
                     "total_ms": 5.0,
@@ -522,7 +522,7 @@ def test_d15_forensic_deltas_surface_when_enabled(
             "seq": 7,
             "payload": {
                 "tool_call": {
-                    "tool_id": "t7",
+                    "tool_use_id": "t7",
                     "tool_name": "read_file",
                     "workspace_mode": "ephemeral",
                     "total_ms": 10.0,

@@ -31,7 +31,7 @@ def audit_events_from_stream_event(
                 ),
                 payload={
                     "tool_name": stream_event.tool_name,
-                    "tool_id": stream_event.tool_use_id,
+                    "tool_use_id": stream_event.tool_use_id,
                     "status": "ok",
                     "input_shape": _shape(stream_event.tool_input),
                     "input_redacted": _redacted_shape(stream_event.tool_input),
@@ -53,7 +53,7 @@ def audit_events_from_stream_event(
                 ),
                 payload={
                     "tool_name": stream_event.tool_name,
-                    "tool_id": stream_event.tool_use_id,
+                    "tool_use_id": stream_event.tool_use_id,
                     "status": status,
                     "error_kind": "tool_result_error" if stream_event.is_error else None,
                     "output_shape": _shape(stream_event.output),

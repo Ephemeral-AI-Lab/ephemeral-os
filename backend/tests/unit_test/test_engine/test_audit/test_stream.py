@@ -69,7 +69,7 @@ def test_tool_completed_stream_event_preserves_domain_timings_as_metadata() -> N
             "task_center_run_id": "run-1",
             "task_center_task_id": "task-2",
             "agent_run_id": "metadata-agent-run",
-            "tool_id": "metadata-tool-id",
+            "tool_use_id": "metadata-tool-id",
         },
     )
 

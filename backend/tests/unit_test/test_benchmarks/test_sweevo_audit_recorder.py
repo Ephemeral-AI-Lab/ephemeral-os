@@ -476,7 +476,7 @@ def test_write_performance_reports_produces_detailed_report(tmp_path: Path) -> N
                 node=node,
                 payload={
                     "tool_name": "write_file",
-                    "tool_id": "toolu_1",
+                    "tool_use_id": "toolu_1",
                     "tool_input": {"file_path": "a.py", "content": "print(1)"},
                 },
                 ts=started,
@@ -488,7 +488,7 @@ def test_write_performance_reports_produces_detailed_report(tmp_path: Path) -> N
                 node=node,
                 payload={
                     "tool_name": "write_file",
-                    "tool_id": "toolu_1",
+                    "tool_use_id": "toolu_1",
                     "output": '{"ok": true}',
                     "is_error": False,
                     "metadata": {
@@ -509,7 +509,7 @@ def test_write_performance_reports_produces_detailed_report(tmp_path: Path) -> N
                 node=node,
                 payload={
                     "tool_name": "write_file",
-                    "tool_id": "toolu_1",
+                    "tool_use_id": "toolu_1",
                     "status": "ok",
                     "changed_paths": ["a.py"],
                     "timings": {
@@ -525,7 +525,7 @@ def test_write_performance_reports_produces_detailed_report(tmp_path: Path) -> N
                 node=node,
                 payload={
                     "tool_name": "shell",
-                    "tool_id": "toolu_2",
+                    "tool_use_id": "toolu_2",
                     "status": "ok",
                     "changed_paths": ["b.py"],
                     "timings": {
@@ -545,7 +545,7 @@ def test_write_performance_reports_produces_detailed_report(tmp_path: Path) -> N
                 node=node,
                 payload={
                     "tool_name": "write_file",
-                    "tool_id": "toolu_3",
+                    "tool_use_id": "toolu_3",
                     "status": "ok",
                     "changed_paths": [],
                     "timings": {
@@ -561,7 +561,7 @@ def test_write_performance_reports_produces_detailed_report(tmp_path: Path) -> N
                 node=node,
                 payload={
                     "tool_name": "shell",
-                    "tool_id": "toolu_4",
+                    "tool_use_id": "toolu_4",
                     "status": "ok",
                     "changed_paths": [],
                     "timings": {
@@ -579,7 +579,7 @@ def test_write_performance_reports_produces_detailed_report(tmp_path: Path) -> N
                 node=node,
                 payload={
                     "tool_name": "shell",
-                    "tool_id": "toolu_5",
+                    "tool_use_id": "toolu_5",
                     "status": "ok",
                     "changed_paths": [],
                     "timings": {
@@ -645,7 +645,7 @@ def test_write_performance_reports_produces_detailed_report(tmp_path: Path) -> N
     assert report["sandbox"]["resource_keys"]["resource.cgroup.io_wbytes"][
         "latest"
     ] == 500.0
-    assert report["hotspots"]["slowest_tool_calls"][0]["tool_id"] == "toolu_1"
+    assert report["hotspots"]["slowest_tool_calls"][0]["tool_use_id"] == "toolu_1"
 
     markdown = (recorder.run_dir / "performance_report.md").read_text(
         encoding="utf-8"

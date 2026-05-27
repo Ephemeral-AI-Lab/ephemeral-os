@@ -49,7 +49,7 @@ File reviewed: `docs/plans/daemon-audit-pull-consolidation-implementation-plan.m
 3. **Background tool calls are entirely absent.**
    `engine/background/task_supervisor.py` already runs an
    `EOS_BACKGROUND_HEARTBEAT_INTERVAL_S` loop and emits
-   `BackgroundTaskStarted` stream events with a RUNNING → {COMPLETED, FAILED,
+   `BackgroundTaskStartedEvent` stream events with a RUNNING → {COMPLETED, FAILED,
    CANCELLED} → DELIVERED state machine. None of that surfaces in the audit
    pull. A background shell that runs for 20 minutes is invisible between
    start and delivery.

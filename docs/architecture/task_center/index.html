@@ -60,7 +60,7 @@
     <li>TaskCenter does not add peer-to-peer agent communication. Delegation is persisted as a task-origin child Goal; the parent generator waits in <code>WAITING_GOAL</code> and later resumes through a closure report.</li>
     <li>The AttemptOrchestrator is per-Attempt machinery, not a global orchestrator. It persists the planner contract, generator rows, generator outcomes, evaluator outcomes, and Attempt close.</li>
     <li>The Context Engine builds and renders role-specific packets from stores. It does not decide retry, continuation, goal closure, launch policy, or sandbox behavior.</li>
-    <li>Terminal tools are the agent-facing state boundary. Successful terminal tool calls are stamped <code>does_terminate=true</code> by the tool framework, and their payloads mutate TaskCenter through TaskCenter services.</li>
+    <li>Terminal tools are the agent-facing state boundary. Successful terminal tool calls are stamped <code>is_terminal=true</code> by the tool framework, and their payloads mutate TaskCenter through TaskCenter services.</li>
   </ul>
 </div>
 <div class="wiki-links" aria-label="TaskCenter related pages">

@@ -59,7 +59,7 @@
     <li>The model-provider package is <code>backend/src/providers</code>. It owns the LLM API request/streaming contract, active model dispatch, auth strategies, provider errors, and Anthropic/Codex client translations.</li>
     <li>Prompt configuration has two layers: stable runtime/profile system prompt text, then TaskCenter launch rows built from context packets, task guidance, and optional skill text.</li>
     <li>Tool execution crosses into sandbox through typed tool wrappers and <code>sandbox.api</code>. Normal file and shell operations use daemon workspace routing; provider raw <code>exec</code> is a transport and diagnostic primitive.</li>
-    <li>Termination is a stamped tool-result condition. A successful terminal tool gets <code>does_terminate=true</code>, the query loop exits with <code>TOOL_STOP</code>, and TaskCenter lifecycle code reads the structured submission.</li>
+    <li>Termination is a stamped tool-result condition. A successful terminal tool gets <code>is_terminal=true</code>, the query loop exits with <code>TOOL_STOP</code>, and TaskCenter lifecycle code reads the structured submission.</li>
   </ul>
 </div>
 <div class="wiki-links" aria-label="Agent loop related pages">
@@ -127,7 +127,7 @@
   </div>
   <div class="evidence-card">
     <h4>Model Provider</h4>
-    <p>Use <a class="wiki-link" href="model-provider.html">Model Provider Runtime</a> for active model resolution, <code>ApiMessageRequest</code>, provider stream events, Anthropic/Codex client translation, auth, retry, and errors.</p>
+    <p>Use <a class="wiki-link" href="model-provider.html">Model Provider Runtime</a> for active model resolution, <code>MessageRequest</code>, provider stream events, Anthropic/Codex client translation, auth, retry, and errors.</p>
   </div>
   <div class="evidence-card">
     <h4>Long-Running Work</h4>
@@ -160,7 +160,7 @@
   <div><b>tools own execution contracts</b><span><code>BaseTool</code> metadata owns intent, background policy, terminal flag, hooks, and context requirements consumed by the query loop and sandbox dispatch path.</span></div>
   <div><b>TaskCenter owns lifecycle</b><span>Submission tools mutate attempts, goals, and tasks. Sandbox tools only inspect or mutate workspace state that those submissions reference.</span></div>
   <div><b>sandbox owns workspace semantics</b><span>Provider adapters own containers and raw command execution. Daemon/workspace code owns LayerStack, OCC, overlay, isolated workspace, and plugin/LSP routing.</span></div>
-  <div><b>message owns artifact shape</b><span><code>ConversationMessage</code>, stream events, event printing, and <code>message.jsonl</code> recording are kept outside the query-loop implementation.</span></div>
+  <div><b>message owns artifact shape</b><span><code>Message</code>, stream events, event printing, and <code>message.jsonl</code> recording are kept outside the query-loop implementation.</span></div>
   <div><b>notification owns reminders</b><span>Rules produce system reminders that are both stream events and provider-visible user-message blocks.</span></div>
 </div>
 </section>

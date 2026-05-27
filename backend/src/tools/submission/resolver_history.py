@@ -34,7 +34,7 @@ def unresolved_resolver_call_count(messages: list[Any]) -> int:
             continue
         for block in message.content:
             if isinstance(block, ToolUseBlock):
-                tool_names_by_id[block.id] = block.name
+                tool_names_by_id[block.tool_use_id] = block.name
 
     unresolved = 0
     for message in messages:

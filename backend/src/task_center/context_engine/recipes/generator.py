@@ -42,7 +42,7 @@ GENERATOR_ID = "generator"
 _REQUIRED_FIELDS = frozenset({"goal_id", "attempt_id", "task_id"})
 
 
-def _generator_build(scope: ContextScope, deps: ContextEngineDeps) -> ContextPacket:
+def build_generator_context(scope: ContextScope, deps: ContextEngineDeps) -> ContextPacket:
     attempt_id = scope.require_field("attempt_id")
     task_id = scope.require_field("task_id")
     goal_id = scope.require_field("goal_id")
@@ -135,5 +135,5 @@ def _dependency_blocks(
 GENERATOR_RECIPE = ContextRecipe(
     id=GENERATOR_ID,
     required_scope_fields=_REQUIRED_FIELDS,
-    build=_generator_build,
+    build=build_generator_context,
 )

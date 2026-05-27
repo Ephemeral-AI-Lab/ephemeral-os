@@ -18,9 +18,6 @@ from message import (
 from message.events import (
     ThinkingDeltaEvent,
 )
-from message.events import (
-    ThinkingDeltaEvent,
-)
 # ---------------------------------------------------------------------------
 # ThinkingBlock model tests
 # ---------------------------------------------------------------------------

@@ -118,7 +118,7 @@ def test_tool_call_phase_slow_tail_flush() -> None:
 
     phase_calls: set[str] = set()
     for evt in phase_events:
-        phase_calls.add(evt["payload"]["tool_call"]["tool_id"])
+        phase_calls.add(evt["payload"]["tool_call"]["tool_use_id"])
 
     # Cold window: 100 calls × 6 phases. Slow tail: exactly 10 back-half slow
     # calls × 6 phases. Fast back-half calls (1.0 ms) sit below P95 and DO
@@ -205,7 +205,7 @@ def test_tool_call_phase_buffer_thread_local_under_many_foreground() -> None:
         # Each task recorded exactly 2 phases — their rollup must reflect
         # ONLY the durations its own context recorded, never another task's.
         assert set(rollup.keys()) == {"queued", "exec"}
-        tool_use_id = evt["payload"]["tool_call"]["tool_id"]
+        tool_use_id = evt["payload"]["tool_call"]["tool_use_id"]
         expected = float(10 + int(tool_use_id.split("-")[1]))
         assert rollup["queued"] == pytest.approx(expected, abs=0.001)
         assert rollup["exec"] == pytest.approx(expected, abs=0.001)

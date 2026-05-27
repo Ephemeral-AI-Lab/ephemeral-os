@@ -54,7 +54,7 @@
     <div class="node info"><strong>Launch profile</strong><small>TaskCenter selects available terminal tools</small></div>
     <div class="node"><strong>Agent terminal call</strong><small><code>submit_*</code> validates structured payload</small></div>
     <div class="node"><strong>Tool framework</strong><small>runs hooks and stamps successful terminal result</small></div>
-    <div class="node warn"><strong>Engine loop</strong><small>stops on <code>does_terminate=True</code></small></div>
+    <div class="node warn"><strong>Engine loop</strong><small>stops on <code>is_terminal=True</code></small></div>
   </div>
   <div class="flow-row">
     <div class="node good"><strong>Attempt owner</strong><small>planner, executor, verifier, evaluator submissions</small></div>
@@ -93,7 +93,7 @@
   <li><code>submit_execution_handoff(goal=...)</code> validates a nonblank goal and resolves an executor submission context for the current attempt-bound generator task.</li>
   <li><code>ExecutorSubmissionContext.start_delegated_goal()</code> constructs <code>GoalStarter(runtime=...)</code> and calls <code>GoalStarter.start(prompt=goal, origin=GoalOrigin.task(task_id=current_task_id))</code>.</li>
   <li><code>GoalStarter</code> validates that the parent generator task is running and has no open delegated child goal, creates the child goal, initial iteration, and initial attempt, then marks the parent task as <code>WAITING_GOAL</code>.</li>
-  <li>The handoff tool returns metadata containing <code>submission_kind="goal_start"</code>, parent task id, parent attempt id, child goal id, initial iteration id, and initial attempt id. Because it is terminal and successful, the framework stamps <code>does_terminate=True</code>.</li>
+  <li>The handoff tool returns metadata containing <code>submission_kind="goal_start"</code>, parent task id, parent attempt id, child goal id, initial iteration id, and initial attempt id. Because it is terminal and successful, the framework stamps <code>is_terminal=True</code>.</li>
   <li>When the delegated goal later closes, <code>GoalClosureReportRouter</code> delivers the report to the parent task. For task-origin goals, the parent must still be <code>WAITING_GOAL</code>; the router calls the registered parent task object.</li>
   <li>The parent task delegates to <code>AttemptOrchestrator.apply_goal_closure_report()</code>, which resumes the waiting generator task as <code>DONE</code> on success or <code>FAILED</code> on failure, records the closure report in the task summary payload, and advances the attempt stage.</li>
 </ol>

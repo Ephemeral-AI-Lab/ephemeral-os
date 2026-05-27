@@ -46,7 +46,7 @@ from task_center.iteration.state import (
 logger = logging.getLogger(__name__)
 
 
-GoalClosureReportSink = Callable[[GoalClosureReport], object]
+GoalClosureCallback = Callable[[GoalClosureReport], object]
 
 
 class GoalLifecycle:
@@ -60,7 +60,7 @@ class GoalLifecycle:
         attempt_store: AttemptStoreProtocol,
         iteration_coordinators: OpenIterationCoordinatorRegistry,
         config: TaskCenterLifecycleConfig,
-        deliver_closure_report: GoalClosureReportSink | None = None,
+        deliver_closure_report: GoalClosureCallback | None = None,
         orchestrator_factory: OrchestratorFactory | None = None,
         task_store: TaskStoreProtocol | None = None,
     ) -> None:
@@ -251,6 +251,6 @@ class GoalLifecycle:
 
 
 __all__ = [
-    "GoalClosureReportSink",
+    "GoalClosureCallback",
     "GoalLifecycle",
 ]

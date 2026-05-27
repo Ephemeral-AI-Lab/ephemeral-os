@@ -70,7 +70,7 @@ def _emit_tool_call_started(tool_call: ToolUseBlock) -> None:
     safe_emit(
         build_tool_call_event(
             "tool_call.started",
-            ToolCallSection(tool_id=tool_call.tool_use_id, tool_name=tool_call.name),
+            ToolCallSection(tool_use_id=tool_call.tool_use_id, tool_name=tool_call.name),
         ),
         lane="normal",
     )
@@ -89,7 +89,7 @@ def _emit_tool_call_phase_and_finished(
                 build_tool_call_event(
                     "tool_call.phase",
                     ToolCallSection(
-                        tool_id=tool_call.tool_use_id,
+                        tool_use_id=tool_call.tool_use_id,
                         tool_name=tool_call.name,
                         phase=entry.phase,
                         duration_ms=entry.duration_ms,
@@ -101,7 +101,7 @@ def _emit_tool_call_phase_and_finished(
         build_tool_call_event(
             "tool_call.finished",
             ToolCallSection(
-                tool_id=tool_call.tool_use_id,
+                tool_use_id=tool_call.tool_use_id,
                 tool_name=tool_call.name,
                 total_ms=total_ms,
                 exit_status=exit_status,

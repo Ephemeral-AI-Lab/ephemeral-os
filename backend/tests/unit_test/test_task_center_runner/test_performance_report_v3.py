@@ -73,7 +73,7 @@ def _tool_call_finished(
         "seq": seq,
         "payload": {
             "tool_call": {
-                "tool_id": f"t{seq}",
+                "tool_use_id": f"t{seq}",
                 "tool_name": tool_name,
                 "workspace_mode": workspace_mode,
                 "total_ms": total_ms,

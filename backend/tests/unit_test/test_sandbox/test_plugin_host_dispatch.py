@@ -108,7 +108,7 @@ def test_call_plugin_forwards_caller_audit_fields(
     ctx["task_center_attempt_id"] = "attempt-1"
     ctx["task_center_goal_id"] = "goal-1"
     ctx["task_center_request_id"] = "request-1"
-    ctx["tool_id"] = "tool-1"
+    ctx["tool_use_id"] = "tool-1"
     dispatch_payloads: list[dict[str, Any]] = []
 
     async def fake_install(sandbox_id: str, m: PluginManifest) -> str:

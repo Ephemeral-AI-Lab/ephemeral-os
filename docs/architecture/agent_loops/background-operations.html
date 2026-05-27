@@ -75,7 +75,7 @@
 </div>
 </section>
 
-<section id="status-progress-and-delivery" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="backend/src/engine/background/task_supervisor.py backend/src/engine/background/history.py backend/src/message/messages.py backend/src/message/stream_events.py backend/tests/unit_test/test_engine/test_background_tasks.py backend/tests/unit_test/test_engine/test_background_unit.py backend/tests/unit_test/test_engine/test_background_terminal_latch.py">
+<section id="status-progress-and-delivery" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="backend/src/engine/background/task_supervisor.py backend/src/engine/background/history.py backend/src/message/message.py backend/src/message/events.py backend/tests/unit_test/test_engine/test_background_tasks.py backend/tests/unit_test/test_engine/test_background_unit.py backend/tests/unit_test/test_engine/test_background_terminal_latch.py">
 <h2>Status Progress and Delivery</h2>
 <p><code>BackgroundTaskSupervisor</code> owns the in-memory records for the current agent run. Each record stores the alias, tool name, clean input, task type, agent id, sandbox binding, status, final result, progress lines, and an optional progress provider.</p>
 <pre class="diagram" aria-label="Background status lifecycle">

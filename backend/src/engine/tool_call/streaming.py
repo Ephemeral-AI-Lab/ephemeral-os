@@ -123,7 +123,7 @@ class StreamingToolExecutor:
             return
 
         tracked = StreamingToolRun(
-            id=event.tool_use_id,
+            tool_use_id=event.tool_use_id,
             name=event.name,
             input=event.input,
         )

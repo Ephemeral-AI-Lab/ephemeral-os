@@ -8,8 +8,8 @@ import pytest
 
 from task_center.context_engine.core import ContextEngineDeps, ContextEngineError
 from task_center.context_engine.packet import ContextPriority
-from task_center.context_engine.recipes.evaluator import _evaluator_build
-from task_center.context_engine.recipes.generator import _generator_build
+from task_center.context_engine.recipes.evaluator import build_evaluator_context
+from task_center.context_engine.recipes.generator import build_generator_context
 from task_center.context_engine.scope import ContextScope
 from task_center.iteration.state import IterationCreationReason
 
@@ -84,7 +84,7 @@ def test_generator_emits_planned_task_spec_required_block(
         task_center_attempt_id=attempt.id,
         spawn_reason="attempt_generator",
     )
-    packet = _generator_build(
+    packet = build_generator_context(
         ContextScope(
             goal_id=req.id,
             attempt_id=attempt.id,
@@ -131,7 +131,7 @@ def test_generator_drops_deferred_goal_from_executor_packet(
         spawn_reason="attempt_generator",
     )
 
-    packet = _generator_build(
+    packet = build_generator_context(
         ContextScope(
             goal_id=req.id,
             attempt_id=attempt.id,
@@ -186,7 +186,7 @@ def test_generator_dependency_blocks_are_flat_siblings(
         spawn_reason="attempt_generator",
     )
 
-    packet = _generator_build(
+    packet = build_generator_context(
         ContextScope(
             goal_id=req.id, attempt_id=attempt.id, task_id="t-down"
         ),
@@ -227,7 +227,7 @@ def test_generator_missing_dependency_task_raises_context_error(
     )
 
     with pytest.raises(ContextEngineError, match="Dependency task 't-missing'"):
-        _generator_build(
+        build_generator_context(
             ContextScope(
                 goal_id=req.id,
                 attempt_id=attempt.id,
@@ -267,7 +267,7 @@ def test_evaluator_emits_current_attempt_block_with_plan_and_criteria_inline(
         task_center_attempt_id=attempt.id,
         spawn_reason="attempt_generator",
     )
-    packet = _evaluator_build(
+    packet = build_evaluator_context(
         ContextScope(
             goal_id=req.id, iteration_id=iteration.id, attempt_id=attempt.id
         ),
@@ -323,7 +323,7 @@ def test_evaluator_renders_every_generator_summary_in_attempt_order(
             spawn_reason="attempt_generator",
         )
 
-    packet = _evaluator_build(
+    packet = build_evaluator_context(
         ContextScope(
             goal_id=req.id,
             iteration_id=iteration.id,
@@ -366,7 +366,7 @@ def test_evaluator_missing_generator_task_does_not_raise(
     )
     attempt_store.set_generator_task_ids(attempt.id, ["t-missing"])
 
-    packet = _evaluator_build(
+    packet = build_evaluator_context(
         ContextScope(
             goal_id=req.id,
             iteration_id=iteration.id,
@@ -409,7 +409,7 @@ def test_evaluator_defers_goal_inlines_deferred_child_in_attempt_body(
         spawn_reason="attempt_generator",
     )
 
-    packet = _evaluator_build(
+    packet = build_evaluator_context(
         ContextScope(
             goal_id=req.id, iteration_id=iteration.id, attempt_id=attempt.id
         ),
@@ -448,7 +448,7 @@ def test_evaluator_iteration2_frame_then_current_attempt(
         deferred_goal_for_next_iteration=None,
     )
 
-    packet = _evaluator_build(
+    packet = build_evaluator_context(
         ContextScope(
             goal_id=req.id, iteration_id=iteration2.id, attempt_id=attempt.id
         ),
@@ -487,7 +487,7 @@ def test_evaluator_with_empty_criteria_omits_criteria_block(
         deferred_goal_for_next_iteration=None,
     )
 
-    packet = _evaluator_build(
+    packet = build_evaluator_context(
         ContextScope(
             goal_id=req.id, iteration_id=iteration.id, attempt_id=attempt.id
         ),

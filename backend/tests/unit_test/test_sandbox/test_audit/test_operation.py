@@ -73,7 +73,7 @@ def test_node_from_caller_uses_task_center_fields_before_legacy_run_id() -> None
             task_center_attempt_id="attempt-1",
             task_center_goal_id="goal-1",
             task_center_request_id="request-1",
-            tool_use_id="tool-1",
+            tool_id="tool-1",
         ),
     )
 

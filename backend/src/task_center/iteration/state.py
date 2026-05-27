@@ -64,7 +64,7 @@ class Iteration:
 
 
 @dataclass(frozen=True, slots=True)
-class PriorAttemptEntry:
+class FailedAttemptEntry:
     """One past attempt's structural state. Phase 06 fills the summary fields."""
 
     attempt_id: str
@@ -90,7 +90,7 @@ class SuccessDeferred:
 @dataclass(frozen=True, slots=True)
 class AttemptPlanFailed:
     failure_summary: str
-    prior_attempt_history: tuple[PriorAttemptEntry, ...]
+    prior_attempt_history: tuple[FailedAttemptEntry, ...]
     kind: Literal["attempt_plan_failed"] = "attempt_plan_failed"
 
 

@@ -211,7 +211,7 @@ class MetricsAggregator:
             "incomplete_calls": [
                 {
                     "tool_name": key[0],
-                    "tool_id": key[1] or None,
+                    "tool_use_id": key[1] or None,
                     "agent_run_id": key[2] or None,
                     "started_ts": start.ts.isoformat(),
                     "node": start.node,
@@ -234,7 +234,7 @@ class MetricsAggregator:
     def _key(event: Event) -> tuple[str, str, str]:
         return (
             str(event.payload.get("tool_name") or "unknown"),
-            str(event.payload.get("tool_id") or ""),
+            str(event.payload.get("tool_use_id") or ""),
             str(event.node.agent_run_id or ""),
         )
 
@@ -250,7 +250,7 @@ class MetricsAggregator:
         changed_paths = _string_list(metadata_dict.get("changed_paths"))
         sample: dict[str, Any] = {
             "tool_name": str(event.payload.get("tool_name") or "unknown"),
-            "tool_id": str(event.payload.get("tool_id") or "") or None,
+            "tool_use_id": str(event.payload.get("tool_use_id") or "") or None,
             "agent_name": event.node.agent_name,
             "agent_run_id": event.node.agent_run_id,
             "task_center_run_id": event.node.task_center_run_id,

@@ -120,7 +120,7 @@
   <ol>
     <li><span><code>execute_tool_once()</code> parses raw input through the tool input model before any hook runs.</span></li>
     <li><span><code>run_pre_hooks()</code> executes each pre-hook in tuple order. A pass can replace input; a fail returns a structured hook failure before the tool body starts.</span></li>
-    <li><span>The framework emits <code>ToolExecutionStarted</code> using the effective input and calls the tool body.</span></li>
+    <li><span>The framework emits <code>ToolExecutionStartedEvent</code> using the effective input and calls the tool body.</span></li>
     <li><span>The normal output validator checks the body result against the tool output model.</span></li>
     <li><span><code>run_post_hooks()</code> executes each post-hook in tuple order. A pass can replace the result; a fail replaces it with a hook failure.</span></li>
     <li><span><code>finalize_result()</code> appends <code>hook_trace</code>, <code>effective_tool_input</code>, and pending system notification metadata unless the result is already a hook failure.</span></li>

@@ -102,7 +102,6 @@ class GoalClosureReport:
 
 
 GoalClosureDeliveryStatus = Literal["delivered", "already_delivered"]
-CloseReportDeliveryStatus = GoalClosureDeliveryStatus
 
 
 @dataclass(frozen=True, slots=True)
@@ -110,8 +109,3 @@ class GoalClosureDeliveryResult:
     status: GoalClosureDeliveryStatus
     requested_by_task_id: str | None
     parent_attempt_id: str | None
-
-
-# Preserve the old facade name for direct imports while internal code uses the
-# goal-closure name.
-CloseReportDeliveryResult = GoalClosureDeliveryResult

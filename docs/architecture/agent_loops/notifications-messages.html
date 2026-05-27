@@ -53,27 +53,27 @@
 
 <p class="lead">The message package owns the transcript and output formats that the agent loop mutates. The notification package owns engine-generated reminders that appear both as stream events and provider-visible user-message blocks.</p>
 
-<section id="message-model" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="backend/src/message/messages.py backend/src/message/stream_events.py backend/src/engine/tool_call/dispatch.py backend/src/tools/_framework/execution/tool_call.py">
+<section id="message-model" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="backend/src/message/message.py backend/src/message/events.py backend/src/engine/tool_call/dispatch.py backend/src/tools/_framework/execution/tool_call.py">
 <h2>Message Model <a class="anchor" href="#message-model">#</a></h2>
 <div class="diagram" aria-label="Message model shape">
   <div class="flow-row">
-    <div class="node info"><strong><code>ConversationMessage</code></strong><small>role plus content blocks</small></div>
+    <div class="node info"><strong><code>Message</code></strong><small>role plus content blocks</small></div>
     <div class="node"><strong>Assistant blocks</strong><small>text, thinking, tool_use</small></div>
     <div class="node"><strong>User blocks</strong><small>text, tool_result, system notification</small></div>
-    <div class="node warn"><strong>Internal marker</strong><small><code>does_terminate</code> stays off provider wire</small></div>
+    <div class="node warn"><strong>Internal marker</strong><small><code>is_terminal</code> stays off provider wire</small></div>
   </div>
 </div>
 <div class="edge-list">
   <div><b>text and thinking</b><span><code>TextBlock</code> and <code>ThinkingBlock</code> model assistant/user text. Thinking blocks are excluded when a conversation message is converted back to provider parameters.</span></div>
   <div><b>tool requests</b><span><code>ToolUseBlock</code> carries the provider tool id, name, and JSON input. The query loop reads these blocks from the final assistant message to decide dispatch.</span></div>
-  <div><b>tool results</b><span><code>ToolResultBlock</code> is appended in a user message for non-terminal tool results. Its <code>metadata</code> and <code>does_terminate</code> fields are engine-local and are not serialized to providers.</span></div>
+  <div><b>tool results</b><span><code>ToolResultBlock</code> is appended in a user message for non-terminal tool results. Its <code>metadata</code> and <code>is_terminal</code> fields are engine-local and are not serialized to providers.</span></div>
   <div><b>system notifications</b><span><code>SystemNotificationBlock</code> is a first-class local block, but provider serialization flattens it into a text block wrapped in <code>&lt;system-reminder&gt;</code> tags.</span></div>
 </div>
 </section>
 
-<section id="provider-history" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="backend/src/engine/query/request.py backend/src/engine/query/provider_history.py backend/src/engine/background/history.py backend/src/message/messages.py">
+<section id="provider-history" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="backend/src/engine/query/request.py backend/src/engine/query/provider_history.py backend/src/engine/background/history.py backend/src/message/message.py">
 <h2>Provider History <a class="anchor" href="#provider-history">#</a></h2>
-<p>The query loop keeps a canonical in-memory transcript, but provider calls receive a sanitized copy. <code>build_query_run_request()</code> calls <code>prepare_provider_messages()</code>, records prompt reports, decorates background-capable tool schemas, and records the initial prompt rows once for message artifacts.</p>
+<p>The query loop keeps a canonical in-memory transcript, but provider calls receive a sanitized copy. <code>build_query_run_request()</code> calls <code>build_provider_messages()</code>, records prompt reports, decorates background-capable tool schemas, and records the initial prompt rows once for message artifacts.</p>
 <pre class="diagram" aria-label="Provider message preparation">
 [engine transcript]
         |
@@ -81,7 +81,7 @@
 [background updates folded into history]
         |
         v
-[prepare_provider_messages]
+[build_provider_messages]
         |
         +--&gt; [sanitize tool-call/result adjacency]
         |       ensures provider-valid tool pairs
@@ -112,13 +112,13 @@
 </div>
 </section>
 
-<section id="stream-output" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="backend/src/message/stream_events.py backend/src/message/event_printer.py backend/src/engine/query/loop.py backend/src/engine/tool_call/streaming.py backend/src/engine/background/dispatch.py backend/src/engine/background/task_supervisor.py">
+<section id="stream-output" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="backend/src/message/events.py backend/src/message/event_printer.py backend/src/engine/query/loop.py backend/src/engine/tool_call/streaming.py backend/src/engine/background/dispatch.py backend/src/engine/background/task_supervisor.py">
 <h2>Stream Output <a class="anchor" href="#stream-output">#</a></h2>
 <p>Stream events are the live output surface. <code>run_query()</code> stamps emitted dataclass events with <code>agent_name</code> and <code>run_id</code> when those fields are present, so multi-agent logs can group interleaved work by lane.</p>
 <div class="edge-list">
-  <div><b>assistant deltas</b><span><code>ThinkingDelta</code> and <code>AssistantTextDelta</code> stream partial provider output. <code>AssistantMessageComplete</code> carries the canonical completed assistant message and usage.</span></div>
-  <div><b>tool events</b><span><code>ToolExecutionStarted</code>, <code>ToolExecutionProgress</code>, <code>ToolExecutionCompleted</code>, and <code>ToolExecutionCancelled</code> describe foreground and deferred tool execution.</span></div>
-  <div><b>background start</b><span><code>BackgroundTaskStarted</code> carries the short task alias, tool name, and clean input for background launch display.</span></div>
+  <div><b>assistant deltas</b><span><code>ThinkingDeltaEvent</code> and <code>AssistantTextDeltaEvent</code> stream partial provider output. <code>AssistantMessageCompleteEvent</code> carries the canonical completed assistant message and usage.</span></div>
+  <div><b>tool events</b><span><code>ToolExecutionStartedEvent</code>, <code>ToolExecutionProgressEvent</code>, <code>ToolExecutionCompletedEvent</code>, and <code>ToolExecutionCancelledEvent</code> describe foreground and deferred tool execution.</span></div>
+  <div><b>background start</b><span><code>BackgroundTaskStartedEvent</code> carries the short task alias, tool name, and clean input for background launch display.</span></div>
   <div><b>printer output</b><span><code>MultiAgentEventPrinter</code> buffers text and thinking per <code>(agent_name, run_id)</code> lane, formats shell structured errors, and prints background start details for subagents.</span></div>
 </div>
 </section>
@@ -129,8 +129,8 @@
 <div class="summary">
   <ul>
     <li>Rows contain <code>role</code>, serialized <code>content</code>, and <code>metadata</code> with <code>seq</code>, <code>agent_name</code>, <code>run_id</code>, and optional tool fields.</li>
-    <li>Thinking and text deltas are buffered until <code>AssistantMessageComplete</code>. If the complete message already contains the relevant block, the buffer is dropped.</li>
-    <li>Tool completions are recorded as user messages with <code>ToolResultBlock</code> content, preserving <code>metadata</code> and <code>does_terminate</code> for local artifact analysis.</li>
+    <li>Thinking and text deltas are buffered until <code>AssistantMessageCompleteEvent</code>. If the complete message already contains the relevant block, the buffer is dropped.</li>
+    <li>Tool completions are recorded as user messages with <code>ToolResultBlock</code> content, preserving <code>metadata</code> and <code>is_terminal</code> for local artifact analysis.</li>
     <li>For TaskCenter's multi-row launch shape, seeded initial messages are written between the system row and the final spawn prompt row, preserving system plus context plus task-guidance or skill rows.</li>
   </ul>
 </div>

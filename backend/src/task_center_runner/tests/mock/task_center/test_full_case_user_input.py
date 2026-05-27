@@ -262,7 +262,7 @@ def _assert_parallel_agent_execution(events: list[Event]) -> None:
     intervals: list[tuple[Any, Any, str, str, str]] = []
     for event in events:
         if event.type == EventType.TOOL_CALL_STARTED:
-            tool_use_id = str(event.payload.get("tool_id") or "")
+            tool_use_id = str(event.payload.get("tool_use_id") or "")
             if not tool_use_id:
                 continue
             starts[tool_use_id] = (
@@ -272,7 +272,7 @@ def _assert_parallel_agent_execution(events: list[Event]) -> None:
                 str(event.payload.get("tool_name") or ""),
             )
         elif event.type in (EventType.TOOL_CALL_COMPLETED, EventType.TOOL_CALL_ERROR):
-            tool_use_id = str(event.payload.get("tool_id") or "")
+            tool_use_id = str(event.payload.get("tool_use_id") or "")
             start = starts.pop(tool_use_id, None)
             if start is None:
                 continue

@@ -50,17 +50,17 @@
   </ol>
 </nav>
 
-<section id="provider-turn-workflow" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="backend/src/engine/query/loop.py backend/src/engine/query/context.py backend/src/engine/query/request.py backend/src/engine/query/provider_history.py backend/src/providers backend/src/message/messages.py backend/src/message/stream_events.py backend/src/notification">
+<section id="provider-turn-workflow" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="backend/src/engine/query/loop.py backend/src/engine/query/context.py backend/src/engine/query/request.py backend/src/engine/query/provider_history.py backend/src/providers backend/src/message/message.py backend/src/message/events.py backend/src/notification">
 <h2>Provider Turn Workflow</h2>
 <div class="summary">
   <p>The query loop owns one provider-visible turn at a time. It prepares tool metadata, background supervision, terminal-tool names, notification state, provider-safe history, and prompt-report rows before the model-provider stream starts.</p>
-  <p>The durable transcript remains local to the agent. Provider requests receive a sanitized copy from <code>prepare_provider_messages()</code>, which compacts stale background snapshots and drops malformed tool-use/result pairs without mutating the run transcript.</p>
+  <p>The durable transcript remains local to the agent. Provider requests receive a sanitized copy from <code>build_provider_messages()</code>, which compacts stale background snapshots and drops malformed tool-use/result pairs without mutating the run transcript.</p>
 </div>
 <div class="diagram" aria-label="Provider turn workflow">
   <div class="flow-row">
     <div class="node"><strong>Prepare runtime</strong><small><code>ExecutionMetadata</code>, notifications, background supervisor, terminal names</small></div>
-    <div class="node"><strong>Build request</strong><small><code>ApiMessageRequest</code>, provider-safe messages, decorated background schemas</small></div>
-    <div class="node"><strong>Consume stream</strong><small><code>ApiStreamEvent</code>: thinking, text, tool-use deltas, final assistant</small></div>
+    <div class="node"><strong>Build request</strong><small><code>MessageRequest</code>, provider-safe messages, decorated background schemas</small></div>
+    <div class="node"><strong>Consume stream</strong><small><code>StreamEvent</code>: thinking, text, tool-use deltas, final assistant</small></div>
   </div>
   <div class="flow-row">
     <div class="node"><strong>Append assistant</strong><small>record usage and message completion</small></div>
@@ -93,25 +93,25 @@
 </pre>
 <div class="edge-list">
   <div><b>Runtime setup</b><span>The loop coerces or creates <code>ExecutionMetadata</code>, installs the run-scoped notification service, and creates <code>BackgroundTaskSupervisor</code> only when background tools are enabled.</span></div>
-  <div><b>Request copy</b><span><code>prepare_provider_messages()</code> sanitizes the provider-visible history and feeds <code>ApiMessageRequest</code> without changing the durable transcript.</span></div>
-  <div><b>Dispatch precondition</b><span>Final tool dispatch waits for <code>ApiMessageCompleteEvent</code> so the complete assistant message is available before side effects continue.</span></div>
+  <div><b>Request copy</b><span><code>build_provider_messages()</code> sanitizes the provider-visible history and feeds <code>MessageRequest</code> without changing the durable transcript.</span></div>
+  <div><b>Dispatch precondition</b><span>Final tool dispatch waits for <code>AssistantMessageCompleteEvent</code> so the complete assistant message is available before side effects continue.</span></div>
 </div>
 </section>
 
-<section id="streaming-and-deferral" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="backend/src/engine/query/loop.py backend/src/engine/tool_call/streaming.py backend/src/engine/tool_call/dispatch.py backend/src/engine/background/dispatch.py backend/src/tools/background backend/src/message/stream_events.py backend/tests/unit_test/test_tools/test_tool_execution.py">
+<section id="streaming-and-deferral" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="backend/src/engine/query/loop.py backend/src/engine/tool_call/streaming.py backend/src/engine/tool_call/dispatch.py backend/src/engine/background/dispatch.py backend/src/tools/background backend/src/message/events.py backend/tests/unit_test/test_tools/test_tool_execution.py">
 <h2>Streaming and Deferral</h2>
 <p><code>StreamingToolExecutor</code> can execute normal foreground tools as soon as tool-use deltas arrive. The executor itself does not know background or terminal policy; the query loop passes a <code>should_defer</code> predicate.</p>
 <div class="edge-list">
   <div><b>Terminal-capable run</b><span>If <code>context.terminal_tools</code> is non-empty, every streamed tool is deferred until the final assistant message is available. This lets the final batch validator reject a terminal tool batched with siblings before any sibling side effect runs.</span></div>
   <div><b>Background-bound call</b><span><code>defer_background_dispatch()</code> returns true for <code>background=&quot;always&quot;</code>, or for <code>background=&quot;optional&quot;</code> when the tool input carries <code>background=true</code>. The final dispatcher later launches it through the background path.</span></div>
   <div><b>Foreground call</b><span>Non-deferred tools start mid-stream, emit lifecycle/progress events, and are gathered by <code>executor.get_remaining()</code> before final dispatch decides which final-message tool ids remain unresolved.</span></div>
-  <div><b>Failure mode</b><span>If the provider stream ends without an <code>ApiMessageCompleteEvent</code>, the executor cancels in-flight streamed tools and the loop raises a provider-facing runtime error instead of dispatching a partial assistant message.</span></div>
+  <div><b>Failure mode</b><span>If the provider stream ends without an <code>AssistantMessageCompleteEvent</code>, the executor cancels in-flight streamed tools and the loop raises a provider-facing runtime error instead of dispatching a partial assistant message.</span></div>
 </div>
 </section>
 
-<section id="tool-dispatch-and-terminal-stop" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="backend/src/engine/query/loop.py backend/src/engine/query/context.py backend/src/engine/tool_call/dispatch.py backend/src/tools/_framework/execution/tool_call.py backend/src/message/messages.py backend/src/message/stream_events.py backend/tests/unit_test/test_tools/test_tool_execution.py">
+<section id="tool-dispatch-and-terminal-stop" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="backend/src/engine/query/loop.py backend/src/engine/query/context.py backend/src/engine/tool_call/dispatch.py backend/src/tools/_framework/execution/tool_call.py backend/src/message/message.py backend/src/message/events.py backend/tests/unit_test/test_tools/test_tool_execution.py">
 <h2>Tool Dispatch and Terminal Stop</h2>
-<p>Terminal tools are ordinary registered tools with <code>is_terminal_tool=True</code>, but successful execution is stamped with <code>does_terminate=True</code> in <code>execute_tool_once()</code>. That marker is local engine state on <code>ToolResultBlock</code> and stream events; it is not serialized back to providers.</p>
+<p>Terminal tools are ordinary registered tools with <code>is_terminal_tool=True</code>, but successful execution is stamped with <code>is_terminal=True</code> in <code>execute_tool_once()</code>. That marker is local engine state on <code>ToolResultBlock</code> and stream events; it is not serialized back to providers.</p>
 <div class="diagram" aria-label="Terminal dispatch path">
   <div class="flow-row">
     <div class="node"><strong>Full batch visible</strong><small>final assistant message has all tool uses</small></div>
@@ -119,7 +119,7 @@
     <div class="node"><strong>Tool body</strong><small>validation, hooks, start event, output validation</small></div>
   </div>
   <div class="flow-row">
-    <div class="node"><strong>Terminate marker</strong><small>successful terminal result sets <code>does_terminate</code></small></div>
+    <div class="node"><strong>Terminate marker</strong><small>successful terminal result sets <code>is_terminal</code></small></div>
     <div class="node"><strong>Dispatch outcome</strong><small>first terminating result becomes <code>terminal_result</code></small></div>
     <div class="node"><strong>Loop stop</strong><small><code>QueryExitReason.TOOL_STOP</code></small></div>
   </div>
@@ -150,7 +150,7 @@
 <div class="edge-list">
   <div><b>Batch rejection</b><span>If a terminal tool is batched with any sibling tool, none of the batch executes and streamed work is cancelled.</span></div>
   <div><b>Background split</b><span>For a valid batch, background launches are acknowledged separately while foreground calls execute through the normal tool framework.</span></div>
-  <div><b>Terminal stop</b><span>The first <code>does_terminate</code> block becomes the run terminal result and stops the query loop.</span></div>
+  <div><b>Terminal stop</b><span>The first <code>is_terminal</code> block becomes the run terminal result and stops the query loop.</span></div>
 </div>
 </section>
 
@@ -166,7 +166,7 @@
 </div>
 </section>
 
-<section id="run-lifecycle-boundary" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="backend/src/engine/agent/lifecycle.py backend/src/engine/agent/factory.py backend/src/engine/query/loop.py backend/src/engine/query/context.py backend/src/tools/background backend/src/message/messages.py backend/tests/unit_test/test_task_center/test_agent_launch/test_attempt_launcher_retry.py">
+<section id="run-lifecycle-boundary" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="backend/src/engine/agent/lifecycle.py backend/src/engine/agent/factory.py backend/src/engine/query/loop.py backend/src/engine/query/context.py backend/src/tools/background backend/src/message/message.py backend/tests/unit_test/test_task_center/test_agent_launch/test_attempt_launcher_retry.py">
 <h2>Run Lifecycle Boundary</h2>
 <p><code>run_ephemeral_agent()</code> is the single lifecycle entry point for top-level agent runs and subagent launches. It spawns the agent, drives <code>agent.run(..., auto_close=False)</code>, forwards stream events, persists the agent run, closes the provider client, and returns an <code>EphemeralRunResult</code>.</p>
 <div class="summary">

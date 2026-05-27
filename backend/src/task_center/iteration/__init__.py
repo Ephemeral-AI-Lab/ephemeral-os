@@ -12,7 +12,7 @@ if TYPE_CHECKING:
     from task_center.iteration.attempt_coordinator import (
         AttemptClosedCallback as AttemptClosedCallback,
         IterationAttemptCoordinator as IterationAttemptCoordinator,
-        IterationClosureSink as IterationClosureSink,
+        IterationClosureCallback as IterationClosureCallback,
         OpenIterationCoordinatorRegistry as OpenIterationCoordinatorRegistry,
         OrchestratorFactory as OrchestratorFactory,
     )
@@ -23,7 +23,7 @@ if TYPE_CHECKING:
         IterationClosureReport as IterationClosureReport,
         IterationCreationReason as IterationCreationReason,
         IterationStatus as IterationStatus,
-        PriorAttemptEntry as PriorAttemptEntry,
+        FailedAttemptEntry as FailedAttemptEntry,
         SuccessDeferred as SuccessDeferred,
         TerminalSuccess as TerminalSuccess,
     )
@@ -39,9 +39,9 @@ _EXPORTS: dict[str, tuple[str, str]] = {
     "AttemptPlanFailed": (_STATE, "AttemptPlanFailed"),
     "ClosureOutcome": (_STATE, "ClosureOutcome"),
     "Iteration": (_STATE, "Iteration"),
-    "IterationClosureSink": (
+    "IterationClosureCallback": (
         _COORDINATORS,
-        "IterationClosureSink",
+        "IterationClosureCallback",
     ),
     "IterationClosureReport": (_STATE, "IterationClosureReport"),
     "IterationCreationReason": (_STATE, "IterationCreationReason"),
@@ -58,7 +58,7 @@ _EXPORTS: dict[str, tuple[str, str]] = {
         _COORDINATORS,
         "OrchestratorFactory",
     ),
-    "PriorAttemptEntry": (_STATE, "PriorAttemptEntry"),
+    "FailedAttemptEntry": (_STATE, "FailedAttemptEntry"),
     "SuccessDeferred": (_STATE, "SuccessDeferred"),
     "TerminalSuccess": (_STATE, "TerminalSuccess"),
 }

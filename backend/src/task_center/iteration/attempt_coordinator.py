@@ -32,7 +32,7 @@ from task_center.attempt.state import (
     AttemptStatus,
 )
 from task_center.iteration.state import (
-    PriorAttemptEntry,
+    FailedAttemptEntry,
     AttemptPlanFailed,
     Iteration,
     IterationClosureReport,
@@ -44,7 +44,7 @@ from task_center.iteration.state import (
 logger = logging.getLogger(__name__)
 
 
-IterationClosureSink = Callable[[IterationClosureReport], None]
+IterationClosureCallback = Callable[[IterationClosureReport], None]
 AttemptClosedCallback = Callable[[str], None]
 OrchestratorFactory = Callable[[Attempt, AttemptClosedCallback], RegisteredAttemptOrchestrator]
 
@@ -58,7 +58,7 @@ class IterationAttemptCoordinator:
         iteration_id: str,
         iteration_store: IterationStoreProtocol,
         attempt_store: AttemptStoreProtocol,
-        on_iteration_closed: IterationClosureSink,
+        on_iteration_closed: IterationClosureCallback,
         orchestrator_factory: OrchestratorFactory | None = None,
         task_store: TaskStoreProtocol | None = None,
     ) -> None:
@@ -322,10 +322,10 @@ class IterationAttemptCoordinator:
         )
         self._on_iteration_closed(report)
 
-    def _build_prior_attempt_history(self) -> tuple[PriorAttemptEntry, ...]:
+    def _build_prior_attempt_history(self) -> tuple[FailedAttemptEntry, ...]:
         attempts = self._attempt_store.list_for_iteration(self.iteration_id)
         return tuple(
-            PriorAttemptEntry(
+            FailedAttemptEntry(
                 attempt_id=g.id,
                 attempt_sequence_no=g.attempt_sequence_no,
                 plan_spec=g.plan_spec,
@@ -361,7 +361,7 @@ class OpenIterationCoordinatorRegistry:
 
 __all__ = [
     "AttemptClosedCallback",
-    "IterationClosureSink",
+    "IterationClosureCallback",
     "IterationAttemptCoordinator",
     "OpenIterationCoordinatorRegistry",
     "OrchestratorFactory",

@@ -54,7 +54,7 @@
 
 <p class="lead">TaskCenter terminal tools are agent-facing submission endpoints. They are normal registered tools until a successful call crosses the tool framework, where the result is stamped as terminating and the engine loop stops the agent run.</p>
 <div class="summary">
-  <p>The current shape is intentionally layered: descriptors tell agents when to choose each terminal, submission tools validate and project role payloads, the framework validates output and stamps <code>does_terminate</code>, and the engine owns terminal exclusivity. Advisor and resolver helpers use the same terminal contract for their own child runs, but their results return to the caller instead of mutating the parent attempt directly.</p>
+  <p>The current shape is intentionally layered: descriptors tell agents when to choose each terminal, submission tools validate and project role payloads, the framework validates output and stamps <code>is_terminal</code>, and the engine owns terminal exclusivity. Advisor and resolver helpers use the same terminal contract for their own child runs, but their results return to the caller instead of mutating the parent attempt directly.</p>
 </div>
 
 <section id="terminal-contract-map" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="backend/src/tools/submission/_factory.py backend/src/tools/_terminals/registry.py backend/src/tools/_framework/execution/tool_call.py backend/src/tools/_framework/core/validation.py backend/src/engine/tool_call/dispatch.py backend/src/engine/query/loop.py docs/architecture/tools/submission.html docs/architecture/tools/terminals.html">
@@ -96,7 +96,7 @@
     <li><span>Each terminal tool is decorated with <code>is_terminal_tool=True</code> and a concrete pydantic input model. Most use <code>TextToolOutput</code>, so non-error output must validate as text before the result can terminate the run.</span></li>
     <li><span><code>engine.query.loop</code> derives <code>context.terminal_tools</code> from the active tool registry. If a run has any terminals, streamed tool calls are deferred until the final assistant message is available.</span></li>
     <li><span><code>engine.tool_call.dispatch</code> rejects any final batch that mixes a terminal tool with sibling tool calls. The rejection returns one error tool result per tool-use id and executes none of the batch.</span></li>
-    <li><span><code>execute_tool_once()</code> validates input, runs prehooks, emits start, executes the body, validates output, runs posthooks, and stamps non-error terminal results with <code>does_terminate=True</code>.</span></li>
+    <li><span><code>execute_tool_once()</code> validates input, runs prehooks, emits start, executes the body, validates output, runs posthooks, and stamps non-error terminal results with <code>is_terminal=True</code>.</span></li>
     <li><span>The dispatcher projects the first terminating result into <code>terminal_result</code>. The query loop sets <code>QueryExitReason.TOOL_STOP</code> and returns without another model turn.</span></li>
   </ol>
 </div>
@@ -170,7 +170,7 @@
   <div>Input validation</div><div><code>parse_tool_input()</code> strips engine runtime-control fields such as <code>background</code>, validates the pydantic input model, and returns a retryable invalid-input message on validation errors.</div>
   <div>Body execution</div><div><code>execute_tool_body()</code> catches tool exceptions, logs the traceback, and returns bounded error text with the exception type.</div>
   <div>Output validation</div><div><code>validate_tool_output()</code> validates non-error output against the tool's output model. Invalid JSON or pydantic mismatch becomes an error result with <code>output_validation_error</code> metadata.</div>
-  <div>Terminal stamping</div><div><code>execute_tool_once()</code> uses <code>dataclasses.replace()</code> to set <code>does_terminate=True</code> only when <code>tool.is_terminal_tool</code> and the final result is not an error.</div>
+  <div>Terminal stamping</div><div><code>execute_tool_once()</code> uses <code>dataclasses.replace()</code> to set <code>is_terminal=True</code> only when <code>tool.is_terminal_tool</code> and the final result is not an error.</div>
   <div>Runtime metadata</div><div><code>ExecutionMetadata</code> carries TaskCenter ids, <code>attempt_runtime</code>, <code>composer</code>, conversation messages, tool registry, background manager, sandbox invocation ids, and extras such as <code>active_terminals</code>.</div>
   <div>Loop stop</div><div><code>dispatch_assistant_tools()</code> returns the first terminating result. <code>engine.query.loop</code> stores it on <code>context.terminal_result</code>, sets <code>QueryExitReason.TOOL_STOP</code>, and stops the run.</div>
 </div>
@@ -251,7 +251,7 @@
 </div>
 <div class="refresh-list">
   <div><strong>Refresh when terminal names change</strong><span>Update descriptors, role profiles, submission registration tests, helper prompts, and TaskCenter terminal routing together.</span></div>
-  <div><strong>Refresh when framework validation changes</strong><span>Re-check input parsing, runtime control stripping, output validation, posthooks, and <code>does_terminate</code> stamping.</span></div>
+  <div><strong>Refresh when framework validation changes</strong><span>Re-check input parsing, runtime control stripping, output validation, posthooks, and <code>is_terminal</code> stamping.</span></div>
   <div><strong>Refresh when helper prompts change</strong><span>Re-check transcript filtering, prompt-injection guard text, terminal catalog rendering, and helper terminal result metadata.</span></div>
 </div>
 </section>

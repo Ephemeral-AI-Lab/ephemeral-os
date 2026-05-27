@@ -33,7 +33,7 @@ PLANNER_ID = "planner"
 _REQUIRED_FIELDS = frozenset({"goal_id", "iteration_id", "attempt_id"})
 
 
-def _planner_build(scope: ContextScope, deps: ContextEngineDeps) -> ContextPacket:
+def build_planner_context(scope: ContextScope, deps: ContextEngineDeps) -> ContextPacket:
     goal_id = scope.require_field("goal_id")
     iteration_id = scope.require_field("iteration_id")
     attempt_id = scope.require_field("attempt_id")
@@ -75,5 +75,5 @@ def _planner_build(scope: ContextScope, deps: ContextEngineDeps) -> ContextPacke
 PLANNER_RECIPE = ContextRecipe(
     id=PLANNER_ID,
     required_scope_fields=_REQUIRED_FIELDS,
-    build=_planner_build,
+    build=build_planner_context,
 )

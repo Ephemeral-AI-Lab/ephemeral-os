@@ -191,7 +191,7 @@ from __future__ import annotations
 
 from pydantic import BaseModel
 
-from message.messages import ConversationMessage, ToolResultBlock, ToolUseBlock
+from message.message import Message, ToolResultBlock, ToolUseBlock
 from tools._framework.core.context import ToolExecutionContextService
 from tools._framework.core.hooks import HookResult
 
@@ -272,7 +272,7 @@ class AdvisorApprovalPreHook:
 
 
 def _find_latest_advisor_pair(
-    messages: list[ConversationMessage],
+    messages: list[Message],
 ) -> tuple[ToolResultBlock | None, ToolUseBlock | None]:
     for msg in reversed(messages):
         if msg.role != "user":
@@ -288,7 +288,7 @@ def _find_latest_advisor_pair(
 
 
 def _find_originating_ask_advisor(
-    messages: list[ConversationMessage],
+    messages: list[Message],
     tool_use_id: str,
 ) -> ToolUseBlock | None:
     for msg in messages:
@@ -311,7 +311,7 @@ __all__ = ["AdvisorApprovalPreHook"]
 
 from __future__ import annotations
 
-from message.messages import ConversationMessage, ToolResultBlock, ToolUseBlock
+from message.message import Message, ToolResultBlock, ToolUseBlock
 
 _DEFAULT_ID = "toolu_test_advisor_approval"
 
@@ -324,9 +324,9 @@ def build_advisor_approval_messages(
     tool_payload: dict | None = None,
     tool_use_id: str = _DEFAULT_ID,
     is_error: bool = False,
-) -> list[ConversationMessage]:
+) -> list[Message]:
     return [
-        ConversationMessage(
+        Message(
             role="assistant",
             content=[
                 ToolUseBlock(
@@ -336,7 +336,7 @@ def build_advisor_approval_messages(
                 )
             ],
         ),
-        ConversationMessage(
+        Message(
             role="user",
             content=[
                 ToolResultBlock(
@@ -488,7 +488,7 @@ commit and root-cause before continuing.
   red test before Phase 4 begins.
 - **Second:** profile-prompt drift — the hook teaches via errors if a profile
   doesn't mention `ask_advisor`. Phase 5 closes this.
-- **Lowest:** circular imports — the hook depends only on `message.messages` +
+- **Lowest:** circular imports — the hook depends only on `message.message` +
   `_framework.core.{context,hooks}`, all of which live below `tools/submission/`.
 
 ## 9. Evidence anchors

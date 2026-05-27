@@ -8,8 +8,6 @@ from datetime import UTC, datetime
 import pytest
 
 from task_center.goal.state import (
-    CloseReportDeliveryResult,
-    CloseReportDeliveryStatus,
     GoalClosureReport,
     GoalClosureDeliveryResult,
     GoalClosureDeliveryStatus,
@@ -62,14 +60,12 @@ def test_closure_report_constructs():
     assert rep.outcome == "success"
 
 
-def test_goal_closure_delivery_keeps_legacy_facade_names():
-    legacy_status: CloseReportDeliveryStatus = "delivered"
-    new_status: GoalClosureDeliveryStatus = legacy_status
+def test_goal_closure_delivery_result_constructs():
+    status: GoalClosureDeliveryStatus = "delivered"
     result = GoalClosureDeliveryResult(
-        status=new_status,
+        status=status,
         requested_by_task_id="t1",
         parent_attempt_id="a1",
     )
 
     assert result.status == "delivered"
-    assert CloseReportDeliveryResult is GoalClosureDeliveryResult

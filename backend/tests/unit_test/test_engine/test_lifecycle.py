@@ -15,7 +15,6 @@ from message.events import (
     StreamEvent,
     ToolExecutionStartedEvent,
 )
-from message.events import AssistantMessageCompleteEvent
 from providers.types import UsageSnapshot
 from tools._framework.core.base import ExecutionMetadata
 from tools._framework.core.registry import ToolRegistry

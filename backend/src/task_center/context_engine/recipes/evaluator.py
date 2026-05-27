@@ -30,7 +30,7 @@ EVALUATOR_ID = "evaluator"
 _REQUIRED_FIELDS = frozenset({"goal_id", "attempt_id"})
 
 
-def _evaluator_build(scope: ContextScope, deps: ContextEngineDeps) -> ContextPacket:
+def build_evaluator_context(scope: ContextScope, deps: ContextEngineDeps) -> ContextPacket:
     attempt_id = scope.require_field("attempt_id")
     goal_id = scope.require_field("goal_id")
 
@@ -82,5 +82,5 @@ def _evaluator_build(scope: ContextScope, deps: ContextEngineDeps) -> ContextPac
 EVALUATOR_RECIPE = ContextRecipe(
     id=EVALUATOR_ID,
     required_scope_fields=_REQUIRED_FIELDS,
-    build=_evaluator_build,
+    build=build_evaluator_context,
 )

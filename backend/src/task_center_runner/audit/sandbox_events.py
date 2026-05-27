@@ -62,7 +62,7 @@ def sandbox_events_from_tool_completion(
     )
     base_payload = {
         "tool_name": tool_name,
-        "tool_id": stream_event.tool_use_id,
+        "tool_use_id": stream_event.tool_use_id,
         "status": status,
         "changed_paths": changed_paths,
         "changed_path_kinds": changed_path_kinds,

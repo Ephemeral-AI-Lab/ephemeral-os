@@ -410,7 +410,7 @@ class MockSquadRunner:
                 )
                 result = await self._call_tool(
                     submit_execution_handoff,
-                    {"goal": goal},
+                    {"goal_handoff": goal},
                     self._approve_terminal(metadata, submit_execution_handoff),
                     emit,
                 )
@@ -432,7 +432,7 @@ class MockSquadRunner:
                 )
                 result = await self._call_tool(
                     submit_execution_handoff,
-                    {"goal": goal},
+                    {"goal_handoff": goal},
                     self._approve_terminal(metadata, submit_execution_handoff),
                     emit,
                 )
@@ -1629,7 +1629,7 @@ class MockSquadRunner:
         )
         client_t1 = monotonic_now()
         override_kwargs: dict[str, Any] = {
-            "tool_id": tool_use_id,
+            "tool_use_id": tool_use_id,
             "sandbox_audit_sink": self._sandbox_audit_sink,
         }
         resolved_sandbox_invocation_id = ""
@@ -1663,7 +1663,7 @@ class MockSquadRunner:
                     tool_name=tool_obj.name,
                     payload={
                         "tool_name": tool_obj.name,
-                        "tool_id": tool_use_id,
+                        "tool_use_id": tool_use_id,
                         "invocation_id": resolved_sandbox_invocation_id,
                         "background_task_id": background_task_id,
                     },
@@ -1895,7 +1895,7 @@ class MockSquadRunner:
             task_center_attempt_id=str(metadata.get("task_center_attempt_id") or ""),
             task_center_goal_id=str(metadata.get("task_center_goal_id") or ""),
             task_center_request_id=str(metadata.get("task_center_request_id") or ""),
-            tool_use_id=str(metadata.get("tool_id") or ""),
+            tool_id=str(metadata.get("tool_use_id") or ""),
         )
 
     @staticmethod

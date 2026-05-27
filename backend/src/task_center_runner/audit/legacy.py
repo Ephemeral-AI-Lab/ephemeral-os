@@ -77,8 +77,8 @@ def _legacy_payload(event: AuditEvent) -> dict[str, Any]:
     payload = dict(event.payload)
     if "tool_name" not in payload and event.node.tool_name:
         payload["tool_name"] = event.node.tool_name
-    if "tool_id" not in payload and event.node.tool_use_id:
-        payload["tool_id"] = event.node.tool_use_id
+    if "tool_use_id" not in payload and event.node.tool_use_id:
+        payload["tool_use_id"] = event.node.tool_use_id
     changed_paths = payload.get("changed_paths")
     if isinstance(changed_paths, Iterable) and not isinstance(
         changed_paths, (str, bytes, dict)

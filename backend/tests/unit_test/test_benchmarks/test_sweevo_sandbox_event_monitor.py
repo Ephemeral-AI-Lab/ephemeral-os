@@ -276,7 +276,7 @@ def test_legacy_sandbox_audit_sink_maps_namespaced_events_once(tmp_path: Path) -
     assert rows[0]["event_type"] == "sandbox_occ_changes_committed"
     assert rows[0]["node"]["agent_run_id"] == "task-1"
     assert rows[0]["payload"]["tool_name"] == "write_file"
-    assert rows[0]["payload"]["tool_id"] == "toolu_1"
+    assert rows[0]["payload"]["tool_use_id"] == "toolu_1"
 
 
 def test_legacy_sandbox_audit_sink_maps_resource_snapshot(tmp_path: Path) -> None:

@@ -79,7 +79,7 @@
 </div>
 </section>
 
-<section id="record-lifecycle" data-last-reviewed-commit="569f12c3f39471dbaa643906856a8daf81a21a2d" data-evidence-paths="backend/src/engine/background/dispatch.py backend/src/engine/background/task_supervisor.py backend/src/engine/background/history.py backend/src/message/stream_events.py backend/tests/unit_test/test_engine/test_background_terminal_latch.py backend/tests/unit_test/test_engine/test_background_unit.py">
+<section id="record-lifecycle" data-last-reviewed-commit="569f12c3f39471dbaa643906856a8daf81a21a2d" data-evidence-paths="backend/src/engine/background/dispatch.py backend/src/engine/background/task_supervisor.py backend/src/engine/background/history.py backend/src/message/events.py backend/tests/unit_test/test_engine/test_background_terminal_latch.py backend/tests/unit_test/test_engine/test_background_unit.py">
 <h2>Record Lifecycle <a class="anchor" href="#record-lifecycle">#</a></h2>
 <p><code>BackgroundTaskSupervisor</code> owns the in-memory record map for the current query loop. It creates short aliases such as <code>bg_1</code>, stores the original tool name and clean input, records <code>task_type</code>, agent identity, sandbox binding, live progress, and the final <code>ToolResult</code>.</p>
 <table>

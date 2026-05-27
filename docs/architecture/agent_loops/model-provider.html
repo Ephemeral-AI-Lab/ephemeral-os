@@ -66,7 +66,7 @@
 <div class="diagram" aria-label="Model provider package boundary">
   <div class="flow-row">
     <div class="node info"><strong>Agent factory</strong><small><code>make_api_client()</code></small></div>
-    <div class="node"><strong>Provider request</strong><small><code>ApiMessageRequest</code></small></div>
+    <div class="node"><strong>Provider request</strong><small><code>MessageRequest</code></small></div>
     <div class="node"><strong>Streaming client</strong><small><code>SupportsStreamingMessages</code></small></div>
     <div class="node good"><strong>Query loop</strong><small>provider events become stream events and dispatch decisions</small></div>
   </div>
@@ -107,23 +107,23 @@
 </div>
 </section>
 
-<section id="request-stream-contract" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="backend/src/providers/types.py backend/src/engine/query/request.py backend/src/engine/query/loop.py backend/src/message/messages.py backend/src/message/stream_events.py backend/tests/unit_test/test_providers/test_anthropic_client.py backend/tests/unit_test/test_providers/test_codex_event_translation.py">
+<section id="request-stream-contract" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="backend/src/providers/types.py backend/src/engine/query/request.py backend/src/engine/query/loop.py backend/src/message/message.py backend/src/message/events.py backend/tests/unit_test/test_providers/test_anthropic_client.py backend/tests/unit_test/test_providers/test_codex_event_translation.py">
 <h2>Request And Stream Contract <a class="anchor" href="#request-stream-contract">#</a></h2>
-<p><code>ApiMessageRequest</code> is the engine-to-provider boundary. It carries the model id, provider-safe conversation messages, system prompt, max tokens, tool schemas, and optional tool choice. The provider client yields <code>ApiStreamEvent</code> values back to the query loop.</p>
+<p><code>MessageRequest</code> is the engine-to-provider boundary. It carries the model id, provider-safe conversation messages, system prompt, max tokens, tool schemas, and optional tool choice. The provider client yields <code>StreamEvent</code> values back to the query loop.</p>
 <div class="trace-grid">
-  <div>Request input</div><div><code>build_query_run_request()</code> supplies sanitized messages from <code>prepare_provider_messages()</code>, the run system prompt, registered tool schemas, and prompt-report recording.</div>
-  <div>Text and thinking</div><div><code>ApiTextDeltaEvent</code> and <code>ApiThinkingDeltaEvent</code> map directly to user-visible stream deltas.</div>
-  <div>Tool deltas</div><div><code>ApiToolUseDeltaEvent</code> is the early-execution seam. The query loop can start foreground tools before the final assistant message when deferral policy permits it.</div>
-  <div>Completion</div><div><code>ApiMessageCompleteEvent</code> is required before final dispatch. It carries the canonical assistant <code>ConversationMessage</code>, <code>UsageSnapshot</code>, and provider stop reason.</div>
+  <div>Request input</div><div><code>build_query_run_request()</code> supplies sanitized messages from <code>build_provider_messages()</code>, the run system prompt, registered tool schemas, and prompt-report recording.</div>
+  <div>Text and thinking</div><div><code>AssistantTextDeltaEvent</code> and <code>ThinkingDeltaEvent</code> map directly to user-visible stream deltas.</div>
+  <div>Tool deltas</div><div><code>ToolUseDeltaEvent</code> is the early-execution seam. The query loop can start foreground tools before the final assistant message when deferral policy permits it.</div>
+  <div>Completion</div><div><code>AssistantMessageCompleteEvent</code> is required before final dispatch. It carries the canonical assistant <code>Message</code>, <code>UsageSnapshot</code>, and provider stop reason.</div>
 </div>
 </section>
 
-<section id="anthropic-native" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="backend/src/providers/clients/anthropic_native.py backend/src/providers/auth_strategy.py backend/src/message/messages.py backend/tests/unit_test/test_providers/test_anthropic_client.py backend/tests/unit_test/test_providers/test_anthropic_refresh_replay.py backend/tests/unit_test/test_providers/test_anthropic_plan_mode_error_log.py">
+<section id="anthropic-native" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="backend/src/providers/clients/anthropic_native.py backend/src/providers/auth_strategy.py backend/src/message/message.py backend/tests/unit_test/test_providers/test_anthropic_client.py backend/tests/unit_test/test_providers/test_anthropic_refresh_replay.py backend/tests/unit_test/test_providers/test_anthropic_plan_mode_error_log.py">
 <h2>Anthropic Native Client <a class="anchor" href="#anthropic-native">#</a></h2>
 <p><code>AnthropicClient</code> uses the official async Anthropic SDK. Its main architecture role is translating Anthropic content-block streams into the provider-neutral events above.</p>
 <div class="edge-list">
-  <div><b>serializes</b><span>Request messages become provider API params through <code>ConversationMessage.to_api_param()</code>. Tool schemas drop <code>output_schema</code> because the Anthropic API does not accept it in tool definitions.</span></div>
-  <div><b>streams</b><span>Text and thinking deltas are yielded immediately. Tool-use input JSON is buffered until the Anthropic content block stops, then emitted as <code>ApiToolUseDeltaEvent</code>.</span></div>
+  <div><b>serializes</b><span>Request messages become provider API params through <code>Message.to_api_param()</code>. Tool schemas drop <code>output_schema</code> because the Anthropic API does not accept it in tool definitions.</span></div>
+  <div><b>streams</b><span>Text and thinking deltas are yielded immediately. Tool-use input JSON is buffered until the Anthropic content block stops, then emitted as <code>ToolUseDeltaEvent</code>.</span></div>
   <div><b>reassembles</b><span>After the SDK stream completes, <code>stream.get_final_message()</code> is converted back into the canonical assistant message and usage snapshot.</span></div>
   <div><b>retries</b><span>Transient API failures are retried only before any stream event has been emitted. Once text/tool events have escaped to the engine, failures are translated and raised rather than replaying duplicate deltas.</span></div>
 </div>
@@ -172,7 +172,7 @@
   </div>
   <div class="evidence-card">
     <h4>Query-loop adjacency</h4>
-    <p><code>test_provider_history.py</code> covers sanitation of the message history copied into <code>ApiMessageRequest</code>, which is the last engine-owned step before provider streaming.</p>
+    <p><code>test_provider_history.py</code> covers sanitation of the message history copied into <code>MessageRequest</code>, which is the last engine-owned step before provider streaming.</p>
   </div>
   <div class="evidence-card">
     <h4>Refresh triggers</h4>

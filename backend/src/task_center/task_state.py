@@ -30,11 +30,6 @@ class TaskCenterTaskStatus(StrEnum):
     BLOCKED = "blocked"
 
 
-# Older direct imports used "BackgroundTask" while these values are now the
-# canonical statuses for TaskCenter task rows.
-TaskCenterBackgroundTaskStatus = TaskCenterTaskStatus
-
-
 TERMINAL_GENERATOR_STATUSES: frozenset[TaskCenterTaskStatus] = frozenset(
     {
         TaskCenterTaskStatus.DONE,

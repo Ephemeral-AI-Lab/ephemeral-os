@@ -38,7 +38,7 @@ def stream_bridge(
                     payload={
                         "tool_name": stream_event.tool_name,
                         "tool_input": stream_event.tool_input,
-                        "tool_id": stream_event.tool_use_id,
+                        "tool_use_id": stream_event.tool_use_id,
                     },
                 )
             )
@@ -63,7 +63,7 @@ def stream_bridge(
                         "tool_name": stream_event.tool_name,
                         "output": stream_event.output,
                         "is_error": stream_event.is_error,
-                        "tool_id": stream_event.tool_use_id,
+                        "tool_use_id": stream_event.tool_use_id,
                         "metadata": metadata,
                         "is_terminal": stream_event.is_terminal,
                     },

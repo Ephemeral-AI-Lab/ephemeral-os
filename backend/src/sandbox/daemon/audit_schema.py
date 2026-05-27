@@ -248,7 +248,7 @@ def build_background_tool_event(
 class ToolCallSection:
     """Payload shape for ``tool_call.*`` events."""
 
-    tool_id: str
+    tool_use_id: str
     tool_name: str
     agent_id: str | None = None
     workspace_mode: str | None = None
@@ -263,11 +263,11 @@ class ToolCallSection:
 
     def as_dict(self) -> dict[str, Any]:
         out: dict[str, Any] = {
-            "tool_id": self.tool_id,
+            "tool_use_id": self.tool_use_id,
             "tool_name": self.tool_name,
         }
         for k, v in asdict(self).items():
-            if k in ("tool_id", "tool_name"):
+            if k in ("tool_use_id", "tool_name"):
                 continue
             if v is not None:
                 out[k] = v

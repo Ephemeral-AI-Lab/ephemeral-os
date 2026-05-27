@@ -56,7 +56,7 @@
     <div class="node warn"><strong>Batch validator</strong><small>rejects terminal calls with siblings</small></div>
   </div>
   <div class="flow-row">
-    <div class="node good"><strong>Successful terminal body</strong><small><code>execute_tool_once</code> stamps <code>does_terminate</code></small></div>
+    <div class="node good"><strong>Successful terminal body</strong><small><code>execute_tool_once</code> stamps <code>is_terminal</code></small></div>
     <div class="node"><strong>Dispatcher</strong><small>returns first terminal ToolResult</small></div>
     <div class="node"><strong>Query loop</strong><small>sets <code>TOOL_STOP</code> and exits</small></div>
   </div>
@@ -73,7 +73,7 @@
 <h2>Terminal Exclusivity <a class="anchor" href="#terminal-exclusivity">#</a></h2>
 <p>A terminal tool is any registered <code>BaseTool</code> whose <code>is_terminal_tool</code> flag is true. At query-loop startup, <code>engine.query.loop</code> derives <code>context.terminal_tools</code> from the active registry. When that set is non-empty, the stream executor defers all tool execution until the full assistant message is available.</p>
 <p>Deferral matters because <code>engine.tool_call.dispatch</code> rejects a batch where a terminal tool appears with any sibling tool call. The rejection returns tool-result errors for the batch and executes none of the tools, preserving the terminal invariant before foreground, background, sandbox, or TaskCenter side effects can happen.</p>
-<p>For valid batches, successful terminal execution is stamped in <code>execute_tool_once()</code> by replacing the final <code>ToolResult</code> with <code>does_terminate=True</code>. Failed terminal calls are not stamped, so the agent can receive the error and retry with corrected input.</p>
+<p>For valid batches, successful terminal execution is stamped in <code>execute_tool_once()</code> by replacing the final <code>ToolResult</code> with <code>is_terminal=True</code>. Failed terminal calls are not stamped, so the agent can receive the error and retry with corrected input.</p>
 </section>
 
 <section id="query-loop-stop" data-last-reviewed-commit="569f12c3f39471dbaa643906856a8daf81a21a2d" data-evidence-paths="backend/src/engine/query/loop.py backend/src/engine/query/context.py backend/src/engine/tool_call/dispatch.py backend/src/tools/_framework/execution/tool_call.py backend/src/engine/background/task_supervisor.py backend/tests/unit_test/test_tools/test_tool_execution.py">
@@ -81,7 +81,7 @@
 <ol>
   <li>The provider stream completes and the final assistant message is appended to the transcript.</li>
   <li><code>dispatch_assistant_tools()</code> executes deferred tool calls or rejects invalid terminal batches.</li>
-  <li><code>_first_terminal_tool_result()</code> finds the first result block with <code>does_terminate=True</code> and returns it as the dispatch terminal result.</li>
+  <li><code>_first_terminal_tool_result()</code> finds the first result block with <code>is_terminal=True</code> and returns it as the dispatch terminal result.</li>
   <li><code>engine.query.loop</code> copies that result into <code>context.terminal_result</code>, sets <code>context.exit_reason = QueryExitReason.TOOL_STOP</code>, and returns without appending another tool-result user message.</li>
   <li>The loop exits; pending background tasks are cancelled in the <code>finally</code> block if any remain.</li>
 </ol>

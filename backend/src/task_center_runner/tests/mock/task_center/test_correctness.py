@@ -165,3 +165,34 @@ def _assert_message_jsonl_contains_sandbox_tools(run_dir: Path) -> None:
         if isinstance(block, dict) and block.get("type") == "tool_use"
     }
     assert {"write_file", "read_file", "edit_file", "shell"}.issubset(tool_calls)
+    # The mock runner injects a synthetic ``ask_advisor`` + advisor approval
+    # pair into ``conversation_messages`` so gated terminals clear
+    # ``AdvisorApprovalPreHook`` (see
+    # ``task_center_runner/agent/mock/runner.py:_approve_terminal``). That
+    # pair lives on per-call ``ExecutionMetadata`` and is never emitted as a
+    # stream event, so it must not leak into the on-disk transcript.
+    leaked_tool_uses = [
+        block
+        for message in messages
+        for block in message.get("content", [])
+        if isinstance(block, dict)
+        and block.get("type") == "tool_use"
+        and str(block.get("name") or "") == "ask_advisor"
+    ]
+    assert not leaked_tool_uses, (
+        f"synthetic ask_advisor tool_use leaked into message.jsonl: "
+        f"{leaked_tool_uses!r}"
+    )
+    leaked_advisor_results = [
+        block
+        for message in messages
+        for block in message.get("content", [])
+        if isinstance(block, dict)
+        and block.get("type") == "tool_result"
+        and isinstance(block.get("metadata"), dict)
+        and block["metadata"].get("helper_role") == "advisor"
+    ]
+    assert not leaked_advisor_results, (
+        f"synthetic advisor approval result leaked into message.jsonl: "
+        f"{leaked_advisor_results!r}"
+    )

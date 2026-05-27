@@ -70,7 +70,7 @@
   <div><b>owns-schema</b><span><code>BaseTool</code> owns the tool name, descriptions, Pydantic input/output models, API schema rendering, foreground <code>intent</code>, <code>background</code> policy, <code>task_type</code>, terminal flag, context requirements, and explicit pre/post hooks.</span></div>
   <div><b>registers</b><span><code>ToolRegistry</code> is a name-to-instance map used by engine dispatch, while <code>tools._framework.factory</code> is the name-to-factory catalog used during agent setup.</span></div>
   <div><b>calls</b><span><code>engine.query.loop</code> builds a <code>ToolExecutionContextService</code>, prepares runtime context, and routes assistant tool calls through <code>engine.tool_call.dispatch</code> into <code>execute_tool_call_streaming</code>.</span></div>
-  <div><b>tested-by</b><span><code>backend/tests/unit_test/test_tools/test_tool_execution.py</code> covers direct execution, terminal stamping, query-loop terminal stop behavior, and dispatch propagation into <code>ToolResultBlock.does_terminate</code>.</span></div>
+  <div><b>tested-by</b><span><code>backend/tests/unit_test/test_tools/test_tool_execution.py</code> covers direct execution, terminal stamping, query-loop terminal stop behavior, and dispatch propagation into <code>ToolResultBlock.is_terminal</code>.</span></div>
 </div>
 </section>
 
@@ -84,7 +84,7 @@
     <tr><td><code>intent</code></td><td>Declares foreground access mode: read-only, write-allowed, or lifecycle.</td><td>The decorator injects <code>context["__intent"]</code> before calling functions that accept context, letting sandbox/plugin dispatch distinguish read-only from write-capable work.</td></tr>
     <tr><td><code>background</code></td><td>Controls whether a tool may or must run through background dispatch.</td><td><code>decorate_schemas_for_background()</code> adds the optional input flag only for eligible non-terminal tools; <code>engine.tool_call.dispatch</code> routes background requests.</td></tr>
     <tr><td><code>task_type</code></td><td>Classifies background/audit task shape without sniffing names.</td><td>Used by monitoring and UI paths that need to distinguish ordinary agent work from subagent-style tasks.</td></tr>
-    <tr><td><code>is_terminal_tool</code></td><td>Marks successful results that end the agent run.</td><td><code>execute_tool_once()</code> stamps <code>does_terminate=True</code>; <code>engine.query.loop</code> exits with <code>TOOL_STOP</code>.</td></tr>
+    <tr><td><code>is_terminal_tool</code></td><td>Marks successful results that end the agent run.</td><td><code>execute_tool_once()</code> stamps <code>is_terminal=True</code>; <code>engine.query.loop</code> exits with <code>TOOL_STOP</code>.</td></tr>
     <tr><td><code>context_requirements</code></td><td>Declares runtime service requirements for tools.</td><td><code>engine.tool_call.context.prepare_tool_execution_context()</code> can attach provider-specific services without hard-coding tool names in the query loop.</td></tr>
     <tr><td><code>pre_hooks</code>, <code>post_hooks</code></td><td>Tool-local policy and output gates.</td><td><code>ToolHookExecutionPipeline</code> runs them around the tool body and merges hook trace/notification metadata into the result.</td></tr>
   </tbody>
@@ -104,16 +104,16 @@
   <li><code>execute_tool_call_streaming()</code> looks up the named tool in the active <code>ToolRegistry</code>, copies or creates <code>ExecutionMetadata</code>, stamps the tool id, task-center task id, and conversation messages, then builds <code>ToolExecutionContextService</code>.</li>
   <li><code>execute_tool_once()</code> parses raw input through the tool input model after stripping runtime-only fields such as <code>background</code>.</li>
   <li><code>ToolHookExecutionPipeline.run_pre_hooks()</code> can transform the parsed input or deny execution with a structured tool error.</li>
-  <li>The framework optionally emits <code>ToolExecutionStarted</code>, runs the tool body, catches exceptions as bounded <code>ToolResult</code> errors, and validates successful output against the declared output model.</li>
+  <li>The framework optionally emits <code>ToolExecutionStartedEvent</code>, runs the tool body, catches exceptions as bounded <code>ToolResult</code> errors, and validates successful output against the declared output model.</li>
   <li>Post-hooks can validate or replace the <code>ToolResult</code>. Finalization adds effective input, hook trace, and system-notification metadata unless a hook failure already owns the result.</li>
-  <li>If the tool is terminal and the final result is successful, <code>execute_tool_once()</code> returns a copy with <code>does_terminate=True</code>. Errors and non-terminal tools are not stamped.</li>
+  <li>If the tool is terminal and the final result is successful, <code>execute_tool_once()</code> returns a copy with <code>is_terminal=True</code>. Errors and non-terminal tools are not stamped.</li>
 </ol>
 </section>
 
 <section id="engine-bridges" data-last-reviewed-commit="569f12c3f39471dbaa643906856a8daf81a21a2d" data-evidence-paths="backend/src/engine/query/loop.py backend/src/engine/query/context.py backend/src/engine/tool_call/dispatch.py backend/src/engine/tool_call/streaming.py backend/src/engine/background/dispatch.py backend/src/engine/background/task_supervisor.py backend/src/tools/_framework/execution/tool_call.py backend/tests/unit_test/test_tools/test_tool_execution.py">
 <h2>Engine Integration Points <a class="anchor" href="#engine-bridges">#</a></h2>
 <p>The query loop treats terminal capability as a property of the registered tools. During runtime preparation it derives <code>context.terminal_tools</code> from tools whose <code>is_terminal_tool</code> flag is true. Once any terminal tool is available, the stream dispatcher defers all tool bodies until the complete assistant message is available, so terminal exclusivity can be validated before sibling calls mutate state.</p>
-<p><code>engine.tool_call.dispatch</code> rejects any assistant batch where a terminal tool appears with siblings. For valid batches, background-eligible calls are handed to the background dispatcher and foreground calls use <code>execute_tool_call_streaming()</code>. The first returned block with <code>does_terminate=True</code> becomes the terminal result. The query loop records that result, sets <code>QueryExitReason.TOOL_STOP</code>, and the loop's <code>finally</code> block cancels pending background work before exit.</p>
+<p><code>engine.tool_call.dispatch</code> rejects any assistant batch where a terminal tool appears with siblings. For valid batches, background-eligible calls are handed to the background dispatcher and foreground calls use <code>execute_tool_call_streaming()</code>. The first returned block with <code>is_terminal=True</code> becomes the terminal result. The query loop records that result, sets <code>QueryExitReason.TOOL_STOP</code>, and the loop's <code>finally</code> block cancels pending background work before exit.</p>
 <div class="summary">
   <ul>
     <li><code>BaseTool</code> metadata is the shared contract: schema for providers, intent for sandbox/plugin policy, terminal flag for query-loop lifecycle, and hooks for tool-local gates.</li>
