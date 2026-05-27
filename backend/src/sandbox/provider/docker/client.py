@@ -115,8 +115,8 @@ def get_docker_client() -> Any:
     """Return a connected ``docker.DockerClient`` from the local daemon.
 
     Raises ``RuntimeError`` if the ``docker`` SDK is not installed; the import
-    is intentionally lazy so darwin hosts can import the provider package
-    without the dependency.
+    is intentionally lazy so environments without the SDK can still import the
+    provider package.
     """
     try:
         import docker  # type: ignore[import-not-found]

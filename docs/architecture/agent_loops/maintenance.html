@@ -128,13 +128,12 @@
 </div>
 </section>
 
-<section id="component-gap-sweep" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="backend/src/providers backend/src/engine/audit backend/src/engine/agent/run_tracker.py backend/src/prompt/environment.py backend/src/prompt/prompt_report_recorder.py docs/architecture/agent_loops/model-provider.html docs/architecture/agent_loops/notifications-messages.html docs/architecture/agent_loops/prompt-context.html">
+<section id="component-gap-sweep" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="backend/src/providers backend/src/engine/audit backend/src/engine/agent/run_tracker.py backend/src/prompt/prompt_report_recorder.py docs/architecture/agent_loops/model-provider.html docs/architecture/agent_loops/notifications-messages.html docs/architecture/agent_loops/prompt-context.html">
 <h2>Component Gap Sweep <a class="anchor" href="#component-gap-sweep">#</a></h2>
 <div class="summary">
   <ul>
     <li><code>backend/src/providers</code> is now covered by <a class="wiki-link" href="model-provider.html">Model Provider Runtime</a>. It was the main missing source module from the original engine/notification/message/provider/prompt scope.</li>
     <li><code>backend/src/engine/audit</code>, <code>AgentRunTracker</code>, and <code>PromptReportRecorder</code> are now covered by <a class="wiki-link" href="notifications-messages.html#observability-persistence">Observability And Persistence</a>.</li>
-    <li><code>backend/src/prompt/environment.py</code> is now called out in <a class="wiki-link" href="prompt-context.html#runtime-and-profiles">Runtime And Profiles</a> as an exported helper that current runtime prompt assembly does not inject by default.</li>
     <li><code>backend/src/sandbox/provider</code> remains covered separately by <a class="wiki-link" href="provider-sandbox-bridge.html">Sandbox Tool Dispatch Path</a> to avoid mixing model-provider and sandbox-provider ownership.</li>
   </ul>
 </div>

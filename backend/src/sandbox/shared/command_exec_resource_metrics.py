@@ -200,9 +200,7 @@ def _add_memory_stats(timings: dict[str, float]) -> None:
     rss_bytes = _current_rss_bytes()
     if rss_bytes is not None:
         timings["resource.process.rss_bytes"] = rss_bytes
-    max_rss = float(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss)
-    if not sys.platform.startswith("darwin"):
-        max_rss *= 1024.0
+    max_rss = float(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss) * 1024.0
     timings["resource.process.max_rss_bytes"] = max_rss
     for name, key in (
         ("memory.current", "resource.cgroup.memory_current_bytes"),
@@ -303,8 +301,6 @@ def _current_rss_bytes() -> float | None:
         except (OSError, IndexError, ValueError):
             return None
         return float(rss_pages * os.sysconf("SC_PAGE_SIZE"))
-    if sys.platform.startswith("darwin"):
-        return float(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss)
     return None
 
 

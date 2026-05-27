@@ -97,7 +97,7 @@ class DockerProviderAdapter:
     name = "docker"
 
     def __init__(self) -> None:
-        # Client is constructed lazily so darwin imports don't blow up.
+        # Client is constructed lazily so imports succeed without the docker SDK.
         self._client: Any | None = None
 
     # -- Client wiring -------------------------------------------------------
