@@ -103,12 +103,12 @@ def test_delete_disposes_adapter_and_plugin_host_caches(
     forgotten: list[tuple[str, str]] = []
     monkeypatch.setattr(
         host_lifecycle.plugin_host_dispatch,
-        "forget",
+        "forget_plugin_dispatch_state",
         lambda sandbox_id: forgotten.append(("host_dispatch", sandbox_id)),
     )
     monkeypatch.setattr(
         host_lifecycle.plugin_install,
-        "forget",
+        "forget_plugin_install_state",
         lambda sandbox_id: forgotten.append(("install", sandbox_id)),
     )
 
