@@ -12,6 +12,9 @@ from tools._framework.core.context import ToolExecutionContextService
 from sandbox.shared.models import Intent
 from tools._framework.core.decorator import tool
 from tools._framework.core.results import TextToolOutput, ToolResult
+from tools._hooks.require_no_inflight_background_tasks import (
+    RequireNoInflightBackgroundTasks,
+)
 from tools.submission._advisor_approval_prehook import AdvisorApprovalPreHook
 from tools.submission.context import (
     AttemptSubmissionContextError,
@@ -34,7 +37,10 @@ class SubmitVerificationFailureInput(BaseModel):
     output_model=TextToolOutput,
     intent=Intent.READ_ONLY,
     is_terminal_tool=True,
-    pre_hooks=(AdvisorApprovalPreHook("submit_verification_failure"),),
+    pre_hooks=(
+        RequireNoInflightBackgroundTasks("submit_verification_failure"),
+        AdvisorApprovalPreHook("submit_verification_failure"),
+    ),
 )
 async def submit_verification_failure(
     summary: str,

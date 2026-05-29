@@ -8,6 +8,7 @@ from sandbox.api.transport import (
     DAEMON_OP_INFLIGHT_COUNT,
     DAEMON_OP_INVOCATION_CANCEL,
     DAEMON_OP_INVOCATION_HEARTBEAT,
+    DAEMON_OP_ISOLATED_WORKSPACE_STATUS,
     SandboxTransport,
     call_sandbox_daemon,
 )
@@ -65,4 +66,26 @@ async def inflight_count(
     return int(response.get("count") or 0)
 
 
-__all__ = ["cancel", "heartbeat", "inflight_count"]
+async def isolated_active(
+    sandbox_id: str,
+    agent_id: str,
+    *,
+    transport: SandboxTransport | None = None,
+) -> bool:
+    """Return True iff the agent has an open isolated workspace (daemon truth).
+
+    Reads the authoritative ``get_handle`` verdict via the existing
+    ``api.isolated_workspace.status`` op. The no-bootstrapped-pipeline error
+    payload has no ``open`` key → treated as not isolated.
+    """
+    response = await call_sandbox_daemon(
+        sandbox_id,
+        DAEMON_OP_ISOLATED_WORKSPACE_STATUS,
+        {"agent_id": agent_id},
+        timeout=_CONTROL_TIMEOUT_S,
+        transport=transport,
+    )
+    return bool(response.get("open", False))
+
+
+__all__ = ["cancel", "heartbeat", "inflight_count", "isolated_active"]

@@ -16,6 +16,7 @@ from sandbox.shared.models import Intent
 from tools._framework.core.context import ToolExecutionContextService
 from tools._framework.core.decorator import tool
 from tools._framework.core.results import TextToolOutput, ToolResult
+from tools._hooks.block_in_isolated_mode import BlockInIsolatedMode
 from tools._terminals.registry import render_terminal_catalog
 from .prompt import get_ask_advisor_description
 from tools.ask_helper._lib._compose import (
@@ -160,6 +161,7 @@ def _build_advisor_user_msg_2(
     input_model=AskAdvisorInput,
     output_model=TextToolOutput,
     intent=Intent.READ_ONLY,
+    pre_hooks=(BlockInIsolatedMode("ask_advisor"),),
 )
 async def ask_advisor(
     tool_name: str,

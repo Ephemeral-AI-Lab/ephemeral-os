@@ -52,12 +52,19 @@ async def test_background_exit_iws_drains_agent_tasks(
 
     assert summary["mode"] == "exit_iws_drain", summary
     assert summary["default_inflight"] >= 1, summary
+    # Enter is refused at the bg prehook (a hook_failure ToolResult), so the
+    # reason tag lives in the hook trace, not a LifecycleError payload.
     assert summary["blocked_enter"]["is_error"], summary
-    error = summary["blocked_enter_payload"]["error"]
-    assert error["kind"] == "ephemeral_jobs_in_flight", summary
+    assert summary["blocked_enter_reason"] == "ephemeral_jobs_in_flight", summary
     assert summary["default_background"]["cancelled"], summary
     assert not summary["default_published"], summary
     assert not summary["iws_enter"]["is_error"], summary
+    # Exit is now GATED: the first attempt is refused while the iws bg task is
+    # in flight; the agent cancels it via cancel_background_task, then exit
+    # succeeds. (Drain stays as defense-in-depth but no longer fires here.)
+    assert summary["blocked_exit"]["is_error"], summary
+    assert summary["blocked_exit_reason"] == "ephemeral_jobs_in_flight", summary
+    assert not summary["cancel_bg"]["is_error"], summary
     assert not summary["iws_exit"]["is_error"], summary
     phases = summary["iws_exit_payload"]["phases_ms"]
     assert "evicted_background_tasks" in phases, summary

@@ -28,6 +28,7 @@ from message.events import StreamEvent
 from tools._framework.core.base import BaseTool
 from tools._framework.core.results import ToolResult
 from tools._framework.core.runtime import ExecutionMetadata
+from tools.background.cancel_background_task import CancelBackgroundTaskTool
 from tools.isolated_workspace.enter_isolated_workspace import (
     enter_isolated_workspace as enter_isolated_workspace_tool,
 )
@@ -37,6 +38,8 @@ from tools.isolated_workspace.exit_isolated_workspace import (
 from tools.sandbox.read_file import read_file as read_file_tool
 from tools.sandbox.shell import shell as shell_tool
 from tools.sandbox.write_file import write_file as write_file_tool
+
+cancel_background_task_tool = CancelBackgroundTaskTool()
 
 
 WORKSPACE_ROOT = "/testbed"
@@ -152,6 +155,25 @@ def _tool_record(result: ToolResult) -> dict[str, Any]:
 def _read_content(result: ToolResult) -> str:
     payload = _json_payload(result)
     return str(payload.get("content") or result.output or "")
+
+
+def _hook_failure_reason(result: ToolResult) -> str:
+    """Pull a failing pre-hook's ``metadata['reason']`` tag out of a result.
+
+    A prehook rejection is a ``hook_failure`` ToolResult whose user-facing
+    output is the generic permission-deny JSON; the per-branch reason tag lives
+    in the hook trace lifted into ``metadata['hook_trace']`` by the execution
+    pipeline. Returns ``""`` when the result is not a hook failure.
+    """
+    trace = (result.metadata or {}).get("hook_trace")
+    if not isinstance(trace, list):
+        return ""
+    for entry in reversed(trace):
+        if isinstance(entry, dict) and entry.get("status") == "fail":
+            meta = entry.get("metadata")
+            if isinstance(meta, dict) and meta.get("reason"):
+                return str(meta["reason"])
+    return ""
 
 
 async def _call_probe_tool(
@@ -1219,8 +1241,35 @@ async def run_background_exit_iws_drains_agent_tasks_probe(
         sandbox_invocation_id=f"iws-manager-{uuid4().hex}",
     )
     await asyncio.sleep(0.5)
+    # Exit is now GATED by the bg prehook: with a live sandbox-bound bg task it
+    # is refused (a hook_failure), not silently drained. The agent must cancel
+    # the task via the real cancel_background_task tool, then retry exit.
+    blocked_exit = await _call_probe_tool(
+        label="exit_iws.blocked_exit",
+        tool_obj=exit_isolated_workspace_tool,
+        raw_input={"grace_s": 1.0},
+        metadata=iws_metadata,
+        emit=emit,
+        call_tool=call_tool,
+        record_tool_check=None,
+        allow_error=True,
+    )
+    cancel_bg = await _call_probe_tool(
+        label="exit_iws.cancel_bg",
+        tool_obj=cancel_background_task_tool,
+        raw_input={"task_id": task_id, "reason": "iws_exit_gate"},
+        metadata=iws_metadata,
+        emit=emit,
+        call_tool=call_tool,
+        record_tool_check=record_tool_check,
+        allow_error=True,
+    )
+    # Let the daemon in-flight registry settle to zero before retrying so the
+    # retry's max(local, daemon) check sees no in-flight work (local is already
+    # settled by the cancel above).
+    await _wait_for_background_drain(iws_metadata)
     iws_exit = await _call_probe_tool(
-        label="exit_iws.exit_drains",
+        label="exit_iws.exit_after_cancel",
         tool_obj=exit_isolated_workspace_tool,
         raw_input={"grace_s": 1.0},
         metadata=iws_metadata,
@@ -1260,9 +1309,13 @@ async def run_background_exit_iws_drains_agent_tasks_probe(
         "default_inflight": default_inflight,
         "blocked_enter": _tool_record(blocked_enter),
         "blocked_enter_payload": _json_payload(blocked_enter),
+        "blocked_enter_reason": _hook_failure_reason(blocked_enter),
         "default_background": default_record,
         "iws_enter": _tool_record(iws_enter),
         "iws_enter_payload": _json_payload(iws_enter),
+        "blocked_exit": _tool_record(blocked_exit),
+        "blocked_exit_reason": _hook_failure_reason(blocked_exit),
+        "cancel_bg": _tool_record(cancel_bg),
         "iws_exit": _tool_record(iws_exit),
         "iws_exit_payload": _json_payload(iws_exit),
         "tracked_status_after_exit": (

@@ -14,6 +14,9 @@ from tools._framework.core.base import (
     ToolResult,
 )
 from tools._framework.core.decorator import tool
+from tools._hooks.require_no_inflight_background_tasks import (
+    RequireNoInflightBackgroundTasks,
+)
 from tools.sandbox._lib.tool_context import sandbox_caller_from_tool_context
 
 
@@ -28,6 +31,7 @@ class EnterIsolatedWorkspaceInput(BaseModel):
     input_model=EnterIsolatedWorkspaceInput,
     output_model=TextToolOutput,
     intent=Intent.LIFECYCLE,
+    pre_hooks=(RequireNoInflightBackgroundTasks("enter_isolated_workspace"),),
 )
 async def enter_isolated_workspace(
     layer_stack_root: str = "",

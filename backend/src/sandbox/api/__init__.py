@@ -63,7 +63,12 @@ from sandbox.api.tool.read import read_file
 from sandbox.api.tool.shell import shell
 from sandbox.api.tool.write import write_file
 from sandbox.api.raw_exec import raw_exec
-from sandbox.api.daemon_invocations import cancel, heartbeat, inflight_count
+from sandbox.api.daemon_invocations import (
+    cancel,
+    heartbeat,
+    inflight_count,
+    isolated_active,
+)
 from sandbox.api.daemon_audit import audit_pull, audit_reset_floor, audit_snapshot
 
 __all__ = [
@@ -113,6 +118,7 @@ __all__ = [
     "glob",
     "grep",
     "inflight_count",
+    "isolated_active",
     "list_sandboxes",
     "list_snapshots",
     "raw_exec",

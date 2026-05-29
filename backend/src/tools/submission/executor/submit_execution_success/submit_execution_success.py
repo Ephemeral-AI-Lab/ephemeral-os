@@ -9,6 +9,9 @@ from tools._framework.core.context import ToolExecutionContextService
 from sandbox.shared.models import Intent
 from tools._framework.core.decorator import tool
 from tools._framework.core.results import TextToolOutput, ToolResult
+from tools._hooks.require_no_inflight_background_tasks import (
+    RequireNoInflightBackgroundTasks,
+)
 from tools.submission._advisor_approval_prehook import AdvisorApprovalPreHook
 from tools.submission.context import (
     AttemptSubmissionContextError,
@@ -31,7 +34,10 @@ class SubmitExecutionSuccessInput(BaseModel):
     output_model=TextToolOutput,
     intent=Intent.READ_ONLY,
     is_terminal_tool=True,
-    pre_hooks=(AdvisorApprovalPreHook("submit_execution_success"),),
+    pre_hooks=(
+        RequireNoInflightBackgroundTasks("submit_execution_success"),
+        AdvisorApprovalPreHook("submit_execution_success"),
+    ),
 )
 async def submit_execution_success(
     summary: str,
