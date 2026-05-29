@@ -770,6 +770,12 @@ class MockSquadRunner:
                 )
                 summary = "Background-shell many-small-writes probe passed."
                 artifacts = [summary_path]
+            elif action == "background_mixed_op_concurrent":
+                summary_path = await self._run_background_shell_probe(
+                    metadata, emit, mode="mixed_op_concurrent"
+                )
+                summary = "Background-shell mixed-op concurrent probe passed."
+                artifacts = [summary_path]
             elif action == "plugin_read_only_lsp_refresh":
                 summary_path = await self._run_plugin_workspace_probe(
                     metadata, emit, mode="read_only_lsp_refresh"
@@ -1416,6 +1422,9 @@ class MockSquadRunner:
             ),
             "many_small_writes": (
                 background_shell_probe.run_background_many_small_writes_probe
+            ),
+            "mixed_op_concurrent": (
+                background_shell_probe.run_background_mixed_op_concurrent_probe
             ),
         }
         probe = dispatch.get(mode)

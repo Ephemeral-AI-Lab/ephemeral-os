@@ -286,12 +286,31 @@ class BackgroundManySmallWritesDoNotStarveDispatcher(_BackgroundShellScenarioBas
     )
 
 
+class BackgroundMixedOpConcurrent(_BackgroundShellScenarioBase):
+    """3.3.6: heterogeneous + conflicting + disjoint concurrent background work."""
+
+    name = "sandbox.background_mixed_op_concurrent"
+    action_id = "background_mixed_op_concurrent"
+    action_spec = (
+        "ACTION background_mixed_op_concurrent. Launch a pytest run, a pip "
+        "install, and a python edit-loop as concurrent background tasks and "
+        "confirm each reaches a terminal status; race N background shells "
+        "overwriting one seeded path (exactly one OCC winner, the rest abort); "
+        "and write N disjoint paths concurrently (all land)."
+    )
+    summary_path_hint = (
+        "/testbed/.ephemeralos/sweevo-mock/background_shell/"
+        "mixed_op_concurrent/summary.json"
+    )
+
+
 __all__ = [
     "BackgroundEngineRestartNoLeaseLeak",
     "BackgroundExitIwsDrainsAgentTasks",
     "BackgroundHeartbeatLossReapsOnlyStaleBg",
     "BackgroundManySmallWritesDoNotStarveDispatcher",
     "BackgroundMixedFgBgSamePathConflict",
+    "BackgroundMixedOpConcurrent",
     "BackgroundShellStop",
     "BackgroundShellStopDuringMaintenance",
     "BackgroundShellExhaustion",

@@ -46,6 +46,7 @@ from task_center_runner.scenarios.sandbox import (
     BackgroundHeartbeatLossReapsOnlyStaleBg,
     BackgroundManySmallWritesDoNotStarveDispatcher,
     BackgroundMixedFgBgSamePathConflict,
+    BackgroundMixedOpConcurrent,
     BackgroundShellStop,
     BackgroundShellStopDuringMaintenance,
     BackgroundShellExhaustion,
@@ -118,6 +119,7 @@ SCENARIO_REGISTRY: dict[str, type[Scenario]] = {
     "sandbox.background_mixed_fg_bg_same_path_conflict": (
         BackgroundMixedFgBgSamePathConflict
     ),
+    "sandbox.background_mixed_op_concurrent": BackgroundMixedOpConcurrent,
     "sandbox.background_heartbeat_loss_reaps_only_stale_bg": (
         BackgroundHeartbeatLossReapsOnlyStaleBg
     ),
@@ -181,6 +183,7 @@ __all__ = [
     "BackgroundHeartbeatLossReapsOnlyStaleBg",
     "BackgroundManySmallWritesDoNotStarveDispatcher",
     "BackgroundMixedFgBgSamePathConflict",
+    "BackgroundMixedOpConcurrent",
     "BackgroundShellStop",
     "BackgroundShellStopDuringMaintenance",
     "BackgroundShellExhaustion",

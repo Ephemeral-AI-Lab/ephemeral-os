@@ -56,6 +56,7 @@ HEARTBEAT_LOSS_SUMMARY = f"{ROOT}/heartbeat_loss/summary.json"
 EXIT_IWS_DRAIN_SUMMARY = f"{ROOT}/exit_iws_drain/summary.json"
 ENGINE_RESTART_SUMMARY = f"{ROOT}/engine_restart/summary.json"
 MANY_SMALL_WRITES_SUMMARY = f"{ROOT}/many_small_writes/summary.json"
+MIXED_OP_CONCURRENT_SUMMARY = f"{ROOT}/mixed_op_concurrent/summary.json"
 
 SUMMARY_SCHEMA = "task_center_runner.background_shell.v1"
 BACKGROUND_IWS_LAYER_STACK_ROOT = "/tmp/eos-sandbox-runtime/layer-stack"
@@ -1607,6 +1608,222 @@ async def run_background_many_small_writes_probe(
     )
 
 
+# ---- 3.4.6 mixed-op concurrent background tasks ---------------------------
+
+
+MIXED_OP_OVERLAP_WRITERS = 4
+MIXED_OP_DISJOINT_WRITERS = 4
+MIXED_OP_EDIT_LINES = 20
+
+# A publish that did not error and is not an OCC abort landed; a versioned/
+# overlap/lock abort is the conflict-loser surface SC4 cares about.
+_MIXED_OP_ABORT_STATUSES = ("aborted_version", "aborted_overlap", "aborted_lock")
+
+
+def _publish_accepted(record: dict[str, Any]) -> bool:
+    status = str(record.get("status") or "")
+    return (not bool(record.get("is_error"))) and status not in _MIXED_OP_ABORT_STATUSES
+
+
+async def run_background_mixed_op_concurrent_probe(
+    *,
+    metadata: ExecutionMetadata,
+    emit: EmitStreamEvent,
+    call_tool: CallTool,
+    record_tool_check: RecordToolCheck,
+) -> str:
+    """3.4.6: heterogeneous + conflicting + disjoint concurrent background work.
+
+    Three independent assertions land in one summary:
+
+    * **Mixed ops** — a ``pytest`` run, a ``pip install``, and a ``python``
+      edit-loop launched as concurrent background tasks each reach a terminal
+      status (none stuck), proving the supervisor drives heterogeneous
+      workloads to completion. (``pip install`` is offline/``--no-index`` so it
+      terminates fast and deterministically without a network dependency.)
+    * **Overlapping same-file edits** — N background shells overwrite one
+      seeded path concurrently; exactly the OCC winner lands and the rest abort
+      with a versioned/overlap/lock conflict (≥1 accepted, ≥1 aborted).
+    * **Disjoint edits** — N background shells write distinct paths; all land
+      and read back their own content.
+    """
+    started = time.perf_counter()
+    root = f"{ROOT}/mixed_op_concurrent"
+    await _call_probe_tool(
+        label="mixed_op.seed_root",
+        tool_obj=shell_tool,
+        raw_input={"command": f"mkdir -p {root}", "timeout": 30},
+        metadata=metadata,
+        emit=emit,
+        call_tool=call_tool,
+        record_tool_check=record_tool_check,
+    )
+
+    # --- mixed heterogeneous ops, all must reach a terminal status ----------
+    pytest_file = f"{root}/t_probe.py"
+    await _call_probe_tool(
+        label="mixed_op.seed_pytest",
+        tool_obj=write_file_tool,
+        raw_input={
+            "file_path": pytest_file,
+            "content": "def test_ok():\n    assert 1 + 1 == 2\n",
+        },
+        metadata=metadata,
+        emit=emit,
+        call_tool=call_tool,
+        record_tool_check=record_tool_check,
+    )
+    edit_target = f"{root}/edit-loop.txt"
+    mixed_specs = {
+        "pytest": f"python3 -m pytest -q {pytest_file}",
+        "pip": (
+            "python3 -m pip install --no-input --disable-pip-version-check "
+            "--no-index eos-nonexistent-probe-pkg"
+        ),
+        "edit_loop": (
+            f"python3 -c \"open('{edit_target}','w').write("
+            f"''.join('line-%d\\n' % i for i in range({MIXED_OP_EDIT_LINES})))\""
+        ),
+    }
+    mixed_tasks = {
+        name: asyncio.create_task(
+            _call_probe_tool(
+                label=f"mixed_op.mixed.{name}",
+                tool_obj=shell_tool,
+                raw_input={"command": command, "timeout": 120},
+                metadata=metadata,
+                emit=emit,
+                call_tool=call_tool,
+                record_tool_check=None,
+                allow_error=True,
+                background_task_id=_bg_id(f"mixed-{name}"),
+            )
+        )
+        for name, command in mixed_specs.items()
+    }
+    mixed_records: dict[str, dict[str, Any]] = {}
+    for name, task in mixed_tasks.items():
+        record = await _await_task_record(task)
+        record["terminal"] = (not record.get("cancelled")) and (
+            record.get("exit_code") is not None or bool(record.get("status"))
+        )
+        mixed_records[name] = record
+
+    # --- overlapping same-file edits race for one OCC winner ----------------
+    shared = f"{root}/overlap-shared.txt"
+    await _call_probe_tool(
+        label="mixed_op.overlap.seed",
+        tool_obj=write_file_tool,
+        raw_input={"file_path": shared, "content": "owner=seed\n"},
+        metadata=metadata,
+        emit=emit,
+        call_tool=call_tool,
+        record_tool_check=record_tool_check,
+    )
+
+    async def _overlap_one(index: int) -> ToolResult:
+        return await _call_probe_tool(
+            label=f"mixed_op.overlap.{index}",
+            tool_obj=shell_tool,
+            raw_input={
+                "command": f"sleep 0.3; printf 'writer-{index}\\n' > {shared}",
+                "timeout": 60,
+            },
+            metadata=metadata,
+            emit=emit,
+            call_tool=call_tool,
+            record_tool_check=None,
+            allow_error=True,
+            background_task_id=_bg_id(f"overlap-{index}"),
+        )
+
+    overlap_results = await asyncio.gather(
+        *(_overlap_one(index) for index in range(MIXED_OP_OVERLAP_WRITERS))
+    )
+    overlap_writers = [
+        {"index": index, **_tool_record(result), "accepted": _publish_accepted(_tool_record(result))}
+        for index, result in enumerate(overlap_results)
+    ]
+    overlap_final = await _call_probe_tool(
+        label="mixed_op.overlap.final_read",
+        tool_obj=read_file_tool,
+        raw_input={"file_path": shared},
+        metadata=metadata,
+        emit=emit,
+        call_tool=call_tool,
+        record_tool_check=record_tool_check,
+        allow_error=True,
+    )
+    overlap_final_content = _read_content(overlap_final)
+
+    # --- disjoint edits all land --------------------------------------------
+    async def _disjoint_one(index: int) -> tuple[str, ToolResult]:
+        path = f"{root}/disjoint-{index}.txt"
+        result = await _call_probe_tool(
+            label=f"mixed_op.disjoint.{index}",
+            tool_obj=shell_tool,
+            raw_input={
+                "command": f"sleep 0.3; printf 'disjoint-{index}\\n' > {path}",
+                "timeout": 60,
+            },
+            metadata=metadata,
+            emit=emit,
+            call_tool=call_tool,
+            record_tool_check=None,
+            allow_error=True,
+            background_task_id=_bg_id(f"disjoint-{index}"),
+        )
+        return path, result
+
+    disjoint_pairs = await asyncio.gather(
+        *(_disjoint_one(index) for index in range(MIXED_OP_DISJOINT_WRITERS))
+    )
+    disjoint_writers = [
+        {"path": path, **_tool_record(result), "accepted": _publish_accepted(_tool_record(result))}
+        for path, result in disjoint_pairs
+    ]
+    disjoint_readbacks: dict[str, str] = {}
+    for path, _ in disjoint_pairs:
+        read = await _call_probe_tool(
+            label=f"mixed_op.disjoint.read.{path.rsplit('/', 1)[-1]}",
+            tool_obj=read_file_tool,
+            raw_input={"file_path": path},
+            metadata=metadata,
+            emit=emit,
+            call_tool=call_tool,
+            record_tool_check=None,
+            allow_error=True,
+        )
+        disjoint_readbacks[path] = _read_content(read)
+
+    summary = {
+        "schema": SUMMARY_SCHEMA,
+        "mode": "mixed_op_concurrent",
+        "duration_s": time.perf_counter() - started,
+        "mixed": mixed_records,
+        "overlap": {
+            "shared": shared,
+            "writers": overlap_writers,
+            "accepted_count": sum(1 for w in overlap_writers if w["accepted"]),
+            "aborted_count": sum(1 for w in overlap_writers if not w["accepted"]),
+            "final_content": overlap_final_content,
+        },
+        "disjoint": {
+            "writers": disjoint_writers,
+            "accepted_count": sum(1 for w in disjoint_writers if w["accepted"]),
+            "readbacks": disjoint_readbacks,
+        },
+    }
+    return await _write_summary(
+        path=MIXED_OP_CONCURRENT_SUMMARY,
+        payload=summary,
+        metadata=metadata,
+        emit=emit,
+        call_tool=call_tool,
+        record_tool_check=record_tool_check,
+    )
+
+
 __all__ = [
     "GOLDEN_SUMMARY",
     "STOP_SUMMARY",
@@ -1620,6 +1837,7 @@ __all__ = [
     "EXIT_IWS_DRAIN_SUMMARY",
     "ENGINE_RESTART_SUMMARY",
     "MANY_SMALL_WRITES_SUMMARY",
+    "MIXED_OP_CONCURRENT_SUMMARY",
     "SUMMARY_SCHEMA",
     "BACKGROUND_IWS_LAYER_STACK_ROOT",
     "run_background_shell_golden_probe",
@@ -1634,4 +1852,5 @@ __all__ = [
     "run_background_exit_iws_drains_agent_tasks_probe",
     "run_background_engine_restart_no_lease_leak_probe",
     "run_background_many_small_writes_probe",
+    "run_background_mixed_op_concurrent_probe",
 ]
