@@ -3,7 +3,7 @@
 Each agent name maps to exactly one line — the imperative the agent should
 read after the ``What's in context`` outline. Situational nuance is fully
 encoded by the ``<context>`` shape (presence of
-``<attempt status="prior" verdict="fail">``, etc.); the directive stays
+``<attempt attempt_no="k">`` failed-attempt blocks, etc.); the directive stays
 constant.
 
 Operational heuristics (e.g. "diagnose first after failure", "treat

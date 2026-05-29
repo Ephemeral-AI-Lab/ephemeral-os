@@ -143,7 +143,7 @@ def _parse_attrs(attrs_str: str) -> dict[str, str]:
     """Parse a raw ``attrs=...`` string into a dict.
 
     Recipes emit attrs as a literal XML attribute fragment
-    (``'iteration_no="1" status="current"'``). The walker only consumes
+    (``'iteration_no="1" position="current"'``). The walker only consumes
     semantic and identity attributes, so a simple key="value" split is
     sufficient.
     """

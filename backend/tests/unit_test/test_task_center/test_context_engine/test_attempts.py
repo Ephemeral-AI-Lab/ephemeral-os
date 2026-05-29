@@ -105,7 +105,7 @@ def test_excludes_current_attempt_even_if_current_is_failed():
     assert all(block.priority == ContextPriority.HIGH for block in blocks)
 
 
-def test_prior_attempt_block_metadata_carries_status_and_verdict():
+def test_prior_attempt_block_metadata_carries_attempt_no_only():
     blocks = failed_attempt_blocks(
         current_attempt_id=None,
         iteration=_iteration(sequence_no=3),

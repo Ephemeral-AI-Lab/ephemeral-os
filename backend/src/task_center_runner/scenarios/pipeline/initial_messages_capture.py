@@ -85,7 +85,7 @@ class InitialMessagesCapture(ScenarioBase):
     runs preflight; evaluator returns ``submit_evaluation_failure`` so the
     attempt is closed FAILED with rich, fully-rendered retry evidence.
     Iteration 1, attempt 2: planner sees that retry evidence in a
-    ``<attempt status="prior" verdict="fail">`` block, submits a partial
+    ``<attempt attempt_no="1">`` block, submits a partial
     plan with a ``deferred_goal_for_next_iteration``; executor runs
     preflight; evaluator passes.
     Iteration 2, attempt 1: planner submits a full plan; executor runs

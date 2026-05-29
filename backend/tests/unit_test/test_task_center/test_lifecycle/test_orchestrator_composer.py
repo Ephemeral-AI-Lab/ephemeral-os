@@ -194,7 +194,7 @@ def test_planner_launched_via_composer_uses_base_when_no_ancestor(
         "submit_plan_defers_goal",
     ]
     assert launched.context_packet_id is None  # no packet store wired
-    assert '<iteration iteration_no="1" status="current">' in launched.context
+    assert '<iteration iteration_no="1" position="current">' in launched.context
     assert "<iteration_goal>" in launched.context
 
 

@@ -61,8 +61,8 @@ def goal_iteration_blocks(
 ) -> list[ContextBlock]:
     """Return the goal/iteration frame in LLM-facing semantic order.
 
-    Always emits ``<goal>`` followed by zero or more ``<iteration status="prior">``
-    groups and the ``<iteration status="current">`` group with its
+    Always emits ``<goal>`` followed by zero or more ``<iteration position="prior">``
+    groups and the ``<iteration position="current">`` group with its
     ``<iteration_goal>`` child. Iteration 1's iteration goal collapses to the
     literal marker ``(identical to <goal>)``.
     """
@@ -85,7 +85,7 @@ def _goal_statement_block(goal: Goal) -> ContextBlock:
 
 
 def _current_iteration_goal_child(iteration: Iteration) -> ContextBlock:
-    """Child block inside ``<iteration status="current">``: ``<iteration_goal>``.
+    """Child block inside ``<iteration position="current">``: ``<iteration_goal>``.
 
     For iteration 1 the body collapses to ``(identical to <goal>)`` since the
     iteration scope is the user's request verbatim.
