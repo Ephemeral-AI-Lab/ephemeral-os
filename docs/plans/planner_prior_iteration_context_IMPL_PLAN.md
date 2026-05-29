@@ -1,190 +1,259 @@
 # Role-Scoped Context Design — Planner / Generator / Evaluator / Handoff
 
-Status: REVISED v5 (full per-role design after mapping all four current recipes)
+Status: REVISED v6 (unify generator summaries on `<task>` everywhere; status vocab = success|failure|pending;
+handoff renders nested `<task>`; structured achieved-record storage).
 Scope: TaskCenter context engine + iteration lifecycle + attempt orchestrator (handoff closure).
 
-> **Headline:** the **generator** and **evaluator** contexts **already match** the target design —
-> no change. All real work is in the **planner** (two distinct blocks) and the **handoff** result.
+---
+
+## 0. Rendering conventions (apply everywhere)
+
+> The XML examples below are written compactly; the renderer always emits **block form**
+> (`<tag>\n{content}\n</tag>` — `renderer.py:_render_block`/`_render_group`), never inline. Empty
+> `<task>` bodies use a placeholder (presence-defensive) rather than self-closing; the handoff's
+> nested `<task>` is pre-rendered (`pre_rendered_xml="true"`) since the group path nests one level.
+> The whole rendered body is wrapped in a `<context>…</context>` envelope by the composer
+> (`agent_launch/composer.py:_wrap_context`), not the renderer — it's one of the launch rows
+> (system + `<context>` + `<Task Guidance>` + `Load skill:`).
+
+
+- **One element for a generator/task summary: `<task id="<local_id>" status="<status>">summary</task>`.**
+  Used in the evaluator, the generator's dependencies, the planner's prior-iteration and
+  failed-attempt blocks, and (nested) the handoff result. No `<summary>`/`<accepted_plan>` blob, no
+  `<achieved>`, no flat `- local_id: summary` text.
+- **Status vocabulary is `success | failure | pending`** (presentation), mapped from the internal
+  enum: `DONE→success`, `FAILED|BLOCKED→failure`, `PENDING→pending` (`RUNNING`/`WAITING_GOAL` are
+  transient and not shown in these terminal contexts).
+- **Un-started generators are excluded** in the planner's failed-attempt blocks ("pretend they never
+  existed") — i.e. only render statuses derived from `TERMINAL_GENERATOR_STATUSES {DONE, FAILED,
+  BLOCKED}`.
+
+Because we render per-task `<task id status>`, the denormalized achieved records (prior-iteration and
+handoff roll-up) must be stored **structurally** — a list of `{local_id, status, summary}` — not a
+flat string, so the recipe can emit `<task>` cleanly without parsing.
 
 ---
 
-## 0. Current state per role (code-grounded)
+## 1. Per-role target structure
 
-### Generator (recipe `generator`) — `recipes/generator.py` — ALREADY MATCHES TARGET
-Scope: `goal_id, iteration_id, attempt_id, task_id`. Ordered blocks:
-1. `<plan_spec>` (HIGH) — full attempt plan/DAG (`generator.py:59-69`). **Present.**
-2. `<dependency id="...">` (MEDIUM) — one per upstream `needs` task, body = that dep's latest
-   summary (`_dependency_blocks`, `generator.py:101-132`). **Present.**
-3. `<assigned_task task_id="...">` (REQUIRED) — this generator's task contract (`generator.py:73-85`).
-   **Present.**
-→ Target (plan spec + dependency summaries + assigned task) = **exactly today**. No change.
+### Planner — `recipe: planner` · scope `goal_id, iteration_id, attempt_id`
+Both the prior iterations and the current iteration are `<iteration>` groups (same
+`current_iteration_group_id` / prior group_id mechanism). The current group holds the
+`<iteration_goal>` **first**, then any failed attempts.
+```xml
+<goal>
+…overall goal…
+</goal>
 
-### Evaluator (recipe `evaluator`) — `recipes/evaluator.py` → `current_attempt_flat_blocks` — ALREADY MATCHES
-Scope: `goal_id, iteration_id, attempt_id`. Ordered blocks (`attempts.py:127-174`):
-1. `<plan_spec>` (HIGH). **Present.**
-2. `<task id="..." status="...">summary</task>` per generator in `attempt.generator_task_ids`
-   (HIGH). **Present (all of them).**
-3. `<evaluation_criteria>` (REQUIRED). **Present.**
-→ Target (plan spec + all generator summaries + criteria) = **exactly today**. No change.
-   *Note:* the evaluator only runs once **all** generators are `DONE` (stage advance requires
-   `all_done`), so at eval time there are no un-started generators — "all summaries" is naturally
-   all-done. No filtering question here.
+<!-- prior CLOSED iterations (only when N>1; immediate prior=HIGH, older=MEDIUM) -->
+<iteration iteration_no="1" position="prior">
+<task id="storage" status="success">
+…summary…
+</task>
+<task id="cli_add" status="success">
+…summary…
+</task>
+</iteration>
 
-### Planner (recipe `planner`) — `recipes/planner.py` → `iterations.py` + `attempts.py`
-Scope: `goal_id, iteration_id, attempt_id`. Two temporally-distinct contributions:
-- **Cross-iteration** (`_prior_iteration_blocks`, `iterations.py:106-158`): per prior closed
-  iteration, `<accepted_plan>`=`prior.plan_spec` + `<summary>`=`prior.task_summary` (today the
-  evaluator pass-summary + `Passed criteria:`). Immediate=HIGH, older=MEDIUM.
-- **Within-iteration replanning** (`failed_attempt_blocks` → `_render_failed_attempt_body`,
-  `attempts.py`): per **failed** attempt of the current iteration — `<plan_spec>`,
-  `<deferred_goal_for_next_iteration>` (if any), `<status_summary>`, one `<task id status>` per
-  generator (**all**, incl. un-started), `<evaluation_criteria>`, `<evaluator_summary>`,
-  `<passed_criteria>`/`<failed_criteria>`.
+<!-- CURRENT iteration: <iteration_goal> first, then failed attempts (only while retrying) -->
+<!-- failed-attempt <task>s are TERMINAL only; un-started excluded -->
+<iteration iteration_no="2" position="current">
+<iteration_goal>
+…current iteration goal (= deferred goal)…
+</iteration_goal>
+<attempt attempt_no="1">
+<task id="cli_list" status="success">
+…summary…
+</task>
+<task id="cli_done" status="failure">
+…summary…
+</task>
+<evaluator_summary>
+…submit_evaluation_* result; only if the evaluator ran…
+</evaluator_summary>
+<failure>
+generator cli_done: …why this attempt failed…
+</failure>
+</attempt>
+</iteration>
+```
+Already true in code: the current-iteration grouping and `<iteration_goal>`-first
+ordering (insertion order: `goal_iteration_blocks` appends `<iteration_goal>` before
+`failed_attempt_blocks` is extended; renderer preserves order within a contiguous same-group run).
+Not present: prior `<accepted_plan>`/plan_spec, prior evaluator narrative, `<evaluation_criteria>`,
+`<status_summary>`, `<deferred_goal_for_next_iteration>`, un-started generators.
 
-### Handoff result — `attempt/orchestrator.py:160-206` (`apply_goal_closure_report`)
-`submit_execution_handoff` starts a delegated goal and returns immediately. On child-goal closure,
-the **parent generator task's** summary is set (today: one line `"Delegated goal X succeeded/failed."`).
-The executor continuation reads it via its `<dependency>` block. `AttemptDeps` exposes
-`goal_store/iteration_store/attempt_store/task_store` here, so all child state is reachable.
+### Generator / Executor — `recipe: generator` · scope `…, task_id`
+```xml
+<plan_spec>
+…full attempt plan / DAG…
+</plan_spec>
 
-### Generator status enum (`_core/task_state.py:27-42`)
-`PENDING, RUNNING, WAITING_GOAL, DONE, FAILED, BLOCKED` (+ synthetic "missing task row").
-`TERMINAL_GENERATOR_STATUSES = {DONE, FAILED, BLOCKED}`. **`BLOCKED` means the generator ran and
-reported a `blocker` outcome — NOT "never started".** Un-started/never-ran = `PENDING`,
-unreachable-pending, `RUNNING`, `WAITING_GOAL`, missing. Today's failed-attempt + evaluator blocks
-render **all** statuses with **no filtering**.
+<!-- wrapper around upstream task summaries -->
+<dependency>
+<task id="storage" status="success">
+…summary…
+</task>
+<task id="cli_add" status="success">
+…summary…
+</task>
+</dependency>
+
+<assigned_task task_id="cli_done">
+…this generator's task contract…
+</assigned_task>
+```
+Change vs today: dependencies move from flat `<dependency id="…">` siblings to a `<dependency>`
+wrapper with `<task>` children; status vocab applies.
+
+### Evaluator — `recipe: evaluator` · scope `…, attempt_id`
+```xml
+<plan_spec>
+…full attempt plan / DAG…
+</plan_spec>
+
+<!-- one per generator; all success at eval time -->
+<task id="storage" status="success">
+…summary…
+</task>
+<task id="cli_add" status="success">
+…summary…
+</task>
+<task id="cli_list" status="success">
+…summary…
+</task>
+<task id="cli_done" status="success">
+…summary…
+</task>
+
+<evaluation_criteria>
+…planner-defined acceptance criteria…
+</evaluation_criteria>
+```
+Change vs today: status vocab only (`done→success`). Structure otherwise unchanged.
+
+### Handoff task (a generator that called `submit_execution_handoff`)
+Its summary is the roll-up of its **child goal's** generators, rendered as **nested `<task>`**:
+```xml
+<!-- SUCCESS: all child generators across all succeeded child iterations -->
+<task id="implement_auth" status="success">
+<task id="schema" status="success">
+…summary…
+</task>
+<task id="login_api" status="success">
+…summary…
+</task>
+<task id="session_mw" status="success">
+…summary…
+</task>
+</task>
+
+<!-- FAILURE: what's been done + the failing step of the last iteration -->
+<task id="implement_auth" status="failure">
+<task id="schema" status="success">
+…summary…   (what's been done)
+</task>
+<task id="login_api" status="failure">
+…summary…   (last iteration's failing step)
+</task>
+<failure>
+generator login_api: …
+</failure>
+</task>
+```
+This nested `<task>` then appears wherever that generator appears (a `<dependency>` child downstream,
+a `<task>` in the evaluator, or the planner's prior-iteration / failed-attempt blocks). Nesting is
+one level per task — a child that itself did a handoff already encapsulates its own subtree.
 
 ---
 
-## 1. Target design (from user) + verdict
+## 2. Changes by surface
 
-| Role | Target | Verdict |
-|---|---|---|
-| **Generator** | plan spec · dependency summaries · assigned task | ✅ already exactly this — **no change** |
-| **Evaluator** | plan spec · all generator summaries · evaluation criteria | ✅ already exactly this — **no change** |
-| **Planner** | goal · iteration goal · what's-been-done (prior iterations) · generator summaries (passed+failed, **not un-started**) · evaluator summary (if executed) · **not** prior plan spec / eval criteria | sound; **real changes** (§2) |
-| **Handoff gen** | its summary = list of **all** child generator summaries (+ optional failure) | ✅ sound; reuse denorm (§3) |
-
-**Overall:** coherent, and the fact that 2 of 3 roles already implement the target is strong evidence
-the design is consistent with the system's existing intent. The planner changes are the substance.
-
-### Why the planner changes are sound
-- **Drop prior plan_spec + eval criteria (within-iteration replanning blocks):** the planner is
-  *about to write its own* plan + criteria. Showing the failed attempt's plan/criteria anchors it to
-  the decomposition that just failed. Keeping **what was tried** (generator summaries) + **why it
-  failed** (evaluator summary) is the useful retry fuel; the plan/criteria are not.
-- **Exclude un-started generators ("pretend they never exist"):** an un-started task carries zero
-  signal about what happened. Precise rule = **keep only `TERMINAL_GENERATOR_STATUSES`
-  {DONE, FAILED, BLOCKED}**; drop `PENDING`/unreachable-pending/`RUNNING`/`WAITING_GOAL`/missing.
-  (`BLOCKED` is kept — it ran and reported a blocker, which is exactly the kind of "why stuck"
-  signal replanning wants.)
-- **Evaluator summary only if executed:** omit the block entirely when the attempt failed before the
-  evaluator ran (no `(missing evaluator task row)` placeholder).
-- **Cross-iteration "what's been done":** the passing attempt's generator summaries (all `DONE`),
-  denormalized — no evaluator text, no plan_spec, no criteria.
-
-### Decisions to confirm (the genuine ambiguities)
-- **D1 — "drop evaluation criteria":** I read this as dropping the `<evaluation_criteria>` list **and**
-  the `<passed_criteria>`/`<failed_criteria>` breakdown, keeping only the free-text
-  `<evaluator_summary>`. Confirm (or keep passed/failed?).
-- **D2 — failed-attempt extras:** `<status_summary>` becomes largely redundant once tasks are
-  filtered + shown per-task → recommend drop; `<deferred_goal_for_next_iteration>` on a *failed*
-  attempt is normally absent → leave out. Confirm.
-- **D3 — asymmetry (intended?):** the planner sees the evaluator summary in the *within-iteration*
-  failed-attempt blocks but **not** in the *cross-iteration* record. Justified: replanning needs
-  "why it failed"; cross-iteration needs "what's done." OK?
-- **D4 — handoff failure body:** aggregate succeeded child iterations' generator summaries **plus**
-  the final failed attempt's terminal-generator summaries + `Handoff failed: <reason>`; or simpler
-  (final attempt + reason only)? Recommend the former.
-
----
-
-## 2. Planner changes
-
-### 2.1 Cross-iteration record (`iterations.py` + denorm at close)
-- At `attempt_coordinator._close_iteration_passed`: set `task_summary = generator_summary_lines(
-  passing_attempt, task_store)` (the `- <local_id>: <summary>` list; passing attempt ⇒ all `DONE`).
-  Keep `plan_spec` stored (audit) but stop surfacing it.
-- `iterations.py:_prior_iteration_blocks`: **remove** the `<accepted_plan>` block; keep `<summary>`
-  (content now the generator list). Retarget the chain-integrity guard to `task_summary` only.
+### 2.1 Planner cross-iteration record
+- Denorm at `attempt_coordinator._close_iteration_passed`: store the passing attempt's generators
+  **structurally** (`[{local_id, status:"success", summary}]`) — replaces the evaluator pass-summary
+  in `Iteration.task_summary` (store JSON in the existing text column, or a new nullable column;
+  either avoids backfill on the long-lived no-Alembic DB and degrades gracefully for legacy rows).
+  Stop surfacing `plan_spec`.
+- `iterations.py:_prior_iteration_blocks`: drop `<accepted_plan>`; render the structured record as
+  `<task id status>` children inside `<iteration position="prior">` (no `<summary>` wrapper). Retarget
+  the chain-integrity guard to the achieved-record field.
 - `_evaluator_pass_summary_for` / `_evaluator_passed_criteria` become unused here → remove if no
   other caller.
 
-### 2.2 Within-iteration replanning blocks (`attempts.py:_render_failed_attempt_body`)
-- **Filter generators to `TERMINAL_GENERATOR_STATUSES`** (exclude un-started) — applied in
-  `_generator_outcomes` or at render.
-- **Remove** `<plan_spec>` and `<evaluation_criteria>` (+ `<passed_criteria>`/`<failed_criteria>` per D1).
-- **Keep `<evaluator_summary>` only if the evaluator executed** (drop the missing-row fallback path).
-- Per D2: drop `<status_summary>`; leave out `<deferred_goal_for_next_iteration>`.
+### 2.2 Planner within-iteration failed-attempt blocks (`attempts.py:failed_attempt_blocks` / `_render_failed_attempt_body`)
+- Already grouped under `<iteration position="current">` (shares `current_iteration_group_id`) after the
+  `<iteration_goal>` — no grouping/ordering change needed.
+- **Rename the iteration group attribute `status` → `position`** (values `prior`/`current`) — it
+  collides with the domain `IterationStatus` and with `<task status>`. Change in
+  `iterations.py:current_iteration_group_attrs` and the prior-iteration `group_attrs` (e.g.
+  `f'iteration_no="{n}" position="current"'`); update recipe tests. `<task>`/`<attempt>` keep `status`.
+- `<attempt attempt_no="k">` — drop the `status` / `verdict="fail"` from the block's `attrs`
+  (keep `attempt_no`); the attempt is a prior attempt *of the current iteration*, so those attrs were
+  misleading anyway.
+- `<task id status>` per generator, **TERMINAL only** (exclude un-started), status vocab.
+- `<evaluator_summary>` = `submit_evaluation_*` result (with passed/failed detail) — only if the
+  evaluator executed (drop the missing-row fallback).
+- `<failure>` (see §2.4). Drop `<plan_spec>`, `<evaluation_criteria>`, `<status_summary>`,
+  `<deferred_goal_for_next_iteration>`.
+
+### 2.3 Generator + Evaluator
+- Evaluator: status vocab only.
+- Generator: wrap dependencies in `<dependency>` with `<task>` children; status vocab.
+
+### 2.4 Failure component — `attempt_failure_line(attempt, task_store)` (shared)
+From `attempt.fail_reason` + the failing task's latest summary:
+- `PLANNER_FAILED` → `planner: <summary>`; `GENERATOR_FAILED` → `generator <local_id>: <summary>`
+  (per failed/blocked generator); `EVALUATOR_FAILED` → `evaluator: <summary>`;
+  `STARTUP_FAILED` → `agent_launch_failed` (terse `"<role> agent launch failed."` when present).
+- Tag `(terminated)` when the task's `payload.fail_reason == "run_exhausted"`.
+- Presence-defensive (`(no detail recorded)`).
+
+### 2.5 Handoff result (`attempt/orchestrator.py:apply_goal_closure_report`)
+Store the result **structurally** on the parent generator task so it renders nested `<task>`:
+- **Success:** child generators across all SUCCEEDED child iterations
+  (`iteration_store.list_for_goal` → succeeded iterations' structured achieved records, reused from §2.1).
+- **Failure:** what's been done (succeeded child iterations' generators) **+** the last failed
+  attempt's `attempt_failure_line` (§2.4), as a `<failure>` child.
+- `GoalClosureReport` carries only `outcome`/`final_iteration_id`/`final_attempt_id`; read the "why"
+  from `attempt_store.get(report.final_attempt_id).fail_reason` + failing task summary (reachable via
+  `AttemptDeps`).
 
 ---
 
-## 3. Handoff result (`apply_goal_closure_report`)
-- Parent generator task summary = **all child generator summaries across all child iterations**.
-  **Synergy:** after §2.1, each succeeded child iteration's `Iteration.task_summary` *is* the
-  generator list — so aggregate by concatenating `iteration_store.list_for_goal(report.goal_id)`
-  succeeded iterations' `task_summary` (cheap: 1 read/iteration) instead of walking every task.
-- On failure (`report.outcome != "success"`): append the final failed attempt's terminal-generator
-  summaries (walk `report.final_attempt_id`) + `Handoff failed: <fail_reason>` (per D4).
+## 3. Failure representation — findings (why the odd cases are safe)
+The launcher normalizes abnormal terminations into clean failure submissions with human-readable text:
+- Clean `submit_*_failure` → agent's reason text (+ payload, e.g. `failed_criteria`).
+- Terminated (1.5× tool-call hard ceiling `TERMINAL_NOT_SUBMITTED`, crash, run-failed) →
+  `attempt/launch.py` synthesizes a role submission with `payload.fail_reason="run_exhausted"` and a
+  diagnostic summary (`"Agent run crashed: <exc>"` / `"Agent run ended without a terminal submission."`).
+- `STARTUP_FAILED` (`_mark_startup_failed`/unstarted) → only `agent_launch_failed` (the one terse case).
+So `attempt_failure_line` always has at least the stage + a message (or the terse launch-failed label).
 
 ---
 
-## 4. Shared helper + `latest_summary_text` removal
-- New neutral `task_center/_core/generator_summaries.py`: `latest_task_summary(summaries)` (moved
-  projection) + `generator_summary_lines(attempt, task_store)` (the `- <local_id>: <summary>` list,
-  presence-defensive, DAG order, `local_id` via `_core/primitives.py`).
-- Delete `recipes/summaries.py`; repoint its 3 callers (`generator.py:123`, `attempts.py:284,374`)
-  to `_core.latest_task_summary`. (Consolidate, don't inline 4 copies.)
+## 4. Shared helpers (`_core`) + cleanup
+- `task_center/_core/generator_summaries.py`:
+  - `latest_task_summary(summaries)` — moved projection (placeholders `(no summary recorded)`/`(empty)`).
+  - `generator_outcomes(attempt, task_store)` — `[{local_id, status(success|failure|pending), summary}]`
+    over `attempt.generator_task_ids` (DAG order, presence-defensive, status mapped); the structured
+    record reused by §2.1 denorm, §2.5 handoff, and rendered to `<task>` by recipes.
+  - `attempt_failure_line(attempt, task_store)` — §2.4.
+- Delete `recipes/summaries.py`; repoint its 3 callers to `_core.latest_task_summary`.
+- A small status-mapping helper (internal enum → `success|failure|pending`) shared by all renderers.
 
 ---
 
-## 5. Context diagram (target)
-
-```
-PLANNER            scope: goal_id, iteration_id, attempt_id        recipe: planner
-├─ <goal>                                            overall goal
-├─ prior closed iterations  (N>1; immediate=HIGH, older=MEDIUM)
-│   └─ <iteration status="prior" seq=k>
-│        └─ <summary>            WHAT'S BEEN DONE = passing attempt's generator summaries
-│             - <local_id>: <summary>      (no evaluator text · no plan_spec · no criteria)
-├─ current iteration's FAILED attempts  (replanning fuel; only if retrying)
-│   └─ <attempt status="prior" verdict="fail" seq=k>
-│        ├─ <task id status>summary</task>   generators — TERMINAL only {done,failed,blocked}
-│        │                                   (un-started PENDING/RUNNING/WAITING_GOAL excluded)
-│        └─ <evaluator_summary>…             ONLY if the evaluator executed
-│        ✗ no <plan_spec>   ✗ no <evaluation_criteria>
-└─ <iteration_goal>                          current iteration goal (= deferred goal)
-
-GENERATOR/EXECUTOR  scope: …, task_id     recipe: generator     [ALREADY MATCHES — no change]
-├─ <plan_spec>                               full attempt plan / DAG
-├─ <dependency id="…">                       one per upstream `needs` = its latest summary
-│   …
-└─ <assigned_task task_id="…">               this generator's task contract
-
-EVALUATOR           scope: …, attempt_id    recipe: evaluator    [ALREADY MATCHES — no change]
-├─ <plan_spec>                               full attempt plan / DAG
-├─ <task id status>summary</task>            one per generator (all DONE at eval time)
-│   …
-└─ <evaluation_criteria>                     planner-defined acceptance criteria
-
-HANDOFF result      written at apply_goal_closure_report → parent generator task summary
-└─ parent generator's summary =
-     - <child_local_id>: <summary>           ALL child generators, ALL succeeded child iterations
-     …
-     Handoff failed: <reason>                optional — only if the delegated goal failed
-   (executor continuation reads this through its <dependency> block)
-```
-
----
-
-## 6. Tests / verification
-- Generator & evaluator recipes: **regression only** (assert unchanged).
-- Planner cross-iteration: `<summary>` = generator list; no `<accepted_plan>`; chain-guard retarget.
-- Planner failed-attempt: un-started filtered out; no `<plan_spec>`/`<evaluation_criteria>`;
-  `<evaluator_summary>` present iff evaluator ran. Tests in
-  `test_recipes_planner_closes_or_defers.py`, `test_recipes_other.py`, `test_iteration_attempt_coordinator.py`.
-- Handoff: success aggregates all succeeded child iterations' generator lists; failure appends
-  terminal generators + reason. Tests under `test_task_center` for `apply_goal_closure_report`.
-- `recipes/summaries.py` deleted; 3 callers repointed; identical output at those sites.
+## 5. Tests / verification
+- Status vocab: `<task>` renders `success|failure|pending` everywhere (evaluator, generator deps,
+  planner blocks, handoff).
+- Generator: dependencies wrapped in `<dependency>` with `<task>` children.
+- Planner prior-iteration: `<task>` children, no `<summary>`/`<accepted_plan>`; chain-guard retarget.
+- Planner failed-attempt: `<attempt seq>` (no status/verdict attrs); un-started excluded;
+  `<evaluator_summary>` only if evaluator ran; `<failure>` present; no plan_spec/criteria/status_summary/deferred.
+- Handoff: success → nested `<task>` of all succeeded child generators; failure → what's-been-done +
+  `<failure>`; robust across terminated/exhausted/agent_launch_failed.
+- Structured achieved record round-trips; legacy (pre-migration) iterations render gracefully.
+- `recipes/summaries.py` deleted; 3 callers repointed.
 - `.venv/bin/pytest` green (never global pytest).
 ```

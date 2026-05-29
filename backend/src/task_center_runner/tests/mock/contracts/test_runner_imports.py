@@ -87,8 +87,8 @@ def test_prompt_inspector_accepts_current_failed_attempt_heading(
         prompt="\n".join(
             [
                 "<goal>Do the retry work.</goal>",
-                "<iteration status=\"current\">",
-                "<attempt status=\"failed\">Attempt 1 failed.</attempt>",
+                "<iteration iteration_no=\"1\" position=\"current\">",
+                "<attempt attempt_no=\"1\">Attempt 1 failed.</attempt>",
                 "</iteration>",
             ]
         ),
@@ -127,11 +127,10 @@ def test_prompt_inspector_accepts_current_previous_iteration_sections(
         prompt="\n".join(
             [
                 "<goal>Continue the delegated goal.</goal>",
-                "<iteration status=\"prior\">",
-                "<accepted_plan>Earlier plan.</accepted_plan>",
-                "<summary>Earlier result.</summary>",
+                "<iteration iteration_no=\"1\" position=\"prior\">",
+                "<task id=\"schema\" status=\"success\">Earlier result.</task>",
                 "</iteration>",
-                "<iteration status=\"current\">",
+                "<iteration iteration_no=\"2\" position=\"current\">",
                 "Next slice.",
                 "</iteration>",
             ]
@@ -162,7 +161,7 @@ def test_prompt_inspector_accepts_planner_without_defer_terminal() -> None:
             [
                 "<context>",
                 "<goal>Close this delegated recursive goal.</goal>",
-                "<iteration status=\"current\">",
+                "<iteration iteration_no=\"1\" position=\"current\">",
                 "<iteration_goal>Close this delegated recursive goal.</iteration_goal>",
                 "</iteration>",
                 "</context>",

@@ -23,6 +23,7 @@ from tools import ToolResult
 from message.message import ToolResultBlock
 
 from task_center_runner.agent.mock.event_source import ToolCall, Turn, TurnScript
+from task_center_runner.agent.mock.probe_bridge import bridge_probe_for, bridge_turns
 from task_center_runner.agent.mock.probes import (
     PROBE_BUILDERS,
     PROBE_SUMMARY,
@@ -191,21 +192,42 @@ async def _executor_script(
     artifacts: list[str] = []
     for action in actions:
         builder = PROBE_BUILDERS.get(action)
-        if builder is None:
+        if builder is not None:
+            # Generator-style probe: yields one ToolCall per step directly.
+            probe = builder(probe_ctx)
+            send: Any = None
+            while True:
+                try:
+                    call = await probe.asend(send)
+                except StopAsyncIteration:
+                    break
+                blocks = yield Turn(calls=(call,))
+                send = normalize_result(blocks)
+            summary = PROBE_SUMMARY.get(action, summary)
+            artifacts = [] if action == "preflight" else [probe_ctx.probe_path()]
+            continue
+
+        # Imperative call_tool-based probe (heavy/fan-out): drive its body
+        # through the queue-bridge so every tool still routes through the loop.
+        bridged = bridge_probe_for(action, probe_ctx=probe_ctx)
+        if bridged is None:
             raise NotImplementedError(
                 f"executor action {action!r} not yet adapted (Phase 2)."
             )
-        probe = builder(probe_ctx)
-        send: Any = None
+        factory, bridge_summary = bridged
+        artifact_out: list[str] = []
+        driver = bridge_turns(
+            factory, artifact_out=artifact_out, normalize=normalize_result
+        )
+        bridge_send: Any = None
         while True:
             try:
-                call = await probe.asend(send)
+                turn = await driver.asend(bridge_send)
             except StopAsyncIteration:
                 break
-            blocks = yield Turn(calls=(call,))
-            send = normalize_result(blocks)
-        summary = PROBE_SUMMARY.get(action, summary)
-        artifacts = [] if action == "preflight" else [probe_ctx.probe_path()]
+            bridge_send = yield turn
+        summary = bridge_summary
+        artifacts = [path for path in artifact_out if path]
 
     success_args = {"summary": summary, "artifacts": artifacts}
     _ = yield _ask_advisor_turn("submit_execution_success", success_args)

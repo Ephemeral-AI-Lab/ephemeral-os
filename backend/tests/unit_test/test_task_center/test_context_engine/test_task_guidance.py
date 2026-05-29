@@ -59,7 +59,7 @@ def _iteration_goal_block(seq_no: int) -> ContextBlock:
         metadata={
             "group_id": f"iteration_{seq_no}_current",
             "group_tag": "iteration",
-            "group_attrs": f'iteration_no="{seq_no}" status="current"',
+            "group_attrs": f'iteration_no="{seq_no}" position="current"',
             "child_tag": "iteration_goal",
             "iteration_no": str(seq_no),
         },
@@ -74,9 +74,9 @@ def _prior_attempt_block() -> ContextBlock:
         metadata={
             "group_id": "iteration_1_current",
             "group_tag": "iteration",
-            "group_attrs": 'iteration_no="1" status="current"',
+            "group_attrs": 'iteration_no="1" position="current"',
             "child_tag": "attempt",
-            "attrs": 'attempt_no="1" status="prior" verdict="fail"',
+            "attrs": 'attempt_no="1"',
             "pre_rendered_xml": "true",
         },
     )
@@ -130,7 +130,7 @@ def test_planner_iter1_fresh_outline():
     )
     assert "What's in context:" in prose
     assert "- <goal> — user's request" in prose
-    assert '- <iteration status="current"> — active iteration' in prose
+    assert '- <iteration position="current"> — active iteration' in prose
     assert "  - <iteration_goal> — active iteration's scope" in prose
     assert "What to do:\n- Plan for <iteration_goal>." in prose
 
@@ -143,9 +143,7 @@ def test_planner_iter1_after_failure_outline():
         ),
         scope=None,  # type: ignore[arg-type]
     )
-    assert (
-        '  - <attempt status="prior" verdict="fail"> — failed prior attempt'
-    ) in prose
+    assert "  - <attempt> — failed prior attempt" in prose
 
 
 def test_executor_outline_with_deps():

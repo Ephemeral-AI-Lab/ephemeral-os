@@ -26,8 +26,15 @@ from tools import ExecutionMetadata
 from task_center_runner.audit.events import Event, EventType
 from task_center_runner.audit.node_id import NodeId
 from task_center_runner.agent.mock.event_source import ScenarioEventSource
-from task_center_runner.agent.mock.prompt_inspector import LaunchRecord, ToolCallRecord
-from task_center_runner.agent.mock.scenario_adapter import scenario_script_for
+from task_center_runner.agent.mock.prompt_inspector import (
+    LaunchRecord,
+    PromptInspection,
+    ToolCallRecord,
+)
+from task_center_runner.agent.mock.scenario_adapter import (
+    _attempt_and_iteration,
+    scenario_script_for,
+)
 
 if TYPE_CHECKING:
     from agents import AgentDefinition
@@ -114,6 +121,8 @@ class ScenarioLoopRunner:
         resolved_task_id = task_id or str(_md_get(md, "task_center_task_id") or "")
         attempt_id = str(_md_get(md, "task_center_attempt_id") or "") or None
         self._publish_launch(agent_def, prompt, resolved_task_id, attempt_id)
+        self._publish_prompt_inspection(agent_def, prompt, md)
+        self._record_initial_messages(agent_def, prompt, md, initial_messages)
 
         config.event_source_factory = self._event_source_factory
 
@@ -175,12 +184,144 @@ class ScenarioLoopRunner:
             Event(type=event_type, node=NodeId(task_center_run_id=""), payload=payload)
         )
 
+    # -- prompt inspection + initial-message recording (ported from runner) --
+
+    def _publish_prompt_inspection(
+        self, agent_def: "AgentDefinition", prompt: str, metadata: Any
+    ) -> None:
+        inspection = self._inspect_prompt(
+            agent_def=agent_def, prompt=prompt, metadata=metadata
+        )
+        self._publish_record(EventType.MOCK_PROMPT_INSPECTED, inspection.as_dict())
+
+    def _inspect_prompt(
+        self, *, prompt: str, agent_def: "AgentDefinition", metadata: Any
+    ) -> PromptInspection:
+        """Verify the launch payload carries the right XML envelopes for the role.
+
+        Only the four squad roles reach ``ScenarioLoopRunner.__call__`` (advisor /
+        explorer sub-agents are spawned inside the loop), so those branches cover
+        every inspected agent.
+        """
+        role = str(agent_def.agent_kind.value or "")
+        checks: dict[str, bool]
+        reason: str
+        active_terminals = set(
+            _md_get(metadata, "active_terminals") or agent_def.terminals
+        )
+        if role == "planner" and "submit_plan_defers_goal" not in active_terminals:
+            checks = {
+                "goal": "<goal>" in prompt,
+                "current_iteration": (
+                    "<iteration " in prompt and 'position="current"' in prompt
+                ),
+                "closes_goal_terminal": "submit_plan_closes_goal" in prompt,
+                "no_defer_terminal": "submit_plan_defers_goal" not in prompt,
+            }
+            reason = "Depth-restricted planner exposes only the closes-goal terminal."
+        elif role == "planner":
+            attempt, iteration = _attempt_and_iteration(metadata)
+            checks = {
+                "goal": "<goal>" in prompt,
+                "current_iteration": (
+                    "<iteration " in prompt and 'position="current"' in prompt
+                ),
+            }
+            if attempt.attempt_sequence_no > 1:
+                checks["failed_attempts"] = '<attempt attempt_no="' in prompt
+            if iteration.sequence_no > 1:
+                checks["previous_iteration_results"] = (
+                    'position="prior"' in prompt and "<task " in prompt
+                )
+            reason = (
+                "Planner context is goal and iteration scoped; retry planners also "
+                "receive failed-attempt evidence, and continuation planners receive "
+                "previous iteration results."
+            )
+        elif role == "executor":
+            checks = {
+                "plan_spec": "<plan_spec>" in prompt,
+                "assigned_task": "<assigned_task" in prompt,
+            }
+            reason = (
+                "Executor context is local to the current planned task with the "
+                "attempt contract as framing."
+            )
+        elif role == "verifier":
+            checks = {
+                "plan_spec": "<plan_spec>" in prompt,
+                "assigned_task": "<assigned_task" in prompt,
+            }
+            reason = (
+                "Verifier context is a generator task profile with the assigned "
+                "checkpoint and its dependency evidence."
+            )
+        elif role == "evaluator":
+            checks = {
+                "plan_spec": "<plan_spec>" in prompt,
+                "task_outcomes": "<task " in prompt,
+                "evaluation_criteria": "<evaluation_criteria>" in prompt,
+            }
+            reason = (
+                "Evaluator context is graph-local: the active attempt's plan_spec, "
+                "per-task outcomes, and the criteria it must judge."
+            )
+        else:
+            checks = {"known_role": False}
+            reason = f"Unknown role {role!r}."
+
+        return PromptInspection(
+            task_id=str(_md_get(metadata, "task_center_task_id") or ""),
+            agent_name=agent_def.name,
+            role=role,
+            checks=checks,
+            justification=reason,
+        )
+
+    def _record_initial_messages(
+        self,
+        agent_def: "AgentDefinition",
+        prompt: str,
+        metadata: Any,
+        seeded_initial_messages: Any,
+    ) -> None:
+        task_id = str(_md_get(metadata, "task_center_task_id") or "")
+        if not task_id or self._audit_recorder is None:
+            return
+        recorder = self._audit_recorder.message_recorder_for_task(task_id)
+        if recorder is None:
+            return
+        recorder.record_initial_messages(
+            system_prompt=str(agent_def.system_prompt or ""),
+            user_prompt=prompt,
+            agent_name=agent_def.name,
+            run_id=_stream_run_id(metadata),
+            seeded_initial_messages=list(seeded_initial_messages or []),
+            metadata=_initial_message_metadata(metadata),
+        )
+
 
 def _md_get(md: Any, key: str) -> Any:
     getter = getattr(md, "get", None)
     if callable(getter):
         return getter(key)
     return None
+
+
+def _stream_run_id(md: Any) -> str:
+    return str(
+        _md_get(md, "task_center_task_id")
+        or getattr(md, "agent_run_id", None)
+        or _md_get(md, "run_id")
+        or ""
+    )
+
+
+def _initial_message_metadata(md: Any) -> dict[str, object]:
+    active_terminals = _md_get(md, "active_terminals")
+    if not isinstance(active_terminals, (list, tuple, set, frozenset)):
+        return {}
+    return {"active_terminals": [str(name) for name in active_terminals]}
 
 
 __all__ = ["ScenarioLoopRunner", "make_mock_runtime_config"]

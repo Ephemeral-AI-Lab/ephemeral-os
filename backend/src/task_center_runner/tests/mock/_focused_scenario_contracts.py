@@ -44,6 +44,33 @@ def assert_focused_scenario_report(
     _assert_graph_shape(report, case)
 
 
+def count_role_tasks(
+    report: RunReport,
+    role: str,
+    *,
+    status: str | None = None,
+) -> int:
+    """Count generator tasks of *role* across all attempts in ``graph_summary``.
+
+    The §4.1 replacement for ``count_events(<ROLE>_INVOKED/<ROLE>_SUCCESS)``:
+    lifecycle events are gone, so workflow fan-out is asserted via real store
+    state. ``status="done"`` counts only succeeded tasks (the ``EXECUTOR_SUCCESS``
+    analog); ``status=None`` counts every task of that role (the ``_INVOKED``
+    analog).
+    """
+    total = 0
+    for goal in report.graph_summary["goals"]:
+        for iteration in goal["iterations"]:
+            for attempt in iteration["attempts"]:
+                for task in attempt["tasks"]:
+                    if str(task.get("agent_name") or "") != role:
+                        continue
+                    if status is not None and str(task.get("status") or "") != status:
+                        continue
+                    total += 1
+    return total
+
+
 def _assert_ordered_subsequence(
     expected: Sequence[EventType],
     actual: Sequence[EventType],

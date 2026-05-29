@@ -116,30 +116,31 @@ def test_prior_attempt_block_metadata_carries_status_and_verdict():
     block = blocks[0]
     assert block.metadata["group_id"] == "iteration_3_current"
     assert block.metadata["group_tag"] == "iteration"
-    assert block.metadata["group_attrs"] == 'iteration_no="3" status="current"'
+    # Group attribute renamed status -> position.
+    assert block.metadata["group_attrs"] == 'iteration_no="3" position="current"'
     assert block.metadata["child_tag"] == "attempt"
-    assert block.metadata["attrs"] == (
-        'attempt_no="1" status="prior" verdict="fail"'
-    )
+    # attrs is now attempt_no only — no status="prior" verdict="fail" (the
+    # attempt is a prior attempt *of the current iteration*).
+    assert block.metadata["attrs"] == 'attempt_no="1"'
 
 
-def test_prior_attempt_body_emits_flat_plan_spec_child():
+def test_prior_attempt_body_omits_plan_spec_child():
+    # Repurposed: <plan_spec> was DROPPED from the failed-attempt body. With no
+    # generators and fail_reason=None the body is just the <failure> line.
     blocks = failed_attempt_blocks(
         current_attempt_id=None,
         iteration=_iteration(),
         attempts=[_attempt(1, plan_spec="submitted spec")],
     )
     body = blocks[0].text
-    assert "<plan_spec>\nsubmitted spec\n</plan_spec>" in body
-    # No <attempt_plan> wrapper anymore.
-    assert "<attempt_plan>" not in body
-    assert "</attempt_plan>" not in body
-    assert "<deferred_goal_for_next_iteration>" not in body, (
-        "absent deferred goal must not produce a child element"
-    )
+    assert "<plan_spec>" not in body
+    assert "submitted spec" not in body
+    assert body == "<failure>\n(no detail recorded)\n</failure>"
 
 
-def test_prior_attempt_body_emits_deferred_goal_when_present():
+def test_prior_attempt_body_omits_deferred_goal():
+    # Repurposed: <deferred_goal_for_next_iteration> was DROPPED from the
+    # failed-attempt body even when the attempt carries one.
     blocks = failed_attempt_blocks(
         current_attempt_id=None,
         iteration=_iteration(),
@@ -152,14 +153,16 @@ def test_prior_attempt_body_emits_deferred_goal_when_present():
         ],
     )
     body = blocks[0].text
-    assert "<plan_spec>\npartial spec\n</plan_spec>" in body
-    assert (
-        "<deferred_goal_for_next_iteration>\ncontinue with admin tools\n"
-        "</deferred_goal_for_next_iteration>"
-    ) in body
+    assert "<deferred_goal_for_next_iteration>" not in body
+    assert "continue with admin tools" not in body
+    assert "<plan_spec>" not in body
+    assert body == "<failure>\n(no detail recorded)\n</failure>"
 
 
-def test_planner_failed_renders_compact_bypassed_body():
+def test_planner_failed_renders_failure_only_body():
+    # The compact "bypassed" body (plan_spec/status_summary/evaluator_summary
+    # self-closers) was DROPPED. PLANNER_FAILED with no generators now renders
+    # just the <failure> line: "planner: <summary>" (no store -> no detail).
     blocks = failed_attempt_blocks(
         current_attempt_id=None,
         iteration=_iteration(),
@@ -168,14 +171,12 @@ def test_planner_failed_renders_compact_bypassed_body():
         ],
     )
     body = blocks[0].text
-    assert body == (
-        '<plan_spec status="unsubmitted"/>\n'
-        '<status_summary status="not_started"/>\n'
-        '<evaluator_summary status="bypassed" reason="planner_failed"/>'
-    )
+    assert body == "<failure>\nplanner: (no detail recorded)\n</failure>"
 
 
-def test_startup_failed_renders_compact_bypassed_body():
+def test_startup_failed_renders_failure_only_body():
+    # The compact "bypassed" body was DROPPED. STARTUP_FAILED now renders just
+    # the <failure> line "agent_launch_failed".
     blocks = failed_attempt_blocks(
         current_attempt_id=None,
         iteration=_iteration(),
@@ -184,14 +185,10 @@ def test_startup_failed_renders_compact_bypassed_body():
         ],
     )
     body = blocks[0].text
-    assert body == (
-        '<plan_spec status="unsubmitted"/>\n'
-        '<status_summary status="not_started"/>\n'
-        '<evaluator_summary status="bypassed" reason="startup_failed"/>'
-    )
+    assert body == "<failure>\nagent_launch_failed\n</failure>"
 
 
-def test_prior_body_emits_status_summary_and_task_children():
+def test_prior_body_emits_terminal_task_children():
     class TaskStore:
         def get_task(self, task_id: str):
             return {
@@ -225,28 +222,35 @@ def test_prior_body_emits_status_summary_and_task_children():
     )
 
     body = blocks[0].text
-    # Wrappers are gone; status_summary + task siblings sit at attempt scope.
+    # <status_summary> was DROPPED; only terminal <task> children + <failure>
+    # remain. done->success; the missing (un-started) row is excluded entirely
+    # (terminal-only). No evaluator ran -> failure line carries no detail.
+    assert "<status_summary>" not in body
     assert "<generator_outcomes>" not in body
-    assert "</generator_outcomes>" not in body
-    assert "<status_summary>" in body
-    assert "t-a: done" in body
-    assert "t-b: done" in body
-    assert "t-missing: missing task row" in body
-    assert (
-        '<task id="t-a" status="done">\nbuilt catalog slice\n</task>'
-    ) in body
-    assert (
-        '<task id="t-b" status="done">\nverified checkout\n</task>'
-    ) in body
+    assert 'id="t-missing"' not in body
+    assert body == (
+        '<task id="t-a" status="success">\n'
+        "built catalog slice\n"
+        "</task>\n"
+        '<task id="t-b" status="success">\n'
+        "verified checkout\n"
+        "</task>\n"
+        "<failure>\n"
+        "evaluator: (no detail recorded)\n"
+        "</failure>"
+    )
 
 
-def test_prior_body_bypassed_on_generator_failure():
+def test_prior_body_renders_terminal_tasks_and_generator_failure():
+    # The "bypassed" evaluator_summary message was DROPPED. A GENERATOR_FAILED
+    # attempt never produced an evaluator summary (so the fixture sets no
+    # evaluator_task_id, matching the ground-truth GENERATOR_FAILED shape).
+    # Body = terminal <task>s + <failure>"generator <local_id>: ...".
     class TaskStore:
         def get_task(self, task_id: str):
             return {
                 "t-a": {"status": "done", "summaries": [{"summary": "ok"}]},
                 "t-b": {"status": "failed", "summaries": [{"summary": "boom"}]},
-                "eval-1": {"summaries": [{"summary": "should not be read"}]},
             }.get(task_id)
 
     blocks = failed_attempt_blocks(
@@ -258,21 +262,31 @@ def test_prior_body_bypassed_on_generator_failure():
                 plan_spec="spec",
                 evaluation_criteria=("c1",),
                 generator_task_ids=("t-a", "t-b"),
-                evaluator_task_id="eval-1",
                 fail_reason=AttemptFailReason.GENERATOR_FAILED,
             )
         ],
         task_store=TaskStore(),
     )
     body = blocks[0].text
-    assert (
-        '<evaluator_summary status="bypassed" reason="generator_failed">'
-    ) in body
-    assert "task(s) failed: t-b" in body
-    assert "should not be read" not in body
+    assert "<evaluator_summary>" not in body
+    assert body == (
+        '<task id="t-a" status="success">\n'
+        "ok\n"
+        "</task>\n"
+        '<task id="t-b" status="failure">\n'
+        "boom\n"
+        "</task>\n"
+        "<failure>\n"
+        "generator t-b: boom\n"
+        "</failure>"
+    )
 
 
-def test_prior_body_renders_evaluator_children_with_failed_criteria():
+def test_prior_body_renders_evaluator_summary_on_evaluator_failure():
+    # <evaluation_criteria>/<failed_criteria>/<passed_criteria> elements were
+    # DROPPED from the failed-attempt body. An EVALUATOR_FAILED attempt whose
+    # evaluator ran now renders the terminal <task>s, the <evaluator_summary>,
+    # then the <failure> "evaluator: <summary>" line.
     class TaskStore:
         def get_task(self, task_id: str):
             return {
@@ -303,15 +317,25 @@ def test_prior_body_renders_evaluator_children_with_failed_criteria():
         task_store=TaskStore(),
     )
     body = blocks[0].text
-    # No <evaluator_judgment> wrapper.
-    assert "<evaluator_judgment" not in body
-    assert "</evaluator_judgment>" not in body
-    assert "<evaluation_criteria>\ntotal\n</evaluation_criteria>" in body
-    assert "checkout review failed total mismatch" in body
-    assert "<failed_criteria>\ntotal\n</failed_criteria>" in body
+    assert "<evaluation_criteria>" not in body
+    assert "<failed_criteria>" not in body
+    assert body == (
+        '<task id="t-a" status="success">\n'
+        "generator ok\n"
+        "</task>\n"
+        "<evaluator_summary>\n"
+        "checkout review failed total mismatch\n"
+        "</evaluator_summary>\n"
+        "<failure>\n"
+        "evaluator: checkout review failed total mismatch\n"
+        "</failure>"
+    )
 
 
-def test_prior_body_includes_passed_criteria_when_payload_carries_them():
+def test_prior_body_omits_passed_criteria_element():
+    # Removed behavior: the <passed_criteria> element no longer appears in the
+    # failed-attempt body; the evaluator's text surfaces only as the
+    # <evaluator_summary> + <failure> "evaluator: <summary>" line.
     class TaskStore:
         def get_task(self, task_id: str):
             return {
@@ -343,7 +367,18 @@ def test_prior_body_includes_passed_criteria_when_payload_carries_them():
         task_store=TaskStore(),
     )
     body = blocks[0].text
-    assert "<passed_criteria>\nc1\nc2\n</passed_criteria>" in body
+    assert "<passed_criteria>" not in body
+    assert body == (
+        '<task id="t-a" status="success">\n'
+        "generator ok\n"
+        "</task>\n"
+        "<evaluator_summary>\n"
+        "passing summary\n"
+        "</evaluator_summary>\n"
+        "<failure>\n"
+        "evaluator: passing summary\n"
+        "</failure>"
+    )
 
 
 def test_all_failed_attempts_render_in_sequence_order():
@@ -359,9 +394,9 @@ def test_all_failed_attempts_render_in_sequence_order():
     )
     assert [b.source_id for b in blocks] == ["attempt-1", "attempt-2", "attempt-3"]
     assert [b.metadata["attrs"] for b in blocks] == [
-        'attempt_no="1" status="prior" verdict="fail"',
-        'attempt_no="2" status="prior" verdict="fail"',
-        'attempt_no="3" status="prior" verdict="fail"',
+        'attempt_no="1"',
+        'attempt_no="2"',
+        'attempt_no="3"',
     ]
 
 
@@ -409,9 +444,10 @@ def test_current_attempt_flat_blocks_emit_one_task_block_per_generator():
         task_store=TaskStore(),
     )
     task_blocks = [b for b in blocks if b.metadata.get("tag") == "task"]
+    # done -> "success" under the presentation-status vocabulary.
     assert [b.metadata["attrs"] for b in task_blocks] == [
-        'id="t-a" status="done"',
-        'id="t-b" status="done"',
+        'id="t-a" status="success"',
+        'id="t-b" status="success"',
     ]
     # Real summary becomes the body; a placeholder summary collapses to empty.
     assert task_blocks[0].text == "built slice"

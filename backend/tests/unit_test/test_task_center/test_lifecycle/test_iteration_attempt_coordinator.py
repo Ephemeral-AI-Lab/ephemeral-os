@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import json
+
 import pytest
 
 from task_center.iteration import IterationAttemptCoordinator
@@ -114,26 +116,18 @@ def test_passing_graph_with_null_continuation_emits_terminal_success(
 
 
 class _FakeTaskStore:
-    """Minimal TaskStoreProtocol surface used by _evaluator_pass_summary_for."""
+    """Minimal TaskStoreProtocol surface: returns task rows by id.
 
-    def __init__(
-        self,
-        *,
-        free_text: str = "",
-        evaluator_task_id: str | None = None,
-        evaluator_task: dict | None = None,
-    ) -> None:
-        self._free_text = free_text
-        self._evaluator_task_id = evaluator_task_id
-        self._evaluator_task = evaluator_task
+    The coordinator builds the iteration's denormalized achieved record from
+    the passing attempt's generator tasks via ``task_store.get_task`` per
+    ``generator_task_id``.
+    """
 
-    def get_evaluator_pass_summary(self, attempt_id: str) -> str:
-        return self._free_text
+    def __init__(self, rows: dict[str, dict] | None = None) -> None:
+        self._rows = rows or {}
 
     def get_task(self, task_id: str):
-        if task_id == self._evaluator_task_id:
-            return self._evaluator_task
-        return None
+        return self._rows.get(task_id)
 
 
 def _make_coordinator_with_task_store(seg_id, iteration_store, attempt_store, task_store):
@@ -148,26 +142,26 @@ def _make_coordinator_with_task_store(seg_id, iteration_store, attempt_store, ta
     return coordinator, captured
 
 
-def test_close_iteration_passed_appends_passed_criteria(
+def test_close_iteration_passed_writes_structured_achieved_record(
     goal_store, iteration_store, attempt_store, task_center_run_id
 ):
+    """At successful close the coordinator denormalizes the passing attempt's
+    GENERATOR tasks onto ``Iteration.task_summary`` as a JSON achieved record
+    (``[{local_id, status, summary}, ...]``). Renamed from
+    ``..._appends_passed_criteria``: the evaluator free-text + ``Passed
+    criteria:`` block behavior was removed."""
     seg_id = _seed_segment(goal_store, iteration_store, task_center_run_id)
     g = attempt_store.insert(iteration_id=seg_id, attempt_sequence_no=1)
     iteration_store.append_attempt_id(seg_id, g.id)
-    attempt_store.set_evaluator_task_id(g.id, "eval-1")
+    gen_a = f"{g.id}:gen:gen_a"
+    gen_b = f"{g.id}:gen:gen_b"
+    attempt_store.set_generator_task_ids(g.id, [gen_a, gen_b])
     attempt_store.close(g.id, status=AttemptStatus.PASSED, fail_reason=None)
     task_store = _FakeTaskStore(
-        free_text="looks good",
-        evaluator_task_id="eval-1",
-        evaluator_task={
-            "summaries": [
-                {
-                    "outcome": "success",
-                    "summary": "looks good",
-                    "payload": {"passed_criteria": ["c1", "c2"]},
-                }
-            ],
-        },
+        {
+            gen_a: {"status": "done", "summaries": [{"summary": "Implemented storage layer."}]},
+            gen_b: {"status": "done", "summaries": [{"summary": "Added the add command."}]},
+        }
     )
     coordinator, _ = _make_coordinator_with_task_store(
         seg_id, iteration_store, attempt_store, task_store
@@ -176,38 +170,30 @@ def test_close_iteration_passed_appends_passed_criteria(
     seg = iteration_store.get(seg_id)
     assert seg is not None
     assert seg.task_summary is not None
-    assert "looks good" in seg.task_summary
-    assert "Passed criteria:\n  - c1\n  - c2" in seg.task_summary
+    record = json.loads(seg.task_summary)
+    assert record == [
+        {"local_id": "gen_a", "status": "success", "summary": "Implemented storage layer."},
+        {"local_id": "gen_b", "status": "success", "summary": "Added the add command."},
+    ]
 
 
-def test_close_iteration_passed_omits_criteria_when_payload_empty(
+def test_close_iteration_passed_achieved_record_empty_without_generators(
     goal_store, iteration_store, attempt_store, task_center_run_id
 ):
+    """A passing attempt with no generators yields an empty JSON achieved
+    record. Renamed from ``..._omits_criteria_when_payload_empty``: the
+    evaluator-payload ``passed_criteria`` behavior was removed."""
     seg_id = _seed_segment(goal_store, iteration_store, task_center_run_id)
     g = attempt_store.insert(iteration_id=seg_id, attempt_sequence_no=1)
     iteration_store.append_attempt_id(seg_id, g.id)
-    attempt_store.set_evaluator_task_id(g.id, "eval-1")
     attempt_store.close(g.id, status=AttemptStatus.PASSED, fail_reason=None)
-    task_store = _FakeTaskStore(
-        free_text="all good",
-        evaluator_task_id="eval-1",
-        evaluator_task={
-            "summaries": [
-                {
-                    "outcome": "success",
-                    "summary": "all good",
-                    "payload": {},
-                }
-            ],
-        },
-    )
     coordinator, _ = _make_coordinator_with_task_store(
-        seg_id, iteration_store, attempt_store, task_store
+        seg_id, iteration_store, attempt_store, _FakeTaskStore()
     )
     coordinator.handle_attempt_closed(g.id)
     seg = iteration_store.get(seg_id)
     assert seg is not None
-    assert seg.task_summary == "all good"
+    assert json.loads(seg.task_summary) == []
 
 
 def test_passing_graph_with_continuation_emits_success_continue(

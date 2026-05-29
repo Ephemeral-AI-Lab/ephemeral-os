@@ -33,13 +33,20 @@ class MutableMockState:
     response are intentionally stubs in this phase.
     """
 
-    __slots__ = ("seen_events", "flags", "_failures", "_next_planner_response")
+    __slots__ = (
+        "seen_events",
+        "flags",
+        "_failures",
+        "_next_planner_response",
+        "_next_advisor_verdict",
+    )
 
     def __init__(self) -> None:
         self.seen_events: list[EventType] = []
         self.flags: dict[str, Any] = {}
         self._failures: dict[tuple[str, str, str | None], int] = {}
         self._next_planner_response: Any = None
+        self._next_advisor_verdict: str | None = None
 
     def inject_failure(
         self,
@@ -82,6 +89,20 @@ class MutableMockState:
         spec = self._next_planner_response
         self._next_planner_response = None
         return spec
+
+    def set_next_advisor_verdict(self, verdict: str) -> None:
+        """Inject the next advisor sub-agent's verdict (e.g. ``"reject"``).
+
+        Read once by ``scenario_adapter._advisor_script`` via
+        ``consume_advisor_verdict``; lets negative-path scenarios drive a real
+        ``ask_advisor`` rejection through the loop's advisor gate.
+        """
+        self._next_advisor_verdict = verdict
+
+    def consume_advisor_verdict(self) -> str | None:
+        verdict = self._next_advisor_verdict
+        self._next_advisor_verdict = None
+        return verdict
 
 
 @dataclass(frozen=True, slots=True)

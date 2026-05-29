@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import json
 from datetime import UTC, datetime
 
 import pytest
 
+from task_center._core.generator_summaries import TaskOutcome, to_record
 from task_center.context_engine.core import ContextEngineDeps, ContextEngineError
 from task_center.context_engine.packet import (
     ContextPriority,
@@ -61,13 +63,32 @@ def _seed_iteration(
     )
 
 
+def _achieved_record(*outcomes: tuple[str, str]) -> str:
+    """Build a denormalized achieved record (JSON) for a succeeded iteration.
+
+    Each ``(local_id, summary)`` becomes one ``status="success"`` entry; prior
+    iterations now render one ``<task id status>`` child per entry.
+    """
+    return json.dumps(
+        [
+            to_record(TaskOutcome(local_id=local_id, status="success", summary=summary))
+            for local_id, summary in outcomes
+        ]
+    )
+
+
 def _close_iteration_succeeded(
     iteration_store, iteration_id, *, spec: str, summary: str
 ):
+    """Close a prior iteration with a JSON achieved record as ``task_summary``.
+
+    ``summary`` is the single achieved-record entry's text (local_id ``"t"``);
+    prior iterations render it as a ``<task id="t" status="success">`` child.
+    """
     return iteration_store.close_succeeded(
         iteration_id,
         plan_spec=spec,
-        task_summary=summary,
+        task_summary=_achieved_record(("t", summary)),
         closed_at=datetime.now(UTC),
     )
 
@@ -126,7 +147,7 @@ def test_iteration1_emits_goal_then_current_iteration_child(
     assert iteration_goal.metadata["child_tag"] == "iteration_goal"
     assert iteration_goal.metadata["group_tag"] == "iteration"
     assert iteration_goal.metadata["group_attrs"] == (
-        'iteration_no="1" status="current"'
+        'iteration_no="1" position="current"'
     )
     assert iteration_goal.metadata["iteration_no"] == "1"
     assert iteration_goal.text == "(identical to &lt;goal&gt;)"
@@ -160,24 +181,27 @@ def test_iteration2_emits_goal_prior_results_and_current_iteration(
         ),
         deps_with_stores,
     )
+    # Prior iterations no longer emit an <accepted_plan>/<summary> pair: each
+    # achieved-record entry is one <task> child under a single
+    # prior_iteration_summary block.
     kinds = [b.kind for b in packet.blocks]
     assert kinds == [
         "goal_statement",
-        "prior_iteration_specification",
         "prior_iteration_summary",
         "iteration_statement",
     ]
     assert packet.blocks[0].metadata["tag"] == "goal"
-    prior_spec = packet.blocks[1]
-    assert prior_spec.priority == ContextPriority.HIGH
-    assert prior_spec.metadata["child_tag"] == "accepted_plan"
-    assert prior_spec.metadata["group_tag"] == "iteration"
-    assert prior_spec.metadata["group_attrs"] == 'iteration_no="1" status="prior"'
-    assert prior_spec.text == "iteration1 spec"
-    iteration_goal = packet.blocks[3]
+    prior_task = packet.blocks[1]
+    assert prior_task.priority == ContextPriority.HIGH
+    assert prior_task.metadata["child_tag"] == "task"
+    assert prior_task.metadata["group_tag"] == "iteration"
+    assert prior_task.metadata["group_attrs"] == 'iteration_no="1" position="prior"'
+    assert prior_task.metadata["attrs"] == 'id="t" status="success"'
+    assert prior_task.text == "iteration1 summary"
+    iteration_goal = packet.blocks[2]
     assert iteration_goal.metadata["child_tag"] == "iteration_goal"
     assert iteration_goal.metadata["group_tag"] == "iteration"
-    assert iteration_goal.metadata["group_attrs"] == 'iteration_no="2" status="current"'
+    assert iteration_goal.metadata["group_attrs"] == 'iteration_no="2" position="current"'
     assert iteration_goal.metadata["iteration_no"] == "2"
 
 
@@ -205,23 +229,24 @@ def test_iteration3_emits_two_pairs_with_priority_split(
         ),
         deps_with_stores,
     )
-    # Two prior iterations in sequence order; immediate prior is HIGH.
-    prior_specs = [
-        b for b in packet.blocks if b.kind == "prior_iteration_specification"
+    # Two prior iterations in sequence order; immediate prior is HIGH. Each
+    # prior is now a single prior_iteration_summary block (one <task> child).
+    priors = [
+        b for b in packet.blocks if b.kind == "prior_iteration_summary"
     ]
-    assert len(prior_specs) == 2
-    assert prior_specs[0].metadata["group_attrs"] == 'iteration_no="1" status="prior"'
-    assert prior_specs[0].priority == ContextPriority.MEDIUM
-    assert prior_specs[1].metadata["group_attrs"] == 'iteration_no="2" status="prior"'
-    assert prior_specs[1].priority == ContextPriority.HIGH
+    assert len(priors) == 2
+    assert priors[0].metadata["group_attrs"] == 'iteration_no="1" position="prior"'
+    assert priors[0].priority == ContextPriority.MEDIUM
+    assert priors[1].metadata["group_attrs"] == 'iteration_no="2" position="prior"'
+    assert priors[1].priority == ContextPriority.HIGH
 
 
 def test_missing_prior_spec_raises_context_engine_error(
     deps_with_stores, goal_store, iteration_store, attempt_store,
     task_center_run_id,
 ):
-    """Closed iteration-1 with plan_spec still null is an invariant
-    violation; recipe must raise."""
+    """Closed iteration-1 with task_summary still null is an invariant
+    violation; recipe must raise (chain-integrity guard keys on task_summary)."""
     request = _seed_goal(goal_store, task_center_run_id)
     iteration1 = _seed_iteration(
         iteration_store, goal_id=request.id, sequence_no=1, goal="g1"
@@ -275,10 +300,12 @@ def test_three_failed_attempts_emit_three_high_priority_blocks(
     assert len(failed_blocks) == 3
     for block in failed_blocks:
         assert block.priority == ContextPriority.HIGH
+    # Failed-attempt attrs are attempt_no only (no status/verdict): the attempt
+    # is a prior attempt OF the current iteration, so a verdict would mislead.
     assert [b.metadata["attrs"] for b in failed_blocks] == [
-        'attempt_no="1" status="prior" verdict="fail"',
-        'attempt_no="2" status="prior" verdict="fail"',
-        'attempt_no="3" status="prior" verdict="fail"',
+        'attempt_no="1"',
+        'attempt_no="2"',
+        'attempt_no="3"',
     ]
 
 
@@ -325,7 +352,7 @@ def test_failed_attempt_includes_plan_type_statuses_and_summaries(
     attempt_store.close(
         failed.id,
         status=AttemptStatus.FAILED,
-        fail_reason=AttemptFailReason.EVALUATOR_FAILED,
+        fail_reason=AttemptFailReason.GENERATOR_FAILED,
         closed_at=datetime.now(UTC),
     )
     current_attempt = _seed_running_attempt(attempt_store, iteration.id, sequence_no=2)
@@ -344,23 +371,31 @@ def test_failed_attempt_includes_plan_type_statuses_and_summaries(
     ]
     assert len(failed_blocks) == 1
     text = failed_blocks[0].text
-    # No wrappers — children are flat siblings under <attempt>.
+    # The failed-attempt body is one <task id status> per terminal generator
+    # (status-vocab: done->success, failed->failure) followed by a <failure>
+    # line. Wrappers are dropped per the §1 diagram.
     assert "<attempt_plan>" not in text
     assert "<generator_outcomes>" not in text
     assert "<evaluator_judgment" not in text
-    assert "<plan_spec>\npartial failed spec\n</plan_spec>" in text
+    # Dropped from the body: <plan_spec>, <deferred_goal_for_next_iteration>,
+    # <status_summary>, and the compact "gen-a: done" status lines.
+    assert "<plan_spec>" not in text
+    assert "<deferred_goal_for_next_iteration>" not in text
+    assert "<status_summary>" not in text
+    assert "gen-a: done" not in text
+    assert "gen-b: failed" not in text
+    # Generator statuses + summaries render as <task> children.
+    assert '<task id="gen-a" status="success">\nimplemented A\n</task>' in text
     assert (
-        "<deferred_goal_for_next_iteration>\ncontinue with later slice\n"
-        "</deferred_goal_for_next_iteration>"
+        '<task id="gen-b" status="failure">\nB failed after creating fixture\n</task>'
     ) in text
-    assert "<status_summary>" in text
-    assert "gen-a: done" in text
-    assert "gen-b: failed" in text
-    assert '<task id="gen-a" status="done">\nimplemented A\n</task>' in text
     assert "fail_reason" not in text
-    # Generator failure bypasses evaluator regardless of evaluator_task_id.
+    # Generator failure bypasses the evaluator (no evaluator_task_id): no
+    # <evaluator_summary>, and the bypassed-evaluator fallback was dropped.
+    # GENERATOR_FAILED renders a "generator <local_id>: ..." <failure> line.
+    assert "<evaluator_summary>" not in text
     assert (
-        '<evaluator_summary status="bypassed" reason="generator_failed">'
+        "<failure>\ngenerator gen-b: B failed after creating fixture\n</failure>"
     ) in text
 
 
@@ -392,8 +427,7 @@ def test_all_failed_attempts_render_as_high_priority_blocks(
     ]
     assert len(failed_blocks) == total
     assert [b.metadata["attrs"] for b in failed_blocks] == [
-        f'attempt_no="{n}" status="prior" verdict="fail"'
-        for n in range(1, total + 1)
+        f'attempt_no="{n}"' for n in range(1, total + 1)
     ]
     assert all(block.priority == ContextPriority.HIGH for block in failed_blocks)
     assert all("truncated_count" not in block.metadata for block in failed_blocks)
@@ -442,18 +476,17 @@ def test_iteration_2_plus_reading_a_structure(
         deps_with_stores,
     )
 
-    # 1. Block-kind order (structural lock; survives Reading B):
+    # 1. Block-kind order (structural lock; survives Reading B). Each prior
+    # iteration is now a single prior_iteration_summary block (one <task> per
+    # achieved-record entry) — no prior_iteration_specification pair.
     tier_kinds = {
         "goal_statement",
-        "prior_iteration_specification",
         "prior_iteration_summary",
         "iteration_statement",
     }
     assert [b.kind for b in packet.blocks if b.kind in tier_kinds] == [
         "goal_statement",
-        "prior_iteration_specification",
         "prior_iteration_summary",
-        "prior_iteration_specification",
         "prior_iteration_summary",
         "iteration_statement",
     ]
@@ -463,14 +496,15 @@ def test_iteration_2_plus_reading_a_structure(
     rendered = renderer.render_context(packet)
     assert rendered.startswith("<goal>\n")
     assert "</goal>" in rendered
-    # Current iteration's <iteration_goal> child wrapped under status="current".
-    assert '<iteration iteration_no="3" status="current">' in rendered
+    # Current iteration's <iteration_goal> child wrapped under position="current".
+    assert '<iteration iteration_no="3" position="current">' in rendered
     assert "<iteration_goal>\niteration 3 goal\n</iteration_goal>" in rendered
-    # Two prior iterations wrap their plan + summary children.
+    # Two prior iterations render a <task> child per achieved-record entry
+    # (no <accepted_plan>/<summary> pair).
+    assert "<accepted_plan>" not in rendered
     for n in (1, 2):
-        assert f'<iteration iteration_no="{n}" status="prior">' in rendered
-        assert f"<accepted_plan>\niter{n} spec\n</accepted_plan>" in rendered
-        assert f"<summary>\niter{n} summary\n</summary>" in rendered
+        assert f'<iteration iteration_no="{n}" position="prior">' in rendered
+        assert f'<task id="t" status="success">\niter{n} summary\n</task>' in rendered
 
     # 3. Each prior iteration shares a group_id; the standalone <goal> block
     # carries metadata['tag'] without a group_id.
@@ -479,6 +513,6 @@ def test_iteration_2_plus_reading_a_structure(
     group_ids = {
         b.metadata.get("group_id")
         for b in packet.blocks
-        if b.kind in {"prior_iteration_specification", "prior_iteration_summary"}
+        if b.kind == "prior_iteration_summary"
     }
     assert group_ids == {"iteration_1_prior", "iteration_2_prior"}

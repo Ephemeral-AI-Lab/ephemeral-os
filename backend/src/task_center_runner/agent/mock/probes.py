@@ -47,6 +47,11 @@ class ProbeContext:
         self._bus = bus
         self._sink = LegacySandboxAuditSink(bus) if bus is not None else None
 
+    @property
+    def metadata(self) -> Any:
+        """The live loop ``tool_metadata`` (heavy probes pass it to call_tool)."""
+        return self._metadata
+
     def probe_path(self) -> str:
         return _PROBE_PATH
 
@@ -79,6 +84,31 @@ class ProbeContext:
     def _publish(self, event_type: EventType, payload: dict[str, Any]) -> None:
         if self._bus is None:
             return
+        self._bus.publish(
+            Event(type=event_type, node=NodeId(task_center_run_id=""), payload=payload)
+        )
+
+    def publish(
+        self,
+        event_type: EventType,
+        *,
+        metadata: Any = None,  # noqa: ARG002 — node identity is re-homed off the bus
+        payload: dict[str, Any] | None = None,
+    ) -> None:
+        """``publish`` callback the heavy probes expect (re-homed SANDBOX_* events)."""
+        self._publish(event_type, payload or {})
+
+    def publish_mock_record(self, event_type: EventType, record: Any) -> None:
+        """``publish_mock_record`` callback: publish a dataclass record to the bus."""
+        if self._bus is None:
+            return
+        import dataclasses
+
+        payload = (
+            dataclasses.asdict(record)
+            if dataclasses.is_dataclass(record) and not isinstance(record, type)
+            else dict(record)
+        )
         self._bus.publish(
             Event(type=event_type, node=NodeId(task_center_run_id=""), payload=payload)
         )

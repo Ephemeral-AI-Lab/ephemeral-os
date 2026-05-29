@@ -1767,7 +1767,7 @@ class MockSquadRunner:
             checks = {
                 "goal": "<goal>" in prompt,
                 "current_iteration": (
-                    "<iteration " in prompt and 'status="current"' in prompt
+                    "<iteration " in prompt and 'position="current"' in prompt
                 ),
                 "closes_goal_terminal": "submit_plan_closes_goal" in prompt,
                 "no_defer_terminal": "submit_plan_defers_goal" not in prompt,
@@ -1780,19 +1780,14 @@ class MockSquadRunner:
             checks = {
                 "goal": "<goal>" in prompt,
                 "current_iteration": (
-                    "<iteration " in prompt and 'status="current"' in prompt
+                    "<iteration " in prompt and 'position="current"' in prompt
                 ),
             }
             if attempt.attempt_sequence_no > 1:
-                checks["failed_attempts"] = (
-                    'status="prior" verdict="fail"' in prompt
-                    or 'status="failed"' in prompt
-                )
+                checks["failed_attempts"] = '<attempt attempt_no="' in prompt
             if iteration.sequence_no > 1:
                 checks["previous_iteration_results"] = (
-                    'status="prior"' in prompt
-                    and "<accepted_plan>" in prompt
-                    and "<summary>" in prompt
+                    'position="prior"' in prompt and "<task " in prompt
                 )
             reason = (
                 "Planner context is goal and iteration scoped; retry planners "

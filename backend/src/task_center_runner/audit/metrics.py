@@ -143,7 +143,7 @@ class MetricsAggregator:
             bucket.count += 1
             if event.type is EventType.TOOL_CALL_ERROR:
                 bucket.errors += 1
-            start = self._open_starts.pop(self._key(event), None)
+            start = self._pop_start(event)
             latency_ms: float | None = None
             if start is not None:
                 latency_ms = (event.ts - start.ts).total_seconds() * 1000.0
@@ -229,6 +229,26 @@ class MetricsAggregator:
             key=lambda sample: float(sample.get("duration_ms") or -1.0),
             reverse=True,
         )[:_SLOWEST_CALL_LIMIT]
+
+    def _pop_start(self, event: Event) -> "_ToolStart | None":
+        """Match a completion to its open start.
+
+        Prefer the exact ``(tool_name, tool_use_id, agent_run_id)`` key (the old
+        MockSquadRunner hand-emitted ``TOOL_CALL_STARTED`` with the tool_use_id).
+        The real query loop emits ``TOOL_CALL_STARTED`` from ``execute_tool_once``
+        WITHOUT a tool_use_id (only the completion carries it), so fall back to
+        the open start for the same ``(tool_name, agent_run_id)`` — the loop
+        dispatches an agent's tools sequentially, so at most one is open.
+        """
+        start = self._open_starts.pop(self._key(event), None)
+        if start is not None:
+            return start
+        fallback_key = (
+            str(event.payload.get("tool_name") or "unknown"),
+            "",
+            str(event.node.agent_run_id or ""),
+        )
+        return self._open_starts.pop(fallback_key, None)
 
     @staticmethod
     def _key(event: Event) -> tuple[str, str, str]:

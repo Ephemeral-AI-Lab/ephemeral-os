@@ -56,7 +56,7 @@ def _seed_continuation_iteration(iteration_store, *, goal_id):
 
 
 # ---------------------------------------------------------------------------
-# generator — emits <plan_spec> (no wrapper), <dependency> siblings, <assigned_task>
+# generator — emits <plan_spec> (no wrapper), <dependency> group, <assigned_task>
 # ---------------------------------------------------------------------------
 
 
@@ -156,7 +156,7 @@ def test_generator_drops_deferred_goal_from_executor_packet(
     )
 
 
-def test_generator_dependency_blocks_are_flat_siblings(
+def test_generator_dependency_blocks_are_a_dependency_group(
     deps, goal_store, iteration_store, attempt_store, task_store, task_center_run_id
 ):
     req = _seed_goal(goal_store, task_center_run_id)
@@ -196,10 +196,10 @@ def test_generator_dependency_blocks_are_flat_siblings(
     dep_blocks = [b for b in packet.blocks if b.kind == "dependency_summary"]
     assert len(dep_blocks) == 1
     dep = dep_blocks[0]
-    assert dep.metadata["tag"] == "dependency"
-    # No <dependency_results> group wrapper.
-    assert "group_tag" not in dep.metadata
-    assert dep.metadata["attrs"] == 'id="t-up"'
+    # Dependencies render as a <dependency> GROUP with one <task> child each.
+    assert dep.metadata["group_tag"] == "dependency"
+    assert dep.metadata["child_tag"] == "task"
+    assert dep.metadata["attrs"] == 'id="t-up" status="success"'
     assert "produced X" in dep.text
     assert packet.blocks[-1].kind == "planned_task_spec"
     kinds = [b.kind for b in packet.blocks]
@@ -285,7 +285,7 @@ def test_evaluator_emits_flat_plan_spec_tasks_and_criteria(
     assert plan_spec_block.text == "evaluator spec"
     # task — summary-only body, id + status on the tag.
     assert task_block.metadata["tag"] == "task"
-    assert task_block.metadata["attrs"] == 'id="t-a" status="done"'
+    assert task_block.metadata["attrs"] == 'id="t-a" status="success"'
     assert task_block.text == "good output"
     # evaluation_criteria — the authority, highest priority (last dropped).
     assert criteria_block.metadata["tag"] == "evaluation_criteria"
@@ -296,7 +296,7 @@ def test_evaluator_emits_flat_plan_spec_tasks_and_criteria(
     # guard sanitizes the bodies and wraps each tag once — no <attempt> wrapper.
     rendered = XmlPromptRenderer().render_context(packet)
     assert "<plan_spec>\nevaluator spec\n</plan_spec>" in rendered
-    assert '<task id="t-a" status="done">\ngood output\n</task>' in rendered
+    assert '<task id="t-a" status="success">\ngood output\n</task>' in rendered
     assert "<evaluation_criteria>\nc1\nc2\n</evaluation_criteria>" in rendered
     assert "<attempt" not in rendered and "<iteration" not in rendered
 
@@ -342,7 +342,7 @@ def test_evaluator_renders_every_generator_summary_in_order(
     task_blocks = [b for b in packet.blocks if b.kind == "generator_task_outcome"]
     assert [b.source_id for b in task_blocks] == task_ids
     for task_id, block in zip(task_ids, task_blocks, strict=True):
-        assert block.metadata["attrs"] == f'id="{task_id}" status="done"'
+        assert block.metadata["attrs"] == f'id="{task_id}" status="success"'
         assert block.text == f"summary for {task_id}"
 
 

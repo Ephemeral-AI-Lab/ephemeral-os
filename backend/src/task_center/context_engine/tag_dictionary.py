@@ -6,10 +6,10 @@ outline uses. The dictionary is the single source of truth for those labels:
 two cases that reference the same ``(tag, semantic-attribute-set)`` produce
 byte-identical bullets.
 
-Only ``status`` and ``verdict`` are *semantic* attributes — they change what
-a tag means. ``iteration_no``, ``attempt_no``, ``task_id``, ``id`` are
-*identity* attributes — they distinguish instances but never change the
-label. The dictionary keys on semantic attributes only.
+Only ``status``, ``verdict``, and ``position`` are *semantic* attributes —
+they change what a tag means. ``iteration_no``, ``attempt_no``, ``task_id``,
+``id`` are *identity* attributes — they distinguish instances but never change
+the label. The dictionary keys on semantic attributes only.
 
 Wiring contract:
 
@@ -43,12 +43,12 @@ TAG_DICTIONARY: list[TagDescriptor] = [
     ),
     TagDescriptor(
         tag="iteration",
-        attr_filter={"status": "prior"},
+        attr_filter={"position": "prior"},
         label="previous iteration's work",
     ),
     TagDescriptor(
         tag="iteration",
-        attr_filter={"status": "current"},
+        attr_filter={"position": "current"},
         label="active iteration",
     ),
     TagDescriptor(
@@ -68,13 +68,8 @@ TAG_DICTIONARY: list[TagDescriptor] = [
     ),
     TagDescriptor(
         tag="attempt",
-        attr_filter={"status": "prior", "verdict": "fail"},
+        attr_filter=None,
         label="failed prior attempt",
-    ),
-    TagDescriptor(
-        tag="attempt",
-        attr_filter={"status": "current"},
-        label="active attempt",
     ),
     TagDescriptor(tag="plan_spec", attr_filter=None, label="attempt's plan"),
     TagDescriptor(
@@ -123,7 +118,7 @@ RECURSE_THROUGH: frozenset[str] = frozenset({"iteration"})
 _IDENTITY_ATTRS: frozenset[str] = frozenset({"iteration_no", "attempt_no", "task_id", "id"})
 
 # Semantic attributes — the only ones the dictionary keys on.
-_SEMANTIC_ATTRS: frozenset[str] = frozenset({"status", "verdict"})
+_SEMANTIC_ATTRS: frozenset[str] = frozenset({"status", "verdict", "position"})
 
 
 def match(tag: str, attrs: dict[str, str]) -> TagDescriptor | None:
@@ -156,12 +151,12 @@ def render_attrs(attrs: dict[str, str]) -> str:
     """Format ``attrs`` for an outline bullet's opening tag.
 
     Identity attributes (``iteration_no``, ``attempt_no``, ``task_id``, ``id``)
-    are dropped; semantic attributes (``status``, ``verdict``) are emitted in a
-    stable order so two cases at the same ``(tag, semantic-set)`` produce
-    byte-identical bullets.
+    are dropped; semantic attributes (``status``, ``verdict``, ``position``) are
+    emitted in a stable order so two cases at the same ``(tag, semantic-set)``
+    produce byte-identical bullets.
     """
     ordered: list[tuple[str, str]] = []
-    for key in ("status", "verdict"):
+    for key in ("status", "verdict", "position"):
         if key in attrs:
             ordered.append((key, attrs[key]))
     for key, value in attrs.items():

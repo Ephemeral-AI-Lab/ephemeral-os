@@ -8,10 +8,12 @@ open-iteration registry.
 
 from __future__ import annotations
 
+import json
 import logging
 from collections.abc import Callable
 from datetime import UTC, datetime
 
+from task_center._core.generator_summaries import generator_outcomes, to_record
 from task_center._core.invariants import (
     assert_attempt_belongs_to_iteration,
     assert_attempt_sequence_contiguous,
@@ -67,9 +69,10 @@ class IterationAttemptCoordinator:
         self._attempt_store = attempt_store
         self._on_iteration_closed = on_iteration_closed
         self._orchestrator_factory = orchestrator_factory
-        # Optional: when present, the coordinator denormalizes the evaluator's
-        # pass-summary text onto the iteration row at successful close so the
-        # context engine's planner recipe can read it on retry / chain.
+        # Optional: when present, the coordinator denormalizes the passing
+        # attempt's generators onto the iteration row (a structured achieved
+        # record) at successful close so the context engine's planner recipe
+        # can render them as ``<task>`` children on retry / chain.
         self._task_store = task_store
 
     # ---- public API -----------------------------------------------------
@@ -175,13 +178,15 @@ class IterationAttemptCoordinator:
             self.iteration_id,
             deferred_goal_for_next_iteration=attempt.deferred_goal_for_next_iteration,
         )
-        # Atomically transition status + write the denormalized
-        # plan_spec (from the passing attempt) and task_summary
-        # (from the evaluator's pass summary text) onto the iteration row.
+        # Atomically transition status + write the denormalized plan_spec (from
+        # the passing attempt) and the structured achieved record (a JSON list
+        # of ``{local_id, status, summary}`` over the passing generators) onto
+        # the iteration row. The planner recipe reads the achieved record; it
+        # no longer surfaces plan_spec.
         self._iteration_store.close_succeeded(
             self.iteration_id,
             plan_spec=attempt.plan_spec or "",
-            task_summary=self._evaluator_pass_summary_for(attempt),
+            task_summary=self._achieved_record_for(attempt),
             closed_at=datetime.now(UTC),
         )
         if attempt.deferred_goal_for_next_iteration is None:
@@ -189,55 +194,15 @@ class IterationAttemptCoordinator:
         else:
             self._emit_success_deferred(attempt)
 
-    def _evaluator_pass_summary_for(self, attempt: Attempt) -> str:
-        """Resolve the evaluator's success-summary text for *attempt*.
+    def _achieved_record_for(self, attempt: Attempt) -> str:
+        """JSON achieved record for the passing attempt's generators.
 
-        Empty string when the coordinator is configured without a ``task_store``
-        (test seams) or when the evaluator never recorded a summary.
-
-        When the evaluator submission carried a ``passed_criteria`` payload,
-        append a structured ``Passed criteria:`` block so the next iteration's
-        planner sees the done-items list via ``prior_iteration_summary`` —
-        the iteration store denormalises this string onto ``Iteration.task_summary``.
+        Empty list (``"[]"``) when the coordinator is configured without a
+        ``task_store`` (test seams). All generators of a passing attempt are
+        ``DONE``, so each entry's status maps to ``success``.
         """
-        if self._task_store is None:
-            return ""
-        free_text = str(self._task_store.get_evaluator_pass_summary(attempt.id) or "")
-        passed = self._evaluator_passed_criteria(attempt)
-        if not passed:
-            return free_text
-        block = "Passed criteria:\n" + "\n".join(f"  - {c}" for c in passed)
-        if not free_text:
-            return block
-        return f"{free_text}\n\n{block}"
-
-    def _evaluator_passed_criteria(self, attempt: Attempt) -> list[str]:
-        """Pull ``passed_criteria`` from the evaluator task's latest payload.
-
-        The orchestrator persists evaluator submissions as
-        ``summaries[-1] = {"outcome", "summary", "payload": {...}}``; on a
-        success submission the payload carries ``passed_criteria``. Defensive
-        against missing rows, non-dict summaries, and absent payload keys.
-        """
-        task_store = self._task_store
-        if task_store is None or attempt.evaluator_task_id is None:
-            return []
-        task = task_store.get_task(attempt.evaluator_task_id)
-        if task is None:
-            return []
-        summaries = task.get("summaries")
-        if not summaries:
-            return []
-        latest = summaries[-1]
-        if not isinstance(latest, dict):
-            return []
-        payload = latest.get("payload") or {}
-        if not isinstance(payload, dict):
-            return []
-        raw = payload.get("passed_criteria")
-        if not isinstance(raw, list):
-            return []
-        return [str(item) for item in raw if item]
+        outcomes = generator_outcomes(attempt, task_store=self._task_store)
+        return json.dumps([to_record(o) for o in outcomes])
 
     def _retry_or_close_failed(self, attempt: Attempt) -> None:
         while True:

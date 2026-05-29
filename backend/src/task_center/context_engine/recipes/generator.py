@@ -1,11 +1,11 @@
 """``generator`` recipe — context for one generator task spawn.
 
-Emits the current attempt's ``<plan_spec>``, dependency outputs as flat
-``<dependency>`` siblings, and the assigned local task. XML shape:
+Emits the current attempt's ``<plan_spec>``, dependency outputs wrapped in a
+``<dependency>`` group, and the assigned local task. XML shape:
 
 * ``<plan_spec>`` — standalone block (no surrounding wrapper).
-* ``<dependency id="...">`` siblings — one per upstream task, omitted when
-  the assigned task has no deps.
+* ``<dependency>`` group with one ``<task id="..." status="...">`` child per
+  upstream task, omitted when the assigned task has no deps.
 * ``<assigned_task task_id="...">`` — the generator's local contract, anchored
   last so the agent ends on its concrete obligation.
 
@@ -30,7 +30,8 @@ from task_center.context_engine.packet import (
     ContextPriority,
     ContextRefs,
 )
-from task_center.context_engine.recipes.summaries import latest_summary_text
+from task_center._core.generator_summaries import task_outcome_from_row
+from task_center.context_engine.recipes._task_xml import block_task_body, task_attrs
 from task_center.context_engine.recipes_registry import ContextRecipe
 from task_center.context_engine.scope import ContextScope
 
@@ -98,12 +99,15 @@ def build_generator_context(scope: ContextScope, deps: ContextEngineDeps) -> Con
     )
 
 
+_DEPENDENCY_GROUP_ID = "dependencies"
+
+
 def _dependency_blocks(
     *,
     needs: tuple[str, ...],
     task_store: TaskStoreProtocol,
 ) -> list[ContextBlock]:
-    """Emit flat ``<dependency id="...">`` siblings, one per upstream task."""
+    """Emit a ``<dependency>`` group with one ``<task>`` child per upstream task."""
     if not needs:
         return []
     out: list[ContextBlock] = []
@@ -116,17 +120,24 @@ def _dependency_blocks(
                 f"Dependency task {dep_id!r} referenced by needs is missing; "
                 "generator context cannot be assembled without dependency results."
             )
+        outcome = task_outcome_from_row(dep_id, dep)
+        text, pre_rendered = block_task_body(outcome)
+        metadata = {
+            "group_id": _DEPENDENCY_GROUP_ID,
+            "group_tag": "dependency",
+            "child_tag": "task",
+            "attrs": task_attrs(outcome),
+        }
+        if pre_rendered:
+            metadata["pre_rendered_xml"] = "true"
         out.append(
             ContextBlock(
                 kind=ContextBlockKind.DEPENDENCY_SUMMARY,
                 priority=ContextPriority.MEDIUM,
-                text=latest_summary_text(dep.get("summaries")),
+                text=text,
                 source_id=dep_id,
                 source_kind="task_center_task",
-                metadata={
-                    "tag": "dependency",
-                    "attrs": f'id="{dep_id}"',
-                },
+                metadata=metadata,
             )
         )
     return out

@@ -16,6 +16,12 @@ from task_center._core.invariants import (
     assert_task_belongs_to_attempt,
     assert_valid_attempt_close,
 )
+from task_center._core.generator_summaries import (
+    attempt_failure_line,
+    child_outcomes_for_goal,
+    generator_outcomes,
+    to_record,
+)
 from task_center._core.primitives import (
     TaskCenterInvariantViolation,
     generator_task_id,
@@ -197,6 +203,7 @@ class AttemptOrchestrator:
                 "payload": {
                     "goal_closure_report": asdict(report),
                     "submission_kind": "goal_closure_report",
+                    "handoff_rollup": self._build_handoff_rollup(report),
                 },
             },
         )
@@ -204,6 +211,33 @@ class AttemptOrchestrator:
             # Race: another delivery moved the parent first. Idempotent.
             return
         self._stage_advancer.advance_ready_tasks()
+
+    def _build_handoff_rollup(self, report: GoalClosureReport) -> dict[str, Any]:
+        """Structured roll-up of the child goal, rendered later as nested ``<task>``.
+
+        Success: the child generators across all SUCCEEDED child iterations.
+        Failure: those, plus the final failed attempt's terminal generators and
+        an ``attempt_failure_line`` as the ``<failure>`` child. The recipe layer
+        turns this into nested ``<task>`` wherever the parent generator appears.
+        """
+        runtime = self._runtime
+        children = [
+            to_record(outcome)
+            for outcome in child_outcomes_for_goal(report.goal_id, runtime.iteration_store)
+        ]
+        failure: str | None = None
+        if report.outcome != "success" and report.final_attempt_id is not None:
+            final_attempt = runtime.attempt_store.get(report.final_attempt_id)
+            if final_attempt is not None:
+                children.extend(
+                    to_record(outcome)
+                    for outcome in generator_outcomes(
+                        final_attempt, task_store=runtime.task_store
+                    )
+                    if outcome.is_terminal
+                )
+                failure = attempt_failure_line(final_attempt, runtime.task_store)
+        return {"children": children, "failure": failure}
 
     def _validate_planner_submission(self, planner_task_id: str) -> Attempt:
         attempt = self._assert_stage(AttemptStage.PLAN)

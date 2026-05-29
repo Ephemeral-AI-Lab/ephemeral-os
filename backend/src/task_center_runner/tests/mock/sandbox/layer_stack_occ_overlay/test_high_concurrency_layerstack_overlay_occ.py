@@ -34,6 +34,7 @@ from task_center_runner.tests._live_config import (
     database_configured,
     live_e2e_heavy_enabled,
 )
+from task_center_runner.tests.mock._focused_scenario_contracts import count_role_tasks
 from task_center_runner.tests.mock._layer_stack_occ_overlay_assertions import (
     assert_o1_workspace_resource_snapshots,
     assert_resource_key_max,
@@ -120,19 +121,15 @@ def _assert_summary(summary: Mapping[str, Any]) -> None:
 
 def _assert_report_shape(report: RunReport, summary: Mapping[str, Any]) -> None:
     counts = Counter(event.type for event in report.events)
-    assert counts[EventType.EXECUTOR_SUCCESS] >= WORKER_COUNT + 2
+    # §4.1 migration: EXECUTOR_SUCCESS count → executor tasks landed ``done`` in
+    # real store state (seed + WORKER_COUNT workers + reconcile). The lifecycle
+    # events are removed and the real TaskCenter enforces role ordering, so the
+    # old expected_event_sequence subsequence check is dropped. SANDBOX_CONFLICT_
+    # DETECTED is still emitted (re-homed onto ProbeContext.publish).
+    assert count_role_tasks(report, "executor", status="done") >= WORKER_COUNT + 2
     assert counts[EventType.SANDBOX_CONFLICT_DETECTED] >= int(
         summary["conflict_errors"]
     )
-
-    expected = tuple(SCENARIO_REGISTRY[report.scenario_name]().expected_event_sequence)
-    position = 0
-    for event_type in report.seen_event_types:
-        if position < len(expected) and event_type == expected[position]:
-            position += 1
-    assert position == len(expected), [
-        event_type.value for event_type in report.seen_event_types
-    ]
 
     error_calls = [call for call in report.tool_calls if call.is_error]
     assert len(error_calls) == int(summary["conflict_errors"])

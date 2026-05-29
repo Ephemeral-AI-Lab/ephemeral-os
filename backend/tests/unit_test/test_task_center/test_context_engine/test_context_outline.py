@@ -36,7 +36,7 @@ def _iter_current_goal(seq_no: int = 1) -> ContextBlock:
         metadata={
             "group_id": f"iteration_{seq_no}_current",
             "group_tag": "iteration",
-            "group_attrs": f'iteration_no="{seq_no}" status="current"',
+            "group_attrs": f'iteration_no="{seq_no}" position="current"',
             "child_tag": "iteration_goal",
         },
     )
@@ -50,52 +50,40 @@ def _prior_attempt() -> ContextBlock:
         metadata={
             "group_id": "iteration_1_current",
             "group_tag": "iteration",
-            "group_attrs": 'iteration_no="1" status="current"',
+            "group_attrs": 'iteration_no="1" position="current"',
             "child_tag": "attempt",
-            "attrs": 'attempt_no="1" status="prior" verdict="fail"',
-            "pre_rendered_xml": "true",
-        },
-    )
-
-
-def _current_attempt() -> ContextBlock:
-    return ContextBlock(
-        kind="failed_attempt",
-        priority=ContextPriority.REQUIRED,
-        text="(current body)",
-        metadata={
-            "group_id": "iteration_1_current",
-            "group_tag": "iteration",
-            "group_attrs": 'iteration_no="1" status="current"',
-            "child_tag": "attempt",
-            "attrs": 'attempt_no="2" status="current"',
+            "attrs": 'attempt_no="1"',
             "pre_rendered_xml": "true",
         },
     )
 
 
 def _prior_iteration_pair(seq_no: int) -> list[ContextBlock]:
+    """Prior iteration's denormalized achieved record: one ``prior_iteration_summary``
+    block per entry, each a ``<task id status>`` child (contract §4)."""
     return [
         ContextBlock(
-            kind="prior_iteration_specification",
+            kind="prior_iteration_summary",
             priority=ContextPriority.HIGH,
-            text="plan",
+            text="Implemented storage layer.",
             metadata={
                 "group_id": f"iteration_{seq_no}_prior",
                 "group_tag": "iteration",
-                "group_attrs": f'iteration_no="{seq_no}" status="prior"',
-                "child_tag": "accepted_plan",
+                "group_attrs": f'iteration_no="{seq_no}" position="prior"',
+                "child_tag": "task",
+                "attrs": 'id="storage" status="success"',
             },
         ),
         ContextBlock(
             kind="prior_iteration_summary",
             priority=ContextPriority.HIGH,
-            text="summary",
+            text="Added the add command.",
             metadata={
                 "group_id": f"iteration_{seq_no}_prior",
                 "group_tag": "iteration",
-                "group_attrs": f'iteration_no="{seq_no}" status="prior"',
-                "child_tag": "summary",
+                "group_attrs": f'iteration_no="{seq_no}" position="prior"',
+                "child_tag": "task",
+                "attrs": 'id="cli_add" status="success"',
             },
         ),
     ]
@@ -105,7 +93,7 @@ def test_case02_planner_iter1_fresh_outline():
     outline = render_context_outline(_packet([_goal(), _iter_current_goal(1)]))
     assert outline == (
         "- <goal> — user's request\n"
-        "- <iteration status=\"current\"> — active iteration\n"
+        "- <iteration position=\"current\"> — active iteration\n"
         "  - <iteration_goal> — active iteration's scope"
     )
 
@@ -116,43 +104,29 @@ def test_case03_planner_iter1_with_prior_attempt():
     )
     assert outline == (
         "- <goal> — user's request\n"
-        "- <iteration status=\"current\"> — active iteration\n"
+        "- <iteration position=\"current\"> — active iteration\n"
         "  - <iteration_goal> — active iteration's scope\n"
-        "  - <attempt status=\"prior\" verdict=\"fail\"> — failed prior attempt"
+        "  - <attempt> — failed prior attempt"
     )
 
 
-def test_case07_evaluator_iter1_two_attempts_collapses_correctly():
-    # Two attempts, distinct descriptors (prior/fail and current) — both
-    # appear; they do NOT collapse because the descriptors differ.
-    outline = render_context_outline(
-        _packet(
-            [
-                _goal(),
-                _iter_current_goal(1),
-                _prior_attempt(),
-                _current_attempt(),
-            ]
-        )
-    )
-    assert outline == (
-        "- <goal> — user's request\n"
-        "- <iteration status=\"current\"> — active iteration\n"
-        "  - <iteration_goal> — active iteration's scope\n"
-        "  - <attempt status=\"prior\" verdict=\"fail\"> — failed prior attempt\n"
-        "  - <attempt status=\"current\"> — active attempt"
-    )
+# Removed test_case07_evaluator_iter1_two_attempts_collapses_correctly: its
+# premise (two attempts render distinct descriptors and do NOT collapse) was
+# invalidated by contract §5 — failed <attempt> now carries only attempt_no, so
+# both attempts share one descriptor and collapse to a single bullet. Attempt
+# collapse is covered by test_consecutive_same_descriptor_siblings_collapse.
 
 
 def test_case04_planner_iter2_prior_and_current():
     blocks = [_goal()] + _prior_iteration_pair(1) + [_iter_current_goal(2)]
     outline = render_context_outline(_packet(blocks))
+    # Prior iteration's two success <task> children share one descriptor and
+    # collapse to a single bullet (contract §4: <task id status> children).
     assert outline == (
         "- <goal> — user's request\n"
-        "- <iteration status=\"prior\"> — previous iteration's work\n"
-        "  - <accepted_plan> — prior iteration's accepted plan\n"
-        "  - <summary> — prior iteration's summary\n"
-        "- <iteration status=\"current\"> — active iteration\n"
+        "- <iteration position=\"prior\"> — previous iteration's work\n"
+        "  - <task status=\"success\"> — generator task outcome\n"
+        "- <iteration position=\"current\"> — active iteration\n"
         "  - <iteration_goal> — active iteration's scope"
     )
 
@@ -164,7 +138,7 @@ def test_consecutive_same_descriptor_siblings_collapse():
         update={
             "metadata": {
                 **_prior_attempt().metadata,
-                "attrs": 'attempt_no="2" status="prior" verdict="fail"',
+                "attrs": 'attempt_no="2"',
             },
             "source_id": "att-2",
         }
@@ -173,7 +147,7 @@ def test_consecutive_same_descriptor_siblings_collapse():
         _packet([_goal(), _iter_current_goal(1), a1, a2])
     )
     # Only one bullet for the two prior-failed attempts.
-    assert outline.count('<attempt status="prior" verdict="fail">') == 1
+    assert outline.count("<attempt>") == 1
 
 
 def test_executor_outline_with_plan_spec_dependency_and_assigned_task():

@@ -10,19 +10,17 @@ Combines three orthogonal composer branches into one live run so a single
 1. **Attempt retry** — iteration 1 attempt 1's planner submits a valid full
    plan, the executor runs the assigned task, and the evaluator returns
    ``submit_evaluation_failure``. Attempt 2 then sees a fully-populated
-   ``<iteration status="current">`` / ``<attempt status="prior"
-   verdict="fail">`` block in its planner context: real ``<plan_spec>``,
-   per-task ``<status_summary>`` + ``<task>`` summaries, plus
-   ``<evaluator_summary>`` and ``<failed_criteria>`` (no enclosing
-   ``<generator_outcomes>`` or ``<evaluator_judgment>`` wrappers).
+   ``<iteration position="current">`` / ``<attempt attempt_no="1">`` block in
+   its planner context: per-task ``<task id status>`` summaries, an
+   ``<evaluator_summary>`` (the evaluator ran), and a ``<failure>`` line.
    Attempt 2 then submits a partial plan (handoff) to drive the
    continuation branch (#2 below).
 
 2. **Continuation goal** — iteration 1 attempt 2 submits a *partial* plan
    with a ``deferred_goal_for_next_iteration``. The iteration coordinator spawns
    iteration 2 with ``creation_reason=DEFERRED_GOAL_CONTINUATION``; iteration 2's
-   planner sees a ``<iteration iteration_no="1" status="prior">`` group
-   with the accepted plan and summary.
+   planner sees a ``<iteration iteration_no="1" position="prior">`` group whose
+   ``<task id status>`` children are the prior iteration's achieved record.
 
 3. **Executor launch coverage** — both iterations include at least one
    generator task per attempt. The single-task plans keep executor captures
@@ -151,11 +149,10 @@ class InitialMessagesCapture(ScenarioBase):
         ):
             # Intentional first-attempt evaluator failure so the next
             # planner's context carries a fully-populated
-            # `<attempt status="prior" verdict="fail">` block (real
-            # plan_spec, real per-task summaries, real evaluator
-            # commentary). Without this the retry attempt would only see
-            # the compact "bypassed" body emitted for planner-validation
-            # failures.
+            # `<attempt attempt_no="1">` block: real per-task `<task>`
+            # summaries, real `<evaluator_summary>` (the evaluator ran),
+            # and a `<failure>` line. Without this the retry attempt would
+            # only see a bare `<failure>` for the planner-validation failure.
             return ToolCallSpec(
                 submit_evaluation_failure,
                 {

@@ -8,12 +8,17 @@ this scaffold — see ``recipes/evaluator.py`` for its flat current-attempt shap
 The XML structure produced by this module is the same for every iteration:
 
 * Standalone ``<goal>`` block.
-* One ``<iteration iteration_no="K" status="prior">`` group per prior closed
-  iteration (each wrapping ``<accepted_plan>`` + ``<summary>``).
-* The current iteration's group ``<iteration iteration_no="N" status="current">``
+* One ``<iteration iteration_no="K" position="prior">`` group per prior closed
+  iteration, wrapping one ``<task id="..." status="...">`` per generator from
+  that iteration's denormalized achieved record.
+* The current iteration's group ``<iteration iteration_no="N" position="current">``
   containing an ``<iteration_goal>`` child. For iteration 1 the
   ``<iteration_goal>`` body reads ``(identical to <goal>)`` rather than
   duplicating the goal text.
+
+The iteration group attribute is ``position`` (``prior``/``current``), not
+``status`` — it would otherwise collide with the domain ``IterationStatus`` and
+with ``<task status>``.
 
 Failed prior attempts (:func:`failed_attempt_blocks`) join the current
 iteration's group by sharing :func:`current_iteration_group_id`.
@@ -21,23 +26,25 @@ iteration's group by sharing :func:`current_iteration_group_id`.
 
 from __future__ import annotations
 
+from task_center._core.generator_summaries import parse_achieved_record
 from task_center.context_engine.exceptions import ContextEngineError
 from task_center.context_engine.packet import (
     ContextBlock,
     ContextBlockKind,
     ContextPriority,
 )
+from task_center.context_engine.recipes._task_xml import block_task_body, task_attrs
 from task_center.iteration.state import Iteration
 from task_center.goal.state import Goal
 
 
 def current_iteration_group_id(iteration: Iteration) -> str:
-    """Shared group key for blocks wrapped in ``<iteration status="current">``."""
+    """Shared group key for blocks wrapped in ``<iteration position="current">``."""
     return f"iteration_{iteration.sequence_no}_current"
 
 
 def current_iteration_group_attrs(iteration: Iteration) -> str:
-    return f'iteration_no="{iteration.sequence_no}" status="current"'
+    return f'iteration_no="{iteration.sequence_no}" position="current"'
 
 
 # For iteration 1 the iteration goal equals the user's request. Echoing the
@@ -108,6 +115,14 @@ def _prior_iteration_blocks(
     current: Iteration,
     iterations: list[Iteration],
 ) -> list[ContextBlock]:
+    """Emit ``<iteration position="prior">`` groups of ``<task>`` children.
+
+    Each prior iteration renders one ``<task id="..." status="...">`` per
+    generator from its denormalized achieved record (``Iteration.task_summary``,
+    a JSON list of ``{local_id, status, summary}``). The chain-integrity guard
+    keys on that achieved record; a closed prior iteration that never stored one
+    is an invariant violation.
+    """
     priors = sorted(
         (s for s in iterations if s.sequence_no < current.sequence_no),
         key=lambda s: s.sequence_no,
@@ -115,44 +130,35 @@ def _prior_iteration_blocks(
     out: list[ContextBlock] = []
     immediate_prior = current.sequence_no - 1
     for prior in priors:
-        if prior.plan_spec is None or prior.task_summary is None:
+        if prior.task_summary is None:
             raise ContextEngineError(
                 f"Prior iteration {prior.id!r} (seq={prior.sequence_no}) is "
-                "missing plan_spec or task_summary; chain integrity violated."
+                "missing its achieved record (task_summary); chain integrity violated."
             )
         priority = (
             ContextPriority.HIGH if prior.sequence_no == immediate_prior else ContextPriority.MEDIUM
         )
         group_id = f"iteration_{prior.sequence_no}_prior"
-        group_attrs = f'iteration_no="{prior.sequence_no}" status="prior"'
-        out.append(
-            ContextBlock(
-                kind=ContextBlockKind.PRIOR_ITERATION_SPECIFICATION,
-                priority=priority,
-                text=prior.plan_spec,
-                source_id=prior.id,
-                source_kind="iteration",
-                metadata={
-                    "group_id": group_id,
-                    "group_tag": "iteration",
-                    "group_attrs": group_attrs,
-                    "child_tag": "accepted_plan",
-                },
+        group_attrs = f'iteration_no="{prior.sequence_no}" position="prior"'
+        for outcome in parse_achieved_record(prior.task_summary):
+            text, pre_rendered = block_task_body(outcome)
+            metadata = {
+                "group_id": group_id,
+                "group_tag": "iteration",
+                "group_attrs": group_attrs,
+                "child_tag": "task",
+                "attrs": task_attrs(outcome),
+            }
+            if pre_rendered:
+                metadata["pre_rendered_xml"] = "true"
+            out.append(
+                ContextBlock(
+                    kind=ContextBlockKind.PRIOR_ITERATION_SUMMARY,
+                    priority=priority,
+                    text=text,
+                    source_id=prior.id,
+                    source_kind="iteration",
+                    metadata=metadata,
+                )
             )
-        )
-        out.append(
-            ContextBlock(
-                kind=ContextBlockKind.PRIOR_ITERATION_SUMMARY,
-                priority=priority,
-                text=prior.task_summary,
-                source_id=prior.id,
-                source_kind="iteration",
-                metadata={
-                    "group_id": group_id,
-                    "group_tag": "iteration",
-                    "group_attrs": group_attrs,
-                    "child_tag": "summary",
-                },
-            )
-        )
     return out
