@@ -599,12 +599,23 @@ untouched code left out of scope).
   type quirks left untouched and noted: `path_staging._hash_mismatch` (`str|None`
   assignment) and `mutation_result.normalize_timing_map` arg variance — both
   confirmed present at the clean baseline.
-- Not removed (legacy the plan deliberately kept, noted not deleted):
-  `expected_occurrences` plumbing (`_normalize_args`, `_edit_changes`, validation,
-  BL-05 tests) is dead in production — the payload drops it and both readers
-  default to 1 — but PLAN §1.3 explicitly keeps it out of scope; the
-  `"old_text_not_found"` entry in `audit/conflict_markers.py` has no producer in
-  the current edit path but is a cross-module contract list, unrelated to this work.
+- Legacy removed per follow-up user direction (2026-05-29, beyond original PLAN scope):
+  - `expected_occurrences`: dropped from `apply_search_replace`, `EditChange`
+    (+ `__post_init__` + `_change_signature`), `path_staging`, `dispatch._edit_changes`
+    (read + `>= 0` validation), and `tool_primitives/edit` (`_normalize_args` tuple +
+    loop). The non-`replace_all` contract is now simply "anchor must occur exactly
+    once" (the production behavior — the payload never carried `expected_occurrences`
+    and both readers defaulted it to 1). Dropped the now-moot BL-05 tests
+    (`expected_occurrences=0`/negative) and the inline `expected_occurrences` keys in
+    the parity corpus + two mock IWS test args.
+  - `old_text_not_found`: a legacy classification entry with no real producer.
+    Removed from `audit/conflict_markers.EDIT_CONFLICT_MARKERS`,
+    `api/tool/_conflict_detection._EDIT_CONFLICT_CODES`, and
+    `task_center_runner/audit/sandbox_events._CONFLICT_STATUSES`; the only producer
+    was the sweevo mock `_FakeSandboxApi.edit_file`, updated to emit the real backend
+    status (`aborted_overlap` / "anchor not found"). `ruff` + `mypy` clean on changed
+    lines; 441 + 142 passed across tool/api/audit/daemon/edit suites (only the two
+    unrelated pre-existing daemon failures remain).
 
 ### Deviation from §4 (intentional — see open-questions.md)
 The shipped helper does NOT raise on `count == 0` unconditionally in the non-`replace_all`

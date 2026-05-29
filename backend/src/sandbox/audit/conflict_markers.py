@@ -15,7 +15,6 @@ EDIT_CONFLICT_MARKERS: tuple[str, ...] = (
     "anchor not found",
     "anchor occurrence count mismatch",
     "aborted_overlap",
-    "old_text_not_found",
 )
 SHELL_CONFLICT_MARKERS: tuple[str, ...] = (
     "overlay capture refuses escaping symlink target",

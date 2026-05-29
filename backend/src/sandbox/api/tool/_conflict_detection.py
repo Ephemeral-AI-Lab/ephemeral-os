@@ -14,7 +14,6 @@ _EDIT_CONFLICT_CODES = {
     "aborted_overlap",
     "anchor_not_found",
     "anchor_occurrence_count_mismatch",
-    "old_text_not_found",
 }
 _SHELL_CONFLICT_CODES = {
     "overlay_escape",

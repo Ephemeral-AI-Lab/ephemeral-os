@@ -68,7 +68,6 @@ async def test_iws_all_typed_verbs_same_session(iws_clean_sandbox) -> None:
                 {
                     "old_text": "AlphaValue",
                     "new_text": "BetaValue",
-                    "expected_occurrences": 1,
                 }
             ],
         )

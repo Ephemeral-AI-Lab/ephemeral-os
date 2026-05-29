@@ -82,7 +82,6 @@ def test_representative_corpus_cases_replay_against_shared_primitives(
                     {
                         "old_text": "hello",
                         "new_text": "hi",
-                        "expected_occurrences": 1,
                     }
                 ],
             }

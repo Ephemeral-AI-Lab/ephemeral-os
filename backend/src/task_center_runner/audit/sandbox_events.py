@@ -30,7 +30,6 @@ _CONFLICT_STATUSES = frozenset(
         "aborted_version",
         "failed",
         "not_found",
-        "old_text_not_found",
         "rejected",
     }
 )

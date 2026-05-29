@@ -91,13 +91,13 @@ class _FakeSandboxApi:
                 return EditFileResult(
                     success=False,
                     changed_paths=(request.path,),
-                    status="old_text_not_found",
+                    status="aborted_overlap",
                     conflict=ConflictInfo(
-                        reason="old_text_not_found",
+                        reason="aborted_overlap",
                         conflict_file=request.path,
-                        message="old text not found",
+                        message="anchor not found",
                     ),
-                    conflict_reason="old_text_not_found",
+                    conflict_reason="anchor not found",
                     applied_edits=applied,
                 )
             updated = updated.replace(edit.old_text, edit.new_text, 1)

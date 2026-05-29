@@ -67,7 +67,6 @@ async def test_iws_peer_publish_pin_and_refresh_boundary(
                 {
                     "old_text": f"version-A-{token}",
                     "new_text": f"private-IWS-{token}",
-                    "expected_occurrences": 1,
                 }
             ],
         )
