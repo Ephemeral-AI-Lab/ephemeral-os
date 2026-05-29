@@ -21,6 +21,7 @@ import pytest
 import sandbox.host.daemon_client as daemon_client_mod
 
 from .._harness.sandbox_fixture import SandboxHandle
+from .._harness.workspace_base_public import seed_imported_base
 from .test_auto_squash_edge_cases import (
     _iws_enter,
     _iws_exit,
@@ -57,6 +58,7 @@ async def test_iws_same_port_discard_live(
     workspace_base_sandbox: SandboxHandle,
 ) -> None:
     handle = workspace_base_sandbox
+    await seed_imported_base(handle, {"iws-same-port/base.txt": "base\n"})
     await _prepare_isolated_workspace_runtime(handle)
 
     enters = await asyncio.gather(*(_iws_enter(handle, agent) for agent in _AGENTS))

@@ -16,7 +16,12 @@ from sandbox.daemon.audit_schema import (
 )
 from sandbox.layer_stack.manifest import Manifest
 from sandbox.occ.changeset import CommitOptions, PreparedChangeset
-from sandbox.occ.changeset import Change, ChangesetResult, FileStatus
+from sandbox.occ.changeset import (
+    Change,
+    ChangesetResult,
+    is_published_status,
+    is_success_status,
+)
 from sandbox.occ.changeset_preparation import ChangesetPreparer
 from sandbox.occ.commit_queue import CommitQueue
 from sandbox.occ.commit_transaction import CommitTransaction
@@ -320,10 +325,7 @@ def _emit_occ_commit_events(
     base_version = (
         prepared.snapshot.version if prepared.snapshot is not None else None
     )
-    failed_file = next(
-        (f for f in result.files if f.status != FileStatus.COMMITTED),
-        None,
-    )
+    failed_file = next((f for f in result.files if not is_success_status(f.status)), None)
     if failed_file is not None:
         conflict_reason = failed_file.message or failed_file.status.value
         safe_emit(
@@ -350,7 +352,9 @@ def _emit_occ_commit_events(
                 operation_id=operation_id,
                 operation_step=110,
                 changeset_id=changeset_id,
-                changed_path_count=len(result.files),
+                changed_path_count=sum(
+                    1 for file in result.files if is_published_status(file.status)
+                ),
                 apply_ms=apply_ms,
                 commit_ms=apply_ms,
                 base_manifest_version=base_version,

@@ -162,6 +162,23 @@ def _plugin_tool_invoked(
     }
 
 
+def _occ_conflict_rejected(*, seq: int, kind: str, path: str) -> dict[str, Any]:
+    return {
+        "event_type": "occ.conflict_rejected",
+        "schema": "sandbox.daemon.audit.pull.v1",
+        "lane": "critical",
+        "seq": seq,
+        "payload": {
+            "occ": {
+                "changeset_id": f"c{seq}",
+                "conflict_kind": kind,
+                "conflict_path": path,
+                "conflict_reason": kind,
+            }
+        },
+    }
+
+
 # ---------------------------------------------------------------------------
 # Test 1 — MD layout structure (schema-shape, not golden-file diff)
 # ---------------------------------------------------------------------------
@@ -355,6 +372,31 @@ def test_phase_breakdown_keeps_overlap_fraction_before_bar_normalization(
     assert row["total_ms"] == pytest.approx(100.0)
     assert row["phases_fraction"]["exec"] == pytest.approx(1.0)
     assert row["phases_fraction"]["mount"] == pytest.approx(0.2)
+
+
+def test_occ_section_ignores_accepted_rows_misfiled_as_conflict_rejected(
+    tmp_path: Path,
+) -> None:
+    _write_jsonl(
+        tmp_path / "sandbox_events.jsonl",
+        [
+            _occ_conflict_rejected(seq=1, kind="accepted", path="ok.txt"),
+            _occ_conflict_rejected(
+                seq=2, kind="aborted_version", path="conflict.txt"
+            ),
+        ],
+    )
+
+    report = build_performance_report(tmp_path, _empty_tool_performance())
+    sections = report["sandbox"]["sections"]
+    occ = sections["occ"]
+
+    assert occ["transactions"]["rejected"] == 1
+    assert occ["conflicts"]["kinds"] == {"aborted_version": 1}
+    assert occ["conflicts"]["top_paths"] == [("conflict.txt", 1)]
+    assert sections["warnings"]["rows"] == [
+        {"kind": "occ.conflict_cluster", "detail": "1 OCC conflicts observed"}
+    ]
 
 
 # ---------------------------------------------------------------------------

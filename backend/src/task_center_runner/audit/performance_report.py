@@ -110,6 +110,7 @@ _RUN_DELTA_RESOURCE_KEYS = frozenset(
         "resource.cgroup.io_dios",
     }
 )
+_OCC_SUCCESS_KINDS = frozenset({"accepted", "committed", "dropped"})
 
 
 # ---------------------------------------------------------------------------
@@ -875,9 +876,13 @@ def _section_occ(
 ) -> dict[str, Any]:
     conflict_kinds: Counter[str] = Counter()
     conflict_paths: Counter[str] = Counter()
+    rejected_count = 0
     for event_row in indexed.get("occ.conflict_rejected", []):
         section = _promoted_payload_section(event_row, "occ")
         kind = str(section.get("conflict_kind") or "unknown")
+        if kind in _OCC_SUCCESS_KINDS:
+            continue
+        rejected_count += 1
         conflict_kinds[kind] += 1
         path = section.get("conflict_path")
         if path:
@@ -886,7 +891,7 @@ def _section_occ(
         "transactions": {
             "prepared": len(indexed.get("occ.changeset_prepared", [])),
             "committed": len(indexed.get("occ.apply_committed", [])),
-            "rejected": len(indexed.get("occ.conflict_rejected", [])),
+            "rejected": rejected_count,
         },
         "conflicts": {
             "kinds": dict(conflict_kinds),

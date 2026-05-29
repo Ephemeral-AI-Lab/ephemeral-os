@@ -50,14 +50,25 @@ async def run_scenario_on_sweevo_image(
     repo_dir: str = _REPO_DIR,
     extra_hooks: Sequence[Hook] = (),
     user_prompt: str | None = None,
+    commit_to_workspace: bool = False,
 ) -> RunReport:
-    """Run a mocked-agent scenario inside a SWE-EVO image workspace."""
+    """Run a mocked-agent scenario inside a SWE-EVO image workspace.
+
+    When *commit_to_workspace* is true, the active layer-stack overlay is
+    projected onto ``repo_dir`` after the run via the same
+    ``apply_layerstack_to_repo`` step sweevo uses in
+    :meth:`SweevoLifecycle.after_run`, so a host-side / raw ``git`` invocation on
+    ``repo_dir`` sees the mock agent's edits and ``repo_dir/.git`` survives.
+    Defaults to false: existing callers read final state through the
+    daemon-backed ``sandbox_api`` overlay (which already reflects committed OCC
+    layers) and must keep their current behavior.
+    """
     entry_prompt = (
         user_prompt
         if user_prompt is not None
         else build_sweevo_user_prompt(instance, repo_dir=repo_dir)
     )
-    return await _generic_run_scenario(
+    report = await _generic_run_scenario(
         scenario,
         sandbox_id=sandbox_id,
         audit_dir=audit_dir,
@@ -67,6 +78,11 @@ async def run_scenario_on_sweevo_image(
         extra_hooks=extra_hooks,
         instance_id=instance.instance_id,
     )
+    if commit_to_workspace:
+        from task_center_runner.benchmarks.sweevo.eval import apply_layerstack_to_repo
+
+        await apply_layerstack_to_repo(sandbox_id, repo_dir)
+    return report
 
 
 @pytest.fixture(scope="session")

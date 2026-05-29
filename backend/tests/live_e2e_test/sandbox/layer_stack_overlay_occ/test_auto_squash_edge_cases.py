@@ -11,6 +11,7 @@ from __future__ import annotations
 import asyncio
 import json
 import shlex
+import subprocess
 import time
 from collections.abc import Mapping, Sequence
 from datetime import datetime, timezone
@@ -54,6 +55,9 @@ COMPLEX_LOGICAL_EVENT_FLOOR = 2_000
 SHELL_EDIT_LSP_LOGICAL_EDIT_FLOOR = 600
 SHELL_EDIT_LSP_TARGET_AUTO_SQUASHES = 6
 SHELL_EDIT_LSP_MAX_LOGICAL_EDITS = 750
+_IWS_APT_CACHE_DIR = (
+    Path(__file__).resolve().parents[3] / "_assets" / "iws_apt_cache" / "jammy-amd64"
+)
 
 
 @pytest.mark.timeout(900)
@@ -748,18 +752,82 @@ async def _iws_enter(handle: SandboxHandle, agent_id: str) -> dict[str, object]:
     )
 
 
+async def _try_install_iws_deps_from_cache(handle: SandboxHandle) -> bool:
+    if not _IWS_APT_CACHE_DIR.is_dir():
+        return False
+    if not list(_IWS_APT_CACHE_DIR.glob("*.deb")):
+        return False
+
+    await handle.raw_exec(
+        handle.sandbox_id,
+        "rm -rf /tmp/iws-debs && mkdir -p /tmp/iws-debs",
+        cwd="/",
+        timeout=10,
+    )
+    try:
+        copied = subprocess.run(
+            [
+                "docker",
+                "cp",
+                f"{_IWS_APT_CACHE_DIR}/.",
+                f"{handle.sandbox_id}:/tmp/iws-debs/",
+            ],
+            check=False,
+            capture_output=True,
+            timeout=60,
+        )
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        return False
+    if copied.returncode != 0:
+        return False
+
+    installed = await handle.raw_exec(
+        handle.sandbox_id,
+        (
+            "command -v ip >/dev/null 2>&1 && "
+            "command -v nft >/dev/null 2>&1 "
+            "|| DEBIAN_FRONTEND=noninteractive dpkg -i /tmp/iws-debs/*.deb"
+        ),
+        cwd="/",
+        timeout=60,
+    )
+    if installed.exit_code != 0:
+        return False
+    verified = await handle.raw_exec(
+        handle.sandbox_id,
+        "command -v ip >/dev/null 2>&1 && command -v nft >/dev/null 2>&1",
+        cwd="/",
+        timeout=10,
+    )
+    return verified.exit_code == 0
+
+
 async def _prepare_isolated_workspace_runtime(handle: SandboxHandle) -> None:
     result = await handle.raw_exec(
         handle.sandbox_id,
-        (
-            "set -e; "
-            "if command -v ip >/dev/null 2>&1 && command -v nft >/dev/null 2>&1; "
-            "then exit 0; fi; "
-            "export DEBIAN_FRONTEND=noninteractive; "
-            "apt-get update >/dev/null; "
-            "apt-get install -y --no-install-recommends iproute2 nftables >/dev/null"
-        ),
-        timeout=240,
+        "command -v ip >/dev/null 2>&1 && command -v nft >/dev/null 2>&1",
+        cwd="/",
+        timeout=10,
+    )
+    if result.exit_code != 0:
+        installed_via_cache = await _try_install_iws_deps_from_cache(handle)
+        if not installed_via_cache:
+            result = await handle.raw_exec(
+                handle.sandbox_id,
+                (
+                    "set -e; "
+                    "export DEBIAN_FRONTEND=noninteractive; "
+                    "apt-get update >/dev/null; "
+                    "apt-get install -y --no-install-recommends iproute2 nftables >/dev/null"
+                ),
+                timeout=240,
+            )
+            assert result.exit_code == 0, result.stderr or result.stdout
+    result = await handle.raw_exec(
+        handle.sandbox_id,
+        "command -v ip >/dev/null 2>&1 && command -v nft >/dev/null 2>&1",
+        cwd="/",
+        timeout=10,
     )
     assert result.exit_code == 0, result.stderr or result.stdout
     result = await handle.raw_exec(

@@ -78,6 +78,32 @@ def test_occ_apply_committed_lane_is_normal_publish_layer_present() -> None:
     assert apply["payload"]["occ"]["changed_path_count"] == 1
 
 
+def test_occ_accepted_status_is_committed_not_conflict_rejected() -> None:
+    result = ChangesetResult(
+        files=(FileResult(path="src/foo.py", status=FileStatus.ACCEPTED),),
+        timings={},
+        published_manifest_version=12,
+    )
+    _emit_occ_commit_events(result, prepared=_prepared(), commit_elapsed=0.01)
+    events = _drain_occ_events()
+    assert [e["type"] for e in events] == ["occ.apply_committed", "occ.publish_layer"]
+    apply = next(e for e in events if e["type"] == "occ.apply_committed")
+    assert apply["payload"]["occ"]["changed_path_count"] == 1
+
+
+def test_occ_dropped_status_is_not_conflict_rejected_or_published() -> None:
+    result = ChangesetResult(
+        files=(FileResult(path="src/foo.py", status=FileStatus.DROPPED),),
+        timings={},
+        published_manifest_version=None,
+    )
+    _emit_occ_commit_events(result, prepared=_prepared(), commit_elapsed=0.01)
+    events = _drain_occ_events()
+    assert [e["type"] for e in events] == ["occ.apply_committed"]
+    apply = events[0]
+    assert apply["payload"]["occ"]["changed_path_count"] == 0
+
+
 def test_occ_conflict_rejected_carries_both_manifest_versions_and_critical_lane() -> None:
     result = ChangesetResult(
         files=(

@@ -22,6 +22,8 @@ import pytest
 from task_center_runner.benchmarks.sweevo.models import SWEEvoInstance
 from task_center_runner.agent.mock.background_shell_probe import (
     MIXED_OP_CONCURRENT_SUMMARY,
+    MIXED_OP_DISJOINT_WRITERS,
+    MIXED_OP_OVERLAP_WRITERS,
 )
 from task_center_runner.core.stores import TaskCenterStoreBundle
 from task_center_runner.tests._live_config import (
@@ -77,8 +79,9 @@ async def test_background_mixed_op_concurrent(
     # single deterministic final content.
     overlap = summary["overlap"]
     writers = overlap["writers"]
-    assert overlap["accepted_count"] >= 1, summary
-    assert overlap["aborted_count"] >= 1, summary
+    assert len(writers) == MIXED_OP_OVERLAP_WRITERS, summary
+    assert overlap["accepted_count"] == 1, summary
+    assert overlap["aborted_count"] == MIXED_OP_OVERLAP_WRITERS - 1, summary
     assert overlap["accepted_count"] + overlap["aborted_count"] == len(writers), summary
 
     final = overlap["final_content"]
@@ -100,6 +103,7 @@ async def test_background_mixed_op_concurrent(
     # (c) disjoint edits all land and read back their own content.
     disjoint = summary["disjoint"]
     disjoint_writers = disjoint["writers"]
+    assert len(disjoint_writers) == MIXED_OP_DISJOINT_WRITERS, summary
     assert disjoint["accepted_count"] == len(disjoint_writers), summary
     for writer in disjoint_writers:
         assert writer["accepted"], writer
