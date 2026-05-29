@@ -9,6 +9,7 @@ runner-agnostic.
 
 from __future__ import annotations
 
+import os
 from collections.abc import Sequence
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -21,7 +22,19 @@ from task_center_runner.scenarios.lifecycle import ScenarioLifecycle
 
 if TYPE_CHECKING:
     from task_center_runner.core.config import RunContext
-    from task_center_runner.agent.mock.runner import MockSquadRunner
+
+
+# Migration seam: when truthy, mock scenarios run through the real query loop
+# via ``ScenarioLoopRunner`` + an injected ``ScenarioEventSource`` instead of the
+# imperative ``MockSquadRunner``. Default-off keeps un-migrated scenarios on the
+# old runner until each is ported (Phase 2). Flipped to default-on once the
+# migration completes.
+_EVENT_SOURCE_RUNNER_ENV = "EOS_MOCK_EVENT_SOURCE_RUNNER"
+
+
+def _event_source_runner_enabled() -> bool:
+    raw = os.environ.get(_EVENT_SOURCE_RUNNER_ENV)
+    return bool(raw) and raw.strip().lower() not in {"false", "0", "no", "off"}
 
 
 def build_scenario_config(
@@ -50,8 +63,20 @@ def build_scenario_config(
         scenario=scenario, hook_set=hook_set, mutable_state=mutable_state
     )
 
-    def _make_runner(ctx: "RunContext") -> "MockSquadRunner":
+    def _make_runner(ctx: "RunContext"):
         # Imported lazily to keep scenario import-time setup free of runner state.
+        if _event_source_runner_enabled():
+            from task_center_runner.agent.mock.scenario_loop_runner import (
+                ScenarioLoopRunner,
+            )
+
+            return ScenarioLoopRunner(
+                repo_dir=repo_dir,
+                bus=ctx.bus,
+                scenario=scenario,
+                mutable_state=mutable_state,
+            )
+
         from task_center_runner.agent.mock.runner import MockSquadRunner
 
         return MockSquadRunner(
@@ -63,6 +88,15 @@ def build_scenario_config(
             audit_recorder=None,
         )
 
+    # A real ``RuntimeConfig`` is threaded as ``runtime_config`` so the launcher
+    # passes it (not a bare ``SimpleNamespace``) to the runner: the event-source
+    # path needs ``resolve_settings``/``external_api_client``/
+    # ``event_source_factory`` to reach ``run_ephemeral_agent`` → ``spawn_agent``.
+    # Harmless to ``MockSquadRunner`` (it only reads ``.cwd``).
+    from task_center_runner.agent.mock.scenario_loop_runner import (
+        make_mock_runtime_config,
+    )
+
     config = RunConfig(
         entry_prompt=entry_prompt,
         repo_dir=repo_dir,
@@ -73,7 +107,10 @@ def build_scenario_config(
         audit_dir=audit_dir,
         run_label=f"scenario_logs/{scenario.name}",
         instance_id=instance_id,
-        extras={"scenario_name": scenario.name},
+        extras={
+            "scenario_name": scenario.name,
+            "runtime_config": make_mock_runtime_config(repo_dir),
+        },
     )
     return config, mutable_state, lifecycle
 

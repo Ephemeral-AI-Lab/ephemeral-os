@@ -32,6 +32,10 @@ from db.stores.model_store import ModelStore
 from db.stores.task_center_store import TaskCenterStore
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
+    from agents import AgentDefinition
+    from engine.query.context import EventSource
     from providers.types import SupportsStreamingMessages
 
 logger = logging.getLogger(__name__)
@@ -50,6 +54,11 @@ class RuntimeConfig:
     cwd: str
     external_api_client: "SupportsStreamingMessages | None" = None
     _initial_messages: list[dict] | None = field(default=None, repr=False)
+    # Optional per-agent event-source factory. ``None`` (production default) ⇒
+    # the query loop streams from the live provider; the mock harness sets it
+    # so each spawned agent runs the real loop against a scripted source.
+    # ``spawn_agent`` reads it and assigns ``QueryContext.event_source``.
+    event_source_factory: "Callable[[AgentDefinition], EventSource] | None" = None
 
     def resolve_settings(self) -> Settings:
         """Load Settings as-is. Agent system prompts come from agent profile

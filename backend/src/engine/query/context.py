@@ -2,15 +2,30 @@
 
 from __future__ import annotations
 
+from collections.abc import AsyncIterator, Callable
 from dataclasses import dataclass, field
 from enum import StrEnum
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from notification import NotificationRule
 from prompt.prompt_report_recorder import PromptReportRecorder
 from providers.types import SupportsStreamingMessages
 from tools import ExecutionMetadata, ToolRegistry, ToolResult
+
+if TYPE_CHECKING:
+    from engine.query.request import QueryRunRequest
+    from message.events import StreamEvent
+
+
+# A per-agent event source. Called once per loop turn with the current
+# ``QueryContext`` and the built ``QueryRunRequest``; yields the same
+# ``StreamEvent`` shape the provider client produces. Production leaves this
+# unset (``None``) so the loop streams from ``api_client``; the mock harness
+# injects a scripted source so a mock agent runs through the real loop.
+EventSource = Callable[
+    ["QueryContext", "QueryRunRequest"], "AsyncIterator[StreamEvent]"
+]
 
 
 class QueryExitReason(StrEnum):
@@ -39,6 +54,10 @@ class QueryContext:
     terminal_tools: set[str] = field(default_factory=set)
     exit_reason: QueryExitReason | None = None
     terminal_result: ToolResult | None = None
+    # Injected per-agent event source. ``None`` (production default) ⇒ the loop
+    # streams from ``api_client``; a scripted source ⇒ the agent runs the real
+    # loop against mock events. See ``loop._consume_provider_stream``.
+    event_source: EventSource | None = None
     prompt_report_recorder: PromptReportRecorder | None = None
     # Notification rules evaluated at the top of every turn. See
     # ``notification.dispatch_rules``. Default empty list = disabled.

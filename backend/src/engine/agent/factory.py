@@ -398,6 +398,13 @@ def spawn_agent(
         notification_rules=cast("list[NotificationRule]", notification_rules),
     )
 
+    # Default-off seam: production leaves ``event_source_factory`` unset, so
+    # ``event_source`` stays ``None`` and the loop streams from ``api_client``.
+    # The mock harness supplies a factory so this agent runs the real loop
+    # against a scripted source.
+    if config.event_source_factory is not None:
+        query_context.event_source = config.event_source_factory(agent_def)
+
     return EphemeralAgent(
         agent_name=agent_name,
         query_context=query_context,

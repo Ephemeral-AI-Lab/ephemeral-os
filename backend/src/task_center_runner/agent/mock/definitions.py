@@ -21,9 +21,13 @@ from agents import (
 )
 
 
-_MAIN_PROFILE_DIR = (
-    Path(__file__).resolve().parents[3] / "agents" / "profile" / "main"
-)
+_PROFILE_ROOT = Path(__file__).resolve().parents[3] / "agents" / "profile"
+_MAIN_PROFILE_DIR = _PROFILE_ROOT / "main"
+# The mock now drives the REAL loop, which spawns the advisor (via ``ask_advisor``,
+# required by the gated-terminal advisor gate) and the explorer (via
+# ``run_subagent``). Both must be registered or those spawns fail to resolve.
+_HELPER_PROFILE_DIR = _PROFILE_ROOT / "helper"
+_SUBAGENT_PROFILE_DIR = _PROFILE_ROOT / "subagent"
 
 
 @contextlib.contextmanager
@@ -46,8 +50,13 @@ def registered_mock_agents() -> Iterator[None]:
 
 
 def mock_agent_definitions() -> tuple[AgentDefinition, ...]:
-    """Load the production main-profile definitions for deterministic runs."""
-    return tuple(load_agents_dir(_MAIN_PROFILE_DIR))
+    """Load the production squad (main) + the helper/subagent profiles the real
+    loop spawns (advisor, explorer) for deterministic runs."""
+    return (
+        *load_agents_dir(_MAIN_PROFILE_DIR),
+        *load_agents_dir(_HELPER_PROFILE_DIR),
+        *load_agents_dir(_SUBAGENT_PROFILE_DIR),
+    )
 
 
 __all__ = [

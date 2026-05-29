@@ -159,6 +159,19 @@ async def _build_stream_executor(
     return executor
 
 
+def _provider_event_source(
+    context: QueryContext,
+    run_request: QueryRunRequest,
+) -> AsyncIterator[StreamEvent]:
+    """Default event source: stream from the live provider ``api_client``.
+
+    The sole site that issues a provider request. ``context.event_source``
+    overrides this (mock harness) without any other loop change, so the mock
+    path is byte-identical to production except for the event *content*.
+    """
+    return context.api_client.stream_message(run_request.request)
+
+
 async def _consume_provider_stream(
     context: QueryContext,
     executor: StreamingToolExecutor,
@@ -166,8 +179,9 @@ async def _consume_provider_stream(
     state: _ProviderStreamAccumulator,
 ) -> AsyncIterator[tuple[StreamEvent, UsageSnapshot | None]]:
     """Consume the provider stream, populating ``state`` along the way."""
+    source = context.event_source or _provider_event_source
     try:
-        async for event in context.api_client.stream_message(run_request.request):
+        async for event in source(context, run_request):
             if isinstance(event, ToolUseDeltaEvent):
                 state.streamed_tool_use_ids.add(event.tool_use_id)
                 _count_tool_dispatch(context)
