@@ -8,15 +8,16 @@ means "no row 3".
 Helpers and subagents (``advisor``, ``explorer``) bypass the composer
 entirely — they live in ``tools/ask_helper/`` and
 ``tools/subagent/run_subagent.py``. The explorer's identity/format prose
-still lives in :func:`task_guidance.builders.build_explorer_task_guidance`,
-read directly by ``tools/subagent/run_subagent.py``.
+still lives in
+:func:`context_engine.task_guidance.build_explorer_task_guidance`, read
+directly by ``tools/subagent/run_subagent.py``.
 """
 
 from __future__ import annotations
 
 from collections.abc import Callable
 
-from task_center.task_guidance.builders import build_task_guidance
+from task_center.context_engine.task_guidance import build_task_guidance
 
 
 TaskGuidanceBuilder = Callable[..., str]

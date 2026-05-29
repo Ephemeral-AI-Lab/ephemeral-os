@@ -15,7 +15,7 @@ from task_center._core.primitives import TaskCenterInvariantViolation
 
 if TYPE_CHECKING:  # pragma: no cover - typing-only
     from task_center.goal.state import GoalClosureReport
-    from task_center.task_state import (
+    from task_center.submissions import (
         EvaluatorSubmission,
         GeneratorSubmission,
         PlannerFailureSubmission,

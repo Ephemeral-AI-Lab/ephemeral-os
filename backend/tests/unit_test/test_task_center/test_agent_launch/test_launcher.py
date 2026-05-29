@@ -12,7 +12,7 @@ from task_center.attempt import AttemptFailReason, AttemptStatus
 from task_center.attempt.orchestrator_registry import AttemptOrchestratorRegistry
 from task_center.attempt.deps import AgentLaunch, AttemptDeps
 from task_center.iteration.state import IterationCreationReason
-from task_center.task_state import TaskCenterTaskRole, TaskCenterTaskStatus
+from task_center._core.task_state import TaskCenterTaskRole, TaskCenterTaskStatus
 from task_center._core.primitives import planner_task_id
 
 

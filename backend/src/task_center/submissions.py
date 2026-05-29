@@ -1,42 +1,15 @@
-"""TaskCenter attempt task roles, statuses, and submission DTOs."""
+"""Validated terminal-outcome submission DTOs (tools ↔ TaskCenter contract).
+
+The ``tools/submission/*`` layer constructs these and hands them to TaskCenter
+lifecycle handlers. They are part of the ``task_center`` public facade (see the
+package root re-exports), distinct from the internal task vocabulary in
+:mod:`task_center._core.task_state`.
+"""
 
 from __future__ import annotations
 
 from dataclasses import dataclass
-from enum import StrEnum
 from typing import Any, Literal
-
-
-class TaskCenterTaskRole(StrEnum):
-    PLANNER = "planner"
-    GENERATOR = "generator"
-    EVALUATOR = "evaluator"
-
-
-class SpawnReason(StrEnum):
-    """Why a task row was created. Replaces free-form spawn_reason strings."""
-
-    ATTEMPT_PLANNER = "attempt_planner"
-    ATTEMPT_GENERATOR = "attempt_generator"
-    ATTEMPT_EVALUATOR = "attempt_evaluator"
-
-
-class TaskCenterTaskStatus(StrEnum):
-    PENDING = "pending"
-    RUNNING = "running"
-    WAITING_GOAL = "waiting_goal"
-    DONE = "done"
-    FAILED = "failed"
-    BLOCKED = "blocked"
-
-
-TERMINAL_GENERATOR_STATUSES: frozenset[TaskCenterTaskStatus] = frozenset(
-    {
-        TaskCenterTaskStatus.DONE,
-        TaskCenterTaskStatus.FAILED,
-        TaskCenterTaskStatus.BLOCKED,
-    }
-)
 
 
 @dataclass(frozen=True, slots=True)

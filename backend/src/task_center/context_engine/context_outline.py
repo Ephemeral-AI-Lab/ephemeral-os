@@ -45,7 +45,7 @@ class _OutlineNode:
     children: tuple["_OutlineNode", ...] = ()
 
 
-def render_what_in_context(packet: ContextPacket, max_depth: int = 2) -> str:
+def render_context_outline(packet: ContextPacket, max_depth: int = 2) -> str:
     """Return the bulleted ``What's in context`` outline for ``packet``."""
     top_level = _walk_top_level(list(packet.blocks))
     nodes = _collapse_consecutive(top_level)
@@ -203,4 +203,4 @@ def _render_one(node: _OutlineNode, *, depth: int, max_depth: int) -> str:
     return line
 
 
-__all__ = ["render_what_in_context"]
+__all__ = ["render_context_outline"]

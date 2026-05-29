@@ -10,7 +10,7 @@ import pytest
 from task_center import start_task_center_run
 from task_center.entry import TaskCenterSandboxProvisioner
 from task_center.goal.state import GoalOriginKind
-from task_center.task_state import TaskCenterTaskRole, SpawnReason
+from task_center._core.task_state import TaskCenterTaskRole, SpawnReason
 
 
 @pytest.mark.asyncio

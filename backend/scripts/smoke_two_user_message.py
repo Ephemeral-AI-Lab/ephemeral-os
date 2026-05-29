@@ -44,7 +44,7 @@ from task_center.context_engine.packet import (  # noqa: E402
     ContextRefs,
 )
 from task_center.context_engine.renderer import XmlPromptRenderer  # noqa: E402
-from task_center.task_guidance.builders import (  # noqa: E402
+from task_center.context_engine.task_guidance import (  # noqa: E402
     build_task_guidance,
 )
 

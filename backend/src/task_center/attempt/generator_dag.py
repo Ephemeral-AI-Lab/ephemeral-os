@@ -8,11 +8,11 @@ from dataclasses import dataclass
 from task_center._core.persistence import TaskRow
 from task_center._core.primitives import TaskCenterInvariantViolation
 from task_center._core.primitives import generator_task_id
-from task_center.task_state import (
-    TaskCenterTaskStatus,
-    PlannedGeneratorTask,
+from task_center._core.task_state import (
     TERMINAL_GENERATOR_STATUSES,
+    TaskCenterTaskStatus,
 )
+from task_center.submissions import PlannedGeneratorTask
 
 
 def ordered_generator_tasks(

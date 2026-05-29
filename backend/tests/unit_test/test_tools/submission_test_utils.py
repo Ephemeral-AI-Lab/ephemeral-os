@@ -13,7 +13,7 @@ from task_center.attempt.orchestrator_registry import (
 from task_center.attempt.deps import AgentLaunch, AttemptDeps
 from task_center.iteration import OpenIterationCoordinatorRegistry
 from task_center.iteration.state import IterationCreationReason
-from task_center.task_state import GeneratorSubmission, PlannedGeneratorTask, PlannerSubmission
+from task_center.submissions import GeneratorSubmission, PlannedGeneratorTask, PlannerSubmission
 from task_center._core.primitives import evaluator_task_id, generator_task_id, planner_task_id
 from tools._framework.core.context import ToolExecutionContextService
 from tools._framework.core.runtime import ExecutionMetadata

@@ -34,7 +34,7 @@ from task_center.attempt.launch import EphemeralAttemptAgentLauncher
 from task_center.attempt.orchestrator_registry import AttemptOrchestratorRegistry
 from task_center.attempt.deps import AgentLaunch, AttemptDeps
 from task_center.iteration.state import IterationCreationReason
-from task_center.task_state import TaskCenterTaskRole, TaskCenterTaskStatus
+from task_center._core.task_state import TaskCenterTaskRole, TaskCenterTaskStatus
 from tools._framework.core.base import ToolResult
 
 
@@ -547,3 +547,79 @@ async def test_launch_without_task_guidance_falls_back_to_single_user_message(
     # Context becomes the spawn prompt; no initial_messages seeded.
     assert args[1] == "execute this task"
     assert kwargs.get("initial_messages") is None
+
+
+@pytest.mark.asyncio
+async def test_main_agent_launches_with_skill_as_prompt_and_context_guidance_initial(
+    goal_store,
+    iteration_store,
+    attempt_store,
+    task_store,
+    task_center_run_id,
+    register_test_agents,
+) -> None:
+    """Skill+guidance (4-row) shape: the skill is the spawn prompt (lands last),
+    initial_messages = [context, guidance] in canonical order."""
+    from message.message import Message
+
+    goal, attempt, task_id = _seed_planner_attempt(
+        goal_store=goal_store,
+        iteration_store=iteration_store,
+        attempt_store=attempt_store,
+        task_store=task_store,
+        task_center_run_id=task_center_run_id,
+    )
+    launch = AgentLaunch(
+        task_id=task_id,
+        task_center_run_id=task_center_run_id,
+        attempt_id=attempt.id,
+        role=TaskCenterTaskRole.PLANNER,
+        agent_name="planner",
+        context="plan context",
+        task_guidance="plan the work",
+        skill="Load skill: planner",
+        needs=(),
+        goal_id=goal.id,
+    )
+    deps = _build_deps(
+        goal_store=goal_store,
+        iteration_store=iteration_store,
+        attempt_store=attempt_store,
+        task_store=task_store,
+    )
+
+    captured: list[dict[str, Any]] = []
+
+    async def _spy_runner(*args: Any, **kwargs: Any) -> EphemeralRunResult:
+        captured.append({"args": args, "kwargs": kwargs})
+        task_store.set_task_status(
+            task_id, status=TaskCenterTaskStatus.DONE.value, summary={}
+        )
+        return EphemeralRunResult(
+            status="completed",
+            error=None,
+            terminal_result=ToolResult(
+                output="plan", is_error=False, is_terminal=True
+            ),
+            agent_name="planner",
+            event_count=1,
+        )
+
+    launcher = EphemeralAttemptAgentLauncher(
+        config=SimpleNamespace(),
+        deps_provider=lambda: deps,
+        runner=_spy_runner,
+    )
+    launcher.launch(launch)
+    await asyncio.wait_for(launcher.wait_for_idle(), timeout=1.0)
+
+    assert len(captured) == 1
+    args = captured[0]["args"]
+    kwargs = captured[0]["kwargs"]
+    # Skill is the spawn prompt (appended last → row 4).
+    assert args[1] == "Load skill: planner"
+    initial_messages = kwargs.get("initial_messages")
+    assert isinstance(initial_messages, list)
+    assert all(isinstance(m, Message) and m.role == "user" for m in initial_messages)
+    # Canonical order: context, then guidance.
+    assert [m.assistant_text for m in initial_messages] == ["plan context", "plan the work"]

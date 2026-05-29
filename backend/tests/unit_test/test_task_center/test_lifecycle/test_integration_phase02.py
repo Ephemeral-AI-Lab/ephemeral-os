@@ -14,7 +14,7 @@ from task_center.attempt.deps import (
     AgentLaunch,
     AttemptDeps,
 )
-from task_center.task_state import EvaluatorSubmission, GeneratorSubmission, PlannedGeneratorTask, PlannerSubmission
+from task_center.submissions import EvaluatorSubmission, GeneratorSubmission, PlannedGeneratorTask, PlannerSubmission
 from task_center._core.primitives import evaluator_task_id, generator_task_id, planner_task_id
 from task_center.iteration import OpenIterationCoordinatorRegistry
 from task_center.iteration.state import IterationStatus

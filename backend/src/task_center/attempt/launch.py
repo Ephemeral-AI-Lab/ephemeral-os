@@ -17,12 +17,14 @@ from task_center.attempt.deps import AgentLaunch, AttemptDeps
 from task_center.attempt.state import AttemptFailReason, AttemptStatus
 from task_center.context_engine.scope import ContextScope
 from task_center._core.primitives import TaskCenterInvariantViolation
-from task_center.task_state import (
+from task_center._core.task_state import (
+    TaskCenterTaskRole,
+    TaskCenterTaskStatus,
+)
+from task_center.submissions import (
     EvaluatorSubmission,
     GeneratorSubmission,
     PlannerFailureSubmission,
-    TaskCenterTaskRole,
-    TaskCenterTaskStatus,
 )
 from tools import ExecutionMetadata
 
@@ -115,25 +117,16 @@ class EphemeralAttemptAgentLauncher:
             composer=runtime.composer,
         )
         metadata["active_terminals"] = list(agent_def.terminals)
-        # Launch shape:
-        #   - 4 rows when both task_guidance and skill are present
-        #     (planner with a declared skill: system + <context> +
-        #     <Task Guidance> + skill). Row 3 carries the role prose plus a
-        #     <terminal_tool_selection> block; row 4 carries the skill body
-        #     plus an identical (byte-equal) <terminal_tool_selection> block.
-        #   - 3 rows when task_guidance is present without a skill (today's
-        #     main-agent default).
-        task_guidance = launch.task_guidance
-        skill_message = launch.skill
-        if task_guidance and skill_message:
-            runner_prompt = skill_message
-            runner_initial_messages: list[Message] | None = [
-                Message.from_user_text(launch.context),
-                Message.from_user_text(task_guidance),
-            ]
-        elif task_guidance:
-            runner_prompt = task_guidance
-            runner_initial_messages = [Message.from_user_text(launch.context)]
+        # Canonical initial-message order: [system, context, guidance, skill?].
+        # system is the agent_def system prompt; the remaining rows are user
+        # messages and the last one becomes the runner's spawn prompt (the
+        # runner appends it after initial_messages). A planner with a declared
+        # skill yields 4 rows; the main-agent default (guidance, no skill) is 3.
+        rows = [r for r in (launch.context, launch.task_guidance, launch.skill) if r]
+        runner_initial_messages: list[Message] | None
+        if rows:
+            runner_prompt = rows[-1]
+            runner_initial_messages = [Message.from_user_text(r) for r in rows[:-1]] or None
         else:
             runner_prompt = launch.context
             runner_initial_messages = None

@@ -18,7 +18,7 @@ from task_center.goal.state import (
     GoalClosureReport,
     GoalOriginKind,
 )
-from task_center.task_state import TaskCenterTaskStatus
+from task_center._core.task_state import TaskCenterTaskStatus
 
 
 class GoalClosureReportRouter:

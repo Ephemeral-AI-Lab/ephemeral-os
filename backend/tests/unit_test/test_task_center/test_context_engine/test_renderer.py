@@ -333,7 +333,7 @@ def test_hostile_body_planted_inside_grouped_attempt_raises():
 # ---------------------------------------------------------------------------
 # Post-v3.3: render_context is the single entry point. role_instruction blocks
 # no longer exist — task-guidance prose lives in
-# ``task_center/task_guidance/builders.py`` and is wrapped by the composer.
+# ``task_center/context_engine/task_guidance.py`` and is wrapped by the composer.
 # ---------------------------------------------------------------------------
 
 

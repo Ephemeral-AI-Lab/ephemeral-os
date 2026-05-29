@@ -29,7 +29,7 @@ from task_center.attempt.generator_dag import (
     summarize_generator_dag,
 )
 from task_center._core.primitives import evaluator_task_id
-from task_center.task_state import (
+from task_center._core.task_state import (
     SpawnReason,
     TaskCenterTaskRole,
     TaskCenterTaskStatus,

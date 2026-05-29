@@ -14,7 +14,7 @@ absent: it is a planner / evaluator concern and would distract executors.
 
 The ``<Task Guidance>`` row is assembled at launch time by
 ``AgentEntryComposer`` via the registry-driven
-``task_center/task_guidance/builders.py:build_task_guidance``.
+``task_center/context_engine/task_guidance.py:build_task_guidance``.
 """
 
 from __future__ import annotations

@@ -24,7 +24,8 @@ from task_center.iteration.state import (
     IterationCreationReason,
     IterationStatus,
 )
-from task_center.task_state import EvaluatorSubmission, GeneratorSubmission, TaskCenterTaskStatus, PlannedGeneratorTask, PlannerSubmission
+from task_center._core.task_state import TaskCenterTaskStatus
+from task_center.submissions import EvaluatorSubmission, GeneratorSubmission, PlannedGeneratorTask, PlannerSubmission
 from task_center._core.primitives import evaluator_task_id, generator_task_id, planner_task_id
 
 

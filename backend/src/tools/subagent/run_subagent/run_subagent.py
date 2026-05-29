@@ -217,10 +217,10 @@ async def run_subagent(
     # the isolation contract forbids inheriting the parent's scope. Split
     # the launch directly: caller's free-text prompt is user msg 1
     # (initial_messages[0]); a static identity-instruction string from
-    # task_guidance.builders is user msg 2 (the spawn prompt). Only one
+    # context_engine.task_guidance is user msg 2 (the spawn prompt). Only one
     # subagent class exists today (explorer); a static test guards that
     # invariant so adding another class forces a revisit here.
-    from task_center.task_guidance.builders import (
+    from task_center.context_engine.task_guidance import (
         build_explorer_task_guidance,
     )
 

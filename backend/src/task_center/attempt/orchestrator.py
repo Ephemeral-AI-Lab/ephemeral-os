@@ -35,15 +35,17 @@ from task_center.attempt.state import (
     AttemptStatus,
 )
 from task_center.goal.state import GoalClosureReport
-from task_center.task_state import (
+from task_center._core.task_state import (
+    SpawnReason,
+    TaskCenterTaskRole,
+    TaskCenterTaskStatus,
+)
+from task_center.submissions import (
     EvaluatorSubmission,
     GeneratorSubmission,
     PlannedGeneratorTask,
     PlannerFailureSubmission,
     PlannerSubmission,
-    SpawnReason,
-    TaskCenterTaskRole,
-    TaskCenterTaskStatus,
 )
 
 logger = logging.getLogger(__name__)

@@ -59,7 +59,7 @@
 <p>The underlying tool is declared with <code>intent=Intent.WRITE_ALLOWED</code>, <code>background=&quot;always&quot;</code>, and <code>task_type=SUBAGENT_TASK_TYPE</code>. That declaration is why the engine defers it from foreground streaming and gives the background supervisor a subagent-specific cancellation path.</p>
 </section>
 
-<section id="launch-workflow" data-last-reviewed-commit="569f12c3f39471dbaa643906856a8daf81a21a2d" data-evidence-paths="backend/src/tools/subagent/run_subagent/run_subagent.py backend/src/engine/background/dispatch.py backend/src/engine/agent/lifecycle.py backend/src/task_center/task_guidance/builders.py backend/src/engine/agent/factory.py">
+<section id="launch-workflow" data-last-reviewed-commit="569f12c3f39471dbaa643906856a8daf81a21a2d" data-evidence-paths="backend/src/tools/subagent/run_subagent/run_subagent.py backend/src/engine/background/dispatch.py backend/src/engine/agent/lifecycle.py backend/src/task_center/context_engine/task_guidance.py backend/src/engine/agent/factory.py">
 <h2>Launch Workflow <a class="anchor" href="#launch-workflow">#</a></h2>
 <div class="diagram" aria-label="Subagent launch workflow">
   <div class="flow-row">
@@ -90,7 +90,7 @@
 <p>Cancellation is also subagent-aware. <code>cancel_background_task</code> asks the supervisor to request an early stop, cancel the child task, and allow the child path to salvage a partial result before it settles.</p>
 </section>
 
-<section id="taskcenter-boundary" data-last-reviewed-commit="569f12c3f39471dbaa643906856a8daf81a21a2d" data-evidence-paths="backend/src/tools/subagent/run_subagent/run_subagent.py backend/src/task_center/attempt/launch.py backend/src/task_center/agent_launch/task_guidance_dispatch.py backend/src/task_center/task_guidance/builders.py backend/src/tools/submission backend/src/engine/query/loop.py">
+<section id="taskcenter-boundary" data-last-reviewed-commit="569f12c3f39471dbaa643906856a8daf81a21a2d" data-evidence-paths="backend/src/tools/subagent/run_subagent/run_subagent.py backend/src/task_center/attempt/launch.py backend/src/task_center/agent_launch/task_guidance_dispatch.py backend/src/task_center/context_engine/task_guidance.py backend/src/tools/submission backend/src/engine/query/loop.py">
 <h2>TaskCenter Boundary <a class="anchor" href="#taskcenter-boundary">#</a></h2>
 <p><code>run_subagent</code> is a worker launch tool, not a global orchestrator. It lets the parent ask for focused exploration or implementation help while TaskCenter state still advances through persisted terminal submissions, context packets, lifecycle reports, and attempt state machines.</p>
 <p>The parent receives the subagent's terminal output as a normal background task result. The parent then decides whether to continue, call another tool, ask a helper, or submit a TaskCenter terminal tool. This keeps task handoff and completion state in TaskCenter rather than creating direct agent-to-agent control flow.</p>

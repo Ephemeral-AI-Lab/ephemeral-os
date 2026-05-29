@@ -58,7 +58,7 @@ if TYPE_CHECKING:
     from task_center._core.primitives import TaskCenterInvariantViolation
     from task_center.goal.starter import GoalStarter, StartedGoal
     from task_center.goal.state import Goal, GoalOrigin, GoalOriginKind, GoalStatus
-    from task_center.task_state import (
+    from task_center.submissions import (
         EvaluatorSubmission,
         GeneratorSubmission,
         PlannedGeneratorTask,
@@ -97,15 +97,15 @@ _EXPORTS: dict[str, tuple[str, str]] = {
         "IterationCreationReason",
     ),
     "IterationStatus": ("task_center.iteration.state", "IterationStatus"),
-    "EvaluatorSubmission": ("task_center.task_state", "EvaluatorSubmission"),
-    "GeneratorSubmission": ("task_center.task_state", "GeneratorSubmission"),
+    "EvaluatorSubmission": ("task_center.submissions", "EvaluatorSubmission"),
+    "GeneratorSubmission": ("task_center.submissions", "GeneratorSubmission"),
     "Goal": ("task_center.goal.state", "Goal"),
     "GoalOrigin": ("task_center.goal.state", "GoalOrigin"),
     "GoalOriginKind": ("task_center.goal.state", "GoalOriginKind"),
     "GoalStarter": ("task_center.goal.starter", "GoalStarter"),
     "GoalStatus": ("task_center.goal.state", "GoalStatus"),
-    "PlannedGeneratorTask": ("task_center.task_state", "PlannedGeneratorTask"),
-    "PlannerSubmission": ("task_center.task_state", "PlannerSubmission"),
+    "PlannedGeneratorTask": ("task_center.submissions", "PlannedGeneratorTask"),
+    "PlannerSubmission": ("task_center.submissions", "PlannerSubmission"),
     "RecipeRegistry": (
         "task_center.context_engine.recipes_registry",
         "RecipeRegistry",

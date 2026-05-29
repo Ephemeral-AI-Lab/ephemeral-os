@@ -29,7 +29,7 @@ from task_center.iteration import OrchestratorFactory
 from task_center.attempt.state import AttemptFailReason, AttemptStatus
 from task_center.attempt.deps import AttemptDeps
 from task_center.iteration.state import Iteration, IterationStatus
-from task_center.task_state import TaskCenterTaskStatus
+from task_center._core.task_state import TaskCenterTaskStatus
 
 logger = logging.getLogger(__name__)
 

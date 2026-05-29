@@ -1,4 +1,4 @@
-"""Canonical tag → label dictionary for ``render_what_in_context``.
+"""Canonical tag → label dictionary for ``render_context_outline``.
 
 Each :class:`TagDescriptor` pairs a structural tag (and optional
 *semantic-attribute filter*) with the prose label the ``What's in context``

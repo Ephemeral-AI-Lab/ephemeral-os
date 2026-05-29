@@ -3,7 +3,7 @@
 Two terse labeled sections, no per-role prose branching:
 
 * ``What's in context:`` — deterministic outline produced by
-  :func:`render_what_in_context` over the recipe's :class:`ContextPacket`.
+  :func:`render_context_outline` over the recipe's :class:`ContextPacket`.
 * ``What to do:`` — single line from
   :data:`ROLE_DIRECTIVES`, keyed by the resolved agent name.
 
@@ -25,7 +25,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from task_center.context_engine.role_directives import ROLE_DIRECTIVES
-from task_center.context_engine.what_in_context import render_what_in_context
+from task_center.context_engine.context_outline import render_context_outline
 
 if TYPE_CHECKING:  # pragma: no cover - typing-only
     from agents import AgentDefinition
@@ -46,7 +46,7 @@ def build_task_guidance(
             f"No ROLE_DIRECTIVES entry for agent {agent_def.name!r}. Add one "
             "row to backend/src/task_center/context_engine/role_directives.py."
         )
-    outline = render_what_in_context(packet)
+    outline = render_context_outline(packet)
     return f"What's in context:\n{outline}\n\nWhat to do:\n- {directive}"
 
 

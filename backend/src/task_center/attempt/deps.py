@@ -23,7 +23,7 @@ from task_center._core.persistence import (
     GoalStoreProtocol,
     TaskStoreProtocol,
 )
-from task_center.task_state import TaskCenterTaskRole, TaskCenterTaskStatus
+from task_center._core.task_state import TaskCenterTaskRole, TaskCenterTaskStatus
 
 if TYPE_CHECKING:
     from task_center.agent_launch.composer import AgentEntryComposer

@@ -18,7 +18,8 @@ from task_center.attempt.orchestrator_registry import (
 from task_center.attempt.deps import AgentLaunch, AttemptDeps
 from task_center.iteration import OpenIterationCoordinatorRegistry
 from task_center.iteration.state import IterationCreationReason
-from task_center.task_state import TaskCenterTaskStatus, PlannedGeneratorTask, PlannerSubmission
+from task_center._core.task_state import TaskCenterTaskStatus
+from task_center.submissions import PlannedGeneratorTask, PlannerSubmission
 from task_center._core.primitives import generator_task_id
 
 

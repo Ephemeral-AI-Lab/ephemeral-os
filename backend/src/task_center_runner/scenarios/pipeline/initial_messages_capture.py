@@ -33,7 +33,7 @@ runner does not currently invoke them — those initial-message
 captures are produced programmatically by
 ``scripts/build_initial_messages_report.py``, which calls the real
 builder functions in ``tools/ask_helper/_lib/_compose.py`` and
-``task_center/task_guidance/builders.py`` (specifically
+``task_center/context_engine/task_guidance.py`` (specifically
 ``build_explorer_task_guidance`` for the subagent's row-2 prose).
 Adding a helper/subagent dispatch branch to ``MockSquadRunner`` is left
 as a follow-up; the matching scenario hook is the

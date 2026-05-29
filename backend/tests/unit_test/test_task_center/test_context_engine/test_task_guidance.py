@@ -3,7 +3,7 @@
 The single :func:`build_task_guidance` composes its two labelled sections
 deterministically:
 
-* ``What's in context:`` — outline produced by :func:`render_what_in_context`
+* ``What's in context:`` — outline produced by :func:`render_context_outline`
   from the packet alone (no per-role branching).
 * ``What to do:`` — one line lifted from :data:`ROLE_DIRECTIVES` by exact
   agent name.
@@ -26,7 +26,7 @@ from task_center.context_engine.packet import (
     ContextRefs,
 )
 from task_center.context_engine.role_directives import ROLE_DIRECTIVES
-from task_center.task_guidance.builders import (
+from task_center.context_engine.task_guidance import (
     build_explorer_task_guidance,
     build_task_guidance,
 )
@@ -169,34 +169,32 @@ def test_planner_directive_is_terminal_agnostic():
     assert "What to do:\n- Plan for <iteration_goal>." in prose
 
 
-def test_evaluator_outline_with_prior_and_current_attempt():
-    current_attempt = ContextBlock(
-        kind="failed_attempt",
+def test_evaluator_outline_is_flat_current_attempt():
+    """E4: the evaluator outline is flat top-level blocks — <plan_spec>,
+    <task>, <evaluation_criteria> — with no goal/iteration frame and no
+    <attempt> nesting."""
+    task_block = ContextBlock(
+        kind="generator_task_outcome",
+        priority=ContextPriority.HIGH,
+        text="built slice",
+        metadata={"tag": "task", "attrs": 'id="t-a" status="done"'},
+    )
+    criteria_block = ContextBlock(
+        kind="evaluation_criteria",
         priority=ContextPriority.REQUIRED,
-        text="(current body)",
-        metadata={
-            "group_id": "iteration_1_current",
-            "group_tag": "iteration",
-            "group_attrs": 'iteration_no="1" status="current"',
-            "child_tag": "attempt",
-            "attrs": 'attempt_no="2" status="current"',
-            "pre_rendered_xml": "true",
-        },
+        text="c1",
+        metadata={"tag": "evaluation_criteria"},
     )
     prose = build_task_guidance(
         agent_def=_agent_def("evaluator", AgentKind.EVALUATOR),
-        packet=_packet(
-            [
-                _goal_block(),
-                _iteration_goal_block(1),
-                _prior_attempt_block(),
-                current_attempt,
-            ]
-        ),
+        packet=_packet([_plan_spec_block(), task_block, criteria_block]),
         scope=None,  # type: ignore[arg-type]
     )
-    assert '  - <attempt status="prior" verdict="fail"> — failed prior attempt' in prose
-    assert '  - <attempt status="current"> — active attempt' in prose
+    # Flat top-level bullets (no leading indent → no <iteration>/<attempt> nesting).
+    assert "- <plan_spec> — attempt's plan" in prose
+    assert '- <task status="done"> — generator task outcome' in prose
+    assert "- <evaluation_criteria> — criteria the attempt must satisfy" in prose
+    assert "<attempt" not in prose
     assert "Verify the current attempt against <evaluation_criteria>." in prose
 
 

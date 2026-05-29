@@ -19,7 +19,7 @@ from task_center.attempt.state import (
 )
 from task_center.iteration.state import Iteration, IterationStatus
 from task_center.goal.state import Goal
-from task_center.task_state import TaskCenterTaskRole
+from task_center._core.task_state import TaskCenterTaskRole
 
 
 def assert_goal_open(goal: Goal) -> None:
