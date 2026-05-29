@@ -41,13 +41,17 @@ from tools import (
 def terminal_submission_failed(context: QueryContext) -> bool:
     """True iff the agent has burned 1.5× its tool_call_limit without a
     terminal submission."""
-    return context.tool_calls_used >= math.ceil(1.5 * context.tool_call_limit)
+    return (
+        context.tool_calls_used + context.text_only_no_terminal_turns
+        >= math.ceil(1.5 * context.tool_call_limit)
+    )
 
 
 def _terminal_not_submitted_message(context: QueryContext) -> str:
     return (
         f"Agent stopped: terminal tool not submitted. "
         f"tool_calls_used={context.tool_calls_used}, "
+        f"text_only_no_terminal_turns={context.text_only_no_terminal_turns}, "
         f"tool_call_limit={context.tool_call_limit}, "
         f"hard_ceiling={math.ceil(1.5 * context.tool_call_limit)}."
     )
@@ -271,6 +275,8 @@ async def _run_query_loop(
             if context.terminal_result is not None:
                 context.exit_reason = QueryExitReason.TOOL_STOP
                 break
+            if not final_message.tool_uses:
+                context.text_only_no_terminal_turns += 1
             if terminal_submission_failed(context):
                 if background_tasks is not None:
                     await background_tasks.cancel_all()

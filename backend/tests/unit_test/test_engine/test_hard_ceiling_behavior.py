@@ -181,6 +181,63 @@ async def test_loop_exits_terminal_not_submitted_when_ceiling_crossed(
 
 
 @pytest.mark.asyncio
+async def test_text_only_turns_also_reach_terminal_not_submitted(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    limit = 1
+
+    class _TextOnlyProvider:
+        def __init__(self) -> None:
+            self.calls = 0
+
+        async def stream_message(self, request):  # noqa: ARG002
+            self.calls += 1
+            if self.calls > 2:
+                raise AssertionError("loop requested an unexpected third turn")
+            yield AssistantMessageCompleteEvent(
+                message=Message(
+                    role="assistant",
+                    content=[],
+                ),
+                usage=UsageSnapshot(),
+            )
+
+    provider = _TextOnlyProvider()
+    context = QueryContext(
+        api_client=provider,
+        tool_registry=ToolRegistry(),
+        cwd=Path("/tmp"),
+        model="test-model",
+        system_prompt="",
+        max_tokens=32,
+        tool_call_limit=limit,
+        tool_calls_used=0,
+        tool_metadata=ExecutionMetadata(),
+        terminal_tools={"submit_x"},
+    )
+    messages: list[Message] = [Message.from_user_text("go")]
+
+    async def _unexpected_dispatch(*_args: Any, **_kwargs: Any) -> AssistantToolDispatchOutcome:
+        raise AssertionError("text-only turns must not dispatch tools")
+
+    monkeypatch.setattr("engine.query.loop.dispatch_assistant_tools", _unexpected_dispatch)
+
+    events: list[StreamEvent] = []
+    async for event, _usage in _run_query_loop(context, messages):
+        events.append(event)
+
+    assert provider.calls == 2
+    assert context.exit_reason == QueryExitReason.TERMINAL_NOT_SUBMITTED
+    assert context.text_only_no_terminal_turns == 2
+    error_events = [
+        e for e in events
+        if isinstance(e, ToolExecutionCompletedEvent) and e.is_error
+    ]
+    assert error_events
+    assert "terminal tool not submitted" in error_events[-1].output
+
+
+@pytest.mark.asyncio
 async def test_terminal_result_short_circuits_ceiling(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
