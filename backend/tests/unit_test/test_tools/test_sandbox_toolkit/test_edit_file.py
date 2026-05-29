@@ -202,6 +202,65 @@ def test_conflict_status_is_preserved_when_reason_is_human_text(
     }
 
 
+def test_replace_all_passes_through_to_request(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    api = _EditApi(EditFileResult(success=True, changed_paths=("/ws/file.py",), applied_edits=1))
+    ctx = _ctx_with_api(api)
+    monkeypatch.setattr(edit_file_module, "sandbox_api", api)
+
+    result = _run(
+        {
+            "file_path": "/ws/file.py",
+            "old_text": "foo",
+            "new_text": "bar",
+            "replace_all": True,
+        },
+        ctx,
+    )
+
+    assert not result.is_error
+    request = api.calls[0][1]
+    assert request.edits[0].replace_all is True
+    payload = json.loads(result.output)
+    assert payload["status"] == "edited"
+
+
+def test_default_call_has_replace_all_false(monkeypatch: pytest.MonkeyPatch) -> None:
+    api = _EditApi()
+    ctx = _ctx_with_api(api)
+    monkeypatch.setattr(edit_file_module, "sandbox_api", api)
+
+    _run({"file_path": "/ws/file.py", "old_text": "a", "new_text": "b"}, ctx)
+
+    request = api.calls[0][1]
+    assert request.edits[0].replace_all is False
+
+
+def test_applied_edits_is_edit_count_not_occurrence_count(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # A single replace_all edit that hits 3 occurrences still reports 1 (D4).
+    api = _EditApi(
+        EditFileResult(success=True, changed_paths=("/ws/file.py",), applied_edits=1)
+    )
+    ctx = _ctx_with_api(api)
+    monkeypatch.setattr(edit_file_module, "sandbox_api", api)
+
+    result = _run(
+        {
+            "file_path": "/ws/file.py",
+            "old_text": "a",
+            "new_text": "b",
+            "replace_all": True,
+        },
+        ctx,
+    )
+
+    payload = json.loads(result.output)
+    assert payload["applied_edits"] == 1
+
+
 def test_caller_and_description_flow_through_to_api(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

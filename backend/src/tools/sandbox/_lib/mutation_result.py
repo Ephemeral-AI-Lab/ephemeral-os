@@ -6,7 +6,13 @@ import json
 from typing import Any
 
 from sandbox.shared.clock import normalize_timing_map
+from sandbox.shared.models import GuardedResultBase
+from tools._framework.core.context import ToolExecutionContextService
 from tools._framework.core.results import ToolResult
+from tools.sandbox._lib.tool_context import (
+    sandbox_audit_metadata_from_tool_context,
+    sandbox_repo_root_from_tool_context,
+)
 
 
 def mutation_tool_result(
@@ -76,6 +82,52 @@ def mutation_tool_result(
     )
 
 
+def project_file_mutation(
+    result: GuardedResultBase,
+    *,
+    success_status: str,
+    file_path: str,
+    success_extra: dict[str, Any],
+    context: ToolExecutionContextService,
+) -> ToolResult:
+    """Project a guarded file-mutation result into the standard ToolResult.
+
+    Shared by ``write_file``/``edit_file``/``multi_edit``: the success/failure
+    projection is identical except for ``success_status`` and the
+    tool-specific ``success_extra`` (e.g. ``bytes_written`` vs ``applied_edits``).
+    ``cwd`` and ``file_path`` are always added to the success payload.
+    """
+    paths = list(result.changed_paths)
+    if result.success:
+        return mutation_tool_result(
+            success=True,
+            success_status=success_status,
+            paths=paths,
+            success_extra={
+                "cwd": sandbox_repo_root_from_tool_context(context),
+                "file_path": file_path,
+                **success_extra,
+            },
+            timings=result.timings,
+            mutation_source=result.mutation_source,
+            changed_path_kinds=dict(result.changed_path_kinds),
+            metadata_extra=sandbox_audit_metadata_from_tool_context(context),
+        )
+
+    return mutation_tool_result(
+        success=False,
+        success_status=success_status,
+        paths=paths,
+        failure_status=result.status or None,
+        conflict_reason=result.conflict_reason,
+        error=result.error,
+        mutation_source=result.mutation_source,
+        changed_path_kinds=dict(result.changed_path_kinds),
+        timings=result.timings,
+        metadata_extra=sandbox_audit_metadata_from_tool_context(context),
+    )
+
+
 def _failure_status(conflict_reason: str | None) -> str:
     if conflict_reason in {"base_mismatch", "version_conflict", "drift"}:
         return "aborted_version"
@@ -86,4 +138,4 @@ def _failure_status(conflict_reason: str | None) -> str:
     return "failed"
 
 
-__all__ = ["mutation_tool_result"]
+__all__ = ["mutation_tool_result", "project_file_mutation"]

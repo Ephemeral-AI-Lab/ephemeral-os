@@ -184,6 +184,7 @@ class SearchReplaceEdit:
 
     old_text: str
     new_text: str
+    replace_all: bool = False
 
 
 @dataclass(frozen=True, kw_only=True)

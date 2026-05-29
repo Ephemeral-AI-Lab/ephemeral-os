@@ -21,6 +21,7 @@ from sandbox.layer_stack.changes import (
 )
 from sandbox.layer_stack.manifest import Manifest
 from sandbox.shared.clock import monotonic_now
+from sandbox.shared.edit_apply import SearchReplaceError, apply_search_replace
 from sandbox.shared.timing_keys import TimingKey
 from sandbox.occ.changeset import (
     Change,
@@ -55,21 +56,23 @@ def _apply_edit_content(
             status=FileStatus.ABORTED_OVERLAP,
             message="file is not utf-8 text",
         )
-    count = text.count(change.old_text)
-    if count == 0:
+    try:
+        # EditChange.__post_init__ coerces old_text/new_text to str (and rejects
+        # None), so `or ""` only narrows the declared `str | None` for the type
+        # checker; it does not change runtime behavior.
+        result_text = apply_search_replace(
+            text,
+            change.old_text or "",
+            change.new_text or "",
+            replace_all=change.replace_all,
+        )
+    except SearchReplaceError as exc:
         return FileResult(
             path=path,
             status=FileStatus.ABORTED_OVERLAP,
-            message="anchor not found",
+            message=exc.message,
         )
-    if count != change.expected_occurrences:
-        return FileResult(
-            path=path,
-            status=FileStatus.ABORTED_OVERLAP,
-            message="anchor occurrence count mismatch",
-        )
-    text = text.replace(change.old_text, change.new_text, change.expected_occurrences)
-    return text.encode("utf-8")
+    return result_text.encode("utf-8")
 
 
 @dataclass(frozen=True)

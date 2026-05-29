@@ -395,10 +395,6 @@ def _edit_changes(args: Mapping[str, object], path: str) -> list[EditChange]:
     for raw in raw_edits:
         if not isinstance(raw, dict):
             raise ValueError("each edit must be an object")
-        expected_raw = raw.get("expected_occurrences")
-        expected = 1 if expected_raw is None else int(expected_raw)
-        if expected < 0:
-            raise ValueError("expected_occurrences must be >= 0")
         old_text = str(raw.get("old_text") if raw.get("old_text") is not None else "")
         if not old_text:
             raise ValueError(f"edit anchor old_text must be non-empty for {path}")
@@ -407,7 +403,7 @@ def _edit_changes(args: Mapping[str, object], path: str) -> list[EditChange]:
                 path=path,
                 old_text=old_text,
                 new_text=str(raw.get("new_text") if raw.get("new_text") is not None else ""),
-                expected_occurrences=expected,
+                replace_all=bool(raw.get("replace_all", False)),
             )
         )
     return changes

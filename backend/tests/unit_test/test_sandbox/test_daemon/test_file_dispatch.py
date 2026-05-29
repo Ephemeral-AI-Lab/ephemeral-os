@@ -14,6 +14,24 @@ from sandbox.layer_stack import LayerStack
 from sandbox.layer_stack.workspace_base import build_workspace_base
 
 
+def test_edit_changes_reads_replace_all_from_payload() -> None:
+    """The OCC payload reader (`_edit_changes`) threads `replace_all` from the
+    raw edit dict into `EditChange` — the load-bearing Site-A half of the
+    "both apply sites agree" claim (PLAN §7, step 6)."""
+    enabled = workspace_tool_dispatch._edit_changes(
+        {"edits": [{"old_text": "a", "new_text": "b", "replace_all": True}]},
+        "f.txt",
+    )
+    assert enabled[0].replace_all is True
+
+    # Absent key defaults to False (existing behavior unchanged).
+    default = workspace_tool_dispatch._edit_changes(
+        {"edits": [{"old_text": "a", "new_text": "b"}]},
+        "f.txt",
+    )
+    assert default[0].replace_all is False
+
+
 @pytest.mark.asyncio
 async def test_ephemeral_file_verbs_use_direct_occ_path(
     tmp_path: Path,

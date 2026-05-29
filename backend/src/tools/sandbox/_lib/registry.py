@@ -6,6 +6,7 @@ from tools._framework.core.base import BaseTool
 from tools.sandbox._lib.context import SANDBOX_CONTEXT
 
 from tools.sandbox.edit_file import edit_file
+from tools.sandbox.multi_edit import multi_edit
 from tools.sandbox.glob import glob
 from tools.sandbox.grep import grep
 from tools.sandbox.read_file import read_file
@@ -20,6 +21,7 @@ def make_sandbox_tools() -> list[BaseTool]:
         read_file,
         write_file,
         edit_file,
+        multi_edit,
         shell,
         glob,
         grep,

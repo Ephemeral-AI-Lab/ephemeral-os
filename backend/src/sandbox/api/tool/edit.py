@@ -29,7 +29,11 @@ async def edit_file(
         payload = daemon_request_identity_fields(request) | {
             "path": request.path,
             "edits": [
-                {"old_text": edit.old_text, "new_text": edit.new_text}
+                {
+                    "old_text": edit.old_text,
+                    "new_text": edit.new_text,
+                    "replace_all": edit.replace_all,
+                }
                 for edit in request.edits
             ],
             "description": request.default_description(f"edit {request.path}"),

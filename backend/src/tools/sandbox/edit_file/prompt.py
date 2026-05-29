@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from tools._names import (
     EDIT_FILE_TOOL_NAME,
+    MULTI_EDIT_TOOL_NAME,
     READ_FILE_TOOL_NAME,
     SHELL_TOOL_NAME,
     WRITE_FILE_TOOL_NAME,
@@ -42,8 +43,16 @@ def get_edit_file_description() -> str:
         "Capabilities and constraints:\n"
         "- `old_text` must match byte-for-byte: whitespace, indentation, newlines,\n"
         "  all included.\n"
-        "- `old_text` must be unique in the file. If it isn't, widen the match with\n"
+        "- `old_text` must be unique in the file, unless `replace_all=true`. If it\n"
+        "  isn't unique and you want a single targeted change, widen the match with\n"
         "  surrounding context until it is — don't trim it to be terser.\n"
+        "- `replace_all=true` replaces EVERY occurrence of `old_text` in one call.\n"
+        "  The only failure is when `old_text` is absent (`anchor not found`). Use\n"
+        "  it for a repo-symbol rename within one file. Concurrency caveat:\n"
+        "  `replace_all` replaces however many occurrences exist in the CURRENT\n"
+        "  committed content and does NOT detect concurrent edits to that file;\n"
+        "  prefer the default unique-match mode when correctness depends on the\n"
+        "  file being unchanged.\n"
         "- You cannot create new files. If the path doesn't exist, the call fails.\n"
         "- Optimistic concurrency: if the file changed under you (e.g., another\n"
         "  tool or test run wrote to it), the result is `aborted_version` —\n"
@@ -53,7 +62,8 @@ def get_edit_file_description() -> str:
         '- `status`: "edited" | "aborted_version" | "failed".\n'
         "- `changed_paths`: the edited file (and any side-effects from the audit\n"
         "  layer).\n"
-        "- `applied_edits`: 1 on success.\n"
+        "- `applied_edits`: counts edits applied, not occurrences — 1 for one\n"
+        "  edit even when `replace_all=true` hits several spots.\n"
         '- `conflict_reason`: populated when `status != "edited"`.\n'
         "\n"
         "Common pitfalls:\n"
@@ -63,8 +73,8 @@ def get_edit_file_description() -> str:
         "  `old_text` includes the trailing newline so you don't leave a blank\n"
         "  line.\n"
         f"- Using `{EDIT_FILE_TOOL_NAME}` for find-and-replace across many occurrences in one\n"
-        f"  file — split into multiple calls, or rewrite the file with\n"
-        f"  `{WRITE_FILE_TOOL_NAME}`.\n"
+        f"  file — pass `replace_all=true` instead, or use `{MULTI_EDIT_TOOL_NAME}` for several\n"
+        f"  distinct edits to one file, or rewrite it with `{WRITE_FILE_TOOL_NAME}`.\n"
         "\n"
         "Example:\n"
         "  # Good: 3 lines of context, unique match\n"
@@ -72,6 +82,14 @@ def get_edit_file_description() -> str:
         '    file_path="src/foo.py",\n'
         '    old_text="def bar(x: int) -> int:\\n    return x * 2\\n\\n",\n'
         '    new_text="def bar(x: int) -> int:\\n    return x * 3\\n\\n",\n'
+        "  )\n"
+        "\n"
+        "  # Rename every occurrence of a symbol in one file\n"
+        "  edit_file(\n"
+        '    file_path="src/foo.py",\n'
+        '    old_text="old_name",\n'
+        '    new_text="new_name",\n'
+        "    replace_all=True,\n"
         "  )"
     )
 

@@ -10,16 +10,14 @@ from tools._framework.core.decorator import tool
 from tools.sandbox._lib.tool_context import (
     sandbox_audit_kwargs_from_tool_context,
     sandbox_caller_from_tool_context,
-    sandbox_repo_root_from_tool_context,
     resolve_tool_sandbox_path,
-    sandbox_audit_metadata_from_tool_context,
     sandbox_id_or_missing_error_result,
 )
 from tools.sandbox._lib.file_payloads import (
     WriteFileInput,
     WriteFileOutput,
 )
-from tools.sandbox._lib.mutation_result import mutation_tool_result
+from tools.sandbox._lib.mutation_result import project_file_mutation
 from .prompt import get_write_file_description
 
 
@@ -56,34 +54,12 @@ async def write_file(
         **sandbox_audit_kwargs_from_tool_context(context),
     )
 
-    paths = list(result.changed_paths)
-    if result.success:
-        return mutation_tool_result(
-            success=True,
-            success_status="written",
-            paths=paths,
-            success_extra={
-                "cwd": sandbox_repo_root_from_tool_context(context),
-                "file_path": file_path,
-                "bytes_written": len(content.encode("utf-8")),
-            },
-            timings=result.timings,
-            mutation_source=result.mutation_source,
-            changed_path_kinds=dict(result.changed_path_kinds),
-            metadata_extra=sandbox_audit_metadata_from_tool_context(context),
-        )
-
-    return mutation_tool_result(
-        success=False,
+    return project_file_mutation(
+        result,
         success_status="written",
-        paths=paths,
-        failure_status=result.status or None,
-        conflict_reason=result.conflict_reason,
-        error=result.error,
-        mutation_source=result.mutation_source,
-        changed_path_kinds=dict(result.changed_path_kinds),
-        timings=result.timings,
-        metadata_extra=sandbox_audit_metadata_from_tool_context(context),
+        file_path=file_path,
+        success_extra={"bytes_written": len(content.encode("utf-8"))},
+        context=context,
     )
 
 

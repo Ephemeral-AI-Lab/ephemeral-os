@@ -11,6 +11,7 @@ from __future__ import annotations
 SHELL_TOOL_NAME = "shell"
 READ_FILE_TOOL_NAME = "read_file"
 EDIT_FILE_TOOL_NAME = "edit_file"
+MULTI_EDIT_TOOL_NAME = "multi_edit"
 WRITE_FILE_TOOL_NAME = "write_file"
 GREP_TOOL_NAME = "grep"
 GLOB_TOOL_NAME = "glob"
@@ -54,6 +55,7 @@ __all__ = [
     "SHELL_TOOL_NAME",
     "READ_FILE_TOOL_NAME",
     "EDIT_FILE_TOOL_NAME",
+    "MULTI_EDIT_TOOL_NAME",
     "WRITE_FILE_TOOL_NAME",
     "GREP_TOOL_NAME",
     "GLOB_TOOL_NAME",

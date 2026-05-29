@@ -26,6 +26,7 @@ def test_sandbox_exports_expected_tools():
         "read_file",
         "write_file",
         "edit_file",
+        "multi_edit",
         "enter_isolated_workspace",
         "exit_isolated_workspace",
         "glob",
@@ -45,6 +46,10 @@ async def test_registered_api_backed_tools_require_sandbox_id():
             "file_path": "/repo/app.py",
             "old_text": "old",
             "new_text": "new",
+        },
+        "multi_edit": {
+            "file_path": "/repo/app.py",
+            "edits": [{"old_text": "old", "new_text": "new"}],
         },
         "shell": {"command": "echo hi"},
         "glob": {"pattern": "*.py"},
@@ -117,7 +122,7 @@ def test_missing_sandbox_tool_absent():
 
 def test_sandbox_tool_count():
     tools = make_sandbox_tools()
-    assert len(tools) == 8
+    assert len(tools) == 9
 
 
 def test_sandbox_tools_omit_instruction_block():

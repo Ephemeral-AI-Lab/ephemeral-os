@@ -184,3 +184,30 @@ def test_prepared_changeset_id_is_stable_across_replay() -> None:
         snapshot=_FakeManifest(7), path_groups=(group_alt,), atomic=True
     )
     assert id_a != id_c
+
+
+def test_changeset_id_distinguishes_replace_all_edits() -> None:
+    """Two edits identical except ``replace_all`` MUST hash to distinct ids,
+    while a default-mode edit stays replay-stable (conditional-add, D5)."""
+    from sandbox.occ.changeset import (
+        EditChange,
+        PreparedPathGroup,
+        RouteDecision,
+        compute_changeset_id,
+    )
+
+    def _edit_id(*, replace_all: bool) -> str:
+        change = EditChange(
+            path="f.txt", old_text="a", new_text="b", replace_all=replace_all
+        )
+        group = PreparedPathGroup(
+            path="f.txt", route=RouteDecision.GATED, changes=(change,)
+        )
+        return compute_changeset_id(
+            snapshot=_FakeManifest(7), path_groups=(group,), atomic=True
+        )
+
+    # Default-mode edit id is replay-stable.
+    assert _edit_id(replace_all=False) == _edit_id(replace_all=False)
+    # replace_all=True perturbs the id so the two cannot collide in replay/dedup.
+    assert _edit_id(replace_all=False) != _edit_id(replace_all=True)

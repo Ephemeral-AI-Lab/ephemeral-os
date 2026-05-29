@@ -92,7 +92,7 @@ class EditChange(Change):
     source: ChangeSource = ChangeSource.API_EDIT
     old_text: str | None = None
     new_text: str | None = None
-    expected_occurrences: int = 1
+    replace_all: bool = False
 
     def __post_init__(self) -> None:
         super().__post_init__()
@@ -102,7 +102,7 @@ class EditChange(Change):
             raise ValueError("EditChange requires new_text")
         object.__setattr__(self, "old_text", str(self.old_text))
         object.__setattr__(self, "new_text", str(self.new_text))
-        object.__setattr__(self, "expected_occurrences", int(self.expected_occurrences))
+        object.__setattr__(self, "replace_all", bool(self.replace_all))
 
 
 @dataclass(frozen=True)
@@ -327,7 +327,10 @@ def _change_signature(change: Change) -> dict[str, str | int | None]:
     elif isinstance(change, EditChange):
         sig["old_text"] = change.old_text
         sig["new_text"] = change.new_text
-        sig["expected_occurrences"] = change.expected_occurrences
+        # Conditional add (D5): only edits that opt into replace_all get a
+        # perturbed id, so existing default-mode edit ids stay stable.
+        if change.replace_all:
+            sig["replace_all"] = 1
     elif isinstance(change, SymlinkChange):
         sig["target"] = change.target
     return sig

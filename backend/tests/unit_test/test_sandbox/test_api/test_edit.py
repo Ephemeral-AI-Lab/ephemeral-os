@@ -48,7 +48,9 @@ async def test_edit_file_dispatches_to_sandbox_daemon(
             "api.v1.edit_file",
             {
                 "path": "a.py",
-                "edits": [{"old_text": "old", "new_text": "new"}],
+                "edits": [
+                    {"old_text": "old", "new_text": "new", "replace_all": False}
+                ],
                 "agent_id": "agent-1",
                 "caller": {
                     "agent_id": "agent-1",
