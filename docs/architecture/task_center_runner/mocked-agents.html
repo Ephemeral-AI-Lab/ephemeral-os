@@ -160,12 +160,8 @@ EphemeralRunResult from the real query loop
     <p>Writes the per-stage final ledger JSON and a stable <code>final-reconciliation.json</code> summary read back by the <code>final_release</code> checkpoint.</p>
   </div>
   <div class="evidence-card">
-    <h3>verifier_checkpoint_script</h3>
-    <p>Checkpoint readback probe driven from the executor lane (its task <code>prompt</code> carries a <code>VERIFY checkpoint=...</code> directive authored by the planner alongside the reducer). Picks an artifact path by checkpoint name (<code>inventory</code> → ledger, <code>recursive_return</code> → close report, <code>final_release</code> → final reconciliation), reads it, and shell-checks the file tree. The function keeps its legacy name even though there is no longer a verifier role.</p>
-  </div>
-  <div class="evidence-card">
     <h3>full_stack_*_script</h3>
-    <p><code>inspect_full_user_input_script</code>, <code>occ_conflict_matrix_script</code>, <code>overlay_edge_matrix_script</code>, <code>layerstack_squash_lease_script</code>, <code>lsp_refresh_semantics_script</code>, <code>recursive_oversized_matrix_script</code>, <code>final_reconciliation_script</code>, <code>verifier_checkpoint_script</code> (in <code>full_stack_tool_scripts.py</code>). These drive the composite scenarios (<code>FullStackAdversarial</code>, <code>FullCaseUserInput</code>, <code>FullSystemCapacityMatrix</code>).</p>
+    <p><code>inspect_full_user_input_script</code>, <code>occ_conflict_matrix_script</code>, <code>overlay_edge_matrix_script</code>, <code>layerstack_squash_lease_script</code>, <code>lsp_refresh_semantics_script</code>, <code>recursive_oversized_matrix_script</code>, <code>final_reconciliation_script</code> (in <code>full_stack_tool_scripts.py</code>). These drive the composite scenarios (<code>FullStackAdversarial</code>, <code>FullCaseUserInput</code>, <code>FullSystemCapacityMatrix</code>).</p>
   </div>
 </div>
 </section>

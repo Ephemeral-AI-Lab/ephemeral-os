@@ -157,7 +157,7 @@ async def test_ask_advisor_assembles_direct_launch(monkeypatch) -> None:
                 metadata={"helper_role": "advisor", "verdict": "approve"},
             ),
             agent_name="advisor",
-            event_count=1,
+            tool_call_count=1,
         )
 
     monkeypatch.setattr("engine.api.run_ephemeral_agent", _fake_run)

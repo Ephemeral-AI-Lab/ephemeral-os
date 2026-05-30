@@ -78,9 +78,8 @@ class SharedPlannerSubmissionInput(BaseModel):
     """Planner submission boundary schema.
 
     A plan is a DAG of generator + reducer tasks. ``tasks`` + ``task_specs``
-    define the generators; ``reducers`` (>=1) define the exit gate. There is no
-    global ``plan_spec``/``evaluation_criteria`` — framing lives in each task
-    spec and each reducer prompt.
+    define the generators; ``reducers`` (>=1) define the exit gate. Framing
+    lives in each task spec and each reducer prompt.
     """
 
     model_config = ConfigDict(extra="forbid")

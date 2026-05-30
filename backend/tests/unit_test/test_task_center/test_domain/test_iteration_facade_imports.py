@@ -24,7 +24,8 @@ def test_persistence_can_import_iteration_state_before_coordinator_facade() -> N
             "\n".join(
                 [
                     "from task_center._core.persistence import AttemptStoreProtocol",
-                    "from task_center.iteration import Iteration, OpenIterationCoordinatorRegistry",
+                    "from task_center._core.state import Iteration",
+                    "from task_center.iteration import OpenIterationCoordinatorRegistry",
                     "assert AttemptStoreProtocol",
                     "assert Iteration",
                     "assert OpenIterationCoordinatorRegistry",

@@ -196,7 +196,9 @@ def test_operation_overlay_release_uses_daemon_lease_guard(
 
     assert order == ["acquire", "release:lease-1"]
     assert pipeline._lease_guard._released_lease_ids == {"lease-1"}
-    assert not handle.run_dir.exists()
+    # Sync release() is lease-only; release_overlay() owns scratch rmtree, so
+    # run_dir persists past a bare handle.release().
+    assert handle.run_dir.exists()
 
 
 @pytest.mark.asyncio

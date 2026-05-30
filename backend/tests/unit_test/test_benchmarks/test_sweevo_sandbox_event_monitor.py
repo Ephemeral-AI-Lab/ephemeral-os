@@ -29,7 +29,7 @@ def test_stream_bridge_derives_sandbox_subsystem_events() -> None:
                 is_error=False,
                 tool_use_id="toolu_1",
                 agent_name="executor",
-                run_id="task-1",
+                agent_run_id="task-1",
                 metadata={
                     "status": "ok",
                     "changed_paths": ["a.txt"],
@@ -97,7 +97,7 @@ def test_stream_bridge_sandbox_fallback_flag_blocks_derived_sandbox_events() -> 
                 is_error=False,
                 tool_use_id="toolu_1",
                 agent_name="executor",
-                run_id="task-1",
+                agent_run_id="task-1",
                 metadata={
                     "status": "ok",
                     "changed_paths": ["a.txt"],
@@ -128,7 +128,7 @@ def test_stream_bridge_skips_metadata_derivation_when_sandbox_audit_emitted() ->
                 is_error=False,
                 tool_use_id="toolu_1",
                 agent_name="executor",
-                run_id="task-1",
+                agent_run_id="task-1",
                 metadata={
                     "sandbox_audit_emitted": True,
                     "status": "ok",
@@ -160,7 +160,7 @@ def test_stream_bridge_keeps_lease_event_when_sandbox_audit_emitted() -> None:
                 is_error=False,
                 tool_use_id="toolu_1",
                 agent_name="executor",
-                run_id="task-1",
+                agent_run_id="task-1",
                 metadata={
                     "sandbox_audit_emitted": True,
                     "status": "ok",
@@ -194,7 +194,7 @@ def test_stream_bridge_derives_sandbox_conflict_event() -> None:
                 is_error=True,
                 tool_use_id="toolu_conflict",
                 agent_name="executor",
-                run_id="task-1",
+                agent_run_id="task-1",
                 metadata={
                     "status": "aborted_overlap",
                     "changed_paths": ["a.txt"],

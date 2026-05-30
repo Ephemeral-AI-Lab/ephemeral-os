@@ -42,7 +42,6 @@ _DEFAULT_TAGS: dict[str, str] = {
     "failed_attempt": "attempt",
     "planned_task_spec": "assigned_task",
     "dependency_summary": "needs",
-    "entry_request": "entry_request",
 }
 
 

@@ -12,7 +12,7 @@ with ``status=failed`` and the workflow closes ``status=failed``. No generator
 or reducer task was created.
 
 Asserts: ``report.task_center_status == "failed"``; graph state contains two
-planner attempts, no accepted planner task, and no executor or evaluator tasks.
+planner attempts, no accepted planner task, and no generator or reducer tasks.
 """
 
 from __future__ import annotations

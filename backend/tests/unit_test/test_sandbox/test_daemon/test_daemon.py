@@ -316,7 +316,7 @@ def test_services_cached_per_layer_stack_root(
     b1 = occ_runtime_services.get_occ_runtime_services("/tmp/b")
 
     assert a1 is a2  # same root → cached tuple
-    assert a1.manager is not b1.manager  # different roots → distinct managers
+    assert a1.layer_stack_manager is not b1.layer_stack_manager  # different roots → distinct managers
 
 
 def test_drop_occ_runtime_services_removes_only_requested_root(

@@ -116,7 +116,7 @@ async def test_subagent_retry_succeeds_then_returns_terminal_to_parent(
         error=None,
         terminal_result=terminal,
         agent_name=fake_subagent_definition,
-        event_count=7,
+        tool_call_count=7,
     )
     calls = _install_fake_runner(monkeypatch, return_value=success_result)
 
@@ -147,7 +147,7 @@ async def test_subagent_retry_exhausted_returns_existing_error_to_parent(
         error=None,
         terminal_result=None,  # Both attempts inside run_ephemeral_agent failed
         agent_name=fake_subagent_definition,
-        event_count=4,
+        tool_call_count=4,
     )
     calls = _install_fake_runner(monkeypatch, return_value=exhausted_result)
 
@@ -180,7 +180,7 @@ async def test_subagent_internal_retries_invisible_to_parent_budget(
             output="ok", is_error=False, is_terminal=True
         ),
         agent_name=fake_subagent_definition,
-        event_count=1,
+        tool_call_count=1,
     )
     calls = _install_fake_runner(
         monkeypatch, results_per_call=[success, success, success]
@@ -226,7 +226,7 @@ async def test_parallel_subagents_retry_independently(
                 is_terminal=True,
             ),
             agent_name=fake_subagent_definition,
-            event_count=2,
+            tool_call_count=2,
         )
 
     monkeypatch.setattr("engine.api.run_ephemeral_agent", _fake, raising=False)
@@ -262,7 +262,7 @@ async def test_subagent_crash_does_not_trigger_retry(
         error="downstream-boom",
         terminal_result=None,
         agent_name=fake_subagent_definition,
-        event_count=0,
+        tool_call_count=0,
     )
     calls = _install_fake_runner(monkeypatch, return_value=crash_result)
 

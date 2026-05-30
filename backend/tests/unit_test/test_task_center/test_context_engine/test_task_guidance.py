@@ -1,15 +1,13 @@
-"""Registry-driven ``<Task Guidance>`` builder behaviour.
+"""Launch-time ``<Task Guidance>`` builder behaviour.
 
 The single :func:`build_task_guidance` composes its two labelled sections
 deterministically:
 
 * ``What's in context:`` — outline produced by :func:`render_context_outline`
   from the packet alone (no per-role branching).
-* ``What to do:`` — one line lifted from :data:`AGENT_DIRECTIVES` by exact
+* ``What to do:`` — one line lifted from
+  :data:`TASK_GUIDANCE_DIRECTIVES` by exact
   agent name.
-
-The explorer builder remains a standalone helper for subagent-launch paths
-that bypass the composer; it takes no arguments.
 """
 
 from __future__ import annotations
@@ -25,9 +23,9 @@ from task_center.context_engine.packet import (
     ContextPriority,
     ContextRefs,
 )
-from task_center.context_engine.agent_directives import AGENT_DIRECTIVES
-from task_center.context_engine.task_guidance import (
-    build_explorer_task_guidance,
+from task_center.agent_launch.task_guidance import (
+    TASK_GUIDANCE_DIRECTIVES,
+    build_launch_task_guidance,
     build_task_guidance,
 )
 
@@ -188,28 +186,12 @@ def test_reducer_outline_is_needs_then_assigned_prompt():
 
 
 def test_unknown_agent_raises():
-    with pytest.raises(KeyError, match="AGENT_DIRECTIVES"):
+    with pytest.raises(KeyError, match="task guidance directive"):
         build_task_guidance(
             agent_def=_agent_def("nonexistent"),
             packet=_packet([_goal_block()]),
             scope=None,  # type: ignore[arg-type]
         )
-
-
-# ---------------------------------------------------------------------------
-# Explorer subagent — static prose, no inputs, no branches.
-# ---------------------------------------------------------------------------
-
-
-def test_explorer_static_prose_uses_role_directive():
-    prose = build_explorer_task_guidance()
-    assert AGENT_DIRECTIVES["explorer"] in prose
-    assert "submit_exploration_result" in prose
-
-
-def test_explorer_takes_no_arguments():
-    sig = inspect.signature(build_explorer_task_guidance)
-    assert list(sig.parameters) == []
 
 
 # ---------------------------------------------------------------------------
@@ -225,3 +207,21 @@ def test_composer_dispatch_signature():
         assert param.kind == inspect.Parameter.KEYWORD_ONLY, (
             f"build_task_guidance.{name} must be keyword-only"
         )
+
+
+def test_launch_builder_returns_none_for_agents_without_row_3():
+    prose = build_launch_task_guidance(
+        agent_def=_agent_def("context_only_executor"),
+        packet=_packet([_goal_block()]),
+        scope=None,  # type: ignore[arg-type]
+    )
+    assert prose is None
+
+
+def test_task_guidance_directives_match_spec_lines():
+    expected = {
+        "planner": "Plan for <iteration_goal>.",
+        "executor": "Complete <assigned_task>.",
+        "reducer": "Digest your <needs> and gate against <assigned_prompt>.",
+    }
+    assert TASK_GUIDANCE_DIRECTIVES == expected

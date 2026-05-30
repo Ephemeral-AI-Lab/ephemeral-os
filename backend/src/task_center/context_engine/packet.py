@@ -36,7 +36,6 @@ class ContextBlockKind(StrEnum):
     FAILED_ATTEMPT = "failed_attempt"
     PLANNED_TASK_SPEC = "planned_task_spec"
     DEPENDENCY_SUMMARY = "dependency_summary"
-    ENTRY_REQUEST = "entry_request"
 
 
 class ContextRefs(BaseModel):

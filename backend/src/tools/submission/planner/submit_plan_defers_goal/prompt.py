@@ -45,6 +45,6 @@ Input (next iteration's seed):
   spawns a new iteration seeded with this string as its goal.
 
 Behavior:
-- Records the plan with `closes_goal=False`. Once the reducers pass, the next
-  iteration is spawned automatically from `deferred_goal_for_next_iteration`.\
+- Records the deferring plan. Once the reducers pass, the next iteration is
+  spawned automatically from `deferred_goal_for_next_iteration`.\
 """

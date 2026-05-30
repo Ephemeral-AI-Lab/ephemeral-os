@@ -179,17 +179,6 @@ def test_executor_outline_with_needs_and_assigned_task():
     )
 
 
-def test_entry_request_outline():
-    block = ContextBlock(
-        kind="entry_request",
-        priority=ContextPriority.REQUIRED,
-        text="request body",
-        metadata={"tag": "entry_request"},
-    )
-    outline = render_context_outline(_packet([block]))
-    assert outline == "- <entry_request> — root delegation envelope"
-
-
 def test_unknown_tag_is_skipped():
     block = ContextBlock(
         kind="custom_kind",

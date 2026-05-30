@@ -93,7 +93,6 @@ def build_scenario_context(
         task_id=task_id or None,
         agent_name=str(metadata.agent_name or "") or None,
         context_message=(str(task.get("context_message") or "") if task else None),
-        graph_summary=None,
         requirement_ledger=getattr(scenario, "requirement_ledger", None),
         package_plan=getattr(scenario, "package_plan", None),
         matrix_plan=getattr(scenario, "matrix_plan", None),

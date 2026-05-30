@@ -144,7 +144,7 @@ async def test_advisor_returns_terminal_output_on_success(
             error=None,
             terminal_result=terminal,
             agent_name="advisor",
-            event_count=5,
+            tool_call_count=5,
         ),
     )
 
@@ -172,7 +172,7 @@ async def test_advisor_returns_pinned_error_when_terminal_missing(
             error=None,
             terminal_result=None,
             agent_name="advisor",
-            event_count=2,
+            tool_call_count=2,
         ),
     )
 
@@ -200,7 +200,7 @@ async def test_advisor_returns_pinned_error_on_crash(
             error="downstream-boom",
             terminal_result=None,
             agent_name="advisor",
-            event_count=0,
+            tool_call_count=0,
         ),
     )
 
@@ -231,7 +231,7 @@ async def test_advisor_launches_with_two_user_messages(
                 output="ok", is_error=False, is_terminal=True
             ),
             agent_name="advisor",
-            event_count=1,
+            tool_call_count=1,
         ),
     )
 

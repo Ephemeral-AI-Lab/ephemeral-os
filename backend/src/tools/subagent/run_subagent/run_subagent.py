@@ -214,17 +214,16 @@ async def run_subagent(
         )
 
     # Subagents have NO ContextScope and do NOT go through the composer —
-    # the isolation contract forbids inheriting the parent's scope. Split
-    # the launch directly: caller's free-text prompt is user msg 1
-    # (initial_messages[0]); a static identity-instruction string from
-    # context_engine.task_guidance is user msg 2 (the spawn prompt). Only one
-    # subagent class exists today (explorer); a static test guards that
-    # invariant so adding another class forces a revisit here.
-    from task_center.context_engine.task_guidance import (
-        build_explorer_task_guidance,
+    # the isolation contract forbids inheriting the parent's scope. Split the
+    # launch directly: caller's free-text prompt is user msg 1
+    # (initial_messages[0]); a static explorer prompt is user msg 2 (the spawn
+    # prompt). Only one subagent class exists today (explorer); a static test
+    # guards that invariant so adding another class forces a revisit here.
+    from tools.subagent.explorer_guidance import (
+        build_explorer_launch_prompt,
     )
 
-    role_text = build_explorer_task_guidance()
+    role_text = build_explorer_launch_prompt()
     result = await run_ephemeral_agent(
         parent_cfg,
         role_text,

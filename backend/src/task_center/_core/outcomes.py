@@ -206,13 +206,8 @@ def to_record(outcome: Outcome) -> dict[str, Any]:
 
 
 def from_record(record: dict[str, Any]) -> Outcome:
-    """Rebuild an :class:`Outcome` from a serialized dict.
-
-    Reads ``outcome`` then the legacy ``summary`` key (pre-redesign rows).
-    """
+    """Rebuild an :class:`Outcome` from a serialized dict."""
     outcome_text = record.get("outcome")
-    if outcome_text is None:
-        outcome_text = record.get("summary")
     failure = record.get("failure")
     return Outcome(
         local_id=str(record.get("local_id") or ""),
@@ -230,22 +225,14 @@ def from_record(record: dict[str, Any]) -> Outcome:
 def parse_outcomes_record(value: Any) -> list[Outcome]:
     """Parse a denormalized iteration ``outcomes`` field into outcomes.
 
-    The field is a ``json.dumps`` list-of-records string. Degrades gracefully
-    for legacy (pre-migration) rows whose value is free text rather than a JSON
-    list: such a row renders as a single ``<task>`` carrying the legacy text.
-    A list value (already-parsed) is accepted directly.
+    The field is a ``json.dumps`` list-of-records string (or an already-parsed
+    list); ``None``/empty yields no outcomes.
     """
     if not value:
         return []
     if isinstance(value, list):
         return [from_record(item) for item in value if isinstance(item, dict)]
-    try:
-        data = json.loads(value)
-    except (ValueError, TypeError):
-        data = None
-    if not isinstance(data, list):
-        return [Outcome(local_id="summary", status="success", outcome=str(value))]
-    return [from_record(item) for item in data if isinstance(item, dict)]
+    return [from_record(item) for item in json.loads(value) if isinstance(item, dict)]
 
 
 def workflow_outcomes(
@@ -280,8 +267,6 @@ def _outcome_text(task: dict[str, Any]) -> str:
     if latest is None:
         return _NO_OUTCOME
     text = latest.get("outcome")
-    if text is None:
-        text = latest.get("summary")
     return str(text) if text is not None else _EMPTY
 
 

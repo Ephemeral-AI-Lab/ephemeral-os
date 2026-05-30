@@ -13,7 +13,7 @@ global ``<plan_spec>`` — the planner distributes framing into each task_spec.
 
 The ``<Task Guidance>`` row is assembled at launch time by
 ``AgentEntryComposer`` via the registry-driven
-``task_center/context_engine/task_guidance.py:build_task_guidance``.
+``task_center/agent_launch/task_guidance.py:build_task_guidance``.
 """
 
 from __future__ import annotations

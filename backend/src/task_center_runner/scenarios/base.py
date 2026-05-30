@@ -33,7 +33,6 @@ class ScenarioContext:
     task_id: str | None = None
     agent_name: str | None = None
     context_message: str | None = None
-    graph_summary: dict[str, Any] | None = None
     requirement_ledger: Any = None
     package_plan: Any = None
     matrix_plan: Any = None

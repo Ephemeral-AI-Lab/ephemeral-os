@@ -18,8 +18,8 @@ from task_center.agent_launch.skill_message import (
     _wrap_task_guidance,
     build_skill_message,
 )
-from task_center.agent_launch.task_guidance_dispatch import (
-    task_guidance_builder_for,
+from task_center.agent_launch.task_guidance import (
+    build_launch_task_guidance,
 )
 from task_center.context_engine.engine import ContextEngine
 from task_center.context_engine.exceptions import ContextEngineError
@@ -69,11 +69,11 @@ class AgentEntryComposer:
         rendered_body = self.renderer.render_context(packet)
         context_message = _wrap_context(rendered_body)
 
-        builder = task_guidance_builder_for(agent_def.name)
-        if builder is not None:
-            prose = builder(agent_def=agent_def, packet=packet, scope=scope)
-        else:
-            prose = None
+        prose = build_launch_task_guidance(
+            agent_def=agent_def,
+            packet=packet,
+            scope=scope,
+        )
         task_guidance = _wrap_task_guidance(prose, agent_def)
 
         skill_message = build_skill_message(agent_def.skill, agent_def)

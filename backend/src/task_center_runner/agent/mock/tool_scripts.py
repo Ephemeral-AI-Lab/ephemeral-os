@@ -428,46 +428,6 @@ def final_reconciliation_script(ctx: ScenarioContext) -> PreparedToolScript:
     )
 
 
-def verifier_checkpoint_script(ctx: ScenarioContext) -> PreparedToolScript:
-    """Run verifier readback checks for the requested checkpoint."""
-    checkpoint = (
-        context_message_field(ctx.context_message or "", "checkpoint")
-        or "checkpoint"
-    )
-    if checkpoint == "inventory":
-        read_path = _LEDGER_PATH
-    elif checkpoint == "recursive_return":
-        read_path = _RECURSIVE_CLOSE_PATH
-    elif checkpoint == "final_release":
-        read_path = _FINAL_PATH
-    else:
-        read_path = _LEDGER_PATH
-    return PreparedToolScript(
-        name=f"verify:{checkpoint}",
-        summary=f"Verifier checked checkpoint {checkpoint} with sandbox readback.",
-        artifact=read_path,
-        steps=(
-            ToolScriptStep(
-                "read-checkpoint-evidence",
-                read_file_tool,
-                {"file_path": read_path, "start_line": 1, "end_line": 20},
-            ),
-            ToolScriptStep(
-                "shell-check-checkpoint",
-                shell_tool,
-                {
-                    "command": (
-                        f"test -s {read_path} && "
-                        f"printf 'checkpoint={checkpoint}\\n' && "
-                        f"find .ephemeralos/sweevo-mock -maxdepth 3 -type f | sort | head -40"
-                    ),
-                    "timeout": 60,
-                },
-            ),
-        ),
-    )
-
-
 async def _emit_text(
     emit: EmitStreamEvent,
     metadata: ExecutionMetadata,
@@ -522,5 +482,4 @@ __all__ = [
     "final_reconciliation_script",
     "inspect_user_input_script",
     "recursive_step_script",
-    "verifier_checkpoint_script",
 ]

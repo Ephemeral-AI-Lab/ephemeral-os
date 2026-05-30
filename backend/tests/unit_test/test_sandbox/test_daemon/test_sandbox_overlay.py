@@ -241,8 +241,10 @@ def test_operation_overlay_uses_shared_snapshot_layers_and_private_upperdir(
     second.release()
 
     assert layer_stack.released == ["lease-1-1", "lease-1-2"]
-    assert not Path(first.run_dir).exists()
-    assert not Path(second.run_dir).exists()
+    # Sync release() is lease-only; scratch rmtree is owned by release_overlay()
+    # (the production teardown path), so run_dir persists until then.
+    assert Path(first.run_dir).exists()
+    assert Path(second.run_dir).exists()
 
 
 @pytest.mark.asyncio

@@ -96,7 +96,7 @@ async def test_correctness_testing_scenario_runs_end_to_end(
                     assert role_segment in {
                         "planner",
                         "executor",
-                        "evaluator",
+                        "reducer",
                         "generator",
                     }, role_segment
     assert found_attempt_with_role_dir, "no attempt_NN_<id> dir"
@@ -104,7 +104,7 @@ async def test_correctness_testing_scenario_runs_end_to_end(
     _assert_message_jsonl_contains_sandbox_tools(run_dir)
 
     # --- Helper agents are filtered out -------------------------------
-    primary_role_segments = {"planner", "executor", "evaluator", "generator"}
+    primary_role_segments = {"planner", "executor", "reducer", "generator"}
     for role_dir in run_dir.rglob("[0-9][0-9]_*_*"):
         role_segment = role_dir.name.split("_", 2)[1]
         assert role_segment in primary_role_segments, (
@@ -112,7 +112,7 @@ async def test_correctness_testing_scenario_runs_end_to_end(
         )
 
     assert count_role_tasks(report, "planner") >= 1, report.graph_summary
-    assert count_role_tasks(report, "evaluator") >= 1, report.graph_summary
+    assert count_role_tasks(report, "reducer") >= 1, report.graph_summary
 
     # --- run.json carries the bound run id ----------------------------
     run_payload = json.loads((run_dir / "run.json").read_text(encoding="utf-8"))

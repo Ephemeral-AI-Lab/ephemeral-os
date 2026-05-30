@@ -16,10 +16,10 @@ For helper (advisor) and subagent (explorer) initial-message
 construction, see ``scripts/build_initial_messages_report.py`` — the
 scenario does not invoke helpers today, so the report builder calls the
 real builder functions in ``tools/ask_helper/_lib/_compose.py`` and
-``task_center/context_engine/task_guidance.py`` against a realistic parent
-context. Once the scenario script grows a helper dispatch, this test should be
-extended to also collect ``advisor`` / ``explorer`` ``message.jsonl`` trees from
-the live run.
+``tools/subagent/explorer_guidance.py`` against a realistic
+parent context. Once the scenario script grows a helper dispatch, this test
+should be extended to also collect ``advisor`` / ``explorer`` ``message.jsonl``
+trees from the live run.
 """
 
 from __future__ import annotations

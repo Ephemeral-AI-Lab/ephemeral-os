@@ -24,10 +24,10 @@ from task_center.agent_launch.composer import AgentEntryComposer
 from task_center.attempt.launch import (
     AgentStreamEmitter,
     AttemptAgentRunner,
+    AttemptDeps,
     EphemeralAttemptAgentLauncher,
 )
 from task_center.attempt.orchestrator_registry import AttemptOrchestratorRegistry
-from task_center.attempt.launch import AttemptDeps
 from task_center.context_engine.engine import ContextEngine, ContextEngineDeps
 from task_center.context_engine.recipes import register_builtin_recipes
 from task_center.entry.sandbox_provisioning import (

@@ -107,9 +107,8 @@ def test_initialize_db_migrates_legacy_agent_runs_schema(
         agent_name="executor",
         context_message="prompt",
         status="running",
-        summaries=[],
+        outcomes=[],
         needs=[],
-        task_center_attempt_id=None,
     )
 
     agent_run_store.create_run(

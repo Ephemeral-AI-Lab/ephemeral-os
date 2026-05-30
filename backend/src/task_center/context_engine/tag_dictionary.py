@@ -6,7 +6,7 @@ outline uses. The dictionary is the single source of truth for those labels:
 two cases that reference the same ``(tag, semantic-attribute-set)`` produce
 byte-identical bullets.
 
-Only ``status``, ``verdict``, and ``position`` are *semantic* attributes —
+Only ``status`` and ``position`` are *semantic* attributes —
 they change what a tag means. ``iteration_no``, ``attempt_no``, ``task_id``,
 ``id`` are *identity* attributes — they distinguish instances but never change
 the label. The dictionary keys on semantic attributes only.
@@ -36,11 +36,6 @@ class TagDescriptor(BaseModel):
 
 TAG_DICTIONARY: list[TagDescriptor] = [
     TagDescriptor(tag="goal", attr_filter=None, label="user's request"),
-    TagDescriptor(
-        tag="entry_request",
-        attr_filter=None,
-        label="root delegation envelope",
-    ),
     TagDescriptor(
         tag="iteration",
         attr_filter={"position": "prior"},
@@ -92,7 +87,7 @@ RECURSE_THROUGH: frozenset[str] = frozenset({"iteration"})
 _IDENTITY_ATTRS: frozenset[str] = frozenset({"iteration_no", "attempt_no", "task_id", "id"})
 
 # Semantic attributes — the only ones the dictionary keys on.
-_SEMANTIC_ATTRS: frozenset[str] = frozenset({"status", "verdict", "position"})
+_SEMANTIC_ATTRS: frozenset[str] = frozenset({"status", "position"})
 
 
 def match(tag: str, attrs: dict[str, str]) -> TagDescriptor | None:
@@ -100,7 +95,7 @@ def match(tag: str, attrs: dict[str, str]) -> TagDescriptor | None:
 
     A descriptor with ``attr_filter`` set wins over a wildcard entry on the
     same tag, provided every filter key matches the value in ``attrs``. Only
-    ``status`` and ``verdict`` participate in matching — identity attributes
+    ``status`` and ``position`` participate in matching — identity attributes
     are ignored.
     """
     semantic = {k: v for k, v in attrs.items() if k in _SEMANTIC_ATTRS}
@@ -125,12 +120,12 @@ def render_attrs(attrs: dict[str, str]) -> str:
     """Format ``attrs`` for an outline bullet's opening tag.
 
     Identity attributes (``iteration_no``, ``attempt_no``, ``task_id``, ``id``)
-    are dropped; semantic attributes (``status``, ``verdict``, ``position``) are
-    emitted in a stable order so two cases at the same ``(tag, semantic-set)``
-    produce byte-identical bullets.
+    are dropped; semantic attributes (``status``, ``position``) are emitted in a
+    stable order so two cases at the same ``(tag, semantic-set)`` produce
+    byte-identical bullets.
     """
     ordered: list[tuple[str, str]] = []
-    for key in ("status", "verdict", "position"):
+    for key in ("status", "position"):
         if key in attrs:
             ordered.append((key, attrs[key]))
     for key, value in attrs.items():

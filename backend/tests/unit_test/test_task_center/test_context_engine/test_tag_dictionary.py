@@ -2,7 +2,7 @@
 
 Pins the registry against ``OPTIMIZED_USER_MSG_1.md``: every spec'd
 ``(tag, semantic-attrs)`` row maps to the spec's canonical label and only
-``status`` / ``verdict`` / ``position`` participate in matching.
+``status`` / ``position`` participate in matching.
 """
 
 from __future__ import annotations
@@ -20,7 +20,6 @@ from task_center.context_engine.tag_dictionary import (
 def test_dictionary_has_every_canonical_row_from_spec():
     expected: list[tuple[str, dict[str, str] | None, str]] = [
         ("goal", None, "user's request"),
-        ("entry_request", None, "root delegation envelope"),
         ("iteration", {"position": "prior"}, "previous iteration's work"),
         ("iteration", {"position": "current"}, "active iteration"),
         ("iteration_goal", None, "active iteration's scope"),
@@ -78,14 +77,14 @@ def test_render_attrs_orders_semantic_first_and_drops_identity():
     out = render_attrs(
         {
             "iteration_no": "1",
-            "verdict": "fail",
             "status": "prior",
             "position": "current",
             "id": "x",
         }
     )
-    # position is a semantic attr too (contract §3); it renders after verdict.
-    assert out == 'status="prior" verdict="fail" position="current"'
+    # status and position are the semantic attrs (contract §3), emitted in a
+    # stable order; identity attrs (iteration_no, id) are dropped.
+    assert out == 'status="prior" position="current"'
 
 
 def test_render_attrs_empty_for_only_identity_attrs():

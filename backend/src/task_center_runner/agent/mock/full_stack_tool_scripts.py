@@ -935,47 +935,6 @@ def final_reconciliation_script(ctx: ScenarioContext) -> PreparedToolScript:
     )
 
 
-def verifier_checkpoint_script(ctx: ScenarioContext) -> PreparedToolScript:
-    """Verifier-side readback for full-stack checkpoints."""
-    checkpoint = (
-        context_message_field(ctx.context_message or "", "checkpoint")
-        or "checkpoint"
-    )
-    read_paths = {
-        "inventory": _LEDGER_PATH,
-        "subsystem_wave_guard": _OCC_PATH,
-        "recursive_wave": f"{_RECURSIVE_ROOT}/oversized-a.json",
-        "recursive_final": _RECURSIVE_CLOSE_PATH,
-        "recursive_return": _FINAL_PATH,
-        "final_release": _FINAL_PATH,
-    }
-    read_path = read_paths.get(checkpoint, _FINAL_PATH)
-    return PreparedToolScript(
-        name=f"verify_full_stack:{checkpoint}",
-        summary=f"Verifier checked full-stack checkpoint {checkpoint}.",
-        artifact=read_path,
-        steps=(
-            ToolScriptStep(
-                "read-full-stack-checkpoint",
-                read_file_tool,
-                {"file_path": read_path, "start_line": 1, "end_line": 80},
-            ),
-            ToolScriptStep(
-                "shell-list-full-stack-evidence",
-                shell_tool,
-                {
-                    "command": (
-                        f"test -s {read_path} && "
-                        f"find {_ROOT} {_RECURSIVE_ROOT} -maxdepth 3 -type f "
-                        "| sort | head -80"
-                    ),
-                    "timeout": 60,
-                },
-            ),
-        ),
-    )
-
-
 def _metric_steps(
     ctx: ScenarioContext,
     subsystem: str,
@@ -1198,5 +1157,4 @@ __all__ = [
     "occ_conflict_matrix_script",
     "overlay_edge_matrix_script",
     "recursive_oversized_matrix_script",
-    "verifier_checkpoint_script",
 ]

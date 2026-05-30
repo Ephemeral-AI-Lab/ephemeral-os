@@ -15,9 +15,6 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from task_center._core.state import (
-        Iteration as Iteration,
-    )
     from task_center.iteration.attempt_coordinator import (
         IterationAttemptCoordinator as IterationAttemptCoordinator,
         OpenIterationCoordinatorRegistry as OpenIterationCoordinatorRegistry,
@@ -25,10 +22,8 @@ if TYPE_CHECKING:
     )
 
 _COORDINATORS = "task_center.iteration.attempt_coordinator"
-_STATE = "task_center._core.state"
 
 _EXPORTS: dict[str, tuple[str, str]] = {
-    "Iteration": (_STATE, "Iteration"),
     "IterationAttemptCoordinator": (
         _COORDINATORS,
         "IterationAttemptCoordinator",
