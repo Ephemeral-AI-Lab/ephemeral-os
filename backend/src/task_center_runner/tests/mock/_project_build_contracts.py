@@ -50,8 +50,8 @@ _SUBMISSION_TOOL_NAMES = {
     "submit_workflow_handoff",
     "submit_plan_closes_goal",
     "submit_plan_defers_goal",
-    "submit_execution_success",
-    "submit_execution_blocker",
+    "submit_generator_success",
+    "submit_generator_failure",
     "submit_reduction_success",
     "submit_reduction_failure",
 }

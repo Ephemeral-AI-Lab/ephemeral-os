@@ -8,7 +8,6 @@ from typing import Any
 __all__ = [
     "AgentRunStore",
     "WorkflowStore",
-    "ContextPacketStore",
     "AttemptStore",
     "ModelStore",
     "TaskCenterStore",
@@ -20,10 +19,6 @@ _EXPORTS = {
     "WorkflowStore": (
         "db.stores.workflow_store",
         "WorkflowStore",
-    ),
-    "ContextPacketStore": (
-        "db.stores.context_packet_store",
-        "ContextPacketStore",
     ),
     "AttemptStore": (
         "db.stores.attempt_store",

@@ -25,8 +25,6 @@ from task_center._core.primitives import (
 )
 from task_center.agent_launch.composer import AgentEntryComposer
 from task_center.context_engine.engine import ContextEngine, ContextEngineDeps
-from task_center.context_engine.recipes import register_builtin_recipes
-from task_center.context_engine.recipes_registry import RecipeRegistry
 from task_center.attempt.orchestrator import AttemptOrchestrator
 from task_center.attempt.orchestrator_registry import (
     AttemptOrchestratorRegistry,
@@ -56,18 +54,13 @@ class _RecordingLauncher:
 
 @pytest.fixture(autouse=True)
 def _isolate_global_registries():
-    saved_recipes = dict(RecipeRegistry._registry)
     saved_definitions = list_definitions()
-    RecipeRegistry.clear()
     _clear_definitions()
-    register_builtin_recipes()
     # Load every agent.md in the repo so launch lookups succeed.
     for definition in load_agents_tree(AGENTS_ROOT):
         register_definition(definition)
     yield
-    RecipeRegistry.clear()
     _clear_definitions()
-    RecipeRegistry._registry.update(saved_recipes)
     for definition in saved_definitions:
         register_definition(definition)
 

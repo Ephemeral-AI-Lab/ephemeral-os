@@ -48,7 +48,7 @@ def assert_focused_scenario_report(
 
 # Both FAILED and BLOCKED are non-success terminal generator statuses in
 # TaskCenter (TERMINAL_GENERATOR_STATUSES); either one fails its attempt. A
-# ``submit_execution_blocker`` task is "a task that failed the attempt" for the
+# ``submit_generator_failure`` task is "a task that failed the attempt" for the
 # purposes of the scenario role counts.
 _FAILED_STATUSES: tuple[str, ...] = ("failed", "blocked")
 

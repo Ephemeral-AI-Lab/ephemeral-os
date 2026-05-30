@@ -1,7 +1,7 @@
 """Helper-tool message builder for ``ask_advisor``.
 
-The helper tool no longer inherits the parent's ``ContextPacket``. Instead
-it reconstructs the helper's two user messages directly:
+The helper tool does not inherit a prebuilt parent context object. Instead it
+reconstructs the helper's two user messages directly:
 
 * ``user_msg_1`` carries the parent's verbatim ``user_msg_1`` (engineered
   context the parent received), the parent's verbatim ``user_msg_2``

@@ -1,4 +1,4 @@
-"""Static guard against removed TaskCenter submission-era surfaces."""
+"""Static guard against removed TaskCenter lifecycle/context surfaces."""
 
 from __future__ import annotations
 
@@ -24,10 +24,18 @@ _REMOVED_TOKENS = (
     "apply_workflow_closure_report",
     "apply_evaluator_submission",
     "set_plan_contract",
-    "TaskOutcome",
     "generator_dag",
     "GeneratorDagSummary",
     "evaluator_task_id",
+    "submit_execution_success",
+    "submit_execution_blocker",
+    "SUBMIT_EXECUTION_SUCCESS_TOOL_NAME",
+    "SUBMIT_EXECUTION_BLOCKER_TOOL_NAME",
+    "class Outcome",
+    "ContextPacket",
+    "ContextOutline",
+    "TagDictionary",
+    "recipes_registry",
 )
 
 

@@ -10,13 +10,13 @@ def get_submit_reduction_success_description() -> str:
 Terminate your reducer run with SUCCESS for the current attempt.
 
 Call this when:
-- The `<needs>` outcomes satisfy your `<assigned_prompt>`.
+- The `<dependencies>` outcomes satisfy your `<assigned_task>`.
 - The slice you gate meets its acceptance bar.
 
 Do NOT call this when:
-- The `<assigned_prompt>` is not satisfied — use `{SUBMIT_REDUCTION_FAILURE_TOOL_NAME}`.
-- You haven't actually checked the `<needs>` outcomes against your
-  `<assigned_prompt>` — do that first.
+- The `<assigned_task>` is not satisfied — use `{SUBMIT_REDUCTION_FAILURE_TOOL_NAME}`.
+- You haven't actually checked the `<dependencies>` outcomes against your
+  `<assigned_task>` — do that first.
 
 Inputs:
 - `outcome`: 1–3 sentence recap of the reduction outcome.

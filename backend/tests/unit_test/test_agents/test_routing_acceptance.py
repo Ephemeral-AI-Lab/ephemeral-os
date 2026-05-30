@@ -17,37 +17,19 @@ from agents import (
     unregister_definition,
     validate_agent_definitions_resolved,
 )
-from task_center.context_engine.recipes_registry import (
-    ContextRecipe,
-    RecipeRegistry,
-)
 from tools.submission.planner._schemas import _is_generator_capable_agent
 
 
 @pytest.fixture(autouse=True)
 def _isolate():
-    saved_recipes = dict(RecipeRegistry._registry)
     saved_definitions = list_definitions()
-    RecipeRegistry.clear()
     for d in list_definitions():
         unregister_definition(d.name)
     yield
-    RecipeRegistry.clear()
     for d in list_definitions():
         unregister_definition(d.name)
-    RecipeRegistry._registry.update(saved_recipes)
     for d in saved_definitions:
         register_definition(d)
-
-
-def _stub_recipe(recipe_id: str) -> None:
-    RecipeRegistry.register(
-        ContextRecipe(
-            id=recipe_id,
-            required_scope_fields=frozenset({"request_id"}),
-            build=lambda s, d: None,  # type: ignore[arg-type, return-value]
-        )
-    )
 
 
 # ---------------------------------------------------------------------------
@@ -101,7 +83,6 @@ def test_ac2_unknown_agent_name_is_rejected() -> None:
 
 def test_ac9_planner_md_shape_passes_validation() -> None:
     """The planner.md shape validates without legacy profile variants."""
-    _stub_recipe("planner")
     planner = AgentDefinition(
         name="planner",
         description="planner",
@@ -132,7 +113,7 @@ def test_ac10_factory_metadata_role_matches_role_value_exactly() -> None:
             description="ac10 fixture",
             role=kind,
             allowed_tools=[],
-            terminals=["submit_execution_success"],
+            terminals=["submit_generator_success"],
             tool_call_limit=10,
         )
         registry_metadata: list[dict] = []

@@ -19,14 +19,11 @@ from db.base import Base
 import db.models  # noqa: F401  - populates Base.metadata
 from db.models.task_center import TaskCenterRequestRecord, TaskCenterRunRecord
 from db.stores.workflow_store import WorkflowStore
-from db.stores.context_packet_store import ContextPacketStore
 from db.stores.attempt_store import AttemptStore
 from db.stores.task_center_store import TaskCenterStore
 from db.stores.iteration_store import IterationStore
 from task_center.agent_launch.composer import AgentEntryComposer
 from task_center.context_engine.engine import ContextEngine, ContextEngineDeps
-from task_center.context_engine.recipes import register_builtin_recipes
-from task_center.context_engine.recipes_registry import RecipeRegistry
 
 
 @pytest.fixture
@@ -88,13 +85,6 @@ def task_store(session_factory) -> TaskCenterStore:
 
 
 @pytest.fixture
-def context_packet_store(session_factory) -> ContextPacketStore:
-    store = ContextPacketStore()
-    store.initialize(session_factory)
-    return store
-
-
-@pytest.fixture
 def task_center_run_id() -> str:
     return "run1"
 
@@ -114,16 +104,11 @@ def task_center_run_id() -> str:
 
 @pytest.fixture
 def isolated_agent_registries():
-    """Save + restore recipe / agent registries for test isolation."""
-    saved_recipes = dict(RecipeRegistry._registry)
+    """Save + restore agent registries for test isolation."""
     saved_definitions = list_definitions()
-    RecipeRegistry.clear()
     _clear_definitions()
-    register_builtin_recipes()
     yield
-    RecipeRegistry.clear()
     _clear_definitions()
-    RecipeRegistry._registry.update(saved_recipes)
     for definition in saved_definitions:
         register_definition(definition)
 
@@ -138,9 +123,9 @@ def register_test_agents(request):
     """Register the bare-minimum agents needed by lifecycle tests.
 
     Provides ``planner``, ``executor``, ``generator``, ``reducer`` definitions
-    each wired to its corresponding ``*_v1`` recipe. Tests that need a
-    different shape can register their own definitions on top — agent names
-    are unique per test thanks to ``isolated_agent_registries`` cleanup.
+    each declaring the context role used by launch routing. Tests that need a
+    different shape can register their own definitions on top; agent names are
+    unique per test thanks to ``isolated_agent_registries`` cleanup.
     """
     request.getfixturevalue("isolated_agent_registries")
     register_definition(
@@ -162,8 +147,8 @@ def register_test_agents(request):
             context_recipe="generator",
             terminals=[
                 "submit_workflow_handoff",
-                "submit_execution_success",
-                "submit_execution_blocker",
+                "submit_generator_success",
+                "submit_generator_failure",
             ],
         )
     )
@@ -173,7 +158,7 @@ def register_test_agents(request):
             description="test generator",
             role=AgentRole.GENERATOR,
             context_recipe="generator",
-            terminals=["submit_execution_success", "submit_execution_blocker"],
+            terminals=["submit_generator_success", "submit_generator_failure"],
             tool_call_limit=10,
         )
     )
@@ -196,7 +181,6 @@ def composer(
     iteration_store,
     attempt_store,
     task_store,
-    context_packet_store,
     request,
 ) -> AgentEntryComposer:
     """Real AgentEntryComposer wired against the in-memory stores."""
@@ -206,6 +190,5 @@ def composer(
         iteration_store=iteration_store,
         attempt_store=attempt_store,
         task_store=task_store,
-        context_packet_store=context_packet_store,
     )
     return AgentEntryComposer.default(ContextEngine(deps))

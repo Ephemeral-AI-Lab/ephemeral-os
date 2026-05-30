@@ -18,7 +18,7 @@ terminal_routing: planner_routing.py
 notification_triggers: []
 context_recipe: planner
 # Skill is loaded into row 4 at launch (`task_center/context_engine/
-# engine.py:build_skill_message`). The path is relative to this file:
+# skill_message.py:build_skill_message`). The path is relative to this file:
 # four `..` segments climb from `agents/profile/main/` to `backend/`,
 # then `config/skills/planner/SKILL.md` reuses the
 # existing bundled-skill discovery so the same folder is reachable via
@@ -55,52 +55,22 @@ Only terminal tools exposed in this launch are valid. If this launch does not ex
 
 You commit your plan via **exactly one** call to one of these tools. There is no other path; plain text you emit is reasoning, not a plan.
 
-The pair encodes the workflow lifecycle: `submit_plan_closes_goal` submits a plan that, once its reducers PASS, closes the workflow terminally. `submit_plan_defers_goal` submits a plan that, once its reducers PASS, closes the current iteration and continues the workflow in a new iteration spawned from your `deferred_goal_for_next_iteration`.
-
-### `submit_plan_closes_goal(tasks, task_specs, reducers)`
-
-Use when this attempt's tasks fully cover the current iteration's `<iteration_goal>`. Once the reducers pass, the iteration closes terminally and the workflow can succeed.
-
-### `submit_plan_defers_goal(tasks, task_specs, reducers, deferred_goal_for_next_iteration)`
-
-Use when this attempt delivers a **complete, coherent, bounded slice** of the current `<iteration_goal>` and a clear remainder exists. Once the reducers pass, a continuation iteration is created from your `deferred_goal_for_next_iteration`.
-
-Rules for continuation plans:
-
-- A continuation plan must stand on its own. Its tasks and criteria deliver a finished slice that closes the current iteration. The continuation is for *additional* work, not for *unfinished* work in this graph.
-- The next iteration's planner does not see this attempt's task contents, only its summary. Write `deferred_goal_for_next_iteration` as a self-contained instruction the way you would want a fresh iteration goal, not as a diff against this attempt.
-- `deferred_goal_for_next_iteration` is the next iteration's whole scope, not a backlog dump. If the remainder contains many independent items, choose one coherent, bounded next slice and leave any later remainder for that future planner to size again.
-- If this launch's available terminal tools do not include `submit_plan_defers_goal`, only `submit_plan_closes_goal` is valid.
-- If `<attempt status="failed">` blocks are present inside `<iteration status="current">`, you are retrying inside a fixed iteration goal. You may still choose terminal close or continuation when both tools are available, but the iteration goal does not change.
+The pair encodes the workflow lifecycle: `submit_plan_closes_goal` closes the
+current workflow when its reducers pass; `submit_plan_defers_goal` closes this
+iteration and starts a follow-up iteration when its reducers pass. Use the
+terminal tool descriptions for their exact signatures, payload contracts,
+diagrams, and validation rules.
 
 If you cannot decide yet, keep working with read-only and helper tools. The graph stays in PLANNING until you call exactly one terminal tool.
 
-## Required submission fields
+## Submission contract
 
-Both terminal tools share the same plan body.
-
-- `tasks: list[{id, agent_name, needs}]` — the generator tasks. At least one.
-  - `id` — short, unique within this plan. Stable identifier hinting at purpose.
-  - `agent_name` — must be `executor` (the only generator-capable agent): implementation, investigation, file edits, shell checks, and other generator work. Do not invent repository-specific names such as `code_executor`, `default`, `python_executor`, `verifier`, or `file_editor`; those are invalid harness agent names.
-  - `needs: list[str]` — `id`s in this same plan (generators or reducers). Edges represent ordering and information flow: a task receives only its `needs`' outcomes, nothing else.
-- `task_specs: dict[id, str]` — one entry per **generator** `id`, no more, no less. Each value is the task's local instruction, written for the executor to act on without re-reading the plan. State inputs, outputs, success conditions, and constraints. Reference `needs` outputs by their `id`.
-- `reducers: list[{id, needs, prompt}]` — the exit gates. At least one.
-  - `id` — short, unique within this plan (across generators and reducers).
-  - `needs: list[str]` — the task `id`s this reducer digests and gates.
-  - `prompt: str` — the reducer's gating instruction (what it must confirm). Each reducer sees only its `needs`' outcomes and this prompt, then submits a binary pass/fail.
-  - Every generator must be transitively needed by at least one reducer (a generator no reducer needs would finish unjudged and is rejected). A single reducer that needs the plan's leaf tasks recovers the whole-attempt view.
-- `deferred_goal_for_next_iteration: str` (continuation only) — non-blank, verbatim contract for the next iteration.
-
-## Hard validity rules (enforced)
-
-A submission that violates any of these is rejected. Repair and resubmit.
-
-- Task `id`s are unique across generators and reducers.
-- `task_specs` keys equal the set of generator `id`s exactly — no missing, no extra.
-- Every entry in any `needs` refers to an `id` in this plan.
-- The DAG is acyclic.
-- At least one reducer, and every generator is transitively needed by a reducer.
-- Every `task_specs` value, every reducer `prompt`, and `deferred_goal_for_next_iteration` (when present) are non-blank.
+Use the exposed terminal tool descriptions as the source of truth for payload
+fields, DAG diagrams, `needs` semantics, validation rules, and examples. When a
+plan task needs a generator-capable agent name, it must be `executor`
+(the only generator-capable agent); do not invent repository-specific names such as
+`code_executor`, `default`, `python_executor`, `verifier`, or `file_editor`,
+because those are invalid harness agent names.
 
 ## Design principles
 

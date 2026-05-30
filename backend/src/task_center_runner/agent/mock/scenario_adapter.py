@@ -8,7 +8,7 @@ Bridges the existing scenario decision methods (``planner_response`` /
 Per-role:
 - planner / reducer → one single-call ``Turn`` from the spec.
 - executor → run each probe-name's coroutine (yielding one ``ToolCall`` per
-  step), then submit ``submit_execution_success``.
+  step), then submit ``submit_generator_success``.
 
 ``ScenarioContext`` is built from ``context.tool_metadata`` at call time
 (``attempt_runtime`` carries the live TaskCenter stores), so a single per-agent
@@ -180,9 +180,9 @@ async def _executor_script(
                 else "Scenario-injected generator failure."
             )
             blocker_args = {"outcome": reason}
-            _ = yield _ask_advisor_turn("submit_execution_blocker", blocker_args)
+            _ = yield _ask_advisor_turn("submit_generator_failure", blocker_args)
             _ = yield Turn(
-                calls=(ToolCall("submit_execution_blocker", blocker_args),)
+                calls=(ToolCall("submit_generator_failure", blocker_args),)
             )
             return
         if action.startswith("request_recursive_workflow:") or action.startswith(
@@ -250,8 +250,8 @@ async def _executor_script(
         artifacts = [path for path in artifact_out if path]
 
     success_args = {"outcome": summary, "artifacts": artifacts}
-    _ = yield _ask_advisor_turn("submit_execution_success", success_args)
-    _ = yield Turn(calls=(ToolCall("submit_execution_success", success_args),))
+    _ = yield _ask_advisor_turn("submit_generator_success", success_args)
+    _ = yield Turn(calls=(ToolCall("submit_generator_success", success_args),))
 
 
 def scenario_script_for(

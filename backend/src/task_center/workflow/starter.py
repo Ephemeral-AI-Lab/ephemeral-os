@@ -15,7 +15,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any
 
-from task_center._core.outcomes import Outcome, local_id_of, to_record
+from task_center._core.outcomes import execution_outcome_for_submission, to_record
 from task_center._core.primitives import (
     TaskCenterInvariantViolation,
     attempt_id_from_task_id,
@@ -266,7 +266,12 @@ class WorkflowStarter:
                     status=TaskCenterTaskStatus.FAILED.value,
                     outcomes=[
                         to_record(
-                            Outcome(local_id_of(task_id), "failure", "Child workflow start failed.")
+                            execution_outcome_for_submission(
+                                task_id=task_id,
+                                role="generator",
+                                status="failed",
+                                outcome="Child workflow start failed.",
+                            )
                         )
                     ],
                     terminal_tool_result={"fail_reason": "workflow_start_failed"},

@@ -167,7 +167,7 @@
 
 <section id="advisor-approval-prehook"
   data-last-reviewed-commit="b1f90277db47df4796821e86513bed67cf7afa22"
-  data-evidence-paths="backend/src/tools/submission/_advisor_approval_prehook.py backend/src/tools/ask_helper/ask_advisor/ask_advisor.py backend/src/tools/submission/advisor/submit_advisor_feedback/submit_advisor_feedback.py backend/src/tools/submission/planner/submit_plan_closes_goal/submit_plan_closes_goal.py backend/src/tools/submission/planner/submit_plan_defers_goal/submit_plan_defers_goal.py backend/src/tools/submission/executor/submit_execution_success/submit_execution_success.py backend/src/tools/submission/executor/submit_execution_blocker/submit_execution_blocker.py backend/src/tools/submission/executor/submit_execution_handoff/submit_execution_handoff.py backend/src/tools/submission/evaluator/submit_evaluation_success/submit_evaluation_success.py backend/src/tools/submission/evaluator/submit_evaluation_failure/submit_evaluation_failure.py backend/src/tools/submission/verifier/submit_verification_success/submit_verification_success.py backend/src/tools/submission/verifier/submit_verification_failure/submit_verification_failure.py backend/tests/unit_test/test_tools/test_submission/test_advisor_approval_prehook.py">
+  data-evidence-paths="backend/src/tools/submission/_advisor_approval_prehook.py backend/src/tools/ask_helper/ask_advisor/ask_advisor.py backend/src/tools/submission/advisor/submit_advisor_feedback/submit_advisor_feedback.py backend/src/tools/submission/planner/submit_plan_closes_goal/submit_plan_closes_goal.py backend/src/tools/submission/planner/submit_plan_defers_goal/submit_plan_defers_goal.py backend/src/tools/submission/executor/submit_generator_success/submit_generator_success.py backend/src/tools/submission/executor/submit_generator_failure/submit_generator_failure.py backend/src/tools/submission/executor/submit_workflow_handoff/submit_workflow_handoff.py backend/src/tools/submission/reducer/submit_reduction_success/submit_reduction_success.py backend/src/tools/submission/reducer/submit_reduction_failure/submit_reduction_failure.py backend/tests/unit_test/test_tools/test_submission/test_advisor_approval_prehook.py">
 <h2>Advisor Approval Pre-Hook</h2>
 <p>
   The second concrete pre-hook family gates main-agent terminal submissions on an
@@ -186,7 +186,7 @@
     <div class="node"><strong>Parent transcript</strong><small><code>ToolResultBlock</code> inherits <code>metadata={helper_role, verdict}</code></small></div>
   </div>
   <div class="flow-row">
-    <div class="node warn"><strong>Terminal call</strong><small>main agent calls e.g. <code>submit_execution_success</code></small></div>
+    <div class="node warn"><strong>Terminal call</strong><small>main agent calls e.g. <code>submit_generator_success</code></small></div>
     <div class="node good"><strong><code>AdvisorApprovalPreHook.run</code></strong><small>reverse-walks <code>conversation_messages</code>, pairs by <code>tool_use_id</code></small></div>
     <div class="node"><strong>Decision</strong><small><code>pass</code> only when latest advisor verdict is <code>approve</code> AND <code>tool_name == target_tool</code></small></div>
   </div>

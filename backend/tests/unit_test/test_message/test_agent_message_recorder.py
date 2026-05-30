@@ -185,7 +185,7 @@ def test_advisor_approval_excluded_from_transcript(tmp_path) -> None:
                         tool_use_id="adv-1",
                         name="ask_advisor",
                         input={
-                            "tool_name": "submit_execution_success",
+                            "tool_name": "submit_generator_success",
                             "tool_payload": {},
                         },
                     ),
@@ -216,7 +216,7 @@ def test_advisor_approval_excluded_from_transcript(tmp_path) -> None:
                 content=[
                     ToolUseBlock(
                         tool_use_id="t1",
-                        name="submit_execution_success",
+                        name="submit_generator_success",
                         input={},
                     )
                 ],
@@ -228,7 +228,7 @@ def test_advisor_approval_excluded_from_transcript(tmp_path) -> None:
     )
     recorder.emit(
         ToolExecutionCompletedEvent(
-            tool_name="submit_execution_success",
+            tool_name="submit_generator_success",
             output="ok",
             tool_use_id="t1",
             agent_name="executor",
@@ -243,7 +243,7 @@ def test_advisor_approval_excluded_from_transcript(tmp_path) -> None:
         block.get("name") for block in blocks if block.get("type") == "tool_use"
     }
     assert "ask_advisor" not in tool_use_names
-    assert "submit_execution_success" in tool_use_names
+    assert "submit_generator_success" in tool_use_names
     # The real text in the mixed turn survives.
     assert any(
         block.get("type") == "text" and block.get("text") == "seeking approval"

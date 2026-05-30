@@ -7,6 +7,7 @@ from datetime import UTC, datetime
 
 from db.models.attempt import AttemptRecord
 from db.stores.base import SyncStoreMixin
+from task_center._core.outcomes import parse_outcomes_record
 from task_center._core.state import (
     Attempt,
     AttemptFailReason,
@@ -32,6 +33,7 @@ class AttemptStore(SyncStoreMixin):
                 planner_task_id=None,
                 generator_task_ids=[],
                 reducer_task_ids=[],
+                outcomes=[],
                 deferred_goal=None,
                 fail_reason=None,
                 created_at=now,
@@ -116,6 +118,7 @@ class AttemptStore(SyncStoreMixin):
         *,
         status: AttemptStatus,
         fail_reason: AttemptFailReason | None,
+        outcomes: list[dict] | None = None,
         closed_at: datetime | None = None,
     ) -> Attempt:
         with self._sf() as db:
@@ -125,6 +128,8 @@ class AttemptStore(SyncStoreMixin):
             record.stage = AttemptStage.CLOSED.value
             record.status = status.value
             record.fail_reason = fail_reason.value if fail_reason is not None else None
+            if outcomes is not None:
+                record.outcomes = outcomes
             record.closed_at = closed_at if closed_at is not None else datetime.now(UTC)
             db.commit()
             db.refresh(record)
@@ -164,6 +169,7 @@ class AttemptStore(SyncStoreMixin):
             planner_task_id=record.planner_task_id,
             generator_task_ids=tuple(record.generator_task_ids or ()),
             reducer_task_ids=tuple(record.reducer_task_ids or ()),
+            outcomes=parse_outcomes_record(record.outcomes or []),
             deferred_goal_for_next_iteration=record.deferred_goal,
             fail_reason=(
                 AttemptFailReason(record.fail_reason)

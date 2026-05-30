@@ -100,7 +100,7 @@
 <h2>Planner And Plan-DAG Persistence <a class="anchor" href="#planner-dag-persistence">#</a></h2>
 <p>A planner submission is accepted only for the current attempt planner task while the attempt is in <code>PLAN</code>. The plan is two tuples: <code>tasks</code> (generators, each with an <code>agent_name</code> and <code>task_spec</code>) and <code>reducers</code> (each with a <code>prompt</code>, no agent name — reducers always run the <code>reducer</code> profile). Both use <code>needs</code> (not <code>deps</code>). Full (<code>completes</code>) plans cannot set <code>deferred_goal_for_next_iteration</code>; deferring (<code>defers</code>) plans must set it. There is no <code>plan_spec</code> and no <code>evaluation_criteria</code>. After validation, the orchestrator marks the planner task done, persists generator rows then reducer rows, records both id tuples on the attempt, moves the attempt to <code>RUN</code>, and advances ready work.</p>
 <div class="edge-list">
-  <div><b>structural gate</b><span><code>ordered_plan_tasks(generators, reducers)</code> enforces the two construction rules at <code>PLAN</code> to <code>RUN</code>: at least one reducer (<code>"Plan must contain at least one reducer"</code>) and reachability — every generator must be transitively needed by some reducer (<code>"Plan has generator(s) no reducer needs: ..."</code>). This guarantees every attempt has an exit and all work is judged.</span></div>
+  <div><b>structural gate</b><span><code>ordered_plan_tasks(generators, reducers)</code> enforces the multi-lane DAG rules at <code>PLAN</code> to <code>RUN</code>: at least one reducer (<code>"Plan must contain at least one reducer"</code>), generator <code>needs</code> can reference one or more generators but not reducers, reducer <code>needs</code> must contain one or more generators and cannot reference reducers, and every generator must feed at least one downstream generator or reducer (<code>"Plan has generator(s) no downstream task needs: ..."</code>). This guarantees every attempt has an exit and all work is judged.</span></div>
   <div><b>DAG validation</b><span>The same helper rejects duplicate local ids, <code>needs</code> on unknown local ids, and dependency cycles across the combined generator + reducer graph before any runtime rows are used.</span></div>
   <div><b>topological order</b><span>A stable Kahn sort orders both tuples together. Runtime task ids are derived from the attempt id plus planner local id (<code>&lt;attempt_id&gt;:gen:&lt;local&gt;</code>, <code>&lt;attempt_id&gt;:red:&lt;local&gt;</code>), and <code>needs</code> are normalized into the persisted ids.</span></div>
   <div><b>stage move</b><span><code>attempt_store.set_stage(..., AttemptStage.RUN)</code> happens only after the planner task, generator rows, and reducer rows have all been persisted and both id tuples recorded on the attempt.</span></div>
@@ -108,7 +108,7 @@
 <div class="diagram" aria-label="Planner to plan DAG workflow">
   <div class="flow-row">
     <div class="node info"><strong>PlannerSubmission</strong><small>tasks (generators) + reducers, kind, deferred goal</small></div>
-    <div class="node"><strong>Gate + validate</strong><small>&ge;1 reducer, reachability, unique ids, known needs, acyclic</small></div>
+    <div class="node"><strong>Gate + validate</strong><small>&ge;1 reducer, generator-only DAG, unique ids, known needs, acyclic</small></div>
     <div class="node"><strong>Persist rows</strong><small><code>:gen:</code> + <code>:red:</code> ids, <code>needs[]</code></small></div>
     <div class="node good"><strong>Advance</strong><small>RUN stage launches first ready tasks</small></div>
   </div>
@@ -145,8 +145,8 @@
 </div>
 <div class="edge-list">
   <div><b>waiting workflow</b><span><code>WAITING_WORKFLOW</code> is not quiescent and not done. A parent generator waiting on a child workflow keeps the parent attempt from advancing until the child-workflow outcome is delivered.</span></div>
-  <div><b>blocked descendants</b><span>Pending descendants of <code>FAILED</code> or <code>BLOCKED</code> tasks remain persisted as pending not-started work. They are counted as unreachable for quiescence, not launched.</span></div>
-  <div><b>blocker semantics</b><span><code>GeneratorSubmission(status=&quot;blocker&quot;)</code> marks the task <code>BLOCKED</code>; the attempt waits for runnable siblings, then fails with <code>TASK_FAILED</code>. Blocker is generator-only — <code>ReducerSubmission.status</code> is just <code>success</code> or <code>failure</code>.</span></div>
+  <div><b>unreachable descendants</b><span>Pending descendants of <code>FAILED</code> or legacy <code>BLOCKED</code> tasks remain persisted as pending not-started work. They are counted as unreachable for quiescence, not launched.</span></div>
+  <div><b>failure semantics</b><span><code>GeneratorSubmission(status=&quot;failed&quot;)</code> and <code>ReducerSubmission(status=&quot;failed&quot;)</code> mark the task <code>FAILED</code>; the attempt waits for runnable siblings, then fails with <code>TASK_FAILED</code>. The stored task outcome status is <code>failed</code>, not <code>blocker</code> or <code>failure</code>.</span></div>
 </div>
 </section>
 
@@ -157,7 +157,7 @@
   <div><b>pass</b><span>When every plan task (generators and reducers) is <code>DONE</code>, <code>dag_status().all_done</code> is true and the stage advancer closes the attempt <code>PASSED</code> with no fail reason.</span></div>
   <div><b>fail</b><span>When the DAG is quiescent and <code>any_failed_or_blocked</code> is true, the attempt closes <code>FAILED</code> with <code>TASK_FAILED</code>. The planner-failure and launch-exhaustion paths reach the same <code>TASK_FAILED</code> close.</span></div>
   <div><b>close owner</b><span><code>AttemptOrchestrator._close_attempt()</code> is the only attempt-closing path. It asserts a valid close, deregisters the orchestrator, then notifies the iteration coordinator via <code>on_attempt_closed</code>.</span></div>
-  <div><b>outcome projection</b><span>On a passing attempt the iteration coordinator denormalizes the <em>reducer</em> outcomes (<code>reducer_outcomes</code>) onto the iteration's persisted <code>outcomes</code>; on a failing attempt it denormalizes the failed-task outcomes (<code>failed_task_outcomes</code>). There is no separate evaluator summary.</span></div>
+  <div><b>outcome projection</b><span>Attempt close persists generator/reducer execution outcomes. Iteration close projects successful reducer outcomes from all attempts plus failed generator/reducer outcomes from the final failed attempt. There is no separate evaluator summary.</span></div>
   <div><b>retry handoff</b><span>The orchestrator never creates retry attempts. Retry is decided after closure by <code>IterationAttemptCoordinator.handle_attempt_closed()</code>.</span></div>
 </div>
 <div class="callout good">
@@ -220,11 +220,11 @@
 <div class="evidence-grid">
   <div class="evidence-card">
     <h4>Primary Code</h4>
-    <p><code>attempt/orchestrator.py</code> owns submission entry points (planner, generator, reducer, child-workflow) and attempt close. <code>attempt/run_stage.py</code> owns the single RUN-stage plan-DAG advancement. <code>attempt/plan_dag.py</code> owns the structural gate (&ge;1 reducer + reachability), DAG validation, and quiescence (<code>ordered_plan_tasks</code>, <code>ready_pending_plan_ids</code>, <code>dag_status</code>).</p>
+    <p><code>attempt/orchestrator.py</code> owns submission entry points (planner, generator, reducer, child-workflow) and attempt close. <code>attempt/run_stage.py</code> owns the single RUN-stage plan-DAG advancement. <code>attempt/plan_dag.py</code> owns the structural gate (&ge;1 reducer + generator-only DAG ending in reducer sinks), DAG validation, and quiescence (<code>ordered_plan_tasks</code>, <code>ready_pending_plan_ids</code>, <code>dag_status</code>).</p>
   </div>
   <div class="evidence-card">
     <h4>Launch Code</h4>
-    <p><code>attempt/launch.py</code> owns agent scheduling, row mapping, exhaustion reporting, <code>AttemptDeps</code>, and <code>AgentLaunchFactory</code> (<code>for_planner</code> / <code>for_generator</code> / <code>for_reducer</code>). Result data lives in <code>_core/outcomes.py</code> (the recursive <code>Outcome</code> algebra).</p>
+    <p><code>attempt/launch.py</code> owns agent scheduling, row mapping, exhaustion reporting, <code>AttemptDeps</code>, and <code>AgentLaunchFactory</code> (<code>for_planner</code> / <code>for_generator</code> / <code>for_reducer</code>). Result data lives in <code>_core/outcomes.py</code> as task-bound planner/execution outcome records.</p>
   </div>
   <div class="evidence-card">
     <h4>Verification Anchors</h4>

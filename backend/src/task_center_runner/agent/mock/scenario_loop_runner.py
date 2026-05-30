@@ -258,8 +258,10 @@ class ScenarioLoopRunner:
             _attempt, iteration = _attempt_and_iteration(metadata)
             checks = {
                 "goal": "<goal>" in prompt,
-                "current_iteration": (
-                    "<iteration " in prompt and 'position="current"' in prompt
+                "current_iteration": "<current_iteration " in prompt
+                or (
+                    "<iteration " in prompt
+                    and 'position="current"' in prompt
                 ),
             }
             # Failed-attempt evidence renders as <attempt attempt_no="k"> when the
@@ -267,11 +269,12 @@ class ScenarioLoopRunner:
             # (positive-only — a non-retry planner is not penalized) rather than
             # gating on attempt_sequence_no, which the store view may not reflect
             # for the inspected planner.
-            if '<attempt attempt_no="' in prompt:
+            if '<attempt sequence="' in prompt or '<attempt attempt_no="' in prompt:
                 checks["failed_attempts"] = True
             if iteration.sequence_no > 1:
                 checks["previous_iteration_results"] = (
-                    'position="prior"' in prompt and "<task " in prompt
+                    ("<prior_iterations>" in prompt or 'position="prior"' in prompt)
+                    and "<task " in prompt
                 )
             reason = (
                 "Planner context is objective and iteration scoped; retry planners also "
@@ -284,16 +287,16 @@ class ScenarioLoopRunner:
             }
             reason = (
                 "Executor context is local to the current planned task with the "
-                "attempt contract as framing."
+                "declared dependency outcomes as framing."
             )
         elif role == "reducer":
             checks = {
-                "assigned_prompt": "<assigned_prompt" in prompt,
-                "needs": "<needs>" in prompt,
+                "assigned_task": "<assigned_task" in prompt,
+                "dependencies": "<dependencies>" in prompt,
             }
             reason = (
-                "Reducer context is graph-local: its assigned prompt and the "
-                "per-task outcomes of the generators it needs."
+                "Reducer context is graph-local: its assigned task and the "
+                "per-task outcomes of its dependencies."
             )
         else:
             checks = {"known_role": False}

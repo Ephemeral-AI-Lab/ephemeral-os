@@ -52,7 +52,7 @@ async def submit_reduction_failure(
             ReducerSubmission(
                 attempt_id=submission_context.attempt.id,
                 task_id=submission_context.task_center_task_id,
-                status="failure",
+                status="failed",
                 outcome=outcome,
                 terminal_tool_result={},
             )

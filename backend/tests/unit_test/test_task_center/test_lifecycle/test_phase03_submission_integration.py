@@ -19,7 +19,7 @@ from task_center.iteration import OpenIterationCoordinatorRegistry
 from tools._framework.core.context import ToolExecutionContextService
 from tools._framework.core.runtime import ExecutionMetadata
 from tools._framework.execution.tool_call import execute_tool_once
-from tools.submission.executor import submit_execution_success
+from tools.submission.executor import submit_generator_success
 from tools.submission.planner import submit_plan_closes_goal
 from tools.submission.reducer import submit_reduction_success
 
@@ -129,13 +129,13 @@ async def test_phase03_full_plan_through_reducer_success(
         emit=_noop_emit,
     )
     generator_result = await execute_tool_once(
-        submit_execution_success,
+        submit_generator_success,
         {"outcome": "done", "artifacts": []},
         _tool_context(
             runtime,
             attempt_id,
             generator_task_id(attempt_id, "a"),
-            advisor_approves="submit_execution_success",
+            advisor_approves="submit_generator_success",
         ),
         emit=_noop_emit,
     )

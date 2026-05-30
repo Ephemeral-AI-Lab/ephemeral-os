@@ -4,8 +4,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from unittest.mock import MagicMock
-
 import pytest
 
 from agents import (
@@ -25,7 +23,6 @@ class _Deps:
     iteration_store: object = None
     attempt_store: object = None
     task_store: object = None
-    context_packet_store: object = None
 
 
 @pytest.fixture(autouse=True)
@@ -58,18 +55,11 @@ def _make_definition(
     )
 
 
-def test_resolve_returns_skill_path_from_registered_definition(
-    tmp_path: Path, monkeypatch
-):
+def test_resolve_returns_skill_path_from_registered_definition(tmp_path: Path):
     skill_file = tmp_path / "SKILL.md"
     skill_file.write_text("# planner skill")
     base = _make_definition(name="planner_test_base", skill=skill_file)
     register_definition(base)
-
-    monkeypatch.setattr(
-        "task_center.context_engine.recipes_registry.RecipeRegistry.get",
-        lambda key: MagicMock(),
-    )
 
     selection = TerminalToolRouter().resolve(
         base_agent_name="planner_test_base",
@@ -82,9 +72,7 @@ def test_resolve_returns_skill_path_from_registered_definition(
     unregister_definition("planner_test_base")
 
 
-def test_resolve_keeps_base_skill_when_terminals_are_filtered(
-    tmp_path: Path, monkeypatch
-):
+def test_resolve_keeps_base_skill_when_terminals_are_filtered(tmp_path: Path):
     base_skill = tmp_path / "SKILL.md"
     base_skill.write_text("# planner skill")
     base = _make_definition(
@@ -93,11 +81,6 @@ def test_resolve_keeps_base_skill_when_terminals_are_filtered(
         terminals=["submit_plan_closes_goal", "submit_plan_defers_goal"],
     )
     register_definition(base)
-
-    monkeypatch.setattr(
-        "task_center.context_engine.recipes_registry.RecipeRegistry.get",
-        lambda key: MagicMock(),
-    )
 
     selection = TerminalToolRouter().resolve(
         base_agent_name="planner_test_router",
@@ -113,14 +96,9 @@ def test_resolve_keeps_base_skill_when_terminals_are_filtered(
     unregister_definition("planner_test_router")
 
 
-def test_resolve_returns_none_when_no_skill_declared(monkeypatch):
+def test_resolve_returns_none_when_no_skill_declared():
     plain = _make_definition(name="planner_test_plain", skill=None)
     register_definition(plain)
-    monkeypatch.setattr(
-        "task_center.context_engine.recipes_registry.RecipeRegistry.get",
-        lambda key: MagicMock(),
-    )
-
     selection = TerminalToolRouter().resolve(
         base_agent_name="planner_test_plain",
         scope=ContextScope(),

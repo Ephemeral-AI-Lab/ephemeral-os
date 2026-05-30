@@ -1,10 +1,11 @@
 """Plan DAG helper tests (generators + reducers as one DAG).
 
 ``ordered_plan_tasks`` validates the combined generator+reducer plan and
-enforces the two structural gates that keep "every attempt has an exit AND all
-work is judged" by construction: at least one reducer, and reachability (every
-generator transitively needed by some reducer). ``ready_pending_plan_ids`` and
-``dag_status`` drive RUN-stage dispatch off the persisted task rows.
+enforces the structural gates that keep "every attempt has an exit AND all
+work is judged" by construction: at least one reducer, and lane shape
+(generators feed generators or terminal reducers; reducers directly gate
+generators). ``ready_pending_plan_ids`` and ``dag_status`` drive RUN-stage
+dispatch off the persisted task rows.
 """
 
 from __future__ import annotations
@@ -51,14 +52,29 @@ def test_ordered_plan_tasks_topological_and_stable():
     assert ordered_red == (r,)
 
 
-def test_ordered_plan_tasks_orders_reducers_after_their_needs():
+def test_ordered_plan_tasks_allows_generator_and_reducer_fan_in():
     a = _gen("a")
-    r1 = _red("r1", ("a",))
-    r2 = _red("r2", ("r1",))
+    b = _gen("b")
+    c = _gen("c", ("a", "b"))
+    d = _gen("d", ("a", "c"))
+    r = _red("r", ("b", "d"))
 
-    ordered_gen, ordered_red = ordered_plan_tasks((a,), (r2, r1))
+    ordered_gen, ordered_red = ordered_plan_tasks((a, b, c, d), (r,))
 
-    assert ordered_gen == (a,)
+    assert ordered_gen == (a, b, c, d)
+    assert ordered_red == (r,)
+
+
+def test_ordered_plan_tasks_allows_multiple_reducer_lanes():
+    a = _gen("a")
+    b = _gen("b", ("a",))
+    c = _gen("c", ("a",))
+    r1 = _red("r1", ("b",))
+    r2 = _red("r2", ("c",))
+
+    ordered_gen, ordered_red = ordered_plan_tasks((b, c, a), (r2, r1))
+
+    assert ordered_gen == (a, b, c)
     assert ordered_red == (r1, r2)
 
 
@@ -71,12 +87,38 @@ def test_ordered_plan_tasks_rejects_missing_reducer():
 
 
 def test_ordered_plan_tasks_rejects_unreachable_generator():
-    # ``b`` is not transitively needed by any reducer.
+    # ``b`` has no downstream generator or reducer.
     a = _gen("a")
     b = _gen("b")
     r = _red("r", ("a",))
 
-    with pytest.raises(TaskCenterInvariantViolation, match="no reducer needs"):
+    with pytest.raises(TaskCenterInvariantViolation, match="no downstream task needs"):
+        ordered_plan_tasks((a, b), (r,))
+
+
+def test_ordered_plan_tasks_rejects_reducer_without_generator_need():
+    with pytest.raises(
+        TaskCenterInvariantViolation, match="must need at least one generator"
+    ):
+        ordered_plan_tasks((_gen("a"),), (_red("r", ()),))
+
+
+def test_ordered_plan_tasks_rejects_reducer_needing_reducer():
+    a = _gen("a")
+    b = _gen("b", ("a",))
+    r1 = _red("r1", ("b",))
+    r2 = _red("r2", ("r1",))
+
+    with pytest.raises(TaskCenterInvariantViolation, match="cannot need reducer"):
+        ordered_plan_tasks((a, b), (r1, r2))
+
+
+def test_ordered_plan_tasks_rejects_generator_needing_reducer():
+    a = _gen("a")
+    b = _gen("b", ("r",))
+    r = _red("r", ("a",))
+
+    with pytest.raises(TaskCenterInvariantViolation, match="cannot need reducer"):
         ordered_plan_tasks((a, b), (r,))
 
 

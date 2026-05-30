@@ -114,7 +114,7 @@
                 -&gt; [state transition and next lifecycle step]
 </pre>
 <div class="edge-list" aria-label="TaskCenter lifecycle transitions">
-  <div><b>bootstrap</b><span><code>start_task_center_run()</code> validates stores, creates request/run rows, prepares the sandbox binding, registers recipes, and constructs <code>AttemptDeps</code>.</span></div>
+  <div><b>bootstrap</b><span><code>start_task_center_run()</code> validates stores, creates request/run rows, prepares the sandbox binding, validates agent definitions, and constructs <code>AttemptDeps</code>.</span></div>
   <div><b>root</b><span><code>RunController.start_root_run()</code> seeds a synthetic <code>GENERATOR</code> bootstrap task <code>&lt;run_id&gt;:root</code> (<code>RUNNING</code>), then delegates the root workflow to it — so every workflow, including the root, is generator-spawned.</span></div>
   <div><b>start</b><span><code>WorkflowStarter.start(prompt, parent_task_id)</code> creates the Workflow, initial Iteration, and initial Attempt, then starts the attempt through the iteration coordinator.</span></div>
   <div><b>plan</b><span><code>AttemptOrchestrator</code> writes planner task state, launches the planner, and applies its plan submission (generator tasks + task specs + reducers, validated by <code>ordered_plan_tasks</code>). The PLAN stage advances to RUN.</span></div>
@@ -137,7 +137,7 @@
   </div>
   <div class="evidence-card">
     <h3>Context Engine</h3>
-    <p>Use <a class="wiki-link" href="context-engine.html">Context Engine</a> for ContextScope, recipes, packets, renderer behavior, task guidance, skills, artificial user-message rows, and retry context.</p>
+    <p>Use <a class="wiki-link" href="context-engine.html">Context Engine</a> for <code>ContextScope</code>, role-scoped <code>AgentContext</code>, XML rendering, task guidance, skills, launch user-message rows, and retry context.</p>
   </div>
   <div class="evidence-card">
     <h3>Agent Roles</h3>
@@ -168,14 +168,14 @@
 </div>
 </section>
 
-<section id="stale-claim-map" data-last-reviewed-commit="d32994314" data-evidence-paths="backend/src/task_center/workflow/lifecycle.py backend/src/task_center/iteration/attempt_coordinator.py backend/src/task_center/attempt/orchestrator.py backend/src/task_center/_core/terminal_routing.py backend/src/task_center/context_engine/recipes backend/src/task_center/context_engine/renderer.py">
+<section id="stale-claim-map" data-last-reviewed-commit="HEAD" data-evidence-paths="backend/src/task_center/workflow/lifecycle.py backend/src/task_center/iteration/attempt_coordinator.py backend/src/task_center/attempt/orchestrator.py backend/src/task_center/_core/terminal_routing.py backend/src/task_center/context_engine/engine.py backend/src/task_center/context_engine/xml.py backend/src/task_center/context_engine/task_guidance.py">
 <h2>Stale Claim Map <a class="anchor" href="#stale-claim-map">#</a></h2>
 <div class="summary">
   <ul>
     <li>Older docs name an <code>evaluator</code> role, a <code>verifier</code> profile, and an EVALUATE attempt stage. These are gone: the evaluator is replaced by the <code>reducer</code> (a plan task), the verifier profile is removed, and stages collapse to <code>PLAN -> RUN -> CLOSED</code>.</li>
     <li>Older docs say child Workflow closure delivers a <code>WorkflowClosureReport</code> through a <code>closure_report_router</code> into <code>apply_workflow_closure_report()</code>. There is no closure abstraction now: the parent resumes via <code>AttemptOrchestrator.apply_child_workflow_outcome()</code> (with <code>start_child_workflow</code> / <code>cancel_child_workflow</code>), and <code>Task.child_workflow_id</code> &lt;-&gt; <code>Workflow.parent_task_id</code> link the two directions.</li>
     <li>Older docs name <code>submit_execution_handoff</code> and <code>WorkflowOrigin</code>. The executor handoff terminal is now <code>submit_workflow_handoff</code>; <code>WorkflowStarter.start(prompt, parent_task_id)</code> has no origin object. <code>TerminalToolRouter</code> removes <code>submit_workflow_handoff</code> at nested Workflow depth (see <code>terminal_routing.py</code>).</li>
-    <li>Older docs name per-state modules (<code>attempt/state.py</code>, <code>iteration/state.py</code>, <code>workflow/state.py</code>) and a <code>plan_spec</code>. State is consolidated in <code>_core/state.py</code>; <code>plan_spec</code> is removed (the planner submits tasks + task_specs + reducers, edges are <code>needs</code>). Built-in recipes are planner, generator, and reducer.</li>
+    <li>Older docs name per-state modules (<code>attempt/state.py</code>, <code>iteration/state.py</code>, <code>workflow/state.py</code>), <code>plan_spec</code>, context packets, and recipe registries. State is consolidated in <code>_core/state.py</code>; <code>plan_spec</code> is removed; launch context is a role-scoped <code>AgentContext</code>.</li>
   </ul>
 </div>
 </section>

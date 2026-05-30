@@ -12,7 +12,7 @@ class ContextEngineError(Exception):
 
 
 class RecipeScopeError(ContextEngineError):
-    """A recipe was called with a :class:`ContextScope` missing required fields."""
+    """A context builder was called with missing launch identity fields."""
 
 
 class MissingContextRecipeError(ContextEngineError):
@@ -21,5 +21,4 @@ class MissingContextRecipeError(ContextEngineError):
 
 
 class AgentDefinitionValidationError(ContextEngineError):
-    """A registered :class:`AgentDefinition` references unknown or invalid
-    context recipes or agent definition references - caught at startup."""
+    """A selected :class:`AgentDefinition` cannot be launched."""

@@ -16,10 +16,9 @@ from task_center._core.invariants import (
     assert_valid_attempt_close,
 )
 from task_center._core.outcomes import (
-    Outcome,
-    attempt_failure_line,
-    local_id_of,
-    present_status,
+    execution_outcome_for_submission,
+    planner_outcome_from_submission,
+    project_attempt_outcomes,
     to_record,
     workflow_outcomes,
 )
@@ -128,7 +127,7 @@ class AttemptOrchestrator:
         runtime.task_store.set_task_status(
             submission.planner_task_id,
             status=TaskCenterTaskStatus.DONE.value,
-            outcomes=[to_record(Outcome("planner", "success", submission.outcome))],
+            outcomes=[to_record(planner_outcome_from_submission(submission))],
             terminal_tool_result={"kind": submission.kind},
         )
         runtime.attempt_store.set_deferred_goal(
@@ -149,7 +148,7 @@ class AttemptOrchestrator:
         self._runtime.task_store.set_task_status(
             submission.planner_task_id,
             status=TaskCenterTaskStatus.FAILED.value,
-            outcomes=[to_record(Outcome("planner", "failure", submission.outcome))],
+            outcomes=[],
             terminal_tool_result={"fail_reason": submission.fail_reason},
         )
         self._close_attempt(AttemptStatus.FAILED, AttemptFailReason.TASK_FAILED)
@@ -187,9 +186,8 @@ class AttemptOrchestrator:
         """Resolve a generator waiting on a child workflow.
 
         Idempotent: if the parent has already moved off ``waiting_workflow``
-        (an earlier delivery / race), return silently. The generator's outcome
-        is one :class:`Outcome` whose ``children`` are the child workflow's
-        outcomes (MN2); a failed child also carries an ``attempt_failure_line``.
+        (an earlier delivery / race), return silently. The parent task receives
+        the child workflow's flattened execution outcomes directly.
         """
         runtime = self._runtime
         task_id = str(generator_task["task_id"])
@@ -203,29 +201,15 @@ class AttemptOrchestrator:
         assert_generator_task_for_submission(task, attempt)
 
         succeeded = child_workflow.status == WorkflowStatus.SUCCEEDED
-        children = tuple(
+        outcomes = tuple(
             workflow_outcomes(child_workflow, iteration_store=runtime.iteration_store)
         )
-        if succeeded:
-            status = TaskCenterTaskStatus.DONE
-            text = f"Delegated workflow {child_workflow.id} succeeded."
-            failure = None
-        else:
-            status = TaskCenterTaskStatus.FAILED
-            text = f"Delegated workflow {child_workflow.id} failed."
-            failure = self._child_failure_line(final_attempt_id)
-        outcome = Outcome(
-            local_id=local_id_of(task_id),
-            status=present_status(status.value),
-            outcome=text,
-            children=children,
-            failure=failure,
-        )
+        status = TaskCenterTaskStatus.DONE if succeeded else TaskCenterTaskStatus.FAILED
         updated = runtime.task_store.set_task_status_if_current(
             task_id,
             expected_status=TaskCenterTaskStatus.WAITING_WORKFLOW.value,
             status=status.value,
-            outcomes=[to_record(outcome)],
+            outcomes=[to_record(outcome) for outcome in outcomes],
             terminal_tool_result={"child_workflow_id": child_workflow.id},
         )
         if updated is None:
@@ -239,14 +223,6 @@ class AttemptOrchestrator:
             expected_status=TaskCenterTaskStatus.WAITING_WORKFLOW.value,
             status=TaskCenterTaskStatus.RUNNING.value,
         )
-
-    def _child_failure_line(self, final_attempt_id: str | None) -> str | None:
-        if final_attempt_id is None:
-            return None
-        final_attempt = self._runtime.attempt_store.get(final_attempt_id)
-        if final_attempt is None:
-            return None
-        return attempt_failure_line(final_attempt, self._runtime.task_store)
 
     # ---- internals ------------------------------------------------------
 
@@ -357,13 +333,15 @@ class AttemptOrchestrator:
             raise TaskCenterInvariantViolation(f"{role} task {task_id!r} is not running")
         if status == "success":
             task_status = TaskCenterTaskStatus.DONE
-        elif status == "blocker":
-            task_status = TaskCenterTaskStatus.BLOCKED
+        elif status == "failed":
+            task_status = TaskCenterTaskStatus.FAILED
         else:
             task_status = TaskCenterTaskStatus.FAILED
-        result = Outcome(
-            local_id=local_id_of(task_id),
-            status=present_status(task_status.value),
+        execution_status = "success" if task_status == TaskCenterTaskStatus.DONE else "failed"
+        result = execution_outcome_for_submission(
+            task_id=task_id,
+            role="generator" if role == "Generator" else "reducer",
+            status=execution_status,
             outcome=outcome,
         )
         self._runtime.task_store.set_task_status(
@@ -387,6 +365,10 @@ class AttemptOrchestrator:
             attempt.id,
             status=status,
             fail_reason=fail_reason,
+            outcomes=[
+                to_record(outcome)
+                for outcome in project_attempt_outcomes(attempt, self._runtime.task_store)
+            ],
             closed_at=datetime.now(UTC),
         )
         self._runtime.orchestrator_registry.deregister(attempt.id)
@@ -404,7 +386,7 @@ class AttemptOrchestrator:
                 planner_task_id,
                 expected_status=TaskCenterTaskStatus.RUNNING.value,
                 status=TaskCenterTaskStatus.FAILED.value,
-                outcomes=[to_record(Outcome("planner", "failure", "Planner agent startup failed."))],
+                outcomes=[],
                 terminal_tool_result={"fail_reason": AttemptFailReason.STARTUP_FAILED.value},
             )
         except LookupError:

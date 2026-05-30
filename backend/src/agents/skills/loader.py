@@ -1,6 +1,6 @@
 """Startup lint over ``AgentDefinition.skill`` files.
 
-A skill body is row 4 at launch (`task_center/context_engine/core.py:
+A skill body is row 4 at launch (`task_center/context_engine/skill_message.py:
 build_skill_message`). Row 3 (the terminal catalog) owns terminal-tool
 authority; the skill must stay terminal-silent at the contract level so
 the two rows never drift. This module enforces that floor at process

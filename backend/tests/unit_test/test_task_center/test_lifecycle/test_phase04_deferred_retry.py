@@ -109,7 +109,6 @@ def _seed_outer_running_generator(
             ),
             reducers=(PlannedReducerTask(local_id="r", needs=("outer",), prompt="gate"),),
             deferred_goal_for_next_iteration=None,
-            outcome="outer plan",
         )
     )
     return generator_task_id(outer_attempt.id, "outer"), outer_attempt.id
@@ -123,7 +122,6 @@ def _plan(attempt_id: str, *, deferred_goal: str | None) -> PlannerSubmission:
         tasks=(PlannedGeneratorTask("d", "executor", (), "do delegated"),),
         reducers=(PlannedReducerTask("rr", ("d",), "gate delegated"),),
         deferred_goal_for_next_iteration=deferred_goal,
-        outcome="delegated plan",
     )
 
 
@@ -159,7 +157,7 @@ def _drive_delegated_attempt_to_fail(*, runtime: AttemptDeps, delegated_attempt_
         GeneratorSubmission(
             attempt_id=delegated_attempt_id,
             task_id=generator_task_id(delegated_attempt_id, "d"),
-            status="failure",
+            status="failed",
             outcome="generator failed",
             terminal_tool_result={},
         )

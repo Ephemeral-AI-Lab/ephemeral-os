@@ -31,6 +31,7 @@ class AttemptRecord(Base):
     planner_task_id: Mapped[str | None] = mapped_column(String(96), nullable=True)
     generator_task_ids: Mapped[list[str]] = mapped_column(JSON, default=list)
     reducer_task_ids: Mapped[list[str]] = mapped_column(JSON, default=list)
+    outcomes: Mapped[list[dict]] = mapped_column(JSON, default=list)
     deferred_goal: Mapped[str | None] = mapped_column(Text, nullable=True)
     fail_reason: Mapped[str | None] = mapped_column(String(48), nullable=True)
     created_at: Mapped[datetime] = mapped_column(

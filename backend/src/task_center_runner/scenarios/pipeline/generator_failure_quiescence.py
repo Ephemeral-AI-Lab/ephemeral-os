@@ -6,7 +6,7 @@ Plan shape per attempt::
         \\  |  /
             d           (depends on a, b, c)
 
-On attempt 1, task ``b`` calls ``submit_execution_blocker``. The task dispatcher
+On attempt 1, task ``b`` calls ``submit_generator_failure``. The task dispatcher
 **does not** abort the attempt immediately — quiescence semantics require it
 to wait for the still-running siblings ``a`` and ``c`` to finish before
 closing the attempt. Once all runnable roots reach a terminal state

@@ -87,7 +87,7 @@ def _make_agent_def(**overrides: Any) -> AgentDefinition:
         "name": "agent",
         "description": "Agent",
         "allowed_tools": overrides.pop("allowed_tools", []),
-        "terminals": ["submit_execution_success"],
+        "terminals": ["submit_generator_success"],
         "tool_call_limit": 10,
     }
     data.update(overrides)

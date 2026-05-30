@@ -1,18 +1,13 @@
-"""Composer output bundle.
-
-The composer's output: agent definition, rendered context envelope, optional
-task-guidance and skill rows, and the packet itself for downstream persistence.
-"""
+"""Composer output bundle."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from task_center.context_engine.packet import ContextPacket
-
 if TYPE_CHECKING:  # pragma: no cover - typing-only
     from agents import AgentDefinition
+    from task_center.context_engine.context import AgentContext
 
 
 @dataclass(frozen=True, slots=True)
@@ -21,8 +16,8 @@ class AgentEntryMessages:
 
     Field shapes:
 
-    * ``context`` — ``<context>...</context>\n`` envelope around rendered
-      blocks, or ``""`` for an empty packet.
+    * ``context`` — ``<context>...</context>`` envelope around rendered role
+      context.
     * ``task_guidance`` — ``<Task Guidance>...</Task Guidance>`` envelope
       around role prose; ``None`` for agents with no task-guidance builder
       (helpers/subagents).
@@ -34,8 +29,7 @@ class AgentEntryMessages:
     context: str
     task_guidance: str | None
     skill: str | None
-    packet: ContextPacket
-    context_packet_id: str | None
+    packet: AgentContext
 
 
 __all__ = ["AgentEntryMessages"]

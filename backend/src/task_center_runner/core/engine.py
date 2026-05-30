@@ -243,7 +243,6 @@ async def run_pipeline(config: RunConfig) -> PipelineReport:
             workflow_store=bundle.workflow_store,
             iteration_store=bundle.iteration_store,
             attempt_store=bundle.attempt_store,
-            context_packet_store=bundle.context_packet_store,
             runner=runner,
             sandbox_provisioner=sandbox_provisioner,
         )

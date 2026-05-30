@@ -114,7 +114,6 @@ def _seed_outer_running_generator(
             ),
             reducers=(PlannedReducerTask(local_id="r", needs=("outer",), prompt="gate"),),
             deferred_goal_for_next_iteration=None,
-            outcome="outer plan",
         )
     )
     parent_task_id = generator_task_id(outer_attempt.id, "outer")

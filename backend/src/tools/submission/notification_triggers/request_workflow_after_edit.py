@@ -31,7 +31,7 @@ def make_workflow_request_after_edit_reminder() -> NotificationRule:
         return (
             "submit_workflow_handoff is meant for delegating before edits begin. "
             "Once this generator has edited, prefer finishing through its own "
-            "success or blocker terminal."
+            "success or failure terminal."
         )
 
     return NotificationRule(

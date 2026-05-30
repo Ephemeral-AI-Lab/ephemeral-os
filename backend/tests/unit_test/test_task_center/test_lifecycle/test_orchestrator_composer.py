@@ -24,8 +24,6 @@ from task_center._core.primitives import (
 )
 from task_center.agent_launch.composer import AgentEntryComposer
 from task_center.context_engine.engine import ContextEngine, ContextEngineDeps
-from task_center.context_engine.recipes import register_builtin_recipes
-from task_center.context_engine.recipes_registry import RecipeRegistry
 from task_center.attempt.orchestrator import AttemptOrchestrator
 from task_center.attempt.orchestrator_registry import (
     AttemptOrchestratorRegistry,
@@ -49,15 +47,10 @@ class _RecordingLauncher:
 
 @pytest.fixture(autouse=True)
 def _isolate_global_registries():
-    saved_recipes = dict(RecipeRegistry._registry)
     saved_definitions = list_definitions()
-    RecipeRegistry.clear()
     _clear_definitions()
-    register_builtin_recipes()
     yield
-    RecipeRegistry.clear()
     _clear_definitions()
-    RecipeRegistry._registry.update(saved_recipes)
     for definition in saved_definitions:
         register_definition(definition)
 
@@ -183,9 +176,8 @@ def test_planner_launched_via_composer_uses_base_when_top_level(
         "submit_plan_closes_goal",
         "submit_plan_defers_goal",
     ]
-    assert launched.context_packet_id is None  # no packet store wired
-    assert '<iteration iteration_no="1" position="current">' in launched.context
-    assert "<iteration_goal>" in launched.context
+    assert '<current_iteration sequence="1">' in launched.context
+    assert "<goal>" in launched.context
 
 
 def test_planner_terminals_restricted_when_nested_in_outer_workflow(

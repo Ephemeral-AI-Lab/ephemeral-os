@@ -22,8 +22,8 @@ if TYPE_CHECKING:
 class ExecutorSubmissionContext:
     """Unified context for executor-shaped terminal submissions.
 
-    Tools call :meth:`submit_executor_success`,
-    :meth:`submit_executor_blocker`, or :meth:`start_delegated_workflow`
+    Tools call :meth:`submit_generator_success`,
+    :meth:`submit_generator_failure`, or :meth:`start_delegated_workflow`
     for attempt-bound generator tasks.
     """
 
@@ -36,7 +36,7 @@ class ExecutorSubmissionContext:
     def attempt_id(self) -> str:
         return self.attempt_ctx.attempt.id
 
-    def submit_executor_success(
+    def submit_generator_success(
         self, *, outcome: str, artifacts: list[str]
     ) -> None:
         from task_center import GeneratorSubmission
@@ -54,20 +54,28 @@ class ExecutorSubmissionContext:
             )
         )
 
-    def submit_executor_blocker(self, *, outcome: str) -> None:
+    def submit_generator_failure(self, *, outcome: str) -> None:
         from task_center import GeneratorSubmission
 
         self.attempt_ctx.orchestrator.apply_generator_submission(
             GeneratorSubmission(
                 attempt_id=self.attempt_ctx.attempt.id,
                 task_id=self.task_center_task_id,
-                status="blocker",
+                status="failed",
                 outcome=outcome,
                 terminal_tool_result={
                     "generator_role": "executor",
                 },
             )
         )
+
+    def submit_executor_success(
+        self, *, outcome: str, artifacts: list[str]
+    ) -> None:
+        self.submit_generator_success(outcome=outcome, artifacts=artifacts)
+
+    def submit_executor_blocker(self, *, outcome: str) -> None:
+        self.submit_generator_failure(outcome=outcome)
 
     def start_delegated_workflow(
         self, *, goal_handoff: str

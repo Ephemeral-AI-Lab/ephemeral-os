@@ -2,9 +2,10 @@
 
 Named for the *plan* (not every task is in it: planner/advisor/explorer are
 off-spine). ``ordered_plan_tasks`` validates the combined generator+reducer DAG
-and enforces the two structural rules that keep "every attempt has an exit AND
-all work is judged" by construction: **≥1 reducer**, and **reachability** —
-every generator transitively needed by ≥1 reducer.
+and enforces the structural rules that keep "every attempt has an exit AND
+all work is judged" by construction: **≥1 reducer**, and a lane shape where
+every generator feeds another generator or a terminal reducer, and every reducer
+directly gates one or more generators.
 """
 
 from __future__ import annotations
@@ -28,8 +29,9 @@ def ordered_plan_tasks(
     """Validate the combined plan DAG and return both tuples in topo order.
 
     Raises :class:`TaskCenterInvariantViolation` on a duplicate local id, an
-    unknown ``needs`` target, a dependency cycle, an empty reducer set, or an
-    unreachable generator (one no reducer transitively needs).
+    unknown ``needs`` target, a dependency cycle, an empty reducer set, a
+    reducer dependency edge, an empty reducer ``needs`` set, or a dangling
+    generator no downstream task needs.
     """
     by_needs: dict[str, tuple[str, ...]] = {}
     duplicates: list[str] = []
@@ -50,23 +52,65 @@ def ordered_plan_tasks(
                 f"Plan task {local_id!r} has unknown needs: {missing!r}"
             )
 
-    _assert_acyclic(by_needs)
-
     if not reducers:
         raise TaskCenterInvariantViolation("Plan must contain at least one reducer")
 
-    reachable = _needs_closure(roots=[r.local_id for r in reducers], by_needs=by_needs)
-    unreachable = [g.local_id for g in generators if g.local_id not in reachable]
-    if unreachable:
-        raise TaskCenterInvariantViolation(
-            f"Plan has generator(s) no reducer needs: {tuple(unreachable)!r}"
-        )
+    _assert_lane_shape(generators, reducers)
+    _assert_acyclic(by_needs)
 
     order = _topo_order(by_needs)
     rank = {local_id: i for i, local_id in enumerate(order)}
     ordered_gen = tuple(sorted(generators, key=lambda g: rank[g.local_id]))
     ordered_red = tuple(sorted(reducers, key=lambda r: rank[r.local_id]))
     return ordered_gen, ordered_red
+
+
+def _assert_lane_shape(
+    generators: tuple[PlannedGeneratorTask, ...],
+    reducers: tuple[PlannedReducerTask, ...],
+) -> None:
+    generator_ids = {task.local_id for task in generators}
+    reducer_ids = {task.local_id for task in reducers}
+
+    for task in generators:
+        reducer_needs = tuple(dep for dep in task.needs if dep in reducer_ids)
+        if reducer_needs:
+            raise TaskCenterInvariantViolation(
+                f"Generator task {task.local_id!r} cannot need reducer task(s): "
+                f"{reducer_needs!r}"
+            )
+
+    for reducer in reducers:
+        if not reducer.needs:
+            raise TaskCenterInvariantViolation(
+                f"Reducer task {reducer.local_id!r} must need at least one generator"
+            )
+        reducer_needs = tuple(dep for dep in reducer.needs if dep in reducer_ids)
+        if reducer_needs:
+            raise TaskCenterInvariantViolation(
+                f"Reducer task {reducer.local_id!r} cannot need reducer task(s): "
+                f"{reducer_needs!r}"
+            )
+
+    downstream_by_generator = {task.local_id: [] for task in generators}
+    for task in generators:
+        for dep in task.needs:
+            if dep in generator_ids:
+                downstream_by_generator[dep].append(task.local_id)
+    for reducer in reducers:
+        for dep in reducer.needs:
+            if dep in generator_ids:
+                downstream_by_generator[dep].append(reducer.local_id)
+
+    dangling = tuple(
+        local_id
+        for local_id, downstream in downstream_by_generator.items()
+        if not downstream
+    )
+    if dangling:
+        raise TaskCenterInvariantViolation(
+            f"Plan has generator(s) no downstream task needs: {dangling!r}"
+        )
 
 
 def _assert_acyclic(by_needs: dict[str, tuple[str, ...]]) -> None:
@@ -94,18 +138,6 @@ def _topo_order(by_needs: dict[str, tuple[str, ...]]) -> list[str]:
             if not remaining[dependent]:
                 ready.append(dependent)
     return order
-
-
-def _needs_closure(*, roots: list[str], by_needs: dict[str, tuple[str, ...]]) -> set[str]:
-    seen: set[str] = set()
-    stack = list(roots)
-    while stack:
-        local_id = stack.pop()
-        for dep in by_needs.get(local_id, ()):
-            if dep not in seen:
-                seen.add(dep)
-                stack.append(dep)
-    return seen
 
 
 def _task_statuses_by_id(

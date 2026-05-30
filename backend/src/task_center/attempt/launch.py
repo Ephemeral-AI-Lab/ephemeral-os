@@ -20,7 +20,7 @@ from agents import get_definition
 from audit.base import AuditSink, NoopAuditSink
 from message.message import Message
 from message.events import StreamEvent
-from task_center._core.outcomes import Outcome, local_id_of, to_record
+from task_center._core.outcomes import execution_outcome_for_submission, to_record
 from task_center._core.persistence import (
     AttemptStoreProtocol,
     IterationStoreProtocol,
@@ -65,8 +65,8 @@ class AgentLaunch:
     The launch carries up to three user-message payloads matching the wire
     shape composed by :class:`AgentEntryComposer`:
 
-    * ``context`` — ``<context>...</context>`` envelope around rendered
-      packet blocks. Persisted into the task row for traceability.
+    * ``context`` — ``<context>...</context>`` envelope around rendered role
+      context. Persisted into the task row for traceability.
     * ``task_guidance`` — ``<Task Guidance>...</Task Guidance>`` envelope
       around the per-agent role prose.
     * ``skill`` — row-4 ``Load skill:`` + ``<terminal_tool_selection>``
@@ -82,7 +82,6 @@ class AgentLaunch:
     task_guidance: str | None
     needs: tuple[str, ...]
     agent_def: AgentDefinition | None = None
-    context_packet_id: str | None = None
     workflow_id: str | None = None
     skill: str | None = None
 
@@ -294,10 +293,24 @@ def _fail_unowned_attempt(
         "EphemeralAttemptAgentLauncher: missing orchestrator for unfinished task",
         extra={"task_id": launch.task_id, "attempt_id": launch.attempt_id},
     )
+    outcomes = []
+    if launch.role in (TaskCenterTaskRole.GENERATOR, TaskCenterTaskRole.REDUCER):
+        outcomes.append(
+            to_record(
+                execution_outcome_for_submission(
+                    task_id=launch.task_id,
+                    role="reducer"
+                    if launch.role == TaskCenterTaskRole.REDUCER
+                    else "generator",
+                    status="failed",
+                    outcome=summary,
+                )
+            )
+        )
     runtime.task_store.set_task_status(
         launch.task_id,
         status=TaskCenterTaskStatus.FAILED.value,
-        outcomes=[to_record(Outcome(local_id_of(launch.task_id), "failure", summary))],
+        outcomes=outcomes,
         terminal_tool_result={"fail_reason": "run_exhausted"},
     )
     attempt = runtime.attempt_store.get(launch.attempt_id)
@@ -361,7 +374,7 @@ def _report_exhaustion(
             GeneratorSubmission(
                 attempt_id=attempt_id,
                 task_id=launch.task_id,
-                status="failure",
+                status="failed",
                 outcome=summary,
                 terminal_tool_result=exhausted,
             )
@@ -371,7 +384,7 @@ def _report_exhaustion(
             ReducerSubmission(
                 attempt_id=attempt_id,
                 task_id=launch.task_id,
-                status="failure",
+                status="failed",
                 outcome=summary,
                 terminal_tool_result=exhausted,
             )
@@ -479,7 +492,6 @@ class AgentLaunchFactory:
             context=messages.context,
             task_guidance=messages.task_guidance,
             needs=needs,
-            context_packet_id=messages.context_packet_id,
             workflow_id=workflow_id,
             skill=messages.skill,
         )

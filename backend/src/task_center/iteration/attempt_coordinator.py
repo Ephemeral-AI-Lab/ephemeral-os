@@ -8,7 +8,6 @@ process-local one-coordinator-per-open-iteration registry.
 
 from __future__ import annotations
 
-import json
 import logging
 from collections.abc import Callable
 from datetime import UTC, datetime
@@ -21,9 +20,8 @@ from task_center._core.invariants import (
     assert_iteration_open,
 )
 from task_center._core.outcomes import (
-    failed_task_outcomes,
-    reducer_outcomes,
-    to_record,
+    project_iteration_outcomes,
+    records_json,
 )
 from task_center._core.persistence import (
     AttemptStoreProtocol,
@@ -214,8 +212,8 @@ class IterationAttemptCoordinator:
 
     def _iteration_outcomes_for(self, attempt: Attempt) -> str:
         """JSON outcomes record for the passing attempt's reducers."""
-        outcomes = reducer_outcomes(attempt, task_store=self._task_store)
-        return json.dumps([to_record(o) for o in outcomes])
+        attempts = self._attempt_store.list_for_iteration(attempt.iteration_id)
+        return records_json(project_iteration_outcomes(attempts, self._task_store))
 
     def _retry_or_close_failed(self, attempt: Attempt) -> None:
         while True:
@@ -247,9 +245,8 @@ class IterationAttemptCoordinator:
     def _close_iteration_failed(self, attempt: Attempt) -> None:
         # Failure-aware: denormalize the last failed attempt's failed-task
         # outcomes so the parent (or the run report) surfaces what went wrong.
-        outcomes = json.dumps(
-            [to_record(o) for o in failed_task_outcomes(attempt, self._task_store)]
-        )
+        attempts = self._attempt_store.list_for_iteration(attempt.iteration_id)
+        outcomes = records_json(project_iteration_outcomes(attempts, self._task_store))
         self._iteration_store.set_status(
             self.iteration_id,
             status=IterationStatus.FAILED,

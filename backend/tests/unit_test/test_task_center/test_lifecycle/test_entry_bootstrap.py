@@ -25,7 +25,6 @@ async def test_entry_bootstrap_converts_prompt_to_root_workflow(
     iteration_store,
     attempt_store,
     task_store,
-    context_packet_store,
     register_test_agents,
 ) -> None:
     release_runner = None
@@ -50,7 +49,6 @@ async def test_entry_bootstrap_converts_prompt_to_root_workflow(
         workflow_store=workflow_store,
         iteration_store=iteration_store,
         attempt_store=attempt_store,
-        context_packet_store=context_packet_store,
         runner=runner,
         sandbox_provisioner=TaskCenterSandboxProvisioner(
             create_fn=lambda **_kwargs: {"id": "sandbox-entry-test"}

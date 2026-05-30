@@ -66,10 +66,6 @@ class _StubStores:
         self.workflow_store = self
         self.iteration_store = self
         self.attempt_store = self
-        self.workflow_store = self
-        self.iteration_store = self
-        self.attempt_store = self
-        self.context_packet_store = self
 
     def get_run(self, *_args: Any, **_kwargs: Any) -> dict:
         return {"status": "done"}

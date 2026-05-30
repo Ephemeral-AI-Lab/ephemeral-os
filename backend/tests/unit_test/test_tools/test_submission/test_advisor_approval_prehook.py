@@ -28,7 +28,7 @@ from tools._hooks.advisor_approval import AdvisorApprovalPreHook
 from ._advisor_approval_fixtures import build_advisor_approval_messages
 
 
-_TARGET_TOOL = "submit_execution_success"
+_TARGET_TOOL = "submit_generator_success"
 
 
 class _DummyInput(BaseModel):
@@ -78,7 +78,7 @@ async def test_approve_for_target_passes() -> None:
 # ----- Case 3 ---------------------------------------------------------------
 @pytest.mark.asyncio
 async def test_approve_for_different_tool_fails() -> None:
-    messages = build_advisor_approval_messages(tool_name="submit_execution_blocker")
+    messages = build_advisor_approval_messages(tool_name="submit_generator_failure")
     result = await _hook().run(_DummyInput(), _context(messages))
     assert result.status == "fail"
     assert _BLOCKED_PREAMBLE in result.reason
@@ -107,7 +107,7 @@ async def test_reject_fails_with_uniform_message() -> None:
 @pytest.mark.asyncio
 async def test_latest_of_two_calls_wins_when_latest_is_approve() -> None:
     older = build_advisor_approval_messages(
-        tool_name="submit_execution_blocker",
+        tool_name="submit_generator_failure",
         verdict="reject",
         summary="wrong tool",
         tool_use_id="toolu_older",
@@ -191,8 +191,8 @@ def test_hook_wired_to_main_terminals_and_omitted_from_helpers() -> None:
     main_terminals = (
         "submit_plan_closes_goal",
         "submit_plan_defers_goal",
-        "submit_execution_success",
-        "submit_execution_blocker",
+        "submit_generator_success",
+        "submit_generator_failure",
         "submit_workflow_handoff",
         "submit_reduction_success",
         "submit_reduction_failure",

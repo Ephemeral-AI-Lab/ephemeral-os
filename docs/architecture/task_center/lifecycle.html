@@ -75,7 +75,7 @@
 <div class="edge-list">
   <div><b>generator-spawned workflows</b><span>Every workflow is started by a running generator task. The root workflow's parent is the synthetic run-level bootstrap generator task <code>&lt;run_id&gt;:root</code>; a delegated child workflow's parent is a real generator task inside a parent attempt. There is no <code>WorkflowOrigin</code> abstraction — the spawning task id is the link.</span></div>
   <div><b>persistent shape</b><span><code>WorkflowStoreProtocol</code>, <code>IterationStoreProtocol</code>, <code>AttemptStoreProtocol</code>, and <code>TaskStoreProtocol</code> are the storage boundary consumed by Workflow -> Iteration -> Attempt code.</span></div>
-  <div><b>unified outcomes</b><span>Results are one recursive <code>Outcome</code> algebra (<code>_core/outcomes.py</code>): <code>Outcome{local_id, status, outcome, children, failure}</code>. A passing iteration persists its reducer outcomes; a failed iteration persists its last failed attempt's failed-task outcomes; a delegated generator's outcome carries the child workflow's outcomes as <code>children</code>.</span></div>
+  <div><b>task-bound outcomes</b><span>Results are role-discriminated task evidence (<code>_core/outcomes.py</code>): planner task outcomes for UI, and generator/reducer execution outcomes with <code>status="success|failed"</code>. Attempt, iteration, and workflow outcomes are explicit projections over execution outcomes only.</span></div>
   <div><b>child-close correction</b><span>On a child workflow close the parent generator becomes terminal: <code>DONE</code> on child success or <code>FAILED</code> on child failure, via <code>apply_child_workflow_outcome()</code>. It does not return to <code>RUNNING</code>.</span></div>
 </div>
 </section>
@@ -147,10 +147,10 @@
 </pre>
 <div class="edge-list" aria-label="Iteration closure branches">
   <div><b>re-read</b><span><code>handle_attempt_closed()</code> re-reads state before branching and enforces ownership plus the fail-reason-present-on-failure invariant.</span></div>
-  <div><b>pass</b><span>A passing attempt closes the iteration <code>SUCCEEDED</code> via <code>close_succeeded(outcomes=...)</code>, denormalizing the passing attempt's <em>reducer</em> outcomes onto the iteration row, with optional deferred-goal text.</span></div>
+  <div><b>pass</b><span>A passing attempt closes the iteration <code>SUCCEEDED</code> via <code>close_succeeded(outcomes=...)</code>, denormalizing the iteration projection onto the row, with optional deferred-goal text.</span></div>
   <div><b>iteration close signal</b><span>The coordinator signals close through a primitive callback <code>on_iteration_closed(iteration_id, succeeded, deferred_goal, final_attempt_id)</code> — there is no <code>TerminalSuccess</code> / <code>SuccessDeferred</code> / <code>AttemptPlanFailed</code> report DTO.</span></div>
   <div><b>retry</b><span>Failed attempts create the next attempt while <code>attempt_count &lt; attempt_budget</code>; a startup failure during retry folds back into the same decision loop.</span></div>
-  <div><b>exhausted</b><span>Budget exhaustion closes the iteration <code>FAILED</code> via <code>set_status(..., outcomes=...)</code>, denormalizing the last failed attempt's failed-task outcomes (<code>failed_task_outcomes</code>).</span></div>
+  <div><b>exhausted</b><span>Budget exhaustion closes the iteration <code>FAILED</code> via <code>set_status(..., outcomes=...)</code>, using reducer successes from all attempts plus failed execution outcomes from the final failed attempt.</span></div>
 </div>
 <div class="edge-list">
   <div><b>deferral gate</b><span><code>WorkflowLifecycle.create_iteration_with_coordinator()</code> derives the continuation case from workflow state and requires the predecessor iteration to be <code>SUCCEEDED</code> and to have non-null deferred text.</span></div>
@@ -188,7 +188,7 @@
   <div><b>child start</b><span><code>WorkflowStarter</code> validates the parent, inserts the child state chain, and calls the parent orchestrator's <code>start_child_workflow()</code>, which atomically flips the generator <code>RUNNING</code> to <code>WAITING_WORKFLOW</code> and sets <code>child_workflow_id</code>.</span></div>
   <div><b>parent non-quiescent</b><span><code>WAITING_WORKFLOW</code> is not terminal, so the parent attempt cannot advance past that generator until the child-workflow outcome is delivered.</span></div>
   <div><b>child-local policy</b><span>Child retry stays inside the child iteration; child deferral creates another child iteration and still does not resolve the parent.</span></div>
-  <div><b>outcome delivery</b><span>A terminal child workflow close routes via <code>WorkflowLifecycle._route_close()</code> to the parent orchestrator's <code>apply_child_workflow_outcome()</code>, which marks the waiting generator <code>DONE</code> on success or <code>FAILED</code> on failure and records the child workflow's outcomes as the generator outcome's <code>children</code>.</span></div>
+  <div><b>outcome delivery</b><span>A terminal child workflow close routes via <code>WorkflowLifecycle._route_close()</code> to the parent orchestrator's <code>apply_child_workflow_outcome()</code>, which marks the waiting generator <code>DONE</code> on success or <code>FAILED</code> on failure and copies the child workflow's outcomes directly onto the parent generator task.</span></div>
 </div>
 <div class="callout warn">
   <span class="label">Resolution rule</span>
@@ -231,7 +231,7 @@
 [child workflow runs its own iteration/attempt lifecycle]
         |
         v
-[child outcomes become T1's outcome children]
+[child outcomes become T1's direct outcomes]
         |
         v
 [parent lifecycle advances with child evidence]
@@ -239,13 +239,13 @@
 <div class="edge-list" aria-label="Nested planning transitions">
   <div><b>delegate</b><span>Parent Attempt A1 launches generator T1, and T1 uses <code>submit_workflow_handoff</code> to start a delegated child workflow whose parent task is T1.</span></div>
   <div><b>depth</b><span><code>_nested_workflow_depth()</code> in <code>_core/terminal_routing.py</code> walks up via <code>Workflow.parent_task_id</code> and the attempt the parent task id encodes, counting the child and root ancestor, so G2 under G1 returns depth 2.</span></div>
-  <div><b>filter</b><span>At depth greater than 1 the per-profile routing fires: the nested planner keeps only <code>submit_plan_closes_goal</code> (loses <code>submit_plan_defers_goal</code>) and the nested executor loses <code>submit_workflow_handoff</code> (keeps success and blocker).</span></div>
+  <div><b>filter</b><span>At depth greater than 1 the per-profile routing fires: the nested planner keeps only <code>submit_plan_closes_goal</code> (loses <code>submit_plan_defers_goal</code>) and the nested executor loses <code>submit_workflow_handoff</code> (keeps success and failure).</span></div>
   <div><b>child attempt</b><span>Child Attempt A2 runs its own planner -> plan-DAG lifecycle (generators + reducers) before closing the child workflow.</span></div>
   <div><b>parent continuation</b><span>Only after T1 becomes <code>DONE</code> or <code>FAILED</code> can A1 launch downstream plan tasks or quiesce.</span></div>
 </div>
 <div class="callout warn">
   <span class="label">Depth rule</span>
-  The root Workflow is depth 1. A delegated child workflow is depth 2. In current launch routing, depth greater than 1 disables further planning deferral and executor handoff for that nested Workflow, so nested planning stays bounded by terminal close/blocker outcomes.
+  The root Workflow is depth 1. A delegated child workflow is depth 2. In current launch routing, depth greater than 1 disables further planning deferral and executor handoff for that nested Workflow, so nested planning stays bounded by terminal close/failure outcomes.
 </div>
 </section>
 

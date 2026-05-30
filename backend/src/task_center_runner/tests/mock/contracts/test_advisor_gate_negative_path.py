@@ -28,11 +28,11 @@ from task_center_runner.agent.mock._advisor_approval import (
 from tools._framework.core.context import ToolExecutionContextService
 from tools._framework.core.runtime import ExecutionMetadata
 from tools._framework.execution.tool_call import execute_tool_once
-from tools.submission.executor.submit_execution_blocker import (
-    submit_execution_blocker,
+from tools.submission.executor.submit_generator_failure import (
+    submit_generator_failure,
 )
-from tools.submission.executor.submit_execution_success import (
-    submit_execution_success,
+from tools.submission.executor.submit_generator_success import (
+    submit_generator_success,
 )
 
 
@@ -73,7 +73,7 @@ def _metadata_with_advisor_approval(
 
 @pytest.mark.asyncio
 async def test_wrong_tool_approval_blocks_terminal_dispatch() -> None:
-    """Approve ``submit_execution_success`` → submit ``submit_execution_blocker``.
+    """Approve ``submit_generator_success`` → submit ``submit_generator_failure``.
 
     The gate must reject with the canonical ``BLOCKED`` prose. Verifies that
     the transcript helper produces metadata the gate reads correctly, and
@@ -82,14 +82,14 @@ async def test_wrong_tool_approval_blocks_terminal_dispatch() -> None:
     """
     gated_metadata = _metadata_with_advisor_approval(
         ExecutionMetadata(),
-        tool_name=submit_execution_success.name,
+        tool_name=submit_generator_success.name,
     )
     context = ToolExecutionContextService(
         cwd=Path("/tmp"), services=gated_metadata
     )
 
     result = await execute_tool_once(
-        submit_execution_blocker,
+        submit_generator_failure,
         {"outcome": "negative-path probe"},
         context,
         emit=_noop_emit,
@@ -125,7 +125,7 @@ async def test_no_approval_blocks_terminal_dispatch() -> None:
     )
 
     result = await execute_tool_once(
-        submit_execution_blocker,
+        submit_generator_failure,
         {"outcome": "negative-path probe"},
         context,
         emit=_noop_emit,

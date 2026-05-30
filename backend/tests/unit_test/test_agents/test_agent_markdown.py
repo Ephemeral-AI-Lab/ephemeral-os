@@ -45,8 +45,8 @@ def test_recursive_agent_loader_finds_harness_profiles() -> None:
     assert by_name["executor"].agent_type == AgentType.AGENT
     assert by_name["executor"].terminals == [
         "submit_workflow_handoff",
-        "submit_execution_success",
-        "submit_execution_blocker",
+        "submit_generator_success",
+        "submit_generator_failure",
     ]
 
 

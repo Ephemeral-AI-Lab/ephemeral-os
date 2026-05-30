@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 from tools._names import (
-    SUBMIT_EXECUTION_BLOCKER_TOOL_NAME,
-    SUBMIT_EXECUTION_SUCCESS_TOOL_NAME,
+    SUBMIT_GENERATOR_FAILURE_TOOL_NAME,
+    SUBMIT_GENERATOR_SUCCESS_TOOL_NAME,
 )
 
 
@@ -20,13 +20,13 @@ Call this when:
   edited.
 
 You MUST call this BEFORE making edits. If you've already started
-editing, finish what you can and use `{SUBMIT_EXECUTION_SUCCESS_TOOL_NAME}`
-or `{SUBMIT_EXECUTION_BLOCKER_TOOL_NAME}` instead.
+editing, finish what you can and use `{SUBMIT_GENERATOR_SUCCESS_TOOL_NAME}`
+or `{SUBMIT_GENERATOR_FAILURE_TOOL_NAME}` instead.
 
 Do NOT call this when:
 - The task is bounded and doable — just do it.
 - You're stuck on an environment or dependency issue — that's
-  `{SUBMIT_EXECUTION_BLOCKER_TOOL_NAME}`, not a decomposition request.
+  `{SUBMIT_GENERATOR_FAILURE_TOOL_NAME}`, not a decomposition request.
 
 Inputs:
 - `goal_handoff`: the original goal statement (verbatim or paraphrased

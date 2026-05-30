@@ -48,9 +48,9 @@ _PARENT_EXECUTOR_DEF = AgentDefinition(
     agent_type="agent",
     role=AgentRole.GENERATOR,
     terminals=[
-        "submit_execution_handoff",
-        "submit_execution_success",
-        "submit_execution_blocker",
+        "submit_workflow_handoff",
+        "submit_generator_success",
+        "submit_generator_failure",
     ],
 )
 
@@ -149,7 +149,7 @@ async def test_advisor_returns_terminal_output_on_success(
     )
 
     result = await ask_advisor._entrypoint(
-        tool_name="submit_execution_success",
+        tool_name="submit_generator_success",
         tool_payload={"outcome": "shipped"},
         context=_make_context(),
     )
@@ -177,7 +177,7 @@ async def test_advisor_returns_pinned_error_when_terminal_missing(
     )
 
     result = await ask_advisor._entrypoint(
-        tool_name="submit_execution_success",
+        tool_name="submit_generator_success",
         tool_payload={},
         context=_make_context(),
     )
@@ -205,7 +205,7 @@ async def test_advisor_returns_pinned_error_on_crash(
     )
 
     result = await ask_advisor._entrypoint(
-        tool_name="submit_execution_success",
+        tool_name="submit_generator_success",
         tool_payload={},
         context=_make_context(),
     )
@@ -236,7 +236,7 @@ async def test_advisor_launches_with_two_user_messages(
     )
 
     await ask_advisor._entrypoint(
-        tool_name="submit_execution_success",
+        tool_name="submit_generator_success",
         tool_payload={"outcome": "shipped", "deliverable_path": "x.py"},
         context=_make_context(),
     )
@@ -270,11 +270,11 @@ async def test_advisor_launches_with_two_user_messages(
     assert "# Terminal tool catalog (advisor review focus)" in user_msg_2
     # Parent's terminals appear in the catalog with advisor_review_focus
     # text fragments.
-    assert "submit_execution_success" in user_msg_2
-    assert "submit_execution_blocker" in user_msg_2
+    assert "submit_generator_success" in user_msg_2
+    assert "submit_generator_failure" in user_msg_2
     assert "Verify the `<assigned_task>` deliverable" in user_msg_2
     assert "# Pending submission" in user_msg_2
-    assert "submit_execution_success" in user_msg_2
+    assert "submit_generator_success" in user_msg_2
     assert "shipped" in user_msg_2
     assert "# Your task" in user_msg_2
     assert "# Calibration" in user_msg_2

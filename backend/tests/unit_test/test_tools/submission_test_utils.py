@@ -160,7 +160,6 @@ def apply_single_generator_plan(fixture: TaskCenterFixture, *, agent_name: str =
                 ),
             ),
             deferred_goal_for_next_iteration=None,
-            outcome="plan",
         )
     )
     return generator_task_id(fixture.attempt_id, "a")

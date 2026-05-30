@@ -147,7 +147,7 @@ def test_no_routing_module_keeps_all_terminals(deps, monkeypatch):
 def test_router_none_result_keeps_all_terminals(deps, monkeypatch):
     _register(
         name="standalone_executor",
-        terminals=["submit_execution_success"],
+        terminals=["submit_generator_success"],
         recipe="generator",
         routing=lambda *, is_nested, has_workflow: None,
     )
@@ -162,7 +162,7 @@ def test_router_none_result_keeps_all_terminals(deps, monkeypatch):
         deps=deps,
     )
 
-    assert selection.agent_def.terminals == ["submit_execution_success"]
+    assert selection.agent_def.terminals == ["submit_generator_success"]
 
 
 def test_missing_context_recipe_raises(deps):

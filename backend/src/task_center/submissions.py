@@ -45,7 +45,6 @@ class PlannerSubmission:
     tasks: tuple[PlannedGeneratorTask, ...]
     reducers: tuple[PlannedReducerTask, ...]
     deferred_goal_for_next_iteration: str | None
-    outcome: str
 
 
 @dataclass(frozen=True, slots=True)
@@ -64,7 +63,7 @@ class GeneratorSubmission:
 
     attempt_id: str
     task_id: str
-    status: Literal["success", "failure", "blocker"]
+    status: Literal["success", "failed"]
     outcome: str
     terminal_tool_result: dict[str, Any]
 
@@ -75,6 +74,6 @@ class ReducerSubmission:
 
     attempt_id: str
     task_id: str
-    status: Literal["success", "failure"]
+    status: Literal["success", "failed"]
     outcome: str
     terminal_tool_result: dict[str, Any]

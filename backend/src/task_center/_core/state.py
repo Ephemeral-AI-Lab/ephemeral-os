@@ -17,6 +17,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime
 from enum import StrEnum
+from typing import Any
 
 
 # ---- Workflow (origin axis) ------------------------------------------------
@@ -73,8 +74,8 @@ class Iteration:
     """Immutable view of a persisted Iteration.
 
     ``outcomes`` is the persisted, canonical projection (a ``json.dumps`` list
-    of ``Outcome`` records): the passing attempt's reducer outcomes, or — when
-    the iteration failed — its last failed attempt's failed-task outcomes.
+    of execution outcome records): the passing attempt's reducer outcomes, or
+    when the iteration failed, its last failed attempt's failed-task outcomes.
     ``None`` while open.
     """
 
@@ -154,6 +155,7 @@ class Attempt:
     created_at: datetime
     updated_at: datetime
     closed_at: datetime | None
+    outcomes: tuple[Any, ...] = ()
 
     @property
     def is_closed(self) -> bool:

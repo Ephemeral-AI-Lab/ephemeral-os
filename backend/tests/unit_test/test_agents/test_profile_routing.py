@@ -46,11 +46,11 @@ def test_executor_routing_rule():
     assert rule(is_nested=False, has_workflow=False) is None
     # Nested in a workflow → no handoff.
     assert rule(is_nested=True, has_workflow=True) == frozenset(
-        {"submit_execution_success", "submit_execution_blocker"}
+        {"submit_generator_success", "submit_generator_failure"}
     )
     # Top-level in a workflow → handoff allowed.
     assert rule(is_nested=False, has_workflow=True) == frozenset(
-        {"submit_workflow_handoff", "submit_execution_success", "submit_execution_blocker"}
+        {"submit_workflow_handoff", "submit_generator_success", "submit_generator_failure"}
     )
 
 

@@ -10,7 +10,7 @@ sandbox-bound* background tasks for this agent — the same definition as
 
 The decision uses ``max(local, daemon)`` like
 ``sandbox.host.isolated_workspace_lifecycle``: confirmed in-flight blocks. On
-a daemon error (count indeterminate, local zero) failure/blocker terminals
+a daemon error (count indeterminate, local zero) failure terminals
 fail OPEN so a flaky daemon can never trap the agent's bail-out path; every
 other gated tool fails safe.
 """
@@ -28,12 +28,12 @@ from tools._hooks._context import resolve_agent_id, resolve_sandbox_id
 
 logger = logging.getLogger(__name__)
 
-# Failure/blocker terminals exempt from the daemon-error fail-safe-block so a
+# Failure terminals exempt from the daemon-error fail-safe-block so a
 # flaky daemon never hard-locks the agent's bail-out path (plan D7). Scoped to
 # the daemon-error branch only — confirmed in-flight still blocks these too.
 _BAILOUT_TOOLS = frozenset(
     {
-        "submit_execution_blocker",
+        "submit_generator_failure",
         "submit_reduction_failure",
         "submit_plan_defers_goal",
     }

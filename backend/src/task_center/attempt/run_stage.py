@@ -13,7 +13,7 @@ import logging
 from collections.abc import Callable
 
 from task_center._core.audit import TaskCenterAuditEmitter
-from task_center._core.outcomes import Outcome, local_id_of, to_record
+from task_center._core.outcomes import execution_outcome_for_submission, to_record
 from task_center._core.primitives import TaskCenterInvariantViolation
 from task_center._core.state import (
     Attempt,
@@ -107,7 +107,16 @@ class AttemptStageAdvancer:
             task_id,
             expected_status=TaskCenterTaskStatus.RUNNING.value,
             status=TaskCenterTaskStatus.FAILED.value,
-            outcomes=[to_record(Outcome(local_id_of(task_id), "failure", summary))],
+            outcomes=[
+                to_record(
+                    execution_outcome_for_submission(
+                        task_id=task_id,
+                        role="reducer" if role == "Reducer" else "generator",
+                        status="failed",
+                        outcome=summary,
+                    )
+                )
+            ],
             terminal_tool_result={"fail_reason": "agent_launch_failed"},
         )
         failed_task = runtime.task_store.get_task(task_id)

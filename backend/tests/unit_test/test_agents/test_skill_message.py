@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from agents import AgentDefinition, AgentRole
-from task_center.agent_launch.skill_message import build_skill_message
+from task_center.context_engine.skill_message import build_skill_message
 from tools._terminals.registry import render_terminal_catalog
 
 

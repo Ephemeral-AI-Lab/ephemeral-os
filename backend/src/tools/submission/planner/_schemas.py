@@ -184,7 +184,6 @@ def build_planner_submission(
             tasks=ordered_generators,
             reducers=ordered_reducers,
             deferred_goal_for_next_iteration=deferred_goal_for_next_iteration,
-            outcome=f"Accepted {kind} planner submission.",
         ),
         None,
     )

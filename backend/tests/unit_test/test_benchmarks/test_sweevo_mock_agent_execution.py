@@ -249,7 +249,7 @@ async def test_run_scenario_correctness_testing_with_fake_sandbox(
         "read_file",
         "edit_file",
         "shell",
-        "submit_execution_success",
+        "submit_generator_success",
         "submit_reduction_failure",
         "submit_reduction_success",
     } <= tool_names

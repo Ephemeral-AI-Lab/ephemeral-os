@@ -52,7 +52,7 @@
 </nav>
 
 <p class="lead"><code>load_skill_reference</code> is a caller-scoped read-only tool for loading named reference files from the agent's own skill.</p>
-<section id="factory-scoping" data-last-reviewed-commit="569f12c3f39471dbaa643906856a8daf81a21a2d" data-evidence-paths="backend/src/tools/skills/_factory.py backend/src/tools/skills/load_skill_reference.py backend/src/tools/_framework/factory.py backend/src/agents/definition/model.py backend/src/agents/definition/registry.py backend/src/task_center/agent_launch/skill_message.py backend/tests/unit_test/test_tools/test_skills_toolkit.py backend/tests/unit_test/test_agents/test_planner_tool_exposure.py">
+<section id="factory-scoping" data-last-reviewed-commit="569f12c3f39471dbaa643906856a8daf81a21a2d" data-evidence-paths="backend/src/tools/skills/_factory.py backend/src/tools/skills/load_skill_reference.py backend/src/tools/_framework/factory.py backend/src/agents/definition/model.py backend/src/agents/definition/registry.py backend/src/task_center/context_engine/skill_message.py backend/tests/unit_test/test_tools/test_skills_toolkit.py backend/tests/unit_test/test_agents/test_planner_tool_exposure.py">
 <h2>Factory Scoping <a class="anchor" href="#factory-scoping">#</a></h2>
 <div class="diagram" aria-label="Skill reference scoping workflow">
   <div class="flow-row">
@@ -85,7 +85,7 @@
 </table>
 </section>
 
-<section id="architecture-connections" data-last-reviewed-commit="569f12c3f39471dbaa643906856a8daf81a21a2d" data-evidence-paths="backend/src/tools/skills/_factory.py backend/src/tools/_framework/factory.py backend/src/task_center/agent_launch/skill_message.py backend/src/task_center/context_engine backend/src/engine/agent/factory.py backend/tests/unit_test/test_agents/test_skill_message.py backend/tests/unit_test/test_agents/test_planner_tool_exposure.py">
+<section id="architecture-connections" data-last-reviewed-commit="569f12c3f39471dbaa643906856a8daf81a21a2d" data-evidence-paths="backend/src/tools/skills/_factory.py backend/src/tools/_framework/factory.py backend/src/task_center/context_engine/skill_message.py backend/src/task_center/context_engine backend/src/engine/agent/factory.py backend/tests/unit_test/test_agents/test_skill_message.py backend/tests/unit_test/test_agents/test_planner_tool_exposure.py">
 <h2>Architecture Connections <a class="anchor" href="#architecture-connections">#</a></h2>
 <div class="edge-list">
   <div><b>tool framework</b><span>The framework creates the tool with caller metadata, so scope is fixed before the model can call it.</span></div>

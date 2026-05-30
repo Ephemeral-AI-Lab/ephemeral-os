@@ -129,8 +129,8 @@ run_pipeline(config) coroutine
    |
    | 7. handle = start_task_center_run(
    |       config=extras["runtime_config"] or SimpleNamespace(cwd=repo_dir),
-   |       prompt, sandbox_id, on_agent_event, task/workflow/iteration/attempt/
-   |       context_packet stores, runner, sandbox_provisioner)
+   |       prompt, sandbox_id, on_agent_event, task/workflow/iteration/attempt
+   |       stores, runner, sandbox_provisioner)
    |    bus.publish(RUN_STARTED)
    |
    | 8. await handle.launcher.wait_for_idle()
@@ -183,7 +183,7 @@ run_pipeline(config) coroutine
 </div>
 <div class="summary">
   <ul>
-    <li>Stores in the bundle: <code>task_store</code>, <code>workflow_store</code>, <code>iteration_store</code>, <code>attempt_store</code>, <code>context_packet_store</code>.</li>
+    <li>Stores in the bundle: <code>task_store</code>, <code>workflow_store</code>, <code>iteration_store</code>, and <code>attempt_store</code>.</li>
     <li>Each store is constructed and then <code>store.initialize(session_factory)</code> is called so the same instance can be reused safely under one bundle.</li>
     <li>Other dialects raise — only PostgreSQL and SQLite are supported.</li>
   </ul>

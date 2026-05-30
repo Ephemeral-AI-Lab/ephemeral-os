@@ -287,11 +287,11 @@ def test_dispatch_deferred_skips_dispatch_when_lifecycle_rejection_drains_batch(
 def test_terminal_rejection_still_runs_before_lifecycle_policy():
     intent_map = {
         "enter_isolated_workspace": Intent.LIFECYCLE,
-        "submit_execution_success": Intent.WRITE_ALLOWED,
+        "submit_generator_success": Intent.WRITE_ALLOWED,
     }
-    ctx = _ctx(intent_map, terminal_tools={"submit_execution_success"})
+    ctx = _ctx(intent_map, terminal_tools={"submit_generator_success"})
     tool_calls = [
-        _tool("submit_execution_success"),
+        _tool("submit_generator_success"),
         _tool("enter_isolated_workspace"),
     ]
     tool_results: list[ToolResultBlock] = []

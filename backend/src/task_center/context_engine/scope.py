@@ -1,21 +1,20 @@
-"""ContextScope — identity surface every recipe sees.
+"""ContextScope — identity surface every role context builder sees.
 
 The scope carries identity (workflow / iteration / attempt / task ids). It
 does **not** carry store handles; those live on :class:`ContextEngineDeps`
-so recipes can be swapped without touching call sites.
+so builders do not reach into globals.
 
 The role-specific factory classmethods (:meth:`for_planner`,
 :meth:`for_generator`, etc.) document the required fields per role at the
 call site: omitting one raises ``TypeError`` at call time, and strict
-mypy will narrow the kwargs to their declared ``str`` types. The engine
-still validates via :meth:`assert_fields` so direct ``ContextScope(...)``
-construction is also covered at runtime.
+mypy will narrow the kwargs to their declared ``str`` types. The engine still
+validates fields so direct ``ContextScope(...)`` construction is covered.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Literal
+from typing import Literal, Self
 
 from task_center.context_engine.exceptions import RecipeScopeError
 
@@ -24,8 +23,9 @@ ScopeField = Literal["workflow_id", "iteration_id", "attempt_id", "task_id"]
 
 @dataclass(frozen=True, slots=True)
 class ContextScope:
-    """Identity surface threaded through resolver + engine + recipes."""
+    """Identity surface threaded through resolver + engine + builders."""
 
+    role: Literal["planner", "generator", "reducer"] = "planner"
     workflow_id: str | None = None
 
     # Optional identity fields — recipes declare which of these they need.
@@ -48,7 +48,7 @@ class ContextScope:
 
     # ---- Role-specific factory shortcuts -------------------------------
     #
-    # Each factory takes ONLY the required fields for that recipe role as
+    # Each factory takes ONLY the required fields for that launch role as
     # positional/keyword args. Missing a required field is a static error
     # instead of a runtime assert. The defaults flow through the dataclass
     # for any optional fields the role might inspect.
@@ -60,9 +60,10 @@ class ContextScope:
         workflow_id: str,
         iteration_id: str,
         attempt_id: str,
-    ) -> ContextScope:
-        """Scope shape required by the planner recipe."""
+    ) -> Self:
+        """Scope shape required by the planner context."""
         return cls(
+            role="planner",
             workflow_id=workflow_id,
             iteration_id=iteration_id,
             attempt_id=attempt_id,
@@ -76,9 +77,10 @@ class ContextScope:
         iteration_id: str,
         attempt_id: str,
         task_id: str,
-    ) -> ContextScope:
-        """Scope shape required by the generator recipe."""
+    ) -> Self:
+        """Scope shape required by the generator context."""
         return cls(
+            role="generator",
             workflow_id=workflow_id,
             iteration_id=iteration_id,
             attempt_id=attempt_id,
@@ -93,9 +95,10 @@ class ContextScope:
         iteration_id: str,
         attempt_id: str,
         task_id: str,
-    ) -> ContextScope:
-        """Scope shape required by the reducer recipe."""
+    ) -> Self:
+        """Scope shape required by the reducer context."""
         return cls(
+            role="reducer",
             workflow_id=workflow_id,
             iteration_id=iteration_id,
             attempt_id=attempt_id,

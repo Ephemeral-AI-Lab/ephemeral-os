@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from tools._names import (
     ASK_ADVISOR_TOOL_NAME,
-    SUBMIT_EXECUTION_SUCCESS_TOOL_NAME,
+    SUBMIT_GENERATOR_SUCCESS_TOOL_NAME,
     SUBMIT_PLAN_CLOSES_GOAL_TOOL_NAME,
     SUBMIT_REDUCTION_SUCCESS_TOOL_NAME,
 )
@@ -16,7 +16,7 @@ def get_ask_advisor_description() -> str:
         f"you're about to make.\n"
         f"\n"
         f"Use this when:\n"
-        f"- You're about to call a terminal tool (e.g., `{SUBMIT_EXECUTION_SUCCESS_TOOL_NAME}`,\n"
+        f"- You're about to call a terminal tool (e.g., `{SUBMIT_GENERATOR_SUCCESS_TOOL_NAME}`,\n"
         f"  `{SUBMIT_REDUCTION_SUCCESS_TOOL_NAME}`, `{SUBMIT_PLAN_CLOSES_GOAL_TOOL_NAME}`) and you want a\n"
         f"  second pair of eyes on (1) tool selection and (2) whether the work you've\n"
         f"  done actually supports the payload.\n"

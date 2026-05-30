@@ -12,13 +12,13 @@ def select_terminals(*, is_nested: bool, has_workflow: bool) -> frozenset[str] |
     # Outside a workflow: keep the full frontmatter terminal set (no filtering).
     if not has_workflow:
         return None
-    # Nested executors cannot hand off; only succeed or block.
+    # Nested executors cannot hand off; only succeed or fail.
     if is_nested:
-        return frozenset({"submit_execution_success", "submit_execution_blocker"})
+        return frozenset({"submit_generator_success", "submit_generator_failure"})
     return frozenset(
         {
             "submit_workflow_handoff",
-            "submit_execution_success",
-            "submit_execution_blocker",
+            "submit_generator_success",
+            "submit_generator_failure",
         }
     )

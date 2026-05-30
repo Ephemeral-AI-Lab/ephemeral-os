@@ -20,7 +20,6 @@ from db.base import Base
 import db.models  # noqa: F401 — populate SQLAlchemy metadata
 from db.engine import get_engine, initialize_db
 from db.stores.attempt_store import AttemptStore
-from db.stores.context_packet_store import ContextPacketStore
 from db.stores.iteration_store import IterationStore
 from db.stores.workflow_store import WorkflowStore
 from db.stores.task_center_store import TaskCenterStore
@@ -37,7 +36,6 @@ class TaskCenterStoreBundle:
     workflow_store: WorkflowStore
     iteration_store: IterationStore
     attempt_store: AttemptStore
-    context_packet_store: ContextPacketStore
     owns_engine: bool = False
     cleanup_paths: tuple[Path, ...] = ()
 
@@ -94,7 +92,6 @@ def _initialize_bundle(
         workflow_store=WorkflowStore(),
         iteration_store=IterationStore(),
         attempt_store=AttemptStore(),
-        context_packet_store=ContextPacketStore(),
         owns_engine=owns_engine,
         cleanup_paths=cleanup_paths,
     )
@@ -103,7 +100,6 @@ def _initialize_bundle(
         bundle.workflow_store,
         bundle.iteration_store,
         bundle.attempt_store,
-        bundle.context_packet_store,
     ):
         store.initialize(session_factory)
     return bundle

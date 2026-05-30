@@ -34,7 +34,7 @@ class AskAdvisorInput(BaseModel):
         min_length=1,
         description=(
             "The name of the terminal tool you intend to call (e.g. "
-            "submit_execution_success)."
+            "submit_generator_success)."
         ),
     )
     tool_payload: dict[str, object] = Field(

@@ -142,7 +142,6 @@ def _plan(
         tasks=tasks,
         reducers=reducers,
         deferred_goal_for_next_iteration=deferred_goal_for_next_iteration,
-        outcome="plan accepted",
     )
 
 
@@ -164,7 +163,7 @@ def _generator_failure(attempt_id: str, local_id: str) -> GeneratorSubmission:
     return GeneratorSubmission(
         attempt_id=attempt_id,
         task_id=generator_task_id(attempt_id, local_id),
-        status="failure",
+        status="failed",
         outcome=f"{local_id} failed",
         terminal_tool_result={"role": "executor"},
     )
@@ -174,7 +173,7 @@ def _generator_blocker(attempt_id: str, local_id: str) -> GeneratorSubmission:
     return GeneratorSubmission(
         attempt_id=attempt_id,
         task_id=generator_task_id(attempt_id, local_id),
-        status="blocker",
+        status="failed",
         outcome=f"{local_id} blocked",
         terminal_tool_result={"role": "executor"},
     )
@@ -493,7 +492,7 @@ def test_apply_generator_blocker_leaves_pending_descendants_not_started(
     task_b = task_store.get_task(generator_task_id(attempt.id, "b"))
     task_c = task_store.get_task(generator_task_id(attempt.id, "c"))
     task_d = task_store.get_task(generator_task_id(attempt.id, "d"))
-    assert task_a is not None and task_a["status"] == "blocked"
+    assert task_a is not None and task_a["status"] == "failed"
     assert task_b is not None and task_b["status"] == "pending"
     assert task_c is not None and task_c["status"] == "pending"
     assert task_d is not None and task_d["status"] == "running"

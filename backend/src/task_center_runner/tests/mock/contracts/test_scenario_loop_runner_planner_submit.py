@@ -3,7 +3,7 @@
 Before adapting the probe-heavy executor, prove the riskiest *new* path: the
 ``ScenarioLoopRunner`` + ``extras["runtime_config"]`` injection driving a real
 TaskCenter submission terminal (``submit_plan_closes_goal`` →
-``submit_execution_success`` → ``submit_reduction_success``) through
+``submit_generator_success`` → ``submit_reduction_success``) through
 ``run_pipeline`` → ``start_task_center_run`` → launcher → ``run_ephemeral_agent``,
 landing a closed workflow in store state. Asserted via ``graph_summary`` /
 ``task_center_status`` (real store), not lifecycle events.

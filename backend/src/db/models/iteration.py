@@ -45,9 +45,9 @@ class IterationRecord(Base):
     )
 
     # Denormalized canonical projection at close time: a ``json.dumps`` list of
-    # ``Outcome`` records (the passing attempt's reducer outcomes, or — on
-    # failure — the last failed attempt's failed-task outcomes). Null while
-    # open. Read by the planner recipe for prior-iteration context (relay).
+    # execution outcome records (the passing attempt's reducer outcomes, or on
+    # failure, the last failed attempt's failed-task outcomes). Null while open.
+    # Read by planner context for prior-iteration relay.
     outcomes: Mapped[str | None] = mapped_column(Text, nullable=True)
     __table_args__ = (
         UniqueConstraint(

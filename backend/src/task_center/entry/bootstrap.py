@@ -14,7 +14,6 @@ from typing import TYPE_CHECKING
 from agents import validate_agent_definitions_resolved
 from db.stores import (
     AttemptStore,
-    ContextPacketStore,
     WorkflowStore,
     IterationStore,
     TaskCenterStore,
@@ -29,7 +28,6 @@ from task_center.attempt.launch import (
 )
 from task_center.attempt.orchestrator_registry import AttemptOrchestratorRegistry
 from task_center.context_engine.engine import ContextEngine, ContextEngineDeps
-from task_center.context_engine.recipes import register_builtin_recipes
 from task_center.entry.sandbox_provisioning import (
     TaskCenterSandboxBinding,
     TaskCenterSandboxProvisioner,
@@ -67,7 +65,6 @@ def start_task_center_run(
     iteration_store: IterationStore,
     attempt_store: AttemptStore,
     runner: AttemptAgentRunner | None = None,
-    context_packet_store: ContextPacketStore | None = None,
     sandbox_provisioner: TaskCenterSandboxProvisioner | None = None,
 ) -> TaskCenterEntryHandle:
     """Start a TaskCenter run by converting *prompt* into the first Workflow."""
@@ -81,7 +78,6 @@ def start_task_center_run(
         iteration_store=iteration_store,
         attempt_store=attempt_store,
         runner=runner,
-        context_packet_store=context_packet_store,
         sandbox_provisioner=sandbox_provisioner,
     ).start()
 
@@ -101,7 +97,6 @@ class TaskCenterEntry:
         iteration_store: IterationStore,
         attempt_store: AttemptStore,
         runner: AttemptAgentRunner | None = None,
-        context_packet_store: ContextPacketStore | None = None,
         sandbox_provisioner: TaskCenterSandboxProvisioner | None = None,
     ) -> None:
         self._config = config
@@ -113,7 +108,6 @@ class TaskCenterEntry:
         self._iteration_store = iteration_store
         self._attempt_store = attempt_store
         self._runner = runner
-        self._context_packet_store = context_packet_store
         self._sandbox_provisioner = sandbox_provisioner or TaskCenterSandboxProvisioner()
 
     def start(self) -> TaskCenterEntryHandle:
@@ -191,14 +185,12 @@ class TaskCenterEntry:
         return runtime, launcher
 
     def _build_composer(self) -> AgentEntryComposer:
-        register_builtin_recipes()
         validate_agent_definitions_resolved()
         deps = ContextEngineDeps(
             workflow_store=self._workflow_store,
             iteration_store=self._iteration_store,
             attempt_store=self._attempt_store,
             task_store=self._task_store,
-            context_packet_store=self._context_packet_store,
         )
         return AgentEntryComposer.default(ContextEngine(deps))
 

@@ -211,7 +211,7 @@ async def test_initial_messages_capture(
         elif "executor" in role_dir:
             # Executor: 4 initial rows (system + <context> + <Task Guidance>
             # + skill). Skills carry operational heuristics (treat
-            # `<needs>` as fixed inputs, verify deliverable at claimed
+            # `<dependencies>` as fixed inputs, verify deliverable at claimed
             # location).
             assert len(rows) >= 4, (
                 f"{rel}: executor needs >=4 initial rows for the skill "
@@ -241,8 +241,11 @@ async def test_initial_messages_capture(
                 f"{rel}: reducer needs >=4 initial rows for the skill "
                 f"composite, got {len(rows)}"
             )
-            assert "<assigned_prompt" in user_msg_1, (
-                f"{rel}: missing <assigned_prompt> XML tag"
+            assert "<assigned_task" in user_msg_1, (
+                f"{rel}: missing <assigned_task> XML tag"
+            )
+            assert "<dependencies>" in user_msg_1, (
+                f"{rel}: missing <dependencies> XML tag"
             )
             task_guidance = texts[2]
             assert task_guidance.startswith("<Task Guidance>\n"), (

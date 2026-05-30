@@ -34,8 +34,8 @@ class TerminalToolDescriptor(BaseModel):
 
 
 TERMINAL_DESCRIPTORS: dict[str, TerminalToolDescriptor] = {
-    "submit_execution_success": TerminalToolDescriptor(
-        name="submit_execution_success",
+    "submit_generator_success": TerminalToolDescriptor(
+        name="submit_generator_success",
         selection_guidance=(
             "Call when the `<assigned_task>` deliverable is complete, exists "
             "at the claimed location, satisfies the task specification, and "
@@ -49,16 +49,16 @@ TERMINAL_DESCRIPTORS: dict[str, TerminalToolDescriptor] = {
             "contract."
         ),
     ),
-    "submit_execution_blocker": TerminalToolDescriptor(
-        name="submit_execution_blocker",
+    "submit_generator_failure": TerminalToolDescriptor(
+        name="submit_generator_failure",
         selection_guidance=(
-            "Call when the `<assigned_task>` cannot proceed because of a "
-            "concrete blocker. Summarize the blocker and the evidence."
+            "Call when the `<assigned_task>` cannot be completed in this "
+            "attempt. Summarize the failure and the evidence."
         ),
         advisor_review_focus=(
-            "Confirm the blocker is real and specific, not a premature "
-            "give-up. Verify the executor tried the obvious remediation "
-            "paths and did not hide solvable work behind a blocker."
+            "Confirm the failure is real and specific, not a premature "
+            "give-up. Verify the generator tried the obvious remediation "
+            "paths and did not hide solvable work behind a vague failure."
         ),
     ),
     "submit_workflow_handoff": TerminalToolDescriptor(
@@ -112,13 +112,13 @@ TERMINAL_DESCRIPTORS: dict[str, TerminalToolDescriptor] = {
     "submit_reduction_success": TerminalToolDescriptor(
         name="submit_reduction_success",
         selection_guidance=(
-            "Call when your `<needs>` outcomes satisfy your "
-            "`<assigned_prompt>`; this reducer task closes successfully and "
+            "Call when your `<dependencies>` outcomes satisfy your "
+            "`<assigned_task>`; this reducer task closes successfully and "
             "the attempt passes once every plan task is done."
         ),
         advisor_review_focus=(
             "The reducer proposes to PASS the slice it gates. Re-read its "
-            "`<assigned_prompt>`; verify the `<needs>` outcomes actually "
+            "`<assigned_task>`; verify the `<dependencies>` outcomes actually "
             "satisfy it. Flag any requirement the reducer is glossing over "
             "and any outcome that satisfies the letter but not the intent of "
             "the prompt."
@@ -127,8 +127,8 @@ TERMINAL_DESCRIPTORS: dict[str, TerminalToolDescriptor] = {
     "submit_reduction_failure": TerminalToolDescriptor(
         name="submit_reduction_failure",
         selection_guidance=(
-            "Call when your `<needs>` outcomes do not satisfy your "
-            "`<assigned_prompt>`. The graph enters retry or failure handling."
+            "Call when your `<dependencies>` outcomes do not satisfy your "
+            "`<assigned_task>`. The graph enters retry or failure handling."
         ),
         advisor_review_focus=(
             "The reducer proposes to FAIL the slice it gates. Confirm the "

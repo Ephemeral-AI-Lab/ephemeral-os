@@ -20,8 +20,8 @@ from task_center._core.primitives import (
 )
 from tools._framework.execution.tool_call import execute_tool_once
 from tools.submission.executor import (
-    submit_execution_blocker,
-    submit_execution_success,
+    submit_generator_failure,
+    submit_generator_success,
     submit_workflow_handoff,
 )
 from tools.submission.reducer import (
@@ -43,7 +43,7 @@ async def _noop_emit(event) -> None:
     del event
 
 
-async def test_submit_execution_success_calls_apply_generator_submission(
+async def test_submit_generator_success_calls_apply_generator_submission(
     workflow_store, iteration_store, attempt_store, task_store, composer
 ) -> None:
     fixture = build_harness_fixture(
@@ -56,10 +56,10 @@ async def test_submit_execution_success_calls_apply_generator_submission(
     generator_id = apply_single_generator_plan(fixture)
 
     result = await execute_tool_once(
-        submit_execution_success,
+        submit_generator_success,
         {"outcome": "done", "artifacts": ["artifact"]},
         make_tool_context(
-            fixture, generator_id, advisor_approves="submit_execution_success"
+            fixture, generator_id, advisor_approves="submit_generator_success"
         ),
         emit=_noop_emit,
     )
@@ -72,7 +72,7 @@ async def test_submit_execution_success_calls_apply_generator_submission(
     assert task["terminal_tool_result"]["generator_role"] == "executor"
 
 
-async def test_submit_execution_blocker_calls_apply_generator_submission(
+async def test_submit_generator_failure_calls_apply_generator_submission(
     workflow_store, iteration_store, attempt_store, task_store, composer
 ) -> None:
     fixture = build_harness_fixture(
@@ -85,10 +85,10 @@ async def test_submit_execution_blocker_calls_apply_generator_submission(
     generator_id = apply_single_generator_plan(fixture)
 
     result = await execute_tool_once(
-        submit_execution_blocker,
+        submit_generator_failure,
         {"outcome": "blocked by missing dependency"},
         make_tool_context(
-            fixture, generator_id, advisor_approves="submit_execution_blocker"
+            fixture, generator_id, advisor_approves="submit_generator_failure"
         ),
         emit=_noop_emit,
     )
@@ -96,7 +96,7 @@ async def test_submit_execution_blocker_calls_apply_generator_submission(
     task = task_store.get_task(generator_id)
     assert not result.is_error
     assert task is not None
-    assert task["status"] == TaskCenterTaskStatus.BLOCKED.value
+    assert task["status"] == TaskCenterTaskStatus.FAILED.value
     assert task["terminal_tool_result"]["generator_role"] == "executor"
 
 
@@ -209,8 +209,8 @@ async def test_submit_workflow_handoff_accepts_any_generator_agent_profile(
             context_recipe="generator",
             terminals=[
                 "submit_workflow_handoff",
-                "submit_execution_success",
-                "submit_execution_blocker",
+                "submit_generator_success",
+                "submit_generator_failure",
             ],
         )
     )
@@ -297,7 +297,6 @@ async def test_submit_workflow_handoff_child_outcome_updates_outer_generator(
                 ),
             ),
             deferred_goal_for_next_iteration=None,
-            outcome="Accepted delegated plan.",
         )
     )
     delegated_orchestrator.apply_generator_submission(

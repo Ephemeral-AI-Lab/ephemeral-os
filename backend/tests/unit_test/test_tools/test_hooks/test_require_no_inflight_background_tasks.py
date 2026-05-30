@@ -117,7 +117,7 @@ async def test_daemon_count_fails(monkeypatch) -> None:
     [
         "enter_isolated_workspace",
         "exit_isolated_workspace",
-        "submit_execution_success",
+        "submit_generator_success",
         "submit_workflow_handoff",
         "submit_plan_closes_goal",
         "submit_reduction_success",
@@ -135,7 +135,7 @@ async def test_daemon_error_fail_safe_blocks_non_bailout(monkeypatch, target) ->
 @pytest.mark.parametrize(
     "target",
     [
-        "submit_execution_blocker",
+        "submit_generator_failure",
         "submit_reduction_failure",
         "submit_plan_defers_goal",
     ],
@@ -153,7 +153,7 @@ async def test_daemon_error_with_local_inflight_still_blocks_bailout(monkeypatch
     """Bail-out exemption is daemon-error-only; confirmed local in-flight wins."""
     _patch_daemon(monkeypatch, error=True)
     ctx = _context(manager=_FakeManager({"agent-1": 1}))
-    result = await _hook("submit_execution_blocker").run(_DummyInput(), ctx)
+    result = await _hook("submit_generator_failure").run(_DummyInput(), ctx)
     assert result.status == "fail"
     assert _reason(result) == "ephemeral_jobs_in_flight"
 

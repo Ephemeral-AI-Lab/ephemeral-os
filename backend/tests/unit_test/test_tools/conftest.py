@@ -19,14 +19,11 @@ from db.base import Base
 import db.models  # noqa: F401
 from db.models.task_center import TaskCenterRequestRecord, TaskCenterRunRecord
 from db.stores.workflow_store import WorkflowStore
-from db.stores.context_packet_store import ContextPacketStore
 from db.stores.attempt_store import AttemptStore
 from db.stores.task_center_store import TaskCenterStore
 from db.stores.iteration_store import IterationStore
 from task_center.agent_launch.composer import AgentEntryComposer
 from task_center.context_engine.engine import ContextEngine, ContextEngineDeps
-from task_center.context_engine.recipes import register_builtin_recipes
-from task_center.context_engine.recipes_registry import RecipeRegistry
 
 
 @pytest.fixture
@@ -87,24 +84,12 @@ def task_store(session_factory) -> TaskCenterStore:
 
 
 @pytest.fixture
-def context_packet_store(session_factory) -> ContextPacketStore:
-    store = ContextPacketStore()
-    store.initialize(session_factory)
-    return store
-
-
-@pytest.fixture
 def isolated_agent_registries():
-    """Save + restore recipe / agent registries for test isolation."""
-    saved_recipes = dict(RecipeRegistry._registry)
+    """Save + restore agent registries for test isolation."""
     saved_definitions = list_definitions()
-    RecipeRegistry.clear()
     _clear_definitions()
-    register_builtin_recipes()
     yield
-    RecipeRegistry.clear()
     _clear_definitions()
-    RecipeRegistry._registry.update(saved_recipes)
     for definition in saved_definitions:
         register_definition(definition)
 
@@ -136,8 +121,8 @@ def register_test_agents(isolated_agent_registries):
             context_recipe="generator",
             terminals=[
                 "submit_workflow_handoff",
-                "submit_execution_success",
-                "submit_execution_blocker",
+                "submit_generator_success",
+                "submit_generator_failure",
             ],
         )
     )
@@ -147,7 +132,7 @@ def register_test_agents(isolated_agent_registries):
             description="test generator",
             role=AgentRole.GENERATOR,
             context_recipe="generator",
-            terminals=["submit_execution_success", "submit_execution_blocker"],
+            terminals=["submit_generator_success", "submit_generator_failure"],
             tool_call_limit=10,
         )
     )
@@ -170,7 +155,6 @@ def composer(
     iteration_store,
     attempt_store,
     task_store,
-    context_packet_store,
     register_test_agents,
 ) -> AgentEntryComposer:
     deps = ContextEngineDeps(
@@ -178,6 +162,5 @@ def composer(
         iteration_store=iteration_store,
         attempt_store=attempt_store,
         task_store=task_store,
-        context_packet_store=context_packet_store,
     )
     return AgentEntryComposer.default(ContextEngine(deps))

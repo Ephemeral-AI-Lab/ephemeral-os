@@ -75,21 +75,21 @@ def test_descriptors_have_non_empty_focus_fields() -> None:
 
 
 def test_render_terminal_catalog_uses_selection_guidance() -> None:
-    terminals = ["submit_execution_success", "submit_execution_blocker"]
+    terminals = ["submit_generator_success", "submit_generator_failure"]
     catalog = render_terminal_catalog(terminals, focus="selection_guidance")
     for name in terminals:
         assert f"`{name}`" in catalog
     assert (
-        TERMINAL_DESCRIPTORS["submit_execution_success"].selection_guidance[:30]
+        TERMINAL_DESCRIPTORS["submit_generator_success"].selection_guidance[:30]
         in catalog
     )
 
 
 def test_render_terminal_catalog_uses_advisor_review_focus() -> None:
-    terminals = ["submit_execution_success", "submit_execution_blocker"]
+    terminals = ["submit_generator_success", "submit_generator_failure"]
     catalog = render_terminal_catalog(terminals, focus="advisor_review_focus")
     assert (
-        TERMINAL_DESCRIPTORS["submit_execution_success"].advisor_review_focus[:30]
+        TERMINAL_DESCRIPTORS["submit_generator_success"].advisor_review_focus[:30]
         in catalog
     )
 

@@ -138,7 +138,8 @@ class AttemptStoreProtocol(Protocol):
         *,
         status: AttemptStatus,
         fail_reason: AttemptFailReason | None,
-        closed_at: datetime,
+        outcomes: list[dict[str, Any]] | None = ...,
+        closed_at: datetime = ...,
     ) -> Attempt: ...
 
     def list_for_iteration(self, iteration_id: str) -> list[Attempt]: ...

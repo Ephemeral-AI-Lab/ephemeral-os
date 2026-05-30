@@ -145,6 +145,50 @@ async def test_partial_plan_routes_to_apply_plan_submission(
         ),
         (
             {
+                "tasks": [
+                    {"id": "a", "agent_name": "executor", "needs": []},
+                    {"id": "b", "agent_name": "executor", "needs": []},
+                ],
+                "task_specs": {"a": "Do it.", "b": "Do b."},
+                "reducers": [{"id": "r", "needs": ["a"], "prompt": "Gate a."}],
+            },
+            "no downstream task needs",
+        ),
+        (
+            {
+                "tasks": [{"id": "a", "agent_name": "executor", "needs": []}],
+                "task_specs": {"a": "Do it."},
+                "reducers": [{"id": "r", "needs": [], "prompt": "Gate it."}],
+            },
+            "must need at least one generator",
+        ),
+        (
+            {
+                "tasks": [
+                    {"id": "a", "agent_name": "executor", "needs": []},
+                    {"id": "b", "agent_name": "executor", "needs": ["r"]},
+                ],
+                "task_specs": {"a": "Do it.", "b": "Do b."},
+                "reducers": [{"id": "r", "needs": ["a"], "prompt": "Gate a."}],
+            },
+            "cannot need reducer",
+        ),
+        (
+            {
+                "tasks": [
+                    {"id": "a", "agent_name": "executor", "needs": []},
+                    {"id": "b", "agent_name": "executor", "needs": ["a"]},
+                ],
+                "task_specs": {"a": "Do it.", "b": "Do b."},
+                "reducers": [
+                    {"id": "r1", "needs": ["b"], "prompt": "Gate b."},
+                    {"id": "r2", "needs": ["r1"], "prompt": "Gate r1."},
+                ],
+            },
+            "cannot need reducer",
+        ),
+        (
+            {
                 "tasks": [{"id": " ", "agent_name": "executor", "needs": []}],
                 "task_specs": {" ": "Do it."},
             },

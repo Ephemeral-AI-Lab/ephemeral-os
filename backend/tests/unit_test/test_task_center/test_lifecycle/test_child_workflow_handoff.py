@@ -95,7 +95,6 @@ def _seed_attempt_with_waiting_generator(
             ),
             reducers=(PlannedReducerTask(local_id="r", needs=("a", "b"), prompt="gate"),),
             deferred_goal_for_next_iteration=None,
-            outcome="plan",
         )
     )
     parent_task_id = generator_task_id(attempt.id, "a")
@@ -212,7 +211,7 @@ def test_child_workflow_outcome_is_idempotent_on_second_delivery(
     parent_task = task_store.get_task(parent_task_id)
     assert parent_task is not None
     assert parent_task["status"] == TaskCenterTaskStatus.DONE.value
-    assert len(parent_task["outcomes"]) == 1
+    assert parent_task["outcomes"] == []
 
 
 def test_root_workflow_close_routes_through_run_close_handler(

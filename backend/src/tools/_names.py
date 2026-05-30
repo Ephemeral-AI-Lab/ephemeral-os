@@ -27,9 +27,9 @@ CANCEL_BACKGROUND_TASK_TOOL_NAME = "cancel_background_task"
 # Helper-ask tools (backend/src/tools/ask_helper/)
 ASK_ADVISOR_TOOL_NAME = "ask_advisor"
 
-# Executor terminal tools
-SUBMIT_EXECUTION_SUCCESS_TOOL_NAME = "submit_execution_success"
-SUBMIT_EXECUTION_BLOCKER_TOOL_NAME = "submit_execution_blocker"
+# Generator terminal tools
+SUBMIT_GENERATOR_SUCCESS_TOOL_NAME = "submit_generator_success"
+SUBMIT_GENERATOR_FAILURE_TOOL_NAME = "submit_generator_failure"
 SUBMIT_WORKFLOW_HANDOFF_TOOL_NAME = "submit_workflow_handoff"
 
 # Reducer terminal tools
@@ -60,8 +60,8 @@ __all__ = [
     "WAIT_BACKGROUND_TASKS_TOOL_NAME",
     "CANCEL_BACKGROUND_TASK_TOOL_NAME",
     "ASK_ADVISOR_TOOL_NAME",
-    "SUBMIT_EXECUTION_SUCCESS_TOOL_NAME",
-    "SUBMIT_EXECUTION_BLOCKER_TOOL_NAME",
+    "SUBMIT_GENERATOR_SUCCESS_TOOL_NAME",
+    "SUBMIT_GENERATOR_FAILURE_TOOL_NAME",
     "SUBMIT_WORKFLOW_HANDOFF_TOOL_NAME",
     "SUBMIT_REDUCTION_SUCCESS_TOOL_NAME",
     "SUBMIT_REDUCTION_FAILURE_TOOL_NAME",

@@ -46,8 +46,6 @@ if TYPE_CHECKING:
     from task_center.context_engine.engine import (
         AgentDefinitionValidationError,
     )
-    from task_center.context_engine.packet import ContextPacket
-    from task_center.context_engine.recipes_registry import RecipeRegistry
     from task_center.context_engine.scope import ContextScope
     from task_center.entry.bootstrap import (
         TaskCenterEntry,
@@ -92,7 +90,6 @@ _EXPORTS: dict[str, tuple[str, str]] = {
         "task_center.agent_launch.entry_messages",
         "AgentEntryMessages",
     ),
-    "ContextPacket": ("task_center.context_engine.packet", "ContextPacket"),
     "ContextScope": ("task_center.context_engine.scope", "ContextScope"),
     "Iteration": (_STATE, "Iteration"),
     "IterationCreationReason": (_STATE, "IterationCreationReason"),
@@ -105,10 +102,6 @@ _EXPORTS: dict[str, tuple[str, str]] = {
     "PlannedGeneratorTask": (_SUBMISSIONS, "PlannedGeneratorTask"),
     "PlannedReducerTask": (_SUBMISSIONS, "PlannedReducerTask"),
     "PlannerSubmission": (_SUBMISSIONS, "PlannerSubmission"),
-    "RecipeRegistry": (
-        "task_center.context_engine.recipes_registry",
-        "RecipeRegistry",
-    ),
     "StartedWorkflow": ("task_center.workflow.starter", "StartedWorkflow"),
     "TaskCenterInvariantViolation": (
         "task_center._core.primitives",

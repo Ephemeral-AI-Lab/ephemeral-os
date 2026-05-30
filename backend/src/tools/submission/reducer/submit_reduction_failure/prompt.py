@@ -8,7 +8,7 @@ def get_submit_reduction_failure_description() -> str:
 Terminate your reducer run with FAILURE for the current attempt.
 
 Call this when:
-- The `<needs>` outcomes do not satisfy your `<assigned_prompt>`.
+- The `<dependencies>` outcomes do not satisfy your `<assigned_task>`.
 - The slice you gate does not meet its acceptance bar.
 
 Inputs:

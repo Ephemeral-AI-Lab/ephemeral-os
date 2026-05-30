@@ -4,9 +4,8 @@ Iteration close is now a primitive keyword callback
 ``on_iteration_closed(iteration_id=, succeeded=, deferred_goal=,
 final_attempt_id=)`` — there is no ``IterationClosureReport`` DTO. On a passing
 close the coordinator denormalizes the passing attempt's REDUCER outcomes onto
-``Iteration.outcomes`` (a JSON list of ``Outcome`` records keyed by ``text``);
-on a failed close it denormalizes the last failed attempt's failed-task
-outcomes.
+``Iteration.outcomes`` as execution outcome records; on a failed close it
+denormalizes the last failed attempt's failed-task outcomes.
 """
 
 from __future__ import annotations
@@ -143,8 +142,7 @@ def test_close_iteration_passed_writes_reducer_outcomes(
     workflow_store, iteration_store, attempt_store, task_center_run_id
 ):
     """At successful close the coordinator denormalizes the passing attempt's
-    REDUCER tasks onto ``Iteration.outcomes`` as a JSON list of ``Outcome``
-    records (``[{local_id, status, text}, ...]``)."""
+    REDUCER tasks onto ``Iteration.outcomes`` as execution outcome records."""
     iter_id = _seed_iteration(workflow_store, iteration_store, task_center_run_id)
     attempt = attempt_store.insert(iteration_id=iter_id, attempt_sequence_no=1)
     iteration_store.append_attempt_id(iter_id, attempt.id)
@@ -167,8 +165,18 @@ def test_close_iteration_passed_writes_reducer_outcomes(
     assert iteration.outcomes is not None
     record = json.loads(iteration.outcomes)
     assert record == [
-        {"local_id": "red_a", "status": "success", "outcome": "Storage layer ok."},
-        {"local_id": "red_b", "status": "success", "outcome": "Add command ok."},
+        {
+            "status": "success",
+            "role": "reducer",
+            "task_id": red_a,
+            "outcome": "Storage layer ok.",
+        },
+        {
+            "status": "success",
+            "role": "reducer",
+            "task_id": red_b,
+            "outcome": "Add command ok.",
+        },
     ]
 
 

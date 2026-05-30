@@ -2,7 +2,7 @@
 
 Round 3 ships a single skill-related tool, ``load_skill_reference``. The
 skill body itself lands as row 4 at agent launch (see
-``task_center/context_engine/core.py:build_skill_message``); references
+``task_center/context_engine/skill_message.py:build_skill_message``); references
 under the loaded skill's ``references/`` folder are reachable on demand
 via this tool.
 

@@ -13,25 +13,14 @@ from agents import (
     validate_agent_definitions_resolved,
 )
 from agents.skills import SkillLintError
-from task_center.context_engine.engine import (
-    AgentDefinitionValidationError,
-)
-from task_center.context_engine.recipes_registry import (
-    ContextRecipe,
-    RecipeRegistry,
-)
 
 
 @pytest.fixture(autouse=True)
 def _isolate_state():
-    saved_recipes = dict(RecipeRegistry._registry)
     saved_definitions = list_definitions()
-    RecipeRegistry.clear()
     _clear_definitions()
     yield
-    RecipeRegistry.clear()
     _clear_definitions()
-    RecipeRegistry._registry.update(saved_recipes)
     for definition in saved_definitions:
         register_definition(definition)
 
@@ -39,16 +28,6 @@ def _isolate_state():
 def _clear_definitions() -> None:
     for definition in list_definitions():
         unregister_definition(definition.name)
-
-
-def _stub_recipe(recipe_id: str) -> None:
-    RecipeRegistry.register(
-        ContextRecipe(
-            id=recipe_id,
-            required_scope_fields=frozenset({"request_id"}),
-            build=lambda s, d: None,  # type: ignore[arg-type, return-value]
-        )
-    )
 
 
 def test_legacy_variants_field_rejected_by_definition_model():
@@ -64,7 +43,7 @@ def test_legacy_variants_field_rejected_by_definition_model():
     assert "variants" in str(exc.value)
 
 
-def test_unknown_context_recipe_rejected():
+def test_context_recipe_name_is_not_registry_validated():
     base = AgentDefinition(
         name="planner",
         description="planner",
@@ -73,14 +52,10 @@ def test_unknown_context_recipe_rejected():
         context_recipe="not_registered_recipe",
     )
     register_definition(base)
-    with pytest.raises(AgentDefinitionValidationError) as exc:
-        validate_agent_definitions_resolved()
-    assert "not_registered_recipe" in str(exc.value)
+    validate_agent_definitions_resolved()
 
 
 def test_clean_setup_passes_validation():
-    _stub_recipe("planner")
-    _stub_recipe("generator")
     planner = AgentDefinition(
         name="planner",
         description="planner",
@@ -92,7 +67,7 @@ def test_clean_setup_passes_validation():
         name="generator",
         description="generator",
         context_recipe="generator",
-        terminals=["submit_execution_success", "submit_execution_blocker"],
+        terminals=["submit_generator_success", "submit_generator_failure"],
         tool_call_limit=10,
     )
     for d in (planner, generator):
@@ -116,7 +91,6 @@ def test_definitions_with_no_recipe_pass_validation():
 
 
 def test_skill_lint_runs_during_resolved_validation(tmp_path):
-    _stub_recipe("planner")
     skill_file = tmp_path / "planner" / "SKILL.md"
     skill_file.parent.mkdir()
     skill_file.write_text(

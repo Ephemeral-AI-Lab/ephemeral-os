@@ -57,7 +57,7 @@
 <div class="edge-list">
   <div><b>coordinator/reducer</b><span>Owned scope, page taxonomy, shared assets, source-truth merge, stale-claim decisions, overview, maintenance, and final validation.</span></div>
   <div><b>graph explorer: workflow-iteration-attempt</b><span>Mapped WorkflowStarter, WorkflowLifecycle, IterationAttemptCoordinator, AttemptOrchestrator, generator DAG, retry, deferral, delegated child workflows, nested planning, closure routing, tests, and stale older-doc claims.</span></div>
-  <div><b>graph explorer: context</b><span>Mapped ContextEngine, recipes, packets, renderer, task guidance, skill rows, profile frontmatter, and launch message rows.</span></div>
+  <div><b>graph explorer: context</b><span>Mapped ContextEngine, role-scoped AgentContext, XML renderer, task guidance, skill rows, profile frontmatter, and launch message rows.</span></div>
   <div><b>graph explorer: terminals</b><span>Mapped submission tools, terminal descriptor registry, the advisor helper pattern, terminal exclusivity, output validation, and engine stop behavior.</span></div>
   <div><b>graph explorer: runtime boundaries</b><span>Mapped TaskCenter entry bootstrap, sandbox binding, engine run launch, tool metadata, message artifacts, task_center_runner audit, and cross-module boundaries.</span></div>
   <div><b>wiki builder lanes</b><span>Parallel write lanes owned non-overlapping TaskCenter pages. Shared navigation, search, root index, and maintenance remained serial coordinator-owned.</span></div>
@@ -98,7 +98,7 @@
     <li><code>python3 .agents/skills/codebase-wiki-builder/scripts/check_html_wiki.py docs/architecture/task_center/*.html</code></li>
     <li><code>git diff --check -- docs/architecture/task_center docs/architecture/assets/search-index.js docs/architecture/assets/nav.js docs/architecture/index.html</code></li>
     <li><code>rg -n "\\[\\[|\\]\\]|style=|&lt;style" docs/architecture/task_center</code></li>
-    <li><code>rg -n "WorkflowLifecycle|IterationAttemptCoordinator|AttemptOrchestrator|TerminalToolRouter|ask_advisor" backend/src/task_center backend/src/tools backend/tests/unit_test</code></li>
+    <li><code>rg -n -e "WorkflowLifecycle" -e "IterationAttemptCoordinator" -e "AttemptOrchestrator" -e "TerminalToolRouter" -e "ask_advisor" backend/src/task_center backend/src/tools backend/tests/unit_test</code></li>
   </ul>
 </div>
 </section>
@@ -108,7 +108,7 @@
 <div class="evidence-grid">
   <div class="evidence-card">
     <h3>Workflow Iteration Attempt</h3>
-    <p>Refresh when Workflow, Iteration, Attempt, nested planning depth rules, retry, deferral, child-workflow handoff (<code>start/apply/cancel_child_workflow</code>), the recursive <code>Outcome</code> algebra, or store protocol methods change.</p>
+    <p>Refresh when Workflow, Iteration, Attempt, nested planning depth rules, retry, deferral, child-workflow handoff (<code>start/apply/cancel_child_workflow</code>), execution outcome projections, or store protocol methods change.</p>
   </div>
   <div class="evidence-card">
     <h3>Attempt Harness</h3>
@@ -116,7 +116,7 @@
   </div>
   <div class="evidence-card">
     <h3>Context Engine</h3>
-    <p>Refresh when recipes, packet block kinds, renderer compression, tag dictionary, what-in-context output, task guidance, skills, or launch message row rules change.</p>
+    <p>Refresh when role context shapes, XML tags, task guidance, skills, terminal catalogs, or launch message row rules change.</p>
   </div>
   <div class="evidence-card">
     <h3>Agent Roles</h3>
@@ -154,7 +154,7 @@
   <ul>
     <li><span><strong>2026-05-26.</strong> Created the TaskCenter architecture module under <code>docs/architecture/task_center</code>, covering the Workflow -> Iteration -> Attempt model, planner-generator-evaluator harness, context engine, agent roles, terminal tools, the advisor helper pattern, engine/tools/sandbox dispatch paths, and maintenance rules.</span></li>
     <li><span><strong>2026-05-26.</strong> Recorded stale claims from the older standalone TaskCenter HTML and linked this module into the shared architecture navigation/search layer.</span></li>
-    <li><span><strong>2026-05-30.</strong> Refreshed the context-engine, bridges, and maintenance pages for the reducers + unified-outcomes redesign (commit <code>d32994314</code>): the evaluator role and verifier profile are gone, replaced by a <code>reducer</code> plan task; an attempt is a planner-authored generator + reducer DAG with <code>PLAN -> RUN -> CLOSED</code> stages; results are unified under the recursive <code>Outcome</code> algebra (<code>_core/outcomes.py</code>); the <code>&lt;dependency&gt;</code> wrapper became <code>&lt;needs&gt;</code>; and the closure-report abstraction was dropped for a direct child-workflow handoff (<code>start/apply/cancel_child_workflow</code>). Repointed evidence paths for the module renames (<code>context_engine/core.py -&gt; engine.py</code>, <code>_core/terminal_tool_routing.py -&gt; terminal_routing.py</code>, the consolidated <code>_core/state.py</code>, <code>attempt/deps.py -&gt; launch.py</code>, <code>stage_advancer.py -&gt; run_stage.py</code>).</span></li>
+    <li><span><strong>2026-05-30.</strong> Refreshed the context-engine, bridges, and maintenance pages for the reducers + unified-outcomes redesign (commit <code>d32994314</code>): the evaluator role and verifier profile are gone, replaced by a <code>reducer</code> plan task; an attempt is a planner-authored generator + reducer DAG with <code>PLAN -> RUN -> CLOSED</code> stages; results are unified under task-bound planner/generator/reducer outcome records (<code>_core/outcomes.py</code>); the <code>&lt;dependency&gt;</code> wrapper became <code>&lt;needs&gt;</code>; and the closure-report abstraction was dropped for a direct child-workflow handoff (<code>start/apply/cancel_child_workflow</code>). Repointed evidence paths for the module renames (<code>context_engine/core.py -&gt; engine.py</code>, <code>_core/terminal_tool_routing.py -&gt; terminal_routing.py</code>, the consolidated <code>_core/state.py</code>, <code>attempt/deps.py -&gt; launch.py</code>, <code>stage_advancer.py -&gt; run_stage.py</code>).</span></li>
   </ul>
 </div>
 </section>

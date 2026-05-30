@@ -181,7 +181,7 @@ class InitialWorkflow(ScenarioBase):
 Run flow under the mock runner (single RUN stage to quiescence):
   planner_response -&gt; submit_plan_closes_goal
   executor_actions ("preflight") -&gt; shell tool probe
-                                -&gt; submit_execution_success
+                                -&gt; submit_generator_success
   reducer_response -&gt; submit_reduction_success
                   -&gt; attempt PASSES (every plan task DONE) -&gt; workflow closes
 
