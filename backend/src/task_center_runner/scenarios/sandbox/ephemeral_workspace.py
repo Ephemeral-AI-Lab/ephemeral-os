@@ -5,8 +5,8 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing import Any
 
-from tools.submission.evaluator import submit_evaluation_success
 from tools.submission.planner import submit_plan_closes_goal
+from tools.submission.reducer import submit_reduction_success
 
 from task_center_runner.scenarios.base import (
     ScenarioBase,
@@ -17,17 +17,20 @@ from task_center_runner.scenarios.base import (
 
 def _plan(action_id: str, action_spec: str, summary_hint: str) -> dict[str, Any]:
     return {
-        "plan_spec": (
-            f"Single-task plan that drives the {action_id} ephemeral-workspace "
-            "probe through the mock-agent harness."
-        ),
-        "evaluation_criteria": [
-            f"Ephemeral-workspace probe '{action_id}' wrote its summary to {summary_hint}.",
-            "Per-call overlay lifecycle, OCC publish behavior, and runtime "
-            "cleanup matched the 3.2 live E2E contract.",
-        ],
-        "tasks": [{"id": action_id, "agent_name": "executor", "deps": []}],
+        "tasks": [{"id": action_id, "agent_name": "executor", "needs": []}],
         "task_specs": {action_id: action_spec},
+        "reducers": [
+            {
+                "id": "reduce",
+                "needs": [action_id],
+                "prompt": (
+                    f"Confirm ephemeral-workspace probe '{action_id}' wrote its "
+                    f"summary to {summary_hint} and that per-call overlay "
+                    "lifecycle, OCC publish behavior, and runtime cleanup "
+                    "matched the 3.2 live E2E contract."
+                ),
+            }
+        ],
     }
 
 
@@ -40,19 +43,19 @@ def _same_path_conflict_plan() -> dict[str, Any]:
         for index in range(SAME_PATH_CONFLICT_WRITER_COUNT)
     ]
     tasks = [
-        {"id": "same_path_conflict_seed", "agent_name": "executor", "deps": []},
+        {"id": "same_path_conflict_seed", "agent_name": "executor", "needs": []},
         *(
             {
                 "id": writer_id,
                 "agent_name": "executor",
-                "deps": ["same_path_conflict_seed"],
+                "needs": ["same_path_conflict_seed"],
             }
             for writer_id in writer_ids
         ),
         {
             "id": "same_path_conflict_reconcile",
             "agent_name": "executor",
-            "deps": writer_ids,
+            "needs": writer_ids,
         },
     ]
     task_specs = {
@@ -72,20 +75,25 @@ def _same_path_conflict_plan() -> dict[str, Any]:
             "shared same-path target and write a first-wave fragment."
         )
     return {
-        "plan_spec": (
-            "Seed one shared file, launch four executor writers concurrently "
-            "against the same path, then reconcile fragments into the existing "
-            "ephemeral-workspace same-path summary contract."
-        ),
-        "evaluation_criteria": [
-            "The seed task initializes the shared same-path target.",
-            "Four writer generators launch after the seed and produce at least "
-            "one success plus at least one typed conflict or rejected write.",
-            "The reconcile task retries failed writers after fresh reads.",
-            "The final summary uses task_center_runner.ephemeral_workspace.v1.",
-        ],
         "tasks": tasks,
         "task_specs": task_specs,
+        "reducers": [
+            {
+                "id": "reduce",
+                "needs": [
+                    "same_path_conflict_seed",
+                    *writer_ids,
+                    "same_path_conflict_reconcile",
+                ],
+                "prompt": (
+                    "Confirm the seed initialized the shared same-path target, "
+                    "the four writers produced at least one success plus at "
+                    "least one typed conflict or rejected write, the reconcile "
+                    "retried failed writers after fresh reads, and the final "
+                    "summary uses task_center_runner.ephemeral_workspace.v1."
+                ),
+            }
+        ],
     }
 
 
@@ -107,12 +115,11 @@ class _EphemeralWorkspaceScenarioBase(ScenarioBase):
             return (self.action_id,)
         return ()
 
-    def evaluator_response(self, ctx: ScenarioContext) -> ToolCallSpec:
+    def reducer_response(self, ctx: ScenarioContext) -> ToolCallSpec:  # noqa: ARG002
         return ToolCallSpec(
-            submit_evaluation_success,
+            submit_reduction_success,
             {
-                "summary": f"{self.action_id} ephemeral-workspace scenario completed.",
-                "passed_criteria": list(ctx.attempt.evaluation_criteria),
+                "outcome": f"{self.action_id} ephemeral-workspace scenario completed.",
             },
         )
 

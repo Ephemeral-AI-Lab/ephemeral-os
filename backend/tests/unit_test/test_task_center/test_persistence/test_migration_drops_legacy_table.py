@@ -60,14 +60,19 @@ def test_initialize_db_creates_workflows_table_on_fresh_db(tmp_path, monkeypatch
 
     store = WorkflowStore()
     store.initialize(sf)
-    workflow = store.insert(task_center_run_id="run1", goal="fresh objective")
+    workflow = store.insert(
+        task_center_run_id="run1",
+        parent_task_id=None,
+        workflow_goal="fresh objective",
+    )
     assert store.get(workflow.id) == workflow
 
 
-def test_initialize_db_renames_task_specification_to_plan_spec(tmp_path, monkeypatch):
-    """FU-2: legacy ``task_specification`` columns migrate to ``plan_spec`` on
-    both ``iterations`` and ``attempts``, preserving stored values."""
-    db_path = tmp_path / "legacy-plan-spec.db"
+def test_initialize_db_renames_task_summary_to_outcomes(tmp_path, monkeypatch):
+    """Outcomes redesign: legacy ``iterations.task_summary`` migrates to
+    ``outcomes`` (preserving the stored value), and the legacy attempt columns
+    ``plan_spec``/``evaluation_criteria``/``evaluator_task_id`` are dropped."""
+    db_path = tmp_path / "legacy-outcomes.db"
     pre_engine = create_engine(f"sqlite:///{db_path}")
     with pre_engine.begin() as conn:
         conn.execute(
@@ -86,7 +91,7 @@ def test_initialize_db_renames_task_specification_to_plan_spec(tmp_path, monkeyp
                     created_at DATETIME NOT NULL,
                     updated_at DATETIME NOT NULL,
                     closed_at DATETIME,
-                    task_specification TEXT,
+                    plan_spec TEXT,
                     task_summary TEXT
                 )
                 """
@@ -103,26 +108,23 @@ def test_initialize_db_renames_task_specification_to_plan_spec(tmp_path, monkeyp
                     status TEXT NOT NULL,
                     created_at DATETIME NOT NULL,
                     updated_at DATETIME NOT NULL,
-                    task_specification TEXT
+                    generator_task_ids JSON,
+                    plan_spec TEXT,
+                    evaluation_criteria JSON,
+                    evaluator_task_id TEXT
                 )
                 """
             )
         )
+        # ``attempt_ids`` must be non-null: dropping the legacy ``plan_spec``
+        # column triggers a SQLite table rebuild that copies this NOT-NULL col.
         conn.execute(
             text(
                 "INSERT INTO iterations (id, workflow_id, sequence_no, "
-                "creation_reason, goal, attempt_budget, status, created_at, "
-                "updated_at, task_specification) VALUES ('it1', 'wf1', 1, "
-                "'initial', 'g', 3, 'succeeded', '2026-01-01 00:00:00', "
-                "'2026-01-01 00:00:00', 'iteration spec')"
-            )
-        )
-        conn.execute(
-            text(
-                "INSERT INTO attempts (id, iteration_id, attempt_sequence_no, "
-                "stage, status, created_at, updated_at, task_specification) VALUES "
-                "('at1', 'it1', 1, 'closed', 'passed', '2026-01-01 00:00:00', "
-                "'2026-01-01 00:00:00', 'attempt spec')"
+                "creation_reason, goal, attempt_budget, status, attempt_ids, "
+                "created_at, updated_at, task_summary) VALUES ('it1', 'wf1', 1, "
+                "'initial', 'g', 3, 'succeeded', '[]', '2026-01-01 00:00:00', "
+                "'2026-01-01 00:00:00', 'iteration outcomes')"
             )
         )
     pre_engine.dispose()
@@ -134,19 +136,23 @@ def test_initialize_db_renames_task_specification_to_plan_spec(tmp_path, monkeyp
     assert eng is not None
     insp = inspect(eng)
 
-    for table in ("iterations", "attempts"):
-        cols = {column["name"] for column in insp.get_columns(table)}
-        assert "plan_spec" in cols, table
-        assert "task_specification" not in cols, table
+    iteration_cols = {column["name"] for column in insp.get_columns("iterations")}
+    assert "outcomes" in iteration_cols
+    assert "task_summary" not in iteration_cols
+    assert "plan_spec" not in iteration_cols
+
+    attempt_cols = {column["name"] for column in insp.get_columns("attempts")}
+    assert "plan_spec" not in attempt_cols
+    assert "evaluation_criteria" not in attempt_cols
+    assert "evaluator_task_id" not in attempt_cols
+    assert "reducer_task_ids" in attempt_cols
 
     with eng.begin() as conn:
         assert (
-            conn.execute(text("SELECT plan_spec FROM iterations WHERE id='it1'")).scalar_one()
-            == "iteration spec"
-        )
-        assert (
-            conn.execute(text("SELECT plan_spec FROM attempts WHERE id='at1'")).scalar_one()
-            == "attempt spec"
+            conn.execute(
+                text("SELECT outcomes FROM iterations WHERE id='it1'")
+            ).scalar_one()
+            == "iteration outcomes"
         )
 
 

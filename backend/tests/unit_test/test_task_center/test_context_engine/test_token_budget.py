@@ -162,7 +162,7 @@ def test_compression_preserves_remaining_packet_order():
                 source_id="src-low",
             ),
             ContextBlock(
-                kind="task_specification",
+                kind="failed_attempt",
                 priority=ContextPriority.HIGH,
                 text="attempt",
             ),

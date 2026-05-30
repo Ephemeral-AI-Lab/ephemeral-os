@@ -16,11 +16,11 @@ from agents import (
     register_definition,
     unregister_definition,
 )
-from task_center._core.terminal_tool_routing import (
+from task_center._core.terminal_routing import (
     TerminalToolRouter,
     TerminalToolSelection,
 )
-from task_center.context_engine.core import ContextEngineDeps, MissingContextRecipeError
+from task_center.context_engine.engine import ContextEngineDeps, MissingContextRecipeError
 from task_center.context_engine.scope import ContextScope
 
 
@@ -81,7 +81,7 @@ def test_router_intersects_and_returns_effective_copy_without_mutating(deps, mon
         routing=lambda *, is_nested, has_workflow: frozenset({"submit_plan_closes_goal"}),
     )
     monkeypatch.setattr(
-        "task_center._core.terminal_tool_routing._nested_workflow_depth_gt_1",
+        "task_center._core.terminal_routing._nested_workflow_depth_gt_1",
         lambda ctx: True,
     )
 
@@ -107,7 +107,7 @@ def test_router_passes_depth_and_workflow_flags(deps, monkeypatch):
 
     _register(name="planner", terminals=["submit_plan_closes_goal"], recipe="planner", routing=_spy)
     monkeypatch.setattr(
-        "task_center._core.terminal_tool_routing._nested_workflow_depth_gt_1",
+        "task_center._core.terminal_routing._nested_workflow_depth_gt_1",
         lambda ctx: True,
     )
 
@@ -122,25 +122,25 @@ def test_router_passes_depth_and_workflow_flags(deps, monkeypatch):
 
 def test_no_routing_module_keeps_all_terminals(deps, monkeypatch):
     _register(
-        name="evaluator",
-        terminals=["submit_evaluation_success", "submit_evaluation_failure"],
-        recipe="evaluator",
+        name="reducer",
+        terminals=["submit_reduction_success", "submit_reduction_failure"],
+        recipe="reducer",
         routing=None,
     )
     monkeypatch.setattr(
-        "task_center._core.terminal_tool_routing._nested_workflow_depth_gt_1",
+        "task_center._core.terminal_routing._nested_workflow_depth_gt_1",
         lambda ctx: True,
     )
 
     selection = TerminalToolRouter().resolve(
-        base_agent_name="evaluator",
+        base_agent_name="reducer",
         scope=ContextScope(workflow_id="g"),
         deps=deps,
     )
 
     assert selection.agent_def.terminals == [
-        "submit_evaluation_success",
-        "submit_evaluation_failure",
+        "submit_reduction_success",
+        "submit_reduction_failure",
     ]
 
 
@@ -152,7 +152,7 @@ def test_router_none_result_keeps_all_terminals(deps, monkeypatch):
         routing=lambda *, is_nested, has_workflow: None,
     )
     monkeypatch.setattr(
-        "task_center._core.terminal_tool_routing._nested_workflow_depth_gt_1",
+        "task_center._core.terminal_routing._nested_workflow_depth_gt_1",
         lambda ctx: True,
     )
 

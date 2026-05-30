@@ -17,7 +17,7 @@ from agents import (
 )
 from task_center.agent_launch.composer import AgentEntryComposer
 from task_center.agent_launch.entry_messages import AgentEntryMessages
-from task_center.context_engine.core import (
+from task_center.context_engine.engine import (
     ContextEngine,
     ContextEngineDeps,
     ContextEngineError,

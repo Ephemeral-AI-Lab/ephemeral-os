@@ -125,7 +125,7 @@ def test_case04_planner_iter2_prior_and_current():
     assert outline == (
         "- <goal> — user's request\n"
         "- <iteration position=\"prior\"> — previous iteration's work\n"
-        "  - <task status=\"success\"> — generator task outcome\n"
+        "  - <task status=\"success\"> — upstream task outcome\n"
         "- <iteration position=\"current\"> — active iteration\n"
         "  - <iteration_goal> — active iteration's scope"
     )
@@ -150,19 +150,18 @@ def test_consecutive_same_descriptor_siblings_collapse():
     assert outline.count("<attempt>") == 1
 
 
-def test_executor_outline_with_plan_spec_dependency_and_assigned_task():
+def test_executor_outline_with_needs_and_assigned_task():
     blocks = [
-        ContextBlock(
-            kind="task_specification",
-            priority=ContextPriority.HIGH,
-            text="plan body",
-            metadata={"tag": "plan_spec"},
-        ),
         ContextBlock(
             kind="dependency_summary",
             priority=ContextPriority.MEDIUM,
             text="dep",
-            metadata={"tag": "dependency", "attrs": 'id="t-a"'},
+            metadata={
+                "group_id": "needs",
+                "group_tag": "needs",
+                "child_tag": "task",
+                "attrs": 'id="t-a" status="success"',
+            },
         ),
         ContextBlock(
             kind="planned_task_spec",
@@ -172,9 +171,10 @@ def test_executor_outline_with_plan_spec_dependency_and_assigned_task():
         ),
     ]
     outline = render_context_outline(_packet(blocks))
+    # <needs> is not in RECURSE_THROUGH, so it renders one bullet with no
+    # nested <task> children. The generator drops <plan_spec> entirely.
     assert outline == (
-        "- <plan_spec> — attempt's plan\n"
-        "- <dependency> — upstream task output\n"
+        "- <needs> — upstream needs output\n"
         "- <assigned_task> — your assigned task"
     )
 

@@ -26,7 +26,7 @@ Do NOT call this when:
 - You succeeded — use `{SUBMIT_EXECUTION_SUCCESS_TOOL_NAME}`.
 
 Inputs:
-- `summary`: 1–3 sentence factual recap of what blocked you and the
+- `outcome`: 1–3 sentence factual recap of what blocked you and the
   evidence for it.
 
 Behavior:

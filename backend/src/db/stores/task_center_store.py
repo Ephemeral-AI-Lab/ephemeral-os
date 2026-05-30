@@ -43,18 +43,16 @@ def _serialize_run(record: TaskCenterRunRecord) -> SerializedRow:
 
 def _serialize_task(record: TaskCenterTaskRecord) -> SerializedRow:
     return {
-        "id": record.id,
+        "task_id": record.id,
         "task_center_run_id": record.task_center_run_id,
         "role": record.role,
         "agent_name": record.agent_name,
         "context_message": record.context_message,
         "status": record.status,
-        "summaries": record.summaries or [],
+        "outcomes": record.outcomes or [],
+        "terminal_tool_result": record.terminal_tool_result,
         "needs": record.needs or [],
-        "task_center_attempt_id": record.task_center_attempt_id,
-        "context_packet_id": record.context_packet_id,
-        "fix_target_id": record.fix_target_id,
-        "spawn_reason": record.spawn_reason,
+        "child_workflow_id": record.child_workflow_id,
         "created_at": record.created_at.isoformat() if record.created_at else None,
         "updated_at": record.updated_at.isoformat() if record.updated_at else None,
     }
@@ -131,13 +129,11 @@ class TaskCenterStore(SyncStoreMixin):
         role: str,
         context_message: str,
         status: str,
-        summaries: list[SerializedRow],
+        outcomes: list[SerializedRow],
         needs: list[str],
-        task_center_attempt_id: str | None,
         agent_name: str | None = None,
-        context_packet_id: str | None = None,
-        fix_target_id: str | None = None,
-        spawn_reason: str | None = None,
+        terminal_tool_result: dict | None = None,
+        child_workflow_id: str | None = None,
     ) -> None:
         with self._sf() as db:
             now = datetime.now(UTC)
@@ -150,12 +146,10 @@ class TaskCenterStore(SyncStoreMixin):
                     agent_name=agent_name,
                     context_message=context_message,
                     status=status,
-                    summaries=summaries,
+                    outcomes=outcomes,
+                    terminal_tool_result=terminal_tool_result,
                     needs=needs,
-                    task_center_attempt_id=task_center_attempt_id,
-                    context_packet_id=context_packet_id,
-                    fix_target_id=fix_target_id,
-                    spawn_reason=spawn_reason,
+                    child_workflow_id=child_workflow_id,
                     created_at=now,
                     updated_at=now,
                 )
@@ -165,12 +159,10 @@ class TaskCenterStore(SyncStoreMixin):
                 record.agent_name = agent_name
                 record.context_message = context_message
                 record.status = status
-                record.summaries = summaries
+                record.outcomes = outcomes
+                record.terminal_tool_result = terminal_tool_result
                 record.needs = needs
-                record.task_center_attempt_id = task_center_attempt_id
-                record.context_packet_id = context_packet_id
-                record.fix_target_id = fix_target_id
-                record.spawn_reason = spawn_reason
+                record.child_workflow_id = child_workflow_id
                 record.updated_at = now
             db.commit()
 
@@ -191,28 +183,13 @@ class TaskCenterStore(SyncStoreMixin):
     def list_tasks_for_attempt(
         self, attempt_id: str
     ) -> list[SerializedRow]:
+        # Task ids encode the attempt (``<attempt_id>:planner|gen:..|red:..``),
+        # so membership is an id-prefix match (the ``task_center_attempt_id``
+        # column is gone).
         with self._sf() as db:
             q = (
                 db.query(TaskCenterTaskRecord)
-                .filter(
-                    TaskCenterTaskRecord.task_center_attempt_id
-                    == attempt_id
-                )
-                .order_by(TaskCenterTaskRecord.created_at.asc())
-            )
-            return [_serialize_task(record) for record in q.all()]
-
-    def list_generator_tasks_for_attempt(
-        self, attempt_id: str
-    ) -> list[SerializedRow]:
-        with self._sf() as db:
-            q = (
-                db.query(TaskCenterTaskRecord)
-                .filter(
-                    TaskCenterTaskRecord.task_center_attempt_id
-                    == attempt_id,
-                    TaskCenterTaskRecord.role == "generator",
-                )
+                .filter(TaskCenterTaskRecord.id.like(f"{attempt_id}:%"))
                 .order_by(TaskCenterTaskRecord.created_at.asc())
             )
             return [_serialize_task(record) for record in q.all()]
@@ -222,31 +199,18 @@ class TaskCenterStore(SyncStoreMixin):
         task_id: str,
         *,
         status: str,
-        summary: SerializedRow | None = None,
+        outcomes: list[SerializedRow] | None = None,
+        terminal_tool_result: dict | None = None,
     ) -> SerializedRow:
         with self._sf() as db:
             record = db.get(TaskCenterTaskRecord, task_id)
             if record is None:
                 raise LookupError(f"TaskCenterTask {task_id!r} not found")
             record.status = status
-            if summary is not None:
-                record.summaries = [*(record.summaries or []), summary]
-            record.updated_at = datetime.now(UTC)
-            db.commit()
-            db.refresh(record)
-            return _serialize_task(record)
-
-    def set_task_context_packet_id(
-        self,
-        task_id: str,
-        *,
-        context_packet_id: str | None,
-    ) -> SerializedRow:
-        with self._sf() as db:
-            record = db.get(TaskCenterTaskRecord, task_id)
-            if record is None:
-                raise LookupError(f"TaskCenterTask {task_id!r} not found")
-            record.context_packet_id = context_packet_id
+            if outcomes is not None:
+                record.outcomes = outcomes
+            if terminal_tool_result is not None:
+                record.terminal_tool_result = terminal_tool_result
             record.updated_at = datetime.now(UTC)
             db.commit()
             db.refresh(record)
@@ -258,12 +222,16 @@ class TaskCenterStore(SyncStoreMixin):
         *,
         expected_status: str,
         status: str,
-        summary: SerializedRow | None = None,
+        outcomes: list[SerializedRow] | None = None,
+        terminal_tool_result: dict | None = None,
+        child_workflow_id: str | None = None,
     ) -> SerializedRow | None:
         """Compare-and-set task status. Returns the new row, or ``None`` on mismatch.
 
         The CAS miss is the idempotency primitive for parent-task transitions
-        in the complex-task-handoff lifecycle.
+        in the child-workflow handoff lifecycle; ``child_workflow_id`` lets the
+        ``RUNNING → WAITING_WORKFLOW`` flip and the forward link land in one
+        transaction.
         """
         with self._sf() as db:
             record = db.get(TaskCenterTaskRecord, task_id)
@@ -272,8 +240,12 @@ class TaskCenterStore(SyncStoreMixin):
             if record.status != expected_status:
                 return None
             record.status = status
-            if summary is not None:
-                record.summaries = [*(record.summaries or []), summary]
+            if outcomes is not None:
+                record.outcomes = outcomes
+            if terminal_tool_result is not None:
+                record.terminal_tool_result = terminal_tool_result
+            if child_workflow_id is not None:
+                record.child_workflow_id = child_workflow_id
             record.updated_at = datetime.now(UTC)
             db.commit()
             db.refresh(record)

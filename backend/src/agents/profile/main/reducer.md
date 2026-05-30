@@ -17,7 +17,7 @@ terminals:
   - submit_reduction_success
   - submit_reduction_failure
 notification_triggers: []
-context_recipe: evaluator
+context_recipe: reducer
 skill: ../../../../config/skills/reducer/SKILL.md
 ---
 You are the **main-agent reducer**.
@@ -46,7 +46,7 @@ self-check before calling `ask_advisor`.
 If the advisor rejects your success submission specifically because your
 prior edit exceeded scope, do NOT attempt to revert via another edit.
 Submit `submit_reduction_failure` with the rejected scope-violation
-issue echoed in your failure summary (this will require a fresh
+issue echoed in your failure outcome (this will require a fresh
 `ask_advisor` call for the failure terminal per the Submission
 discipline section; the advisor can approve a failure terminal that
 admits the scope violation even when it just rejected the success

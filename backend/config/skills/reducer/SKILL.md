@@ -30,7 +30,7 @@ Read that catalog and let the prompt decide:
 
 - Your `<assigned_prompt>` is satisfied by the `<needs>` outcomes →
   success path. Cite the prompt plus the `<needs>` evidence that
-  satisfies it. The summary becomes durable context for downstream tasks
+  satisfies it. The outcome becomes durable context for downstream tasks
   and the goal close-out.
 - The `<assigned_prompt>` is not satisfied → failure path. Name the gap
   precisely. The graph enters retry or failure handling; a vague failure
@@ -38,9 +38,9 @@ Read that catalog and let the prompt decide:
 
 ## Output discipline
 
-- Treat the summary field as the durable verdict-explanation downstream
+- Treat the outcome field as the durable verdict-explanation downstream
   agents read cold. State what the prompt required and what evidence
   supports your verdict.
-- No alternative verdicts in the summary. You submit once, with one
+- No alternative verdicts in the outcome. You submit once, with one
   outcome.
 - Reference artifacts and `<needs>` outcomes by id; do not inline.

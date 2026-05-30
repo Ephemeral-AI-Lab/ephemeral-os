@@ -6,13 +6,9 @@ from collections.abc import Sequence
 from dataclasses import asdict, dataclass
 from typing import Any
 
-from tools.submission.evaluator import (
-    submit_evaluation_failure,
-    submit_evaluation_success,
-)
-from tools.submission.verifier import (
-    submit_verification_failure,
-    submit_verification_success,
+from tools.submission.reducer import (
+    submit_reduction_failure,
+    submit_reduction_success,
 )
 from tools.submission.planner import (
     submit_plan_closes_goal,
@@ -107,52 +103,39 @@ class FullStackAdversarial(ScenarioBase):
             return ("full_stack_final_reconciliation",)
         return ()
 
-    def verifier_response(self, ctx: ScenarioContext) -> ToolCallSpec:
-        context_message = ctx.context_message or ""
-        checkpoint = context_message_field(context_message, "checkpoint") or "checkpoint"
-        should_fail = self._should_fail_verifier(ctx, checkpoint)
-        if should_fail:
+    def reducer_response(self, ctx: ScenarioContext) -> ToolCallSpec:
+        if (
+            is_entry_origin_workflow(ctx)
+            and ctx.iteration.sequence_no == 1
+            and ctx.attempt.attempt_sequence_no == 1
+        ):
             return ToolCallSpec(
-                submit_verification_failure,
+                submit_reduction_failure,
                 {
-                    "summary": f"Verifier rejected {checkpoint}.",
-                    "unresolved_issues": [
-                        f"{checkpoint} is missing retry-only recursive evidence.",
-                    ],
+                    "outcome": (
+                        "Intentional inventory retry so the next planner sees "
+                        "failed-attempt context before subsystem work."
+                    ),
+                },
+            )
+        if (
+            is_entry_origin_workflow(ctx)
+            and ctx.iteration.sequence_no == 2
+            and ctx.attempt.attempt_sequence_no == 1
+        ):
+            return ToolCallSpec(
+                submit_reduction_failure,
+                {
+                    "outcome": (
+                        "Subsystem wave gate failed once to force retry "
+                        "evidence before recursive delegation."
+                    ),
                 },
             )
         return ToolCallSpec(
-            submit_verification_success,
+            submit_reduction_success,
             {
-                "summary": f"Verifier accepted {checkpoint}.",
-                "checks": [
-                    f"checkpoint:{checkpoint}",
-                    "dependencies:"
-                    f"{context_message_field(context_message, 'dependency_count') or '0'}",
-                ],
-            },
-        )
-
-    def evaluator_response(self, ctx: ScenarioContext) -> ToolCallSpec:
-        if is_entry_origin_workflow(ctx) and ctx.iteration.sequence_no == 1:
-            if ctx.attempt.attempt_sequence_no == 1:
-                return ToolCallSpec(
-                    submit_evaluation_failure,
-                    {
-                        "summary": (
-                            "Intentional inventory retry so the next planner "
-                            "sees failed-attempt context before subsystem work."
-                        ),
-                        "failed_criteria": [
-                            "Retry context was not yet exercised.",
-                        ],
-                    },
-                )
-        return ToolCallSpec(
-            submit_evaluation_success,
-            {
-                "summary": "Full-stack adversarial evidence accepted.",
-                "passed_criteria": list(ctx.attempt.evaluation_criteria),
+                "outcome": "Full-stack adversarial evidence accepted.",
             },
         )
 
@@ -207,28 +190,21 @@ class FullStackAdversarial(ScenarioBase):
             return ToolCallSpec(
                 submit_plan_defers_goal,
                 {
-                    "plan_spec": (
-                        "Execute delegated oversized full-stack matrix slices."
-                    ),
-                    "evaluation_criteria": [
-                        "At least two recursive executor slices wrote evidence.",
-                        "Recursive wave verifier accepted delegated evidence.",
-                    ],
                     "tasks": [
                         {
                             "id": "recursive_oversized_a",
                             "agent_name": "executor",
-                            "deps": [],
+                            "needs": [],
                         },
                         {
                             "id": "recursive_oversized_b",
                             "agent_name": "executor",
-                            "deps": [],
+                            "needs": [],
                         },
                         {
                             "id": "recursive_wave_guard",
-                            "agent_name": "verifier",
-                            "deps": ["recursive_oversized_a", "recursive_oversized_b"],
+                            "agent_name": "executor",
+                            "needs": ["recursive_oversized_a", "recursive_oversized_b"],
                         },
                     ],
                     "task_specs": {
@@ -242,6 +218,21 @@ class FullStackAdversarial(ScenarioBase):
                             "VERIFY checkpoint=recursive_wave dependency_count=2"
                         ),
                     },
+                    "reducers": [
+                        {
+                            "id": "reduce",
+                            "needs": [
+                                "recursive_oversized_a",
+                                "recursive_oversized_b",
+                                "recursive_wave_guard",
+                            ],
+                            "prompt": (
+                                "At least two recursive executor slices wrote "
+                                "evidence and the recursive wave guard accepted "
+                                "delegated evidence."
+                            ),
+                        }
+                    ],
                     "deferred_goal_for_next_iteration": (
                         "Write the recursive full-stack close report and verify it."
                     ),
@@ -250,21 +241,16 @@ class FullStackAdversarial(ScenarioBase):
         return ToolCallSpec(
             submit_plan_closes_goal,
             {
-                "plan_spec": "Close delegated full-stack matrix workflow.",
-                "evaluation_criteria": [
-                    "Recursive close report was written through tools.",
-                    "Recursive final verifier read the close report.",
-                ],
                 "tasks": [
                     {
                         "id": "recursive_closure_report",
                         "agent_name": "executor",
-                        "deps": [],
+                        "needs": [],
                     },
                     {
                         "id": "recursive_close_guard",
-                        "agent_name": "verifier",
-                        "deps": ["recursive_closure_report"],
+                        "agent_name": "executor",
+                        "needs": ["recursive_closure_report"],
                     },
                 ],
                 "task_specs": {
@@ -275,6 +261,16 @@ class FullStackAdversarial(ScenarioBase):
                         "VERIFY checkpoint=recursive_final dependency_count=1"
                     ),
                 },
+                "reducers": [
+                    {
+                        "id": "reduce",
+                        "needs": ["recursive_closure_report", "recursive_close_guard"],
+                        "prompt": (
+                            "Recursive close report was written through tools and "
+                            "the recursive final guard read it."
+                        ),
+                    }
+                ],
             },
         )
 
@@ -287,21 +283,21 @@ class FullStackAdversarial(ScenarioBase):
             for subsystem in ("io", "distributed", "compat", "parquet")
         }
         tasks = [
-            {"id": "occ_matrix", "agent_name": "executor", "deps": []},
-            {"id": "overlay_matrix", "agent_name": "executor", "deps": []},
-            {"id": "lsp_matrix", "agent_name": "executor", "deps": []},
+            {"id": "occ_matrix", "agent_name": "executor", "needs": []},
+            {"id": "overlay_matrix", "agent_name": "executor", "needs": []},
+            {"id": "lsp_matrix", "agent_name": "executor", "needs": []},
             # The layer-stack script intentionally drives squash/GC behavior;
             # run it after the other matrices so it cannot invalidate their
             # active shell snapshots.
             {
                 "id": "layerstack_matrix",
                 "agent_name": "executor",
-                "deps": ["occ_matrix", "overlay_matrix", "lsp_matrix"],
+                "needs": ["occ_matrix", "overlay_matrix", "lsp_matrix"],
             },
             {
                 "id": "subsystem_wave_guard",
-                "agent_name": "verifier",
-                "deps": [
+                "agent_name": "executor",
+                "needs": [
                     "occ_matrix",
                     "overlay_matrix",
                     "layerstack_matrix",
@@ -331,18 +327,19 @@ class FullStackAdversarial(ScenarioBase):
             ),
         }
         return {
-            "plan_spec": (
-                "Run the full-stack subsystem wave using only agent tool scripts."
-            ),
-            "evaluation_criteria": [
-                "OCC conflict matrix emitted per-cell metrics.",
-                "Overlay edge matrix emitted per-cell metrics.",
-                "Layer-stack lease/squash evidence was captured.",
-                "LSP refresh tools observed latest workspace state.",
-                "Subsystem wave guard fails once to force retry evidence.",
-            ],
             "tasks": tasks,
             "task_specs": task_specs,
+            "reducers": [
+                {
+                    "id": "reduce",
+                    "needs": [task["id"] for task in tasks],
+                    "prompt": (
+                        "OCC, overlay, layer-stack lease/squash, and LSP refresh "
+                        "evidence were captured; the subsystem wave gate fails "
+                        "once to force retry evidence."
+                    ),
+                }
+            ],
             "deferred_goal_for_next_iteration": (
                 "Retry with recursive oversized matrix delegation and final "
                 "reconciliation after subsystem artifacts exist."
@@ -354,33 +351,25 @@ class FullStackAdversarial(ScenarioBase):
         recursive = _recursive_package(plan.packages)
         package_id = recursive.id if recursive is not None else "pkg_recursive_unknown"
         self._recursive_package_id = package_id
+        tasks = [
+            {
+                "id": "request_recursive_matrix",
+                "agent_name": "executor",
+                "needs": [],
+            },
+            {
+                "id": "final_reconciliation",
+                "agent_name": "executor",
+                "needs": ["request_recursive_matrix"],
+            },
+            {
+                "id": "recursive_return_guard",
+                "agent_name": "executor",
+                "needs": ["request_recursive_matrix", "final_reconciliation"],
+            },
+        ]
         return {
-            "plan_spec": (
-                "Continue after subsystem verifier failure with recursive "
-                "delegation and parent reconciliation."
-            ),
-            "evaluation_criteria": [
-                "Retry planner saw failed verifier context.",
-                "Recursive workflow completes before parent final guard.",
-                "Final reconciliation reads subsystem and recursive artifacts.",
-            ],
-            "tasks": [
-                {
-                    "id": "request_recursive_matrix",
-                    "agent_name": "executor",
-                    "deps": [],
-                },
-                {
-                    "id": "final_reconciliation",
-                    "agent_name": "executor",
-                    "deps": ["request_recursive_matrix"],
-                },
-                {
-                    "id": "recursive_return_guard",
-                    "agent_name": "verifier",
-                    "deps": ["request_recursive_matrix", "final_reconciliation"],
-                },
-            ],
+            "tasks": tasks,
             "task_specs": {
                 "request_recursive_matrix": (
                     f"ACTION request_recursive_matrix package={package_id}"
@@ -390,33 +379,39 @@ class FullStackAdversarial(ScenarioBase):
                     "VERIFY checkpoint=recursive_return dependency_count=2"
                 ),
             },
+            "reducers": [
+                {
+                    "id": "reduce",
+                    "needs": [task["id"] for task in tasks],
+                    "prompt": (
+                        "Retry planner saw failed context, the recursive workflow "
+                        "completed before the parent final guard, and final "
+                        "reconciliation read subsystem and recursive artifacts."
+                    ),
+                }
+            ],
             "deferred_goal_for_next_iteration": (
-                "Run the final release guard and evaluator after recursive close."
+                "Run the final release guard and reducer after recursive close."
             ),
         }
 
     def _final_plan(self, ctx: ScenarioContext) -> dict[str, Any]:
         plan = self._ensure_user_input_plan(ctx)
         high_risk_count = sum(1 for item in plan.requirements if item.risk == "high")
+        tasks = [
+            {
+                "id": "final_reconciliation_check",
+                "agent_name": "executor",
+                "needs": [],
+            },
+            {
+                "id": "final_release_guard",
+                "agent_name": "executor",
+                "needs": ["final_reconciliation_check"],
+            },
+        ]
         return {
-            "plan_spec": "Close the full-stack adversarial scenario.",
-            "evaluation_criteria": [
-                "Final metrics summary row exists with zero failed cells.",
-                "Final verifier reads canonical reconciliation evidence.",
-                "Evaluator runs only after final verifier passes.",
-            ],
-            "tasks": [
-                {
-                    "id": "final_reconciliation_check",
-                    "agent_name": "executor",
-                    "deps": [],
-                },
-                {
-                    "id": "final_release_guard",
-                    "agent_name": "verifier",
-                    "deps": ["final_reconciliation_check"],
-                },
-            ],
+            "tasks": tasks,
             "task_specs": {
                 "final_reconciliation_check": (
                     "ACTION final_reconciliation stage=final "
@@ -426,6 +421,17 @@ class FullStackAdversarial(ScenarioBase):
                     "VERIFY checkpoint=final_release dependency_count=1"
                 ),
             },
+            "reducers": [
+                {
+                    "id": "reduce",
+                    "needs": [task["id"] for task in tasks],
+                    "prompt": (
+                        "Final metrics summary row exists with zero failed cells, "
+                        "the final guard reads canonical reconciliation evidence, "
+                        "and the reducer runs only after the final guard passes."
+                    ),
+                }
+            ],
         }
 
     def _ensure_user_input_plan(self, ctx: ScenarioContext) -> UserInputPlan:
@@ -433,7 +439,7 @@ class FullStackAdversarial(ScenarioBase):
             return self._user_input_plan
         prompt = ""
         if ctx.workflow is not None and is_entry_origin_workflow(ctx):
-            prompt = str(ctx.workflow.goal or "")
+            prompt = str(ctx.workflow.workflow_goal or "")
         if not prompt:
             prompt = ctx.prompt or ctx.context_message or ""
         self._entry_prompt = prompt
@@ -477,18 +483,6 @@ class FullStackAdversarial(ScenarioBase):
         self._matrix_cells = cells
         return self._matrix_cells
 
-    def _should_fail_verifier(
-        self,
-        ctx: ScenarioContext,
-        checkpoint: str,
-    ) -> bool:
-        if not is_entry_origin_workflow(ctx):
-            return False
-        if checkpoint != "subsystem_wave_guard" or self._forced_failure_seen:
-            return False
-        self._forced_failure_seen = True
-        return True
-
 
 def _inventory_plan(
     *,
@@ -496,24 +490,29 @@ def _inventory_plan(
     deferred_goal_for_next_iteration: str | None = None,
 ) -> dict[str, Any]:
     args: dict[str, Any] = {
-        "plan_spec": "Inventory rendered SWE-EVO user input.",
-        "evaluation_criteria": [
-            "Rendered prompt was parsed without reconstructing CSV data.",
-            "Requirement ledger and package graph were written through tools.",
-            "Workspace proof was produced from /testbed through tools.",
-        ],
         "tasks": [
-            {"id": "inspect_full_user_input", "agent_name": "executor", "deps": []},
+            {"id": "inspect_full_user_input", "agent_name": "executor", "needs": []},
             {
                 "id": "inventory_guard",
-                "agent_name": "verifier",
-                "deps": ["inspect_full_user_input"],
+                "agent_name": "executor",
+                "needs": ["inspect_full_user_input"],
             },
         ],
         "task_specs": {
             "inspect_full_user_input": "ACTION inspect_full_user_input",
             "inventory_guard": "VERIFY checkpoint=inventory dependency_count=1",
         },
+        "reducers": [
+            {
+                "id": "reduce",
+                "needs": ["inspect_full_user_input", "inventory_guard"],
+                "prompt": (
+                    "Rendered prompt was parsed without reconstructing CSV data; "
+                    "requirement ledger, package graph, and workspace proof were "
+                    "written through tools."
+                ),
+            }
+        ],
     }
     if kind == "defers":
         assert deferred_goal_for_next_iteration is not None
@@ -523,27 +522,22 @@ def _inventory_plan(
 
 def _recursive_full_only_plan() -> dict[str, Any]:
     """Single-attempt recursive plan for launches without a defer terminal."""
+    tasks = [
+        {"id": "recursive_oversized_a", "agent_name": "executor", "needs": []},
+        {"id": "recursive_oversized_b", "agent_name": "executor", "needs": []},
+        {
+            "id": "recursive_closure_report",
+            "agent_name": "executor",
+            "needs": ["recursive_oversized_a", "recursive_oversized_b"],
+        },
+        {
+            "id": "recursive_close_guard",
+            "agent_name": "executor",
+            "needs": ["recursive_closure_report"],
+        },
+    ]
     return {
-        "plan_spec": "Close delegated oversized full-stack matrix in one attempt.",
-        "evaluation_criteria": [
-            "Both recursive executor slices wrote evidence.",
-            "Recursive close report was written after slice evidence.",
-            "Recursive final verifier read the close report.",
-        ],
-        "tasks": [
-            {"id": "recursive_oversized_a", "agent_name": "executor", "deps": []},
-            {"id": "recursive_oversized_b", "agent_name": "executor", "deps": []},
-            {
-                "id": "recursive_closure_report",
-                "agent_name": "executor",
-                "deps": ["recursive_oversized_a", "recursive_oversized_b"],
-            },
-            {
-                "id": "recursive_close_guard",
-                "agent_name": "verifier",
-                "deps": ["recursive_closure_report"],
-            },
-        ],
+        "tasks": tasks,
         "task_specs": {
             "recursive_oversized_a": "ACTION recursive_oversized_matrix slice=a",
             "recursive_oversized_b": "ACTION recursive_oversized_matrix slice=b",
@@ -552,6 +546,17 @@ def _recursive_full_only_plan() -> dict[str, Any]:
             ),
             "recursive_close_guard": "VERIFY checkpoint=recursive_final dependency_count=1",
         },
+        "reducers": [
+            {
+                "id": "reduce",
+                "needs": [task["id"] for task in tasks],
+                "prompt": (
+                    "Both recursive executor slices wrote evidence, the close "
+                    "report was written after slice evidence, and the recursive "
+                    "final guard read the close report."
+                ),
+            }
+        ],
     }
 
 

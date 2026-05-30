@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from task_center.iteration.state import (
+from task_center._core.state import (
     Iteration,
     IterationCreationReason,
     IterationStatus,
@@ -14,8 +14,8 @@ from task_center.iteration.state import (
 def _seed_request(workflow_store, task_center_run_id) -> str:
     req = workflow_store.insert(
         task_center_run_id=task_center_run_id,
-        requested_by_task_id="t1",
-        goal="g",
+        parent_task_id="t1",
+        workflow_goal="g",
     )
     return req.id
 
@@ -26,7 +26,7 @@ def test_insert_returns_dto(iteration_store, workflow_store, task_center_run_id)
         workflow_id=request_id,
         sequence_no=1,
         creation_reason=IterationCreationReason.INITIAL,
-        goal="g",
+        iteration_goal="g",
         attempt_budget=2,
     )
     assert isinstance(seg, Iteration)
@@ -41,7 +41,7 @@ def test_get_round_trip(iteration_store, workflow_store, task_center_run_id):
         workflow_id=request_id,
         sequence_no=1,
         creation_reason=IterationCreationReason.INITIAL,
-        goal="g",
+        iteration_goal="g",
         attempt_budget=2,
     )
     got = iteration_store.get(inserted.id)
@@ -58,7 +58,7 @@ def test_append_attempt_id_preserves_order(
         workflow_id=request_id,
         sequence_no=1,
         creation_reason=IterationCreationReason.INITIAL,
-        goal="g",
+        iteration_goal="g",
         attempt_budget=3,
     )
     s1 = iteration_store.append_attempt_id(seg.id, "g1")
@@ -82,7 +82,7 @@ def test_deferred_goal_dto_field_maps_to_deferred_goal_db_column(
         workflow_id=request_id,
         sequence_no=1,
         creation_reason=IterationCreationReason.INITIAL,
-        goal="g",
+        iteration_goal="g",
         attempt_budget=2,
     )
     seg = iteration_store.set_deferred_goal_for_next_iteration(seg.id, deferred_goal_for_next_iteration="deferred-scope")
@@ -102,7 +102,7 @@ def test_set_deferred_goal_for_next_iteration_and_status(
         workflow_id=request_id,
         sequence_no=1,
         creation_reason=IterationCreationReason.INITIAL,
-        goal="g",
+        iteration_goal="g",
         attempt_budget=2,
     )
     seg = iteration_store.set_deferred_goal_for_next_iteration(seg.id, deferred_goal_for_next_iteration="next-goal")
@@ -124,14 +124,14 @@ def test_list_for_goal_orders_by_sequence_no(
         workflow_id=request_id,
         sequence_no=2,
         creation_reason=IterationCreationReason.DEFERRED_GOAL_CONTINUATION,
-        goal="g2",
+        iteration_goal="g2",
         attempt_budget=2,
     )
     s1 = iteration_store.insert(
         workflow_id=request_id,
         sequence_no=1,
         creation_reason=IterationCreationReason.INITIAL,
-        goal="g1",
+        iteration_goal="g1",
         attempt_budget=2,
     )
     listed = iteration_store.list_for_workflow(request_id)
@@ -144,7 +144,7 @@ def test_get_by_sequence(iteration_store, workflow_store, task_center_run_id):
         workflow_id=request_id,
         sequence_no=1,
         creation_reason=IterationCreationReason.INITIAL,
-        goal="g",
+        iteration_goal="g",
         attempt_budget=2,
     )
     found = iteration_store.get_by_sequence(

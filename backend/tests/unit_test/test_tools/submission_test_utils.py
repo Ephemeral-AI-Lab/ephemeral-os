@@ -10,11 +10,16 @@ from task_center.attempt.orchestrator import AttemptOrchestrator
 from task_center.attempt.orchestrator_registry import (
     AttemptOrchestratorRegistry,
 )
-from task_center.attempt.deps import AgentLaunch, AttemptDeps
+from task_center.attempt.launch import AgentLaunch, AttemptDeps
 from task_center.iteration import OpenIterationCoordinatorRegistry
-from task_center.iteration.state import IterationCreationReason
-from task_center.submissions import GeneratorSubmission, PlannedGeneratorTask, PlannerSubmission
-from task_center._core.primitives import evaluator_task_id, generator_task_id, planner_task_id
+from task_center._core.state import IterationCreationReason
+from task_center.submissions import (
+    GeneratorSubmission,
+    PlannedGeneratorTask,
+    PlannedReducerTask,
+    PlannerSubmission,
+)
+from task_center._core.primitives import generator_task_id, planner_task_id, reducer_task_id
 from tools._framework.core.context import ToolExecutionContextService
 from tools._framework.core.runtime import ExecutionMetadata
 
@@ -50,14 +55,14 @@ def build_harness_fixture(
 ) -> TaskCenterFixture:
     request = workflow_store.insert(
         task_center_run_id="run1",
-        requested_by_task_id="outer-task",
-        goal="solve the task",
+        parent_task_id="outer-task",
+        workflow_goal="solve the task",
     )
     iteration = iteration_store.insert(
         workflow_id=request.id,
         sequence_no=1,
         creation_reason=IterationCreationReason.INITIAL,
-        goal="solve the task",
+        iteration_goal="solve the task",
         attempt_budget=2,
     )
     workflow_store.append_iteration_id(request.id, iteration.id)
@@ -139,32 +144,42 @@ def apply_single_generator_plan(fixture: TaskCenterFixture, *, agent_name: str =
             attempt_id=fixture.attempt_id,
             planner_task_id=planner_id,
             kind="completes",
-            plan_spec="spec",
-            evaluation_criteria=("criterion",),
             tasks=(
                 PlannedGeneratorTask(
                     local_id="a",
                     agent_name=agent_name,
-                    deps=(),
+                    needs=(),
                     task_spec="do A",
                 ),
             ),
+            reducers=(
+                PlannedReducerTask(
+                    local_id="r",
+                    needs=("a",),
+                    prompt="reduce the result",
+                ),
+            ),
             deferred_goal_for_next_iteration=None,
-            summary="plan",
+            outcome="plan",
         )
     )
     return generator_task_id(fixture.attempt_id, "a")
 
 
-def spawn_evaluator(fixture: TaskCenterFixture) -> str:
+def spawn_reducer(fixture: TaskCenterFixture) -> str:
+    """Drive the attempt to the point where its single reducer is RUNNING.
+
+    Submits the generator success so the stage advancer launches the reducer
+    (the exit gate). Returns the reducer task id, now running.
+    """
     generator_id = apply_single_generator_plan(fixture)
     fixture.orchestrator.apply_generator_submission(
         GeneratorSubmission(
             attempt_id=fixture.attempt_id,
             task_id=generator_id,
-            outcome="success",
-            summary="done",
-            payload={},
+            status="success",
+            outcome="done",
+            terminal_tool_result={},
         )
     )
-    return evaluator_task_id(fixture.attempt_id)
+    return reducer_task_id(fixture.attempt_id, "r")

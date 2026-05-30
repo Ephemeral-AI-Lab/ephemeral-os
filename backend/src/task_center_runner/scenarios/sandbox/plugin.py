@@ -5,8 +5,8 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing import Any
 
-from tools.submission.evaluator import submit_evaluation_success
 from tools.submission.planner import submit_plan_closes_goal
+from tools.submission.reducer import submit_reduction_success
 
 from task_center_runner.scenarios.base import (
     ScenarioBase,
@@ -17,18 +17,20 @@ from task_center_runner.scenarios.base import (
 
 def _plan(action_id: str, action_spec: str, summary_hint: str) -> dict[str, Any]:
     return {
-        "plan_spec": (
-            f"Single-task plan that drives the {action_id} plugin/LSP probe "
-            "through the mock-agent harness."
-        ),
-        "evaluation_criteria": [
-            f"Plugin probe '{action_id}' wrote its summary to {summary_hint}.",
-            "Plugin READ_ONLY service latency, WRITE_ALLOWED overlay/OCC "
-            "behavior, and isolated-workspace policy matched the 3.5 live "
-            "E2E contract.",
-        ],
-        "tasks": [{"id": action_id, "agent_name": "executor", "deps": []}],
+        "tasks": [{"id": action_id, "agent_name": "executor", "needs": []}],
         "task_specs": {action_id: action_spec},
+        "reducers": [
+            {
+                "id": "reduce",
+                "needs": [action_id],
+                "prompt": (
+                    f"Confirm plugin probe '{action_id}' wrote its summary to "
+                    f"{summary_hint} and that READ_ONLY service latency, "
+                    "WRITE_ALLOWED overlay/OCC behavior, and isolated-workspace "
+                    "policy matched the 3.5 live E2E contract."
+                ),
+            }
+        ],
     }
 
 
@@ -50,12 +52,11 @@ class _PluginScenarioBase(ScenarioBase):
             return (self.action_id,)
         return ()
 
-    def evaluator_response(self, ctx: ScenarioContext) -> ToolCallSpec:
+    def reducer_response(self, ctx: ScenarioContext) -> ToolCallSpec:  # noqa: ARG002
         return ToolCallSpec(
-            submit_evaluation_success,
+            submit_reduction_success,
             {
-                "summary": f"{self.action_id} plugin/LSP scenario completed.",
-                "passed_criteria": list(ctx.attempt.evaluation_criteria),
+                "outcome": f"{self.action_id} plugin/LSP scenario completed.",
             },
         )
 

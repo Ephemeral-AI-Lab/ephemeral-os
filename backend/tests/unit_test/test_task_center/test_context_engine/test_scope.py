@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from task_center.context_engine.core import RecipeScopeError
+from task_center.context_engine.engine import RecipeScopeError
 from task_center.context_engine.scope import ContextScope
 
 
@@ -23,6 +23,18 @@ def test_assert_fields_rejects_missing_iteration():
     with pytest.raises(RecipeScopeError) as exc:
         scope.assert_fields(frozenset({"workflow_id", "iteration_id"}))
     assert "iteration_id" in str(exc.value)
+
+
+def test_for_reducer_carries_all_identity_fields():
+    scope = ContextScope.for_reducer(
+        workflow_id="r", iteration_id="s", attempt_id="g", task_id="t"
+    )
+    assert (scope.workflow_id, scope.iteration_id, scope.attempt_id, scope.task_id) == (
+        "r",
+        "s",
+        "g",
+        "t",
+    )
 
 
 def test_assert_fields_lists_all_missing_fields_sorted():

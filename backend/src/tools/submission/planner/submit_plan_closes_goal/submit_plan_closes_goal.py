@@ -18,6 +18,7 @@ from tools.submission.context import (
 from tools.submission.planner._schemas import (
     SUBMISSION_KIND_PLANNER_COMPLETES,
     PlanTaskInput,
+    ReducerInput,
     SharedPlannerSubmissionInput,
     build_planner_submission,
 )
@@ -43,10 +44,9 @@ class SubmitPlanClosesGoalInput(SharedPlannerSubmissionInput):
     ),
 )
 async def submit_plan_closes_goal(
-    plan_spec: str,
-    evaluation_criteria: list[str],
     tasks: list[PlanTaskInput],
     task_specs: dict[str, str],
+    reducers: list[ReducerInput],
     *,
     context: ToolExecutionContextService,
 ) -> ToolResult:
@@ -58,10 +58,9 @@ async def submit_plan_closes_goal(
     submission, error = build_planner_submission(
         submission_context=submission_context,
         kind="completes",
-        plan_spec=plan_spec,
-        evaluation_criteria=evaluation_criteria,
         tasks=[PlanTaskInput.model_validate(task) for task in tasks],
         task_specs=task_specs,
+        reducers=[ReducerInput.model_validate(reducer) for reducer in reducers],
         deferred_goal_for_next_iteration=None,
     )
     if error is not None or submission is None:

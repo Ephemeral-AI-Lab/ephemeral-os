@@ -14,7 +14,7 @@ from __future__ import annotations
 
 
 def test_agent_resolver_protocol_gone() -> None:
-    import task_center._core.terminal_tool_routing as mod
+    import task_center._core.terminal_routing as mod
 
     assert not hasattr(mod, "AgentResolver")
 
@@ -26,13 +26,13 @@ def test_prompt_renderer_protocol_gone() -> None:
 
 
 def test_attempt_agent_launcher_protocol_gone() -> None:
-    import task_center.attempt.deps as mod
+    import task_center.attempt.launch as mod
 
     assert not hasattr(mod, "AttemptAgentLauncher")
 
 
 def test_concrete_classes_importable() -> None:
-    from task_center._core.terminal_tool_routing import TerminalToolRouter
+    from task_center._core.terminal_routing import TerminalToolRouter
     from task_center.attempt.launch import EphemeralAttemptAgentLauncher
     from task_center.context_engine.renderer import XmlPromptRenderer
 

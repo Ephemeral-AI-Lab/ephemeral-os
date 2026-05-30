@@ -50,10 +50,10 @@ def test_executor_routing_rule():
     )
     # Top-level in a workflow → handoff allowed.
     assert rule(is_nested=False, has_workflow=True) == frozenset(
-        {"submit_execution_handoff", "submit_execution_success", "submit_execution_blocker"}
+        {"submit_workflow_handoff", "submit_execution_success", "submit_execution_blocker"}
     )
 
 
-@pytest.mark.parametrize("name", ["evaluator", "verifier", "advisor", "explorer"])
+@pytest.mark.parametrize("name", ["reducer", "advisor", "explorer"])
 def test_non_routed_profiles_have_no_router(name):
     assert _definitions()[name].terminal_router is None

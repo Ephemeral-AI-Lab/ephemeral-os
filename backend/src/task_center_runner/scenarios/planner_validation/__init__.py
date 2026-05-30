@@ -1,9 +1,9 @@
 """Planner submission rejection scenarios.
 
 Each scenario emits an invalid ``submit_plan_closes_goal`` / ``submit_plan_defers_goal``
-and asserts the attempt closes with ``fail_reason="planner_failed"``, no
-generator/evaluator ran, and the right ``TaskCenterInvariantViolation`` was
-surfaced.
+and asserts the attempt closes with ``fail_reason="task_failed"`` and no
+generator or reducer task was created (the submission is rejected at the planner
+tool boundary or the ``ordered_plan_tasks`` gate).
 
 Implemented (reference scenarios):
 - :class:`PlannerCycleInDeps`

@@ -35,7 +35,6 @@ class ContextBlockKind(StrEnum):
     PRIOR_ITERATION_SUMMARY = "prior_iteration_summary"
     FAILED_ATTEMPT = "failed_attempt"
     PLANNED_TASK_SPEC = "planned_task_spec"
-    TASK_SPECIFICATION = "task_specification"
     DEPENDENCY_SUMMARY = "dependency_summary"
     ENTRY_REQUEST = "entry_request"
 

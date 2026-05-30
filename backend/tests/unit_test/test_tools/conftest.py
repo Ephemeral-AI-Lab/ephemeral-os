@@ -24,7 +24,7 @@ from db.stores.attempt_store import AttemptStore
 from db.stores.task_center_store import TaskCenterStore
 from db.stores.iteration_store import IterationStore
 from task_center.agent_launch.composer import AgentEntryComposer
-from task_center.context_engine.core import ContextEngine, ContextEngineDeps
+from task_center.context_engine.engine import ContextEngine, ContextEngineDeps
 from task_center.context_engine.recipes import register_builtin_recipes
 from task_center.context_engine.recipes_registry import RecipeRegistry
 
@@ -135,7 +135,7 @@ def register_test_agents(isolated_agent_registries):
             role=AgentRole.GENERATOR,
             context_recipe="generator",
             terminals=[
-                "submit_execution_handoff",
+                "submit_workflow_handoff",
                 "submit_execution_success",
                 "submit_execution_blocker",
             ],
@@ -153,21 +153,11 @@ def register_test_agents(isolated_agent_registries):
     )
     register_definition(
         AgentDefinition(
-            name="verifier",
-            description="test verifier",
-            role=AgentRole.GENERATOR,
-            context_recipe="generator",
-            terminals=["submit_verification_success", "submit_verification_failure"],
-            tool_call_limit=10,
-        )
-    )
-    register_definition(
-        AgentDefinition(
-            name="evaluator",
-            description="test evaluator",
-            role=AgentRole.EVALUATOR,
-            context_recipe="evaluator",
-            terminals=["submit_evaluation"],
+            name="reducer",
+            description="test reducer",
+            role=AgentRole.REDUCER,
+            context_recipe="reducer",
+            terminals=["submit_reduction_success", "submit_reduction_failure"],
             tool_call_limit=10,
         )
     )

@@ -45,10 +45,11 @@ def test_planner_no_longer_lists_recursive_partial_plan_trigger():
 
 def test_planner_names_valid_graph_agents():
     body = _load_planner().system_prompt or ""
-    assert "`executor` for implementation" in body
-    assert "`verifier` for independent verification" in body
-    assert "code_executor" in body
-    assert "python_executor" in body
+    # `executor` is the only generator-capable agent name; repository-specific
+    # names are explicitly rejected as invalid.
+    assert "must be `executor`" in body
+    assert "the only generator-capable agent" in body
+    assert "invalid harness agent names" in body
 
 
 def test_planner_treats_release_notes_as_code_repair_targets():

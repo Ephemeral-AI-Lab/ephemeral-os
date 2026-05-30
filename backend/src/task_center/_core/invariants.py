@@ -10,15 +10,19 @@ from __future__ import annotations
 
 from typing import Any
 
-from task_center._core.primitives import TaskCenterInvariantViolation
-from task_center.attempt.state import (
+from task_center._core.primitives import (
+    TaskCenterInvariantViolation,
+    attempt_id_from_task_id,
+)
+from task_center._core.state import (
     Attempt,
     AttemptFailReason,
     AttemptStage,
     AttemptStatus,
+    Iteration,
+    IterationStatus,
+    Workflow,
 )
-from task_center.iteration.state import Iteration, IterationStatus
-from task_center.workflow.state import Workflow
 from task_center._core.task_state import TaskCenterTaskRole
 
 
@@ -120,22 +124,23 @@ def assert_valid_attempt_close(
 
 
 def assert_task_belongs_to_attempt(task: dict[str, Any], attempt: Attempt) -> None:
-    if task.get("task_center_attempt_id") != attempt.id:
+    task_id = str(task.get("task_id") or "")
+    if attempt_id_from_task_id(task_id) != attempt.id:
         raise TaskCenterInvariantViolation(
-            f"Task {task.get('id')!r} does not belong to Attempt {attempt.id!r}"
+            f"Task {task_id!r} does not belong to Attempt {attempt.id!r}"
         )
 
 
 def assert_generator_task_for_submission(task: dict[str, Any], attempt: Attempt) -> None:
     assert_task_belongs_to_attempt(task, attempt)
     if task.get("role") != TaskCenterTaskRole.GENERATOR.value:
-        raise TaskCenterInvariantViolation(f"Task {task.get('id')!r} is not a generator task")
+        raise TaskCenterInvariantViolation(f"Task {task.get('task_id')!r} is not a generator task")
 
 
-def assert_evaluator_task_for_submission(task: dict[str, Any], attempt: Attempt) -> None:
+def assert_reducer_task_for_submission(task: dict[str, Any], attempt: Attempt) -> None:
     assert_task_belongs_to_attempt(task, attempt)
     if task.get("role") != TaskCenterTaskRole.REDUCER.value:
-        raise TaskCenterInvariantViolation(f"Task {task.get('id')!r} is not a reducer task")
+        raise TaskCenterInvariantViolation(f"Task {task.get('task_id')!r} is not a reducer task")
 
 
 __all__ = [
@@ -144,7 +149,7 @@ __all__ = [
     "assert_attempt_sequence_contiguous",
     "assert_attempt_stage",
     "assert_predecessor_has_deferred_goal_for_next_iteration",
-    "assert_evaluator_task_for_submission",
+    "assert_reducer_task_for_submission",
     "assert_fail_reason_present_on_failure",
     "assert_generator_task_for_submission",
     "assert_workflow_open",

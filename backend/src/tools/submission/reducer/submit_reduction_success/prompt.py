@@ -19,7 +19,7 @@ Do NOT call this when:
   `<assigned_prompt>` — do that first.
 
 Inputs:
-- `summary`: 1–3 sentence recap of the reduction outcome.
+- `outcome`: 1–3 sentence recap of the reduction outcome.
 
 Behavior:
 - Records your reducer pass on this task. When every plan task is done

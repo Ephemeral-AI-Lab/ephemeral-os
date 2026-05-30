@@ -20,8 +20,8 @@ from __future__ import annotations
 from collections.abc import Sequence
 
 from sandbox.occ.service import AUTO_SQUASH_MAX_DEPTH
-from tools.submission.evaluator import submit_evaluation_success
 from tools.submission.planner import submit_plan_closes_goal
+from tools.submission.reducer import submit_reduction_success
 
 from task_center_runner.scenarios.base import ScenarioBase, ScenarioContext, ToolCallSpec
 
@@ -30,29 +30,34 @@ _AUTO_SQUASH_WRITE_COUNT = AUTO_SQUASH_MAX_DEPTH + 4
 
 def _auto_squash_plan() -> dict[str, object]:
     return {
-        "plan_spec": (
-            "Drive the sandbox toolkit through enough write/edit calls to cross "
-            "the OCC auto-squash depth threshold while keeping at least two "
-            "generator work streams active after seeding."
-        ),
-        "evaluation_criteria": [
-            "Auto-squash is triggered naturally by public mutations.",
-            "The sequential depth-building chain crosses the squash threshold.",
-            "A disjoint independent generator runs alongside the depth chain.",
-            "Final committed contents match across read_file and shell readback.",
-            "Intentional missing-anchor edit reports a conflict with the same "
-            "shape as the synchronous baseline.",
-        ],
         "tasks": [
-            {"id": "auto_squash_seed", "agent_name": "executor", "deps": []},
-            {"id": "auto_squash_squash_a", "agent_name": "executor", "deps": ["auto_squash_seed"]},
-            {"id": "auto_squash_independent", "agent_name": "executor", "deps": ["auto_squash_seed"]},
-            {"id": "auto_squash_squash_b", "agent_name": "executor", "deps": ["auto_squash_squash_a"]},
+            {"id": "auto_squash_seed", "agent_name": "executor", "needs": []},
+            {"id": "auto_squash_squash_a", "agent_name": "executor", "needs": ["auto_squash_seed"]},
+            {"id": "auto_squash_independent", "agent_name": "executor", "needs": ["auto_squash_seed"]},
+            {"id": "auto_squash_squash_b", "agent_name": "executor", "needs": ["auto_squash_squash_a"]},
             {
                 "id": "auto_squash_reconcile",
                 "agent_name": "executor",
-                "deps": ["auto_squash_squash_b", "auto_squash_independent"],
+                "needs": ["auto_squash_squash_b", "auto_squash_independent"],
             },
+        ],
+        "reducers": [
+            {
+                "id": "reduce",
+                "needs": [
+                    "auto_squash_seed",
+                    "auto_squash_squash_a",
+                    "auto_squash_independent",
+                    "auto_squash_squash_b",
+                    "auto_squash_reconcile",
+                ],
+                "prompt": (
+                    "Confirm auto-squash crossed the depth threshold, the "
+                    "independent generator ran alongside the depth chain, final "
+                    "contents match across read_file and shell readback, and the "
+                    "intentional missing-anchor edit reported a conflict."
+                ),
+            }
         ],
         "task_specs": {
             "auto_squash_seed": (
@@ -103,16 +108,15 @@ class AutoSquashCommitResume(ScenarioBase):
             return ("auto_squash_reconcile",)
         return ()
 
-    def evaluator_response(self, ctx: ScenarioContext) -> ToolCallSpec:
+    def reducer_response(self, ctx: ScenarioContext) -> ToolCallSpec:  # noqa: ARG002
         return ToolCallSpec(
-            submit_evaluation_success,
+            submit_reduction_success,
             {
-                "summary": (
+                "outcome": (
                     "Auto-squash commit-resume probe captured depth-crossing "
                     "writes, post-threshold edits, intentional conflict, and "
                     "final readback agreement."
                 ),
-                "passed_criteria": list(ctx.attempt.evaluation_criteria),
             },
         )
 

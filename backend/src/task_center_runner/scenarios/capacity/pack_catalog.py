@@ -135,7 +135,7 @@ CAPACITY_PACK_SPECS: tuple[CapacityPackSpec, ...] = (
         test_path="backend/tests/unit_test/test_task_center/test_context_engine/test_recipes_other.py",
     ),
     CapacityPackSpec(
-        "context.evaluator_iterative_deferral",
+        "context.reducer_iterative_deferral",
         test_path="backend/tests/unit_test/test_task_center/test_context_engine/test_recipes_other.py",
     ),
     CapacityPackSpec(

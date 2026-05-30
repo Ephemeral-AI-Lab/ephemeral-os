@@ -1,18 +1,17 @@
 """Persistence regressions for the AgentEntryMessages context split.
 
-Two static guards locked here:
+Static guards on the orchestrator's task-upsert sources:
 
-1. Orchestrator's generator-task upsert path writes
-   ``context_message=task.task_spec`` (the parent-authored task description),
-   NOT the launch's rendered context. The two values come from different
-   sources — task_spec from the planner submission, ``launch.context`` from
-   the per-spawn renderer. The SOURCE EXPRESSION ``task.task_spec`` must be
-   preserved verbatim across kwarg renames.
+1. Generator-task upsert writes ``context_message=task.task_spec`` (the
+   parent-authored task description), NOT the launch's rendered context.
+2. Reducer-task upsert writes ``context_message=reducer.prompt`` (the
+   reducer's exit-gate prompt), set at plan-submission time.
+3. The planner upsert that DOES use ``launch.context`` (the ``<context>``
+   envelope) as the persisted ``context_message`` column.
 
-2. Planner and evaluator launches that DO use ``launch.context`` (the
-   ``<context>`` envelope) as the persisted ``context_message`` column.
-   Post-v3.3 field rename: the AgentLaunch attribute is ``.context`` (was
-   ``.context_message``).
+Both generator and reducer plan tasks are upserted in the orchestrator's
+``_persist_plan_tasks`` (the old separate evaluator stage is gone — the reducer
+is a plan task scheduled in the single RUN stage).
 """
 
 from __future__ import annotations
@@ -20,32 +19,27 @@ from __future__ import annotations
 import inspect
 
 from task_center.attempt import orchestrator as orchestrator_module
-from task_center.attempt import stage_advancer as stage_advancer_module
 
 
-def test_orchestrator_persists_task_spec_for_generator_tasks_unchanged_by_e4():
-    """``_persist_generator_tasks`` keeps writing ``context_message=task.task_spec``.
-
-    Before E4 this site read ``task.task_spec``; nothing about the
-    AgentEntryMessages split changed that contract. Static grep so a future
-    refactor that wires ``launch.context_message`` here gets caught
-    immediately.
-    """
+def test_orchestrator_persists_task_spec_for_generator_tasks():
+    """``_persist_plan_tasks`` persists ``context_message=task.task_spec`` for generators."""
     source = inspect.getsource(orchestrator_module)
     assert "context_message=task.task_spec," in source, (
-        "_persist_generator_tasks must continue persisting "
-        "context_message=task.task_spec (parent-authored task description), "
-        "NOT the launch's context_message."
+        "_persist_plan_tasks must persist context_message=task.task_spec "
+        "(parent-authored task description), NOT the launch's context."
+    )
+
+
+def test_orchestrator_persists_prompt_for_reducer_tasks():
+    """``_persist_plan_tasks`` persists ``context_message=reducer.prompt`` for reducers."""
+    source = inspect.getsource(orchestrator_module)
+    assert "context_message=reducer.prompt," in source, (
+        "_persist_plan_tasks must persist context_message=reducer.prompt "
+        "(the reducer's exit-gate prompt)."
     )
 
 
 def test_planner_upsert_path_persists_context_message():
     """Planner upsert in orchestrator writes ``context_message=launch.context``."""
     source = inspect.getsource(orchestrator_module)
-    assert "context_message=launch.context," in source
-
-
-def test_evaluator_upsert_path_persists_context_message():
-    """Evaluator upsert in stage advancer writes ``context_message=launch.context``."""
-    source = inspect.getsource(stage_advancer_module)
     assert "context_message=launch.context," in source

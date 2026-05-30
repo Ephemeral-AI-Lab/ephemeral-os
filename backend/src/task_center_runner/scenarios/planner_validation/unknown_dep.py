@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing import Any
 
-from tools.submission.evaluator import submit_evaluation_failure
+from tools.submission.reducer import submit_reduction_failure
 from tools.submission.planner import submit_plan_closes_goal
 
 from task_center_runner.scenarios.base import ScenarioBase, ScenarioContext, ToolCallSpec
@@ -13,16 +13,21 @@ from task_center_runner.scenarios.base import ScenarioBase, ScenarioContext, Too
 
 def _unknown_dep_plan() -> dict[str, Any]:
     return {
-        "plan_spec": "Invalid plan: task b depends on unknown local id z.",
-        "evaluation_criteria": ["Unknown dependency is rejected."],
         "tasks": [
-            {"id": "a", "agent_name": "executor", "deps": []},
-            {"id": "b", "agent_name": "executor", "deps": ["z"]},
+            {"id": "a", "agent_name": "executor", "needs": []},
+            {"id": "b", "agent_name": "executor", "needs": ["z"]},
         ],
         "task_specs": {
             "a": "Run a workspace preflight.",
             "b": "Run after missing dependency z.",
         },
+        "reducers": [
+            {
+                "id": "reduce",
+                "needs": ["a", "b"],
+                "prompt": "Confirm both tasks completed.",
+            }
+        ],
     }
 
 
@@ -37,13 +42,10 @@ class PlannerUnknownDep(ScenarioBase):
     def executor_actions(self, ctx: ScenarioContext) -> Sequence[str]:  # noqa: ARG002
         return ()
 
-    def evaluator_response(self, ctx: ScenarioContext) -> ToolCallSpec:
+    def reducer_response(self, ctx: ScenarioContext) -> ToolCallSpec:  # noqa: ARG002
         return ToolCallSpec(
-            submit_evaluation_failure,
-            {
-                "summary": "Unexpected evaluator invocation under unknown dep.",
-                "failed_criteria": list(ctx.attempt.evaluation_criteria),
-            },
+            submit_reduction_failure,
+            {"outcome": "Unexpected reducer invocation under unknown dep."},
         )
 
 

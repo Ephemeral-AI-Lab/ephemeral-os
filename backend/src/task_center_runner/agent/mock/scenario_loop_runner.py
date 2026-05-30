@@ -236,8 +236,8 @@ class ScenarioLoopRunner:
         (advisor / explorer sub-agents are spawned inside the loop), so those
         branches cover every inspected agent.
         """
-        # Dispatch by profile name: executor/verifier share the generator role
-        # but render distinct context envelopes.
+        # Dispatch by profile name: executor renders the generator task
+        # envelope; reducer renders the reduction envelope.
         role = agent_def.name
         checks: dict[str, bool]
         reason: str
@@ -280,31 +280,20 @@ class ScenarioLoopRunner:
             )
         elif role == "executor":
             checks = {
-                "plan_spec": "<plan_spec>" in prompt,
                 "assigned_task": "<assigned_task" in prompt,
             }
             reason = (
                 "Executor context is local to the current planned task with the "
                 "attempt contract as framing."
             )
-        elif role == "verifier":
+        elif role == "reducer":
             checks = {
-                "plan_spec": "<plan_spec>" in prompt,
-                "assigned_task": "<assigned_task" in prompt,
+                "assigned_prompt": "<assigned_prompt" in prompt,
+                "needs": "<needs>" in prompt,
             }
             reason = (
-                "Verifier context is a generator task profile with the assigned "
-                "checkpoint and its dependency evidence."
-            )
-        elif role == "evaluator":
-            checks = {
-                "plan_spec": "<plan_spec>" in prompt,
-                "task_outcomes": "<task " in prompt,
-                "evaluation_criteria": "<evaluation_criteria>" in prompt,
-            }
-            reason = (
-                "Evaluator context is graph-local: the active attempt's plan_spec, "
-                "per-task outcomes, and the criteria it must judge."
+                "Reducer context is graph-local: its assigned prompt and the "
+                "per-task outcomes of the generators it needs."
             )
         else:
             checks = {"known_role": False}

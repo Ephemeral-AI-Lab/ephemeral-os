@@ -57,7 +57,7 @@
   <p>This boundary map is deliberately not a global orchestrator. TaskCenter starts a run, prepares one sandbox binding, composes launch messages, schedules attempt-scoped agents, and receives terminal submissions through persisted state. The engine loop remains the enforcement layer for terminal tools, and sandbox operations still pass through <code>tools/sandbox</code>, <code>sandbox.api</code>, and daemon workspace routing.</p>
 </div>
 
-<section id="bridge-boundary-map" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="backend/src/task_center/entry/bootstrap.py backend/src/task_center/entry/sandbox_provisioning.py backend/src/task_center/attempt/launch.py backend/src/task_center/attempt/deps.py backend/src/engine/api.py backend/src/engine/agent/lifecycle.py backend/src/engine/query/loop.py backend/src/tools/_framework/core/runtime.py backend/src/tools/sandbox backend/src/sandbox/api backend/src/sandbox/daemon/workspace_tool_dispatch.py docs/architecture/agent_loops/main-loop.html docs/architecture/agent_loops/prompt-context.html docs/architecture/agent_loops/provider-sandbox-bridge.html">
+<section id="bridge-boundary-map" data-last-reviewed-commit="d32994314" data-evidence-paths="backend/src/task_center/entry/bootstrap.py backend/src/task_center/entry/sandbox_provisioning.py backend/src/task_center/attempt/launch.py backend/src/engine/api.py backend/src/engine/agent/lifecycle.py backend/src/engine/query/loop.py backend/src/tools/_framework/core/runtime.py backend/src/tools/sandbox backend/src/sandbox/api backend/src/sandbox/daemon/workspace_tool_dispatch.py docs/architecture/agent_loops/main-loop.html docs/architecture/agent_loops/prompt-context.html docs/architecture/agent_loops/provider-sandbox-bridge.html">
 <h2>Runtime Boundary Map <a class="anchor" href="#bridge-boundary-map">#</a></h2>
 <div class="diagram" aria-label="TaskCenter engine tools sandbox boundary map">
   <div class="flow-row">
@@ -82,9 +82,9 @@
 </div>
 </section>
 
-<section id="entry-sandbox-provisioning" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="backend/src/task_center/entry/bootstrap.py backend/src/task_center/entry/sandbox_provisioning.py backend/src/task_center/workflow/starter.py backend/src/task_center/workflow/state.py backend/src/task_center/attempt/deps.py backend/tests/unit_test/test_task_center/test_lifecycle/test_entry_bootstrap.py backend/tests/unit_test/test_task_center/test_lifecycle/test_sandbox_provisioning.py backend/src/sandbox/api/provider_control.py">
+<section id="entry-sandbox-provisioning" data-last-reviewed-commit="d32994314" data-evidence-paths="backend/src/task_center/entry/bootstrap.py backend/src/task_center/entry/sandbox_provisioning.py backend/src/task_center/run_controller.py backend/src/task_center/workflow/starter.py backend/src/task_center/_core/state.py backend/src/task_center/attempt/launch.py backend/tests/unit_test/test_task_center/test_lifecycle/test_entry_bootstrap.py backend/tests/unit_test/test_task_center/test_lifecycle/test_sandbox_provisioning.py backend/src/sandbox/api/provider_control.py">
 <h2>Entry And Sandbox Provisioning <a class="anchor" href="#entry-sandbox-provisioning">#</a></h2>
-<p><code>start_task_center_run()</code> is the entry seam for top-level TaskCenter work. It receives stores, runtime config, prompt, optional sandbox id, event callback, optional runner, optional context packet store, and optional sandbox provisioner. It does not run an agent directly; it constructs the run shell and lets Workflow -> Iteration -> Attempt startup launch the initial planner.</p>
+<p><code>start_task_center_run()</code> is the entry seam for top-level TaskCenter work. It receives stores, runtime config, prompt, optional sandbox id, event callback, optional runner, optional context packet store, and optional sandbox provisioner. It does not run an agent directly; it constructs the run shell and hands off to <code>RunController.start_root_run()</code>, which seeds a synthetic root bootstrap generator task (id <code>&lt;run_id&gt;:root</code>) so even the root workflow is generator-spawned, then lets Workflow -> Iteration -> Attempt startup launch the initial planner.</p>
 <pre class="diagram" aria-label="TaskCenter entry workflow diagram">
 [user / external task request]
         |
@@ -92,7 +92,10 @@
 [TaskCenter entry bootstrap]
         |
         v
-[WorkflowStarter.start]
+[RunController.start_root_run]
+        |  seeds synthetic &lt;run_id&gt;:root bootstrap generator
+        v
+[WorkflowStarter.start(prompt, parent_task_id)]
         |  creates workflow, first iteration, first attempt
         v
 [AttemptOrchestrator]
@@ -107,7 +110,7 @@
   <div><b>preflight</b><span><code>TaskCenterEntry.start()</code> verifies task, workflow, iteration, and attempt stores before mutating run state.</span></div>
   <div><b>run shell</b><span><code>_create_top_level_run()</code> generates ids, prepares the sandbox binding, creates the request row, then creates the run row.</span></div>
   <div><b>runtime</b><span><code>_create_runtime()</code> builds <code>AttemptDeps</code> around stores, <code>EphemeralAttemptAgentLauncher</code>, registry, coordinators, config, and <code>AgentEntryComposer</code>.</span></div>
-  <div><b>state start</b><span><code>WorkflowStarter</code> creates the first Workflow -> Iteration -> Attempt chain; attempt startup, not entry bootstrap, schedules the planner.</span></div>
+  <div><b>state start</b><span><code>RunController.start_root_run()</code> seeds the <code>&lt;run_id&gt;:root</code> bootstrap generator, then <code>WorkflowStarter.start(prompt=, parent_task_id=)</code> creates the first Workflow -> Iteration -> Attempt chain; attempt startup, not entry bootstrap, schedules the planner.</span></div>
   <div><b>handle</b><span><code>TaskCenterEntryHandle</code> exposes request/run ids, sandbox binding, Workflow/Iteration/Attempt ids, and the launcher used by <code>wait_for_idle()</code>.</span></div>
 </div>
 <div class="trace-grid">
@@ -118,7 +121,7 @@
 </div>
 </section>
 
-<section id="launch-engine-bridge" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="backend/src/task_center/attempt/launch.py backend/src/task_center/attempt/deps.py backend/src/task_center/agent_launch/composer.py backend/src/task_center/agent_launch/entry_messages.py backend/src/task_center/agent_launch/skill_message.py backend/src/task_center/context_engine/core.py backend/src/tools/_framework/core/runtime.py backend/src/engine/api.py backend/src/engine/agent/lifecycle.py backend/src/engine/query/request.py backend/tests/unit_test/test_task_center/test_agent_launch/test_runner_kwargs_contract.py backend/tests/unit_test/test_task_center/test_agent_launch/test_attempt_launcher_retry.py backend/src/task_center_runner/tests/mock/task_center/test_initial_messages_capture.py">
+<section id="launch-engine-bridge" data-last-reviewed-commit="d32994314" data-evidence-paths="backend/src/task_center/attempt/launch.py backend/src/task_center/agent_launch/composer.py backend/src/task_center/agent_launch/entry_messages.py backend/src/task_center/agent_launch/skill_message.py backend/src/task_center/context_engine/engine.py backend/src/tools/_framework/core/runtime.py backend/src/engine/api.py backend/src/engine/agent/lifecycle.py backend/src/engine/query/request.py backend/tests/unit_test/test_task_center/test_agent_launch/test_runner_kwargs_contract.py backend/tests/unit_test/test_task_center/test_agent_launch/test_attempt_launcher_retry.py backend/src/task_center_runner/tests/mock/task_center/test_initial_messages_capture.py">
 <h2>Launch To Engine Path <a class="anchor" href="#launch-engine-bridge">#</a></h2>
 <p>The attempt launcher is the TaskCenter-to-engine adapter. It receives an <code>AgentLaunch</code> record from <code>AgentLaunchFactory</code>, attaches TaskCenter runtime metadata, chooses the launch message shape, and awaits the runner. If no runner is injected, it imports <code>engine.api.run_ephemeral_agent</code> lazily and uses the real engine path.</p>
 <div class="diagram" aria-label="Attempt launch to engine path">
@@ -134,11 +137,11 @@
   <div><b>metadata path</b><span>The launcher creates <code>ExecutionMetadata</code> with <code>task_center_run_id</code>, <code>task_center_task_id</code>, <code>task_center_attempt_id</code>, <code>task_center_workflow_id</code>, <code>task_center_request_id</code>, <code>attempt_runtime</code>, <code>composer</code>, and <code>active_terminals</code>.</span></div>
   <div><b>message shape</b><span>If both task guidance and skill exist, the skill is the spawn prompt and the context plus task guidance are seeded through <code>initial_messages</code>. If only task guidance exists, guidance is the prompt and context is the one seeded initial message. Without task guidance, context is the prompt and no initial messages are seeded.</span></div>
   <div><b>runner contract</b><span><code>test_runner_kwargs_contract.py</code> freezes the runner keyword set: <code>agent_def</code>, <code>sandbox_id</code>, <code>persist_agent_run</code>, <code>task_id</code>, <code>on_event</code>, <code>extra_tool_metadata</code>, and <code>initial_messages</code>.</span></div>
-  <div><b>exhaustion path</b><span>If the runner returns <code>None</code>, crashes, fails, or completes while the TaskCenter task is still <code>RUNNING</code>, the launcher reports a planner, generator, or evaluator failure through the attempt orchestrator.</span></div>
+  <div><b>exhaustion path</b><span>If the runner returns <code>None</code>, crashes, fails, or completes while the TaskCenter task is still <code>RUNNING</code>, the launcher reports a planner, generator, or reducer failure through the attempt orchestrator (<code>apply_planner_failure</code> / <code>apply_generator_submission</code> / <code>apply_reducer_submission</code> with <code>fail_reason="run_exhausted"</code>).</span></div>
 </div>
 </section>
 
-<section id="tool-and-sandbox-routing" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="backend/src/engine/agent/lifecycle.py backend/src/engine/query/loop.py backend/src/engine/tool_call/dispatch.py backend/src/tools/_framework/execution/tool_call.py backend/src/tools/_framework/core/runtime.py backend/src/tools/sandbox/_lib/registry.py backend/src/tools/sandbox/_lib/tool_context.py backend/src/tools/sandbox/read_file/read_file.py backend/src/tools/sandbox/write_file/write_file.py backend/src/tools/sandbox/edit_file/edit_file.py backend/src/tools/sandbox/shell/shell.py backend/src/sandbox/api/tool backend/src/sandbox/api/transport.py backend/src/sandbox/daemon/workspace_tool_dispatch.py docs/architecture/tools/sandbox.html docs/architecture/sandbox/workspaces.html docs/architecture/agent_loops/provider-sandbox-bridge.html">
+<section id="tool-and-sandbox-routing" data-last-reviewed-commit="d32994314" data-evidence-paths="backend/src/engine/agent/lifecycle.py backend/src/engine/query/loop.py backend/src/engine/tool_call/dispatch.py backend/src/tools/_framework/execution/tool_call.py backend/src/tools/_framework/core/runtime.py backend/src/tools/sandbox/_lib/registry.py backend/src/tools/sandbox/_lib/tool_context.py backend/src/tools/sandbox/read_file/read_file.py backend/src/tools/sandbox/write_file/write_file.py backend/src/tools/sandbox/edit_file/edit_file.py backend/src/tools/sandbox/shell/shell.py backend/src/sandbox/api/tool backend/src/sandbox/api/transport.py backend/src/sandbox/daemon/workspace_tool_dispatch.py docs/architecture/tools/sandbox.html docs/architecture/sandbox/workspaces.html docs/architecture/agent_loops/provider-sandbox-bridge.html">
 <h2>Tool And Sandbox Routing <a class="anchor" href="#tool-and-sandbox-routing">#</a></h2>
 <p>The engine does not special-case TaskCenter sandbox work. TaskCenter metadata enters the normal <code>ExecutionMetadata</code> object, the tool framework exposes it through <code>ToolExecutionContextService</code>, and sandbox tools build typed <code>sandbox.api</code> requests with caller identity.</p>
 <pre class="diagram" aria-label="TaskCenter sandbox tool routing diagram">
@@ -173,7 +176,7 @@
 </div>
 </section>
 
-<section id="runner-live-artifacts" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="backend/src/task_center_runner/core/engine.py backend/src/task_center_runner/audit/recorder.py backend/src/task_center_runner/audit/stream_bridge.py backend/src/message/agent_message_recorder.py backend/src/engine/query/request.py backend/src/task_center_runner/agent/mock/scenario_loop_runner.py backend/src/task_center_runner/tests/mock/task_center/test_initial_messages_capture.py backend/src/task_center_runner/tests/mock/task_center/test_correctness.py backend/src/task_center_runner/tests/mock/task_center/test_full_case_user_input.py">
+<section id="runner-live-artifacts" data-last-reviewed-commit="d32994314" data-evidence-paths="backend/src/task_center_runner/core/engine.py backend/src/task_center_runner/audit/recorder.py backend/src/task_center_runner/audit/stream_bridge.py backend/src/message/agent_message_recorder.py backend/src/engine/query/request.py backend/src/task_center_runner/agent/mock/scenario_loop_runner.py backend/src/task_center_runner/tests/mock/task_center/test_initial_messages_capture.py backend/src/task_center_runner/tests/mock/task_center/test_correctness.py backend/src/task_center_runner/tests/mock/task_center/test_full_case_user_input.py">
 <h2>Runner And Live Artifacts <a class="anchor" href="#runner-live-artifacts">#</a></h2>
 <p><code>task_center_runner.core.engine.run_pipeline()</code> is the live/mock/benchmark harness entrypoint around TaskCenter. It provisions the sandbox, opens an audit bus, starts <code>AuditRecorder</code>, injects a runner if the mode has one, starts TaskCenter, waits for the launcher to go idle, releases the sandbox, and writes a performance report task.</p>
 <div class="trace-grid">
@@ -182,7 +185,7 @@
   <div>State snapshots</div><div><code>AuditRecorder</code> listens to Workflow, Iteration, Attempt, task, and agent-run ORM events, then writes <code>workflow.json</code>, <code>iteration.json</code>, <code>attempt.json</code>, <code>task.json</code>, <code>run.json</code>, and <code>metrics.json</code>.</div>
   <div>Message capture</div><div>Primary role task directories get <code>message.jsonl</code>. Initial rows are recorded once from system prompt, seeded <code>initial_messages</code>, and the spawn prompt.</div>
   <div>Sandbox events</div><div>Sandbox audit events are mirrored to <code>sandbox_events.jsonl</code>, either from daemon event pulling or stream-derived sandbox event projection.</div>
-  <div>Initial-message regression</div><div><code>test_initial_messages_capture.py</code> asserts captured <code>message.jsonl</code> rows include <code>&lt;context&gt;</code>, <code>&lt;Task Guidance&gt;</code>, skill rows, and terminal-selection catalog metadata for planner/executor/evaluator launches.</div>
+  <div>Initial-message regression</div><div><code>test_initial_messages_capture.py</code> asserts captured <code>message.jsonl</code> rows include <code>&lt;context&gt;</code>, <code>&lt;Task Guidance&gt;</code>, skill rows, and terminal-selection catalog metadata for planner/executor/reducer launches.</div>
 </div>
 <div class="summary">
   <ul>
@@ -193,19 +196,19 @@
 </div>
 </section>
 
-<section id="boundary-rules-failure-modes" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="backend/src/task_center/entry/bootstrap.py backend/src/task_center/attempt/launch.py backend/src/task_center/attempt/deps.py backend/src/task_center/workflow/starter.py backend/src/task_center/workflow/closure_report_router.py backend/src/tools/submission/context/attempt.py backend/src/tools/submission/context/executor.py backend/src/tools/submission/executor/submit_execution_handoff/submit_execution_handoff.py backend/src/engine/agent/lifecycle.py backend/src/engine/query/loop.py backend/src/sandbox/daemon/workspace_tool_dispatch.py">
+<section id="boundary-rules-failure-modes" data-last-reviewed-commit="d32994314" data-evidence-paths="backend/src/task_center/entry/bootstrap.py backend/src/task_center/attempt/launch.py backend/src/task_center/attempt/orchestrator.py backend/src/task_center/workflow/starter.py backend/src/tools/submission/context/attempt.py backend/src/tools/submission/context/executor.py backend/src/tools/submission/executor/submit_workflow_handoff/submit_workflow_handoff.py backend/src/engine/agent/lifecycle.py backend/src/engine/query/loop.py backend/src/sandbox/daemon/workspace_tool_dispatch.py">
 <h2>Boundary Rules And Failure Modes <a class="anchor" href="#boundary-rules-failure-modes">#</a></h2>
 <div class="edge-list">
   <div><b>No global orchestrator</b><span><code>AttemptOrchestrator</code> is per Attempt. Entry bootstrap wires registries and stores, but mutation still flows through Workflow, Iteration, Attempt, task, and terminal-submission state.</span></div>
-  <div><b>No peer-to-peer handoff</b><span><code>submit_execution_handoff</code> starts a persisted child workflow. The parent generator moves to <code>WAITING_WORKFLOW</code> and resumes only when a close report routes back through <code>WorkflowClosureReportRouter</code> and <code>AttemptOrchestrator.apply_workflow_closure_report()</code>.</span></div>
+  <div><b>No peer-to-peer handoff</b><span><code>submit_workflow_handoff</code> starts a persisted child workflow through <code>AttemptOrchestrator.start_child_workflow()</code>, which flips the parent generator <code>RUNNING -> WAITING_WORKFLOW</code> and links <code>Task.child_workflow_id</code> &lt;-&gt; <code>Workflow.parent_task_id</code>. There is no closure-report abstraction: the child's terminal result resumes the parent directly via <code>AttemptOrchestrator.apply_child_workflow_outcome()</code> (or <code>cancel_child_workflow()</code> on teardown), completing the parent task <code>DONE</code> or <code>FAILED</code>.</span></div>
   <div><b>Missing attempt runtime</b><span>Submission context resolvers require <code>ExecutionMetadata.attempt_runtime</code>, a task id, a persisted task row, matching attempt metadata, and a registered orchestrator. Missing pieces return terminal tool errors instead of guessing state.</span></div>
-  <div><b>Runner exhaustion</b><span>When an agent run ends without moving its TaskCenter task off <code>RUNNING</code>, the launcher synthesizes a planner, generator, or evaluator failure submission so the Attempt remains owned by TaskCenter state code.</span></div>
+  <div><b>Runner exhaustion</b><span>When an agent run ends without moving its TaskCenter task off <code>RUNNING</code>, the launcher synthesizes a planner, generator, or reducer failure submission so the Attempt remains owned by TaskCenter state code.</span></div>
   <div><b>Terminal refusal</b><span>The engine may return no terminal result for text-only refusal, resource limit, or crash. TaskCenter treats that as runner exhaustion unless a terminal submission already changed the task state.</span></div>
   <div><b>Workspace routing surprise</b><span>Sandbox calls can route isolated, direct, or overlay depending on active isolated handles, file verb, workspace binding, path shape, and daemon availability. TaskCenter should not assume a file mutation bypasses OCC.</span></div>
 </div>
 </section>
 
-<section id="tests-maintenance" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="backend/tests/unit_test/test_task_center/test_lifecycle/test_entry_bootstrap.py backend/tests/unit_test/test_task_center/test_lifecycle/test_sandbox_provisioning.py backend/tests/unit_test/test_task_center/test_agent_launch/test_runner_kwargs_contract.py backend/tests/unit_test/test_task_center/test_agent_launch/test_attempt_launcher_retry.py backend/src/task_center_runner/tests/mock/task_center/test_initial_messages_capture.py backend/src/task_center_runner/tests/mock/task_center/test_correctness.py backend/src/task_center_runner/tests/mock/task_center/test_full_case_user_input.py docs/architecture/agent_loops/main-loop.html docs/architecture/agent_loops/prompt-context.html docs/architecture/agent_loops/provider-sandbox-bridge.html docs/architecture/tools/sandbox.html docs/architecture/sandbox/workspaces.html">
+<section id="tests-maintenance" data-last-reviewed-commit="d32994314" data-evidence-paths="backend/tests/unit_test/test_task_center/test_lifecycle/test_entry_bootstrap.py backend/tests/unit_test/test_task_center/test_lifecycle/test_sandbox_provisioning.py backend/tests/unit_test/test_task_center/test_agent_launch/test_runner_kwargs_contract.py backend/tests/unit_test/test_task_center/test_agent_launch/test_attempt_launcher_retry.py backend/src/task_center_runner/tests/mock/task_center/test_initial_messages_capture.py backend/src/task_center_runner/tests/mock/task_center/test_correctness.py backend/src/task_center_runner/tests/mock/task_center/test_full_case_user_input.py docs/architecture/agent_loops/main-loop.html docs/architecture/agent_loops/prompt-context.html docs/architecture/agent_loops/provider-sandbox-bridge.html docs/architecture/tools/sandbox.html docs/architecture/sandbox/workspaces.html">
 <h2>Tests And Maintenance <a class="anchor" href="#tests-maintenance">#</a></h2>
 <div class="evidence-grid">
   <div class="evidence-card">
@@ -232,10 +235,10 @@
 </div>
 </section>
 
-<div class="page-baseline" data-page-baseline-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa">
+<div class="page-baseline" data-page-baseline-commit="d32994314">
   <strong>Maintenance baseline</strong>
-  <span>Technical sections reviewed against <code>e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa</code>.</span>
-  <code>git diff e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa..HEAD -- &lt;section data-evidence-paths&gt;</code>
+  <span>Technical sections reviewed against <code>d32994314</code>.</span>
+  <code>git diff d32994314..HEAD -- &lt;section data-evidence-paths&gt;</code>
 </div>
 <div class="page-footer-nav"><span><a href="terminal-tools.html">Terminal Tools</a></span><span><a href="maintenance.html">Maintenance</a></span></div>
 </main>

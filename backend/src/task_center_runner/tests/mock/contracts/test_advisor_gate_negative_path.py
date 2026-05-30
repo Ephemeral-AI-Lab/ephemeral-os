@@ -90,7 +90,7 @@ async def test_wrong_tool_approval_blocks_terminal_dispatch() -> None:
 
     result = await execute_tool_once(
         submit_execution_blocker,
-        {"summary": "negative-path probe"},
+        {"outcome": "negative-path probe"},
         context,
         emit=_noop_emit,
         emit_started=False,
@@ -126,7 +126,7 @@ async def test_no_approval_blocks_terminal_dispatch() -> None:
 
     result = await execute_tool_once(
         submit_execution_blocker,
-        {"summary": "negative-path probe"},
+        {"outcome": "negative-path probe"},
         context,
         emit=_noop_emit,
         emit_started=False,

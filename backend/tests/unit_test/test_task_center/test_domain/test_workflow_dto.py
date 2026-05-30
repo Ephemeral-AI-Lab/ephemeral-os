@@ -7,12 +7,8 @@ from datetime import UTC, datetime
 
 import pytest
 
-from task_center.workflow.state import (
-    WorkflowClosureReport,
-    WorkflowClosureDeliveryResult,
-    WorkflowClosureDeliveryStatus,
+from task_center._core.state import (
     Workflow,
-    WorkflowOriginKind,
     WorkflowStatus,
 )
 
@@ -21,11 +17,10 @@ def _request(**overrides) -> Workflow:
     base = dict(
         id="r1",
         task_center_run_id="run1",
-        requested_by_task_id="t1",
-        goal="goal",
+        workflow_goal="goal",
         status=WorkflowStatus.OPEN,
         iteration_ids=(),
-        final_outcome=None,
+        parent_task_id=None,
         created_at=datetime.now(UTC),
         updated_at=datetime.now(UTC),
         closed_at=None,
@@ -45,27 +40,3 @@ def test_request_dto_is_frozen():
     req = _request()
     with pytest.raises(FrozenInstanceError):
         req.status = WorkflowStatus.SUCCEEDED  # type: ignore[misc]
-
-
-def test_closure_report_constructs():
-    rep = WorkflowClosureReport(
-        workflow_id="r1",
-        task_center_run_id="run1",
-        origin_kind=WorkflowOriginKind.TASK,
-        requested_by_task_id="t1",
-        outcome="success",
-        final_iteration_id="s1",
-        final_attempt_id="g1",
-    )
-    assert rep.outcome == "success"
-
-
-def test_goal_closure_delivery_result_constructs():
-    status: WorkflowClosureDeliveryStatus = "delivered"
-    result = WorkflowClosureDeliveryResult(
-        status=status,
-        requested_by_task_id="t1",
-        parent_attempt_id="a1",
-    )
-
-    assert result.status == "delivered"

@@ -15,7 +15,7 @@ from agents import (
     register_definition,
     unregister_definition,
 )
-from task_center._core.terminal_tool_routing import TerminalToolRouter
+from task_center._core.terminal_routing import TerminalToolRouter
 from task_center.context_engine.scope import ContextScope
 
 

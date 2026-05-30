@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing import Any
 
-from tools.submission.evaluator import submit_evaluation_failure
+from tools.submission.reducer import submit_reduction_failure
 from tools.submission.planner import submit_plan_closes_goal
 
 from task_center_runner.scenarios.base import ScenarioBase, ScenarioContext, ToolCallSpec
@@ -13,12 +13,17 @@ from task_center_runner.scenarios.base import ScenarioBase, ScenarioContext, Too
 
 def _unknown_agent_plan() -> dict[str, Any]:
     return {
-        "plan_spec": "Invalid plan references an unregistered agent.",
-        "evaluation_criteria": ["Unknown generator agent is rejected."],
         "tasks": [
-            {"id": "a", "agent_name": "missing_generator_agent", "deps": []},
+            {"id": "a", "agent_name": "missing_generator_agent", "needs": []},
         ],
         "task_specs": {"a": "Run with an unknown agent."},
+        "reducers": [
+            {
+                "id": "reduce",
+                "needs": ["a"],
+                "prompt": "Confirm the task completed.",
+            }
+        ],
     }
 
 
@@ -33,13 +38,10 @@ class PlannerUnknownAgentName(ScenarioBase):
     def executor_actions(self, ctx: ScenarioContext) -> Sequence[str]:  # noqa: ARG002
         return ()
 
-    def evaluator_response(self, ctx: ScenarioContext) -> ToolCallSpec:
+    def reducer_response(self, ctx: ScenarioContext) -> ToolCallSpec:  # noqa: ARG002
         return ToolCallSpec(
-            submit_evaluation_failure,
-            {
-                "summary": "Unexpected evaluator invocation under unknown agent.",
-                "failed_criteria": list(ctx.attempt.evaluation_criteria),
-            },
+            submit_reduction_failure,
+            {"outcome": "Unexpected reducer invocation under unknown agent."},
         )
 
 

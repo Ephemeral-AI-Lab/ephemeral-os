@@ -16,7 +16,7 @@ from task_center.context_engine.packet import ContextPacket
 from task_center.context_engine.scope import ContextScope
 
 if TYPE_CHECKING:  # pragma: no cover - typing-only
-    from task_center.context_engine.core import ContextEngineDeps
+    from task_center.context_engine.engine import ContextEngineDeps
 
 RecipeBuild = Callable[[ContextScope, "ContextEngineDeps"], ContextPacket]
 

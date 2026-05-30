@@ -6,7 +6,7 @@ it against the caller's :class:`ContextScope`, producing a
 :mod:`task_center.agent_launch`.
 
 Exceptions are re-exported from :mod:`.exceptions` so existing callers that
-``from task_center.context_engine.core import ContextEngineError`` keep
+``from task_center.context_engine.engine import ContextEngineError`` keep
 working.
 """
 

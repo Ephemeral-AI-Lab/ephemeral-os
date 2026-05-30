@@ -26,11 +26,11 @@ Do NOT call this when:
   your changes are durable.
 
 Inputs:
-- `summary`: 1–3 sentence factual recap of what you did. No filler.
+- `outcome`: 1–3 sentence factual recap of what you did. No filler.
 - `artifacts`: list of concrete artifacts (file paths, command IDs) the
   caller can verify.
 
 Behavior:
-- Records evaluator-visible success on the attempt's task. The
+- Records reducer-visible success on the attempt's task. The
   orchestrator advances the DAG.\
 """

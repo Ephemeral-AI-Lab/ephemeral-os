@@ -12,14 +12,11 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing import Any
 
-from tools.submission.evaluator import submit_evaluation_success
-from tools.submission.verifier import (
-    submit_verification_success,
-)
 from tools.submission.planner import (
     submit_plan_closes_goal,
     submit_plan_defers_goal,
 )
+from tools.submission.reducer import submit_reduction_success
 
 from task_center_runner.scenarios._scenario_helpers import (
     is_recursive_workflow,
@@ -42,20 +39,12 @@ _CONTINUATION_GOAL = (
 
 def _entry_origin_defers_plan() -> dict[str, Any]:
     return {
-        "plan_spec": (
-            "Execute the first entry-origin slice by delegating one oversized branch to "
-            "a child workflow, then continue the entry-origin workflow afterward."
-        ),
-        "evaluation_criteria": [
-            "The child workflow is requested from the parent executor task.",
-            "The parent observes the child workflow close report before evaluation.",
-        ],
         "tasks": [
-            {"id": "delegate_child", "agent_name": "executor", "deps": []},
+            {"id": "delegate_child", "agent_name": "executor", "needs": []},
             {
                 "id": "recursive_return_guard",
-                "agent_name": "verifier",
-                "deps": ["delegate_child"],
+                "agent_name": "executor",
+                "needs": ["delegate_child"],
             },
         ],
         "task_specs": {
@@ -64,23 +53,26 @@ def _entry_origin_defers_plan() -> dict[str, Any]:
             ),
             "recursive_return_guard": "VERIFY checkpoint=recursive_return",
         },
+        "reducers": [
+            {
+                "id": "reduce",
+                "needs": ["delegate_child", "recursive_return_guard"],
+                "prompt": (
+                    "Confirm the child workflow close report reached the parent."
+                ),
+            }
+        ],
         "deferred_goal_for_next_iteration": _CONTINUATION_GOAL,
     }
 
 
 def _child_full_plan() -> dict[str, Any]:
     return minimal_full_plan(
-        plan_spec=(
-            "Run a full child workflow preflight to prove the delegated workflow "
-            "cannot emit another partial plan."
-        ),
-        evaluation_criteria=[
-            "The child workflow completes through a full plan.",
-        ],
+        criteria=["The child workflow completes through a full plan."],
         task_id="child_reconcile",
         task_spec=(
             "ACTION recursive_reconcile slice=full_only_planner. Write the "
-            "standard recursive close report for the parent verifier."
+            "standard recursive close report for the parent."
         ),
     )
 
@@ -98,10 +90,7 @@ class DeferredParentPlannerTerminalRouting(ScenarioBase):
         return ToolCallSpec(
             submit_plan_closes_goal,
             preflight_full_plan(
-                plan_spec=(
-                    "Run the entry-origin continuation follow-up as a normal full plan."
-                ),
-                evaluation_criteria=(
+                criteria=(
                     "The entry-origin continuation iteration completed as a full plan.",
                 ),
             ),
@@ -115,22 +104,10 @@ class DeferredParentPlannerTerminalRouting(ScenarioBase):
             return ("recursive_step",)
         return ("preflight",)
 
-    def verifier_response(self, ctx: ScenarioContext) -> ToolCallSpec:
+    def reducer_response(self, ctx: ScenarioContext) -> ToolCallSpec:  # noqa: ARG002
         return ToolCallSpec(
-            submit_verification_success,
-            {
-                "summary": "Recursive child close report reached the parent.",
-                "checks": ["recursive_return"],
-            },
-        )
-
-    def evaluator_response(self, ctx: ScenarioContext) -> ToolCallSpec:
-        return ToolCallSpec(
-            submit_evaluation_success,
-            {
-                "summary": "Planner routing scenario branch passed.",
-                "passed_criteria": list(ctx.attempt.evaluation_criteria),
-            },
+            submit_reduction_success,
+            {"outcome": "Planner routing scenario branch passed."},
         )
 
     def recursive_handoff_goal(self, ctx: ScenarioContext) -> str | None:  # noqa: ARG002

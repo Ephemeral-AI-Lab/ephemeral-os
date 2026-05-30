@@ -27,23 +27,20 @@ def test_dictionary_has_every_canonical_row_from_spec():
         # The attempt row is now a single wildcard; the prior/current and
         # status/verdict attempt rows were removed (contract §5). The
         # accepted_plan/summary/status_summary/failed_criteria rows were removed
-        # too — the redesign no longer emits any of those elements.
+        # too — the redesign no longer emits any of those elements. The
+        # evaluator-only descriptors (plan_spec, evaluation_criteria,
+        # evaluator_summary) are gone with the evaluator role; the reducer adds
+        # <assigned_prompt> and the dependency wrapper is now <needs>.
         ("attempt", None, "failed prior attempt"),
-        ("plan_spec", None, "attempt's plan"),
         (
             "deferred_goal_for_next_iteration",
             None,
             "scope handed to next iteration",
         ),
-        ("task", None, "generator task outcome"),
-        (
-            "evaluation_criteria",
-            None,
-            "criteria the attempt must satisfy",
-        ),
-        ("evaluator_summary", None, "evaluator's commentary"),
+        ("task", None, "upstream task outcome"),
         ("assigned_task", None, "your assigned task"),
-        ("dependency", None, "upstream task output"),
+        ("assigned_prompt", None, "your reducer prompt"),
+        ("needs", None, "upstream needs output"),
     ]
     actual = [(d.tag, d.attr_filter, d.label) for d in TAG_DICTIONARY]
     assert actual == expected

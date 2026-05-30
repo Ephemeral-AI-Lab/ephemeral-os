@@ -38,9 +38,8 @@ def test_advisor_profile_body_contains_identity_sentence():
 # ---------------------------------------------------------------------------
 
 _MAIN_AGENT_IDENTITY_PINS = {
-    "main/evaluator.md": "You are the **main-agent evaluator**.",
     "main/executor.md": "You are the **main-agent generator executor**.",
-    "main/generator_verifier.md": "You are the **main-agent generator verifier**.",
+    "main/reducer.md": "You are the **main-agent reducer**.",
     "main/planner.md": (
         "You are the **planner** for one attempt in the TaskCenter harness."
     ),

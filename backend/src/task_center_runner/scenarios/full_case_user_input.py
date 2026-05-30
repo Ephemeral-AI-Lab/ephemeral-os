@@ -6,10 +6,9 @@ from collections.abc import Sequence
 from dataclasses import asdict
 from typing import Any
 
-from tools.submission.evaluator import submit_evaluation_success
-from tools.submission.verifier import (
-    submit_verification_failure,
-    submit_verification_success,
+from tools.submission.reducer import (
+    submit_reduction_failure,
+    submit_reduction_success,
 )
 from tools.submission.planner import (
     submit_plan_closes_goal,
@@ -34,7 +33,7 @@ from task_center_runner.scenarios.user_input import (
 
 
 class FullCaseUserInput(ScenarioBase):
-    """Exercise user-input parsing, dynamic DAGs, verifiers, and recursion."""
+    """Exercise user-input parsing, dynamic DAGs, gate reducers, and recursion."""
 
     name = "full_case_user_input"
 
@@ -82,39 +81,21 @@ class FullCaseUserInput(ScenarioBase):
             return ("recursive_step",)
         return ("execute_package:generic",)
 
-    def verifier_response(self, ctx: ScenarioContext) -> ToolCallSpec:
-        context_message = ctx.context_message or ""
-        checkpoint = context_message_field(context_message, "checkpoint") or "checkpoint"
-        should_fail = self._should_fail_verifier(ctx, checkpoint)
-        if should_fail:
+    def reducer_response(self, ctx: ScenarioContext) -> ToolCallSpec:
+        if self._should_fail_reducer(ctx):
             return ToolCallSpec(
-                submit_verification_failure,
+                submit_reduction_failure,
                 {
-                    "summary": f"Verifier rejected {checkpoint}.",
-                    "unresolved_issues": [
-                        f"{checkpoint} is missing retry-only evidence.",
-                    ],
+                    "outcome": (
+                        "Reducer rejected the attempt: missing retry-only "
+                        "evidence on the gated checkpoint."
+                    ),
                 },
             )
         return ToolCallSpec(
-            submit_verification_success,
+            submit_reduction_success,
             {
-                "summary": f"Verifier accepted {checkpoint}.",
-                "checks": [
-                    f"checkpoint:{checkpoint}",
-                    "dependencies:"
-                    f"{context_message_field(context_message, 'dependency_count') or '0'}",
-                ],
-            },
-        )
-
-    def evaluator_response(self, ctx: ScenarioContext) -> ToolCallSpec:
-        attempt = ctx.attempt
-        return ToolCallSpec(
-            submit_evaluation_success,
-            {
-                "summary": "Mock evaluator accepted verifier-gated evidence.",
-                "passed_criteria": list(attempt.evaluation_criteria),
+                "outcome": "Reducer accepted the gated executor-task evidence.",
             },
         )
 
@@ -152,8 +133,8 @@ class FullCaseUserInput(ScenarioBase):
                 _inventory_plan(
                     kind="defers",
                     deferred_goal_for_next_iteration=(
-                        "Execute the dynamic package DAG with verifier "
-                        "checkpoints and recursive workflow handling."
+                        "Execute the dynamic package DAG with gated checkpoints "
+                        "and recursive workflow handling."
                     ),
                 ),
             )
@@ -171,17 +152,12 @@ class FullCaseUserInput(ScenarioBase):
             return ToolCallSpec(
                 submit_plan_defers_goal,
                 {
-                    "plan_spec": "Decompose the oversized delegated package.",
-                    "evaluation_criteria": [
-                        "Recursive package inventory was produced.",
-                        "Recursive verifier accepted decomposition coverage.",
-                    ],
                     "tasks": [
-                        {"id": "recursive_inventory", "agent_name": "executor", "deps": []},
+                        {"id": "recursive_inventory", "agent_name": "executor", "needs": []},
                         {
                             "id": "recursive_inventory_guard",
-                            "agent_name": "verifier",
-                            "deps": ["recursive_inventory"],
+                            "agent_name": "executor",
+                            "needs": ["recursive_inventory"],
                         },
                     ],
                     "task_specs": {
@@ -191,6 +167,16 @@ class FullCaseUserInput(ScenarioBase):
                             "dependency_count=1"
                         ),
                     },
+                    "reducers": [
+                        {
+                            "id": "reduce",
+                            "needs": ["recursive_inventory", "recursive_inventory_guard"],
+                            "prompt": (
+                                "Recursive package inventory was produced and the "
+                                "decomposition coverage was confirmed."
+                            ),
+                        }
+                    ],
                     "deferred_goal_for_next_iteration": (
                         "Execute the delegated package subtasks and verify "
                         "their local integration."
@@ -201,18 +187,13 @@ class FullCaseUserInput(ScenarioBase):
             return ToolCallSpec(
                 submit_plan_defers_goal,
                 {
-                    "plan_spec": "Execute delegated package subtasks.",
-                    "evaluation_criteria": [
-                        "Recursive package probes completed.",
-                        "Recursive wave guard passed.",
-                    ],
                     "tasks": [
-                        {"id": "recursive_exec_a", "agent_name": "executor", "deps": []},
-                        {"id": "recursive_exec_b", "agent_name": "executor", "deps": []},
+                        {"id": "recursive_exec_a", "agent_name": "executor", "needs": []},
+                        {"id": "recursive_exec_b", "agent_name": "executor", "needs": []},
                         {
                             "id": "recursive_wave_guard",
-                            "agent_name": "verifier",
-                            "deps": ["recursive_exec_a", "recursive_exec_b"],
+                            "agent_name": "executor",
+                            "needs": ["recursive_exec_a", "recursive_exec_b"],
                         },
                     ],
                     "task_specs": {
@@ -222,23 +203,32 @@ class FullCaseUserInput(ScenarioBase):
                             "VERIFY checkpoint=recursive_wave dependency_count=2"
                         ),
                     },
+                    "reducers": [
+                        {
+                            "id": "reduce",
+                            "needs": [
+                                "recursive_exec_a",
+                                "recursive_exec_b",
+                                "recursive_wave_guard",
+                            ],
+                            "prompt": (
+                                "Recursive package probes completed and the "
+                                "recursive wave guard passed."
+                            ),
+                        }
+                    ],
                     "deferred_goal_for_next_iteration": "Reconcile recursive package evidence.",
                 },
             )
         return ToolCallSpec(
             submit_plan_closes_goal,
             {
-                "plan_spec": "Close the delegated package workflow.",
-                "evaluation_criteria": [
-                    "Recursive close report summarizes package evidence.",
-                    "Recursive final verifier passed.",
-                ],
                 "tasks": [
-                    {"id": "recursive_reconcile", "agent_name": "executor", "deps": []},
+                    {"id": "recursive_reconcile", "agent_name": "executor", "needs": []},
                     {
                         "id": "recursive_final_guard",
-                        "agent_name": "verifier",
-                        "deps": ["recursive_reconcile"],
+                        "agent_name": "executor",
+                        "needs": ["recursive_reconcile"],
                     },
                 ],
                 "task_specs": {
@@ -247,6 +237,16 @@ class FullCaseUserInput(ScenarioBase):
                         "VERIFY checkpoint=recursive_final dependency_count=1"
                     ),
                 },
+                "reducers": [
+                    {
+                        "id": "reduce",
+                        "needs": ["recursive_reconcile", "recursive_final_guard"],
+                        "prompt": (
+                            "Recursive close report summarizes package evidence "
+                            "and the recursive final guard passed."
+                        ),
+                    }
+                ],
             },
         )
 
@@ -265,15 +265,15 @@ class FullCaseUserInput(ScenarioBase):
         previous_guard: str | None = None
         for wave_no, wave in enumerate(_chunked(regular, 8), start=1):
             local_ids: list[str] = []
-            deps = [previous_guard] if previous_guard else []
+            needs = [previous_guard] if previous_guard else []
             for package in wave:
                 local_id = f"exec_{package.id}"
                 local_ids.append(local_id)
-                tasks.append({"id": local_id, "agent_name": "executor", "deps": deps})
+                tasks.append({"id": local_id, "agent_name": "executor", "needs": needs})
                 task_specs[local_id] = _package_task_spec(package, wave_no)
             guard_id = f"verify_wave_{wave_no}"
             tasks.append(
-                {"id": guard_id, "agent_name": "verifier", "deps": local_ids}
+                {"id": guard_id, "agent_name": "executor", "needs": local_ids}
             )
             task_specs[guard_id] = (
                 f"VERIFY checkpoint=wave_{wave_no} wave={wave_no} "
@@ -281,12 +281,12 @@ class FullCaseUserInput(ScenarioBase):
             )
             previous_guard = guard_id
 
-        final_deps: list[str] = [previous_guard] if previous_guard else []
+        final_needs: list[str] = [previous_guard] if previous_guard else []
         if recursive is not None:
-            recursive_deps = [previous_guard] if previous_guard else []
+            recursive_needs = [previous_guard] if previous_guard else []
             delegate_id = f"delegate_{recursive.id}"
             tasks.append(
-                {"id": delegate_id, "agent_name": "executor", "deps": recursive_deps}
+                {"id": delegate_id, "agent_name": "executor", "needs": recursive_needs}
             )
             task_specs[delegate_id] = (
                 f"ACTION request_recursive_workflow package={recursive.id} "
@@ -296,32 +296,36 @@ class FullCaseUserInput(ScenarioBase):
             tasks.append(
                 {
                     "id": recursive_guard,
-                    "agent_name": "verifier",
-                    "deps": [delegate_id],
+                    "agent_name": "executor",
+                    "needs": [delegate_id],
                 }
             )
             task_specs[recursive_guard] = (
                 "VERIFY checkpoint=recursive_return dependency_count=1"
             )
-            final_deps.append(recursive_guard)
+            final_needs.append(recursive_guard)
 
-        final_guard = "verify_final_pre_evaluator"
-        tasks.append({"id": final_guard, "agent_name": "verifier", "deps": final_deps})
+        final_guard = "verify_final_pre_reduce"
+        tasks.append({"id": final_guard, "agent_name": "executor", "needs": final_needs})
         task_specs[final_guard] = (
-            f"VERIFY checkpoint=final_pre_evaluator "
-            f"dependency_count={len(final_deps)}"
+            f"VERIFY checkpoint=final_pre_reduce "
+            f"dependency_count={len(final_needs)}"
         )
         return {
-            "plan_spec": (
-                "Execute dynamic SWE-EVO package DAG from the rendered user input."
-            ),
-            "evaluation_criteria": [
-                "Every generated executor wave is guarded by a verifier.",
-                "At least one verifier guards multiple executor tasks.",
-                "Recursive package close report is available before parent guard.",
-            ],
             "tasks": tasks,
             "task_specs": task_specs,
+            "reducers": [
+                {
+                    "id": "reduce",
+                    "needs": [task["id"] for task in tasks],
+                    "prompt": (
+                        "Every generated executor wave is guarded; at least one "
+                        "guard depends on multiple executor tasks; the recursive "
+                        "package close report is available before the parent "
+                        "guard."
+                    ),
+                }
+            ],
             "deferred_goal_for_next_iteration": (
                 "Run final release-bundle reconciliation after package evidence "
                 "and recursive workflow output are available."
@@ -331,25 +335,21 @@ class FullCaseUserInput(ScenarioBase):
     def _final_reconciliation_plan(self, ctx: ScenarioContext) -> dict[str, Any]:
         plan = self._ensure_user_input_plan(ctx)
         high_risk_count = sum(1 for item in plan.requirements if item.risk == "high")
+        tasks = [
+            {"id": "final_coverage_ledger", "agent_name": "executor", "needs": []},
+            {
+                "id": "final_readback_probe",
+                "agent_name": "executor",
+                "needs": ["final_coverage_ledger"],
+            },
+            {
+                "id": "final_release_guard",
+                "agent_name": "executor",
+                "needs": ["final_coverage_ledger", "final_readback_probe"],
+            },
+        ]
         return {
-            "plan_spec": "Reconcile final SWE-EVO coverage evidence.",
-            "evaluation_criteria": [
-                "High-risk requirement categories have verifier evidence.",
-                "Final evaluator runs after the final verifier passes.",
-            ],
-            "tasks": [
-                {"id": "final_coverage_ledger", "agent_name": "executor", "deps": []},
-                {
-                    "id": "final_readback_probe",
-                    "agent_name": "executor",
-                    "deps": ["final_coverage_ledger"],
-                },
-                {
-                    "id": "final_release_guard",
-                    "agent_name": "verifier",
-                    "deps": ["final_coverage_ledger", "final_readback_probe"],
-                },
-            ],
+            "tasks": tasks,
             "task_specs": {
                 "final_coverage_ledger": (
                     "ACTION final_reconciliation stage=coverage "
@@ -360,6 +360,16 @@ class FullCaseUserInput(ScenarioBase):
                     "VERIFY checkpoint=final_release dependency_count=2"
                 ),
             },
+            "reducers": [
+                {
+                    "id": "reduce",
+                    "needs": [task["id"] for task in tasks],
+                    "prompt": (
+                        "High-risk requirement categories have evidence and the "
+                        "reducer runs after the final release guard passes."
+                    ),
+                }
+            ],
         }
 
     def _ensure_user_input_plan(self, ctx: ScenarioContext) -> UserInputPlan:
@@ -367,30 +377,21 @@ class FullCaseUserInput(ScenarioBase):
             return self._user_input_plan
         prompt = ""
         if ctx.workflow is not None and is_entry_origin_workflow(ctx):
-            prompt = str(ctx.workflow.goal or "")
+            prompt = str(ctx.workflow.workflow_goal or "")
         if not prompt:
             prompt = ctx.prompt or ctx.context_message or ""
         self._entry_prompt = prompt
         self._user_input_plan = build_user_input_plan(prompt)
         return self._user_input_plan
 
-    def _should_fail_verifier(
-        self,
-        ctx: ScenarioContext,
-        checkpoint: str,
-    ) -> bool:
+    def _should_fail_reducer(self, ctx: ScenarioContext) -> bool:
         if not is_entry_origin_workflow(ctx):
             return False
         iteration = ctx.iteration
         attempt = ctx.attempt
         return (
-            iteration.sequence_no == 1
+            iteration.sequence_no in (1, 2)
             and attempt.attempt_sequence_no == 1
-            and checkpoint == "inventory"
-        ) or (
-            iteration.sequence_no == 2
-            and attempt.attempt_sequence_no == 1
-            and checkpoint == "final_pre_evaluator"
         )
 
 
@@ -400,23 +401,28 @@ def _inventory_plan(
     deferred_goal_for_next_iteration: str | None = None,
 ) -> dict[str, Any]:
     args: dict[str, Any] = {
-        "plan_spec": "Inventory rendered SWE-EVO user-input requirements.",
-        "evaluation_criteria": [
-            "Requirement ledger was built from the already-rendered user input.",
-            "Package DAG policy can be derived from the requirement ledger.",
-        ],
         "tasks": [
-            {"id": "requirement_inventory", "agent_name": "executor", "deps": []},
+            {"id": "requirement_inventory", "agent_name": "executor", "needs": []},
             {
                 "id": "inventory_guard",
-                "agent_name": "verifier",
-                "deps": ["requirement_inventory"],
+                "agent_name": "executor",
+                "needs": ["requirement_inventory"],
             },
         ],
         "task_specs": {
             "requirement_inventory": "ACTION inspect_user_input",
             "inventory_guard": "VERIFY checkpoint=inventory dependency_count=1",
         },
+        "reducers": [
+            {
+                "id": "reduce",
+                "needs": ["requirement_inventory", "inventory_guard"],
+                "prompt": (
+                    "Requirement ledger was built from the already-rendered user "
+                    "input and the package DAG policy can be derived from it."
+                ),
+            }
+        ],
     }
     if kind == "defers":
         assert deferred_goal_for_next_iteration is not None
@@ -425,46 +431,41 @@ def _inventory_plan(
 
 
 def _recursive_full_only_plan() -> dict[str, Any]:
+    tasks = [
+        {"id": "recursive_inventory", "agent_name": "executor", "needs": []},
+        {
+            "id": "recursive_inventory_guard",
+            "agent_name": "executor",
+            "needs": ["recursive_inventory"],
+        },
+        {
+            "id": "recursive_exec_a",
+            "agent_name": "executor",
+            "needs": ["recursive_inventory_guard"],
+        },
+        {
+            "id": "recursive_exec_b",
+            "agent_name": "executor",
+            "needs": ["recursive_inventory_guard"],
+        },
+        {
+            "id": "recursive_wave_guard",
+            "agent_name": "executor",
+            "needs": ["recursive_exec_a", "recursive_exec_b"],
+        },
+        {
+            "id": "recursive_reconcile",
+            "agent_name": "executor",
+            "needs": ["recursive_wave_guard"],
+        },
+        {
+            "id": "recursive_final_guard",
+            "agent_name": "executor",
+            "needs": ["recursive_reconcile"],
+        },
+    ]
     return {
-        "plan_spec": "Execute and close the delegated package workflow.",
-        "evaluation_criteria": [
-            "Recursive package inventory was produced.",
-            "Recursive package probes completed.",
-            "Recursive final verifier passed.",
-        ],
-        "tasks": [
-            {"id": "recursive_inventory", "agent_name": "executor", "deps": []},
-            {
-                "id": "recursive_inventory_guard",
-                "agent_name": "verifier",
-                "deps": ["recursive_inventory"],
-            },
-            {
-                "id": "recursive_exec_a",
-                "agent_name": "executor",
-                "deps": ["recursive_inventory_guard"],
-            },
-            {
-                "id": "recursive_exec_b",
-                "agent_name": "executor",
-                "deps": ["recursive_inventory_guard"],
-            },
-            {
-                "id": "recursive_wave_guard",
-                "agent_name": "verifier",
-                "deps": ["recursive_exec_a", "recursive_exec_b"],
-            },
-            {
-                "id": "recursive_reconcile",
-                "agent_name": "executor",
-                "deps": ["recursive_wave_guard"],
-            },
-            {
-                "id": "recursive_final_guard",
-                "agent_name": "verifier",
-                "deps": ["recursive_reconcile"],
-            },
-        ],
+        "tasks": tasks,
         "task_specs": {
             "recursive_inventory": "ACTION recursive_inventory",
             "recursive_inventory_guard": (
@@ -480,6 +481,16 @@ def _recursive_full_only_plan() -> dict[str, Any]:
                 "VERIFY checkpoint=recursive_final dependency_count=1"
             ),
         },
+        "reducers": [
+            {
+                "id": "reduce",
+                "needs": [task["id"] for task in tasks],
+                "prompt": (
+                    "Recursive package inventory, probes, and final guard all "
+                    "completed."
+                ),
+            }
+        ],
     }
 
 

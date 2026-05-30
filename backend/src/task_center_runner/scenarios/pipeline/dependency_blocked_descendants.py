@@ -5,26 +5,19 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing import Any
 
-from tools.submission.evaluator import submit_evaluation_failure
 from tools.submission.planner import submit_plan_closes_goal
+from tools.submission.reducer import submit_reduction_failure
 
 from task_center_runner.scenarios.base import ScenarioBase, ScenarioContext, ToolCallSpec
 
 
 def _unreachable_pending_plan() -> dict[str, Any]:
     return {
-        "plan_spec": (
-            "Block root task a and prove descendants b, c, and d never launch."
-        ),
-        "evaluation_criteria": [
-            "Downstream descendants of blocked task a remained pending.",
-            "No evaluator launched for the failed generator stage.",
-        ],
         "tasks": [
-            {"id": "a", "agent_name": "executor", "deps": []},
-            {"id": "b", "agent_name": "executor", "deps": ["a"]},
-            {"id": "c", "agent_name": "executor", "deps": ["a"]},
-            {"id": "d", "agent_name": "executor", "deps": ["b", "c"]},
+            {"id": "a", "agent_name": "executor", "needs": []},
+            {"id": "b", "agent_name": "executor", "needs": ["a"]},
+            {"id": "c", "agent_name": "executor", "needs": ["a"]},
+            {"id": "d", "agent_name": "executor", "needs": ["b", "c"]},
         ],
         "task_specs": {
             "a": "ACTION fail_root reason=unreachable_pending",
@@ -32,6 +25,13 @@ def _unreachable_pending_plan() -> dict[str, Any]:
             "c": "This task must remain pending behind a.",
             "d": "This fan-in task must remain pending behind b and c.",
         },
+        "reducers": [
+            {
+                "id": "reduce",
+                "needs": ["a", "b", "c", "d"],
+                "prompt": "Confirm blocked root a left descendants pending.",
+            }
+        ],
     }
 
 
@@ -48,13 +48,12 @@ class DependencyBlockedDescendants(ScenarioBase):
             return ("fail:Intentional root failure for blocked-descendant coverage.",)
         return ("preflight",)
 
-    def evaluator_response(self, ctx: ScenarioContext) -> ToolCallSpec:
+    def reducer_response(self, ctx: ScenarioContext) -> ToolCallSpec:  # noqa: ARG002
+        # Never reached: the blocked root fails the attempt before the
+        # reducer's needs are satisfied. Stub satisfies the protocol.
         return ToolCallSpec(
-            submit_evaluation_failure,
-            {
-                "summary": "Unexpected evaluator invocation after unreachable pending descendants.",
-                "failed_criteria": list(ctx.attempt.evaluation_criteria),
-            },
+            submit_reduction_failure,
+            {"outcome": "Unexpected reducer invocation after unreachable pending descendants."},
         )
 
 

@@ -18,6 +18,16 @@ _REMOVED_TOKENS = (
     "submit_request_plan",
     "RETRY_ON_FAILURE",
     "retry_after_partial",
+    # Reducers + unified-outcomes redesign removals.
+    "WorkflowClosureReport",
+    "closure_report_router",
+    "apply_workflow_closure_report",
+    "apply_evaluator_submission",
+    "set_plan_contract",
+    "TaskOutcome",
+    "generator_dag",
+    "GeneratorDagSummary",
+    "evaluator_task_id",
 )
 
 

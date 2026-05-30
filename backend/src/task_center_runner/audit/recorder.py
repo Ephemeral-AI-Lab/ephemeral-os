@@ -22,6 +22,7 @@ from typing import Any
 from sqlalchemy import event
 
 from audit.jsonl import append_jsonl_event
+from task_center._core.primitives import attempt_id_from_task_id
 from task_center_runner.audit.bus import AuditEventBus
 from task_center_runner.audit.daemon_event_normalizer import normalize_pulled_event
 from task_center_runner.audit.daemon_pull import DaemonAuditPuller, PullerStats
@@ -103,12 +104,10 @@ def _serialize_workflow(record: WorkflowRecord) -> dict[str, Any]:
     return {
         "id": record.id,
         "task_center_run_id": record.task_center_run_id,
-        "origin_kind": record.origin_kind,
-        "requested_by_task_id": record.requested_by_task_id,
+        "parent_task_id": record.parent_task_id,
         "goal": record.goal,
         "status": record.status,
         "iteration_ids": list(record.iteration_ids or []),
-        "final_outcome": record.final_outcome,
         "created_at": _isoformat(record.created_at),
         "updated_at": _isoformat(record.updated_at),
         "closed_at": _isoformat(record.closed_at),
@@ -126,8 +125,7 @@ def _serialize_iteration(record: IterationRecord) -> dict[str, Any]:
         "status": record.status,
         "attempt_ids": list(record.attempt_ids or []),
         "deferred_goal": record.deferred_goal,
-        "plan_spec": record.plan_spec,
-        "task_summary": record.task_summary,
+        "outcomes": record.outcomes,
         "created_at": _isoformat(record.created_at),
         "updated_at": _isoformat(record.updated_at),
         "closed_at": _isoformat(record.closed_at),
@@ -142,10 +140,8 @@ def _serialize_attempt(record: AttemptRecord) -> dict[str, Any]:
         "stage": record.stage,
         "status": record.status,
         "planner_task_id": record.planner_task_id,
-        "plan_spec": record.plan_spec,
-        "evaluation_criteria": list(record.evaluation_criteria or []),
         "generator_task_ids": list(record.generator_task_ids or []),
-        "evaluator_task_id": record.evaluator_task_id,
+        "reducer_task_ids": list(record.reducer_task_ids or []),
         "deferred_goal": record.deferred_goal,
         "fail_reason": record.fail_reason,
         "created_at": _isoformat(record.created_at),
@@ -156,18 +152,16 @@ def _serialize_attempt(record: AttemptRecord) -> dict[str, Any]:
 
 def _serialize_task(record: TaskCenterTaskRecord) -> dict[str, Any]:
     return {
-        "id": record.id,
+        "task_id": record.id,
         "task_center_run_id": record.task_center_run_id,
         "role": record.role,
         "agent_name": record.agent_name,
         "context_message": record.context_message,
         "status": record.status,
-        "summaries": list(record.summaries or []),
+        "outcomes": list(record.outcomes or []),
+        "terminal_tool_result": record.terminal_tool_result,
         "needs": list(record.needs or []),
-        "task_center_attempt_id": record.task_center_attempt_id,
-        "context_packet_id": record.context_packet_id,
-        "fix_target_id": record.fix_target_id,
-        "spawn_reason": record.spawn_reason,
+        "child_workflow_id": record.child_workflow_id,
         "created_at": _isoformat(record.created_at),
         "updated_at": _isoformat(record.updated_at),
     }
@@ -673,7 +667,7 @@ class AuditRecorder:
         self, target: TaskCenterTaskRecord
     ) -> Path | None:
         role = self._display_role(target)
-        attempt_id = target.task_center_attempt_id
+        attempt_id = attempt_id_from_task_id(target.id)
         if (
             role in _ATTEMPT_CHILD_ROLES
             and attempt_id

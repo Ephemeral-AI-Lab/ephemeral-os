@@ -1,8 +1,9 @@
-"""US-014: orchestrator + stage advancer composer wiring.
+"""Orchestrator + stage advancer composer wiring.
 
-Confirms that when ``AttemptDeps.composer`` is set, the orchestrator
-asks the composer for the planner agent name and context_message, and that
-planner terminals are restricted when ancestry is nested.
+Confirms that when ``AttemptDeps.composer`` is set, the orchestrator asks the
+composer for the planner agent name and context_message, and that planner
+terminals are restricted when the launch is nested (its caller attempt is itself
+inside another workflow — depth > 1 via ``Workflow.parent_task_id``).
 """
 
 from __future__ import annotations
@@ -17,20 +18,23 @@ from agents import (
     register_definition,
     unregister_definition,
 )
-from task_center._core.primitives import TaskCenterLifecycleConfig
+from task_center._core.primitives import (
+    TaskCenterLifecycleConfig,
+    generator_task_id,
+)
 from task_center.agent_launch.composer import AgentEntryComposer
-from task_center.context_engine.core import ContextEngine, ContextEngineDeps
+from task_center.context_engine.engine import ContextEngine, ContextEngineDeps
 from task_center.context_engine.recipes import register_builtin_recipes
 from task_center.context_engine.recipes_registry import RecipeRegistry
 from task_center.attempt.orchestrator import AttemptOrchestrator
 from task_center.attempt.orchestrator_registry import (
     AttemptOrchestratorRegistry,
 )
-from task_center.attempt.deps import (
+from task_center.attempt.launch import (
     AgentLaunch,
     AttemptDeps,
 )
-from task_center.iteration.state import IterationCreationReason
+from task_center._core.state import IterationCreationReason
 
 
 class _RecordingLauncher:
@@ -116,72 +120,33 @@ def _register_planner_agents() -> None:
     register_definition(planner)
 
 
-def _seed_request_segment_graph(
-    workflow_store, iteration_store, attempt_store, task_center_run_id
+def _seed_workflow_iteration_attempt(
+    workflow_store,
+    iteration_store,
+    attempt_store,
+    task_center_run_id,
+    *,
+    parent_task_id: str | None,
 ):
-    request = workflow_store.insert(
+    workflow = workflow_store.insert(
         task_center_run_id=task_center_run_id,
-        requested_by_task_id="parent-task",
-        goal="overall",
+        parent_task_id=parent_task_id,
+        workflow_goal="overall",
     )
     iteration = iteration_store.insert(
-        workflow_id=request.id,
+        workflow_id=workflow.id,
         sequence_no=1,
         creation_reason=IterationCreationReason.INITIAL,
-        goal="seg goal",
+        iteration_goal="seg goal",
         attempt_budget=2,
     )
     attempt = attempt_store.insert(
         iteration_id=iteration.id, attempt_sequence_no=1
     )
-    return request, iteration, attempt
+    return workflow, iteration, attempt
 
 
-def _setup_partial_plan_ancestor(
-    workflow_store,
-    iteration_store,
-    attempt_store,
-    task_store,
-    task_center_run_id,
-):
-    """Ancestor caller submitted a partial plan → child planner should fork."""
-    parent_req = workflow_store.insert(
-        task_center_run_id=task_center_run_id,
-        requested_by_task_id="parent-task",
-        goal="parent",
-    )
-    parent_seg = iteration_store.insert(
-        workflow_id=parent_req.id,
-        sequence_no=1,
-        creation_reason=IterationCreationReason.INITIAL,
-        goal="parent seg",
-        attempt_budget=2,
-    )
-    caller_attempt = attempt_store.insert(
-        iteration_id=parent_seg.id, attempt_sequence_no=1
-    )
-    attempt_store.set_plan_contract(
-        caller_attempt.id,
-        plan_spec="caller spec",
-        evaluation_criteria=["c"],
-        deferred_goal_for_next_iteration="continue here",   # ← partial plan
-    )
-    task_store.upsert_task(
-        task_id="t-caller",
-        task_center_run_id=task_center_run_id,
-        role="generator",
-        agent_name="executor",
-        context_message="x",
-        status="running",
-        summaries=[],
-        needs=[],
-        task_center_attempt_id=caller_attempt.id,
-        spawn_reason="attempt_generator",
-    )
-    return parent_req
-
-
-def test_planner_launched_via_composer_uses_base_when_no_ancestor(
+def test_planner_launched_via_composer_uses_base_when_top_level(
     composer_runtime,
     workflow_store,
     iteration_store,
@@ -191,9 +156,20 @@ def test_planner_launched_via_composer_uses_base_when_no_ancestor(
 ):
     runtime, launcher = composer_runtime
     _register_planner_agents()
-    request, iteration, attempt = _seed_request_segment_graph(
-        workflow_store, iteration_store, attempt_store, task_center_run_id
+    # Top-level workflow: parent task is the synthetic root bootstrap (encodes
+    # no attempt), so depth == 1 and the planner is NOT nested.
+    _seed_workflow_iteration_attempt(
+        workflow_store,
+        iteration_store,
+        attempt_store,
+        task_center_run_id,
+        parent_task_id=f"{task_center_run_id}:root",
     )
+    attempt = attempt_store.list_for_iteration(
+        iteration_store.list_for_workflow(
+            workflow_store.list_for_run(task_center_run_id)[0].id
+        )[0].id
+    )[0]
     orchestrator = AttemptOrchestrator(
         attempt=attempt, on_attempt_closed=lambda _id: None, runtime=runtime
     )
@@ -212,7 +188,7 @@ def test_planner_launched_via_composer_uses_base_when_no_ancestor(
     assert "<iteration_goal>" in launched.context
 
 
-def test_planner_terminals_restricted_when_partial_plan_caller_present(
+def test_planner_terminals_restricted_when_nested_in_outer_workflow(
     composer_runtime,
     workflow_store,
     iteration_store,
@@ -222,31 +198,34 @@ def test_planner_terminals_restricted_when_partial_plan_caller_present(
 ):
     runtime, launcher = composer_runtime
     _register_planner_agents()
-    _setup_partial_plan_ancestor(
+    # Outer workflow with an attempt whose generator task spawns a child
+    # workflow. The child planner is therefore nested (depth > 1).
+    _outer_wf, _outer_seg, outer_attempt = _seed_workflow_iteration_attempt(
         workflow_store,
         iteration_store,
         attempt_store,
-        task_store,
         task_center_run_id,
+        parent_task_id=f"{task_center_run_id}:root",
     )
-    # Child request is spawned by the partial-plan caller task.
-    child_req = workflow_store.insert(
+    spawning_generator_id = generator_task_id(outer_attempt.id, "g")
+
+    child_workflow = workflow_store.insert(
         task_center_run_id=task_center_run_id,
-        requested_by_task_id="t-caller",
-        goal="child",
+        parent_task_id=spawning_generator_id,
+        workflow_goal="child",
     )
     child_seg = iteration_store.insert(
-        workflow_id=child_req.id,
+        workflow_id=child_workflow.id,
         sequence_no=1,
         creation_reason=IterationCreationReason.INITIAL,
-        goal="child seg",
+        iteration_goal="child seg",
         attempt_budget=2,
     )
-    child_graph = attempt_store.insert(
+    child_attempt = attempt_store.insert(
         iteration_id=child_seg.id, attempt_sequence_no=1
     )
     orchestrator = AttemptOrchestrator(
-        attempt=child_graph,
+        attempt=child_attempt,
         on_attempt_closed=lambda _id: None,
         runtime=runtime,
     )

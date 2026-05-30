@@ -180,7 +180,7 @@ async def _executor_script(
                 if ":" in action
                 else "Scenario-injected generator failure."
             )
-            blocker_args = {"summary": reason}
+            blocker_args = {"outcome": reason}
             _ = yield _ask_advisor_turn("submit_execution_blocker", blocker_args)
             _ = yield Turn(
                 calls=(ToolCall("submit_execution_blocker", blocker_args),)
@@ -250,7 +250,7 @@ async def _executor_script(
         summary = bridge_summary
         artifacts = [path for path in artifact_out if path]
 
-    success_args = {"summary": summary, "artifacts": artifacts}
+    success_args = {"outcome": summary, "artifacts": artifacts}
     _ = yield _ask_advisor_turn("submit_execution_success", success_args)
     _ = yield Turn(calls=(ToolCall("submit_execution_success", success_args),))
 

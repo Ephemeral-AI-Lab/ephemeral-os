@@ -6,7 +6,7 @@ Failures here mean a regression in `task_center/` proper.
 
 Implemented (reference scenarios):
 - :class:`AttemptBudgetExhausted`
-- :class:`AttemptRetryEvaluatorFailure`
+- :class:`AttemptRetryReducerFailure`
 - :class:`AttemptRetryGeneratorFailure`
 - :class:`AttemptRetryPlannerFailure`
 - :class:`DependencyBlockedDescendants`
@@ -27,8 +27,8 @@ from __future__ import annotations
 from task_center_runner.scenarios.pipeline.attempt_budget_exhausted import (
     AttemptBudgetExhausted,
 )
-from task_center_runner.scenarios.pipeline.attempt_retry_evaluator_failure import (
-    AttemptRetryEvaluatorFailure,
+from task_center_runner.scenarios.pipeline.attempt_retry_reducer_failure import (
+    AttemptRetryReducerFailure,
 )
 from task_center_runner.scenarios.pipeline.attempt_retry_generator_failure import (
     AttemptRetryGeneratorFailure,
@@ -71,7 +71,7 @@ from task_center_runner.scenarios.pipeline.deferred_parent_planner_terminal_rout
 
 __all__ = [
     "AttemptBudgetExhausted",
-    "AttemptRetryEvaluatorFailure",
+    "AttemptRetryReducerFailure",
     "AttemptRetryGeneratorFailure",
     "AttemptRetryPlannerFailure",
     "DependencyBlockedDescendants",

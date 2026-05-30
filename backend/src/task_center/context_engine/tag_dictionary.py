@@ -61,32 +61,26 @@ TAG_DICTIONARY: list[TagDescriptor] = [
         attr_filter=None,
         label="failed prior attempt",
     ),
-    TagDescriptor(tag="plan_spec", attr_filter=None, label="attempt's plan"),
     TagDescriptor(
         tag="deferred_goal_for_next_iteration",
         attr_filter=None,
         label="scope handed to next iteration",
     ),
-    TagDescriptor(tag="task", attr_filter=None, label="generator task outcome"),
-    TagDescriptor(
-        tag="evaluation_criteria",
-        attr_filter=None,
-        label="criteria the attempt must satisfy",
-    ),
-    TagDescriptor(
-        tag="evaluator_summary",
-        attr_filter=None,
-        label="evaluator's commentary",
-    ),
+    TagDescriptor(tag="task", attr_filter=None, label="upstream task outcome"),
     TagDescriptor(
         tag="assigned_task",
         attr_filter=None,
         label="your assigned task",
     ),
     TagDescriptor(
-        tag="dependency",
+        tag="assigned_prompt",
         attr_filter=None,
-        label="upstream task output",
+        label="your reducer prompt",
+    ),
+    TagDescriptor(
+        tag="needs",
+        attr_filter=None,
+        label="upstream needs output",
     ),
 ]
 

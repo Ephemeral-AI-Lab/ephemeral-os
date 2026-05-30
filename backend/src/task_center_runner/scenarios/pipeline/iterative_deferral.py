@@ -1,9 +1,9 @@
 """Iterative continuation via partial plan.
 
 Reference scenario for iteration continuation: iteration 1 submits a partial plan
-with ``deferred_goal_for_next_iteration``, evaluator passes, iteration coordinator spawns iteration
+with ``deferred_goal_for_next_iteration``, reducer passes, iteration coordinator spawns iteration
 2 with ``creation_reason=DEFERRED_GOAL_CONTINUATION`` and ``goal=<deferred_goal_for_next_iteration>``.
-Iteration 2 submits a full plan, evaluator passes, workflow closes succeeded.
+Iteration 2 submits a full plan, reducer passes, workflow closes succeeded.
 
 Asserts: 2 iterations per workflow, iteration 2 has ``creation_reason`` =
 ``DEFERRED_GOAL_CONTINUATION``.
@@ -13,11 +13,11 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 
-from tools.submission.evaluator import submit_evaluation_success
 from tools.submission.planner import (
     submit_plan_closes_goal,
     submit_plan_defers_goal,
 )
+from tools.submission.reducer import submit_reduction_success
 
 from task_center_runner.scenarios._scenario_helpers import (
     preflight_full_plan,
@@ -48,13 +48,10 @@ class IterativeDeferral(ScenarioBase):
     def executor_actions(self, ctx: ScenarioContext) -> Sequence[str]:  # noqa: ARG002
         return ("preflight",)
 
-    def evaluator_response(self, ctx: ScenarioContext) -> ToolCallSpec:
+    def reducer_response(self, ctx: ScenarioContext) -> ToolCallSpec:  # noqa: ARG002
         return ToolCallSpec(
-            submit_evaluation_success,
-            {
-                "summary": "Continuation-iteration preflight evidence accepted.",
-                "passed_criteria": list(ctx.attempt.evaluation_criteria),
-            },
+            submit_reduction_success,
+            {"outcome": "Continuation-iteration preflight evidence accepted."},
         )
 
 

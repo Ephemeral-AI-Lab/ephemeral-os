@@ -118,10 +118,9 @@ async def test_daemon_count_fails(monkeypatch) -> None:
         "enter_isolated_workspace",
         "exit_isolated_workspace",
         "submit_execution_success",
-        "submit_execution_handoff",
+        "submit_workflow_handoff",
         "submit_plan_closes_goal",
-        "submit_evaluation_success",
-        "submit_verification_success",
+        "submit_reduction_success",
     ],
 )
 async def test_daemon_error_fail_safe_blocks_non_bailout(monkeypatch, target) -> None:
@@ -137,8 +136,7 @@ async def test_daemon_error_fail_safe_blocks_non_bailout(monkeypatch, target) ->
     "target",
     [
         "submit_execution_blocker",
-        "submit_evaluation_failure",
-        "submit_verification_failure",
+        "submit_reduction_failure",
         "submit_plan_defers_goal",
     ],
 )

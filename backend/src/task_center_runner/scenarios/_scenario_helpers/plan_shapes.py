@@ -12,32 +12,34 @@ from typing import Any
 
 def minimal_full_plan(
     *,
-    plan_spec: str,
-    evaluation_criteria: list[str],
+    criteria: list[str],
     task_id: str = "preflight",
     task_spec: str | None = None,
     agent_name: str = "executor",
 ) -> dict[str, Any]:
     """One-task full plan; the cheapest plan that drives the whole pipeline."""
     return {
-        "plan_spec": plan_spec,
-        "evaluation_criteria": evaluation_criteria,
-        "tasks": [{"id": task_id, "agent_name": agent_name, "deps": []}],
-        "task_specs": {task_id: task_spec or plan_spec},
+        "tasks": [{"id": task_id, "agent_name": agent_name, "needs": []}],
+        "task_specs": {task_id: task_spec or "\n".join(criteria)},
+        "reducers": [
+            {
+                "id": "reduce",
+                "needs": [task_id],
+                "prompt": "\n".join(criteria) or "Confirm completion.",
+            }
+        ],
     }
 
 
 def preflight_full_plan(
     *,
-    plan_spec: str = "Run a workspace preflight probe.",
-    evaluation_criteria: tuple[str, ...] = (
+    criteria: tuple[str, ...] = (
         "Workspace preflight completed.",
     ),
 ) -> dict[str, Any]:
     """Full plan whose single task triggers the `preflight` executor action."""
     return minimal_full_plan(
-        plan_spec=plan_spec,
-        evaluation_criteria=list(evaluation_criteria),
+        criteria=list(criteria),
         task_id="preflight",
         task_spec=(
             "Run a lightweight workspace preflight and report the observed "
@@ -49,17 +51,13 @@ def preflight_full_plan(
 def preflight_defers_plan(
     *,
     deferred_goal_for_next_iteration: str,
-    plan_spec: str = (
-        "Run a workspace preflight probe and continue with the follow-up goal."
-    ),
-    evaluation_criteria: tuple[str, ...] = (
+    criteria: tuple[str, ...] = (
         "Workspace preflight completed.",
     ),
 ) -> dict[str, Any]:
     """Partial plan with deferred_goal_for_next_iteration; drives DEFERRED_GOAL_CONTINUATION iteration."""
     plan = minimal_full_plan(
-        plan_spec=plan_spec,
-        evaluation_criteria=list(evaluation_criteria),
+        criteria=list(criteria),
         task_id="preflight",
         task_spec=(
             "Run a lightweight workspace preflight and report the observed "

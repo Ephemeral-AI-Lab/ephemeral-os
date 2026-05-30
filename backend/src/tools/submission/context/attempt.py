@@ -13,6 +13,7 @@ from task_center import (
     Workflow,
     TaskCenterInvariantViolation,
 )
+from task_center._core.primitives import attempt_id_from_task_id
 from tools._framework.core.context import ToolExecutionContextService
 
 
@@ -45,7 +46,7 @@ def resolve_attempt_submission_context(
 
     Strict attempt mode — raises :class:`AttemptSubmissionContextError` if the
     task is not attached to a Attempt. Use this resolver from tools
-    that genuinely require a attempt (planner submissions, evaluator
+    that genuinely require a attempt (planner submissions, reducer
     submissions).
     """
     runtime, task, task_id = _resolve_runtime_task(context)
@@ -91,8 +92,8 @@ def _resolve_attempt_context(
     attempt-mode branch of :func:`resolve_executor_submission_context` so the
     task row is fetched exactly once per call.
     """
-    attempt_id = str(task.get("task_center_attempt_id") or "")
-    if not attempt_id or attempt_id.isspace():
+    attempt_id = attempt_id_from_task_id(task_id) or ""
+    if not attempt_id:
         raise AttemptSubmissionContextError(
             f"TaskCenter task {task_id!r} is not attached to a harness attempt."
         )

@@ -27,15 +27,14 @@ from task_center.attempt.launch import (
     EphemeralAttemptAgentLauncher,
 )
 from task_center.attempt.orchestrator_registry import AttemptOrchestratorRegistry
-from task_center.attempt.deps import AttemptDeps
-from task_center.context_engine.core import ContextEngine, ContextEngineDeps
+from task_center.attempt.launch import AttemptDeps
+from task_center.context_engine.engine import ContextEngine, ContextEngineDeps
 from task_center.context_engine.recipes import register_builtin_recipes
 from task_center.entry.sandbox_provisioning import (
     TaskCenterSandboxBinding,
     TaskCenterSandboxProvisioner,
 )
-from task_center.workflow.starter import WorkflowStarter
-from task_center.workflow.state import WorkflowOrigin
+from task_center.run_controller import RunController
 from task_center.iteration import OpenIterationCoordinatorRegistry
 
 if TYPE_CHECKING:
@@ -128,14 +127,13 @@ class TaskCenterEntry:
         iteration_coordinators = OpenIterationCoordinatorRegistry()
         runtime, launcher = self._create_runtime(iteration_coordinators=iteration_coordinators)
 
-        try:
-            started = WorkflowStarter(runtime=runtime).start(
-                prompt=self._prompt,
-                origin=WorkflowOrigin.entry(task_center_run_id=run_id),
-            )
-        except Exception:
-            self._finish_run_if_open(run_id, status="failed")
-            raise
+        # RunController seeds the synthetic root bootstrap generator and
+        # delegates the root workflow to it (its own seed/start failsafe finishes
+        # the run on failure).
+        started = RunController(runtime=runtime).start_root_run(
+            prompt=self._prompt,
+            task_center_run_id=run_id,
+        )
 
         return TaskCenterEntryHandle(
             request_id=request_id,
@@ -203,11 +201,6 @@ class TaskCenterEntry:
             context_packet_store=self._context_packet_store,
         )
         return AgentEntryComposer.default(ContextEngine(deps))
-
-    def _finish_run_if_open(self, run_id: str, *, status: str) -> None:
-        run = self._task_store.get_run(run_id)
-        if run is not None and run.get("status") not in ("done", "failed"):
-            self._task_store.finish_run(run_id, status=status)
 
 
 def _assert_stores_ready(

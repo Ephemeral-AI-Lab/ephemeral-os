@@ -5,27 +5,29 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing import Any
 
-from tools.submission.evaluator import submit_evaluation_success
 from tools.submission.planner import submit_plan_closes_goal
+from tools.submission.reducer import submit_reduction_success
 
 from task_center_runner.scenarios.base import ScenarioBase, ScenarioContext, ToolCallSpec
 
 
 def _retry_generator_plan() -> dict[str, Any]:
     return {
-        "plan_spec": "Run one generator task that fails only on attempt 1.",
-        "evaluation_criteria": [
-            "Attempt 1 records a terminal generator failure.",
-            "Attempt 2 reruns the generator task with a revised task id.",
-        ],
         "tasks": [
-            {"id": "generator_retry_probe", "agent_name": "executor", "deps": []},
+            {"id": "generator_retry_probe", "agent_name": "executor", "needs": []},
         ],
         "task_specs": {
             "generator_retry_probe": (
                 "ACTION fail_once_then_preflight reason=generator_retry"
             ),
         },
+        "reducers": [
+            {
+                "id": "reduce",
+                "needs": ["generator_retry_probe"],
+                "prompt": "Confirm the generator task recovered on the retry attempt.",
+            }
+        ],
     }
 
 
@@ -42,13 +44,10 @@ class AttemptRetryGeneratorFailure(ScenarioBase):
             return ("fail:Intentional first-attempt generator failure.",)
         return ("preflight",)
 
-    def evaluator_response(self, ctx: ScenarioContext) -> ToolCallSpec:
+    def reducer_response(self, ctx: ScenarioContext) -> ToolCallSpec:  # noqa: ARG002
         return ToolCallSpec(
-            submit_evaluation_success,
-            {
-                "summary": "Generator retry recovered on attempt 2.",
-                "passed_criteria": list(ctx.attempt.evaluation_criteria),
-            },
+            submit_reduction_success,
+            {"outcome": "Generator retry recovered on attempt 2."},
         )
 
 

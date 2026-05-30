@@ -33,16 +33,15 @@ def _ctx(
     context_message: str,
     prompt: str = "",
     attempt_no: int = 1,
-    requested_by_task_id: str = "parent-task-id",
+    parent_task_id: str = "parent-task-id",
 ) -> ScenarioContext:
     return ScenarioContext(
         attempt=SimpleNamespace(
             attempt_sequence_no=attempt_no,
-            evaluation_criteria=("criterion",),
             id=f"attempt-{attempt_no}",
         ),
         iteration=SimpleNamespace(sequence_no=1, workflow_id="workflow-id"),
-        workflow=SimpleNamespace(requested_by_task_id=requested_by_task_id),
+        workflow=SimpleNamespace(parent_task_id=parent_task_id),
         prompt=prompt,
         metadata={},
         audit_recorder=None,
@@ -60,21 +59,6 @@ def test_full_case_executor_actions_use_context_message() -> None:
     )
 
     assert scenario.executor_actions(ctx) == ("request_recursive_workflow:pkg_42",)
-
-
-def test_full_case_verifier_response_reads_checkpoint_from_context_message() -> None:
-    scenario = FullCaseUserInput()
-    ctx = _ctx(
-        context_message="VERIFY checkpoint=recursive_return dependency_count=3",
-    )
-
-    result = scenario.verifier_response(ctx)
-
-    assert result.tool.name == "submit_verification_success"
-    assert result.args["checks"] == [
-        "checkpoint:recursive_return",
-        "dependencies:3",
-    ]
 
 
 def test_full_stack_executor_actions_use_context_message() -> None:
@@ -131,22 +115,22 @@ def test_high_concurrency_plan_honors_configured_worker_overlap() -> None:
     scenario = HighConcurrencyLayerstackOverlayOcc()
 
     plan = scenario.planner_response(_ctx(context_message="")).args
-    deps_by_id = {
-        str(task["id"]): tuple(task.get("deps") or ()) for task in plan["tasks"]
+    needs_by_id = {
+        str(task["id"]): tuple(task.get("needs") or ()) for task in plan["tasks"]
     }
 
     for index in range(WORKER_COUNT):
         worker_id = f"concurrent_worker_{index:02d}"
         if index < MAX_CONCURRENT_WORKERS:
-            assert deps_by_id[worker_id] == ("concurrency_seed",)
+            assert needs_by_id[worker_id] == ("concurrency_seed",)
         else:
-            assert deps_by_id[worker_id] == (
+            assert needs_by_id[worker_id] == (
                 f"concurrent_worker_{index - MAX_CONCURRENT_WORKERS:02d}",
             )
-    assert deps_by_id["concurrency_reconcile"] == tuple(
+    assert needs_by_id["concurrency_reconcile"] == tuple(
         f"concurrent_worker_{index:02d}" for index in range(WORKER_COUNT)
     )
     assert any(
-        f"{MAX_CONCURRENT_WORKERS} active sandbox tool calls" in item
-        for item in plan["evaluation_criteria"]
+        f"{MAX_CONCURRENT_WORKERS} active sandbox tool calls" in reducer["prompt"]
+        for reducer in plan["reducers"]
     )

@@ -1,11 +1,17 @@
-"""Planner validation - partial plan requires a continuation goal."""
+"""Planner validation - partial plan requires a continuation goal.
+
+The planner calls ``submit_plan_defers_goal`` with an otherwise well-formed plan
+but omits the required ``deferred_goal_for_next_iteration``. The defers schema
+requires that field (nonblank), so the tool rejects the submission and the
+attempt closes with ``fail_reason="task_failed"`` without deferring.
+"""
 
 from __future__ import annotations
 
 from collections.abc import Sequence
 from typing import Any
 
-from tools.submission.evaluator import submit_evaluation_failure
+from tools.submission.reducer import submit_reduction_failure
 from tools.submission.planner import submit_plan_defers_goal
 
 from task_center_runner.scenarios.base import ScenarioBase, ScenarioContext, ToolCallSpec
@@ -13,15 +19,20 @@ from task_center_runner.scenarios.base import ScenarioBase, ScenarioContext, Too
 
 def _defers_without_goal() -> dict[str, Any]:
     return {
-        "plan_spec": "Invalid partial plan with no continuation goal.",
-        "evaluation_criteria": ["Partial plan must declare a continuation goal."],
-        "tasks": [{"id": "a", "agent_name": "executor", "deps": []}],
+        "tasks": [{"id": "a", "agent_name": "executor", "needs": []}],
         "task_specs": {"a": "Run a workspace preflight."},
+        "reducers": [
+            {
+                "id": "reduce",
+                "needs": ["a"],
+                "prompt": "Confirm the task completed.",
+            }
+        ],
     }
 
 
 class PlannerDefersWithoutDeferredGoal(ScenarioBase):
-    """submit_plan_defers_goal call omits required deferred_goal."""
+    """submit_plan_defers_goal call omits required deferred_goal_for_next_iteration."""
 
     name = "planner_validation.defers_without_deferred_goal"
 
@@ -31,13 +42,10 @@ class PlannerDefersWithoutDeferredGoal(ScenarioBase):
     def executor_actions(self, ctx: ScenarioContext) -> Sequence[str]:  # noqa: ARG002
         return ()
 
-    def evaluator_response(self, ctx: ScenarioContext) -> ToolCallSpec:
+    def reducer_response(self, ctx: ScenarioContext) -> ToolCallSpec:  # noqa: ARG002
         return ToolCallSpec(
-            submit_evaluation_failure,
-            {
-                "summary": "Unexpected evaluator invocation under invalid partial.",
-                "failed_criteria": list(ctx.attempt.evaluation_criteria),
-            },
+            submit_reduction_failure,
+            {"outcome": "Unexpected reducer invocation under invalid partial."},
         )
 
 

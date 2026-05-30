@@ -24,33 +24,26 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 
-from tools.submission.evaluator import submit_evaluation_success
 from tools.submission.planner import submit_plan_closes_goal
+from tools.submission.reducer import submit_reduction_success
 
 from task_center_runner.scenarios.base import ScenarioBase, ScenarioContext, ToolCallSpec
 
 
+_REDUCER_PROMPT = (
+    "Confirm the workspace was rebound to /ephemeral-os with pytest passing, "
+    "all 5 LSP tools and the sandbox.api round-trip surface were exercised, "
+    "auto-squash fired multiple times, tri-source projection agreed "
+    "byte-for-byte, and the edit:write ratio met its floor."
+)
+
+
 _FULL_PLAN = {
-    "plan_spec": (
-        "Build a small stdlib-only Python scheduler library inside a freshly "
-        "initialized /ephemeral-os workspace, exercising the layer stack, "
-        "overlay capture, OCC apply path, and Pyright LSP across many files."
-    ),
-    "evaluation_criteria": [
-        "Workspace base is rebound to /ephemeral-os and pytest runs there.",
-        "All 5 LSP tools and the direct sandbox.api round-trip surface are "
-        "exercised.",
-        "Auto-squash fires multiple times across the run.",
-        "Final pytest exit code is 0.",
-        "Tri-source projection (read_file == shell cat == sandbox.api) agrees "
-        "byte-for-byte.",
-        "Edit:write ratio >= 4x.",
-    ],
     "tasks": [
         {
             "id": "complex_project_build",
             "agent_name": "executor",
-            "deps": [],
+            "needs": [],
         },
     ],
     "task_specs": {
@@ -62,20 +55,22 @@ _FULL_PLAN = {
             "/ephemeral-os/.metrics/perf.json emission."
         ),
     },
+    "reducers": [
+        {
+            "id": "reduce",
+            "needs": ["complex_project_build"],
+            "prompt": _REDUCER_PROMPT,
+        }
+    ],
 }
 
 
 _SMOKE_PLAN = {
-    "plan_spec": (
-        "Smoke variant of the complex project-build probe — covers the same "
-        "phases but with a smaller fixture set so it can run pre-merge."
-    ),
-    "evaluation_criteria": list(_FULL_PLAN["evaluation_criteria"]),
     "tasks": [
         {
             "id": "complex_project_build_smoke",
             "agent_name": "executor",
-            "deps": [],
+            "needs": [],
         },
     ],
     "task_specs": {
@@ -84,6 +79,13 @@ _SMOKE_PLAN = {
             "1 pytest invocation, ≥250 tool calls."
         ),
     },
+    "reducers": [
+        {
+            "id": "reduce",
+            "needs": ["complex_project_build_smoke"],
+            "prompt": _REDUCER_PROMPT,
+        }
+    ],
 }
 
 
@@ -100,16 +102,15 @@ class ComplexProjectBuild(ScenarioBase):
     def executor_actions(self, ctx: ScenarioContext) -> Sequence[str]:  # noqa: ARG002
         return ("complex_project_build",)
 
-    def evaluator_response(self, ctx: ScenarioContext) -> ToolCallSpec:
+    def reducer_response(self, ctx: ScenarioContext) -> ToolCallSpec:  # noqa: ARG002
         return ToolCallSpec(
-            submit_evaluation_success,
+            submit_reduction_success,
             {
-                "summary": (
+                "outcome": (
                     "Complex project build under /ephemeral-os exercised the "
                     "layer-stack/overlay/OCC stack end-to-end with pytest "
                     "passing through the projected workspace."
                 ),
-                "passed_criteria": list(ctx.attempt.evaluation_criteria),
             },
         )
 
@@ -125,16 +126,15 @@ class ComplexProjectBuildSmoke(ScenarioBase):
     def executor_actions(self, ctx: ScenarioContext) -> Sequence[str]:  # noqa: ARG002
         return ("complex_project_build_smoke",)
 
-    def evaluator_response(self, ctx: ScenarioContext) -> ToolCallSpec:
+    def reducer_response(self, ctx: ScenarioContext) -> ToolCallSpec:  # noqa: ARG002
         return ToolCallSpec(
-            submit_evaluation_success,
+            submit_reduction_success,
             {
-                "summary": (
+                "outcome": (
                     "Smoke complex project build under /ephemeral-os "
                     "exercised the layer-stack/overlay/OCC stack with pytest "
                     "passing through the projected workspace."
                 ),
-                "passed_criteria": list(ctx.attempt.evaluation_criteria),
             },
         )
 

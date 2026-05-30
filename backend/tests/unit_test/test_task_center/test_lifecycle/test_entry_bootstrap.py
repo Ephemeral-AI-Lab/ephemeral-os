@@ -1,4 +1,10 @@
-"""TaskCenter entry bootstrap tests."""
+"""TaskCenter entry bootstrap tests.
+
+The entry layer converts a top-level prompt into the root workflow: it seeds the
+synthetic root bootstrap generator (``<run_id>:root``), delegates the root
+workflow to it (flipping it to ``waiting_workflow``), and the workflow's first
+attempt launches the planner.
+"""
 
 from __future__ import annotations
 
@@ -9,12 +15,12 @@ import pytest
 
 from task_center import start_task_center_run
 from task_center.entry import TaskCenterSandboxProvisioner
-from task_center.workflow.state import WorkflowOriginKind
-from task_center._core.task_state import TaskCenterTaskRole, SpawnReason
+from task_center._core.primitives import planner_task_id, root_task_id
+from task_center._core.task_state import TaskCenterTaskRole, TaskCenterTaskStatus
 
 
 @pytest.mark.asyncio
-async def test_entry_bootstrap_converts_prompt_to_initial_workflow(
+async def test_entry_bootstrap_converts_prompt_to_root_workflow(
     workflow_store,
     iteration_store,
     attempt_store,
@@ -55,20 +61,35 @@ async def test_entry_bootstrap_converts_prompt_to_initial_workflow(
     workflow = workflow_store.get(handle.workflow_id)
     iteration = iteration_store.get(handle.iteration_id)
     attempt = attempt_store.get(handle.attempt_id)
-    planner_task = task_store.get_task(f"{handle.attempt_id}:planner")
+    root_task = task_store.get_task(root_task_id(handle.task_center_run_id))
+    planner_task = task_store.get_task(planner_task_id(handle.attempt_id))
     run_tasks = task_store.list_tasks_for_run(handle.task_center_run_id)
 
     assert workflow is not None
-    assert workflow.origin_kind == WorkflowOriginKind.ENTRY
-    assert workflow.requested_by_task_id is None
-    assert workflow.goal == "solve the user request"
+    # No origin abstraction anymore: the root workflow links back to the
+    # synthetic bootstrap generator via parent_task_id.
+    assert workflow.parent_task_id == root_task_id(handle.task_center_run_id)
+    assert workflow.workflow_goal == "solve the user request"
     assert iteration is not None
-    assert iteration.goal == "solve the user request"
+    assert iteration.iteration_goal == "solve the user request"
     assert attempt is not None
+
+    # The synthetic root bootstrap generator is waiting on the root workflow.
+    assert root_task is not None
+    assert root_task["role"] == TaskCenterTaskRole.GENERATOR.value
+    assert root_task["status"] == TaskCenterTaskStatus.WAITING_WORKFLOW.value
+    assert root_task["child_workflow_id"] == workflow.id
+
+    # The first attempt launched the planner.
     assert planner_task is not None
     assert planner_task["role"] == TaskCenterTaskRole.PLANNER.value
-    assert planner_task["spawn_reason"] == SpawnReason.ATTEMPT_PLANNER.value
-    assert [task["role"] for task in run_tasks] == [TaskCenterTaskRole.PLANNER.value]
+    assert planner_task["status"] == TaskCenterTaskStatus.RUNNING.value
+
+    roles = sorted(task["role"] for task in run_tasks)
+    assert roles == [
+        TaskCenterTaskRole.GENERATOR.value,
+        TaskCenterTaskRole.PLANNER.value,
+    ]
 
     assert release_runner is not None
     release_runner()

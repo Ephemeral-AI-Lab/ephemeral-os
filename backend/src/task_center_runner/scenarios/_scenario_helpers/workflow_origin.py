@@ -6,15 +6,17 @@ from task_center_runner.scenarios.base import ScenarioContext
 
 
 def is_entry_origin_workflow(ctx: ScenarioContext) -> bool:
-    """True when the scenario context is in the entry-origin workflow."""
+    """True when the scenario context is in the entry (root) workflow.
+
+    Every workflow links back to its spawning task via ``parent_task_id``. The
+    root workflow's parent is the synthetic run-level bootstrap task
+    ``<run_id>:root``; child (recursively spawned) workflows point at a
+    generator task id, so the ``:root`` suffix distinguishes them.
+    """
     workflow = ctx.workflow
     if workflow is None:
         return True
-    origin_kind = getattr(workflow, "origin_kind", None)
-    if str(getattr(origin_kind, "value", origin_kind) or "") == "entry":
-        return True
-    requested_by = str(workflow.requested_by_task_id or "")
-    return not requested_by
+    return (workflow.parent_task_id or "").endswith(":root")
 
 
 def is_recursive_workflow(ctx: ScenarioContext) -> bool:

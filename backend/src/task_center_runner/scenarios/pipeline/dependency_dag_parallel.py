@@ -5,8 +5,8 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing import Any
 
-from tools.submission.evaluator import submit_evaluation_success
 from tools.submission.planner import submit_plan_closes_goal
+from tools.submission.reducer import submit_reduction_success
 
 from task_center_runner.scenarios.base import ScenarioBase, ScenarioContext, ToolCallSpec
 
@@ -17,18 +17,20 @@ def _parallel_fanin_plan() -> dict[str, Any]:
         "sandbox root."
     )
     return {
-        "plan_spec": "Run parallel roots a, b, c before fan-in task d.",
-        "evaluation_criteria": [
-            "Root tasks a, b, and c completed.",
-            "Fan-in task d launched only after all three parents completed.",
-        ],
         "tasks": [
-            {"id": "a", "agent_name": "executor", "deps": []},
-            {"id": "b", "agent_name": "executor", "deps": []},
-            {"id": "c", "agent_name": "executor", "deps": []},
-            {"id": "d", "agent_name": "executor", "deps": ["a", "b", "c"]},
+            {"id": "a", "agent_name": "executor", "needs": []},
+            {"id": "b", "agent_name": "executor", "needs": []},
+            {"id": "c", "agent_name": "executor", "needs": []},
+            {"id": "d", "agent_name": "executor", "needs": ["a", "b", "c"]},
         ],
         "task_specs": {task_id: task_spec for task_id in ("a", "b", "c", "d")},
+        "reducers": [
+            {
+                "id": "reduce",
+                "needs": ["a", "b", "c", "d"],
+                "prompt": "Confirm roots a/b/c completed before fan-in task d.",
+            }
+        ],
     }
 
 
@@ -43,13 +45,10 @@ class DependencyDagParallel(ScenarioBase):
     def executor_actions(self, ctx: ScenarioContext) -> Sequence[str]:  # noqa: ARG002
         return ("preflight",)
 
-    def evaluator_response(self, ctx: ScenarioContext) -> ToolCallSpec:
+    def reducer_response(self, ctx: ScenarioContext) -> ToolCallSpec:  # noqa: ARG002
         return ToolCallSpec(
-            submit_evaluation_success,
-            {
-                "summary": "Parallel fan-in DAG completed.",
-                "passed_criteria": list(ctx.attempt.evaluation_criteria),
-            },
+            submit_reduction_success,
+            {"outcome": "Parallel fan-in DAG completed."},
         )
 
 

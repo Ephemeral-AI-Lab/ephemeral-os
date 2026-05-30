@@ -52,7 +52,7 @@ class TaskCenterAuditEmitter:
             TASK_READY,
             node=_task_node(task, attempt_id=attempt_id),
             payload={
-                **_task_payload(task),
+                **_task_payload(task, attempt_id=attempt_id),
                 "status_from": "pending",
                 "status_to": "pending",
                 "satisfied_dependency_ids": [str(dep) for dep in satisfied_dependency_ids],
@@ -70,7 +70,7 @@ class TaskCenterAuditEmitter:
             TASK_LAUNCHED,
             node=_task_node(task, attempt_id=attempt_id),
             payload={
-                **_task_payload(task),
+                **_task_payload(task, attempt_id=attempt_id),
                 "status_from": status_from,
                 "status_to": str(task.get("status") or "running"),
             },
@@ -89,7 +89,7 @@ class TaskCenterAuditEmitter:
             TASK_FAILED,
             node=_task_node(task, attempt_id=attempt_id),
             payload={
-                **_task_payload(task),
+                **_task_payload(task, attempt_id=attempt_id),
                 "status_from": status_from,
                 "status_to": str(task.get("status") or "failed"),
                 "fail_reason": fail_reason or None,
@@ -101,21 +101,20 @@ class TaskCenterAuditEmitter:
 def _task_node(task: Mapping[str, Any], *, attempt_id: str | None) -> AuditNode:
     return AuditNode(
         task_center_run_id=_text(task.get("task_center_run_id")),
-        attempt_id=_text(attempt_id or task.get("task_center_attempt_id")),
-        task_center_task_id=_text(task.get("id")),
+        attempt_id=_text(attempt_id),
+        task_center_task_id=_text(task.get("task_id")),
         agent_name=_text(task.get("agent_name")),
     )
 
 
-def _task_payload(task: Mapping[str, Any]) -> dict[str, Any]:
+def _task_payload(task: Mapping[str, Any], *, attempt_id: str | None = None) -> dict[str, Any]:
     return {
         "run_id": _text(task.get("task_center_run_id")),
-        "attempt_id": _text(task.get("task_center_attempt_id")),
-        "task_center_task_id": _text(task.get("id")),
+        "attempt_id": _text(attempt_id),
+        "task_center_task_id": _text(task.get("task_id")),
         "role": _text(task.get("role")),
         "agent_name": _text(task.get("agent_name")),
         "needs": [str(dep) for dep in task.get("needs", ()) or ()],
-        "context_packet_id": _text(task.get("context_packet_id")),
     }
 
 

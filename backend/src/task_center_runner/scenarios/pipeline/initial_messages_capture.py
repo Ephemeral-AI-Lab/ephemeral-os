@@ -8,13 +8,12 @@ Combines three orthogonal composer branches into one live run so a single
 ``message.jsonl`` tree carries every variant we want to inspect:
 
 1. **Attempt retry** — iteration 1 attempt 1's planner submits a valid full
-   plan, the executor runs the assigned task, and the evaluator returns
-   ``submit_evaluation_failure``. Attempt 2 then sees a fully-populated
+   plan, the executor runs the assigned task, and the reducer returns
+   ``submit_reduction_failure``. Attempt 2 then sees a fully-populated
    ``<iteration position="current">`` / ``<attempt attempt_no="1">`` block in
-   its planner context: per-task ``<task id status>`` summaries, an
-   ``<evaluator_summary>`` (the evaluator ran), and a ``<failure>`` line.
-   Attempt 2 then submits a partial plan (handoff) to drive the
-   continuation branch (#2 below).
+   its planner context: per-task ``<task id status>`` outcomes and a
+   ``<failure>`` line. Attempt 2 then submits a partial plan (handoff) to drive
+   the continuation branch (#2 below).
 
 2. **Continuation goal** — iteration 1 attempt 2 submits a *partial* plan
    with a ``deferred_goal_for_next_iteration``. The iteration coordinator spawns
@@ -40,7 +39,7 @@ flag below.
 Wire shape (see ``docs/reports/initial_messages_cases/README.md``):
 
 * system + ``<context>`` envelope + ``<Task Guidance>`` envelope + skill
-  row for planner / executor / evaluator launches (4 rows each — skills
+  row for planner / executor / reducer launches (4 rows each — skills
   carry operational heuristics; ``<Task Guidance>`` carries the
   deterministic outline + role directive).
 """
@@ -49,13 +48,13 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 
-from tools.submission.evaluator import (
-    submit_evaluation_failure,
-    submit_evaluation_success,
-)
 from tools.submission.planner import (
     submit_plan_closes_goal,
     submit_plan_defers_goal,
+)
+from tools.submission.reducer import (
+    submit_reduction_failure,
+    submit_reduction_success,
 )
 
 from task_center_runner.scenarios._scenario_helpers import (
@@ -80,14 +79,14 @@ class InitialMessagesCapture(ScenarioBase):
     """Continuation + attempt retry, single executor task per attempt.
 
     Iteration 1, attempt 1: planner submits a *valid* full plan; executor
-    runs preflight; evaluator returns ``submit_evaluation_failure`` so the
+    runs preflight; reducer returns ``submit_reduction_failure`` so the
     attempt is closed FAILED with rich, fully-rendered retry evidence.
     Iteration 1, attempt 2: planner sees that retry evidence in a
     ``<attempt attempt_no="1">`` block, submits a partial
     plan with a ``deferred_goal_for_next_iteration``; executor runs
-    preflight; evaluator passes.
+    preflight; reducer passes.
     Iteration 2, attempt 1: planner submits a full plan; executor runs
-    preflight; evaluator passes; workflow closes succeeded.
+    preflight; reducer passes; workflow closes succeeded.
     """
 
     name = "pipeline.initial_messages_capture"
@@ -101,8 +100,8 @@ class InitialMessagesCapture(ScenarioBase):
     def planner_response(self, ctx: ScenarioContext) -> ToolCallSpec:
         if ctx.iteration.sequence_no == 1:
             if ctx.attempt.attempt_sequence_no == 1:
-                # Valid full plan — driver for the evaluator-failure branch
-                # in evaluator_response below. Attempt 2's planner will read
+                # Valid full plan — driver for the reducer-failure branch
+                # in reducer_response below. Attempt 2's planner will read
                 # the resulting `<attempt status="failed">` block.
                 return ToolCallSpec(
                     submit_plan_closes_goal, preflight_full_plan()
@@ -116,37 +115,34 @@ class InitialMessagesCapture(ScenarioBase):
     def executor_actions(self, ctx: ScenarioContext) -> Sequence[str]:  # noqa: ARG002
         return ("preflight",)
 
-    def evaluator_response(self, ctx: ScenarioContext) -> ToolCallSpec:
+    def reducer_response(self, ctx: ScenarioContext) -> ToolCallSpec:
         if (
             ctx.iteration.sequence_no == 1
             and ctx.attempt.attempt_sequence_no == 1
         ):
-            # Intentional first-attempt evaluator failure so the next
-            # planner's context carries a fully-populated
-            # `<attempt attempt_no="1">` block: real per-task `<task>`
-            # summaries, real `<evaluator_summary>` (the evaluator ran),
-            # and a `<failure>` line. Without this the retry attempt would
-            # only see a bare `<failure>` for the planner-validation failure.
+            # Intentional first-attempt reducer failure so the next planner's
+            # context carries a fully-populated `<attempt attempt_no="1">`
+            # block: real per-task `<task>` outcomes and a `<failure>` line.
+            # Without this the retry attempt would only see a bare `<failure>`
+            # for the planner-validation failure.
             return ToolCallSpec(
-                submit_evaluation_failure,
+                submit_reduction_failure,
                 {
-                    "summary": (
-                        "Intentional first-attempt evaluator failure to "
+                    "outcome": (
+                        "Intentional first-attempt reducer failure to "
                         "exercise the rich failed-prior-attempt "
                         "retry-evidence rendering in the next attempt's "
                         "planner context."
                     ),
-                    "failed_criteria": list(ctx.attempt.evaluation_criteria),
                 },
             )
         return ToolCallSpec(
-            submit_evaluation_success,
+            submit_reduction_success,
             {
-                "summary": (
-                    "Captured planner / executor / evaluator initial messages "
+                "outcome": (
+                    "Captured planner / executor / reducer initial messages "
                     f"for iteration {ctx.iteration.sequence_no}."
                 ),
-                "passed_criteria": list(ctx.attempt.evaluation_criteria),
             },
         )
 

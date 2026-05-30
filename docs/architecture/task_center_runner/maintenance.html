@@ -50,13 +50,13 @@
   </ol>
 </nav>
 
-<p class="lead">All pages in this module share one baseline commit: <code>c8f6bcde0c63c7ec004545128d186853df5dcde1</code>. Refreshing the wiki is a delta-first task: <code>git diff</code> the baseline against <code>HEAD</code> for each page's evidence paths, then update only the sections whose claims drifted.</p>
+<p class="lead">All pages in this module share one baseline commit: <code>d32994314</code>. Refreshing the wiki is a delta-first task: <code>git diff</code> the baseline against <code>HEAD</code> for each page's evidence paths, then update only the sections whose claims drifted.</p>
 
-<section id="refresh-plan" data-last-reviewed-commit="c8f6bcde0c63c7ec004545128d186853df5dcde1" data-evidence-paths="docs/architecture/task_center_runner backend/src/task_center_runner">
+<section id="refresh-plan" data-last-reviewed-commit="d32994314" data-evidence-paths="docs/architecture/task_center_runner backend/src/task_center_runner">
 <h2>Refresh Plan <a class="anchor" href="#refresh-plan">#</a></h2>
 <div class="summary">
   <ul>
-    <li>Run <code>git log --oneline c8f6bcde0c63c7ec004545128d186853df5dcde1..HEAD -- backend/src/task_center_runner</code> first. If there are no commits, the wiki is current; skip.</li>
+    <li>Run <code>git log --oneline d32994314..HEAD -- backend/src/task_center_runner</code> first. If there are no commits, the wiki is current; skip.</li>
     <li>For each changed file, find the matching page via the <em>evidence paths</em> in section metadata. Use <code>git diff</code> on those exact paths to scope the section refresh.</li>
     <li>Update <code>data-last-reviewed-commit</code> on the section AND the page-level <code>data-page-baseline-commit</code> after refreshing claims. They should match unless the page intentionally mixes commits.</li>
     <li>Validate with <code>check_html_wiki.py</code> on every touched page before committing.</li>
@@ -69,7 +69,7 @@
 </div>
 </section>
 
-<section id="baselines" data-last-reviewed-commit="c8f6bcde0c63c7ec004545128d186853df5dcde1" data-evidence-paths="docs/architecture/task_center_runner">
+<section id="baselines" data-last-reviewed-commit="d32994314" data-evidence-paths="docs/architecture/task_center_runner">
 <h2>Per-Page Baselines <a class="anchor" href="#baselines">#</a></h2>
 <div class="edge-list" aria-label="Page-to-evidence map">
   <div><b><a href="index.html">Overview</a></b><span>Evidence: <code>backend/src/task_center_runner/__init__.py</code>, <code>core/runner.py</code>, <code>core/engine.py</code>, <code>core/config.py</code>, <code>scenarios/__init__.py</code>, <code>benchmarks/sweevo/pipeline.py</code>.</span></div>
@@ -81,37 +81,37 @@
 </div>
 </section>
 
-<section id="delta-commands" data-last-reviewed-commit="c8f6bcde0c63c7ec004545128d186853df5dcde1" data-evidence-paths="docs/architecture/task_center_runner">
+<section id="delta-commands" data-last-reviewed-commit="d32994314" data-evidence-paths="docs/architecture/task_center_runner">
 <h2>Delta Commands <a class="anchor" href="#delta-commands">#</a></h2>
 <pre class="diagram" aria-label="Refresh command set">
 # 1. has anything changed since baseline?
-git log --oneline c8f6bcde0c63c7ec004545128d186853df5dcde1..HEAD \
+git log --oneline d32994314..HEAD \
     -- backend/src/task_center_runner
 
 # 2. per-page deltas (skip ones with no log entries)
-git diff c8f6bcde0c63c7ec004545128d186853df5dcde1..HEAD \
+git diff d32994314..HEAD \
     -- backend/src/task_center_runner/core \
        backend/src/task_center_runner/audit
 
-git diff c8f6bcde0c63c7ec004545128d186853df5dcde1..HEAD \
+git diff d32994314..HEAD \
     -- backend/src/task_center_runner/scenarios
 
-git diff c8f6bcde0c63c7ec004545128d186853df5dcde1..HEAD \
+git diff d32994314..HEAD \
     -- backend/src/task_center_runner/agent/mock
 
-git diff c8f6bcde0c63c7ec004545128d186853df5dcde1..HEAD \
+git diff d32994314..HEAD \
     -- backend/src/task_center_runner/benchmarks/sweevo \
        backend/src/task_center_runner/environments/sweevo_image
 
-git diff c8f6bcde0c63c7ec004545128d186853df5dcde1..HEAD \
+git diff d32994314..HEAD \
     -- backend/src/task_center_runner/tests
 
 # 3. verify baseline commit is still in the tree
-git cat-file -e c8f6bcde0c63c7ec004545128d186853df5dcde1^{commit}
+git cat-file -e d32994314^{commit}
 </pre>
 </section>
 
-<section id="validation" data-last-reviewed-commit="c8f6bcde0c63c7ec004545128d186853df5dcde1" data-evidence-paths="docs/architecture/task_center_runner .claude/skills/codebase-wiki-builder/scripts/check_html_wiki.py">
+<section id="validation" data-last-reviewed-commit="d32994314" data-evidence-paths="docs/architecture/task_center_runner .claude/skills/codebase-wiki-builder/scripts/check_html_wiki.py">
 <h2>Validation <a class="anchor" href="#validation">#</a></h2>
 <pre class="diagram" aria-label="Validator invocations">
 # tag balance, Obsidian-link residue, duplicate ids, broken links, missing anchors,
@@ -134,7 +134,7 @@ rg -n 'double-open-bracket|double-close-bracket' docs/architecture/task_center_r
 </pre>
 </section>
 
-<section id="stale-claim-watch" data-last-reviewed-commit="c8f6bcde0c63c7ec004545128d186853df5dcde1" data-evidence-paths="backend/src/task_center_runner/benchmarks/sweevo backend/src/task_center_runner/agent/mock backend/src/task_center_runner/core docs/plans/sweevo_layerstack_migration_REPORT.md">
+<section id="stale-claim-watch" data-last-reviewed-commit="d32994314" data-evidence-paths="backend/src/task_center_runner/benchmarks/sweevo backend/src/task_center_runner/agent/mock backend/src/task_center_runner/core docs/plans/sweevo_layerstack_migration_REPORT.md">
 <h2>Stale-Claim Watch <a class="anchor" href="#stale-claim-watch">#</a></h2>
 <p>Areas that historically drift between code and docs. Audit these first on any refresh pass.</p>
 <div class="edge-list" aria-label="Stale-claim areas">
@@ -148,10 +148,10 @@ rg -n 'double-open-bracket|double-close-bracket' docs/architecture/task_center_r
 </div>
 </section>
 
-<div class="page-baseline" data-page-baseline-commit="c8f6bcde0c63c7ec004545128d186853df5dcde1">
+<div class="page-baseline" data-page-baseline-commit="d32994314">
   <strong>Maintenance baseline</strong>
-  <span>Maintenance page reviewed against <code>c8f6bcde0c63c7ec004545128d186853df5dcde1</code>.</span>
-  <code>git diff c8f6bcde0c63c7ec004545128d186853df5dcde1..HEAD -- backend/src/task_center_runner docs/architecture/task_center_runner</code>
+  <span>Maintenance page reviewed against <code>d32994314</code>.</span>
+  <code>git diff d32994314..HEAD -- backend/src/task_center_runner docs/architecture/task_center_runner</code>
 </div>
 <div class="page-footer-nav"><span><a href="tests-layout.html">Test Suites</a></span><span><a href="index.html">Overview</a></span></div>
 </main>

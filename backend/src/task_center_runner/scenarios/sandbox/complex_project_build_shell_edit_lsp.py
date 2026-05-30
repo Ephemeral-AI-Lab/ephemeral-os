@@ -4,35 +4,27 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 
-from tools.submission.evaluator import submit_evaluation_success
 from tools.submission.planner import submit_plan_closes_goal
+from tools.submission.reducer import submit_reduction_success
 
 from task_center_runner.scenarios.base import ScenarioBase, ScenarioContext, ToolCallSpec
 
 
+_REDUCER_PROMPT = (
+    "Confirm the workspace was rebound to /ephemeral-os with pytest passing, "
+    "edits were routed deterministically with the shell-edit ratio near one "
+    "third, each LSP tool contributed its semantic-check floor and passed, "
+    "diagnostics detected then cleared the broken probe file, and tri-source "
+    "projection agreed byte-for-byte."
+)
+
+
 _FULL_PLAN = {
-    "plan_spec": (
-        "Build the scheduler_demo project under /ephemeral-os using a mixed "
-        "edit workload: roughly one third shell-based file mutations, the "
-        "remaining edits through edit_file, and at least 200 semantic LSP "
-        "checks across hover, definitions, references, symbols, and diagnostics."
-    ),
-    "evaluation_criteria": [
-        "Workspace base is rebound to /ephemeral-os and pytest runs there.",
-        "Logical edits are routed deterministically with every third edit "
-        "using shell-based mutation.",
-        "Shell edit ratio is within three percentage points of one third.",
-        "Each LSP tool contributes at least 40 semantic checks and all pass.",
-        "Diagnostics detect the intentionally broken probe file and clear "
-        "after repair.",
-        "Tri-source projection (read_file == shell cat == sandbox.api) agrees "
-        "byte-for-byte.",
-    ],
     "tasks": [
         {
             "id": "complex_project_build_shell_edit_lsp",
             "agent_name": "executor",
-            "deps": [],
+            "needs": [],
         },
     ],
     "task_specs": {
@@ -42,20 +34,22 @@ _FULL_PLAN = {
             "plus /ephemeral-os/.metrics/summary.json."
         ),
     },
+    "reducers": [
+        {
+            "id": "reduce",
+            "needs": ["complex_project_build_shell_edit_lsp"],
+            "prompt": _REDUCER_PROMPT,
+        }
+    ],
 }
 
 
 _SMOKE_PLAN = {
-    "plan_spec": (
-        "Smoke variant of the mixed shell-edit + LSP saturation project-build "
-        "probe with the same routing rule and reduced edit/LSP floors."
-    ),
-    "evaluation_criteria": list(_FULL_PLAN["evaluation_criteria"]),
     "tasks": [
         {
             "id": "complex_project_build_shell_edit_lsp_smoke",
             "agent_name": "executor",
-            "deps": [],
+            "needs": [],
         },
     ],
     "task_specs": {
@@ -64,6 +58,13 @@ _SMOKE_PLAN = {
             "probe under /ephemeral-os."
         ),
     },
+    "reducers": [
+        {
+            "id": "reduce",
+            "needs": ["complex_project_build_shell_edit_lsp_smoke"],
+            "prompt": _REDUCER_PROMPT,
+        }
+    ],
 }
 
 
@@ -80,15 +81,14 @@ class ComplexProjectBuildShellEditLsp(ScenarioBase):
     def executor_actions(self, ctx: ScenarioContext) -> Sequence[str]:  # noqa: ARG002
         return ("complex_project_build_shell_edit_lsp",)
 
-    def evaluator_response(self, ctx: ScenarioContext) -> ToolCallSpec:
+    def reducer_response(self, ctx: ScenarioContext) -> ToolCallSpec:  # noqa: ARG002
         return ToolCallSpec(
-            submit_evaluation_success,
+            submit_reduction_success,
             {
-                "summary": (
+                "outcome": (
                     "Mixed shell-edit + LSP project build under /ephemeral-os "
                     "passed pytest and semantic sandbox checks."
                 ),
-                "passed_criteria": list(ctx.attempt.evaluation_criteria),
             },
         )
 
@@ -104,15 +104,14 @@ class ComplexProjectBuildShellEditLspSmoke(ScenarioBase):
     def executor_actions(self, ctx: ScenarioContext) -> Sequence[str]:  # noqa: ARG002
         return ("complex_project_build_shell_edit_lsp_smoke",)
 
-    def evaluator_response(self, ctx: ScenarioContext) -> ToolCallSpec:
+    def reducer_response(self, ctx: ScenarioContext) -> ToolCallSpec:  # noqa: ARG002
         return ToolCallSpec(
-            submit_evaluation_success,
+            submit_reduction_success,
             {
-                "summary": (
+                "outcome": (
                     "Smoke mixed shell-edit + LSP project build under "
                     "/ephemeral-os passed pytest and semantic sandbox checks."
                 ),
-                "passed_criteria": list(ctx.attempt.evaluation_criteria),
             },
         )
 

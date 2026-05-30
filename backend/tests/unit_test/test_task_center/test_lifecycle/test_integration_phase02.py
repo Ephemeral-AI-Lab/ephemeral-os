@@ -1,23 +1,38 @@
-"""Phase 02 integration through workflow_lifecycle -> coordinator -> orchestrator."""
+"""Integration through workflow_lifecycle -> coordinator -> orchestrator.
+
+Drives a full planner -> generator -> reducer attempt synchronously (the
+launcher is a no-op; submissions are applied directly to the orchestrator) and
+asserts that a passing reducer closes the attempt, the iteration, and the root
+workflow, routing the close through the run-close handler.
+"""
 
 from __future__ import annotations
 
-from task_center._core.primitives import TaskCenterLifecycleConfig
-from task_center.workflow.lifecycle import WorkflowLifecycle
-from task_center.workflow.state import WorkflowOrigin, WorkflowStatus
-from task_center.attempt import AttemptStatus
+from task_center._core.primitives import (
+    TaskCenterLifecycleConfig,
+    generator_task_id,
+    planner_task_id,
+    reducer_task_id,
+    root_task_id,
+)
+from task_center._core.state import (
+    AttemptStatus,
+    IterationStatus,
+    Workflow,
+    WorkflowStatus,
+)
+from task_center.attempt.launch import AgentLaunch, AttemptDeps
 from task_center.attempt.orchestrator import AttemptOrchestrator
-from task_center.attempt.orchestrator_registry import (
-    AttemptOrchestratorRegistry,
-)
-from task_center.attempt.deps import (
-    AgentLaunch,
-    AttemptDeps,
-)
-from task_center.submissions import EvaluatorSubmission, GeneratorSubmission, PlannedGeneratorTask, PlannerSubmission
-from task_center._core.primitives import evaluator_task_id, generator_task_id, planner_task_id
+from task_center.attempt.orchestrator_registry import AttemptOrchestratorRegistry
 from task_center.iteration import OpenIterationCoordinatorRegistry
-from task_center.iteration.state import IterationStatus
+from task_center.submissions import (
+    GeneratorSubmission,
+    PlannedGeneratorTask,
+    PlannedReducerTask,
+    PlannerSubmission,
+    ReducerSubmission,
+)
+from task_center.workflow.lifecycle import WorkflowLifecycle
 
 
 class _FakeLauncher:
@@ -28,14 +43,7 @@ class _FakeLauncher:
         self.launches.append(launch)
 
 
-def _build_workflow_lifecycle(
-    workflow_store,
-    iteration_store,
-    attempt_store,
-    task_store,
-    *,
-    composer,
-):
+def _build(workflow_store, iteration_store, attempt_store, task_store, *, composer):
     launcher = _FakeLauncher()
     orchestrator_registry = AttemptOrchestratorRegistry()
     iteration_coordinators = OpenIterationCoordinatorRegistry()
@@ -49,19 +57,23 @@ def _build_workflow_lifecycle(
         iteration_coordinators=iteration_coordinators,
         composer=composer,
     )
+    closed_workflows: list[Workflow] = []
     workflow_lifecycle = WorkflowLifecycle(
         workflow_store=workflow_store,
         iteration_store=iteration_store,
         attempt_store=attempt_store,
         iteration_coordinators=iteration_coordinators,
         config=TaskCenterLifecycleConfig(default_attempt_budget=2),
+        orchestrator_registry=orchestrator_registry,
+        run_close_handler=lambda *, child_workflow: closed_workflows.append(child_workflow),
         orchestrator_factory=lambda attempt, on_attempt_closed: AttemptOrchestrator(
             attempt=attempt,
             on_attempt_closed=on_attempt_closed,
             runtime=runtime,
         ),
+        task_store=task_store,
     )
-    return workflow_lifecycle, iteration_coordinators, orchestrator_registry
+    return workflow_lifecycle, iteration_coordinators, orchestrator_registry, closed_workflows
 
 
 def _plan(attempt_id: str) -> PlannerSubmission:
@@ -69,45 +81,56 @@ def _plan(attempt_id: str) -> PlannerSubmission:
         attempt_id=attempt_id,
         planner_task_id=planner_task_id(attempt_id),
         kind="completes",
-        plan_spec="spec",
-        evaluation_criteria=("criterion",),
         tasks=(PlannedGeneratorTask("a", "executor", (), "do A"),),
+        reducers=(PlannedReducerTask("r", ("a",), "gate the slice"),),
         deferred_goal_for_next_iteration=None,
-        summary="plan",
+        outcome="plan",
     )
 
 
-def _generator_success(attempt_id: str) -> GeneratorSubmission:
+def _generator(attempt_id: str, status: str) -> GeneratorSubmission:
     return GeneratorSubmission(
         attempt_id=attempt_id,
         task_id=generator_task_id(attempt_id, "a"),
-        outcome="success",
-        summary="done",
-        payload={},
+        status=status,
+        outcome="gen",
+        terminal_tool_result={},
     )
 
 
-def _generator_failure(attempt_id: str) -> GeneratorSubmission:
-    return GeneratorSubmission(
+def _reducer(attempt_id: str, status: str) -> ReducerSubmission:
+    return ReducerSubmission(
         attempt_id=attempt_id,
-        task_id=generator_task_id(attempt_id, "a"),
-        outcome="failure",
-        summary="failed",
-        payload={},
+        task_id=reducer_task_id(attempt_id, "r"),
+        status=status,
+        outcome="reducer",
+        terminal_tool_result={},
     )
 
 
-def _evaluator_success(attempt_id: str) -> EvaluatorSubmission:
-    return EvaluatorSubmission(
-        attempt_id=attempt_id,
-        task_id=evaluator_task_id(attempt_id),
-        outcome="success",
-        summary="pass",
-        payload={},
+def _create_root_workflow(workflow_lifecycle, task_store, run_id):
+    # Seed the synthetic root bootstrap generator so the close routes through
+    # the run-close handler.
+    from task_center._core.task_state import TaskCenterTaskRole, TaskCenterTaskStatus
+
+    task_store.upsert_task(
+        task_id=root_task_id(run_id),
+        task_center_run_id=run_id,
+        role=TaskCenterTaskRole.GENERATOR.value,
+        agent_name=None,
+        context_message="",
+        status=TaskCenterTaskStatus.RUNNING.value,
+        outcomes=[],
+        needs=[],
+    )
+    return workflow_lifecycle.create_workflow(
+        task_center_run_id=run_id,
+        parent_task_id=root_task_id(run_id),
+        workflow_goal="g",
     )
 
 
-def test_full_plan_execution_success_closes_request_success(
+def test_full_plan_execution_success_closes_workflow_succeeded(
     workflow_store,
     iteration_store,
     attempt_store,
@@ -115,36 +138,33 @@ def test_full_plan_execution_success_closes_request_success(
     task_center_run_id,
     composer,
 ):
-    workflow_lifecycle, iteration_coordinators, orchestrator_registry = _build_workflow_lifecycle(
+    workflow_lifecycle, iteration_coordinators, orchestrator_registry, closed = _build(
         workflow_store, iteration_store, attempt_store, task_store, composer=composer
     )
-    request = workflow_lifecycle.create_workflow(
-        task_center_run_id=task_center_run_id,
-        origin=WorkflowOrigin.task(task_id="executor-1"),
-        goal="g",
+    workflow = _create_root_workflow(workflow_lifecycle, task_store, task_center_run_id)
+    iteration, coordinator = workflow_lifecycle.create_iteration_with_coordinator(
+        workflow_id=workflow.id
     )
-    iteration, _ = workflow_lifecycle.create_iteration_with_coordinator(workflow_id=request.id)
-    coordinator = iteration_coordinators.get(iteration.id)
-    assert coordinator is not None
     attempt = coordinator.create_attempt()
     orchestrator = orchestrator_registry.get_or_raise(attempt.id)
 
     orchestrator.apply_plan_submission(_plan(attempt.id))
-    orchestrator.apply_generator_submission(_generator_success(attempt.id))
-    orchestrator.apply_evaluator_submission(_evaluator_success(attempt.id))
+    orchestrator.apply_generator_submission(_generator(attempt.id, "success"))
+    orchestrator.apply_reducer_submission(_reducer(attempt.id, "success"))
 
-    final_request = workflow_store.get(request.id)
-    final_segment = iteration_store.get(iteration.id)
-    final_graph = attempt_store.get(attempt.id)
-    assert final_request is not None and final_segment is not None
-    assert final_graph is not None
-    assert final_request.status == WorkflowStatus.SUCCEEDED
-    assert final_segment.status == IterationStatus.SUCCEEDED
-    assert final_graph.status == AttemptStatus.PASSED
+    final_workflow = workflow_store.get(workflow.id)
+    final_iteration = iteration_store.get(iteration.id)
+    final_attempt = attempt_store.get(attempt.id)
+    assert final_workflow is not None and final_iteration is not None
+    assert final_attempt is not None
+    assert final_workflow.status == WorkflowStatus.SUCCEEDED
+    assert final_iteration.status == IterationStatus.SUCCEEDED
+    assert final_attempt.status == AttemptStatus.PASSED
     assert iteration_coordinators.get(iteration.id) is None
+    assert [w.id for w in closed] == [workflow.id]
 
 
-def test_generator_failure_retry_then_evaluator_success(
+def test_generator_failure_retry_then_reducer_success(
     workflow_store,
     iteration_store,
     attempt_store,
@@ -152,38 +172,37 @@ def test_generator_failure_retry_then_evaluator_success(
     task_center_run_id,
     composer,
 ):
-    workflow_lifecycle, iteration_coordinators, orchestrator_registry = _build_workflow_lifecycle(
+    workflow_lifecycle, iteration_coordinators, orchestrator_registry, closed = _build(
         workflow_store, iteration_store, attempt_store, task_store, composer=composer
     )
-    request = workflow_lifecycle.create_workflow(
-        task_center_run_id=task_center_run_id,
-        origin=WorkflowOrigin.task(task_id="executor-1"),
-        goal="g",
+    workflow = _create_root_workflow(workflow_lifecycle, task_store, task_center_run_id)
+    iteration, coordinator = workflow_lifecycle.create_iteration_with_coordinator(
+        workflow_id=workflow.id
     )
-    iteration, _ = workflow_lifecycle.create_iteration_with_coordinator(workflow_id=request.id)
-    coordinator = iteration_coordinators.get(iteration.id)
-    assert coordinator is not None
-    graph1 = coordinator.create_attempt()
-    orchestrator1 = orchestrator_registry.get_or_raise(graph1.id)
+    attempt1 = coordinator.create_attempt()
+    orchestrator1 = orchestrator_registry.get_or_raise(attempt1.id)
 
-    orchestrator1.apply_plan_submission(_plan(graph1.id))
-    orchestrator1.apply_generator_submission(_generator_failure(graph1.id))
+    orchestrator1.apply_plan_submission(_plan(attempt1.id))
+    orchestrator1.apply_generator_submission(_generator(attempt1.id, "failure"))
 
-    refreshed_segment = iteration_store.get(iteration.id)
-    assert refreshed_segment is not None
-    assert len(refreshed_segment.attempt_ids) == 2
-    graph2_id = refreshed_segment.attempt_ids[1]
-    orchestrator2 = orchestrator_registry.get_or_raise(graph2_id)
+    # A failed generator fails the reducer's gate -> attempt fails -> retry in
+    # the same iteration (budget=2).
+    refreshed_iteration = iteration_store.get(iteration.id)
+    assert refreshed_iteration is not None
+    assert len(refreshed_iteration.attempt_ids) == 2
+    attempt2_id = refreshed_iteration.attempt_ids[1]
+    orchestrator2 = orchestrator_registry.get_or_raise(attempt2_id)
 
-    orchestrator2.apply_plan_submission(_plan(graph2_id))
-    orchestrator2.apply_generator_submission(_generator_success(graph2_id))
-    orchestrator2.apply_evaluator_submission(_evaluator_success(graph2_id))
+    orchestrator2.apply_plan_submission(_plan(attempt2_id))
+    orchestrator2.apply_generator_submission(_generator(attempt2_id, "success"))
+    orchestrator2.apply_reducer_submission(_reducer(attempt2_id, "success"))
 
-    final_request = workflow_store.get(request.id)
-    final_segment = iteration_store.get(iteration.id)
-    final_graph2 = attempt_store.get(graph2_id)
-    assert final_request is not None and final_segment is not None
-    assert final_graph2 is not None
-    assert final_request.status == WorkflowStatus.SUCCEEDED
-    assert final_segment.status == IterationStatus.SUCCEEDED
-    assert final_graph2.status == AttemptStatus.PASSED
+    final_workflow = workflow_store.get(workflow.id)
+    final_iteration = iteration_store.get(iteration.id)
+    final_attempt2 = attempt_store.get(attempt2_id)
+    assert final_workflow is not None and final_iteration is not None
+    assert final_attempt2 is not None
+    assert final_workflow.status == WorkflowStatus.SUCCEEDED
+    assert final_iteration.status == IterationStatus.SUCCEEDED
+    assert final_attempt2.status == AttemptStatus.PASSED
+    assert [w.id for w in closed] == [workflow.id]

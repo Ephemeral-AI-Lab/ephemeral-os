@@ -2,7 +2,7 @@
 
 Reference scenario for the simplest task_center happy path: TaskCenter entry
 creates the initial workflow → planner emits one full plan → executor runs ``preflight`` →
-evaluator passes → workflow closes succeeded. One workflow, one iteration
+reducer passes → workflow closes succeeded. One workflow, one iteration
 (``creation_reason=INITIAL``), one attempt (``attempt_sequence_no=1``).
 
 Use this as the template for any "single-attempt success in a particular
@@ -14,8 +14,8 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 
-from tools.submission.evaluator import submit_evaluation_success
 from tools.submission.planner import submit_plan_closes_goal
+from tools.submission.reducer import submit_reduction_success
 
 from task_center_runner.scenarios._scenario_helpers import preflight_full_plan
 from task_center_runner.scenarios.base import ScenarioBase, ScenarioContext, ToolCallSpec
@@ -32,13 +32,10 @@ class InitialWorkflow(ScenarioBase):
     def executor_actions(self, ctx: ScenarioContext) -> Sequence[str]:  # noqa: ARG002
         return ("preflight",)
 
-    def evaluator_response(self, ctx: ScenarioContext) -> ToolCallSpec:
+    def reducer_response(self, ctx: ScenarioContext) -> ToolCallSpec:  # noqa: ARG002
         return ToolCallSpec(
-            submit_evaluation_success,
-            {
-                "summary": "Initial workflow preflight evidence accepted.",
-                "passed_criteria": list(ctx.attempt.evaluation_criteria),
-            },
+            submit_reduction_success,
+            {"outcome": "Initial workflow preflight evidence accepted."},
         )
 
 

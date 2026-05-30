@@ -14,12 +14,25 @@ from typing import Any, Literal
 
 @dataclass(frozen=True, slots=True)
 class PlannedGeneratorTask:
-    """One normalized generator DAG node."""
+    """One normalized generator plan task (role GENERATOR)."""
 
     local_id: str
     agent_name: str
-    deps: tuple[str, ...]
+    needs: tuple[str, ...]
     task_spec: str
+
+
+@dataclass(frozen=True, slots=True)
+class PlannedReducerTask:
+    """One normalized reducer plan task (role REDUCER) — the exit gate.
+
+    ``prompt`` is the reducer's contract (required + nonblank); it has no
+    ``agent_name`` (reducers always run the ``reducer`` profile).
+    """
+
+    local_id: str
+    needs: tuple[str, ...]
+    prompt: str
 
 
 @dataclass(frozen=True, slots=True)
@@ -29,11 +42,10 @@ class PlannerSubmission:
     attempt_id: str
     planner_task_id: str
     kind: Literal["completes", "defers"]
-    plan_spec: str
-    evaluation_criteria: tuple[str, ...]
     tasks: tuple[PlannedGeneratorTask, ...]
+    reducers: tuple[PlannedReducerTask, ...]
     deferred_goal_for_next_iteration: str | None
-    summary: str
+    outcome: str
 
 
 @dataclass(frozen=True, slots=True)
@@ -43,7 +55,7 @@ class PlannerFailureSubmission:
     attempt_id: str
     planner_task_id: str
     fail_reason: Literal["run_exhausted"]
-    summary: str
+    outcome: str
 
 
 @dataclass(frozen=True, slots=True)
@@ -52,17 +64,17 @@ class GeneratorSubmission:
 
     attempt_id: str
     task_id: str
-    outcome: Literal["success", "failure", "blocker"]
-    summary: str
-    payload: dict[str, Any]
+    status: Literal["success", "failure", "blocker"]
+    outcome: str
+    terminal_tool_result: dict[str, Any]
 
 
 @dataclass(frozen=True, slots=True)
 class ReducerSubmission:
-    """Validated terminal outcome for one reducer task."""
+    """Validated terminal outcome for one reducer task (binary)."""
 
     attempt_id: str
     task_id: str
     status: Literal["success", "failure"]
-    summary: str
-    payload: dict[str, Any]
+    outcome: str
+    terminal_tool_result: dict[str, Any]

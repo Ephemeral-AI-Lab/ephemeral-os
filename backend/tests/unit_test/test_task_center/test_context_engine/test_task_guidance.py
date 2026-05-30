@@ -82,21 +82,17 @@ def _prior_attempt_block() -> ContextBlock:
     )
 
 
-def _dep_block(dep_id: str = "dep-a") -> ContextBlock:
+def _needs_block(dep_id: str = "dep-a") -> ContextBlock:
     return ContextBlock(
         kind="dependency_summary",
         priority=ContextPriority.MEDIUM,
         text="dep output",
-        metadata={"tag": "dependency", "attrs": f'id="{dep_id}"'},
-    )
-
-
-def _plan_spec_block() -> ContextBlock:
-    return ContextBlock(
-        kind="task_specification",
-        priority=ContextPriority.HIGH,
-        text="plan body",
-        metadata={"tag": "plan_spec"},
+        metadata={
+            "group_id": "needs",
+            "group_tag": "needs",
+            "child_tag": "task",
+            "attrs": f'id="{dep_id}" status="success"',
+        },
     )
 
 
@@ -106,6 +102,15 @@ def _assigned_task_block() -> ContextBlock:
         priority=ContextPriority.REQUIRED,
         text="task body",
         metadata={"tag": "assigned_task", "attrs": 'task_id="t1"'},
+    )
+
+
+def _assigned_prompt_block() -> ContextBlock:
+    return ContextBlock(
+        kind="planned_task_spec",
+        priority=ContextPriority.REQUIRED,
+        text="reduce body",
+        metadata={"tag": "assigned_prompt", "attrs": 'task_id="t1"'},
     )
 
 
@@ -146,14 +151,15 @@ def test_planner_iter1_after_failure_outline():
     assert "  - <attempt> — failed prior attempt" in prose
 
 
-def test_executor_outline_with_deps():
+def test_executor_outline_with_needs():
     prose = build_task_guidance(
         agent_def=_agent_def("executor", AgentRole.GENERATOR),
-        packet=_packet([_plan_spec_block(), _dep_block(), _assigned_task_block()]),
+        packet=_packet([_needs_block(), _assigned_task_block()]),
         scope=None,  # type: ignore[arg-type]
     )
-    assert "- <plan_spec> — attempt's plan" in prose
-    assert "- <dependency> — upstream task output" in prose
+    # The generator drops <plan_spec>; it opens on its <needs> group and ends
+    # on its <assigned_task>.
+    assert "- <needs> — upstream needs output" in prose
     assert "- <assigned_task> — your assigned task" in prose
     assert "Complete <assigned_task>." in prose
 
@@ -167,33 +173,18 @@ def test_planner_directive_is_terminal_agnostic():
     assert "What to do:\n- Plan for <iteration_goal>." in prose
 
 
-def test_evaluator_outline_is_flat_current_attempt():
-    """E4: the evaluator outline is flat top-level blocks — <plan_spec>,
-    <task>, <evaluation_criteria> — with no goal/iteration frame and no
-    <attempt> nesting."""
-    task_block = ContextBlock(
-        kind="generator_task_outcome",
-        priority=ContextPriority.HIGH,
-        text="built slice",
-        metadata={"tag": "task", "attrs": 'id="t-a" status="done"'},
-    )
-    criteria_block = ContextBlock(
-        kind="evaluation_criteria",
-        priority=ContextPriority.REQUIRED,
-        text="c1",
-        metadata={"tag": "evaluation_criteria"},
-    )
+def test_reducer_outline_is_needs_then_assigned_prompt():
+    """The reducer outline is its <needs> group followed by its
+    <assigned_prompt> — no goal/iteration frame, no attempt-wide plan."""
     prose = build_task_guidance(
-        agent_def=_agent_def("evaluator", AgentRole.EVALUATOR),
-        packet=_packet([_plan_spec_block(), task_block, criteria_block]),
+        agent_def=_agent_def("reducer", AgentRole.REDUCER),
+        packet=_packet([_needs_block(), _assigned_prompt_block()]),
         scope=None,  # type: ignore[arg-type]
     )
-    # Flat top-level bullets (no leading indent → no <iteration>/<attempt> nesting).
-    assert "- <plan_spec> — attempt's plan" in prose
-    assert '- <task status="done"> — generator task outcome' in prose
-    assert "- <evaluation_criteria> — criteria the attempt must satisfy" in prose
+    assert "- <needs> — upstream needs output" in prose
+    assert "- <assigned_prompt> — your reducer prompt" in prose
     assert "<attempt" not in prose
-    assert "Verify the current attempt against <evaluation_criteria>." in prose
+    assert "Digest your <needs> and gate against <assigned_prompt>." in prose
 
 
 def test_unknown_agent_raises():

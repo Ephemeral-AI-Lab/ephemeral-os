@@ -9,12 +9,12 @@ this registry — the cycle is broken at the type level.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Protocol
+from typing import TYPE_CHECKING, Any, Protocol
 
 from task_center._core.primitives import TaskCenterInvariantViolation
 
 if TYPE_CHECKING:  # pragma: no cover - typing-only
-    from task_center.workflow.state import WorkflowClosureReport
+    from task_center._core.state import Workflow
     from task_center.submissions import (
         GeneratorSubmission,
         PlannerFailureSubmission,
@@ -30,7 +30,19 @@ class RegisteredAttemptOrchestrator(Protocol):
 
     def start(self) -> None: ...
 
-    def apply_workflow_closure_report(self, report: WorkflowClosureReport) -> None: ...
+    def start_child_workflow(
+        self, *, generator_task: dict[str, Any], child_workflow: Workflow
+    ) -> None: ...
+
+    def apply_child_workflow_outcome(
+        self,
+        *,
+        generator_task: dict[str, Any],
+        child_workflow: Workflow,
+        final_attempt_id: str | None,
+    ) -> None: ...
+
+    def cancel_child_workflow(self, *, generator_task: dict[str, Any]) -> None: ...
 
     def apply_planner_failure(self, submission: PlannerFailureSubmission) -> None: ...
 

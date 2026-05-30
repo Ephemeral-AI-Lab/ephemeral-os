@@ -97,10 +97,13 @@ async def test_full_case_user_input_runs_dynamic_verifier_dag(
 
     assert len(report.requirement_ledger) > 30  # dask renders ~39 requirements
     executor_count = sum(1 for launch in report.launches if launch.role == "executor")
-    verifier_count = sum(1 for launch in report.launches if launch.role == "verifier")
+    reducer_count = sum(1 for launch in report.launches if launch.role == "reducer")
+    # Guard tasks are executor generators carrying a ``VERIFY checkpoint=`` spec;
+    # the reducer is the per-attempt gate. Each attempt runs exactly one reducer,
+    # so reducers stay well below the executor (worker + guard) count.
     assert executor_count >= 12
-    assert verifier_count >= 4
-    assert verifier_count < executor_count
+    assert reducer_count >= 4
+    assert reducer_count < executor_count
 
     # --- lifecycle migrated to graph_summary (event-source runner emits no
     # lifecycle events; assert the protected outcome via real store state) ----
@@ -108,9 +111,12 @@ async def test_full_case_user_input_runs_dynamic_verifier_dag(
     # At least one attempt carried a deferral.
     assert _attempt_deferred(gs), gs
     assert _continuation_iterations_follow_partial_attempts(gs)
-    assert _has_multi_dependency_verifier(gs)
-    # At least one verifier task failed.
-    assert _count_failed_verifier_tasks(gs) >= 1, gs
+    # Guard density: the dynamic DAG wires several VERIFY-checkpoint guard tasks
+    # (one per executor wave plus the recursive/final guards).
+    assert _count_guard_tasks(gs) >= 4, gs
+    assert _has_multi_dependency_guard(gs)
+    # At least one reducer gate failed (the only failed task in a failing attempt).
+    assert _count_failed_reducer_tasks(gs) >= 1, gs
     planner_inspections = [
         item for item in report.prompt_inspections if item.role == "planner"
     ]
@@ -126,13 +132,13 @@ async def test_full_case_user_input_runs_dynamic_verifier_dag(
     assert recursive, gs
     assert all(workflow["status"] == "succeeded" for workflow in recursive), recursive
     # recursive child closed before the parent's recursive_return guard passed.
-    assert _verifier_task_done_with_checkpoint(gs, "recursive_return"), gs
+    assert _guard_task_done_with_checkpoint(gs, "recursive_return"), gs
     # final release: the entry workflow's final attempt passed and its
-    # final_release verifier guard is done (it gates the evaluator).
+    # final_release guard is done (it gates the reducer).
     entry = _entry_workflow(gs)
     final_attempt = entry["iterations"][-1]["attempts"][-1]
     assert final_attempt["status"] == "passed", final_attempt
-    assert _verifier_task_done_with_checkpoint(gs, "final_release"), gs
+    assert _guard_task_done_with_checkpoint(gs, "final_release"), gs
 
     _assert_audit_tree_roles(report.run_dir)
     _assert_message_jsonl_contains_tool_scripts(report.run_dir)
@@ -157,19 +163,42 @@ def _continuation_iterations_follow_partial_attempts(
     return True
 
 
-def _has_multi_dependency_verifier(graph_summary: dict[str, Any]) -> bool:
+def _is_guard_task(task: dict[str, Any]) -> bool:
+    """A guard is an executor generator whose spec is a ``VERIFY checkpoint=`` line.
+
+    Guard tasks were ``verifier`` agents in the old model; they are now plain
+    executor generators gated by the reducer, identified by their preserved
+    ``VERIFY checkpoint=`` ``context_message`` spec.
+    """
+    return task.get("agent_name") == "executor" and "VERIFY checkpoint=" in str(
+        task.get("context_message") or ""
+    )
+
+
+def _count_guard_tasks(graph_summary: dict[str, Any]) -> int:
+    return sum(
+        1
+        for workflow in graph_summary["workflows"]
+        for iteration in workflow["iterations"]
+        for attempt in iteration["attempts"]
+        for task in attempt["tasks"]
+        if _is_guard_task(task)
+    )
+
+
+def _has_multi_dependency_guard(graph_summary: dict[str, Any]) -> bool:
     for workflow in graph_summary["workflows"]:
         for iteration in workflow["iterations"]:
             for attempt in iteration["attempts"]:
                 for task in attempt["tasks"]:
-                    if task.get("agent_name") == "verifier" and len(task["needs"]) > 1:
+                    if _is_guard_task(task) and len(task["needs"]) > 1:
                         return True
     return False
 
 
 def _entry_workflow(graph_summary: dict[str, Any]) -> dict[str, Any]:
     for workflow in graph_summary["workflows"]:
-        if str(workflow.get("origin_kind") or "") == "entry":
+        if str(workflow.get("parent_task_id") or "").endswith(":root"):
             return workflow
     raise AssertionError(f"no entry workflow in graph_summary: {graph_summary}")
 
@@ -183,31 +212,38 @@ def _attempt_deferred(graph_summary: dict[str, Any]) -> bool:
     )
 
 
-def _count_failed_verifier_tasks(graph_summary: dict[str, Any]) -> int:
+def _count_failed_reducer_tasks(graph_summary: dict[str, Any]) -> int:
+    """Count failed reducer-gate tasks across all attempts.
+
+    A failing attempt now fails at its reducer gate (its generators all
+    succeed); the failed task is identified by membership in the attempt's
+    ``reducer_task_ids``.
+    """
     return sum(
         1
         for workflow in graph_summary["workflows"]
         for iteration in workflow["iterations"]
         for attempt in iteration["attempts"]
         for task in attempt["tasks"]
-        if task.get("agent_name") == "verifier" and task.get("status") == "failed"
+        if task.get("task_id") in set(attempt["reducer_task_ids"])
+        and task.get("status") == "failed"
     )
 
 
-def _verifier_task_done_with_checkpoint(
+def _guard_task_done_with_checkpoint(
     graph_summary: dict[str, Any],
     checkpoint: str,
 ) -> bool:
-    """A verifier task whose spec carries ``checkpoint=<checkpoint>`` is done.
+    """A guard executor task whose spec carries ``checkpoint=<checkpoint>`` is done.
 
-    The verifier task's ``context_message`` is its ``VERIFY checkpoint=<x> ...``
+    The guard task's ``context_message`` is its ``VERIFY checkpoint=<x> ...``
     spec; the former checkpoint-gated event ordering is replaced by asserting
     that the corresponding guard task reached ``done`` (TaskCenter's own
     dependency enforcement guarantees it ran after its upstream tasks closed).
     """
     needle = f"checkpoint={checkpoint}"
     return any(
-        task.get("agent_name") == "verifier"
+        _is_guard_task(task)
         and task.get("status") == "done"
         and needle in str(task.get("context_message") or "")
         for workflow in graph_summary["workflows"]
@@ -223,15 +259,15 @@ def _assert_audit_tree_roles(run_dir: Path) -> None:
     for role_dir in run_dir.rglob("[0-9][0-9]_*_*"):
         role_segments.add(role_dir.name.split("_", 2)[1])
         assert (role_dir / "task.json").exists()
-    assert {"executor", "verifier", "evaluator"}.issubset(role_segments)
+    assert {"executor", "reducer"}.issubset(role_segments)
     workflow_dirs = sorted(run_dir.glob("workflow_*_*"))
     assert workflow_dirs
     assert list(run_dir.glob("workflow_*_*/iteration_*_*"))
     assert list(run_dir.glob("workflow_*_*/iteration_*_*/attempt_*_*"))
     first_workflow = workflow_dirs[0]
     workflow = _json_file(first_workflow / "workflow.json")
-    assert workflow["origin_kind"] == "entry"
-    assert workflow["requested_by_task_id"] is None
+    # The entry workflow's parent is the synthetic ``<run_id>:root`` bootstrap task.
+    assert str(workflow["parent_task_id"]).endswith(":root")
     iteration_files = sorted(first_workflow.glob("iteration_*_*/iteration.json"))
     assert iteration_files
     first_iteration = _json_file(iteration_files[0])
@@ -251,7 +287,7 @@ def _assert_message_jsonl_contains_tool_scripts(run_dir: Path) -> None:
         if isinstance(message.get("metadata"), dict)
     }
     assert any(_is_executor_agent_name(agent) for agent in agents)
-    assert "verifier" in agents
+    assert "reducer" in agents
     tool_calls = {
         str(block.get("name") or "")
         for message in messages

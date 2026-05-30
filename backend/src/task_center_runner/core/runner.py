@@ -30,6 +30,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from task_center._core.outcomes import to_record, workflow_outcomes
 from task_center_runner.audit.events import Event
 from task_center_runner.core.engine import run_pipeline
 from task_center_runner.scenarios.base import Scenario
@@ -108,7 +109,9 @@ def _graph_summary(
                         # consumers can read ``attempt["deferred_goal_for_next_iteration"]``
                         # without having to know the DB column alias.
                         "deferred_goal_for_next_iteration": attempt.deferred_goal_for_next_iteration,
-                        "task_ids": list(attempt.generator_task_ids),
+                        "task_ids": list(attempt.generator_task_ids) + list(attempt.reducer_task_ids),
+                        "generator_task_ids": list(attempt.generator_task_ids),
+                        "reducer_task_ids": list(attempt.reducer_task_ids),
                         "tasks": task_rows,
                     }
                 )
@@ -118,7 +121,7 @@ def _graph_summary(
                     "sequence_no": iteration.sequence_no,
                     "creation_reason": iteration.creation_reason.value,
                     "status": iteration.status.value,
-                    "goal": iteration.goal,
+                    "goal": iteration.iteration_goal,
                     # Dict key mirrors the Python attribute name.
                     "deferred_goal_for_next_iteration": iteration.deferred_goal_for_next_iteration,
                     "attempts": attempts,
@@ -128,9 +131,13 @@ def _graph_summary(
             {
                 "id": workflow.id,
                 "status": workflow.status.value,
-                "origin_kind": workflow.origin_kind.value,
-                "requested_by_task_id": workflow.requested_by_task_id,
-                "final_outcome": workflow.final_outcome,
+                "parent_task_id": workflow.parent_task_id,
+                "outcomes": [
+                    to_record(outcome)
+                    for outcome in workflow_outcomes(
+                        workflow, iteration_store=bundle.iteration_store
+                    )
+                ],
                 "iterations": iterations,
             }
         )

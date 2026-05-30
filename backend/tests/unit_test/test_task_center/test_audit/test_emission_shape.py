@@ -26,13 +26,11 @@ class CollectingSink:
 
 
 _TASK = {
-    "id": "task-1",
+    "task_id": "task-1",
     "task_center_run_id": "run-1",
-    "task_center_attempt_id": "attempt-1",
     "role": "generator",
     "agent_name": "generator",
     "needs": ["dep-1"],
-    "context_packet_id": "packet-1",
     "status": "running",
 }
 
@@ -44,7 +42,6 @@ _BASE_KEYS = frozenset(
         "role",
         "agent_name",
         "needs",
-        "context_packet_id",
         "status_from",
         "status_to",
     }

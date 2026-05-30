@@ -12,13 +12,16 @@ from dataclasses import dataclass
 
 from agents import get_definition
 from agents import AgentDefinition
-from task_center.context_engine.core import (
+from task_center._core.primitives import (
+    TaskCenterInvariantViolation,
+    attempt_id_from_task_id,
+)
+from task_center.context_engine.engine import (
     AgentDefinitionValidationError,
     ContextEngineDeps,
     MissingContextRecipeError,
 )
 from task_center.context_engine.scope import ContextScope
-from task_center.workflow.ancestry import nested_workflow_depth
 
 
 @dataclass(frozen=True, slots=True)
@@ -27,6 +30,41 @@ class TerminalRoutingContext:
 
     scope: ContextScope
     deps: ContextEngineDeps
+
+
+def _nested_workflow_depth(*, workflow_id: str, deps: ContextEngineDeps) -> int:
+    """Number of workflow ancestors on the chain INCLUDING ``workflow_id``.
+
+    Walks up via ``Workflow.parent_task_id`` (the backward link) and the
+    attempt the parent task id encodes (``attempt_id_from_task_id``). The root
+    workflow's parent is the synthetic bootstrap task ``<run_id>:root``, which
+    encodes no attempt, so the walk terminates there.
+    """
+    depth = 0
+    seen: set[str] = set()
+    current = workflow_id
+    while True:
+        if current in seen:
+            raise TaskCenterInvariantViolation("Cycle detected while resolving workflow ancestry.")
+        seen.add(current)
+        depth += 1
+        workflow = deps.workflow_store.get(current)
+        if workflow is None:
+            raise TaskCenterInvariantViolation(f"Workflow {current!r} was not found.")
+        if workflow.parent_task_id is None:
+            return depth
+        parent_attempt_id = attempt_id_from_task_id(workflow.parent_task_id)
+        if parent_attempt_id is None:
+            return depth  # root boundary
+        parent_attempt = deps.attempt_store.get(parent_attempt_id)
+        if parent_attempt is None:
+            raise TaskCenterInvariantViolation(f"Parent Attempt {parent_attempt_id!r} was not found.")
+        parent_iteration = deps.iteration_store.get(parent_attempt.iteration_id)
+        if parent_iteration is None:
+            raise TaskCenterInvariantViolation(
+                f"Parent Iteration {parent_attempt.iteration_id!r} was not found."
+            )
+        current = parent_iteration.workflow_id
 
 
 def _depth(ctx: TerminalRoutingContext) -> int:
@@ -38,13 +76,7 @@ def _depth(ctx: TerminalRoutingContext) -> int:
     workflow_id = ctx.scope.workflow_id
     if workflow_id is None:
         return 0
-    return nested_workflow_depth(
-        workflow_id=workflow_id,
-        workflow_store=ctx.deps.workflow_store,
-        iteration_store=ctx.deps.iteration_store,
-        attempt_store=ctx.deps.attempt_store,
-        task_store=ctx.deps.task_store,
-    )
+    return _nested_workflow_depth(workflow_id=workflow_id, deps=ctx.deps)
 
 
 def _nested_workflow_depth_gt_1(ctx: TerminalRoutingContext) -> bool:

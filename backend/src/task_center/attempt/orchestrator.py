@@ -4,50 +4,50 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Callable
-from dataclasses import asdict
 from datetime import UTC, datetime
 from typing import Any
 
 from task_center._core.invariants import (
     assert_attempt_not_closed,
     assert_attempt_stage,
-    assert_evaluator_task_for_submission,
     assert_generator_task_for_submission,
+    assert_reducer_task_for_submission,
     assert_task_belongs_to_attempt,
     assert_valid_attempt_close,
 )
-from task_center._core.generator_summaries import (
+from task_center._core.outcomes import (
+    Outcome,
     attempt_failure_line,
-    child_outcomes_for_workflow,
-    generator_outcomes,
+    local_id_of,
+    present_status,
     to_record,
+    workflow_outcomes,
 )
 from task_center._core.primitives import (
     TaskCenterInvariantViolation,
     generator_task_id,
     planner_task_id,
+    reducer_task_id,
 )
-from task_center.attempt.stage_advancer import AttemptStageAdvancer
-from task_center.attempt.generator_dag import (
-    dependency_task_ids,
-    ordered_generator_tasks,
-)
-from task_center.attempt.launch import AgentLaunchFactory
-from task_center.attempt.deps import AttemptDeps
-from task_center.attempt.state import (
+from task_center._core.state import (
     Attempt,
     AttemptFailReason,
     AttemptStage,
     AttemptStatus,
+    Workflow,
+    WorkflowStatus,
 )
-from task_center.workflow.state import WorkflowClosureReport
 from task_center._core.task_state import (
     TaskCenterTaskRole,
     TaskCenterTaskStatus,
 )
+from task_center.attempt.launch import REDUCER_AGENT_NAME, AgentLaunchFactory, AttemptDeps
+from task_center.attempt.plan_dag import ordered_plan_tasks
+from task_center.attempt.run_stage import AttemptStageAdvancer
 from task_center.submissions import (
     GeneratorSubmission,
     PlannedGeneratorTask,
+    PlannedReducerTask,
     PlannerFailureSubmission,
     PlannerSubmission,
     ReducerSubmission,
@@ -57,7 +57,7 @@ logger = logging.getLogger(__name__)
 
 
 class AttemptOrchestrator:
-    """Runs one planner -> generator DAG -> evaluator harness attempt."""
+    """Runs one planner -> plan-DAG (generators + reducers) harness attempt."""
 
     def __init__(
         self,
@@ -99,11 +99,8 @@ class AttemptOrchestrator:
                 agent_name=launch.agent_name,
                 context_message=launch.context,
                 status=TaskCenterTaskStatus.RUNNING.value,
-                summaries=[],
+                outcomes=[],
                 needs=[],
-                task_center_attempt_id=attempt.id,
-                context_packet_id=launch.context_packet_id,
-                spawn_reason="attempt_planner",
             )
             runtime.attempt_store.set_planner_task_id(attempt.id, task_id)
             runtime.agent_launcher.launch(launch)
@@ -131,12 +128,19 @@ class AttemptOrchestrator:
         runtime.task_store.set_task_status(
             submission.planner_task_id,
             status=TaskCenterTaskStatus.DONE.value,
-            summary={"kind": submission.kind, "summary": submission.summary},
+            outcomes=[to_record(Outcome("planner", "success", submission.outcome))],
+            terminal_tool_result={"kind": submission.kind},
         )
-        self._persist_plan_contract(submission)
-        generator_ids = self._persist_generator_tasks(submission.tasks)
+        runtime.attempt_store.set_deferred_goal(
+            attempt.id,
+            deferred_goal_for_next_iteration=submission.deferred_goal_for_next_iteration,
+        )
+        generator_ids, reducer_ids = self._persist_plan_tasks(
+            submission.tasks, submission.reducers
+        )
         runtime.attempt_store.set_generator_task_ids(attempt.id, list(generator_ids))
-        runtime.attempt_store.set_stage(attempt.id, AttemptStage.GENERATE)
+        runtime.attempt_store.set_reducer_task_ids(attempt.id, list(reducer_ids))
+        runtime.attempt_store.set_stage(attempt.id, AttemptStage.RUN)
         self._stage_advancer.advance_ready_tasks()
 
     def apply_planner_failure(self, submission: PlannerFailureSubmission) -> None:
@@ -145,12 +149,10 @@ class AttemptOrchestrator:
         self._runtime.task_store.set_task_status(
             submission.planner_task_id,
             status=TaskCenterTaskStatus.FAILED.value,
-            summary={
-                "fail_reason": submission.fail_reason,
-                "summary": submission.summary,
-            },
+            outcomes=[to_record(Outcome("planner", "failure", submission.outcome))],
+            terminal_tool_result={"fail_reason": submission.fail_reason},
         )
-        self._close_attempt(AttemptStatus.FAILED, AttemptFailReason.PLANNER_FAILED)
+        self._close_attempt(AttemptStatus.FAILED, AttemptFailReason.TASK_FAILED)
 
     def apply_generator_submission(self, submission: GeneratorSubmission) -> None:
         self._assert_submission_attempt(submission.attempt_id)
@@ -159,84 +161,94 @@ class AttemptOrchestrator:
 
     def apply_reducer_submission(self, submission: ReducerSubmission) -> None:
         self._assert_submission_attempt(submission.attempt_id)
-        self._mark_evaluator(submission)
+        self._mark_reducer(submission)
         self._stage_advancer.advance_ready_tasks()
 
-    def apply_workflow_closure_report(self, report: WorkflowClosureReport) -> None:
-        """Resume a generator task waiting on a delegated workflow.
+    # ---- child-workflow handoff -----------------------------------------
 
-        Idempotent: if the parent has already been resumed (status moved off
-        ``waiting_workflow`` by an earlier delivery), return silently
-        without re-asserting attempt stage or appending another summary.
-        """
-        runtime = self._runtime
-        parent_task_id = report.requested_by_task_id
-        if parent_task_id is None:
-            raise TaskCenterInvariantViolation(
-                f"Workflow closure report {report.workflow_id!r} has no parent task id"
-            )
-        task = runtime.task_store.get_task(parent_task_id)
-        if task is None:
-            raise TaskCenterInvariantViolation(f"Generator task {parent_task_id!r} not found")
-        if task.get("status") != TaskCenterTaskStatus.WAITING_WORKFLOW.value:
-            # Already delivered; no further action.
-            return
-
-        attempt = self._assert_stage(AttemptStage.GENERATE)
-        assert_generator_task_for_submission(task, attempt)
-
-        if report.outcome == "success":
-            status = TaskCenterTaskStatus.DONE
-            summary = f"Delegated workflow {report.workflow_id} succeeded."
-        else:
-            status = TaskCenterTaskStatus.FAILED
-            summary = f"Delegated workflow {report.workflow_id} failed."
-
-        updated = runtime.task_store.set_task_status_if_current(
-            parent_task_id,
-            expected_status=TaskCenterTaskStatus.WAITING_WORKFLOW.value,
-            status=status.value,
-            summary={
-                "outcome": report.outcome,
-                "summary": summary,
-                "payload": {
-                    "workflow_closure_report": asdict(report),
-                    "submission_kind": "workflow_closure_report",
-                    "handoff_rollup": self._build_handoff_rollup(report),
-                },
-            },
+    def start_child_workflow(self, *, generator_task: dict[str, Any], child_workflow: Workflow) -> None:
+        """Atomically flip the spawning generator RUNNING -> WAITING_WORKFLOW + link."""
+        task_id = str(generator_task["task_id"])
+        updated = self._runtime.task_store.set_task_status_if_current(
+            task_id,
+            expected_status=TaskCenterTaskStatus.RUNNING.value,
+            status=TaskCenterTaskStatus.WAITING_WORKFLOW.value,
+            child_workflow_id=child_workflow.id,
         )
         if updated is None:
-            # Race: another delivery moved the parent first. Idempotent.
+            raise TaskCenterInvariantViolation(
+                f"TaskCenter task {task_id!r} was not running when the delegated "
+                "workflow start tried to mark it waiting."
+            )
+
+    def apply_child_workflow_outcome(
+        self, *, generator_task: dict[str, Any], child_workflow: Workflow, final_attempt_id: str | None
+    ) -> None:
+        """Resolve a generator waiting on a child workflow.
+
+        Idempotent: if the parent has already moved off ``waiting_workflow``
+        (an earlier delivery / race), return silently. The generator's outcome
+        is one :class:`Outcome` whose ``children`` are the child workflow's
+        outcomes (MN2); a failed child also carries an ``attempt_failure_line``.
+        """
+        runtime = self._runtime
+        task_id = str(generator_task["task_id"])
+        task = runtime.task_store.get_task(task_id)
+        if task is None:
+            raise TaskCenterInvariantViolation(f"Generator task {task_id!r} not found")
+        if task.get("status") != TaskCenterTaskStatus.WAITING_WORKFLOW.value:
+            return
+
+        attempt = self._assert_stage(AttemptStage.RUN)
+        assert_generator_task_for_submission(task, attempt)
+
+        succeeded = child_workflow.status == WorkflowStatus.SUCCEEDED
+        children = tuple(
+            workflow_outcomes(child_workflow, iteration_store=runtime.iteration_store)
+        )
+        if succeeded:
+            status = TaskCenterTaskStatus.DONE
+            text = f"Delegated workflow {child_workflow.id} succeeded."
+            failure = None
+        else:
+            status = TaskCenterTaskStatus.FAILED
+            text = f"Delegated workflow {child_workflow.id} failed."
+            failure = self._child_failure_line(final_attempt_id)
+        outcome = Outcome(
+            local_id=local_id_of(task_id),
+            status=present_status(status.value),
+            outcome=text,
+            children=children,
+            failure=failure,
+        )
+        updated = runtime.task_store.set_task_status_if_current(
+            task_id,
+            expected_status=TaskCenterTaskStatus.WAITING_WORKFLOW.value,
+            status=status.value,
+            outcomes=[to_record(outcome)],
+            terminal_tool_result={"child_workflow_id": child_workflow.id},
+        )
+        if updated is None:
             return
         self._stage_advancer.advance_ready_tasks()
 
-    def _build_handoff_rollup(self, report: WorkflowClosureReport) -> dict[str, Any]:
-        """Structured roll-up of the child workflow, rendered later as nested ``<task>``.
+    def cancel_child_workflow(self, *, generator_task: dict[str, Any]) -> None:
+        """Restore a generator to RUNNING after a failed child-workflow start."""
+        self._runtime.task_store.set_task_status_if_current(
+            str(generator_task["task_id"]),
+            expected_status=TaskCenterTaskStatus.WAITING_WORKFLOW.value,
+            status=TaskCenterTaskStatus.RUNNING.value,
+        )
 
-        Success: the child generators across all SUCCEEDED child iterations.
-        Failure: those, plus the final failed attempt's terminal generators and
-        an ``attempt_failure_line`` as the ``<failure>`` child. The recipe layer
-        turns this into nested ``<task>`` wherever the parent generator appears.
-        """
-        runtime = self._runtime
-        children = [
-            to_record(outcome)
-            for outcome in child_outcomes_for_workflow(report.workflow_id, runtime.iteration_store)
-        ]
-        failure: str | None = None
-        if report.outcome != "success" and report.final_attempt_id is not None:
-            final_attempt = runtime.attempt_store.get(report.final_attempt_id)
-            if final_attempt is not None:
-                children.extend(
-                    to_record(outcome)
-                    for outcome in generator_outcomes(
-                        final_attempt, task_store=runtime.task_store
-                    )
-                    if outcome.is_terminal
-                )
-                failure = attempt_failure_line(final_attempt, runtime.task_store)
-        return {"children": children, "failure": failure}
+    def _child_failure_line(self, final_attempt_id: str | None) -> str | None:
+        if final_attempt_id is None:
+            return None
+        final_attempt = self._runtime.attempt_store.get(final_attempt_id)
+        if final_attempt is None:
+            return None
+        return attempt_failure_line(final_attempt, self._runtime.task_store)
+
+    # ---- internals ------------------------------------------------------
 
     def _validate_planner_submission(self, planner_task_id: str) -> Attempt:
         attempt = self._assert_stage(AttemptStage.PLAN)
@@ -253,43 +265,51 @@ class AttemptOrchestrator:
             raise TaskCenterInvariantViolation(f"Task {planner_task_id!r} is not a planner task")
         return attempt
 
-    def _persist_plan_contract(self, submission: PlannerSubmission) -> None:
-        self._runtime.attempt_store.set_plan_contract(
-            submission.attempt_id,
-            plan_spec=submission.plan_spec,
-            evaluation_criteria=list(submission.evaluation_criteria),
-            deferred_goal_for_next_iteration=submission.deferred_goal_for_next_iteration,
-        )
-
-    def _persist_generator_tasks(self, tasks: tuple[PlannedGeneratorTask, ...]) -> tuple[str, ...]:
+    def _persist_plan_tasks(
+        self,
+        tasks: tuple[PlannedGeneratorTask, ...],
+        reducers: tuple[PlannedReducerTask, ...],
+    ) -> tuple[tuple[str, ...], tuple[str, ...]]:
         runtime = self._runtime
         attempt = self._fresh_attempt()
-        ordered = ordered_generator_tasks(tasks)
-        task_center_run_id = runtime.run_id_for_attempt(attempt)
-        task_ids: list[str] = []
-        for task in ordered:
-            task_id = generator_task_id(attempt.id, task.local_id)
-            needs = dependency_task_ids(
-                attempt_id=attempt.id,
-                local_deps=task.deps,
-            )
+        ordered_gen, ordered_red = ordered_plan_tasks(tasks, reducers)
+        run_id = runtime.run_id_for_attempt(attempt)
+        id_map = {t.local_id: generator_task_id(attempt.id, t.local_id) for t in ordered_gen}
+        id_map.update({r.local_id: reducer_task_id(attempt.id, r.local_id) for r in ordered_red})
+
+        generator_ids: list[str] = []
+        for task in ordered_gen:
+            task_id = id_map[task.local_id]
             runtime.task_store.upsert_task(
                 task_id=task_id,
-                task_center_run_id=task_center_run_id,
+                task_center_run_id=run_id,
                 role=TaskCenterTaskRole.GENERATOR.value,
                 agent_name=task.agent_name,
                 context_message=task.task_spec,
                 status=TaskCenterTaskStatus.PENDING.value,
-                summaries=[],
-                needs=list(needs),
-                task_center_attempt_id=attempt.id,
-                spawn_reason="attempt_generator",
+                outcomes=[],
+                needs=[id_map[dep] for dep in task.needs],
             )
-            task_ids.append(task_id)
-        return tuple(task_ids)
+            generator_ids.append(task_id)
+
+        reducer_ids: list[str] = []
+        for reducer in ordered_red:
+            task_id = id_map[reducer.local_id]
+            runtime.task_store.upsert_task(
+                task_id=task_id,
+                task_center_run_id=run_id,
+                role=TaskCenterTaskRole.REDUCER.value,
+                agent_name=REDUCER_AGENT_NAME,
+                context_message=reducer.prompt,
+                status=TaskCenterTaskStatus.PENDING.value,
+                outcomes=[],
+                needs=[id_map[dep] for dep in reducer.needs],
+            )
+            reducer_ids.append(task_id)
+        return tuple(generator_ids), tuple(reducer_ids)
 
     def _mark_generator(self, submission: GeneratorSubmission) -> None:
-        attempt = self._assert_stage(AttemptStage.GENERATE)
+        attempt = self._assert_stage(AttemptStage.RUN)
         task = self._runtime.task_store.get_task(submission.task_id)
         if task is None:
             raise TaskCenterInvariantViolation(f"Generator task {submission.task_id!r} not found")
@@ -298,29 +318,29 @@ class AttemptOrchestrator:
             task=task,
             task_id=submission.task_id,
             role="Generator",
+            status=submission.status,
             outcome=submission.outcome,
-            summary=submission.summary,
-            payload=submission.payload,
+            terminal_tool_result=submission.terminal_tool_result,
         )
 
-    def _mark_evaluator(self, submission: ReducerSubmission) -> None:
-        attempt = self._assert_stage(AttemptStage.EVALUATE)
-        if attempt.evaluator_task_id != submission.task_id:
+    def _mark_reducer(self, submission: ReducerSubmission) -> None:
+        attempt = self._assert_stage(AttemptStage.RUN)
+        if submission.task_id not in attempt.reducer_task_ids:
             raise TaskCenterInvariantViolation(
-                f"Reducer submission task {submission.task_id!r} does not "
-                f"match attempt reducer {attempt.evaluator_task_id!r}"
+                f"Reducer submission task {submission.task_id!r} is not a "
+                f"reducer of attempt {attempt.id!r}"
             )
         task = self._runtime.task_store.get_task(submission.task_id)
         if task is None:
             raise TaskCenterInvariantViolation(f"Reducer task {submission.task_id!r} not found")
-        assert_evaluator_task_for_submission(task, attempt)
+        assert_reducer_task_for_submission(task, attempt)
         self._write_submission_status(
             task=task,
             task_id=submission.task_id,
             role="Reducer",
-            outcome=submission.status,
-            summary=submission.summary,
-            payload=submission.payload,
+            status=submission.status,
+            outcome=submission.outcome,
+            terminal_tool_result=submission.terminal_tool_result,
         )
 
     def _write_submission_status(
@@ -329,22 +349,28 @@ class AttemptOrchestrator:
         task: dict[str, Any],
         task_id: str,
         role: str,
+        status: str,
         outcome: str,
-        summary: str,
-        payload: object,
+        terminal_tool_result: dict[str, Any],
     ) -> None:
         if task["status"] != TaskCenterTaskStatus.RUNNING.value:
             raise TaskCenterInvariantViolation(f"{role} task {task_id!r} is not running")
-        if outcome == "success":
-            status = TaskCenterTaskStatus.DONE
-        elif outcome == "blocker":
-            status = TaskCenterTaskStatus.BLOCKED
+        if status == "success":
+            task_status = TaskCenterTaskStatus.DONE
+        elif status == "blocker":
+            task_status = TaskCenterTaskStatus.BLOCKED
         else:
-            status = TaskCenterTaskStatus.FAILED
+            task_status = TaskCenterTaskStatus.FAILED
+        result = Outcome(
+            local_id=local_id_of(task_id),
+            status=present_status(task_status.value),
+            outcome=outcome,
+        )
         self._runtime.task_store.set_task_status(
             task_id,
-            status=status.value,
-            summary={"outcome": outcome, "summary": summary, "payload": payload},
+            status=task_status.value,
+            outcomes=[to_record(result)],
+            terminal_tool_result=terminal_tool_result,
         )
 
     def _close_attempt(
@@ -378,9 +404,8 @@ class AttemptOrchestrator:
                 planner_task_id,
                 expected_status=TaskCenterTaskStatus.RUNNING.value,
                 status=TaskCenterTaskStatus.FAILED.value,
-                summary={
-                    "fail_reason": AttemptFailReason.STARTUP_FAILED.value,
-                },
+                outcomes=[to_record(Outcome("planner", "failure", "Planner agent startup failed."))],
+                terminal_tool_result={"fail_reason": AttemptFailReason.STARTUP_FAILED.value},
             )
         except LookupError:
             pass

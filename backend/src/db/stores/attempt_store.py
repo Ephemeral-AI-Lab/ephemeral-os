@@ -7,7 +7,7 @@ from datetime import UTC, datetime
 
 from db.models.attempt import AttemptRecord
 from db.stores.base import SyncStoreMixin
-from task_center.attempt.state import (
+from task_center._core.state import (
     Attempt,
     AttemptFailReason,
     AttemptStage,
@@ -30,10 +30,8 @@ class AttemptStore(SyncStoreMixin):
                 stage=AttemptStage.PLAN.value,
                 status=AttemptStatus.RUNNING.value,
                 planner_task_id=None,
-                plan_spec=None,
-                evaluation_criteria=[],
                 generator_task_ids=[],
-                evaluator_task_id=None,
+                reducer_task_ids=[],
                 deferred_goal=None,
                 fail_reason=None,
                 created_at=now,
@@ -61,45 +59,41 @@ class AttemptStore(SyncStoreMixin):
             db.refresh(record)
             return self._to_dto(record)
 
-    def set_plan_contract(
+    def set_deferred_goal(
         self,
         attempt_id: str,
         *,
-        plan_spec: str,
-        evaluation_criteria: list[str],
         deferred_goal_for_next_iteration: str | None,
     ) -> Attempt:
         with self._sf() as db:
             record = db.get(AttemptRecord, attempt_id)
             if record is None:
                 raise LookupError(f"Attempt {attempt_id!r} not found")
-            record.plan_spec = plan_spec
-            record.evaluation_criteria = list(evaluation_criteria)
             record.deferred_goal = deferred_goal_for_next_iteration
             db.commit()
             db.refresh(record)
             return self._to_dto(record)
 
     def set_generator_task_ids(
-        self, attempt_id: str, task_ids: list[str]
+        self, attempt_id: str, generator_task_ids: list[str]
     ) -> Attempt:
         with self._sf() as db:
             record = db.get(AttemptRecord, attempt_id)
             if record is None:
                 raise LookupError(f"Attempt {attempt_id!r} not found")
-            record.generator_task_ids = list(task_ids)
+            record.generator_task_ids = list(generator_task_ids)
             db.commit()
             db.refresh(record)
             return self._to_dto(record)
 
-    def set_evaluator_task_id(
-        self, attempt_id: str, evaluator_task_id: str
+    def set_reducer_task_ids(
+        self, attempt_id: str, reducer_task_ids: list[str]
     ) -> Attempt:
         with self._sf() as db:
             record = db.get(AttemptRecord, attempt_id)
             if record is None:
                 raise LookupError(f"Attempt {attempt_id!r} not found")
-            record.evaluator_task_id = evaluator_task_id
+            record.reducer_task_ids = list(reducer_task_ids)
             db.commit()
             db.refresh(record)
             return self._to_dto(record)
@@ -168,10 +162,8 @@ class AttemptStore(SyncStoreMixin):
             stage=AttemptStage(record.stage),
             status=AttemptStatus(record.status),
             planner_task_id=record.planner_task_id,
-            plan_spec=record.plan_spec,
-            evaluation_criteria=tuple(record.evaluation_criteria or ()),
             generator_task_ids=tuple(record.generator_task_ids or ()),
-            evaluator_task_id=record.evaluator_task_id,
+            reducer_task_ids=tuple(record.reducer_task_ids or ()),
             deferred_goal_for_next_iteration=record.deferred_goal,
             fail_reason=(
                 AttemptFailReason(record.fail_reason)

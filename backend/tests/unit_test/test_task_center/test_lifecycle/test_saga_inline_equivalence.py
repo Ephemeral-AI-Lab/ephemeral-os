@@ -32,9 +32,10 @@ def test_compensate_failed_start_signature_preserved() -> None:
     expected = {
         "self",
         "workflow",
-        "iteration",
+        "iteration_id",
         "attempt_id",
-        "origin",
+        "parent_task",
+        "parent_attempt_id",
     }
     assert set(sig.parameters) == expected
 

@@ -1,7 +1,7 @@
 """Attempt persistence model — horizontal-retry axis of harness work.
 
-A Attempt is one full planner -> generator -> evaluator run inside an
-Iteration.
+An Attempt is one planner-authored plan (a DAG of generator + reducer tasks)
+run inside an Iteration.
 """
 
 from __future__ import annotations
@@ -29,10 +29,8 @@ class AttemptRecord(Base):
     stage: Mapped[str] = mapped_column(String(16))
     status: Mapped[str] = mapped_column(String(16))
     planner_task_id: Mapped[str | None] = mapped_column(String(96), nullable=True)
-    plan_spec: Mapped[str | None] = mapped_column(Text, nullable=True)
-    evaluation_criteria: Mapped[list[str]] = mapped_column(JSON, default=list)
     generator_task_ids: Mapped[list[str]] = mapped_column(JSON, default=list)
-    evaluator_task_id: Mapped[str | None] = mapped_column(String(96), nullable=True)
+    reducer_task_ids: Mapped[list[str]] = mapped_column(JSON, default=list)
     deferred_goal: Mapped[str | None] = mapped_column(Text, nullable=True)
     fail_reason: Mapped[str | None] = mapped_column(String(48), nullable=True)
     created_at: Mapped[datetime] = mapped_column(

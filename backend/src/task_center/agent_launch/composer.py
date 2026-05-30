@@ -21,12 +21,12 @@ from task_center.agent_launch.skill_message import (
 from task_center.agent_launch.task_guidance_dispatch import (
     task_guidance_builder_for,
 )
-from task_center.context_engine.core import ContextEngine
+from task_center.context_engine.engine import ContextEngine
 from task_center.context_engine.exceptions import ContextEngineError
 from task_center.context_engine.renderer import XmlPromptRenderer
 
 if TYPE_CHECKING:  # pragma: no cover - typing-only
-    from task_center._core.terminal_tool_routing import TerminalToolRouter
+    from task_center._core.terminal_routing import TerminalToolRouter
     from task_center.context_engine.scope import ContextScope
 
 
@@ -43,9 +43,9 @@ class AgentEntryComposer:
 
     @classmethod
     def default(cls, engine: ContextEngine) -> AgentEntryComposer:
-        # Lazy import: _core.terminal_tool_routing imports ContextEngineDeps from
-        # context_engine.core, which would round-trip through agent_launch.
-        from task_center._core.terminal_tool_routing import TerminalToolRouter
+        # Lazy import: _core.terminal_routing imports ContextEngineDeps from
+        # context_engine.engine, which would round-trip through agent_launch.
+        from task_center._core.terminal_routing import TerminalToolRouter
 
         return cls(
             router=TerminalToolRouter(),

@@ -7,11 +7,14 @@ from types import SimpleNamespace
 
 import pytest
 
-from task_center.attempt.launch import EphemeralAttemptAgentLauncher
 from task_center.attempt import AttemptFailReason, AttemptStatus
+from task_center.attempt.launch import (
+    AgentLaunch,
+    AttemptDeps,
+    EphemeralAttemptAgentLauncher,
+)
 from task_center.attempt.orchestrator_registry import AttemptOrchestratorRegistry
-from task_center.attempt.deps import AgentLaunch, AttemptDeps
-from task_center.iteration.state import IterationCreationReason
+from task_center._core.state import IterationCreationReason
 from task_center._core.task_state import TaskCenterTaskRole, TaskCenterTaskStatus
 from task_center._core.primitives import planner_task_id
 
@@ -42,14 +45,14 @@ async def test_missing_orchestrator_exhaustion_closes_attempt(
 ) -> None:
     workflow = workflow_store.insert(
         task_center_run_id=task_center_run_id,
-        requested_by_task_id="outer-task",
-        goal="solve",
+        parent_task_id="outer-task",
+        workflow_goal="solve",
     )
     iteration = iteration_store.insert(
         workflow_id=workflow.id,
         sequence_no=1,
         creation_reason=IterationCreationReason.INITIAL,
-        goal="solve",
+        iteration_goal="solve",
         attempt_budget=1,
     )
     workflow_store.append_iteration_id(workflow.id, iteration.id)
@@ -63,10 +66,8 @@ async def test_missing_orchestrator_exhaustion_closes_attempt(
         agent_name="planner",
         context_message="plan",
         status=TaskCenterTaskStatus.RUNNING.value,
-        summaries=[],
+        outcomes=[],
         needs=[],
-        task_center_attempt_id=attempt.id,
-        spawn_reason="attempt_planner",
     )
     runtime = AttemptDeps(
         workflow_store=workflow_store,
@@ -102,4 +103,4 @@ async def test_missing_orchestrator_exhaustion_closes_attempt(
     assert task["status"] == TaskCenterTaskStatus.FAILED.value
     assert refreshed is not None
     assert refreshed.status == AttemptStatus.FAILED
-    assert refreshed.fail_reason == AttemptFailReason.PLANNER_FAILED
+    assert refreshed.fail_reason == AttemptFailReason.TASK_FAILED

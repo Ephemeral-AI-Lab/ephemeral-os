@@ -53,27 +53,44 @@ _DROPPED_COLUMNS: dict[str, set[str]] = {
         "acceptance_criteria",
         "children",
         "closes_for",
+        "context_packet_id",
         "evaluator_id",
+        "fix_target_id",
         "handoff_note",
         "parent_id",
         "run_id",
+        "spawn_reason",
         "spec",
         "summary",
         "system_prompt",
+        "task_center_attempt_id",
         "title",
         "user_prompt",
     },
     "task_center_runs": {
         "root_task_id",
     },
+    "attempts": {
+        "evaluation_criteria",
+        "evaluator_task_id",
+        "plan_spec",
+    },
+    "iterations": {
+        "plan_spec",
+    },
+    "workflows": {
+        "final_outcome",
+        "origin_kind",
+        "requested_by_task_id",
+    },
 }
 
 _RENAMED_COLUMNS: dict[str, dict[str, str]] = {
     "iterations": {
-        "task_specification": "plan_spec",
+        "task_summary": "outcomes",
     },
-    "attempts": {
-        "task_specification": "plan_spec",
+    "task_center_tasks": {
+        "summaries": "outcomes",
     },
 }
 

@@ -9,16 +9,15 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 from agents import AgentRole, get_definition
 from task_center import (
     PlannedGeneratorTask,
+    PlannedReducerTask,
     PlannerSubmission,
     TaskCenterInvariantViolation,
-    ordered_generator_tasks,
+    ordered_plan_tasks,
 )
 from tools.submission.context import AttemptSubmissionContext
 
 
-# `submission_kind` payload string constants. Symbol names and string values
-# now share the current vocabulary (FU-2 completed the rename from the legacy
-# ``planner_partial``/``planner_full`` values).
+# `submission_kind` payload string constants.
 SUBMISSION_KIND_PLANNER_DEFERS = "planner_defers"
 SUBMISSION_KIND_PLANNER_COMPLETES = "planner_completes"
 
@@ -28,7 +27,7 @@ class PlanTaskInput(BaseModel):
 
     id: str = Field(..., min_length=1)
     agent_name: str = Field(..., min_length=1)
-    deps: list[str] = Field(default_factory=list)
+    needs: list[str] = Field(default_factory=list)
 
     @field_validator("id")
     @classmethod
@@ -40,39 +39,55 @@ class PlanTaskInput(BaseModel):
     def _validate_agent_name(cls, value: str) -> str:
         return validate_nonblank(value, "agent_name")
 
-    @field_validator("deps")
+    @field_validator("needs")
     @classmethod
-    def _validate_deps(cls, value: list[str]) -> list[str]:
+    def _validate_needs(cls, value: list[str]) -> list[str]:
         for dep in value:
-            validate_nonblank(dep, "deps")
+            validate_nonblank(dep, "needs")
         return value
+
+
+class ReducerInput(BaseModel):
+    """One reducer plan task — the exit gate. ``prompt`` required + nonblank."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    id: str = Field(..., min_length=1)
+    needs: list[str] = Field(default_factory=list)
+    prompt: str = Field(..., min_length=1)
+
+    @field_validator("id")
+    @classmethod
+    def _validate_id(cls, value: str) -> str:
+        return validate_nonblank(value, "id")
+
+    @field_validator("needs")
+    @classmethod
+    def _validate_needs(cls, value: list[str]) -> list[str]:
+        for dep in value:
+            validate_nonblank(dep, "needs")
+        return value
+
+    @field_validator("prompt")
+    @classmethod
+    def _validate_prompt(cls, value: str) -> str:
+        return validate_nonblank(value, "prompt")
 
 
 class SharedPlannerSubmissionInput(BaseModel):
     """Planner submission boundary schema.
 
-    ``plan_spec`` is the name used end to end — LLM-facing, the DTO layer, and
-    the DB column (FU-2 completed the column rename from ``task_specification``).
+    A plan is a DAG of generator + reducer tasks. ``tasks`` + ``task_specs``
+    define the generators; ``reducers`` (>=1) define the exit gate. There is no
+    global ``plan_spec``/``evaluation_criteria`` — framing lives in each task
+    spec and each reducer prompt.
     """
 
     model_config = ConfigDict(extra="forbid")
 
-    plan_spec: str = Field(..., min_length=1)
-    evaluation_criteria: list[str] = Field(..., min_length=1)
     tasks: list[PlanTaskInput] = Field(..., min_length=1)
     task_specs: dict[str, str] = Field(..., min_length=1)
-
-    @field_validator("plan_spec")
-    @classmethod
-    def _validate_plan_spec(cls, value: str) -> str:
-        return validate_nonblank(value, "plan_spec")
-
-    @field_validator("evaluation_criteria")
-    @classmethod
-    def _validate_evaluation_criteria(cls, value: list[str]) -> list[str]:
-        for criterion in value:
-            validate_nonblank(criterion, "evaluation_criteria")
-        return value
+    reducers: list[ReducerInput] = Field(..., min_length=1)
 
     @field_validator("task_specs")
     @classmethod
@@ -92,8 +107,8 @@ def validate_nonblank(value: str, field_name: str) -> str:
 def _is_generator_capable_agent(agent_name: str) -> bool:
     """Gate for ``agent_name`` values a planner may submit as a generator task.
 
-    Only ``generator``-role profiles (executor / verifier) are generator-capable;
-    planner, evaluator, helper, and subagent roles are never planner-submittable.
+    Only ``generator``-role profiles (executor) are generator-capable; planner,
+    reducer, helper, and subagent roles are never planner-submittable.
     """
     definition = get_definition(agent_name)
     if definition is None:
@@ -105,10 +120,9 @@ def build_planner_submission(
     *,
     submission_context: AttemptSubmissionContext,
     kind: Literal["completes", "defers"],
-    plan_spec: str,
-    evaluation_criteria: list[str],
     tasks: list[PlanTaskInput],
     task_specs: dict[str, str],
+    reducers: list[ReducerInput],
     deferred_goal_for_next_iteration: str | None,
 ) -> tuple[PlannerSubmission | None, str | None]:
     task_id = submission_context.task_center_task_id
@@ -136,21 +150,29 @@ def build_planner_submission(
         if not spec or spec.isspace():
             return None, f"Task spec for {task_id_for_spec!r} is blank."
 
-    planned = tuple(
+    planned_generators = tuple(
         PlannedGeneratorTask(
             local_id=task.id,
             agent_name=task.agent_name,
-            deps=tuple(task.deps),
+            needs=tuple(task.needs),
             task_spec=task_specs[task.id],
         )
         for task in tasks
     )
+    planned_reducers = tuple(
+        PlannedReducerTask(
+            local_id=reducer.id,
+            needs=tuple(reducer.needs),
+            prompt=reducer.prompt,
+        )
+        for reducer in reducers
+    )
     try:
-        planned = ordered_generator_tasks(planned)
+        ordered_generators, ordered_reducers = ordered_plan_tasks(
+            planned_generators, planned_reducers
+        )
     except TaskCenterInvariantViolation as exc:
         message = str(exc)
-        if "unknown deps" in message:
-            return None, message
         if "dependency cycle" in message:
             return None, "Plan contains a dependency cycle."
         return None, message
@@ -160,11 +182,10 @@ def build_planner_submission(
             attempt_id=submission_context.attempt.id,
             planner_task_id=task_id,
             kind=kind,
-            plan_spec=plan_spec,
-            evaluation_criteria=tuple(evaluation_criteria),
-            tasks=planned,
+            tasks=ordered_generators,
+            reducers=ordered_reducers,
             deferred_goal_for_next_iteration=deferred_goal_for_next_iteration,
-            summary=f"Accepted {kind} planner submission.",
+            outcome=f"Accepted {kind} planner submission.",
         ),
         None,
     )

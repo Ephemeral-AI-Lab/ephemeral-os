@@ -18,20 +18,16 @@ from task_center._core.invariants import (
     assert_iteration_sequence_contiguous,
 )
 from task_center.iteration import OpenIterationCoordinatorRegistry
-from task_center.workflow.state import (
-    Workflow,
-    WorkflowStatus,
-)
-from task_center.attempt import (
+from task_center._core.state import (
     Attempt,
     AttemptFailReason,
     AttemptStage,
     AttemptStatus,
-)
-from task_center.iteration.state import (
     Iteration,
     IterationCreationReason,
     IterationStatus,
+    Workflow,
+    WorkflowStatus,
 )
 from task_center._core.primitives import TaskCenterInvariantViolation
 
@@ -44,11 +40,10 @@ def _goal(
     return Workflow(
         id="r1",
         task_center_run_id="run1",
-        requested_by_task_id="t1",
-        goal="g",
+        workflow_goal="g",
         status=status,
         iteration_ids=iteration_ids,
-        final_outcome=None,
+        parent_task_id="t1",
         created_at=now,
         updated_at=now,
         closed_at=None,
@@ -69,7 +64,7 @@ def _iteration(
         workflow_id="r1",
         sequence_no=1,
         creation_reason=IterationCreationReason.INITIAL,
-        goal="g",
+        iteration_goal="g",
         attempt_budget=attempt_budget,
         status=status,
         attempt_ids=attempt_ids,
@@ -95,10 +90,8 @@ def _attempt(
         stage=AttemptStage.PLAN,
         status=status,
         planner_task_id=None,
-        plan_spec=None,
-        evaluation_criteria=(),
         generator_task_ids=(),
-        evaluator_task_id=None,
+        reducer_task_ids=(),
         deferred_goal_for_next_iteration=None,
         fail_reason=fail_reason,
         created_at=now,
@@ -206,7 +199,7 @@ def test_assert_fail_reason_present_on_failure():
     assert_fail_reason_present_on_failure(
         _attempt(
             status=AttemptStatus.FAILED,
-            fail_reason=AttemptFailReason.GENERATOR_FAILED,
+            fail_reason=AttemptFailReason.TASK_FAILED,
         )
     )
     with pytest.raises(TaskCenterInvariantViolation):

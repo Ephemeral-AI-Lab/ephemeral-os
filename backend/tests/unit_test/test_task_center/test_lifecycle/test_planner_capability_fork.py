@@ -19,20 +19,23 @@ from agents import (
     register_definition,
     unregister_definition,
 )
-from task_center._core.primitives import TaskCenterLifecycleConfig
+from task_center._core.primitives import (
+    TaskCenterLifecycleConfig,
+    generator_task_id,
+)
 from task_center.agent_launch.composer import AgentEntryComposer
-from task_center.context_engine.core import ContextEngine, ContextEngineDeps
+from task_center.context_engine.engine import ContextEngine, ContextEngineDeps
 from task_center.context_engine.recipes import register_builtin_recipes
 from task_center.context_engine.recipes_registry import RecipeRegistry
 from task_center.attempt.orchestrator import AttemptOrchestrator
 from task_center.attempt.orchestrator_registry import (
     AttemptOrchestratorRegistry,
 )
-from task_center.attempt.deps import (
+from task_center.attempt.launch import (
     AgentLaunch,
     AttemptDeps,
 )
-from task_center.iteration.state import IterationCreationReason
+from task_center._core.state import IterationCreationReason
 
 
 REPO_ROOT = next(
@@ -108,38 +111,38 @@ def _seed_partial_plan_caller(
 ):
     parent_req = workflow_store.insert(
         task_center_run_id=task_center_run_id,
-        requested_by_task_id="parent-task",
-        goal="parent",
+        parent_task_id=None,
+        workflow_goal="parent",
     )
     parent_seg = iteration_store.insert(
         workflow_id=parent_req.id,
         sequence_no=1,
         creation_reason=IterationCreationReason.INITIAL,
-        goal="parent seg",
+        iteration_goal="parent seg",
         attempt_budget=2,
     )
     caller_attempt = attempt_store.insert(
         iteration_id=parent_seg.id, attempt_sequence_no=1
     )
-    attempt_store.set_plan_contract(
+    attempt_store.set_deferred_goal(
         caller_attempt.id,
-        plan_spec="parent spec",
-        evaluation_criteria=["c"],
         deferred_goal_for_next_iteration="continue here",
     )
+    # The caller is a generator task of the caller attempt; its id encodes that
+    # attempt so the depth walk (child -> caller attempt -> parent workflow)
+    # makes the child planner nested.
+    caller_task_id = generator_task_id(caller_attempt.id, "caller")
     task_store.upsert_task(
-        task_id="t-caller",
+        task_id=caller_task_id,
         task_center_run_id=task_center_run_id,
         role="generator",
         agent_name="executor",
         context_message="x",
         status="running",
-        summaries=[],
+        outcomes=[],
         needs=[],
-        task_center_attempt_id=caller_attempt.id,
-        spawn_reason="attempt_generator",
     )
-    return parent_req
+    return parent_req, caller_task_id
 
 
 def test_partial_plan_caller_restricts_child_planner_terminals(
@@ -148,21 +151,21 @@ def test_partial_plan_caller_restricts_child_planner_terminals(
     runtime, launcher = _runtime_with_composer(
         workflow_store, iteration_store, attempt_store, task_store
     )
-    _seed_partial_plan_caller(
+    _parent_req, caller_task_id = _seed_partial_plan_caller(
         workflow_store, iteration_store, attempt_store, task_store, task_center_run_id
     )
 
     # Child request spawned by the partial-plan caller task.
     child_req = workflow_store.insert(
         task_center_run_id=task_center_run_id,
-        requested_by_task_id="t-caller",
-        goal="child",
+        parent_task_id=caller_task_id,
+        workflow_goal="child",
     )
     child_seg = iteration_store.insert(
         workflow_id=child_req.id,
         sequence_no=1,
         creation_reason=IterationCreationReason.INITIAL,
-        goal="child seg",
+        iteration_goal="child seg",
         attempt_budget=2,
     )
     child_graph = attempt_store.insert(

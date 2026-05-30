@@ -2,7 +2,7 @@
 
 Returns the terminal subset permitted for a given launch context (``None`` = no
 filtering); the router intersects a non-``None`` result with the executor's
-declared ``terminals``. See ``task_center/_core/terminal_tool_routing.py``.
+declared ``terminals``. See ``task_center/_core/terminal_routing.py``.
 """
 
 from __future__ import annotations

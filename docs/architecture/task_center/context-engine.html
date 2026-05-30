@@ -54,9 +54,9 @@
   </ol>
 </nav>
 
-<p class="lead">This page traces the TaskCenter context engine from launch identity to model-facing rows. Current verdict: <code>ContextEngine</code> builds typed packets from persisted Workflow -> Iteration -> Attempt state; it does not own policy, terminal submission handling, retries, delegated-workflow closure, or provider execution.</p>
+<p class="lead">This page traces the TaskCenter context engine from launch identity to model-facing rows. Current verdict: <code>ContextEngine</code> builds typed packets from persisted Workflow -> Iteration -> Attempt state; it does not own policy, terminal submission handling, retries, child-workflow handoff, or provider execution.</p>
 
-<section id="scope-verdict" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="backend/src/task_center/context_engine/core.py backend/src/task_center/context_engine/scope.py backend/src/task_center/context_engine/packet.py backend/src/task_center/agent_launch/composer.py backend/src/task_center/attempt/launch.py backend/src/task_center/attempt/deps.py backend/src/task_center/entry/bootstrap.py">
+<section id="scope-verdict" data-last-reviewed-commit="d32994314" data-evidence-paths="backend/src/task_center/context_engine/engine.py backend/src/task_center/context_engine/scope.py backend/src/task_center/context_engine/packet.py backend/src/task_center/agent_launch/composer.py backend/src/task_center/attempt/launch.py backend/src/task_center/entry/bootstrap.py">
 <h2>Scope And Verdict <a class="anchor" href="#scope-verdict">#</a></h2>
 <div class="summary">
   <ul>
@@ -74,17 +74,17 @@
 </div>
 </section>
 
-<section id="launch-workflow" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="backend/src/task_center/attempt/launch.py backend/src/task_center/agent_launch/composer.py backend/src/task_center/_core/terminal_tool_routing.py backend/src/task_center/context_engine/core.py backend/src/task_center/context_engine/renderer.py backend/src/task_center/context_engine/task_guidance.py backend/src/task_center/agent_launch/skill_message.py backend/src/task_center/attempt/stage_advancer.py backend/tests/unit_test/test_task_center/test_agent_launch/test_attempt_launcher_retry.py backend/tests/unit_test/test_task_center/test_agent_launch/test_composer.py">
+<section id="launch-workflow" data-last-reviewed-commit="d32994314" data-evidence-paths="backend/src/task_center/attempt/launch.py backend/src/task_center/agent_launch/composer.py backend/src/task_center/_core/terminal_routing.py backend/src/task_center/context_engine/engine.py backend/src/task_center/context_engine/renderer.py backend/src/task_center/context_engine/task_guidance.py backend/src/task_center/agent_launch/skill_message.py backend/src/task_center/attempt/run_stage.py backend/tests/unit_test/test_task_center/test_agent_launch/test_attempt_launcher_retry.py backend/tests/unit_test/test_task_center/test_agent_launch/test_composer.py">
 <h2>Launch Workflow <a class="anchor" href="#launch-workflow">#</a></h2>
 <div class="diagram" aria-label="TaskCenter context launch workflow">
   <div class="flow-row">
-    <div class="node info"><strong>AgentLaunchFactory</strong><small>planner, generator, evaluator scopes</small></div>
+    <div class="node info"><strong>AgentLaunchFactory</strong><small>planner, generator, reducer scopes</small></div>
     <div class="node"><strong>AgentEntryComposer</strong><small>single row builder</small></div>
     <div class="node warn"><strong>TerminalToolRouter</strong><small>effective profile copy</small></div>
     <div class="node"><strong>ContextEngine</strong><small>recipe id to packet</small></div>
   </div>
   <div class="flow-row">
-    <div class="node"><strong>RecipeRegistry</strong><small>planner, generator, evaluator</small></div>
+    <div class="node"><strong>RecipeRegistry</strong><small>planner, generator, reducer</small></div>
     <div class="node good"><strong>ContextPacket</strong><small>refs, blocks, metadata</small></div>
     <div class="node"><strong>XmlPromptRenderer</strong><small>rendered XML body</small></div>
     <div class="node"><strong>Task Guidance</strong><small>outline, directive, terminals</small></div>
@@ -93,14 +93,13 @@
 </div>
 <pre class="diagram" aria-label="Context engine launch dataflow diagram">
 [TaskCenter store state]
-        |  workflow, iteration, attempt, reports
+        |  workflow, iteration, attempt, outcomes
         v
 [ContextEngine recipe selection]
         |
         +--&gt; [planner recipe]
         +--&gt; [generator recipe]
-        +--&gt; [evaluator recipe]
-        +--&gt; [retry/deferred recipe]
+        +--&gt; [reducer recipe]
         |
         v
 [context packet]
@@ -120,12 +119,12 @@
 </div>
 </section>
 
-<section id="scope-deps-registry" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="backend/src/task_center/context_engine/core.py backend/src/task_center/context_engine/scope.py backend/src/task_center/context_engine/packet.py backend/src/task_center/context_engine/recipes_registry.py backend/src/task_center/context_engine/recipes/__init__.py backend/src/task_center/entry/bootstrap.py backend/tests/unit_test/test_task_center/test_context_engine/test_engine.py backend/tests/unit_test/test_task_center/test_context_engine/test_scope.py backend/tests/unit_test/test_task_center/test_context_engine/test_packet.py backend/tests/unit_test/test_agents/test_registry_validation.py">
+<section id="scope-deps-registry" data-last-reviewed-commit="d32994314" data-evidence-paths="backend/src/task_center/context_engine/engine.py backend/src/task_center/context_engine/scope.py backend/src/task_center/context_engine/packet.py backend/src/task_center/context_engine/recipes_registry.py backend/src/task_center/context_engine/recipes/__init__.py backend/src/task_center/entry/bootstrap.py backend/tests/unit_test/test_task_center/test_context_engine/test_engine.py backend/tests/unit_test/test_task_center/test_context_engine/test_scope.py backend/tests/unit_test/test_task_center/test_context_engine/test_packet.py backend/tests/unit_test/test_agents/test_registry_validation.py">
 <h2>Scope, Deps, Registry <a class="anchor" href="#scope-deps-registry">#</a></h2>
 <div class="concept-grid">
   <div class="concept-card"><strong><code>ContextScope.for_planner()</code></strong><p>Requires workflow, iteration, and attempt ids. It represents one attempt planner spawn.</p></div>
-  <div class="concept-card"><strong><code>ContextScope.for_generator()</code></strong><p>Requires workflow, iteration, attempt, and task ids. It is used for executor and verifier generator tasks.</p></div>
-  <div class="concept-card"><strong><code>ContextScope.for_evaluator()</code></strong><p>Passes workflow, iteration, and attempt ids, but the evaluator recipe itself requires only the attempt id and derives the iteration from it.</p></div>
+  <div class="concept-card"><strong><code>ContextScope.for_generator()</code></strong><p>Requires workflow, iteration, attempt, and task ids. It is used for executor generator tasks.</p></div>
+  <div class="concept-card"><strong><code>ContextScope.for_reducer()</code></strong><p>Requires workflow, iteration, attempt, and task ids — the same shape as the generator. The reducer task id resolves to a <code>:red:</code>-suffixed plan task.</p></div>
   <div class="concept-card"><strong><code>ContextEngineDeps</code></strong><p>Frozen store bundle: workflow, iteration, attempt, task, and optional context-packet store.</p></div>
 </div>
 <div class="edge-list">
@@ -140,45 +139,45 @@
 </div>
 </section>
 
-<section id="role-recipes" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="backend/src/task_center/context_engine/recipes/planner.py backend/src/task_center/context_engine/recipes/generator.py backend/src/task_center/context_engine/recipes/evaluator.py backend/src/task_center/context_engine/recipes/iterations.py backend/src/task_center/context_engine/recipes/attempts.py backend/src/task_center/context_engine/recipes/summaries.py backend/tests/unit_test/test_task_center/test_context_engine/test_recipes_planner_closes_or_defers.py backend/tests/unit_test/test_task_center/test_context_engine/test_recipes_other.py backend/tests/unit_test/test_task_center/test_context_engine/test_attempts.py backend/tests/unit_test/test_task_center/test_context_engine/test_iteration_no_invariant.py">
+<section id="role-recipes" data-last-reviewed-commit="d32994314" data-evidence-paths="backend/src/task_center/context_engine/recipes/planner.py backend/src/task_center/context_engine/recipes/generator.py backend/src/task_center/context_engine/recipes/reducer.py backend/src/task_center/context_engine/recipes/_needs.py backend/src/task_center/context_engine/recipes/_task_xml.py backend/src/task_center/_core/outcomes.py backend/tests/unit_test/test_task_center/test_context_engine/test_recipes_planner_closes_or_defers.py backend/tests/unit_test/test_task_center/test_context_engine/test_recipes_other.py backend/tests/unit_test/test_task_center/test_context_engine/test_attempts.py backend/tests/unit_test/test_task_center/test_context_engine/test_iteration_no_invariant.py">
 <h2>Role Recipes <a class="anchor" href="#role-recipes">#</a></h2>
-<p>The built-in recipe set is role-shaped, not agent-instance-shaped. Planner, generator, and evaluator all read the same persisted TaskCenter state through <code>ContextEngineDeps</code>, but each exposes a different slice to keep the launched agent inside its role contract.</p>
+<p>The built-in recipe set is role-shaped, not agent-instance-shaped. Planner, generator, and reducer all read the same persisted TaskCenter state through <code>ContextEngineDeps</code>, but each exposes a different slice to keep the launched agent inside its role contract. There is no evaluator recipe: judgement is now a <code>reducer</code> plan task that gates its <code>&lt;needs&gt;</code> against its own <code>&lt;assigned_prompt&gt;</code>.</p>
 <div class="table-wrap">
   <table>
     <thead><tr><th>Recipe</th><th>Required scope</th><th>Model-facing context</th><th>Intentional omission</th></tr></thead>
     <tbody>
-      <tr><td><code>planner</code></td><td><code>workflow_id</code>, <code>iteration_id</code>, <code>attempt_id</code></td><td><code>&lt;goal&gt;</code>, prior iterations, current <code>&lt;iteration_goal&gt;</code>, and failed prior attempts in the current iteration.</td><td>No future generator results; the planner gets Workflow -> Iteration -> Attempt evidence, not a task transcript.</td></tr>
-      <tr><td><code>generator</code></td><td><code>workflow_id</code>, <code>attempt_id</code>, <code>task_id</code></td><td>Current <code>&lt;plan_spec&gt;</code>, flat <code>&lt;dependency id="..."&gt;</code> siblings, and final <code>&lt;assigned_task task_id="..."&gt;</code>.</td><td>No <code>&lt;deferred_goal_for_next_iteration&gt;</code>; executor and verifier work is scoped by <code>&lt;assigned_task&gt;</code>.</td></tr>
-      <tr><td><code>evaluator</code></td><td><code>attempt_id</code></td><td>The current attempt as flat top-level blocks: <code>&lt;plan_spec&gt;</code>, one <code>&lt;task id status&gt;</code> per generator outcome (summary-only), and <code>&lt;evaluation_criteria&gt;</code>.</td><td>No goal/iteration frame, prior attempts, or <code>&lt;deferred_goal_for_next_iteration&gt;</code> — the evaluator judges only this attempt against its criteria.</td></tr>
+      <tr><td><code>planner</code></td><td><code>workflow_id</code>, <code>iteration_id</code>, <code>attempt_id</code></td><td><code>&lt;goal&gt;</code>, prior iterations as <code>&lt;iteration position="prior"&gt;</code> groups of reducer <code>&lt;task&gt;</code> outcomes, the current <code>&lt;iteration_goal&gt;</code>, and failed prior attempts as <code>&lt;attempt attempt_no="k"&gt;</code> groups.</td><td>No future generator results; the planner gets Workflow -> Iteration -> Attempt evidence, not a task transcript.</td></tr>
+      <tr><td><code>generator</code></td><td><code>workflow_id</code>, <code>attempt_id</code>, <code>task_id</code></td><td>A <code>&lt;needs&gt;</code> group of upstream <code>&lt;task id status&gt;</code> outcomes (omitted when the task has no needs), then a final <code>&lt;assigned_task task_id="..."&gt;</code>.</td><td>No global <code>&lt;plan_spec&gt;</code> and no <code>&lt;deferred_goal_for_next_iteration&gt;</code>; the planner distributes framing into each <code>task_spec</code> and the executor is scoped by <code>&lt;assigned_task&gt;</code>.</td></tr>
+      <tr><td><code>reducer</code></td><td><code>workflow_id</code>, <code>attempt_id</code>, <code>task_id</code></td><td>Symmetric with the generator: a <code>&lt;needs&gt;</code> group of upstream <code>&lt;task&gt;</code> outcomes, then a final <code>&lt;assigned_prompt task_id="..."&gt;</code> — the reducer's gating contract.</td><td>No attempt-wide plan or all-generator view; a convergent reducer that <code>needs</code> every generator recovers the global view by construction.</td></tr>
     </tbody>
   </table>
 </div>
 <div class="trace-grid">
-  <div>Iteration frame</div><div><code>goal_iteration_blocks()</code> emits the standalone <code>&lt;goal&gt;</code>, prior closed iterations with accepted plan and summary, and the current iteration group with <code>&lt;iteration_goal&gt;</code>.</div>
+  <div>Iteration frame</div><div><code>_goal_iteration_blocks()</code> emits the standalone <code>&lt;goal&gt;</code> (from <code>workflow.workflow_goal</code>), prior closed iterations as <code>&lt;iteration position="prior"&gt;</code> groups of <code>&lt;task&gt;</code> children parsed from each prior iteration's denormalized <code>outcomes</code>, and the current iteration group with <code>&lt;iteration_goal&gt;</code>.</div>
   <div>Iteration 1</div><div>The first iteration's <code>&lt;iteration_goal&gt;</code> body is the literal marker <code>(identical to &amp;lt;goal&amp;gt;)</code> rather than a duplicate of the user request.</div>
-  <div>Failed attempts</div><div><code>failed_attempt_blocks()</code> emits one <code>&lt;attempt status="prior" verdict="fail"&gt;</code> child per failed prior attempt, sorted by attempt sequence.</div>
-  <div>Current attempt</div><div><code>current_attempt_flat_blocks()</code> appears only in evaluator context, emitting <code>&lt;plan_spec&gt;</code>, per-task <code>&lt;task&gt;</code> outcomes, and <code>&lt;evaluation_criteria&gt;</code> as flat top-level blocks — no <code>&lt;attempt&gt;</code> wrapper and no deferred-goal remainder.</div>
+  <div>Failed attempts</div><div><code>_failed_attempt_blocks()</code> emits one <code>&lt;attempt attempt_no="k"&gt;</code> child per failed prior attempt, sorted by attempt sequence; its body is the failed plan tasks' <code>&lt;task&gt;</code>s plus a single <code>&lt;failure&gt;</code> line (the generalized <code>attempt_failure_line</code>).</div>
+  <div>Shared needs</div><div><code>recipes/_needs.py:needs_outcome_blocks()</code> builds the <code>&lt;needs&gt;</code> group for both generator and reducer, projecting each upstream task row through <code>_core/outcomes.py:task_outcome_from_row</code> and rendering it with <code>recipes/_task_xml.py</code>.</div>
 </div>
 </section>
 
-<section id="renderer-guidance-skills" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="backend/src/task_center/context_engine/renderer.py backend/src/task_center/context_engine/context_outline.py backend/src/task_center/context_engine/tag_dictionary.py backend/src/task_center/context_engine/agent_directives.py backend/src/task_center/context_engine/task_guidance.py backend/src/task_center/agent_launch/skill_message.py backend/src/tools/_terminals/registry.py backend/tests/unit_test/test_task_center/test_context_engine/test_renderer.py backend/tests/unit_test/test_task_center/test_context_engine/test_token_budget.py backend/tests/unit_test/test_task_center/test_context_engine/test_context_outline.py backend/tests/unit_test/test_task_center/test_context_engine/test_tag_dictionary.py backend/tests/unit_test/test_task_center/test_context_engine/test_agent_directives.py backend/tests/unit_test/test_agents/test_skill_message.py">
+<section id="renderer-guidance-skills" data-last-reviewed-commit="d32994314" data-evidence-paths="backend/src/task_center/context_engine/renderer.py backend/src/task_center/context_engine/context_outline.py backend/src/task_center/context_engine/tag_dictionary.py backend/src/task_center/context_engine/agent_directives.py backend/src/task_center/context_engine/task_guidance.py backend/src/task_center/agent_launch/skill_message.py backend/src/tools/_terminals/registry.py backend/tests/unit_test/test_task_center/test_context_engine/test_renderer.py backend/tests/unit_test/test_task_center/test_context_engine/test_token_budget.py backend/tests/unit_test/test_task_center/test_context_engine/test_context_outline.py backend/tests/unit_test/test_task_center/test_context_engine/test_tag_dictionary.py backend/tests/unit_test/test_task_center/test_context_engine/test_agent_directives.py backend/tests/unit_test/test_agents/test_skill_message.py">
 <h2>Renderer, Guidance, Skills <a class="anchor" href="#renderer-guidance-skills">#</a></h2>
 <p><code>XmlPromptRenderer</code> is a pure function over a packet. It walks blocks in packet order, groups consecutive blocks with the same <code>group_id</code>, wraps text in XML tags, and treats priority as a token-budget compression policy rather than a display-order policy.</p>
 <div class="edge-list">
-  <div><b>renders XML</b><span>Default tags come from block kind, but recipe metadata can override standalone tags, group tags, child tags, attributes, and pre-rendered attempt bodies.</span></div>
-  <div><b>protects structure</b><span>The renderer rejects structural tag closers found inside ordinary block text. The attempts recipe opts into <code>pre_rendered_xml</code> and separately rejects closers in user-controlled attempt fields.</span></div>
+  <div><b>renders XML</b><span>Default tags come from block kind, but recipe metadata can override standalone tags, group tags, child tags, attributes, and pre-rendered bodies.</span></div>
+  <div><b>protects structure</b><span>The renderer rejects structural tag closers found inside ordinary block text. Hand-assembled bodies opt into <code>pre_rendered_xml</code> — the planner's <code>_failed_attempt_blocks</code> always, and <code>_prior_iteration_blocks</code> / <code>_needs.py</code> when an outcome carries a handoff roll-up — and <code>recipes/_task_xml.py:sanitize_fragment</code> separately rejects closers in those user-controlled fields.</span></div>
   <div><b>compresses lower priority first</b><span>When <code>packet.metadata["token_budget"]</code> is set, low-priority blocks truncate first, then medium-priority blocks. Required and high-priority blocks are preserved.</span></div>
   <div><b>summarizes context</b><span><code>render_context_outline()</code> walks packet metadata instead of parsing rendered XML. <code>tag_dictionary.py</code> labels semantic tags and hides identity attributes from the outline.</span></div>
 </div>
 <div class="trace-grid">
-  <div><code>AGENT_DIRECTIVES</code></div><div>Maps exact agent names to one imperative line such as <code>Plan for &lt;iteration_goal&gt;.</code>, <code>Complete &lt;assigned_task&gt;.</code>, or <code>Verify the current attempt against &lt;evaluation_criteria&gt;.</code></div>
+  <div><code>AGENT_DIRECTIVES</code></div><div>Maps exact agent names (<code>planner</code>, <code>executor</code>, <code>reducer</code>, <code>explorer</code>) to one imperative line such as <code>Plan for &lt;iteration_goal&gt;.</code>, <code>Complete &lt;assigned_task&gt;.</code>, or <code>Digest your &lt;needs&gt; and gate against &lt;assigned_prompt&gt;.</code></div>
   <div><code>build_task_guidance()</code></div><div>Returns two sections: <code>What's in context:</code> from the packet outline and <code>What to do:</code> from the role directive table.</div>
   <div><code>_wrap_task_guidance()</code></div><div>Adds the <code>&lt;Task Guidance&gt;</code> envelope and one <code>&lt;terminal_tool_selection&gt;</code> block when the effective profile declares terminals.</div>
   <div><code>build_skill_message()</code></div><div>Reads the profile's skill file, strips skill frontmatter, emits <code>Load skill: &lt;skill-folder&gt;</code>, wraps the body in <code>&lt;skill&gt;</code>, and appends the same terminal catalog.</div>
 </div>
 </section>
 
-<section id="persistence-and-wire-shape" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="backend/src/db/stores/context_packet_store.py backend/src/db/models/context_packet.py backend/src/db/stores/task_center_store.py backend/src/task_center/agent_launch/entry_messages.py backend/src/task_center/agent_launch/composer.py backend/src/task_center/attempt/deps.py backend/src/task_center/attempt/launch.py backend/src/task_center/attempt/orchestrator.py backend/src/task_center/attempt/stage_advancer.py backend/tests/unit_test/test_task_center/test_persistence/test_context_packet_store.py backend/tests/unit_test/test_task_center/test_persistence/test_task_center_task_helpers.py backend/tests/unit_test/test_task_center/test_agent_launch/test_attempt_launcher_retry.py backend/tests/unit_test/test_task_center/test_agent_launch/test_runner_kwargs_contract.py">
+<section id="persistence-and-wire-shape" data-last-reviewed-commit="d32994314" data-evidence-paths="backend/src/db/stores/context_packet_store.py backend/src/db/models/context_packet.py backend/src/db/stores/task_center_store.py backend/src/task_center/agent_launch/entry_messages.py backend/src/task_center/agent_launch/composer.py backend/src/task_center/attempt/launch.py backend/src/task_center/attempt/orchestrator.py backend/src/task_center/attempt/run_stage.py backend/tests/unit_test/test_task_center/test_persistence/test_context_packet_store.py backend/tests/unit_test/test_task_center/test_persistence/test_task_center_task_helpers.py backend/tests/unit_test/test_task_center/test_agent_launch/test_attempt_launcher_retry.py backend/tests/unit_test/test_task_center/test_agent_launch/test_runner_kwargs_contract.py">
 <h2>Persistence And Wire Shape <a class="anchor" href="#persistence-and-wire-shape">#</a></h2>
 <p><code>ContextPacketStore</code> is write-once. It inserts packet ids, target role/id, canonical refs, block JSON, metadata, and source ids, and exposes <code>get()</code>; tests assert there is no update or set method. Task rows carry <code>context_packet_id</code> so later audit, helper, and retry flows can recover the frame that launched the agent.</p>
 <pre class="diagram" aria-label="Launch wire shape diagram">
@@ -208,9 +207,9 @@
 </div>
 </section>
 
-<section id="retry-deferred-context" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="backend/src/task_center/attempt/orchestrator.py backend/src/task_center/attempt/stage_advancer.py backend/src/task_center/attempt/state.py backend/src/task_center/iteration/state.py backend/src/task_center/context_engine/recipes/planner.py backend/src/task_center/context_engine/recipes/evaluator.py backend/src/task_center/context_engine/recipes/generator.py backend/src/task_center/context_engine/recipes/attempts.py backend/src/agents/profile/main/planner.md backend/tests/unit_test/test_task_center/test_context_engine/test_recipes_planner_closes_or_defers.py backend/tests/unit_test/test_task_center/test_context_engine/test_recipes_other.py backend/tests/unit_test/test_task_center/test_lifecycle/test_attempt_orchestrator.py backend/tests/unit_test/test_task_center/test_lifecycle/test_phase04_deferred_retry.py">
+<section id="retry-deferred-context" data-last-reviewed-commit="d32994314" data-evidence-paths="backend/src/task_center/attempt/orchestrator.py backend/src/task_center/attempt/run_stage.py backend/src/task_center/_core/state.py backend/src/task_center/_core/outcomes.py backend/src/task_center/context_engine/recipes/planner.py backend/src/task_center/context_engine/recipes/generator.py backend/src/task_center/context_engine/recipes/reducer.py backend/src/agents/profile/main/planner.md backend/tests/unit_test/test_task_center/test_context_engine/test_recipes_planner_closes_or_defers.py backend/tests/unit_test/test_task_center/test_context_engine/test_recipes_other.py backend/tests/unit_test/test_task_center/test_lifecycle/test_attempt_orchestrator.py backend/tests/unit_test/test_task_center/test_lifecycle/test_phase04_deferred_retry.py">
 <h2>Retry And Deferred Context <a class="anchor" href="#retry-deferred-context">#</a></h2>
-<p>Retry and continuation are persisted Workflow -> Iteration -> Attempt state that recipes read back later. <code>AttemptOrchestrator</code> accepts planner submissions, stores <code>plan_spec</code>, <code>evaluation_criteria</code>, generator task ids, and optional <code>deferred_goal_for_next_iteration</code>. The context engine never chooses whether to retry, defer, or close; it exposes the evidence appropriate to the next role.</p>
+<p>Retry and continuation are persisted Workflow -> Iteration -> Attempt state that recipes read back later. <code>AttemptOrchestrator</code> accepts planner submissions, stores the generator and reducer task ids, and an optional <code>deferred_goal_for_next_iteration</code> (there is no <code>plan_spec</code> or <code>evaluation_criteria</code>; the planner distributes framing into each <code>task_spec</code>). The context engine never chooses whether to retry, defer, or close; it exposes the evidence appropriate to the next role.</p>
 <pre class="diagram" aria-label="Retry and deferred context workflow diagram">
 [attempt outcome]
         |
@@ -231,11 +230,11 @@
             [next launch resumes from persisted state]
 </pre>
 <div class="edge-list" aria-label="Retry and deferred context branches">
-  <div><b>retry evidence</b><span>A failed attempt keeps failed generator/evaluator state, and the next planner in the same iteration receives prior failed attempts ordered under the current iteration.</span></div>
+  <div><b>retry evidence</b><span>A failed attempt keeps its failed plan-task rows, and the next planner in the same iteration receives prior failed attempts as <code>&lt;attempt attempt_no="k"&gt;</code> groups under the current iteration — each carrying the failed tasks' <code>&lt;task&gt;</code>s plus a <code>&lt;failure&gt;</code> line. When a generator fails before any reducer runs, this is the only feedback the next planner gets.</span></div>
   <div><b>deferred continuation</b><span>A successful deferring plan closes the current iteration and starts the next one from <code>deferred_goal_for_next_iteration</code>.</span></div>
-  <div><b>planner frame</b><span>The next iteration planner sees prior successful iterations as accepted plan plus summary, while the new <code>&lt;iteration_goal&gt;</code> remains authoritative.</span></div>
-  <div><b>evaluator frame</b><span>The evaluator never receives the deferred-goal text; excluding it makes penalizing intentional deferral unrepresentable. The planner still sees it in failed-prior blocks as retry context.</span></div>
-  <div><b>generator frame</b><span>The generator recipe omits deferred-goal text so executor and verifier tasks stay scoped to the assigned task and dependency outputs.</span></div>
+  <div><b>planner relay frame</b><span>The next iteration planner sees prior successful iterations as <code>&lt;iteration position="prior"&gt;</code> groups built from each prior iteration's denormalized <code>outcomes</code> (the canonical reducer outcomes), while the new <code>&lt;iteration_goal&gt;</code> remains authoritative.</span></div>
+  <div><b>generator frame</b><span>The generator recipe omits deferred-goal text so executor tasks stay scoped to their <code>&lt;assigned_task&gt;</code> and <code>&lt;needs&gt;</code> outputs.</span></div>
+  <div><b>reducer frame</b><span>The reducer recipe omits deferred-goal text too; a reducer sees only its <code>&lt;needs&gt;</code> and its own <code>&lt;assigned_prompt&gt;</code>, so its gating judgement cannot be skewed by next-iteration scope.</span></div>
 </div>
 <div class="callout warn">
   <span class="label">Staleness trap</span>
@@ -243,14 +242,15 @@
 </div>
 </section>
 
-<section id="evidence-refresh" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="backend/src/task_center/context_engine backend/src/task_center/agent_launch backend/src/task_center/task_guidance backend/src/task_center/_core/terminal_tool_routing.py backend/src/task_center/attempt backend/src/task_center/entry/bootstrap.py backend/src/db/stores/context_packet_store.py backend/src/agents/profile/main backend/tests/unit_test/test_task_center/test_context_engine backend/tests/unit_test/test_task_center/test_agent_launch backend/tests/unit_test/test_task_center/test_persistence backend/tests/unit_test/test_agents">
+<section id="evidence-refresh" data-last-reviewed-commit="d32994314" data-evidence-paths="backend/src/task_center/context_engine backend/src/task_center/agent_launch backend/src/task_center/_core/outcomes.py backend/src/task_center/_core/terminal_routing.py backend/src/task_center/attempt backend/src/task_center/entry/bootstrap.py backend/src/db/stores/context_packet_store.py backend/src/agents/profile/main backend/tests/unit_test/test_task_center/test_context_engine backend/tests/unit_test/test_task_center/test_agent_launch backend/tests/unit_test/test_task_center/test_persistence backend/tests/unit_test/test_agents">
 <h2>Evidence And Refresh <a class="anchor" href="#evidence-refresh">#</a></h2>
 <div class="evidence-grid">
   <div class="evidence-card">
     <h3>Primary code</h3>
     <ul>
-      <li><span class="file-ref">backend/src/task_center/context_engine/core.py</span> routes recipe ids to packet builders.</li>
-      <li><span class="file-ref">backend/src/task_center/context_engine/recipes</span> owns role-specific packet shapes.</li>
+      <li><span class="file-ref">backend/src/task_center/context_engine/engine.py</span> routes recipe ids to packet builders.</li>
+      <li><span class="file-ref">backend/src/task_center/context_engine/recipes</span> owns role-specific packet shapes (<code>planner</code>, <code>generator</code>, <code>reducer</code>, shared <code>_needs.py</code>/<code>_task_xml.py</code>).</li>
+      <li><span class="file-ref">backend/src/task_center/_core/outcomes.py</span> owns the recursive <code>Outcome</code> algebra projected into every <code>&lt;task&gt;</code>.</li>
       <li><span class="file-ref">backend/src/task_center/agent_launch/composer.py</span> owns context, task-guidance, and skill row composition.</li>
       <li><span class="file-ref">backend/src/task_center/attempt/launch.py</span> owns runner prompt and <code>initial_messages</code> mapping.</li>
       <li><span class="file-ref">backend/src/db/stores/context_packet_store.py</span> owns write-once packet persistence.</li>
@@ -277,10 +277,10 @@
 </div>
 </section>
 
-<div class="page-baseline" data-page-baseline-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa">
+<div class="page-baseline" data-page-baseline-commit="d32994314">
   <strong>Maintenance baseline</strong>
-  <span>TaskCenter context-engine sections reviewed against <code>e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa</code>.</span>
-  <code>git diff e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa..HEAD -- &lt;section data-evidence-paths&gt;</code>
+  <span>TaskCenter context-engine sections reviewed against <code>d32994314</code>.</span>
+  <code>git diff d32994314..HEAD -- &lt;section data-evidence-paths&gt;</code>
 </div>
 <div class="page-footer-nav"><span><a href="../agent_loops/prompt-context.html">Agent Prompt Assembly</a></span><span><a href="agent-roles.html">Agent Roles</a></span></div>
 </main>

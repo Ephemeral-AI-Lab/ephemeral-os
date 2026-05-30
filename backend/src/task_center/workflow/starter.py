@@ -1,7 +1,10 @@
 """WorkflowStarter — single safe path from prompt text to Workflow execution.
 
-Owns origin validation, optional parent-task CAS, iteration/attempt startup,
-and compensation on failure.
+Owns parent-task validation, the atomic ``RUNNING -> WAITING_WORKFLOW`` flip +
+``child_workflow_id`` link, iteration/attempt startup, and compensation
+(including the M1 orphan-guard) on failure. The parent task is either an
+attempt-bound generator (a ``submit_workflow_handoff`` child) or the synthetic
+run-level bootstrap generator ``<run_id>:root`` (the root workflow).
 """
 
 from __future__ import annotations
@@ -12,40 +15,41 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any
 
-from task_center.workflow.closure_report_router import (
-    WorkflowClosureReportRouter,
+from task_center._core.outcomes import Outcome, local_id_of, to_record
+from task_center._core.primitives import (
+    TaskCenterInvariantViolation,
+    attempt_id_from_task_id,
 )
-from task_center.workflow.lifecycle import WorkflowLifecycle
-from task_center.workflow.state import (
-    WorkflowClosureReport,
-    WorkflowOrigin,
-    WorkflowOriginKind,
+from task_center._core.state import (
+    AttemptFailReason,
+    AttemptStatus,
+    IterationStatus,
     Workflow,
     WorkflowStatus,
 )
-from task_center._core.primitives import TaskCenterInvariantViolation
+from task_center._core.task_state import TaskCenterTaskStatus
+from task_center.attempt.launch import AttemptDeps
 from task_center.attempt.orchestrator import AttemptOrchestrator
 from task_center.iteration import OrchestratorFactory
-from task_center.attempt.state import Attempt, AttemptFailReason, AttemptStatus
-from task_center.attempt.deps import AttemptDeps
-from task_center.iteration.state import Iteration, IterationStatus
-from task_center._core.task_state import TaskCenterTaskStatus
+from task_center.workflow.lifecycle import RunCloseHandler, WorkflowLifecycle
 
 logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True, slots=True)
 class StartedWorkflow:
-    origin: WorkflowOrigin
+    parent_task_id: str
     parent_attempt_id: str | None
     workflow_id: str
     iteration_id: str
     attempt_id: str
     goal: str
 
-    @property
-    def parent_task_id(self) -> str | None:
-        return self.origin.task_id
+
+def _no_root_close_handler(*, child_workflow: Workflow) -> None:
+    raise TaskCenterInvariantViolation(
+        f"Root workflow {child_workflow.id!r} closed without a run-close handler."
+    )
 
 
 class WorkflowStarter:
@@ -55,9 +59,11 @@ class WorkflowStarter:
         self,
         *,
         runtime: AttemptDeps,
+        run_close_handler: RunCloseHandler | None = None,
         orchestrator_factory: OrchestratorFactory | None = None,
     ) -> None:
         self._runtime = runtime
+        self._run_close_handler = run_close_handler or _no_root_close_handler
         self._orchestrator_factory = orchestrator_factory or (
             lambda attempt, on_attempt_closed: AttemptOrchestrator(
                 attempt=attempt,
@@ -66,36 +72,31 @@ class WorkflowStarter:
             )
         )
 
-    def start(self, *, prompt: str, origin: WorkflowOrigin) -> StartedWorkflow:
+    def start(self, *, prompt: str, parent_task_id: str) -> StartedWorkflow:
         prompt = prompt.strip()
         if not prompt:
             raise TaskCenterInvariantViolation("Workflow prompt must be nonblank.")
-        prepared = self._prepare_origin(origin)
+        parent_task = self._assert_parent_running_and_no_open_child(parent_task_id)
+        run_id = str(parent_task.get("task_center_run_id") or "")
+        if not run_id.strip():
+            raise TaskCenterInvariantViolation(f"Parent task {parent_task_id!r} has no run id.")
+        parent_attempt_id = attempt_id_from_task_id(parent_task_id)
 
-        workflow_lifecycle = self._build_workflow_lifecycle()
-        created_workflow = workflow_lifecycle.create_workflow(
-            task_center_run_id=prepared.task_center_run_id,
-            origin=origin,
-            goal=prompt,
+        lifecycle = self._build_workflow_lifecycle()
+        workflow = lifecycle.create_workflow(
+            task_center_run_id=run_id,
+            parent_task_id=parent_task_id,
+            workflow_goal=prompt,
         )
-        iteration, iteration_coordinator = workflow_lifecycle.create_iteration_with_coordinator(
-            workflow_id=created_workflow.id,
+        iteration, iteration_coordinator = lifecycle.create_iteration_with_coordinator(
+            workflow_id=workflow.id,
         )
 
-        def _before_start(attempt: Attempt) -> None:
-            if origin.kind != WorkflowOriginKind.TASK:
-                return
-            if prepared.parent_attempt_id is None:
-                raise TaskCenterInvariantViolation(
-                    "Task-origin workflow start is missing parent attempt id."
-                )
+        def _before_start(attempt: Any) -> None:
             self._mark_parent_waiting(
-                origin=origin,
-                parent_attempt_id=prepared.parent_attempt_id,
-                workflow=created_workflow,
-                iteration=iteration,
-                attempt_id=attempt.id,
-                goal_text=prompt,
+                parent_task=parent_task,
+                parent_attempt_id=parent_attempt_id,
+                workflow=workflow,
             )
 
         try:
@@ -106,60 +107,35 @@ class WorkflowStarter:
             refreshed = self._runtime.iteration_store.get(iteration.id)
             attempt_id = refreshed.latest_attempt_id if refreshed else None
             self._compensate_failed_start(
-                workflow=created_workflow,
-                iteration=iteration,
+                workflow=workflow,
+                iteration_id=iteration.id,
                 attempt_id=attempt_id,
-                origin=origin,
+                parent_task=parent_task,
+                parent_attempt_id=parent_attempt_id,
             )
             raise
 
         return StartedWorkflow(
-            origin=origin,
-            parent_attempt_id=prepared.parent_attempt_id,
-            workflow_id=created_workflow.id,
+            parent_task_id=parent_task_id,
+            parent_attempt_id=parent_attempt_id,
+            workflow_id=workflow.id,
             iteration_id=iteration.id,
             attempt_id=attempt.id,
             goal=prompt,
-        )
-
-    def _prepare_origin(self, origin: WorkflowOrigin) -> "_PreparedWorkflowOrigin":
-        if origin.kind == WorkflowOriginKind.ENTRY:
-            if origin.task_center_run_id is None:
-                raise TaskCenterInvariantViolation("Entry-origin workflow requires task_center_run_id.")
-            return _PreparedWorkflowOrigin(
-                task_center_run_id=origin.task_center_run_id,
-                parent_attempt_id=None,
-            )
-
-        if origin.task_id is None:
-            raise TaskCenterInvariantViolation("Task-origin workflow requires parent task_id.")
-        parent_task = self._assert_parent_running_and_no_open_child(origin.task_id)
-        task_center_run_id = str(parent_task.get("task_center_run_id") or "")
-        if not task_center_run_id.strip():
-            raise TaskCenterInvariantViolation(f"TaskCenter task {origin.task_id!r} has no run id.")
-        parent_attempt_id = _parent_attempt_id(parent_task)
-        if parent_attempt_id is None:
-            raise TaskCenterInvariantViolation(
-                f"TaskCenter task {origin.task_id!r} is not attempt-bound; "
-                "task-origin workflow starts require a generator task."
-            )
-        return _PreparedWorkflowOrigin(
-            task_center_run_id=task_center_run_id,
-            parent_attempt_id=parent_attempt_id,
         )
 
     def _build_workflow_lifecycle(self) -> WorkflowLifecycle:
         iteration_coordinators = self._runtime.iteration_coordinators
         if iteration_coordinators is None:
             raise TaskCenterInvariantViolation("WorkflowStarter requires open iteration coordinators.")
-        router = WorkflowClosureReportRouter(runtime=self._runtime)
         return WorkflowLifecycle(
             workflow_store=self._runtime.workflow_store,
             iteration_store=self._runtime.iteration_store,
             attempt_store=self._runtime.attempt_store,
             iteration_coordinators=iteration_coordinators,
             config=self._runtime.lifecycle_config,
-            deliver_closure_report=router.deliver,
+            orchestrator_registry=self._runtime.orchestrator_registry,
+            run_close_handler=self._run_close_handler,
             orchestrator_factory=self._orchestrator_factory,
             task_store=self._runtime.task_store,
         )
@@ -171,7 +147,7 @@ class WorkflowStarter:
         if task.get("status") != TaskCenterTaskStatus.RUNNING.value:
             raise TaskCenterInvariantViolation(
                 f"TaskCenter task {parent_task_id!r} is not running; "
-                "delegated workflow start requires a running generator task."
+                "delegated workflow start requires a running parent task."
             )
         open_workflows = [
             r for r in self._runtime.workflow_store.list_for_parent_task(parent_task_id) if r.is_open
@@ -186,45 +162,42 @@ class WorkflowStarter:
     def _mark_parent_waiting(
         self,
         *,
-        origin: WorkflowOrigin,
-        parent_attempt_id: str,
+        parent_task: dict[str, Any],
+        parent_attempt_id: str | None,
         workflow: Workflow,
-        iteration: Iteration,
-        attempt_id: str,
-        goal_text: str,
     ) -> None:
-        if origin.task_id is None:
-            raise TaskCenterInvariantViolation("Task-origin workflow start is missing parent task_id.")
-        parent_task = self._runtime.parent_task_for_delegated_workflow(
-            task_id=origin.task_id, attempt_id=parent_attempt_id
+        if parent_attempt_id is not None:
+            orchestrator = self._runtime.orchestrator_registry.get(parent_attempt_id)
+            if orchestrator is None:
+                raise TaskCenterInvariantViolation(
+                    f"Parent AttemptOrchestrator for attempt {parent_attempt_id!r} is not "
+                    "registered; workflow start cannot proceed."
+                )
+            orchestrator.start_child_workflow(generator_task=parent_task, child_workflow=workflow)
+            return
+        # Root: the synthetic bootstrap task has no orchestrator — flip it directly.
+        updated = self._runtime.task_store.set_task_status_if_current(
+            str(parent_task["task_id"]),
+            expected_status=TaskCenterTaskStatus.RUNNING.value,
+            status=TaskCenterTaskStatus.WAITING_WORKFLOW.value,
+            child_workflow_id=workflow.id,
         )
-        if parent_task is None:
+        if updated is None:
             raise TaskCenterInvariantViolation(
-                f"No parent task registered for TaskCenter task "
-                f"{origin.task_id!r}; workflow start cannot proceed."
+                f"Root bootstrap task {parent_task['task_id']!r} was not running when "
+                "the root workflow start tried to mark it waiting."
             )
-        parent_task.mark_waiting_workflow(
-            delegated_workflow_id=workflow.id,
-            delegated_iteration_id=iteration.id,
-            delegated_attempt_id=attempt_id,
-            goal=goal_text,
-        )
 
     def _compensate_failed_start(
         self,
         *,
         workflow: Workflow,
-        iteration: Iteration,
+        iteration_id: str,
         attempt_id: str | None,
-        origin: WorkflowOrigin,
+        parent_task: dict[str, Any],
+        parent_attempt_id: str | None,
     ) -> None:
-        """Best-effort rollback: attempt -> iteration -> workflow -> parent.
-
-        Each step is independent; failures are logged via ``logger.exception``
-        but never block subsequent steps. If parent restore fails we route a
-        synthetic failed close-report so the parent does not stay orphaned in
-        ``WAITING_WORKFLOW``.
-        """
+        """Best-effort rollback: attempt -> iteration -> workflow -> parent (M1)."""
         now = datetime.now(UTC)
         runtime = self._runtime
 
@@ -236,64 +209,69 @@ class WorkflowStarter:
                 logger.exception("WorkflowStart compensation step %r failed", step_name)
                 return False
 
-        _do(
-            "close_unstarted_attempt",
-            lambda: self._close_unstarted_attempt(attempt_id, now=now),
-        )
+        _do("close_unstarted_attempt", lambda: self._close_unstarted_attempt(attempt_id, now=now))
         _do(
             "cancel_iteration",
             lambda: runtime.iteration_store.set_status(
-                iteration.id, status=IterationStatus.CANCELLED, closed_at=now
+                iteration_id, status=IterationStatus.CANCELLED, closed_at=now
             ),
         )
         _do(
             "cancel_workflow",
             lambda: runtime.workflow_store.set_status(
-                workflow.id,
-                status=WorkflowStatus.CANCELLED,
-                final_outcome=None,
-                closed_at=now,
+                workflow.id, status=WorkflowStatus.CANCELLED, closed_at=now
             ),
         )
-        if origin.kind != WorkflowOriginKind.TASK:
-            if runtime.iteration_coordinators is not None:
-                runtime.iteration_coordinators.deregister(iteration.id)
-            return
-        parent_task_id = origin.task_id
-        if parent_task_id is None:
-            return
-        if not _do("restore_parent", lambda: self._restore_parent(parent_task_id)):
-            _do(
-                "synthetic_close_report",
-                lambda: WorkflowClosureReportRouter(runtime=runtime).deliver(
-                    WorkflowClosureReport(
-                        workflow_id=workflow.id,
-                        task_center_run_id=workflow.task_center_run_id,
-                        origin_kind=workflow.origin_kind,
-                        requested_by_task_id=parent_task_id,
-                        outcome="failed",
-                        final_iteration_id=iteration.id,
-                        final_attempt_id=attempt_id,
-                    )
+        self._restore_or_fail_parent(
+            parent_task=parent_task, parent_attempt_id=parent_attempt_id, do=_do
+        )
+        if runtime.iteration_coordinators is not None:
+            runtime.iteration_coordinators.deregister(iteration_id)
+
+    def _restore_or_fail_parent(
+        self,
+        *,
+        parent_task: dict[str, Any],
+        parent_attempt_id: str | None,
+        do: Callable[[str, Callable[[], object]], bool],
+    ) -> None:
+        task_id = str(parent_task["task_id"])
+        if parent_attempt_id is None:
+            # Root bootstrap: restore RUNNING; the run controller's seed
+            # failsafe then finishes the run.
+            do(
+                "restore_root",
+                lambda: self._runtime.task_store.set_task_status_if_current(
+                    task_id,
+                    expected_status=TaskCenterTaskStatus.WAITING_WORKFLOW.value,
+                    status=TaskCenterTaskStatus.RUNNING.value,
                 ),
             )
-        if runtime.iteration_coordinators is not None:
-            runtime.iteration_coordinators.deregister(iteration.id)
-
-    def _restore_parent(self, parent_task_id: str) -> None:
-        task_row = self._runtime.task_store.get_task(parent_task_id)
-        attempt_id = _parent_attempt_id(task_row) if task_row else None
-        parent_task = self._runtime.parent_task_for_delegated_workflow(
-            task_id=parent_task_id, attempt_id=attempt_id
-        )
-        if parent_task is not None:
-            parent_task.restore_running_after_failed_workflow_start()
             return
-        self._runtime.task_store.set_task_status_if_current(
-            parent_task_id,
-            expected_status=TaskCenterTaskStatus.WAITING_WORKFLOW.value,
-            status=TaskCenterTaskStatus.RUNNING.value,
-        )
+        orchestrator = self._runtime.orchestrator_registry.get(parent_attempt_id)
+        restored = False
+        if orchestrator is not None:
+            restored = do(
+                "cancel_child_workflow",
+                lambda: orchestrator.cancel_child_workflow(generator_task=parent_task),
+            )
+        if not restored:
+            # M1 orphan-guard last resort: a WAITING_WORKFLOW generator can never
+            # be stranded — force it FAILED.
+            do(
+                "orphan_guard_fail",
+                lambda: self._runtime.task_store.set_task_status_if_current(
+                    task_id,
+                    expected_status=TaskCenterTaskStatus.WAITING_WORKFLOW.value,
+                    status=TaskCenterTaskStatus.FAILED.value,
+                    outcomes=[
+                        to_record(
+                            Outcome(local_id_of(task_id), "failure", "Child workflow start failed.")
+                        )
+                    ],
+                    terminal_tool_result={"fail_reason": "workflow_start_failed"},
+                ),
+            )
 
     def _close_unstarted_attempt(self, attempt_id: str | None, *, now: datetime) -> None:
         if attempt_id is None:
@@ -307,14 +285,3 @@ class WorkflowStarter:
             fail_reason=AttemptFailReason.STARTUP_FAILED,
             closed_at=now,
         )
-
-
-def _parent_attempt_id(task: dict[str, Any]) -> str | None:
-    raw = str(task.get("task_center_attempt_id") or "")
-    return raw if raw else None
-
-
-@dataclass(frozen=True, slots=True)
-class _PreparedWorkflowOrigin:
-    task_center_run_id: str
-    parent_attempt_id: str | None

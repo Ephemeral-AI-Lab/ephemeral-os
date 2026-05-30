@@ -2,7 +2,7 @@
 
 Returns the terminal subset permitted for a given launch context; the router
 intersects it with the planner's declared ``terminals``. See
-``task_center/_core/terminal_tool_routing.py``.
+``task_center/_core/terminal_routing.py``.
 """
 
 from __future__ import annotations

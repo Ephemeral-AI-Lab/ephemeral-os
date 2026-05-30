@@ -1,24 +1,27 @@
-"""Phase 03 submission tool integration smoke tests."""
+"""Submission tool integration smoke: plan -> generator -> reducer success."""
 
 from __future__ import annotations
 
 import pytest
 
-from task_center.attempt import AttemptStatus
+from task_center._core.primitives import (
+    generator_task_id,
+    planner_task_id,
+    reducer_task_id,
+)
+from task_center._core.state import AttemptStatus, IterationCreationReason
+from task_center.attempt.launch import AgentLaunch, AttemptDeps
 from task_center.attempt.orchestrator import AttemptOrchestrator
 from task_center.attempt.orchestrator_registry import (
     AttemptOrchestratorRegistry,
 )
-from task_center.attempt.deps import AgentLaunch, AttemptDeps
 from task_center.iteration import OpenIterationCoordinatorRegistry
-from task_center.iteration.state import IterationCreationReason
-from task_center._core.primitives import evaluator_task_id, generator_task_id, planner_task_id
 from tools._framework.core.context import ToolExecutionContextService
 from tools._framework.core.runtime import ExecutionMetadata
 from tools._framework.execution.tool_call import execute_tool_once
-from tools.submission.evaluator import submit_evaluation_success
 from tools.submission.executor import submit_execution_success
 from tools.submission.planner import submit_plan_closes_goal
+from tools.submission.reducer import submit_reduction_success
 
 from tests.unit_test.test_tools.test_submission._advisor_approval_fixtures import (
     build_advisor_approval_messages,
@@ -63,29 +66,28 @@ def _tool_context(
 
 
 def _build_runtime(workflow_store, iteration_store, attempt_store, task_store, *, composer):
-    request = workflow_store.insert(
+    workflow = workflow_store.insert(
         task_center_run_id="run1",
-        requested_by_task_id="outer-task",
-        goal="solve task",
+        parent_task_id="run1:root",
+        workflow_goal="solve task",
     )
     iteration = iteration_store.insert(
-        workflow_id=request.id,
+        workflow_id=workflow.id,
         sequence_no=1,
         creation_reason=IterationCreationReason.INITIAL,
-        goal="solve task",
+        iteration_goal="solve task",
         attempt_budget=2,
     )
-    workflow_store.append_iteration_id(request.id, iteration.id)
+    workflow_store.append_iteration_id(workflow.id, iteration.id)
     attempt = attempt_store.insert(iteration_id=iteration.id, attempt_sequence_no=1)
     iteration_store.append_attempt_id(iteration.id, attempt.id)
-    launcher = _FakeLauncher()
     registry = AttemptOrchestratorRegistry()
     runtime = AttemptDeps(
         workflow_store=workflow_store,
         iteration_store=iteration_store,
         attempt_store=attempt_store,
         task_store=task_store,
-        agent_launcher=launcher,
+        agent_launcher=_FakeLauncher(),
         orchestrator_registry=registry,
         iteration_coordinators=OpenIterationCoordinatorRegistry(),
         composer=composer,
@@ -99,7 +101,7 @@ def _build_runtime(workflow_store, iteration_store, attempt_store, task_store, *
     return runtime, orchestrator, attempt.id
 
 
-async def test_phase03_full_plan_through_evaluator_success(
+async def test_phase03_full_plan_through_reducer_success(
     workflow_store, iteration_store, attempt_store, task_store, composer
 ) -> None:
     runtime, orchestrator, attempt_id = _build_runtime(
@@ -114,10 +116,9 @@ async def test_phase03_full_plan_through_evaluator_success(
     planner_result = await execute_tool_once(
         submit_plan_closes_goal,
         {
-            "plan_spec": "Implement and verify a change.",
-            "evaluation_criteria": ["generator passed"],
-            "tasks": [{"id": "a", "agent_name": "executor", "deps": []}],
+            "tasks": [{"id": "a", "agent_name": "executor", "needs": []}],
             "task_specs": {"a": "Do the work."},
+            "reducers": [{"id": "r", "needs": ["a"], "prompt": "Gate the slice."}],
         },
         _tool_context(
             runtime,
@@ -129,7 +130,7 @@ async def test_phase03_full_plan_through_evaluator_success(
     )
     generator_result = await execute_tool_once(
         submit_execution_success,
-        {"summary": "done", "artifacts": []},
+        {"outcome": "done", "artifacts": []},
         _tool_context(
             runtime,
             attempt_id,
@@ -138,14 +139,15 @@ async def test_phase03_full_plan_through_evaluator_success(
         ),
         emit=_noop_emit,
     )
-    evaluator_result = await execute_tool_once(
-        submit_evaluation_success,
-        {"summary": "passed", "passed_criteria": ["generator passed"]},
+    reducer_result = await execute_tool_once(
+        submit_reduction_success,
+        {"outcome": "gated and passed"},
         _tool_context(
             runtime,
             attempt_id,
-            evaluator_task_id(attempt_id),
-            advisor_approves="submit_evaluation_success",
+            reducer_task_id(attempt_id, "r"),
+            role="reducer",
+            advisor_approves="submit_reduction_success",
         ),
         emit=_noop_emit,
     )
@@ -153,6 +155,6 @@ async def test_phase03_full_plan_through_evaluator_success(
     attempt = attempt_store.get(attempt_id)
     assert not planner_result.is_error
     assert not generator_result.is_error
-    assert not evaluator_result.is_error
+    assert not reducer_result.is_error
     assert attempt is not None
     assert attempt.status == AttemptStatus.PASSED

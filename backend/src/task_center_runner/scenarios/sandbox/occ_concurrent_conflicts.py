@@ -20,24 +20,15 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 
-from tools.submission.evaluator import submit_evaluation_success
 from tools.submission.planner import submit_plan_closes_goal
+from tools.submission.reducer import submit_reduction_success
 
 from task_center_runner.scenarios.base import ScenarioBase, ScenarioContext, ToolCallSpec
 
 
 _INTEGRITY_PLAN = {
-    "plan_spec": (
-        "Drive the sandbox toolkit through write, read, edit, shell, batch "
-        "edit, and a stale-edit conflict to exercise OCC + overlay + "
-        "layerstack."
-    ),
-    "evaluation_criteria": [
-        "Sandbox toolkit can read, write, edit, and run shell.",
-        "Batch edit succeeds and a stale edit reports conflict.",
-    ],
     "tasks": [
-        {"id": "sandbox_integrity", "agent_name": "executor", "deps": []},
+        {"id": "sandbox_integrity", "agent_name": "executor", "needs": []},
     ],
     "task_specs": {
         "sandbox_integrity": (
@@ -45,6 +36,17 @@ _INTEGRITY_PLAN = {
             "edit_file, shell, a batch public edit, and an expected conflict."
         ),
     },
+    "reducers": [
+        {
+            "id": "reduce",
+            "needs": ["sandbox_integrity"],
+            "prompt": (
+                "Confirm the sandbox toolkit could read, write, edit, and run "
+                "shell, the batch edit succeeded, and a stale edit reported a "
+                "conflict."
+            ),
+        }
+    ],
 }
 
 
@@ -59,15 +61,14 @@ class OccConcurrentConflicts(ScenarioBase):
     def executor_actions(self, ctx: ScenarioContext) -> Sequence[str]:  # noqa: ARG002
         return ("sandbox_integrity",)
 
-    def evaluator_response(self, ctx: ScenarioContext) -> ToolCallSpec:
+    def reducer_response(self, ctx: ScenarioContext) -> ToolCallSpec:  # noqa: ARG002
         return ToolCallSpec(
-            submit_evaluation_success,
+            submit_reduction_success,
             {
-                "summary": (
+                "outcome": (
                     "Sandbox integrity probe captured both batch-edit and "
                     "conflict evidence."
                 ),
-                "passed_criteria": list(ctx.attempt.evaluation_criteria),
             },
         )
 

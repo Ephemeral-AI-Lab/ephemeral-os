@@ -26,7 +26,7 @@ from .prompt import (
 
 
 class SubmitReductionSuccessInput(BaseModel):
-    summary: str = Field(..., min_length=1)
+    outcome: str = Field(..., min_length=1)
 
 
 @tool(
@@ -42,7 +42,7 @@ class SubmitReductionSuccessInput(BaseModel):
     ),
 )
 async def submit_reduction_success(
-    summary: str,
+    outcome: str,
     *,
     context: ToolExecutionContextService,
 ) -> ToolResult:
@@ -53,8 +53,8 @@ async def submit_reduction_success(
                 attempt_id=submission_context.attempt.id,
                 task_id=submission_context.task_center_task_id,
                 status="success",
-                summary=summary,
-                payload={},
+                outcome=outcome,
+                terminal_tool_result={},
             )
         )
     except (AttemptSubmissionContextError, TaskCenterInvariantViolation) as exc:

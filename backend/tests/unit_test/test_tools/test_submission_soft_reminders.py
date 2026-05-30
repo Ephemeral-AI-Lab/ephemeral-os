@@ -43,7 +43,7 @@ async def test_after_edit_reminder_fires_once() -> None:
     )
 
     assert len(notifications) == 1
-    assert "submit_execution_handoff is meant for delegating before edits begin" in notifications[0].text
+    assert "submit_workflow_handoff is meant for delegating before edits begin" in notifications[0].text
 
 
 async def test_resolve_harness_notification_triggers_rejects_unknown() -> None:

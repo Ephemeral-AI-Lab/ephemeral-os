@@ -120,22 +120,23 @@ def _planner_args(name: str, ctx: ScenarioContext) -> dict[str, Any]:
 
 
 def _deps_by_id(plan: dict[str, Any]) -> dict[str, tuple[str, ...]]:
-    return {str(task["id"]): tuple(task.get("deps") or ()) for task in plan["tasks"]}
+    return {str(task["id"]): tuple(task.get("needs") or ()) for task in plan["tasks"]}
 
 
 def _ctx(*, attempt_no: int = 1, iteration_no: int = 1, recursive: bool = False) -> ScenarioContext:
-    requested_by = "parent-task-id" if recursive else None
-    origin_kind = "task" if recursive else "entry"
+    # Workflow origin is classified via parent_task_id: the root workflow's
+    # parent is the synthetic `<run_id>:root` bootstrap task; child (recursively
+    # spawned) workflows point at a generator task id.
+    parent_task_id = "parent-task-id" if recursive else "run-id:root"
     return ScenarioContext(
         attempt=SimpleNamespace(
             attempt_sequence_no=attempt_no,
-            evaluation_criteria=("criterion",),
             id=f"attempt-{attempt_no}",
         ),
         iteration=SimpleNamespace(sequence_no=iteration_no, workflow_id="workflow-id"),
         workflow=SimpleNamespace(
-            origin_kind=origin_kind,
-            requested_by_task_id=requested_by,
+            parent_task_id=parent_task_id,
+            workflow_goal="capacity scenario pack offline test",
         ),
         prompt="capacity scenario pack offline test",
         metadata={},

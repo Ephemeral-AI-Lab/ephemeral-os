@@ -52,10 +52,10 @@ Read that catalog and let the work decide:
 
 ## Output discipline
 
-- Reasoning text in the run is not a deliverable. The summary field is
+- Reasoning text in the run is not a deliverable. The outcome field is
   the only durable artifact downstream agents see.
 - Reference artifacts by identifier; do not paste contents into the
-  summary.
+  outcome.
 - Do not re-state the plan or the iteration goal — downstream tasks and
   reducers already have them. State what changed in the workspace as a
   result of this task.

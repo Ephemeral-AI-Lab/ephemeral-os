@@ -15,7 +15,7 @@ from task_center_runner.scenarios.full_case_user_input import FullCaseUserInput
 from task_center_runner.scenarios.full_stack_adversarial import FullStackAdversarial
 from task_center_runner.scenarios.pipeline import (
     AttemptBudgetExhausted,
-    AttemptRetryEvaluatorFailure,
+    AttemptRetryReducerFailure,
     AttemptRetryGeneratorFailure,
     AttemptRetryPlannerFailure,
     DependencyBlockedDescendants,
@@ -86,7 +86,7 @@ SCENARIO_REGISTRY: dict[str, type[Scenario]] = {
     "pipeline.initial_workflow": InitialWorkflow,
     "pipeline.initial_messages_capture": InitialMessagesCapture,
     "pipeline.iterative_deferral": IterativeDeferral,
-    "pipeline.attempt_retry_evaluator_failure": AttemptRetryEvaluatorFailure,
+    "pipeline.attempt_retry_reducer_failure": AttemptRetryReducerFailure,
     "pipeline.attempt_retry_generator_failure": AttemptRetryGeneratorFailure,
     "pipeline.attempt_retry_planner_failure": AttemptRetryPlannerFailure,
     "pipeline.dependency_blocked_descendants": DependencyBlockedDescendants,
@@ -174,7 +174,7 @@ SCENARIO_REGISTRY: dict[str, type[Scenario]] = {
 
 __all__ = [
     "AttemptBudgetExhausted",
-    "AttemptRetryEvaluatorFailure",
+    "AttemptRetryReducerFailure",
     "AttemptRetryGeneratorFailure",
     "AttemptRetryPlannerFailure",
     "AutoSquashCommitResume",

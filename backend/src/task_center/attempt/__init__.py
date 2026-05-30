@@ -1,6 +1,6 @@
 """TaskCenter attempt lifecycle package."""
 
-from task_center.attempt.state import (
+from task_center._core.state import (
     Attempt,
     AttemptFailReason,
     AttemptStage,

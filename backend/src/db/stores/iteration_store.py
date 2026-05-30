@@ -7,7 +7,7 @@ from datetime import UTC, datetime
 
 from db.models.iteration import IterationRecord
 from db.stores.base import SyncStoreMixin
-from task_center.iteration.state import (
+from task_center._core.state import (
     Iteration,
     IterationCreationReason,
     IterationStatus,
@@ -23,7 +23,7 @@ class IterationStore(SyncStoreMixin):
         workflow_id: str,
         sequence_no: int,
         creation_reason: IterationCreationReason,
-        goal: str,
+        iteration_goal: str,
         attempt_budget: int,
     ) -> Iteration:
         with self._sf() as db:
@@ -33,7 +33,7 @@ class IterationStore(SyncStoreMixin):
                 workflow_id=workflow_id,
                 sequence_no=sequence_no,
                 creation_reason=creation_reason.value,
-                goal=goal,
+                goal=iteration_goal,
                 attempt_budget=attempt_budget,
                 status=IterationStatus.OPEN.value,
                 attempt_ids=[],
@@ -81,6 +81,7 @@ class IterationStore(SyncStoreMixin):
         *,
         status: IterationStatus,
         closed_at: datetime | None = None,
+        outcomes: str | None = None,
     ) -> Iteration:
         with self._sf() as db:
             record = db.get(IterationRecord, iteration_id)
@@ -89,6 +90,8 @@ class IterationStore(SyncStoreMixin):
             record.status = status.value
             if closed_at is not None:
                 record.closed_at = closed_at
+            if outcomes is not None:
+                record.outcomes = outcomes
             db.commit()
             db.refresh(record)
             return self._to_dto(record)
@@ -127,24 +130,21 @@ class IterationStore(SyncStoreMixin):
         self,
         iteration_id: str,
         *,
-        plan_spec: str,
-        task_summary: str,
+        outcomes: str,
         closed_at: datetime | None = None,
     ) -> Iteration:
-        """Atomically transition to SUCCEEDED + write denormalized fields.
+        """Atomically transition to SUCCEEDED + write the denormalized outcomes.
 
-        All three writes (status, plan_spec, task_summary) happen
-        inside one ``db.commit()`` so a mid-write crash leaves the row
-        untouched. Continuation-segment spawn happens *after* this returns
-        and reads the just-closed row's denormalized fields.
+        Both writes (status, outcomes) happen inside one ``db.commit()`` so a
+        mid-write crash leaves the row untouched. Continuation-iteration spawn
+        happens *after* this returns and reads the just-closed row's outcomes.
         """
         with self._sf() as db:
             record = db.get(IterationRecord, iteration_id)
             if record is None:
                 raise LookupError(f"Iteration {iteration_id!r} not found")
             record.status = IterationStatus.SUCCEEDED.value
-            record.plan_spec = plan_spec
-            record.task_summary = task_summary
+            record.outcomes = outcomes
             if closed_at is not None:
                 record.closed_at = closed_at
             db.commit()
@@ -157,7 +157,7 @@ class IterationStore(SyncStoreMixin):
             workflow_id=record.workflow_id,
             sequence_no=record.sequence_no,
             creation_reason=IterationCreationReason(record.creation_reason),
-            goal=record.goal,
+            iteration_goal=record.goal,
             attempt_budget=record.attempt_budget,
             status=IterationStatus(record.status),
             attempt_ids=tuple(record.attempt_ids or ()),
@@ -165,6 +165,5 @@ class IterationStore(SyncStoreMixin):
             created_at=record.created_at,
             updated_at=record.updated_at,
             closed_at=record.closed_at,
-            plan_spec=record.plan_spec,
-            task_summary=record.task_summary,
+            outcomes=record.outcomes,
         )

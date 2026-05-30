@@ -150,7 +150,7 @@ async def test_advisor_returns_terminal_output_on_success(
 
     result = await ask_advisor._entrypoint(
         tool_name="submit_execution_success",
-        tool_payload={"summary": "shipped"},
+        tool_payload={"outcome": "shipped"},
         context=_make_context(),
     )
 
@@ -237,7 +237,7 @@ async def test_advisor_launches_with_two_user_messages(
 
     await ask_advisor._entrypoint(
         tool_name="submit_execution_success",
-        tool_payload={"summary": "shipped", "deliverable_path": "x.py"},
+        tool_payload={"outcome": "shipped", "deliverable_path": "x.py"},
         context=_make_context(),
     )
 

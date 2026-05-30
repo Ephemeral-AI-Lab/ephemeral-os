@@ -3,7 +3,7 @@
 Before adapting the probe-heavy executor, prove the riskiest *new* path: the
 ``ScenarioLoopRunner`` + ``extras["runtime_config"]`` injection driving a real
 TaskCenter submission terminal (``submit_plan_closes_goal`` →
-``submit_execution_success`` → ``submit_evaluation_success``) through
+``submit_execution_success`` → ``submit_reduction_success``) through
 ``run_pipeline`` → ``start_task_center_run`` → launcher → ``run_ephemeral_agent``,
 landing a closed workflow in store state. Asserted via ``graph_summary`` /
 ``task_center_status`` (real store), not lifecycle events.
@@ -22,14 +22,14 @@ from task_center_runner.core.runner import run_scenario
 from task_center_runner.core.stores import TaskCenterStoreBundle
 from task_center_runner.scenarios.base import ScenarioBase, ScenarioContext, ToolCallSpec
 from task_center_runner.tests._live_config import database_configured
-from tools.submission.evaluator import submit_evaluation_success
+from tools.submission.reducer import submit_reduction_success
 from tools.submission.planner import submit_plan_closes_goal
 
 pytestmark = pytest.mark.asyncio
 
 
 class _PlannerSubmitProof(ScenarioBase):
-    """Planner closes the workflow with one trivial executor task; evaluator passes."""
+    """Planner closes the workflow with one trivial executor task; reducer passes."""
 
     name = "planner_submit_proof"
 
@@ -37,23 +37,25 @@ class _PlannerSubmitProof(ScenarioBase):
         return ToolCallSpec(
             submit_plan_closes_goal,
             {
-                "plan_spec": "Proof: planner submission through the real loop.",
-                "evaluation_criteria": ["Proof criterion satisfied."],
-                "tasks": [{"id": "t1", "agent_name": "executor", "deps": []}],
+                "tasks": [{"id": "t1", "agent_name": "executor", "needs": []}],
                 "task_specs": {"t1": "Trivial executor task (no probe)."},
+                "reducers": [
+                    {
+                        "id": "reduce",
+                        "needs": ["t1"],
+                        "prompt": "Confirm the trivial executor task completed.",
+                    }
+                ],
             },
         )
 
     def executor_actions(self, ctx: ScenarioContext) -> Sequence[str]:
         return ()
 
-    def evaluator_response(self, ctx: ScenarioContext) -> ToolCallSpec:
+    def reducer_response(self, ctx: ScenarioContext) -> ToolCallSpec:
         return ToolCallSpec(
-            submit_evaluation_success,
-            {
-                "summary": "Proof accepted.",
-                "passed_criteria": list(ctx.attempt.evaluation_criteria),
-            },
+            submit_reduction_success,
+            {"outcome": "Proof accepted."},
         )
 
 
@@ -97,13 +99,13 @@ async def test_planner_submission_through_real_loop(
         stores=stores,
     )
 
-    # The workflow closed — which required planner + executor + evaluator terminals
+    # The workflow closed — which required planner + executor + reducer terminals
     # to dispatch through the real loop and mutate TaskCenter store state.
     assert report.task_center_status == "done", report.metrics
     workflows = report.graph_summary["workflows"]
     assert len(workflows) == 1, workflows
     workflow = workflows[0]
-    assert workflow["origin_kind"] == "entry", workflow
+    assert str(workflow["parent_task_id"]).endswith(":root"), workflow
     # The executor task landed done in real store state.
     task_statuses = [
         task.get("status")

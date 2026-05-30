@@ -1,26 +1,43 @@
-"""Production launcher + AgentLaunchFactory for TaskCenter harness agents."""
+"""Production launcher, runtime DI bundle, and AgentLaunchFactory for TaskCenter agents.
+
+:class:`AttemptDeps` threads stores, orchestration, launch, and audit concerns
+into every attempt-scoped spawn. :class:`EphemeralAttemptAgentLauncher`
+schedules the runs and synthesizes the matching harness failure submission when
+an agent exits while its task is still running. :class:`AgentLaunchFactory`
+builds the per-role :class:`AgentLaunch` records.
+"""
 
 from __future__ import annotations
 
 import asyncio
 import logging
 from collections.abc import Awaitable, Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 
 from agents import get_definition
+from audit.base import AuditSink, NoopAuditSink
 from message.message import Message
 from message.events import StreamEvent
-from task_center.attempt.orchestrator_registry import RegisteredAttemptOrchestrator
-from task_center.attempt.deps import AgentLaunch, AttemptDeps
-from task_center.attempt.state import AttemptFailReason, AttemptStatus
-from task_center.context_engine.scope import ContextScope
-from task_center._core.primitives import TaskCenterInvariantViolation
+from task_center._core.outcomes import Outcome, local_id_of, to_record
+from task_center._core.persistence import (
+    AttemptStoreProtocol,
+    IterationStoreProtocol,
+    TaskStoreProtocol,
+    WorkflowStoreProtocol,
+)
+from task_center._core.primitives import (
+    TaskCenterInvariantViolation,
+    TaskCenterLifecycleConfig,
+)
+from task_center._core.state import Attempt, AttemptFailReason, AttemptStatus
 from task_center._core.task_state import (
     TaskCenterTaskRole,
     TaskCenterTaskStatus,
 )
+from task_center.context_engine.scope import ContextScope
+from task_center.iteration import OpenIterationCoordinatorRegistry
 from task_center.submissions import (
     GeneratorSubmission,
     PlannerFailureSubmission,
@@ -31,10 +48,82 @@ from tools import ExecutionMetadata
 if TYPE_CHECKING:
     from agents import AgentDefinition
     from runtime.app_factory import RuntimeConfig
-    from task_center.attempt.state import Attempt
+    from task_center.agent_launch.composer import AgentEntryComposer
+    from task_center.attempt.orchestrator_registry import (
+        AttemptOrchestratorRegistry,
+        RegisteredAttemptOrchestrator,
+    )
 
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass(frozen=True, slots=True)
+class AgentLaunch:
+    """Launch descriptor for one harness agent run.
+
+    The launch carries up to three user-message payloads matching the wire
+    shape composed by :class:`AgentEntryComposer`:
+
+    * ``context`` — ``<context>...</context>`` envelope around rendered
+      packet blocks. Persisted into the task row for traceability.
+    * ``task_guidance`` — ``<Task Guidance>...</Task Guidance>`` envelope
+      around the per-agent role prose.
+    * ``skill`` — row-4 ``Load skill:`` + ``<terminal_tool_selection>``
+      body; ``None`` when the agent declares no skill.
+    """
+
+    task_id: str
+    task_center_run_id: str
+    attempt_id: str | None
+    role: TaskCenterTaskRole
+    agent_name: str
+    context: str
+    task_guidance: str | None
+    needs: tuple[str, ...]
+    agent_def: AgentDefinition | None = None
+    context_packet_id: str | None = None
+    workflow_id: str | None = None
+    skill: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class AttemptDeps:
+    workflow_store: WorkflowStoreProtocol
+    iteration_store: IterationStoreProtocol
+    attempt_store: AttemptStoreProtocol
+    task_store: TaskStoreProtocol
+    agent_launcher: EphemeralAttemptAgentLauncher
+    orchestrator_registry: AttemptOrchestratorRegistry
+    iteration_coordinators: OpenIterationCoordinatorRegistry | None = None
+    lifecycle_config: TaskCenterLifecycleConfig = field(default_factory=TaskCenterLifecycleConfig)
+    # When set, orchestrator + run stage route launches through the composer
+    # to obtain a rendered context envelope + selected agent definition.
+    # Optional so existing tests can continue without composer wiring.
+    composer: AgentEntryComposer | None = None
+    audit_sink: AuditSink = field(default_factory=NoopAuditSink)
+
+    def run_id_for_attempt(self, attempt: Attempt) -> str:
+        iteration = self.iteration_store.get(attempt.iteration_id)
+        if iteration is None:
+            raise TaskCenterInvariantViolation(
+                f"Iteration {attempt.iteration_id!r} not found for Attempt {attempt.id!r}"
+            )
+        workflow = self.workflow_store.get(iteration.workflow_id)
+        if workflow is None:
+            raise TaskCenterInvariantViolation(
+                f"Workflow {iteration.workflow_id!r} not found for Iteration {iteration.id!r}"
+            )
+        return workflow.task_center_run_id
+
+    def require_composer(self) -> AgentEntryComposer:
+        if self.composer is None:
+            raise TaskCenterInvariantViolation(
+                "AttemptDeps requires an AgentEntryComposer for harness "
+                "agent launches; none was wired."
+            )
+        return self.composer
+
 
 AttemptDepsProvider = Callable[[], AttemptDeps | None]
 AttemptAgentRunner = Callable[..., Awaitable[Any]]
@@ -194,13 +283,6 @@ class EphemeralAttemptAgentLauncher:
         _report_exhaustion(runtime, launch, summary=summary)
 
 
-_ROLE_FAIL_REASONS: dict[TaskCenterTaskRole, AttemptFailReason] = {
-    TaskCenterTaskRole.PLANNER: AttemptFailReason.PLANNER_FAILED,
-    TaskCenterTaskRole.GENERATOR: AttemptFailReason.GENERATOR_FAILED,
-    TaskCenterTaskRole.REDUCER: AttemptFailReason.EVALUATOR_FAILED,
-}
-
-
 def _fail_unowned_attempt(
     runtime: AttemptDeps,
     launch: AgentLaunch,
@@ -215,7 +297,8 @@ def _fail_unowned_attempt(
     runtime.task_store.set_task_status(
         launch.task_id,
         status=TaskCenterTaskStatus.FAILED.value,
-        summary={"fail_reason": "run_exhausted", "summary": summary},
+        outcomes=[to_record(Outcome(local_id_of(launch.task_id), "failure", summary))],
+        terminal_tool_result={"fail_reason": "run_exhausted"},
     )
     attempt = runtime.attempt_store.get(launch.attempt_id)
     if attempt is None or attempt.is_closed:
@@ -223,7 +306,7 @@ def _fail_unowned_attempt(
     runtime.attempt_store.close(
         attempt.id,
         status=AttemptStatus.FAILED,
-        fail_reason=_ROLE_FAIL_REASONS[launch.role],
+        fail_reason=AttemptFailReason.TASK_FAILED,
         closed_at=datetime.now(UTC),
     )
     iteration_coordinators = runtime.iteration_coordinators
@@ -263,13 +346,14 @@ def _report_exhaustion(
         return
 
     attempt_id = launch.attempt_id or ""
+    exhausted = {"fail_reason": "run_exhausted"}
     if launch.role == TaskCenterTaskRole.PLANNER:
         orchestrator.apply_planner_failure(
             PlannerFailureSubmission(
                 attempt_id=attempt_id,
                 planner_task_id=launch.task_id,
                 fail_reason="run_exhausted",
-                summary=summary,
+                outcome=summary,
             )
         )
     elif launch.role == TaskCenterTaskRole.GENERATOR:
@@ -277,9 +361,9 @@ def _report_exhaustion(
             GeneratorSubmission(
                 attempt_id=attempt_id,
                 task_id=launch.task_id,
-                outcome="failure",
-                summary=summary,
-                payload={"fail_reason": "run_exhausted"},
+                status="failure",
+                outcome=summary,
+                terminal_tool_result=exhausted,
             )
         )
     elif launch.role == TaskCenterTaskRole.REDUCER:
@@ -288,8 +372,8 @@ def _report_exhaustion(
                 attempt_id=attempt_id,
                 task_id=launch.task_id,
                 status="failure",
-                summary=summary,
-                payload={"fail_reason": "run_exhausted"},
+                outcome=summary,
+                terminal_tool_result=exhausted,
             )
         )
     else:
@@ -334,7 +418,7 @@ class AgentLaunchFactory:
         base_agent_name: str,
     ) -> AgentLaunch:
         iteration = self._require_iteration(attempt)
-        task_id = str(task["id"])
+        task_id = str(task["task_id"])
         return self._build(
             role=TaskCenterTaskRole.GENERATOR,
             base_agent_name=base_agent_name,
@@ -351,8 +435,9 @@ class AgentLaunchFactory:
             workflow_id=iteration.workflow_id,
         )
 
-    def for_reducer(self, *, attempt: Attempt, task_id: str) -> AgentLaunch:
+    def for_reducer(self, *, attempt: Attempt, task: dict[str, Any]) -> AgentLaunch:
         iteration = self._require_iteration(attempt)
+        task_id = str(task["task_id"])
         return self._build(
             role=TaskCenterTaskRole.REDUCER,
             base_agent_name=REDUCER_AGENT_NAME,
@@ -363,9 +448,9 @@ class AgentLaunchFactory:
                 task_id=task_id,
             ),
             task_id=task_id,
-            task_center_run_id=self.runtime.run_id_for_attempt(attempt),
+            task_center_run_id=task["task_center_run_id"],
             attempt_id=attempt.id,
-            needs=tuple(attempt.generator_task_ids),
+            needs=tuple(task["needs"]),
             workflow_id=iteration.workflow_id,
         )
 

@@ -83,16 +83,12 @@ class TaskCenterTaskRecord(Base):
     agent_name: Mapped[str | None] = mapped_column(String(128), nullable=True)
     context_message: Mapped[str] = mapped_column(Text)
     status: Mapped[str] = mapped_column(String(32))
-    summaries: Mapped[list[dict]] = mapped_column(JSON, default=list)
+    outcomes: Mapped[list[dict]] = mapped_column(JSON, default=list)
+    terminal_tool_result: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     needs: Mapped[list[str]] = mapped_column(JSON, default=list)
-    task_center_attempt_id: Mapped[str | None] = mapped_column(
-        String(96), nullable=True
-    )
-    context_packet_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
-    # Stage 6: fix-executor recovery wiring (round-tripped to/from
-    # ``Task.fix_target_id`` / ``Task.spawn_reason``).
-    fix_target_id: Mapped[str | None] = mapped_column(String(96), nullable=True)
-    spawn_reason: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    # Forward link to a child workflow spawned via submit_workflow_handoff
+    # (bidirectional with ``Workflow.parent_task_id``).
+    child_workflow_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(UTC)
     )

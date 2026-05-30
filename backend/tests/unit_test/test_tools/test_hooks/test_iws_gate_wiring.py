@@ -1,11 +1,11 @@
 """Contract: isolated-workspace gate wiring (plan G1/G2).
 
 Mirrors ``test_advisor_gate_wiring.py`` but for the new gates:
-- ``RequireNoInflightBackgroundTasks`` is on ``enter``/``exit`` and all nine
+- ``RequireNoInflightBackgroundTasks`` is on ``enter``/``exit`` and all seven
   main terminals, ordered BEFORE ``AdvisorApprovalPreHook`` on terminals, and
   absent from the helper terminals;
 - each gate instance's ``target_tool`` equals its host tool's own name
-  (guards the 11-site copy-paste against a wrong ``<own_name>`` that
+  (guards the 9-site copy-paste against a wrong ``<own_name>`` that
   ``validate_hook_targets`` would otherwise reject at construction);
 - ``ask_advisor`` carries ``BlockInIsolatedMode``.
 
@@ -31,11 +31,9 @@ _MAIN_TERMINAL_NAMES = frozenset(
         "submit_plan_defers_goal",
         "submit_execution_success",
         "submit_execution_blocker",
-        "submit_execution_handoff",
-        "submit_evaluation_success",
-        "submit_evaluation_failure",
-        "submit_verification_success",
-        "submit_verification_failure",
+        "submit_workflow_handoff",
+        "submit_reduction_success",
+        "submit_reduction_failure",
     }
 )
 

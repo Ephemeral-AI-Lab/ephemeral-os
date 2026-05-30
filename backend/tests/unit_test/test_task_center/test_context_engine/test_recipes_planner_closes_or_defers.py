@@ -1,4 +1,11 @@
-"""US-010: planner block taxonomy and conditional logic."""
+"""US-010: planner block taxonomy and conditional logic.
+
+The planner recipe has two history paths: the **relay** (prior iterations'
+canonical outcomes, read from ``iteration.outcomes`` via
+``parse_outcomes_record``) and the **retry** (the current iteration's failed
+attempts). There is no ``<plan_spec>`` / ``<evaluation_criteria>`` /
+``<evaluator_summary>`` — the evaluator role is gone.
+"""
 
 from __future__ import annotations
 
@@ -7,24 +14,18 @@ from datetime import UTC, datetime
 
 import pytest
 
-from task_center._core.generator_summaries import TaskOutcome, to_record
-from task_center.context_engine.core import ContextEngineDeps, ContextEngineError
-from task_center.context_engine.packet import (
-    ContextPriority,
-)
-from task_center.context_engine.recipes.planner import (
-    build_planner_context,
-)
-from task_center.context_engine.renderer import XmlPromptRenderer
-from task_center.context_engine.scope import ContextScope
-from task_center.attempt import (
+from task_center._core.outcomes import Outcome, to_record
+from task_center._core.state import (
     AttemptFailReason,
     AttemptStatus,
-)
-from task_center.iteration.state import (
     IterationCreationReason,
     IterationStatus,
 )
+from task_center.context_engine.engine import ContextEngineDeps
+from task_center.context_engine.packet import ContextPriority
+from task_center.context_engine.recipes.planner import build_planner_context
+from task_center.context_engine.renderer import XmlPromptRenderer
+from task_center.context_engine.scope import ContextScope
 
 
 @pytest.fixture
@@ -42,8 +43,8 @@ def deps_with_stores(
 def _seed_workflow(workflow_store, task_center_run_id, goal="goal"):
     return workflow_store.insert(
         task_center_run_id=task_center_run_id,
-        requested_by_task_id="parent-task",
-        goal=goal,
+        parent_task_id="parent-task",
+        workflow_goal=goal,
     )
 
 
@@ -58,37 +59,30 @@ def _seed_iteration(
         workflow_id=workflow_id,
         sequence_no=sequence_no,
         creation_reason=IterationCreationReason.INITIAL,
-        goal=goal,
+        iteration_goal=goal,
         attempt_budget=2,
     )
 
 
-def _achieved_record(*outcomes: tuple[str, str]) -> str:
-    """Build a denormalized achieved record (JSON) for a succeeded iteration.
+def _outcomes_record(*outcomes: tuple[str, str]) -> str:
+    """Build a denormalized ``iteration.outcomes`` record (JSON list).
 
-    Each ``(local_id, summary)`` becomes one ``status="success"`` entry; prior
-    iterations now render one ``<task id status>`` child per entry.
+    Each ``(local_id, text)`` becomes one ``status="success"`` entry; prior
+    iterations render one ``<task id status>`` child per entry.
     """
     return json.dumps(
         [
-            to_record(TaskOutcome(local_id=local_id, status="success", summary=summary))
-            for local_id, summary in outcomes
+            to_record(Outcome(local_id=local_id, status="success", outcome=text))
+            for local_id, text in outcomes
         ]
     )
 
 
-def _close_iteration_succeeded(
-    iteration_store, iteration_id, *, spec: str, summary: str
-):
-    """Close a prior iteration with a JSON achieved record as ``task_summary``.
-
-    ``summary`` is the single achieved-record entry's text (local_id ``"t"``);
-    prior iterations render it as a ``<task id="t" status="success">`` child.
-    """
+def _close_iteration_succeeded(iteration_store, iteration_id, *, summary: str):
+    """Close a prior iteration with a JSON outcomes record (local_id ``"t"``)."""
     return iteration_store.close_succeeded(
         iteration_id,
-        plan_spec=spec,
-        task_summary=_achieved_record(("t", summary)),
+        outcomes=_outcomes_record(("t", summary)),
         closed_at=datetime.now(UTC),
     )
 
@@ -97,16 +91,10 @@ def _seed_failed_attempt(attempt_store, iteration_id, *, sequence_no: int):
     g = attempt_store.insert(
         iteration_id=iteration_id, attempt_sequence_no=sequence_no
     )
-    attempt_store.set_plan_contract(
-        g.id,
-        plan_spec=f"spec-{sequence_no}",
-        evaluation_criteria=[f"crit-{sequence_no}-a", f"crit-{sequence_no}-b"],
-        deferred_goal_for_next_iteration=None,
-    )
     return attempt_store.close(
         g.id,
         status=AttemptStatus.FAILED,
-        fail_reason=AttemptFailReason.GENERATOR_FAILED,
+        fail_reason=AttemptFailReason.TASK_FAILED,
         closed_at=datetime.now(UTC),
     )
 
@@ -126,8 +114,8 @@ def test_iteration1_emits_goal_then_current_iteration_child(
     deps_with_stores, workflow_store, iteration_store, attempt_store,
     task_center_run_id,
 ):
-    """Iteration 1 now emits standalone ``<goal>`` plus a current-iteration
-    group whose ``<iteration_goal>`` body is the identity marker."""
+    """Iteration 1 emits standalone ``<goal>`` plus a current-iteration group
+    whose ``<iteration_goal>`` body is the identity marker."""
     request = _seed_workflow(workflow_store, task_center_run_id, goal="overall")
     iteration = _seed_iteration(
         iteration_store, workflow_id=request.id, sequence_no=1, goal="overall"
@@ -155,7 +143,7 @@ def test_iteration1_emits_goal_then_current_iteration_child(
 
 
 # ---------------------------------------------------------------------------
-# iteration-2 / iteration-N branch
+# iteration-2 / iteration-N branch (relay)
 # ---------------------------------------------------------------------------
 
 
@@ -168,7 +156,7 @@ def test_iteration2_emits_goal_prior_results_and_current_iteration(
         iteration_store, workflow_id=request.id, sequence_no=1, goal="iteration1 goal"
     )
     _close_iteration_succeeded(
-        iteration_store, iteration1.id, spec="iteration1 spec", summary="iteration1 summary"
+        iteration_store, iteration1.id, summary="iteration1 summary"
     )
     iteration2 = _seed_iteration(
         iteration_store, workflow_id=request.id, sequence_no=2, goal="iteration2 goal"
@@ -181,8 +169,7 @@ def test_iteration2_emits_goal_prior_results_and_current_iteration(
         ),
         deps_with_stores,
     )
-    # Prior iterations no longer emit an <accepted_plan>/<summary> pair: each
-    # achieved-record entry is one <task> child under a single
+    # Each prior-iteration outcome entry is one <task> child under a single
     # prior_iteration_summary block.
     kinds = [b.kind for b in packet.blocks]
     assert kinds == [
@@ -213,11 +200,11 @@ def test_iteration3_emits_two_pairs_with_priority_split(
     iteration1 = _seed_iteration(
         iteration_store, workflow_id=request.id, sequence_no=1, goal="g1"
     )
-    _close_iteration_succeeded(iteration_store, iteration1.id, spec="s1", summary="sum1")
+    _close_iteration_succeeded(iteration_store, iteration1.id, summary="sum1")
     iteration2 = _seed_iteration(
         iteration_store, workflow_id=request.id, sequence_no=2, goal="g2"
     )
-    _close_iteration_succeeded(iteration_store, iteration2.id, spec="s2", summary="sum2")
+    _close_iteration_succeeded(iteration_store, iteration2.id, summary="sum2")
     iteration3 = _seed_iteration(
         iteration_store, workflow_id=request.id, sequence_no=3, goal="g3"
     )
@@ -229,8 +216,7 @@ def test_iteration3_emits_two_pairs_with_priority_split(
         ),
         deps_with_stores,
     )
-    # Two prior iterations in sequence order; immediate prior is HIGH. Each
-    # prior is now a single prior_iteration_summary block (one <task> child).
+    # Two prior iterations in sequence order; immediate prior is HIGH.
     priors = [
         b for b in packet.blocks if b.kind == "prior_iteration_summary"
     ]
@@ -241,17 +227,21 @@ def test_iteration3_emits_two_pairs_with_priority_split(
     assert priors[1].priority == ContextPriority.HIGH
 
 
-def test_missing_prior_spec_raises_context_engine_error(
+def test_prior_iteration_without_outcomes_emits_no_prior_block(
     deps_with_stores, workflow_store, iteration_store, attempt_store,
     task_center_run_id,
 ):
-    """Closed iteration-1 with task_summary still null is an invariant
-    violation; recipe must raise (chain-integrity guard keys on task_summary)."""
+    """A closed iteration with null ``outcomes`` contributes no prior block.
+
+    The recipe reads ``iteration.outcomes`` via ``parse_outcomes_record``; a
+    null value degrades to an empty list (no raise), so the relay simply omits
+    that prior iteration rather than failing.
+    """
     request = _seed_workflow(workflow_store, task_center_run_id)
     iteration1 = _seed_iteration(
         iteration_store, workflow_id=request.id, sequence_no=1, goal="g1"
     )
-    # Close via legacy set_status (does not write denormalized fields).
+    # Close via set_status (does not write denormalized outcomes).
     iteration_store.set_status(
         iteration1.id, status=IterationStatus.SUCCEEDED, closed_at=datetime.now(UTC)
     )
@@ -260,17 +250,17 @@ def test_missing_prior_spec_raises_context_engine_error(
     )
     g = _seed_running_attempt(attempt_store, iteration2.id, sequence_no=1)
 
-    with pytest.raises(ContextEngineError):
-        build_planner_context(
-            ContextScope(
-                workflow_id=request.id, iteration_id=iteration2.id, attempt_id=g.id
-            ),
-            deps_with_stores,
-        )
+    packet = build_planner_context(
+        ContextScope(
+            workflow_id=request.id, iteration_id=iteration2.id, attempt_id=g.id
+        ),
+        deps_with_stores,
+    )
+    assert [b.kind for b in packet.blocks] == ["goal_statement", "iteration_statement"]
 
 
 # ---------------------------------------------------------------------------
-# Failed-attempt landscape blocks (current iteration retries)
+# Failed-attempt landscape blocks (retry — current iteration retries)
 # ---------------------------------------------------------------------------
 
 
@@ -318,12 +308,6 @@ def test_failed_attempt_includes_plan_type_statuses_and_summaries(
         iteration_store, workflow_id=request.id, sequence_no=1, goal="g"
     )
     failed = attempt_store.insert(iteration_id=iteration.id, attempt_sequence_no=1)
-    attempt_store.set_plan_contract(
-        failed.id,
-        plan_spec="partial failed spec",
-        evaluation_criteria=["criterion"],
-        deferred_goal_for_next_iteration="continue with later slice",
-    )
     attempt_store.set_generator_task_ids(failed.id, ["gen-a", "gen-b"])
     task_store.upsert_task(
         task_id="gen-a",
@@ -332,10 +316,8 @@ def test_failed_attempt_includes_plan_type_statuses_and_summaries(
         agent_name="executor",
         context_message="a",
         status="done",
-        summaries=[{"summary": "implemented A"}],
+        outcomes=[{"outcome": "implemented A"}],
         needs=[],
-        task_center_attempt_id=failed.id,
-        spawn_reason="attempt_generator",
     )
     task_store.upsert_task(
         task_id="gen-b",
@@ -344,15 +326,13 @@ def test_failed_attempt_includes_plan_type_statuses_and_summaries(
         agent_name="executor",
         context_message="b",
         status="failed",
-        summaries=[{"summary": "B failed after creating fixture"}],
+        outcomes=[{"outcome": "B failed after creating fixture"}],
         needs=[],
-        task_center_attempt_id=failed.id,
-        spawn_reason="attempt_generator",
     )
     attempt_store.close(
         failed.id,
         status=AttemptStatus.FAILED,
-        fail_reason=AttemptFailReason.GENERATOR_FAILED,
+        fail_reason=AttemptFailReason.TASK_FAILED,
         closed_at=datetime.now(UTC),
     )
     current_attempt = _seed_running_attempt(attempt_store, iteration.id, sequence_no=2)
@@ -371,29 +351,18 @@ def test_failed_attempt_includes_plan_type_statuses_and_summaries(
     ]
     assert len(failed_blocks) == 1
     text = failed_blocks[0].text
-    # The failed-attempt body is one <task id status> per terminal generator
+    # The failed-attempt body is one <task id status> per terminal plan task
     # (status-vocab: done->success, failed->failure) followed by a <failure>
-    # line. Wrappers are dropped per the §1 diagram.
+    # line. Wrappers and evaluator/plan_spec elements are dropped.
     assert "<attempt_plan>" not in text
-    assert "<generator_outcomes>" not in text
-    assert "<evaluator_judgment" not in text
-    # Dropped from the body: <plan_spec>, <deferred_goal_for_next_iteration>,
-    # <status_summary>, and the compact "gen-a: done" status lines.
     assert "<plan_spec>" not in text
-    assert "<deferred_goal_for_next_iteration>" not in text
-    assert "<status_summary>" not in text
-    assert "gen-a: done" not in text
-    assert "gen-b: failed" not in text
-    # Generator statuses + summaries render as <task> children.
+    assert "<evaluator_summary>" not in text
+    # Generator statuses + texts render as <task> children.
     assert '<task id="gen-a" status="success">\nimplemented A\n</task>' in text
     assert (
         '<task id="gen-b" status="failure">\nB failed after creating fixture\n</task>'
     ) in text
-    assert "fail_reason" not in text
-    # Generator failure bypasses the evaluator (no evaluator_task_id): no
-    # <evaluator_summary>, and the bypassed-evaluator fallback was dropped.
-    # GENERATOR_FAILED renders a "generator <local_id>: ..." <failure> line.
-    assert "<evaluator_summary>" not in text
+    # The failure line names the failed task (any role).
     assert (
         "<failure>\ngenerator gen-b: B failed after creating fixture\n</failure>"
     ) in text
@@ -442,26 +411,20 @@ def test_iteration_2_plus_reading_a_structure(
     deps_with_stores, workflow_store, iteration_store, attempt_store,
     task_center_run_id,
 ):
-    """Structural lock for the planner Reading-A reframing (§4, Principle 4).
+    """Structural lock for the planner relay reframing.
 
-    Asserts block-kind order and rendered heading structure for a scenario with
-    2 prior closed iterations and a current iteration (sequence_no=3).  Uses
-    structural assertions (not full-text snapshots) so the test survives a
-    future Reading-B rewrite.
+    Asserts block-kind order and rendered XML structure for a scenario with 2
+    prior closed iterations and a current iteration (sequence_no=3).
     """
     request = _seed_workflow(workflow_store, task_center_run_id, goal="overall goal")
     iteration1 = _seed_iteration(
         iteration_store, workflow_id=request.id, sequence_no=1, goal="iteration 1 goal"
     )
-    _close_iteration_succeeded(
-        iteration_store, iteration1.id, spec="iter1 spec", summary="iter1 summary"
-    )
+    _close_iteration_succeeded(iteration_store, iteration1.id, summary="iter1 summary")
     iteration2 = _seed_iteration(
         iteration_store, workflow_id=request.id, sequence_no=2, goal="iteration 2 goal"
     )
-    _close_iteration_succeeded(
-        iteration_store, iteration2.id, spec="iter2 spec", summary="iter2 summary"
-    )
+    _close_iteration_succeeded(iteration_store, iteration2.id, summary="iter2 summary")
     iteration3 = _seed_iteration(
         iteration_store, workflow_id=request.id, sequence_no=3, goal="iteration 3 goal"
     )
@@ -476,9 +439,8 @@ def test_iteration_2_plus_reading_a_structure(
         deps_with_stores,
     )
 
-    # 1. Block-kind order (structural lock; survives Reading B). Each prior
-    # iteration is now a single prior_iteration_summary block (one <task> per
-    # achieved-record entry) — no prior_iteration_specification pair.
+    # 1. Block-kind order. Each prior iteration is a single prior_iteration_summary
+    # block (one <task> per outcomes entry).
     tier_kinds = {
         "goal_statement",
         "prior_iteration_summary",
@@ -491,16 +453,13 @@ def test_iteration_2_plus_reading_a_structure(
         "iteration_statement",
     ]
 
-    # 2. Renderer output structure (XML tags, not markdown headings):
+    # 2. Renderer output structure (XML tags):
     renderer = XmlPromptRenderer()
     rendered = renderer.render_context(packet)
     assert rendered.startswith("<goal>\n")
     assert "</goal>" in rendered
-    # Current iteration's <iteration_goal> child wrapped under position="current".
     assert '<iteration iteration_no="3" position="current">' in rendered
     assert "<iteration_goal>\niteration 3 goal\n</iteration_goal>" in rendered
-    # Two prior iterations render a <task> child per achieved-record entry
-    # (no <accepted_plan>/<summary> pair).
     assert "<accepted_plan>" not in rendered
     for n in (1, 2):
         assert f'<iteration iteration_no="{n}" position="prior">' in rendered

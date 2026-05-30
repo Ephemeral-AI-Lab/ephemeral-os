@@ -20,18 +20,17 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any, Protocol
 
-from task_center.attempt.state import (
+from task_center._core.state import (
     Attempt,
     AttemptFailReason,
     AttemptStage,
     AttemptStatus,
-)
-from task_center.iteration.state import (
     Iteration,
     IterationCreationReason,
     IterationStatus,
+    Workflow,
+    WorkflowStatus,
 )
-from task_center.workflow.state import Workflow, WorkflowOrigin, WorkflowStatus
 
 # Row dicts returned by the task store. Always a serialized snapshot, never
 # a live ORM row.
@@ -47,9 +46,8 @@ class WorkflowStoreProtocol(Protocol):
         self,
         *,
         task_center_run_id: str,
-        origin: WorkflowOrigin | None = ...,
-        requested_by_task_id: str | None = ...,
-        goal: str,
+        parent_task_id: str | None,
+        workflow_goal: str,
     ) -> Workflow: ...
 
     def get(self, workflow_id: str) -> Workflow | None: ...
@@ -61,7 +59,6 @@ class WorkflowStoreProtocol(Protocol):
         workflow_id: str,
         *,
         status: WorkflowStatus,
-        final_outcome: dict[str, str | None] | None,
         closed_at: datetime | None,
     ) -> Workflow: ...
 
@@ -79,7 +76,7 @@ class IterationStoreProtocol(Protocol):
         workflow_id: str,
         sequence_no: int,
         creation_reason: IterationCreationReason,
-        goal: str,
+        iteration_goal: str,
         attempt_budget: int,
     ) -> Iteration: ...
 
@@ -93,6 +90,7 @@ class IterationStoreProtocol(Protocol):
         *,
         status: IterationStatus,
         closed_at: datetime | None,
+        outcomes: str | None = ...,
     ) -> Iteration: ...
 
     def set_deferred_goal_for_next_iteration(
@@ -103,8 +101,7 @@ class IterationStoreProtocol(Protocol):
         self,
         iteration_id: str,
         *,
-        plan_spec: str,
-        task_summary: str,
+        outcomes: str,
         closed_at: datetime | None = None,
     ) -> Iteration: ...
 
@@ -126,14 +123,12 @@ class AttemptStoreProtocol(Protocol):
 
     def set_generator_task_ids(self, attempt_id: str, generator_task_ids: list[str]) -> Attempt: ...
 
-    def set_evaluator_task_id(self, attempt_id: str, evaluator_task_id: str) -> Attempt: ...
+    def set_reducer_task_ids(self, attempt_id: str, reducer_task_ids: list[str]) -> Attempt: ...
 
-    def set_plan_contract(
+    def set_deferred_goal(
         self,
         attempt_id: str,
         *,
-        plan_spec: str,
-        evaluation_criteria: list[str],
         deferred_goal_for_next_iteration: str | None,
     ) -> Attempt: ...
 
@@ -177,20 +172,23 @@ class TaskStoreProtocol(Protocol):
         role: str,
         context_message: str,
         status: str,
-        summaries: list[Any],
+        outcomes: list[Any],
         needs: list[str],
-        task_center_attempt_id: str | None,
         agent_name: str | None = ...,
-        context_packet_id: str | None = ...,
-        fix_target_id: str | None = ...,
-        spawn_reason: str | None = ...,
+        terminal_tool_result: dict[str, Any] | None = ...,
+        child_workflow_id: str | None = ...,
     ) -> None: ...
 
     def get_task(self, task_id: str) -> TaskRow | None: ...
 
-    def list_generator_tasks_for_attempt(self, attempt_id: str) -> list[TaskRow]: ...
-
-    def set_task_status(self, task_id: str, *, status: str, summary: Any = ...) -> TaskRow: ...
+    def set_task_status(
+        self,
+        task_id: str,
+        *,
+        status: str,
+        outcomes: list[Any] | None = ...,
+        terminal_tool_result: dict[str, Any] | None = ...,
+    ) -> TaskRow: ...
 
     def set_task_status_if_current(
         self,
@@ -198,10 +196,10 @@ class TaskStoreProtocol(Protocol):
         *,
         expected_status: str,
         status: str,
-        summary: Any = ...,
+        outcomes: list[Any] | None = ...,
+        terminal_tool_result: dict[str, Any] | None = ...,
+        child_workflow_id: str | None = ...,
     ) -> TaskRow | None: ...
-
-    def set_task_context_packet_id(self, task_id: str, *, context_packet_id: str) -> None: ...
 
 
 __all__ = [

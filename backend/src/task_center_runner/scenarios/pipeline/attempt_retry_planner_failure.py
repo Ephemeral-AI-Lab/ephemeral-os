@@ -5,21 +5,24 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing import Any
 
-from tools.submission.evaluator import submit_evaluation_success
 from tools.submission.planner import submit_plan_closes_goal
+from tools.submission.reducer import submit_reduction_success
 
 from task_center_runner.scenarios._scenario_helpers import preflight_full_plan
 from task_center_runner.scenarios.base import ScenarioBase, ScenarioContext, ToolCallSpec
 
 
 def _unknown_dependency_plan() -> dict[str, Any]:
+    # Task ``a`` needs an unknown id, so the gate rejects this plan with
+    # "unknown needs" — driving the attempt-1 planner failure / retry path.
     return {
-        "plan_spec": "Invalid first attempt with an unknown dependency.",
-        "evaluation_criteria": ["Planner failure triggers an attempt retry."],
         "tasks": [
-            {"id": "a", "agent_name": "executor", "deps": ["missing"]},
+            {"id": "a", "agent_name": "executor", "needs": ["missing"]},
         ],
         "task_specs": {"a": "Run a workspace preflight."},
+        "reducers": [
+            {"id": "reduce", "needs": ["a"], "prompt": "Confirm task a completed."},
+        ],
     }
 
 
@@ -34,10 +37,7 @@ class AttemptRetryPlannerFailure(ScenarioBase):
         return ToolCallSpec(
             submit_plan_closes_goal,
             preflight_full_plan(
-                plan_spec=(
-                    "Retry with a valid plan after the planner failure."
-                ),
-                evaluation_criteria=(
+                criteria=(
                     "Retry planner saw failed-attempt context.",
                     "Workspace preflight completed.",
                 ),
@@ -47,13 +47,10 @@ class AttemptRetryPlannerFailure(ScenarioBase):
     def executor_actions(self, ctx: ScenarioContext) -> Sequence[str]:  # noqa: ARG002
         return ("preflight",)
 
-    def evaluator_response(self, ctx: ScenarioContext) -> ToolCallSpec:
+    def reducer_response(self, ctx: ScenarioContext) -> ToolCallSpec:  # noqa: ARG002
         return ToolCallSpec(
-            submit_evaluation_success,
-            {
-                "summary": "Planner retry recovered with a valid plan.",
-                "passed_criteria": list(ctx.attempt.evaluation_criteria),
-            },
+            submit_reduction_success,
+            {"outcome": "Planner retry recovered with a valid plan."},
         )
 
 

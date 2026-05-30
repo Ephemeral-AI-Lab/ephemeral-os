@@ -212,9 +212,9 @@ def test_composite_scenarios_have_stable_names(scenario_cls: type) -> None:
 def test_full_stack_recursive_planner_without_defer_closes_workflow() -> None:
     scenario = FullStackAdversarial()
     ctx = ScenarioContext(
-        attempt=SimpleNamespace(attempt_sequence_no=1, evaluation_criteria=()),
+        attempt=SimpleNamespace(attempt_sequence_no=1),
         iteration=SimpleNamespace(sequence_no=1, workflow_id="recursive-workflow"),
-        workflow=SimpleNamespace(requested_by_task_id="parent-task:executor"),
+        workflow=SimpleNamespace(parent_task_id="parent-task:executor"),
         prompt="Run delegated recursive matrix.",
         metadata=ExecutionMetadata(
             agent_name="planner",
@@ -243,9 +243,9 @@ def test_full_stack_recursive_planner_without_defer_closes_workflow() -> None:
 def test_full_case_recursive_planner_without_defer_closes_workflow() -> None:
     scenario = FullCaseUserInput()
     ctx = ScenarioContext(
-        attempt=SimpleNamespace(attempt_sequence_no=1, evaluation_criteria=()),
+        attempt=SimpleNamespace(attempt_sequence_no=1),
         iteration=SimpleNamespace(sequence_no=1, workflow_id="recursive-workflow"),
-        workflow=SimpleNamespace(requested_by_task_id="parent-task:executor"),
+        workflow=SimpleNamespace(parent_task_id="parent-task:executor"),
         prompt="Run delegated release package.",
         metadata=ExecutionMetadata(
             agent_name="planner",

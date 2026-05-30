@@ -1,11 +1,18 @@
-"""Planner validation - empty full plan rejected."""
+"""Planner validation - empty full plan rejected.
+
+The planner submits a plan with no generator tasks and no reducers. The
+submission schema requires at least one ``task``, one ``task_spec``, and one
+``reducer`` (``SharedPlannerSubmissionInput``), so the tool rejects the empty
+plan at its boundary before any orchestrator dispatch. The attempt closes with
+``fail_reason="task_failed"`` and no generator or reducer task is created.
+"""
 
 from __future__ import annotations
 
 from collections.abc import Sequence
 from typing import Any
 
-from tools.submission.evaluator import submit_evaluation_failure
+from tools.submission.reducer import submit_reduction_failure
 from tools.submission.planner import submit_plan_closes_goal
 
 from task_center_runner.scenarios.base import ScenarioBase, ScenarioContext, ToolCallSpec
@@ -13,15 +20,14 @@ from task_center_runner.scenarios.base import ScenarioBase, ScenarioContext, Too
 
 def _empty_tasks_plan() -> dict[str, Any]:
     return {
-        "plan_spec": "Invalid full plan with no generator tasks.",
-        "evaluation_criteria": ["Empty full plans are rejected before dispatch."],
         "tasks": [],
         "task_specs": {},
+        "reducers": [],
     }
 
 
 class PlannerEmptyTasks(ScenarioBase):
-    """Full plan with no generator tasks."""
+    """Full plan with no generator tasks and no reducers."""
 
     name = "planner_validation.empty_tasks"
 
@@ -31,13 +37,10 @@ class PlannerEmptyTasks(ScenarioBase):
     def executor_actions(self, ctx: ScenarioContext) -> Sequence[str]:  # noqa: ARG002
         return ()
 
-    def evaluator_response(self, ctx: ScenarioContext) -> ToolCallSpec:
+    def reducer_response(self, ctx: ScenarioContext) -> ToolCallSpec:  # noqa: ARG002
         return ToolCallSpec(
-            submit_evaluation_failure,
-            {
-                "summary": "Unexpected evaluator invocation under empty plan.",
-                "failed_criteria": list(ctx.attempt.evaluation_criteria),
-            },
+            submit_reduction_failure,
+            {"outcome": "Unexpected reducer invocation under empty plan."},
         )
 
 

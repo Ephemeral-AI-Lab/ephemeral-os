@@ -1,28 +1,48 @@
-"""AttemptOrchestrator lifecycle tests."""
+"""AttemptOrchestrator lifecycle tests.
+
+The orchestrator runs one planner -> plan-DAG attempt. The plan is a DAG of
+GENERATOR + REDUCER tasks scheduled as a single RUN stage (PLAN -> RUN ->
+CLOSED). An attempt PASSES only when every plan task (generators and reducers)
+reaches DONE; any failed/blocked plan task closes it FAILED with TASK_FAILED.
+There is no evaluator stage and no closure-report DTO: a delegated child
+workflow resolves through ``start/apply/cancel_child_workflow``.
+"""
 
 from __future__ import annotations
 
 import pytest
 
-from task_center.workflow.state import WorkflowClosureReport, WorkflowOriginKind
 from task_center._core.primitives import TaskCenterInvariantViolation
-from task_center.attempt import (
+from task_center._core.state import (
     AttemptFailReason,
     AttemptStage,
     AttemptStatus,
+    Workflow,
+    WorkflowStatus,
 )
 from task_center.attempt.orchestrator import AttemptOrchestrator
 from task_center.attempt.orchestrator_registry import (
     AttemptOrchestratorRegistry,
 )
-from task_center.attempt.deps import (
+from task_center.attempt.launch import (
     AgentLaunch,
     AttemptDeps,
 )
 from task_center._core.task_state import TaskCenterTaskRole, TaskCenterTaskStatus
-from task_center.submissions import EvaluatorSubmission, GeneratorSubmission, PlannedGeneratorTask, PlannerFailureSubmission, PlannerSubmission
-from task_center._core.primitives import evaluator_task_id, generator_task_id, planner_task_id
-from task_center.iteration.state import IterationCreationReason
+from task_center.submissions import (
+    GeneratorSubmission,
+    PlannedGeneratorTask,
+    PlannedReducerTask,
+    PlannerFailureSubmission,
+    PlannerSubmission,
+    ReducerSubmission,
+)
+from task_center._core.primitives import (
+    generator_task_id,
+    planner_task_id,
+    reducer_task_id,
+)
+from task_center._core.state import IterationCreationReason
 
 
 class _FakeLauncher:
@@ -44,28 +64,30 @@ class _FailingRoleLauncher(_FakeLauncher):
         super().launch(launch)
 
 
-class _FailingEvaluatorComposer:
+class _FailingReducerComposer:
+    """Wraps a real composer but raises when composing the reducer launch."""
+
     def __init__(self, inner) -> None:
         self._inner = inner
         self.engine = inner.engine
 
     def compose(self, *, base_agent_name: str, scope):
-        if base_agent_name == "evaluator":
-            raise RuntimeError("evaluator compose failed")
+        if base_agent_name == "reducer":
+            raise RuntimeError("reducer compose failed")
         return self._inner.compose(base_agent_name=base_agent_name, scope=scope)
 
 
 def _seed_graph(workflow_store, iteration_store, attempt_store, task_center_run_id):
-    request = workflow_store.insert(
+    workflow = workflow_store.insert(
         task_center_run_id=task_center_run_id,
-        requested_by_task_id="outer-task",
-        goal="solve the task",
+        parent_task_id="outer-task",
+        workflow_goal="solve the task",
     )
     iteration = iteration_store.insert(
-        workflow_id=request.id,
+        workflow_id=workflow.id,
         sequence_no=1,
         creation_reason=IterationCreationReason.INITIAL,
-        goal="solve the task",
+        iteration_goal="solve the task",
         attempt_budget=2,
     )
     return attempt_store.insert(iteration_id=iteration.id, attempt_sequence_no=1)
@@ -109,28 +131,32 @@ def _plan(
     attempt_id: str,
     *,
     tasks: tuple[PlannedGeneratorTask, ...],
-    kind: str = "full",
+    reducers: tuple[PlannedReducerTask, ...],
+    kind: str = "completes",
     deferred_goal_for_next_iteration: str | None = None,
 ) -> PlannerSubmission:
     return PlannerSubmission(
         attempt_id=attempt_id,
         planner_task_id=planner_task_id(attempt_id),
         kind=kind,  # type: ignore[arg-type]
-        plan_spec="spec",
-        evaluation_criteria=("criterion",),
         tasks=tasks,
+        reducers=reducers,
         deferred_goal_for_next_iteration=deferred_goal_for_next_iteration,
-        summary="plan accepted",
+        outcome="plan accepted",
     )
+
+
+def _one_reducer(needs: tuple[str, ...]) -> tuple[PlannedReducerTask, ...]:
+    return (PlannedReducerTask("r", needs, "judge it"),)
 
 
 def _generator_success(attempt_id: str, local_id: str) -> GeneratorSubmission:
     return GeneratorSubmission(
         attempt_id=attempt_id,
         task_id=generator_task_id(attempt_id, local_id),
-        outcome="success",
-        summary=f"{local_id} done",
-        payload={"role": "executor"},
+        status="success",
+        outcome=f"{local_id} done",
+        terminal_tool_result={"role": "executor"},
     )
 
 
@@ -138,9 +164,9 @@ def _generator_failure(attempt_id: str, local_id: str) -> GeneratorSubmission:
     return GeneratorSubmission(
         attempt_id=attempt_id,
         task_id=generator_task_id(attempt_id, local_id),
-        outcome="failure",
-        summary=f"{local_id} failed",
-        payload={"role": "executor"},
+        status="failure",
+        outcome=f"{local_id} failed",
+        terminal_tool_result={"role": "executor"},
     )
 
 
@@ -148,23 +174,23 @@ def _generator_blocker(attempt_id: str, local_id: str) -> GeneratorSubmission:
     return GeneratorSubmission(
         attempt_id=attempt_id,
         task_id=generator_task_id(attempt_id, local_id),
-        outcome="blocker",
-        summary=f"{local_id} blocked",
-        payload={"role": "executor"},
+        status="blocker",
+        outcome=f"{local_id} blocked",
+        terminal_tool_result={"role": "executor"},
     )
 
 
-def _evaluator_submission(attempt_id: str, outcome: str) -> EvaluatorSubmission:
-    return EvaluatorSubmission(
+def _reducer_submission(attempt_id: str, status: str) -> ReducerSubmission:
+    return ReducerSubmission(
         attempt_id=attempt_id,
-        task_id=evaluator_task_id(attempt_id),
-        outcome=outcome,  # type: ignore[arg-type]
-        summary=f"evaluation {outcome}",
-        payload={},
+        task_id=reducer_task_id(attempt_id, "r"),
+        status=status,  # type: ignore[arg-type]
+        outcome=f"reduction {status}",
+        terminal_tool_result={},
     )
 
 
-def test_start_creates_planner_task_and_sets_graph_planner_id(
+def test_start_creates_planner_task_and_sets_attempt_planner_id(
     workflow_store, iteration_store, attempt_store, task_store, task_center_run_id, composer
 ):
     orchestrator, attempt, launcher, _, _ = _build_orchestrator(
@@ -182,7 +208,7 @@ def test_start_creates_planner_task_and_sets_graph_planner_id(
     assert [launch.task_id for launch in launcher.launches] == [task_id]
 
 
-def test_apply_plan_submission_persists_contract_and_generator_ids(
+def test_apply_plan_submission_runs_and_persists_plan_task_ids(
     workflow_store, iteration_store, attempt_store, task_store, task_center_run_id, composer
 ):
     orchestrator, attempt, launcher, _, _ = _build_orchestrator(
@@ -191,19 +217,22 @@ def test_apply_plan_submission_persists_contract_and_generator_ids(
     orchestrator.start()
     tasks = (
         PlannedGeneratorTask("a", "executor", (), "do A"),
-        PlannedGeneratorTask("b", "verifier", ("a",), "verify A"),
+        PlannedGeneratorTask("b", "generator", ("a",), "do B"),
     )
 
-    orchestrator.apply_plan_submission(_plan(attempt.id, tasks=tasks))
+    orchestrator.apply_plan_submission(
+        _plan(attempt.id, tasks=tasks, reducers=_one_reducer(("a", "b")))
+    )
 
     refreshed = attempt_store.get(attempt.id)
     assert refreshed is not None
-    assert refreshed.stage == AttemptStage.GENERATE
-    assert refreshed.plan_spec == "spec"
+    assert refreshed.stage == AttemptStage.RUN
     assert refreshed.generator_task_ids == (
         generator_task_id(attempt.id, "a"),
         generator_task_id(attempt.id, "b"),
     )
+    assert refreshed.reducer_task_ids == (reducer_task_id(attempt.id, "r"),)
+    # Only the root generator ``a`` is ready immediately.
     assert [launch.task_id for launch in launcher.launches] == [
         planner_task_id(attempt.id),
         generator_task_id(attempt.id, "a"),
@@ -222,6 +251,7 @@ def test_apply_partial_plan_submission_stores_deferred_goal(
         _plan(
             attempt.id,
             tasks=(PlannedGeneratorTask("a", "executor", (), "do A"),),
+            reducers=_one_reducer(("a",)),
             kind="defers",
             deferred_goal_for_next_iteration="continue here",
         )
@@ -232,7 +262,7 @@ def test_apply_partial_plan_submission_stores_deferred_goal(
     assert refreshed.deferred_goal_for_next_iteration == "continue here"
 
 
-def test_apply_planner_failure_marks_task_and_closes_graph(
+def test_apply_planner_failure_marks_task_and_closes_attempt(
     workflow_store, iteration_store, attempt_store, task_store, task_center_run_id, composer
 ):
     orchestrator, attempt, _, registry, closed = _build_orchestrator(
@@ -245,7 +275,7 @@ def test_apply_planner_failure_marks_task_and_closes_graph(
             attempt_id=attempt.id,
             planner_task_id=planner_task_id(attempt.id),
             fail_reason="run_exhausted",
-            summary="planner stopped",
+            outcome="planner stopped",
         )
     )
 
@@ -253,7 +283,7 @@ def test_apply_planner_failure_marks_task_and_closes_graph(
     task = task_store.get_task(planner_task_id(attempt.id))
     assert refreshed is not None
     assert refreshed.status == AttemptStatus.FAILED
-    assert refreshed.fail_reason == AttemptFailReason.PLANNER_FAILED
+    assert refreshed.fail_reason == AttemptFailReason.TASK_FAILED
     assert task is not None and task["status"] == TaskCenterTaskStatus.FAILED.value
     assert closed == [attempt.id]
     assert registry.get(attempt.id) is None
@@ -271,13 +301,16 @@ def test_apply_generator_success_launches_newly_ready_dependents(
             attempt.id,
             tasks=(
                 PlannedGeneratorTask("a", "executor", (), "do A"),
-                PlannedGeneratorTask("b", "verifier", ("a",), "verify A"),
+                PlannedGeneratorTask("b", "generator", ("a",), "do B"),
             ),
+            reducers=_one_reducer(("a", "b")),
         )
     )
 
     orchestrator.apply_generator_submission(_generator_success(attempt.id, "a"))
 
+    # The reducer needs both ``a`` and ``b``, so only ``b`` becomes ready here;
+    # the launch sequence is deterministic.
     assert [launch.task_id for launch in launcher.launches] == [
         planner_task_id(attempt.id),
         generator_task_id(attempt.id, "a"),
@@ -299,13 +332,15 @@ def test_missing_generator_agent_profile_is_invariant_violation(
             attempt.id,
             tasks=(
                 PlannedGeneratorTask("a", "executor", (), "do A"),
-                PlannedGeneratorTask("b", "verifier", ("a",), "verify A"),
+                PlannedGeneratorTask("b", "generator", ("a",), "do B"),
             ),
+            reducers=_one_reducer(("a", "b")),
         )
     )
     task_b_id = generator_task_id(attempt.id, "b")
     task_b = task_store.get_task(task_b_id)
     assert task_b is not None
+    # Strip the persisted agent profile so the launch cannot resolve a target.
     task_store.upsert_task(
         task_id=task_b_id,
         task_center_run_id=task_b["task_center_run_id"],
@@ -313,10 +348,8 @@ def test_missing_generator_agent_profile_is_invariant_violation(
         agent_name=None,
         context_message=task_b["context_message"],
         status=task_b["status"],
-        summaries=task_b["summaries"],
+        outcomes=task_b["outcomes"],
         needs=task_b["needs"],
-        task_center_attempt_id=task_b["task_center_attempt_id"],
-        spawn_reason=task_b["spawn_reason"],
     )
 
     with pytest.raises(TaskCenterInvariantViolation):
@@ -327,7 +360,7 @@ def test_missing_generator_agent_profile_is_invariant_violation(
     assert refreshed_task_b["status"] == TaskCenterTaskStatus.PENDING.value
 
 
-def test_generator_launch_failure_marks_task_failed_and_closes_graph(
+def test_generator_launch_failure_marks_task_failed_and_closes_attempt(
     workflow_store, iteration_store, attempt_store, task_store, task_center_run_id, composer
 ):
     launcher = _FailingRoleLauncher(TaskCenterTaskRole.GENERATOR)
@@ -346,6 +379,7 @@ def test_generator_launch_failure_marks_task_failed_and_closes_graph(
         _plan(
             attempt.id,
             tasks=(PlannedGeneratorTask("a", "executor", (), "do A"),),
+            reducers=_one_reducer(("a",)),
         )
     )
 
@@ -353,18 +387,18 @@ def test_generator_launch_failure_marks_task_failed_and_closes_graph(
     refreshed = attempt_store.get(attempt.id)
     assert task is not None
     assert task["status"] == TaskCenterTaskStatus.FAILED.value
-    assert task["summaries"][-1]["fail_reason"] == "agent_launch_failed"
+    assert task["terminal_tool_result"]["fail_reason"] == "agent_launch_failed"
     assert refreshed is not None
     assert refreshed.status == AttemptStatus.FAILED
-    assert refreshed.fail_reason == AttemptFailReason.GENERATOR_FAILED
+    assert refreshed.fail_reason == AttemptFailReason.TASK_FAILED
     assert closed == [attempt.id]
     assert registry.get(attempt.id) is None
 
 
-def test_evaluator_launch_failure_marks_task_failed_and_closes_graph(
+def test_reducer_launch_failure_marks_task_failed_and_closes_attempt(
     workflow_store, iteration_store, attempt_store, task_store, task_center_run_id, composer
 ):
-    launcher = _FailingRoleLauncher(TaskCenterTaskRole.EVALUATOR)
+    launcher = _FailingRoleLauncher(TaskCenterTaskRole.REDUCER)
     orchestrator, attempt, _, registry, closed = _build_orchestrator(
         workflow_store,
         iteration_store,
@@ -379,24 +413,25 @@ def test_evaluator_launch_failure_marks_task_failed_and_closes_graph(
         _plan(
             attempt.id,
             tasks=(PlannedGeneratorTask("a", "executor", (), "do A"),),
+            reducers=_one_reducer(("a",)),
         )
     )
 
     orchestrator.apply_generator_submission(_generator_success(attempt.id, "a"))
 
-    task = task_store.get_task(evaluator_task_id(attempt.id))
+    task = task_store.get_task(reducer_task_id(attempt.id, "r"))
     refreshed = attempt_store.get(attempt.id)
     assert task is not None
     assert task["status"] == TaskCenterTaskStatus.FAILED.value
-    assert task["summaries"][-1]["fail_reason"] == "agent_launch_failed"
+    assert task["terminal_tool_result"]["fail_reason"] == "agent_launch_failed"
     assert refreshed is not None
     assert refreshed.status == AttemptStatus.FAILED
-    assert refreshed.fail_reason == AttemptFailReason.EVALUATOR_FAILED
+    assert refreshed.fail_reason == AttemptFailReason.TASK_FAILED
     assert closed == [attempt.id]
     assert registry.get(attempt.id) is None
 
 
-def test_evaluator_compose_failure_closes_graph(
+def test_reducer_compose_failure_marks_task_failed_and_closes_attempt(
     workflow_store, iteration_store, attempt_store, task_store, task_center_run_id, composer
 ):
     orchestrator, attempt, _, registry, closed = _build_orchestrator(
@@ -405,145 +440,31 @@ def test_evaluator_compose_failure_closes_graph(
         attempt_store,
         task_store,
         task_center_run_id,
-        composer=_FailingEvaluatorComposer(composer),
+        composer=_FailingReducerComposer(composer),
     )
     orchestrator.start()
     orchestrator.apply_plan_submission(
         _plan(
             attempt.id,
             tasks=(PlannedGeneratorTask("a", "executor", (), "do A"),),
+            reducers=_one_reducer(("a",)),
         )
     )
 
-    with pytest.raises(RuntimeError, match="evaluator compose failed"):
-        orchestrator.apply_generator_submission(_generator_success(attempt.id, "a"))
+    # All generators done -> reducer launch is attempted; compose raises, so the
+    # reducer task is marked FAILED and the attempt closes FAILED (no re-raise).
+    orchestrator.apply_generator_submission(_generator_success(attempt.id, "a"))
 
-    task = task_store.get_task(evaluator_task_id(attempt.id))
-    refreshed = attempt_store.get(attempt.id)
-    assert task is None
-    assert refreshed is not None
-    assert refreshed.status == AttemptStatus.FAILED
-    assert refreshed.fail_reason == AttemptFailReason.EVALUATOR_FAILED
-    assert closed == [attempt.id]
-    assert registry.get(attempt.id) is None
-
-
-def test_waiting_workflow_prevents_generator_quiescence(
-    workflow_store, iteration_store, attempt_store, task_store, task_center_run_id, composer
-):
-    orchestrator, attempt, _, _, closed = _build_orchestrator(
-        workflow_store, iteration_store, attempt_store, task_store, task_center_run_id, composer=composer
-    )
-    orchestrator.start()
-    orchestrator.apply_plan_submission(
-        _plan(
-            attempt.id,
-            tasks=(
-                PlannedGeneratorTask("a", "executor", (), "do A"),
-                PlannedGeneratorTask("b", "executor", (), "do B"),
-            ),
-        )
-    )
-    task_store.set_task_status(
-        generator_task_id(attempt.id, "a"),
-        status=TaskCenterTaskStatus.WAITING_WORKFLOW.value,
-    )
-
-    orchestrator.apply_generator_submission(_generator_success(attempt.id, "b"))
-
-    refreshed = attempt_store.get(attempt.id)
-    assert refreshed is not None
-    assert refreshed.stage == AttemptStage.GENERATE
-    assert closed == []
-
-
-def test_workflow_closure_report_success_resumes_waiting_generator(
-    workflow_store, iteration_store, attempt_store, task_store, task_center_run_id, composer
-):
-    orchestrator, attempt, _, _, _ = _build_orchestrator(
-        workflow_store, iteration_store, attempt_store, task_store, task_center_run_id, composer=composer
-    )
-    orchestrator.start()
-    orchestrator.apply_plan_submission(
-        _plan(
-            attempt.id,
-            tasks=(PlannedGeneratorTask("a", "executor", (), "do A"),),
-        )
-    )
-    task_id = generator_task_id(attempt.id, "a")
-    task_store.set_task_status(
-        task_id,
-        status=TaskCenterTaskStatus.WAITING_WORKFLOW.value,
-    )
-
-    orchestrator.apply_workflow_closure_report(
-        WorkflowClosureReport(
-            workflow_id="delegated-1",
-            task_center_run_id=task_center_run_id,
-            origin_kind=WorkflowOriginKind.TASK,
-            requested_by_task_id=task_id,
-            outcome="success",
-            final_iteration_id="iteration-1",
-            final_attempt_id="attempt-1",
-        )
-    )
-
-    task = task_store.get_task(task_id)
-    refreshed = attempt_store.get(attempt.id)
-    assert task is not None
-    assert task["status"] == TaskCenterTaskStatus.DONE.value
-    assert task["summaries"][-1]["payload"]["workflow_closure_report"][
-        "workflow_id"
-    ] == "delegated-1"
-    assert refreshed is not None
-    assert refreshed.stage == AttemptStage.EVALUATE
-
-
-def test_workflow_closure_report_failure_leaves_dependents_pending_and_closes_graph(
-    workflow_store, iteration_store, attempt_store, task_store, task_center_run_id, composer
-):
-    orchestrator, attempt, _, _, closed = _build_orchestrator(
-        workflow_store, iteration_store, attempt_store, task_store, task_center_run_id, composer=composer
-    )
-    orchestrator.start()
-    orchestrator.apply_plan_submission(
-        _plan(
-            attempt.id,
-            tasks=(
-                PlannedGeneratorTask("a", "executor", (), "do A"),
-                PlannedGeneratorTask("b", "executor", ("a",), "do B"),
-            ),
-        )
-    )
-    task_id = generator_task_id(attempt.id, "a")
-    dependent_id = generator_task_id(attempt.id, "b")
-    task_store.set_task_status(
-        task_id,
-        status=TaskCenterTaskStatus.WAITING_WORKFLOW.value,
-    )
-
-    orchestrator.apply_workflow_closure_report(
-        WorkflowClosureReport(
-            workflow_id="delegated-1",
-            task_center_run_id=task_center_run_id,
-            origin_kind=WorkflowOriginKind.TASK,
-            requested_by_task_id=task_id,
-            outcome="failed",
-            final_iteration_id="iteration-1",
-            final_attempt_id="attempt-1",
-        )
-    )
-
-    task = task_store.get_task(task_id)
-    dependent = task_store.get_task(dependent_id)
+    task = task_store.get_task(reducer_task_id(attempt.id, "r"))
     refreshed = attempt_store.get(attempt.id)
     assert task is not None
     assert task["status"] == TaskCenterTaskStatus.FAILED.value
-    assert dependent is not None
-    assert dependent["status"] == TaskCenterTaskStatus.PENDING.value
+    assert task["terminal_tool_result"]["fail_reason"] == "agent_launch_failed"
     assert refreshed is not None
     assert refreshed.status == AttemptStatus.FAILED
+    assert refreshed.fail_reason == AttemptFailReason.TASK_FAILED
     assert closed == [attempt.id]
+    assert registry.get(attempt.id) is None
 
 
 def test_apply_generator_blocker_leaves_pending_descendants_not_started(
@@ -562,6 +483,7 @@ def test_apply_generator_blocker_leaves_pending_descendants_not_started(
                 PlannedGeneratorTask("c", "executor", ("b",), "do C"),
                 PlannedGeneratorTask("d", "executor", (), "do D"),
             ),
+            reducers=_one_reducer(("c", "d")),
         )
     )
 
@@ -591,6 +513,7 @@ def test_generator_blocker_waits_then_closes_after_runnable_siblings_finish(
                 PlannedGeneratorTask("a", "executor", (), "do A"),
                 PlannedGeneratorTask("b", "executor", (), "do B"),
             ),
+            reducers=_one_reducer(("a", "b")),
         )
     )
 
@@ -602,11 +525,11 @@ def test_generator_blocker_waits_then_closes_after_runnable_siblings_finish(
     refreshed = attempt_store.get(attempt.id)
     assert refreshed is not None
     assert refreshed.status == AttemptStatus.FAILED
-    assert refreshed.fail_reason == AttemptFailReason.GENERATOR_FAILED
+    assert refreshed.fail_reason == AttemptFailReason.TASK_FAILED
     assert closed == [attempt.id]
 
 
-def test_all_generators_done_spawns_evaluator(
+def test_all_generators_done_launches_reducer(
     workflow_store, iteration_store, attempt_store, task_store, task_center_run_id, composer
 ):
     orchestrator, attempt, launcher, _, _ = _build_orchestrator(
@@ -617,6 +540,7 @@ def test_all_generators_done_spawns_evaluator(
         _plan(
             attempt.id,
             tasks=(PlannedGeneratorTask("a", "executor", (), "do A"),),
+            reducers=_one_reducer(("a",)),
         )
     )
 
@@ -624,11 +548,13 @@ def test_all_generators_done_spawns_evaluator(
 
     refreshed = attempt_store.get(attempt.id)
     assert refreshed is not None
-    assert refreshed.stage == AttemptStage.EVALUATE
-    assert launcher.launches[-1].task_id == evaluator_task_id(attempt.id)
+    assert refreshed.stage == AttemptStage.RUN
+    assert launcher.launches[-1].task_id == reducer_task_id(attempt.id, "r")
+    reducer_task = task_store.get_task(reducer_task_id(attempt.id, "r"))
+    assert reducer_task is not None and reducer_task["status"] == "running"
 
 
-def test_apply_evaluator_success_closes_graph_passed(
+def test_reducer_success_closes_attempt_passed(
     workflow_store, iteration_store, attempt_store, task_store, task_center_run_id, composer
 ):
     orchestrator, attempt, _, _, closed = _build_orchestrator(
@@ -639,13 +565,12 @@ def test_apply_evaluator_success_closes_graph_passed(
         _plan(
             attempt.id,
             tasks=(PlannedGeneratorTask("a", "executor", (), "do A"),),
+            reducers=_one_reducer(("a",)),
         )
     )
     orchestrator.apply_generator_submission(_generator_success(attempt.id, "a"))
 
-    orchestrator.apply_evaluator_submission(
-        _evaluator_submission(attempt.id, "success")
-    )
+    orchestrator.apply_reducer_submission(_reducer_submission(attempt.id, "success"))
 
     refreshed = attempt_store.get(attempt.id)
     assert refreshed is not None
@@ -654,7 +579,7 @@ def test_apply_evaluator_success_closes_graph_passed(
     assert closed == [attempt.id]
 
 
-def test_apply_evaluator_failure_closes_graph_failed(
+def test_reducer_failure_closes_attempt_failed(
     workflow_store, iteration_store, attempt_store, task_store, task_center_run_id, composer
 ):
     orchestrator, attempt, _, _, closed = _build_orchestrator(
@@ -665,19 +590,149 @@ def test_apply_evaluator_failure_closes_graph_failed(
         _plan(
             attempt.id,
             tasks=(PlannedGeneratorTask("a", "executor", (), "do A"),),
+            reducers=_one_reducer(("a",)),
         )
     )
     orchestrator.apply_generator_submission(_generator_success(attempt.id, "a"))
 
-    orchestrator.apply_evaluator_submission(
-        _evaluator_submission(attempt.id, "failure")
-    )
+    orchestrator.apply_reducer_submission(_reducer_submission(attempt.id, "failure"))
 
     refreshed = attempt_store.get(attempt.id)
     assert refreshed is not None
     assert refreshed.status == AttemptStatus.FAILED
-    assert refreshed.fail_reason == AttemptFailReason.EVALUATOR_FAILED
+    assert refreshed.fail_reason == AttemptFailReason.TASK_FAILED
     assert closed == [attempt.id]
+
+
+# ---- child-workflow handoff -------------------------------------------------
+
+
+def _waiting_workflow(task_center_run_id: str, *, status: WorkflowStatus, parent_task_id: str) -> Workflow:
+    from datetime import UTC, datetime
+
+    now = datetime.now(UTC)
+    return Workflow(
+        id="delegated-1",
+        task_center_run_id=task_center_run_id,
+        workflow_goal="child",
+        status=status,
+        iteration_ids=(),
+        parent_task_id=parent_task_id,
+        created_at=now,
+        updated_at=now,
+        closed_at=now,
+    )
+
+
+def test_child_workflow_success_resumes_waiting_generator(
+    workflow_store, iteration_store, attempt_store, task_store, task_center_run_id, composer
+):
+    orchestrator, attempt, _, _, _ = _build_orchestrator(
+        workflow_store, iteration_store, attempt_store, task_store, task_center_run_id, composer=composer
+    )
+    orchestrator.start()
+    orchestrator.apply_plan_submission(
+        _plan(
+            attempt.id,
+            tasks=(PlannedGeneratorTask("a", "executor", (), "do A"),),
+            reducers=_one_reducer(("a",)),
+        )
+    )
+    task_id = generator_task_id(attempt.id, "a")
+    child = _waiting_workflow(
+        task_center_run_id, status=WorkflowStatus.SUCCEEDED, parent_task_id=task_id
+    )
+    orchestrator.start_child_workflow(
+        generator_task=task_store.get_task(task_id), child_workflow=child
+    )
+    assert task_store.get_task(task_id)["status"] == TaskCenterTaskStatus.WAITING_WORKFLOW.value
+
+    orchestrator.apply_child_workflow_outcome(
+        generator_task=task_store.get_task(task_id),
+        child_workflow=child,
+        final_attempt_id=None,
+    )
+
+    task = task_store.get_task(task_id)
+    assert task is not None
+    assert task["status"] == TaskCenterTaskStatus.DONE.value
+    assert task["terminal_tool_result"]["child_workflow_id"] == "delegated-1"
+    # Generator done -> reducer became ready and launched.
+    reducer_task = task_store.get_task(reducer_task_id(attempt.id, "r"))
+    assert reducer_task is not None and reducer_task["status"] == "running"
+
+
+def test_child_workflow_failure_leaves_dependents_pending_and_closes_attempt(
+    workflow_store, iteration_store, attempt_store, task_store, task_center_run_id, composer
+):
+    orchestrator, attempt, _, _, closed = _build_orchestrator(
+        workflow_store, iteration_store, attempt_store, task_store, task_center_run_id, composer=composer
+    )
+    orchestrator.start()
+    orchestrator.apply_plan_submission(
+        _plan(
+            attempt.id,
+            tasks=(
+                PlannedGeneratorTask("a", "executor", (), "do A"),
+                PlannedGeneratorTask("b", "executor", ("a",), "do B"),
+            ),
+            reducers=_one_reducer(("a", "b")),
+        )
+    )
+    task_id = generator_task_id(attempt.id, "a")
+    dependent_id = generator_task_id(attempt.id, "b")
+    child = _waiting_workflow(
+        task_center_run_id, status=WorkflowStatus.FAILED, parent_task_id=task_id
+    )
+    orchestrator.start_child_workflow(
+        generator_task=task_store.get_task(task_id), child_workflow=child
+    )
+
+    orchestrator.apply_child_workflow_outcome(
+        generator_task=task_store.get_task(task_id),
+        child_workflow=child,
+        final_attempt_id=None,
+    )
+
+    task = task_store.get_task(task_id)
+    dependent = task_store.get_task(dependent_id)
+    refreshed = attempt_store.get(attempt.id)
+    assert task is not None
+    assert task["status"] == TaskCenterTaskStatus.FAILED.value
+    assert dependent is not None
+    assert dependent["status"] == TaskCenterTaskStatus.PENDING.value
+    assert refreshed is not None
+    assert refreshed.status == AttemptStatus.FAILED
+    assert closed == [attempt.id]
+
+
+def test_cancel_child_workflow_restores_generator_running(
+    workflow_store, iteration_store, attempt_store, task_store, task_center_run_id, composer
+):
+    orchestrator, attempt, _, _, _ = _build_orchestrator(
+        workflow_store, iteration_store, attempt_store, task_store, task_center_run_id, composer=composer
+    )
+    orchestrator.start()
+    orchestrator.apply_plan_submission(
+        _plan(
+            attempt.id,
+            tasks=(PlannedGeneratorTask("a", "executor", (), "do A"),),
+            reducers=_one_reducer(("a",)),
+        )
+    )
+    task_id = generator_task_id(attempt.id, "a")
+    child = _waiting_workflow(
+        task_center_run_id, status=WorkflowStatus.OPEN, parent_task_id=task_id
+    )
+    orchestrator.start_child_workflow(
+        generator_task=task_store.get_task(task_id), child_workflow=child
+    )
+
+    orchestrator.cancel_child_workflow(generator_task=task_store.get_task(task_id))
+
+    task = task_store.get_task(task_id)
+    assert task is not None
+    assert task["status"] == TaskCenterTaskStatus.RUNNING.value
 
 
 def test_orchestrator_never_creates_retry_attempt(
@@ -691,6 +746,7 @@ def test_orchestrator_never_creates_retry_attempt(
         _plan(
             attempt.id,
             tasks=(PlannedGeneratorTask("a", "executor", (), "do A"),),
+            reducers=_one_reducer(("a",)),
         )
     )
     orchestrator.apply_generator_submission(_generator_failure(attempt.id, "a"))

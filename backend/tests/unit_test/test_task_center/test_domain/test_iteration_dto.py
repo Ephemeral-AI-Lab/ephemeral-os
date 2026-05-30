@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from task_center.iteration.state import (
+from task_center._core.state import (
     Iteration,
     IterationCreationReason,
     IterationStatus,
@@ -17,7 +17,7 @@ def _seg(**overrides) -> Iteration:
         workflow_id="r1",
         sequence_no=1,
         creation_reason=IterationCreationReason.INITIAL,
-        goal="g",
+        iteration_goal="g",
         attempt_budget=2,
         status=IterationStatus.OPEN,
         attempt_ids=(),

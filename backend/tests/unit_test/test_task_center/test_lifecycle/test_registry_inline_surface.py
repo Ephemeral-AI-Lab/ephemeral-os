@@ -25,7 +25,7 @@ def test_recipe_registry_public_surface_preserved() -> None:
 
 
 def test_registry_get_raises_typed_error() -> None:
-    from task_center.context_engine.core import ContextEngineError
+    from task_center.context_engine.engine import ContextEngineError
 
     RecipeRegistry.clear()
     try:

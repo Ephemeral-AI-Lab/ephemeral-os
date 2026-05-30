@@ -1,8 +1,10 @@
 """Workflow persistence model — origin axis of harness work.
 
-A Workflow is created from prompt text at TaskCenter entry or from a generator's
-``submit_execution_handoff(goal)``. It owns an ordered list of ``Iteration`` ids
-representing the vertical continuation progression of work toward the goal.
+Every Workflow is generator-spawned (the root via a synthetic run-level
+bootstrap generator task) through ``submit_workflow_handoff(goal)``;
+``parent_task_id`` is the backward link to the spawning task. It owns an
+ordered list of ``Iteration`` ids representing the vertical continuation
+progression of work toward the goal.
 """
 
 from __future__ import annotations
@@ -26,14 +28,12 @@ class WorkflowRecord(Base):
         ForeignKey("task_center_runs.id", ondelete="CASCADE"),
         index=True,
     )
-    origin_kind: Mapped[str | None] = mapped_column(String(16), nullable=True)
-    requested_by_task_id: Mapped[str | None] = mapped_column(
+    parent_task_id: Mapped[str | None] = mapped_column(
         String(96), nullable=True, index=True
     )
     goal: Mapped[str] = mapped_column(Text)
     status: Mapped[str] = mapped_column(String(16))
     iteration_ids: Mapped[list[str]] = mapped_column(JSON, default=list)
-    final_outcome: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(UTC)
     )

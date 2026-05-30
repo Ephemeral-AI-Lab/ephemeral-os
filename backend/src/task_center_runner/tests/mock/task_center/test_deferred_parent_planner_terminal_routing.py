@@ -58,20 +58,23 @@ def _tool_count(tool_calls: list[Any], tool_name: str) -> int:
 def _assert_partial_parent_graph(graph_summary: dict[str, Any]) -> None:
     workflows = graph_summary["workflows"]
     assert len(workflows) == 2, graph_summary
+    # Entry vs child workflow is classified by parent_task_id: the root
+    # workflow's parent is the synthetic ``<run_id>:root`` bootstrap task;
+    # the child workflow's parent is the delegating generator task.
     root = next(
         workflow
         for workflow in workflows
-        if workflow.get("origin_kind") == "entry"
+        if str(workflow.get("parent_task_id") or "").endswith(":root")
     )
     child = next(
         workflow
         for workflow in workflows
-        if workflow.get("origin_kind") == "task"
+        if not str(workflow.get("parent_task_id") or "").endswith(":root")
     )
 
     assert len(root["iterations"]) == 2
     assert root["iterations"][0]["attempts"][-1]["deferred_goal_for_next_iteration"]
-    assert str(child["requested_by_task_id"]).endswith(":delegate_child")
+    assert str(child["parent_task_id"]).endswith(":delegate_child")
 
 
 def _assert_restricted_planner_catalog_was_recorded(run_dir: Path) -> None:

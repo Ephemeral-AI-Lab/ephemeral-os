@@ -23,15 +23,13 @@ def _load_named(directory: Path, name: str):
 def test_harness_agent_markdown_declares_notification_triggers() -> None:
     planner = _load_named(MAIN_PROFILE_DIR, "planner")
     executor = _load_named(MAIN_PROFILE_DIR, "executor")
-    verifier = _load_named(MAIN_PROFILE_DIR, "verifier")
-    evaluator = _load_named(MAIN_PROFILE_DIR, "evaluator")
+    reducer = _load_named(MAIN_PROFILE_DIR, "reducer")
 
     # Planner terminal restrictions are launch-time router policy; the profile
     # does not carry soft reminder triggers for recursive partial plans.
     assert planner.notification_triggers == []
     assert executor.notification_triggers == ["request_workflow_after_edit"]
-    assert verifier.notification_triggers == []
-    assert evaluator.notification_triggers == []
+    assert reducer.notification_triggers == []
 
 
 def test_recursive_agent_loader_finds_harness_profiles() -> None:
@@ -41,13 +39,12 @@ def test_recursive_agent_loader_finds_harness_profiles() -> None:
     assert {
         "planner",
         "executor",
-        "verifier",
-        "evaluator",
+        "reducer",
     } <= set(by_name)
     assert by_name["executor"].role == AgentRole.GENERATOR
     assert by_name["executor"].agent_type == AgentType.AGENT
     assert by_name["executor"].terminals == [
-        "submit_execution_handoff",
+        "submit_workflow_handoff",
         "submit_execution_success",
         "submit_execution_blocker",
     ]
@@ -56,7 +53,7 @@ def test_recursive_agent_loader_finds_harness_profiles() -> None:
 def test_executor_profile_uses_goal_solution_terminal() -> None:
     executor = _load_named(MAIN_PROFILE_DIR, "executor")
 
-    assert "submit_execution_handoff" in executor.terminals
+    assert "submit_workflow_handoff" in executor.terminals
     assert "ask_resolver" not in executor.allowed_tools
 
 

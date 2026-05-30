@@ -13,8 +13,8 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing import Any
 
-from tools.submission.evaluator import submit_evaluation_success
 from tools.submission.planner import submit_plan_closes_goal
+from tools.submission.reducer import submit_reduction_success
 
 from task_center_runner.scenarios.base import ScenarioBase, ScenarioContext, ToolCallSpec
 
@@ -26,19 +26,19 @@ MAX_CONCURRENT_WORKERS = 20
 def _plan() -> dict[str, Any]:
     worker_ids = [f"concurrent_worker_{index:02d}" for index in range(WORKER_COUNT)]
     tasks = [
-        {"id": "concurrency_seed", "agent_name": "executor", "deps": []},
+        {"id": "concurrency_seed", "agent_name": "executor", "needs": []},
         *(
             {
                 "id": worker_id,
                 "agent_name": "executor",
-                "deps": _worker_deps(index, worker_ids),
+                "needs": _worker_deps(index, worker_ids),
             }
             for index, worker_id in enumerate(worker_ids)
         ),
         {
             "id": "concurrency_reconcile",
             "agent_name": "executor",
-            "deps": worker_ids,
+            "needs": worker_ids,
         },
     ]
     task_specs = {
@@ -58,22 +58,26 @@ def _plan() -> dict[str, Any]:
             "race the shared OCC conflict target."
         )
     return {
-        "plan_spec": (
-            "Seed one shared OCC target, launch 20 executor workers in one "
-            "bounded wave that pressures layer-stack commits and overlay "
-            "capture, then reconcile all fragments into a capacity summary."
-        ),
-        "evaluation_criteria": [
-            "All 20 workers complete and write fragments.",
-            "The concurrent workload never fans out beyond 20 active sandbox "
-            "tool calls.",
-            "Shell setup and reconciliation remain bounded while worker "
-            "concurrency pressures direct file/OCC paths.",
-            "The shared OCC target records at least one success and one conflict.",
-            "The final summary uses task_center_runner.high_concurrency.v1.",
-        ],
         "tasks": tasks,
         "task_specs": task_specs,
+        "reducers": [
+            {
+                "id": "reduce",
+                "needs": [
+                    "concurrency_seed",
+                    *worker_ids,
+                    "concurrency_reconcile",
+                ],
+                "prompt": (
+                    "Confirm all 20 workers completed and wrote fragments, the "
+                    "workload never fanned out beyond 20 active sandbox tool "
+                    "calls, setup and reconciliation stayed bounded, the shared "
+                    "OCC target recorded at least one success and one conflict, "
+                    "and the final summary uses "
+                    "task_center_runner.high_concurrency.v1."
+                ),
+            }
+        ],
     }
 
 
@@ -102,16 +106,15 @@ class HighConcurrencyLayerstackOverlayOcc(ScenarioBase):
             return (f"high_concurrency_worker:{worker_index}",)
         return ()
 
-    def evaluator_response(self, ctx: ScenarioContext) -> ToolCallSpec:
+    def reducer_response(self, ctx: ScenarioContext) -> ToolCallSpec:  # noqa: ARG002
         return ToolCallSpec(
-            submit_evaluation_success,
+            submit_reduction_success,
             {
-                "summary": (
+                "outcome": (
                     "High-concurrency sandbox pressure run completed with "
                     "worker fragments, overlay capture, and OCC conflict "
                     "evidence."
                 ),
-                "passed_criteria": list(ctx.attempt.evaluation_criteria),
             },
         )
 

@@ -23,7 +23,7 @@ artifact boundary.
    - State-machine assertion → `pipeline/initial_workflow.py`
    - DAG dependency assertion → `pipeline/dependency_dag_serial.py`
    - Iterative continuation → `pipeline/iterative_deferral.py`
-   - Attempt-retry assertion → `pipeline/attempt_retry_evaluator_failure.py`
+   - Attempt-retry assertion → `pipeline/attempt_retry_reducer_failure.py`
    - Sandbox event assertion → `sandbox/occ_concurrent_conflicts.py`
    - Planner rejection assertion → `planner_validation/duplicate_local_id.py`
 3. Update `SCENARIO_REGISTRY` in `__init__.py`.

@@ -23,7 +23,7 @@ from .prompt import (
 
 
 class SubmitExecutionBlockerInput(BaseModel):
-    summary: str = Field(..., min_length=1)
+    outcome: str = Field(..., min_length=1)
 
 
 @tool(
@@ -39,13 +39,13 @@ class SubmitExecutionBlockerInput(BaseModel):
     ),
 )
 async def submit_execution_blocker(
-    summary: str,
+    outcome: str,
     *,
     context: ToolExecutionContextService,
 ) -> ToolResult:
     try:
         submission_context = resolve_executor_submission_context(context)
-        submission_context.submit_executor_blocker(summary=summary)
+        submission_context.submit_executor_blocker(outcome=outcome)
     except (AttemptSubmissionContextError, TaskCenterInvariantViolation) as exc:
         return ToolResult(output=str(exc), is_error=True)
 

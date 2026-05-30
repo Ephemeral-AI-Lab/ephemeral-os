@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
+from task_center._core.primitives import attempt_id_from_task_id
 from tools._framework.core.context import ToolExecutionContextService
 from tools.submission.context.attempt import (
     AttemptSubmissionContext,
@@ -36,7 +37,7 @@ class ExecutorSubmissionContext:
         return self.attempt_ctx.attempt.id
 
     def submit_executor_success(
-        self, *, summary: str, artifacts: list[str]
+        self, *, outcome: str, artifacts: list[str]
     ) -> None:
         from task_center import GeneratorSubmission
 
@@ -44,25 +45,25 @@ class ExecutorSubmissionContext:
             GeneratorSubmission(
                 attempt_id=self.attempt_ctx.attempt.id,
                 task_id=self.task_center_task_id,
-                outcome="success",
-                summary=summary,
-                payload={
+                status="success",
+                outcome=outcome,
+                terminal_tool_result={
                     "generator_role": "executor",
                     "artifacts": artifacts,
                 },
             )
         )
 
-    def submit_executor_blocker(self, *, summary: str) -> None:
+    def submit_executor_blocker(self, *, outcome: str) -> None:
         from task_center import GeneratorSubmission
 
         self.attempt_ctx.orchestrator.apply_generator_submission(
             GeneratorSubmission(
                 attempt_id=self.attempt_ctx.attempt.id,
                 task_id=self.task_center_task_id,
-                outcome="blocker",
-                summary=summary,
-                payload={
+                status="blocker",
+                outcome=outcome,
+                terminal_tool_result={
                     "generator_role": "executor",
                 },
             )
@@ -71,12 +72,12 @@ class ExecutorSubmissionContext:
     def start_delegated_workflow(
         self, *, goal_handoff: str
     ) -> StartedWorkflow:
-        from task_center import WorkflowOrigin, WorkflowStarter
+        from task_center import WorkflowStarter
 
         coordinator = WorkflowStarter(runtime=self.runtime)
         return coordinator.start(
             prompt=goal_handoff,
-            origin=WorkflowOrigin.task(task_id=self.task_center_task_id),
+            parent_task_id=self.task_center_task_id,
         )
 
 
@@ -88,8 +89,8 @@ def resolve_executor_submission_context(
     Executor terminal tools are valid only for attempt-bound generator tasks.
     """
     runtime, task, task_id = _resolve_runtime_task(context)
-    attempt_id = str(task.get("task_center_attempt_id") or "")
-    if not attempt_id or attempt_id.isspace():
+    attempt_id = attempt_id_from_task_id(task_id) or ""
+    if not attempt_id:
         raise AttemptSubmissionContextError(
             f"TaskCenter task {task_id!r} is not attempt-bound; executor "
             "terminal submissions require a generator task."

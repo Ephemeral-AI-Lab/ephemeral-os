@@ -193,11 +193,9 @@ def test_hook_wired_to_main_terminals_and_omitted_from_helpers() -> None:
         "submit_plan_defers_goal",
         "submit_execution_success",
         "submit_execution_blocker",
-        "submit_execution_handoff",
-        "submit_evaluation_success",
-        "submit_evaluation_failure",
-        "submit_verification_success",
-        "submit_verification_failure",
+        "submit_workflow_handoff",
+        "submit_reduction_success",
+        "submit_reduction_failure",
     )
     helper_terminals = (
         "submit_advisor_feedback",

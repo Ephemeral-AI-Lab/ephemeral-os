@@ -13,7 +13,7 @@ from agents import (
     validate_agent_definitions_resolved,
 )
 from agents.skills import SkillLintError
-from task_center.context_engine.core import (
+from task_center.context_engine.engine import (
     AgentDefinitionValidationError,
 )
 from task_center.context_engine.recipes_registry import (

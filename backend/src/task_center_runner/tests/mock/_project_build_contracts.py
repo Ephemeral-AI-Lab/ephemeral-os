@@ -47,15 +47,13 @@ _LSP_NAMES = (
 )
 
 _SUBMISSION_TOOL_NAMES = {
-    "submit_execution_handoff",
+    "submit_workflow_handoff",
     "submit_plan_closes_goal",
     "submit_plan_defers_goal",
     "submit_execution_success",
     "submit_execution_blocker",
-    "submit_evaluation_success",
-    "submit_evaluation_failure",
-    "submit_verification_success",
-    "submit_verification_failure",
+    "submit_reduction_success",
+    "submit_reduction_failure",
 }
 _NON_PROBE_TOOL_NAMES = _SUBMISSION_TOOL_NAMES | {"ask_advisor"}
 

@@ -30,10 +30,13 @@ import pytest
 from engine.agent.lifecycle import EphemeralRunResult
 from task_center._core.primitives import planner_task_id
 from task_center.attempt import AttemptFailReason, AttemptStatus
-from task_center.attempt.launch import EphemeralAttemptAgentLauncher
+from task_center.attempt.launch import (
+    AgentLaunch,
+    AttemptDeps,
+    EphemeralAttemptAgentLauncher,
+)
 from task_center.attempt.orchestrator_registry import AttemptOrchestratorRegistry
-from task_center.attempt.deps import AgentLaunch, AttemptDeps
-from task_center.iteration.state import IterationCreationReason
+from task_center._core.state import IterationCreationReason
 from task_center._core.task_state import TaskCenterTaskRole, TaskCenterTaskStatus
 from tools._framework.core.base import ToolResult
 
@@ -50,14 +53,14 @@ def _seed_planner_attempt(
     """Insert a workflow/iteration/attempt/planner-task row set; return key handles."""
     workflow = workflow_store.insert(
         task_center_run_id=task_center_run_id,
-        requested_by_task_id="outer-task",
-        goal="solve",
+        parent_task_id="outer-task",
+        workflow_goal="solve",
     )
     iteration = iteration_store.insert(
         workflow_id=workflow.id,
         sequence_no=1,
         creation_reason=IterationCreationReason.INITIAL,
-        goal="solve",
+        iteration_goal="solve",
         attempt_budget=4,
     )
     workflow_store.append_iteration_id(workflow.id, iteration.id)
@@ -74,10 +77,8 @@ def _seed_planner_attempt(
         agent_name="planner",
         context_message="plan",
         status=TaskCenterTaskStatus.RUNNING.value,
-        summaries=[],
+        outcomes=[],
         needs=[],
-        task_center_attempt_id=attempt.id,
-        spawn_reason="attempt_planner",
     )
     return workflow, attempt, task_id
 
@@ -148,9 +149,7 @@ async def test_main_planner_engine_retry_keeps_attempt_sequence_no_at_one(
         # Simulate the planner's terminal submission tool transitioning
         # the task off RUNNING — real submission tools do this via
         # ``set_task_status``.
-        task_store.set_task_status(
-            task_id, status=TaskCenterTaskStatus.DONE.value, summary={}
-        )
+        task_store.set_task_status(task_id, status=TaskCenterTaskStatus.DONE.value)
         return EphemeralRunResult(
             status="completed",
             error=None,
@@ -158,7 +157,7 @@ async def test_main_planner_engine_retry_keeps_attempt_sequence_no_at_one(
                 output="full plan", is_error=False, is_terminal=True
             ),
             agent_name="planner",
-            event_count=12,
+            tool_call_count=12,
         )
 
     launcher = EphemeralAttemptAgentLauncher(
@@ -194,7 +193,7 @@ async def test_main_planner_no_terminal_result_marks_attempt_failed(
 
     With no orchestrator registered, the launcher falls back to the
     _fail_unowned_attempt path which closes the task FAILED and the
-    attempt with PLANNER_FAILED. The harness is then free to schedule
+    attempt with TASK_FAILED. The harness is then free to schedule
     a new attempt_sequence_no=2 (not exercised here — the assertion is
     that the failure was recorded on attempt_sequence_no=1).
     """
@@ -227,7 +226,7 @@ async def test_main_planner_no_terminal_result_marks_attempt_failed(
             error=None,
             terminal_result=None,
             agent_name="planner",
-            event_count=8,
+            tool_call_count=8,
         )
 
     launcher = EphemeralAttemptAgentLauncher(
@@ -246,7 +245,7 @@ async def test_main_planner_no_terminal_result_marks_attempt_failed(
     assert refreshed_attempt is not None
     assert refreshed_attempt.attempt_sequence_no == 1
     assert refreshed_attempt.status == AttemptStatus.FAILED
-    assert refreshed_attempt.fail_reason == AttemptFailReason.PLANNER_FAILED
+    assert refreshed_attempt.fail_reason == AttemptFailReason.TASK_FAILED
     refreshed_task = task_store.get_task(task_id)
     assert refreshed_task is not None
     assert refreshed_task["status"] == TaskCenterTaskStatus.FAILED.value
@@ -294,12 +293,10 @@ async def test_attempt_harness_records_runner_token_usage(
                 output="plan", is_error=False, is_terminal=True
             ),
             agent_name="planner",
-            event_count=42,  # mimics aggregated cross-attempt count
+            tool_call_count=42,  # mimics aggregated cross-attempt count
         )
         captured_results.append(result)
-        task_store.set_task_status(
-            task_id, status=TaskCenterTaskStatus.DONE.value, summary={}
-        )
+        task_store.set_task_status(task_id, status=TaskCenterTaskStatus.DONE.value)
         return result
 
     launcher = EphemeralAttemptAgentLauncher(
@@ -313,7 +310,7 @@ async def test_attempt_harness_records_runner_token_usage(
     # The runner's result reached the launcher's flow unchanged — the
     # launcher consumed it without rewriting event_count.
     assert len(captured_results) == 1
-    assert captured_results[0].event_count == 42
+    assert captured_results[0].tool_call_count == 42
 
 
 @pytest.mark.asyncio
@@ -354,9 +351,7 @@ async def test_continuation_planner_attempt_does_not_pass_retry_kwarg(
 
     async def _runner(*args: Any, **kwargs: Any) -> EphemeralRunResult:
         captured_kwargs.append(kwargs)
-        task_store.set_task_status(
-            task_id, status=TaskCenterTaskStatus.DONE.value, summary={}
-        )
+        task_store.set_task_status(task_id, status=TaskCenterTaskStatus.DONE.value)
         return EphemeralRunResult(
             status="completed",
             error=None,
@@ -366,7 +361,7 @@ async def test_continuation_planner_attempt_does_not_pass_retry_kwarg(
                 is_terminal=True,
             ),
             agent_name="planner",
-            event_count=1,
+            tool_call_count=1,
         )
 
     launcher = EphemeralAttemptAgentLauncher(
@@ -437,9 +432,7 @@ async def test_main_agent_launches_with_two_user_messages(
 
     async def _spy_runner(*args: Any, **kwargs: Any) -> EphemeralRunResult:
         captured.append({"args": args, "kwargs": kwargs})
-        task_store.set_task_status(
-            task_id, status=TaskCenterTaskStatus.DONE.value, summary={}
-        )
+        task_store.set_task_status(task_id, status=TaskCenterTaskStatus.DONE.value)
         return EphemeralRunResult(
             status="completed",
             error=None,
@@ -447,7 +440,7 @@ async def test_main_agent_launches_with_two_user_messages(
                 output="plan", is_error=False, is_terminal=True
             ),
             agent_name="planner",
-            event_count=1,
+            tool_call_count=1,
         )
 
     launcher = EphemeralAttemptAgentLauncher(
@@ -520,9 +513,7 @@ async def test_launch_without_task_guidance_falls_back_to_single_user_message(
 
     async def _spy_runner(*args: Any, **kwargs: Any) -> EphemeralRunResult:
         captured.append({"args": args, "kwargs": kwargs})
-        task_store.set_task_status(
-            task_id, status=TaskCenterTaskStatus.DONE.value, summary={}
-        )
+        task_store.set_task_status(task_id, status=TaskCenterTaskStatus.DONE.value)
         return EphemeralRunResult(
             status="completed",
             error=None,
@@ -530,7 +521,7 @@ async def test_launch_without_task_guidance_falls_back_to_single_user_message(
                 output="ok", is_error=False, is_terminal=True
             ),
             agent_name="planner",
-            event_count=1,
+            tool_call_count=1,
         )
 
     launcher = EphemeralAttemptAgentLauncher(
@@ -592,9 +583,7 @@ async def test_main_agent_launches_with_skill_as_prompt_and_context_guidance_ini
 
     async def _spy_runner(*args: Any, **kwargs: Any) -> EphemeralRunResult:
         captured.append({"args": args, "kwargs": kwargs})
-        task_store.set_task_status(
-            task_id, status=TaskCenterTaskStatus.DONE.value, summary={}
-        )
+        task_store.set_task_status(task_id, status=TaskCenterTaskStatus.DONE.value)
         return EphemeralRunResult(
             status="completed",
             error=None,
@@ -602,7 +591,7 @@ async def test_main_agent_launches_with_skill_as_prompt_and_context_guidance_ini
                 output="plan", is_error=False, is_terminal=True
             ),
             agent_name="planner",
-            event_count=1,
+            tool_call_count=1,
         )
 
     launcher = EphemeralAttemptAgentLauncher(

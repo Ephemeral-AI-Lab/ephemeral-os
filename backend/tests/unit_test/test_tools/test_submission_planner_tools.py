@@ -23,16 +23,17 @@ async def _noop_emit(event) -> None:
 
 def _valid_plan_payload() -> dict[str, object]:
     return {
-        "plan_spec": "Implement the requested change.",
-        "evaluation_criteria": ["tests pass"],
         "tasks": [
-            {"id": "a", "agent_name": "executor", "deps": []},
-            {"id": "b", "agent_name": "verifier", "deps": ["a"]},
+            {"id": "a", "agent_name": "executor", "needs": []},
+            {"id": "b", "agent_name": "generator", "needs": ["a"]},
         ],
         "task_specs": {
             "a": "Do the implementation.",
-            "b": "Verify the implementation.",
+            "b": "Do the follow-up.",
         },
+        "reducers": [
+            {"id": "r", "needs": ["b"], "prompt": "Confirm the work is complete."},
+        ],
     }
 
 
@@ -62,8 +63,9 @@ async def test_full_plan_routes_to_apply_plan_submission(
     assert result.is_terminal
     assert result.metadata["submission_kind"] == "planner_completes"
     assert attempt is not None
-    assert attempt.stage == AttemptStage.GENERATE
+    assert attempt.stage == AttemptStage.RUN
     assert attempt.generator_task_ids
+    assert attempt.reducer_task_ids
 
 
 async def test_partial_plan_routes_to_apply_plan_submission(
@@ -100,15 +102,15 @@ async def test_partial_plan_routes_to_apply_plan_submission(
         (
             {
                 "tasks": [
-                    {"id": "a", "agent_name": "executor", "deps": []},
-                    {"id": "a", "agent_name": "verifier", "deps": []},
+                    {"id": "a", "agent_name": "executor", "needs": []},
+                    {"id": "a", "agent_name": "generator", "needs": []},
                 ],
             },
             "duplicate task id",
         ),
         (
             {
-                "tasks": [{"id": "a", "agent_name": "missing", "deps": []}],
+                "tasks": [{"id": "a", "agent_name": "missing", "needs": []}],
                 "task_specs": {"a": "Do it."},
             },
             "Unknown generator agent",
@@ -127,30 +129,30 @@ async def test_partial_plan_routes_to_apply_plan_submission(
         ({"task_specs": {"a": " ", "b": "Check it."}}, "must be nonblank"),
         (
             {
-                "tasks": [{"id": "a", "agent_name": "executor", "deps": ["z"]}],
+                "tasks": [{"id": "a", "agent_name": "executor", "needs": ["z"]}],
                 "task_specs": {"a": "Do it."},
             },
-            "unknown deps",
+            "unknown needs",
         ),
         (
             {
                 "tasks": [
-                    {"id": "a", "agent_name": "executor", "deps": ["b"]},
-                    {"id": "b", "agent_name": "verifier", "deps": ["a"]},
+                    {"id": "a", "agent_name": "executor", "needs": ["b"]},
+                    {"id": "b", "agent_name": "generator", "needs": ["a"]},
                 ],
             },
             "dependency cycle",
         ),
         (
             {
-                "tasks": [{"id": " ", "agent_name": "executor", "deps": []}],
+                "tasks": [{"id": " ", "agent_name": "executor", "needs": []}],
                 "task_specs": {" ": "Do it."},
             },
             "id must be nonblank",
         ),
         (
-            {"evaluation_criteria": [" "]},
-            "evaluation_criteria must be nonblank",
+            {"reducers": []},
+            "at least 1 item",
         ),
     ],
 )

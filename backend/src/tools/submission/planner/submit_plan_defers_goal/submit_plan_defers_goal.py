@@ -20,6 +20,7 @@ from tools.submission.context import (
 from tools.submission.planner._schemas import (
     SUBMISSION_KIND_PLANNER_DEFERS,
     PlanTaskInput,
+    ReducerInput,
     SharedPlannerSubmissionInput,
     build_planner_submission,
     validate_nonblank,
@@ -51,10 +52,9 @@ class SubmitPlanDefersGoalInput(SharedPlannerSubmissionInput):
     ),
 )
 async def submit_plan_defers_goal(
-    plan_spec: str,
-    evaluation_criteria: list[str],
     tasks: list[PlanTaskInput],
     task_specs: dict[str, str],
+    reducers: list[ReducerInput],
     deferred_goal_for_next_iteration: str,
     *,
     context: ToolExecutionContextService,
@@ -67,10 +67,9 @@ async def submit_plan_defers_goal(
     submission, error = build_planner_submission(
         submission_context=submission_context,
         kind="defers",
-        plan_spec=plan_spec,
-        evaluation_criteria=evaluation_criteria,
         tasks=[PlanTaskInput.model_validate(task) for task in tasks],
         task_specs=task_specs,
+        reducers=[ReducerInput.model_validate(reducer) for reducer in reducers],
         deferred_goal_for_next_iteration=deferred_goal_for_next_iteration,
     )
     if error is not None or submission is None:

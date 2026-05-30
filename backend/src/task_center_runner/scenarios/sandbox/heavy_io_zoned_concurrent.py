@@ -21,8 +21,8 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing import Any
 
-from tools.submission.evaluator import submit_evaluation_success
 from tools.submission.planner import submit_plan_closes_goal
+from tools.submission.reducer import submit_reduction_success
 
 from task_center_runner.scenarios.base import ScenarioBase, ScenarioContext, ToolCallSpec
 
@@ -33,15 +33,15 @@ WORKER_COUNT = 5
 def _plan() -> dict[str, Any]:
     worker_ids = [f"heavy_io_zoned_worker_{index:02d}" for index in range(WORKER_COUNT)]
     tasks = [
-        {"id": "heavy_io_zoned_seed", "agent_name": "executor", "deps": []},
+        {"id": "heavy_io_zoned_seed", "agent_name": "executor", "needs": []},
         *(
-            {"id": worker_id, "agent_name": "executor", "deps": ["heavy_io_zoned_seed"]}
+            {"id": worker_id, "agent_name": "executor", "needs": ["heavy_io_zoned_seed"]}
             for worker_id in worker_ids
         ),
         {
             "id": "heavy_io_zoned_reconcile",
             "agent_name": "executor",
-            "deps": worker_ids,
+            "needs": worker_ids,
         },
     ]
     task_specs: dict[str, str] = {
@@ -62,24 +62,25 @@ def _plan() -> dict[str, Any]:
             "vs gitignored vs outside-workspace) and record per-zone results."
         )
     return {
-        "plan_spec": (
-            "Seed shared directories, fan out five concurrent workers that "
-            "drive long-running shell writes to three placement zones "
-            "(gitincluded, gitignored, outside-workspace), then reconcile "
-            "per-zone results."
-        ),
-        "evaluation_criteria": [
-            "All five workers complete and write per-worker fragments.",
-            "Each worker exercises three zones (gitincluded, gitignored, "
-            "outside-workspace) with long-running shell commands.",
-            "Each zone write is observable via a follow-up read after the "
-            "lease is released and the OCC merge has published.",
-            "Workspace OCC changed_paths reflect zone semantics: workspace "
-            "zones report writes; outside-workspace shells report none.",
-            "The final summary uses task_center_runner.heavy_io_zoned.v1.",
-        ],
         "tasks": tasks,
         "task_specs": task_specs,
+        "reducers": [
+            {
+                "id": "reduce",
+                "needs": [
+                    "heavy_io_zoned_seed",
+                    *worker_ids,
+                    "heavy_io_zoned_reconcile",
+                ],
+                "prompt": (
+                    "Confirm all five workers wrote per-worker fragments across "
+                    "the three placement zones, each zone write was observable "
+                    "after the lease released and the OCC merge published, "
+                    "changed_paths reflected zone semantics, and the final "
+                    "summary uses task_center_runner.heavy_io_zoned.v1."
+                ),
+            }
+        ],
     }
 
 
@@ -102,16 +103,15 @@ class HeavyIoZonedConcurrent(ScenarioBase):
             return (f"heavy_io_zoned_worker:{worker_index}",)
         return ()
 
-    def evaluator_response(self, ctx: ScenarioContext) -> ToolCallSpec:
+    def reducer_response(self, ctx: ScenarioContext) -> ToolCallSpec:  # noqa: ARG002
         return ToolCallSpec(
-            submit_evaluation_success,
+            submit_reduction_success,
             {
-                "summary": (
+                "outcome": (
                     "Heavy-IO zoned lease/merge scenario completed with "
                     "per-worker fragments across gitincluded, gitignored, "
                     "and outside-workspace zones."
                 ),
-                "passed_criteria": list(ctx.attempt.evaluation_criteria),
             },
         )
 

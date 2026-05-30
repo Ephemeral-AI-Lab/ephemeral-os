@@ -85,18 +85,29 @@ async def test_full_system_capacity_matrix_records_artifacts_and_metrics(
         report.task_center_run_id,
     )
 
+def _is_guard_task(task: dict[str, Any]) -> bool:
+    """A guard is an executor generator carrying a ``VERIFY checkpoint=`` spec.
+
+    Guard tasks were ``verifier`` agents in the old model; they are now plain
+    executor generators gated by the reducer.
+    """
+    return task.get("agent_name") == "executor" and "VERIFY checkpoint=" in str(
+        task.get("context_message") or ""
+    )
+
+
 def _assert_graph_shape(graph_summary: dict[str, Any]) -> None:
     workflows = graph_summary["workflows"]
     assert len(workflows) >= 2, graph_summary
     root = next(
         workflow
         for workflow in workflows
-        if workflow.get("origin_kind") == "entry"
+        if str(workflow.get("parent_task_id") or "").endswith(":root")
     )
     recursive = [
         workflow
         for workflow in workflows
-        if workflow.get("origin_kind") == "task"
+        if not str(workflow.get("parent_task_id") or "").endswith(":root")
     ]
     assert recursive, graph_summary
     assert root["status"] == "succeeded"
@@ -114,18 +125,19 @@ def _assert_graph_shape(graph_summary: dict[str, Any]) -> None:
     assert len(tasks) >= 20
     assert any(attempt["deferred_goal_for_next_iteration"] for attempt in attempts)
     assert any(
-        task.get("id", "").endswith(":capacity_metrics_summary")
+        str(task.get("task_id") or "").endswith(":capacity_metrics_summary")
         and task.get("status") == "done"
         for task in tasks
     )
+    # A failing attempt now fails at its reducer gate.
+    reducer_ids = {
+        task_id for attempt in attempts for task_id in attempt["reducer_task_ids"]
+    }
     assert any(
-        task.get("agent_name") == "verifier" and task.get("status") == "failed"
+        task.get("task_id") in reducer_ids and task.get("status") == "failed"
         for task in tasks
     )
-    assert any(
-        task.get("agent_name") == "verifier" and len(task["needs"]) > 1
-        for task in tasks
-    )
+    assert any(_is_guard_task(task) and len(task["needs"]) > 1 for task in tasks)
     assert max(len(attempt["tasks"]) for attempt in attempts) >= 5
 
 

@@ -1,4 +1,13 @@
-"""IterationAttemptCoordinator lifecycle tests."""
+"""IterationAttemptCoordinator lifecycle tests.
+
+Iteration close is now a primitive keyword callback
+``on_iteration_closed(iteration_id=, succeeded=, deferred_goal=,
+final_attempt_id=)`` — there is no ``IterationClosureReport`` DTO. On a passing
+close the coordinator denormalizes the passing attempt's REDUCER outcomes onto
+``Iteration.outcomes`` (a JSON list of ``Outcome`` records keyed by ``text``);
+on a failed close it denormalizes the last failed attempt's failed-task
+outcomes.
+"""
 
 from __future__ import annotations
 
@@ -7,47 +16,52 @@ import json
 import pytest
 
 from task_center.iteration import IterationAttemptCoordinator
-from task_center.attempt import (
+from task_center._core.state import (
     AttemptFailReason,
     AttemptStatus,
-)
-from task_center.iteration.state import (
-    AttemptPlanFailed,
-    SuccessDeferred,
-    IterationClosureReport,
-    TerminalSuccess,
-)
-from task_center.iteration.state import (
     IterationCreationReason,
     IterationStatus,
 )
+from task_center._core.primitives import reducer_task_id
 
 
-def _seed_segment(
+def _seed_iteration(
     workflow_store, iteration_store, task_center_run_id, attempt_budget=2
 ) -> str:
-    req = workflow_store.insert(
+    workflow = workflow_store.insert(
         task_center_run_id=task_center_run_id,
-        requested_by_task_id="t1",
-        goal="g",
+        parent_task_id="t1",
+        workflow_goal="g",
     )
-    seg = iteration_store.insert(
-        workflow_id=req.id,
+    iteration = iteration_store.insert(
+        workflow_id=workflow.id,
         sequence_no=1,
         creation_reason=IterationCreationReason.INITIAL,
-        goal="g",
+        iteration_goal="g",
         attempt_budget=attempt_budget,
     )
-    return seg.id
+    return iteration.id
 
 
-def _make_coordinator(seg_id, iteration_store, attempt_store):
-    captured: list[IterationClosureReport] = []
+def _make_coordinator(iter_id, iteration_store, attempt_store, task_store=None):
+    captured: list[dict] = []
+
+    def sink(*, iteration_id, succeeded, deferred_goal, final_attempt_id):
+        captured.append(
+            {
+                "iteration_id": iteration_id,
+                "succeeded": succeeded,
+                "deferred_goal": deferred_goal,
+                "final_attempt_id": final_attempt_id,
+            }
+        )
+
     coordinator = IterationAttemptCoordinator(
-        iteration_id=seg_id,
+        iteration_id=iter_id,
         iteration_store=iteration_store,
         attempt_store=attempt_store,
-        on_iteration_closed=captured.append,
+        on_iteration_closed=sink,
+        task_store=task_store,
     )
     return coordinator, captured
 
@@ -69,58 +83,11 @@ class _FailingStartOrchestrator:
         raise RuntimeError("orchestrator start failed")
 
 
-def test_initial_iteration_creates_graph_sequence_1(
-    workflow_store, iteration_store, attempt_store, task_center_run_id
-):
-    """Phase 01 exit: create iteration 1 with harness attempt sequence 1."""
-    seg_id = _seed_segment(workflow_store, iteration_store, task_center_run_id)
-    coordinator, _ = _make_coordinator(seg_id, iteration_store, attempt_store)
-    g = coordinator.create_attempt()
-    assert g.attempt_sequence_no == 1
-    seg = iteration_store.get(seg_id)
-    assert seg is not None
-    assert seg.attempt_ids == (g.id,)
-
-
-def test_retry_creates_graph_in_same_segment(
-    workflow_store, iteration_store, attempt_store, task_center_run_id
-):
-    """Phase 01 exit: retry creates another Attempt in the same iteration."""
-    seg_id = _seed_segment(workflow_store, iteration_store, task_center_run_id)
-    coordinator, _ = _make_coordinator(seg_id, iteration_store, attempt_store)
-    g1 = coordinator.create_attempt()
-    g2 = coordinator.create_attempt(previous_attempt_id=g1.id)
-    assert g2.iteration_id == seg_id
-    assert g2.attempt_sequence_no == 2
-    seg = iteration_store.get(seg_id)
-    assert seg is not None
-    assert seg.attempt_ids == (g1.id, g2.id)
-
-
-def test_passing_graph_with_null_continuation_emits_terminal_success(
-    workflow_store, iteration_store, attempt_store, task_center_run_id
-):
-    seg_id = _seed_segment(workflow_store, iteration_store, task_center_run_id)
-    coordinator, captured = _make_coordinator(seg_id, iteration_store, attempt_store)
-    g = coordinator.create_attempt()
-    # No deferred_goal_for_next_iteration set on the attempt.
-    attempt_store.close(
-        g.id, status=AttemptStatus.PASSED, fail_reason=None
-    )
-    coordinator.handle_attempt_closed(g.id)
-    assert len(captured) == 1
-    assert isinstance(captured[0].outcome, TerminalSuccess)
-    seg = iteration_store.get(seg_id)
-    assert seg is not None
-    assert seg.status == IterationStatus.SUCCEEDED
-
-
 class _FakeTaskStore:
     """Minimal TaskStoreProtocol surface: returns task rows by id.
 
-    The coordinator builds the iteration's denormalized achieved record from
-    the passing attempt's generator tasks via ``task_store.get_task`` per
-    ``generator_task_id``.
+    The coordinator denormalizes the passing attempt's REDUCER outcomes by
+    reading ``task_store.get_task`` per ``reducer_task_id``.
     """
 
     def __init__(self, rows: dict[str, dict] | None = None) -> None:
@@ -130,177 +97,191 @@ class _FakeTaskStore:
         return self._rows.get(task_id)
 
 
-def _make_coordinator_with_task_store(seg_id, iteration_store, attempt_store, task_store):
-    captured: list[IterationClosureReport] = []
-    coordinator = IterationAttemptCoordinator(
-        iteration_id=seg_id,
-        iteration_store=iteration_store,
-        attempt_store=attempt_store,
-        on_iteration_closed=captured.append,
-        task_store=task_store,
-    )
-    return coordinator, captured
+def test_initial_iteration_creates_attempt_sequence_1(
+    workflow_store, iteration_store, attempt_store, task_center_run_id
+):
+    iter_id = _seed_iteration(workflow_store, iteration_store, task_center_run_id)
+    coordinator, _ = _make_coordinator(iter_id, iteration_store, attempt_store)
+    attempt = coordinator.create_attempt()
+    assert attempt.attempt_sequence_no == 1
+    iteration = iteration_store.get(iter_id)
+    assert iteration is not None
+    assert iteration.attempt_ids == (attempt.id,)
 
 
-def test_close_iteration_passed_writes_structured_achieved_record(
+def test_retry_creates_attempt_in_same_iteration(
+    workflow_store, iteration_store, attempt_store, task_center_run_id
+):
+    iter_id = _seed_iteration(workflow_store, iteration_store, task_center_run_id)
+    coordinator, _ = _make_coordinator(iter_id, iteration_store, attempt_store)
+    g1 = coordinator.create_attempt()
+    g2 = coordinator.create_attempt(previous_attempt_id=g1.id)
+    assert g2.iteration_id == iter_id
+    assert g2.attempt_sequence_no == 2
+    iteration = iteration_store.get(iter_id)
+    assert iteration is not None
+    assert iteration.attempt_ids == (g1.id, g2.id)
+
+
+def test_passing_attempt_with_null_continuation_signals_success(
+    workflow_store, iteration_store, attempt_store, task_center_run_id
+):
+    iter_id = _seed_iteration(workflow_store, iteration_store, task_center_run_id)
+    coordinator, captured = _make_coordinator(iter_id, iteration_store, attempt_store)
+    attempt = coordinator.create_attempt()
+    attempt_store.close(attempt.id, status=AttemptStatus.PASSED, fail_reason=None)
+    coordinator.handle_attempt_closed(attempt.id)
+    assert len(captured) == 1
+    assert captured[0]["succeeded"] is True
+    assert captured[0]["deferred_goal"] is None
+    iteration = iteration_store.get(iter_id)
+    assert iteration is not None
+    assert iteration.status == IterationStatus.SUCCEEDED
+
+
+def test_close_iteration_passed_writes_reducer_outcomes(
     workflow_store, iteration_store, attempt_store, task_center_run_id
 ):
     """At successful close the coordinator denormalizes the passing attempt's
-    GENERATOR tasks onto ``Iteration.task_summary`` as a JSON achieved record
-    (``[{local_id, status, summary}, ...]``). Renamed from
-    ``..._appends_passed_criteria``: the evaluator free-text + ``Passed
-    criteria:`` block behavior was removed."""
-    seg_id = _seed_segment(workflow_store, iteration_store, task_center_run_id)
-    g = attempt_store.insert(iteration_id=seg_id, attempt_sequence_no=1)
-    iteration_store.append_attempt_id(seg_id, g.id)
-    gen_a = f"{g.id}:gen:gen_a"
-    gen_b = f"{g.id}:gen:gen_b"
-    attempt_store.set_generator_task_ids(g.id, [gen_a, gen_b])
-    attempt_store.close(g.id, status=AttemptStatus.PASSED, fail_reason=None)
+    REDUCER tasks onto ``Iteration.outcomes`` as a JSON list of ``Outcome``
+    records (``[{local_id, status, text}, ...]``)."""
+    iter_id = _seed_iteration(workflow_store, iteration_store, task_center_run_id)
+    attempt = attempt_store.insert(iteration_id=iter_id, attempt_sequence_no=1)
+    iteration_store.append_attempt_id(iter_id, attempt.id)
+    red_a = reducer_task_id(attempt.id, "red_a")
+    red_b = reducer_task_id(attempt.id, "red_b")
+    attempt_store.set_reducer_task_ids(attempt.id, [red_a, red_b])
+    attempt_store.close(attempt.id, status=AttemptStatus.PASSED, fail_reason=None)
     task_store = _FakeTaskStore(
         {
-            gen_a: {"status": "done", "summaries": [{"summary": "Implemented storage layer."}]},
-            gen_b: {"status": "done", "summaries": [{"summary": "Added the add command."}]},
+            red_a: {"status": "done", "outcomes": [{"outcome": "Storage layer ok."}]},
+            red_b: {"status": "done", "outcomes": [{"outcome": "Add command ok."}]},
         }
     )
-    coordinator, _ = _make_coordinator_with_task_store(
-        seg_id, iteration_store, attempt_store, task_store
+    coordinator, _ = _make_coordinator(
+        iter_id, iteration_store, attempt_store, task_store
     )
-    coordinator.handle_attempt_closed(g.id)
-    seg = iteration_store.get(seg_id)
-    assert seg is not None
-    assert seg.task_summary is not None
-    record = json.loads(seg.task_summary)
+    coordinator.handle_attempt_closed(attempt.id)
+    iteration = iteration_store.get(iter_id)
+    assert iteration is not None
+    assert iteration.outcomes is not None
+    record = json.loads(iteration.outcomes)
     assert record == [
-        {"local_id": "gen_a", "status": "success", "summary": "Implemented storage layer."},
-        {"local_id": "gen_b", "status": "success", "summary": "Added the add command."},
+        {"local_id": "red_a", "status": "success", "outcome": "Storage layer ok."},
+        {"local_id": "red_b", "status": "success", "outcome": "Add command ok."},
     ]
 
 
-def test_close_iteration_passed_achieved_record_empty_without_generators(
+def test_close_iteration_passed_outcomes_empty_without_reducers(
     workflow_store, iteration_store, attempt_store, task_center_run_id
 ):
-    """A passing attempt with no generators yields an empty JSON achieved
-    record. Renamed from ``..._omits_criteria_when_payload_empty``: the
-    evaluator-payload ``passed_criteria`` behavior was removed."""
-    seg_id = _seed_segment(workflow_store, iteration_store, task_center_run_id)
-    g = attempt_store.insert(iteration_id=seg_id, attempt_sequence_no=1)
-    iteration_store.append_attempt_id(seg_id, g.id)
-    attempt_store.close(g.id, status=AttemptStatus.PASSED, fail_reason=None)
-    coordinator, _ = _make_coordinator_with_task_store(
-        seg_id, iteration_store, attempt_store, _FakeTaskStore()
+    """A passing attempt with no reducers yields an empty JSON outcomes record."""
+    iter_id = _seed_iteration(workflow_store, iteration_store, task_center_run_id)
+    attempt = attempt_store.insert(iteration_id=iter_id, attempt_sequence_no=1)
+    iteration_store.append_attempt_id(iter_id, attempt.id)
+    attempt_store.close(attempt.id, status=AttemptStatus.PASSED, fail_reason=None)
+    coordinator, _ = _make_coordinator(
+        iter_id, iteration_store, attempt_store, _FakeTaskStore()
     )
-    coordinator.handle_attempt_closed(g.id)
-    seg = iteration_store.get(seg_id)
-    assert seg is not None
-    assert json.loads(seg.task_summary) == []
+    coordinator.handle_attempt_closed(attempt.id)
+    iteration = iteration_store.get(iter_id)
+    assert iteration is not None
+    assert json.loads(iteration.outcomes) == []
 
 
-def test_passing_graph_with_continuation_emits_success_continue(
+def test_passing_attempt_with_continuation_signals_deferred_goal(
     workflow_store, iteration_store, attempt_store, task_center_run_id
 ):
-    seg_id = _seed_segment(workflow_store, iteration_store, task_center_run_id)
-    coordinator, captured = _make_coordinator(seg_id, iteration_store, attempt_store)
-    g = coordinator.create_attempt()
-    attempt_store.set_plan_contract(
-        g.id,
-        plan_spec="spec",
-        evaluation_criteria=["c1"],
-        deferred_goal_for_next_iteration="next-goal",
+    iter_id = _seed_iteration(workflow_store, iteration_store, task_center_run_id)
+    coordinator, captured = _make_coordinator(iter_id, iteration_store, attempt_store)
+    attempt = coordinator.create_attempt()
+    attempt_store.set_deferred_goal(
+        attempt.id, deferred_goal_for_next_iteration="next-goal"
     )
-    attempt_store.close(
-        g.id, status=AttemptStatus.PASSED, fail_reason=None
-    )
-    coordinator.handle_attempt_closed(g.id)
+    attempt_store.close(attempt.id, status=AttemptStatus.PASSED, fail_reason=None)
+    coordinator.handle_attempt_closed(attempt.id)
     assert len(captured) == 1
-    outcome = captured[0].outcome
-    assert isinstance(outcome, SuccessDeferred)
-    assert outcome.deferred_goal_for_next_iteration == "next-goal"
-    seg = iteration_store.get(seg_id)
-    assert seg is not None
-    assert seg.deferred_goal_for_next_iteration == "next-goal"
+    assert captured[0]["succeeded"] is True
+    assert captured[0]["deferred_goal"] == "next-goal"
+    iteration = iteration_store.get(iter_id)
+    assert iteration is not None
+    assert iteration.deferred_goal_for_next_iteration == "next-goal"
 
 
-def test_passing_graph_does_not_retry(
+def test_passing_attempt_does_not_retry(
     workflow_store, iteration_store, attempt_store, task_center_run_id
 ):
     """Spec rule: passing attempt always closes the iteration; no second attempt."""
-    seg_id = _seed_segment(workflow_store, iteration_store, task_center_run_id)
-    coordinator, _ = _make_coordinator(seg_id, iteration_store, attempt_store)
-    g = coordinator.create_attempt()
-    attempt_store.close(
-        g.id, status=AttemptStatus.PASSED, fail_reason=None
-    )
-    coordinator.handle_attempt_closed(g.id)
-    seg = iteration_store.get(seg_id)
-    assert seg is not None
-    assert seg.attempt_ids == (g.id,)
-    assert seg.status == IterationStatus.SUCCEEDED
+    iter_id = _seed_iteration(workflow_store, iteration_store, task_center_run_id)
+    coordinator, _ = _make_coordinator(iter_id, iteration_store, attempt_store)
+    attempt = coordinator.create_attempt()
+    attempt_store.close(attempt.id, status=AttemptStatus.PASSED, fail_reason=None)
+    coordinator.handle_attempt_closed(attempt.id)
+    iteration = iteration_store.get(iter_id)
+    assert iteration is not None
+    assert iteration.attempt_ids == (attempt.id,)
+    assert iteration.status == IterationStatus.SUCCEEDED
 
 
-def test_failed_attempt_with_budget_creates_next_graph(
+def test_failed_attempt_with_budget_creates_next_attempt(
     workflow_store, iteration_store, attempt_store, task_center_run_id
 ):
-    seg_id = _seed_segment(workflow_store, iteration_store, task_center_run_id, attempt_budget=2)
-    coordinator, captured = _make_coordinator(seg_id, iteration_store, attempt_store)
+    iter_id = _seed_iteration(
+        workflow_store, iteration_store, task_center_run_id, attempt_budget=2
+    )
+    coordinator, captured = _make_coordinator(iter_id, iteration_store, attempt_store)
     g1 = coordinator.create_attempt()
     attempt_store.close(
-        g1.id,
-        status=AttemptStatus.FAILED,
-        fail_reason=AttemptFailReason.GENERATOR_FAILED,
+        g1.id, status=AttemptStatus.FAILED, fail_reason=AttemptFailReason.TASK_FAILED
     )
     coordinator.handle_attempt_closed(g1.id)
-    assert captured == []  # No closure report yet — iteration still open.
-    seg = iteration_store.get(seg_id)
-    assert seg is not None
-    assert seg.is_open
-    assert len(seg.attempt_ids) == 2
+    assert captured == []  # No closure signal yet — iteration still open.
+    iteration = iteration_store.get(iter_id)
+    assert iteration is not None
+    assert iteration.is_open
+    assert len(iteration.attempt_ids) == 2
 
 
-def test_failed_partial_plan_graph_retries_without_propagating_continuation(
+def test_failed_partial_plan_attempt_retries_without_propagating_continuation(
     workflow_store, iteration_store, attempt_store, task_center_run_id
 ):
-    seg_id = _seed_segment(workflow_store, iteration_store, task_center_run_id, attempt_budget=2)
-    coordinator, captured = _make_coordinator(seg_id, iteration_store, attempt_store)
+    iter_id = _seed_iteration(
+        workflow_store, iteration_store, task_center_run_id, attempt_budget=2
+    )
+    coordinator, captured = _make_coordinator(iter_id, iteration_store, attempt_store)
     g1 = coordinator.create_attempt()
-    attempt_store.set_plan_contract(
-        g1.id,
-        plan_spec="partial slice",
-        evaluation_criteria=["slice passes"],
-        deferred_goal_for_next_iteration="next slice",
+    attempt_store.set_deferred_goal(
+        g1.id, deferred_goal_for_next_iteration="next slice"
     )
     attempt_store.close(
-        g1.id,
-        status=AttemptStatus.FAILED,
-        fail_reason=AttemptFailReason.GENERATOR_FAILED,
+        g1.id, status=AttemptStatus.FAILED, fail_reason=AttemptFailReason.TASK_FAILED
     )
 
     coordinator.handle_attempt_closed(g1.id)
 
     assert captured == []
-    seg = iteration_store.get(seg_id)
-    assert seg is not None
-    assert seg.is_open
-    assert seg.deferred_goal_for_next_iteration is None
-    assert len(seg.attempt_ids) == 2
+    iteration = iteration_store.get(iter_id)
+    assert iteration is not None
+    assert iteration.is_open
+    assert iteration.deferred_goal_for_next_iteration is None
+    assert len(iteration.attempt_ids) == 2
 
 
 def test_coordinator_starts_orchestrator_when_factory_present(
     workflow_store, iteration_store, attempt_store, task_center_run_id
 ):
-    seg_id = _seed_segment(workflow_store, iteration_store, task_center_run_id)
+    iter_id = _seed_iteration(workflow_store, iteration_store, task_center_run_id)
     started: list[str] = []
 
     def factory(attempt, on_attempt_closed):
         del on_attempt_closed
         return _StartedOrchestrator(attempt.id, started)
 
-    captured: list[IterationClosureReport] = []
     coordinator = IterationAttemptCoordinator(
-        iteration_id=seg_id,
+        iteration_id=iter_id,
         iteration_store=iteration_store,
         attempt_store=attempt_store,
-        on_iteration_closed=captured.append,
+        on_iteration_closed=lambda **_: None,
         orchestrator_factory=factory,
     )
 
@@ -309,22 +290,21 @@ def test_coordinator_starts_orchestrator_when_factory_present(
     assert started == [attempt.id]
 
 
-def test_initial_graph_start_can_be_deferred(
+def test_initial_attempt_start_can_be_deferred(
     workflow_store, iteration_store, attempt_store, task_center_run_id
 ):
-    seg_id = _seed_segment(workflow_store, iteration_store, task_center_run_id)
+    iter_id = _seed_iteration(workflow_store, iteration_store, task_center_run_id)
     started: list[str] = []
 
     def factory(attempt, on_attempt_closed):
         del on_attempt_closed
         return _StartedOrchestrator(attempt.id, started)
 
-    captured: list[IterationClosureReport] = []
     coordinator = IterationAttemptCoordinator(
-        iteration_id=seg_id,
+        iteration_id=iter_id,
         iteration_store=iteration_store,
         attempt_store=attempt_store,
-        on_iteration_closed=captured.append,
+        on_iteration_closed=lambda **_: None,
         orchestrator_factory=factory,
     )
 
@@ -336,28 +316,28 @@ def test_initial_graph_start_can_be_deferred(
     assert started == [attempt.id]
 
 
-def test_initial_start_failure_closes_inserted_graph(
+def test_initial_start_failure_closes_inserted_attempt(
     workflow_store, iteration_store, attempt_store, task_center_run_id
 ):
-    seg_id = _seed_segment(workflow_store, iteration_store, task_center_run_id)
+    iter_id = _seed_iteration(workflow_store, iteration_store, task_center_run_id)
 
     def factory(attempt, on_attempt_closed):
         del on_attempt_closed
         return _FailingStartOrchestrator(attempt.id)
 
-    captured: list[IterationClosureReport] = []
+    captured: list[dict] = []
     coordinator = IterationAttemptCoordinator(
-        iteration_id=seg_id,
+        iteration_id=iter_id,
         iteration_store=iteration_store,
         attempt_store=attempt_store,
-        on_iteration_closed=captured.append,
+        on_iteration_closed=lambda **kw: captured.append(kw),
         orchestrator_factory=factory,
     )
 
     with pytest.raises(RuntimeError, match="orchestrator start failed"):
         coordinator.create_attempt()
 
-    iteration = iteration_store.get(seg_id)
+    iteration = iteration_store.get(iter_id)
     assert iteration is not None
     assert len(iteration.attempt_ids) == 1
     attempt = attempt_store.get(iteration.attempt_ids[0])
@@ -367,21 +347,21 @@ def test_initial_start_failure_closes_inserted_graph(
     assert captured == []
 
 
-def test_deferred_start_failure_closes_inserted_graph(
+def test_deferred_start_failure_closes_inserted_attempt(
     workflow_store, iteration_store, attempt_store, task_center_run_id
 ):
-    seg_id = _seed_segment(workflow_store, iteration_store, task_center_run_id)
+    iter_id = _seed_iteration(workflow_store, iteration_store, task_center_run_id)
 
     def factory(attempt, on_attempt_closed):
         del on_attempt_closed
         return _FailingStartOrchestrator(attempt.id)
 
-    captured: list[IterationClosureReport] = []
+    captured: list[dict] = []
     coordinator = IterationAttemptCoordinator(
-        iteration_id=seg_id,
+        iteration_id=iter_id,
         iteration_store=iteration_store,
         attempt_store=attempt_store,
-        on_iteration_closed=captured.append,
+        on_iteration_closed=lambda **kw: captured.append(kw),
         orchestrator_factory=factory,
     )
 
@@ -397,13 +377,15 @@ def test_deferred_start_failure_closes_inserted_graph(
     assert captured == []
 
 
-def test_retry_start_failure_exhausts_budget_and_emits_closure(
+def test_retry_start_failure_exhausts_budget_and_signals_failure(
     workflow_store, iteration_store, attempt_store, task_center_run_id
 ):
     """Retry-path startup failure closes the new attempt STARTUP_FAILED and,
-    when budget is exhausted, emits ``attempt_plan_failed`` instead of
-    leaving the iteration open."""
-    seg_id = _seed_segment(workflow_store, iteration_store, task_center_run_id, attempt_budget=2)
+    when budget is exhausted, signals a failed close instead of leaving the
+    iteration open."""
+    iter_id = _seed_iteration(
+        workflow_store, iteration_store, task_center_run_id, attempt_budget=2
+    )
     started: list[str] = []
 
     def factory(attempt, on_attempt_closed):
@@ -412,24 +394,23 @@ def test_retry_start_failure_exhausts_budget_and_emits_closure(
             return _StartedOrchestrator(attempt.id, started)
         return _FailingStartOrchestrator(attempt.id)
 
-    captured: list[IterationClosureReport] = []
+    captured: list[dict] = []
     coordinator = IterationAttemptCoordinator(
-        iteration_id=seg_id,
+        iteration_id=iter_id,
         iteration_store=iteration_store,
         attempt_store=attempt_store,
-        on_iteration_closed=captured.append,
+        on_iteration_closed=lambda **kw: captured.append(kw),
         orchestrator_factory=factory,
+        task_store=_FakeTaskStore(),
     )
-    first_graph = coordinator.create_attempt()
+    first = coordinator.create_attempt()
     attempt_store.close(
-        first_graph.id,
-        status=AttemptStatus.FAILED,
-        fail_reason=AttemptFailReason.GENERATOR_FAILED,
+        first.id, status=AttemptStatus.FAILED, fail_reason=AttemptFailReason.TASK_FAILED
     )
 
-    coordinator.handle_attempt_closed(first_graph.id)
+    coordinator.handle_attempt_closed(first.id)
 
-    iteration = iteration_store.get(seg_id)
+    iteration = iteration_store.get(iter_id)
     assert iteration is not None
     assert len(iteration.attempt_ids) == 2
     retry_attempt = attempt_store.get(iteration.attempt_ids[-1])
@@ -438,16 +419,17 @@ def test_retry_start_failure_exhausts_budget_and_emits_closure(
     assert retry_attempt.fail_reason == AttemptFailReason.STARTUP_FAILED
     assert iteration.status == IterationStatus.FAILED
     assert len(captured) == 1
-    outcome = captured[0].outcome
-    assert isinstance(outcome, AttemptPlanFailed)
+    assert captured[0]["succeeded"] is False
 
 
-def test_retry_start_failure_with_budget_remaining_creates_next_graph(
+def test_retry_start_failure_with_budget_remaining_creates_next_attempt(
     workflow_store, iteration_store, attempt_store, task_center_run_id
 ):
     """When budget remains after a startup failure on retry, the coordinator
     keeps trying until a non-failing factory or budget exhaustion."""
-    seg_id = _seed_segment(workflow_store, iteration_store, task_center_run_id, attempt_budget=3)
+    iter_id = _seed_iteration(
+        workflow_store, iteration_store, task_center_run_id, attempt_budget=3
+    )
     started: list[str] = []
 
     def factory(attempt, on_attempt_closed):
@@ -456,24 +438,22 @@ def test_retry_start_failure_with_budget_remaining_creates_next_graph(
             return _FailingStartOrchestrator(attempt.id)
         return _StartedOrchestrator(attempt.id, started)
 
-    captured: list[IterationClosureReport] = []
+    captured: list[dict] = []
     coordinator = IterationAttemptCoordinator(
-        iteration_id=seg_id,
+        iteration_id=iter_id,
         iteration_store=iteration_store,
         attempt_store=attempt_store,
-        on_iteration_closed=captured.append,
+        on_iteration_closed=lambda **kw: captured.append(kw),
         orchestrator_factory=factory,
     )
-    first_graph = coordinator.create_attempt()
+    first = coordinator.create_attempt()
     attempt_store.close(
-        first_graph.id,
-        status=AttemptStatus.FAILED,
-        fail_reason=AttemptFailReason.GENERATOR_FAILED,
+        first.id, status=AttemptStatus.FAILED, fail_reason=AttemptFailReason.TASK_FAILED
     )
 
-    coordinator.handle_attempt_closed(first_graph.id)
+    coordinator.handle_attempt_closed(first.id)
 
-    iteration = iteration_store.get(seg_id)
+    iteration = iteration_store.get(iter_id)
     assert iteration is not None
     assert len(iteration.attempt_ids) == 3
     g2 = attempt_store.get(iteration.attempt_ids[1])
@@ -484,79 +464,78 @@ def test_retry_start_failure_with_budget_remaining_creates_next_graph(
     assert captured == []
 
 
-def test_failed_attempt_with_budget_starts_next_graph_orchestrator(
+def test_failed_attempt_with_budget_starts_next_attempt_orchestrator(
     workflow_store, iteration_store, attempt_store, task_center_run_id
 ):
-    seg_id = _seed_segment(workflow_store, iteration_store, task_center_run_id, attempt_budget=2)
+    iter_id = _seed_iteration(
+        workflow_store, iteration_store, task_center_run_id, attempt_budget=2
+    )
     started: list[str] = []
 
     def factory(attempt, on_attempt_closed):
         del on_attempt_closed
         return _StartedOrchestrator(attempt.id, started)
 
-    captured: list[IterationClosureReport] = []
+    captured: list[dict] = []
     coordinator = IterationAttemptCoordinator(
-        iteration_id=seg_id,
+        iteration_id=iter_id,
         iteration_store=iteration_store,
         attempt_store=attempt_store,
-        on_iteration_closed=captured.append,
+        on_iteration_closed=lambda **kw: captured.append(kw),
         orchestrator_factory=factory,
     )
     attempt = coordinator.create_attempt()
     attempt_store.close(
-        attempt.id,
-        status=AttemptStatus.FAILED,
-        fail_reason=AttemptFailReason.GENERATOR_FAILED,
+        attempt.id, status=AttemptStatus.FAILED, fail_reason=AttemptFailReason.TASK_FAILED
     )
 
     coordinator.handle_attempt_closed(attempt.id)
 
-    iteration = iteration_store.get(seg_id)
+    iteration = iteration_store.get(iter_id)
     assert iteration is not None
     assert started == list(iteration.attempt_ids)
     assert captured == []
 
 
-def test_failed_attempt_without_budget_emits_attempt_plan_failed(
+def test_failed_attempt_without_budget_signals_failure_with_outcomes(
     workflow_store, iteration_store, attempt_store, task_center_run_id
 ):
-    seg_id = _seed_segment(workflow_store, iteration_store, task_center_run_id, attempt_budget=2)
-    coordinator, captured = _make_coordinator(seg_id, iteration_store, attempt_store)
-    g1 = coordinator.create_attempt()
-    attempt_store.set_plan_contract(
-        g1.id, plan_spec="spec1", evaluation_criteria=["a"], deferred_goal_for_next_iteration=None
+    iter_id = _seed_iteration(
+        workflow_store, iteration_store, task_center_run_id, attempt_budget=2
     )
+    coordinator, captured = _make_coordinator(
+        iter_id, iteration_store, attempt_store, _FakeTaskStore()
+    )
+    g1 = coordinator.create_attempt()
     attempt_store.close(
-        g1.id,
-        status=AttemptStatus.FAILED,
-        fail_reason=AttemptFailReason.GENERATOR_FAILED,
+        g1.id, status=AttemptStatus.FAILED, fail_reason=AttemptFailReason.TASK_FAILED
     )
     coordinator.handle_attempt_closed(g1.id)
     # second attempt
-    seg = iteration_store.get(seg_id)
-    assert seg is not None
-    g2_id = seg.attempt_ids[-1]
-    attempt_store.set_plan_contract(
-        g2_id, plan_spec="spec2", evaluation_criteria=["b"], deferred_goal_for_next_iteration=None
-    )
+    iteration = iteration_store.get(iter_id)
+    assert iteration is not None
+    g2_id = iteration.attempt_ids[-1]
     attempt_store.close(
-        g2_id,
-        status=AttemptStatus.FAILED,
-        fail_reason=AttemptFailReason.EVALUATOR_FAILED,
+        g2_id, status=AttemptStatus.FAILED, fail_reason=AttemptFailReason.TASK_FAILED
     )
     coordinator.handle_attempt_closed(g2_id)
     assert len(captured) == 1
-    outcome = captured[0].outcome
-    assert isinstance(outcome, AttemptPlanFailed)
+    assert captured[0]["succeeded"] is False
+    iteration = iteration_store.get(iter_id)
+    assert iteration is not None
+    assert iteration.status == IterationStatus.FAILED
+    # Failure-aware close writes the (empty here) failed-task outcomes record.
+    assert iteration.outcomes is not None
+    assert json.loads(iteration.outcomes) == []
 
 
-def test_creating_initial_graph_twice_raises(
+def test_creating_initial_attempt_twice_raises(
     workflow_store, iteration_store, attempt_store, task_center_run_id
 ):
     from task_center._core.primitives import TaskCenterInvariantViolation
 
-    seg_id = _seed_segment(workflow_store, iteration_store, task_center_run_id)
-    coordinator, _ = _make_coordinator(seg_id, iteration_store, attempt_store)
+    iter_id = _seed_iteration(workflow_store, iteration_store, task_center_run_id)
+    coordinator, _ = _make_coordinator(iter_id, iteration_store, attempt_store)
     coordinator.create_attempt()
     with pytest.raises(TaskCenterInvariantViolation):
         coordinator.create_attempt()

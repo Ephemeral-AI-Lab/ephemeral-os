@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
-from task_center.attempt import (
+from task_center._core.state import (
     Attempt,
     AttemptFailReason,
     AttemptStage,
     AttemptStatus,
+    IterationCreationReason,
 )
-from task_center.iteration.state import IterationCreationReason
 
 
 def _seed_segment(
@@ -16,14 +16,14 @@ def _seed_segment(
 ) -> str:
     req = workflow_store.insert(
         task_center_run_id=task_center_run_id,
-        requested_by_task_id="t1",
-        goal="g",
+        parent_task_id="t1",
+        workflow_goal="g",
     )
     seg = iteration_store.insert(
         workflow_id=req.id,
         sequence_no=sequence_no,
         creation_reason=IterationCreationReason.INITIAL,
-        goal="g",
+        iteration_goal="g",
         attempt_budget=2,
     )
     return seg.id
@@ -37,25 +37,23 @@ def test_insert_returns_running_planning_dto(
     assert isinstance(g, Attempt)
     assert g.stage == AttemptStage.PLAN
     assert g.status == AttemptStatus.RUNNING
-    assert g.evaluation_criteria == ()
     assert g.generator_task_ids == ()
+    assert g.reducer_task_ids == ()
     assert g.fail_reason is None
 
 
-def test_set_plan_contract_persists_fields(
+def test_set_deferred_goal_and_reducer_task_ids_persist(
     attempt_store, iteration_store, workflow_store, task_center_run_id
 ):
     seg_id = _seed_segment(workflow_store, iteration_store, task_center_run_id)
     g = attempt_store.insert(iteration_id=seg_id, attempt_sequence_no=1)
-    g = attempt_store.set_plan_contract(
+    g = attempt_store.set_deferred_goal(
         g.id,
-        plan_spec="spec",
-        evaluation_criteria=["c1", "c2"],
         deferred_goal_for_next_iteration="next",
     )
-    assert g.plan_spec == "spec"
-    assert g.evaluation_criteria == ("c1", "c2")
     assert g.deferred_goal_for_next_iteration == "next"
+    g = attempt_store.set_reducer_task_ids(g.id, ["r1", "r2"])
+    assert g.reducer_task_ids == ("r1", "r2")
 
 
 def test_close_records_status_fail_reason_and_closed_at(
@@ -66,11 +64,11 @@ def test_close_records_status_fail_reason_and_closed_at(
     closed = attempt_store.close(
         g.id,
         status=AttemptStatus.FAILED,
-        fail_reason=AttemptFailReason.EVALUATOR_FAILED,
+        fail_reason=AttemptFailReason.TASK_FAILED,
     )
     assert closed.is_closed
     assert closed.status == AttemptStatus.FAILED
-    assert closed.fail_reason == AttemptFailReason.EVALUATOR_FAILED
+    assert closed.fail_reason == AttemptFailReason.TASK_FAILED
     assert closed.closed_at is not None
 
 

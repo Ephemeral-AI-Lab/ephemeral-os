@@ -23,7 +23,7 @@ from .prompt import (
 
 
 class SubmitExecutionSuccessInput(BaseModel):
-    summary: str = Field(..., min_length=1)
+    outcome: str = Field(..., min_length=1)
     artifacts: list[str] = Field(default_factory=list)
 
 
@@ -40,7 +40,7 @@ class SubmitExecutionSuccessInput(BaseModel):
     ),
 )
 async def submit_execution_success(
-    summary: str,
+    outcome: str,
     artifacts: list[str],
     *,
     context: ToolExecutionContextService,
@@ -48,7 +48,7 @@ async def submit_execution_success(
     try:
         submission_context = resolve_executor_submission_context(context)
         submission_context.submit_executor_success(
-            summary=summary, artifacts=artifacts
+            outcome=outcome, artifacts=artifacts
         )
     except (AttemptSubmissionContextError, TaskCenterInvariantViolation) as exc:
         return ToolResult(output=str(exc), is_error=True)

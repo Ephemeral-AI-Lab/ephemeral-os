@@ -32,20 +32,32 @@ cross-module map now lives under `docs/architecture`.
   adding disconnected notes. When refreshing architecture docs, follow each
   page's `data-last-reviewed-commit` and `data-evidence-paths` metadata.
 - TaskCenter is the persisted multi-agent control plane. Coordination flows
-  through TaskCenter state, terminal submissions, context packets, and lifecycle
-  reports; do not introduce peer-to-peer agent communication or a global agent
+  through TaskCenter state, terminal submissions, context packets, and persisted
+  outcomes; do not introduce peer-to-peer agent communication or a global agent
   orchestrator. Its durable model is Workflow -> Iteration -> Attempt, with each
-  Attempt owning one planner -> generator DAG -> evaluator try.
+  Attempt owning one planner-authored plan: a DAG of generator and reducer tasks
+  whose edges are `needs`. Stages collapse to PLAN -> RUN -> CLOSED (the single
+  RUN stage schedules both task tuples to quiescence); the attempt PASSES iff
+  every plan task is DONE and FAILS (TASK_FAILED) if any failed or blocked. The
+  structural gate (in `attempt/plan_dag.py`) requires >=1 reducer and
+  reachability (every generator transitively needed by a reducer). There is no
+  separate "node" concept and no evaluator/verifier role — the reducer is the
+  exit gate. Every workflow, including the root, is generator-spawned via a
+  synthetic `<run_id>:root` bootstrap generator owned by `run_controller.py`.
 - `ContextEngine` builds recipe-driven packets from store state for role,
-  retry, deferral, and evaluation contexts. Keep lifecycle policy in TaskCenter
+  retry, and deferral contexts. Keep lifecycle policy in TaskCenter
   handlers/managers, not hidden in context construction. Recipes live under
-  `backend/src/task_center/context_engine/recipes`.
-- TaskCenter state is grounded in `backend/src/task_center/workflow/state.py`,
-  `backend/src/task_center/iteration/state.py`, and
-  `backend/src/task_center/attempt/state.py`. Handoff runs through
-  `submit_execution_handoff`, `WorkflowStarter.start(WorkflowOrigin.task(...))`,
-  `WorkflowClosureReportRouter`, and
-  `AttemptOrchestrator.apply_workflow_closure_report`.
+  `backend/src/task_center/context_engine/recipes` (planner, generator, reducer).
+- TaskCenter state is consolidated in `backend/src/task_center/_core/state.py`
+  (Workflow, Iteration, Attempt) and results in
+  `backend/src/task_center/_core/outcomes.py` (the recursive `Outcome` algebra;
+  `iteration.outcomes` persisted, `workflow.outcomes` derived from the last
+  iteration). There is no closure abstraction: a generator handoff runs through
+  `submit_workflow_handoff`, `WorkflowStarter.start(prompt, parent_task_id)`, and
+  `AttemptOrchestrator.start_child_workflow` /
+  `apply_child_workflow_outcome` / `cancel_child_workflow`, with bidirectional
+  `Task.child_workflow_id` <-> `Workflow.parent_task_id`. "Close" is a state
+  transition, not a closure report.
 - `AttemptOrchestrator` is per-Attempt lifecycle machinery, not permission to
   add a global orchestration layer. Related launch, stage-advance, and close
   behavior lives under `backend/src/task_center/attempt`.

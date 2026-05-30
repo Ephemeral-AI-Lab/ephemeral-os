@@ -1,39 +1,35 @@
 """Shared ``<task>`` XML rendering for the recipe layer.
 
-Single source of truth for turning a :class:`TaskOutcome` into the
+Single source of truth for turning an :class:`Outcome` into the
 ``<task id="<local_id>" status="<status>">…</task>`` element used in the
-planner failed-attempt body, prior-iteration children, generator
-dependencies, the evaluator outcomes, and the handoff roll-up. Handoff
-outcomes nest their child ``<task>`` elements (recursively) plus an optional
-``<failure>`` child.
+planner failed-attempt body, prior-iteration children, generator/reducer
+``<needs>``, and the handoff roll-up. Handoff outcomes nest their child
+``<task>`` elements (recursively) plus an optional ``<failure>`` child.
 
-This module owns hostile-body sanitization (it embeds user-supplied summaries
-into hand-assembled XML, so it needs :class:`ContextEngineError`); the
-presentation-free data helpers live in
-``task_center._core.generator_summaries``.
+This module owns hostile-body sanitization (it embeds user-supplied text into
+hand-assembled XML, so it needs :class:`ContextEngineError`); the
+presentation-free data helpers live in ``task_center._core.outcomes``.
 """
 
 from __future__ import annotations
 
-from task_center._core.generator_summaries import (
-    EMPTY_SUMMARY_PLACEHOLDERS,
-    TaskOutcome,
+from task_center._core.outcomes import (
+    EMPTY_OUTCOME_PLACEHOLDERS,
+    Outcome,
 )
 from task_center.context_engine.exceptions import ContextEngineError
 
 # Placeholder for an empty ``<task>`` body — presence-defensive, never
-# self-closing (IMPL_PLAN §0).
-EMPTY_TASK_BODY = "(no summary recorded)"
+# self-closing.
+EMPTY_TASK_BODY = "(no outcome recorded)"
 
 # Closers a hand-assembled body MUST refuse to leak from embedded user text.
 STRUCTURAL_CLOSERS: tuple[str, ...] = (
     "</task>",
     "</failure>",
-    "</evaluator_summary>",
-    "</evaluation_criteria>",
-    "</plan_spec>",
-    "</dependency>",
+    "</needs>",
     "</assigned_task>",
+    "</assigned_prompt>",
     "</attempt>",
     "</iteration>",
     "</goal>",
@@ -53,12 +49,12 @@ def sanitize_fragment(text: str, source_id: str) -> str:
     return text
 
 
-def has_nested_body(outcome: TaskOutcome) -> bool:
+def has_nested_body(outcome: Outcome) -> bool:
     """True when the outcome renders a nested body (handoff roll-up)."""
     return bool(outcome.children) or outcome.failure is not None
 
 
-def render_task_children(outcome: TaskOutcome, *, source_id: str = "task") -> str:
+def render_task_children(outcome: Outcome, *, source_id: str = "task") -> str:
     """Render a handoff outcome's inner body: child ``<task>``s + ``<failure>``."""
     parts = [render_task_element(child, source_id=source_id) for child in outcome.children]
     if outcome.failure is not None:
@@ -66,37 +62,37 @@ def render_task_children(outcome: TaskOutcome, *, source_id: str = "task") -> st
     return "\n".join(parts)
 
 
-def render_task_body(outcome: TaskOutcome, *, source_id: str = "task") -> str:
+def render_task_body(outcome: Outcome, *, source_id: str = "task") -> str:
     """Render just the body inside a ``<task>`` (no surrounding tag)."""
     if has_nested_body(outcome):
         return render_task_children(outcome, source_id=source_id)
-    if outcome.summary and outcome.summary not in EMPTY_SUMMARY_PLACEHOLDERS:
-        return sanitize_fragment(outcome.summary, source_id)
+    if outcome.outcome and outcome.outcome not in EMPTY_OUTCOME_PLACEHOLDERS:
+        return sanitize_fragment(outcome.outcome, source_id)
     return EMPTY_TASK_BODY
 
 
-def render_task_element(outcome: TaskOutcome, *, source_id: str = "task") -> str:
+def render_task_element(outcome: Outcome, *, source_id: str = "task") -> str:
     """Render a full ``<task id status>body</task>`` element (recursive)."""
     body = render_task_body(outcome, source_id=source_id)
     return f'<task id="{outcome.local_id}" status="{outcome.status}">\n{body}\n</task>'
 
 
-def block_task_body(outcome: TaskOutcome) -> tuple[str, bool]:
+def block_task_body(outcome: Outcome) -> tuple[str, bool]:
     """Body + ``pre_rendered_xml`` flag for a renderer-wrapped ``<task>`` block.
 
     A handoff outcome returns its sanitized nested body and ``True`` (the block
     must opt out of the renderer's structural-closer guard). A plain outcome
-    returns its summary (or ``""`` for a placeholder/empty summary) and
-    ``False`` — the renderer guard sanitizes the verbatim body itself.
+    returns its text (or ``""`` for a placeholder/empty value) and ``False`` —
+    the renderer guard sanitizes the verbatim body itself.
     """
     if has_nested_body(outcome):
         return render_task_children(outcome, source_id=outcome.local_id), True
-    if outcome.summary and outcome.summary not in EMPTY_SUMMARY_PLACEHOLDERS:
-        return outcome.summary, False
+    if outcome.outcome and outcome.outcome not in EMPTY_OUTCOME_PLACEHOLDERS:
+        return outcome.outcome, False
     return "", False
 
 
-def task_attrs(outcome: TaskOutcome) -> str:
+def task_attrs(outcome: Outcome) -> str:
     """The ``id="…" status="…"`` attribute fragment for a ``<task>``."""
     return f'id="{outcome.local_id}" status="{outcome.status}"'
 

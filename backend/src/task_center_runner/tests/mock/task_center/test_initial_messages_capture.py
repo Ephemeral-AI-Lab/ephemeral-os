@@ -9,7 +9,7 @@ trees carry the right shape for every iteration position and attempt:
   ``<terminal_tool_selection>`` block must match the row-3 block
   byte-for-byte — both render from
   ``render_terminal_catalog(focus="selection_guidance", ...)`` (AC #15).
-* executor / evaluator launches — 3 rows (system + ``<context>`` +
+* executor / reducer launches — 3 rows (system + ``<context>`` +
   ``<Task Guidance>``); no skill is declared in v1.
 
 For helper (advisor) and subagent (explorer) initial-message
@@ -90,11 +90,13 @@ async def test_initial_messages_capture(
 
     assert count_role_tasks(report, "planner") >= 3, report.graph_summary
     assert count_deferred_attempts(report) == 1, report.graph_summary
-    assert count_role_tasks(report, "planner", status="done") == 2, report.graph_summary
-    assert count_role_tasks(report, "evaluator", status="failed") == 1, (
+    # All 3 attempts' planners submit a valid plan (DONE); the only failure is
+    # the intentional attempt-1 reducer failure (asserted below).
+    assert count_role_tasks(report, "planner", status="done") == 3, report.graph_summary
+    assert count_role_tasks(report, "reducer", status="failed") == 1, (
         report.graph_summary
     )
-    assert count_role_tasks(report, "evaluator", status="done") == 2, (
+    assert count_role_tasks(report, "reducer", status="done") == 2, (
         report.graph_summary
     )
 
@@ -209,15 +211,15 @@ async def test_initial_messages_capture(
         elif "executor" in role_dir:
             # Executor: 4 initial rows (system + <context> + <Task Guidance>
             # + skill). Skills carry operational heuristics (treat
-            # `<dependency>` as fixed inputs, verify deliverable at claimed
+            # `<needs>` as fixed inputs, verify deliverable at claimed
             # location).
             assert len(rows) >= 4, (
                 f"{rel}: executor needs >=4 initial rows for the skill "
                 f"composite, got {len(rows)}"
             )
-            assert (
-                "<plan_spec" in user_msg_1 or "<assigned_task" in user_msg_1
-            ), f"{rel}: missing <plan_spec> / <assigned_task> XML tag"
+            assert "<assigned_task" in user_msg_1, (
+                f"{rel}: missing <assigned_task> XML tag"
+            )
             task_guidance = texts[2]
             assert task_guidance.startswith("<Task Guidance>\n"), (
                 f"{rel}: row 3 does not start with '<Task Guidance>\\n'"
@@ -232,23 +234,23 @@ async def test_initial_messages_capture(
             assert "<skill>" in skill_row and "</skill>" in skill_row, (
                 f"{rel}: row 4 missing <skill> block"
             )
-        elif "evaluator" in role_dir:
-            # Evaluator: 4 initial rows (system + <context> + <Task Guidance>
+        elif "reducer" in role_dir:
+            # Reducer: 4 initial rows (system + <context> + <Task Guidance>
             # + skill). Skill carries pass/fail discipline heuristics.
             assert len(rows) >= 4, (
-                f"{rel}: evaluator needs >=4 initial rows for the skill "
+                f"{rel}: reducer needs >=4 initial rows for the skill "
                 f"composite, got {len(rows)}"
             )
-            assert (
-                "<evaluation_criteria" in user_msg_1
-            ), f"{rel}: missing <evaluation_criteria> XML tag"
+            assert "<assigned_prompt" in user_msg_1, (
+                f"{rel}: missing <assigned_prompt> XML tag"
+            )
             task_guidance = texts[2]
             assert task_guidance.startswith("<Task Guidance>\n"), (
                 f"{rel}: row 3 does not start with '<Task Guidance>\\n'"
             )
             skill_row = texts[3]
-            assert skill_row.startswith("Load skill: evaluator"), (
-                f"{rel}: row 4 does not start with `Load skill: evaluator`"
+            assert skill_row.startswith("Load skill: reducer"), (
+                f"{rel}: row 4 does not start with `Load skill: reducer`"
             )
             assert "<skill>" in skill_row and "</skill>" in skill_row, (
                 f"{rel}: row 4 missing <skill> block"

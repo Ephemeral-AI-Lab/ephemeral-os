@@ -44,13 +44,11 @@ class IterationRecord(Base):
         DateTime(timezone=True), nullable=True
     )
 
-    # Denormalized projections from this segment's *passing* harness graph at
-    # close time. Both null while open and on failed close. Used by the
-    # context engine's ``planner`` recipe for prior-segment context.
-    plan_spec: Mapped[str | None] = mapped_column(
-        Text, nullable=True
-    )
-    task_summary: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Denormalized canonical projection at close time: a ``json.dumps`` list of
+    # ``Outcome`` records (the passing attempt's reducer outcomes, or — on
+    # failure — the last failed attempt's failed-task outcomes). Null while
+    # open. Read by the planner recipe for prior-iteration context (relay).
+    outcomes: Mapped[str | None] = mapped_column(Text, nullable=True)
     __table_args__ = (
         UniqueConstraint(
             "workflow_id",

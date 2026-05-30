@@ -1,8 +1,7 @@
 """Workflow package.
 
-Workflow DTOs/enums live in :mod:`task_center.workflow.state`; lifecycle, ancestry,
-closure-report routing, and workflow-start sequencing live in their dedicated
-submodules (``lifecycle``, ``ancestry``, ``closure_report_router``,
+Workflow DTOs/enums live in :mod:`task_center._core.state`; lifecycle and
+workflow-start sequencing live in their dedicated submodules (``lifecycle``,
 ``starter``). Callers import from the canonical submodule path; the package
 root deliberately re-exports nothing.
 """

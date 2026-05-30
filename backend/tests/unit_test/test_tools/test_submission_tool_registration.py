@@ -14,13 +14,11 @@ from tools.submission.planner import PlanTaskInput
 PHASE03_TOOLS = (
     "submit_plan_closes_goal",
     "submit_plan_defers_goal",
-    "submit_execution_handoff",
+    "submit_workflow_handoff",
     "submit_execution_success",
     "submit_execution_blocker",
-    "submit_verification_success",
-    "submit_verification_failure",
-    "submit_evaluation_success",
-    "submit_evaluation_failure",
+    "submit_reduction_success",
+    "submit_reduction_failure",
     "ask_advisor",
     "submit_advisor_feedback",
     "submit_exploration_result",
@@ -53,10 +51,10 @@ def test_custom_generator_agent_can_declare_goal_solution_terminal() -> None:
         name="custom_generator",
         description="Custom generator agent.",
         role=AgentRole.GENERATOR,
-        terminals=["submit_execution_handoff"],
+        terminals=["submit_workflow_handoff"],
         tool_call_limit=10,
     )
-    assert has_tool("submit_execution_handoff")
+    assert has_tool("submit_workflow_handoff")
 
 
 def test_plan_input_rejects_extra_keys() -> None:

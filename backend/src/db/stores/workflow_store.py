@@ -7,12 +7,7 @@ from datetime import UTC, datetime
 
 from db.models.workflow import WorkflowRecord
 from db.stores.base import SyncStoreMixin
-from task_center.workflow.state import (
-    WorkflowOrigin,
-    WorkflowOriginKind,
-    Workflow,
-    WorkflowStatus,
-)
+from task_center._core.state import Workflow, WorkflowStatus
 
 
 class WorkflowStore(SyncStoreMixin):
@@ -22,26 +17,18 @@ class WorkflowStore(SyncStoreMixin):
         self,
         *,
         task_center_run_id: str,
-        origin: WorkflowOrigin | None = None,
-        requested_by_task_id: str | None = None,
-        goal: str,
+        parent_task_id: str | None,
+        workflow_goal: str,
     ) -> Workflow:
-        origin = _resolve_origin(
-            task_center_run_id=task_center_run_id,
-            origin=origin,
-            requested_by_task_id=requested_by_task_id,
-        )
         with self._sf() as db:
             now = datetime.now(UTC)
             record = WorkflowRecord(
                 id=str(uuid.uuid4()),
                 task_center_run_id=task_center_run_id,
-                origin_kind=origin.kind.value,
-                requested_by_task_id=origin.task_id,
-                goal=goal,
+                parent_task_id=parent_task_id,
+                goal=workflow_goal,
                 status=WorkflowStatus.OPEN.value,
                 iteration_ids=[],
-                final_outcome=None,
                 created_at=now,
                 updated_at=now,
             )
@@ -74,7 +61,6 @@ class WorkflowStore(SyncStoreMixin):
         workflow_id: str,
         *,
         status: WorkflowStatus,
-        final_outcome: dict[str, str | None] | None,
         closed_at: datetime | None = None,
     ) -> Workflow:
         with self._sf() as db:
@@ -82,7 +68,6 @@ class WorkflowStore(SyncStoreMixin):
             if record is None:
                 raise LookupError(f"Workflow {workflow_id!r} not found")
             record.status = status.value
-            record.final_outcome = final_outcome
             if closed_at is not None:
                 record.closed_at = closed_at
             db.commit()
@@ -93,10 +78,7 @@ class WorkflowStore(SyncStoreMixin):
         with self._sf() as db:
             q = (
                 db.query(WorkflowRecord)
-                .filter(
-                    WorkflowRecord.requested_by_task_id
-                    == parent_task_id
-                )
+                .filter(WorkflowRecord.parent_task_id == parent_task_id)
                 .order_by(WorkflowRecord.created_at.asc())
             )
             return [self._to_dto(r) for r in q.all()]
@@ -119,26 +101,11 @@ class WorkflowStore(SyncStoreMixin):
         return Workflow(
             id=record.id,
             task_center_run_id=record.task_center_run_id,
-            origin_kind=WorkflowOriginKind(record.origin_kind or WorkflowOriginKind.TASK.value),
-            requested_by_task_id=record.requested_by_task_id,
-            goal=record.goal,
+            workflow_goal=record.goal,
             status=WorkflowStatus(record.status),
             iteration_ids=tuple(record.iteration_ids or ()),
-            final_outcome=record.final_outcome,
+            parent_task_id=record.parent_task_id,
             created_at=record.created_at,
             updated_at=record.updated_at,
             closed_at=record.closed_at,
         )
-
-
-def _resolve_origin(
-    *,
-    task_center_run_id: str,
-    origin: WorkflowOrigin | None,
-    requested_by_task_id: str | None,
-) -> WorkflowOrigin:
-    if origin is not None:
-        return origin
-    if requested_by_task_id is not None:
-        return WorkflowOrigin.task(task_id=requested_by_task_id)
-    return WorkflowOrigin.entry(task_center_run_id=task_center_run_id)

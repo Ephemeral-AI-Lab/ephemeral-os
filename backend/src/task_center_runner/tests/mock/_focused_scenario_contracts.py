@@ -46,17 +46,26 @@ def assert_focused_scenario_report(
     _assert_graph_shape(report, case)
 
 
+# Both FAILED and BLOCKED are non-success terminal generator statuses in
+# TaskCenter (TERMINAL_GENERATOR_STATUSES); either one fails its attempt. A
+# ``submit_execution_blocker`` task is "a task that failed the attempt" for the
+# purposes of the scenario role counts.
+_FAILED_STATUSES: tuple[str, ...] = ("failed", "blocked")
+
+
 def count_role_tasks(
     report: RunReport,
     role: str,
     *,
-    status: str | None = None,
+    status: str | tuple[str, ...] | None = None,
 ) -> int:
     """Count generator tasks of *role* across all attempts in ``graph_summary``.
 
     Workflow fan-out is asserted via real store state. ``status="done"`` counts
-    only succeeded tasks; ``status=None`` counts every task of that role.
+    only succeeded tasks; a tuple counts any task whose status is in the tuple;
+    ``status=None`` counts every task of that role.
     """
+    allowed = (status,) if isinstance(status, str) else status
     total = 0
     for workflow in report.graph_summary["workflows"]:
         for iteration in workflow["iterations"]:
@@ -64,7 +73,7 @@ def count_role_tasks(
                 for task in attempt["tasks"]:
                     if str(task.get("agent_name") or "") != role:
                         continue
-                    if status is not None and str(task.get("status") or "") != status:
+                    if allowed is not None and str(task.get("status") or "") not in allowed:
                         continue
                     total += 1
     return total
@@ -73,14 +82,15 @@ def count_role_tasks(
 def recursive_workflows(graph_summary: Mapping[str, object]) -> list[dict]:
     """Return the delegated (recursive) workflows from ``graph_summary``.
 
-    A recursive workflow is one started by an executor ``submit_execution_handoff``
-    (``origin_kind == "task"``), as opposed to the entry workflow.
+    A recursive workflow is one started by an executor ``submit_workflow_handoff``;
+    its ``parent_task_id`` points at a generator task rather than the synthetic
+    run-level bootstrap task ``<run_id>:root`` that parents the entry workflow.
     """
     workflows = graph_summary["workflows"]  # type: ignore[index]
     return [
         workflow
         for workflow in workflows  # type: ignore[union-attr]
-        if str(workflow.get("origin_kind") or "") == "task"
+        if not str(workflow.get("parent_task_id") or "").endswith(":root")
     ]
 
 
@@ -122,7 +132,7 @@ def _assert_role_counts(report: RunReport, case: FocusedScenarioCase) -> None:
             f"saw {observed}"
         )
     for role, minimum in case.min_failed_role_tasks.items():
-        observed = count_role_tasks(report, role, status="failed")
+        observed = count_role_tasks(report, role, status=_FAILED_STATUSES)
         assert observed >= minimum, (
             f"{case.name}: expected at least {minimum} failed {role} tasks, "
             f"saw {observed}"

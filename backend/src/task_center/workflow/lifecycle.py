@@ -1,8 +1,11 @@
 """Workflow lifecycle coordination.
 
 ``WorkflowLifecycle`` is the entry point for creating a workflow, extending its
-iteration chain, and closing it. Persistence, iteration creation, and
-continuation routing stay in this module behind the public lifecycle class.
+iteration chain, and closing it. On close it sets the workflow status and routes
+the result: a workflow spawned by a generator task resolves through that
+attempt's orchestrator (``apply_child_workflow_outcome``); the root workflow
+(parent task ``<run_id>:root``) resolves through the injected run-close handler.
+There is no closure report or router layer.
 """
 
 from __future__ import annotations
@@ -10,6 +13,7 @@ from __future__ import annotations
 import logging
 from collections.abc import Callable
 from datetime import UTC, datetime
+from typing import Any
 
 from task_center._core.invariants import (
     assert_predecessor_has_deferred_goal_for_next_iteration,
@@ -26,31 +30,31 @@ from task_center._core.persistence import (
 from task_center._core.primitives import (
     TaskCenterInvariantViolation,
     TaskCenterLifecycleConfig,
+    attempt_id_from_task_id,
 )
-from task_center.workflow.state import Workflow, WorkflowClosureReport, WorkflowOrigin, WorkflowStatus
+from task_center._core.state import (
+    Iteration,
+    IterationCreationReason,
+    IterationStatus,
+    Workflow,
+    WorkflowStatus,
+)
+from task_center.attempt.orchestrator_registry import AttemptOrchestratorRegistry
 from task_center.iteration import (
     IterationAttemptCoordinator,
     OpenIterationCoordinatorRegistry,
     OrchestratorFactory,
 )
-from task_center.iteration.state import (
-    AttemptPlanFailed,
-    Iteration,
-    IterationClosureReport,
-    IterationCreationReason,
-    IterationStatus,
-    SuccessDeferred,
-    TerminalSuccess,
-)
 
 logger = logging.getLogger(__name__)
 
 
-WorkflowClosureCallback = Callable[[WorkflowClosureReport], object]
+# Called when the ROOT workflow closes: run_close_handler(child_workflow=<wf>).
+RunCloseHandler = Callable[..., Any]
 
 
 class WorkflowLifecycle:
-    """Coordinates one workflow's iteration chain and closure report delivery."""
+    """Coordinates one workflow's iteration chain and close routing."""
 
     def __init__(
         self,
@@ -60,16 +64,18 @@ class WorkflowLifecycle:
         attempt_store: AttemptStoreProtocol,
         iteration_coordinators: OpenIterationCoordinatorRegistry,
         config: TaskCenterLifecycleConfig,
-        deliver_closure_report: WorkflowClosureCallback | None = None,
+        orchestrator_registry: AttemptOrchestratorRegistry,
+        run_close_handler: RunCloseHandler,
         orchestrator_factory: OrchestratorFactory | None = None,
         task_store: TaskStoreProtocol | None = None,
     ) -> None:
-        self._deliver_closure_report = deliver_closure_report
         self._workflow_store = workflow_store
         self._iteration_store = iteration_store
         self._attempt_store = attempt_store
         self._iteration_coordinators = iteration_coordinators
         self._config = config
+        self._orchestrator_registry = orchestrator_registry
+        self._run_close_handler = run_close_handler
         self._orchestrator_factory = orchestrator_factory
         self._task_store = task_store
 
@@ -77,13 +83,13 @@ class WorkflowLifecycle:
         self,
         *,
         task_center_run_id: str,
-        origin: WorkflowOrigin,
-        goal: str,
+        parent_task_id: str | None,
+        workflow_goal: str,
     ) -> Workflow:
         return self._workflow_store.insert(
             task_center_run_id=task_center_run_id,
-            origin=origin,
-            goal=goal,
+            parent_task_id=parent_task_id,
+            workflow_goal=workflow_goal,
         )
 
     def create_iteration_with_coordinator(
@@ -101,7 +107,7 @@ class WorkflowLifecycle:
         if not workflow.iteration_ids:
             sequence_no = 1
             creation_reason = IterationCreationReason.INITIAL
-            iteration_goal = workflow.goal
+            iteration_goal = workflow.workflow_goal
         else:
             previous = self._iteration_store.get(workflow.iteration_ids[-1])
             if previous is None:
@@ -126,37 +132,87 @@ class WorkflowLifecycle:
             iteration_goal=iteration_goal,
         )
 
-    def handle_iteration_closed(self, report: IterationClosureReport) -> None:
-        self._route_iteration_closure(report)
+    def handle_iteration_closed(
+        self,
+        *,
+        iteration_id: str,
+        succeeded: bool,
+        deferred_goal: str | None,
+        final_attempt_id: str | None,
+    ) -> None:
+        iteration = self._iteration_store.get(iteration_id)
+        if iteration is None:
+            raise TaskCenterInvariantViolation(f"Iteration {iteration_id!r} not found")
+        try:
+            if succeeded and deferred_goal is not None:
+                next_iteration, next_coordinator = self.create_iteration_with_coordinator(
+                    workflow_id=iteration.workflow_id
+                )
+                self._start_deferred_iteration(
+                    next_iteration=next_iteration,
+                    next_coordinator=next_coordinator,
+                    fallback_attempt_id=final_attempt_id,
+                )
+            else:
+                self.close_workflow(
+                    workflow_id=iteration.workflow_id,
+                    succeeded=succeeded,
+                    final_attempt_id=final_attempt_id,
+                )
+        finally:
+            self._iteration_coordinators.deregister(iteration.id)
 
     def close_workflow(
         self,
         *,
         workflow_id: str,
         succeeded: bool,
-        final_iteration_id: str,
         final_attempt_id: str | None,
     ) -> Workflow:
         workflow = self._require_workflow(workflow_id)
         assert_workflow_open(workflow)
-        report = WorkflowClosureReport(
-            workflow_id=workflow_id,
-            task_center_run_id=workflow.task_center_run_id,
-            origin_kind=workflow.origin_kind,
-            requested_by_task_id=workflow.requested_by_task_id,
-            outcome="success" if succeeded else "failed",
-            final_iteration_id=final_iteration_id,
-            final_attempt_id=final_attempt_id,
-        )
         updated = self._workflow_store.set_status(
             workflow_id,
             status=WorkflowStatus.SUCCEEDED if succeeded else WorkflowStatus.FAILED,
-            final_outcome=report.to_final_outcome(),
             closed_at=datetime.now(UTC),
         )
-        if self._deliver_closure_report is not None:
-            self._deliver_closure_report(report)
+        self._route_close(updated, final_attempt_id=final_attempt_id)
         return updated
+
+    # ---- internals ------------------------------------------------------
+
+    def _route_close(self, workflow: Workflow, *, final_attempt_id: str | None) -> None:
+        """Resolve a closed workflow into its parent task (attempt) or the run."""
+        parent_task_id = workflow.parent_task_id
+        if parent_task_id is None:
+            raise TaskCenterInvariantViolation(
+                f"Workflow {workflow.id!r} has no parent task id; cannot resolve close."
+            )
+        attempt_id = attempt_id_from_task_id(parent_task_id)
+        if attempt_id is None:
+            # Root workflow: parent is the synthetic run-level bootstrap task.
+            self._run_close_handler(child_workflow=workflow)
+            return
+        if self._task_store is None:
+            raise TaskCenterInvariantViolation(
+                "WorkflowLifecycle requires a task_store to resolve a child-workflow close."
+            )
+        parent_task = self._task_store.get_task(parent_task_id)
+        if parent_task is None:
+            raise TaskCenterInvariantViolation(
+                f"Parent task {parent_task_id!r} of workflow {workflow.id!r} was not found."
+            )
+        orchestrator = self._orchestrator_registry.get(attempt_id)
+        if orchestrator is None:
+            raise TaskCenterInvariantViolation(
+                f"AttemptOrchestrator for attempt {attempt_id!r} is not registered; "
+                "child-workflow close cannot be delivered."
+            )
+        orchestrator.apply_child_workflow_outcome(
+            generator_task=parent_task,
+            child_workflow=workflow,
+            final_attempt_id=final_attempt_id,
+        )
 
     def _require_workflow(self, workflow_id: str) -> Workflow:
         workflow = self._workflow_store.get(workflow_id)
@@ -180,7 +236,7 @@ class WorkflowLifecycle:
             workflow_id=workflow.id,
             sequence_no=sequence_no,
             creation_reason=creation_reason,
-            goal=iteration_goal,
+            iteration_goal=iteration_goal,
             attempt_budget=self._config.default_attempt_budget,
         )
         self._append_iteration_id(workflow, iteration.id)
@@ -195,40 +251,12 @@ class WorkflowLifecycle:
         self._iteration_coordinators.register(coordinator)
         return iteration, coordinator
 
-    def _route_iteration_closure(self, report: IterationClosureReport) -> None:
-        iteration = self._iteration_store.get(report.iteration_id)
-        if iteration is None:
-            raise TaskCenterInvariantViolation(f"Iteration {report.iteration_id!r} not found")
-        try:
-            outcome = report.outcome
-            if isinstance(outcome, SuccessDeferred):
-                (
-                    next_iteration,
-                    next_coordinator,
-                ) = self.create_iteration_with_coordinator(workflow_id=iteration.workflow_id)
-                self._start_deferred_iteration(
-                    next_iteration=next_iteration,
-                    next_coordinator=next_coordinator,
-                    previous_report=report,
-                )
-            elif isinstance(outcome, (TerminalSuccess, AttemptPlanFailed)):
-                self.close_workflow(
-                    workflow_id=iteration.workflow_id,
-                    succeeded=isinstance(outcome, TerminalSuccess),
-                    final_iteration_id=iteration.id,
-                    final_attempt_id=report.final_attempt_id,
-                )
-            else:  # pragma: no cover
-                raise TaskCenterInvariantViolation(f"Unknown ClosureOutcome: {outcome!r}")
-        finally:
-            self._iteration_coordinators.deregister(iteration.id)
-
     def _start_deferred_iteration(
         self,
         *,
         next_iteration: Iteration,
         next_coordinator: IterationAttemptCoordinator,
-        previous_report: IterationClosureReport,
+        fallback_attempt_id: str | None,
     ) -> None:
         if self._orchestrator_factory is None:
             return
@@ -242,7 +270,7 @@ class WorkflowLifecycle:
             latest_iteration = self._iteration_store.get(next_iteration.id)
             failed_attempt_id = (
                 latest_iteration.latest_attempt_id if latest_iteration else None
-            ) or previous_report.final_attempt_id
+            ) or fallback_attempt_id
             self._iteration_store.set_status(
                 next_iteration.id,
                 status=IterationStatus.CANCELLED,
@@ -252,12 +280,11 @@ class WorkflowLifecycle:
             self.close_workflow(
                 workflow_id=next_iteration.workflow_id,
                 succeeded=False,
-                final_iteration_id=next_iteration.id,
                 final_attempt_id=failed_attempt_id,
             )
 
 
 __all__ = [
-    "WorkflowClosureCallback",
+    "RunCloseHandler",
     "WorkflowLifecycle",
 ]

@@ -1,15 +1,13 @@
 """Iteration package facade.
 
-Iteration DTOs/enums live in :mod:`task_center.iteration.state`; lifecycle
+Iteration DTOs/enums live in :mod:`task_center._core.state`; lifecycle
 coordination lives in :mod:`task_center.iteration.attempt_coordinator`.
 
 The facade re-exports only the names that callers actually reach through this
 path. Internal callback aliases (``AttemptClosedCallback``,
-``IterationClosureCallback``) and per-iteration DTOs (``AttemptPlanFailed``,
-``ClosureOutcome``, ``IterationClosureReport``, ``IterationCreationReason``,
-``IterationStatus``, ``SuccessDeferred``,
-``TerminalSuccess``) live on the canonical ``.state`` /
-``.attempt_coordinator`` modules; import them from there.
+``IterationClosureCallback``) and the iteration DTOs/enums
+(``IterationCreationReason``, ``IterationStatus``) live on the canonical
+``_core.state`` / ``.attempt_coordinator`` modules; import them from there.
 """
 
 from __future__ import annotations
@@ -17,17 +15,17 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from task_center._core.state import (
+        Iteration as Iteration,
+    )
     from task_center.iteration.attempt_coordinator import (
         IterationAttemptCoordinator as IterationAttemptCoordinator,
         OpenIterationCoordinatorRegistry as OpenIterationCoordinatorRegistry,
         OrchestratorFactory as OrchestratorFactory,
     )
-    from task_center.iteration.state import (
-        Iteration as Iteration,
-    )
 
 _COORDINATORS = "task_center.iteration.attempt_coordinator"
-_STATE = "task_center.iteration.state"
+_STATE = "task_center._core.state"
 
 _EXPORTS: dict[str, tuple[str, str]] = {
     "Iteration": (_STATE, "Iteration"),

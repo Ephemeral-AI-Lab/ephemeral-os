@@ -38,6 +38,11 @@ from task_center import (
     IterationCreationReason,
     WorkflowStatus,
 )
+from task_center._core.primitives import (
+    generator_task_id,
+    planner_task_id,
+    reducer_task_id,
+)
 
 
 _RUN_ID = "run-abc"
@@ -145,8 +150,8 @@ def test_workflow_insert_writes_latest_snapshot(
     try:
         workflow = stores.workflow_store.insert(
             task_center_run_id=_RUN_ID,
-            requested_by_task_id="parent_task_1",
-            goal="solve the problem",
+            parent_task_id="parent_task_1",
+            workflow_goal="solve the problem",
         )
     finally:
         recorder.dispose()
@@ -157,6 +162,8 @@ def test_workflow_insert_writes_latest_snapshot(
     row = _read_json(snapshot)
     assert row["id"] == workflow.id
     assert row["status"] == "open"
+    assert row["parent_task_id"] == "parent_task_1"
+    assert row["goal"] == "solve the problem"
     assert "context" not in row
     assert "summary" not in row
     assert not (workflow_dir / "workflow.jsonl").exists()
@@ -171,13 +178,12 @@ def test_workflow_update_overwrites_latest_snapshot(
     try:
         workflow = stores.workflow_store.insert(
             task_center_run_id=_RUN_ID,
-            requested_by_task_id="parent_task_1",
-            goal="solve the problem",
+            parent_task_id="parent_task_1",
+            workflow_goal="solve the problem",
         )
         stores.workflow_store.set_status(
             workflow.id,
             status=WorkflowStatus.SUCCEEDED,
-            final_outcome={"ok": True},
             closed_at=datetime.now(UTC),
         )
     finally:
@@ -186,7 +192,7 @@ def test_workflow_update_overwrites_latest_snapshot(
     snapshot = recorder.run_dir / f"workflow_01_{workflow.id}" / "workflow.json"
     row = _read_json(snapshot)
     assert row["status"] == "succeeded"
-    assert row["final_outcome"] == {"ok": True}
+    assert "final_outcome" not in row
 
 
 def test_iteration_and_attempt_listeners(
@@ -198,14 +204,14 @@ def test_iteration_and_attempt_listeners(
     try:
         workflow = stores.workflow_store.insert(
             task_center_run_id=_RUN_ID,
-            requested_by_task_id="parent_task_1",
-            goal="solve the problem",
+            parent_task_id="parent_task_1",
+            workflow_goal="solve the problem",
         )
         iteration = stores.iteration_store.insert(
             workflow_id=workflow.id,
             sequence_no=1,
             creation_reason=IterationCreationReason.INITIAL,
-            goal="ep goal",
+            iteration_goal="ep goal",
             attempt_budget=3,
         )
         attempt = stores.attempt_store.insert(
@@ -236,7 +242,6 @@ def _insert_task(
     task_id: str,
     role: str,
     run_id: str = _RUN_ID,
-    task_center_attempt_id: str | None = None,
     agent_name: str | None = None,
 ) -> None:
     sf = bundle.session_factory
@@ -250,10 +255,8 @@ def _insert_task(
                 agent_name=agent_name,
                 context_message="input",
                 status="pending",
-                summaries=[],
+                outcomes=[],
                 needs=[],
-                task_center_attempt_id=task_center_attempt_id,
-                context_packet_id=None,
                 created_at=now,
                 updated_at=now,
             )
@@ -270,13 +273,14 @@ def test_task_dir_placement_per_role(
     try:
         workflow = stores.workflow_store.insert(
             task_center_run_id=_RUN_ID,
-            goal="goal",
+            parent_task_id=None,
+            workflow_goal="goal",
         )
         iteration = stores.iteration_store.insert(
             workflow_id=workflow.id,
             sequence_no=1,
             creation_reason=IterationCreationReason.INITIAL,
-            goal="ep",
+            iteration_goal="ep",
             attempt_budget=3,
         )
         attempt = stores.attempt_store.insert(
@@ -284,24 +288,17 @@ def test_task_dir_placement_per_role(
             attempt_sequence_no=1,
         )
 
+        planner_id = planner_task_id(attempt.id)
+        executor_id = generator_task_id(attempt.id, "g1")
+        reducer_id = reducer_task_id(attempt.id, "r1")
+        _insert_task(stores, task_id=planner_id, role="planner")
         _insert_task(
             stores,
-            task_id="task_planner",
-            role="planner",
-            task_center_attempt_id=attempt.id,
+            task_id=executor_id,
+            role="generator",
+            agent_name="executor",
         )
-        _insert_task(
-            stores,
-            task_id="task_executor",
-            role="executor",
-            task_center_attempt_id=attempt.id,
-        )
-        _insert_task(
-            stores,
-            task_id="task_evaluator",
-            role="evaluator",
-            task_center_attempt_id=attempt.id,
-        )
+        _insert_task(stores, task_id=reducer_id, role="reducer")
     finally:
         recorder.dispose()
 
@@ -311,9 +308,9 @@ def test_task_dir_placement_per_role(
         / f"iteration_01_{iteration.id}"
         / f"attempt_01_{attempt.id}"
     )
-    assert (attempt_dir / "01_planner_task_planner" / "task.json").exists()
-    assert (attempt_dir / "02_executor_task_executor" / "task.json").exists()
-    assert (attempt_dir / "03_evaluator_task_evaluator" / "task.json").exists()
+    assert (attempt_dir / f"01_planner_{planner_id}" / "task.json").exists()
+    assert (attempt_dir / f"02_executor_{executor_id}" / "task.json").exists()
+    assert (attempt_dir / f"03_reducer_{reducer_id}" / "task.json").exists()
 
 
 def test_helper_role_filtered(
@@ -331,7 +328,7 @@ def test_helper_role_filtered(
     assert helper_dirs == []
 
 
-def test_generator_verifier_task_uses_verifier_dir_and_message_recorder(
+def test_generator_executor_task_uses_executor_dir_and_message_recorder(
     tmp_path: Path, stores: _TestStoreBundle
 ) -> None:
     _seed_run(stores)
@@ -340,39 +337,39 @@ def test_generator_verifier_task_uses_verifier_dir_and_message_recorder(
     try:
         workflow = stores.workflow_store.insert(
             task_center_run_id=_RUN_ID,
-            requested_by_task_id="parent_task_1",
-            goal="goal",
+            parent_task_id="parent_task_1",
+            workflow_goal="goal",
         )
         iteration = stores.iteration_store.insert(
             workflow_id=workflow.id,
             sequence_no=1,
             creation_reason=IterationCreationReason.INITIAL,
-            goal="ep",
+            iteration_goal="ep",
             attempt_budget=3,
         )
         attempt = stores.attempt_store.insert(
             iteration_id=iteration.id,
             attempt_sequence_no=1,
         )
+        executor_id = generator_task_id(attempt.id, "g1")
         _insert_task(
             stores,
-            task_id="task_verifier",
+            task_id=executor_id,
             role="generator",
-            agent_name="verifier",
-            task_center_attempt_id=attempt.id,
+            agent_name="executor",
         )
     finally:
         recorder.dispose()
 
-    verifier_dir = (
+    executor_dir = (
         recorder.run_dir
         / f"workflow_01_{workflow.id}"
         / f"iteration_01_{iteration.id}"
         / f"attempt_01_{attempt.id}"
-        / "01_verifier_task_verifier"
+        / f"01_executor_{executor_id}"
     )
-    assert (verifier_dir / "task.json").exists()
-    assert recorder.message_recorder_for_task("task_verifier") is not None
+    assert (executor_dir / "task.json").exists()
+    assert recorder.message_recorder_for_task(executor_id) is not None
 
 
 def test_sandbox_events_are_mirrored_to_run_jsonl(tmp_path: Path) -> None:
@@ -419,16 +416,16 @@ def test_dispose_unregisters_listeners(
     try:
         m1 = stores.workflow_store.insert(
             task_center_run_id=_RUN_ID,
-            requested_by_task_id="parent_task_1",
-            goal="g1",
+            parent_task_id="parent_task_1",
+            workflow_goal="g1",
         )
     finally:
         recorder.dispose()
 
     m2 = stores.workflow_store.insert(
         task_center_run_id=_RUN_ID,
-        requested_by_task_id="parent_task_2",
-        goal="g2",
+        parent_task_id="parent_task_2",
+        workflow_goal="g2",
     )
 
     assert (recorder.run_dir / f"workflow_01_{m1.id}").exists()
@@ -671,25 +668,26 @@ def test_agent_run_id_to_task_id_mapping(
     try:
         workflow = stores.workflow_store.insert(
             task_center_run_id=_RUN_ID,
-            goal="goal",
+            parent_task_id=None,
+            workflow_goal="goal",
         )
         iteration = stores.iteration_store.insert(
             workflow_id=workflow.id,
             sequence_no=1,
             creation_reason=IterationCreationReason.INITIAL,
-            goal="ep",
+            iteration_goal="ep",
             attempt_budget=3,
         )
         attempt = stores.attempt_store.insert(
             iteration_id=iteration.id,
             attempt_sequence_no=1,
         )
+        planner_id = planner_task_id(attempt.id)
         _insert_task(
             stores,
-            task_id="task_planner",
+            task_id=planner_id,
             role="planner",
             agent_name="planner",
-            task_center_attempt_id=attempt.id,
         )
         agent_run_id = str(uuid.uuid4())
         sf = stores.session_factory
@@ -697,7 +695,7 @@ def test_agent_run_id_to_task_id_mapping(
             db.add(
                 AgentRunRecord(
                     id=agent_run_id,
-                    task_id="task_planner",
+                    task_id=planner_id,
                     agent_name="planner",
                     message_history=None,
                     terminal_tool_result=None,
@@ -710,6 +708,6 @@ def test_agent_run_id_to_task_id_mapping(
 
         rec = recorder.message_recorder_for_agent_run(agent_run_id)
         assert rec is not None
-        assert recorder.message_recorder_for_task("task_planner") is rec
+        assert recorder.message_recorder_for_task(planner_id) is rec
     finally:
         recorder.dispose()

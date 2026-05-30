@@ -34,12 +34,12 @@ class FullSystemCapacityMatrix(FullStackAdversarial):
             {
                 "id": "capacity_metrics_summary",
                 "agent_name": "executor",
-                "deps": ["final_reconciliation_check"],
+                "needs": ["final_reconciliation_check"],
             }
         )
         for task in tasks:
             if task["id"] == "final_release_guard":
-                task["deps"] = ["capacity_metrics_summary"]
+                task["needs"] = ["capacity_metrics_summary"]
                 break
 
         task_specs["capacity_metrics_summary"] = (
@@ -47,9 +47,15 @@ class FullSystemCapacityMatrix(FullStackAdversarial):
         )
         plan["tasks"] = tasks
         plan["task_specs"] = task_specs
-        plan["evaluation_criteria"] = [
-            *plan["evaluation_criteria"],
-            "Capacity metrics artifact uses task_center_runner.capacity.v1 schema.",
+        plan["reducers"] = [
+            {
+                "id": "reduce",
+                "needs": [task["id"] for task in tasks],
+                "prompt": (
+                    "Final reconciliation passed and the capacity metrics "
+                    "artifact uses the task_center_runner.capacity.v1 schema."
+                ),
+            }
         ]
         return plan
 

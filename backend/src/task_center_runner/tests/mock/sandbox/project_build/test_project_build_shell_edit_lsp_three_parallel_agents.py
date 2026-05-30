@@ -24,8 +24,8 @@ from task_center_runner.tests._live_config import (
     database_configured,
     live_e2e_heavy_enabled,
 )
-from tools.submission.evaluator import submit_evaluation_success
 from tools.submission.planner import submit_plan_closes_goal
+from tools.submission.reducer import submit_reduction_success
 
 
 pytestmark = pytest.mark.asyncio
@@ -47,15 +47,14 @@ class ComplexProjectBuildShellEditLspThreeParallelAgents(ScenarioBase):
     def executor_actions(self, ctx: ScenarioContext) -> Sequence[str]:  # noqa: ARG002
         return ("complex_project_build_shell_edit_lsp_shared_bootstrap",)
 
-    def evaluator_response(self, ctx: ScenarioContext) -> ToolCallSpec:
+    def reducer_response(self, ctx: ScenarioContext) -> ToolCallSpec:  # noqa: ARG002
         return ToolCallSpec(
-            submit_evaluation_success,
+            submit_reduction_success,
             {
-                "summary": (
+                "outcome": (
                     "Three parallel mixed shell-edit + LSP project-build "
                     "executors completed in one TaskCenter run."
                 ),
-                "passed_criteria": list(ctx.attempt.evaluation_criteria),
             },
         )
 
@@ -102,22 +101,23 @@ def _three_agent_plan() -> dict[str, Any]:
         for task_id in _AGENT_TASK_IDS
     }
     return {
-        "plan_spec": (
-            "Launch three mocked executor agents in parallel inside one "
-            "TaskCenter run; each executor runs the smoke mixed shell-edit + "
-            "semantic LSP project-build probe."
-        ),
-        "evaluation_criteria": [
-            "The planner emits exactly three dependency-free executor tasks.",
-            "All three executor tasks launch together in each attempt.",
-            "The performance report shows overlapping executor tool calls.",
-            "Shared bootstrap writes fail fast with typed OCC conflicts.",
-        ],
         "tasks": [
-            {"id": task_id, "agent_name": "executor", "deps": []}
+            {"id": task_id, "agent_name": "executor", "needs": []}
             for task_id in _AGENT_TASK_IDS
         ],
         "task_specs": task_specs,
+        "reducers": [
+            {
+                "id": "reduce",
+                "needs": list(_AGENT_TASK_IDS),
+                "prompt": (
+                    "Confirm the planner emitted exactly three dependency-free "
+                    "executor tasks that launched together, the performance "
+                    "report shows overlapping executor tool calls, and shared "
+                    "bootstrap writes failed fast with typed OCC conflicts."
+                ),
+            }
+        ],
     }
 
 
@@ -143,11 +143,12 @@ def _assert_three_executor_tasks_per_attempt(report: RunReport) -> None:
     generator_status_counts: Counter[str] = Counter()
     for attempt in attempts:
         assert attempt["status"] == "failed"
-        assert attempt["fail_reason"] == "generator_failed"
-        for task_id in attempt["task_ids"]:
+        assert attempt["fail_reason"] == "task_failed"
+        for task_id in attempt["generator_task_ids"]:
             _assert_canonical_generator_task_id(task_id, attempt["id"])
         assert [
-            _local_generator_task_id(task_id) for task_id in attempt["task_ids"]
+            _local_generator_task_id(task_id)
+            for task_id in attempt["generator_task_ids"]
         ] == list(_AGENT_TASK_IDS)
 
         generator_tasks = [

@@ -148,12 +148,12 @@ async def test_full_stack_adversarial_runs_agent_tool_script_matrix(
 def _assert_task_center_shape(graph_summary: dict[str, Any]) -> None:
     assert _has_deferred_attempt(graph_summary)
     assert _has_closing_passed_attempt(graph_summary)
-    assert _count_failed_verifier_tasks(graph_summary) >= 1
-    assert _has_multi_dependency_verifier(graph_summary)
+    assert _count_failed_reducer_tasks(graph_summary) >= 1
+    assert _has_multi_dependency_guard(graph_summary)
     assert _recursive_workflow_count(graph_summary) >= 1
     assert _recursive_workflows_succeeded(graph_summary), graph_summary
-    assert _verifier_task_done_with_checkpoint(graph_summary, "recursive_return")
-    assert _verifier_task_done_with_checkpoint(graph_summary, "final_release")
+    assert _guard_task_done_with_checkpoint(graph_summary, "recursive_return")
+    assert _guard_task_done_with_checkpoint(graph_summary, "final_release")
 
 
 def _has_deferred_attempt(graph_summary: dict[str, Any]) -> bool:
@@ -175,23 +175,37 @@ def _has_closing_passed_attempt(graph_summary: dict[str, Any]) -> bool:
     )
 
 
-def _count_failed_verifier_tasks(graph_summary: dict[str, Any]) -> int:
+def _is_guard_task(task: dict[str, Any]) -> bool:
+    """A guard is an executor generator carrying a ``VERIFY checkpoint=`` spec.
+
+    Guard tasks were ``verifier`` agents in the old model; they are now plain
+    executor generators gated by the reducer, identified by their preserved
+    ``VERIFY checkpoint=`` ``context_message`` spec.
+    """
+    return task.get("agent_name") == "executor" and "VERIFY checkpoint=" in str(
+        task.get("context_message") or ""
+    )
+
+
+def _count_failed_reducer_tasks(graph_summary: dict[str, Any]) -> int:
+    """Count failed reducer-gate tasks; a failing attempt fails at its reducer."""
     return sum(
         1
         for workflow in graph_summary["workflows"]
         for iteration in workflow["iterations"]
         for attempt in iteration["attempts"]
         for task in attempt["tasks"]
-        if task.get("agent_name") == "verifier" and task.get("status") == "failed"
+        if task.get("task_id") in set(attempt["reducer_task_ids"])
+        and task.get("status") == "failed"
     )
 
 
-def _has_multi_dependency_verifier(graph_summary: dict[str, Any]) -> bool:
+def _has_multi_dependency_guard(graph_summary: dict[str, Any]) -> bool:
     for workflow in graph_summary["workflows"]:
         for iteration in workflow["iterations"]:
             for attempt in iteration["attempts"]:
                 for task in attempt["tasks"]:
-                    if task.get("agent_name") == "verifier" and len(task["needs"]) > 1:
+                    if _is_guard_task(task) and len(task["needs"]) > 1:
                         return True
     return False
 
@@ -200,7 +214,7 @@ def _recursive_workflow_count(graph_summary: dict[str, Any]) -> int:
     return sum(
         1
         for workflow in graph_summary["workflows"]
-        if workflow.get("origin_kind") == "task"
+        if not str(workflow.get("parent_task_id") or "").endswith(":root")
     )
 
 
@@ -208,20 +222,20 @@ def _recursive_workflows_succeeded(graph_summary: dict[str, Any]) -> bool:
     recursive = [
         workflow
         for workflow in graph_summary["workflows"]
-        if workflow.get("origin_kind") == "task"
+        if not str(workflow.get("parent_task_id") or "").endswith(":root")
     ]
     return bool(recursive) and all(
         workflow.get("status") == "succeeded" for workflow in recursive
     )
 
 
-def _verifier_task_done_with_checkpoint(
+def _guard_task_done_with_checkpoint(
     graph_summary: dict[str, Any],
     checkpoint: str,
 ) -> bool:
     needle = f"checkpoint={checkpoint}"
     return any(
-        task.get("agent_name") == "verifier"
+        _is_guard_task(task)
         and task.get("status") == "done"
         and needle in str(task.get("context_message") or "")
         for workflow in graph_summary["workflows"]
@@ -241,8 +255,7 @@ def _assert_message_logs(run_dir: Path) -> None:
     }
     assert {
         "planner",
-        "verifier",
-        "evaluator",
+        "reducer",
     } <= agents
     assert any(_is_executor_agent_name(agent) for agent in agents)
     tool_uses = {

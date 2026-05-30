@@ -1,13 +1,15 @@
 """Diagram-fidelity tests for the role-scoped context redesign.
 
-Renders the planner / generator / evaluator / handoff contexts from
-production-shape task ids (``<attempt>:gen:<local_id>``, which exercise the
-local-id derivation the diagrams hinge on) and asserts the rendered
-``<context>`` body byte-for-byte against the §1 diagrams of
-``docs/plans/planner_prior_iteration_context_IMPL_PLAN.md``.
+Renders the planner / generator / reducer / handoff contexts from
+production-shape task ids (``<attempt>:gen:<local_id>`` / ``:red:<local_id>``,
+which exercise the local-id derivation the diagrams hinge on) and asserts the
+rendered ``<context>`` body byte-for-byte.
 
-This is the executable form of "verify the resulting context matches the
-diagram": each expected string below is transcribed from that plan.
+The redesign drops ``<plan_spec>`` (the planner distributes framing into each
+task spec) and the evaluator role; the dependency wrapper is now ``<needs>`` and
+the reducer's own prompt renders as ``<assigned_prompt>``. The planner's failed
+attempt body is the failed plan tasks' ``<task>``s + a ``<failure>`` line — no
+``<evaluator_summary>``.
 """
 
 from __future__ import annotations
@@ -15,14 +17,19 @@ from __future__ import annotations
 import json
 from datetime import UTC, datetime
 
-from task_center._core.generator_summaries import TaskOutcome, to_record
-from task_center.agent_launch.composer import _wrap_context
-from task_center.attempt.state import (
+from task_center._core.outcomes import Outcome, to_record
+from task_center._core.state import (
     Attempt,
     AttemptFailReason,
     AttemptStage,
     AttemptStatus,
+    Iteration,
+    IterationCreationReason,
+    IterationStatus,
+    Workflow,
+    WorkflowStatus,
 )
+from task_center.agent_launch.composer import _wrap_context
 from task_center.context_engine.packet import (
     ContextBlock,
     ContextBlockKind,
@@ -30,20 +37,13 @@ from task_center.context_engine.packet import (
     ContextPriority,
     ContextRefs,
 )
+from task_center.context_engine.recipes._needs import needs_outcome_blocks
 from task_center.context_engine.recipes._task_xml import render_task_element
-from task_center.context_engine.recipes.attempts import (
-    current_attempt_flat_blocks,
-    failed_attempt_blocks,
+from task_center.context_engine.recipes.planner import (
+    _failed_attempt_blocks,
+    _goal_iteration_blocks,
 )
-from task_center.context_engine.recipes.generator import _dependency_blocks
-from task_center.context_engine.recipes.iterations import goal_iteration_blocks
 from task_center.context_engine.renderer import XmlPromptRenderer
-from task_center.workflow.state import Workflow, WorkflowOriginKind, WorkflowStatus
-from task_center.iteration.state import (
-    Iteration,
-    IterationCreationReason,
-    IterationStatus,
-)
 
 _NOW = datetime(2026, 5, 29, tzinfo=UTC)
 
@@ -60,26 +60,25 @@ def _goal() -> Workflow:
     return Workflow(
         id="g1",
         task_center_run_id="run1",
-        goal="Build a CLI todo app.",
+        workflow_goal="Build a CLI todo app.",
         status=WorkflowStatus.OPEN,
         iteration_ids=(),
-        final_outcome=None,
+        parent_task_id=None,
         created_at=_NOW,
         updated_at=_NOW,
         closed_at=None,
-        origin_kind=WorkflowOriginKind.ENTRY,
     )
 
 
 def _iteration(
-    seq: int, status: IterationStatus, goal_text: str, achieved: str | None = None
+    seq: int, status: IterationStatus, goal_text: str, outcomes: str | None = None
 ) -> Iteration:
     return Iteration(
         id=f"it{seq}",
         workflow_id="g1",
         sequence_no=seq,
         creation_reason=IterationCreationReason.INITIAL,
-        goal=goal_text,
+        iteration_goal=goal_text,
         attempt_budget=2,
         status=status,
         attempt_ids=(),
@@ -87,8 +86,7 @@ def _iteration(
         created_at=_NOW,
         updated_at=_NOW,
         closed_at=_NOW if status is not IterationStatus.OPEN else None,
-        plan_spec="prior spec" if achieved is not None else None,
-        task_summary=achieved,
+        outcomes=outcomes,
     )
 
 
@@ -97,9 +95,7 @@ def _attempt(
     status: AttemptStatus,
     fail_reason: AttemptFailReason | None = None,
     generator_task_ids: tuple[str, ...] = (),
-    evaluator_task_id: str | None = None,
-    evaluation_criteria: tuple[str, ...] = (),
-    plan_spec: str = "Full DAG plan.",
+    reducer_task_ids: tuple[str, ...] = (),
 ) -> Attempt:
     return Attempt(
         id="att1",
@@ -108,10 +104,8 @@ def _attempt(
         stage=AttemptStage.CLOSED,
         status=status,
         planner_task_id="att1:planner",
-        plan_spec=plan_spec,
-        evaluation_criteria=evaluation_criteria,
         generator_task_ids=generator_task_ids,
-        evaluator_task_id=evaluator_task_id,
+        reducer_task_ids=reducer_task_ids,
         deferred_goal_for_next_iteration=None,
         fail_reason=fail_reason,
         created_at=_NOW,
@@ -131,10 +125,10 @@ def _render(blocks: list[ContextBlock], *, role: str) -> str:
     return _wrap_context(XmlPromptRenderer().render_context(packet))
 
 
-_PRIOR_ACHIEVED = json.dumps(
+_PRIOR_OUTCOMES = json.dumps(
     [
-        to_record(TaskOutcome(local_id="storage", status="success", summary="Implemented storage layer.")),
-        to_record(TaskOutcome(local_id="cli_add", status="success", summary="Added the add command.")),
+        to_record(Outcome(local_id="storage", status="success", outcome="Implemented storage layer.")),
+        to_record(Outcome(local_id="cli_add", status="success", outcome="Added the add command.")),
     ]
 )
 
@@ -145,28 +139,27 @@ _PRIOR_ACHIEVED = json.dumps(
 
 
 def test_planner_context_matches_diagram():
-    """§1 Planner: <goal> + <iteration position="prior"> of <task> + current
-    <iteration> whose <iteration_goal> precedes a <attempt attempt_no="1"> body
-    of <task>s + <failure>. GENERATOR_FAILED is the consistent instance for the
-    visible <task> statuses + the ``generator <local_id>:`` failure line."""
-    it1 = _iteration(1, IterationStatus.SUCCEEDED, "iteration 1 goal", _PRIOR_ACHIEVED)
+    """Planner: <goal> + <iteration position="prior"> of <task> + current
+    <iteration> whose <iteration_goal> precedes an <attempt attempt_no="1"> body
+    of <task>s + <failure>."""
+    it1 = _iteration(1, IterationStatus.SUCCEEDED, "iteration 1 goal", _PRIOR_OUTCOMES)
     it2 = _iteration(2, IterationStatus.OPEN, "Add list and done commands.")
     failed = _attempt(
         status=AttemptStatus.FAILED,
-        fail_reason=AttemptFailReason.GENERATOR_FAILED,
+        fail_reason=AttemptFailReason.TASK_FAILED,
         generator_task_ids=("att1:gen:cli_list", "att1:gen:cli_done"),
     )
     store = _FakeTaskStore(
         {
-            "att1:gen:cli_list": {"status": "done", "summaries": [{"summary": "Implemented list command."}]},
+            "att1:gen:cli_list": {"status": "done", "outcomes": [{"outcome": "Implemented list command."}]},
             "att1:gen:cli_done": {
                 "status": "failed",
-                "summaries": [{"summary": "done command crashed on empty store."}],
+                "outcomes": [{"outcome": "done command crashed on empty store."}],
             },
         }
     )
-    blocks = goal_iteration_blocks(workflow=_goal(), current_iteration=it2, iterations=[it1, it2])
-    blocks += failed_attempt_blocks(
+    blocks = _goal_iteration_blocks(workflow=_goal(), current_iteration=it2, iterations=[it1, it2])
+    blocks += _failed_attempt_blocks(
         current_attempt_id="att2", iteration=it2, attempts=[failed], task_store=store
     )
 
@@ -206,69 +199,22 @@ def test_planner_context_matches_diagram():
     assert _render(blocks, role="planner") == expected
 
 
-def test_planner_failed_attempt_includes_evaluator_summary_when_evaluator_ran():
-    """The conditional ``<evaluator_summary>`` slot from the §1 diagram: an
-    EVALUATOR_FAILED attempt ran the evaluator, so its summary is rendered
-    between the <task>s and the <failure> line."""
-    it2 = _iteration(2, IterationStatus.OPEN, "Add list and done commands.")
-    failed = _attempt(
-        status=AttemptStatus.FAILED,
-        fail_reason=AttemptFailReason.EVALUATOR_FAILED,
-        generator_task_ids=("att1:gen:cli_list", "att1:gen:cli_done"),
-        evaluator_task_id="att1:evaluator",
-    )
-    store = _FakeTaskStore(
-        {
-            "att1:gen:cli_list": {"status": "done", "summaries": [{"summary": "Implemented list command."}]},
-            "att1:gen:cli_done": {"status": "done", "summaries": [{"summary": "Implemented done command."}]},
-            "att1:evaluator": {
-                "summaries": [{"summary": "The done command does not persist completion."}]
-            },
-        }
-    )
-    body = failed_attempt_blocks(
-        current_attempt_id="att2", iteration=it2, attempts=[failed], task_store=store
-    )[0].text
-    assert body == (
-        '<task id="cli_list" status="success">\n'
-        "Implemented list command.\n"
-        "</task>\n"
-        '<task id="cli_done" status="success">\n'
-        "Implemented done command.\n"
-        "</task>\n"
-        "<evaluator_summary>\n"
-        "The done command does not persist completion.\n"
-        "</evaluator_summary>\n"
-        "<failure>\n"
-        "evaluator: The done command does not persist completion.\n"
-        "</failure>"
-    )
-
-
 # ---------------------------------------------------------------------------
-# Generator — plan_spec + <dependency> wrapper of <task> + assigned_task.
+# Generator — <needs> wrapper of <task> + assigned_task (no plan_spec).
 # ---------------------------------------------------------------------------
 
 
 def test_generator_context_matches_diagram():
     store = _FakeTaskStore(
         {
-            "att1:gen:storage": {"status": "done", "summaries": [{"summary": "Implemented storage layer."}]},
-            "att1:gen:cli_add": {"status": "done", "summaries": [{"summary": "Added the add command."}]},
+            "att1:gen:storage": {"status": "done", "outcomes": [{"outcome": "Implemented storage layer."}]},
+            "att1:gen:cli_add": {"status": "done", "outcomes": [{"outcome": "Added the add command."}]},
         }
     )
-    blocks: list[ContextBlock] = [
-        ContextBlock(
-            kind=ContextBlockKind.TASK_SPECIFICATION,
-            priority=ContextPriority.HIGH,
-            text="Full attempt plan / DAG.",
-            source_id="att1",
-            source_kind="attempt",
-            metadata={"tag": "plan_spec"},
+    blocks: list[ContextBlock] = list(
+        needs_outcome_blocks(
+            needs=("att1:gen:storage", "att1:gen:cli_add"), task_store=store
         )
-    ]
-    blocks += _dependency_blocks(
-        needs=("att1:gen:storage", "att1:gen:cli_add"), task_store=store
     )
     blocks.append(
         ContextBlock(
@@ -282,18 +228,14 @@ def test_generator_context_matches_diagram():
     )
     expected = (
         "<context>\n"
-        "<plan_spec>\n"
-        "Full attempt plan / DAG.\n"
-        "</plan_spec>\n"
-        "\n"
-        "<dependency>\n"
+        "<needs>\n"
         '<task id="storage" status="success">\n'
         "Implemented storage layer.\n"
         "</task>\n"
         '<task id="cli_add" status="success">\n'
         "Added the add command.\n"
         "</task>\n"
-        "</dependency>\n"
+        "</needs>\n"
         "\n"
         '<assigned_task task_id="cli_done">\n'
         "Implement the done command.\n"
@@ -304,60 +246,49 @@ def test_generator_context_matches_diagram():
 
 
 # ---------------------------------------------------------------------------
-# Evaluator — plan_spec + flat <task>×N + evaluation_criteria.
+# Reducer — <needs> wrapper of <task> + assigned_prompt (its own prompt only).
 # ---------------------------------------------------------------------------
 
 
-def test_evaluator_context_matches_diagram():
-    attempt = _attempt(
-        status=AttemptStatus.RUNNING,
-        generator_task_ids=(
-            "att1:gen:storage",
-            "att1:gen:cli_add",
-            "att1:gen:cli_list",
-            "att1:gen:cli_done",
-        ),
-        evaluation_criteria=("the add command works", "listing works", "done marks complete"),
-    )
+def test_reducer_context_matches_diagram():
     store = _FakeTaskStore(
         {
-            "att1:gen:storage": {"status": "done", "summaries": [{"summary": "Implemented storage layer."}]},
-            "att1:gen:cli_add": {"status": "done", "summaries": [{"summary": "Added the add command."}]},
-            "att1:gen:cli_list": {"status": "done", "summaries": [{"summary": "Added the list command."}]},
-            "att1:gen:cli_done": {"status": "done", "summaries": [{"summary": "Added the done command."}]},
+            "att1:gen:storage": {"status": "done", "outcomes": [{"outcome": "Implemented storage layer."}]},
+            "att1:gen:cli_add": {"status": "done", "outcomes": [{"outcome": "Added the add command."}]},
         }
     )
-    blocks = current_attempt_flat_blocks(attempt=attempt, task_store=store)
+    blocks: list[ContextBlock] = list(
+        needs_outcome_blocks(
+            needs=("att1:gen:storage", "att1:gen:cli_add"), task_store=store
+        )
+    )
+    blocks.append(
+        ContextBlock(
+            kind=ContextBlockKind.PLANNED_TASK_SPEC,
+            priority=ContextPriority.REQUIRED,
+            text="Confirm every command works end to end.",
+            source_id="att1:red:gate",
+            source_kind="task_center_task",
+            metadata={"tag": "assigned_prompt", "attrs": 'task_id="att1:red:gate"'},
+        )
+    )
     expected = (
         "<context>\n"
-        "<plan_spec>\n"
-        "Full DAG plan.\n"
-        "</plan_spec>\n"
-        "\n"
+        "<needs>\n"
         '<task id="storage" status="success">\n'
         "Implemented storage layer.\n"
         "</task>\n"
-        "\n"
         '<task id="cli_add" status="success">\n'
         "Added the add command.\n"
         "</task>\n"
+        "</needs>\n"
         "\n"
-        '<task id="cli_list" status="success">\n'
-        "Added the list command.\n"
-        "</task>\n"
-        "\n"
-        '<task id="cli_done" status="success">\n'
-        "Added the done command.\n"
-        "</task>\n"
-        "\n"
-        "<evaluation_criteria>\n"
-        "the add command works\n"
-        "listing works\n"
-        "done marks complete\n"
-        "</evaluation_criteria>\n"
+        '<assigned_prompt task_id="att1:red:gate">\n'
+        "Confirm every command works end to end.\n"
+        "</assigned_prompt>\n"
         "</context>\n"
     )
-    assert _render(blocks, role="evaluator") == expected
+    assert _render(blocks, role="reducer") == expected
 
 
 # ---------------------------------------------------------------------------
@@ -366,14 +297,14 @@ def test_evaluator_context_matches_diagram():
 
 
 def test_handoff_success_nested_task_matches_diagram():
-    parent = TaskOutcome(
+    parent = Outcome(
         local_id="implement_auth",
         status="success",
-        summary=None,
+        outcome=None,
         children=(
-            TaskOutcome(local_id="schema", status="success", summary="Designed the schema."),
-            TaskOutcome(local_id="login_api", status="success", summary="Built the login API."),
-            TaskOutcome(local_id="session_mw", status="success", summary="Added session middleware."),
+            Outcome(local_id="schema", status="success", outcome="Designed the schema."),
+            Outcome(local_id="login_api", status="success", outcome="Built the login API."),
+            Outcome(local_id="session_mw", status="success", outcome="Added session middleware."),
         ),
     )
     assert render_task_element(parent) == (
@@ -392,13 +323,13 @@ def test_handoff_success_nested_task_matches_diagram():
 
 
 def test_handoff_failure_nested_task_matches_diagram():
-    parent = TaskOutcome(
+    parent = Outcome(
         local_id="implement_auth",
         status="failure",
-        summary=None,
+        outcome=None,
         children=(
-            TaskOutcome(local_id="schema", status="success", summary="Designed the schema."),
-            TaskOutcome(local_id="login_api", status="failure", summary="Login API failed on token refresh."),
+            Outcome(local_id="schema", status="success", outcome="Designed the schema."),
+            Outcome(local_id="login_api", status="failure", outcome="Login API failed on token refresh."),
         ),
         failure="generator login_api: token refresh raised.",
     )
@@ -415,55 +346,3 @@ def test_handoff_failure_nested_task_matches_diagram():
         "</failure>\n"
         "</task>"
     )
-
-
-def test_handoff_rollup_renders_through_evaluator_task_block():
-    """A parent generator carrying a ``handoff_rollup`` payload renders its
-    nested ``<task>`` roll-up wherever the generator appears — here as one of
-    the evaluator's flat task blocks (unit-level stand-in for the end-to-end
-    handoff, per the design note)."""
-    rollup = {
-        "children": [
-            to_record(TaskOutcome(local_id="schema", status="success", summary="Designed the schema.")),
-            to_record(TaskOutcome(local_id="login_api", status="success", summary="Built the login API.")),
-        ],
-        "failure": None,
-    }
-    attempt = _attempt(
-        status=AttemptStatus.RUNNING,
-        generator_task_ids=("att1:gen:implement_auth",),
-        evaluation_criteria=("auth works",),
-    )
-    store = _FakeTaskStore(
-        {
-            "att1:gen:implement_auth": {
-                "status": "done",
-                "summaries": [
-                    {
-                        "outcome": "success",
-                        "summary": "Delegated workflow succeeded.",
-                        "payload": {"handoff_rollup": rollup},
-                    }
-                ],
-            }
-        }
-    )
-    rendered = XmlPromptRenderer().render_context(
-        ContextPacket(
-            target_role="evaluator",
-            target_id="att1",
-            canonical_refs=ContextRefs(workflow_id="g1", iteration_id="it2", attempt_id="att1"),
-            blocks=current_attempt_flat_blocks(attempt=attempt, task_store=store),
-            source_ids=[],
-        )
-    )
-    assert (
-        '<task id="implement_auth" status="success">\n'
-        '<task id="schema" status="success">\n'
-        "Designed the schema.\n"
-        "</task>\n"
-        '<task id="login_api" status="success">\n'
-        "Built the login API.\n"
-        "</task>\n"
-        "</task>"
-    ) in rendered

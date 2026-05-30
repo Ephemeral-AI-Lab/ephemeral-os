@@ -1,9 +1,9 @@
 """Iteration attempt coordination and process-local registry.
 
 ``IterationAttemptCoordinator`` is the sole creator of attempt records inside
-its owned iteration and the only emitter of ``IterationClosureReport``.
-``OpenIterationCoordinatorRegistry`` is the process-local one-coordinator-per-
-open-iteration registry.
+its owned iteration and the only signaller of iteration close (a primitive
+callback, not a report DTO). ``OpenIterationCoordinatorRegistry`` is the
+process-local one-coordinator-per-open-iteration registry.
 """
 
 from __future__ import annotations
@@ -13,7 +13,6 @@ import logging
 from collections.abc import Callable
 from datetime import UTC, datetime
 
-from task_center._core.generator_summaries import generator_outcomes, to_record
 from task_center._core.invariants import (
     assert_attempt_belongs_to_iteration,
     assert_attempt_sequence_contiguous,
@@ -21,31 +20,33 @@ from task_center._core.invariants import (
     assert_iteration_has_budget,
     assert_iteration_open,
 )
+from task_center._core.outcomes import (
+    failed_task_outcomes,
+    reducer_outcomes,
+    to_record,
+)
 from task_center._core.persistence import (
     AttemptStoreProtocol,
     IterationStoreProtocol,
     TaskStoreProtocol,
 )
 from task_center._core.primitives import TaskCenterInvariantViolation
-from task_center.attempt.orchestrator_registry import RegisteredAttemptOrchestrator
-from task_center.attempt.state import (
+from task_center._core.state import (
     Attempt,
     AttemptFailReason,
     AttemptStatus,
-)
-from task_center.iteration.state import (
-    AttemptPlanFailed,
     Iteration,
-    IterationClosureReport,
     IterationStatus,
-    SuccessDeferred,
-    TerminalSuccess,
 )
+from task_center.attempt.orchestrator_registry import RegisteredAttemptOrchestrator
 
 logger = logging.getLogger(__name__)
 
 
-IterationClosureCallback = Callable[[IterationClosureReport], None]
+# Signalled on iteration close: (iteration_id, succeeded, deferred_goal,
+# final_attempt_id). succeeded + deferred_goal=None -> workflow success;
+# succeeded + deferred_goal -> next iteration; not succeeded -> workflow fail.
+IterationClosureCallback = Callable[..., None]
 AttemptClosedCallback = Callable[[str], None]
 OrchestratorFactory = Callable[[Attempt, AttemptClosedCallback], RegisteredAttemptOrchestrator]
 
@@ -68,10 +69,10 @@ class IterationAttemptCoordinator:
         self._attempt_store = attempt_store
         self._on_iteration_closed = on_iteration_closed
         self._orchestrator_factory = orchestrator_factory
-        # Optional: when present, the coordinator denormalizes the passing
-        # attempt's generators onto the iteration row (a structured achieved
-        # record) at successful close so the context engine's planner recipe
-        # can render them as ``<task>`` children on retry / chain.
+        # Optional: when present, the coordinator denormalizes the canonical
+        # outcomes (the passing attempt's reducer outcomes, or a failed
+        # attempt's failed-task outcomes) onto the iteration row at close so the
+        # planner recipe can relay them on the next iteration.
         self._task_store = task_store
 
     # ---- public API -----------------------------------------------------
@@ -196,30 +197,24 @@ class IterationAttemptCoordinator:
             self.iteration_id,
             deferred_goal_for_next_iteration=attempt.deferred_goal_for_next_iteration,
         )
-        # Atomically transition status + write the denormalized plan_spec (from
-        # the passing attempt) and the structured achieved record (a JSON list
-        # of ``{local_id, status, summary}`` over the passing generators) onto
-        # the iteration row. The planner recipe reads the achieved record; it
-        # no longer surfaces plan_spec.
+        # Atomically transition to SUCCEEDED + write the canonical outcomes
+        # (the passing attempt's reducer outcomes). The planner recipe relays
+        # them on the next iteration.
         self._iteration_store.close_succeeded(
             self.iteration_id,
-            plan_spec=attempt.plan_spec or "",
-            task_summary=self._achieved_record_for(attempt),
+            outcomes=self._iteration_outcomes_for(attempt),
             closed_at=datetime.now(UTC),
         )
-        if attempt.deferred_goal_for_next_iteration is None:
-            self._emit_terminal_success(attempt)
-        else:
-            self._emit_success_deferred(attempt)
+        self._on_iteration_closed(
+            iteration_id=self.iteration_id,
+            succeeded=True,
+            deferred_goal=attempt.deferred_goal_for_next_iteration,
+            final_attempt_id=attempt.id,
+        )
 
-    def _achieved_record_for(self, attempt: Attempt) -> str:
-        """JSON achieved record for the passing attempt's generators.
-
-        Empty list (``"[]"``) when the coordinator is configured without a
-        ``task_store`` (test seams). All generators of a passing attempt are
-        ``DONE``, so each entry's status maps to ``success``.
-        """
-        outcomes = generator_outcomes(attempt, task_store=self._task_store)
+    def _iteration_outcomes_for(self, attempt: Attempt) -> str:
+        """JSON outcomes record for the passing attempt's reducers."""
+        outcomes = reducer_outcomes(attempt, task_store=self._task_store)
         return json.dumps([to_record(o) for o in outcomes])
 
     def _retry_or_close_failed(self, attempt: Attempt) -> None:
@@ -250,12 +245,23 @@ class IterationAttemptCoordinator:
                 continue
 
     def _close_iteration_failed(self, attempt: Attempt) -> None:
+        # Failure-aware: denormalize the last failed attempt's failed-task
+        # outcomes so the parent (or the run report) surfaces what went wrong.
+        outcomes = json.dumps(
+            [to_record(o) for o in failed_task_outcomes(attempt, self._task_store)]
+        )
         self._iteration_store.set_status(
             self.iteration_id,
             status=IterationStatus.FAILED,
             closed_at=datetime.now(UTC),
+            outcomes=outcomes,
         )
-        self._emit_attempt_plan_failed(attempt)
+        self._on_iteration_closed(
+            iteration_id=self.iteration_id,
+            succeeded=False,
+            deferred_goal=None,
+            final_attempt_id=attempt.id,
+        )
 
     def _latest_failed_attempt_for(self, *, previous_id: str) -> Attempt | None:
         iteration = self._current_iteration_snapshot()
@@ -266,36 +272,6 @@ class IterationAttemptCoordinator:
         if retry_attempt is None or retry_attempt.status != AttemptStatus.FAILED:
             return None
         return retry_attempt
-
-    def _emit_terminal_success(self, attempt: Attempt) -> None:
-        report = IterationClosureReport(
-            iteration_id=self.iteration_id,
-            final_attempt_id=attempt.id,
-            outcome=TerminalSuccess(),
-        )
-        self._on_iteration_closed(report)
-
-    def _emit_success_deferred(self, attempt: Attempt) -> None:
-        if attempt.deferred_goal_for_next_iteration is None:
-            raise TaskCenterInvariantViolation(
-                "success_deferred requires a non-null deferred_goal_for_next_iteration"
-            )
-        report = IterationClosureReport(
-            iteration_id=self.iteration_id,
-            final_attempt_id=attempt.id,
-            outcome=SuccessDeferred(
-                deferred_goal_for_next_iteration=attempt.deferred_goal_for_next_iteration
-            ),
-        )
-        self._on_iteration_closed(report)
-
-    def _emit_attempt_plan_failed(self, last_attempt: Attempt) -> None:
-        report = IterationClosureReport(
-            iteration_id=self.iteration_id,
-            final_attempt_id=last_attempt.id,
-            outcome=AttemptPlanFailed(),
-        )
-        self._on_iteration_closed(report)
 
 
 class OpenIterationCoordinatorRegistry:

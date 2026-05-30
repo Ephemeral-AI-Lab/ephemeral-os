@@ -12,7 +12,7 @@ Call this when:
 - The slice you gate does not meet its acceptance bar.
 
 Inputs:
-- `summary`: 1–3 sentence recap, citing the specific gap.
+- `outcome`: 1–3 sentence recap, citing the specific gap.
 
 Behavior:
 - Records your reducer failure on this task. The orchestrator may

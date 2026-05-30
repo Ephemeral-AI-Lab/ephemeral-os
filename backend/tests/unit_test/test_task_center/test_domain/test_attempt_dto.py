@@ -20,10 +20,8 @@ def _graph(**overrides) -> Attempt:
         stage=AttemptStage.PLAN,
         status=AttemptStatus.RUNNING,
         planner_task_id=None,
-        plan_spec=None,
-        evaluation_criteria=(),
         generator_task_ids=(),
-        evaluator_task_id=None,
+        reducer_task_ids=(),
         deferred_goal_for_next_iteration=None,
         fail_reason=None,
         created_at=datetime.now(UTC),
@@ -36,16 +34,10 @@ def _graph(**overrides) -> Attempt:
 
 def test_is_closed_matches_stage():
     assert _graph(stage=AttemptStage.PLAN).is_closed is False
-    assert _graph(stage=AttemptStage.GENERATE).is_closed is False
-    assert _graph(stage=AttemptStage.EVALUATE).is_closed is False
+    assert _graph(stage=AttemptStage.RUN).is_closed is False
     assert _graph(stage=AttemptStage.CLOSED).is_closed is True
 
 
 def test_fail_reason_enum_values():
-    assert (
-        AttemptFailReason.PLANNER_FAILED.value
-        == "planner_failed"
-    )
-    assert AttemptFailReason.GENERATOR_FAILED.value == "generator_failed"
-    assert AttemptFailReason.EVALUATOR_FAILED.value == "evaluator_failed"
+    assert AttemptFailReason.TASK_FAILED.value == "task_failed"
     assert AttemptFailReason.STARTUP_FAILED.value == "startup_failed"

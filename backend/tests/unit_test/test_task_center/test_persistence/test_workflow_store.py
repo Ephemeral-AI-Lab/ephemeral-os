@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from task_center.workflow.state import (
+from task_center._core.state import (
     Workflow,
     WorkflowStatus,
 )
@@ -13,8 +13,8 @@ from task_center.workflow.state import (
 def test_insert_returns_dto(workflow_store, task_center_run_id):
     req = workflow_store.insert(
         task_center_run_id=task_center_run_id,
-        requested_by_task_id="t1",
-        goal="g",
+        parent_task_id="t1",
+        workflow_goal="g",
     )
     assert isinstance(req, Workflow)
     assert req.is_open
@@ -24,22 +24,22 @@ def test_insert_returns_dto(workflow_store, task_center_run_id):
 def test_get_round_trip(workflow_store, task_center_run_id):
     inserted = workflow_store.insert(
         task_center_run_id=task_center_run_id,
-        requested_by_task_id="t1",
-        goal="g",
+        parent_task_id="t1",
+        workflow_goal="g",
     )
     got = workflow_store.get(inserted.id)
     assert got is not None
     assert got.id == inserted.id
-    assert got.goal == "g"
-    assert got.requested_by_task_id == "t1"
+    assert got.workflow_goal == "g"
+    assert got.parent_task_id == "t1"
     assert got.iteration_ids == ()
 
 
 def test_append_iteration_id_persists_tuple(workflow_store, task_center_run_id):
     req = workflow_store.insert(
         task_center_run_id=task_center_run_id,
-        requested_by_task_id="t1",
-        goal="g",
+        parent_task_id="t1",
+        workflow_goal="g",
     )
     after_first = workflow_store.append_iteration_id(req.id, "s1")
     after_second = workflow_store.append_iteration_id(req.id, "s2")
@@ -48,23 +48,21 @@ def test_append_iteration_id_persists_tuple(workflow_store, task_center_run_id):
     assert isinstance(after_second.iteration_ids, tuple)
 
 
-def test_set_status_records_outcome_and_closed_at(
+def test_set_status_records_closed_at(
     workflow_store, task_center_run_id
 ):
     req = workflow_store.insert(
         task_center_run_id=task_center_run_id,
-        requested_by_task_id="t1",
-        goal="g",
+        parent_task_id="t1",
+        workflow_goal="g",
     )
     closed_at = datetime.now(UTC)
     updated = workflow_store.set_status(
         req.id,
         status=WorkflowStatus.SUCCEEDED,
-        final_outcome={"outcome": "success"},
         closed_at=closed_at,
     )
     assert updated.status == WorkflowStatus.SUCCEEDED
-    assert updated.final_outcome == {"outcome": "success"}
     assert updated.closed_at is not None
 
 
@@ -73,18 +71,18 @@ def test_list_for_parent_task_orders_by_created_at(
 ):
     a = workflow_store.insert(
         task_center_run_id=task_center_run_id,
-        requested_by_task_id="parent-task-A",
-        goal="ga",
+        parent_task_id="parent-task-A",
+        workflow_goal="ga",
     )
     b = workflow_store.insert(
         task_center_run_id=task_center_run_id,
-        requested_by_task_id="parent-task-A",
-        goal="gb",
+        parent_task_id="parent-task-A",
+        workflow_goal="gb",
     )
     workflow_store.insert(
         task_center_run_id=task_center_run_id,
-        requested_by_task_id="parent-task-B",
-        goal="gc",
+        parent_task_id="parent-task-B",
+        workflow_goal="gc",
     )
     listed = workflow_store.list_for_parent_task("parent-task-A")
     assert [r.id for r in listed] == [a.id, b.id]
