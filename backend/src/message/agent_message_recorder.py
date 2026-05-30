@@ -13,6 +13,7 @@ from message.message import (
     TextBlock,
     ThinkingBlock,
     ToolResultBlock,
+    ToolUseBlock,
 )
 from message.events import (
     AssistantMessageCompleteEvent,
@@ -23,6 +24,13 @@ from message.events import (
 )
 
 logger = logging.getLogger(__name__)
+
+# Advisor-approval calls (the advisor-gated-terminal mechanism) are captured as
+# per-call ``ExecutionMetadata`` and must NOT leak into the persisted transcript
+# audit artifact; they stay in the LIVE conversation so the gate/prehook can
+# still see them. Mirrors ``tools._names.ASK_ADVISOR_TOOL_NAME`` (kept local to
+# avoid a ``message`` -> ``tools`` import inversion).
+_ADVISOR_APPROVAL_TOOL_NAME = "ask_advisor"
 
 
 class AgentMessageJsonlRecorder:
@@ -83,14 +91,31 @@ class AgentMessageJsonlRecorder:
                 self._text.pop((agent_name, run_id), None)
             else:
                 self._flush_text(agent_name, run_id)
-            self._record(
-                agent_name=event.agent_name,
-                run_id=event.agent_run_id,
-                message=event.message,
-            )
+            # Drop advisor-approval tool_use blocks (gated-terminal approval is
+            # metadata, not a durable transcript row). If that empties the
+            # assistant turn, skip recording it entirely.
+            content = [
+                block
+                for block in event.message.content
+                if not (
+                    isinstance(block, ToolUseBlock)
+                    and block.name == _ADVISOR_APPROVAL_TOOL_NAME
+                )
+            ]
+            if content:
+                self._record(
+                    agent_name=event.agent_name,
+                    run_id=event.agent_run_id,
+                    message=event.message.model_copy(update={"content": content}),
+                )
             return
 
         if isinstance(event, ToolExecutionCompletedEvent):
+            # Exclude the paired advisor-approval result on the same tool
+            # identity as its call, so the transcript never holds an orphan
+            # tool_result (and the helper_role="advisor" result never leaks).
+            if event.tool_name == _ADVISOR_APPROVAL_TOOL_NAME:
+                return
             message = Message(
                 role="user",
                 content=[

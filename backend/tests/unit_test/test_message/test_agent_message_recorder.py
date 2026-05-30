@@ -166,6 +166,103 @@ def test_assistant_complete_with_full_blocks_does_not_duplicate(tmp_path) -> Non
     ]
 
 
+def test_advisor_approval_excluded_from_transcript(tmp_path) -> None:
+    """The advisor-gated-terminal approval (the ``ask_advisor`` call AND its
+    paired result) is per-call metadata, not a durable transcript row. The
+    recorder drops both while keeping surrounding real content."""
+    path = tmp_path / "message.jsonl"
+    recorder = AgentMessageJsonlRecorder(path)
+
+    # Assistant turn mixing real text with an advisor-approval call: keep the
+    # text, drop the ask_advisor tool_use.
+    recorder.emit(
+        AssistantMessageCompleteEvent(
+            message=Message(
+                role="assistant",
+                content=[
+                    TextBlock(text="seeking approval"),
+                    ToolUseBlock(
+                        tool_use_id="adv-1",
+                        name="ask_advisor",
+                        input={
+                            "tool_name": "submit_execution_success",
+                            "tool_payload": {},
+                        },
+                    ),
+                ],
+            ),
+            usage=UsageSnapshot(),
+            agent_name="executor",
+            agent_run_id="r",
+        )
+    )
+    # Paired advisor result (helper_role="advisor") -> dropped on the same tool
+    # identity, so no orphan tool_result remains.
+    recorder.emit(
+        ToolExecutionCompletedEvent(
+            tool_name="ask_advisor",
+            output="approved",
+            tool_use_id="adv-1",
+            metadata={"helper_role": "advisor", "verdict": "approve"},
+            agent_name="executor",
+            agent_run_id="r",
+        )
+    )
+    # The real gated terminal call + result are kept.
+    recorder.emit(
+        AssistantMessageCompleteEvent(
+            message=Message(
+                role="assistant",
+                content=[
+                    ToolUseBlock(
+                        tool_use_id="t1",
+                        name="submit_execution_success",
+                        input={},
+                    )
+                ],
+            ),
+            usage=UsageSnapshot(),
+            agent_name="executor",
+            agent_run_id="r",
+        )
+    )
+    recorder.emit(
+        ToolExecutionCompletedEvent(
+            tool_name="submit_execution_success",
+            output="ok",
+            tool_use_id="t1",
+            agent_name="executor",
+            agent_run_id="r",
+        )
+    )
+    recorder.flush()
+
+    records = _read_jsonl(path)
+    blocks = [block for record in records for block in record["content"]]
+    tool_use_names = {
+        block.get("name") for block in blocks if block.get("type") == "tool_use"
+    }
+    assert "ask_advisor" not in tool_use_names
+    assert "submit_execution_success" in tool_use_names
+    # The real text in the mixed turn survives.
+    assert any(
+        block.get("type") == "text" and block.get("text") == "seeking approval"
+        for block in blocks
+    )
+    # No advisor-approval result row leaks.
+    assert not any(
+        block.get("type") == "tool_result"
+        and isinstance(block.get("metadata"), dict)
+        and block["metadata"].get("helper_role") == "advisor"
+        for block in blocks
+    )
+    # The real terminal's result IS kept.
+    assert any(
+        block.get("type") == "tool_result" and block.get("tool_use_id") == "t1"
+        for block in blocks
+    )
+
+
 def test_recorder_registry_round_trip(tmp_path) -> None:
     recorder = AgentMessageJsonlRecorder(tmp_path / "message.jsonl")
     register_recorder("agent-a", "run-xyz", recorder)
