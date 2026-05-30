@@ -9,7 +9,6 @@ tool registration see the same launch-specific terminal set.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from pathlib import Path
 
 from agents import get_definition
 from agents import AgentDefinition, AgentKind
@@ -70,7 +69,6 @@ class TerminalToolSelection:
 
     agent_def: AgentDefinition
     context_recipe: str
-    skill_path: Path | None = None
 
 
 class TerminalToolRouter:
@@ -90,7 +88,6 @@ class TerminalToolRouter:
         return TerminalToolSelection(
             agent_def=effective,
             context_recipe=recipe,
-            skill_path=effective.skill,
         )
 
     # ---- internals ---------------------------------------------------------

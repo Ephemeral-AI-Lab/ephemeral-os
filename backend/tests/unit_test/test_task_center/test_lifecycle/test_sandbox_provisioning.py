@@ -22,7 +22,6 @@ def test_prepares_explicit_sandbox_id_without_create() -> None:
 
     assert binding.sandbox_id == "sbx-explicit"
     assert binding.task_center_run_id == "run-1"
-    assert binding.owned_by_task_center is False
     assert create_calls == []
     assert start_calls == ["sbx-explicit"]
 
@@ -44,7 +43,6 @@ def test_creates_sandbox_when_id_is_missing() -> None:
 
     assert binding.sandbox_id == "sbx-created"
     assert binding.task_center_run_id == "run-2"
-    assert binding.owned_by_task_center is True
     assert start_calls == []
     assert len(create_calls) == 1
     assert str(create_calls[0]["name"]).startswith("task-center-")

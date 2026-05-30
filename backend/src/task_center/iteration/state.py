@@ -7,8 +7,6 @@ from datetime import datetime
 from enum import StrEnum
 from typing import Literal
 
-from task_center.attempt.state import AttemptFailReason
-
 
 class IterationStatus(StrEnum):
     OPEN = "open"
@@ -64,17 +62,6 @@ class Iteration:
 
 
 @dataclass(frozen=True, slots=True)
-class FailedAttemptEntry:
-    """One past attempt's structural state."""
-
-    attempt_id: str
-    attempt_sequence_no: int
-    plan_spec: str | None
-    evaluation_criteria: tuple[str, ...]
-    fail_reason: AttemptFailReason | None
-
-
-@dataclass(frozen=True, slots=True)
 class TerminalSuccess:
     kind: Literal["terminal_success"] = "terminal_success"
 
@@ -87,8 +74,6 @@ class SuccessDeferred:
 
 @dataclass(frozen=True, slots=True)
 class AttemptPlanFailed:
-    failure_summary: str
-    prior_attempt_history: tuple[FailedAttemptEntry, ...]
     kind: Literal["attempt_plan_failed"] = "attempt_plan_failed"
 
 

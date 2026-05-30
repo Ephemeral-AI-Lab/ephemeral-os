@@ -440,8 +440,6 @@ def test_retry_start_failure_exhausts_budget_and_emits_closure(
     assert len(captured) == 1
     outcome = captured[0].outcome
     assert isinstance(outcome, AttemptPlanFailed)
-    assert outcome.failure_summary == AttemptFailReason.STARTUP_FAILED.value
-    assert [e.attempt_sequence_no for e in outcome.prior_attempt_history] == [1, 2]
 
 
 def test_retry_start_failure_with_budget_remaining_creates_next_graph(
@@ -550,38 +548,6 @@ def test_failed_attempt_without_budget_emits_attempt_plan_failed(
     assert len(captured) == 1
     outcome = captured[0].outcome
     assert isinstance(outcome, AttemptPlanFailed)
-    assert outcome.failure_summary == AttemptFailReason.EVALUATOR_FAILED.value
-
-
-def test_prior_attempt_history_ordered_by_graph_sequence(
-    workflow_store, iteration_store, attempt_store, task_center_run_id
-):
-    seg_id = _seed_segment(workflow_store, iteration_store, task_center_run_id, attempt_budget=2)
-    coordinator, captured = _make_coordinator(seg_id, iteration_store, attempt_store)
-    g1 = coordinator.create_initial_attempt()
-    attempt_store.set_plan_contract(
-        g1.id, plan_spec="spec1", evaluation_criteria=["a"], deferred_goal_for_next_iteration=None
-    )
-    attempt_store.close(
-        g1.id, status=AttemptStatus.FAILED,
-        fail_reason=AttemptFailReason.GENERATOR_FAILED,
-    )
-    coordinator.handle_attempt_closed(g1.id)
-    seg = iteration_store.get(seg_id)
-    assert seg is not None
-    g2_id = seg.attempt_ids[-1]
-    attempt_store.set_plan_contract(
-        g2_id, plan_spec="spec2", evaluation_criteria=["b"], deferred_goal_for_next_iteration=None
-    )
-    attempt_store.close(
-        g2_id, status=AttemptStatus.FAILED,
-        fail_reason=AttemptFailReason.EVALUATOR_FAILED,
-    )
-    coordinator.handle_attempt_closed(g2_id)
-    outcome = captured[0].outcome
-    assert isinstance(outcome, AttemptPlanFailed)
-    seqs = [e.attempt_sequence_no for e in outcome.prior_attempt_history]
-    assert seqs == [1, 2]
 
 
 def test_creating_initial_graph_twice_raises(

@@ -34,7 +34,6 @@ from task_center.attempt.state import (
     AttemptStatus,
 )
 from task_center.iteration.state import (
-    FailedAttemptEntry,
     AttemptPlanFailed,
     Iteration,
     IterationClosureReport,
@@ -272,33 +271,12 @@ class IterationAttemptCoordinator:
         self._on_iteration_closed(report)
 
     def _emit_attempt_plan_failed(self, last_attempt: Attempt) -> None:
-        history = self._build_prior_attempt_history()
         report = IterationClosureReport(
             iteration_id=self.iteration_id,
             final_attempt_id=last_attempt.id,
-            outcome=AttemptPlanFailed(
-                failure_summary=(
-                    last_attempt.fail_reason.value
-                    if last_attempt.fail_reason is not None
-                    else "unknown"
-                ),
-                prior_attempt_history=history,
-            ),
+            outcome=AttemptPlanFailed(),
         )
         self._on_iteration_closed(report)
-
-    def _build_prior_attempt_history(self) -> tuple[FailedAttemptEntry, ...]:
-        attempts = self._attempt_store.list_for_iteration(self.iteration_id)
-        return tuple(
-            FailedAttemptEntry(
-                attempt_id=g.id,
-                attempt_sequence_no=g.attempt_sequence_no,
-                plan_spec=g.plan_spec,
-                evaluation_criteria=g.evaluation_criteria,
-                fail_reason=g.fail_reason,
-            )
-            for g in attempts
-        )
 
 
 class OpenIterationCoordinatorRegistry:

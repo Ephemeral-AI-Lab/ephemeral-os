@@ -7,7 +7,7 @@ The facade re-exports only the names that callers actually reach through this
 path. Internal callback aliases (``AttemptClosedCallback``,
 ``IterationClosureCallback``) and per-iteration DTOs (``AttemptPlanFailed``,
 ``ClosureOutcome``, ``IterationClosureReport``, ``IterationCreationReason``,
-``IterationStatus``, ``FailedAttemptEntry``, ``SuccessDeferred``,
+``IterationStatus``, ``SuccessDeferred``,
 ``TerminalSuccess``) live on the canonical ``.state`` /
 ``.attempt_coordinator`` modules; import them from there.
 """

@@ -1,9 +1,8 @@
 """Sandbox provisioning for one TaskCenter run.
 
 :class:`TaskCenterSandboxProvisioner` prepares the sandbox binding for entry
-startup: it either starts a caller-provided sandbox and reports the run does not
-own it, or creates a fresh sandbox labelled with the run id and reports the run
-does own it.
+startup: it either starts a caller-provided sandbox, or creates a fresh sandbox
+labelled with the run id.
 """
 
 from __future__ import annotations
@@ -22,7 +21,6 @@ StartSandboxFn = Callable[[str], dict[str, Any]]
 class TaskCenterSandboxBinding:
     sandbox_id: str
     task_center_run_id: str
-    owned_by_task_center: bool
 
 
 def _default_create(**kwargs: Any) -> dict[str, Any]:
@@ -62,7 +60,6 @@ class TaskCenterSandboxProvisioner:
             return TaskCenterSandboxBinding(
                 sandbox_id=explicit_id,
                 task_center_run_id=task_center_run_id,
-                owned_by_task_center=False,
             )
 
         create = self._create or _default_create
@@ -79,7 +76,6 @@ class TaskCenterSandboxProvisioner:
         return TaskCenterSandboxBinding(
             sandbox_id=new_id,
             task_center_run_id=task_center_run_id,
-            owned_by_task_center=True,
         )
 
 

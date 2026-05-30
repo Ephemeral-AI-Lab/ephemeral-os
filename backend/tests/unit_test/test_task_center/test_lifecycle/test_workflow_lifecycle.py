@@ -169,9 +169,7 @@ def test_handle_iteration_closed_attempt_plan_failed_closes_workflow_failed(
         IterationClosureReport(
             iteration_id=iteration.id,
             final_attempt_id="g1",
-            outcome=AttemptPlanFailed(
-                failure_summary="boom", prior_attempt_history=()
-            ),
+            outcome=AttemptPlanFailed(),
         )
     )
     final = workflow_store.get(workflow.id)

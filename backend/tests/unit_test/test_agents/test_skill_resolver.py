@@ -77,7 +77,7 @@ def test_resolve_returns_skill_path_from_registered_definition(
         deps=_Deps(),  # type: ignore[arg-type]
     )
 
-    assert selection.skill_path == skill_file
+    assert selection.agent_def.skill == skill_file
     assert selection.agent_def.name == "planner_test_base"
     unregister_definition("planner_test_base")
 
@@ -107,7 +107,7 @@ def test_resolve_keeps_base_skill_when_terminals_are_filtered(
         deps=_Deps(),  # type: ignore[arg-type]
     )
 
-    assert selection.skill_path == base_skill
+    assert selection.agent_def.skill == base_skill
     assert selection.agent_def.name == "planner_test_router"
 
     unregister_definition("planner_test_router")
@@ -127,5 +127,5 @@ def test_resolve_returns_none_when_no_skill_declared(monkeypatch):
         deps=_Deps(),  # type: ignore[arg-type]
     )
 
-    assert selection.skill_path is None
+    assert selection.agent_def.skill is None
     unregister_definition("planner_test_plain")
