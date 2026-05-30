@@ -16,7 +16,7 @@ class SystemNotification:
 
     text: str
     agent_name: str = ""
-    run_id: str = ""
+    agent_run_id: str = ""
 
 
 @dataclass

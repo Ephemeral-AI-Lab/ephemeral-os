@@ -4,9 +4,8 @@ The unified engine must not reach into the mock-runner internals or any
 specific benchmark adapter. The test enforces two layers of insulation:
 
 1. Module-graph: source files under ``core/`` MUST NOT import
-   ``MockSquadRunner``, ``MutableMockState``, anything under
-   ``task_center_runner.agent.mock`` (or its legacy alias
-   ``task_center_runner.squad``), or anything under
+   concrete mock-runner state, anything under ``task_center_runner.agent.mock``
+   (or its legacy alias ``task_center_runner.squad``), or anything under
    ``task_center_runner.benchmarks.sweevo``.
 
 2. Source-string: each ``core/*.py`` source MUST NOT contain
@@ -14,7 +13,7 @@ specific benchmark adapter. The test enforces two layers of insulation:
    ``collect_extras``, or ``runner_extras``. These are the canonical
    Python escape valves that would re-introduce a runner-shape
    assumption; the import-graph layer already blocks symbol-level reach
-   to ``MockSquadRunner`` but a reviewer needs the belt-and-suspenders.
+   to concrete mock-runner state but a reviewer needs the belt-and-suspenders.
 """
 
 from __future__ import annotations
@@ -32,8 +31,7 @@ CORE_DIR = (
 )
 
 _FORBIDDEN_IMPORT_TOKENS = (
-    "MockSquadRunner",
-    "MutableMockState",
+    "task_center_runner.hooks",
     "from task_center_runner.squad",
     "import task_center_runner.squad",
     "from task_center_runner.agent.mock",

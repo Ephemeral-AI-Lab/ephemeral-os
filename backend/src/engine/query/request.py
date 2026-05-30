@@ -76,7 +76,7 @@ def _record_initial_messages_once(
     rows so the on-disk transcript holds the full launch shape (system +
     user_msg_1 + user_msg_2) rather than just system + the last user row.
     """
-    recorder = recorder_for_run(context.agent_name, context.run_id)
+    recorder = recorder_for_run(context.agent_name, context.agent_run_id)
     if recorder is None:
         return
     initial_user_messages = _initial_user_message_prefix(messages)
@@ -87,7 +87,7 @@ def _record_initial_messages_once(
         system_prompt=context.system_prompt,
         user_prompt=spawn_prompt,
         agent_name=context.agent_name,
-        run_id=context.run_id,
+        run_id=context.agent_run_id,
         seeded_initial_messages=initial_user_messages[:-1],
     )
 

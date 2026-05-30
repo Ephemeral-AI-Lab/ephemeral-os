@@ -7,7 +7,6 @@ from collections.abc import Sequence
 from tools.submission.evaluator import submit_evaluation_success
 from tools.submission.planner import submit_plan_closes_goal
 
-from task_center_runner.audit.events import EventType
 from task_center_runner.scenarios.base import ScenarioBase, ScenarioContext, ToolCallSpec
 
 
@@ -77,21 +76,12 @@ _SMOKE_PLAN = {
 }
 
 
-_EXPECTED_EVENT_SEQUENCE: tuple[EventType, ...] = (
-    EventType.PLANNER_INVOKED,
-    EventType.PLANNER_COMPLETES_GOAL_PLAN,
-    EventType.EXECUTOR_INVOKED,
-    EventType.EXECUTOR_SUCCESS,
-    EventType.EVALUATOR_INVOKED,
-    EventType.EVALUATOR_SUCCESS,
-)
 
 
 class ComplexProjectBuildGrepGlob(ScenarioBase):
     """Full heavy grep + glob + edit_file project-build scenario."""
 
     name = "sandbox.complex_project_build_grep_glob"
-    expected_event_sequence: tuple[EventType, ...] = _EXPECTED_EVENT_SEQUENCE
 
     def planner_response(self, ctx: ScenarioContext) -> ToolCallSpec:  # noqa: ARG002
         return ToolCallSpec(submit_plan_closes_goal, dict(_FULL_PLAN))
@@ -116,7 +106,6 @@ class ComplexProjectBuildGrepGlobSmoke(ScenarioBase):
     """Smoke variant of the grep + glob workflow scenario."""
 
     name = "sandbox.complex_project_build_grep_glob_smoke"
-    expected_event_sequence: tuple[EventType, ...] = _EXPECTED_EVENT_SEQUENCE
 
     def planner_response(self, ctx: ScenarioContext) -> ToolCallSpec:  # noqa: ARG002
         return ToolCallSpec(submit_plan_closes_goal, dict(_SMOKE_PLAN))

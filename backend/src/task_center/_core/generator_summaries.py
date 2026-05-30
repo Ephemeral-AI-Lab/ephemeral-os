@@ -296,9 +296,7 @@ __all__ = [
     "from_record",
     "generator_outcomes",
     "latest_task_summary",
-    "local_id_of",
     "parse_achieved_record",
-    "present_status",
     "task_outcome_from_row",
     "to_record",
 ]

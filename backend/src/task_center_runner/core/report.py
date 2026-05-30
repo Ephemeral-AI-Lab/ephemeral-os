@@ -1,8 +1,8 @@
 """``PipelineReport`` — the unified return shape of ``run_pipeline``.
 
-Intentionally narrower than the legacy ``RunReport`` (which carries mock-only
-fields like ``launches``/``tool_calls``/``prompt_inspections``/``sandbox_checks``).
-Mock side-channels travel through ``MOCK_*`` audit events instead — see
+Intentionally narrower than ``RunReport`` (which carries mock-only fields like
+``launches``/``tool_calls``/``prompt_inspections``/``sandbox_checks``). Mock
+side-channels travel through ``MOCK_*`` audit events instead — see
 ``task_center_runner.audit.events`` for the four enum values; ``run_scenario``
 uses ``ScenarioLifecycle``'s accumulated records when assembling its
 ``RunReport`` view.

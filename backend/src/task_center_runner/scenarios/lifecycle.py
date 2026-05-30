@@ -1,11 +1,9 @@
-"""``ScenarioLifecycle`` — bridges scenario hooks into the audit-bus pipeline.
+"""``ScenarioLifecycle`` — captures mock side-channel audit events.
 
 Mock scenarios run through the same ``run_pipeline`` as real-agent and
 benchmark runs. This lifecycle is the mock-specific seam: ``on_event`` is
-subscribed to the audit bus at engine startup and fires the scenario's
-``HookSet`` against the shared ``MutableMockState``. ``run_scenario`` then
-builds the rich ``RunReport`` from the lifecycle's captured events and hook
-results.
+subscribed to the audit bus at engine startup and accumulates the captured
+events plus typed ``MOCK_*`` records for ``RunReport``.
 """
 
 from __future__ import annotations
@@ -13,8 +11,6 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from task_center_runner.audit.events import EventType
-from task_center_runner.hooks.registry import HookResult, HookSet, MutableMockState
-from task_center_runner.scenarios.base import Scenario
 from task_center_runner.agent.mock.prompt_inspector import (
     LaunchRecord,
     PromptInspection,
@@ -31,17 +27,7 @@ if TYPE_CHECKING:
 class ScenarioLifecycle:
     """``LifecycleHooks`` implementation for the mock-scenario mode."""
 
-    def __init__(
-        self,
-        *,
-        scenario: Scenario,
-        hook_set: HookSet,
-        mutable_state: MutableMockState,
-    ) -> None:
-        self._scenario = scenario
-        self._hook_set = hook_set
-        self._mutable_state = mutable_state
-        self._hook_results: list[HookResult] = []
+    def __init__(self) -> None:
         self._captured_events: list[Event] = []
         self._launches: list[LaunchRecord] = []
         self._tool_calls: list[ToolCallRecord] = []
@@ -51,10 +37,6 @@ class ScenarioLifecycle:
     @property
     def captured_events(self) -> list["Event"]:
         return self._captured_events
-
-    @property
-    def hook_results(self) -> list[HookResult]:
-        return self._hook_results
 
     @property
     def launches(self) -> list[LaunchRecord]:
@@ -72,12 +54,11 @@ class ScenarioLifecycle:
     def sandbox_checks(self) -> list[SandboxCheck]:
         return self._sandbox_checks
 
-    async def before_run(self, ctx: "RunContext") -> None:
+    async def before_run(self, _ctx: "RunContext") -> None:
         return None
 
     def on_event(self, event: "Event") -> None:
         self._captured_events.append(event)
-        self._mutable_state.seen_events.append(event.type)
         if event.type == EventType.MOCK_LAUNCH_RECORDED:
             self._launches.append(LaunchRecord(**event.payload))
         elif event.type == EventType.MOCK_TOOL_CALL_RECORDED:
@@ -92,8 +73,6 @@ class ScenarioLifecycle:
             cp = payload.get("changed_paths", ())
             payload["changed_paths"] = tuple(cp) if not isinstance(cp, tuple) else cp
             self._sandbox_checks.append(SandboxCheck(**payload))
-        for result in self._hook_set.fire(event, "post", self._mutable_state):
-            self._hook_results.append(result)
 
     async def after_run(self, _ctx: "RunContext", _report: "PipelineReport") -> None:
         return None

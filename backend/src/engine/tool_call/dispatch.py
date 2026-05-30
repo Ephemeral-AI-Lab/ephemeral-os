@@ -314,7 +314,7 @@ def _record_lifecycle_batch_rejection(
 def _batch_agent_id(context: QueryContext) -> str:
     """Best-effort agent_id for audit records — empty string if unknown."""
     metadata = getattr(context, "tool_metadata", None)
-    candidate = getattr(metadata, "agent_id", None) or getattr(context, "run_id", "")
+    candidate = getattr(metadata, "agent_id", None) or getattr(context, "agent_run_id", "")
     return str(candidate or "")
 
 

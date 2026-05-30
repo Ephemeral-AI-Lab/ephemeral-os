@@ -1,17 +1,14 @@
 """Focused negative-path: wrong-tool approval blocks via dispatch path.
 
-``MockSquadRunner._approve_terminal`` synthesizes an ``ask_advisor`` approval
-pair targeting a specific terminal. If a test (or a future divergence)
-threads an approval pair for the *wrong* terminal, ``AdvisorApprovalPreHook``
-must still fire when dispatch reaches the gated terminal.
+The ScenarioLoopRunner path gets real ``ask_advisor`` transcript entries from
+the query loop. This focused test uses the same transcript helper to thread an
+approval pair for the *wrong* terminal and verifies ``AdvisorApprovalPreHook``
+still fires when dispatch reaches the gated terminal.
 
 This is the focused-test variant of testing-plan §3.3.1 (4): rather than
-driving a full scenario — which would require ``MockSquadRunner._call_tool``
-to grow a "gate-block is non-fatal" code path because today it raises on
-``is_error=True`` — we hit the same dispatch surface (``execute_tool_once``
-+ ``ToolExecutionContextService``) the runner uses, with wrong-tool metadata
-produced by the same ``_approve_terminal`` helper used by every happy-path
-scenario.
+driving a full scenario, we hit the same dispatch surface
+(``execute_tool_once`` + ``ToolExecutionContextService``) the runner uses, with
+wrong-tool metadata produced by the shared advisor-approval transcript helper.
 
 A reviewer tempted to "fix" this by adding scenario plumbing should not:
 the focused shape was chosen deliberately to keep the runner's failure
@@ -25,10 +22,9 @@ from typing import Any
 
 import pytest
 
-from task_center_runner.agent.mock.runner import MockSquadRunner
-from task_center_runner.audit.bus import AuditEventBus
-from task_center_runner.hooks.registry import MutableMockState
-from task_center_runner.scenarios.correctness_testing import CorrectnessTesting
+from task_center_runner.agent.mock._advisor_approval import (
+    build_advisor_approval_messages,
+)
 from tools._framework.core.context import ToolExecutionContextService
 from tools._framework.core.runtime import ExecutionMetadata
 from tools._framework.execution.tool_call import execute_tool_once
@@ -62,13 +58,17 @@ def _gate_reason_metadata(result: Any) -> dict[str, Any]:
     return {}
 
 
-def _runner() -> MockSquadRunner:
-    return MockSquadRunner(
-        repo_dir="/tmp/advisor_gate_focused",
-        bus=AuditEventBus(),
-        scenario=CorrectnessTesting(),
-        mutable_state=MutableMockState(),
+def _metadata_with_advisor_approval(
+    metadata: ExecutionMetadata,
+    *,
+    tool_name: str,
+) -> ExecutionMetadata:
+    gated = metadata.copy()
+    existing = list(metadata.get("conversation_messages") or [])
+    gated["conversation_messages"] = (
+        build_advisor_approval_messages(tool_name=tool_name) + existing
     )
+    return gated
 
 
 @pytest.mark.asyncio
@@ -76,14 +76,13 @@ async def test_wrong_tool_approval_blocks_terminal_dispatch() -> None:
     """Approve ``submit_execution_success`` → submit ``submit_execution_blocker``.
 
     The gate must reject with the canonical ``BLOCKED`` prose. Verifies that
-    ``_approve_terminal`` produces metadata the gate reads correctly, and
+    the transcript helper produces metadata the gate reads correctly, and
     that the gate's wrong-tool branch fires when the approval names a
     different terminal than the one being submitted.
     """
-    runner = _runner()
-    base_metadata = ExecutionMetadata()
-    gated_metadata = runner._approve_terminal(  # noqa: SLF001 — focused contract
-        base_metadata, submit_execution_success
+    gated_metadata = _metadata_with_advisor_approval(
+        ExecutionMetadata(),
+        tool_name=submit_execution_success.name,
     )
     context = ToolExecutionContextService(
         cwd=Path("/tmp"), services=gated_metadata
@@ -116,9 +115,9 @@ async def test_wrong_tool_approval_blocks_terminal_dispatch() -> None:
 async def test_no_approval_blocks_terminal_dispatch() -> None:
     """Empty ``conversation_messages`` → gate fails with ``missing`` reason.
 
-    The mock runner today always calls ``_approve_terminal``, so this path
-    only fires if a future change drops the shim. Locking it in keeps the
-    contract explicit.
+    ScenarioLoopRunner terminal submissions should be preceded by a real
+    ``ask_advisor`` call. Locking in the missing-approval branch keeps the
+    contract explicit for direct dispatch.
     """
     metadata = ExecutionMetadata()  # no conversation_messages
     context = ToolExecutionContextService(

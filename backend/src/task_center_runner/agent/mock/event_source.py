@@ -154,13 +154,13 @@ class ScenarioEventSource:
             yield ThinkingDeltaEvent(
                 text=turn.thinking,
                 agent_name=self._agent_name,
-                run_id=self._run_id,
+                agent_run_id=self._run_id,
             )
         if turn.text:
             yield AssistantTextDeltaEvent(
                 text=turn.text,
                 agent_name=self._agent_name,
-                run_id=self._run_id,
+                agent_run_id=self._run_id,
             )
         # One delta per tool_use — required for stream-time budget parity.
         for block in tool_use_blocks:
@@ -169,7 +169,7 @@ class ScenarioEventSource:
                 name=block.name,
                 input=block.input,
                 agent_name=self._agent_name,
-                run_id=self._run_id,
+                agent_run_id=self._run_id,
             )
         yield AssistantMessageCompleteEvent(
             message=Message(
@@ -178,7 +178,7 @@ class ScenarioEventSource:
             ),
             usage=UsageSnapshot(),
             agent_name=self._agent_name,
-            run_id=self._run_id,
+            agent_run_id=self._run_id,
         )
 
     async def _advance(self, run_request: QueryRunRequest) -> Turn:

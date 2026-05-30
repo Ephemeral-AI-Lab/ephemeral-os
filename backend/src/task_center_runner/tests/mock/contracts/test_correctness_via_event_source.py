@@ -2,8 +2,7 @@
 
 Runs the full ``correctness_testing`` scenario — multi-iteration, eval-failure
 retry, partial-plan defer, and the sandbox_integrity / final probes — through
-``ScenarioLoopRunner`` + the real query loop instead of the imperative
-``MockSquadRunner``. Asserts via real store state
+``ScenarioLoopRunner`` + the real query loop. Asserts via real store state
 (``graph_summary``) + re-homed sandbox checks, NOT lifecycle events (those
 migrate in Phase 2). Proves the ported probe coroutines + ProbeContext work.
 """

@@ -13,7 +13,6 @@ Subpackages:
 - ``audit``     — event bus, lifecycle observer, recorder, metrics
 - ``agent.mock`` — mocked-agent runner, prompt inspector, sandbox probe
 - ``core``      — run config, pipeline entrypoint, report types, fixtures
-- ``hooks``     — Hook protocol + registry + built-in hooks
 - ``scenarios`` — Scenario protocol + concrete scenarios
 - ``tests``     — pytest suites split by mock, real-agent, and capacity boundaries
 

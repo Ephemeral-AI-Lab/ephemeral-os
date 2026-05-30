@@ -214,7 +214,7 @@ async def run_pipeline(config: RunConfig) -> PipelineReport:
             sandbox_fallback_enabled=sandbox_stream_fallback_enabled,
         )
         await stream_callback(event)
-        agent_run_id = str(getattr(event, "run_id", "") or "")
+        agent_run_id = str(getattr(event, "agent_run_id", "") or "")
         if not agent_run_id:
             return
         per_task = recorder.message_recorder_for_agent_run(agent_run_id)

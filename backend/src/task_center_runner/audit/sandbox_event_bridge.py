@@ -1,4 +1,4 @@
-"""Compatibility mapping from namespaced audit events to legacy live-e2e events."""
+"""Bridge sandbox-owned audit events into the runner audit bus."""
 
 from __future__ import annotations
 
@@ -6,10 +6,10 @@ from collections.abc import Iterable
 from typing import Any
 
 from audit.base import AuditEvent, AuditSink
+from sandbox.audit import events as sandbox_events
 from task_center_runner.audit.bus import AuditEventBus
 from task_center_runner.audit.events import Event, EventType
 from task_center_runner.audit.node_id import NodeId
-from sandbox.audit import events as sandbox_events
 
 
 _SANDBOX_EVENT_MAP = {
@@ -31,36 +31,36 @@ _SANDBOX_EVENT_MAP = {
 }
 
 
-class LegacySandboxAuditSink(AuditSink):
-    """Forward sandbox-owned audit events into the legacy live-e2e bus."""
+class SandboxAuditEventBridge(AuditSink):
+    """Forward sandbox-owned audit events into ``AuditEventBus``."""
 
     def __init__(self, bus: AuditEventBus) -> None:
         self._bus = bus
 
     def publish(self, event: AuditEvent) -> None:
-        for legacy_event in legacy_events_from_audit_event(event):
-            self._bus.publish(legacy_event)
+        for runner_event in runner_events_from_sandbox_audit_event(event):
+            self._bus.publish(runner_event)
 
 
-def legacy_events_from_audit_event(event: AuditEvent) -> tuple[Event, ...]:
-    """Return legacy live-e2e events for one namespaced audit event."""
+def runner_events_from_sandbox_audit_event(event: AuditEvent) -> tuple[Event, ...]:
+    """Return runner audit events for one sandbox-owned audit event."""
     if event.source != "sandbox":
         return ()
-    legacy_type = _SANDBOX_EVENT_MAP.get(event.type)
-    if legacy_type is None:
+    event_type = _SANDBOX_EVENT_MAP.get(event.type)
+    if event_type is None:
         return ()
     return (
         Event(
-            type=legacy_type,
-            node=_legacy_node(event),
-            payload=_legacy_payload(event),
+            type=event_type,
+            node=_runner_node(event),
+            payload=_runner_payload(event),
             correlation_id=event.correlation_id,
             ts=event.ts,
         ),
     )
 
 
-def _legacy_node(event: AuditEvent) -> NodeId:
+def _runner_node(event: AuditEvent) -> NodeId:
     node = event.node
     return NodeId(
         task_center_run_id=node.task_center_run_id or "",
@@ -73,7 +73,7 @@ def _legacy_node(event: AuditEvent) -> NodeId:
     )
 
 
-def _legacy_payload(event: AuditEvent) -> dict[str, Any]:
+def _runner_payload(event: AuditEvent) -> dict[str, Any]:
     payload = dict(event.payload)
     if "tool_name" not in payload and event.node.tool_name:
         payload["tool_name"] = event.node.tool_name
@@ -87,4 +87,4 @@ def _legacy_payload(event: AuditEvent) -> dict[str, Any]:
     return payload
 
 
-__all__ = ["LegacySandboxAuditSink", "legacy_events_from_audit_event"]
+__all__ = ["SandboxAuditEventBridge", "runner_events_from_sandbox_audit_event"]

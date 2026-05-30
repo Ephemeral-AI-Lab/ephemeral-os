@@ -105,11 +105,11 @@ async def test_full_case_user_input_runs_dynamic_verifier_dag(
     # --- lifecycle migrated to graph_summary (event-source runner emits no
     # lifecycle events; assert the protected outcome via real store state) ----
     gs = report.graph_summary
-    # PLANNER_DEFERS_GOAL_PLAN -> at least one attempt carried a deferral.
+    # At least one attempt carried a deferral.
     assert _attempt_deferred(gs), gs
     assert _continuation_iterations_follow_partial_attempts(gs)
     assert _has_multi_dependency_verifier(gs)
-    # VERIFIER_FAILURE -> at least one verifier task failed.
+    # At least one verifier task failed.
     assert _count_failed_verifier_tasks(gs) >= 1, gs
     planner_inspections = [
         item for item in report.prompt_inspections if item.role == "planner"
@@ -120,12 +120,8 @@ async def test_full_case_user_input_runs_dynamic_verifier_dag(
         for item in planner_inspections
     ), planner_inspections
 
-    # RECURSIVE_WORKFLOW_REQUESTED/COMPLETED -> a delegated (task-origin)
-    # workflow exists and succeeded. The two former checkpoint-gated ordering
-    # checks (RECURSIVE_WORKFLOW_COMPLETED -> VERIFIER_SUCCESS@recursive_return
-    # and VERIFIER_SUCCESS@final_release -> EVALUATOR_INVOKED) become terminal
-    # structural outcomes: graph_summary is final state with no timeline, so the
-    # ordering itself is enforced by TaskCenter's own dependency/closure rules.
+    # A delegated (task-origin) workflow exists and succeeded. Checkpoint-gated
+    # ordering is now enforced by TaskCenter dependency and closure state.
     recursive = recursive_workflows(gs)
     assert recursive, gs
     assert all(workflow["status"] == "succeeded" for workflow in recursive), recursive

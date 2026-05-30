@@ -260,7 +260,7 @@ async def _run_query_loop(
                 message=final_message,
                 usage=state.usage,
                 agent_name=context.agent_name,
-                run_id=context.run_id,
+                agent_run_id=context.agent_run_id,
             ), state.usage
 
             if final_message.tool_uses:
@@ -319,21 +319,21 @@ async def run_query(
     from dataclasses import fields, is_dataclass, replace
 
     agent_name = context.agent_name
-    run_id = context.run_id
+    agent_run_id = context.agent_run_id
 
     def _stamp(
         event: StreamEvent,
     ) -> StreamEvent:
         if not is_dataclass(event):
             return event
-        if not (agent_name or run_id):
+        if not (agent_name or agent_run_id):
             return event
         names = {f.name for f in fields(event)}
         updates: dict[str, str] = {}
         if "agent_name" in names and not getattr(event, "agent_name", ""):
             updates["agent_name"] = agent_name
-        if "run_id" in names and not getattr(event, "run_id", ""):
-            updates["run_id"] = run_id
+        if "agent_run_id" in names and not getattr(event, "agent_run_id", ""):
+            updates["agent_run_id"] = agent_run_id
         if not updates:
             return event
         return cast(StreamEvent, replace(cast(Any, event), **updates))

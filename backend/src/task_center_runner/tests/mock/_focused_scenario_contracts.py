@@ -8,7 +8,6 @@ from dataclasses import dataclass, field
 
 from task_center_runner.audit.events import EventType
 from task_center_runner.core.runner import RunReport
-from task_center_runner.scenarios.base import Scenario
 
 
 @dataclass(frozen=True, slots=True)
@@ -17,6 +16,13 @@ class FocusedScenarioCase:
     expected_status: str = "done"
     min_event_counts: Mapping[EventType, int] = field(default_factory=dict)
     absent_events: Sequence[EventType] = ()
+    min_role_tasks: Mapping[str, int] = field(default_factory=dict)
+    min_done_role_tasks: Mapping[str, int] = field(default_factory=dict)
+    min_failed_role_tasks: Mapping[str, int] = field(default_factory=dict)
+    absent_role_tasks: Sequence[str] = ()
+    absent_done_role_tasks: Sequence[str] = ()
+    min_deferred_attempts: int = 0
+    max_deferred_attempts: int | None = None
     workflow_status: str = "succeeded"
     iteration_count: int | None = 1
     attempt_count: int | None = None
@@ -24,7 +30,6 @@ class FocusedScenarioCase:
 
 def assert_focused_scenario_report(
     report: RunReport,
-    scenario: Scenario,
     case: FocusedScenarioCase,
 ) -> None:
     assert report.task_center_status == case.expected_status, report.metrics
@@ -36,11 +41,8 @@ def assert_focused_scenario_report(
     ]
     assert (report.run_dir / "run.json").exists()
     assert (report.run_dir / "metrics.json").exists()
-    _assert_ordered_subsequence(
-        scenario.expected_event_sequence,
-        report.seen_event_types,
-    )
     _assert_event_counts(report, case)
+    _assert_role_counts(report, case)
     _assert_graph_shape(report, case)
 
 
@@ -52,11 +54,8 @@ def count_role_tasks(
 ) -> int:
     """Count generator tasks of *role* across all attempts in ``graph_summary``.
 
-    The §4.1 replacement for ``count_events(<ROLE>_INVOKED/<ROLE>_SUCCESS)``:
-    lifecycle events are gone, so workflow fan-out is asserted via real store
-    state. ``status="done"`` counts only succeeded tasks (the ``EXECUTOR_SUCCESS``
-    analog); ``status=None`` counts every task of that role (the ``_INVOKED``
-    analog).
+    Workflow fan-out is asserted via real store state. ``status="done"`` counts
+    only succeeded tasks; ``status=None`` counts every task of that role.
     """
     total = 0
     for workflow in report.graph_summary["workflows"]:
@@ -75,10 +74,7 @@ def recursive_workflows(graph_summary: Mapping[str, object]) -> list[dict]:
     """Return the delegated (recursive) workflows from ``graph_summary``.
 
     A recursive workflow is one started by an executor ``submit_execution_handoff``
-    (``origin_kind == "task"``), as opposed to the entry workflow. The §4.1
-    replacement for ``count_events(RECURSIVE_WORKFLOW_REQUESTED/COMPLETED)``:
-    lifecycle events are gone under the event-source runner, so recursion is
-    asserted via real store state.
+    (``origin_kind == "task"``), as opposed to the entry workflow.
     """
     workflows = graph_summary["workflows"]  # type: ignore[index]
     return [
@@ -88,31 +84,20 @@ def recursive_workflows(graph_summary: Mapping[str, object]) -> list[dict]:
     ]
 
 
-def _assert_ordered_subsequence(
-    expected: Sequence[EventType],
-    actual: Sequence[EventType],
-) -> None:
-    actual_set = set(actual)
-    expected = [
-        event_type
-        for event_type in expected
-        if event_type not in _GRAPH_BACKED_EVENT_TYPES or event_type in actual_set
-    ]
-    position = 0
-    for event_type in actual:
-        if position < len(expected) and event_type == expected[position]:
-            position += 1
-    assert position == len(expected), (
-        "expected_event_sequence was not observed in order: "
-        f"expected={[event.value for event in expected]} "
-        f"actual={[event.value for event in actual]}"
+def count_deferred_attempts(report: RunReport) -> int:
+    return sum(
+        1
+        for workflow in report.graph_summary["workflows"]
+        for iteration in workflow["iterations"]
+        for attempt in iteration["attempts"]
+        if attempt["deferred_goal_for_next_iteration"]
     )
 
 
 def _assert_event_counts(report: RunReport, case: FocusedScenarioCase) -> None:
     counts = Counter(event.type for event in report.events)
     for event_type, minimum in case.min_event_counts.items():
-        observed = max(counts[event_type], _graph_backed_event_count(report, event_type))
+        observed = counts[event_type]
         assert observed >= minimum, (
             f"{case.name}: expected at least {minimum} {event_type.value} events, "
             f"saw {observed}"
@@ -121,6 +106,47 @@ def _assert_event_counts(report: RunReport, case: FocusedScenarioCase) -> None:
         assert counts[event_type] == 0, (
             f"{case.name}: did not expect {event_type.value}, saw "
             f"{counts[event_type]}"
+        )
+
+
+def _assert_role_counts(report: RunReport, case: FocusedScenarioCase) -> None:
+    for role, minimum in case.min_role_tasks.items():
+        observed = count_role_tasks(report, role)
+        assert observed >= minimum, (
+            f"{case.name}: expected at least {minimum} {role} tasks, saw {observed}"
+        )
+    for role, minimum in case.min_done_role_tasks.items():
+        observed = count_role_tasks(report, role, status="done")
+        assert observed >= minimum, (
+            f"{case.name}: expected at least {minimum} done {role} tasks, "
+            f"saw {observed}"
+        )
+    for role, minimum in case.min_failed_role_tasks.items():
+        observed = count_role_tasks(report, role, status="failed")
+        assert observed >= minimum, (
+            f"{case.name}: expected at least {minimum} failed {role} tasks, "
+            f"saw {observed}"
+        )
+    for role in case.absent_role_tasks:
+        observed = count_role_tasks(report, role)
+        assert observed == 0, (
+            f"{case.name}: did not expect {role} tasks, saw {observed}"
+        )
+    for role in case.absent_done_role_tasks:
+        observed = count_role_tasks(report, role, status="done")
+        assert observed == 0, (
+            f"{case.name}: did not expect done {role} tasks, saw {observed}"
+        )
+
+    deferred = count_deferred_attempts(report)
+    assert deferred >= case.min_deferred_attempts, (
+        f"{case.name}: expected at least {case.min_deferred_attempts} deferred "
+        f"attempts, saw {deferred}"
+    )
+    if case.max_deferred_attempts is not None:
+        assert deferred <= case.max_deferred_attempts, (
+            f"{case.name}: expected at most {case.max_deferred_attempts} "
+            f"deferred attempts, saw {deferred}"
         )
 
 
@@ -138,63 +164,3 @@ def _assert_graph_shape(report: RunReport, case: FocusedScenarioCase) -> None:
             for attempt in iteration["attempts"]
         ]
         assert len(attempts) == case.attempt_count
-
-
-_GRAPH_BACKED_EVENT_TYPES: frozenset[EventType] = frozenset(
-    {
-        EventType.PLANNER_INVOKED,
-        EventType.PLANNER_COMPLETES_GOAL_PLAN,
-        EventType.PLANNER_DEFERS_GOAL_PLAN,
-        EventType.EXECUTOR_INVOKED,
-        EventType.EXECUTOR_SUCCESS,
-        EventType.EXECUTOR_FAILURE,
-        EventType.VERIFIER_INVOKED,
-        EventType.VERIFIER_SUCCESS,
-        EventType.VERIFIER_FAILURE,
-        EventType.EVALUATOR_INVOKED,
-        EventType.EVALUATOR_SUCCESS,
-        EventType.EVALUATOR_FAILURE,
-        EventType.RECURSIVE_WORKFLOW_REQUESTED,
-        EventType.RECURSIVE_WORKFLOW_COMPLETED,
-    }
-)
-
-
-def _graph_backed_event_count(report: RunReport, event_type: EventType) -> int:
-    if event_type in {EventType.PLANNER_INVOKED, EventType.PLANNER_COMPLETES_GOAL_PLAN}:
-        return count_role_tasks(report, "planner", status="done")
-    if event_type == EventType.PLANNER_DEFERS_GOAL_PLAN:
-        return sum(
-            1
-            for workflow in report.graph_summary["workflows"]
-            for iteration in workflow["iterations"]
-            for attempt in iteration["attempts"]
-            if attempt["deferred_goal_for_next_iteration"]
-        )
-    if event_type == EventType.EXECUTOR_INVOKED:
-        return count_role_tasks(report, "executor")
-    if event_type == EventType.EXECUTOR_SUCCESS:
-        return count_role_tasks(report, "executor", status="done")
-    if event_type == EventType.EXECUTOR_FAILURE:
-        return count_role_tasks(report, "executor", status="failed")
-    if event_type == EventType.VERIFIER_INVOKED:
-        return count_role_tasks(report, "verifier")
-    if event_type == EventType.VERIFIER_SUCCESS:
-        return count_role_tasks(report, "verifier", status="done")
-    if event_type == EventType.VERIFIER_FAILURE:
-        return count_role_tasks(report, "verifier", status="failed")
-    if event_type == EventType.EVALUATOR_INVOKED:
-        return count_role_tasks(report, "evaluator")
-    if event_type == EventType.EVALUATOR_SUCCESS:
-        return count_role_tasks(report, "evaluator", status="done")
-    if event_type == EventType.EVALUATOR_FAILURE:
-        return count_role_tasks(report, "evaluator", status="failed")
-    if event_type == EventType.RECURSIVE_WORKFLOW_REQUESTED:
-        return len(recursive_workflows(report.graph_summary))
-    if event_type == EventType.RECURSIVE_WORKFLOW_COMPLETED:
-        return sum(
-            1
-            for workflow in recursive_workflows(report.graph_summary)
-            if workflow.get("status") == "succeeded"
-        )
-    return 0

@@ -1,16 +1,15 @@
 """Offline conformance tests for the focused scenario suite.
 
 Verifies every scenario in :data:`SCENARIO_REGISTRY` satisfies the
-``Scenario`` protocol, declares a non-empty ``expected_event_sequence``, and
-matches the dotted ``<package>.<file>`` naming convention for focused
-scenarios. Pure import + structural checks; no Daytona, no Postgres.
+``Scenario`` protocol and matches the dotted ``<package>.<file>`` naming
+convention for focused scenarios. Pure import + structural checks; no Daytona,
+no Postgres.
 """
 
 from __future__ import annotations
 
 import pytest
 
-from task_center_runner.audit.events import EventType
 from task_center_runner.scenarios import SCENARIO_REGISTRY
 from task_center_runner.scenarios.base import Scenario, ScenarioBase
 from task_center_runner.scenarios.capacity import CAPACITY_PACK_SPECS
@@ -67,17 +66,6 @@ def test_focused_scenarios_use_dotted_names() -> None:
         assert cls.name == key, (
             f"scenario class.name {cls.name!r} must match registry key {key!r}"
         )
-
-
-def test_every_scenario_declares_expected_event_sequence() -> None:
-    for key, cls in SCENARIO_REGISTRY.items():
-        instance = cls()
-        sequence = tuple(instance.expected_event_sequence)
-        assert sequence, f"{key} declares empty expected_event_sequence"
-        for event_type in sequence:
-            assert isinstance(event_type, EventType), (
-                f"{key}: {event_type!r} is not an EventType"
-            )
 
 
 def test_capacity_pack_catalog_has_coverage_anchor() -> None:

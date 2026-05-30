@@ -1,8 +1,8 @@
 """Prepared mock-agent tool scripts for SWE-EVO live scenarios.
 
-The mock squad is deterministic, but it should still behave like an agent:
-pick a prepared sequence, announce the step, call real sandbox tools, inspect
-their outputs, and then submit through the real terminal tool.
+The scripted mock lane is deterministic, but it should still behave like an
+agent: pick a prepared sequence, announce the step, call real sandbox tools,
+inspect their outputs, and then submit through the real terminal tool.
 """
 
 from __future__ import annotations
@@ -477,16 +477,16 @@ async def _emit_text(
         AssistantTextDeltaEvent(
             text=text,
             agent_name=str(metadata.agent_name or ""),
-            run_id=_stream_run_id(metadata),
+            agent_run_id=_stream_run_id(metadata),
         )
     )
 
 
 def _stream_run_id(metadata: ExecutionMetadata) -> str:
+    # Live (post-mint) metadata: the agent_run_id is populated, so prefer it.
     return str(
-        metadata.get("task_center_task_id")
-        or metadata.agent_run_id
-        or metadata.get("run_id")
+        metadata.agent_run_id
+        or metadata.get("task_center_task_id")
         or ""
     )
 

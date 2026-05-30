@@ -21,7 +21,6 @@ from tools.submission.planner import (
     submit_plan_defers_goal,
 )
 
-from task_center_runner.audit.events import EventType
 from task_center_runner.scenarios._scenario_helpers import (
     is_recursive_workflow,
     minimal_full_plan,
@@ -90,24 +89,6 @@ class DeferredParentPlannerTerminalRouting(ScenarioBase):
     """Child workflow from a partial parent gets the restricted planner terminals."""
 
     name = "pipeline.deferred_parent_planner_terminal_routing"
-    expected_event_sequence: tuple[EventType, ...] = (
-        EventType.PLANNER_INVOKED,
-        EventType.PLANNER_DEFERS_GOAL_PLAN,
-        EventType.EXECUTOR_INVOKED,
-        EventType.RECURSIVE_WORKFLOW_REQUESTED,
-        EventType.PLANNER_INVOKED,
-        EventType.PLANNER_COMPLETES_GOAL_PLAN,
-        EventType.EXECUTOR_SUCCESS,
-        EventType.EVALUATOR_SUCCESS,
-        EventType.VERIFIER_INVOKED,
-        EventType.RECURSIVE_WORKFLOW_COMPLETED,
-        EventType.VERIFIER_SUCCESS,
-        EventType.EVALUATOR_SUCCESS,
-        EventType.PLANNER_INVOKED,
-        EventType.PLANNER_COMPLETES_GOAL_PLAN,
-        EventType.EXECUTOR_SUCCESS,
-        EventType.EVALUATOR_SUCCESS,
-    )
 
     def planner_response(self, ctx: ScenarioContext) -> ToolCallSpec:
         if is_recursive_workflow(ctx):

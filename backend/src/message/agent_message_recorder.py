@@ -63,15 +63,15 @@ class AgentMessageJsonlRecorder:
         :meth:`flush`.
         """
         if isinstance(event, ThinkingDeltaEvent):
-            self._thinking_for(event.agent_name, event.run_id).append(event.text)
+            self._thinking_for(event.agent_name, event.agent_run_id).append(event.text)
             return
 
         if isinstance(event, AssistantTextDeltaEvent):
-            self._text_for(event.agent_name, event.run_id).append(event.text)
+            self._text_for(event.agent_name, event.agent_run_id).append(event.text)
             return
 
         agent_name = str(getattr(event, "agent_name", "") or "")
-        run_id = str(getattr(event, "run_id", "") or "")
+        run_id = str(getattr(event, "agent_run_id", "") or "")
 
         if isinstance(event, AssistantMessageCompleteEvent):
             block_types = {type(b).__name__ for b in event.message.content}
@@ -85,7 +85,7 @@ class AgentMessageJsonlRecorder:
                 self._flush_text(agent_name, run_id)
             self._record(
                 agent_name=event.agent_name,
-                run_id=event.run_id,
+                run_id=event.agent_run_id,
                 message=event.message,
             )
             return
@@ -105,7 +105,7 @@ class AgentMessageJsonlRecorder:
             )
             self._record(
                 agent_name=event.agent_name,
-                run_id=event.run_id,
+                run_id=event.agent_run_id,
                 message=message,
                 tool_name=event.tool_name,
                 tool_use_id=event.tool_use_id,
@@ -248,7 +248,7 @@ class AgentMessageJsonlRecorder:
             **self._base_event,
             "seq": self._seq,
             "agent_name": agent_name,
-            "run_id": run_id,
+            "agent_run_id": run_id,
             **extra,
         }
         event = {

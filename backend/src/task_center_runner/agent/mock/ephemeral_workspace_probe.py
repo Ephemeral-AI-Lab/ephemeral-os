@@ -897,7 +897,7 @@ async def run_ephemeral_same_path_conflict_reconcile_probe(
     call_tool: CallTool,
     record_tool_check: RecordToolCheck,
 ) -> str:
-    """Retry failed first-wave writers and write the legacy summary contract."""
+    """Retry failed first-wave writers and write the scenario summary contract."""
     from task_center_runner.scenarios.sandbox.ephemeral_workspace import (
         SAME_PATH_CONFLICT_WRITER_COUNT,
     )

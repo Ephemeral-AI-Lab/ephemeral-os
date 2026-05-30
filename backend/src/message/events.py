@@ -9,14 +9,14 @@ from notification import SystemNotification
 
 
 # Identity fields carried by every StreamEvent:
-#   agent_name — short label of the emitting agent ("coordinator",
-#                "developer-1", "eval_agent", ...). Empty string for
-#                standalone single-agent callers.
-#   run_id    — stable identifier for the unit of work that produced the
-#                event. For a coordinator's own response this is its run_id;
-#                for a dispatched subagent it is the subagent's run_id
-#                (distinct from the parent). Lets printers group and
-#                indent events by work unit even when agents interleave.
+#   agent_name    — short label of the emitting agent ("coordinator",
+#                   "developer-1", "eval_agent", ...). Empty string for
+#                   standalone single-agent callers.
+#   agent_run_id  — the engine agent-run id (``AgentRunTracker.agent_run_id``)
+#                   of the run that produced the event. Distinct per agent run,
+#                   so printers/recorders group and indent events by run even
+#                   when agents interleave. The TaskCenter task id is carried
+#                   separately on tool metadata as ``task_center_task_id``.
 
 
 @dataclass(frozen=True)
@@ -25,7 +25,7 @@ class ThinkingDeltaEvent:
 
     text: str
     agent_name: str = ""
-    run_id: str = ""
+    agent_run_id: str = ""
 
 
 @dataclass(frozen=True)
@@ -34,7 +34,7 @@ class AssistantTextDeltaEvent:
 
     text: str
     agent_name: str = ""
-    run_id: str = ""
+    agent_run_id: str = ""
 
 
 @dataclass(frozen=True)
@@ -45,7 +45,7 @@ class AssistantMessageCompleteEvent:
     usage: UsageSnapshot
     stop_reason: str | None = None
     agent_name: str = ""
-    run_id: str = ""
+    agent_run_id: str = ""
 
 
 @dataclass(frozen=True)
@@ -56,7 +56,7 @@ class ToolUseDeltaEvent:
     name: str
     input: dict[str, Any]
     agent_name: str = ""
-    run_id: str = ""
+    agent_run_id: str = ""
 
 
 @dataclass(frozen=True)
@@ -67,7 +67,7 @@ class ToolExecutionStartedEvent:
     tool_input: dict[str, Any]
     tool_use_id: str = ""
     agent_name: str = ""
-    run_id: str = ""
+    agent_run_id: str = ""
 
 
 @dataclass(frozen=True)
@@ -81,7 +81,7 @@ class ToolExecutionCompletedEvent:
     metadata: dict[str, Any] = field(default_factory=dict)
     is_terminal: bool = False
     agent_name: str = ""
-    run_id: str = ""
+    agent_run_id: str = ""
 
 
 @dataclass(frozen=True)
@@ -97,7 +97,7 @@ class ToolExecutionProgressEvent:
     tool_name: str
     output: str
     agent_name: str = ""
-    run_id: str = ""
+    agent_run_id: str = ""
 
 
 @dataclass(frozen=True)
@@ -108,7 +108,7 @@ class ToolExecutionCancelledEvent:
     tool_name: str
     reason: str
     agent_name: str = ""
-    run_id: str = ""
+    agent_run_id: str = ""
 
 
 @dataclass(frozen=True)
@@ -119,7 +119,7 @@ class BackgroundTaskStartedEvent:
     tool_name: str
     tool_input: dict[str, Any]
     agent_name: str = ""
-    run_id: str = ""
+    agent_run_id: str = ""
 
 
 StreamEvent = (

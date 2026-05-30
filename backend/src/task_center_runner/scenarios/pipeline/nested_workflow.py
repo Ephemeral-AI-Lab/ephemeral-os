@@ -14,7 +14,6 @@ from tools.submission.verifier import (
 )
 from tools.submission.planner import submit_plan_closes_goal
 
-from task_center_runner.audit.events import EventType
 from task_center_runner.scenarios._scenario_helpers import is_recursive_workflow
 from task_center_runner.scenarios.base import ScenarioBase, ScenarioContext, ToolCallSpec
 
@@ -85,13 +84,6 @@ class NestedWorkflow(ScenarioBase):
     """Parent generator delegates to a child workflow, then reconciles."""
 
     name = "pipeline.nested_workflow"
-    expected_event_sequence: tuple[EventType, ...] = (
-        EventType.PLANNER_INVOKED,
-        EventType.PLANNER_COMPLETES_GOAL_PLAN,
-        EventType.RECURSIVE_WORKFLOW_REQUESTED,
-        EventType.RECURSIVE_WORKFLOW_COMPLETED,
-        EventType.EVALUATOR_SUCCESS,
-    )
 
     def planner_response(self, ctx: ScenarioContext) -> ToolCallSpec:
         if is_recursive_workflow(ctx):
@@ -135,11 +127,6 @@ class NestedWorkflowFailure(ScenarioBase):
     """Child workflow exhausts attempts and parent workflow fails cleanly."""
 
     name = "pipeline.nested_workflow_failure"
-    expected_event_sequence: tuple[EventType, ...] = (
-        EventType.PLANNER_INVOKED,
-        EventType.PLANNER_COMPLETES_GOAL_PLAN,
-        EventType.RECURSIVE_WORKFLOW_REQUESTED,
-    )
 
     def planner_response(self, ctx: ScenarioContext) -> ToolCallSpec:
         if is_recursive_workflow(ctx):

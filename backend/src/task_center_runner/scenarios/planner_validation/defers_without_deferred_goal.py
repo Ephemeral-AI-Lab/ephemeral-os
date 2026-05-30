@@ -8,7 +8,6 @@ from typing import Any
 from tools.submission.evaluator import submit_evaluation_failure
 from tools.submission.planner import submit_plan_defers_goal
 
-from task_center_runner.audit.events import EventType
 from task_center_runner.scenarios.base import ScenarioBase, ScenarioContext, ToolCallSpec
 
 
@@ -25,10 +24,6 @@ class PlannerDefersWithoutDeferredGoal(ScenarioBase):
     """submit_plan_defers_goal call omits required deferred_goal."""
 
     name = "planner_validation.defers_without_deferred_goal"
-    expected_event_sequence: tuple[EventType, ...] = (
-        EventType.PLANNER_INVOKED,
-        EventType.PLANNER_INVOKED,
-    )
 
     def planner_response(self, ctx: ScenarioContext) -> ToolCallSpec:  # noqa: ARG002
         return ToolCallSpec(submit_plan_defers_goal, _defers_without_goal())

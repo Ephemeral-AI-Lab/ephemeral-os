@@ -16,7 +16,6 @@ from typing import Any
 from tools.submission.evaluator import submit_evaluation_success
 from tools.submission.planner import submit_plan_closes_goal
 
-from task_center_runner.audit.events import EventType
 from task_center_runner.scenarios.base import ScenarioBase, ScenarioContext, ToolCallSpec
 
 
@@ -88,15 +87,6 @@ class HighConcurrencyLayerstackOverlayOcc(ScenarioBase):
     """Capacity case for concurrent layer-stack, overlay, and OCC pressure."""
 
     name = "sandbox.high_concurrency_layerstack_overlay_occ"
-    expected_event_sequence: tuple[EventType, ...] = (
-        EventType.PLANNER_INVOKED,
-        EventType.PLANNER_COMPLETES_GOAL_PLAN,
-        EventType.EXECUTOR_INVOKED,
-        EventType.SANDBOX_CONFLICT_DETECTED,
-        EventType.EXECUTOR_SUCCESS,
-        EventType.EVALUATOR_INVOKED,
-        EventType.EVALUATOR_SUCCESS,
-    )
 
     def planner_response(self, ctx: ScenarioContext) -> ToolCallSpec:  # noqa: ARG002
         return ToolCallSpec(submit_plan_closes_goal, _plan())

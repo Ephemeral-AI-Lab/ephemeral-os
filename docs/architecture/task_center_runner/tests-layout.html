@@ -93,7 +93,7 @@ backend/src/task_center_runner/tests/
     test_real_agent_coding_plan_mode.py
 </pre>
 <div class="edge-list" aria-label="Suite split">
-  <div><b>tests/mock</b><span>Drives <code>run_scenario_on_sweevo_image</code> or <code>run_scenario</code> against the persistent SWE-EVO container. Scenarios + probes do real tool calls; the LLM is mocked through <code>MockSquadRunner</code>.</span></div>
+  <div><b>tests/mock</b><span>Drives <code>run_scenario_on_sweevo_image</code> or <code>run_scenario</code> against the persistent SWE-EVO container. Scenarios + probes emit deterministic turns through <code>ScenarioLoopRunner</code>, and the real query loop executes the tool calls.</span></div>
   <div><b>tests/real_agent</b><span>Drives the production agent loop through the SWE-EVO image and the central-config-selected model. Used for full e2e validation including coding-plan mode.</span></div>
   <div><b>Out-of-tree unit tests</b><span><code>backend/tests/unit_test/test_task_center_runner/</code> has <code>test_no_core_imports.py</code> (the runner-agnostic guarantee on <code>core/engine.py</code>) and lifecycle aggregates. <code>backend/tests/unit_test/test_benchmarks/</code> covers the sweevo evaluation and snapshot verifier logic in isolation.</span></div>
 </div>
@@ -151,7 +151,7 @@ workspace            (function-scoped)
 <p>Module-private helpers (underscored) carry assertion vocabulary shared across many test files. They consume the rich <code>RunReport</code> built by <code>ScenarioLifecycle</code>.</p>
 <div class="edge-list" aria-label="Contract helper roles">
   <div><b>_project_build_contracts</b><span>Assertions for complex-project-build probes — checks that the expected sequence of write/edit/shell/LSP results appeared and that build evidence files exist on disk.</span></div>
-  <div><b>_focused_scenario_contracts</b><span>Assertions for focused pipeline scenarios — verifies graph_summary shape, attempt sequence, and terminal payloads against the scenario's <code>expected_event_sequence</code>.</span></div>
+  <div><b>_focused_scenario_contracts</b><span>Assertions for focused pipeline scenarios — verifies graph_summary shape, role task counts, attempt sequence, and retained audit events.</span></div>
   <div><b>_layer_stack_occ_overlay_assertions</b><span>Assertions for LayerStack / OCC / overlay invariants — depth thresholds, squash events, applied-edit counts, conflict reasons.</span></div>
 </div>
 <p>Tests typically follow this shape:</p>
@@ -167,7 +167,6 @@ async def test_some_pipeline_path(workspace):
     assert report.task_center_status == "done"
     assert report.passed_prompt_inspections
     assert report.passed_sandbox_checks
-    assert_event_subsequence(report, [...])
     assert_graph_summary_shape(report, [...])
 </pre>
 </section>

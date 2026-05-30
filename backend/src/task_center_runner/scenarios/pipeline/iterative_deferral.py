@@ -19,7 +19,6 @@ from tools.submission.planner import (
     submit_plan_defers_goal,
 )
 
-from task_center_runner.audit.events import EventType
 from task_center_runner.scenarios._scenario_helpers import (
     preflight_full_plan,
     preflight_defers_plan,
@@ -37,20 +36,6 @@ class IterativeDeferral(ScenarioBase):
     """Iteration 1 partial plan → iteration 2 full plan; both pass."""
 
     name = "pipeline.iterative_deferral"
-    expected_event_sequence: tuple[EventType, ...] = (
-        EventType.PLANNER_INVOKED,
-        EventType.PLANNER_DEFERS_GOAL_PLAN,
-        EventType.EXECUTOR_INVOKED,
-        EventType.EXECUTOR_SUCCESS,
-        EventType.EVALUATOR_INVOKED,
-        EventType.EVALUATOR_SUCCESS,
-        EventType.PLANNER_INVOKED,
-        EventType.PLANNER_COMPLETES_GOAL_PLAN,
-        EventType.EXECUTOR_INVOKED,
-        EventType.EXECUTOR_SUCCESS,
-        EventType.EVALUATOR_INVOKED,
-        EventType.EVALUATOR_SUCCESS,
-    )
 
     def planner_response(self, ctx: ScenarioContext) -> ToolCallSpec:
         if ctx.iteration.sequence_no == 1:

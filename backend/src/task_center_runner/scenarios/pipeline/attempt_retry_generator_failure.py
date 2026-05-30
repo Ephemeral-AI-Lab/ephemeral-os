@@ -8,7 +8,6 @@ from typing import Any
 from tools.submission.evaluator import submit_evaluation_success
 from tools.submission.planner import submit_plan_closes_goal
 
-from task_center_runner.audit.events import EventType
 from task_center_runner.scenarios.base import ScenarioBase, ScenarioContext, ToolCallSpec
 
 
@@ -34,18 +33,6 @@ class AttemptRetryGeneratorFailure(ScenarioBase):
     """Attempt 1 generator fails, attempt 2 succeeds."""
 
     name = "pipeline.attempt_retry_generator_failure"
-    expected_event_sequence: tuple[EventType, ...] = (
-        EventType.PLANNER_INVOKED,
-        EventType.PLANNER_COMPLETES_GOAL_PLAN,
-        EventType.EXECUTOR_INVOKED,
-        EventType.EXECUTOR_FAILURE,
-        EventType.PLANNER_INVOKED,
-        EventType.PLANNER_COMPLETES_GOAL_PLAN,
-        EventType.EXECUTOR_INVOKED,
-        EventType.EXECUTOR_SUCCESS,
-        EventType.EVALUATOR_INVOKED,
-        EventType.EVALUATOR_SUCCESS,
-    )
 
     def planner_response(self, ctx: ScenarioContext) -> ToolCallSpec:  # noqa: ARG002
         return ToolCallSpec(submit_plan_closes_goal, _retry_generator_plan())

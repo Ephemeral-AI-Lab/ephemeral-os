@@ -1,9 +1,9 @@
 """Live e2e regression for the SWE-EVO mock framework.
 
 Exercises the ``correctness_testing`` scenario end-to-end against a real
-Daytona sandbox + the real TaskCenter runtime + the deterministic mock
-squad. Verifies the on-disk audit tree, mid-run message.jsonl flushing,
-helper-agent filtering, and hook ordering.
+Daytona sandbox + the real TaskCenter runtime + deterministic mock agents.
+Verifies the on-disk audit tree, mid-run message.jsonl flushing, and
+helper-agent filtering.
 
 Skipped when Daytona is unreachable so unit-test collections that import
 this file do not fail. The pytest tier 7 invocation
@@ -21,14 +21,13 @@ import pytest
 from task_center_runner.environments.sweevo_image.health import (
     require_sweevo_image_provider_healthy,
 )
-from task_center_runner.audit.events import EventType
-from task_center_runner.hooks.builtins import count_events
 from task_center_runner.scenarios.correctness_testing import (
     CorrectnessTesting,
 )
 from task_center_runner.core.stores import TaskCenterStoreBundle
 from task_center_runner.environments.sweevo_image.fixtures import run_scenario_on_sweevo_image
 from task_center_runner.benchmarks.sweevo.models import SWEEvoInstance
+from task_center_runner.tests.mock._focused_scenario_contracts import count_role_tasks
 
 
 @pytest.mark.asyncio
@@ -41,17 +40,12 @@ async def test_correctness_testing_scenario_runs_end_to_end(
     require_sweevo_image_provider_healthy(sweevo_image_instance)
 
     scenario = CorrectnessTesting()
-    extra_hooks = (
-        count_events(EventType.PLANNER_INVOKED, name="planner_invocations"),
-        count_events(EventType.EVALUATOR_INVOKED, name="evaluator_invocations"),
-    )
     report = await run_scenario_on_sweevo_image(
         scenario,
         instance=sweevo_image_instance,
         sandbox_id=str(workspace["sandbox_id"]),
         audit_dir=audit_dir,
         stores=stores,
-        extra_hooks=extra_hooks,
     )
 
     # --- TaskCenter outcome -------------------------------------------
@@ -117,23 +111,8 @@ async def test_correctness_testing_scenario_runs_end_to_end(
             f"helper-role dir leaked into audit tree: {role_dir}"
         )
 
-    # --- Hook insertion ordering --------------------------------------
-    assert report.mutable_state_flags.get("count_planner_invocations", 0) >= 1
-    assert report.mutable_state_flags.get("count_evaluator_invocations", 0) >= 1
-    # Hooks fire in registration order — assert that the planner counter
-    # is observed at least once before the final evaluator counter result.
-    hook_names = [r.name for r in report.hook_results]
-    planner_idx = next(
-        (i for i, n in enumerate(hook_names) if "planner_invocations" in n), -1
-    )
-    evaluator_idx = next(
-        (i for i, n in enumerate(hook_names) if "evaluator_invocations" in n), -1
-    )
-    assert planner_idx >= 0 and evaluator_idx >= 0
-    assert planner_idx < evaluator_idx, (
-        "planner counter should fire before evaluator counter "
-        f"(insertion order): {hook_names}"
-    )
+    assert count_role_tasks(report, "planner") >= 1, report.graph_summary
+    assert count_role_tasks(report, "evaluator") >= 1, report.graph_summary
 
     # --- run.json carries the bound run id ----------------------------
     run_payload = json.loads((run_dir / "run.json").read_text(encoding="utf-8"))
@@ -165,12 +144,8 @@ def _assert_message_jsonl_contains_sandbox_tools(run_dir: Path) -> None:
         if isinstance(block, dict) and block.get("type") == "tool_use"
     }
     assert {"write_file", "read_file", "edit_file", "shell"}.issubset(tool_calls)
-    # The mock runner injects a synthetic ``ask_advisor`` + advisor approval
-    # pair into ``conversation_messages`` so gated terminals clear
-    # ``AdvisorApprovalPreHook`` (see
-    # ``task_center_runner/agent/mock/runner.py:_approve_terminal``). That
-    # pair lives on per-call ``ExecutionMetadata`` and is never emitted as a
-    # stream event, so it must not leak into the on-disk transcript.
+    # Advisor approval data lives on per-call ``ExecutionMetadata`` and must not
+    # leak into the on-disk transcript.
     leaked_tool_uses = [
         block
         for message in messages

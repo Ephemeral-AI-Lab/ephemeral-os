@@ -1,15 +1,14 @@
 """Shared helper: construct a synthetic ``ask_advisor`` approval transcript pair.
 
-The mock squad bypasses the engine loop, so it has no real ``ask_advisor``
-result to thread through ``conversation_messages`` when a gated terminal
-fires. Without intervention every existing live e2e scenario would trip
-``AdvisorApprovalPreHook``. This helper produces the same two-message pair
-the engine would have produced (assistant ``ToolUseBlock`` paired with a
-user ``ToolResultBlock`` carrying ``metadata.helper_role == "advisor"``).
+ScenarioLoopRunner now uses the production helper-tool path, so this helper is
+only for direct dispatch tests that need to exercise ``AdvisorApprovalPreHook``
+without running a full agent loop. It produces the same two-message pair the
+engine would have produced (assistant ``ToolUseBlock`` paired with a user
+``ToolResultBlock`` carrying ``metadata.helper_role == "advisor"``).
 
-Lives under ``src/`` so the mock runner — the legitimate src-side consumer —
-can import it without a test→src layering inversion. Unit tests re-export
-the same symbol from
+Lives under ``src/`` so contract tests and src-side diagnostics can share the
+same fixture without a test→src layering inversion. Unit tests re-export the
+same symbol from
 ``backend/tests/unit_test/test_tools/test_submission/_advisor_approval_fixtures.py``.
 """
 

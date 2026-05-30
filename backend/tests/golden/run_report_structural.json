@@ -6,12 +6,10 @@
     "entry_prompt_sha256",
     "events",
     "graph_summary",
-    "hook_results",
     "instance_id",
     "launches",
     "matrix_plan",
     "metrics",
-    "mutable_state_flags",
     "package_plan",
     "performance_report_task",
     "prompt_inspections",
@@ -21,12 +19,11 @@
     "sandbox_checks",
     "sandbox_id",
     "scenario_name",
-    "seen_event_types",
     "task_center_run_id",
     "task_center_status",
     "tool_calls"
   ],
-  "field_count": 24,
+  "field_count": 21,
   "captured_at_commit": "1bdb21de",
   "captured_for": "task_center_runner restructure plan \u00a77 Risk #4 \u2014 invariance contract for the Phase 4 run_scenario shim"
 }

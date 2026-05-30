@@ -1,6 +1,6 @@
 ---
 name: sandbox-performance-evaluation
-description: Use when evaluating EphemeralOS sandbox correctness or performance for unified layerstack, overlay, OCC, isolated_workspace, command_exec, plugin dispatch, Pyright/LSP, daemon-audit/event stats, high-concurrency live_e2e scenarios, mount(2) overlay O(1) disk usage, CPU, memory, or .sweevo_runs scenario artifacts.
+description: Use when evaluating EphemeralOS sandbox correctness or performance for unified layerstack, overlay, OCC, isolated_workspace, command_exec, plugin dispatch, Pyright/LSP, daemon-audit/event stats, high-concurrency live_e2e scenarios, ScenarioLoopRunner mock-event-source scenarios, mount(2) overlay O(1) disk usage, CPU, memory, or .sweevo_runs scenario artifacts.
 ---
 
 # Sandbox Performance Evaluation
@@ -22,6 +22,60 @@ Check the design as a set of observable claims:
 4. Pyright/LSP must see the latest layerstack snapshot at the bound workspace root, not a stale projected copy. A snapshot refresh should remount or refresh the long-lived session, not restart the server on every normal write.
 5. The mounted process should see a normal container filesystem with only the bound workspace root replaced by the overlay. Files outside the workspace are normal container files and are not captured by workspace OCC unless another mechanism captures them.
 6. In the private namespace/new mount API path, overlay disk use should be O(1) with respect to workspace size and number of parallel readers/writers. Per-operation disk should scale with changed files and scratch metadata only.
+
+## Mock Event Source Runner Contract
+
+Use this path when a sandbox scenario lives under
+`backend/src/task_center_runner/tests/mock`, when a failure mentions
+`ScenarioLoopRunner`, `ScenarioEventSource`, `MOCK_*`, `graph_summary`,
+`run_scenario`, or when comparing mock-agent and real-agent behavior.
+
+Observable claims:
+
+1. Mock scenarios route through `run_scenario` -> `build_scenario_config` ->
+   `ScenarioLoopRunner` unconditionally. Do not set or rely on
+   `EOS_MOCK_EVENT_SOURCE_RUNNER`, a scenario fallback list, or the deleted old
+   mock runner.
+2. `ScenarioLoopRunner` injects `ScenarioEventSource` through
+   `RuntimeConfig.event_source_factory` and then delegates to the real
+   `run_ephemeral_agent`. Production and real-agent runs leave
+   `event_source_factory` unset, so the query loop streams from the provider
+   client instead.
+3. "Mock" means deterministic assistant stream content only:
+   `thinking`, `text`, and `tool_use` blocks are scripted. TaskCenter,
+   QueryLoop dispatch, tool budget counting, terminal-alone enforcement,
+   advisor prehooks, sandbox APIs, background tools, audit recording, and
+   persisted graph state are real.
+4. Role lifecycle assertions should come from `report.graph_summary`,
+   persisted TaskCenter store artifacts, or task/message JSONL. Do not
+   reintroduce synthetic planner/executor/verifier/evaluator lifecycle events
+   just to recover old assertions.
+5. True sandbox events (`SANDBOX_*`) and mock side-channel records (`MOCK_*`)
+   remain event-backed. `RunReport.events`, `launches`, `tool_calls`,
+   `prompt_inspections`, `sandbox_checks`, and `graph_summary` are mock-rich
+   report views rebuilt from `ScenarioLifecycle`, real stream events, and
+   store state.
+6. Fan-out and high-volume deterministic probes must stay on the
+   ScenarioLoopRunner path. If a scenario needs more scripted tool calls, raise
+   the scenario-local executor budget in `ScenarioLoopRunner`; do not add a
+   runner fallback to bypass the real query loop.
+7. `pytest -n <N>` parallelizes pytest workers. It does not mean one
+   `ScenarioLoopRunner` instance is shared across scenarios. Real TaskCenter
+   generator DAG fan-out is still exercised inside each run where the scenario
+   is shaped that way.
+
+Mock versus real-agent interpretation:
+
+- Mock-agent run: production main-profile agent definitions plus scripted
+  event source; no provider-generated thinking/text/tool choices; real tool
+  execution and real TaskCenter lifecycle.
+- Real-agent run: same engine/query/tool paths, but `event_source_factory` is
+  unset and the provider decides thinking/text/tool choices. Failures in real
+  runs can come from provider behavior that the deterministic mock cannot
+  cover.
+- A mock `message.jsonl` transcript is still a real loop transcript. Absence
+  of provider calls or natural language variability does not mean sandbox
+  tools, terminal routing, or background execution were mocked.
 
 ## Audit Events And Stats Contract
 
@@ -126,6 +180,7 @@ rg -n "register_plugin_op|auto_workspace_overlay|run_plugin_op_with_workspace_ov
 rg -n "prepare_workspace_snapshot|LayerPathsLayout|mount_workspace_s|mount_overlay|new_mount_api_supported" backend/src/sandbox
 rg -n "PyrightSession|refresh_manifest|namespace_remount|auto_workspace_overlay=False|lsp.session" backend/src/plugins/catalog/lsp
 rg -n "IsolatedWorkspaceManager|sandbox_isolated_workspace|phases_ms|install_veth|ttl_sweep|startup_gc" backend/src/sandbox/isolated_workspace backend/src/task_center_runner/tests/mock/sandbox/isolated_workspace
+rg -n "ScenarioLoopRunner|ScenarioEventSource|event_source_factory|run_scenario|build_scenario_config|registered_mock_agents|MOCK_" backend/src/task_center_runner backend/src/engine docs/architecture/task_center_runner
 rg -n "AuditBuffer|SCHEMA_VERSION|api.audit.pull|api.audit.snapshot|retained_bytes|max_bytes|lost_before_seq" backend/src/sandbox/daemon backend/src/sandbox/api docs/daemon-audit-pull-consolidation-v3
 rg -n "RotatingJsonlSink|ROTATION_BYTES_DEFAULT|artifact_inventory|sandbox_events.jsonl|daemon_audit_puller_stats|_daemon_audit_pull_enabled" backend/src/task_center_runner/audit backend/src/task_center_runner/core backend/tests/unit_test/test_task_center_runner
 rg -n "build_performance_report|REPORT_SCHEMA|sandbox.sections|evaluate_.*gate" backend/src/task_center_runner/audit backend/tests/unit_test/test_task_center_runner
@@ -152,6 +207,21 @@ Expected anchors:
   handlers; import fence must keep OCC and sandbox-overlay publish out.
 - `backend/src/sandbox/isolated_workspace/network.py`: bridge, MASQUERADE,
   IMDS/RFC1918 policy, veth install/teardown, and IP pool.
+- `backend/src/task_center_runner/scenarios/builder.py`: mock-mode
+  `RunConfig` assembly; should return a `ScenarioLoopRunner` factory only.
+- `backend/src/task_center_runner/core/runner.py`: `run_scenario` shim,
+  `RunReport` rebuild, active mock model registration, and
+  `registered_mock_agents` context.
+- `backend/src/task_center_runner/agent/mock/scenario_loop_runner.py`:
+  drop-in mock `AttemptAgentRunner` that injects `ScenarioEventSource` and
+  delegates to `run_ephemeral_agent`.
+- `backend/src/task_center_runner/agent/mock/event_source.py`: deterministic
+  assistant stream source. Tool-use deltas must preserve real query-loop
+  budget and dispatch semantics.
+- `backend/src/task_center_runner/agent/mock/scenario_adapter.py` and
+  `probe_bridge.py`: scenario/probe adaptation into `TurnScript`; if a mock
+  scenario fails with a missing action, fix this layer or the specific probe,
+  not a legacy runner.
 - `backend/src/task_center_runner/tests/mock/sandbox/isolated_workspace/`:
   Tier 0-9 contract tests and `RUNNING-LIVE-TESTS.md` /
   `RUNNING-SOAK-TESTS.md`.
@@ -195,8 +265,27 @@ Locate current tests first; paths move:
 ```bash
 rg -n "high_concurrency_layerstack_overlay_occ|complex_project_build_shell_edit_lsp|full_system_capacity_matrix|heavy_io_zoned_concurrent|background_shell_" backend/src/task_center_runner/tests backend/src/task_center_runner/scenarios
 rg -n "isolated_workspace|sandbox_isolated_workspace|live_e2e_soak|phases_ms|install_veth" backend/src/task_center_runner/tests/mock/sandbox/isolated_workspace backend/src/sandbox/isolated_workspace
+rg -n "ScenarioLoopRunner|ScenarioEventSource|graph_summary|NotImplementedError: executor action|run_scenario_on_sweevo_image" backend/src/task_center_runner/tests/mock backend/src/task_center_runner/agent/mock
 rg -n "performance_report_v3|assert_timing_keys_present|assert_resource_key_max|resource.command_exec|daemon_audit_pull|overhead_gate|sandbox.sections" backend/tests/unit_test backend/src/task_center_runner/tests/mock/sandbox backend/src/task_center_runner/audit
 ```
+
+Mock sandbox tests are ScenarioLoopRunner tests by default. Keep this gate
+available after mock-runner, lifecycle-event, fan-out, or probe-adapter changes:
+
+```bash
+uv run pytest -q -p no:cacheprovider \
+  backend/src/task_center_runner/tests/mock/contracts
+
+uv run pytest -n 3 -q -p no:cacheprovider \
+  backend/src/task_center_runner/tests/mock/sandbox/layer_stack_occ_overlay/test_auto_squash_commit_resume.py \
+  backend/src/task_center_runner/tests/mock/sandbox/ephemeral_workspace/test_ephemeral_same_path_conflict_and_retry.py \
+  backend/src/task_center_runner/tests/mock/sandbox/project_build/test_project_build_shell_edit_lsp_three_parallel_agents.py
+```
+
+If these fail with a missing scripted action, adapt
+`scenario_adapter.py`, `probe_bridge.py`, `PROBE_BUILDERS`, or the specific
+probe. If they fail on tool behavior, debug the real tool path and artifacts;
+the tool execution is not mocked.
 
 For daemon audit, event stats, or performance-report refactors, run the
 report/static gate before live sandbox scenarios:

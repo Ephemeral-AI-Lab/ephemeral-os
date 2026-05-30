@@ -1,10 +1,9 @@
-"""Phase 4a — invariance guard for the legacy ``RunReport`` shape.
+"""Invariance guard for the ``RunReport`` shape.
 
-The Phase 4 ``run_scenario`` shim rebuilds ``RunReport`` from a
-``PipelineReport`` + accumulated ``MOCK_*`` events. This test asserts the
-field set stays identical to the captured golden so external consumers
-that access ``report.launches`` / ``.tool_calls`` / etc. continue to work
-unchanged.
+The ``run_scenario`` shim rebuilds ``RunReport`` from a ``PipelineReport``,
+accumulated ``MOCK_*`` events, and graph state. This test asserts the field set
+stays identical to the captured golden so external consumers that access
+``report.launches`` / ``.tool_calls`` / etc. continue to work unchanged.
 
 Captured at commit 1bdb21de — see ``backend/tests/golden/run_report_structural.json``.
 

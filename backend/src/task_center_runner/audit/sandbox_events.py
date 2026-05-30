@@ -56,7 +56,7 @@ def sandbox_events_from_tool_completion(
     node = NodeId(
         task_center_run_id=task_center_run_id,
         agent_name=stream_event.agent_name or None,
-        agent_run_id=stream_event.run_id or None,
+        agent_run_id=stream_event.agent_run_id or None,
         tool_name=tool_name,
     )
     base_payload = {

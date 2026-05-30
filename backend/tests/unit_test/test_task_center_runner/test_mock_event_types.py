@@ -1,7 +1,7 @@
 """Regression guard for the four MOCK_* EventType values.
 
-MockSquadRunner publishes these side-channel events; ScenarioLifecycle consumes
-them when assembling the rich mock ``RunReport`` view.
+ScenarioLoopRunner and probe helpers publish these side-channel events;
+ScenarioLifecycle consumes them when assembling the rich mock ``RunReport`` view.
 """
 
 from __future__ import annotations

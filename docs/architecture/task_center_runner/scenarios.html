@@ -46,7 +46,7 @@
     <li><a href="#scenario-protocol"><span>2</span> Scenario Protocol</a></li>
     <li><a href="#scenario-lifecycle-wiring"><span>3</span> ScenarioLifecycle Wiring</a></li>
     <li><a href="#catalog"><span>4</span> Scenario Catalog</a></li>
-    <li><a href="#hooks"><span>5</span> Hooks And MutableMockState</a></li>
+    <li><a href="#graph-backed-assertions"><span>5</span> Graph-Backed Assertions</a></li>
     <li><a href="#example-initial-workflow"><span>6</span> Example: InitialWorkflow</a></li>
   </ol>
 </nav>
@@ -59,8 +59,8 @@
   <ul>
     <li>Scenarios live under <code>backend/src/task_center_runner/scenarios/</code>. Composite scenarios live at the top level; focused scenarios are grouped by concern under subpackages.</li>
     <li><code>SCENARIO_REGISTRY</code> is the catalog (~45 entries across pipeline, sandbox, capacity, planner-validation, and composite lanes).</li>
-    <li>Scenarios never own state. The mock runner runs the scenario, the bus carries events, hooks read <code>MutableMockState</code>, and <code>ScenarioLifecycle</code> accumulates everything for the report.</li>
-    <li>The decision protocol is intentionally narrow: planner / executor / verifier / evaluator responses, optional recursive-handoff goal text, and hooks.</li>
+    <li>Scenarios never own runner state. The mock runner drives real TaskCenter tool calls, the bus carries mock side-channel events, and <code>ScenarioLifecycle</code> accumulates those records for the report.</li>
+    <li>The decision protocol is intentionally narrow: planner / executor / verifier / evaluator responses and optional recursive-handoff goal text.</li>
   </ul>
 </div>
 <div class="wiki-links" aria-label="Scenarios related pages">
@@ -76,29 +76,24 @@
 <p>The protocol is implemented either via <code>ScenarioBase</code> (with overridable defaults) or by satisfying <code>Scenario</code> structurally.</p>
 <div class="edge-list" aria-label="Scenario protocol methods">
   <div><b>name</b><span>Dotted-path identifier used by <code>SCENARIO_REGISTRY</code> and as the audit recorder's scenario label. Example: <code>pipeline.initial_workflow</code>, <code>sandbox.background_shell_golden</code>.</span></div>
-  <div><b>expected_event_sequence</b><span>Ordered tuple of <code>EventType</code>s the scenario expects. Drives <code>assert_event_sequence</code> hooks.</span></div>
   <div><b>planner_response(ctx)</b><span>Returns a <code>ToolCallSpec(submit_plan_closes_goal | submit_plan_defers_goal, args)</code>. <code>args</code> typically contains <code>plan_spec</code>, <code>tasks</code>, <code>evaluation_criteria</code>.</span></div>
   <div><b>executor_actions(ctx)</b><span>Returns a sequence of action tokens consumed by the runner's executor dispatcher: <code>"preflight"</code>, <code>"fail"</code>/<code>"fail:reason"</code>, <code>"request_recursive_workflow:&lt;pkg&gt;"</code>, probe action names. Default is empty.</span></div>
   <div><b>verifier_response(ctx)</b><span>Returns a <code>ToolCallSpec</code> targeting <code>submit_verification_success</code> or <code>submit_verification_failure</code>.</span></div>
   <div><b>evaluator_response(ctx)</b><span>Returns a <code>ToolCallSpec</code> targeting <code>submit_evaluation_success</code> or <code>submit_evaluation_failure</code>.</span></div>
   <div><b>recursive_handoff_goal(ctx)</b><span>Optional goal text used when an executor action requests a recursive handoff; defaults to <code>None</code> (the runner synthesizes a placeholder).</span></div>
-  <div><b>hooks()</b><span>Sequence of <code>Hook</code> instances; registered into the per-run <code>HookSet</code> by <code>build_scenario_config</code>.</span></div>
 </div>
-<p><code>ScenarioContext</code> is the live state visible to the scenario at each decision: <code>attempt</code>, <code>iteration</code>, <code>workflow</code>, <code>prompt</code>, <code>metadata</code>, <code>audit_recorder</code>, <code>mutable_state</code>, <code>task_id</code>, <code>agent_name</code>, <code>context_message</code>, plus optional <code>requirement_ledger</code>, <code>package_plan</code>, and <code>matrix_plan</code> for composite scenarios.</p>
+<p><code>ScenarioContext</code> is the live state visible to the scenario at each decision: <code>attempt</code>, <code>iteration</code>, <code>workflow</code>, <code>prompt</code>, <code>metadata</code>, <code>audit_recorder</code>, <code>task_id</code>, <code>agent_name</code>, <code>context_message</code>, plus optional <code>requirement_ledger</code>, <code>package_plan</code>, and <code>matrix_plan</code> for composite scenarios.</p>
 </section>
 
-<section id="scenario-lifecycle-wiring" data-last-reviewed-commit="c8f6bcde0c63c7ec004545128d186853df5dcde1" data-evidence-paths="backend/src/task_center_runner/scenarios/builder.py backend/src/task_center_runner/scenarios/lifecycle.py backend/src/task_center_runner/agent/mock/runner.py">
+<section id="scenario-lifecycle-wiring" data-last-reviewed-commit="c8f6bcde0c63c7ec004545128d186853df5dcde1" data-evidence-paths="backend/src/task_center_runner/scenarios/builder.py backend/src/task_center_runner/scenarios/lifecycle.py backend/src/task_center_runner/agent/mock/scenario_loop_runner.py backend/src/task_center_runner/agent/mock/scenario_adapter.py">
 <h2>ScenarioLifecycle Wiring <a class="anchor" href="#scenario-lifecycle-wiring">#</a></h2>
-<p>One builder, one lifecycle, one shared <code>MutableMockState</code>. <code>build_scenario_config</code> is the single point of truth where the <code>MockSquadRunner</code> factory, <code>HookSet</code>, and lifecycle are wired together.</p>
+<p>One builder, one lifecycle. <code>build_scenario_config</code> is the single point of truth where the <code>ScenarioLoopRunner</code> factory and lifecycle are wired together.</p>
 <pre class="diagram" aria-label="ScenarioLifecycle wiring diagram">
 build_scenario_config(scenario, ...)
    |
-   +--&gt; MutableMockState()
-   +--&gt; HookSet().register(scenario.hooks()) + extra_hooks
-   +--&gt; ScenarioLifecycle(scenario, hook_set, mutable_state)
-   +--&gt; runner_factory = (ctx) -&gt; MockSquadRunner(repo_dir, ctx.bus,
-   |                              scenario=scenario,
-   |                              mutable_state=mutable_state)
+   +--&gt; ScenarioLifecycle()
+   +--&gt; runner_factory = (ctx) -&gt; ScenarioLoopRunner(repo_dir, ctx.bus,
+   |                              scenario=scenario)
    |
    v
 RunConfig (mock mode):
@@ -113,17 +108,13 @@ run_pipeline executes; per event:
       |
       +--&gt; ScenarioLifecycle.on_event(event):
               captured_events.append(event)
-              mutable_state.seen_events.append(event.type)
               if event.type in MOCK_*:
                   decode payload into LaunchRecord /
                   ToolCallRecord / PromptInspection /
                   SandboxCheck and append
-              hook_set.fire(event, "post", mutable_state)
-                  -&gt; append HookResults
 </pre>
 <div class="edge-list" aria-label="ScenarioLifecycle accumulators">
   <div><b>captured_events</b><span>Every event the bus published in subscription order. Read by <code>run_scenario</code> to populate <code>RunReport.events</code>.</span></div>
-  <div><b>hook_results</b><span>One <code>HookResult</code> per hook firing, including <code>assert_event_sequence</code> verdicts.</span></div>
   <div><b>launches / tool_calls / prompt_inspections / sandbox_checks</b><span>Typed records decoded from the four <code>MOCK_*</code> event payloads. Used by mock tests to assert on prompt content, sandbox correctness, and tool dispatch.</span></div>
 </div>
 </section>
@@ -152,49 +143,23 @@ run_pipeline executes; per event:
   </div>
   <div class="evidence-card">
     <h3>Composite</h3>
-    <p>Multi-stage scenarios that combine pipeline and sandbox concerns under one entry prompt: <code>CorrectnessTesting</code> (the default scenario used when <code>MockSquadRunner</code> is constructed without one), <code>FullCaseUserInput</code> (requirement-ledger / package-plan / recursive-workflow flow), <code>FullStackAdversarial</code> (occ conflict matrix, overlay edge matrix, layerstack squash lease, LSP refresh semantics, recursive oversized matrix, final reconciliation).</p>
+    <p>Multi-stage scenarios that combine pipeline and sandbox concerns under one entry prompt: <code>CorrectnessTesting</code>, <code>FullCaseUserInput</code> (requirement-ledger / package-plan / recursive-workflow flow), <code>FullStackAdversarial</code> (occ conflict matrix, overlay edge matrix, layerstack squash lease, LSP refresh semantics, recursive oversized matrix, final reconciliation).</p>
   </div>
 </div>
 </section>
 
-<section id="hooks" data-last-reviewed-commit="c8f6bcde0c63c7ec004545128d186853df5dcde1" data-evidence-paths="backend/src/task_center_runner/hooks/registry.py backend/src/task_center_runner/hooks/builtins.py">
-<h2>Hooks And MutableMockState <a class="anchor" href="#hooks">#</a></h2>
-<p>Hooks are insertion-ordered, fired post-event in registration order. Per-event errors are wrapped into <code>HookResult(failed_reason=...)</code> rather than raised.</p>
-<div class="edge-list" aria-label="Hook protocol">
-  <div><b>Hook</b><span>Frozen dataclass: <code>name</code>, <code>event: EventType</code>, <code>when: "pre" | "post"</code>, <code>fn: (event, state) -&gt; HookResult</code>.</span></div>
-  <div><b>HookSet</b><span>Insertion-ordered registry. <code>fire(event, when, state)</code> yields one <code>HookResult</code> per matching hook.</span></div>
-  <div><b>MutableMockState</b><span>Cross-hook scratchpad with <code>seen_events</code>, <code>flags</code>, and an injected-failure queue (<code>inject_failure</code> / <code>consume_failure</code>) keyed by <code>(role, attempt_id, checkpoint)</code>. <code>replace_next_planner_response</code> swaps the next mock planner submission once.</span></div>
-</div>
-<div class="evidence-grid">
-  <div class="evidence-card">
-    <h3>count_events(event_type, name=)</h3>
-    <p>Increments <code>state.flags[f"count_{name}"]</code> on every match. Use to assert counts of a given <code>EventType</code> across the run.</p>
-  </div>
-  <div class="evidence-card">
-    <h3>capture_prompt(role, name=)</h3>
-    <p>Copies the <code>*_INVOKED</code> payload for the given role into <code>state.flags["prompt_&lt;name&gt;"]</code>. Pre-event hook.</p>
-  </div>
-  <div class="evidence-card">
-    <h3>assert_event_sequence(expected, name=)</h3>
-    <p>RUN_COMPLETED post-hook that asserts the seen-event list contains the expected <code>EventType</code> subsequence in order. Returns a <code>HookResult(asserted=False, failed_reason=...)</code> on mismatch.</p>
-  </div>
-  <div class="evidence-card">
-    <h3>fail_verifier_at(checkpoint=)</h3>
-    <p>VERIFIER_INVOKED post-hook that arms a one-shot verifier failure when the invocation payload carries <code>checkpoint == &lt;checkpoint&gt;</code>; the runner consumes the queued failure on the next verifier dispatch.</p>
-  </div>
-  <div class="evidence-card">
-    <h3>assert_guard_after_wave(wave_id=)</h3>
-    <p>VERIFIER_SUCCESS post-hook that asserts a verifier guard for <code>wave_id</code> had at least one executor dependency. Defends against accidentally-leaf guards.</p>
-  </div>
-  <div class="evidence-card">
-    <h3>assert_recursive_workflow_closed_before_parent_guard</h3>
-    <p>VERIFIER_SUCCESS post-hook that asserts <code>RECURSIVE_WORKFLOW_COMPLETED</code> precedes the parent <code>recursive_return</code> guard in seen-events order.</p>
-  </div>
+<section id="graph-backed-assertions" data-last-reviewed-commit="c8f6bcde0c63c7ec004545128d186853df5dcde1" data-evidence-paths="backend/src/task_center_runner/tests/mock/_focused_scenario_contracts.py backend/src/task_center_runner/core/runner.py">
+<h2>Graph-Backed Assertions <a class="anchor" href="#graph-backed-assertions">#</a></h2>
+<p>Role lifecycle assertions are derived from persisted TaskCenter graph state instead of synthetic event hooks. The runner still exposes true audit events for tools and sandbox probes.</p>
+<div class="edge-list" aria-label="Graph-backed assertion helpers">
+  <div><b>count_role_tasks(report, role, status=)</b><span>Counts planner / executor / verifier / evaluator tasks across <code>report.graph_summary</code>. Use <code>status="done"</code> or <code>status="failed"</code> for outcome-specific checks.</span></div>
+  <div><b>count_deferred_attempts(report)</b><span>Counts attempts that wrote <code>deferred_goal_for_next_iteration</code>, replacing old planner deferral event assertions.</span></div>
+  <div><b>recursive_workflows(graph_summary)</b><span>Finds workflows whose <code>origin_kind == "task"</code>, replacing old recursive workflow lifecycle events.</span></div>
 </div>
 <div class="summary">
   <ul>
-    <li>Two builtins are explicitly deferred and raise on call: <code>fail_evaluator_at(attempt_seq=)</code> and <code>assert_squash_after_n_edits(n=)</code>. Both need additional event surfaces.</li>
-    <li>Hooks see <code>state.seen_events</code> as a running list — earlier hook firings have already appended their event type when later hooks see it.</li>
+    <li>Keep sandbox events such as <code>SANDBOX_CONFLICT_DETECTED</code> as event assertions because they are real probe/audit signals.</li>
+    <li>Use graph state for role scheduling and terminal outcomes because the real TaskCenter stores are the durable source of truth.</li>
   </ul>
 </div>
 </section>
@@ -205,11 +170,6 @@ run_pipeline executes; per event:
 <pre class="diagram" aria-label="InitialWorkflow scenario step diagram">
 class InitialWorkflow(ScenarioBase):
     name = "pipeline.initial_workflow"
-    expected_event_sequence = (
-        PLANNER_INVOKED, PLANNER_COMPLETES_GOAL_PLAN,
-        EXECUTOR_INVOKED, EXECUTOR_SUCCESS,
-        EVALUATOR_INVOKED, EVALUATOR_SUCCESS,
-    )
 
     planner_response(ctx)   -&gt; ToolCallSpec(submit_plan_closes_goal,
                                             preflight_full_plan())
@@ -220,13 +180,14 @@ class InitialWorkflow(ScenarioBase):
                                                  list(ctx.attempt.evaluation_criteria)})
 
 Run flow under the mock runner:
-  PLANNER_INVOKED  -&gt; planner_response -&gt; submit_plan_closes_goal
-  PLANNER_COMPLETES_GOAL_PLAN
-  EXECUTOR_INVOKED -&gt; executor_actions ("preflight") -&gt; shell tool probe
-                                                     -&gt; submit_execution_success
-  EXECUTOR_SUCCESS
-  EVALUATOR_INVOKED -&gt; evaluator_response -&gt; submit_evaluation_success
-  EVALUATOR_SUCCESS
+  planner_response -&gt; submit_plan_closes_goal
+  executor_actions ("preflight") -&gt; shell tool probe
+                                -&gt; submit_execution_success
+  evaluator_response -&gt; submit_evaluation_success
+
+Assertions:
+  count_role_tasks(report, "executor", status="done") &gt;= 1
+  count_role_tasks(report, "evaluator", status="done") &gt;= 1
 </pre>
 <p>Branch on <code>ctx.iteration.sequence_no</code> and <code>ctx.attempt.attempt_sequence_no</code> to cover more configurations from the same scenario.</p>
 </section>
@@ -234,7 +195,7 @@ Run flow under the mock runner:
 <div class="page-baseline" data-page-baseline-commit="c8f6bcde0c63c7ec004545128d186853df5dcde1">
   <strong>Maintenance baseline</strong>
   <span>Scenarios page reviewed against <code>c8f6bcde0c63c7ec004545128d186853df5dcde1</code>.</span>
-  <code>git diff c8f6bcde0c63c7ec004545128d186853df5dcde1..HEAD -- backend/src/task_center_runner/scenarios backend/src/task_center_runner/hooks</code>
+  <code>git diff c8f6bcde0c63c7ec004545128d186853df5dcde1..HEAD -- backend/src/task_center_runner/scenarios</code>
 </div>
 <div class="page-footer-nav"><span><a href="core-harness.html">Core Harness</a></span><span><a href="mocked-agents.html">Mocked Agents</a></span></div>
 </main>

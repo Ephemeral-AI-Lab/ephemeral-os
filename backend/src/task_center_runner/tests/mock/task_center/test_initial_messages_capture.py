@@ -14,29 +14,31 @@ trees carry the right shape for every iteration position and attempt:
 
 For helper (advisor) and subagent (explorer) initial-message
 construction, see ``scripts/build_initial_messages_report.py`` — the
-mock-runner does not invoke helpers today, so the report builder calls the
+scenario does not invoke helpers today, so the report builder calls the
 real builder functions in ``tools/ask_helper/_lib/_compose.py`` and
 ``task_center/context_engine/task_guidance.py`` against a realistic parent
-context. Once ``MockSquadRunner`` grows a helper dispatch, this test
-should be extended to also collect ``advisor`` / ``explorer``
-``message.jsonl`` trees from the live run.
+context. Once the scenario script grows a helper dispatch, this test should be
+extended to also collect ``advisor`` / ``explorer`` ``message.jsonl`` trees from
+the live run.
 """
 
 from __future__ import annotations
 
 import json
-from collections import Counter
 from pathlib import Path
 
 import pytest
 
 from agents import load_agents_dir
 from task_center_runner.benchmarks.sweevo.models import SWEEvoInstance
-from task_center_runner.audit.events import EventType
 from task_center_runner.environments.sweevo_image.fixtures import run_scenario_on_sweevo_image
 from task_center_runner.core.stores import TaskCenterStoreBundle
 from task_center_runner.scenarios import SCENARIO_REGISTRY
 from task_center_runner.tests._live_config import database_configured
+from task_center_runner.tests.mock._focused_scenario_contracts import (
+    count_deferred_attempts,
+    count_role_tasks,
+)
 from tools._terminals.registry import render_terminal_catalog
 
 
@@ -86,12 +88,15 @@ async def test_initial_messages_capture(
     ]
     assert len(attempts) == 3, attempts
 
-    counts = Counter(event.type for event in report.events)
-    assert counts[EventType.PLANNER_INVOKED] >= 3, counts
-    assert counts[EventType.PLANNER_DEFERS_GOAL_PLAN] == 1, counts
-    assert counts[EventType.PLANNER_COMPLETES_GOAL_PLAN] == 2, counts
-    assert counts[EventType.EVALUATOR_FAILURE] == 1, counts
-    assert counts[EventType.EVALUATOR_SUCCESS] == 2, counts
+    assert count_role_tasks(report, "planner") >= 3, report.graph_summary
+    assert count_deferred_attempts(report) == 1, report.graph_summary
+    assert count_role_tasks(report, "planner", status="done") == 2, report.graph_summary
+    assert count_role_tasks(report, "evaluator", status="failed") == 1, (
+        report.graph_summary
+    )
+    assert count_role_tasks(report, "evaluator", status="done") == 2, (
+        report.graph_summary
+    )
 
     # 2) message.jsonl present for every main-agent role we care about.
     messages = list(report.run_dir.rglob("message.jsonl"))

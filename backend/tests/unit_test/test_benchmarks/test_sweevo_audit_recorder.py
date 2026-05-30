@@ -390,9 +390,9 @@ def test_sandbox_events_are_mirrored_to_run_jsonl(tmp_path: Path) -> None:
         )
         bus.publish(
             Event(
-                type=EventType.EXECUTOR_SUCCESS,
-                node=NodeId(task_center_run_id=_RUN_ID, agent_name="executor"),
-                payload={"checkpoint": "done"},
+                type=EventType.RUN_COMPLETED,
+                node=NodeId(task_center_run_id=_RUN_ID),
+                payload={"status": "done"},
             )
         )
     finally:

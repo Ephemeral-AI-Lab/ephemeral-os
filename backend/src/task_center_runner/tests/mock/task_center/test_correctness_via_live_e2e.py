@@ -21,8 +21,6 @@ import pytest
 from task_center_runner.benchmarks.sweevo.models import SWEEvoInstance, _REPO_DIR
 from task_center_runner.benchmarks.sweevo.setup import build_sweevo_user_prompt
 from task_center_runner import run_scenario
-from task_center_runner.audit.events import EventType
-from task_center_runner.hooks.builtins import count_events
 from task_center_runner.scenarios.correctness_testing import CorrectnessTesting
 from task_center_runner.environments.sweevo_image.health import (
     require_sweevo_image_provider_healthy,
@@ -41,17 +39,12 @@ async def test_correctness_testing_via_live_e2e(
     require_sweevo_image_provider_healthy(sweevo_image_instance)
 
     scenario = CorrectnessTesting()
-    extra_hooks = (
-        count_events(EventType.PLANNER_INVOKED, name="planner_invocations"),
-        count_events(EventType.EVALUATOR_INVOKED, name="evaluator_invocations"),
-    )
     report = await run_scenario(
         scenario,
         sandbox_id=str(workspace["sandbox_id"]),
         audit_dir=audit_dir,
         repo_dir=_REPO_DIR,
         entry_prompt=build_sweevo_user_prompt(sweevo_image_instance, repo_dir=_REPO_DIR),
-        extra_hooks=extra_hooks,
         instance_id=sweevo_image_instance.instance_id,
     )
 

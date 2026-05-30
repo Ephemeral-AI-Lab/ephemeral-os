@@ -52,14 +52,14 @@
   </ol>
 </nav>
 
-<p class="lead">The mocked-agent squad is deterministic but behaves like a real agent: it inspects the prompt, picks a prepared sequence, calls real sandbox tools, inspects their outputs, and submits through the real terminal tool. The squad uses production main-profile markdown definitions so live e2e coverage exercises the same frontmatter, variants, terminals, and system prompts as production launches.</p>
+<p class="lead">The mocked-agent lane is deterministic but behaves like a real agent: it inspects the prompt, emits scripted turns through the real query loop, calls real sandbox tools, inspects their outputs, and submits through the real terminal tool. It uses production main-profile markdown definitions so live e2e coverage exercises the same frontmatter, variants, terminals, and system prompts as production launches.</p>
 
-<section id="scope" data-last-reviewed-commit="c8f6bcde0c63c7ec004545128d186853df5dcde1" data-evidence-paths="backend/src/task_center_runner/agent/mock backend/src/task_center_runner/agent/mock/runner.py backend/src/task_center_runner/agent/mock/definitions.py">
+<section id="scope" data-last-reviewed-commit="c8f6bcde0c63c7ec004545128d186853df5dcde1" data-evidence-paths="backend/src/task_center_runner/agent/mock backend/src/task_center_runner/agent/mock/scenario_loop_runner.py backend/src/task_center_runner/agent/mock/scenario_adapter.py backend/src/task_center_runner/agent/mock/definitions.py">
 <h2>Scope <a class="anchor" href="#scope">#</a></h2>
 <div class="summary">
   <ul>
-    <li>The mock runner lives at <code>backend/src/task_center_runner/agent/mock/runner.py</code>. It is constructed by <code>build_scenario_config</code> and never imported directly by scenarios.</li>
-    <li>Agent kind dispatch (<code>planner</code> / <code>executor</code> / <code>verifier</code> / <code>evaluator</code>) is the only branching the runner does on the scenario; everything else flows through real submission tools.</li>
+    <li>The mock runner lives at <code>backend/src/task_center_runner/agent/mock/scenario_loop_runner.py</code>. It is constructed by <code>build_scenario_config</code> and never imported directly by scenarios.</li>
+    <li>Profile-name dispatch (<code>planner</code> / <code>executor</code> / <code>verifier</code> / <code>evaluator</code>) selects a <code>ScenarioEventSource</code> script; everything else flows through the real query loop and production tools.</li>
     <li>Prepared <em>tool scripts</em> and <em>probes</em> let the executor lane exercise complex sandbox surfaces (LayerStack, OCC, overlay, plugin, ephemeral workspace, background shell) without growing the scenario protocol.</li>
     <li>The runner emits four side-channel <code>MOCK_*</code> events that <code>ScenarioLifecycle</code> decodes into the rich <code>RunReport</code>.</li>
   </ul>
@@ -99,46 +99,36 @@ run_scenario(...)                            agents/profile/main/
 </div>
 </section>
 
-<section id="dispatch" data-last-reviewed-commit="c8f6bcde0c63c7ec004545128d186853df5dcde1" data-evidence-paths="backend/src/task_center_runner/agent/mock/runner.py backend/src/task_center_runner/scenarios/base.py">
+<section id="dispatch" data-last-reviewed-commit="c8f6bcde0c63c7ec004545128d186853df5dcde1" data-evidence-paths="backend/src/task_center_runner/agent/mock/scenario_loop_runner.py backend/src/task_center_runner/agent/mock/scenario_adapter.py backend/src/task_center_runner/scenarios/base.py">
 <h2>Per-Agent Dispatch <a class="anchor" href="#dispatch">#</a></h2>
-<p>The runner's <code>__call__</code> coroutine has the same signature as the real <code>AttemptAgentRunner</code> so TaskCenter cannot tell them apart. The dispatch fan-out is purely by <code>agent_def.name</code>.</p>
-<pre class="diagram" aria-label="MockSquadRunner per-call lifecycle">
-MockSquadRunner.__call__(config, prompt, agent_def, sandbox_id, extra_tool_metadata, ...)
+<p><code>ScenarioLoopRunner.__call__</code> has the same signature as the real <code>AttemptAgentRunner</code> so TaskCenter cannot tell them apart. Dispatch is by <code>agent_def.name</code>, but tool execution is owned by the real query loop.</p>
+<pre class="diagram" aria-label="ScenarioLoopRunner per-call lifecycle">
+ScenarioLoopRunner.__call__(config, prompt, agent_def, sandbox_id, extra_tool_metadata, ...)
    |
-   | 1. metadata = self._metadata_for(...)
-   |        sets sandbox_id, agent_name, repo_root, cwd,
-   |        role = agent_def.name
+   | 1. publish MOCK_LAUNCH_RECORDED  (LaunchRecord)
    |
-   | 2. publish MOCK_LAUNCH_RECORDED  (LaunchRecord)
-   |
-   | 3. wire_payload = prompt + "\n" + initial_messages text
+   | 2. wire_payload = prompt + "\n" + initial_messages text
    |    publish MOCK_PROMPT_INSPECTED (PromptInspection over checks)
    |
-   | 4. record initial_messages on the audit recorder
+   | 3. record initial_messages on the audit recorder
    |
-   | 5. publish PLANNER_INVOKED | EXECUTOR_INVOKED |
-   |            VERIFIER_INVOKED | EVALUATOR_INVOKED
+   | 4. config.event_source_factory = scenario_script_for(agent_def.name)
    |
-   | 6. dispatch on agent_def.name:
-   |       "planner"   -&gt; _run_planner(metadata, emit)
-   |       "executor"  -&gt; _run_executor(prompt, metadata, emit)
-   |       "verifier"  -&gt; _run_verifier(prompt, metadata, emit)
-   |       "evaluator" -&gt; _run_evaluator(metadata, emit)
+   | 5. run_ephemeral_agent(...)
+   |       "planner"   -&gt; one scripted planner terminal turn
+   |       "executor"  -&gt; probe/action turns, then execution terminal
+   |       "verifier"  -&gt; checkpoint turn, then verification terminal
+   |       "evaluator" -&gt; one scripted evaluator terminal turn
    |       (anything else raises)
    |
-   | 7. each handler builds a ScenarioContext, asks the scenario for the
-   |    decision, prepends advisor-approval shim, calls the submission
-   |    tool through execute_tool_once, publishes the *_SUCCESS or
-   |    *_FAILURE event, and returns the ToolResult.
-   |
    v
-EphemeralRunResult(status="completed", terminal_result=&lt;ToolResult&gt;, agent_name, event_count=1)
+EphemeralRunResult from the real query loop
 </pre>
 <div class="edge-list" aria-label="Handler responsibilities">
-  <div><b>_run_planner</b><span>Reads <code>scenario.planner_response(ctx)</code> (or <code>mutable_state.consume_next_planner_response()</code> when one is queued), gates the terminal with the advisor-approval shim, calls the submission tool, and emits <code>PLANNER_COMPLETES_GOAL_PLAN</code> or <code>PLANNER_DEFERS_GOAL_PLAN</code> with the plan summary.</span></div>
-  <div><b>_run_executor</b><span>Walks <code>scenario.executor_actions(ctx)</code>. <code>fail</code>/<code>fail:reason</code> submits <code>submit_execution_blocker</code>. <code>request_recursive_workflow:&lt;pkg&gt;</code> or <code>request_recursive_matrix:&lt;pkg&gt;</code> submits <code>submit_execution_handoff</code> with the scenario's recursive-handoff goal. Otherwise the action name selects a probe (<code>preflight</code>, <code>sandbox_integrity</code>, <code>final_probe</code>, <code>inspect_user_input</code>, <code>execute_package:&lt;id&gt;</code>, dozens of probe-mode tokens) and ends with <code>submit_execution_success</code>.</span></div>
-  <div><b>_run_verifier</b><span>Runs the verifier-checkpoint script (a readback probe targeting the requirement ledger, recursive close report, or final reconciliation file). Calls <code>scenario.verifier_response(ctx)</code> and submits success/failure with the parsed checkpoint payload. Composite scenarios use the <code>full_stack</code> checkpoint script variant.</span></div>
-  <div><b>_run_evaluator</b><span>Plain submission of <code>scenario.evaluator_response(ctx)</code> with the advisor-approval shim prepended.</span></div>
+  <div><b>planner script</b><span>Reads <code>scenario.planner_response(ctx)</code>, calls <code>ask_advisor</code>, then emits the chosen planner terminal turn.</span></div>
+  <div><b>executor script</b><span>Walks <code>scenario.executor_actions(ctx)</code>. Failure and handoff tokens emit the matching terminal turns; probe tokens bridge one real-loop tool turn per probe call and end with <code>submit_execution_success</code>.</span></div>
+  <div><b>verifier script</b><span>Runs the verifier-checkpoint script (a readback probe targeting the requirement ledger, recursive close report, or final reconciliation file), calls <code>ask_advisor</code>, and emits the scenario's verifier terminal turn.</span></div>
+  <div><b>evaluator script</b><span>Calls <code>ask_advisor</code> and emits <code>scenario.evaluator_response(ctx)</code> as the evaluator terminal turn.</span></div>
 </div>
 </section>
 
@@ -226,32 +216,30 @@ EphemeralRunResult(status="completed", terminal_result=&lt;ToolResult&gt;, agent
 </div>
 </section>
 
-<section id="advisor-shim" data-last-reviewed-commit="c8f6bcde0c63c7ec004545128d186853df5dcde1" data-evidence-paths="backend/src/task_center_runner/agent/mock/_advisor_approval.py backend/src/task_center_runner/agent/mock/runner.py">
-<h2>Advisor-Approval Shim <a class="anchor" href="#advisor-shim">#</a></h2>
-<p>The mock squad bypasses the engine loop, so <code>conversation_messages</code> arrives empty and every gated terminal would trip <code>AdvisorApprovalPreHook</code>. The shim injects the same two-message pair the engine would have produced when an agent calls <code>ask_advisor</code> followed by an advisor approval verdict for the specific terminal being submitted.</p>
-<pre class="diagram" aria-label="Advisor-approval injection diagram">
-runner builds metadata for terminal tool T
+<section id="advisor-shim" data-last-reviewed-commit="c8f6bcde0c63c7ec004545128d186853df5dcde1" data-evidence-paths="backend/src/task_center_runner/agent/mock/scenario_adapter.py backend/src/task_center_runner/agent/mock/_advisor_approval.py">
+<h2>Advisor-Approval Flow <a class="anchor" href="#advisor-shim">#</a></h2>
+<p>Scenario scripts call the real <code>ask_advisor</code> tool before gated terminal submissions, so <code>AdvisorApprovalPreHook</code> sees the same transcript shape as a real agent. <code>build_advisor_approval_messages</code> remains as a focused test helper for direct dispatch negative-path contracts.</p>
+<pre class="diagram" aria-label="Advisor approval flow diagram">
+scenario script wants terminal tool T
    |
    v
-_approve_terminal(metadata, T):
-   existing = metadata.get("conversation_messages") or []
-   gated["conversation_messages"] = (
-       build_advisor_approval_messages(tool_name=T.name)
-       + existing
-   )
-   return gated
+yield ask_advisor(tool_name=T.name, tool_payload=...)
    |
    v
-execute_tool_once(T, args, gated_metadata, emit)
+query loop records assistant tool_use + advisor tool_result
    |
    v
-AdvisorApprovalPreHook sees the matching approval message pair
+yield terminal tool T
+   |
+   v
+AdvisorApprovalPreHook sees the matching ask_advisor result
    and lets the terminal submission proceed.
 
-Negative path: pass the WRONG tool name to _approve_terminal and the
-hook still fires, confirming the gate is not a no-op.
+Negative path: direct dispatch tests pass the WRONG tool name through
+build_advisor_approval_messages and the hook still fires, confirming
+the gate is not a no-op.
 </pre>
-<p>The shim is the smallest thing that lets every gated terminal test ride the production code path without re-implementing the engine loop.</p>
+<p>The helper is only for direct dispatch tests; scenario runs use the production helper-tool path.</p>
 </section>
 
 <section id="mock-events" data-last-reviewed-commit="c8f6bcde0c63c7ec004545128d186853df5dcde1" data-evidence-paths="backend/src/task_center_runner/audit/events.py backend/src/task_center_runner/agent/mock/prompt_inspector.py backend/src/task_center_runner/agent/mock/sandbox_probe.py backend/src/task_center_runner/scenarios/lifecycle.py">
@@ -259,13 +247,13 @@ hook still fires, confirming the gate is not a no-op.
 <p>Four <code>EventType</code> values exist only for the mock lane. Real-agent and benchmark runs never emit them; subscribers must tolerate absence.</p>
 <div class="edge-list" aria-label="Mock side-channel events">
   <div><b>MOCK_LAUNCH_RECORDED</b><span><code>LaunchRecord(task_id, attempt_id, agent_name, role, prompt_preview)</code>. Published at the top of every <code>__call__</code> so the report shows every dispatch.</span></div>
-  <div><b>MOCK_TOOL_CALL_RECORDED</b><span><code>ToolCallRecord(task_id, tool_name, is_error, metadata)</code>. Published from <code>_record_tool_check</code> after every sandbox tool call inside a probe or script step.</span></div>
+  <div><b>MOCK_TOOL_CALL_RECORDED</b><span><code>ToolCallRecord(task_id, tool_name, is_error, metadata)</code>. Published from real loop <code>ToolExecutionCompletedEvent</code> records.</span></div>
   <div><b>MOCK_PROMPT_INSPECTED</b><span><code>PromptInspection(task_id, agent_name, role, checks, justification)</code>. Published once per dispatch; <code>passed</code> ANDs every check.</span></div>
   <div><b>MOCK_SANDBOX_CHECK_RECORDED</b><span><code>SandboxCheck(name, passed, detail, changed_paths)</code>. Published from probes that go through <code>sandbox_api</code> directly (batch edit, conflict detection, intentional conflict).</span></div>
 </div>
 <div class="summary">
   <ul>
-    <li><code>ScenarioLifecycle.on_event</code> decodes each payload into the typed record and appends it to the matching list; <code>run_scenario</code> copies those lists into the legacy <code>RunReport</code>.</li>
+    <li><code>ScenarioLifecycle.on_event</code> decodes each payload into the typed record and appends it to the matching list; <code>run_scenario</code> copies those lists into <code>RunReport</code>.</li>
     <li>The <code>RunReport.passed_prompt_inspections</code> and <code>passed_sandbox_checks</code> properties AND the boolean fields across every recorded item — so a single failed probe in a long scenario makes the whole report fail.</li>
   </ul>
 </div>

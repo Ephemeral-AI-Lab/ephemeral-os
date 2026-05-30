@@ -10,7 +10,6 @@ from typing import Any
 import pytest
 
 from task_center_runner.benchmarks.sweevo.models import SWEEvoInstance
-from task_center_runner.audit.events import EventType
 from task_center_runner.core.runner import RunReport
 from task_center_runner.core.stores import TaskCenterStoreBundle
 from task_center_runner.environments.sweevo_image.fixtures import (
@@ -41,14 +40,6 @@ class ComplexProjectBuildShellEditLspThreeParallelAgents(ScenarioBase):
     """Three dependency-free executor tasks inside one TaskCenter run."""
 
     name = "sandbox.complex_project_build_shell_edit_lsp_three_parallel_agents"
-    expected_event_sequence: tuple[EventType, ...] = (
-        EventType.PLANNER_INVOKED,
-        EventType.PLANNER_COMPLETES_GOAL_PLAN,
-        EventType.EXECUTOR_INVOKED,
-        EventType.EXECUTOR_SUCCESS,
-        EventType.EVALUATOR_INVOKED,
-        EventType.EVALUATOR_SUCCESS,
-    )
 
     def planner_response(self, ctx: ScenarioContext) -> ToolCallSpec:  # noqa: ARG002
         return ToolCallSpec(submit_plan_closes_goal, _three_agent_plan())

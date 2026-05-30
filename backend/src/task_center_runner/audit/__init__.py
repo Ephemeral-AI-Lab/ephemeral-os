@@ -1,4 +1,4 @@
-"""Audit subpackage — event bus, recorder, metrics, and compatibility sinks."""
+"""Audit subpackage — event bus, recorder, metrics, and sandbox event bridges."""
 
 from __future__ import annotations
 

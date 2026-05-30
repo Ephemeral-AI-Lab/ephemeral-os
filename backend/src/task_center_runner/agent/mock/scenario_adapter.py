@@ -39,7 +39,6 @@ from task_center_runner.scenarios.base import ScenarioContext, ToolCallSpec
 if TYPE_CHECKING:
     from agents import AgentDefinition
     from engine.query.context import QueryContext
-    from task_center_runner.hooks.registry import MutableMockState
     from task_center_runner.scenarios.base import Scenario
 
 
@@ -76,7 +75,6 @@ def build_scenario_context(
     metadata: Any,
     *,
     prompt: str,
-    mutable_state: "MutableMockState | None",
     audit_recorder: Any | None,
 ) -> ScenarioContext:
     """Build the live :class:`ScenarioContext` from loop ``tool_metadata``."""
@@ -92,7 +90,6 @@ def build_scenario_context(
         prompt=prompt,
         metadata=metadata,
         audit_recorder=audit_recorder,
-        mutable_state=mutable_state,
         task_id=task_id or None,
         agent_name=str(metadata.agent_name or "") or None,
         context_message=(str(task.get("context_message") or "") if task else None),
@@ -130,13 +127,8 @@ def _ask_advisor_turn(tool_name: str, tool_payload: dict[str, Any]) -> Turn:
 async def _planner_script(
     scenario: "Scenario",
     ctx: ScenarioContext,
-    mutable_state: "MutableMockState | None",
 ) -> TurnScript:
-    injected = None
-    if mutable_state is not None:
-        consume = getattr(mutable_state, "consume_next_planner_response", None)
-        injected = consume() if callable(consume) else None
-    spec = injected or scenario.planner_response(ctx)
+    spec = scenario.planner_response(ctx)
     _ = yield _ask_advisor_turn(spec.tool.name, spec.args)
     _ = yield _spec_turn(spec)
 
@@ -153,22 +145,14 @@ async def _verifier_script(scenario: "Scenario", ctx: ScenarioContext) -> TurnSc
     _ = yield _spec_turn(spec)
 
 
-async def _advisor_script(
-    mutable_state: "MutableMockState | None",
-) -> TurnScript:
+async def _advisor_script() -> TurnScript:
     """Advisor sub-agent (spawned by ``ask_advisor``): approve.
 
     Its ``submit_advisor_feedback`` terminal is ungated, so this is a single
-    turn. Negative-path scenarios will inject a ``reject`` verdict here.
+    turn.
     """
     verdict = "approve"
     summary = "Mock advisor approval."
-    if mutable_state is not None:
-        consume = getattr(mutable_state, "consume_advisor_verdict", None)
-        injected = consume() if callable(consume) else None
-        if injected:
-            verdict = injected
-            summary = f"Mock advisor {verdict}."
     _ = yield Turn(
         calls=(
             ToolCall(
@@ -182,7 +166,6 @@ async def _advisor_script(
 async def _executor_script(
     scenario: "Scenario",
     ctx: ScenarioContext,
-    mutable_state: "MutableMockState | None",
     probe_ctx: ProbeContext,
 ) -> TurnScript:
     """Drive each ``executor_actions`` probe coroutine, then submit success.
@@ -283,7 +266,6 @@ def scenario_script_for(
     agent_def: "AgentDefinition",
     context: "QueryContext",
     *,
-    mutable_state: "MutableMockState | None" = None,
     audit_recorder: Any | None = None,
     bus: Any | None = None,
     repo_dir: str = "",
@@ -297,21 +279,20 @@ def scenario_script_for(
     # Helper sub-agents (advisor) carry no TaskCenter attempt context — script
     # them before touching ``tool_metadata``.
     if role == "advisor":
-        return _advisor_script(mutable_state)
+        return _advisor_script()
     ctx = build_scenario_context(
         scenario,
         context.tool_metadata,
         prompt="",
-        mutable_state=mutable_state,
         audit_recorder=audit_recorder,
     )
     if role == "planner":
-        return _planner_script(scenario, ctx, mutable_state)
+        return _planner_script(scenario, ctx)
     if role == "executor":
         probe_ctx = ProbeContext(
             metadata=context.tool_metadata, repo_dir=repo_dir, bus=bus
         )
-        return _executor_script(scenario, ctx, mutable_state, probe_ctx)
+        return _executor_script(scenario, ctx, probe_ctx)
     if role == "verifier":
         return _verifier_script(scenario, ctx)
     if role == "evaluator":

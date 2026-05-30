@@ -233,10 +233,9 @@ class MetricsAggregator:
     def _pop_start(self, event: Event) -> "_ToolStart | None":
         """Match a completion to its open start.
 
-        Prefer the exact ``(tool_name, tool_use_id, agent_run_id)`` key (the old
-        MockSquadRunner hand-emitted ``TOOL_CALL_STARTED`` with the tool_use_id).
-        The real query loop emits ``TOOL_CALL_STARTED`` from ``execute_tool_once``
-        WITHOUT a tool_use_id (only the completion carries it), so fall back to
+        Prefer the exact ``(tool_name, tool_use_id, agent_run_id)`` key. The
+        real query loop emits ``TOOL_CALL_STARTED`` from ``execute_tool_once``
+        without a tool_use_id (only the completion carries it), so fall back to
         the open start for the same ``(tool_name, agent_run_id)`` — the loop
         dispatches an agent's tools sequentially, so at most one is open.
         """

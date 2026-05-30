@@ -58,7 +58,6 @@ from tools.submission.planner import (
     submit_plan_defers_goal,
 )
 
-from task_center_runner.audit.events import EventType
 from task_center_runner.scenarios._scenario_helpers import (
     preflight_full_plan,
     preflight_defers_plan,
@@ -98,30 +97,6 @@ class InitialMessagesCapture(ScenarioBase):
     # informational only.
     call_helpers_in_executor: bool = False
 
-    expected_event_sequence: tuple[EventType, ...] = (
-        # Iteration 1 attempt 1 — full submission then evaluator failure.
-        EventType.PLANNER_INVOKED,
-        EventType.PLANNER_COMPLETES_GOAL_PLAN,
-        EventType.EXECUTOR_INVOKED,
-        EventType.EXECUTOR_SUCCESS,
-        EventType.EVALUATOR_INVOKED,
-        EventType.EVALUATOR_FAILURE,
-        # Iteration 1 attempt 2 — planner submits partial plan after seeing
-        # the rich failed-attempt block from attempt 1.
-        EventType.PLANNER_INVOKED,
-        EventType.PLANNER_DEFERS_GOAL_PLAN,
-        EventType.EXECUTOR_INVOKED,
-        EventType.EXECUTOR_SUCCESS,
-        EventType.EVALUATOR_INVOKED,
-        EventType.EVALUATOR_SUCCESS,
-        # Iteration 2 — full plan after continuation.
-        EventType.PLANNER_INVOKED,
-        EventType.PLANNER_COMPLETES_GOAL_PLAN,
-        EventType.EXECUTOR_INVOKED,
-        EventType.EXECUTOR_SUCCESS,
-        EventType.EVALUATOR_INVOKED,
-        EventType.EVALUATOR_SUCCESS,
-    )
 
     def planner_response(self, ctx: ScenarioContext) -> ToolCallSpec:
         if ctx.iteration.sequence_no == 1:

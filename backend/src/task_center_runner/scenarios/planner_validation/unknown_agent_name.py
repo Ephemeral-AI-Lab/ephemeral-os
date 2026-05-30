@@ -8,7 +8,6 @@ from typing import Any
 from tools.submission.evaluator import submit_evaluation_failure
 from tools.submission.planner import submit_plan_closes_goal
 
-from task_center_runner.audit.events import EventType
 from task_center_runner.scenarios.base import ScenarioBase, ScenarioContext, ToolCallSpec
 
 
@@ -27,10 +26,6 @@ class PlannerUnknownAgentName(ScenarioBase):
     """Plan references an unknown generator-capable agent."""
 
     name = "planner_validation.unknown_agent_name"
-    expected_event_sequence: tuple[EventType, ...] = (
-        EventType.PLANNER_INVOKED,
-        EventType.PLANNER_INVOKED,
-    )
 
     def planner_response(self, ctx: ScenarioContext) -> ToolCallSpec:  # noqa: ARG002
         return ToolCallSpec(submit_plan_closes_goal, _unknown_agent_plan())

@@ -191,7 +191,7 @@ class MultiAgentEventPrinter:
 
     def emit(self, event: StreamEvent) -> None:
         agent = getattr(event, "agent_name", "") or "?"
-        run_id = getattr(event, "run_id", "")
+        run_id = getattr(event, "agent_run_id", "")
         totals = self._agent_totals_for(agent)
         lane = self._lane_for(agent, run_id)
 

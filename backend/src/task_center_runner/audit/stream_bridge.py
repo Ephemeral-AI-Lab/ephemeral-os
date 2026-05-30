@@ -28,7 +28,7 @@ def stream_bridge(
             node = NodeId(
                 task_center_run_id=task_center_run_id,
                 agent_name=stream_event.agent_name or None,
-                agent_run_id=stream_event.run_id or None,
+                agent_run_id=stream_event.agent_run_id or None,
                 tool_name=stream_event.tool_name or None,
             )
             bus.publish(
@@ -47,7 +47,7 @@ def stream_bridge(
             node = NodeId(
                 task_center_run_id=task_center_run_id,
                 agent_name=stream_event.agent_name or None,
-                agent_run_id=stream_event.run_id or None,
+                agent_run_id=stream_event.agent_run_id or None,
                 tool_name=stream_event.tool_name or None,
             )
             event_type = (

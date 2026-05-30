@@ -1,11 +1,10 @@
 """``ScenarioLoopRunner`` — thin AttemptAgentRunner that drives mock agents
 through the REAL ``run_ephemeral_agent`` via an injected ``ScenarioEventSource``.
 
-Replaces the imperative ``MockSquadRunner`` engine: instead of hand-executing
-tools and hand-emitting lifecycle events, it scripts each agent's turns through
-the scenario adapter and lets the real query loop dispatch tools, enforce
-terminal-alone, and count budget. It keeps only the harness-observability
-responsibilities the report needs:
+Instead of hand-executing tools and hand-emitting lifecycle events, it scripts
+each agent's turns through the scenario adapter and lets the real query loop
+dispatch tools, enforce terminal-alone, and count budget. It keeps only the
+harness-observability responsibilities the report needs:
 
 * ``MOCK_LAUNCH_RECORDED`` (RunReport.launches),
 * ``MOCK_TOOL_CALL_RECORDED`` bridged from the loop's
@@ -41,7 +40,6 @@ if TYPE_CHECKING:
     from agents import AgentDefinition
     from runtime.app_factory import RuntimeConfig
     from task_center_runner.audit.bus import AuditEventBus
-    from task_center_runner.hooks.registry import MutableMockState
     from task_center_runner.scenarios.base import Scenario
 
 
@@ -66,7 +64,7 @@ def make_mock_runtime_config(repo_dir: str) -> "RuntimeConfig":
     """A ``RuntimeConfig`` for the mock path — carries ``cwd`` + the stub client.
 
     ``event_source_factory`` is left unset here; ``ScenarioLoopRunner`` sets it
-    per run (it needs the scenario/mutable-state it was built with)."""
+    per run because it needs the scenario it was built with."""
     from runtime.app_factory import RuntimeConfig
 
     return RuntimeConfig(cwd=repo_dir, external_api_client=_UnusedApiClient())
@@ -81,13 +79,11 @@ class ScenarioLoopRunner:
         repo_dir: str,
         bus: "AuditEventBus | None" = None,
         scenario: "Scenario",
-        mutable_state: "MutableMockState | None" = None,
         audit_recorder: Any | None = None,
     ) -> None:
         self._repo_dir = repo_dir
         self._bus = bus
         self._scenario = scenario
-        self._mutable_state = mutable_state
         self._audit_recorder = audit_recorder
 
     def bind_audit_recorder(self, audit_recorder: Any | None) -> None:
@@ -99,7 +95,6 @@ class ScenarioLoopRunner:
                 self._scenario,
                 agent_def,
                 context,
-                mutable_state=self._mutable_state,
                 audit_recorder=self._audit_recorder,
                 bus=self._bus,
                 repo_dir=self._repo_dir,
@@ -164,7 +159,7 @@ class ScenarioLoopRunner:
         The mock harness is deliberately deterministic and can issue thousands
         of scripted tool calls in one executor run. The production hard ceiling
         still exists; this only raises the scenario-local executor profile so
-        the real query loop, not ``MockSquadRunner``, owns those calls.
+        the real query loop owns those calls.
         """
         if agent_def.name != "executor":
             return agent_def
@@ -237,9 +232,9 @@ class ScenarioLoopRunner:
     ) -> PromptInspection:
         """Verify the launch payload carries the right XML envelopes for the role.
 
-        Only the four squad roles reach ``ScenarioLoopRunner.__call__`` (advisor /
-        explorer sub-agents are spawned inside the loop), so those branches cover
-        every inspected agent.
+        Only the four main TaskCenter roles reach ``ScenarioLoopRunner.__call__``
+        (advisor / explorer sub-agents are spawned inside the loop), so those
+        branches cover every inspected agent.
         """
         # Dispatch by profile name: executor/verifier share the generator role
         # but render distinct context envelopes.
@@ -354,10 +349,11 @@ def _md_get(md: Any, key: str) -> Any:
 
 
 def _stream_run_id(md: Any) -> str:
+    # Pre-mint site (runs before run_ephemeral_agent mints the agent_run_id),
+    # so task_center_task_id is the only stable id available here.
     return str(
         _md_get(md, "task_center_task_id")
         or getattr(md, "agent_run_id", None)
-        or _md_get(md, "run_id")
         or ""
     )
 

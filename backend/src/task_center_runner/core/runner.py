@@ -1,17 +1,18 @@
 """``run_scenario`` — thin shim around :func:`task_center_runner.core.engine.run_pipeline`.
 
-The legacy ``run_scenario`` contract is preserved (same arguments, same
-:class:`RunReport` shape — see
-``tests/golden/run_report_structural.json``), but the actual orchestration
-now happens inside :func:`task_center_runner.core.engine.run_pipeline`.
+The actual orchestration happens inside
+:func:`task_center_runner.core.engine.run_pipeline`; this shim wires a
+``ScenarioLoopRunner`` into the core engine and rebuilds the mock-specific
+``RunReport`` view from captured audit events and TaskCenter store state.
 
 What the shim adds on top of the engine:
 
 - Constructs ``RunConfig`` via :func:`build_scenario_config` so the
-  ``ScenarioLoopRunner`` factory, ``MutableMockState``, ``HookSet``, and
-  ``ScenarioLifecycle`` all share state inside one place.
-- Rebuilds the legacy ``RunReport`` view from ``ScenarioLifecycle`` event
-  accumulation and the ``PipelineReport`` returned by the engine.
+  ``ScenarioLoopRunner`` factory and ``ScenarioLifecycle`` are wired in one
+  place.
+- Rebuilds the ``RunReport`` view from ``ScenarioLifecycle`` event
+  accumulation, ``MOCK_*`` records, and the ``PipelineReport`` returned by the
+  engine.
 - Owns the ``TaskCenterStoreBundle`` lifecycle: passes the bundle to
   ``run_pipeline`` via ``config.stores`` so the engine does not close it,
   then computes :func:`_graph_summary` against the still-open stores before
@@ -25,17 +26,12 @@ import contextlib
 import dataclasses as _dataclasses
 import hashlib
 import uuid
-from collections.abc import Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from task_center_runner.audit.events import Event, EventType
+from task_center_runner.audit.events import Event
 from task_center_runner.core.engine import run_pipeline
-from task_center_runner.hooks.registry import (
-    Hook,
-    HookResult,
-)
 from task_center_runner.scenarios.base import Scenario
 from task_center_runner.scenarios.builder import build_scenario_config
 from task_center_runner.agent.mock.definitions import registered_mock_agents  # noqa: F401 — re-export
@@ -64,9 +60,6 @@ class RunReport:
     task_center_status: str | None
     duration_s: float
     events: list[Event] = field(default_factory=list)
-    seen_event_types: list[EventType] = field(default_factory=list)
-    hook_results: list[HookResult] = field(default_factory=list)
-    mutable_state_flags: dict[str, Any] = field(default_factory=dict)
     launches: list[LaunchRecord] = field(default_factory=list)
     tool_calls: list[ToolCallRecord] = field(default_factory=list)
     prompt_inspections: list[PromptInspection] = field(default_factory=list)
@@ -154,10 +147,15 @@ def _active_mock_model(bundle: TaskCenterStoreBundle):
     funnel through here, so none need a per-test fixture.
     """
     from config.model_config import get_active_model_kwargs
-    from runtime.app_factory import model_store
+    from runtime.app_factory import agent_run_store, model_store
 
     prior_sf = model_store._session_factory  # noqa: SLF001 — restored on exit
     model_store.initialize(bundle.session_factory)
+    # Persist agent_runs against the bundle DB so the audit recorder's
+    # agent_run_id -> task mapping is populated; the mock message.jsonl
+    # streamed-row recorder (engine._on_agent_event) routes by agent_run_id.
+    prior_ars_sf = agent_run_store._session_factory  # noqa: SLF001 — restored on exit
+    agent_run_store.initialize(bundle.session_factory)
     # Skip if a caller (e.g. a proof-test fixture) already activated a model
     # against these stores — avoid a double registration / multiple-active row.
     try:
@@ -182,6 +180,7 @@ def _active_mock_model(bundle: TaskCenterStoreBundle):
             with contextlib.suppress(Exception):
                 model_store.delete(key)
         model_store._session_factory = prior_sf  # noqa: SLF001
+        agent_run_store._session_factory = prior_ars_sf  # noqa: SLF001
 
 
 async def run_scenario(
@@ -192,26 +191,24 @@ async def run_scenario(
     repo_dir: str,
     entry_prompt: str,
     stores: TaskCenterStoreBundle | None = None,
-    extra_hooks: Sequence[Hook] = (),
     instance_id: str = "",
 ) -> RunReport:
     """Run *scenario* end-to-end against ``sandbox_id``.
 
-    Thin shim over :func:`run_pipeline`. The legacy ``RunReport`` view is
-    rebuilt from the ``PipelineReport`` plus state accumulated by the
-    ``ScenarioLifecycle`` and the ``ScenarioLoopRunner`` instance captured via
-    a wrapped ``runner_factory``.
+    Thin shim over :func:`run_pipeline`. The ``RunReport`` view is rebuilt from
+    the ``PipelineReport`` plus state accumulated by the ``ScenarioLifecycle``
+    and the ``ScenarioLoopRunner`` instance captured via a wrapped
+    ``runner_factory``.
     """
     owns_stores = stores is None
     bundle = stores or create_per_test_task_center_stores()
 
-    config, mutable_state, lifecycle = build_scenario_config(
+    config, lifecycle = build_scenario_config(
         scenario,
         sandbox_id=sandbox_id,
         audit_dir=audit_dir,
         repo_dir=repo_dir,
         entry_prompt=entry_prompt,
-        extra_hooks=extra_hooks,
         instance_id=instance_id,
     )
 
@@ -238,9 +235,6 @@ async def run_scenario(
         task_center_status=pipeline_report.task_center_status,
         duration_s=pipeline_report.duration_s,
         events=list(lifecycle.captured_events),
-        seen_event_types=list(mutable_state.seen_events),
-        hook_results=list(lifecycle.hook_results),
-        mutable_state_flags=dict(mutable_state.flags),
         launches=list(lifecycle.launches),
         tool_calls=list(lifecycle.tool_calls),
         prompt_inspections=list(lifecycle.prompt_inspections),

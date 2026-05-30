@@ -19,8 +19,6 @@ from tools.submission.planner import (
     submit_plan_defers_goal,
 )
 
-from task_center_runner.audit.events import EventType
-from task_center_runner.hooks.registry import Hook
 from task_center_runner.scenarios.base import (
     ScenarioBase,
     ScenarioContext,
@@ -99,28 +97,6 @@ class CorrectnessTesting(ScenarioBase):
     """Single composite scenario validating framework end-to-end."""
 
     name = "correctness_testing"
-    expected_event_sequence: tuple[EventType, ...] = (
-        EventType.PLANNER_INVOKED,
-        EventType.PLANNER_COMPLETES_GOAL_PLAN,
-        EventType.EXECUTOR_INVOKED,
-        EventType.EXECUTOR_SUCCESS,
-        EventType.EVALUATOR_INVOKED,
-        EventType.EVALUATOR_FAILURE,
-        EventType.PLANNER_INVOKED,
-        EventType.PLANNER_DEFERS_GOAL_PLAN,
-        EventType.EXECUTOR_INVOKED,
-        EventType.SANDBOX_BATCH_EDIT_APPLIED,
-        EventType.SANDBOX_CONFLICT_DETECTED,
-        EventType.EXECUTOR_SUCCESS,
-        EventType.EVALUATOR_INVOKED,
-        EventType.EVALUATOR_SUCCESS,
-        EventType.PLANNER_INVOKED,
-        EventType.PLANNER_COMPLETES_GOAL_PLAN,
-        EventType.EXECUTOR_INVOKED,
-        EventType.EXECUTOR_SUCCESS,
-        EventType.EVALUATOR_INVOKED,
-        EventType.EVALUATOR_SUCCESS,
-    )
 
     def planner_response(self, ctx: ScenarioContext) -> ToolCallSpec:
         iteration = ctx.iteration
@@ -162,9 +138,6 @@ class CorrectnessTesting(ScenarioBase):
                 "passed_criteria": list(attempt.evaluation_criteria),
             },
         )
-
-    def hooks(self) -> Sequence[Hook]:
-        return ()
 
 
 __all__ = ["CorrectnessTesting"]

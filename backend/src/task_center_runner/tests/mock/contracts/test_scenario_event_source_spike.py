@@ -3,7 +3,7 @@
 A scripted :class:`ScenarioEventSource` drives a mock agent through the REAL
 ``run_ephemeral_agent`` → query loop on a docker (sweevo) sandbox — i.e. exactly
 the production lifecycle, with only the event *source* swapped. This validates
-the approach before the MockSquadRunner migration:
+the scripted event-source approach:
 
   1. **Tool effect through real dispatch** — a scripted ``shell`` call actually
      runs in the sandbox and its output reaches the agent.

@@ -1,7 +1,7 @@
 """EventType enum + Event dataclass for the in-memory audit bus.
 
-Events live in-memory only — they drive hook dispatch and metrics aggregation.
-There is no persisted ``events.jsonl``.
+Events live in-memory only — they drive metrics aggregation. There is no
+persisted ``events.jsonl``.
 
 Phase-timing contract (PLAN §14, isolated_workspace tier)
 ---------------------------------------------------------
@@ -57,24 +57,6 @@ class EventType(StrEnum):
     ATTEMPT_PASSED = "attempt_passed"
     ATTEMPT_FAILED = "attempt_failed"
 
-    # agent invocations
-    PLANNER_INVOKED = "planner_invoked"
-    PLANNER_COMPLETES_GOAL_PLAN = "planner_completes_plan"
-    PLANNER_DEFERS_GOAL_PLAN = "planner_defers_plan"
-    PLANNER_REPLAN = "planner_replan"
-    EXECUTOR_INVOKED = "executor_invoked"
-    EXECUTOR_SUCCESS = "executor_success"
-    EXECUTOR_FAILURE = "executor_failure"
-    VERIFIER_INVOKED = "verifier_invoked"
-    VERIFIER_SUCCESS = "verifier_success"
-    VERIFIER_FAILURE = "verifier_failure"
-    EVALUATOR_INVOKED = "evaluator_invoked"
-    EVALUATOR_SUCCESS = "evaluator_success"
-    EVALUATOR_FAILURE = "evaluator_failure"
-    RECURSIVE_WORKFLOW_REQUESTED = "recursive_workflow_requested"
-    RECURSIVE_WORKFLOW_COMPLETED = "recursive_workflow_completed"
-    FULL_STACK_SCRIPT_COMPLETED = "full_stack_script_completed"
-
     # tools
     TOOL_CALL_STARTED = "tool_call_started"
     TOOL_CALL_COMPLETED = "tool_call_completed"
@@ -99,10 +81,6 @@ class EventType(StrEnum):
     SANDBOX_ISOLATED_WORKSPACE_TOOL_CALL = "sandbox_isolated_workspace_tool_call"
     SANDBOX_ISOLATED_WORKSPACE_EVICTED = "sandbox_isolated_workspace_evicted"
     SANDBOX_ISOLATED_WORKSPACE_GC_ORPHAN = "sandbox_isolated_workspace_gc_orphan"
-
-    # hook synthetic
-    HOOK_INJECTED_FAILURE = "hook_injected_failure"
-    HOOK_ASSERTED = "hook_asserted"
 
     # mock-scenario side-channel events. ScenarioLoopRunner and probe helpers
     # publish these for ScenarioLifecycle to accumulate into the rich RunReport

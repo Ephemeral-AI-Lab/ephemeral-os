@@ -46,7 +46,6 @@ def _ctx(
         prompt=prompt,
         metadata={},
         audit_recorder=None,
-        mutable_state=None,
         task_id="task-id",
         agent_name="executor",
         context_message=context_message,

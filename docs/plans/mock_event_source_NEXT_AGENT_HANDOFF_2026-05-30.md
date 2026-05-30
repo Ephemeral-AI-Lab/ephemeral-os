@@ -1,15 +1,15 @@
-# Next Agent Handoff: mock event-source fallback removal follow-up (2026-05-30)
+# Next Agent Handoff: mock event-source runner deletion follow-up (2026-05-30)
 
 Read this after `docs/plans/mock_event_source_HANDOFF_2026-05-30.md`. That file
 is still the source of truth for Items 3/4/5 design detail; this file is the
-short implementation and testing plan after the fallback-removal pass.
+short implementation and testing plan after the fallback-removal and old-runner
+deletion pass.
 
 ## Current state
 
 - `backend/src/task_center_runner/scenarios/builder.py` now constructs
-  `ScenarioLoopRunner` unconditionally. There is no
-  `_LEGACY_RUNNER_REQUIRED_SCENARIOS` list and no
-  `EOS_MOCK_EVENT_SOURCE_RUNNER` runtime decision.
+  `ScenarioLoopRunner` unconditionally. There is no legacy scenario fallback
+  list and no mock-runner env-var runtime decision.
 - `backend/src/task_center_runner/core/runner.py` now registers the active mock
   model unconditionally for mock scenarios because every mock scenario goes
   through the real query loop.
@@ -22,9 +22,12 @@ short implementation and testing plan after the fallback-removal pass.
     `check_background_task_result` / `wait_background_tasks` /
     `cancel_background_task`;
   - `sandbox.ephemeral_workspace_cancellation`.
-- `MockSquadRunner` is still present, but `build_scenario_config` no longer
-  selects it. Remaining references are direct helper/contract tests and stale
-  documentation, not scenario-runtime fallback routing.
+- The old mock-runner module has been deleted.
+- The direct helper tests that used the old runner have been ported:
+  - `test_runner_imports.py` now checks prompt inspection through
+    `ScenarioLoopRunner`;
+  - `test_advisor_gate_negative_path.py` now uses
+    `build_advisor_approval_messages` directly.
 - The fallback-removal gate verified so far:
   - fast contract/import slice: `16 passed`
   - ephemeral cancellation: `1 passed`
@@ -34,6 +37,8 @@ short implementation and testing plan after the fallback-removal pass.
   - project-build smoke trio: `3 passed`
   - three-parallel project-build diagnostic: `1 passed`
   - runner contract slice without the old env setup: `18 passed`
+  - focused old-runner deletion blockers: `15 passed`
+  - full `tests/mock/contracts` directory after deleting the old runner: `37 passed`
 - A broad `backend/src/task_center_runner/tests/mock` fail-fast run reached the
   end and reported 3 failures. The user explicitly said to ignore them because
   of concurrent worker activity. Do not treat those failures as blockers unless
@@ -63,44 +68,31 @@ Inspect:
 - `backend/src/tools/_framework/execution/tool_call.py`
 
 - `build_scenario_config` returns a `ScenarioLoopRunner` factory only;
-- no env var or scenario-name branch can select `MockSquadRunner`;
+- no env var or scenario-name branch can select an old runner;
 - active mock model setup is unconditional for mock scenarios;
 - tool start events and completion events use the same query-loop run id, so
   performance samples get `started_ts` and `duration_ms`.
 
-### 2. Delete the remaining direct `MockSquadRunner` helper surface
+### 2. Keep the old runner deleted
 
-The remaining deletion blockers are direct tests/helpers, not scenario runtime:
+The deletion blockers have been removed:
 
 - `backend/src/task_center_runner/tests/mock/contracts/test_runner_imports.py`
-  still instantiates `MockSquadRunner` for prompt-inspection/probe-path
-  contracts.
+  now uses `ScenarioLoopRunner`.
 - `backend/src/task_center_runner/tests/mock/contracts/test_advisor_gate_negative_path.py`
-  still calls `MockSquadRunner._approve_terminal`.
-- Several architecture and historical plan docs still describe
-  `MockSquadRunner` as the selected mock runtime.
+  now uses `build_advisor_approval_messages` directly.
+- the old mock-runner module should stay deleted.
 
-Convert those focused tests to the new homes before deleting
-`backend/src/task_center_runner/agent/mock/runner.py`:
-
-- prompt inspection and initial-message capture should stay on
-  `ScenarioLoopRunner` / `prompt_inspector`;
-- advisor approval metadata should move to a small test helper that builds the
-  same conversation message pair without depending on the old runner class.
+Several architecture and historical plan docs still describe the old runner as
+the selected mock runtime. Update maintained architecture pages next; keep older
+historical plans as historical unless they are actively linked from
+`docs/architecture`.
 
 ### 3. Keep test migrations graph-backed
 
-When a migrated scenario still asserts lifecycle events such as:
-
-- `PLANNER_INVOKED`
-- `EXECUTOR_SUCCESS`
-- `VERIFIER_FAILURE`
-- `EVALUATOR_SUCCESS`
-- `RECURSIVE_WORKFLOW_REQUESTED`
-- `FULL_STACK_SCRIPT_COMPLETED`
-
-move the assertion to `report.graph_summary` or persisted task/message
-artifacts. Keep true sandbox events (`SANDBOX_*`) as event assertions.
+When a migrated scenario needs role lifecycle coverage, assert it through
+`report.graph_summary` or persisted task/message artifacts. Keep true sandbox
+events (`SANDBOX_*`) as event assertions.
 
 Useful already-migrated templates:
 
@@ -132,13 +124,12 @@ loop background calls. Intentional stale-inflight tests pass an internal fixed
 sandbox invocation id and disable the supervisor heartbeat for that launched
 task; ordinary background tasks still use the normal heartbeat path.
 
-### 6. Phase-D deletion is the next cleanup pass
+### 6. Phase-D cleanup is now lifecycle-event cleanup
 
-Scenarios now run through `ScenarioLoopRunner`. The deletion pass should:
+Scenarios now run through `ScenarioLoopRunner` and the old runner file is gone.
+The cleanup pass should:
 
-- delete `MockSquadRunner` after the direct helper tests are ported;
-- remove stale `EOS_MOCK_EVENT_SOURCE_RUNNER` references from active tests and
-  maintained architecture docs;
+- remove stale old-runner prose from maintained architecture docs;
 - remove lifecycle-only event assertions and then remove unused lifecycle enum
   members last.
 
@@ -159,7 +150,7 @@ uv run pytest -q -p no:cacheprovider \
 
 ### ScenarioLoopRunner migrated gate
 
-Do not set `EOS_MOCK_EVENT_SOURCE_RUNNER`; it should have no runtime effect.
+Do not set the old mock-runner env var; active code should not read it.
 
 ```bash
 uv run pytest -n 3 -p no:cacheprovider \
@@ -236,8 +227,8 @@ git diff --check
 
 The next agent should report:
 
-- proof that no scenario relies on `_LEGACY_RUNNER_REQUIRED_SCENARIOS`;
-- whether `MockSquadRunner` is still directly referenced by tests/docs and why;
+- proof that no scenario relies on a legacy fallback list;
+- proof that the old runner module remains deleted and no active tests import it;
 - exact pytest commands run and pass/fail counts;
 - exact `.sweevo_runs/scenario_logs/...` paths for any live failures inspected;
 - any failures ignored because they are owned by concurrent agent-profile work.

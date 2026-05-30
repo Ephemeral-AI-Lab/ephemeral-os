@@ -11,9 +11,8 @@ Both attempts in the iteration run the same invalid plan, so iteration 1 closes
 with ``status=failed`` and the workflow closes ``status=failed``. No generator
 or evaluator was launched.
 
-Asserts: ``report.task_center_status == "failed"``; the seen event sequence
-contains two planner invocations, no accepted ``PLANNER_COMPLETES_GOAL_PLAN``, and no
-``EXECUTOR_INVOKED`` or ``EVALUATOR_INVOKED`` events.
+Asserts: ``report.task_center_status == "failed"``; graph state contains two
+planner attempts, no accepted planner task, and no executor or evaluator tasks.
 """
 
 from __future__ import annotations
@@ -24,7 +23,6 @@ from typing import Any
 from tools.submission.evaluator import submit_evaluation_failure
 from tools.submission.planner import submit_plan_closes_goal
 
-from task_center_runner.audit.events import EventType
 from task_center_runner.scenarios.base import ScenarioBase, ScenarioContext, ToolCallSpec
 
 
@@ -46,10 +44,6 @@ class PlannerDuplicateLocalId(ScenarioBase):
     """Planner returns a duplicate-id plan; attempt closes planner_failed."""
 
     name = "planner_validation.duplicate_local_id"
-    expected_event_sequence: tuple[EventType, ...] = (
-        EventType.PLANNER_INVOKED,
-        EventType.PLANNER_INVOKED,
-    )
 
     def planner_response(self, ctx: ScenarioContext) -> ToolCallSpec:  # noqa: ARG002
         return ToolCallSpec(submit_plan_closes_goal, _duplicate_local_id_plan())
@@ -60,8 +54,7 @@ class PlannerDuplicateLocalId(ScenarioBase):
     def evaluator_response(self, ctx: ScenarioContext) -> ToolCallSpec:
         # Should never be invoked — both planner submissions are rejected
         # before the attempt reaches the evaluator stage. The implementation
-        # exists only so the scenario satisfies the protocol; its presence in
-        # ``expected_event_sequence`` is intentionally omitted.
+        # exists only so the scenario satisfies the protocol.
         return ToolCallSpec(
             submit_evaluation_failure,
             {

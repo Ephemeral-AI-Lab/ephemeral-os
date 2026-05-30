@@ -10,7 +10,6 @@ from __future__ import annotations
 import os
 import re
 from collections.abc import AsyncIterator
-from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import IO
@@ -25,7 +24,6 @@ from task_center_runner.benchmarks.sweevo.setup import (
 from task_center_runner.core.runner import RunReport
 from task_center_runner.core.runner import run_scenario as _generic_run_scenario
 from task_center_runner.core.stores import TaskCenterStoreBundle
-from task_center_runner.hooks.registry import Hook
 from task_center_runner.scenarios.base import Scenario
 
 _DEFAULT_INSTANCE_ID = "dask__dask_2023.3.2_2023.4.0"
@@ -48,7 +46,6 @@ async def run_scenario_on_sweevo_image(
     audit_dir: Path,
     stores: TaskCenterStoreBundle | None = None,
     repo_dir: str = _REPO_DIR,
-    extra_hooks: Sequence[Hook] = (),
     user_prompt: str | None = None,
     commit_to_workspace: bool = False,
 ) -> RunReport:
@@ -75,7 +72,6 @@ async def run_scenario_on_sweevo_image(
         repo_dir=repo_dir,
         entry_prompt=entry_prompt,
         stores=stores,
-        extra_hooks=extra_hooks,
         instance_id=instance.instance_id,
     )
     if commit_to_workspace:

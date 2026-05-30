@@ -8,7 +8,6 @@ from typing import Any
 from tools.submission.evaluator import submit_evaluation_success
 from tools.submission.planner import submit_plan_closes_goal
 
-from task_center_runner.audit.events import EventType
 from task_center_runner.scenarios.base import (
     ScenarioBase,
     ScenarioContext,
@@ -34,14 +33,6 @@ def _plan(action_id: str, action_spec: str, summary_hint: str) -> dict[str, Any]
 
 
 class _PluginScenarioBase(ScenarioBase):
-    expected_event_sequence: tuple[EventType, ...] = (
-        EventType.PLANNER_INVOKED,
-        EventType.PLANNER_COMPLETES_GOAL_PLAN,
-        EventType.EXECUTOR_INVOKED,
-        EventType.EXECUTOR_SUCCESS,
-        EventType.EVALUATOR_INVOKED,
-        EventType.EVALUATOR_SUCCESS,
-    )
 
     action_id: str = ""
     action_spec: str = ""

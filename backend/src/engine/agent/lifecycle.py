@@ -142,9 +142,11 @@ async def run_ephemeral_agent(
     if task_id:
         agent.query_context.task_center_task_id = task_id
         agent.query_context.tool_metadata.task_center_task_id = task_id
-    if agent_run_id is not None:
-        agent.query_context.tool_metadata.agent_run_id = agent_run_id
-    agent.query_context.run_id = task_id or agent_run_id or agent.query_context.run_id
+    # ``agent_run_id`` is always minted now; the task id rides its own
+    # dedicated ``task_center_task_id`` field above, so this carries the
+    # agent-run identity truthfully.
+    agent.query_context.tool_metadata.agent_run_id = agent_run_id
+    agent.query_context.agent_run_id = agent_run_id
 
     tool_call_count = 0
     run_error: str | None = None

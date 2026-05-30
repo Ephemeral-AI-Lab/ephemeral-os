@@ -6,7 +6,7 @@ from pathlib import Path
 
 from task_center_runner.audit.bus import AuditEventBus
 from task_center_runner.audit.events import Event, EventType
-from task_center_runner.audit.legacy import LegacySandboxAuditSink
+from task_center_runner.audit.sandbox_event_bridge import SandboxAuditEventBridge
 from task_center_runner.audit.node_id import NodeId
 from task_center_runner.audit.recorder import AuditRecorder
 from task_center_runner.audit.stream_bridge import stream_bridge
@@ -238,10 +238,10 @@ def test_audit_recorder_persists_sandbox_events(tmp_path: Path) -> None:
     assert rows[0]["payload"]["tool_name"] == "write_file"
 
 
-def test_legacy_sandbox_audit_sink_maps_namespaced_events_once(tmp_path: Path) -> None:
+def test_sandbox_audit_event_bridge_maps_namespaced_events_once(tmp_path: Path) -> None:
     bus = AuditEventBus()
     recorder = AuditRecorder(tmp_path / "run", task_center_run_id="run-1", bus=bus)
-    sink = LegacySandboxAuditSink(bus)
+    sink = SandboxAuditEventBridge(bus)
     recorder.start()
     try:
         sink.publish(
@@ -279,10 +279,10 @@ def test_legacy_sandbox_audit_sink_maps_namespaced_events_once(tmp_path: Path) -
     assert rows[0]["payload"]["tool_use_id"] == "toolu_1"
 
 
-def test_legacy_sandbox_audit_sink_maps_resource_snapshot(tmp_path: Path) -> None:
+def test_sandbox_audit_event_bridge_maps_resource_snapshot(tmp_path: Path) -> None:
     bus = AuditEventBus()
     recorder = AuditRecorder(tmp_path / "run", task_center_run_id="run-1", bus=bus)
-    sink = LegacySandboxAuditSink(bus)
+    sink = SandboxAuditEventBridge(bus)
     recorder.start()
     try:
         sink.publish(

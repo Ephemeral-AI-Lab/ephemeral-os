@@ -74,7 +74,7 @@
 <div class="edge-list" aria-label="Page-to-evidence map">
   <div><b><a href="index.html">Overview</a></b><span>Evidence: <code>backend/src/task_center_runner/__init__.py</code>, <code>core/runner.py</code>, <code>core/engine.py</code>, <code>core/config.py</code>, <code>scenarios/__init__.py</code>, <code>benchmarks/sweevo/pipeline.py</code>.</span></div>
   <div><b><a href="core-harness.html">Core Harness</a></b><span>Evidence: <code>backend/src/task_center_runner/core/</code>, <code>backend/src/task_center_runner/audit/</code>.</span></div>
-  <div><b><a href="scenarios.html">Scenarios</a></b><span>Evidence: <code>backend/src/task_center_runner/scenarios/</code>, <code>backend/src/task_center_runner/hooks/</code>.</span></div>
+  <div><b><a href="scenarios.html">Scenarios</a></b><span>Evidence: <code>backend/src/task_center_runner/scenarios/</code>.</span></div>
   <div><b><a href="mocked-agents.html">Mocked Agents</a></b><span>Evidence: <code>backend/src/task_center_runner/agent/mock/</code>.</span></div>
   <div><b><a href="benchmark-sweevo.html">SWE-EVO Benchmark</a></b><span>Evidence: <code>backend/src/task_center_runner/benchmarks/sweevo/</code>, <code>backend/src/task_center_runner/environments/sweevo_image/</code>.</span></div>
   <div><b><a href="tests-layout.html">Test Suites</a></b><span>Evidence: <code>backend/src/task_center_runner/tests/</code>, <code>backend/src/task_center_runner/environments/sweevo_image/</code>.</span></div>
@@ -94,8 +94,7 @@ git diff c8f6bcde0c63c7ec004545128d186853df5dcde1..HEAD \
        backend/src/task_center_runner/audit
 
 git diff c8f6bcde0c63c7ec004545128d186853df5dcde1..HEAD \
-    -- backend/src/task_center_runner/scenarios \
-       backend/src/task_center_runner/hooks
+    -- backend/src/task_center_runner/scenarios
 
 git diff c8f6bcde0c63c7ec004545128d186853df5dcde1..HEAD \
     -- backend/src/task_center_runner/agent/mock
@@ -142,10 +141,10 @@ rg -n 'double-open-bracket|double-close-bracket' docs/architecture/task_center_r
   <div><b>Sweevo CLI location</b><span>Commit <code>f915434df</code> relocated the benchmark to <code>task_center_runner.benchmarks.sweevo</code>. Watch for old <code>backend.benchmark_sweevo</code> references or <code>python -m benchmark_sweevo</code> command lines.</span></div>
   <div><b>RunReport vs PipelineReport</b><span>Mock-rich fields (<code>launches</code>, <code>tool_calls</code>, <code>prompt_inspections</code>, <code>sandbox_checks</code>) live ONLY on <code>RunReport</code>. If a page describes them on <code>PipelineReport</code>, that page is stale.</span></div>
   <div><b>Scenario registry size</b><span>The catalog grows over time. Re-read <code>scenarios/__init__.py::SCENARIO_REGISTRY</code> on every refresh and update the catalog page if new lanes appear.</span></div>
-  <div><b>Probe modes</b><span>New probe-mode tokens are easy to add to the executor dispatcher (<code>runner.py::_run_executor</code>) without updating the mocked-agents page. Grep for new <code>elif action == "..."</code> branches under <code>_run_executor</code> and reflect them in the probe library section.</span></div>
+  <div><b>Probe modes</b><span>New probe-mode tokens are easy to add in <code>scenario_adapter.py</code>, <code>probe_bridge.py</code>, or <code>PROBE_BUILDERS</code> without updating the mocked-agents page. Grep for new action-token branches and reflect them in the probe library section.</span></div>
   <div><b>Daytona vs Docker vocabulary</b><span>Watch for new code that mentions Daytona's <code>state</code> on the sweevo benchmark path. Docker's <code>status</code> is the authoritative key; the benchmark is docker-first.</span></div>
   <div><b>Sandbox label keys</b><span><code>reset_sweevo_workspace</code> reads <code>sweevo_instance</code> and <code>project_dir</code>. New labels or renames here can break workspace reset; verify any change against <code>_provision.py::_sweevo_sandbox_labels</code>.</span></div>
-  <div><b>Bootstrap-required agents</b><span><code>_REQUIRED_AGENT_NAMES</code> in <code>core/bootstrap.py</code> is the canonical list. If markdown profile naming or the registry contract changes, this set and the squad-registry page need to be updated together.</span></div>
+  <div><b>Bootstrap-required agents</b><span><code>_REQUIRED_AGENT_NAMES</code> in <code>core/bootstrap.py</code> is the canonical list. If markdown profile naming or the registry contract changes, this set and the mocked-agents page need to be updated together.</span></div>
 </div>
 </section>
 

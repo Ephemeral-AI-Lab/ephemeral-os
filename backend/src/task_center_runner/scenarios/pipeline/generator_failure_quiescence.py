@@ -20,9 +20,8 @@ failure injection — all four tasks run ``preflight`` and pass; evaluator
 accepts; workflow closes succeeded.
 
 Asserts: 1 workflow (succeeded), 1 iteration, 2 attempts; attempt 1 contains
-exactly three EXECUTOR_INVOKED events (a, b, c) and one EXECUTOR_FAILURE
-(b); ``d`` was NOT executed in attempt 1; attempt 2 contains four
-EXECUTOR_SUCCESS events.
+three executor tasks (a, b, c), one failed executor task (b), and no ``d`` task;
+attempt 2 contains four done executor tasks.
 """
 
 from __future__ import annotations
@@ -33,7 +32,6 @@ from typing import Any
 from tools.submission.evaluator import submit_evaluation_success
 from tools.submission.planner import submit_plan_closes_goal
 
-from task_center_runner.audit.events import EventType
 from task_center_runner.scenarios._scenario_helpers import (
     context_message_field as _field,
 )
@@ -79,20 +77,6 @@ class GeneratorFailureQuiescence(ScenarioBase):
     # Attempt 2: 4 executor pairs all success, evaluator success.
     # Sibling order within an attempt is non-deterministic; the test asserts
     # on event-type multisets rather than positional equality.
-    expected_event_sequence: tuple[EventType, ...] = (
-        EventType.PLANNER_INVOKED,
-        EventType.PLANNER_COMPLETES_GOAL_PLAN,
-        # Attempt 1 sibling executor events interleave. The stable signal is
-        # the injected generator failure before the retry planner invocation.
-        EventType.EXECUTOR_FAILURE,
-        # Attempt 2 — fresh planner, all four nodes succeed, evaluator passes.
-        EventType.PLANNER_INVOKED,
-        EventType.PLANNER_COMPLETES_GOAL_PLAN,
-        EventType.EXECUTOR_INVOKED,
-        EventType.EXECUTOR_SUCCESS,
-        EventType.EVALUATOR_INVOKED,
-        EventType.EVALUATOR_SUCCESS,
-    )
 
     def planner_response(self, ctx: ScenarioContext) -> ToolCallSpec:  # noqa: ARG002
         return ToolCallSpec(submit_plan_closes_goal, _three_plus_one_plan())

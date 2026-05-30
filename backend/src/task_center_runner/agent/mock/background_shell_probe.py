@@ -62,8 +62,8 @@ SUMMARY_SCHEMA = "task_center_runner.background_shell.v1"
 BACKGROUND_IWS_LAYER_STACK_ROOT = "/tmp/eos-sandbox-runtime/layer-stack"
 
 EmitStreamEvent = Callable[[StreamEvent], Awaitable[None]]
-# call_tool signature with the new background_task_id parameter we plumbed
-# through ``runner.py:_call_tool``.
+# call_tool signature includes the background_task_id compatibility parameter
+# consumed by the ScenarioLoopRunner bridge.
 CallTool = Callable[..., Awaitable[ToolResult]]
 RecordToolCheck = Callable[[str, ToolResult], None]
 _BACKGROUND_DRAIN_TIMEOUT_S = 10.0

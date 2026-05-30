@@ -2,7 +2,7 @@
 
 Scenarios are pure descriptions; the mock runner translates them into actual
 tool calls. The protocol is intentionally narrow: planner/executor/verifier/
-evaluator decisions, optional recursive-handoff goal text, and hooks.
+evaluator decisions and optional recursive-handoff goal text.
 """
 
 from __future__ import annotations
@@ -10,9 +10,6 @@ from __future__ import annotations
 from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Any, Protocol, runtime_checkable
-
-from task_center_runner.audit.events import EventType
-from task_center_runner.hooks.registry import Hook
 
 
 @dataclass(frozen=True, slots=True)
@@ -33,7 +30,6 @@ class ScenarioContext:
     prompt: str
     metadata: Any  # ExecutionMetadata
     audit_recorder: Any  # AuditRecorder | None
-    mutable_state: Any  # MutableMockState | None
     task_id: str | None = None
     agent_name: str | None = None
     context_message: str | None = None
@@ -48,7 +44,6 @@ class Scenario(Protocol):
     """A scenario that drives one mock-agent run end-to-end."""
 
     name: str
-    expected_event_sequence: tuple[EventType, ...]
 
     def planner_response(self, ctx: ScenarioContext) -> ToolCallSpec: ...
 
@@ -60,18 +55,14 @@ class Scenario(Protocol):
 
     def recursive_handoff_goal(self, ctx: ScenarioContext) -> str | None: ...
 
-    def hooks(self) -> Sequence[Hook]: ...
-
 
 class ScenarioBase:
     """Default implementation of the Scenario protocol.
 
-    Subclasses override the decision methods they need. ``hooks()`` defaults to
-    no hooks.
+    Subclasses override the decision methods they need.
     """
 
     name: str = ""
-    expected_event_sequence: tuple[EventType, ...] = ()
 
     def planner_response(self, ctx: ScenarioContext) -> ToolCallSpec:  # noqa: ARG002
         raise NotImplementedError
@@ -87,9 +78,6 @@ class ScenarioBase:
 
     def recursive_handoff_goal(self, ctx: ScenarioContext) -> str | None:  # noqa: ARG002
         return None
-
-    def hooks(self) -> Sequence[Hook]:
-        return ()
 
 
 __all__ = [

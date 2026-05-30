@@ -19,8 +19,6 @@ from tools.submission.planner import (
     submit_plan_defers_goal,
 )
 
-from task_center_runner.audit.events import EventType
-from task_center_runner.hooks.registry import Hook
 from task_center_runner.scenarios.base import (
     ScenarioBase,
     ScenarioContext,
@@ -53,16 +51,6 @@ class FullStackAdversarial(ScenarioBase):
     """Drive TaskCenter, sandbox, OCC, layer-stack, LSP, and recursion."""
 
     name = "full_stack_adversarial"
-    expected_event_sequence: tuple[EventType, ...] = (
-        EventType.PLANNER_INVOKED,
-        EventType.PLANNER_COMPLETES_GOAL_PLAN,
-        EventType.EVALUATOR_FAILURE,
-        EventType.PLANNER_DEFERS_GOAL_PLAN,
-        EventType.VERIFIER_FAILURE,
-        EventType.RECURSIVE_WORKFLOW_REQUESTED,
-        EventType.RECURSIVE_WORKFLOW_COMPLETED,
-        EventType.EVALUATOR_SUCCESS,
-    )
 
     def __init__(self) -> None:
         self._user_input_plan: UserInputPlan | None = None
@@ -122,15 +110,7 @@ class FullStackAdversarial(ScenarioBase):
     def verifier_response(self, ctx: ScenarioContext) -> ToolCallSpec:
         context_message = ctx.context_message or ""
         checkpoint = context_message_field(context_message, "checkpoint") or "checkpoint"
-        failed_by_hook = bool(
-            ctx.mutable_state is not None
-            and ctx.mutable_state.consume_failure(
-                role="verifier",
-                attempt_id=str(ctx.attempt.id),
-                checkpoint=checkpoint,
-            )
-        )
-        should_fail = failed_by_hook or self._should_fail_verifier(ctx, checkpoint)
+        should_fail = self._should_fail_verifier(ctx, checkpoint)
         if should_fail:
             return ToolCallSpec(
                 submit_verification_failure,
@@ -193,9 +173,6 @@ class FullStackAdversarial(ScenarioBase):
             "Run oversized full-stack adversarial matrix for package "
             f"{package.id}: {package.title}. Representative requirements: {item_ids}."
         )
-
-    def hooks(self) -> Sequence[Hook]:
-        return ()
 
     def _entry_origin_planner_response(self, ctx: ScenarioContext) -> ToolCallSpec:
         iteration = ctx.iteration

@@ -45,7 +45,7 @@ class QueryContext:
     max_tokens: int
     tool_call_limit: int
     agent_name: str = ""
-    run_id: str = ""
+    agent_run_id: str = ""
     task_center_task_id: str = ""
     tool_calls_used: int = 0
     text_only_no_terminal_turns: int = 0

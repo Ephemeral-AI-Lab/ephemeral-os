@@ -1,16 +1,16 @@
 """Queue-bridge: run an imperative ``call_tool``-based probe through the REAL loop.
 
 The heavy probe modules (``high_concurrency_probe``, ``heavy_io_zoned_probe``,
-``complex_project_build_probe``, …) were written for the old ``MockSquadRunner``:
-they accept an injected ``call_tool(tool_obj, raw_input, metadata, emit, *,
-allow_error=...)`` and call it many times deep in their bodies. To run those
-bodies through the real ``query.py`` loop WITHOUT rewriting them as async
-generators, this module injects a *bridging* ``call_tool`` that hands each call
-to the driving role ``TurnScript`` — one :class:`Turn` per call — so the
-``ScenarioEventSource`` emits it as a scripted ``tool_use`` and the **real loop
-dispatches it**. The bridge changes nothing about how tools execute; it only
-adapts an imperative body into the scripted event stream. Mock vs. real still
-differ *only* in the event source.
+``complex_project_build_probe``, …) accept an injected
+``call_tool(tool_obj, raw_input, metadata, emit, *, allow_error=...)`` and call
+it many times deep in their bodies. To run those bodies through the real
+``query.py`` loop WITHOUT rewriting them as async generators, this module
+injects a *bridging* ``call_tool`` that hands each call to the driving role
+``TurnScript`` — one :class:`Turn` per call — so the ``ScenarioEventSource``
+emits it as a scripted ``tool_use`` and the **real loop dispatches it**. The
+bridge changes nothing about how tools execute; it only adapts an imperative
+body into the scripted event stream. Mock vs. real still differ *only* in the
+event source.
 
 This is the "two-level coroutine bridge": the probe runs as a concurrent task;
 :func:`bridge_turns` pulls each tool request off a queue and ``yield``s a
@@ -18,13 +18,13 @@ This is the "two-level coroutine bridge": the probe runs as a concurrent task;
 async-generator yield inside a helper), resolving the probe's awaited future
 with the loop-normalized :class:`~tools.ToolResult`.
 
-Budget: a single agent is capped at its ``tool_call_limit`` (executor=75, hard
-ceiling 1.5×). Heavy probes exceed that, so the scenario planner fans the work
-out into a generator DAG (see [[mock_event_source_heavy_probe_fanout_decision]]);
-each generator's tool stream is budget-sized and routes through the loop here.
-Background dispatch (``background_task_id``) is fire-and-forget through the loop
-and cannot satisfy the old probes' blocking-await contract by itself, so this
-bridge converts that legacy probe request into the real-agent model:
+Budget: a single agent is capped at its configured ``tool_call_limit`` plus the
+engine's hard ceiling. Heavy probes exceed that, so the scenario planner fans
+the work out into a generator DAG; each generator's tool stream is budget-sized
+and routes through the loop here. Background dispatch
+(``background_task_id``) is fire-and-forget through the loop and cannot satisfy
+the imperative probes' blocking-await contract by itself, so this bridge
+converts the requested stable background id into the real-agent model:
 ``shell(background=True)`` plus ``check_background_task_result`` /
 ``cancel_background_task``.
 """
@@ -94,15 +94,15 @@ class _CallToolBridge:
                 tool_name=tool_obj.name,
                 raw_input=raw_input,
                 allow_error=allow_error,
-                legacy_background_task_id=background_task_id,
+                requested_background_task_id=background_task_id,
                 sandbox_invocation_id=sandbox_invocation_id,
             )
             if result.is_error and not allow_error:
                 raise RuntimeError(f"{tool_obj.name} failed: {result.output}")
             return result
         result = await self._call_loop_tool(tool_obj.name, raw_input)
-        # Mirror MockSquadRunner._call_tool: raise unless the caller opted in to
-        # tolerate errors (probe bodies rely on this to fail fast).
+        # Probe bodies rely on fail-fast behavior unless the caller opted in to
+        # tolerate errors.
         if result.is_error and not allow_error:
             raise RuntimeError(f"{tool_obj.name} failed: {result.output}")
         return result
@@ -118,7 +118,7 @@ class _CallToolBridge:
         tool_name: str,
         raw_input: dict[str, Any],
         allow_error: bool,
-        legacy_background_task_id: str,
+        requested_background_task_id: str,
         sandbox_invocation_id: str | None,
     ) -> ToolResult:
         launch_input = {**dict(raw_input), "background": True}
@@ -136,7 +136,7 @@ class _CallToolBridge:
             return ToolResult(
                 output=(
                     "Background launch did not expose a task_id. "
-                    f"legacy_background_task_id={legacy_background_task_id!r} "
+                    f"requested_background_task_id={requested_background_task_id!r} "
                     f"output={launch.output!r}"
                 ),
                 is_error=True,
@@ -158,15 +158,15 @@ class _CallToolBridge:
                     {
                         "task_id": task_id,
                         "reason": (
-                            "legacy background_task_id cancellation: "
-                            f"{legacy_background_task_id}"
+                            "requested background_task_id cancellation: "
+                            f"{requested_background_task_id}"
                         ),
                     },
                 )
             if cancel_result is not None and not cancel_result.is_error:
                 self._publish_background_cancel(
                     tool_name=tool_name,
-                    legacy_background_task_id=legacy_background_task_id,
+                    requested_background_task_id=requested_background_task_id,
                     task_id=task_id,
                 )
             raise
@@ -175,7 +175,7 @@ class _CallToolBridge:
         self,
         *,
         tool_name: str,
-        legacy_background_task_id: str,
+        requested_background_task_id: str,
         task_id: str,
     ) -> None:
         if self._on_background_cancel is None:
@@ -184,7 +184,7 @@ class _CallToolBridge:
             self._on_background_cancel(
                 {
                     "tool_name": tool_name,
-                    "background_task_id": legacy_background_task_id,
+                    "background_task_id": requested_background_task_id,
                     "real_background_task_id": task_id,
                     "invocation_id": task_id,
                 }

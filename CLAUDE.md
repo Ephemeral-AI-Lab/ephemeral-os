@@ -116,8 +116,14 @@ cross-module map now lives under `docs/architecture`.
 
 ## Implementation Style
 
-- Write the minimum code that satisfies the request. Do not add speculative
-  features, configuration, extension points, or abstractions.
+- Make the touched file's final implementation as small as the request allows.
+  Prefer net-negative changes when existing code can be simplified or deleted,
+  and use aggressive, transformative rewrites when they improve extensibility or
+  implementation feasibility. Do not add speculative features, configuration,
+  extension points, or abstractions.
+- Treat LOC guidance as a final-code standard, not a net-diff target: if a file
+  implements something in 200 lines that can be expressed clearly in 50, rewrite
+  it toward the smaller shape.
 - If the solution is growing large and a smaller design would solve the same
   problem, simplify before continuing.
 - Avoid defensive branches for impossible states unless the surrounding codebase

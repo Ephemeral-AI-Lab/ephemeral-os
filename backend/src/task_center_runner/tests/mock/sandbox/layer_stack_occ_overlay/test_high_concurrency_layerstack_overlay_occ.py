@@ -121,11 +121,9 @@ def _assert_summary(summary: Mapping[str, Any]) -> None:
 
 def _assert_report_shape(report: RunReport, summary: Mapping[str, Any]) -> None:
     counts = Counter(event.type for event in report.events)
-    # §4.1 migration: EXECUTOR_SUCCESS count → executor tasks landed ``done`` in
-    # real store state (seed + WORKER_COUNT workers + reconcile). The lifecycle
-    # events are removed and the real TaskCenter enforces role ordering, so the
-    # old expected_event_sequence subsequence check is dropped. SANDBOX_CONFLICT_
-    # DETECTED is still emitted (re-homed onto ProbeContext.publish).
+    # Executor success is asserted through real store state (seed +
+    # WORKER_COUNT workers + reconcile). SANDBOX_CONFLICT_DETECTED is still
+    # emitted through ProbeContext.publish.
     assert count_role_tasks(report, "executor", status="done") >= WORKER_COUNT + 2
     assert counts[EventType.SANDBOX_CONFLICT_DETECTED] >= int(
         summary["conflict_errors"]

@@ -1,9 +1,10 @@
-"""AgentDefinitions used by the live e2e mock runner.
+"""AgentDefinitions used by the live e2e mock scenarios.
 
-The squad uses the repository's main-profile markdown definitions so live e2e
-coverage exercises the same frontmatter, variants, terminals, and system
-prompts as production launches. The mock runner still executes deterministic
-tool calls, but agent selection comes from real ``agent.md``-style metadata.
+Mock scenarios use the repository's main-profile markdown definitions so live
+e2e coverage exercises the same frontmatter, variants, terminals, and system
+prompts as production launches. ScenarioEventSource still scripts the assistant
+turns deterministically, but agent selection comes from real ``agent.md``-style
+metadata.
 """
 
 from __future__ import annotations
@@ -32,7 +33,7 @@ _SUBAGENT_PROFILE_DIR = _PROFILE_ROOT / "subagent"
 
 @contextlib.contextmanager
 def registered_mock_agents() -> Iterator[None]:
-    """Temporarily install the main TaskCenter squad definitions."""
+    """Temporarily install the TaskCenter agent profile definitions."""
     previous = list_definitions()
     for definition in previous:
         unregister_definition(definition.name)
@@ -50,8 +51,7 @@ def registered_mock_agents() -> Iterator[None]:
 
 
 def mock_agent_definitions() -> tuple[AgentDefinition, ...]:
-    """Load the production squad (main) + the helper/subagent profiles the real
-    loop spawns (advisor, explorer) for deterministic runs."""
+    """Load the main, helper, and subagent profiles needed by mock scenarios."""
     return (
         *load_agents_dir(_MAIN_PROFILE_DIR),
         *load_agents_dir(_HELPER_PROFILE_DIR),

@@ -1,20 +1,12 @@
-"""``build_scenario_config`` — assembles the ``RunConfig`` for a mock scenario.
-
-Single point of truth where the ``ScenarioLoopRunner`` factory, the
-``ScenarioLifecycle`` (and thus ``HookSet``), and the shared ``MutableMockState``
-are wired together so they share state. Outside this builder no other module
-imports ``MutableMockState`` — the engine remains runner-agnostic.
-"""
+"""``build_scenario_config`` — assembles the ``RunConfig`` for a mock scenario."""
 
 from __future__ import annotations
 
-from collections.abc import Sequence
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 from task_center_runner.core.config import RunConfig
 from task_center_runner.core.sandbox import AttachExisting
-from task_center_runner.hooks.registry import Hook, HookSet, MutableMockState
 from task_center_runner.scenarios.base import Scenario
 from task_center_runner.scenarios.lifecycle import ScenarioLifecycle
 
@@ -29,24 +21,10 @@ def build_scenario_config(
     audit_dir: Path,
     repo_dir: str,
     entry_prompt: str,
-    extra_hooks: Sequence[Hook] = (),
     instance_id: str = "",
-) -> tuple[RunConfig, MutableMockState, ScenarioLifecycle]:
-    """Construct the mock-mode ``RunConfig`` plus the shared mutable state.
-
-    Returns the config alongside the ``MutableMockState`` and
-    ``ScenarioLifecycle`` so callers (the ``run_scenario`` shim) can read
-    their state after the run for the legacy ``RunReport`` assembly.
-    """
-    mutable_state = MutableMockState()
-    hook_set = HookSet()
-    for hook in scenario.hooks():
-        hook_set.register(hook)
-    for hook in extra_hooks:
-        hook_set.register(hook)
-    lifecycle = ScenarioLifecycle(
-        scenario=scenario, hook_set=hook_set, mutable_state=mutable_state
-    )
+) -> tuple[RunConfig, ScenarioLifecycle]:
+    """Construct the mock-mode ``RunConfig`` plus its lifecycle."""
+    lifecycle = ScenarioLifecycle()
 
     def _make_runner(ctx: "RunContext"):
         # Imported lazily to keep scenario import-time setup free of runner state.
@@ -58,7 +36,6 @@ def build_scenario_config(
             repo_dir=repo_dir,
             bus=ctx.bus,
             scenario=scenario,
-            mutable_state=mutable_state,
         )
 
     # A real ``RuntimeConfig`` is threaded as ``runtime_config`` so the launcher
@@ -84,7 +61,7 @@ def build_scenario_config(
             "runtime_config": make_mock_runtime_config(repo_dir),
         },
     )
-    return config, mutable_state, lifecycle
+    return config, lifecycle
 
 
 __all__ = ["build_scenario_config"]

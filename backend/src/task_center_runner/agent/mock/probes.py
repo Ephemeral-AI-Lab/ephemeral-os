@@ -1,12 +1,12 @@
 """Probe coroutines for the event-source mock path.
 
-Re-homed from the imperative ``MockSquadRunner._run_*_probe`` methods. Each probe
-is an async generator that ``yield``s one :class:`ToolCall` per loop turn (driven
-by ``scenario_adapter._executor_script``, which is what turns each yield into a
-``Turn`` for the real loop) and uses a :class:`ProbeContext` for the out-of-band
-sandbox verification the loop does not do for it (direct ``sandbox_api`` edits +
-sandbox-check audit records). The ``ToolResult`` sent back into each ``yield`` is
-the normalized result of the loop having executed that tool.
+Each probe is an async generator that ``yield``s one :class:`ToolCall` per loop
+turn (driven by ``scenario_adapter._executor_script``, which is what turns each
+yield into a ``Turn`` for the real loop) and uses a :class:`ProbeContext` for
+the out-of-band sandbox verification the loop does not do for it (direct
+``sandbox_api`` edits + sandbox-check audit records). The ``ToolResult`` sent
+back into each ``yield`` is the normalized result of the loop having executed
+that tool.
 """
 
 from __future__ import annotations
@@ -20,7 +20,7 @@ from sandbox.api import EditFileRequest, SandboxCaller, SearchReplaceEdit
 from tools import ToolResult
 
 from task_center_runner.audit.events import Event, EventType
-from task_center_runner.audit.legacy import LegacySandboxAuditSink
+from task_center_runner.audit.sandbox_event_bridge import SandboxAuditEventBridge
 from task_center_runner.audit.node_id import NodeId
 from task_center_runner.agent.mock.event_source import ToolCall
 from task_center_runner.agent.mock.sandbox_probe import SandboxCheck
@@ -45,7 +45,7 @@ class ProbeContext:
         self._metadata = metadata
         self._repo_dir = repo_dir
         self._bus = bus
-        self._sink = LegacySandboxAuditSink(bus) if bus is not None else None
+        self._sink = SandboxAuditEventBridge(bus) if bus is not None else None
 
     @property
     def metadata(self) -> Any:

@@ -8,7 +8,6 @@ from typing import Any
 from tools.submission.evaluator import submit_evaluation_failure
 from tools.submission.planner import submit_plan_closes_goal
 
-from task_center_runner.audit.events import EventType
 from task_center_runner.scenarios.base import ScenarioBase, ScenarioContext, ToolCallSpec
 
 
@@ -31,10 +30,6 @@ class PlannerCycleInDeps(ScenarioBase):
     """Plan contains a dependency cycle."""
 
     name = "planner_validation.cycle_in_deps"
-    expected_event_sequence: tuple[EventType, ...] = (
-        EventType.PLANNER_INVOKED,
-        EventType.PLANNER_INVOKED,
-    )
 
     def planner_response(self, ctx: ScenarioContext) -> ToolCallSpec:  # noqa: ARG002
         return ToolCallSpec(submit_plan_closes_goal, _cycle_plan())

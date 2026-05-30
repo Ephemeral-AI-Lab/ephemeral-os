@@ -26,8 +26,8 @@ _FOCUSED_SANDBOX_CASES: tuple[FocusedScenarioCase, ...] = (
         min_event_counts={
             EventType.SANDBOX_BATCH_EDIT_APPLIED: 1,
             EventType.SANDBOX_CONFLICT_DETECTED: 1,
-            EventType.EXECUTOR_SUCCESS: 1,
         },
+        min_done_role_tasks={"executor": 1},
         attempt_count=1,
     ),
 )
@@ -58,4 +58,4 @@ async def test_focused_sandbox_reference_scenario_runs(
         stores=stores,
     )
 
-    assert_focused_scenario_report(report, scenario, case)
+    assert_focused_scenario_report(report, case)
