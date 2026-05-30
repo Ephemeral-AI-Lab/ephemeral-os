@@ -1,7 +1,7 @@
 """submit_execution_handoff terminal tool.
 
-Hands the executor task back to the planner for goal decomposition when
-the current goal's scope is too large for a single executor pass. The
+Hands the executor task back to the planner for objective decomposition when
+the current objective's scope is too large for a single executor pass. The
 ``goal_handoff`` arg is the statement of the goal that needs to be
 decomposed (verbatim or paraphrased without information loss), together
 with the executor's findings and reasons for the handoff. It flows

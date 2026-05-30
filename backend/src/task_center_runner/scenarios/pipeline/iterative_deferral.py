@@ -3,9 +3,9 @@
 Reference scenario for iteration continuation: iteration 1 submits a partial plan
 with ``deferred_goal_for_next_iteration``, evaluator passes, iteration coordinator spawns iteration
 2 with ``creation_reason=DEFERRED_GOAL_CONTINUATION`` and ``goal=<deferred_goal_for_next_iteration>``.
-Iteration 2 submits a full plan, evaluator passes, goal closes succeeded.
+Iteration 2 submits a full plan, evaluator passes, workflow closes succeeded.
 
-Asserts: 2 iterations per goal, iteration 2 has ``creation_reason`` =
+Asserts: 2 iterations per workflow, iteration 2 has ``creation_reason`` =
 ``DEFERRED_GOAL_CONTINUATION``.
 """
 

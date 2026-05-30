@@ -18,7 +18,7 @@ Public names are exposed via ``__getattr__`` so that importing a submodule
 (``from task_center.workflow.state import Workflow``) does NOT trigger the
 heavy agent-launch / context-engine load chain. The cycle would otherwise
 be: db.stores -> task_center root -> agent_launch.composer ->
-terminal_tool_routing -> goal.ancestry -> db.stores. Lazy loading keeps the
+terminal_tool_routing -> workflow.ancestry -> db.stores. Lazy loading keeps the
 DTO submodules import-cycle-safe.
 """
 

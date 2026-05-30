@@ -6,14 +6,14 @@ from task_center_runner.scenarios.base import ScenarioContext
 
 
 def is_entry_origin_workflow(ctx: ScenarioContext) -> bool:
-    """True when the scenario context is in the entry-origin goal."""
-    goal = ctx.workflow
-    if goal is None:
+    """True when the scenario context is in the entry-origin workflow."""
+    workflow = ctx.workflow
+    if workflow is None:
         return True
-    origin_kind = getattr(goal, "origin_kind", None)
+    origin_kind = getattr(workflow, "origin_kind", None)
     if str(getattr(origin_kind, "value", origin_kind) or "") == "entry":
         return True
-    requested_by = str(goal.requested_by_task_id or "")
+    requested_by = str(workflow.requested_by_task_id or "")
     return not requested_by
 
 

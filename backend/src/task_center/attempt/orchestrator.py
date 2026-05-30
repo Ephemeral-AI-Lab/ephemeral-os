@@ -188,10 +188,10 @@ class AttemptOrchestrator:
 
         if report.outcome == "success":
             status = TaskCenterTaskStatus.DONE
-            summary = f"Delegated goal {report.workflow_id} succeeded."
+            summary = f"Delegated workflow {report.workflow_id} succeeded."
         else:
             status = TaskCenterTaskStatus.FAILED
-            summary = f"Delegated goal {report.workflow_id} failed."
+            summary = f"Delegated workflow {report.workflow_id} failed."
 
         updated = runtime.task_store.set_task_status_if_current(
             parent_task_id,
@@ -213,7 +213,7 @@ class AttemptOrchestrator:
         self._stage_advancer.advance_ready_tasks()
 
     def _build_handoff_rollup(self, report: WorkflowClosureReport) -> dict[str, Any]:
-        """Structured roll-up of the child goal, rendered later as nested ``<task>``.
+        """Structured roll-up of the child workflow, rendered later as nested ``<task>``.
 
         Success: the child generators across all SUCCEEDED child iterations.
         Failure: those, plus the final failed attempt's terminal generators and

@@ -212,10 +212,10 @@ async def _executor_script(
             "request_recursive_matrix:"
         ):
             package_id = action.split(":", 1)[1]
-            goal = scenario.recursive_handoff_goal(ctx) or (
+            goal_handoff = scenario.recursive_handoff_goal(ctx) or (
                 f"Resolve recursive package {package_id}."
             )
-            handoff_args = {"goal_handoff": goal}
+            handoff_args = {"goal_handoff": goal_handoff}
             _ = yield _ask_advisor_turn("submit_execution_handoff", handoff_args)
             _ = yield Turn(
                 calls=(ToolCall("submit_execution_handoff", handoff_args),)

@@ -211,7 +211,7 @@ def parse_achieved_record(task_summary: str | None) -> list[TaskOutcome]:
 def child_outcomes_for_workflow(
     workflow_id: str, iteration_store: IterationStoreProtocol
 ) -> list[TaskOutcome]:
-    """Flatten the achieved records of a goal's SUCCEEDED iterations, in order."""
+    """Flatten the achieved records of a workflow's SUCCEEDED iterations, in order."""
     outcomes: list[TaskOutcome] = []
     for iteration in iteration_store.list_for_workflow(workflow_id):
         if iteration.status != IterationStatus.SUCCEEDED:

@@ -94,26 +94,26 @@ async def test_full_system_capacity_matrix_records_artifacts_and_metrics(
     )
 
 def _assert_graph_shape(graph_summary: dict[str, Any]) -> None:
-    goals = graph_summary["workflows"]
-    assert len(goals) >= 2, graph_summary
+    workflows = graph_summary["workflows"]
+    assert len(workflows) >= 2, graph_summary
     root = next(
-        goal
-        for goal in goals
-        if goal.get("origin_kind") == "entry"
+        workflow
+        for workflow in workflows
+        if workflow.get("origin_kind") == "entry"
     )
     recursive = [
-        goal
-        for goal in goals
-        if goal.get("origin_kind") == "task"
+        workflow
+        for workflow in workflows
+        if workflow.get("origin_kind") == "task"
     ]
     assert recursive, graph_summary
     assert root["status"] == "succeeded"
-    assert all(goal["status"] == "succeeded" for goal in recursive)
+    assert all(workflow["status"] == "succeeded" for workflow in recursive)
 
     attempts = [
         attempt
-        for goal in goals
-        for iteration in goal["iterations"]
+        for workflow in workflows
+        for iteration in workflow["iterations"]
         for attempt in iteration["attempts"]
     ]
     tasks = [task for attempt in attempts for task in attempt["tasks"]]

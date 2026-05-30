@@ -1,4 +1,4 @@
-"""Recursive goal success and failure scenarios."""
+"""Recursive workflow success and failure scenarios."""
 
 from __future__ import annotations
 
@@ -22,10 +22,10 @@ from task_center_runner.scenarios.base import ScenarioBase, ScenarioContext, Too
 def _entry_origin_nested_plan(*, failing_child: bool) -> dict[str, Any]:
     package_id = "child_failure" if failing_child else "child_success"
     return {
-        "plan_spec": "Delegate one oversized branch to a child goal.",
+        "plan_spec": "Delegate one oversized branch to a child workflow.",
         "evaluation_criteria": [
-            "Child goal is linked to the parent generator task.",
-            "Parent graph does not finish before the child goal closes.",
+            "Child workflow is linked to the parent generator task.",
+            "Parent graph does not finish before the child workflow closes.",
         ],
         "tasks": [
             {"id": "delegate_child", "agent_name": "executor", "deps": []},
@@ -52,7 +52,7 @@ def _entry_origin_nested_plan(*, failing_child: bool) -> dict[str, Any]:
 
 def _child_success_plan() -> dict[str, Any]:
     return {
-        "plan_spec": "Execute a two-task child goal and close it.",
+        "plan_spec": "Execute a two-task child workflow and close it.",
         "evaluation_criteria": [
             "Both child slices completed.",
             "Child close report can be delivered to the parent.",
@@ -70,7 +70,7 @@ def _child_success_plan() -> dict[str, Any]:
 
 def _child_failure_plan() -> dict[str, Any]:
     return {
-        "plan_spec": "Child goal fails every attempt.",
+        "plan_spec": "Child workflow fails every attempt.",
         "evaluation_criteria": ["Parent receives a failed child close report."],
         "tasks": [
             {"id": "child_always_fails", "agent_name": "executor", "deps": []},
@@ -82,7 +82,7 @@ def _child_failure_plan() -> dict[str, Any]:
 
 
 class NestedWorkflow(ScenarioBase):
-    """Parent generator delegates to a child goal, then reconciles."""
+    """Parent generator delegates to a child workflow, then reconciles."""
 
     name = "pipeline.nested_workflow"
     expected_event_sequence: tuple[EventType, ...] = (
@@ -122,17 +122,17 @@ class NestedWorkflow(ScenarioBase):
         return ToolCallSpec(
             submit_evaluation_success,
             {
-                "summary": "Nested goal completed before parent reconciliation.",
+                "summary": "Nested workflow completed before parent reconciliation.",
                 "passed_criteria": list(ctx.attempt.evaluation_criteria),
             },
         )
 
     def recursive_handoff_goal(self, ctx: ScenarioContext) -> str | None:  # noqa: ARG002
-        return "Run the delegated child goal and return a close report."
+        return "Run the delegated child workflow and return a close report."
 
 
 class NestedWorkflowFailure(ScenarioBase):
-    """Child goal exhausts attempts and parent goal fails cleanly."""
+    """Child workflow exhausts attempts and parent workflow fails cleanly."""
 
     name = "pipeline.nested_workflow_failure"
     expected_event_sequence: tuple[EventType, ...] = (
@@ -154,7 +154,7 @@ class NestedWorkflowFailure(ScenarioBase):
         if "request_recursive_workflow" in context_message:
             return ("request_recursive_workflow:child_failure",)
         if "child_failure" in context_message:
-            return ("fail:Intentional child goal failure.",)
+            return ("fail:Intentional child workflow failure.",)
         return ("preflight",)
 
     def verifier_response(self, ctx: ScenarioContext) -> ToolCallSpec:
@@ -170,13 +170,13 @@ class NestedWorkflowFailure(ScenarioBase):
         return ToolCallSpec(
             submit_evaluation_failure,
             {
-                "summary": "Nested goal failure should not reach evaluator.",
+                "summary": "Nested workflow failure should not reach evaluator.",
                 "failed_criteria": list(ctx.attempt.evaluation_criteria),
             },
         )
 
     def recursive_handoff_goal(self, ctx: ScenarioContext) -> str | None:  # noqa: ARG002
-        return "Run a child goal that intentionally exhausts attempts."
+        return "Run a child workflow that intentionally exhausts attempts."
 
 
 __all__ = ["NestedWorkflow", "NestedWorkflowFailure"]

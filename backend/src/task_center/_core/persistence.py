@@ -39,7 +39,7 @@ TaskRow = dict[str, Any]
 
 
 class WorkflowStoreProtocol(Protocol):
-    """Narrow contract for the goal persistence surface."""
+    """Narrow contract for the workflow persistence surface."""
 
     is_ready: bool
 

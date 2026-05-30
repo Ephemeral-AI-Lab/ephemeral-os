@@ -124,7 +124,7 @@
   </div>
   <div class="evidence-card">
     <h3>Executor</h3>
-    <p><code>submit_execution_success</code> and <code>submit_execution_blocker</code> resolve <code>ExecutorSubmissionContext</code> and call <code>apply_generator_submission()</code> with <code>generator_role=&quot;executor&quot;</code>. <code>submit_execution_handoff</code> starts a child goal through <code>WorkflowStarter.start(WorkflowOrigin.task(...))</code>.</p>
+    <p><code>submit_execution_success</code> and <code>submit_execution_blocker</code> resolve <code>ExecutorSubmissionContext</code> and call <code>apply_generator_submission()</code> with <code>generator_role=&quot;executor&quot;</code>. <code>submit_execution_handoff</code> starts a child workflow through <code>WorkflowStarter.start(WorkflowOrigin.task(...))</code>.</p>
   </div>
   <div class="evidence-card">
     <h3>Verifier</h3>
@@ -145,7 +145,7 @@
 [WorkflowStarter.start child task origin]
         |
         v
-[parent generator attempt waits on child goal]
+[parent generator attempt waits on child workflow]
         |
         v
 [child terminal closure report]
@@ -156,9 +156,9 @@
 <div class="sequence" aria-label="Executor handoff sequence">
   <ol>
     <li><span>The executor submits a nonblank <code>goal_handoff</code> through <code>submit_execution_handoff</code>.</span></li>
-    <li><span><code>ExecutorSubmissionContext.start_delegated_workflow()</code> creates <code>WorkflowStarter(runtime=...)</code> and starts a task-origin goal for the current generator task.</span></li>
-    <li><span><code>WorkflowStarter</code> creates the child goal, initial iteration, and initial attempt, then marks the parent generator task <code>WAITING_WORKFLOW</code>.</span></li>
-    <li><span>When the child goal closes, <code>WorkflowClosureReportRouter</code> routes the close report back to the parent task, and <code>AttemptOrchestrator.apply_workflow_closure_report()</code> resumes the parent generator state.</span></li>
+    <li><span><code>ExecutorSubmissionContext.start_delegated_workflow()</code> creates <code>WorkflowStarter(runtime=...)</code> and starts a task-origin workflow for the current generator task.</span></li>
+    <li><span><code>WorkflowStarter</code> creates the child workflow, initial iteration, and initial attempt, then marks the parent generator task <code>WAITING_WORKFLOW</code>.</span></li>
+    <li><span>When the child workflow closes, <code>WorkflowClosureReportRouter</code> routes the close report back to the parent task, and <code>AttemptOrchestrator.apply_workflow_closure_report()</code> resumes the parent generator state.</span></li>
   </ol>
 </div>
 </section>

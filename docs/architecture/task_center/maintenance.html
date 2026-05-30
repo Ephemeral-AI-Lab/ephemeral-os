@@ -56,7 +56,7 @@
 <h2>Delegation Log <a class="anchor" href="#delegation-log">#</a></h2>
 <div class="edge-list">
   <div><b>coordinator/reducer</b><span>Owned scope, page taxonomy, shared assets, source-truth merge, stale-claim decisions, overview, maintenance, and final validation.</span></div>
-  <div><b>graph explorer: goal-iteration-attempt</b><span>Mapped WorkflowStarter, WorkflowLifecycle, IterationAttemptCoordinator, AttemptOrchestrator, generator DAG, retry, deferral, delegated child goals, nested planning, closure routing, tests, and stale older-doc claims.</span></div>
+  <div><b>graph explorer: workflow-iteration-attempt</b><span>Mapped WorkflowStarter, WorkflowLifecycle, IterationAttemptCoordinator, AttemptOrchestrator, generator DAG, retry, deferral, delegated child workflows, nested planning, closure routing, tests, and stale older-doc claims.</span></div>
   <div><b>graph explorer: context</b><span>Mapped ContextEngine, recipes, packets, renderer, task guidance, skill rows, profile frontmatter, and launch message rows.</span></div>
   <div><b>graph explorer: terminals</b><span>Mapped submission tools, terminal descriptor registry, the advisor helper pattern, terminal exclusivity, output validation, and engine stop behavior.</span></div>
   <div><b>graph explorer: runtime boundaries</b><span>Mapped TaskCenter entry bootstrap, sandbox binding, engine run launch, tool metadata, message artifacts, task_center_runner audit, and cross-module boundaries.</span></div>
@@ -71,7 +71,7 @@
         |
         v
 [inspect source anchors]
-        |  goal, iteration, attempt, context_engine, tools
+        |  workflow, iteration, attempt, context_engine, tools
         v
 [update lifecycle/role diagrams]
         |
@@ -139,7 +139,7 @@
   <ul>
     <li><code>docs/task_center_harness_and_context_engine.html</code> remains historical reference material, not the canonical current wiki. Use this module for refreshed source-backed TaskCenter claims.</li>
     <li>Current state-service naming is <code>WorkflowLifecycle</code> plus <code>IterationAttemptCoordinator</code>, not <code>GoalHandler</code>, <code>IterationManager</code>, <code>IterationFactory</code>, or <code>IterationClosureRouter</code>.</li>
-    <li>Current child-goal closure completes the parent generator task as <code>DONE</code> or <code>FAILED</code>. Do not document it as returning the parent to <code>RUNNING</code>.</li>
+    <li>Current child-workflow closure completes the parent generator task as <code>DONE</code> or <code>FAILED</code>. Do not document it as returning the parent to <code>RUNNING</code>.</li>
     <li>Current nested-depth terminal routing can remove <code>submit_execution_handoff</code> from nested executors. Do not repeat older claims that executor handoff is available at every nesting depth.</li>
     <li>The current helper agent uses direct launch prompt assembly through <code>ask_advisor</code>; the Context Engine is not involved in helper prompt composition.</li>
   </ul>

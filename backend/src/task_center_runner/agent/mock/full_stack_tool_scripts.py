@@ -763,7 +763,7 @@ def lsp_refresh_semantics_script(ctx: ScenarioContext) -> PreparedToolScript:
 
 
 def recursive_oversized_matrix_script(ctx: ScenarioContext) -> PreparedToolScript:
-    """Persist recursive goal evidence and close report through tools."""
+    """Persist recursive workflow evidence and close report through tools."""
     context_message = ctx.context_message or ""
     slice_id = context_message_field(context_message, "slice") or "slice"
     is_close = (

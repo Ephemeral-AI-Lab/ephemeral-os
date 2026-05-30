@@ -9,7 +9,7 @@ matches their on-disk artifacts:
 
 - ``atomic_write_json(path, data)`` — compact, no trailing newline. Used by the
   recorder for high-frequency artifacts (``run.json``, ``metrics.json``,
-  per-goal / per-attempt JSON).
+  per-workflow / per-attempt JSON).
 - ``atomic_write_pretty_json(path, data)`` — ``indent=2`` + trailing newline.
   Used by the performance report for human-/git-friendly artifacts.
 

@@ -59,7 +59,7 @@
     <li>The durable state model is <code>Workflow -> Iteration -> Attempt</code>. A Workflow has ordered Iterations; an Iteration owns sequential retry Attempts; an Attempt owns one planner task, a persisted generator DAG, and one evaluator task.</li>
     <li>TaskCenter does not add peer-to-peer agent communication. Delegation is persisted as a task-origin child Workflow; the parent generator waits in <code>WAITING_WORKFLOW</code> and later resumes through a closure report.</li>
     <li>The AttemptOrchestrator is per-Attempt machinery, not a global orchestrator. It persists the planner contract, generator rows, generator outcomes, evaluator outcomes, and Attempt close.</li>
-    <li>The Context Engine builds and renders role-specific packets from stores. It does not decide retry, continuation, goal closure, launch policy, or sandbox behavior.</li>
+    <li>The Context Engine builds and renders role-specific packets from stores. It does not decide retry, continuation, workflow closure, launch policy, or sandbox behavior.</li>
     <li>Terminal tools are the agent-facing state boundary. Successful terminal tool calls are stamped <code>is_terminal=true</code> by the tool framework, and their payloads mutate TaskCenter through TaskCenter services.</li>
   </ul>
 </div>
@@ -88,7 +88,7 @@
   </div>
 </div>
 <pre class="diagram" aria-label="TaskCenter lifecycle state-machine diagram">
-[goal created]
+[workflow created]
         |
         v
 [iteration created]
@@ -98,7 +98,7 @@
         |
         +--&gt; [planner] -&gt; [generator DAG] -&gt; [evaluator]
         |
-        +--&gt; [delegated child goal]
+        +--&gt; [delegated child workflow]
         |       -&gt; [parent waits] -&gt; [closure report resumes parent]
         |
         +--&gt; [terminal submission]
@@ -119,7 +119,7 @@
 <div class="evidence-grid">
   <div class="evidence-card">
     <h3>Workflow Iteration Attempt</h3>
-    <p>Use <a class="wiki-link" href="lifecycle.html">Workflow Iteration Attempt</a> for the core state model, retry, deferral, delegated child goals, nested planning, and close-report routing.</p>
+    <p>Use <a class="wiki-link" href="lifecycle.html">Workflow Iteration Attempt</a> for the core state model, retry, deferral, delegated child workflows, nested planning, and close-report routing.</p>
   </div>
   <div class="evidence-card">
     <h3>Attempt Harness</h3>

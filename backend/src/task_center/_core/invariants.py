@@ -1,7 +1,7 @@
 """TaskCenter domain invariants — assertion helpers.
 
 Each ``assert_*`` validates one harness lifecycle invariant and raises
-:class:`TaskCenterInvariantViolation` on breach. Used by the goal lifecycle,
+:class:`TaskCenterInvariantViolation` on breach. Used by the workflow lifecycle,
 iteration attempt coordinator, attempt orchestrator, and stage advancer to fail fast on
 illegal transitions instead of silently corrupting state.
 """
@@ -22,20 +22,22 @@ from task_center.workflow.state import Workflow
 from task_center._core.task_state import TaskCenterTaskRole
 
 
-def assert_workflow_open(goal: Workflow) -> None:
-    if not goal.is_open:
-        raise TaskCenterInvariantViolation(f"Workflow {goal.id!r} is not open (status={goal.status})")
-
-
-def assert_iteration_id_unique_in_workflow(goal: Workflow, iteration_id: str) -> None:
-    if iteration_id in goal.iteration_ids:
+def assert_workflow_open(workflow: Workflow) -> None:
+    if not workflow.is_open:
         raise TaskCenterInvariantViolation(
-            f"Iteration {iteration_id!r} already present in Workflow {goal.id!r} iteration list"
+            f"Workflow {workflow.id!r} is not open (status={workflow.status})"
         )
 
 
-def assert_iteration_sequence_contiguous(goal: Workflow, new_sequence_no: int) -> None:
-    expected = len(goal.iteration_ids) + 1
+def assert_iteration_id_unique_in_workflow(workflow: Workflow, iteration_id: str) -> None:
+    if iteration_id in workflow.iteration_ids:
+        raise TaskCenterInvariantViolation(
+            f"Iteration {iteration_id!r} already present in Workflow {workflow.id!r} iteration list"
+        )
+
+
+def assert_iteration_sequence_contiguous(workflow: Workflow, new_sequence_no: int) -> None:
+    expected = len(workflow.iteration_ids) + 1
     if new_sequence_no != expected:
         raise TaskCenterInvariantViolation(
             f"Iteration sequence_no must be contiguous: expected {expected}, got {new_sequence_no}"

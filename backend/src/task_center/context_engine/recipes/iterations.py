@@ -55,7 +55,7 @@ _ITERATION_GOAL_IDENTITY_BODY = "(identical to &lt;goal&gt;)"
 
 def goal_iteration_blocks(
     *,
-    goal: Workflow,
+    workflow: Workflow,
     current_iteration: Iteration,
     iterations: list[Iteration],
 ) -> list[ContextBlock]:
@@ -66,19 +66,19 @@ def goal_iteration_blocks(
     ``<iteration_goal>`` child. Iteration 1's iteration goal collapses to the
     literal marker ``(identical to <goal>)``.
     """
-    blocks: list[ContextBlock] = [_goal_statement_block(goal)]
+    blocks: list[ContextBlock] = [_goal_statement_block(workflow)]
     blocks.extend(_prior_iteration_blocks(current=current_iteration, iterations=iterations))
     blocks.append(_current_iteration_goal_child(current_iteration))
     return blocks
 
 
-def _goal_statement_block(goal: Workflow) -> ContextBlock:
+def _goal_statement_block(workflow: Workflow) -> ContextBlock:
     """Standalone ``<goal>`` block (every iteration)."""
     return ContextBlock(
         kind=ContextBlockKind.GOAL_STATEMENT,
         priority=ContextPriority.REQUIRED,
-        text=goal.goal,
-        source_id=goal.id,
+        text=workflow.goal,
+        source_id=workflow.id,
         source_kind="goal",
         metadata={"tag": "goal"},
     )

@@ -165,7 +165,7 @@ def test_planner_context_matches_diagram():
             },
         }
     )
-    blocks = goal_iteration_blocks(goal=_goal(), current_iteration=it2, iterations=[it1, it2])
+    blocks = goal_iteration_blocks(workflow=_goal(), current_iteration=it2, iterations=[it1, it2])
     blocks += failed_attempt_blocks(
         current_attempt_id="att2", iteration=it2, attempts=[failed], task_store=store
     )
@@ -441,7 +441,7 @@ def test_handoff_rollup_renders_through_evaluator_task_block():
                 "summaries": [
                     {
                         "outcome": "success",
-                        "summary": "Delegated goal succeeded.",
+                        "summary": "Delegated workflow succeeded.",
                         "payload": {"handoff_rollup": rollup},
                     }
                 ],

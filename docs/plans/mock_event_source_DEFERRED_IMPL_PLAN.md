@@ -121,7 +121,48 @@ uv run pytest backend/src/task_center_runner/tests/mock -n "${EOS_SWEEVO_XDIST_N
 
 ## Item 2 — full_stack / capacity / full_case script-actions (PreparedToolScriptEngine bridge)
 
-**Status:** analyzed, bridgeable, not implemented. `PreparedToolScriptEngine` (`tool_scripts.py`) runs
+> **✅ CODE LANDED + VERIFIED GREEN at HEAD `b9bc4b531` 2026-05-30.** Parts 1 + 2 (the run/call
+> layer) are implemented; Part 3 (test migration) is **BLOCKED by two pre-existing, out-of-scope
+> issues — NOT by the new code** (see below). What landed:
+> - **`bridge_script_for`** (`agent/mock/probe_bridge.py:133`) covers **all 13 script actions** via the
+>   existing **`bridge_turns`** queue-driver (`probe_bridge.py:92`); it is `call_tool`-compatible, **no
+>   shim**. `scenario_adapter._executor_script` (`scenario_adapter.py:244`) calls
+>   `bridge_script_for(action, ctx=ctx)`.
+> - **Terminal routing in `_executor_script`** (`scenario_adapter.py:197-223`): `fail` / `fail:<reason>`
+>   → `submit_execution_blocker`; `request_recursive_workflow:<id>` / `request_recursive_matrix:<id>`
+>   (unchanged) → `submit_execution_handoff` (objective text via `scenario.recursive_handoff_goal(ctx)`
+>   → the kept `goal_handoff` kwarg). **Both gated** by `AdvisorApprovalPreHook` — each terminal gets its
+>   own `_ask_advisor_turn` first.
+> - **PROVENANCE:** the implementation was swept into commit `b9bc4b531` ("complete workflow rename
+>   batch") by the parallel commit-all rename pass; the working tree adds only 2 cosmetic tweaks. **Stage
+>   Item-2 with explicit paths only** (never `git add <dir>`).
+> - **VERIFICATION at HEAD `b9bc4b531`:** 3 proof tests **5 passed / 101s**; `high_concurrency` under
+>   `EOS_MOCK_EVENT_SOURCE_RUNNER=1` **1 passed / 18s**; ruff + import clean; `count_role_tasks(report,
+>   role, *, status=None)` signature unchanged. Proven at run/call level: `inspect_user_input` +
+>   **all 10** `execute_package:<id>` tasks reached `done` via `bridge_script_for` through the **real
+>   loop**; the handoff routed `ask_advisor`→approve→"Started delegated workflow".
+> - **`consume_failure` DEFERRED (minimum-code):** no Item-2 target scenario injects failure (verified
+>   empty); the method (`hooks/registry.py:64`) is **verifier-path-only**, so wiring it into the executor
+>   adapter is unnecessary for the current targets.
+> - **BUDGET nuance (corrects the "≤100 hard" assumption):** the `tool_call_limit: 100` is a **SOFT**
+>   reminder; the only **HARD** abort is at `ceil(1.5 × 100) = 150`. `inspect_user_input` (111 steps) and
+>   `layerstack_squash_lease` (118) exceed 100 but run fine (< 150). Flagged for Item-3 fan-out as a
+>   **design-limit overage**, NOT runtime-blocked.
+> - **PHASE 3 (migrate the 4 tests) is BLOCKED by two PRE-EXISTING, out-of-scope issues:**
+>   1. `test_full_stack_adversarial` + `test_full_system_capacity_matrix` + `test_full_case_user_input`
+>      pin `instance_id == dask` AND assert `requirement_ledger > 100`, but **dask yields 39 requirements
+>      (11 packages)** (primary-source verified) — **unsatisfiable, red at HEAD regardless of the flag**
+>      (these run the OLD runner; our change is flag-gated). Resolution is a product decision (which
+>      instance / what floor) — **owner = user**.
+>   2. `full_case_user_input`'s child-**workflow** iteration-1 planner **over-defers under the real loop**
+>      to the 150 ceiling (`full_stack` guards on `active_terminals` + closes single-shot; `full_case`
+>      does not) — a **scenario bug, out of Item-2 scope**.
+> - **`MIGRATION_MAP.md` is VOCAB-STALE:** when consuming it, translate `graph_summary["goals"]` →
+>   `["workflows"]`, `RECURSIVE_GOAL_*` → `RECURSIVE_WORKFLOW_*`, `request_recursive_goal:` →
+>   `request_recursive_workflow:`. The **live** `count_role_tasks(report, role, *, status=None)`
+>   signature stays — never redefine it.
+
+**Status (Parts 1–2 DONE; Part 3 blocked — see banner).** `PreparedToolScriptEngine` (`tool_scripts.py`) runs
 `script.steps` **sequentially**, so the queue-bridge is semantically faithful (unlike ephemeral's
 `asyncio.gather`). Scenarios already fan out (e.g. `full_stack_adversarial` emits separate
 `occ_matrix`/`overlay_matrix`/`lsp_matrix`/`layerstack_matrix` executor tasks); each matrix script is
@@ -135,14 +176,15 @@ cell uses `lsp.apply_workspace_edit` — already unblocked.
    `PreparedToolScriptEngine(bridge_call_tool).run(<script>(ctx), metadata=metadata, emit=_noop_emit)`
    and returns `result.artifact`. **Do NOT** emit `publish_full_stack_script` — `FULL_STACK_SCRIPT_COMPLETED`
    is removed in Phase D and the tests migrate away from it.
-2. **Terminal routing in `_executor_script`** (today only `submit_execution_success`). Add, each preceded
-   by its own `ask_advisor` turn for THAT terminal, then return:
+2. **Terminal routing in `_executor_script`** (LANDED — formerly only `submit_execution_success`; now
+   routes all three, each preceded by its own `ask_advisor` turn for THAT terminal, then returns):
    - `fail` / `fail:<reason>` → `submit_execution_blocker`
-   - `request_recursive_goal:<id>` / `request_recursive_matrix:<id>` → `submit_execution_handoff`
-     (recursive goal text via `scenario.recursive_handoff_goal(ctx)`)
-   Also wire `MutableMockState.consume_failure(role=, attempt_id=, checkpoint=)` for failure-injection
-   (verifier path already uses it; method exists in `hooks/registry.py`).
-   **Shared executor path — after this change re-run high_concurrency + the 3 proof tests** (regression).
+   - `request_recursive_workflow:<id>` / `request_recursive_matrix:<id>` → `submit_execution_handoff`
+     (the recursive workflow's goal text — objective — via `scenario.recursive_handoff_goal(ctx)`)
+   `MutableMockState.consume_failure(role=, attempt_id=, checkpoint=)` for failure-injection is
+   **DEFERRED** (no Item-2 target injects failure; the method in `hooks/registry.py` is verifier-path-only).
+   **Shared executor path — after this change re-run high_concurrency + the 3 proof tests** (regression,
+   done — green at HEAD; see banner).
 3. **Test migration** — `tests/mock/sandbox/full_stack/test_full_stack_adversarial.py` +
    `tests/mock/sandbox/capacity/test_full_system_capacity_matrix.py` (+ full_case) still assert lifecycle
    event counts the new runner doesn't emit. Map specs: capacity ~MIGRATION_MAP 1611-1765, full_stack ~1765+.
@@ -155,13 +197,13 @@ step count ≤100 (matrices are bounded; `execute_package:N` depends on package 
 
 ---
 
-## Item 3 — Multiagent fan-out promotions + nested-goal coverage (directive #3)
+## Item 3 — Multiagent fan-out promotions + nested-workflow coverage (directive #3)
 
 Promote the deferred single-agent complex scenarios into planner→generator DAGs (the project's core
-fan-out thesis), and add nested-goal (`request_recursive_goal` → `submit_execution_handoff` → child goal,
-gated by `is_recursive_goal`) coverage. Reference impl: `high_concurrency_probe.py`
-(`run_*_{seed,worker,reconcile}`) + `probe_bridge.py` `bridge_probe_for` index-parse. Nested-goal pattern:
-`scenarios/pipeline/nested_goal.py`; gate `scenarios/_scenario_helpers/goal_origin.py:20`.
+fan-out thesis), and add nested-workflow (`request_recursive_workflow` → `submit_execution_handoff` →
+child workflow, gated by `is_recursive_workflow`) coverage. Reference impl: `high_concurrency_probe.py`
+(`run_*_{seed,worker,reconcile}`) + `probe_bridge.py` `bridge_probe_for` index-parse. Nested-workflow
+pattern: `scenarios/pipeline/nested_workflow.py`; gate `scenarios/_scenario_helpers/workflow_origin.py:20`.
 
 **Shared 3-tier DAG for fan-outs:** `seed/bootstrap → N work generators (write per-gen fragments) → reconcile
 (read all fragments, aggregate, emit the ONE canonical artifact + run global-consistency phases)`.
@@ -227,13 +269,13 @@ file slices, write fragments) → reconcile (sum fragments, run global phases: p
 - `complex_project_build_grep_glob`: grep/glob/edit floors are sums; reconcile owns `_phase_f_search_sweep`
   + writes `perf.scenario` = the full scenario name (hardcode, not per-gen).
 
-**Nested-goal insertion points (add `RECURSIVE_GOAL_REQUESTED/COMPLETED` coverage):** the refactor pass
-(`_phase_d_refactor`), the diagnostic break-detect-repair cycle (shell_edit_lsp), or the search audit
-(grep_glob) are each self-contained → one work gen emits `request_recursive_goal:<k>`; the child goal's
-planner (gated by `is_recursive_goal`) fans out its own seed/work/reconcile and closes via `GoalClosureReport`;
-the parent reconcile waits on it. Child edits land in the same shared `/ephemeral-os` → roll into the
-aggregate contract counters untouched. Add the new events to `expected_event_sequence` only on the variant(s)
-that wire the nested goal.
+**Nested-workflow insertion points (add `RECURSIVE_WORKFLOW_REQUESTED/COMPLETED` coverage):** the refactor
+pass (`_phase_d_refactor`), the diagnostic break-detect-repair cycle (shell_edit_lsp), or the search audit
+(grep_glob) are each self-contained → one work gen emits `request_recursive_workflow:<k>`; the child
+workflow's planner (gated by `is_recursive_workflow`) fans out its own seed/work/reconcile and closes via
+`WorkflowClosureReport`; the parent reconcile waits on it. Child edits land in the same shared
+`/ephemeral-os` → roll into the aggregate contract counters untouched. Add the new events to
+`expected_event_sequence` only on the variant(s) that wire the nested workflow.
 
 **Cross-cutting:** new probe entries mirror `run_high_concurrency_{seed,worker,reconcile}_probe` signatures
 (reuse the existing phase helpers — slice, don't rewrite); add `bridge_probe_for` branches parsing
@@ -308,7 +350,7 @@ OCC-in-output `tools/sandbox/shell/shell.py:123-141`; loop teardown `engine/quer
    match; used by high_concurrency) is INCOMPATIBLE with the per-attempt
    `count_role_tasks(attempt, *, role, agent_name, status)` the map's specs assume. Reconcile as single
    writer (keep report-level OR add a distinct per-attempt helper name) and tell migration authors the live
-   signature. Add `attempt_outcome`, `recursive_goals` helpers. `test_correctness.py`'s "no ask_advisor in
+   signature. Add `attempt_outcome`, `recursive_workflows` helpers. `test_correctness.py`'s "no ask_advisor in
    transcript" assertion is INVERTED (real `ask_advisor` turns now appear). `test_correctness` map section
    is blank (API error) — derive from source.
 2. **Phase D deletions (STRICTLY after all scenarios green under the flag; EventType-enum removal LAST):**
@@ -328,7 +370,7 @@ OCC-in-output `tools/sandbox/shell/shell.py:123-141`; loop teardown `engine/quer
 1. **Item 1** (parallel sandboxes) — unblocks fast iteration on everything else.
 2. **Item 2** (script-actions bridge + terminal routing) — also lands `fail`/`handoff` routing that Item 3 reuses.
 3. **Item 3** (fan-out promotions: 3a auto_squash → 3b same_path_conflict → 3c complex_project_build ×6) +
-   nested goals. Plan 3c with a fresh advisor pass (it's the hardest; the cwd-reset hazard is load-bearing).
+   nested workflows. Plan 3c with a fresh advisor pass (it's the hardest; the cwd-reset hazard is load-bearing).
 4. **Item 4** (background rewrites).
 5. **Item 5** (test migrations → Phase D flip → Phase E sweep).
 

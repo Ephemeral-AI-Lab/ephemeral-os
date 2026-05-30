@@ -129,7 +129,7 @@ run_pipeline(config) coroutine
    |
    | 7. handle = start_task_center_run(
    |       config=extras["runtime_config"] or SimpleNamespace(cwd=repo_dir),
-   |       prompt, sandbox_id, on_agent_event, task/goal/iteration/attempt/
+   |       prompt, sandbox_id, on_agent_event, task/workflow/iteration/attempt/
    |       context_packet stores, runner, sandbox_provisioner)
    |    bus.publish(RUN_STARTED)
    |
@@ -233,7 +233,7 @@ run_pipeline(config) coroutine
 </div>
 <div class="summary">
   <ul>
-    <li>The shim closes its owned <code>bundle</code> only AFTER <code>_graph_summary</code> reads goals → iterations → attempts → tasks, so the dict-shaped graph stays consistent.</li>
+    <li>The shim closes its owned <code>bundle</code> only AFTER <code>_graph_summary</code> reads workflows → iterations → attempts → tasks, so the dict-shaped graph stays consistent.</li>
     <li><code>passed_prompt_inspections</code> and <code>passed_sandbox_checks</code> are convenience properties on <code>RunReport</code> that AND-together every recorded check.</li>
   </ul>
 </div>

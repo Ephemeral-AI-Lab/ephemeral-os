@@ -49,7 +49,7 @@ class StartedWorkflow:
 
 
 class WorkflowStarter:
-    """Single orchestration entry point for prompt → goal start."""
+    """Single orchestration entry point for prompt → workflow start."""
 
     def __init__(
         self,
@@ -88,12 +88,12 @@ class WorkflowStarter:
             if origin.kind == WorkflowOriginKind.TASK:
                 if prepared.parent_attempt_id is None:
                     raise TaskCenterInvariantViolation(
-                        "Task-origin goal start is missing parent attempt id."
+                        "Task-origin workflow start is missing parent attempt id."
                     )
                 self._mark_parent_waiting(
                     origin=origin,
                     parent_attempt_id=prepared.parent_attempt_id,
-                    goal=created_workflow,
+                    workflow=created_workflow,
                     iteration=iteration,
                     attempt_id=initial_attempt.id,
                     goal_text=prompt,
@@ -101,7 +101,7 @@ class WorkflowStarter:
             iteration_coordinator.start_attempt(initial_attempt)
         except Exception:
             self._compensate_failed_start(
-                goal=created_workflow,
+                workflow=created_workflow,
                 iteration=iteration,
                 initial_attempt_id=initial_attempt.id if initial_attempt else None,
                 origin=origin,
@@ -120,14 +120,14 @@ class WorkflowStarter:
     def _prepare_origin(self, origin: WorkflowOrigin) -> "_PreparedWorkflowOrigin":
         if origin.kind == WorkflowOriginKind.ENTRY:
             if origin.task_center_run_id is None:
-                raise TaskCenterInvariantViolation("Entry-origin goal requires task_center_run_id.")
+                raise TaskCenterInvariantViolation("Entry-origin workflow requires task_center_run_id.")
             return _PreparedWorkflowOrigin(
                 task_center_run_id=origin.task_center_run_id,
                 parent_attempt_id=None,
             )
 
         if origin.task_id is None:
-            raise TaskCenterInvariantViolation("Task-origin goal requires parent task_id.")
+            raise TaskCenterInvariantViolation("Task-origin workflow requires parent task_id.")
         parent_task = self._assert_parent_running_and_no_open_child(origin.task_id)
         task_center_run_id = str(parent_task.get("task_center_run_id") or "")
         if not task_center_run_id.strip():
@@ -136,7 +136,7 @@ class WorkflowStarter:
         if parent_attempt_id is None:
             raise TaskCenterInvariantViolation(
                 f"TaskCenter task {origin.task_id!r} is not attempt-bound; "
-                "task-origin goal starts require a generator task."
+                "task-origin workflow starts require a generator task."
             )
         return _PreparedWorkflowOrigin(
             task_center_run_id=task_center_run_id,
@@ -183,23 +183,23 @@ class WorkflowStarter:
         *,
         origin: WorkflowOrigin,
         parent_attempt_id: str,
-        goal: Workflow,
+        workflow: Workflow,
         iteration: Iteration,
         attempt_id: str,
         goal_text: str,
     ) -> None:
         if origin.task_id is None:
-            raise TaskCenterInvariantViolation("Task-origin goal start is missing parent task_id.")
+            raise TaskCenterInvariantViolation("Task-origin workflow start is missing parent task_id.")
         parent_task = self._runtime.parent_task_for_delegated_workflow(
             task_id=origin.task_id, attempt_id=parent_attempt_id
         )
         if parent_task is None:
             raise TaskCenterInvariantViolation(
                 f"No parent task registered for TaskCenter task "
-                f"{origin.task_id!r}; goal start cannot proceed."
+                f"{origin.task_id!r}; workflow start cannot proceed."
             )
         parent_task.mark_waiting_workflow(
-            delegated_workflow_id=goal.id,
+            delegated_workflow_id=workflow.id,
             delegated_iteration_id=iteration.id,
             delegated_attempt_id=attempt_id,
             goal=goal_text,
@@ -208,12 +208,12 @@ class WorkflowStarter:
     def _compensate_failed_start(
         self,
         *,
-        goal: Workflow,
+        workflow: Workflow,
         iteration: Iteration,
         initial_attempt_id: str | None,
         origin: WorkflowOrigin,
     ) -> None:
-        """Best-effort rollback: attempt -> iteration -> goal -> parent.
+        """Best-effort rollback: attempt -> iteration -> workflow -> parent.
 
         Each step is independent; failures are logged via ``logger.exception``
         but never block subsequent steps. If parent restore fails we route a
@@ -242,9 +242,9 @@ class WorkflowStarter:
             ),
         )
         _do(
-            "cancel_goal",
+            "cancel_workflow",
             lambda: runtime.workflow_store.set_status(
-                goal.id,
+                workflow.id,
                 status=WorkflowStatus.CANCELLED,
                 final_outcome=None,
                 closed_at=now,
@@ -262,9 +262,9 @@ class WorkflowStarter:
                 "synthetic_close_report",
                 lambda: WorkflowClosureReportRouter(runtime=runtime).deliver(
                     WorkflowClosureReport(
-                        workflow_id=goal.id,
-                        task_center_run_id=goal.task_center_run_id,
-                        origin_kind=goal.origin_kind,
+                        workflow_id=workflow.id,
+                        task_center_run_id=workflow.task_center_run_id,
+                        origin_kind=workflow.origin_kind,
                         requested_by_task_id=parent_task_id,
                         outcome="failed",
                         final_iteration_id=iteration.id,

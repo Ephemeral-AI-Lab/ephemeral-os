@@ -273,7 +273,7 @@ class FullStackAdversarial(ScenarioBase):
         return ToolCallSpec(
             submit_plan_closes_goal,
             {
-                "plan_spec": "Close delegated full-stack matrix goal.",
+                "plan_spec": "Close delegated full-stack matrix workflow.",
                 "evaluation_criteria": [
                     "Recursive close report was written through tools.",
                     "Recursive final verifier read the close report.",
@@ -384,7 +384,7 @@ class FullStackAdversarial(ScenarioBase):
             ),
             "evaluation_criteria": [
                 "Retry planner saw failed verifier context.",
-                "Recursive goal completes before parent final guard.",
+                "Recursive workflow completes before parent final guard.",
                 "Final reconciliation reads subsystem and recursive artifacts.",
             ],
             "tasks": [

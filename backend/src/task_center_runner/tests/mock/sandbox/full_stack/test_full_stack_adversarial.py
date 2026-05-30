@@ -178,8 +178,8 @@ def _assert_task_center_shape(
 
 
 def _has_multi_dependency_verifier(graph_summary: dict[str, Any]) -> bool:
-    for goal in graph_summary["workflows"]:
-        for iteration in goal["iterations"]:
+    for workflow in graph_summary["workflows"]:
+        for iteration in workflow["iterations"]:
             for attempt in iteration["attempts"]:
                 for task in attempt["tasks"]:
                     if task.get("agent_name") == "verifier" and len(task["needs"]) > 1:
@@ -190,8 +190,8 @@ def _has_multi_dependency_verifier(graph_summary: dict[str, Any]) -> bool:
 def _recursive_workflow_count(graph_summary: dict[str, Any]) -> int:
     return sum(
         1
-        for goal in graph_summary["workflows"]
-        if goal.get("origin_kind") == "task"
+        for workflow in graph_summary["workflows"]
+        if workflow.get("origin_kind") == "task"
     )
 
 

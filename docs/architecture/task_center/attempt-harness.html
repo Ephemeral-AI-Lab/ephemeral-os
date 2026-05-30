@@ -148,7 +148,7 @@
   <div><b>evaluate</b><span>Only when every generator is <code>DONE</code> does stage advancement create and launch the evaluator task.</span></div>
 </div>
 <div class="edge-list">
-  <div><b>waiting goal</b><span><code>WAITING_WORKFLOW</code> is not quiescent and not done. A parent generator waiting on a child goal keeps the parent attempt from advancing until a close report is delivered.</span></div>
+  <div><b>waiting workflow</b><span><code>WAITING_WORKFLOW</code> is not quiescent and not done. A parent generator waiting on a child workflow keeps the parent attempt from advancing until a close report is delivered.</span></div>
   <div><b>blocked descendants</b><span>Pending descendants of <code>FAILED</code> or <code>BLOCKED</code> tasks remain persisted as pending not-started work. They are counted as unreachable for quiescence, not launched.</span></div>
   <div><b>blocker semantics</b><span><code>GeneratorSubmission(outcome=&quot;blocker&quot;)</code> marks the task <code>BLOCKED</code>. The attempt waits for runnable siblings, then fails with <code>GENERATOR_FAILED</code>.</span></div>
 </div>
@@ -165,7 +165,7 @@
 </div>
 <div class="callout good">
   <span class="label">Boundary</span>
-  The attempt harness closes only one Attempt. Iteration retry, deferred continuation, nested child Goals, and Workflow closure live one level up in the Workflow Iteration Attempt page.
+  The attempt harness closes only one Attempt. Iteration retry, deferred continuation, nested child workflows, and Workflow closure live one level up in the Workflow Iteration Attempt page.
 </div>
 </section>
 

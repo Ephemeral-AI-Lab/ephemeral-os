@@ -24,7 +24,7 @@ from task_center_runner.environments.sweevo_image.fixtures import run_scenario_o
 from task_center_runner.environments.sweevo_image.health import (
     require_sweevo_image_provider_healthy,
 )
-from task_center_runner.tests.mock._focused_scenario_contracts import recursive_goals
+from task_center_runner.tests.mock._focused_scenario_contracts import recursive_workflows
 from task_center_runner.benchmarks.sweevo.models import SWEEvoInstance
 
 
@@ -125,7 +125,7 @@ async def test_full_case_user_input_runs_dynamic_verifier_dag(
     # and VERIFIER_SUCCESS@final_release -> EVALUATOR_INVOKED) become terminal
     # structural outcomes: graph_summary is final state with no timeline, so the
     # ordering itself is enforced by TaskCenter's own dependency/closure rules.
-    recursive = recursive_goals(gs)
+    recursive = recursive_workflows(gs)
     assert recursive, gs
     assert all(workflow["status"] == "succeeded" for workflow in recursive), recursive
     # recursive child closed before the parent's recursive_return guard passed.
@@ -147,8 +147,8 @@ async def test_full_case_user_input_runs_dynamic_verifier_dag(
 def _continuation_iterations_follow_partial_attempts(
     graph_summary: dict[str, Any],
 ) -> bool:
-    for goal in graph_summary["workflows"]:
-        iterations = goal["iterations"]
+    for workflow in graph_summary["workflows"]:
+        iterations = workflow["iterations"]
         by_sequence = {iteration["sequence_no"]: iteration for iteration in iterations}
         for iteration in iterations:
             if iteration["sequence_no"] <= 1:
@@ -161,8 +161,8 @@ def _continuation_iterations_follow_partial_attempts(
 
 
 def _has_multi_dependency_verifier(graph_summary: dict[str, Any]) -> bool:
-    for goal in graph_summary["workflows"]:
-        for iteration in goal["iterations"]:
+    for workflow in graph_summary["workflows"]:
+        for iteration in workflow["iterations"]:
             for attempt in iteration["attempts"]:
                 for task in attempt["tasks"]:
                     if task.get("agent_name") == "verifier" and len(task["needs"]) > 1:
@@ -232,9 +232,9 @@ def _assert_audit_tree_roles(run_dir: Path) -> None:
     assert list(run_dir.glob("workflow_*_*/iteration_*_*"))
     assert list(run_dir.glob("workflow_*_*/iteration_*_*/attempt_*_*"))
     first_workflow = workflow_dirs[0]
-    goal = _json_file(first_workflow / "workflow.json")
-    assert goal["origin_kind"] == "entry"
-    assert goal["requested_by_task_id"] is None
+    workflow = _json_file(first_workflow / "workflow.json")
+    assert workflow["origin_kind"] == "entry"
+    assert workflow["requested_by_task_id"] is None
     iteration_files = sorted(first_workflow.glob("iteration_*_*/iteration.json"))
     assert iteration_files
     first_iteration = _json_file(iteration_files[0])

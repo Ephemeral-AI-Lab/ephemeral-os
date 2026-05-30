@@ -18,8 +18,8 @@ both e and f) and (ii) launch siblings (b/c, e/f) in parallel as soon as
 their shared upstream completes.
 
 All seven nodes run the lightweight ``preflight`` action; evaluator passes.
-Asserts: 7 ``EXECUTOR_INVOKED`` events, goal ``status=succeeded``,
-graph_summary shows one goal with one iteration and one passed attempt
+Asserts: 7 ``EXECUTOR_INVOKED`` events, workflow ``status=succeeded``,
+graph_summary shows one workflow with one iteration and one passed attempt
 containing all seven generator tasks.
 """
 

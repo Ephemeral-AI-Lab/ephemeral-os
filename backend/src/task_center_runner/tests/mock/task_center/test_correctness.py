@@ -65,14 +65,14 @@ async def test_correctness_testing_scenario_runs_end_to_end(
         item for item in report.sandbox_checks if not item.passed
     ]
 
-    # --- Workflow graph: succeeded goal with delegated iterations ----
+    # --- Workflow graph: succeeded workflow with delegated iterations ----
     delegated = [
-        goal
-        for goal in report.graph_summary["workflows"]
-        if len(goal["iterations"]) >= 1
-        and any(ep["attempts"] for ep in goal["iterations"])
+        workflow
+        for workflow in report.graph_summary["workflows"]
+        if len(workflow["iterations"]) >= 1
+        and any(ep["attempts"] for ep in workflow["iterations"])
     ]
-    assert delegated, "no goal with attempts in graph"
+    assert delegated, "no workflow with attempts in graph"
     final_workflow = delegated[-1]
     assert final_workflow["status"] == "succeeded"
 

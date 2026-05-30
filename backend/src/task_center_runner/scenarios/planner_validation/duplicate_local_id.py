@@ -8,7 +8,7 @@ this as a planner failure and closes the attempt with
 ``fail_reason="planner_failed"``.
 
 Both attempts in the iteration run the same invalid plan, so iteration 1 closes
-with ``status=failed`` and the goal closes ``status=failed``. No generator
+with ``status=failed`` and the workflow closes ``status=failed``. No generator
 or evaluator was launched.
 
 Asserts: ``report.task_center_status == "failed"``; the seen event sequence

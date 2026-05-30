@@ -38,17 +38,17 @@ def build_planner_context(scope: ContextScope, deps: ContextEngineDeps) -> Conte
     iteration_id = scope.require_field("iteration_id")
     attempt_id = scope.require_field("attempt_id")
 
-    goal = deps.workflow_store.get(workflow_id)
-    if goal is None:
+    workflow = deps.workflow_store.get(workflow_id)
+    if workflow is None:
         raise ContextEngineError(f"Workflow {workflow_id!r} not found")
     iteration = deps.iteration_store.get(iteration_id)
     if iteration is None:
         raise ContextEngineError(f"Iteration {iteration_id!r} not found")
 
     blocks = goal_iteration_blocks(
-        goal=goal,
+        workflow=workflow,
         current_iteration=iteration,
-        iterations=deps.iteration_store.list_for_workflow(goal.id),
+        iterations=deps.iteration_store.list_for_workflow(workflow.id),
     )
     blocks.extend(
         failed_attempt_blocks(
@@ -63,7 +63,7 @@ def build_planner_context(scope: ContextScope, deps: ContextEngineDeps) -> Conte
         target_role="planner",
         target_id=attempt_id,
         canonical_refs=ContextRefs(
-            workflow_id=goal.id,
+            workflow_id=workflow.id,
             iteration_id=iteration.id,
             attempt_id=attempt_id,
         ),

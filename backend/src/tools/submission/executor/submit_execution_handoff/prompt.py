@@ -11,11 +11,11 @@ from tools._names import (
 def get_submit_execution_handoff_description() -> str:
     return f"""\
 Hand the current task back to the planner for decomposition into smaller
-sub-goals. This terminates your executor run.
+sub-objectives. This terminates your executor run.
 
 Call this when:
-- The current goal's scope is too large for a single executor pass and
-  would be more reliably completed as several smaller sub-goals.
+- The current objective's scope is too large for a single executor pass and
+  would be more reliably completed as several smaller sub-objectives.
 - You've assessed the scope BEFORE making edits — and have not yet
   edited.
 

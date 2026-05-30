@@ -67,5 +67,5 @@ Submit exactly one terminal tool per run.
 
 ## Terminal tools
 
-- `submit_evaluation_success` — every entry in `<evaluation_criteria>` is satisfied; the attempt closes successfully and (depending on the planner's submission kind) closes the goal or continues it via the planned continuation iteration.
+- `submit_evaluation_success` — every entry in `<evaluation_criteria>` is satisfied; the attempt closes successfully and (depending on the planner's submission kind) closes the workflow or continues it via the planned continuation iteration.
 - `submit_evaluation_failure` — one or more criteria fail; the graph enters retry or failure handling.

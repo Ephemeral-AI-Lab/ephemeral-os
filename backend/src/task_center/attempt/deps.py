@@ -2,7 +2,7 @@
 
 :class:`AttemptDeps` threads stores, orchestration, launch, and audit concerns
 into every attempt-scoped spawn. :class:`AttemptDelegatedWorkflowParentTask`
-owns the parent generator-task transitions while a child goal is running.
+owns the parent generator-task transitions while a child workflow is running.
 """
 
 from __future__ import annotations
@@ -87,12 +87,12 @@ class AttemptDeps:
             raise TaskCenterInvariantViolation(
                 f"Iteration {attempt.iteration_id!r} not found for Attempt {attempt.id!r}"
             )
-        goal = self.workflow_store.get(iteration.workflow_id)
-        if goal is None:
+        workflow = self.workflow_store.get(iteration.workflow_id)
+        if workflow is None:
             raise TaskCenterInvariantViolation(
                 f"Workflow {iteration.workflow_id!r} not found for Iteration {iteration.id!r}"
             )
-        return goal.task_center_run_id
+        return workflow.task_center_run_id
 
     def require_composer(self) -> AgentEntryComposer:
         if self.composer is None:
@@ -105,7 +105,7 @@ class AttemptDeps:
     def parent_task_for_delegated_workflow(
         self, *, task_id: str, attempt_id: str | None
     ) -> AttemptDelegatedWorkflowParentTask | None:
-        """Return the parent generator task waiting on a child goal."""
+        """Return the parent generator task waiting on a child workflow."""
         if attempt_id is None:
             return None
         return AttemptDelegatedWorkflowParentTask(
@@ -118,7 +118,7 @@ class AttemptDeps:
 
 @dataclass(frozen=True, slots=True)
 class AttemptDelegatedWorkflowParentTask:
-    """Parent generator task waiting on a delegated child goal."""
+    """Parent generator task waiting on a delegated child workflow."""
 
     task_id: str
     attempt_id: str

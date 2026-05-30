@@ -405,12 +405,12 @@ class MockSquadRunner:
                 "request_recursive_workflow:"
             ):
                 package_id = action.split(":", 1)[1]
-                goal = self._scenario.recursive_handoff_goal(ctx) or (
+                goal_handoff = self._scenario.recursive_handoff_goal(ctx) or (
                     f"Resolve recursive package {package_id}."
                 )
                 result = await self._call_tool(
                     submit_execution_handoff,
-                    {"goal_handoff": goal},
+                    {"goal_handoff": goal_handoff},
                     self._approve_terminal(metadata, submit_execution_handoff),
                     emit,
                 )
@@ -427,12 +427,12 @@ class MockSquadRunner:
                 "request_recursive_matrix:"
             ):
                 package_id = action.split(":", 1)[1]
-                goal = self._scenario.recursive_handoff_goal(ctx) or (
+                goal_handoff = self._scenario.recursive_handoff_goal(ctx) or (
                     f"Resolve recursive matrix package {package_id}."
                 )
                 result = await self._call_tool(
                     submit_execution_handoff,
-                    {"goal_handoff": goal},
+                    {"goal_handoff": goal_handoff},
                     self._approve_terminal(metadata, submit_execution_handoff),
                     emit,
                 )
@@ -1773,7 +1773,7 @@ class MockSquadRunner:
                 "no_defer_terminal": "submit_plan_defers_goal" not in prompt,
             }
             reason = (
-                "Depth-restricted planner exposes only the closes-goal terminal."
+                "Depth-restricted planner exposes only the close-only planner terminal."
             )
         elif role == "planner":
             attempt, iteration = self._current_attempt_and_iteration(metadata)
@@ -1790,7 +1790,7 @@ class MockSquadRunner:
                     'position="prior"' in prompt and "<task " in prompt
                 )
             reason = (
-                "Planner context is goal and iteration scoped; retry planners "
+                "Planner context is objective and iteration scoped; retry planners "
                 "also receive failed-attempt evidence, and continuation planners "
                 "receive previous iteration results."
             )

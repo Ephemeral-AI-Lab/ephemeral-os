@@ -47,20 +47,20 @@ def _seed_planner_attempt(
     task_center_run_id: str,
     attempt_sequence_no: int = 1,
 ) -> tuple[Any, Any, str]:
-    """Insert a goal/iteration/attempt/planner-task row set; return key handles."""
-    goal = workflow_store.insert(
+    """Insert a workflow/iteration/attempt/planner-task row set; return key handles."""
+    workflow = workflow_store.insert(
         task_center_run_id=task_center_run_id,
         requested_by_task_id="outer-task",
         goal="solve",
     )
     iteration = iteration_store.insert(
-        workflow_id=goal.id,
+        workflow_id=workflow.id,
         sequence_no=1,
         creation_reason=IterationCreationReason.INITIAL,
         goal="solve",
         attempt_budget=4,
     )
-    workflow_store.append_iteration_id(goal.id, iteration.id)
+    workflow_store.append_iteration_id(workflow.id, iteration.id)
     attempt = attempt_store.insert(
         iteration_id=iteration.id,
         attempt_sequence_no=attempt_sequence_no,
@@ -79,10 +79,10 @@ def _seed_planner_attempt(
         task_center_attempt_id=attempt.id,
         spawn_reason="attempt_planner",
     )
-    return goal, attempt, task_id
+    return workflow, attempt, task_id
 
 
-def _build_launch(*, attempt: Any, goal: Any, task_id: str, task_center_run_id: str) -> AgentLaunch:
+def _build_launch(*, attempt: Any, workflow: Any, task_id: str, task_center_run_id: str) -> AgentLaunch:
     return AgentLaunch(
         task_id=task_id,
         task_center_run_id=task_center_run_id,
@@ -92,7 +92,7 @@ def _build_launch(*, attempt: Any, goal: Any, task_id: str, task_center_run_id: 
         context="plan context",
         task_guidance="plan the work",
         needs=(),
-        workflow_id=goal.id,
+        workflow_id=workflow.id,
     )
 
 
@@ -124,7 +124,7 @@ async def test_main_planner_engine_retry_keeps_attempt_sequence_no_at_one(
     terminal submission mutated the task to DONE) and no
     exhaustion-reporting fires. The runner is called exactly once.
     """
-    goal, attempt, task_id = _seed_planner_attempt(
+    workflow, attempt, task_id = _seed_planner_attempt(
         workflow_store=workflow_store,
         iteration_store=iteration_store,
         attempt_store=attempt_store,
@@ -132,7 +132,7 @@ async def test_main_planner_engine_retry_keeps_attempt_sequence_no_at_one(
         task_center_run_id=task_center_run_id,
     )
     launch = _build_launch(
-        attempt=attempt, goal=goal, task_id=task_id, task_center_run_id=task_center_run_id
+        attempt=attempt, workflow=workflow, task_id=task_id, task_center_run_id=task_center_run_id
     )
     deps = _build_deps(
         workflow_store=workflow_store,
@@ -198,7 +198,7 @@ async def test_main_planner_no_terminal_result_marks_attempt_failed(
     a new attempt_sequence_no=2 (not exercised here — the assertion is
     that the failure was recorded on attempt_sequence_no=1).
     """
-    goal, attempt, task_id = _seed_planner_attempt(
+    workflow, attempt, task_id = _seed_planner_attempt(
         workflow_store=workflow_store,
         iteration_store=iteration_store,
         attempt_store=attempt_store,
@@ -206,7 +206,7 @@ async def test_main_planner_no_terminal_result_marks_attempt_failed(
         task_center_run_id=task_center_run_id,
     )
     launch = _build_launch(
-        attempt=attempt, goal=goal, task_id=task_id, task_center_run_id=task_center_run_id
+        attempt=attempt, workflow=workflow, task_id=task_id, task_center_run_id=task_center_run_id
     )
     deps = _build_deps(
         workflow_store=workflow_store,
@@ -267,7 +267,7 @@ async def test_attempt_harness_records_runner_token_usage(
     field on the runner's :class:`EphemeralRunResult`. The result reaches
     the runner's own bookkeeping — the launcher only inspects ``status``.
     """
-    goal, attempt, task_id = _seed_planner_attempt(
+    workflow, attempt, task_id = _seed_planner_attempt(
         workflow_store=workflow_store,
         iteration_store=iteration_store,
         attempt_store=attempt_store,
@@ -275,7 +275,7 @@ async def test_attempt_harness_records_runner_token_usage(
         task_center_run_id=task_center_run_id,
     )
     launch = _build_launch(
-        attempt=attempt, goal=goal, task_id=task_id, task_center_run_id=task_center_run_id
+        attempt=attempt, workflow=workflow, task_id=task_id, task_center_run_id=task_center_run_id
     )
     deps = _build_deps(
         workflow_store=workflow_store,
@@ -332,7 +332,7 @@ async def test_continuation_planner_attempt_does_not_pass_retry_kwarg(
     post-deletion shape: ``persist_agent_run`` and ``task_id`` present,
     no resurrection of ``max_terminal_retries``.
     """
-    goal, attempt, task_id = _seed_planner_attempt(
+    workflow, attempt, task_id = _seed_planner_attempt(
         workflow_store=workflow_store,
         iteration_store=iteration_store,
         attempt_store=attempt_store,
@@ -341,7 +341,7 @@ async def test_continuation_planner_attempt_does_not_pass_retry_kwarg(
         attempt_sequence_no=2,
     )
     launch = _build_launch(
-        attempt=attempt, goal=goal, task_id=task_id, task_center_run_id=task_center_run_id
+        attempt=attempt, workflow=workflow, task_id=task_id, task_center_run_id=task_center_run_id
     )
     deps = _build_deps(
         workflow_store=workflow_store,
@@ -416,7 +416,7 @@ async def test_main_agent_launches_with_two_user_messages(
     """Non-entry agents launch with initial_messages=[<context>] + prompt=<task_guidance>."""
     from message.message import Message
 
-    goal, attempt, task_id = _seed_planner_attempt(
+    workflow, attempt, task_id = _seed_planner_attempt(
         workflow_store=workflow_store,
         iteration_store=iteration_store,
         attempt_store=attempt_store,
@@ -424,7 +424,7 @@ async def test_main_agent_launches_with_two_user_messages(
         task_center_run_id=task_center_run_id,
     )
     launch = _build_launch(
-        attempt=attempt, goal=goal, task_id=task_id, task_center_run_id=task_center_run_id
+        attempt=attempt, workflow=workflow, task_id=task_id, task_center_run_id=task_center_run_id
     )
     deps = _build_deps(
         workflow_store=workflow_store,
@@ -487,7 +487,7 @@ async def test_launch_without_task_guidance_falls_back_to_single_user_message(
     The launcher must NOT pass initial_messages when task_guidance
     is None or empty — the context becomes the spawn prompt directly.
     """
-    goal, attempt, task_id = _seed_planner_attempt(
+    workflow, attempt, task_id = _seed_planner_attempt(
         workflow_store=workflow_store,
         iteration_store=iteration_store,
         attempt_store=attempt_store,
@@ -507,7 +507,7 @@ async def test_launch_without_task_guidance_falls_back_to_single_user_message(
         context="execute this task",
         task_guidance=None,  # no task-guidance prose
         needs=(),
-        workflow_id=goal.id,
+        workflow_id=workflow.id,
     )
     deps = _build_deps(
         workflow_store=workflow_store,
@@ -562,7 +562,7 @@ async def test_main_agent_launches_with_skill_as_prompt_and_context_guidance_ini
     initial_messages = [context, guidance] in canonical order."""
     from message.message import Message
 
-    goal, attempt, task_id = _seed_planner_attempt(
+    workflow, attempt, task_id = _seed_planner_attempt(
         workflow_store=workflow_store,
         iteration_store=iteration_store,
         attempt_store=attempt_store,
@@ -579,7 +579,7 @@ async def test_main_agent_launches_with_skill_as_prompt_and_context_guidance_ini
         task_guidance="plan the work",
         skill="Load skill: planner",
         needs=(),
-        workflow_id=goal.id,
+        workflow_id=workflow.id,
     )
     deps = _build_deps(
         workflow_store=workflow_store,

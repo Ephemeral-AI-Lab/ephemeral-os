@@ -33,7 +33,7 @@ class AttemptSubmissionContext:
     task: dict[str, Any]
     attempt: Attempt
     iteration: Iteration
-    goal: Workflow
+    workflow: Workflow
     runtime: AttemptDeps
     orchestrator: AttemptOrchestrator
 
@@ -119,8 +119,8 @@ def _resolve_attempt_context(
             f"Iteration {attempt.iteration_id!r} was not found."
         )
 
-    goal = runtime.workflow_store.get(iteration.workflow_id)
-    if goal is None:
+    workflow = runtime.workflow_store.get(iteration.workflow_id)
+    if workflow is None:
         raise AttemptSubmissionContextError(
             f"Workflow {iteration.workflow_id!r} was not found."
         )
@@ -135,7 +135,7 @@ def _resolve_attempt_context(
         task=task,
         attempt=attempt,
         iteration=iteration,
-        goal=goal,
+        workflow=workflow,
         runtime=runtime,
         orchestrator=orchestrator,
     )

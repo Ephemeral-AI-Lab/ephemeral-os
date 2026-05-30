@@ -41,7 +41,7 @@ def _ctx(
             evaluation_criteria=("criterion",),
             id=f"attempt-{attempt_no}",
         ),
-        iteration=SimpleNamespace(sequence_no=1, workflow_id="goal-id"),
+        iteration=SimpleNamespace(sequence_no=1, workflow_id="workflow-id"),
         workflow=SimpleNamespace(requested_by_task_id=requested_by_task_id),
         prompt=prompt,
         metadata={},
@@ -99,7 +99,7 @@ def test_nested_workflow_dispatch_uses_context_message() -> None:
     ) == ("request_recursive_workflow:child_success",)
     assert failure.executor_actions(
         _ctx(context_message="ACTION child_failure reason=nested_workflow")
-    ) == ("fail:Intentional child goal failure.",)
+    ) == ("fail:Intentional child workflow failure.",)
 
 
 def test_generator_failure_quiescence_uses_context_message_on_attempt_one() -> None:

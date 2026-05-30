@@ -5,7 +5,7 @@ Before adapting the probe-heavy executor, prove the riskiest *new* path: the
 TaskCenter submission terminal (``submit_plan_closes_goal`` →
 ``submit_execution_success`` → ``submit_evaluation_success``) through
 ``run_pipeline`` → ``start_task_center_run`` → launcher → ``run_ephemeral_agent``,
-landing a closed goal in store state. Asserted via ``graph_summary`` /
+landing a closed workflow in store state. Asserted via ``graph_summary`` /
 ``task_center_status`` (real store), not lifecycle events.
 """
 
@@ -29,7 +29,7 @@ pytestmark = pytest.mark.asyncio
 
 
 class _PlannerSubmitProof(ScenarioBase):
-    """Planner closes the goal with one trivial executor task; evaluator passes."""
+    """Planner closes the workflow with one trivial executor task; evaluator passes."""
 
     name = "planner_submit_proof"
 
@@ -100,19 +100,19 @@ async def test_planner_submission_through_real_loop(
         stores=stores,
     )
 
-    # The goal closed — which required planner + executor + evaluator terminals
+    # The workflow closed — which required planner + executor + evaluator terminals
     # to dispatch through the real loop and mutate TaskCenter store state.
     assert report.task_center_status == "done", report.metrics
-    goals = report.graph_summary["workflows"]
-    assert len(goals) == 1, goals
-    goal = goals[0]
-    assert goal["origin_kind"] == "entry", goal
+    workflows = report.graph_summary["workflows"]
+    assert len(workflows) == 1, workflows
+    workflow = workflows[0]
+    assert workflow["origin_kind"] == "entry", workflow
     # The executor task landed done in real store state.
     task_statuses = [
         task.get("status")
-        for iteration in goal["iterations"]
+        for iteration in workflow["iterations"]
         for attempt in iteration["attempts"]
         for task in attempt["tasks"]
     ]
-    assert task_statuses, goal
+    assert task_statuses, workflow
     assert all(status == "done" for status in task_statuses), task_statuses

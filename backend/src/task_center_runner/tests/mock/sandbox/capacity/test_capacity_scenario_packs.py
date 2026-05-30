@@ -132,7 +132,7 @@ def _ctx(*, attempt_no: int = 1, iteration_no: int = 1, recursive: bool = False)
             evaluation_criteria=("criterion",),
             id=f"attempt-{attempt_no}",
         ),
-        iteration=SimpleNamespace(sequence_no=iteration_no, workflow_id="goal-id"),
+        iteration=SimpleNamespace(sequence_no=iteration_no, workflow_id="workflow-id"),
         workflow=SimpleNamespace(
             origin_kind=origin_kind,
             requested_by_task_id=requested_by,

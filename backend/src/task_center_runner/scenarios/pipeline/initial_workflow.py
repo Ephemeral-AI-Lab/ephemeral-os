@@ -23,7 +23,7 @@ from task_center_runner.scenarios.base import ScenarioBase, ScenarioContext, Too
 
 
 class InitialWorkflow(ScenarioBase):
-    """Single goal, single iteration, single attempt — happy path."""
+    """Single workflow, single iteration, single attempt — happy path."""
 
     name = "pipeline.initial_workflow"
     expected_event_sequence: tuple[EventType, ...] = (
@@ -45,7 +45,7 @@ class InitialWorkflow(ScenarioBase):
         return ToolCallSpec(
             submit_evaluation_success,
             {
-                "summary": "Initial goal preflight evidence accepted.",
+                "summary": "Initial workflow preflight evidence accepted.",
                 "passed_criteria": list(ctx.attempt.evaluation_criteria),
             },
         )

@@ -1,6 +1,6 @@
 """Workflow lifecycle coordination.
 
-``WorkflowLifecycle`` is the entry point for creating a goal, extending its
+``WorkflowLifecycle`` is the entry point for creating a workflow, extending its
 iteration chain, and closing it. Persistence, iteration creation, and
 continuation routing stay in this module behind the public lifecycle class.
 """
@@ -50,7 +50,7 @@ WorkflowClosureCallback = Callable[[WorkflowClosureReport], object]
 
 
 class WorkflowLifecycle:
-    """Coordinates one goal's iteration chain and closure report delivery."""
+    """Coordinates one workflow's iteration chain and closure report delivery."""
 
     def __init__(
         self,
@@ -89,21 +89,21 @@ class WorkflowLifecycle:
     def create_initial_iteration_with_coordinator(
         self, *, workflow_id: str
     ) -> tuple[Iteration, IterationAttemptCoordinator]:
-        goal = self._require_workflow(workflow_id)
-        assert_workflow_open(goal)
-        assert_iteration_sequence_contiguous(goal, new_sequence_no=1)
+        workflow = self._require_workflow(workflow_id)
+        assert_workflow_open(workflow)
+        assert_iteration_sequence_contiguous(workflow, new_sequence_no=1)
         return self._insert_iteration_and_register_coordinator(
-            goal=goal,
+            workflow=workflow,
             sequence_no=1,
             creation_reason=IterationCreationReason.INITIAL,
-            iteration_goal=goal.goal,
+            iteration_goal=workflow.goal,
         )
 
     def create_deferred_iteration_with_coordinator(
         self, *, previous_iteration: Iteration
     ) -> tuple[Iteration, IterationAttemptCoordinator]:
-        goal = self._require_workflow(previous_iteration.workflow_id)
-        assert_workflow_open(goal)
+        workflow = self._require_workflow(previous_iteration.workflow_id)
+        assert_workflow_open(workflow)
         assert_predecessor_has_deferred_goal_for_next_iteration(previous_iteration)
         deferred_goal = previous_iteration.deferred_goal_for_next_iteration
         if deferred_goal is None:  # pragma: no cover - guarded by invariant above
@@ -111,9 +111,9 @@ class WorkflowLifecycle:
                 f"Iteration {previous_iteration.id!r} has no deferred goal"
             )
         new_sequence_no = previous_iteration.sequence_no + 1
-        assert_iteration_sequence_contiguous(goal, new_sequence_no=new_sequence_no)
+        assert_iteration_sequence_contiguous(workflow, new_sequence_no=new_sequence_no)
         return self._insert_iteration_and_register_coordinator(
-            goal=goal,
+            workflow=workflow,
             sequence_no=new_sequence_no,
             creation_reason=IterationCreationReason.DEFERRED_GOAL_CONTINUATION,
             iteration_goal=deferred_goal,
@@ -130,13 +130,13 @@ class WorkflowLifecycle:
         final_iteration_id: str,
         final_attempt_id: str | None,
     ) -> Workflow:
-        goal = self._require_workflow(workflow_id)
-        assert_workflow_open(goal)
+        workflow = self._require_workflow(workflow_id)
+        assert_workflow_open(workflow)
         report = WorkflowClosureReport(
             workflow_id=workflow_id,
-            task_center_run_id=goal.task_center_run_id,
-            origin_kind=goal.origin_kind,
-            requested_by_task_id=goal.requested_by_task_id,
+            task_center_run_id=workflow.task_center_run_id,
+            origin_kind=workflow.origin_kind,
+            requested_by_task_id=workflow.requested_by_task_id,
             outcome="success" if succeeded else "failed",
             final_iteration_id=final_iteration_id,
             final_attempt_id=final_attempt_id,
@@ -152,31 +152,31 @@ class WorkflowLifecycle:
         return updated
 
     def _require_workflow(self, workflow_id: str) -> Workflow:
-        goal = self._workflow_store.get(workflow_id)
-        if goal is None:
+        workflow = self._workflow_store.get(workflow_id)
+        if workflow is None:
             raise TaskCenterInvariantViolation(f"Workflow {workflow_id!r} not found")
-        return goal
+        return workflow
 
-    def _append_iteration_id(self, goal: Workflow, iteration_id: str) -> Workflow:
-        assert_iteration_id_unique_in_workflow(goal, iteration_id)
-        return self._workflow_store.append_iteration_id(goal.id, iteration_id)
+    def _append_iteration_id(self, workflow: Workflow, iteration_id: str) -> Workflow:
+        assert_iteration_id_unique_in_workflow(workflow, iteration_id)
+        return self._workflow_store.append_iteration_id(workflow.id, iteration_id)
 
     def _insert_iteration_and_register_coordinator(
         self,
         *,
-        goal: Workflow,
+        workflow: Workflow,
         sequence_no: int,
         creation_reason: IterationCreationReason,
         iteration_goal: str,
     ) -> tuple[Iteration, IterationAttemptCoordinator]:
         iteration = self._iteration_store.insert(
-            workflow_id=goal.id,
+            workflow_id=workflow.id,
             sequence_no=sequence_no,
             creation_reason=creation_reason,
             goal=iteration_goal,
             attempt_budget=self._config.default_attempt_budget,
         )
-        self._append_iteration_id(goal, iteration.id)
+        self._append_iteration_id(workflow, iteration.id)
         coordinator = IterationAttemptCoordinator(
             iteration_id=iteration.id,
             iteration_store=self._iteration_store,

@@ -219,7 +219,9 @@ async def test_run_scenario_correctness_testing_with_fake_sandbox(
     assert report.passed_sandbox_checks
 
     delegated = [
-        goal for goal in report.graph_summary["workflows"] if len(goal["iterations"]) == 2
+        workflow
+        for workflow in report.graph_summary["workflows"]
+        if len(workflow["iterations"]) == 2
     ][0]
     assert delegated["status"] == "succeeded"
     assert [
@@ -271,21 +273,21 @@ async def test_run_scenario_correctness_testing_with_fake_sandbox(
 
     workflow_dirs = list(run_dir.glob("workflow_*_*"))
     assert workflow_dirs, f"no workflow_NN_<id> dir under {run_dir}"
-    delegated_goal_dirs = []
+    delegated_workflow_dirs = []
     for workflow_dir in workflow_dirs:
         assert (workflow_dir / "workflow.json").exists()
         if list(workflow_dir.glob("iteration_*_*")):
-            delegated_goal_dirs.append(workflow_dir)
-    assert delegated_goal_dirs, "no goal with iterations — delegated path missing"
+            delegated_workflow_dirs.append(workflow_dir)
+    assert delegated_workflow_dirs, "no workflow with iterations — delegated path missing"
     found_attempt_with_role_dir = False
-    for workflow_dir in delegated_goal_dirs:
+    for workflow_dir in delegated_workflow_dirs:
         iteration_dirs = list(workflow_dir.glob("iteration_*_*"))
         for iteration_dir in iteration_dirs:
             assert (iteration_dir / "iteration.json").exists()
             attempt_dirs = list(iteration_dir.glob("attempt_*_*"))
             if not attempt_dirs:
                 # Older run fixtures may include attempt-less entry artifacts.
-                # Delegated goals must still contain normal attempts.
+                # Delegated workflows must still contain normal attempts.
                 continue
             for attempt_dir in attempt_dirs:
                 assert (attempt_dir / "attempt.json").exists()

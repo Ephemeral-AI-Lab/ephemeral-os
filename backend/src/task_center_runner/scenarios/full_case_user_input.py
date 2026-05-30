@@ -177,7 +177,7 @@ class FullCaseUserInput(ScenarioBase):
                     kind="defers",
                     deferred_goal_for_next_iteration=(
                         "Execute the dynamic package DAG with verifier "
-                        "checkpoints and recursive goal handling."
+                        "checkpoints and recursive workflow handling."
                     ),
                 ),
             )
@@ -188,6 +188,9 @@ class FullCaseUserInput(ScenarioBase):
 
     def _recursive_planner_response(self, ctx: ScenarioContext) -> ToolCallSpec:
         iteration = ctx.iteration
+        active_terminals = set(ctx.metadata.get("active_terminals") or ())
+        if "submit_plan_defers_goal" not in active_terminals:
+            return ToolCallSpec(submit_plan_closes_goal, _recursive_full_only_plan())
         if iteration.sequence_no == 1:
             return ToolCallSpec(
                 submit_plan_defers_goal,
@@ -249,7 +252,7 @@ class FullCaseUserInput(ScenarioBase):
         return ToolCallSpec(
             submit_plan_closes_goal,
             {
-                "plan_spec": "Close the delegated package goal.",
+                "plan_spec": "Close the delegated package workflow.",
                 "evaluation_criteria": [
                     "Recursive close report summarizes package evidence.",
                     "Recursive final verifier passed.",
@@ -345,7 +348,7 @@ class FullCaseUserInput(ScenarioBase):
             "task_specs": task_specs,
             "deferred_goal_for_next_iteration": (
                 "Run final release-bundle reconciliation after package evidence "
-                "and recursive goal output are available."
+                "and recursive workflow output are available."
             ),
         }
 
@@ -443,6 +446,65 @@ def _inventory_plan(
         assert deferred_goal_for_next_iteration is not None
         args["deferred_goal_for_next_iteration"] = deferred_goal_for_next_iteration
     return args
+
+
+def _recursive_full_only_plan() -> dict[str, Any]:
+    return {
+        "plan_spec": "Execute and close the delegated package workflow.",
+        "evaluation_criteria": [
+            "Recursive package inventory was produced.",
+            "Recursive package probes completed.",
+            "Recursive final verifier passed.",
+        ],
+        "tasks": [
+            {"id": "recursive_inventory", "agent_name": "executor", "deps": []},
+            {
+                "id": "recursive_inventory_guard",
+                "agent_name": "verifier",
+                "deps": ["recursive_inventory"],
+            },
+            {
+                "id": "recursive_exec_a",
+                "agent_name": "executor",
+                "deps": ["recursive_inventory_guard"],
+            },
+            {
+                "id": "recursive_exec_b",
+                "agent_name": "executor",
+                "deps": ["recursive_inventory_guard"],
+            },
+            {
+                "id": "recursive_wave_guard",
+                "agent_name": "verifier",
+                "deps": ["recursive_exec_a", "recursive_exec_b"],
+            },
+            {
+                "id": "recursive_reconcile",
+                "agent_name": "executor",
+                "deps": ["recursive_wave_guard"],
+            },
+            {
+                "id": "recursive_final_guard",
+                "agent_name": "verifier",
+                "deps": ["recursive_reconcile"],
+            },
+        ],
+        "task_specs": {
+            "recursive_inventory": "ACTION recursive_inventory",
+            "recursive_inventory_guard": (
+                "VERIFY checkpoint=recursive_inventory dependency_count=1"
+            ),
+            "recursive_exec_a": "ACTION recursive_execute slice=a",
+            "recursive_exec_b": "ACTION recursive_execute slice=b",
+            "recursive_wave_guard": (
+                "VERIFY checkpoint=recursive_wave dependency_count=2"
+            ),
+            "recursive_reconcile": "ACTION recursive_reconcile",
+            "recursive_final_guard": (
+                "VERIFY checkpoint=recursive_final dependency_count=1"
+            ),
+        },
+    }
 
 
 def _package_task_spec(package: WorkPackage, wave_no: int) -> str:

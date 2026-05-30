@@ -1,8 +1,8 @@
 """correctness_testing scenario — the only scenario shipped this phase.
 
-One composite that exercises entry → goal → iteration 1 (attempt 1 fails;
+One composite that exercises entry → workflow → iteration 1 (attempt 1 fails;
 attempt 2 passes via partial plan) → continuation iteration (attempt 1 passes
-via full plan + final probe) → goal close. Validates the full happy path
+via full plan + final probe) → workflow close. Validates the full happy path
 plus one failure path per plan §10.
 """
 
@@ -79,7 +79,7 @@ _INTEGRITY_PARTIAL_PLAN: dict = {
 _FINAL_PROBE_FULL_PLAN: dict = {
     "plan_spec": (
         "Confirm the sandbox integrity artifacts remain readable in the "
-        "continuation iteration and close the benchmark goal."
+        "continuation iteration and close the benchmark workflow."
     ),
     "evaluation_criteria": [
         "Continuation iteration received previous iteration context.",

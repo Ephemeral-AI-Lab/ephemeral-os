@@ -61,8 +61,8 @@
 <h2>Runtime Boundary Map <a class="anchor" href="#bridge-boundary-map">#</a></h2>
 <div class="diagram" aria-label="TaskCenter engine tools sandbox boundary map">
   <div class="flow-row">
-    <div class="node info"><strong>TaskCenter entry</strong><small>request, run, sandbox binding, first goal</small></div>
-    <div class="node"><strong>Workflow Iteration Attempt</strong><small>goal, iteration, attempt stores</small></div>
+    <div class="node info"><strong>TaskCenter entry</strong><small>request, run, sandbox binding, first workflow</small></div>
+    <div class="node"><strong>Workflow Iteration Attempt</strong><small>workflow, iteration, attempt stores</small></div>
     <div class="node"><strong>Attempt launcher</strong><small>composer output, metadata, runner fallback</small></div>
     <div class="node warn"><strong>Engine loop</strong><small>provider turn, terminal enforcement, tool dispatch</small></div>
   </div>
@@ -93,7 +93,7 @@
         |
         v
 [WorkflowStarter.start]
-        |  creates goal, first iteration, first attempt
+        |  creates workflow, first iteration, first attempt
         v
 [AttemptOrchestrator]
         |
@@ -104,7 +104,7 @@
 [terminal submission updates TaskCenter state]
 </pre>
 <div class="edge-list" aria-label="TaskCenter entry transitions">
-  <div><b>preflight</b><span><code>TaskCenterEntry.start()</code> verifies task, goal, iteration, and attempt stores before mutating run state.</span></div>
+  <div><b>preflight</b><span><code>TaskCenterEntry.start()</code> verifies task, workflow, iteration, and attempt stores before mutating run state.</span></div>
   <div><b>run shell</b><span><code>_create_top_level_run()</code> generates ids, prepares the sandbox binding, creates the request row, then creates the run row.</span></div>
   <div><b>runtime</b><span><code>_create_runtime()</code> builds <code>AttemptDeps</code> around stores, <code>EphemeralAttemptAgentLauncher</code>, registry, coordinators, config, and <code>AgentEntryComposer</code>.</span></div>
   <div><b>state start</b><span><code>WorkflowStarter</code> creates the first Workflow -> Iteration -> Attempt chain; attempt startup, not entry bootstrap, schedules the planner.</span></div>
@@ -125,7 +125,7 @@
   <div class="flow-row">
     <div class="node info"><strong><code>AgentLaunchFactory</code></strong><small>scope and composer output</small></div>
     <div class="node"><strong><code>AgentEntryComposer</code></strong><small>terminal router, context engine, XML renderer, task guidance, skill</small></div>
-    <div class="node"><strong><code>ExecutionMetadata</code></strong><small>run, task, attempt, goal, runtime, composer, active terminals</small></div>
+    <div class="node"><strong><code>ExecutionMetadata</code></strong><small>run, task, attempt, workflow, runtime, composer, active terminals</small></div>
     <div class="node warn"><strong><code>run_ephemeral_agent</code></strong><small>engine lifecycle and query loop</small></div>
   </div>
 </div>
@@ -197,7 +197,7 @@
 <h2>Boundary Rules And Failure Modes <a class="anchor" href="#boundary-rules-failure-modes">#</a></h2>
 <div class="edge-list">
   <div><b>No global orchestrator</b><span><code>AttemptOrchestrator</code> is per Attempt. Entry bootstrap wires registries and stores, but mutation still flows through Workflow, Iteration, Attempt, task, and terminal-submission state.</span></div>
-  <div><b>No peer-to-peer handoff</b><span><code>submit_execution_handoff</code> starts a persisted child goal. The parent generator moves to <code>WAITING_WORKFLOW</code> and resumes only when a close report routes back through <code>WorkflowClosureReportRouter</code> and <code>AttemptOrchestrator.apply_workflow_closure_report()</code>.</span></div>
+  <div><b>No peer-to-peer handoff</b><span><code>submit_execution_handoff</code> starts a persisted child workflow. The parent generator moves to <code>WAITING_WORKFLOW</code> and resumes only when a close report routes back through <code>WorkflowClosureReportRouter</code> and <code>AttemptOrchestrator.apply_workflow_closure_report()</code>.</span></div>
   <div><b>Missing attempt runtime</b><span>Submission context resolvers require <code>ExecutionMetadata.attempt_runtime</code>, a task id, a persisted task row, matching attempt metadata, and a registered orchestrator. Missing pieces return terminal tool errors instead of guessing state.</span></div>
   <div><b>Runner exhaustion</b><span>When an agent run ends without moving its TaskCenter task off <code>RUNNING</code>, the launcher synthesizes a planner, generator, or evaluator failure submission so the Attempt remains owned by TaskCenter state code.</span></div>
   <div><b>Terminal refusal</b><span>The engine may return no terminal result for text-only refusal, resource limit, or crash. TaskCenter treats that as runner exhaustion unless a terminal submission already changed the task state.</span></div>

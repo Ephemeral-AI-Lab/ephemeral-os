@@ -49,12 +49,12 @@ def _depth(ctx: TerminalRoutingContext) -> int:
 
 
 def _nested_workflow_depth_gt_1(ctx: TerminalRoutingContext) -> bool:
-    """True when depth > 1 — caller attempt is itself inside another goal.
+    """True when depth > 1 — caller attempt is itself inside another workflow.
 
     Kept as a named predicate (rather than inlined as ``_depth(ctx) > 1``)
     because router tests in ``test_terminal_tool_router.py`` patch this
     symbol via ``monkeypatch.setattr`` on its full module path to stub the
-    depth check without constructing a real goal hierarchy.
+    depth check without constructing a real workflow hierarchy.
     """
     return _depth(ctx) > 1
 

@@ -15,7 +15,7 @@ class WorkflowOriginKind(StrEnum):
 
 @dataclass(frozen=True, slots=True)
 class WorkflowOrigin:
-    """Where prompt text entered the goal lifecycle."""
+    """Where prompt text entered the workflow lifecycle."""
 
     kind: WorkflowOriginKind
     task_center_run_id: str | None = None
@@ -32,13 +32,13 @@ class WorkflowOrigin:
     def __post_init__(self) -> None:
         if self.kind == WorkflowOriginKind.ENTRY:
             if not self.task_center_run_id or self.task_id is not None:
-                raise ValueError("entry goal origin requires only task_center_run_id")
+                raise ValueError("entry workflow origin requires only task_center_run_id")
             return
         if self.kind == WorkflowOriginKind.TASK:
             if not self.task_id or self.task_center_run_id is not None:
-                raise ValueError("task goal origin requires only task_id")
+                raise ValueError("task workflow origin requires only task_id")
             return
-        raise ValueError(f"Unsupported goal origin kind: {self.kind!r}")
+        raise ValueError(f"Unsupported workflow origin kind: {self.kind!r}")
 
 
 class WorkflowStatus(StrEnum):
@@ -73,13 +73,13 @@ class Workflow:
         if self.origin_kind == WorkflowOriginKind.ENTRY:
             return WorkflowOrigin.entry(task_center_run_id=self.task_center_run_id)
         if self.requested_by_task_id is None:
-            raise ValueError("task-origin goal is missing requested_by_task_id")
+            raise ValueError("task-origin workflow is missing requested_by_task_id")
         return WorkflowOrigin.task(task_id=self.requested_by_task_id)
 
 
 @dataclass(frozen=True, slots=True)
 class WorkflowClosureReport:
-    """Final report emitted when a goal closes.
+    """Final report emitted when a workflow closes.
 
     ``final_attempt_id`` is normally the passing or final failed attempt.
     It remains nullable for defensive compensation paths.

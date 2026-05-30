@@ -1,6 +1,6 @@
 """Phase 04 end-to-end continuation and retry tests.
 
-Drives the full starter → goal lifecycle → iteration coordinator → orchestrator pipeline so
+Drives the full starter → workflow lifecycle → iteration coordinator → orchestrator pipeline so
 that retry, continuation, and final close-report routing are exercised
 together. The parent task must remain in ``waiting_workflow`` until the
 delegated workflow closes terminally.
@@ -265,7 +265,7 @@ def test_delegated_continuation_waits_until_final_segment(
     assert delegated_request_after_segment1.status == WorkflowStatus.OPEN
     assert len(delegated_request_after_segment1.iteration_ids) == 2
 
-    # Segment 2 starts from the new continuation attempt the goal lifecycle created.
+    # Segment 2 starts from the new continuation attempt the workflow lifecycle created.
     segment2_id = delegated_request_after_segment1.iteration_ids[1]
     segment2 = iteration_store.get(segment2_id)
     assert segment2 is not None

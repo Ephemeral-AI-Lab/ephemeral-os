@@ -4,7 +4,7 @@ After inlining task_center.saga.Saga directly into WorkflowStarter's
 _compensate_failed_start method, this test pins:
 
 1. The Saga module and its shim are gone.
-2. _compensate_failed_start signature preserved (5 kwargs).
+2. _compensate_failed_start signature uses the workflow entity name (5 kwargs).
 3. Best-effort semantics intact: failure in an early step does not
    block subsequent steps.
 
@@ -31,7 +31,7 @@ def test_compensate_failed_start_signature_preserved() -> None:
     sig = inspect.signature(WorkflowStarter._compensate_failed_start)
     expected = {
         "self",
-        "goal",
+        "workflow",
         "iteration",
         "initial_attempt_id",
         "origin",

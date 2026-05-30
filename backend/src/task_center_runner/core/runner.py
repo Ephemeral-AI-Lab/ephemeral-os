@@ -96,10 +96,10 @@ def _graph_summary(
     bundle: TaskCenterStoreBundle,
     task_center_run_id: str,
 ) -> dict[str, Any]:
-    goals: list[dict[str, Any]] = []
-    for goal in bundle.workflow_store.list_for_run(task_center_run_id):
+    workflows: list[dict[str, Any]] = []
+    for workflow in bundle.workflow_store.list_for_run(task_center_run_id):
         iterations: list[dict[str, Any]] = []
-        for iteration in bundle.iteration_store.list_for_workflow(goal.id):
+        for iteration in bundle.iteration_store.list_for_workflow(workflow.id):
             attempts: list[dict[str, Any]] = []
             for attempt in bundle.attempt_store.list_for_iteration(iteration.id):
                 task_rows = bundle.task_store.list_tasks_for_attempt(attempt.id)
@@ -134,17 +134,17 @@ def _graph_summary(
                     "attempts": attempts,
                 }
             )
-        goals.append(
+        workflows.append(
             {
-                "id": goal.id,
-                "status": goal.status.value,
-                "origin_kind": goal.origin_kind.value,
-                "requested_by_task_id": goal.requested_by_task_id,
-                "final_outcome": goal.final_outcome,
+                "id": workflow.id,
+                "status": workflow.status.value,
+                "origin_kind": workflow.origin_kind.value,
+                "requested_by_task_id": workflow.requested_by_task_id,
+                "final_outcome": workflow.final_outcome,
                 "iterations": iterations,
             }
         )
-    return {"workflows": goals}
+    return {"workflows": workflows}
 
 
 @contextlib.contextmanager

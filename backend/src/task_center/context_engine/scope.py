@@ -1,6 +1,6 @@
 """ContextScope — identity surface every recipe sees.
 
-The scope carries identity (goal / iteration / attempt / task ids). It
+The scope carries identity (workflow / iteration / attempt / task ids). It
 does **not** carry store handles; those live on :class:`ContextEngineDeps`
 so recipes can be swapped without touching call sites.
 

@@ -55,7 +55,7 @@
 <h2>Scope And Verdict <a class="anchor" href="#wiki-scope">#</a></h2>
 <div class="summary">
   <ul>
-    <li>The main agent loop is engine-owned. TaskCenter submits and resumes state through terminal tools and persisted attempt/goal state, not peer-to-peer agent messaging.</li>
+    <li>The main agent loop is engine-owned. TaskCenter submits and resumes state through terminal tools and persisted attempt/workflow state, not peer-to-peer agent messaging.</li>
     <li>The model-provider package is <code>backend/src/providers</code>. It owns the LLM API request/streaming contract, active model dispatch, auth strategies, provider errors, and Anthropic/Codex client translations.</li>
     <li>Prompt configuration has two layers: stable runtime/profile system prompt text, then TaskCenter launch rows built from context packets, task guidance, and optional skill text.</li>
     <li>Tool execution crosses into sandbox through typed tool wrappers and <code>sandbox.api</code>. Normal file and shell operations use daemon workspace routing; provider raw <code>exec</code> is a transport and diagnostic primitive.</li>
@@ -158,7 +158,7 @@
   <div><b>engine owns loop state</b><span><code>QueryContext</code> owns terminal tools, terminal result, exit reason, tool budget, notification state, and the background-task manager.</span></div>
   <div><b>providers own model streaming</b><span><code>providers</code> owns active model client construction, provider request/event dataclasses, upstream auth, retry/error translation, and stream-to-engine event normalization.</span></div>
   <div><b>tools own execution contracts</b><span><code>BaseTool</code> metadata owns intent, background policy, terminal flag, hooks, and context requirements consumed by the query loop and sandbox dispatch path.</span></div>
-  <div><b>TaskCenter owns lifecycle</b><span>Submission tools mutate attempts, goals, and tasks. Sandbox tools only inspect or mutate workspace state that those submissions reference.</span></div>
+  <div><b>TaskCenter owns lifecycle</b><span>Submission tools mutate attempts, workflows, and tasks. Sandbox tools only inspect or mutate workspace state that those submissions reference.</span></div>
   <div><b>sandbox owns workspace semantics</b><span>Provider adapters own containers and raw command execution. Daemon/workspace code owns LayerStack, OCC, overlay, isolated workspace, and plugin/LSP routing.</span></div>
   <div><b>message owns artifact shape</b><span><code>Message</code>, stream events, event printing, and <code>message.jsonl</code> recording are kept outside the query-loop implementation.</span></div>
   <div><b>notification owns reminders</b><span>Rules produce system reminders that are both stream events and provider-visible user-message blocks.</span></div>

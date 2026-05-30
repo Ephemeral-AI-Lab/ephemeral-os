@@ -79,11 +79,11 @@ async def test_correctness_testing_through_event_source(
     ]
 
     delegated = [
-        goal
-        for goal in report.graph_summary["workflows"]
-        if any(it["attempts"] for it in goal["iterations"])
+        workflow
+        for workflow in report.graph_summary["workflows"]
+        if any(it["attempts"] for it in workflow["iterations"])
     ]
-    assert delegated, "no goal with attempts in graph"
+    assert delegated, "no workflow with attempts in graph"
     assert delegated[-1]["status"] == "succeeded", delegated[-1]
 
     # --- the executor probe actually ran sandbox tools through real dispatch

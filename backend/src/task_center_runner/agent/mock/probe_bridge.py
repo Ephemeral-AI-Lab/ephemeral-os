@@ -221,7 +221,7 @@ def bridge_script_for(
             return recursive_step_script(ctx)
 
         return _engine_factory(
-            _build_recursive, "Recursive goal step completed with sandbox evidence."
+            _build_recursive, "Recursive workflow step completed with sandbox evidence."
         )
 
     # --- full_stack scripts -------------------------------------------------

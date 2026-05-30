@@ -141,7 +141,7 @@ Scenario → probe module → test (verify per-generator budget ≤75 first):
   `PreparedToolScriptEngine(bridge_call_tool).run(<script>(ctx))`. Tests:
   `test_full_case_user_input.py`, `test_full_system_capacity_matrix.py`,
   `test_full_stack_adversarial.py`, `test_capacity_scenario_packs.py`.
-  NOTE: `fail`/`fail:` → `submit_execution_blocker`; `request_recursive_goal:`/
+  NOTE: `fail`/`fail:` → `submit_execution_blocker`; `request_recursive_workflow:`/
   `request_recursive_matrix:` → `submit_execution_handoff` — these need their own
   advisor-gated terminal turn in `_executor_script` (not the success terminal).
   Also wire `MutableMockState.consume_failure` into the adapter for failure-injection
@@ -221,7 +221,7 @@ unaffected — confirm, don't migrate.
 
 > **Forward plan for all remaining/deferred work:** `docs/plans/mock_event_source_DEFERRED_IMPL_PLAN.md`
 > (ordered: [1] N concurrent same-instance docker sandboxes for parallel verify [FIRST] → [2] full_stack/
-> capacity script bridge + terminal routing → [3] multiagent fan-out promotions + nested goals → [4] §C
+> capacity script bridge + terminal routing → [3] multiagent fan-out promotions + nested workflows → [4] §C
 > background rewrites → [5] test migrations + Phase D flip + Phase E). Executor `tool_call_limit` is now 100.
 
 ### ✅ Verified green under `EOS_MOCK_EVENT_SOURCE_RUNNER=1` (docker, this session)
@@ -279,8 +279,8 @@ bridging is semantically faithful (unlike ephemeral's gather). The scenarios **a
    `result.artifact`. `publish_full_stack_script` is NOT needed (FULL_STACK_SCRIPT_COMPLETED is
    removed in Phase D; tests migrate away from it).
 2. **terminal routing in `_executor_script`** (currently only emits `submit_execution_success`).
-   Add: `fail`/`fail:<reason>` → `submit_execution_blocker`; `request_recursive_goal:<id>` /
-   `request_recursive_matrix:<id>` → `submit_execution_handoff` (recursive goal via
+   Add: `fail`/`fail:<reason>` → `submit_execution_blocker`; `request_recursive_workflow:<id>` /
+   `request_recursive_matrix:<id>` → `submit_execution_handoff` (recursive workflow via
    `scenario.recursive_handoff_goal(ctx)`), each preceded by its own `ask_advisor` turn for THAT
    terminal, then return. Also wire `MutableMockState.consume_failure(role="...", attempt_id, checkpoint)`
    for failure-injection (the verifier path already uses it; method exists in registry.py).
@@ -292,7 +292,7 @@ bridging is semantically faithful (unlike ephemeral's gather). The scenarios **a
 ### Recovered: full Executor-action catalogue (MIGRATION_MAP §1174 was BLANK — API error)
 Source: `runner.py:_run_executor` (372-829). Terminal disposition per action:
 - `fail` / `fail:<reason>` → **submit_execution_blocker** (return).
-- `request_recursive_goal:<id>`, `request_recursive_matrix:<id>` → **submit_execution_handoff** (return).
+- `request_recursive_workflow:<id>`, `request_recursive_matrix:<id>` → **submit_execution_handoff** (return).
 - everything else → **submit_execution_success** (after the action loop).
 - generator probes (PROBE_BUILDERS): `preflight`, `sandbox_integrity`, `final_probe`.
 - script-engine (PreparedToolScriptEngine): `inspect_user_input`, `execute_package:<id>`,

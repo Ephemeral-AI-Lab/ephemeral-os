@@ -1,8 +1,8 @@
 """Partial parent executor routes a child planner to a restricted terminal set.
 
-The entry-origin goal's first iteration submits a partial plan with
-``deferred_goal_for_next_iteration``. Its executor then requests a child goal. Because the
-child goal's parent task belongs to that partial-planned attempt, the child
+The entry-origin workflow's first iteration submits a partial plan with
+``deferred_goal_for_next_iteration``. Its executor then requests a child workflow. Because the
+child workflow's parent task belongs to that partial-planned attempt, the child
 planner must launch as ``planner`` without a defer terminal. The entry-origin
 continuation iteration still launches ``planner`` with both planner terminals.
 """
@@ -32,11 +32,11 @@ from task_center_runner.scenarios.base import ScenarioBase, ScenarioContext, Too
 
 _CHILD_PACKAGE_ID = "partial_parent_child"
 _CHILD_GOAL = (
-    "Resolve the delegated child goal requested by an executor whose parent "
+    "Resolve the delegated child workflow requested by an executor whose parent "
     "attempt submitted a partial plan."
 )
 _CONTINUATION_GOAL = (
-    "Run the entry-origin follow-up iteration after the delegated child goal has "
+    "Run the entry-origin follow-up iteration after the delegated child workflow has "
     "returned its close report."
 )
 
@@ -45,11 +45,11 @@ def _entry_origin_defers_plan() -> dict[str, Any]:
     return {
         "plan_spec": (
             "Execute the first entry-origin slice by delegating one oversized branch to "
-            "a child goal, then continue the entry-origin goal afterward."
+            "a child workflow, then continue the entry-origin workflow afterward."
         ),
         "evaluation_criteria": [
-            "The child goal is requested from the parent executor task.",
-            "The parent observes the child goal close report before evaluation.",
+            "The child workflow is requested from the parent executor task.",
+            "The parent observes the child workflow close report before evaluation.",
         ],
         "tasks": [
             {"id": "delegate_child", "agent_name": "executor", "deps": []},
@@ -87,7 +87,7 @@ def _child_full_plan() -> dict[str, Any]:
 
 
 class DeferredParentPlannerTerminalRouting(ScenarioBase):
-    """Child goal from a partial parent gets the restricted planner terminals."""
+    """Child workflow from a partial parent gets the restricted planner terminals."""
 
     name = "pipeline.deferred_parent_planner_terminal_routing"
     expected_event_sequence: tuple[EventType, ...] = (

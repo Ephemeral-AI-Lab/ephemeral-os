@@ -89,7 +89,7 @@ class InitialMessagesCapture(ScenarioBase):
     plan with a ``deferred_goal_for_next_iteration``; executor runs
     preflight; evaluator passes.
     Iteration 2, attempt 1: planner submits a full plan; executor runs
-    preflight; evaluator passes; goal closes succeeded.
+    preflight; evaluator passes; workflow closes succeeded.
     """
 
     name = "pipeline.initial_messages_capture"

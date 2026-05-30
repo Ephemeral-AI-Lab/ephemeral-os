@@ -59,8 +59,8 @@ def count_role_tasks(
     analog).
     """
     total = 0
-    for goal in report.graph_summary["workflows"]:
-        for iteration in goal["iterations"]:
+    for workflow in report.graph_summary["workflows"]:
+        for iteration in workflow["iterations"]:
             for attempt in iteration["attempts"]:
                 for task in attempt["tasks"]:
                     if str(task.get("agent_name") or "") != role:
@@ -71,7 +71,7 @@ def count_role_tasks(
     return total
 
 
-def recursive_goals(graph_summary: Mapping[str, object]) -> list[dict]:
+def recursive_workflows(graph_summary: Mapping[str, object]) -> list[dict]:
     """Return the delegated (recursive) workflows from ``graph_summary``.
 
     A recursive workflow is one started by an executor ``submit_execution_handoff``
@@ -118,16 +118,16 @@ def _assert_event_counts(report: RunReport, case: FocusedScenarioCase) -> None:
 
 
 def _assert_graph_shape(report: RunReport, case: FocusedScenarioCase) -> None:
-    goals = report.graph_summary["workflows"]
-    assert len(goals) == 1, report.graph_summary
-    goal = goals[0]
-    assert goal["status"] == case.workflow_status
+    workflows = report.graph_summary["workflows"]
+    assert len(workflows) == 1, report.graph_summary
+    workflow = workflows[0]
+    assert workflow["status"] == case.workflow_status
     if case.iteration_count is not None:
-        assert len(goal["iterations"]) == case.iteration_count
+        assert len(workflow["iterations"]) == case.iteration_count
     if case.attempt_count is not None:
         attempts = [
             attempt
-            for iteration in goal["iterations"]
+            for iteration in workflow["iterations"]
             for attempt in iteration["attempts"]
         ]
         assert len(attempts) == case.attempt_count

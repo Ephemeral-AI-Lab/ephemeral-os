@@ -47,7 +47,7 @@
     <li><a href="#scenario-lifecycle-wiring"><span>3</span> ScenarioLifecycle Wiring</a></li>
     <li><a href="#catalog"><span>4</span> Scenario Catalog</a></li>
     <li><a href="#hooks"><span>5</span> Hooks And MutableMockState</a></li>
-    <li><a href="#example-initial-goal"><span>6</span> Example: InitialWorkflow</a></li>
+    <li><a href="#example-initial-workflow"><span>6</span> Example: InitialWorkflow</a></li>
   </ol>
 </nav>
 
@@ -84,7 +84,7 @@
   <div><b>recursive_handoff_goal(ctx)</b><span>Optional goal text used when an executor action requests a recursive handoff; defaults to <code>None</code> (the runner synthesizes a placeholder).</span></div>
   <div><b>hooks()</b><span>Sequence of <code>Hook</code> instances; registered into the per-run <code>HookSet</code> by <code>build_scenario_config</code>.</span></div>
 </div>
-<p><code>ScenarioContext</code> is the live state visible to the scenario at each decision: <code>attempt</code>, <code>iteration</code>, <code>goal</code>, <code>prompt</code>, <code>metadata</code>, <code>audit_recorder</code>, <code>mutable_state</code>, <code>task_id</code>, <code>agent_name</code>, <code>context_message</code>, plus optional <code>requirement_ledger</code>, <code>package_plan</code>, and <code>matrix_plan</code> for composite scenarios.</p>
+<p><code>ScenarioContext</code> is the live state visible to the scenario at each decision: <code>attempt</code>, <code>iteration</code>, <code>workflow</code>, <code>prompt</code>, <code>metadata</code>, <code>audit_recorder</code>, <code>mutable_state</code>, <code>task_id</code>, <code>agent_name</code>, <code>context_message</code>, plus optional <code>requirement_ledger</code>, <code>package_plan</code>, and <code>matrix_plan</code> for composite scenarios.</p>
 </section>
 
 <section id="scenario-lifecycle-wiring" data-last-reviewed-commit="c8f6bcde0c63c7ec004545128d186853df5dcde1" data-evidence-paths="backend/src/task_center_runner/scenarios/builder.py backend/src/task_center_runner/scenarios/lifecycle.py backend/src/task_center_runner/agent/mock/runner.py">
@@ -152,7 +152,7 @@ run_pipeline executes; per event:
   </div>
   <div class="evidence-card">
     <h3>Composite</h3>
-    <p>Multi-stage scenarios that combine pipeline and sandbox concerns under one entry prompt: <code>CorrectnessTesting</code> (the default scenario used when <code>MockSquadRunner</code> is constructed without one), <code>FullCaseUserInput</code> (requirement-ledger / package-plan / recursive-goal flow), <code>FullStackAdversarial</code> (occ conflict matrix, overlay edge matrix, layerstack squash lease, LSP refresh semantics, recursive oversized matrix, final reconciliation).</p>
+    <p>Multi-stage scenarios that combine pipeline and sandbox concerns under one entry prompt: <code>CorrectnessTesting</code> (the default scenario used when <code>MockSquadRunner</code> is constructed without one), <code>FullCaseUserInput</code> (requirement-ledger / package-plan / recursive-workflow flow), <code>FullStackAdversarial</code> (occ conflict matrix, overlay edge matrix, layerstack squash lease, LSP refresh semantics, recursive oversized matrix, final reconciliation).</p>
   </div>
 </div>
 </section>
@@ -199,8 +199,8 @@ run_pipeline executes; per event:
 </div>
 </section>
 
-<section id="example-initial-goal" data-last-reviewed-commit="c8f6bcde0c63c7ec004545128d186853df5dcde1" data-evidence-paths="backend/src/task_center_runner/scenarios/pipeline/initial_workflow.py backend/src/task_center_runner/scenarios/_scenario_helpers/plan_shapes.py">
-<h2>Example: InitialWorkflow <a class="anchor" href="#example-initial-goal">#</a></h2>
+<section id="example-initial-workflow" data-last-reviewed-commit="c8f6bcde0c63c7ec004545128d186853df5dcde1" data-evidence-paths="backend/src/task_center_runner/scenarios/pipeline/initial_workflow.py backend/src/task_center_runner/scenarios/_scenario_helpers/plan_shapes.py">
+<h2>Example: InitialWorkflow <a class="anchor" href="#example-initial-workflow">#</a></h2>
 <p>The smallest pipeline scenario — the canonical template for "single-attempt success" tests.</p>
 <pre class="diagram" aria-label="InitialWorkflow scenario step diagram">
 class InitialWorkflow(ScenarioBase):

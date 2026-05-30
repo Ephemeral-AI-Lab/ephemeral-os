@@ -162,9 +162,9 @@ def test_prompt_inspector_accepts_planner_without_defer_terminal() -> None:
         prompt="\n".join(
             [
                 "<context>",
-                "<goal>Close this delegated recursive goal.</goal>",
+                "<goal>Close this delegated recursive workflow.</goal>",
                 "<iteration iteration_no=\"1\" position=\"current\">",
-                "<iteration_goal>Close this delegated recursive goal.</iteration_goal>",
+                "<iteration_goal>Close this delegated recursive workflow.</iteration_goal>",
                 "</iteration>",
                 "</context>",
                 "<Task Guidance>",
@@ -228,11 +228,11 @@ def test_scenarios_register_hookset_cleanly(scenario_cls: type) -> None:
     assert hasattr(scenario, "expected_event_sequence")
 
 
-def test_full_stack_recursive_planner_without_defer_closes_goal() -> None:
+def test_full_stack_recursive_planner_without_defer_closes_workflow() -> None:
     scenario = FullStackAdversarial()
     ctx = ScenarioContext(
         attempt=SimpleNamespace(attempt_sequence_no=1, evaluation_criteria=()),
-        iteration=SimpleNamespace(sequence_no=1, workflow_id="recursive-goal"),
+        iteration=SimpleNamespace(sequence_no=1, workflow_id="recursive-workflow"),
         workflow=SimpleNamespace(requested_by_task_id="parent-task:executor"),
         prompt="Run delegated recursive matrix.",
         metadata=ExecutionMetadata(
@@ -241,7 +241,7 @@ def test_full_stack_recursive_planner_without_defer_closes_goal() -> None:
         ),
         audit_recorder=None,
         mutable_state=None,
-        task_id="recursive-goal:planner",
+        task_id="recursive-workflow:planner",
         agent_name="planner",
         context_message=None,
     )
@@ -257,6 +257,39 @@ def test_full_stack_recursive_planner_without_defer_closes_goal() -> None:
         "recursive_oversized_b",
         "recursive_closure_report",
         "recursive_close_guard",
+    } <= task_ids
+
+
+def test_full_case_recursive_planner_without_defer_closes_workflow() -> None:
+    scenario = FullCaseUserInput()
+    ctx = ScenarioContext(
+        attempt=SimpleNamespace(attempt_sequence_no=1, evaluation_criteria=()),
+        iteration=SimpleNamespace(sequence_no=1, workflow_id="recursive-workflow"),
+        workflow=SimpleNamespace(requested_by_task_id="parent-task:executor"),
+        prompt="Run delegated release package.",
+        metadata=ExecutionMetadata(
+            agent_name="planner",
+            extras={"active_terminals": ["submit_plan_closes_goal"]},
+        ),
+        audit_recorder=None,
+        mutable_state=None,
+        task_id="recursive-workflow:planner",
+        agent_name="planner",
+        context_message=None,
+    )
+
+    spec = scenario.planner_response(ctx)
+
+    assert spec.tool.name == submit_plan_closes_goal.name
+    assert spec.tool.name != submit_plan_defers_goal.name
+    assert "deferred_goal_for_next_iteration" not in spec.args
+    task_ids = {task["id"] for task in spec.args["tasks"]}
+    assert {
+        "recursive_inventory",
+        "recursive_exec_a",
+        "recursive_exec_b",
+        "recursive_reconcile",
+        "recursive_final_guard",
     } <= task_ids
 
 

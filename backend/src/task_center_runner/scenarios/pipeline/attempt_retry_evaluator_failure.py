@@ -4,10 +4,10 @@ Reference scenario for the attempt-retry path. Iteration 1 / Attempt 1: planner
 emits a full plan, executor runs ``preflight``, evaluator returns
 ``submit_evaluation_failure`` — iteration coordinator creates Attempt 2 (budget
 permits). Attempt 2: planner emits a full plan, executor runs ``preflight``,
-evaluator passes — goal closes succeeded.
+evaluator passes — workflow closes succeeded.
 
 Asserts: 1 iteration with 2 attempts; attempt 1 ``fail_reason="evaluator_failed"``,
-attempt 2 ``status=PASSED``; goal ``status=succeeded``.
+attempt 2 ``status=PASSED``; workflow ``status=succeeded``.
 """
 
 from __future__ import annotations

@@ -17,9 +17,9 @@ not-started work that depended on the blocked task. Quiescence is reached → th
 Iteration budget permits a second attempt. Attempt 2 runs the same plan but
 the executor reads ``ctx.attempt.attempt_sequence_no == 2`` and skips the
 failure injection — all four tasks run ``preflight`` and pass; evaluator
-accepts; goal closes succeeded.
+accepts; workflow closes succeeded.
 
-Asserts: 1 goal (succeeded), 1 iteration, 2 attempts; attempt 1 contains
+Asserts: 1 workflow (succeeded), 1 iteration, 2 attempts; attempt 1 contains
 exactly three EXECUTOR_INVOKED events (a, b, c) and one EXECUTOR_FAILURE
 (b); ``d`` was NOT executed in attempt 1; attempt 2 contains four
 EXECUTOR_SUCCESS events.

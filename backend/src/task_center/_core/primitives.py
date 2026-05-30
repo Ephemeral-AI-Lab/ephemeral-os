@@ -38,7 +38,7 @@ def evaluator_task_id(attempt_id: str) -> str:
 
 @dataclass(frozen=True, slots=True)
 class TaskCenterLifecycleConfig:
-    """Configurable knobs for the goal/iteration/attempt lifecycle.
+    """Configurable knobs for the workflow/iteration/attempt lifecycle.
 
     ``default_attempt_budget`` is applied to every Iteration created by
     ``WorkflowLifecycle`` unless overridden per-call.

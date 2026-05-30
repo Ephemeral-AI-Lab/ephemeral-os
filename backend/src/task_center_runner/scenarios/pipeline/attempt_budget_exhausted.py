@@ -1,13 +1,13 @@
-"""Attempt budget exhausted — every attempt fails, goal closes failed.
+"""Attempt budget exhausted — every attempt fails, workflow closes failed.
 
 The default ``TaskCenterLifecycleConfig.default_attempt_budget`` is ``2``
 (``backend/src/task_center/config.py:16``). This scenario plans a single
 generator task that **always** calls ``submit_execution_blocker``, so each
 attempt closes ``status=failed``, ``fail_reason="generator_failed"``. After
 attempt 2 fails, ``IterationAttemptCoordinator.has_budget_remaining`` is False — iteration
-closes failed, and the goal lifecycle closes the goal failed.
+closes failed, and the workflow lifecycle closes the workflow failed.
 
-Asserts: 1 goal (status=failed), 1 iteration (status=failed), exactly 2
+Asserts: 1 workflow (status=failed), 1 iteration (status=failed), exactly 2
 attempts each with ``fail_reason=generator_failed``,
 ``EXECUTOR_FAILURE`` appears twice in the event sequence, and there is no
 ``EVALUATOR_INVOKED`` event in the entire run (evaluator never spawned
@@ -49,7 +49,7 @@ def _always_fail_plan() -> dict[str, Any]:
 
 
 class AttemptBudgetExhausted(ScenarioBase):
-    """Every attempt fails — budget exhaustion closes the goal failed."""
+    """Every attempt fails — budget exhaustion closes the workflow failed."""
 
     name = "pipeline.attempt_budget_exhausted"
     expected_event_sequence: tuple[EventType, ...] = (

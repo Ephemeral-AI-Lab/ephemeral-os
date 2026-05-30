@@ -108,7 +108,7 @@ def test_invariant_catches_planted_drift():
 def test_goal_iteration_blocks_full_frame_invariant():
     """The full Iteration N≥2 frame: standalone ``<goal>`` + prior iteration
     groups + current iteration goal."""
-    goal = _FakeWorkflow(id="g", goal="overall goal")
+    workflow = _FakeWorkflow(id="g", goal="overall goal")
     prior = _FakeIteration(
         id="i1",
         sequence_no=1,
@@ -118,7 +118,7 @@ def test_goal_iteration_blocks_full_frame_invariant():
     )
     current = _FakeIteration(id="i2", sequence_no=2, goal="iter 2 goal")
     blocks = goal_iteration_blocks(
-        goal=goal,
+        workflow=workflow,
         current_iteration=current,
         iterations=[prior, current],
     )

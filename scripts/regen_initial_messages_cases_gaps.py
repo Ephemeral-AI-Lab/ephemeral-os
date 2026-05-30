@@ -2,7 +2,7 @@
 the previously-flagged content gaps in the initial_messages_cases
 directory.
 
-* Case 12 — planner launch routed to close-only terminals in a child-goal context
+* Case 12 — planner launch routed to close-only terminals in a child-workflow context
   (no submit_plan_defers_goal terminal). Source:
   pipeline.deferred_parent_planner_terminal_routing.
 
@@ -100,25 +100,25 @@ def _write_case(
     case_path.write_text("\n".join(parts))
 
 
-def case_12_planner_child_goal_close_only() -> None:
+def case_12_planner_child_workflow_close_only() -> None:
     """Capture case 12 from the deferred_parent_planner_terminal_routing scenario.
 
-    The scenario submits a partial plan in the parent goal, then delegates a
-    child goal. The child goal's planner keeps the single ``planner`` profile,
+    The scenario submits a partial plan in the parent workflow, then delegates a
+    child workflow. The child workflow's planner keeps the single ``planner`` profile,
     but launch-time terminal routing removes ``submit_plan_defers_goal``.
     """
     run = _latest_run("pipeline.deferred_parent_planner_terminal_routing")
-    # The child goal directory is ``goal_02_*`` (root is goal_01).
-    candidates = list(run.rglob("goal_02_*/iteration_01_*/attempt_01_*/01_planner_*:planner/message.jsonl"))
+    # The child workflow directory is ``workflow_02_*`` (root is workflow_01).
+    candidates = list(run.rglob("workflow_02_*/iteration_01_*/attempt_01_*/01_planner_*:planner/message.jsonl"))
     assert len(candidates) == 1, candidates
     jsonl = candidates[0]
     rel = jsonl.relative_to(run)
     system, um1, um2, um3 = _read_initial_rows(jsonl)
     _write_case(
         case_path=CASES_DIR
-        / "12_planner__child_goal__delegated_from_deferring_parent.md",
+        / "12_planner__child_workflow__delegated_from_deferring_parent.md",
         title=(
-            "planner - child goal delegated from a partial-plan parent "
+            "planner - child workflow delegated from a partial-plan parent "
             "(only `submit_plan_closes_goal` is available)"
         ),
         source=(
@@ -127,8 +127,8 @@ def case_12_planner_child_goal_close_only() -> None:
         ),
         notes=(
             "The parent attempt submitted a partial plan that delegated work to a "
-            "child goal. The child goal still launches the ``planner`` profile, "
-            "but terminal routing uses ``nested_goal_depth_gt_1`` to expose only "
+            "child workflow. The child workflow still launches the ``planner`` profile, "
+            "but terminal routing uses ``nested_workflow_depth_gt_1`` to expose only "
             "``submit_plan_closes_goal``. Row 4's "
             "``<terminal_tool_selection>`` block therefore lists only that "
             "terminal."
@@ -140,7 +140,7 @@ def case_12_planner_child_goal_close_only() -> None:
     )
     print(
         f"wrote {CASES_DIR}/"
-        "12_planner__child_goal__delegated_from_deferring_parent.md"
+        "12_planner__child_workflow__delegated_from_deferring_parent.md"
     )
 
 
@@ -236,7 +236,7 @@ def case_15_evaluator_pre_failure_submission() -> None:
 
 def main() -> int:
     CASES_DIR.mkdir(parents=True, exist_ok=True)
-    case_12_planner_child_goal_close_only()
+    case_12_planner_child_workflow_close_only()
     case_13_planner_after_evaluator_failure()
     case_14_executor_with_dependency_results()
     case_15_evaluator_pre_failure_submission()

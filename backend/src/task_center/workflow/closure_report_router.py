@@ -1,8 +1,8 @@
 """WorkflowClosureReport delivery router.
 
 Owns the delivery path from ``WorkflowLifecycle.close_workflow`` to either the run
-itself (entry-origin goals) or the parent
-``AttemptOrchestrator.apply_workflow_closure_report`` (task-origin goals). The
+itself (entry-origin workflows) or the parent
+``AttemptOrchestrator.apply_workflow_closure_report`` (task-origin workflows). The
 runtime assumes no process restart: while a parent generator task is in
 ``WAITING_WORKFLOW`` its attempt cannot reach quiescence and its
 orchestrator stays registered. A missing orchestrator at delivery time
@@ -32,7 +32,7 @@ class WorkflowClosureReportRouter:
             return self._deliver_entry_origin(report)
         if report.requested_by_task_id is None:
             raise TaskCenterInvariantViolation(
-                f"Task-origin goal {report.workflow_id!r} has no requested_by_task_id."
+                f"Task-origin workflow {report.workflow_id!r} has no requested_by_task_id."
             )
         task = self._runtime.task_store.get_task(report.requested_by_task_id)
         if task is None:
@@ -52,7 +52,7 @@ class WorkflowClosureReportRouter:
             )
         if status != TaskCenterTaskStatus.WAITING_WORKFLOW.value:
             raise TaskCenterInvariantViolation(
-                f"TaskCenter task {report.requested_by_task_id!r} is not waiting on a goal."
+                f"TaskCenter task {report.requested_by_task_id!r} is not waiting on a workflow."
             )
 
         parent_task = self._runtime.parent_task_for_delegated_workflow(

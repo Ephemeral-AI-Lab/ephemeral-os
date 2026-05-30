@@ -7,8 +7,8 @@ artifact boundary.
 ## Layout
 
 - `base.py` — `Scenario` protocol, `ScenarioBase`, `ScenarioContext`, `ToolCallSpec`.
-- `_scenario_helpers/` — shared plan shapes, goal-origin predicates, and context-message token parsers.
-- `pipeline/` — task_center state-machine scenarios (goal/iteration/attempt control flow).
+- `_scenario_helpers/` — shared plan shapes, workflow-origin predicates, and context-message token parsers.
+- `pipeline/` — task_center state-machine scenarios (workflow/iteration/attempt control flow).
 - `sandbox/` — sandbox subsystem scenarios (OCC, overlay, layerstack, LSP, daemon).
 - `capacity/` — composite scenarios that intentionally span multiple subsystem owners.
 - `planner_validation/` — invalid plan rejection.

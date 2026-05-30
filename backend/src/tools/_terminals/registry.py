@@ -79,7 +79,7 @@ TERMINAL_DESCRIPTORS: dict[str, TerminalToolDescriptor] = {
         selection_guidance=(
             "Call when this attempt's tasks fully cover the current "
             "`<iteration_goal>`. On evaluator PASS, the iteration closes "
-            "terminally and the goal can succeed."
+            "terminally and the workflow can succeed."
         ),
         advisor_review_focus=(
             "The planner proposes to CLOSE the current `<iteration_goal>` in "
@@ -114,7 +114,7 @@ TERMINAL_DESCRIPTORS: dict[str, TerminalToolDescriptor] = {
         selection_guidance=(
             "Call when every entry in `<evaluation_criteria>` is satisfied; "
             "the attempt closes successfully and the planner's submission "
-            "kind determines whether the goal closes or continues."
+            "kind determines whether the workflow closes or continues."
         ),
         advisor_review_focus=(
             "The evaluator proposes to PASS the attempt. Re-read "

@@ -1,4 +1,4 @@
-"""Scenario helper APIs for plan shapes, goal-origin predicates, and tokens."""
+"""Scenario helper APIs for plan shapes, workflow-origin predicates, and tokens."""
 
 from __future__ import annotations
 
