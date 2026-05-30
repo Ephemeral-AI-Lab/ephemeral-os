@@ -38,7 +38,7 @@ def _ctx(
     return SimpleNamespace(
         terminal_tools=terminal_tools or set(),
         tool_metadata=None,
-        run_id="run-1",
+        agent_run_id="run-1",
         tool_registry=_registry(intent_map),
     )
 

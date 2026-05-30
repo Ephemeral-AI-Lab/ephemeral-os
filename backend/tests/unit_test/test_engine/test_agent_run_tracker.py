@@ -32,5 +32,8 @@ def test_create_does_not_retry_on_duplicate_auto_run_id(monkeypatch):
         agent_name="developer",
     )
 
-    assert tracker.agent_run_id is None
+    # Always-mint: the id is returned even when the insert fails (only the
+    # durable ``agent_runs`` row, gated by ``_persisted``, is skipped).
+    assert tracker.agent_run_id == "duplicate000000"[:16]
+    assert tracker._persisted is False
     assert calls == ["duplicate000000"[:16]]

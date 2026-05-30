@@ -14,7 +14,7 @@ def test_tool_started_stream_event_maps_to_engine_audit_event() -> None:
             tool_input={"file_path": "a.py", "old_text": "x", "new_text": "y"},
             tool_use_id="toolu_1",
             agent_name="executor",
-            run_id="agent-run-1",
+            agent_run_id="agent-run-1",
         ),
         task_center_run_id="run-1",
         metadata={
@@ -63,7 +63,7 @@ def test_tool_completed_stream_event_preserves_domain_timings_as_metadata() -> N
             },
             is_terminal=False,
             agent_name="executor",
-            run_id="agent-run-2",
+            agent_run_id="agent-run-2",
         ),
         metadata={
             "task_center_run_id": "run-1",

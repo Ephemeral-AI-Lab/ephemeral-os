@@ -32,7 +32,7 @@ def test_eval_agent_verbose_logging_keeps_full_background_start_and_system_messa
                 SystemNotification(
                     text=long_system,
                     agent_name="analysis_agent",
-                    run_id="wid-1",
+                    agent_run_id="wid-1",
                 ),
                 BackgroundTaskStartedEvent(
                     task_id="bg_1",
@@ -42,7 +42,7 @@ def test_eval_agent_verbose_logging_keeps_full_background_start_and_system_messa
                         "prompt": long_background_prompt,
                     },
                     agent_name="analysis_agent",
-                    run_id="wid-1",
+                    agent_run_id="wid-1",
                 ),
             ]
         )
@@ -53,7 +53,7 @@ def test_eval_agent_verbose_logging_keeps_full_background_start_and_system_messa
     query_context = SimpleNamespace(
         tool_metadata=None,
         agent_name="eval_agent",
-        run_id="",
+        agent_run_id="",
     )
     ephemeral_agent = SimpleNamespace(query_context=query_context)
     agent = EvalAgent(

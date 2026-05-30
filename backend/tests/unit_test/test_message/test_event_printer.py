@@ -21,7 +21,7 @@ def test_printer_includes_run_id_in_prefix() -> None:
             tool_name="pytest",
             tool_input={"k": "value"},
             agent_name="developer",
-            run_id="1234567890abcdef1234",
+            agent_run_id="1234567890abcdef1234",
         )
     )
 
@@ -45,7 +45,7 @@ def test_printer_timestamps_use_module_time(monkeypatch) -> None:
             tool_name="pytest",
             tool_input={},
             agent_name="developer",
-            run_id="run-1",
+            agent_run_id="run-1",
         )
     )
 
@@ -57,14 +57,14 @@ def test_printer_keeps_run_id_for_flushed_thinking() -> None:
     printer = MultiAgentEventPrinter(color=False, sink=lines.append)
 
     printer.emit(
-        ThinkingDeltaEvent(text="working", agent_name="analysis_agent", run_id="b88848c71234425a")
+        ThinkingDeltaEvent(text="working", agent_name="analysis_agent", agent_run_id="b88848c71234425a")
     )
     printer.emit(
         AssistantMessageCompleteEvent(
             message=Message(role="assistant", content=[TextBlock(text="done")]),
             usage=UsageSnapshot(),
             agent_name="analysis_agent",
-            run_id="b88848c71234425a",
+            agent_run_id="b88848c71234425a",
         )
     )
 
@@ -86,7 +86,7 @@ def test_printer_renders_structured_shell_error_detail() -> None:
             ),
             is_error=True,
             agent_name="developer",
-            run_id="1234567890abcdef1234",
+            agent_run_id="1234567890abcdef1234",
         )
     )
 
@@ -113,7 +113,7 @@ def test_printer_renders_structured_shell_cmd_error_detail() -> None:
             ),
             is_error=True,
             agent_name="developer",
-            run_id="1234567890abcdef1234",
+            agent_run_id="1234567890abcdef1234",
         )
     )
 
@@ -134,7 +134,7 @@ def test_printer_keeps_plain_shell_error_payload() -> None:
             output="Execution failed: sandbox unavailable",
             is_error=True,
             agent_name="developer",
-            run_id="1234567890abcdef1234",
+            agent_run_id="1234567890abcdef1234",
         )
     )
 
@@ -157,7 +157,7 @@ def test_printer_renders_subagent_background_launch_context() -> None:
                 "prompt": "Read alpha.txt\nReturn concise findings.",
             },
             agent_name="executor",
-            run_id="t1",
+            agent_run_id="t1",
         )
     )
 
@@ -188,7 +188,7 @@ def test_printer_keeps_full_background_progress_notification_text() -> None:
         SystemNotification(
             text=long_text,
             agent_name="analysis_agent",
-            run_id="1a0578d4c4dd7f1f14dd",
+            agent_run_id="1a0578d4c4dd7f1f14dd",
         )
     )
 

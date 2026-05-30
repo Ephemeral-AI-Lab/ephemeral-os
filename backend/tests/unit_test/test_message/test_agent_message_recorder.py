@@ -41,16 +41,16 @@ def test_agent_message_recorder_appends_conversation_messages(tmp_path) -> None:
         run_id="t1",
     )
     recorder.emit(
-        ThinkingDeltaEvent(text="inspect ", agent_name="executor", run_id="t1")
+        ThinkingDeltaEvent(text="inspect ", agent_name="executor", agent_run_id="t1")
     )
-    recorder.emit(ThinkingDeltaEvent(text="repo", agent_name="executor", run_id="t1"))
+    recorder.emit(ThinkingDeltaEvent(text="repo", agent_name="executor", agent_run_id="t1"))
     recorder.emit(
         AssistantTextDeltaEvent(
-            text="I will run ", agent_name="executor", run_id="t1"
+            text="I will run ", agent_name="executor", agent_run_id="t1"
         )
     )
     recorder.emit(
-        AssistantTextDeltaEvent(text="tests.", agent_name="executor", run_id="t1")
+        AssistantTextDeltaEvent(text="tests.", agent_name="executor", agent_run_id="t1")
     )
     recorder.emit(
         AssistantMessageCompleteEvent(
@@ -66,7 +66,7 @@ def test_agent_message_recorder_appends_conversation_messages(tmp_path) -> None:
             ),
             usage=UsageSnapshot(input_tokens=1, output_tokens=2),
             agent_name="executor",
-            run_id="t1",
+            agent_run_id="t1",
         )
     )
     recorder.emit(
@@ -75,7 +75,7 @@ def test_agent_message_recorder_appends_conversation_messages(tmp_path) -> None:
             output="ok",
             tool_use_id="toolu_1",
             agent_name="executor",
-            run_id="t1",
+            agent_run_id="t1",
         )
     )
     recorder.flush()
@@ -137,9 +137,9 @@ def test_assistant_complete_with_full_blocks_does_not_duplicate(tmp_path) -> Non
     path = tmp_path / "message.jsonl"
     recorder = AgentMessageJsonlRecorder(path)
 
-    recorder.emit(ThinkingDeltaEvent(text="plan ", agent_name="a", run_id="r"))
-    recorder.emit(ThinkingDeltaEvent(text="step", agent_name="a", run_id="r"))
-    recorder.emit(AssistantTextDeltaEvent(text="ok.", agent_name="a", run_id="r"))
+    recorder.emit(ThinkingDeltaEvent(text="plan ", agent_name="a", agent_run_id="r"))
+    recorder.emit(ThinkingDeltaEvent(text="step", agent_name="a", agent_run_id="r"))
+    recorder.emit(AssistantTextDeltaEvent(text="ok.", agent_name="a", agent_run_id="r"))
     recorder.emit(
         AssistantMessageCompleteEvent(
             message=Message(
@@ -152,7 +152,7 @@ def test_assistant_complete_with_full_blocks_does_not_duplicate(tmp_path) -> Non
             ),
             usage=UsageSnapshot(),
             agent_name="a",
-            run_id="r",
+            agent_run_id="r",
         )
     )
     recorder.flush()
