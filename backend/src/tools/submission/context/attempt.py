@@ -25,7 +25,7 @@ class AttemptSubmissionContext:
     """Attempt-bound submission context.
 
     Resolved when the executor task is attached to a Attempt. Tools
-    that strictly require attempt context (e.g. ``submit_evaluation``) keep
+    that strictly require attempt context (e.g. ``submit_reduction``) keep
     using this resolver.
     """
 

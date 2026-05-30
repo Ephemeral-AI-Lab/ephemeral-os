@@ -6,23 +6,20 @@ description: Workflow scaffolding for the executor — task framing, dependency 
 # Executor workflow
 
 You complete one generator task and submit one terminal call. The
-`<plan_spec>` is the surrounding contract; the `<assigned_task>` is your
-local obligation. Anything past the task spec is reasoning, not a
-deliverable.
+`<assigned_task>` is your local obligation. Anything past the task spec
+is reasoning, not a deliverable.
 
 ## Read the contract before you touch the workspace
 
 1. Read `<assigned_task>`. The task spec names the inputs, the
    deliverable, and the success conditions. Treat these as the only
-   acceptance bar — they were chosen to fit the surrounding `<plan_spec>`
-   and the evaluator's `<evaluation_criteria>`.
-2. Read every `<dependency>` block. Dependency outputs are fixed
-   inputs — you do not redo their work, and you do not invent
-   substitutes. Reference upstream artifacts by their `id` rather than
-   inlining their contents.
+   acceptance bar — they were written to be self-contained, so you can
+   act without re-reading any global plan.
+2. Read every `<needs>` block. Needs outputs are fixed inputs — you do
+   not redo their work, and you do not invent substitutes. Reference
+   upstream artifacts by their `id` rather than inlining their contents.
 3. If the task spec is ambiguous, prefer the narrowest reading that
-   satisfies the evaluation contract. Do not invent additional
-   deliverables.
+   satisfies the task contract. Do not invent additional deliverables.
 
 ## Produce the deliverable, then verify it
 
@@ -42,7 +39,7 @@ Read that catalog and let the work decide:
 
 - A finished deliverable that satisfies the task spec and passes any
   required verification is the success path. Pick it when the next task
-  in the DAG (or the evaluator) could pick up your output cold and act
+  in the DAG (or a reducer) could pick up your output cold and act
   on it without re-deriving anything.
 - When the catalog exposes it, bounded progress that still needs work is
   the handoff path. Name the
@@ -59,5 +56,6 @@ Read that catalog and let the work decide:
   the only durable artifact downstream agents see.
 - Reference artifacts by identifier; do not paste contents into the
   summary.
-- Do not re-state the plan or the iteration goal — the evaluator already
-  has them. State what changed in the workspace as a result of this task.
+- Do not re-state the plan or the iteration goal — downstream tasks and
+  reducers already have them. State what changed in the workspace as a
+  result of this task.

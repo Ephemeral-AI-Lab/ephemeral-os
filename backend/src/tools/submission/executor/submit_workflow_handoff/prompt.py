@@ -1,4 +1,4 @@
-"""Description factory for submit_execution_handoff."""
+"""Description factory for submit_workflow_handoff."""
 
 from __future__ import annotations
 
@@ -8,7 +8,7 @@ from tools._names import (
 )
 
 
-def get_submit_execution_handoff_description() -> str:
+def get_submit_workflow_handoff_description() -> str:
     return f"""\
 Hand the current task back to the planner for decomposition into smaller
 sub-objectives. This terminates your executor run.

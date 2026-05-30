@@ -12,8 +12,7 @@ from typing import Literal
 PrimaryRole = Literal[
     "planner",
     "executor",
-    "verifier",
-    "evaluator",
+    "reducer",
 ]
 
 

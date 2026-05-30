@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from tools._names import (
-    SUBMIT_EXECUTION_HANDOFF_TOOL_NAME,
+    SUBMIT_WORKFLOW_HANDOFF_TOOL_NAME,
     SUBMIT_EXECUTION_SUCCESS_TOOL_NAME,
 )
 
@@ -22,7 +22,7 @@ Call this when:
 Do NOT call this when:
 - You have not actually attempted the task — try first.
 - The task is solvable but needs delegation or replanning — use
-  `{SUBMIT_EXECUTION_HANDOFF_TOOL_NAME}` instead.
+  `{SUBMIT_WORKFLOW_HANDOFF_TOOL_NAME}` instead.
 - You succeeded — use `{SUBMIT_EXECUTION_SUCCESS_TOOL_NAME}`.
 
 Inputs:

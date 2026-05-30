@@ -1,11 +1,11 @@
-"""submit_evaluation_failure terminal tool."""
+"""submit_reduction_success terminal tool."""
 
 from __future__ import annotations
 
 from pydantic import BaseModel, Field
 
 from task_center import (
-    EvaluatorSubmission,
+    ReducerSubmission,
     TaskCenterInvariantViolation,
 )
 from tools._framework.core.context import ToolExecutionContextService
@@ -21,51 +21,49 @@ from tools.submission.context import (
     resolve_attempt_submission_context,
 )
 from .prompt import (
-    get_submit_evaluation_failure_description,
+    get_submit_reduction_success_description,
 )
 
 
-class SubmitEvaluationFailureInput(BaseModel):
+class SubmitReductionSuccessInput(BaseModel):
     summary: str = Field(..., min_length=1)
-    failed_criteria: list[str] = Field(default_factory=list)
 
 
 @tool(
-    name="submit_evaluation_failure",
-    description=get_submit_evaluation_failure_description(),
-    input_model=SubmitEvaluationFailureInput,
+    name="submit_reduction_success",
+    description=get_submit_reduction_success_description(),
+    input_model=SubmitReductionSuccessInput,
     output_model=TextToolOutput,
     intent=Intent.READ_ONLY,
     is_terminal_tool=True,
     pre_hooks=(
-        RequireNoInflightBackgroundTasks("submit_evaluation_failure"),
-        AdvisorApprovalPreHook("submit_evaluation_failure"),
+        RequireNoInflightBackgroundTasks("submit_reduction_success"),
+        AdvisorApprovalPreHook("submit_reduction_success"),
     ),
 )
-async def submit_evaluation_failure(
+async def submit_reduction_success(
     summary: str,
-    failed_criteria: list[str],
     *,
     context: ToolExecutionContextService,
 ) -> ToolResult:
     try:
         submission_context = resolve_attempt_submission_context(context)
-        submission_context.orchestrator.apply_evaluator_submission(
-            EvaluatorSubmission(
+        submission_context.orchestrator.apply_reducer_submission(
+            ReducerSubmission(
                 attempt_id=submission_context.attempt.id,
                 task_id=submission_context.task_center_task_id,
-                outcome="failure",
+                status="success",
                 summary=summary,
-                payload={"failed_criteria": failed_criteria},
+                payload={},
             )
         )
     except (AttemptSubmissionContextError, TaskCenterInvariantViolation) as exc:
         return ToolResult(output=str(exc), is_error=True)
 
     return ToolResult(
-        output="Accepted evaluation failure.",
+        output="Accepted reduction success.",
         metadata={
-            "submission_kind": "evaluator_failure",
+            "submission_kind": "reduction_success",
             "task_center_task_id": submission_context.task_center_task_id,
             "attempt_id": submission_context.attempt.id,
         },

@@ -28,14 +28,14 @@ class AgentRole(StrEnum):
     Pure identity: read as the ``metadata["role"]`` audit tag (emitted by
     ``factory.py`` and ``run_subagent.py``) and by the planner-submission gate.
     Terminal-tool routing is no longer keyed on role — it lives in each
-    profile's own ``terminal_routing`` module. ``GENERATOR`` covers both the
-    executor and verifier profiles (distinguished by ``name``); ``HELPER`` is
-    the advisor, ``SUBAGENT`` is the explorer.
+    profile's own ``terminal_routing`` module. ``GENERATOR`` covers the
+    executor profile; ``REDUCER`` digests/gates; ``HELPER`` is the advisor,
+    ``SUBAGENT`` is the explorer.
     """
 
     PLANNER = "planner"
     GENERATOR = "generator"
-    EVALUATOR = "evaluator"
+    REDUCER = "reducer"
     HELPER = "helper"
     SUBAGENT = "subagent"
 
@@ -62,7 +62,7 @@ class AgentDefinition(BaseModel):
     tool_call_limit: int = Field(..., gt=0)
 
     # --- role ---
-    # Canonical category of this profile (planner / generator / evaluator /
+    # Canonical category of this profile (planner / generator / reducer /
     # helper / subagent). The planner-submission gate reads this, and audit
     # consumers read ``role.value`` through the ``metadata["role"]`` key
     # emitted by ``factory.py`` and ``run_subagent.py``. Profile MDs MUST

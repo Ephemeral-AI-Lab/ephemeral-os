@@ -29,7 +29,7 @@ def make_workflow_request_after_edit_reminder() -> NotificationRule:
     def _body(messages: list[Any], context: Any) -> str:
         del messages, context
         return (
-            "submit_execution_handoff is meant for delegating before edits begin. "
+            "submit_workflow_handoff is meant for delegating before edits begin. "
             "Once this generator has edited, prefer finishing through its own "
             "success or blocker terminal."
         )

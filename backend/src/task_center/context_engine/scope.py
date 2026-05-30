@@ -86,16 +86,18 @@ class ContextScope:
         )
 
     @classmethod
-    def for_evaluator(
+    def for_reducer(
         cls,
         *,
         workflow_id: str,
         iteration_id: str,
         attempt_id: str,
+        task_id: str,
     ) -> ContextScope:
-        """Scope shape required by the evaluator recipe."""
+        """Scope shape required by the reducer recipe."""
         return cls(
             workflow_id=workflow_id,
             iteration_id=iteration_id,
             attempt_id=attempt_id,
+            task_id=task_id,
         )

@@ -59,10 +59,10 @@ if TYPE_CHECKING:
     from task_center.workflow.starter import WorkflowStarter, StartedWorkflow
     from task_center.workflow.state import Workflow, WorkflowOrigin, WorkflowOriginKind, WorkflowStatus
     from task_center.submissions import (
-        EvaluatorSubmission,
         GeneratorSubmission,
         PlannedGeneratorTask,
         PlannerSubmission,
+        ReducerSubmission,
     )
 
 
@@ -97,8 +97,8 @@ _EXPORTS: dict[str, tuple[str, str]] = {
         "IterationCreationReason",
     ),
     "IterationStatus": ("task_center.iteration.state", "IterationStatus"),
-    "EvaluatorSubmission": ("task_center.submissions", "EvaluatorSubmission"),
     "GeneratorSubmission": ("task_center.submissions", "GeneratorSubmission"),
+    "ReducerSubmission": ("task_center.submissions", "ReducerSubmission"),
     "Workflow": ("task_center.workflow.state", "Workflow"),
     "WorkflowOrigin": ("task_center.workflow.state", "WorkflowOrigin"),
     "WorkflowOriginKind": ("task_center.workflow.state", "WorkflowOriginKind"),

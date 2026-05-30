@@ -1,8 +1,8 @@
 """Scenario protocol + ScenarioContext + ToolCallSpec.
 
 Scenarios are pure descriptions; the mock runner translates them into actual
-tool calls. The protocol is intentionally narrow: planner/executor/verifier/
-evaluator decisions and optional recursive-handoff goal text.
+tool calls. The protocol is intentionally narrow: planner/executor/reducer
+decisions and optional recursive-handoff goal text.
 """
 
 from __future__ import annotations
@@ -49,9 +49,7 @@ class Scenario(Protocol):
 
     def executor_actions(self, ctx: ScenarioContext) -> Sequence[Any]: ...
 
-    def verifier_response(self, ctx: ScenarioContext) -> ToolCallSpec: ...
-
-    def evaluator_response(self, ctx: ScenarioContext) -> ToolCallSpec: ...
+    def reducer_response(self, ctx: ScenarioContext) -> ToolCallSpec: ...
 
     def recursive_handoff_goal(self, ctx: ScenarioContext) -> str | None: ...
 
@@ -70,10 +68,7 @@ class ScenarioBase:
     def executor_actions(self, ctx: ScenarioContext) -> Sequence[Any]:  # noqa: ARG002
         return ()
 
-    def verifier_response(self, ctx: ScenarioContext) -> ToolCallSpec:  # noqa: ARG002
-        raise NotImplementedError
-
-    def evaluator_response(self, ctx: ScenarioContext) -> ToolCallSpec:  # noqa: ARG002
+    def reducer_response(self, ctx: ScenarioContext) -> ToolCallSpec:  # noqa: ARG002
         raise NotImplementedError
 
     def recursive_handoff_goal(self, ctx: ScenarioContext) -> str | None:  # noqa: ARG002

@@ -23,7 +23,7 @@ allowed_tools:
   - run_subagent
   - ask_advisor
 terminals:
-  - submit_execution_handoff
+  - submit_workflow_handoff
   - submit_execution_success
   - submit_execution_blocker
 terminal_routing: executor_routing.py
@@ -34,9 +34,9 @@ skill: ../../../../config/skills/executor/SKILL.md
 ---
 You are the **main-agent generator executor**.
 
-Complete the `<assigned_task>`. If the task is too broad or genuinely needs a delegated complex-task plan, call `submit_execution_handoff`. If the task cannot proceed because of a concrete blocker, call `submit_execution_blocker`.
+Complete the `<assigned_task>`. If the task is too broad or genuinely needs a delegated complex-task plan, call `submit_workflow_handoff`. If the task cannot proceed because of a concrete blocker, call `submit_execution_blocker`.
 
-Only terminal tools exposed in this launch are valid. If this launch does not expose `submit_execution_handoff`, handoff is unavailable; use success or blocker according to the work's actual state.
+Only terminal tools exposed in this launch are valid. If this launch does not expose `submit_workflow_handoff`, handoff is unavailable; use success or blocker according to the work's actual state.
 
 ## Submission discipline
 
@@ -48,6 +48,6 @@ Submit exactly one terminal tool per run.
 
 ## Terminal tools
 
-- `submit_execution_success` — the assigned task is complete and verified. Closes this generator task with a passing outcome that the attempt's evaluator reads.
-- `submit_execution_handoff` — the task is too broad to complete here; spawns a delegated complex-task plan instead of finishing this task in place.
+- `submit_execution_success` — the assigned task is complete and verified. Closes this generator task with a passing outcome that the attempt's reducer reads.
+- `submit_workflow_handoff` — the task is too broad to complete here; spawns a delegated complex-task plan instead of finishing this task in place.
 - `submit_execution_blocker` — the task cannot proceed because of a concrete blocker. Marks this generator task blocked; dependent pending tasks remain not-started.

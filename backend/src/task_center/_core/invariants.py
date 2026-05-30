@@ -134,8 +134,8 @@ def assert_generator_task_for_submission(task: dict[str, Any], attempt: Attempt)
 
 def assert_evaluator_task_for_submission(task: dict[str, Any], attempt: Attempt) -> None:
     assert_task_belongs_to_attempt(task, attempt)
-    if task.get("role") != TaskCenterTaskRole.EVALUATOR.value:
-        raise TaskCenterInvariantViolation(f"Task {task.get('id')!r} is not an evaluator task")
+    if task.get("role") != TaskCenterTaskRole.REDUCER.value:
+        raise TaskCenterInvariantViolation(f"Task {task.get('id')!r} is not a reducer task")
 
 
 __all__ = [

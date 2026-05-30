@@ -58,11 +58,11 @@ class GeneratorSubmission:
 
 
 @dataclass(frozen=True, slots=True)
-class EvaluatorSubmission:
-    """Validated terminal outcome for one evaluator task."""
+class ReducerSubmission:
+    """Validated terminal outcome for one reducer task."""
 
     attempt_id: str
     task_id: str
-    outcome: Literal["success", "failure"]
+    status: Literal["success", "failure"]
     summary: str
     payload: dict[str, Any]

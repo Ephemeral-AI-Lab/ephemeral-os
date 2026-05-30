@@ -76,7 +76,7 @@ def get_run_subagent_description() -> str:
         "    agent_name=\"explorer\",\n"
         "    prompt=(\n"
         "      \"Find every call site of \"\n"
-        "      \"`AttemptOrchestrator.apply_evaluator_submission` in backend/src \"\n"
+        "      \"`AttemptOrchestrator.apply_reducer_submission` in backend/src \"\n"
         "      \"and report (file, line, calling function). The signature is \"\n"
         "      \"changing in PR #842; I need the punch list of files to update. \"\n"
         "      \"Report under 200 words.\"\n"

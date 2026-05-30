@@ -16,9 +16,9 @@ from task_center._core.primitives import TaskCenterInvariantViolation
 if TYPE_CHECKING:  # pragma: no cover - typing-only
     from task_center.workflow.state import WorkflowClosureReport
     from task_center.submissions import (
-        EvaluatorSubmission,
         GeneratorSubmission,
         PlannerFailureSubmission,
+        ReducerSubmission,
     )
 
 
@@ -36,7 +36,7 @@ class RegisteredAttemptOrchestrator(Protocol):
 
     def apply_generator_submission(self, submission: GeneratorSubmission) -> None: ...
 
-    def apply_evaluator_submission(self, submission: EvaluatorSubmission) -> None: ...
+    def apply_reducer_submission(self, submission: ReducerSubmission) -> None: ...
 
 
 class AttemptOrchestratorRegistry:

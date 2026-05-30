@@ -17,8 +17,7 @@ from __future__ import annotations
 AGENT_DIRECTIVES: dict[str, str] = {
     "planner": "Plan for <iteration_goal>.",
     "executor": "Complete <assigned_task>.",
-    "verifier": "Complete <assigned_task>.",
-    "evaluator": "Verify the current attempt against <evaluation_criteria>.",
+    "reducer": "Digest your <needs> and gate against <assigned_prompt>.",
     "explorer": ("Investigate the parent's question and return concrete findings."),
 }
 

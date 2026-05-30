@@ -1,12 +1,12 @@
 """Adapter: drive an imperative :class:`Scenario` through the REAL query loop.
 
 Bridges the existing scenario decision methods (``planner_response`` /
-``executor_actions`` / ``verifier_response`` / ``evaluator_response``, which
-return :class:`ToolCallSpec` / probe-name sequences) into the per-turn
+``executor_actions`` / ``reducer_response``, which return
+:class:`ToolCallSpec` / probe-name sequences) into the per-turn
 ``TurnScript`` protocol consumed by :class:`ScenarioEventSource`.
 
 Per-role:
-- planner / verifier / evaluator → one single-call ``Turn`` from the spec.
+- planner / reducer → one single-call ``Turn`` from the spec.
 - executor → run each probe-name's coroutine (yielding one ``ToolCall`` per
   step), then submit ``submit_execution_success``.
 
@@ -133,14 +133,8 @@ async def _planner_script(
     _ = yield _spec_turn(spec)
 
 
-async def _evaluator_script(scenario: "Scenario", ctx: ScenarioContext) -> TurnScript:
-    spec = scenario.evaluator_response(ctx)
-    _ = yield _ask_advisor_turn(spec.tool.name, spec.args)
-    _ = yield _spec_turn(spec)
-
-
-async def _verifier_script(scenario: "Scenario", ctx: ScenarioContext) -> TurnScript:
-    spec = scenario.verifier_response(ctx)
+async def _reducer_script(scenario: "Scenario", ctx: ScenarioContext) -> TurnScript:
+    spec = scenario.reducer_response(ctx)
     _ = yield _ask_advisor_turn(spec.tool.name, spec.args)
     _ = yield _spec_turn(spec)
 
@@ -200,9 +194,9 @@ async def _executor_script(
                 f"Resolve recursive package {package_id}."
             )
             handoff_args = {"goal_handoff": goal_handoff}
-            _ = yield _ask_advisor_turn("submit_execution_handoff", handoff_args)
+            _ = yield _ask_advisor_turn("submit_workflow_handoff", handoff_args)
             _ = yield Turn(
-                calls=(ToolCall("submit_execution_handoff", handoff_args),)
+                calls=(ToolCall("submit_workflow_handoff", handoff_args),)
             )
             return
 
@@ -272,8 +266,8 @@ def scenario_script_for(
 ) -> TurnScript:
     """Return the profile-appropriate :class:`TurnScript` for *agent_def*.
 
-    Dispatch is by profile ``name`` (not ``role``): executor and verifier share
-    the ``generator`` role but script distinct behaviors.
+    Dispatch is by profile ``name`` (not ``role``): the executor is a generator
+    by role; the reducer scripts its own gating behavior.
     """
     role = agent_def.name
     # Helper sub-agents (advisor) carry no TaskCenter attempt context — script
@@ -293,10 +287,8 @@ def scenario_script_for(
             metadata=context.tool_metadata, repo_dir=repo_dir, bus=bus
         )
         return _executor_script(scenario, ctx, probe_ctx)
-    if role == "verifier":
-        return _verifier_script(scenario, ctx)
-    if role == "evaluator":
-        return _evaluator_script(scenario, ctx)
+    if role == "reducer":
+        return _reducer_script(scenario, ctx)
     raise RuntimeError(f"Unsupported mock agent role: {role!r}")
 
 

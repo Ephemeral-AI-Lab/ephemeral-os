@@ -1,4 +1,4 @@
-"""submit_execution_handoff terminal tool.
+"""submit_workflow_handoff terminal tool.
 
 Hands the executor task back to the planner for objective decomposition when
 the current objective's scope is too large for a single executor pass. The
@@ -29,14 +29,14 @@ from tools.submission.context import (
     resolve_executor_submission_context,
 )
 from .prompt import (
-    get_submit_execution_handoff_description,
+    get_submit_workflow_handoff_description,
 )
 
 if TYPE_CHECKING:
     from task_center import StartedWorkflow
 
 
-class SubmitExecutionHandoffInput(BaseModel):
+class SubmitWorkflowHandoffInput(BaseModel):
     goal_handoff: str = Field(
         ...,
         min_length=1,
@@ -56,18 +56,18 @@ class SubmitExecutionHandoffInput(BaseModel):
 
 
 @tool(
-    name="submit_execution_handoff",
-    description=get_submit_execution_handoff_description(),
-    input_model=SubmitExecutionHandoffInput,
+    name="submit_workflow_handoff",
+    description=get_submit_workflow_handoff_description(),
+    input_model=SubmitWorkflowHandoffInput,
     output_model=TextToolOutput,
     intent=Intent.READ_ONLY,
     is_terminal_tool=True,
     pre_hooks=(
-        RequireNoInflightBackgroundTasks("submit_execution_handoff"),
-        AdvisorApprovalPreHook("submit_execution_handoff"),
+        RequireNoInflightBackgroundTasks("submit_workflow_handoff"),
+        AdvisorApprovalPreHook("submit_workflow_handoff"),
     ),
 )
-async def submit_execution_handoff(
+async def submit_workflow_handoff(
     goal_handoff: str,
     *,
     context: ToolExecutionContextService,

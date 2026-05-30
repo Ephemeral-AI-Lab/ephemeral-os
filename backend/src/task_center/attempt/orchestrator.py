@@ -42,16 +42,15 @@ from task_center.attempt.state import (
 )
 from task_center.workflow.state import WorkflowClosureReport
 from task_center._core.task_state import (
-    SpawnReason,
     TaskCenterTaskRole,
     TaskCenterTaskStatus,
 )
 from task_center.submissions import (
-    EvaluatorSubmission,
     GeneratorSubmission,
     PlannedGeneratorTask,
     PlannerFailureSubmission,
     PlannerSubmission,
+    ReducerSubmission,
 )
 
 logger = logging.getLogger(__name__)
@@ -104,7 +103,7 @@ class AttemptOrchestrator:
                 needs=[],
                 task_center_attempt_id=attempt.id,
                 context_packet_id=launch.context_packet_id,
-                spawn_reason=SpawnReason.ATTEMPT_PLANNER.value,
+                spawn_reason="attempt_planner",
             )
             runtime.attempt_store.set_planner_task_id(attempt.id, task_id)
             runtime.agent_launcher.launch(launch)
@@ -158,7 +157,7 @@ class AttemptOrchestrator:
         self._mark_generator(submission)
         self._stage_advancer.advance_ready_tasks()
 
-    def apply_evaluator_submission(self, submission: EvaluatorSubmission) -> None:
+    def apply_reducer_submission(self, submission: ReducerSubmission) -> None:
         self._assert_submission_attempt(submission.attempt_id)
         self._mark_evaluator(submission)
         self._stage_advancer.advance_ready_tasks()
@@ -284,7 +283,7 @@ class AttemptOrchestrator:
                 summaries=[],
                 needs=list(needs),
                 task_center_attempt_id=attempt.id,
-                spawn_reason=SpawnReason.ATTEMPT_GENERATOR.value,
+                spawn_reason="attempt_generator",
             )
             task_ids.append(task_id)
         return tuple(task_ids)
@@ -304,22 +303,22 @@ class AttemptOrchestrator:
             payload=submission.payload,
         )
 
-    def _mark_evaluator(self, submission: EvaluatorSubmission) -> None:
+    def _mark_evaluator(self, submission: ReducerSubmission) -> None:
         attempt = self._assert_stage(AttemptStage.EVALUATE)
         if attempt.evaluator_task_id != submission.task_id:
             raise TaskCenterInvariantViolation(
-                f"Evaluator submission task {submission.task_id!r} does not "
-                f"match attempt evaluator {attempt.evaluator_task_id!r}"
+                f"Reducer submission task {submission.task_id!r} does not "
+                f"match attempt reducer {attempt.evaluator_task_id!r}"
             )
         task = self._runtime.task_store.get_task(submission.task_id)
         if task is None:
-            raise TaskCenterInvariantViolation(f"Evaluator task {submission.task_id!r} not found")
+            raise TaskCenterInvariantViolation(f"Reducer task {submission.task_id!r} not found")
         assert_evaluator_task_for_submission(task, attempt)
         self._write_submission_status(
             task=task,
             task_id=submission.task_id,
-            role="Evaluator",
-            outcome=submission.outcome,
+            role="Reducer",
+            outcome=submission.status,
             summary=submission.summary,
             payload=submission.payload,
         )

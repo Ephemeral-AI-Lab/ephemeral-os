@@ -34,8 +34,7 @@ logger = logging.getLogger(__name__)
 _BAILOUT_TOOLS = frozenset(
     {
         "submit_execution_blocker",
-        "submit_evaluation_failure",
-        "submit_verification_failure",
+        "submit_reduction_failure",
         "submit_plan_defers_goal",
     }
 )

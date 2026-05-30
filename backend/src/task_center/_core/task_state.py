@@ -13,15 +13,7 @@ from enum import StrEnum
 class TaskCenterTaskRole(StrEnum):
     PLANNER = "planner"
     GENERATOR = "generator"
-    EVALUATOR = "evaluator"
-
-
-class SpawnReason(StrEnum):
-    """Why a task row was created. Replaces free-form spawn_reason strings."""
-
-    ATTEMPT_PLANNER = "attempt_planner"
-    ATTEMPT_GENERATOR = "attempt_generator"
-    ATTEMPT_EVALUATOR = "attempt_evaluator"
+    REDUCER = "reducer"
 
 
 class TaskCenterTaskStatus(StrEnum):

@@ -61,8 +61,8 @@ TERMINAL_DESCRIPTORS: dict[str, TerminalToolDescriptor] = {
             "paths and did not hide solvable work behind a blocker."
         ),
     ),
-    "submit_execution_handoff": TerminalToolDescriptor(
-        name="submit_execution_handoff",
+    "submit_workflow_handoff": TerminalToolDescriptor(
+        name="submit_workflow_handoff",
         selection_guidance=(
             "Call when bounded progress is made but further work is needed. "
             "Name the next bounded slice; do not kick the problem downstream "
@@ -78,8 +78,8 @@ TERMINAL_DESCRIPTORS: dict[str, TerminalToolDescriptor] = {
         name="submit_plan_closes_goal",
         selection_guidance=(
             "Call when this attempt's tasks fully cover the current "
-            "`<iteration_goal>`. On evaluator PASS, the iteration closes "
-            "terminally and the workflow can succeed."
+            "`<iteration_goal>`. When every plan task is done, the iteration "
+            "closes terminally and the workflow can succeed."
         ),
         advisor_review_focus=(
             "The planner proposes to CLOSE the current `<iteration_goal>` in "
@@ -109,63 +109,33 @@ TERMINAL_DESCRIPTORS: dict[str, TerminalToolDescriptor] = {
             "clearly named so the next iteration can pick up cleanly."
         ),
     ),
-    "submit_evaluation_success": TerminalToolDescriptor(
-        name="submit_evaluation_success",
+    "submit_reduction_success": TerminalToolDescriptor(
+        name="submit_reduction_success",
         selection_guidance=(
-            "Call when every entry in `<evaluation_criteria>` is satisfied; "
-            "the attempt closes successfully and the planner's submission "
-            "kind determines whether the workflow closes or continues."
+            "Call when your `<needs>` outcomes satisfy your "
+            "`<assigned_prompt>`; this reducer task closes successfully and "
+            "the attempt passes once every plan task is done."
         ),
         advisor_review_focus=(
-            "The evaluator proposes to PASS the attempt. Re-read "
-            "`<evaluation_criteria>`; for each criterion, verify the "
-            "attempt's deliverables actually satisfy it. Flag any criterion "
-            "the evaluator is glossing over and any deliverable that "
-            "satisfies the letter but not the intent of the criterion."
+            "The reducer proposes to PASS the slice it gates. Re-read its "
+            "`<assigned_prompt>`; verify the `<needs>` outcomes actually "
+            "satisfy it. Flag any requirement the reducer is glossing over "
+            "and any outcome that satisfies the letter but not the intent of "
+            "the prompt."
         ),
     ),
-    "submit_evaluation_failure": TerminalToolDescriptor(
-        name="submit_evaluation_failure",
+    "submit_reduction_failure": TerminalToolDescriptor(
+        name="submit_reduction_failure",
         selection_guidance=(
-            "Call when one or more entries in `<evaluation_criteria>` fail. "
-            "The graph enters retry or failure handling."
+            "Call when your `<needs>` outcomes do not satisfy your "
+            "`<assigned_prompt>`. The graph enters retry or failure handling."
         ),
         advisor_review_focus=(
-            "The evaluator proposes to FAIL the attempt. Confirm the failing "
-            "criteria are accurately named and that the failure is on the "
-            "attempt's promised scope (NOT on work deferred via "
-            "`deferred_goal_for_next_iteration`). Flag failures that punish the "
-            "attempt for items outside the current `<iteration_goal>`."
-        ),
-    ),
-    "submit_verification_success": TerminalToolDescriptor(
-        name="submit_verification_success",
-        selection_guidance=(
-            "Call when the generator output passes verification. Closes this "
-            "verifier task with a passing outcome."
-        ),
-        advisor_review_focus=(
-            "The verifier proposes the deliverable PASSES verification. "
-            "Re-check the verification criteria against the actual "
-            "deliverable; flag missed checks and any claim that the "
-            "deliverable passes solely because the verifier didn't look hard "
-            "enough."
-        ),
-    ),
-    "submit_verification_failure": TerminalToolDescriptor(
-        name="submit_verification_failure",
-        selection_guidance=(
-            "Call when issues remain that the verifier could not safely fix "
-            "inline (touches intent, control flow, tests, or multiple files)."
-        ),
-        advisor_review_focus=(
-            "The verifier proposes the deliverable FAILS verification. "
-            "Confirm the failing checks are real and accurately described. "
-            "Flag failures that are not the verifier's responsibility (e.g. "
-            "issues that belong to a different task) so the failure surfaces "
-            "in the right scope. Also flag verifier inline edits that exceed "
-            "the typo/single-line scope (a verifier doing implementation work "
-            "should have failed the task instead)."
+            "The reducer proposes to FAIL the slice it gates. Confirm the "
+            "failing requirement is accurately named and that the failure is "
+            "on the slice's promised scope (NOT on work deferred via "
+            "`deferred_goal_for_next_iteration`). Flag failures that punish "
+            "the attempt for items outside the current `<iteration_goal>`."
         ),
     ),
 }

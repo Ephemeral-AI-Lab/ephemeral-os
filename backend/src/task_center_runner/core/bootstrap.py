@@ -23,9 +23,8 @@ _PROFILE_ROOT = Path(__file__).resolve().parents[2] / "agents" / "profile"
 # Names the launcher resolves via
 # ``EphemeralAttemptAgentLauncher._resolve_agent_definition``. Markdown
 # frontmatter ``name:`` fields under ``_PROFILE_ROOT/main/`` register these:
-# planner.md, evaluator.md, executor.md (name=executor), and
-# generator_verifier.md (name=verifier).
-_REQUIRED_AGENT_NAMES = frozenset({"planner", "executor", "verifier", "evaluator"})
+# planner.md, reducer.md, and executor.md (name=executor).
+_REQUIRED_AGENT_NAMES = frozenset({"planner", "executor", "reducer"})
 
 
 def bootstrap_real_agent_runtime() -> None:

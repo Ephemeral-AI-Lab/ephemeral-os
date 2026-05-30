@@ -22,9 +22,9 @@ from task_center._core.task_state import (
     TaskCenterTaskStatus,
 )
 from task_center.submissions import (
-    EvaluatorSubmission,
     GeneratorSubmission,
     PlannerFailureSubmission,
+    ReducerSubmission,
 )
 from tools import ExecutionMetadata
 
@@ -106,7 +106,7 @@ class EphemeralAttemptAgentLauncher:
             runner = run_ephemeral_agent
 
         # Runtime is always attached: submission tools resolve through the
-        # attempt id carried on normal planner/generator/evaluator launches.
+        # attempt id carried on normal planner/generator/reducer launches.
         metadata = ExecutionMetadata(
             task_center_run_id=launch.task_center_run_id,
             task_center_task_id=launch.task_id,
@@ -197,7 +197,7 @@ class EphemeralAttemptAgentLauncher:
 _ROLE_FAIL_REASONS: dict[TaskCenterTaskRole, AttemptFailReason] = {
     TaskCenterTaskRole.PLANNER: AttemptFailReason.PLANNER_FAILED,
     TaskCenterTaskRole.GENERATOR: AttemptFailReason.GENERATOR_FAILED,
-    TaskCenterTaskRole.EVALUATOR: AttemptFailReason.EVALUATOR_FAILED,
+    TaskCenterTaskRole.REDUCER: AttemptFailReason.EVALUATOR_FAILED,
 }
 
 
@@ -282,12 +282,12 @@ def _report_exhaustion(
                 payload={"fail_reason": "run_exhausted"},
             )
         )
-    elif launch.role == TaskCenterTaskRole.EVALUATOR:
-        orchestrator.apply_evaluator_submission(
-            EvaluatorSubmission(
+    elif launch.role == TaskCenterTaskRole.REDUCER:
+        orchestrator.apply_reducer_submission(
+            ReducerSubmission(
                 attempt_id=attempt_id,
                 task_id=launch.task_id,
-                outcome="failure",
+                status="failure",
                 summary=summary,
                 payload={"fail_reason": "run_exhausted"},
             )
@@ -300,7 +300,7 @@ def _report_exhaustion(
 
 
 PLANNER_AGENT_NAME = "planner"
-EVALUATOR_AGENT_NAME = "evaluator"
+REDUCER_AGENT_NAME = "reducer"
 
 
 @dataclass(frozen=True, slots=True)
@@ -351,15 +351,16 @@ class AgentLaunchFactory:
             workflow_id=iteration.workflow_id,
         )
 
-    def for_evaluator(self, *, attempt: Attempt, task_id: str) -> AgentLaunch:
+    def for_reducer(self, *, attempt: Attempt, task_id: str) -> AgentLaunch:
         iteration = self._require_iteration(attempt)
         return self._build(
-            role=TaskCenterTaskRole.EVALUATOR,
-            base_agent_name=EVALUATOR_AGENT_NAME,
-            scope=ContextScope.for_evaluator(
+            role=TaskCenterTaskRole.REDUCER,
+            base_agent_name=REDUCER_AGENT_NAME,
+            scope=ContextScope.for_reducer(
                 workflow_id=iteration.workflow_id,
                 iteration_id=iteration.id,
                 attempt_id=attempt.id,
+                task_id=task_id,
             ),
             task_id=task_id,
             task_center_run_id=self.runtime.run_id_for_attempt(attempt),

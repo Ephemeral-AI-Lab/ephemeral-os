@@ -27,11 +27,7 @@ _AGENTS_WITH_TASK_GUIDANCE: frozenset[str] = frozenset(
     {
         "planner",
         "executor",
-        # ``generator_verifier.md`` registers as ``name: verifier`` in its
-        # frontmatter; dispatch keys match the registered agent name, not the
-        # source filename.
-        "verifier",
-        "evaluator",
+        "reducer",
     }
 )
 

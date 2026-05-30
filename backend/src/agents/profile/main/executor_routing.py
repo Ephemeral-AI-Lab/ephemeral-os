@@ -17,7 +17,7 @@ def select_terminals(*, is_nested: bool, has_workflow: bool) -> frozenset[str] |
         return frozenset({"submit_execution_success", "submit_execution_blocker"})
     return frozenset(
         {
-            "submit_execution_handoff",
+            "submit_workflow_handoff",
             "submit_execution_success",
             "submit_execution_blocker",
         }

@@ -28,9 +28,7 @@ from task_center.attempt.generator_dag import (
     ready_pending_generator_ids,
     summarize_generator_dag,
 )
-from task_center._core.primitives import evaluator_task_id
 from task_center._core.task_state import (
-    SpawnReason,
     TaskCenterTaskRole,
     TaskCenterTaskStatus,
 )
@@ -204,13 +202,13 @@ class AttemptStageAdvancer:
         if attempt.evaluator_task_id is not None:
             return
         runtime = self._runtime
-        task_id = evaluator_task_id(attempt.id)
+        task_id = f"{attempt.id}:evaluator"
         try:
-            launch = AgentLaunchFactory(runtime=runtime).for_evaluator(attempt=attempt, task_id=task_id)
+            launch = AgentLaunchFactory(runtime=runtime).for_reducer(attempt=attempt, task_id=task_id)
             ready_task = {
                 "id": task_id,
                 "task_center_run_id": launch.task_center_run_id,
-                "role": TaskCenterTaskRole.EVALUATOR.value,
+                "role": TaskCenterTaskRole.REDUCER.value,
                 "agent_name": launch.agent_name,
                 "status": TaskCenterTaskStatus.PENDING.value,
                 "needs": list(attempt.generator_task_ids),
@@ -225,7 +223,7 @@ class AttemptStageAdvancer:
             runtime.task_store.upsert_task(
                 task_id=task_id,
                 task_center_run_id=launch.task_center_run_id,
-                role=TaskCenterTaskRole.EVALUATOR.value,
+                role=TaskCenterTaskRole.REDUCER.value,
                 agent_name=launch.agent_name,
                 context_message=launch.context,
                 status=TaskCenterTaskStatus.RUNNING.value,
@@ -233,7 +231,7 @@ class AttemptStageAdvancer:
                 needs=list(attempt.generator_task_ids),
                 task_center_attempt_id=attempt.id,
                 context_packet_id=launch.context_packet_id,
-                spawn_reason=SpawnReason.ATTEMPT_EVALUATOR.value,
+                spawn_reason="attempt_evaluator",
             )
             task = runtime.task_store.get_task(task_id)
             if task is not None:

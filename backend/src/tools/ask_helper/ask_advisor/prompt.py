@@ -6,7 +6,7 @@ from tools._names import (
     ASK_ADVISOR_TOOL_NAME,
     SUBMIT_EXECUTION_SUCCESS_TOOL_NAME,
     SUBMIT_PLAN_CLOSES_GOAL_TOOL_NAME,
-    SUBMIT_VERIFICATION_SUCCESS_TOOL_NAME,
+    SUBMIT_REDUCTION_SUCCESS_TOOL_NAME,
 )
 
 
@@ -17,7 +17,7 @@ def get_ask_advisor_description() -> str:
         f"\n"
         f"Use this when:\n"
         f"- You're about to call a terminal tool (e.g., `{SUBMIT_EXECUTION_SUCCESS_TOOL_NAME}`,\n"
-        f"  `{SUBMIT_VERIFICATION_SUCCESS_TOOL_NAME}`, `{SUBMIT_PLAN_CLOSES_GOAL_TOOL_NAME}`) and you want a\n"
+        f"  `{SUBMIT_REDUCTION_SUCCESS_TOOL_NAME}`, `{SUBMIT_PLAN_CLOSES_GOAL_TOOL_NAME}`) and you want a\n"
         f"  second pair of eyes on (1) tool selection and (2) whether the work you've\n"
         f"  done actually supports the payload.\n"
         f"- The submission is high-stakes (closes a goal, marks an attempt\n"
@@ -27,8 +27,8 @@ def get_ask_advisor_description() -> str:
         f"- Trivial submissions where the right terminal is unambiguous and the\n"
         f"  work is obvious (e.g., a short summary acknowledging an already-passed\n"
         f"  eval).\n"
-        f"- Fixing problems — the advisor only audits and cannot edit. Verifier and\n"
-        f"  evaluator agents may apply trivial inline fixes themselves via\n"
+        f"- Fixing problems — the advisor only audits and cannot edit. Reducer\n"
+        f"  agents may apply trivial inline fixes themselves via\n"
         f"  `edit_file`/`write_file` (typo, wrong variable name, single-line\n"
         f"  obvious bug); the advisor's job is to confirm those fixes do not exceed\n"
         f"  that scope before approving a success terminal.\n"

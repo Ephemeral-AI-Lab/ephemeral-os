@@ -105,7 +105,7 @@ def task_center_run_id() -> str:
 #
 # Production paths (orchestrator + stage advancer + entry bootstrap) require an
 # ``AgentEntryComposer`` on ``AttemptDeps``. Lifecycle tests that exercise
-# planner/generator/evaluator launches need (a) a composer wired into the
+# planner/generator/reducer launches need (a) a composer wired into the
 # runtime, (b) registered context recipes, and (c) minimal test agent
 # definitions so the router can look up a target agent.
 #
@@ -137,7 +137,7 @@ def _clear_definitions() -> None:
 def register_test_agents(request):
     """Register the bare-minimum agents needed by lifecycle tests.
 
-    Provides ``planner``, ``executor``, ``generator``, ``evaluator`` definitions
+    Provides ``planner``, ``executor``, ``generator``, ``reducer`` definitions
     each wired to its corresponding ``*_v1`` recipe. Tests that need a
     different shape can register their own definitions on top — agent names
     are unique per test thanks to ``isolated_agent_registries`` cleanup.
@@ -179,21 +179,11 @@ def register_test_agents(request):
     )
     register_definition(
         AgentDefinition(
-            name="evaluator",
-            description="test evaluator",
-            role=AgentRole.EVALUATOR,
+            name="reducer",
+            description="test reducer",
+            role=AgentRole.REDUCER,
             context_recipe="evaluator",
-            terminals=["submit_evaluation"],
-            tool_call_limit=10,
-        )
-    )
-    register_definition(
-        AgentDefinition(
-            name="verifier",
-            description="test verifier",
-            role=AgentRole.GENERATOR,
-            context_recipe="generator",
-            terminals=["submit_execution_success", "submit_execution_blocker"],
+            terminals=["submit_reduction_success", "submit_reduction_failure"],
             tool_call_limit=10,
         )
     )

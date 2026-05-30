@@ -84,14 +84,14 @@ def _runner_config_daemon_audit_pull_enabled() -> bool:
 
 
 PRIMARY_ROLES: frozenset[str] = frozenset(
-    {"planner", "executor", "verifier", "evaluator"}
+    {"planner", "executor", "reducer"}
 )
 
 # Roles which earn an ``NN_<role>_<task_id>`` directory under the parent
 # attempt — superset of the primary message-recorder allowlist (we still
 # want the ``task.json`` snapshot for ``generator`` rows).
 _ATTEMPT_CHILD_ROLES: frozenset[str] = frozenset(
-    {"planner", "executor", "verifier", "evaluator", "generator"}
+    {"planner", "executor", "reducer", "generator"}
 )
 
 
@@ -687,10 +687,7 @@ class AuditRecorder:
 
     @staticmethod
     def _display_role(target: TaskCenterTaskRecord) -> str:
-        if target.role == "generator" and target.agent_name in {
-            "executor",
-            "verifier",
-        }:
+        if target.role == "generator" and target.agent_name == "executor":
             return str(target.agent_name)
         return str(target.role)
 

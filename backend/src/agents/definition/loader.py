@@ -66,7 +66,7 @@ def _load_agent_files(paths: Iterable[Path]) -> list[AgentDefinition]:
             raise ValueError(
                 f"Agent profile {path} is missing required 'role:' "
                 "frontmatter field. Declare one of planner / generator / "
-                "evaluator / helper / subagent."
+                "reducer / helper / subagent."
             )
         skill_value = data.get("skill")
         if skill_value:
