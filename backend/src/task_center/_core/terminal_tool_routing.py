@@ -11,7 +11,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from agents import get_definition
-from agents import AgentDefinition, AgentKind
+from agents import AgentDefinition
 from task_center.context_engine.core import (
     AgentDefinitionValidationError,
     ContextEngineDeps,
@@ -126,22 +126,15 @@ class TerminalToolRouter:
         definition: AgentDefinition,
         ctx: TerminalRoutingContext,
     ) -> frozenset[str] | None:
-        if definition.agent_kind not in {AgentKind.PLANNER, AgentKind.EXECUTOR}:
+        # Routing policy lives in each profile's own ``terminal_routing`` module
+        # (e.g. ``agents/profile/main/planner_routing.py``), attached by the
+        # loader. Profiles without one are never filtered. Depth is computed
+        # here and passed in so the per-folder rule stays a pure function (and so
+        # the ``_nested_workflow_depth_gt_1`` test seam is preserved).
+        router = definition.terminal_router
+        if router is None:
             return None
-        if definition.agent_kind == AgentKind.EXECUTOR and ctx.scope.workflow_id is None:
-            return None
-
-        depth_restricted = _nested_workflow_depth_gt_1(ctx)
-        if definition.agent_kind == AgentKind.PLANNER:
-            if depth_restricted:
-                return frozenset({"submit_plan_closes_goal"})
-            return frozenset({"submit_plan_closes_goal", "submit_plan_defers_goal"})
-        if depth_restricted:
-            return frozenset({"submit_execution_success", "submit_execution_blocker"})
-        return frozenset(
-            {
-                "submit_execution_handoff",
-                "submit_execution_success",
-                "submit_execution_blocker",
-            }
+        return router(
+            is_nested=_nested_workflow_depth_gt_1(ctx),
+            has_workflow=ctx.scope.workflow_id is not None,
         )

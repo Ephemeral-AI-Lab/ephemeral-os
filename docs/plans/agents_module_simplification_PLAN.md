@@ -97,8 +97,8 @@ a planner/advisor/explorer name is rejected.
 |---|---|---|
 | `task_center/_core/terminal_tool_routing.py:127-150` (`_allowed_terminals`) | depth-aware terminal filtering via `if agent_kind == PLANNER … elif EXECUTOR …` | **A** — replaced by per-folder routing |
 | `engine/agent/factory.py:378` + `tools/subagent/run_subagent/run_subagent.py:198` + mock `runner.py:311,1762,2012`, `scenario_loop_runner.py:167,213` | `metadata["role"] = agent_kind.value` (telemetry tag) | **B** — read `.role` instead |
-| mock `runner.py:253-282` (invocation event + `_run_<role>`), `scenario_adapter.py:285` (`TurnScript` select) | behavioral dispatch on `agent_kind.value == "planner"/...` | **B** — dispatch on `.role` |
-| `tools/submission/planner/_schemas.py:102` | generator gate `agent_kind in {EXECUTOR, VERIFIER}` (post-②) | **B** — `role in {EXECUTOR, VERIFIER}` |
+| mock `runner.py:253-282` (invocation event + `_run_<role>`), `scenario_adapter.py:285` (`TurnScript` select) | behavioral dispatch on `agent_kind.value == "planner"/...` | **B** — planner/evaluator on `.role`; executor/verifier on `.name` (they share `role == generator`) |
+| `tools/submission/planner/_schemas.py:102` | generator gate `agent_kind in {EXECUTOR, VERIFIER}` (post-②) | **B** — `role == AgentRole.GENERATOR` |
 
 The enum itself carries **no routing logic** — it is a plain `StrEnum`. All
 routing coupling lives in the `terminal_tool_routing.py` ladder. A and B are
@@ -116,32 +116,60 @@ Each rule is a pure function `(depth: int, has_workflow: bool) -> frozenset[str]
   else `{handoff, success, blocker}`.
 - **verifier / evaluator / advisor / explorer:** no file → `None` (no filtering).
 
-**Mechanism (recommended): optional sibling routing module per profile.**
-The user asked for "script-based, in the agent's own folder." Minimal way to
-honor that without a plugin framework: a convention-discovered optional sibling.
+**Mechanism (recommended): explicit frontmatter path, mirroring `skill:`.**
+The user asked for "script-based, in the agent's own folder." The loader already
+has this exact idiom: the `skill:` field is a *relative path declared in
+frontmatter, resolved against the profile's folder* (`loader.py:70-78`). Reuse
+that pattern instead of inventing a magic `<stem>_routing.py` suffix convention —
+explicit, greppable, and consistent with how profiles already reference adjacent
+files.
 
-- Add `routing.py` next to a profile `.md` that needs filtering, exporting one
-  function `select_terminals(depth, has_workflow) -> frozenset[str] | None`.
-  Only `profile/main/planner.py`(routing) and `profile/main/executor.py`(routing)
-  exist; the other four ship none.
-- Loader change (`agents/definition/loader.py`): after building each
-  `AgentDefinition`, look for a sibling module by convention (e.g.
-  `<stem>_routing.py`) and, if present, import it via `importlib.util` and attach
-  the callable to a new optional field `terminal_router: Callable | None = None`
-  (excluded from serialization; `arbitrary_types_allowed` is NOT reintroduced —
-  use `model_config`-free attach or a `PrivateAttr`).
-- `TerminalToolRouter._allowed_terminals` collapses to: if
-  `definition.terminal_router is None: return None`; else
-  `return definition.terminal_router(depth=_depth(ctx), has_workflow=ctx.scope.workflow_id is not None)`.
-  The enum branch, the `AgentKind` import, and the hardcoded terminal sets all
-  leave `terminal_tool_routing.py`.
+Five design decisions:
 
-**Proportionality note / alternative.** Two functions do not justify dynamic
-module loading on their own. A lighter alternative is a **declarative routing
-block in frontmatter** (depth/workflow conditions → terminal lists) interpreted
-by the router — no code import, no new loader capability. It is less
-"script-based" than the user asked for; offered as the cheaper option if the
-import mechanism is judged too heavy for two profiles.
+1. **Declaration — explicit, not convention.** A profile that needs filtering
+   adds `terminal_routing: planner_routing.py` to its frontmatter (relative path,
+   resolved like `skill:`). No field → no router → never filtered. Only
+   `planner.md` and `executor.md` declare it; the other four omit it.
+   *Rejected:* magic `<stem>_routing.py` auto-discovery — implicit, surprising,
+   and inconsistent with the explicit `skill:` precedent.
+
+2. **Module contract — one pure function.**
+   `select_terminals(*, is_nested: bool, has_workflow: bool) -> frozenset[str] | None`.
+   Returns the *allowed* terminal superset (the router intersects it with the
+   profile's declared `terminals`, exactly as today), or `None` for "no
+   filtering." It takes only two derived booleans — never `ContextScope`, `deps`,
+   or the definition — so it is unit-testable with zero fixtures.
+
+3. **Where the path is stored — a real field, like `skill`.** Add
+   `terminal_routing: Path | None = None` to `AgentDefinition`. Because it is a
+   declared field it passes `extra="forbid"`, serializes for audit, and the
+   loader resolves it with the same three lines as `skill`. `Path` needs no
+   `arbitrary_types_allowed`.
+
+4. **Where the code is imported — loader, at load (fail-fast).** The loader
+   imports the module once at startup and attaches the callable. A broken routing
+   module (missing file, missing/!callable `select_terminals`) then fails
+   *startup*, consistent with how the loader already hard-fails on a missing
+   `skill:` file or absent `agent_kind:`. The callable rides on a `PrivateAttr`
+   (non-serializable, survives `model_copy`), exposed via a `terminal_router`
+   property. *Alternative considered:* let the `task_center` router lazy-import
+   from `definition.terminal_routing` on first launch — purer layering (the
+   agents package never executes profile code) but defers failure to the first
+   nested launch in production. Fail-fast wins.
+
+5. **Router — thin dispatch, depth seam intact.** `_allowed_terminals` collapses
+   to "call `definition.terminal_router` if present, else `None`"; it still calls
+   `_nested_workflow_depth_gt_1(ctx)` to compute `is_nested`, so the existing
+   monkeypatch test seam is untouched.
+
+**Proportionality note / alternative.** Two functions do not, by themselves,
+justify importing code from a data directory (and `profile/` becomes mixed
+`.md` + `.py`). The lighter alternative is a **declarative routing block in
+frontmatter** (depth/workflow conditions → terminal lists) interpreted by the
+router — no code import, no new loader capability, `profile/` stays pure data.
+It is less "script-based" than requested and needs a tiny interpreter for the
+two-axis (`is_nested` × `has_workflow`) branching. Offered as the cheaper option
+if executing profile-folder code is judged too heavy for two rules.
 
 **Test seam.** `test_terminal_tool_router.py` monkeypatches
 `_nested_workflow_depth_gt_1` by module path. The router still calls that helper
@@ -188,8 +216,12 @@ def select_terminals(*, is_nested: bool, has_workflow: bool) -> frozenset[str] |
     )
 ```
 
-The other four profiles ship no `*_routing.py`, so the loader attaches no router
-and they are never filtered (today's `return None` for non-planner/executor).
+`planner.md` / `executor.md` frontmatter gains one line (resolved like `skill:`):
+```yaml
+terminal_routing: planner_routing.py
+```
+The other four profiles omit the key, so the loader attaches no router and they
+are never filtered (today's `return None` for non-planner/executor).
 
 `terminal_tool_routing.py` — the enum ladder collapses to a thin dispatch:
 ```python
@@ -206,10 +238,17 @@ def _allowed_terminals(definition, ctx) -> frozenset[str] | None:
 The `AgentKind` import, the `{PLANNER, EXECUTOR}` membership test, and the four
 hardcoded terminal sets all leave this file.
 
-`agents/definition/model.py` — carry the callable as a private attribute (no
-`arbitrary_types_allowed`, not serialized; survives `model_copy`):
+`agents/definition/model.py` — a serializable `Path` field (mirrors `skill`)
+plus the resolved callable on a private attr (no `arbitrary_types_allowed`,
+survives `model_copy`):
 ```python
 from pydantic import PrivateAttr
+
+# --- terminal routing (Round ③) ---
+# Absolute path to the profile's terminal-routing module, resolved by the
+# loader from the relative ``terminal_routing:`` frontmatter field. ``None``
+# when no routing is declared (the profile is never terminal-filtered).
+terminal_routing: Path | None = None
 
 _terminal_router: Callable[..., frozenset[str] | None] | None = PrivateAttr(default=None)
 
@@ -218,16 +257,34 @@ def terminal_router(self) -> Callable[..., frozenset[str] | None] | None:
     return self._terminal_router
 ```
 
-`agents/definition/loader.py` — convention discovery after `model_validate`:
+`agents/definition/loader.py` — resolve the path exactly like `skill:` (before
+`model_validate`), then import once and attach the callable (after):
 ```python
-routing_path = path.with_name(f"{path.stem}_routing.py")
-if routing_path.is_file():
+routing_value = data.get("terminal_routing")
+if routing_value:
+    routing_path = (path.parent / str(routing_value)).resolve()
+    if not routing_path.is_file():
+        raise FileNotFoundError(
+            f"Agent profile {path} declares terminal_routing: {routing_value!r}, "
+            f"but {routing_path} does not exist."
+        )
+    data["terminal_routing"] = routing_path
+
+definition = AgentDefinition.model_validate(data)
+
+if definition.terminal_routing is not None:
     spec = importlib.util.spec_from_file_location(
-        f"agents._routing.{path.stem}", routing_path
+        f"agents._routing.{path.stem}", definition.terminal_routing
     )
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
-    definition._terminal_router = mod.select_terminals
+    select = getattr(mod, "select_terminals", None)
+    if not callable(select):
+        raise SkillLintError(  # or a dedicated RoutingModuleError
+            f"{definition.terminal_routing} must export a callable "
+            "'select_terminals(*, is_nested, has_workflow)'."
+        )
+    definition._terminal_router = select
 ```
 
 **Threshold note.** Passing the `is_nested` boolean (not raw `depth: int`) fixes
@@ -236,33 +293,64 @@ the monkeypatch seam. If a future profile needs its own threshold, switch the
 contract to pass `depth: int` and move the test seam from
 `_nested_workflow_depth_gt_1` to `_depth`. Not needed for the two current rules.
 
+**Testing.** Three cheap layers, no fixture stacks:
+- *Per-folder functions* — call `select_terminals(is_nested=…, has_workflow=…)`
+  across the 4 input combinations and assert the returned set. Pure, no scope or
+  stores. This is the main win: today the same coverage needs a constructed
+  workflow hierarchy.
+- *Router dispatch* — attach a stub callable to a definition, monkeypatch
+  `_nested_workflow_depth_gt_1`, assert the stub's result is intersected with the
+  declared terminals; and that a definition with no router returns unfiltered.
+- *Loader* — a profile declaring `terminal_routing:` gets a callable attached;
+  a missing file raises `FileNotFoundError`; a module without a callable
+  `select_terminals` raises at load.
+
 ---
 
-### Change B — retag `agent_kind` → `AgentRole`  (recommended)
+### Change B — retag `agent_kind` → `AgentRole` with a 5-member taxonomy  (recommended)
 
 `agent_kind` survives as pure identity once routing is gone. Rename to signal
-that:
+that, and **collapse the six members to five** — role becomes a true category,
+coarser than `name`:
 
-- `AgentKind` enum → `AgentRole` (members unchanged: planner / executor /
-  verifier / evaluator / advisor / explorer).
-- `AgentDefinition.agent_kind: AgentKind` → `role: AgentRole`. Frontmatter key
-  `agent_kind:` → `role:` in all 6 MDs; loader's required-field check updated.
-- Mechanical rename at the four B-consumers above (`.agent_kind` → `.role`,
-  `agent_kind.value` → `.role.value`).
+| `AgentRole` | profiles (by `name`) | folder(s) | was |
+|---|---|---|---|
+| `PLANNER` | `planner` | `main/` | planner |
+| `GENERATOR` | `executor`, `verifier` | `main/` | executor + verifier |
+| `EVALUATOR` | `evaluator` | `main/` | evaluator |
+| `HELPER` | `advisor` | `helper/` | advisor |
+| `SUBAGENT` | `explorer` | `subagent/` | explorer |
 
-**Why keep it typed (reject full deletion).** Full deletion is *technically*
-possible today because `name == kind` for all six profiles, so every consumer
-could collapse to `agent_def.name`. **Rejected** because:
-- It conflates instance identity (`name`) with role category — and breaks the
-  first time the framework has two profiles of one role (e.g. `executor` +
-  `executor_v2`), which the multi-agent direction explicitly anticipates
-  (see memory: "typed roles").
-- A free-form `str` tag reintroduces typo-silent failure in the planner gate and
-  mock dispatch that the enum prevents.
+Changes:
+- `AgentKind` enum → `AgentRole`, members `planner / generator / evaluator /
+  helper / subagent`.
+- `AgentDefinition.agent_kind: AgentKind` → `role: AgentRole`. Frontmatter
+  `agent_kind:` → `role:` in all 6 MDs (executor.md + generator_verifier.md both
+  → `role: generator`; advisor → `helper`; explorer → `subagent`); loader
+  required-field check updated.
+- **Planner gate** (`_schemas.py`) simplifies: `role in {EXECUTOR, VERIFIER}` →
+  `role == AgentRole.GENERATOR`.
+- **Telemetry** `metadata["role"]` becomes coarser — both executor and verifier
+  report `"generator"`. The fine instance is still in `metadata["agent_name"]`.
 
-Keeping a typed `AgentRole` preserves exhaustiveness and the closed member set
-while still removing `agent_kind`'s routing responsibility — which is the real
-intent of ③.
+**The one place role no longer suffices: mock-runner dispatch.** `runner.py:253-282`
+picks `_run_executor` vs `_run_verifier` and `EXECUTOR_INVOKED` vs
+`VERIFIER_INVOKED` — these are *behaviorally distinct* but now share
+`role == generator`. Split that branch to dispatch on **`agent_def.name`**
+(`"executor"` / `"verifier"`), keeping planner/evaluator on `role`. `name` is
+already in scope at the dispatch (`runner.py:224` etc.).
+
+**Already name-keyed → unaffected by the collapse** (verified): `ROLE_DIRECTIVES`
+(name-keyed despite its name — keys `executor`/`verifier`/`explorer` stay),
+`task_guidance_dispatch.py` (exact agent name), scenario `agent_name:` values,
+and the `*_INVOKED` event assertions.
+
+**Why keep it typed (reject full deletion / `str`).** The collapse makes
+`name != role` real (`executor`/`verifier` → `generator`), so the consumers
+*cannot* all fold to `agent_def.name` — full deletion is now off the table on its
+own merits. A free-form `str` is also rejected: it reintroduces typo-silent
+failure in the (now single-value) planner gate and the mock dispatch. A typed
+`AgentRole` keeps exhaustiveness and a closed set while shedding the routing job.
 
 ---
 
@@ -277,12 +365,22 @@ intent of ③.
 
 ### Risks / open items
 
-- **Mock-runner dispatch is the largest surface** (~7 sites across 3 files); it
-  is a pure rename under B, but touch-count is high — do it mechanically.
+- **Mock-runner dispatch is the largest surface** (~7 sites across 3 files).
+  Under B it is *not* a pure rename: the executor/verifier branch must move from
+  `role` to `name` (both are `generator` now), while planner/evaluator stay on
+  `role`. Do it carefully, not mechanically.
 - Decide the per-folder mechanism (sibling module vs declarative block) before
   starting A.
 - Confirm `terminal_router` can be attached without re-enabling
   `arbitrary_types_allowed` (use `PrivateAttr` or post-validate attach).
+- **New redundancy surfaced by the taxonomy (candidate ④, not in ③ scope):**
+  `agent_type ∈ {agent, subagent}` becomes derivable from `role` — `explorer` is
+  the only `agent_type: subagent` profile and its role is now `subagent`, so
+  `agent_type == subagent ⟺ role == subagent`. `agent_type` still has its own
+  consumers (`run_subagent.py:197`, `factory.py:377` set `metadata["agent_type"]`),
+  so leave it for now and revisit as a separate merge.
+- `ROLE_DIRECTIVES` is misnamed (it is name-keyed, not role-keyed). Out of ③
+  scope; note for a future rename to avoid confusion with the new `role` field.
 
 ---
 

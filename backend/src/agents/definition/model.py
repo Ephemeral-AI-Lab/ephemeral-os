@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from enum import StrEnum
 from pathlib import Path
 from typing import Any
@@ -10,6 +11,7 @@ from pydantic import (
     BaseModel,
     ConfigDict,
     Field,
+    PrivateAttr,
     field_validator,
 )
 
@@ -98,10 +100,29 @@ class AgentDefinition(BaseModel):
     # via ``AgentEntryComposer``; helper / subagent definitions that pre-date
     # the context engine may keep this null.
     context_recipe: str | None = None
+
+    # --- terminal routing ---
+    # Absolute path to this profile's terminal-routing module, resolved by the
+    # loader from the relative ``terminal_routing:`` frontmatter field (same
+    # idiom as ``skill:``). ``None`` when no routing is declared — the profile
+    # is never terminal-filtered. The module exports
+    # ``select_terminals(*, is_nested, has_workflow) -> frozenset[str] | None``,
+    # which the loader imports once and attaches to ``_terminal_router``.
+    terminal_routing: Path | None = None
+
     model_config = ConfigDict(
         populate_by_name=True,
         extra="forbid",
     )
+
+    # Resolved routing callable, attached by the loader after construction.
+    # Carried as a private attr so the model needs no ``arbitrary_types_allowed``
+    # and stays serializable; ``model_copy`` preserves it.
+    _terminal_router: Callable[..., frozenset[str] | None] | None = PrivateAttr(default=None)
+
+    @property
+    def terminal_router(self) -> Callable[..., frozenset[str] | None] | None:
+        return self._terminal_router
 
     @field_validator("tool_call_limit", mode="before")
     @classmethod

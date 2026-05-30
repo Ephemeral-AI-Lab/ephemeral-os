@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
+import importlib.util
 import logging
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from pathlib import Path
 
 from pydantic import ValidationError
@@ -76,12 +77,46 @@ def _load_agent_files(paths: Iterable[Path]) -> list[AgentDefinition]:
                     f"but {skill_path} does not exist."
                 )
             data["skill"] = skill_path
+        routing_value = data.get("terminal_routing")
+        if routing_value:
+            routing_path = (path.parent / str(routing_value)).resolve()
+            if not routing_path.is_file():
+                raise FileNotFoundError(
+                    f"Agent profile {path} declares terminal_routing: "
+                    f"{routing_value!r}, but {routing_path} does not exist."
+                )
+            data["terminal_routing"] = routing_path
         try:
-            agents.append(AgentDefinition.model_validate(data))
+            definition = AgentDefinition.model_validate(data)
         except ValidationError:
             logger.error("Invalid agent definition in %s", path, exc_info=True)
             raise
+        if definition.terminal_routing is not None:
+            definition._terminal_router = _load_terminal_router(
+                path.stem, definition.terminal_routing
+            )
+        agents.append(definition)
     return agents
+
+
+def _load_terminal_router(stem: str, routing_path: Path) -> Callable[..., frozenset[str] | None]:
+    """Import a profile's routing module and return its ``select_terminals``.
+
+    Imported once at load so a broken routing module fails startup, consistent
+    with the loader's hard-fail on a missing ``skill:`` file or absent ``role:``.
+    """
+    spec = importlib.util.spec_from_file_location(f"agents._routing.{stem}", routing_path)
+    if spec is None or spec.loader is None:
+        raise ImportError(f"Could not load terminal_routing module {routing_path}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    select = getattr(module, "select_terminals", None)
+    if not callable(select):
+        raise TypeError(
+            f"terminal_routing module {routing_path} must export a callable "
+            "'select_terminals(*, is_nested, has_workflow)'."
+        )
+    return select
 
 
 def load_agents_dir(directory: Path) -> list[AgentDefinition]:

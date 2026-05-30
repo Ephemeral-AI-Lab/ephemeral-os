@@ -14,6 +14,7 @@ allowed_tools:
 terminals:
   - submit_plan_closes_goal
   - submit_plan_defers_goal
+terminal_routing: planner_routing.py
 notification_triggers: []
 context_recipe: planner
 # Skill is loaded into row 4 at launch (`task_center/context_engine/

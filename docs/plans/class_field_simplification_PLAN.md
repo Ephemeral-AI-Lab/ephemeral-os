@@ -42,6 +42,24 @@ stay separate, and why* — plus §4a, the one large lever that is actually safe
 
 ## 0. Verification update (2026-05-30) — three plan claims corrected against the live tree
 
+> **✅ EXECUTION OUTCOME (2026-05-30).** After this verification, the user directed "do §4a
+> now anyway" despite the collision. **§4a was executed and committed** (swept into
+> `a8182d803`): the 25 data-only leaves in `background_shell.py` / `ephemeral_workspace.py` /
+> `plugin.py` are now `type()`-synthesized from a data table, **−25 `ClassDef` nodes** (14→1,
+> 7→1, 7→1). Behavior is byte-identical — a snapshot diff confirmed every leaf's
+> `name`/`action_id`/`action_spec`/`summary_path_hint`/`expected_event_sequence`, MRO/base, and
+> `__name__` are unchanged; `name` is now derived as `f"sandbox.{action_id}"` (verified true for
+> all 25). The contract suite (`test_scenario_suite_imports.py`) and `ruff check` pass; the two
+> `__init__.py` re-exports and all `SCENARIO_REGISTRY[...]` consumers are untouched.
+> **T3 and §5 were NOT executed** (verification below shows T3 is a type error and §5's main
+> candidate is tested) — they remain retracted.
+>
+> ⚠️ **HEAD is currently red for an unrelated reason:** 11 `pipeline.*`/`planner_validation.*`
+> focused-scenario cases fail with `CancelledError`/contract `AssertionError` because the same
+> `a8182d803` sweep also committed the **incomplete** mock event-source migration (the
+> `builder.py` flip to the event-source runner). An isolation test (leaves reverted to
+> hand-written, same cases re-run) proved these failures are **independent of the §4a refactor**.
+
 Before executing, every *actionable* lever (§2/§4a/§5) was re-grounded against the
 current `backend/src`. **All three "do this" items failed verification**, which
 *reinforces* the TL;DR ("almost no safe class-count reduction; structure is well-factored")
@@ -82,12 +100,15 @@ but specifically retracts the concrete actions:
   - The **6 plugin leaves are not under migration**, so a non-colliding *partial* §4a is
     technically possible — but it still touches the shared registry + contract and leaves a
     half-migrated state, so it is not recommended as a standalone.
-  - **Recommendation: defer §4a until the migration lands.** Doing it now violates the
-    CLAUDE.md no-collision rule for marginal, soon-stale gain.
+  - **Recommendation was: defer §4a until the migration lands** — but the user chose to execute
+    now (see the EXECUTION OUTCOME banner above). The chosen behavior-preserving form was exactly
+    the `type()`-synthesis described here, so the collision risk is a *rebase* cost for the
+    migration owner, not a behavior change.
 
-**Revised bottom line:** there is **no safe, valuable, non-colliding class/field reduction to
-land right now.** The plan's analysis (§3 deliberate boundaries, §6/§7 keep) stands; its three
-action items do not. Pursue §4a only after the mock event-source migration completes.
+**Revised bottom line:** in `src`, T3/§5 do not hold (a type error and tested code); the §3
+deliberate boundaries and §6/§7 keeps stand. The one real lever, **§4a, was executed** as a
+behavior-preserving test-harness change (−25 `ClassDef` nodes), at the cost of a rebase against
+the in-flight event-source migration.
 
 ---
 
@@ -221,11 +242,11 @@ well-intentioned but damaging consolidation.
 
 ---
 
-## 4a. The one real class-count lever: scenario parametrization (test harness) — ⏸ DEFER, see §0
-> **Blocked now.** The 14 background/ephemeral leaves are slated for imminent rewrite by the
-> in-flight mock event-source migration, and `test_scenario_suite_imports.py` forces named
-> exported classes (so the win is `type()`-synthesis, not a data table — same runtime class
-> count). Defer until that migration lands. Detail below stands as the design.
+## 4a. The one real class-count lever: scenario parametrization (test harness) — ✅ EXECUTED, see §0
+> **Done (2026-05-30, per user direction).** The 25 data-only leaves are now `type()`-synthesized
+> from a data table (−25 `ClassDef` nodes), byte-identical and committed in `a8182d803`. The
+> contract (`test_scenario_suite_imports.py`) forced named exported classes, so this is
+> `type()`-synthesis, not a data table — same runtime class count. Design below is what shipped.
 
 `task_center_runner/scenarios` holds **80 of the module's 150 classes**. Inspecting
 their methods/bases (not guessing) splits them cleanly:
@@ -313,9 +334,9 @@ The `expected_event_sequence` field (41 classes) is the test-scenario DSL — se
 
 ## 8. Recommendation
 
-> **Superseded by §0 (2026-05-30 verification).** Post-verification, the only standing action
-> is "defer §4a until the mock event-source migration lands; land no `src` change now (T3 is a
-> type error, §5 yield is 0)." The original ordering is kept below for the record.
+> **Superseded by §0 (2026-05-30).** Final outcome: **§4a was executed** (−25 `ClassDef` nodes,
+> behavior-preserving, committed `a8182d803`) per user direction; **no `src` change** was made
+> (T3 is a type error, §5 yield is 0). The original ordering is kept below for the record.
 
 Ordered by value for the stated goal (fewer classes/fields):
 

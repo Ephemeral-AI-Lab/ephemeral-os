@@ -26,6 +26,7 @@ terminals:
   - submit_execution_handoff
   - submit_execution_success
   - submit_execution_blocker
+terminal_routing: executor_routing.py
 notification_triggers:
   - request_workflow_after_edit
 context_recipe: generator
