@@ -60,7 +60,7 @@ async def test_full_plan_routes_to_apply_plan_submission(
     attempt = attempt_store.get(fixture.attempt_id)
     assert not result.is_error
     assert result.is_terminal
-    assert result.metadata["submission_kind"] == "planner_full"
+    assert result.metadata["submission_kind"] == "planner_completes"
     assert attempt is not None
     assert attempt.stage == AttemptStage.GENERATE
     assert attempt.generator_task_ids

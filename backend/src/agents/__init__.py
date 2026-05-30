@@ -12,14 +12,14 @@ from .definition.registry import (
 )
 from .definition.model import (
     AgentDefinition,
-    AgentKind,
+    AgentRole,
     AgentType,
 )
 from .definition.resolved_validation import validate_agent_definitions_resolved
 
 __all__ = [
     "AgentDefinition",
-    "AgentKind",
+    "AgentRole",
     "AgentType",
     "get_definition",
     "list_dispatchable_subagent_names",

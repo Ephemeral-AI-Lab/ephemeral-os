@@ -48,8 +48,8 @@ class TaskCenterEntryHandle:
     task_center_run_id: str
     binding: TaskCenterSandboxBinding
     workflow_id: str
-    initial_iteration_id: str
-    initial_attempt_id: str
+    iteration_id: str
+    attempt_id: str
     launcher: EphemeralAttemptAgentLauncher
 
     @property
@@ -142,8 +142,8 @@ class TaskCenterEntry:
             task_center_run_id=run_id,
             binding=binding,
             workflow_id=started.workflow_id,
-            initial_iteration_id=started.initial_iteration_id,
-            initial_attempt_id=started.initial_attempt_id,
+            iteration_id=started.iteration_id,
+            attempt_id=started.attempt_id,
             launcher=launcher,
         )
 

@@ -9,7 +9,7 @@ from typing import Any
 import pytest
 from pydantic import BaseModel
 
-from agents import AgentDefinition, AgentKind
+from agents import AgentDefinition, AgentRole
 from engine.agent.factory import (
     _attach_default_notification_rules,
     _build_agent_tool_registry,
@@ -130,7 +130,7 @@ def test_tool_factory_context_carries_agent_metadata() -> None:
     register_tool_factory("capturing_tool", factory)
     agent_def = _make_agent_def(
         name="my-agent",
-        agent_kind=AgentKind.EXECUTOR,
+        role=AgentRole.GENERATOR,
         allowed_tools=["capturing_tool"],
     )
 
@@ -144,7 +144,7 @@ def test_tool_factory_context_carries_agent_metadata() -> None:
     assert len(_CapturingTool.captured_contexts) == 1
     captured = _CapturingTool.captured_contexts[0]
     assert captured.metadata["agent_name"] == "my-agent"
-    assert captured.metadata["role"] == "executor"
+    assert captured.metadata["role"] == "generator"
     assert captured.metadata["cwd"] == "/repo"
     assert captured.metadata["sandbox_id"] == "sb-123"
 

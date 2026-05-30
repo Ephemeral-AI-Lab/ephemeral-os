@@ -125,8 +125,8 @@ def test_workflow_start_creates_request_segment_graph_and_marks_parent_waiting(
     )
 
     delegated_request = workflow_store.get(result.workflow_id)
-    initial_iteration = iteration_store.get(result.initial_iteration_id)
-    initial_graph = attempt_store.get(result.initial_attempt_id)
+    initial_iteration = iteration_store.get(result.iteration_id)
+    initial_graph = attempt_store.get(result.attempt_id)
     parent_task = task_store.get_task(parent_task_id)
 
     assert delegated_request is not None
@@ -321,8 +321,8 @@ def test_workflow_start_accepts_entry_origin_without_parent_task(
     assert result.parent_task_id is None
     assert result.parent_attempt_id is None
     delegated_request = workflow_store.get(result.workflow_id)
-    delegated_segment = iteration_store.get(result.initial_iteration_id)
-    delegated_attempt = attempt_store.get(result.initial_attempt_id)
+    delegated_segment = iteration_store.get(result.iteration_id)
+    delegated_attempt = attempt_store.get(result.attempt_id)
     assert delegated_request is not None
     assert delegated_request.origin_kind == WorkflowOriginKind.ENTRY
     assert delegated_request.requested_by_task_id is None

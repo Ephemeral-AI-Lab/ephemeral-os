@@ -6,7 +6,7 @@ import pytest
 from pydantic import ValidationError
 
 from agents import AgentDefinition
-from agents import AgentKind
+from agents import AgentRole
 from tools._framework.factory import ToolFactoryContext, create_tool, has_tool
 from tools.submission.planner import PlanTaskInput
 
@@ -52,7 +52,7 @@ def test_custom_generator_agent_can_declare_goal_solution_terminal() -> None:
     AgentDefinition(
         name="custom_generator",
         description="Custom generator agent.",
-        agent_kind=AgentKind.EXECUTOR,
+        role=AgentRole.GENERATOR,
         terminals=["submit_execution_handoff"],
         tool_call_limit=10,
     )

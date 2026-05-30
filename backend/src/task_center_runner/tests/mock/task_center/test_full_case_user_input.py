@@ -68,9 +68,7 @@ async def test_full_case_user_input_runs_dynamic_verifier_dag(
     audit_dir: Path,
     stores: TaskCenterStoreBundle,
     _active_mock_model: None,
-    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setenv("EOS_MOCK_EVENT_SOURCE_RUNNER", "1")
     require_sweevo_image_provider_healthy(sweevo_image_instance)
 
     scenario = FullCaseUserInput()

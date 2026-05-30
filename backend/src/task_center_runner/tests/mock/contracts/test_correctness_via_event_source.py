@@ -2,8 +2,8 @@
 
 Runs the full ``correctness_testing`` scenario — multi-iteration, eval-failure
 retry, partial-plan defer, and the sandbox_integrity / final probes — through
-``ScenarioLoopRunner`` + the real query loop (``EOS_MOCK_EVENT_SOURCE_RUNNER=1``)
-instead of the imperative ``MockSquadRunner``. Asserts via real store state
+``ScenarioLoopRunner`` + the real query loop instead of the imperative
+``MockSquadRunner``. Asserts via real store state
 (``graph_summary``) + re-homed sandbox checks, NOT lifecycle events (those
 migrate in Phase 2). Proves the ported probe coroutines + ProbeContext work.
 """
@@ -57,10 +57,7 @@ async def test_correctness_testing_through_event_source(
     audit_dir: Path,
     stores: TaskCenterStoreBundle,
     _active_mock_model: None,
-    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setenv("EOS_MOCK_EVENT_SOURCE_RUNNER", "1")
-
     report = await run_scenario_on_sweevo_image(
         CorrectnessTesting(),
         instance=sweevo_image_instance,

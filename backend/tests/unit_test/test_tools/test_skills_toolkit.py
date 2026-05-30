@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from agents import AgentDefinition, AgentKind, register_definition, unregister_definition
+from agents import AgentDefinition, AgentRole, register_definition, unregister_definition
 from skills.core.registry import SkillRegistry
 from skills.core.types import SkillDefinition
 from tools._framework.factory import ToolFactoryContext
@@ -100,7 +100,7 @@ async def test_load_skill_reference_from_context_uses_agent_skill_folder(
         description="Planner with a skill.",
         terminals=["submit_x"],
         tool_call_limit=10,
-        agent_kind=AgentKind.PLANNER,
+        role=AgentRole.PLANNER,
         skill=skill_file,
     )
     register_definition(definition)

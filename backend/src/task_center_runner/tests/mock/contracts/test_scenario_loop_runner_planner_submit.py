@@ -87,10 +87,7 @@ async def test_planner_submission_through_real_loop(
     audit_dir: Path,
     stores: TaskCenterStoreBundle,
     _active_mock_model: None,
-    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setenv("EOS_MOCK_EVENT_SOURCE_RUNNER", "1")
-
     report = await run_scenario(
         _PlannerSubmitProof(),
         sandbox_id=str(workspace["sandbox_id"]),

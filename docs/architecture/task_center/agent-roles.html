@@ -61,7 +61,7 @@
   <ul>
     <li>Main agents are planner, executor, verifier, and evaluator. Their role contracts live in <code>backend/src/agents/profile/main/*.md</code>.</li>
     <li>Every main profile gets <code>_main_role_contract.md</code> prepended at load time, so the shared terminal discipline and XML-context boundaries are part of the actual system prompt.</li>
-    <li>Planner submissions may target only registered executor or verifier profiles with <code>dispatchable_by_planner: true</code>.</li>
+    <li>Planner submissions may target only registered <code>generator</code>-role profiles (executor, verifier) — the gate is <code>role == AgentRole.GENERATOR</code>.</li>
     <li>Delegation is state-backed. <code>submit_execution_handoff</code> starts a child workflow through <code>WorkflowStarter</code>, the parent task moves to <code>WAITING_WORKFLOW</code>, and <code>WorkflowClosureReportRouter</code> resumes the parent through its attempt orchestrator.</li>
   </ul>
 </div>
@@ -75,7 +75,7 @@
 
 <section id="profile-loading" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="backend/src/agents/definition/loader.py backend/src/agents/definition/model.py backend/src/agents/definition/registry.py backend/src/agents/definition/resolved_validation.py backend/src/agents/__init__.py backend/src/agents/profile/main/_main_role_contract.md backend/src/agents/profile/main backend/src/agents/profile/helper backend/src/agents/profile/subagent backend/tests/unit_test/test_agents/test_agent_markdown.py backend/tests/unit_test/test_agents/test_registry_validation.py backend/tests/unit_test/test_agents/test_skill_lint.py backend/tests/unit_test/test_agents/test_helper_profile_identity_sentences.py">
 <h2>Profile Loading <a class="anchor" href="#profile-loading">#</a></h2>
-<p><code>load_agents_tree()</code> walks Markdown profile files, parses YAML frontmatter, defaults missing names from filenames, requires <code>agent_kind</code>, resolves relative <code>skill</code> paths to absolute files, and validates the result through <code>AgentDefinition</code>. Files beginning with an underscore are private includes, not standalone profiles.</p>
+<p><code>load_agents_tree()</code> walks Markdown profile files, parses YAML frontmatter, defaults missing names from filenames, requires <code>role</code>, resolves relative <code>skill</code> and <code>terminal_routing</code> paths to absolute files (importing the routing module's <code>select_terminals</code>), and validates the result through <code>AgentDefinition</code>. Files beginning with an underscore are private includes, not standalone profiles.</p>
 <pre class="diagram" aria-label="Agent profile loading workflow diagram">
 [task role + workflow state]
         |
@@ -97,7 +97,7 @@
 <div class="edge-list" aria-label="Agent profile loading transitions">
   <div><b>parse</b><span>The loader reads each profile Markdown file, parses frontmatter, and resolves relative <code>skill</code> paths before validation.</span></div>
   <div><b>include</b><span>Only non-private files directly under <code>agents/profile/main/</code> receive the shared main-role contract in the stored <code>system_prompt</code>.</span></div>
-  <div><b>validate</b><span>The model validates <code>agent_kind</code>, <code>agent_type</code>, <code>allowed_tools</code>, <code>terminals</code>, <code>notification_triggers</code>, <code>skill</code>, and <code>context_recipe</code>.</span></div>
+  <div><b>validate</b><span>The model validates <code>role</code>, <code>agent_type</code>, <code>allowed_tools</code>, <code>terminals</code>, <code>notification_triggers</code>, <code>skill</code>, <code>terminal_routing</code>, and <code>context_recipe</code>.</span></div>
   <div><b>guard</b><span><code>validate_agent_definitions_resolved()</code> rejects unknown context recipes and keeps terminal-specific instructions out of row-4 skills.</span></div>
 </div>
 <div class="callout good">
@@ -110,11 +110,11 @@
 <h2>Main Role Matrix <a class="anchor" href="#main-role-matrix">#</a></h2>
 <div class="table-wrap">
   <table>
-    <thead><tr><th>Profile</th><th>Agent kind</th><th>Tools</th><th>Terminals</th><th>Context and skill</th></tr></thead>
+    <thead><tr><th>Profile (name)</th><th>Role</th><th>Tools</th><th>Terminals</th><th>Context and skill</th></tr></thead>
     <tbody>
-      <tr><td><code>planner.md</code></td><td><code>planner</code></td><td>Read/search, <code>run_subagent</code>, <code>ask_advisor</code>, <code>load_skill_reference</code>.</td><td><code>submit_plan_closes_goal</code>, <code>submit_plan_defers_goal</code>.</td><td><code>context_recipe: planner</code>; planner skill row; no notification triggers.</td></tr>
-      <tr><td><code>executor.md</code></td><td><code>executor</code></td><td>Read/write/edit, shell/search/LSP, <code>run_subagent</code>, <code>ask_advisor</code>.</td><td><code>submit_execution_handoff</code>, <code>submit_execution_success</code>, <code>submit_execution_blocker</code>.</td><td><code>context_recipe: generator</code>; executor skill row; <code>request_workflow_after_edit</code> trigger; <code>dispatchable_by_planner: true</code>.</td></tr>
-      <tr><td><code>generator_verifier.md</code></td><td><code>verifier</code></td><td>Read/write shell/search plus <code>ask_advisor</code>; may inline-edit for trivial defects per profile prose.</td><td><code>submit_verification_success</code>, <code>submit_verification_failure</code>.</td><td><code>context_recipe: generator</code>; no skill row; no notification triggers; <code>dispatchable_by_planner: true</code>.</td></tr>
+      <tr><td><code>planner.md</code></td><td><code>planner</code></td><td>Read/search, <code>run_subagent</code>, <code>ask_advisor</code>, <code>load_skill_reference</code>.</td><td><code>submit_plan_closes_goal</code>, <code>submit_plan_defers_goal</code>.</td><td><code>context_recipe: planner</code>; planner skill row; <code>terminal_routing: planner_routing.py</code>; no notification triggers.</td></tr>
+      <tr><td><code>executor.md</code></td><td><code>generator</code></td><td>Read/write/edit, shell/search/LSP, <code>run_subagent</code>, <code>ask_advisor</code>.</td><td><code>submit_execution_handoff</code>, <code>submit_execution_success</code>, <code>submit_execution_blocker</code>.</td><td><code>context_recipe: generator</code>; executor skill row; <code>terminal_routing: executor_routing.py</code>; <code>request_workflow_after_edit</code> trigger.</td></tr>
+      <tr><td><code>generator_verifier.md</code></td><td><code>generator</code></td><td>Read/write shell/search plus <code>ask_advisor</code>; may inline-edit for trivial defects per profile prose.</td><td><code>submit_verification_success</code>, <code>submit_verification_failure</code>.</td><td><code>context_recipe: generator</code>; no skill row; no terminal routing; no notification triggers.</td></tr>
       <tr><td><code>evaluator.md</code></td><td><code>evaluator</code></td><td>Read/write shell/search plus <code>ask_advisor</code>; may inline-edit for trivial defects per profile prose.</td><td><code>submit_evaluation_success</code>, <code>submit_evaluation_failure</code>.</td><td><code>context_recipe: evaluator</code>; evaluator skill row; no notification triggers.</td></tr>
     </tbody>
   </table>
@@ -131,10 +131,11 @@
 <h2>Dispatch And Terminals <a class="anchor" href="#dispatch-terminal-routing">#</a></h2>
 <p>Profiles declare the broad tool surface, but launch and planner-submission paths narrow how those declarations are used. The engine registers the union of <code>allowed_tools</code> and effective <code>terminals</code>, while TaskCenter launch routing can return an effective profile copy with fewer terminal tools for this run.</p>
 <div class="trace-grid">
-  <div>Runtime tool surface</div><div><code>engine.agent.factory._build_agent_tool_registry()</code> registers <code>sorted(set(agent_def.allowed_tools) | set(agent_def.terminals))</code> and records the role as <code>agent_def.agent_kind.value</code> in tool metadata.</div>
-  <div>Planner dispatch gate</div><div><code>_is_generator_capable_agent()</code> requires both <code>dispatchable_by_planner</code> and an executor or verifier <code>agent_kind</code>.</div>
+  <div>Runtime tool surface</div><div><code>engine.agent.factory._build_agent_tool_registry()</code> registers <code>sorted(set(agent_def.allowed_tools) | set(agent_def.terminals))</code> and records the role as <code>agent_def.role.value</code> in tool metadata.</div>
+  <div>Planner dispatch gate</div><div><code>_is_generator_capable_agent()</code> requires <code>role == AgentRole.GENERATOR</code> (the executor and verifier profiles).</div>
   <div>Terminal descriptors</div><div><code>tools/_terminals/registry.py</code> owns selection guidance and advisor-review focus for every terminal. Row 3, row 4, and advisor prompts render from the same catalog.</div>
-  <div>Launch filtering</div><div><code>TerminalToolRouter</code> preserves the registered profile and returns a copied effective definition only when terminals must be filtered.</div>
+  <div>Routing policy</div><div>Routing is file-based, not role-based: a profile declaring <code>terminal_routing:</code> ships a sibling <code>&lt;name&gt;_routing.py</code> exporting <code>select_terminals(*, is_nested, has_workflow)</code>. The loader attaches it; only <code>planner_routing.py</code> and <code>executor_routing.py</code> exist.</div>
+  <div>Launch filtering</div><div><code>TerminalToolRouter</code> preserves the registered profile and returns a copied effective definition only when the attached router narrows terminals (else no filtering). Depth is computed in the router and passed in as <code>is_nested</code>.</div>
 </div>
 <pre class="diagram" aria-label="Terminal filtering workflow diagram">
 [available submission tools]
@@ -191,7 +192,7 @@
 </div>
 </section>
 
-<section id="helper-profiles" data-last-reviewed-commit="422aa57100f55131995ca73977c22ea0f9402a09" data-evidence-paths="backend/src/agents/profile/helper/advisor.md backend/src/agents/profile/subagent/explorer.md backend/src/task_center/context_engine/task_guidance.py backend/src/tools/subagent/run_subagent.py backend/src/tools/submission/notification_triggers/request_workflow_after_edit.py backend/tests/unit_test/test_agents/test_helper_profile_identity_sentences.py backend/tests/unit_test/test_task_center/test_context_engine/test_role_directives.py">
+<section id="helper-profiles" data-last-reviewed-commit="422aa57100f55131995ca73977c22ea0f9402a09" data-evidence-paths="backend/src/agents/profile/helper/advisor.md backend/src/agents/profile/subagent/explorer.md backend/src/task_center/context_engine/task_guidance.py backend/src/tools/subagent/run_subagent.py backend/src/tools/submission/notification_triggers/request_workflow_after_edit.py backend/tests/unit_test/test_agents/test_helper_profile_identity_sentences.py backend/tests/unit_test/test_task_center/test_context_engine/test_agent_directives.py">
 <h2>Helper Profiles <a class="anchor" href="#helper-profiles">#</a></h2>
 <div class="concept-grid">
   <div class="concept-card"><strong><code>advisor</code></strong><p>Blocking read-only helper. It audits a parent agent's pending terminal submission and must end with <code>submit_advisor_feedback</code>.</p></div>
@@ -201,7 +202,7 @@
 <p>Helper and subagent profiles may omit <code>context_recipe</code>. <code>validate_agent_definitions_resolved()</code> allows definitions with no recipe, and <code>build_explorer_task_guidance()</code> documents that explorer subagents do not go through the TaskCenter composer path.</p>
 </section>
 
-<section id="evidence-refresh" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="backend/src/agents/profile backend/src/agents/definition backend/src/task_center/_core/terminal_tool_routing.py backend/src/task_center/context_engine/role_directives.py backend/src/task_center/context_engine/task_guidance.py backend/src/task_center/attempt backend/src/task_center/workflow backend/src/tools/submission backend/src/tools/_terminals/registry.py backend/src/engine/agent/factory.py backend/tests/unit_test/test_agents backend/tests/unit_test/test_task_center/test_agent_launch backend/tests/unit_test/test_task_center/test_lifecycle">
+<section id="evidence-refresh" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="backend/src/agents/profile backend/src/agents/definition backend/src/task_center/_core/terminal_tool_routing.py backend/src/agents/profile/main/planner_routing.py backend/src/agents/profile/main/executor_routing.py backend/src/task_center/context_engine/agent_directives.py backend/src/task_center/context_engine/task_guidance.py backend/src/task_center/attempt backend/src/task_center/workflow backend/src/tools/submission backend/src/tools/_terminals/registry.py backend/src/engine/agent/factory.py backend/tests/unit_test/test_agents backend/tests/unit_test/test_task_center/test_agent_launch backend/tests/unit_test/test_task_center/test_lifecycle">
 <h2>Evidence And Refresh <a class="anchor" href="#evidence-refresh">#</a></h2>
 <div class="evidence-grid">
   <div class="evidence-card">
@@ -227,7 +228,7 @@
   <div class="evidence-card">
     <h3>Refresh triggers</h3>
     <ul>
-      <li>Any profile frontmatter change to <code>allowed_tools</code>, <code>terminals</code>, <code>notification_triggers</code>, <code>context_recipe</code>, <code>skill</code>, or <code>dispatchable_by_planner</code>.</li>
+      <li>Any profile frontmatter change to <code>role</code>, <code>allowed_tools</code>, <code>terminals</code>, <code>notification_triggers</code>, <code>context_recipe</code>, <code>skill</code>, or <code>terminal_routing</code> (and the routing module behind it).</li>
       <li>Terminal descriptor or advisor-review guidance changes.</li>
       <li>Delegated-workflow handoff, <code>WAITING_WORKFLOW</code>, or close-report delivery changes.</li>
       <li>Loader validation or skill-lint changes.</li>

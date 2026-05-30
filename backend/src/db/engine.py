@@ -69,19 +69,13 @@ _DROPPED_COLUMNS: dict[str, set[str]] = {
 }
 
 _RENAMED_COLUMNS: dict[str, dict[str, str]] = {
-    "task_center_tasks": {
-        "run_id": "task_center_run_id",
-        "rendered_prompt": "context_message",
-    },
     "iterations": {
-        "goal_id": "workflow_id",
+        "task_specification": "plan_spec",
+    },
+    "attempts": {
+        "task_specification": "plan_spec",
     },
 }
-
-_RENAMED_TABLES: dict[str, str] = {
-    "goals": "workflows",
-}
-
 
 _LEGACY_TABLES_TO_DROP: set[str] = {
     "task_center_attempt",
@@ -96,45 +90,6 @@ def _drop_legacy_tables(engine: Engine) -> None:
             logger.info("Dropping legacy table %s", name)
             with engine.begin() as conn:
                 conn.execute(text(f'DROP TABLE IF EXISTS "{name}"'))
-
-
-_LEGACY_TIER_TABLES: frozenset[str] = frozenset({"missions", "episodes", "trials"})
-
-
-def init_db_with_legacy_check(engine: Engine) -> None:
-    """Pre-create_all gate: refuse to start if pre-rename tier tables linger.
-
-    Two prior renames stamped legacy table names that must be cleared from
-    stale dev DBs: 2026-05-15 renamed `missions`/`episodes` to
-    `workflows`/`iterations`; 2026-05-16 renamed `trials` back to `attempts`.
-    SQLAlchemy's `create_all` will create the new tables but leave the old
-    ones intact, silently splitting state across two schemas. This gate
-    detects that case and points the developer at the one-shot drop script.
-    """
-    insp = inspect(engine)
-    present = _LEGACY_TIER_TABLES & set(insp.get_table_names())
-    if present:
-        raise RuntimeError(
-            f"Legacy tier tables {sorted(present)} present after rename. "
-            "Run: python -m backend.scripts.drop_legacy_tier_tables"
-        )
-    if insp.has_table("goals") and insp.has_table("workflows"):
-        raise RuntimeError(
-            "Both pre-rename table 'goals' and renamed table 'workflows' are present. "
-            "Resolve the split state before starting the application."
-        )
-
-
-def _rename_tables(engine: Engine) -> None:
-    """Rename known legacy tables before create_all can create replacements."""
-    insp = inspect(engine)
-    existing = set(insp.get_table_names())
-    for old_name, new_name in _RENAMED_TABLES.items():
-        if old_name not in existing or new_name in existing:
-            continue
-        logger.info("Renaming legacy table %s to %s", old_name, new_name)
-        with engine.begin() as conn:
-            conn.execute(text(f'ALTER TABLE "{old_name}" RENAME TO "{new_name}"'))
 
 
 def _drop_indexes_for_columns(engine: Engine, table_name: str, columns: set[str]) -> None:
@@ -321,12 +276,6 @@ def initialize_db(
 
     # Import models so Base.metadata knows about all tables
     import db.models  # noqa: F401
-
-    # Refuse to proceed if pre-rename tier tables linger from a stale dev DB.
-    init_db_with_legacy_check(_engine)
-
-    # Preserve rows from pre-Workflow DBs before create_all could make an empty table.
-    _rename_tables(_engine)
 
     Base.metadata.create_all(_engine)
 

@@ -41,11 +41,10 @@ def aggregate_perf_metrics(
     overlay = _aggregate_overlay(tool_call_metadata, shell_count=shell_count)
     occ = _aggregate_occ(tool_call_metadata, intentional_conflicts=intentional_conflicts)
 
-    # `total_calls` mirrors `len(report.tool_calls)` — i.e. only the toolkit
-    # calls that flow through MockSquadRunner._call_tool. Direct sandbox.api
-    # round-trips (read_file/edit_file/shell) are tracked separately as
-    # `api_calls.*` and excluded here so plan §7.20 can compare the two
-    # counts directly.
+    # `total_calls` mirrors the probe/toolkit calls that flow through the mock
+    # scenario loop. Direct sandbox.api round-trips are tracked separately as
+    # `api_calls.*` and excluded here so plan §7.20 can compare the two counts
+    # directly.
     total_calls = (
         write_count
         + edit_count

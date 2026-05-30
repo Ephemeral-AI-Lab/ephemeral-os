@@ -53,9 +53,9 @@ async def test_entry_bootstrap_converts_prompt_to_initial_workflow(
     await asyncio.sleep(0)
 
     workflow = workflow_store.get(handle.workflow_id)
-    iteration = iteration_store.get(handle.initial_iteration_id)
-    attempt = attempt_store.get(handle.initial_attempt_id)
-    planner_task = task_store.get_task(f"{handle.initial_attempt_id}:planner")
+    iteration = iteration_store.get(handle.iteration_id)
+    attempt = attempt_store.get(handle.attempt_id)
+    planner_task = task_store.get_task(f"{handle.attempt_id}:planner")
     run_tasks = task_store.list_tasks_for_run(handle.task_center_run_id)
 
     assert workflow is not None

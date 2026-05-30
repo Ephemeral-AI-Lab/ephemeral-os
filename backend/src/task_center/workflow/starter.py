@@ -1,7 +1,7 @@
 """WorkflowStarter — single safe path from prompt text to Workflow execution.
 
-Owns origin validation, optional parent-task CAS, initial iteration/attempt
-startup, and compensation on failure.
+Owns origin validation, optional parent-task CAS, iteration/attempt startup,
+and compensation on failure.
 """
 
 from __future__ import annotations
@@ -26,7 +26,7 @@ from task_center.workflow.state import (
 from task_center._core.primitives import TaskCenterInvariantViolation
 from task_center.attempt.orchestrator import AttemptOrchestrator
 from task_center.iteration import OrchestratorFactory
-from task_center.attempt.state import AttemptFailReason, AttemptStatus
+from task_center.attempt.state import Attempt, AttemptFailReason, AttemptStatus
 from task_center.attempt.deps import AttemptDeps
 from task_center.iteration.state import Iteration, IterationStatus
 from task_center._core.task_state import TaskCenterTaskStatus
@@ -39,8 +39,8 @@ class StartedWorkflow:
     origin: WorkflowOrigin
     parent_attempt_id: str | None
     workflow_id: str
-    initial_iteration_id: str
-    initial_attempt_id: str
+    iteration_id: str
+    attempt_id: str
     goal: str
 
     @property
@@ -78,32 +78,37 @@ class WorkflowStarter:
             origin=origin,
             goal=prompt,
         )
-        iteration, iteration_coordinator = workflow_lifecycle.create_initial_iteration_with_coordinator(
+        iteration, iteration_coordinator = workflow_lifecycle.create_iteration_with_coordinator(
             workflow_id=created_workflow.id,
         )
 
-        initial_attempt = None
-        try:
-            initial_attempt = iteration_coordinator.create_unstarted_initial_attempt()
-            if origin.kind == WorkflowOriginKind.TASK:
-                if prepared.parent_attempt_id is None:
-                    raise TaskCenterInvariantViolation(
-                        "Task-origin workflow start is missing parent attempt id."
-                    )
-                self._mark_parent_waiting(
-                    origin=origin,
-                    parent_attempt_id=prepared.parent_attempt_id,
-                    workflow=created_workflow,
-                    iteration=iteration,
-                    attempt_id=initial_attempt.id,
-                    goal_text=prompt,
+        def _before_start(attempt: Attempt) -> None:
+            if origin.kind != WorkflowOriginKind.TASK:
+                return
+            if prepared.parent_attempt_id is None:
+                raise TaskCenterInvariantViolation(
+                    "Task-origin workflow start is missing parent attempt id."
                 )
-            iteration_coordinator.start_attempt(initial_attempt)
+            self._mark_parent_waiting(
+                origin=origin,
+                parent_attempt_id=prepared.parent_attempt_id,
+                workflow=created_workflow,
+                iteration=iteration,
+                attempt_id=attempt.id,
+                goal_text=prompt,
+            )
+
+        try:
+            attempt = iteration_coordinator.create_and_start_first_attempt(
+                before_start=_before_start
+            )
         except Exception:
+            refreshed = self._runtime.iteration_store.get(iteration.id)
+            attempt_id = refreshed.latest_attempt_id if refreshed else None
             self._compensate_failed_start(
                 workflow=created_workflow,
                 iteration=iteration,
-                initial_attempt_id=initial_attempt.id if initial_attempt else None,
+                attempt_id=attempt_id,
                 origin=origin,
             )
             raise
@@ -112,8 +117,8 @@ class WorkflowStarter:
             origin=origin,
             parent_attempt_id=prepared.parent_attempt_id,
             workflow_id=created_workflow.id,
-            initial_iteration_id=iteration.id,
-            initial_attempt_id=initial_attempt.id,
+            iteration_id=iteration.id,
+            attempt_id=attempt.id,
             goal=prompt,
         )
 
@@ -210,7 +215,7 @@ class WorkflowStarter:
         *,
         workflow: Workflow,
         iteration: Iteration,
-        initial_attempt_id: str | None,
+        attempt_id: str | None,
         origin: WorkflowOrigin,
     ) -> None:
         """Best-effort rollback: attempt -> iteration -> workflow -> parent.
@@ -233,7 +238,7 @@ class WorkflowStarter:
 
         _do(
             "close_unstarted_attempt",
-            lambda: self._close_unstarted_attempt(initial_attempt_id, now=now),
+            lambda: self._close_unstarted_attempt(attempt_id, now=now),
         )
         _do(
             "cancel_iteration",
@@ -268,7 +273,7 @@ class WorkflowStarter:
                         requested_by_task_id=parent_task_id,
                         outcome="failed",
                         final_iteration_id=iteration.id,
-                        final_attempt_id=initial_attempt_id,
+                        final_attempt_id=attempt_id,
                     )
                 ),
             )

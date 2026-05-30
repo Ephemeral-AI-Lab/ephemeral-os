@@ -22,6 +22,7 @@ from typing import TYPE_CHECKING, Any
 from tools import ToolResult
 from message.message import ToolResultBlock
 
+from task_center_runner.audit.events import EventType
 from task_center_runner.agent.mock.event_source import ToolCall, Turn, TurnScript
 from task_center_runner.agent.mock.probe_bridge import (
     bridge_probe_for,
@@ -254,7 +255,13 @@ async def _executor_script(
         factory, bridge_summary = scripted
         artifact_out: list[str] = []
         driver = bridge_turns(
-            factory, artifact_out=artifact_out, normalize=normalize_result
+            factory,
+            artifact_out=artifact_out,
+            normalize=normalize_result,
+            on_background_cancel=lambda payload: probe_ctx.publish(
+                EventType.SANDBOX_TOOL_CANCELLED,
+                payload=payload,
+            ),
         )
         bridge_send: Any = None
         while True:
@@ -281,8 +288,12 @@ def scenario_script_for(
     bus: Any | None = None,
     repo_dir: str = "",
 ) -> TurnScript:
-    """Return the role-appropriate :class:`TurnScript` for *agent_def*."""
-    role = agent_def.agent_kind.value
+    """Return the profile-appropriate :class:`TurnScript` for *agent_def*.
+
+    Dispatch is by profile ``name`` (not ``role``): executor and verifier share
+    the ``generator`` role but script distinct behaviors.
+    """
+    role = agent_def.name
     # Helper sub-agents (advisor) carry no TaskCenter attempt context — script
     # them before touching ``tool_metadata``.
     if role == "advisor":

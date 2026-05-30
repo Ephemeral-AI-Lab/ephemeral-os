@@ -38,23 +38,9 @@ it's dropped.
 
 ## Dev-action required
 
-If you have an existing local database created against the 2026-05-15
-schema (with a `trials` table), run the one-shot drop script before
-next start:
-
-```bash
-python -m backend.scripts.drop_legacy_tier_tables --db-url <your-db-url>
-```
-
-The script drops `trials`, then any still-present pre-2026-05-15
-`episodes` and `missions` (children before parents) and is idempotent.
-
-If you skip this step, the next `initialize_db()` call raises:
-
-```
-RuntimeError: Legacy tier tables ['trials'] present after rename.
-Run: python -m backend.scripts.drop_legacy_tier_tables
-```
+> **Update 2026-05-30:** the startup gate (`init_db_with_legacy_check`) and the
+> `drop_legacy_tier_tables` remediation script were removed. Databases predating
+> this migration are no longer auto-detected or remediated — recreate any such DB.
 
 ## Audit / observability changes
 

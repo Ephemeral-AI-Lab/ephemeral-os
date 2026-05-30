@@ -3,7 +3,7 @@
 All three run modes funnel through this one coroutine; the only mode-specific
 seams are five ``RunConfig`` fields:
 
-- ``config.runner_factory`` — mock returns a ``MockSquadRunner``; real-LLM
+- ``config.runner_factory`` — mock returns a ``ScenarioLoopRunner``; real-LLM
   and benchmark return ``None`` so ``start_task_center_run`` falls
   back to its real-agent runner.
 - ``config.bootstrap`` — only real-agent paths set this (it seeds the
@@ -17,9 +17,9 @@ seams are five ``RunConfig`` fields:
   ``scenario_logs/<name>``, ``user_run``,
   ``benchmark/sweevo/<instance_id>``).
 
-This module knows nothing about ``MockSquadRunner``, ``MutableMockState``,
-Daytona, or any ``task_center_runner.benchmarks.sweevo.*`` symbol — that runner-agnostic
-property is enforced by ``test_no_core_imports.py``.
+This module knows nothing about concrete mock-runner state, Daytona, or any
+``task_center_runner.benchmarks.sweevo.*`` symbol — that runner-agnostic property
+is enforced by ``test_no_core_imports.py``.
 """
 
 from __future__ import annotations

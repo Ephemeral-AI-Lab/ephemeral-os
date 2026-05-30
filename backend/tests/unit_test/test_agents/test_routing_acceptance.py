@@ -11,7 +11,7 @@ import pytest
 
 from agents import (
     AgentDefinition,
-    AgentKind,
+    AgentRole,
     list_definitions,
     register_definition,
     unregister_definition,
@@ -63,7 +63,7 @@ def test_ac2_executor_is_accepted() -> None:
             description="alt executor",
             terminals=["submit_x"],
             tool_call_limit=10,
-            agent_kind=AgentKind.EXECUTOR,
+            role=AgentRole.GENERATOR,
         )
     )
     assert _is_generator_capable_agent("executor_alt") is True
@@ -76,7 +76,7 @@ def test_ac2_verifier_is_accepted() -> None:
             description="alt verifier",
             terminals=["submit_x"],
             tool_call_limit=10,
-            agent_kind=AgentKind.VERIFIER,
+            role=AgentRole.GENERATOR,
         )
     )
     assert _is_generator_capable_agent("verifier_alt") is True
@@ -89,7 +89,7 @@ def test_ac2_non_generator_kind_is_rejected() -> None:
             description="alt advisor",
             terminals=["submit_x"],
             tool_call_limit=10,
-            agent_kind=AgentKind.ADVISOR,
+            role=AgentRole.HELPER,
         )
     )
     assert _is_generator_capable_agent("advisor_alt") is False
@@ -116,21 +116,21 @@ def test_ac9_planner_md_shape_passes_validation() -> None:
 
 # ---------------------------------------------------------------------------
 # AC10 — audit-shape regression. The metadata["role"] value emitted by the
-# factory MUST equal agent_def.agent_kind.value exactly (set membership is
+# factory MUST equal agent_def.role.value exactly (set membership is
 # not enough; downstream audit consumers index by the exact string).
 # ---------------------------------------------------------------------------
 
 
-def test_ac10_factory_metadata_role_matches_agent_kind_value_exactly() -> None:
+def test_ac10_factory_metadata_role_matches_role_value_exactly() -> None:
     from types import SimpleNamespace
 
     from engine.agent.factory import _build_agent_tool_registry
 
-    for kind in AgentKind:
+    for kind in AgentRole:
         agent_def = AgentDefinition(
             name=f"ac10_{kind.value}",
             description="ac10 fixture",
-            agent_kind=kind,
+            role=kind,
             allowed_tools=[],
             terminals=["submit_execution_success"],
             tool_call_limit=10,
@@ -176,7 +176,7 @@ def test_ac10_factory_metadata_role_matches_agent_kind_value_exactly() -> None:
             agent_def_with_probe = AgentDefinition(
                 name=agent_def.name,
                 description=agent_def.description,
-                agent_kind=agent_def.agent_kind,
+                role=agent_def.role,
                 allowed_tools=["ac10_probe"],
                 terminals=agent_def.terminals,
                 tool_call_limit=10,
@@ -194,5 +194,5 @@ def test_ac10_factory_metadata_role_matches_agent_kind_value_exactly() -> None:
         captured_role = registry_metadata[-1]["role"]
         assert captured_role == kind.value, (
             f"metadata['role']={captured_role!r} must equal "
-            f"agent_kind.value={kind.value!r} exactly"
+            f"role.value={kind.value!r} exactly"
         )

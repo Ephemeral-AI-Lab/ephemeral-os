@@ -24,7 +24,7 @@ from typing import Any
 
 import pytest
 
-from agents import AgentDefinition, AgentKind
+from agents import AgentDefinition, AgentRole
 from engine.agent.lifecycle import EphemeralRunResult
 from message.message import Message, TextBlock
 from tools._framework.core.base import ExecutionMetadata, ToolResult
@@ -36,7 +36,7 @@ _ADVISOR_DEF = AgentDefinition(
     name="advisor",
     description="advisor stub",
     agent_type="agent",
-    agent_kind=AgentKind.ADVISOR,
+    role=AgentRole.HELPER,
     terminals=["submit_advisor_feedback"],
     tool_call_limit=10,
 )
@@ -46,7 +46,7 @@ _PARENT_EXECUTOR_DEF = AgentDefinition(
     description="parent executor stub",
     tool_call_limit=10,
     agent_type="agent",
-    agent_kind=AgentKind.EXECUTOR,
+    role=AgentRole.GENERATOR,
     terminals=[
         "submit_execution_handoff",
         "submit_execution_success",

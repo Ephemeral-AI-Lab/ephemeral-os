@@ -66,6 +66,9 @@ class ProbeContext:
             raise RuntimeError("Sandbox id is required for SWE-EVO sandbox checks.")
         return sandbox_id
 
+    def sandbox_id(self) -> str:
+        return self._require_sandbox_id()
+
     def _caller(self) -> SandboxCaller:
         md = self._metadata
         return SandboxCaller(
@@ -80,6 +83,9 @@ class ProbeContext:
             task_center_request_id=str(md.get("task_center_request_id") or ""),
             tool_id=str(md.get("tool_use_id") or ""),
         )
+
+    def caller(self) -> SandboxCaller:
+        return self._caller()
 
     def _publish(self, event_type: EventType, payload: dict[str, Any]) -> None:
         if self._bus is None:

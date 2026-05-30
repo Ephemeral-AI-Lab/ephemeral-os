@@ -6,9 +6,9 @@ to that workspace root. The probe is split into a smoke variant (≥250 calls,
 6 source files, 1 refactor pass) and a full variant (≥2,000 calls, 21 source
 files, 3 refactor passes).
 
-Public entry point: :func:`run_complex_project_build_probe`. The runner
-delegates here from ``MockSquadRunner._run_executor`` so this module owns the
-phase-by-phase orchestration without bloating ``runner.py``.
+Public entry point: :func:`run_complex_project_build_probe`. The
+ScenarioLoopRunner bridge delegates here so this module owns the phase-by-phase
+orchestration without bloating the runner.
 
 Path discipline: every tool call uses an **absolute** ``/ephemeral-os/...``
 file path so that the toolkit's ``resolve_tool_sandbox_path`` does not rewrite the
@@ -247,6 +247,7 @@ async def _phase0_bootstrap(
     stats: ProbeStats,
     *,
     shared_attempt_bootstrap: bool = False,
+    shared_attempt_overlap_sleep_s: float = 0.0,
 ) -> None:
     phase_started = time.monotonic()
 
@@ -305,6 +306,22 @@ async def _phase0_bootstrap(
     ctx.metadata.repo_root = WORKSPACE_ROOT
     ctx.metadata.cwd = WORKSPACE_ROOT
     ctx.metadata.exec_cwd = WORKSPACE_ROOT
+
+    if shared_attempt_overlap_sleep_s > 0:
+        overlap = await _shell(
+            ctx,
+            stats,
+            command=(
+                f"sleep {shared_attempt_overlap_sleep_s:.3f}; "
+                "printf 'shared-bootstrap-overlap\\n'"
+            ),
+            timeout=max(60, int(shared_attempt_overlap_sleep_s) + 30),
+        )
+        if overlap.is_error or _shell_exit_code(overlap) != 0:
+            raise RuntimeError(
+                "shared bootstrap overlap checkpoint failed: "
+                f"{_shell_stdout(overlap)}"
+            )
 
     await _write_file(
         ctx,

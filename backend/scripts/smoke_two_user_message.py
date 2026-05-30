@@ -82,12 +82,12 @@ def _build_demo_packet() -> ContextPacket:
 
 
 def _make_planner_def():
-    from agents import AgentDefinition, AgentKind
+    from agents import AgentDefinition, AgentRole
 
     return AgentDefinition(
         name="planner",
         description="planner",
-        agent_kind=AgentKind.PLANNER,
+        role=AgentRole.PLANNER,
         context_recipe="planner",
         terminals=["submit_plan_closes_goal", "submit_plan_defers_goal"],
     )

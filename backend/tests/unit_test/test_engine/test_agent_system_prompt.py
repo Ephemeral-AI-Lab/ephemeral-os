@@ -4,7 +4,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from agents import AgentDefinition, AgentKind
+from agents import AgentDefinition, AgentRole
 from engine.agent import factory as runtime_agent
 
 
@@ -29,7 +29,7 @@ def test_agent_system_prompt_includes_runtime_base_and_agent_body_only(monkeypat
             description="d",
             terminals=["submit_x"],
             tool_call_limit=10,
-            agent_kind=AgentKind.PLANNER,
+            role=AgentRole.PLANNER,
             system_prompt="base prompt",
         ),
         settings=None,
@@ -47,8 +47,8 @@ def test_agent_system_prompt_includes_runtime_base_and_agent_body_only(monkeypat
 @pytest.mark.parametrize(
     ("name", "kind"),
     [
-        ("advisor", AgentKind.ADVISOR),
-        ("explorer", AgentKind.EXPLORER),
+        ("advisor", AgentRole.HELPER),
+        ("explorer", AgentRole.SUBAGENT),
     ],
 )
 def test_main_role_base_not_injected_at_runtime(monkeypatch, name, kind):
@@ -67,7 +67,7 @@ def test_main_role_base_not_injected_at_runtime(monkeypatch, name, kind):
             description="d",
             terminals=["submit_x"],
             tool_call_limit=10,
-            agent_kind=kind,
+            role=kind,
             system_prompt="role body",
         ),
         settings=None,
@@ -86,7 +86,7 @@ def test_main_role_base_excluded_for_subagent(monkeypatch):
             description="d",
             terminals=["submit_x"],
             tool_call_limit=10,
-            agent_kind=AgentKind.EXPLORER,
+            role=AgentRole.SUBAGENT,
             agent_type="subagent",
             system_prompt="role body",
         ),

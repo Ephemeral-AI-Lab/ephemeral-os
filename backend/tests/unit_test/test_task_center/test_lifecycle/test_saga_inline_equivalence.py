@@ -33,7 +33,7 @@ def test_compensate_failed_start_signature_preserved() -> None:
         "self",
         "workflow",
         "iteration",
-        "initial_attempt_id",
+        "attempt_id",
         "origin",
     }
     assert set(sig.parameters) == expected

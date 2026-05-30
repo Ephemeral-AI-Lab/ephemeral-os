@@ -244,7 +244,7 @@ def test_delegated_continuation_waits_until_final_segment(
         origin=WorkflowOrigin.task(task_id=parent_task_id),
     )
 
-    segment1_initial_attempt_id = workflow_start.initial_attempt_id
+    segment1_initial_attempt_id = workflow_start.attempt_id
 
     # Segment 1 passes with continuation goal — parent must remain WAITING.
     _drive_delegated_attempt_to_pass(
@@ -317,7 +317,7 @@ def test_continuation_startup_failure_reports_continuation_graph(
 
     _drive_delegated_attempt_to_pass(
         runtime=runtime,
-        delegated_attempt_id=workflow_start.initial_attempt_id,
+        delegated_attempt_id=workflow_start.attempt_id,
         deferred_goal_for_next_iteration="continue work",
     )
 
@@ -363,9 +363,9 @@ def test_delegated_retry_waits_until_final_graph(
 
     # Graph 1 fails — coordinator should retry inside same iteration, parent waits.
     _drive_delegated_attempt_to_fail(
-        runtime=runtime, delegated_attempt_id=workflow_start.initial_attempt_id
+        runtime=runtime, delegated_attempt_id=workflow_start.attempt_id
     )
-    segment1 = iteration_store.get(workflow_start.initial_iteration_id)
+    segment1 = iteration_store.get(workflow_start.iteration_id)
     assert segment1 is not None
     assert len(segment1.attempt_ids) == 2
     parent_mid = task_store.get_task(parent_task_id)
@@ -385,7 +385,7 @@ def test_delegated_retry_waits_until_final_graph(
 
     parent_final = task_store.get_task(parent_task_id)
     delegated_final = workflow_store.get(workflow_start.workflow_id)
-    refreshed_segment = iteration_store.get(workflow_start.initial_iteration_id)
+    refreshed_segment = iteration_store.get(workflow_start.iteration_id)
     assert parent_final is not None
     assert parent_final["status"] == TaskCenterTaskStatus.DONE.value
     assert delegated_final is not None

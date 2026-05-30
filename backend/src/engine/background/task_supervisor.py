@@ -87,6 +87,7 @@ class BackgroundTaskRecord:
     uses_sandbox: bool = False
     sandbox_id: str | None = None
     sandbox_invocation_id: str | None = None
+    heartbeat_enabled: bool = True
     status: BackgroundTaskStatus = BackgroundTaskStatus.RUNNING
     # Reason captured by cancel(); kept on the tracked task so callers (and
     # the subagent finaliser) can persist it to the audit record.
@@ -214,6 +215,7 @@ class BackgroundTaskSupervisor:
         uses_sandbox: bool = False,
         sandbox_id: str | None = None,
         sandbox_invocation_id: str | None = None,
+        heartbeat_enabled: bool = True,
     ) -> BackgroundTaskStartedEvent:
         """Launch *coro* as a background task and return a started event."""
         asyncio_task = asyncio.create_task(coro)
@@ -227,6 +229,7 @@ class BackgroundTaskSupervisor:
             uses_sandbox=uses_sandbox,
             sandbox_id=sandbox_id,
             sandbox_invocation_id=sandbox_invocation_id,
+            heartbeat_enabled=heartbeat_enabled,
         )
         start_line = f"[started: {tool_name}]"
         tracked.progress_lines.append(start_line)
@@ -275,7 +278,12 @@ class BackgroundTaskSupervisor:
             self._stop_heartbeat_if_idle()
 
         asyncio_task.add_done_callback(_done_callback)
-        if tracked.uses_sandbox and tracked.sandbox_invocation_id and tracked.sandbox_id:
+        if (
+            tracked.uses_sandbox
+            and tracked.sandbox_invocation_id
+            and tracked.sandbox_id
+            and tracked.heartbeat_enabled
+        ):
             self._ensure_heartbeat_task()
 
         return BackgroundTaskStartedEvent(
@@ -563,6 +571,7 @@ class BackgroundTaskSupervisor:
                 _running_sandbox_task(tracked)
                 and tracked.sandbox_id
                 and tracked.sandbox_invocation_id
+                and tracked.heartbeat_enabled
             ):
                 by_sandbox.setdefault(tracked.sandbox_id, []).append(
                     tracked.sandbox_invocation_id

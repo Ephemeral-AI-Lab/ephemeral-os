@@ -3,7 +3,7 @@ name: explorer
 description: Read-only explorer subagent for focused parallel investigation.
 model: inherit
 tool_call_limit: 30
-agent_kind: explorer
+role: subagent
 agent_type: subagent
 allowed_tools:
   - read_file

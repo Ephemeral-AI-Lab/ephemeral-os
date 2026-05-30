@@ -10,7 +10,7 @@ from sqlalchemy.orm import sessionmaker
 
 from agents import (
     AgentDefinition,
-    AgentKind,
+    AgentRole,
     list_definitions,
     register_definition,
     unregister_definition,
@@ -147,7 +147,7 @@ def register_test_agents(request):
         AgentDefinition(
             name="planner",
             description="test planner",
-            agent_kind=AgentKind.PLANNER,
+            role=AgentRole.PLANNER,
             context_recipe="planner",
             terminals=["submit_plan_closes_goal", "submit_plan_defers_goal"],
             tool_call_limit=10,
@@ -158,7 +158,7 @@ def register_test_agents(request):
             name="executor",
             description="test executor",
             tool_call_limit=10,
-            agent_kind=AgentKind.EXECUTOR,
+            role=AgentRole.GENERATOR,
             context_recipe="generator",
             terminals=[
                 "submit_execution_handoff",
@@ -171,7 +171,7 @@ def register_test_agents(request):
         AgentDefinition(
             name="generator",
             description="test generator",
-            agent_kind=AgentKind.EXECUTOR,
+            role=AgentRole.GENERATOR,
             context_recipe="generator",
             terminals=["submit_execution_success", "submit_execution_blocker"],
             tool_call_limit=10,
@@ -181,7 +181,7 @@ def register_test_agents(request):
         AgentDefinition(
             name="evaluator",
             description="test evaluator",
-            agent_kind=AgentKind.EVALUATOR,
+            role=AgentRole.EVALUATOR,
             context_recipe="evaluator",
             terminals=["submit_evaluation"],
             tool_call_limit=10,
@@ -191,7 +191,7 @@ def register_test_agents(request):
         AgentDefinition(
             name="verifier",
             description="test verifier",
-            agent_kind=AgentKind.EXECUTOR,
+            role=AgentRole.GENERATOR,
             context_recipe="generator",
             terminals=["submit_execution_success", "submit_execution_blocker"],
             tool_call_limit=10,

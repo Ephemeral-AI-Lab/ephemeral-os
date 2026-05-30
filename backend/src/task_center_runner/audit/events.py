@@ -59,8 +59,8 @@ class EventType(StrEnum):
 
     # agent invocations
     PLANNER_INVOKED = "planner_invoked"
-    PLANNER_COMPLETES_GOAL_PLAN = "planner_full_plan"
-    PLANNER_DEFERS_GOAL_PLAN = "planner_partial_plan"
+    PLANNER_COMPLETES_GOAL_PLAN = "planner_completes_plan"
+    PLANNER_DEFERS_GOAL_PLAN = "planner_defers_plan"
     PLANNER_REPLAN = "planner_replan"
     EXECUTOR_INVOKED = "executor_invoked"
     EXECUTOR_SUCCESS = "executor_success"
@@ -104,10 +104,10 @@ class EventType(StrEnum):
     HOOK_INJECTED_FAILURE = "hook_injected_failure"
     HOOK_ASSERTED = "hook_asserted"
 
-    # mock-runner side-channel events. Emitted only by MockSquadRunner under
-    # the mock-scenario pipeline; ScenarioLifecycle accumulates them for the
-    # rich RunReport view. Real-agent and benchmark runs never emit them, so
-    # subscribers must tolerate absence.
+    # mock-scenario side-channel events. ScenarioLoopRunner and probe helpers
+    # publish these for ScenarioLifecycle to accumulate into the rich RunReport
+    # view. Real-agent and benchmark runs never emit them, so subscribers must
+    # tolerate absence.
     MOCK_LAUNCH_RECORDED = "mock_launch_recorded"
     MOCK_TOOL_CALL_RECORDED = "mock_tool_call_recorded"
     MOCK_PROMPT_INSPECTED = "mock_prompt_inspected"

@@ -17,7 +17,7 @@ class IterationStatus(StrEnum):
 
 class IterationCreationReason(StrEnum):
     INITIAL = "initial"
-    DEFERRED_GOAL_CONTINUATION = "partial_continuation"
+    DEFERRED_GOAL_CONTINUATION = "deferred_goal_continuation"
 
 
 @dataclass(frozen=True, slots=True)

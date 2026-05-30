@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from agents import AgentDefinition, AgentKind
+from agents import AgentDefinition, AgentRole
 from task_center.agent_launch.skill_message import build_skill_message
 from tools._terminals.registry import render_terminal_catalog
 
@@ -14,7 +14,7 @@ def _make_planner_def(terminals: list[str] | None = None) -> AgentDefinition:
         name="planner",
         description="planner",
         tool_call_limit=10,
-        agent_kind=AgentKind.PLANNER,
+        role=AgentRole.PLANNER,
         context_recipe="planner",
         terminals=terminals
         if terminals is not None

@@ -1,4 +1,4 @@
-"""Coverage for the ROLE_DIRECTIVES registry."""
+"""Coverage for the AGENT_DIRECTIVES registry."""
 
 from __future__ import annotations
 
@@ -6,16 +6,16 @@ from task_center.agent_launch.task_guidance_dispatch import (
     _AGENTS_WITH_TASK_GUIDANCE,
     task_guidance_builder_for,
 )
-from task_center.context_engine.role_directives import ROLE_DIRECTIVES
+from task_center.context_engine.agent_directives import AGENT_DIRECTIVES
 
 
 def test_every_dispatched_agent_has_a_directive():
     """An agent that routes through the registry-driven builder must carry a
     directive — the builder raises otherwise."""
     missing = sorted(
-        name for name in _AGENTS_WITH_TASK_GUIDANCE if name not in ROLE_DIRECTIVES
+        name for name in _AGENTS_WITH_TASK_GUIDANCE if name not in AGENT_DIRECTIVES
     )
-    assert missing == [], f"agents missing ROLE_DIRECTIVES: {missing}"
+    assert missing == [], f"agents missing AGENT_DIRECTIVES: {missing}"
 
 
 def test_directives_match_spec_lines():
@@ -29,7 +29,7 @@ def test_directives_match_spec_lines():
         ),
     }
     for name, line in expected.items():
-        assert ROLE_DIRECTIVES[name] == line
+        assert AGENT_DIRECTIVES[name] == line
 
 
 def test_unknown_agent_has_no_task_guidance_builder():

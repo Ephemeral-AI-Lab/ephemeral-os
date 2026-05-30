@@ -76,21 +76,55 @@ class IterationAttemptCoordinator:
 
     # ---- public API -----------------------------------------------------
 
-    def create_initial_attempt(self) -> Attempt:
-        """Create attempt sequence 1 and start its orchestrator."""
-        attempt = self.create_unstarted_initial_attempt()
-        self.start_attempt(attempt)
-        return attempt
+    def create_attempt(
+        self, *, previous_attempt_id: str | None = None, start: bool = True
+    ) -> Attempt:
+        """Create an attempt for this iteration.
 
-    def create_unstarted_initial_attempt(self) -> Attempt:
-        """Create attempt sequence 1 without starting its orchestrator."""
+        ``previous_attempt_id=None`` creates the iteration's first attempt
+        (sequence 1, rejected if any attempt already exists). A
+        ``previous_attempt_id`` makes it a retry: the iteration must still have
+        budget and the id must be the current latest attempt. ``start=False``
+        inserts the attempt without starting its orchestrator so the caller can
+        start it later via :meth:`start_attempt`.
+        """
         iteration = self._current_iteration_snapshot()
         assert_iteration_open(iteration)
-        if iteration.attempt_ids:
-            raise TaskCenterInvariantViolation(
-                f"Iteration {iteration.id!r} already has attempts; use create_next_attempt"
-            )
-        return self._insert_attempt(iteration, attempt_sequence_no=1)
+        if previous_attempt_id is None:
+            if iteration.attempt_ids:
+                raise TaskCenterInvariantViolation(
+                    f"Iteration {iteration.id!r} already has attempts; "
+                    "pass previous_attempt_id to retry"
+                )
+            sequence_no = 1
+        else:
+            assert_iteration_has_budget(iteration)
+            if iteration.latest_attempt_id != previous_attempt_id:
+                raise TaskCenterInvariantViolation(
+                    f"previous_attempt_id {previous_attempt_id!r} is not "
+                    f"the latest attempt of iteration {iteration.id!r} "
+                    f"(latest={iteration.latest_attempt_id!r})"
+                )
+            sequence_no = iteration.attempt_count + 1
+        attempt = self._insert_attempt(iteration, attempt_sequence_no=sequence_no)
+        if start:
+            self._start_orchestrator_if_configured(attempt)
+        return attempt
+
+    def create_and_start_first_attempt(
+        self, *, before_start: Callable[[Attempt], None] | None = None
+    ) -> Attempt:
+        """Create the iteration's first attempt and start it.
+
+        ``before_start`` runs after the attempt row exists but before its
+        orchestrator starts, so the entry path can mark the parent task waiting
+        between create and start.
+        """
+        attempt = self.create_attempt(start=False)
+        if before_start is not None:
+            before_start(attempt)
+        self.start_attempt(attempt)
+        return attempt
 
     def start_attempt(self, attempt: Attempt) -> None:
         """Start an attempt that belongs to this coordinator's open iteration."""
@@ -98,21 +132,6 @@ class IterationAttemptCoordinator:
         assert_iteration_open(iteration)
         assert_attempt_belongs_to_iteration(attempt, iteration)
         self._start_orchestrator_if_configured(attempt)
-
-    def create_next_attempt(self, *, previous_attempt_id: str) -> Attempt:
-        """Called after a failed attempt if the iteration still has budget."""
-        iteration = self._current_iteration_snapshot()
-        assert_iteration_open(iteration)
-        assert_iteration_has_budget(iteration)
-        if iteration.latest_attempt_id != previous_attempt_id:
-            raise TaskCenterInvariantViolation(
-                f"previous_attempt_id {previous_attempt_id!r} is not "
-                f"the latest attempt of iteration {iteration.id!r} "
-                f"(latest={iteration.latest_attempt_id!r})"
-            )
-        attempt = self._insert_attempt(iteration, attempt_sequence_no=iteration.attempt_count + 1)
-        self._start_orchestrator_if_configured(attempt)
-        return attempt
 
     def handle_attempt_closed(self, attempt_id: str) -> None:
         """Entry point for the closed-attempt callback from the orchestrator."""
@@ -210,7 +229,7 @@ class IterationAttemptCoordinator:
                 self._close_iteration_failed(attempt)
                 return
             try:
-                self.create_next_attempt(previous_attempt_id=attempt.id)
+                self.create_attempt(previous_attempt_id=attempt.id)
                 return
             except Exception:
                 # Retry start failed; the new attempt was inserted and closed

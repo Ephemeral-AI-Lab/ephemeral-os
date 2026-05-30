@@ -86,37 +86,44 @@ class WorkflowLifecycle:
             goal=goal,
         )
 
-    def create_initial_iteration_with_coordinator(
+    def create_iteration_with_coordinator(
         self, *, workflow_id: str
     ) -> tuple[Iteration, IterationAttemptCoordinator]:
+        """Create the workflow's next iteration and register its coordinator.
+
+        The first iteration (workflow has none yet) is sequence 1 carrying the
+        workflow goal. A later iteration continues the predecessor's deferred
+        goal; the predecessor must be SUCCEEDED with a recorded
+        ``deferred_goal_for_next_iteration``.
+        """
         workflow = self._require_workflow(workflow_id)
         assert_workflow_open(workflow)
-        assert_iteration_sequence_contiguous(workflow, new_sequence_no=1)
+        if not workflow.iteration_ids:
+            sequence_no = 1
+            creation_reason = IterationCreationReason.INITIAL
+            iteration_goal = workflow.goal
+        else:
+            previous = self._iteration_store.get(workflow.iteration_ids[-1])
+            if previous is None:
+                raise TaskCenterInvariantViolation(
+                    f"Workflow {workflow_id!r} predecessor iteration "
+                    f"{workflow.iteration_ids[-1]!r} not found"
+                )
+            assert_predecessor_has_deferred_goal_for_next_iteration(previous)
+            deferred_goal = previous.deferred_goal_for_next_iteration
+            if deferred_goal is None:  # pragma: no cover - guarded by invariant above
+                raise TaskCenterInvariantViolation(
+                    f"Iteration {previous.id!r} has no deferred goal"
+                )
+            sequence_no = previous.sequence_no + 1
+            creation_reason = IterationCreationReason.DEFERRED_GOAL_CONTINUATION
+            iteration_goal = deferred_goal
+        assert_iteration_sequence_contiguous(workflow, new_sequence_no=sequence_no)
         return self._insert_iteration_and_register_coordinator(
             workflow=workflow,
-            sequence_no=1,
-            creation_reason=IterationCreationReason.INITIAL,
-            iteration_goal=workflow.goal,
-        )
-
-    def create_deferred_iteration_with_coordinator(
-        self, *, previous_iteration: Iteration
-    ) -> tuple[Iteration, IterationAttemptCoordinator]:
-        workflow = self._require_workflow(previous_iteration.workflow_id)
-        assert_workflow_open(workflow)
-        assert_predecessor_has_deferred_goal_for_next_iteration(previous_iteration)
-        deferred_goal = previous_iteration.deferred_goal_for_next_iteration
-        if deferred_goal is None:  # pragma: no cover - guarded by invariant above
-            raise TaskCenterInvariantViolation(
-                f"Iteration {previous_iteration.id!r} has no deferred goal"
-            )
-        new_sequence_no = previous_iteration.sequence_no + 1
-        assert_iteration_sequence_contiguous(workflow, new_sequence_no=new_sequence_no)
-        return self._insert_iteration_and_register_coordinator(
-            workflow=workflow,
-            sequence_no=new_sequence_no,
-            creation_reason=IterationCreationReason.DEFERRED_GOAL_CONTINUATION,
-            iteration_goal=deferred_goal,
+            sequence_no=sequence_no,
+            creation_reason=creation_reason,
+            iteration_goal=iteration_goal,
         )
 
     def handle_iteration_closed(self, report: IterationClosureReport) -> None:
@@ -198,7 +205,7 @@ class WorkflowLifecycle:
                 (
                     next_iteration,
                     next_coordinator,
-                ) = self.create_deferred_iteration_with_coordinator(previous_iteration=iteration)
+                ) = self.create_iteration_with_coordinator(workflow_id=iteration.workflow_id)
                 self._start_deferred_iteration(
                     next_iteration=next_iteration,
                     next_coordinator=next_coordinator,
@@ -226,7 +233,7 @@ class WorkflowLifecycle:
         if self._orchestrator_factory is None:
             return
         try:
-            next_coordinator.create_initial_attempt()
+            next_coordinator.create_and_start_first_attempt()
         except Exception:
             logger.exception(
                 "WorkflowLifecycle: continuation attempt creation failed",

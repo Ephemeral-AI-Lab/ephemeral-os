@@ -186,6 +186,116 @@ async def run_complex_project_build_shell_edit_lsp_probe(
     )
 
 
+async def run_complex_project_build_shell_edit_lsp_shared_bootstrap_probe(
+    *,
+    metadata: ExecutionMetadata,
+    emit: EmitStreamEvent,
+    call_tool: CallTool,
+    publish: PublishEvent,
+    publish_mock_record: PublishMockRecord,
+    record_tool_check: RecordToolCheck,
+    caller,
+    sandbox_id: str,
+) -> str:
+    """Compact shared-bootstrap diagnostic for three parallel executors.
+
+    The full shell/edit/LSP probe is intentionally monolithic and exceeds the
+    real executor hard ceiling. This diagnostic keeps the load-bearing shared
+    reset/write conflict shape, then runs a small mixed workload so the winning
+    executor can still submit its terminal through the event-source loop.
+    """
+    started_at = time.monotonic()
+    ctx = ProbeContext(
+        metadata=metadata,
+        emit=emit,
+        call_tool=call_tool,
+        publish=publish,
+        publish_mock_record=publish_mock_record,
+        record_tool_check=record_tool_check,
+        caller=caller,
+        sandbox_id=sandbox_id,
+        smoke=True,
+    )
+    stats = ShellEditLspStats()
+
+    await _phase0_bootstrap(
+        ctx,
+        stats,
+        shared_attempt_bootstrap=True,
+        shared_attempt_overlap_sleep_s=1.0,
+    )
+    module_path = f"{WORKSPACE_ROOT}/scheduler_demo/shared_bootstrap.py"
+    await _write_file(
+        ctx,
+        stats,
+        path=f"{WORKSPACE_ROOT}/scheduler_demo/__init__.py",
+        content="",
+    )
+    await _write_file(
+        ctx,
+        stats,
+        path=module_path,
+        content=(
+            "def status() -> str:\n"
+            "    return 'bootstrapped'\n"
+        ),
+    )
+    await _edit_file(
+        ctx,
+        stats,
+        path=module_path,
+        old_text="return 'bootstrapped'\n",
+        new_text="return 'bootstrapped-and-edited'\n",
+        description="prove edit_file participates in the shared-bootstrap diagnostic",
+    )
+    readback = await _read_file(ctx, stats, path=module_path)
+    ctx.record_tool_check("tool.read_file.shared_bootstrap.module", readback)
+    shell_result = await _shell(
+        ctx,
+        stats,
+        command=(
+            "python - <<'PY'\n"
+            "from scheduler_demo.shared_bootstrap import status\n"
+            "print(status())\n"
+            "PY"
+        ),
+        timeout=120,
+    )
+    ctx.record_tool_check("tool.shell.shared_bootstrap.import", shell_result)
+    diagnostics = await _lsp(
+        ctx,
+        stats,
+        tool_obj=lsp_diagnostics_tool,
+        tool_name="lsp.diagnostics",
+        args={
+            "file_path": module_path,
+            "wait_for_diagnostics": False,
+        },
+    )
+    ctx.record_tool_check("tool.lsp.shared_bootstrap.diagnostics", diagnostics)
+
+    summary = {
+        "probe": "complex_project_build_shell_edit_lsp_shared_bootstrap",
+        "wall_seconds_total": time.monotonic() - started_at,
+        "workspace_root": WORKSPACE_ROOT,
+        "module_path": module_path,
+        "tool_use": {
+            "write": stats.write_count,
+            "edit": stats.edit_count,
+            "read": stats.read_count,
+            "shell": stats.shell_count,
+            "lsp": dict(stats.lsp_counts),
+        },
+    }
+    await _write_file(
+        ctx,
+        stats,
+        path=_SUMMARY_PATH,
+        content=json.dumps(summary, indent=2, sort_keys=True) + "\n",
+    )
+    return _SUMMARY_PATH
+
+
 def _select_lsp_expectations(
     selected_files: Sequence[FixtureFile],
 ) -> tuple[LspExpectation, ...]:
@@ -1366,4 +1476,5 @@ __all__ = [
     "WORKSPACE_ROOT",
     "_compute_mixed_amp_pairs",
     "run_complex_project_build_shell_edit_lsp_probe",
+    "run_complex_project_build_shell_edit_lsp_shared_bootstrap_probe",
 ]

@@ -10,7 +10,7 @@ import pytest
 
 from agents import (
     AgentDefinition,
-    AgentKind,
+    AgentRole,
     list_definitions,
     register_definition,
     unregister_definition,
@@ -80,7 +80,7 @@ def _register_agent(
     definition = AgentDefinition(
         name=name,
         description=f"test {name}",
-        agent_kind=AgentKind.PLANNER if "planner" in name else AgentKind.EXECUTOR,
+        role=AgentRole.PLANNER if "planner" in name else AgentRole.GENERATOR,
         context_recipe=recipe,
         terminals=list(terminals),
         tool_call_limit=10,

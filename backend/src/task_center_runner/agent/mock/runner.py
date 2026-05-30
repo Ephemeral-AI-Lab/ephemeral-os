@@ -1,6 +1,6 @@
 """MockSquadRunner — deterministic mock agent execution for live e2e scenarios.
 
-The runner dispatches on ``agent_def.agent_kind`` and calls real submission
+The runner dispatches on ``agent_def.name`` and calls real submission
 tools through ``execute_tool_once``.
 """
 
@@ -222,7 +222,7 @@ class MockSquadRunner:
             task_id=task_id,
             attempt_id=attempt_id,
             agent_name=agent_def.name,
-            role=str(agent_def.agent_kind.value or ""),
+            role=agent_def.name,
             prompt_preview=prompt[:500],
         )
         self._publish_mock_record(EventType.MOCK_LAUNCH_RECORDED, _launch_record)
@@ -250,13 +250,13 @@ class MockSquadRunner:
         )
 
         # Publish invocation event.
-        if agent_def.agent_kind.value == "planner":
+        if agent_def.name == "planner":
             invocation_type = EventType.PLANNER_INVOKED
-        elif agent_def.agent_kind.value == "executor":
+        elif agent_def.name == "executor":
             invocation_type = EventType.EXECUTOR_INVOKED
-        elif agent_def.agent_kind.value == "verifier":
+        elif agent_def.name == "verifier":
             invocation_type = EventType.VERIFIER_INVOKED
-        elif agent_def.agent_kind.value == "evaluator":
+        elif agent_def.name == "evaluator":
             invocation_type = EventType.EVALUATOR_INVOKED
         else:
             invocation_type = None
@@ -270,16 +270,16 @@ class MockSquadRunner:
                 payload=payload,
             )
 
-        if agent_def.agent_kind.value == "planner":
+        if agent_def.name == "planner":
             terminal = await self._run_planner(metadata, emit)
-        elif agent_def.agent_kind.value == "executor":
+        elif agent_def.name == "executor":
             terminal = await self._run_executor(prompt, metadata, emit)
-        elif agent_def.agent_kind.value == "verifier":
+        elif agent_def.name == "verifier":
             terminal = await self._run_verifier(prompt, metadata, emit)
-        elif agent_def.agent_kind.value == "evaluator":
+        elif agent_def.name == "evaluator":
             terminal = await self._run_evaluator(metadata, emit)
         else:
-            raise RuntimeError(f"Unsupported mock agent role: {agent_def.agent_kind.value!r}")
+            raise RuntimeError(f"Unsupported mock agent role: {agent_def.name!r}")
 
         return EphemeralRunResult(
             status="completed",
@@ -308,7 +308,7 @@ class MockSquadRunner:
         metadata.repo_root = self._repo_dir
         metadata.cwd = str(getattr(config, "cwd", self._repo_dir) or self._repo_dir)
         metadata.exec_cwd = self._repo_dir
-        metadata["role"] = str(agent_def.agent_kind.value or "")
+        metadata["role"] = str(agent_def.role.value or "")
         metadata["agent_type"] = agent_def.agent_type.value
         metadata["run_id"] = str(metadata.task_center_run_id or "")
         metadata["task_id"] = str(metadata.task_center_task_id or "")
@@ -567,6 +567,36 @@ class MockSquadRunner:
                 )
                 summary = "Auto-squash commit-resume probe passed."
                 artifacts = [summary_path]
+            elif action == "auto_squash_seed":
+                summary_path = await self._run_auto_squash_probe(
+                    metadata, emit, mode="seed"
+                )
+                summary = "Auto-squash seed passed."
+                artifacts = [summary_path]
+            elif action == "auto_squash_squash_a":
+                summary_path = await self._run_auto_squash_probe(
+                    metadata, emit, mode="squash_a"
+                )
+                summary = "Auto-squash depth slice A passed."
+                artifacts = [summary_path]
+            elif action == "auto_squash_squash_b":
+                summary_path = await self._run_auto_squash_probe(
+                    metadata, emit, mode="squash_b"
+                )
+                summary = "Auto-squash depth slice B passed."
+                artifacts = [summary_path]
+            elif action == "auto_squash_independent":
+                summary_path = await self._run_auto_squash_probe(
+                    metadata, emit, mode="independent"
+                )
+                summary = "Auto-squash independent generator passed."
+                artifacts = [summary_path]
+            elif action == "auto_squash_reconcile":
+                summary_path = await self._run_auto_squash_probe(
+                    metadata, emit, mode="reconcile"
+                )
+                summary = "Auto-squash reconciliation passed."
+                artifacts = [summary_path]
             elif action == "high_concurrency_seed":
                 summary_path = await self._run_high_concurrency_seed_probe(
                     metadata, emit
@@ -632,13 +662,13 @@ class MockSquadRunner:
                 summary = "Complex project-build shell-edit LSP probe passed."
                 artifacts = [summary_path]
             elif action == "complex_project_build_shell_edit_lsp_shared_bootstrap":
-                summary_path = await self._run_complex_project_build_shell_edit_lsp_probe(
-                    metadata,
-                    emit,
-                    smoke=False,
-                    shared_attempt_bootstrap=True,
+                summary_path = await self._run_complex_project_build_shell_edit_lsp_shared_bootstrap_probe(
+                    metadata, emit
                 )
-                summary = "Complex project-build shell-edit LSP probe passed."
+                summary = (
+                    "Complex project-build shell-edit LSP shared-bootstrap "
+                    "smoke probe passed."
+                )
                 artifacts = [summary_path]
             elif action == "complex_project_build_shell_edit_lsp_smoke":
                 summary_path = await self._run_complex_project_build_shell_edit_lsp_probe(
@@ -675,6 +705,34 @@ class MockSquadRunner:
                     metadata, emit, mode="same_path_conflict"
                 )
                 summary = "Ephemeral-workspace same-path conflict probe passed."
+                artifacts = [summary_path]
+            elif action == "ephemeral_same_path_conflict_seed":
+                summary_path = await self._run_ephemeral_workspace_probe(
+                    metadata, emit, mode="same_path_conflict_seed"
+                )
+                summary = "Ephemeral-workspace same-path conflict seed passed."
+                artifacts = [summary_path]
+            elif isinstance(action, str) and action.startswith(
+                "ephemeral_same_path_conflict_writer:"
+            ):
+                writer_index = int(action.split(":", 1)[1])
+                summary_path = await self._run_ephemeral_workspace_probe(
+                    metadata,
+                    emit,
+                    mode=f"same_path_conflict_writer:{writer_index}",
+                )
+                summary = (
+                    "Ephemeral-workspace same-path conflict writer "
+                    f"{writer_index} passed."
+                )
+                artifacts = [summary_path]
+            elif action == "ephemeral_same_path_conflict_reconcile":
+                summary_path = await self._run_ephemeral_workspace_probe(
+                    metadata, emit, mode="same_path_conflict_reconcile"
+                )
+                summary = (
+                    "Ephemeral-workspace same-path conflict reconciliation passed."
+                )
                 artifacts = [summary_path]
             elif action == "ephemeral_workspace_policy":
                 summary_path = await self._run_ephemeral_workspace_probe(
@@ -1255,6 +1313,40 @@ class MockSquadRunner:
         self._record_tool_check("tool.write_file.summary", summary_write)
         return summary_path
 
+    async def _run_auto_squash_probe(
+        self,
+        metadata: ExecutionMetadata,
+        emit: EmitStreamEvent,
+        *,
+        mode: str,
+    ) -> str:
+        from task_center_runner.agent.mock import auto_squash_probe
+
+        dispatch = {
+            "seed": auto_squash_probe.run_auto_squash_seed_probe,
+            "squash_a": auto_squash_probe.run_auto_squash_squash_a_probe,
+            "squash_b": auto_squash_probe.run_auto_squash_squash_b_probe,
+            "independent": auto_squash_probe.run_auto_squash_independent_probe,
+        }
+        if mode == "reconcile":
+            return await auto_squash_probe.run_auto_squash_reconcile_probe(
+                metadata=metadata,
+                emit=emit,
+                call_tool=self._call_tool,
+                publish=self._publish,
+                publish_mock_record=self._publish_mock_record,
+                record_tool_check=self._record_tool_check,
+            )
+        probe = dispatch.get(mode)
+        if probe is None:
+            raise RuntimeError(f"unknown auto_squash probe mode: {mode!r}")
+        return await probe(
+            metadata=metadata,
+            emit=emit,
+            call_tool=self._call_tool,
+            record_tool_check=self._record_tool_check,
+        )
+
     async def _run_complex_project_build_probe(
         self,
         metadata: ExecutionMetadata,
@@ -1455,11 +1547,23 @@ class MockSquadRunner:
             "same_path_conflict": (
                 ephemeral_workspace_probe.run_ephemeral_same_path_conflict_probe
             ),
+            "same_path_conflict_seed": (
+                ephemeral_workspace_probe.run_ephemeral_same_path_conflict_seed_probe
+            ),
+            "same_path_conflict_reconcile": (
+                ephemeral_workspace_probe.run_ephemeral_same_path_conflict_reconcile_probe
+            ),
             "policy": ephemeral_workspace_probe.run_ephemeral_policy_probe,
             "cancellation": ephemeral_workspace_probe.run_ephemeral_cancellation_probe,
             "o1_disk": ephemeral_workspace_probe.run_ephemeral_o1_disk_probe,
         }
-        probe = dispatch.get(mode)
+        writer_prefix = "same_path_conflict_writer:"
+        writer_index: int | None = None
+        if mode.startswith(writer_prefix):
+            writer_index = int(mode.split(":", 1)[1])
+            probe = ephemeral_workspace_probe.run_ephemeral_same_path_conflict_writer_probe
+        else:
+            probe = dispatch.get(mode)
         if probe is None:
             raise RuntimeError(f"unknown ephemeral_workspace probe mode: {mode!r}")
         kwargs: dict[str, Any] = {
@@ -1468,7 +1572,9 @@ class MockSquadRunner:
             "call_tool": self._call_tool,
             "record_tool_check": self._record_tool_check,
         }
-        if mode != "same_path_conflict":
+        if writer_index is not None:
+            kwargs["index"] = writer_index
+        if not mode.startswith("same_path_conflict"):
             kwargs["sandbox_id"] = sandbox_id
         return await probe(**kwargs)
 
@@ -1531,6 +1637,27 @@ class MockSquadRunner:
             sandbox_id=sandbox_id,
             smoke=smoke,
             shared_attempt_bootstrap=shared_attempt_bootstrap,
+        )
+
+    async def _run_complex_project_build_shell_edit_lsp_shared_bootstrap_probe(
+        self,
+        metadata: ExecutionMetadata,
+        emit: EmitStreamEvent,
+    ) -> str:
+        from task_center_runner.agent.mock.complex_project_build_shell_edit_lsp_probe import (
+            run_complex_project_build_shell_edit_lsp_shared_bootstrap_probe,
+        )
+
+        sandbox_id = self._require_sandbox_id(metadata)
+        return await run_complex_project_build_shell_edit_lsp_shared_bootstrap_probe(
+            metadata=metadata,
+            emit=emit,
+            call_tool=self._call_tool,
+            publish=self._publish,
+            publish_mock_record=self._publish_mock_record,
+            record_tool_check=self._record_tool_check,
+            caller=self._caller(metadata),
+            sandbox_id=sandbox_id,
         )
 
     async def _run_complex_project_build_grep_glob_probe(
@@ -1759,7 +1886,9 @@ class MockSquadRunner:
         ``<Task Guidance>...</Task Guidance>`` envelope (row 3). The
         inspector checks for the tag opens — not the old markdown headings.
         """
-        role = str(agent_def.agent_kind.value or "")
+        # Dispatch by profile name: executor/verifier share the generator role
+        # but render distinct context envelopes.
+        role = agent_def.name
         checks: dict[str, bool]
         reason: str
         active_terminals = set(metadata.get("active_terminals") or agent_def.terminals)
@@ -2009,7 +2138,7 @@ class MockSquadRunner:
         attempt_id: str | None = None
         if agent_def is not None:
             agent_name = agent_def.name or None
-            agent_role = str(agent_def.agent_kind.value or "") or None
+            agent_role = str(agent_def.role.value or "") or None
         if metadata is not None:
             if agent_name is None:
                 agent_name = str(metadata.agent_name or "") or None

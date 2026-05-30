@@ -62,11 +62,11 @@ def _load_agent_files(paths: Iterable[Path]) -> list[AgentDefinition]:
             data["system_prompt"] = contract
         elif body:
             data["system_prompt"] = body
-        if "agent_kind" not in data:
+        if "role" not in data:
             raise ValueError(
-                f"Agent profile {path} is missing required 'agent_kind:' "
-                "frontmatter field. Declare one of planner / executor / verifier / "
-                "evaluator / advisor / explorer."
+                f"Agent profile {path} is missing required 'role:' "
+                "frontmatter field. Declare one of planner / generator / "
+                "evaluator / helper / subagent."
             )
         skill_value = data.get("skill")
         if skill_value:

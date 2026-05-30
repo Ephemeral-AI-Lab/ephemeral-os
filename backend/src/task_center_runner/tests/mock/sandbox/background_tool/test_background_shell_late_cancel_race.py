@@ -22,6 +22,9 @@ from task_center_runner.tests._live_config import (
     database_configured,
     live_e2e_heavy_enabled,
 )
+from task_center_runner.tests.mock.sandbox.background_tool._background_shell_invariants import (
+    configure_default_inflight_ttl,
+)
 
 
 pytestmark = pytest.mark.asyncio
@@ -46,6 +49,7 @@ async def test_background_shell_late_cancel_race(
         "sandbox.background_shell_late_cancel_race"
     ]
     sandbox_id = str(workspace["sandbox_id"])
+    await configure_default_inflight_ttl(sandbox_id)
     report = await run_scenario_on_sweevo_image(
         scenario_cls(),
         instance=sweevo_image_instance,

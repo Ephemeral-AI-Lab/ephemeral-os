@@ -91,16 +91,6 @@ class TaskCenterStore(SyncStoreMixin):
             record = db.get(TaskCenterRequestRecord, request_id)
             return _serialize_request(record) if record is not None else None
 
-    def list_requests(
-        self, cwd: str | None = None, limit: int = 20
-    ) -> list[SerializedRow]:
-        with self._sf() as db:
-            q = db.query(TaskCenterRequestRecord)
-            if cwd:
-                q = q.filter(TaskCenterRequestRecord.cwd == cwd)
-            q = q.order_by(TaskCenterRequestRecord.created_at.desc()).limit(limit)
-            return [_serialize_request(record) for record in q.all()]
-
     def create_run(
         self,
         *,
@@ -132,18 +122,6 @@ class TaskCenterStore(SyncStoreMixin):
         with self._sf() as db:
             record = db.get(TaskCenterRunRecord, task_center_run_id)
             return _serialize_run(record) if record is not None else None
-
-    def list_runs_for_request(
-        self, request_id: str, limit: int = 50
-    ) -> list[SerializedRow]:
-        with self._sf() as db:
-            q = (
-                db.query(TaskCenterRunRecord)
-                .filter(TaskCenterRunRecord.request_id == request_id)
-                .order_by(TaskCenterRunRecord.started_at.desc())
-                .limit(limit)
-            )
-            return [_serialize_run(record) for record in q.all()]
 
     def upsert_task(
         self,

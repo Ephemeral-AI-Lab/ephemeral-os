@@ -61,7 +61,7 @@ class WorkflowStoreProtocol(Protocol):
         workflow_id: str,
         *,
         status: WorkflowStatus,
-        final_outcome: dict[str, Any] | None,
+        final_outcome: dict[str, str | None] | None,
         closed_at: datetime | None,
     ) -> Workflow: ...
 

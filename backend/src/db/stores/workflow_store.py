@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import uuid
 from datetime import UTC, datetime
-from typing import Any
 
 from db.models.workflow import WorkflowRecord
 from db.stores.base import SyncStoreMixin
@@ -75,7 +74,7 @@ class WorkflowStore(SyncStoreMixin):
         workflow_id: str,
         *,
         status: WorkflowStatus,
-        final_outcome: dict[str, Any] | None,
+        final_outcome: dict[str, str | None] | None,
         closed_at: datetime | None = None,
     ) -> Workflow:
         with self._sf() as db:

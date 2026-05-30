@@ -123,10 +123,10 @@ def test_full_plan_execution_success_closes_request_success(
         origin=WorkflowOrigin.task(task_id="executor-1"),
         goal="g",
     )
-    iteration, _ = workflow_lifecycle.create_initial_iteration_with_coordinator(workflow_id=request.id)
+    iteration, _ = workflow_lifecycle.create_iteration_with_coordinator(workflow_id=request.id)
     coordinator = iteration_coordinators.get(iteration.id)
     assert coordinator is not None
-    attempt = coordinator.create_initial_attempt()
+    attempt = coordinator.create_attempt()
     orchestrator = orchestrator_registry.get_or_raise(attempt.id)
 
     orchestrator.apply_plan_submission(_plan(attempt.id))
@@ -160,10 +160,10 @@ def test_generator_failure_retry_then_evaluator_success(
         origin=WorkflowOrigin.task(task_id="executor-1"),
         goal="g",
     )
-    iteration, _ = workflow_lifecycle.create_initial_iteration_with_coordinator(workflow_id=request.id)
+    iteration, _ = workflow_lifecycle.create_iteration_with_coordinator(workflow_id=request.id)
     coordinator = iteration_coordinators.get(iteration.id)
     assert coordinator is not None
-    graph1 = coordinator.create_initial_attempt()
+    graph1 = coordinator.create_attempt()
     orchestrator1 = orchestrator_registry.get_or_raise(graph1.id)
 
     orchestrator1.apply_plan_submission(_plan(graph1.id))

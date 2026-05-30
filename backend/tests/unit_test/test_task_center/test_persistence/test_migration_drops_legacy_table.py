@@ -64,51 +64,18 @@ def test_initialize_db_creates_workflows_table_on_fresh_db(tmp_path, monkeypatch
     assert store.get(workflow.id) == workflow
 
 
-def test_initialize_db_renames_legacy_goals_table_and_iteration_column(
-    tmp_path, monkeypatch
-):
-    db_path = tmp_path / "legacy-workflow.db"
+def test_initialize_db_renames_task_specification_to_plan_spec(tmp_path, monkeypatch):
+    """FU-2: legacy ``task_specification`` columns migrate to ``plan_spec`` on
+    both ``iterations`` and ``attempts``, preserving stored values."""
+    db_path = tmp_path / "legacy-plan-spec.db"
     pre_engine = create_engine(f"sqlite:///{db_path}")
     with pre_engine.begin() as conn:
         conn.execute(
             text(
                 """
-                CREATE TABLE goals (
-                    id TEXT PRIMARY KEY,
-                    task_center_run_id TEXT NOT NULL,
-                    origin_kind TEXT,
-                    requested_by_task_id TEXT,
-                    goal TEXT NOT NULL,
-                    status TEXT NOT NULL,
-                    iteration_ids JSON,
-                    final_outcome JSON,
-                    created_at DATETIME NOT NULL,
-                    updated_at DATETIME NOT NULL,
-                    closed_at DATETIME
-                )
-                """
-            )
-        )
-        conn.execute(
-            text(
-                """
-                INSERT INTO goals (
-                    id, task_center_run_id, origin_kind, requested_by_task_id,
-                    goal, status, iteration_ids, final_outcome, created_at, updated_at
-                )
-                VALUES (
-                    'wf1', 'run1', 'entry', NULL, 'legacy objective', 'open',
-                    '[]', NULL, '2026-01-01 00:00:00', '2026-01-01 00:00:00'
-                )
-                """
-            )
-        )
-        conn.execute(
-            text(
-                """
                 CREATE TABLE iterations (
                     id TEXT PRIMARY KEY,
-                    goal_id TEXT NOT NULL,
+                    workflow_id TEXT NOT NULL,
                     sequence_no INTEGER NOT NULL,
                     creation_reason TEXT NOT NULL,
                     goal TEXT NOT NULL,
@@ -128,15 +95,34 @@ def test_initialize_db_renames_legacy_goals_table_and_iteration_column(
         conn.execute(
             text(
                 """
-                INSERT INTO iterations (
-                    id, goal_id, sequence_no, creation_reason, goal, attempt_budget,
-                    status, attempt_ids, created_at, updated_at
-                )
-                VALUES (
-                    'it1', 'wf1', 1, 'initial', 'legacy objective', 3,
-                    'open', '[]', '2026-01-01 00:00:00', '2026-01-01 00:00:00'
+                CREATE TABLE attempts (
+                    id TEXT PRIMARY KEY,
+                    iteration_id TEXT NOT NULL,
+                    attempt_sequence_no INTEGER NOT NULL,
+                    stage TEXT NOT NULL,
+                    status TEXT NOT NULL,
+                    created_at DATETIME NOT NULL,
+                    updated_at DATETIME NOT NULL,
+                    task_specification TEXT
                 )
                 """
+            )
+        )
+        conn.execute(
+            text(
+                "INSERT INTO iterations (id, workflow_id, sequence_no, "
+                "creation_reason, goal, attempt_budget, status, created_at, "
+                "updated_at, task_specification) VALUES ('it1', 'wf1', 1, "
+                "'initial', 'g', 3, 'succeeded', '2026-01-01 00:00:00', "
+                "'2026-01-01 00:00:00', 'iteration spec')"
+            )
+        )
+        conn.execute(
+            text(
+                "INSERT INTO attempts (id, iteration_id, attempt_sequence_no, "
+                "stage, status, created_at, updated_at, task_specification) VALUES "
+                "('at1', 'it1', 1, 'closed', 'passed', '2026-01-01 00:00:00', "
+                "'2026-01-01 00:00:00', 'attempt spec')"
             )
         )
     pre_engine.dispose()
@@ -144,21 +130,24 @@ def test_initialize_db_renames_legacy_goals_table_and_iteration_column(
     _reset_engine(monkeypatch)
     sf = engine_mod.initialize_db(DatabaseSettings(url=f"sqlite:///{db_path}"))
     assert sf is not None
-
     eng = engine_mod.get_engine()
     assert eng is not None
     insp = inspect(eng)
-    assert "goals" not in set(insp.get_table_names())
-    assert "workflows" in set(insp.get_table_names())
-    iteration_columns = {column["name"] for column in insp.get_columns("iterations")}
-    assert "workflow_id" in iteration_columns
-    assert "goal_id" not in iteration_columns
 
-    store = WorkflowStore()
-    store.initialize(sf)
-    workflow = store.get("wf1")
-    assert workflow is not None
-    assert workflow.goal == "legacy objective"
+    for table in ("iterations", "attempts"):
+        cols = {column["name"] for column in insp.get_columns(table)}
+        assert "plan_spec" in cols, table
+        assert "task_specification" not in cols, table
+
+    with eng.begin() as conn:
+        assert (
+            conn.execute(text("SELECT plan_spec FROM iterations WHERE id='it1'")).scalar_one()
+            == "iteration spec"
+        )
+        assert (
+            conn.execute(text("SELECT plan_spec FROM attempts WHERE id='at1'")).scalar_one()
+            == "attempt spec"
+        )
 
 
 def _reset_engine(monkeypatch) -> None:

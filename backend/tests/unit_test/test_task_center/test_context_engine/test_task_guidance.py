@@ -5,7 +5,7 @@ deterministically:
 
 * ``What's in context:`` — outline produced by :func:`render_context_outline`
   from the packet alone (no per-role branching).
-* ``What to do:`` — one line lifted from :data:`ROLE_DIRECTIVES` by exact
+* ``What to do:`` — one line lifted from :data:`AGENT_DIRECTIVES` by exact
   agent name.
 
 The explorer builder remains a standalone helper for subagent-launch paths
@@ -18,25 +18,25 @@ import inspect
 
 import pytest
 
-from agents import AgentDefinition, AgentKind
+from agents import AgentDefinition, AgentRole
 from task_center.context_engine.packet import (
     ContextBlock,
     ContextPacket,
     ContextPriority,
     ContextRefs,
 )
-from task_center.context_engine.role_directives import ROLE_DIRECTIVES
+from task_center.context_engine.agent_directives import AGENT_DIRECTIVES
 from task_center.context_engine.task_guidance import (
     build_explorer_task_guidance,
     build_task_guidance,
 )
 
 
-def _agent_def(name: str, kind: AgentKind = AgentKind.PLANNER) -> AgentDefinition:
+def _agent_def(name: str, kind: AgentRole = AgentRole.PLANNER) -> AgentDefinition:
     return AgentDefinition(
         name=name,
         description=name,
-        agent_kind=kind,
+        role=kind,
         terminals=["submit_x"],
         tool_call_limit=10,
     )
@@ -148,7 +148,7 @@ def test_planner_iter1_after_failure_outline():
 
 def test_executor_outline_with_deps():
     prose = build_task_guidance(
-        agent_def=_agent_def("executor", AgentKind.EXECUTOR),
+        agent_def=_agent_def("executor", AgentRole.GENERATOR),
         packet=_packet([_plan_spec_block(), _dep_block(), _assigned_task_block()]),
         scope=None,  # type: ignore[arg-type]
     )
@@ -184,7 +184,7 @@ def test_evaluator_outline_is_flat_current_attempt():
         metadata={"tag": "evaluation_criteria"},
     )
     prose = build_task_guidance(
-        agent_def=_agent_def("evaluator", AgentKind.EVALUATOR),
+        agent_def=_agent_def("evaluator", AgentRole.EVALUATOR),
         packet=_packet([_plan_spec_block(), task_block, criteria_block]),
         scope=None,  # type: ignore[arg-type]
     )
@@ -197,7 +197,7 @@ def test_evaluator_outline_is_flat_current_attempt():
 
 
 def test_unknown_agent_raises():
-    with pytest.raises(KeyError, match="ROLE_DIRECTIVES"):
+    with pytest.raises(KeyError, match="AGENT_DIRECTIVES"):
         build_task_guidance(
             agent_def=_agent_def("nonexistent"),
             packet=_packet([_goal_block()]),
@@ -212,7 +212,7 @@ def test_unknown_agent_raises():
 
 def test_explorer_static_prose_uses_role_directive():
     prose = build_explorer_task_guidance()
-    assert ROLE_DIRECTIVES["explorer"] in prose
+    assert AGENT_DIRECTIVES["explorer"] in prose
     assert "submit_exploration_result" in prose
 
 

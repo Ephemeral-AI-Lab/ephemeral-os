@@ -95,7 +95,7 @@ async def submit_execution_handoff(
             "task_center_task_id": started_workflow.origin.task_id,
             "attempt_id": started_workflow.parent_attempt_id,
             "workflow_id": started_workflow.workflow_id,
-            "initial_iteration_id": started_workflow.initial_iteration_id,
-            "initial_attempt_id": started_workflow.initial_attempt_id,
+            "initial_iteration_id": started_workflow.iteration_id,
+            "initial_attempt_id": started_workflow.attempt_id,
         },
     )

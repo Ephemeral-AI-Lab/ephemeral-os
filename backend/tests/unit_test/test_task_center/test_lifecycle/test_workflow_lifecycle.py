@@ -64,7 +64,7 @@ def test_workflow_records_iterations_in_iteration_ids(
         origin=WorkflowOrigin.task(task_id="t1"),
         goal="g",
     )
-    iteration, _ = workflow_lifecycle.create_initial_iteration_with_coordinator(workflow_id=workflow.id)
+    iteration, _ = workflow_lifecycle.create_iteration_with_coordinator(workflow_id=workflow.id)
     refreshed = workflow_store.get(workflow.id)
     assert refreshed is not None
     assert refreshed.iteration_ids == (iteration.id,)
@@ -76,7 +76,7 @@ def test_initial_iteration_has_sequence_one_and_initial_reason(workflow_lifecycl
         origin=WorkflowOrigin.task(task_id="t1"),
         goal="g",
     )
-    iteration, _ = workflow_lifecycle.create_initial_iteration_with_coordinator(workflow_id=workflow.id)
+    iteration, _ = workflow_lifecycle.create_iteration_with_coordinator(workflow_id=workflow.id)
     assert iteration.sequence_no == 1
     assert iteration.creation_reason == IterationCreationReason.INITIAL
     assert iteration.goal == "g"
@@ -93,15 +93,15 @@ def test_continuation_iteration_inherits_deferred_goal(
         origin=WorkflowOrigin.task(task_id="t1"),
         goal="initial-goal",
     )
-    iteration1, _ = workflow_lifecycle.create_initial_iteration_with_coordinator(workflow_id=workflow.id)
+    iteration1, _ = workflow_lifecycle.create_iteration_with_coordinator(workflow_id=workflow.id)
     # Mark predecessor SUCCEEDED with a deferred_goal_for_next_iteration so the invariant passes.
-    iteration_store.set_deferred_goal_for_next_iteration(iteration1.id, "next-goal")
+    iteration_store.set_deferred_goal_for_next_iteration(iteration1.id, deferred_goal_for_next_iteration="next-goal")
     iteration_store.set_status(iteration1.id, status=IterationStatus.SUCCEEDED)
     iteration1_succeeded = iteration_store.get(iteration1.id)
     assert iteration1_succeeded is not None
 
-    iteration2, _ = workflow_lifecycle.create_deferred_iteration_with_coordinator(
-        previous_iteration=iteration1_succeeded
+    iteration2, _ = workflow_lifecycle.create_iteration_with_coordinator(
+        workflow_id=iteration1_succeeded.workflow_id
     )
     assert iteration2.sequence_no == 2
     assert iteration2.creation_reason == IterationCreationReason.DEFERRED_GOAL_CONTINUATION
@@ -117,13 +117,13 @@ def test_iteration_ids_holds_multiple_iterations(
         origin=WorkflowOrigin.task(task_id="t1"),
         goal="g1",
     )
-    iteration1, _ = workflow_lifecycle.create_initial_iteration_with_coordinator(workflow_id=workflow.id)
-    iteration_store.set_deferred_goal_for_next_iteration(iteration1.id, "g2")
+    iteration1, _ = workflow_lifecycle.create_iteration_with_coordinator(workflow_id=workflow.id)
+    iteration_store.set_deferred_goal_for_next_iteration(iteration1.id, deferred_goal_for_next_iteration="g2")
     iteration_store.set_status(iteration1.id, status=IterationStatus.SUCCEEDED)
     iteration1_succeeded = iteration_store.get(iteration1.id)
     assert iteration1_succeeded is not None
-    iteration2, _ = workflow_lifecycle.create_deferred_iteration_with_coordinator(
-        previous_iteration=iteration1_succeeded
+    iteration2, _ = workflow_lifecycle.create_iteration_with_coordinator(
+        workflow_id=iteration1_succeeded.workflow_id
     )
     refreshed = workflow_store.get(workflow.id)
     assert refreshed is not None
@@ -138,7 +138,7 @@ def test_handle_iteration_closed_terminal_success_closes_workflow_succeeded(
         origin=WorkflowOrigin.task(task_id="t1"),
         goal="g",
     )
-    iteration, _ = workflow_lifecycle.create_initial_iteration_with_coordinator(workflow_id=workflow.id)
+    iteration, _ = workflow_lifecycle.create_iteration_with_coordinator(workflow_id=workflow.id)
     workflow_lifecycle.handle_iteration_closed(
         IterationClosureReport(
             iteration_id=iteration.id,
@@ -164,7 +164,7 @@ def test_handle_iteration_closed_attempt_plan_failed_closes_workflow_failed(
         origin=WorkflowOrigin.task(task_id="t1"),
         goal="g",
     )
-    iteration, _ = workflow_lifecycle.create_initial_iteration_with_coordinator(workflow_id=workflow.id)
+    iteration, _ = workflow_lifecycle.create_iteration_with_coordinator(workflow_id=workflow.id)
     workflow_lifecycle.handle_iteration_closed(
         IterationClosureReport(
             iteration_id=iteration.id,
@@ -185,8 +185,8 @@ def test_handle_iteration_closed_success_continue_creates_continuation(
         origin=WorkflowOrigin.task(task_id="t1"),
         goal="g",
     )
-    iteration1, _ = workflow_lifecycle.create_initial_iteration_with_coordinator(workflow_id=workflow.id)
-    iteration_store.set_deferred_goal_for_next_iteration(iteration1.id, "next-goal")
+    iteration1, _ = workflow_lifecycle.create_iteration_with_coordinator(workflow_id=workflow.id)
+    iteration_store.set_deferred_goal_for_next_iteration(iteration1.id, deferred_goal_for_next_iteration="next-goal")
     iteration_store.set_status(iteration1.id, status=IterationStatus.SUCCEEDED)
     workflow_lifecycle.handle_iteration_closed(
         IterationClosureReport(
@@ -213,7 +213,7 @@ def test_handle_iteration_closed_deregisters_coordinator(
         origin=WorkflowOrigin.task(task_id="t1"),
         goal="g",
     )
-    iteration, _ = workflow_lifecycle.create_initial_iteration_with_coordinator(workflow_id=workflow.id)
+    iteration, _ = workflow_lifecycle.create_iteration_with_coordinator(workflow_id=workflow.id)
     assert iteration_coordinators.get(iteration.id) is not None
     workflow_lifecycle.handle_iteration_closed(
         IterationClosureReport(
@@ -233,18 +233,18 @@ def test_continuation_iteration_only_from_succeeded_predecessor_with_goal(
         origin=WorkflowOrigin.task(task_id="t1"),
         goal="g",
     )
-    iteration1, _ = workflow_lifecycle.create_initial_iteration_with_coordinator(workflow_id=workflow.id)
+    iteration1, _ = workflow_lifecycle.create_iteration_with_coordinator(workflow_id=workflow.id)
 
     # Predecessor still OPEN -> invariant violation.
     with pytest.raises(TaskCenterInvariantViolation):
-        workflow_lifecycle.create_deferred_iteration_with_coordinator(previous_iteration=iteration1)
+        workflow_lifecycle.create_iteration_with_coordinator(workflow_id=iteration1.workflow_id)
 
     # Predecessor SUCCEEDED but no deferred_goal_for_next_iteration -> invariant violation.
     iteration_store.set_status(iteration1.id, status=IterationStatus.SUCCEEDED)
     iteration1_no_goal = iteration_store.get(iteration1.id)
     assert iteration1_no_goal is not None
     with pytest.raises(TaskCenterInvariantViolation):
-        workflow_lifecycle.create_deferred_iteration_with_coordinator(previous_iteration=iteration1_no_goal)
+        workflow_lifecycle.create_iteration_with_coordinator(workflow_id=iteration1_no_goal.workflow_id)
 
 
 def test_open_iteration_coordinators_enforces_unique_per_iteration(
@@ -256,11 +256,11 @@ def test_open_iteration_coordinators_enforces_unique_per_iteration(
         origin=WorkflowOrigin.task(task_id="t1"),
         goal="g",
     )
-    workflow_lifecycle.create_initial_iteration_with_coordinator(workflow_id=workflow.id)
-    # Calling create_initial_iteration again should fail because the workflow now
-    # has iteration 1 — sequence_no 1 is no longer the contiguous next.
+    workflow_lifecycle.create_iteration_with_coordinator(workflow_id=workflow.id)
+    # Calling it again must fail: the only iteration is still OPEN, so it cannot
+    # serve as a SUCCEEDED predecessor for a continuation iteration.
     with pytest.raises(TaskCenterInvariantViolation):
-        workflow_lifecycle.create_initial_iteration_with_coordinator(workflow_id=workflow.id)
+        workflow_lifecycle.create_iteration_with_coordinator(workflow_id=workflow.id)
 
 
 def test_close_workflow_delivers_closure_report_when_callback_set(
@@ -284,7 +284,7 @@ def test_close_workflow_delivers_closure_report_when_callback_set(
         origin=WorkflowOrigin.task(task_id="executor-1"),
         goal="g",
     )
-    workflow_lifecycle.create_initial_iteration_with_coordinator(workflow_id=workflow.id)
+    workflow_lifecycle.create_iteration_with_coordinator(workflow_id=workflow.id)
     workflow_lifecycle.close_workflow(
         workflow_id=workflow.id,
         succeeded=True,
@@ -326,11 +326,11 @@ def test_workflow_lifecycle_passes_orchestrator_factory_to_spawned_coordinator(
         origin=WorkflowOrigin.task(task_id="executor-1"),
         goal="g",
     )
-    iteration, _ = workflow_lifecycle.create_initial_iteration_with_coordinator(workflow_id=workflow.id)
+    iteration, _ = workflow_lifecycle.create_iteration_with_coordinator(workflow_id=workflow.id)
     coordinator = registry.get(iteration.id)
     assert coordinator is not None
 
-    attempt = coordinator.create_initial_attempt()
+    attempt = coordinator.create_attempt()
 
     assert started == [attempt.id]
 
@@ -345,7 +345,7 @@ def test_no_legacy_entry_creation_reason_in_lifecycle(workflow_lifecycle, task_c
         origin=WorkflowOrigin.task(task_id="t1"),
         goal="g",
     )
-    iteration, _ = workflow_lifecycle.create_initial_iteration_with_coordinator(workflow_id=workflow.id)
+    iteration, _ = workflow_lifecycle.create_iteration_with_coordinator(workflow_id=workflow.id)
     assert iteration.creation_reason in (
         IterationCreationReason.INITIAL,
         IterationCreationReason.DEFERRED_GOAL_CONTINUATION,

@@ -5,7 +5,7 @@ Two terse labeled sections, no per-role prose branching:
 * ``What's in context:`` — deterministic outline produced by
   :func:`render_context_outline` over the recipe's :class:`ContextPacket`.
 * ``What to do:`` — single line from
-  :data:`ROLE_DIRECTIVES`, keyed by the resolved agent name.
+  :data:`AGENT_DIRECTIVES`, keyed by the resolved agent name.
 
 The terminal-tool block is appended by the composer (see
 ``task_center/agent_launch/skill_message.py:_wrap_task_guidance``), so this
@@ -24,7 +24,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from task_center.context_engine.role_directives import ROLE_DIRECTIVES
+from task_center.context_engine.agent_directives import AGENT_DIRECTIVES
 from task_center.context_engine.context_outline import render_context_outline
 
 if TYPE_CHECKING:  # pragma: no cover - typing-only
@@ -40,11 +40,11 @@ def build_task_guidance(
     scope: ContextScope,  # noqa: ARG001 - dispatch signature
 ) -> str:
     """Return the two-section ``<Task Guidance>`` body for ``agent_def``."""
-    directive = ROLE_DIRECTIVES.get(agent_def.name)
+    directive = AGENT_DIRECTIVES.get(agent_def.name)
     if directive is None:
         raise KeyError(
-            f"No ROLE_DIRECTIVES entry for agent {agent_def.name!r}. Add one "
-            "row to backend/src/task_center/context_engine/role_directives.py."
+            f"No AGENT_DIRECTIVES entry for agent {agent_def.name!r}. Add one "
+            "row to backend/src/task_center/context_engine/agent_directives.py."
         )
     outline = render_context_outline(packet)
     return f"What's in context:\n{outline}\n\nWhat to do:\n- {directive}"
@@ -66,7 +66,7 @@ def build_explorer_task_guidance() -> str:
         "- Parent's user message above\n"
         "\n"
         "# What to do\n"
-        f"- {ROLE_DIRECTIVES['explorer']}\n"
+        f"- {AGENT_DIRECTIVES['explorer']}\n"
         "\n"
         "## Deliver\n"
         "- File paths, line numbers, specific symbols. No vague hand-waves.\n"

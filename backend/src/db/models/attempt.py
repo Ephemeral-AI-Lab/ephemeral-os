@@ -29,7 +29,7 @@ class AttemptRecord(Base):
     stage: Mapped[str] = mapped_column(String(16))
     status: Mapped[str] = mapped_column(String(16))
     planner_task_id: Mapped[str | None] = mapped_column(String(96), nullable=True)
-    task_specification: Mapped[str | None] = mapped_column(Text, nullable=True)
+    plan_spec: Mapped[str | None] = mapped_column(Text, nullable=True)
     evaluation_criteria: Mapped[list[str]] = mapped_column(JSON, default=list)
     generator_task_ids: Mapped[list[str]] = mapped_column(JSON, default=list)
     evaluator_task_id: Mapped[str | None] = mapped_column(String(96), nullable=True)

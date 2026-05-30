@@ -85,7 +85,7 @@ def test_deferred_goal_dto_field_maps_to_deferred_goal_db_column(
         goal="g",
         attempt_budget=2,
     )
-    seg = iteration_store.set_deferred_goal_for_next_iteration(seg.id, "deferred-scope")
+    seg = iteration_store.set_deferred_goal_for_next_iteration(seg.id, deferred_goal_for_next_iteration="deferred-scope")
     assert seg.deferred_goal_for_next_iteration == "deferred-scope"
 
     with iteration_store._sf() as db:  # noqa: SLF001
@@ -105,7 +105,7 @@ def test_set_deferred_goal_for_next_iteration_and_status(
         goal="g",
         attempt_budget=2,
     )
-    seg = iteration_store.set_deferred_goal_for_next_iteration(seg.id, "next-goal")
+    seg = iteration_store.set_deferred_goal_for_next_iteration(seg.id, deferred_goal_for_next_iteration="next-goal")
     assert seg.deferred_goal_for_next_iteration == "next-goal"
     seg = iteration_store.set_status(
         seg.id,

@@ -42,6 +42,9 @@ CONCURRENT_WRITES_SUMMARY = f"{ROOT}/concurrent_writes/summary.json"
 POLICY_SUMMARY = f"{ROOT}/policy/summary.json"
 CANCELLATION_SUMMARY = f"{ROOT}/cancellation/summary.json"
 O1_DISK_SUMMARY = f"{ROOT}/o1_disk/summary.json"
+SAME_PATH_CONFLICT_SUMMARY = f"{ROOT}/same_path_conflict/summary.json"
+SAME_PATH_CONFLICT_SHARED_PATH = f"{ROOT}/same_path_conflict/shared.txt"
+SAME_PATH_CONFLICT_FRAGMENT_DIR = f"{ROOT}/same_path_conflict/fragments"
 
 EmitStreamEvent = Callable[[StreamEvent], Awaitable[None]]
 CallTool = Callable[..., Awaitable[ToolResult]]
@@ -791,7 +794,212 @@ async def run_ephemeral_same_path_conflict_probe(
         "last_successful_value": expected,
     }
     return await _write_summary(
-        path=f"{ROOT}/same_path_conflict/summary.json",
+        path=SAME_PATH_CONFLICT_SUMMARY,
+        payload=summary,
+        metadata=metadata,
+        emit=emit,
+        call_tool=call_tool,
+        record_tool_check=record_tool_check,
+    )
+
+
+async def run_ephemeral_same_path_conflict_seed_probe(
+    *,
+    metadata: ExecutionMetadata,
+    emit: EmitStreamEvent,
+    call_tool: CallTool,
+    record_tool_check: RecordToolCheck,
+) -> str:
+    """Seed the shared target before TaskCenter fans out writer generators."""
+    metadata.repo_root = WORKSPACE_ROOT
+    mkdir = await _call_tool(
+        label="same_path_fanout_seed_dirs",
+        tool_obj=shell_tool,
+        raw_input={
+            "command": f"mkdir -p {SAME_PATH_CONFLICT_FRAGMENT_DIR}",
+            "timeout": 60,
+        },
+        metadata=metadata,
+        emit=emit,
+        call_tool=call_tool,
+        record_tool_check=record_tool_check,
+    )
+    if mkdir.is_error:
+        raise RuntimeError(f"same-path seed mkdir failed: {mkdir.output}")
+    seed = await _call_tool(
+        label="same_path_fanout_seed",
+        tool_obj=write_file_tool,
+        raw_input={
+            "file_path": SAME_PATH_CONFLICT_SHARED_PATH,
+            "content": "owner=seed\n",
+        },
+        metadata=metadata,
+        emit=emit,
+        call_tool=call_tool,
+        record_tool_check=record_tool_check,
+    )
+    if seed.is_error:
+        raise RuntimeError(f"same-path seed write failed: {seed.output}")
+    return SAME_PATH_CONFLICT_SHARED_PATH
+
+
+async def run_ephemeral_same_path_conflict_writer_probe(
+    *,
+    index: int,
+    metadata: ExecutionMetadata,
+    emit: EmitStreamEvent,
+    call_tool: CallTool,
+    record_tool_check: RecordToolCheck,
+) -> str:
+    """Race one first-wave same-path edit and persist its fragment."""
+    metadata.repo_root = WORKSPACE_ROOT
+    first = await _call_tool(
+        label=f"same_path_fanout_first_{index}",
+        tool_obj=edit_file_tool,
+        raw_input={
+            "file_path": SAME_PATH_CONFLICT_SHARED_PATH,
+            "old_text": "owner=seed\n",
+            "new_text": f"owner=first-{index}\n",
+            "description": (
+                "same-path conflict first-wave fan-out "
+                f"writer={index}"
+            ),
+        },
+        metadata=metadata,
+        emit=emit,
+        call_tool=call_tool,
+        record_tool_check=None,
+        allow_error=True,
+    )
+    fragment_path = f"{SAME_PATH_CONFLICT_FRAGMENT_DIR}/first-{index}.json"
+    fragment_payload = _conflict_record(index, first)
+    fragment = await _call_tool(
+        label=f"same_path_fanout_fragment_{index}",
+        tool_obj=write_file_tool,
+        raw_input={
+            "file_path": fragment_path,
+            "content": json.dumps(fragment_payload, indent=2, sort_keys=True) + "\n",
+        },
+        metadata=metadata,
+        emit=emit,
+        call_tool=call_tool,
+        record_tool_check=record_tool_check,
+    )
+    if fragment.is_error:
+        raise RuntimeError(f"same-path fragment write failed: {fragment.output}")
+    return fragment_path
+
+
+async def run_ephemeral_same_path_conflict_reconcile_probe(
+    *,
+    metadata: ExecutionMetadata,
+    emit: EmitStreamEvent,
+    call_tool: CallTool,
+    record_tool_check: RecordToolCheck,
+) -> str:
+    """Retry failed first-wave writers and write the legacy summary contract."""
+    from task_center_runner.scenarios.sandbox.ephemeral_workspace import (
+        SAME_PATH_CONFLICT_WRITER_COUNT,
+    )
+
+    metadata.repo_root = WORKSPACE_ROOT
+    first_records: list[dict[str, Any]] = []
+    for index in range(SAME_PATH_CONFLICT_WRITER_COUNT):
+        fragment = await _call_tool(
+            label=f"same_path_fanout_read_fragment_{index}",
+            tool_obj=read_file_tool,
+            raw_input={
+                "file_path": f"{SAME_PATH_CONFLICT_FRAGMENT_DIR}/first-{index}.json",
+                "start_line": 1,
+                "end_line": 80,
+            },
+            metadata=metadata,
+            emit=emit,
+            call_tool=call_tool,
+            record_tool_check=None,
+        )
+        first_records.append(json.loads(_read_content(fragment)))
+
+    failed_indexes = [item["index"] for item in first_records if item["is_error"]]
+    if not any(not item["is_error"] for item in first_records):
+        raise RuntimeError(f"same-path first wave had no success: {first_records}")
+    if not failed_indexes:
+        raise RuntimeError(
+            f"same-path first wave produced no typed conflicts: {first_records}"
+        )
+
+    successful_labels = [
+        f"first-{item['index']}" for item in first_records if not item["is_error"]
+    ]
+    retries: list[dict[str, Any]] = []
+    for index in failed_indexes:
+        fresh = await _call_tool(
+            label=f"same_path_fanout_retry_read_{index}",
+            tool_obj=read_file_tool,
+            raw_input={
+                "file_path": SAME_PATH_CONFLICT_SHARED_PATH,
+                "start_line": 1,
+                "end_line": 5,
+            },
+            metadata=metadata,
+            emit=emit,
+            call_tool=call_tool,
+            record_tool_check=None,
+        )
+        retry_value = f"retry-{index}"
+        retry = await _call_tool(
+            label=f"same_path_fanout_retry_write_{index}",
+            tool_obj=write_file_tool,
+            raw_input={
+                "file_path": SAME_PATH_CONFLICT_SHARED_PATH,
+                "content": f"owner={retry_value}\n",
+            },
+            metadata=metadata,
+            emit=emit,
+            call_tool=call_tool,
+            record_tool_check=record_tool_check,
+        )
+        successful_labels.append(retry_value)
+        retries.append(
+            {
+                "index": index,
+                "fresh_content": _read_content(fresh),
+                "retry_changed_paths": _changed_paths(retry),
+                "retry_source": _mutation_source(retry),
+            }
+        )
+
+    final = await _call_tool(
+        label="same_path_fanout_final_read",
+        tool_obj=read_file_tool,
+        raw_input={
+            "file_path": SAME_PATH_CONFLICT_SHARED_PATH,
+            "start_line": 1,
+            "end_line": 5,
+        },
+        metadata=metadata,
+        emit=emit,
+        call_tool=call_tool,
+        record_tool_check=None,
+    )
+    final_content = _read_content(final)
+    expected = successful_labels[-1]
+    if expected not in final_content:
+        raise RuntimeError(
+            f"final shared content did not match last retry {expected!r}: "
+            f"{final_content}"
+        )
+
+    summary = {
+        "schema": SUMMARY_SCHEMA,
+        "mode": "same_path_conflict",
+        "first_wave": first_records,
+        "retry_records": retries,
+        "final_content": final_content,
+        "last_successful_value": expected,
+    }
+    return await _write_summary(
+        path=SAME_PATH_CONFLICT_SUMMARY,
         payload=summary,
         metadata=metadata,
         emit=emit,

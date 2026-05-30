@@ -32,6 +32,15 @@ ToolCallExecutor = Callable[
     [str, str, dict[str, object], ExecutionMetadata | None],
     Awaitable[ToolResultBlock],
 ]
+SANDBOX_INVOCATION_ID_INPUT_KEY = "_sandbox_invocation_id"
+DISABLE_SANDBOX_HEARTBEAT_INPUT_KEY = "_disable_sandbox_heartbeat"
+_BACKGROUND_CONTROL_INPUT_KEYS = frozenset(
+    {
+        "background",
+        SANDBOX_INVOCATION_ID_INPUT_KEY,
+        DISABLE_SANDBOX_HEARTBEAT_INPUT_KEY,
+    }
+)
 
 
 def validate_background_tool_input(
@@ -69,7 +78,9 @@ def launch_background_tool(
     execute_tool_call: ToolCallExecutor,
 ) -> tuple[ToolResultBlock, BackgroundTaskStartedEvent | None, ToolExecutionCompletedEvent | None]:
     """Dispatch a single tool use through the background path."""
-    clean_input = {k: v for k, v in tool_use.input.items() if k != "background"}
+    clean_input = {
+        k: v for k, v in tool_use.input.items() if k not in _BACKGROUND_CONTROL_INPUT_KEYS
+    }
 
     tool_def = tool_registry.get(tool_use.name)
     if tool_def is None or getattr(tool_def, "background", "forbidden") == "forbidden":
@@ -109,7 +120,16 @@ def launch_background_tool(
         (),
     )
     sandbox_id = str(getattr(tool_metadata, "sandbox_id", "") or "")
-    sandbox_invocation_id = uuid4().hex if uses_sandbox and sandbox_id else ""
+    requested_sandbox_invocation_id = str(
+        tool_use.input.get(SANDBOX_INVOCATION_ID_INPUT_KEY) or ""
+    ).strip()
+    sandbox_invocation_id = ""
+    if uses_sandbox and sandbox_id:
+        sandbox_invocation_id = requested_sandbox_invocation_id or uuid4().hex
+    heartbeat_enabled = not (
+        bool(requested_sandbox_invocation_id)
+        and bool(tool_use.input.get(DISABLE_SANDBOX_HEARTBEAT_INPUT_KEY))
+    )
     agent_id = str(getattr(tool_metadata, "agent_run_id", "") or "")
     if not agent_id:
         agent_id = str(getattr(tool_metadata, "agent_name", "") or "")
@@ -142,6 +162,7 @@ def launch_background_tool(
         uses_sandbox=uses_sandbox,
         sandbox_id=sandbox_id or None,
         sandbox_invocation_id=sandbox_invocation_id or None,
+        heartbeat_enabled=heartbeat_enabled,
     )
     record_tool_trace(tool_metadata, tool_use.name, clean_input)
     tool_result = ToolResultBlock(

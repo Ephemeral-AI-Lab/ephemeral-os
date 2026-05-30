@@ -32,6 +32,64 @@ def _plan(action_id: str, action_spec: str, summary_hint: str) -> dict[str, Any]
     }
 
 
+SAME_PATH_CONFLICT_WRITER_COUNT = 4
+
+
+def _same_path_conflict_plan() -> dict[str, Any]:
+    writer_ids = [
+        f"same_path_conflict_writer_{index}"
+        for index in range(SAME_PATH_CONFLICT_WRITER_COUNT)
+    ]
+    tasks = [
+        {"id": "same_path_conflict_seed", "agent_name": "executor", "deps": []},
+        *(
+            {
+                "id": writer_id,
+                "agent_name": "executor",
+                "deps": ["same_path_conflict_seed"],
+            }
+            for writer_id in writer_ids
+        ),
+        {
+            "id": "same_path_conflict_reconcile",
+            "agent_name": "executor",
+            "deps": writer_ids,
+        },
+    ]
+    task_specs = {
+        "same_path_conflict_seed": (
+            "ACTION ephemeral_same_path_conflict_seed. Initialize the shared "
+            "same-path target for the conflict fan-out."
+        ),
+        "same_path_conflict_reconcile": (
+            "ACTION ephemeral_same_path_conflict_reconcile. Read all first-wave "
+            "fragments, retry failed writers after fresh reads, verify final "
+            "content, and write summary.json."
+        ),
+    }
+    for index, writer_id in enumerate(writer_ids):
+        task_specs[writer_id] = (
+            f"ACTION ephemeral_same_path_conflict_writer index={index}. Race the "
+            "shared same-path target and write a first-wave fragment."
+        )
+    return {
+        "plan_spec": (
+            "Seed one shared file, launch four executor writers concurrently "
+            "against the same path, then reconcile fragments into the existing "
+            "ephemeral-workspace same-path summary contract."
+        ),
+        "evaluation_criteria": [
+            "The seed task initializes the shared same-path target.",
+            "Four writer generators launch after the seed and produce at least "
+            "one success plus at least one typed conflict or rejected write.",
+            "The reconcile task retries failed writers after fresh reads.",
+            "The final summary uses task_center_runner.ephemeral_workspace.v1.",
+        ],
+        "tasks": tasks,
+        "task_specs": task_specs,
+    }
+
+
 class _EphemeralWorkspaceScenarioBase(ScenarioBase):
     expected_event_sequence: tuple[EventType, ...] = (
         EventType.PLANNER_INVOKED,
@@ -112,16 +170,48 @@ EphemeralWorkspaceConcurrentWrites = _scenario(
     ),
     summary_path_hint="/testbed/.ephemeralos/sweevo-mock/ephemeral_workspace/concurrent_writes/summary.json",
 )
-EphemeralWorkspaceSamePathConflict = _scenario(
-    "EphemeralWorkspaceSamePathConflict",
-    action_id="ephemeral_workspace_same_path_conflict",
-    action_spec=(
+
+
+class EphemeralWorkspaceSamePathConflict(_EphemeralWorkspaceScenarioBase):
+    """Same-path conflict scenario promoted to a real generator fan-out."""
+
+    name = "sandbox.ephemeral_workspace_same_path_conflict"
+    action_id = "ephemeral_workspace_same_path_conflict"
+    action_spec = (
         "ACTION ephemeral_workspace_same_path_conflict. Launch four same-path "
         "writes, require typed OCC conflicts, retry failed writes after fresh "
         "reads, and verify the final content."
-    ),
-    summary_path_hint="/testbed/.ephemeralos/sweevo-mock/ephemeral_workspace/same_path_conflict/summary.json",
-)
+    )
+    summary_path_hint = (
+        "/testbed/.ephemeralos/sweevo-mock/ephemeral_workspace/"
+        "same_path_conflict/summary.json"
+    )
+
+    def planner_response(self, ctx: ScenarioContext) -> ToolCallSpec:  # noqa: ARG002
+        return ToolCallSpec(submit_plan_closes_goal, _same_path_conflict_plan())
+
+    def executor_actions(self, ctx: ScenarioContext) -> Sequence[str]:
+        context_message = ctx.context_message or ctx.prompt or ""
+        if "ACTION ephemeral_same_path_conflict_seed" in context_message:
+            return ("ephemeral_same_path_conflict_seed",)
+        if "ACTION ephemeral_same_path_conflict_reconcile" in context_message:
+            return ("ephemeral_same_path_conflict_reconcile",)
+        marker = "ACTION ephemeral_same_path_conflict_writer"
+        if marker in context_message:
+            return (
+                f"ephemeral_same_path_conflict_writer:{_writer_index(context_message)}",
+            )
+        return ()
+
+
+def _writer_index(context_message: str) -> int:
+    marker = "index="
+    if marker not in context_message:
+        raise RuntimeError(f"missing same-path writer index in: {context_message!r}")
+    raw = context_message.split(marker, 1)[1].split(".", 1)[0].strip()
+    return int(raw)
+
+
 EphemeralWorkspacePolicy = _scenario(
     "EphemeralWorkspacePolicy",
     action_id="ephemeral_workspace_policy",

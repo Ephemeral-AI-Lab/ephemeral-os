@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime
 from enum import StrEnum
-from typing import Any, Literal
+from typing import Literal
 
 
 class WorkflowOriginKind(StrEnum):
@@ -57,7 +57,7 @@ class Workflow:
     goal: str
     status: WorkflowStatus
     iteration_ids: tuple[str, ...]
-    final_outcome: dict[str, Any] | None
+    final_outcome: dict[str, str | None] | None
     created_at: datetime
     updated_at: datetime
     closed_at: datetime | None

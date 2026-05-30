@@ -14,7 +14,7 @@ Operational heuristics (e.g. "diagnose first after failure", "treat
 from __future__ import annotations
 
 
-ROLE_DIRECTIVES: dict[str, str] = {
+AGENT_DIRECTIVES: dict[str, str] = {
     "planner": "Plan for <iteration_goal>.",
     "executor": "Complete <assigned_task>.",
     "verifier": "Complete <assigned_task>.",
@@ -23,4 +23,4 @@ ROLE_DIRECTIVES: dict[str, str] = {
 }
 
 
-__all__ = ["ROLE_DIRECTIVES"]
+__all__ = ["AGENT_DIRECTIVES"]

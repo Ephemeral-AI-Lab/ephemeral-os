@@ -235,6 +235,25 @@ async def test_cancel_by_agent_only_targets_running_sandbox_tasks(monkeypatch) -
     await mgr.cancel_all()
 
 
+async def test_sandbox_task_can_disable_supervisor_heartbeat() -> None:
+    mgr = BackgroundTaskSupervisor()
+    mgr.launch(
+        task_id="sandbox-task",
+        tool_name="shell",
+        tool_input={},
+        coro=_make_tool_coro(delay=60),
+        agent_id="agent-a",
+        uses_sandbox=True,
+        sandbox_id="sandbox-1",
+        sandbox_invocation_id="invocation-1",
+        heartbeat_enabled=False,
+    )
+
+    assert mgr.count_by_agent("agent-a") == 1
+    assert mgr._heartbeat_task is None
+    await mgr.cancel_all()
+
+
 # ---------------------------------------------------------------------------
 # 9. cancel nonexistent task
 # ---------------------------------------------------------------------------

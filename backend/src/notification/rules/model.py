@@ -16,10 +16,8 @@ from message.message import Message
 MessageList = list[Message]
 
 # Note: ``body`` and ``trigger`` receive ``(messages, QueryContext)`` at
-# runtime. The type is loosened to ``Callable[..., ...]`` so that Pydantic
-# (which validates ``AgentDefinition.notification_rules: list[NotificationRule]``)
-# does not try to resolve the forward reference to ``QueryContext`` and
-# raise ``PydanticUserError: not fully defined``.
+# runtime. The type is loosened to ``Callable[..., ...]`` so this module need
+# not import ``QueryContext`` (engine layer) — that would be a layering cycle.
 RuleBody = Callable[..., str]
 RuleTrigger = Callable[..., bool]
 

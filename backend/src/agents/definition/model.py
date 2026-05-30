@@ -22,23 +22,22 @@ class AgentType(StrEnum):
     SUBAGENT = "subagent"
 
 
-class AgentKind(StrEnum):
+class AgentRole(StrEnum):
     """Canonical category of an agent profile.
 
-    Values mirror the previous free-form ``AgentDefinition.role`` strings
-    byte-for-byte, so audit consumers reading the ``metadata["role"]`` key
-    (emitted by ``factory.py`` and ``run_subagent.py``) continue to see the
-    same string set. Planner and executor profiles can participate in
-    launch-time terminal-tool routing; ADVISOR / EXPLORER are helper /
-    subagent kinds.
+    Pure identity: read as the ``metadata["role"]`` audit tag (emitted by
+    ``factory.py`` and ``run_subagent.py``) and by the planner-submission gate.
+    Terminal-tool routing is no longer keyed on role — it lives in each
+    profile's own ``terminal_routing`` module. ``GENERATOR`` covers both the
+    executor and verifier profiles (distinguished by ``name``); ``HELPER`` is
+    the advisor, ``SUBAGENT`` is the explorer.
     """
 
     PLANNER = "planner"
-    EXECUTOR = "executor"
-    VERIFIER = "verifier"
+    GENERATOR = "generator"
     EVALUATOR = "evaluator"
-    ADVISOR = "advisor"
-    EXPLORER = "explorer"
+    HELPER = "helper"
+    SUBAGENT = "subagent"
 
 
 class AgentDefinition(BaseModel):
@@ -62,17 +61,16 @@ class AgentDefinition(BaseModel):
     # ``ceil(1.5 * tool_call_limit)``.
     tool_call_limit: int = Field(..., gt=0)
 
-    # --- agent kind ---
-    # Canonical category of this profile (planner / executor / verifier /
-    # evaluator / advisor / explorer). Routing logic and the planner
-    # submission gate read this; audit consumers read the same set of
-    # strings via ``agent_kind.value`` through the ``metadata["role"]`` key
+    # --- role ---
+    # Canonical category of this profile (planner / generator / evaluator /
+    # helper / subagent). The planner-submission gate reads this, and audit
+    # consumers read ``role.value`` through the ``metadata["role"]`` key
     # emitted by ``factory.py`` and ``run_subagent.py``. Profile MDs MUST
-    # declare ``agent_kind:`` in frontmatter — the loader rejects MDs that
-    # omit it. The Pydantic default exists only so test fixtures that build
+    # declare ``role:`` in frontmatter — the loader rejects MDs that omit it.
+    # The Pydantic default exists only so test fixtures that build
     # ``AgentDefinition`` directly stay terse; production agents always go
     # through the loader gate.
-    agent_kind: AgentKind = AgentKind.EXECUTOR
+    role: AgentRole = AgentRole.GENERATOR
 
     # --- agent type: regular agent or subagent (worker) ---
     agent_type: AgentType = AgentType.AGENT
@@ -111,7 +109,6 @@ class AgentDefinition(BaseModel):
     terminal_routing: Path | None = None
 
     model_config = ConfigDict(
-        populate_by_name=True,
         extra="forbid",
     )
 

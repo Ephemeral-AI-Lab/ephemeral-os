@@ -139,19 +139,6 @@ class ModelStore(SyncStoreMixin):
             db.refresh(record)
             return _to_dict(record)
 
-    def select_active(self, key: str) -> dict[str, Any] | None:
-        """Set a model as active, deactivating all others."""
-        with self._sf() as db:
-            record = db.query(ModelRegistrationRecord).filter_by(key=key).first()
-            if record is None:
-                return None
-            self._deactivate_all(db)
-            record.is_active = True
-            record.updated_at = datetime.now(UTC)
-            db.commit()
-            db.refresh(record)
-            return _to_dict(record)
-
     def delete(self, key: str) -> bool:
         """Delete a model. If it was active, activate the first remaining."""
         with self._sf() as db:
@@ -176,14 +163,6 @@ class ModelStore(SyncStoreMixin):
             return True
 
     # -- reads -----------------------------------------------------------------
-
-    def list_all(self, *, redact: bool = True) -> list[dict[str, Any]]:
-        """List all registered models."""
-        with self._sf() as db:
-            rows = db.query(ModelRegistrationRecord).order_by(
-                ModelRegistrationRecord.created_at
-            ).all()
-            return [_to_dict(r, redact=redact) for r in rows]
 
     def get(self, key: str, *, redact: bool = True) -> dict[str, Any] | None:
         """Get a model by key."""

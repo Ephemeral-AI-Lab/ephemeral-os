@@ -47,6 +47,7 @@ from task_center_runner.tests.mock._layer_stack_occ_overlay_assertions import (
     load_performance_report,
     mapping,
 )
+from task_center_runner.tests.mock._focused_scenario_contracts import count_role_tasks
 
 
 pytestmark = pytest.mark.asyncio
@@ -93,6 +94,7 @@ async def test_auto_squash_commit_resume_crosses_depth_threshold(
     assert report.passed_sandbox_checks, [
         item for item in report.sandbox_checks if not item.passed
     ]
+    assert count_role_tasks(report, "executor", status="done") == 5
 
     seen_events = {event.type for event in report.events}
     missing_events = sorted(

@@ -13,14 +13,49 @@ Evidence base: code anchors verified 2026-05-30 against `main`.
 - **① — DONE** (2026-05-30). Field + Protocol + config knob removed; factory
   builds rules from triggers + defaults.
 - **② — DONE** (2026-05-30). Field removed, gate collapsed, MDs cleaned.
-- **③ — not started.** Design task; see section below.
+- **③ — DONE** (2026-05-30). Both changes landed as designed:
+  - **A (file-based routing):** `terminal_routing: Path` field + `_terminal_router`
+    PrivateAttr + property on `AgentDefinition`; loader resolves the path (like
+    `skill:`) and imports `select_terminals` once (fail-fast); `planner_routing.py`
+    + `executor_routing.py` created next to their `.md`; `_allowed_terminals`
+    collapsed to a thin dispatch (the `AgentKind` import + hardcoded sets left
+    `terminal_tool_routing.py`). Router test split into dispatch-mechanics (stub)
+    + real-rule unit tests (`test_profile_routing.py`).
+  - **B (retag):** `AgentKind`→`AgentRole` with the 5-member taxonomy
+    (planner/generator/evaluator/helper/subagent); field `agent_kind`→`role`;
+    6 MDs remapped; planner gate → `role == GENERATOR`; telemetry sites →
+    `role.value`; mock-runner behavioral dispatch → `agent_def.name`
+    (executor/verifier share `generator`). ~30 files.
 
-Verification: `test_agents/`, `test_tools/test_submission_terminal_routing.py`,
-`test_engine/`, `test_task_center/` green (583 passed). All 6 real profiles load
-under `extra="forbid"`. One pre-existing failure
-(`test_attempt_launcher_retry.py::test_attempt_harness_records_runner_token_usage`,
-`EphemeralRunResult ... event_count`) belongs to the parallel mock event-source
-migration — not this change.
+Verification: full `backend/tests/unit_test/` suite — **2050 passed**, 3 skipped;
+ruff clean on all changed files; the two `src/task_center_runner` contract tests
+(16) pass. The remaining 14 failures are unrelated parallel work — 10 are the
+mock event-source `EphemeralRunResult(event_count=...)` migration (the field does
+not exist on the dataclass yet; `lifecycle.py:46`), 3 are sandbox/overlay tests
+with no agent refs, 1 is the pre-existing launcher `event_count` failure.
+
+**Follow-up cleanup (2026-05-30, post-③):**
+- Removed the no-op `populate_by_name=True` from `AgentDefinition.model_config`
+  (no field declares an alias).
+- Renamed the misnomer `ROLE_DIRECTIVES` → `AGENT_DIRECTIVES` (+ file
+  `role_directives.py` → `agent_directives.py`, + test) — it is name-keyed, not
+  role-keyed.
+- Refreshed `docs/architecture` hand-maintained pages (`task_center/agent-roles.html`,
+  `agent_loops/prompt-context.html`, `task_center/context-engine.html`,
+  `task_center_runner/{index,mocked-agents}.html`) for `role`/file-based routing.
+  The generated `assets/search-index.js` still holds 3 stale tokens — rebuilds
+  on the next doc build.
+- Fixed two stale comments (`factory.py`, `notification/rules/model.py`) that
+  cited the removed `AgentDefinition.notification_rules`.
+
+**④ `agent_type` ↔ `role` merge — REJECTED (not redundant).** `agent_type` is an
+orthogonal *spawn-mechanism* axis, not a role coincidence: the run_subagent
+nesting guard reads `caller_agent_type == SUBAGENT` from propagated runtime
+metadata (`run_subagent.py:134`), and agent_type also gates fresh-client /
+background-tool withholding / run_subagent target validation. Merging would
+conflate "is the explorer profile" with "running as a subagent worker" and
+regress extensibility. Left as two axes (matches the deliberate-orthogonal-
+boundaries finding).
 
 ---
 
@@ -80,7 +115,7 @@ a planner/advisor/explorer name is rejected.
 
 ---
 
-## ③ Decouple terminal routing + retag `agent_kind`  (design — DRAFT)
+## ③ Decouple terminal routing + retag `agent_kind`  ✅ DONE (design below as-built)
 
 > **Decision needed (read first).** The request is "remove `agent_kind`." The
 > honest answer from the code: the **routing coupling** can be removed cleanly,

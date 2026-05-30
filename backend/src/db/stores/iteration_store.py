@@ -64,7 +64,7 @@ class IterationStore(SyncStoreMixin):
             return self._to_dto(record)
 
     def set_deferred_goal_for_next_iteration(
-        self, iteration_id: str, deferred_goal_for_next_iteration: str | None
+        self, iteration_id: str, *, deferred_goal_for_next_iteration: str | None
     ) -> Iteration:
         with self._sf() as db:
             record = db.get(IterationRecord, iteration_id)
@@ -143,8 +143,7 @@ class IterationStore(SyncStoreMixin):
             if record is None:
                 raise LookupError(f"Iteration {iteration_id!r} not found")
             record.status = IterationStatus.SUCCEEDED.value
-            # DB column name task_specification pinned by ADR (FU-2 renames the column).
-            record.task_specification = plan_spec
+            record.plan_spec = plan_spec
             record.task_summary = task_summary
             if closed_at is not None:
                 record.closed_at = closed_at
@@ -166,7 +165,6 @@ class IterationStore(SyncStoreMixin):
             created_at=record.created_at,
             updated_at=record.updated_at,
             closed_at=record.closed_at,
-            # DB column name task_specification pinned by ADR (FU-2 renames the column).
-            plan_spec=record.task_specification,
+            plan_spec=record.plan_spec,
             task_summary=record.task_summary,
         )

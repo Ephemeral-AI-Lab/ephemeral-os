@@ -80,7 +80,7 @@ def _drive_segment(
         iteration_id
     )
     assert coordinator is not None
-    g = coordinator.create_initial_attempt()
+    g = coordinator.create_attempt()
     stub = _StubOrchestrator(
         attempt=g,
         attempt_store=attempt_store,
@@ -101,7 +101,7 @@ def test_smoke_terminal_success(
         origin=WorkflowOrigin.task(task_id="exec-1"),
         goal="solve X",
     )
-    seg, _ = workflow_lifecycle.create_initial_iteration_with_coordinator(workflow_id=req.id)
+    seg, _ = workflow_lifecycle.create_iteration_with_coordinator(workflow_id=req.id)
     _drive_segment(
         iteration_coordinators=iteration_coordinators,
         iteration_id=seg.id,
@@ -126,11 +126,11 @@ def test_smoke_attempt_plan_failed(
         origin=WorkflowOrigin.task(task_id="exec-1"),
         goal="solve X",
     )
-    seg, _ = workflow_lifecycle.create_initial_iteration_with_coordinator(workflow_id=req.id)
+    seg, _ = workflow_lifecycle.create_iteration_with_coordinator(workflow_id=req.id)
     # First attempt: fail with a generator error.
     coordinator = iteration_coordinators.get(seg.id)
     assert coordinator is not None
-    g1 = coordinator.create_initial_attempt()
+    g1 = coordinator.create_attempt()
     attempt_store.set_plan_contract(
         g1.id, plan_spec="spec1", evaluation_criteria=["a"], deferred_goal_for_next_iteration=None
     )
@@ -171,7 +171,7 @@ def test_smoke_success_continue_then_terminal(
         origin=WorkflowOrigin.task(task_id="exec-1"),
         goal="initial-goal",
     )
-    seg1, _ = workflow_lifecycle.create_initial_iteration_with_coordinator(workflow_id=req.id)
+    seg1, _ = workflow_lifecycle.create_iteration_with_coordinator(workflow_id=req.id)
     _drive_segment(
         iteration_coordinators=iteration_coordinators,
         iteration_id=seg1.id,

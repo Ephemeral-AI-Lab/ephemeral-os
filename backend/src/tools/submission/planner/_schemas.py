@@ -6,7 +6,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from agents import AgentKind, get_definition
+from agents import AgentRole, get_definition
 from task_center import (
     PlannedGeneratorTask,
     PlannerSubmission,
@@ -16,11 +16,11 @@ from task_center import (
 from tools.submission.context import AttemptSubmissionContext
 
 
-# `submission_kind` payload string constants.
-# Symbol names reflect the new vocabulary; string VALUES are pinned to the
-# legacy form until FU-2 (separate PR) updates persisted audit dict values.
-SUBMISSION_KIND_PLANNER_DEFERS = "planner_partial"
-SUBMISSION_KIND_PLANNER_COMPLETES = "planner_full"
+# `submission_kind` payload string constants. Symbol names and string values
+# now share the current vocabulary (FU-2 completed the rename from the legacy
+# ``planner_partial``/``planner_full`` values).
+SUBMISSION_KIND_PLANNER_DEFERS = "planner_defers"
+SUBMISSION_KIND_PLANNER_COMPLETES = "planner_completes"
 
 
 class PlanTaskInput(BaseModel):
@@ -51,9 +51,8 @@ class PlanTaskInput(BaseModel):
 class SharedPlannerSubmissionInput(BaseModel):
     """Planner submission boundary schema.
 
-    ``plan_spec`` is the LLM-facing name for the plan-level contract; the same
-    name is preserved through the DTO layer. Only the DB column retains the
-    historical ``task_specification`` name (see FU-2 for the column rename).
+    ``plan_spec`` is the name used end to end — LLM-facing, the DTO layer, and
+    the DB column (FU-2 completed the column rename from ``task_specification``).
     """
 
     model_config = ConfigDict(extra="forbid")
@@ -93,16 +92,13 @@ def validate_nonblank(value: str, field_name: str) -> str:
 def _is_generator_capable_agent(agent_name: str) -> bool:
     """Gate for ``agent_name`` values a planner may submit as a generator task.
 
-    Only executor / verifier profiles are generator-capable; helper, subagent,
-    planner, and evaluator kinds are never planner-submittable.
+    Only ``generator``-role profiles (executor / verifier) are generator-capable;
+    planner, evaluator, helper, and subagent roles are never planner-submittable.
     """
     definition = get_definition(agent_name)
     if definition is None:
         return False
-    return definition.agent_kind in {
-        AgentKind.EXECUTOR,
-        AgentKind.VERIFIER,
-    }
+    return definition.role == AgentRole.GENERATOR
 
 
 def build_planner_submission(

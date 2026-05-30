@@ -23,17 +23,25 @@ ceiling 1.5×). Heavy probes exceed that, so the scenario planner fans the work
 out into a generator DAG (see [[mock_event_source_heavy_probe_fanout_decision]]);
 each generator's tool stream is budget-sized and routes through the loop here.
 Background dispatch (``background_task_id``) is fire-and-forget through the loop
-and cannot satisfy the old probes' blocking-await contract, so the bridge
-rejects it — those probes are rewritten to the real-agent background model.
+and cannot satisfy the old probes' blocking-await contract by itself, so this
+bridge converts that legacy probe request into the real-agent model:
+``shell(background=True)`` plus ``check_background_task_result`` /
+``cancel_background_task``.
 """
 
 from __future__ import annotations
 
 import asyncio
 import contextlib
+import json
+import re
 from collections.abc import AsyncGenerator, Awaitable, Callable
 from typing import Any
 
+from engine.background.dispatch import (
+    DISABLE_SANDBOX_HEARTBEAT_INPUT_KEY,
+    SANDBOX_INVOCATION_ID_INPUT_KEY,
+)
 from message.message import ToolResultBlock
 from tools._framework.core.results import ToolResult
 
@@ -48,16 +56,26 @@ async def _noop_emit(_event: Any) -> None:
     return None
 
 
+_BACKGROUND_TASK_ID_RE = re.compile(r'task_id="([^"]+)"')
+_BACKGROUND_WAIT_TIMEOUT_S = 5
+BackgroundCancelCallback = Callable[[dict[str, Any]], None]
+
+
 class _CallToolBridge:
     """Provides the bridging ``call_tool`` + a request queue the driver drains."""
 
-    __slots__ = ("_queue",)
+    __slots__ = ("_on_background_cancel", "_queue")
 
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        *,
+        on_background_cancel: BackgroundCancelCallback | None = None,
+    ) -> None:
         # items: ("call", tool_name, raw_input, future) | ("done", None, None, None)
         self._queue: asyncio.Queue[tuple[str, str | None, dict | None, Any]] = (
             asyncio.Queue()
         )
+        self._on_background_cancel = on_background_cancel
 
     async def call_tool(
         self,
@@ -68,25 +86,194 @@ class _CallToolBridge:
         *,
         allow_error: bool = False,
         background_task_id: str | None = None,
-        sandbox_invocation_id: str | None = None,  # noqa: ARG002
+        sandbox_invocation_id: str | None = None,
         **_kwargs: Any,
     ) -> ToolResult:
         if background_task_id is not None:
-            raise NotImplementedError(
-                "Background tool dispatch is not expressible through the query "
-                "loop bridge (the loop's background path is fire-and-forget). "
-                "Background probes must use the real-agent background model "
-                "(shell(background=True) + wait_background_tasks / "
-                "cancel_background_task). See the heavy-probe fan-out decision."
+            result = await self._call_background_tool(
+                tool_name=tool_obj.name,
+                raw_input=raw_input,
+                allow_error=allow_error,
+                legacy_background_task_id=background_task_id,
+                sandbox_invocation_id=sandbox_invocation_id,
             )
-        fut: asyncio.Future[ToolResult] = asyncio.get_running_loop().create_future()
-        await self._queue.put(("call", tool_obj.name, dict(raw_input), fut))
-        result = await fut
+            if result.is_error and not allow_error:
+                raise RuntimeError(f"{tool_obj.name} failed: {result.output}")
+            return result
+        result = await self._call_loop_tool(tool_obj.name, raw_input)
         # Mirror MockSquadRunner._call_tool: raise unless the caller opted in to
         # tolerate errors (probe bodies rely on this to fail fast).
         if result.is_error and not allow_error:
             raise RuntimeError(f"{tool_obj.name} failed: {result.output}")
         return result
+
+    async def _call_loop_tool(self, tool_name: str, raw_input: dict[str, Any]) -> ToolResult:
+        fut: asyncio.Future[ToolResult] = asyncio.get_running_loop().create_future()
+        await self._queue.put(("call", tool_name, dict(raw_input), fut))
+        return await asyncio.shield(fut)
+
+    async def _call_background_tool(
+        self,
+        *,
+        tool_name: str,
+        raw_input: dict[str, Any],
+        allow_error: bool,
+        legacy_background_task_id: str,
+        sandbox_invocation_id: str | None,
+    ) -> ToolResult:
+        launch_input = {**dict(raw_input), "background": True}
+        if sandbox_invocation_id:
+            launch_input[SANDBOX_INVOCATION_ID_INPUT_KEY] = sandbox_invocation_id
+            launch_input[DISABLE_SANDBOX_HEARTBEAT_INPUT_KEY] = True
+        launch = await self._call_loop_tool(
+            tool_name,
+            launch_input,
+        )
+        if launch.is_error:
+            return launch
+        task_id = _parse_background_task_id(launch.output)
+        if not task_id:
+            return ToolResult(
+                output=(
+                    "Background launch did not expose a task_id. "
+                    f"legacy_background_task_id={legacy_background_task_id!r} "
+                    f"output={launch.output!r}"
+                ),
+                is_error=True,
+            )
+        try:
+            return await self._await_background_result(
+                task_id=task_id,
+                allow_error=allow_error,
+            )
+        except asyncio.CancelledError:
+            current = asyncio.current_task()
+            if current is not None:
+                with contextlib.suppress(AttributeError):
+                    current.uncancel()
+            cancel_result: ToolResult | None = None
+            with contextlib.suppress(Exception):
+                cancel_result = await self._call_loop_tool(
+                    "cancel_background_task",
+                    {
+                        "task_id": task_id,
+                        "reason": (
+                            "legacy background_task_id cancellation: "
+                            f"{legacy_background_task_id}"
+                        ),
+                    },
+                )
+            if cancel_result is not None and not cancel_result.is_error:
+                self._publish_background_cancel(
+                    tool_name=tool_name,
+                    legacy_background_task_id=legacy_background_task_id,
+                    task_id=task_id,
+                )
+            raise
+
+    def _publish_background_cancel(
+        self,
+        *,
+        tool_name: str,
+        legacy_background_task_id: str,
+        task_id: str,
+    ) -> None:
+        if self._on_background_cancel is None:
+            return
+        with contextlib.suppress(Exception):
+            self._on_background_cancel(
+                {
+                    "tool_name": tool_name,
+                    "background_task_id": legacy_background_task_id,
+                    "real_background_task_id": task_id,
+                    "invocation_id": task_id,
+                }
+            )
+
+    async def _await_background_result(
+        self,
+        *,
+        task_id: str,
+        allow_error: bool,
+    ) -> ToolResult:
+        while True:
+            checked = await self._call_loop_tool(
+                "check_background_task_result", {"task_id": task_id}
+            )
+            payload = _json_object(checked.output)
+            status = str(payload.get("status") or "")
+            if status != "running":
+                return _background_result_to_tool_result(
+                    checked,
+                    payload=payload,
+                    allow_error=allow_error,
+                )
+            await self._call_loop_tool(
+                "wait_background_tasks",
+                {"timeout": _BACKGROUND_WAIT_TIMEOUT_S},
+            )
+
+
+def _parse_background_task_id(output: str) -> str:
+    match = _BACKGROUND_TASK_ID_RE.search(output or "")
+    return match.group(1) if match else ""
+
+
+def _json_object(raw: str) -> dict[str, Any]:
+    try:
+        parsed = json.loads(raw or "{}")
+    except json.JSONDecodeError:
+        return {}
+    return parsed if isinstance(parsed, dict) else {}
+
+
+def _raw_result_looks_like_error(raw: str) -> bool:
+    text = (raw or "").lstrip().lower()
+    return text.startswith(("execution failed:", "error:", "failed:")) or (
+        "exception_type=" in text
+    )
+
+
+def _background_result_to_tool_result(
+    checked: ToolResult,
+    *,
+    payload: dict[str, Any],
+    allow_error: bool,
+) -> ToolResult:
+    raw_result = str(payload.get("result") or "")
+    shell_payload = _json_object(raw_result)
+    status = str(payload.get("status") or "")
+    is_error = status not in {"finished", "completed", "delivered"}
+    if shell_payload:
+        is_error = str(shell_payload.get("status") or "") == "error"
+    elif _raw_result_looks_like_error(raw_result):
+        is_error = True
+    metadata: dict[str, Any] = {}
+    if shell_payload:
+        metadata.update(
+            {
+                "status": shell_payload.get("status"),
+                "changed_paths": list(shell_payload.get("changed_paths") or ()),
+                "changed_path_kinds": dict(
+                    shell_payload.get("changed_path_kinds") or {}
+                ),
+                "mutation_source": shell_payload.get("mutation_source"),
+                "conflict_reason": shell_payload.get("conflict_reason"),
+            }
+        )
+    if checked.metadata:
+        metadata.update(dict(checked.metadata))
+    if is_error and allow_error:
+        return ToolResult(
+            output=raw_result or checked.output,
+            is_error=True,
+            metadata=metadata,
+        )
+    return ToolResult(
+        output=raw_result or checked.output,
+        is_error=is_error,
+        metadata=metadata,
+    )
 
 
 async def bridge_turns(
@@ -94,6 +281,7 @@ async def bridge_turns(
     *,
     artifact_out: list[str],
     normalize: Callable[[list[ToolResultBlock]], ToolResult],
+    on_background_cancel: BackgroundCancelCallback | None = None,
 ) -> AsyncGenerator[Turn, list[ToolResultBlock]]:
     """Drive an imperative probe, yielding one :class:`Turn` per tool call.
 
@@ -103,7 +291,7 @@ async def bridge_turns(
     resolve the probe's awaited future. The probe's return value (artifact path)
     is appended to *artifact_out*. Probe exceptions propagate to the caller.
     """
-    bridge = _CallToolBridge()
+    bridge = _CallToolBridge(on_background_cancel=on_background_cancel)
 
     async def _run() -> None:
         try:
@@ -331,6 +519,88 @@ def bridge_probe_for(
     """
     metadata = probe_ctx.metadata
 
+    if action in {"complex_project_build", "complex_project_build_smoke"}:
+        smoke = action.endswith("_smoke")
+
+        def _complex_project_build(call_tool: Any) -> Awaitable[str]:
+            from task_center_runner.agent.mock.complex_project_build_probe import (
+                run_complex_project_build_probe,
+            )
+
+            return run_complex_project_build_probe(
+                metadata=metadata,
+                emit=_noop_emit,
+                call_tool=call_tool,
+                publish=probe_ctx.publish,
+                publish_mock_record=probe_ctx.publish_mock_record,
+                record_tool_check=probe_ctx.record_check,
+                caller=probe_ctx.caller(),
+                sandbox_id=probe_ctx.sandbox_id(),
+                smoke=smoke,
+            )
+
+        suffix = " smoke" if smoke else ""
+        return _complex_project_build, f"Complex project-build{suffix} probe passed."
+
+    if action in {
+        "complex_project_build_grep_glob",
+        "complex_project_build_grep_glob_smoke",
+    }:
+        smoke = action.endswith("_smoke")
+
+        def _grep_glob(call_tool: Any) -> Awaitable[str]:
+            from task_center_runner.agent.mock.complex_project_build_grep_glob_probe import (
+                run_complex_project_build_grep_glob_probe,
+            )
+
+            return run_complex_project_build_grep_glob_probe(
+                metadata=metadata,
+                emit=_noop_emit,
+                call_tool=call_tool,
+                publish=probe_ctx.publish,
+                publish_mock_record=probe_ctx.publish_mock_record,
+                record_tool_check=probe_ctx.record_check,
+                caller=probe_ctx.caller(),
+                sandbox_id=probe_ctx.sandbox_id(),
+                smoke=smoke,
+            )
+
+        suffix = " smoke" if smoke else ""
+        return _grep_glob, f"Complex project-build grep/glob{suffix} probe passed."
+
+    if action in {
+        "complex_project_build_shell_edit_lsp",
+        "complex_project_build_shell_edit_lsp_smoke",
+    }:
+        smoke = action.endswith("_smoke")
+
+        def _shell_edit_lsp(call_tool: Any) -> Awaitable[str]:
+            from task_center_runner.agent.mock.complex_project_build_shell_edit_lsp_probe import (
+                run_complex_project_build_shell_edit_lsp_probe,
+            )
+
+            return run_complex_project_build_shell_edit_lsp_probe(
+                metadata=metadata,
+                emit=_noop_emit,
+                call_tool=call_tool,
+                publish=probe_ctx.publish,
+                publish_mock_record=probe_ctx.publish_mock_record,
+                record_tool_check=probe_ctx.record_check,
+                caller=probe_ctx.caller(),
+                sandbox_id=probe_ctx.sandbox_id(),
+                smoke=smoke,
+            )
+
+        suffix = " smoke" if smoke else ""
+        return (
+            _shell_edit_lsp,
+            f"Complex project-build shell-edit LSP{suffix} probe passed.",
+        )
+
+    background_probe = _background_probe_factory(action, metadata, probe_ctx)
+    if background_probe is not None:
+        return background_probe
+
     if action == "high_concurrency_seed":
         def _seed(call_tool: Any) -> Awaitable[str]:
             from task_center_runner.agent.mock.high_concurrency_probe import (
@@ -431,6 +701,106 @@ def bridge_probe_for(
 
         return _hiz_reconcile, "Heavy-IO zoned sandbox reconciliation passed."
 
+    if action == "complex_project_build_shell_edit_lsp_shared_bootstrap":
+        def _complex_shared_bootstrap(call_tool: Any) -> Awaitable[str]:
+            from task_center_runner.agent.mock.complex_project_build_shell_edit_lsp_probe import (
+                run_complex_project_build_shell_edit_lsp_shared_bootstrap_probe,
+            )
+
+            return run_complex_project_build_shell_edit_lsp_shared_bootstrap_probe(
+                metadata=metadata,
+                emit=_noop_emit,
+                call_tool=call_tool,
+                publish=probe_ctx.publish,
+                publish_mock_record=probe_ctx.publish_mock_record,
+                record_tool_check=probe_ctx.record_check,
+                caller=probe_ctx.caller(),
+                sandbox_id=probe_ctx.sandbox_id(),
+            )
+
+        return (
+            _complex_shared_bootstrap,
+            "Complex project-build shell-edit LSP shared-bootstrap smoke probe passed.",
+        )
+
+    # --- auto_squash_commit_resume fan-out -------------------------------
+    if action == "auto_squash_seed":
+        def _auto_seed(call_tool: Any) -> Awaitable[str]:
+            from task_center_runner.agent.mock.auto_squash_probe import (
+                run_auto_squash_seed_probe,
+            )
+
+            return run_auto_squash_seed_probe(
+                metadata=metadata,
+                emit=_noop_emit,
+                call_tool=call_tool,
+                record_tool_check=probe_ctx.record_check,
+            )
+
+        return _auto_seed, "Auto-squash seed passed."
+
+    if action == "auto_squash_squash_a":
+        def _auto_squash_a(call_tool: Any) -> Awaitable[str]:
+            from task_center_runner.agent.mock.auto_squash_probe import (
+                run_auto_squash_squash_a_probe,
+            )
+
+            return run_auto_squash_squash_a_probe(
+                metadata=metadata,
+                emit=_noop_emit,
+                call_tool=call_tool,
+                record_tool_check=probe_ctx.record_check,
+            )
+
+        return _auto_squash_a, "Auto-squash depth slice A passed."
+
+    if action == "auto_squash_squash_b":
+        def _auto_squash_b(call_tool: Any) -> Awaitable[str]:
+            from task_center_runner.agent.mock.auto_squash_probe import (
+                run_auto_squash_squash_b_probe,
+            )
+
+            return run_auto_squash_squash_b_probe(
+                metadata=metadata,
+                emit=_noop_emit,
+                call_tool=call_tool,
+                record_tool_check=probe_ctx.record_check,
+            )
+
+        return _auto_squash_b, "Auto-squash depth slice B passed."
+
+    if action == "auto_squash_independent":
+        def _auto_independent(call_tool: Any) -> Awaitable[str]:
+            from task_center_runner.agent.mock.auto_squash_probe import (
+                run_auto_squash_independent_probe,
+            )
+
+            return run_auto_squash_independent_probe(
+                metadata=metadata,
+                emit=_noop_emit,
+                call_tool=call_tool,
+                record_tool_check=probe_ctx.record_check,
+            )
+
+        return _auto_independent, "Auto-squash independent generator passed."
+
+    if action == "auto_squash_reconcile":
+        def _auto_reconcile(call_tool: Any) -> Awaitable[str]:
+            from task_center_runner.agent.mock.auto_squash_probe import (
+                run_auto_squash_reconcile_probe,
+            )
+
+            return run_auto_squash_reconcile_probe(
+                metadata=metadata,
+                emit=_noop_emit,
+                call_tool=call_tool,
+                publish=probe_ctx.publish,
+                publish_mock_record=probe_ctx.publish_mock_record,
+                record_tool_check=probe_ctx.record_check,
+            )
+
+        return _auto_reconcile, "Auto-squash reconciliation passed."
+
     # --- plugin_workspace (single-action scenarios; all queue-bridge) -------
     if action == "plugin_read_only_lsp_refresh":
         def _plugin_read_only(call_tool: Any) -> Awaitable[str]:
@@ -527,9 +897,7 @@ def bridge_probe_for(
 
         return _plugin_service_evict, "Plugin service-evict probe passed."
 
-    # --- ephemeral_workspace (non-cancellation actions; queue-bridge) ------
-    # ephemeral_workspace_cancellation is a §C background rewrite — the bridge
-    # rejects its background_task_id call, so it is intentionally not wired here.
+    # --- ephemeral_workspace actions; queue-bridge -------------------------
     if action == "ephemeral_workspace_all_verbs":
         def _eph_all_verbs(call_tool: Any) -> Awaitable[str]:
             from task_center_runner.agent.mock.ephemeral_workspace_probe import (
@@ -594,16 +962,152 @@ def bridge_probe_for(
 
         return _eph_o1_disk, "Ephemeral workspace O(1)-disk probe passed."
 
-    # ephemeral_workspace_same_path_conflict is intentionally NOT bridged: its
-    # probe asyncio.gathers 4 same-path writes and asserts >=1 OCC conflict, but
-    # the queue-bridge serializes calls (one loop turn at a time) so no race /
-    # no conflict occurs and the probe's "no typed conflicts" guard fires. It
-    # needs a concurrency-preserving fan-out (N racing generators, like
-    # high_concurrency's CONFLICT_WORKER_COUNT). Falling through to the adapter's
-    # NotImplementedError keeps it a clean "not ported" signal, not a confusing
-    # assertion failure. See FANOUT_HANDOFF §"Session 2026-05-29 cont."
+    if action == "ephemeral_same_path_conflict_seed":
+        def _eph_same_path_seed(call_tool: Any) -> Awaitable[str]:
+            from task_center_runner.agent.mock.ephemeral_workspace_probe import (
+                run_ephemeral_same_path_conflict_seed_probe,
+            )
+
+            return run_ephemeral_same_path_conflict_seed_probe(
+                metadata=metadata,
+                emit=_noop_emit,
+                call_tool=call_tool,
+                record_tool_check=probe_ctx.record_check,
+            )
+
+        return _eph_same_path_seed, "Ephemeral same-path conflict seed passed."
+
+    if action.startswith("ephemeral_same_path_conflict_writer:"):
+        index = int(action.split(":", 1)[1])
+
+        def _eph_same_path_writer(call_tool: Any) -> Awaitable[str]:
+            from task_center_runner.agent.mock.ephemeral_workspace_probe import (
+                run_ephemeral_same_path_conflict_writer_probe,
+            )
+
+            return run_ephemeral_same_path_conflict_writer_probe(
+                index=index,
+                metadata=metadata,
+                emit=_noop_emit,
+                call_tool=call_tool,
+                record_tool_check=probe_ctx.record_check,
+            )
+
+        return _eph_same_path_writer, f"Ephemeral same-path writer {index} passed."
+
+    if action == "ephemeral_same_path_conflict_reconcile":
+        def _eph_same_path_reconcile(call_tool: Any) -> Awaitable[str]:
+            from task_center_runner.agent.mock.ephemeral_workspace_probe import (
+                run_ephemeral_same_path_conflict_reconcile_probe,
+            )
+
+            return run_ephemeral_same_path_conflict_reconcile_probe(
+                metadata=metadata,
+                emit=_noop_emit,
+                call_tool=call_tool,
+                record_tool_check=probe_ctx.record_check,
+            )
+
+        return (
+            _eph_same_path_reconcile,
+            "Ephemeral same-path conflict reconciliation passed.",
+        )
 
     return None
+
+
+def _background_probe_factory(
+    action: str,
+    metadata: Any,
+    probe_ctx: Any,
+) -> tuple[ProbeFactory, str] | None:
+    background_modes = {
+        "background_shell_golden": (
+            "run_background_shell_golden_probe",
+            "Background-shell golden probe passed.",
+        ),
+        "background_shell_stop": (
+            "run_background_shell_stop_probe",
+            "Background-shell cancel probe passed.",
+        ),
+        "background_shell_interleave": (
+            "run_background_shell_interleave_probe",
+            "Background-shell interleave probe passed.",
+        ),
+        "background_shell_exhaustion": (
+            "run_background_shell_exhaustion_probe",
+            "Background-shell exhaustion probe passed.",
+        ),
+        "background_shell_partial_write_cancel": (
+            "run_background_shell_partial_write_cancel_probe",
+            "Background-shell partial-write-cancel probe passed.",
+        ),
+        "background_shell_stop_during_maintenance": (
+            "run_background_shell_maintenance_probe",
+            "Background-shell cancel-during-maintenance probe passed.",
+        ),
+        "background_shell_late_cancel_race": (
+            "run_background_shell_late_cancel_probe",
+            "Background-shell late-cancel-race probe passed.",
+        ),
+        "background_mixed_fg_bg_same_path_conflict": (
+            "run_background_mixed_fg_bg_same_path_conflict_probe",
+            "Background-shell mixed foreground/background conflict probe passed.",
+        ),
+        "background_heartbeat_loss_reaps_only_stale_bg": (
+            "run_background_heartbeat_loss_probe",
+            "Background-shell heartbeat-loss probe passed.",
+        ),
+        "background_exit_iws_drains_agent_tasks": (
+            "run_background_exit_iws_drains_agent_tasks_probe",
+            "Background-shell isolated-workspace drain probe passed.",
+        ),
+        "background_engine_restart_no_lease_leak": (
+            "run_background_engine_restart_no_lease_leak_probe",
+            "Background-shell engine-restart cleanup probe passed.",
+        ),
+        "background_many_small_writes_do_not_starve_dispatcher": (
+            "run_background_many_small_writes_probe",
+            "Background-shell many-small-writes probe passed.",
+        ),
+        "background_mixed_op_concurrent": (
+            "run_background_mixed_op_concurrent_probe",
+            "Background-shell mixed-op concurrent probe passed.",
+        ),
+    }
+    if action == "ephemeral_workspace_cancellation":
+        def _ephemeral_cancel(call_tool: Any) -> Awaitable[str]:
+            from task_center_runner.agent.mock.ephemeral_workspace_probe import (
+                run_ephemeral_cancellation_probe,
+            )
+
+            return run_ephemeral_cancellation_probe(
+                metadata=metadata,
+                emit=_noop_emit,
+                call_tool=call_tool,
+                record_tool_check=probe_ctx.record_check,
+                sandbox_id=probe_ctx.sandbox_id(),
+            )
+
+        return _ephemeral_cancel, "Ephemeral workspace cancellation probe passed."
+
+    item = background_modes.get(action)
+    if item is None:
+        return None
+    function_name, summary = item
+
+    def _background(call_tool: Any) -> Awaitable[str]:
+        from task_center_runner.agent.mock import background_shell_probe
+
+        probe = getattr(background_shell_probe, function_name)
+        return probe(
+            metadata=metadata,
+            emit=_noop_emit,
+            call_tool=call_tool,
+            record_tool_check=probe_ctx.record_check,
+        )
+
+    return _background, summary
 
 
 __all__ = ["bridge_probe_for", "bridge_script_for", "bridge_turns"]

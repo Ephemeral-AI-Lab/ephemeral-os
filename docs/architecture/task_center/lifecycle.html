@@ -103,7 +103,7 @@
 <div class="edge-list" aria-label="WorkflowStarter start transitions">
   <div><b>origin</b><span>Preparation validates either an entry run id or a running generator task that belongs to an active attempt.</span></div>
   <div><b>workflow</b><span><code>WorkflowLifecycle.create_workflow()</code> inserts the Workflow with the selected entry or task-origin metadata.</span></div>
-  <div><b>iteration</b><span><code>create_initial_iteration_with_coordinator()</code> inserts Iteration sequence 1, appends it to the Workflow, and registers the open coordinator.</span></div>
+  <div><b>iteration</b><span><code>create_iteration_with_coordinator()</code> inserts the workflow's next Iteration (sequence 1 here), appends it to the Workflow, and registers the open coordinator.</span></div>
   <div><b>attempt</b><span>The coordinator inserts Attempt sequence 1 before startup; task-origin starts move the parent generator to <code>WAITING_WORKFLOW</code> with a CAS.</span></div>
   <div><b>launch</b><span><code>IterationAttemptCoordinator.start_attempt()</code> starts the <code>AttemptOrchestrator</code>, which launches the attempt planner.</span></div>
 </div>
@@ -120,7 +120,7 @@
 <div class="diagram" aria-label="Retry versus deferral workflow">
   <div class="flow-row">
     <div class="node"><strong>Attempt fails</strong><small>planner, generator, evaluator, or startup failure</small></div>
-    <div class="node warn"><strong>Budget remains</strong><small><code>create_next_attempt()</code> in same iteration</small></div>
+    <div class="node warn"><strong>Budget remains</strong><small><code>create_attempt(previous_attempt_id=...)</code> in same iteration</small></div>
     <div class="node bad"><strong>Budget exhausted</strong><small>iteration <code>FAILED</code>, workflow <code>FAILED</code></small></div>
   </div>
   <div class="flow-row">
@@ -152,7 +152,7 @@
   <div><b>exhausted</b><span>Budget exhaustion closes the iteration as failed and emits <code>AttemptPlanFailed</code> with prior attempts ordered by sequence.</span></div>
 </div>
 <div class="edge-list">
-  <div><b>deferral gate</b><span><code>WorkflowLifecycle.create_deferred_iteration_with_coordinator()</code> requires the predecessor iteration to be <code>SUCCEEDED</code> and to have non-null deferred text.</span></div>
+  <div><b>deferral gate</b><span><code>WorkflowLifecycle.create_iteration_with_coordinator()</code> derives the continuation case from workflow state and requires the predecessor iteration to be <code>SUCCEEDED</code> and to have non-null deferred text.</span></div>
   <div><b>retry scope</b><span>A failed partial-plan attempt does not propagate its deferred continuation to the iteration. The next attempt retries the same iteration scope.</span></div>
   <div><b>workflow stays open</b><span>During delegated continuation and delegated retry, tests keep the parent generator in <code>WAITING_WORKFLOW</code> until the child workflow closes terminally.</span></div>
 </div>

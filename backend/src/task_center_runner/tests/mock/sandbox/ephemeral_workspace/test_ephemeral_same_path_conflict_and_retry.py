@@ -13,6 +13,7 @@ from task_center_runner.tests._live_config import (
     database_configured,
     live_e2e_heavy_enabled,
 )
+from task_center_runner.tests.mock._focused_scenario_contracts import count_role_tasks
 from task_center_runner.tests.mock.sandbox.ephemeral_workspace._ephemeral_workspace_invariants import (
     assert_ephemeral_performance_artifacts,
     assert_no_internal_sandbox_errors,
@@ -44,6 +45,7 @@ async def test_ephemeral_same_path_conflict_and_retry(
         audit_dir=audit_dir,
         stores=stores,
     )
+    assert count_role_tasks(report, "executor", status="done") == 6
 
     first_wave = summary["first_wave"]
     assert sum(1 for item in first_wave if not item["is_error"]) >= 1

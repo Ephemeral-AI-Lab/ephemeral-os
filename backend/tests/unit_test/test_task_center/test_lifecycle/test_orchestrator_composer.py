@@ -12,7 +12,7 @@ import pytest
 
 from agents import (
     AgentDefinition,
-    AgentKind,
+    AgentRole,
     list_definitions,
     register_definition,
     unregister_definition,
@@ -89,16 +89,30 @@ def composer_runtime(
     return runtime, launcher
 
 
+def _real_planner_router():
+    """Reuse the planner profile's real terminal_routing rule (no drift)."""
+    from pathlib import Path
+
+    import agents as _agents_pkg
+    from agents.definition.loader import load_agents_tree
+
+    profiles = load_agents_tree(Path(_agents_pkg.__file__).parent / "profile")
+    return next(p for p in profiles if p.name == "planner").terminal_router
+
+
 def _register_planner_agents() -> None:
     planner = AgentDefinition(
         name="planner",
         description="planner",
-        agent_kind=AgentKind.PLANNER,
+        role=AgentRole.PLANNER,
         context_recipe="planner",
         terminals=["submit_plan_closes_goal", "submit_plan_defers_goal"],
         tool_call_limit=10,
         system_prompt="PLANNER",
     )
+    # Fabricated definition bypasses the loader, so attach the routing callable
+    # the loader would normally resolve from ``terminal_routing:`` frontmatter.
+    planner._terminal_router = _real_planner_router()
     register_definition(planner)
 
 

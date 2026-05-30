@@ -6,7 +6,7 @@ from typing import Any
 
 import pytest
 
-from agents import AgentDefinition, AgentKind, register_definition, unregister_definition
+from agents import AgentDefinition, AgentRole, register_definition, unregister_definition
 from engine.api import EphemeralRunResult
 from message.message import Message, TextBlock
 from tools._framework.core.context import ToolExecutionContextService
@@ -130,7 +130,7 @@ async def test_ask_advisor_assembles_direct_launch(monkeypatch) -> None:
         AgentDefinition(
             name="advisor",
             description="advisor",
-            agent_kind=AgentKind.ADVISOR,
+            role=AgentRole.HELPER,
             terminals=["submit_advisor_feedback"],
             tool_call_limit=10,
         )
@@ -138,7 +138,7 @@ async def test_ask_advisor_assembles_direct_launch(monkeypatch) -> None:
     parent_def = AgentDefinition(
         name="planner",
         description="planner stub",
-        agent_kind=AgentKind.PLANNER,
+        role=AgentRole.PLANNER,
         terminals=["submit_plan_closes_goal"],
         tool_call_limit=10,
     )
@@ -211,7 +211,7 @@ async def test_ask_advisor_errors_when_parent_messages_missing() -> None:
         AgentDefinition(
             name="advisor",
             description="advisor",
-            agent_kind=AgentKind.ADVISOR,
+            role=AgentRole.HELPER,
             terminals=["submit_advisor_feedback"],
             tool_call_limit=10,
         )

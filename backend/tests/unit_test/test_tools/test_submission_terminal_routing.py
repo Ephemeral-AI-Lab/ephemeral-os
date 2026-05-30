@@ -227,14 +227,14 @@ async def test_submit_execution_handoff_starts_delegated_request(
 async def test_submit_execution_handoff_accepts_any_generator_agent_profile(
     workflow_store, iteration_store, attempt_store, task_store, composer
 ) -> None:
-    from agents import AgentDefinition, AgentKind, register_definition
+    from agents import AgentDefinition, AgentRole, register_definition
 
     register_definition(
         AgentDefinition(
             name="custom_generator",
             description="custom generator for this test",
             tool_call_limit=10,
-            agent_kind=AgentKind.EXECUTOR,
+            role=AgentRole.GENERATOR,
             context_recipe="generator",
             terminals=[
                 "submit_execution_handoff",

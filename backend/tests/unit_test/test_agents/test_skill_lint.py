@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from agents import AgentDefinition, AgentKind
+from agents import AgentDefinition, AgentRole
 from agents.skills import (
     SkillLintError,
     scan_skill_file,
@@ -66,7 +66,7 @@ def test_validate_skill_files_raises_with_definition_name(tmp_path: Path):
         description="bad",
         terminals=["submit_x"],
         tool_call_limit=10,
-        agent_kind=AgentKind.PLANNER,
+        role=AgentRole.PLANNER,
         skill=path,
     )
 
@@ -83,7 +83,7 @@ def test_validate_skill_files_ignores_definitions_without_skill():
         description="plain",
         terminals=["submit_x"],
         tool_call_limit=10,
-        agent_kind=AgentKind.EXECUTOR,
+        role=AgentRole.GENERATOR,
     )
     validate_skill_files([plain])  # must not raise
 
@@ -102,7 +102,7 @@ def test_validate_skill_files_aggregates_violations(tmp_path: Path):
             description="a",
             terminals=["submit_x"],
             tool_call_limit=10,
-            agent_kind=AgentKind.PLANNER,
+            role=AgentRole.PLANNER,
             skill=bad1,
         ),
         AgentDefinition(
@@ -110,7 +110,7 @@ def test_validate_skill_files_aggregates_violations(tmp_path: Path):
             description="b",
             terminals=["submit_x"],
             tool_call_limit=10,
-            agent_kind=AgentKind.PLANNER,
+            role=AgentRole.PLANNER,
             skill=bad2,
         ),
     ]

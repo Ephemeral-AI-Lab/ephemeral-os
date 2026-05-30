@@ -101,13 +101,13 @@ run_scenario(...)                            agents/profile/main/
 
 <section id="dispatch" data-last-reviewed-commit="c8f6bcde0c63c7ec004545128d186853df5dcde1" data-evidence-paths="backend/src/task_center_runner/agent/mock/runner.py backend/src/task_center_runner/scenarios/base.py">
 <h2>Per-Agent Dispatch <a class="anchor" href="#dispatch">#</a></h2>
-<p>The runner's <code>__call__</code> coroutine has the same signature as the real <code>AttemptAgentRunner</code> so TaskCenter cannot tell them apart. The dispatch fan-out is purely by <code>agent_def.agent_kind</code>.</p>
+<p>The runner's <code>__call__</code> coroutine has the same signature as the real <code>AttemptAgentRunner</code> so TaskCenter cannot tell them apart. The dispatch fan-out is purely by <code>agent_def.name</code>.</p>
 <pre class="diagram" aria-label="MockSquadRunner per-call lifecycle">
 MockSquadRunner.__call__(config, prompt, agent_def, sandbox_id, extra_tool_metadata, ...)
    |
    | 1. metadata = self._metadata_for(...)
    |        sets sandbox_id, agent_name, repo_root, cwd,
-   |        role = agent_def.agent_kind.value
+   |        role = agent_def.name
    |
    | 2. publish MOCK_LAUNCH_RECORDED  (LaunchRecord)
    |
@@ -119,7 +119,7 @@ MockSquadRunner.__call__(config, prompt, agent_def, sandbox_id, extra_tool_metad
    | 5. publish PLANNER_INVOKED | EXECUTOR_INVOKED |
    |            VERIFIER_INVOKED | EVALUATOR_INVOKED
    |
-   | 6. dispatch on agent_def.agent_kind.value:
+   | 6. dispatch on agent_def.name:
    |       "planner"   -&gt; _run_planner(metadata, emit)
    |       "executor"  -&gt; _run_executor(prompt, metadata, emit)
    |       "verifier"  -&gt; _run_verifier(prompt, metadata, emit)

@@ -29,35 +29,57 @@ from task_center_runner.scenarios.base import ScenarioBase, ScenarioContext, Too
 
 _AUTO_SQUASH_WRITE_COUNT = AUTO_SQUASH_MAX_DEPTH + 4
 
-_AUTO_SQUASH_PLAN = {
-    "plan_spec": (
-        "Drive the sandbox toolkit through enough write/edit calls to cross "
-        "the OCC auto-squash depth threshold and capture commit-resume "
-        "timing evidence."
-    ),
-    "evaluation_criteria": [
-        "Auto-squash is triggered naturally by public mutations.",
-        "Final committed contents match across read_file and shell readback.",
-        "Intentional missing-anchor edit reports a conflict with the same "
-        "shape as the synchronous baseline.",
-    ],
-    "tasks": [
-        {
-            "id": "auto_squash_commit_resume_probe",
-            "agent_name": "executor",
-            "deps": [],
-        },
-    ],
-    "task_specs": {
-        "auto_squash_commit_resume_probe": (
-            "Run the auto-squash commit-resume probe: "
-            f"{_AUTO_SQUASH_WRITE_COUNT} sequential writes to cross the "
-            "depth threshold, post-threshold edits, interleaved reads, a "
-            "shell readback, and one intentional missing-anchor "
-            "edit conflict."
+def _auto_squash_plan() -> dict[str, object]:
+    return {
+        "plan_spec": (
+            "Drive the sandbox toolkit through enough write/edit calls to cross "
+            "the OCC auto-squash depth threshold while keeping at least two "
+            "generator work streams active after seeding."
         ),
-    },
-}
+        "evaluation_criteria": [
+            "Auto-squash is triggered naturally by public mutations.",
+            "The sequential depth-building chain crosses the squash threshold.",
+            "A disjoint independent generator runs alongside the depth chain.",
+            "Final committed contents match across read_file and shell readback.",
+            "Intentional missing-anchor edit reports a conflict with the same "
+            "shape as the synchronous baseline.",
+        ],
+        "tasks": [
+            {"id": "auto_squash_seed", "agent_name": "executor", "deps": []},
+            {"id": "auto_squash_squash_a", "agent_name": "executor", "deps": ["auto_squash_seed"]},
+            {"id": "auto_squash_independent", "agent_name": "executor", "deps": ["auto_squash_seed"]},
+            {"id": "auto_squash_squash_b", "agent_name": "executor", "deps": ["auto_squash_squash_a"]},
+            {
+                "id": "auto_squash_reconcile",
+                "agent_name": "executor",
+                "deps": ["auto_squash_squash_b", "auto_squash_independent"],
+            },
+        ],
+        "task_specs": {
+            "auto_squash_seed": (
+                "ACTION auto_squash_seed. Initialize directories for the "
+                "auto-squash fan-out run."
+            ),
+            "auto_squash_squash_a": (
+                "ACTION auto_squash_squash_a. Run the first sequential write "
+                "slice for the depth-building chain."
+            ),
+            "auto_squash_independent": (
+                "ACTION auto_squash_independent. Run disjoint read/write work "
+                "concurrently with the depth-building chain."
+            ),
+            "auto_squash_squash_b": (
+                "ACTION auto_squash_squash_b. Continue the depth-building "
+                f"chain until {_AUTO_SQUASH_WRITE_COUNT} public writes cross "
+                "the auto-squash threshold."
+            ),
+            "auto_squash_reconcile": (
+                "ACTION auto_squash_reconcile. Aggregate write-slice "
+                "fragments, perform post-threshold edits/readbacks, emit the "
+                "intentional conflict, and write summary.json."
+            ),
+        },
+    }
 
 
 class AutoSquashCommitResume(ScenarioBase):
@@ -75,10 +97,21 @@ class AutoSquashCommitResume(ScenarioBase):
     )
 
     def planner_response(self, ctx: ScenarioContext) -> ToolCallSpec:  # noqa: ARG002
-        return ToolCallSpec(submit_plan_closes_goal, dict(_AUTO_SQUASH_PLAN))
+        return ToolCallSpec(submit_plan_closes_goal, _auto_squash_plan())
 
-    def executor_actions(self, ctx: ScenarioContext) -> Sequence[str]:  # noqa: ARG002
-        return ("auto_squash_commit_resume_probe",)
+    def executor_actions(self, ctx: ScenarioContext) -> Sequence[str]:
+        context_message = ctx.context_message or ctx.prompt or ""
+        if "ACTION auto_squash_seed" in context_message:
+            return ("auto_squash_seed",)
+        if "ACTION auto_squash_squash_a" in context_message:
+            return ("auto_squash_squash_a",)
+        if "ACTION auto_squash_squash_b" in context_message:
+            return ("auto_squash_squash_b",)
+        if "ACTION auto_squash_independent" in context_message:
+            return ("auto_squash_independent",)
+        if "ACTION auto_squash_reconcile" in context_message:
+            return ("auto_squash_reconcile",)
+        return ()
 
     def evaluator_response(self, ctx: ScenarioContext) -> ToolCallSpec:
         return ToolCallSpec(

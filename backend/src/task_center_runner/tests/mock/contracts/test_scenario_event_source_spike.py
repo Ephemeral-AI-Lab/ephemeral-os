@@ -31,7 +31,7 @@ from typing import Any
 
 import pytest
 
-from agents import AgentDefinition, AgentKind, AgentType
+from agents import AgentDefinition, AgentRole, AgentType
 from engine.api import run_ephemeral_agent
 from message.events import StreamEvent, ToolExecutionCompletedEvent
 from runtime.app_factory import RuntimeConfig, model_store
@@ -86,7 +86,7 @@ def _spike_agent_def(*, tools: list[str], limit: int = 16) -> AgentDefinition:
         tool_call_limit=limit,
         terminals=["submit_advisor_feedback"],
         allowed_tools=tools,
-        agent_kind=AgentKind.ADVISOR,
+        role=AgentRole.HELPER,
         agent_type=AgentType.AGENT,
         model="inherit",
     )

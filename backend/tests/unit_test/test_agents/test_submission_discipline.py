@@ -34,7 +34,7 @@ def _main_profile_mds() -> list[pathlib.Path]:
     out: list[pathlib.Path] = []
     for md_path in _MAIN_PROFILE_DIR.glob("*.md"):
         text = md_path.read_text(encoding="utf-8")
-        if "agent_kind" not in text:
+        if "role" not in text:
             continue
         out.append(md_path)
     return out

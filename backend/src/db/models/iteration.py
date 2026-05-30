@@ -47,7 +47,7 @@ class IterationRecord(Base):
     # Denormalized projections from this segment's *passing* harness graph at
     # close time. Both null while open and on failed close. Used by the
     # context engine's ``planner`` recipe for prior-segment context.
-    task_specification: Mapped[str | None] = mapped_column(
+    plan_spec: Mapped[str | None] = mapped_column(
         Text, nullable=True
     )
     task_summary: Mapped[str | None] = mapped_column(Text, nullable=True)

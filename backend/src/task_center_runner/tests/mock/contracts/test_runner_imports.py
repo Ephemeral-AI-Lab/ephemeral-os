@@ -13,7 +13,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from agents import AgentDefinition, AgentKind
+from agents import AgentDefinition, AgentRole
 from agents import list_definitions
 from task_center_runner import RunReport, run_scenario
 from task_center_runner.audit.bus import AuditEventBus
@@ -95,7 +95,7 @@ def test_prompt_inspector_accepts_current_failed_attempt_heading(
         agent_def=AgentDefinition(
             name="planner",
             description="test planner",
-            agent_kind=AgentKind.PLANNER,
+            role=AgentRole.PLANNER,
             terminals=["submit_plan_closes_goal", "submit_plan_defers_goal"],
             tool_call_limit=10,
         ),
@@ -139,7 +139,7 @@ def test_prompt_inspector_accepts_current_previous_iteration_sections(
         agent_def=AgentDefinition(
             name="planner",
             description="test planner",
-            agent_kind=AgentKind.PLANNER,
+            role=AgentRole.PLANNER,
             terminals=["submit_plan_closes_goal", "submit_plan_defers_goal"],
             tool_call_limit=10,
         ),
@@ -175,7 +175,7 @@ def test_prompt_inspector_accepts_planner_without_defer_terminal() -> None:
         agent_def=AgentDefinition(
             name="planner",
             description="test full-only planner",
-            agent_kind=AgentKind.PLANNER,
+            role=AgentRole.PLANNER,
             terminals=["submit_plan_closes_goal"],
             tool_call_limit=10,
         ),

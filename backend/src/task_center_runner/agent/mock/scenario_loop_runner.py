@@ -45,6 +45,14 @@ if TYPE_CHECKING:
     from task_center_runner.scenarios.base import Scenario
 
 
+_HIGH_VOLUME_MOCK_TOOL_CALL_LIMIT = 5_000
+_HIGH_VOLUME_SCENARIO_PREFIXES = (
+    "sandbox.background_",
+    "sandbox.complex_project_build",
+)
+_HIGH_VOLUME_SCENARIO_NAMES = frozenset({"sandbox.ephemeral_workspace_cancellation"})
+
+
 class _UnusedApiClient:
     """``event_source`` short-circuits the loop's provider call, so the api_client
     ``spawn_agent`` builds is never streamed from. A stub keeps spawn cheap and
@@ -117,6 +125,7 @@ class ScenarioLoopRunner:
 
         if agent_def is None:
             raise RuntimeError("ScenarioLoopRunner requires agent_def.")
+        agent_def = self._agent_def_for_loop(agent_def)
 
         md = extra_tool_metadata or {}
         resolved_task_id = task_id or str(_md_get(md, "task_center_task_id") or "")
@@ -149,6 +158,28 @@ class ScenarioLoopRunner:
             initial_messages=initial_messages,
         )
 
+    def _agent_def_for_loop(self, agent_def: "AgentDefinition") -> "AgentDefinition":
+        """Give migrated high-volume mock scenarios enough loop budget.
+
+        The mock harness is deliberately deterministic and can issue thousands
+        of scripted tool calls in one executor run. The production hard ceiling
+        still exists; this only raises the scenario-local executor profile so
+        the real query loop, not ``MockSquadRunner``, owns those calls.
+        """
+        if agent_def.name != "executor":
+            return agent_def
+        scenario_name = self._scenario.name
+        if not (
+            scenario_name in _HIGH_VOLUME_SCENARIO_NAMES
+            or scenario_name.startswith(_HIGH_VOLUME_SCENARIO_PREFIXES)
+        ):
+            return agent_def
+        if agent_def.tool_call_limit >= _HIGH_VOLUME_MOCK_TOOL_CALL_LIMIT:
+            return agent_def
+        return agent_def.model_copy(
+            update={"tool_call_limit": _HIGH_VOLUME_MOCK_TOOL_CALL_LIMIT}
+        )
+
     # -- audit-bus records (RunReport observability) ------------------------
 
     def _publish_launch(
@@ -164,7 +195,7 @@ class ScenarioLoopRunner:
                 task_id=task_id,
                 attempt_id=attempt_id,
                 agent_name=agent_def.name,
-                role=str(agent_def.agent_kind.value or ""),
+                role=agent_def.name,
                 prompt_preview=prompt[:500],
             ).as_dict(),
         )
@@ -210,7 +241,9 @@ class ScenarioLoopRunner:
         explorer sub-agents are spawned inside the loop), so those branches cover
         every inspected agent.
         """
-        role = str(agent_def.agent_kind.value or "")
+        # Dispatch by profile name: executor/verifier share the generator role
+        # but render distinct context envelopes.
+        role = agent_def.name
         checks: dict[str, bool]
         reason: str
         active_terminals = set(

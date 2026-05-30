@@ -1,8 +1,7 @@
 """Probe for ``sandbox.high_concurrency_layerstack_overlay_occ``.
 
-The scenario owns the DAG shape; this module owns the sandbox workload. It is
-split from ``MockSquadRunner`` so the runner remains dispatch glue while the
-capacity workload can grow without bloating the central mock runner.
+The scenario owns the DAG shape; this module owns the sandbox workload so the
+ScenarioLoopRunner bridge stays thin while the capacity workload can grow.
 """
 
 from __future__ import annotations

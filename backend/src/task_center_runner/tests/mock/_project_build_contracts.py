@@ -57,6 +57,7 @@ _SUBMISSION_TOOL_NAMES = {
     "submit_verification_success",
     "submit_verification_failure",
 }
+_NON_PROBE_TOOL_NAMES = _SUBMISSION_TOOL_NAMES | {"ask_advisor"}
 
 _DIRECT_FILE_TOOLS = ("read_file", "write_file", "edit_file")
 _PROJECT_BUILD_REQUIRED_TOOLS = (*_DIRECT_FILE_TOOLS, "shell")
@@ -421,12 +422,12 @@ async def _assert_complex_build_contract(
         assert top_key in perf, f"perf.json missing {top_key!r}: keys={list(perf.keys())}"
 
     probe_tool_calls = [
-        c for c in report.tool_calls if c.tool_name not in _SUBMISSION_TOOL_NAMES
+        c for c in report.tool_calls if c.tool_name not in _NON_PROBE_TOOL_NAMES
     ]
     perf_total_calls = int(perf["tool_use"].get("total_calls") or 0)
     assert abs(perf_total_calls - len(probe_tool_calls)) <= 5, (
         f"perf.tool_use.total_calls={perf_total_calls} vs "
-        f"probe-toolkit-calls={len(probe_tool_calls)} "
+        f"probe-tool-calls={len(probe_tool_calls)} "
         f"(report.tool_calls={len(report.tool_calls)})"
     )
 

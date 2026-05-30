@@ -10,6 +10,8 @@ import pytest
 from pydantic import BaseModel, RootModel
 
 from engine.background.dispatch import (
+    DISABLE_SANDBOX_HEARTBEAT_INPUT_KEY,
+    SANDBOX_INVOCATION_ID_INPUT_KEY,
     dispatch_background_tool_call,
     launch_background_tool,
 )
@@ -38,6 +40,7 @@ from message.events import (
     ToolUseDeltaEvent,
 )
 from sandbox.shared.models import Intent
+from tools.sandbox._lib.context import SANDBOX_CONTEXT
 from tools._framework.core.base import (
     BaseTool,
     ToolExecutionContextService,
@@ -1113,6 +1116,119 @@ async def test_background_tool_runs_hooks_and_reports_failure() -> None:
         "prehook denied for test"
     )
     assert tool.seen == []
+
+
+async def test_background_launch_honors_internal_sandbox_invocation_id() -> None:
+    class _BackgroundSandboxTool(_EchoTool):
+        name = "background_sandbox_echo"
+        background = "optional"
+        context_requirements = (SANDBOX_CONTEXT,)
+
+    registry = ToolRegistry()
+    registry.register(_BackgroundSandboxTool())
+    manager = BackgroundTaskSupervisor()
+    metadata = ExecutionMetadata(sandbox_id="sandbox-1", agent_run_id="agent-a")
+    captured: dict[str, object] = {}
+
+    async def _execute_tool_call(
+        tool_name: str,
+        tool_use_id: str,
+        tool_input: dict[str, object],
+        extra_metadata=None,
+    ) -> ToolResultBlock:
+        captured["tool_name"] = tool_name
+        captured["tool_input"] = dict(tool_input)
+        captured["extra_metadata"] = extra_metadata
+        return ToolResultBlock(tool_use_id=tool_use_id, content="ok")
+
+    tool_result, bg_event, reject_event = launch_background_tool(
+        tool_registry=registry,
+        tool_metadata=metadata,
+        background_tasks=manager,
+        tool_use=ToolUseBlock(
+            tool_use_id="toolu_bg",
+            name="background_sandbox_echo",
+            input={
+                "value": "hi",
+                "background": True,
+                SANDBOX_INVOCATION_ID_INPUT_KEY: "invocation-fixed",
+                DISABLE_SANDBOX_HEARTBEAT_INPUT_KEY: True,
+            },
+        ),
+        execute_tool_call=_execute_tool_call,
+    )
+
+    await asyncio.sleep(0)
+
+    assert tool_result.is_error is False
+    assert bg_event is not None
+    assert reject_event is None
+    assert captured["tool_input"] == {"value": "hi"}
+    extra = captured["extra_metadata"]
+    assert isinstance(extra, ExecutionMetadata)
+    assert extra.sandbox_invocation_id == "invocation-fixed"
+    tracked = manager.get_task("bg_1")
+    assert tracked is not None
+    assert tracked.sandbox_invocation_id == "invocation-fixed"
+    assert tracked.heartbeat_enabled is False
+    assert manager._heartbeat_task is None
+    await manager.cancel_all()
+
+
+async def test_background_launch_keeps_heartbeat_when_invocation_id_not_pinned() -> None:
+    class _BackgroundSandboxTool(_EchoTool):
+        name = "background_sandbox_echo"
+        background = "optional"
+        context_requirements = (SANDBOX_CONTEXT,)
+
+    registry = ToolRegistry()
+    registry.register(_BackgroundSandboxTool())
+    manager = BackgroundTaskSupervisor()
+    metadata = ExecutionMetadata(sandbox_id="sandbox-1", agent_run_id="agent-a")
+    captured: dict[str, object] = {}
+
+    async def _execute_tool_call(
+        tool_name: str,
+        tool_use_id: str,
+        tool_input: dict[str, object],
+        extra_metadata=None,
+    ) -> ToolResultBlock:
+        captured["tool_name"] = tool_name
+        captured["tool_input"] = dict(tool_input)
+        captured["extra_metadata"] = extra_metadata
+        return ToolResultBlock(tool_use_id=tool_use_id, content="ok")
+
+    tool_result, bg_event, reject_event = launch_background_tool(
+        tool_registry=registry,
+        tool_metadata=metadata,
+        background_tasks=manager,
+        tool_use=ToolUseBlock(
+            tool_use_id="toolu_bg",
+            name="background_sandbox_echo",
+            input={
+                "value": "hi",
+                "background": True,
+                DISABLE_SANDBOX_HEARTBEAT_INPUT_KEY: True,
+            },
+        ),
+        execute_tool_call=_execute_tool_call,
+    )
+
+    await asyncio.sleep(0)
+
+    assert tool_result.is_error is False
+    assert bg_event is not None
+    assert reject_event is None
+    assert captured["tool_input"] == {"value": "hi"}
+    extra = captured["extra_metadata"]
+    assert isinstance(extra, ExecutionMetadata)
+    assert extra.sandbox_invocation_id
+    tracked = manager.get_task("bg_1")
+    assert tracked is not None
+    assert tracked.sandbox_invocation_id
+    assert tracked.heartbeat_enabled is True
+    assert manager._heartbeat_task is not None
+    await manager.cancel_all()
 
 
 async def test_background_dispatch_exposes_conversation_messages_to_prehooks() -> None:

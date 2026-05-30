@@ -21,7 +21,7 @@ import pytest
 
 from agents import (
     AgentDefinition,
-    AgentKind,
+    AgentRole,
     register_definition,
     unregister_definition,
 )
@@ -40,7 +40,7 @@ def fake_subagent_definition() -> Any:
             name=name,
             description="Test subagent used by subagent_retry suite.",
             agent_type="subagent",
-            agent_kind=AgentKind.EXPLORER,
+            role=AgentRole.SUBAGENT,
             context_recipe="subagent_recipe",
             terminals=["submit_exploration_result"],
             tool_call_limit=10,

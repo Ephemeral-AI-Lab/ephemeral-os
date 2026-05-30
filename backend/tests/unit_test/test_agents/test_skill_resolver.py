@@ -10,7 +10,7 @@ import pytest
 
 from agents import (
     AgentDefinition,
-    AgentKind,
+    AgentRole,
     list_definitions,
     register_definition,
     unregister_definition,
@@ -50,7 +50,7 @@ def _make_definition(
     return AgentDefinition(
         name=name,
         description=name,
-        agent_kind=AgentKind.PLANNER,
+        role=AgentRole.PLANNER,
         context_recipe=recipe,
         skill=skill,
         terminals=terminals or ["submit_x"],

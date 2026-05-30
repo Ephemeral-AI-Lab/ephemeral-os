@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from agents import AgentKind, load_agents_dir
+from agents import AgentRole, load_agents_dir
 
 BACKEND_ROOT = Path(__file__).resolve().parents[3]
 PLANNER_DIR = BACKEND_ROOT / "src" / "agents" / "profile" / "main"
@@ -21,7 +21,7 @@ def _load_planner():
 
 def test_single_planner_definition_loads():
     planner = _load_planner()
-    assert planner.agent_kind == AgentKind.PLANNER
+    assert planner.role == AgentRole.PLANNER
     assert planner.context_recipe == "planner"
 
 

@@ -230,7 +230,7 @@ async def test_run_scenario_correctness_testing_with_fake_sandbox(
         for attempt in iteration["attempts"]
     ] == ["failed", "passed", "passed"]
     assert delegated["iterations"][0]["deferred_goal_for_next_iteration"]
-    assert delegated["iterations"][1]["creation_reason"] == "partial_continuation"
+    assert delegated["iterations"][1]["creation_reason"] == "deferred_goal_continuation"
 
     planner_reviews = [
         item for item in report.prompt_inspections if item.role == "planner"

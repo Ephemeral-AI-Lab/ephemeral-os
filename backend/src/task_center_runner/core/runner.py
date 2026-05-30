@@ -8,7 +8,7 @@ now happens inside :func:`task_center_runner.core.engine.run_pipeline`.
 What the shim adds on top of the engine:
 
 - Constructs ``RunConfig`` via :func:`build_scenario_config` so the
-  ``MockSquadRunner`` factory, ``MutableMockState``, ``HookSet``, and
+  ``ScenarioLoopRunner`` factory, ``MutableMockState``, ``HookSet``, and
   ``ScenarioLifecycle`` all share state inside one place.
 - Rebuilds the legacy ``RunReport`` view from ``ScenarioLifecycle`` event
   accumulation and the ``PipelineReport`` returned by the engine.
@@ -37,10 +37,7 @@ from task_center_runner.hooks.registry import (
     HookResult,
 )
 from task_center_runner.scenarios.base import Scenario
-from task_center_runner.scenarios.builder import (
-    _event_source_runner_enabled,
-    build_scenario_config,
-)
+from task_center_runner.scenarios.builder import build_scenario_config
 from task_center_runner.agent.mock.definitions import registered_mock_agents  # noqa: F401 — re-export
 from task_center_runner.agent.mock.prompt_inspector import (
     LaunchRecord,
@@ -148,19 +145,14 @@ def _graph_summary(
 
 
 @contextlib.contextmanager
-def _active_mock_model_if_enabled(bundle: TaskCenterStoreBundle, scenario_name: str):
+def _active_mock_model(bundle: TaskCenterStoreBundle):
     """Register a throwaway active model row for the event-source runner path.
 
-    Under ``EOS_MOCK_EVENT_SOURCE_RUNNER`` the mock drives the REAL loop via
-    ``spawn_agent``, which requires an active model registration even though the
-    api_client is never streamed from (the injected ``ScenarioEventSource``
-    short-circuits it). The old ``MockSquadRunner`` never spawned agents, so no
-    row was needed. Gating on the flag keeps the default-off path untouched; all
-    scenario tests funnel through here, so none need a per-test fixture.
+    The mock drives the REAL loop via ``spawn_agent``, which requires an active
+    model registration even though the api_client is never streamed from (the
+    injected ``ScenarioEventSource`` short-circuits it). All scenario tests
+    funnel through here, so none need a per-test fixture.
     """
-    if not _event_source_runner_enabled(scenario_name):
-        yield
-        return
     from config.model_config import get_active_model_kwargs
     from runtime.app_factory import model_store
 
@@ -207,7 +199,7 @@ async def run_scenario(
 
     Thin shim over :func:`run_pipeline`. The legacy ``RunReport`` view is
     rebuilt from the ``PipelineReport`` plus state accumulated by the
-    ``ScenarioLifecycle`` and the ``MockSquadRunner`` instance captured via
+    ``ScenarioLifecycle`` and the ``ScenarioLoopRunner`` instance captured via
     a wrapped ``runner_factory``.
     """
     owns_stores = stores is None
@@ -226,7 +218,7 @@ async def run_scenario(
     # ``registered_mock_agents`` registers the mock agent definitions for the
     # duration of the run; restore the registry on exit. The original
     # ``run_scenario`` wrapped its core call in this context manager too.
-    with registered_mock_agents(), _active_mock_model_if_enabled(bundle, scenario.name):
+    with registered_mock_agents(), _active_mock_model(bundle):
         config = _dataclasses.replace(config, stores=bundle)
         pipeline_report = await run_pipeline(config)
 

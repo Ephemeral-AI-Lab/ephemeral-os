@@ -30,7 +30,7 @@ class AttemptStore(SyncStoreMixin):
                 stage=AttemptStage.PLAN.value,
                 status=AttemptStatus.RUNNING.value,
                 planner_task_id=None,
-                task_specification=None,
+                plan_spec=None,
                 evaluation_criteria=[],
                 generator_task_ids=[],
                 evaluator_task_id=None,
@@ -73,7 +73,7 @@ class AttemptStore(SyncStoreMixin):
             record = db.get(AttemptRecord, attempt_id)
             if record is None:
                 raise LookupError(f"Attempt {attempt_id!r} not found")
-            record.task_specification = plan_spec
+            record.plan_spec = plan_spec
             record.evaluation_criteria = list(evaluation_criteria)
             record.deferred_goal = deferred_goal_for_next_iteration
             db.commit()
@@ -168,7 +168,7 @@ class AttemptStore(SyncStoreMixin):
             stage=AttemptStage(record.stage),
             status=AttemptStatus(record.status),
             planner_task_id=record.planner_task_id,
-            plan_spec=record.task_specification,
+            plan_spec=record.plan_spec,
             evaluation_criteria=tuple(record.evaluation_criteria or ()),
             generator_task_ids=tuple(record.generator_task_ids or ()),
             evaluator_task_id=record.evaluator_task_id,

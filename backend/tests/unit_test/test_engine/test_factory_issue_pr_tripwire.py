@@ -24,7 +24,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from agents import AgentDefinition, AgentKind, load_agents_dir
+from agents import AgentDefinition, AgentRole, load_agents_dir
 from engine.agent import factory as runtime_agent
 
 
@@ -105,7 +105,7 @@ def test_factory_omits_issue_pr_even_with_files_on_disk(tmp_path, monkeypatch):
         description="planner",
         terminals=["submit_x"],
         tool_call_limit=10,
-        agent_kind=AgentKind.PLANNER,
+        role=AgentRole.PLANNER,
         system_prompt="role body",
     )
     prompt = runtime_agent._build_agent_system_prompt(

@@ -216,7 +216,7 @@ def _build_agent_tool_registry(
     tool_ctx = ToolFactoryContext(
         metadata={
             "agent_name": agent_name,
-            "role": agent_def.agent_kind.value,
+            "role": agent_def.role.value,
             "cwd": config.cwd,
             "sandbox_id": sandbox_id or "",
         },
@@ -268,8 +268,9 @@ def _attach_default_notification_rules(
     """Append default notification rules if not already present.
 
     Every agent has terminals and a ``tool_call_limit`` by invariant, so
-    these rules apply unconditionally. Dedupes by ``rule.name`` so
-    profiles that customize the rule via ``notification_rules`` win.
+    these rules apply unconditionally. Dedupes by ``rule.name`` so a rule
+    already resolved from the profile's ``notification_triggers`` (which run
+    earlier) wins over the same-named default.
     """
     from notification import (
         make_terminal_call_reminder,
@@ -375,7 +376,7 @@ def spawn_agent(
         context_preparers=_build_sandbox_context_preparers(tool_registry, sandbox_id),
     )
     initial_tool_metadata["agent_type"] = agent_def.agent_type.value
-    initial_tool_metadata["role"] = agent_def.agent_kind.value
+    initial_tool_metadata["role"] = agent_def.role.value
 
     notification_rules: list[Any] = []
     if agent_def.notification_triggers:
