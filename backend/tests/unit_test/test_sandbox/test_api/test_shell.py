@@ -106,6 +106,44 @@ async def test_shell_overlay_policy_error_maps_to_rejected_result(
 
 
 @pytest.mark.asyncio
+async def test_shell_dispatch_preserves_argv_command(
+    monkeypatch: pytest.MonkeyPatch,
+    recording_transport_factory,
+) -> None:
+    async def fake_call_daemon_api(sandbox_id, op, args, timeout):
+        del sandbox_id, op, args, timeout
+        return {
+            "success": True,
+            "exit_code": 0,
+            "stdout": "",
+            "stderr": "",
+            "changed_paths": [],
+            "status": "ok",
+            "conflict": None,
+            "conflict_reason": None,
+            "warnings": [],
+            "timings": {"api.shell.total_s": 0.02},
+        }
+
+    del monkeypatch
+    transport = recording_transport_factory(fake_call_daemon_api)
+
+    result = await shell(
+        "sb-shell",
+        ShellRequest(
+            command=("true",),
+            cwd=".",
+            timeout=12,
+            caller=SandboxCaller(agent_id="agent-1"),
+        ),
+        transport=transport,
+    )
+
+    assert result.success is True
+    assert transport.calls[0][2]["command"] == ("true",)
+
+
+@pytest.mark.asyncio
 async def test_shell_rejects_stdin_without_daemon_dispatch(
     monkeypatch: pytest.MonkeyPatch,
     recording_transport_factory,

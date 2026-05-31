@@ -756,24 +756,28 @@ fn require_shell_command(args: &Value) -> Result<Value, DaemonError> {
             "command is required".to_owned(),
         ));
     };
-    if let Some(raw) = command.as_str() {
-        if raw.trim().is_empty() {
-            return Err(DaemonError::InvalidEnvelope(
-                "command is required".to_owned(),
-            ));
-        }
-        return Ok(Value::String(raw.to_owned()));
-    }
     if let Some(parts) = command.as_array() {
         if parts.is_empty() {
             return Err(DaemonError::InvalidEnvelope(
                 "command argv must not be empty".to_owned(),
             ));
         }
+        for (index, part) in parts.iter().enumerate() {
+            let Some(value) = part.as_str() else {
+                return Err(DaemonError::InvalidEnvelope(
+                    "command argv entries must be strings".to_owned(),
+                ));
+            };
+            if index == 0 && value.trim().is_empty() {
+                return Err(DaemonError::InvalidEnvelope(
+                    "command argv[0] must not be empty".to_owned(),
+                ));
+            }
+        }
         return Ok(Value::Array(parts.clone()));
     }
     Err(DaemonError::InvalidEnvelope(
-        "command must be a string or argv list".to_owned(),
+        "command must be an argv list; shell strings are not supported".to_owned(),
     ))
 }
 
@@ -1597,11 +1601,11 @@ mod tests {
     use super::*;
 
     #[test]
-    fn shell_command_accepts_string_without_trimming_payload() {
-        let command = require_shell_command(&json!({"command": "  echo hi  "}))
-            .expect("string shell command is valid");
+    fn shell_command_rejects_string_wire_shape() {
+        let error = require_shell_command(&json!({"command": "echo hi"}))
+            .expect_err("string shell command is rejected");
 
-        assert_eq!(command, json!("  echo hi  "));
+        assert!(error.to_string().contains("argv list"));
     }
 
     #[test]
@@ -1614,8 +1618,9 @@ mod tests {
 
     #[test]
     fn shell_command_rejects_empty_values() {
-        assert!(require_shell_command(&json!({"command": "   "})).is_err());
         assert!(require_shell_command(&json!({"command": []})).is_err());
+        assert!(require_shell_command(&json!({"command": [""]})).is_err());
+        assert!(require_shell_command(&json!({"command": [true]})).is_err());
     }
 
     #[test]

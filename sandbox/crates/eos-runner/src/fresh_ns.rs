@@ -257,31 +257,31 @@ fn shell_argv(args: &serde_json::Value) -> Result<Vec<String>, RunnerError> {
             "shell args require command".to_owned(),
         ));
     };
-    if let Some(command) = command.as_str() {
-        return Ok(vec![
-            "bash".to_owned(),
-            "-lc".to_owned(),
-            command.to_owned(),
-        ]);
-    }
     if let Some(parts) = command.as_array() {
-        let argv: Vec<String> = parts
-            .iter()
-            .map(|part| {
-                part.as_str()
-                    .map(str::to_owned)
-                    .unwrap_or_else(|| part.to_string())
-            })
-            .collect();
-        if argv.is_empty() {
+        if parts.is_empty() {
             return Err(RunnerError::InvalidRequest(
                 "shell command argv must not be empty".to_owned(),
+            ));
+        }
+        let argv: Result<Vec<String>, RunnerError> = parts
+            .iter()
+            .map(|part| match part.as_str() {
+                Some(value) => Ok(value.to_owned()),
+                None => Err(RunnerError::InvalidRequest(
+                    "shell command argv entries must be strings".to_owned(),
+                )),
+            })
+            .collect();
+        let argv = argv?;
+        if argv[0].trim().is_empty() {
+            return Err(RunnerError::InvalidRequest(
+                "shell command argv[0] must not be empty".to_owned(),
             ));
         }
         return Ok(argv);
     }
     Err(RunnerError::InvalidRequest(
-        "shell command must be a string or argv list".to_owned(),
+        "shell command must be an argv list; shell strings are not supported".to_owned(),
     ))
 }
 
@@ -416,10 +416,17 @@ mod tests {
     use std::path::Path;
 
     #[test]
-    fn shell_string_uses_bash_lc() {
+    fn shell_rejects_string_command() {
+        let error = shell_argv(&serde_json::json!({"command": "echo hi"}))
+            .expect_err("string command must be rejected");
+        assert!(error.to_string().contains("argv list"));
+    }
+
+    #[test]
+    fn shell_accepts_argv_command() {
         let argv =
-            shell_argv(&serde_json::json!({"command": "echo hi"})).expect("valid shell argv");
-        assert_eq!(argv, vec!["bash", "-lc", "echo hi"]);
+            shell_argv(&serde_json::json!({"command": ["echo", "hi"]})).expect("valid shell argv");
+        assert_eq!(argv, vec!["echo", "hi"]);
     }
 
     #[test]

@@ -200,7 +200,7 @@ class EditFileResult(GuardedResultBase):
 
 @dataclass(frozen=True, kw_only=True)
 class ShellRequest(SandboxRequestBase):
-    command: str
+    command: str | tuple[str, ...]
     cwd: str | None = None
     timeout: int | None = None
     stdin: str | None = None

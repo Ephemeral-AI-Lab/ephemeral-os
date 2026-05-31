@@ -2,11 +2,14 @@
 """Live Phase 3 Rust daemon benchmark for CP-4s shell/search hot paths.
 
 The harness uploads a locally packaged ``eosd`` into the Docker sandbox, seeds a
-minimal LayerStack fixture, starts the Rust daemon, then measures:
+LayerStack fixture from the image's real workspace, starts the Rust daemon, then
+measures:
 
-* ``api.v1.shell`` no-op latency for string shell and raw argv forms.
+* ``api.v1.shell`` no-op latency for the canonical argv/no-shell form.
 * ``api.v1.shell`` small-write publish latency.
 * ``api.v1.glob`` and ``api.v1.grep`` read-only overlay search latency.
+* 1/3/5/10 concurrent raw-argv ``api.v1.shell`` load for no-op and unique write
+  commands.
 * daemon memory before load, between operation groups, and after drain.
 
 It intentionally records gate failures instead of smoothing them over. CP-4s is
@@ -18,16 +21,18 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import copy
 import hashlib
+import io
 import json
 import os
 import platform
-import shlex
 import sys
+import tarfile
 import time
 import uuid
 from collections.abc import Callable
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Any
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -40,11 +45,11 @@ if str(SCRIPT_DIR) not in sys.path:
 
 from bench_rust_daemon_phase2 import (  # noqa: E402
     LAYER_STACK_ROOT,
+    RUNTIME_ROOT,
     WORKSPACE_ROOT,
     call_tcp,
     read_pid,
     reset_runtime,
-    seed_layer_stack,
     temporary_env,
     upload_artifact,
 )
@@ -57,7 +62,7 @@ from bench_sandbox_e2e import (  # noqa: E402
 )
 
 AGENT_ID = "phase3-cp4s-bench"
-SEARCH_TOKEN = "phase3_cp4s_search_token"
+BASE_LAYER_ID = "B000001-base"
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -69,7 +74,7 @@ def main(argv: list[str] | None = None) -> int:
     print(
         f"wrote {out} "
         f"(cp4s={report['cp4s']['gate_pass']} all={report['gate_pass']} "
-        f"direct_argv={report['cp4s']['gates'].get('direct_argv_noop_70pct_faster_than_phase1')} "
+        f"argv_noop={report['cp4s']['gates'].get('argv_noop_70pct_faster_than_phase1')} "
         f"run_id={report['run_id']})"
     )
     return 0 if report["gate_pass"] else 1
@@ -123,6 +128,22 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
         help="Seconds to wait before the final idle memory sample.",
     )
     parser.add_argument(
+        "--load-concurrency",
+        default="1,3,5,10",
+        help="Comma-separated concurrent command counts for the raw-argv load matrix.",
+    )
+    parser.add_argument(
+        "--load-rounds",
+        type=int,
+        default=10,
+        help="Number of concurrent waves to run per load concurrency level.",
+    )
+    parser.add_argument(
+        "--skip-load",
+        action="store_true",
+        help="Skip the concurrent raw-argv load matrix.",
+    )
+    parser.add_argument(
         "--keep-container",
         action="store_true",
         help="Do not delete a container created by this script.",
@@ -162,10 +183,15 @@ async def run_phase3(args: argparse.Namespace) -> dict[str, Any]:
                 "phase0": str(args.phase0_baseline),
             },
             "samples_per_operation": args.samples,
+            "load": {
+                "concurrency_levels": parse_concurrency_levels(args.load_concurrency),
+                "rounds_per_concurrency": max(0, args.load_rounds),
+                "skipped": bool(args.skip_load),
+            },
         }
         await reset_runtime(bench)
         report["artifact"] = await upload_artifact(bench, args.artifact)
-        await seed_layer_stack(bench)
+        report["layer_stack_seed"] = await seed_layer_stack_from_workspace(bench)
 
         with temporary_env("EOS_SANDBOX_RUNTIME", "rust"):
             from sandbox.host import daemon_client
@@ -196,28 +222,10 @@ async def run_phase3(args: argparse.Namespace) -> dict[str, Any]:
 
             memory_samples = [await sample_daemon_memory(bench, "idle_before_load")]
             operations: dict[str, Any] = {}
-            operations["noop_shell"] = await measure_operation(
+            operations["noop_argv"] = await measure_operation(
                 daemon_client,
                 endpoint,
-                "noop_shell",
-                args.samples,
-                lambda index, invocation_id: (
-                    "api.v1.shell",
-                    {
-                        "command": "true",
-                        "cwd": ".",
-                        "timeout_seconds": 10,
-                        "invocation_id": invocation_id,
-                    },
-                ),
-                expect_noop_shell,
-            )
-            memory_samples.append(await sample_daemon_memory(bench, "after_noop_shell"))
-
-            operations["direct_argv_noop"] = await measure_operation(
-                daemon_client,
-                endpoint,
-                "direct_argv_noop",
+                "noop_argv",
                 args.samples,
                 lambda _index, invocation_id: (
                     "api.v1.shell",
@@ -230,7 +238,7 @@ async def run_phase3(args: argparse.Namespace) -> dict[str, Any]:
                 ),
                 expect_noop_shell,
             )
-            memory_samples.append(await sample_daemon_memory(bench, "after_direct_argv_noop"))
+            memory_samples.append(await sample_daemon_memory(bench, "after_noop_argv"))
 
             operations["small_write"] = await measure_operation(
                 daemon_client,
@@ -267,7 +275,7 @@ async def run_phase3(args: argparse.Namespace) -> dict[str, Any]:
                 lambda _index, invocation_id: (
                     "api.v1.grep",
                     {
-                        "pattern": SEARCH_TOKEN,
+                        "pattern": "README",
                         "path": ".",
                         "output_mode": "content",
                         "offset": 0,
@@ -277,9 +285,25 @@ async def run_phase3(args: argparse.Namespace) -> dict[str, Any]:
                         "invocation_id": invocation_id,
                     },
                 ),
-                lambda response: expect_search_count(response, args.samples),
+                lambda response: expect_search_count(response, 1),
             )
             memory_samples.append(await sample_daemon_memory(bench, "after_grep"))
+            if args.skip_load:
+                report["load"]["gate_pass"] = True
+                report["load"]["operations"] = {}
+                report["load"]["evaluation"] = {"skipped": True, "gate_pass": True}
+            else:
+                report["load"] = await measure_load_matrix(
+                    daemon_client,
+                    endpoint,
+                    concurrencies=parse_concurrency_levels(args.load_concurrency),
+                    rounds=max(0, args.load_rounds),
+                )
+                report["load"]["evaluation"] = evaluate_load_matrix(report["load"], phase1)
+                report["load"]["gate_pass"] = bool(
+                    report["load"]["evaluation"]["gate_pass"]
+                )
+            memory_samples.append(await sample_daemon_memory(bench, "after_load_matrix"))
             await asyncio.sleep(max(0.0, float(args.drain_seconds)))
             memory_samples.append(await sample_daemon_memory(bench, "idle_after_drain"))
 
@@ -297,20 +321,233 @@ async def run_phase3(args: argparse.Namespace) -> dict[str, Any]:
             and report["ready"].get("ready") is True
             and report["final_state"]["gate_pass"]
             and report["cp4s"]["gate_pass"]
+            and report["load"]["gate_pass"]
         )
         return report
     finally:
         await bench.close(keep=args.keep_container)
 
 
+async def seed_layer_stack_from_workspace(bench: DockerBench) -> dict[str, Any]:
+    workspace_archive = await read_workspace_archive(bench)
+    tar_stream, seed = layer_stack_archive_from_workspace(workspace_archive)
+    await bench.adapter.put_archive(
+        bench.sandbox_id,
+        tar_stream=tar_stream,
+        dest_dir="/",
+    )
+    return seed
+
+
+async def read_workspace_archive(bench: DockerBench) -> bytes:
+    def _run() -> bytes:
+        client = bench.adapter._get_client()  # Docker-only benchmark helper.
+        container = client.containers.get(bench.sandbox_id)
+        chunks, _stat = container.get_archive(WORKSPACE_ROOT)
+        return b"".join(chunks)
+
+    return await asyncio.to_thread(_run)
+
+
+def layer_stack_archive_from_workspace(workspace_archive: bytes) -> tuple[bytes, dict[str, Any]]:
+    manifest = {
+        "schema_version": 1,
+        "version": 1,
+        "layers": [
+            {
+                "layer_id": BASE_LAYER_ID,
+                "path": f"layers/{BASE_LAYER_ID}",
+            }
+        ],
+    }
+    binding = {
+        "workspace_root": WORKSPACE_ROOT,
+        "layer_stack_root": LAYER_STACK_ROOT,
+        "active_manifest_version": 1,
+        "active_root_hash": "phase3-active-root",
+        "base_manifest_version": 1,
+        "base_root_hash": "phase3-base-root",
+    }
+    base_prefix = f"{LAYER_STACK_ROOT.strip('/')}/layers/{BASE_LAYER_ID}"
+    raw = io.BytesIO()
+    stats: dict[str, Any] = {
+        "source_workspace": WORKSPACE_ROOT,
+        "base_layer_id": BASE_LAYER_ID,
+        "file_count": 0,
+        "dir_count": 0,
+        "symlink_count": 0,
+        "other_count": 0,
+        "file_bytes": 0,
+        "source_archive_bytes": len(workspace_archive),
+    }
+    added_dirs: set[str] = set()
+
+    with tarfile.open(fileobj=raw, mode="w") as out:
+        for directory in (
+            RUNTIME_ROOT,
+            LAYER_STACK_ROOT,
+            f"{LAYER_STACK_ROOT}/layers",
+            f"{LAYER_STACK_ROOT}/layers/{BASE_LAYER_ID}",
+            f"{LAYER_STACK_ROOT}/staging",
+            WORKSPACE_ROOT,
+        ):
+            add_tar_dir(out, directory, added_dirs)
+        add_tar_file(
+            out,
+            f"{LAYER_STACK_ROOT}/manifest.json",
+            json.dumps(manifest, indent=2, sort_keys=True).encode(),
+            added_dirs,
+        )
+        add_tar_file(
+            out,
+            f"{LAYER_STACK_ROOT}/workspace.json",
+            json.dumps(binding, indent=2, sort_keys=True).encode(),
+            added_dirs,
+        )
+
+        with tarfile.open(fileobj=io.BytesIO(workspace_archive), mode="r:*") as source:
+            for member in source:
+                rel = workspace_member_relpath(member.name)
+                if rel is None or rel == "":
+                    continue
+                target = f"{base_prefix}/{rel}"
+                add_parent_tar_dirs(out, target, added_dirs)
+                copied = copy_tar_info(member, target)
+                if copied.isdir():
+                    add_tar_dir(out, f"/{target}", added_dirs)
+                    stats["dir_count"] += 1
+                elif copied.isfile():
+                    extracted = source.extractfile(member)
+                    if extracted is None:
+                        stats["other_count"] += 1
+                        continue
+                    out.addfile(copied, extracted)
+                    stats["file_count"] += 1
+                    stats["file_bytes"] += int(copied.size)
+                elif copied.issym():
+                    out.addfile(copied)
+                    stats["symlink_count"] += 1
+                elif copied.islnk():
+                    copied.linkname = rewrite_workspace_linkname(copied.linkname, base_prefix)
+                    out.addfile(copied)
+                    stats["other_count"] += 1
+                else:
+                    out.addfile(copied)
+                    stats["other_count"] += 1
+
+    payload = raw.getvalue()
+    stats["layer_stack_archive_bytes"] = len(payload)
+    return payload, stats
+
+
+def workspace_member_relpath(name: str) -> str | None:
+    normalized = PurePosixPath(name).as_posix().lstrip("./").lstrip("/")
+    root = WORKSPACE_ROOT.strip("/")
+    if normalized in {"", "."}:
+        return ""
+    if normalized == root:
+        return ""
+    prefix = f"{root}/"
+    if normalized.startswith(prefix):
+        return normalized[len(prefix) :]
+    return None
+
+
+def rewrite_workspace_linkname(linkname: str, base_prefix: str) -> str:
+    rel = workspace_member_relpath(linkname)
+    if rel is None:
+        return linkname
+    return base_prefix if rel == "" else f"{base_prefix}/{rel}"
+
+
+def copy_tar_info(member: tarfile.TarInfo, name: str) -> tarfile.TarInfo:
+    copied = copy.copy(member)
+    copied.name = name
+    copied.uid = 0
+    copied.gid = 0
+    copied.uname = ""
+    copied.gname = ""
+    copied.mtime = 0
+    return copied
+
+
+def add_parent_tar_dirs(
+    tar: tarfile.TarFile,
+    target_name: str,
+    added: set[str],
+) -> None:
+    parent = PurePosixPath(target_name).parent
+    current = PurePosixPath("")
+    for part in parent.parts:
+        current = current / part
+        add_tar_dir(tar, f"/{current.as_posix()}", added)
+
+
+def add_tar_dir(tar: tarfile.TarFile, path: str, added: set[str]) -> None:
+    name = path.strip("/")
+    if not name or name in added:
+        return
+    add_parent_tar_dirs(tar, name, added)
+    info = tarfile.TarInfo(name)
+    info.type = tarfile.DIRTYPE
+    info.mtime = 0
+    info.uid = 0
+    info.gid = 0
+    info.uname = ""
+    info.gname = ""
+    info.mode = 0o755
+    tar.addfile(info)
+    added.add(name)
+
+
+def add_tar_file(
+    tar: tarfile.TarFile,
+    path: str,
+    payload: bytes,
+    added: set[str],
+) -> None:
+    name = path.strip("/")
+    add_parent_tar_dirs(tar, name, added)
+    info = tarfile.TarInfo(name)
+    info.size = len(payload)
+    info.mtime = 0
+    info.uid = 0
+    info.gid = 0
+    info.uname = ""
+    info.gname = ""
+    info.mode = 0o644
+    tar.addfile(info, io.BytesIO(payload))
+
+
 def small_write_request(index: int, invocation_id: str) -> tuple[str, dict[str, Any]]:
     filename = f"phase3-small-{index:03d}.txt"
-    content = f"phase3 sample {index} {SEARCH_TOKEN}\n"
-    command = f"printf '%s' {shlex.quote(content)} > {shlex.quote(filename)}"
     return (
         "api.v1.shell",
         {
-            "command": command,
+            "command": ["touch", filename],
+            "cwd": ".",
+            "timeout_seconds": 10,
+            "invocation_id": invocation_id,
+            "expected_path": filename,
+        },
+    )
+
+
+def load_small_write_request(
+    index: int,
+    concurrency: int,
+    round_index: int,
+    slot: int,
+    invocation_id: str,
+) -> tuple[str, dict[str, Any]]:
+    filename = (
+        f"phase3-load-c{concurrency:02d}-r{round_index:03d}-"
+        f"s{slot:02d}-{index:04d}.txt"
+    )
+    return (
+        "api.v1.shell",
+        {
+            "command": ["touch", filename],
             "cwd": ".",
             "timeout_seconds": 10,
             "invocation_id": invocation_id,
@@ -356,6 +593,144 @@ async def measure_operation(
             }
         )
     return summarize_operation(samples)
+
+
+async def measure_load_matrix(
+    daemon_client: Any,
+    endpoint: Any,
+    *,
+    concurrencies: list[int],
+    rounds: int,
+) -> dict[str, Any]:
+    operations: dict[str, dict[str, Any]] = {"noop_argv": {}, "small_write": {}}
+    for concurrency in concurrencies:
+        operations["noop_argv"][str(concurrency)] = await measure_concurrent_operation(
+            daemon_client,
+            endpoint,
+            name="load_noop_argv",
+            operation_key="noop_argv",
+            concurrency=concurrency,
+            rounds=rounds,
+            build_request=lambda _index, _concurrency, _round, _slot, invocation_id: (
+                "api.v1.shell",
+                {
+                    "command": ["true"],
+                    "cwd": ".",
+                    "timeout_seconds": 10,
+                    "invocation_id": invocation_id,
+                },
+            ),
+            expect=expect_noop_shell,
+        )
+        operations["small_write"][str(concurrency)] = await measure_concurrent_operation(
+            daemon_client,
+            endpoint,
+            name="load_small_write",
+            operation_key="small_write",
+            concurrency=concurrency,
+            rounds=rounds,
+            build_request=load_small_write_request,
+            expect=expect_small_write,
+        )
+    return {
+        "skipped": False,
+        "concurrency_levels": concurrencies,
+        "rounds_per_concurrency": rounds,
+        "operations": operations,
+    }
+
+
+async def measure_concurrent_operation(
+    daemon_client: Any,
+    endpoint: Any,
+    *,
+    name: str,
+    operation_key: str,
+    concurrency: int,
+    rounds: int,
+    build_request: Callable[[int, int, int, int, str], tuple[str, dict[str, Any]]],
+    expect: Callable[[dict[str, Any]], bool],
+) -> dict[str, Any]:
+    samples: list[dict[str, Any]] = []
+    waves: list[dict[str, Any]] = []
+    if concurrency <= 0 or rounds <= 0:
+        return {
+            **summarize_operation(samples),
+            "concurrency": concurrency,
+            "rounds": rounds,
+            "wave_wall_ms": summarize_samples([]),
+            "throughput_cmd_s": 0.0,
+            "waves": waves,
+        }
+
+    async def run_one(round_index: int, slot: int) -> dict[str, Any]:
+        index = round_index * concurrency + slot
+        invocation_id = (
+            f"phase3-{name}-c{concurrency:02d}-r{round_index:03d}-"
+            f"s{slot:02d}-{uuid.uuid4().hex[:8]}"
+        )
+        op, args = build_request(index, concurrency, round_index, slot, invocation_id)
+        expected_path = args.pop("expected_path", None)
+        started = time.perf_counter()
+        response = await call_tcp(
+            daemon_client,
+            endpoint,
+            daemon_request(op, args, invocation_id),
+        )
+        host_wall_ms = elapsed_ms(started)
+        ok = expect(response)
+        if expected_path is not None:
+            ok = ok and expected_path in response.get("changed_paths", [])
+        timings_ms = timing_ms(response)
+        return {
+            "index": index,
+            "round": round_index,
+            "slot": slot,
+            "concurrency": concurrency,
+            "invocation_id": invocation_id,
+            "op": op,
+            "host_wall_ms": host_wall_ms,
+            "ok": ok,
+            "timings_ms": timings_ms,
+            "derived_ms": derived_timings_ms(operation_key, host_wall_ms, timings_ms),
+            "response": trim_response(response),
+        }
+
+    for round_index in range(rounds):
+        wave_started = time.perf_counter()
+        wave_samples = await asyncio.gather(
+            *(run_one(round_index, slot) for slot in range(concurrency))
+        )
+        wave_wall_ms = elapsed_ms(wave_started)
+        samples.extend(wave_samples)
+        waves.append(
+            {
+                "round": round_index,
+                "concurrency": concurrency,
+                "wave_wall_ms": wave_wall_ms,
+                "success_count": sum(1 for sample in wave_samples if sample["ok"]),
+                "sample_count": len(wave_samples),
+            }
+        )
+
+    summary = summarize_operation(samples)
+    total_wave_wall_ms = sum(float(wave["wave_wall_ms"]) for wave in waves)
+    summary.update(
+        {
+            "concurrency": concurrency,
+            "rounds": rounds,
+            "wave_wall_ms": summarize_samples(
+                [float(wave["wave_wall_ms"]) for wave in waves]
+            ),
+            "throughput_cmd_s": (
+                len(samples) / (total_wave_wall_ms / 1000.0)
+                if total_wave_wall_ms > 0.0
+                else 0.0
+            ),
+            "waves": waves,
+        }
+    )
+    return summary
 
 
 def daemon_request(op: str, args: dict[str, Any], invocation_id: str) -> str:
@@ -412,8 +787,7 @@ def derived_timings_ms(
     timings: dict[str, float],
 ) -> dict[str, float]:
     api_keys = {
-        "noop_shell": "api.shell.total_s",
-        "direct_argv_noop": "api.shell.total_s",
+        "noop_argv": "api.shell.total_s",
         "small_write": "api.shell.total_s",
         "glob": "api.glob.total_s",
         "grep": "api.grep.total_s",
@@ -590,8 +964,7 @@ async def collect_final_state(
         )
         contents[filename] = str(response.get("content", ""))
     expected = {
-        f"phase3-small-{index:03d}.txt": f"phase3 sample {index} {SEARCH_TOKEN}\n"
-        for index in range(samples)
+        f"phase3-small-{index:03d}.txt": "" for index in range(samples)
     }
     digest = hashlib.sha256(
         json.dumps(contents, sort_keys=True, separators=(",", ":")).encode()
@@ -611,25 +984,17 @@ def evaluate_cp4s(report: dict[str, Any], phase1: dict[str, Any]) -> dict[str, A
     phase1_perf = phase1["performance"]
     phase1_host = phase1_perf["host_wall_ms"]
     phase1_tool = phase1_perf["runner_tool_ms"]
-    noop = operations["noop_shell"]
+    noop = operations["noop_argv"]
     noop_host = noop["host_wall_ms"]
     noop_run_command = stat_block(noop, "phase_timing_ms", "command_exec.run_command_s")
     noop_mount = stat_block(noop, "phase_timing_ms", "command_exec.mount_workspace_s")
     noop_dispatch = stat_block(noop, "derived_ms", "host_minus_api_total_ms")
-    direct_argv = operations.get("direct_argv_noop", {})
-    direct_argv_host = direct_argv.get("host_wall_ms", {"count": 0, "samples_ms": []})
-    direct_argv_run_command = stat_block(
-        direct_argv,
-        "phase_timing_ms",
-        "command_exec.run_command_s",
-    )
 
     host_latency_gate = (
         stat_value(noop_host, "p50") <= float(phase1_host["p50"])
         and stat_value(noop_host, "p95") <= float(phase1_host["p95"])
     )
-    shell_segment_gate = stat_value(noop_run_command, "p50") <= float(phase1_tool["p50"]) * 0.75
-    direct_argv_gate = stat_value(direct_argv_run_command, "p50") <= float(phase1_tool["p50"]) * 0.30
+    argv_gate = stat_value(noop_run_command, "p50") <= float(phase1_tool["p50"]) * 0.30
     mount_gate = stat_value(noop_mount, "p95") <= 5.0
     dispatch_gate = stat_value(noop_dispatch, "p95") <= 5.0
     operations_gate = all(
@@ -640,7 +1005,7 @@ def evaluate_cp4s(report: dict[str, Any], phase1: dict[str, Any]) -> dict[str, A
         [
             operations_gate,
             host_latency_gate,
-            shell_segment_gate,
+            argv_gate,
             mount_gate,
             dispatch_gate,
             memory_gate,
@@ -651,29 +1016,65 @@ def evaluate_cp4s(report: dict[str, Any], phase1: dict[str, Any]) -> dict[str, A
             "phase1_noop_shell_host_wall_p50_ms": phase1_host["p50"],
             "phase1_noop_shell_host_wall_p95_ms": phase1_host["p95"],
             "phase1_runner_tool_p50_ms": phase1_tool["p50"],
-            "required_runner_tool_p50_ms": float(phase1_tool["p50"]) * 0.75,
-            "required_direct_argv_runner_tool_p50_ms": float(phase1_tool["p50"]) * 0.30,
+            "required_argv_runner_tool_p50_ms": float(phase1_tool["p50"]) * 0.30,
             "overlay_mount_p95_max_ms": 5.0,
             "host_minus_api_total_p95_max_ms": 5.0,
         },
         "observed": {
-            "noop_shell_host_wall_ms": noop_host,
-            "noop_shell_run_command_ms": noop_run_command,
-            "noop_shell_mount_ms": noop_mount,
-            "noop_shell_host_minus_api_total_ms": noop_dispatch,
-            "direct_argv_noop_host_wall_ms": direct_argv_host,
-            "direct_argv_noop_run_command_ms": direct_argv_run_command,
+            "noop_argv_host_wall_ms": noop_host,
+            "noop_argv_run_command_ms": noop_run_command,
+            "noop_argv_mount_ms": noop_mount,
+            "noop_argv_host_minus_api_total_ms": noop_dispatch,
         },
         "gates": {
             "operations_all_samples_ok": operations_gate,
             "noop_host_no_worse_than_phase1": host_latency_gate,
-            "process_shell_segment_25pct_faster_than_phase1": shell_segment_gate,
-            "direct_argv_noop_70pct_faster_than_phase1": direct_argv_gate,
+            "argv_noop_70pct_faster_than_phase1": argv_gate,
             "overlay_mount_p95_lte_5ms": mount_gate,
             "host_minus_api_total_p95_lte_5ms": dispatch_gate,
             "daemon_memory": memory_gate,
         },
         "gate_pass": gate_pass,
+    }
+
+
+def evaluate_load_matrix(load: dict[str, Any], phase1: dict[str, Any]) -> dict[str, Any]:
+    if load.get("skipped"):
+        return {"skipped": True, "gate_pass": True}
+    phase1_perf = phase1["performance"]
+    phase1_host_p95 = float(phase1_perf["host_wall_ms"]["p95"])
+    required_run_p50 = float(phase1_perf["runner_tool_ms"]["p50"]) * 0.30
+    operation_gates: dict[str, dict[str, Any]] = {}
+    all_gates: list[bool] = []
+    for operation_name, by_concurrency in load.get("operations", {}).items():
+        operation_gates[operation_name] = {}
+        for concurrency, summary in by_concurrency.items():
+            host = summary.get("host_wall_ms", {})
+            run_command = stat_block(
+                summary,
+                "phase_timing_ms",
+                "command_exec.run_command_s",
+            )
+            gates = {
+                "all_samples_ok": bool(summary.get("all_samples_ok")),
+                "host_p95_no_worse_than_phase1": stat_value(host, "p95")
+                <= phase1_host_p95,
+            }
+            if operation_name == "noop_argv":
+                gates["run_command_p50_70pct_faster_than_phase1"] = (
+                    stat_value(run_command, "p50") <= required_run_p50
+                )
+            gates["gate_pass"] = all(gates.values())
+            operation_gates[operation_name][concurrency] = gates
+            all_gates.append(bool(gates["gate_pass"]))
+    return {
+        "skipped": False,
+        "thresholds": {
+            "phase1_host_wall_p95_ms": phase1_host_p95,
+            "required_noop_run_command_p50_ms": required_run_p50,
+        },
+        "operation_gates": operation_gates,
+        "gate_pass": bool(all_gates) and all(all_gates),
     }
 
 
@@ -710,6 +1111,22 @@ def truncate_text(value: str, limit: int = 400) -> str:
     if len(value) <= limit:
         return value
     return f"{value[:limit]}...<truncated {len(value) - limit} chars>"
+
+
+def parse_concurrency_levels(raw: str) -> list[int]:
+    levels: list[int] = []
+    for part in raw.split(","):
+        part = part.strip()
+        if not part:
+            continue
+        value = int(part)
+        if value <= 0:
+            raise argparse.ArgumentTypeError("concurrency levels must be positive integers")
+        if value not in levels:
+            levels.append(value)
+    if not levels:
+        raise argparse.ArgumentTypeError("at least one concurrency level is required")
+    return levels
 
 
 if __name__ == "__main__":
