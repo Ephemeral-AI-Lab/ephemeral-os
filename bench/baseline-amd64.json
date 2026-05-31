@@ -1,0 +1,154 @@
+{
+  "cp0": {
+    "commands": 10,
+    "daemon_cold_start_ms": 816.2003339966759,
+    "daemon_idle_rss_kb": 36796,
+    "python_process_start_ms": {
+      "exit_code": 0,
+      "samples": {
+        "count": 10,
+        "max": 406.8557499558665,
+        "min": 393.05987500119954,
+        "p50": 398.14862550701946,
+        "p95": 406.72475000610575,
+        "samples_ms": [
+          393.05987500119954,
+          394.28045897511765,
+          396.25337498728186,
+          397.23141700960696,
+          397.88841700647026,
+          398.40883400756866,
+          400.05954197840765,
+          403.55212497524917,
+          406.72475000610575,
+          406.8557499558665
+        ]
+      },
+      "stderr": "",
+      "stdout": ""
+    },
+    "runtime_bundle_sha": "f77dc78eef1fa7f9d52e46ba5c1bb749ce88ff4c90ab36536e7d692719dc2d92",
+    "upload_time_ms": 3957.26191700669,
+    "warm_heartbeat_ms": {
+      "count": 10,
+      "max": 4.065209010150284,
+      "min": 0.857542036101222,
+      "p50": 1.234916999237612,
+      "p95": 2.3410830181092024,
+      "samples_ms": [
+        0.857542036101222,
+        1.026791986078024,
+        1.0894580045714974,
+        1.1121249990537763,
+        1.2337500229477882,
+        1.2360839755274355,
+        1.2594999861903489,
+        1.5557080041617155,
+        2.3410830181092024,
+        4.065209010150284
+      ]
+    }
+  },
+  "cp1": {
+    "gate_pass": true,
+    "payload_mib": [
+      1.5,
+      3.0
+    ],
+    "put_archive_size_ratio": 1.609177648720739,
+    "put_archive_size_ratio_limit": 2.5,
+    "samples": [
+      {
+        "base64_chunks": 64,
+        "base64_exec_ms": 22075.006500002928,
+        "base64_sha256": "4a119adb52563ed07c0a1d005827d1ecbfaebf45e67b411df93765f6f535c546",
+        "expected_sha256": "4a119adb52563ed07c0a1d005827d1ecbfaebf45e67b411df93765f6f535c546",
+        "hashes_match": true,
+        "put_archive_ms": 19.31045897072181,
+        "put_archive_no_slower_than_base64": true,
+        "put_archive_sha256": "4a119adb52563ed07c0a1d005827d1ecbfaebf45e67b411df93765f6f535c546",
+        "size_bytes": 1572864
+      },
+      {
+        "base64_chunks": 128,
+        "base64_exec_ms": 44192.961957945954,
+        "base64_sha256": "cc5850e3955c9704fc9519cec6eac9b79c73b906922d7c3206b52102f0f15de5",
+        "expected_sha256": "cc5850e3955c9704fc9519cec6eac9b79c73b906922d7c3206b52102f0f15de5",
+        "hashes_match": true,
+        "put_archive_ms": 31.073958962224424,
+        "put_archive_no_slower_than_base64": true,
+        "put_archive_sha256": "cc5850e3955c9704fc9519cec6eac9b79c73b906922d7c3206b52102f0f15de5",
+        "size_bytes": 3145728
+      }
+    ]
+  },
+  "created_container": true,
+  "environment": {
+    "architecture": {
+      "exit_code": 0,
+      "stderr": "",
+      "stdout": "x86_64"
+    },
+    "kernel": {
+      "exit_code": 0,
+      "stderr": "",
+      "stdout": "6.10.14-linuxkit"
+    },
+    "max_user_namespaces": {
+      "exit_code": 0,
+      "stderr": "",
+      "stdout": "15655"
+    },
+    "os_release": {
+      "exit_code": 0,
+      "stderr": "",
+      "stdout": "PRETTY_NAME=\"Ubuntu 22.04.4 LTS\"\nNAME=\"Ubuntu\"\nVERSION_ID=\"22.04\"\nVERSION=\"22.04.4 LTS (Jammy Jellyfish)\"\nVERSION_CODENAME=jammy\nID=ubuntu\nID_LIKE=debian\nHOME_URL=\"https://www.ubuntu.com/\"\nSUPPORT_URL=\"https://help.ubuntu.com/\"\nBUG_REPORT_URL=\"https://bugs.launchpad.net/ubuntu/\"\nPRIVACY_POLICY_URL=\"https://www.ubuntu.com/legal/terms-and-policies/privacy-policy\"\nUBUNTU_CODENAME=jammy"
+    },
+    "overlay_filesystem": {
+      "exit_code": 0,
+      "stderr": "",
+      "stdout": "nodev\toverlay"
+    },
+    "overlay_in_userns_probe": {
+      "exit_code": 0,
+      "samples": {
+        "count": 3,
+        "max": 437.65666702529415,
+        "min": 423.23895898880437,
+        "p50": 425.2707920386456,
+        "p95": 425.2707920386456,
+        "samples_ms": [
+          423.23895898880437,
+          425.2707920386456,
+          437.65666702529415
+        ]
+      },
+      "stderr": "",
+      "stdout": "",
+      "success": true
+    },
+    "python": {
+      "exit_code": 0,
+      "stderr": "",
+      "stdout": "Python 3.10.14"
+    },
+    "scratch_mount": {
+      "exit_code": 0,
+      "stderr": "",
+      "stdout": "tmpfs  rw,nosuid,nodev,noexec,relatime,size=2097152k"
+    },
+    "userns_clone": {
+      "exit_code": 0,
+      "stderr": "",
+      "stdout": ""
+    }
+  },
+  "host": {
+    "platform": "macOS-26.4.1-arm64-arm-64bit",
+    "python": "3.12.6"
+  },
+  "mode": "docker-phase0",
+  "run_id": "local-25aae6c014ae",
+  "sandbox_id": "6812d3f614f274c649b7b87bf7de941b3c609adc2e0c3f52def5b2fa85234546",
+  "scaffold": false
+}

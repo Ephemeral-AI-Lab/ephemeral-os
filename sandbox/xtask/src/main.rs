@@ -1,8 +1,343 @@
-//! `xtask`: build and release tooling for the workspace (musl static artifact,
-//! fixture checks).
+//! `xtask`: build and release tooling for the workspace.
 //!
 //! Invariant: dev-only tooling, never linked into the runtime. `anyhow` is
-//! allowed here (binary). Filled next phase; intentionally empty now.
+//! allowed here (binary). Runtime crates must stay free of this packaging code.
 #![forbid(unsafe_code)]
 
-fn main() {}
+use std::env;
+use std::ffi::OsString;
+use std::fs;
+use std::io::Read;
+use std::path::{Path, PathBuf};
+use std::process::Command;
+
+use anyhow::{bail, Context, Result};
+use sha2::{Digest, Sha256};
+
+const AMD64_TARGET: &str = "x86_64-unknown-linux-musl";
+const ARM64_TARGET: &str = "aarch64-unknown-linux-musl";
+
+fn main() -> Result<()> {
+    let mut args = env::args_os();
+    let _argv0 = args.next();
+    match args
+        .next()
+        .and_then(|arg| arg.into_string().ok())
+        .as_deref()
+    {
+        Some("package") => package(PackageArgs::parse(args)?),
+        Some("help") | Some("--help") | Some("-h") | None => {
+            print_help();
+            Ok(())
+        }
+        Some(other) => bail!("unknown xtask command {other:?}; run `cargo run -p xtask -- help`"),
+    }
+}
+
+#[derive(Debug)]
+struct PackageArgs {
+    target: String,
+    out_dir: PathBuf,
+    no_build: bool,
+    builder: String,
+    sign: bool,
+    minisign_key: Option<PathBuf>,
+}
+
+impl PackageArgs {
+    fn parse<I>(args: I) -> Result<Self>
+    where
+        I: IntoIterator<Item = OsString>,
+    {
+        let mut target: Option<String> = None;
+        let mut out_dir = PathBuf::from("dist");
+        let mut no_build = false;
+        let mut builder = env::var("EOS_XTASK_BUILDER").unwrap_or_else(|_| "rust-lld".to_owned());
+        let mut sign = false;
+        let mut minisign_key: Option<PathBuf> = None;
+
+        let mut iter = args.into_iter();
+        while let Some(arg) = iter.next() {
+            let arg = arg
+                .into_string()
+                .map_err(|_| anyhow::anyhow!("xtask arguments must be valid UTF-8"))?;
+            match arg.as_str() {
+                "--target" => target = Some(next_string(&mut iter, "--target")?),
+                "--out-dir" => out_dir = PathBuf::from(next_string(&mut iter, "--out-dir")?),
+                "--no-build" => no_build = true,
+                "--builder" => builder = next_string(&mut iter, "--builder")?,
+                "--sign" => sign = true,
+                "--minisign-key" => {
+                    minisign_key = Some(PathBuf::from(next_string(&mut iter, "--minisign-key")?));
+                }
+                "--help" | "-h" => {
+                    print_help();
+                    std::process::exit(0);
+                }
+                other => bail!("unknown package option {other:?}"),
+            }
+        }
+
+        let target = target.unwrap_or_else(|| AMD64_TARGET.to_owned());
+        arch_for_target(&target)?;
+        Ok(Self {
+            target,
+            out_dir,
+            no_build,
+            builder,
+            sign,
+            minisign_key,
+        })
+    }
+}
+
+fn package(args: PackageArgs) -> Result<()> {
+    let root = workspace_root()?;
+    let out_dir = absolutize(&root, &args.out_dir);
+    fs::create_dir_all(&out_dir)
+        .with_context(|| format!("create artifact dir {}", out_dir.display()))?;
+
+    if !args.no_build {
+        run_build(&root, &args.builder, &args.target)?;
+    }
+
+    let arch = arch_for_target(&args.target)?;
+    let built = root
+        .join("target")
+        .join(&args.target)
+        .join("release")
+        .join("eosd");
+    let artifact_name = format!("eosd-linux-{arch}");
+    let artifact = out_dir.join(&artifact_name);
+    fs::copy(&built, &artifact)
+        .with_context(|| format!("copy {} to {}", built.display(), artifact.display()))?;
+
+    #[cfg(unix)]
+    set_executable(&artifact)?;
+
+    let sha = sha256_file(&artifact)?;
+    write_protocol_version(&out_dir)?;
+    write_checksums(&out_dir)?;
+    write_manifest(&out_dir, &args.target, arch, &artifact_name, &sha)?;
+
+    if args.sign {
+        let key = args
+            .minisign_key
+            .as_deref()
+            .context("--sign requires --minisign-key <path>")?;
+        sign_artifact(&artifact, key)?;
+    }
+
+    println!(
+        "packaged {artifact_name} target={} sha256={} protocol_version={}",
+        args.target,
+        sha,
+        eos_protocol::DAEMON_PROTOCOL_VERSION
+    );
+    Ok(())
+}
+
+fn next_string<I>(iter: &mut I, flag: &str) -> Result<String>
+where
+    I: Iterator<Item = OsString>,
+{
+    iter.next()
+        .context(format!("{flag} requires a value"))?
+        .into_string()
+        .map_err(|_| anyhow::anyhow!("{flag} value must be valid UTF-8"))
+}
+
+fn workspace_root() -> Result<PathBuf> {
+    Path::new(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .map(Path::to_path_buf)
+        .context("xtask manifest directory has no parent")
+}
+
+fn absolutize(root: &Path, path: &Path) -> PathBuf {
+    if path.is_absolute() {
+        path.to_path_buf()
+    } else {
+        root.join(path)
+    }
+}
+
+fn arch_for_target(target: &str) -> Result<&'static str> {
+    match target {
+        AMD64_TARGET => Ok("amd64"),
+        ARM64_TARGET => Ok("arm64"),
+        _ => bail!(
+            "unsupported release target {target:?}; expected {AMD64_TARGET} or {ARM64_TARGET}"
+        ),
+    }
+}
+
+fn run_build(root: &Path, builder: &str, target: &str) -> Result<()> {
+    let mut command = match builder {
+        "rust-lld" => {
+            let mut command = cargo_build_command(target);
+            command.env("RUSTFLAGS", rustflags_with_rust_lld());
+            command
+        }
+        "cargo" => cargo_build_command(target),
+        "cross" => {
+            let mut command = Command::new("cross");
+            command.args(["build", "--release", "-p", "eosd", "--target", target]);
+            command
+        }
+        other => bail!("unsupported builder {other:?}; expected rust-lld, cargo, or cross"),
+    };
+    let status = command
+        .current_dir(root)
+        .status()
+        .with_context(|| format!("spawn {builder} build"))?;
+    if !status.success() {
+        bail!("{builder} build failed for {target} with {status}");
+    }
+    Ok(())
+}
+
+fn cargo_build_command(target: &str) -> Command {
+    let mut command = Command::new("cargo");
+    command.args(["build", "--release", "-p", "eosd", "--target", target]);
+    command
+}
+
+fn rustflags_with_rust_lld() -> String {
+    let existing = env::var("RUSTFLAGS").unwrap_or_default();
+    if existing
+        .split_whitespace()
+        .any(|flag| flag == "linker=rust-lld")
+        || existing.contains("-C linker=rust-lld")
+    {
+        existing
+    } else if existing.is_empty() {
+        "-C linker=rust-lld".to_owned()
+    } else {
+        format!("{existing} -C linker=rust-lld")
+    }
+}
+
+#[cfg(unix)]
+fn set_executable(path: &Path) -> Result<()> {
+    use std::os::unix::fs::PermissionsExt;
+
+    let mut perms = fs::metadata(path)
+        .with_context(|| format!("stat {}", path.display()))?
+        .permissions();
+    perms.set_mode(0o755);
+    fs::set_permissions(path, perms).with_context(|| format!("chmod 755 {}", path.display()))
+}
+
+fn sha256_file(path: &Path) -> Result<String> {
+    let mut file = fs::File::open(path).with_context(|| format!("open {}", path.display()))?;
+    let mut hasher = Sha256::new();
+    let mut buf = [0_u8; 64 * 1024];
+    loop {
+        let n = file
+            .read(&mut buf)
+            .with_context(|| format!("read {}", path.display()))?;
+        if n == 0 {
+            break;
+        }
+        hasher.update(&buf[..n]);
+    }
+    Ok(format!("{:x}", hasher.finalize()))
+}
+
+fn write_protocol_version(out_dir: &Path) -> Result<()> {
+    fs::write(
+        out_dir.join("protocol_version"),
+        format!("{}\n", eos_protocol::DAEMON_PROTOCOL_VERSION),
+    )
+    .with_context(|| format!("write {}", out_dir.join("protocol_version").display()))
+}
+
+fn write_checksums(out_dir: &Path) -> Result<()> {
+    let mut artifacts = fs::read_dir(out_dir)
+        .with_context(|| format!("read {}", out_dir.display()))?
+        .map(|entry| entry.map(|entry| entry.path()))
+        .collect::<std::io::Result<Vec<_>>>()
+        .with_context(|| format!("read {}", out_dir.display()))?;
+    artifacts.retain(|path| {
+        path.file_name()
+            .and_then(|name| name.to_str())
+            .is_some_and(|name| matches!(name, "eosd-linux-amd64" | "eosd-linux-arm64"))
+    });
+    artifacts.sort();
+
+    let mut body = String::new();
+    for path in artifacts {
+        let name = path
+            .file_name()
+            .and_then(|name| name.to_str())
+            .context("artifact filename must be valid UTF-8")?;
+        body.push_str(&format!("{}  {name}\n", sha256_file(&path)?));
+    }
+    fs::write(out_dir.join("SHA256SUMS"), body)
+        .with_context(|| format!("write {}", out_dir.join("SHA256SUMS").display()))
+}
+
+fn write_manifest(
+    out_dir: &Path,
+    target: &str,
+    arch: &str,
+    artifact_name: &str,
+    sha256: &str,
+) -> Result<()> {
+    let body = format!(
+        concat!(
+            "{{\n",
+            "  \"artifact\": \"{}\",\n",
+            "  \"arch\": \"{}\",\n",
+            "  \"protocol_version\": {},\n",
+            "  \"sha256\": \"{}\",\n",
+            "  \"target\": \"{}\",\n",
+            "  \"version\": \"{}\"\n",
+            "}}\n"
+        ),
+        artifact_name,
+        arch,
+        eos_protocol::DAEMON_PROTOCOL_VERSION,
+        sha256,
+        target,
+        env!("CARGO_PKG_VERSION"),
+    );
+    fs::write(out_dir.join(format!("{artifact_name}.json")), body).with_context(|| {
+        format!(
+            "write {}",
+            out_dir.join(format!("{artifact_name}.json")).display()
+        )
+    })
+}
+
+fn sign_artifact(artifact: &Path, key: &Path) -> Result<()> {
+    let signature = artifact.with_extension("minisig");
+    let status = Command::new("minisign")
+        .args(["-S", "-s"])
+        .arg(key)
+        .args(["-m"])
+        .arg(artifact)
+        .args(["-x"])
+        .arg(&signature)
+        .status()
+        .with_context(|| "spawn minisign")?;
+    if !status.success() {
+        bail!("minisign failed for {} with {status}", artifact.display());
+    }
+    Ok(())
+}
+
+fn print_help() {
+    println!(
+        "\
+xtask commands:
+  package [--target <triple>] [--out-dir <dir>] [--builder rust-lld|cargo|cross] [--no-build]
+          [--sign --minisign-key <path>]
+
+Targets:
+  {AMD64_TARGET} -> eosd-linux-amd64
+  {ARM64_TARGET} -> eosd-linux-arm64
+"
+    );
+}

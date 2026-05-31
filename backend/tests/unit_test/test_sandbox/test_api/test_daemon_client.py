@@ -23,6 +23,39 @@ def test_with_daemon_protocol_version_attaches_daemon_protocol_field() -> None:
     }
 
 
+def test_selected_sandbox_runtime_defaults_to_python(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv(daemon_client_mod.SANDBOX_RUNTIME_ENV, raising=False)
+
+    assert daemon_client_mod.selected_sandbox_runtime() == "python"
+
+
+@pytest.mark.parametrize(
+    ("raw", "expected"),
+    [
+        ("python", "python"),
+        ("rust", "rust"),
+        (" RUST ", "rust"),
+    ],
+)
+def test_selected_sandbox_runtime_accepts_known_values(
+    monkeypatch: pytest.MonkeyPatch,
+    raw: str,
+    expected: str,
+) -> None:
+    monkeypatch.setenv(daemon_client_mod.SANDBOX_RUNTIME_ENV, raw)
+
+    assert daemon_client_mod.selected_sandbox_runtime() == expected
+
+
+def test_selected_sandbox_runtime_rejects_unknown_value(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv(daemon_client_mod.SANDBOX_RUNTIME_ENV, "go")
+
+    with pytest.raises(ValueError, match=daemon_client_mod.SANDBOX_RUNTIME_ENV):
+        daemon_client_mod.selected_sandbox_runtime()
+
+
 @pytest.mark.asyncio
 async def test_call_daemon_api_dispatches_without_bundle_probe(
     monkeypatch: pytest.MonkeyPatch,

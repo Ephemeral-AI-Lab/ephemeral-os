@@ -1,5 +1,5 @@
 {
-  "upstream_commit": "UNPINNED",
-  "fixtures_sha256": "",
-  "note": "vendored pinned copy of sandbox/crates/eos-protocol/fixtures; dual-CI pin assert"
+  "upstream_commit": "2df20649b3158324d1be9c4c6c53a5844034ebc2",
+  "fixtures_sha256": "3d62ff3017bf1b1a76e36de08ea4a3185d9640cb9ca98f7e4a1796b153aab221",
+  "note": "vendored pinned copy of sandbox/crates/eos-protocol/fixtures; dual-side pin assert"
 }

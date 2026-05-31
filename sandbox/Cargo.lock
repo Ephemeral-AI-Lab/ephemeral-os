@@ -1167,6 +1167,8 @@ name = "xtask"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "eos-protocol",
+ "sha2",
 ]
 
 [[package]]

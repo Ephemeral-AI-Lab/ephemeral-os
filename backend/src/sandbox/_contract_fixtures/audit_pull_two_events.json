@@ -1,0 +1,51 @@
+{
+  "schema": "sandbox.daemon.audit.pull.v1",
+  "cursor": {
+    "after_seq": 1,
+    "lost_before_seq": 0
+  },
+  "buffer": {
+    "retained_events": 2,
+    "retained_bytes": 164,
+    "max_events": 10,
+    "max_bytes": 1024,
+    "pressure": 0.2,
+    "dropped_event_count": 0,
+    "dropped_event_count_by_lane": {
+      "critical": 0,
+      "normal": 0,
+      "sample": 0
+    },
+    "lost_before_seq": 0
+  },
+  "snapshot": {
+    "daemon": {
+      "boot_epoch_id": 999,
+      "next_seq": 2
+    }
+  },
+  "events": [
+    {
+      "type": "daemon.started",
+      "payload": {
+        "daemon": {
+          "pid": 1
+        }
+      },
+      "seq": 0,
+      "lane": "critical"
+    },
+    {
+      "type": "tool_call.started",
+      "payload": {
+        "tool_call": {
+          "tool_use_id": "t",
+          "tool_name": "read_file"
+        }
+      },
+      "seq": 1,
+      "lane": "normal"
+    }
+  ],
+  "success": true
+}

@@ -1,0 +1,99 @@
+{
+  "created_container": true,
+  "environment": {
+    "architecture": {
+      "exit_code": 0,
+      "stderr": "",
+      "stdout": "x86_64"
+    },
+    "cargo": {
+      "exit_code": 0,
+      "stderr": "",
+      "stdout": "missing"
+    },
+    "kernel": {
+      "exit_code": 0,
+      "stderr": "",
+      "stdout": "6.10.14-linuxkit"
+    },
+    "max_user_namespaces": {
+      "exit_code": 0,
+      "stderr": "",
+      "stdout": "15655"
+    },
+    "os_release": {
+      "exit_code": 0,
+      "stderr": "",
+      "stdout": "PRETTY_NAME=\"Ubuntu 22.04.4 LTS\"\nNAME=\"Ubuntu\"\nVERSION_ID=\"22.04\"\nVERSION=\"22.04.4 LTS (Jammy Jellyfish)\"\nVERSION_CODENAME=jammy\nID=ubuntu\nID_LIKE=debian\nHOME_URL=\"https://www.ubuntu.com/\"\nSUPPORT_URL=\"https://help.ubuntu.com/\"\nBUG_REPORT_URL=\"https://bugs.launchpad.net/ubuntu/\"\nPRIVACY_POLICY_URL=\"https://www.ubuntu.com/legal/terms-and-policies/privacy-policy\"\nUBUNTU_CODENAME=jammy"
+    },
+    "overlay_filesystem": {
+      "exit_code": 0,
+      "stderr": "",
+      "stdout": "nodev\toverlay"
+    },
+    "overlay_in_userns_probe": {
+      "exit_code": 0,
+      "samples": {
+        "count": 3,
+        "max": 433.1517919781618,
+        "min": 409.009666997008,
+        "p50": 418.77541702706367,
+        "p95": 418.77541702706367,
+        "samples_ms": [
+          409.009666997008,
+          418.77541702706367,
+          433.1517919781618
+        ]
+      },
+      "stderr": "",
+      "stdout": "",
+      "success": true
+    },
+    "python": {
+      "exit_code": 0,
+      "stderr": "",
+      "stdout": "Python 3.10.14"
+    },
+    "rustc": {
+      "exit_code": 0,
+      "stderr": "",
+      "stdout": "missing"
+    },
+    "scratch_mount": {
+      "exit_code": 0,
+      "stderr": "",
+      "stdout": "tmpfs  rw,nosuid,nodev,noexec,relatime,size=2097152k"
+    },
+    "userns_clone": {
+      "exit_code": 0,
+      "stderr": "",
+      "stdout": ""
+    }
+  },
+  "host": {
+    "platform": "macOS-26.4.1-arm64-arm-64bit",
+    "python": "3.12.6"
+  },
+  "local_artifact": {
+    "dest_dir": "/tmp/eosd-local",
+    "executable": true,
+    "gate_pass": true,
+    "hashes_match": true,
+    "local_sha256": "ad69bd919d4ed912756180927af993047166a134659d67048153317534ecb8a9",
+    "remote_mode": "0o755",
+    "remote_path": "/tmp/eosd-local/eosd",
+    "remote_sha256": "ad69bd919d4ed912756180927af993047166a134659d67048153317534ecb8a9",
+    "size_bytes": 417664,
+    "source_path": "sandbox/dist/eosd-linux-amd64",
+    "upload_time_ms": 10.839792026672512,
+    "version": {
+      "exit_code": 0,
+      "stderr": "",
+      "stdout": "eosd 0.1.0"
+    }
+  },
+  "mode": "docker-upload",
+  "run_id": "local-da08d004753f",
+  "sandbox_id": "df8cd02033b699d9161a5b9c0112fee7e1b79731351200d3aa80523f73850e64",
+  "scaffold": false
+}

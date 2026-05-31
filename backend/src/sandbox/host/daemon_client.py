@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import os
 import shlex
 from collections.abc import Mapping
 from dataclasses import dataclass
@@ -46,6 +47,8 @@ _CONNECT_RETRY_DELAYS_S: tuple[float, ...] = (0.25, 0.5, 1.0, 2.0)
 DAEMON_PROTOCOL_VERSION = 1
 DAEMON_PROTOCOL_FIELD = "_eos_daemon_protocol_version"
 DAEMON_AUTH_FIELD = "_eos_daemon_auth_token"
+SANDBOX_RUNTIME_ENV = "EOS_SANDBOX_RUNTIME"
+_SUPPORTED_SANDBOX_RUNTIMES = frozenset({"python", "rust"})
 
 
 @dataclass(frozen=True)
@@ -191,12 +194,26 @@ def with_daemon_protocol_version(payload: Mapping[str, object]) -> dict[str, obj
     }
 
 
+def selected_sandbox_runtime() -> str:
+    """Return the requested sandbox runtime.
+
+    Phase 0 only validates and exposes the flag; the Python/Rust dispatch fork
+    lands with the daemon connector in Phase 2.
+    """
+    runtime = os.environ.get(SANDBOX_RUNTIME_ENV, "python").strip().lower() or "python"
+    if runtime not in _SUPPORTED_SANDBOX_RUNTIMES:
+        supported = ", ".join(sorted(_SUPPORTED_SANDBOX_RUNTIMES))
+        raise ValueError(f"{SANDBOX_RUNTIME_ENV} must be one of: {supported}")
+    return runtime
+
+
 async def ensure_daemon_current(
     sandbox_id: str,
     *,
     timeout: int = _DAEMON_SPAWN_TIMEOUT,
 ) -> None:
     """Ensure the resident daemon is running for the current runtime bundle."""
+    selected_sandbox_runtime()
     adapter = get_adapter(sandbox_id)
     tcp_endpoint = await _resolve_daemon_tcp_endpoint(adapter, sandbox_id)
     result = await adapter.exec(
