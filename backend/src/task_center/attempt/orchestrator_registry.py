@@ -39,7 +39,6 @@ class RegisteredAttemptOrchestrator(Protocol):
         *,
         generator_task: dict[str, Any],
         child_workflow: Workflow,
-        final_attempt_id: str | None,
     ) -> None: ...
 
     def cancel_child_workflow(self, *, generator_task: dict[str, Any]) -> None: ...

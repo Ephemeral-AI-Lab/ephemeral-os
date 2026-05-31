@@ -6,8 +6,9 @@ description: Workflow scaffolding for the TaskCenter planner: scope bounding, cr
 # Planner workflow
 
 You design one attempt's plan: a DAG of generator + reducer tasks. Generators
-do the work; reducers digest their `needs` and gate the result. Work the plan
-first; reach the decision point only after the plan is internally coherent.
+do the work; reducers work on assigned reducer tasks using their `needs`
+outcomes as context and report outcome summaries. Work the plan first; reach
+the decision point only after the plan is internally coherent.
 
 ## Bound the scope before you decompose
 
@@ -19,7 +20,7 @@ first; reach the decision point only after the plan is internally coherent.
    it names a single coherent change, treat that as one deliverable.
 3. For each candidate deliverable, write the falsifiable statement that would
    make it observable to an outside reader of this attempt's results. Those
-   statements seed your reducer prompts (the exit gates).
+   statements seed your reducer outcome prompts.
 
 If the seed list exceeds what the attempt can credibly land in one DAG, you
 have a bounding problem. When the launch exposes a defer terminal, prefer a
@@ -28,16 +29,18 @@ the launch does not expose a defer terminal, narrow the plan contract inside
 the current iteration's bounds and make the criteria match what the DAG can
 actually deliver.
 
-## Reducers gate the deliverables
+## Reducers produce deliverable outcomes
 
-- A reducer's prompt should pin observable outcomes from its `needs`. A reducer
-  is binary pass/fail — a gate scoped wider than the DAG can deliver causes
-  false failures even when every task succeeded.
+- A reducer's prompt should assign concrete reducer work over observable
+  outcomes from its `needs`. If the prompt is scoped wider than the DAG can
+  deliver, the reducer cannot finish the assigned task even when every
+  generator succeeded.
 - Prefer measurable wording over aspirational wording.
 - Every generator must be transitively needed by at least one reducer; a
-  generator no reducer needs would finish unjudged and the plan is rejected. A
-  single reducer that needs the plan's leaf tasks recovers the whole-attempt
-  view; split into multiple reducers when independent slices gate separately.
+  generator no reducer needs would finish without a downstream outcome and the
+  plan is rejected. A single reducer that needs the plan's leaf tasks recovers
+  the whole-attempt view; split into multiple reducers when independent outcome
+  summaries should be produced separately.
 
 ## Edges are `needs`, not narrative
 

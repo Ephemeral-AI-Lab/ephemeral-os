@@ -175,9 +175,7 @@ def test_handle_iteration_closed_success_closes_workflow_succeeded(
     workflow_lifecycle.handle_iteration_closed(
         iteration_id=iteration.id,
         succeeded=True,
-        deferred_goal=None,
-        final_attempt_id="g1",
-    )
+        deferred_goal=None,    )
     final = workflow_store.get(workflow.id)
     assert final is not None
     assert final.status == WorkflowStatus.SUCCEEDED
@@ -198,9 +196,7 @@ def test_handle_iteration_closed_failure_closes_workflow_failed(
     workflow_lifecycle.handle_iteration_closed(
         iteration_id=iteration.id,
         succeeded=False,
-        deferred_goal=None,
-        final_attempt_id="g1",
-    )
+        deferred_goal=None,    )
     final = workflow_store.get(workflow.id)
     assert final is not None
     assert final.status == WorkflowStatus.FAILED
@@ -225,9 +221,7 @@ def test_handle_iteration_closed_success_continue_creates_continuation(
     workflow_lifecycle.handle_iteration_closed(
         iteration_id=iteration1.id,
         succeeded=True,
-        deferred_goal="next-goal",
-        final_attempt_id="g1",
-    )
+        deferred_goal="next-goal",    )
     refreshed = workflow_store.get(workflow.id)
     assert refreshed is not None
     assert len(refreshed.iteration_ids) == 2
@@ -253,9 +247,7 @@ def test_handle_iteration_closed_deregisters_coordinator(
     workflow_lifecycle.handle_iteration_closed(
         iteration_id=iteration.id,
         succeeded=True,
-        deferred_goal=None,
-        final_attempt_id="g1",
-    )
+        deferred_goal=None,    )
     assert iteration_coordinators.get(iteration.id) is None
 
 
@@ -328,9 +320,7 @@ def test_close_workflow_routes_to_run_close_handler_for_root(
     workflow_lifecycle.create_iteration_with_coordinator(workflow_id=workflow.id)
     closed = workflow_lifecycle.close_workflow(
         workflow_id=workflow.id,
-        succeeded=True,
-        final_attempt_id="g1",
-    )
+        succeeded=True,    )
     assert closed.status == WorkflowStatus.SUCCEEDED
     assert delivered == [closed]
 

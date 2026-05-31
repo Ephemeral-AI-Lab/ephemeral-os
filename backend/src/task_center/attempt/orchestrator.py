@@ -181,7 +181,7 @@ class AttemptOrchestrator:
             )
 
     def apply_child_workflow_outcome(
-        self, *, generator_task: dict[str, Any], child_workflow: Workflow, final_attempt_id: str | None
+        self, *, generator_task: dict[str, Any], child_workflow: Workflow
     ) -> None:
         """Resolve a generator waiting on a child workflow.
 

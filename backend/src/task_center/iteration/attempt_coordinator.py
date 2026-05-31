@@ -41,8 +41,8 @@ from task_center.attempt.orchestrator_registry import RegisteredAttemptOrchestra
 logger = logging.getLogger(__name__)
 
 
-# Signalled on iteration close: (iteration_id, succeeded, deferred_goal,
-# final_attempt_id). succeeded + deferred_goal=None -> workflow success;
+# Signalled on iteration close: (iteration_id, succeeded, deferred_goal).
+# succeeded + deferred_goal=None -> workflow success;
 # succeeded + deferred_goal -> next iteration; not succeeded -> workflow fail.
 IterationClosedCallback = Callable[..., None]
 AttemptClosedCallback = Callable[[str], None]
@@ -207,11 +207,11 @@ class IterationAttemptCoordinator:
             iteration_id=self.iteration_id,
             succeeded=True,
             deferred_goal=attempt.deferred_goal_for_next_iteration,
-            final_attempt_id=attempt.id,
         )
 
     def _iteration_outcomes_for(self, attempt: Attempt) -> str:
-        """JSON outcomes record for the passing attempt's reducers."""
+        """JSON outcomes record for the iteration: reducer successes plus the
+        final attempt's failed tasks (shared by the passing and failed close)."""
         attempts = self._attempt_store.list_for_iteration(attempt.iteration_id)
         return records_json(project_iteration_outcomes(attempts, self._task_store))
 
@@ -245,8 +245,7 @@ class IterationAttemptCoordinator:
     def _close_iteration_failed(self, attempt: Attempt) -> None:
         # Failure-aware: denormalize the last failed attempt's failed-task
         # outcomes so the parent (or the run report) surfaces what went wrong.
-        attempts = self._attempt_store.list_for_iteration(attempt.iteration_id)
-        outcomes = records_json(project_iteration_outcomes(attempts, self._task_store))
+        outcomes = self._iteration_outcomes_for(attempt)
         self._iteration_store.set_status(
             self.iteration_id,
             status=IterationStatus.FAILED,
@@ -257,7 +256,6 @@ class IterationAttemptCoordinator:
             iteration_id=self.iteration_id,
             succeeded=False,
             deferred_goal=None,
-            final_attempt_id=attempt.id,
         )
 
     def _latest_failed_attempt_for(self, *, previous_id: str) -> Attempt | None:

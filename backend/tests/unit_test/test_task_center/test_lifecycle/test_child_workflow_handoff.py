@@ -141,7 +141,6 @@ def test_child_workflow_success_marks_waiting_generator_done(
     orchestrator.apply_child_workflow_outcome(
         generator_task=task_store.get_task(parent_task_id),
         child_workflow=child,
-        final_attempt_id=None,
     )
 
     parent_task = task_store.get_task(parent_task_id)
@@ -169,7 +168,6 @@ def test_child_workflow_failure_marks_waiting_generator_failed(
     orchestrator.apply_child_workflow_outcome(
         generator_task=task_store.get_task(parent_task_id),
         child_workflow=child,
-        final_attempt_id=None,
     )
 
     parent_task = task_store.get_task(parent_task_id)
@@ -199,13 +197,11 @@ def test_child_workflow_outcome_is_idempotent_on_second_delivery(
     orchestrator.apply_child_workflow_outcome(
         generator_task=task_store.get_task(parent_task_id),
         child_workflow=child,
-        final_attempt_id=None,
     )
     # Second delivery: parent already moved off waiting_workflow → silent no-op.
     orchestrator.apply_child_workflow_outcome(
         generator_task=task_store.get_task(parent_task_id),
         child_workflow=child,
-        final_attempt_id=None,
     )
 
     parent_task = task_store.get_task(parent_task_id)
@@ -242,7 +238,7 @@ def test_root_workflow_close_routes_through_run_close_handler(
     )
 
     closed = lifecycle.close_workflow(
-        workflow_id=root_workflow.id, succeeded=True, final_attempt_id=None
+        workflow_id=root_workflow.id, succeeded=True
     )
 
     assert closed.status == WorkflowStatus.SUCCEEDED
@@ -280,7 +276,7 @@ def test_child_workflow_close_raises_when_parent_orchestrator_missing(
     with pytest.raises(TaskCenterInvariantViolation):
         # The child is already closed; routing alone must raise on the missing
         # orchestrator.
-        lifecycle._route_close(child, final_attempt_id=None)
+        lifecycle._route_close(child)
 
     parent_task = task_store.get_task(parent_task_id)
     assert parent_task is not None

@@ -8,14 +8,12 @@ from task_center.entry.bootstrap import (
     start_task_center_run,
 )
 from task_center.entry.sandbox_provisioning import (
-    TaskCenterSandboxBinding,
     TaskCenterSandboxProvisioner,
 )
 
 __all__ = [
     "TaskCenterEntry",
     "TaskCenterEntryHandle",
-    "TaskCenterSandboxBinding",
     "TaskCenterSandboxProvisioner",
     "start_task_center_run",
 ]

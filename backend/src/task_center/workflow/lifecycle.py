@@ -138,7 +138,6 @@ class WorkflowLifecycle:
         iteration_id: str,
         succeeded: bool,
         deferred_goal: str | None,
-        final_attempt_id: str | None,
     ) -> None:
         iteration = self._iteration_store.get(iteration_id)
         if iteration is None:
@@ -151,13 +150,11 @@ class WorkflowLifecycle:
                 self._start_deferred_iteration(
                     next_iteration=next_iteration,
                     next_coordinator=next_coordinator,
-                    fallback_attempt_id=final_attempt_id,
                 )
             else:
                 self.close_workflow(
                     workflow_id=iteration.workflow_id,
                     succeeded=succeeded,
-                    final_attempt_id=final_attempt_id,
                 )
         finally:
             self._iteration_coordinators.deregister(iteration.id)
@@ -167,7 +164,6 @@ class WorkflowLifecycle:
         *,
         workflow_id: str,
         succeeded: bool,
-        final_attempt_id: str | None,
     ) -> Workflow:
         workflow = self._require_workflow(workflow_id)
         assert_workflow_open(workflow)
@@ -176,12 +172,12 @@ class WorkflowLifecycle:
             status=WorkflowStatus.SUCCEEDED if succeeded else WorkflowStatus.FAILED,
             closed_at=datetime.now(UTC),
         )
-        self._route_close(updated, final_attempt_id=final_attempt_id)
+        self._route_close(updated)
         return updated
 
     # ---- internals ------------------------------------------------------
 
-    def _route_close(self, workflow: Workflow, *, final_attempt_id: str | None) -> None:
+    def _route_close(self, workflow: Workflow) -> None:
         """Resolve a closed workflow into its parent task (attempt) or the run."""
         parent_task_id = workflow.parent_task_id
         if parent_task_id is None:
@@ -211,7 +207,6 @@ class WorkflowLifecycle:
         orchestrator.apply_child_workflow_outcome(
             generator_task=parent_task,
             child_workflow=workflow,
-            final_attempt_id=final_attempt_id,
         )
 
     def _require_workflow(self, workflow_id: str) -> Workflow:
@@ -256,7 +251,6 @@ class WorkflowLifecycle:
         *,
         next_iteration: Iteration,
         next_coordinator: IterationAttemptCoordinator,
-        fallback_attempt_id: str | None,
     ) -> None:
         if self._orchestrator_factory is None:
             return
@@ -267,10 +261,6 @@ class WorkflowLifecycle:
                 "WorkflowLifecycle: continuation attempt creation failed",
                 extra={"iteration_id": next_iteration.id},
             )
-            latest_iteration = self._iteration_store.get(next_iteration.id)
-            failed_attempt_id = (
-                latest_iteration.latest_attempt_id if latest_iteration else None
-            ) or fallback_attempt_id
             self._iteration_store.set_status(
                 next_iteration.id,
                 status=IterationStatus.CANCELLED,
@@ -280,7 +270,6 @@ class WorkflowLifecycle:
             self.close_workflow(
                 workflow_id=next_iteration.workflow_id,
                 succeeded=False,
-                final_attempt_id=failed_attempt_id,
             )
 
 

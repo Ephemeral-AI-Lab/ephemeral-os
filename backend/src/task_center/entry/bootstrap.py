@@ -28,10 +28,7 @@ from task_center.attempt.launch import (
 )
 from task_center.attempt.orchestrator_registry import AttemptOrchestratorRegistry
 from task_center.context_engine.engine import ContextEngine, ContextEngineDeps
-from task_center.entry.sandbox_provisioning import (
-    TaskCenterSandboxBinding,
-    TaskCenterSandboxProvisioner,
-)
+from task_center.entry.sandbox_provisioning import TaskCenterSandboxProvisioner
 from task_center.run_controller import RunController
 from task_center.iteration import OpenIterationCoordinatorRegistry
 
@@ -43,15 +40,10 @@ if TYPE_CHECKING:
 class TaskCenterEntryHandle:
     request_id: str
     task_center_run_id: str
-    binding: TaskCenterSandboxBinding
     workflow_id: str
     iteration_id: str
     attempt_id: str
     launcher: EphemeralAttemptAgentLauncher
-
-    @property
-    def sandbox_id(self) -> str:
-        return self.binding.sandbox_id
 
 
 def start_task_center_run(
@@ -117,7 +109,7 @@ class TaskCenterEntry:
             iteration_store=self._iteration_store,
             attempt_store=self._attempt_store,
         )
-        request_id, run_id, binding = self._create_top_level_run()
+        request_id, run_id = self._create_top_level_run()
         iteration_coordinators = OpenIterationCoordinatorRegistry()
         runtime, launcher = self._create_runtime(iteration_coordinators=iteration_coordinators)
 
@@ -132,14 +124,13 @@ class TaskCenterEntry:
         return TaskCenterEntryHandle(
             request_id=request_id,
             task_center_run_id=run_id,
-            binding=binding,
             workflow_id=started.workflow_id,
             iteration_id=started.iteration_id,
             attempt_id=started.attempt_id,
             launcher=launcher,
         )
 
-    def _create_top_level_run(self) -> tuple[str, str, TaskCenterSandboxBinding]:
+    def _create_top_level_run(self) -> tuple[str, str]:
         request_id = str(uuid.uuid4())
         run_id = str(uuid.uuid4())
         binding = self._sandbox_provisioner.prepare_for_run(
@@ -157,7 +148,7 @@ class TaskCenterEntry:
             task_center_run_id=run_id,
             request_id=request_id,
         )
-        return request_id, run_id, binding
+        return request_id, run_id
 
     def _create_runtime(
         self, *, iteration_coordinators: OpenIterationCoordinatorRegistry

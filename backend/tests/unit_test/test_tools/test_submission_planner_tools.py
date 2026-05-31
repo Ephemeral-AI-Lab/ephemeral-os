@@ -59,7 +59,10 @@ async def test_plan_tool_descriptions_share_dag_guidance() -> None:
     assert "## Close vs Defer Decision" in closes
     assert "## Close vs Defer Decision" in defers
     assert "Lane shape does not decide close vs defer" in defers
+    assert "concrete plan for this bounded iteration" in defers
+    assert "Planning the full current goal now would be speculative" in defers
     assert "outcomes become prior-iteration context" in defers
+    assert "collection of reducer outcomes is sufficient" in closes
     assert "deferred_goal_for_next_iteration" in defers
 
 
@@ -176,7 +179,7 @@ async def test_partial_plan_routes_to_apply_plan_submission(
                     {"id": "b", "agent_name": "executor", "needs": []},
                 ],
                 "task_specs": {"a": "Do it.", "b": "Do b."},
-                "reducers": [{"id": "r", "needs": ["a"], "prompt": "Gate a."}],
+                "reducers": [{"id": "r", "needs": ["a"], "prompt": "Summarize a."}],
             },
             "no downstream task needs",
         ),
@@ -184,7 +187,7 @@ async def test_partial_plan_routes_to_apply_plan_submission(
             {
                 "tasks": [{"id": "a", "agent_name": "executor", "needs": []}],
                 "task_specs": {"a": "Do it."},
-                "reducers": [{"id": "r", "needs": [], "prompt": "Gate it."}],
+                "reducers": [{"id": "r", "needs": [], "prompt": "Summarize it."}],
             },
             "must need at least one generator",
         ),
@@ -195,7 +198,7 @@ async def test_partial_plan_routes_to_apply_plan_submission(
                     {"id": "b", "agent_name": "executor", "needs": ["r"]},
                 ],
                 "task_specs": {"a": "Do it.", "b": "Do b."},
-                "reducers": [{"id": "r", "needs": ["a"], "prompt": "Gate a."}],
+                "reducers": [{"id": "r", "needs": ["a"], "prompt": "Summarize a."}],
             },
             "cannot need reducer",
         ),
@@ -207,8 +210,8 @@ async def test_partial_plan_routes_to_apply_plan_submission(
                 ],
                 "task_specs": {"a": "Do it.", "b": "Do b."},
                 "reducers": [
-                    {"id": "r1", "needs": ["b"], "prompt": "Gate b."},
-                    {"id": "r2", "needs": ["r1"], "prompt": "Gate r1."},
+                    {"id": "r1", "needs": ["b"], "prompt": "Summarize b."},
+                    {"id": "r2", "needs": ["r1"], "prompt": "Summarize r1."},
                 ],
             },
             "cannot need reducer",

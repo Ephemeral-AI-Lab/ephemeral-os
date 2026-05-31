@@ -1,8 +1,8 @@
 """IterationAttemptCoordinator lifecycle tests.
 
 Iteration close is now a primitive keyword callback
-``on_iteration_closed(iteration_id=, succeeded=, deferred_goal=,
-final_attempt_id=)`` — there is no ``IterationClosureReport`` DTO. On a passing
+``on_iteration_closed(iteration_id=, succeeded=, deferred_goal=)`` — there is
+no ``IterationClosureReport`` DTO. On a passing
 close the coordinator denormalizes the passing attempt's REDUCER outcomes onto
 ``Iteration.outcomes`` as execution outcome records; on a failed close it
 denormalizes the last failed attempt's failed-task outcomes.
@@ -45,13 +45,12 @@ def _seed_iteration(
 def _make_coordinator(iter_id, iteration_store, attempt_store, task_store=None):
     captured: list[dict] = []
 
-    def sink(*, iteration_id, succeeded, deferred_goal, final_attempt_id):
+    def sink(*, iteration_id, succeeded, deferred_goal):
         captured.append(
             {
                 "iteration_id": iteration_id,
                 "succeeded": succeeded,
                 "deferred_goal": deferred_goal,
-                "final_attempt_id": final_attempt_id,
             }
         )
 

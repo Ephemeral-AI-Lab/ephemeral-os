@@ -11,34 +11,37 @@ PLAN_SUBMISSION_CHOICE_GUIDANCE = f"""\
 ## Close vs Defer Decision
 
 Use `{SUBMIT_PLAN_CLOSES_GOAL_TOOL_NAME}` when:
-- You estimate this attempt's generators and reducers are sufficient for the
-  whole current goal.
-- Sufficient means every required outcome is produced by the DAG and checked by
-  reducers; after those reducers PASS, no known follow-up work remains.
+- This iteration's generator work and reducer outcomes are enough to finish the
+  current iteration goal.
+- "Enough" means the reducer outcomes cover the goal; after they exist, no
+  known follow-up planner pass is needed.
 
 Use `{SUBMIT_PLAN_DEFERS_GOAL_TOOL_NAME}` when:
-- You estimate the current goal needs another planner pass after this bounded
-  iteration runs.
-- The current reducers gate and summarize this iteration. Once they pass, their
-  outcomes become prior-iteration context for the next planner, alongside
+- You have a concrete plan for this bounded iteration, and the next useful step
+  is another planner pass after this iteration's reducer outcomes exist.
+- The current plan is concrete; what would be speculative is planning the full
+  goal beyond this iteration before those reducer outcomes exist.
+- Once current reducers complete successfully, their outcomes become
+  prior-iteration context for the next planner, alongside
   `deferred_goal_for_next_iteration`.
 - The deferred goal is the next planner's scope; reducer outcomes are context
   for that planner, not a replacement for the deferred goal.
 
 Do not submit either terminal yet when:
-- The plan is uncertain, reducers are too broad, current-iteration work is
-  unfinished, or the iteration boundary is unclear.
-- You cannot state why reducer PASS means either goal completion
-  (`{SUBMIT_PLAN_CLOSES_GOAL_TOOL_NAME}`) or a completed bounded iteration
-  ready for the next planner (`{SUBMIT_PLAN_DEFERS_GOAL_TOOL_NAME}`).
+- You cannot state this iteration as a concrete generator/reducer DAG with a
+  clear reducer outcome set.
+- You cannot state why the collection of reducer outcomes is sufficient for
+  either current-iteration goal completion (`{SUBMIT_PLAN_CLOSES_GOAL_TOOL_NAME}`)
+  or a completed bounded iteration ready for the next planner
+  (`{SUBMIT_PLAN_DEFERS_GOAL_TOOL_NAME}`).
 
 Examples:
 - Lane shape does not decide close vs defer. A sequence like
   `gen_a -> gen_b -> gen_c -> ...` can close or defer depending on whether
   another planner pass is needed.
-- Use `{SUBMIT_PLAN_CLOSES_GOAL_TOOL_NAME}` when the reducers gate the complete
-  result the current goal asked for.
-- Use `{SUBMIT_PLAN_DEFERS_GOAL_TOOL_NAME}` when the reducers gate iteration
+- Use `{SUBMIT_PLAN_CLOSES_GOAL_TOOL_NAME}` when the collection of reducer
+  outcomes is sufficient for the current iteration goal.
+- Use `{SUBMIT_PLAN_DEFERS_GOAL_TOOL_NAME}` when the reducers produce iteration
   outcomes that should become context for the next planner, and
   `deferred_goal_for_next_iteration` gives that planner a self-contained next
   goal.
@@ -48,8 +51,8 @@ PLAN_DAG_GUIDANCE = """\
 ## Plan DAG Contract
 
 A plan is a DAG of generator + reducer tasks. Generators do the work; reducers
-digest their direct `needs` and gate the result. Use the smallest graph that
-matches the context flow.
+work on assigned reducer tasks using their direct `needs` as context, then
+report outcome summaries. Use the smallest graph that matches the context flow.
 
 Rules:
 - Root generators may have no `needs`.

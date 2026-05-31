@@ -648,7 +648,6 @@ def test_child_workflow_success_resumes_waiting_generator(
     orchestrator.apply_child_workflow_outcome(
         generator_task=task_store.get_task(task_id),
         child_workflow=child,
-        final_attempt_id=None,
     )
 
     task = task_store.get_task(task_id)
@@ -689,7 +688,6 @@ def test_child_workflow_failure_leaves_dependents_pending_and_closes_attempt(
     orchestrator.apply_child_workflow_outcome(
         generator_task=task_store.get_task(task_id),
         child_workflow=child,
-        final_attempt_id=None,
     )
 
     task = task_store.get_task(task_id)

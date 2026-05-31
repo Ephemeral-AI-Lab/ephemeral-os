@@ -74,6 +74,33 @@ def test_descriptors_have_non_empty_focus_fields() -> None:
         )
 
 
+def test_reducer_terminal_descriptors_use_assigned_task_contract() -> None:
+    success = TERMINAL_DESCRIPTORS["submit_reduction_success"]
+    failure = TERMINAL_DESCRIPTORS["submit_reduction_failure"]
+    combined = (
+        f"{success.selection_guidance}\n{success.advisor_review_focus}\n"
+        f"{failure.selection_guidance}\n{failure.advisor_review_focus}"
+    )
+
+    assert "finished the work in `<assigned_task>`" in success.selection_guidance
+    assert "cannot finish the work in `<assigned_task>`" in failure.selection_guidance
+    assert "assigned reducer work is actually complete" in success.advisor_review_focus
+    assert "prevents completing `<assigned_task>`" in failure.advisor_review_focus
+    assert "gate" not in combined.lower()
+    assert "slice it gates" not in combined
+
+
+def test_generator_handoff_descriptor_requires_pre_edit_decomposition() -> None:
+    descriptor = TERMINAL_DESCRIPTORS["submit_workflow_handoff"]
+    combined = f"{descriptor.selection_guidance}\n{descriptor.advisor_review_focus}"
+
+    assert "you have not started edits" in descriptor.selection_guidance
+    assert "planner decomposition is needed" in descriptor.selection_guidance
+    assert "has not started edits" in descriptor.advisor_review_focus
+    assert "why decomposition is needed" in descriptor.advisor_review_focus
+    assert "bounded progress is made" not in combined
+
+
 def test_render_terminal_catalog_uses_selection_guidance() -> None:
     terminals = ["submit_generator_success", "submit_generator_failure"]
     catalog = render_terminal_catalog(terminals, focus="selection_guidance")

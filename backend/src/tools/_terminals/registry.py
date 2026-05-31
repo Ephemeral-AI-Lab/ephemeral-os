@@ -64,78 +64,81 @@ TERMINAL_DESCRIPTORS: dict[str, TerminalToolDescriptor] = {
     "submit_workflow_handoff": TerminalToolDescriptor(
         name="submit_workflow_handoff",
         selection_guidance=(
-            "Call when bounded progress is made but further work is needed. "
-            "Name the next bounded slice; do not kick the problem downstream "
-            "without specifying what's needed."
+            "Call when the tool is available, you have not started edits, "
+            "and the `<assigned_task>` is too broad or complex for one "
+            "executor pass. Name the delegated goal and why planner "
+            "decomposition is needed."
         ),
         advisor_review_focus=(
-            "Verify the handoff scope is specific and actionable. Flag vague "
-            "handoffs that just kick the problem downstream without naming "
-            "what's needed."
+            "Verify the generator has not started edits and the handoff scope "
+            "is specific and actionable. Flag vague handoffs that kick the "
+            "problem downstream without naming the delegated goal, findings, "
+            "or why decomposition is needed."
         ),
     ),
     "submit_plan_closes_goal": TerminalToolDescriptor(
         name="submit_plan_closes_goal",
         selection_guidance=(
-            "Call when this attempt's tasks fully cover the current "
-            "`<iteration_goal>`. When every plan task is done, the iteration "
-            "closes terminally and the workflow can succeed."
+            "Call when this iteration's generator work and reducer outcomes "
+            "are enough to finish the current `<iteration_goal>`. After those "
+            "outcomes exist, no known follow-up planner pass is needed."
         ),
         advisor_review_focus=(
             "The planner proposes to CLOSE the current `<iteration_goal>` in "
-            "this attempt. Review the proposed decomposition against "
-            "`<iteration_goal>`: does every required item have a generator "
-            "task, are evaluation criteria one-per-item where the goal is a "
-            "list, and does the plan avoid a coarse 'all items done' "
-            "criterion that turns partial progress into total failure? Flag "
-            "missing items, mis-scoped tasks, and dependency mistakes."
+            "this iteration. Review the DAG against `<iteration_goal>`: does "
+            "every required item have generator work, do reducer outcomes "
+            "cover the goal, and is any follow-up planner pass still known to "
+            "be needed? Flag missing items, mis-scoped tasks, and dependency "
+            "mistakes."
         ),
     ),
     "submit_plan_defers_goal": TerminalToolDescriptor(
         name="submit_plan_defers_goal",
         selection_guidance=(
-            "Call when this attempt delivers a complete, coherent, bounded "
-            "slice of the current `<iteration_goal>` and a clear remainder "
-            "exists. The `deferred_goal_for_next_iteration` is the next "
-            "iteration's whole scope, not a backlog dump."
+            "Call when this attempt has a concrete plan for a bounded "
+            "iteration and the next useful step is another planner pass after "
+            "the reducer outcomes exist. The "
+            "`deferred_goal_for_next_iteration` is the next planner's scope, "
+            "not a backlog dump."
         ),
         advisor_review_focus=(
             "The planner DEFERS remaining work via a "
-            "`deferred_goal_for_next_iteration`. Confirm the partial scope is "
-            "genuinely smaller than `<iteration_goal>` and that the "
-            "`deferred_goal_for_next_iteration` is the next bounded slice — NOT a "
-            "dump of the entire remaining backlog. Verify the in-scope items "
-            "have one evaluation criterion each and the deferred items are "
-            "clearly named so the next iteration can pick up cleanly."
+            "`deferred_goal_for_next_iteration`. Confirm the current DAG is a "
+            "finished bounded iteration, its reducer outcomes will be useful "
+            "context for the next planner, and the deferred goal is a "
+            "self-contained next scope rather than a backlog dump. Flag "
+            "unfinished current-iteration work hidden as deferral."
         ),
     ),
     "submit_reduction_success": TerminalToolDescriptor(
         name="submit_reduction_success",
         selection_guidance=(
-            "Call when your `<dependencies>` outcomes satisfy your "
-            "`<assigned_task>`; this reducer task closes successfully and "
-            "the attempt passes once every plan task is done."
+            "Call when you have finished the work in `<assigned_task>` using "
+            "the `<dependencies>` outcomes as context. The `outcome` must "
+            "summarize the completed reducer work and the context/result it "
+            "produces."
         ),
         advisor_review_focus=(
-            "The reducer proposes to PASS the slice it gates. Re-read its "
-            "`<assigned_task>`; verify the `<dependencies>` outcomes actually "
-            "satisfy it. Flag any requirement the reducer is glossing over "
-            "and any outcome that satisfies the letter but not the intent of "
-            "the prompt."
+            "The reducer proposes success. Re-read `<assigned_task>` and the "
+            "`<dependencies>` outcomes; verify the assigned reducer work is "
+            "actually complete and the `outcome` states what was produced. "
+            "Flag submissions that only reviewed dependencies, omit requested "
+            "work, or claim success despite missing context."
         ),
     ),
     "submit_reduction_failure": TerminalToolDescriptor(
         name="submit_reduction_failure",
         selection_guidance=(
-            "Call when your `<dependencies>` outcomes do not satisfy your "
-            "`<assigned_task>`. The graph enters retry or failure handling."
+            "Call when you cannot finish the work in `<assigned_task>` from "
+            "the current `<dependencies>` outcomes. Name the blocker, gap, or "
+            "missing context."
         ),
         advisor_review_focus=(
-            "The reducer proposes to FAIL the slice it gates. Confirm the "
-            "failing requirement is accurately named and that the failure is "
-            "on the slice's promised scope (NOT on work deferred via "
-            "`deferred_goal_for_next_iteration`). Flag failures that punish "
-            "the attempt for items outside the current `<iteration_goal>`."
+            "The reducer proposes failure. Confirm the named blocker prevents "
+            "completing `<assigned_task>` from the current context and that "
+            "the failure outcome is specific enough for retry or replanning. "
+            "Flag premature failures and failures based on work outside the "
+            "assigned task or current iteration."
         ),
     ),
 }

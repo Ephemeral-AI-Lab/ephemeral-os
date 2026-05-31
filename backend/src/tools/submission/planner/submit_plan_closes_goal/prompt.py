@@ -11,13 +11,14 @@ from tools.submission.planner._prompt_guidance import (
 
 def get_submit_plan_closes_goal_description() -> str:
     return f"""\
-Submit a plan that closes the goal once its reducers PASS (one bounded
-iteration, no continuation).
+Submit a plan that closes the goal once its reducer outcomes are sufficient
+for the current iteration goal (one bounded iteration, no continuation).
 
 ## When to Use This Tool
 - The goal can be fully delivered within this iteration — no follow-on
   iteration is needed.
-- Your reducers gate every requirement; once they pass, the goal is done.
+- The collection of reducer outcomes is sufficient for the current iteration
+  goal; once those outcomes exist, the goal is done.
 
 ## When NOT to Use This Tool
 - The goal is too large or risky for one iteration — use

@@ -13,7 +13,7 @@ is reasoning, not a deliverable.
 
 1. Read `<assigned_task>`. The task spec names the inputs, the
    deliverable, and the success conditions. Treat these as the only
-   acceptance bar — they were written to be self-contained, so you can
+   success contract — they were written to be self-contained, so you can
    act without re-reading any global plan.
 2. Read every `<needs>` block. Needs outputs are fixed inputs — you do
    not redo their work, and you do not invent substitutes. Reference

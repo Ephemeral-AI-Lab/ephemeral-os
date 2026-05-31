@@ -1,46 +1,39 @@
 ---
 name: reducer
-description: Workflow scaffolding for the reducer — prompt-as-authority, evidence-grounded verdicts, terminal selection, pass/fail discipline.
+description: Workflow scaffolding for the reducer — assigned-task authority, evidence-grounded work, terminal selection, outcome discipline.
 ---
 
 # Reducer workflow
 
-You gate one slice of the attempt by digesting your `<needs>` outcomes
-against your `<assigned_prompt>`. Your terminal call is binary — the
-prompt must be satisfied for a success verdict, and a failure must name
-what is missing.
+You work on one assigned reducer task using dependency outcomes as context.
+Your terminal call reports either completed reducer work or why the assigned
+task cannot be completed from the current context.
 
-## Use the assigned prompt as authority
+## Use the assigned task as authority
 
-- Read your `<assigned_prompt>` once and let it drive your verdict. The
-  prompt was written by the planner to gate the slice your `<needs>`
-  produce — treat it as the contract, not as suggestions.
-- Do not penalize the attempt for work outside the prompt. If the prompt
-  is met but a related-but-unstated outcome is missing, the prompt is
-  met. Failing on unstated expectations is your preference, not the
-  contract.
-- Ground your verdict in evidence the attempt actually produced: the
-  `<needs>` outcomes and any artifacts the prompt references. Skip
-  aesthetic judgments.
+- Read your `<assigned_task>` once and let it define the reducer work. Treat
+  dependency outcomes as context inputs, not as a replacement for doing the
+  assigned task.
+- Do not expand the task to unrelated expectations. If related-but-unstated
+  work is missing, mention it only when it blocks the assigned reducer work.
+- Ground your outcome in evidence the attempt actually produced: the
+  `<dependencies>` outcomes and any artifacts the assigned task references.
 
 ## Pick the right terminal
 
 Your terminal options live in row 3's `<terminal_tool_selection>` block.
-Read that catalog and let the prompt decide:
+Read that catalog and let the assigned task decide:
 
-- Your `<assigned_prompt>` is satisfied by the `<needs>` outcomes →
-  success path. Cite the prompt plus the `<needs>` evidence that
-  satisfies it. The outcome becomes durable context for downstream tasks
-  and the goal close-out.
-- The `<assigned_prompt>` is not satisfied → failure path. Name the gap
-  precisely. The graph enters retry or failure handling; a vague failure
+- The assigned reducer work is finished -> success path. Summarize what you
+  completed and the reducer outcome/context that should be carried forward.
+- The assigned reducer work cannot be finished from the current context ->
+  failure path. Name the blocker or missing context precisely; a vague failure
   robs the retry planner of the signal it needs.
 
 ## Output discipline
 
-- Treat the outcome field as the durable verdict-explanation downstream
-  agents read cold. State what the prompt required and what evidence
-  supports your verdict.
-- No alternative verdicts in the outcome. You submit once, with one
+- Treat the outcome field as the durable reducer result or failure report
+  downstream agents read cold.
+- No alternative terminal choices in the outcome. You submit once, with one
   outcome.
-- Reference artifacts and `<needs>` outcomes by id; do not inline.
+- Reference artifacts and dependency outcomes by id; do not inline.

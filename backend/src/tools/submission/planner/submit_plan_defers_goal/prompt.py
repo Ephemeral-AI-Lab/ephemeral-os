@@ -28,9 +28,9 @@ and defers the remainder to a follow-up iteration.
 {PLAN_SUBMISSION_CHOICE_GUIDANCE}
 
 ## Continuation Contract
-- The submitted plan must stand on its own. Its tasks and reducers deliver a
-  finished iteration that closes the current iteration. The continuation is for
-  additional work, not unfinished work in this graph.
+- The submitted plan must stand on its own. Its generator and reducer outcomes
+  deliver a finished iteration. The continuation is for additional work, not
+  unfinished work in this graph.
 - `deferred_goal_for_next_iteration` is the next iteration's whole scope, not
   a backlog dump or a diff against this attempt. Write it as a self-contained
   instruction for a fresh planner.
@@ -55,6 +55,6 @@ generator inputs, extra or missing `task_specs`, and dangling generators with no
 downstream generator or reducer consumer.
 
 ## Behavior
-- Records the deferring plan. Once the reducers pass, the next iteration is
-  spawned automatically from `deferred_goal_for_next_iteration`.\
+- Records the deferring plan. Once reducer tasks complete successfully, the next
+  iteration is spawned automatically from `deferred_goal_for_next_iteration`.\
 """

@@ -48,7 +48,7 @@ class PlanTaskInput(BaseModel):
 
 
 class ReducerInput(BaseModel):
-    """One reducer plan task — the exit gate. ``prompt`` required + nonblank."""
+    """One reducer plan task. ``prompt`` required + nonblank."""
 
     model_config = ConfigDict(extra="forbid")
 
@@ -78,8 +78,8 @@ class SharedPlannerSubmissionInput(BaseModel):
     """Planner submission boundary schema.
 
     A plan is a DAG of generator + reducer tasks. ``tasks`` + ``task_specs``
-    define the generators; ``reducers`` (>=1) define the exit gate. Framing
-    lives in each task spec and each reducer prompt.
+    define the generators; ``reducers`` (>=1) define iteration outcomes.
+    Framing lives in each task spec and each reducer prompt.
     """
 
     model_config = ConfigDict(extra="forbid")
