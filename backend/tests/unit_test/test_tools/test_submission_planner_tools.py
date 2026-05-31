@@ -51,6 +51,11 @@ async def test_plan_tool_descriptions_share_dag_guidance() -> None:
     assert PLAN_DAG_GUIDANCE in closes
     assert PLAN_DAG_GUIDANCE in defers
     assert "The attempt PASSES iff every plan task reaches DONE." in closes
+    assert "Sufficient means every required outcome" in closes
+    assert "## Decision Reasoning" in defers
+    assert "If this iteration can gate every requirement" in defers
+    assert "phase_a -> phase_b -> phase_c -> ... lane" in defers
+    assert "produces a concrete next-iteration plan" in defers
     assert "deferred_goal_for_next_iteration" in defers
 
 

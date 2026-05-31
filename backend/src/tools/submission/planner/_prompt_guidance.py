@@ -3,22 +3,29 @@
 from __future__ import annotations
 
 PLAN_DAG_GUIDANCE = """\
-A plan is a DAG of generator + reducer tasks (edges are `needs`). Generators
-do the work; reducers digest their `needs` and gate the result.
+## Plan DAG Contract
 
-Plan shape:
+A plan is a DAG of generator + reducer tasks. Generators do the work; reducers
+digest their direct `needs` and gate the result. Use the smallest graph that
+matches the context flow.
+
+Rules:
 - Root generators may have no `needs`.
 - Non-root generator `needs` may reference one or more generator ids.
 - Reducer `needs` must reference one or more generator ids.
 - No task may need a reducer; reducers are terminal sinks.
 - Every generator must be needed by another generator or by a reducer.
-- `needs` are direct context inputs, not scheduling shortcuts. A task receives
-  only the outcomes of ids listed in its own `needs`; transitive ancestors are
-  not included. If `gen_b` needs `gen_a` and `gen_c` needs `gen_b`, then
-  `gen_c` receives `gen_b` only. If `gen_c` also needs `gen_a`'s context, set
+
+Context rule:
+- `needs` are direct context inputs, not scheduling shortcuts.
+- A task receives only the outcomes of ids listed in its own `needs`;
+  transitive ancestors are not included.
+- If `gen_b` needs `gen_a` and `gen_c` needs `gen_b`, then `gen_c` receives
+  `gen_b` only.
+- If `gen_c` also needs `gen_a`'s context, set
   `gen_c.needs = ["gen_a", "gen_b"]`.
 
-Patterns:
+Valid examples:
 
 Overview graph:
    gen_a ----\\
