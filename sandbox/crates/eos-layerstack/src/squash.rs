@@ -7,9 +7,13 @@
 //! that lease's frozen reads (see the DUAL-SET note in [`crate::lease`]).
 //! `// PORT backend/src/sandbox/layer_stack/squash.py`
 
-use eos_protocol::{LayerRef, Manifest};
+use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicU64, Ordering};
+
+use eos_protocol::{LayerRef, Manifest, MANIFEST_SCHEMA_VERSION};
 
 use crate::error::LayerStackError;
+use crate::{MergedView, LAYERS_DIR, STAGING_DIR};
 
 /// Format string for a freshly-built checkpoint layer id: `B{version:06}-{uuid8}`.
 /// The Rust port must reproduce `f"B{next_version:06d}-{uuid4().hex[:8]}"` exactly
@@ -108,15 +112,17 @@ impl SquashPlan {
 /// `// PORT backend/src/sandbox/layer_stack/squash.py:51-59 — LayerCheckpointSquasher`
 #[derive(Debug)]
 pub struct LayerCheckpointSquasher {
-    _storage_root: std::path::PathBuf,
+    storage_root: PathBuf,
+    view: MergedView,
 }
 
 impl LayerCheckpointSquasher {
     /// Bind a squasher to a storage root (owns its own [`crate::MergedView`]).
     /// `// PORT backend/src/sandbox/layer_stack/squash.py:54-59 — __init__`
-    pub fn new(storage_root: std::path::PathBuf) -> Self {
+    pub fn new(storage_root: PathBuf) -> Self {
         Self {
-            _storage_root: storage_root,
+            view: MergedView::new(storage_root.clone()),
+            storage_root,
         }
     }
 
@@ -131,9 +137,48 @@ impl LayerCheckpointSquasher {
         lease_head_layers: &[LayerRef],
         min_reduction: usize,
     ) -> Result<Option<SquashPlan>, LayerStackError> {
-        let _ = (active_manifest, max_depth, lease_head_layers, min_reduction);
-        // PORT backend/src/sandbox/layer_stack/squash.py:61-93 — _segment_around_lease_heads + depth/min_reduction gates
-        todo!("PORT: LayerCheckpointSquasher.plan")
+        if max_depth == 0 {
+            return Err(LayerStackError::InvalidSquashPlan(
+                "max_depth must be positive".to_owned(),
+            ));
+        }
+        if min_reduction == 0 {
+            return Err(LayerStackError::InvalidSquashPlan(
+                "min_reduction must be positive".to_owned(),
+            ));
+        }
+        if active_manifest.layers.len() <= max_depth {
+            return Ok(None);
+        }
+
+        let entries = segment_around_lease_heads(&active_manifest.layers, lease_head_layers)?;
+        if entries.len() >= active_manifest.layers.len() {
+            return Ok(None);
+        }
+        if active_manifest.layers.len() - entries.len() < min_reduction {
+            return Ok(None);
+        }
+        let checkpoint_segments: Vec<&CheckpointSegment> = entries
+            .iter()
+            .filter_map(|entry| match entry {
+                SquashPlanEntry::Segment(segment) => Some(segment),
+                SquashPlanEntry::Keep(_) => None,
+            })
+            .collect();
+        if entries.len() > max_depth
+            && checkpoint_segments
+                .iter()
+                .all(|segment| segment.layers.len() <= max_depth)
+        {
+            return Ok(None);
+        }
+
+        SquashPlan::new(
+            active_manifest.version,
+            active_manifest.layers.clone(),
+            entries,
+        )
+        .map(Some)
     }
 
     /// Project a segment's layers into a fresh checkpoint layer directory and
@@ -144,9 +189,29 @@ impl LayerCheckpointSquasher {
         segment: &CheckpointSegment,
         active_version: i64,
     ) -> Result<LayerRef, LayerStackError> {
-        let _ = (segment, active_version);
-        // PORT backend/src/sandbox/layer_stack/squash.py:95-113 — project(staging) → os.replace(staging, layer_dir)
-        todo!("PORT: LayerCheckpointSquasher.build_checkpoint")
+        let (layer_id, staging_dir, layer_dir) =
+            self.allocate_checkpoint_paths(active_version + 1)?;
+        let segment_manifest = Manifest::new(
+            active_version,
+            segment.layers.clone(),
+            MANIFEST_SCHEMA_VERSION,
+        )
+        .map_err(LayerStackError::from)?;
+        if let Err(err) = self.view.project(&staging_dir, &segment_manifest) {
+            let _ = std::fs::remove_dir_all(&staging_dir);
+            return Err(err);
+        }
+        if let Some(parent) = layer_dir.parent() {
+            std::fs::create_dir_all(parent)?;
+        }
+        if let Err(err) = std::fs::rename(&staging_dir, &layer_dir) {
+            let _ = std::fs::remove_dir_all(&staging_dir);
+            return Err(err.into());
+        }
+        Ok(LayerRef {
+            layer_id: layer_id.clone(),
+            path: format!("{LAYERS_DIR}/{layer_id}"),
+        })
     }
 
     /// Rename a prebuilt checkpoint so its id matches the publishing manifest
@@ -157,17 +222,71 @@ impl LayerCheckpointSquasher {
         checkpoint: &LayerRef,
         manifest_version: i64,
     ) -> Result<LayerRef, LayerStackError> {
-        let _ = (checkpoint, manifest_version);
-        // PORT backend/src/sandbox/layer_stack/squash.py:115-126 — os.replace(current, layer_dir) + fsync parent
-        todo!("PORT: LayerCheckpointSquasher.relabel_checkpoint")
+        let current = self.layer_path(checkpoint)?;
+        if !current.exists() {
+            return Err(LayerStackError::Storage(format!(
+                "checkpoint layer is missing: {}",
+                checkpoint.layer_id
+            )));
+        }
+        let (layer_id, _staging_dir, layer_dir) =
+            self.allocate_checkpoint_paths(manifest_version)?;
+        if let Some(parent) = layer_dir.parent() {
+            std::fs::create_dir_all(parent)?;
+        }
+        std::fs::rename(current, &layer_dir)?;
+        Ok(LayerRef {
+            layer_id: layer_id.clone(),
+            path: format!("{LAYERS_DIR}/{layer_id}"),
+        })
     }
 
     /// Best-effort removal of an uncommitted checkpoint (rollback path).
     /// `// PORT backend/src/sandbox/layer_stack/squash.py:128-130 — discard_checkpoint`
     pub fn discard_checkpoint(&self, checkpoint: &LayerRef) -> Result<(), LayerStackError> {
-        let _ = checkpoint;
-        // PORT backend/src/sandbox/layer_stack/squash.py:128-130 — rmtree(layer_path, ignore_errors=True)
-        todo!("PORT: LayerCheckpointSquasher.discard_checkpoint")
+        let path = self.layer_path(checkpoint)?;
+        match std::fs::remove_dir_all(path) {
+            Ok(()) => Ok(()),
+            Err(err) if err.kind() == std::io::ErrorKind::NotFound => Ok(()),
+            Err(err) => Err(err.into()),
+        }
+    }
+
+    fn allocate_checkpoint_paths(
+        &self,
+        next_version: i64,
+    ) -> Result<(String, PathBuf, PathBuf), LayerStackError> {
+        std::fs::create_dir_all(self.storage_root.join(LAYERS_DIR))?;
+        std::fs::create_dir_all(self.storage_root.join(STAGING_DIR))?;
+        for _ in 0..100 {
+            let unique = NEXT_CHECKPOINT.fetch_add(1, Ordering::Relaxed);
+            let layer_id = format!("{CHECKPOINT_ID_PREFIX}{next_version:06}-{unique:08x}");
+            let staging_dir = self
+                .storage_root
+                .join(STAGING_DIR)
+                .join(format!("{layer_id}.staging"));
+            let layer_dir = self.storage_root.join(LAYERS_DIR).join(&layer_id);
+            if !staging_dir.exists() && !layer_dir.exists() {
+                return Ok((layer_id, staging_dir, layer_dir));
+            }
+        }
+        Err(LayerStackError::LayerIdAllocation)
+    }
+
+    fn layer_path(&self, layer: &LayerRef) -> Result<PathBuf, LayerStackError> {
+        if layer.path.is_empty() || layer.path.contains('\0') {
+            return Err(LayerStackError::Manifest(
+                "invalid checkpoint layer path".to_owned(),
+            ));
+        }
+        let path = Path::new(&layer.path);
+        if path.is_absolute() || path.components().any(|part| part.as_os_str() == "..") {
+            return Err(LayerStackError::Manifest(format!(
+                "invalid checkpoint layer path: {}",
+                layer.path
+            )));
+        }
+        Ok(self.storage_root.join(path))
     }
 }
 
@@ -178,7 +297,48 @@ pub fn manifest_prefix_before_plan<'m>(
     manifest: &'m Manifest,
     plan: &SquashPlan,
 ) -> Option<&'m [LayerRef]> {
-    let _ = (manifest, plan);
-    // PORT backend/src/sandbox/layer_stack/squash.py:167-176 — tail-equality check, return manifest.layers[:-planned_depth]
-    todo!("PORT: manifest_prefix_before_plan")
+    let planned_depth = plan.active_layers.len();
+    if planned_depth > manifest.layers.len() {
+        return None;
+    }
+    let split = manifest.layers.len() - planned_depth;
+    if manifest.layers[split..] != plan.active_layers {
+        return None;
+    }
+    Some(&manifest.layers[..split])
 }
+
+fn segment_around_lease_heads(
+    layers: &[LayerRef],
+    lease_head_layers: &[LayerRef],
+) -> Result<Vec<SquashPlanEntry>, LayerStackError> {
+    let mut entries = Vec::new();
+    let mut run = Vec::new();
+    for layer in layers {
+        if lease_head_layers.contains(layer) {
+            flush_run(&mut entries, &mut run)?;
+            entries.push(SquashPlanEntry::Keep(layer.clone()));
+        } else {
+            run.push(layer.clone());
+        }
+    }
+    flush_run(&mut entries, &mut run)?;
+    Ok(entries)
+}
+
+fn flush_run(
+    entries: &mut Vec<SquashPlanEntry>,
+    run: &mut Vec<LayerRef>,
+) -> Result<(), LayerStackError> {
+    match run.len() {
+        0 => {}
+        1 => entries.push(SquashPlanEntry::Keep(run[0].clone())),
+        _ => entries.push(SquashPlanEntry::Segment(CheckpointSegment::new(
+            std::mem::take(run),
+        )?)),
+    }
+    run.clear();
+    Ok(())
+}
+
+static NEXT_CHECKPOINT: AtomicU64 = AtomicU64::new(0);

@@ -5,11 +5,13 @@
 //! changeset to the per-root [`CommitQueue`], and (optionally) runs an
 //! auto-squash maintenance policy once a publish lands.
 
-use eos_protocol::LayerChange;
+use std::sync::Arc;
+
+use eos_protocol::{LayerChange, LayerPath};
 
 use crate::commit_queue::{CommitQueue, CommitTransactionPort, PreparedChangeset};
 use crate::error::OccError;
-use crate::route::ChangesetResult;
+use crate::route::{ChangesetResult, PublishDecision, Route};
 
 /// Layer depth at which auto-squash maintenance kicks in.
 // PORT backend/src/sandbox/occ/service.py:34 — AUTO_SQUASH_MAX_DEPTH = 100
@@ -38,6 +40,33 @@ pub trait LayerSquashPort {
     fn squash(&self, max_depth: u32) -> Result<Option<u64>, OccError>;
 }
 
+/// Route/base-hash provider used while preparing OCC changesets.
+///
+/// The daemon owns the concrete layer-stack/gitignore implementation because
+/// this crate must not know daemon workspace bindings. The default provider
+/// routes every non-`.git` path as gated with an unknown base hash, preserving
+/// the earlier skeleton behavior for unit tests and custom queues.
+pub trait OccRouteProvider: Send + Sync {
+    /// Is this normalized path gitignored in the operation snapshot?
+    fn is_ignored(&self, path: &LayerPath) -> Result<bool, OccError>;
+
+    /// Content hash of `path` in the operation snapshot, or `None` if absent.
+    fn base_hash(&self, path: &LayerPath) -> Result<Option<String>, OccError>;
+}
+
+#[derive(Debug)]
+struct AllGatedRouteProvider;
+
+impl OccRouteProvider for AllGatedRouteProvider {
+    fn is_ignored(&self, _path: &LayerPath) -> Result<bool, OccError> {
+        Ok(false)
+    }
+
+    fn base_hash(&self, _path: &LayerPath) -> Result<Option<String>, OccError> {
+        Ok(None)
+    }
+}
+
 /// Synchronous layer-stack squash after successful publishes.
 ///
 /// Each policy owns its own squash lock (Python `_squash_lock`) so concurrent
@@ -62,8 +91,10 @@ impl<S: LayerSquashPort> AutoSquashMaintenancePolicy<S> {
 impl<S: LayerSquashPort> MaintenancePolicy for AutoSquashMaintenancePolicy<S> {
     // PORT backend/src/sandbox/occ/maintenance.py:44 — after_publish_sync(): depth gate + squash
     fn after_publish_sync(&self, result: &ChangesetResult) -> Result<(), OccError> {
-        let _ = (&self.squasher, self.max_depth, result);
-        todo!("PORT occ/maintenance.py:44 — gate on published version + active depth, then squash")
+        if result.published_manifest_version.is_some() && self.squasher.can_squash(self.max_depth) {
+            let _ = self.squasher.squash(self.max_depth)?;
+        }
+        Ok(())
     }
 }
 
@@ -73,12 +104,25 @@ impl<S: LayerSquashPort> MaintenancePolicy for AutoSquashMaintenancePolicy<S> {
 /// is exactly one `OccService` per `layer_stack_root` (the MF-1 owner).
 pub struct OccService<T: CommitTransactionPort + 'static> {
     commit_queue: CommitQueue<T>,
+    route_provider: Arc<dyn OccRouteProvider>,
 }
 
 impl<T: CommitTransactionPort + 'static> OccService<T> {
-    /// Build a service over an already-started commit queue.
-    pub fn new(commit_queue: CommitQueue<T>) -> Self {
-        Self { commit_queue }
+    /// Build a service and start its owned commit queue.
+    pub fn new(commit_queue: CommitQueue<T>) -> Result<Self, OccError> {
+        Self::with_route_provider(commit_queue, Arc::new(AllGatedRouteProvider))
+    }
+
+    /// Build a service with a daemon-provided route/base-hash provider.
+    pub fn with_route_provider(
+        mut commit_queue: CommitQueue<T>,
+        route_provider: Arc<dyn OccRouteProvider>,
+    ) -> Result<Self, OccError> {
+        commit_queue.start()?;
+        Ok(Self {
+            commit_queue,
+            route_provider,
+        })
     }
 
     /// Prepare and commit a changeset through the layer stack.
@@ -89,8 +133,31 @@ impl<T: CommitTransactionPort + 'static> OccService<T> {
         snapshot_version: Option<u64>,
         atomic: bool,
     ) -> Result<ChangesetResult, OccError> {
-        let _ = (&self.commit_queue, changes, snapshot_version, atomic);
-        todo!("PORT occ/service.py:63 — prepare_changeset then commit_prepared")
+        let prepared = self.prepare_changeset(changes, snapshot_version, atomic)?;
+        let receiver = self.commit_queue.submit(prepared)?;
+        receiver.recv().map_err(|_| OccError::ReplyDisconnected)?
+    }
+
+    /// Prepare and commit with caller-supplied base hashes.
+    ///
+    /// Direct file APIs use this to pin the hash observed before applying edit
+    /// anchors. Overlay callers can pass hashes from their leased snapshot once
+    /// the shell/search pipeline is wired.
+    pub fn apply_changeset_with_base_hashes(
+        &self,
+        changes: &[LayerChange],
+        snapshot_version: Option<u64>,
+        atomic: bool,
+        base_hashes: &[(LayerPath, Option<String>)],
+    ) -> Result<ChangesetResult, OccError> {
+        let prepared = self.prepare_changeset_with_base_hashes(
+            changes,
+            snapshot_version,
+            atomic,
+            base_hashes,
+        )?;
+        let receiver = self.commit_queue.submit(prepared)?;
+        receiver.recv().map_err(|_| OccError::ReplyDisconnected)?
     }
 
     /// Route raw changes into a [`PreparedChangeset`] (Drop/Direct/Gated/Reject).
@@ -101,8 +168,58 @@ impl<T: CommitTransactionPort + 'static> OccService<T> {
         snapshot_version: Option<u64>,
         atomic: bool,
     ) -> Result<PreparedChangeset, OccError> {
-        let _ = (changes, snapshot_version, atomic);
-        todo!("PORT occ/service.py:230 — classify routes + compute changeset_id")
+        self.prepare_changeset_with_base_hashes(changes, snapshot_version, atomic, &[])
+    }
+
+    /// Route raw changes into a [`PreparedChangeset`] with optional base-hash
+    /// overrides supplied by the caller.
+    pub fn prepare_changeset_with_base_hashes(
+        &self,
+        changes: &[LayerChange],
+        snapshot_version: Option<u64>,
+        atomic: bool,
+        base_hashes: &[(LayerPath, Option<String>)],
+    ) -> Result<PreparedChangeset, OccError> {
+        let mut path_groups = Vec::with_capacity(changes.len());
+        let mut publishable = Vec::with_capacity(changes.len());
+        for change in changes {
+            let path = change.path().clone();
+            if path.as_str() == ".git" || path.as_str().starts_with(".git/") {
+                path_groups.push(PublishDecision {
+                    path,
+                    route: Route::Drop,
+                    base_hash: None,
+                    message: Some(".git paths are not mutable through OCC".to_owned()),
+                });
+                continue;
+            }
+            let route = if self.route_provider.is_ignored(&path)? {
+                Route::Direct
+            } else {
+                Route::Gated
+            };
+            let base_hash = if route == Route::Gated {
+                match base_hashes.iter().find(|(candidate, _)| candidate == &path) {
+                    Some((_, hash)) => hash.clone(),
+                    None => self.route_provider.base_hash(&path)?,
+                }
+            } else {
+                None
+            };
+            path_groups.push(PublishDecision {
+                path,
+                route,
+                base_hash,
+                message: None,
+            });
+            publishable.push(change.clone());
+        }
+        Ok(PreparedChangeset {
+            snapshot_version,
+            path_groups,
+            changes: publishable,
+            atomic,
+        })
     }
 }
 

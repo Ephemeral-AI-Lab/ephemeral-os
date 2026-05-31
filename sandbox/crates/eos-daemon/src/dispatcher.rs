@@ -15,16 +15,31 @@
 //! `// PORT backend/src/sandbox/daemon/rpc/dispatcher.py:60-160 — dispatch_envelope_async`
 //! `// PORT backend/src/sandbox/daemon/rpc/dispatcher.py:404-449 — _register_builtin_operations / OP_TABLE`
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
+use std::io::Write;
 use std::path::{Path, PathBuf};
+use std::process::{Command, Stdio};
+use std::sync::{Arc, Mutex, OnceLock};
 use std::time::Instant;
 
 use serde_json::{json, Value};
+use sha2::{Digest, Sha256};
 
-use eos_layerstack::{read_workspace_binding, require_workspace_binding, LayerStack};
-use eos_protocol::{models::MAX_READ_BYTES, ErrorKind, Request};
+use eos_layerstack::{read_workspace_binding, require_workspace_binding, LayerStack, MergedView};
+use eos_occ::{
+    ChangesetResult, CommitQueue, CommitTransactionPort, FileResult, OccRouteProvider, OccService,
+    OccStatus, PreparedChangeset, PublishConflict, Route,
+};
+use eos_overlay::{allocate_overlay_writable_dirs, capture_upperdir, overlay_writable_root};
+use eos_protocol::{
+    apply_search_replace,
+    models::{SearchReplaceEdit, MAX_READ_BYTES},
+    ErrorKind, Intent, LayerChange, LayerPath, Request, SearchReplaceError,
+};
+use eos_runner::{RunMode, RunRequest, RunResult, ToolCall, WorkspaceRoot};
 
 use crate::error::DaemonError;
+use crate::in_flight::InFlightRegistry;
 
 /// Env gate for `api.audit.reset_floor` (must be `"true"`).
 /// `// PORT backend/src/sandbox/daemon/rpc/dispatcher.py:404 — EOS_DAEMON_AUDIT_ALLOW_FLOOR_RESET`
@@ -36,12 +51,32 @@ pub const AUDIT_ALLOW_FLOOR_RESET_ENV: &str = "EOS_DAEMON_AUDIT_ALLOW_FLOOR_RESE
 /// that at the call site. This skeleton models the registered routing surface
 /// rather than each handler's async-ness.
 /// `// PORT backend/src/sandbox/daemon/rpc/dispatcher.py:37 — Handler = Callable[[dict], Any]`
-pub type Handler = fn(&Value) -> Result<Value, DaemonError>;
+pub type Handler = for<'ctx> fn(&Value, DispatchContext<'ctx>) -> Result<Value, DaemonError>;
+
+/// Per-dispatch daemon services used by handlers that need runtime state.
+#[derive(Clone, Copy, Default)]
+pub struct DispatchContext<'ctx> {
+    in_flight: Option<&'ctx InFlightRegistry>,
+}
+
+impl<'ctx> DispatchContext<'ctx> {
+    /// Empty context for direct unit dispatch.
+    pub fn empty() -> Self {
+        Self { in_flight: None }
+    }
+
+    /// Context carrying the server's in-flight registry.
+    pub fn with_in_flight(in_flight: &'ctx InFlightRegistry) -> Self {
+        Self {
+            in_flight: Some(in_flight),
+        }
+    }
+}
 
 /// The op routing table. Re-registering the SAME handler under an op is a no-op;
 /// a DIFFERENT handler under a claimed op is rejected so peer collisions surface.
 /// `// PORT backend/src/sandbox/daemon/rpc/dispatcher.py:42-57 — register_op + OP_TABLE`
-#[derive(Default)]
+#[derive(Clone, Default)]
 pub struct OpTable {
     handlers: HashMap<String, Handler>,
 }
@@ -56,13 +91,24 @@ impl OpTable {
         // isolated-workspace ops, plugin ops, and the layer-stack control
         // surface; this skeleton registers the daemon-owned ops the task names.
         table.register("api.runtime.ready", op_runtime_ready);
+        table.register("api.v1.cancel", op_cancel);
         table.register("api.v1.heartbeat", op_heartbeat);
+        table.register("api.v1.inflight_count", op_inflight_count);
         table.register("api.layer_metrics", op_layer_metrics);
         table.register("api.audit.pull", op_audit_pull);
         table.register("api.audit.snapshot", op_audit_snapshot);
         table.register("api.audit.reset_floor", op_audit_reset_floor);
         table.register("api.read_file", op_read_file);
         table.register("api.v1.read_file", op_read_file);
+        table.register("api.write_file", op_write_file);
+        table.register("api.v1.write_file", op_write_file);
+        table.register("api.edit_file", op_edit_file);
+        table.register("api.v1.edit_file", op_edit_file);
+        table.register("api.glob", op_glob);
+        table.register("api.v1.glob", op_glob);
+        table.register("api.grep", op_grep);
+        table.register("api.v1.grep", op_grep);
+        table.register("api.v1.shell", op_shell);
         table
     }
 
@@ -78,6 +124,11 @@ impl OpTable {
     /// unknown op returns the `unknown_op` envelope.
     // PORT backend/src/sandbox/daemon/rpc/dispatcher.py:60-160 — dispatch_envelope_async core
     pub fn dispatch(&self, request: &Request) -> Value {
+        self.dispatch_with_context(request, DispatchContext::empty())
+    }
+
+    /// Route `request` with daemon runtime context.
+    pub fn dispatch_with_context(&self, request: &Request, context: DispatchContext<'_>) -> Value {
         if request.op.trim().is_empty() {
             return error_envelope(ErrorKind::InvalidEnvelope, "op is required", json!({}));
         }
@@ -95,7 +146,7 @@ impl OpTable {
                 json!({"op": request.op}),
             );
         };
-        match handler(&request.args) {
+        match handler(&request.args, context) {
             Ok(mut response) => {
                 attach_runtime_timings(&mut response);
                 response
@@ -127,7 +178,7 @@ pub fn error_envelope(kind: ErrorKind, message: &str, details: Value) -> Value {
 /// `api.runtime.ready` — binary readiness plus the three plane probes
 /// (control_plane / data_plane / mutation_gate). Requires `layer_stack_root`.
 // PORT backend/src/sandbox/daemon/builtin_operations.py:176-198 — runtime_ready: probe control_plane/data_plane/mutation_gate
-fn op_runtime_ready(args: &Value) -> Result<Value, DaemonError> {
+fn op_runtime_ready(args: &Value, _context: DispatchContext<'_>) -> Result<Value, DaemonError> {
     let total_start = Instant::now();
     let root = require_string(args, "layer_stack_root")?;
     let mut timings = serde_json::Map::new();
@@ -150,19 +201,64 @@ fn op_runtime_ready(args: &Value) -> Result<Value, DaemonError> {
     }))
 }
 
+/// `api.v1.cancel` — cancel one in-flight invocation id.
+// PORT backend/src/sandbox/daemon/builtin_operations.py:94-110 — cancel: registry.cancel_task(id), wait cleanup
+fn op_cancel(args: &Value, context: DispatchContext<'_>) -> Result<Value, DaemonError> {
+    let invocation_id = args
+        .get("invocation_id")
+        .and_then(Value::as_str)
+        .unwrap_or_default()
+        .trim()
+        .to_owned();
+    let cancelled = context
+        .in_flight
+        .is_some_and(|registry| registry.cancel(&invocation_id));
+    Ok(json!({
+        "success": true,
+        "invocation_id": invocation_id,
+        "cancelled": cancelled,
+        "already_done": !cancelled,
+        "cleanup_done": !cancelled,
+    }))
+}
+
 /// `api.v1.heartbeat` — touch `last_seen` for the given invocation ids.
 // PORT backend/src/sandbox/daemon/builtin_operations.py:113-117 — heartbeat: registry.heartbeat(ids) -> {success, touched}
-fn op_heartbeat(args: &Value) -> Result<Value, DaemonError> {
-    let touched = args
+fn op_heartbeat(args: &Value, context: DispatchContext<'_>) -> Result<Value, DaemonError> {
+    let invocation_ids: Vec<String> = args
         .get("invocation_ids")
         .and_then(Value::as_array)
-        .map_or(0, Vec::len);
+        .map(|ids| {
+            ids.iter()
+                .filter_map(Value::as_str)
+                .map(str::to_owned)
+                .collect()
+        })
+        .unwrap_or_default();
+    let touched = context
+        .in_flight
+        .map_or(0, |registry| registry.heartbeat(&invocation_ids));
     Ok(json!({"success": true, "touched": touched}))
+}
+
+/// `api.v1.inflight_count` — count background daemon invocations for one agent.
+// PORT backend/src/sandbox/daemon/builtin_operations.py:120-123 — inflight_count
+fn op_inflight_count(args: &Value, context: DispatchContext<'_>) -> Result<Value, DaemonError> {
+    let agent_id = args
+        .get("agent_id")
+        .and_then(Value::as_str)
+        .unwrap_or_default()
+        .trim()
+        .to_owned();
+    let count = context
+        .in_flight
+        .map_or(0, |registry| registry.count_by_agent(&agent_id));
+    Ok(json!({"success": true, "agent_id": agent_id, "count": count}))
 }
 
 /// `api.layer_metrics` — summarize layer-stack storage + lease state for a root.
 // PORT backend/src/sandbox/daemon/builtin_operations.py:132-170 — layer_metrics
-fn op_layer_metrics(args: &Value) -> Result<Value, DaemonError> {
+fn op_layer_metrics(args: &Value, _context: DispatchContext<'_>) -> Result<Value, DaemonError> {
     let root = PathBuf::from(require_string(args, "layer_stack_root")?);
     let stack = LayerStack::open(root.clone())?;
     let manifest = stack.read_active_manifest()?;
@@ -189,7 +285,7 @@ fn op_layer_metrics(args: &Value) -> Result<Value, DaemonError> {
 
 /// `api.audit.pull` — drain ring events after a cursor (backs the pull API).
 // PORT backend/src/sandbox/daemon/rpc/dispatcher.py:413-421 — _audit_pull_handler
-fn op_audit_pull(args: &Value) -> Result<Value, DaemonError> {
+fn op_audit_pull(args: &Value, _context: DispatchContext<'_>) -> Result<Value, DaemonError> {
     let after_seq = args.get("after_seq").and_then(Value::as_i64).unwrap_or(-1);
     let limit = args.get("limit").and_then(Value::as_u64).unwrap_or(1000) as usize;
     let mut response = crate::audit_buffer::AuditBuffer::new().pull(after_seq, limit);
@@ -199,7 +295,7 @@ fn op_audit_pull(args: &Value) -> Result<Value, DaemonError> {
 
 /// `api.audit.snapshot` — ring buffer + snapshot blocks, no events.
 // PORT backend/src/sandbox/daemon/rpc/dispatcher.py:423-428 — _audit_snapshot_handler
-fn op_audit_snapshot(args: &Value) -> Result<Value, DaemonError> {
+fn op_audit_snapshot(args: &Value, _context: DispatchContext<'_>) -> Result<Value, DaemonError> {
     let _ = args;
     let mut response = crate::audit_buffer::AuditBuffer::new().snapshot();
     response["success"] = Value::Bool(true);
@@ -208,7 +304,7 @@ fn op_audit_snapshot(args: &Value) -> Result<Value, DaemonError> {
 
 /// `api.audit.reset_floor` — gated behind [`AUDIT_ALLOW_FLOOR_RESET_ENV`].
 // PORT backend/src/sandbox/daemon/rpc/dispatcher.py:430-438 — _audit_reset_floor_handler (env gate -> forbidden)
-fn op_audit_reset_floor(args: &Value) -> Result<Value, DaemonError> {
+fn op_audit_reset_floor(args: &Value, _context: DispatchContext<'_>) -> Result<Value, DaemonError> {
     let _ = args;
     if std::env::var(AUDIT_ALLOW_FLOOR_RESET_ENV)
         .map(|raw| raw == "true")
@@ -224,7 +320,7 @@ fn op_audit_reset_floor(args: &Value) -> Result<Value, DaemonError> {
 
 /// `api.v1.read_file` — direct LayerStack read path.
 // PORT backend/src/sandbox/daemon/workspace_tool/dispatch.py:300-317 — _read_file_from_layer_stack
-fn op_read_file(args: &Value) -> Result<Value, DaemonError> {
+fn op_read_file(args: &Value, _context: DispatchContext<'_>) -> Result<Value, DaemonError> {
     let total_start = Instant::now();
     let root = PathBuf::from(require_string(args, "layer_stack_root")?);
     let raw_path = require_string(args, "path")?;
@@ -285,6 +381,362 @@ fn op_read_file(args: &Value) -> Result<Value, DaemonError> {
     }))
 }
 
+/// `api.v1.write_file` — direct LayerStack write publish path.
+// PORT backend/src/sandbox/daemon/workspace_tool/dispatch.py:321-363 — _write_file_to_layer_stack
+fn op_write_file(args: &Value, _context: DispatchContext<'_>) -> Result<Value, DaemonError> {
+    let total_start = Instant::now();
+    let root = PathBuf::from(require_string(args, "layer_stack_root")?);
+    let layer_path = bound_layer_path(&root, args)?;
+    let content = args
+        .get("content")
+        .and_then(Value::as_str)
+        .unwrap_or_default()
+        .as_bytes()
+        .to_vec();
+    let stack = LayerStack::open(root.clone())?;
+
+    if !args
+        .get("overwrite")
+        .and_then(Value::as_bool)
+        .unwrap_or(true)
+    {
+        let (_current, exists) = stack.read_text(&layer_path)?;
+        if exists {
+            let manifest = stack.read_active_manifest()?;
+            return Ok(guarded_conflict_response(
+                "write",
+                &layer_path,
+                "rejected",
+                "create_only_existing",
+                "file already exists",
+                resource_timings(&manifest, 0),
+                total_start,
+            ));
+        }
+    }
+    let manifest = stack.read_active_manifest()?;
+    let (base_bytes, base_exists) = stack.read_bytes(&layer_path)?;
+    let base_hash = hash_current(base_bytes.as_deref(), base_exists);
+
+    drop(stack);
+    let occ_start = Instant::now();
+    let path = LayerPath::parse(&layer_path).map_err(eos_layerstack::LayerStackError::from)?;
+    let result = apply_occ_changeset(
+        &root,
+        Some(manifest.version as u64),
+        &[LayerChange::Write {
+            path: path.clone(),
+            content,
+        }],
+        &[(path, base_hash)],
+    )?;
+    let manifest = LayerStack::open(root)?.read_active_manifest()?;
+    let mut timings = resource_timings(&manifest, published_file_count(&result));
+    timings.insert(
+        "api.write.occ_apply_s".to_owned(),
+        json!(occ_start.elapsed().as_secs_f64()),
+    );
+    Ok(guarded_changeset_response(
+        "write",
+        &result,
+        timings,
+        total_start,
+        None,
+    ))
+}
+
+/// `api.v1.edit_file` — direct LayerStack edit publish path.
+// PORT backend/src/sandbox/daemon/workspace_tool/dispatch.py:366-387 — _edit_file_in_layer_stack
+fn op_edit_file(args: &Value, _context: DispatchContext<'_>) -> Result<Value, DaemonError> {
+    let total_start = Instant::now();
+    let root = PathBuf::from(require_string(args, "layer_stack_root")?);
+    let layer_path = bound_layer_path(&root, args)?;
+    let edits = parse_edits(args)?;
+    let stack = LayerStack::open(root.clone())?;
+    let (base_bytes, exists) = stack.read_bytes(&layer_path)?;
+    let base_hash = hash_current(base_bytes.as_deref(), exists);
+    let mut content = if exists {
+        String::from_utf8(base_bytes.unwrap_or_default()).map_err(|err| {
+            eos_layerstack::LayerStackError::Storage(format!("file is not utf-8 text: {err}"))
+        })?
+    } else {
+        String::new()
+    };
+
+    if !exists {
+        let manifest = stack.read_active_manifest()?;
+        return Ok(guarded_conflict_response(
+            "edit",
+            &layer_path,
+            "aborted_version",
+            "aborted_version",
+            "file does not exist",
+            resource_timings(&manifest, 0),
+            total_start,
+        ));
+    }
+
+    for edit in &edits {
+        match apply_search_replace(&content, &edit.old_text, &edit.new_text, edit.replace_all) {
+            Ok(next) => content = next,
+            Err(err) => {
+                let manifest = stack.read_active_manifest()?;
+                return Ok(guarded_conflict_response(
+                    "edit",
+                    &layer_path,
+                    "aborted_overlap",
+                    "aborted_overlap",
+                    search_replace_message(&err),
+                    resource_timings(&manifest, 0),
+                    total_start,
+                ));
+            }
+        }
+    }
+
+    let manifest = stack.read_active_manifest()?;
+    drop(stack);
+    let occ_start = Instant::now();
+    let path = LayerPath::parse(&layer_path).map_err(eos_layerstack::LayerStackError::from)?;
+    let result = apply_occ_changeset(
+        &root,
+        Some(manifest.version as u64),
+        &[LayerChange::Write {
+            path: path.clone(),
+            content: content.into_bytes(),
+        }],
+        &[(path, base_hash)],
+    )?;
+    let manifest = LayerStack::open(root)?.read_active_manifest()?;
+    let mut timings = resource_timings(&manifest, published_file_count(&result));
+    timings.insert(
+        "api.edit.occ_apply_s".to_owned(),
+        json!(occ_start.elapsed().as_secs_f64()),
+    );
+    Ok(guarded_changeset_response(
+        "edit",
+        &result,
+        timings,
+        total_start,
+        Some(edits.len() as i64),
+    ))
+}
+
+/// `api.v1.shell` — fresh overlay namespace, capture upperdir, publish via OCC.
+// PORT backend/src/sandbox/ephemeral_workspace/pipeline.py:130-202 — run_tool_call overlay body
+fn op_shell(args: &Value, _context: DispatchContext<'_>) -> Result<Value, DaemonError> {
+    let total_start = Instant::now();
+    let root = PathBuf::from(require_string(args, "layer_stack_root")?);
+    let command = require_string(args, "command")?;
+    let cwd = args
+        .get("cwd")
+        .and_then(Value::as_str)
+        .unwrap_or(".")
+        .to_owned();
+    let invocation_id = args
+        .get("invocation_id")
+        .and_then(Value::as_str)
+        .unwrap_or("shell")
+        .to_owned();
+    let agent_id = args
+        .get("agent_id")
+        .and_then(Value::as_str)
+        .unwrap_or("default")
+        .to_owned();
+    let timeout_seconds = args.get("timeout_seconds").and_then(Value::as_f64);
+    let binding = require_workspace_binding(&root)?;
+
+    let mut stack = LayerStack::open(root.clone())?;
+    let lease = stack.acquire_snapshot(&format!("overlay:{agent_id}:{invocation_id}"))?;
+    let run_result: Result<ShellRunOutcome, DaemonError> = (|| {
+        let run_root = overlay_writable_root()
+            .map_err(|err| overlay_daemon_error("overlay writable root", err))?
+            .join("runtime")
+            .join("sandbox-overlay")
+            .join(format!(
+                "{}-{}",
+                std::process::id(),
+                sanitize_path_component(&invocation_id)
+            ));
+        let dirs = allocate_overlay_writable_dirs(&run_root)
+            .map_err(|err| overlay_daemon_error("allocate overlay dirs", err))?;
+        let _cleanup = RunDirCleanup(dirs.run_dir.clone());
+        let request = RunRequest {
+            mode: RunMode::FreshNs,
+            tool_call: ToolCall {
+                invocation_id: invocation_id.clone(),
+                agent_id: agent_id.clone(),
+                verb: "shell".to_owned(),
+                intent: Intent::WriteAllowed,
+                args: json!({
+                    "command": command,
+                    "cwd": cwd,
+                }),
+                background: args
+                    .get("background")
+                    .and_then(Value::as_bool)
+                    .unwrap_or(false),
+            },
+            workspace_root: WorkspaceRoot(PathBuf::from(&binding.workspace_root)),
+            layer_paths: lease.layer_paths.iter().map(PathBuf::from).collect(),
+            upperdir: Some(dirs.upperdir.clone()),
+            workdir: Some(dirs.workdir.clone()),
+            ns_fds: None,
+            cgroup_path: None,
+            timeout_seconds,
+        };
+        let runner = run_ns_runner_child(&request)?;
+        let capture_start = Instant::now();
+        let changes = capture_upperdir(&dirs.upperdir)
+            .map_err(|err| overlay_daemon_error("capture upperdir", err))?;
+        let capture_s = capture_start.elapsed().as_secs_f64();
+        let path_kinds = changes
+            .iter()
+            .map(|change| {
+                (
+                    change.path().as_str().to_owned(),
+                    layer_change_kind(change).to_owned(),
+                )
+            })
+            .collect();
+        let base_hashes = base_hashes_for_snapshot(&root, &lease.manifest, &changes)?;
+        let occ_start = Instant::now();
+        let changeset = apply_occ_changeset(
+            &root,
+            Some(lease.manifest_version as u64),
+            &changes,
+            &base_hashes,
+        )?;
+        let occ_s = occ_start.elapsed().as_secs_f64();
+        Ok(ShellRunOutcome {
+            runner,
+            changeset,
+            path_kinds,
+            capture_s,
+            occ_s,
+        })
+    })();
+    let _ = stack.release_lease(&lease.lease_id);
+    let shell = run_result?;
+
+    let manifest = LayerStack::open(root)?.read_active_manifest()?;
+    let mut timings = resource_timings(&manifest, shell.path_kinds.len());
+    merge_runner_timings(&mut timings, &shell.runner);
+    timings.insert(
+        "command_exec.capture_upperdir_s".to_owned(),
+        json!(shell.capture_s),
+    );
+    timings.insert("command_exec.occ_apply_s".to_owned(), json!(shell.occ_s));
+    timings.insert(
+        "api.shell.total_s".to_owned(),
+        json!(total_start.elapsed().as_secs_f64()),
+    );
+    let mut response =
+        guarded_changeset_response("shell", &shell.changeset, timings, total_start, None);
+    attach_runner_shell_fields(&mut response, &shell.runner);
+    response["changed_path_kinds"] = Value::Object(
+        shell
+            .path_kinds
+            .into_iter()
+            .map(|(path, kind)| (path, json!(kind)))
+            .collect(),
+    );
+    if shell.changeset.success() && response["conflict"].is_null() {
+        response["success"] = json!(true);
+        response["status"] = shell
+            .runner
+            .tool_result
+            .get("status")
+            .cloned()
+            .unwrap_or_else(|| json!("ok"));
+    }
+    Ok(response)
+}
+
+/// `api.v1.glob` — read-only overlay namespace search.
+// PORT backend/src/sandbox/shared/tool_primitives/glob.py:20-35 — glob_files
+fn op_glob(args: &Value, _context: DispatchContext<'_>) -> Result<Value, DaemonError> {
+    run_overlay_read_tool(args, "glob")
+}
+
+/// `api.v1.grep` — read-only overlay namespace content search.
+// PORT backend/src/sandbox/shared/tool_primitives/grep.py:36-102 — grep_files
+fn op_grep(args: &Value, _context: DispatchContext<'_>) -> Result<Value, DaemonError> {
+    run_overlay_read_tool(args, "grep")
+}
+
+fn run_overlay_read_tool(args: &Value, verb: &str) -> Result<Value, DaemonError> {
+    let total_start = Instant::now();
+    let root = PathBuf::from(require_string(args, "layer_stack_root")?);
+    let invocation_id = args
+        .get("invocation_id")
+        .and_then(Value::as_str)
+        .unwrap_or(verb)
+        .to_owned();
+    let agent_id = args
+        .get("agent_id")
+        .and_then(Value::as_str)
+        .unwrap_or("default")
+        .to_owned();
+    let binding = require_workspace_binding(&root)?;
+
+    let mut stack = LayerStack::open(root.clone())?;
+    let lease = stack.acquire_snapshot(&format!("overlay:{agent_id}:{invocation_id}"))?;
+    let run_result: Result<RunResult, DaemonError> = (|| {
+        let run_root = overlay_writable_root()
+            .map_err(|err| overlay_daemon_error("overlay writable root", err))?
+            .join("runtime")
+            .join("sandbox-overlay")
+            .join(format!(
+                "{}-{}",
+                std::process::id(),
+                sanitize_path_component(&invocation_id)
+            ));
+        let dirs = allocate_overlay_writable_dirs(&run_root)
+            .map_err(|err| overlay_daemon_error("allocate overlay dirs", err))?;
+        let _cleanup = RunDirCleanup(dirs.run_dir.clone());
+        let request = RunRequest {
+            mode: RunMode::FreshNs,
+            tool_call: ToolCall {
+                invocation_id: invocation_id.clone(),
+                agent_id,
+                verb: verb.to_owned(),
+                intent: Intent::ReadOnly,
+                args: args.clone(),
+                background: false,
+            },
+            workspace_root: WorkspaceRoot(PathBuf::from(&binding.workspace_root)),
+            layer_paths: lease.layer_paths.iter().map(PathBuf::from).collect(),
+            upperdir: Some(dirs.upperdir),
+            workdir: Some(dirs.workdir),
+            ns_fds: None,
+            cgroup_path: None,
+            timeout_seconds: args.get("timeout_seconds").and_then(Value::as_f64),
+        };
+        run_ns_runner_child(&request)
+    })();
+    let _ = stack.release_lease(&lease.lease_id);
+
+    let runner = run_result?;
+    let manifest = LayerStack::open(root)?.read_active_manifest()?;
+    let mut timings = resource_timings(&manifest, 0);
+    merge_runner_timings(&mut timings, &runner);
+    let mut response = runner.tool_result;
+    timings
+        .entry("command_exec.capture_upperdir_s".to_owned())
+        .or_insert_with(|| json!(0.0));
+    timings.insert(
+        "command_exec.total_s".to_owned(),
+        json!(total_start.elapsed().as_secs_f64()),
+    );
+    timings.insert(
+        format!("api.{verb}.total_s"),
+        json!(total_start.elapsed().as_secs_f64()),
+    );
+    response["timings"] = Value::Object(timings);
+    Ok(response)
+}
+
 fn require_string(args: &Value, key: &str) -> Result<String, DaemonError> {
     let value = args
         .get(key)
@@ -296,6 +748,698 @@ fn require_string(args: &Value, key: &str) -> Result<String, DaemonError> {
         return Err(DaemonError::InvalidEnvelope(format!("{key} is required")));
     }
     Ok(value)
+}
+
+#[derive(Clone)]
+struct LayerStackCommitTransaction {
+    root: PathBuf,
+}
+
+struct ShellRunOutcome {
+    runner: RunResult,
+    changeset: ChangesetResult,
+    path_kinds: Vec<(String, String)>,
+    capture_s: f64,
+    occ_s: f64,
+}
+
+struct RunDirCleanup(PathBuf);
+
+impl Drop for RunDirCleanup {
+    fn drop(&mut self) {
+        let _ = std::fs::remove_dir_all(&self.0);
+    }
+}
+
+impl CommitTransactionPort for LayerStackCommitTransaction {
+    fn revalidate_and_publish(
+        &self,
+        combined: &PreparedChangeset,
+    ) -> std::result::Result<ChangesetResult, PublishConflict> {
+        let mut stack = match LayerStack::open(self.root.clone()) {
+            Ok(stack) => stack,
+            Err(err) => return Ok(failed_changeset(combined, err.to_string())),
+        };
+        let validations = validate_prepared(&stack, combined);
+        if combined.atomic
+            && validations
+                .iter()
+                .any(|file| is_validation_failure(file.status))
+        {
+            return Ok(ChangesetResult {
+                files: validations
+                    .into_iter()
+                    .map(|file| {
+                        if file.status.is_published() {
+                            FileResult {
+                                status: OccStatus::Dropped,
+                                message: "not published because atomic changeset validation failed"
+                                    .to_owned(),
+                                ..file
+                            }
+                        } else {
+                            file
+                        }
+                    })
+                    .collect(),
+                published_manifest_version: None,
+            });
+        }
+        let publishable_paths = validations
+            .iter()
+            .filter(|file| file.status.is_published())
+            .map(|file| file.path.as_str())
+            .collect::<HashSet<_>>();
+        let publishable_changes: Vec<LayerChange> = combined
+            .changes
+            .iter()
+            .filter(|change| publishable_paths.contains(change.path().as_str()))
+            .cloned()
+            .collect();
+        if publishable_changes.is_empty() {
+            return Ok(ChangesetResult {
+                files: validations,
+                published_manifest_version: None,
+            });
+        }
+        match stack.publish_layer(&publishable_changes) {
+            Ok(manifest) => Ok(ChangesetResult {
+                files: validations
+                    .into_iter()
+                    .map(|file| {
+                        if file.status.is_published() {
+                            FileResult {
+                                status: OccStatus::Committed,
+                                ..file
+                            }
+                        } else {
+                            file
+                        }
+                    })
+                    .collect(),
+                published_manifest_version: Some(manifest.version as u64),
+            }),
+            Err(eos_layerstack::LayerStackError::ManifestConflict { found, .. }) => {
+                Err(PublishConflict {
+                    observed_version: Some(found as u64),
+                })
+            }
+            Err(err) => Ok(failed_changeset(combined, err.to_string())),
+        }
+    }
+}
+
+#[derive(Clone)]
+struct LayerStackRouteProvider {
+    root: PathBuf,
+}
+
+impl OccRouteProvider for LayerStackRouteProvider {
+    fn is_ignored(&self, path: &LayerPath) -> std::result::Result<bool, eos_occ::OccError> {
+        let stack = LayerStack::open(self.root.clone())
+            .map_err(|err| eos_occ::OccError::RoutePreparation(err.to_string()))?;
+        let (bytes, exists) = stack
+            .read_bytes(".gitignore")
+            .map_err(|err| eos_occ::OccError::RoutePreparation(err.to_string()))?;
+        if !exists {
+            return Ok(false);
+        }
+        let Some(bytes) = bytes else {
+            return Ok(false);
+        };
+        let ignore = String::from_utf8(bytes)
+            .map_err(|err| eos_occ::OccError::RoutePreparation(err.to_string()))?;
+        Ok(gitignore_matches(&ignore, path.as_str()))
+    }
+
+    fn base_hash(
+        &self,
+        path: &LayerPath,
+    ) -> std::result::Result<Option<String>, eos_occ::OccError> {
+        let stack = LayerStack::open(self.root.clone())
+            .map_err(|err| eos_occ::OccError::RoutePreparation(err.to_string()))?;
+        let (bytes, exists) = stack
+            .read_bytes(path.as_str())
+            .map_err(|err| eos_occ::OccError::RoutePreparation(err.to_string()))?;
+        Ok(hash_current(bytes.as_deref(), exists))
+    }
+}
+
+fn apply_occ_changeset(
+    root: &Path,
+    snapshot_version: Option<u64>,
+    changes: &[LayerChange],
+    base_hashes: &[(LayerPath, Option<String>)],
+) -> Result<ChangesetResult, DaemonError> {
+    let service = occ_service_for_root(root)?;
+    Ok(service.apply_changeset_with_base_hashes(changes, snapshot_version, true, base_hashes)?)
+}
+
+fn run_ns_runner_child(request: &RunRequest) -> Result<RunResult, DaemonError> {
+    let payload =
+        serde_json::to_vec(request).map_err(|err| DaemonError::InvalidEnvelope(err.to_string()))?;
+    let mut child = Command::new(std::env::current_exe()?)
+        .arg("ns-runner")
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()?;
+    child
+        .stdin
+        .as_mut()
+        .ok_or_else(|| {
+            DaemonError::Ephemeral(eos_ephemeral::EphemeralError::Overlay(
+                "ns-runner stdin unavailable".to_owned(),
+            ))
+        })?
+        .write_all(&payload)?;
+    let output = child.wait_with_output()?;
+    if !output.status.success() {
+        return Err(DaemonError::Ephemeral(
+            eos_ephemeral::EphemeralError::Overlay(format!(
+                "ns-runner exited with status {}: {}",
+                output.status,
+                String::from_utf8_lossy(&output.stderr)
+            )),
+        ));
+    }
+    serde_json::from_slice::<RunResult>(&output.stdout).map_err(|err| {
+        DaemonError::Ephemeral(eos_ephemeral::EphemeralError::Overlay(format!(
+            "invalid ns-runner output: {err}"
+        )))
+    })
+}
+
+fn base_hashes_for_snapshot(
+    root: &Path,
+    manifest: &eos_layerstack::Manifest,
+    changes: &[LayerChange],
+) -> Result<Vec<(LayerPath, Option<String>)>, DaemonError> {
+    let view = MergedView::new(root.to_path_buf());
+    changes
+        .iter()
+        .map(|change| {
+            let (bytes, exists) = view.read_bytes(change.path().as_str(), manifest)?;
+            Ok((
+                change.path().clone(),
+                hash_current(bytes.as_deref(), exists),
+            ))
+        })
+        .collect()
+}
+
+fn attach_runner_shell_fields(response: &mut Value, runner: &RunResult) {
+    response["exit_code"] = runner
+        .tool_result
+        .get("exit_code")
+        .cloned()
+        .unwrap_or_else(|| json!(runner.exit_code));
+    response["stdout"] = runner
+        .tool_result
+        .get("stdout")
+        .cloned()
+        .unwrap_or_else(|| json!(""));
+    response["stderr"] = runner
+        .tool_result
+        .get("stderr")
+        .cloned()
+        .unwrap_or_else(|| json!(""));
+    response["warnings"] = runner
+        .tool_result
+        .get("warnings")
+        .cloned()
+        .unwrap_or_else(|| json!([]));
+}
+
+fn merge_runner_timings(timings: &mut serde_json::Map<String, Value>, runner: &RunResult) {
+    if let Some(runner_timings) = runner.tool_result.get("timings").and_then(Value::as_object) {
+        for (key, value) in runner_timings {
+            timings.entry(key.clone()).or_insert_with(|| value.clone());
+        }
+    }
+    if let Some(value) = timings.get("workspace.mount_s").cloned() {
+        timings
+            .entry("command_exec.mount_workspace_s".to_owned())
+            .or_insert(value);
+    }
+    if let Some(value) = timings.get("workspace.tool_s").cloned() {
+        timings
+            .entry("command_exec.run_command_s".to_owned())
+            .or_insert(value);
+    }
+}
+
+fn layer_change_kind(change: &LayerChange) -> &'static str {
+    match change {
+        LayerChange::Write { .. } => "write",
+        LayerChange::Delete { .. } => "delete",
+        LayerChange::Symlink { .. } => "symlink",
+        LayerChange::OpaqueDir { .. } => "opaque_dir",
+    }
+}
+
+fn overlay_daemon_error(context: &str, err: eos_overlay::OverlayError) -> DaemonError {
+    DaemonError::Ephemeral(eos_ephemeral::EphemeralError::Overlay(format!(
+        "{context}: {err}"
+    )))
+}
+
+fn sanitize_path_component(value: &str) -> String {
+    let cleaned: String = value
+        .chars()
+        .map(|ch| {
+            if ch.is_ascii_alphanumeric() || matches!(ch, '-' | '_' | '.') {
+                ch
+            } else {
+                '_'
+            }
+        })
+        .collect();
+    if cleaned.is_empty() {
+        "op".to_owned()
+    } else {
+        cleaned
+    }
+}
+
+fn occ_service_for_root(
+    root: &Path,
+) -> Result<Arc<OccService<LayerStackCommitTransaction>>, DaemonError> {
+    let key = root.to_string_lossy().into_owned();
+    let mut services = occ_services()
+        .lock()
+        .expect("occ service registry poisoned");
+    if let Some(service) = services.get(&key) {
+        return Ok(service.clone());
+    }
+    let transaction = LayerStackCommitTransaction {
+        root: root.to_path_buf(),
+    };
+    let route_provider = Arc::new(LayerStackRouteProvider {
+        root: root.to_path_buf(),
+    });
+    let service = Arc::new(OccService::with_route_provider(
+        CommitQueue::new(transaction),
+        route_provider,
+    )?);
+    services.insert(key, service.clone());
+    Ok(service)
+}
+
+fn occ_services() -> &'static Mutex<HashMap<String, Arc<OccService<LayerStackCommitTransaction>>>> {
+    static SERVICES: OnceLock<
+        Mutex<HashMap<String, Arc<OccService<LayerStackCommitTransaction>>>>,
+    > = OnceLock::new();
+    SERVICES.get_or_init(|| Mutex::new(HashMap::new()))
+}
+
+fn validate_prepared(stack: &LayerStack, prepared: &PreparedChangeset) -> Vec<FileResult> {
+    prepared
+        .path_groups
+        .iter()
+        .map(|group| match group.route {
+            Route::Drop => FileResult {
+                path: group.path.clone(),
+                status: OccStatus::Dropped,
+                message: group
+                    .message
+                    .clone()
+                    .unwrap_or_else(|| "change dropped".to_owned()),
+            },
+            Route::Reject => FileResult {
+                path: group.path.clone(),
+                status: OccStatus::Rejected,
+                message: group
+                    .message
+                    .clone()
+                    .unwrap_or_else(|| "change rejected".to_owned()),
+            },
+            Route::Direct => validate_direct_group(group.path.as_str()),
+            Route::Gated => {
+                validate_gated_group(stack, prepared, group.path.as_str(), &group.base_hash)
+            }
+            _ => FileResult {
+                path: group.path.clone(),
+                status: OccStatus::Rejected,
+                message: "unsupported route".to_owned(),
+            },
+        })
+        .collect()
+}
+
+fn validate_direct_group(path: &str) -> FileResult {
+    let layer_path = LayerPath::parse(path).expect("prepared paths are normalized");
+    FileResult {
+        path: layer_path,
+        status: OccStatus::Accepted,
+        message: String::new(),
+    }
+}
+
+fn validate_gated_group(
+    stack: &LayerStack,
+    prepared: &PreparedChangeset,
+    path: &str,
+    base_hash: &Option<String>,
+) -> FileResult {
+    let layer_path = LayerPath::parse(path).expect("prepared paths are normalized");
+    if prepared.changes.iter().any(|change| {
+        change.path().as_str() == path && matches!(change, LayerChange::Symlink { .. })
+    }) {
+        return FileResult {
+            path: layer_path,
+            status: OccStatus::Rejected,
+            message: "unsupported gated change kind: SymlinkChange".to_owned(),
+        };
+    }
+    match stack.read_bytes(path) {
+        Ok((bytes, exists)) if hash_current(bytes.as_deref(), exists) == *base_hash => FileResult {
+            path: layer_path,
+            status: OccStatus::Accepted,
+            message: String::new(),
+        },
+        Ok(_) => FileResult {
+            path: layer_path,
+            status: OccStatus::AbortedVersion,
+            message: "content changed".to_owned(),
+        },
+        Err(err) => FileResult {
+            path: layer_path,
+            status: OccStatus::Failed,
+            message: err.to_string(),
+        },
+    }
+}
+
+fn is_validation_failure(status: OccStatus) -> bool {
+    matches!(
+        status,
+        OccStatus::AbortedOverlap
+            | OccStatus::AbortedVersion
+            | OccStatus::Failed
+            | OccStatus::Rejected
+    )
+}
+
+fn hash_current(content: Option<&[u8]>, exists: bool) -> Option<String> {
+    if !exists {
+        return None;
+    }
+    content.map(hash_bytes)
+}
+
+fn hash_bytes(content: &[u8]) -> String {
+    let mut hasher = Sha256::new();
+    hasher.update(content);
+    hex_lower(&hasher.finalize())
+}
+
+fn hex_lower(bytes: &[u8]) -> String {
+    let mut out = String::with_capacity(bytes.len() * 2);
+    for byte in bytes {
+        out.push_str(&format!("{byte:02x}"));
+    }
+    out
+}
+
+fn gitignore_matches(ignore: &str, path: &str) -> bool {
+    let mut matched = false;
+    for line in ignore.lines() {
+        let mut pattern = line.trim();
+        if pattern.is_empty() || pattern.starts_with('#') {
+            continue;
+        }
+        let negated = pattern.starts_with('!');
+        if negated {
+            pattern = pattern.trim_start_matches('!');
+        }
+        if pattern.is_empty() {
+            continue;
+        }
+        if gitignore_rule_matches(pattern, path) {
+            matched = !negated;
+        }
+    }
+    matched
+}
+
+fn gitignore_rule_matches(pattern: &str, path: &str) -> bool {
+    let pattern = pattern.trim_start_matches('/');
+    let dir_only = pattern.ends_with('/');
+    let pattern = pattern.trim_end_matches('/');
+    if pattern.is_empty() {
+        return false;
+    }
+    if dir_only {
+        return path == pattern || path.starts_with(&format!("{pattern}/"));
+    }
+    if pattern.contains('*') {
+        return wildcard_match(pattern.as_bytes(), path.as_bytes());
+    }
+    if pattern.contains('/') {
+        return path == pattern;
+    }
+    path.split('/').any(|part| part == pattern)
+}
+
+fn wildcard_match(pattern: &[u8], value: &[u8]) -> bool {
+    let (mut p, mut v) = (0, 0);
+    let mut star = None;
+    let mut star_value = 0;
+    while v < value.len() {
+        if p < pattern.len() && (pattern[p] == b'?' || pattern[p] == value[v]) {
+            p += 1;
+            v += 1;
+        } else if p < pattern.len() && pattern[p] == b'*' {
+            star = Some(p);
+            p += 1;
+            star_value = v;
+        } else if let Some(star_index) = star {
+            p = star_index + 1;
+            star_value += 1;
+            v = star_value;
+        } else {
+            return false;
+        }
+    }
+    while p < pattern.len() && pattern[p] == b'*' {
+        p += 1;
+    }
+    p == pattern.len()
+}
+
+fn failed_changeset(prepared: &PreparedChangeset, message: String) -> ChangesetResult {
+    ChangesetResult {
+        files: prepared
+            .path_groups
+            .iter()
+            .map(|group| FileResult {
+                path: group.path.clone(),
+                status: OccStatus::Failed,
+                message: message.clone(),
+            })
+            .collect(),
+        published_manifest_version: None,
+    }
+}
+
+fn bound_layer_path(root: &Path, args: &Value) -> Result<String, DaemonError> {
+    let raw_path = require_string(args, "path")?;
+    let binding = require_workspace_binding(root)?;
+    if raw_path.starts_with('/') {
+        binding
+            .layer_path_from_absolute(&raw_path)
+            .map_err(DaemonError::from)
+    } else {
+        binding
+            .layer_path_from_relative(&raw_path)
+            .map_err(DaemonError::from)
+    }
+}
+
+fn parse_edits(args: &Value) -> Result<Vec<SearchReplaceEdit>, DaemonError> {
+    let edits = args
+        .get("edits")
+        .and_then(Value::as_array)
+        .ok_or_else(|| DaemonError::InvalidEnvelope("edits must be a list".to_owned()))?;
+    let mut parsed = Vec::with_capacity(edits.len());
+    for raw in edits {
+        let edit: SearchReplaceEdit = serde_json::from_value(raw.clone())
+            .map_err(|err| DaemonError::InvalidEnvelope(err.to_string()))?;
+        if edit.old_text.is_empty() {
+            return Err(DaemonError::InvalidEnvelope(
+                "edit anchor old_text must be non-empty".to_owned(),
+            ));
+        }
+        parsed.push(edit);
+    }
+    Ok(parsed)
+}
+
+fn guarded_changeset_response(
+    verb: &str,
+    result: &ChangesetResult,
+    mut timings: serde_json::Map<String, Value>,
+    total_start: Instant,
+    applied_edits: Option<i64>,
+) -> Value {
+    timings.insert(
+        format!("api.{verb}.total_s"),
+        json!(total_start.elapsed().as_secs_f64()),
+    );
+    let changed_paths: Vec<String> = result
+        .files
+        .iter()
+        .filter(|file| file.status.is_published())
+        .map(|file| file.path.as_str().to_owned())
+        .collect();
+    let mut changed_path_kinds = serde_json::Map::new();
+    for path in &changed_paths {
+        changed_path_kinds.insert(path.to_owned(), json!("write"));
+    }
+    let conflict = first_conflict(result);
+    let mut response = json!({
+        "success": result.success(),
+        "workspace": "ephemeral",
+        "changed_paths": changed_paths,
+        "changed_path_kinds": Value::Object(changed_path_kinds),
+        "mutation_source": mutation_source(verb),
+        "status": conflict.as_ref().map(|file| occ_status_wire(file.status)).unwrap_or("committed"),
+        "conflict": conflict.as_ref().map(|file| json!({
+            "reason": occ_status_wire(file.status),
+            "conflict_file": file.path.as_str(),
+            "message": if file.message.is_empty() { occ_status_wire(file.status) } else { file.message.as_str() },
+        })),
+        "conflict_reason": conflict.as_ref().map(|file| {
+            if file.message.is_empty() { occ_status_wire(file.status) } else { file.message.as_str() }
+        }),
+        "error": null,
+        "timings": Value::Object(timings),
+    });
+    if let Some(count) = applied_edits {
+        response["applied_edits"] = json!(count);
+    }
+    response
+}
+
+fn first_conflict(result: &ChangesetResult) -> Option<&FileResult> {
+    result.files.iter().find(|file| !file.status.is_success())
+}
+
+fn published_file_count(result: &ChangesetResult) -> usize {
+    result
+        .files
+        .iter()
+        .filter(|file| file.status.is_published())
+        .count()
+}
+
+fn occ_status_wire(status: OccStatus) -> &'static str {
+    match status {
+        OccStatus::Accepted => "accepted",
+        OccStatus::Committed => "committed",
+        OccStatus::AbortedVersion => "aborted_version",
+        OccStatus::AbortedOverlap => "aborted_overlap",
+        OccStatus::Dropped => "dropped",
+        OccStatus::Rejected => "rejected",
+        OccStatus::Failed => "failed",
+        _ => "failed",
+    }
+}
+
+fn guarded_conflict_response(
+    verb: &str,
+    path: &str,
+    status: &str,
+    reason: &str,
+    message: &str,
+    mut timings: serde_json::Map<String, Value>,
+    total_start: Instant,
+) -> Value {
+    timings.insert(
+        format!("api.{verb}.total_s"),
+        json!(total_start.elapsed().as_secs_f64()),
+    );
+    let mut response = json!({
+        "success": false,
+        "workspace": "ephemeral",
+        "changed_paths": [],
+        "changed_path_kinds": {},
+        "mutation_source": mutation_source(verb),
+        "status": status,
+        "conflict": {
+            "reason": reason,
+            "conflict_file": path,
+            "message": message,
+        },
+        "conflict_reason": reason,
+        "error": null,
+        "timings": Value::Object(timings),
+    });
+    if verb == "edit" {
+        response["applied_edits"] = json!(0);
+    }
+    response
+}
+
+fn resource_timings(
+    manifest: &eos_layerstack::Manifest,
+    changed_path_count: usize,
+) -> serde_json::Map<String, Value> {
+    let mut timings = serde_json::Map::new();
+    timings.insert(
+        "resource.command_exec.changed_path_count".to_owned(),
+        json!(changed_path_count as f64),
+    );
+    timings.insert(
+        "resource.layer_stack.manifest_depth".to_owned(),
+        json!(manifest.depth() as f64),
+    );
+    timings.insert(
+        "resource.layer_stack.manifest_path_count".to_owned(),
+        json!(manifest.depth() as f64),
+    );
+    for key in [
+        "resource.command_exec.run_dir_tree_exists",
+        "resource.command_exec.run_dir_tree_bytes",
+        "resource.command_exec.run_dir_tree_file_count",
+        "resource.command_exec.run_dir_tree_dir_count",
+        "resource.command_exec.run_dir_tree_entry_count",
+        "resource.command_exec.run_dir_tree_truncated",
+        "resource.command_exec.workspace_tree_exists",
+        "resource.command_exec.workspace_tree_bytes",
+        "resource.command_exec.workspace_tree_file_count",
+        "resource.command_exec.workspace_tree_dir_count",
+        "resource.command_exec.workspace_tree_entry_count",
+        "resource.command_exec.workspace_tree_truncated",
+        "resource.command_exec.upperdir_tree_exists",
+        "resource.command_exec.upperdir_tree_bytes",
+        "resource.command_exec.upperdir_tree_file_count",
+        "resource.command_exec.upperdir_tree_dir_count",
+        "resource.command_exec.upperdir_tree_entry_count",
+        "resource.command_exec.upperdir_tree_truncated",
+    ] {
+        timings.insert(key.to_owned(), json!(0.0));
+    }
+    timings
+}
+
+fn mutation_source(verb: &str) -> &'static str {
+    match verb {
+        "write" => "api_write",
+        "edit" => "api_edit",
+        "shell" => "overlay_capture",
+        _ => "",
+    }
+}
+
+fn search_replace_message(err: &SearchReplaceError) -> &'static str {
+    match err {
+        SearchReplaceError::EmptyAnchor => "edit anchor old_text must be non-empty",
+        SearchReplaceError::NotFound => "anchor not found",
+        SearchReplaceError::CountMismatch => "anchor occurrence count mismatch",
+        _ => "edit failed",
+    }
 }
 
 fn run_probe<F>(name: &str, probe: F, timings: &mut serde_json::Map<String, Value>) -> Value
@@ -414,5 +1558,213 @@ fn error_type(err: &DaemonError) -> &'static str {
         DaemonError::Io(_) => "OSError",
         DaemonError::InvalidEnvelope(_) => "ValueError",
         _ => "RuntimeError",
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::sync::atomic::{AtomicU64, Ordering};
+
+    use serde_json::json;
+
+    use super::*;
+
+    #[test]
+    fn gated_stale_base_aborts_without_publish() {
+        let fixture = Fixture::new("gated_stale");
+        let old_hash = hash_bytes(b"# README\n");
+        LayerStack::open(fixture.root.clone())
+            .expect("open stack")
+            .publish_layer(&[LayerChange::Write {
+                path: lp("README.md"),
+                content: b"# theirs\n".to_vec(),
+            }])
+            .expect("publish competing layer");
+
+        let result = transaction(&fixture).revalidate_and_publish(&PreparedChangeset {
+            snapshot_version: Some(1),
+            path_groups: vec![publish_decision("README.md", Route::Gated, Some(old_hash))],
+            changes: vec![LayerChange::Write {
+                path: lp("README.md"),
+                content: b"# mine\n".to_vec(),
+            }],
+            atomic: true,
+        });
+
+        let result = result.expect("validation returns regular result");
+        assert_eq!(result.published_manifest_version, None);
+        assert_eq!(result.files[0].status, OccStatus::AbortedVersion);
+        assert_eq!(read_text(&fixture, "README.md"), "# theirs\n");
+    }
+
+    #[test]
+    fn direct_route_ignores_stale_base_and_publishes() {
+        let fixture = Fixture::new("direct_stale");
+        LayerStack::open(fixture.root.clone())
+            .expect("open stack")
+            .publish_layer(&[LayerChange::Write {
+                path: lp("target/out.txt"),
+                content: b"theirs\n".to_vec(),
+            }])
+            .expect("publish competing layer");
+
+        let result = transaction(&fixture).revalidate_and_publish(&PreparedChangeset {
+            snapshot_version: Some(1),
+            path_groups: vec![publish_decision(
+                "target/out.txt",
+                Route::Direct,
+                Some("stale".to_owned()),
+            )],
+            changes: vec![LayerChange::Write {
+                path: lp("target/out.txt"),
+                content: b"mine\n".to_vec(),
+            }],
+            atomic: true,
+        });
+
+        let result = result.expect("direct route publishes");
+        assert!(result.success());
+        assert_eq!(result.files[0].status, OccStatus::Committed);
+        assert_eq!(read_text(&fixture, "target/out.txt"), "mine\n");
+    }
+
+    #[test]
+    fn atomic_mixed_validation_failure_drops_accepted_paths() {
+        let fixture = Fixture::new("atomic_mixed");
+        let old_hash = hash_bytes(b"# README\n");
+        LayerStack::open(fixture.root.clone())
+            .expect("open stack")
+            .publish_layer(&[LayerChange::Write {
+                path: lp("README.md"),
+                content: b"# theirs\n".to_vec(),
+            }])
+            .expect("publish competing layer");
+
+        let result = transaction(&fixture).revalidate_and_publish(&PreparedChangeset {
+            snapshot_version: Some(1),
+            path_groups: vec![
+                publish_decision("README.md", Route::Gated, Some(old_hash)),
+                publish_decision("target/out.txt", Route::Direct, None),
+            ],
+            changes: vec![
+                LayerChange::Write {
+                    path: lp("README.md"),
+                    content: b"# mine\n".to_vec(),
+                },
+                LayerChange::Write {
+                    path: lp("target/out.txt"),
+                    content: b"ok\n".to_vec(),
+                },
+            ],
+            atomic: true,
+        });
+
+        let result = result.expect("atomic validation returns result");
+        assert_eq!(result.published_manifest_version, None);
+        assert_eq!(result.files[0].status, OccStatus::AbortedVersion);
+        assert_eq!(result.files[1].status, OccStatus::Dropped);
+        assert_eq!(read_text(&fixture, "README.md"), "# theirs\n");
+        assert!(
+            !LayerStack::open(fixture.root.clone())
+                .expect("open stack")
+                .read_bytes("target/out.txt")
+                .expect("read target")
+                .1
+        );
+    }
+
+    #[test]
+    fn root_gitignore_routes_target_as_direct() {
+        let fixture = Fixture::new_with_gitignore("gitignore_direct", "target/\n*.pyc\n");
+        let provider = LayerStackRouteProvider {
+            root: fixture.root.clone(),
+        };
+
+        assert!(provider
+            .is_ignored(&lp("target/out.txt"))
+            .expect("gitignore read succeeds"));
+        assert!(provider
+            .is_ignored(&lp("pkg/cache.pyc"))
+            .expect("gitignore read succeeds"));
+        assert!(!provider
+            .is_ignored(&lp("src/main.rs"))
+            .expect("gitignore read succeeds"));
+    }
+
+    fn transaction(fixture: &Fixture) -> LayerStackCommitTransaction {
+        LayerStackCommitTransaction {
+            root: fixture.root.clone(),
+        }
+    }
+
+    fn publish_decision(
+        path: &str,
+        route: Route,
+        base_hash: Option<String>,
+    ) -> eos_occ::PublishDecision {
+        eos_occ::PublishDecision {
+            path: lp(path),
+            route,
+            base_hash,
+            message: None,
+        }
+    }
+
+    fn lp(path: &str) -> LayerPath {
+        LayerPath::parse(path).expect("test path is valid")
+    }
+
+    fn read_text(fixture: &Fixture, path: &str) -> String {
+        LayerStack::open(fixture.root.clone())
+            .expect("open stack")
+            .read_text(path)
+            .expect("read text")
+            .0
+    }
+
+    struct Fixture {
+        base: PathBuf,
+        root: PathBuf,
+    }
+
+    impl Fixture {
+        fn new(label: &str) -> Self {
+            Self::new_with_gitignore(label, "")
+        }
+
+        fn new_with_gitignore(label: &str, gitignore: &str) -> Self {
+            static COUNTER: AtomicU64 = AtomicU64::new(0);
+            let base = std::env::temp_dir().join(format!(
+                "eosd-occ-{label}-{}-{}",
+                std::process::id(),
+                COUNTER.fetch_add(1, Ordering::Relaxed)
+            ));
+            let _ = std::fs::remove_dir_all(&base);
+            let root = base.join("layer-stack");
+            let layer = root.join("layers").join("B000001-base");
+            std::fs::create_dir_all(&layer).expect("create base layer dir");
+            std::fs::create_dir_all(root.join("staging")).expect("create staging dir");
+            std::fs::write(layer.join("README.md"), "# README\n").expect("write read fixture");
+            if !gitignore.is_empty() {
+                std::fs::write(layer.join(".gitignore"), gitignore).expect("write gitignore");
+            }
+            std::fs::write(
+                root.join("manifest.json"),
+                serde_json::to_string_pretty(&json!({
+                    "schema_version": 1,
+                    "version": 1,
+                    "layers": [{"layer_id": "B000001-base", "path": "layers/B000001-base"}],
+                }))
+                .expect("serialize manifest"),
+            )
+            .expect("write manifest");
+            Self { base, root }
+        }
+    }
+
+    impl Drop for Fixture {
+        fn drop(&mut self) {
+            let _ = std::fs::remove_dir_all(&self.base);
+        }
     }
 }

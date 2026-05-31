@@ -146,27 +146,30 @@ mod tests {
 
     #[test]
     fn mode_selection_matches_intent_and_flag() {
-        let ro = PluginOpRegistration::new("lsp", "hover", Intent::ReadOnly, true).unwrap();
+        let ro = PluginOpRegistration::new("lsp", "hover", Intent::ReadOnly, true)
+            .expect("valid read-only plugin registration");
         assert_eq!(
             DispatchMode::for_registration(&ro),
             DispatchMode::ReadOnlyWarmServer
         );
-        let wa = PluginOpRegistration::new("fmt", "run", Intent::WriteAllowed, true).unwrap();
+        let wa = PluginOpRegistration::new("fmt", "run", Intent::WriteAllowed, true)
+            .expect("valid write-allowed plugin registration");
         assert_eq!(
             DispatchMode::for_registration(&wa),
             DispatchMode::WriteAllowedEosdOwned
         );
         // auto_workspace_overlay=false self-manages ONLY for write-capable ops
         // (the LSP apply.py path): plugin owns overlay+OCC, calls back to commit.
-        let sm = PluginOpRegistration::new("lsp", "apply", Intent::WriteAllowed, false).unwrap();
+        let sm = PluginOpRegistration::new("lsp", "apply", Intent::WriteAllowed, false)
+            .expect("valid self-managed plugin registration");
         assert_eq!(
             DispatchMode::for_registration(&sm),
             DispatchMode::SelfManagedCallback
         );
         // READ_ONLY ignores the flag — a read never publishes, so auto=false
         // still runs in the warm server, NOT through an OCC commit callback.
-        let ro_no_overlay =
-            PluginOpRegistration::new("lsp", "hover", Intent::ReadOnly, false).unwrap();
+        let ro_no_overlay = PluginOpRegistration::new("lsp", "hover", Intent::ReadOnly, false)
+            .expect("valid read-only plugin registration with overlay disabled");
         assert_eq!(
             DispatchMode::for_registration(&ro_no_overlay),
             DispatchMode::ReadOnlyWarmServer

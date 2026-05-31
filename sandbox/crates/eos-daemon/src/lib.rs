@@ -51,7 +51,9 @@ pub mod ports;
 pub mod server;
 
 pub use audit_buffer::{safe_emit, safe_record_phase, AuditBuffer, BufferedEvent, LaneCounters};
-pub use dispatcher::{error_envelope, Handler, OpTable, AUDIT_ALLOW_FLOOR_RESET_ENV};
+pub use dispatcher::{
+    error_envelope, DispatchContext, Handler, OpTable, AUDIT_ALLOW_FLOOR_RESET_ENV,
+};
 pub use error::{DaemonError, Result};
 pub use in_flight::{
     ActiveCallGuard, InFlightInvocation, InFlightRegistry, DEFAULT_REAPER_INTERVAL_S,

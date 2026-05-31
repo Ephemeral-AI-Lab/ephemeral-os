@@ -81,6 +81,11 @@ pub struct PublishDecision {
     pub path: LayerPath,
     /// Destination this path was routed to.
     pub route: Route,
+    /// Expected content hash for gated writes/deletes.
+    ///
+    /// `None` means the path did not exist at the operation snapshot. Direct,
+    /// dropped, and rejected routes do not use this field.
+    pub base_hash: Option<String>,
     /// Optional human-readable reason (e.g. why dropped/rejected).
     pub message: Option<String>,
 }

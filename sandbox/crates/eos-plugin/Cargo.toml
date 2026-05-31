@@ -9,10 +9,11 @@ eos-ephemeral.workspace = true
 eos-overlay.workspace = true
 eos-layerstack.workspace = true
 eos-protocol.workspace = true
-# Errors only. NOT eos-occ — the no-publish/no-second-writer guard (06-crate-map
-# §A) keeps that internal edge absent; PPC payloads are opaque `String` (no serde
-# edge), reusing eos_protocol's envelope encode/decode for framing.
+# Errors + small JSON arg objects only. NOT eos-occ — the no-publish/no-second-writer
+# guard (06-crate-map §A) keeps that internal edge absent; PPC payload bodies stay
+# opaque `String`, reusing eos_protocol's envelope encode/decode for framing.
 thiserror.workspace = true
+serde_json.workspace = true
 
 [lints]
 workspace = true

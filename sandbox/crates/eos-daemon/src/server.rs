@@ -35,10 +35,10 @@ use tokio::sync::{mpsc, oneshot};
 use tokio::time::timeout;
 use tokio_util::sync::CancellationToken;
 
-use eos_protocol::{decode, encode, Envelope, ErrorKind, LayerChange};
+use eos_protocol::{decode, encode, Envelope, ErrorKind, LayerChange, Request};
 
 use crate::audit_buffer::AuditBuffer;
-use crate::dispatcher::OpTable;
+use crate::dispatcher::{DispatchContext, OpTable};
 use crate::error::DaemonError;
 use crate::in_flight::InFlightRegistry;
 
@@ -76,7 +76,7 @@ pub struct DaemonServer {
     config: ServerConfig,
     op_table: OpTable,
     audit: AuditBuffer,
-    in_flight: InFlightRegistry,
+    in_flight: Arc<InFlightRegistry>,
     occ_tx: mpsc::Sender<OccWork>,
     shutdown: CancellationToken,
 }
@@ -92,7 +92,7 @@ impl DaemonServer {
             config,
             op_table: OpTable::with_builtins(),
             audit: AuditBuffer::new(),
-            in_flight: InFlightRegistry::from_env(),
+            in_flight: Arc::new(InFlightRegistry::from_env()),
             occ_tx,
             shutdown: shutdown.clone(),
         };
@@ -120,6 +120,20 @@ impl DaemonServer {
         let shutdown = self.shutdown.clone();
         let server = Arc::new(self);
         let _occ_task = tokio::spawn(occ_queue.run());
+        let _reaper_task = {
+            let registry = Arc::clone(&server.in_flight);
+            let shutdown = server.shutdown.clone();
+            tokio::spawn(async move {
+                loop {
+                    tokio::select! {
+                        _ = shutdown.cancelled() => break,
+                        _ = tokio::time::sleep(Duration::from_secs_f64(registry.reaper_interval_s())) => {
+                            registry.ttl_sweep();
+                        }
+                    }
+                }
+            })
+        };
         let _ = (&server.audit, &server.in_flight, &server.occ_tx);
 
         if let Some(parent) = server.config.socket_path.parent() {
@@ -211,7 +225,7 @@ impl DaemonServer {
         let (mut reader, mut writer) = tokio::io::split(stream);
         let bytes = read_request_line(&mut reader).await;
         let response = match bytes {
-            Ok(bytes) => self.dispatch_bytes(bytes, is_tcp),
+            Ok(bytes) => self.dispatch_bytes(bytes, is_tcp).await,
             Err(err @ DaemonError::RequestTooLarge { .. }) => crate::dispatcher::error_envelope(
                 err.wire_kind(),
                 &format!("daemon request exceeds {MAX_REQUEST_BYTES} byte limit"),
@@ -229,7 +243,7 @@ impl DaemonServer {
         Ok(())
     }
 
-    fn dispatch_bytes(&self, bytes: Vec<u8>, is_tcp: bool) -> serde_json::Value {
+    async fn dispatch_bytes(&self, bytes: Vec<u8>, is_tcp: bool) -> serde_json::Value {
         let bytes = if is_tcp {
             match self.strip_tcp_auth(&bytes) {
                 Ok(bytes) => bytes,
@@ -245,7 +259,7 @@ impl DaemonServer {
             bytes
         };
         match decode(&bytes) {
-            Ok(Envelope::Request(request)) => self.op_table.dispatch(&request),
+            Ok(Envelope::Request(request)) => self.dispatch_request(request).await,
             Ok(_) => crate::dispatcher::error_envelope(
                 ErrorKind::InvalidEnvelope,
                 "request envelope must include op, invocation_id, and args",
@@ -257,6 +271,50 @@ impl DaemonServer {
                 serde_json::json!({}),
             ),
         }
+    }
+
+    async fn dispatch_request(&self, request: Request) -> serde_json::Value {
+        let invocation_id = request.invocation_id.clone();
+        let agent_id = agent_id_from_args(&request.args);
+        let background = request
+            .args
+            .get("background")
+            .and_then(serde_json::Value::as_bool)
+            .unwrap_or(false);
+        let op = request.op.clone();
+        let table = self.op_table.clone();
+        let registry = Arc::clone(&self.in_flight);
+        let task_invocation_id = invocation_id.clone();
+        let task_registry = Arc::clone(&registry);
+        let (start_tx, start_rx) = oneshot::channel::<()>();
+        let task = tokio::spawn(async move {
+            let _ = start_rx.await;
+            let _active_call = task_registry.enter_call(&task_invocation_id);
+            table.dispatch_with_context(&request, DispatchContext::with_in_flight(&task_registry))
+        });
+        registry.register(
+            &invocation_id,
+            task.abort_handle(),
+            &agent_id,
+            &op,
+            background,
+        );
+        let _ = start_tx.send(());
+        let response = match task.await {
+            Ok(response) => response,
+            Err(err) if err.is_cancelled() => crate::dispatcher::error_envelope(
+                ErrorKind::InternalError,
+                "daemon invocation cancelled",
+                serde_json::json!({"op": op}),
+            ),
+            Err(err) => crate::dispatcher::error_envelope(
+                ErrorKind::InternalError,
+                &format!("daemon invocation failed: {err}"),
+                serde_json::json!({"op": op}),
+            ),
+        };
+        registry.deregister(&invocation_id);
+        response
     }
 
     fn strip_tcp_auth(&self, bytes: &[u8]) -> Result<Vec<u8>, DaemonError> {
@@ -281,6 +339,14 @@ impl DaemonServer {
         encoded.push(b'\n');
         Ok(encoded)
     }
+}
+
+fn agent_id_from_args(args: &serde_json::Value) -> String {
+    args.get("agent_id")
+        .and_then(serde_json::Value::as_str)
+        .unwrap_or_default()
+        .trim()
+        .to_owned()
 }
 
 /// Bound on the OCC work-queue depth (back-pressures publishers onto the single

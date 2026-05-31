@@ -35,6 +35,10 @@ pub enum OverlayError {
     #[error(transparent)]
     Path(#[from] CasError),
 
+    /// A captured overlay path change violated the per-kind field contract.
+    #[error("invalid overlay path change: {0}")]
+    InvalidPathChange(String),
+
     /// The current target OS provides no overlayfs mount syscalls. Returned by
     /// the `#[cfg(not(target_os = "linux"))]` arms so non-Linux `cargo check`
     /// stays green while the real syscall path is Linux-only.

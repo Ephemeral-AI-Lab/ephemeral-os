@@ -48,6 +48,8 @@ pub mod fresh_ns;
 pub mod mount;
 pub mod request;
 pub mod setns;
+#[cfg(any(test, target_os = "linux"))]
+mod tool_primitives;
 
 pub use error::RunnerError;
 pub use mount::{KernelMountPort, MountInputs, MountedOverlay};

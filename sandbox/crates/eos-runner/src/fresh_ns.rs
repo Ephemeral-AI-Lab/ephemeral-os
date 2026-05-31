@@ -42,6 +42,8 @@ use crate::mount::KernelMountPort;
 #[cfg(target_os = "linux")]
 use crate::mount::MountInputs;
 use crate::request::{RunRequest, RunResult};
+#[cfg(target_os = "linux")]
+use crate::tool_primitives::{glob_tool_result, grep_tool_result};
 
 #[cfg(target_os = "linux")]
 const CHILD_WAIT_POLL: Duration = Duration::from_millis(5);
@@ -136,17 +138,44 @@ fn execute_tool(
     output_dir: PathBuf,
     run_start: Instant,
 ) -> Result<RunResult, RunnerError> {
-    if request.tool_call.verb != "shell" {
-        return Ok(error_result(
+    match request.tool_call.verb.as_str() {
+        "shell" => execute_shell(request, mount_s, output_dir, run_start),
+        "glob" => Ok(RunResult {
+            exit_code: 0,
+            tool_result: glob_tool_result(
+                &request.tool_call.args,
+                &request.workspace_root.0,
+                mount_s,
+                run_start.elapsed().as_secs_f64(),
+            )?,
+        }),
+        "grep" => Ok(RunResult {
+            exit_code: 0,
+            tool_result: grep_tool_result(
+                &request.tool_call.args,
+                &request.workspace_root.0,
+                mount_s,
+                run_start.elapsed().as_secs_f64(),
+            )?,
+        }),
+        _ => Ok(error_result(
             2,
             "unsupported_runner_verb",
             format!(
-                "fresh namespace runner currently supports shell only; got {}",
+                "fresh namespace runner does not support verb {}",
                 request.tool_call.verb
             ),
-        ));
+        )),
     }
+}
 
+#[cfg(target_os = "linux")]
+fn execute_shell(
+    request: &RunRequest,
+    mount_s: f64,
+    output_dir: PathBuf,
+    run_start: Instant,
+) -> Result<RunResult, RunnerError> {
     let argv = shell_argv(&request.tool_call.args)?;
     let cwd = shell_cwd(request)?;
     fs::create_dir_all(&output_dir).map_err(RunnerError::Child)?;

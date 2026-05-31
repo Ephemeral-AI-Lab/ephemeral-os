@@ -78,3 +78,7 @@ pub const STAGING_DIR: &str = "staging";
 /// Active-manifest pointer filename under a storage root.
 /// `// PORT backend/src/sandbox/layer_stack/manifest.py:23 — ACTIVE_MANIFEST_FILE`
 pub const ACTIVE_MANIFEST_FILE: &str = "manifest.json";
+
+/// Sidecar directory for per-layer digests used by head-layer idempotency.
+/// `// PORT backend/src/sandbox/layer_stack/manifest.py:26 — LAYER_METADATA_DIR`
+pub const LAYER_METADATA_DIR: &str = ".layer-metadata";

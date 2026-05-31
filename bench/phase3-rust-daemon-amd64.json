@@ -1,0 +1,2740 @@
+{
+  "artifact": {
+    "executable": true,
+    "gate_pass": true,
+    "hashes_match": true,
+    "local_sha256": "03075315d48c3c16fe6dc8a36c6269fd475b92be3a4c230205ef18162f97b22e",
+    "remote_mode": "0o755",
+    "remote_path": "/tmp/eos-sandbox-runtime/eosd",
+    "remote_sha256": "03075315d48c3c16fe6dc8a36c6269fd475b92be3a4c230205ef18162f97b22e",
+    "size_bytes": 3045456,
+    "source_path": "sandbox/dist/eosd-linux-amd64",
+    "upload_time_ms": 30.440042028203607,
+    "version": {
+      "exit_code": 0,
+      "stderr": "",
+      "stdout": "eosd 0.1.0"
+    }
+  },
+  "baseline_paths": {
+    "phase0": "bench/baseline-amd64.json",
+    "phase1": "bench/phase1-ns-runner-amd64.json"
+  },
+  "cp4s": {
+    "gate_pass": false,
+    "gates": {
+      "daemon_memory": true,
+      "host_minus_api_total_p95_lte_5ms": true,
+      "noop_host_no_worse_than_phase1": true,
+      "operations_all_samples_ok": true,
+      "overlay_mount_p95_lte_5ms": true,
+      "process_shell_segment_25pct_faster_than_phase1": false
+    },
+    "observed": {
+      "noop_shell_host_minus_api_total_ms": {
+        "count": 10,
+        "max": 2.787916010094989,
+        "min": 1.5029989882733048,
+        "p50": 1.7600210145714925,
+        "p95": 2.3725419679992115,
+        "samples_ms": [
+          1.5029989882733048,
+          1.5949169984204445,
+          1.6190420366009448,
+          1.6812499661743345,
+          1.7217500307044133,
+          1.7982919984385717,
+          1.8187499741986244,
+          1.9605830437610052,
+          2.3725419679992115,
+          2.787916010094989
+        ]
+      },
+      "noop_shell_host_wall_ms": {
+        "count": 10,
+        "max": 341.878125036601,
+        "min": 306.103625043761,
+        "p50": 327.0411459670868,
+        "p95": 337.9477499984205,
+        "samples_ms": [
+          306.103625043761,
+          316.63354201009497,
+          319.8994580307044,
+          325.38633298827335,
+          325.77374996617436,
+          328.3085419679992,
+          328.51129199843854,
+          335.07412497419864,
+          337.9477499984205,
+          341.878125036601
+        ]
+      },
+      "noop_shell_mount_ms": {
+        "count": 10,
+        "max": 1.406334,
+        "min": 1.121,
+        "p50": 1.1755415,
+        "p95": 1.308167,
+        "samples_ms": [
+          1.121,
+          1.121416,
+          1.1460000000000001,
+          1.151792,
+          1.161625,
+          1.189458,
+          1.223958,
+          1.2904579999999999,
+          1.308167,
+          1.406334
+        ]
+      },
+      "noop_shell_run_command_ms": {
+        "count": 10,
+        "max": 326.500625,
+        "min": 290.890751,
+        "p50": 311.0723955,
+        "p95": 321.963375,
+        "samples_ms": [
+          290.890751,
+          290.89275,
+          305.38025000000005,
+          309.98025,
+          310.835458,
+          311.30933300000004,
+          313.823458,
+          319.152417,
+          321.963375,
+          326.500625
+        ]
+      }
+    },
+    "thresholds": {
+      "host_minus_api_total_p95_max_ms": 5.0,
+      "overlay_mount_p95_max_ms": 5.0,
+      "phase1_noop_shell_host_wall_p50_ms": 361.5667294943705,
+      "phase1_noop_shell_host_wall_p95_ms": 373.75916697783396,
+      "phase1_runner_tool_p50_ms": 318.2281875,
+      "required_runner_tool_p50_ms": 238.671140625
+    }
+  },
+  "created_container": true,
+  "daemon_spawn_ms": 353.4555840305984,
+  "endpoint": {
+    "auth_token_present": true,
+    "host": "127.0.0.1",
+    "internal_port": 37657,
+    "port": 52579
+  },
+  "environment": {
+    "architecture": {
+      "exit_code": 0,
+      "stderr": "",
+      "stdout": "x86_64"
+    },
+    "cargo": {
+      "exit_code": 0,
+      "stderr": "",
+      "stdout": "missing"
+    },
+    "kernel": {
+      "exit_code": 0,
+      "stderr": "",
+      "stdout": "6.10.14-linuxkit"
+    },
+    "max_user_namespaces": {
+      "exit_code": 0,
+      "stderr": "",
+      "stdout": "15655"
+    },
+    "os_release": {
+      "exit_code": 0,
+      "stderr": "",
+      "stdout": "PRETTY_NAME=\"Ubuntu 22.04.4 LTS\"\nNAME=\"Ubuntu\"\nVERSION_ID=\"22.04\"\nVERSION=\"22.04.4 LTS (Jammy Jellyfish)\"\nVERSION_CODENAME=jammy\nID=ubuntu\nID_LIKE=debian\nHOME_URL=\"https://www.ubuntu.com/\"\nSUPPORT_URL=\"https://help.ubuntu.com/\"\nBUG_REPORT_URL=\"https://bugs.launchpad.net/ubuntu/\"\nPRIVACY_POLICY_URL=\"https://www.ubuntu.com/legal/terms-and-policies/privacy-policy\"\nUBUNTU_CODENAME=jammy"
+    },
+    "overlay_filesystem": {
+      "exit_code": 0,
+      "stderr": "",
+      "stdout": "nodev\toverlay"
+    },
+    "overlay_in_userns_probe": {
+      "exit_code": 0,
+      "samples": {
+        "count": 3,
+        "max": 436.55562499770895,
+        "min": 426.5221250243485,
+        "p50": 428.02808299893513,
+        "p95": 428.02808299893513,
+        "samples_ms": [
+          426.5221250243485,
+          428.02808299893513,
+          436.55562499770895
+        ]
+      },
+      "stderr": "",
+      "stdout": "",
+      "success": true
+    },
+    "python": {
+      "exit_code": 0,
+      "stderr": "",
+      "stdout": "Python 3.10.14"
+    },
+    "rustc": {
+      "exit_code": 0,
+      "stderr": "",
+      "stdout": "missing"
+    },
+    "scratch_mount": {
+      "exit_code": 0,
+      "stderr": "",
+      "stdout": "tmpfs  rw,nosuid,nodev,noexec,relatime,size=2097152k"
+    },
+    "userns_clone": {
+      "exit_code": 0,
+      "stderr": "",
+      "stdout": ""
+    }
+  },
+  "final_state": {
+    "gate_pass": true,
+    "path_count": 11,
+    "sha256": "0900301aa84e4da34203b500fedd010866564c6273767baf0e30e31ecb9896d6",
+    "small_write_readback_match": true
+  },
+  "gate_pass": false,
+  "host": {
+    "platform": "macOS-26.4.1-arm64-arm-64bit",
+    "python": "3.12.6"
+  },
+  "memory": {
+    "active_memory_basis": "pss",
+    "active_memory_gate_pass": true,
+    "baseline": {
+      "active_memory_baseline_note": "Phase 0 report lacks active daemon PSS; using CP-0 idle RSS as the conservative fallback until an active Python PSS baseline is captured.",
+      "cp0_daemon_idle_rss_kb": 36676
+    },
+    "gate_pass": true,
+    "idle_return_gate_pass": true,
+    "peak_pss_kb": 5416,
+    "peak_rss_kb": 6008,
+    "samples": [
+      {
+        "available": true,
+        "cgroup_memory_current_bytes": 15163392,
+        "label": "idle_before_load",
+        "pid": 295,
+        "smaps_Private_Clean_kb": 0,
+        "smaps_Private_Dirty_kb": 4756,
+        "smaps_Private_Total_kb": 4756,
+        "smaps_Pss_kb": 4784,
+        "smaps_Rss_kb": 5376,
+        "smaps_rollup_available": true,
+        "status_VmRSS_kb": 5048,
+        "status_VmSize_kb": 238332
+      },
+      {
+        "available": true,
+        "cgroup_memory_current_bytes": 15732736,
+        "label": "after_noop_shell",
+        "pid": 295,
+        "smaps_Private_Clean_kb": 0,
+        "smaps_Private_Dirty_kb": 5272,
+        "smaps_Private_Total_kb": 5272,
+        "smaps_Pss_kb": 5300,
+        "smaps_Rss_kb": 5892,
+        "smaps_rollup_available": true,
+        "status_VmRSS_kb": 5564,
+        "status_VmSize_kb": 240544
+      },
+      {
+        "available": true,
+        "cgroup_memory_current_bytes": 15712256,
+        "label": "after_small_write",
+        "pid": 295,
+        "smaps_Private_Clean_kb": 0,
+        "smaps_Private_Dirty_kb": 5316,
+        "smaps_Private_Total_kb": 5316,
+        "smaps_Pss_kb": 5344,
+        "smaps_Rss_kb": 5936,
+        "smaps_rollup_available": true,
+        "status_VmRSS_kb": 5692,
+        "status_VmSize_kb": 240584
+      },
+      {
+        "available": true,
+        "cgroup_memory_current_bytes": 16117760,
+        "label": "after_glob",
+        "pid": 295,
+        "smaps_Private_Clean_kb": 1840,
+        "smaps_Private_Dirty_kb": 3544,
+        "smaps_Private_Total_kb": 5384,
+        "smaps_Pss_kb": 5412,
+        "smaps_Rss_kb": 6004,
+        "smaps_rollup_available": true,
+        "status_VmRSS_kb": 5820,
+        "status_VmSize_kb": 240652
+      },
+      {
+        "available": true,
+        "cgroup_memory_current_bytes": 16031744,
+        "label": "after_grep",
+        "pid": 295,
+        "smaps_Private_Clean_kb": 1840,
+        "smaps_Private_Dirty_kb": 3548,
+        "smaps_Private_Total_kb": 5388,
+        "smaps_Pss_kb": 5416,
+        "smaps_Rss_kb": 6008,
+        "smaps_rollup_available": true,
+        "status_VmRSS_kb": 5820,
+        "status_VmSize_kb": 240644
+      },
+      {
+        "available": true,
+        "cgroup_memory_current_bytes": 15749120,
+        "label": "idle_after_drain",
+        "pid": 295,
+        "smaps_Private_Clean_kb": 1840,
+        "smaps_Private_Dirty_kb": 3548,
+        "smaps_Private_Total_kb": 5388,
+        "smaps_Pss_kb": 5416,
+        "smaps_Rss_kb": 6008,
+        "smaps_rollup_available": true,
+        "status_VmRSS_kb": 5820,
+        "status_VmSize_kb": 240644
+      }
+    ]
+  },
+  "mode": "docker-phase3-rust-daemon-cp4s",
+  "operations": {
+    "glob": {
+      "all_samples_ok": true,
+      "derived_ms": {
+        "host_minus_api_total_ms": {
+          "count": 10,
+          "max": 3.013457979559332,
+          "min": 1.5517499831095343,
+          "p50": 1.7498960024326147,
+          "p95": 2.72920797716397,
+          "samples_ms": [
+            1.5517499831095343,
+            1.6421250223703687,
+            1.7128750002533195,
+            1.721874979343264,
+            1.7413749978760187,
+            1.7584170069892107,
+            1.788625034249753,
+            1.937292009783178,
+            2.72920797716397,
+            3.013457979559332
+          ]
+        }
+      },
+      "host_wall_ms": {
+        "count": 10,
+        "max": 15.373874979559332,
+        "min": 13.038999983109534,
+        "p50": 13.496375002432615,
+        "p95": 15.335624979343265,
+        "samples_ms": [
+          13.038999983109534,
+          13.191417034249753,
+          13.254375022370368,
+          13.31262500025332,
+          13.419791997876018,
+          13.57295800698921,
+          15.010458009783179,
+          15.15187497716397,
+          15.335624979343265,
+          15.373874979559332
+        ]
+      },
+      "phase_timing_ms": {
+        "api.glob.total_s": {
+          "count": 10,
+          "max": 13.613750000000001,
+          "min": 11.402792,
+          "p50": 11.746479,
+          "p95": 13.073166,
+          "samples_ms": [
+            11.402792,
+            11.48725,
+            11.59975,
+            11.61225,
+            11.678417,
+            11.814541,
+            12.360417,
+            12.422667,
+            13.073166,
+            13.613750000000001
+          ]
+        },
+        "command_exec.capture_upperdir_s": {
+          "count": 10,
+          "max": 0.0,
+          "min": 0.0,
+          "p50": 0.0,
+          "p95": 0.0,
+          "samples_ms": [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        "command_exec.mount_workspace_s": {
+          "count": 10,
+          "max": 1.2622499999999999,
+          "min": 1.160166,
+          "p50": 1.1994585,
+          "p95": 1.2580829999999998,
+          "samples_ms": [
+            1.160166,
+            1.17975,
+            1.186042,
+            1.18825,
+            1.198,
+            1.200917,
+            1.216,
+            1.245083,
+            1.2580829999999998,
+            1.2622499999999999
+          ]
+        },
+        "command_exec.run_command_s": {
+          "count": 10,
+          "max": 0.28204199999999996,
+          "min": 0.186583,
+          "p50": 0.20520850000000002,
+          "p95": 0.271708,
+          "samples_ms": [
+            0.186583,
+            0.188084,
+            0.188333,
+            0.18954200000000002,
+            0.19045800000000002,
+            0.21995900000000002,
+            0.233375,
+            0.241291,
+            0.271708,
+            0.28204199999999996
+          ]
+        },
+        "command_exec.total_s": {
+          "count": 10,
+          "max": 13.612083,
+          "min": 11.402083000000001,
+          "p50": 11.7452705,
+          "p95": 13.070625000000001,
+          "samples_ms": [
+            11.402083000000001,
+            11.485917,
+            11.598459,
+            11.611042,
+            11.677125,
+            11.813416,
+            12.358417,
+            12.416708,
+            13.070625000000001,
+            13.612083
+          ]
+        },
+        "runtime.boot_to_dispatch_s": {
+          "count": 10,
+          "max": 0.0,
+          "min": 0.0,
+          "p50": 0.0,
+          "p95": 0.0,
+          "samples_ms": [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        "runtime.dispatch_s": {
+          "count": 10,
+          "max": 0.0,
+          "min": 0.0,
+          "p50": 0.0,
+          "p95": 0.0,
+          "samples_ms": [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        "runtime.read_request_s": {
+          "count": 10,
+          "max": 0.0,
+          "min": 0.0,
+          "p50": 0.0,
+          "p95": 0.0,
+          "samples_ms": [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        "workspace.mount_s": {
+          "count": 10,
+          "max": 1.2622499999999999,
+          "min": 1.160166,
+          "p50": 1.1994585,
+          "p95": 1.2580829999999998,
+          "samples_ms": [
+            1.160166,
+            1.17975,
+            1.186042,
+            1.18825,
+            1.198,
+            1.200917,
+            1.216,
+            1.245083,
+            1.2580829999999998,
+            1.2622499999999999
+          ]
+        },
+        "workspace.tool_s": {
+          "count": 10,
+          "max": 0.28204199999999996,
+          "min": 0.186583,
+          "p50": 0.20520850000000002,
+          "p95": 0.271708,
+          "samples_ms": [
+            0.186583,
+            0.188084,
+            0.188333,
+            0.18954200000000002,
+            0.19045800000000002,
+            0.21995900000000002,
+            0.233375,
+            0.241291,
+            0.271708,
+            0.28204199999999996
+          ]
+        }
+      },
+      "sample_count": 10,
+      "samples": [
+        {
+          "derived_ms": {
+            "host_minus_api_total_ms": 1.937292009783178
+          },
+          "host_wall_ms": 15.010458009783179,
+          "index": 0,
+          "invocation_id": "phase3-glob-000-a4b0416b",
+          "ok": true,
+          "op": "api.v1.glob",
+          "response": {
+            "changed_paths": [],
+            "filenames": [
+              "phase3-small-000.txt",
+              "phase3-small-001.txt",
+              "phase3-small-002.txt",
+              "phase3-small-003.txt",
+              "phase3-small-004.txt",
+              "phase3-small-005.txt",
+              "phase3-small-006.txt",
+              "phase3-small-007.txt",
+              "phase3-small-008.txt",
+              "phase3-small-009.txt"
+            ],
+            "num_files": 10,
+            "success": true
+          },
+          "timings_ms": {
+            "api.glob.total_s": 13.073166,
+            "command_exec.capture_upperdir_s": 0.0,
+            "command_exec.mount_workspace_s": 1.245083,
+            "command_exec.run_command_s": 0.28204199999999996,
+            "command_exec.total_s": 13.070625000000001,
+            "runtime.boot_to_dispatch_s": 0.0,
+            "runtime.dispatch_s": 0.0,
+            "runtime.read_request_s": 0.0,
+            "workspace.mount_s": 1.245083,
+            "workspace.tool_s": 0.28204199999999996
+          }
+        },
+        {
+          "derived_ms": {
+            "host_minus_api_total_ms": 1.7128750002533195
+          },
+          "host_wall_ms": 13.31262500025332,
+          "index": 1,
+          "invocation_id": "phase3-glob-001-148b56f2",
+          "ok": true,
+          "op": "api.v1.glob",
+          "response": {
+            "changed_paths": [],
+            "filenames": [
+              "phase3-small-000.txt",
+              "phase3-small-001.txt",
+              "phase3-small-002.txt",
+              "phase3-small-003.txt",
+              "phase3-small-004.txt",
+              "phase3-small-005.txt",
+              "phase3-small-006.txt",
+              "phase3-small-007.txt",
+              "phase3-small-008.txt",
+              "phase3-small-009.txt"
+            ],
+            "num_files": 10,
+            "success": true
+          },
+          "timings_ms": {
+            "api.glob.total_s": 11.59975,
+            "command_exec.capture_upperdir_s": 0.0,
+            "command_exec.mount_workspace_s": 1.216,
+            "command_exec.run_command_s": 0.21995900000000002,
+            "command_exec.total_s": 11.598459,
+            "runtime.boot_to_dispatch_s": 0.0,
+            "runtime.dispatch_s": 0.0,
+            "runtime.read_request_s": 0.0,
+            "workspace.mount_s": 1.216,
+            "workspace.tool_s": 0.21995900000000002
+          }
+        },
+        {
+          "derived_ms": {
+            "host_minus_api_total_ms": 1.7584170069892107
+          },
+          "host_wall_ms": 13.57295800698921,
+          "index": 2,
+          "invocation_id": "phase3-glob-002-d782c934",
+          "ok": true,
+          "op": "api.v1.glob",
+          "response": {
+            "changed_paths": [],
+            "filenames": [
+              "phase3-small-000.txt",
+              "phase3-small-001.txt",
+              "phase3-small-002.txt",
+              "phase3-small-003.txt",
+              "phase3-small-004.txt",
+              "phase3-small-005.txt",
+              "phase3-small-006.txt",
+              "phase3-small-007.txt",
+              "phase3-small-008.txt",
+              "phase3-small-009.txt"
+            ],
+            "num_files": 10,
+            "success": true
+          },
+          "timings_ms": {
+            "api.glob.total_s": 11.814541,
+            "command_exec.capture_upperdir_s": 0.0,
+            "command_exec.mount_workspace_s": 1.2622499999999999,
+            "command_exec.run_command_s": 0.19045800000000002,
+            "command_exec.total_s": 11.813416,
+            "runtime.boot_to_dispatch_s": 0.0,
+            "runtime.dispatch_s": 0.0,
+            "runtime.read_request_s": 0.0,
+            "workspace.mount_s": 1.2622499999999999,
+            "workspace.tool_s": 0.19045800000000002
+          }
+        },
+        {
+          "derived_ms": {
+            "host_minus_api_total_ms": 1.5517499831095343
+          },
+          "host_wall_ms": 13.038999983109534,
+          "index": 3,
+          "invocation_id": "phase3-glob-003-a4e5cd9d",
+          "ok": true,
+          "op": "api.v1.glob",
+          "response": {
+            "changed_paths": [],
+            "filenames": [
+              "phase3-small-000.txt",
+              "phase3-small-001.txt",
+              "phase3-small-002.txt",
+              "phase3-small-003.txt",
+              "phase3-small-004.txt",
+              "phase3-small-005.txt",
+              "phase3-small-006.txt",
+              "phase3-small-007.txt",
+              "phase3-small-008.txt",
+              "phase3-small-009.txt"
+            ],
+            "num_files": 10,
+            "success": true
+          },
+          "timings_ms": {
+            "api.glob.total_s": 11.48725,
+            "command_exec.capture_upperdir_s": 0.0,
+            "command_exec.mount_workspace_s": 1.160166,
+            "command_exec.run_command_s": 0.241291,
+            "command_exec.total_s": 11.485917,
+            "runtime.boot_to_dispatch_s": 0.0,
+            "runtime.dispatch_s": 0.0,
+            "runtime.read_request_s": 0.0,
+            "workspace.mount_s": 1.160166,
+            "workspace.tool_s": 0.241291
+          }
+        },
+        {
+          "derived_ms": {
+            "host_minus_api_total_ms": 1.6421250223703687
+          },
+          "host_wall_ms": 13.254375022370368,
+          "index": 4,
+          "invocation_id": "phase3-glob-004-ad7b30b8",
+          "ok": true,
+          "op": "api.v1.glob",
+          "response": {
+            "changed_paths": [],
+            "filenames": [
+              "phase3-small-000.txt",
+              "phase3-small-001.txt",
+              "phase3-small-002.txt",
+              "phase3-small-003.txt",
+              "phase3-small-004.txt",
+              "phase3-small-005.txt",
+              "phase3-small-006.txt",
+              "phase3-small-007.txt",
+              "phase3-small-008.txt",
+              "phase3-small-009.txt"
+            ],
+            "num_files": 10,
+            "success": true
+          },
+          "timings_ms": {
+            "api.glob.total_s": 11.61225,
+            "command_exec.capture_upperdir_s": 0.0,
+            "command_exec.mount_workspace_s": 1.198,
+            "command_exec.run_command_s": 0.271708,
+            "command_exec.total_s": 11.611042,
+            "runtime.boot_to_dispatch_s": 0.0,
+            "runtime.dispatch_s": 0.0,
+            "runtime.read_request_s": 0.0,
+            "workspace.mount_s": 1.198,
+            "workspace.tool_s": 0.271708
+          }
+        },
+        {
+          "derived_ms": {
+            "host_minus_api_total_ms": 1.788625034249753
+          },
+          "host_wall_ms": 13.191417034249753,
+          "index": 5,
+          "invocation_id": "phase3-glob-005-c4757afe",
+          "ok": true,
+          "op": "api.v1.glob",
+          "response": {
+            "changed_paths": [],
+            "filenames": [
+              "phase3-small-000.txt",
+              "phase3-small-001.txt",
+              "phase3-small-002.txt",
+              "phase3-small-003.txt",
+              "phase3-small-004.txt",
+              "phase3-small-005.txt",
+              "phase3-small-006.txt",
+              "phase3-small-007.txt",
+              "phase3-small-008.txt",
+              "phase3-small-009.txt"
+            ],
+            "num_files": 10,
+            "success": true
+          },
+          "timings_ms": {
+            "api.glob.total_s": 11.402792,
+            "command_exec.capture_upperdir_s": 0.0,
+            "command_exec.mount_workspace_s": 1.17975,
+            "command_exec.run_command_s": 0.186583,
+            "command_exec.total_s": 11.402083000000001,
+            "runtime.boot_to_dispatch_s": 0.0,
+            "runtime.dispatch_s": 0.0,
+            "runtime.read_request_s": 0.0,
+            "workspace.mount_s": 1.17975,
+            "workspace.tool_s": 0.186583
+          }
+        },
+        {
+          "derived_ms": {
+            "host_minus_api_total_ms": 1.7413749978760187
+          },
+          "host_wall_ms": 13.419791997876018,
+          "index": 6,
+          "invocation_id": "phase3-glob-006-9e10e47b",
+          "ok": true,
+          "op": "api.v1.glob",
+          "response": {
+            "changed_paths": [],
+            "filenames": [
+              "phase3-small-000.txt",
+              "phase3-small-001.txt",
+              "phase3-small-002.txt",
+              "phase3-small-003.txt",
+              "phase3-small-004.txt",
+              "phase3-small-005.txt",
+              "phase3-small-006.txt",
+              "phase3-small-007.txt",
+              "phase3-small-008.txt",
+              "phase3-small-009.txt"
+            ],
+            "num_files": 10,
+            "success": true
+          },
+          "timings_ms": {
+            "api.glob.total_s": 11.678417,
+            "command_exec.capture_upperdir_s": 0.0,
+            "command_exec.mount_workspace_s": 1.18825,
+            "command_exec.run_command_s": 0.233375,
+            "command_exec.total_s": 11.677125,
+            "runtime.boot_to_dispatch_s": 0.0,
+            "runtime.dispatch_s": 0.0,
+            "runtime.read_request_s": 0.0,
+            "workspace.mount_s": 1.18825,
+            "workspace.tool_s": 0.233375
+          }
+        },
+        {
+          "derived_ms": {
+            "host_minus_api_total_ms": 1.721874979343264
+          },
+          "host_wall_ms": 15.335624979343265,
+          "index": 7,
+          "invocation_id": "phase3-glob-007-a2f508a6",
+          "ok": true,
+          "op": "api.v1.glob",
+          "response": {
+            "changed_paths": [],
+            "filenames": [
+              "phase3-small-000.txt",
+              "phase3-small-001.txt",
+              "phase3-small-002.txt",
+              "phase3-small-003.txt",
+              "phase3-small-004.txt",
+              "phase3-small-005.txt",
+              "phase3-small-006.txt",
+              "phase3-small-007.txt",
+              "phase3-small-008.txt",
+              "phase3-small-009.txt"
+            ],
+            "num_files": 10,
+            "success": true
+          },
+          "timings_ms": {
+            "api.glob.total_s": 13.613750000000001,
+            "command_exec.capture_upperdir_s": 0.0,
+            "command_exec.mount_workspace_s": 1.2580829999999998,
+            "command_exec.run_command_s": 0.188333,
+            "command_exec.total_s": 13.612083,
+            "runtime.boot_to_dispatch_s": 0.0,
+            "runtime.dispatch_s": 0.0,
+            "runtime.read_request_s": 0.0,
+            "workspace.mount_s": 1.2580829999999998,
+            "workspace.tool_s": 0.188333
+          }
+        },
+        {
+          "derived_ms": {
+            "host_minus_api_total_ms": 3.013457979559332
+          },
+          "host_wall_ms": 15.373874979559332,
+          "index": 8,
+          "invocation_id": "phase3-glob-008-11602528",
+          "ok": true,
+          "op": "api.v1.glob",
+          "response": {
+            "changed_paths": [],
+            "filenames": [
+              "phase3-small-000.txt",
+              "phase3-small-001.txt",
+              "phase3-small-002.txt",
+              "phase3-small-003.txt",
+              "phase3-small-004.txt",
+              "phase3-small-005.txt",
+              "phase3-small-006.txt",
+              "phase3-small-007.txt",
+              "phase3-small-008.txt",
+              "phase3-small-009.txt"
+            ],
+            "num_files": 10,
+            "success": true
+          },
+          "timings_ms": {
+            "api.glob.total_s": 12.360417,
+            "command_exec.capture_upperdir_s": 0.0,
+            "command_exec.mount_workspace_s": 1.200917,
+            "command_exec.run_command_s": 0.18954200000000002,
+            "command_exec.total_s": 12.358417,
+            "runtime.boot_to_dispatch_s": 0.0,
+            "runtime.dispatch_s": 0.0,
+            "runtime.read_request_s": 0.0,
+            "workspace.mount_s": 1.200917,
+            "workspace.tool_s": 0.18954200000000002
+          }
+        },
+        {
+          "derived_ms": {
+            "host_minus_api_total_ms": 2.72920797716397
+          },
+          "host_wall_ms": 15.15187497716397,
+          "index": 9,
+          "invocation_id": "phase3-glob-009-cb61f6a8",
+          "ok": true,
+          "op": "api.v1.glob",
+          "response": {
+            "changed_paths": [],
+            "filenames": [
+              "phase3-small-000.txt",
+              "phase3-small-001.txt",
+              "phase3-small-002.txt",
+              "phase3-small-003.txt",
+              "phase3-small-004.txt",
+              "phase3-small-005.txt",
+              "phase3-small-006.txt",
+              "phase3-small-007.txt",
+              "phase3-small-008.txt",
+              "phase3-small-009.txt"
+            ],
+            "num_files": 10,
+            "success": true
+          },
+          "timings_ms": {
+            "api.glob.total_s": 12.422667,
+            "command_exec.capture_upperdir_s": 0.0,
+            "command_exec.mount_workspace_s": 1.186042,
+            "command_exec.run_command_s": 0.188084,
+            "command_exec.total_s": 12.416708,
+            "runtime.boot_to_dispatch_s": 0.0,
+            "runtime.dispatch_s": 0.0,
+            "runtime.read_request_s": 0.0,
+            "workspace.mount_s": 1.186042,
+            "workspace.tool_s": 0.188084
+          }
+        }
+      ],
+      "success_count": 10
+    },
+    "grep": {
+      "all_samples_ok": true,
+      "derived_ms": {
+        "host_minus_api_total_ms": {
+          "count": 10,
+          "max": 3.0076669919081027,
+          "min": 1.569000976145837,
+          "p50": 1.8571244992067957,
+          "p95": 2.810625029712348,
+          "samples_ms": [
+            1.569000976145837,
+            1.688750026267023,
+            1.7005839717058535,
+            1.7132510413129047,
+            1.772208009805528,
+            1.9420409886080634,
+            1.9479999853085879,
+            2.2774570122536097,
+            2.810625029712348,
+            3.0076669919081027
+          ]
+        }
+      },
+      "host_wall_ms": {
+        "count": 10,
+        "max": 20.849291991908103,
+        "min": 18.684792041312903,
+        "p50": 19.530916499206796,
+        "p95": 20.20066702971235,
+        "samples_ms": [
+          18.684792041312903,
+          18.856333976145834,
+          19.226041971705854,
+          19.332125026267022,
+          19.45945800980553,
+          19.602374988608062,
+          19.768916012253612,
+          19.780665985308588,
+          20.20066702971235,
+          20.849291991908103
+        ]
+      },
+      "phase_timing_ms": {
+        "api.grep.total_s": {
+          "count": 10,
+          "max": 17.841625,
+          "min": 16.971541,
+          "p50": 17.5844165,
+          "p95": 17.832666,
+          "samples_ms": [
+            16.971541,
+            17.287332999999997,
+            17.390042,
+            17.491459000000003,
+            17.525458,
+            17.643375,
+            17.660334,
+            17.687250000000002,
+            17.832666,
+            17.841625
+          ]
+        },
+        "command_exec.capture_upperdir_s": {
+          "count": 10,
+          "max": 0.0,
+          "min": 0.0,
+          "p50": 0.0,
+          "p95": 0.0,
+          "samples_ms": [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        "command_exec.mount_workspace_s": {
+          "count": 10,
+          "max": 1.461583,
+          "min": 1.158583,
+          "p50": 1.2639995,
+          "p95": 1.392584,
+          "samples_ms": [
+            1.158583,
+            1.208708,
+            1.246666,
+            1.249125,
+            1.260583,
+            1.2674159999999999,
+            1.304417,
+            1.3324159999999998,
+            1.392584,
+            1.461583
+          ]
+        },
+        "command_exec.run_command_s": {
+          "count": 10,
+          "max": 0.15945900000000002,
+          "min": 0.090708,
+          "p50": 0.102396,
+          "p95": 0.127584,
+          "samples_ms": [
+            0.090708,
+            0.091042,
+            0.09175,
+            0.0955,
+            0.099042,
+            0.10575,
+            0.11474999999999999,
+            0.12370799999999998,
+            0.127584,
+            0.15945900000000002
+          ]
+        },
+        "command_exec.total_s": {
+          "count": 10,
+          "max": 17.840249999999997,
+          "min": 16.970208,
+          "p50": 17.583,
+          "p95": 17.831125,
+          "samples_ms": [
+            16.970208,
+            17.286083,
+            17.38875,
+            17.49,
+            17.524333,
+            17.641666999999998,
+            17.659208999999997,
+            17.685708,
+            17.831125,
+            17.840249999999997
+          ]
+        },
+        "runtime.boot_to_dispatch_s": {
+          "count": 10,
+          "max": 0.0,
+          "min": 0.0,
+          "p50": 0.0,
+          "p95": 0.0,
+          "samples_ms": [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        "runtime.dispatch_s": {
+          "count": 10,
+          "max": 0.0,
+          "min": 0.0,
+          "p50": 0.0,
+          "p95": 0.0,
+          "samples_ms": [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        "runtime.read_request_s": {
+          "count": 10,
+          "max": 0.0,
+          "min": 0.0,
+          "p50": 0.0,
+          "p95": 0.0,
+          "samples_ms": [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        "workspace.mount_s": {
+          "count": 10,
+          "max": 1.461583,
+          "min": 1.158583,
+          "p50": 1.2639995,
+          "p95": 1.392584,
+          "samples_ms": [
+            1.158583,
+            1.208708,
+            1.246666,
+            1.249125,
+            1.260583,
+            1.2674159999999999,
+            1.304417,
+            1.3324159999999998,
+            1.392584,
+            1.461583
+          ]
+        },
+        "workspace.tool_s": {
+          "count": 10,
+          "max": 0.15945900000000002,
+          "min": 0.090708,
+          "p50": 0.102396,
+          "p95": 0.127584,
+          "samples_ms": [
+            0.090708,
+            0.091042,
+            0.09175,
+            0.0955,
+            0.099042,
+            0.10575,
+            0.11474999999999999,
+            0.12370799999999998,
+            0.127584,
+            0.15945900000000002
+          ]
+        }
+      },
+      "sample_count": 10,
+      "samples": [
+        {
+          "derived_ms": {
+            "host_minus_api_total_ms": 1.9479999853085879
+          },
+          "host_wall_ms": 19.780665985308588,
+          "index": 0,
+          "invocation_id": "phase3-grep-000-d2571b4b",
+          "ok": true,
+          "op": "api.v1.grep",
+          "response": {
+            "changed_paths": [],
+            "content": "phase3-small-000.txt:1:phase3 sample 0 phase3_cp4s_search_token\nphase3-small-001.txt:1:phase3 sample 1 phase3_cp4s_search_token\nphase3-small-002.txt:1:phase3 sample 2 phase3_cp4s_search_token\nphase3-small-003.txt:1:phase3 sample 3 phase3_cp4s_search_token\nphase3-small-004.txt:1:phase3 sample 4 phase3_cp4s_search_token\nphase3-small-005.txt:1:phase3 sample 5 phase3_cp4s_search_token\nphase3-small-006...<truncated 240 chars>",
+            "filenames": [
+              "phase3-small-000.txt",
+              "phase3-small-001.txt",
+              "phase3-small-002.txt",
+              "phase3-small-003.txt",
+              "phase3-small-004.txt",
+              "phase3-small-005.txt",
+              "phase3-small-006.txt",
+              "phase3-small-007.txt",
+              "phase3-small-008.txt",
+              "phase3-small-009.txt"
+            ],
+            "num_files": 10,
+            "num_matches": 10,
+            "success": true
+          },
+          "timings_ms": {
+            "api.grep.total_s": 17.832666,
+            "command_exec.capture_upperdir_s": 0.0,
+            "command_exec.mount_workspace_s": 1.461583,
+            "command_exec.run_command_s": 0.127584,
+            "command_exec.total_s": 17.831125,
+            "runtime.boot_to_dispatch_s": 0.0,
+            "runtime.dispatch_s": 0.0,
+            "runtime.read_request_s": 0.0,
+            "workspace.mount_s": 1.461583,
+            "workspace.tool_s": 0.127584
+          }
+        },
+        {
+          "derived_ms": {
+            "host_minus_api_total_ms": 2.2774570122536097
+          },
+          "host_wall_ms": 19.768916012253612,
+          "index": 1,
+          "invocation_id": "phase3-grep-001-fb4daf1c",
+          "ok": true,
+          "op": "api.v1.grep",
+          "response": {
+            "changed_paths": [],
+            "content": "phase3-small-000.txt:1:phase3 sample 0 phase3_cp4s_search_token\nphase3-small-001.txt:1:phase3 sample 1 phase3_cp4s_search_token\nphase3-small-002.txt:1:phase3 sample 2 phase3_cp4s_search_token\nphase3-small-003.txt:1:phase3 sample 3 phase3_cp4s_search_token\nphase3-small-004.txt:1:phase3 sample 4 phase3_cp4s_search_token\nphase3-small-005.txt:1:phase3 sample 5 phase3_cp4s_search_token\nphase3-small-006...<truncated 240 chars>",
+            "filenames": [
+              "phase3-small-000.txt",
+              "phase3-small-001.txt",
+              "phase3-small-002.txt",
+              "phase3-small-003.txt",
+              "phase3-small-004.txt",
+              "phase3-small-005.txt",
+              "phase3-small-006.txt",
+              "phase3-small-007.txt",
+              "phase3-small-008.txt",
+              "phase3-small-009.txt"
+            ],
+            "num_files": 10,
+            "num_matches": 10,
+            "success": true
+          },
+          "timings_ms": {
+            "api.grep.total_s": 17.491459000000003,
+            "command_exec.capture_upperdir_s": 0.0,
+            "command_exec.mount_workspace_s": 1.208708,
+            "command_exec.run_command_s": 0.09175,
+            "command_exec.total_s": 17.49,
+            "runtime.boot_to_dispatch_s": 0.0,
+            "runtime.dispatch_s": 0.0,
+            "runtime.read_request_s": 0.0,
+            "workspace.mount_s": 1.208708,
+            "workspace.tool_s": 0.09175
+          }
+        },
+        {
+          "derived_ms": {
+            "host_minus_api_total_ms": 1.7132510413129047
+          },
+          "host_wall_ms": 18.684792041312903,
+          "index": 2,
+          "invocation_id": "phase3-grep-002-d7aaf683",
+          "ok": true,
+          "op": "api.v1.grep",
+          "response": {
+            "changed_paths": [],
+            "content": "phase3-small-000.txt:1:phase3 sample 0 phase3_cp4s_search_token\nphase3-small-001.txt:1:phase3 sample 1 phase3_cp4s_search_token\nphase3-small-002.txt:1:phase3 sample 2 phase3_cp4s_search_token\nphase3-small-003.txt:1:phase3 sample 3 phase3_cp4s_search_token\nphase3-small-004.txt:1:phase3 sample 4 phase3_cp4s_search_token\nphase3-small-005.txt:1:phase3 sample 5 phase3_cp4s_search_token\nphase3-small-006...<truncated 240 chars>",
+            "filenames": [
+              "phase3-small-000.txt",
+              "phase3-small-001.txt",
+              "phase3-small-002.txt",
+              "phase3-small-003.txt",
+              "phase3-small-004.txt",
+              "phase3-small-005.txt",
+              "phase3-small-006.txt",
+              "phase3-small-007.txt",
+              "phase3-small-008.txt",
+              "phase3-small-009.txt"
+            ],
+            "num_files": 10,
+            "num_matches": 10,
+            "success": true
+          },
+          "timings_ms": {
+            "api.grep.total_s": 16.971541,
+            "command_exec.capture_upperdir_s": 0.0,
+            "command_exec.mount_workspace_s": 1.158583,
+            "command_exec.run_command_s": 0.091042,
+            "command_exec.total_s": 16.970208,
+            "runtime.boot_to_dispatch_s": 0.0,
+            "runtime.dispatch_s": 0.0,
+            "runtime.read_request_s": 0.0,
+            "workspace.mount_s": 1.158583,
+            "workspace.tool_s": 0.091042
+          }
+        },
+        {
+          "derived_ms": {
+            "host_minus_api_total_ms": 1.9420409886080634
+          },
+          "host_wall_ms": 19.602374988608062,
+          "index": 3,
+          "invocation_id": "phase3-grep-003-03683838",
+          "ok": true,
+          "op": "api.v1.grep",
+          "response": {
+            "changed_paths": [],
+            "content": "phase3-small-000.txt:1:phase3 sample 0 phase3_cp4s_search_token\nphase3-small-001.txt:1:phase3 sample 1 phase3_cp4s_search_token\nphase3-small-002.txt:1:phase3 sample 2 phase3_cp4s_search_token\nphase3-small-003.txt:1:phase3 sample 3 phase3_cp4s_search_token\nphase3-small-004.txt:1:phase3 sample 4 phase3_cp4s_search_token\nphase3-small-005.txt:1:phase3 sample 5 phase3_cp4s_search_token\nphase3-small-006...<truncated 240 chars>",
+            "filenames": [
+              "phase3-small-000.txt",
+              "phase3-small-001.txt",
+              "phase3-small-002.txt",
+              "phase3-small-003.txt",
+              "phase3-small-004.txt",
+              "phase3-small-005.txt",
+              "phase3-small-006.txt",
+              "phase3-small-007.txt",
+              "phase3-small-008.txt",
+              "phase3-small-009.txt"
+            ],
+            "num_files": 10,
+            "num_matches": 10,
+            "success": true
+          },
+          "timings_ms": {
+            "api.grep.total_s": 17.660334,
+            "command_exec.capture_upperdir_s": 0.0,
+            "command_exec.mount_workspace_s": 1.392584,
+            "command_exec.run_command_s": 0.0955,
+            "command_exec.total_s": 17.659208999999997,
+            "runtime.boot_to_dispatch_s": 0.0,
+            "runtime.dispatch_s": 0.0,
+            "runtime.read_request_s": 0.0,
+            "workspace.mount_s": 1.392584,
+            "workspace.tool_s": 0.0955
+          }
+        },
+        {
+          "derived_ms": {
+            "host_minus_api_total_ms": 3.0076669919081027
+          },
+          "host_wall_ms": 20.849291991908103,
+          "index": 4,
+          "invocation_id": "phase3-grep-004-121a7236",
+          "ok": true,
+          "op": "api.v1.grep",
+          "response": {
+            "changed_paths": [],
+            "content": "phase3-small-000.txt:1:phase3 sample 0 phase3_cp4s_search_token\nphase3-small-001.txt:1:phase3 sample 1 phase3_cp4s_search_token\nphase3-small-002.txt:1:phase3 sample 2 phase3_cp4s_search_token\nphase3-small-003.txt:1:phase3 sample 3 phase3_cp4s_search_token\nphase3-small-004.txt:1:phase3 sample 4 phase3_cp4s_search_token\nphase3-small-005.txt:1:phase3 sample 5 phase3_cp4s_search_token\nphase3-small-006...<truncated 240 chars>",
+            "filenames": [
+              "phase3-small-000.txt",
+              "phase3-small-001.txt",
+              "phase3-small-002.txt",
+              "phase3-small-003.txt",
+              "phase3-small-004.txt",
+              "phase3-small-005.txt",
+              "phase3-small-006.txt",
+              "phase3-small-007.txt",
+              "phase3-small-008.txt",
+              "phase3-small-009.txt"
+            ],
+            "num_files": 10,
+            "num_matches": 10,
+            "success": true
+          },
+          "timings_ms": {
+            "api.grep.total_s": 17.841625,
+            "command_exec.capture_upperdir_s": 0.0,
+            "command_exec.mount_workspace_s": 1.260583,
+            "command_exec.run_command_s": 0.099042,
+            "command_exec.total_s": 17.840249999999997,
+            "runtime.boot_to_dispatch_s": 0.0,
+            "runtime.dispatch_s": 0.0,
+            "runtime.read_request_s": 0.0,
+            "workspace.mount_s": 1.260583,
+            "workspace.tool_s": 0.099042
+          }
+        },
+        {
+          "derived_ms": {
+            "host_minus_api_total_ms": 1.569000976145837
+          },
+          "host_wall_ms": 18.856333976145834,
+          "index": 5,
+          "invocation_id": "phase3-grep-005-2eb78d19",
+          "ok": true,
+          "op": "api.v1.grep",
+          "response": {
+            "changed_paths": [],
+            "content": "phase3-small-000.txt:1:phase3 sample 0 phase3_cp4s_search_token\nphase3-small-001.txt:1:phase3 sample 1 phase3_cp4s_search_token\nphase3-small-002.txt:1:phase3 sample 2 phase3_cp4s_search_token\nphase3-small-003.txt:1:phase3 sample 3 phase3_cp4s_search_token\nphase3-small-004.txt:1:phase3 sample 4 phase3_cp4s_search_token\nphase3-small-005.txt:1:phase3 sample 5 phase3_cp4s_search_token\nphase3-small-006...<truncated 240 chars>",
+            "filenames": [
+              "phase3-small-000.txt",
+              "phase3-small-001.txt",
+              "phase3-small-002.txt",
+              "phase3-small-003.txt",
+              "phase3-small-004.txt",
+              "phase3-small-005.txt",
+              "phase3-small-006.txt",
+              "phase3-small-007.txt",
+              "phase3-small-008.txt",
+              "phase3-small-009.txt"
+            ],
+            "num_files": 10,
+            "num_matches": 10,
+            "success": true
+          },
+          "timings_ms": {
+            "api.grep.total_s": 17.287332999999997,
+            "command_exec.capture_upperdir_s": 0.0,
+            "command_exec.mount_workspace_s": 1.3324159999999998,
+            "command_exec.run_command_s": 0.15945900000000002,
+            "command_exec.total_s": 17.286083,
+            "runtime.boot_to_dispatch_s": 0.0,
+            "runtime.dispatch_s": 0.0,
+            "runtime.read_request_s": 0.0,
+            "workspace.mount_s": 1.3324159999999998,
+            "workspace.tool_s": 0.15945900000000002
+          }
+        },
+        {
+          "derived_ms": {
+            "host_minus_api_total_ms": 1.772208009805528
+          },
+          "host_wall_ms": 19.45945800980553,
+          "index": 6,
+          "invocation_id": "phase3-grep-006-d0b8444d",
+          "ok": true,
+          "op": "api.v1.grep",
+          "response": {
+            "changed_paths": [],
+            "content": "phase3-small-000.txt:1:phase3 sample 0 phase3_cp4s_search_token\nphase3-small-001.txt:1:phase3 sample 1 phase3_cp4s_search_token\nphase3-small-002.txt:1:phase3 sample 2 phase3_cp4s_search_token\nphase3-small-003.txt:1:phase3 sample 3 phase3_cp4s_search_token\nphase3-small-004.txt:1:phase3 sample 4 phase3_cp4s_search_token\nphase3-small-005.txt:1:phase3 sample 5 phase3_cp4s_search_token\nphase3-small-006...<truncated 240 chars>",
+            "filenames": [
+              "phase3-small-000.txt",
+              "phase3-small-001.txt",
+              "phase3-small-002.txt",
+              "phase3-small-003.txt",
+              "phase3-small-004.txt",
+              "phase3-small-005.txt",
+              "phase3-small-006.txt",
+              "phase3-small-007.txt",
+              "phase3-small-008.txt",
+              "phase3-small-009.txt"
+            ],
+            "num_files": 10,
+            "num_matches": 10,
+            "success": true
+          },
+          "timings_ms": {
+            "api.grep.total_s": 17.687250000000002,
+            "command_exec.capture_upperdir_s": 0.0,
+            "command_exec.mount_workspace_s": 1.246666,
+            "command_exec.run_command_s": 0.10575,
+            "command_exec.total_s": 17.685708,
+            "runtime.boot_to_dispatch_s": 0.0,
+            "runtime.dispatch_s": 0.0,
+            "runtime.read_request_s": 0.0,
+            "workspace.mount_s": 1.246666,
+            "workspace.tool_s": 0.10575
+          }
+        },
+        {
+          "derived_ms": {
+            "host_minus_api_total_ms": 1.7005839717058535
+          },
+          "host_wall_ms": 19.226041971705854,
+          "index": 7,
+          "invocation_id": "phase3-grep-007-54101b5b",
+          "ok": true,
+          "op": "api.v1.grep",
+          "response": {
+            "changed_paths": [],
+            "content": "phase3-small-000.txt:1:phase3 sample 0 phase3_cp4s_search_token\nphase3-small-001.txt:1:phase3 sample 1 phase3_cp4s_search_token\nphase3-small-002.txt:1:phase3 sample 2 phase3_cp4s_search_token\nphase3-small-003.txt:1:phase3 sample 3 phase3_cp4s_search_token\nphase3-small-004.txt:1:phase3 sample 4 phase3_cp4s_search_token\nphase3-small-005.txt:1:phase3 sample 5 phase3_cp4s_search_token\nphase3-small-006...<truncated 240 chars>",
+            "filenames": [
+              "phase3-small-000.txt",
+              "phase3-small-001.txt",
+              "phase3-small-002.txt",
+              "phase3-small-003.txt",
+              "phase3-small-004.txt",
+              "phase3-small-005.txt",
+              "phase3-small-006.txt",
+              "phase3-small-007.txt",
+              "phase3-small-008.txt",
+              "phase3-small-009.txt"
+            ],
+            "num_files": 10,
+            "num_matches": 10,
+            "success": true
+          },
+          "timings_ms": {
+            "api.grep.total_s": 17.525458,
+            "command_exec.capture_upperdir_s": 0.0,
+            "command_exec.mount_workspace_s": 1.249125,
+            "command_exec.run_command_s": 0.090708,
+            "command_exec.total_s": 17.524333,
+            "runtime.boot_to_dispatch_s": 0.0,
+            "runtime.dispatch_s": 0.0,
+            "runtime.read_request_s": 0.0,
+            "workspace.mount_s": 1.249125,
+            "workspace.tool_s": 0.090708
+          }
+        },
+        {
+          "derived_ms": {
+            "host_minus_api_total_ms": 2.810625029712348
+          },
+          "host_wall_ms": 20.20066702971235,
+          "index": 8,
+          "invocation_id": "phase3-grep-008-27b530ad",
+          "ok": true,
+          "op": "api.v1.grep",
+          "response": {
+            "changed_paths": [],
+            "content": "phase3-small-000.txt:1:phase3 sample 0 phase3_cp4s_search_token\nphase3-small-001.txt:1:phase3 sample 1 phase3_cp4s_search_token\nphase3-small-002.txt:1:phase3 sample 2 phase3_cp4s_search_token\nphase3-small-003.txt:1:phase3 sample 3 phase3_cp4s_search_token\nphase3-small-004.txt:1:phase3 sample 4 phase3_cp4s_search_token\nphase3-small-005.txt:1:phase3 sample 5 phase3_cp4s_search_token\nphase3-small-006...<truncated 240 chars>",
+            "filenames": [
+              "phase3-small-000.txt",
+              "phase3-small-001.txt",
+              "phase3-small-002.txt",
+              "phase3-small-003.txt",
+              "phase3-small-004.txt",
+              "phase3-small-005.txt",
+              "phase3-small-006.txt",
+              "phase3-small-007.txt",
+              "phase3-small-008.txt",
+              "phase3-small-009.txt"
+            ],
+            "num_files": 10,
+            "num_matches": 10,
+            "success": true
+          },
+          "timings_ms": {
+            "api.grep.total_s": 17.390042,
+            "command_exec.capture_upperdir_s": 0.0,
+            "command_exec.mount_workspace_s": 1.304417,
+            "command_exec.run_command_s": 0.11474999999999999,
+            "command_exec.total_s": 17.38875,
+            "runtime.boot_to_dispatch_s": 0.0,
+            "runtime.dispatch_s": 0.0,
+            "runtime.read_request_s": 0.0,
+            "workspace.mount_s": 1.304417,
+            "workspace.tool_s": 0.11474999999999999
+          }
+        },
+        {
+          "derived_ms": {
+            "host_minus_api_total_ms": 1.688750026267023
+          },
+          "host_wall_ms": 19.332125026267022,
+          "index": 9,
+          "invocation_id": "phase3-grep-009-48feb48f",
+          "ok": true,
+          "op": "api.v1.grep",
+          "response": {
+            "changed_paths": [],
+            "content": "phase3-small-000.txt:1:phase3 sample 0 phase3_cp4s_search_token\nphase3-small-001.txt:1:phase3 sample 1 phase3_cp4s_search_token\nphase3-small-002.txt:1:phase3 sample 2 phase3_cp4s_search_token\nphase3-small-003.txt:1:phase3 sample 3 phase3_cp4s_search_token\nphase3-small-004.txt:1:phase3 sample 4 phase3_cp4s_search_token\nphase3-small-005.txt:1:phase3 sample 5 phase3_cp4s_search_token\nphase3-small-006...<truncated 240 chars>",
+            "filenames": [
+              "phase3-small-000.txt",
+              "phase3-small-001.txt",
+              "phase3-small-002.txt",
+              "phase3-small-003.txt",
+              "phase3-small-004.txt",
+              "phase3-small-005.txt",
+              "phase3-small-006.txt",
+              "phase3-small-007.txt",
+              "phase3-small-008.txt",
+              "phase3-small-009.txt"
+            ],
+            "num_files": 10,
+            "num_matches": 10,
+            "success": true
+          },
+          "timings_ms": {
+            "api.grep.total_s": 17.643375,
+            "command_exec.capture_upperdir_s": 0.0,
+            "command_exec.mount_workspace_s": 1.2674159999999999,
+            "command_exec.run_command_s": 0.12370799999999998,
+            "command_exec.total_s": 17.641666999999998,
+            "runtime.boot_to_dispatch_s": 0.0,
+            "runtime.dispatch_s": 0.0,
+            "runtime.read_request_s": 0.0,
+            "workspace.mount_s": 1.2674159999999999,
+            "workspace.tool_s": 0.12370799999999998
+          }
+        }
+      ],
+      "success_count": 10
+    },
+    "noop_shell": {
+      "all_samples_ok": true,
+      "derived_ms": {
+        "host_minus_api_total_ms": {
+          "count": 10,
+          "max": 2.787916010094989,
+          "min": 1.5029989882733048,
+          "p50": 1.7600210145714925,
+          "p95": 2.3725419679992115,
+          "samples_ms": [
+            1.5029989882733048,
+            1.5949169984204445,
+            1.6190420366009448,
+            1.6812499661743345,
+            1.7217500307044133,
+            1.7982919984385717,
+            1.8187499741986244,
+            1.9605830437610052,
+            2.3725419679992115,
+            2.787916010094989
+          ]
+        }
+      },
+      "host_wall_ms": {
+        "count": 10,
+        "max": 341.878125036601,
+        "min": 306.103625043761,
+        "p50": 327.0411459670868,
+        "p95": 337.9477499984205,
+        "samples_ms": [
+          306.103625043761,
+          316.63354201009497,
+          319.8994580307044,
+          325.38633298827335,
+          325.77374996617436,
+          328.3085419679992,
+          328.51129199843854,
+          335.07412497419864,
+          337.9477499984205,
+          341.878125036601
+        ]
+      },
+      "phase_timing_ms": {
+        "api.shell.total_s": {
+          "count": 10,
+          "max": 340.25908300000003,
+          "min": 304.143042,
+          "p50": 325.01425,
+          "p95": 336.35283300000003,
+          "samples_ms": [
+            304.143042,
+            313.845626,
+            318.177708,
+            323.88333400000005,
+            324.09250000000003,
+            325.936,
+            326.71299999999997,
+            333.255375,
+            336.35283300000003,
+            340.25908300000003
+          ]
+        },
+        "command_exec.capture_upperdir_s": {
+          "count": 10,
+          "max": 0.5632919999999999,
+          "min": 0.016082999999999997,
+          "p50": 0.0190835,
+          "p95": 0.032541,
+          "samples_ms": [
+            0.016082999999999997,
+            0.017750000000000002,
+            0.018042000000000002,
+            0.018334,
+            0.018458,
+            0.019709,
+            0.02275,
+            0.024916999999999998,
+            0.032541,
+            0.5632919999999999
+          ]
+        },
+        "command_exec.mount_workspace_s": {
+          "count": 10,
+          "max": 1.406334,
+          "min": 1.121,
+          "p50": 1.1755415,
+          "p95": 1.308167,
+          "samples_ms": [
+            1.121,
+            1.121416,
+            1.1460000000000001,
+            1.151792,
+            1.161625,
+            1.189458,
+            1.223958,
+            1.2904579999999999,
+            1.308167,
+            1.406334
+          ]
+        },
+        "command_exec.occ_apply_s": {
+          "count": 10,
+          "max": 6.289750000000001,
+          "min": 2.1365,
+          "p50": 3.1099375,
+          "p95": 3.977042,
+          "samples_ms": [
+            2.1365,
+            2.50925,
+            2.81675,
+            3.004542,
+            3.071667,
+            3.148208,
+            3.2425,
+            3.304917,
+            3.977042,
+            6.289750000000001
+          ]
+        },
+        "command_exec.run_command_s": {
+          "count": 10,
+          "max": 326.500625,
+          "min": 290.890751,
+          "p50": 311.0723955,
+          "p95": 321.963375,
+          "samples_ms": [
+            290.890751,
+            290.89275,
+            305.38025000000005,
+            309.98025,
+            310.835458,
+            311.30933300000004,
+            313.823458,
+            319.152417,
+            321.963375,
+            326.500625
+          ]
+        },
+        "runtime.boot_to_dispatch_s": {
+          "count": 10,
+          "max": 0.0,
+          "min": 0.0,
+          "p50": 0.0,
+          "p95": 0.0,
+          "samples_ms": [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        "runtime.dispatch_s": {
+          "count": 10,
+          "max": 0.0,
+          "min": 0.0,
+          "p50": 0.0,
+          "p95": 0.0,
+          "samples_ms": [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        "runtime.read_request_s": {
+          "count": 10,
+          "max": 0.0,
+          "min": 0.0,
+          "p50": 0.0,
+          "p95": 0.0,
+          "samples_ms": [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        "workspace.mount_s": {
+          "count": 10,
+          "max": 1.406334,
+          "min": 1.121,
+          "p50": 1.1755415,
+          "p95": 1.308167,
+          "samples_ms": [
+            1.121,
+            1.121416,
+            1.1460000000000001,
+            1.151792,
+            1.161625,
+            1.189458,
+            1.223958,
+            1.2904579999999999,
+            1.308167,
+            1.406334
+          ]
+        },
+        "workspace.tool_s": {
+          "count": 10,
+          "max": 326.500625,
+          "min": 290.890751,
+          "p50": 311.0723955,
+          "p95": 321.963375,
+          "samples_ms": [
+            290.890751,
+            290.89275,
+            305.38025000000005,
+            309.98025,
+            310.835458,
+            311.30933300000004,
+            313.823458,
+            319.152417,
+            321.963375,
+            326.500625
+          ]
+        }
+      },
+      "sample_count": 10,
+      "samples": [
+        {
+          "derived_ms": {
+            "host_minus_api_total_ms": 2.787916010094989
+          },
+          "host_wall_ms": 316.63354201009497,
+          "index": 0,
+          "invocation_id": "phase3-noop_shell-000-04145e80",
+          "ok": true,
+          "op": "api.v1.shell",
+          "response": {
+            "changed_paths": [],
+            "exit_code": 0,
+            "status": "ok",
+            "stderr": "",
+            "stdout": "",
+            "success": true
+          },
+          "timings_ms": {
+            "api.shell.total_s": 313.845626,
+            "command_exec.capture_upperdir_s": 0.5632919999999999,
+            "command_exec.mount_workspace_s": 1.151792,
+            "command_exec.occ_apply_s": 6.289750000000001,
+            "command_exec.run_command_s": 290.890751,
+            "runtime.boot_to_dispatch_s": 0.0,
+            "runtime.dispatch_s": 0.0,
+            "runtime.read_request_s": 0.0,
+            "workspace.mount_s": 1.151792,
+            "workspace.tool_s": 290.890751
+          }
+        },
+        {
+          "derived_ms": {
+            "host_minus_api_total_ms": 2.3725419679992115
+          },
+          "host_wall_ms": 328.3085419679992,
+          "index": 1,
+          "invocation_id": "phase3-noop_shell-001-f0bf65c1",
+          "ok": true,
+          "op": "api.v1.shell",
+          "response": {
+            "changed_paths": [],
+            "exit_code": 0,
+            "status": "ok",
+            "stderr": "",
+            "stdout": "",
+            "success": true
+          },
+          "timings_ms": {
+            "api.shell.total_s": 325.936,
+            "command_exec.capture_upperdir_s": 0.019709,
+            "command_exec.mount_workspace_s": 1.406334,
+            "command_exec.occ_apply_s": 3.977042,
+            "command_exec.run_command_s": 311.30933300000004,
+            "runtime.boot_to_dispatch_s": 0.0,
+            "runtime.dispatch_s": 0.0,
+            "runtime.read_request_s": 0.0,
+            "workspace.mount_s": 1.406334,
+            "workspace.tool_s": 311.30933300000004
+          }
+        },
+        {
+          "derived_ms": {
+            "host_minus_api_total_ms": 1.8187499741986244
+          },
+          "host_wall_ms": 335.07412497419864,
+          "index": 2,
+          "invocation_id": "phase3-noop_shell-002-b30c01bd",
+          "ok": true,
+          "op": "api.v1.shell",
+          "response": {
+            "changed_paths": [],
+            "exit_code": 0,
+            "status": "ok",
+            "stderr": "",
+            "stdout": "",
+            "success": true
+          },
+          "timings_ms": {
+            "api.shell.total_s": 333.255375,
+            "command_exec.capture_upperdir_s": 0.024916999999999998,
+            "command_exec.mount_workspace_s": 1.308167,
+            "command_exec.occ_apply_s": 3.071667,
+            "command_exec.run_command_s": 319.152417,
+            "runtime.boot_to_dispatch_s": 0.0,
+            "runtime.dispatch_s": 0.0,
+            "runtime.read_request_s": 0.0,
+            "workspace.mount_s": 1.308167,
+            "workspace.tool_s": 319.152417
+          }
+        },
+        {
+          "derived_ms": {
+            "host_minus_api_total_ms": 1.7982919984385717
+          },
+          "host_wall_ms": 328.51129199843854,
+          "index": 3,
+          "invocation_id": "phase3-noop_shell-003-6281e1f8",
+          "ok": true,
+          "op": "api.v1.shell",
+          "response": {
+            "changed_paths": [],
+            "exit_code": 0,
+            "status": "ok",
+            "stderr": "",
+            "stdout": "",
+            "success": true
+          },
+          "timings_ms": {
+            "api.shell.total_s": 326.71299999999997,
+            "command_exec.capture_upperdir_s": 0.016082999999999997,
+            "command_exec.mount_workspace_s": 1.189458,
+            "command_exec.occ_apply_s": 2.1365,
+            "command_exec.run_command_s": 313.823458,
+            "runtime.boot_to_dispatch_s": 0.0,
+            "runtime.dispatch_s": 0.0,
+            "runtime.read_request_s": 0.0,
+            "workspace.mount_s": 1.189458,
+            "workspace.tool_s": 313.823458
+          }
+        },
+        {
+          "derived_ms": {
+            "host_minus_api_total_ms": 1.9605830437610052
+          },
+          "host_wall_ms": 306.103625043761,
+          "index": 4,
+          "invocation_id": "phase3-noop_shell-004-e381c1ef",
+          "ok": true,
+          "op": "api.v1.shell",
+          "response": {
+            "changed_paths": [],
+            "exit_code": 0,
+            "status": "ok",
+            "stderr": "",
+            "stdout": "",
+            "success": true
+          },
+          "timings_ms": {
+            "api.shell.total_s": 304.143042,
+            "command_exec.capture_upperdir_s": 0.018334,
+            "command_exec.mount_workspace_s": 1.121416,
+            "command_exec.occ_apply_s": 3.148208,
+            "command_exec.run_command_s": 290.89275,
+            "runtime.boot_to_dispatch_s": 0.0,
+            "runtime.dispatch_s": 0.0,
+            "runtime.read_request_s": 0.0,
+            "workspace.mount_s": 1.121416,
+            "workspace.tool_s": 290.89275
+          }
+        },
+        {
+          "derived_ms": {
+            "host_minus_api_total_ms": 1.6812499661743345
+          },
+          "host_wall_ms": 325.77374996617436,
+          "index": 5,
+          "invocation_id": "phase3-noop_shell-005-7158e27b",
+          "ok": true,
+          "op": "api.v1.shell",
+          "response": {
+            "changed_paths": [],
+            "exit_code": 0,
+            "status": "ok",
+            "stderr": "",
+            "stdout": "",
+            "success": true
+          },
+          "timings_ms": {
+            "api.shell.total_s": 324.09250000000003,
+            "command_exec.capture_upperdir_s": 0.018458,
+            "command_exec.mount_workspace_s": 1.223958,
+            "command_exec.occ_apply_s": 2.81675,
+            "command_exec.run_command_s": 310.835458,
+            "runtime.boot_to_dispatch_s": 0.0,
+            "runtime.dispatch_s": 0.0,
+            "runtime.read_request_s": 0.0,
+            "workspace.mount_s": 1.223958,
+            "workspace.tool_s": 310.835458
+          }
+        },
+        {
+          "derived_ms": {
+            "host_minus_api_total_ms": 1.5029989882733048
+          },
+          "host_wall_ms": 325.38633298827335,
+          "index": 6,
+          "invocation_id": "phase3-noop_shell-006-daf25e5f",
+          "ok": true,
+          "op": "api.v1.shell",
+          "response": {
+            "changed_paths": [],
+            "exit_code": 0,
+            "status": "ok",
+            "stderr": "",
+            "stdout": "",
+            "success": true
+          },
+          "timings_ms": {
+            "api.shell.total_s": 323.88333400000005,
+            "command_exec.capture_upperdir_s": 0.02275,
+            "command_exec.mount_workspace_s": 1.161625,
+            "command_exec.occ_apply_s": 3.2425,
+            "command_exec.run_command_s": 309.98025,
+            "runtime.boot_to_dispatch_s": 0.0,
+            "runtime.dispatch_s": 0.0,
+            "runtime.read_request_s": 0.0,
+            "workspace.mount_s": 1.161625,
+            "workspace.tool_s": 309.98025
+          }
+        },
+        {
+          "derived_ms": {
+            "host_minus_api_total_ms": 1.5949169984204445
+          },
+          "host_wall_ms": 337.9477499984205,
+          "index": 7,
+          "invocation_id": "phase3-noop_shell-007-db081438",
+          "ok": true,
+          "op": "api.v1.shell",
+          "response": {
+            "changed_paths": [],
+            "exit_code": 0,
+            "status": "ok",
+            "stderr": "",
+            "stdout": "",
+            "success": true
+          },
+          "timings_ms": {
+            "api.shell.total_s": 336.35283300000003,
+            "command_exec.capture_upperdir_s": 0.032541,
+            "command_exec.mount_workspace_s": 1.2904579999999999,
+            "command_exec.occ_apply_s": 3.304917,
+            "command_exec.run_command_s": 321.963375,
+            "runtime.boot_to_dispatch_s": 0.0,
+            "runtime.dispatch_s": 0.0,
+            "runtime.read_request_s": 0.0,
+            "workspace.mount_s": 1.2904579999999999,
+            "workspace.tool_s": 321.963375
+          }
+        },
+        {
+          "derived_ms": {
+            "host_minus_api_total_ms": 1.6190420366009448
+          },
+          "host_wall_ms": 341.878125036601,
+          "index": 8,
+          "invocation_id": "phase3-noop_shell-008-aeb4df7b",
+          "ok": true,
+          "op": "api.v1.shell",
+          "response": {
+            "changed_paths": [],
+            "exit_code": 0,
+            "status": "ok",
+            "stderr": "",
+            "stdout": "",
+            "success": true
+          },
+          "timings_ms": {
+            "api.shell.total_s": 340.25908300000003,
+            "command_exec.capture_upperdir_s": 0.017750000000000002,
+            "command_exec.mount_workspace_s": 1.1460000000000001,
+            "command_exec.occ_apply_s": 3.004542,
+            "command_exec.run_command_s": 326.500625,
+            "runtime.boot_to_dispatch_s": 0.0,
+            "runtime.dispatch_s": 0.0,
+            "runtime.read_request_s": 0.0,
+            "workspace.mount_s": 1.1460000000000001,
+            "workspace.tool_s": 326.500625
+          }
+        },
+        {
+          "derived_ms": {
+            "host_minus_api_total_ms": 1.7217500307044133
+          },
+          "host_wall_ms": 319.8994580307044,
+          "index": 9,
+          "invocation_id": "phase3-noop_shell-009-b3735b44",
+          "ok": true,
+          "op": "api.v1.shell",
+          "response": {
+            "changed_paths": [],
+            "exit_code": 0,
+            "status": "ok",
+            "stderr": "",
+            "stdout": "",
+            "success": true
+          },
+          "timings_ms": {
+            "api.shell.total_s": 318.177708,
+            "command_exec.capture_upperdir_s": 0.018042000000000002,
+            "command_exec.mount_workspace_s": 1.121,
+            "command_exec.occ_apply_s": 2.50925,
+            "command_exec.run_command_s": 305.38025000000005,
+            "runtime.boot_to_dispatch_s": 0.0,
+            "runtime.dispatch_s": 0.0,
+            "runtime.read_request_s": 0.0,
+            "workspace.mount_s": 1.121,
+            "workspace.tool_s": 305.38025000000005
+          }
+        }
+      ],
+      "success_count": 10
+    },
+    "small_write": {
+      "all_samples_ok": true,
+      "derived_ms": {
+        "host_minus_api_total_ms": {
+          "count": 10,
+          "max": 2.4672920221021855,
+          "min": 1.593291019025628,
+          "p50": 1.8672084986945663,
+          "p95": 2.3097079980777266,
+          "samples_ms": [
+            1.593291019025628,
+            1.6305419606342753,
+            1.6903750263601296,
+            1.7254590462521264,
+            1.8397920247439288,
+            1.8946249726452038,
+            1.8999580031702408,
+            2.274416034984199,
+            2.3097079980777266,
+            2.4672920221021855
+          ]
+        }
+      },
+      "host_wall_ms": {
+        "count": 10,
+        "max": 339.0469580190256,
+        "min": 309.0823340462521,
+        "p50": 323.8902500306722,
+        "p95": 336.81950002210215,
+        "samples_ms": [
+          309.0823340462521,
+          311.23383302474394,
+          314.65162499807775,
+          314.9311249726452,
+          322.8015000349842,
+          324.97900002636015,
+          334.1415000031702,
+          335.0192919606343,
+          336.81950002210215,
+          339.0469580190256
+        ]
+      },
+      "phase_timing_ms": {
+        "api.shell.total_s": {
+          "count": 10,
+          "max": 337.453667,
+          "min": 307.35687499999995,
+          "p50": 321.9078545,
+          "p95": 334.35220799999996,
+          "samples_ms": [
+            307.35687499999995,
+            309.394041,
+            312.341917,
+            313.0365,
+            320.527084,
+            323.288625,
+            332.241542,
+            333.38875,
+            334.35220799999996,
+            337.453667
+          ]
+        },
+        "command_exec.capture_upperdir_s": {
+          "count": 10,
+          "max": 1.6246660000000002,
+          "min": 0.039709,
+          "p50": 0.0508545,
+          "p95": 0.058499999999999996,
+          "samples_ms": [
+            0.039709,
+            0.047292,
+            0.049166999999999995,
+            0.049416999999999996,
+            0.050124999999999996,
+            0.051584,
+            0.052041,
+            0.057083999999999996,
+            0.058499999999999996,
+            1.6246660000000002
+          ]
+        },
+        "command_exec.mount_workspace_s": {
+          "count": 10,
+          "max": 1.442208,
+          "min": 1.13075,
+          "p50": 1.2011045,
+          "p95": 1.39625,
+          "samples_ms": [
+            1.13075,
+            1.14525,
+            1.1562919999999999,
+            1.1591660000000001,
+            1.198167,
+            1.204042,
+            1.237291,
+            1.2964579999999999,
+            1.39625,
+            1.442208
+          ]
+        },
+        "command_exec.occ_apply_s": {
+          "count": 10,
+          "max": 5.220167,
+          "min": 2.726084,
+          "p50": 3.0798745,
+          "p95": 3.451583,
+          "samples_ms": [
+            2.726084,
+            2.872541,
+            2.935167,
+            2.999959,
+            3.039083,
+            3.120666,
+            3.1992499999999997,
+            3.311708,
+            3.451583,
+            5.220167
+          ]
+        },
+        "command_exec.run_command_s": {
+          "count": 10,
+          "max": 322.941584,
+          "min": 293.544291,
+          "p50": 308.1996875,
+          "p95": 320.37233399999997,
+          "samples_ms": [
+            293.544291,
+            294.727376,
+            296.075833,
+            298.990542,
+            306.946583,
+            309.452792,
+            318.33408299999996,
+            319.04933400000004,
+            320.37233399999997,
+            322.941584
+          ]
+        },
+        "runtime.boot_to_dispatch_s": {
+          "count": 10,
+          "max": 0.0,
+          "min": 0.0,
+          "p50": 0.0,
+          "p95": 0.0,
+          "samples_ms": [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        "runtime.dispatch_s": {
+          "count": 10,
+          "max": 0.0,
+          "min": 0.0,
+          "p50": 0.0,
+          "p95": 0.0,
+          "samples_ms": [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        "runtime.read_request_s": {
+          "count": 10,
+          "max": 0.0,
+          "min": 0.0,
+          "p50": 0.0,
+          "p95": 0.0,
+          "samples_ms": [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        "workspace.mount_s": {
+          "count": 10,
+          "max": 1.442208,
+          "min": 1.13075,
+          "p50": 1.2011045,
+          "p95": 1.39625,
+          "samples_ms": [
+            1.13075,
+            1.14525,
+            1.1562919999999999,
+            1.1591660000000001,
+            1.198167,
+            1.204042,
+            1.237291,
+            1.2964579999999999,
+            1.39625,
+            1.442208
+          ]
+        },
+        "workspace.tool_s": {
+          "count": 10,
+          "max": 322.941584,
+          "min": 293.544291,
+          "p50": 308.1996875,
+          "p95": 320.37233399999997,
+          "samples_ms": [
+            293.544291,
+            294.727376,
+            296.075833,
+            298.990542,
+            306.946583,
+            309.452792,
+            318.33408299999996,
+            319.04933400000004,
+            320.37233399999997,
+            322.941584
+          ]
+        }
+      },
+      "sample_count": 10,
+      "samples": [
+        {
+          "derived_ms": {
+            "host_minus_api_total_ms": 2.3097079980777266
+          },
+          "host_wall_ms": 314.65162499807775,
+          "index": 0,
+          "invocation_id": "phase3-small_write-000-838491ec",
+          "ok": true,
+          "op": "api.v1.shell",
+          "response": {
+            "changed_paths": [
+              "phase3-small-000.txt"
+            ],
+            "exit_code": 0,
+            "status": "ok",
+            "stderr": "",
+            "stdout": "",
+            "success": true
+          },
+          "timings_ms": {
+            "api.shell.total_s": 312.341917,
+            "command_exec.capture_upperdir_s": 1.6246660000000002,
+            "command_exec.mount_workspace_s": 1.13075,
+            "command_exec.occ_apply_s": 5.220167,
+            "command_exec.run_command_s": 294.727376,
+            "runtime.boot_to_dispatch_s": 0.0,
+            "runtime.dispatch_s": 0.0,
+            "runtime.read_request_s": 0.0,
+            "workspace.mount_s": 1.13075,
+            "workspace.tool_s": 294.727376
+          }
+        },
+        {
+          "derived_ms": {
+            "host_minus_api_total_ms": 1.8397920247439288
+          },
+          "host_wall_ms": 311.23383302474394,
+          "index": 1,
+          "invocation_id": "phase3-small_write-001-dcc062c4",
+          "ok": true,
+          "op": "api.v1.shell",
+          "response": {
+            "changed_paths": [
+              "phase3-small-001.txt"
+            ],
+            "exit_code": 0,
+            "status": "ok",
+            "stderr": "",
+            "stdout": "",
+            "success": true
+          },
+          "timings_ms": {
+            "api.shell.total_s": 309.394041,
+            "command_exec.capture_upperdir_s": 0.039709,
+            "command_exec.mount_workspace_s": 1.1591660000000001,
+            "command_exec.occ_apply_s": 3.039083,
+            "command_exec.run_command_s": 296.075833,
+            "runtime.boot_to_dispatch_s": 0.0,
+            "runtime.dispatch_s": 0.0,
+            "runtime.read_request_s": 0.0,
+            "workspace.mount_s": 1.1591660000000001,
+            "workspace.tool_s": 296.075833
+          }
+        },
+        {
+          "derived_ms": {
+            "host_minus_api_total_ms": 1.7254590462521264
+          },
+          "host_wall_ms": 309.0823340462521,
+          "index": 2,
+          "invocation_id": "phase3-small_write-002-4524b663",
+          "ok": true,
+          "op": "api.v1.shell",
+          "response": {
+            "changed_paths": [
+              "phase3-small-002.txt"
+            ],
+            "exit_code": 0,
+            "status": "ok",
+            "stderr": "",
+            "stdout": "",
+            "success": true
+          },
+          "timings_ms": {
+            "api.shell.total_s": 307.35687499999995,
+            "command_exec.capture_upperdir_s": 0.047292,
+            "command_exec.mount_workspace_s": 1.14525,
+            "command_exec.occ_apply_s": 3.1992499999999997,
+            "command_exec.run_command_s": 293.544291,
+            "runtime.boot_to_dispatch_s": 0.0,
+            "runtime.dispatch_s": 0.0,
+            "runtime.read_request_s": 0.0,
+            "workspace.mount_s": 1.14525,
+            "workspace.tool_s": 293.544291
+          }
+        },
+        {
+          "derived_ms": {
+            "host_minus_api_total_ms": 1.6305419606342753
+          },
+          "host_wall_ms": 335.0192919606343,
+          "index": 3,
+          "invocation_id": "phase3-small_write-003-cba7e4d8",
+          "ok": true,
+          "op": "api.v1.shell",
+          "response": {
+            "changed_paths": [
+              "phase3-small-003.txt"
+            ],
+            "exit_code": 0,
+            "status": "ok",
+            "stderr": "",
+            "stdout": "",
+            "success": true
+          },
+          "timings_ms": {
+            "api.shell.total_s": 333.38875,
+            "command_exec.capture_upperdir_s": 0.050124999999999996,
+            "command_exec.mount_workspace_s": 1.442208,
+            "command_exec.occ_apply_s": 2.999959,
+            "command_exec.run_command_s": 319.04933400000004,
+            "runtime.boot_to_dispatch_s": 0.0,
+            "runtime.dispatch_s": 0.0,
+            "runtime.read_request_s": 0.0,
+            "workspace.mount_s": 1.442208,
+            "workspace.tool_s": 319.04933400000004
+          }
+        },
+        {
+          "derived_ms": {
+            "host_minus_api_total_ms": 1.593291019025628
+          },
+          "host_wall_ms": 339.0469580190256,
+          "index": 4,
+          "invocation_id": "phase3-small_write-004-57457eb1",
+          "ok": true,
+          "op": "api.v1.shell",
+          "response": {
+            "changed_paths": [
+              "phase3-small-004.txt"
+            ],
+            "exit_code": 0,
+            "status": "ok",
+            "stderr": "",
+            "stdout": "",
+            "success": true
+          },
+          "timings_ms": {
+            "api.shell.total_s": 337.453667,
+            "command_exec.capture_upperdir_s": 0.057083999999999996,
+            "command_exec.mount_workspace_s": 1.237291,
+            "command_exec.occ_apply_s": 3.311708,
+            "command_exec.run_command_s": 322.941584,
+            "runtime.boot_to_dispatch_s": 0.0,
+            "runtime.dispatch_s": 0.0,
+            "runtime.read_request_s": 0.0,
+            "workspace.mount_s": 1.237291,
+            "workspace.tool_s": 322.941584
+          }
+        },
+        {
+          "derived_ms": {
+            "host_minus_api_total_ms": 1.6903750263601296
+          },
+          "host_wall_ms": 324.97900002636015,
+          "index": 5,
+          "invocation_id": "phase3-small_write-005-825261fd",
+          "ok": true,
+          "op": "api.v1.shell",
+          "response": {
+            "changed_paths": [
+              "phase3-small-005.txt"
+            ],
+            "exit_code": 0,
+            "status": "ok",
+            "stderr": "",
+            "stdout": "",
+            "success": true
+          },
+          "timings_ms": {
+            "api.shell.total_s": 323.288625,
+            "command_exec.capture_upperdir_s": 0.051584,
+            "command_exec.mount_workspace_s": 1.1562919999999999,
+            "command_exec.occ_apply_s": 2.872541,
+            "command_exec.run_command_s": 309.452792,
+            "runtime.boot_to_dispatch_s": 0.0,
+            "runtime.dispatch_s": 0.0,
+            "runtime.read_request_s": 0.0,
+            "workspace.mount_s": 1.1562919999999999,
+            "workspace.tool_s": 309.452792
+          }
+        },
+        {
+          "derived_ms": {
+            "host_minus_api_total_ms": 1.8946249726452038
+          },
+          "host_wall_ms": 314.9311249726452,
+          "index": 6,
+          "invocation_id": "phase3-small_write-006-2d8596ce",
+          "ok": true,
+          "op": "api.v1.shell",
+          "response": {
+            "changed_paths": [
+              "phase3-small-006.txt"
+            ],
+            "exit_code": 0,
+            "status": "ok",
+            "stderr": "",
+            "stdout": "",
+            "success": true
+          },
+          "timings_ms": {
+            "api.shell.total_s": 313.0365,
+            "command_exec.capture_upperdir_s": 0.049166999999999995,
+            "command_exec.mount_workspace_s": 1.204042,
+            "command_exec.occ_apply_s": 3.451583,
+            "command_exec.run_command_s": 298.990542,
+            "runtime.boot_to_dispatch_s": 0.0,
+            "runtime.dispatch_s": 0.0,
+            "runtime.read_request_s": 0.0,
+            "workspace.mount_s": 1.204042,
+            "workspace.tool_s": 298.990542
+          }
+        },
+        {
+          "derived_ms": {
+            "host_minus_api_total_ms": 2.274416034984199
+          },
+          "host_wall_ms": 322.8015000349842,
+          "index": 7,
+          "invocation_id": "phase3-small_write-007-5ff00ae9",
+          "ok": true,
+          "op": "api.v1.shell",
+          "response": {
+            "changed_paths": [
+              "phase3-small-007.txt"
+            ],
+            "exit_code": 0,
+            "status": "ok",
+            "stderr": "",
+            "stdout": "",
+            "success": true
+          },
+          "timings_ms": {
+            "api.shell.total_s": 320.527084,
+            "command_exec.capture_upperdir_s": 0.058499999999999996,
+            "command_exec.mount_workspace_s": 1.198167,
+            "command_exec.occ_apply_s": 2.726084,
+            "command_exec.run_command_s": 306.946583,
+            "runtime.boot_to_dispatch_s": 0.0,
+            "runtime.dispatch_s": 0.0,
+            "runtime.read_request_s": 0.0,
+            "workspace.mount_s": 1.198167,
+            "workspace.tool_s": 306.946583
+          }
+        },
+        {
+          "derived_ms": {
+            "host_minus_api_total_ms": 2.4672920221021855
+          },
+          "host_wall_ms": 336.81950002210215,
+          "index": 8,
+          "invocation_id": "phase3-small_write-008-2cc2c96d",
+          "ok": true,
+          "op": "api.v1.shell",
+          "response": {
+            "changed_paths": [
+              "phase3-small-008.txt"
+            ],
+            "exit_code": 0,
+            "status": "ok",
+            "stderr": "",
+            "stdout": "",
+            "success": true
+          },
+          "timings_ms": {
+            "api.shell.total_s": 334.35220799999996,
+            "command_exec.capture_upperdir_s": 0.052041,
+            "command_exec.mount_workspace_s": 1.39625,
+            "command_exec.occ_apply_s": 2.935167,
+            "command_exec.run_command_s": 320.37233399999997,
+            "runtime.boot_to_dispatch_s": 0.0,
+            "runtime.dispatch_s": 0.0,
+            "runtime.read_request_s": 0.0,
+            "workspace.mount_s": 1.39625,
+            "workspace.tool_s": 320.37233399999997
+          }
+        },
+        {
+          "derived_ms": {
+            "host_minus_api_total_ms": 1.8999580031702408
+          },
+          "host_wall_ms": 334.1415000031702,
+          "index": 9,
+          "invocation_id": "phase3-small_write-009-48990130",
+          "ok": true,
+          "op": "api.v1.shell",
+          "response": {
+            "changed_paths": [
+              "phase3-small-009.txt"
+            ],
+            "exit_code": 0,
+            "status": "ok",
+            "stderr": "",
+            "stdout": "",
+            "success": true
+          },
+          "timings_ms": {
+            "api.shell.total_s": 332.241542,
+            "command_exec.capture_upperdir_s": 0.049416999999999996,
+            "command_exec.mount_workspace_s": 1.2964579999999999,
+            "command_exec.occ_apply_s": 3.120666,
+            "command_exec.run_command_s": 318.33408299999996,
+            "runtime.boot_to_dispatch_s": 0.0,
+            "runtime.dispatch_s": 0.0,
+            "runtime.read_request_s": 0.0,
+            "workspace.mount_s": 1.2964579999999999,
+            "workspace.tool_s": 318.33408299999996
+          }
+        }
+      ],
+      "success_count": 10
+    }
+  },
+  "ready": {
+    "daemon_pid": 295,
+    "probes": [
+      {
+        "details": {
+          "base_root_hash": "phase2-base-root",
+          "manifest_depth": 1,
+          "manifest_version": 1,
+          "workspace_root": "/testbed"
+        },
+        "name": "control_plane",
+        "status": "ok"
+      },
+      {
+        "details": {
+          "handlers_services_ready": true,
+          "shell_services_ready": true,
+          "workspace_mount_mode": "private_namespace"
+        },
+        "name": "data_plane",
+        "status": "ok"
+      },
+      {
+        "details": {
+          "backend_fields": [
+            "layer_stack",
+            "occ_service",
+            "occ_client",
+            "gitignore",
+            "layer_stack_manager"
+          ],
+          "backend_ready": true,
+          "occ_client_class": "OccClient"
+        },
+        "name": "mutation_gate",
+        "status": "ok"
+      }
+    ],
+    "ready": true,
+    "success": true,
+    "timings": {
+      "runtime.boot_to_dispatch_s": 0.0,
+      "runtime.dispatch_s": 0.0,
+      "runtime.read_request_s": 0.0,
+      "runtime.ready.control_plane_s": 4.9125e-05,
+      "runtime.ready.data_plane_s": 5.41e-07,
+      "runtime.ready.mutation_gate_s": 7.5e-07,
+      "runtime.ready.total_s": 5.6583e-05
+    },
+    "uptime_s": 0.003231
+  },
+  "run_id": "local-73ac7734026d",
+  "samples_per_operation": 10,
+  "sandbox_id": "8ec7537edcf59628a4b11916be7c257943a41276b146f5ce45b698af636cba47"
+}

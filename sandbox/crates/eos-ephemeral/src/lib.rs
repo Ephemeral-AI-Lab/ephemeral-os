@@ -11,10 +11,11 @@
 //!   ATOMIC: a partial capture is never published. `glob`/`grep` are
 //!   `READ_ONLY`, so they mount but skip capture+publish.
 //!
-//! This is the one workspace flavor that DOES publish — hence it links eos-occ
-//! and drives the publish cycle, and it links eos-layerstack as a DIRECT edge
-//! (the pipeline reads layer-stack snapshot/manifest types directly, not only
-//! through overlay/occ).
+//! This is the one workspace flavor that DOES publish, but it does not link
+//! `eos-occ` directly. The daemon injects [`OccRuntimeServicesPort`], so
+//! publishing still routes through the daemon-owned per-root single writer while
+//! plugin/isolated no-publish crates can consume the same port surface without a
+//! transitive OCC edge.
 //!
 //! The orchestration is `async` (it runs inside the daemon's tokio runtime) but
 //! this crate adds NO tokio dependency: the `asyncio.Lock` operation locks and

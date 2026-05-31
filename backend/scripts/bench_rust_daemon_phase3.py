@@ -1,0 +1,684 @@
+#!/usr/bin/env python3
+"""Live Phase 3 Rust daemon benchmark for CP-4s shell/search hot paths.
+
+The harness uploads a locally packaged ``eosd`` into the Docker sandbox, seeds a
+minimal LayerStack fixture, starts the Rust daemon, then measures:
+
+* ``api.v1.shell`` no-op latency.
+* ``api.v1.shell`` small-write publish latency.
+* ``api.v1.glob`` and ``api.v1.grep`` read-only overlay search latency.
+* daemon memory before load, between operation groups, and after drain.
+
+It intentionally records gate failures instead of smoothing them over. CP-4s is
+only closed when the generated report passes the thresholds encoded here and is
+captured in the target Linux/Docker image.
+"""
+
+from __future__ import annotations
+
+import argparse
+import asyncio
+import hashlib
+import json
+import os
+import platform
+import shlex
+import sys
+import time
+import uuid
+from collections.abc import Callable
+from pathlib import Path
+from typing import Any
+
+ROOT = Path(__file__).resolve().parents[2]
+BACKEND_SRC = ROOT / "backend" / "src"
+SCRIPT_DIR = Path(__file__).resolve().parent
+if str(BACKEND_SRC) not in sys.path:
+    sys.path.insert(0, str(BACKEND_SRC))
+if str(SCRIPT_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPT_DIR))
+
+from bench_rust_daemon_phase2 import (  # noqa: E402
+    LAYER_STACK_ROOT,
+    WORKSPACE_ROOT,
+    call_tcp,
+    read_pid,
+    reset_runtime,
+    seed_layer_stack,
+    temporary_env,
+    upload_artifact,
+)
+from bench_sandbox_e2e import (  # noqa: E402
+    DEFAULT_DOCKER_IMAGE,
+    DockerBench,
+    collect_environment,
+    elapsed_ms,
+    summarize_samples,
+)
+
+AGENT_ID = "phase3-cp4s-bench"
+SEARCH_TOKEN = "phase3_cp4s_search_token"
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = parse_args(argv)
+    report = asyncio.run(run_phase3(args))
+    out = Path(args.report)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(json.dumps(report, indent=2, sort_keys=True))
+    print(
+        f"wrote {out} "
+        f"(cp4s={report['cp4s']['gate_pass']} all={report['gate_pass']} "
+        f"run_id={report['run_id']})"
+    )
+    return 0 if report["gate_pass"] else 1
+
+
+def parse_args(argv: list[str] | None) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--docker-image",
+        default=DEFAULT_DOCKER_IMAGE,
+        help=f"Docker image for the live run (default: {DEFAULT_DOCKER_IMAGE}).",
+    )
+    parser.add_argument(
+        "--container-id",
+        default=None,
+        help="Use an existing Docker container instead of creating one.",
+    )
+    parser.add_argument(
+        "--artifact",
+        type=Path,
+        default=ROOT / "sandbox" / "dist" / "eosd-linux-amd64",
+        help="Locally packaged amd64 eosd binary.",
+    )
+    parser.add_argument(
+        "--phase1-baseline",
+        type=Path,
+        default=ROOT / "bench" / "phase1-ns-runner-amd64.json",
+        help="Phase 1 direct-runner report used for shell latency thresholds.",
+    )
+    parser.add_argument(
+        "--phase0-baseline",
+        type=Path,
+        default=ROOT / "bench" / "baseline-amd64.json",
+        help="Phase 0 baseline report used for daemon memory fallback thresholds.",
+    )
+    parser.add_argument(
+        "--report",
+        default=str(ROOT / "bench" / "phase3-rust-daemon-amd64.json"),
+        help="JSON report path.",
+    )
+    parser.add_argument(
+        "--samples",
+        type=int,
+        default=10,
+        help="Samples per operation group.",
+    )
+    parser.add_argument(
+        "--drain-seconds",
+        type=float,
+        default=0.5,
+        help="Seconds to wait before the final idle memory sample.",
+    )
+    parser.add_argument(
+        "--keep-container",
+        action="store_true",
+        help="Do not delete a container created by this script.",
+    )
+    parser.add_argument(
+        "--name-prefix",
+        default="eos-phase3-rust-daemon",
+        help="Name prefix for created containers.",
+    )
+    return parser.parse_args(argv)
+
+
+async def run_phase3(args: argparse.Namespace) -> dict[str, Any]:
+    if not args.artifact.exists():
+        raise SystemExit(f"missing eosd artifact: {args.artifact}")
+    phase1 = json.loads(args.phase1_baseline.read_text())
+    phase0 = json.loads(args.phase0_baseline.read_text())
+    bench = await DockerBench.create(
+        image=args.docker_image,
+        container_id=args.container_id,
+        name_prefix=args.name_prefix,
+    )
+    try:
+        report: dict[str, Any] = {
+            "mode": "docker-phase3-rust-daemon-cp4s",
+            "run_id": os.environ.get("EOS_TIER_RUN_ID")
+            or f"local-{uuid.uuid4().hex[:12]}",
+            "sandbox_id": bench.sandbox_id,
+            "created_container": bench.created,
+            "host": {
+                "platform": platform.platform(),
+                "python": sys.version.split()[0],
+            },
+            "environment": await collect_environment(bench),
+            "baseline_paths": {
+                "phase1": str(args.phase1_baseline),
+                "phase0": str(args.phase0_baseline),
+            },
+            "samples_per_operation": args.samples,
+        }
+        await reset_runtime(bench)
+        report["artifact"] = await upload_artifact(bench, args.artifact)
+        await seed_layer_stack(bench)
+
+        with temporary_env("EOS_SANDBOX_RUNTIME", "rust"):
+            from sandbox.host import daemon_client
+
+            daemon_client.invalidate_daemon_tcp_endpoint(bench.sandbox_id)
+            started = time.perf_counter()
+            await daemon_client.ensure_daemon_current(bench.sandbox_id)
+            report["daemon_spawn_ms"] = elapsed_ms(started)
+            endpoint = await daemon_client._resolve_daemon_tcp_endpoint(  # noqa: SLF001
+                bench.adapter,
+                bench.sandbox_id,
+            )
+            if endpoint is None:
+                raise RuntimeError("Docker sandbox did not expose a daemon TCP endpoint")
+            report["endpoint"] = {
+                "host": endpoint.host,
+                "port": endpoint.port,
+                "internal_port": endpoint.internal_port,
+                "auth_token_present": bool(endpoint.auth_token),
+            }
+            report["ready"] = await daemon_client.call_daemon_api(
+                bench.sandbox_id,
+                "api.runtime.ready",
+                {},
+                layer_stack_root=LAYER_STACK_ROOT,
+                timeout=30,
+            )
+
+            memory_samples = [await sample_daemon_memory(bench, "idle_before_load")]
+            operations: dict[str, Any] = {}
+            operations["noop_shell"] = await measure_operation(
+                daemon_client,
+                endpoint,
+                "noop_shell",
+                args.samples,
+                lambda index, invocation_id: (
+                    "api.v1.shell",
+                    {
+                        "command": "true",
+                        "cwd": ".",
+                        "timeout_seconds": 10,
+                        "invocation_id": invocation_id,
+                    },
+                ),
+                expect_noop_shell,
+            )
+            memory_samples.append(await sample_daemon_memory(bench, "after_noop_shell"))
+
+            operations["small_write"] = await measure_operation(
+                daemon_client,
+                endpoint,
+                "small_write",
+                args.samples,
+                small_write_request,
+                expect_small_write,
+            )
+            memory_samples.append(await sample_daemon_memory(bench, "after_small_write"))
+
+            operations["glob"] = await measure_operation(
+                daemon_client,
+                endpoint,
+                "glob",
+                args.samples,
+                lambda _index, invocation_id: (
+                    "api.v1.glob",
+                    {
+                        "pattern": "phase3-small-*.txt",
+                        "path": ".",
+                        "invocation_id": invocation_id,
+                    },
+                ),
+                lambda response: expect_search_count(response, args.samples),
+            )
+            memory_samples.append(await sample_daemon_memory(bench, "after_glob"))
+
+            operations["grep"] = await measure_operation(
+                daemon_client,
+                endpoint,
+                "grep",
+                args.samples,
+                lambda _index, invocation_id: (
+                    "api.v1.grep",
+                    {
+                        "pattern": SEARCH_TOKEN,
+                        "path": ".",
+                        "output_mode": "content",
+                        "offset": 0,
+                        "case_insensitive": False,
+                        "line_numbers": True,
+                        "multiline": False,
+                        "invocation_id": invocation_id,
+                    },
+                ),
+                lambda response: expect_search_count(response, args.samples),
+            )
+            memory_samples.append(await sample_daemon_memory(bench, "after_grep"))
+            await asyncio.sleep(max(0.0, float(args.drain_seconds)))
+            memory_samples.append(await sample_daemon_memory(bench, "idle_after_drain"))
+
+            report["operations"] = operations
+            report["memory"] = summarize_memory(memory_samples, phase0)
+            report["final_state"] = await collect_final_state(
+                daemon_client,
+                endpoint,
+                args.samples,
+            )
+
+        report["cp4s"] = evaluate_cp4s(report, phase1)
+        report["gate_pass"] = bool(
+            report["artifact"]["gate_pass"]
+            and report["ready"].get("ready") is True
+            and report["final_state"]["gate_pass"]
+            and report["cp4s"]["gate_pass"]
+        )
+        return report
+    finally:
+        await bench.close(keep=args.keep_container)
+
+
+def small_write_request(index: int, invocation_id: str) -> tuple[str, dict[str, Any]]:
+    filename = f"phase3-small-{index:03d}.txt"
+    content = f"phase3 sample {index} {SEARCH_TOKEN}\n"
+    command = f"printf '%s' {shlex.quote(content)} > {shlex.quote(filename)}"
+    return (
+        "api.v1.shell",
+        {
+            "command": command,
+            "cwd": ".",
+            "timeout_seconds": 10,
+            "invocation_id": invocation_id,
+            "expected_path": filename,
+        },
+    )
+
+
+async def measure_operation(
+    daemon_client: Any,
+    endpoint: Any,
+    name: str,
+    count: int,
+    build_request: Callable[[int, str], tuple[str, dict[str, Any]]],
+    expect: Callable[[dict[str, Any]], bool],
+) -> dict[str, Any]:
+    samples: list[dict[str, Any]] = []
+    for index in range(max(0, count)):
+        invocation_id = f"phase3-{name}-{index:03d}-{uuid.uuid4().hex[:8]}"
+        op, args = build_request(index, invocation_id)
+        expected_path = args.pop("expected_path", None)
+        started = time.perf_counter()
+        response = await call_tcp(
+            daemon_client,
+            endpoint,
+            daemon_request(op, args, invocation_id),
+        )
+        host_wall_ms = elapsed_ms(started)
+        ok = expect(response)
+        if expected_path is not None:
+            ok = ok and expected_path in response.get("changed_paths", [])
+        timings_ms = timing_ms(response)
+        samples.append(
+            {
+                "index": index,
+                "invocation_id": invocation_id,
+                "op": op,
+                "host_wall_ms": host_wall_ms,
+                "ok": ok,
+                "timings_ms": timings_ms,
+                "derived_ms": derived_timings_ms(name, host_wall_ms, timings_ms),
+                "response": trim_response(response),
+            }
+        )
+    return summarize_operation(samples)
+
+
+def daemon_request(op: str, args: dict[str, Any], invocation_id: str) -> str:
+    wire_args = {
+        "layer_stack_root": LAYER_STACK_ROOT,
+        "agent_id": AGENT_ID,
+        **args,
+    }
+    wire_args.setdefault("invocation_id", invocation_id)
+    return json.dumps(
+        {
+            "op": op,
+            "invocation_id": invocation_id,
+            "args": wire_args,
+        },
+        separators=(",", ":"),
+    )
+
+
+def expect_noop_shell(response: dict[str, Any]) -> bool:
+    return (
+        response.get("success") is True
+        and response.get("exit_code") == 0
+        and response.get("status") == "ok"
+    )
+
+
+def expect_small_write(response: dict[str, Any]) -> bool:
+    return (
+        response.get("success") is True
+        and response.get("exit_code") == 0
+        and response.get("status") in {"ok", "committed"}
+    )
+
+
+def expect_search_count(response: dict[str, Any], minimum: int) -> bool:
+    return response.get("success") is True and int(response.get("num_files") or 0) >= minimum
+
+
+def timing_ms(response: dict[str, Any]) -> dict[str, float]:
+    out: dict[str, float] = {}
+    timings = response.get("timings")
+    if not isinstance(timings, dict):
+        return out
+    for key, value in timings.items():
+        if key.endswith("_s") and isinstance(value, int | float):
+            out[key] = float(value) * 1000.0
+    return out
+
+
+def derived_timings_ms(
+    operation: str,
+    host_wall_ms: float,
+    timings: dict[str, float],
+) -> dict[str, float]:
+    api_keys = {
+        "noop_shell": "api.shell.total_s",
+        "small_write": "api.shell.total_s",
+        "glob": "api.glob.total_s",
+        "grep": "api.grep.total_s",
+    }
+    derived: dict[str, float] = {}
+    api_total_ms = timings.get(api_keys[operation])
+    if api_total_ms is not None:
+        derived["host_minus_api_total_ms"] = max(0.0, host_wall_ms - api_total_ms)
+    return derived
+
+
+def summarize_operation(samples: list[dict[str, Any]]) -> dict[str, Any]:
+    timing_keys = sorted(
+        {
+            key
+            for sample in samples
+            for key in sample["timings_ms"]
+            if isinstance(sample["timings_ms"].get(key), int | float)
+        }
+    )
+    derived_keys = sorted(
+        {
+            key
+            for sample in samples
+            for key in sample["derived_ms"]
+            if isinstance(sample["derived_ms"].get(key), int | float)
+        }
+    )
+    return {
+        "success_count": sum(1 for sample in samples if sample["ok"]),
+        "sample_count": len(samples),
+        "all_samples_ok": bool(samples) and all(sample["ok"] for sample in samples),
+        "host_wall_ms": summarize_samples([sample["host_wall_ms"] for sample in samples]),
+        "phase_timing_ms": {
+            key: summarize_samples(
+                [
+                    sample["timings_ms"][key]
+                    for sample in samples
+                    if key in sample["timings_ms"]
+                ]
+            )
+            for key in timing_keys
+        },
+        "derived_ms": {
+            key: summarize_samples(
+                [
+                    sample["derived_ms"][key]
+                    for sample in samples
+                    if key in sample["derived_ms"]
+                ]
+            )
+            for key in derived_keys
+        },
+        "samples": samples,
+    }
+
+
+async def sample_daemon_memory(bench: DockerBench, label: str) -> dict[str, Any]:
+    pid = await read_pid(bench)
+    if pid is None:
+        return {"label": label, "pid": None, "available": False}
+    command = f"""
+set -eu
+pid={pid}
+echo "pid=$pid"
+if [ -r "/proc/$pid/smaps_rollup" ]; then
+  awk '/^(Rss|Pss|Private_Clean|Private_Dirty):/ {{gsub(":", "", $1); print "smaps_" $1 "_kb=" $2}}' "/proc/$pid/smaps_rollup"
+fi
+if [ -r "/proc/$pid/status" ]; then
+  awk '/^(VmRSS|VmSize):/ {{gsub(":", "", $1); print "status_" $1 "_kb=" $2}}' "/proc/$pid/status"
+fi
+if [ -r /sys/fs/cgroup/memory.current ]; then
+  printf 'cgroup_memory_current_bytes='
+  cat /sys/fs/cgroup/memory.current
+elif [ -r /sys/fs/cgroup/memory/memory.usage_in_bytes ]; then
+  printf 'cgroup_memory_current_bytes='
+  cat /sys/fs/cgroup/memory/memory.usage_in_bytes
+fi
+"""
+    result = await bench.exec(command, timeout=15)
+    values: dict[str, Any] = {"label": label, "pid": pid, "available": True}
+    for line in getattr(result, "stdout", "").splitlines():
+        if "=" not in line:
+            continue
+        key, raw = line.split("=", 1)
+        raw = raw.strip()
+        try:
+            values[key] = int(raw)
+        except ValueError:
+            values[key] = raw
+    private_clean = values.get("smaps_Private_Clean_kb")
+    private_dirty = values.get("smaps_Private_Dirty_kb")
+    if isinstance(private_clean, int) and isinstance(private_dirty, int):
+        values["smaps_Private_Total_kb"] = private_clean + private_dirty
+    values["smaps_rollup_available"] = "smaps_Pss_kb" in values
+    return values
+
+
+def summarize_memory(
+    samples: list[dict[str, Any]],
+    phase0: dict[str, Any],
+) -> dict[str, Any]:
+    baseline_rss_kb = int(phase0.get("cp0", {}).get("daemon_idle_rss_kb") or 0)
+    before = next(
+        (sample for sample in samples if sample.get("label") == "idle_before_load"),
+        {},
+    )
+    after = next(
+        (sample for sample in samples if sample.get("label") == "idle_after_drain"),
+        {},
+    )
+    pss_values = int_values(samples, "smaps_Pss_kb")
+    rss_values = int_values(samples, "smaps_Rss_kb") or int_values(samples, "status_VmRSS_kb")
+    peak_pss_kb = max(pss_values) if pss_values else None
+    peak_rss_kb = max(rss_values) if rss_values else None
+    before_pss = before.get("smaps_Pss_kb")
+    after_pss = after.get("smaps_Pss_kb")
+    before_rss = before.get("smaps_Rss_kb") or before.get("status_VmRSS_kb")
+    after_rss = after.get("smaps_Rss_kb") or after.get("status_VmRSS_kb")
+    idle_before = before_pss if isinstance(before_pss, int) else before_rss
+    idle_after = after_pss if isinstance(after_pss, int) else after_rss
+    idle_return = within_idle_return(idle_before, idle_after)
+    active_basis = "pss" if peak_pss_kb is not None else "rss"
+    active_peak = peak_pss_kb if peak_pss_kb is not None else peak_rss_kb
+    active_memory_gate = (
+        isinstance(active_peak, int)
+        and baseline_rss_kb > 0
+        and active_peak <= baseline_rss_kb
+    )
+    return {
+        "samples": samples,
+        "baseline": {
+            "cp0_daemon_idle_rss_kb": baseline_rss_kb,
+            "active_memory_baseline_note": (
+                "Phase 0 report lacks active daemon PSS; using CP-0 idle RSS as "
+                "the conservative fallback until an active Python PSS baseline is captured."
+            ),
+        },
+        "peak_pss_kb": peak_pss_kb,
+        "peak_rss_kb": peak_rss_kb,
+        "active_memory_basis": active_basis,
+        "active_memory_gate_pass": active_memory_gate,
+        "idle_return_gate_pass": idle_return,
+        "gate_pass": bool(active_memory_gate and idle_return),
+    }
+
+
+def int_values(samples: list[dict[str, Any]], key: str) -> list[int]:
+    return [sample[key] for sample in samples if isinstance(sample.get(key), int)]
+
+
+def within_idle_return(before: object, after: object) -> bool:
+    if not isinstance(before, int) or not isinstance(after, int):
+        return False
+    return after <= before + max(int(before * 0.10), 2048)
+
+
+async def collect_final_state(
+    daemon_client: Any,
+    endpoint: Any,
+    samples: int,
+) -> dict[str, Any]:
+    filenames = ["README.md"] + [f"phase3-small-{index:03d}.txt" for index in range(samples)]
+    contents: dict[str, str] = {}
+    for filename in filenames:
+        response = await call_tcp(
+            daemon_client,
+            endpoint,
+            daemon_request(
+                "api.v1.read_file",
+                {"path": f"{WORKSPACE_ROOT}/{filename}"},
+                f"phase3-final-read-{uuid.uuid4().hex[:8]}",
+            ),
+        )
+        contents[filename] = str(response.get("content", ""))
+    expected = {
+        f"phase3-small-{index:03d}.txt": f"phase3 sample {index} {SEARCH_TOKEN}\n"
+        for index in range(samples)
+    }
+    digest = hashlib.sha256(
+        json.dumps(contents, sort_keys=True, separators=(",", ":")).encode()
+    ).hexdigest()
+    return {
+        "path_count": len(contents),
+        "sha256": digest,
+        "small_write_readback_match": all(
+            contents.get(path) == content for path, content in expected.items()
+        ),
+        "gate_pass": all(contents.get(path) == content for path, content in expected.items()),
+    }
+
+
+def evaluate_cp4s(report: dict[str, Any], phase1: dict[str, Any]) -> dict[str, Any]:
+    operations = report["operations"]
+    phase1_perf = phase1["performance"]
+    phase1_host = phase1_perf["host_wall_ms"]
+    phase1_tool = phase1_perf["runner_tool_ms"]
+    noop = operations["noop_shell"]
+    noop_host = noop["host_wall_ms"]
+    noop_run_command = stat_block(noop, "phase_timing_ms", "command_exec.run_command_s")
+    noop_mount = stat_block(noop, "phase_timing_ms", "command_exec.mount_workspace_s")
+    noop_dispatch = stat_block(noop, "derived_ms", "host_minus_api_total_ms")
+
+    host_latency_gate = (
+        stat_value(noop_host, "p50") <= float(phase1_host["p50"])
+        and stat_value(noop_host, "p95") <= float(phase1_host["p95"])
+    )
+    shell_segment_gate = stat_value(noop_run_command, "p50") <= float(phase1_tool["p50"]) * 0.75
+    mount_gate = stat_value(noop_mount, "p95") <= 5.0
+    dispatch_gate = stat_value(noop_dispatch, "p95") <= 5.0
+    operations_gate = all(
+        bool(operation["all_samples_ok"]) for operation in operations.values()
+    )
+    memory_gate = bool(report["memory"]["gate_pass"])
+    gate_pass = all(
+        [
+            operations_gate,
+            host_latency_gate,
+            shell_segment_gate,
+            mount_gate,
+            dispatch_gate,
+            memory_gate,
+        ]
+    )
+    return {
+        "thresholds": {
+            "phase1_noop_shell_host_wall_p50_ms": phase1_host["p50"],
+            "phase1_noop_shell_host_wall_p95_ms": phase1_host["p95"],
+            "phase1_runner_tool_p50_ms": phase1_tool["p50"],
+            "required_runner_tool_p50_ms": float(phase1_tool["p50"]) * 0.75,
+            "overlay_mount_p95_max_ms": 5.0,
+            "host_minus_api_total_p95_max_ms": 5.0,
+        },
+        "observed": {
+            "noop_shell_host_wall_ms": noop_host,
+            "noop_shell_run_command_ms": noop_run_command,
+            "noop_shell_mount_ms": noop_mount,
+            "noop_shell_host_minus_api_total_ms": noop_dispatch,
+        },
+        "gates": {
+            "operations_all_samples_ok": operations_gate,
+            "noop_host_no_worse_than_phase1": host_latency_gate,
+            "process_shell_segment_25pct_faster_than_phase1": shell_segment_gate,
+            "overlay_mount_p95_lte_5ms": mount_gate,
+            "host_minus_api_total_p95_lte_5ms": dispatch_gate,
+            "daemon_memory": memory_gate,
+        },
+        "gate_pass": gate_pass,
+    }
+
+
+def stat_block(operation: dict[str, Any], section: str, key: str) -> dict[str, Any]:
+    return operation.get(section, {}).get(key, {"count": 0, "samples_ms": []})
+
+
+def stat_value(stats: dict[str, Any], key: str) -> float:
+    value = stats.get(key)
+    if isinstance(value, int | float):
+        return float(value)
+    return float("inf")
+
+
+def trim_response(response: dict[str, Any]) -> dict[str, Any]:
+    trimmed = {
+        "success": response.get("success"),
+        "status": response.get("status"),
+        "exit_code": response.get("exit_code"),
+        "changed_paths": response.get("changed_paths"),
+        "num_files": response.get("num_files"),
+        "num_matches": response.get("num_matches"),
+        "filenames": response.get("filenames"),
+        "conflict_reason": response.get("conflict_reason"),
+        "error": response.get("error"),
+    }
+    for key in ("stdout", "stderr", "content"):
+        if key in response:
+            trimmed[key] = truncate_text(str(response.get(key) or ""))
+    return {key: value for key, value in trimmed.items() if value is not None}
+
+
+def truncate_text(value: str, limit: int = 400) -> str:
+    if len(value) <= limit:
+        return value
+    return f"{value[:limit]}...<truncated {len(value) - limit} chars>"
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

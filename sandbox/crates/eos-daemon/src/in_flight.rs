@@ -86,14 +86,22 @@ struct RegistryState {
 }
 
 impl InFlightRegistry {
+    /// Build a registry with explicit timing values.
+    pub fn new(ttl_s: f64, reaper_interval_s: f64) -> Self {
+        Self {
+            inner: Mutex::new(RegistryState::default()),
+            ttl_s: positive_f64(ttl_s, DEFAULT_TTL_S),
+            reaper_interval_s: positive_f64(reaper_interval_s, DEFAULT_REAPER_INTERVAL_S),
+        }
+    }
+
     /// Build a registry, sourcing TTL / reaper interval from env (falling back
     /// to the defaults). `// PORT backend/src/sandbox/daemon/rpc/in_flight.py:34-52`
     pub fn from_env() -> Self {
-        Self {
-            inner: Mutex::new(RegistryState::default()),
-            ttl_s: env_positive_f64(ENV_TTL_S, DEFAULT_TTL_S),
-            reaper_interval_s: env_positive_f64(ENV_REAPER_INTERVAL_S, DEFAULT_REAPER_INTERVAL_S),
-        }
+        Self::new(
+            env_positive_f64(ENV_TTL_S, DEFAULT_TTL_S),
+            env_positive_f64(ENV_REAPER_INTERVAL_S, DEFAULT_REAPER_INTERVAL_S),
+        )
     }
 
     /// Reaper sweep interval (seconds) the daemon's reaper loop sleeps between.
@@ -176,7 +184,12 @@ impl InFlightRegistry {
             .expect("in-flight registry poisoned")
             .by_invocation
             .values()
-            .filter(|entry| entry.background && entry.agent_id == agent_id && !entry.ttl_reaped)
+            .filter(|entry| {
+                entry.background
+                    && entry.agent_id == agent_id
+                    && !entry.ttl_reaped
+                    && !entry.abort.is_finished()
+            })
             .count()
     }
 
@@ -265,14 +278,82 @@ impl Drop for ActiveCallGuard<'_> {
 fn env_positive_f64(name: &str, default: f64) -> f64 {
     match std::env::var(name) {
         Ok(raw) => match raw.trim().parse::<f64>() {
-            Ok(value) if value > 0.0 => value,
-            _ => default,
+            Ok(value) => positive_f64(value, default),
+            Err(_) => default,
         },
         Err(_) => default,
+    }
+}
+
+fn positive_f64(value: f64, default: f64) -> f64 {
+    if value.is_finite() && value > 0.0 {
+        value
+    } else {
+        default
     }
 }
 
 fn monotonic_seconds() -> f64 {
     static START: OnceLock<Instant> = OnceLock::new();
     START.get_or_init(Instant::now).elapsed().as_secs_f64()
+}
+
+#[cfg(test)]
+mod tests {
+    use std::future;
+    use std::thread;
+    use std::time::Duration;
+
+    use super::InFlightRegistry;
+
+    #[tokio::test]
+    async fn cancel_heartbeat_and_count_track_background_task() {
+        let registry = InFlightRegistry::new(300.0, 30.0);
+        let task = tokio::spawn(future::pending::<()>());
+        registry.register("bg-1", task.abort_handle(), "agent-a", "api.v1.shell", true);
+
+        assert_eq!(registry.count_by_agent("agent-a"), 1);
+        assert_eq!(
+            registry.heartbeat(&["bg-1".to_owned(), "missing".to_owned()]),
+            1
+        );
+        assert!(registry.cancel("bg-1"));
+        assert!(task
+            .await
+            .expect_err("task should be cancelled")
+            .is_cancelled());
+        assert_eq!(registry.count_by_agent("agent-a"), 0);
+
+        registry.deregister("bg-1");
+        assert_eq!(registry.metrics(), (0, 0));
+    }
+
+    #[tokio::test]
+    async fn ttl_sweep_skips_active_calls_then_reaps_idle_background_task() {
+        let registry = InFlightRegistry::new(0.001, 30.0);
+        let task = tokio::spawn(future::pending::<()>());
+        registry.register(
+            "bg-ttl",
+            task.abort_handle(),
+            "agent-a",
+            "api.v1.shell",
+            true,
+        );
+
+        {
+            let _active = registry.enter_call("bg-ttl");
+            thread::sleep(Duration::from_millis(3));
+            registry.ttl_sweep();
+            assert_eq!(registry.metrics(), (1, 0));
+            assert_eq!(registry.count_by_agent("agent-a"), 1);
+        }
+
+        registry.ttl_sweep();
+        assert_eq!(registry.metrics(), (1, 1));
+        assert!(task
+            .await
+            .expect_err("task should be ttl-cancelled")
+            .is_cancelled());
+        assert_eq!(registry.count_by_agent("agent-a"), 0);
+    }
 }

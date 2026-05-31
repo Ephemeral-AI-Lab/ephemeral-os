@@ -1,8 +1,8 @@
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 
-use eos_daemon::OpTable;
 use eos_daemon::{DaemonServer, ServerConfig};
+use eos_daemon::{DispatchContext, InFlightRegistry, OpTable};
 use eos_protocol::{decode, encode, Envelope, Request, DAEMON_AUTH_FIELD};
 use serde_json::{json, Value};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
@@ -72,6 +72,69 @@ fn unknown_op_uses_structured_contract() {
         response["error"]["details"]["op"],
         Value::String("api.v1.does_not_exist".to_owned())
     );
+}
+
+#[tokio::test]
+async fn control_ops_use_inflight_registry() {
+    let table = OpTable::with_builtins();
+    let registry = InFlightRegistry::new(300.0, 30.0);
+    let task = tokio::spawn(std::future::pending::<()>());
+    registry.register(
+        "bg-shell",
+        task.abort_handle(),
+        "agent-a",
+        "api.v1.shell",
+        true,
+    );
+    let context = DispatchContext::with_in_flight(&registry);
+
+    let count = table.dispatch_with_context(
+        &Request {
+            op: "api.v1.inflight_count".to_owned(),
+            invocation_id: "count".to_owned(),
+            args: json!({"agent_id": "agent-a"}),
+        },
+        context,
+    );
+    assert_eq!(count["success"], Value::Bool(true));
+    assert_eq!(count["count"], json!(1));
+
+    let heartbeat = table.dispatch_with_context(
+        &Request {
+            op: "api.v1.heartbeat".to_owned(),
+            invocation_id: "heartbeat".to_owned(),
+            args: json!({"invocation_ids": ["bg-shell", "missing"]}),
+        },
+        context,
+    );
+    assert_eq!(heartbeat["success"], Value::Bool(true));
+    assert_eq!(heartbeat["touched"], json!(1));
+
+    let cancel = table.dispatch_with_context(
+        &Request {
+            op: "api.v1.cancel".to_owned(),
+            invocation_id: "cancel".to_owned(),
+            args: json!({"invocation_id": "bg-shell"}),
+        },
+        context,
+    );
+    assert_eq!(cancel["success"], Value::Bool(true));
+    assert_eq!(cancel["cancelled"], Value::Bool(true));
+    assert!(task
+        .await
+        .expect_err("task should be cancelled")
+        .is_cancelled());
+
+    registry.deregister("bg-shell");
+    let count = table.dispatch_with_context(
+        &Request {
+            op: "api.v1.inflight_count".to_owned(),
+            invocation_id: "count-after".to_owned(),
+            args: json!({"agent_id": "agent-a"}),
+        },
+        context,
+    );
+    assert_eq!(count["count"], json!(0));
 }
 
 #[tokio::test]

@@ -16,7 +16,8 @@
 //! `// PORT backend/src/sandbox/ephemeral_workspace/plugin/overlay_child.py:39-69 — JSON payload <-> reply framing`
 //! `// PORT backend/src/sandbox/ephemeral_workspace/plugin/overlay_dispatch.py:135-173 — request/output_ref handoff (becomes the PPC channel)`
 
-use eos_protocol::{decode, encode, Envelope, ProtocolError};
+use eos_protocol::{decode, encode, Envelope, ProtocolError, Request};
+use serde_json::json;
 
 use crate::error::PluginError;
 
@@ -68,22 +69,106 @@ impl PpcEnvelope {
     /// framing carries it. Body is opaque JSON text wrapped into the args object.
     /// `// PORT backend/src/sandbox/ephemeral_workspace/plugin/overlay_dispatch.py:135-158 — payload_ref JSON shape`
     fn to_envelope(&self) -> Envelope {
-        // PORT overlay_dispatch.py:135-158 — build {op, invocation_id=message_id,
-        //   args:{direction, body}} so eos_protocol::encode frames it unchanged.
-        let _ = (&self.message_id, &self.direction, &self.op, &self.body);
-        todo!("PORT overlay_dispatch.py:135-158 — map PpcEnvelope -> eos_protocol::Request{{op, invocation_id, args:{{direction, body}}}}")
+        Envelope::Request(Request {
+            op: self.op.clone(),
+            invocation_id: self.message_id.clone(),
+            args: json!({
+                "direction": direction_wire(self.direction),
+                "body": self.body,
+            }),
+        })
     }
 
     /// Recover a PPC frame from a decoded protocol envelope (the request shape).
     /// `// PORT backend/src/sandbox/ephemeral_workspace/plugin/overlay_child.py:81-99 — read args/direction back out`
     fn from_envelope(envelope: Envelope) -> Result<Self, PluginError> {
-        // PORT overlay_child.py:81-99 — read op/invocation_id/args{direction, body}
-        //   back off the request envelope; reject error/bare-response frames.
-        let _ = envelope;
-        todo!("PORT overlay_child.py:81-99 — map eos_protocol::Envelope::Request -> PpcEnvelope")
+        let Envelope::Request(request) = envelope else {
+            return Err(PluginError::Ppc(
+                "ppc frame must be a request envelope".to_owned(),
+            ));
+        };
+        let direction = request
+            .args
+            .get("direction")
+            .and_then(serde_json::Value::as_str)
+            .ok_or_else(|| PluginError::Ppc("ppc frame missing direction".to_owned()))
+            .and_then(parse_direction)?;
+        let body = request
+            .args
+            .get("body")
+            .and_then(serde_json::Value::as_str)
+            .ok_or_else(|| PluginError::Ppc("ppc frame missing body".to_owned()))?;
+        Ok(Self {
+            message_id: request.invocation_id,
+            direction,
+            op: request.op,
+            body: body.to_owned(),
+        })
+    }
+}
+
+fn direction_wire(direction: PpcDirection) -> &'static str {
+    match direction {
+        PpcDirection::Request => "request",
+        PpcDirection::Reply => "reply",
+    }
+}
+
+fn parse_direction(raw: &str) -> Result<PpcDirection, PluginError> {
+    match raw {
+        "request" => Ok(PpcDirection::Request),
+        "reply" => Ok(PpcDirection::Reply),
+        other => Err(PluginError::Ppc(format!("unknown ppc direction: {other}"))),
     }
 }
 
 fn map_protocol(err: ProtocolError) -> PluginError {
     PluginError::Ppc(err.to_string())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn ppc_envelope_round_trips_through_protocol_framing() {
+        let envelope = PpcEnvelope {
+            message_id: "msg-1".to_owned(),
+            direction: PpcDirection::Request,
+            op: "plugin.lsp.hover".to_owned(),
+            body: r#"{"path":"main.py"}"#.to_owned(),
+        };
+
+        let encoded = envelope.encode().expect("encode ppc envelope");
+        assert!(encoded.ends_with(b"\n"));
+        let decoded = PpcEnvelope::decode(&encoded).expect("decode ppc envelope");
+
+        assert_eq!(decoded, envelope);
+    }
+
+    #[test]
+    fn ppc_decode_rejects_non_request_frames() {
+        let encoded =
+            encode(&Envelope::Response(json!({"success": true}))).expect("encode response frame");
+
+        assert!(matches!(
+            PpcEnvelope::decode(&encoded),
+            Err(PluginError::Ppc(message)) if message.contains("request envelope")
+        ));
+    }
+
+    #[test]
+    fn ppc_decode_rejects_unknown_direction() {
+        let encoded = encode(&Envelope::Request(Request {
+            op: "plugin.lsp.hover".to_owned(),
+            invocation_id: "msg-1".to_owned(),
+            args: json!({"direction": "sideways", "body": "{}"}),
+        }))
+        .expect("encode request frame");
+
+        assert!(matches!(
+            PpcEnvelope::decode(&encoded),
+            Err(PluginError::Ppc(message)) if message.contains("unknown ppc direction")
+        ));
+    }
 }

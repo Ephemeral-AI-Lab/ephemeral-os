@@ -186,22 +186,31 @@ mod tests {
     #[test]
     fn conflicting_handler_errors_idempotent_is_noop() {
         let mut reg = OpRegistry::new();
-        let a = PluginOpRegistration::new("lsp", "hover", Intent::ReadOnly, true).unwrap();
-        reg.register(a.clone()).unwrap();
+        let a = PluginOpRegistration::new("lsp", "hover", Intent::ReadOnly, true)
+            .expect("valid read-only plugin registration");
+        reg.register(a.clone())
+            .expect("initial registration succeeds");
         // identical re-registration is a no-op
-        reg.register(a).unwrap();
+        reg.register(a).expect("idempotent registration succeeds");
         // different intent for the same (plugin, op) conflicts
-        let b = PluginOpRegistration::new("lsp", "hover", Intent::WriteAllowed, true).unwrap();
+        let b = PluginOpRegistration::new("lsp", "hover", Intent::WriteAllowed, true)
+            .expect("valid conflicting plugin registration");
         assert!(matches!(reg.register(b), Err(PluginError::Conflict(_))));
     }
 
     #[test]
     fn flush_drains_only_the_named_plugin() {
         let mut reg = OpRegistry::new();
-        reg.register(PluginOpRegistration::new("lsp", "hover", Intent::ReadOnly, true).unwrap())
-            .unwrap();
-        reg.register(PluginOpRegistration::new("fmt", "run", Intent::WriteAllowed, true).unwrap())
-            .unwrap();
+        reg.register(
+            PluginOpRegistration::new("lsp", "hover", Intent::ReadOnly, true)
+                .expect("valid lsp registration"),
+        )
+        .expect("lsp registration succeeds");
+        reg.register(
+            PluginOpRegistration::new("fmt", "run", Intent::WriteAllowed, true)
+                .expect("valid fmt registration"),
+        )
+        .expect("fmt registration succeeds");
         let flushed = reg.flush("lsp");
         assert_eq!(flushed, vec!["plugin.lsp.hover".to_owned()]);
         assert_eq!(reg.pending(None).len(), 1);

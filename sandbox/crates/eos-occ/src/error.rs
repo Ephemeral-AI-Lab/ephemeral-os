@@ -18,6 +18,14 @@ pub enum OccError {
     #[error("occ commit queue has not been started")]
     QueueNotStarted,
 
+    /// The commit queue worker thread could not be started.
+    #[error("occ commit queue worker failed to start: {0}")]
+    WorkerStart(String),
+
+    /// The commit queue worker thread panicked while closing.
+    #[error("occ commit queue worker panicked")]
+    WorkerPanicked,
+
     /// The single-writer reply channel dropped before delivering a result.
     #[error("occ commit reply channel disconnected")]
     ReplyDisconnected,
@@ -40,6 +48,10 @@ pub enum OccError {
         /// Why the conversion could not proceed.
         reason: String,
     },
+
+    /// Route/base-hash preparation failed before enqueueing.
+    #[error("occ route preparation failed: {0}")]
+    RoutePreparation(String),
 
     /// A path/hash from `eos-protocol` failed to parse or validate.
     #[error(transparent)]

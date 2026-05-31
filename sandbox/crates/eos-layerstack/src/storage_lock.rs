@@ -23,10 +23,9 @@
 //! write guard is still held. A naive 1:1 port to `std::sync::Mutex`
 //! (NON-reentrant) **DEADLOCKS** on the second same-thread acquire.
 //!
-//! Do NOT 1:1-port. The future implementer must either (a) restructure the
-//! re-entrant sections so re-entry is impossible (thread the already-acquired
-//! guard through the call graph instead of re-locking), or (b) use a reentrant
-//! guard type. This is a `todo!()` skeleton for now.
+//! Do NOT 1:1-port. This module uses option (b): a small reentrant guard type
+//! that preserves the Python same-thread re-entry semantics without holding an
+//! async lock across awaits.
 //! `// PORT backend/src/sandbox/layer_stack/transaction.py:45`
 //! `// PORT backend/src/sandbox/layer_stack/stack.py:365`
 
