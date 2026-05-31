@@ -12,8 +12,8 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing import Any
 
-from tools.submission.reducer import submit_reduction_failure
-from tools.submission.planner import submit_plan_closes_goal
+from tools.submission.reducer import submit_reducer_outcome
+from tools.submission.planner import submit_planner_outcome
 
 from task_center_runner.scenarios.base import ScenarioBase, ScenarioContext, ToolCallSpec
 
@@ -32,15 +32,15 @@ class PlannerEmptyTasks(ScenarioBase):
     name = "planner_validation.empty_tasks"
 
     def planner_response(self, ctx: ScenarioContext) -> ToolCallSpec:  # noqa: ARG002
-        return ToolCallSpec(submit_plan_closes_goal, _empty_tasks_plan())
+        return ToolCallSpec(submit_planner_outcome, _empty_tasks_plan())
 
     def executor_actions(self, ctx: ScenarioContext) -> Sequence[str]:  # noqa: ARG002
         return ()
 
     def reducer_response(self, ctx: ScenarioContext) -> ToolCallSpec:  # noqa: ARG002
         return ToolCallSpec(
-            submit_reduction_failure,
-            {"outcome": "Unexpected reducer invocation under empty plan."},
+            submit_reducer_outcome,
+            {"status": "failed", "outcome": "Unexpected reducer invocation under empty plan."},
         )
 
 

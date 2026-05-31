@@ -37,7 +37,9 @@ class _DummyTool(BaseTool):
     description = "Dummy tool."
     input_model = _EmptyInput
 
-    async def execute(self, arguments: BaseModel, context: ToolExecutionContextService) -> ToolResult:
+    async def execute(
+        self, arguments: BaseModel, context: ToolExecutionContextService
+    ) -> ToolResult:
         del arguments, context
         return ToolResult(output="ok")
 
@@ -87,7 +89,7 @@ def _make_agent_def(**overrides: Any) -> AgentDefinition:
         "name": "agent",
         "description": "Agent",
         "allowed_tools": overrides.pop("allowed_tools", []),
-        "terminals": ["submit_generator_success"],
+        "terminals": ["submit_generator_outcome"],
         "tool_call_limit": 10,
     }
     data.update(overrides)

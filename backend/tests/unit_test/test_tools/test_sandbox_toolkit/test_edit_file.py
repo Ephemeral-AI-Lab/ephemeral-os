@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import importlib
 import json
 from pathlib import Path
 from typing import Any
@@ -11,10 +12,11 @@ import pytest
 
 from sandbox.api import EditFileResult
 from tools._framework.core.base import ToolExecutionContextService
-import tools.sandbox.edit_file as edit_file_module
 from tools.sandbox.edit_file import edit_file
 
 from ._helpers import run_tool_safely
+
+edit_file_module = importlib.import_module("tools.sandbox.edit_file.edit_file")
 
 
 class _EditApi:

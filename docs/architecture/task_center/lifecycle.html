@@ -159,9 +159,9 @@
 </div>
 </section>
 
-<section id="delegated-child-workflows" data-last-reviewed-commit="d32994314" data-evidence-paths="backend/src/tools/submission/context/executor.py backend/src/tools/submission/executor/submit_workflow_handoff/submit_workflow_handoff.py backend/src/task_center/workflow/starter.py backend/src/task_center/workflow/lifecycle.py backend/src/task_center/attempt/orchestrator.py backend/src/task_center/attempt/orchestrator_registry.py backend/src/task_center/_core/task_state.py backend/src/task_center/_core/outcomes.py backend/tests/unit_test/test_task_center/test_lifecycle/test_child_workflow_handoff.py backend/tests/unit_test/test_task_center/test_lifecycle/test_phase04_workflow_request_start.py">
+<section id="delegated-child-workflows" data-last-reviewed-commit="HEAD-plus-worktree" data-evidence-paths="backend/src/tools/submission/context/generator.py backend/src/tools/submission/generator/submit_workflow_handoff/submit_workflow_handoff.py backend/src/task_center/workflow/starter.py backend/src/task_center/workflow/lifecycle.py backend/src/task_center/attempt/orchestrator.py backend/src/task_center/attempt/orchestrator_registry.py backend/src/task_center/_core/task_state.py backend/src/task_center/_core/outcomes.py backend/tests/unit_test/test_task_center/test_lifecycle/test_child_workflow_handoff.py backend/tests/unit_test/test_task_center/test_lifecycle/test_phase04_workflow_request_start.py">
 <h2>Delegated Child Workflows <a class="anchor" href="#delegated-child-workflows">#</a></h2>
-<p>Delegation creates another complete Workflow -> Iteration -> Attempt chain. It starts from the executor submission context, not from a direct agent-to-agent channel. <code>submit_workflow_handoff</code> resolves the running generator task and calls <code>ExecutorSubmissionContext.start_delegated_workflow(goal_handoff=...)</code>, which invokes <code>WorkflowStarter.start(prompt=goal_handoff, parent_task_id=current_task_id)</code>. There is no closure report or router layer.</p>
+<p>Delegation creates another complete Workflow -> Iteration -> Attempt chain. It starts from the generator submission context, not from a direct agent-to-agent channel. <code>submit_workflow_handoff</code> resolves the running generator task and calls <code>GeneratorSubmissionContext.start_delegated_workflow(goal_handoff=...)</code>, which invokes <code>WorkflowStarter.start(prompt=goal_handoff, parent_task_id=current_task_id)</code>. There is no closure report or router layer.</p>
 <pre class="diagram" aria-label="Delegated child workflow diagram">
 [parent generator task]
         |
@@ -201,7 +201,7 @@
 </div>
 </section>
 
-<section id="nested-planning-case" data-last-reviewed-commit="d32994314" data-evidence-paths="backend/src/task_center/_core/terminal_routing.py backend/src/agents/profile/main/planner_routing.py backend/src/agents/profile/main/executor_routing.py backend/src/task_center/workflow/starter.py backend/src/tools/submission/executor/submit_workflow_handoff/submit_workflow_handoff.py backend/src/task_center/attempt/orchestrator.py backend/src/task_center/attempt/run_stage.py backend/tests/unit_test/test_task_center/test_lifecycle/test_planner_capability_fork.py backend/tests/unit_test/test_task_center/test_agent_launch/test_terminal_tool_router.py">
+<section id="nested-planning-case" data-last-reviewed-commit="HEAD-plus-worktree" data-evidence-paths="backend/src/task_center/_core/workflow_depth.py backend/src/tools/_hooks/disallow_nested_planner_deferral.py backend/src/tools/_hooks/disallow_nested_workflow_handoff.py backend/src/task_center/workflow/starter.py backend/src/tools/submission/generator/submit_workflow_handoff/submit_workflow_handoff.py backend/src/task_center/attempt/orchestrator.py backend/src/task_center/attempt/run_stage.py backend/tests/unit_test/test_task_center/test_lifecycle/test_planner_capability_fork.py backend/tests/unit_test/test_tools/test_submission_main_role_terminals.py">
 <h2>Nested Planning Case <a class="anchor" href="#nested-planning-case">#</a></h2>
 <p>The nested planning case is a delegated child workflow whose planner must plan inside a parent generator task. This is still the same model: the parent Attempt pauses one generator task, the child workflow gets its own Iteration and Attempt, and the child planner authors its own plan DAG of generators and reducers.</p>
 <div class="diagram" aria-label="Nested planning state chain">
@@ -238,14 +238,14 @@
 </pre>
 <div class="edge-list" aria-label="Nested planning transitions">
   <div><b>delegate</b><span>Parent Attempt A1 launches generator T1, and T1 uses <code>submit_workflow_handoff</code> to start a delegated child workflow whose parent task is T1.</span></div>
-  <div><b>depth</b><span><code>_nested_workflow_depth()</code> in <code>_core/terminal_routing.py</code> walks up via <code>Workflow.parent_task_id</code> and the attempt the parent task id encodes, counting the child and root ancestor, so G2 under G1 returns depth 2.</span></div>
-  <div><b>filter</b><span>At depth greater than 1 the per-profile routing fires: the nested planner keeps only <code>submit_plan_closes_goal</code> (loses <code>submit_plan_defers_goal</code>) and the nested executor loses <code>submit_workflow_handoff</code> (keeps success and failure).</span></div>
+  <div><b>depth</b><span><code>workflow_depth()</code> in <code>_core/workflow_depth.py</code> walks up via <code>Workflow.parent_task_id</code> and the attempt the parent task id encodes, counting the child and root ancestor, so G2 under G1 returns depth 2.</span></div>
+  <div><b>guardrails</b><span>At depth greater than 1 prehooks reject planner submissions with nonblank <code>deferred_goal_for_next_iteration</code> and reject generator <code>submit_workflow_handoff</code> calls. Nested planners can still call <code>submit_planner_outcome</code> with no deferred items; nested generators can still call <code>submit_generator_outcome</code>.</span></div>
   <div><b>child attempt</b><span>Child Attempt A2 runs its own planner -> plan-DAG lifecycle (generators + reducers) before closing the child workflow.</span></div>
   <div><b>parent continuation</b><span>Only after T1 becomes <code>DONE</code> or <code>FAILED</code> can A1 launch downstream plan tasks or quiesce.</span></div>
 </div>
 <div class="callout warn">
   <span class="label">Depth rule</span>
-  The root Workflow is depth 1. A delegated child workflow is depth 2. In current launch routing, depth greater than 1 disables further planning deferral and executor handoff for that nested Workflow, so nested planning stays bounded by terminal close/failure outcomes.
+  The root Workflow is depth 1. A delegated child workflow is depth 2. Depth greater than 1 disables further planning deferral and generator handoff through submission prehooks, so nested planning stays bounded by outcome submissions.
 </div>
 </section>
 
@@ -268,7 +268,7 @@
 </div>
 </section>
 
-<section id="evidence-refresh" data-last-reviewed-commit="d32994314" data-evidence-paths="backend/src/task_center/_core/state.py backend/src/task_center/workflow/starter.py backend/src/task_center/workflow/lifecycle.py backend/src/task_center/run_controller.py backend/src/task_center/iteration/attempt_coordinator.py backend/src/task_center/_core/outcomes.py backend/src/task_center/_core/terminal_routing.py backend/src/task_center/_core/task_state.py backend/src/task_center/submissions.py backend/src/task_center/_core/persistence.py backend/tests/unit_test/test_task_center/test_lifecycle/test_workflow_lifecycle.py backend/tests/unit_test/test_task_center/test_lifecycle/test_iteration_attempt_coordinator.py backend/tests/unit_test/test_task_center/test_lifecycle/test_phase04_workflow_request_start.py backend/tests/unit_test/test_task_center/test_lifecycle/test_child_workflow_handoff.py backend/tests/unit_test/test_task_center/test_lifecycle/test_phase04_deferred_retry.py">
+<section id="evidence-refresh" data-last-reviewed-commit="HEAD-plus-worktree" data-evidence-paths="backend/src/task_center/_core/state.py backend/src/task_center/workflow/starter.py backend/src/task_center/workflow/lifecycle.py backend/src/task_center/run_controller.py backend/src/task_center/iteration/attempt_coordinator.py backend/src/task_center/_core/outcomes.py backend/src/task_center/_core/workflow_depth.py backend/src/task_center/_core/task_state.py backend/src/task_center/submissions.py backend/src/task_center/_core/persistence.py backend/tests/unit_test/test_task_center/test_lifecycle/test_workflow_lifecycle.py backend/tests/unit_test/test_task_center/test_lifecycle/test_iteration_attempt_coordinator.py backend/tests/unit_test/test_task_center/test_lifecycle/test_phase04_workflow_request_start.py backend/tests/unit_test/test_task_center/test_lifecycle/test_child_workflow_handoff.py backend/tests/unit_test/test_task_center/test_lifecycle/test_phase04_deferred_retry.py">
 <h2>Evidence And Refresh <a class="anchor" href="#evidence-refresh">#</a></h2>
 <div class="evidence-grid">
   <div class="evidence-card">

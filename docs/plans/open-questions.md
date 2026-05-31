@@ -1,5 +1,14 @@
 # Open Questions
 
+## Sandbox Rust External Migration - 2026-05-31 (RESOLVED iteration 2)
+- [x] Delivery mechanism — RESOLVED: Option A (pinned released artifact). Submodule (B) reintroduces a backend build-toolchain dependency; no atomic cross-repo need justifies it.
+- [x] Parametric perf gates — RESOLVED: ACCEPTED as a strength. Thresholds lock at CP-0 against the measured in-sandbox baseline; no host-proxy number is quoted as a gate.
+- [x] Fixture ownership — RESOLVED: `eos-protocol/fixtures` canonical + backend-vendored pinned copy + dual-CI pin assert; recovery contract (exit 97/98 + `api.runtime.ready{layer_stack_root}`) added to the canonical set.
+- [x] Phase 4 timing — RESOLVED: DEFER isolated-workspace (`setns`) to a follow-up milestone; it stays on the Python `setns` path behind its own flag (DoD permits this).
+- [x] Canary window — RESOLVED: per-sandbox A/B (not per-op), ≥1 full traffic cycle, N≥1,000/op-class, zero mismatch (AV-5b / M3).
+- [ ] Artifact signing/provenance (S5 follow-up) — SHA-pin proves integrity, not provenance; design a signing/provenance step before GA.
+- [ ] CP-1b BYO-image matrix membership — which kernel versions + non-root + read-only-rootfs base images to certify? Needs Architect input; not blocking the plan.
+
 ## replace_all + multi_edit - 2026-05-29
 - [ ] Should `docs/architecture/tools` get a one-line note on the shared `apply_search_replace` helper and the `replace_all` last-write-wins OCC semantic? — Keeps curated memory in sync with the new seam; low effort, deferred out of scope.
 - [ ] Should `multi_edit` later report per-edit occurrence counts? — Would require threading counts back through the `DAEMON_OP_EDIT_FILE` payload from both apply sites (heavy); only worth it if agents need occurrence feedback.

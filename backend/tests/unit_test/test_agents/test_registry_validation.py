@@ -81,7 +81,7 @@ def test_clean_setup_passes_validation():
         description="planner",
         role=AgentRole.PLANNER,
         context_recipe="planner",
-        terminals=["submit_plan_closes_goal", "submit_plan_defers_goal"],
+        terminals=["submit_planner_outcome"],
         tool_call_limit=10,
     )
     generator = AgentDefinition(
@@ -89,7 +89,7 @@ def test_clean_setup_passes_validation():
         description="generator",
         role=AgentRole.GENERATOR,
         context_recipe="generator",
-        terminals=["submit_generator_success", "submit_generator_failure"],
+        terminals=["submit_generator_outcome"],
         tool_call_limit=10,
     )
     for d in (planner, generator):
@@ -116,7 +116,7 @@ def test_skill_lint_runs_during_resolved_validation(tmp_path):
     skill_file = tmp_path / "planner" / "SKILL.md"
     skill_file.parent.mkdir()
     skill_file.write_text(
-        "---\nname: planner\n---\n\nUse submit_plan_closes_goal here.",
+        "---\nname: planner\n---\n\nUse submit_planner_outcome here.",
         encoding="utf-8",
     )
     planner = AgentDefinition(
@@ -132,5 +132,5 @@ def test_skill_lint_runs_during_resolved_validation(tmp_path):
 
     with pytest.raises(SkillLintError) as exc:
         validate_agent_definitions_resolved()
-    assert "submit_plan_closes_goal" in str(exc.value)
+    assert "submit_planner_outcome" in str(exc.value)
     assert "planner" in str(exc.value)

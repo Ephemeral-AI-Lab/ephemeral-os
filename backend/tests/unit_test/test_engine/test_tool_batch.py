@@ -23,20 +23,20 @@ def _tool(name: str, **input_kwargs) -> ToolUseBlock:
 
 
 def test_validate_tool_batch_allows_terminal_tool_alone():
-    ctx = _ctx(terminal_tools={"submit_generator_success"})
-    result = _validate_tool_batch(ctx, [_tool("submit_generator_success")])
+    ctx = _ctx(terminal_tools={"submit_generator_outcome"})
+    result = _validate_tool_batch(ctx, [_tool("submit_generator_outcome")])
     assert result is None
 
 
 def test_validate_tool_batch_allows_non_terminal_batch():
-    ctx = _ctx(terminal_tools={"submit_generator_success"})
+    ctx = _ctx(terminal_tools={"submit_generator_outcome"})
     result = _validate_tool_batch(ctx, [_tool("read_file"), _tool("grep")])
     assert result is None
 
 
 def test_validate_tool_batch_rejects_terminal_with_sibling():
-    ctx = _ctx(terminal_tools={"submit_generator_success"})
-    calls = [_tool("submit_generator_success"), _tool("read_file")]
+    ctx = _ctx(terminal_tools={"submit_generator_outcome"})
+    calls = [_tool("submit_generator_outcome"), _tool("read_file")]
     result = _validate_tool_batch(ctx, calls)
     assert result is not None
     assert len(result) == len(calls)
@@ -44,12 +44,12 @@ def test_validate_tool_batch_rejects_terminal_with_sibling():
         assert block.is_error is True
         assert block.tool_use_id == call.tool_use_id
         assert "Terminal tool" in block.content
-        assert "submit_generator_success" in block.content
+        assert "submit_generator_outcome" in block.content
 
 
 def test_validate_tool_batch_rejects_even_when_terminal_last():
-    ctx = _ctx(terminal_tools={"submit_generator_success"})
-    calls = [_tool("read_file"), _tool("submit_generator_success")]
+    ctx = _ctx(terminal_tools={"submit_generator_outcome"})
+    calls = [_tool("read_file"), _tool("submit_generator_outcome")]
     result = _validate_tool_batch(ctx, calls)
     assert result is not None
     assert all(block.is_error for block in result)
@@ -58,12 +58,10 @@ def test_validate_tool_batch_rejects_even_when_terminal_last():
 def test_validate_tool_batch_no_terminal_tools_configured():
     """When terminal_tools is empty, siblings pass through freely."""
     ctx = _ctx(terminal_tools=set())
-    result = _validate_tool_batch(
-        ctx, [_tool("submit_generator_success"), _tool("read_file")]
-    )
+    result = _validate_tool_batch(ctx, [_tool("submit_generator_outcome"), _tool("read_file")])
     assert result is None
 
 
 def test_validate_tool_batch_empty_calls():
-    ctx = _ctx(terminal_tools={"submit_generator_success"})
+    ctx = _ctx(terminal_tools={"submit_generator_outcome"})
     assert _validate_tool_batch(ctx, []) is None

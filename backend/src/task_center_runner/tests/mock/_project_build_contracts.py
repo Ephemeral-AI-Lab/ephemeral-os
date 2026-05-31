@@ -48,12 +48,9 @@ _LSP_NAMES = (
 
 _SUBMISSION_TOOL_NAMES = {
     "submit_workflow_handoff",
-    "submit_plan_closes_goal",
-    "submit_plan_defers_goal",
-    "submit_generator_success",
-    "submit_generator_failure",
-    "submit_reduction_success",
-    "submit_reduction_failure",
+    "submit_planner_outcome",
+    "submit_generator_outcome",
+    "submit_reducer_outcome",
 }
 _NON_PROBE_TOOL_NAMES = _SUBMISSION_TOOL_NAMES | {"ask_advisor"}
 
@@ -279,8 +276,7 @@ async def assert_project_build_grep_glob_low_latency_after_many_edits(
     for tool_name in _SEARCH_TOOLS:
         p95_ms = _warm_tool_p95_ms(perf, tool_name)
         assert p95_ms <= _WARM_SEARCH_P95_BUDGET_MS, (
-            f"{tool_name} warm p95 {p95_ms:.3f}ms exceeds "
-            f"{_WARM_SEARCH_P95_BUDGET_MS:.0f}ms"
+            f"{tool_name} warm p95 {p95_ms:.3f}ms exceeds {_WARM_SEARCH_P95_BUDGET_MS:.0f}ms"
         )
         _assert_tool_samples_lack_publish_timings(perf, tool_name)
 
@@ -331,9 +327,7 @@ async def assert_project_build_shell_edit_lsp_remount_not_restart(
         if _tool_count(perf, tool_name) <= 0:
             continue
         warm_samples = [
-            sample
-            for sample in _tool_samples(perf, tool_name)
-            if _is_lsp_no_refresh_sample(sample)
+            sample for sample in _tool_samples(perf, tool_name) if _is_lsp_no_refresh_sample(sample)
         ]
         assert warm_samples, f"{tool_name} has no no-refresh warm samples"
         p95_ms = _warm_tool_p95_ms(
@@ -357,9 +351,7 @@ async def _assert_complex_build_contract(
     assert report.passed_prompt_inspections, [
         item for item in report.prompt_inspections if not item.passed
     ]
-    assert report.passed_sandbox_checks, [
-        item for item in report.sandbox_checks if not item.passed
-    ]
+    assert report.passed_sandbox_checks, [item for item in report.sandbox_checks if not item.passed]
 
     assert len(report.tool_calls) >= contract.tool_call_floor, (
         f"tool_calls={len(report.tool_calls)} below floor {contract.tool_call_floor}"
@@ -380,9 +372,7 @@ async def _assert_complex_build_contract(
         if (event_type := row.get("event_type")) in runner_event_values
     }
     missing_logged = sorted(
-        event.value
-        for event in contract.required_sandbox_events
-        if event not in logged_events
+        event.value for event in contract.required_sandbox_events if event not in logged_events
     )
     assert not missing_logged, f"missing persisted events: {missing_logged}"
 
@@ -392,9 +382,7 @@ async def _assert_complex_build_contract(
             for event in report.events
             if event.type == EventType.SANDBOX_LAYER_STACK_LAYERS_SQUASHED
         )
-        assert squash_event_count >= 10, (
-            f"only {squash_event_count} squash events; expected >= 10"
-        )
+        assert squash_event_count >= 10, f"only {squash_event_count} squash events; expected >= 10"
 
     edit_count = sum(1 for c in report.tool_calls if c.tool_name == "edit_file")
     write_count = sum(1 for c in report.tool_calls if c.tool_name == "write_file")
@@ -407,8 +395,7 @@ async def _assert_complex_build_contract(
         )
 
     lsp_counts = {
-        name: sum(1 for c in report.tool_calls if c.tool_name == name)
-        for name in _LSP_NAMES
+        name: sum(1 for c in report.tool_calls if c.tool_name == name) for name in _LSP_NAMES
     }
     weak = [name for name, cnt in lsp_counts.items() if cnt < contract.lsp_floor]
     assert not weak, f"LSP tools below floor {contract.lsp_floor}: {lsp_counts}"
@@ -419,9 +406,7 @@ async def _assert_complex_build_contract(
     for top_key in ("tool_use", "layer_stack", "overlay", "occ", "phases"):
         assert top_key in perf, f"perf.json missing {top_key!r}: keys={list(perf.keys())}"
 
-    probe_tool_calls = [
-        c for c in report.tool_calls if c.tool_name not in _NON_PROBE_TOOL_NAMES
-    ]
+    probe_tool_calls = [c for c in report.tool_calls if c.tool_name not in _NON_PROBE_TOOL_NAMES]
     perf_total_calls = int(perf["tool_use"].get("total_calls") or 0)
     assert abs(perf_total_calls - len(probe_tool_calls)) <= 5, (
         f"perf.tool_use.total_calls={perf_total_calls} vs "
@@ -447,9 +432,7 @@ async def _assert_complex_build_contract(
     if contract.require_layer_squash_metrics:
         layer = perf.get("layer_stack") or {}
         assert int(layer.get("squash_count") or 0) >= 10
-        assert float(layer.get("max_depth_before") or 0.0) > float(
-            AUTO_SQUASH_MAX_DEPTH
-        )
+        assert float(layer.get("max_depth_before") or 0.0) > float(AUTO_SQUASH_MAX_DEPTH)
 
     summary = await _read_json(
         sandbox_id,
@@ -460,15 +443,9 @@ async def _assert_complex_build_contract(
     api_read_count = int(api_calls.get("read") or 0)
     api_edit_count = int(api_calls.get("edit") or 0)
     api_shell_count = int(api_calls.get("shell") or 0)
-    assert api_read_count >= contract.api_read_floor, (
-        f"api.read_file count={api_read_count}"
-    )
-    assert api_edit_count >= contract.api_edit_floor, (
-        f"api.edit_file count={api_edit_count}"
-    )
-    assert api_shell_count >= contract.api_shell_floor, (
-        f"api.shell count={api_shell_count}"
-    )
+    assert api_read_count >= contract.api_read_floor, f"api.read_file count={api_read_count}"
+    assert api_edit_count >= contract.api_edit_floor, f"api.edit_file count={api_edit_count}"
+    assert api_shell_count >= contract.api_shell_floor, f"api.shell count={api_shell_count}"
 
     junit = await _read_text(
         sandbox_id,
@@ -510,9 +487,7 @@ async def _assert_shell_edit_lsp_contract(
     assert report.passed_prompt_inspections, [
         item for item in report.prompt_inspections if not item.passed
     ]
-    assert report.passed_sandbox_checks, [
-        item for item in report.sandbox_checks if not item.passed
-    ]
+    assert report.passed_sandbox_checks, [item for item in report.sandbox_checks if not item.passed]
 
     caller = SandboxCaller(agent_id="complex-project-build-shell-edit-lsp-test")
     perf = await _read_json(sandbox_id, SHELL_EDIT_LSP_METRICS_PATH, caller)
@@ -542,17 +517,13 @@ async def _assert_shell_edit_lsp_contract(
     assert logical_edit_count >= contract.logical_edit_floor
     assert shell_edit_count >= math.floor(logical_edit_count / 3)
     assert edit_file_count >= math.floor(logical_edit_count / 3)
-    assert abs(float(routing["shell_edit_ratio"]) - (1 / 3)) <= (
-        contract.shell_ratio_tolerance
-    )
+    assert abs(float(routing["shell_edit_ratio"]) - (1 / 3)) <= (contract.shell_ratio_tolerance)
     assert routing["routing_rule"] == "logical_edit_index % 3 == 2"
 
     lsp_correctness = summary["lsp_correctness"]
     assert int(lsp_correctness["total_checks"]) >= contract.total_lsp_floor
     assert int(lsp_correctness["failed_checks"]) == 0
-    assert int(lsp_correctness["passed_checks"]) == int(
-        lsp_correctness["total_checks"]
-    )
+    assert int(lsp_correctness["passed_checks"]) == int(lsp_correctness["total_checks"])
     by_tool = lsp_correctness["by_tool"]
     weak = {
         name: by_tool.get(name, 0)
@@ -564,9 +535,7 @@ async def _assert_shell_edit_lsp_contract(
     diagnostic_probe = summary["diagnostic_probe"]
     assert diagnostic_probe["error_detected"] is True
     assert diagnostic_probe["repair_cleared"] is True
-    assert int(diagnostic_probe["diagnostic_checks"]) >= (
-        contract.diagnostic_checks_floor
-    )
+    assert int(diagnostic_probe["diagnostic_checks"]) >= (contract.diagnostic_checks_floor)
 
     shell_edit = summary["shell_edit"]
     assert int(shell_edit["count"]) == shell_edit_count
@@ -576,8 +545,7 @@ async def _assert_shell_edit_lsp_contract(
     assert perf["shell_edit"]["count"] == shell_edit["count"]
 
     tri_source_checks = [
-        check for check in report.sandbox_checks
-        if check.name.startswith("projection.tri_source.")
+        check for check in report.sandbox_checks if check.name.startswith("projection.tri_source.")
     ]
     assert tri_source_checks, "tri-source projection checks missing"
     assert all(check.passed for check in tri_source_checks)
@@ -602,9 +570,7 @@ async def _assert_grep_glob_contract(
     assert report.passed_prompt_inspections, [
         item for item in report.prompt_inspections if not item.passed
     ]
-    assert report.passed_sandbox_checks, [
-        item for item in report.sandbox_checks if not item.passed
-    ]
+    assert report.passed_sandbox_checks, [item for item in report.sandbox_checks if not item.passed]
 
     tool_counts = {
         name: sum(1 for call in report.tool_calls if call.tool_name == name)
@@ -631,9 +597,7 @@ async def _assert_grep_glob_contract(
     assert int(grep_glob["glob_count"]) >= contract.glob_floor
     assert int(grep_glob["search_checks"]) >= contract.grep_floor
     assert int(grep_glob["negative_grep_checks"]) > 0
-    assert {"files_with_matches", "count", "content"}.issubset(
-        set(grep_glob["grep_modes"])
-    )
+    assert {"files_with_matches", "count", "content"}.issubset(set(grep_glob["grep_modes"]))
     assert perf["grep_glob"]["grep_count"] == grep_glob["grep_count"]
     assert perf["grep_glob"]["glob_count"] == grep_glob["glob_count"]
     assert int(summary["tool_use"]["toolkit_total"]) >= contract.tool_call_floor
@@ -670,9 +634,7 @@ async def _read_text(
 
 def _jsonl_rows(path: Path) -> list[dict[str, Any]]:
     return [
-        json.loads(line)
-        for line in path.read_text(encoding="utf-8").splitlines()
-        if line.strip()
+        json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()
     ]
 
 
@@ -719,9 +681,8 @@ def _assert_direct_file_samples_do_not_create_overlay_resources(
                 value = float(timings.get(key) or 0.0)
                 if value:
                     violations.append(f"{tool_name}:{key}={value}")
-    assert not violations, (
-        "direct file verbs exposed overlay command resources: "
-        + ", ".join(violations[:10])
+    assert not violations, "direct file verbs exposed overlay command resources: " + ", ".join(
+        violations[:10]
     )
 
 
@@ -765,8 +726,7 @@ def _assert_tool_samples_lack_publish_timings(
             if key.startswith(_SEARCH_PUBLISH_TIMING_PREFIXES):
                 violating_keys.add(key)
     assert not violating_keys, (
-        f"{tool_name} read-only samples published or advanced manifest: "
-        f"{sorted(violating_keys)}"
+        f"{tool_name} read-only samples published or advanced manifest: {sorted(violating_keys)}"
     )
 
 
@@ -795,10 +755,7 @@ def _tool_samples(perf: Mapping[str, Any], tool_name: str) -> list[Mapping[str, 
     per_tool = mapping(mapping(perf["tools"])["per_tool"])
     if tool_name not in per_tool:
         return []
-    return [
-        mapping(sample)
-        for sample in list(mapping(per_tool[tool_name]).get("samples") or ())
-    ]
+    return [mapping(sample) for sample in list(mapping(per_tool[tool_name]).get("samples") or ())]
 
 
 def _tool_samples_by_prefix(
@@ -814,10 +771,7 @@ def _tool_samples_by_prefix(
 
 
 def _max_sample_timing(samples: Sequence[Mapping[str, Any]], key: str) -> float:
-    values = [
-        float(mapping(sample.get("timings_s") or {}).get(key) or 0.0)
-        for sample in samples
-    ]
+    values = [float(mapping(sample.get("timings_s") or {}).get(key) or 0.0) for sample in samples]
     return max(values) if values else 0.0
 
 
@@ -831,11 +785,7 @@ def _warm_tool_p95_ms(
     warm_samples = samples[2:]
     if include_sample is not None:
         warm_samples = [sample for sample in warm_samples if include_sample(sample)]
-    durations = [
-        float(sample["duration_ms"])
-        for sample in warm_samples
-        if "duration_ms" in sample
-    ]
+    durations = [float(sample["duration_ms"]) for sample in warm_samples if "duration_ms" in sample]
     if len(durations) >= 2:
         return float(statistics.quantiles(durations, n=20, method="inclusive")[18])
     if len(durations) == 1:

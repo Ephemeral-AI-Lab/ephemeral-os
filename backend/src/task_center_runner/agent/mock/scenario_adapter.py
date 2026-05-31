@@ -8,7 +8,7 @@ Bridges the existing scenario decision methods (``planner_response`` /
 Per-role:
 - planner / reducer → one single-call ``Turn`` from the spec.
 - executor → run each probe-name's coroutine (yielding one ``ToolCall`` per
-  step), then submit ``submit_generator_success``.
+  step), then submit ``submit_generator_outcome(status="success", ...)``.
 
 ``ScenarioContext`` is built from ``context.tool_metadata`` at call time
 (``attempt_runtime`` carries the live TaskCenter stores), so a single per-agent
@@ -172,18 +172,14 @@ async def _executor_script(
     summary = "Workspace preflight completed."
     artifacts: list[str] = []
     for action in actions:
-        # --- terminal routing (each emits its own gated terminal, then ends) -
+        # --- unified terminal (each emits its own gated terminal, then ends) -
         if action == "fail" or action.startswith("fail:"):
             reason = (
-                action.split(":", 1)[1]
-                if ":" in action
-                else "Scenario-injected generator failure."
+                action.split(":", 1)[1] if ":" in action else "Scenario-injected generator failure."
             )
-            blocker_args = {"outcome": reason}
-            _ = yield _ask_advisor_turn("submit_generator_failure", blocker_args)
-            _ = yield Turn(
-                calls=(ToolCall("submit_generator_failure", blocker_args),)
-            )
+            blocker_args = {"status": "failed", "outcome": reason}
+            _ = yield _ask_advisor_turn("submit_generator_outcome", blocker_args)
+            _ = yield Turn(calls=(ToolCall("submit_generator_outcome", blocker_args),))
             return
         if action.startswith("request_recursive_workflow:") or action.startswith(
             "request_recursive_matrix:"
@@ -194,9 +190,7 @@ async def _executor_script(
             )
             handoff_args = {"goal_handoff": goal_handoff}
             _ = yield _ask_advisor_turn("submit_workflow_handoff", handoff_args)
-            _ = yield Turn(
-                calls=(ToolCall("submit_workflow_handoff", handoff_args),)
-            )
+            _ = yield Turn(calls=(ToolCall("submit_workflow_handoff", handoff_args),))
             return
 
         builder = PROBE_BUILDERS.get(action)
@@ -225,9 +219,7 @@ async def _executor_script(
             # loop.
             scripted = bridge_probe_for(action, probe_ctx=probe_ctx)
         if scripted is None:
-            raise NotImplementedError(
-                f"executor action {action!r} not yet adapted (Phase 2)."
-            )
+            raise NotImplementedError(f"executor action {action!r} not yet adapted (Phase 2).")
         factory, bridge_summary = scripted
         artifact_out: list[str] = []
         driver = bridge_turns(
@@ -249,9 +241,10 @@ async def _executor_script(
         summary = bridge_summary
         artifacts = [path for path in artifact_out if path]
 
-    success_args = {"outcome": summary, "artifacts": artifacts}
-    _ = yield _ask_advisor_turn("submit_generator_success", success_args)
-    _ = yield Turn(calls=(ToolCall("submit_generator_success", success_args),))
+    artifact_suffix = f" Artifacts: {artifacts}." if artifacts else ""
+    success_args = {"status": "success", "outcome": f"{summary}{artifact_suffix}"}
+    _ = yield _ask_advisor_turn("submit_generator_outcome", success_args)
+    _ = yield Turn(calls=(ToolCall("submit_generator_outcome", success_args),))
 
 
 def scenario_script_for(
@@ -282,9 +275,7 @@ def scenario_script_for(
     if role == "planner":
         return _planner_script(scenario, ctx)
     if role == "executor":
-        probe_ctx = ProbeContext(
-            metadata=context.tool_metadata, repo_dir=repo_dir, bus=bus
-        )
+        probe_ctx = ProbeContext(metadata=context.tool_metadata, repo_dir=repo_dir, bus=bus)
         return _executor_script(scenario, ctx, probe_ctx)
     if role == "reducer":
         return _reducer_script(scenario, ctx)

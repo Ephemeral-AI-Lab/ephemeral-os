@@ -2,7 +2,7 @@
 
 The default ``TaskCenterLifecycleConfig.default_attempt_budget`` is ``2``
 (``backend/src/task_center/config.py:16``). This scenario plans a single
-generator task that **always** calls ``submit_generator_failure``, so each
+generator task that **always** calls ``submit_generator_outcome(status="failed", ...)``, so each
 attempt closes ``status=failed``, ``fail_reason="task_failed"``. After
 attempt 2 fails, ``IterationAttemptCoordinator.has_budget_remaining`` is False — iteration
 closes failed, and the workflow lifecycle closes the workflow failed.
@@ -22,8 +22,8 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing import Any
 
-from tools.submission.planner import submit_plan_closes_goal
-from tools.submission.reducer import submit_reduction_failure
+from tools.submission.planner import submit_planner_outcome
+from tools.submission.reducer import submit_reducer_outcome
 
 from task_center_runner.scenarios.base import ScenarioBase, ScenarioContext, ToolCallSpec
 
@@ -52,20 +52,21 @@ class AttemptBudgetExhausted(ScenarioBase):
     name = "pipeline.attempt_budget_exhausted"
 
     def planner_response(self, ctx: ScenarioContext) -> ToolCallSpec:  # noqa: ARG002
-        return ToolCallSpec(submit_plan_closes_goal, _always_fail_plan())
+        return ToolCallSpec(submit_planner_outcome, _always_fail_plan())
 
     def executor_actions(self, ctx: ScenarioContext) -> Sequence[str]:  # noqa: ARG002
-        return (
-            "fail:Intentional generator failure to exhaust the attempt budget.",
-        )
+        return ("fail:Intentional generator failure to exhaust the attempt budget.",)
 
     def reducer_response(self, ctx: ScenarioContext) -> ToolCallSpec:  # noqa: ARG002
         # Should never be invoked — the generator never reaches DONE, so the
         # reducer's need is never satisfied. Implementation exists only to
         # satisfy the protocol.
         return ToolCallSpec(
-            submit_reduction_failure,
-            {"outcome": "Unexpected reducer invocation — no generator ever DONE."},
+            submit_reducer_outcome,
+            {
+                "status": "failed",
+                "outcome": "Unexpected reducer invocation; no generator ever DONE.",
+            },
         )
 
 

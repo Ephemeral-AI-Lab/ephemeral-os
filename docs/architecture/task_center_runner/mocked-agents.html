@@ -125,9 +125,9 @@ ScenarioLoopRunner.__call__(config, prompt, agent_def, sandbox_id, extra_tool_me
 EphemeralRunResult from the real query loop
 </pre>
 <div class="edge-list" aria-label="Handler responsibilities">
-  <div><b>planner script</b><span>Reads <code>scenario.planner_response(ctx)</code>, calls <code>ask_advisor</code>, then emits the chosen planner terminal turn (<code>submit_plan_closes_goal</code> / <code>submit_plan_defers_goal</code>).</span></div>
-  <div><b>executor script</b><span>Walks <code>scenario.executor_actions(ctx)</code>. Failure (<code>submit_generator_failure</code>) and handoff (<code>submit_workflow_handoff</code>) tokens emit the matching terminal turns; probe / prepared-tool-script tokens bridge real-loop tool turns and end with <code>submit_generator_success</code>. Each gated terminal is preceded by an <code>ask_advisor</code> turn.</span></div>
-  <div><b>reducer script</b><span>Reads <code>scenario.reducer_response(ctx)</code>, calls <code>ask_advisor</code>, then emits <code>submit_reduction_success</code> or <code>submit_reduction_failure</code> as the reducer terminal. The reducer is the plan task whose outcome decides whether the attempt passes.</span></div>
+  <div><b>planner script</b><span>Reads <code>scenario.planner_response(ctx)</code>, calls <code>ask_advisor</code>, then emits <code>submit_planner_outcome</code>.</span></div>
+  <div><b>executor script</b><span>Walks <code>scenario.executor_actions(ctx)</code>. Failure tokens emit <code>submit_generator_outcome(status="failed", ...)</code>, handoff tokens emit <code>submit_workflow_handoff</code>, and probe / prepared-tool-script tokens bridge real-loop tool turns and end with <code>submit_generator_outcome(status="success", ...)</code>. Each gated terminal is preceded by an <code>ask_advisor</code> turn.</span></div>
+  <div><b>reducer script</b><span>Reads <code>scenario.reducer_response(ctx)</code>, calls <code>ask_advisor</code>, then emits <code>submit_reducer_outcome</code> as the reducer terminal. The reducer is the plan task whose outcome decides whether the attempt passes.</span></div>
   <div><b>advisor script</b><span>The helper sub-agent spawned by <code>ask_advisor</code>; carries no TaskCenter attempt context and emits one ungated <code>submit_advisor_feedback</code> (<code>verdict="approve"</code>) turn.</span></div>
 </div>
 </section>

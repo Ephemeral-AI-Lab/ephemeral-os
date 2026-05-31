@@ -9,6 +9,8 @@ import pytest
 from message.message import Message, ToolUseBlock
 from notification import dispatch_rules
 from notification import SystemNotificationService
+import tools.submission.notification_triggers.nested_planner_deferral_disabled as planner_nested
+import tools.submission.notification_triggers.nested_workflow_handoff_disabled as generator_nested
 from tools.submission.notification_triggers import (
     make_workflow_request_after_edit_reminder,
     resolve_harness_notification_triggers,
@@ -43,7 +45,51 @@ async def test_after_edit_reminder_fires_once() -> None:
     )
 
     assert len(notifications) == 1
-    assert "submit_workflow_handoff is meant for delegating before edits begin" in notifications[0].text
+    assert (
+        "submit_workflow_handoff is meant for delegating before edits begin"
+        in notifications[0].text
+    )
+
+
+async def test_nested_planner_deferral_reminder_fires_once(monkeypatch) -> None:
+    monkeypatch.setattr(
+        planner_nested,
+        "tool_context_is_nested_workflow",
+        lambda context: True,
+    )
+    context = SimpleNamespace(notification_fired=set(), tool_metadata=object())
+    service = SystemNotificationService()
+    rule = planner_nested.make_nested_planner_deferral_disabled_reminder()
+
+    await dispatch_rules([rule], [], context, service)
+    first = service.pop_pending_notifications()
+    await dispatch_rules([rule], [], context, service)
+    second = service.pop_pending_notifications()
+
+    assert len(first) == 1
+    assert "deferred_goal_for_next_iteration" in first[0].text
+    assert second == []
+
+
+async def test_nested_workflow_handoff_reminder_fires_once(monkeypatch) -> None:
+    monkeypatch.setattr(
+        generator_nested,
+        "tool_context_is_nested_workflow",
+        lambda context: True,
+    )
+    context = SimpleNamespace(notification_fired=set(), tool_metadata=object())
+    service = SystemNotificationService()
+    rule = generator_nested.make_nested_workflow_handoff_disabled_reminder()
+
+    await dispatch_rules([rule], [], context, service)
+    first = service.pop_pending_notifications()
+    await dispatch_rules([rule], [], context, service)
+    second = service.pop_pending_notifications()
+
+    assert len(first) == 1
+    assert "submit_workflow_handoff is disabled here" in first[0].text
+    assert "submit_generator_outcome" in first[0].text
+    assert second == []
 
 
 async def test_resolve_harness_notification_triggers_rejects_unknown() -> None:

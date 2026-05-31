@@ -5,8 +5,8 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing import Any
 
-from tools.submission.planner import submit_plan_closes_goal
-from tools.submission.reducer import submit_reduction_success
+from tools.submission.planner import submit_planner_outcome
+from tools.submission.reducer import submit_reducer_outcome
 
 from task_center_runner.scenarios.base import (
     ScenarioBase,
@@ -39,8 +39,7 @@ SAME_PATH_CONFLICT_WRITER_COUNT = 4
 
 def _same_path_conflict_plan() -> dict[str, Any]:
     writer_ids = [
-        f"same_path_conflict_writer_{index}"
-        for index in range(SAME_PATH_CONFLICT_WRITER_COUNT)
+        f"same_path_conflict_writer_{index}" for index in range(SAME_PATH_CONFLICT_WRITER_COUNT)
     ]
     tasks = [
         {"id": "same_path_conflict_seed", "agent_name": "executor", "needs": []},
@@ -98,14 +97,13 @@ def _same_path_conflict_plan() -> dict[str, Any]:
 
 
 class _EphemeralWorkspaceScenarioBase(ScenarioBase):
-
     action_id: str = ""
     action_spec: str = ""
     summary_path_hint: str = ""
 
     def planner_response(self, ctx: ScenarioContext) -> ToolCallSpec:  # noqa: ARG002
         return ToolCallSpec(
-            submit_plan_closes_goal,
+            submit_planner_outcome,
             _plan(self.action_id, self.action_spec, self.summary_path_hint),
         )
 
@@ -117,8 +115,9 @@ class _EphemeralWorkspaceScenarioBase(ScenarioBase):
 
     def reducer_response(self, ctx: ScenarioContext) -> ToolCallSpec:  # noqa: ARG002
         return ToolCallSpec(
-            submit_reduction_success,
+            submit_reducer_outcome,
             {
+                "status": "success",
                 "outcome": f"{self.action_id} ephemeral-workspace scenario completed.",
             },
         )
@@ -181,12 +180,11 @@ class EphemeralWorkspaceSamePathConflict(_EphemeralWorkspaceScenarioBase):
         "reads, and verify the final content."
     )
     summary_path_hint = (
-        "/testbed/.ephemeralos/sweevo-mock/ephemeral_workspace/"
-        "same_path_conflict/summary.json"
+        "/testbed/.ephemeralos/sweevo-mock/ephemeral_workspace/same_path_conflict/summary.json"
     )
 
     def planner_response(self, ctx: ScenarioContext) -> ToolCallSpec:  # noqa: ARG002
-        return ToolCallSpec(submit_plan_closes_goal, _same_path_conflict_plan())
+        return ToolCallSpec(submit_planner_outcome, _same_path_conflict_plan())
 
     def executor_actions(self, ctx: ScenarioContext) -> Sequence[str]:
         context_message = ctx.context_message or ctx.prompt or ""
@@ -196,9 +194,7 @@ class EphemeralWorkspaceSamePathConflict(_EphemeralWorkspaceScenarioBase):
             return ("ephemeral_same_path_conflict_reconcile",)
         marker = "ACTION ephemeral_same_path_conflict_writer"
         if marker in context_message:
-            return (
-                f"ephemeral_same_path_conflict_writer:{_writer_index(context_message)}",
-            )
+            return (f"ephemeral_same_path_conflict_writer:{_writer_index(context_message)}",)
         return ()
 
 

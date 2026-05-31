@@ -28,12 +28,7 @@ from task_center_runner.agent.mock._advisor_approval import (
 from tools._framework.core.context import ToolExecutionContextService
 from tools._framework.core.runtime import ExecutionMetadata
 from tools._framework.execution.tool_call import execute_tool_once
-from tools.submission.executor.submit_generator_failure import (
-    submit_generator_failure,
-)
-from tools.submission.executor.submit_generator_success import (
-    submit_generator_success,
-)
+from tools.submission.generator import submit_generator_outcome, submit_workflow_handoff
 
 
 async def _noop_emit(_event: Any) -> None:
@@ -65,15 +60,13 @@ def _metadata_with_advisor_approval(
 ) -> ExecutionMetadata:
     gated = metadata.copy()
     existing = list(metadata.get("conversation_messages") or [])
-    gated["conversation_messages"] = (
-        build_advisor_approval_messages(tool_name=tool_name) + existing
-    )
+    gated["conversation_messages"] = build_advisor_approval_messages(tool_name=tool_name) + existing
     return gated
 
 
 @pytest.mark.asyncio
 async def test_wrong_tool_approval_blocks_terminal_dispatch() -> None:
-    """Approve ``submit_generator_success`` → submit ``submit_generator_failure``.
+    """Approve ``submit_workflow_handoff`` → submit ``submit_generator_outcome``.
 
     The gate must reject with the canonical ``BLOCKED`` prose. Verifies that
     the transcript helper produces metadata the gate reads correctly, and
@@ -82,24 +75,20 @@ async def test_wrong_tool_approval_blocks_terminal_dispatch() -> None:
     """
     gated_metadata = _metadata_with_advisor_approval(
         ExecutionMetadata(),
-        tool_name=submit_generator_success.name,
+        tool_name=submit_workflow_handoff.name,
     )
-    context = ToolExecutionContextService(
-        cwd=Path("/tmp"), services=gated_metadata
-    )
+    context = ToolExecutionContextService(cwd=Path("/tmp"), services=gated_metadata)
 
     result = await execute_tool_once(
-        submit_generator_failure,
-        {"outcome": "negative-path probe"},
+        submit_generator_outcome,
+        {"status": "failed", "outcome": "negative-path probe"},
         context,
         emit=_noop_emit,
         emit_started=False,
     )
 
     assert result.is_error, f"gate failed to block; result={result!r}"
-    assert "BLOCKED" in result.output, (
-        f"expected BLOCKED prose in output; got {result.output!r}"
-    )
+    assert "BLOCKED" in result.output, f"expected BLOCKED prose in output; got {result.output!r}"
     # The hook stamps a structured reason on the per-hook trace entry; verify
     # the ops/observability surface fires as designed.
     reason_meta = _gate_reason_metadata(result)
@@ -120,13 +109,11 @@ async def test_no_approval_blocks_terminal_dispatch() -> None:
     contract explicit for direct dispatch.
     """
     metadata = ExecutionMetadata()  # no conversation_messages
-    context = ToolExecutionContextService(
-        cwd=Path("/tmp"), services=metadata
-    )
+    context = ToolExecutionContextService(cwd=Path("/tmp"), services=metadata)
 
     result = await execute_tool_once(
-        submit_generator_failure,
-        {"outcome": "negative-path probe"},
+        submit_generator_outcome,
+        {"status": "failed", "outcome": "negative-path probe"},
         context,
         emit=_noop_emit,
         emit_started=False,

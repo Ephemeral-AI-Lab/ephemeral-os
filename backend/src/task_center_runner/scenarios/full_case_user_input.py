@@ -6,14 +6,8 @@ from collections.abc import Sequence
 from dataclasses import asdict
 from typing import Any
 
-from tools.submission.reducer import (
-    submit_reduction_failure,
-    submit_reduction_success,
-)
-from tools.submission.planner import (
-    submit_plan_closes_goal,
-    submit_plan_defers_goal,
-)
+from tools.submission.reducer import submit_reducer_outcome
+from tools.submission.planner import submit_planner_outcome
 
 from task_center_runner.scenarios.base import (
     ScenarioBase,
@@ -84,8 +78,9 @@ class FullCaseUserInput(ScenarioBase):
     def reducer_response(self, ctx: ScenarioContext) -> ToolCallSpec:
         if self._should_fail_reducer(ctx):
             return ToolCallSpec(
-                submit_reduction_failure,
+                submit_reducer_outcome,
                 {
+                    "status": "failed",
                     "outcome": (
                         "Reducer rejected the attempt: missing retry-only "
                         "evidence on the gated checkpoint."
@@ -93,18 +88,16 @@ class FullCaseUserInput(ScenarioBase):
                 },
             )
         return ToolCallSpec(
-            submit_reduction_success,
+            submit_reducer_outcome,
             {
+                "status": "success",
                 "outcome": "Reducer accepted the gated executor-task evidence.",
             },
         )
 
     def recursive_handoff_goal(self, ctx: ScenarioContext) -> str | None:
         context_message = ctx.context_message or ""
-        package_id = (
-            context_message_field(context_message, "package")
-            or self._recursive_package_id
-        )
+        package_id = context_message_field(context_message, "package") or self._recursive_package_id
         if not package_id:
             return None
         plan = self._ensure_user_input_plan(ctx)
@@ -126,10 +119,10 @@ class FullCaseUserInput(ScenarioBase):
         attempt = ctx.attempt
         self._ensure_user_input_plan(ctx)
         if iteration.sequence_no == 1 and attempt.attempt_sequence_no == 1:
-            return ToolCallSpec(submit_plan_closes_goal, _inventory_plan(kind="completes"))
+            return ToolCallSpec(submit_planner_outcome, _inventory_plan(kind="completes"))
         if iteration.sequence_no == 1:
             return ToolCallSpec(
-                submit_plan_defers_goal,
+                submit_planner_outcome,
                 _inventory_plan(
                     kind="defers",
                     deferred_goal_for_next_iteration=(
@@ -140,115 +133,11 @@ class FullCaseUserInput(ScenarioBase):
             )
         if iteration.sequence_no == 2:
             args = self._implementation_plan(ctx)
-            return ToolCallSpec(submit_plan_defers_goal, args)
-        return ToolCallSpec(submit_plan_closes_goal, self._final_reconciliation_plan(ctx))
+            return ToolCallSpec(submit_planner_outcome, args)
+        return ToolCallSpec(submit_planner_outcome, self._final_reconciliation_plan(ctx))
 
     def _recursive_planner_response(self, ctx: ScenarioContext) -> ToolCallSpec:
-        iteration = ctx.iteration
-        active_terminals = set(ctx.metadata.get("active_terminals") or ())
-        if "submit_plan_defers_goal" not in active_terminals:
-            return ToolCallSpec(submit_plan_closes_goal, _recursive_full_only_plan())
-        if iteration.sequence_no == 1:
-            return ToolCallSpec(
-                submit_plan_defers_goal,
-                {
-                    "tasks": [
-                        {"id": "recursive_inventory", "agent_name": "executor", "needs": []},
-                        {
-                            "id": "recursive_inventory_guard",
-                            "agent_name": "executor",
-                            "needs": ["recursive_inventory"],
-                        },
-                    ],
-                    "task_specs": {
-                        "recursive_inventory": "ACTION recursive_inventory",
-                        "recursive_inventory_guard": (
-                            "VERIFY checkpoint=recursive_inventory "
-                            "dependency_count=1"
-                        ),
-                    },
-                    "reducers": [
-                        {
-                            "id": "reduce",
-                            "needs": ["recursive_inventory", "recursive_inventory_guard"],
-                            "prompt": (
-                                "Recursive package inventory was produced and the "
-                                "decomposition coverage was confirmed."
-                            ),
-                        }
-                    ],
-                    "deferred_goal_for_next_iteration": (
-                        "Execute the delegated package subtasks and verify "
-                        "their local integration."
-                    ),
-                },
-            )
-        if iteration.sequence_no == 2:
-            return ToolCallSpec(
-                submit_plan_defers_goal,
-                {
-                    "tasks": [
-                        {"id": "recursive_exec_a", "agent_name": "executor", "needs": []},
-                        {"id": "recursive_exec_b", "agent_name": "executor", "needs": []},
-                        {
-                            "id": "recursive_wave_guard",
-                            "agent_name": "executor",
-                            "needs": ["recursive_exec_a", "recursive_exec_b"],
-                        },
-                    ],
-                    "task_specs": {
-                        "recursive_exec_a": "ACTION recursive_execute slice=a",
-                        "recursive_exec_b": "ACTION recursive_execute slice=b",
-                        "recursive_wave_guard": (
-                            "VERIFY checkpoint=recursive_wave dependency_count=2"
-                        ),
-                    },
-                    "reducers": [
-                        {
-                            "id": "reduce",
-                            "needs": [
-                                "recursive_exec_a",
-                                "recursive_exec_b",
-                                "recursive_wave_guard",
-                            ],
-                            "prompt": (
-                                "Recursive package probes completed and the "
-                                "recursive wave guard passed."
-                            ),
-                        }
-                    ],
-                    "deferred_goal_for_next_iteration": "Reconcile recursive package evidence.",
-                },
-            )
-        return ToolCallSpec(
-            submit_plan_closes_goal,
-            {
-                "tasks": [
-                    {"id": "recursive_reconcile", "agent_name": "executor", "needs": []},
-                    {
-                        "id": "recursive_final_guard",
-                        "agent_name": "executor",
-                        "needs": ["recursive_reconcile"],
-                    },
-                ],
-                "task_specs": {
-                    "recursive_reconcile": "ACTION recursive_reconcile",
-                    "recursive_final_guard": (
-                        "VERIFY checkpoint=recursive_final dependency_count=1"
-                    ),
-                },
-                "reducers": [
-                    {
-                        "id": "reduce",
-                        "needs": ["recursive_reconcile", "recursive_final_guard"],
-                        "prompt": (
-                            "Recursive close report summarizes package evidence "
-                            "and the recursive final guard passed."
-                        ),
-                    }
-                ],
-            },
-        )
+        return ToolCallSpec(submit_planner_outcome, _recursive_full_only_plan())
 
     def _implementation_plan(self, ctx: ScenarioContext) -> dict[str, Any]:
         plan = self._ensure_user_input_plan(ctx)
@@ -272,12 +161,9 @@ class FullCaseUserInput(ScenarioBase):
                 tasks.append({"id": local_id, "agent_name": "executor", "needs": needs})
                 task_specs[local_id] = _package_task_spec(package, wave_no)
             guard_id = f"verify_wave_{wave_no}"
-            tasks.append(
-                {"id": guard_id, "agent_name": "executor", "needs": local_ids}
-            )
+            tasks.append({"id": guard_id, "agent_name": "executor", "needs": local_ids})
             task_specs[guard_id] = (
-                f"VERIFY checkpoint=wave_{wave_no} wave={wave_no} "
-                f"dependency_count={len(local_ids)}"
+                f"VERIFY checkpoint=wave_{wave_no} wave={wave_no} dependency_count={len(local_ids)}"
             )
             previous_guard = guard_id
 
@@ -285,12 +171,9 @@ class FullCaseUserInput(ScenarioBase):
         if recursive is not None:
             recursive_needs = [previous_guard] if previous_guard else []
             delegate_id = f"delegate_{recursive.id}"
-            tasks.append(
-                {"id": delegate_id, "agent_name": "executor", "needs": recursive_needs}
-            )
+            tasks.append({"id": delegate_id, "agent_name": "executor", "needs": recursive_needs})
             task_specs[delegate_id] = (
-                f"ACTION request_recursive_workflow package={recursive.id} "
-                f"risk={recursive.risk}"
+                f"ACTION request_recursive_workflow package={recursive.id} risk={recursive.risk}"
             )
             recursive_guard = "verify_recursive_return"
             tasks.append(
@@ -300,16 +183,13 @@ class FullCaseUserInput(ScenarioBase):
                     "needs": [delegate_id],
                 }
             )
-            task_specs[recursive_guard] = (
-                "VERIFY checkpoint=recursive_return dependency_count=1"
-            )
+            task_specs[recursive_guard] = "VERIFY checkpoint=recursive_return dependency_count=1"
             final_needs.append(recursive_guard)
 
         final_guard = "verify_final_pre_reduce"
         tasks.append({"id": final_guard, "agent_name": "executor", "needs": final_needs})
         task_specs[final_guard] = (
-            f"VERIFY checkpoint=final_pre_reduce "
-            f"dependency_count={len(final_needs)}"
+            f"VERIFY checkpoint=final_pre_reduce dependency_count={len(final_needs)}"
         )
         return {
             "tasks": tasks,
@@ -352,13 +232,10 @@ class FullCaseUserInput(ScenarioBase):
             "tasks": tasks,
             "task_specs": {
                 "final_coverage_ledger": (
-                    "ACTION final_reconciliation stage=coverage "
-                    f"high_risk_count={high_risk_count}"
+                    f"ACTION final_reconciliation stage=coverage high_risk_count={high_risk_count}"
                 ),
                 "final_readback_probe": "ACTION final_reconciliation stage=readback",
-                "final_release_guard": (
-                    "VERIFY checkpoint=final_release dependency_count=2"
-                ),
+                "final_release_guard": ("VERIFY checkpoint=final_release dependency_count=2"),
             },
             "reducers": [
                 {
@@ -389,10 +266,7 @@ class FullCaseUserInput(ScenarioBase):
             return False
         iteration = ctx.iteration
         attempt = ctx.attempt
-        return (
-            iteration.sequence_no in (1, 2)
-            and attempt.attempt_sequence_no == 1
-        )
+        return iteration.sequence_no in (1, 2) and attempt.attempt_sequence_no == 1
 
 
 def _inventory_plan(
@@ -473,22 +347,15 @@ def _recursive_full_only_plan() -> dict[str, Any]:
             ),
             "recursive_exec_a": "ACTION recursive_execute slice=a",
             "recursive_exec_b": "ACTION recursive_execute slice=b",
-            "recursive_wave_guard": (
-                "VERIFY checkpoint=recursive_wave dependency_count=2"
-            ),
+            "recursive_wave_guard": ("VERIFY checkpoint=recursive_wave dependency_count=2"),
             "recursive_reconcile": "ACTION recursive_reconcile",
-            "recursive_final_guard": (
-                "VERIFY checkpoint=recursive_final dependency_count=1"
-            ),
+            "recursive_final_guard": ("VERIFY checkpoint=recursive_final dependency_count=1"),
         },
         "reducers": [
             {
                 "id": "reduce",
                 "needs": [task["id"] for task in tasks],
-                "prompt": (
-                    "Recursive package inventory, probes, and final guard all "
-                    "completed."
-                ),
+                "prompt": ("Recursive package inventory, probes, and final guard all completed."),
             }
         ],
     }
@@ -506,10 +373,7 @@ def _chunked(
     packages: tuple[WorkPackage, ...],
     size: int,
 ) -> tuple[tuple[WorkPackage, ...], ...]:
-    return tuple(
-        tuple(packages[index : index + size])
-        for index in range(0, len(packages), size)
-    )
+    return tuple(tuple(packages[index : index + size]) for index in range(0, len(packages), size))
 
 
 __all__ = ["FullCaseUserInput"]

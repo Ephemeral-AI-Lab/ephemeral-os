@@ -5,15 +5,15 @@ from tools.submission.context.attempt import (
     AttemptSubmissionContextError,
     resolve_attempt_submission_context,
 )
-from tools.submission.context.executor import (
-    ExecutorSubmissionContext,
-    resolve_executor_submission_context,
+from tools.submission.context.generator import (
+    GeneratorSubmissionContext,
+    resolve_generator_submission_context,
 )
 
 __all__ = [
     "AttemptSubmissionContext",
     "AttemptSubmissionContextError",
-    "ExecutorSubmissionContext",
+    "GeneratorSubmissionContext",
     "resolve_attempt_submission_context",
-    "resolve_executor_submission_context",
+    "resolve_generator_submission_context",
 ]

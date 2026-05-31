@@ -5,17 +5,14 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing import Any
 
-from tools.submission.planner import submit_plan_closes_goal
-from tools.submission.reducer import submit_reduction_success
+from tools.submission.planner import submit_planner_outcome
+from tools.submission.reducer import submit_reducer_outcome
 
 from task_center_runner.scenarios.base import ScenarioBase, ScenarioContext, ToolCallSpec
 
 
 def _diamond_plan() -> dict[str, Any]:
-    task_spec = (
-        "Run a lightweight workspace preflight and report the observed "
-        "sandbox root."
-    )
+    task_spec = "Run a lightweight workspace preflight and report the observed sandbox root."
     return {
         "tasks": [
             {"id": "a", "agent_name": "executor", "needs": []},
@@ -40,15 +37,15 @@ class DependencyDagDiamond(ScenarioBase):
     name = "pipeline.dependency_dag_diamond"
 
     def planner_response(self, ctx: ScenarioContext) -> ToolCallSpec:  # noqa: ARG002
-        return ToolCallSpec(submit_plan_closes_goal, _diamond_plan())
+        return ToolCallSpec(submit_planner_outcome, _diamond_plan())
 
     def executor_actions(self, ctx: ScenarioContext) -> Sequence[str]:  # noqa: ARG002
         return ("preflight",)
 
     def reducer_response(self, ctx: ScenarioContext) -> ToolCallSpec:  # noqa: ARG002
         return ToolCallSpec(
-            submit_reduction_success,
-            {"outcome": "Diamond DAG completed."},
+            submit_reducer_outcome,
+            {"status": "success", "outcome": "Diamond DAG completed."},
         )
 
 

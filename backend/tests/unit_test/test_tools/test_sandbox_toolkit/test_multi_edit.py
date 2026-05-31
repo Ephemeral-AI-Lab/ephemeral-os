@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import importlib
 import json
 from pathlib import Path
 from typing import Any
@@ -10,10 +11,11 @@ from typing import Any
 from sandbox.api import EditFileResult
 from sandbox.shared.edit_apply import SearchReplaceError, apply_search_replace
 from tools._framework.core.base import ToolExecutionContextService
-import tools.sandbox.multi_edit as multi_edit_module
 from tools.sandbox.multi_edit import multi_edit
 
 from ._helpers import run_tool_safely
+
+multi_edit_module = importlib.import_module("tools.sandbox.multi_edit.multi_edit")
 
 
 class _CannedApi:

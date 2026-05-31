@@ -13,11 +13,8 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 
-from tools.submission.planner import (
-    submit_plan_closes_goal,
-    submit_plan_defers_goal,
-)
-from tools.submission.reducer import submit_reduction_success
+from tools.submission.planner import submit_planner_outcome
+from tools.submission.reducer import submit_reducer_outcome
 
 from task_center_runner.scenarios._scenario_helpers import (
     preflight_full_plan,
@@ -40,18 +37,18 @@ class IterativeDeferral(ScenarioBase):
     def planner_response(self, ctx: ScenarioContext) -> ToolCallSpec:
         if ctx.iteration.sequence_no == 1:
             return ToolCallSpec(
-                submit_plan_defers_goal,
+                submit_planner_outcome,
                 preflight_defers_plan(deferred_goal_for_next_iteration=_CONTINUATION_GOAL),
             )
-        return ToolCallSpec(submit_plan_closes_goal, preflight_full_plan())
+        return ToolCallSpec(submit_planner_outcome, preflight_full_plan())
 
     def executor_actions(self, ctx: ScenarioContext) -> Sequence[str]:  # noqa: ARG002
         return ("preflight",)
 
     def reducer_response(self, ctx: ScenarioContext) -> ToolCallSpec:  # noqa: ARG002
         return ToolCallSpec(
-            submit_reduction_success,
-            {"outcome": "Continuation-iteration preflight evidence accepted."},
+            submit_reducer_outcome,
+            {"status": "success", "outcome": "Continuation-iteration preflight evidence accepted."},
         )
 
 

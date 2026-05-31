@@ -6,14 +6,8 @@ from collections.abc import Sequence
 from dataclasses import asdict, dataclass
 from typing import Any
 
-from tools.submission.reducer import (
-    submit_reduction_failure,
-    submit_reduction_success,
-)
-from tools.submission.planner import (
-    submit_plan_closes_goal,
-    submit_plan_defers_goal,
-)
+from tools.submission.reducer import submit_reducer_outcome
+from tools.submission.planner import submit_planner_outcome
 
 from task_center_runner.scenarios.base import (
     ScenarioBase,
@@ -110,8 +104,9 @@ class FullStackAdversarial(ScenarioBase):
             and ctx.attempt.attempt_sequence_no == 1
         ):
             return ToolCallSpec(
-                submit_reduction_failure,
+                submit_reducer_outcome,
                 {
+                    "status": "failed",
                     "outcome": (
                         "Intentional inventory retry so the next planner sees "
                         "failed-attempt context before subsystem work."
@@ -124,8 +119,9 @@ class FullStackAdversarial(ScenarioBase):
             and ctx.attempt.attempt_sequence_no == 1
         ):
             return ToolCallSpec(
-                submit_reduction_failure,
+                submit_reducer_outcome,
                 {
+                    "status": "failed",
                     "outcome": (
                         "Subsystem wave gate failed once to force retry "
                         "evidence before recursive delegation."
@@ -133,18 +129,16 @@ class FullStackAdversarial(ScenarioBase):
                 },
             )
         return ToolCallSpec(
-            submit_reduction_success,
+            submit_reducer_outcome,
             {
+                "status": "success",
                 "outcome": "Full-stack adversarial evidence accepted.",
             },
         )
 
     def recursive_handoff_goal(self, ctx: ScenarioContext) -> str | None:
         context_message = ctx.context_message or ""
-        package_id = (
-            context_message_field(context_message, "package")
-            or self._recursive_package_id
-        )
+        package_id = context_message_field(context_message, "package") or self._recursive_package_id
         if not package_id:
             return None
         plan = self._ensure_user_input_plan(ctx)
@@ -163,10 +157,10 @@ class FullStackAdversarial(ScenarioBase):
         self._ensure_user_input_plan(ctx)
         self._ensure_matrix_cells(ctx)
         if iteration.sequence_no == 1 and attempt.attempt_sequence_no == 1:
-            return ToolCallSpec(submit_plan_closes_goal, _inventory_plan(kind="completes"))
+            return ToolCallSpec(submit_planner_outcome, _inventory_plan(kind="completes"))
         if iteration.sequence_no == 1:
             return ToolCallSpec(
-                submit_plan_defers_goal,
+                submit_planner_outcome,
                 _inventory_plan(
                     kind="defers",
                     deferred_goal_for_next_iteration=(
@@ -176,103 +170,13 @@ class FullStackAdversarial(ScenarioBase):
                 ),
             )
         if iteration.sequence_no == 2 and attempt.attempt_sequence_no == 1:
-            return ToolCallSpec(submit_plan_defers_goal, self._subsystem_wave_plan(ctx))
+            return ToolCallSpec(submit_planner_outcome, self._subsystem_wave_plan(ctx))
         if iteration.sequence_no == 2:
-            return ToolCallSpec(submit_plan_defers_goal, self._retry_deferred_plan(ctx))
-        return ToolCallSpec(submit_plan_closes_goal, self._final_plan(ctx))
+            return ToolCallSpec(submit_planner_outcome, self._retry_deferred_plan(ctx))
+        return ToolCallSpec(submit_planner_outcome, self._final_plan(ctx))
 
     def _recursive_planner_response(self, ctx: ScenarioContext) -> ToolCallSpec:
-        iteration = ctx.iteration
-        active_terminals = set(ctx.metadata.get("active_terminals") or ())
-        if "submit_plan_defers_goal" not in active_terminals:
-            return ToolCallSpec(submit_plan_closes_goal, _recursive_full_only_plan())
-        if iteration.sequence_no == 1:
-            return ToolCallSpec(
-                submit_plan_defers_goal,
-                {
-                    "tasks": [
-                        {
-                            "id": "recursive_oversized_a",
-                            "agent_name": "executor",
-                            "needs": [],
-                        },
-                        {
-                            "id": "recursive_oversized_b",
-                            "agent_name": "executor",
-                            "needs": [],
-                        },
-                        {
-                            "id": "recursive_wave_guard",
-                            "agent_name": "executor",
-                            "needs": ["recursive_oversized_a", "recursive_oversized_b"],
-                        },
-                    ],
-                    "task_specs": {
-                        "recursive_oversized_a": (
-                            "ACTION recursive_oversized_matrix slice=a"
-                        ),
-                        "recursive_oversized_b": (
-                            "ACTION recursive_oversized_matrix slice=b"
-                        ),
-                        "recursive_wave_guard": (
-                            "VERIFY checkpoint=recursive_wave dependency_count=2"
-                        ),
-                    },
-                    "reducers": [
-                        {
-                            "id": "reduce",
-                            "needs": [
-                                "recursive_oversized_a",
-                                "recursive_oversized_b",
-                                "recursive_wave_guard",
-                            ],
-                            "prompt": (
-                                "At least two recursive executor slices wrote "
-                                "evidence and the recursive wave guard accepted "
-                                "delegated evidence."
-                            ),
-                        }
-                    ],
-                    "deferred_goal_for_next_iteration": (
-                        "Write the recursive full-stack close report and verify it."
-                    ),
-                },
-            )
-        return ToolCallSpec(
-            submit_plan_closes_goal,
-            {
-                "tasks": [
-                    {
-                        "id": "recursive_closure_report",
-                        "agent_name": "executor",
-                        "needs": [],
-                    },
-                    {
-                        "id": "recursive_close_guard",
-                        "agent_name": "executor",
-                        "needs": ["recursive_closure_report"],
-                    },
-                ],
-                "task_specs": {
-                    "recursive_closure_report": (
-                        "ACTION recursive_oversized_matrix slice=close close=true"
-                    ),
-                    "recursive_close_guard": (
-                        "VERIFY checkpoint=recursive_final dependency_count=1"
-                    ),
-                },
-                "reducers": [
-                    {
-                        "id": "reduce",
-                        "needs": ["recursive_closure_report", "recursive_close_guard"],
-                        "prompt": (
-                            "Recursive close report was written through tools and "
-                            "the recursive final guard read it."
-                        ),
-                    }
-                ],
-            },
-        )
+        return ToolCallSpec(submit_planner_outcome, _recursive_full_only_plan())
 
     def _subsystem_wave_plan(self, ctx: ScenarioContext) -> dict[str, Any]:
         plan = self._ensure_user_input_plan(ctx)
@@ -306,25 +210,17 @@ class FullStackAdversarial(ScenarioBase):
             },
         ]
         task_specs = {
-            "occ_matrix": (
-                "ACTION occ_conflict_matrix "
-                f"package={_package_id(packages['io'])}"
-            ),
+            "occ_matrix": (f"ACTION occ_conflict_matrix package={_package_id(packages['io'])}"),
             "overlay_matrix": (
-                "ACTION overlay_edge_matrix "
-                f"package={_package_id(packages['distributed'])}"
+                f"ACTION overlay_edge_matrix package={_package_id(packages['distributed'])}"
             ),
             "layerstack_matrix": (
-                "ACTION layerstack_squash_lease "
-                f"package={_package_id(packages['compat'])}"
+                f"ACTION layerstack_squash_lease package={_package_id(packages['compat'])}"
             ),
             "lsp_matrix": (
-                "ACTION lsp_refresh_semantics "
-                f"package={_package_id(packages['parquet'])}"
+                f"ACTION lsp_refresh_semantics package={_package_id(packages['parquet'])}"
             ),
-            "subsystem_wave_guard": (
-                "VERIFY checkpoint=subsystem_wave_guard dependency_count=4"
-            ),
+            "subsystem_wave_guard": ("VERIFY checkpoint=subsystem_wave_guard dependency_count=4"),
         }
         return {
             "tasks": tasks,
@@ -375,9 +271,7 @@ class FullStackAdversarial(ScenarioBase):
                     f"ACTION request_recursive_matrix package={package_id}"
                 ),
                 "final_reconciliation": "ACTION final_reconciliation stage=retry",
-                "recursive_return_guard": (
-                    "VERIFY checkpoint=recursive_return dependency_count=2"
-                ),
+                "recursive_return_guard": ("VERIFY checkpoint=recursive_return dependency_count=2"),
             },
             "reducers": [
                 {
@@ -414,12 +308,9 @@ class FullStackAdversarial(ScenarioBase):
             "tasks": tasks,
             "task_specs": {
                 "final_reconciliation_check": (
-                    "ACTION final_reconciliation stage=final "
-                    f"high_risk_count={high_risk_count}"
+                    f"ACTION final_reconciliation stage=final high_risk_count={high_risk_count}"
                 ),
-                "final_release_guard": (
-                    "VERIFY checkpoint=final_release dependency_count=1"
-                ),
+                "final_release_guard": ("VERIFY checkpoint=final_release dependency_count=1"),
             },
             "reducers": [
                 {
@@ -521,7 +412,7 @@ def _inventory_plan(
 
 
 def _recursive_full_only_plan() -> dict[str, Any]:
-    """Single-attempt recursive plan for launches without a defer terminal."""
+    """Single-attempt recursive plan for nested workflow launches."""
     tasks = [
         {"id": "recursive_oversized_a", "agent_name": "executor", "needs": []},
         {"id": "recursive_oversized_b", "agent_name": "executor", "needs": []},

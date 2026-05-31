@@ -19,13 +19,10 @@ from tools._hooks.advisor_approval import AdvisorApprovalPreHook
 
 _MAIN_TERMINAL_NAMES = frozenset(
     {
-        "submit_plan_closes_goal",
-        "submit_plan_defers_goal",
-        "submit_generator_success",
-        "submit_generator_failure",
+        "submit_planner_outcome",
+        "submit_generator_outcome",
         "submit_workflow_handoff",
-        "submit_reduction_success",
-        "submit_reduction_failure",
+        "submit_reducer_outcome",
     }
 )
 
@@ -44,9 +41,7 @@ def test_main_terminals_carry_advisor_approval_prehook() -> None:
         tool = tools_by_name.get(name)
         assert tool is not None, f"{name!r} missing from make_submission_tools()"
         hooks = tuple(getattr(tool, "pre_hooks", ()) or ())
-        advisor_hooks = [
-            hook for hook in hooks if isinstance(hook, AdvisorApprovalPreHook)
-        ]
+        advisor_hooks = [hook for hook in hooks if isinstance(hook, AdvisorApprovalPreHook)]
         assert len(advisor_hooks) == 1, (
             f"{name!r}: expected exactly one AdvisorApprovalPreHook, got {hooks!r}"
         )
@@ -62,9 +57,7 @@ def test_helper_terminals_omit_advisor_approval_prehook() -> None:
         tool = tools_by_name.get(name)
         assert tool is not None, f"{name!r} missing from make_submission_tools()"
         hooks = tuple(getattr(tool, "pre_hooks", ()) or ())
-        advisor_hooks = [
-            hook for hook in hooks if isinstance(hook, AdvisorApprovalPreHook)
-        ]
+        advisor_hooks = [hook for hook in hooks if isinstance(hook, AdvisorApprovalPreHook)]
         assert not advisor_hooks, (
             f"{name!r}: helper terminal must not carry AdvisorApprovalPreHook "
             f"(found {advisor_hooks!r})"

@@ -51,21 +51,15 @@ def test_every_scenario_implements_protocol() -> None:
     for key, cls in SCENARIO_REGISTRY.items():
         assert issubclass(cls, ScenarioBase), f"{key} is not a ScenarioBase subclass"
         instance = cls()
-        assert isinstance(instance, Scenario), (
-            f"{key} does not satisfy the Scenario protocol"
-        )
+        assert isinstance(instance, Scenario), f"{key} does not satisfy the Scenario protocol"
 
 
 def test_focused_scenarios_use_dotted_names() -> None:
     for key, cls in SCENARIO_REGISTRY.items():
         if key in _COMPOSITE_NAMES:
             continue
-        assert "." in key, (
-            f"focused scenario {key} must use dotted <package>.<file> form"
-        )
-        assert cls.name == key, (
-            f"scenario class.name {cls.name!r} must match registry key {key!r}"
-        )
+        assert "." in key, f"focused scenario {key} must use dotted <package>.<file> form"
+        assert cls.name == key, f"scenario class.name {cls.name!r} must match registry key {key!r}"
 
 
 def test_capacity_pack_catalog_has_coverage_anchor() -> None:
@@ -121,14 +115,14 @@ def test_subpackage_imports_are_clean() -> None:
         "InitialWorkflow",
         "NestedWorkflow",
         "NestedWorkflowFailure",
-        "DeferredParentPlannerTerminalRouting",
+        "DeferredParentPlannerUnifiedTerminal",
     ]
     _assert_subpackage_exports_registry(sandbox, registry_prefix="sandbox")
     assert planner_validation.__all__ == [
         "PlannerCycleInDeps",
         "PlannerDuplicateLocalId",
         "PlannerEmptyTasks",
-        "PlannerDefersWithoutDeferredGoal",
+        "PlannerBlankDeferredGoal",
         "PlannerUnknownAgentName",
         "PlannerUnknownDep",
     ]

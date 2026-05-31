@@ -108,7 +108,7 @@ def register_test_agents(isolated_agent_registries):
             description="test planner",
             role=AgentRole.PLANNER,
             context_recipe="planner",
-            terminals=["submit_plan_closes_goal", "submit_plan_defers_goal"],
+            terminals=["submit_planner_outcome"],
             tool_call_limit=10,
         )
     )
@@ -119,11 +119,7 @@ def register_test_agents(isolated_agent_registries):
             tool_call_limit=10,
             role=AgentRole.GENERATOR,
             context_recipe="generator",
-            terminals=[
-                "submit_workflow_handoff",
-                "submit_generator_success",
-                "submit_generator_failure",
-            ],
+            terminals=["submit_workflow_handoff", "submit_generator_outcome"],
         )
     )
     register_definition(
@@ -132,7 +128,7 @@ def register_test_agents(isolated_agent_registries):
             description="test generator",
             role=AgentRole.GENERATOR,
             context_recipe="generator",
-            terminals=["submit_generator_success", "submit_generator_failure"],
+            terminals=["submit_generator_outcome"],
             tool_call_limit=10,
         )
     )
@@ -142,7 +138,7 @@ def register_test_agents(isolated_agent_registries):
             description="test reducer",
             role=AgentRole.REDUCER,
             context_recipe="reducer",
-            terminals=["submit_reduction_success", "submit_reduction_failure"],
+            terminals=["submit_reducer_outcome"],
             tool_call_limit=10,
         )
     )

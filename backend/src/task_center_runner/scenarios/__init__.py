@@ -29,13 +29,13 @@ from task_center_runner.scenarios.pipeline import (
     InitialWorkflow,
     NestedWorkflow,
     NestedWorkflowFailure,
-    DeferredParentPlannerTerminalRouting,
+    DeferredParentPlannerUnifiedTerminal,
 )
 from task_center_runner.scenarios.planner_validation import (
     PlannerCycleInDeps,
     PlannerDuplicateLocalId,
     PlannerEmptyTasks,
-    PlannerDefersWithoutDeferredGoal,
+    PlannerBlankDeferredGoal,
     PlannerUnknownAgentName,
     PlannerUnknownDep,
 )
@@ -98,37 +98,25 @@ SCENARIO_REGISTRY: dict[str, type[Scenario]] = {
     "pipeline.attempt_budget_exhausted": AttemptBudgetExhausted,
     "pipeline.nested_workflow": NestedWorkflow,
     "pipeline.nested_workflow_failure": NestedWorkflowFailure,
-    "pipeline.deferred_parent_planner_terminal_routing": (
-        DeferredParentPlannerTerminalRouting
-    ),
+    "pipeline.deferred_parent_planner_unified_terminal": (DeferredParentPlannerUnifiedTerminal),
     # Composite capacity scenarios.
     "capacity.full_system_capacity_matrix": FullSystemCapacityMatrix,
     # Focused sandbox scenarios.
     "sandbox.auto_squash_commit_resume": AutoSquashCommitResume,
     "sandbox.background_shell_stop": BackgroundShellStop,
-    "sandbox.background_shell_stop_during_maintenance": (
-        BackgroundShellStopDuringMaintenance
-    ),
+    "sandbox.background_shell_stop_during_maintenance": (BackgroundShellStopDuringMaintenance),
     "sandbox.background_shell_exhaustion": BackgroundShellExhaustion,
     "sandbox.background_shell_golden": BackgroundShellGolden,
     "sandbox.background_shell_interleave": BackgroundShellInterleave,
     "sandbox.background_shell_late_cancel_race": BackgroundShellLateCancelRace,
-    "sandbox.background_shell_partial_write_cancel": (
-        BackgroundShellPartialWriteCancel
-    ),
-    "sandbox.background_mixed_fg_bg_same_path_conflict": (
-        BackgroundMixedFgBgSamePathConflict
-    ),
+    "sandbox.background_shell_partial_write_cancel": (BackgroundShellPartialWriteCancel),
+    "sandbox.background_mixed_fg_bg_same_path_conflict": (BackgroundMixedFgBgSamePathConflict),
     "sandbox.background_mixed_op_concurrent": BackgroundMixedOpConcurrent,
     "sandbox.background_heartbeat_loss_reaps_only_stale_bg": (
         BackgroundHeartbeatLossReapsOnlyStaleBg
     ),
-    "sandbox.background_exit_iws_drains_agent_tasks": (
-        BackgroundExitIwsDrainsAgentTasks
-    ),
-    "sandbox.background_engine_restart_no_lease_leak": (
-        BackgroundEngineRestartNoLeaseLeak
-    ),
+    "sandbox.background_exit_iws_drains_agent_tasks": (BackgroundExitIwsDrainsAgentTasks),
+    "sandbox.background_engine_restart_no_lease_leak": (BackgroundEngineRestartNoLeaseLeak),
     "sandbox.background_many_small_writes_do_not_starve_dispatcher": (
         BackgroundManySmallWritesDoNotStarveDispatcher
     ),
@@ -136,24 +124,16 @@ SCENARIO_REGISTRY: dict[str, type[Scenario]] = {
     "sandbox.complex_project_build_grep_glob": ComplexProjectBuildGrepGlob,
     "sandbox.complex_project_build_grep_glob_smoke": ComplexProjectBuildGrepGlobSmoke,
     "sandbox.complex_project_build_shell_edit_lsp": ComplexProjectBuildShellEditLsp,
-    "sandbox.complex_project_build_shell_edit_lsp_smoke": (
-        ComplexProjectBuildShellEditLspSmoke
-    ),
+    "sandbox.complex_project_build_shell_edit_lsp_smoke": (ComplexProjectBuildShellEditLspSmoke),
     "sandbox.complex_project_build_smoke": ComplexProjectBuildSmoke,
     "sandbox.ephemeral_workspace_all_verbs": EphemeralWorkspaceAllVerbs,
-    "sandbox.ephemeral_workspace_concurrent_writes": (
-        EphemeralWorkspaceConcurrentWrites
-    ),
-    "sandbox.ephemeral_workspace_same_path_conflict": (
-        EphemeralWorkspaceSamePathConflict
-    ),
+    "sandbox.ephemeral_workspace_concurrent_writes": (EphemeralWorkspaceConcurrentWrites),
+    "sandbox.ephemeral_workspace_same_path_conflict": (EphemeralWorkspaceSamePathConflict),
     "sandbox.ephemeral_workspace_policy": EphemeralWorkspacePolicy,
     "sandbox.ephemeral_workspace_cancellation": EphemeralWorkspaceCancellation,
     "sandbox.ephemeral_workspace_o1_disk": EphemeralWorkspaceO1Disk,
     "sandbox.heavy_io_zoned_concurrent": HeavyIoZonedConcurrent,
-    "sandbox.high_concurrency_layerstack_overlay_occ": (
-        HighConcurrencyLayerstackOverlayOcc
-    ),
+    "sandbox.high_concurrency_layerstack_overlay_occ": (HighConcurrencyLayerstackOverlayOcc),
     "sandbox.occ_concurrent_conflicts": OccConcurrentConflicts,
     "sandbox.plugin_read_only_lsp_refresh": PluginReadOnlyLspRefresh,
     "sandbox.plugin_write_allowed_publish": PluginWriteAllowedPublish,
@@ -165,9 +145,7 @@ SCENARIO_REGISTRY: dict[str, type[Scenario]] = {
     "planner_validation.cycle_in_deps": PlannerCycleInDeps,
     "planner_validation.duplicate_local_id": PlannerDuplicateLocalId,
     "planner_validation.empty_tasks": PlannerEmptyTasks,
-    "planner_validation.defers_without_deferred_goal": (
-        PlannerDefersWithoutDeferredGoal
-    ),
+    "planner_validation.blank_deferred_goal": (PlannerBlankDeferredGoal),
     "planner_validation.unknown_agent_name": PlannerUnknownAgentName,
     "planner_validation.unknown_dep": PlannerUnknownDep,
 }
@@ -220,12 +198,12 @@ __all__ = [
     "HighConcurrencyLayerstackOverlayOcc",
     "NestedWorkflow",
     "NestedWorkflowFailure",
-    "DeferredParentPlannerTerminalRouting",
+    "DeferredParentPlannerUnifiedTerminal",
     "OccConcurrentConflicts",
     "PlannerCycleInDeps",
     "PlannerDuplicateLocalId",
     "PlannerEmptyTasks",
-    "PlannerDefersWithoutDeferredGoal",
+    "PlannerBlankDeferredGoal",
     "PlannerUnknownAgentName",
     "PlannerUnknownDep",
     "PluginIntentContract",

@@ -20,8 +20,8 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing import Any
 
-from tools.submission.reducer import submit_reduction_failure
-from tools.submission.planner import submit_plan_closes_goal
+from tools.submission.reducer import submit_reducer_outcome
+from tools.submission.planner import submit_planner_outcome
 
 from task_center_runner.scenarios.base import ScenarioBase, ScenarioContext, ToolCallSpec
 
@@ -49,7 +49,7 @@ class PlannerDuplicateLocalId(ScenarioBase):
     name = "planner_validation.duplicate_local_id"
 
     def planner_response(self, ctx: ScenarioContext) -> ToolCallSpec:  # noqa: ARG002
-        return ToolCallSpec(submit_plan_closes_goal, _duplicate_local_id_plan())
+        return ToolCallSpec(submit_planner_outcome, _duplicate_local_id_plan())
 
     def executor_actions(self, ctx: ScenarioContext) -> Sequence[str]:  # noqa: ARG002
         return ()
@@ -59,8 +59,8 @@ class PlannerDuplicateLocalId(ScenarioBase):
         # before the attempt reaches the reducer stage. The implementation
         # exists only so the scenario satisfies the protocol.
         return ToolCallSpec(
-            submit_reduction_failure,
-            {"outcome": "Unexpected reducer invocation under invalid plan."},
+            submit_reducer_outcome,
+            {"status": "failed", "outcome": "Unexpected reducer invocation under invalid plan."},
         )
 
 

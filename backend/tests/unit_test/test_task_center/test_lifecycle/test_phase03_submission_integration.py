@@ -19,9 +19,9 @@ from task_center.iteration import OpenIterationCoordinatorRegistry
 from tools._framework.core.context import ToolExecutionContextService
 from tools._framework.core.runtime import ExecutionMetadata
 from tools._framework.execution.tool_call import execute_tool_once
-from tools.submission.executor import submit_generator_success
-from tools.submission.planner import submit_plan_closes_goal
-from tools.submission.reducer import submit_reduction_success
+from tools.submission.generator import submit_generator_outcome
+from tools.submission.planner import submit_planner_outcome
+from tools.submission.reducer import submit_reducer_outcome
 
 from tests.unit_test.test_tools.test_submission._advisor_approval_fixtures import (
     build_advisor_approval_messages,
@@ -114,7 +114,7 @@ async def test_phase03_full_plan_through_reducer_success(
     orchestrator.start()
 
     planner_result = await execute_tool_once(
-        submit_plan_closes_goal,
+        submit_planner_outcome,
         {
             "tasks": [{"id": "a", "agent_name": "executor", "needs": []}],
             "task_specs": {"a": "Do the work."},
@@ -124,30 +124,30 @@ async def test_phase03_full_plan_through_reducer_success(
             runtime,
             attempt_id,
             planner_task_id(attempt_id),
-            advisor_approves="submit_plan_closes_goal",
+            advisor_approves="submit_planner_outcome",
         ),
         emit=_noop_emit,
     )
     generator_result = await execute_tool_once(
-        submit_generator_success,
-        {"outcome": "done", "artifacts": []},
+        submit_generator_outcome,
+        {"status": "success", "outcome": "done"},
         _tool_context(
             runtime,
             attempt_id,
             generator_task_id(attempt_id, "a"),
-            advisor_approves="submit_generator_success",
+            advisor_approves="submit_generator_outcome",
         ),
         emit=_noop_emit,
     )
     reducer_result = await execute_tool_once(
-        submit_reduction_success,
-        {"outcome": "gated and passed"},
+        submit_reducer_outcome,
+        {"status": "success", "outcome": "gated and passed"},
         _tool_context(
             runtime,
             attempt_id,
             reducer_task_id(attempt_id, "r"),
             role="reducer",
-            advisor_approves="submit_reduction_success",
+            advisor_approves="submit_reducer_outcome",
         ),
         emit=_noop_emit,
     )

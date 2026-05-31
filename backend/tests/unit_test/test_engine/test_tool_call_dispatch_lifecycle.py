@@ -151,9 +151,7 @@ def test_tool_call_dispatch_parallel_non_lifecycle_unchanged():
 # ---------------------------------------------------------------------------
 
 
-def test_lifecycle_batch_rejection_emits_counter_and_audit(
-    tmp_path: Path, monkeypatch
-):
+def test_lifecycle_batch_rejection_emits_counter_and_audit(tmp_path: Path, monkeypatch):
     audit_path = tmp_path / "lifecycle.jsonl"
     monkeypatch.setenv("EOS_WORKSPACE_LIFECYCLE_AUDIT_PATH", str(audit_path))
     intent_map = {
@@ -210,9 +208,7 @@ def test_tool_call_dispatch_lifecycle_actually_dispatches_when_siblings_rejected
             is_error=False,
         )
 
-    monkeypatch.setattr(
-        "engine.tool_call.dispatch.execute_tool_call_streaming", _fake_execute
-    )
+    monkeypatch.setattr("engine.tool_call.dispatch.execute_tool_call_streaming", _fake_execute)
 
     tool_calls = [_tool("enter_isolated_workspace"), _tool("write_file")]
     tool_results: list[ToolResultBlock] = []
@@ -233,15 +229,11 @@ def test_tool_call_dispatch_lifecycle_actually_dispatches_when_siblings_rejected
         # The rejected sibling produces a ToolResultBlock with the
         # rejection wording.
         "write_file": next(
-            block
-            for block in tool_results
-            if "write_file" in str(block.content) and block.is_error
+            block for block in tool_results if "write_file" in str(block.content) and block.is_error
         ),
         # The lifecycle call's dispatch result is appended after rejection.
         "enter_isolated_workspace": next(
-            block
-            for block in tool_results
-            if block.content == "lifecycle ok"
+            block for block in tool_results if block.content == "lifecycle ok"
         ),
     }
     assert by_name["enter_isolated_workspace"].is_error is False
@@ -287,11 +279,11 @@ def test_dispatch_deferred_skips_dispatch_when_lifecycle_rejection_drains_batch(
 def test_terminal_rejection_still_runs_before_lifecycle_policy():
     intent_map = {
         "enter_isolated_workspace": Intent.LIFECYCLE,
-        "submit_generator_success": Intent.WRITE_ALLOWED,
+        "submit_generator_outcome": Intent.WRITE_ALLOWED,
     }
-    ctx = _ctx(intent_map, terminal_tools={"submit_generator_success"})
+    ctx = _ctx(intent_map, terminal_tools={"submit_generator_outcome"})
     tool_calls = [
-        _tool("submit_generator_success"),
+        _tool("submit_generator_outcome"),
         _tool("enter_isolated_workspace"),
     ]
     tool_results: list[ToolResultBlock] = []

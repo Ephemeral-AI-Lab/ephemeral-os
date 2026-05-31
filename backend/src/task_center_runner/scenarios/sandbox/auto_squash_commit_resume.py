@@ -20,21 +20,30 @@ from __future__ import annotations
 from collections.abc import Sequence
 
 from sandbox.occ.service import AUTO_SQUASH_MAX_DEPTH
-from tools.submission.planner import submit_plan_closes_goal
-from tools.submission.reducer import submit_reduction_success
+from tools.submission.planner import submit_planner_outcome
+from tools.submission.reducer import submit_reducer_outcome
 
 from task_center_runner.scenarios.base import ScenarioBase, ScenarioContext, ToolCallSpec
 
 
 _AUTO_SQUASH_WRITE_COUNT = AUTO_SQUASH_MAX_DEPTH + 4
 
+
 def _auto_squash_plan() -> dict[str, object]:
     return {
         "tasks": [
             {"id": "auto_squash_seed", "agent_name": "executor", "needs": []},
             {"id": "auto_squash_squash_a", "agent_name": "executor", "needs": ["auto_squash_seed"]},
-            {"id": "auto_squash_independent", "agent_name": "executor", "needs": ["auto_squash_seed"]},
-            {"id": "auto_squash_squash_b", "agent_name": "executor", "needs": ["auto_squash_squash_a"]},
+            {
+                "id": "auto_squash_independent",
+                "agent_name": "executor",
+                "needs": ["auto_squash_seed"],
+            },
+            {
+                "id": "auto_squash_squash_b",
+                "agent_name": "executor",
+                "needs": ["auto_squash_squash_a"],
+            },
             {
                 "id": "auto_squash_reconcile",
                 "agent_name": "executor",
@@ -61,8 +70,7 @@ def _auto_squash_plan() -> dict[str, object]:
         ],
         "task_specs": {
             "auto_squash_seed": (
-                "ACTION auto_squash_seed. Initialize directories for the "
-                "auto-squash fan-out run."
+                "ACTION auto_squash_seed. Initialize directories for the auto-squash fan-out run."
             ),
             "auto_squash_squash_a": (
                 "ACTION auto_squash_squash_a. Run the first sequential write "
@@ -92,7 +100,7 @@ class AutoSquashCommitResume(ScenarioBase):
     name = "sandbox.auto_squash_commit_resume"
 
     def planner_response(self, ctx: ScenarioContext) -> ToolCallSpec:  # noqa: ARG002
-        return ToolCallSpec(submit_plan_closes_goal, _auto_squash_plan())
+        return ToolCallSpec(submit_planner_outcome, _auto_squash_plan())
 
     def executor_actions(self, ctx: ScenarioContext) -> Sequence[str]:
         context_message = ctx.context_message or ctx.prompt or ""
@@ -110,8 +118,9 @@ class AutoSquashCommitResume(ScenarioBase):
 
     def reducer_response(self, ctx: ScenarioContext) -> ToolCallSpec:  # noqa: ARG002
         return ToolCallSpec(
-            submit_reduction_success,
+            submit_reducer_outcome,
             {
+                "status": "success",
                 "outcome": (
                     "Auto-squash commit-resume probe captured depth-crossing "
                     "writes, post-threshold edits, intentional conflict, and "

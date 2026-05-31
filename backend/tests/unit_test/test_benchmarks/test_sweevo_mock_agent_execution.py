@@ -232,26 +232,20 @@ async def test_run_scenario_correctness_testing_with_fake_sandbox(
     assert delegated["iterations"][0]["deferred_goal_for_next_iteration"]
     assert delegated["iterations"][1]["creation_reason"] == "deferred_goal_continuation"
 
-    planner_reviews = [
-        item for item in report.prompt_inspections if item.role == "planner"
-    ]
+    planner_reviews = [item for item in report.prompt_inspections if item.role == "planner"]
     assert any(item.checks.get("failed_attempts") for item in planner_reviews)
-    assert any(
-        item.checks.get("previous_iteration_results") for item in planner_reviews
-    )
+    assert any(item.checks.get("previous_iteration_results") for item in planner_reviews)
 
     tool_names = {item.tool_name for item in report.tool_calls}
     assert {
         "submit_workflow_handoff",
-        "submit_plan_closes_goal",
-        "submit_plan_defers_goal",
+        "submit_planner_outcome",
         "write_file",
         "read_file",
         "edit_file",
         "shell",
-        "submit_generator_success",
-        "submit_reduction_failure",
-        "submit_reduction_success",
+        "submit_generator_outcome",
+        "submit_reducer_outcome",
     } <= tool_names
 
     check_names = {item.name for item in report.sandbox_checks}
@@ -292,9 +286,7 @@ async def test_run_scenario_correctness_testing_with_fake_sandbox(
             for attempt_dir in attempt_dirs:
                 assert (attempt_dir / "attempt.json").exists()
                 role_dirs = list(attempt_dir.glob("[0-9][0-9]_*"))
-                assert role_dirs, (
-                    f"no NN_<role>_<task_id> dir under {attempt_dir}"
-                )
+                assert role_dirs, f"no NN_<role>_<task_id> dir under {attempt_dir}"
                 found_attempt_with_role_dir = True
                 for role_dir in role_dirs:
                     assert (role_dir / "task.json").exists()

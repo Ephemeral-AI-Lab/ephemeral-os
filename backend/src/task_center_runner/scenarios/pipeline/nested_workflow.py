@@ -5,11 +5,8 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing import Any
 
-from tools.submission.planner import submit_plan_closes_goal
-from tools.submission.reducer import (
-    submit_reduction_failure,
-    submit_reduction_success,
-)
+from tools.submission.planner import submit_planner_outcome
+from tools.submission.reducer import submit_reducer_outcome
 
 from task_center_runner.scenarios._scenario_helpers import is_recursive_workflow
 from task_center_runner.scenarios.base import ScenarioBase, ScenarioContext, ToolCallSpec
@@ -34,9 +31,7 @@ def _entry_origin_nested_plan(*, failing_child: bool) -> dict[str, Any]:
         "task_specs": {
             "delegate_child": f"ACTION request_recursive_workflow package={package_id}",
             "recursive_return_guard": "VERIFY checkpoint=recursive_return",
-            "parent_reconciliation": (
-                "Run parent reconciliation after recursive close report."
-            ),
+            "parent_reconciliation": ("Run parent reconciliation after recursive close report."),
         },
         "reducers": [
             {
@@ -46,9 +41,7 @@ def _entry_origin_nested_plan(*, failing_child: bool) -> dict[str, Any]:
                     "recursive_return_guard",
                     "parent_reconciliation",
                 ],
-                "prompt": (
-                    "Confirm the child workflow closed before parent reconciliation."
-                ),
+                "prompt": ("Confirm the child workflow closed before parent reconciliation."),
             }
         ],
     }
@@ -99,9 +92,9 @@ class NestedWorkflow(ScenarioBase):
 
     def planner_response(self, ctx: ScenarioContext) -> ToolCallSpec:
         if is_recursive_workflow(ctx):
-            return ToolCallSpec(submit_plan_closes_goal, _child_success_plan())
+            return ToolCallSpec(submit_planner_outcome, _child_success_plan())
         return ToolCallSpec(
-            submit_plan_closes_goal,
+            submit_planner_outcome,
             _entry_origin_nested_plan(failing_child=False),
         )
 
@@ -115,8 +108,11 @@ class NestedWorkflow(ScenarioBase):
 
     def reducer_response(self, ctx: ScenarioContext) -> ToolCallSpec:  # noqa: ARG002
         return ToolCallSpec(
-            submit_reduction_success,
-            {"outcome": "Nested workflow completed before parent reconciliation."},
+            submit_reducer_outcome,
+            {
+                "status": "success",
+                "outcome": "Nested workflow completed before parent reconciliation.",
+            },
         )
 
     def recursive_handoff_goal(self, ctx: ScenarioContext) -> str | None:  # noqa: ARG002
@@ -130,9 +126,9 @@ class NestedWorkflowFailure(ScenarioBase):
 
     def planner_response(self, ctx: ScenarioContext) -> ToolCallSpec:
         if is_recursive_workflow(ctx):
-            return ToolCallSpec(submit_plan_closes_goal, _child_failure_plan())
+            return ToolCallSpec(submit_planner_outcome, _child_failure_plan())
         return ToolCallSpec(
-            submit_plan_closes_goal,
+            submit_planner_outcome,
             _entry_origin_nested_plan(failing_child=True),
         )
 
@@ -148,8 +144,11 @@ class NestedWorkflowFailure(ScenarioBase):
         # Never reached: the child workflow fails, so the delegating generator
         # fails the parent attempt before the reducer's needs are satisfied.
         return ToolCallSpec(
-            submit_reduction_failure,
-            {"outcome": "Nested workflow failure should not reach the reducer."},
+            submit_reducer_outcome,
+            {
+                "status": "failed",
+                "outcome": "Nested workflow failure should not reach the reducer.",
+            },
         )
 
     def recursive_handoff_goal(self, ctx: ScenarioContext) -> str | None:  # noqa: ARG002

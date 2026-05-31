@@ -147,7 +147,7 @@ _FOCUSED_CASES: tuple[FocusedScenarioCase, ...] = (
         attempt_count=2,
     ),
     FocusedScenarioCase(
-        "planner_validation.defers_without_deferred_goal",
+        "planner_validation.blank_deferred_goal",
         expected_status="failed",
         min_event_counts={
             EventType.TOOL_CALL_ERROR: 2,

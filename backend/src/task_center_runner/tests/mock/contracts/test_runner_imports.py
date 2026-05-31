@@ -28,10 +28,7 @@ from task_center_runner.agent.mock.definitions import (
 from task_center_runner.agent.mock import scenario_loop_runner as loop_runner_module
 from task_center_runner.agent.mock.scenario_loop_runner import ScenarioLoopRunner
 from tools._framework.core.runtime import ExecutionMetadata
-from tools.submission.planner import (
-    submit_plan_closes_goal,
-    submit_plan_defers_goal,
-)
+from tools.submission.planner import submit_planner_outcome
 
 
 def test_runner_top_level_exports_are_callable() -> None:
@@ -151,8 +148,8 @@ def test_prompt_inspector_accepts_current_failed_attempt_heading(
         prompt="\n".join(
             [
                 "<goal>Do the retry work.</goal>",
-                "<iteration iteration_no=\"1\" position=\"current\">",
-                "<attempt attempt_no=\"1\">Attempt 1 failed.</attempt>",
+                '<iteration iteration_no="1" position="current">',
+                '<attempt attempt_no="1">Attempt 1 failed.</attempt>',
                 "</iteration>",
             ]
         ),
@@ -160,7 +157,7 @@ def test_prompt_inspector_accepts_current_failed_attempt_heading(
             name="planner",
             description="test planner",
             role=AgentRole.PLANNER,
-            terminals=["submit_plan_closes_goal", "submit_plan_defers_goal"],
+            terminals=["submit_planner_outcome", "submit_planner_outcome"],
             tool_call_limit=10,
         ),
         metadata=ExecutionMetadata(task_center_task_id="attempt-2:planner"),
@@ -186,10 +183,10 @@ def test_prompt_inspector_accepts_current_previous_iteration_sections(
         prompt="\n".join(
             [
                 "<goal>Continue the delegated workflow.</goal>",
-                "<iteration iteration_no=\"1\" position=\"prior\">",
-                "<task id=\"schema\" status=\"success\">Earlier result.</task>",
+                '<iteration iteration_no="1" position="prior">',
+                '<task id="schema" status="success">Earlier result.</task>',
                 "</iteration>",
-                "<iteration iteration_no=\"2\" position=\"current\">",
+                '<iteration iteration_no="2" position="current">',
                 "Next slice.",
                 "</iteration>",
             ]
@@ -198,7 +195,7 @@ def test_prompt_inspector_accepts_current_previous_iteration_sections(
             name="planner",
             description="test planner",
             role=AgentRole.PLANNER,
-            terminals=["submit_plan_closes_goal", "submit_plan_defers_goal"],
+            terminals=["submit_planner_outcome", "submit_planner_outcome"],
             tool_call_limit=10,
         ),
         metadata=ExecutionMetadata(task_center_task_id="attempt-1:planner"),
@@ -208,18 +205,29 @@ def test_prompt_inspector_accepts_current_previous_iteration_sections(
     assert inspection.passed
 
 
-def test_prompt_inspector_accepts_planner_without_defer_terminal() -> None:
+def test_prompt_inspector_accepts_planner_with_unified_terminal(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        loop_runner_module,
+        "_attempt_and_iteration",
+        lambda _metadata: (
+            SimpleNamespace(attempt_sequence_no=1),
+            SimpleNamespace(sequence_no=1),
+        ),
+    )
+
     inspection = _runner()._inspect_prompt(  # noqa: SLF001
         prompt="\n".join(
             [
                 "<context>",
                 "<goal>Close this delegated recursive workflow.</goal>",
-                "<iteration iteration_no=\"1\" position=\"current\">",
+                '<iteration iteration_no="1" position="current">',
                 "<iteration_goal>Close this delegated recursive workflow.</iteration_goal>",
                 "</iteration>",
                 "</context>",
                 "<Task Guidance>",
-                "Use submit_plan_closes_goal to close this goal in one attempt.",
+                "Use submit_planner_outcome to close this goal in one attempt.",
                 "</Task Guidance>",
             ]
         ),
@@ -227,38 +235,44 @@ def test_prompt_inspector_accepts_planner_without_defer_terminal() -> None:
             name="planner",
             description="test full-only planner",
             role=AgentRole.PLANNER,
-            terminals=["submit_plan_closes_goal"],
+            terminals=["submit_planner_outcome"],
             tool_call_limit=10,
         ),
         metadata=ExecutionMetadata(
             task_center_task_id="recursive-1:planner",
-            extras={"active_terminals": ["submit_plan_closes_goal"]},
+            extras={"active_terminals": ["submit_planner_outcome"]},
         ),
     )
 
-    assert inspection.checks == {
-        "goal": True,
-        "current_iteration": True,
-        "closes_goal_terminal": True,
-        "no_defer_terminal": True,
-    }
+    assert inspection.checks == {"goal": True, "current_iteration": True}
     assert inspection.passed
 
 
-def test_prompt_inspector_accepts_close_only_current_iteration_envelope() -> None:
+def test_prompt_inspector_accepts_close_only_current_iteration_envelope(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        loop_runner_module,
+        "_attempt_and_iteration",
+        lambda _metadata: (
+            SimpleNamespace(attempt_sequence_no=1),
+            SimpleNamespace(sequence_no=1),
+        ),
+    )
+
     inspection = _runner()._inspect_prompt(  # noqa: SLF001
         prompt="\n".join(
             [
-                "<context role=\"planner\">",
+                '<context role="planner">',
                 "<workflow>",
                 "<goal>Close this delegated recursive workflow.</goal>",
-                "<current_iteration sequence=\"1\">",
+                '<current_iteration sequence="1">',
                 "<goal>Close this delegated recursive workflow.</goal>",
                 "</current_iteration>",
                 "</workflow>",
                 "</context>",
                 "<terminal_tool_selection>",
-                "`submit_plan_closes_goal`",
+                "`submit_planner_outcome`",
                 "</terminal_tool_selection>",
             ]
         ),
@@ -266,21 +280,16 @@ def test_prompt_inspector_accepts_close_only_current_iteration_envelope() -> Non
             name="planner",
             description="test full-only planner",
             role=AgentRole.PLANNER,
-            terminals=["submit_plan_closes_goal"],
+            terminals=["submit_planner_outcome"],
             tool_call_limit=10,
         ),
         metadata=ExecutionMetadata(
             task_center_task_id="recursive-1:planner",
-            extras={"active_terminals": ["submit_plan_closes_goal"]},
+            extras={"active_terminals": ["submit_planner_outcome"]},
         ),
     )
 
-    assert inspection.checks == {
-        "goal": True,
-        "current_iteration": True,
-        "closes_goal_terminal": True,
-        "no_defer_terminal": True,
-    }
+    assert inspection.checks == {"goal": True, "current_iteration": True}
     assert inspection.passed
 
 
@@ -292,9 +301,7 @@ def test_prompt_inspector_verifies_dependent_executor_outcomes() -> None:
             role="generator",
             task_id=task_id,
             dependency_sections=[
-                _dependency_section(
-                    "attempt-1:gen:a", task_outcome="Generator a completed."
-                )
+                _dependency_section("attempt-1:gen:a", task_outcome="Generator a completed.")
             ],
         ),
         agent_def=_agent("executor", AgentRole.GENERATOR),
@@ -335,9 +342,7 @@ def test_prompt_inspector_verifies_reducer_dependency_outcomes() -> None:
             role="reducer",
             task_id=task_id,
             dependency_sections=[
-                _dependency_section(
-                    "attempt-1:gen:a", task_outcome="Generator a completed."
-                ),
+                _dependency_section("attempt-1:gen:a", task_outcome="Generator a completed."),
                 _dependency_section(
                     "attempt-1:gen:b",
                     task_outcome="Nested child outcome completed.",
@@ -390,7 +395,7 @@ def test_composite_scenarios_have_stable_names(scenario_cls: type) -> None:
     }
 
 
-def test_full_stack_recursive_planner_without_defer_closes_workflow() -> None:
+def test_full_stack_recursive_planner_with_unified_terminal_closes_workflow() -> None:
     scenario = FullStackAdversarial()
     ctx = ScenarioContext(
         attempt=SimpleNamespace(attempt_sequence_no=1),
@@ -399,7 +404,7 @@ def test_full_stack_recursive_planner_without_defer_closes_workflow() -> None:
         prompt="Run delegated recursive matrix.",
         metadata=ExecutionMetadata(
             agent_name="planner",
-            extras={"active_terminals": ["submit_plan_closes_goal"]},
+            extras={"active_terminals": ["submit_planner_outcome"]},
         ),
         audit_recorder=None,
         task_id="recursive-workflow:planner",
@@ -409,8 +414,7 @@ def test_full_stack_recursive_planner_without_defer_closes_workflow() -> None:
 
     spec = scenario.planner_response(ctx)
 
-    assert spec.tool.name == submit_plan_closes_goal.name
-    assert spec.tool.name != submit_plan_defers_goal.name
+    assert spec.tool.name == submit_planner_outcome.name
     assert "deferred_goal_for_next_iteration" not in spec.args
     task_ids = {task["id"] for task in spec.args["tasks"]}
     assert {
@@ -421,7 +425,7 @@ def test_full_stack_recursive_planner_without_defer_closes_workflow() -> None:
     } <= task_ids
 
 
-def test_full_case_recursive_planner_without_defer_closes_workflow() -> None:
+def test_full_case_recursive_planner_with_unified_terminal_closes_workflow() -> None:
     scenario = FullCaseUserInput()
     ctx = ScenarioContext(
         attempt=SimpleNamespace(attempt_sequence_no=1),
@@ -430,7 +434,7 @@ def test_full_case_recursive_planner_without_defer_closes_workflow() -> None:
         prompt="Run delegated release package.",
         metadata=ExecutionMetadata(
             agent_name="planner",
-            extras={"active_terminals": ["submit_plan_closes_goal"]},
+            extras={"active_terminals": ["submit_planner_outcome"]},
         ),
         audit_recorder=None,
         task_id="recursive-workflow:planner",
@@ -440,8 +444,7 @@ def test_full_case_recursive_planner_without_defer_closes_workflow() -> None:
 
     spec = scenario.planner_response(ctx)
 
-    assert spec.tool.name == submit_plan_closes_goal.name
-    assert spec.tool.name != submit_plan_defers_goal.name
+    assert spec.tool.name == submit_planner_outcome.name
     assert "deferred_goal_for_next_iteration" not in spec.args
     task_ids = {task["id"] for task in spec.args["tasks"]}
     assert {

@@ -30,17 +30,14 @@ def test_main_profiles_do_not_declare_legacy_variants():
         assert "\nvariants:" not in path.read_text(encoding="utf-8")
 
 
-def test_planner_declares_full_terminal_surface_for_router_to_filter():
+def test_planner_declares_unified_plan_terminal():
     planner = _load_planner()
-    assert planner.terminals == [
-        "submit_plan_closes_goal",
-        "submit_plan_defers_goal",
-    ]
+    assert planner.terminals == ["submit_planner_outcome"]
 
 
-def test_planner_no_longer_lists_recursive_partial_plan_trigger():
+def test_planner_lists_nested_deferral_reminder():
     planner = _load_planner()
-    assert "recursive_partial_plan" not in planner.notification_triggers
+    assert planner.notification_triggers == ["nested_planner_deferral_disabled"]
 
 
 def test_planner_names_valid_graph_agents():
@@ -56,7 +53,4 @@ def test_planner_treats_release_notes_as_code_repair_targets():
     body = _load_planner().system_prompt or ""
     assert "Code-repair benchmark framing" in body
     assert "treat that text as the behavior/code delta to implement" in body
-    assert (
-        "Do **not** plan to summarize, rewrite, or create a release-notes document"
-        in body
-    )
+    assert "Do **not** plan to summarize, rewrite, or create a release-notes document" in body

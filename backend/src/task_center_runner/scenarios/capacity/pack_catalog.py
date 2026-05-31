@@ -151,8 +151,8 @@ CAPACITY_PACK_SPECS: tuple[CapacityPackSpec, ...] = (
         registry_name="planner_validation.cycle_in_deps",
     ),
     CapacityPackSpec(
-        "planner_validation.defers_without_deferred_goal",
-        registry_name="planner_validation.defers_without_deferred_goal",
+        "planner_validation.blank_deferred_goal",
+        registry_name="planner_validation.blank_deferred_goal",
     ),
     CapacityPackSpec(
         "planner_validation.unknown_agent_name",

@@ -5,8 +5,8 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing import Any
 
-from tools.submission.planner import submit_plan_closes_goal
-from tools.submission.reducer import submit_reduction_success
+from tools.submission.planner import submit_planner_outcome
+from tools.submission.reducer import submit_reducer_outcome
 
 from task_center_runner.scenarios.base import ScenarioBase, ScenarioContext, ToolCallSpec
 
@@ -17,9 +17,7 @@ def _retry_generator_plan() -> dict[str, Any]:
             {"id": "generator_retry_probe", "agent_name": "executor", "needs": []},
         ],
         "task_specs": {
-            "generator_retry_probe": (
-                "ACTION fail_once_then_preflight reason=generator_retry"
-            ),
+            "generator_retry_probe": ("ACTION fail_once_then_preflight reason=generator_retry"),
         },
         "reducers": [
             {
@@ -37,7 +35,7 @@ class AttemptRetryGeneratorFailure(ScenarioBase):
     name = "pipeline.attempt_retry_generator_failure"
 
     def planner_response(self, ctx: ScenarioContext) -> ToolCallSpec:  # noqa: ARG002
-        return ToolCallSpec(submit_plan_closes_goal, _retry_generator_plan())
+        return ToolCallSpec(submit_planner_outcome, _retry_generator_plan())
 
     def executor_actions(self, ctx: ScenarioContext) -> Sequence[str]:
         if ctx.attempt.attempt_sequence_no == 1:
@@ -46,8 +44,8 @@ class AttemptRetryGeneratorFailure(ScenarioBase):
 
     def reducer_response(self, ctx: ScenarioContext) -> ToolCallSpec:  # noqa: ARG002
         return ToolCallSpec(
-            submit_reduction_success,
-            {"outcome": "Generator retry recovered on attempt 2."},
+            submit_reducer_outcome,
+            {"status": "success", "outcome": "Generator retry recovered on attempt 2."},
         )
 
 

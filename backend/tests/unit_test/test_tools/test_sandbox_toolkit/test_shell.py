@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import importlib
 import json
 from pathlib import Path
 from typing import Any
@@ -12,10 +13,11 @@ import pytest
 from sandbox.api import ShellResult
 from sandbox.shared.timing_keys import TimingKey
 from tools._framework.core.base import ToolExecutionContextService
-import tools.sandbox.shell as shell_module
 from tools.sandbox.shell import shell
 
 from ._helpers import run_tool_safely
+
+shell_module = importlib.import_module("tools.sandbox.shell.shell")
 
 
 class _ShellApi:

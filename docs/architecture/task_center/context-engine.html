@@ -61,20 +61,17 @@
     <li><code>ContextScope</code> carries launch identity: role, workflow id, iteration id, attempt id, and optional task id.</li>
     <li><code>ContextEngineDeps</code> carries the stores. Builders read state through this bundle and do not reach into globals.</li>
     <li><code>ContextEngine.build(...)</code> dispatches by <code>scope.role</code> and returns <code>AgentContext</code>, not a generic packet or recipe block list.</li>
-    <li><code>AgentEntryComposer</code> resolves the effective profile, renders context XML as one user row, renders task guidance as a second user row, and appends the optional skill row.</li>
+    <li><code>AgentEntryComposer</code> resolves the profile, renders context XML as one user row, renders task guidance as a second user row, and appends the optional skill row.</li>
   </ul>
 </div>
 <div class="callout warn"><span class="label">Boundary</span> Keep lifecycle decisions in TaskCenter orchestrators and coordinators. Context construction only projects the state the launched role can act on.</div>
 </section>
 
-<section id="launch-workflow" data-last-reviewed-commit="HEAD" data-evidence-paths="backend/src/task_center/attempt/launch.py backend/src/task_center/agent_launch/composer.py backend/src/task_center/_core/terminal_routing.py backend/src/task_center/context_engine/engine.py backend/src/task_center/context_engine/xml.py backend/src/task_center/context_engine/task_guidance.py backend/src/task_center/context_engine/skill_message.py backend/tests/unit_test/test_task_center/test_agent_launch">
+<section id="launch-workflow" data-last-reviewed-commit="HEAD-plus-worktree" data-evidence-paths="backend/src/task_center/attempt/launch.py backend/src/task_center/agent_launch/composer.py backend/src/task_center/context_engine/engine.py backend/src/task_center/context_engine/xml.py backend/src/task_center/context_engine/task_guidance.py backend/src/task_center/context_engine/skill_message.py backend/tests/unit_test/test_task_center/test_agent_launch">
 <h2>Launch Workflow <a class="anchor" href="#launch-workflow">#</a></h2>
 <pre class="diagram" aria-label="Context launch workflow">
 [AgentLaunchFactory]
         | creates ContextScope.for_planner/generator/reducer
-        v
-[TerminalToolRouter]
-        | effective profile terminals
         v
 [ContextEngine]
         | AgentContext
@@ -88,7 +85,7 @@
 </pre>
 <div class="edge-list">
   <div><b>scope</b><span>Planner launches require workflow, iteration, and attempt ids. Generator and reducer launches also require task id.</span></div>
-  <div><b>terminal routing</b><span>The router still filters terminals by launch depth and profile policy, but it no longer chooses a context recipe implementation.</span></div>
+  <div><b>terminal policy</b><span>The composer uses the profile terminal list directly. Nested-workflow restrictions are call-time prehooks plus launch-time reminder notifications, not terminal-list filtering.</span></div>
   <div><b>rows</b><span>Context XML and task guidance remain separate internal rows after the system prompt. Provider adapters may later join rows for transport, but TaskCenter keeps them distinct.</span></div>
 </div>
 </section>
@@ -129,7 +126,7 @@
   <div>Planner directive</div><div><code>Plan generator and reducer tasks for &lt;current_iteration&gt;&lt;goal&gt;.</code></div>
   <div>Generator directive</div><div><code>Complete &lt;assigned_task&gt; using &lt;dependencies&gt;.</code></div>
   <div>Reducer directive</div><div><code>Complete &lt;assigned_task&gt; using &lt;dependencies&gt;.</code></div>
-  <div>Terminal catalog</div><div><code>skill_message._wrap_task_guidance()</code> appends the effective profile's terminal-selection block. Generator terminals are <code>submit_generator_success</code>, <code>submit_generator_failure</code>, and optionally <code>submit_workflow_handoff</code>.</div>
+  <div>Terminal catalog</div><div><code>skill_message._wrap_task_guidance()</code> appends the profile's terminal-selection block. Generator terminals are <code>submit_generator_outcome</code> and <code>submit_workflow_handoff</code>; nested workflow handoff is rejected by prehook.</div>
 </div>
 </section>
 
@@ -145,7 +142,7 @@
 </div>
 </section>
 
-<section id="evidence-refresh" data-last-reviewed-commit="HEAD" data-evidence-paths="backend/src/task_center/context_engine backend/src/task_center/agent_launch backend/src/task_center/_core/outcomes.py backend/src/task_center/_core/terminal_routing.py backend/src/task_center/attempt backend/src/tools/submission backend/src/agents/profile/main backend/tests/unit_test/test_task_center/test_context_engine backend/tests/unit_test/test_task_center/test_agent_launch backend/tests/unit_test/test_tools">
+<section id="evidence-refresh" data-last-reviewed-commit="HEAD-plus-worktree" data-evidence-paths="backend/src/task_center/context_engine backend/src/task_center/agent_launch backend/src/task_center/_core/outcomes.py backend/src/tools/_hooks backend/src/task_center/attempt backend/src/tools/submission backend/src/agents/profile/main backend/tests/unit_test/test_task_center/test_context_engine backend/tests/unit_test/test_task_center/test_agent_launch backend/tests/unit_test/test_tools">
 <h2>Evidence And Refresh <a class="anchor" href="#evidence-refresh">#</a></h2>
 <div class="evidence-grid">
   <div class="evidence-card">

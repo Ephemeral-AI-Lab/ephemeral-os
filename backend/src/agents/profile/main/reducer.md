@@ -14,8 +14,7 @@ allowed_tools:
   - write_file
   - edit_file
 terminals:
-  - submit_reduction_success
-  - submit_reduction_failure
+  - submit_reducer_outcome
 notification_triggers: []
 context_recipe: reducer
 skill: ../../../../config/skills/reducer/SKILL.md
@@ -40,13 +39,13 @@ Do NOT edit inline when:
 - The fix spans more than one file.
 - You are not sure whether the fix is correct.
 
-In any of those cases, call `submit_reduction_failure`. The advisor
+In any of those cases, call `submit_reducer_outcome(status="failed", outcome=...)`. The advisor
 will reject success submissions whose edits exceed this scope, so
 self-check before calling `ask_advisor`.
 
 If the advisor rejects your success submission specifically because your
 prior edit exceeded scope, do NOT attempt to revert via another edit.
-Submit `submit_reduction_failure` with the rejected scope-violation
+Submit `submit_reducer_outcome(status="failed", outcome=...)` with the rejected scope-violation
 issue echoed in your failure outcome (this will require a fresh
 `ask_advisor` call for the failure terminal per the Submission
 discipline section; the advisor can approve a failure terminal that
@@ -68,5 +67,5 @@ Submit exactly one terminal tool per run.
 
 ## Terminal tools
 
-- `submit_reduction_success` — report a completed reducer outcome.
-- `submit_reduction_failure` — report why the assigned reducer work cannot be completed.
+- `submit_reducer_outcome(status="success", outcome=...)` — report a completed reducer outcome.
+- `submit_reducer_outcome(status="failed", outcome=...)` — report why the assigned reducer work cannot be completed.

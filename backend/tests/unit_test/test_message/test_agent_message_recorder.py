@@ -40,18 +40,12 @@ def test_agent_message_recorder_appends_conversation_messages(tmp_path) -> None:
         agent_name="executor",
         run_id="t1",
     )
-    recorder.emit(
-        ThinkingDeltaEvent(text="inspect ", agent_name="executor", agent_run_id="t1")
-    )
+    recorder.emit(ThinkingDeltaEvent(text="inspect ", agent_name="executor", agent_run_id="t1"))
     recorder.emit(ThinkingDeltaEvent(text="repo", agent_name="executor", agent_run_id="t1"))
     recorder.emit(
-        AssistantTextDeltaEvent(
-            text="I will run ", agent_name="executor", agent_run_id="t1"
-        )
+        AssistantTextDeltaEvent(text="I will run ", agent_name="executor", agent_run_id="t1")
     )
-    recorder.emit(
-        AssistantTextDeltaEvent(text="tests.", agent_name="executor", agent_run_id="t1")
-    )
+    recorder.emit(AssistantTextDeltaEvent(text="tests.", agent_name="executor", agent_run_id="t1"))
     recorder.emit(
         AssistantMessageCompleteEvent(
             message=Message(
@@ -103,12 +97,8 @@ def test_agent_message_recorder_appends_conversation_messages(tmp_path) -> None:
     ]
     assert records[5]["content"][0]["tool_use_id"] == "toolu_1"
     assert records[5]["content"][0]["content"] == "ok"
-    assert all(
-        record["metadata"]["benchmark"] == "sweevo" for record in records
-    )
-    assert all(
-        record["metadata"]["agent_name"] == "executor" for record in records
-    )
+    assert all(record["metadata"]["benchmark"] == "sweevo" for record in records)
+    assert all(record["metadata"]["agent_name"] == "executor" for record in records)
 
 
 def test_initial_messages_preserve_launch_metadata(tmp_path) -> None:
@@ -120,13 +110,13 @@ def test_initial_messages_preserve_launch_metadata(tmp_path) -> None:
         user_prompt="user",
         agent_name="planner",
         run_id="run-1",
-        metadata={"active_terminals": ["submit_plan_closes_goal"]},
+        metadata={"active_terminals": ["submit_planner_outcome"]},
     )
 
     records = _read_jsonl(path)
     assert [record["metadata"]["active_terminals"] for record in records] == [
-        ["submit_plan_closes_goal"],
-        ["submit_plan_closes_goal"],
+        ["submit_planner_outcome"],
+        ["submit_planner_outcome"],
     ]
 
 
@@ -185,7 +175,7 @@ def test_advisor_approval_excluded_from_transcript(tmp_path) -> None:
                         tool_use_id="adv-1",
                         name="ask_advisor",
                         input={
-                            "tool_name": "submit_generator_success",
+                            "tool_name": "submit_generator_outcome",
                             "tool_payload": {},
                         },
                     ),
@@ -216,7 +206,7 @@ def test_advisor_approval_excluded_from_transcript(tmp_path) -> None:
                 content=[
                     ToolUseBlock(
                         tool_use_id="t1",
-                        name="submit_generator_success",
+                        name="submit_generator_outcome",
                         input={},
                     )
                 ],
@@ -228,7 +218,7 @@ def test_advisor_approval_excluded_from_transcript(tmp_path) -> None:
     )
     recorder.emit(
         ToolExecutionCompletedEvent(
-            tool_name="submit_generator_success",
+            tool_name="submit_generator_outcome",
             output="ok",
             tool_use_id="t1",
             agent_name="executor",
@@ -239,15 +229,12 @@ def test_advisor_approval_excluded_from_transcript(tmp_path) -> None:
 
     records = _read_jsonl(path)
     blocks = [block for record in records for block in record["content"]]
-    tool_use_names = {
-        block.get("name") for block in blocks if block.get("type") == "tool_use"
-    }
+    tool_use_names = {block.get("name") for block in blocks if block.get("type") == "tool_use"}
     assert "ask_advisor" not in tool_use_names
-    assert "submit_generator_success" in tool_use_names
+    assert "submit_generator_outcome" in tool_use_names
     # The real text in the mixed turn survives.
     assert any(
-        block.get("type") == "text" and block.get("text") == "seeking approval"
-        for block in blocks
+        block.get("type") == "text" and block.get("text") == "seeking approval" for block in blocks
     )
     # No advisor-approval result row leaks.
     assert not any(
@@ -258,8 +245,7 @@ def test_advisor_approval_excluded_from_transcript(tmp_path) -> None:
     )
     # The real terminal's result IS kept.
     assert any(
-        block.get("type") == "tool_result" and block.get("tool_use_id") == "t1"
-        for block in blocks
+        block.get("type") == "tool_result" and block.get("tool_use_id") == "t1" for block in blocks
     )
 
 

@@ -29,7 +29,9 @@ class _DemoTool(BaseTool):
     short_description = "Inspect the current target."
     input_model = _EmptyInput
 
-    async def execute(self, arguments: BaseModel, context: ToolExecutionContextService) -> ToolResult:
+    async def execute(
+        self, arguments: BaseModel, context: ToolExecutionContextService
+    ) -> ToolResult:
         del arguments, context
         return ToolResult(output="ok")
 
@@ -60,26 +62,26 @@ def test_background_tools_expose_management_tools_without_instruction_block():
 
 
 def test_termination_condition_prompt_omits_tool_call_notes_and_background_section():
-    prompt = build_termination_condition_prompt(terminal_tools=["submit_plan"])
+    prompt = build_termination_condition_prompt(terminal_tools=["submit_planner_outcome"])
 
     assert "Tool Call Notes" not in prompt
     assert "<Background Tasks>" not in prompt
     assert "Background-capable tools: `run_subagent`." not in prompt
     assert "check_background_progress" not in prompt
     assert "<Termination Condition>" in prompt
-    assert "- `submit_plan`" in prompt
+    assert "- `submit_planner_outcome`" in prompt
     assert "WARNING: These are one-way exit tools." in prompt
     assert "Your lifecycle ends at that moment" in prompt
     assert "</Termination Condition>" in prompt
 
 
 def test_termination_condition_prompt_only_renders_termination_condition():
-    prompt = build_termination_condition_prompt(terminal_tools=["submit_plan"])
+    prompt = build_termination_condition_prompt(terminal_tools=["submit_planner_outcome"])
 
     assert "<Available Skills>" not in prompt
     assert "<Background Tasks>" not in prompt
     assert prompt.startswith("<Termination Condition>")
-    assert "- `submit_plan`" in prompt
+    assert "- `submit_planner_outcome`" in prompt
 
 
 def test_tool_registry_remove_tools_filters_registered_tools():
@@ -101,7 +103,9 @@ def test_tool_registry_restrict_to_tools_filters_registered_tools():
 
 
 def test_daemon_system_prompt_omits_reasoning_settings():
-    settings = SimpleNamespace(system_prompt="base prompt", fast_mode=False, effort="medium", passes=1)
+    settings = SimpleNamespace(
+        system_prompt="base prompt", fast_mode=False, effort="medium", passes=1
+    )
 
     prompt = build_runtime_system_prompt(settings, cwd="/tmp/project")
 

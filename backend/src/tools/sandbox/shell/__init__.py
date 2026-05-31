@@ -1,13 +1,5 @@
-"""Package for the `shell` tool.
+"""Package for the `shell` tool."""
 
-`__init__.py` re-exports the impl module so that
-`tools...shell` and `tools...shell.shell` resolve to the same module —
-keeps monkeypatching `tools...shell.<name>` working after the
-tool was moved into its own package.
-"""
+from .shell import _build_shell_tool_result, shell
 
-import sys
-
-from . import shell as _impl
-
-sys.modules[__name__] = _impl
+__all__ = ["_build_shell_tool_result", "shell"]

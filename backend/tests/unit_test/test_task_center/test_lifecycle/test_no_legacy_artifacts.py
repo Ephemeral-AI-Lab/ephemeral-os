@@ -36,6 +36,18 @@ _REMOVED_TOKENS = (
     "ContextOutline",
     "TagDictionary",
     "recipes_registry",
+    # Unified submission terminal migration removals.
+    "TerminalToolRouter",
+    "terminal_routing",
+    "select_terminals",
+    "tools.submission.executor",
+    "ExecutorSubmissionContext",
+    "submit_plan_closes_goal",
+    "submit_plan_defers_goal",
+    "submit_generator_success",
+    "submit_generator_failure",
+    "submit_reduction_success",
+    "submit_reduction_failure",
 )
 
 

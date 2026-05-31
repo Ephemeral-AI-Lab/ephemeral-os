@@ -2,49 +2,47 @@
 
 from __future__ import annotations
 
-from tools._names import (
-    SUBMIT_PLAN_CLOSES_GOAL_TOOL_NAME,
-    SUBMIT_PLAN_DEFERS_GOAL_TOOL_NAME,
-)
+from tools._names import SUBMIT_PLANNER_OUTCOME_TOOL_NAME
 
 PLAN_SUBMISSION_CHOICE_GUIDANCE = f"""\
 ## Close vs Defer Decision
 
-Use `{SUBMIT_PLAN_CLOSES_GOAL_TOOL_NAME}` when:
+Call `{SUBMIT_PLANNER_OUTCOME_TOOL_NAME}` without `deferred_goal_for_next_iteration` when:
 - This iteration's generator work and reducer outcomes are enough to finish the
   current iteration goal.
-- "Enough" means the reducer outcomes cover the goal; after they exist, no
-  known follow-up planner pass is needed.
+- The plan covers all current-iteration goal items and leaves no remaining
+  items.
 
-Use `{SUBMIT_PLAN_DEFERS_GOAL_TOOL_NAME}` when:
-- You have a concrete plan for this bounded iteration, and the next useful step
-  is another planner pass after this iteration's reducer outcomes exist.
+Call `{SUBMIT_PLANNER_OUTCOME_TOOL_NAME}` with nonblank `deferred_goal_for_next_iteration` when:
+- You have a concrete plan for a bounded subset of the current iteration goal,
+  and the listed remaining current-iteration goal items should move to the next
+  iteration after this iteration's reducer outcomes exist.
 - The current plan is concrete; what would be speculative is planning the full
   goal beyond this iteration before those reducer outcomes exist.
 - Once current reducers complete successfully, their outcomes become
   prior-iteration context for the next planner, alongside
   `deferred_goal_for_next_iteration`.
-- The deferred goal is the next planner's scope; reducer outcomes are context
-  for that planner, not a replacement for the deferred goal.
+- The deferred goal is concrete remaining current-iteration goal items, not a
+  generic backlog dump or unrelated future idea.
 
-Do not submit either terminal yet when:
+Do not submit the terminal yet when:
 - You cannot state this iteration as a concrete generator/reducer DAG with a
   clear reducer outcome set.
 - You cannot state why the collection of reducer outcomes is sufficient for
-  either current-iteration goal completion (`{SUBMIT_PLAN_CLOSES_GOAL_TOOL_NAME}`)
-  or a completed bounded iteration ready for the next planner
-  (`{SUBMIT_PLAN_DEFERS_GOAL_TOOL_NAME}`).
+  either current-iteration goal completion or a completed bounded iteration
+  ready for the next planner.
 
 Examples:
 - Lane shape does not decide close vs defer. A sequence like
   `gen_a -> gen_b -> gen_c -> ...` can close or defer depending on whether
   another planner pass is needed.
-- Use `{SUBMIT_PLAN_CLOSES_GOAL_TOOL_NAME}` when the collection of reducer
-  outcomes is sufficient for the current iteration goal.
-- Use `{SUBMIT_PLAN_DEFERS_GOAL_TOOL_NAME}` when the reducers produce iteration
+- Omit `deferred_goal_for_next_iteration` when the collection of reducer
+  outcomes is sufficient for the current iteration goal and leaves no remaining
+  items.
+- Set `deferred_goal_for_next_iteration` when the reducers produce iteration
   outcomes that should become context for the next planner, and
-  `deferred_goal_for_next_iteration` gives that planner a self-contained next
-  goal.
+  `deferred_goal_for_next_iteration` lists the remaining current-iteration goal
+  items.
 """
 
 PLAN_DAG_GUIDANCE = """\

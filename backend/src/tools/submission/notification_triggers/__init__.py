@@ -3,6 +3,12 @@
 from __future__ import annotations
 
 from notification import NotificationRule
+from tools.submission.notification_triggers.nested_planner_deferral_disabled import (
+    make_nested_planner_deferral_disabled_reminder,
+)
+from tools.submission.notification_triggers.nested_workflow_handoff_disabled import (
+    make_nested_workflow_handoff_disabled_reminder,
+)
 from tools.submission.notification_triggers.request_workflow_after_edit import (
     make_workflow_request_after_edit_reminder,
 )
@@ -12,6 +18,8 @@ def resolve_harness_notification_triggers(
     trigger_ids: list[str],
 ) -> list[NotificationRule]:
     factories = {
+        "nested_planner_deferral_disabled": make_nested_planner_deferral_disabled_reminder,
+        "nested_workflow_handoff_disabled": make_nested_workflow_handoff_disabled_reminder,
         "request_workflow_after_edit": make_workflow_request_after_edit_reminder,
     }
     rules: list[NotificationRule] = []
@@ -25,5 +33,7 @@ def resolve_harness_notification_triggers(
 
 __all__ = [
     "make_workflow_request_after_edit_reminder",
+    "make_nested_planner_deferral_disabled_reminder",
+    "make_nested_workflow_handoff_disabled_reminder",
     "resolve_harness_notification_triggers",
 ]

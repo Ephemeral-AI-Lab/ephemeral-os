@@ -24,16 +24,13 @@ from task_center_runner.tests._live_config import (
     database_configured,
     live_e2e_heavy_enabled,
 )
-from tools.submission.planner import submit_plan_closes_goal
-from tools.submission.reducer import submit_reduction_success
+from tools.submission.planner import submit_planner_outcome
+from tools.submission.reducer import submit_reducer_outcome
 
 
 pytestmark = pytest.mark.asyncio
 
-_AGENT_TASK_IDS = tuple(
-    f"complex_project_build_shell_edit_lsp_agent_{index}"
-    for index in range(3)
-)
+_AGENT_TASK_IDS = tuple(f"complex_project_build_shell_edit_lsp_agent_{index}" for index in range(3))
 
 
 class ComplexProjectBuildShellEditLspThreeParallelAgents(ScenarioBase):
@@ -42,15 +39,16 @@ class ComplexProjectBuildShellEditLspThreeParallelAgents(ScenarioBase):
     name = "sandbox.complex_project_build_shell_edit_lsp_three_parallel_agents"
 
     def planner_response(self, ctx: ScenarioContext) -> ToolCallSpec:  # noqa: ARG002
-        return ToolCallSpec(submit_plan_closes_goal, _three_agent_plan())
+        return ToolCallSpec(submit_planner_outcome, _three_agent_plan())
 
     def executor_actions(self, ctx: ScenarioContext) -> Sequence[str]:  # noqa: ARG002
         return ("complex_project_build_shell_edit_lsp_shared_bootstrap",)
 
     def reducer_response(self, ctx: ScenarioContext) -> ToolCallSpec:  # noqa: ARG002
         return ToolCallSpec(
-            submit_reduction_success,
+            submit_reducer_outcome,
             {
+                "status": "success",
                 "outcome": (
                     "Three parallel mixed shell-edit + LSP project-build "
                     "executors completed in one TaskCenter run."
@@ -102,8 +100,7 @@ def _three_agent_plan() -> dict[str, Any]:
     }
     return {
         "tasks": [
-            {"id": task_id, "agent_name": "executor", "needs": []}
-            for task_id in _AGENT_TASK_IDS
+            {"id": task_id, "agent_name": "executor", "needs": []} for task_id in _AGENT_TASK_IDS
         ],
         "task_specs": task_specs,
         "reducers": [
@@ -122,9 +119,7 @@ def _three_agent_plan() -> dict[str, Any]:
 
 
 def _assert_three_executor_tasks_per_attempt(report: RunReport) -> None:
-    executor_launches = [
-        launch for launch in report.launches if launch.role == "executor"
-    ]
+    executor_launches = [launch for launch in report.launches if launch.role == "executor"]
     by_attempt: dict[str | None, list[str]] = {}
     for launch in executor_launches:
         _assert_canonical_generator_task_id(launch.task_id, launch.attempt_id)
@@ -147,14 +142,13 @@ def _assert_three_executor_tasks_per_attempt(report: RunReport) -> None:
         for task_id in attempt["generator_task_ids"]:
             _assert_canonical_generator_task_id(task_id, attempt["id"])
         assert [
-            _local_generator_task_id(task_id)
-            for task_id in attempt["generator_task_ids"]
+            _local_generator_task_id(task_id) for task_id in attempt["generator_task_ids"]
         ] == list(_AGENT_TASK_IDS)
 
         generator_tasks = [
             task
             for task in attempt["tasks"]
-            if _local_generator_task_id(task["id"]) in _AGENT_TASK_IDS
+            if _local_generator_task_id(_graph_task_id(task)) in _AGENT_TASK_IDS
         ]
         assert len(generator_tasks) == len(_AGENT_TASK_IDS)
         assert all(task["needs"] == [] for task in generator_tasks)
@@ -177,6 +171,12 @@ def _local_generator_task_id(task_id: str) -> str:
     return task_id.rsplit(":gen:", maxsplit=1)[-1]
 
 
+def _graph_task_id(task: dict[str, Any]) -> str:
+    task_id = task.get("task_id") or task.get("id")
+    assert task_id, task
+    return str(task_id)
+
+
 def _assert_shared_bootstrap_conflicts(report: RunReport) -> None:
     bootstrap_write_errors = [
         call
@@ -186,6 +186,4 @@ def _assert_shared_bootstrap_conflicts(report: RunReport) -> None:
         and call.metadata.get("status") == "aborted_version"
         and call.metadata.get("conflict_reason") == "content changed"
     ]
-    assert len(bootstrap_write_errors) >= 2, [
-        call.as_dict() for call in bootstrap_write_errors
-    ]
+    assert len(bootstrap_write_errors) >= 2, [call.as_dict() for call in bootstrap_write_errors]

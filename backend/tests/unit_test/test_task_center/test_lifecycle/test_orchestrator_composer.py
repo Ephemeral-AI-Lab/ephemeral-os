@@ -2,8 +2,8 @@
 
 Confirms that when ``AttemptDeps.composer`` is set, the orchestrator asks the
 composer for the planner agent name and context_message, and that planner
-terminals are restricted when the launch is nested (its caller attempt is itself
-inside another workflow — depth > 1 via ``Workflow.parent_task_id``).
+terminal selection stays stable; nested deferral policy is enforced by the
+``submit_planner_outcome`` prehook rather than mutating launch terminals.
 """
 
 from __future__ import annotations
@@ -86,31 +86,18 @@ def composer_runtime(
     return runtime, launcher
 
 
-def _real_planner_router():
-    """Reuse the planner profile's real terminal_routing rule (no drift)."""
-    from pathlib import Path
-
-    import agents as _agents_pkg
-    from agents.definition.loader import load_agents_tree
-
-    profiles = load_agents_tree(Path(_agents_pkg.__file__).parent / "profile")
-    return next(p for p in profiles if p.name == "planner").terminal_router
-
-
 def _register_planner_agents() -> None:
-    planner = AgentDefinition(
-        name="planner",
-        description="planner",
-        role=AgentRole.PLANNER,
-        context_recipe="planner",
-        terminals=["submit_plan_closes_goal", "submit_plan_defers_goal"],
-        tool_call_limit=10,
-        system_prompt="PLANNER",
+    register_definition(
+        AgentDefinition(
+            name="planner",
+            description="planner",
+            role=AgentRole.PLANNER,
+            context_recipe="planner",
+            terminals=["submit_planner_outcome"],
+            tool_call_limit=10,
+            system_prompt="PLANNER",
+        )
     )
-    # Fabricated definition bypasses the loader, so attach the routing callable
-    # the loader would normally resolve from ``terminal_routing:`` frontmatter.
-    planner._terminal_router = _real_planner_router()
-    register_definition(planner)
 
 
 def _seed_workflow_iteration_attempt(
@@ -133,9 +120,7 @@ def _seed_workflow_iteration_attempt(
         iteration_goal="seg goal",
         attempt_budget=2,
     )
-    attempt = attempt_store.insert(
-        iteration_id=iteration.id, attempt_sequence_no=1
-    )
+    attempt = attempt_store.insert(iteration_id=iteration.id, attempt_sequence_no=1)
     return workflow, iteration, attempt
 
 
@@ -159,9 +144,9 @@ def test_planner_launched_via_composer_uses_base_when_top_level(
         parent_task_id=f"{task_center_run_id}:root",
     )
     attempt = attempt_store.list_for_iteration(
-        iteration_store.list_for_workflow(
-            workflow_store.list_for_run(task_center_run_id)[0].id
-        )[0].id
+        iteration_store.list_for_workflow(workflow_store.list_for_run(task_center_run_id)[0].id)[
+            0
+        ].id
     )[0]
     orchestrator = AttemptOrchestrator(
         attempt=attempt, on_attempt_closed=lambda _id: None, runtime=runtime
@@ -172,15 +157,12 @@ def test_planner_launched_via_composer_uses_base_when_top_level(
     assert launched.agent_name == "planner"
     assert launched.agent_def is not None
     assert launched.agent_def.system_prompt == "PLANNER"
-    assert launched.agent_def.terminals == [
-        "submit_plan_closes_goal",
-        "submit_plan_defers_goal",
-    ]
+    assert launched.agent_def.terminals == ["submit_planner_outcome"]
     assert '<current_iteration sequence="1">' in launched.context
     assert "<goal>" in launched.context
 
 
-def test_planner_terminals_restricted_when_nested_in_outer_workflow(
+def test_nested_planner_keeps_unified_plan_terminal(
     composer_runtime,
     workflow_store,
     iteration_store,
@@ -213,9 +195,7 @@ def test_planner_terminals_restricted_when_nested_in_outer_workflow(
         iteration_goal="child seg",
         attempt_budget=2,
     )
-    child_attempt = attempt_store.insert(
-        iteration_id=child_seg.id, attempt_sequence_no=1
-    )
+    child_attempt = attempt_store.insert(iteration_id=child_seg.id, attempt_sequence_no=1)
     orchestrator = AttemptOrchestrator(
         attempt=child_attempt,
         on_attempt_closed=lambda _id: None,
@@ -227,4 +207,4 @@ def test_planner_terminals_restricted_when_nested_in_outer_workflow(
     assert launched.agent_name == "planner"
     assert launched.agent_def is not None
     assert launched.agent_def.system_prompt == "PLANNER"
-    assert launched.agent_def.terminals == ["submit_plan_closes_goal"]
+    assert launched.agent_def.terminals == ["submit_planner_outcome"]

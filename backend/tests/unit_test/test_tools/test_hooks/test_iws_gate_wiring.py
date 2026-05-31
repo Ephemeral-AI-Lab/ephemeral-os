@@ -1,7 +1,7 @@
 """Contract: isolated-workspace gate wiring (plan G1/G2).
 
 Mirrors ``test_advisor_gate_wiring.py`` but for the new gates:
-- ``RequireNoInflightBackgroundTasks`` is on ``enter``/``exit`` and all seven
+- ``RequireNoInflightBackgroundTasks`` is on ``enter``/``exit`` and all four
   main terminals, ordered BEFORE ``AdvisorApprovalPreHook`` on terminals, and
   absent from the helper terminals;
 - each gate instance's ``target_tool`` equals its host tool's own name
@@ -27,13 +27,10 @@ from tools._hooks.require_no_inflight_background_tasks import (
 
 _MAIN_TERMINAL_NAMES = frozenset(
     {
-        "submit_plan_closes_goal",
-        "submit_plan_defers_goal",
-        "submit_generator_success",
-        "submit_generator_failure",
+        "submit_planner_outcome",
+        "submit_generator_outcome",
         "submit_workflow_handoff",
-        "submit_reduction_success",
-        "submit_reduction_failure",
+        "submit_reducer_outcome",
     }
 )
 

@@ -5,8 +5,8 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing import Any
 
-from tools.submission.reducer import submit_reduction_failure
-from tools.submission.planner import submit_plan_closes_goal
+from tools.submission.reducer import submit_reducer_outcome
+from tools.submission.planner import submit_planner_outcome
 
 from task_center_runner.scenarios.base import ScenarioBase, ScenarioContext, ToolCallSpec
 
@@ -37,15 +37,15 @@ class PlannerCycleInDeps(ScenarioBase):
     name = "planner_validation.cycle_in_deps"
 
     def planner_response(self, ctx: ScenarioContext) -> ToolCallSpec:  # noqa: ARG002
-        return ToolCallSpec(submit_plan_closes_goal, _cycle_plan())
+        return ToolCallSpec(submit_planner_outcome, _cycle_plan())
 
     def executor_actions(self, ctx: ScenarioContext) -> Sequence[str]:  # noqa: ARG002
         return ()
 
     def reducer_response(self, ctx: ScenarioContext) -> ToolCallSpec:  # noqa: ARG002
         return ToolCallSpec(
-            submit_reduction_failure,
-            {"outcome": "Unexpected reducer invocation under cyclic plan."},
+            submit_reducer_outcome,
+            {"status": "failed", "outcome": "Unexpected reducer invocation under cyclic plan."},
         )
 
 

@@ -25,8 +25,8 @@ class AttemptSubmissionContextError(RuntimeError):
 class AttemptSubmissionContext:
     """Attempt-bound submission context.
 
-    Resolved when the executor task is attached to a Attempt. Tools
-    that strictly require attempt context (e.g. ``submit_reduction``) keep
+    Resolved when a TaskCenter task is attached to an Attempt. Tools that
+    strictly require attempt context (planner and reducer submissions) keep
     using this resolver.
     """
 
@@ -45,14 +45,11 @@ def resolve_attempt_submission_context(
     """Resolve the current TaskCenter task into durable harness attempt context.
 
     Strict attempt mode — raises :class:`AttemptSubmissionContextError` if the
-    task is not attached to a Attempt. Use this resolver from tools
-    that genuinely require a attempt (planner submissions, reducer
-    submissions).
+    task is not attached to an Attempt. Use this resolver from tools that
+    genuinely require an attempt (planner and reducer submissions).
     """
     runtime, task, task_id = _resolve_runtime_task(context)
-    return _resolve_attempt_context(
-        runtime=runtime, task=task, task_id=task_id, context=context
-    )
+    return _resolve_attempt_context(runtime=runtime, task=task, task_id=task_id, context=context)
 
 
 def _resolve_runtime_task(
@@ -67,15 +64,11 @@ def _resolve_runtime_task(
 
     task_id = str(context.get("task_center_task_id") or "")
     if not task_id or task_id.isspace():
-        raise AttemptSubmissionContextError(
-            "Missing TaskCenter task id for this submission."
-        )
+        raise AttemptSubmissionContextError("Missing TaskCenter task id for this submission.")
 
     task = runtime.task_store.get_task(task_id)
     if task is None:
-        raise AttemptSubmissionContextError(
-            f"TaskCenter task {task_id!r} was not found."
-        )
+        raise AttemptSubmissionContextError(f"TaskCenter task {task_id!r} was not found.")
     return runtime, task, task_id
 
 
@@ -89,7 +82,7 @@ def _resolve_attempt_context(
     """Build :class:`AttemptSubmissionContext` from an already-fetched task.
 
     Shared between :func:`resolve_attempt_submission_context` and the
-    attempt-mode branch of :func:`resolve_executor_submission_context` so the
+    attempt-mode branch of :func:`resolve_generator_submission_context` so the
     task row is fetched exactly once per call.
     """
     attempt_id = attempt_id_from_task_id(task_id) or ""
@@ -100,9 +93,7 @@ def _resolve_attempt_context(
 
     metadata_attempt_id = str(context.get("task_center_attempt_id") or "")
     if metadata_attempt_id.isspace():
-        raise AttemptSubmissionContextError(
-            "TaskCenter attempt metadata is blank."
-        )
+        raise AttemptSubmissionContextError("TaskCenter attempt metadata is blank.")
     if metadata_attempt_id and metadata_attempt_id != attempt_id:
         raise AttemptSubmissionContextError(
             "TaskCenter attempt metadata does not match the persisted task row."
@@ -110,21 +101,15 @@ def _resolve_attempt_context(
 
     attempt = runtime.attempt_store.get(attempt_id)
     if attempt is None:
-        raise AttemptSubmissionContextError(
-            f"Attempt {attempt_id!r} was not found."
-        )
+        raise AttemptSubmissionContextError(f"Attempt {attempt_id!r} was not found.")
 
     iteration = runtime.iteration_store.get(attempt.iteration_id)
     if iteration is None:
-        raise AttemptSubmissionContextError(
-            f"Iteration {attempt.iteration_id!r} was not found."
-        )
+        raise AttemptSubmissionContextError(f"Iteration {attempt.iteration_id!r} was not found.")
 
     workflow = runtime.workflow_store.get(iteration.workflow_id)
     if workflow is None:
-        raise AttemptSubmissionContextError(
-            f"Workflow {iteration.workflow_id!r} was not found."
-        )
+        raise AttemptSubmissionContextError(f"Workflow {iteration.workflow_id!r} was not found.")
 
     try:
         orchestrator = runtime.orchestrator_registry.get_or_raise(attempt_id)

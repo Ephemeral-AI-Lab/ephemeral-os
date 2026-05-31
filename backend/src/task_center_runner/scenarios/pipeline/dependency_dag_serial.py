@@ -15,17 +15,14 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing import Any
 
-from tools.submission.planner import submit_plan_closes_goal
-from tools.submission.reducer import submit_reduction_success
+from tools.submission.planner import submit_planner_outcome
+from tools.submission.reducer import submit_reducer_outcome
 
 from task_center_runner.scenarios.base import ScenarioBase, ScenarioContext, ToolCallSpec
 
 
 def _serial_chain_plan() -> dict[str, Any]:
-    spec = (
-        "Run a lightweight workspace preflight and report the observed "
-        "sandbox root."
-    )
+    spec = "Run a lightweight workspace preflight and report the observed sandbox root."
     return {
         "tasks": [
             {"id": "a", "agent_name": "executor", "needs": []},
@@ -49,15 +46,15 @@ class DependencyDagSerial(ScenarioBase):
     name = "pipeline.dependency_dag_serial"
 
     def planner_response(self, ctx: ScenarioContext) -> ToolCallSpec:  # noqa: ARG002
-        return ToolCallSpec(submit_plan_closes_goal, _serial_chain_plan())
+        return ToolCallSpec(submit_planner_outcome, _serial_chain_plan())
 
     def executor_actions(self, ctx: ScenarioContext) -> Sequence[str]:  # noqa: ARG002
         return ("preflight",)
 
     def reducer_response(self, ctx: ScenarioContext) -> ToolCallSpec:  # noqa: ARG002
         return ToolCallSpec(
-            submit_reduction_success,
-            {"outcome": "Serial DAG completed in dependency order."},
+            submit_reducer_outcome,
+            {"status": "success", "outcome": "Serial DAG completed in dependency order."},
         )
 
 

@@ -5,8 +5,8 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing import Any
 
-from tools.submission.planner import submit_plan_closes_goal
-from tools.submission.reducer import submit_reduction_success
+from tools.submission.planner import submit_planner_outcome
+from tools.submission.reducer import submit_reducer_outcome
 
 from task_center_runner.scenarios.base import (
     ScenarioBase,
@@ -35,14 +35,13 @@ def _plan(action_id: str, action_spec: str, summary_hint: str) -> dict[str, Any]
 
 
 class _PluginScenarioBase(ScenarioBase):
-
     action_id: str = ""
     action_spec: str = ""
     summary_path_hint: str = ""
 
     def planner_response(self, ctx: ScenarioContext) -> ToolCallSpec:  # noqa: ARG002
         return ToolCallSpec(
-            submit_plan_closes_goal,
+            submit_planner_outcome,
             _plan(self.action_id, self.action_spec, self.summary_path_hint),
         )
 
@@ -54,8 +53,9 @@ class _PluginScenarioBase(ScenarioBase):
 
     def reducer_response(self, ctx: ScenarioContext) -> ToolCallSpec:  # noqa: ARG002
         return ToolCallSpec(
-            submit_reduction_success,
+            submit_reducer_outcome,
             {
+                "status": "success",
                 "outcome": f"{self.action_id} plugin/LSP scenario completed.",
             },
         )

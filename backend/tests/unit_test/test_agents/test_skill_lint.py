@@ -29,10 +29,10 @@ def test_scan_passes_on_terminal_silent_skill(tmp_path: Path):
 
 
 def test_scan_rejects_submit_substring(tmp_path: Path):
-    path = _write_skill(tmp_path, "Pick submit_plan_closes_goal at the end.")
+    path = _write_skill(tmp_path, "Pick submit_planner_outcome at the end.")
     violations = scan_skill_file(path)
     assert violations
-    assert any("submit_plan_closes_goal" in v for v in violations)
+    assert any("submit_planner_outcome" in v for v in violations)
 
 
 def test_scan_rejects_invented_submit_substring(tmp_path: Path):
@@ -53,14 +53,12 @@ def test_scan_passes_on_bridging_language(tmp_path: Path):
 def test_scan_ignores_frontmatter(tmp_path: Path):
     """Frontmatter is stripped before scanning — author metadata is safe."""
     path = tmp_path / "SKILL.md"
-    path.write_text(
-        "---\nname: submit_plan_closes_goal_doc\n---\n\nClean body."
-    )
+    path.write_text("---\nname: submit_planner_outcome_doc\n---\n\nClean body.")
     assert scan_skill_file(path) == []
 
 
 def test_validate_skill_files_raises_with_definition_name(tmp_path: Path):
-    path = _write_skill(tmp_path, "Submit submit_plan_defers_goal now.")
+    path = _write_skill(tmp_path, "Submit submit_planner_outcome now.")
     bad = AgentDefinition(
         name="bad_planner",
         description="bad",
@@ -73,7 +71,7 @@ def test_validate_skill_files_raises_with_definition_name(tmp_path: Path):
     with pytest.raises(SkillLintError) as exc:
         validate_skill_files([bad])
     assert "bad_planner" in str(exc.value)
-    assert "submit_plan_defers_goal" in str(exc.value)
+    assert "submit_planner_outcome" in str(exc.value)
 
 
 def test_validate_skill_files_ignores_definitions_without_skill():
@@ -128,11 +126,7 @@ def test_shipped_planner_skills_pass_lint():
     from agents import load_agents_tree
 
     profiles = Path(__file__).resolve().parents[3] / "src" / "agents" / "profile"
-    defs = [
-        d
-        for d in load_agents_tree(profiles)
-        if d.skill is not None
-    ]
+    defs = [d for d in load_agents_tree(profiles) if d.skill is not None]
     # Sanity: the planner profile exists and declares a skill.
     names = {d.name for d in defs}
     assert "planner" in names

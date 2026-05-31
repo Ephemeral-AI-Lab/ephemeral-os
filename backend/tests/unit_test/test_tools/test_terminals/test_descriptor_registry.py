@@ -75,17 +75,13 @@ def test_descriptors_have_non_empty_focus_fields() -> None:
 
 
 def test_reducer_terminal_descriptors_use_assigned_task_contract() -> None:
-    success = TERMINAL_DESCRIPTORS["submit_reduction_success"]
-    failure = TERMINAL_DESCRIPTORS["submit_reduction_failure"]
-    combined = (
-        f"{success.selection_guidance}\n{success.advisor_review_focus}\n"
-        f"{failure.selection_guidance}\n{failure.advisor_review_focus}"
-    )
+    descriptor = TERMINAL_DESCRIPTORS["submit_reducer_outcome"]
+    combined = f"{descriptor.selection_guidance}\n{descriptor.advisor_review_focus}"
 
-    assert "finished the work in `<assigned_task>`" in success.selection_guidance
-    assert "cannot finish the work in `<assigned_task>`" in failure.selection_guidance
-    assert "assigned reducer work is actually complete" in success.advisor_review_focus
-    assert "prevents completing `<assigned_task>`" in failure.advisor_review_focus
+    assert 'status="success"' in descriptor.selection_guidance
+    assert 'status="failed"' in descriptor.selection_guidance
+    assert "assigned reducer work is actually complete" in descriptor.advisor_review_focus
+    assert "prevents completion" in descriptor.advisor_review_focus
     assert "gate" not in combined.lower()
     assert "slice it gates" not in combined
 
@@ -102,48 +98,36 @@ def test_generator_handoff_descriptor_requires_pre_edit_decomposition() -> None:
 
 
 def test_planner_terminal_descriptors_use_iteration_outcome_contract() -> None:
-    closes = TERMINAL_DESCRIPTORS["submit_plan_closes_goal"]
-    defers = TERMINAL_DESCRIPTORS["submit_plan_defers_goal"]
-    combined = (
-        f"{closes.selection_guidance}\n{closes.advisor_review_focus}\n"
-        f"{defers.selection_guidance}\n{defers.advisor_review_focus}"
-    )
+    descriptor = TERMINAL_DESCRIPTORS["submit_planner_outcome"]
+    combined = f"{descriptor.selection_guidance}\n{descriptor.advisor_review_focus}"
 
-    assert "reducer outcomes are enough" in closes.selection_guidance
-    assert "no known follow-up planner pass" in closes.selection_guidance
-    assert "another planner pass after" in defers.selection_guidance
-    assert "self-contained next scope" in defers.advisor_review_focus
+    assert "covers all current-iteration goal items" in descriptor.selection_guidance
+    assert "leaves no remaining items" in descriptor.selection_guidance
+    assert "deferred_goal_for_next_iteration" in descriptor.selection_guidance
+    assert "explicitly listed" in descriptor.advisor_review_focus
     assert "slice" not in combined.lower()
     assert "partial scope" not in combined.lower()
 
 
 def test_render_terminal_catalog_uses_selection_guidance() -> None:
-    terminals = ["submit_generator_success", "submit_generator_failure"]
+    terminals = ["submit_generator_outcome", "submit_reducer_outcome"]
     catalog = render_terminal_catalog(terminals, focus="selection_guidance")
     for name in terminals:
         assert f"`{name}`" in catalog
-    assert (
-        TERMINAL_DESCRIPTORS["submit_generator_success"].selection_guidance[:30]
-        in catalog
-    )
+    assert TERMINAL_DESCRIPTORS["submit_generator_outcome"].selection_guidance[:30] in catalog
 
 
 def test_render_terminal_catalog_uses_advisor_review_focus() -> None:
-    terminals = ["submit_generator_success", "submit_generator_failure"]
+    terminals = ["submit_generator_outcome", "submit_reducer_outcome"]
     catalog = render_terminal_catalog(terminals, focus="advisor_review_focus")
-    assert (
-        TERMINAL_DESCRIPTORS["submit_generator_success"].advisor_review_focus[:30]
-        in catalog
-    )
+    assert TERMINAL_DESCRIPTORS["submit_generator_outcome"].advisor_review_focus[:30] in catalog
 
 
 def test_render_terminal_catalog_uses_fallback_for_unknown_terminal() -> None:
     """Unknown terminals render a fallback bullet — the static completeness
     test is the strict drift guard, not the runtime renderer.
     """
-    out = render_terminal_catalog(
-        ["definitely_not_a_terminal"], focus="selection_guidance"
-    )
+    out = render_terminal_catalog(["definitely_not_a_terminal"], focus="selection_guidance")
     assert "definitely_not_a_terminal" in out
     assert "(no descriptor registered" in out
 

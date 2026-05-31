@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import importlib
 import json
 from pathlib import Path
 from typing import Any
@@ -11,10 +12,11 @@ import pytest
 
 from sandbox.api import WriteFileResult
 from tools._framework.core.base import ToolExecutionContextService
-import tools.sandbox.write_file as write_file_module
 from tools.sandbox.write_file import write_file
 
 from ._helpers import run_tool_safely
+
+write_file_module = importlib.import_module("tools.sandbox.write_file.write_file")
 
 
 class _WriteApi:

@@ -1,7 +1,5 @@
 """Package for the enter_isolated_workspace tool."""
 
-import sys
+from .definition import EnterIsolatedWorkspaceInput, enter_isolated_workspace
 
-from . import definition as _impl
-
-sys.modules[__name__] = _impl
+__all__ = ["EnterIsolatedWorkspaceInput", "enter_isolated_workspace"]

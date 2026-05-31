@@ -19,7 +19,7 @@ Implemented (reference scenarios):
 - :class:`InitialWorkflow`
 - :class:`NestedWorkflow`
 - :class:`NestedWorkflowFailure`
-- :class:`DeferredParentPlannerTerminalRouting`
+- :class:`DeferredParentPlannerUnifiedTerminal`
 """
 
 from __future__ import annotations
@@ -65,8 +65,8 @@ from task_center_runner.scenarios.pipeline.nested_workflow import (
     NestedWorkflow,
     NestedWorkflowFailure,
 )
-from task_center_runner.scenarios.pipeline.deferred_parent_planner_terminal_routing import (
-    DeferredParentPlannerTerminalRouting,
+from task_center_runner.scenarios.pipeline.deferred_parent_planner_unified_terminal import (
+    DeferredParentPlannerUnifiedTerminal,
 )
 
 __all__ = [
@@ -85,5 +85,5 @@ __all__ = [
     "InitialWorkflow",
     "NestedWorkflow",
     "NestedWorkflowFailure",
-    "DeferredParentPlannerTerminalRouting",
+    "DeferredParentPlannerUnifiedTerminal",
 ]

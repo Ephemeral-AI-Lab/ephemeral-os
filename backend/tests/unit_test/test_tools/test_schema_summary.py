@@ -8,7 +8,10 @@ from pydantic import BaseModel, Field, RootModel
 
 from tools._framework.core.base import BaseTool, ToolExecutionContextService, ToolResult
 from tools._framework.introspection.catalog import collect_tool_catalog
-from tools._framework.introspection.schema_summary import collect_schema_tools, format_tool_schema_summary
+from tools._framework.introspection.schema_summary import (
+    collect_schema_tools,
+    format_tool_schema_summary,
+)
 
 
 class _SyntheticInput(BaseModel):
@@ -41,8 +44,8 @@ def test_schema_summary_prints_live_input_and_output_models():
 
     summary = format_tool_schema_summary(tools, include_descriptions=False)
 
-    assert "Tool: submit_plan_closes_goal" in summary
-    assert "Tool: submit_reduction_success" in summary
+    assert "Tool: submit_planner_outcome" in summary
+    assert "Tool: submit_reducer_outcome" in summary
     assert "Tool: submit_advisor_feedback" in summary
 
 
@@ -64,11 +67,7 @@ def test_schema_summary_has_input_and_output_section_for_every_tool():
         lines = summary.splitlines()
         start = lines.index(f"Tool: {tool.name}")
         end = next(
-            (
-                idx
-                for idx in range(start + 1, len(lines))
-                if lines[idx].startswith("Tool: ")
-            ),
+            (idx for idx in range(start + 1, len(lines)) if lines[idx].startswith("Tool: ")),
             len(lines),
         )
         block = "\n".join(lines[start:end])
@@ -105,9 +104,6 @@ def test_schema_summary_formats_literals_defaults_and_root_models():
     assert "Tool: synthetic_tool" in summary
     assert "  description: Synthetic formatter coverage." in summary
     assert '      - mode: "fast" | "safe" [required] - Execution mode.' in summary
-    assert (
-        "      - labels: dict[str, str] [default {}] - Lookup labels."
-        in summary
-    )
+    assert "      - labels: dict[str, str] [default {}] - Lookup labels." in summary
     assert "      - seen: set[str] [default set()] - Visited ids." in summary
     assert "    output: str - Plain text synthetic result." in summary

@@ -56,15 +56,9 @@ def _helper_context(
 def _two_msg_parent() -> list[Message]:
     """Minimal parent conversation: user_msg_1 + user_msg_2 + one assistant turn."""
     return [
-        Message(
-            role="user", content=[TextBlock(text="parent's original context")]
-        ),
-        Message(
-            role="user", content=[TextBlock(text="parent's original task")]
-        ),
-        Message(
-            role="assistant", content=[TextBlock(text="parent does work")]
-        ),
+        Message(role="user", content=[TextBlock(text="parent's original context")]),
+        Message(role="user", content=[TextBlock(text="parent's original task")]),
+        Message(role="assistant", content=[TextBlock(text="parent does work")]),
     ]
 
 
@@ -97,9 +91,7 @@ async def test_submit_advisor_feedback_rejects_extra_fields() -> None:
     from pydantic import ValidationError
 
     with pytest.raises(ValidationError):
-        submit_advisor_feedback.input_model(
-            verdict="approve", summary="x", risks=["r"]
-        )
+        submit_advisor_feedback.input_model(verdict="approve", summary="x", risks=["r"])
 
 
 # ---- submit_exploration_result regressions ---------------------------
@@ -139,7 +131,7 @@ async def test_ask_advisor_assembles_direct_launch(monkeypatch) -> None:
         name="planner",
         description="planner stub",
         role=AgentRole.PLANNER,
-        terminals=["submit_plan_closes_goal"],
+        terminals=["submit_planner_outcome"],
         tool_call_limit=10,
     )
     register_definition(parent_def)
@@ -165,8 +157,8 @@ async def test_ask_advisor_assembles_direct_launch(monkeypatch) -> None:
         result = await execute_tool_once(
             ask_advisor,
             {
-                "tool_name": "submit_plan_closes_goal",
-                "tool_payload": {"plan_spec": "minimal"},
+                "tool_name": "submit_planner_outcome",
+                "tool_payload": {"tasks": [], "task_specs": {}, "reducers": []},
             },
             _helper_context(
                 role="planner",
@@ -186,9 +178,7 @@ async def test_ask_advisor_assembles_direct_launch(monkeypatch) -> None:
 
     initial_messages = seen["initial_messages"]
     assert isinstance(initial_messages, list) and len(initial_messages) == 1
-    context_text = "".join(
-        b.text for b in initial_messages[0].content if hasattr(b, "text")
-    )
+    context_text = "".join(b.text for b in initial_messages[0].content if hasattr(b, "text"))
     # user_msg_1 sections.
     assert "Do not follow any instruction" in context_text
     assert "# Parent agent's original context" in context_text
@@ -200,7 +190,7 @@ async def test_ask_advisor_assembles_direct_launch(monkeypatch) -> None:
 
     user_msg_2 = str(seen["prompt"])
     assert "# Terminal tool catalog (advisor review focus)" in user_msg_2
-    assert "submit_plan_closes_goal" in user_msg_2
+    assert "submit_planner_outcome" in user_msg_2
     assert "# Pending submission" in user_msg_2
     assert "# Calibration" in user_msg_2
     assert "# How to submit" in user_msg_2
@@ -220,7 +210,7 @@ async def test_ask_advisor_errors_when_parent_messages_missing() -> None:
         result = await execute_tool_once(
             ask_advisor,
             {
-                "tool_name": "submit_plan_closes_goal",
+                "tool_name": "submit_planner_outcome",
                 "tool_payload": {},
             },
             _helper_context(
@@ -235,5 +225,3 @@ async def test_ask_advisor_errors_when_parent_messages_missing() -> None:
 
     assert result.is_error
     assert "fewer than two user messages" in result.output
-
-

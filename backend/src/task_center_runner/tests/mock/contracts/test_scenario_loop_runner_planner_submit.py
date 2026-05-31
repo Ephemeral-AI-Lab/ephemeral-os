@@ -2,8 +2,8 @@
 
 Before adapting the probe-heavy executor, prove the riskiest *new* path: the
 ``ScenarioLoopRunner`` + ``extras["runtime_config"]`` injection driving a real
-TaskCenter submission terminal (``submit_plan_closes_goal`` →
-``submit_generator_success`` → ``submit_reduction_success``) through
+TaskCenter submission terminal (``submit_planner_outcome`` →
+``submit_generator_outcome(status="success", ...)`` → ``submit_reducer_outcome``) through
 ``run_pipeline`` → ``start_task_center_run`` → launcher → ``run_ephemeral_agent``,
 landing a closed workflow in store state. Asserted via ``graph_summary`` /
 ``task_center_status`` (real store), not lifecycle events.
@@ -22,8 +22,8 @@ from task_center_runner.core.runner import run_scenario
 from task_center_runner.core.stores import TaskCenterStoreBundle
 from task_center_runner.scenarios.base import ScenarioBase, ScenarioContext, ToolCallSpec
 from task_center_runner.tests._live_config import database_configured
-from tools.submission.reducer import submit_reduction_success
-from tools.submission.planner import submit_plan_closes_goal
+from tools.submission.reducer import submit_reducer_outcome
+from tools.submission.planner import submit_planner_outcome
 
 pytestmark = pytest.mark.asyncio
 
@@ -35,7 +35,7 @@ class _PlannerSubmitProof(ScenarioBase):
 
     def planner_response(self, ctx: ScenarioContext) -> ToolCallSpec:
         return ToolCallSpec(
-            submit_plan_closes_goal,
+            submit_planner_outcome,
             {
                 "tasks": [{"id": "t1", "agent_name": "executor", "needs": []}],
                 "task_specs": {"t1": "Trivial executor task (no probe)."},
@@ -54,8 +54,8 @@ class _PlannerSubmitProof(ScenarioBase):
 
     def reducer_response(self, ctx: ScenarioContext) -> ToolCallSpec:
         return ToolCallSpec(
-            submit_reduction_success,
-            {"outcome": "Proof accepted."},
+            submit_reducer_outcome,
+            {"status": "success", "outcome": "Proof accepted."},
         )
 
 

@@ -28,7 +28,7 @@ from tools._hooks.advisor_approval import AdvisorApprovalPreHook
 from ._advisor_approval_fixtures import build_advisor_approval_messages
 
 
-_TARGET_TOOL = "submit_generator_success"
+_TARGET_TOOL = "submit_generator_outcome"
 
 
 class _DummyInput(BaseModel):
@@ -78,7 +78,7 @@ async def test_approve_for_target_passes() -> None:
 # ----- Case 3 ---------------------------------------------------------------
 @pytest.mark.asyncio
 async def test_approve_for_different_tool_fails() -> None:
-    messages = build_advisor_approval_messages(tool_name="submit_generator_failure")
+    messages = build_advisor_approval_messages(tool_name="submit_reducer_outcome")
     result = await _hook().run(_DummyInput(), _context(messages))
     assert result.status == "fail"
     assert _BLOCKED_PREAMBLE in result.reason
@@ -107,7 +107,7 @@ async def test_reject_fails_with_uniform_message() -> None:
 @pytest.mark.asyncio
 async def test_latest_of_two_calls_wins_when_latest_is_approve() -> None:
     older = build_advisor_approval_messages(
-        tool_name="submit_generator_failure",
+        tool_name="submit_reducer_outcome",
         verdict="reject",
         summary="wrong tool",
         tool_use_id="toolu_older",
@@ -143,9 +143,7 @@ async def test_latest_reject_overrides_prior_approve() -> None:
 # ----- Case 7 ---------------------------------------------------------------
 @pytest.mark.asyncio
 async def test_advisor_is_error_treated_as_failed_advisor() -> None:
-    messages = build_advisor_approval_messages(
-        tool_name=_TARGET_TOOL, is_error=True
-    )
+    messages = build_advisor_approval_messages(tool_name=_TARGET_TOOL, is_error=True)
     result = await _hook().run(_DummyInput(), _context(messages))
     assert result.status == "fail"
     assert _reason(result) == "advisor_failed"
@@ -155,7 +153,8 @@ async def test_advisor_is_error_treated_as_failed_advisor() -> None:
 @pytest.mark.asyncio
 async def test_unknown_verdict_is_structural_error() -> None:
     messages = build_advisor_approval_messages(
-        tool_name=_TARGET_TOOL, verdict="approved"  # typo
+        tool_name=_TARGET_TOOL,
+        verdict="approved",  # typo
     )
     result = await _hook().run(_DummyInput(), _context(messages))
     assert result.status == "fail"
@@ -189,13 +188,10 @@ async def test_result_without_originating_call_is_unpaired() -> None:
 def test_hook_wired_to_main_terminals_and_omitted_from_helpers() -> None:
     """Structural guard: every main terminal carries the hook; helpers do not."""
     main_terminals = (
-        "submit_plan_closes_goal",
-        "submit_plan_defers_goal",
-        "submit_generator_success",
-        "submit_generator_failure",
+        "submit_planner_outcome",
+        "submit_generator_outcome",
         "submit_workflow_handoff",
-        "submit_reduction_success",
-        "submit_reduction_failure",
+        "submit_reducer_outcome",
     )
     helper_terminals = (
         "submit_advisor_feedback",
@@ -218,9 +214,7 @@ def test_hook_wired_to_main_terminals_and_omitted_from_helpers() -> None:
         tool = create_tool(name, ctx)
         hooks = tuple(getattr(tool, "pre_hooks", ()) or ())
         advisor_hooks = [h for h in hooks if isinstance(h, AdvisorApprovalPreHook)]
-        assert not advisor_hooks, (
-            f"{name!r}: helper terminal must not carry AdvisorApprovalPreHook"
-        )
+        assert not advisor_hooks, f"{name!r}: helper terminal must not carry AdvisorApprovalPreHook"
 
 
 @pytest.mark.asyncio
@@ -254,9 +248,7 @@ async def test_originating_use_id_must_be_ask_advisor() -> None:
             )
         ],
     )
-    result = await _hook().run(
-        _DummyInput(), _context([fake_assistant, user_msg])
-    )
+    result = await _hook().run(_DummyInput(), _context([fake_assistant, user_msg]))
     # Even though a ToolUseBlock with this id exists, it is not ask_advisor —
     # so the pair is unresolvable.
     assert result.status == "fail"

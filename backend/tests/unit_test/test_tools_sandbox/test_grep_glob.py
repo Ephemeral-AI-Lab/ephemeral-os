@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import importlib
 import json
 from pathlib import Path
 
@@ -9,8 +10,9 @@ import pytest
 
 from sandbox.shared.models import GlobResult, GrepResult
 from tools._framework.core.base import ToolExecutionContextService
-import tools.sandbox.glob as glob_tool_module
-import tools.sandbox.grep as grep_tool_module
+
+glob_tool_module = importlib.import_module("tools.sandbox.glob.glob")
+grep_tool_module = importlib.import_module("tools.sandbox.grep.grep")
 
 
 def _ctx(services: dict[str, object] | None = None) -> ToolExecutionContextService:

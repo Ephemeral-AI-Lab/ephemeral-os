@@ -63,7 +63,7 @@
     <div class="node"><strong>ContextScope</strong><small>workflow, iteration, attempt, task ids</small></div>
     <div class="node"><strong>ContextEngine</strong><small>role-scoped AgentContext</small></div>
     <div class="node"><strong>XML + guidance</strong><small>pure render functions</small></div>
-    <div class="node warn"><strong>TerminalToolRouter</strong><small>effective terminal copy</small></div>
+    <div class="node warn"><strong>Profile terminals</strong><small>terminal catalog</small></div>
     <div class="node good"><strong>AgentEntryMessages</strong><small>context, guidance, skill</small></div>
   </div>
 </div>
@@ -72,17 +72,17 @@
 <section id="runtime-and-profiles" data-last-reviewed-commit="HEAD" data-evidence-paths="backend/src/prompt/runtime_prompt.py backend/src/engine/agent/factory.py backend/src/agents/definition/loader.py backend/src/agents/definition/model.py backend/src/agents/profile/main backend/tests/unit_test/test_engine/test_agent_system_prompt.py backend/tests/unit_test/test_prompt/test_runtime_prompt.py backend/tests/unit_test/test_agents">
 <h2>Runtime And Profiles <a class="anchor" href="#runtime-and-profiles">#</a></h2>
 <p><code>build_runtime_system_prompt()</code> reads settings and returns the base runtime instruction text, including fast-mode guidance when configured. <code>engine.agent.factory._build_agent_system_prompt()</code> appends the loaded <code>AgentDefinition.system_prompt</code> and the terminal warning section derived from the actual tool registry.</p>
-<p>Main profile loading is file-backed. <code>load_agents_tree()</code> parses Markdown frontmatter, defaults the name from the filename, validates relative skill and terminal-routing paths, and prepends <code>_main_role_contract.md</code> to the main-role profiles. The profile body remains the system-prompt body; launch-specific context is not injected here.</p>
+<p>Main profile loading is file-backed. <code>load_agents_tree()</code> parses Markdown frontmatter, defaults the name from the filename, validates relative skill paths, and prepends <code>_main_role_contract.md</code> to the main-role profiles. The profile body remains the system-prompt body; launch-specific context is not injected here.</p>
 <div class="trace-grid">
-  <div>Frontmatter</div><div>Main profiles declare role, allowed tools, terminals, notification triggers, context role id, optional skill, and optional terminal-routing module.</div>
+  <div>Frontmatter</div><div>Main profiles declare role, allowed tools, terminals, notification triggers, context role id, and optional skill.</div>
   <div>Terminal warning</div><div><code>_finalize_tool_registry_and_prompt()</code> derives terminal names from registered tool classes and appends the termination-condition warning.</div>
   <div>Validation</div><div><code>validate_agent_definitions_resolved()</code> runs skill-file linting. It no longer validates against a process-global context recipe registry.</div>
 </div>
 </section>
 
-<section id="composer-rows" data-last-reviewed-commit="HEAD" data-evidence-paths="backend/src/task_center/agent_launch/composer.py backend/src/task_center/agent_launch/entry_messages.py backend/src/task_center/context_engine/skill_message.py backend/src/task_center/context_engine/task_guidance.py backend/src/task_center/_core/terminal_routing.py backend/src/task_center/attempt/launch.py backend/src/tools/_terminals/registry.py backend/tests/unit_test/test_task_center/test_agent_launch/test_composer.py backend/tests/unit_test/test_task_center/test_agent_launch/test_terminal_tool_router.py backend/tests/unit_test/test_task_center/test_lifecycle/test_planner_capability_fork.py">
+<section id="composer-rows" data-last-reviewed-commit="HEAD-plus-worktree" data-evidence-paths="backend/src/task_center/agent_launch/composer.py backend/src/task_center/agent_launch/entry_messages.py backend/src/task_center/context_engine/skill_message.py backend/src/task_center/context_engine/task_guidance.py backend/src/task_center/attempt/launch.py backend/src/tools/_terminals/registry.py backend/src/tools/submission/notification_triggers backend/tests/unit_test/test_task_center/test_agent_launch/test_composer.py backend/tests/unit_test/test_task_center/test_lifecycle/test_planner_capability_fork.py">
 <h2>Composer Rows <a class="anchor" href="#composer-rows">#</a></h2>
-<p><code>AgentEntryComposer.compose()</code> is the TaskCenter launch seam. It resolves the effective profile and terminal set, asks <code>ContextEngine</code> for an <code>AgentContext</code>, renders context XML, renders task guidance from the same context object, and appends the optional skill row.</p>
+<p><code>AgentEntryComposer.compose()</code> is the TaskCenter launch seam. It uses the profile terminal set directly, asks <code>ContextEngine</code> for an <code>AgentContext</code>, renders context XML, renders task guidance from the same context object, and appends the optional skill row.</p>
 <table>
   <thead><tr><th>Launch row</th><th>Owner</th><th>Current shape</th></tr></thead>
   <tbody>
@@ -93,7 +93,7 @@
   </tbody>
 </table>
 <p><code>EphemeralAttemptAgentLauncher._run_launch()</code> maps those rows into the runner call. When both task guidance and skill exist, the skill row is the runner prompt and context plus guidance are initial messages. When only guidance exists, guidance is the runner prompt and context is the initial message. With no guidance, context is the prompt.</p>
-<div class="callout warn"><span class="label">Effective terminals</span> Planner and executor frontmatter stays broad. Launch routing filters it by nested workflow depth: nested planners keep only <code>submit_plan_closes_goal</code>, and nested executors lose <code>submit_workflow_handoff</code>. The registered profile is not mutated.</div>
+<div class="callout warn"><span class="label">Nested workflow policy</span> Planner and executor frontmatter stays broad. Nested planners are reminded that <code>deferred_goal_for_next_iteration</code> is disallowed, and nested generators are reminded that <code>submit_workflow_handoff</code> is disallowed; the actual rejection happens in submission prehooks.</div>
 </section>
 
 <section id="context-engine" data-last-reviewed-commit="HEAD" data-evidence-paths="backend/src/task_center/context_engine/context.py backend/src/task_center/context_engine/engine.py backend/src/task_center/context_engine/scope.py backend/src/task_center/context_engine/xml.py backend/src/task_center/context_engine/task_guidance.py backend/tests/unit_test/test_task_center/test_context_engine/test_agent_context.py">

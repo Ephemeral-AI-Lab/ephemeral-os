@@ -1,13 +1,5 @@
-"""Package for the `multi_edit` tool.
+"""Package for the `multi_edit` tool."""
 
-`__init__.py` re-exports the impl module so that
-`tools...multi_edit` and `tools...multi_edit.multi_edit` resolve to the same
-module — keeps monkeypatching `tools...multi_edit.<name>` working, mirroring
-the `edit_file` package layout.
-"""
+from .multi_edit import multi_edit
 
-import sys
-
-from . import multi_edit as _impl
-
-sys.modules[__name__] = _impl
+__all__ = ["multi_edit"]

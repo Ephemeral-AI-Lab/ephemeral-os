@@ -10,14 +10,8 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 
-from tools.submission.reducer import (
-    submit_reduction_failure,
-    submit_reduction_success,
-)
-from tools.submission.planner import (
-    submit_plan_closes_goal,
-    submit_plan_defers_goal,
-)
+from tools.submission.reducer import submit_reducer_outcome
+from tools.submission.planner import submit_planner_outcome
 
 from task_center_runner.scenarios.base import (
     ScenarioBase,
@@ -30,8 +24,7 @@ _PREFLIGHT_FULL_PLAN: dict = {
     "tasks": [{"id": "preflight", "agent_name": "executor", "needs": []}],
     "task_specs": {
         "preflight": (
-            "Run a lightweight workspace preflight and report the observed "
-            "sandbox root."
+            "Run a lightweight workspace preflight and report the observed sandbox root."
         ),
     },
     "reducers": [
@@ -107,10 +100,10 @@ class CorrectnessTesting(ScenarioBase):
         iteration = ctx.iteration
         attempt = ctx.attempt
         if iteration.sequence_no == 1 and attempt.attempt_sequence_no == 1:
-            return ToolCallSpec(submit_plan_closes_goal, dict(_PREFLIGHT_FULL_PLAN))
+            return ToolCallSpec(submit_planner_outcome, dict(_PREFLIGHT_FULL_PLAN))
         if iteration.sequence_no == 1:
-            return ToolCallSpec(submit_plan_defers_goal, dict(_INTEGRITY_PARTIAL_PLAN))
-        return ToolCallSpec(submit_plan_closes_goal, dict(_FINAL_PROBE_FULL_PLAN))
+            return ToolCallSpec(submit_planner_outcome, dict(_INTEGRITY_PARTIAL_PLAN))
+        return ToolCallSpec(submit_planner_outcome, dict(_FINAL_PROBE_FULL_PLAN))
 
     def executor_actions(self, ctx: ScenarioContext) -> Sequence[str]:
         prompt = ctx.context_message or ctx.prompt or ""
@@ -125,8 +118,9 @@ class CorrectnessTesting(ScenarioBase):
         attempt = ctx.attempt
         if iteration.sequence_no == 1 and attempt.attempt_sequence_no == 1:
             return ToolCallSpec(
-                submit_reduction_failure,
+                submit_reducer_outcome,
                 {
+                    "status": "failed",
                     "outcome": (
                         "Intentional mock failure to verify iteration retry and "
                         "failed-attempt context."
@@ -134,8 +128,9 @@ class CorrectnessTesting(ScenarioBase):
                 },
             )
         return ToolCallSpec(
-            submit_reduction_success,
+            submit_reducer_outcome,
             {
+                "status": "success",
                 "outcome": "Mock reducer accepted the current attempt evidence.",
             },
         )

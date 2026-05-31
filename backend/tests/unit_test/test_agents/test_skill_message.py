@@ -16,9 +16,7 @@ def _make_planner_def(terminals: list[str] | None = None) -> AgentDefinition:
         tool_call_limit=10,
         role=AgentRole.PLANNER,
         context_recipe="planner",
-        terminals=terminals
-        if terminals is not None
-        else ["submit_plan_closes_goal", "submit_plan_defers_goal"],
+        terminals=terminals if terminals is not None else ["submit_planner_outcome"],
     )
 
 
@@ -32,9 +30,7 @@ def test_build_skill_message_has_load_header_skill_block_and_terminal_block(
 ):
     skill_file = tmp_path / "planner" / "SKILL.md"
     skill_file.parent.mkdir()
-    skill_file.write_text(
-        "---\nname: planner\n---\n\n# Planner skill\n\nWorkflow text."
-    )
+    skill_file.write_text("---\nname: planner\n---\n\n# Planner skill\n\nWorkflow text.")
     msg = build_skill_message(skill_file, _make_planner_def())
     assert msg is not None
 
@@ -54,9 +50,7 @@ def test_terminal_tool_selection_block_matches_registry_catalog(tmp_path: Path):
     skill_file = tmp_path / "planner" / "SKILL.md"
     skill_file.parent.mkdir()
     skill_file.write_text("# body")
-    planner_def = _make_planner_def(
-        terminals=["submit_plan_closes_goal", "submit_plan_defers_goal"]
-    )
+    planner_def = _make_planner_def(terminals=["submit_planner_outcome"])
 
     msg = build_skill_message(skill_file, planner_def)
     assert msg is not None
@@ -64,9 +58,7 @@ def test_terminal_tool_selection_block_matches_registry_catalog(tmp_path: Path):
     expected_catalog = render_terminal_catalog(
         list(planner_def.terminals), focus="selection_guidance"
     )
-    block = msg.split("<terminal_tool_selection>", 1)[1].split(
-        "</terminal_tool_selection>", 1
-    )[0]
+    block = msg.split("<terminal_tool_selection>", 1)[1].split("</terminal_tool_selection>", 1)[0]
     assert expected_catalog in block, (
         "row-4 <terminal_tool_selection> must include the same catalog text as row 3"
     )

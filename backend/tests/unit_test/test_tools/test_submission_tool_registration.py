@@ -12,13 +12,10 @@ from tools.submission.planner import PlanTaskInput
 
 
 PHASE03_TOOLS = (
-    "submit_plan_closes_goal",
-    "submit_plan_defers_goal",
+    "submit_planner_outcome",
     "submit_workflow_handoff",
-    "submit_generator_success",
-    "submit_generator_failure",
-    "submit_reduction_success",
-    "submit_reduction_failure",
+    "submit_generator_outcome",
+    "submit_reducer_outcome",
     "ask_advisor",
     "submit_advisor_feedback",
     "submit_exploration_result",
@@ -30,11 +27,16 @@ def test_submission_tools_registered() -> None:
 
 
 def test_tool_registry_renamed() -> None:
-    """PR 1 acceptance tripwire: planner-defers tool name is new, old is gone."""
-    assert has_tool("submit_plan_defers_goal")
-    assert has_tool("submit_plan_closes_goal")
-    assert has_tool("submit_generator_success")
-    assert has_tool("submit_generator_failure")
+    """Unified submission names are registered and split terminals are gone."""
+    assert has_tool("submit_planner_outcome")
+    assert has_tool("submit_generator_outcome")
+    assert has_tool("submit_reducer_outcome")
+    assert not has_tool("submit_plan_defers_goal")
+    assert not has_tool("submit_plan_closes_goal")
+    assert not has_tool("submit_generator_success")
+    assert not has_tool("submit_generator_failure")
+    assert not has_tool("submit_reduction_success")
+    assert not has_tool("submit_reduction_failure")
     assert not has_tool("submit_plan_continues_goal")
     assert not has_tool("submit_execution_success")
     assert not has_tool("submit_execution_blocker")

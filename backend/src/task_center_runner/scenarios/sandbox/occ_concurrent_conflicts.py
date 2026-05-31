@@ -20,8 +20,8 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 
-from tools.submission.planner import submit_plan_closes_goal
-from tools.submission.reducer import submit_reduction_success
+from tools.submission.planner import submit_planner_outcome
+from tools.submission.reducer import submit_reducer_outcome
 
 from task_center_runner.scenarios.base import ScenarioBase, ScenarioContext, ToolCallSpec
 
@@ -56,18 +56,18 @@ class OccConcurrentConflicts(ScenarioBase):
     name = "sandbox.occ_concurrent_conflicts"
 
     def planner_response(self, ctx: ScenarioContext) -> ToolCallSpec:  # noqa: ARG002
-        return ToolCallSpec(submit_plan_closes_goal, dict(_INTEGRITY_PLAN))
+        return ToolCallSpec(submit_planner_outcome, dict(_INTEGRITY_PLAN))
 
     def executor_actions(self, ctx: ScenarioContext) -> Sequence[str]:  # noqa: ARG002
         return ("sandbox_integrity",)
 
     def reducer_response(self, ctx: ScenarioContext) -> ToolCallSpec:  # noqa: ARG002
         return ToolCallSpec(
-            submit_reduction_success,
+            submit_reducer_outcome,
             {
+                "status": "success",
                 "outcome": (
-                    "Sandbox integrity probe captured both batch-edit and "
-                    "conflict evidence."
+                    "Sandbox integrity probe captured both batch-edit and conflict evidence."
                 ),
             },
         )

@@ -1,4 +1,4 @@
-"""Acceptance tests for agent dispatch and terminal-routing cleanup.
+"""Acceptance tests for agent dispatch and terminal-surface cleanup.
 
 These pin the live invariants after profile variants were removed: planner
 dispatchability is explicit, validation accepts the single planner shape, and
@@ -88,7 +88,7 @@ def test_ac9_planner_md_shape_passes_validation() -> None:
         description="planner",
         role=AgentRole.PLANNER,
         context_recipe="planner",
-        terminals=["submit_plan_closes_goal", "submit_plan_defers_goal"],
+        terminals=["submit_planner_outcome"],
         tool_call_limit=10,
     )
     register_definition(planner)
@@ -114,7 +114,7 @@ def test_ac10_factory_metadata_role_matches_role_value_exactly() -> None:
             description="ac10 fixture",
             role=kind,
             allowed_tools=[],
-            terminals=["submit_generator_success"],
+            terminals=["submit_generator_outcome"],
             tool_call_limit=10,
         )
         registry_metadata: list[dict] = []
@@ -175,6 +175,5 @@ def test_ac10_factory_metadata_role_matches_role_value_exactly() -> None:
         assert registry_metadata, "tool factory should have been invoked"
         captured_role = registry_metadata[-1]["role"]
         assert captured_role == kind.value, (
-            f"metadata['role']={captured_role!r} must equal "
-            f"role.value={kind.value!r} exactly"
+            f"metadata['role']={captured_role!r} must equal role.value={kind.value!r} exactly"
         )

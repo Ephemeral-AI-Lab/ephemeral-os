@@ -13,8 +13,8 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing import Any
 
-from tools.submission.planner import submit_plan_closes_goal
-from tools.submission.reducer import submit_reduction_success
+from tools.submission.planner import submit_planner_outcome
+from tools.submission.reducer import submit_reducer_outcome
 
 from task_center_runner.scenarios.base import ScenarioBase, ScenarioContext, ToolCallSpec
 
@@ -93,7 +93,7 @@ class HighConcurrencyLayerstackOverlayOcc(ScenarioBase):
     name = "sandbox.high_concurrency_layerstack_overlay_occ"
 
     def planner_response(self, ctx: ScenarioContext) -> ToolCallSpec:  # noqa: ARG002
-        return ToolCallSpec(submit_plan_closes_goal, _plan())
+        return ToolCallSpec(submit_planner_outcome, _plan())
 
     def executor_actions(self, ctx: ScenarioContext) -> Sequence[str]:
         context_message = ctx.context_message or ctx.prompt or ""
@@ -108,8 +108,9 @@ class HighConcurrencyLayerstackOverlayOcc(ScenarioBase):
 
     def reducer_response(self, ctx: ScenarioContext) -> ToolCallSpec:  # noqa: ARG002
         return ToolCallSpec(
-            submit_reduction_success,
+            submit_reducer_outcome,
             {
+                "status": "success",
                 "outcome": (
                     "High-concurrency sandbox pressure run completed with "
                     "worker fragments, overlay capture, and OCC conflict "

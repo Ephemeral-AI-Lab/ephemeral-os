@@ -28,17 +28,14 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing import Any
 
-from tools.submission.planner import submit_plan_closes_goal
-from tools.submission.reducer import submit_reduction_success
+from tools.submission.planner import submit_planner_outcome
+from tools.submission.reducer import submit_reducer_outcome
 
 from task_center_runner.scenarios.base import ScenarioBase, ScenarioContext, ToolCallSpec
 
 
 def _mixed_topology_plan() -> dict[str, Any]:
-    spec = (
-        "Run a lightweight workspace preflight and report the observed "
-        "sandbox root."
-    )
+    spec = "Run a lightweight workspace preflight and report the observed sandbox root."
     task_ids = ("a", "b", "c", "d", "e", "f", "g")
     return {
         "tasks": [
@@ -67,15 +64,15 @@ class DependencyDagMixed(ScenarioBase):
     name = "pipeline.dependency_dag_mixed"
 
     def planner_response(self, ctx: ScenarioContext) -> ToolCallSpec:  # noqa: ARG002
-        return ToolCallSpec(submit_plan_closes_goal, _mixed_topology_plan())
+        return ToolCallSpec(submit_planner_outcome, _mixed_topology_plan())
 
     def executor_actions(self, ctx: ScenarioContext) -> Sequence[str]:  # noqa: ARG002
         return ("preflight",)
 
     def reducer_response(self, ctx: ScenarioContext) -> ToolCallSpec:  # noqa: ARG002
         return ToolCallSpec(
-            submit_reduction_success,
-            {"outcome": "Mixed-topology DAG completed; all fan-in nodes ran."},
+            submit_reducer_outcome,
+            {"status": "success", "outcome": "Mixed-topology DAG completed; all fan-in nodes ran."},
         )
 
 

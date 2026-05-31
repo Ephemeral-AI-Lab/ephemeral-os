@@ -1,10 +1,11 @@
-"""US-018: end-to-end planner terminal capability fork.
+"""US-018: nested planner keeps unified terminal surface.
 
 Builds a parent request whose harness attempt submitted a partial plan, spawns
 a child request, then asserts the planner spawned for the child:
 
 * remains the single ``planner`` agent;
-* receives an effective terminal list without the defer terminal.
+* receives the unified planner terminal. Nested deferral is now enforced by the
+  submission prehook rather than by mutating launch terminals.
 """
 
 from __future__ import annotations
@@ -114,9 +115,7 @@ def _seed_partial_plan_caller(
         iteration_goal="parent seg",
         attempt_budget=2,
     )
-    caller_attempt = attempt_store.insert(
-        iteration_id=parent_seg.id, attempt_sequence_no=1
-    )
+    caller_attempt = attempt_store.insert(iteration_id=parent_seg.id, attempt_sequence_no=1)
     attempt_store.set_deferred_goal(
         caller_attempt.id,
         deferred_goal_for_next_iteration="continue here",
@@ -138,7 +137,7 @@ def _seed_partial_plan_caller(
     return parent_req, caller_task_id
 
 
-def test_partial_plan_caller_restricts_child_planner_terminals(
+def test_partial_plan_caller_child_planner_keeps_unified_plan_terminal(
     workflow_store, iteration_store, attempt_store, task_store, task_center_run_id
 ):
     runtime, launcher = _runtime_with_composer(
@@ -161,9 +160,7 @@ def test_partial_plan_caller_restricts_child_planner_terminals(
         iteration_goal="child seg",
         attempt_budget=2,
     )
-    child_graph = attempt_store.insert(
-        iteration_id=child_seg.id, attempt_sequence_no=1
-    )
+    child_graph = attempt_store.insert(iteration_id=child_seg.id, attempt_sequence_no=1)
     orchestrator = AttemptOrchestrator(
         attempt=child_graph,
         on_attempt_closed=lambda _id: None,
@@ -176,7 +173,6 @@ def test_partial_plan_caller_restricts_child_planner_terminals(
 
     assert launched.agent_name == "planner"
     assert launched.agent_def is not None
-    assert "submit_plan_closes_goal" in launched.agent_def.terminals
-    assert "submit_plan_defers_goal" not in launched.agent_def.terminals
+    assert launched.agent_def.terminals == ["submit_planner_outcome"]
     assert launched.task_guidance is not None
-    assert "submit_plan_defers_goal" not in launched.task_guidance
+    assert "submit_planner_outcome" in launched.task_guidance

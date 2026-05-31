@@ -33,8 +33,7 @@ class AskAdvisorInput(BaseModel):
         ...,
         min_length=1,
         description=(
-            "The name of the terminal tool you intend to call (e.g. "
-            "submit_generator_success)."
+            "The name of the terminal tool you intend to call (e.g. submit_generator_outcome)."
         ),
     )
     tool_payload: dict[str, object] = Field(
@@ -46,9 +45,7 @@ class AskAdvisorInput(BaseModel):
     )
 
 
-def _render_pending_submission(
-    *, tool_name: str, tool_payload: dict[str, object]
-) -> str:
+def _render_pending_submission(*, tool_name: str, tool_payload: dict[str, object]) -> str:
     payload_json = json.dumps(tool_payload, indent=2, sort_keys=True, default=str)
     return (
         "# Pending submission\n\n"
@@ -75,9 +72,7 @@ def _render_catalog_section(messages: HelperMessages) -> str:
             "(parent terminals unavailable — review the pending submission "
             "against the parent's original task as best you can)"
         )
-    catalog = render_terminal_catalog(
-        terminals, focus="advisor_review_focus"
-    )
+    catalog = render_terminal_catalog(terminals, focus="advisor_review_focus")
     return (
         "# Terminal tool catalog (advisor review focus)\n\n"
         "The parent could submit any of the following terminals. Review "
@@ -113,7 +108,7 @@ _ADVISOR_CALIBRATION_SECTION = (
     "synthesis/exploration that doesn't support the payload's claims (stubs, "
     "TODOs, deliverable missing or misnamed, criteria not actually "
     "exercised).\n\n"
-    "If the parent has already received a prior \"reject\" in this run "
+    'If the parent has already received a prior "reject" in this run '
     "(visible in the transcript as a prior ask_advisor call), check whether "
     "the parent addressed the prior issues. A parent that ignored prior "
     "feedback warrants a sharper second reject."
@@ -122,16 +117,16 @@ _ADVISOR_CALIBRATION_SECTION = (
 _ADVISOR_HOW_TO_SUBMIT_SECTION = (
     "# How to submit\n\n"
     "Call `submit_advisor_feedback` exactly once with:\n\n"
-    "- `verdict`: \"approve\" or \"reject\".\n\n"
+    '- `verdict`: "approve" or "reject".\n\n'
     "- `summary`: focused prose that MUST cover, in order:\n\n"
-    "  1. Tool selection — \"correct\" or \"should be <other_tool>\" with a "
+    '  1. Tool selection — "correct" or "should be <other_tool>" with a '
     "one-sentence rationale.\n\n"
     "  2. Quality of synthesis/exploration backing the payload — what's "
     "solid, what's thin or unsupported. Quote transcript lines or contract "
     "fragments.\n\n"
     "  3. Residual risks (if any) — issues the parent should weigh even on "
     "approve, or the single most important thing to fix before re-attempting "
-    "on reject. \"None\" if none.\n\n"
+    'on reject. "None" if none.\n\n'
     "Be concise. Falsifiable beats vague. No filler."
 )
 
@@ -145,9 +140,7 @@ def _build_advisor_user_msg_2(
     return "\n\n".join(
         [
             _render_catalog_section(messages),
-            _render_pending_submission(
-                tool_name=tool_name, tool_payload=tool_payload
-            ),
+            _render_pending_submission(tool_name=tool_name, tool_payload=tool_payload),
             _ADVISOR_TASK_SECTION,
             _ADVISOR_CALIBRATION_SECTION,
             _ADVISOR_HOW_TO_SUBMIT_SECTION,
@@ -179,9 +172,7 @@ async def ask_advisor(
         )
 
     try:
-        messages = build_helper_messages(
-            helper_role="advisor", context=context
-        )
+        messages = build_helper_messages(helper_role="advisor", context=context)
     except HelperMessageError as exc:
         return exc.to_tool_result()
 

@@ -2,7 +2,7 @@
 
 Reference scenario for the attempt-retry path. Iteration 1 / Attempt 1: planner
 emits a full plan, executor runs ``preflight``, reducer returns
-``submit_reduction_failure`` — iteration coordinator creates Attempt 2 (budget
+``submit_reducer_outcome`` — iteration coordinator creates Attempt 2 (budget
 permits). Attempt 2: planner emits a full plan, executor runs ``preflight``,
 reducer passes — workflow closes succeeded.
 
@@ -14,11 +14,8 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 
-from tools.submission.planner import submit_plan_closes_goal
-from tools.submission.reducer import (
-    submit_reduction_failure,
-    submit_reduction_success,
-)
+from tools.submission.planner import submit_planner_outcome
+from tools.submission.reducer import submit_reducer_outcome
 
 from task_center_runner.scenarios._scenario_helpers import preflight_full_plan
 from task_center_runner.scenarios.base import ScenarioBase, ScenarioContext, ToolCallSpec
@@ -30,7 +27,7 @@ class AttemptRetryReducerFailure(ScenarioBase):
     name = "pipeline.attempt_retry_reducer_failure"
 
     def planner_response(self, ctx: ScenarioContext) -> ToolCallSpec:  # noqa: ARG002
-        return ToolCallSpec(submit_plan_closes_goal, preflight_full_plan())
+        return ToolCallSpec(submit_planner_outcome, preflight_full_plan())
 
     def executor_actions(self, ctx: ScenarioContext) -> Sequence[str]:  # noqa: ARG002
         return ("preflight",)
@@ -38,8 +35,9 @@ class AttemptRetryReducerFailure(ScenarioBase):
     def reducer_response(self, ctx: ScenarioContext) -> ToolCallSpec:
         if ctx.attempt.attempt_sequence_no == 1:
             return ToolCallSpec(
-                submit_reduction_failure,
+                submit_reducer_outcome,
                 {
+                    "status": "failed",
                     "outcome": (
                         "Intentional reducer failure to exercise the "
                         "single-iteration attempt retry path."
@@ -47,8 +45,11 @@ class AttemptRetryReducerFailure(ScenarioBase):
                 },
             )
         return ToolCallSpec(
-            submit_reduction_success,
-            {"outcome": "Retry attempt accepted after retry context delivered."},
+            submit_reducer_outcome,
+            {
+                "status": "success",
+                "outcome": "Retry attempt accepted after retry context delivered.",
+            },
         )
 
 

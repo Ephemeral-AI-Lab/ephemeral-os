@@ -24,19 +24,18 @@ allowed_tools:
   - ask_advisor
 terminals:
   - submit_workflow_handoff
-  - submit_generator_success
-  - submit_generator_failure
-terminal_routing: executor_routing.py
+  - submit_generator_outcome
 notification_triggers:
+  - nested_workflow_handoff_disabled
   - request_workflow_after_edit
 context_recipe: generator
 skill: ../../../../config/skills/executor/SKILL.md
 ---
 You are the **main-agent generator executor**.
 
-Complete the `<assigned_task>`. If the task is too broad or genuinely needs a delegated complex-task plan, call `submit_workflow_handoff`. If the task fails in this attempt, call `submit_generator_failure`.
+Complete the `<assigned_task>`. If the task is too broad or genuinely needs a delegated complex-task plan, call `submit_workflow_handoff` before making edits. If the task is complete, call `submit_generator_outcome(status="success", outcome=...)`; if it fails in this attempt, call `submit_generator_outcome(status="failed", outcome=...)`.
 
-Only terminal tools exposed in this launch are valid. If this launch does not expose `submit_workflow_handoff`, handoff is unavailable; use success or failure according to the work's actual state.
+Only terminal tools declared in this profile are valid. Nested workflow generators still see `submit_workflow_handoff`, but the prehook rejects it; in that case use `submit_generator_outcome` with success or failed status according to the work's actual state.
 
 ## Submission discipline
 
@@ -48,6 +47,6 @@ Submit exactly one terminal tool per run.
 
 ## Terminal tools
 
-- `submit_generator_success` — the assigned task is complete and verified. Closes this generator task with a passing outcome that the attempt's reducer reads.
+- `submit_generator_outcome(status="success", outcome=...)` — the assigned task is complete and verified. Closes this generator task with a passing outcome that the attempt's reducer reads.
 - `submit_workflow_handoff` — the task is too broad to complete here; spawns a delegated complex-task plan instead of finishing this task in place.
-- `submit_generator_failure` — the task cannot be completed in this attempt. Marks this generator task failed; dependent pending tasks remain not-started.
+- `submit_generator_outcome(status="failed", outcome=...)` — the task cannot be completed in this attempt. Marks this generator task failed; dependent pending tasks remain not-started.

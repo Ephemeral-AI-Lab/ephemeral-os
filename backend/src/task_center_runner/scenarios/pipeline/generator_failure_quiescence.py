@@ -6,7 +6,7 @@ Plan shape per attempt::
         \\  |  /
             d           (depends on a, b, c)
 
-On attempt 1, task ``b`` calls ``submit_generator_failure``. The task dispatcher
+On attempt 1, task ``b`` calls ``submit_generator_outcome(status="failed", ...)``. The task dispatcher
 **does not** abort the attempt immediately — quiescence semantics require it
 to wait for the still-running siblings ``a`` and ``c`` to finish before
 closing the attempt. Once all runnable roots reach a terminal state
@@ -29,8 +29,8 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing import Any
 
-from tools.submission.planner import submit_plan_closes_goal
-from tools.submission.reducer import submit_reduction_success
+from tools.submission.planner import submit_planner_outcome
+from tools.submission.reducer import submit_reducer_outcome
 
 from task_center_runner.scenarios._scenario_helpers import (
     context_message_field as _field,
@@ -51,10 +51,7 @@ def _three_plus_one_plan() -> dict[str, Any]:
         ],
         "task_specs": {
             "a": "Run a workspace preflight (root a).",
-            "b": (
-                f"Run a workspace preflight (root b). {_FAIL_TAG} "
-                "tag=quiescence_b"
-            ),
+            "b": (f"Run a workspace preflight (root b). {_FAIL_TAG} tag=quiescence_b"),
             "c": "Run a workspace preflight (root c).",
             "d": "Run a workspace preflight (final d).",
         },
@@ -79,21 +76,20 @@ class GeneratorFailureQuiescence(ScenarioBase):
     # on event-type multisets rather than positional equality.
 
     def planner_response(self, ctx: ScenarioContext) -> ToolCallSpec:  # noqa: ARG002
-        return ToolCallSpec(submit_plan_closes_goal, _three_plus_one_plan())
+        return ToolCallSpec(submit_planner_outcome, _three_plus_one_plan())
 
     def executor_actions(self, ctx: ScenarioContext) -> Sequence[str]:
         context_message = ctx.context_message or ctx.prompt or ""
         if _FAIL_TAG in context_message and ctx.attempt.attempt_sequence_no == 1:
             tag = _field(context_message, "tag") or "quiescence"
-            return (
-                f"fail:Intentional generator failure on attempt 1 ({tag}).",
-            )
+            return (f"fail:Intentional generator failure on attempt 1 ({tag}).",)
         return ("preflight",)
 
     def reducer_response(self, ctx: ScenarioContext) -> ToolCallSpec:  # noqa: ARG002
         return ToolCallSpec(
-            submit_reduction_success,
+            submit_reducer_outcome,
             {
+                "status": "success",
                 "outcome": (
                     "All four preflight nodes passed on the retry attempt; "
                     "quiescence behaviour exercised on attempt 1."

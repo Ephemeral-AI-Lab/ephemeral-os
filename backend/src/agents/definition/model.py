@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
 from enum import StrEnum
 from pathlib import Path
 from typing import Any
@@ -11,9 +10,9 @@ from pydantic import (
     BaseModel,
     ConfigDict,
     Field,
-    PrivateAttr,
     field_validator,
 )
+
 
 class AgentType(StrEnum):
     """Runtime class of an agent profile."""
@@ -27,10 +26,8 @@ class AgentRole(StrEnum):
 
     Pure identity: read as the ``metadata["role"]`` audit tag (emitted by
     ``factory.py`` and ``run_subagent.py``) and by the planner-submission gate.
-    Terminal-tool routing is no longer keyed on role — it lives in each
-    profile's own ``terminal_routing`` module. ``GENERATOR`` covers the
-    executor profile; ``REDUCER`` digests/gates; ``HELPER`` is the advisor,
-    ``SUBAGENT`` is the explorer.
+    ``GENERATOR`` covers the executor profile; ``REDUCER`` digests/gates;
+    ``HELPER`` is the advisor, ``SUBAGENT`` is the explorer.
     """
 
     PLANNER = "planner"
@@ -99,27 +96,9 @@ class AgentDefinition(BaseModel):
     # the context engine may keep this null.
     context_recipe: str | None = None
 
-    # --- terminal routing ---
-    # Absolute path to this profile's terminal-routing module, resolved by the
-    # loader from the relative ``terminal_routing:`` frontmatter field (same
-    # idiom as ``skill:``). ``None`` when no routing is declared — the profile
-    # is never terminal-filtered. The module exports
-    # ``select_terminals(*, is_nested, has_workflow) -> frozenset[str] | None``,
-    # which the loader imports once and attaches to ``_terminal_router``.
-    terminal_routing: Path | None = None
-
     model_config = ConfigDict(
         extra="forbid",
     )
-
-    # Resolved routing callable, attached by the loader after construction.
-    # Carried as a private attr so the model needs no ``arbitrary_types_allowed``
-    # and stays serializable; ``model_copy`` preserves it.
-    _terminal_router: Callable[..., frozenset[str] | None] | None = PrivateAttr(default=None)
-
-    @property
-    def terminal_router(self) -> Callable[..., frozenset[str] | None] | None:
-        return self._terminal_router
 
     @field_validator("tool_call_limit", mode="before")
     @classmethod

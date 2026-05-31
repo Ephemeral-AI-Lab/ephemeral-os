@@ -21,8 +21,8 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing import Any
 
-from tools.submission.planner import submit_plan_closes_goal
-from tools.submission.reducer import submit_reduction_success
+from tools.submission.planner import submit_planner_outcome
+from tools.submission.reducer import submit_reducer_outcome
 
 from task_center_runner.scenarios.base import ScenarioBase, ScenarioContext, ToolCallSpec
 
@@ -90,7 +90,7 @@ class HeavyIoZonedConcurrent(ScenarioBase):
     name = "sandbox.heavy_io_zoned_concurrent"
 
     def planner_response(self, ctx: ScenarioContext) -> ToolCallSpec:  # noqa: ARG002
-        return ToolCallSpec(submit_plan_closes_goal, _plan())
+        return ToolCallSpec(submit_planner_outcome, _plan())
 
     def executor_actions(self, ctx: ScenarioContext) -> Sequence[str]:
         context_message = ctx.context_message or ctx.prompt or ""
@@ -105,8 +105,9 @@ class HeavyIoZonedConcurrent(ScenarioBase):
 
     def reducer_response(self, ctx: ScenarioContext) -> ToolCallSpec:  # noqa: ARG002
         return ToolCallSpec(
-            submit_reduction_success,
+            submit_reducer_outcome,
             {
+                "status": "success",
                 "outcome": (
                     "Heavy-IO zoned lease/merge scenario completed with "
                     "per-worker fragments across gitincluded, gitignored, "

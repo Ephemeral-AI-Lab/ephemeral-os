@@ -103,6 +103,5 @@ def test_compose_generator_context_uses_new_terminal_names(
     assert '<context role="generator">' in messages.context
     assert f'<assigned_task task_id="{task_id}">' in messages.context
     assert messages.task_guidance is not None
-    assert "submit_generator_success" in messages.task_guidance
-    assert "submit_generator_failure" in messages.task_guidance
+    assert "submit_generator_outcome" in messages.task_guidance
     assert "submit_execution_success" not in messages.task_guidance

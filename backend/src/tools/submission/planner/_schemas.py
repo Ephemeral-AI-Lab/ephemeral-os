@@ -103,6 +103,18 @@ def validate_nonblank(value: str, field_name: str) -> str:
     return value
 
 
+def planner_kind_from_deferred_goal(
+    deferred_goal_for_next_iteration: str | None,
+) -> tuple[Literal["completes", "defers"], str | None]:
+    if deferred_goal_for_next_iteration is None:
+        return "completes", None
+    validate_nonblank(
+        deferred_goal_for_next_iteration,
+        "deferred_goal_for_next_iteration",
+    )
+    return "defers", deferred_goal_for_next_iteration
+
+
 def _is_generator_capable_agent(agent_name: str) -> bool:
     """Gate for ``agent_name`` values a planner may submit as a generator task.
 

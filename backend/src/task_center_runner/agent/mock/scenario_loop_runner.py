@@ -172,9 +172,7 @@ class ScenarioLoopRunner:
             return agent_def
         if agent_def.tool_call_limit >= _HIGH_VOLUME_MOCK_TOOL_CALL_LIMIT:
             return agent_def
-        return agent_def.model_copy(
-            update={"tool_call_limit": _HIGH_VOLUME_MOCK_TOOL_CALL_LIMIT}
-        )
+        return agent_def.model_copy(update={"tool_call_limit": _HIGH_VOLUME_MOCK_TOOL_CALL_LIMIT})
 
     # -- audit-bus records (RunReport observability) ------------------------
 
@@ -196,9 +194,7 @@ class ScenarioLoopRunner:
             ).as_dict(),
         )
 
-    def _publish_tool_call(
-        self, event: ToolExecutionCompletedEvent, task_id: str
-    ) -> None:
+    def _publish_tool_call(self, event: ToolExecutionCompletedEvent, task_id: str) -> None:
         self._publish_record(
             EventType.MOCK_TOOL_CALL_RECORDED,
             ToolCallRecord(
@@ -221,12 +217,8 @@ class ScenarioLoopRunner:
     def _publish_prompt_inspection(
         self, agent_def: "AgentDefinition", prompt: str, metadata: Any
     ) -> None:
-        inspection = self._inspect_prompt(
-            agent_def=agent_def, prompt=prompt, metadata=metadata
-        )
-        self._publish_record(
-            EventType.MOCK_PROMPT_INSPECTED, dataclasses.asdict(inspection)
-        )
+        inspection = self._inspect_prompt(agent_def=agent_def, prompt=prompt, metadata=metadata)
+        self._publish_record(EventType.MOCK_PROMPT_INSPECTED, dataclasses.asdict(inspection))
 
     def _inspect_prompt(
         self, *, prompt: str, agent_def: "AgentDefinition", metadata: Any
@@ -242,32 +234,12 @@ class ScenarioLoopRunner:
         role = agent_def.name
         checks: dict[str, bool]
         reason: str
-        active_terminals = set(
-            _md_get(metadata, "active_terminals") or agent_def.terminals
-        )
-        if role == "planner" and "submit_plan_defers_goal" not in active_terminals:
-            checks = {
-                "goal": "<goal>" in prompt,
-                "current_iteration": (
-                    "<current_iteration " in prompt
-                    or (
-                        "<iteration " in prompt
-                        and 'position="current"' in prompt
-                    )
-                ),
-                "closes_goal_terminal": "submit_plan_closes_goal" in prompt,
-                "no_defer_terminal": "submit_plan_defers_goal" not in prompt,
-            }
-            reason = "Depth-restricted planner exposes only the close-only planner terminal."
-        elif role == "planner":
+        if role == "planner":
             _attempt, iteration = _attempt_and_iteration(metadata)
             checks = {
                 "goal": "<goal>" in prompt,
                 "current_iteration": "<current_iteration " in prompt
-                or (
-                    "<iteration " in prompt
-                    and 'position="current"' in prompt
-                ),
+                or ("<iteration " in prompt and 'position="current"' in prompt),
             }
             # Failed-attempt evidence renders as <attempt attempt_no="k"> when the
             # current iteration has a prior failed attempt; flag it from the prompt
@@ -278,9 +250,8 @@ class ScenarioLoopRunner:
                 checks["failed_attempts"] = True
             if iteration.sequence_no > 1:
                 checks["previous_iteration_results"] = (
-                    ("<prior_iterations>" in prompt or 'position="prior"' in prompt)
-                    and "<task " in prompt
-                )
+                    "<prior_iterations>" in prompt or 'position="prior"' in prompt
+                ) and "<task " in prompt
             reason = (
                 "Planner context is objective and iteration scoped; retry planners also "
                 "receive failed-attempt evidence, and continuation planners receive "
@@ -293,9 +264,7 @@ class ScenarioLoopRunner:
             }
             if needs:
                 checks["dependencies"] = "<dependencies>" in prompt
-                checks["dependency_outcomes"] = _has_dependency_outcomes(
-                    prompt, needs=needs
-                )
+                checks["dependency_outcomes"] = _has_dependency_outcomes(prompt, needs=needs)
             reason = (
                 "Executor context is local to the current planned task with the "
                 "declared dependency outcomes as framing."
@@ -307,9 +276,7 @@ class ScenarioLoopRunner:
                 "dependencies": "<dependencies>" in prompt,
             }
             if needs:
-                checks["dependency_outcomes"] = _has_dependency_outcomes(
-                    prompt, needs=needs
-                )
+                checks["dependency_outcomes"] = _has_dependency_outcomes(prompt, needs=needs)
             reason = (
                 "Reducer context is graph-local: its assigned task and the "
                 "per-task outcomes of its dependencies."
@@ -384,11 +351,7 @@ def _dependency_has_task_outcome(prompt: str, task_id: str) -> bool:
 def _stream_run_id(md: Any) -> str:
     # Pre-mint site (runs before run_ephemeral_agent mints the agent_run_id),
     # so task_center_task_id is the only stable id available here.
-    return str(
-        _md_get(md, "task_center_task_id")
-        or getattr(md, "agent_run_id", None)
-        or ""
-    )
+    return str(_md_get(md, "task_center_task_id") or getattr(md, "agent_run_id", None) or "")
 
 
 def _initial_message_metadata(md: Any) -> dict[str, object]:

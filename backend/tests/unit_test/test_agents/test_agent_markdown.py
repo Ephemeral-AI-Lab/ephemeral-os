@@ -25,10 +25,11 @@ def test_harness_agent_markdown_declares_notification_triggers() -> None:
     executor = _load_named(MAIN_PROFILE_DIR, "executor")
     reducer = _load_named(MAIN_PROFILE_DIR, "reducer")
 
-    # Planner terminal restrictions are launch-time router policy; the profile
-    # does not carry soft reminder triggers for recursive partial plans.
-    assert planner.notification_triggers == []
-    assert executor.notification_triggers == ["request_workflow_after_edit"]
+    assert planner.notification_triggers == ["nested_planner_deferral_disabled"]
+    assert executor.notification_triggers == [
+        "nested_workflow_handoff_disabled",
+        "request_workflow_after_edit",
+    ]
     assert reducer.notification_triggers == []
 
 
@@ -45,8 +46,7 @@ def test_recursive_agent_loader_finds_harness_profiles() -> None:
     assert by_name["executor"].agent_type == AgentType.AGENT
     assert by_name["executor"].terminals == [
         "submit_workflow_handoff",
-        "submit_generator_success",
-        "submit_generator_failure",
+        "submit_generator_outcome",
     ]
 
 

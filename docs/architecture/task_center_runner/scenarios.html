@@ -76,9 +76,9 @@
 <p>The protocol is implemented either via <code>ScenarioBase</code> (with overridable defaults) or by satisfying <code>Scenario</code> structurally.</p>
 <div class="edge-list" aria-label="Scenario protocol methods">
   <div><b>name</b><span>Dotted-path identifier used by <code>SCENARIO_REGISTRY</code> and as the audit recorder's scenario label. Example: <code>pipeline.initial_workflow</code>, <code>sandbox.background_shell_golden</code>.</span></div>
-  <div><b>planner_response(ctx)</b><span>Returns a <code>ToolCallSpec(submit_plan_closes_goal | submit_plan_defers_goal, args)</code>. <code>args</code> is the plan: <code>tasks</code> (each <code>{id, agent_name, needs}</code>), <code>task_specs</code> (per-task-id spec text), <code>reducers</code> (each <code>{id, needs, prompt}</code>), and optional <code>deferred_goal_for_next_iteration</code>. The plan is a DAG of generator + reducer tasks joined by <code>needs</code>; there is no <code>plan_spec</code> or <code>evaluation_criteria</code>.</span></div>
+  <div><b>planner_response(ctx)</b><span>Returns a <code>ToolCallSpec(submit_planner_outcome, args)</code>. <code>args</code> is the plan: <code>tasks</code> (each <code>{id, agent_name, needs}</code>), <code>task_specs</code> (per-task-id spec text), <code>reducers</code> (each <code>{id, needs, prompt}</code>), and optional <code>deferred_goal_for_next_iteration</code>. The plan is a DAG of generator + reducer tasks joined by <code>needs</code>; there is no <code>plan_spec</code> or <code>evaluation_criteria</code>.</span></div>
   <div><b>executor_actions(ctx)</b><span>Returns a sequence of action tokens consumed by the runner's executor dispatcher: <code>"preflight"</code>, <code>"fail"</code>/<code>"fail:reason"</code>, <code>"request_recursive_workflow:&lt;pkg&gt;"</code>, probe action names. Default is empty.</span></div>
-  <div><b>reducer_response(ctx)</b><span>Returns a <code>ToolCallSpec</code> targeting <code>submit_reduction_success</code> or <code>submit_reduction_failure</code>. The reducer is the plan task that decides whether the attempt passes; its task <code>prompt</code> can carry a <code>VERIFY checkpoint=...</code> directive that the executor lane reads back.</span></div>
+  <div><b>reducer_response(ctx)</b><span>Returns a <code>ToolCallSpec</code> targeting <code>submit_reducer_outcome</code>. The reducer is the plan task that decides whether the attempt passes; its task <code>prompt</code> can carry a <code>VERIFY checkpoint=...</code> directive that the executor lane reads back.</span></div>
   <div><b>recursive_handoff_goal(ctx)</b><span>Optional goal text used when an executor action requests a recursive (child-workflow) handoff; defaults to <code>None</code> (the runner synthesizes a placeholder).</span></div>
 </div>
 <p><code>ScenarioContext</code> is the live state visible to the scenario at each decision: <code>attempt</code>, <code>iteration</code>, <code>workflow</code>, <code>prompt</code>, <code>metadata</code>, <code>audit_recorder</code>, <code>task_id</code>, <code>agent_name</code>, <code>context_message</code>, plus optional <code>requirement_ledger</code>, <code>package_plan</code>, and <code>matrix_plan</code> for composite scenarios.</p>
@@ -138,7 +138,7 @@ run_pipeline executes; per event:
   </div>
   <div class="evidence-card">
     <h3>Planner Validation</h3>
-    <p>Negative-path scenarios for planner output validation: <code>PlannerCycleInDeps</code>, <code>PlannerDuplicateLocalId</code>, <code>PlannerEmptyTasks</code>, <code>PlannerDefersWithoutDeferredGoal</code>, <code>PlannerUnknownAgentName</code>, <code>PlannerUnknownDep</code>. The mock planner returns an intentionally bad plan; the runner asserts TaskCenter rejects it through the expected error path.</p>
+    <p>Negative-path scenarios for planner output validation: <code>PlannerCycleInDeps</code>, <code>PlannerDuplicateLocalId</code>, <code>PlannerEmptyTasks</code>, <code>PlannerBlankDeferredGoal</code>, <code>PlannerUnknownAgentName</code>, <code>PlannerUnknownDep</code>. The mock planner returns an intentionally bad plan; the runner asserts TaskCenter rejects it through the expected error path.</p>
   </div>
   <div class="evidence-card">
     <h3>Composite</h3>
@@ -170,19 +170,19 @@ run_pipeline executes; per event:
 class InitialWorkflow(ScenarioBase):
     name = "pipeline.initial_workflow"
 
-    planner_response(ctx)  -&gt; ToolCallSpec(submit_plan_closes_goal,
+    planner_response(ctx)  -&gt; ToolCallSpec(submit_planner_outcome,
                                            preflight_full_plan())
                               # one generator task "preflight" + one reducer
                               # "reduce" that needs ["preflight"]
     executor_actions(ctx)  -&gt; ("preflight",)            # runs shell pwd + git probe
-    reducer_response(ctx)  -&gt; ToolCallSpec(submit_reduction_success,
+    reducer_response(ctx)  -&gt; ToolCallSpec(submit_reducer_outcome,
                                            {"summary": "..."})
 
 Run flow under the mock runner (single RUN stage to quiescence):
-  planner_response -&gt; submit_plan_closes_goal
+  planner_response -&gt; submit_planner_outcome
   executor_actions ("preflight") -&gt; shell tool probe
-                                -&gt; submit_generator_success
-  reducer_response -&gt; submit_reduction_success
+                                -&gt; submit_generator_outcome(status="success")
+  reducer_response -&gt; submit_reducer_outcome
                   -&gt; attempt PASSES (every plan task DONE) -&gt; workflow closes
 
 Assertions:

@@ -2,7 +2,7 @@
 sandbox-bound background tasks.
 
 Reused on ``enter_isolated_workspace``, ``exit_isolated_workspace`` and the
-nine main-role terminals (wired *before* ``AdvisorApprovalPreHook`` so the
+main-role terminals (wired *before* ``AdvisorApprovalPreHook`` so the
 background rejection is the one surfaced). "In-flight" means *running,
 sandbox-bound* background tasks for this agent — the same definition as
 ``BackgroundTaskSupervisor.count_by_agent`` and the daemon's
@@ -27,17 +27,6 @@ from tools._hooks._context import resolve_agent_id, resolve_sandbox_id
 
 
 logger = logging.getLogger(__name__)
-
-# Failure terminals exempt from the daemon-error fail-safe-block so a
-# flaky daemon never hard-locks the agent's bail-out path (plan D7). Scoped to
-# the daemon-error branch only — confirmed in-flight still blocks these too.
-_BAILOUT_TOOLS = frozenset(
-    {
-        "submit_generator_failure",
-        "submit_reduction_failure",
-        "submit_plan_defers_goal",
-    }
-)
 
 _MSG_IN_FLIGHT = (
     "BLOCKED: {count} sandbox-bound background task(s) are still in flight for "
@@ -108,13 +97,10 @@ class RequireNoInflightBackgroundTasks:
             },
         )
 
-    def _fail_or_bailout(
-        self, tool_input: BaseModel, exc: Exception
-    ) -> HookResult[BaseModel]:
-        if self.target_tool in _BAILOUT_TOOLS:
+    def _fail_or_bailout(self, tool_input: BaseModel, exc: Exception) -> HookResult[BaseModel]:
+        if self._is_bailout_submission(tool_input):
             logger.warning(
-                "no_bg_tasks gate fail-open on %s: daemon in-flight count "
-                "unavailable (%s)",
+                "no_bg_tasks gate fail-open on %s: daemon in-flight count unavailable (%s)",
                 self.target_tool,
                 exc,
             )
@@ -132,6 +118,14 @@ class RequireNoInflightBackgroundTasks:
                 "reason": "inflight_count_unavailable",
             },
         )
+
+    def _is_bailout_submission(self, tool_input: BaseModel) -> bool:
+        if self.target_tool == "submit_planner_outcome":
+            deferred = getattr(tool_input, "deferred_goal_for_next_iteration", None)
+            return isinstance(deferred, str) and bool(deferred.strip())
+        if self.target_tool in {"submit_generator_outcome", "submit_reducer_outcome"}:
+            return getattr(tool_input, "status", None) == "failed"
+        return False
 
 
 __all__ = ["RequireNoInflightBackgroundTasks"]

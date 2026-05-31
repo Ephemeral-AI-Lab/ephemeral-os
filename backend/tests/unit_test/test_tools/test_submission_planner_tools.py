@@ -1,4 +1,4 @@
-"""Planner submission tool validation and routing tests."""
+"""Planner submission tool validation tests."""
 
 from __future__ import annotations
 
@@ -6,16 +6,13 @@ import pytest
 
 from task_center.attempt import AttemptStage
 from tools._framework.execution.tool_call import execute_tool_once
-from tools.submission.planner import submit_plan_closes_goal, submit_plan_defers_goal
+from tools.submission.planner import submit_planner_outcome
 from tools.submission.planner._prompt_guidance import (
     PLAN_DAG_GUIDANCE,
     PLAN_SUBMISSION_CHOICE_GUIDANCE,
 )
-from tools.submission.planner.submit_plan_closes_goal.prompt import (
-    get_submit_plan_closes_goal_description,
-)
-from tools.submission.planner.submit_plan_defers_goal.prompt import (
-    get_submit_plan_defers_goal_description,
+from tools.submission.planner.submit_planner_outcome.prompt import (
+    get_submit_planner_outcome_description,
 )
 
 from .submission_test_utils import (
@@ -48,24 +45,15 @@ def _valid_plan_payload() -> dict[str, object]:
 
 
 async def test_plan_tool_descriptions_share_dag_guidance() -> None:
-    closes = get_submit_plan_closes_goal_description()
-    defers = get_submit_plan_defers_goal_description()
+    description = get_submit_planner_outcome_description()
 
-    assert PLAN_DAG_GUIDANCE in closes
-    assert PLAN_DAG_GUIDANCE in defers
-    assert PLAN_SUBMISSION_CHOICE_GUIDANCE in closes
-    assert PLAN_SUBMISSION_CHOICE_GUIDANCE in defers
-    assert "The attempt PASSES iff every plan task reaches DONE." in closes
-    assert "## Close vs Defer Decision" in closes
-    assert "## Close vs Defer Decision" in defers
-    assert "Lane shape does not decide close vs defer" in defers
-    assert "concrete plan for this bounded iteration" in defers
-    assert "what would be speculative is planning the full" in defers
-    assert "goal beyond this iteration" in defers
-    assert "outcomes become" in defers
-    assert "prior-iteration context for the next planner" in defers
-    assert "collection of reducer outcomes is sufficient" in closes
-    assert "deferred_goal_for_next_iteration" in defers
+    assert PLAN_DAG_GUIDANCE in description
+    assert PLAN_SUBMISSION_CHOICE_GUIDANCE in description
+    assert "The attempt PASSES iff every plan task reaches DONE." in description
+    assert "## Close vs Defer Decision" in description
+    assert "Lane shape does not decide close vs defer" in description
+    assert "deferred_goal_for_next_iteration" in description
+    assert "leaves no remaining items" in description
 
 
 async def test_full_plan_routes_to_apply_plan_submission(
@@ -81,11 +69,9 @@ async def test_full_plan_routes_to_apply_plan_submission(
     planner_id = start_planner(fixture)
 
     result = await execute_tool_once(
-        submit_plan_closes_goal,
+        submit_planner_outcome,
         _valid_plan_payload(),
-        make_tool_context(
-            fixture, planner_id, advisor_approves="submit_plan_closes_goal"
-        ),
+        make_tool_context(fixture, planner_id, advisor_approves="submit_planner_outcome"),
         emit=_noop_emit,
     )
 
@@ -110,14 +96,15 @@ async def test_partial_plan_routes_to_apply_plan_submission(
         composer=composer,
     )
     planner_id = start_planner(fixture)
-    payload = {**_valid_plan_payload(), "deferred_goal_for_next_iteration": "  continue with phase 2  "}
+    payload = {
+        **_valid_plan_payload(),
+        "deferred_goal_for_next_iteration": "  continue with phase 2  ",
+    }
 
     result = await execute_tool_once(
-        submit_plan_defers_goal,
+        submit_planner_outcome,
         payload,
-        make_tool_context(
-            fixture, planner_id, advisor_approves="submit_plan_defers_goal"
-        ),
+        make_tool_context(fixture, planner_id, advisor_approves="submit_planner_outcome"),
         emit=_noop_emit,
     )
 
@@ -251,45 +238,15 @@ async def test_plan_validation_errors_do_not_mutate_graph(
     payload = {**_valid_plan_payload(), **payload_update}
 
     result = await execute_tool_once(
-        submit_plan_closes_goal,
+        submit_planner_outcome,
         payload,
-        make_tool_context(
-            fixture, planner_id, advisor_approves="submit_plan_closes_goal"
-        ),
+        make_tool_context(fixture, planner_id, advisor_approves="submit_planner_outcome"),
         emit=_noop_emit,
     )
 
     attempt = attempt_store.get(fixture.attempt_id)
     assert result.is_error
     assert expected in result.output
-    assert attempt is not None
-    assert attempt.stage == AttemptStage.PLAN
-
-
-async def test_full_plan_rejects_deferred_goal(
-    workflow_store, iteration_store, attempt_store, task_store, composer
-) -> None:
-    fixture = build_harness_fixture(
-        workflow_store=workflow_store,
-        iteration_store=iteration_store,
-        attempt_store=attempt_store,
-        task_store=task_store,
-        composer=composer,
-    )
-    planner_id = start_planner(fixture)
-    payload = {**_valid_plan_payload(), "deferred_goal_for_next_iteration": "continue later"}
-
-    result = await execute_tool_once(
-        submit_plan_closes_goal,
-        payload,
-        make_tool_context(fixture, planner_id),
-        emit=_noop_emit,
-    )
-
-    attempt = attempt_store.get(fixture.attempt_id)
-    assert result.is_error
-    assert "deferred_goal_for_next_iteration" in result.output
-    assert "Extra inputs are not permitted" in result.output
     assert attempt is not None
     assert attempt.stage == AttemptStage.PLAN
 
@@ -308,7 +265,7 @@ async def test_partial_plan_rejects_blank_deferred_goal(
     payload = {**_valid_plan_payload(), "deferred_goal_for_next_iteration": " "}
 
     result = await execute_tool_once(
-        submit_plan_defers_goal,
+        submit_planner_outcome,
         payload,
         make_tool_context(fixture, planner_id),
         emit=_noop_emit,
