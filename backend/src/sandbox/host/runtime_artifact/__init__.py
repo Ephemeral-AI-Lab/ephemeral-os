@@ -6,7 +6,7 @@ runtime is: the wire protocol, the data-type contract (see
 ``eosd-linux-{arch}`` binary against the SHA256 recorded here before upload/exec
 (verify logic lands in a later phase — this module is data only).
 
-Phase 0 local-upload closeout: the amd64 pin is the host-local static-musl build
+Phase 0 local-upload closeout: the pins are host-local static-musl builds
 packaged by ``xtask`` and uploaded with provider ``put_archive``. Minisign stays
 empty until the later release-grade provenance gate.
 """
@@ -18,10 +18,10 @@ from __future__ import annotations
 EOSD_VERSION = "0.1.0-local.20260531"
 
 # Per-arch SHA256 of the binary. Keys = container arch tokens the host maps to
-# (amd64 / arm64). arm64 remains empty until an arm64 artifact is run-verified.
+# (amd64 / arm64).
 EOSD_SHA256: dict[str, str] = {
-    "amd64": "ad69bd919d4ed912756180927af993047166a134659d67048153317534ecb8a9",
-    "arm64": "",
+    "amd64": "c81993538d4cfb6425e1a00f91d38d0a85dd07a1706907c3b07db6faf5a5629e",
+    "arm64": "6edbe7bdc7bb4d6414b2b331d58857b1ce55bcf61bd391f34f34b36bdba716c6",
 }
 
 # Minisign trust-anchor public key (the release signing key). Empty for the

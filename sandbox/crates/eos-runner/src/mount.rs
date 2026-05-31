@@ -15,6 +15,7 @@
 //! adapter implementing [`KernelMountPort`] over it; the runner keeps depending
 //! only on this trait.
 
+use std::fmt::Debug;
 use std::path::PathBuf;
 
 use crate::error::RunnerError;
@@ -43,9 +44,13 @@ pub struct MountInputs {
 /// `fsconfig("upperdir"/"workdir")` → `fsconfig_create` → `fsmount` →
 /// `move_mount(workspace_root)`.
 /// `// PORT backend/src/sandbox/overlay/kernel_mount.py:63-70 — mount_overlay raw new-mount API`
+pub trait MountedOverlay: Debug {}
+
+impl<T: Debug> MountedOverlay for T {}
+
 pub trait KernelMountPort {
     /// Mount the overlay described by `inputs` at its workspace root. Must be
     /// called on a caller that already holds `CAP_SYS_ADMIN` in the target
     /// mount namespace (post-unshare / post-setns).
-    fn mount_overlay(&self, inputs: &MountInputs) -> Result<(), RunnerError>;
+    fn mount_overlay(&self, inputs: &MountInputs) -> Result<Box<dyn MountedOverlay>, RunnerError>;
 }

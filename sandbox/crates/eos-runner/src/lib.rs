@@ -50,7 +50,7 @@ pub mod request;
 pub mod setns;
 
 pub use error::RunnerError;
-pub use mount::{KernelMountPort, MountInputs};
+pub use mount::{KernelMountPort, MountInputs, MountedOverlay};
 pub use request::{Fd, NsFds, RunMode, RunRequest, RunResult, ToolCall, WorkspaceRoot};
 
 /// Execute one tool call through the runner, dispatching on [`RunRequest::mode`].

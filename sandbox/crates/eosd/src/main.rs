@@ -33,7 +33,9 @@
 //! PORT backend/src/sandbox/daemon/scripts/launch_daemon.sh + backend/src/sandbox/host/daemon_client.py — the launcher + thin-client this binary replaces.
 #![forbid(unsafe_code)]
 
+use std::io::{Read, Write};
 use std::os::fd::RawFd;
+use std::path::PathBuf;
 
 use anyhow::{anyhow, Context, Result};
 
@@ -81,15 +83,19 @@ fn run_daemon(_args: std::env::Args) -> Result<()> {
 /// `RunResult` JSON, the way `namespace_entrypoint.py` / `setns_exec.py` run as
 /// child interpreters today.
 ///
-/// This is a thin call into `eos-runner`. The runner exposes `run(&RunRequest,
-/// &dyn KernelMountPort)`, but a runner CLI entry (read the request payload from
-/// the inherited fd/stdin, construct the overlay `KernelMountPort`, call `run`,
-/// write the result) does not exist as a library function yet, and the mount
-/// port impl lives in a sibling crate being written concurrently — so this arm
-/// stays a `todo!()` rather than reconstructing that logic in `main`.
+/// This is a thin call into `eos-runner`: read the request payload from stdin
+/// or `--request <path>`, construct the overlay mount adapter, call `run`, and
+/// write compact JSON to stdout or `--output <path>`.
 // PORT backend/src/sandbox/overlay/namespace_entrypoint.py:1 + backend/src/sandbox/isolated_workspace/scripts/setns_exec.py:1 — child-interpreter entry; call eos_runner::run once a runner CLI entry exists
-fn run_ns_runner(_args: std::env::Args) -> Result<()> {
-    todo!("PORT namespace_entrypoint.py + setns_exec.py — call eos_runner::run via a runner CLI entry once it exists")
+fn run_ns_runner(args: std::env::Args) -> Result<()> {
+    let config = RunnerCliConfig::parse(args)?;
+    let request_json = read_payload(config.request_path.as_ref())?;
+    let request: eos_runner::RunRequest =
+        serde_json::from_str(&request_json).context("failed to decode ns-runner request JSON")?;
+    let result = eos_runner::run(&request, &OverlayMountPort).context("ns-runner failed")?;
+    let output = serde_json::to_vec(&result).context("failed to encode ns-runner result JSON")?;
+    write_payload(config.output_path.as_ref(), &output)?;
+    Ok(())
 }
 
 /// `eosd ns-holder <readiness_fd> <control_fd>` — become the single-threaded
@@ -134,4 +140,109 @@ fn parse_fd(value: Option<String>, name: &str) -> Result<RawFd> {
         .ok_or_else(|| anyhow!("missing {name} argument for ns-holder"))?
         .parse::<RawFd>()
         .with_context(|| format!("{name} must be an integer file descriptor"))
+}
+
+struct RunnerCliConfig {
+    request_path: Option<PathBuf>,
+    output_path: Option<PathBuf>,
+}
+
+impl RunnerCliConfig {
+    fn parse(args: std::env::Args) -> Result<Self> {
+        let mut request_path = None;
+        let mut output_path = None;
+        let mut positional = Vec::new();
+        let mut args = args.peekable();
+        while let Some(arg) = args.next() {
+            match arg.as_str() {
+                "--request" => {
+                    request_path = Some(PathBuf::from(
+                        args.next()
+                            .ok_or_else(|| anyhow!("--request requires a path"))?,
+                    ));
+                }
+                "--output" => {
+                    output_path = Some(PathBuf::from(
+                        args.next()
+                            .ok_or_else(|| anyhow!("--output requires a path"))?,
+                    ));
+                }
+                "--help" | "-h" => {
+                    println!("usage: eosd ns-runner [--request PATH] [--output PATH]");
+                    std::process::exit(0);
+                }
+                other if other.starts_with('-') => {
+                    return Err(anyhow!("unknown ns-runner flag {other:?}"));
+                }
+                other => positional.push(PathBuf::from(other)),
+            }
+        }
+        if request_path.is_none() && positional.len() == 1 {
+            request_path = positional.pop();
+        } else if !positional.is_empty() {
+            return Err(anyhow!(
+                "ns-runner accepts at most one positional request path"
+            ));
+        }
+        Ok(Self {
+            request_path,
+            output_path,
+        })
+    }
+}
+
+fn read_payload(path: Option<&PathBuf>) -> Result<String> {
+    let mut payload = String::new();
+    if let Some(path) = path {
+        std::fs::File::open(path)
+            .with_context(|| format!("failed to open request payload {}", path.display()))?
+            .read_to_string(&mut payload)
+            .with_context(|| format!("failed to read request payload {}", path.display()))?;
+    } else {
+        std::io::stdin()
+            .read_to_string(&mut payload)
+            .context("failed to read request payload from stdin")?;
+    }
+    Ok(payload)
+}
+
+fn write_payload(path: Option<&PathBuf>, payload: &[u8]) -> Result<()> {
+    if let Some(path) = path {
+        if let Some(parent) = path
+            .parent()
+            .filter(|parent| !parent.as_os_str().is_empty())
+        {
+            std::fs::create_dir_all(parent)
+                .with_context(|| format!("failed to create output dir {}", parent.display()))?;
+        }
+        std::fs::write(path, payload)
+            .with_context(|| format!("failed to write ns-runner output {}", path.display()))?;
+    } else {
+        let mut stdout = std::io::stdout().lock();
+        stdout
+            .write_all(payload)
+            .context("failed to write ns-runner output to stdout")?;
+        stdout
+            .write_all(b"\n")
+            .context("failed to terminate ns-runner output line")?;
+    }
+    Ok(())
+}
+
+#[derive(Debug)]
+struct OverlayMountPort;
+
+impl eos_runner::KernelMountPort for OverlayMountPort {
+    fn mount_overlay(
+        &self,
+        inputs: &eos_runner::MountInputs,
+    ) -> std::result::Result<Box<dyn eos_runner::MountedOverlay>, eos_runner::RunnerError> {
+        let handle = eos_overlay::OverlayHandle {
+            upperdir: inputs.upperdir.clone(),
+            workdir: inputs.workdir.clone(),
+            layer_paths: inputs.layer_paths.clone(),
+        };
+        let mount = eos_overlay::mount_overlay(&inputs.workspace_root, &handle)?;
+        Ok(Box::new(mount))
+    }
 }

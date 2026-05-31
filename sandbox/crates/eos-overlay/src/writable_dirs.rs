@@ -8,7 +8,7 @@
 
 use std::path::{Path, PathBuf};
 
-use crate::error::Result;
+use crate::error::{OverlayError, Result};
 
 /// Canonical filesystem for overlay `upperdir`/`workdir`.
 /// `// PORT backend/src/sandbox/overlay/writable_dirs.py:13 — OVERLAY_WRITABLE_ROOT`
@@ -34,13 +34,47 @@ pub struct OverlayWritableDirs {
 /// `// PORT backend/src/sandbox/overlay/writable_dirs.py:29-43 — overlay_writable_root`
 pub fn overlay_writable_root() -> Result<PathBuf> {
     // PORT backend/src/sandbox/overlay/writable_dirs.py:36-42 — mkdir-if-parent then is_dir gate
-    todo!()
+    let root = PathBuf::from(OVERLAY_WRITABLE_ROOT);
+    if root.parent().is_some_and(Path::is_dir) {
+        std::fs::create_dir_all(&root).map_err(OverlayError::Capture)?;
+    }
+    if root.is_dir() {
+        Ok(root)
+    } else {
+        Err(OverlayError::WritableRootUnavailable(
+            root.display().to_string(),
+        ))
+    }
 }
 
 /// Create and return the `upper`/`work` dirs for one overlay instance.
 /// `// PORT backend/src/sandbox/overlay/writable_dirs.py:46-52 — allocate_overlay_writable_dirs`
 pub fn allocate_overlay_writable_dirs(run_dir: &Path) -> Result<OverlayWritableDirs> {
     // PORT backend/src/sandbox/overlay/writable_dirs.py:48-52 — mkdir upper/work (parents, exist_ok)
-    let _ = run_dir;
-    todo!()
+    let upperdir = run_dir.join("upper");
+    let workdir = run_dir.join("work");
+    std::fs::create_dir_all(&upperdir).map_err(OverlayError::Capture)?;
+    std::fs::create_dir_all(&workdir).map_err(OverlayError::Capture)?;
+    Ok(OverlayWritableDirs {
+        run_dir: run_dir.to_path_buf(),
+        upperdir,
+        workdir,
+    })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::allocate_overlay_writable_dirs;
+
+    #[test]
+    fn allocates_upper_and_work_dirs() {
+        let run_dir = std::env::temp_dir().join(format!("eos-overlay-test-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&run_dir);
+
+        let dirs = allocate_overlay_writable_dirs(&run_dir).expect("allocate dirs");
+        assert!(dirs.upperdir.is_dir());
+        assert!(dirs.workdir.is_dir());
+
+        let _ = std::fs::remove_dir_all(&run_dir);
+    }
 }

@@ -19,6 +19,15 @@ pub enum RunnerError {
     #[error("namespace syscall failed")]
     Syscall(#[source] std::io::Error),
 
+    /// The request payload is structurally valid JSON but cannot be executed by
+    /// this runner mode.
+    #[error("invalid namespace runner request: {0}")]
+    InvalidRequest(String),
+
+    /// The overlay mount port failed.
+    #[error("overlay mount failed")]
+    Overlay(#[source] eos_overlay::OverlayError),
+
     /// Spawning, exec'ing, or waiting on the child process failed.
     /// `// PORT backend/src/sandbox/overlay/namespace_runner.py:243-272`
     #[error("child process failed")]
@@ -50,6 +59,12 @@ pub enum RunnerError {
 impl From<std::io::Error> for RunnerError {
     fn from(err: std::io::Error) -> Self {
         Self::Syscall(err)
+    }
+}
+
+impl From<eos_overlay::OverlayError> for RunnerError {
+    fn from(err: eos_overlay::OverlayError) -> Self {
+        Self::Overlay(err)
     }
 }
 

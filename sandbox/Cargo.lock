@@ -230,8 +230,10 @@ dependencies = [
  "anyhow",
  "eos-daemon",
  "eos-ns-holder",
+ "eos-overlay",
  "eos-protocol",
  "eos-runner",
+ "serde_json",
 ]
 
 [[package]]
