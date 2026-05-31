@@ -346,7 +346,7 @@ async def _dispatch_with_daemon_spawn_recovery(
         },
         separators=(",", ":"),
     )
-    readiness_result = await _call_thin_client_with_connect_retry(
+    readiness_result = await _call_daemon_envelope_with_connect_retry(
         exec_fn=exec_fn,
         sandbox_id=sandbox_id,
         envelope_json=readiness_envelope_json,
@@ -404,7 +404,7 @@ async def _dispatch_with_daemon_spawn_recovery(
                 details={"response": response, "original_op": op},
             )
 
-    return await _call_thin_client_with_connect_retry(
+    return await _call_daemon_envelope_with_connect_retry(
         exec_fn=exec_fn,
         sandbox_id=sandbox_id,
         envelope_json=envelope_json,
@@ -415,7 +415,7 @@ async def _dispatch_with_daemon_spawn_recovery(
     )
 
 
-async def _call_thin_client_with_connect_retry(
+async def _call_daemon_envelope_with_connect_retry(
     *,
     exec_fn: _DaemonExec,
     sandbox_id: str,

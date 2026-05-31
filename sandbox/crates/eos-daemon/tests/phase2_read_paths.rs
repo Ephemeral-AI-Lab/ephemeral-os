@@ -3,8 +3,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 
 use eos_daemon::OpTable;
 use eos_daemon::{DaemonServer, ServerConfig};
-use eos_protocol::Request;
-use eos_protocol::{decode, encode, Envelope};
+use eos_protocol::{decode, encode, Envelope, Request, DAEMON_AUTH_FIELD};
 use serde_json::{json, Value};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpListener, TcpStream, UnixStream};
@@ -171,7 +170,7 @@ async fn tcp_server_dispatches_authenticated_ready_request() {
     value
         .as_object_mut()
         .expect("request value object")
-        .insert("_eos_daemon_auth_token".to_owned(), json!("secret"));
+        .insert(DAEMON_AUTH_FIELD.to_owned(), json!("secret"));
     let mut request = serde_json::to_vec(&value).expect("encode authenticated request");
     request.push(b'\n');
     let mut stream = TcpStream::connect(("127.0.0.1", port))

@@ -120,7 +120,7 @@
 
 </section>
 <section id="startup-transport"
-  data-last-reviewed-commit="2a3e6cc7c"
+  data-last-reviewed-commit="5be91798f"
   data-evidence-paths="backend/src/sandbox/host/daemon_client.py backend/src/sandbox/daemon/rpc/server.py backend/src/sandbox/daemon/scripts/thin_client.py backend/src/sandbox/daemon/scripts/launch_daemon.sh backend/src/sandbox/daemon/builtin_operations.py sandbox/crates/eosd/src/main.rs sandbox/crates/eos-daemon/src/server.rs backend/scripts/bench_rust_daemon_phase2.py">
 <h3>6.2 Startup and Transport Workflow <a class="anchor" href="#startup-transport">§</a></h3>
 
@@ -150,12 +150,12 @@
 
 <div class="sequence" aria-label="Daemon startup and transport workflow">
   <ol>
-    <li><span><code>call_daemon_api()</code> injects <code>layer_stack_root</code>, resolves a provider adapter, and asks the adapter whether a daemon TCP endpoint exists <span class="file-ref">backend/src/sandbox/host/daemon_client.py:161-183</span>, <span class="file-ref">backend/src/sandbox/host/daemon_client.py:227-278</span>.</span></li>
+    <li><span><code>call_daemon_api()</code> injects <code>layer_stack_root</code>, resolves a provider adapter, and asks the adapter whether a daemon TCP endpoint exists <span class="file-ref">backend/src/sandbox/host/daemon_client.py:165-183</span>, <span class="file-ref">backend/src/sandbox/host/daemon_client.py:231-278</span>.</span></li>
     <li><span>The daemon server accepts one newline-delimited JSON envelope, applies auth and size/read-time limits, then delegates valid requests to the dispatcher <span class="file-ref">backend/src/sandbox/daemon/rpc/server.py:82-152</span>.</span></li>
     <li><span>The thin client connects to <code>runtime.sock</code>, writes the envelope plus newline, shuts down the write side, reads response chunks, and returns structured exit codes for connect and I/O failure <span class="file-ref">backend/src/sandbox/daemon/scripts/thin_client.py:13-56</span>.</span></li>
-    <li><span>If the first send reports connect failure, or an empty response that is safe to retry, the host launches the daemon through the selected runtime launcher <span class="file-ref">backend/src/sandbox/host/daemon_client.py:281-313</span>.</span></li>
+    <li><span>If the first send reports connect failure, or an empty response that is safe to retry, the host launches the daemon through the selected runtime launcher <span class="file-ref">backend/src/sandbox/host/daemon_client.py:300-330</span>.</span></li>
     <li><span>Python mode runs the bundle launch script, which checks for a live non-zombie PID, validates the environment signature, serializes respawn with <code>flock</code> when available, removes stale socket/PID state, then starts <code>python -m sandbox.daemon.__main__</code> with stdout/stderr redirected to the daemon log <span class="file-ref">backend/src/sandbox/daemon/scripts/launch_daemon.sh:19-86</span>. Rust mode runs <code>eosd daemon --spawn</code>, which preserves the same PID/socket/log contract and starts the Rust AF_UNIX/TCP server <span class="file-ref">sandbox/crates/eosd/src/main.rs</span>, <span class="file-ref">sandbox/crates/eos-daemon/src/server.rs</span>.</span></li>
-    <li><span>After spawn, the host probes <code>api.runtime.ready</code>. Readiness checks the control plane, data-plane services, and mutation gate before the original envelope is retried with bounded connect backoff <span class="file-ref">backend/src/sandbox/host/daemon_client.py:322-394</span>, <span class="file-ref">backend/src/sandbox/daemon/builtin_operations.py:158-245</span>.</span></li>
+    <li><span>After spawn, the host probes <code>api.runtime.ready</code>. Readiness checks the control plane, data-plane services, and mutation gate before the original envelope is retried with bounded connect backoff <span class="file-ref">backend/src/sandbox/host/daemon_client.py:333-459</span>, <span class="file-ref">backend/src/sandbox/daemon/builtin_operations.py:158-245</span>.</span></li>
   </ol>
 </div>
 
@@ -170,7 +170,7 @@
 
 </section>
 <section id="request-lifecycle"
-  data-last-reviewed-commit="2a3e6cc7c"
+  data-last-reviewed-commit="5be91798f"
   data-evidence-paths="backend/src/sandbox/api/tool/_daemon_request_payloads.py backend/src/sandbox/api/transport.py backend/src/sandbox/api/tool backend/src/sandbox/host/daemon_client.py backend/src/sandbox/daemon/rpc/dispatcher.py backend/tests/unit_test/test_sandbox/test_api/test_payload_helpers.py">
 <h3>6.3 Request Lifecycle <a class="anchor" href="#request-lifecycle">§</a></h3>
 
@@ -222,8 +222,8 @@
   <ol>
     <li><span>The public API builds a typed payload: file APIs add path/content/edit fields; shell adds command, cwd, timeout, description, and <code>background=true</code> when launched through the background path <span class="file-ref">backend/src/sandbox/api/tool/shell.py:49-63</span>.</span></li>
     <li><span><code>DaemonSandboxTransport</code> calls <code>with_daemon_protocol_version()</code>, then calls <code>call_daemon_api()</code>; the host client injects <code>layer_stack_root</code>, chooses a transport path, and serializes <code>{op, invocation_id, args}</code> <span class="file-ref">backend/src/sandbox/api/transport.py:44-77</span>, <span class="file-ref">backend/src/sandbox/host/daemon_client.py:97-149</span>, <span class="file-ref">backend/src/sandbox/host/daemon_client.py:161-191</span>.</span></li>
-    <li><span>Docker sandboxes can use a cached host TCP endpoint; otherwise the host executes the bundled thin client inside the sandbox, which connects to the AF_UNIX socket, sends one newline-terminated JSON envelope, and returns stdout JSON <span class="file-ref">backend/src/sandbox/host/daemon_client.py:436-457</span>, <span class="file-ref">backend/src/sandbox/daemon/scripts/thin_client.py:13-55</span>.</span></li>
-    <li><span>On connection failure or selected empty-response cases, the host runs the launch script, probes <code>api.runtime.ready</code>, then retries the original envelope with bounded connect backoff <span class="file-ref">backend/src/sandbox/host/daemon_client.py:281-394</span>, <span class="file-ref">backend/src/sandbox/host/daemon_client.py:397-433</span>.</span></li>
+    <li><span>Docker sandboxes can use a cached host TCP endpoint; otherwise the host executes the bundled thin client inside the sandbox, which connects to the AF_UNIX socket, sends one newline-terminated JSON envelope, and returns stdout JSON <span class="file-ref">backend/src/sandbox/host/daemon_client.py:462-485</span>, <span class="file-ref">backend/src/sandbox/daemon/scripts/thin_client.py:13-55</span>.</span></li>
+    <li><span>On connection failure or selected empty-response cases, the host runs the launch script, probes <code>api.runtime.ready</code>, then retries the original envelope with bounded connect backoff <span class="file-ref">backend/src/sandbox/host/daemon_client.py:300-415</span>, <span class="file-ref">backend/src/sandbox/host/daemon_client.py:418-459</span>.</span></li>
     <li><span>The daemon server enforces request size and read-timeout bounds, validates JSON object shape, checks TCP auth when configured, and delegates to <code>dispatch_envelope_async()</code> <span class="file-ref">backend/src/sandbox/daemon/rpc/server.py:54-62</span>, <span class="file-ref">backend/src/sandbox/daemon/rpc/server.py:82-152</span>.</span></li>
     <li><span>The dispatcher validates <code>op</code> and <code>args</code>, supplies a missing <code>invocation_id</code> only as a fallback, derives <code>agent_id</code>, registers the current asyncio task in the in-flight registry, runs the handler from <code>OP_TABLE</code>, serializes the result, attaches runtime timings, and deregisters in <code>finally</code> <span class="file-ref">backend/src/sandbox/daemon/rpc/dispatcher.py:55-113</span>, <span class="file-ref">backend/src/sandbox/daemon/rpc/dispatcher.py:116-176</span>.</span></li>
     <li><span>The host decodes the daemon response. Non-null daemon <code>error</code> values raise transport-level failures unless the response is a handler-level error result, so expected policy conflicts remain normal tool results <span class="file-ref">backend/src/sandbox/host/daemon_client.py:128-158</span>.</span></li>

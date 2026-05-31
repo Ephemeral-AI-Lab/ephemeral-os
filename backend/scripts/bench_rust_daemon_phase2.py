@@ -6,8 +6,8 @@ uploads a locally packaged ``eosd`` into a Docker sandbox, seeds a minimal
 LayerStack read fixture, starts ``EOS_SANDBOX_RUNTIME=rust``, and proves:
 
 * CP-3: daemon cold-start and idle RSS beat the checked-in CP-0 Python baseline.
-* AV-2: TCP connect failure invalidates the cached endpoint, respawns the daemon,
-  and the read path works after recovery.
+* AV-2: stale TCP transport failure invalidates the cached endpoint, respawns
+  the daemon, and the read path works after recovery.
 * Phase 2 read surface: ``api.runtime.ready``, ``api.v1.heartbeat``,
   ``api.layer_metrics``, ``api.read_file``, and ``api.v1.read_file`` work over
   the real AF_UNIX/TCP transports.
@@ -27,7 +27,8 @@ import sys
 import tarfile
 import time
 import uuid
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Iterator
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
 
@@ -148,8 +149,7 @@ async def run_phase2(args: argparse.Namespace) -> dict[str, Any]:
         report["artifact"] = await upload_artifact(bench, args.artifact)
         await seed_layer_stack(bench)
 
-        rust_env = temporary_env("EOS_SANDBOX_RUNTIME", "rust")
-        with rust_env:
+        with temporary_env("EOS_SANDBOX_RUNTIME", "rust"):
             from sandbox.host import daemon_client
 
             daemon_client.invalidate_daemon_tcp_endpoint(bench.sandbox_id)
@@ -179,21 +179,17 @@ async def run_phase2(args: argparse.Namespace) -> dict[str, Any]:
         await bench.close(keep=args.keep_container)
 
 
-class temporary_env:
-    def __init__(self, key: str, value: str) -> None:
-        self.key = key
-        self.value = value
-        self.previous: str | None = None
-
-    def __enter__(self) -> None:
-        self.previous = os.environ.get(self.key)
-        os.environ[self.key] = self.value
-
-    def __exit__(self, *_exc: object) -> None:
-        if self.previous is None:
-            os.environ.pop(self.key, None)
+@contextmanager
+def temporary_env(key: str, value: str) -> Iterator[None]:
+    previous = os.environ.get(key)
+    os.environ[key] = value
+    try:
+        yield
+    finally:
+        if previous is None:
+            os.environ.pop(key, None)
         else:
-            os.environ[self.key] = self.previous
+            os.environ[key] = previous
 
 
 async def upload_artifact(bench: DockerBench, artifact: Path) -> dict[str, Any]:
@@ -458,14 +454,14 @@ async def prove_respawn_and_cache_invalidation(
     cache_was_populated = bench.sandbox_id in daemon_client._tcp_endpoint_cache  # noqa: SLF001
     old_pid = await read_pid(bench)
     await kill_daemon(bench)
-    connect_failed = await daemon_client._call_tcp_daemon(  # noqa: SLF001
+    stale_tcp_probe = await daemon_client._call_tcp_daemon(  # noqa: SLF001
         endpoint,
         request("api.v1.heartbeat", {"invocation_ids": []}),
         timeout=5,
     )
-    stale_tcp_failed = _exit_code(connect_failed) == 97 or (
-        _exit_code(connect_failed) == 98
-        and _text(connect_failed, "stderr") == "EOS_DAEMON_IO_FAILED:empty_response"
+    stale_tcp_failed = _exit_code(stale_tcp_probe) == 97 or (
+        _exit_code(stale_tcp_probe) == 98
+        and _text(stale_tcp_probe, "stderr") == "EOS_DAEMON_IO_FAILED:empty_response"
     )
     read_after_respawn = await daemon_client.call_daemon_api(
         bench.sandbox_id,
@@ -504,8 +500,8 @@ async def prove_respawn_and_cache_invalidation(
     return {
         "cache_was_populated": cache_was_populated,
         "stale_tcp_transport_failure": stale_tcp_failed,
-        "connect_failed_probe": result_block(connect_failed),
-        "cache_invalidated_after_connect_failed": cache_invalidated,
+        "stale_tcp_probe": result_block(stale_tcp_probe),
+        "cache_invalidated_after_stale_tcp_failure": cache_invalidated,
         "cache_repopulated_on_next_call": cache_repopulated,
         "old_pid": old_pid,
         "new_pid": new_pid,

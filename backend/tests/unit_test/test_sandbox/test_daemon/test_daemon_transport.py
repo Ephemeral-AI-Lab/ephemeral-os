@@ -520,7 +520,7 @@ async def test_daemon_transport_does_not_retry_after_io_failure() -> None:
     assert exc.value.kind == "RuntimeExecFailed"
 
 
-async def test_call_thin_client_with_connect_retry_retries_transient_connect_failures(
+async def test_call_daemon_envelope_with_connect_retry_retries_transient_connect_failures(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     attempts: list[str] = []
@@ -548,7 +548,7 @@ async def test_call_thin_client_with_connect_retry_retries_transient_connect_fai
 
     monkeypatch.setattr(command.asyncio, "sleep", fake_sleep)
 
-    result = await command._call_thin_client_with_connect_retry(
+    result = await command._call_daemon_envelope_with_connect_retry(
         exec_fn=fake_exec,
         sandbox_id="sb-1",
         envelope_json='{"op":"api.read_file"}',
@@ -562,7 +562,7 @@ async def test_call_thin_client_with_connect_retry_retries_transient_connect_fai
     assert sleeps == list(command._CONNECT_RETRY_DELAYS_S[:2])
 
 
-async def test_call_thin_client_with_connect_retry_can_retry_empty_response(
+async def test_call_daemon_envelope_with_connect_retry_can_retry_empty_response(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     attempts: list[str] = []
@@ -585,7 +585,7 @@ async def test_call_thin_client_with_connect_retry_can_retry_empty_response(
 
     monkeypatch.setattr(command.asyncio, "sleep", fake_sleep)
 
-    result = await command._call_thin_client_with_connect_retry(
+    result = await command._call_daemon_envelope_with_connect_retry(
         exec_fn=fake_exec,
         sandbox_id="sb-1",
         envelope_json='{"op":"api.read_file"}',

@@ -9,7 +9,7 @@
     "remote_sha256": "59c0ae7bc655ba55f59e9d4e228e33340fd6125238d9fc8f4ea1961fd395c7a4",
     "size_bytes": 1277616,
     "source_path": "sandbox/dist/eosd-linux-amd64",
-    "upload_time_ms": 15.91637497767806,
+    "upload_time_ms": 14.828499988652766,
     "version": {
       "exit_code": 0,
       "stderr": "",
@@ -17,14 +17,9 @@
     }
   },
   "av2": {
-    "cache_invalidated_after_connect_failed": true,
+    "cache_invalidated_after_stale_tcp_failure": true,
     "cache_repopulated_on_next_call": true,
     "cache_was_populated": true,
-    "connect_failed_probe": {
-      "exit_code": 98,
-      "stderr": "EOS_DAEMON_IO_FAILED:empty_response",
-      "stdout": ""
-    },
     "gate_pass": true,
     "new_pid": 424,
     "old_pid": 295,
@@ -51,6 +46,11 @@
       "exists": true,
       "success": true,
       "workspace": "ephemeral"
+    },
+    "stale_tcp_probe": {
+      "exit_code": 98,
+      "stderr": "EOS_DAEMON_IO_FAILED:empty_response",
+      "stdout": ""
     },
     "stale_tcp_transport_failure": true
   },
@@ -106,17 +106,17 @@
         "runtime.boot_to_dispatch_s": 0.0,
         "runtime.dispatch_s": 0.0,
         "runtime.read_request_s": 0.0,
-        "runtime.ready.control_plane_s": 0.003255208,
-        "runtime.ready.data_plane_s": 1.25e-06,
-        "runtime.ready.mutation_gate_s": 1.292e-06,
-        "runtime.ready.total_s": 0.004028708
+        "runtime.ready.control_plane_s": 0.003130041,
+        "runtime.ready.data_plane_s": 1.041e-06,
+        "runtime.ready.mutation_gate_s": 1.333e-06,
+        "runtime.ready.total_s": 0.003892042
       },
       "uptime_s": 2.5e-07
     },
     "rss_no_more_than_half_cp0": true,
-    "rust_daemon_idle_rss_kb": 4264,
-    "rust_daemon_spawn_ms": 343.8992080045864,
-    "rust_runtime_ready_ms": 10.09870896814391
+    "rust_daemon_idle_rss_kb": 4112,
+    "rust_daemon_spawn_ms": 367.01454099966213,
+    "rust_runtime_ready_ms": 9.759750042576343
   },
   "created_container": true,
   "environment": {
@@ -154,14 +154,14 @@
       "exit_code": 0,
       "samples": {
         "count": 3,
-        "max": 419.2373749683611,
-        "min": 410.42725002625957,
-        "p50": 416.24558402691036,
-        "p95": 416.24558402691036,
+        "max": 482.89795801974833,
+        "min": 454.63695895159617,
+        "p50": 468.7849160400219,
+        "p95": 468.7849160400219,
         "samples_ms": [
-          410.42725002625957,
-          416.24558402691036,
-          419.2373749683611
+          454.63695895159617,
+          468.7849160400219,
+          482.89795801974833
         ]
       },
       "stderr": "",
@@ -195,14 +195,14 @@
     "python": "3.12.6"
   },
   "mode": "docker-phase2-rust-daemon",
-  "run_id": "local-fa437ca606dc",
-  "sandbox_id": "6634e960c3ecc25475375299f6e6891b0e581dd53902f6b5be6855017a8d6c4c",
+  "run_id": "local-2917cb87430f",
+  "sandbox_id": "49fbc311ad8a5544bc1cabd5aee41eeb8fdb2d20ed416f3d36834eb72840cd19",
   "transports": {
     "endpoint": {
       "auth_token_present": true,
       "host": "127.0.0.1",
       "internal_port": 37657,
-      "port": 54266
+      "port": 56725
     },
     "gate_pass": true,
     "tcp_heartbeat": {
@@ -288,12 +288,12 @@
         "runtime.boot_to_dispatch_s": 0.0,
         "runtime.dispatch_s": 0.0,
         "runtime.read_request_s": 0.0,
-        "runtime.ready.control_plane_s": 7.4792e-05,
-        "runtime.ready.data_plane_s": 7.08e-07,
-        "runtime.ready.mutation_gate_s": 1.166e-06,
-        "runtime.ready.total_s": 8.7875e-05
+        "runtime.ready.control_plane_s": 6.3125e-05,
+        "runtime.ready.data_plane_s": 9.58e-07,
+        "runtime.ready.mutation_gate_s": 1.125e-06,
+        "runtime.ready.total_s": 7.4916e-05
       },
-      "uptime_s": 1.020710751
+      "uptime_s": 1.070648167
     },
     "unix_read_alias": {
       "content": "# README\nPhase 2 rust daemon read path\n",
@@ -346,25 +346,25 @@
         "runtime.boot_to_dispatch_s": 0.0,
         "runtime.dispatch_s": 0.0,
         "runtime.read_request_s": 0.0,
-        "runtime.ready.control_plane_s": 5.9334e-05,
-        "runtime.ready.data_plane_s": 8.33e-07,
-        "runtime.ready.mutation_gate_s": 1.416e-06,
-        "runtime.ready.total_s": 7.2666e-05
+        "runtime.ready.control_plane_s": 5.7458e-05,
+        "runtime.ready.data_plane_s": 9.17e-07,
+        "runtime.ready.mutation_gate_s": 1.25e-06,
+        "runtime.ready.total_s": 6.9916e-05
       },
-      "uptime_s": 0.679728167
+      "uptime_s": 0.73839775
     },
     "warm_heartbeat_ms": {
       "count": 5,
-      "max": 1.7590000061318278,
-      "min": 0.7950839935801923,
-      "p50": 0.811208039522171,
-      "p95": 0.8189160143956542,
+      "max": 1.870625012088567,
+      "min": 0.7922910153865814,
+      "p50": 1.1732080020010471,
+      "p95": 1.4436249621212482,
       "samples_ms": [
-        0.7950839935801923,
-        0.7958330097608268,
-        0.811208039522171,
-        0.8189160143956542,
-        1.7590000061318278
+        0.7922910153865814,
+        1.1344169615767896,
+        1.1732080020010471,
+        1.4436249621212482,
+        1.870625012088567
       ]
     }
   }
