@@ -338,6 +338,29 @@ def test_exec_nonzero_exit_propagates(adapter: DockerProviderAdapter, fake_clien
     assert result.stderr == "boom\n"
 
 
+def test_put_archive_streams_tar_to_dest(
+    adapter: DockerProviderAdapter, fake_client: MagicMock
+) -> None:
+    container = fake_client.containers.get.return_value
+    container.put_archive.return_value = True
+
+    asyncio.run(
+        adapter.put_archive("c-1", tar_stream=b"TARBYTES", dest_dir="/opt/eos")
+    )
+
+    container.put_archive.assert_called_once_with(path="/opt/eos", data=b"TARBYTES")
+
+
+def test_put_archive_raises_on_false(
+    adapter: DockerProviderAdapter, fake_client: MagicMock
+) -> None:
+    container = fake_client.containers.get.return_value
+    container.put_archive.return_value = False
+
+    with pytest.raises(RuntimeError, match="put_archive returned False"):
+        asyncio.run(adapter.put_archive("c-1", tar_stream=b"x", dest_dir="/opt/eos"))
+
+
 def test_context_preparer_returns_preparer_instance(adapter: DockerProviderAdapter) -> None:
     preparer = adapter.context_preparer("c-1")
     from sandbox.provider.docker.context_preparer import DockerContextPreparer

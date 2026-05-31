@@ -1,0 +1,81 @@
+//! Isolated-workspace lifecycle error type.
+//!
+//! `kind()` maps onto the daemon RPC wire error kind, mirroring the Python
+//! `IsolatedWorkspaceError.kind` string (`_control_plane/types.py:87-97`).
+
+use std::path::PathBuf;
+
+/// Lifecycle error for the enter/exit isolated-workspace flow.
+///
+/// Each variant's `kind()` reproduces the Python `kind` string fed onto the
+/// daemon RPC response envelope.
+/// `// PORT backend/src/sandbox/isolated_workspace/_control_plane/types.py:87-97 — IsolatedWorkspaceError`
+#[derive(Debug, thiserror::Error)]
+#[non_exhaustive]
+pub enum IsolatedError {
+    /// `feature_disabled` — pipeline not initialized / feature flag off.
+    #[error("isolated workspaces are disabled")]
+    FeatureDisabled,
+
+    /// `invalid_argument` — a required argument was empty or malformed.
+    #[error("invalid argument: {0}")]
+    InvalidArgument(String),
+
+    /// `already_open` — the agent already holds an open isolated workspace.
+    #[error("agent already has an open isolated workspace")]
+    AlreadyOpen,
+
+    /// `not_open` — the agent has no open isolated workspace.
+    #[error("agent has no open isolated workspace")]
+    NotOpen,
+
+    /// `quota_exceeded` — the global concurrent-workspace cap is reached.
+    #[error("global isolated workspace cap reached")]
+    QuotaExceeded,
+
+    /// `setup_timeout` — a setup phase exceeded its deadline (rollback runs).
+    #[error("setup timed out at step {step}")]
+    SetupTimeout {
+        /// The pipeline phase that timed out.
+        step: String,
+    },
+
+    /// `setup_failed` — a setup phase failed (rollback runs).
+    #[error("setup failed at step {step}")]
+    SetupFailed {
+        /// The pipeline phase that failed.
+        step: String,
+    },
+
+    /// Linux network primitives (`ip`/`nft`/`CAP_NET_ADMIN`) unavailable.
+    /// `// PORT backend/src/sandbox/isolated_workspace/network.py:37-38`
+    #[error("isolated network unavailable: {0}")]
+    NetworkUnavailable(String),
+
+    /// An audit-sink write to the JSONL path failed.
+    #[error("audit sink write failed at {path}")]
+    AuditWrite {
+        /// The configured JSONL audit path.
+        path: PathBuf,
+        /// Underlying I/O error.
+        #[source]
+        source: std::io::Error,
+    },
+}
+
+impl IsolatedError {
+    /// The wire error `kind` string this error maps to.
+    pub fn kind(&self) -> &'static str {
+        match self {
+            Self::FeatureDisabled => "feature_disabled",
+            Self::InvalidArgument(_) => "invalid_argument",
+            Self::AlreadyOpen => "already_open",
+            Self::NotOpen => "not_open",
+            Self::QuotaExceeded => "quota_exceeded",
+            Self::SetupTimeout { .. } => "setup_timeout",
+            Self::SetupFailed { .. } => "setup_failed",
+            Self::NetworkUnavailable(_) => "setup_failed",
+            Self::AuditWrite { .. } => "internal_error",
+        }
+    }
+}

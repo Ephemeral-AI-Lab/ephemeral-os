@@ -1,0 +1,23 @@
+[package]
+name = "eos-protocol"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+serde.workspace = true
+# `preserve_order` is contract-required, NOT a convenience: request `args` keys
+# cross the wire in INSERTION order (layer_stack_root, _eos_daemon_protocol_version,
+# path, ...). The default `serde_json::Value` is a BTreeMap and would re-sort keys,
+# breaking the byte-stable request round-trip. Byte-identity > conservative deps.
+serde_json = { workspace = true, features = ["preserve_order"] }
+sha2.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+proptest.workspace = true
+# fixtures store `write_content` as base64 (JSON cannot hold raw bytes).
+base64.workspace = true
+
+[lints]
+workspace = true

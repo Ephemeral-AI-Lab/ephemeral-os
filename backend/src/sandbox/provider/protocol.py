@@ -63,6 +63,24 @@ class ProviderAdapter(Protocol):
         timeout: int | None = None,
     ) -> RawExecResult: ...
 
+    # -- Upload --------------------------------------------------------------
+
+    async def put_archive(
+        self,
+        sandbox_id: str,
+        *,
+        tar_stream: bytes,
+        dest_dir: str,
+    ) -> None:
+        """Stream a tar archive into *dest_dir* inside the sandbox.
+
+        The provider unpacks the tar server-side — no in-image
+        ``tar``/``gzip``/``base64`` is spawned. *dest_dir* must already exist;
+        the archive is extracted into it. Tar entry modes (e.g. the executable
+        bit) are set by the caller in the archive, not here.
+        """
+        ...
+
     # -- Context preparation -------------------------------------------------
 
     def context_preparer(self, sandbox_id: str) -> Any:

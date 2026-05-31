@@ -1,0 +1,78 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/eos-protocol",
+    "crates/eosd",
+    "crates/eos-daemon",
+    "crates/eos-runner",
+    "crates/eos-ns-holder",
+    "crates/eos-layerstack",
+    "crates/eos-overlay",
+    "crates/eos-occ",
+    "crates/eos-ephemeral",
+    "crates/eos-isolated",
+    "crates/eos-plugin",
+    "xtask",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+
+[workspace.dependencies]
+# External crates — declared ONCE, consumed via `dep.workspace = true`.
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+sha2 = "0.10"
+thiserror = "2"
+tokio = { version = "1", features = ["full"] }
+tokio-util = { version = "0.7", features = ["rt"] }
+tracing = "0.1"
+rustix = { version = "0.38", features = ["fs", "mount", "process", "thread"] }
+nix = "0.29"
+libc = "0.2"
+anyhow = "1"
+proptest = "1"
+criterion = "0.5"
+base64 = "0.22"
+
+# Internal crates — path deps (the edges below ARE the architecture).
+eos-protocol = { path = "crates/eos-protocol" }
+eos-layerstack = { path = "crates/eos-layerstack" }
+eos-overlay = { path = "crates/eos-overlay" }
+eos-occ = { path = "crates/eos-occ" }
+eos-ephemeral = { path = "crates/eos-ephemeral" }
+eos-isolated = { path = "crates/eos-isolated" }
+eos-plugin = { path = "crates/eos-plugin" }
+eos-runner = { path = "crates/eos-runner" }
+eos-ns-holder = { path = "crates/eos-ns-holder" }
+eos-daemon = { path = "crates/eos-daemon" }
+eosd = { path = "crates/eosd" }
+xtask = { path = "xtask" }
+
+[workspace.lints.clippy]
+# Lint groups need a lower priority than individual lints so the per-lint
+# levels below win (clippy lint_groups_priority gate).
+correctness = { level = "deny", priority = -1 }
+suspicious = { level = "deny", priority = -1 }
+style = { level = "warn", priority = -1 }
+complexity = { level = "warn", priority = -1 }
+perf = { level = "warn", priority = -1 }
+unwrap_used = "warn"
+dbg_macro = "warn"
+
+[workspace.lints.rust]
+unused_must_use = "warn"
+
+[profile.release]
+opt-level = 3
+lto = "fat"
+codegen-units = 1
+panic = "abort"
+strip = true
+
+[profile.bench]
+inherits = "release"
+debug = true
+strip = false

@@ -1,0 +1,24 @@
+[package]
+name = "eos-daemon"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+eos-protocol.workspace = true
+eos-layerstack.workspace = true
+eos-overlay.workspace = true
+eos-occ.workspace = true
+eos-ephemeral.workspace = true
+eos-isolated.workspace = true
+eos-plugin.workspace = true
+eos-runner.workspace = true
+eos-ns-holder.workspace = true
+serde_json.workspace = true
+tokio.workspace = true
+tokio-util.workspace = true
+tracing.workspace = true
+thiserror.workspace = true
+
+[lints]
+workspace = true

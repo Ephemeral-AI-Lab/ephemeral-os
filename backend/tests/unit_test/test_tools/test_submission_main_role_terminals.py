@@ -33,6 +33,7 @@ from .submission_test_utils import (
     build_harness_fixture,
     make_tool_context,
     spawn_reducer,
+    start_planner,
 )
 
 pytestmark = pytest.mark.asyncio
@@ -231,6 +232,58 @@ async def test_submit_workflow_handoff_starts_delegated_request(
     assert created_attempt is not None
     assert created_attempt.iteration_id == initial_iteration.id
     assert created_attempt.stage == AttemptStage.PLAN
+
+
+@pytest.mark.parametrize(
+    ("tool", "tool_input", "advisor_tool"),
+    [
+        (
+            submit_generator_outcome,
+            {"status": "success", "outcome": "wrong task kind"},
+            "submit_generator_outcome",
+        ),
+        (
+            submit_workflow_handoff,
+            {"goal_handoff": "wrong task kind"},
+            "submit_workflow_handoff",
+        ),
+    ],
+)
+async def test_generator_terminals_reject_non_generator_tasks(
+    workflow_store,
+    iteration_store,
+    attempt_store,
+    task_store,
+    composer,
+    tool,
+    tool_input,
+    advisor_tool,
+) -> None:
+    fixture = build_harness_fixture(
+        workflow_store=workflow_store,
+        iteration_store=iteration_store,
+        attempt_store=attempt_store,
+        task_store=task_store,
+        composer=composer,
+    )
+    planner_id = start_planner(fixture)
+
+    result = await execute_tool_once(
+        tool,
+        tool_input,
+        make_tool_context(
+            fixture,
+            planner_id,
+            advisor_approves=advisor_tool,
+        ),
+        emit=_noop_emit,
+    )
+
+    task = task_store.get_task(planner_id)
+    assert result.is_error
+    assert f"Task {planner_id!r} is not a generator task" in str(result.output)
+    assert task is not None
+    assert task["status"] == TaskCenterTaskStatus.RUNNING.value
 
 
 async def test_nested_planner_deferral_prehook_blocks_deferred_goal(

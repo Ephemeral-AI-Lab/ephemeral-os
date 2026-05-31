@@ -1,0 +1,18 @@
+[package]
+name = "eos-plugin"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+eos-ephemeral.workspace = true
+eos-overlay.workspace = true
+eos-layerstack.workspace = true
+eos-protocol.workspace = true
+# Errors only. NOT eos-occ — the no-publish/no-second-writer guard (06-crate-map
+# §A) keeps that internal edge absent; PPC payloads are opaque `String` (no serde
+# edge), reusing eos_protocol's envelope encode/decode for framing.
+thiserror.workspace = true
+
+[lints]
+workspace = true

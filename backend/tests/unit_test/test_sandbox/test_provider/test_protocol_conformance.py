@@ -18,6 +18,7 @@ _PROTOCOL_METHODS = (
     "get_signed_preview_url",
     "get_build_logs_url",
     "exec",
+    "put_archive",
     "context_preparer",
 )
 

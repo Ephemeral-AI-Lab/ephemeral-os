@@ -1,0 +1,29 @@
+{
+  "schema": "sandbox.daemon.audit.pull.v1",
+  "cursor": {
+    "after_seq": -1,
+    "lost_before_seq": 0
+  },
+  "buffer": {
+    "retained_events": 0,
+    "retained_bytes": 0,
+    "max_events": 50000,
+    "max_bytes": 8388608,
+    "pressure": 0.0,
+    "dropped_event_count": 0,
+    "dropped_event_count_by_lane": {
+      "critical": 0,
+      "normal": 0,
+      "sample": 0
+    },
+    "lost_before_seq": 0
+  },
+  "snapshot": {
+    "daemon": {
+      "boot_epoch_id": 999,
+      "next_seq": 0
+    }
+  },
+  "events": [],
+  "success": true
+}

@@ -382,6 +382,28 @@ class DockerProviderAdapter:
             stderr=stderr_b.decode("utf-8", errors="replace"),
         )
 
+    # -- Upload --------------------------------------------------------------
+
+    async def put_archive(
+        self,
+        sandbox_id: str,
+        *,
+        tar_stream: bytes,
+        dest_dir: str,
+    ) -> None:
+        client = await self._get_async_client()
+
+        def _run() -> None:
+            container = client.containers.get(sandbox_id)
+            ok = container.put_archive(path=dest_dir, data=tar_stream)
+            if not ok:
+                raise RuntimeError(
+                    f"docker put_archive returned False "
+                    f"(sandbox={sandbox_id!r}, dest_dir={dest_dir!r})"
+                )
+
+        await asyncio.to_thread(_run)
+
     # -- Context preparation -------------------------------------------------
 
     def context_preparer(self, sandbox_id: str) -> Any:

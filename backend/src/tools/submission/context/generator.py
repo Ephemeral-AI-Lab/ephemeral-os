@@ -5,6 +5,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Literal
 
+from task_center import TaskCenterInvariantViolation
+from task_center._core.invariants import assert_generator_task_for_submission
 from task_center._core.primitives import attempt_id_from_task_id
 from tools._framework.core.context import ToolExecutionContextService
 from tools.submission.context.attempt import (
@@ -81,6 +83,10 @@ def resolve_generator_submission_context(
     attempt_ctx = _resolve_attempt_context(
         runtime=runtime, task=task, task_id=task_id, context=context
     )
+    try:
+        assert_generator_task_for_submission(task, attempt_ctx.attempt)
+    except TaskCenterInvariantViolation as exc:
+        raise AttemptSubmissionContextError(str(exc)) from exc
     return GeneratorSubmissionContext(
         task_center_task_id=task_id,
         task=task,

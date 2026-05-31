@@ -1,0 +1,113 @@
+//! Route classification and per-path publish outcomes.
+//!
+//! A changeset is split into disjoint normalized paths; each path is routed to
+//! exactly one of four destinations and, after the publish transaction, lands a
+//! per-path [`OccStatus`]. These mirror the Python `RouteDecision` /
+//! `FileStatus` enums byte-for-byte (the `str` values are part of the wire
+//! contract, so the `serde` rename strings below are load-bearing).
+
+use eos_protocol::LayerPath;
+use serde::{Deserialize, Serialize};
+
+/// Where a single normalized path is routed during preparation.
+///
+/// The wire strings are exact: `gated`/`direct`/`drop`/`reject`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[non_exhaustive]
+pub enum Route {
+    /// Tracked-by-git path: publish through CAS with a base-hash check.
+    #[serde(rename = "gated")]
+    Gated,
+    /// Gitignored path: publish directly without a base-hash gate.
+    #[serde(rename = "direct")]
+    Direct,
+    /// `.git` internal path: dropped (never published).
+    #[serde(rename = "drop")]
+    Drop,
+    /// Disallowed path (absolute / escaping): rejected.
+    #[serde(rename = "reject")]
+    Reject,
+}
+
+/// Terminal per-path status after the publish transaction resolves.
+///
+/// Wire strings are exact and include `aborted_version` — the stale-base
+/// outcome surfaced when the CAS retry budget is exhausted.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[non_exhaustive]
+pub enum OccStatus {
+    /// Validated and staged (atomic batch not yet finalized).
+    #[serde(rename = "accepted")]
+    Accepted,
+    /// Published into a new manifest version.
+    #[serde(rename = "committed")]
+    Committed,
+    /// Stale base hash; CAS retry budget exhausted.
+    #[serde(rename = "aborted_version")]
+    AbortedVersion,
+    /// Overlapping in-flight publish to the same path aborted this one.
+    #[serde(rename = "aborted_overlap")]
+    AbortedOverlap,
+    /// Routed [`Route::Drop`]: intentionally not published.
+    #[serde(rename = "dropped")]
+    Dropped,
+    /// Routed [`Route::Reject`]: disallowed path.
+    #[serde(rename = "rejected")]
+    Rejected,
+    /// Publish failed for a non-version reason.
+    #[serde(rename = "failed")]
+    Failed,
+}
+
+impl OccStatus {
+    /// Did this path actually land in a published manifest?
+    pub fn is_published(self) -> bool {
+        matches!(self, Self::Accepted | Self::Committed)
+    }
+
+    /// Is this a success outcome (published, or a deliberate drop)?
+    pub fn is_success(self) -> bool {
+        matches!(self, Self::Accepted | Self::Committed | Self::Dropped)
+    }
+}
+
+/// The route + reason a preparer assigned to one normalized path.
+///
+/// This is the per-path half of a `PublishDecision`: the input contract the
+/// commit queue consumes (one entry per disjoint path).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PublishDecision {
+    /// Normalized, validated path (unrepresentable when invalid).
+    pub path: LayerPath,
+    /// Destination this path was routed to.
+    pub route: Route,
+    /// Optional human-readable reason (e.g. why dropped/rejected).
+    pub message: Option<String>,
+}
+
+/// Terminal outcome for one path after the publish transaction.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct FileResult {
+    /// The normalized path this result describes.
+    pub path: LayerPath,
+    /// Terminal status.
+    pub status: OccStatus,
+    /// Diagnostic message (empty by default, mirrors Python).
+    pub message: String,
+}
+
+/// Aggregate result of a published (or aborted) changeset.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ChangesetResult {
+    /// Per-path outcomes, one entry per input path.
+    pub files: Vec<FileResult>,
+    /// Manifest version produced, or `None` if nothing landed.
+    pub published_manifest_version: Option<u64>,
+}
+
+impl ChangesetResult {
+    /// True iff every path reached a success status.
+    pub fn success(&self) -> bool {
+        self.files.iter().all(|f| f.status.is_success())
+    }
+}

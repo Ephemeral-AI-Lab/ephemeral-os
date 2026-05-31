@@ -338,6 +338,20 @@ class DaytonaProviderAdapter:
             stderr=str(getattr(response, "stderr", "") or ""),
         )
 
+    # -- Upload --------------------------------------------------------------
+
+    async def put_archive(
+        self,
+        sandbox_id: str,
+        *,
+        tar_stream: bytes,
+        dest_dir: str,
+    ) -> None:
+        raise NotImplementedError(
+            "DaytonaProviderAdapter.put_archive is not implemented; "
+            "the eosd binary-upload path is Docker-only (migration plan §0)."
+        )
+
     # -- Hook ----------------------------------------------------------------
 
     def context_preparer(self, sandbox_id: str) -> Any:

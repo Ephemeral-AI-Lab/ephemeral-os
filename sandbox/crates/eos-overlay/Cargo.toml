@@ -1,0 +1,18 @@
+[package]
+name = "eos-overlay"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+eos-layerstack.workspace = true
+eos-protocol.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+rustix.workspace = true
+nix.workspace = true
+libc.workspace = true
+
+[lints]
+workspace = true

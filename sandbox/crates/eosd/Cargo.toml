@@ -1,0 +1,19 @@
+[package]
+name = "eosd"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "eosd"
+path = "src/main.rs"
+
+[dependencies]
+eos-daemon.workspace = true
+eos-runner.workspace = true
+eos-ns-holder.workspace = true
+eos-protocol.workspace = true
+anyhow.workspace = true
+
+[lints]
+workspace = true

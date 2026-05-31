@@ -1,0 +1,12 @@
+[package]
+name = "eos-layerstack"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+eos-protocol.workspace = true
+thiserror.workspace = true
+
+[lints]
+workspace = true

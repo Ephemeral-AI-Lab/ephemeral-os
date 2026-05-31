@@ -1,0 +1,19 @@
+[package]
+name = "eos-isolated"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+eos-overlay.workspace = true
+eos-runner.workspace = true
+eos-ns-holder.workspace = true
+eos-layerstack.workspace = true
+eos-protocol.workspace = true
+# External deps the crate map assigns to eos-isolated (06-crate-map §A). NOT
+# eos-occ — that edge is the build-time no-publish guard and must stay absent.
+serde_json.workspace = true
+thiserror.workspace = true
+
+[lints]
+workspace = true
