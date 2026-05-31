@@ -95,6 +95,7 @@ _RENAMED_COLUMNS: dict[str, dict[str, str]] = {
 }
 
 _LEGACY_TABLES_TO_DROP: set[str] = {
+    "context_packets",
     "task_center_attempt",
 }
 

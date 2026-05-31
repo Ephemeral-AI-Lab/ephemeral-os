@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING
 from task_center._core.outcomes import (
     ExecutionTaskOutcome,
     attempt_execution_outcomes,
-    latest_execution_outcome,
+    execution_outcomes_from_row,
     parse_outcomes_record,
     role_from_task_id,
 )
@@ -49,7 +49,10 @@ __all__ = [
     "build_generator_context",
     "build_planner_context",
     "build_reducer_context",
+    "validate_context_recipe",
 ]
+
+VALID_CONTEXT_RECIPE_IDS = frozenset(("planner", "generator", "reducer"))
 
 
 @dataclass(frozen=True, slots=True)
@@ -68,8 +71,21 @@ class ContextEngine:
 
     deps: ContextEngineDeps
 
-    def build(self, recipe_id: str, scope: ContextScope) -> AgentContext:  # noqa: ARG002
+    def build(self, recipe_id: str, scope: ContextScope) -> AgentContext:
+        validate_context_recipe(recipe_id, scope.role)
         return build_agent_context(scope, self.deps)
+
+
+def validate_context_recipe(recipe_id: str, role: str) -> None:
+    """Ensure the declared recipe is one of the role-scoped builders."""
+    if recipe_id not in VALID_CONTEXT_RECIPE_IDS:
+        raise MissingContextRecipeError(f"Unknown context recipe: {recipe_id!r}")
+    if role not in VALID_CONTEXT_RECIPE_IDS:
+        raise RecipeScopeError(f"Unsupported context role: {role!r}")
+    if recipe_id != role:
+        raise RecipeScopeError(
+            f"Context recipe {recipe_id!r} cannot build role {role!r}"
+        )
 
 
 def build_agent_context(scope: ContextScope, deps: ContextEngineDeps) -> AgentContext:
@@ -135,10 +151,6 @@ def build_planner_context(scope: ContextScope, deps: ContextEngineDeps) -> Agent
             "Prior iterations omit internal attempt history.",
             "Planner outcomes are omitted from iteration and workflow history.",
         ),
-        target_id=attempt_id,
-        workflow_id=workflow_id,
-        iteration_id=iteration_id,
-        attempt_id=attempt_id,
     )
 
 
@@ -156,11 +168,10 @@ def _build_execution_context(
     *,
     role: str,
 ) -> AgentContext:
-    workflow_id = scope.require_field("workflow_id")
+    scope.require_field("workflow_id")
     attempt_id = scope.require_field("attempt_id")
     task_id = scope.require_field("task_id")
-    attempt = deps.attempt_store.get(attempt_id)
-    if attempt is None:
+    if deps.attempt_store.get(attempt_id) is None:
         raise ContextEngineError(f"Attempt {attempt_id!r} not found")
     task = deps.task_store.get_task(task_id)
     if task is None:
@@ -186,11 +197,6 @@ def _build_execution_context(
         role="reducer" if role == "reducer" else "generator",
         sections=tuple(sections),
         directive="Complete <assigned_task> using <dependencies>.",
-        target_id=task_id,
-        workflow_id=workflow_id,
-        iteration_id=scope.iteration_id or attempt.iteration_id,
-        attempt_id=attempt_id,
-        task_id=task_id,
     )
 
 
@@ -252,23 +258,25 @@ def _dependency_sections(
             raise ContextEngineError(
                 f"Dependency task {task_id!r} is missing; context cannot be assembled."
             )
-        outcome = latest_execution_outcome(task_id, task)
-        if outcome is None:
+        outcomes = execution_outcomes_from_row(task_id, task)
+        if not outcomes:
             if task.get("status") != "done":
                 raise ContextEngineError(
                     f"Dependency task {task_id!r} has no execution outcome."
                 )
-            outcome = ExecutionTaskOutcome(
-                status="success",
-                role=role_from_task_id(task_id) or "generator",
-                task_id=task_id,
-                outcome="(no outcome recorded)",
+            outcomes = (
+                ExecutionTaskOutcome(
+                    status="success",
+                    role=role_from_task_id(task_id) or "generator",
+                    task_id=task_id,
+                    outcome="(no outcome recorded)",
+                ),
             )
         sections.append(
             ContextSection(
                 tag="dependency",
-                attrs={"task_id": outcome.task_id},
-                children=(render_task_outcome(outcome),),
+                attrs={"task_id": task_id},
+                children=tuple(render_task_outcome(outcome) for outcome in outcomes),
             )
         )
     return tuple(sections)

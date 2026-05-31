@@ -281,7 +281,7 @@ async def test_submit_workflow_handoff_child_outcome_updates_outer_generator(
             attempt_id=delegated_attempt_id,
             planner_task_id=delegated_planner_id,
             kind="completes",
-            tasks=(
+            generators=(
                 PlannedGeneratorTask(
                     local_id="delegated",
                     agent_name="executor",

@@ -102,7 +102,7 @@ def _seed_outer_running_generator(
             attempt_id=outer_attempt.id,
             planner_task_id=planner_task_id(outer_attempt.id),
             kind="completes",
-            tasks=(
+            generators=(
                 PlannedGeneratorTask(
                     local_id="outer", agent_name="executor", needs=(), task_spec="execute outer"
                 ),
@@ -119,7 +119,7 @@ def _plan(attempt_id: str, *, deferred_goal: str | None) -> PlannerSubmission:
         attempt_id=attempt_id,
         planner_task_id=planner_task_id(attempt_id),
         kind="defers" if deferred_goal is not None else "completes",
-        tasks=(PlannedGeneratorTask("d", "executor", (), "do delegated"),),
+        generators=(PlannedGeneratorTask("d", "executor", (), "do delegated"),),
         reducers=(PlannedReducerTask("rr", ("d",), "gate delegated"),),
         deferred_goal_for_next_iteration=deferred_goal,
     )

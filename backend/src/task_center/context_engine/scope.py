@@ -33,12 +33,6 @@ class ContextScope:
     attempt_id: str | None = None
     task_id: str | None = None
 
-    def assert_fields(self, required: frozenset[str]) -> None:
-        """Raise :class:`RecipeScopeError` if any required field is None."""
-        missing = sorted(f for f in required if getattr(self, f, None) is None)
-        if missing:
-            raise RecipeScopeError(f"ContextScope is missing required fields: {missing!r}")
-
     def require_field(self, field: ScopeField) -> str:
         """Return one required identity field as a non-optional string."""
         value = getattr(self, field)

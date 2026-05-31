@@ -27,6 +27,12 @@ def test_initialize_db_drops_legacy_attempt_table(tmp_path, monkeypatch):
                 "VALUES ('legacy-1', 'r1')"
             )
         )
+        conn.execute(
+            text(
+                "CREATE TABLE context_packets "
+                "(id TEXT PRIMARY KEY, task_id TEXT)"
+            )
+        )
     pre_engine.dispose()
 
     # Reset module-level engine state so initialize_db rebuilds cleanly.
@@ -39,6 +45,7 @@ def test_initialize_db_drops_legacy_attempt_table(tmp_path, monkeypatch):
     assert eng is not None
     insp = inspect(eng)
     tables = set(insp.get_table_names())
+    assert "context_packets" not in tables
     assert "task_center_attempt" not in tables
     assert "workflows" in tables
     assert "iterations" in tables

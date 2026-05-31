@@ -7,12 +7,14 @@ from pydantic import ValidationError
 
 from agents import (
     AgentDefinition,
+    AgentRole,
     list_definitions,
     register_definition,
     unregister_definition,
     validate_agent_definitions_resolved,
 )
 from agents.skills import SkillLintError
+from task_center.context_engine.engine import AgentDefinitionValidationError
 
 
 @pytest.fixture(autouse=True)
@@ -43,22 +45,41 @@ def test_legacy_variants_field_rejected_by_definition_model():
     assert "variants" in str(exc.value)
 
 
-def test_context_recipe_name_is_not_registry_validated():
+def test_unknown_context_recipe_is_rejected():
     base = AgentDefinition(
         name="planner",
         description="planner",
+        role=AgentRole.PLANNER,
         terminals=["submit_x"],
         tool_call_limit=10,
         context_recipe="not_registered_recipe",
     )
     register_definition(base)
-    validate_agent_definitions_resolved()
+
+    with pytest.raises(AgentDefinitionValidationError, match="invalid context_recipe"):
+        validate_agent_definitions_resolved()
+
+
+def test_context_recipe_must_match_agent_role():
+    base = AgentDefinition(
+        name="generator",
+        description="generator",
+        role=AgentRole.GENERATOR,
+        terminals=["submit_x"],
+        tool_call_limit=10,
+        context_recipe="planner",
+    )
+    register_definition(base)
+
+    with pytest.raises(AgentDefinitionValidationError, match="cannot build role"):
+        validate_agent_definitions_resolved()
 
 
 def test_clean_setup_passes_validation():
     planner = AgentDefinition(
         name="planner",
         description="planner",
+        role=AgentRole.PLANNER,
         context_recipe="planner",
         terminals=["submit_plan_closes_goal", "submit_plan_defers_goal"],
         tool_call_limit=10,
@@ -66,6 +87,7 @@ def test_clean_setup_passes_validation():
     generator = AgentDefinition(
         name="generator",
         description="generator",
+        role=AgentRole.GENERATOR,
         context_recipe="generator",
         terminals=["submit_generator_success", "submit_generator_failure"],
         tool_call_limit=10,
@@ -100,6 +122,7 @@ def test_skill_lint_runs_during_resolved_validation(tmp_path):
     planner = AgentDefinition(
         name="planner",
         description="planner",
+        role=AgentRole.PLANNER,
         terminals=["submit_x"],
         tool_call_limit=10,
         context_recipe="planner",

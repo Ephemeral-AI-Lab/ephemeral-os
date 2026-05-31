@@ -130,7 +130,7 @@ def _build_orchestrator(
 def _plan(
     attempt_id: str,
     *,
-    tasks: tuple[PlannedGeneratorTask, ...],
+    generators: tuple[PlannedGeneratorTask, ...],
     reducers: tuple[PlannedReducerTask, ...],
     kind: str = "completes",
     deferred_goal_for_next_iteration: str | None = None,
@@ -139,7 +139,7 @@ def _plan(
         attempt_id=attempt_id,
         planner_task_id=planner_task_id(attempt_id),
         kind=kind,  # type: ignore[arg-type]
-        tasks=tasks,
+        generators=generators,
         reducers=reducers,
         deferred_goal_for_next_iteration=deferred_goal_for_next_iteration,
     )
@@ -220,7 +220,7 @@ def test_apply_plan_submission_runs_and_persists_plan_task_ids(
     )
 
     orchestrator.apply_plan_submission(
-        _plan(attempt.id, tasks=tasks, reducers=_one_reducer(("a", "b")))
+        _plan(attempt.id, generators=tasks, reducers=_one_reducer(("a", "b")))
     )
 
     refreshed = attempt_store.get(attempt.id)
@@ -249,7 +249,7 @@ def test_apply_partial_plan_submission_stores_deferred_goal(
     orchestrator.apply_plan_submission(
         _plan(
             attempt.id,
-            tasks=(PlannedGeneratorTask("a", "executor", (), "do A"),),
+            generators=(PlannedGeneratorTask("a", "executor", (), "do A"),),
             reducers=_one_reducer(("a",)),
             kind="defers",
             deferred_goal_for_next_iteration="continue here",
@@ -298,7 +298,7 @@ def test_apply_generator_success_launches_newly_ready_dependents(
     orchestrator.apply_plan_submission(
         _plan(
             attempt.id,
-            tasks=(
+            generators=(
                 PlannedGeneratorTask("a", "executor", (), "do A"),
                 PlannedGeneratorTask("b", "generator", ("a",), "do B"),
             ),
@@ -329,7 +329,7 @@ def test_missing_generator_agent_profile_is_invariant_violation(
     orchestrator.apply_plan_submission(
         _plan(
             attempt.id,
-            tasks=(
+            generators=(
                 PlannedGeneratorTask("a", "executor", (), "do A"),
                 PlannedGeneratorTask("b", "generator", ("a",), "do B"),
             ),
@@ -377,7 +377,7 @@ def test_generator_launch_failure_marks_task_failed_and_closes_attempt(
     orchestrator.apply_plan_submission(
         _plan(
             attempt.id,
-            tasks=(PlannedGeneratorTask("a", "executor", (), "do A"),),
+            generators=(PlannedGeneratorTask("a", "executor", (), "do A"),),
             reducers=_one_reducer(("a",)),
         )
     )
@@ -411,7 +411,7 @@ def test_reducer_launch_failure_marks_task_failed_and_closes_attempt(
     orchestrator.apply_plan_submission(
         _plan(
             attempt.id,
-            tasks=(PlannedGeneratorTask("a", "executor", (), "do A"),),
+            generators=(PlannedGeneratorTask("a", "executor", (), "do A"),),
             reducers=_one_reducer(("a",)),
         )
     )
@@ -445,7 +445,7 @@ def test_reducer_compose_failure_marks_task_failed_and_closes_attempt(
     orchestrator.apply_plan_submission(
         _plan(
             attempt.id,
-            tasks=(PlannedGeneratorTask("a", "executor", (), "do A"),),
+            generators=(PlannedGeneratorTask("a", "executor", (), "do A"),),
             reducers=_one_reducer(("a",)),
         )
     )
@@ -476,7 +476,7 @@ def test_apply_generator_blocker_leaves_pending_descendants_not_started(
     orchestrator.apply_plan_submission(
         _plan(
             attempt.id,
-            tasks=(
+            generators=(
                 PlannedGeneratorTask("a", "executor", (), "do A"),
                 PlannedGeneratorTask("b", "executor", ("a",), "do B"),
                 PlannedGeneratorTask("c", "executor", ("b",), "do C"),
@@ -508,7 +508,7 @@ def test_generator_blocker_waits_then_closes_after_runnable_siblings_finish(
     orchestrator.apply_plan_submission(
         _plan(
             attempt.id,
-            tasks=(
+            generators=(
                 PlannedGeneratorTask("a", "executor", (), "do A"),
                 PlannedGeneratorTask("b", "executor", (), "do B"),
             ),
@@ -538,7 +538,7 @@ def test_all_generators_done_launches_reducer(
     orchestrator.apply_plan_submission(
         _plan(
             attempt.id,
-            tasks=(PlannedGeneratorTask("a", "executor", (), "do A"),),
+            generators=(PlannedGeneratorTask("a", "executor", (), "do A"),),
             reducers=_one_reducer(("a",)),
         )
     )
@@ -563,7 +563,7 @@ def test_reducer_success_closes_attempt_passed(
     orchestrator.apply_plan_submission(
         _plan(
             attempt.id,
-            tasks=(PlannedGeneratorTask("a", "executor", (), "do A"),),
+            generators=(PlannedGeneratorTask("a", "executor", (), "do A"),),
             reducers=_one_reducer(("a",)),
         )
     )
@@ -588,7 +588,7 @@ def test_reducer_failure_closes_attempt_failed(
     orchestrator.apply_plan_submission(
         _plan(
             attempt.id,
-            tasks=(PlannedGeneratorTask("a", "executor", (), "do A"),),
+            generators=(PlannedGeneratorTask("a", "executor", (), "do A"),),
             reducers=_one_reducer(("a",)),
         )
     )
@@ -633,7 +633,7 @@ def test_child_workflow_success_resumes_waiting_generator(
     orchestrator.apply_plan_submission(
         _plan(
             attempt.id,
-            tasks=(PlannedGeneratorTask("a", "executor", (), "do A"),),
+            generators=(PlannedGeneratorTask("a", "executor", (), "do A"),),
             reducers=_one_reducer(("a",)),
         )
     )
@@ -671,7 +671,7 @@ def test_child_workflow_failure_leaves_dependents_pending_and_closes_attempt(
     orchestrator.apply_plan_submission(
         _plan(
             attempt.id,
-            tasks=(
+            generators=(
                 PlannedGeneratorTask("a", "executor", (), "do A"),
                 PlannedGeneratorTask("b", "executor", ("a",), "do B"),
             ),
@@ -715,7 +715,7 @@ def test_cancel_child_workflow_restores_generator_running(
     orchestrator.apply_plan_submission(
         _plan(
             attempt.id,
-            tasks=(PlannedGeneratorTask("a", "executor", (), "do A"),),
+            generators=(PlannedGeneratorTask("a", "executor", (), "do A"),),
             reducers=_one_reducer(("a",)),
         )
     )
@@ -744,7 +744,7 @@ def test_orchestrator_never_creates_retry_attempt(
     orchestrator.apply_plan_submission(
         _plan(
             attempt.id,
-            tasks=(PlannedGeneratorTask("a", "executor", (), "do A"),),
+            generators=(PlannedGeneratorTask("a", "executor", (), "do A"),),
             reducers=_one_reducer(("a",)),
         )
     )

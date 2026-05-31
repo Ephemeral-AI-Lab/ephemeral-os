@@ -181,7 +181,7 @@ def build_planner_submission(
             attempt_id=submission_context.attempt.id,
             planner_task_id=task_id,
             kind=kind,
-            tasks=ordered_generators,
+            generators=ordered_generators,
             reducers=ordered_reducers,
             deferred_goal_for_next_iteration=deferred_goal_for_next_iteration,
         ),

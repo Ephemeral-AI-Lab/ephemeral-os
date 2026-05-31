@@ -81,7 +81,7 @@ def _plan(attempt_id: str) -> PlannerSubmission:
         attempt_id=attempt_id,
         planner_task_id=planner_task_id(attempt_id),
         kind="completes",
-        tasks=(PlannedGeneratorTask("a", "executor", (), "do A"),),
+        generators=(PlannedGeneratorTask("a", "executor", (), "do A"),),
         reducers=(PlannedReducerTask("r", ("a",), "gate the slice"),),
         deferred_goal_for_next_iteration=None,
     )

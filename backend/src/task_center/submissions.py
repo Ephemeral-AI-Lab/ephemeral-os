@@ -42,7 +42,7 @@ class PlannerSubmission:
     attempt_id: str
     planner_task_id: str
     kind: Literal["completes", "defers"]
-    tasks: tuple[PlannedGeneratorTask, ...]
+    generators: tuple[PlannedGeneratorTask, ...]
     reducers: tuple[PlannedReducerTask, ...]
     deferred_goal_for_next_iteration: str | None
 

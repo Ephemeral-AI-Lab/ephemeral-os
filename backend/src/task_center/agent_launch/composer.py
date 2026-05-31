@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 
 from task_center.agent_launch.entry_messages import AgentEntryMessages
 from task_center.context_engine.skill_message import (
-    _wrap_task_guidance,
+    wrap_task_guidance,
     build_skill_message,
 )
 from task_center.context_engine.engine import ContextEngine
@@ -42,14 +42,13 @@ class AgentEntryComposer:
 
         agent_def = selection.agent_def
         context_message = render_context_xml(context)
-        task_guidance = _wrap_task_guidance(render_task_guidance(context), agent_def)
+        task_guidance = wrap_task_guidance(render_task_guidance(context), agent_def)
         skill_message = build_skill_message(agent_def.skill, agent_def)
         return AgentEntryMessages(
             agent_def=agent_def,
             context=context_message,
             task_guidance=task_guidance,
             skill=skill_message,
-            packet=context,
         )
 
 

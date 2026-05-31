@@ -144,7 +144,7 @@ def apply_single_generator_plan(fixture: TaskCenterFixture, *, agent_name: str =
             attempt_id=fixture.attempt_id,
             planner_task_id=planner_id,
             kind="completes",
-            tasks=(
+            generators=(
                 PlannedGeneratorTask(
                     local_id="a",
                     agent_name=agent_name,

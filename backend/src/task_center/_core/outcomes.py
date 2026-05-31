@@ -107,18 +107,11 @@ def execution_outcomes_from_row(
     )
 
 
-def latest_execution_outcome(
-    task_id: str, task: dict[str, Any] | None
-) -> ExecutionTaskOutcome | None:
-    outcomes = execution_outcomes_from_row(task_id, task)
-    return outcomes[-1] if outcomes else None
-
-
 def planner_outcome_from_submission(submission: PlannerSubmission) -> PlannerTaskOutcome:
     """Build the planner task outcome from a normalized planner submission."""
     id_map = _planned_id_map(submission)
     planned: list[PlannedTaskRef] = []
-    for task in submission.tasks:
+    for task in submission.generators:
         planned.append(
             PlannedTaskRef(
                 task_id=id_map[task.local_id],
@@ -281,7 +274,7 @@ def _planned_id_map(submission: PlannerSubmission) -> dict[str, str]:
 
     ids = {
         task.local_id: generator_task_id(submission.attempt_id, task.local_id)
-        for task in submission.tasks
+        for task in submission.generators
     }
     ids.update(
         {
@@ -387,7 +380,6 @@ __all__ = [
     "attempt_execution_outcomes",
     "execution_outcome_for_submission",
     "execution_outcomes_from_row",
-    "latest_execution_outcome",
     "parse_outcomes_record",
     "present_status",
     "planner_outcome_from_submission",

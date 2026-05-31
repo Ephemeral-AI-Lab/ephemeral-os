@@ -86,6 +86,7 @@ def test_ac9_planner_md_shape_passes_validation() -> None:
     planner = AgentDefinition(
         name="planner",
         description="planner",
+        role=AgentRole.PLANNER,
         context_recipe="planner",
         terminals=["submit_plan_closes_goal", "submit_plan_defers_goal"],
         tool_call_limit=10,

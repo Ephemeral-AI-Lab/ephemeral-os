@@ -87,7 +87,7 @@ def _seed_attempt_with_waiting_generator(
             attempt_id=attempt.id,
             planner_task_id=planner_task_id(attempt.id),
             kind="completes",
-            tasks=(
+            generators=(
                 PlannedGeneratorTask(local_id="a", agent_name="executor", needs=(), task_spec="do a"),
                 PlannedGeneratorTask(
                     local_id="b", agent_name="executor", needs=("a",), task_spec="do b"

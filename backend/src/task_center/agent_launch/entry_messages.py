@@ -7,7 +7,6 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:  # pragma: no cover - typing-only
     from agents import AgentDefinition
-    from task_center.context_engine.context import AgentContext
 
 
 @dataclass(frozen=True, slots=True)
@@ -29,7 +28,6 @@ class AgentEntryMessages:
     context: str
     task_guidance: str | None
     skill: str | None
-    packet: AgentContext
 
 
 __all__ = ["AgentEntryMessages"]

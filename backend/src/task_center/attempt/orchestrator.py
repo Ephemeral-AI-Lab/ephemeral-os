@@ -135,7 +135,7 @@ class AttemptOrchestrator:
             deferred_goal_for_next_iteration=submission.deferred_goal_for_next_iteration,
         )
         generator_ids, reducer_ids = self._persist_plan_tasks(
-            submission.tasks, submission.reducers
+            submission.generators, submission.reducers
         )
         runtime.attempt_store.set_generator_task_ids(attempt.id, list(generator_ids))
         runtime.attempt_store.set_reducer_task_ids(attempt.id, list(reducer_ids))

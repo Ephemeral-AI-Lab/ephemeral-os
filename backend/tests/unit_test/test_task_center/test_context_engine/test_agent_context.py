@@ -13,7 +13,11 @@ from task_center._core.state import (
     AttemptStatus,
     IterationCreationReason,
 )
-from task_center.context_engine.engine import ContextEngine, ContextEngineDeps
+from task_center.context_engine.engine import (
+    ContextEngine,
+    ContextEngineDeps,
+    RecipeScopeError,
+)
 from task_center.context_engine.scope import ContextScope
 from task_center.context_engine.task_guidance import render_task_guidance
 from task_center.context_engine.xml import render_context_xml
@@ -214,6 +218,91 @@ def test_generator_context_is_dependencies_plus_assigned_task(
     assert "<needs>" not in xml
     assert "<assigned_prompt>" not in xml
     assert "Complete <assigned_task> using <dependencies>." in render_task_guidance(context)
+
+
+def test_dependency_context_preserves_all_execution_outcomes(
+    deps, workflow_store, iteration_store, attempt_store, task_store, task_center_run_id
+) -> None:
+    workflow = _workflow(workflow_store, task_center_run_id)
+    iteration = iteration_store.insert(
+        workflow_id=workflow.id,
+        sequence_no=1,
+        creation_reason=IterationCreationReason.INITIAL,
+        iteration_goal=workflow.workflow_goal,
+        attempt_budget=2,
+    )
+    attempt = attempt_store.insert(iteration_id=iteration.id, attempt_sequence_no=1)
+    dep_id = generator_task_id(attempt.id, "handoff")
+    task_id = generator_task_id(attempt.id, "consumer")
+    first_child = generator_task_id("child-attempt-1", "api")
+    second_child = reducer_task_id("child-attempt-2", "verify_api")
+    task_store.upsert_task(
+        task_id=dep_id,
+        task_center_run_id=task_center_run_id,
+        role="generator",
+        agent_name="executor",
+        context_message="Run child workflow.",
+        status="done",
+        outcomes=[
+            to_record(
+                ExecutionTaskOutcome(
+                    "success",
+                    "generator",
+                    first_child,
+                    "Child API implementation completed.",
+                )
+            ),
+            to_record(
+                ExecutionTaskOutcome(
+                    "success",
+                    "reducer",
+                    second_child,
+                    "Child API verification passed.",
+                )
+            ),
+        ],
+        needs=[],
+    )
+    task_store.upsert_task(
+        task_id=task_id,
+        task_center_run_id=task_center_run_id,
+        role="generator",
+        agent_name="executor",
+        context_message="Consume child workflow results.",
+        status="pending",
+        outcomes=[],
+        needs=[dep_id],
+    )
+
+    context = ContextEngine(deps).build(
+        "generator",
+        ContextScope.for_generator(
+            workflow_id=workflow.id,
+            iteration_id=iteration.id,
+            attempt_id=attempt.id,
+            task_id=task_id,
+        ),
+    )
+    xml = render_context_xml(context)
+
+    assert f'<dependency task_id="{dep_id}">' in xml
+    assert f'<task task_id="{first_child}" role="generator" status="success">' in xml
+    assert f'<task task_id="{second_child}" role="reducer" status="success">' in xml
+    assert "Child API implementation completed." in xml
+    assert "Child API verification passed." in xml
+
+
+def test_context_recipe_must_match_scope_role(deps) -> None:
+    with pytest.raises(RecipeScopeError, match="cannot build role"):
+        ContextEngine(deps).build(
+            "planner",
+            ContextScope.for_generator(
+                workflow_id="workflow",
+                iteration_id="iteration",
+                attempt_id="attempt",
+                task_id="task",
+            ),
+        )
 
 
 def test_reducer_context_uses_assigned_task_not_assigned_prompt(

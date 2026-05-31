@@ -1,6 +1,6 @@
 """Row-3 (``<Task Guidance>``) and row-4 (``Load skill:``) wrappers.
 
-* :func:`_wrap_task_guidance` wraps role prose in ``<Task Guidance>`` and
+* :func:`wrap_task_guidance` wraps role prose in ``<Task Guidance>`` and
   appends one ``<terminal_tool_selection>`` block rendered from the shared
   terminal registry. ``None`` prose is preserved as ``None``.
 * :func:`build_skill_message` reads the agent's skill markdown body and
@@ -33,7 +33,7 @@ def _render_terminal_tool_selection_block(agent_def: AgentDefinition) -> str | N
     return f"<terminal_tool_selection>\n{catalog}\n</terminal_tool_selection>"
 
 
-def _wrap_task_guidance(
+def wrap_task_guidance(
     prose: str | None,
     agent_def: AgentDefinition,
 ) -> str | None:
@@ -73,7 +73,7 @@ def build_skill_message(
         </terminal_tool_selection>
 
     The ``<terminal_tool_selection>`` block is byte-equal to the row-3 block
-    produced by :func:`_wrap_task_guidance` (AC #15).
+    produced by :func:`wrap_task_guidance` (AC #15).
     """
     if skill_path is None:
         return None
@@ -97,4 +97,4 @@ def build_skill_message(
     return "\n".join(parts)
 
 
-__all__ = ["_wrap_task_guidance", "build_skill_message"]
+__all__ = ["wrap_task_guidance", "build_skill_message"]

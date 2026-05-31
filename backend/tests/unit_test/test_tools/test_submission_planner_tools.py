@@ -7,6 +7,13 @@ import pytest
 from task_center.attempt import AttemptStage
 from tools._framework.execution.tool_call import execute_tool_once
 from tools.submission.planner import submit_plan_closes_goal, submit_plan_defers_goal
+from tools.submission.planner._prompt_guidance import PLAN_DAG_GUIDANCE
+from tools.submission.planner.submit_plan_closes_goal.prompt import (
+    get_submit_plan_closes_goal_description,
+)
+from tools.submission.planner.submit_plan_defers_goal.prompt import (
+    get_submit_plan_defers_goal_description,
+)
 
 from .submission_test_utils import (
     build_harness_fixture,
@@ -35,6 +42,16 @@ def _valid_plan_payload() -> dict[str, object]:
             {"id": "r", "needs": ["b"], "prompt": "Confirm the work is complete."},
         ],
     }
+
+
+async def test_plan_tool_descriptions_share_dag_guidance() -> None:
+    closes = get_submit_plan_closes_goal_description()
+    defers = get_submit_plan_defers_goal_description()
+
+    assert PLAN_DAG_GUIDANCE in closes
+    assert PLAN_DAG_GUIDANCE in defers
+    assert "The attempt PASSES iff every plan task reaches DONE." in closes
+    assert "deferred_goal_for_next_iteration" in defers
 
 
 async def test_full_plan_routes_to_apply_plan_submission(

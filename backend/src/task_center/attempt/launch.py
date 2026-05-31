@@ -320,6 +320,7 @@ def _fail_unowned_attempt(
         attempt.id,
         status=AttemptStatus.FAILED,
         fail_reason=AttemptFailReason.TASK_FAILED,
+        outcomes=outcomes,
         closed_at=datetime.now(UTC),
     )
     iteration_coordinators = runtime.iteration_coordinators

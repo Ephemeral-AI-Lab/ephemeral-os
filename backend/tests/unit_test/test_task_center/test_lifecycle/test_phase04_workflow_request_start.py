@@ -107,7 +107,7 @@ def _seed_outer_running_generator(
             attempt_id=outer_attempt.id,
             planner_task_id=planner_task_id(outer_attempt.id),
             kind="completes",
-            tasks=(
+            generators=(
                 PlannedGeneratorTask(
                     local_id="outer", agent_name="executor", needs=(), task_spec="execute outer"
                 ),
