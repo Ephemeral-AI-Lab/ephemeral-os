@@ -7,7 +7,7 @@ use eos_protocol::Request;
 use eos_protocol::{decode, encode, Envelope};
 use serde_json::{json, Value};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
-use tokio::net::UnixStream;
+use tokio::net::{TcpListener, TcpStream, UnixStream};
 use tokio::time::{sleep, timeout, Duration};
 
 #[test]
@@ -118,6 +118,75 @@ async fn unix_server_dispatches_framed_ready_request() {
         .await
         .expect("daemon response read timed out")
         .expect("read daemon response");
+    shutdown.cancel();
+    let _ = timeout(Duration::from_secs(2), task)
+        .await
+        .expect("daemon shutdown timed out")
+        .expect("daemon task join failed");
+
+    let response = match decode(&response).expect("decode daemon response") {
+        Envelope::Response(value) => value,
+        other => panic!("expected response, got {other:?}"),
+    };
+    assert_eq!(response["success"], Value::Bool(true));
+    assert_eq!(response["ready"], Value::Bool(true));
+}
+
+#[tokio::test]
+async fn tcp_server_dispatches_authenticated_ready_request() {
+    let (root, _workspace) = seed_layer_stack("tcp_server");
+    let runtime_dir = root
+        .parent()
+        .expect("seeded layer-stack root must have parent")
+        .join("runtime");
+    std::fs::create_dir_all(&runtime_dir).expect("create runtime dir");
+    let probe = TcpListener::bind(("127.0.0.1", 0))
+        .await
+        .expect("reserve tcp port");
+    let port = probe.local_addr().expect("tcp local addr").port();
+    drop(probe);
+    let config = ServerConfig {
+        socket_path: runtime_dir.join("runtime.sock"),
+        pid_path: runtime_dir.join("runtime.pid"),
+        tcp_host: Some("127.0.0.1".to_owned()),
+        tcp_port: Some(port),
+        auth_token: Some("secret".to_owned()),
+    };
+    let (server, occ_queue) = DaemonServer::new(config.clone());
+    let shutdown = server.shutdown_token();
+    let task = tokio::spawn(server.serve(occ_queue));
+    for _ in 0..50 {
+        if TcpStream::connect(("127.0.0.1", port)).await.is_ok() {
+            break;
+        }
+        sleep(Duration::from_millis(10)).await;
+    }
+
+    let mut value = serde_json::to_value(Request {
+        op: "api.runtime.ready".to_owned(),
+        invocation_id: "inv-1".to_owned(),
+        args: json!({"layer_stack_root": root}),
+    })
+    .expect("encode request value");
+    value
+        .as_object_mut()
+        .expect("request value object")
+        .insert("_eos_daemon_auth_token".to_owned(), json!("secret"));
+    let mut request = serde_json::to_vec(&value).expect("encode authenticated request");
+    request.push(b'\n');
+    let mut stream = TcpStream::connect(("127.0.0.1", port))
+        .await
+        .expect("connect to daemon tcp socket");
+    stream
+        .write_all(&request)
+        .await
+        .expect("write authenticated request");
+    stream.shutdown().await.expect("shutdown request writer");
+    let mut response = Vec::new();
+    timeout(Duration::from_secs(2), stream.read_to_end(&mut response))
+        .await
+        .expect("daemon tcp response read timed out")
+        .expect("read daemon tcp response");
     shutdown.cancel();
     let _ = timeout(Duration::from_secs(2), task)
         .await

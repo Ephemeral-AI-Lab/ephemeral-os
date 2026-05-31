@@ -181,6 +181,46 @@ async def test_daemon_tcp_empty_response_is_io_failure(
     assert result.stderr == "EOS_DAEMON_IO_FAILED:empty_response"
 
 
+async def test_daemon_tcp_empty_response_invalidates_endpoint_cache(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    async def fake_tcp(
+        _endpoint: command._DaemonTcpEndpoint,
+        _payload: str,
+        *,
+        timeout: int | None,
+    ) -> Any:
+        return SimpleNamespace(
+            stdout="",
+            stderr=command._EMPTY_RESPONSE_MESSAGE,
+            exit_code=command._THIN_CLIENT_IO_FAILED,
+        )
+
+    async def fake_exec(*_: Any, **__: Any) -> Any:
+        raise AssertionError("empty TCP response should be returned to spawn recovery")
+
+    endpoint = command._DaemonTcpEndpoint(
+        host="127.0.0.1",
+        port=53913,
+        internal_port=37657,
+        auth_token="secret",
+    )
+    command._tcp_endpoint_cache["sb-1"] = endpoint
+    monkeypatch.setattr(command, "_call_tcp_daemon", fake_tcp)
+
+    result = await command._send_daemon_envelope(
+        exec_fn=fake_exec,
+        sandbox_id="sb-1",
+        envelope_json='{"op":"api.read_file"}',
+        cwd="/runtime",
+        timeout=15,
+        tcp_endpoint=endpoint,
+    )
+
+    assert result.exit_code == command._THIN_CLIENT_IO_FAILED
+    assert "sb-1" not in command._tcp_endpoint_cache
+
+
 async def test_daemon_empty_response_retries_lifecycle_op() -> None:
     seen: list[str] = []
     responses: list[Any] = [
@@ -520,6 +560,43 @@ async def test_call_thin_client_with_connect_retry_retries_transient_connect_fai
     assert len(attempts) == 3
     assert all("thin_client.py" in attempt for attempt in attempts)
     assert sleeps == list(command._CONNECT_RETRY_DELAYS_S[:2])
+
+
+async def test_call_thin_client_with_connect_retry_can_retry_empty_response(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    attempts: list[str] = []
+    sleeps: list[float] = []
+    responses: list[Any] = [
+        SimpleNamespace(
+            stdout="",
+            stderr=command._EMPTY_RESPONSE_MESSAGE,
+            exit_code=command._THIN_CLIENT_IO_FAILED,
+        ),
+        SimpleNamespace(stdout=_ok_response(), stderr="", exit_code=0),
+    ]
+
+    async def fake_exec(_sandbox_id: str, command_str: str, **_: Any) -> Any:
+        attempts.append(command_str)
+        return responses.pop(0)
+
+    async def fake_sleep(delay: float) -> None:
+        sleeps.append(delay)
+
+    monkeypatch.setattr(command.asyncio, "sleep", fake_sleep)
+
+    result = await command._call_thin_client_with_connect_retry(
+        exec_fn=fake_exec,
+        sandbox_id="sb-1",
+        envelope_json='{"op":"api.read_file"}',
+        cwd="/runtime",
+        timeout=15,
+        retry_empty_response=True,
+    )
+
+    assert result.exit_code == 0
+    assert len(attempts) == 2
+    assert sleeps == [command._CONNECT_RETRY_DELAYS_S[0]]
 
 
 async def test_daemon_transport_rejects_exec_result_without_exit_code() -> None:

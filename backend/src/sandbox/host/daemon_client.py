@@ -353,6 +353,7 @@ async def _dispatch_with_daemon_spawn_recovery(
         cwd=cwd,
         timeout=30,
         tcp_endpoint=tcp_endpoint,
+        retry_empty_response=True,
     )
     if _exit_code(readiness_result) != 0:
         raise _DaemonReadinessError(
@@ -410,6 +411,7 @@ async def _dispatch_with_daemon_spawn_recovery(
         cwd=cwd,
         timeout=timeout,
         tcp_endpoint=tcp_endpoint,
+        retry_empty_response=_can_retry_empty_response(op),
     )
 
 
@@ -421,13 +423,16 @@ async def _call_thin_client_with_connect_retry(
     cwd: str,
     timeout: int | None,
     tcp_endpoint: _DaemonTcpEndpoint | None = None,
+    retry_empty_response: bool = False,
 ) -> Any:
-    """Dispatch one envelope, retrying transient CONNECT_FAILED responses.
+    """Dispatch one envelope, retrying transient connection failures.
 
     The in-sandbox daemon's accept queue can transiently refuse connections
     immediately after spawn, or while many parallel agent runs land on the
-    socket at once. A bounded backoff retry absorbs that without surfacing a
-    user-visible tool failure.
+    socket at once. Docker's forwarded TCP path can also briefly connect and
+    then close without a response after a hard daemon kill/rebind. A bounded
+    backoff retry absorbs those failures for readiness and explicitly
+    retryable read/control operations.
     """
     last_result: Any = None
     for delay in _CONNECT_RETRY_DELAYS_S:
@@ -439,7 +444,9 @@ async def _call_thin_client_with_connect_retry(
             timeout=timeout,
             tcp_endpoint=tcp_endpoint,
         )
-        if _exit_code(last_result) != _THIN_CLIENT_CONNECT_FAILED:
+        if _exit_code(last_result) != _THIN_CLIENT_CONNECT_FAILED and not (
+            retry_empty_response and _is_empty_response(last_result)
+        ):
             return last_result
         await asyncio.sleep(delay)
     return await _send_daemon_envelope(
@@ -463,6 +470,9 @@ async def _send_daemon_envelope(
 ) -> Any:
     if tcp_endpoint is not None:
         tcp_result = await _call_tcp_daemon(tcp_endpoint, envelope_json, timeout=timeout)
+        if _is_empty_response(tcp_result):
+            invalidate_daemon_tcp_endpoint(sandbox_id)
+            return tcp_result
         if _exit_code(tcp_result) != _THIN_CLIENT_CONNECT_FAILED:
             return tcp_result
         # Cached endpoint produced CONNECT_FAILED — drop it so the next call
@@ -661,7 +671,7 @@ def _daemon_spawn_command(
             inner_parts.extend(
                 [
                     "--tcp-host",
-                    "127.0.0.1",
+                    "0.0.0.0",
                     "--tcp-port",
                     str(tcp_endpoint.internal_port or tcp_endpoint.port),
                 ]

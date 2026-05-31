@@ -79,6 +79,7 @@ def test_rust_runtime_spawn_uses_eosd_spawn(monkeypatch: pytest.MonkeyPatch) -> 
 
     assert "launch_daemon.sh" not in command
     assert "/tmp/eos-sandbox-runtime/eosd daemon --spawn" in command
+    assert "--tcp-host 0.0.0.0" in command
     assert "--tcp-port 40123" in command
     assert "--auth-token token-1" in command
 

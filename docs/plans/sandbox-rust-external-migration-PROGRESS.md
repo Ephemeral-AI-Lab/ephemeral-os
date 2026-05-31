@@ -3,7 +3,7 @@
 Living status tracker for `docs/plans/sandbox-rust-external-migration-PLAN.md`.
 Spec = PLAN.md. Landed-status snapshot = PLAN §13. This file = done/next checklist.
 
-**Last updated:** 2026-05-31 · **Phase:** 2 local Rust daemon/read-path implementation landed; CP-3/live Docker closeout pending.
+**Last updated:** 2026-05-31 · **Phase:** 2 daemon/read-path closeout complete on local amd64 Docker/dask; Phase 3 next.
 
 ---
 
@@ -13,7 +13,7 @@ Spec = PLAN.md. Landed-status snapshot = PLAN §13. This file = done/next checkl
 |---|---|---|
 | **0 — Bootstrap** | workspace, eos-protocol, put_archive, pins, CP-0/local upload | ✅ **local amd64+arm64 upload closeout complete; signing/full matrix deferred** |
 | 1 — ns-runner (fresh-ns) | `eos-runner` unshare→mount→exec | ✅ **scoped direct `eosd ns-runner` closeout complete; host dispatch is Phase 2** |
-| 2 — daemon + read paths | `eos-daemon` RPC, read verbs, readiness | 🟡 local read path + host fork implemented; CP-3 pending |
+| 2 — daemon + read paths | `eos-daemon` RPC, read verbs, readiness | ✅ **CP-3/AV-2 closed on local amd64 Docker/dask** |
 | 3 — write/publish + shell/search + plugin (HIGH risk) | OCC/LayerStack publish, PPC | ⬜ skeleton only |
 | 3.5 — isolated workspace | ns-holder + setns + shell-free net | ⬜ skeleton only |
 | 5 — cutover | flip default, delete Python | ⬜ |
@@ -28,7 +28,7 @@ Legend: ✅ done · 🟡 partial · ⬜ not started.
 - ✅ `eos-protocol` **fully implemented + tested**: version/envelope/cas/audit/models/canonical. **29 tests green incl 18 executed CAS golden fixtures** (the `ensure_ascii` Unicode trap reproduced).
 - ✅ Faithful **skeletons** for layerstack/overlay/occ/ephemeral/isolated/plugin/runner/ns-holder/daemon/eosd — **546 `// PORT backend/…:line` anchors + 19 `todo!()`**.
 - ✅ `cargo check --workspace` green (12 crates) · Phase 1 deny-gate clippy green for `eos-overlay`, `eos-runner`, and `eosd` on host and Linux-musl targets · `cargo fmt --all --check` clean. Later-phase skeleton crates still emit expected unused/dead-code warnings until their bodies land.
-- ✅ `xtask package` implemented for `eosd-linux-{amd64,arm64}`: default builder is `rust-lld` (`cargo` with `RUSTFLAGS=-C linker=rust-lld`), with optional `cargo`/`cross`; writes binary-only `SHA256SUMS`, `protocol_version`, per-artifact JSON manifests, and optional minisign `.minisig` signatures. Current Phase 1 artifacts package locally (`amd64` SHA `f374662b28337575aafb65995c7c3626e4731fc9464cb4ac24bc45ab262acefe`, `arm64` SHA `4a39764bc3e13421a58835bc3294fb8f6f2801b2610690ebbe9e652d0a6c1758`).
+- ✅ `xtask package` implemented for `eosd-linux-{amd64,arm64}`: default builder is `rust-lld` (`cargo` with `RUSTFLAGS=-C linker=rust-lld`), with optional `cargo`/`cross`; writes binary-only `SHA256SUMS`, `protocol_version`, per-artifact JSON manifests, and optional minisign `.minisig` signatures. Current artifacts package locally (`amd64` SHA `59c0ae7bc655ba55f59e9d4e228e33340fd6125238d9fc8f4ea1961fd395c7a4`, `arm64` SHA `4a39764bc3e13421a58835bc3294fb8f6f2801b2610690ebbe9e652d0a6c1758`).
 - ✅ **Build-time guarantee holds**: `cargo tree -p eos-isolated` has no `eos-occ` edge (direct/transitive). HINGE split (`SnapshotLeasePort` vs `CommitTransactionPort` in `eos-layerstack`) + 3 severings wired (`OccServicesInjector` impls both `eos_occ::` and `eos_ephemeral::OccRuntimeServicesPort`, returns the per-root single writer — MF-1-aware).
 
 **Contracts & fixtures (ground truth)**
@@ -38,7 +38,7 @@ Legend: ✅ done · 🟡 partial · ⬜ not started.
 
 **Python-side Phase 0 (surgical; focused sandbox tests passed)**
 - ✅ `put_archive` on `ProviderAdapter` Protocol + Docker adapter (async → `container.put_archive`) + Daytona stub.
-- ✅ `backend/src/sandbox/host/runtime_artifact/__init__.py` pins the local artifacts: `EOSD_VERSION=0.1.0-local.20260531`, amd64 SHA256 `f374662b28337575aafb65995c7c3626e4731fc9464cb4ac24bc45ab262acefe`, arm64 SHA256 `4a39764bc3e13421a58835bc3294fb8f6f2801b2610690ebbe9e652d0a6c1758`, protocol version `1`. Minisign remains empty until the later release-provenance gate.
+- ✅ `backend/src/sandbox/host/runtime_artifact/__init__.py` pins the local artifacts: `EOSD_VERSION=0.1.0-local.20260531`, amd64 SHA256 `59c0ae7bc655ba55f59e9d4e228e33340fd6125238d9fc8f4ea1961fd395c7a4`, arm64 SHA256 `4a39764bc3e13421a58835bc3294fb8f6f2801b2610690ebbe9e652d0a6c1758`, protocol version `1`. Minisign remains empty until the later release-provenance gate.
 - ✅ `backend/src/sandbox/_contract_fixtures/` vendors the Rust fixtures; `pin.json` is hard-pinned to `2df20649b3158324d1be9c4c6c53a5844034ebc2` with `fixtures_sha256=3d62ff3017bf1b1a76e36de08ea4a3185d9640cb9ca98f7e4a1796b153aab221`; the backend pin assert is hard-fail (no skip).
 - ✅ `EOS_SANDBOX_RUNTIME=python|rust` no-op host read exists in `daemon_client.py` and validates values; the actual dispatch fork remains Phase 2.
 - ✅ `backend/scripts/bench_sandbox_e2e.py` has Docker-backed Phase 0 mode for CP-0 + CP-1 (`--phase0`) plus local artifact upload verification (`--eosd-binary`) that uses `put_archive`, Docker archive readback, and direct binary exec. `backend/scripts/build_upload_eosd_docker.py` is the narrower build/package/upload script for both arches. Neither path installs `apt`/`pkg` packages or requires Rust/Cargo inside the target sandbox image for the artifact check.
@@ -63,12 +63,12 @@ Legend: ✅ done · 🟡 partial · ⬜ not started.
 - ✅ Bottleneck interpretation recorded: network is not the main delay in this local dask run. Direct runner host-wall p50 is `361.567 ms`; internal `mount+tool` p50 is `319.288 ms`; raw mount p50 is `1.076 ms`; implied host/Docker/request overhead is about `42.279 ms`. The dominant remaining cost is shell/process startup (`bash -lc true`) under the amd64 dask container, likely amplified by Docker Desktop/emulation.
 
 **Phase 2 implementation artifacts (local, 2026-05-31)**
-- 🟡 `eos-daemon` now has a real Phase 2 AF_UNIX + optional loopback TCP server: newline-delimited JSON framing, request-size/read-time handling, TCP auth-token stripping, structured error envelopes, `api.runtime.ready`, `api.v1.heartbeat`, `api.layer_metrics`, audit pull/snapshot/reset-floor stubs, and direct `api.v1.read_file` / `api.read_file` LayerStack reads.
-- 🟡 `eos-layerstack` now has read-side manifest loading, workspace binding translation, merged newest-first read semantics with whiteout/opaque ancestor handling, O(1) snapshot lease plumbing, a process-local dual-layer storage writer lease, and active-lease metrics needed by readiness/layer metrics.
-- 🟡 `eosd daemon` now starts the Rust daemon, supports `--spawn` for host recovery launches, and supports `--client SOCKET JSON` as the Rust AF_UNIX thin-client replacement preserving the 97/98 connect/I/O exit-code contract.
-- 🟡 `backend/src/sandbox/host/daemon_client.py` now selects Rust spawn/client commands when `EOS_SANDBOX_RUNTIME=rust`, while Python remains the default. The Docker TCP endpoint cache invalidation path remains shared.
+- ✅ `eos-daemon` now has a real Phase 2 AF_UNIX + Docker-published TCP server: newline-delimited JSON framing, request-size/read-time handling, TCP auth-token stripping, structured error envelopes, `api.runtime.ready`, `api.v1.heartbeat`, `api.layer_metrics`, audit pull/snapshot/reset-floor stubs, and direct `api.v1.read_file` / `api.read_file` LayerStack reads.
+- ✅ `eos-layerstack` now has read-side manifest loading, workspace binding translation, merged newest-first read semantics with whiteout/opaque ancestor handling, O(1) snapshot lease plumbing, a process-local dual-layer storage writer lease, and active-lease metrics needed by readiness/layer metrics.
+- ✅ `eosd daemon` now starts the Rust daemon, supports `--spawn` for host recovery launches, and supports `--client SOCKET JSON` as the Rust AF_UNIX thin-client replacement preserving the 97/98 connect/I/O exit-code contract.
+- ✅ `backend/src/sandbox/host/daemon_client.py` now selects Rust spawn/client commands when `EOS_SANDBOX_RUNTIME=rust`, while Python remains the default. Rust daemon TCP binds `0.0.0.0` inside Docker so the provider's host-loopback port mapping works; stale TCP empty-response/connect-failure paths invalidate the cached endpoint before respawn.
 - ✅ Local verification: `cargo check --workspace`; `cargo test -p eos-daemon --test phase2_read_paths`; `cargo clippy -p eos-layerstack -p eos-daemon -p eosd --all-targets`; `.venv/bin/python -m pytest backend/tests/unit_test/test_sandbox/test_api/test_daemon_client.py backend/tests/unit_test/test_sandbox/test_contract_fixtures_pin.py -q`.
-- ⬜ CP-3 is not yet closed: daemon cold-start/RSS, live uploaded `eosd daemon`, respawn/readiness, and endpoint-cache invalidation still need Docker/dask evidence against the pinned amd64 artifact.
+- ✅ Live Docker/dask evidence: `bench/phase2-rust-daemon-amd64.json` uploaded pinned amd64 `eosd` SHA `59c0ae7bc655ba55f59e9d4e228e33340fd6125238d9fc8f4ea1961fd395c7a4` into `sweevo-dask__dask-10042:latest`, launched with `EOS_SANDBOX_RUNTIME=rust`, and closed CP-3/AV-2. Rust daemon spawn was `343.899 ms` vs CP-0 Python `885.234 ms`; idle RSS was `4,264 KiB` vs CP-0 `36,676 KiB`; readiness after spawn was `10.099 ms`. AF_UNIX and TCP both proved `api.runtime.ready`, `api.read_file`/`api.v1.read_file`, `api.v1.heartbeat`, and `api.layer_metrics`. AV-2 killed pid `295`, respawned pid `424`, invalidated then repopulated the TCP endpoint cache, left exactly one `eosd daemon` process, and reported zero `eos-sandbox-runtime` mount entries.
 
 **Docs**
 - ✅ PLAN §12 (verified Docker/dask/plugin config) + §13 (Phase-0 status + 8 source-verified corrections).
@@ -82,6 +82,7 @@ cd sandbox && cargo test -p eos-daemon --test phase2_read_paths && cargo clippy 
 cd .. && .venv/bin/python -m pytest backend/tests/unit_test/test_sandbox/test_provider/ backend/tests/unit_test/test_sandbox/test_contract_fixtures_pin.py backend/tests/unit_test/test_sandbox/test_api/test_daemon_client.py -q
 .venv/bin/python backend/scripts/bench_sandbox_e2e.py --commands 10 --report /tmp/eos-synthetic-bench.json
 .venv/bin/python backend/scripts/bench_sandbox_e2e.py --docker-image sweevo-dask__dask-10042:latest --phase0 --commands 10 --report bench/baseline-amd64.json
+.venv/bin/python backend/scripts/bench_rust_daemon_phase2.py --docker-image sweevo-dask__dask-10042:latest --artifact sandbox/dist/eosd-linux-amd64 --baseline bench/baseline-amd64.json --report bench/phase2-rust-daemon-amd64.json
 # Direct Phase 1 dask evidence is currently captured in bench/phase1-ns-runner-amd64.json.
 ```
 
@@ -114,11 +115,11 @@ cd .. && .venv/bin/python -m pytest backend/tests/unit_test/test_sandbox/test_pr
 
 ### B. Phase 1 closeout guardrails
 - Treat Phase 1 as closed for the scoped direct `eosd ns-runner` fresh-ns boundary. Keep `bench/phase1-ns-runner-amd64.json` as the direct-runner dask evidence until a checked-in Phase 1 harness exists.
-- Do not flip `EOS_SANDBOX_RUNTIME=rust` from this result alone. Host dispatch, persistent daemon routing, and endpoint readiness are Phase 2.
+- Do not flip the global default to `EOS_SANDBOX_RUNTIME=rust` from Phase 1 alone. Phase 2 now proves persistent daemon routing and endpoint readiness for the read path, but the global default flip still waits for the later cutover gates.
 - Remaining scope clarification: setns mode stays Phase 3.5. Current `eosd ns-runner` is an executable request/response subcommand for the fresh path, not a full daemon runtime cutover.
 
 ### C. Phase 2 — daemon + read paths
-- Close the remaining CP-3/AV-2 live gate for the landed local implementation: rebuild/package pinned amd64 `eosd`, upload it into `sweevo-dask__dask-10042:latest`, launch via `EOS_SANDBOX_RUNTIME=rust`, measure daemon cold-start + idle RSS, prove `api.runtime.ready` + `api.v1.read_file` through AF_UNIX and TCP, and exercise respawn/readiness/endpoint-cache invalidation. Keep write/publish, shell/search, plugin, and isolated mode out of this gate.
+- ✅ Closed by `bench/phase2-rust-daemon-amd64.json`. Keep write/publish, shell/search, plugin, and isolated mode out of the Phase 2 result; those remain Phase 3/3.5 gates.
 
 ### D. Phase 3 (HIGH risk) — write/publish + OCC/LayerStack + plugin PPC
 - Fill OCC publish (single `occ-commit-queue`, 0.002/64/3), LayerStack squash/GC, the **reentrant-RLock→Mutex restructuring** (do NOT 1:1 port — see RUST-GUIDANCE §5), `eos-plugin` PPC channel + MF-1 single-writer routing.

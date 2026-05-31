@@ -121,10 +121,11 @@
 </section>
 <section id="startup-transport"
   data-last-reviewed-commit="2a3e6cc7c"
-  data-evidence-paths="backend/src/sandbox/host/daemon_client.py backend/src/sandbox/daemon/rpc/server.py backend/src/sandbox/daemon/scripts/thin_client.py backend/src/sandbox/daemon/scripts/launch_daemon.sh backend/src/sandbox/daemon/builtin_operations.py">
+  data-evidence-paths="backend/src/sandbox/host/daemon_client.py backend/src/sandbox/daemon/rpc/server.py backend/src/sandbox/daemon/scripts/thin_client.py backend/src/sandbox/daemon/scripts/launch_daemon.sh backend/src/sandbox/daemon/builtin_operations.py sandbox/crates/eosd/src/main.rs sandbox/crates/eos-daemon/src/server.rs backend/scripts/bench_rust_daemon_phase2.py">
 <h3>6.2 Startup and Transport Workflow <a class="anchor" href="#startup-transport">§</a></h3>
 
 <p>The host has two ways to reach the same daemon contract. Docker can expose a cached TCP endpoint; providers that cannot publish a port use <code>provider.exec</code> to run the bundled thin client inside the sandbox. Both paths send the same JSON envelope and receive the same JSON response.</p>
+<p>During the Rust migration, <code>EOS_SANDBOX_RUNTIME=rust</code> swaps the Python launch script and Python thin client for the uploaded <code>/tmp/eos-sandbox-runtime/eosd</code> binary. For Docker TCP, the daemon binds <code>0.0.0.0</code> inside the container so Docker's host-loopback port mapping can reach it; the host still exposes only the mapped host endpoint returned by the provider.</p>
 
 <pre class="diagram" aria-label="Daemon startup transport routes">
 [provider bootstrap]
@@ -152,8 +153,8 @@
     <li><span><code>call_daemon_api()</code> injects <code>layer_stack_root</code>, resolves a provider adapter, and asks the adapter whether a daemon TCP endpoint exists <span class="file-ref">backend/src/sandbox/host/daemon_client.py:161-183</span>, <span class="file-ref">backend/src/sandbox/host/daemon_client.py:227-278</span>.</span></li>
     <li><span>The daemon server accepts one newline-delimited JSON envelope, applies auth and size/read-time limits, then delegates valid requests to the dispatcher <span class="file-ref">backend/src/sandbox/daemon/rpc/server.py:82-152</span>.</span></li>
     <li><span>The thin client connects to <code>runtime.sock</code>, writes the envelope plus newline, shuts down the write side, reads response chunks, and returns structured exit codes for connect and I/O failure <span class="file-ref">backend/src/sandbox/daemon/scripts/thin_client.py:13-56</span>.</span></li>
-    <li><span>If the first send reports connect failure, or an empty response that is safe to retry, the host launches the daemon through the bundle launch script <span class="file-ref">backend/src/sandbox/host/daemon_client.py:281-313</span>.</span></li>
-    <li><span>The launch script checks for a live non-zombie PID, validates the environment signature, serializes respawn with <code>flock</code> when available, removes stale socket/PID state, then starts <code>python -m sandbox.daemon.__main__</code> with stdout/stderr redirected to the daemon log <span class="file-ref">backend/src/sandbox/daemon/scripts/launch_daemon.sh:19-86</span>.</span></li>
+    <li><span>If the first send reports connect failure, or an empty response that is safe to retry, the host launches the daemon through the selected runtime launcher <span class="file-ref">backend/src/sandbox/host/daemon_client.py:281-313</span>.</span></li>
+    <li><span>Python mode runs the bundle launch script, which checks for a live non-zombie PID, validates the environment signature, serializes respawn with <code>flock</code> when available, removes stale socket/PID state, then starts <code>python -m sandbox.daemon.__main__</code> with stdout/stderr redirected to the daemon log <span class="file-ref">backend/src/sandbox/daemon/scripts/launch_daemon.sh:19-86</span>. Rust mode runs <code>eosd daemon --spawn</code>, which preserves the same PID/socket/log contract and starts the Rust AF_UNIX/TCP server <span class="file-ref">sandbox/crates/eosd/src/main.rs</span>, <span class="file-ref">sandbox/crates/eos-daemon/src/server.rs</span>.</span></li>
     <li><span>After spawn, the host probes <code>api.runtime.ready</code>. Readiness checks the control plane, data-plane services, and mutation gate before the original envelope is retried with bounded connect backoff <span class="file-ref">backend/src/sandbox/host/daemon_client.py:322-394</span>, <span class="file-ref">backend/src/sandbox/daemon/builtin_operations.py:158-245</span>.</span></li>
   </ol>
 </div>
@@ -161,7 +162,7 @@
 <table>
   <thead><tr><th>Transport path</th><th>When used</th><th>Failure signal</th><th>Recovery path</th></tr></thead>
   <tbody>
-    <tr><td>TCP daemon endpoint</td><td>Adapter exposes host/port/auth data, primarily for Docker-style local sandboxes.</td><td><code>EOS_DAEMON_CONNECT_FAILED</code>, <code>EOS_DAEMON_IO_FAILED</code>, timeout, or unauthenticated server response.</td><td>Invalidate cached endpoint, try spawn/readiness, then retry the original envelope.</td></tr>
+    <tr><td>TCP daemon endpoint</td><td>Adapter exposes host/port/auth data, primarily for Docker-style local sandboxes.</td><td><code>EOS_DAEMON_CONNECT_FAILED</code>, selected <code>EOS_DAEMON_IO_FAILED</code> empty responses, timeout, or unauthenticated server response.</td><td>Invalidate cached endpoint, try spawn/readiness, then retry the original envelope when the op is safe to replay.</td></tr>
     <tr><td>AF_UNIX thin client</td><td>Provider only supports exec into the sandbox, including Daytona-style constraints.</td><td>Thin-client exit code <code>97</code> for connect failure or <code>98</code> for I/O failure.</td><td>Run launch script, verify readiness, then run the thin client again.</td></tr>
     <tr><td>Daemon server</td><td>Always resident inside the sandbox after successful launch.</td><td>Structured daemon errors such as <code>bad_json</code>, <code>invalid_envelope</code>, <code>request_too_large</code>, or <code>unauthorized</code>.</td><td>Caller receives a structured error; no workspace handler runs.</td></tr>
   </tbody>
@@ -562,7 +563,7 @@
 <table>
   <thead><tr><th>Symptom</th><th>Likely layer</th><th>What to inspect</th><th>Evidence</th></tr></thead>
   <tbody>
-    <tr><td><code>EOS_DAEMON_CONNECT_FAILED</code></td><td>Transport / daemon spawn</td><td>TCP endpoint cache, AF_UNIX socket path, launch script lock, zombie PID handling, and spawn logs.</td><td><span class="file-ref">backend/src/sandbox/host/daemon_client.py:397-457</span>, <span class="file-ref">backend/src/sandbox/daemon/scripts/launch_daemon.sh:38-86</span></td></tr>
+    <tr><td><code>EOS_DAEMON_CONNECT_FAILED</code> or retryable empty TCP response</td><td>Transport / daemon spawn</td><td>TCP endpoint cache, AF_UNIX socket path, runtime-selected launcher, zombie PID handling, and spawn logs.</td><td><span class="file-ref">backend/src/sandbox/host/daemon_client.py:397-457</span>, <span class="file-ref">backend/src/sandbox/daemon/scripts/launch_daemon.sh:38-86</span>, <span class="file-ref">sandbox/crates/eosd/src/main.rs</span></td></tr>
     <tr><td>Invalid or oversized request</td><td>Daemon server</td><td>JSON object shape, auth token on TCP, <code>MAX_REQUEST_BYTES</code>, and read timeout behavior.</td><td><span class="file-ref">backend/src/sandbox/daemon/rpc/server.py:54-152</span></td></tr>
     <tr><td><code>unknown_op</code> or wrong handler</td><td>Dispatcher registration</td><td><code>OP_TABLE</code> registration, duplicate-op protection, plugin runtime registration.</td><td><span class="file-ref">backend/src/sandbox/daemon/rpc/dispatcher.py:37-53</span>, <span class="file-ref">backend/src/sandbox/daemon/rpc/dispatcher.py:344-373</span></td></tr>
     <tr><td>Plugin blocked during private work</td><td>Isolation gate</td><td>Whether the caller has an open isolated handle; plugin ops are forbidden for that agent while isolated workspace is open.</td><td><span class="file-ref">backend/src/sandbox/daemon/rpc/dispatcher.py:215-234</span></td></tr>
