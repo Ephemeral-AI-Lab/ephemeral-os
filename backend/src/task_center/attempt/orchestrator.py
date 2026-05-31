@@ -16,6 +16,7 @@ from task_center._core.invariants import (
     assert_valid_attempt_close,
 )
 from task_center._core.outcomes import (
+    ExecutionRole,
     execution_outcome_for_submission,
     planner_outcome_from_submission,
     project_attempt_outcomes,
@@ -293,7 +294,7 @@ class AttemptOrchestrator:
         self._write_submission_status(
             task=task,
             task_id=submission.task_id,
-            role="Generator",
+            role="generator",
             status=submission.status,
             outcome=submission.outcome,
             terminal_tool_result=submission.terminal_tool_result,
@@ -313,7 +314,7 @@ class AttemptOrchestrator:
         self._write_submission_status(
             task=task,
             task_id=submission.task_id,
-            role="Reducer",
+            role="reducer",
             status=submission.status,
             outcome=submission.outcome,
             terminal_tool_result=submission.terminal_tool_result,
@@ -324,13 +325,13 @@ class AttemptOrchestrator:
         *,
         task: dict[str, Any],
         task_id: str,
-        role: str,
+        role: ExecutionRole,
         status: str,
         outcome: str,
         terminal_tool_result: dict[str, Any],
     ) -> None:
         if task["status"] != TaskCenterTaskStatus.RUNNING.value:
-            raise TaskCenterInvariantViolation(f"{role} task {task_id!r} is not running")
+            raise TaskCenterInvariantViolation(f"{role.capitalize()} task {task_id!r} is not running")
         if status == "success":
             task_status = TaskCenterTaskStatus.DONE
         elif status == "failed":
@@ -340,7 +341,7 @@ class AttemptOrchestrator:
         execution_status = "success" if task_status == TaskCenterTaskStatus.DONE else "failed"
         result = execution_outcome_for_submission(
             task_id=task_id,
-            role="generator" if role == "Generator" else "reducer",
+            role=role,
             status=execution_status,
             outcome=outcome,
         )

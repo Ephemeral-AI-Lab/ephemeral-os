@@ -60,8 +60,10 @@ async def test_plan_tool_descriptions_share_dag_guidance() -> None:
     assert "## Close vs Defer Decision" in defers
     assert "Lane shape does not decide close vs defer" in defers
     assert "concrete plan for this bounded iteration" in defers
-    assert "Planning the full current goal now would be speculative" in defers
-    assert "outcomes become prior-iteration context" in defers
+    assert "what would be speculative is planning the full" in defers
+    assert "goal beyond this iteration" in defers
+    assert "outcomes become" in defers
+    assert "prior-iteration context for the next planner" in defers
     assert "collection of reducer outcomes is sufficient" in closes
     assert "deferred_goal_for_next_iteration" in defers
 

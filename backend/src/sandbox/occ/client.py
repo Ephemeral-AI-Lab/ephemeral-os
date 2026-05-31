@@ -6,7 +6,7 @@ from collections.abc import Sequence
 from typing import TYPE_CHECKING
 
 from sandbox.layer_stack.manifest import Manifest
-from sandbox.occ.changeset import CommitOptions, PreparedChangeset
+from sandbox.occ.changeset import CommitOptions
 from sandbox.occ.changeset import Change, ChangesetResult
 from sandbox.occ.ports import WorkspaceBindingReader
 
@@ -46,20 +46,6 @@ class OccClient:
             typed_changes,
             snapshot=snapshot,
             options=options,
-            run_maintenance=run_maintenance,
-        )
-
-    async def commit_prepared(
-        self,
-        prepared: PreparedChangeset,
-        *,
-        workspace_ref: str | None = None,
-        run_maintenance: bool = True,
-    ) -> ChangesetResult:
-        """Commit a caller-prepared changeset after the standard binding check."""
-        self._require_binding(workspace_ref)
-        return await self._service.commit_prepared(
-            prepared,
             run_maintenance=run_maintenance,
         )
 

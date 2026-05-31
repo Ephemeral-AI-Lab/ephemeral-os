@@ -8,7 +8,7 @@ recipe registry.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 
 from task_center._core.outcomes import (
     ExecutionTaskOutcome,
@@ -166,7 +166,7 @@ def _build_execution_context(
     scope: ContextScope,
     deps: ContextEngineDeps,
     *,
-    role: str,
+    role: Literal["generator", "reducer"],
 ) -> AgentContext:
     scope.require_field("workflow_id")
     attempt_id = scope.require_field("attempt_id")
@@ -194,7 +194,7 @@ def _build_execution_context(
         )
     )
     return AgentContext(
-        role="reducer" if role == "reducer" else "generator",
+        role=role,
         sections=tuple(sections),
         directive="Complete <assigned_task> using <dependencies>.",
     )

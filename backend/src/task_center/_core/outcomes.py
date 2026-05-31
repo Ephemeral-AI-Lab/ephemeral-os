@@ -5,9 +5,8 @@ UI/rendering metadata for planner tasks; attempt, iteration, and workflow
 outcomes are execution evidence and therefore contain only generator/reducer
 outcomes.
 
-Readers tolerate the previous recursive record shape so existing rows can still
-be surfaced, but writers in this module emit only the new
-``{status, role, task_id, ...}`` records.
+Writers and readers in this module use only the flat
+``{status, role, task_id, ...}`` record shape.
 """
 
 from __future__ import annotations
@@ -16,7 +15,7 @@ import json
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Literal, TypeAlias
 
-from task_center._core.state import Attempt
+from task_center._core.state import Attempt, AttemptStatus
 
 if TYPE_CHECKING:  # pragma: no cover - typing-only
     from task_center._core.persistence import IterationStoreProtocol, TaskStoreProtocol
@@ -161,7 +160,7 @@ def project_attempt_outcomes(
 def attempt_execution_outcomes(
     attempt: Attempt, task_store: TaskStoreProtocol | None
 ) -> tuple[ExecutionTaskOutcome, ...]:
-    """Return persisted attempt outcomes, or recompute for legacy/manual tests."""
+    """Return persisted attempt outcomes, or recompute from task rows when not yet persisted."""
     if attempt.outcomes:
         return attempt.outcomes
     return project_attempt_outcomes(attempt, task_store)
@@ -171,25 +170,28 @@ def project_iteration_outcomes(
     attempts: list[Attempt] | tuple[Attempt, ...],
     task_store: TaskStoreProtocol | None,
 ) -> tuple[ExecutionTaskOutcome, ...]:
-    """Successful reducer evidence from all attempts plus final failed tasks."""
+    """Execution evidence for the iteration's closing attempt only.
+
+    On a passing close, the closing attempt's successful reducer outcomes; on a
+    failed close, that attempt's failed generator/reducer tasks. Reducer
+    successes from earlier failed attempts are internal attempt history, not
+    iteration evidence, and are never surfaced.
+    """
     if not attempts:
         return ()
-    per_attempt = {
-        attempt.id: attempt_execution_outcomes(attempt, task_store) for attempt in attempts
-    }
-    reducer_successes = tuple(
-        outcome
-        for attempt in attempts
-        for outcome in per_attempt[attempt.id]
-        if outcome.role == "reducer" and outcome.status == "success"
-    )
     final_attempt = attempts[-1]
-    final_failed = tuple(
+    final_outcomes = attempt_execution_outcomes(final_attempt, task_store)
+    if final_attempt.status == AttemptStatus.PASSED:
+        return tuple(
+            outcome
+            for outcome in final_outcomes
+            if outcome.role == "reducer" and outcome.status == "success"
+        )
+    return tuple(
         outcome
-        for outcome in per_attempt[final_attempt.id]
+        for outcome in final_outcomes
         if outcome.role in ("generator", "reducer") and outcome.status == "failed"
     )
-    return reducer_successes + final_failed
 
 
 def workflow_outcomes(
@@ -294,7 +296,7 @@ def _normalize_status(value: Any) -> TaskOutcomeStatus:
 
 def _outcomes_from_record(record: dict[str, Any], *, fallback_task_id: str) -> tuple[TaskOutcome, ...]:
     role = record.get("role")
-    task_id = str(record.get("task_id") or fallback_task_id or record.get("local_id") or "")
+    task_id = str(record.get("task_id") or fallback_task_id or "")
     if role == "planner":
         planned_tasks = tuple(
             _planned_ref_from_record(item)
@@ -322,29 +324,7 @@ def _outcomes_from_record(record: dict[str, Any], *, fallback_task_id: str) -> t
             ),
         )
 
-    # Legacy recursive record. A handoff wrapper flattens to its children.
-    children = tuple(
-        child
-        for item in record.get("children") or ()
-        if isinstance(item, dict)
-        for child in _outcomes_from_record(
-            item, fallback_task_id=str(item.get("task_id") or item.get("local_id") or "")
-        )
-    )
-    if children:
-        return children
-
     inferred = role_from_task_id(task_id) or "generator"
-    if record.get("local_id") == "planner":
-        return (
-            PlannerTaskOutcome(
-                status=_normalize_status(record.get("status")),
-                role="planner",
-                task_id=task_id or "planner",
-                planned_tasks=(),
-                deferred_goal_for_next_iteration=None,
-            ),
-        )
     return (
         ExecutionTaskOutcome(
             status=_normalize_status(record.get("status")),

@@ -48,7 +48,6 @@ class _NamespaceHolderProcess:
     ppid: int
     state: str
     comm: str
-    cmdline: str
 
 
 class _OrphanResourceReaperMixin:
@@ -335,7 +334,6 @@ def _iter_namespace_holder_processes(
                 ppid=ppid,
                 state=state,
                 comm=comm,
-                cmdline=cmdline,
             )
         )
     return processes

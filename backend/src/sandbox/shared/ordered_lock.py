@@ -102,9 +102,6 @@ class OrderedLock:
     def name(self) -> str:
         return self._name
 
-    def locked(self) -> bool:
-        return self._lock.locked()
-
     async def acquire(self) -> bool:
         _assert_lock_order_in_test_mode(self._name)
         await self._lock.acquire()

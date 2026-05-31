@@ -41,10 +41,9 @@ Read that catalog and let the work decide:
   required verification is the success path. Pick it when the next task
   in the DAG (or a reducer) could pick up your output cold and act
   on it without re-deriving anything.
-- When the catalog exposes it, bounded progress that still needs work is
-  the handoff path. Name the
-  next bounded slice — what specifically is needed, by whom — so the
-  downstream agent inherits a concrete handoff, not a vague kick.
+- When the catalog exposes it, a too-large task assessed before edits is
+  the handoff path. Name the delegated goal, what decomposition is needed,
+  and why the task should return to the planner.
 - A concrete blocker is the blocker path. Use it when the task cannot
   proceed after the obvious remediation paths, and summarize the blocker
   with evidence. Downstream dependent tasks remain pending not-started

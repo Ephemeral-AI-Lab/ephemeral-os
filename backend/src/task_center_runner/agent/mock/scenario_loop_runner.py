@@ -249,7 +249,11 @@ class ScenarioLoopRunner:
             checks = {
                 "goal": "<goal>" in prompt,
                 "current_iteration": (
-                    "<iteration " in prompt and 'position="current"' in prompt
+                    "<current_iteration " in prompt
+                    or (
+                        "<iteration " in prompt
+                        and 'position="current"' in prompt
+                    )
                 ),
                 "closes_goal_terminal": "submit_plan_closes_goal" in prompt,
                 "no_defer_terminal": "submit_plan_defers_goal" not in prompt,

@@ -325,7 +325,7 @@ class LayerStack:
             projected = Path(tempfile.mkdtemp(prefix="projected-", dir=str(projection_parent)))
             try:
                 project_start = monotonic_now()
-                self._view.project(projected, active, share_inodes=False)
+                self._view.project(projected, active)
                 record_elapsed(
                     timings, "layer_stack.commit_to_workspace.project_s", project_start
                 )

@@ -101,6 +101,22 @@ def test_generator_handoff_descriptor_requires_pre_edit_decomposition() -> None:
     assert "bounded progress is made" not in combined
 
 
+def test_planner_terminal_descriptors_use_iteration_outcome_contract() -> None:
+    closes = TERMINAL_DESCRIPTORS["submit_plan_closes_goal"]
+    defers = TERMINAL_DESCRIPTORS["submit_plan_defers_goal"]
+    combined = (
+        f"{closes.selection_guidance}\n{closes.advisor_review_focus}\n"
+        f"{defers.selection_guidance}\n{defers.advisor_review_focus}"
+    )
+
+    assert "reducer outcomes are enough" in closes.selection_guidance
+    assert "no known follow-up planner pass" in closes.selection_guidance
+    assert "another planner pass after" in defers.selection_guidance
+    assert "self-contained next scope" in defers.advisor_review_focus
+    assert "slice" not in combined.lower()
+    assert "partial scope" not in combined.lower()
+
+
 def test_render_terminal_catalog_uses_selection_guidance() -> None:
     terminals = ["submit_generator_success", "submit_generator_failure"]
     catalog = render_terminal_catalog(terminals, focus="selection_guidance")

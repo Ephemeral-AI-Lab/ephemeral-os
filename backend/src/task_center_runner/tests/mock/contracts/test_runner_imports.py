@@ -245,6 +245,45 @@ def test_prompt_inspector_accepts_planner_without_defer_terminal() -> None:
     assert inspection.passed
 
 
+def test_prompt_inspector_accepts_close_only_current_iteration_envelope() -> None:
+    inspection = _runner()._inspect_prompt(  # noqa: SLF001
+        prompt="\n".join(
+            [
+                "<context role=\"planner\">",
+                "<workflow>",
+                "<goal>Close this delegated recursive workflow.</goal>",
+                "<current_iteration sequence=\"1\">",
+                "<goal>Close this delegated recursive workflow.</goal>",
+                "</current_iteration>",
+                "</workflow>",
+                "</context>",
+                "<terminal_tool_selection>",
+                "`submit_plan_closes_goal`",
+                "</terminal_tool_selection>",
+            ]
+        ),
+        agent_def=AgentDefinition(
+            name="planner",
+            description="test full-only planner",
+            role=AgentRole.PLANNER,
+            terminals=["submit_plan_closes_goal"],
+            tool_call_limit=10,
+        ),
+        metadata=ExecutionMetadata(
+            task_center_task_id="recursive-1:planner",
+            extras={"active_terminals": ["submit_plan_closes_goal"]},
+        ),
+    )
+
+    assert inspection.checks == {
+        "goal": True,
+        "current_iteration": True,
+        "closes_goal_terminal": True,
+        "no_defer_terminal": True,
+    }
+    assert inspection.passed
+
+
 def test_prompt_inspector_verifies_dependent_executor_outcomes() -> None:
     task_id = "attempt-1:gen:b"
 

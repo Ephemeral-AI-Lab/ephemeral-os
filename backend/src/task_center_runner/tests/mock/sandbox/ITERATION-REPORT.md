@@ -168,3 +168,31 @@
 - Fix applied: none in this iteration; it validated the bridge polling change.
 - Verification result after the fix: `uv run pytest -q backend/tests/unit_test/test_task_center_runner/test_probe_bridge.py backend/tests/unit_test/test_engine/test_provider_history.py` passed: 18 passed in 0.40s. Focused mixed-conflict live scenario passed. `uv run ruff check ...` passed for the touched bridge/provider/test files.
 - Remaining risk or next iteration target: Resume the full mock sandbox directory from the top.
+
+## Iteration 14 - 2026-05-31 09:25:22 CST
+
+- Exact command run:
+  `PYTHONFAULTHANDLER=1 .venv/bin/python -m pytest -q -x --tb=short --durations=20 /Users/yifanxu/machine_learning/LoVC/EphemeralOS/backend/src/task_center_runner/tests/mock`
+  and skip-reason check:
+  `PYTHONFAULTHANDLER=1 .venv/bin/python -m pytest -q -rs --tb=short /Users/yifanxu/machine_learning/LoVC/EphemeralOS/backend/src/task_center_runner/tests/mock`
+- Exact run directory or artifact paths inspected: no new live `.sweevo_runs/scenario_logs/**/run.json` was expected from the skipped live scenarios; inspected pytest skip output and Docker CLI availability.
+- Pass/fail/skip status: command completed with `87 passed, 149 skipped in 1.39s`, but this is not a valid live-suite pass because sandbox-backed scenarios skipped.
+- Findings summary: All skips shared the Tier-0 health gate reason `api_health='error' notes="eos_docker_privileged=''; docker_info=docker_unavailable"`.
+- Issues found: The shell environment did not have `uv` or `docker` on `PATH`, so the first command used the repo `.venv` and the sandbox health gate could not find Docker.
+- Why it failed: The local Docker CLI exists at `/usr/local/bin/docker`, and Docker Desktop is running, but `/usr/local/bin` was absent from the command environment. This made sandbox tests skip before exercising live ScenarioLoopRunner paths.
+- Fix applied: No code change. Rerun the suite with `PATH=/usr/local/bin:/opt/homebrew/bin:$PATH` while continuing to use the repo `.venv` because `uv` is unavailable on this shell's `PATH`.
+- Verification result after the fix: `PATH=/usr/local/bin:/opt/homebrew/bin:$PATH docker info` succeeded against Docker Desktop, and `docker ps -a --filter 'name=sweevo-test'` showed no existing `sweevo-test` containers.
+- Remaining risk or next iteration target: Rerun the full mock suite with the corrected PATH and monitor `.sweevo_runs/scenario_logs` for the first actionable live failure or hang.
+
+## Iteration 15 - 2026-05-31 09:33:32 CST
+
+- Exact command run:
+  `PATH=/usr/local/bin:/opt/homebrew/bin:$PATH PYTHONFAULTHANDLER=1 .venv/bin/python -m pytest -q -x --tb=short --durations=20 /Users/yifanxu/machine_learning/LoVC/EphemeralOS/backend/src/task_center_runner/tests/mock`
+- Exact run directory or artifact paths inspected: failing run `.sweevo_runs/scenario_logs/capacity.full_system_capacity_matrix/20260531T013001Z_8fb911a17417`; focused verification run `.sweevo_runs/scenario_logs/capacity.full_system_capacity_matrix/20260531T013256Z_582b760ef09b`; `performance_report.json`, `sandbox_events.jsonl`, planner `message.jsonl`.
+- Pass/fail/skip status: broad run failed after 60 passed in 279.06s; focused rerun after the fix passed, 1 passed in 36.04s.
+- Findings summary: The capacity scenario itself finished and wrote artifacts. The failure was `report.passed_prompt_inspections == false` for a delegated close-only planner whose prompt used `<current_iteration sequence="1">` and exposed only `submit_plan_closes_goal`.
+- Issues found: `ScenarioLoopRunner._inspect_prompt` accepted `<current_iteration ...>` for normal planners but the depth-restricted close-only branch only accepted the older `<iteration ... position="current">` shape.
+- Why it failed: The inspector contract drifted from the current TaskCenter planner context envelope. The real prompt and terminal set were valid; the mock-side assertion was stale for delegated close-only workflows.
+- Fix applied: `backend/src/task_center_runner/agent/mock/scenario_loop_runner.py` now accepts `<current_iteration ...>` in the close-only planner branch. `backend/src/task_center_runner/tests/mock/contracts/test_runner_imports.py` adds a close-only current-iteration-envelope contract test.
+- Verification result after the fix: `PYTHONFAULTHANDLER=1 .venv/bin/python -m pytest -q backend/src/task_center_runner/tests/mock/contracts/test_runner_imports.py::test_prompt_inspector_accepts_close_only_current_iteration_envelope backend/src/task_center_runner/tests/mock/contracts/test_runner_imports.py::test_prompt_inspector_accepts_planner_without_defer_terminal` passed: 2 passed in 0.09s. `PATH=/usr/local/bin:/opt/homebrew/bin:$PATH .venv/bin/ruff check backend/src/task_center_runner/agent/mock/scenario_loop_runner.py backend/src/task_center_runner/tests/mock/contracts/test_runner_imports.py` passed. Focused capacity live rerun passed. The focused report is V3, has all required sandbox sections, `events_pulled=1409`, `dropped_event_count=0`, `lost_before_seq=0`, max buffer pressure `0.04056119918823242`, artifact live bytes `2155697`, O(1) workspace tree bytes/truncation zero, and only the expected typed `occ.conflict_cluster` warning.
+- Remaining risk or next iteration target: Resume the full mock suite from the top with corrected PATH and the prompt-inspection fix.

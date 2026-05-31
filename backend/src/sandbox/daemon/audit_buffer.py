@@ -158,14 +158,6 @@ class AuditBuffer:
     def boot_epoch_id(self) -> int:
         return self._boot_epoch_id
 
-    @property
-    def max_events(self) -> int:
-        return self._max_events
-
-    @property
-    def max_bytes(self) -> int:
-        return self._max_bytes
-
     def register_pressure_cross_callback(self, callback: Any) -> None:
         """Register a callback fired on rising 0.8 pressure crossings.
 

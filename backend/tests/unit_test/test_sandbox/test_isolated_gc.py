@@ -65,8 +65,8 @@ def test_iter_namespace_holder_processes_reads_unshare_and_child(tmp_path: Path)
 
 def test_namespace_holder_signal_order_terminates_child_before_unshare_parent() -> None:
     processes = [
-        reaper_module._NamespaceHolderProcess(11, 1, "S", "unshare", "holder"),
-        reaper_module._NamespaceHolderProcess(12, 11, "S", "python3.10", "holder"),
+        reaper_module._NamespaceHolderProcess(11, 1, "S", "unshare"),
+        reaper_module._NamespaceHolderProcess(12, 11, "S", "python3.10"),
     ]
 
     assert [proc.pid for proc in reaper_module._namespace_holder_signal_order(processes)] == [
@@ -87,12 +87,12 @@ def test_reap_orphan_holder_processes_continues_then_kills(
     signals: list[tuple[int, int]] = []
     snapshots = [
         [
-            reaper_module._NamespaceHolderProcess(11, 1, "T", "unshare", "holder"),
-            reaper_module._NamespaceHolderProcess(12, 11, "T", "python3.10", "holder"),
+            reaper_module._NamespaceHolderProcess(11, 1, "T", "unshare"),
+            reaper_module._NamespaceHolderProcess(12, 11, "T", "python3.10"),
         ],
         [
-            reaper_module._NamespaceHolderProcess(11, 1, "T", "unshare", "holder"),
-            reaper_module._NamespaceHolderProcess(12, 11, "T", "python3.10", "holder"),
+            reaper_module._NamespaceHolderProcess(11, 1, "T", "unshare"),
+            reaper_module._NamespaceHolderProcess(12, 11, "T", "python3.10"),
         ],
         [],
     ]

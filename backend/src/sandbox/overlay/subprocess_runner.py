@@ -75,16 +75,10 @@ def subprocess_to_refs(
     timeout_seconds: float | None,
     stdout_ref: str | Path,
     stderr_ref: str | Path,
-    timeout_exit_code: int | None = None,
     cancel_event: threading.Event | None = None,
     pid_recorder: Callable[[int], None] | None = None,
 ) -> int:
     """Run a subprocess with stdout/stderr captured to ref files.
-
-    If a timeout fires and ``timeout_exit_code`` is ``None`` the
-    ``subprocess.TimeoutExpired`` propagates; otherwise that exit code is
-    returned so callers can distinguish a user-command timeout from a real
-    exit (e.g. GNU `timeout(1)` uses 124).
 
     Optional background-shell plumbing: when ``cancel_event`` is provided the
     wait loop polls it on a 100 ms tick and escalates SIGTERM → SIGKILL on
@@ -128,9 +122,7 @@ def subprocess_to_refs(
                     proc.wait(timeout=CANCEL_SIGKILL_GRACE_S)
                 except subprocess.TimeoutExpired:
                     pass
-                if timeout_exit_code is None:
-                    raise
-                return timeout_exit_code
+                raise
         finally:
             if proc.poll() is None:
                 kill_process_group(proc.pid, signal.SIGKILL)

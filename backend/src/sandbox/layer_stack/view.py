@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import errno
 import os
 import shutil
 from collections.abc import Iterator
@@ -197,8 +196,6 @@ class MergedView:
         self,
         destination: str | Path,
         manifest: Manifest,
-        *,
-        share_inodes: bool = False,
     ) -> None:
         """Project *manifest* into *destination* as an owned tree.
 
@@ -206,11 +203,6 @@ class MergedView:
         opaque-dir markers, to produce a self-contained merged tree. The caller
         owns the resulting directory. Pure read of layer storage; never mutates
         active layers.
-
-        ``share_inodes=True`` hardlinks regular files from source layers. Only safe
-        when the caller treats *destination* as read-only (e.g. a layer-stack
-        projection);
-        a writer would corrupt the source layer through the shared inode.
         """
         dest = Path(destination)
         if dest.exists():
@@ -218,11 +210,7 @@ class MergedView:
         dest.mkdir(parents=True)
 
         for layer in reversed(manifest.layers):
-            self._apply_layer(
-                self._layer_dir(layer),
-                dest,
-                share_inodes=share_inodes,
-            )
+            self._apply_layer(self._layer_dir(layer), dest)
 
     def _layer_dir(self, layer: LayerRef) -> Path:
         layer_path = Path(layer.path)
@@ -239,8 +227,6 @@ class MergedView:
         self,
         layer_dir: Path,
         dest: Path,
-        *,
-        share_inodes: bool = False,
     ) -> None:
         opaques: list[Path] = []
         whiteouts: list[Path] = []
@@ -269,10 +255,7 @@ class MergedView:
             elif entry.is_file():
                 target.parent.mkdir(parents=True, exist_ok=True)
                 remove_path(target)
-                if share_inodes:
-                    _link_or_copy(entry, target)
-                else:
-                    shutil.copy2(entry, target)
+                shutil.copy2(entry, target)
 
 
 def _direct_child_segment(name: str, prefix: str) -> str | None:
@@ -323,16 +306,6 @@ def _clear_directory(path: Path) -> None:
     path.mkdir(parents=True, exist_ok=True)
     for child in path.iterdir():
         remove_path(child)
-
-
-def _link_or_copy(src: Path, dst: Path) -> None:
-    """Hardlink ``src`` into ``dst``; copy on EXDEV (cross-FS) or EPERM."""
-    try:
-        os.link(src, dst)
-    except OSError as exc:
-        if exc.errno not in (errno.EXDEV, errno.EPERM):
-            raise
-        shutil.copy2(src, dst)
 
 
 def _replace_symlink(path: Path, target: str) -> None:

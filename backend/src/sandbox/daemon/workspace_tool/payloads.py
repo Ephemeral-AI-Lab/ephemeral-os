@@ -99,23 +99,17 @@ def project_conflict_result(
     message: str,
     total_start: float,
     timings_extra: dict[str, float] | None = None,
-    changed_paths: list[str] | None = None,
-    conflict_reason: str | None = None,
-    **extras: object,
 ) -> dict[str, object]:
     """Project a single-path conflict into the guarded-result shape.
 
     ``status`` is the outer wire status (e.g. ``rejected``); ``reason`` is
     the inner ``conflict.reason`` (e.g. ``create_only_existing``). They
-    coincide for the edit anchor-miss case. ``conflict_reason`` defaults
-    to ``reason`` but the in-workspace edit path passes the raw exception
-    text instead. ``extras`` carries verb-specific fields like
-    ``applied_edits``.
+    coincide for the edit anchor-miss case.
     """
-    payload: dict[str, object] = {
+    return {
         "success": False,
-        "changed_paths": list(changed_paths or []),
-        "changed_path_kinds": _changed_path_kinds(changed_paths or []),
+        "changed_paths": [],
+        "changed_path_kinds": {},
         "mutation_source": _mutation_source_for_verb(verb),
         "status": status,
         "conflict": {
@@ -123,14 +117,12 @@ def project_conflict_result(
             "conflict_file": path,
             "message": message,
         },
-        "conflict_reason": conflict_reason if conflict_reason is not None else reason,
+        "conflict_reason": reason,
         "timings": {
             **(timings_extra or {}),
             f"api.{verb}.total_s": monotonic_now() - total_start,
         },
     }
-    payload.update(extras)
-    return payload
 
 
 def _mutation_source_for_verb(verb: str) -> str:

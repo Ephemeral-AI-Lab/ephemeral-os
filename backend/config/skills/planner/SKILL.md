@@ -24,10 +24,10 @@ the decision point only after the plan is internally coherent.
 
 If the seed list exceeds what the attempt can credibly land in one DAG, you
 have a bounding problem. When the launch exposes a defer terminal, prefer a
-smaller coherent slice with a self-contained next-iteration instruction. When
-the launch does not expose a defer terminal, narrow the plan contract inside
-the current iteration's bounds and make the criteria match what the DAG can
-actually deliver.
+smaller coherent bounded iteration with a self-contained next-iteration
+instruction. When the launch does not expose a defer terminal, narrow the plan
+contract inside the current iteration's bounds and make the criteria match what
+the DAG can actually deliver.
 
 ## Reducers produce deliverable outcomes
 
@@ -57,7 +57,7 @@ actually deliver.
 
 When prior failed attempts appear in the current iteration context, you are
 inside a fixed iteration goal. Use the failed `<task>`s and `<failure>` line to
-rework the failing slice instead of re-running the same plan unchanged. If a
+rework the failing portion instead of re-running the same plan unchanged. If a
 prior failure identified a specific gap, narrow the next plan to address it
 directly.
 
