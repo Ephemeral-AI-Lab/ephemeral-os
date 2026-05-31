@@ -527,7 +527,7 @@ fn op_edit_file(args: &Value, _context: DispatchContext<'_>) -> Result<Value, Da
 fn op_shell(args: &Value, _context: DispatchContext<'_>) -> Result<Value, DaemonError> {
     let total_start = Instant::now();
     let root = PathBuf::from(require_string(args, "layer_stack_root")?);
-    let command = require_string(args, "command")?;
+    let command = require_shell_command(args)?;
     let cwd = args
         .get("cwd")
         .and_then(Value::as_str)
@@ -748,6 +748,33 @@ fn require_string(args: &Value, key: &str) -> Result<String, DaemonError> {
         return Err(DaemonError::InvalidEnvelope(format!("{key} is required")));
     }
     Ok(value)
+}
+
+fn require_shell_command(args: &Value) -> Result<Value, DaemonError> {
+    let Some(command) = args.get("command") else {
+        return Err(DaemonError::InvalidEnvelope(
+            "command is required".to_owned(),
+        ));
+    };
+    if let Some(raw) = command.as_str() {
+        if raw.trim().is_empty() {
+            return Err(DaemonError::InvalidEnvelope(
+                "command is required".to_owned(),
+            ));
+        }
+        return Ok(Value::String(raw.to_owned()));
+    }
+    if let Some(parts) = command.as_array() {
+        if parts.is_empty() {
+            return Err(DaemonError::InvalidEnvelope(
+                "command argv must not be empty".to_owned(),
+            ));
+        }
+        return Ok(Value::Array(parts.clone()));
+    }
+    Err(DaemonError::InvalidEnvelope(
+        "command must be a string or argv list".to_owned(),
+    ))
 }
 
 #[derive(Clone)]
@@ -1568,6 +1595,28 @@ mod tests {
     use serde_json::json;
 
     use super::*;
+
+    #[test]
+    fn shell_command_accepts_string_without_trimming_payload() {
+        let command = require_shell_command(&json!({"command": "  echo hi  "}))
+            .expect("string shell command is valid");
+
+        assert_eq!(command, json!("  echo hi  "));
+    }
+
+    #[test]
+    fn shell_command_accepts_raw_argv_wire_shape() {
+        let command = require_shell_command(&json!({"command": ["true"]}))
+            .expect("argv shell command is valid");
+
+        assert_eq!(command, json!(["true"]));
+    }
+
+    #[test]
+    fn shell_command_rejects_empty_values() {
+        assert!(require_shell_command(&json!({"command": "   "})).is_err());
+        assert!(require_shell_command(&json!({"command": []})).is_err());
+    }
 
     #[test]
     fn gated_stale_base_aborts_without_publish() {

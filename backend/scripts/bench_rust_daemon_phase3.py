@@ -4,7 +4,7 @@
 The harness uploads a locally packaged ``eosd`` into the Docker sandbox, seeds a
 minimal LayerStack fixture, starts the Rust daemon, then measures:
 
-* ``api.v1.shell`` no-op latency.
+* ``api.v1.shell`` no-op latency for string shell and raw argv forms.
 * ``api.v1.shell`` small-write publish latency.
 * ``api.v1.glob`` and ``api.v1.grep`` read-only overlay search latency.
 * daemon memory before load, between operation groups, and after drain.
@@ -69,6 +69,7 @@ def main(argv: list[str] | None = None) -> int:
     print(
         f"wrote {out} "
         f"(cp4s={report['cp4s']['gate_pass']} all={report['gate_pass']} "
+        f"direct_argv={report['cp4s']['gates'].get('direct_argv_noop_70pct_faster_than_phase1')} "
         f"run_id={report['run_id']})"
     )
     return 0 if report["gate_pass"] else 1
@@ -212,6 +213,24 @@ async def run_phase3(args: argparse.Namespace) -> dict[str, Any]:
                 expect_noop_shell,
             )
             memory_samples.append(await sample_daemon_memory(bench, "after_noop_shell"))
+
+            operations["direct_argv_noop"] = await measure_operation(
+                daemon_client,
+                endpoint,
+                "direct_argv_noop",
+                args.samples,
+                lambda _index, invocation_id: (
+                    "api.v1.shell",
+                    {
+                        "command": ["true"],
+                        "cwd": ".",
+                        "timeout_seconds": 10,
+                        "invocation_id": invocation_id,
+                    },
+                ),
+                expect_noop_shell,
+            )
+            memory_samples.append(await sample_daemon_memory(bench, "after_direct_argv_noop"))
 
             operations["small_write"] = await measure_operation(
                 daemon_client,
@@ -394,6 +413,7 @@ def derived_timings_ms(
 ) -> dict[str, float]:
     api_keys = {
         "noop_shell": "api.shell.total_s",
+        "direct_argv_noop": "api.shell.total_s",
         "small_write": "api.shell.total_s",
         "glob": "api.glob.total_s",
         "grep": "api.grep.total_s",
@@ -596,12 +616,20 @@ def evaluate_cp4s(report: dict[str, Any], phase1: dict[str, Any]) -> dict[str, A
     noop_run_command = stat_block(noop, "phase_timing_ms", "command_exec.run_command_s")
     noop_mount = stat_block(noop, "phase_timing_ms", "command_exec.mount_workspace_s")
     noop_dispatch = stat_block(noop, "derived_ms", "host_minus_api_total_ms")
+    direct_argv = operations.get("direct_argv_noop", {})
+    direct_argv_host = direct_argv.get("host_wall_ms", {"count": 0, "samples_ms": []})
+    direct_argv_run_command = stat_block(
+        direct_argv,
+        "phase_timing_ms",
+        "command_exec.run_command_s",
+    )
 
     host_latency_gate = (
         stat_value(noop_host, "p50") <= float(phase1_host["p50"])
         and stat_value(noop_host, "p95") <= float(phase1_host["p95"])
     )
     shell_segment_gate = stat_value(noop_run_command, "p50") <= float(phase1_tool["p50"]) * 0.75
+    direct_argv_gate = stat_value(direct_argv_run_command, "p50") <= float(phase1_tool["p50"]) * 0.30
     mount_gate = stat_value(noop_mount, "p95") <= 5.0
     dispatch_gate = stat_value(noop_dispatch, "p95") <= 5.0
     operations_gate = all(
@@ -624,6 +652,7 @@ def evaluate_cp4s(report: dict[str, Any], phase1: dict[str, Any]) -> dict[str, A
             "phase1_noop_shell_host_wall_p95_ms": phase1_host["p95"],
             "phase1_runner_tool_p50_ms": phase1_tool["p50"],
             "required_runner_tool_p50_ms": float(phase1_tool["p50"]) * 0.75,
+            "required_direct_argv_runner_tool_p50_ms": float(phase1_tool["p50"]) * 0.30,
             "overlay_mount_p95_max_ms": 5.0,
             "host_minus_api_total_p95_max_ms": 5.0,
         },
@@ -632,11 +661,14 @@ def evaluate_cp4s(report: dict[str, Any], phase1: dict[str, Any]) -> dict[str, A
             "noop_shell_run_command_ms": noop_run_command,
             "noop_shell_mount_ms": noop_mount,
             "noop_shell_host_minus_api_total_ms": noop_dispatch,
+            "direct_argv_noop_host_wall_ms": direct_argv_host,
+            "direct_argv_noop_run_command_ms": direct_argv_run_command,
         },
         "gates": {
             "operations_all_samples_ok": operations_gate,
             "noop_host_no_worse_than_phase1": host_latency_gate,
             "process_shell_segment_25pct_faster_than_phase1": shell_segment_gate,
+            "direct_argv_noop_70pct_faster_than_phase1": direct_argv_gate,
             "overlay_mount_p95_lte_5ms": mount_gate,
             "host_minus_api_total_p95_lte_5ms": dispatch_gate,
             "daemon_memory": memory_gate,
