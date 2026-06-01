@@ -118,7 +118,10 @@ class PtyCommandRecord:
     pty_session_id: str
     sandbox_id: str
     agent_id: str
+    command: str = ""
     status: BackgroundTaskStatus = BackgroundTaskStatus.RUNNING
+    result: dict[str, Any] | None = None
+    started_at: float = field(default_factory=time.monotonic)
 
 
 _TERMINAL_EVENT_TYPE: dict[str, str] = {
@@ -341,7 +344,7 @@ class BackgroundTaskSupervisor:
         """Return True if any task is still running."""
         return any(
             task.status == BackgroundTaskStatus.RUNNING for task in self._tasks.values()
-        )
+        ) or bool(self._running_pty_commands())
 
     def count_by_agent(self, agent_id: str) -> int:
         """Return running sandbox-bound background task count for one agent."""
@@ -364,12 +367,14 @@ class BackgroundTaskSupervisor:
         pty_session_id: str,
         sandbox_id: str,
         agent_id: str,
+        command: str = "",
     ) -> None:
         """Track a daemon-owned PTY command for lifecycle gates."""
         self._pty_commands[pty_session_id] = PtyCommandRecord(
             pty_session_id=pty_session_id,
             sandbox_id=sandbox_id,
             agent_id=agent_id,
+            command=command,
         )
         self._ensure_heartbeat_task()
 
@@ -501,6 +506,18 @@ class BackgroundTaskSupervisor:
             for record in targets:
                 record.status = BackgroundTaskStatus.CANCELLED
         return len(targets)
+
+    async def collect_pty_completion_notifications(self) -> list[str]:
+        """Return one notification string for each newly terminal PTY session."""
+        await self._collect_pty_completions_once()
+        notifications: list[str] = []
+        for record in self._pty_commands.values():
+            if record.status not in _TERMINAL_UNDELIVERED or record.result is None:
+                continue
+            notifications.append(_render_pty_completion_notification(record))
+            record.status = BackgroundTaskStatus.DELIVERED
+        self._stop_heartbeat_if_idle()
+        return notifications
 
     def get_task(self, task_id: str) -> BackgroundTaskRecord | None:
         """Return the tracked task for *task_id* (or None)."""
@@ -693,6 +710,9 @@ class BackgroundTaskSupervisor:
                         if isinstance(result, dict)
                         else "completed"
                     )
+                    record.result = dict(result) if isinstance(result, dict) else {}
+                    if not record.command:
+                        record.command = str(completion.get("command") or "")
                     if status == "cancelled":
                         record.status = BackgroundTaskStatus.CANCELLED
                     elif status == "ok":
@@ -701,3 +721,25 @@ class BackgroundTaskSupervisor:
                         record.status = BackgroundTaskStatus.FAILED
         except Exception:
             logger.debug("pty completion collection failed", exc_info=True)
+
+
+def _render_pty_completion_notification(record: PtyCommandRecord) -> str:
+    result = record.result or {}
+    status = str(result.get("status") or record.status.value)
+    exit_code = result.get("exit_code")
+    output = result.get("output") if isinstance(result.get("output"), dict) else {}
+    stdout = str(output.get("stdout") or "")
+    stderr = str(output.get("stderr") or "")
+    lines = [
+        (
+            f'[BACKGROUND COMPLETED] pty_session_id="{record.pty_session_id}" '
+            f"status={status} exit_code={exit_code}"
+        )
+    ]
+    if record.command:
+        lines.append(f"command: {record.command}")
+    if stdout:
+        lines.append(f"stdout:\n{stdout.rstrip()}")
+    if stderr:
+        lines.append(f"stderr:\n{stderr.rstrip()}")
+    return "\n".join(lines)

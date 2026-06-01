@@ -159,6 +159,16 @@ async def _build_stream_executor(
     return executor
 
 
+async def _drain_background_completion_notifications(
+    background_tasks: BackgroundTaskSupervisor | None,
+    notification_service: SystemNotificationService,
+) -> None:
+    if background_tasks is None:
+        return
+    for text in await background_tasks.collect_pty_completion_notifications():
+        await notification_service.notify_system(text)
+
+
 def _provider_event_source(
     context: QueryContext,
     run_request: QueryRunRequest,
@@ -223,6 +233,10 @@ async def _run_query_loop(
             # Evaluate notification rules and drain any reminders into the
             # transcript before building the next provider request, so newly-
             # fired reminders reach the model on this turn.
+            await _drain_background_completion_notifications(
+                background_tasks,
+                notification_service,
+            )
             if context.notification_rules:
                 await dispatch_rules(
                     context.notification_rules,
@@ -230,11 +244,9 @@ async def _run_query_loop(
                     context,
                     notification_service,
                 )
-                pending = notification_service.pop_pending_notifications()
-                if pending:
-                    messages.append(
-                        Message(role="user", content=list(pending))
-                    )
+            pending = notification_service.pop_pending_notifications()
+            if pending:
+                messages.append(Message(role="user", content=list(pending)))
 
             state = _ProviderStreamAccumulator()
             run_request = build_query_run_request(context, messages)

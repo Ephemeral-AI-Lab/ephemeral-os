@@ -195,15 +195,41 @@ def temporary_env(key: str, value: str) -> Iterator[None]:
 async def upload_artifact(bench: DockerBench, artifact: Path) -> dict[str, Any]:
     payload = artifact.read_bytes()
     expected_sha = hashlib.sha256(payload).hexdigest()
+    require_success(
+        await bench.exec(f"mkdir -p {shlex.quote(RUNTIME_ROOT)}", timeout=30),
+        "create rust runtime dir",
+    )
+    staging_dir = f"/tmp/eosd-upload-{uuid.uuid4().hex}"
+    staging_file = f"{staging_dir}/eosd"
+    require_success(
+        await bench.exec(f"mkdir -p {shlex.quote(staging_dir)}", timeout=30),
+        "create eosd staging dir",
+    )
     started = time.perf_counter()
     await bench.adapter.put_archive(
         bench.sandbox_id,
-        tar_stream=tar_file_at_path(EOSD_REMOTE_PATH, payload, mode=0o755),
-        dest_dir="/",
+        tar_stream=tar_file_at_path("eosd", payload, mode=0o755),
+        dest_dir=staging_dir,
+    )
+    require_success(
+        await bench.exec(
+            f"cat {shlex.quote(staging_file)} > {shlex.quote(EOSD_REMOTE_PATH)} && "
+            f"chmod 755 {shlex.quote(EOSD_REMOTE_PATH)} && "
+            f"rm -rf {shlex.quote(staging_dir)}",
+            timeout=30,
+        ),
+        "finalize eosd artifact",
     )
     upload_ms = elapsed_ms(started)
-    remote_bytes, remote_mode = await bench.get_file_archive(EOSD_REMOTE_PATH, timeout=60)
-    remote_sha = hashlib.sha256(remote_bytes).hexdigest()
+    remote_sha_result = await bench.exec(
+        f"sha256sum {shlex.quote(EOSD_REMOTE_PATH)} | awk '{{print $1}}'",
+        timeout=30,
+    )
+    require_success(remote_sha_result, "hash uploaded eosd artifact")
+    remote_sha = _text(remote_sha_result, "stdout").strip().split()[0]
+    remote_mode_result = await bench.exec(f"stat -c %a {shlex.quote(EOSD_REMOTE_PATH)}", timeout=30)
+    require_success(remote_mode_result, "stat uploaded eosd artifact")
+    remote_mode = int(_text(remote_mode_result, "stdout").strip(), 8)
     version = await bench.direct_exec([EOSD_REMOTE_PATH, "--version"], timeout=30)
     return {
         "source_path": str(artifact),
@@ -225,10 +251,25 @@ async def upload_artifact(bench: DockerBench, artifact: Path) -> dict[str, Any]:
 
 
 async def seed_layer_stack(bench: DockerBench) -> None:
+    payload = seed_archive()
+    staging_dir = f"/tmp/eos-layer-stack-{uuid.uuid4().hex}"
+    staging_tar = f"{staging_dir}/seed.tar"
+    require_success(
+        await bench.exec(f"mkdir -p {shlex.quote(staging_dir)}", timeout=30),
+        "create layer stack staging dir",
+    )
     await bench.adapter.put_archive(
         bench.sandbox_id,
-        tar_stream=seed_archive(),
-        dest_dir="/",
+        tar_stream=tar_file_at_path("seed.tar", payload, mode=0o644),
+        dest_dir=staging_dir,
+    )
+    require_success(
+        await bench.exec(
+            f"tar -xf {shlex.quote(staging_tar)} -C / && "
+            f"rm -rf {shlex.quote(staging_dir)}",
+            timeout=30,
+        ),
+        "extract layer stack seed",
     )
 
 

@@ -206,7 +206,11 @@ fn execute_shell(
 
     let mut child = command.spawn().map_err(RunnerError::Child)?;
     let child_pid = Pid::from_child(&child);
-    let (exit_code, timed_out) = match wait_for_child(&mut child, request.timeout_seconds) {
+    let (exit_code, timed_out) = match wait_for_child(
+        &mut child,
+        request.timeout_seconds,
+        TimeoutKill::ProcessGroup,
+    ) {
         Ok(exit_code) => (exit_code, false),
         Err(RunnerError::TimedOut) => (124, true),
         Err(err) => return Err(err),
@@ -266,7 +270,11 @@ fn execute_shell_pty(
         .stderr(Stdio::inherit());
 
     let mut child = command.spawn().map_err(RunnerError::Child)?;
-    let (exit_code, timed_out) = match wait_for_child(&mut child, request.timeout_seconds) {
+    let (exit_code, timed_out) = match wait_for_child(
+        &mut child,
+        request.timeout_seconds,
+        TimeoutKill::DirectChild,
+    ) {
         Ok(exit_code) => (exit_code, false),
         Err(RunnerError::TimedOut) => (124, true),
         Err(err) => return Err(err),
@@ -303,9 +311,16 @@ fn execute_shell_pty(
 }
 
 #[cfg(target_os = "linux")]
+enum TimeoutKill {
+    ProcessGroup,
+    DirectChild,
+}
+
+#[cfg(target_os = "linux")]
 fn wait_for_child(
     child: &mut std::process::Child,
     timeout_seconds: Option<f64>,
+    timeout_kill: TimeoutKill,
 ) -> Result<i32, RunnerError> {
     let deadline = timeout_seconds
         .filter(|seconds| seconds.is_finite() && *seconds >= 0.0)
@@ -318,8 +333,15 @@ fn wait_for_child(
                 .unwrap_or(128));
         }
         if deadline.is_some_and(|deadline| Instant::now() >= deadline) {
-            let pid = Pid::from_child(child);
-            let _ = kill_process_group(pid, Signal::Kill);
+            match timeout_kill {
+                TimeoutKill::ProcessGroup => {
+                    let pid = Pid::from_child(child);
+                    let _ = kill_process_group(pid, Signal::Kill);
+                }
+                TimeoutKill::DirectChild => {
+                    let _ = child.kill();
+                }
+            }
             let _ = child.wait();
             return Err(RunnerError::TimedOut);
         }

@@ -432,20 +432,26 @@ async def test_ensure_eosd_uploaded_streams_arch_binary_with_executable_mode(
         type("R", (), {"exit_code": 1, "stdout": ""})(),
         type("R", (), {"exit_code": 0, "stdout": ""})(),
         type("R", (), {"exit_code": 0, "stdout": ""})(),
+        type("R", (), {"exit_code": 0, "stdout": ""})(),
+        type("R", (), {"exit_code": 0, "stdout": ""})(),
     ]
 
     await _ensure_eosd_uploaded("sb-1", adapter)
 
     adapter.put_archive.assert_awaited_once()
     kwargs = adapter.put_archive.await_args.kwargs
-    assert kwargs["dest_dir"] == "/"
+    assert kwargs["dest_dir"].startswith("/tmp/eosd-upload-")
     with tarfile.open(fileobj=io.BytesIO(kwargs["tar_stream"]), mode="r:") as tar:
-        member = tar.getmember("eos/daemon/eosd")
+        member = tar.getmember("eosd")
         extracted = tar.extractfile(member)
         assert extracted is not None
         assert extracted.read() == payload
         assert member.mode == 0o755
 
+    finalize_cmd = adapter.exec.await_args_list[-2].args[1]
+    assert BUNDLE_REMOTE_DIR in finalize_cmd
+    assert "cat " in finalize_cmd
+    assert "chmod 755" in finalize_cmd
     verify_cmd = adapter.exec.await_args_list[-1].args[1]
     assert ".eosd-sha256" in verify_cmd
     assert "eosd --version" in verify_cmd

@@ -24,8 +24,15 @@ Date: 2026-06-01
   work below it.
 - Delegated workflow work stops when the parent generator crashes or is
   cancelled.
-- No timeout semantics in this phase, and no generic `set_timeout` tool for
-  workflow waiting.
+- No workflow-owned timeout semantics in this phase.
+- A generic `set_timeout` tool is planned later for stopping agent waiting
+  cycles while long-running work continues, including workflow monitoring.
+- `delegate_workflow` is not advisor-gated. Advisor approval stays on
+  `submit_generator_outcome`, which now reviews the parent's synthesized
+  outcome after delegated results are delivered.
+- A delegating generator synthesizes the child workflow result into its own
+  outcome instead of passing the child's flattened outcomes through (the
+  upward synthesis boundary).
 
 ## Goal
 
@@ -76,6 +83,40 @@ The background model is the target because it preserves agentic flexibility
 during delegated work and aligns with the Phase 3T PTY/background-manager
 contract.
 
+## Design Rationale: Per-Delegation Context Boundaries
+
+Background delegation gives every delegation hop a clean context boundary in
+both directions. This is the core reason to prefer it over both the terminal
+handoff and an in-parent orchestration script.
+
+Downward isolation (goal in, fresh planner):
+
+- `delegate_workflow` ships only a goal string. TaskCenter bootstraps the child
+  Workflow whose planner decomposes that goal in a fresh ContextEngine packet.
+- The parent never authors or holds the child's task DAG. Decomposition
+  reasoning stays out of the parent conversation, and the plan is re-derived
+  from store state instead of inherited from the parent's current context.
+
+Upward synthesis (one outcome out, subtree encapsulated):
+
+- Today `AttemptOrchestrator.apply_child_workflow_outcome` writes the child
+  workflow's flattened outcomes directly onto the parent generator task, and
+  the handing-off generator is terminal and contributes no outcome of its own.
+  The generator is a transparent conduit, so a nested subtree's raw outcomes
+  leak upward into the parent attempt's reducer input.
+- In the background model the generator stays `RUNNING`, receives the child
+  result, and emits one synthesized outcome through `submit_generator_outcome`.
+  Each generator becomes the reduction point for its delegated subtree instead
+  of a window into it.
+- This restores compositionality to the recursive `Outcome` algebra: one node,
+  one synthesized outcome, children encapsulated. The parent attempt's reducer
+  reads one high-signal outcome per delegating generator, and failure
+  attribution reads as "the generator weighed the delegated result and decided
+  X" rather than a flattened pile of grandchild outcomes.
+- Encapsulation is not lossy at the audit layer: the child workflow's durable
+  outcomes remain in TaskCenter stores and stay inspectable through
+  `check_workflow_status`.
+
 ## Ownership Boundary
 
 TaskCenter owns durable workflow state:
@@ -114,8 +155,8 @@ supervisor and handle registry.
 
 ## Non-Goals
 
-- Do not add timeout behavior.
-- Do not add a generic `set_timeout` tool for workflow waiting.
+- Do not add workflow timeout or deadline behavior.
+- Do not implement `set_timeout` in this phase.
 - Do not add a private blocking `WorkflowCompletionWaiter`.
 - Do not call `EphemeralAttemptAgentLauncher.wait_for_idle()` from inside
   workflow tools.
@@ -125,6 +166,8 @@ supervisor and handle registry.
 - Do not complete or fail the parent generator directly when a child workflow
   closes.
 - Do not introduce peer-to-peer agent messaging.
+- Do not hard-gate `delegate_workflow` with `AdvisorApprovalPreHook`; advisor
+  review stays on `submit_generator_outcome`.
 - Do not redesign planner, reducer, root workflow bootstrap, or the
   Workflow -> Iteration -> Attempt durable model.
 
@@ -391,10 +434,20 @@ while such records exist. A parent generator can submit its final
 
 The Phase 3T PTY plan and current code have bounded wait semantics for generic
 background tasks (`wait_background_tasks(timeout=...)`) and per-command PTY
-timeouts (`exec_command(..., timeout=...)`). Do not create a new generic
-`set_timeout` tool, and do not adapt those waits into a workflow timeout policy.
+timeouts (`exec_command(..., timeout=...)`). This plan does not implement
+`set_timeout` yet, but reserves it as a future generic agent attention timer.
 Delegated workflows are controlled through status, pushed notification, explicit
 cancel, and parent-exit cleanup.
+
+Future `set_timeout` semantics should be separate from workflow lifecycle
+semantics:
+
+- for `exec_command` and `run_subagent`, it lets an agent stop waiting cycles
+  and re-evaluate whether to check, continue waiting, or cancel;
+- for workflow, it lets an agent wake up and call `check_workflow_status` on
+  long-running workflow work;
+- it does not cancel the workflow by default;
+- it does not create a workflow timeout, deadline, or scheduler policy.
 
 ## TaskCenter Lifecycle Changes
 
@@ -467,7 +520,10 @@ WorkflowLifecycle._route_close(...)
 ```
 
 Do not write child outcomes onto the parent task. The parent generator's own
-`submit_generator_outcome` is the only writer of its task outcome.
+`submit_generator_outcome` is the only writer of its task outcome. This is the
+upward synthesis boundary from Design Rationale: the generator integrates the
+child result into one outcome instead of passing the child's flattened outcomes
+through.
 
 Failed child workflows become information returned to the parent agent, not
 automatic parent task failure.
@@ -535,6 +591,8 @@ Prompt guidance:
   task detail and delivery state.
 - Use `cancel_workflow` when the delegated branch is obsolete or harmful.
 - Workflow completion notifications print final outcomes into the conversation.
+- Synthesize the delegated workflow result into your own generator outcome. Do
+  not echo the child outcomes verbatim; integrate them with your local work.
 - Do not call `submit_generator_outcome` while delegated workflows are still
   running or final outcomes are undelivered.
 - `submit_generator_outcome` remains the only generator terminal.
@@ -546,11 +604,45 @@ new model and should be deleted or rewritten away from timing restrictions.
 Remove `submit_workflow_handoff` from the terminal catalog. `delegate_workflow`
 does not belong in `tools/_terminals/registry.py`.
 
-Advisor approval should stay tied to terminal submissions in the first pass.
-Do not gate `delegate_workflow` with `AdvisorApprovalPreHook` unless a later
-policy explicitly broadens advisor review beyond terminals.
+Advisor approval stays tied to terminal submissions. Do not gate
+`delegate_workflow` with `AdvisorApprovalPreHook`.
+
+Rationale:
+
+- `AdvisorApprovalPreHook` is a handshake gate: it refuses the call until the
+  agent has already run `ask_advisor(tool_name=...)` and received
+  `verdict="approve"`. Imposing that on `delegate_workflow` would turn a fast
+  handle-returning kickoff into a blocking per-delegation approval round-trip,
+  out of step with the other background-manager tools (`run_subagent`,
+  background `exec_command`), which are not advisor-gated.
+- The irreversible commit that justified gating the old handoff moved to
+  `submit_generator_outcome`. That terminal stays advisor-gated and now blocks
+  until delegated workflow results are delivered, so the advisor reviews the
+  parent's integrated outcome with the child result already in context — a
+  better review point than pre-approving a goal string before any evidence
+  exists.
+- Advisor approval is a judgment gate, not a safety invariant. Safety is
+  enforced by the one-outstanding rule, the delivery-before-terminal gate, and
+  cascade cancellation. Helper and non-terminal tools already omit the hook by
+  design.
+
+Cheaper mitigations for a wastefully scoped delegation, in place of a hard
+gate:
+
+- the one-outstanding-workflow rule already bounds runaway fanout;
+- the child workflow's planner rejects a malformed goal in fresh context;
+- optional soft prompt guidance can suggest a voluntary advisor call before a
+  large or deeply nested delegation.
+
+Revisit only if telemetry shows recurring delegate-then-cancel churn, and even
+then prefer a soft reminder or a recursion-depth threshold over a mandatory
+`ask_advisor` handshake on the hot path.
 
 ## Nested Workflow Policy
+
+Nested delegation stays clean because each hop applies the upward synthesis
+boundary: a nested generator emits one synthesized outcome, so a delegated
+subtree never flattens its grandchild outcomes into an ancestor reducer.
 
 Keep the existing depth guard unless the user explicitly expands recursion.
 
@@ -811,9 +903,14 @@ Expected remaining matches should be intentional historical notes only.
   conversation.
 - Parent crash/cancellation stops delegated workflow work.
 - Parent task outcomes are written only by `submit_generator_outcome`.
+- A delegating generator synthesizes the delegated workflow result into one
+  generator outcome; the parent attempt reducer reads that synthesized outcome
+  rather than the child workflow's flattened outcomes.
 - Terminal submissions are blocked while delegated workflows are running or
   terminal-undelivered.
-- No workflow timeout policy and no generic `set_timeout` tool are introduced.
+- No workflow timeout policy is introduced.
+- `set_timeout` remains deferred as a generic agent waiting-cycle tool, not a
+  workflow lifecycle timeout.
 - Root workflow bootstrap and run close behavior are unchanged.
 
 ## Risks And Watchpoints
@@ -831,11 +928,18 @@ Expected remaining matches should be intentional historical notes only.
   close open workflow state without writing a parent generator outcome.
 - Parent-exit risk: parent crash/cancellation must not leave orphan delegated
   workflows running.
-- Timeout drift risk: generic background wait/timeout affordances must not
-  become an implicit workflow timeout policy.
+- Timeout drift risk: generic background waits, command timeouts, and the future
+  `set_timeout` tool must not become an implicit workflow timeout policy.
 - Prompt drift risk: executor frontmatter, terminal catalog, advisor prompt, and
   architecture docs currently describe handoff as terminal or discourage
   delegation after edits.
+- Synthesis-quality risk: a delegating generator could echo the child outcomes
+  verbatim instead of integrating them, re-introducing the flatten-passthrough
+  shape. Executor prompt guidance must push synthesize-don't-echo.
+- Advisor-coverage risk: advisor review of delegated work depends on the
+  terminal gate blocking until delegated results are delivered. If the delivery
+  gate regresses, the parent can submit a synthesized outcome the advisor never
+  saw alongside the child result.
 - Test naming risk: tests that keep "handoff terminal" names after the behavior
   change will hide wrong assumptions.
 
@@ -843,5 +947,6 @@ Expected remaining matches should be intentional historical notes only.
 
 - Parallel delegated workflow fanout beyond one outstanding workflow per parent
   generator task.
-- Any timeout, deadline, or scheduler policy for delegated workflows.
-- A generic `set_timeout` or workflow blocking-wait tool.
+- Any workflow-owned timeout, deadline, or scheduler policy.
+- Generic `set_timeout` for agent waiting-cycle control across `exec_command`,
+  `run_subagent`, and workflow status monitoring.

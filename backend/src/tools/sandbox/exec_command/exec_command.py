@@ -82,6 +82,7 @@ async def exec_command(
                 pty_session_id=result.pty_session_id,
                 sandbox_id=sandbox_id,
                 agent_id=caller.agent_id,
+                command=cmd,
             )
     payload = {
         "status": result.status,

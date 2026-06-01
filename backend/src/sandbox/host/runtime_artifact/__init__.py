@@ -20,7 +20,7 @@ EOSD_VERSION = "0.1.0-local.20260601"
 # Per-arch SHA256 of the binary. Keys = container arch tokens the host maps to
 # (amd64 / arm64).
 EOSD_SHA256: dict[str, str] = {
-    "amd64": "71f6533c2d41861303cc7fef4828738cd16e352c539b59c67e489987f1a36162",
+    "amd64": "cb949fce52784b6f7634589a707f54f40f01f75051bc7259832bc2fee63c54bf",
     "arm64": "4a39764bc3e13421a58835bc3294fb8f6f2801b2610690ebbe9e652d0a6c1758",
 }
 

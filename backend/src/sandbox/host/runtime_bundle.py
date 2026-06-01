@@ -420,10 +420,30 @@ async def _ensure_eosd_uploaded(sandbox_id: str, adapter: object) -> None:
     )
     put_archive = getattr(adapter, "put_archive", None)
     if callable(put_archive):
+        staging_dir = f"/tmp/eosd-upload-{uuid.uuid4().hex}"
+        staging_file = f"{staging_dir}/eosd"
+        await _check_exec(
+            exec_fn,
+            sandbox_id,
+            f"mkdir -p {shlex.quote(staging_dir)}",
+            timeout=30,
+            message="eosd staging directory setup failed",
+        )
         await put_archive(
             sandbox_id,
-            tar_stream=_tar_file_at_path(remote, payload, mode=0o755),
-            dest_dir="/",
+            tar_stream=_tar_file_at_path("eosd", payload, mode=0o755),
+            dest_dir=staging_dir,
+        )
+        await _check_exec(
+            exec_fn,
+            sandbox_id,
+            (
+                f"cat {shlex.quote(staging_file)} > {shlex.quote(remote)} && "
+                f"chmod 755 {shlex.quote(remote)} && "
+                f"rm -rf {shlex.quote(staging_dir)}"
+            ),
+            timeout=30,
+            message="eosd finalize failed",
         )
     else:
         staging = f"{remote}.{uuid.uuid4().hex}.staging"

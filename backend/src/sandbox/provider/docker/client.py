@@ -39,7 +39,7 @@ NO_PRIVILEGE_RUN_FLAGS: tuple[str, ...] = ()
 
 EOS_RUNTIME_TMPFS_TARGET = "/eos"
 OVERLAY_WRITABLE_TMPFS_TARGET = EOS_RUNTIME_TMPFS_TARGET
-DEFAULT_OVERLAY_WRITABLE_TMPFS_OPTIONS = "rw,size=2g,mode=1777"
+DEFAULT_OVERLAY_WRITABLE_TMPFS_OPTIONS = "rw,exec,size=2g,mode=1777"
 
 
 def resolve_run_flags() -> tuple[str, ...]:

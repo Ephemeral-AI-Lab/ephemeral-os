@@ -12,6 +12,7 @@ from engine.background.task_supervisor import (
     BackgroundTaskStatus,
     BackgroundTaskSupervisor,
 )
+from notification import SystemNotificationService
 from sandbox.daemon.audit_buffer import get_audit_buffer
 from tools import ToolResult
 
@@ -215,6 +216,181 @@ async def test_background_tool_heartbeat_reuses_existing_timer(
 
     # Cancel so the test finishes promptly.
     await sup.cancel_all()
+
+
+@pytest.mark.asyncio
+async def test_pty_natural_exit_completion_emits_one_notification(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import sandbox.api as sandbox_api
+
+    calls = 0
+
+    async def _collect_pty_completions(
+        sandbox_id: str,
+        *,
+        agent_id: str,
+        pty_session_ids: list[str],
+    ) -> list[dict[str, Any]]:
+        nonlocal calls
+        calls += 1
+        assert sandbox_id == "sb-1"
+        assert agent_id == "agent-1"
+        assert pty_session_ids == ["pty_1"]
+        return [
+            {
+                "pty_session_id": "pty_1",
+                "agent_id": "agent-1",
+                "command": "printf done",
+                "result": {
+                    "status": "ok",
+                    "exit_code": 0,
+                    "output": {"stdout": "done\n", "stderr": ""},
+                },
+            }
+        ]
+
+    monkeypatch.setattr(sandbox_api, "collect_pty_completions", _collect_pty_completions)
+
+    sup = BackgroundTaskSupervisor()
+    sup.register_pty_command(
+        pty_session_id="pty_1",
+        sandbox_id="sb-1",
+        agent_id="agent-1",
+        command="printf done",
+    )
+
+    notes = await sup.collect_pty_completion_notifications()
+    assert len(notes) == 1
+    assert '[BACKGROUND COMPLETED] pty_session_id="pty_1"' in notes[0]
+    assert "status=ok exit_code=0" in notes[0]
+    assert "command: printf done" in notes[0]
+    assert "stdout:\ndone" in notes[0]
+    assert not sup.has_pending()
+    assert sup.count_by_agent("agent-1") == 0
+
+    assert await sup.collect_pty_completion_notifications() == []
+    assert calls == 1
+    await asyncio.sleep(0)
+
+
+@pytest.mark.asyncio
+async def test_pty_timeout_completion_notification_is_failed(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import sandbox.api as sandbox_api
+
+    async def _collect_pty_completions(
+        sandbox_id: str,
+        *,
+        agent_id: str,
+        pty_session_ids: list[str],
+    ) -> list[dict[str, Any]]:
+        del sandbox_id, agent_id, pty_session_ids
+        return [
+            {
+                "pty_session_id": "pty_timeout",
+                "result": {
+                    "status": "timed_out",
+                    "exit_code": 124,
+                    "output": {"stdout": "", "stderr": "timeout\n"},
+                },
+            }
+        ]
+
+    monkeypatch.setattr(sandbox_api, "collect_pty_completions", _collect_pty_completions)
+
+    sup = BackgroundTaskSupervisor()
+    sup.register_pty_command(
+        pty_session_id="pty_timeout",
+        sandbox_id="sb-1",
+        agent_id="agent-1",
+        command="sleep 60",
+    )
+
+    notes = await sup.collect_pty_completion_notifications()
+    assert len(notes) == 1
+    assert "status=timed_out exit_code=124" in notes[0]
+    assert "stderr:\ntimeout" in notes[0]
+    assert sup._pty_commands["pty_timeout"].status == BackgroundTaskStatus.DELIVERED
+    await asyncio.sleep(0)
+
+
+@pytest.mark.asyncio
+async def test_explicit_pty_cancel_suppresses_completion_notification(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import sandbox.api as sandbox_api
+
+    async def _collect_pty_completions(
+        sandbox_id: str,
+        *,
+        agent_id: str,
+        pty_session_ids: list[str],
+    ) -> list[dict[str, Any]]:
+        raise AssertionError("cancelled PTY records should not be polled")
+
+    monkeypatch.setattr(sandbox_api, "collect_pty_completions", _collect_pty_completions)
+
+    sup = BackgroundTaskSupervisor()
+    sup.register_pty_command(
+        pty_session_id="pty_cancelled",
+        sandbox_id="sb-1",
+        agent_id="agent-1",
+        command="sleep 60",
+    )
+    assert sup.has_pending()
+
+    sup.mark_pty_cancelled_by_tool("pty_cancelled")
+
+    assert await sup.collect_pty_completion_notifications() == []
+    assert not sup.has_pending()
+    assert sup.count_by_agent("agent-1") == 0
+    await asyncio.sleep(0)
+
+
+@pytest.mark.asyncio
+async def test_query_loop_helper_drains_pty_completion_into_notifications(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from engine.query.loop import _drain_background_completion_notifications
+    import sandbox.api as sandbox_api
+
+    async def _collect_pty_completions(
+        sandbox_id: str,
+        *,
+        agent_id: str,
+        pty_session_ids: list[str],
+    ) -> list[dict[str, Any]]:
+        del sandbox_id, agent_id, pty_session_ids
+        return [
+            {
+                "pty_session_id": "pty_2",
+                "result": {
+                    "status": "ok",
+                    "exit_code": 0,
+                    "output": {"stdout": "done\n", "stderr": ""},
+                },
+            }
+        ]
+
+    monkeypatch.setattr(sandbox_api, "collect_pty_completions", _collect_pty_completions)
+
+    sup = BackgroundTaskSupervisor()
+    sup.register_pty_command(
+        pty_session_id="pty_2",
+        sandbox_id="sb-1",
+        agent_id="agent-1",
+    )
+    service = SystemNotificationService()
+    service.register_agent_run()
+
+    await _drain_background_completion_notifications(sup, service)
+
+    pending = service.pop_pending_notifications()
+    assert len(pending) == 1
+    assert '[BACKGROUND COMPLETED] pty_session_id="pty_2"' in pending[0].text
+    await asyncio.sleep(0)
 
 
 def test_audit_recorder_attach_daemon_audit_puller_starts_and_stops(

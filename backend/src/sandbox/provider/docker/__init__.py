@@ -29,7 +29,7 @@ Environment variables
 
 ``EOS_DOCKER_OVERLAY_WRITABLE_TMPFS_OPTIONS``
     Override the default ``/eos`` tmpfs options
-    (``rw,size=2g,mode=1777``).
+    (``rw,exec,size=2g,mode=1777``).
 
 Env-var precedence
 ------------------
