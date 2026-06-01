@@ -97,7 +97,7 @@ def has_unshare_netns() -> bool:
 async def iws_scratch_root(sandbox_id: str) -> str:
     """Discover the daemon's iws scratch_root by listing common candidates.
 
-    The daemon picks ``/eos-mount-scratch/eos-sandbox-runtime`` when that path
+    The daemon picks ``/eos/mount`` when that path
     is a writable tmpfs and falls back to the layer_stack_root (``/testbed``)
     otherwise. Test code can't know which one is active without inspecting
     the live container.
@@ -106,7 +106,7 @@ async def iws_scratch_root(sandbox_id: str) -> str:
 
     result = await raw_exec(
         sandbox_id,
-        "find /eos-mount-scratch /testbed -maxdepth 6 -type d "
+        "find /eos /testbed -maxdepth 6 -type d "
         "-name 'isolated-workspace' 2>/dev/null | head -1",
         cwd="/",
         timeout=20,

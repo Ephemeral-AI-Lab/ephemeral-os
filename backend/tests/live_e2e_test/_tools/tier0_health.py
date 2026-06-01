@@ -377,20 +377,20 @@ def probe_tier0_docker(
 
     cap_script = (
         "command -v git >/dev/null && test -w /testbed && "
-        "test -w /eos-mount-scratch && "
-        "rm -rf /eos-mount-scratch/tier0-overlay-probe && "
-        "mkdir -p /eos-mount-scratch/tier0-overlay-probe/lower "
-        "/eos-mount-scratch/tier0-overlay-probe/upper "
-        "/eos-mount-scratch/tier0-overlay-probe/work "
-        "/eos-mount-scratch/tier0-overlay-probe/merged && "
-        "echo ok >/eos-mount-scratch/tier0-overlay-probe/lower/probe.txt && "
+        "mkdir -p /eos/mount && test -w /eos/mount && "
+        "rm -rf /eos/mount/tier0-overlay-probe && "
+        "mkdir -p /eos/mount/tier0-overlay-probe/lower "
+        "/eos/mount/tier0-overlay-probe/upper "
+        "/eos/mount/tier0-overlay-probe/work "
+        "/eos/mount/tier0-overlay-probe/merged && "
+        "echo ok >/eos/mount/tier0-overlay-probe/lower/probe.txt && "
         "unshare -Urm sh -c 'mount -t overlay overlay "
-        "-o lowerdir=/eos-mount-scratch/tier0-overlay-probe/lower,"
-        "upperdir=/eos-mount-scratch/tier0-overlay-probe/upper,"
-        "workdir=/eos-mount-scratch/tier0-overlay-probe/work "
-        "/eos-mount-scratch/tier0-overlay-probe/merged && "
-        "cat /eos-mount-scratch/tier0-overlay-probe/merged/probe.txt && "
-        "umount /eos-mount-scratch/tier0-overlay-probe/merged'"
+        "-o lowerdir=/eos/mount/tier0-overlay-probe/lower,"
+        "upperdir=/eos/mount/tier0-overlay-probe/upper,"
+        "workdir=/eos/mount/tier0-overlay-probe/work "
+        "/eos/mount/tier0-overlay-probe/merged && "
+        "cat /eos/mount/tier0-overlay-probe/merged/probe.txt && "
+        "umount /eos/mount/tier0-overlay-probe/merged'"
     )
     cap_argv = ["docker", "run", "--rm", *_docker_run_flags(), image, "sh", "-c", cap_script]
     cap = subprocess.run(  # noqa: S603 — fixed argv

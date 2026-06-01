@@ -40,7 +40,7 @@ _DEFAULT_REQUEST_TIMEOUT_S = 30.0
 _REFERENCES_TIMEOUT_S = 5.0
 _DIAGNOSTICS_WAIT_S = 5.0
 _DIAGNOSTICS_POLL_S = 0.05
-_RUNTIME_BUNDLE_ROOT = "/tmp/eos-sandbox-runtime"
+_RUNTIME_BUNDLE_ROOT = "/eos/daemon"
 
 
 class PyrightSpawnError(RuntimeError):

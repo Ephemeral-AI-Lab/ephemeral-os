@@ -160,7 +160,7 @@ surface here first instead of in the noisier daemon path.
      the daemon's is `python3.10` (also system). Should match — eliminate this
      possibility first by printing `sys.executable` from inside the script.
    - PYTHONPATH propagation: the helper's subprocess inherits PYTHONPATH from
-     parent (`/tmp/eos-sandbox-runtime`). Confirm by printing `sys.path` in
+     parent (`/eos/daemon`). Confirm by printing `sys.path` in
      the helper.
    - Capability inheritance: the heredoc shell starts under `bash -lc`. Run
      `cat /proc/self/status | grep ^Cap` to verify CAP_SYS_ADMIN survived.

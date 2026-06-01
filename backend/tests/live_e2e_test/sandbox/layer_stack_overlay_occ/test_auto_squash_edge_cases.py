@@ -843,8 +843,8 @@ async def _prepare_isolated_workspace_runtime(handle: SandboxHandle) -> None:
             ">> /etc/environment; "
             "mount -o remount,rw /sys/fs/cgroup 2>/dev/null || true; "
             "pkill -f '^.*python.*-m sandbox\\.daemon' || true; "
-            "rm -f /tmp/eos-sandbox-runtime/runtime.sock "
-            "/tmp/eos-sandbox-runtime/runtime.env"
+            "rm -f /eos/daemon/runtime.sock "
+            "/eos/daemon/runtime.env"
         ),
         timeout=30,
     )

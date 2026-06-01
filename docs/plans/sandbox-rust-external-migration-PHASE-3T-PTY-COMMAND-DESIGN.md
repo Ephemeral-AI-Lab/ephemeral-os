@@ -29,7 +29,7 @@ Current implementation status:
 - Rust daemon workspace-base control ops now cover `api.ensure_workspace_base`,
   `api.build_workspace_base`, and `api.workspace_binding`;
 - Rust/Python layer-stack whiteout handling uses kernel overlay whiteouts on the
-  existing Docker scratch tmpfs and keeps the xattr/logical fallbacks for
+  unified Docker `/eos` tmpfs and keeps the xattr/logical fallbacks for
   incompatible filesystems;
 - native Linux PTY code compiles for `x86_64-unknown-linux-musl`;
 - Rust/Python unit and focused static gates passed locally;

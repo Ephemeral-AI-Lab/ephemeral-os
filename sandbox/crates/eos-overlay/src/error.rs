@@ -9,7 +9,7 @@ use thiserror::Error;
 #[derive(Debug, Error)]
 #[non_exhaustive]
 pub enum OverlayError {
-    /// The canonical writable root (`/eos-mount-scratch/eos-sandbox-runtime`)
+    /// The canonical writable root (`/eos/mount`)
     /// is missing and could not be created. There is intentionally no fallback.
     /// `// PORT backend/src/sandbox/overlay/writable_dirs.py:16-17 — OverlayWritableRootUnavailable`
     #[error("overlay writable root is missing: {0}")]

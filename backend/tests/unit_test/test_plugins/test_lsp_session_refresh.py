@@ -534,7 +534,7 @@ async def test_pyright_session_refresh_remounts_private_namespace(
     )
     assert "plugins.catalog.lsp.runtime.namespace_remount" in argv
     env = calls[0][1]["env"]
-    assert env["PYTHONPATH"].split(":")[0] == "/tmp/eos-sandbox-runtime"
+    assert env["PYTHONPATH"].split(":")[0] == "/eos/daemon"
     assert (
         "workspace/didChangeWatchedFiles",
         {"changes": [{"uri": session._workspace_uri(), "type": 2}]},

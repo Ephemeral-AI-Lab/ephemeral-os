@@ -42,9 +42,9 @@ Nothing else lands until the harness smoke probe is green.
 
 | Path | Purpose |
 |---|---|
-| `_harness/native_probe.py` | Wrap `cd /tmp/eos-sandbox-runtime && python3 -c "<src>"`. Inject JSON config via `__CFG_JSON__` placeholder. Concatenate `_PROBE_PRELUDE` (resource sampler + helpers) with body. Provide `wrap_unshare(script)` for namespace-direct probes. Mirror `overlay_probe.py` shape. |
+| `_harness/native_probe.py` | Wrap `cd /eos/daemon && python3 -c "<src>"`. Inject JSON config via `__CFG_JSON__` placeholder. Concatenate `_PROBE_PRELUDE` (resource sampler + helpers) with body. Provide `wrap_unshare(script)` for namespace-direct probes. Mirror `overlay_probe.py` shape. |
 | `_harness/resource_metrics.py` | Single Python source string `RESOURCE_PRELUDE`. Emits `sample_resource()` returning the §3.5 dict. Probes call `before = sample_resource()` / `after = sample_resource()` and include both in output. |
-| `sandbox/_harness/sandbox_fixture.py` | Add `native_sandbox` fixture: resets `/testbed`, clears `/tmp/eos-sandbox-runtime/layer-stack-test-*/`, asserts `.bundle-hash` exists. Re-export from `conftest.py`. |
+| `sandbox/_harness/sandbox_fixture.py` | Add `native_sandbox` fixture: resets `/testbed`, clears `/eos/layer-stack-test-*/`, asserts `.bundle-hash` exists. Re-export from `conftest.py`. |
 | `sandbox/overlay/__init__.py` (rename) | Move existing `overlay/` → `overlay/syscall/`. Create `overlay/native/__init__.py`, `layer_stack/__init__.py`, `occ/__init__.py`. |
 | `sandbox/_harness/test_harness_smoke.py` | Phase-0 gate test (deleted at end of phase). Probe imports `sandbox.layer_stack`, `sandbox.occ`, `sandbox.overlay`; verifies `.bundle-hash`; emits and parses one resource block. |
 
@@ -254,9 +254,9 @@ For every probe file, the same loop:
 - `ignored_paths=[...]` parameters used to fake gitignore — use real
   `.gitignore` writes inside `/testbed` and let the pathspec oracle classify.
 - Adding `*_load.py` files without a `SubsystemLoadProfile` row in §6.3.
-- Touching `DEFAULT_LAYER_STACK_ROOT` (`/tmp/eos-sandbox-runtime/layer-stack`)
+- Touching `DEFAULT_LAYER_STACK_ROOT` (`/eos/layer-stack`)
   from a probe — use a per-probe path
-  `/tmp/eos-sandbox-runtime/layer-stack-test-<pid>/`.
+  `/eos/layer-stack-test-<pid>/`.
 
 ## Estimate
 

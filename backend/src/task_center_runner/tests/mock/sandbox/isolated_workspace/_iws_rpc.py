@@ -26,7 +26,7 @@ DEFAULT_TIMEOUT_S = 30
 # (/testbed via ISOLATED_WORKSPACE_ROOT) but the binding metadata must live
 # at a DIFFERENT path per the workspace-binding constraint (layer_stack_root
 # cannot equal or be inside workspace_root). Tests use this constant.
-IWS_LAYER_STACK_ROOT = "/tmp/eos-sandbox-runtime/layer-stack"
+IWS_LAYER_STACK_ROOT = "/eos/layer-stack"
 
 
 async def _call_lifecycle(

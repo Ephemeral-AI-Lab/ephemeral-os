@@ -114,9 +114,7 @@ def test_create_calls_containers_create_with_default_caps(
     assert kwargs["cap_add"] == ["SYS_ADMIN", "NET_ADMIN"]
     assert "seccomp=unconfined" in kwargs["security_opt"]
     assert "apparmor=unconfined" in kwargs["security_opt"]
-    assert kwargs["tmpfs"] == {
-        "/eos-mount-scratch": "rw,size=2g,mode=1777"
-    }
+    assert kwargs["tmpfs"] == {"/eos": "rw,size=2g,mode=1777"}
     assert kwargs["labels"]["managed_by"] == "eos"
     assert kwargs["labels"]["project_dir"] == "/repo"
     assert kwargs["labels"][DOCKER_INIT_ENABLED_LABEL] == "1"
@@ -175,9 +173,7 @@ def test_create_privileged_escape_hatch(
     kwargs = fake_client.containers.create.call_args.kwargs
     assert kwargs["privileged"] is True
     assert "cap_add" not in kwargs
-    assert kwargs["tmpfs"] == {
-        "/eos-mount-scratch": "rw,size=2g,mode=1777"
-    }
+    assert kwargs["tmpfs"] == {"/eos": "rw,size=2g,mode=1777"}
 
 
 def test_create_no_privilege_escape_hatch(
@@ -191,9 +187,7 @@ def test_create_no_privilege_escape_hatch(
     kwargs = fake_client.containers.create.call_args.kwargs
     assert "privileged" not in kwargs
     assert "cap_add" not in kwargs
-    assert kwargs["tmpfs"] == {
-        "/eos-mount-scratch": "rw,size=2g,mode=1777"
-    }
+    assert kwargs["tmpfs"] == {"/eos": "rw,size=2g,mode=1777"}
 
 
 def test_create_can_disable_overlay_writable_tmpfs(

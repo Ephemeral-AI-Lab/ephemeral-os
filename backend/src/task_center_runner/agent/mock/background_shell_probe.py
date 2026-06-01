@@ -59,7 +59,7 @@ MANY_SMALL_WRITES_SUMMARY = f"{ROOT}/many_small_writes/summary.json"
 MIXED_OP_CONCURRENT_SUMMARY = f"{ROOT}/mixed_op_concurrent/summary.json"
 
 SUMMARY_SCHEMA = "task_center_runner.background_shell.v1"
-BACKGROUND_IWS_LAYER_STACK_ROOT = "/tmp/eos-sandbox-runtime/layer-stack"
+BACKGROUND_IWS_LAYER_STACK_ROOT = "/eos/layer-stack"
 
 EmitStreamEvent = Callable[[StreamEvent], Awaitable[None]]
 # call_tool signature includes the background_task_id compatibility parameter

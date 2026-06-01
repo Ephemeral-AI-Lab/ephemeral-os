@@ -3,7 +3,7 @@
 Mirrors :mod:`sandbox.host.runtime_bundle` but per-plugin: bundles
 ``plugin.md`` + ``tools/`` + optional ``runtime/`` + ``setup.sh`` from the
 host catalog into a gzip tarball, uploads it to
-``/tmp/eos-sandbox-runtime/plugins/catalog/<name>/`` on first call, runs
+``/eos/daemon/plugins/catalog/<name>/`` on first call, runs
 ``setup.sh`` once, and writes a ``.installed-<hash>`` marker so subsequent
 calls are cheap.
 
@@ -44,8 +44,8 @@ __all__ = [
 
 logger = logging.getLogger(__name__)
 
-# All plugins land under /tmp/eos-sandbox-runtime/plugins/catalog/<name>/.
-# /tmp/eos-sandbox-runtime/ is already on the daemon's sys.path (that's how
+# All plugins land under /eos/daemon/plugins/catalog/<name>/.
+# /eos/daemon/ is already on the daemon's sys.path (that's how
 # the in-sandbox daemon imports the runtime bundle). plugins/ and
 # plugins/catalog/ are implicit namespace packages — no __init__.py is uploaded
 # — so ``import plugins.catalog.<name>.runtime.server`` resolves naturally.

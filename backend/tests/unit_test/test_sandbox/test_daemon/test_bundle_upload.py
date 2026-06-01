@@ -440,7 +440,7 @@ async def test_ensure_eosd_uploaded_streams_arch_binary_with_executable_mode(
     kwargs = adapter.put_archive.await_args.kwargs
     assert kwargs["dest_dir"] == "/"
     with tarfile.open(fileobj=io.BytesIO(kwargs["tar_stream"]), mode="r:") as tar:
-        member = tar.getmember("tmp/eos-sandbox-runtime/eosd")
+        member = tar.getmember("eos/daemon/eosd")
         extracted = tar.extractfile(member)
         assert extracted is not None
         assert extracted.read() == payload

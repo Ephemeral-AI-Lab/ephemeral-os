@@ -13,13 +13,12 @@ from typing import Any
 
 import sandbox.host.daemon_client as daemon_client_mod
 
-from .native_probe import BUNDLE_REMOTE_DIR
 from .sandbox_fixture import SandboxHandle, WORKSPACE_ROOT
 
 
 SCHEMA = "sandbox.live_e2e.phase01_workspace_base.v1"
-LAYER_STACK_ROOT = f"{BUNDLE_REMOTE_DIR}/layer-stack"
-PHASE01_ROOT_PREFIX = f"{BUNDLE_REMOTE_DIR}/layer-stack-phase01"
+LAYER_STACK_ROOT = "/eos/layer-stack"
+PHASE01_ROOT_PREFIX = "/eos/layer-stack-phase01"
 
 
 def phase01_stack_root(case: str, suffix: str = "") -> str:

@@ -3,9 +3,9 @@
 Confirms the native-probe rendering path is wired correctly:
 
 - ``native_sandbox`` fixture brings up the runtime bundle and asserts
-  ``/tmp/eos-sandbox-runtime/.bundle-hash`` exists.
+  ``/eos/daemon/.bundle-hash`` exists.
 - A probe rendered by ``native_probe.render`` runs ``cd
-  /tmp/eos-sandbox-runtime && python3 -c "<source>"`` and is able to
+  /eos/daemon && python3 -c "<source>"`` and is able to
   import ``sandbox.layer_stack``, ``sandbox.occ``, and ``sandbox.overlay``
   from the bundle.
 - The ``RESOURCE_PRELUDE`` ``sample_resource()`` helper emits a §3.5

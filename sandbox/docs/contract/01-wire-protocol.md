@@ -31,8 +31,8 @@ binds both via one `serve()` (`daemon/rpc/server.py:167-209`).
 | **AF_UNIX** (local fallback / Daytona) | `asyncio.start_unix_server(..., path=<socket>, limit=MAX_REQUEST_BYTES)` | none (`auth_token=None`) | `server.py:183-187` |
 | **127.0.0.1 TCP** (Docker host-forwarded) | `asyncio.start_server(..., host=tcp_host, port=tcp_port, limit=MAX_REQUEST_BYTES)`, only when `tcp_host and tcp_port` | `auth_token` enforced if non-None | `server.py:192-202` |
 
-**Socket path:** `/tmp/eos-sandbox-runtime/runtime.sock` (`daemon/paths.py:11`,
-`DAEMON_SOCKET_PATH`). PID file: `/tmp/eos-sandbox-runtime/runtime.pid` (`paths.py:12`).
+**Socket path:** `/eos/daemon/runtime.sock` (`daemon/paths.py:11`,
+`DAEMON_SOCKET_PATH`). PID file: `/eos/daemon/runtime.pid` (`paths.py:12`).
 Socket parent dir is chmod `0o700`; socket inode forced to `0o600` after bind
 (`server.py:151,181,190`).
 
@@ -93,7 +93,7 @@ caller, `builtin_operations.py:95`.)
 
 `call_daemon_api` always injects `layer_stack_root` into args
 (`daemon_client.py:170-173`); default value `DEFAULT_LAYER_STACK_ROOT =
-"/tmp/eos-sandbox-runtime/layer-stack"` (`paths.py:15`).
+"/eos/layer-stack"` (`paths.py:15`).
 
 The **protocol-version field lives INSIDE `args`, not at the top level.** Path:
 `DaemonSandboxTransport.call` → `call_daemon_api(sandbox_id, op,
@@ -110,7 +110,7 @@ def with_daemon_protocol_version(payload):
 So a fully-built read_file request envelope is:
 
 ```json
-{"op":"api.v1.read_file","invocation_id":"...","args":{"layer_stack_root":"/tmp/eos-sandbox-runtime/layer-stack","_eos_daemon_protocol_version":1,"path":"...","agent_id":"...","invocation_id":"..."}}
+{"op":"api.v1.read_file","invocation_id":"...","args":{"layer_stack_root":"/eos/layer-stack","_eos_daemon_protocol_version":1,"path":"...","agent_id":"...","invocation_id":"..."}}
 ```
 
 | Constant | Value | Source |

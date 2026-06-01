@@ -85,7 +85,7 @@ def _rm_mount_counts():
     return mounts, overlay_mounts
 
 
-def sample_resource(inode_path="/tmp/eos-sandbox-runtime"):
+def sample_resource(inode_path="/eos/daemon"):
     kv = _rm_status_kv()
     mounts, overlay_mounts = _rm_mount_counts()
     try:

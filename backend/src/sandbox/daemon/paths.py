@@ -5,13 +5,13 @@ from __future__ import annotations
 EOS_REMOTE_ROOT = "/eos"
 """Single in-sandbox root for EphemeralOS-managed runtime state."""
 
-BUNDLE_REMOTE_DIR = f"{EOS_REMOTE_ROOT}/runtime"
+BUNDLE_REMOTE_DIR = f"{EOS_REMOTE_ROOT}/daemon"
 """Remote directory where the in-sandbox runtime bundle is extracted."""
 
 LAYER_STACK_REMOTE_DIR = f"{EOS_REMOTE_ROOT}/layer-stack"
 """Remote directory for overlay-compatible LayerStack storage."""
 
-SCRATCH_REMOTE_DIR = f"{EOS_REMOTE_ROOT}/scratch"
+SCRATCH_REMOTE_DIR = f"{EOS_REMOTE_ROOT}/mount"
 """Remote directory for overlay upper/work and transient command state."""
 
 BUNDLE_HASH_MARKER = f"{BUNDLE_REMOTE_DIR}/.bundle-hash"

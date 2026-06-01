@@ -139,11 +139,11 @@ sys.exit(exit_code)
 @pytest.mark.timeout(180)
 async def test_mount_overlay_backstop(iws_clean_sandbox) -> None:
     sandbox_id = str(iws_clean_sandbox["sandbox_id"])
-    # PYTHONPATH=/tmp/eos-sandbox-runtime lets the in-container python3 see
+    # PYTHONPATH=/eos/daemon lets the in-container python3 see
     # the daemon's runtime bundle (sandbox.isolated_workspace package etc.).
     result = await raw_exec(
         sandbox_id,
-        (f"PYTHONPATH=/tmp/eos-sandbox-runtime python3 - <<'PY'\n{_IN_CONTAINER_SCRIPT}\nPY"),
+        (f"PYTHONPATH=/eos/daemon python3 - <<'PY'\n{_IN_CONTAINER_SCRIPT}\nPY"),
         cwd="/",
         timeout=120,
     )

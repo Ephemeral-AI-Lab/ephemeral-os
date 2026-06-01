@@ -239,8 +239,8 @@ The "RLock" the task warns about is the **layer-stack storage writer lock**, NOT
 | `DAEMON_PROTOCOL_VERSION` | `1` | `host/daemon_client.py:46` |
 | `DAEMON_PROTOCOL_FIELD` | `"_eos_daemon_protocol_version"` | `host/daemon_client.py:47` |
 | Default Docker run flags | `--cap-add=SYS_ADMIN --cap-add=NET_ADMIN --security-opt seccomp=unconfined --security-opt apparmor=unconfined` | `provider/docker/client.py:25-29` (`DEFAULT_RUN_FLAGS`) |
-| Overlay writable tmpfs target | `/eos-mount-scratch` (`--tmpfs …:rw,size=2g,mode=1777`) | `provider/docker/client.py:40` (`OVERLAY_WRITABLE_TMPFS_TARGET`) |
-| `overlay_writable_root()` | `Path("/eos-mount-scratch/eos-sandbox-runtime")` | `overlay/writable_dirs.py:13` (`OVERLAY_WRITABLE_ROOT`) |
+| EphemeralOS runtime tmpfs target | `/eos` (`--tmpfs …:rw,size=2g,mode=1777`) | `provider/docker/client.py:40` (`OVERLAY_WRITABLE_TMPFS_TARGET`) |
+| `overlay_writable_root()` | `Path("/eos/mount")` | `overlay/writable_dirs.py:13` (`OVERLAY_WRITABLE_ROOT`) |
 
 > §C.12 values were independently re-opened and confirmed in this pass (not merely plan-asserted).
 

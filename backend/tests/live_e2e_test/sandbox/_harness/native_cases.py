@@ -26,7 +26,7 @@ from pathlib import Path
 
 def _case_root(label):
     safe = "".join(ch if ch.isalnum() or ch in ("-", "_") else "-" for ch in label)
-    root = Path("/tmp/eos-sandbox-runtime/layer-stack-test-%s" % os.getpid()) / safe
+    root = Path("/eos/layer-stack-test-%s" % os.getpid()) / safe
     shutil.rmtree(root, ignore_errors=True)
     root.mkdir(parents=True, exist_ok=True)
     return root

@@ -87,7 +87,7 @@
   </ul>
 </div>
 
-<pre><code>/tmp/eos-sandbox-runtime/layer-stack/     default root, from daemon paths
+<pre><code>/eos/layer-stack/     default root, from daemon paths
   manifest.json                           active manifest
   workspace.json                          binding to the real workspace root
   layers/
@@ -98,7 +98,7 @@
     occ-commit-.../                       OCC content staging
   .layer-metadata/                        layer digest sidecars</code></pre>
 
-<p>The default layer stack root is <code>/tmp/eos-sandbox-runtime/layer-stack</code> <span class="file-ref">backend/src/sandbox/daemon/paths.py:5-16</span>. Actual calls may pass another <code>layer_stack_root</code>. A <code>WorkspaceBinding</code> records the bound <code>workspace_root</code>, stack root, active version, and root hashes <span class="file-ref">backend/src/sandbox/layer_stack/workspace_binding.py:21-28</span>. The binding validator requires both roots to be absolute and requires the layer stack to live outside the workspace <span class="file-ref">backend/src/sandbox/layer_stack/workspace_binding.py:110-130</span>.</p>
+<p>The default layer stack root is <code>/eos/layer-stack</code> <span class="file-ref">backend/src/sandbox/daemon/paths.py:5-16</span>. Actual calls may pass another <code>layer_stack_root</code>. A <code>WorkspaceBinding</code> records the bound <code>workspace_root</code>, stack root, active version, and root hashes <span class="file-ref">backend/src/sandbox/layer_stack/workspace_binding.py:21-28</span>. The binding validator requires both roots to be absolute and requires the layer stack to live outside the workspace <span class="file-ref">backend/src/sandbox/layer_stack/workspace_binding.py:110-130</span>.</p>
 
 <p>The base layer is built once as <code>B000001-base</code> <span class="file-ref">backend/src/sandbox/layer_stack/workspace_base.py:32</span>. The base builder walks the workspace, rejects special or unstable files, writes the layer, writes manifest version 1, then writes <code>workspace.json</code> <span class="file-ref">backend/src/sandbox/layer_stack/workspace_base.py:82-141</span>.</p>
 

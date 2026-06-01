@@ -619,7 +619,7 @@ def request_snapshot_probe_source(
     cfg = {
         "scenario": scenario,
         "source_root": source_root,
-        "probe_root": "/tmp/eos-sandbox-runtime/request-snapshot-probe",
+        "probe_root": "/eos/mount/request-snapshot-probe",
         "run_id": run_id or _default_run_id(scenario),
         "started_at": datetime.now(timezone.utc).isoformat(),
         "workspace_shapes": list(workspace_shapes),

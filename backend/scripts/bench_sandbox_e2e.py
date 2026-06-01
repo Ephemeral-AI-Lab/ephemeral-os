@@ -232,7 +232,7 @@ async def collect_environment(bench: DockerBench) -> dict[str, Any]:
         "userns_clone": "cat /proc/sys/kernel/unprivileged_userns_clone 2>/dev/null || true",
         "max_user_namespaces": "cat /proc/sys/user/max_user_namespaces 2>/dev/null || true",
         "overlay_filesystem": "grep -w overlay /proc/filesystems 2>/dev/null || true",
-        "scratch_mount": "findmnt -T /eos-mount-scratch -no FSTYPE,OPTIONS 2>/dev/null || true",
+        "eos_mount": "findmnt -T /eos -no FSTYPE,OPTIONS 2>/dev/null || true",
     }
     out: dict[str, Any] = {}
     for name, command in probes.items():
@@ -249,7 +249,8 @@ async def collect_environment(bench: DockerBench) -> dict[str, Any]:
 async def overlay_in_userns_probe(bench: DockerBench) -> dict[str, Any]:
     command = r"""
 set -eu
-root="$(mktemp -d /eos-mount-scratch/eos-overlay-probe.XXXXXX)"
+mkdir -p /eos/mount
+root="$(mktemp -d /eos/mount/eos-overlay-probe.XXXXXX)"
 cleanup() { rm -rf "$root"; }
 trap cleanup EXIT
 mkdir -p "$root/lower" "$root/upper" "$root/work" "$root/merged"
@@ -315,11 +316,11 @@ async def measure_cp0(bench: DockerBench, *, commands: int) -> dict[str, Any]:
 
 async def kill_python_daemon(bench: DockerBench) -> None:
     command = r"""
-pid_file=/tmp/eos-sandbox-runtime/runtime.pid
+pid_file=/eos/daemon/runtime.pid
 if [ -f "$pid_file" ]; then
   kill "$(cat "$pid_file")" 2>/dev/null || true
 fi
-rm -f /tmp/eos-sandbox-runtime/runtime.sock "$pid_file" /tmp/eos-sandbox-runtime/runtime.env
+rm -f /eos/daemon/runtime.sock "$pid_file" /eos/daemon/runtime.env
 """
     result = await bench.exec(command, timeout=15)
     if _exit_code(result) != 0:
@@ -328,7 +329,7 @@ rm -f /tmp/eos-sandbox-runtime/runtime.sock "$pid_file" /tmp/eos-sandbox-runtime
 
 async def read_daemon_rss_kb(bench: DockerBench) -> int | None:
     result = await bench.exec(
-        "pid=$(cat /tmp/eos-sandbox-runtime/runtime.pid); ps -o rss= -p \"$pid\"",
+        "pid=$(cat /eos/daemon/runtime.pid); ps -o rss= -p \"$pid\"",
         timeout=15,
     )
     if _exit_code(result) != 0:

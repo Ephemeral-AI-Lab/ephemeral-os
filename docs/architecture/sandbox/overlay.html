@@ -80,7 +80,7 @@
   <div class="layer lower"><strong>layer_paths</strong><div class="desc">shared lowerdirs from the active LayerStack manifest</div></div>
 </div>
 
-<p>The overlay lifecycle primitive allocates a per-operation run dir, leases a snapshot, requires <code>layer_paths</code>, allocates <code>upper</code> and <code>work</code>, and returns an <code>OverlayHandle</code> <span class="file-ref">backend/src/sandbox/overlay/lifecycle.py:20-79</span>. Upper/work directories live under <code>/eos-mount-scratch/eos-sandbox-runtime</code>; there is intentionally no fallback because overlayfs requires a suitable writable filesystem <span class="file-ref">backend/src/sandbox/overlay/writable_dirs.py:13-52</span>.</p>
+<p>The overlay lifecycle primitive allocates a per-operation run dir, leases a snapshot, requires <code>layer_paths</code>, allocates <code>upper</code> and <code>work</code>, and returns an <code>OverlayHandle</code> <span class="file-ref">backend/src/sandbox/overlay/lifecycle.py:20-79</span>. Upper/work directories live under <code>/eos/mount</code>; there is intentionally no fallback because overlayfs requires a suitable writable filesystem <span class="file-ref">backend/src/sandbox/overlay/writable_dirs.py:13-52</span>.</p>
 
 <div class="inline-kv">
   <div>Lowerdirs</div><div>Existing immutable LayerStack directories, ordered newest-first and pinned by the snapshot lease.</div>

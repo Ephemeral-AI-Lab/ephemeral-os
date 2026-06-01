@@ -92,7 +92,7 @@ async def setup_sweevo_sandbox(
     mock tests keep their pre-install-lsp behavior.
     """
     await _wait_for_sandbox_exec_ready(sandbox_id, attempts=exec_ready_attempts)
-    await _exec(sandbox_id, "test -d /eos-mount-scratch")
+    await _exec(sandbox_id, "test -d /eos && mkdir -p /eos/mount && test -w /eos/mount")
     await _exec(sandbox_id, f"test -d {repo_dir} && test -d {repo_dir}/.git")
     await _exec(sandbox_id, f"{_CONDA_ACTIVATE} && python --version")
     # Retry runs may reuse the same named sandbox. Always restore the repo to

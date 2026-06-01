@@ -13,9 +13,9 @@ def test_overlay_writable_root_creates_canonical_child(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    tmpfs_parent = tmp_path / "eos-mount-scratch"
+    tmpfs_parent = tmp_path / "eos"
     tmpfs_parent.mkdir()
-    root = tmpfs_parent / "eos-sandbox-runtime"
+    root = tmpfs_parent / "mount"
     monkeypatch.setattr(writable_dirs_mod, "OVERLAY_WRITABLE_ROOT", root)
 
     assert writable_dirs_mod.overlay_writable_root() == root
@@ -26,7 +26,7 @@ def test_overlay_writable_root_fails_when_parent_missing(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    root = tmp_path / "missing-parent" / "eos-sandbox-runtime"
+    root = tmp_path / "missing-parent" / "mount"
     monkeypatch.setattr(writable_dirs_mod, "OVERLAY_WRITABLE_ROOT", root)
 
     with pytest.raises(writable_dirs_mod.OverlayWritableRootUnavailable):

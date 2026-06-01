@@ -359,7 +359,7 @@ async def _assert_runtime_bundle_installed(sandbox_id: str) -> None:
 
 
 async def _purge_layer_stack_test_roots(sandbox_id: str) -> None:
-    """Remove per-probe scratch dirs left under ``/tmp/eos-sandbox-runtime/layer-stack-test-*``."""
+    """Remove per-probe scratch dirs left under ``/eos/layer-stack-test-*``."""
     pattern = shlex.quote(LAYER_STACK_TEST_PREFIX) + "*"
     # Use shell glob so the pattern is expanded inside the sandbox.
     await sandbox_api.raw_exec(
@@ -375,10 +375,10 @@ async def native_sandbox(
 ) -> AsyncIterator[SandboxHandle]:
     """Live sandbox prepared for native probes that import the runtime bundle.
 
-    Confirms ``/tmp/eos-sandbox-runtime/.bundle-hash`` exists, resets
+    Confirms ``/eos/daemon/.bundle-hash`` exists, resets
     ``/testbed``, clears ``DEFAULT_LAYER_STACK_ROOT``, and removes any
     per-probe scratch dirs left under
-    ``/tmp/eos-sandbox-runtime/layer-stack-test-*``.
+    ``/eos/layer-stack-test-*``.
     """
     await _assert_runtime_bundle_installed(live_sandbox.sandbox_id)
     await _reset_workspace(live_sandbox.sandbox_id)

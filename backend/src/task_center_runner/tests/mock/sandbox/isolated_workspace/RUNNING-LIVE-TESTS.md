@@ -323,7 +323,7 @@ on Linux, double-check:
 - `--cap-add=SYS_ADMIN --cap-add=NET_ADMIN` are present (use
   `docker inspect <container>` to confirm).
 - `apparmor=unconfined` is set if AppArmor is active on the host.
-- `/eos-mount-scratch` is a writable tmpfs in the container
+- `/eos` is a writable tmpfs in the container, with overlay state under `/eos/mount`
   (`EOS_DOCKER_DISABLE_OVERLAY_WRITABLE_TMPFS` must NOT be `1`).
 
 ### Test passes Tier 5/6 but Tier 9 phase-breakdown tests fail "mount_overlay key missing"

@@ -4,7 +4,7 @@
 
 - Exact command run:
   `uv run pytest -q -x --tb=short --durations=20 /Users/yifanxu/machine_learning/LoVC/EphemeralOS/backend/src/task_center_runner/tests/mock/sandbox`
-- Exact run directory or artifact paths inspected: no `.sweevo_runs/scenario_logs/**/run.json` was created before failure; inspected Docker container `5e8196e60955` and `/tmp/eos-sandbox-runtime/runtime.log`.
+- Exact run directory or artifact paths inspected: no `.sweevo_runs/scenario_logs/**/run.json` was created before failure; inspected Docker container `5e8196e60955` and `/eos/daemon/runtime.log`.
 - Pass/fail/skip status: failed during fixture setup before the first test body.
 - Findings summary: The reused sandbox first returned invalid daemon JSON, then a fresh sandbox failed with `RuntimeExecFailed: sandbox daemon failed to bind socket within 10s`.
 - Issues found: The daemon log in fresh container `5e8196e60955` shows startup crashed before socket bind with `ImportError: cannot import name 'StrEnum' from 'enum' (/usr/lib/python3.10/enum.py)`.
@@ -69,7 +69,7 @@
 
 - Exact command run:
   `uv run pytest -q -x --tb=short --durations=20 /Users/yifanxu/machine_learning/LoVC/EphemeralOS/backend/src/task_center_runner/tests/mock/sandbox`
-- Exact run directory or artifact paths inspected: `.sweevo_runs/scenario_logs/sandbox.background_exit_iws_drains_agent_tasks/20260530T082537Z_e467d6b837c7`; Docker container `2856103e0c53`; sandbox-local `/tmp/sandbox_isolated_workspace_events.jsonl`; `/tmp/eos-sandbox-runtime/runtime.log`.
+- Exact run directory or artifact paths inspected: `.sweevo_runs/scenario_logs/sandbox.background_exit_iws_drains_agent_tasks/20260530T082537Z_e467d6b837c7`; Docker container `2856103e0c53`; sandbox-local `/tmp/sandbox_isolated_workspace_events.jsonl`; `/eos/daemon/runtime.log`.
 - Pass/fail/skip status: stopped manually after a concrete no-progress signal; pytest had emitted one passing dot before the active scenario stalled.
 - Findings summary: The run reached `sandbox.background_exit_iws_drains_agent_tasks`. `run.json` stayed `running`; `sandbox_events.jsonl` initially stopped at 43 rows, then later grew only with repeated `isolated_workspace.sampled` rows. Docker showed isolated namespace holders alive but no active shell body. The sandbox-local isolated-workspace audit file showed the probe sequence entering a handle and completing five tool calls without an exit event, then starting a second handle for a new agent while the first handle was still alive.
 - Issues found: The background/IWS drain probe can leave isolated handles alive and retry/re-enter instead of reaching `exit_isolated_workspace` and finalizing the scenario.

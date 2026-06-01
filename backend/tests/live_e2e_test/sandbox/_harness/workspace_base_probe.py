@@ -27,7 +27,7 @@ from sandbox.layer_stack.workspace_binding import workspace_binding_path
 from sandbox.layer_stack.workspace_base import build_workspace_base
 
 WORKSPACE_ROOT = Path("/testbed")
-PHASE01_ROOT = Path("/tmp/eos-sandbox-runtime/layer-stack-phase01-native")
+PHASE01_ROOT = Path("/eos/layer-stack-phase01-native")
 
 
 def _phase01_root(label, suffix=""):

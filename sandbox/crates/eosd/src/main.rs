@@ -175,8 +175,8 @@ struct DaemonCliConfig {
 
 impl DaemonCliConfig {
     fn parse(args: std::env::Args) -> Result<Self> {
-        let mut socket_path = PathBuf::from("/tmp/eos-sandbox-runtime/runtime.sock");
-        let mut pid_path = PathBuf::from("/tmp/eos-sandbox-runtime/runtime.pid");
+        let mut socket_path = PathBuf::from("/eos/daemon/runtime.sock");
+        let mut pid_path = PathBuf::from("/eos/daemon/runtime.pid");
         let mut log_path = None;
         let mut tcp_host = None;
         let mut tcp_port = None;

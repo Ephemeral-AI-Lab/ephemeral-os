@@ -37,7 +37,8 @@ PRIVILEGED_RUN_FLAGS: tuple[str, ...] = ("--privileged",)
 # Capability-stripped escape hatch for negative precondition tests.
 NO_PRIVILEGE_RUN_FLAGS: tuple[str, ...] = ()
 
-OVERLAY_WRITABLE_TMPFS_TARGET = "/eos-mount-scratch"
+EOS_RUNTIME_TMPFS_TARGET = "/eos"
+OVERLAY_WRITABLE_TMPFS_TARGET = EOS_RUNTIME_TMPFS_TARGET
 DEFAULT_OVERLAY_WRITABLE_TMPFS_OPTIONS = "rw,size=2g,mode=1777"
 
 

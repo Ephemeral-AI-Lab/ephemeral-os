@@ -14,7 +14,7 @@ against a real Daytona sandbox. The public surface under test is:
 - `sandbox.api.shell`
 
 The imported workspace root is `/testbed`; the runtime layer-stack root is
-`/tmp/eos-sandbox-runtime/layer-stack`.
+`/eos/layer-stack`.
 
 ## Commands
 

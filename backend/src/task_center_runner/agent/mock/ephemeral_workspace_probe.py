@@ -1071,7 +1071,7 @@ async def _runtime_sample(sandbox_id: str) -> dict[str, Any]:
         "python - <<'PY'\n"
         "import json, os\n"
         "from pathlib import Path\n"
-        "root = Path('/eos-mount-scratch/eos-sandbox-runtime/runtime/overlay')\n"
+        "root = Path('/eos/mount/runtime/overlay')\n"
         "def tree_bytes(path):\n"
         "    total = 0\n"
         "    entries = 0\n"

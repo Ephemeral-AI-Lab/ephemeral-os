@@ -62,7 +62,7 @@ def test_rust_runtime_uses_eosd_client_command(monkeypatch: pytest.MonkeyPatch) 
     command = daemon_client_mod._daemon_thin_client_command('{"op":"api.v1.heartbeat"}')
 
     assert "thin_client.py" not in command
-    assert "/tmp/eos-sandbox-runtime/eosd daemon --client" in command
+    assert "/eos/daemon/eosd daemon --client" in command
     assert daemon_client_mod._DAEMON_SOCKET in command
 
 
@@ -78,7 +78,7 @@ def test_rust_runtime_spawn_uses_eosd_spawn(monkeypatch: pytest.MonkeyPatch) -> 
     command = daemon_client_mod._daemon_spawn_command(tcp_endpoint=endpoint)
 
     assert "launch_daemon.sh" not in command
-    assert "/tmp/eos-sandbox-runtime/eosd daemon --spawn" in command
+    assert "/eos/daemon/eosd daemon --spawn" in command
     assert "--tcp-host 0.0.0.0" in command
     assert "--tcp-port 40123" in command
     assert "--auth-token token-1" in command

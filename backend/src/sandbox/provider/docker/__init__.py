@@ -28,7 +28,7 @@ Environment variables
     tmpfs writable path to keep ``PRIVATE_NAMESPACE`` viable.
 
 ``EOS_DOCKER_OVERLAY_WRITABLE_TMPFS_OPTIONS``
-    Override the default ``/eos-mount-scratch`` tmpfs options
+    Override the default ``/eos`` tmpfs options
     (``rw,size=2g,mode=1777``).
 
 Env-var precedence
@@ -47,9 +47,9 @@ Docker is the default sandbox provider, including on macOS. Docker Desktop's
 Linux VM UID-mapping and overlay-on-overlay2 storage driver may prevent a
 kernel overlay mount on the container root filesystem from succeeding even
 with CAP_SYS_ADMIN + unconfined seccomp. The Docker provider therefore mounts
-``/eos-mount-scratch`` as tmpfs by default, and command exec allocates
-per-run ``upper/`` plus ``work/`` dirs under the canonical overlay writable
-root. Normal Docker Desktop runs should report ``mount_mode=private_namespace``.
+``/eos`` as tmpfs by default, and command exec allocates per-run ``upper/``
+plus ``work/`` dirs under ``/eos/mount``. Normal Docker Desktop runs should
+report ``mount_mode=private_namespace``.
 Disabling the overlay writable tmpfs can make those runs fail the hard overlay
 precondition.
 """

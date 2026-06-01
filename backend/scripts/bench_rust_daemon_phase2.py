@@ -52,9 +52,9 @@ from bench_sandbox_e2e import (  # noqa: E402
     tar_file_at_path,
 )
 
-RUNTIME_ROOT = "/tmp/eos-sandbox-runtime"
+RUNTIME_ROOT = "/eos/daemon"
 EOSD_REMOTE_PATH = f"{RUNTIME_ROOT}/eosd"
-LAYER_STACK_ROOT = "/eos-mount-scratch/eos-sandbox-runtime/layer-stack"
+LAYER_STACK_ROOT = "/eos/layer-stack"
 WORKSPACE_ROOT = "/testbed"
 SOCKET_PATH = f"{RUNTIME_ROOT}/runtime.sock"
 PID_PATH = f"{RUNTIME_ROOT}/runtime.pid"
@@ -642,7 +642,7 @@ def redact_auth_token(line: str) -> str:
 
 async def mount_entries_for_runtime(bench: DockerBench) -> dict[str, Any]:
     result = await bench.exec(
-        "grep -F 'eos-sandbox-runtime' /proc/self/mountinfo || true",
+        "grep -F '/eos' /proc/self/mountinfo || true",
         timeout=10,
     )
     text = _text(result, "stdout").strip()

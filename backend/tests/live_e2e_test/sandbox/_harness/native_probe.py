@@ -2,7 +2,7 @@
 
 Each native probe runs as::
 
-    cd /tmp/eos-sandbox-runtime && python3 -c "<probe source>"
+    cd /eos/daemon && python3 -c "<probe source>"
 
 The host pytest process must not import ``sandbox.layer_stack``,
 ``sandbox.overlay``, or ``sandbox.occ`` (the import-fence in
@@ -23,15 +23,15 @@ import shlex
 from .resource_metrics import RESOURCE_PRELUDE
 
 
-BUNDLE_REMOTE_DIR = "/tmp/eos-sandbox-runtime"
+BUNDLE_REMOTE_DIR = "/eos/daemon"
 BUNDLE_HASH_MARKER = f"{BUNDLE_REMOTE_DIR}/.bundle-hash"
-LAYER_STACK_TEST_PREFIX = f"{BUNDLE_REMOTE_DIR}/layer-stack-test-"
+LAYER_STACK_TEST_PREFIX = "/eos/layer-stack-test-"
 
 
 _PROBE_PRELUDE = r"""
 import json, os, sys, time, traceback
 
-# Native probes are launched with cwd=/tmp/eos-sandbox-runtime so that
+# Native probes are launched with cwd=/eos/daemon so that
 # `import sandbox.layer_stack` etc. resolves to the runtime bundle.
 sys.path.insert(0, os.getcwd())
 """
@@ -64,7 +64,7 @@ def wrap_unshare(source: str, *, prog: str = "python3") -> str:
 
     Equivalent to ``overlay_probe.wrap_unshare`` but for native probes that
     need the runtime bundle on ``sys.path``: the unshare child still cd's
-    into ``/tmp/eos-sandbox-runtime`` first.
+    into ``/eos/daemon`` first.
     """
     return "cd {bundle} && unshare -Urm {prog} -c {src}".format(
         bundle=shlex.quote(BUNDLE_REMOTE_DIR),

@@ -10,7 +10,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
-OVERLAY_WRITABLE_ROOT = Path("/eos-mount-scratch/eos-sandbox-runtime")
+OVERLAY_WRITABLE_ROOT = Path("/eos/mount")
 
 
 class OverlayWritableRootUnavailable(RuntimeError):
@@ -31,7 +31,7 @@ def overlay_writable_root() -> Path:
 
     There is intentionally no fallback. Overlayfs requires upper/work dirs to
     live on a filesystem suitable for writable overlay state; Docker-backed
-    sandboxes provide that filesystem at ``/eos-mount-scratch``.
+    sandboxes provide that filesystem under the unified ``/eos`` tmpfs.
     """
     root = OVERLAY_WRITABLE_ROOT
     if not root.exists() and root.parent.is_dir():

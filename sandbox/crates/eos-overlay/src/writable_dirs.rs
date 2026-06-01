@@ -3,8 +3,8 @@
 //! Overlayfs needs a writable `upperdir` plus a sibling `workdir` for every
 //! mounted overlay. Lower layers are leased from the layer stack; this module
 //! owns only the upper/work side of the mount. There is intentionally NO
-//! fallback root — Docker-backed sandboxes provide the writable filesystem at
-//! `/eos-mount-scratch`.
+//! fallback root — Docker-backed sandboxes provide the writable filesystem
+//! under the unified `/eos` tmpfs.
 
 use std::path::{Path, PathBuf};
 
@@ -12,7 +12,7 @@ use crate::error::{OverlayError, Result};
 
 /// Canonical filesystem for overlay `upperdir`/`workdir`.
 /// `// PORT backend/src/sandbox/overlay/writable_dirs.py:13 — OVERLAY_WRITABLE_ROOT`
-pub const OVERLAY_WRITABLE_ROOT: &str = "/eos-mount-scratch/eos-sandbox-runtime";
+pub const OVERLAY_WRITABLE_ROOT: &str = "/eos/mount";
 
 /// Per-overlay writable directories created beside each other under one run dir.
 /// `// PORT backend/src/sandbox/overlay/writable_dirs.py:20-26 — OverlayWritableDirs`
