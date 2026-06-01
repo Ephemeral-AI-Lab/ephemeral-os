@@ -41,7 +41,8 @@ pub use caps::{
 pub use error::IsolatedError;
 pub use network::{
     veth_names, BridgeAddressPool, IsolatedNetwork, VethAllocation, BRIDGE_CIDR, BRIDGE_NAME,
-    GATEWAY, IMDS_ADDR, NFT_FILTER_TABLE, NFT_NAT_TABLE, RFC1918_NETS, VETH_PREFIX,
+    BRIDGE_PREFIX_LEN, GATEWAY, IMDS_ADDR, NFT_FILTER_TABLE, NFT_NAT_TABLE, RFC1918_NETS,
+    VETH_PREFIX,
 };
 pub use session::{
     AgentId, IsolatedSession, LayerStackSnapshotPort, NamespaceRuntimePort, SnapshotLease,

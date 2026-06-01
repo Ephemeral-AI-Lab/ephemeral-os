@@ -37,7 +37,7 @@ use eos_overlay::{allocate_overlay_writable_dirs, capture_upperdir, overlay_writ
 #[cfg(target_os = "linux")]
 use eos_protocol::Intent;
 #[cfg(target_os = "linux")]
-use eos_runner::{RunMode, RunRequest, RunResult, ToolCall, WorkspaceRoot};
+use eos_runner::{Fd, NsFds, RunMode, RunRequest, RunResult, ToolCall, WorkspaceRoot};
 
 #[cfg(target_os = "linux")]
 use crate::dispatcher::{
@@ -547,8 +547,9 @@ fn run_isolated_command(
         .and_then(Value::as_str)
         .unwrap_or(".")
         .to_owned();
+    let ns_fds = runner_ns_fds(&handle.ns_fds);
     let request = RunRequest {
-        mode: RunMode::FreshNs,
+        mode: runner_mode(ns_fds.as_ref()),
         tool_call: ToolCall {
             invocation_id,
             agent_id: handle.agent_id.clone(),
@@ -564,7 +565,7 @@ fn run_isolated_command(
         layer_paths: handle.layer_paths.clone(),
         upperdir: Some(handle.upperdir.clone()),
         workdir: Some(handle.workdir.clone()),
-        ns_fds: None,
+        ns_fds,
         cgroup_path: handle.cgroup_path.clone(),
         timeout_seconds,
     };
@@ -680,6 +681,28 @@ fn isolated_response_from_runner(
 }
 
 #[cfg(target_os = "linux")]
+fn runner_ns_fds(map: &HashMap<String, i32>) -> Option<NsFds> {
+    if map.is_empty() {
+        return None;
+    }
+    Some(NsFds {
+        user: map.get("user").copied().map(Fd),
+        mnt: map.get("mnt").copied().map(Fd),
+        pid: map.get("pid").copied().map(Fd),
+        net: map.get("net").copied().map(Fd),
+    })
+}
+
+#[cfg(target_os = "linux")]
+fn runner_mode(ns_fds: Option<&NsFds>) -> RunMode {
+    if ns_fds.is_some() {
+        RunMode::SetNs
+    } else {
+        RunMode::FreshNs
+    }
+}
+
+#[cfg(target_os = "linux")]
 fn start_isolated_pty_command(
     args: &Value,
     cmd: String,
@@ -716,8 +739,9 @@ fn start_isolated_pty_command(
             }))
             .map_err(|err| DaemonError::InvalidEnvelope(err.to_string()))?,
         )?;
+        let ns_fds = runner_ns_fds(&handle.ns_fds);
         let request = RunRequest {
-            mode: RunMode::FreshNs,
+            mode: runner_mode(ns_fds.as_ref()),
             tool_call: ToolCall {
                 invocation_id: invocation_id.clone(),
                 agent_id: handle.agent_id.clone(),
@@ -734,7 +758,7 @@ fn start_isolated_pty_command(
             layer_paths: handle.layer_paths.clone(),
             upperdir: Some(handle.upperdir.clone()),
             workdir: Some(handle.workdir.clone()),
-            ns_fds: None,
+            ns_fds,
             cgroup_path: handle.cgroup_path.clone(),
             timeout_seconds,
         };

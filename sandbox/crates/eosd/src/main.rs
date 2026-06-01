@@ -112,6 +112,18 @@ fn run_ns_runner(args: std::env::Args) -> Result<()> {
     let request_json = read_payload(config.request_path.as_ref())?;
     let request: eos_runner::RunRequest =
         serde_json::from_str(&request_json).context("failed to decode ns-runner request JSON")?;
+    if config.mount_overlay {
+        eos_runner::setns::setns_overlay_mount(&request, &OverlayMountPort)
+            .context("ns-runner setns overlay mount failed")?;
+        let result = eos_runner::RunResult {
+            exit_code: 0,
+            tool_result: serde_json::json!({"success": true, "status": "ok"}),
+        };
+        let output =
+            serde_json::to_vec(&result).context("failed to encode ns-runner result JSON")?;
+        write_payload(config.output_path.as_ref(), &output)?;
+        return Ok(());
+    }
     let result = eos_runner::run(&request, &OverlayMountPort).context("ns-runner failed")?;
     let output = serde_json::to_vec(&result).context("failed to encode ns-runner result JSON")?;
     write_payload(config.output_path.as_ref(), &output)?;
@@ -141,6 +153,9 @@ fn run_ns_holder(mut args: std::env::Args) -> Result<()> {
                 }
                 eos_ns_holder::NsHolderError::UnexpectedToken => {
                     eos_ns_holder::NsHolderError::UNEXPECTED_TOKEN_EXIT
+                }
+                eos_ns_holder::NsHolderError::TestCrash => {
+                    eos_ns_holder::NsHolderError::TEST_CRASH_EXIT
                 }
                 // Unshare / pipe-i/o failures have no dedicated Python exit code;
                 // surface the message and fall through to the generic status.
@@ -364,16 +379,19 @@ fn io_error_name(err: &std::io::Error) -> &'static str {
 struct RunnerCliConfig {
     request_path: Option<PathBuf>,
     output_path: Option<PathBuf>,
+    mount_overlay: bool,
 }
 
 impl RunnerCliConfig {
     fn parse(args: std::env::Args) -> Result<Self> {
         let mut request_path = None;
         let mut output_path = None;
+        let mut mount_overlay = false;
         let mut positional = Vec::new();
         let mut args = args.peekable();
         while let Some(arg) = args.next() {
             match arg.as_str() {
+                "--mount-overlay" => mount_overlay = true,
                 "--request" => {
                     request_path = Some(PathBuf::from(
                         args.next()
@@ -387,7 +405,9 @@ impl RunnerCliConfig {
                     ));
                 }
                 "--help" | "-h" => {
-                    println!("usage: eosd ns-runner [--request PATH] [--output PATH]");
+                    println!(
+                        "usage: eosd ns-runner [--mount-overlay] [--request PATH] [--output PATH]"
+                    );
                     std::process::exit(0);
                 }
                 other if other.starts_with('-') => {
@@ -406,6 +426,7 @@ impl RunnerCliConfig {
         Ok(Self {
             request_path,
             output_path,
+            mount_overlay,
         })
     }
 }

@@ -19,10 +19,18 @@
 //! (see `host_runtime`), not in this daemon-scope module.
 //! `// PORT backend/src/sandbox/isolated_workspace/scripts/ns_holder.py:29-49 — IPv6 hardening`
 
+#[cfg(target_os = "linux")]
+use std::future::Future;
 use std::net::Ipv4Addr;
+#[cfg(target_os = "linux")]
+use std::thread;
 
 use crate::caps::{Rfc1918Egress, HANDLE_PREFIX};
 use crate::error::IsolatedError;
+#[cfg(target_os = "linux")]
+use futures_util::stream::TryStreamExt;
+#[cfg(target_os = "linux")]
+use rtnetlink::{new_connection, Handle, LinkBridge, LinkBridgePort, LinkUnspec, LinkVeth};
 
 /// Shared bridge interface name. `// PORT backend/src/sandbox/isolated_workspace/network.py:27`
 pub const BRIDGE_NAME: &str = "eos-shared0";
@@ -55,6 +63,8 @@ pub const POOL_LAST_HOST: u8 = 254;
 pub struct VethAllocation {
     /// Host-side veth name (attached to the bridge).
     pub host_name: String,
+    /// Namespace-side veth name (moved into the holder netns).
+    pub ns_name: String,
     /// Namespace-side IPv4 address allocated from the pool.
     pub ns_ip: Ipv4Addr,
 }
@@ -157,9 +167,22 @@ impl IsolatedNetwork {
     /// Idempotent.
     // PORT backend/src/sandbox/isolated_workspace/network.py:95-100 — IsolatedNetwork.initialize (require_tools/ensure_bridge/install_static_rules)
     pub fn initialize(&mut self) -> Result<(), IsolatedError> {
-        // This lifecycle slice initializes daemon-side allocation state. The
-        // netlink bridge/nft wiring remains the live-kernel follow-up.
-        let _ = self.rfc1918_egress;
+        if test_harness_enabled() {
+            self.initialized = true;
+            return Ok(());
+        }
+        #[cfg(target_os = "linux")]
+        {
+            run_netlink(|handle| async move {
+                ensure_bridge(&handle).await?;
+                // nftables NAT/filter wiring remains the live-kernel follow-up.
+                Ok(())
+            })?;
+        }
+        #[cfg(not(target_os = "linux"))]
+        {
+            let _ = self.rfc1918_egress;
+        }
         self.initialized = true;
         Ok(())
     }
@@ -171,25 +194,227 @@ impl IsolatedNetwork {
     pub fn install_veth(
         &mut self,
         workspace_handle_id: &str,
-        _holder_pid: i32,
+        holder_pid: i32,
     ) -> Result<VethAllocation, IsolatedError> {
-        // Allocate the stable audit/control-plane record now; attaching the
-        // actual veth pair to a holder netns is still deferred.
         if !self.initialized {
             self.initialize()?;
         }
-        let (host_name, _peer_name) = veth_names(workspace_handle_id);
+        let (host_name, ns_name) = veth_names(workspace_handle_id);
+        let ns_ip = self.pool.allocate()?;
+        if !test_harness_enabled() && holder_pid > 0 {
+            #[cfg(target_os = "linux")]
+            {
+                let host = host_name.clone();
+                let ns = ns_name.clone();
+                if let Err(error) = run_netlink(move |handle| async move {
+                    install_veth_pair(&handle, &host, &ns, holder_pid as u32).await
+                }) {
+                    self.pool.free(ns_ip);
+                    return Err(error);
+                }
+            }
+        }
         Ok(VethAllocation {
             host_name,
-            ns_ip: self.pool.allocate()?,
+            ns_name,
+            ns_ip,
         })
     }
 
     /// Tear down a veth pair and return its `/32` to the pool.
     // PORT backend/src/sandbox/isolated_workspace/network.py:148-150 — IsolatedNetwork.teardown_veth
     pub fn teardown_veth(&mut self, allocation: &VethAllocation) {
+        if !test_harness_enabled() {
+            #[cfg(target_os = "linux")]
+            {
+                let host_name = allocation.host_name.clone();
+                let _ = run_netlink(move |handle| async move {
+                    if let Some(index) = link_index(&handle, &host_name).await? {
+                        ignore_not_found(handle.link().del(index).execute().await)?;
+                    }
+                    Ok(())
+                });
+            }
+        }
         self.pool.free(allocation.ns_ip);
     }
+}
+
+fn test_harness_enabled() -> bool {
+    std::env::var("EOS_ISOLATED_WORKSPACE_TEST_HARNESS")
+        .map(|value| matches!(value.as_str(), "1" | "true" | "TRUE" | "yes" | "YES"))
+        .unwrap_or(false)
+}
+
+#[cfg(target_os = "linux")]
+fn gateway_addr() -> Ipv4Addr {
+    Ipv4Addr::new(10, 244, 0, 1)
+}
+
+#[cfg(target_os = "linux")]
+fn run_netlink<T, F, Fut>(operation: F) -> Result<T, IsolatedError>
+where
+    T: Send + 'static,
+    F: FnOnce(Handle) -> Fut + Send + 'static,
+    Fut: Future<Output = Result<T, IsolatedError>> + Send + 'static,
+{
+    thread::spawn(move || {
+        let runtime = tokio::runtime::Builder::new_current_thread()
+            .enable_io()
+            .build()
+            .map_err(network_error)?;
+        runtime.block_on(async move {
+            let (connection, handle, _) = new_connection().map_err(network_error)?;
+            tokio::spawn(connection);
+            operation(handle).await
+        })
+    })
+    .join()
+    .map_err(|_| IsolatedError::NetworkUnavailable("netlink thread panicked".to_owned()))?
+}
+
+#[cfg(target_os = "linux")]
+async fn ensure_bridge(handle: &Handle) -> Result<(), IsolatedError> {
+    if link_index(handle, BRIDGE_NAME).await?.is_none() {
+        ignore_exists(
+            handle
+                .link()
+                .add(LinkBridge::new(BRIDGE_NAME).up().build())
+                .execute()
+                .await,
+        )?;
+    }
+    let bridge_index = require_link_index(handle, BRIDGE_NAME).await?;
+    ignore_exists(
+        handle
+            .address()
+            .add(bridge_index, gateway_addr().into(), BRIDGE_PREFIX_LEN)
+            .execute()
+            .await,
+    )?;
+    ignore_exists(
+        handle
+            .link()
+            .change(LinkUnspec::new_with_index(bridge_index).up().build())
+            .execute()
+            .await,
+    )?;
+    Ok(())
+}
+
+#[cfg(target_os = "linux")]
+async fn install_veth_pair(
+    handle: &Handle,
+    host_name: &str,
+    ns_name: &str,
+    holder_pid: u32,
+) -> Result<(), IsolatedError> {
+    let bridge_index = require_link_index(handle, BRIDGE_NAME).await?;
+    if link_index(handle, host_name).await?.is_none() {
+        ignore_exists(
+            handle
+                .link()
+                .add(LinkVeth::new(host_name, ns_name).build())
+                .execute()
+                .await,
+        )?;
+    }
+    if let Some(ns_index) = link_index(handle, ns_name).await? {
+        ignore_exists(
+            handle
+                .link()
+                .change(
+                    LinkUnspec::new_with_index(ns_index)
+                        .setns_by_pid(holder_pid)
+                        .build(),
+                )
+                .execute()
+                .await,
+        )?;
+    }
+    let host_index = require_link_index(handle, host_name).await?;
+    ignore_exists(
+        handle
+            .link()
+            .change(
+                LinkUnspec::new_with_index(host_index)
+                    .controller(bridge_index)
+                    .up()
+                    .build(),
+            )
+            .execute()
+            .await,
+    )?;
+    ignore_unsupported(
+        handle
+            .link()
+            .set_port(
+                LinkBridgePort::new(host_index)
+                    .isolated(true)
+                    .mcast_flood(false)
+                    .build(),
+            )
+            .execute()
+            .await,
+    )?;
+    Ok(())
+}
+
+#[cfg(target_os = "linux")]
+async fn require_link_index(handle: &Handle, name: &str) -> Result<u32, IsolatedError> {
+    link_index(handle, name)
+        .await?
+        .ok_or_else(|| IsolatedError::NetworkUnavailable(format!("link {name} not found")))
+}
+
+#[cfg(target_os = "linux")]
+async fn link_index(handle: &Handle, name: &str) -> Result<Option<u32>, IsolatedError> {
+    let mut links = handle.link().get().match_name(name.to_owned()).execute();
+    Ok(links
+        .try_next()
+        .await
+        .map_err(network_error)?
+        .map(|link| link.header.index))
+}
+
+#[cfg(target_os = "linux")]
+fn ignore_exists(result: Result<(), rtnetlink::Error>) -> Result<(), IsolatedError> {
+    match result {
+        Ok(()) => Ok(()),
+        Err(error) if is_error_text(&error, &["exists", "-17"]) => Ok(()),
+        Err(error) => Err(network_error(error)),
+    }
+}
+
+#[cfg(target_os = "linux")]
+fn ignore_not_found(result: Result<(), rtnetlink::Error>) -> Result<(), IsolatedError> {
+    match result {
+        Ok(()) => Ok(()),
+        Err(error) if is_error_text(&error, &["not found", "no such", "-19"]) => Ok(()),
+        Err(error) => Err(network_error(error)),
+    }
+}
+
+#[cfg(target_os = "linux")]
+fn ignore_unsupported(result: Result<(), rtnetlink::Error>) -> Result<(), IsolatedError> {
+    match result {
+        Ok(()) => Ok(()),
+        Err(error) if is_error_text(&error, &["operation not supported", "not supported"]) => {
+            Ok(())
+        }
+        Err(error) => Err(network_error(error)),
+    }
+}
+
+#[cfg(target_os = "linux")]
+fn is_error_text(error: &rtnetlink::Error, needles: &[&str]) -> bool {
+    let text = error.to_string().to_ascii_lowercase();
+    needles.iter().any(|needle| text.contains(needle))
+}
+
+#[cfg(target_os = "linux")]
+fn network_error(error: impl std::fmt::Display) -> IsolatedError {
+    IsolatedError::NetworkUnavailable(error.to_string())
 }
 
 fn is_pool_ip(ip: Ipv4Addr) -> bool {

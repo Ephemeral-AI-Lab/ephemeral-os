@@ -37,6 +37,8 @@ anyhow = "1"
 proptest = "1"
 criterion = "0.5"
 base64 = "0.22"
+futures-util = "0.3"
+rtnetlink = "0.21"
 
 # Internal crates — path deps (the edges below ARE the architecture).
 eos-protocol = { path = "crates/eos-protocol" }

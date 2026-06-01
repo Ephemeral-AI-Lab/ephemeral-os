@@ -320,6 +320,9 @@ where
                 "workspace_root": handle.workspace_root,
                 "upperdir": handle.upperdir.to_string_lossy(),
                 "workdir": handle.workdir.to_string_lossy(),
+                "veth_host_name": handle.veth.as_ref().map(|veth| veth.host_name.as_str()),
+                "veth_ns_name": handle.veth.as_ref().map(|veth| veth.ns_name.as_str()),
+                "ns_ip": handle.veth.as_ref().map(|veth| veth.ns_ip.to_string()),
                 "tree-copy": false,
             }),
         );
@@ -451,6 +454,7 @@ where
     }
 
     fn rollback_partial(&mut self, handle: &WorkspaceHandle) {
+        close_handle_fds(handle);
         if let Some(veth) = handle.veth.as_ref() {
             self.network.teardown_veth(veth);
         }
@@ -464,6 +468,7 @@ where
         if handle.holder_pid > 0 {
             let _ = self.runtime.kill_holder(handle.holder_pid, grace_s);
         }
+        close_handle_fds(handle);
         if let Some(veth) = handle.veth.as_ref() {
             self.network.teardown_veth(veth);
         }
@@ -472,6 +477,19 @@ where
             let _ = std::fs::remove_dir(cgroup_path);
         }
         let _ = std::fs::remove_dir_all(&handle.scratch_dir);
+    }
+}
+
+fn close_handle_fds(handle: &WorkspaceHandle) {
+    for fd in handle.ns_fds.values().copied() {
+        if fd >= 0 {
+            let _ = nix::unistd::close(fd);
+        }
+    }
+    for fd in [handle.readiness_fd, handle.control_fd] {
+        if fd >= 0 {
+            let _ = nix::unistd::close(fd);
+        }
     }
 }
 

@@ -132,7 +132,7 @@ fn enter_fresh_namespace() -> Result<(), RunnerError> {
 }
 
 #[cfg(target_os = "linux")]
-fn execute_tool(
+pub(crate) fn execute_tool(
     request: &RunRequest,
     mount_s: f64,
     output_dir: PathBuf,

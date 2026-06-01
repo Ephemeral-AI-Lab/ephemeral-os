@@ -42,9 +42,24 @@ Current state:
   discards scratch, and `test_reset` clears the singleton under the test
   harness gate. Linux `exec_command` / PTY start now consult the active
   `agent_id` handle and return isolated/no-OCC-publish results; active PTY
-  records block `exit` unless the caller uses the force-cancel path. The real
-  ns-holder/setns + netlink bridge/veth wiring and live Docker isolated
-  command/PTY evidence are still open.
+  records block `exit` unless the caller uses the force-cancel path.
+- Rust `eos-runner` now has a Linux `RunMode::SetNs` implementation instead of
+  the previous `todo!()` body: it validates namespace FDs, joins the optional
+  isolated cgroup, calls `setns` in `user` -> `mnt` -> `pid` -> `net` order, and
+  reuses the fresh-namespace command/search execution primitive. Its
+  `setns_overlay_mount` helper now enters `user`+`mnt` and delegates to the
+  overlay mount port.
+- Rust `eos-ns-holder` now performs the first holder syscall slice: unshare the
+  user/mount/pid-for-children/net namespace stack, pin namespace FDs, best-effort
+  `/proc` rbind, pipe handshake, RA-disable hook, and pause-until-kill
+  lifecycle. Rust `eos-daemon` now spawns `eosd ns-holder`, opens inheritable
+  namespace FDs from `/proc/<pid>/ns`, mounts the isolated overlay through
+  `eosd ns-runner --mount-overlay`, signals the holder ready handshake, tracks
+  and kills the holder child, and closes retained namespace/control FDs on
+  isolated teardown. Linux command/PTY requests choose `RunMode::SetNs` when the
+  active isolated handle has namespace FDs. Holder-side loopback-up and
+  IPv6-default-route deletion now use best-effort rtnetlink hooks. Bridge/veth
+  netlink wiring and live Docker isolated command/PTY evidence are still open.
 
 Last focused verification:
 
@@ -62,21 +77,25 @@ Last focused verification:
 - `ruff check` passed on the touched Python files.
 - `git diff --check` passed.
 - Rust focused isolated checks passed:
+  `cargo test -p eos-runner` (`7 passed`), `cargo check -p eos-runner --target
+  x86_64-unknown-linux-musl`,
+  `cargo test -p eos-ns-holder` (`4 passed`),
+  `cargo check -p eos-ns-holder --target x86_64-unknown-linux-musl`,
   `cargo test -p eos-daemon isolated_workspace --test phase2_read_paths`
   (`3 passed`), `cargo test -p eos-daemon
-  active_pty_records_block_exit_until_cleared` (`1 passed`), and
-  `cargo check -p eos-daemon --target x86_64-unknown-linux-musl`. Existing
-  warnings are from pre-existing unfinished isolated/ns-holder/overlay skeleton
-  code.
+  active_pty_records_block_exit_until_cleared` (`1 passed`),
+  `cargo check -p eos-daemon --target x86_64-unknown-linux-musl`, and
+  `cargo check -p eosd --target x86_64-unknown-linux-musl`. Existing warnings
+  are from pre-existing `eos-overlay`/`eos-ephemeral` code.
 - A broader mock contract spike was attempted but did not reach the relevant
   assertions because the live SWE-EVO fixture failed setup on `/eos`
   writability in the existing container. Treat that as environment/setup debt,
   not evidence against the typed subagent/background cleanup.
 
 Next work should start with hardening/verifying Rust isolated-workspace
-command/PTY semantics under live Docker and replacing the current Rust
-no-op namespace/network lifecycle placeholders with real ns-holder/setns +
-netlink bridge/veth wiring. Do not reintroduce
+command/PTY semantics under live Docker, then finishing the remaining Rust
+isolated network parity work: netlink bridge/veth setup plus live validation of
+the holder netlink hardening hooks. Do not reintroduce
 `shell(background=true)`, `BaseTool.background`, model-facing generic
 background controls, or `bg_N` as a subagent reference.
 
@@ -112,15 +131,20 @@ audit emission, and routes Linux `exec_command` / PTY start through the active
 agent handle with isolated/no-OCC-publish result metadata. Active PTY records
 now block non-forced isolated exit.
 
-The implementation is not closed: the Rust namespace/runtime side still uses
-control-plane placeholders for ns-holder/setns and bridge/veth wiring, and the
+The implementation is not closed: the Rust namespace/runtime side now has a
+holder spawn, namespace FD handoff, setns runner entry, and setns overlay mount
+slice, but the network side still lacks bridge/veth netlink setup and the
 isolated command/PTY path has compile + focused lifecycle evidence rather than
 live Docker evidence.
 
 Required work:
 
-- replace the Rust no-op `NamespaceRuntimePort` / `IsolatedNetwork` lifecycle
-  placeholders with real ns-holder/setns and netlink bridge/veth wiring;
+- finish the Rust isolated network lifecycle: bridge/veth netlink setup,
+  namespace-side interface/route programming, holder netlink hook validation,
+  and teardown verification;
+- harden the Rust ns-holder/setns handoff under live Docker, including namespace
+  FD inheritance, overlay mount persistence, cgroup join, and holder kill/cleanup
+  behavior;
 - run live Docker proof that finite `exec_command` writes stay private to the
   isolated workspace and unpublished to shared OCC;
 - prove isolated PTY start/progress/write/cancel/natural-exit behavior against
@@ -136,6 +160,9 @@ Minimum evidence:
 
 - ✅ focused Rust coverage for enabled lifecycle ops and active PTY records
   blocking isolated lifecycle;
+- ✅ runner-side setns request-shape coverage and Linux target compile check;
+- ✅ ns-holder handshake unit coverage plus Linux target compile checks for
+  `eos-ns-holder`, `eos-daemon`, and `eosd`;
 - live Docker isolated-workspace scenarios for finite command, PTY start,
   progress/write/cancel, natural exit, peer shared publish, and teardown;
 - daemon-local isolated audit inspection with no leaked handles, mounts,
@@ -309,12 +336,14 @@ Minimum evidence:
 
 ## Suggested Order
 
-1. Replace the current Rust isolated namespace/network placeholders with real
-   ns-holder/setns + netlink bridge/veth wiring, then run isolated-workspace
-   Docker live coverage for finite command and PTY semantics.
-2. Add daemon-local isolated audit/leak inspection for handles, mounts, cgroups,
+1. Finish the Rust isolated network parity slice: bridge/veth netlink setup,
+   namespace-side interface/route programming, holder netlink hook validation,
+   and teardown.
+2. Harden the Rust holder/setns handoff under live Docker, then run
+   isolated-workspace Docker live coverage for finite command and PTY semantics.
+3. Add daemon-local isolated audit/leak inspection for handles, mounts, cgroups,
    leases, scratch dirs, and PTY force-cancel exit.
-3. Run CP-4 mixed non-plugin load with attached AV-4 audit pull.
-4. Run CP-5 cache-lock churn.
-5. Run AV-7 forward/back parity.
-6. Run the non-plugin Section 7 differential/property contention suite.
+4. Run CP-4 mixed non-plugin load with attached AV-4 audit pull.
+5. Run CP-5 cache-lock churn.
+6. Run AV-7 forward/back parity.
+7. Run the non-plugin Section 7 differential/property contention suite.

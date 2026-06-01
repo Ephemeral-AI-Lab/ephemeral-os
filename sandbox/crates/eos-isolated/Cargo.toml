@@ -14,6 +14,12 @@ eos-protocol.workspace = true
 # eos-occ — that edge is the build-time no-publish guard and must stay absent.
 serde_json.workspace = true
 thiserror.workspace = true
+nix.workspace = true
+
+[target.'cfg(target_os = "linux")'.dependencies]
+futures-util.workspace = true
+rtnetlink.workspace = true
+tokio.workspace = true
 
 [lints]
 workspace = true
