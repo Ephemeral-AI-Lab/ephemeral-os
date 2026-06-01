@@ -55,7 +55,7 @@ pub const AUDIT_ALLOW_FLOOR_RESET_ENV: &str = "EOS_DAEMON_AUDIT_ALLOW_FLOOR_RESE
 /// that at the call site. The daemon keeps the routing surface explicit here
 /// and lets command/file/isolated handlers own their runtime details.
 /// `// PORT backend/src/sandbox/daemon/rpc/dispatcher.py:37 — Handler = Callable[[dict], Any]`
-pub type Handler = for<'ctx> fn(&Value, DispatchContext<'ctx>) -> Result<Value, DaemonError>;
+type Handler = for<'ctx> fn(&Value, DispatchContext<'ctx>) -> Result<Value, DaemonError>;
 
 /// Per-dispatch daemon services used by handlers that need runtime state.
 #[derive(Clone, Copy, Default)]
@@ -96,48 +96,48 @@ impl OpTable {
         // The real registration also folds in plugin ops and the full
         // isolated-workspace implementation; this table pins public daemon op
         // names as they are ported so callers never see unknown_op drift.
-        table.register("api.runtime.ready", op_runtime_ready);
-        table.register("api.v1.cancel", op_cancel);
-        table.register("api.v1.heartbeat", op_heartbeat);
-        table.register("api.v1.inflight_count", op_inflight_count);
-        table.register("api.layer_metrics", op_layer_metrics);
-        table.register("api.ensure_workspace_base", op_ensure_workspace_base);
-        table.register("api.build_workspace_base", op_build_workspace_base);
-        table.register("api.workspace_binding", op_workspace_binding);
-        table.register("api.audit.pull", op_audit_pull);
-        table.register("api.audit.snapshot", op_audit_snapshot);
-        table.register("api.audit.reset_floor", op_audit_reset_floor);
-        table.register("api.read_file", op_read_file);
-        table.register("api.v1.read_file", op_read_file);
-        table.register("api.write_file", op_write_file);
-        table.register("api.v1.write_file", op_write_file);
-        table.register("api.edit_file", op_edit_file);
-        table.register("api.v1.edit_file", op_edit_file);
-        table.register("api.glob", op_glob);
-        table.register("api.v1.glob", op_glob);
-        table.register("api.grep", op_grep);
-        table.register("api.v1.grep", op_grep);
-        table.register("api.v1.shell", op_shell);
-        table.register("api.isolated_workspace.enter", crate::isolated::op_enter);
-        table.register("api.isolated_workspace.exit", crate::isolated::op_exit);
-        table.register("api.isolated_workspace.status", crate::isolated::op_status);
-        table.register(
+        table.register_builtin("api.runtime.ready", op_runtime_ready);
+        table.register_builtin("api.v1.cancel", op_cancel);
+        table.register_builtin("api.v1.heartbeat", op_heartbeat);
+        table.register_builtin("api.v1.inflight_count", op_inflight_count);
+        table.register_builtin("api.layer_metrics", op_layer_metrics);
+        table.register_builtin("api.ensure_workspace_base", op_ensure_workspace_base);
+        table.register_builtin("api.build_workspace_base", op_build_workspace_base);
+        table.register_builtin("api.workspace_binding", op_workspace_binding);
+        table.register_builtin("api.audit.pull", op_audit_pull);
+        table.register_builtin("api.audit.snapshot", op_audit_snapshot);
+        table.register_builtin("api.audit.reset_floor", op_audit_reset_floor);
+        table.register_builtin("api.read_file", op_read_file);
+        table.register_builtin("api.v1.read_file", op_read_file);
+        table.register_builtin("api.write_file", op_write_file);
+        table.register_builtin("api.v1.write_file", op_write_file);
+        table.register_builtin("api.edit_file", op_edit_file);
+        table.register_builtin("api.v1.edit_file", op_edit_file);
+        table.register_builtin("api.glob", op_glob);
+        table.register_builtin("api.v1.glob", op_glob);
+        table.register_builtin("api.grep", op_grep);
+        table.register_builtin("api.v1.grep", op_grep);
+        table.register_builtin("api.v1.shell", op_shell);
+        table.register_builtin("api.isolated_workspace.enter", crate::isolated::op_enter);
+        table.register_builtin("api.isolated_workspace.exit", crate::isolated::op_exit);
+        table.register_builtin("api.isolated_workspace.status", crate::isolated::op_status);
+        table.register_builtin(
             "api.isolated_workspace.list_open",
             crate::isolated::op_list_open,
         );
-        table.register(
+        table.register_builtin(
             "api.isolated_workspace.test_reset",
             crate::isolated::op_test_reset,
         );
-        table.register("api.v1.exec_command", crate::command::op_exec_command);
-        table.register("api.v1.pty.write_stdin", crate::command::op_pty_write_stdin);
-        table.register("api.v1.pty.progress", crate::command::op_pty_progress);
-        table.register("api.v1.pty.cancel", crate::command::op_pty_cancel);
-        table.register(
+        table.register_builtin("api.v1.exec_command", crate::command::op_exec_command);
+        table.register_builtin("api.v1.pty.write_stdin", crate::command::op_pty_write_stdin);
+        table.register_builtin("api.v1.pty.progress", crate::command::op_pty_progress);
+        table.register_builtin("api.v1.pty.cancel", crate::command::op_pty_cancel);
+        table.register_builtin(
             "api.v1.pty.collect_completed",
             crate::command::op_pty_collect_completed,
         );
-        table.register(
+        table.register_builtin(
             "api.v1.pty_session_count",
             crate::command::op_pty_session_count,
         );
@@ -145,9 +145,25 @@ impl OpTable {
     }
 
     /// Register `handler` under `op`.
+    ///
+    /// Returns `true` when the handler was inserted or already registered.
+    /// Returns `false` when `op` is already claimed by a different handler,
+    /// leaving the original route intact.
     // PORT backend/src/sandbox/daemon/rpc/dispatcher.py:42-57 — register_op (collision reject)
-    pub fn register(&mut self, op: &str, handler: Handler) {
+    #[must_use = "registration collisions are rejected; callers must check the result"]
+    fn register(&mut self, op: &str, handler: Handler) -> bool {
+        if let Some(existing) = self.handlers.get(op) {
+            return std::ptr::fn_addr_eq(*existing, handler);
+        }
         self.handlers.insert(op.to_owned(), handler);
+        true
+    }
+
+    fn register_builtin(&mut self, op: &str, handler: Handler) {
+        assert!(
+            self.register(op, handler),
+            "builtin op registered with a different handler: {op}"
+        );
     }
 
     /// Route `request` to its handler, returning the response value or an error
@@ -2450,6 +2466,34 @@ mod tests {
         assert!(require_shell_command(&json!({"command": []})).is_err());
         assert!(require_shell_command(&json!({"command": [""]})).is_err());
         assert!(require_shell_command(&json!({"command": [true]})).is_err());
+    }
+
+    #[test]
+    fn op_table_rejects_different_handler_collision() {
+        fn first_handler(
+            _args: &Value,
+            _context: DispatchContext<'_>,
+        ) -> Result<Value, DaemonError> {
+            Ok(json!({"handler": "first"}))
+        }
+        fn second_handler(
+            _args: &Value,
+            _context: DispatchContext<'_>,
+        ) -> Result<Value, DaemonError> {
+            Ok(json!({"handler": "second"}))
+        }
+
+        let mut table = OpTable::default();
+        assert!(table.register("api.test.collision", first_handler));
+        assert!(table.register("api.test.collision", first_handler));
+        assert!(!table.register("api.test.collision", second_handler));
+
+        let response = table.dispatch(&Request {
+            op: "api.test.collision".to_owned(),
+            invocation_id: "collision-test".to_owned(),
+            args: json!({}),
+        });
+        assert_eq!(response["handler"], "first");
     }
 
     #[test]

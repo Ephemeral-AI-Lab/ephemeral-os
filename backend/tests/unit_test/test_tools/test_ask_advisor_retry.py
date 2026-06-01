@@ -50,7 +50,8 @@ _PARENT_EXECUTOR_DEF = AgentDefinition(
     tool_call_limit=10,
     agent_type="agent",
     role=AgentRole.GENERATOR,
-    terminals=["submit_workflow_handoff", "submit_generator_outcome"],
+    allowed_tools=["delegate_workflow", "check_workflow_status", "cancel_workflow"],
+    terminals=["submit_generator_outcome"],
 )
 
 

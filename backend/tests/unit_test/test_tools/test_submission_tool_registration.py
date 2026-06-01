@@ -12,8 +12,8 @@ from tools.submission.planner import PlanTaskInput
 
 
 PHASE03_TOOLS = (
+    "submit_root_outcome",
     "submit_planner_outcome",
-    "submit_workflow_handoff",
     "submit_generator_outcome",
     "submit_reducer_outcome",
     "ask_advisor",
@@ -29,8 +29,13 @@ def test_submission_tools_registered() -> None:
 def test_tool_registry_renamed() -> None:
     """Unified submission names are registered and split terminals are gone."""
     assert has_tool("submit_planner_outcome")
+    assert has_tool("submit_root_outcome")
     assert has_tool("submit_generator_outcome")
     assert has_tool("submit_reducer_outcome")
+    assert has_tool("delegate_workflow")
+    assert has_tool("check_workflow_status")
+    assert has_tool("cancel_workflow")
+    assert not has_tool("submit_workflow_handoff")
     assert not has_tool("submit_plan_defers_goal")
     assert not has_tool("submit_plan_closes_goal")
     assert not has_tool("submit_generator_success")
@@ -57,10 +62,12 @@ def test_custom_generator_agent_can_declare_goal_solution_terminal() -> None:
         name="custom_generator",
         description="Custom generator agent.",
         role=AgentRole.GENERATOR,
-        terminals=["submit_workflow_handoff"],
+        terminals=["submit_generator_outcome"],
+        allowed_tools=["delegate_workflow", "check_workflow_status", "cancel_workflow"],
         tool_call_limit=10,
     )
-    assert has_tool("submit_workflow_handoff")
+    assert has_tool("submit_generator_outcome")
+    assert has_tool("delegate_workflow")
 
 
 def test_plan_input_rejects_extra_keys() -> None:

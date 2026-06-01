@@ -2,7 +2,7 @@
 
 Covers the plan decision logic (G1, D5, D7): pass at zero; fail on a positive
 local count (checked before the daemon); fail on a positive daemon count; the
-daemon-error branch (fail-safe-block for success/handoff, fail-open for the
+daemon-error branch (fail-safe-block for success/root completion, fail-open for the
 failure/blocker bail-out set); agent-id resolution; and the not-counted cases
 (no sandbox, manager without ``count_by_agent``).
 """
@@ -118,8 +118,8 @@ async def test_daemon_count_fails(monkeypatch) -> None:
     [
         "enter_isolated_workspace",
         "exit_isolated_workspace",
+        "submit_root_outcome",
         "submit_generator_outcome",
-        "submit_workflow_handoff",
         "submit_planner_outcome",
         "submit_reducer_outcome",
     ],

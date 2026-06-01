@@ -70,10 +70,10 @@ pub struct PreparedChangeset {
 
 /// The publish-transaction half of the layer-stack port the queue drives.
 ///
-/// Defined here as a local placeholder (the real port + adapter live in
-/// `eos-layerstack`; do NOT import sibling items still being written). The
-/// daemon injects an implementation that revalidates the CAS base and publishes
-/// a new manifest version, returning [`PublishConflict`] on a stale base.
+/// Defined here as the queue's narrow inverted interface. The daemon injects
+/// the layer-stack-backed implementation that revalidates the CAS base and
+/// publishes a new manifest version, returning [`PublishConflict`] on a stale
+/// base.
 // PORT backend/src/sandbox/occ/commit_transaction.py — CommitTransaction.revalidate_and_publish
 pub trait CommitTransactionPort: Send {
     /// Revalidate the base hash and atomically publish, or signal a CAS

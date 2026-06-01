@@ -2,11 +2,11 @@
 name = "eos-plugin"
 version.workspace = true
 edition.workspace = true
+rust-version.workspace = true
 license.workspace = true
 
 [dependencies]
 eos-ephemeral.workspace = true
-eos-overlay.workspace = true
 eos-layerstack.workspace = true
 eos-protocol.workspace = true
 # Errors + small JSON arg objects only. NOT eos-occ — the no-publish/no-second-writer
@@ -14,7 +14,6 @@ eos-protocol.workspace = true
 # opaque `String`, reusing eos_protocol's envelope encode/decode for framing.
 thiserror.workspace = true
 serde_json.workspace = true
-nix = { workspace = true, features = ["process", "signal"] }
 
 [lints]
 workspace = true

@@ -34,13 +34,11 @@
 //!
 //! Linux-only syscall bodies are gated behind `#[cfg(target_os = "linux")]`; the
 //! non-Linux arms return [`RunnerError::Unsupported`] so the workspace stays green
-//! on the macOS dev host. No real `unsafe` exists yet — every future `unsafe`
-//! syscall site is documented in prose and a `// PORT` anchor; this crate keeps
-//! `#![deny(unsafe_op_in_unsafe_fn)]` so the implementer is forced to annotate.
+//! on the macOS dev host. Raw syscall sites carry focused `// SAFETY:` notes, and
+//! `#![deny(unsafe_op_in_unsafe_fn)]` keeps that annotation discipline enforced.
 //!
 //! Internal deps: `eos-protocol` (verb [`Intent`](eos_protocol::Intent)); `eos-overlay`
-//! (`kernel_mount`, consumed through the local [`mount::KernelMountPort`] port until
-//! the sibling crate lands).
+//! (`kernel_mount`, consumed through the local [`mount::KernelMountPort`] port).
 #![deny(unsafe_op_in_unsafe_fn)]
 
 pub mod error;

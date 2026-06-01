@@ -52,7 +52,7 @@
   </ol>
 </nav>
 
-<p class="lead">Workflow context is now an explicit role-scoped document. <code>ContextEngine</code> reads persisted Workflow -&gt; Iteration -&gt; Attempt state and returns an <code>AgentContext</code>; XML and task guidance are pure renderings of that same typed object. The engine does not own lifecycle policy, retries, terminal submission handling, child-workflow routing, or provider execution.</p>
+<p class="lead">Workflow context is now an explicit role-scoped document. <code>ContextEngine</code> reads persisted Workflow -&gt; Iteration -&gt; Attempt state and returns an <code>AgentContext</code>; XML and task guidance are pure renderings of that same typed object. The engine does not own lifecycle policy, retries, terminal submission handling, delegated-workflow routing, or provider execution.</p>
 
 <section id="scope-verdict" data-last-reviewed-commit="HEAD" data-evidence-paths="backend/src/workflow/context_engine/engine.py backend/src/workflow/context_engine/context.py backend/src/workflow/context_engine/scope.py backend/src/workflow/context_engine/xml.py backend/src/workflow/context_engine/task_guidance.py backend/src/workflow/agent_launch/composer.py backend/src/workflow/attempt/launch.py backend/tests/unit_test/test_workflow/test_context_engine/test_agent_context.py backend/tests/unit_test/test_workflow/test_agent_launch/test_composer.py">
 <h2>Scope And Verdict <a class="anchor" href="#scope-verdict">#</a></h2>
@@ -85,7 +85,7 @@
 </pre>
 <div class="edge-list">
   <div><b>scope</b><span>Planner launches require workflow, iteration, and attempt ids. Generator and reducer launches also require task id.</span></div>
-  <div><b>terminal policy</b><span>The composer uses the profile terminal list directly. Nested-workflow restrictions are call-time prehooks plus launch-time reminder notifications, not terminal-list filtering.</span></div>
+  <div><b>terminal policy</b><span>The composer uses the profile terminal list directly. Nested planner deferral is a call-time prehook plus launch-time reminder notification; workflow delegation controls are ordinary non-terminal tools.</span></div>
   <div><b>rows</b><span>Context XML and task guidance remain separate internal rows after the system prompt. Provider adapters may later join rows for transport, but Workflow keeps them distinct.</span></div>
 </div>
 </section>
@@ -134,11 +134,11 @@
 <h2>Outcome Inputs <a class="anchor" href="#outcomes">#</a></h2>
 <p>Context renders execution evidence only. A task outcome is bounded to one task. Aggregate attempt, iteration, and workflow outcomes are projections over generator/reducer <code>ExecutionTaskOutcome</code> records.</p>
 <div class="edge-list">
-  <div><b>planner task outcomes</b><span>Planner submissions write <code>PlannerTaskOutcome</code> on the planner task for UI rendering, but planner outcomes are excluded from attempt, iteration, and workflow evidence.</span></div>
+  <div><b>planner task outcomes</b><span>Planner submissions mark the planner task complete and create generator/reducer Task rows. Planner outcome records are not part of attempt, iteration, workflow, or planner-history evidence.</span></div>
   <div><b>attempt outcomes</b><span>Attempt close persists generator/reducer execution outcomes from its task rows.</span></div>
   <div><b>iteration outcomes</b><span>Iteration close projects successful reducer outcomes from all attempts plus failed generator/reducer outcomes from the final failed attempt.</span></div>
   <div><b>workflow outcomes</b><span>Workflow outcomes are derived from the latest iteration outcomes.</span></div>
-  <div><b>handoff outcomes</b><span>A generator waiting on a child workflow gets the child workflow outcomes copied directly, with no recursive wrapper outcome.</span></div>
+  <div><b>delegated workflow outcomes</b><span>Delegated workflow results are inspected by the launching agent through workflow tools and synthesized into that agent's own terminal outcome. ContextEngine does not copy delegated workflow outcomes into a waiting parent task.</span></div>
 </div>
 </section>
 

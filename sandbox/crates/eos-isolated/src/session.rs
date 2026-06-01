@@ -89,12 +89,12 @@ pub struct WorkspaceHandle {
     pub active_calls: u32,
 }
 
-/// Snapshot/lease HINGE port — the ONLY layer-stack surface isolated touches.
+/// Snapshot/lease HINGE port — the ONLY layer-stack surface isolated models.
 ///
 /// Defined here as an inverted port (`eos-daemon` injects the layer-stack-backed
 /// implementation). It exposes snapshot/lease + read methods ONLY — never the
-/// publish-transaction half — which is precisely why this crate links
-/// `eos-layerstack`, never `eos-occ`.
+/// publish-transaction half — so this crate needs neither a direct
+/// `eos-layerstack` nor an `eos-occ` dependency.
 /// `// PORT backend/src/sandbox/occ/layer_stack_adapter.py:31-67 — snapshot/lease half`
 pub trait LayerStackSnapshotPort {
     /// Acquire a read snapshot + lease for `request_id`.
@@ -115,14 +115,14 @@ pub trait LayerStackSnapshotPort {
 
 /// Kernel-touching namespace operations the pipeline delegates to.
 ///
-/// Inverted port: the concrete implementation spawns `eos-ns-holder` (the
-/// long-lived pidns PID 1) and drives `setns` mounts/exec via `eos-runner`.
+/// Inverted port: the concrete implementation spawns `eosd ns-holder` (the
+/// long-lived pidns PID 1) and drives `setns` mounts/exec via `eosd ns-runner`.
 /// Both are syscall-only single-threaded crates; this trait keeps the
 /// orchestration here free of those edges' details.
 /// `// PORT backend/src/sandbox/isolated_workspace/_control_plane/types.py:221-256 — NamespaceRuntimePort`
 /// `// PORT backend/src/sandbox/isolated_workspace/_control_plane/namespace_runtime.py:65-301 — _KernelNamespaceRuntime`
 pub trait NamespaceRuntimePort {
-    /// Spawn `eos-ns-holder` under `unshare(--user --net --pid --mount ...)`,
+    /// Spawn `eosd ns-holder` under `unshare(--user --net --pid --mount ...)`,
     /// wait for the `ns-up` handshake token, and return its PID.
     // PORT backend/src/sandbox/isolated_workspace/_control_plane/namespace_runtime.py:79-116 — spawn_ns_holder (ns_holder.py handshake step 1)
     fn spawn_ns_holder(
@@ -135,7 +135,7 @@ pub trait NamespaceRuntimePort {
     // PORT backend/src/sandbox/isolated_workspace/_control_plane/namespace_runtime.py:118-125 — open_ns_fds
     fn open_ns_fds(&self, holder_pid: i32) -> Result<HashMap<String, i32>, IsolatedError>;
 
-    /// Mount the overlay inside the namespace (via `eos-runner` setns helper).
+    /// Mount the overlay inside the namespace (via `eosd ns-runner` setns helper).
     // PORT backend/src/sandbox/isolated_workspace/_control_plane/namespace_runtime.py:127-165 — mount_overlay (setns_overlay_mount)
     fn mount_overlay(
         &self,

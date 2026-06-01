@@ -120,7 +120,7 @@
   </table>
 </div>
 <div class="edge-list">
-  <div><b>shared submission discipline</b><span>All three main profiles require an advisor approval loop before terminal submission and exactly one terminal call per run.</span></div>
+  <div><b>shared submission discipline</b><span>Every main profile gets the one-terminal-per-run contract. Workflow planner, generator, and reducer terminals also require advisor approval; root completion is gated by the root terminal's own validation and in-flight background-work prehook.</span></div>
   <div><b>planner is not an implementer</b><span>The planner profile says it designs and submits a single executable plan (a generator + reducer DAG). It does not run the work itself.</span></div>
   <div><b>executor is the edit-capable generator</b><span>The executor can edit, run commands, call <code>delegate_workflow</code> for decomposed background work, inspect the handle with <code>check_workflow_status</code>, and synthesize the result into <code>submit_generator_outcome</code>.</span></div>
   <div><b>reducer is the attempt exit gate</b><span>A reducer digests <code>&lt;dependencies&gt;</code> and completes its <code>&lt;assigned_task&gt;</code>. It may apply trivial inline fixes via <code>edit_file</code> / <code>write_file</code>; scope is enforced by profile prose and the advisor's pre-terminal audit (which sees full edit-input transcripts).</span></div>
@@ -211,7 +211,7 @@
       <li><span class="file-ref">backend/src/agents/definition</span> profile model, loader, registry, and resolved validation.</li>
       <li><span class="file-ref">backend/src/tools/_hooks</span> call-time submission guardrails.</li>
       <li><span class="file-ref">backend/src/tools/submission/planner/_schemas.py</span> planner dispatchability gate and plan-shape validation.</li>
-      <li><span class="file-ref">backend/src/workflow</span> child-workflow start and outcome application.</li>
+      <li><span class="file-ref">backend/src/workflow</span> delegated workflow start, handle tracking, and attempt lifecycle.</li>
     </ul>
   </div>
   <div class="evidence-card">

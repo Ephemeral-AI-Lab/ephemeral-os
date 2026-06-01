@@ -29,8 +29,8 @@ pub trait MaintenancePolicy {
 
 /// Layer-stack squash capability consumed by [`AutoSquashMaintenancePolicy`].
 ///
-/// Local placeholder for the real port (lives in `eos-layerstack`); the daemon
-/// injects a layer-stack-backed implementation.
+/// Narrow maintenance interface implemented by the daemon's layer-stack-backed
+/// adapter.
 // PORT backend/src/sandbox/occ/maintenance.py:21 — class _LayerSquashPort(Protocol)
 pub trait LayerSquashPort {
     /// Can the active stack be squashed at `max_depth`?
@@ -44,8 +44,8 @@ pub trait LayerSquashPort {
 ///
 /// The daemon owns the concrete layer-stack/gitignore implementation because
 /// this crate must not know daemon workspace bindings. The default provider
-/// routes every non-`.git` path as gated with an unknown base hash, preserving
-/// the earlier skeleton behavior for unit tests and custom queues.
+/// routes every non-`.git` path as gated with an unknown base hash, giving unit
+/// tests and custom queues a conservative default.
 pub trait OccRouteProvider: Send + Sync {
     /// Is this normalized path gitignored in the operation snapshot?
     fn is_ignored(&self, path: &LayerPath) -> Result<bool, OccError>;

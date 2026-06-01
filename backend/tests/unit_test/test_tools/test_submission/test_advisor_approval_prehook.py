@@ -190,7 +190,6 @@ def test_hook_wired_to_main_terminals_and_omitted_from_helpers() -> None:
     main_terminals = (
         "submit_planner_outcome",
         "submit_generator_outcome",
-        "submit_workflow_handoff",
         "submit_reducer_outcome",
     )
     helper_terminals = (

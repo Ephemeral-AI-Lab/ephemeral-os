@@ -42,7 +42,7 @@
   <ol>
     <li><a href="#registration-map"><span>1</span> Registration Map</a></li>
     <li><a href="#planner-executor-reducer"><span>2</span> Planner, Executor, Reducer</a></li>
-    <li><a href="#handoff-delegated-workflow"><span>3</span> Workflow Handoff and Child Workflows</a></li>
+    <li><a href="#delegated-workflow-tools"><span>3</span> Delegated Workflow Tools</a></li>
     <li><a href="#helper-and-explorer-results"><span>4</span> Helper and Explorer Results</a></li>
     <li><a href="#workflow-connections"><span>5</span> Workflow Connections</a></li>
   </ol>
@@ -58,7 +58,7 @@
   </div>
   <div class="flow-row">
     <div class="node good"><strong>Attempt owner</strong><small>planner, executor, reducer submissions</small></div>
-    <div class="node"><strong>Workflow owner</strong><small>workflow handoff through child workflow state</small></div>
+    <div class="node"><strong>Workflow owner</strong><small>non-terminal workflow handles for delegated state</small></div>
     <div class="node"><strong>Helper owner</strong><small>advisor, explorer metadata returned to caller</small></div>
   </div>
 </div>
@@ -88,11 +88,11 @@
 <p><code>submit_reducer_outcome(status, outcome)</code> resolves the strict <code>resolve_attempt_submission_context()</code> and calls <code>AttemptOrchestrator.apply_reducer_submission()</code> with a <code>ReducerSubmission</code> whose <code>status</code> is the literal <code>"success"</code> or <code>"failed"</code>. The reducer is the attempt's exit gate: it completes <code>&lt;assigned_task&gt;</code> using <code>&lt;dependencies&gt;</code>. After either submission the orchestrator runs <code>advance_ready_tasks()</code> over the single RUN stage; the attempt passes once every plan task is <code>DONE</code> and fails (<code>TASK_FAILED</code>) if any task failed or is unreachable behind a failed dependency. There is no separate evaluate stage and no per-task verifier.</p>
 </section>
 
-<section id="handoff-delegated-workflow" data-last-reviewed-commit="HEAD-plus-worktree" data-evidence-paths="backend/src/tools/workflow backend/src/workflow/starter.py backend/src/workflow/lifecycle.py backend/src/workflow/_core/state.py backend/src/workflow/attempt/launch.py backend/src/workflow/attempt/orchestrator.py backend/src/workflow/submissions.py backend/src/engine/background/task_supervisor.py backend/tests/unit_test/test_tools/test_submission_main_role_terminals.py">
-<h2>Delegated Workflow Tools <a class="anchor" href="#handoff-delegated-workflow">#</a></h2>
+<section id="delegated-workflow-tools" data-last-reviewed-commit="HEAD-plus-worktree" data-evidence-paths="backend/src/tools/workflow backend/src/workflow/starter.py backend/src/workflow/lifecycle.py backend/src/workflow/_core/state.py backend/src/workflow/attempt/launch.py backend/src/workflow/attempt/orchestrator.py backend/src/workflow/submissions.py backend/src/engine/background/task_supervisor.py backend/tests/unit_test/test_tools/test_submission_main_role_terminals.py">
+<h2>Delegated Workflow Tools <a class="anchor" href="#delegated-workflow-tools">#</a></h2>
 <ol>
   <li><code>delegate_workflow(goal=...)</code> validates a nonblank goal, resolves the current running Task from tool metadata, and calls <code>WorkflowStarter.start(prompt=goal, parent_task_id=current_task_id)</code>.</li>
-  <li><code>WorkflowStarter</code> validates that the parent Task is <code>RUNNING</code> and has no open delegated workflow for that parent, then creates a <code>Workflow</code>, initial <code>Iteration</code>, and initial <code>Attempt</code>. The parent Task stays <code>RUNNING</code>; there is no legacy waiting-state transition and no child-workflow link column.</li>
+  <li><code>WorkflowStarter</code> validates that the parent Task is <code>RUNNING</code> and has no open delegated workflow for that parent, then creates a <code>Workflow</code>, initial <code>Iteration</code>, and initial <code>Attempt</code>. The parent Task stays <code>RUNNING</code>; there is no legacy waiting-state transition and no legacy delegation link column.</li>
   <li>The workflow tool returns a <code>workflow_task_id</code> handle and <code>workflow_id</code>. Because the tool is non-terminal, the caller continues its own agent loop and later uses <code>check_workflow_status</code> or <code>cancel_workflow</code>.</li>
   <li>Closing a delegated workflow persists workflow outcomes only. It does not mutate the parent generator Task; the launching agent reads the handle result and synthesizes its own <code>submit_generator_outcome</code>.</li>
   <li>The no-inflight terminal hook counts outstanding workflow handles. A generator/root terminal is allowed once the handle is reported by <code>check_workflow_status</code> or explicitly cancelled by <code>cancel_workflow</code>.</li>

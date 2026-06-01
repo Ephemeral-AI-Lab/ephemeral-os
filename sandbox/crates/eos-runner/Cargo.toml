@@ -2,18 +2,23 @@
 name = "eos-runner"
 version.workspace = true
 edition.workspace = true
+rust-version.workspace = true
 license.workspace = true
 
 [dependencies]
 eos-overlay.workspace = true
 eos-protocol.workspace = true
-rustix.workspace = true
-nix.workspace = true
-libc.workspace = true
 serde.workspace = true
 serde_json.workspace = true
-regex.workspace = true
 thiserror.workspace = true
+
+[target.'cfg(target_os = "linux")'.dependencies]
+rustix.workspace = true
+libc.workspace = true
+regex.workspace = true
+
+[dev-dependencies]
+regex.workspace = true
 
 [lints]
 workspace = true

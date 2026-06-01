@@ -354,7 +354,7 @@ fn xattr_value(path: &Path, name: &str) -> Result<Option<Vec<u8>>> {
     if len < 0 {
         let err = std::io::Error::last_os_error();
         return match err.raw_os_error() {
-            Some(libc::ENODATA) | Some(libc::ENOATTR) | Some(libc::EOPNOTSUPP) => Ok(None),
+            Some(libc::ENODATA) | Some(libc::EOPNOTSUPP) => Ok(None),
             _ => Err(OverlayError::Capture(err)),
         };
     }

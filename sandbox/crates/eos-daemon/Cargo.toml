@@ -2,6 +2,7 @@
 name = "eos-daemon"
 version.workspace = true
 edition.workspace = true
+rust-version.workspace = true
 license.workspace = true
 
 [dependencies]
@@ -13,13 +14,13 @@ eos-ephemeral.workspace = true
 eos-isolated.workspace = true
 eos-plugin.workspace = true
 eos-runner.workspace = true
-eos-ns-holder.workspace = true
 serde_json.workspace = true
 sha2.workspace = true
 tokio.workspace = true
 tokio-util.workspace = true
-tracing.workspace = true
 thiserror.workspace = true
+
+[target.'cfg(target_os = "linux")'.dependencies]
 nix = { workspace = true, features = ["fs", "process", "signal", "term"] }
 
 [lints]

@@ -86,15 +86,16 @@ def test_reducer_terminal_descriptors_use_assigned_task_contract() -> None:
     assert "slice it gates" not in combined
 
 
-def test_generator_handoff_descriptor_requires_pre_edit_decomposition() -> None:
-    descriptor = TERMINAL_DESCRIPTORS["submit_workflow_handoff"]
+def test_generator_terminal_descriptor_describes_terminal_outcome_only() -> None:
+    descriptor = TERMINAL_DESCRIPTORS["submit_generator_outcome"]
     combined = f"{descriptor.selection_guidance}\n{descriptor.advisor_review_focus}"
 
-    assert "you have not started edits" in descriptor.selection_guidance
-    assert "planner decomposition is needed" in descriptor.selection_guidance
-    assert "has not started edits" in descriptor.advisor_review_focus
-    assert "why decomposition is needed" in descriptor.advisor_review_focus
-    assert "bounded progress is made" not in combined
+    assert 'status="success"' in descriptor.selection_guidance
+    assert 'status="failed"' in descriptor.selection_guidance
+    assert "deliverable exists" in descriptor.advisor_review_focus
+    assert "blocker is real" in descriptor.advisor_review_focus
+    assert "delegate_workflow" not in combined
+    assert "handoff" not in combined.lower()
 
 
 def test_planner_terminal_descriptors_use_iteration_outcome_contract() -> None:

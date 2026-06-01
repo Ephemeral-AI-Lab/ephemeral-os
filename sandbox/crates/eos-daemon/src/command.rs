@@ -99,7 +99,7 @@ pub(crate) fn op_exec_command(
     #[cfg(target_os = "linux")]
     {
         let yield_time_ms = optional_u64(args, "yield_time_ms").unwrap_or(1000);
-        return start_pty_command(args, cmd, timeout_seconds, yield_time_ms);
+        start_pty_command(args, cmd, timeout_seconds, yield_time_ms)
     }
     #[cfg(not(target_os = "linux"))]
     {
@@ -120,7 +120,7 @@ pub(crate) fn op_pty_write_stdin(
 ) -> Result<Value, DaemonError> {
     #[cfg(target_os = "linux")]
     {
-        return pty_write_stdin(args);
+        pty_write_stdin(args)
     }
     #[cfg(not(target_os = "linux"))]
     {
@@ -135,7 +135,7 @@ pub(crate) fn op_pty_progress(
 ) -> Result<Value, DaemonError> {
     #[cfg(target_os = "linux")]
     {
-        return pty_progress(args);
+        pty_progress(args)
     }
     #[cfg(not(target_os = "linux"))]
     {
@@ -150,7 +150,7 @@ pub(crate) fn op_pty_cancel(
 ) -> Result<Value, DaemonError> {
     #[cfg(target_os = "linux")]
     {
-        return pty_cancel(args);
+        pty_cancel(args)
     }
     #[cfg(not(target_os = "linux"))]
     {
@@ -165,7 +165,7 @@ pub(crate) fn op_pty_collect_completed(
 ) -> Result<Value, DaemonError> {
     #[cfg(target_os = "linux")]
     {
-        return Ok(pty_registry().collect_completed(args));
+        Ok(pty_registry().collect_completed(args))
     }
     #[cfg(not(target_os = "linux"))]
     {

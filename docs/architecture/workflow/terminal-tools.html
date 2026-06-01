@@ -69,7 +69,7 @@
   <div class="flow-row">
     <div class="node"><strong>Dispatcher</strong><small>terminal must be called alone</small></div>
     <div class="node good"><strong>Query loop</strong><small>stores terminal result and exits with <code>TOOL_STOP</code></small></div>
-    <div class="node"><strong>State owner</strong><small>Workflow attempt, helper caller, or run tracker consumes metadata</small></div>
+    <div class="node"><strong>State owner</strong><small>Root task, Workflow attempt, helper caller, or run tracker consumes metadata</small></div>
   </div>
 </div>
 <pre class="diagram" aria-label="Terminal execution ASCII workflow">
@@ -92,7 +92,7 @@
 </pre>
 <div class="sequence" aria-label="Terminal execution sequence">
   <ol>
-    <li><span><code>make_submission_tools()</code> registers planner, executor, reducer, advisor, and explorer submission tools as one framework tool set.</span></li>
+    <li><span><code>make_submission_tools()</code> registers root, planner, generator, reducer, advisor, and explorer submission tools as one framework tool set.</span></li>
     <li><span>Each terminal tool is decorated with <code>is_terminal_tool=True</code> and a concrete pydantic input model. Most use <code>TextToolOutput</code>, so non-error output must validate as text before the result can terminate the run.</span></li>
     <li><span><code>engine.query.loop</code> derives <code>context.terminal_tools</code> from the active tool registry. If a run has any terminals, streamed tool calls are deferred until the final assistant message is available.</span></li>
     <li><span><code>engine.tool_call.dispatch</code> rejects any final batch that mixes a terminal tool with sibling tool calls. The rejection returns one error tool result per tool-use id and executes none of the batch.</span></li>
@@ -108,53 +108,57 @@
 <div class="edge-list">
   <div><b>parent guidance</b><span><code>workflow.context_engine.skill_message</code> renders the selected terminal list into launch guidance and skill rows so the agent sees exactly the terminals allowed for this launch.</span></div>
   <div><b>advisor guidance</b><span><code>ask_advisor</code> renders the same terminal names with <code>focus=&quot;advisor_review_focus&quot;</code>, so the audit prompt reviews the parent's choices through the same registry.</span></div>
-  <div><b>profile terminal set</b><span>The launched agent uses its profile terminal list directly. Nested planner deferral and nested generator handoff are guarded by submission prehooks and one-shot reminder notifications.</span></div>
+  <div><b>profile terminal set</b><span>The launched agent uses its profile terminal list directly. Nested planner deferral is guarded by a submission prehook and reminder notification; Workflow delegation controls are non-terminal profile tools.</span></div>
   <div><b>runtime metadata</b><span><code>EphemeralAttemptAgentLauncher</code> places the selected terminals into <code>ExecutionMetadata</code> under <code>active_terminals</code>. Mock/live message capture tests read that metadata from <code>message.jsonl</code> rows.</span></div>
   <div><b>drift tests</b><span>Descriptor tests require every main-profile terminal to have nonblank selection and advisor text; initial-message capture verifies row-level terminal catalog rendering from the registry.</span></div>
 </div>
 </section>
 
-<section id="role-submission-terminals" data-last-reviewed-commit="HEAD-plus-worktree" data-evidence-paths="backend/src/tools/submission/_factory.py backend/src/tools/submission/context/attempt.py backend/src/tools/submission/context/generator.py backend/src/tools/submission/planner backend/src/tools/submission/generator backend/src/tools/submission/reducer backend/src/workflow/attempt/orchestrator.py backend/src/workflow/starter.py backend/tests/unit_test/test_tools/test_submission_tool_registration.py backend/tests/unit_test/test_tools/test_submission_planner_tools.py backend/tests/unit_test/test_workflow/test_lifecycle">
+<section id="role-submission-terminals" data-last-reviewed-commit="HEAD-plus-worktree" data-evidence-paths="backend/src/tools/submission/_factory.py backend/src/tools/submission/context/attempt.py backend/src/tools/submission/context/generator.py backend/src/tools/submission/root backend/src/tools/submission/planner backend/src/tools/submission/generator backend/src/tools/submission/reducer backend/src/tools/workflow backend/src/workflow/attempt/orchestrator.py backend/src/workflow/starter.py backend/tests/unit_test/test_tools/test_submission_tool_registration.py backend/tests/unit_test/test_tools/test_submission_planner_tools.py backend/tests/unit_test/test_tools/test_submission_main_role_terminals.py">
 <h2>Role Submission Terminals <a class="anchor" href="#role-submission-terminals">#</a></h2>
-<p>The role submission terminals are adapters over Workflow state owners. They do not coordinate peer agents directly; they resolve the current task, build typed submissions, and call the Workflow -> Iteration -> Attempt owner for the current attempt or delegated workflow.</p>
+<p>The role submission terminals are adapters over Task and Workflow state owners. They do not coordinate peer agents directly; they resolve the current task, build typed submissions, and call either the root-task request finisher or the Workflow -> Iteration -> Attempt owner for the current attempt.</p>
 <div class="evidence-grid">
+  <div class="evidence-card">
+    <h3>Root</h3>
+    <p><code>submit_root_outcome(status, outcome)</code> is valid only for the root task (<code>workflow_id IS NULL</code>). It marks the root task done or failed, stores the root outcome, and finishes the request. It does not use ContextEngine or an AttemptOrchestrator.</p>
+  </div>
   <div class="evidence-card">
     <h3>Planner</h3>
     <p><code>submit_planner_outcome</code> validates generator <code>tasks</code>, <code>task_specs</code>, and <code>reducers</code> (known <code>needs</code>, &gt;=1 reducer, generator-only dependency DAG, reducers directly gating one or more generators - via <code>ordered_plan_tasks</code>) plus optional <code>deferred_goal_for_next_iteration</code>. There is no <code>plan_spec</code> or <code>evaluation_criteria</code>. Accepted payloads call <code>AttemptOrchestrator.apply_plan_submission()</code>.</p>
   </div>
   <div class="evidence-card">
     <h3>Executor (generator)</h3>
-    <p><code>submit_generator_outcome(status, outcome)</code> resolves <code>GeneratorSubmissionContext</code> and calls <code>apply_generator_submission()</code>. <code>submit_workflow_handoff</code> starts a child workflow through <code>WorkflowStarter.start(prompt, parent_task_id)</code> - there is no <code>WorkflowOrigin</code>.</p>
+    <p><code>submit_generator_outcome(status, outcome)</code> resolves <code>GeneratorSubmissionContext</code> and calls <code>apply_generator_submission()</code>. Workflow delegation is separate: <code>delegate_workflow</code> is a non-terminal tool that starts background workflow work and returns a handle.</p>
   </div>
   <div class="evidence-card">
     <h3>Reducer</h3>
     <p><code>submit_reducer_outcome(status, outcome)</code> calls <code>AttemptOrchestrator.apply_reducer_submission()</code>. A reducer is a plan task: its terminal closes that task, and the stage advancer (not the tool body) closes the attempt PASSED once every plan task is DONE, or FAILED if any failed or blocked.</p>
   </div>
 </div>
-<pre class="diagram" aria-label="Executor handoff ASCII workflow">
-[generator needs delegated work]
+<pre class="diagram" aria-label="Executor delegation ASCII workflow">
+[root or generator needs delegated work]
         |
         v
-[submit_workflow_handoff executor]
+[delegate_workflow(goal)]
         |
         v
 [WorkflowStarter.start(prompt, parent_task_id)]
         |
         v
-[parent generator attempt waits on child workflow]
+[parent task stays RUNNING; workflow handle returned]
         |
         v
-[child workflow closes]
+[caller checks or cancels workflow handle]
         |
         v
-[parent AttemptOrchestrator.apply_child_workflow_outcome]
+[caller submits its own terminal outcome]
 </pre>
-<div class="sequence" aria-label="Executor handoff sequence">
+<div class="sequence" aria-label="Executor delegation sequence">
   <ol>
-    <li><span>The executor submits a nonblank <code>goal_handoff</code> through <code>submit_workflow_handoff</code>.</span></li>
-    <li><span><code>GeneratorSubmissionContext.start_delegated_workflow()</code> creates <code>WorkflowStarter(runtime=...)</code> and starts a child workflow with <code>start(prompt=goal_handoff, parent_task_id=...)</code> for the current generator task.</span></li>
-    <li><span><code>WorkflowStarter</code> creates the child workflow, initial iteration, and initial attempt, links <code>Task.child_workflow_id</code> &lt;-&gt; <code>Workflow.parent_task_id</code>, and marks the parent generator task <code>WAITING_WORKFLOW</code>.</span></li>
-    <li><span>When the child workflow closes, <code>AttemptOrchestrator.apply_child_workflow_outcome()</code> resumes the parent generator state — there is no closure-report object or router.</span></li>
+    <li><span>The root agent or executor calls non-terminal <code>delegate_workflow(goal=...)</code>.</span></li>
+    <li><span>The workflow tool resolves the current running parent Task, checks that no delegated workflow is already outstanding for that task, and calls <code>WorkflowStarter.start(prompt=goal, parent_task_id=...)</code>.</span></li>
+    <li><span><code>WorkflowStarter</code> creates the delegated workflow, initial iteration, and initial attempt. The parent Task stays <code>running</code>; no waiting status is written.</span></li>
+    <li><span>The caller uses <code>check_workflow_status</code> or <code>cancel_workflow</code>, then folds the delegated result into <code>submit_root_outcome</code> or <code>submit_generator_outcome</code>.</span></li>
   </ol>
 </div>
 </section>
@@ -195,7 +199,7 @@
 </div>
 </section>
 
-<section id="helper-results-notifications" data-last-reviewed-commit="d32994314" data-evidence-paths="backend/src/tools/submission/explorer/submit_exploration_result/submit_exploration_result.py backend/src/tools/submission/notification_triggers/request_workflow_after_edit.py backend/tests/unit_test/test_tools/test_submission_helper_tools.py backend/tests/unit_test/test_tools/test_submission_soft_reminders.py docs/architecture/tools/ask-helper.html">
+<section id="helper-results-notifications" data-last-reviewed-commit="HEAD-plus-worktree" data-evidence-paths="backend/src/tools/submission/explorer/submit_exploration_result/submit_exploration_result.py backend/src/tools/submission/notification_triggers/nested_planner_deferral_disabled.py backend/tests/unit_test/test_tools/test_submission_helper_tools.py backend/tests/unit_test/test_tools/test_submission_soft_reminders.py docs/architecture/tools/ask-helper.html">
 <h2>Helper Results And Notifications <a class="anchor" href="#helper-results-notifications">#</a></h2>
 <p>Helper terminal outputs are terminal inside the helper run, then ordinary tool results for the parent. This lets helpers use the same engine stop contract while keeping parent Workflow state under the parent submission tools and orchestrator.</p>
 <div class="evidence-grid">
@@ -204,15 +208,15 @@
     <p><code>submit_exploration_result</code> terminates explorer-style work and returns <code>subagent_role=&quot;explorer&quot;</code>, findings, and references. It does not resolve attempt context or call Workflow mutators.</p>
   </div>
   <div class="evidence-card">
-    <h3>Handoff-after-edit reminder</h3>
-    <p><code>make_workflow_request_after_edit_reminder()</code> watches for generator edit tools such as <code>write_file</code>, <code>edit_file</code>, and <code>shell</code>. After edits start, it nudges the executor away from <code>submit_workflow_handoff</code> and toward success or failure terminals.</p>
+    <h3>Nested planner reminder</h3>
+    <p><code>make_nested_planner_deferral_disabled_reminder()</code> fires for planners launched inside delegated workflows and reminds them to omit <code>deferred_goal_for_next_iteration</code>. Generator workflow delegation uses normal non-terminal tools, not notification-triggered terminal delegation.</p>
   </div>
 </div>
 <div class="summary">
   <ul>
     <li>Advisor direct launches call <code>engine.api.run_ephemeral_agent</code> with <code>persist_agent_run=False</code> and inherit the active sandbox id when one exists.</li>
     <li>Reducer inline edits via <code>edit_file</code> / <code>write_file</code> use ordinary tool permissions and sandbox routing; there is no separate edit-capable helper.</li>
-    <li>Helper results are evidence for the parent. The parent still must call its own Workflow terminal to mutate parent attempt state.</li>
+    <li>Helper results are evidence for the parent. The parent still must call its own terminal to mutate root-task or Workflow-attempt state.</li>
   </ul>
 </div>
 </section>
@@ -222,7 +226,7 @@
 <div class="evidence-grid">
   <div class="evidence-card">
     <h3>Registration and routing</h3>
-    <p><code>test_submission_tool_registration.py</code> pins the registered submission names and asserts helper request tools are non-terminal while submission tools are terminal. Main-role terminal tests pin the unified profile terminal sets and nested-policy prehooks.</p>
+    <p><code>test_submission_tool_registration.py</code> pins the registered submission names and asserts helper request tools are non-terminal while submission tools are terminal. Main-role terminal tests pin the root, planner, generator, and reducer profile terminal sets plus nested-policy prehooks.</p>
   </div>
   <div class="evidence-card">
     <h3>Validation and stop behavior</h3>
@@ -230,11 +234,11 @@
   </div>
   <div class="evidence-card">
     <h3>Planner and role submissions</h3>
-    <p>Planner submission tests cover duplicate ids, unknown <code>needs</code>, dependency cycles, empty reducers, task spec matching, close and defer variants, and Workflow -> Iteration -> Attempt handoff through the attempt orchestrator.</p>
+    <p>Planner submission tests cover duplicate ids, unknown <code>needs</code>, dependency cycles, empty reducers, task spec matching, close and defer variants, and Workflow -> Iteration -> Attempt advancement through the attempt orchestrator.</p>
   </div>
   <div class="evidence-card">
     <h3>Helpers and reminders</h3>
-    <p>Helper tests cover advisor direct launch shape, missing terminal-result errors, helper terminal metadata, explorer output metadata, and the handoff soft reminder.</p>
+    <p>Helper tests cover advisor direct launch shape, missing terminal-result errors, helper terminal metadata, explorer output metadata, and nested planner reminder wiring.</p>
   </div>
 </div>
 <div class="refresh-list">

@@ -7,8 +7,8 @@
 //! captured for audit but NEVER published.** This is enforced at BUILD TIME by
 //! this crate NOT depending on `eos-occ`. The publish path lives behind the OCC
 //! commit queue; isolated never links it. The only layer-stack surface this
-//! crate reaches is the snapshot/lease HINGE (read-only snapshot + lease
-//! acquire/release), modeled here by [`session::LayerStackSnapshotPort`] and
+//! crate models is the snapshot/lease HINGE (read-only snapshot + lease
+//! acquire/release), exposed here as [`session::LayerStackSnapshotPort`] and
 //! injected by `eos-daemon`. On `exit`, the overlay upperdir is DISCARDED.
 //!
 //! If `eos-occ` ever appears in this crate's `Cargo.toml`, the guarantee is
@@ -22,8 +22,8 @@
 //!   the shell-free IPv6 hardening contract (rtnetlink + `/proc/sys` writes, NO
 //!   `ip`/`sysctl` binaries).
 //! - [`session::IsolatedSession`] — the enter/exit lifecycle plus the inverted
-//!   namespace-runtime and snapshot/lease ports it orchestrates (ns-holder
-//!   spawn via `eos-ns-holder`, setns via `eos-runner`).
+//!   namespace-runtime and snapshot/lease ports it orchestrates (daemon-spawned
+//!   `eosd ns-holder` / `eosd ns-runner` children).
 //! - [`audit`] — an append-only JSONL audit sink (audit-only, no OCC).
 #![forbid(unsafe_code)]
 

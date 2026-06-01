@@ -61,7 +61,7 @@
     <li><code>AttemptStage</code> collapses to <code>PLAN</code> to <code>RUN</code> to <code>CLOSED</code>. The old <code>GENERATE</code> and <code>EVALUATE</code> stages are gone; the single <code>RUN</code> stage schedules the whole plan DAG (generators and reducers) to quiescence.</li>
     <li><code>AttemptStatus</code> is running until the close path marks the attempt <code>PASSED</code> or <code>FAILED</code>.</li>
     <li><code>AttemptFailReason</code> has only two values: <code>TASK_FAILED</code> (any plan task or the planner failed or blocked) and <code>STARTUP_FAILED</code> (the agent could not launch). The old per-role planner/generator/evaluator reasons collapse into <code>TASK_FAILED</code>.</li>
-    <li><code>AttemptOrchestratorRegistry</code> is process-local lookup for active attempts, used by launch/exhaustion and child-workflow outcome delivery (<code>RegisteredAttemptOrchestrator</code> exposes <code>start_child_workflow</code>, <code>apply_child_workflow_outcome</code>, and <code>cancel_child_workflow</code>).</li>
+    <li><code>AttemptOrchestratorRegistry</code> is process-local lookup for active attempts, used by launch and exhaustion paths. <code>RegisteredAttemptOrchestrator</code> exposes only start plus planner/generator/reducer submission failure or close entry points.</li>
   </ul>
 </div>
 <div class="diagram" aria-label="Attempt state machine">
@@ -144,7 +144,7 @@
   <div><b>quiesce</b><span><code>dag_status()</code> reports <code>all_quiescent</code>, <code>all_done</code>, and <code>any_failed_or_blocked</code> in one pass. Pending descendants of failed or blocked upstreams are unreachable but persisted; once runnable siblings finish and the DAG is quiescent, the attempt closes — <code>PASSED</code> if every plan task is <code>DONE</code>, otherwise <code>FAILED</code> with <code>TASK_FAILED</code>.</span></div>
 </div>
 <div class="edge-list">
-  <div><b>waiting workflow</b><span><code>WAITING_WORKFLOW</code> is not quiescent and not done. A parent generator waiting on a child workflow keeps the parent attempt from advancing until the child-workflow outcome is delivered.</span></div>
+  <div><b>delegated workflow</b><span><code>delegate_workflow</code> is not a plan-DAG status. A generator that delegates work keeps its own Task <code>RUNNING</code> until it later submits <code>submit_generator_outcome</code>; the RUN stage observes only persisted task statuses.</span></div>
   <div><b>unreachable descendants</b><span>Pending descendants of <code>FAILED</code> or legacy <code>BLOCKED</code> tasks remain persisted as pending not-started work. They are counted as unreachable for quiescence, not launched.</span></div>
   <div><b>failure semantics</b><span><code>GeneratorSubmission(status=&quot;failed&quot;)</code> and <code>ReducerSubmission(status=&quot;failed&quot;)</code> mark the task <code>FAILED</code>; the attempt waits for runnable siblings, then fails with <code>TASK_FAILED</code>. The stored task outcome status is <code>failed</code>, not <code>blocker</code> or <code>failure</code>.</span></div>
 </div>
@@ -162,7 +162,7 @@
 </div>
 <div class="callout good">
   <span class="label">Boundary</span>
-  The attempt harness closes only one Attempt. Iteration retry, deferred continuation, nested child workflows, and Workflow closure live one level up in the Workflow Iteration Attempt page.
+  The attempt harness closes only one Attempt. Iteration retry, deferred continuation, delegated workflow lifecycle, and Workflow closure live one level up in the Workflow Iteration Attempt page.
 </div>
 </section>
 
@@ -220,7 +220,7 @@
 <div class="evidence-grid">
   <div class="evidence-card">
     <h4>Primary Code</h4>
-    <p><code>attempt/orchestrator.py</code> owns submission entry points (planner, generator, reducer, child-workflow) and attempt close. <code>attempt/run_stage.py</code> owns the single RUN-stage plan-DAG advancement. <code>attempt/plan_dag.py</code> owns the structural gate (&ge;1 reducer + generator-only DAG ending in reducer sinks), DAG validation, and quiescence (<code>ordered_plan_tasks</code>, <code>ready_pending_plan_ids</code>, <code>dag_status</code>).</p>
+    <p><code>attempt/orchestrator.py</code> owns submission entry points (planner, generator, reducer) and attempt close. <code>attempt/run_stage.py</code> owns the single RUN-stage plan-DAG advancement. <code>attempt/plan_dag.py</code> owns the structural gate (&ge;1 reducer + generator-only DAG ending in reducer sinks), DAG validation, and quiescence (<code>ordered_plan_tasks</code>, <code>ready_pending_plan_ids</code>, <code>dag_status</code>).</p>
   </div>
   <div class="evidence-card">
     <h4>Launch Code</h4>

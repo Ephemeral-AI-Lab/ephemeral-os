@@ -52,11 +52,11 @@
 
 <p class="lead">This support page records how the Workflow wiki was built and how future agents should refresh it. It is documentation metadata only; runtime code is not owned here.</p>
 
-<section id="delegation-log" data-last-reviewed-commit="d32994314" data-evidence-paths=".agents/skills/codebase-wiki-builder/SKILL.md .agents/skills/codebase-wiki-builder/agents/graph_explorer.md .agents/skills/codebase-wiki-builder/agents/wiki_builder.md backend/src/workflow backend/src/agents/profile backend/src/tools/submission backend/src/tools/ask_helper backend/src/engine backend/src/sandbox docs/task_center_harness_and_context_engine.html">
+<section id="delegation-log" data-last-reviewed-commit="d32994314" data-evidence-paths=".agents/skills/codebase-wiki-builder/SKILL.md .agents/skills/codebase-wiki-builder/agents/graph_explorer.md .agents/skills/codebase-wiki-builder/agents/wiki_builder.md backend/src/workflow backend/src/agents/profile backend/src/tools/submission backend/src/tools/ask_helper backend/src/engine backend/src/sandbox">
 <h2>Delegation Log <a class="anchor" href="#delegation-log">#</a></h2>
 <div class="edge-list">
   <div><b>coordinator/reducer</b><span>Owned scope, page taxonomy, shared assets, source-truth merge, stale-claim decisions, overview, maintenance, and final validation.</span></div>
-  <div><b>graph explorer: workflow-iteration-attempt</b><span>Mapped WorkflowStarter, WorkflowLifecycle, IterationAttemptCoordinator, AttemptOrchestrator, generator DAG, retry, deferral, delegated child workflows, nested planning, closure routing, tests, and stale older-doc claims.</span></div>
+  <div><b>graph explorer: workflow-iteration-attempt</b><span>Mapped WorkflowStarter, WorkflowLifecycle, IterationAttemptCoordinator, AttemptOrchestrator, generator DAG, retry, deferral, delegated workflows, nested planning, closure routing, tests, and stale older-doc claims.</span></div>
   <div><b>graph explorer: context</b><span>Mapped ContextEngine, role-scoped AgentContext, XML renderer, task guidance, skill rows, profile frontmatter, and launch message rows.</span></div>
   <div><b>graph explorer: terminals</b><span>Mapped submission tools, terminal descriptor registry, the advisor helper pattern, terminal exclusivity, output validation, and engine stop behavior.</span></div>
   <div><b>graph explorer: runtime boundaries</b><span>Mapped Workflow entry bootstrap, sandbox binding, engine run launch, tool metadata, message artifacts, task_center_runner audit, and cross-module boundaries.</span></div>
@@ -98,7 +98,7 @@
     <li><code>python3 .agents/skills/codebase-wiki-builder/scripts/check_html_wiki.py docs/architecture/workflow/*.html</code></li>
     <li><code>git diff --check -- docs/architecture/workflow docs/architecture/assets/search-index.js docs/architecture/assets/nav.js docs/architecture/index.html</code></li>
     <li><code>rg -n "\\[\\[|\\]\\]|style=|&lt;style" docs/architecture/workflow</code></li>
-    <li><code>rg -n -e "WorkflowLifecycle" -e "IterationAttemptCoordinator" -e "AttemptOrchestrator" -e "DisallowNestedWorkflowHandoff" -e "ask_advisor" backend/src/workflow backend/src/tools backend/tests/unit_test</code></li>
+    <li><code>rg -n -e "WorkflowLifecycle" -e "IterationAttemptCoordinator" -e "AttemptOrchestrator" -e "delegate_workflow" -e "ask_advisor" backend/src/workflow backend/src/tools backend/tests/unit_test</code></li>
   </ul>
 </div>
 </section>
@@ -108,7 +108,7 @@
 <div class="evidence-grid">
   <div class="evidence-card">
     <h3>Workflow Iteration Attempt</h3>
-    <p>Refresh when Workflow, Iteration, Attempt, nested planning depth rules, retry, deferral, child-workflow handoff (<code>start/apply/cancel_child_workflow</code>), execution outcome projections, or store protocol methods change.</p>
+    <p>Refresh when Workflow, Iteration, Attempt, nested planning depth rules, retry, deferral, delegated workflow lifecycle tools, execution outcome projections, or store protocol methods change.</p>
   </div>
   <div class="evidence-card">
     <h3>Attempt Harness</h3>
@@ -133,16 +133,16 @@
 </div>
 </section>
 
-<section id="stale-claims" data-last-reviewed-commit="d32994314" data-evidence-paths="docs/task_center_harness_and_context_engine.html docs/architecture/agent_loops/prompt-context.html docs/architecture/tools/submission.html backend/src/workflow backend/src/tools/submission backend/src/tools/_terminals/registry.py">
+<section id="stale-claims" data-last-reviewed-commit="d32994314" data-evidence-paths="docs/architecture/agent_loops/prompt-context.html docs/architecture/tools/submission.html backend/src/workflow backend/src/tools/submission backend/src/tools/_terminals/registry.py">
 <h2>Stale Claims <a class="anchor" href="#stale-claims">#</a></h2>
 <div class="summary">
   <ul>
-    <li><code>docs/task_center_harness_and_context_engine.html</code> remains historical reference material, not the canonical current wiki. Use this module for refreshed source-backed Workflow claims.</li>
+    <li>The older standalone harness reference remains historical background, not the canonical current wiki. Use this module for refreshed source-backed Workflow claims.</li>
     <li>Current state-service naming is <code>WorkflowLifecycle</code> plus <code>IterationAttemptCoordinator</code>, not <code>GoalHandler</code>, <code>IterationManager</code>, <code>IterationFactory</code>, or <code>IterationClosureRouter</code>.</li>
-    <li>Current child-workflow handoff resumes the parent generator via <code>AttemptOrchestrator.apply_child_workflow_outcome()</code>, completing the parent task <code>DONE</code> or <code>FAILED</code>. There is no <code>WorkflowClosureReportRouter</code> / <code>*ClosureReport</code> / <code>WorkflowOrigin</code> abstraction and no <code>final_outcome</code>; do not document it as returning the parent to <code>RUNNING</code>.</li>
-    <li>The EVALUATOR role is gone - judgement is a <code>reducer</code> plan task using <code>submit_reducer_outcome(status, outcome)</code>; the verifier profile and the evaluator context recipe were removed. The five roles are planner, generator (executor), reducer, helper (advisor), and subagent (explorer).</li>
+    <li>Current delegation is non-terminal. <code>delegate_workflow</code> returns a workflow handle, leaves the parent Task <code>RUNNING</code>, and relies on the launching agent to inspect or cancel the handle before submitting its own terminal outcome. Do not document a close-time parent-task mutation path, <code>WorkflowClosureReportRouter</code>, <code>*ClosureReport</code>, <code>WorkflowOrigin</code>, or <code>final_outcome</code>.</li>
+    <li>The EVALUATOR role is gone - judgement is a <code>reducer</code> plan task using <code>submit_reducer_outcome(status, outcome)</code>; the verifier profile and the evaluator context recipe were removed. Persisted task-bearing roles are root, planner, generator (executor), and reducer; helper (advisor) and subagent (explorer) remain ephemeral profiles.</li>
     <li>An attempt is a planner-authored plan: a DAG of generator + reducer tasks (edges are <code>needs</code>), and stages are <code>PLAN -> RUN -> CLOSED</code> (no GENERATE/EVALUATE). Do not repeat <code>plan_spec</code>, <code>evaluation_criteria</code>, or separate generator/evaluator stage claims.</li>
-    <li>Nested generators still see <code>submit_workflow_handoff</code>, but <code>DisallowNestedWorkflowHandoff</code> rejects the call at submission time. Do not repeat older launch-routing claims, and do not cite the old <code>submit_execution_handoff</code> name.</li>
+    <li>Nested generators use the same non-terminal workflow tools as root/generator callers. Do not repeat older terminal-delegation or launch-routing claims, and do not cite the removed execution-submission tool name.</li>
     <li>The current helper agent uses direct launch prompt assembly through <code>ask_advisor</code>; the Context Engine is not involved in helper prompt composition.</li>
   </ul>
 </div>
@@ -154,7 +154,8 @@
   <ul>
     <li><span><strong>2026-05-26.</strong> Created the Workflow architecture module under <code>docs/architecture/workflow</code>, covering the Workflow -> Iteration -> Attempt model, planner-generator-evaluator harness, context engine, agent roles, terminal tools, the advisor helper pattern, engine/tools/sandbox dispatch paths, and maintenance rules.</span></li>
     <li><span><strong>2026-05-26.</strong> Recorded stale claims from the older standalone Workflow HTML and linked this module into the shared architecture navigation/search layer.</span></li>
-    <li><span><strong>2026-05-30.</strong> Refreshed the context-engine, bridges, and maintenance pages for the reducers + unified-outcomes redesign (commit <code>d32994314</code>): the evaluator role and verifier profile are gone, replaced by a <code>reducer</code> plan task; an attempt is a planner-authored generator + reducer DAG with <code>PLAN -> RUN -> CLOSED</code> stages; results are unified under task-bound planner/generator/reducer outcome records (<code>_core/outcomes.py</code>); the <code>&lt;dependency&gt;</code> wrapper became <code>&lt;needs&gt;</code>; and the closure-report abstraction was dropped for a direct child-workflow handoff (<code>start/apply/cancel_child_workflow</code>). Repointed evidence paths for the module renames (<code>context_engine/core.py -&gt; engine.py</code>, the consolidated <code>_core/state.py</code>, <code>attempt/deps.py -&gt; launch.py</code>, <code>stage_advancer.py -&gt; run_stage.py</code>).</span></li>
+    <li><span><strong>2026-05-30.</strong> Refreshed the context-engine, bridges, and maintenance pages for the reducers + unified-outcomes redesign (commit <code>d32994314</code>): the evaluator role and verifier profile are gone, replaced by a <code>reducer</code> plan task; an attempt is a planner-authored generator + reducer DAG with <code>PLAN -> RUN -> CLOSED</code> stages; results are unified under task-bound planner/generator/reducer outcome records (<code>_core/outcomes.py</code>); and the <code>&lt;dependency&gt;</code> wrapper became <code>&lt;needs&gt;</code>. Repointed evidence paths for the module renames (<code>context_engine/core.py -&gt; engine.py</code>, the consolidated <code>_core/state.py</code>, <code>attempt/deps.py -&gt; launch.py</code>, <code>stage_advancer.py -&gt; run_stage.py</code>).</span></li>
+    <li><span><strong>2026-06-01.</strong> Refreshed Workflow docs for the Task-first delegation model: the root request is a root Task completed by <code>submit_root_outcome</code>, Workflow decomposition is launched only by non-terminal <code>delegate_workflow</code>, parent tasks stay <code>RUNNING</code>, and old terminal-delegation / waiting-state language is no longer canonical.</span></li>
   </ul>
 </div>
 </section>

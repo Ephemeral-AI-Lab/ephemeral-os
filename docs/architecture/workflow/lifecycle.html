@@ -45,7 +45,7 @@
     <li><a href="#scope-state-chain"><span>1</span> Task + Workflow Model</a></li>
     <li><a href="#workflow-start-workflow"><span>2</span> Workflow Start</a></li>
     <li><a href="#iteration-retry-deferral"><span>3</span> Retry And Deferral</a></li>
-    <li><a href="#delegated-child-workflows"><span>4</span> Delegated Workflows</a></li>
+    <li><a href="#delegated-workflows"><span>4</span> Delegated Workflows</a></li>
     <li><a href="#nested-planning-case"><span>5</span> Nested Planning Case</a></li>
     <li><a href="#closure-routing-invariants"><span>6</span> Close And Invariants</a></li>
     <li><a href="#evidence-refresh"><span>7</span> Evidence And Refresh</a></li>
@@ -78,7 +78,7 @@
   <div><b>task-first root</b><span>The root request is not wrapped in a Workflow. <code>runtime/entry.py</code> creates the request, mints the root Task, runs the root agent, and relies on <code>submit_root_outcome</code> to finish the request.</span></div>
   <div><b>delegated workflows</b><span>Every Workflow is started from a running Task through <code>delegate_workflow</code>. The launching task id is the parent link; the parent stays running and later submits its own terminal result.</span></div>
   <div><b>persistent shape</b><span><code>WorkflowStoreProtocol</code>, <code>IterationStoreProtocol</code>, <code>AttemptStoreProtocol</code>, and <code>TaskStoreProtocol</code> are the storage boundary consumed by Workflow -> Iteration -> Attempt code.</span></div>
-  <div><b>task-bound outcomes</b><span>Results are role-discriminated task evidence (<code>_core/outcomes.py</code>): planner task outcomes for UI, and generator/reducer execution outcomes with <code>status="success|failed"</code>. Attempt, iteration, and workflow outcomes are explicit projections over execution outcomes only.</span></div>
+  <div><b>task-bound outcomes</b><span>Results are role-discriminated task evidence (<code>_core/outcomes.py</code>): generator/reducer execution outcomes with <code>status="success|failed"</code>. Attempt, iteration, and workflow outcomes are explicit projections over execution outcomes only.</span></div>
 </div>
 </section>
 
@@ -112,7 +112,7 @@
 </div>
 <div class="edge-list">
   <div><b>root request</b><span><code>runtime/entry.py</code> creates the request and root Task, then runs the root agent directly. It does not call <code>WorkflowStarter</code> for bootstrap.</span></div>
-  <div><b>delegated parent</b><span><code>WorkflowStarter._assert_parent_running_and_no_open_child()</code> rejects missing parents, non-running parents, and a second open delegated workflow for the same parent task.</span></div>
+  <div><b>delegated parent</b><span><code>WorkflowStarter</code> rejects missing parents, non-running parents, and a second open delegated workflow for the same parent task.</span></div>
   <div><b>compensation</b><span>If initial attempt start fails, <code>WorkflowStarter._compensate_failed_start()</code> closes the unstarted attempt as <code>STARTUP_FAILED</code>, cancels the iteration and workflow, and deregisters the open coordinator.</span></div>
 </div>
 </section>
@@ -161,10 +161,10 @@
 </div>
 </section>
 
-<section id="delegated-child-workflows" data-last-reviewed-commit="HEAD-plus-worktree" data-evidence-paths="backend/src/tools/workflow backend/src/workflow/starter.py backend/src/workflow/lifecycle.py backend/src/workflow/attempt/orchestrator.py backend/src/workflow/attempt/orchestrator_registry.py backend/src/workflow/_core/outcomes.py backend/src/engine/background/task_supervisor.py backend/tests/unit_test/test_tools/test_submission_main_role_terminals.py">
-<h2>Delegated Workflows <a class="anchor" href="#delegated-child-workflows">#</a></h2>
+<section id="delegated-workflows" data-last-reviewed-commit="HEAD-plus-worktree" data-evidence-paths="backend/src/tools/workflow backend/src/workflow/starter.py backend/src/workflow/lifecycle.py backend/src/workflow/attempt/orchestrator.py backend/src/workflow/attempt/orchestrator_registry.py backend/src/workflow/_core/outcomes.py backend/src/engine/background/task_supervisor.py backend/tests/unit_test/test_tools/test_submission_main_role_terminals.py">
+<h2>Delegated Workflows <a class="anchor" href="#delegated-workflows">#</a></h2>
 <p>Delegation creates another complete Workflow -> Iteration -> Attempt chain. It starts from the workflow tool context, not from a direct agent-to-agent channel. <code>delegate_workflow</code> resolves the running task and invokes <code>WorkflowStarter.start(prompt=goal, parent_task_id=current_task_id)</code>. There is no close-time mutation of the launching task.</p>
-<pre class="diagram" aria-label="Delegated child workflow diagram">
+<pre class="diagram" aria-label="Delegated workflow diagram">
 [parent task]
         |
         v
@@ -185,7 +185,7 @@
         v
 [parent agent submits its own terminal outcome]
 </pre>
-<div class="edge-list" aria-label="Delegated child workflow transitions">
+<div class="edge-list" aria-label="Delegated workflow transitions">
   <div><b>delegate</b><span>The root agent or a generator calls <code>delegate_workflow</code> while its own task is running.</span></div>
   <div><b>start</b><span><code>WorkflowStarter</code> validates the parent and inserts the delegated workflow state chain; the background supervisor records the agent-facing handle.</span></div>
   <div><b>parent gate</b><span>The no-inflight terminal hook counts outstanding workflow handles. The parent cannot submit its terminal outcome until the handle is reported or cancelled.</span></div>
@@ -214,9 +214,9 @@
     <div class="node warn"><strong>Generator T1</strong><small>running with workflow handle</small></div>
   </div>
   <div class="flow-row">
-    <div class="node info"><strong>Child Workflow G2</strong><small>delegated depth 2</small></div>
-    <div class="node"><strong>Child Iteration I2</strong><small>child scope</small></div>
-    <div class="node"><strong>Child Attempt A2</strong><small>child planner and child plan DAG</small></div>
+    <div class="node info"><strong>Delegated Workflow G2</strong><small>delegated depth 2</small></div>
+    <div class="node"><strong>Delegated Iteration I2</strong><small>delegated scope</small></div>
+    <div class="node"><strong>Delegated Attempt A2</strong><small>delegated planner and plan DAG</small></div>
     <div class="node good"><strong>Workflow outcomes</strong><small>reported to parent agent</small></div>
   </div>
 </div>

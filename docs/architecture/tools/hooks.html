@@ -167,15 +167,15 @@
 
 <section id="advisor-approval-prehook"
   data-last-reviewed-commit="b1f90277db47df4796821e86513bed67cf7afa22"
-  data-evidence-paths="backend/src/tools/_hooks/advisor_approval.py backend/src/tools/ask_helper/ask_advisor/ask_advisor.py backend/src/tools/submission/advisor/submit_advisor_feedback/submit_advisor_feedback.py backend/src/tools/submission/planner/submit_planner_outcome/submit_planner_outcome.py backend/src/tools/submission/generator/submit_generator_outcome/submit_generator_outcome.py backend/src/tools/submission/generator/submit_workflow_handoff/submit_workflow_handoff.py backend/src/tools/submission/reducer/submit_reducer_outcome/submit_reducer_outcome.py backend/tests/unit_test/test_tools/test_submission/test_advisor_approval_prehook.py">
+  data-evidence-paths="backend/src/tools/_hooks/advisor_approval.py backend/src/tools/ask_helper/ask_advisor/ask_advisor.py backend/src/tools/submission/advisor/submit_advisor_feedback/submit_advisor_feedback.py backend/src/tools/submission/planner/submit_planner_outcome/submit_planner_outcome.py backend/src/tools/submission/generator/submit_generator_outcome/submit_generator_outcome.py backend/src/tools/submission/reducer/submit_reducer_outcome/submit_reducer_outcome.py backend/src/tools/submission/root/submit_root_outcome/submit_root_outcome.py backend/tests/unit_test/test_tools/test_submission/test_advisor_approval_prehook.py">
 <h2>Advisor Approval Pre-Hook</h2>
 <p>
   The second concrete pre-hook family gates main-agent terminal submissions on an
   advisor approval. <code>AdvisorApprovalPreHook</code> in
-  <code>backend/src/tools/submission/_advisor_approval_prehook.py</code> is wired
-  per-terminal: each of the nine main-role submission tools attaches its own
-  instance via <code>pre_hooks=(AdvisorApprovalPreHook("&lt;own_name&gt;"),)</code>
-  in the <code>@tool</code> decorator. Helper / subagent terminals
+  <code>backend/src/tools/_hooks/advisor_approval.py</code> is wired
+  per-terminal: planner, generator, and reducer submission tools attach their own
+  instance via <code>pre_hooks=(..., AdvisorApprovalPreHook("&lt;own_name&gt;"))</code>
+  in the <code>@tool</code> decorator. The root terminal is gated by in-flight background work but not advisor approval. Helper / subagent terminals
   (<code>submit_advisor_feedback</code>, <code>submit_exploration_result</code>)
   intentionally omit the hook.
 </p>

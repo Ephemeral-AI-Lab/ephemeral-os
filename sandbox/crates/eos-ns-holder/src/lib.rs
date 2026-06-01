@@ -17,12 +17,11 @@
 //!
 //! # Build-time guarantee
 //!
-//! This is a true near-leaf: it links only `eos-protocol` (and only if the
-//! handshake tokens are ever shared — today they are inline byte literals, so
-//! the tokens below are owned here). It deliberately pulls in NO tokio: the
-//! single-threaded `unshare(CLONE_NEWUSER)` requirement is a kernel constraint,
-//! not a style choice. Linux-only at runtime; non-Linux hosts still compile the
-//! crate because Linux syscall bodies are gated by `cfg(target_os = "linux")`.
+//! This is a true near-leaf: the handshake tokens are owned here as inline byte
+//! literals, and it deliberately pulls in NO tokio. The single-threaded
+//! `unshare(CLONE_NEWUSER)` requirement is a kernel constraint, not a style
+//! choice. Linux-only at runtime; non-Linux hosts still compile the crate because
+//! Linux syscall bodies are gated by `cfg(target_os = "linux")`.
 //!
 //! # Handshake (1:1 with `ns_holder.py`)
 //!

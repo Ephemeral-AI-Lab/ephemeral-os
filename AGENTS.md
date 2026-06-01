@@ -22,7 +22,7 @@ links the module pages for `docs/architecture/workflow`,
 `docs/architecture/agent_loops`, `docs/architecture/tools`, and
 `docs/architecture/sandbox`; those pages are the first stop for ownership,
 workflow, invariants, diagnostics, and refresh triggers. Treat the older
-TaskCenter harness reference at `docs/task_center_harness_and_context_engine.html`
+standalone harness/context-engine HTML reference
 as historical background and stale-claim comparison material; the maintained
 cross-module map now lives under `docs/architecture`.
 
@@ -53,7 +53,7 @@ cross-module map now lives under `docs/architecture`.
   leaves the parent Task running. Agents inspect or cancel the background handle
   with `check_workflow_status` / `cancel_workflow`, then submit their own
   terminal outcome. There is no synthetic root workflow, legacy waiting status,
-  child-workflow link column, or close-time parent mutation.
+  legacy delegation link column, or close-time parent mutation.
 - `AttemptOrchestrator` is per-Attempt lifecycle machinery, not permission to
   add a global orchestration layer. Related launch, stage-advance, and close
   behavior lives under `backend/src/workflow/attempt`.

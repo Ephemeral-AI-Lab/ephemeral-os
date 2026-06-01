@@ -113,7 +113,6 @@ dependencies = [
  "eos-ephemeral",
  "eos-isolated",
  "eos-layerstack",
- "eos-ns-holder",
  "eos-occ",
  "eos-overlay",
  "eos-plugin",
@@ -125,7 +124,6 @@ dependencies = [
  "thiserror 2.0.18",
  "tokio",
  "tokio-util",
- "tracing",
 ]
 
 [[package]]
@@ -140,11 +138,7 @@ dependencies = [
 name = "eos-isolated"
 version = "0.1.0"
 dependencies = [
- "eos-layerstack",
- "eos-ns-holder",
  "eos-overlay",
- "eos-protocol",
- "eos-runner",
  "futures-util",
  "libc",
  "netlink-sys",
@@ -171,7 +165,6 @@ dependencies = [
 name = "eos-ns-holder"
 version = "0.1.0"
 dependencies = [
- "eos-protocol",
  "libc",
  "nix 0.29.0",
  "rustix 0.38.44",
@@ -182,7 +175,6 @@ dependencies = [
 name = "eos-occ"
 version = "0.1.0"
 dependencies = [
- "eos-layerstack",
  "eos-overlay",
  "eos-protocol",
  "serde",
@@ -193,13 +185,9 @@ dependencies = [
 name = "eos-overlay"
 version = "0.1.0"
 dependencies = [
- "eos-layerstack",
  "eos-protocol",
  "libc",
- "nix 0.29.0",
  "rustix 0.38.44",
- "serde",
- "serde_json",
  "sha2",
  "thiserror 2.0.18",
 ]
@@ -210,9 +198,7 @@ version = "0.1.0"
 dependencies = [
  "eos-ephemeral",
  "eos-layerstack",
- "eos-overlay",
  "eos-protocol",
- "nix 0.29.0",
  "serde_json",
  "thiserror 2.0.18",
 ]
@@ -236,7 +222,6 @@ dependencies = [
  "eos-overlay",
  "eos-protocol",
  "libc",
- "nix 0.29.0",
  "regex",
  "rustix 0.38.44",
  "serde",
@@ -1047,37 +1032,6 @@ dependencies = [
  "futures-util",
  "pin-project-lite",
  "tokio",
-]
-
-[[package]]
-name = "tracing"
-version = "0.1.44"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "63e71662fa4b2a2c3a26f570f037eb95bb1f85397f3cd8076caed2f026a6d100"
-dependencies = [
- "pin-project-lite",
- "tracing-attributes",
- "tracing-core",
-]
-
-[[package]]
-name = "tracing-attributes"
-version = "0.1.31"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7490cfa5ec963746568740651ac6781f701c9c5ea257c58e057f3ba8cf69e8da"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn",
-]
-
-[[package]]
-name = "tracing-core"
-version = "0.1.36"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "db97caf9d906fbde555dd62fa95ddba9eecfd14cb388e4f491a66d74cd5fb79a"
-dependencies = [
- "once_cell",
 ]
 
 [[package]]

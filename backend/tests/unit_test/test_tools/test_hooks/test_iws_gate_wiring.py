@@ -1,8 +1,9 @@
 """Contract: isolated-workspace gate wiring (plan G1/G2).
 
 Mirrors ``test_advisor_gate_wiring.py`` but for the new gates:
-- ``RequireNoInflightBackgroundTasks`` is on ``enter``/``exit`` and all four
-  main terminals, ordered BEFORE ``AdvisorApprovalPreHook`` on terminals, and
+- ``RequireNoInflightBackgroundTasks`` is on ``enter``/``exit`` and all main
+  terminals. Workflow terminals order it BEFORE ``AdvisorApprovalPreHook``; root
+  completion has no advisor hook; helper terminals are
   absent from the helper terminals;
 - each gate instance's ``target_tool`` equals its host tool's own name
   (guards the 9-site copy-paste against a wrong ``<own_name>`` that
@@ -27,9 +28,9 @@ from tools._hooks.require_no_inflight_background_tasks import (
 
 _MAIN_TERMINAL_NAMES = frozenset(
     {
+        "submit_root_outcome",
         "submit_planner_outcome",
         "submit_generator_outcome",
-        "submit_workflow_handoff",
         "submit_reducer_outcome",
     }
 )
@@ -66,12 +67,15 @@ def test_main_terminals_carry_bg_gate_before_advisor() -> None:
         bg = _only(hooks, RequireNoInflightBackgroundTasks)
         advisor = _only(hooks, AdvisorApprovalPreHook)
         assert len(bg) == 1, f"{name!r}: expected one bg gate, got {hooks!r}"
-        assert len(advisor) == 1, f"{name!r}: expected one advisor gate, got {hooks!r}"
         assert bg[0].target_tool == name, f"{name!r}: bg target_tool={bg[0].target_tool!r}"
-        # Ordering: the bg rejection must surface first (plan D6).
-        assert hooks.index(bg[0]) < hooks.index(advisor[0]), (
-            f"{name!r}: bg gate must precede advisor gate, got {hooks!r}"
-        )
+        if name == "submit_root_outcome":
+            assert not advisor, f"{name!r}: root terminal should not carry advisor gate"
+        else:
+            assert len(advisor) == 1, f"{name!r}: expected one advisor gate, got {hooks!r}"
+            # Ordering: the bg rejection must surface first (plan D6).
+            assert hooks.index(bg[0]) < hooks.index(advisor[0]), (
+                f"{name!r}: bg gate must precede advisor gate, got {hooks!r}"
+            )
 
 
 def test_helper_terminals_omit_bg_gate() -> None:

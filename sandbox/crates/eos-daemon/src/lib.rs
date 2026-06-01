@@ -18,7 +18,7 @@
 //!
 //! Concrete Phase 3/3T handlers own the direct LayerStack/OCC/overlay runtime
 //! paths in [`dispatcher`], [`command`], and [`isolated`]. There is no parallel
-//! daemon port-injector skeleton: write-capable shared-workspace operations
+//! daemon port-injector layer: write-capable shared-workspace operations
 //! route through the same per-root OCC service cache and single writer used by
 //! the live dispatcher.
 //!
@@ -46,9 +46,7 @@ pub(crate) mod isolated;
 pub mod server;
 
 pub use audit_buffer::{safe_emit, safe_record_phase, AuditBuffer, BufferedEvent, LaneCounters};
-pub use dispatcher::{
-    error_envelope, DispatchContext, Handler, OpTable, AUDIT_ALLOW_FLOOR_RESET_ENV,
-};
+pub use dispatcher::{error_envelope, DispatchContext, OpTable, AUDIT_ALLOW_FLOOR_RESET_ENV};
 pub use error::{DaemonError, Result};
 pub use invocation_registry::{
     ActiveCallGuard, InFlightInvocation, InFlightRegistry, DEFAULT_REAPER_INTERVAL_S,

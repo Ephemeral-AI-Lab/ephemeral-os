@@ -174,7 +174,7 @@
   <ul>
     <li>Older docs name an <code>evaluator</code> role, a <code>verifier</code> profile, and an EVALUATE attempt stage. These are gone: the evaluator is replaced by the <code>reducer</code> (a plan task), the verifier profile is removed, and stages collapse to <code>PLAN -> RUN -> CLOSED</code>.</li>
     <li>Older docs say delegated Workflow closure automatically mutates the parent generator. Current delegation returns a workflow handle; the launching agent inspects or cancels it and submits its own terminal outcome.</li>
-    <li>Older docs name terminal handoff tools and root Workflow bootstrap. Current delegation uses non-terminal <code>delegate_workflow</code>; the root request is a direct root Task completed by <code>submit_root_outcome</code>.</li>
+    <li>Older docs name terminal delegation tools and root Workflow bootstrap. Current delegation uses non-terminal <code>delegate_workflow</code>; the root request is a direct root Task completed by <code>submit_root_outcome</code>.</li>
     <li>Older docs name per-state modules (<code>attempt/state.py</code>, <code>iteration/state.py</code>, <code>workflow/state.py</code>), <code>plan_spec</code>, context packets, and recipe registries. State is consolidated in <code>_core/state.py</code>; <code>plan_spec</code> is removed; launch context is a role-scoped <code>AgentContext</code>.</li>
   </ul>
 </div>

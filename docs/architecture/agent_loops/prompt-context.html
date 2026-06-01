@@ -93,7 +93,7 @@
   </tbody>
 </table>
 <p><code>EphemeralAttemptAgentLauncher._run_launch()</code> maps those rows into the runner call. When both task guidance and skill exist, the skill row is the runner prompt and context plus guidance are initial messages. When only guidance exists, guidance is the runner prompt and context is the initial message. With no guidance, context is the prompt.</p>
-<div class="callout warn"><span class="label">Nested workflow policy</span> Planner and executor frontmatter stays broad. Nested planners are reminded that <code>deferred_goal_for_next_iteration</code> is disallowed, and nested generators are reminded that <code>submit_workflow_handoff</code> is disallowed; the actual rejection happens in submission prehooks.</div>
+<div class="callout warn"><span class="label">Nested workflow policy</span> Planner and executor frontmatter stays broad. Nested planners are reminded that <code>deferred_goal_for_next_iteration</code> is disallowed; generators delegate with non-terminal workflow tools and later submit their own terminal outcome.</div>
 </section>
 
 <section id="context-engine" data-last-reviewed-commit="HEAD" data-evidence-paths="backend/src/workflow/context_engine/context.py backend/src/workflow/context_engine/engine.py backend/src/workflow/context_engine/scope.py backend/src/workflow/context_engine/xml.py backend/src/workflow/context_engine/task_guidance.py backend/tests/unit_test/test_workflow/test_context_engine/test_agent_context.py">
@@ -103,7 +103,7 @@
   <div><b>typed document</b><span><code>AgentContext</code> owns role, sections, directive, and context limits.</span></div>
   <div><b>pure rendering</b><span><code>render_context_xml()</code> escapes text and attributes and renders multiline body tags. It never consumes pre-rendered XML blocks.</span></div>
   <div><b>no registry</b><span>There is no recipe registry, packet persistence store, tag dictionary, or token-priority compression path in the current launch context code.</span></div>
-  <div><b>lifecycle boundary</b><span>Context construction reads persisted Workflow state. It does not decide retry, deferral, child-workflow close, or attempt closure.</span></div>
+  <div><b>lifecycle boundary</b><span>Context construction reads persisted Workflow state. It does not decide retry, deferral, workflow handle delivery, or attempt closure.</span></div>
 </div>
 </section>
 
@@ -125,9 +125,9 @@
 <section id="boundaries" data-last-reviewed-commit="HEAD" data-evidence-paths="backend/src/workflow/attempt/orchestrator.py backend/src/workflow/iteration/attempt_coordinator.py backend/src/workflow/lifecycle.py backend/src/workflow/_core/outcomes.py backend/src/tools/submission backend/src/agents/profile/main">
 <h2>Boundaries <a class="anchor" href="#boundaries">#</a></h2>
 <div class="edge-list">
-  <div><b>Submission owns mutation</b><span>Planner, generator, reducer, and handoff terminals mutate Workflow state through submission contexts and orchestrators.</span></div>
+  <div><b>Submission owns mutation</b><span>Planner, generator, and reducer terminals mutate Workflow state through submission contexts and orchestrators. The root terminal mutates the root Task and request; workflow delegation tools are non-terminal.</span></div>
   <div><b>Outcome projection is explicit</b><span>Attempt outcomes contain generator/reducer execution outcomes; iteration outcomes are reducer successes from all attempts plus failed execution outcomes from the final failed attempt; workflow outcomes derive from the latest iteration.</span></div>
-  <div><b>Child workflow handoff is flattened</b><span>A parent generator waiting on a child workflow receives the child workflow outcomes directly when the child closes, with no wrapper task outcome.</span></div>
+  <div><b>Delegated workflow is explicit</b><span>A parent task that delegates work stays running, observes the workflow handle with workflow tools, and synthesizes the result into its own terminal outcome.</span></div>
 </div>
 </section>
 
