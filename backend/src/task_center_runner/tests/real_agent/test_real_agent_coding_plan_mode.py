@@ -171,8 +171,8 @@ def _assert_outcome_shape(report: Any) -> None:
     assert report.run_dir.is_dir()
     assert (report.run_dir / "run.json").is_file()
     assert (report.run_dir / "sweevo_result.json").is_file()
-    assert report.task_center_status in {"done", "failed", "cancelled"}
-    if report.task_center_status == "done" and not report.aborted_by_timeout:
+    assert report.request_status in {"done", "failed", "cancelled"}
+    if report.request_status == "done" and not report.aborted_by_timeout:
         assert report.sweevo_result.fail_to_pass_total > 0
 
 

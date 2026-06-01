@@ -32,7 +32,7 @@ def assert_focused_scenario_report(
     report: RunReport,
     case: FocusedScenarioCase,
 ) -> None:
-    assert report.task_center_status == case.expected_status, report.metrics
+    assert report.request_status == case.expected_status, report.metrics
     assert report.passed_prompt_inspections, [
         item for item in report.prompt_inspections if not item.passed
     ]

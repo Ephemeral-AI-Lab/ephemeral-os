@@ -11,7 +11,7 @@ from agents import AgentRole, get_definition
 from task import TaskStatus
 from workflow import (
     PlannerSubmission,
-    TaskCenterInvariantViolation,
+    WorkflowInvariantViolation,
     ordered_plan_tasks,
 )
 from workflow._core.primitives import generator_task_id, reducer_task_id
@@ -154,7 +154,7 @@ def build_planner_submission(
     reducers: list[ReducerInput],
     deferred_goal_for_next_iteration: str | None,
 ) -> tuple[PlannerSubmission | None, str | None]:
-    task_id = submission_context.task_center_task_id
+    task_id = submission_context.task_id
     if task_id != submission_context.attempt.planner_task_id:
         return None, "Current TaskCenter task is not this attempt's planner task."
 
@@ -200,7 +200,7 @@ def build_planner_submission(
         ordered_generators, ordered_reducers = ordered_plan_tasks(
             generator_drafts, reducer_drafts
         )
-    except TaskCenterInvariantViolation as exc:
+    except WorkflowInvariantViolation as exc:
         message = str(exc)
         if "dependency cycle" in message:
             return None, "Plan contains a dependency cycle."

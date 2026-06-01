@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import pytest
 
-from workflow._core.primitives import TaskCenterInvariantViolation
+from workflow._core.primitives import WorkflowInvariantViolation
 from workflow._core.state import (
     AttemptFailReason,
     AttemptStage,
@@ -350,7 +350,7 @@ def test_missing_generator_agent_profile_is_invariant_violation(
         needs=task_b["needs"],
     )
 
-    with pytest.raises(TaskCenterInvariantViolation):
+    with pytest.raises(WorkflowInvariantViolation):
         orchestrator.apply_generator_submission(_generator_success(attempt.id, "a"))
 
     refreshed_task_b = task_store.get_task(task_b_id)

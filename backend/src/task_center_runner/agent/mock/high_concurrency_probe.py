@@ -446,7 +446,7 @@ def _capture_metadata(tool_name: str, result: ToolResult) -> dict[str, Any]:
         "tool_name": tool_name,
         "is_error": bool(result.is_error),
         "status": str(metadata.get("status") or ""),
-        "task_id": str(metadata.get("task_center_task_id") or ""),
+        "task_id": str(metadata.get("task_id") or ""),
         "changed_path_count": len(list(metadata.get("changed_paths") or ())),
         "timings": {str(key): float(value) for key, value in timings.items()},
     }

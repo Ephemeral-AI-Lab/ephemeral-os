@@ -4,7 +4,7 @@ Drives the OCC mutation critical path past ``AUTO_SQUASH_MAX_DEPTH`` via the
 public sandbox toolkit and asserts the contract from
 ``.omc/plans/occ-layer-stack-commit-resume-auto-squash-report-20260511.md``:
 
-- ``report.task_center_status == 'done'``.
+- ``report.request_status == 'done'``.
 - ``SANDBOX_LAYER_STACK_LAYERS_SQUASHED``, ``SANDBOX_OCC_CHANGESET_RECEIVED``,
   and ``SANDBOX_OCC_CHANGES_COMMITTED`` appear in both in-memory events and
   ``sandbox_events.jsonl``.
@@ -87,7 +87,7 @@ async def test_auto_squash_commit_resume_crosses_depth_threshold(
         stores=stores,
     )
 
-    assert report.task_center_status == "done", report.metrics
+    assert report.request_status == "done", report.metrics
     assert report.passed_prompt_inspections, [
         item for item in report.prompt_inspections if not item.passed
     ]

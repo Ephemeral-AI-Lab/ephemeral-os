@@ -66,7 +66,7 @@ def _runtime_with_tasks(rows: dict[str, dict[str, object]]) -> SimpleNamespace:
 
 def _metadata_for_task(task_id: str, *, needs: list[str]) -> ExecutionMetadata:
     return ExecutionMetadata(
-        task_center_task_id=task_id,
+        task_id=task_id,
         attempt_runtime=_runtime_with_tasks({task_id: {"needs": needs}}),
     )
 
@@ -160,7 +160,7 @@ def test_prompt_inspector_accepts_current_failed_attempt_heading(
             terminals=["submit_planner_outcome", "submit_planner_outcome"],
             tool_call_limit=10,
         ),
-        metadata=ExecutionMetadata(task_center_task_id="attempt-2:planner"),
+        metadata=ExecutionMetadata(task_id="attempt-2:planner"),
     )
 
     assert inspection.checks["failed_attempts"]
@@ -198,7 +198,7 @@ def test_prompt_inspector_accepts_current_previous_iteration_sections(
             terminals=["submit_planner_outcome", "submit_planner_outcome"],
             tool_call_limit=10,
         ),
-        metadata=ExecutionMetadata(task_center_task_id="attempt-1:planner"),
+        metadata=ExecutionMetadata(task_id="attempt-1:planner"),
     )
 
     assert inspection.checks["previous_iteration_results"]
@@ -239,7 +239,7 @@ def test_prompt_inspector_accepts_planner_with_unified_terminal(
             tool_call_limit=10,
         ),
         metadata=ExecutionMetadata(
-            task_center_task_id="recursive-1:planner",
+            task_id="recursive-1:planner",
             extras={"active_terminals": ["submit_planner_outcome"]},
         ),
     )
@@ -284,7 +284,7 @@ def test_prompt_inspector_accepts_close_only_current_iteration_envelope(
             tool_call_limit=10,
         ),
         metadata=ExecutionMetadata(
-            task_center_task_id="recursive-1:planner",
+            task_id="recursive-1:planner",
             extras={"active_terminals": ["submit_planner_outcome"]},
         ),
     )

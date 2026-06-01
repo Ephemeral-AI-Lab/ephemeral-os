@@ -4,9 +4,9 @@ Before adapting the probe-heavy executor, prove the riskiest *new* path: the
 ``ScenarioLoopRunner`` + ``extras["runtime_config"]`` injection driving a real
 TaskCenter submission terminal (``submit_planner_outcome`` →
 ``submit_generator_outcome(status="success", ...)`` → ``submit_reducer_outcome``) through
-``run_pipeline`` → ``start_task_center_run`` → launcher → ``run_ephemeral_agent``,
+``run_pipeline`` → ``start_request`` → launcher → ``run_ephemeral_agent``,
 landing a closed workflow in store state. Asserted via ``graph_summary`` /
-``task_center_status`` (real store), not lifecycle events.
+``request_status`` (real store), not lifecycle events.
 """
 
 from __future__ import annotations
@@ -101,7 +101,7 @@ async def test_planner_submission_through_real_loop(
 
     # The workflow closed — which required planner + executor + reducer terminals
     # to dispatch through the real loop and mutate TaskCenter store state.
-    assert report.task_center_status == "done", report.metrics
+    assert report.request_status == "done", report.metrics
     workflows = report.graph_summary["workflows"]
     assert len(workflows) == 1, workflows
     workflow = workflows[0]

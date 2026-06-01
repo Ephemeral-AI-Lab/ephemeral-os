@@ -51,7 +51,7 @@ async def submit_root_outcome(
     if task_store is None:
         return ToolResult(output="Missing request task store.", is_error=True)
     request_id = str(context.get("request_id") or "")
-    task_id = str(context.get("task_center_task_id") or "")
+    task_id = str(context.get("task_id") or "")
     if not request_id.strip() or not task_id.strip():
         return ToolResult(output="Missing root request or task id.", is_error=True)
 
@@ -89,7 +89,7 @@ async def submit_root_outcome(
         metadata={
             "submission_kind": f"root_{'success' if status == 'success' else 'failure'}",
             "request_id": request_id,
-            "task_center_task_id": task_id,
+            "task_id": task_id,
         },
     )
 

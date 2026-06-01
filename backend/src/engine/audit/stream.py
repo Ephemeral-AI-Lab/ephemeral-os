@@ -82,10 +82,10 @@ def _node_from_stream(
             _metadata_get(metadata, "request_id"),
             request_id,
         ),
-        workflow_id=_text_or_none(_metadata_get(metadata, "task_center_workflow_id")),
-        attempt_id=_text_or_none(_metadata_get(metadata, "task_center_attempt_id")),
-        task_center_task_id=_text_or_none(
-            _metadata_get(metadata, "task_center_task_id")
+        workflow_id=_text_or_none(_metadata_get(metadata, "workflow_id")),
+        attempt_id=_text_or_none(_metadata_get(metadata, "attempt_id")),
+        task_id=_text_or_none(
+            _metadata_get(metadata, "task_id")
         ),
         agent_name=_first_text(stream_event.agent_name, _metadata_get(metadata, "agent_name")),
         agent_run_id=_first_text(stream_event.agent_run_id, _metadata_get(metadata, "agent_run_id")),

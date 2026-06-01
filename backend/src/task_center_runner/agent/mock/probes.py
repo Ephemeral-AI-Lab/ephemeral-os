@@ -75,12 +75,12 @@ class ProbeContext:
             agent_id=str(md.agent_name or "sweevo-mock"),
             run_id=str(md.get("run_id") or ""),
             agent_run_id=str(md.agent_run_id or ""),
-            task_id=str(md.get("task_center_task_id") or ""),
+            task_id=str(md.get("task_id") or ""),
             request_id=str(md.get("request_id") or ""),
-            task_center_task_id=str(md.get("task_center_task_id") or ""),
-            task_center_attempt_id=str(md.get("task_center_attempt_id") or ""),
-            task_center_workflow_id=str(md.get("task_center_workflow_id") or ""),
-            task_center_request_id=str(md.get("task_center_request_id") or ""),
+            task_id=str(md.get("task_id") or ""),
+            attempt_id=str(md.get("attempt_id") or ""),
+            workflow_id=str(md.get("workflow_id") or ""),
+            request_id=str(md.get("request_id") or ""),
             tool_id=str(md.get("tool_use_id") or ""),
         )
 

@@ -49,8 +49,8 @@ async def test_correctness_testing_scenario_runs_end_to_end(
     )
 
     # --- TaskCenter outcome -------------------------------------------
-    assert report.task_center_status == "done", (
-        f"task center status was {report.task_center_status!r}: {report.metrics}"
+    assert report.request_status == "done", (
+        f"task center status was {report.request_status!r}: {report.metrics}"
     )
     assert report.passed_prompt_inspections, [
         item for item in report.prompt_inspections if not item.passed

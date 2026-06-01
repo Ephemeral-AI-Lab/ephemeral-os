@@ -23,7 +23,7 @@ from workflow._core.outcomes import (
     to_record,
 )
 from workflow._core.primitives import (
-    TaskCenterInvariantViolation,
+    WorkflowInvariantViolation,
     planner_task_id,
 )
 from workflow._core.state import (
@@ -76,9 +76,9 @@ class AttemptOrchestrator:
         runtime = self._runtime
         attempt = self._assert_stage(AttemptStage.PLAN)
         if attempt.status != AttemptStatus.RUNNING:
-            raise TaskCenterInvariantViolation(f"Attempt {attempt.id!r} is not running")
+            raise WorkflowInvariantViolation(f"Attempt {attempt.id!r} is not running")
         if attempt.planner_task_id is not None:
-            raise TaskCenterInvariantViolation(f"Attempt {attempt.id!r} already has a planner task")
+            raise WorkflowInvariantViolation(f"Attempt {attempt.id!r} already has a planner task")
 
         task_id = planner_task_id(attempt.id)
         runtime.orchestrator_registry.register(self)
@@ -110,11 +110,11 @@ class AttemptOrchestrator:
             submission.kind == "completes"
             and submission.deferred_goal_for_next_iteration is not None
         ):
-            raise TaskCenterInvariantViolation(
+            raise WorkflowInvariantViolation(
                 "Full plans cannot set deferred_goal_for_next_iteration"
             )
         if submission.kind == "defers" and submission.deferred_goal_for_next_iteration is None:
-            raise TaskCenterInvariantViolation(
+            raise WorkflowInvariantViolation(
                 "Partial plans require deferred_goal_for_next_iteration"
             )
 
@@ -165,23 +165,23 @@ class AttemptOrchestrator:
     def _validate_planner_submission(self, planner_task_id: str) -> Attempt:
         attempt = self._assert_stage(AttemptStage.PLAN)
         if attempt.planner_task_id != planner_task_id:
-            raise TaskCenterInvariantViolation(
+            raise WorkflowInvariantViolation(
                 f"Planner submission task {planner_task_id!r} does not "
                 f"match attempt planner {attempt.planner_task_id!r}"
             )
         planner_task = self._runtime.task_store.get_task(planner_task_id)
         if planner_task is None:
-            raise TaskCenterInvariantViolation(f"Planner task {planner_task_id!r} not found")
+            raise WorkflowInvariantViolation(f"Planner task {planner_task_id!r} not found")
         assert_task_belongs_to_attempt(planner_task, attempt)
         if planner_task["role"] != AgentRole.PLANNER.value:
-            raise TaskCenterInvariantViolation(f"Task {planner_task_id!r} is not a planner task")
+            raise WorkflowInvariantViolation(f"Task {planner_task_id!r} is not a planner task")
         return attempt
 
     def _mark_generator(self, submission: GeneratorSubmission) -> None:
         attempt = self._assert_stage(AttemptStage.RUN)
         task = self._runtime.task_store.get_task(submission.task_id)
         if task is None:
-            raise TaskCenterInvariantViolation(f"Generator task {submission.task_id!r} not found")
+            raise WorkflowInvariantViolation(f"Generator task {submission.task_id!r} not found")
         assert_generator_task_for_submission(task, attempt)
         self._write_submission_status(
             task=task,
@@ -195,13 +195,13 @@ class AttemptOrchestrator:
     def _mark_reducer(self, submission: ReducerSubmission) -> None:
         attempt = self._assert_stage(AttemptStage.RUN)
         if submission.task_id not in attempt.reducer_task_ids:
-            raise TaskCenterInvariantViolation(
+            raise WorkflowInvariantViolation(
                 f"Reducer submission task {submission.task_id!r} is not a "
                 f"reducer of attempt {attempt.id!r}"
             )
         task = self._runtime.task_store.get_task(submission.task_id)
         if task is None:
-            raise TaskCenterInvariantViolation(f"Reducer task {submission.task_id!r} not found")
+            raise WorkflowInvariantViolation(f"Reducer task {submission.task_id!r} not found")
         assert_reducer_task_for_submission(task, attempt)
         self._write_submission_status(
             task=task,
@@ -223,7 +223,7 @@ class AttemptOrchestrator:
         terminal_tool_result: dict[str, Any],
     ) -> None:
         if task["status"] != TaskStatus.RUNNING.value:
-            raise TaskCenterInvariantViolation(f"{role.capitalize()} task {task_id!r} is not running")
+            raise WorkflowInvariantViolation(f"{role.capitalize()} task {task_id!r} is not running")
         if status == "success":
             task_status = TaskStatus.DONE
         elif status == "failed":
@@ -253,7 +253,7 @@ class AttemptOrchestrator:
         attempt = self._fresh_attempt()
         assert_attempt_not_closed(attempt)
         if attempt.status != AttemptStatus.RUNNING:
-            raise TaskCenterInvariantViolation(f"Attempt {attempt.id!r} is not running")
+            raise WorkflowInvariantViolation(f"Attempt {attempt.id!r} is not running")
         self._runtime.attempt_store.close(
             attempt.id,
             status=status,
@@ -292,7 +292,7 @@ class AttemptOrchestrator:
     def _fresh_attempt(self) -> Attempt:
         attempt = self._runtime.attempt_store.get(self._attempt.id)
         if attempt is None:
-            raise TaskCenterInvariantViolation(f"Attempt {self._attempt.id!r} not found")
+            raise WorkflowInvariantViolation(f"Attempt {self._attempt.id!r} not found")
         self._attempt = attempt
         return attempt
 
@@ -304,7 +304,7 @@ class AttemptOrchestrator:
 
     def _assert_submission_attempt(self, attempt_id: str) -> None:
         if attempt_id != self._attempt.id:
-            raise TaskCenterInvariantViolation(
+            raise WorkflowInvariantViolation(
                 f"Submission attempt {attempt_id!r} does not match orchestrator "
                 f"attempt {self._attempt.id!r}"
             )

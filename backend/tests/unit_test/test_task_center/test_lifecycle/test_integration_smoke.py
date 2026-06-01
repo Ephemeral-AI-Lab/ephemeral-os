@@ -13,7 +13,7 @@ from collections.abc import Callable
 
 from db.stores.attempt_store import AttemptStore
 from workflow._core.primitives import (
-    TaskCenterLifecycleConfig,
+    WorkflowLifecycleConfig,
     root_task_id,
 )
 from workflow._core.state import (
@@ -70,7 +70,7 @@ def _build(workflow_store, iteration_store, attempt_store, task_store):
         iteration_store=iteration_store,
         attempt_store=attempt_store,
         iteration_coordinators=iteration_coordinators,
-        config=TaskCenterLifecycleConfig(default_attempt_budget=2),
+        config=WorkflowLifecycleConfig(default_attempt_budget=2),
         orchestrator_registry=AttemptOrchestratorRegistry(),
         run_close_handler=lambda *, child_workflow: closed_workflows.append(child_workflow),
         task_store=task_store,

@@ -7,7 +7,7 @@ from typing import Literal
 from pydantic import BaseModel, Field, field_validator
 
 from sandbox.shared.models import Intent
-from workflow import ReducerSubmission, TaskCenterInvariantViolation
+from workflow import ReducerSubmission, WorkflowInvariantViolation
 from tools._framework.core.context import ToolExecutionContextService
 from tools._framework.core.decorator import tool
 from tools._framework.core.results import TextToolOutput, ToolResult
@@ -60,20 +60,20 @@ async def submit_reducer_outcome(
         submission_context.orchestrator.apply_reducer_submission(
             ReducerSubmission(
                 attempt_id=submission_context.attempt.id,
-                task_id=submission_context.task_center_task_id,
+                task_id=submission_context.task_id,
                 status=status,
                 outcome=outcome,
                 terminal_tool_result={},
             )
         )
-    except (AttemptSubmissionContextError, TaskCenterInvariantViolation) as exc:
+    except (AttemptSubmissionContextError, WorkflowInvariantViolation) as exc:
         return ToolResult(output=str(exc), is_error=True)
 
     return ToolResult(
         output=f"Accepted reducer {status}.",
         metadata={
             "submission_kind": f"reducer_{'success' if status == 'success' else 'failure'}",
-            "task_center_task_id": submission_context.task_center_task_id,
+            "task_id": submission_context.task_id,
             "attempt_id": submission_context.attempt.id,
         },
     )

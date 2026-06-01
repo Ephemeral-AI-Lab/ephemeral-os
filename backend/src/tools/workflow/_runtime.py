@@ -11,7 +11,7 @@ from sandbox.shared.models import Intent
 from task import TaskStatus
 from tools._framework.core.context import ToolExecutionContextService
 from tools._hooks._context import resolve_agent_id
-from workflow import AttemptDeps, TaskCenterInvariantViolation
+from workflow import AttemptDeps, WorkflowInvariantViolation
 from workflow._core.outcomes import parse_outcomes_record, to_record
 from workflow._core.state import (
     AttemptFailReason,
@@ -25,7 +25,7 @@ from workflow._core.state import (
 def require_runtime(context: ToolExecutionContextService) -> AttemptDeps:
     runtime = context.get("attempt_runtime")
     if not isinstance(runtime, AttemptDeps):
-        raise TaskCenterInvariantViolation("Missing workflow runtime.")
+        raise WorkflowInvariantViolation("Missing workflow runtime.")
     return runtime
 
 
@@ -33,14 +33,14 @@ def require_parent_task(
     context: ToolExecutionContextService,
     runtime: AttemptDeps,
 ) -> dict[str, Any]:
-    task_id = str(context.get("task_center_task_id") or "")
+    task_id = str(context.get("task_id") or "")
     if not task_id.strip():
-        raise TaskCenterInvariantViolation("Missing parent task id.")
+        raise WorkflowInvariantViolation("Missing parent task id.")
     task = runtime.task_store.get_task(task_id)
     if task is None:
-        raise TaskCenterInvariantViolation(f"Parent task {task_id!r} was not found.")
+        raise WorkflowInvariantViolation(f"Parent task {task_id!r} was not found.")
     if task.get("status") != TaskStatus.RUNNING.value:
-        raise TaskCenterInvariantViolation(
+        raise WorkflowInvariantViolation(
             f"Parent task {task_id!r} is not running; workflow delegation requires a running task."
         )
     return task

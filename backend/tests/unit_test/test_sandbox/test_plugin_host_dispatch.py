@@ -104,10 +104,10 @@ def test_call_plugin_forwards_caller_audit_fields(
     )
     ctx = _make_context()
     ctx["task_center_run_id"] = "run-1"
-    ctx["task_center_task_id"] = "task-1"
-    ctx["task_center_attempt_id"] = "attempt-1"
-    ctx["task_center_workflow_id"] = "goal-1"
-    ctx["task_center_request_id"] = "request-1"
+    ctx["task_id"] = "task-1"
+    ctx["attempt_id"] = "attempt-1"
+    ctx["workflow_id"] = "goal-1"
+    ctx["request_id"] = "request-1"
     ctx["tool_use_id"] = "tool-1"
     dispatch_payloads: list[dict[str, Any]] = []
 
@@ -141,10 +141,10 @@ def test_call_plugin_forwards_caller_audit_fields(
         "agent_run_id": "",
         "task_id": "",
         "task_center_run_id": "run-1",
-        "task_center_task_id": "task-1",
-        "task_center_attempt_id": "attempt-1",
-        "task_center_workflow_id": "goal-1",
-        "task_center_request_id": "request-1",
+        "task_id": "task-1",
+        "attempt_id": "attempt-1",
+        "workflow_id": "goal-1",
+        "request_id": "request-1",
         "tool_id": "tool-1",
     }
 

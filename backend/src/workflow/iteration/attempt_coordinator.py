@@ -28,7 +28,7 @@ from workflow._core.persistence import (
     IterationStoreProtocol,
     TaskStoreProtocol,
 )
-from workflow._core.primitives import TaskCenterInvariantViolation
+from workflow._core.primitives import WorkflowInvariantViolation
 from workflow._core.state import (
     Attempt,
     AttemptFailReason,
@@ -91,7 +91,7 @@ class IterationAttemptCoordinator:
         assert_iteration_open(iteration)
         if previous_attempt_id is None:
             if iteration.attempt_ids:
-                raise TaskCenterInvariantViolation(
+                raise WorkflowInvariantViolation(
                     f"Iteration {iteration.id!r} already has attempts; "
                     "pass previous_attempt_id to retry"
                 )
@@ -99,7 +99,7 @@ class IterationAttemptCoordinator:
         else:
             assert_iteration_has_budget(iteration)
             if iteration.latest_attempt_id != previous_attempt_id:
-                raise TaskCenterInvariantViolation(
+                raise WorkflowInvariantViolation(
                     f"previous_attempt_id {previous_attempt_id!r} is not "
                     f"the latest attempt of iteration {iteration.id!r} "
                     f"(latest={iteration.latest_attempt_id!r})"
@@ -136,7 +136,7 @@ class IterationAttemptCoordinator:
         """Entry point for the closed-attempt callback from the orchestrator."""
         attempt = self._attempt_store.get(attempt_id)
         if attempt is None:
-            raise TaskCenterInvariantViolation(f"Attempt {attempt_id!r} not found")
+            raise WorkflowInvariantViolation(f"Attempt {attempt_id!r} not found")
         iteration = self._current_iteration_snapshot()
         assert_iteration_open(iteration)
         assert_attempt_belongs_to_iteration(attempt, iteration)
@@ -152,7 +152,7 @@ class IterationAttemptCoordinator:
     def _current_iteration_snapshot(self) -> Iteration:
         iteration = self._iteration_store.get(self.iteration_id)
         if iteration is None:
-            raise TaskCenterInvariantViolation(f"Iteration {self.iteration_id!r} not found")
+            raise WorkflowInvariantViolation(f"Iteration {self.iteration_id!r} not found")
         return iteration
 
     def _insert_attempt(self, iteration: Iteration, *, attempt_sequence_no: int) -> Attempt:
@@ -279,7 +279,7 @@ class OpenIterationCoordinatorRegistry:
     def register(self, coordinator: IterationAttemptCoordinator) -> None:
         iteration_id = coordinator.iteration_id
         if iteration_id in self._by_iteration_id:
-            raise TaskCenterInvariantViolation(
+            raise WorkflowInvariantViolation(
                 f"IterationAttemptCoordinator already registered for iteration {iteration_id!r}"
             )
         self._by_iteration_id[iteration_id] = coordinator

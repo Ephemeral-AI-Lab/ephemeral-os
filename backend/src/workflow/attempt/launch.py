@@ -28,8 +28,8 @@ from workflow._core.persistence import (
     WorkflowStoreProtocol,
 )
 from workflow._core.primitives import (
-    TaskCenterInvariantViolation,
-    TaskCenterLifecycleConfig,
+    WorkflowInvariantViolation,
+    WorkflowLifecycleConfig,
 )
 from workflow._core.state import Attempt, AttemptFailReason, AttemptStatus
 from task import (
@@ -95,7 +95,7 @@ class AttemptDeps:
     agent_launcher: EphemeralAttemptAgentLauncher
     orchestrator_registry: AttemptOrchestratorRegistry
     iteration_coordinators: OpenIterationCoordinatorRegistry | None = None
-    lifecycle_config: TaskCenterLifecycleConfig = field(default_factory=TaskCenterLifecycleConfig)
+    lifecycle_config: WorkflowLifecycleConfig = field(default_factory=WorkflowLifecycleConfig)
     # When set, orchestrator + run stage route launches through the composer
     # to obtain a rendered context envelope + selected agent definition.
     # Optional so existing tests can continue without composer wiring.
@@ -105,19 +105,19 @@ class AttemptDeps:
     def request_id_for_attempt(self, attempt: Attempt) -> str:
         iteration = self.iteration_store.get(attempt.iteration_id)
         if iteration is None:
-            raise TaskCenterInvariantViolation(
+            raise WorkflowInvariantViolation(
                 f"Iteration {attempt.iteration_id!r} not found for Attempt {attempt.id!r}"
             )
         workflow = self.workflow_store.get(iteration.workflow_id)
         if workflow is None:
-            raise TaskCenterInvariantViolation(
+            raise WorkflowInvariantViolation(
                 f"Workflow {iteration.workflow_id!r} not found for Iteration {iteration.id!r}"
             )
         return workflow.request_id
 
     def require_composer(self) -> AgentEntryComposer:
         if self.composer is None:
-            raise TaskCenterInvariantViolation(
+            raise WorkflowInvariantViolation(
                 "AttemptDeps requires an AgentEntryComposer for harness "
                 "agent launches; none was wired."
             )
@@ -157,13 +157,13 @@ class EphemeralAttemptAgentLauncher:
     def launch(self, launch: AgentLaunch) -> None:
         agent_def = launch.agent_def or get_definition(launch.agent_name)
         if agent_def is None:
-            raise TaskCenterInvariantViolation(
+            raise WorkflowInvariantViolation(
                 f"TaskCenter agent definition {launch.agent_name!r} is not registered."
             )
         try:
             loop = asyncio.get_running_loop()
         except RuntimeError as exc:
-            raise TaskCenterInvariantViolation(
+            raise WorkflowInvariantViolation(
                 "TaskCenter agent launcher requires an active asyncio event loop."
             ) from exc
 
@@ -186,7 +186,7 @@ class EphemeralAttemptAgentLauncher:
     ) -> None:
         runtime = self._deps_provider()
         if runtime is None:
-            raise TaskCenterInvariantViolation("TaskCenter attempt runtime is not initialized.")
+            raise WorkflowInvariantViolation("TaskCenter attempt runtime is not initialized.")
         runner = self._runner
         if runner is None:
             from engine.api import run_ephemeral_agent
@@ -197,10 +197,10 @@ class EphemeralAttemptAgentLauncher:
         # attempt id carried on normal planner/generator/reducer launches.
         metadata = ExecutionMetadata(
             request_id=launch.request_id,
-            task_center_task_id=launch.task_id,
-            task_center_attempt_id=launch.attempt_id,
-            task_center_workflow_id=launch.workflow_id,
-            task_center_request_id=launch.workflow_id,
+            task_id=launch.task_id,
+            attempt_id=launch.attempt_id,
+            workflow_id=launch.workflow_id,
+            request_id=launch.workflow_id,
             attempt_runtime=runtime,
             composer=runtime.composer,
         )
@@ -338,7 +338,7 @@ def _require_attempt_orchestrator(
     summary: str,
 ) -> RegisteredAttemptOrchestrator | None:
     if launch.attempt_id is None:
-        raise TaskCenterInvariantViolation(
+        raise WorkflowInvariantViolation(
             f"Role {launch.role!r} exhaustion report requires launch.attempt_id."
         )
     orchestrator = runtime.orchestrator_registry.get(launch.attempt_id)
@@ -390,7 +390,7 @@ def _report_exhaustion(
             )
         )
     else:
-        raise TaskCenterInvariantViolation(f"No exhaustion reporter for role {launch.role!r}")
+        raise WorkflowInvariantViolation(f"No exhaustion reporter for role {launch.role!r}")
 
 
 # ---- AgentLaunchFactory (role-parametrized AgentLaunch factory) ------------
@@ -499,5 +499,5 @@ class AgentLaunchFactory:
     def _require_iteration(self, attempt: Attempt) -> Any:
         iteration = self.runtime.iteration_store.get(attempt.iteration_id)
         if iteration is None:
-            raise TaskCenterInvariantViolation(f"Iteration {attempt.iteration_id!r} not found")
+            raise WorkflowInvariantViolation(f"Iteration {attempt.iteration_id!r} not found")
         return iteration

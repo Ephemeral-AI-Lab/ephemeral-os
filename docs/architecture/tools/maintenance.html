@@ -83,8 +83,8 @@
                 <td>Background, subagent, ask-helper, and skills pages.</td>
               </tr>
               <tr>
-                <td>TaskCenter submission explorer</td>
-                <td><code>tools/submission</code>, TaskCenter submission policy, workflow handoff, attempts, and reducers.</td>
+                <td>Workflow submission explorer</td>
+                <td><code>tools/submission</code>, Workflow submission policy, workflow handoff, attempts, and reducers.</td>
                 <td>Submission and terminal workflow pages.</td>
               </tr>
               <tr>
@@ -118,7 +118,7 @@ rg -n "data-last-reviewed-commit=\"\"" docs/architecture/tools/*.html</pre>
         </p>
       </section>
 
-      <section id="baseline-refresh" data-last-reviewed-commit="569f12c3f39471dbaa643906856a8daf81a21a2d" data-evidence-paths="backend/src/tools;backend/src/engine/query;backend/src/engine/tool_call;backend/src/engine/background;backend/src/sandbox;backend/src/task_center;docs/architecture/tools">
+      <section id="baseline-refresh" data-last-reviewed-commit="569f12c3f39471dbaa643906856a8daf81a21a2d" data-evidence-paths="backend/src/tools;backend/src/engine/query;backend/src/engine/tool_call;backend/src/engine/background;backend/src/sandbox;backend/src/workflow;docs/architecture/tools">
         <h3>Baseline Refresh Rule</h3>
         <ol>
           <li>Run <code>git diff &lt;baseline&gt;..HEAD -- &lt;evidence paths&gt;</code> before changing a page claim.</li>

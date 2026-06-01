@@ -98,12 +98,12 @@ def test_pipeline_report_documented_fields_present() -> None:
     field_names = {f.name for f in fields(PipelineReport)}
     expected = {
         "status",
-        "task_center_run_id",
+        "request_id",
         "request_id",
         "sandbox_id",
         "instance_id",
         "run_dir",
-        "task_center_status",
+        "request_status",
         "duration_s",
         "task_count",
         "tasks_completed",

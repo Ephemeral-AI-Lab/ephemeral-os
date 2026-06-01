@@ -56,7 +56,7 @@ def test_recorder_lifecycle_does_not_leak_token(
 ) -> None:
     recorder = AuditRecorder(
         tmp_path,
-        task_center_run_id="leak-guard-run",
+        request_id="leak-guard-run",
         scenario_name="leak_guard",
         instance_id="leak-instance",
         sandbox_id="leak-sandbox",

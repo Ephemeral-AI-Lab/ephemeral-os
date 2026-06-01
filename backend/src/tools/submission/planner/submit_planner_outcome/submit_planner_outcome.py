@@ -5,7 +5,7 @@ from __future__ import annotations
 from pydantic import Field, field_validator
 
 from sandbox.shared.models import Intent
-from workflow import TaskCenterInvariantViolation
+from workflow import WorkflowInvariantViolation
 from tools._framework.core.context import ToolExecutionContextService
 from tools._framework.core.decorator import tool
 from tools._framework.core.results import TextToolOutput, ToolResult
@@ -95,7 +95,7 @@ async def submit_planner_outcome(
 
     try:
         submission_context.orchestrator.apply_plan_submission(submission)
-    except TaskCenterInvariantViolation as exc:
+    except WorkflowInvariantViolation as exc:
         return ToolResult(output=str(exc), is_error=True)
 
     return ToolResult(
@@ -106,7 +106,7 @@ async def submit_planner_outcome(
                 if kind == "defers"
                 else SUBMISSION_KIND_PLANNER_COMPLETES
             ),
-            "task_center_task_id": submission_context.task_center_task_id,
+            "task_id": submission_context.task_id,
             "attempt_id": submission_context.attempt.id,
         },
     )

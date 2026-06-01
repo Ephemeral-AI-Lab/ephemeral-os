@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from workflow._core.primitives import (
-    TaskCenterInvariantViolation,
+    WorkflowInvariantViolation,
     attempt_id_from_task_id,
 )
 
@@ -17,13 +17,13 @@ def workflow_depth(*, workflow_id: str, deps: Any) -> int:
     current = workflow_id
     while True:
         if current in seen:
-            raise TaskCenterInvariantViolation("Cycle detected while resolving workflow ancestry.")
+            raise WorkflowInvariantViolation("Cycle detected while resolving workflow ancestry.")
         seen.add(current)
         depth += 1
 
         workflow = deps.workflow_store.get(current)
         if workflow is None:
-            raise TaskCenterInvariantViolation(f"Workflow {current!r} was not found.")
+            raise WorkflowInvariantViolation(f"Workflow {current!r} was not found.")
         if workflow.parent_task_id is None:
             return depth
 
@@ -33,12 +33,12 @@ def workflow_depth(*, workflow_id: str, deps: Any) -> int:
 
         parent_attempt = deps.attempt_store.get(parent_attempt_id)
         if parent_attempt is None:
-            raise TaskCenterInvariantViolation(
+            raise WorkflowInvariantViolation(
                 f"Parent Attempt {parent_attempt_id!r} was not found."
             )
         parent_iteration = deps.iteration_store.get(parent_attempt.iteration_id)
         if parent_iteration is None:
-            raise TaskCenterInvariantViolation(
+            raise WorkflowInvariantViolation(
                 f"Parent Iteration {parent_attempt.iteration_id!r} was not found."
             )
         current = parent_iteration.workflow_id

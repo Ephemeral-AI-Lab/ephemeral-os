@@ -1,8 +1,8 @@
-"""Sandbox provisioning for one TaskCenter run.
+"""Sandbox provisioning for one top-level request.
 
-:class:`TaskCenterSandboxProvisioner` prepares the sandbox binding for entry
+:class:`RequestSandboxProvisioner` prepares the sandbox binding for entry
 startup: it either starts a caller-provided sandbox, or creates a fresh sandbox
-labelled with the run id.
+labelled with the request id.
 """
 
 from __future__ import annotations
@@ -18,7 +18,7 @@ StartSandboxFn = Callable[[str], dict[str, Any]]
 
 
 @dataclass(frozen=True, slots=True)
-class TaskCenterSandboxBinding:
+class RequestSandboxBinding:
     sandbox_id: str
     request_id: str
 
@@ -35,8 +35,8 @@ def _default_start(sandbox_id: str) -> dict[str, Any]:
     return sandbox_api.start_sandbox(sandbox_id)
 
 
-class TaskCenterSandboxProvisioner:
-    """Prepare the sandbox binding used by one TaskCenter run."""
+class RequestSandboxProvisioner:
+    """Prepare the sandbox binding used by one top-level request."""
 
     def __init__(
         self,
@@ -52,31 +52,31 @@ class TaskCenterSandboxProvisioner:
         *,
         request_id: str,
         sandbox_id: str | None,
-    ) -> TaskCenterSandboxBinding:
+    ) -> RequestSandboxBinding:
         explicit_id = str(sandbox_id or "").strip()
         if explicit_id:
             start = self._start or _default_start
             start(explicit_id)
-            return TaskCenterSandboxBinding(
+            return RequestSandboxBinding(
                 sandbox_id=explicit_id,
                 request_id=request_id,
             )
 
         create = self._create or _default_create
         info = create(
-            name=f"task-center-{uuid.uuid4().hex[:8]}",
+            name=f"request-{uuid.uuid4().hex[:8]}",
             labels={
-                "origin": "task_center",
+                "origin": "workflow",
                 "request_id": request_id,
             },
         )
         new_id = str(info.get("id") or "").strip()
         if not new_id:
             raise RuntimeError("create_sandbox returned no id")
-        return TaskCenterSandboxBinding(
+        return RequestSandboxBinding(
             sandbox_id=new_id,
             request_id=request_id,
         )
 
 
-__all__ = ["TaskCenterSandboxBinding", "TaskCenterSandboxProvisioner"]
+__all__ = ["RequestSandboxBinding", "RequestSandboxProvisioner"]

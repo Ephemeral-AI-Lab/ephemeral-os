@@ -119,7 +119,7 @@ async def test_full_stack_adversarial_runs_agent_tool_script_matrix(
         stores=stores,
     )
 
-    assert report.task_center_status == "done", report.metrics
+    assert report.request_status == "done", report.metrics
     assert report.instance_id == _DEFAULT_INSTANCE_ID
     assert report.performance_report_task is not None
     perf_path = await report.performance_report_task

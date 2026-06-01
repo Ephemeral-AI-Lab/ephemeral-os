@@ -51,12 +51,12 @@
 
 <p class="lead">
           This wiki maps every immediate tool folder plus the shared hook modules to the engine dispatch loop,
-          sandbox workspace routing, TaskCenter terminal state, and background execution behavior. It is a
+          sandbox workspace routing, Workflow terminal state, and background execution behavior. It is a
           documentation artifact only; the runtime code was not refactored as part of this pass.
         </p>
       </header>
 
-      <section id="wiki-scope" data-last-reviewed-commit="HEAD-plus-worktree" data-evidence-paths="backend/src/tools;backend/src/engine/query;backend/src/engine/tool_call;backend/src/engine/background;backend/src/sandbox;backend/src/task_center">
+      <section id="wiki-scope" data-last-reviewed-commit="HEAD-plus-worktree" data-evidence-paths="backend/src/tools;backend/src/engine/query;backend/src/engine/tool_call;backend/src/engine/background;backend/src/sandbox;backend/src/workflow">
         <h3>Scope And Ownership</h3>
         <div class="grid">
           <div class="card">
@@ -82,16 +82,16 @@
             </p>
           </div>
           <div class="card">
-            <h3>TaskCenter boundary</h3>
+            <h3>Workflow boundary</h3>
             <p>
-              Submission and terminal tools are the persistent handoff channel between agents and TaskCenter
+              Submission and terminal tools are the persistent handoff channel between agents and Workflow
               state: planner rows, generator DAG tasks, delegated workflows, evaluator outcomes, and helper outputs.
             </p>
           </div>
         </div>
       </section>
 
-      <section id="end-to-end-flow" data-last-reviewed-commit="569f12c3f39471dbaa643906856a8daf81a21a2d" data-evidence-paths="backend/src/tools/_framework;backend/src/tools/submission;backend/src/tools/sandbox;backend/src/engine/query/loop.py;backend/src/engine/tool_call/dispatch.py;backend/src/engine/tool_call/streaming.py;backend/src/sandbox/daemon/workspace_tool_dispatch.py;backend/src/task_center">
+      <section id="end-to-end-flow" data-last-reviewed-commit="569f12c3f39471dbaa643906856a8daf81a21a2d" data-evidence-paths="backend/src/tools/_framework;backend/src/tools/submission;backend/src/tools/sandbox;backend/src/engine/query/loop.py;backend/src/engine/tool_call/dispatch.py;backend/src/engine/tool_call/streaming.py;backend/src/sandbox/daemon/workspace_tool_dispatch.py;backend/src/workflow">
         <h3>End-To-End Tool Workflow</h3>
         <div class="diagram" aria-label="Tool dispatch workflow">
           <div class="flow-row">
@@ -103,7 +103,7 @@
           <div class="flow-row">
             <div class="node"><strong>Final dispatcher</strong><small>terminal exclusivity and background launch</small></div>
             <div class="node good"><strong>Tool lifecycle</strong><small>parse, hooks, body, output validation</small></div>
-            <div class="node"><strong>Domain owner</strong><small>sandbox, TaskCenter, helper, skill, background</small></div>
+            <div class="node"><strong>Domain owner</strong><small>sandbox, Workflow, helper, skill, background</small></div>
             <div class="node warn"><strong>Result owner</strong><small>continue, background poll, or terminal stop</small></div>
           </div>
         </div>
@@ -155,7 +155,7 @@
               <strong>Result ownership branches.</strong>
               <p>
                 Terminal results stop the agent loop. Background launches create <code>bg_N</code> records.
-                Sandbox tools cross into daemon workspace routing. Submission tools mutate TaskCenter state or
+                Sandbox tools cross into daemon workspace routing. Submission tools mutate Workflow state or
                 return helper metadata.
               </p>
             </div>
@@ -192,7 +192,7 @@
                 <td><code>_terminals</code></td>
                 <td><a href="terminals.html">Terminals</a></td>
                 <td>Terminal descriptor catalog and prompt rendering.</td>
-                <td>TaskCenter launch profiles, batch exclusivity, query loop stop condition.</td>
+                <td>Workflow launch profiles, batch exclusivity, query loop stop condition.</td>
               </tr>
               <tr>
                 <td><code>sandbox</code></td>
@@ -228,7 +228,7 @@
                 <td><code>submission</code></td>
                 <td><a href="submission.html">Submission</a></td>
                 <td>Planner, executor, verifier, evaluator, helper, and explorer terminal tools.</td>
-                <td>AttemptOrchestrator, WorkflowStarter, WorkflowClosureReportRouter, TaskCenter state.</td>
+                <td>AttemptOrchestrator, WorkflowStarter, WorkflowClosureReportRouter, Workflow state.</td>
               </tr>
               <tr>
                 <td><code>skills</code></td>
@@ -279,7 +279,7 @@
       <div class="page-baseline" data-page-baseline-commit="mixed">
         <strong>Maintenance Baseline</strong>
         <span>Clean sections are reviewed against their section metadata commits, including <code>569f12c3f39471dbaa643906856a8daf81a21a2d</code> and <code>6c45d4565cc912df20e5e688185982fdbe237550</code>; sections that cite currently dirty sandbox paths are marked <code>HEAD-plus-worktree</code>.</span>
-        <code>git diff 569f12c3f39471dbaa643906856a8daf81a21a2d..HEAD -- backend/src/tools backend/src/engine backend/src/sandbox backend/src/task_center docs/architecture/tools docs/architecture/assets</code>
+        <code>git diff 569f12c3f39471dbaa643906856a8daf81a21a2d..HEAD -- backend/src/tools backend/src/engine backend/src/sandbox backend/src/workflow docs/architecture/tools docs/architecture/assets</code>
       </div>
     </main>
 <script src="../assets/search-index.js"></script>

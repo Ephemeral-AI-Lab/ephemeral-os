@@ -24,7 +24,7 @@ from workflow._core.persistence import (
     IterationStoreProtocol,
     TaskStoreProtocol,
 )
-from workflow._core.primitives import TaskCenterInvariantViolation, TaskCenterLifecycleConfig
+from workflow._core.primitives import WorkflowInvariantViolation, WorkflowLifecycleConfig
 from workflow._core.state import (
     Iteration,
     IterationCreationReason,
@@ -52,7 +52,7 @@ class WorkflowLifecycle:
         iteration_store: IterationStoreProtocol,
         attempt_store: AttemptStoreProtocol,
         iteration_coordinators: OpenIterationCoordinatorRegistry,
-        config: TaskCenterLifecycleConfig,
+        config: WorkflowLifecycleConfig,
         orchestrator_registry: AttemptOrchestratorRegistry,
         orchestrator_factory: OrchestratorFactory | None = None,
         task_store: TaskStoreProtocol | None = None,
@@ -98,14 +98,14 @@ class WorkflowLifecycle:
         else:
             previous = self._iteration_store.get(workflow.iteration_ids[-1])
             if previous is None:
-                raise TaskCenterInvariantViolation(
+                raise WorkflowInvariantViolation(
                     f"Workflow {workflow_id!r} predecessor iteration "
                     f"{workflow.iteration_ids[-1]!r} not found"
                 )
             assert_predecessor_has_deferred_goal_for_next_iteration(previous)
             deferred_goal = previous.deferred_goal_for_next_iteration
             if deferred_goal is None:  # pragma: no cover - guarded by invariant above
-                raise TaskCenterInvariantViolation(
+                raise WorkflowInvariantViolation(
                     f"Iteration {previous.id!r} has no deferred goal"
                 )
             sequence_no = previous.sequence_no + 1
@@ -128,7 +128,7 @@ class WorkflowLifecycle:
     ) -> None:
         iteration = self._iteration_store.get(iteration_id)
         if iteration is None:
-            raise TaskCenterInvariantViolation(f"Iteration {iteration_id!r} not found")
+            raise WorkflowInvariantViolation(f"Iteration {iteration_id!r} not found")
         try:
             if succeeded and deferred_goal is not None:
                 next_iteration, next_coordinator = self.create_iteration_with_coordinator(
@@ -170,7 +170,7 @@ class WorkflowLifecycle:
     def _require_workflow(self, workflow_id: str) -> Workflow:
         workflow = self._workflow_store.get(workflow_id)
         if workflow is None:
-            raise TaskCenterInvariantViolation(f"Workflow {workflow_id!r} not found")
+            raise WorkflowInvariantViolation(f"Workflow {workflow_id!r} not found")
         return workflow
 
     def _append_iteration_id(self, workflow: Workflow, iteration_id: str) -> Workflow:

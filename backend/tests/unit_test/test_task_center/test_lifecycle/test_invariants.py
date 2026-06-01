@@ -29,7 +29,7 @@ from workflow._core.state import (
     Workflow,
     WorkflowStatus,
 )
-from workflow._core.primitives import TaskCenterInvariantViolation
+from workflow._core.primitives import WorkflowInvariantViolation
 
 
 def _goal(
@@ -113,7 +113,7 @@ def test_assert_goal_open_fails_for_closed():
         WorkflowStatus.FAILED,
         WorkflowStatus.CANCELLED,
     ):
-        with pytest.raises(TaskCenterInvariantViolation):
+        with pytest.raises(WorkflowInvariantViolation):
             assert_workflow_open(_goal(status=status))
 
 
@@ -121,7 +121,7 @@ def test_assert_iteration_id_unique_in_goal():
     assert_iteration_id_unique_in_workflow(
         _goal(iteration_ids=("s1", "s2")), "s3"
     )
-    with pytest.raises(TaskCenterInvariantViolation):
+    with pytest.raises(WorkflowInvariantViolation):
         assert_iteration_id_unique_in_workflow(
             _goal(iteration_ids=("s1",)), "s1"
         )
@@ -130,9 +130,9 @@ def test_assert_iteration_id_unique_in_goal():
 def test_assert_iteration_sequence_contiguous():
     assert_iteration_sequence_contiguous(_goal(iteration_ids=()), 1)
     assert_iteration_sequence_contiguous(_goal(iteration_ids=("s1",)), 2)
-    with pytest.raises(TaskCenterInvariantViolation):
+    with pytest.raises(WorkflowInvariantViolation):
         assert_iteration_sequence_contiguous(_goal(iteration_ids=("s1",)), 1)
-    with pytest.raises(TaskCenterInvariantViolation):
+    with pytest.raises(WorkflowInvariantViolation):
         assert_iteration_sequence_contiguous(_goal(iteration_ids=("s1",)), 3)
 
 
@@ -142,11 +142,11 @@ def test_assert_continuation_iteration_predecessor_requires_succeeded_with_goal(
     )
     assert_predecessor_has_deferred_goal_for_next_iteration(succeeded_with_goal)
 
-    with pytest.raises(TaskCenterInvariantViolation):
+    with pytest.raises(WorkflowInvariantViolation):
         assert_predecessor_has_deferred_goal_for_next_iteration(
             _iteration(status=IterationStatus.OPEN, deferred_goal_for_next_iteration="next")
         )
-    with pytest.raises(TaskCenterInvariantViolation):
+    with pytest.raises(WorkflowInvariantViolation):
         assert_predecessor_has_deferred_goal_for_next_iteration(
             _iteration(status=IterationStatus.SUCCEEDED, deferred_goal_for_next_iteration=None)
         )
@@ -157,7 +157,7 @@ def test_assert_continuation_iteration_predecessor_requires_succeeded_with_goal(
 
 def test_assert_iteration_open():
     assert_iteration_open(_iteration(status=IterationStatus.OPEN))
-    with pytest.raises(TaskCenterInvariantViolation):
+    with pytest.raises(WorkflowInvariantViolation):
         assert_iteration_open(_iteration(status=IterationStatus.SUCCEEDED))
 
 
@@ -166,7 +166,7 @@ def test_assert_iteration_has_budget():
     assert_iteration_has_budget(
         _iteration(attempt_budget=2, attempt_ids=("g1",))
     )
-    with pytest.raises(TaskCenterInvariantViolation):
+    with pytest.raises(WorkflowInvariantViolation):
         assert_iteration_has_budget(
             _iteration(attempt_budget=2, attempt_ids=("g1", "g2"))
         )
@@ -176,7 +176,7 @@ def test_assert_attempt_belongs_to_iteration():
     assert_attempt_belongs_to_iteration(
         _attempt(iteration_id="s1"), _iteration(iteration_id="s1")
     )
-    with pytest.raises(TaskCenterInvariantViolation):
+    with pytest.raises(WorkflowInvariantViolation):
         assert_attempt_belongs_to_iteration(
             _attempt(iteration_id="s1"), _iteration(iteration_id="s2")
         )
@@ -188,7 +188,7 @@ def test_assert_attempt_belongs_to_iteration():
 def test_assert_attempt_sequence_contiguous():
     assert_attempt_sequence_contiguous(_iteration(attempt_ids=()), 1)
     assert_attempt_sequence_contiguous(_iteration(attempt_ids=("g1",)), 2)
-    with pytest.raises(TaskCenterInvariantViolation):
+    with pytest.raises(WorkflowInvariantViolation):
         assert_attempt_sequence_contiguous(_iteration(attempt_ids=("g1",)), 1)
 
 
@@ -202,7 +202,7 @@ def test_assert_fail_reason_present_on_failure():
             fail_reason=AttemptFailReason.TASK_FAILED,
         )
     )
-    with pytest.raises(TaskCenterInvariantViolation):
+    with pytest.raises(WorkflowInvariantViolation):
         assert_fail_reason_present_on_failure(
             _attempt(status=AttemptStatus.FAILED, fail_reason=None)
         )
@@ -219,7 +219,7 @@ def test_open_iteration_coordinators_enforces_uniqueness():
 
     reg.register(_Fake())  # type: ignore[arg-type]
     assert reg.get("s1") is not None
-    with pytest.raises(TaskCenterInvariantViolation):
+    with pytest.raises(WorkflowInvariantViolation):
         reg.register(_Fake())  # type: ignore[arg-type]
     reg.deregister("s1")
     assert reg.get("s1") is None

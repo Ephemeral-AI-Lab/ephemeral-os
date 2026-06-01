@@ -2,7 +2,7 @@
 
 Ensures the Daytona provider, the production runtime store singletons, and
 the markdown-defined agent registry are all populated before
-``start_task_center_run`` runs with ``runner=None`` (real LLM). The
+``start_request`` runs with ``runner=None`` (real LLM). The
 scenario / mock path never invokes this — mocks register their own agents
 via ``task_center_runner.agent.mock.definitions.registered_mock_agents``.
 
@@ -31,7 +31,7 @@ def bootstrap_real_agent_runtime() -> None:
     """Populate sandbox provider, runtime stores, and agent registry.
 
     Idempotent via a module-level sentinel. Safe to call from any entrypoint
-    that drives :func:`workflow.start_task_center_run` with
+    that drives :func:`workflow.start_request` with
     ``runner=None`` (real LLM path).
     """
     global _BOOTSTRAPPED

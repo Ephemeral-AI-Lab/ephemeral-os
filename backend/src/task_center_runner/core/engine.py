@@ -4,7 +4,7 @@ All three run modes funnel through this one coroutine; the only mode-specific
 seams are five ``RunConfig`` fields:
 
 - ``config.runner_factory`` — mock returns a ``ScenarioLoopRunner``; real-LLM
-  and benchmark return ``None`` so ``start_task_center_run`` falls
+  and benchmark return ``None`` so ``start_request`` falls
   back to its real-agent runner.
 - ``config.bootstrap`` — only real-agent paths set this (it seeds the
   agent registry / runtime stores).
@@ -32,7 +32,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from types import SimpleNamespace
 
-from workflow import TaskCenterSandboxProvisioner, start_task_center_run
+from workflow import RequestSandboxProvisioner, start_request
 
 from config.model_config import try_get_active_model_kwargs
 from task_center_runner.audit.bus import AuditEventBus
@@ -127,9 +127,9 @@ def _default_run_dir(audit_dir: Path, ctx: RunContext) -> Path:
     return Path(audit_dir) / ctx.config.run_label / f"{utc_stamp}_{self_run_id}"
 
 
-def _default_sandbox_provisioner() -> TaskCenterSandboxProvisioner:
+def _default_sandbox_provisioner() -> RequestSandboxProvisioner:
     """Permissive provisioner that accepts the caller-supplied sandbox id."""
-    return TaskCenterSandboxProvisioner(start_fn=lambda existing_id: {"id": existing_id})
+    return RequestSandboxProvisioner(start_fn=lambda existing_id: {"id": existing_id})
 
 
 def _count_task_outcomes(task_rows: list[dict]) -> tuple[int, int, int]:
@@ -140,7 +140,7 @@ def _count_task_outcomes(task_rows: list[dict]) -> tuple[int, int, int]:
 
 
 async def run_pipeline(config: RunConfig) -> PipelineReport:
-    """Drive a single TaskCenter run end-to-end.
+    """Drive a single request end-to-end.
 
     Steps:
       1. ``config.bootstrap()`` if present (real-LLM only).
@@ -150,7 +150,7 @@ async def run_pipeline(config: RunConfig) -> PipelineReport:
       5. Resolve ``run_dir``; start the ``AuditRecorder``.
       6. Build the runner via ``config.runner_factory(ctx)``; ``None``
          signals the real-agent path.
-      7. ``start_task_center_run(...)`` + ``wait_for_idle``
+      7. ``start_request(...)`` + ``wait_for_idle``
          (optionally bounded by ``config.max_duration_s``).
       8. Capture the perf-report snapshot pre-dispose; release the
          sandbox + dispose the recorder + close owned stores in
@@ -227,14 +227,14 @@ async def run_pipeline(config: RunConfig) -> PipelineReport:
     aborted_by_timeout = False
     handle = None
     try:
-        # ``start_task_center_run`` reads only ``config.cwd`` off this
+        # ``start_request`` reads only ``config.cwd`` off this
         # object; real-LLM callers may pre-build a full
         # ``runtime.app_factory.RuntimeConfig`` and pass it via
         # ``config.extras["runtime_config"]`` if extra attributes are needed.
         runtime_cfg = config.extras.get(
             "runtime_config", SimpleNamespace(cwd=config.repo_dir)
         )
-        handle = start_task_center_run(
+        handle = start_request(
             config=runtime_cfg,
             prompt=config.entry_prompt,
             sandbox_id=lease.sandbox_id,
@@ -246,10 +246,10 @@ async def run_pipeline(config: RunConfig) -> PipelineReport:
             runner=runner,
             sandbox_provisioner=sandbox_provisioner,
         )
-        tcrid = str(handle.request_id)
-        stream_request_id = tcrid
-        recorder.bind_request_id(tcrid)
-        bus.publish(Event(type=EventType.RUN_STARTED, node=NodeId(request_id=tcrid)))
+        request_id = str(handle.request_id)
+        stream_request_id = request_id
+        recorder.bind_request_id(request_id)
+        bus.publish(Event(type=EventType.RUN_STARTED, node=NodeId(request_id=request_id)))
 
         try:
             if config.max_duration_s is not None:
@@ -266,10 +266,10 @@ async def run_pipeline(config: RunConfig) -> PipelineReport:
             await asyncio.gather(*pending, return_exceptions=True)
             await config.lifecycle.on_aborted(ctx, "timeout")
 
-        bus.publish(Event(type=EventType.RUN_COMPLETED, node=NodeId(request_id=tcrid)))
+        bus.publish(Event(type=EventType.RUN_COMPLETED, node=NodeId(request_id=request_id)))
 
-        run_row = bundle.task_store.get_run(tcrid) or {}
-        task_rows = bundle.task_store.list_tasks_for_run(tcrid)
+        request_row = bundle.task_store.get_request(request_id) or {}
+        task_rows = bundle.task_store.list_tasks_for_request(request_id)
         task_count, tasks_completed, tasks_failed = _count_task_outcomes(task_rows)
         metrics = recorder.metrics.snapshot()
         perf_snapshot = recorder.metrics.performance_snapshot()
@@ -305,7 +305,7 @@ async def run_pipeline(config: RunConfig) -> PipelineReport:
             perf_snapshot,
             daemon_audit_puller_stats=final_puller_stats,
         ),
-        name=f"perf_report:{tcrid}",
+        name=f"perf_report:{request_id}",
     )
 
     report = PipelineReport(
@@ -314,7 +314,7 @@ async def run_pipeline(config: RunConfig) -> PipelineReport:
         sandbox_id=lease.sandbox_id,
         instance_id=config.instance_id,
         run_dir=run_dir,
-        task_center_status=run_row.get("status"),
+        request_status=request_row.get("status"),
         duration_s=duration_s,
         task_count=task_count,
         tasks_completed=tasks_completed,

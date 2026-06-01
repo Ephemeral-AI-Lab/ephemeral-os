@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Workflow Iteration Attempt - EphemeralOS Architecture</title>
+<link rel="stylesheet" href="../assets/styles.css">
+</head>
+<body data-module="workflow" data-page="lifecycle" data-root="../">
+<nav class="toc">
+  <h2>EphemeralOS Architecture</h2>
+  <a class="home-link" href="../index.html">All Modules</a>
+  <div class="search-box">
+    <input type="search" placeholder="Search architecture" data-doc-search aria-label="Search architecture">
+    <div class="search-results" data-doc-search-results></div>
+  </div>
+  <h2>Modules</h2>
+  <ol class="module-list">
+    <li><a href="../sandbox/index.html" data-doc-module="sandbox">Sandbox Workspace</a></li>
+    <li><a href="../tools/index.html" data-doc-module="tools">Tools</a></li>
+    <li><a href="../agent_loops/index.html" data-doc-module="agent-loops">Agent Loops</a></li>
+    <li><a href="index.html" data-doc-module="workflow" class="active">Workflow</a></li>
+  </ol>
+  <h2>Workflow Pages</h2>
+  <ol>
+    <li><a href="index.html" data-doc-module="workflow" data-doc-section="index" data-doc-page="index.html">Overview</a></li>
+    <li><a href="lifecycle.html" data-doc-module="workflow" data-doc-section="lifecycle" data-doc-page="lifecycle.html" class="active">Workflow Iteration Attempt</a></li>
+    <li><a href="attempt-harness.html" data-doc-module="workflow" data-doc-section="attempt-harness" data-doc-page="attempt-harness.html">Attempt Harness</a></li>
+    <li><a href="context-engine.html" data-doc-module="workflow" data-doc-section="context-engine" data-doc-page="context-engine.html">Context Engine</a></li>
+    <li><a href="agent-roles.html" data-doc-module="workflow" data-doc-section="agent-roles" data-doc-page="agent-roles.html">Agent Roles</a></li>
+    <li><a href="terminal-tools.html" data-doc-module="workflow" data-doc-section="terminal-tools" data-doc-page="terminal-tools.html">Terminal Tools</a></li>
+    <li><a href="bridges.html" data-doc-module="workflow" data-doc-section="bridges" data-doc-page="bridges.html">Runtime Boundaries</a></li>
+    <li><a href="maintenance.html" data-doc-module="workflow" data-doc-section="maintenance" data-doc-page="maintenance.html">Maintenance</a></li>
+  </ol>
+</nav>
+<main>
+<div class="doc-actions">
+  <span><a href="../index.html">Architecture</a> / Workflow / Workflow Iteration Attempt</span>
+  <span class="nav-pair"><a href="index.html">Overview</a><a href="attempt-harness.html">Attempt Harness</a></span>
+</div>
+<h1>Task And Workflow Lifecycle</h1>
+<nav class="page-toc" aria-labelledby="page-toc-heading">
+  <h3 id="page-toc-heading">Contents</h3>
+  <ol>
+    <li><a href="#scope-state-chain"><span>1</span> Task + Workflow Model</a></li>
+    <li><a href="#workflow-start-workflow"><span>2</span> Workflow Start</a></li>
+    <li><a href="#iteration-retry-deferral"><span>3</span> Retry And Deferral</a></li>
+    <li><a href="#delegated-child-workflows"><span>4</span> Delegated Workflows</a></li>
+    <li><a href="#nested-planning-case"><span>5</span> Nested Planning Case</a></li>
+    <li><a href="#closure-routing-invariants"><span>6</span> Close And Invariants</a></li>
+    <li><a href="#evidence-refresh"><span>7</span> Evidence And Refresh</a></li>
+  </ol>
+</nav>
+
+<p class="lead">The request-level control plane is now Task-first. A top-level request mints a root <code>Task</code> with <code>role=root</code> and <code>workflow_id=NULL</code>, runs the root agent directly, and finishes through <code>submit_root_outcome</code>. A <code>Workflow -> Iteration -> Attempt</code> chain exists only when a running agent calls <code>delegate_workflow</code>. A Workflow owns the delegated objective, an Iteration is the bounded planning slice, and an Attempt is one planner-authored DAG of generator and reducer Task rows.</p>
+
+<section id="scope-state-chain" data-last-reviewed-commit="HEAD-plus-worktree" data-evidence-paths="backend/src/task/task.py backend/src/workflow/_core/state.py backend/src/workflow/_core/outcomes.py backend/src/workflow/submissions.py backend/src/workflow/_core/persistence.py backend/src/db/models/request.py backend/src/db/models/task.py">
+<h2>Task + Workflow Model <a class="anchor" href="#scope-state-chain">#</a></h2>
+<div class="summary">
+  <ul>
+    <li><strong>Request</strong>: owns the user prompt, root task pointer, and final status. It replaces the old run container.</li>
+    <li><strong>Task rows</strong>: store root, planner, generator, and reducer agent assignments. The root Task is identified by <code>workflow_id IS NULL</code>; workflow tasks carry <code>workflow_id</code>, <code>iteration_id</code>, and <code>attempt_id</code>.</li>
+    <li><strong>Workflow</strong>: owns a delegated objective (<code>workflow_goal</code>), ordered iteration ids, terminal status, and the launching <code>parent_task_id</code>. It stores final projected outcomes on close.</li>
+    <li><strong>Iteration</strong>: owns one iteration-local goal string (<code>iteration_goal</code>), a retry budget, and the persisted <code>outcomes</code> projection. Deferred continuation creates another Iteration under the same Workflow.</li>
+    <li><strong>Attempt</strong>: owns one planner-authored plan inside one Iteration: planner terminal submission, two task-id tuples (<code>generator_task_ids</code> + <code>reducer_task_ids</code>), and the attempt close.</li>
+  </ul>
+</div>
+<div class="diagram" aria-label="Workflow iteration attempt state chain">
+  <div class="flow-row">
+    <div class="node good"><strong>Root Task</strong><small>request prompt, direct root agent</small></div>
+    <div class="node info"><strong>Workflow</strong><small><code>OPEN</code>, <code>SUCCEEDED</code>, <code>FAILED</code>, <code>CANCELLED</code></small></div>
+    <div class="node"><strong>Iteration</strong><small>sequence, attempt budget, deferred goal, outcomes</small></div>
+    <div class="node"><strong>Attempt</strong><small><code>PLAN</code>, <code>RUN</code>, <code>CLOSED</code></small></div>
+    <div class="node good"><strong>Task rows</strong><small>planner, generators, reducers</small></div>
+  </div>
+</div>
+<div class="edge-list">
+  <div><b>task-first root</b><span>The root request is not wrapped in a Workflow. <code>runtime/entry.py</code> creates the request, mints the root Task, runs the root agent, and relies on <code>submit_root_outcome</code> to finish the request.</span></div>
+  <div><b>delegated workflows</b><span>Every Workflow is started from a running Task through <code>delegate_workflow</code>. The launching task id is the parent link; the parent stays running and later submits its own terminal result.</span></div>
+  <div><b>persistent shape</b><span><code>WorkflowStoreProtocol</code>, <code>IterationStoreProtocol</code>, <code>AttemptStoreProtocol</code>, and <code>TaskStoreProtocol</code> are the storage boundary consumed by Workflow -> Iteration -> Attempt code.</span></div>
+  <div><b>task-bound outcomes</b><span>Results are role-discriminated task evidence (<code>_core/outcomes.py</code>): planner task outcomes for UI, and generator/reducer execution outcomes with <code>status="success|failed"</code>. Attempt, iteration, and workflow outcomes are explicit projections over execution outcomes only.</span></div>
+</div>
+</section>
+
+<section id="workflow-start-workflow" data-last-reviewed-commit="HEAD-plus-worktree" data-evidence-paths="backend/src/workflow/starter.py backend/src/workflow/lifecycle.py backend/src/workflow/_core/state.py backend/src/workflow/iteration/attempt_coordinator.py backend/src/workflow/attempt/orchestrator.py backend/src/workflow/attempt/launch.py backend/src/runtime/entry.py backend/src/tools/workflow/delegate_workflow.py">
+<h2>Workflow Start <a class="anchor" href="#workflow-start-workflow">#</a></h2>
+<p><code>WorkflowStarter.start(*, prompt, parent_task_id)</code> is the prompt-to-Workflow start path for delegated work. It strips and validates the prompt, asserts the parent task is running with no open delegated workflow for that same parent, creates the Workflow row linked by <code>parent_task_id</code>, creates Iteration 1 with a registered <code>IterationAttemptCoordinator</code>, creates the initial Attempt, and starts the Attempt orchestrator. It returns a <code>StartedWorkflow</code> containing workflow, iteration, and attempt ids.</p>
+<pre class="diagram" aria-label="WorkflowStarter start workflow diagram">
+[parent task id (root or generator)]
+        |
+        v
+[WorkflowStarter.start(prompt, parent_task_id)]
+        |
+        v
+[create workflow row (parent_task_id link)]
+        |
+        v
+[create first iteration + coordinator]
+        |
+        v
+[create first attempt; parent task remains RUNNING]
+        |
+        v
+[AttemptOrchestrator launches the planner -> plan-DAG flow]
+</pre>
+<div class="edge-list" aria-label="WorkflowStarter start transitions">
+  <div><b>parent</b><span>The parent task is a running root or generator task. Tool profile gating decides which agents can call the workflow tools.</span></div>
+  <div><b>workflow</b><span><code>WorkflowLifecycle.create_workflow()</code> inserts the Workflow with <code>request_id</code>, <code>parent_task_id</code>, and <code>workflow_goal</code>.</span></div>
+  <div><b>iteration</b><span><code>create_iteration_with_coordinator()</code> inserts the workflow's next Iteration (sequence 1 here), appends it to the Workflow, and registers the open coordinator.</span></div>
+  <div><b>attempt</b><span>The coordinator inserts Attempt sequence 1 and starts the orchestrator; parent task status is unchanged.</span></div>
+  <div><b>launch</b><span><code>IterationAttemptCoordinator.start_attempt()</code> starts the <code>AttemptOrchestrator</code>, which launches the attempt planner.</span></div>
+</div>
+<div class="edge-list">
+  <div><b>root request</b><span><code>runtime/entry.py</code> creates the request and root Task, then runs the root agent directly. It does not call <code>WorkflowStarter</code> for bootstrap.</span></div>
+  <div><b>delegated parent</b><span><code>WorkflowStarter._assert_parent_running_and_no_open_child()</code> rejects missing parents, non-running parents, and a second open delegated workflow for the same parent task.</span></div>
+  <div><b>compensation</b><span>If initial attempt start fails, <code>WorkflowStarter._compensate_failed_start()</code> closes the unstarted attempt as <code>STARTUP_FAILED</code>, cancels the iteration and workflow, and deregisters the open coordinator.</span></div>
+</div>
+</section>
+
+<section id="iteration-retry-deferral" data-last-reviewed-commit="d32994314" data-evidence-paths="backend/src/workflow/_core/state.py backend/src/workflow/iteration/attempt_coordinator.py backend/src/workflow/lifecycle.py backend/src/workflow/_core/invariants.py backend/src/workflow/_core/outcomes.py backend/tests/unit_test/test_workflow/test_lifecycle/test_workflow_lifecycle.py backend/tests/unit_test/test_workflow/test_lifecycle/test_iteration_attempt_coordinator.py backend/tests/unit_test/test_workflow/test_lifecycle/test_phase04_deferred_retry.py">
+<h2>Retry And Deferral <a class="anchor" href="#iteration-retry-deferral">#</a></h2>
+<p>Retry and deferral are separate Workflow -> Iteration -> Attempt decisions. A failed Attempt can retry inside the same Iteration while budget remains. A passed Attempt can either terminally close the Workflow or carry <code>deferred_goal_for_next_iteration</code>, which closes the current Iteration as succeeded and starts the next Iteration under the same Workflow.</p>
+<div class="diagram" aria-label="Retry versus deferral workflow">
+  <div class="flow-row">
+    <div class="node"><strong>Attempt fails</strong><small><code>TASK_FAILED</code> or <code>STARTUP_FAILED</code></small></div>
+    <div class="node warn"><strong>Budget remains</strong><small><code>create_attempt(previous_attempt_id=...)</code> in same iteration</small></div>
+    <div class="node bad"><strong>Budget exhausted</strong><small>iteration <code>FAILED</code>, workflow <code>FAILED</code></small></div>
+  </div>
+  <div class="flow-row">
+    <div class="node"><strong>Attempt passes</strong><small>every plan task <code>DONE</code></small></div>
+    <div class="node good"><strong>No deferred goal</strong><small>iteration succeeds, workflow closes succeeded</small></div>
+    <div class="node info"><strong>Deferred goal</strong><small>new iteration starts from continuation text</small></div>
+  </div>
+</div>
+<pre class="diagram" aria-label="Iteration closure workflow diagram">
+[attempt closed (PASSED / FAILED)]
+        |
+        v
+[IterationAttemptCoordinator.handle_attempt_closed]
+        |
+        +--&gt; [PASSED]
+        |       -&gt; [close iteration succeeded + persist reducer outcomes]
+        |
+        +--&gt; [FAILED, budget remains]
+        |       -&gt; [create + start retry attempt]
+        |
+        +--&gt; [FAILED, budget exhausted]
+                -&gt; [close iteration failed + persist failed-task outcomes]
+</pre>
+<div class="edge-list" aria-label="Iteration closure branches">
+  <div><b>re-read</b><span><code>handle_attempt_closed()</code> re-reads state before branching and enforces ownership plus the fail-reason-present-on-failure invariant.</span></div>
+  <div><b>pass</b><span>A passing attempt closes the iteration <code>SUCCEEDED</code> via <code>close_succeeded(outcomes=...)</code>, denormalizing the iteration projection onto the row, with optional deferred-goal text.</span></div>
+  <div><b>iteration close signal</b><span>The coordinator signals close through a primitive callback <code>on_iteration_closed(iteration_id, succeeded, deferred_goal, final_attempt_id)</code> — there is no <code>TerminalSuccess</code> / <code>SuccessDeferred</code> / <code>AttemptPlanFailed</code> report DTO.</span></div>
+  <div><b>retry</b><span>Failed attempts create the next attempt while <code>attempt_count &lt; attempt_budget</code>; a startup failure during retry folds back into the same decision loop.</span></div>
+  <div><b>exhausted</b><span>Budget exhaustion closes the iteration <code>FAILED</code> via <code>set_status(..., outcomes=...)</code>, using reducer successes from all attempts plus failed execution outcomes from the final failed attempt.</span></div>
+</div>
+<div class="edge-list">
+  <div><b>deferral gate</b><span><code>WorkflowLifecycle.create_iteration_with_coordinator()</code> derives the continuation case from workflow state and requires the predecessor iteration to be <code>SUCCEEDED</code> and to have non-null deferred text.</span></div>
+  <div><b>retry scope</b><span>A failed partial-plan attempt does not propagate its deferred continuation to the iteration. The next attempt retries the same iteration scope.</span></div>
+  <div><b>workflow stays open</b><span>During delegated continuation and delegated retry, the launching task remains running and the workflow handle remains outstanding until reported or cancelled.</span></div>
+</div>
+</section>
+
+<section id="delegated-child-workflows" data-last-reviewed-commit="HEAD-plus-worktree" data-evidence-paths="backend/src/tools/workflow backend/src/workflow/starter.py backend/src/workflow/lifecycle.py backend/src/workflow/attempt/orchestrator.py backend/src/workflow/attempt/orchestrator_registry.py backend/src/workflow/_core/outcomes.py backend/src/engine/background/task_supervisor.py backend/tests/unit_test/test_tools/test_submission_main_role_terminals.py">
+<h2>Delegated Workflows <a class="anchor" href="#delegated-child-workflows">#</a></h2>
+<p>Delegation creates another complete Workflow -> Iteration -> Attempt chain. It starts from the workflow tool context, not from a direct agent-to-agent channel. <code>delegate_workflow</code> resolves the running task and invokes <code>WorkflowStarter.start(prompt=goal, parent_task_id=current_task_id)</code>. There is no close-time mutation of the launching task.</p>
+<pre class="diagram" aria-label="Delegated child workflow diagram">
+[parent task]
+        |
+        v
+[delegate_workflow]
+        |
+        v
+[WorkflowStarter.start(prompt, parent_task_id)]
+        |
+        v
+[workflow handle returned; parent stays RUNNING]
+        |
+        v
+[delegated workflow completes]
+        |
+        v
+[check_workflow_status reports outcomes]
+        |
+        v
+[parent agent submits its own terminal outcome]
+</pre>
+<div class="edge-list" aria-label="Delegated child workflow transitions">
+  <div><b>delegate</b><span>The root agent or a generator calls <code>delegate_workflow</code> while its own task is running.</span></div>
+  <div><b>start</b><span><code>WorkflowStarter</code> validates the parent and inserts the delegated workflow state chain; the background supervisor records the agent-facing handle.</span></div>
+  <div><b>parent gate</b><span>The no-inflight terminal hook counts outstanding workflow handles. The parent cannot submit its terminal outcome until the handle is reported or cancelled.</span></div>
+  <div><b>workflow-local policy</b><span>Retry stays inside the delegated iteration; deferral creates another delegated iteration and still leaves parent synthesis to the launching agent.</span></div>
+  <div><b>outcome delivery</b><span><code>check_workflow_status</code> renders final workflow outcomes and marks the handle delivered. The parent agent decides how those outcomes affect its own terminal submission.</span></div>
+</div>
+<div class="callout warn">
+  <span class="label">Resolution rule</span>
+  Workflow close persists workflow status and outcomes only. The launching Task remains the state owner for its own terminal result.
+</div>
+<div class="edge-list">
+  <div><b>single open handle</b><span><code>WorkflowStarter</code> lists open workflows for the parent task (<code>list_for_parent_task</code>) and rejects a second open delegated workflow before creating another one.</span></div>
+  <div><b>explicit cancel</b><span><code>cancel_workflow</code> marks open workflow/attempt/task state cancelled or failed and marks the handle delivered for terminal gating.</span></div>
+  <div><b>attempt progress</b><span>A parent generator advances only when it submits <code>submit_generator_outcome</code>; delegated workflow success is input evidence, not an automatic parent task transition.</span></div>
+</div>
+</section>
+
+<section id="nested-planning-case" data-last-reviewed-commit="HEAD-plus-worktree" data-evidence-paths="backend/src/workflow/_core/workflow_depth.py backend/src/tools/_hooks/disallow_nested_planner_deferral.py backend/src/workflow/starter.py backend/src/tools/workflow/delegate_workflow.py backend/src/workflow/attempt/orchestrator.py backend/src/workflow/attempt/run_stage.py backend/tests/unit_test/test_tools/test_submission_main_role_terminals.py">
+<h2>Nested Planning Case <a class="anchor" href="#nested-planning-case">#</a></h2>
+<p>The nested planning case is a delegated workflow launched from a generator task that itself belongs to another workflow. This is still the same model: the parent generator keeps running with an outstanding handle, the delegated workflow gets its own Iteration and Attempt, and the delegated planner authors its own plan DAG of generators and reducers.</p>
+<div class="diagram" aria-label="Nested planning state chain">
+  <div class="flow-row">
+    <div class="node info"><strong>Parent Workflow G1</strong><small>root depth 1</small></div>
+    <div class="node"><strong>Parent Iteration I1</strong><small>current planning slice</small></div>
+    <div class="node"><strong>Parent Attempt A1</strong><small>planner -> plan DAG (generators + reducers)</small></div>
+    <div class="node warn"><strong>Generator T1</strong><small>running with workflow handle</small></div>
+  </div>
+  <div class="flow-row">
+    <div class="node info"><strong>Child Workflow G2</strong><small>delegated depth 2</small></div>
+    <div class="node"><strong>Child Iteration I2</strong><small>child scope</small></div>
+    <div class="node"><strong>Child Attempt A2</strong><small>child planner and child plan DAG</small></div>
+    <div class="node good"><strong>Workflow outcomes</strong><small>reported to parent agent</small></div>
+  </div>
+</div>
+<pre class="diagram" aria-label="Nested planning workflow diagram">
+[parent attempt]
+        |
+        v
+[generator T1 identifies child work]
+        |
+        v
+[delegate_workflow creates workflow handle]
+        |
+        v
+[delegated workflow runs its own iteration/attempt lifecycle]
+        |
+        v
+[status check reports delegated outcomes]
+        |
+        v
+[parent submits its own terminal result]
+</pre>
+<div class="edge-list" aria-label="Nested planning transitions">
+  <div><b>delegate</b><span>Parent Attempt A1 launches generator T1, and T1 uses <code>delegate_workflow</code> to start a delegated workflow whose parent task is T1.</span></div>
+  <div><b>depth</b><span><code>workflow_depth()</code> in <code>_core/workflow_depth.py</code> walks up via <code>Workflow.parent_task_id</code> and parent task rows, counting delegated workflow ancestors.</span></div>
+  <div><b>guardrails</b><span>Nested planners cannot submit nonblank <code>deferred_goal_for_next_iteration</code>. Nested generators may still delegate work, then must report or cancel the workflow handle before their own terminal.</span></div>
+  <div><b>delegated attempt</b><span>Delegated Attempt A2 runs its own planner -> plan-DAG lifecycle (generators + reducers) before closing the workflow.</span></div>
+  <div><b>parent continuation</b><span>A1 advances only after T1 submits its own generator outcome.</span></div>
+</div>
+<div class="callout warn">
+  <span class="label">Depth rule</span>
+  A workflow launched by the root task is the first workflow depth. A workflow launched by a workflow generator is nested. Nested planning disables deferred planner submissions; generator delegation remains available but is terminal-gated through workflow handles.
+</div>
+</section>
+
+<section id="closure-routing-invariants" data-last-reviewed-commit="HEAD-plus-worktree" data-evidence-paths="backend/src/workflow/lifecycle.py backend/src/workflow/attempt/orchestrator_registry.py backend/src/workflow/attempt/orchestrator.py backend/src/workflow/_core/invariants.py backend/src/workflow/_core/primitives.py backend/src/runtime/entry.py">
+<h2>Close And Invariants <a class="anchor" href="#closure-routing-invariants">#</a></h2>
+<p>Closing is a state transition, not a report. <code>WorkflowLifecycle.handle_iteration_closed(iteration_id, succeeded, deferred_goal, final_attempt_id)</code> takes primitive args: a succeeded iteration with a deferred goal creates the next iteration; otherwise it calls <code>close_workflow()</code>, then deregisters the closed coordinator. <code>close_workflow()</code> sets workflow status and persists projected outcomes. Root request close is separate and owned by <code>submit_root_outcome</code>.</p>
+<div class="edge-list">
+  <div><b>workflow close</b><span>Workflow close no longer forks into root-vs-parent routes. It updates the workflow row and leaves parent-task synthesis to the launching agent.</span></div>
+  <div><b>root close</b><span><code>submit_root_outcome</code> marks the root Task <code>DONE</code> or <code>FAILED</code> and finishes the request as <code>done</code> or <code>failed</code>.</span></div>
+  <div><b>process-local registry</b><span>Attempt orchestrators remain process-local owners for live attempts. Missing orchestration during an active attempt is still a hard invariant violation.</span></div>
+  <div><b>handle idempotency</b><span>Workflow status delivery and cancellation are idempotent through the background workflow-handle record.</span></div>
+  <div><b>state validation</b><span><code>_core/invariants.py</code> centralizes checks for open workflows, contiguous iteration and attempt sequence numbers, stage correctness, ownership, fail-reason-present-on-failure, and valid attempt close states.</span></div>
+</div>
+<div class="summary">
+  <ul>
+    <li>Workflow -> Iteration -> Attempt policy stays in <code>WorkflowStarter</code>, <code>WorkflowLifecycle</code>, <code>IterationAttemptCoordinator</code>, and <code>AttemptOrchestrator</code>.</li>
+    <li>The context engine later reads persisted state. It does not choose retry, deferral, handle delivery, or workflow close policy.</li>
+    <li>The per-attempt orchestrator is not a global agent orchestrator; it only advances one attempt's planner, generators, and reducers.</li>
+  </ul>
+</div>
+</section>
+
+<section id="evidence-refresh" data-last-reviewed-commit="HEAD-plus-worktree" data-evidence-paths="backend/src/task/task.py backend/src/runtime/entry.py backend/src/workflow/_core/state.py backend/src/workflow/starter.py backend/src/workflow/lifecycle.py backend/src/workflow/iteration/attempt_coordinator.py backend/src/workflow/_core/outcomes.py backend/src/workflow/_core/workflow_depth.py backend/src/workflow/submissions.py backend/src/workflow/_core/persistence.py backend/tests/unit_test/test_tools/test_submission_main_role_terminals.py">
+<h2>Evidence And Refresh <a class="anchor" href="#evidence-refresh">#</a></h2>
+<div class="evidence-grid">
+  <div class="evidence-card">
+    <h4>Primary Code</h4>
+    <p><code>task/task.py</code>, <code>runtime/entry.py</code>, <code>workflow/starter.py</code>, <code>workflow/lifecycle.py</code>, <code>iteration/attempt_coordinator.py</code>, and <code>_core/state.py</code> own the Task and Workflow -> Iteration -> Attempt transitions described here. <code>_core/outcomes.py</code> owns the unified result projections.</p>
+  </div>
+  <div class="evidence-card">
+    <h4>Verification Anchors</h4>
+    <p><code>test_submission_main_role_terminals.py</code> covers current generator/reducer terminals, non-terminal delegation, status delivery, cancellation, and nested planner guardrails.</p>
+  </div>
+  <div class="evidence-card">
+    <h4>Stale Claim Watch</h4>
+    <p>Refresh this page if root request execution moves out of <code>runtime/entry.py</code>, if workflow-handle delivery changes, if the iteration <code>outcomes</code> projection changes, or if retry moves out of <code>IterationAttemptCoordinator</code>.</p>
+  </div>
+</div>
+<div class="summary">
+  <ul>
+    <li>Refresh command shape: <code>git diff HEAD -- backend/src/task backend/src/runtime backend/src/workflow backend/src/tools/workflow backend/src/tools/submission</code></li>
+    <li>Focused verification: <code>uv run pytest backend/tests/unit_test/test_tools/test_submission_main_role_terminals.py -q</code></li>
+  </ul>
+</div>
+</section>
+
+<div class="page-baseline" data-page-baseline-commit="HEAD-plus-worktree">
+  <strong>Maintenance baseline</strong>
+  <span>Task and Workflow lifecycle sections reviewed against the current worktree.</span>
+  <code>git diff d32994314..HEAD -- &lt;section data-evidence-paths&gt;</code>
+</div>
+<div class="page-footer-nav"><span><a href="index.html">Overview</a></span><span><a href="attempt-harness.html">Attempt Harness</a></span></div>
+</main>
+<script src="../assets/search-index.js"></script>
+<script src="../assets/nav.js"></script>
+</body>
+</html>

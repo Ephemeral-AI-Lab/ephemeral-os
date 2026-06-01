@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Protocol
 
-from workflow._core.primitives import TaskCenterInvariantViolation
+from workflow._core.primitives import WorkflowInvariantViolation
 
 if TYPE_CHECKING:  # pragma: no cover - typing-only
     from workflow.submissions import (
@@ -46,7 +46,7 @@ class AttemptOrchestratorRegistry:
         attempt_id = orchestrator.attempt_id
         current = self._by_attempt_id.get(attempt_id)
         if current is not None and current is not orchestrator:
-            raise TaskCenterInvariantViolation(
+            raise WorkflowInvariantViolation(
                 f"AttemptOrchestrator already registered for attempt {attempt_id!r}"
             )
         self._by_attempt_id[attempt_id] = orchestrator
@@ -57,7 +57,7 @@ class AttemptOrchestratorRegistry:
     def get_or_raise(self, attempt_id: str) -> RegisteredAttemptOrchestrator:
         orchestrator = self.get(attempt_id)
         if orchestrator is None:
-            raise TaskCenterInvariantViolation(
+            raise WorkflowInvariantViolation(
                 f"No active AttemptOrchestrator for attempt {attempt_id!r}"
             )
         return orchestrator

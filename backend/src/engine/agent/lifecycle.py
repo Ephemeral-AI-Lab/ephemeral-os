@@ -165,10 +165,10 @@ async def run_ephemeral_agent(
     if extra_tool_metadata:
         agent.query_context.tool_metadata.update(extra_tool_metadata)
     if task_id:
-        agent.query_context.task_center_task_id = task_id
-        agent.query_context.tool_metadata.task_center_task_id = task_id
+        agent.query_context.task_id = task_id
+        agent.query_context.tool_metadata.task_id = task_id
     # ``agent_run_id`` is always minted now; the task id rides its own
-    # dedicated ``task_center_task_id`` field above, so this carries the
+    # dedicated ``task_id`` field above, so this carries the
     # agent-run identity truthfully.
     agent.query_context.tool_metadata.agent_run_id = agent_run_id
     agent.query_context.agent_run_id = agent_run_id

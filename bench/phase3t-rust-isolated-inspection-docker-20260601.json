@@ -10,7 +10,7 @@
     "remote_sha256": "81eb221542666647a3b0a80a0ed254dff674a0ead27d814bfcea26bd14996d53",
     "size_bytes": 4652464,
     "source_path": "sandbox/dist/eosd-linux-amd64",
-    "upload_time_ms": 443.311458977405,
+    "upload_time_ms": 427.60120902676135,
     "version": {
       "exit_code": 0,
       "stderr": "",
@@ -19,12 +19,12 @@
   },
   "audit_path": "/tmp/eos-iws-inspection-audit.jsonl",
   "created_container": true,
-  "daemon_spawn_ms": 379.46187501074746,
+  "daemon_spawn_ms": 371.1211659829132,
   "endpoint": {
     "auth_token_present": true,
     "host": "127.0.0.1",
     "internal_port": 37657,
-    "port": 57624
+    "port": 59781
   },
   "gate_pass": true,
   "host": {
@@ -43,19 +43,19 @@
     "created": true,
     "success": true,
     "timings": {
-      "api.workspace_base.total_s": 1.08231325,
+      "api.workspace_base.total_s": 1.011016708,
       "runtime.boot_to_dispatch_s": 0.0,
       "runtime.dispatch_s": 0.0,
       "runtime.read_request_s": 0.0,
-      "workspace_base.collect_s": 0.544350709,
+      "workspace_base.collect_s": 0.492987667,
       "workspace_base.inventory.bytes": 135087287.0,
       "workspace_base.inventory.dirs": 53.0,
       "workspace_base.inventory.files": 517.0,
       "workspace_base.inventory.symlinks": 0.0,
-      "workspace_base.prepare_stack_s": 0.001362792,
-      "workspace_base.write_binding_s": 0.00020175,
-      "workspace_base.write_layer_s": 0.535023542,
-      "workspace_base.write_manifest_s": 0.0003905
+      "workspace_base.prepare_stack_s": 0.001448791,
+      "workspace_base.write_binding_s": 0.000192958,
+      "workspace_base.write_layer_s": 0.515069,
+      "workspace_base.write_manifest_s": 0.000384125
     }
   },
   "mode": "docker-phase3t-isolated-inspection",
@@ -113,15 +113,15 @@
       "runtime.boot_to_dispatch_s": 0.0,
       "runtime.dispatch_s": 0.0,
       "runtime.read_request_s": 0.0,
-      "runtime.ready.control_plane_s": 0.002391584,
-      "runtime.ready.data_plane_s": 1.25e-06,
-      "runtime.ready.mutation_gate_s": 1.209e-06,
-      "runtime.ready.total_s": 0.002409
+      "runtime.ready.control_plane_s": 0.002078834,
+      "runtime.ready.data_plane_s": 1.542e-06,
+      "runtime.ready.mutation_gate_s": 1.709e-06,
+      "runtime.ready.total_s": 0.002093042
     },
-    "uptime_s": 1.093934959
+    "uptime_s": 1.023354792
   },
-  "run_id": "local-8aa76f45e058",
-  "sandbox_id": "fc2a57c49071f7d2a6bc632566debadc98874a38a77e14a6df0cc1e3812ec17b",
+  "run_id": "local-7d7cbbea6e84",
+  "sandbox_id": "2cde09374b87789230b91e2286180dc428d94b2087786a71c5bb65a260936771",
   "scenario": {
     "checks": {
       "active_leases_zero": true,
@@ -205,72 +205,87 @@
           {
             "payload": {
               "agent_id": "phase3t-isolated-inspection",
-              "lease_id": "000000000000000018b4f6d492582a130000000000000000",
+              "lease_id": "000000000000000018b4f763d2bc21f50000000000000000",
               "lowerdir_layer_count": 1,
               "manifest_root_hash": "f071e2d096b352b67daeb0f2e2f6dc503335246a98e209fa9f199d06314b5cb5",
               "manifest_version": 1,
               "ns_ip": "10.244.0.2",
               "tree-copy": false,
-              "upperdir": "/eos/mount/runtime/isolated-workspace/18b4f6d49264db960002/upper",
-              "veth_host_name": "eos-iws-18b4f6h",
-              "veth_ns_name": "eos-iws-18b4f6n",
-              "workdir": "/eos/mount/runtime/isolated-workspace/18b4f6d49264db960002/work",
-              "workspace_handle_id": "18b4f6d49264db960002",
+              "upperdir": "/eos/mount/runtime/isolated-workspace/18b4f763d2c9976f0002/upper",
+              "veth_host_name": "eos-iws-18b4f7h",
+              "veth_ns_name": "eos-iws-18b4f7n",
+              "workdir": "/eos/mount/runtime/isolated-workspace/18b4f763d2c9976f0002/work",
+              "workspace_handle_id": "18b4f763d2c9976f0002",
               "workspace_root": "/testbed"
             },
-            "ts": 1780319145.6871424,
+            "ts": 1780319760.9741652,
             "type": "sandbox_isolated_workspace_enter"
           },
           {
             "payload": {
               "agent_id": "phase3t-isolated-inspection",
               "changed_paths": [],
-              "duration_s": 0.077405791,
+              "duration_s": 0.082399083,
               "exit_code": 0,
               "published": false,
               "status": "ok",
-              "workspace_handle_id": "18b4f6d49264db960002"
+              "workspace_handle_id": "18b4f763d2c9976f0002"
             },
-            "ts": 1780319146.1641955,
+            "ts": 1780319761.4336622,
             "type": "sandbox_isolated_workspace_tool_call"
           },
           {
             "payload": {
-              "agent_id": "phase3t-port3000-b",
-              "lease_id": "000000000000000018b4f6d4b62605390000000000000001",
+              "agent_id": "phase3t-port3000-a",
+              "lease_id": "000000000000000018b4f763f70873740000000000000001",
               "lowerdir_layer_count": 1,
               "manifest_root_hash": "f071e2d096b352b67daeb0f2e2f6dc503335246a98e209fa9f199d06314b5cb5",
               "manifest_version": 1,
               "ns_ip": "10.244.0.3",
               "tree-copy": false,
-              "upperdir": "/eos/mount/runtime/isolated-workspace/18b4f6d4b626f3570004/upper",
-              "veth_host_name": "eos-iws-18b4f6h",
-              "veth_ns_name": "eos-iws-18b4f6n",
-              "workdir": "/eos/mount/runtime/isolated-workspace/18b4f6d4b626f3570004/work",
-              "workspace_handle_id": "18b4f6d4b626f3570004",
+              "upperdir": "/eos/mount/runtime/isolated-workspace/18b4f763f708a0b40004/upper",
+              "veth_host_name": "eos-iws-18b4f7h",
+              "veth_ns_name": "eos-iws-18b4f7n",
+              "workdir": "/eos/mount/runtime/isolated-workspace/18b4f763f708a0b40004/work",
+              "workspace_handle_id": "18b4f763f708a0b40004",
               "workspace_root": "/testbed"
             },
-            "ts": 1780319146.2577825,
+            "ts": 1780319761.5208578,
             "type": "sandbox_isolated_workspace_enter"
           },
           {
             "payload": {
-              "agent_id": "phase3t-port3000-a",
-              "lease_id": "000000000000000018b4f6d4bb88eb980000000000000002",
+              "agent_id": "phase3t-port3000-b",
+              "lease_id": "000000000000000018b4f763fc121a550000000000000002",
               "lowerdir_layer_count": 1,
               "manifest_root_hash": "f071e2d096b352b67daeb0f2e2f6dc503335246a98e209fa9f199d06314b5cb5",
               "manifest_version": 1,
               "ns_ip": "10.244.0.4",
               "tree-copy": false,
-              "upperdir": "/eos/mount/runtime/isolated-workspace/18b4f6d4bb8940110006/upper",
-              "veth_host_name": "eos-iws-18b4f6h",
-              "veth_ns_name": "eos-iws-18b4f6n",
-              "workdir": "/eos/mount/runtime/isolated-workspace/18b4f6d4bb8940110006/work",
-              "workspace_handle_id": "18b4f6d4bb8940110006",
+              "upperdir": "/eos/mount/runtime/isolated-workspace/18b4f763fc1258ac0006/upper",
+              "veth_host_name": "eos-iws-18b4f7h",
+              "veth_ns_name": "eos-iws-18b4f7n",
+              "workdir": "/eos/mount/runtime/isolated-workspace/18b4f763fc1258ac0006/work",
+              "workspace_handle_id": "18b4f763fc1258ac0006",
               "workspace_root": "/testbed"
             },
-            "ts": 1780319146.350787,
+            "ts": 1780319761.6190236,
             "type": "sandbox_isolated_workspace_enter"
+          },
+          {
+            "payload": {
+              "agent_id": "phase3t-port3000-a",
+              "changed_paths": [
+                "served-phase3t-port3000-a.html"
+              ],
+              "duration_s": 0.22179125,
+              "exit_code": 0,
+              "published": false,
+              "status": "ok",
+              "workspace_handle_id": "18b4f763f708a0b40004"
+            },
+            "ts": 1780319762.1546304,
+            "type": "sandbox_isolated_workspace_tool_call"
           },
           {
             "payload": {
@@ -278,13 +293,13 @@
               "changed_paths": [
                 "served-phase3t-port3000-b.html"
               ],
-              "duration_s": 0.220826625,
+              "duration_s": 0.223271834,
               "exit_code": 0,
               "published": false,
               "status": "ok",
-              "workspace_handle_id": "18b4f6d4b626f3570004"
+              "workspace_handle_id": "18b4f763fc1258ac0006"
             },
-            "ts": 1780319146.8852456,
+            "ts": 1780319762.1560981,
             "type": "sandbox_isolated_workspace_tool_call"
           },
           {
@@ -293,28 +308,13 @@
               "changed_paths": [
                 "served-phase3t-port3000-a.html"
               ],
-              "duration_s": 0.22222625,
+              "duration_s": 0.184308584,
               "exit_code": 0,
               "published": false,
               "status": "ok",
-              "workspace_handle_id": "18b4f6d4bb8940110006"
+              "workspace_handle_id": "18b4f763f708a0b40004"
             },
-            "ts": 1780319146.8854647,
-            "type": "sandbox_isolated_workspace_tool_call"
-          },
-          {
-            "payload": {
-              "agent_id": "phase3t-port3000-a",
-              "changed_paths": [
-                "served-phase3t-port3000-a.html"
-              ],
-              "duration_s": 0.214096375,
-              "exit_code": 0,
-              "published": false,
-              "status": "ok",
-              "workspace_handle_id": "18b4f6d4bb8940110006"
-            },
-            "ts": 1780319147.4810889,
+            "ts": 1780319762.6886022,
             "type": "sandbox_isolated_workspace_tool_call"
           },
           {
@@ -324,33 +324,33 @@
                 "active_leases_after": 2,
                 "agent_registered_after": false,
                 "cgroup_exists_after": false,
-                "cgroup_path": "/sys/fs/cgroup/eos-iws-18b4f6d4bb8940110006",
+                "cgroup_path": "/sys/fs/cgroup/eos-iws-18b4f763f708a0b40004",
                 "control_fd_was_open": true,
                 "handle_registered_after": false,
                 "holder_kill_error": null,
-                "holder_pid": 256,
+                "holder_pid": 251,
                 "lease_released": true,
                 "mountinfo_reference_count_after": 0,
                 "ns_fd_count": 4,
                 "open_agent_count_after": 2,
                 "open_handle_count_after": 2,
                 "readiness_fd_was_open": true,
-                "scratch_dir": "/eos/mount/runtime/isolated-workspace/18b4f6d4bb8940110006",
+                "scratch_dir": "/eos/mount/runtime/isolated-workspace/18b4f763f708a0b40004",
                 "scratch_exists_after": false,
                 "upperdir_exists_after": false,
-                "veth_host_name": "eos-iws-18b4f6h",
-                "veth_ns_name": "eos-iws-18b4f6n",
+                "veth_host_name": "eos-iws-18b4f7h",
+                "veth_ns_name": "eos-iws-18b4f7n",
                 "workdir_exists_after": false
               },
-              "lifetime_s": 1.3156306679999998,
+              "lifetime_s": 1.345086168,
               "phases_ms": {},
               "reason": "explicit",
               "scratch_removed": true,
-              "total_ms": 37.773832999999996,
+              "total_ms": 37.488125,
               "upperdir_bytes_discarded": 29,
-              "workspace_handle_id": "18b4f6d4bb8940110006"
+              "workspace_handle_id": "18b4f763f708a0b40004"
             },
-            "ts": 1780319147.573892,
+            "ts": 1780319762.7819188,
             "type": "sandbox_isolated_workspace_exit"
           },
           {
@@ -360,176 +360,176 @@
                 "active_leases_after": 1,
                 "agent_registered_after": false,
                 "cgroup_exists_after": false,
-                "cgroup_path": "/sys/fs/cgroup/eos-iws-18b4f6d4b626f3570004",
+                "cgroup_path": "/sys/fs/cgroup/eos-iws-18b4f763fc1258ac0006",
                 "control_fd_was_open": true,
                 "handle_registered_after": false,
                 "holder_kill_error": null,
-                "holder_pid": 251,
+                "holder_pid": 256,
                 "lease_released": true,
                 "mountinfo_reference_count_after": 0,
                 "ns_fd_count": 4,
                 "open_agent_count_after": 1,
                 "open_handle_count_after": 1,
                 "readiness_fd_was_open": true,
-                "scratch_dir": "/eos/mount/runtime/isolated-workspace/18b4f6d4b626f3570004",
+                "scratch_dir": "/eos/mount/runtime/isolated-workspace/18b4f763fc1258ac0006",
                 "scratch_exists_after": false,
                 "upperdir_exists_after": false,
-                "veth_host_name": "eos-iws-18b4f6h",
-                "veth_ns_name": "eos-iws-18b4f6n",
+                "veth_host_name": "eos-iws-18b4f7h",
+                "veth_ns_name": "eos-iws-18b4f7n",
                 "workdir_exists_after": false
               },
-              "lifetime_s": 1.4704886670000001,
+              "lifetime_s": 1.3261443339999999,
               "phases_ms": {},
               "reason": "explicit",
               "scratch_removed": true,
-              "total_ms": 11.788791999999999,
+              "total_ms": 11.654791,
               "upperdir_bytes_discarded": 29,
-              "workspace_handle_id": "18b4f6d4b626f3570004"
+              "workspace_handle_id": "18b4f763fc1258ac0006"
             },
-            "ts": 1780319147.63823,
+            "ts": 1780319762.8472593,
             "type": "sandbox_isolated_workspace_exit"
           },
           {
             "payload": {
               "agent_id": "phase3t-isolated-inspection",
               "changed_paths": [
-                "phase3t-iws-private-9da4ba4b.txt"
+                "phase3t-iws-private-a5ae7488.txt"
               ],
-              "duration_s": 0.059968291,
+              "duration_s": 0.075864791,
               "exit_code": 0,
               "published": false,
               "status": "ok",
-              "workspace_handle_id": "18b4f6d49264db960002"
+              "workspace_handle_id": "18b4f763d2c9976f0002"
             },
-            "ts": 1780319147.7063487,
+            "ts": 1780319762.9321482,
             "type": "sandbox_isolated_workspace_tool_call"
           },
           {
             "payload": {
               "agent_id": "phase3t-isolated-inspection",
               "changed_paths": [
-                "phase3t-iws-private-9da4ba4b.txt",
-                "phase3t-iws-pty-1d9b2b35.txt"
+                "phase3t-iws-private-a5ae7488.txt",
+                "phase3t-iws-pty-392f8008.txt"
               ],
               "exit_code": 0,
               "pty_session_id": "pty_3",
               "published": false,
               "status": "ok",
-              "workspace_handle_id": "18b4f6d49264db960002"
+              "workspace_handle_id": "18b4f763d2c9976f0002"
             },
-            "ts": 1780319147.782692,
+            "ts": 1780319762.9926605,
             "type": "sandbox_isolated_workspace_tool_call"
           },
           {
             "payload": {
               "agent_id": "phase3t-isolated-inspection",
               "changed_paths": [
-                "phase3t-iws-private-9da4ba4b.txt",
-                "phase3t-iws-pty-1d9b2b35.txt"
+                "phase3t-iws-private-a5ae7488.txt",
+                "phase3t-iws-pty-392f8008.txt"
               ],
-              "duration_s": 0.071407334,
+              "duration_s": 0.065226083,
               "exit_code": 0,
               "published": false,
               "status": "ok",
-              "workspace_handle_id": "18b4f6d49264db960002"
+              "workspace_handle_id": "18b4f763d2c9976f0002"
             },
-            "ts": 1780319147.8561537,
+            "ts": 1780319763.0605185,
             "type": "sandbox_isolated_workspace_tool_call"
           },
           {
             "payload": {
               "agent_id": "phase3t-isolated-inspection",
               "changed_paths": [
-                "phase3t-iws-private-9da4ba4b.txt",
-                "phase3t-iws-pty-1d9b2b35.txt"
+                "phase3t-iws-private-a5ae7488.txt",
+                "phase3t-iws-pty-392f8008.txt"
               ],
               "exit_code": -15,
               "pty_session_id": "pty_4",
               "published": false,
               "status": "cancelled",
-              "workspace_handle_id": "18b4f6d49264db960002"
+              "workspace_handle_id": "18b4f763d2c9976f0002"
             },
-            "ts": 1780319147.9691274,
+            "ts": 1780319763.1735806,
             "type": "sandbox_isolated_workspace_tool_call"
           },
           {
             "payload": {
               "agent_id": "phase3t-isolated-inspection",
               "changed_paths": [
-                "phase3t-iws-private-9da4ba4b.txt",
-                "phase3t-iws-pty-1d9b2b35.txt"
+                "phase3t-iws-private-a5ae7488.txt",
+                "phase3t-iws-pty-392f8008.txt"
               ],
               "exit_code": 0,
               "pty_session_id": "pty_5",
               "published": false,
               "status": "ok",
-              "workspace_handle_id": "18b4f6d49264db960002"
+              "workspace_handle_id": "18b4f763d2c9976f0002"
             },
-            "ts": 1780319148.131887,
+            "ts": 1780319763.3480055,
             "type": "sandbox_isolated_workspace_tool_call"
           },
           {
             "payload": {
               "agent_id": "phase3t-isolated-inspection",
               "changed_paths": [
-                "phase3t-iws-private-9da4ba4b.txt",
-                "phase3t-iws-pty-1d9b2b35.txt"
+                "phase3t-iws-private-a5ae7488.txt",
+                "phase3t-iws-pty-392f8008.txt"
               ],
               "exit_code": 0,
               "pty_session_id": "pty_6",
               "published": false,
               "status": "ok",
-              "workspace_handle_id": "18b4f6d49264db960002"
+              "workspace_handle_id": "18b4f763d2c9976f0002"
             },
-            "ts": 1780319149.4176016,
+            "ts": 1780319764.6460326,
             "type": "sandbox_isolated_workspace_tool_call"
           },
           {
             "payload": {
               "agent_id": "phase3t-isolated-inspection",
               "changed_paths": [
-                "phase3t-iws-private-9da4ba4b.txt",
-                "phase3t-iws-pty-1d9b2b35.txt"
+                "phase3t-iws-private-a5ae7488.txt",
+                "phase3t-iws-pty-392f8008.txt"
               ],
               "exit_code": 124,
               "pty_session_id": "pty_7",
               "published": false,
               "status": "timed_out",
-              "workspace_handle_id": "18b4f6d49264db960002"
+              "workspace_handle_id": "18b4f763d2c9976f0002"
             },
-            "ts": 1780319150.5136225,
+            "ts": 1780319765.768459,
             "type": "sandbox_isolated_workspace_tool_call"
           },
           {
             "payload": {
               "agent_id": "phase3t-isolated-inspection",
               "changed_paths": [
-                "phase3t-iws-private-9da4ba4b.txt",
-                "phase3t-iws-pty-1d9b2b35.txt"
+                "phase3t-iws-private-a5ae7488.txt",
+                "phase3t-iws-pty-392f8008.txt"
               ],
               "exit_code": -15,
               "pty_session_id": "pty_8",
               "published": false,
               "status": "cancelled",
-              "workspace_handle_id": "18b4f6d49264db960002"
+              "workspace_handle_id": "18b4f763d2c9976f0002"
             },
-            "ts": 1780319150.6463387,
+            "ts": 1780319765.8961163,
             "type": "sandbox_isolated_workspace_tool_call"
           },
           {
             "payload": {
               "agent_id": "phase3t-isolated-inspection",
               "changed_paths": [
-                "phase3t-iws-private-9da4ba4b.txt",
-                "phase3t-iws-pty-1d9b2b35.txt"
+                "phase3t-iws-private-a5ae7488.txt",
+                "phase3t-iws-pty-392f8008.txt"
               ],
               "exit_code": -15,
               "pty_session_id": "pty_9",
               "published": false,
               "status": "cancelled",
-              "workspace_handle_id": "18b4f6d49264db960002"
+              "workspace_handle_id": "18b4f763d2c9976f0002"
             },
-            "ts": 1780319150.7591724,
+            "ts": 1780319766.0104964,
             "type": "sandbox_isolated_workspace_tool_call"
           },
           {
@@ -539,7 +539,7 @@
                 "active_leases_after": 0,
                 "agent_registered_after": false,
                 "cgroup_exists_after": false,
-                "cgroup_path": "/sys/fs/cgroup/eos-iws-18b4f6d49264db960002",
+                "cgroup_path": "/sys/fs/cgroup/eos-iws-18b4f763d2c9976f0002",
                 "control_fd_was_open": true,
                 "handle_registered_after": false,
                 "holder_kill_error": null,
@@ -550,22 +550,22 @@
                 "open_agent_count_after": 0,
                 "open_handle_count_after": 0,
                 "readiness_fd_was_open": true,
-                "scratch_dir": "/eos/mount/runtime/isolated-workspace/18b4f6d49264db960002",
+                "scratch_dir": "/eos/mount/runtime/isolated-workspace/18b4f763d2c9976f0002",
                 "scratch_exists_after": false,
                 "upperdir_exists_after": false,
-                "veth_host_name": "eos-iws-18b4f6h",
-                "veth_ns_name": "eos-iws-18b4f6n",
+                "veth_host_name": "eos-iws-18b4f7h",
+                "veth_ns_name": "eos-iws-18b4f7n",
                 "workdir_exists_after": false
               },
-              "lifetime_s": 5.256215378,
+              "lifetime_s": 5.245883045,
               "phases_ms": {},
               "reason": "explicit",
               "scratch_removed": true,
-              "total_ms": 12.597125,
+              "total_ms": 11.675208,
               "upperdir_bytes_discarded": 27,
-              "workspace_handle_id": "18b4f6d49264db960002"
+              "workspace_handle_id": "18b4f763d2c9976f0002"
             },
-            "ts": 1780319150.8240526,
+            "ts": 1780319766.0744002,
             "type": "sandbox_isolated_workspace_exit"
           }
         ],
@@ -581,17 +581,17 @@
             "runtime.dispatch_s": 0.0,
             "runtime.read_request_s": 0.0
           },
-          "workspace_handle_id": "18b4f6d49264db960002"
+          "workspace_handle_id": "18b4f763d2c9976f0002"
         },
-        "wall_ms": 136.3569999812171
+        "wall_ms": 162.85208298359066
       },
       "host_network_after_enter": {
         "bridge_exists": true,
         "host_veth_names": [
-          "eos-iws-18b4f6h"
+          "eos-iws-18b4f7h"
         ],
         "names": [
-          "eos-iws-18b4f6h",
+          "eos-iws-18b4f7h",
           "eos-shared0"
         ]
       },
@@ -600,7 +600,7 @@
         "exit_code": 0,
         "output": {
           "stderr": "",
-          "stdout": "0       0    0    0    0     0       0          0\nip6gre0:       0       0    0    0    0     0          0         0        0       0    0    0    0     0       0          0\neos-iws-18b4f6n:     290       3    0    0    0     0          0         0      266       3    0    0    0     0       0          0\n__ROUTE__\nIface\tDestination\tGateway \tFlags\tRefCnt\tUse\tMetric\tMask\t\tMTU\tWindow\tIRTT                                                       \neos-iws-18b4f6n\t00000000\t0100F40A\t0003\t0\t0\t0\t00000000\t0\t0\t0                                                                    \neos-iws-18b4f6n\t0000F40A\t00000000\t0001\t0\t0\t0\t00FFFFFF\t0\t0\t0                                                                    \n"
+          "stdout": "0       0    0    0    0     0       0          0\nip6gre0:       0       0    0    0    0     0          0         0        0       0    0    0    0     0       0          0\neos-iws-18b4f7n:     426       5    0    0    0     0          0         0       90       1    0    0    0     0       0          0\n__ROUTE__\nIface\tDestination\tGateway \tFlags\tRefCnt\tUse\tMetric\tMask\t\tMTU\tWindow\tIRTT                                                       \neos-iws-18b4f7n\t00000000\t0100F40A\t0003\t0\t0\t0\t00000000\t0\t0\t0                                                                    \neos-iws-18b4f7n\t0000F40A\t00000000\t0001\t0\t0\t0\t00FFFFFF\t0\t0\t0                                                                    \n"
         },
         "status": "ok",
         "success": true,
@@ -636,28 +636,28 @@
             "evicted_upperdir_bytes": 29,
             "force_cancel_requested": true,
             "force_cancelled_pty_session_ids": [
-              "pty_2"
+              "pty_1"
             ],
             "inspection": {
               "active_leases_after": 2,
               "agent_registered_after": false,
               "cgroup_exists_after": false,
-              "cgroup_path": "/sys/fs/cgroup/eos-iws-18b4f6d4bb8940110006",
+              "cgroup_path": "/sys/fs/cgroup/eos-iws-18b4f763f708a0b40004",
               "control_fd_was_open": true,
               "handle_registered_after": false,
               "holder_kill_error": null,
-              "holder_pid": 256,
+              "holder_pid": 251,
               "lease_released": true,
               "mountinfo_reference_count_after": 0,
               "ns_fd_count": 4,
               "open_agent_count_after": 2,
               "open_handle_count_after": 2,
               "readiness_fd_was_open": true,
-              "scratch_dir": "/eos/mount/runtime/isolated-workspace/18b4f6d4bb8940110006",
+              "scratch_dir": "/eos/mount/runtime/isolated-workspace/18b4f763f708a0b40004",
               "scratch_exists_after": false,
               "upperdir_exists_after": false,
-              "veth_host_name": "eos-iws-18b4f6h",
-              "veth_ns_name": "eos-iws-18b4f6n",
+              "veth_host_name": "eos-iws-18b4f7h",
+              "veth_ns_name": "eos-iws-18b4f7n",
               "workdir_exists_after": false
             },
             "stale_pty_session_ids": [],
@@ -668,28 +668,28 @@
             "evicted_upperdir_bytes": 29,
             "force_cancel_requested": true,
             "force_cancelled_pty_session_ids": [
-              "pty_1"
+              "pty_2"
             ],
             "inspection": {
               "active_leases_after": 1,
               "agent_registered_after": false,
               "cgroup_exists_after": false,
-              "cgroup_path": "/sys/fs/cgroup/eos-iws-18b4f6d4b626f3570004",
+              "cgroup_path": "/sys/fs/cgroup/eos-iws-18b4f763fc1258ac0006",
               "control_fd_was_open": true,
               "handle_registered_after": false,
               "holder_kill_error": null,
-              "holder_pid": 251,
+              "holder_pid": 256,
               "lease_released": true,
               "mountinfo_reference_count_after": 0,
               "ns_fd_count": 4,
               "open_agent_count_after": 1,
               "open_handle_count_after": 1,
               "readiness_fd_was_open": true,
-              "scratch_dir": "/eos/mount/runtime/isolated-workspace/18b4f6d4b626f3570004",
+              "scratch_dir": "/eos/mount/runtime/isolated-workspace/18b4f763fc1258ac0006",
               "scratch_exists_after": false,
               "upperdir_exists_after": false,
-              "veth_host_name": "eos-iws-18b4f6h",
-              "veth_ns_name": "eos-iws-18b4f6n",
+              "veth_host_name": "eos-iws-18b4f7h",
+              "veth_ns_name": "eos-iws-18b4f7n",
               "workdir_exists_after": false
             },
             "stale_pty_session_ids": [],
@@ -767,7 +767,7 @@
               "stderr": "",
               "stdout": "Serving HTTP on 0.0.0.0 port 3000 (http://0.0.0.0:3000/) ...\r\n"
             },
-            "pty_session_id": "pty_2",
+            "pty_session_id": "pty_1",
             "status": "running"
           },
           "phase3t-port3000-b": {
@@ -776,13 +776,13 @@
               "stderr": "",
               "stdout": "Serving HTTP on 0.0.0.0 port 3000 (http://0.0.0.0:3000/) ...\r\n"
             },
-            "pty_session_id": "pty_1",
+            "pty_session_id": "pty_2",
             "status": "running"
           }
         },
         "ns_ips": {
-          "phase3t-port3000-a": "10.244.0.4",
-          "phase3t-port3000-b": "10.244.0.3"
+          "phase3t-port3000-a": "10.244.0.3",
+          "phase3t-port3000-b": "10.244.0.4"
         },
         "port": 3000,
         "post_exit_reads": {
@@ -830,7 +830,7 @@
       "private_write": {
         "finite": {
           "changed_paths": [
-            "phase3t-iws-private-9da4ba4b.txt"
+            "phase3t-iws-private-a5ae7488.txt"
           ],
           "exit_code": 0,
           "output": {
@@ -844,8 +844,8 @@
         },
         "pty": {
           "changed_paths": [
-            "phase3t-iws-private-9da4ba4b.txt",
-            "phase3t-iws-pty-1d9b2b35.txt"
+            "phase3t-iws-private-a5ae7488.txt",
+            "phase3t-iws-pty-392f8008.txt"
           ],
           "exit_code": 0,
           "output": {
@@ -859,8 +859,8 @@
         },
         "pty_inside": {
           "changed_paths": [
-            "phase3t-iws-private-9da4ba4b.txt",
-            "phase3t-iws-pty-1d9b2b35.txt"
+            "phase3t-iws-private-a5ae7488.txt",
+            "phase3t-iws-pty-392f8008.txt"
           ],
           "exit_code": 0,
           "output": {
@@ -974,8 +974,8 @@
           },
           "terminal": {
             "changed_paths": [
-              "phase3t-iws-private-9da4ba4b.txt",
-              "phase3t-iws-pty-1d9b2b35.txt"
+              "phase3t-iws-private-a5ae7488.txt",
+              "phase3t-iws-pty-392f8008.txt"
             ],
             "exit_code": 0,
             "output": {
@@ -990,8 +990,8 @@
           },
           "write": {
             "changed_paths": [
-              "phase3t-iws-private-9da4ba4b.txt",
-              "phase3t-iws-pty-1d9b2b35.txt"
+              "phase3t-iws-private-a5ae7488.txt",
+              "phase3t-iws-pty-392f8008.txt"
             ],
             "exit_code": 0,
             "output": {
@@ -1031,7 +1031,7 @@
             "active_leases_after": 0,
             "agent_registered_after": false,
             "cgroup_exists_after": false,
-            "cgroup_path": "/sys/fs/cgroup/eos-iws-18b4f6d49264db960002",
+            "cgroup_path": "/sys/fs/cgroup/eos-iws-18b4f763d2c9976f0002",
             "control_fd_was_open": true,
             "handle_registered_after": false,
             "holder_kill_error": null,
@@ -1042,17 +1042,17 @@
             "open_agent_count_after": 0,
             "open_handle_count_after": 0,
             "readiness_fd_was_open": true,
-            "scratch_dir": "/eos/mount/runtime/isolated-workspace/18b4f6d49264db960002",
+            "scratch_dir": "/eos/mount/runtime/isolated-workspace/18b4f763d2c9976f0002",
             "scratch_exists_after": false,
             "upperdir_exists_after": false,
-            "veth_host_name": "eos-iws-18b4f6h",
-            "veth_ns_name": "eos-iws-18b4f6n",
+            "veth_host_name": "eos-iws-18b4f7h",
+            "veth_ns_name": "eos-iws-18b4f7n",
             "workdir_exists_after": false
           },
           "stale_pty_session_ids": [],
           "success": true
         },
-        "force_exit_wall_ms": 66.87233399134129,
+        "force_exit_wall_ms": 65.97850000252947,
         "long_pty": {
           "exit_code": null,
           "output": {

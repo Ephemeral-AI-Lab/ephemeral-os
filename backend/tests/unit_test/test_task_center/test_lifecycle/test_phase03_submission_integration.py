@@ -56,8 +56,8 @@ def _tool_context(
         else []
     )
     metadata = ExecutionMetadata(
-        task_center_task_id=task_id,
-        task_center_attempt_id=attempt_id,
+        task_id=task_id,
+        attempt_id=attempt_id,
         attempt_runtime=runtime,
         conversation_messages=messages,
     )

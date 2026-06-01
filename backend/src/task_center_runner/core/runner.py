@@ -57,7 +57,7 @@ class RunReport:
     sandbox_id: str
     instance_id: str
     run_dir: Path
-    task_center_status: str | None
+    request_status: str | None
     duration_s: float
     events: list[Event] = field(default_factory=list)
     launches: list[LaunchRecord] = field(default_factory=list)
@@ -237,7 +237,7 @@ async def run_scenario(
         sandbox_id=pipeline_report.sandbox_id,
         instance_id=pipeline_report.instance_id,
         run_dir=pipeline_report.run_dir,
-        task_center_status=pipeline_report.task_center_status,
+        request_status=pipeline_report.request_status,
         duration_s=pipeline_report.duration_s,
         events=list(lifecycle.captured_events),
         launches=list(lifecycle.launches),

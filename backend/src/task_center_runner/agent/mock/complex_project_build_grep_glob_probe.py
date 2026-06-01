@@ -344,7 +344,7 @@ async def _phase_f_emit_metrics(
         else "sandbox.complex_project_build_grep_glob"
     )
     perf_payload = aggregate_perf_metrics(
-        run_id=str(ctx.metadata.get("task_center_task_id") or ""),
+        run_id=str(ctx.metadata.get("task_id") or ""),
         scenario=scenario,
         wall_seconds_total=wall_seconds,
         tool_call_metadata=stats.tool_call_metadata,

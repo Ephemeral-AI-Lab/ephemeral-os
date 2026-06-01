@@ -11,7 +11,7 @@ from workflow import (
     AttemptDeps,
     Iteration,
     Workflow,
-    TaskCenterInvariantViolation,
+    WorkflowInvariantViolation,
 )
 from tools._framework.core.context import ToolExecutionContextService
 
@@ -29,7 +29,7 @@ class AttemptSubmissionContext:
     using this resolver.
     """
 
-    task_center_task_id: str
+    task_id: str
     task: dict[str, Any]
     attempt: Attempt
     iteration: Iteration
@@ -61,7 +61,7 @@ def _resolve_runtime_task(
             "Missing harness attempt runtime for this TaskCenter submission."
         )
 
-    task_id = str(context.get("task_center_task_id") or "")
+    task_id = str(context.get("task_id") or "")
     if not task_id or task_id.isspace():
         raise AttemptSubmissionContextError("Missing TaskCenter task id for this submission.")
 
@@ -90,7 +90,7 @@ def _resolve_attempt_context(
             f"TaskCenter task {task_id!r} is not attached to a harness attempt."
         )
 
-    metadata_attempt_id = str(context.get("task_center_attempt_id") or "")
+    metadata_attempt_id = str(context.get("attempt_id") or "")
     if metadata_attempt_id.isspace():
         raise AttemptSubmissionContextError("TaskCenter attempt metadata is blank.")
     if metadata_attempt_id and metadata_attempt_id != attempt_id:
@@ -112,11 +112,11 @@ def _resolve_attempt_context(
 
     try:
         orchestrator = runtime.orchestrator_registry.get_or_raise(attempt_id)
-    except TaskCenterInvariantViolation as exc:
+    except WorkflowInvariantViolation as exc:
         raise AttemptSubmissionContextError(str(exc)) from exc
 
     return AttemptSubmissionContext(
-        task_center_task_id=task_id,
+        task_id=task_id,
         task=task,
         attempt=attempt,
         iteration=iteration,

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from workflow._core.primitives import TaskCenterInvariantViolation
+from workflow._core.primitives import WorkflowInvariantViolation
 from workflow._core.workflow_depth import is_nested_workflow
 
 
@@ -13,17 +13,17 @@ def tool_context_is_nested_workflow(context: Any) -> bool:
     if metadata is None:
         return False
     runtime = getattr(metadata, "attempt_runtime", None)
-    workflow_id = getattr(metadata, "task_center_workflow_id", None)
+    workflow_id = getattr(metadata, "workflow_id", None)
     if runtime is None or not workflow_id:
         get = getattr(metadata, "get", None)
         if callable(get):
             runtime = runtime or get("attempt_runtime")
-            workflow_id = workflow_id or get("task_center_workflow_id")
+            workflow_id = workflow_id or get("workflow_id")
     if runtime is None or not workflow_id:
         return False
     try:
         return is_nested_workflow(workflow_id=str(workflow_id), deps=runtime)
-    except TaskCenterInvariantViolation:
+    except WorkflowInvariantViolation:
         return False
 
 

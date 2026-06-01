@@ -68,7 +68,7 @@ _DROPPED_COLUMNS: dict[str, set[str]] = {
         "spec",
         "summary",
         "system_prompt",
-        "task_center_attempt_id",
+        "attempt_id",
         "title",
         "user_prompt",
     },

@@ -3,10 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Test Suites - TaskCenter Runner (Testing)</title>
+<title>Test Suites - Workflow Runner (Testing)</title>
 <link rel="stylesheet" href="../assets/styles.css">
 </head>
-<body data-module="task-center-runner" data-page="tests-layout" data-root="../">
+<body data-module="workflow-runner" data-page="tests-layout" data-root="../">
 <nav class="toc">
   <h2>EphemeralOS Architecture</h2>
   <a class="home-link" href="../index.html">All Modules</a>
@@ -19,23 +19,23 @@
     <li><a href="../sandbox/index.html" data-doc-module="sandbox">Sandbox Workspace</a></li>
     <li><a href="../tools/index.html" data-doc-module="tools">Tools</a></li>
     <li><a href="../agent_loops/index.html" data-doc-module="agent-loops">Agent Loops</a></li>
-    <li><a href="../task_center/index.html" data-doc-module="task-center">TaskCenter</a></li>
-    <li><a href="index.html" data-doc-module="task-center-runner" class="active">TaskCenter Runner (Testing)</a></li>
+    <li><a href="../workflow/index.html" data-doc-module="workflow">Workflow</a></li>
+    <li><a href="index.html" data-doc-module="workflow-runner" class="active">Workflow Runner (Testing)</a></li>
   </ol>
-  <h2>TaskCenter Runner Pages</h2>
+  <h2>Workflow Runner Pages</h2>
   <ol>
-    <li><a href="index.html" data-doc-module="task-center-runner" data-doc-section="index" data-doc-page="index.html">Overview</a></li>
-    <li><a href="core-harness.html" data-doc-module="task-center-runner" data-doc-section="core-harness" data-doc-page="core-harness.html">Core Harness</a></li>
-    <li><a href="scenarios.html" data-doc-module="task-center-runner" data-doc-section="scenarios" data-doc-page="scenarios.html">Scenarios</a></li>
-    <li><a href="mocked-agents.html" data-doc-module="task-center-runner" data-doc-section="mocked-agents" data-doc-page="mocked-agents.html">Mocked Agents</a></li>
-    <li><a href="benchmark-sweevo.html" data-doc-module="task-center-runner" data-doc-section="benchmark-sweevo" data-doc-page="benchmark-sweevo.html">SWE-EVO Benchmark</a></li>
-    <li><a href="tests-layout.html" data-doc-module="task-center-runner" data-doc-section="tests-layout" data-doc-page="tests-layout.html" class="active">Test Suites</a></li>
-    <li><a href="maintenance.html" data-doc-module="task-center-runner" data-doc-section="maintenance" data-doc-page="maintenance.html">Maintenance</a></li>
+    <li><a href="index.html" data-doc-module="workflow-runner" data-doc-section="index" data-doc-page="index.html">Overview</a></li>
+    <li><a href="core-harness.html" data-doc-module="workflow-runner" data-doc-section="core-harness" data-doc-page="core-harness.html">Core Harness</a></li>
+    <li><a href="scenarios.html" data-doc-module="workflow-runner" data-doc-section="scenarios" data-doc-page="scenarios.html">Scenarios</a></li>
+    <li><a href="mocked-agents.html" data-doc-module="workflow-runner" data-doc-section="mocked-agents" data-doc-page="mocked-agents.html">Mocked Agents</a></li>
+    <li><a href="benchmark-sweevo.html" data-doc-module="workflow-runner" data-doc-section="benchmark-sweevo" data-doc-page="benchmark-sweevo.html">SWE-EVO Benchmark</a></li>
+    <li><a href="tests-layout.html" data-doc-module="workflow-runner" data-doc-section="tests-layout" data-doc-page="tests-layout.html" class="active">Test Suites</a></li>
+    <li><a href="maintenance.html" data-doc-module="workflow-runner" data-doc-section="maintenance" data-doc-page="maintenance.html">Maintenance</a></li>
   </ol>
 </nav>
 <main>
 <div class="doc-actions">
-  <span><a href="../index.html">Architecture</a> / <a href="index.html">TaskCenter Runner</a> / Test Suites</span>
+  <span><a href="../index.html">Architecture</a> / <a href="index.html">Workflow Runner</a> / Test Suites</span>
   <span class="nav-pair"><a href="benchmark-sweevo.html">SWE-EVO Benchmark</a><a href="maintenance.html">Maintenance</a></span>
 </div>
 <h1>Test Suites</h1>
@@ -85,7 +85,7 @@ backend/src/task_center_runner/tests/
     _layer_stack_occ_overlay_assertions.py
                                     # LayerStack/OCC/overlay assertion helpers
     sandbox/                        # marker: sandbox_integration
-    task_center/                    # marker: task_center_integration
+    workflow/                    # marker: workflow_integration
     ...
   real_agent/                       # real-LLM end-to-end
     conftest.py                     # marker: real_agent + sweevo image fixtures
@@ -104,7 +104,7 @@ backend/src/task_center_runner/tests/
 <div class="edge-list" aria-label="Marker assignment rules">
   <div><b>mock</b><span>Every item resolved under <code>tests/mock/</code> gets <code>pytest.mark.mock</code> via the suite conftest's <code>pytest_collection_modifyitems</code>.</span></div>
   <div><b>sandbox_integration</b><span>Items under <code>tests/mock/sandbox/</code> get this marker. Use it to select sandbox-focused runs: <code>pytest -m "mock and sandbox_integration"</code>.</span></div>
-  <div><b>task_center_integration</b><span>Items under <code>tests/mock/task_center/</code> get this marker. Use it to select pipeline-state-machine runs.</span></div>
+  <div><b>workflow_integration</b><span>Items under <code>tests/mock/workflow/</code> get this marker. Use it to select pipeline-state-machine runs.</span></div>
   <div><b>real_agent</b><span>Items under <code>tests/real_agent/</code> get this marker. Use it to gate slow live-LLM runs.</span></div>
 </div>
 <div class="summary">
@@ -164,7 +164,7 @@ async def test_some_pipeline_path(workspace):
         audit_dir=...,
     )
 
-    assert report.task_center_status == "done"
+    assert report.workflow_status == "done"
     assert report.passed_prompt_inspections
     assert report.passed_sandbox_checks
     assert_graph_summary_shape(report, [...])

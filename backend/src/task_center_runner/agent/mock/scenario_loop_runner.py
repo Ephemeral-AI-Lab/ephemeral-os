@@ -124,8 +124,8 @@ class ScenarioLoopRunner:
         agent_def = self._agent_def_for_loop(agent_def)
 
         md = extra_tool_metadata or {}
-        resolved_task_id = task_id or str(_md_get(md, "task_center_task_id") or "")
-        attempt_id = str(_md_get(md, "task_center_attempt_id") or "") or None
+        resolved_task_id = task_id or str(_md_get(md, "task_id") or "")
+        attempt_id = str(_md_get(md, "attempt_id") or "") or None
         self._publish_launch(agent_def, prompt, resolved_task_id, attempt_id)
         self._publish_prompt_inspection(
             agent_def,
@@ -286,7 +286,7 @@ class ScenarioLoopRunner:
             reason = f"Unknown role {role!r}."
 
         return PromptInspection(
-            task_id=str(_md_get(metadata, "task_center_task_id") or ""),
+            task_id=str(_md_get(metadata, "task_id") or ""),
             agent_name=agent_def.name,
             role=role,
             checks=checks,
@@ -300,7 +300,7 @@ class ScenarioLoopRunner:
         metadata: Any,
         seeded_initial_messages: Any,
     ) -> None:
-        task_id = str(_md_get(metadata, "task_center_task_id") or "")
+        task_id = str(_md_get(metadata, "task_id") or "")
         if not task_id or self._audit_recorder is None:
             return
         recorder = self._audit_recorder.message_recorder_for_task(task_id)
@@ -325,7 +325,7 @@ def _md_get(md: Any, key: str) -> Any:
 
 def _task_needs(md: Any) -> tuple[str, ...]:
     runtime = _md_get(md, "attempt_runtime")
-    task_id = str(_md_get(md, "task_center_task_id") or "")
+    task_id = str(_md_get(md, "task_id") or "")
     task_store = getattr(runtime, "task_store", None)
     get_task = getattr(task_store, "get_task", None)
     if not task_id or not callable(get_task):
@@ -350,8 +350,8 @@ def _dependency_has_task_outcome(prompt: str, task_id: str) -> bool:
 
 def _stream_run_id(md: Any) -> str:
     # Pre-mint site (runs before run_ephemeral_agent mints the agent_run_id),
-    # so task_center_task_id is the only stable id available here.
-    return str(_md_get(md, "task_center_task_id") or getattr(md, "agent_run_id", None) or "")
+    # so task_id is the only stable id available here.
+    return str(_md_get(md, "task_id") or getattr(md, "agent_run_id", None) or "")
 
 
 def _initial_message_metadata(md: Any) -> dict[str, object]:

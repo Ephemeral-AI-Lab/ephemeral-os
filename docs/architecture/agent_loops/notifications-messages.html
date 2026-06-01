@@ -123,7 +123,7 @@
 </div>
 </section>
 
-<section id="message-jsonl" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="backend/src/message/agent_message_recorder.py backend/src/engine/query/request.py backend/src/engine/agent/lifecycle.py backend/src/task_center/attempt/launch.py backend/tests/unit_test/test_message/test_agent_message_recorder.py">
+<section id="message-jsonl" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="backend/src/message/agent_message_recorder.py backend/src/engine/query/request.py backend/src/engine/agent/lifecycle.py backend/src/workflow/attempt/launch.py backend/tests/unit_test/test_message/test_agent_message_recorder.py">
 <h2>Message JSONL <a class="anchor" href="#message-jsonl">#</a></h2>
 <p><code>AgentMessageJsonlRecorder</code> writes completed conversation rows to append-only JSONL. It records the system prompt explicitly even though the provider API receives it outside the messages array, then writes initial user rows, assistant completions, and tool-result user rows.</p>
 <div class="summary">
@@ -131,7 +131,7 @@
     <li>Rows contain <code>role</code>, serialized <code>content</code>, and <code>metadata</code> with <code>seq</code>, <code>agent_name</code>, <code>run_id</code>, and optional tool fields.</li>
     <li>Thinking and text deltas are buffered until <code>AssistantMessageCompleteEvent</code>. If the complete message already contains the relevant block, the buffer is dropped.</li>
     <li>Tool completions are recorded as user messages with <code>ToolResultBlock</code> content, preserving <code>metadata</code> and <code>is_terminal</code> for local artifact analysis.</li>
-    <li>For TaskCenter's multi-row launch shape, seeded initial messages are written between the system row and the final spawn prompt row, preserving system plus context plus task-guidance or skill rows.</li>
+    <li>For Workflow's multi-row launch shape, seeded initial messages are written between the system row and the final spawn prompt row, preserving system plus context plus task-guidance or skill rows.</li>
   </ul>
 </div>
 </section>
@@ -140,9 +140,9 @@
 <h2>Observability And Persistence <a class="anchor" href="#observability-persistence">#</a></h2>
 <p>The live stream is only one output surface. The agent loop also feeds audit events, prompt reports, persisted run rows, and message JSONL artifacts.</p>
 <div class="edge-list">
-  <div><b>engine audit</b><span><code>engine.audit.stream.audit_events_from_stream_event()</code> translates tool-started and tool-completed stream events into shared <code>AuditEvent</code> rows with redacted input shape, content digests, output shape, terminal marker, node identity, and TaskCenter/sandbox metadata.</span></div>
+  <div><b>engine audit</b><span><code>engine.audit.stream.audit_events_from_stream_event()</code> translates tool-started and tool-completed stream events into shared <code>AuditEvent</code> rows with redacted input shape, content digests, output shape, terminal marker, node identity, and Workflow/sandbox metadata.</span></div>
   <div><b>prompt reports</b><span><code>PromptReportRecorder</code> appends sequenced <code>llm_request</code>, <code>assistant</code>, and <code>tool_results</code> events when <code>prompt_report_messages_path</code> is present in tool metadata.</span></div>
-  <div><b>agent run rows</b><span><code>AgentRunTracker</code> creates an <code>agent_runs</code> row for TaskCenter-backed runs when the store is ready, then finalizes it with message history, terminal result, token count, and error text.</span></div>
+  <div><b>agent run rows</b><span><code>AgentRunTracker</code> creates an <code>agent_runs</code> row for Workflow-backed runs when the store is ready, then finalizes it with message history, terminal result, token count, and error text.</span></div>
   <div><b>message artifact</b><span><code>AgentMessageJsonlRecorder</code> remains the conversation-level artifact writer. It is distinct from prompt reports, which are provider-turn diagnostics.</span></div>
 </div>
 </section>

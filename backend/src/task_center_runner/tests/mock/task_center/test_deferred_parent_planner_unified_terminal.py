@@ -40,7 +40,7 @@ async def test_partial_parent_uses_unified_planner_terminal(
         stores=stores,
     )
 
-    assert report.task_center_status == "done", report.metrics
+    assert report.request_status == "done", report.metrics
     planner_launches = [
         launch.agent_name for launch in report.launches if launch.role == "planner"
     ]

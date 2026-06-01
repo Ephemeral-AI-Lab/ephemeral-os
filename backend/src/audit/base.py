@@ -8,7 +8,7 @@ from datetime import UTC, datetime
 from typing import Any, Literal, Protocol
 
 JsonValue = Any
-AuditSource = Literal["task_center", "engine", "sandbox", "live_e2e"]
+AuditSource = Literal["workflow", "engine", "sandbox", "live_e2e"]
 
 
 @dataclass(frozen=True, slots=True)
@@ -23,7 +23,7 @@ class AuditNode:
     workflow_id: str | None = None
     iteration_id: str | None = None
     attempt_id: str | None = None
-    task_center_task_id: str | None = None
+    task_id: str | None = None
     agent_name: str | None = None
     agent_run_id: str | None = None
     sandbox_id: str | None = None

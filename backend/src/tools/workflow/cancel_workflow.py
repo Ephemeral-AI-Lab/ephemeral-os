@@ -8,7 +8,7 @@ from sandbox.shared.models import Intent
 from tools._framework.core.context import ToolExecutionContextService
 from tools._framework.core.decorator import tool
 from tools._framework.core.results import TextToolOutput, ToolResult
-from workflow import TaskCenterInvariantViolation, WorkflowStatus
+from workflow import WorkflowInvariantViolation, WorkflowStatus
 
 from ._runtime import (
     agent_id,
@@ -40,7 +40,7 @@ async def cancel_workflow(
 ) -> ToolResult:
     try:
         runtime = require_runtime(context)
-    except TaskCenterInvariantViolation as exc:
+    except WorkflowInvariantViolation as exc:
         return ToolResult(output=str(exc), is_error=True)
 
     manager = workflow_manager(context)

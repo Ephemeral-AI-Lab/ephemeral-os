@@ -35,10 +35,10 @@
 <main>
 <div class="doc-actions">
   <span><a href="../index.html">Index</a> / Agent Loops / Agent Prompt Assembly</span>
-  <span class="nav-pair"><a href="../tools/terminals.html">Tools Terminals</a><a href="../task_center/context-engine.html">TaskCenter Context Engine</a></span>
+  <span class="nav-pair"><a href="../tools/terminals.html">Tools Terminals</a><a href="../workflow/context-engine.html">Workflow Context Engine</a></span>
 </div>
 
-<section id="prompt-context" data-last-reviewed-commit="HEAD" data-evidence-paths="backend/src/prompt/runtime_prompt.py backend/src/engine/agent/factory.py backend/src/agents/definition/loader.py backend/src/agents/profile/main backend/src/task_center/agent_launch/composer.py backend/src/task_center/agent_launch/entry_messages.py backend/src/task_center/context_engine backend/src/task_center/attempt/launch.py backend/tests/unit_test/test_task_center/test_agent_launch backend/tests/unit_test/test_task_center/test_context_engine">
+<section id="prompt-context" data-last-reviewed-commit="HEAD" data-evidence-paths="backend/src/prompt/runtime_prompt.py backend/src/engine/agent/factory.py backend/src/agents/definition/loader.py backend/src/agents/profile/main backend/src/workflow/agent_launch/composer.py backend/src/workflow/agent_launch/entry_messages.py backend/src/workflow/context_engine backend/src/workflow/attempt/launch.py backend/tests/unit_test/test_workflow/test_agent_launch backend/tests/unit_test/test_workflow/test_context_engine">
 <h1>Agent Prompt Assembly <a class="anchor" href="#prompt-context">#</a></h1>
 <nav class="page-toc" aria-labelledby="page-toc-heading">
   <h3 id="page-toc-heading">Contents</h3>
@@ -52,7 +52,7 @@
   </ol>
 </nav>
 
-<p class="lead">Prompt assembly is deliberately split. The engine builds the system prompt from settings and the loaded profile body. TaskCenter launch code then adds rendered role context, task guidance, and an optional skill row. The old packet, recipe registry, context outline, and token-priority renderer path has been removed.</p>
+<p class="lead">Prompt assembly is deliberately split. The engine builds the system prompt from settings and the loaded profile body. Workflow launch code then adds rendered role context, task guidance, and an optional skill row. The old packet, recipe registry, context outline, and token-priority renderer path has been removed.</p>
 <div class="diagram" aria-label="Prompt assembly graph">
   <div class="flow-row">
     <div class="node info"><strong>runtime base</strong><small><code>prompt.runtime_prompt</code></small></div>
@@ -80,9 +80,9 @@
 </div>
 </section>
 
-<section id="composer-rows" data-last-reviewed-commit="HEAD-plus-worktree" data-evidence-paths="backend/src/task_center/agent_launch/composer.py backend/src/task_center/agent_launch/entry_messages.py backend/src/task_center/context_engine/skill_message.py backend/src/task_center/context_engine/task_guidance.py backend/src/task_center/attempt/launch.py backend/src/tools/_terminals/registry.py backend/src/tools/submission/notification_triggers backend/tests/unit_test/test_task_center/test_agent_launch/test_composer.py backend/tests/unit_test/test_task_center/test_lifecycle/test_planner_capability_fork.py">
+<section id="composer-rows" data-last-reviewed-commit="HEAD-plus-worktree" data-evidence-paths="backend/src/workflow/agent_launch/composer.py backend/src/workflow/agent_launch/entry_messages.py backend/src/workflow/context_engine/skill_message.py backend/src/workflow/context_engine/task_guidance.py backend/src/workflow/attempt/launch.py backend/src/tools/_terminals/registry.py backend/src/tools/submission/notification_triggers backend/tests/unit_test/test_workflow/test_agent_launch/test_composer.py backend/tests/unit_test/test_workflow/test_lifecycle/test_planner_capability_fork.py">
 <h2>Composer Rows <a class="anchor" href="#composer-rows">#</a></h2>
-<p><code>AgentEntryComposer.compose()</code> is the TaskCenter launch seam. It uses the profile terminal set directly, asks <code>ContextEngine</code> for an <code>AgentContext</code>, renders context XML, renders task guidance from the same context object, and appends the optional skill row.</p>
+<p><code>AgentEntryComposer.compose()</code> is the Workflow launch seam. It uses the profile terminal set directly, asks <code>ContextEngine</code> for an <code>AgentContext</code>, renders context XML, renders task guidance from the same context object, and appends the optional skill row.</p>
 <table>
   <thead><tr><th>Launch row</th><th>Owner</th><th>Current shape</th></tr></thead>
   <tbody>
@@ -96,18 +96,18 @@
 <div class="callout warn"><span class="label">Nested workflow policy</span> Planner and executor frontmatter stays broad. Nested planners are reminded that <code>deferred_goal_for_next_iteration</code> is disallowed, and nested generators are reminded that <code>submit_workflow_handoff</code> is disallowed; the actual rejection happens in submission prehooks.</div>
 </section>
 
-<section id="context-engine" data-last-reviewed-commit="HEAD" data-evidence-paths="backend/src/task_center/context_engine/context.py backend/src/task_center/context_engine/engine.py backend/src/task_center/context_engine/scope.py backend/src/task_center/context_engine/xml.py backend/src/task_center/context_engine/task_guidance.py backend/tests/unit_test/test_task_center/test_context_engine/test_agent_context.py">
+<section id="context-engine" data-last-reviewed-commit="HEAD" data-evidence-paths="backend/src/workflow/context_engine/context.py backend/src/workflow/context_engine/engine.py backend/src/workflow/context_engine/scope.py backend/src/workflow/context_engine/xml.py backend/src/workflow/context_engine/task_guidance.py backend/tests/unit_test/test_workflow/test_context_engine/test_agent_context.py">
 <h2>Context Engine <a class="anchor" href="#context-engine">#</a></h2>
 <p><code>ContextScope</code> carries launch identity: role, workflow id, iteration id, attempt id, and task id when needed. <code>ContextEngineDeps</code> carries workflow, iteration, attempt, and task stores. <code>ContextEngine.build()</code> dispatches by <code>scope.role</code> and returns <code>AgentContext</code>.</p>
 <div class="edge-list">
   <div><b>typed document</b><span><code>AgentContext</code> owns role, sections, directive, and context limits.</span></div>
   <div><b>pure rendering</b><span><code>render_context_xml()</code> escapes text and attributes and renders multiline body tags. It never consumes pre-rendered XML blocks.</span></div>
   <div><b>no registry</b><span>There is no recipe registry, packet persistence store, tag dictionary, or token-priority compression path in the current launch context code.</span></div>
-  <div><b>lifecycle boundary</b><span>Context construction reads persisted TaskCenter state. It does not decide retry, deferral, child-workflow close, or attempt closure.</span></div>
+  <div><b>lifecycle boundary</b><span>Context construction reads persisted Workflow state. It does not decide retry, deferral, child-workflow close, or attempt closure.</span></div>
 </div>
 </section>
 
-<section id="role-shapes" data-last-reviewed-commit="HEAD" data-evidence-paths="backend/src/task_center/context_engine/engine.py backend/src/task_center/context_engine/xml.py backend/src/task_center/context_engine/task_guidance.py backend/src/task_center/_core/outcomes.py backend/tests/unit_test/test_task_center/test_context_engine/test_agent_context.py">
+<section id="role-shapes" data-last-reviewed-commit="HEAD" data-evidence-paths="backend/src/workflow/context_engine/engine.py backend/src/workflow/context_engine/xml.py backend/src/workflow/context_engine/task_guidance.py backend/src/workflow/_core/outcomes.py backend/tests/unit_test/test_workflow/test_context_engine/test_agent_context.py">
 <h2>Role Shapes And Guidance <a class="anchor" href="#role-shapes">#</a></h2>
 <div class="table-wrap">
   <table>
@@ -122,16 +122,16 @@
 <p>Only execution evidence is rendered as task outcomes. Planner task outcomes are UI metadata on the planner task and are excluded from attempt, iteration, workflow, and planner-history projections.</p>
 </section>
 
-<section id="boundaries" data-last-reviewed-commit="HEAD" data-evidence-paths="backend/src/task_center/attempt/orchestrator.py backend/src/task_center/iteration/attempt_coordinator.py backend/src/task_center/workflow/lifecycle.py backend/src/task_center/_core/outcomes.py backend/src/tools/submission backend/src/agents/profile/main">
+<section id="boundaries" data-last-reviewed-commit="HEAD" data-evidence-paths="backend/src/workflow/attempt/orchestrator.py backend/src/workflow/iteration/attempt_coordinator.py backend/src/workflow/lifecycle.py backend/src/workflow/_core/outcomes.py backend/src/tools/submission backend/src/agents/profile/main">
 <h2>Boundaries <a class="anchor" href="#boundaries">#</a></h2>
 <div class="edge-list">
-  <div><b>Submission owns mutation</b><span>Planner, generator, reducer, and handoff terminals mutate TaskCenter state through submission contexts and orchestrators.</span></div>
+  <div><b>Submission owns mutation</b><span>Planner, generator, reducer, and handoff terminals mutate Workflow state through submission contexts and orchestrators.</span></div>
   <div><b>Outcome projection is explicit</b><span>Attempt outcomes contain generator/reducer execution outcomes; iteration outcomes are reducer successes from all attempts plus failed execution outcomes from the final failed attempt; workflow outcomes derive from the latest iteration.</span></div>
   <div><b>Child workflow handoff is flattened</b><span>A parent generator waiting on a child workflow receives the child workflow outcomes directly when the child closes, with no wrapper task outcome.</span></div>
 </div>
 </section>
 
-<section id="evidence-refresh" data-last-reviewed-commit="HEAD" data-evidence-paths="backend/src/prompt backend/src/agents/definition backend/src/agents/profile/main backend/src/task_center/context_engine backend/src/task_center/agent_launch backend/src/task_center/attempt backend/src/task_center/_core backend/tests/unit_test/test_prompt backend/tests/unit_test/test_engine/test_agent_system_prompt.py backend/tests/unit_test/test_agents backend/tests/unit_test/test_task_center/test_agent_launch backend/tests/unit_test/test_task_center/test_context_engine backend/tests/unit_test/test_task_center/test_lifecycle">
+<section id="evidence-refresh" data-last-reviewed-commit="HEAD" data-evidence-paths="backend/src/prompt backend/src/agents/definition backend/src/agents/profile/main backend/src/workflow/context_engine backend/src/workflow/agent_launch backend/src/workflow/attempt backend/src/workflow/_core backend/tests/unit_test/test_prompt backend/tests/unit_test/test_engine/test_agent_system_prompt.py backend/tests/unit_test/test_agents backend/tests/unit_test/test_workflow/test_agent_launch backend/tests/unit_test/test_workflow/test_context_engine backend/tests/unit_test/test_workflow/test_lifecycle">
 <h2>Evidence And Refresh <a class="anchor" href="#evidence-refresh">#</a></h2>
 <div class="evidence-grid">
   <div class="evidence-card">
@@ -146,9 +146,9 @@
   <div class="evidence-card">
     <h3>Verification Anchors</h3>
     <ul>
-      <li><span class="file-ref">backend/tests/unit_test/test_task_center/test_context_engine/test_agent_context.py</span></li>
-      <li><span class="file-ref">backend/tests/unit_test/test_task_center/test_agent_launch/test_composer.py</span></li>
-      <li><span class="file-ref">backend/tests/unit_test/test_task_center/test_agent_launch/test_terminal_tool_router.py</span></li>
+      <li><span class="file-ref">backend/tests/unit_test/test_workflow/test_context_engine/test_agent_context.py</span></li>
+      <li><span class="file-ref">backend/tests/unit_test/test_workflow/test_agent_launch/test_composer.py</span></li>
+      <li><span class="file-ref">backend/tests/unit_test/test_workflow/test_agent_launch/test_terminal_tool_router.py</span></li>
       <li><span class="file-ref">backend/tests/unit_test/test_agents</span></li>
     </ul>
   </div>

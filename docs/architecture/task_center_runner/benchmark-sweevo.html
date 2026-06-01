@@ -3,10 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SWE-EVO Benchmark - TaskCenter Runner (Testing)</title>
+<title>SWE-EVO Benchmark - Workflow Runner (Testing)</title>
 <link rel="stylesheet" href="../assets/styles.css">
 </head>
-<body data-module="task-center-runner" data-page="benchmark-sweevo" data-root="../">
+<body data-module="workflow-runner" data-page="benchmark-sweevo" data-root="../">
 <nav class="toc">
   <h2>EphemeralOS Architecture</h2>
   <a class="home-link" href="../index.html">All Modules</a>
@@ -19,23 +19,23 @@
     <li><a href="../sandbox/index.html" data-doc-module="sandbox">Sandbox Workspace</a></li>
     <li><a href="../tools/index.html" data-doc-module="tools">Tools</a></li>
     <li><a href="../agent_loops/index.html" data-doc-module="agent-loops">Agent Loops</a></li>
-    <li><a href="../task_center/index.html" data-doc-module="task-center">TaskCenter</a></li>
-    <li><a href="index.html" data-doc-module="task-center-runner" class="active">TaskCenter Runner (Testing)</a></li>
+    <li><a href="../workflow/index.html" data-doc-module="workflow">Workflow</a></li>
+    <li><a href="index.html" data-doc-module="workflow-runner" class="active">Workflow Runner (Testing)</a></li>
   </ol>
-  <h2>TaskCenter Runner Pages</h2>
+  <h2>Workflow Runner Pages</h2>
   <ol>
-    <li><a href="index.html" data-doc-module="task-center-runner" data-doc-section="index" data-doc-page="index.html">Overview</a></li>
-    <li><a href="core-harness.html" data-doc-module="task-center-runner" data-doc-section="core-harness" data-doc-page="core-harness.html">Core Harness</a></li>
-    <li><a href="scenarios.html" data-doc-module="task-center-runner" data-doc-section="scenarios" data-doc-page="scenarios.html">Scenarios</a></li>
-    <li><a href="mocked-agents.html" data-doc-module="task-center-runner" data-doc-section="mocked-agents" data-doc-page="mocked-agents.html">Mocked Agents</a></li>
-    <li><a href="benchmark-sweevo.html" data-doc-module="task-center-runner" data-doc-section="benchmark-sweevo" data-doc-page="benchmark-sweevo.html" class="active">SWE-EVO Benchmark</a></li>
-    <li><a href="tests-layout.html" data-doc-module="task-center-runner" data-doc-section="tests-layout" data-doc-page="tests-layout.html">Test Suites</a></li>
-    <li><a href="maintenance.html" data-doc-module="task-center-runner" data-doc-section="maintenance" data-doc-page="maintenance.html">Maintenance</a></li>
+    <li><a href="index.html" data-doc-module="workflow-runner" data-doc-section="index" data-doc-page="index.html">Overview</a></li>
+    <li><a href="core-harness.html" data-doc-module="workflow-runner" data-doc-section="core-harness" data-doc-page="core-harness.html">Core Harness</a></li>
+    <li><a href="scenarios.html" data-doc-module="workflow-runner" data-doc-section="scenarios" data-doc-page="scenarios.html">Scenarios</a></li>
+    <li><a href="mocked-agents.html" data-doc-module="workflow-runner" data-doc-section="mocked-agents" data-doc-page="mocked-agents.html">Mocked Agents</a></li>
+    <li><a href="benchmark-sweevo.html" data-doc-module="workflow-runner" data-doc-section="benchmark-sweevo" data-doc-page="benchmark-sweevo.html" class="active">SWE-EVO Benchmark</a></li>
+    <li><a href="tests-layout.html" data-doc-module="workflow-runner" data-doc-section="tests-layout" data-doc-page="tests-layout.html">Test Suites</a></li>
+    <li><a href="maintenance.html" data-doc-module="workflow-runner" data-doc-section="maintenance" data-doc-page="maintenance.html">Maintenance</a></li>
   </ol>
 </nav>
 <main>
 <div class="doc-actions">
-  <span><a href="../index.html">Architecture</a> / <a href="index.html">TaskCenter Runner</a> / SWE-EVO Benchmark</span>
+  <span><a href="../index.html">Architecture</a> / <a href="index.html">Workflow Runner</a> / SWE-EVO Benchmark</span>
   <span class="nav-pair"><a href="core-harness.html">Core Harness</a><a href="tests-layout.html">Test Suites</a></span>
 </div>
 <h1>SWE-EVO Benchmark Pipeline</h1>
@@ -139,7 +139,7 @@ run_pipeline(config)
    |
    v
 SweevoLifecycle.after_run(ctx, report)
-   if report.task_center_status == "done" and not timeout:
+   if report.workflow_status == "done" and not timeout:
        apply_layerstack_to_repo(sandbox_id, repo_dir)   -&gt; daemon RPC + .git check
        evaluate_sweevo_result(instance, result, sandbox_id, repo_dir)
             - extract combined patch (git add -A + diff HEAD)
@@ -149,7 +149,7 @@ SweevoLifecycle.after_run(ctx, report)
             - fix_rate = F2P_passed / max(F2P_total, 1)
             - resolved = (F2P all passed) and (P2P unchanged)
    else:
-       result.error = "timeout" | task_center_status | "unknown"
+       result.error = "timeout" | workflow_status | "unknown"
    atomic_write_json(run_dir/sweevo_result.json, asdict(result))
    if aggregate_jsonl_path: append one JSON line
    |
@@ -190,7 +190,7 @@ format_verdict(report) -&gt; one-line stdout + exit code (0 resolved, 1 else)
   <div><b>F2P / P2P run</b><span><code>_run_test_set_outcome</code> stages test_ids JSON via <code>_write_file_via_chunked_base64</code>, writes a real-file pytest runner script (<code>python -c</code> would break multiprocessing-spawn-based test suites like Dask), and runs the file via <code>conda activate testbed &amp;&amp; cd /testbed &amp;&amp; python &lt;runner&gt;</code>. Bounded retry loop drops unfindable IDs when pytest exits with <code>EXIT_CODE=4</code> + <code>ERROR: not found:</code> lines.</span></div>
   <div><b>scoring</b><span><code>fix_rate = F2P_passed / max(F2P_total, 1)</code>; <code>resolved</code> is <em>all F2P pass</em> AND <em>no P2P break</em>. Unfindable P2P IDs are treated as dataset artifacts (logged) and do not count as P2P_broken.</span></div>
   <div><b>aggregate.jsonl</b><span>One line per run: <code>instance_id</code>, <code>run_id</code>, <code>resolved</code>, <code>fix_rate</code>, F2P / P2P counts, <code>duration_s</code>, task counts, <code>status</code>, <code>error</code>, <code>sandbox_id</code>, ISO UTC timestamp.</span></div>
-  <div><b>format_verdict</b><span>One-line stdout: <code>benchmark_sweevo task_center_run_id=... status=... resolved=... fix_rate=... sandbox_id=... run_dir=...</code>. Exit code 0 if resolved, else 1.</span></div>
+  <div><b>format_verdict</b><span>One-line stdout: <code>benchmark_sweevo request_id=... status=... resolved=... fix_rate=... sandbox_id=... run_dir=...</code>. Exit code 0 if resolved, else 1.</span></div>
 </div>
 </section>
 

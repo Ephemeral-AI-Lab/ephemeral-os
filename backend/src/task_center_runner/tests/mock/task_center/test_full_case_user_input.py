@@ -80,7 +80,7 @@ async def test_full_case_user_input_runs_dynamic_verifier_dag(
         stores=stores,
     )
 
-    assert report.task_center_status == "done", report.metrics
+    assert report.request_status == "done", report.metrics
     assert report.instance_id == sweevo_image_instance.instance_id
     assert report.instance_id == _DEFAULT_INSTANCE_ID
 

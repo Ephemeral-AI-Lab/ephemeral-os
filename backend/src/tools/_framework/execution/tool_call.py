@@ -95,8 +95,8 @@ async def execute_tool_call_streaming(
     metadata.tool_use_id = tool_use_id
     if context.agent_run_id:
         metadata["query_run_id"] = context.agent_run_id
-    if context.task_center_task_id:
-        metadata.task_center_task_id = context.task_center_task_id
+    if context.task_id:
+        metadata.task_id = context.task_id
     if conversation_messages is not None:
         metadata = metadata.with_overrides(conversation_messages=conversation_messages)
     if extra_metadata:
@@ -176,7 +176,7 @@ async def execute_tool_once(
                 agent_run_id=str(
                     context.get("query_run_id")
                     or context.agent_run_id
-                    or context.task_center_task_id
+                    or context.task_id
                     or ""
                 ),
             )

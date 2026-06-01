@@ -3,10 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Scenarios - TaskCenter Runner (Testing)</title>
+<title>Scenarios - Workflow Runner (Testing)</title>
 <link rel="stylesheet" href="../assets/styles.css">
 </head>
-<body data-module="task-center-runner" data-page="scenarios" data-root="../">
+<body data-module="workflow-runner" data-page="scenarios" data-root="../">
 <nav class="toc">
   <h2>EphemeralOS Architecture</h2>
   <a class="home-link" href="../index.html">All Modules</a>
@@ -19,23 +19,23 @@
     <li><a href="../sandbox/index.html" data-doc-module="sandbox">Sandbox Workspace</a></li>
     <li><a href="../tools/index.html" data-doc-module="tools">Tools</a></li>
     <li><a href="../agent_loops/index.html" data-doc-module="agent-loops">Agent Loops</a></li>
-    <li><a href="../task_center/index.html" data-doc-module="task-center">TaskCenter</a></li>
-    <li><a href="index.html" data-doc-module="task-center-runner" class="active">TaskCenter Runner (Testing)</a></li>
+    <li><a href="../workflow/index.html" data-doc-module="workflow">Workflow</a></li>
+    <li><a href="index.html" data-doc-module="workflow-runner" class="active">Workflow Runner (Testing)</a></li>
   </ol>
-  <h2>TaskCenter Runner Pages</h2>
+  <h2>Workflow Runner Pages</h2>
   <ol>
-    <li><a href="index.html" data-doc-module="task-center-runner" data-doc-section="index" data-doc-page="index.html">Overview</a></li>
-    <li><a href="core-harness.html" data-doc-module="task-center-runner" data-doc-section="core-harness" data-doc-page="core-harness.html">Core Harness</a></li>
-    <li><a href="scenarios.html" data-doc-module="task-center-runner" data-doc-section="scenarios" data-doc-page="scenarios.html" class="active">Scenarios</a></li>
-    <li><a href="mocked-agents.html" data-doc-module="task-center-runner" data-doc-section="mocked-agents" data-doc-page="mocked-agents.html">Mocked Agents</a></li>
-    <li><a href="benchmark-sweevo.html" data-doc-module="task-center-runner" data-doc-section="benchmark-sweevo" data-doc-page="benchmark-sweevo.html">SWE-EVO Benchmark</a></li>
-    <li><a href="tests-layout.html" data-doc-module="task-center-runner" data-doc-section="tests-layout" data-doc-page="tests-layout.html">Test Suites</a></li>
-    <li><a href="maintenance.html" data-doc-module="task-center-runner" data-doc-section="maintenance" data-doc-page="maintenance.html">Maintenance</a></li>
+    <li><a href="index.html" data-doc-module="workflow-runner" data-doc-section="index" data-doc-page="index.html">Overview</a></li>
+    <li><a href="core-harness.html" data-doc-module="workflow-runner" data-doc-section="core-harness" data-doc-page="core-harness.html">Core Harness</a></li>
+    <li><a href="scenarios.html" data-doc-module="workflow-runner" data-doc-section="scenarios" data-doc-page="scenarios.html" class="active">Scenarios</a></li>
+    <li><a href="mocked-agents.html" data-doc-module="workflow-runner" data-doc-section="mocked-agents" data-doc-page="mocked-agents.html">Mocked Agents</a></li>
+    <li><a href="benchmark-sweevo.html" data-doc-module="workflow-runner" data-doc-section="benchmark-sweevo" data-doc-page="benchmark-sweevo.html">SWE-EVO Benchmark</a></li>
+    <li><a href="tests-layout.html" data-doc-module="workflow-runner" data-doc-section="tests-layout" data-doc-page="tests-layout.html">Test Suites</a></li>
+    <li><a href="maintenance.html" data-doc-module="workflow-runner" data-doc-section="maintenance" data-doc-page="maintenance.html">Maintenance</a></li>
   </ol>
 </nav>
 <main>
 <div class="doc-actions">
-  <span><a href="../index.html">Architecture</a> / <a href="index.html">TaskCenter Runner</a> / Scenarios</span>
+  <span><a href="../index.html">Architecture</a> / <a href="index.html">Workflow Runner</a> / Scenarios</span>
   <span class="nav-pair"><a href="core-harness.html">Core Harness</a><a href="mocked-agents.html">Mocked Agents</a></span>
 </div>
 <h1>Scenarios</h1>
@@ -51,7 +51,7 @@
   </ol>
 </nav>
 
-<p class="lead">A <code>Scenario</code> is a pure description of what a mocked planner / executor / reducer should submit at each decision point. The mock runner translates those descriptions into real submission tool calls against a real TaskCenter run, and an audit-bus-fed lifecycle accumulates the events into a rich <code>RunReport</code> for assertions.</p>
+<p class="lead">A <code>Scenario</code> is a pure description of what a mocked planner / executor / reducer should submit at each decision point. The mock runner translates those descriptions into real submission tool calls against a real Workflow run, and an audit-bus-fed lifecycle accumulates the events into a rich <code>RunReport</code> for assertions.</p>
 
 <section id="scope" data-last-reviewed-commit="d32994314" data-evidence-paths="backend/src/task_center_runner/scenarios backend/src/task_center_runner/scenarios/__init__.py backend/src/task_center_runner/scenarios/base.py">
 <h2>Scope <a class="anchor" href="#scope">#</a></h2>
@@ -59,15 +59,15 @@
   <ul>
     <li>Scenarios live under <code>backend/src/task_center_runner/scenarios/</code>. Composite scenarios live at the top level; focused scenarios are grouped by concern under subpackages.</li>
     <li><code>SCENARIO_REGISTRY</code> is the catalog (~45 entries across pipeline, sandbox, capacity, planner-validation, and composite lanes).</li>
-    <li>Scenarios never own runner state. The mock runner drives real TaskCenter tool calls, the bus carries mock side-channel events, and <code>ScenarioLifecycle</code> accumulates those records for the report.</li>
+    <li>Scenarios never own runner state. The mock runner drives real Workflow tool calls, the bus carries mock side-channel events, and <code>ScenarioLifecycle</code> accumulates those records for the report.</li>
     <li>The decision protocol is intentionally narrow: planner / executor / reducer responses and optional recursive-handoff goal text.</li>
   </ul>
 </div>
 <div class="wiki-links" aria-label="Scenarios related pages">
   <a href="core-harness.html">Core Harness</a>
   <a href="mocked-agents.html">Mocked Agents</a>
-  <a href="../task_center/lifecycle.html">Workflow Iteration Attempt</a>
-  <a href="../task_center/terminal-tools.html">Terminal Tools</a>
+  <a href="../workflow/lifecycle.html">Workflow Iteration Attempt</a>
+  <a href="../workflow/terminal-tools.html">Terminal Tools</a>
 </div>
 </section>
 
@@ -124,7 +124,7 @@ run_pipeline executes; per event:
 <div class="evidence-grid">
   <div class="evidence-card">
     <h3>Pipeline (state machine)</h3>
-    <p>Drives planner / plan DAG (generator + reducer) / RUN-stage control flow with the lightest possible executor action. Failures here mean a regression in <code>task_center/</code> proper.</p>
+    <p>Drives planner / plan DAG (generator + reducer) / RUN-stage control flow with the lightest possible executor action. Failures here mean a regression in <code>workflow/</code> proper.</p>
     <p>Reference scenarios: <code>InitialWorkflow</code>, <code>NestedWorkflow</code>, <code>NestedWorkflowFailure</code>, <code>IterativeDeferral</code>, <code>DependencyDagSerial</code>, <code>DependencyDagParallel</code>, <code>DependencyDagDiamond</code>, <code>DependencyDagMixed</code>, <code>DependencyBlockedDescendants</code>, <code>AttemptRetryPlannerFailure</code>, <code>AttemptRetryGeneratorFailure</code>, <code>AttemptRetryReducerFailure</code>, <code>AttemptBudgetExhausted</code>, <code>GeneratorFailureQuiescence</code>, <code>DeferredParentPlannerTerminalRouting</code>, <code>InitialMessagesCapture</code>.</p>
   </div>
   <div class="evidence-card">
@@ -138,7 +138,7 @@ run_pipeline executes; per event:
   </div>
   <div class="evidence-card">
     <h3>Planner Validation</h3>
-    <p>Negative-path scenarios for planner output validation: <code>PlannerCycleInDeps</code>, <code>PlannerDuplicateLocalId</code>, <code>PlannerEmptyTasks</code>, <code>PlannerBlankDeferredGoal</code>, <code>PlannerUnknownAgentName</code>, <code>PlannerUnknownDep</code>. The mock planner returns an intentionally bad plan; the runner asserts TaskCenter rejects it through the expected error path.</p>
+    <p>Negative-path scenarios for planner output validation: <code>PlannerCycleInDeps</code>, <code>PlannerDuplicateLocalId</code>, <code>PlannerEmptyTasks</code>, <code>PlannerBlankDeferredGoal</code>, <code>PlannerUnknownAgentName</code>, <code>PlannerUnknownDep</code>. The mock planner returns an intentionally bad plan; the runner asserts Workflow rejects it through the expected error path.</p>
   </div>
   <div class="evidence-card">
     <h3>Composite</h3>
@@ -149,7 +149,7 @@ run_pipeline executes; per event:
 
 <section id="graph-backed-assertions" data-last-reviewed-commit="d32994314" data-evidence-paths="backend/src/task_center_runner/tests/mock/_focused_scenario_contracts.py backend/src/task_center_runner/core/runner.py">
 <h2>Graph-Backed Assertions <a class="anchor" href="#graph-backed-assertions">#</a></h2>
-<p>Role lifecycle assertions are derived from persisted TaskCenter graph state instead of synthetic event hooks. The runner still exposes true audit events for tools and sandbox probes.</p>
+<p>Role lifecycle assertions are derived from persisted Workflow graph state instead of synthetic event hooks. The runner still exposes true audit events for tools and sandbox probes.</p>
 <div class="edge-list" aria-label="Graph-backed assertion helpers">
   <div><b>count_role_tasks(report, role, status=)</b><span>Counts plan tasks whose <code>agent_name</code> matches <em>role</em> (<code>planner</code> / <code>executor</code> / <code>reducer</code>) across <code>report.graph_summary</code>. Use <code>status="done"</code> or <code>status="failed"</code> for outcome-specific checks.</span></div>
   <div><b>count_deferred_attempts(report)</b><span>Counts attempts that wrote <code>deferred_goal_for_next_iteration</code>, replacing old planner deferral event assertions.</span></div>
@@ -158,7 +158,7 @@ run_pipeline executes; per event:
 <div class="summary">
   <ul>
     <li>Keep sandbox events such as <code>SANDBOX_CONFLICT_DETECTED</code> as event assertions because they are real probe/audit signals.</li>
-    <li>Use graph state for role scheduling and terminal outcomes because the real TaskCenter stores are the durable source of truth.</li>
+    <li>Use graph state for role scheduling and terminal outcomes because the real Workflow stores are the durable source of truth.</li>
   </ul>
 </div>
 </section>
@@ -186,7 +186,7 @@ Run flow under the mock runner (single RUN stage to quiescence):
                   -&gt; attempt PASSES (every plan task DONE) -&gt; workflow closes
 
 Assertions:
-  report.task_center_status == "done"
+  report.workflow_status == "done"
   count_role_tasks(report, "executor", status="done") &gt;= 1
   count_role_tasks(report, "reducer", status="done") &gt;= 1
 </pre>

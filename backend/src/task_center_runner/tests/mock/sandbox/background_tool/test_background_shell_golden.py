@@ -61,7 +61,7 @@ async def test_background_shell_golden(
         audit_dir=audit_dir,
         stores=stores,
     )
-    assert report.task_center_status == "done", report
+    assert report.request_status == "done", report
 
     read = await sandbox_api.read_file(
         sandbox_id,

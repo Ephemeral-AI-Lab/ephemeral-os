@@ -34,10 +34,10 @@ async def test_run_sweevo_real_agent_uses_host_cwd_for_runtime_config(
         captured["config"] = config
         return SimpleNamespace(
             lifecycle_extras={},
-            task_center_run_id="run-1",
+            request_id="run-1",
             sandbox_id="sbx-1",
             run_dir=tmp_path / "run",
-            task_center_status="failed",
+            request_status="failed",
             duration_s=1.0,
             task_count=0,
             tasks_completed=0,

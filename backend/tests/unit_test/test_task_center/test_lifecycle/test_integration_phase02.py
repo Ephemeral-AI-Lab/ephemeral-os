@@ -9,7 +9,7 @@ workflow, routing the close through the run-close handler.
 from __future__ import annotations
 
 from workflow._core.primitives import (
-    TaskCenterLifecycleConfig,
+    WorkflowLifecycleConfig,
     generator_task_id,
     planner_task_id,
     reducer_task_id,
@@ -63,7 +63,7 @@ def _build(workflow_store, iteration_store, attempt_store, task_store, *, compos
         iteration_store=iteration_store,
         attempt_store=attempt_store,
         iteration_coordinators=iteration_coordinators,
-        config=TaskCenterLifecycleConfig(default_attempt_budget=2),
+        config=WorkflowLifecycleConfig(default_attempt_budget=2),
         orchestrator_registry=orchestrator_registry,
         run_close_handler=lambda *, child_workflow: closed_workflows.append(child_workflow),
         orchestrator_factory=lambda attempt, on_attempt_closed: AttemptOrchestrator(

@@ -49,7 +49,7 @@ async def test_read_file_publishes_started_and_completed(
             caller=SandboxCaller(
                 agent_id="agent-1",
                 task_center_run_id="run-1",
-                task_center_task_id="task-1",
+                task_id="task-1",
                 tool_id="tool-1",
             ),
         ),
@@ -64,7 +64,7 @@ async def test_read_file_publishes_started_and_completed(
     ]
     assert published[0].payload == {"operation": "read_file", "path": "a.txt"}
     assert published[1].node.task_center_run_id == "run-1"
-    assert published[1].node.task_center_task_id == "task-1"
+    assert published[1].node.task_id == "task-1"
     assert published[1].node.tool_name == "read_file"
     assert published[1].node.tool_use_id == "tool-1"
     assert published[1].payload["timings"] == {"api.read.total_s": 0.1}

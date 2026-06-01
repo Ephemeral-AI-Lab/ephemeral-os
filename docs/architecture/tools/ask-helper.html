@@ -80,7 +80,7 @@
     <div class="node"><strong>Parent tool result</strong><small>terminal metadata returned to current agent</small></div>
   </div>
 </div>
-<p>The helper tool reconstructs the helper launch messages directly instead of using the TaskCenter context composer. <code>build_helper_messages()</code> resolves the helper agent definition, reads the parent conversation from tool context, extracts the parent's first two user messages, resolves the parent agent definition when possible, captures active terminals, and builds a filtered transcript starting after the parent launch messages.</p>
+<p>The helper tool reconstructs the helper launch messages directly instead of using the Workflow context composer. <code>build_helper_messages()</code> resolves the helper agent definition, reads the parent conversation from tool context, extracts the parent's first two user messages, resolves the parent agent definition when possible, captures active terminals, and builds a filtered transcript starting after the parent launch messages.</p>
 <p><code>assemble_user_msg_1()</code> wraps the parent context, parent task, and parent transcript as evidence with a prompt-injection guard. The second helper message is the advisor's terminal catalog plus the pending submission.</p>
 <p>If the runtime config, helper agent definition, or parent transcript shape is missing, the tool returns an explicit error <code>ToolResult</code> rather than launching a weakly grounded helper.</p>
 </section>
@@ -97,12 +97,12 @@
 <p>The advisor sees verifier/evaluator inline <code>edit_file</code> / <code>write_file</code> tool inputs verbatim in the parent transcript — Claude Code's literal <code>Edit</code> / <code>Write</code> / <code>NotebookEdit</code> names are stripped, but EphemeralOS's lowercase tool names are not. That visibility is how the advisor catches inline edits that exceed the typo / single-line scope.</p>
 </section>
 
-<section id="connections" data-last-reviewed-commit="422aa57100f55131995ca73977c22ea0f9402a09" data-evidence-paths="backend/src/tools/ask_helper backend/src/engine/api.py backend/src/engine/agent/lifecycle.py backend/src/tools/_terminals/registry.py backend/src/tools/submission backend/src/task_center/context_engine backend/src/sandbox/daemon/workspace_tool_dispatch.py">
+<section id="connections" data-last-reviewed-commit="422aa57100f55131995ca73977c22ea0f9402a09" data-evidence-paths="backend/src/tools/ask_helper backend/src/engine/api.py backend/src/engine/agent/lifecycle.py backend/src/tools/_terminals/registry.py backend/src/tools/submission backend/src/workflow/context_engine backend/src/sandbox/daemon/workspace_tool_dispatch.py">
 <h2>Connections <a class="anchor" href="#connections">#</a></h2>
 <div class="edge-list">
   <div><b>engine</b><span>The helper launches through <code>engine.api.run_ephemeral_agent</code> and blocks until the helper run returns.</span></div>
   <div><b>terminal tools</b><span>The helper terminates through its own submission terminal, then the ask-helper tool forwards that terminal output to the parent as the tool result.</span></div>
-  <div><b>TaskCenter</b><span>Helper advice is evidence for the parent. It does not directly close the parent TaskCenter attempt or bypass the parent's terminal submission contract.</span></div>
+  <div><b>Workflow</b><span>Helper advice is evidence for the parent. It does not directly close the parent Workflow attempt or bypass the parent's terminal submission contract.</span></div>
   <div><b>sandbox</b><span>The advisor uses normal tool permissions and sandbox routing. Active sandbox id is forwarded, but background task supervision is not involved.</span></div>
   <div><b>subagent contrast</b><span><a class="wiki-link" href="subagent.html">run_subagent</a> is engine-background and returns through typed subagent controls. The ask helper is a synchronous tool call whose child terminal output is returned immediately to the current tool result.</span></div>
 </div>

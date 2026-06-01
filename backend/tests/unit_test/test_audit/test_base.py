@@ -14,7 +14,7 @@ def test_audit_event_defaults_are_serializable_with_dataclass_projection() -> No
         type="sandbox.operation.completed",
         node=AuditNode(
             task_center_run_id="run-1",
-            task_center_task_id="task-1",
+            task_id="task-1",
             sandbox_id="sb-1",
             tool_name="edit_file",
             tool_use_id="tool-1",

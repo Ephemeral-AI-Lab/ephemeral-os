@@ -19,8 +19,8 @@
     <li><a href="./sandbox/index.html" data-doc-module="sandbox">Sandbox Workspace</a></li>
     <li><a href="./tools/index.html" data-doc-module="tools">Tools</a></li>
     <li><a href="./agent_loops/index.html" data-doc-module="agent-loops">Agent Loops</a></li>
-    <li><a href="./task_center/index.html" data-doc-module="task-center">TaskCenter</a></li>
-    <li><a href="./task_center_runner/index.html" data-doc-module="task-center-runner">TaskCenter Runner (Testing)</a></li>
+    <li><a href="./workflow/index.html" data-doc-module="workflow">Workflow</a></li>
+    <li><a href="./task_center_runner/index.html" data-doc-module="workflow-runner">Workflow Runner (Testing)</a></li>
   </ol>
 </nav>
 <main>
@@ -50,20 +50,20 @@
   <span class="pill">Forward-only retry and replan</span>
 </div>
 
-<section id="thesis" data-last-reviewed-commit="d32994314" data-evidence-paths="backend/src/task_center backend/src/sandbox docs/architecture/sandbox/space-model.html docs/architecture/task_center/lifecycle.html">
+<section id="thesis" data-last-reviewed-commit="d32994314" data-evidence-paths="backend/src/workflow backend/src/sandbox docs/architecture/sandbox/space-model.html docs/architecture/workflow/lifecycle.html">
 <h2>The Bet <a class="anchor" href="#thesis">§</a></h2>
-<p>Two planes, one principle. The <strong>TaskCenter</strong> control plane holds durable <code>Workflow → Iteration → Attempt</code> state and runs a planner → generator + reducer harness. The <strong>Sandbox</strong> substrate is a shared workspace where every write is merged safely and made visible immediately. Agents coordinate by <em>reading shared truth</em> — the decision state and the artifact tree — never by talking to each other.</p>
+<p>Two planes, one principle. The <strong>Task / Workflow</strong> control plane persists every agent assignment as a Task, runs the root Task directly, and launches delegated <code>Workflow → Iteration → Attempt</code> decomposition only when an agent calls <code>delegate_workflow</code>. The <strong>Sandbox</strong> substrate is a shared workspace where every write is merged safely and made visible immediately. Agents coordinate by <em>reading shared truth</em> — the decision state and the artifact tree — never by talking to each other.</p>
 <pre class="diagram" aria-label="EphemeralOS two-plane architecture">
   AGENTS   planner · generator (executor) · reducer · helper (advisor) · subagent (explorer)
    │       typed roles — they never message each other
    │
    ▼  each launched with a fresh, role-scoped Context Packet
-  ┌─ TASKCENTER ───────────── durable control plane ──────────
+  ┌─ WORKFLOW ───────────── durable control plane ──────────
   │  "decision blackboard"
   │
   │  Workflow ──▶ Iteration ──▶ Attempt   (stages: PLAN ▸ RUN ▸ CLOSED)
   │  planner ──▶ plan DAG: generator + reducer tasks (needs edges)
-  │  generator ─▶ child Workflow when runtime evidence requires decomposition
+  │  root task runs directly; generators may call delegate_workflow
   │  coordinate through persisted state, not agent-to-agent chat
   │
   ▼  tool calls:  read · write · edit · shell · search
@@ -75,12 +75,12 @@
      O(1) repo bytes per op  ·  isolated mode for risky work
 </pre>
 <div class="edge-list">
-  <div><b>decision blackboard</b><span>Durable <a class="wiki-link" href="task_center/lifecycle.html">Workflow → Iteration → Attempt</a> state plus role-scoped <a class="wiki-link" href="task_center/context-engine.html">AgentContext</a> projections replace conversational memory; <code>submit_workflow_handoff</code> branches into a child Workflow without introducing peer-to-peer agent messaging.</span></div>
+  <div><b>decision blackboard</b><span>Durable Task rows plus <a class="wiki-link" href="workflow/lifecycle.html">Workflow → Iteration → Attempt</a> state and role-scoped <a class="wiki-link" href="workflow/context-engine.html">AgentContext</a> projections replace conversational memory; <code>delegate_workflow</code> starts background decomposition without introducing peer-to-peer agent messaging.</span></div>
   <div><b>artifact blackboard</b><span>The <a class="wiki-link" href="sandbox/workspaces.html">shared workspace</a> is the coordination channel; <a class="wiki-link" href="sandbox/occ.html">OCC</a> makes concurrent writes safe without agents ever messaging each other.</span></div>
 </div>
 </section>
 
-<section id="why" data-last-reviewed-commit="d32994314" data-evidence-paths="backend/src/sandbox/occ backend/src/sandbox/layer_stack backend/src/sandbox/daemon/workspace_tool_dispatch.py backend/src/task_center/context_engine backend/src/task_center/attempt docs/architecture/sandbox/space-model.html docs/architecture/sandbox/workspaces.html docs/architecture/task_center/agent-roles.html">
+<section id="why" data-last-reviewed-commit="d32994314" data-evidence-paths="backend/src/sandbox/occ backend/src/sandbox/layer_stack backend/src/sandbox/daemon/workspace_tool_dispatch.py backend/src/workflow/context_engine backend/src/workflow/attempt docs/architecture/sandbox/space-model.html docs/architecture/sandbox/workspaces.html docs/architecture/workflow/agent-roles.html">
 <h2>Why EphemeralOS <a class="anchor" href="#why">§</a></h2>
 <p>What this architecture does that container-, worktree-, and single-thread approaches structurally cannot:</p>
 <div class="concept-grid">
@@ -98,7 +98,7 @@
   </div>
   <div class="concept-card">
     <strong>Memory on disk, not in-context</strong>
-    <p>Durable state is the memory; each agent gets a fresh, role-scoped <a class="wiki-link" href="task_center/context-engine.html">AgentContext</a> projected from it — no monotonically growing context, no compaction tax.</p>
+    <p>Durable state is the memory; each agent gets a fresh, role-scoped <a class="wiki-link" href="workflow/context-engine.html">AgentContext</a> projected from it — no monotonically growing context, no compaction tax.</p>
   </div>
   <div class="concept-card">
     <strong>Built-in quality gate</strong>
@@ -106,7 +106,7 @@
   </div>
   <div class="concept-card">
     <strong>Forward-only, self-correcting</strong>
-    <p>No rollback machinery: the system hands the next agent accurate context and trusts it to self-correct, and recovery composes across <a class="wiki-link" href="task_center/lifecycle.html">nested execution lanes</a>.</p>
+    <p>No rollback machinery: the system hands the next agent accurate context and trusts it to self-correct, and recovery composes across <a class="wiki-link" href="workflow/lifecycle.html">nested execution lanes</a>.</p>
   </div>
 </div>
 
@@ -138,7 +138,7 @@
        └─ no  ─▶ ABORTED_VERSION ─▶ A re-reads truth & retries
 </pre>
 </section>
-<section id="landscape" data-last-reviewed-commit="d27d42ecc33841853d50b63df380d347504c5972" data-evidence-paths="backend/src/sandbox/occ backend/src/sandbox/layer_stack backend/src/task_center/attempt backend/src/sandbox/daemon/workspace_tool_dispatch.py docs/architecture/sandbox/space-model.html docs/architecture/task_center/agent-roles.html">
+<section id="landscape" data-last-reviewed-commit="d27d42ecc33841853d50b63df380d347504c5972" data-evidence-paths="backend/src/sandbox/occ backend/src/sandbox/layer_stack backend/src/workflow/attempt backend/src/sandbox/daemon/workspace_tool_dispatch.py docs/architecture/sandbox/space-model.html docs/architecture/workflow/agent-roles.html">
 <h2>Multi-Agent Landscape <a class="anchor" href="#landscape">§</a></h2>
 <p>Where EphemeralOS sits among multi-agent coding approaches. The comparison is on <strong>coordination architecture</strong> — how agents share work and writes — not on benchmark performance. The decisive axis is <strong>concurrent-write safety on a shared tree</strong>: most systems are either single-writer, isolate into copies, or share a working tree and avoid collisions <em>by convention</em> (task partitioning, messaging) rather than by control. The EphemeralOS column is grounded in this codebase; other rows characterize systems from public information as of early 2026 and may lag their latest releases — correct any row you know better.</p>
 <pre class="diagram" aria-label="Multi-agent positioning map: parallel writers by shared-tree safety">
@@ -178,12 +178,12 @@
 <div class="callout"><span class="label">Safety by control, not convention</span> The systems that <em>do</em> run agents in parallel on a shared tree — Claude Code teams, oh-my-claudecode team, Qoder expert teams — keep writes from colliding by <em>convention</em>: partition the task list so two agents do not touch the same files. That holds until they do. EphemeralOS's <a class="wiki-link" href="sandbox/occ.html">OCC</a> stale-base rejection over shared <a class="wiki-link" href="sandbox/space-model.html">LayerStack</a> layers makes overlapping writes <em>structurally</em> safe, so correctness never depends on agents staying out of each other's way.</div>
 </section>
 
-<section id="lifecycle" data-last-reviewed-commit="HEAD-plus-worktree" data-evidence-paths="backend/src/task_center/run_controller.py backend/src/task_center/workflow backend/src/task_center/iteration backend/src/task_center/attempt backend/src/task_center/_core/outcomes.py backend/src/task_center/context_engine docs/architecture/task_center/lifecycle.html docs/architecture/task_center/attempt-harness.html docs/architecture/task_center/context-engine.html">
+<section id="lifecycle" data-last-reviewed-commit="HEAD-plus-worktree" data-evidence-paths="backend/src/workflow/run_controller.py backend/src/workflow backend/src/workflow/iteration backend/src/workflow/attempt backend/src/workflow/_core/outcomes.py backend/src/workflow/context_engine docs/architecture/workflow/lifecycle.html docs/architecture/workflow/attempt-harness.html docs/architecture/workflow/context-engine.html">
 <h2>How a Task Runs <a class="anchor" href="#lifecycle">§</a></h2>
 <p>A run binds a sandbox workspace and starts a root <code>Workflow</code> — itself spawned, like every workflow, by a generator task (the synthetic run-level bootstrap generator <code>&lt;run_id&gt;:root</code> owned by the run controller). Every Workflow advances through one or more Iterations; each Iteration runs Attempts; each Attempt is one planner-authored <strong>plan</strong> — a DAG of generator and reducer tasks whose edges are <code>needs</code>. The stages collapse to <strong>PLAN → RUN → CLOSED</strong>. The whole lifecycle is persisted, so coordination needs no live orchestrator.</p>
 <div class="sequence" aria-label="End-to-end task lifecycle">
   <ol>
-    <li><span><strong>Bootstrap.</strong> A run binds the workspace and the run controller seeds the <code>&lt;run_id&gt;:root</code> generator, which hands off to <a class="wiki-link" href="task_center/lifecycle.html">WorkflowStarter</a> to create the root Workflow, its first Iteration, and its first Attempt.</span></li>
+    <li><span><strong>Bootstrap.</strong> A run binds the workspace and the run controller seeds the <code>&lt;run_id&gt;:root</code> generator, which hands off to <a class="wiki-link" href="workflow/lifecycle.html">WorkflowStarter</a> to create the root Workflow, its first Iteration, and its first Attempt.</span></li>
     <li><span><strong>Plan.</strong> The planner reads goal + history context and submits a validated plan — generator tasks plus at least one reducer (unique ids, known <code>needs</code>, acyclic, generator-only dependency DAG, reducers directly gating one or more generator outputs).</span></li>
     <li><span><strong>Run.</strong> The single RUN stage schedules generator and reducer tasks together to quiescence. Ready tasks launch in parallel waves; each generator reads the shared workspace, does its work, and publishes through <a class="wiki-link" href="sandbox/occ.html">OCC</a>; each reducer judges whether its <code>needs</code> outcomes satisfy its prompt. A failed or blocked task makes its descendants unreachable while runnable siblings drain.</span></li>
     <li><span><strong>Close.</strong> The attempt PASSES iff every plan task is <code>DONE</code>, and FAILS (<code>TASK_FAILED</code>) if any task failed or blocked.</span></li>
@@ -204,31 +204,31 @@
 </pre>
 <div class="edge-list">
   <div><b>known shape</b><span><code>submit_planner_outcome</code> materializes the planner's generator/reducer DAG into persisted task rows before the RUN stage schedules the ready frontier; optional deferral is carried by <code>deferred_goal_for_next_iteration</code>.</span></div>
-  <div><b>runtime branch</b><span>An executor that discovers its task needs decomposition calls <code>submit_workflow_handoff</code>; the parent generator waits while the child Workflow runs its own Iteration and Attempt chain, then receives the child's flattened workflow outcomes.</span></div>
+  <div><b>runtime branch</b><span>An executor that discovers its task needs decomposition calls non-terminal <code>delegate_workflow</code>; the parent task stays <code>RUNNING</code>, inspects or cancels the workflow handle, then submits its own terminal outcome.</span></div>
   <div><b>phase replan</b><span>A deferring successful plan starts the next Iteration from <code>deferred_goal_for_next_iteration</code>. The next planner sees prior successful reducer evidence, not raw transcripts or failed exploratory paths.</span></div>
 </div>
 <div class="trace-grid" aria-label="Lifecycle stage to owning code">
-  <div>Run bootstrap &amp; root workflow</div><div><span class="file-ref">backend/src/task_center/run_controller.py</span></div>
-  <div>Attempt orchestration</div><div><span class="file-ref">backend/src/task_center/attempt/orchestrator.py</span></div>
-  <div>RUN stage scheduling</div><div><span class="file-ref">backend/src/task_center/attempt/run_stage.py</span></div>
-  <div>Plan DAG gate</div><div><span class="file-ref">backend/src/task_center/attempt/plan_dag.py</span></div>
-  <div>Role-scoped context</div><div><span class="file-ref">backend/src/task_center/context_engine/engine.py</span></div>
+  <div>Request bootstrap &amp; root task</div><div><span class="file-ref">backend/src/runtime/entry.py</span></div>
+  <div>Attempt orchestration</div><div><span class="file-ref">backend/src/workflow/attempt/orchestrator.py</span></div>
+  <div>RUN stage scheduling</div><div><span class="file-ref">backend/src/workflow/attempt/run_stage.py</span></div>
+  <div>Plan DAG gate</div><div><span class="file-ref">backend/src/workflow/attempt/plan_dag.py</span></div>
+  <div>Role-scoped context</div><div><span class="file-ref">backend/src/workflow/context_engine/engine.py</span></div>
 </div>
 </section>
 
-<section id="recovery" data-last-reviewed-commit="HEAD-plus-worktree" data-evidence-paths="backend/src/task_center/attempt backend/src/task_center/iteration backend/src/task_center/workflow backend/src/task_center/_core/workflow_depth.py backend/src/task_center/_core/outcomes.py backend/src/tools/submission/generator/submit_workflow_handoff backend/src/tools/submission/context/generator.py backend/src/tools/_hooks docs/architecture/task_center/lifecycle.html docs/architecture/task_center/context-engine.html">
+<section id="recovery" data-last-reviewed-commit="HEAD-plus-worktree" data-evidence-paths="backend/src/workflow/attempt backend/src/workflow/iteration backend/src/workflow/starter.py backend/src/workflow/lifecycle.py backend/src/workflow/_core/workflow_depth.py backend/src/workflow/_core/outcomes.py backend/src/tools/workflow backend/src/tools/submission/generator/submit_generator_outcome backend/src/tools/_hooks docs/architecture/workflow/lifecycle.html docs/architecture/workflow/context-engine.html">
 <h2>Recovery &amp; Replanning <a class="anchor" href="#recovery">§</a></h2>
 <p>There is no checkpoint/rollback machinery and no compaction step. The world only moves forward; when something fails, the system hands the next agent an accurate picture of current reality and trusts it to <strong>self-correct</strong>. Adaptation is layered, and every loop replans at a <em>verified checkpoint</em> rather than mid-thread.</p>
 <pre class="diagram" aria-label="Layered recovery loops">
   within-task      each generator is a full agent loop, adapts inside its task
-  mid-attempt      generator hits sub-work ─▶ handoff ─▶ child Workflow (own lifecycle)
+  mid-attempt      generator hits sub-work ─▶ delegate_workflow ─▶ Workflow handle
   cross-attempt    failure ─▶ retry; next planner sees local failed evidence
   cross-iteration  success + defer ─▶ next phase sees successful reducer evidence
 
   forward-only:  no rollback, no compaction. Decomposition keeps each agent's
   context small by construction, so there is nothing to compress.
 </pre>
-<div class="callout"><span class="label">Dynamic workflow stance</span> TaskCenter is dynamic through durable boundaries, not hidden script variables: fixed plan DAGs cover known fanout, <code>submit_workflow_handoff</code> covers runtime-discovered branches, same-iteration retry handles failed generator/reducer evidence, and deferred Iterations replan only from reducer-approved evidence.</div>
+<div class="callout"><span class="label">Dynamic workflow stance</span> Workflow decomposition is dynamic through durable boundaries, not hidden script variables: fixed plan DAGs cover known fanout, <code>delegate_workflow</code> covers runtime-discovered branches, same-iteration retry handles failed generator/reducer evidence, and deferred Iterations replan only from reducer-approved evidence.</div>
 </section>
 
 <section id="workspaces" data-last-reviewed-commit="d27d42ecc33841853d50b63df380d347504c5972" data-evidence-paths="backend/src/sandbox/daemon/workspace_tool_dispatch.py backend/src/sandbox/ephemeral_workspace backend/src/sandbox/isolated_workspace docs/architecture/sandbox/workspaces.html">
@@ -240,7 +240,7 @@
 </div>
 </section>
 
-<section id="principles" data-last-reviewed-commit="d27d42ecc33841853d50b63df380d347504c5972" data-evidence-paths="backend/src/sandbox backend/src/task_center docs/architecture/sandbox/space-model.html docs/architecture/task_center/context-engine.html">
+<section id="principles" data-last-reviewed-commit="d27d42ecc33841853d50b63df380d347504c5972" data-evidence-paths="backend/src/sandbox backend/src/workflow docs/architecture/sandbox/space-model.html docs/architecture/workflow/context-engine.html">
 <h2>Design Principles <a class="anchor" href="#principles">§</a></h2>
 <p>Every major decision is the same instinct applied at a different layer: <strong>prevent the expensive, volatile thing from forming; externalize truth to cheap, durable substrate; let capable agents self-correct from accurate context.</strong> One bet, five times:</p>
 <div class="table-wrap">
@@ -257,17 +257,17 @@
 </div>
 </section>
 
-<section id="modules" data-last-reviewed-commit="d32994314" data-evidence-paths="docs/architecture/sandbox docs/architecture/tools docs/architecture/agent_loops docs/architecture/assets backend/src/task_center">
+<section id="modules" data-last-reviewed-commit="d32994314" data-evidence-paths="docs/architecture/sandbox docs/architecture/tools docs/architecture/agent_loops docs/architecture/assets backend/src/workflow">
 <h2>Modules <a class="anchor" href="#modules">§</a></h2>
 <div class="module-card-grid">
 <a class="module-card" href="sandbox/index.html"><strong>Sandbox Workspace</strong><span>LayerStack, overlay, OCC, daemon routing, providers, plugins, and workspace execution modes.</span></a>
-<a class="module-card" href="tools/index.html"><strong>Tools</strong><span>Agent-facing tool definitions, framework lifecycle, terminals, helpers, background tasks, and TaskCenter submission surfaces.</span></a>
+<a class="module-card" href="tools/index.html"><strong>Tools</strong><span>Agent-facing tool definitions, framework lifecycle, terminals, helpers, background tasks, and Workflow submission surfaces.</span></a>
 <a class="module-card" href="agent_loops/index.html"><strong>Agent Loops</strong><span>Engine run lifecycle, model-provider streaming, prompt assembly, background operations, sandbox-provider runtimes, notifications, and message artifacts.</span></a>
-<a class="module-card" href="task_center/index.html"><strong>TaskCenter</strong><span>Workflow -> Iteration -> Attempt state model, planner-authored generator + reducer plan harness, context engine, role profiles, and terminal state submissions.</span></a>
-<a class="module-card" href="task_center_runner/index.html"><strong>TaskCenter Runner (Testing)</strong><span>Test-only harness for scenario-based mocked-agent coverage and the SWE-EVO benchmark pipeline; one engine, three modes.</span></a>
+<a class="module-card" href="workflow/index.html"><strong>Workflow</strong><span>Workflow -> Iteration -> Attempt state model, planner-authored generator + reducer plan harness, context engine, role profiles, and terminal state submissions.</span></a>
+<a class="module-card" href="task_center_runner/index.html"><strong>Workflow Runner (Testing)</strong><span>Test-only harness for scenario-based mocked-agent coverage and the SWE-EVO benchmark pipeline; one engine, three modes.</span></a>
 </div>
 </section>
-<section id="cross-module-map" data-last-reviewed-commit="d32994314" data-evidence-paths="backend/src/tools backend/src/sandbox backend/src/engine backend/src/task_center backend/src/message backend/src/notification backend/src/prompt">
+<section id="cross-module-map" data-last-reviewed-commit="d32994314" data-evidence-paths="backend/src/tools backend/src/sandbox backend/src/engine backend/src/workflow backend/src/message backend/src/notification backend/src/prompt">
 <h2>Cross-Module Map <a class="anchor" href="#cross-module-map">§</a></h2>
 <div class="edge-list">
   <div><b>tools to sandbox</b><span><a class="wiki-link" href="tools/sandbox.html">Sandbox tools</a> call typed sandbox APIs whose runtime semantics are explained by <a class="wiki-link" href="sandbox/overview.html">Sandbox Workspace</a>.</span></div>
@@ -276,10 +276,10 @@
   <div><b>agent loop to tools</b><span><a class="wiki-link" href="agent_loops/main-loop.html">Main agent loop</a> defers, dispatches, and terminates tool calls whose framework contracts are documented in <a class="wiki-link" href="tools/framework.html">Tools Framework</a>.</span></div>
   <div><b>agent loop to model providers</b><span><a class="wiki-link" href="agent_loops/model-provider.html">Model Provider Runtime</a> follows <code>backend/src/providers</code> active model resolution, <code>MessageRequest</code>, stream event translation, auth, retry, and provider errors.</span></div>
   <div><b>agent loop to sandbox</b><span><a class="wiki-link" href="agent_loops/provider-sandbox-bridge.html">Sandbox Tool Dispatch Path</a> follows sandbox-backed tools through public API transport, daemon routing, provider adapters, OCC, overlay, and isolated workspace gates.</span></div>
-  <div><b>agent loop to TaskCenter</b><span><a class="wiki-link" href="agent_loops/prompt-context.html">Prompt Assembly</a> shows how TaskCenter profiles, context recipes, terminal routing, task guidance, and skill rows become launch-time prompt rows.</span></div>
-  <div><b>TaskCenter to tools</b><span><a class="wiki-link" href="task_center/terminal-tools.html">TaskCenter Terminal Tools</a> explains how planner, executor, reducer, advisor, and explorer submissions enter the tool framework and engine terminal stop path.</span></div>
-  <div><b>TaskCenter to sandbox</b><span><a class="wiki-link" href="task_center/bridges.html">TaskCenter Runtime Boundaries</a> traces run bootstrap, sandbox binding, agent launch metadata, workspace tools, and live harness artifacts across engine, tools, and sandbox modules.</span></div>
-  <div><b>runner to TaskCenter</b><span><a class="wiki-link" href="task_center_runner/core-harness.html">Core Harness</a> drives a real TaskCenter run through one engine entrypoint; the <a class="wiki-link" href="task_center_runner/scenarios.html">Scenarios</a> and <a class="wiki-link" href="task_center_runner/benchmark-sweevo.html">SWE-EVO Benchmark</a> pages are the two lanes that share it.</span></div>
+  <div><b>agent loop to Workflow</b><span><a class="wiki-link" href="agent_loops/prompt-context.html">Prompt Assembly</a> shows how Workflow profiles, context recipes, terminal routing, task guidance, and skill rows become launch-time prompt rows.</span></div>
+  <div><b>Workflow to tools</b><span><a class="wiki-link" href="workflow/terminal-tools.html">Workflow Terminal Tools</a> explains how planner, executor, reducer, advisor, and explorer submissions enter the tool framework and engine terminal stop path.</span></div>
+  <div><b>Workflow to sandbox</b><span><a class="wiki-link" href="workflow/bridges.html">Workflow Runtime Boundaries</a> traces run bootstrap, sandbox binding, agent launch metadata, workspace tools, and live harness artifacts across engine, tools, and sandbox modules.</span></div>
+  <div><b>runner to Workflow</b><span><a class="wiki-link" href="task_center_runner/core-harness.html">Core Harness</a> drives a real Workflow run through one engine entrypoint; the <a class="wiki-link" href="task_center_runner/scenarios.html">Scenarios</a> and <a class="wiki-link" href="task_center_runner/benchmark-sweevo.html">SWE-EVO Benchmark</a> pages are the two lanes that share it.</span></div>
 </div>
 </section>
 <section id="maintenance" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="docs/architecture/assets/search-index.js docs/architecture/assets/nav.js docs/architecture/agent_loops/maintenance.html .agents/skills/codebase-wiki-builder/SKILL.md">
@@ -292,7 +292,7 @@
 </section>
 <div class="page-baseline" data-page-baseline-commit="d27d42ecc33841853d50b63df380d347504c5972">
   <strong>Maintenance baseline</strong>
-  <span>Mixed: <a href="#lifecycle">How a Task Runs</a> and <a href="#recovery">Recovery</a> cite currently dirty TaskCenter outcome, handoff, and routing paths and are marked <code>HEAD-plus-worktree</code>; the model-summary sections touched by the reducers + outcomes redesign (<a href="#thesis">The Bet</a>, <a href="#why">Why EphemeralOS</a>, <a href="#modules">Modules</a>, <a href="#cross-module-map">Cross-Module Map</a>) were reviewed at <code>d32994314</code>; the unchanged overview sections (<a href="#landscape">Multi-Agent Landscape</a>, <a href="#workspaces">Workspace Modes</a>, <a href="#principles">Design Principles</a>) remain at <code>d27d42ecc33841853d50b63df380d347504c5972</code>; the <a href="#maintenance">Maintenance</a> section remains at <code>e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa</code>.</span>
+  <span>Mixed: <a href="#lifecycle">How a Task Runs</a> and <a href="#recovery">Recovery</a> cite currently dirty Workflow outcome, handoff, and routing paths and are marked <code>HEAD-plus-worktree</code>; the model-summary sections touched by the reducers + outcomes redesign (<a href="#thesis">The Bet</a>, <a href="#why">Why EphemeralOS</a>, <a href="#modules">Modules</a>, <a href="#cross-module-map">Cross-Module Map</a>) were reviewed at <code>d32994314</code>; the unchanged overview sections (<a href="#landscape">Multi-Agent Landscape</a>, <a href="#workspaces">Workspace Modes</a>, <a href="#principles">Design Principles</a>) remain at <code>d27d42ecc33841853d50b63df380d347504c5972</code>; the <a href="#maintenance">Maintenance</a> section remains at <code>e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa</code>.</span>
   <code>git diff &lt;section data-last-reviewed-commit&gt;..HEAD -- &lt;section data-evidence-paths&gt;</code>
 </div>
 </main>

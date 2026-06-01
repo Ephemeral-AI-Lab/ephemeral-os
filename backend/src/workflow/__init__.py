@@ -1,4 +1,4 @@
-"""TaskCenter public package surface.
+"""Workflow public package surface.
 
 External callers import lifecycle types, orchestrators, submissions, and
 sandbox helpers from this package root::
@@ -6,7 +6,7 @@ sandbox helpers from this package root::
     from workflow import (
         AttemptOrchestrator,
         ContextScope,
-        start_task_center_run,
+        start_request,
     )
 
 Internal modules import from the canonical submodule path (e.g.
@@ -17,7 +17,7 @@ callers.
 Public names are exposed via ``__getattr__`` so that importing a submodule
 (``from workflow.state import Workflow``) does NOT trigger the
 heavy agent-launch / context-engine load chain. The cycle would otherwise
-be: db.stores -> task_center root -> agent_launch.composer ->
+be: db.stores -> workflow root -> agent_launch.composer ->
 context_engine -> db.stores. Lazy loading keeps the
 DTO submodules import-cycle-safe.
 """
@@ -48,12 +48,12 @@ if TYPE_CHECKING:
     )
     from workflow.context_engine.scope import ContextScope
     from runtime.entry import (
-        TaskCenterEntry,
-        TaskCenterEntryHandle,
-        start_task_center_run,
+        RequestEntry,
+        RequestEntryHandle,
+        start_request,
     )
-    from runtime.sandbox_provisioning import TaskCenterSandboxProvisioner
-    from workflow._core.primitives import TaskCenterInvariantViolation
+    from runtime.sandbox_provisioning import RequestSandboxProvisioner
+    from workflow._core.primitives import WorkflowInvariantViolation
     from workflow.starter import WorkflowStarter, StartedWorkflow
     from workflow.submissions import (
         GeneratorSubmission,
@@ -99,26 +99,26 @@ _EXPORTS: dict[str, tuple[str, str]] = {
     "WorkflowStatus": (_STATE, "WorkflowStatus"),
     "PlannerSubmission": (_SUBMISSIONS, "PlannerSubmission"),
     "StartedWorkflow": ("workflow.starter", "StartedWorkflow"),
-    "TaskCenterInvariantViolation": (
+    "WorkflowInvariantViolation": (
         "workflow._core.primitives",
-        "TaskCenterInvariantViolation",
+        "WorkflowInvariantViolation",
     ),
-    "TaskCenterSandboxProvisioner": (
+    "RequestSandboxProvisioner": (
         "runtime.sandbox_provisioning",
-        "TaskCenterSandboxProvisioner",
+        "RequestSandboxProvisioner",
     ),
-    "TaskCenterEntry": ("runtime.entry", "TaskCenterEntry"),
-    "TaskCenterEntryHandle": (
+    "RequestEntry": ("runtime.entry", "RequestEntry"),
+    "RequestEntryHandle": (
         "runtime.entry",
-        "TaskCenterEntryHandle",
+        "RequestEntryHandle",
     ),
     "ordered_plan_tasks": (
         "workflow.attempt.plan_dag",
         "ordered_plan_tasks",
     ),
-    "start_task_center_run": (
+    "start_request": (
         "runtime.entry",
-        "start_task_center_run",
+        "start_request",
     ),
 }
 

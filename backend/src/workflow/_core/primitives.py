@@ -1,4 +1,4 @@
-"""TaskCenter package primitives — invariant exception, task-id helpers, lifecycle config.
+"""Workflow package primitives: invariant exception, task-id helpers, lifecycle config.
 
 Persistence I/O Protocols live in :mod:`workflow._core.persistence`.
 """
@@ -11,10 +11,10 @@ from dataclasses import dataclass
 # ---- Exceptions ------------------------------------------------------------
 
 
-class TaskCenterInvariantViolation(Exception):
-    """Raised when a harness lifecycle invariant is violated.
+class WorkflowInvariantViolation(Exception):
+    """Raised when a workflow lifecycle invariant is violated.
 
-    Hard, non-tolerable harness state breach.
+    Hard, non-tolerable workflow state breach.
     """
 
 
@@ -33,16 +33,12 @@ def reducer_task_id(attempt_id: str, local_task_id: str) -> str:
     return f"{attempt_id}:red:{local_task_id}"
 
 
-def root_task_id(run_id: str) -> str:
-    return f"{run_id}:root"
-
-
 def attempt_id_from_task_id(task_id: str) -> str | None:
     """Return the attempt id encoded in a plan task id, or ``None``.
 
     Plan tasks are ``<attempt_id>:planner`` / ``<attempt_id>:gen:<local>`` /
-    ``<attempt_id>:red:<local>``; the run-level bootstrap task is
-    ``<run_id>:root`` (no attempt) and yields ``None``.
+    ``<attempt_id>:red:<local>``. Root tasks are not attempt tasks and yield
+    ``None``.
     """
     for sep in (":gen:", ":red:"):
         if sep in task_id:
@@ -56,7 +52,7 @@ def attempt_id_from_task_id(task_id: str) -> str | None:
 
 
 @dataclass(frozen=True, slots=True)
-class TaskCenterLifecycleConfig:
+class WorkflowLifecycleConfig:
     """Configurable knobs for the workflow/iteration/attempt lifecycle.
 
     ``default_attempt_budget`` is applied to every Iteration created by
@@ -67,11 +63,10 @@ class TaskCenterLifecycleConfig:
 
 
 __all__ = [
-    "TaskCenterInvariantViolation",
-    "TaskCenterLifecycleConfig",
+    "WorkflowInvariantViolation",
+    "WorkflowLifecycleConfig",
     "attempt_id_from_task_id",
     "generator_task_id",
     "planner_task_id",
     "reducer_task_id",
-    "root_task_id",
 ]

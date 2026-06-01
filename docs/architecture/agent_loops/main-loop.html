@@ -206,7 +206,7 @@
   </p>
 </section>
 
-<section id="run-lifecycle-boundary" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="backend/src/engine/agent/lifecycle.py backend/src/engine/agent/factory.py backend/src/engine/query/loop.py backend/src/engine/query/context.py backend/src/tools/background backend/src/message/message.py backend/tests/unit_test/test_task_center/test_agent_launch/test_attempt_launcher_retry.py">
+<section id="run-lifecycle-boundary" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="backend/src/engine/agent/lifecycle.py backend/src/engine/agent/factory.py backend/src/engine/query/loop.py backend/src/engine/query/context.py backend/src/tools/background backend/src/message/message.py backend/tests/unit_test/test_workflow/test_agent_launch/test_attempt_launcher_retry.py">
 <h2>Run Lifecycle Boundary</h2>
 <p><code>run_ephemeral_agent()</code> is the single lifecycle entry point for top-level agent runs and subagent launches. It spawns the agent, drives <code>agent.run(..., auto_close=False)</code>, forwards stream events, persists the agent run, closes the provider client, and returns an <code>EphemeralRunResult</code>.</p>
 <div class="summary">
@@ -236,7 +236,7 @@
 <div class="evidence-grid">
   <div><strong>Streaming and terminal dispatch</strong><p><code>backend/tests/unit_test/test_tools/test_tool_execution.py</code> covers non-terminal continuation, terminal result capture without a follow-up tool-result prompt, terminal batch rejection, terminal marker propagation, and background dispatch hooks.</p></div>
   <div><strong>Termination model</strong><p><code>test_tool_call_limit.py</code>, <code>test_hard_ceiling_behavior.py</code>, <code>test_terminal_not_submitted_transcript.py</code>, <code>test_terminal_call_reminder.py</code>, <code>test_tool_call_budget_tier_reminders.py</code>, and <code>test_definition_invariants.py</code> cover counter-only tool dispatch, the <code>ceil(1.5 × tool_call_limit)</code> hard ceiling, transcript pairing on hard exit, terminal reminder body content, 75/100/125% budget-tier notifications, and the boot-time invariants (non-empty terminals, required positive tool_call_limit, no legacy keys).</p></div>
-  <div><strong>No outer retry</strong><p><code>test_attempt_launcher_retry.py</code> includes static coverage that the TaskCenter launcher no longer passes the deleted <code>max_terminal_retries</code> argument to <code>run_ephemeral_agent()</code>.</p></div>
+  <div><strong>No outer retry</strong><p><code>test_attempt_launcher_retry.py</code> includes static coverage that the Workflow launcher no longer passes the deleted <code>max_terminal_retries</code> argument to <code>run_ephemeral_agent()</code>.</p></div>
   <div><strong>Failure modes</strong><p>Refresh this page when provider message sanitation, terminal-tool exclusivity, background deferral, budget tolerance arithmetic, notification injection, or the lifecycle return contract changes.</p></div>
 </div>
 </section>

@@ -177,7 +177,7 @@ def test_kernel_umount_lazy_raise_modes(
 # ---------------------------------------------------------------------------
 
 
-def test_validate_mount_inputs_keeps_real_mountpoint_and_fd_backed_sources(
+def test_validate_mount_inputs_keeps_real_mountpoint_and_fd_backed_layers(
     tmp_path: Path,
 ) -> None:
     workspace_root = tmp_path / "workspace"
@@ -197,8 +197,8 @@ def test_validate_mount_inputs_keeps_real_mountpoint_and_fd_backed_sources(
         assert inputs.workspace_root == workspace_root
         assert len(inputs.layer_paths) == 2
         assert all(p.as_posix().startswith("/proc/self/fd/") for p in inputs.layer_paths)
-        assert inputs.upperdir.as_posix().startswith("/proc/self/fd/")
-        assert inputs.workdir.as_posix().startswith("/proc/self/fd/")
+        assert inputs.upperdir == tmp_path / "upper"
+        assert inputs.workdir == tmp_path / "work"
         # fd count: workspace + 2 layers + upperdir + workdir = 5
         assert len(inputs.fds) == 5
     finally:

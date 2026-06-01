@@ -41,9 +41,9 @@ def _helper_context(
 ) -> ToolExecutionContextService:
     metadata = ExecutionMetadata(
         runtime_config=object(),
-        task_center_task_id="t-parent",
+        task_id="t-parent",
         task_center_run_id="run1",
-        task_center_workflow_id="req-A",
+        workflow_id="req-A",
         agent_name=agent_name,
     )
     metadata["role"] = role

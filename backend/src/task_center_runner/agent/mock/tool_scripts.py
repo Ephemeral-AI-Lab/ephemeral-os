@@ -446,7 +446,7 @@ def _stream_run_id(metadata: ExecutionMetadata) -> str:
     # Live (post-mint) metadata: the agent_run_id is populated, so prefer it.
     return str(
         metadata.agent_run_id
-        or metadata.get("task_center_task_id")
+        or metadata.get("task_id")
         or ""
     )
 

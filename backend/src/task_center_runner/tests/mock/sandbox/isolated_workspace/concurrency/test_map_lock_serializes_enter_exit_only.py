@@ -45,7 +45,7 @@ async def test_map_lock_serializes_enter_exit_only(
         # Long-ish sleeps so the overlap window is large compared to RPC
         # round-trip jitter. With no per-handle execution lock, total wall ≈
         # max(0.7s, 0.7s) ≈ 0.7s, NOT 1.4s.
-        loop = asyncio.get_running_loop()
+        loop = asyncio.get_requestning_loop()
         t0 = loop.time()
         res = await asyncio.gather(
             _iws_rpc.shell(sandbox_id, "agent-A", "sleep 0.7"),

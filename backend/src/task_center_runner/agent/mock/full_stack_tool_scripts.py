@@ -863,7 +863,7 @@ def final_reconciliation_script(ctx: ScenarioContext) -> PreparedToolScript:
         "unexpected_tool_errors": 0,
         "conflicts_detected": 3,
         "recursive_workflows": 1,
-        "task_center_status": "done",
+        "request_status": "done",
         "artifact": full_stack_metrics_path(ctx),
     }
     payload = {

@@ -22,7 +22,7 @@ from task_center_runner.core.lifecycle import LifecycleHooks, NoopLifecycle
 from task_center_runner.core.sandbox import SandboxProvisioner
 
 if TYPE_CHECKING:
-    from runtime.sandbox_provisioning import TaskCenterSandboxProvisioner
+    from runtime.sandbox_provisioning import RequestSandboxProvisioner
 
     from task_center_runner.audit.bus import AuditEventBus
     from task_center_runner.core.stores import TaskStoreBundle
@@ -42,7 +42,7 @@ class RunConfig:
     audit_dir: Path = Path(".sweevo_runs")
     run_label: str = "task_center_runner"
     run_dir_factory: Callable[[Path, "RunContext"], Path] | None = None
-    sandbox_provisioner_factory: Callable[[], "TaskCenterSandboxProvisioner"] | None = None
+    sandbox_provisioner_factory: Callable[[], "RequestSandboxProvisioner"] | None = None
     instance_id: str = ""
     max_duration_s: float | None = None
     extras: Mapping[str, Any] = field(default_factory=dict)

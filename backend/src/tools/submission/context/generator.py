@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Literal
 
-from workflow import TaskCenterInvariantViolation
+from workflow import WorkflowInvariantViolation
 from workflow._core.invariants import assert_generator_task_for_submission
 from tools._framework.core.context import ToolExecutionContextService
 from tools.submission.context.attempt import (
@@ -27,7 +27,7 @@ class GeneratorSubmissionContext:
     for attempt-bound generator tasks.
     """
 
-    task_center_task_id: str
+    task_id: str
     task: dict[str, Any]
     runtime: AttemptDeps
     attempt_ctx: AttemptSubmissionContext
@@ -44,7 +44,7 @@ class GeneratorSubmissionContext:
         self.attempt_ctx.orchestrator.apply_generator_submission(
             GeneratorSubmission(
                 attempt_id=self.attempt_ctx.attempt.id,
-                task_id=self.task_center_task_id,
+                task_id=self.task_id,
                 status=status,
                 outcome=outcome,
                 terminal_tool_result={
@@ -61,7 +61,7 @@ class GeneratorSubmissionContext:
         coordinator = WorkflowStarter(runtime=self.runtime)
         return coordinator.start(
             prompt=goal_handoff,
-            parent_task_id=self.task_center_task_id,
+            parent_task_id=self.task_id,
         )
 
 
@@ -84,10 +84,10 @@ def resolve_generator_submission_context(
     )
     try:
         assert_generator_task_for_submission(task, attempt_ctx.attempt)
-    except TaskCenterInvariantViolation as exc:
+    except WorkflowInvariantViolation as exc:
         raise AttemptSubmissionContextError(str(exc)) from exc
     return GeneratorSubmissionContext(
-        task_center_task_id=task_id,
+        task_id=task_id,
         task=task,
         runtime=runtime,
         attempt_ctx=attempt_ctx,

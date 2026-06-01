@@ -8,7 +8,7 @@ contract (``benchmarks/sweevo/eval.py``).
 
 Contract asserted:
 
-- ``report.task_center_status == 'done'``.
+- ``report.request_status == 'done'``.
 - ``/testbed/.git`` survives the projection (``apply_layerstack_to_repo``
   postcondition — the overlay opaque-dir marker must not shadow the repo).
 - A *raw* (non-daemon) read of the mock agent's known write sees it on the base
@@ -72,7 +72,7 @@ async def test_commit_to_workspace_materializes_layerstack_edits_into_testbed_gi
             stores=stores,
             commit_to_workspace=True,
         )
-        assert report.task_center_status == "done", report.metrics
+        assert report.request_status == "done", report.metrics
 
         # 1. .git survives the projection.
         git_present = await sandbox_api.raw_exec(

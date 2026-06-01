@@ -26,7 +26,7 @@ def _read_run_json(run_dir: Path) -> dict:
 def test_coding_plan_mode_active_true_recorded_in_run_json(tmp_path: Path) -> None:
     recorder = AuditRecorder(
         tmp_path,
-        task_center_run_id="test-run",
+        request_id="test-run",
         scenario_name="s",
         instance_id="i",
         sandbox_id="sb",
@@ -42,7 +42,7 @@ def test_coding_plan_mode_active_true_recorded_in_run_json(tmp_path: Path) -> No
 def test_coding_plan_mode_active_defaults_false_in_run_json(tmp_path: Path) -> None:
     recorder = AuditRecorder(
         tmp_path,
-        task_center_run_id="test-run",
+        request_id="test-run",
         scenario_name="s",
         instance_id="i",
         sandbox_id="sb",
@@ -71,7 +71,7 @@ def test_no_model_registered_resolves_to_false(tmp_path: Path) -> None:
 
     recorder = AuditRecorder(
         tmp_path,
-        task_center_run_id="test-run",
+        request_id="test-run",
         scenario_name="s",
         instance_id="i",
         sandbox_id="sb",

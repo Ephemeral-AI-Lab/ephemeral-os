@@ -100,7 +100,7 @@
 <section id="execution-lifecycle" data-last-reviewed-commit="569f12c3f39471dbaa643906856a8daf81a21a2d" data-evidence-paths="backend/src/tools/_framework/execution/tool_call.py backend/src/tools/_framework/execution/hook_pipeline.py backend/src/tools/_framework/core/validation.py backend/src/tools/_framework/core/results.py backend/src/tools/_framework/execution/trace.py backend/tests/unit_test/test_tools/test_tool_execution.py">
 <h2>Execution Lifecycle <a class="anchor" href="#execution-lifecycle">#</a></h2>
 <ol>
-  <li><code>execute_tool_call_streaming()</code> looks up the named tool in the active <code>ToolRegistry</code>, copies or creates <code>ExecutionMetadata</code>, stamps the tool id, task-center task id, and conversation messages, then builds <code>ToolExecutionContextService</code>.</li>
+  <li><code>execute_tool_call_streaming()</code> looks up the named tool in the active <code>ToolRegistry</code>, copies or creates <code>ExecutionMetadata</code>, stamps the tool id, workflow task id, and conversation messages, then builds <code>ToolExecutionContextService</code>.</li>
   <li><code>execute_tool_once()</code> parses raw input through the tool input model after stripping runtime-only fields such as <code>background</code>.</li>
   <li><code>ToolHookExecutionPipeline.run_pre_hooks()</code> can transform the parsed input or deny execution with a structured tool error.</li>
   <li>The framework optionally emits <code>ToolExecutionStartedEvent</code>, runs the tool body, catches exceptions as bounded <code>ToolResult</code> errors, and validates successful output against the declared output model.</li>
@@ -116,7 +116,7 @@
 <div class="summary">
   <ul>
     <li><code>BaseTool</code> metadata is the shared contract: schema for providers, intent for sandbox/plugin policy, terminal flag for query-loop lifecycle, and hooks for tool-local gates.</li>
-    <li>The framework owns validation and result stamping; TaskCenter and sandbox tools should delegate domain mutation to their own subsystems instead of bypassing the execution lifecycle.</li>
+    <li>The framework owns validation and result stamping; Workflow and sandbox tools should delegate domain mutation to their own subsystems instead of bypassing the execution lifecycle.</li>
   </ul>
 </div>
 </section>

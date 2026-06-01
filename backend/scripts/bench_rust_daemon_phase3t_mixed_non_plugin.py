@@ -58,6 +58,7 @@ RETRYABLE_DAEMON_OPS = {
     "api.v1.grep",
     "api.v1.read_file",
 }
+PTY_ECHO_PROGRESS_POLLS = 40
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -614,11 +615,19 @@ async def run_pty_input(client: DaemonClient, index: int) -> dict[str, Any]:
     session_id = str(start.get("pty_session_id") or "")
     if not session_id:
         return start
+    ready_text = text_out(start)
+    readiness_polls = 0
+    while "ready" not in ready_text and readiness_polls < PTY_ECHO_PROGRESS_POLLS:
+        progress = await client.pty_progress(session_id)
+        readiness_polls += 1
+        ready_text += text_out(progress)
+        if progress.get("status") != "running":
+            break
     write = await client.pty_write(session_id, f"input-{index}\n")
     write["start_response"] = trim_response(start)
-    collected = text_out(write)
+    collected = ready_text + text_out(write)
     progress_polls = 0
-    while expected not in collected and progress_polls < 10:
+    while expected not in collected and progress_polls < PTY_ECHO_PROGRESS_POLLS:
         progress = await client.pty_progress(session_id)
         progress_polls += 1
         collected += text_out(progress)
@@ -626,6 +635,7 @@ async def run_pty_input(client: DaemonClient, index: int) -> dict[str, Any]:
             break
     if collected != text_out(write):
         write["output"] = {"stdout": collected, "stderr": ""}
+    write["readiness_polls"] = readiness_polls
     write["progress_polls"] = progress_polls
     return write
 

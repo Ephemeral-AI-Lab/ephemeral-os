@@ -52,7 +52,7 @@
     <li><a href="#api-daemon-hop"><span>2</span> API and Daemon Hop</a></li>
     <li><a href="#shared-routing"><span>3</span> Default Shared Workspace Routing</a></li>
     <li><a href="#shell-background-policy"><span>4</span> Shell Background and Policy</a></li>
-    <li><a href="#taskcenter-engine-connections"><span>5</span> Engine and TaskCenter Connections</a></li>
+    <li><a href="#workflow-engine-connections"><span>5</span> Engine and Workflow Connections</a></li>
     <li><a href="#sandbox-evidence-refresh"><span>6</span> Evidence and Refresh</a></li>
   </ol>
 </nav>
@@ -97,7 +97,7 @@
     <tr><td><code>grep</code></td><td>Read-only</td><td>Regex-scan workspace files with output mode, glob filter, and limit options.</td><td><code>sandbox_api.grep</code></td></tr>
   </tbody>
 </table>
-<p>The read/write/edit wrappers construct typed request models and delegate to the API facade rather than touching provider or filesystem code directly. Write and edit route through a shared mutation normalization layer so status, conflicts, changed paths, mutation source, and timing fields stay stable for the engine and TaskCenter context consumers.</p>
+<p>The read/write/edit wrappers construct typed request models and delegate to the API facade rather than touching provider or filesystem code directly. Write and edit route through a shared mutation normalization layer so status, conflicts, changed paths, mutation source, and timing fields stay stable for the engine and Workflow context consumers.</p>
 </section>
 
 <section id="api-daemon-hop"
@@ -162,12 +162,12 @@
 </div>
 </section>
 
-<section id="taskcenter-engine-connections"
+<section id="workflow-engine-connections"
   data-last-reviewed-commit="569f12c3f39471dbaa643906856a8daf81a21a2d"
-  data-evidence-paths="backend/src/engine/query/loop.py backend/src/engine/tool_call/dispatch.py backend/src/tools/_framework/execution/tool_call.py backend/src/tools/_framework/core/decorator.py backend/src/tools/_framework/core/registry.py backend/src/task_center/context_engine/engine.py backend/src/task_center/context_engine/xml.py backend/src/task_center/_core/state.py backend/src/tools/submission backend/src/tools/_terminals">
-<h2>Engine and TaskCenter Connections</h2>
+  data-evidence-paths="backend/src/engine/query/loop.py backend/src/engine/tool_call/dispatch.py backend/src/tools/_framework/execution/tool_call.py backend/src/tools/_framework/core/decorator.py backend/src/tools/_framework/core/registry.py backend/src/workflow/context_engine/engine.py backend/src/workflow/context_engine/xml.py backend/src/workflow/_core/state.py backend/src/tools/submission backend/src/tools/_terminals">
+<h2>Engine and Workflow Connections</h2>
 <p>The sandbox tools are ordinary framework tools from the engine's perspective. The engine loop and tool-call dispatch layer enforce tool execution, background wrapping, and terminal-tool completion rules; sandbox tools provide the workspace mutation/search/shell substrate those tasks use while working toward terminal submission.</p>
-<p>TaskCenter does not receive peer-to-peer messages from sandbox tools. It observes persisted workflow, iteration, attempt, task, terminal, and context state. The important contract is that sandbox tool results carry enough structured metadata for later role context: status, conflicts, changed paths, timings, and background task state. Terminal tools then mark completion and handoff state; sandbox tools only mutate or inspect the workspace that those terminal decisions refer to.</p>
+<p>Workflow does not receive peer-to-peer messages from sandbox tools. It observes persisted workflow, iteration, attempt, task, terminal, and context state. The important contract is that sandbox tool results carry enough structured metadata for later role context: status, conflicts, changed paths, timings, and background task state. Terminal tools then mark completion and handoff state; sandbox tools only mutate or inspect the workspace that those terminal decisions refer to.</p>
 <p>The isolated workspace lifecycle tools share this registry context, but their routing semantics differ: once an agent enters isolated mode, typed sandbox verbs for that agent are intercepted by the isolated pipeline before the shared layer-stack/OCC path. See <a href="isolated-workspace.html">Isolated Workspace</a> for the private scratch workflow and exit behavior.</p>
 </section>
 

@@ -66,7 +66,7 @@ async def test_correctness_testing_through_event_source(
     )
 
     # --- outcome via real store state --------------------------------------
-    assert report.task_center_status == "done", report.metrics
+    assert report.request_status == "done", report.metrics
     # The re-homed probe sandbox checks (write/read/edit/shell/batch/conflict)
     # all passed — published by ProbeContext, collected by ScenarioLifecycle.
     assert report.sandbox_checks, "no sandbox checks recorded by probes"

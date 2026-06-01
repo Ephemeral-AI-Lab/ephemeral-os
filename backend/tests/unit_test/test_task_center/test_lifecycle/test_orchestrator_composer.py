@@ -19,7 +19,7 @@ from agents import (
     unregister_definition,
 )
 from workflow._core.primitives import (
-    TaskCenterLifecycleConfig,
+    WorkflowLifecycleConfig,
     generator_task_id,
 )
 from workflow.agent_launch.composer import AgentEntryComposer
@@ -80,7 +80,7 @@ def composer_runtime(
         agent_launcher=launcher,
         orchestrator_registry=AttemptOrchestratorRegistry(),
         iteration_coordinators=None,
-        lifecycle_config=TaskCenterLifecycleConfig(),
+        lifecycle_config=WorkflowLifecycleConfig(),
         composer=composer,
     )
     return runtime, launcher

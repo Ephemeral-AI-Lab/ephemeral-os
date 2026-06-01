@@ -3,10 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>TaskCenter Terminal Tools - EphemeralOS Architecture</title>
+<title>Workflow Terminal Tools - EphemeralOS Architecture</title>
 <link rel="stylesheet" href="../assets/styles.css">
 </head>
-<body data-module="task-center" data-page="terminal-tools" data-root="../">
+<body data-module="workflow" data-page="terminal-tools" data-root="../">
 <nav class="toc">
   <h2>EphemeralOS Architecture</h2>
   <a class="home-link" href="../index.html">All Modules</a>
@@ -19,26 +19,26 @@
     <li><a href="../sandbox/index.html" data-doc-module="sandbox">Sandbox Workspace</a></li>
     <li><a href="../tools/index.html" data-doc-module="tools">Tools</a></li>
     <li><a href="../agent_loops/index.html" data-doc-module="agent-loops">Agent Loops</a></li>
-    <li><a href="index.html" data-doc-module="task-center" class="active">TaskCenter</a></li>
+    <li><a href="index.html" data-doc-module="workflow" class="active">Workflow</a></li>
   </ol>
-  <h2>TaskCenter Pages</h2>
+  <h2>Workflow Pages</h2>
   <ol>
-    <li><a href="index.html" data-doc-module="task-center" data-doc-section="index" data-doc-page="index.html">Overview</a></li>
-    <li><a href="lifecycle.html" data-doc-module="task-center" data-doc-section="lifecycle" data-doc-page="lifecycle.html">Workflow Iteration Attempt</a></li>
-    <li><a href="attempt-harness.html" data-doc-module="task-center" data-doc-section="attempt-harness" data-doc-page="attempt-harness.html">Attempt Harness</a></li>
-    <li><a href="context-engine.html" data-doc-module="task-center" data-doc-section="context-engine" data-doc-page="context-engine.html">Context Engine</a></li>
-    <li><a href="agent-roles.html" data-doc-module="task-center" data-doc-section="agent-roles" data-doc-page="agent-roles.html">Agent Roles</a></li>
-    <li><a href="terminal-tools.html" data-doc-module="task-center" data-doc-section="terminal-tools" data-doc-page="terminal-tools.html" class="active">Terminal Tools</a></li>
-    <li><a href="bridges.html" data-doc-module="task-center" data-doc-section="bridges" data-doc-page="bridges.html">Runtime Boundaries</a></li>
-    <li><a href="maintenance.html" data-doc-module="task-center" data-doc-section="maintenance" data-doc-page="maintenance.html">Maintenance</a></li>
+    <li><a href="index.html" data-doc-module="workflow" data-doc-section="index" data-doc-page="index.html">Overview</a></li>
+    <li><a href="lifecycle.html" data-doc-module="workflow" data-doc-section="lifecycle" data-doc-page="lifecycle.html">Workflow Iteration Attempt</a></li>
+    <li><a href="attempt-harness.html" data-doc-module="workflow" data-doc-section="attempt-harness" data-doc-page="attempt-harness.html">Attempt Harness</a></li>
+    <li><a href="context-engine.html" data-doc-module="workflow" data-doc-section="context-engine" data-doc-page="context-engine.html">Context Engine</a></li>
+    <li><a href="agent-roles.html" data-doc-module="workflow" data-doc-section="agent-roles" data-doc-page="agent-roles.html">Agent Roles</a></li>
+    <li><a href="terminal-tools.html" data-doc-module="workflow" data-doc-section="terminal-tools" data-doc-page="terminal-tools.html" class="active">Terminal Tools</a></li>
+    <li><a href="bridges.html" data-doc-module="workflow" data-doc-section="bridges" data-doc-page="bridges.html">Runtime Boundaries</a></li>
+    <li><a href="maintenance.html" data-doc-module="workflow" data-doc-section="maintenance" data-doc-page="maintenance.html">Maintenance</a></li>
   </ol>
 </nav>
 <main>
 <div class="doc-actions">
-  <span><a href="index.html">TaskCenter</a> / Terminal Tools</span>
+  <span><a href="index.html">Workflow</a> / Terminal Tools</span>
   <span class="nav-pair"><a href="agent-roles.html">Agent Roles</a><a href="bridges.html">Runtime Boundaries</a></span>
 </div>
-<h1>TaskCenter Terminal Tools</h1>
+<h1>Workflow Terminal Tools</h1>
 <nav class="page-toc" aria-labelledby="page-toc-heading">
   <h3 id="page-toc-heading">Contents</h3>
   <ol>
@@ -52,7 +52,7 @@
   </ol>
 </nav>
 
-<p class="lead">TaskCenter terminal tools are agent-facing submission endpoints. They are normal registered tools until a successful call crosses the tool framework, where the result is stamped as terminating and the engine loop stops the agent run.</p>
+<p class="lead">Workflow terminal tools are agent-facing submission endpoints. They are normal registered tools until a successful call crosses the tool framework, where the result is stamped as terminating and the engine loop stops the agent run.</p>
 <div class="summary">
   <p>The current shape is intentionally layered: descriptors tell agents when to choose each terminal, submission tools validate and project role payloads, the framework validates output and stamps <code>is_terminal</code>, and the engine owns terminal exclusivity. The advisor helper uses the same terminal contract for its own child run, but its result returns to the caller instead of mutating the parent attempt directly.</p>
 </div>
@@ -69,7 +69,7 @@
   <div class="flow-row">
     <div class="node"><strong>Dispatcher</strong><small>terminal must be called alone</small></div>
     <div class="node good"><strong>Query loop</strong><small>stores terminal result and exits with <code>TOOL_STOP</code></small></div>
-    <div class="node"><strong>State owner</strong><small>TaskCenter attempt, helper caller, or run tracker consumes metadata</small></div>
+    <div class="node"><strong>State owner</strong><small>Workflow attempt, helper caller, or run tracker consumes metadata</small></div>
   </div>
 </div>
 <pre class="diagram" aria-label="Terminal execution ASCII workflow">
@@ -82,7 +82,7 @@
 [execute_tool_once]
         |
         v
-[submission executor persists TaskCenter result]
+[submission executor persists Workflow result]
         |
         v
 [terminal tool result returned to engine]
@@ -102,11 +102,11 @@
 </div>
 </section>
 
-<section id="descriptor-registry" data-last-reviewed-commit="HEAD-plus-worktree" data-evidence-paths="backend/src/tools/_terminals/registry.py backend/src/task_center/context_engine/skill_message.py backend/src/task_center/attempt/launch.py backend/tests/unit_test/test_tools/test_terminals/test_descriptor_registry.py backend/src/task_center_runner/tests/mock/task_center/test_initial_messages_capture.py">
+<section id="descriptor-registry" data-last-reviewed-commit="HEAD-plus-worktree" data-evidence-paths="backend/src/tools/_terminals/registry.py backend/src/workflow/context_engine/skill_message.py backend/src/workflow/attempt/launch.py backend/tests/unit_test/test_tools/test_terminals/test_descriptor_registry.py backend/src/task_center_runner/tests/mock/workflow/test_initial_messages_capture.py">
 <h2>Descriptor Registry <a class="anchor" href="#descriptor-registry">#</a></h2>
 <p><code>TERMINAL_DESCRIPTORS</code> is the shared terminal prose registry. Each <code>TerminalToolDescriptor</code> has a parent-facing <code>selection_guidance</code> field and an advisor-facing <code>advisor_review_focus</code> field; <code>render_terminal_catalog()</code> renders either view for a selected terminal list.</p>
 <div class="edge-list">
-  <div><b>parent guidance</b><span><code>task_center.context_engine.skill_message</code> renders the selected terminal list into launch guidance and skill rows so the agent sees exactly the terminals allowed for this launch.</span></div>
+  <div><b>parent guidance</b><span><code>workflow.context_engine.skill_message</code> renders the selected terminal list into launch guidance and skill rows so the agent sees exactly the terminals allowed for this launch.</span></div>
   <div><b>advisor guidance</b><span><code>ask_advisor</code> renders the same terminal names with <code>focus=&quot;advisor_review_focus&quot;</code>, so the audit prompt reviews the parent's choices through the same registry.</span></div>
   <div><b>profile terminal set</b><span>The launched agent uses its profile terminal list directly. Nested planner deferral and nested generator handoff are guarded by submission prehooks and one-shot reminder notifications.</span></div>
   <div><b>runtime metadata</b><span><code>EphemeralAttemptAgentLauncher</code> places the selected terminals into <code>ExecutionMetadata</code> under <code>active_terminals</code>. Mock/live message capture tests read that metadata from <code>message.jsonl</code> rows.</span></div>
@@ -114,9 +114,9 @@
 </div>
 </section>
 
-<section id="role-submission-terminals" data-last-reviewed-commit="HEAD-plus-worktree" data-evidence-paths="backend/src/tools/submission/_factory.py backend/src/tools/submission/context/attempt.py backend/src/tools/submission/context/generator.py backend/src/tools/submission/planner backend/src/tools/submission/generator backend/src/tools/submission/reducer backend/src/task_center/attempt/orchestrator.py backend/src/task_center/workflow/starter.py backend/tests/unit_test/test_tools/test_submission_tool_registration.py backend/tests/unit_test/test_tools/test_submission_planner_tools.py backend/tests/unit_test/test_task_center/test_lifecycle">
+<section id="role-submission-terminals" data-last-reviewed-commit="HEAD-plus-worktree" data-evidence-paths="backend/src/tools/submission/_factory.py backend/src/tools/submission/context/attempt.py backend/src/tools/submission/context/generator.py backend/src/tools/submission/planner backend/src/tools/submission/generator backend/src/tools/submission/reducer backend/src/workflow/attempt/orchestrator.py backend/src/workflow/starter.py backend/tests/unit_test/test_tools/test_submission_tool_registration.py backend/tests/unit_test/test_tools/test_submission_planner_tools.py backend/tests/unit_test/test_workflow/test_lifecycle">
 <h2>Role Submission Terminals <a class="anchor" href="#role-submission-terminals">#</a></h2>
-<p>The role submission terminals are adapters over TaskCenter state owners. They do not coordinate peer agents directly; they resolve the current task, build typed submissions, and call the Workflow -> Iteration -> Attempt owner for the current attempt or delegated workflow.</p>
+<p>The role submission terminals are adapters over Workflow state owners. They do not coordinate peer agents directly; they resolve the current task, build typed submissions, and call the Workflow -> Iteration -> Attempt owner for the current attempt or delegated workflow.</p>
 <div class="evidence-grid">
   <div class="evidence-card">
     <h3>Planner</h3>
@@ -167,12 +167,12 @@
   <div>Body execution</div><div><code>execute_tool_body()</code> catches tool exceptions, logs the traceback, and returns bounded error text with the exception type.</div>
   <div>Output validation</div><div><code>validate_tool_output()</code> validates non-error output against the tool's output model. Invalid JSON or pydantic mismatch becomes an error result with <code>output_validation_error</code> metadata.</div>
   <div>Terminal stamping</div><div><code>execute_tool_once()</code> uses <code>dataclasses.replace()</code> to set <code>is_terminal=True</code> only when <code>tool.is_terminal_tool</code> and the final result is not an error.</div>
-  <div>Runtime metadata</div><div><code>ExecutionMetadata</code> carries TaskCenter ids, <code>attempt_runtime</code>, <code>composer</code>, conversation messages, tool registry, background manager, sandbox invocation ids, and extras such as <code>active_terminals</code>.</div>
+  <div>Runtime metadata</div><div><code>ExecutionMetadata</code> carries Workflow ids, <code>attempt_runtime</code>, <code>composer</code>, conversation messages, tool registry, background manager, sandbox invocation ids, and extras such as <code>active_terminals</code>.</div>
   <div>Loop stop</div><div><code>dispatch_assistant_tools()</code> returns the first terminating result. <code>engine.query.loop</code> stores it on <code>context.terminal_result</code>, sets <code>QueryExitReason.TOOL_STOP</code>, and stops the run.</div>
 </div>
 <div class="callout warn">
   <span class="label">Failure mode</span>
-  A terminal tool batched with siblings is rejected before any sibling foreground, background, sandbox, or TaskCenter side effect runs. A terminal tool that returns an invalid output shape is also non-terminal because output validation converts it to an error.
+  A terminal tool batched with siblings is rejected before any sibling foreground, background, sandbox, or Workflow side effect runs. A terminal tool that returns an invalid output shape is also non-terminal because output validation converts it to an error.
 </div>
 </section>
 
@@ -197,11 +197,11 @@
 
 <section id="helper-results-notifications" data-last-reviewed-commit="d32994314" data-evidence-paths="backend/src/tools/submission/explorer/submit_exploration_result/submit_exploration_result.py backend/src/tools/submission/notification_triggers/request_workflow_after_edit.py backend/tests/unit_test/test_tools/test_submission_helper_tools.py backend/tests/unit_test/test_tools/test_submission_soft_reminders.py docs/architecture/tools/ask-helper.html">
 <h2>Helper Results And Notifications <a class="anchor" href="#helper-results-notifications">#</a></h2>
-<p>Helper terminal outputs are terminal inside the helper run, then ordinary tool results for the parent. This lets helpers use the same engine stop contract while keeping parent TaskCenter state under the parent submission tools and orchestrator.</p>
+<p>Helper terminal outputs are terminal inside the helper run, then ordinary tool results for the parent. This lets helpers use the same engine stop contract while keeping parent Workflow state under the parent submission tools and orchestrator.</p>
 <div class="evidence-grid">
   <div class="evidence-card">
     <h3>Explorer</h3>
-    <p><code>submit_exploration_result</code> terminates explorer-style work and returns <code>subagent_role=&quot;explorer&quot;</code>, findings, and references. It does not resolve attempt context or call TaskCenter mutators.</p>
+    <p><code>submit_exploration_result</code> terminates explorer-style work and returns <code>subagent_role=&quot;explorer&quot;</code>, findings, and references. It does not resolve attempt context or call Workflow mutators.</p>
   </div>
   <div class="evidence-card">
     <h3>Handoff-after-edit reminder</h3>
@@ -212,7 +212,7 @@
   <ul>
     <li>Advisor direct launches call <code>engine.api.run_ephemeral_agent</code> with <code>persist_agent_run=False</code> and inherit the active sandbox id when one exists.</li>
     <li>Reducer inline edits via <code>edit_file</code> / <code>write_file</code> use ordinary tool permissions and sandbox routing; there is no separate edit-capable helper.</li>
-    <li>Helper results are evidence for the parent. The parent still must call its own TaskCenter terminal to mutate parent attempt state.</li>
+    <li>Helper results are evidence for the parent. The parent still must call its own Workflow terminal to mutate parent attempt state.</li>
   </ul>
 </div>
 </section>
@@ -238,7 +238,7 @@
   </div>
 </div>
 <div class="refresh-list">
-  <div><strong>Refresh when terminal names change</strong><span>Update descriptors, role profiles, submission registration tests, helper prompts, and TaskCenter submission policy together.</span></div>
+  <div><strong>Refresh when terminal names change</strong><span>Update descriptors, role profiles, submission registration tests, helper prompts, and Workflow submission policy together.</span></div>
   <div><strong>Refresh when framework validation changes</strong><span>Re-check input parsing, runtime control stripping, output validation, posthooks, and <code>is_terminal</code> stamping.</span></div>
   <div><strong>Refresh when helper prompts change</strong><span>Re-check transcript filtering, prompt-injection guard text, terminal catalog rendering, and helper terminal result metadata.</span></div>
 </div>

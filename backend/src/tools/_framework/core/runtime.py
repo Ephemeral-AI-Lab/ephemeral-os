@@ -35,10 +35,10 @@ class ExecutionMetadata:
     repo_root: str = ""
     exec_cwd: str = ""
     request_id: str | None = None
-    task_center_task_id: str | None = None
-    task_center_attempt_id: str | None = None
-    task_center_workflow_id: str | None = None
-    task_center_request_id: str | None = None
+    task_id: str | None = None
+    attempt_id: str | None = None
+    workflow_id: str | None = None
+    request_id: str | None = None
     attempt_runtime: Any | None = None
     # Per-request AgentEntryComposer used by helper tools (ask_advisor)
     # to build the parent-inheriting prompt for the helper agent.
@@ -84,10 +84,10 @@ class ExecutionMetadata:
             "repo_root",
             "exec_cwd",
             "request_id",
-            "task_center_task_id",
-            "task_center_attempt_id",
-            "task_center_workflow_id",
-            "task_center_request_id",
+            "task_id",
+            "attempt_id",
+            "workflow_id",
+            "request_id",
             "attempt_runtime",
             "composer",
             "conversation_messages",

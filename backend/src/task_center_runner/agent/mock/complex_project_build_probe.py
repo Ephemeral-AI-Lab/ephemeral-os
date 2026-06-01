@@ -491,8 +491,8 @@ def _shared_attempt_bootstrap_key(
     ctx: ProbeContext,
 ) -> tuple[str, str, str, str]:
     run_id = str(ctx.metadata.get("request_id") or "")
-    attempt_id = str(ctx.metadata.get("task_center_attempt_id") or "")
-    task_id = str(ctx.metadata.get("task_center_task_id") or "")
+    attempt_id = str(ctx.metadata.get("attempt_id") or "")
+    task_id = str(ctx.metadata.get("task_id") or "")
     return (
         ctx.sandbox_id,
         run_id,
@@ -503,7 +503,7 @@ def _shared_attempt_bootstrap_key(
 
 def _shared_attempt_bootstrap_expected(ctx: ProbeContext) -> int:
     runtime = ctx.metadata.get("attempt_runtime")
-    attempt_id = str(ctx.metadata.get("task_center_attempt_id") or "")
+    attempt_id = str(ctx.metadata.get("attempt_id") or "")
     if runtime is None or not attempt_id:
         return 1
     attempt = runtime.attempt_store.get(attempt_id)
@@ -1309,7 +1309,7 @@ async def _phase_f_emit_metrics(
     auto_squash_mutations: int,
 ) -> str:
     perf_payload = aggregate_perf_metrics(
-        run_id=str(ctx.metadata.get("task_center_task_id") or ""),
+        run_id=str(ctx.metadata.get("task_id") or ""),
         scenario=(
             "sandbox.complex_project_build_smoke"
             if ctx.smoke

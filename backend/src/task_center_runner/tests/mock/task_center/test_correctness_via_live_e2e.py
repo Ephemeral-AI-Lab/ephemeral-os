@@ -48,8 +48,8 @@ async def test_correctness_testing_via_live_e2e(
         instance_id=sweevo_image_instance.instance_id,
     )
 
-    assert report.task_center_status == "done", (
-        f"task_center_status={report.task_center_status!r}: {report.metrics}"
+    assert report.request_status == "done", (
+        f"request_status={report.request_status!r}: {report.metrics}"
     )
     assert report.passed_prompt_inspections, [
         item for item in report.prompt_inspections if not item.passed

@@ -15,7 +15,7 @@ from workflow.starter import (
     WorkflowStarter,
 )
 from workflow._core.primitives import (
-    TaskCenterInvariantViolation,
+    WorkflowInvariantViolation,
     generator_task_id,
     planner_task_id,
 )
@@ -251,7 +251,7 @@ def test_workflow_start_rejects_second_open_child_for_same_generator(
         parent_task_id, status=TaskStatus.RUNNING.value
     )
 
-    with pytest.raises(TaskCenterInvariantViolation) as exc:
+    with pytest.raises(WorkflowInvariantViolation) as exc:
         starter.start(prompt="second delegation", parent_task_id=parent_task_id)
     assert "open delegated workflow" in str(exc.value)
 
@@ -268,6 +268,6 @@ def test_workflow_start_rejects_non_running_parent(
     task_store.set_task_status(parent_task_id, status=TaskStatus.DONE.value)
 
     starter = WorkflowStarter(runtime=runtime)
-    with pytest.raises(TaskCenterInvariantViolation) as exc:
+    with pytest.raises(WorkflowInvariantViolation) as exc:
         starter.start(prompt="delegated", parent_task_id=parent_task_id)
     assert "not running" in str(exc.value)

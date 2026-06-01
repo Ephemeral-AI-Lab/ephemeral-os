@@ -61,7 +61,7 @@ def _attempt_and_iteration(metadata: Any) -> tuple[Any, Any]:
     runtime = metadata.get("attempt_runtime")
     if runtime is None:
         raise RuntimeError("Missing AttemptDeps in mocked agent metadata.")
-    attempt_id = str(metadata.get("task_center_attempt_id") or "")
+    attempt_id = str(metadata.get("attempt_id") or "")
     attempt = runtime.attempt_store.get(attempt_id)
     if attempt is None:
         raise RuntimeError(f"Attempt {attempt_id!r} not found.")
@@ -82,7 +82,7 @@ def build_scenario_context(
     attempt, iteration = _attempt_and_iteration(metadata)
     runtime = metadata.get("attempt_runtime")
     workflow = runtime.workflow_store.get(iteration.workflow_id)
-    task_id = str(metadata.get("task_center_task_id") or "")
+    task_id = str(metadata.get("task_id") or "")
     task = runtime.task_store.get_task(task_id) if task_id else None
     return ScenarioContext(
         attempt=attempt,

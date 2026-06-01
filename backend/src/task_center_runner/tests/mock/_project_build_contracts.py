@@ -346,7 +346,7 @@ async def _assert_complex_build_contract(
     sandbox_id: str,
     contract: ComplexBuildContract,
 ) -> None:
-    assert report.task_center_status == "done", report.metrics
+    assert report.request_status == "done", report.metrics
     assert report.passed_prompt_inspections, [
         item for item in report.prompt_inspections if not item.passed
     ]
@@ -482,7 +482,7 @@ async def _assert_shell_edit_lsp_contract(
     sandbox_id: str,
     contract: ShellEditLspContract,
 ) -> None:
-    assert report.task_center_status == "done", report.metrics
+    assert report.request_status == "done", report.metrics
     assert report.passed_prompt_inspections, [
         item for item in report.prompt_inspections if not item.passed
     ]
@@ -565,7 +565,7 @@ async def _assert_grep_glob_contract(
     sandbox_id: str,
     contract: GrepGlobContract,
 ) -> None:
-    assert report.task_center_status == "done", report.metrics
+    assert report.request_status == "done", report.metrics
     assert report.passed_prompt_inspections, [
         item for item in report.prompt_inspections if not item.passed
     ]

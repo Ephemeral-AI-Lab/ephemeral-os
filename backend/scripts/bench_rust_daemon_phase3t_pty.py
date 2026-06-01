@@ -50,6 +50,7 @@ PTY_PROGRESS_P95_MS = 20.0
 PTY_WRITE_P95_MS = 100.0
 PTY_CANCEL_P95_MS = 500.0
 PTY_CANCEL_HARD_CLEANUP_MS = 2500.0
+PTY_ECHO_PROGRESS_POLLS = 40
 ISOLATED_AGENT_ID = "phase3t-isolated-bench"
 ISOLATED_AUDIT_PATH = "/eos/isolated-workspace-audit.jsonl"
 MIXED_LOAD_P95_MS = 500.0
@@ -767,14 +768,23 @@ async def measure_pty_write_echo(client: CommandClient, count: int) -> dict[str,
             samples.append(sample(index, start, 0.0, False))
             continue
 
+        ready_text = separated_text(start)
+        readiness_polls = 0
+        while "ready" not in ready_text and readiness_polls < PTY_ECHO_PROGRESS_POLLS:
+            progress, _ = await client.pty_progress(session_id, seconds=0.05)
+            readiness_polls += 1
+            ready_text += separated_text(progress)
+            if progress.get("status") != "running":
+                break
+
         write_response, write_ms = await client.pty_write(
             session_id,
             f"hello-{index}\n",
             yield_time_ms=50,
         )
-        collected = separated_text(write_response)
+        collected = ready_text + separated_text(write_response)
         progress_polls = 0
-        while expected not in collected and progress_polls < 10:
+        while expected not in collected and progress_polls < PTY_ECHO_PROGRESS_POLLS:
             progress, _ = await client.pty_progress(session_id, seconds=0.05)
             progress_polls += 1
             collected += separated_text(progress)
@@ -785,6 +795,7 @@ async def measure_pty_write_echo(client: CommandClient, count: int) -> dict[str,
         response = dict(write_response)
         response["output"] = {"stdout": collected, "stderr": ""}
         entry = sample(index, response, write_ms, ok)
+        entry["readiness_polls"] = readiness_polls
         entry["progress_polls"] = progress_polls
         samples.append(entry)
 

@@ -113,14 +113,14 @@
 <p>This is separate from the workspace execution mode itself. A backgrounded sandbox tool can still be routed by the sandbox daemon into direct LayerStack/OCC fast paths, the <a class="wiki-link" href="sandbox.html">ephemeral sandbox workspace</a> overlay pipeline, or the <a class="wiki-link" href="isolated-workspace.html">isolated workspace</a> lifecycle depending on the tool and active workspace binding.</p>
 </section>
 
-<section id="engine-workflows" data-last-reviewed-commit="569f12c3f39471dbaa643906856a8daf81a21a2d" data-evidence-paths="backend/src/engine/query/loop.py backend/src/engine/tool_call/streaming.py backend/src/engine/tool_call/dispatch.py backend/src/engine/background/dispatch.py backend/src/engine/agent/factory.py backend/src/task_center/attempt/launch.py">
+<section id="engine-workflows" data-last-reviewed-commit="569f12c3f39471dbaa643906856a8daf81a21a2d" data-evidence-paths="backend/src/engine/query/loop.py backend/src/engine/tool_call/streaming.py backend/src/engine/tool_call/dispatch.py backend/src/engine/background/dispatch.py backend/src/engine/agent/factory.py backend/src/workflow/attempt/launch.py">
 <h2>Engine Workflows <a class="anchor" href="#engine-workflows">#</a></h2>
 <ol>
   <li>The agent factory enables background tasks when the registry includes <code>run_subagent</code> or PTY session tools. It synthesizes typed subagent controls only for the <code>run_subagent</code> surface.</li>
   <li>The query loop creates one <code>BackgroundTaskSupervisor</code> for the run and stores it on <code>context.tool_metadata.background_task_manager</code>.</li>
   <li>Provider streaming defers engine-background policy calls so the final assistant batch can still enforce terminal-tool exclusivity.</li>
   <li>Deferred subagent calls are validated, given <code>subagent_session_id</code>, launched as asyncio tasks, and acknowledged with <code>[SUBAGENT LAUNCHED]</code>. PTY commands are tracked by <code>pty_session_id</code>. The old generic background management tools are no longer exposed to the model.</li>
-  <li>The model continues the same run and may call typed subagent or PTY controls. Terminal tools remain TaskCenter-facing completion signals and must still be called through the normal terminal-tool path.</li>
+  <li>The model continues the same run and may call typed subagent or PTY controls. Terminal tools remain Workflow-facing completion signals and must still be called through the normal terminal-tool path.</li>
   <li>On resource-limit exit or query-loop finalization, pending background tasks are cancelled so engine exits do not leave orphaned sandbox work.</li>
 </ol>
 </section>

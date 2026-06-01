@@ -13,6 +13,32 @@ implementation, intentionally excluding:
 - plugin PPC execution and AV-10 plugin parity;
 - Daytona live execution.
 
+## Current Closeout Refresh - 2026-06-01
+
+Latest non-plugin evidence is green on current amd64 artifact
+`81eb221542666647a3b0a80a0ed254dff674a0ead27d814bfcea26bd14996d53`:
+
+- `bench/phase3t-rust-isolated-inspection-docker-20260601.json`
+  (`run_id=local-7d7cbbea6e84`) passed `gate_pass=true` with 74/74 scenario
+  checks green. It now covers isolated PTY stdin, progress, natural completion
+  notification, timeout notification, explicit cancel, cancel duplicate
+  suppression, and the literal two-agent port `3000` isolation case: both
+  isolated agents bind `127.0.0.1:3000`, each reaches its own server, and
+  cross-agent access is blocked.
+- `bench/phase3t-pty-command-docker-20260601-current-eos-paths-post-notify.json`
+  (`run_id=local-7b9deab71f9f`) passed `gate_pass=true`,
+  `operation_samples_ok=true`, and `load.gate_pass=true`; all 50 operation
+  samples were green across finite command, PTY true/no-op, PTY progress,
+  PTY stdin echo, and PTY cancel. Shared-workspace `nohup ... 2>&1 &`
+  descendant cleanup remains green for both `tty=false` and `tty=true`.
+- The PTY bench harness now waits for the child `ready` marker before measuring
+  stdin echo latency, so the stdin-write gate measures PTY input delivery rather
+  than Python child startup timing.
+
+Non-plugin Phase 3T deferred items remain closed. The only Phase 3T work not
+closed by this document is plugin PPC execution/AV-10, intentionally excluded
+above.
+
 ## Next Agent Handoff - 2026-06-01
 
 Current state:
@@ -72,14 +98,16 @@ Current state:
   active lease count, holder PID/kill error, namespace FD count, cgroup
   existence, scratch/upper/workdir existence, mountinfo reference count when
   `/proc/self/mountinfo` is available, and PTY force-cancel cleanup arrays.
-- The live Docker/dask isolated inspection rerun was closed on the then-current
-  amd64 artifact
-  `6f94b650023186b9b4e282d20ad1bd0cd53b97c44759c313547c47f158ebecf6`:
-  `bench/phase3t-rust-isolated-inspection-docker-20260601.json` passed 51/51
-  checks with the target image lacking `ip` and `nft`, verified holder process
-  teardown, zero mountinfo refs, removed cgroup/scratch/upper/workdir, released
-  leases, removed the host veth, cleared active PTY state after force cancel,
-  and mirrored the inspection payload into the JSONL exit audit.
+- The live Docker/dask isolated inspection rerun is closed on the current amd64
+  artifact
+  `81eb221542666647a3b0a80a0ed254dff674a0ead27d814bfcea26bd14996d53`:
+  `bench/phase3t-rust-isolated-inspection-docker-20260601.json`
+  (`run_id=local-7d7cbbea6e84`) passed 74/74 checks with the target image
+  lacking `ip` and `nft`. It verifies holder process teardown, zero mountinfo
+  refs, removed cgroup/scratch/upper/workdir, released leases, removed host
+  veth, cleared active PTY state after force cancel, isolated PTY
+  stdin/progress/natural-exit/timeout/cancel behavior, literal port `3000`
+  network isolation for two agents, and JSONL audit alignment.
 - CP-4/AV-4 mixed non-plugin load is closed for the sidecar scope:
   `bench/phase3t-mixed-non-plugin-cp4-av4-20260601.json` passed with
   `run_id=local-12cb8bd20f51`, current amd64 artifact SHA
@@ -161,12 +189,13 @@ Last focused verification:
   `uv run python backend/scripts/bench_rust_daemon_isolated_inspection.py
   --artifact sandbox/dist/eosd-linux-amd64 --report
   bench/phase3t-rust-isolated-inspection-docker-20260601.json`; report
-  `run_id=local-f4d71d9fd6bb`, artifact SHA
-  `6f94b650023186b9b4e282d20ad1bd0cd53b97c44759c313547c47f158ebecf6`, 51/51
+  `run_id=local-7d7cbbea6e84`, artifact SHA
+  `81eb221542666647a3b0a80a0ed254dff674a0ead27d814bfcea26bd14996d53`, 74/74
   scenario checks passed, preflight showed `ip=nft=`, cgroup writable, and the
-  exit inspection reported `holder_pid=224`, `ns_fd_count=4`,
-  `active_leases_after=0`, `mountinfo_reference_count_after=0`,
-  `cgroup_exists_after=false`, and all scratch dirs removed.
+  exit inspection reported zero leaked leases/mountinfo refs/cgroup/scratch
+  state. The same report now covers isolated PTY stdin/progress/natural
+  notification/timeout notification/cancel behavior and the two-agent
+  port-3000 network isolation case.
 - A broader mock contract spike was attempted but did not reach the relevant
   assertions because the live SWE-EVO fixture failed setup on `/eos`
   writability in the existing container. Treat that as environment/setup debt,
@@ -194,6 +223,12 @@ The PTY command implementation is accepted for the Docker shared-workspace path:
 - PTY natural exit, timeout, progress polling, stdin write, cancel, and
   `nohup ... 2>&1 &` descendant cleanup are covered for `tty=false` and
   `tty=true`;
+- isolated PTY stdin write, progress polling, natural-exit notification,
+  timeout notification, explicit cancel, and cancel duplicate suppression are
+  covered under the active isolated agent handle;
+- isolated network namespace coverage includes the literal same-port case: two
+  agents both host on port `3000` without bind conflict, each reaches its own
+  localhost, and cross-agent peer-IP access is blocked;
 - PTY completion notifications now fire once for natural exit and timeout, and
   explicit cancel suppresses duplicate completion notification.
 
@@ -255,6 +290,15 @@ Minimum evidence:
   holder, mountinfo refs, cgroups, leases, scratch dirs, or active PTY records
   under the real isolated kernel path:
   `bench/phase3t-rust-isolated-inspection-docker-20260601.json`.
+- ✅ live Docker isolated PTY-control coverage for progress, stdin write,
+  natural-exit notification, timeout notification, explicit cancel, and cancel
+  duplicate suppression in
+  `bench/phase3t-rust-isolated-inspection-docker-20260601.json`
+  (`run_id=local-7d7cbbea6e84`);
+- ✅ live Docker isolated network same-port coverage: two agents both bind TCP
+  port `3000`, each reaches its own localhost server, cross-agent access is
+  blocked, force exit cancels the server PTYs, and served files are not
+  published after exit.
 
 ### 2. Typed Subagent Surface
 

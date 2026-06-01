@@ -47,7 +47,7 @@ class RealAgentRunReport:
     request_id: str
     sandbox_id: str
     run_dir: Path
-    task_center_status: str | None
+    request_status: str | None
     sweevo_result: SWEEvoResult
     aborted_by_timeout: bool = False
     performance_report_task: asyncio.Task[Path] | None = None
@@ -113,7 +113,7 @@ async def run_sweevo_real_agent(
         request_id=pipeline_report.request_id,
         sandbox_id=pipeline_report.sandbox_id,
         run_dir=pipeline_report.run_dir,
-        task_center_status=pipeline_report.task_center_status,
+        request_status=pipeline_report.request_status,
         sweevo_result=sweevo_result,
         aborted_by_timeout=pipeline_report.aborted_by_timeout,
         performance_report_task=pipeline_report.performance_report_task,

@@ -81,7 +81,7 @@ async def test_project_build_shell_edit_lsp_three_parallel_agents(
         stores=stores,
     )
 
-    assert report.task_center_status == "failed", report.metrics
+    assert report.request_status == "failed", report.metrics
     assert report.passed_prompt_inspections, [
         item for item in report.prompt_inspections if not item.passed
     ]

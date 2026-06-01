@@ -1,6 +1,6 @@
 """Attempt budget exhausted — every attempt fails, workflow closes failed.
 
-The default ``TaskCenterLifecycleConfig.default_attempt_budget`` is ``2``
+The default ``WorkflowLifecycleConfig.default_attempt_budget`` is ``2``
 (``backend/src/task_center/config.py:16``). This scenario plans a single
 generator task that **always** calls ``submit_generator_outcome(status="failed", ...)``, so each
 attempt closes ``status=failed``, ``fail_reason="task_failed"``. After

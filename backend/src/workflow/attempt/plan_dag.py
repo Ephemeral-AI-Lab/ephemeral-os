@@ -15,7 +15,7 @@ from dataclasses import dataclass
 from typing import Protocol, TypeVar
 
 from workflow._core.persistence import TaskRow
-from workflow._core.primitives import TaskCenterInvariantViolation
+from workflow._core.primitives import WorkflowInvariantViolation
 from task import (
     TERMINAL_GENERATOR_STATUSES,
     TaskStatus,
@@ -37,7 +37,7 @@ def ordered_plan_tasks(
 ) -> tuple[tuple[GenNode, ...], tuple[RedNode, ...]]:
     """Validate the combined plan DAG and return both tuples in topo order.
 
-    Raises :class:`TaskCenterInvariantViolation` on a duplicate local id, an
+    Raises :class:`WorkflowInvariantViolation` on a duplicate local id, an
     unknown ``needs`` target, a dependency cycle, an empty reducer set, a
     reducer dependency edge, an empty reducer ``needs`` set, or a dangling
     generator no downstream task needs.
@@ -50,19 +50,19 @@ def ordered_plan_tasks(
         else:
             by_needs[task.local_id] = task.needs
     if duplicates:
-        raise TaskCenterInvariantViolation(
+        raise WorkflowInvariantViolation(
             f"Plan contains duplicate local ids: {tuple(duplicates)!r}"
         )
 
     for local_id, needs in by_needs.items():
         missing = [dep for dep in needs if dep not in by_needs]
         if missing:
-            raise TaskCenterInvariantViolation(
+            raise WorkflowInvariantViolation(
                 f"Plan task {local_id!r} has unknown needs: {missing!r}"
             )
 
     if not reducers:
-        raise TaskCenterInvariantViolation("Plan must contain at least one reducer")
+        raise WorkflowInvariantViolation("Plan must contain at least one reducer")
 
     _assert_lane_shape(generators, reducers)
     _assert_acyclic(by_needs)
@@ -84,19 +84,19 @@ def _assert_lane_shape(
     for task in generators:
         reducer_needs = tuple(dep for dep in task.needs if dep in reducer_ids)
         if reducer_needs:
-            raise TaskCenterInvariantViolation(
+            raise WorkflowInvariantViolation(
                 f"Generator task {task.local_id!r} cannot need reducer task(s): "
                 f"{reducer_needs!r}"
             )
 
     for reducer in reducers:
         if not reducer.needs:
-            raise TaskCenterInvariantViolation(
+            raise WorkflowInvariantViolation(
                 f"Reducer task {reducer.local_id!r} must need at least one generator"
             )
         reducer_needs = tuple(dep for dep in reducer.needs if dep in reducer_ids)
         if reducer_needs:
-            raise TaskCenterInvariantViolation(
+            raise WorkflowInvariantViolation(
                 f"Reducer task {reducer.local_id!r} cannot need reducer task(s): "
                 f"{reducer_needs!r}"
             )
@@ -117,7 +117,7 @@ def _assert_lane_shape(
         if not downstream
     )
     if dangling:
-        raise TaskCenterInvariantViolation(
+        raise WorkflowInvariantViolation(
             f"Plan has generator(s) no downstream task needs: {dangling!r}"
         )
 
@@ -126,7 +126,7 @@ def _assert_acyclic(by_needs: dict[str, tuple[str, ...]]) -> None:
     if len(_topo_order(by_needs)) != len(by_needs):
         ordered = set(_topo_order(by_needs))
         cycle = tuple(local_id for local_id in by_needs if local_id not in ordered)
-        raise TaskCenterInvariantViolation(
+        raise WorkflowInvariantViolation(
             f"Plan contains a dependency cycle among: {cycle!r}"
         )
 
@@ -186,7 +186,7 @@ def _validate_persisted_needs(
     for task in task_records:
         missing = [dep for dep in task.get("needs") or () if dep not in statuses]
         if missing:
-            raise TaskCenterInvariantViolation(
+            raise WorkflowInvariantViolation(
                 f"Plan task {task['task_id']!r} has unknown persisted needs: {missing!r}"
             )
 
@@ -204,7 +204,7 @@ def _unreachable_pending_ids(
         if task_id in memo:
             return memo[task_id]
         if task_id in visiting:
-            raise TaskCenterInvariantViolation(
+            raise WorkflowInvariantViolation(
                 f"Plan task dependency cycle reached persisted task {task_id!r}"
             )
         if statuses[task_id] != TaskStatus.PENDING:

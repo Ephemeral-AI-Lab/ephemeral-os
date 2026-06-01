@@ -454,7 +454,7 @@ class SweevoLifecycle:
 
     async def after_run(self, ctx: "RunContext", report: "PipelineReport") -> None:
         completed_cleanly = (
-            report.task_center_status == "done" and not report.aborted_by_timeout
+            report.request_status == "done" and not report.aborted_by_timeout
         )
         result = SWEEvoResult(
             plan_id=report.request_id,
@@ -474,7 +474,7 @@ class SweevoLifecycle:
             result.error = (
                 "timeout"
                 if report.aborted_by_timeout
-                else (report.task_center_status or "unknown")
+                else (report.request_status or "unknown")
             )
 
         atomic_write_json(
@@ -526,7 +526,7 @@ def format_verdict(report: "PipelineReport") -> tuple[str, int]:
     fix_rate = float(getattr(sweevo_result, "fix_rate", 0.0))
     line = (
         f"benchmark_sweevo request_id={report.request_id} "
-        f"status={report.task_center_status} "
+        f"status={report.request_status} "
         f"resolved={resolved} fix_rate={fix_rate:.2f} "
         f"sandbox_id={report.sandbox_id} run_dir={report.run_dir}"
     )

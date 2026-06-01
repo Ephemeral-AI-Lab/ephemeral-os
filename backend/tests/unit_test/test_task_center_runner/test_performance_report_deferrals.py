@@ -422,7 +422,7 @@ def test_d12_recorder_start_refuses_dual_disable(
     monkeypatch.setenv("EOS_AUDIT_STREAM_FALLBACK", "false")
     monkeypatch.setenv("EOS_ISOLATED_WORKSPACE_ENABLED", "true")
 
-    recorder = AuditRecorder(tmp_path, task_center_run_id="run-1")
+    recorder = AuditRecorder(tmp_path, request_id="run-1")
     with pytest.raises(RuntimeError, match="refuses to start"):
         recorder.start()
 

@@ -141,8 +141,8 @@ async def _build_stream_executor(
         if context.tool_metadata is not None
         else ExecutionMetadata()
     ).with_overrides(conversation_messages=messages)
-    if context.task_center_task_id:
-        metadata.task_center_task_id = context.task_center_task_id
+    if context.task_id:
+        metadata.task_id = context.task_id
     execution_context = ToolExecutionContextService(
         cwd=context.cwd,
         services=metadata,

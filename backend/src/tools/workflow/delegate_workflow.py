@@ -8,7 +8,7 @@ from sandbox.shared.models import Intent
 from tools._framework.core.context import ToolExecutionContextService
 from tools._framework.core.decorator import tool
 from tools._framework.core.results import TextToolOutput, ToolResult
-from workflow import TaskCenterInvariantViolation, WorkflowStarter
+from workflow import WorkflowInvariantViolation, WorkflowStarter
 
 from ._runtime import (
     agent_id,
@@ -53,7 +53,7 @@ async def delegate_workflow(
     try:
         runtime = require_runtime(context)
         parent_task = require_parent_task(context, runtime)
-    except TaskCenterInvariantViolation as exc:
+    except WorkflowInvariantViolation as exc:
         return ToolResult(output=str(exc), is_error=True)
 
     manager = workflow_manager(context)
@@ -85,7 +85,7 @@ async def delegate_workflow(
             prompt=goal,
             parent_task_id=parent_task_id,
         )
-    except TaskCenterInvariantViolation as exc:
+    except WorkflowInvariantViolation as exc:
         return ToolResult(output=str(exc), is_error=True)
 
     workflow_task_id = started.workflow_id
@@ -116,7 +116,7 @@ async def delegate_workflow(
             "submission_kind": "workflow_delegated",
             "workflow_task_id": workflow_task_id,
             "workflow_id": started.workflow_id,
-            "task_center_task_id": started.parent_task_id,
+            "task_id": started.parent_task_id,
             "attempt_id": started.parent_attempt_id,
             "initial_iteration_id": started.iteration_id,
             "initial_attempt_id": started.attempt_id,

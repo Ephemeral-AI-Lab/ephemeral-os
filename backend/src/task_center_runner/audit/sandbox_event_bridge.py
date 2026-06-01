@@ -68,7 +68,7 @@ def _runner_node(event: AuditEvent) -> NodeId:
         iteration_id=node.iteration_id,
         attempt_id=node.attempt_id,
         agent_name=node.agent_name,
-        agent_run_id=node.agent_run_id or node.task_center_task_id,
+        agent_run_id=node.agent_run_id or node.task_id,
         tool_name=node.tool_name,
     )
 

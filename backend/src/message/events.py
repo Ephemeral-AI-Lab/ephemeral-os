@@ -16,7 +16,7 @@ from notification import SystemNotification
 #                   of the run that produced the event. Distinct per agent run,
 #                   so printers/recorders group and indent events by run even
 #                   when agents interleave. The TaskCenter task id is carried
-#                   separately on tool metadata as ``task_center_task_id``.
+#                   separately on tool metadata as ``task_id``.
 
 
 @dataclass(frozen=True)

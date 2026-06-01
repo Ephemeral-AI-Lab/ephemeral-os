@@ -250,7 +250,7 @@ def test_sandbox_audit_event_bridge_maps_namespaced_events_once(tmp_path: Path) 
                 type=sandbox_events.OCC_COMMITTED,
                 node=AuditNode(
                     task_center_run_id="run-1",
-                    task_center_task_id="task-1",
+                    task_id="task-1",
                     tool_name="write_file",
                     tool_use_id="toolu_1",
                 ),
@@ -291,7 +291,7 @@ def test_sandbox_audit_event_bridge_maps_resource_snapshot(tmp_path: Path) -> No
                 type=sandbox_events.RESOURCE_SNAPSHOT,
                 node=AuditNode(
                     task_center_run_id="run-1",
-                    task_center_task_id="task-1",
+                    task_id="task-1",
                     tool_name="shell",
                     tool_use_id="toolu_1",
                 ),

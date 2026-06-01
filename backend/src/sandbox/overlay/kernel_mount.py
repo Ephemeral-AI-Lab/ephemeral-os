@@ -144,10 +144,10 @@ def validate_mount_inputs(
 ) -> MountInputs:
     """Open O_DIRECTORY|O_NOFOLLOW fds and return mount-safe input paths.
 
-    The overlay source directories are passed through fd-backed paths to pin
-    the validated objects. The target mountpoint remains the real path because
-    move_mount(2) does not accept a /proc/self/fd symlink as the destination
-    path in the namespace helper.
+    Lowerdirs are passed through fd-backed paths to pin the validated objects.
+    The target mountpoint and upper/work dirs remain real paths: move_mount(2)
+    does not accept a /proc/self/fd symlink as the destination path, and
+    overlayfs rejects fd-backed upper/work paths on common kernels.
     """
     fds: list[int] = []
     try:
@@ -181,8 +181,8 @@ def validate_mount_inputs(
         return MountInputs(
             workspace_root=workspace_root,
             layer_paths=layer_fd_paths,
-            upperdir=Path(f"/proc/self/fd/{fds[len(layer_paths) + 1]}"),
-            workdir=Path(f"/proc/self/fd/{fds[len(layer_paths) + 2]}"),
+            upperdir=upperdir,
+            workdir=workdir,
             fds=tuple(fds),
         )
     except Exception:

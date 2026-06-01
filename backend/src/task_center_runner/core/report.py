@@ -29,7 +29,7 @@ class PipelineReport:
     sandbox_id: str
     instance_id: str
     run_dir: Path
-    task_center_status: str | None
+    request_status: str | None
     duration_s: float
     task_count: int
     tasks_completed: int

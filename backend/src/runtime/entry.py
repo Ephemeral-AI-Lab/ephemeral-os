@@ -16,7 +16,7 @@ from db.stores import (
 )
 from engine.api import run_ephemeral_agent
 from task import AgentRole, TaskStatus
-from workflow._core.primitives import TaskCenterLifecycleConfig
+from workflow._core.primitives import WorkflowLifecycleConfig
 from workflow.agent_launch.composer import AgentEntryComposer
 from workflow.attempt.launch import (
     AgentStreamEmitter,
@@ -25,7 +25,7 @@ from workflow.attempt.launch import (
 )
 from workflow.attempt.orchestrator_registry import AttemptOrchestratorRegistry
 from workflow.context_engine.engine import ContextEngine, ContextEngineDeps
-from runtime.sandbox_provisioning import TaskCenterSandboxProvisioner
+from runtime.sandbox_provisioning import RequestSandboxProvisioner
 from workflow.iteration import OpenIterationCoordinatorRegistry
 from tools import ExecutionMetadata
 
@@ -35,7 +35,7 @@ if TYPE_CHECKING:
 
 
 @dataclass(frozen=True, slots=True)
-class TaskCenterEntryHandle:
+class RequestEntryHandle:
     request_id: str
     root_task_id: str
     workflow_runtime: AttemptDeps
@@ -43,7 +43,7 @@ class TaskCenterEntryHandle:
     root_agent_task: asyncio.Task[None]
 
 
-def start_task_center_run(
+def start_request(
     *,
     config: RuntimeConfig,
     prompt: str,
@@ -54,10 +54,10 @@ def start_task_center_run(
     iteration_store: IterationStore,
     attempt_store: AttemptStore,
     runner: object | None = None,
-    sandbox_provisioner: TaskCenterSandboxProvisioner | None = None,
-) -> TaskCenterEntryHandle:
+    sandbox_provisioner: RequestSandboxProvisioner | None = None,
+) -> RequestEntryHandle:
     """Start a request by minting the root task and scheduling the root agent."""
-    return TaskCenterEntry(
+    return RequestEntry(
         config=config,
         prompt=prompt,
         sandbox_id=sandbox_id,
@@ -70,7 +70,7 @@ def start_task_center_run(
     ).start()
 
 
-class TaskCenterEntry:
+class RequestEntry:
     """Bootstraps a top-level prompt into a first-class root task."""
 
     def __init__(
@@ -85,7 +85,7 @@ class TaskCenterEntry:
         iteration_store: IterationStore,
         attempt_store: AttemptStore,
         runner: object | None = None,
-        sandbox_provisioner: TaskCenterSandboxProvisioner | None = None,
+        sandbox_provisioner: RequestSandboxProvisioner | None = None,
     ) -> None:
         self._config = config
         self._prompt = prompt
@@ -95,9 +95,9 @@ class TaskCenterEntry:
         self._workflow_store = workflow_store
         self._iteration_store = iteration_store
         self._attempt_store = attempt_store
-        self._sandbox_provisioner = sandbox_provisioner or TaskCenterSandboxProvisioner()
+        self._sandbox_provisioner = sandbox_provisioner or RequestSandboxProvisioner()
 
-    def start(self) -> TaskCenterEntryHandle:
+    def start(self) -> RequestEntryHandle:
         _assert_stores_ready(
             task_store=self._task_store,
             workflow_store=self._workflow_store,
@@ -114,7 +114,7 @@ class TaskCenterEntry:
             runtime=runtime,
         )
 
-        return TaskCenterEntryHandle(
+        return RequestEntryHandle(
             request_id=request_id,
             root_task_id=root_task_id,
             workflow_runtime=runtime,
@@ -191,8 +191,8 @@ class TaskCenterEntry:
             return
         metadata = ExecutionMetadata(
             request_id=request_id,
-            task_center_task_id=root_task_id,
-            task_center_request_id=request_id,
+            task_id=root_task_id,
+            request_id=request_id,
             attempt_runtime=runtime,
         )
         metadata["task_store"] = self._task_store
@@ -265,7 +265,7 @@ class TaskCenterEntry:
             agent_launcher=launcher,
             orchestrator_registry=AttemptOrchestratorRegistry(),
             iteration_coordinators=iteration_coordinators,
-            lifecycle_config=TaskCenterLifecycleConfig(),
+            lifecycle_config=WorkflowLifecycleConfig(),
             composer=self._build_composer(),
         )
         runtime_ref = runtime
@@ -295,4 +295,4 @@ def _assert_stores_ready(
         and iteration_store.is_ready
         and attempt_store.is_ready
     ):
-        raise RuntimeError("TaskCenter stores are not ready.")
+        raise RuntimeError("Request stores are not ready.")

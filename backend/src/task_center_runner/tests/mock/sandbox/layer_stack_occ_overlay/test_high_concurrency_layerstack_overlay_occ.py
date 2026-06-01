@@ -86,7 +86,7 @@ async def test_high_concurrency_layerstack_overlay_occ_capacity(
         stores=stores,
     )
 
-    assert report.task_center_status == "done", report.metrics
+    assert report.request_status == "done", report.metrics
     assert report.passed_prompt_inspections, [
         item for item in report.prompt_inspections if not item.passed
     ]

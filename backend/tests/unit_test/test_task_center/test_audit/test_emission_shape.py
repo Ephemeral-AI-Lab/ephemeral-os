@@ -14,7 +14,7 @@ from __future__ import annotations
 
 from audit.base import AuditEvent
 from workflow._core import audit as events
-from workflow._core.audit import TaskCenterAuditEmitter
+from workflow._core.audit import WorkflowAuditEmitter
 
 
 class CollectingSink:
@@ -27,7 +27,7 @@ class CollectingSink:
 
 _TASK = {
     "task_id": "task-1",
-    "task_center_run_id": "run-1",
+    "request_id": "request-1",
     "role": "generator",
     "agent_name": "generator",
     "needs": ["dep-1"],
@@ -36,9 +36,9 @@ _TASK = {
 
 _BASE_KEYS = frozenset(
     {
-        "run_id",
+        "request_id",
         "attempt_id",
-        "task_center_task_id",
+        "task_id",
         "role",
         "agent_name",
         "needs",
@@ -50,7 +50,7 @@ _BASE_KEYS = frozenset(
 
 def test_task_ready_payload_shape_is_stable() -> None:
     sink = CollectingSink()
-    TaskCenterAuditEmitter(sink).task_ready(
+    WorkflowAuditEmitter(sink).task_ready(
         _TASK, attempt_id="attempt-1", satisfied_dependency_ids=("dep-1",)
     )
     payload = sink.events[0].payload
@@ -60,7 +60,7 @@ def test_task_ready_payload_shape_is_stable() -> None:
 
 def test_task_launched_payload_shape_is_stable() -> None:
     sink = CollectingSink()
-    TaskCenterAuditEmitter(sink).task_launched(_TASK, attempt_id="attempt-1")
+    WorkflowAuditEmitter(sink).task_launched(_TASK, attempt_id="attempt-1")
     payload = sink.events[0].payload
     assert sink.events[0].type == events.TASK_LAUNCHED
     assert frozenset(payload) == _BASE_KEYS
@@ -68,7 +68,7 @@ def test_task_launched_payload_shape_is_stable() -> None:
 
 def test_task_failed_payload_shape_is_stable() -> None:
     sink = CollectingSink()
-    TaskCenterAuditEmitter(sink).task_failed(
+    WorkflowAuditEmitter(sink).task_failed(
         _TASK,
         attempt_id="attempt-1",
         fail_reason="agent_launch_failed",

@@ -18,8 +18,8 @@ def test_tool_started_stream_event_maps_to_engine_audit_event() -> None:
         ),
         task_center_run_id="run-1",
         metadata={
-            "task_center_task_id": "task-1",
-            "task_center_attempt_id": "attempt-1",
+            "task_id": "task-1",
+            "attempt_id": "attempt-1",
             "sandbox_id": "sb-1",
         },
     )
@@ -29,7 +29,7 @@ def test_tool_started_stream_event_maps_to_engine_audit_event() -> None:
     assert event.source == "engine"
     assert event.type == events.TOOL_STARTED
     assert event.node.task_center_run_id == "run-1"
-    assert event.node.task_center_task_id == "task-1"
+    assert event.node.task_id == "task-1"
     assert event.node.attempt_id == "attempt-1"
     assert event.node.agent_name == "executor"
     assert event.node.agent_run_id == "agent-run-1"
@@ -67,7 +67,7 @@ def test_tool_completed_stream_event_preserves_domain_timings_as_metadata() -> N
         ),
         metadata={
             "task_center_run_id": "run-1",
-            "task_center_task_id": "task-2",
+            "task_id": "task-2",
             "agent_run_id": "metadata-agent-run",
             "tool_use_id": "metadata-tool-id",
         },

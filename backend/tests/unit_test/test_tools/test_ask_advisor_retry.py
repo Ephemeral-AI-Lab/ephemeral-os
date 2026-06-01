@@ -69,7 +69,7 @@ def _make_context() -> ToolExecutionContextService:
     metadata.runtime_config = SimpleNamespace(cwd=Path("/tmp"))
     metadata.sandbox_id = ""
     metadata.agent_name = "executor"
-    metadata.task_center_task_id = "parent-task"
+    metadata.task_id = "parent-task"
     metadata.conversation_messages = [
         Message(role="user", content=[TextBlock(text="parent context here")]),
         Message(role="user", content=[TextBlock(text="parent task here")]),

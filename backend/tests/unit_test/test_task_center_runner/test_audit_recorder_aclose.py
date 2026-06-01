@@ -13,7 +13,7 @@ from task_center_runner.audit.recorder import AuditRecorder
 
 def test_audit_recorder_aclose_awaits_puller_then_disposes(tmp_path: Path) -> None:
     """``aclose`` drains the puller, writes the sink, leaves no background tasks."""
-    recorder = AuditRecorder(tmp_path / "run", task_center_run_id="rid-1")
+    recorder = AuditRecorder(tmp_path / "run", request_id="rid-1")
     recorder.start()
 
     pulls = 0
@@ -65,7 +65,7 @@ def test_audit_recorder_aclose_awaits_puller_then_disposes(tmp_path: Path) -> No
 
 def test_audit_recorder_dispose_still_works_without_puller(tmp_path: Path) -> None:
     """Back-compat: sync ``dispose`` is the path for stubs that never attach a puller."""
-    recorder = AuditRecorder(tmp_path / "run", task_center_run_id="rid-2")
+    recorder = AuditRecorder(tmp_path / "run", request_id="rid-2")
     recorder.start()
     # No puller attached → sync dispose is allowed.
     recorder.dispose()
@@ -74,7 +74,7 @@ def test_audit_recorder_dispose_still_works_without_puller(tmp_path: Path) -> No
 
 def test_audit_recorder_dispose_raises_when_puller_still_active(tmp_path: Path) -> None:
     """Safety: calling sync ``dispose`` while a puller is alive must raise."""
-    recorder = AuditRecorder(tmp_path / "run", task_center_run_id="rid-3")
+    recorder = AuditRecorder(tmp_path / "run", request_id="rid-3")
     recorder.start()
 
     async def _pull(after_seq: int, limit: int) -> dict[str, Any]:

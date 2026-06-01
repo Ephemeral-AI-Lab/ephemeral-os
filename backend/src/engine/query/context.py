@@ -46,7 +46,7 @@ class QueryContext:
     tool_call_limit: int
     agent_name: str = ""
     agent_run_id: str = ""
-    task_center_task_id: str = ""
+    task_id: str = ""
     tool_calls_used: int = 0
     text_only_no_terminal_turns: int = 0
     tool_metadata: ExecutionMetadata | None = None

@@ -52,7 +52,7 @@
 </nav>
 
 <p class="lead"><code>load_skill_reference</code> is a caller-scoped read-only tool for loading named reference files from the agent's own skill.</p>
-<section id="factory-scoping" data-last-reviewed-commit="569f12c3f39471dbaa643906856a8daf81a21a2d" data-evidence-paths="backend/src/tools/skills/_factory.py backend/src/tools/skills/load_skill_reference.py backend/src/tools/_framework/factory.py backend/src/agents/definition/model.py backend/src/agents/definition/registry.py backend/src/task_center/context_engine/skill_message.py backend/tests/unit_test/test_tools/test_skills_toolkit.py backend/tests/unit_test/test_agents/test_planner_tool_exposure.py">
+<section id="factory-scoping" data-last-reviewed-commit="569f12c3f39471dbaa643906856a8daf81a21a2d" data-evidence-paths="backend/src/tools/skills/_factory.py backend/src/tools/skills/load_skill_reference.py backend/src/tools/_framework/factory.py backend/src/agents/definition/model.py backend/src/agents/definition/registry.py backend/src/workflow/context_engine/skill_message.py backend/tests/unit_test/test_tools/test_skills_toolkit.py backend/tests/unit_test/test_agents/test_planner_tool_exposure.py">
 <h2>Factory Scoping <a class="anchor" href="#factory-scoping">#</a></h2>
 <div class="diagram" aria-label="Skill reference scoping workflow">
   <div class="flow-row">
@@ -68,7 +68,7 @@
   </div>
 </div>
 <p><code>load_skill_reference</code> is registered as a per-agent factory, not a shared stateless instance. <code>tools._framework.factory</code> registers <code>make_load_skill_reference_from_context</code>; that factory reads <code>ToolFactoryContext.metadata[&quot;agent_name&quot;]</code>, resolves the agent definition, and scopes the tool to the folder name of that agent's declared <code>skill</code>.</p>
-<p>The loaded skill body itself is supplied at agent launch by TaskCenter skill-message construction. This tool only handles on-demand references under that skill's <code>references/</code> collection. If no agent skill resolves, the factory intentionally creates a no-op scoped tool with an empty availability map so calls return explicit errors.</p>
+<p>The loaded skill body itself is supplied at agent launch by Workflow skill-message construction. This tool only handles on-demand references under that skill's <code>references/</code> collection. If no agent skill resolves, the factory intentionally creates a no-op scoped tool with an empty availability map so calls return explicit errors.</p>
 </section>
 
 <section id="runtime-behavior" data-last-reviewed-commit="569f12c3f39471dbaa643906856a8daf81a21a2d" data-evidence-paths="backend/src/tools/skills/load_skill_reference.py backend/src/tools/skills/_factory.py backend/src/skills/core/registry.py backend/src/skills/core/loader.py backend/tests/unit_test/test_tools/test_skills_toolkit.py">
@@ -85,13 +85,13 @@
 </table>
 </section>
 
-<section id="architecture-connections" data-last-reviewed-commit="569f12c3f39471dbaa643906856a8daf81a21a2d" data-evidence-paths="backend/src/tools/skills/_factory.py backend/src/tools/_framework/factory.py backend/src/task_center/context_engine/skill_message.py backend/src/task_center/context_engine backend/src/engine/agent/factory.py backend/tests/unit_test/test_agents/test_skill_message.py backend/tests/unit_test/test_agents/test_planner_tool_exposure.py">
+<section id="architecture-connections" data-last-reviewed-commit="569f12c3f39471dbaa643906856a8daf81a21a2d" data-evidence-paths="backend/src/tools/skills/_factory.py backend/src/tools/_framework/factory.py backend/src/workflow/context_engine/skill_message.py backend/src/workflow/context_engine backend/src/engine/agent/factory.py backend/tests/unit_test/test_agents/test_skill_message.py backend/tests/unit_test/test_agents/test_planner_tool_exposure.py">
 <h2>Architecture Connections <a class="anchor" href="#architecture-connections">#</a></h2>
 <div class="edge-list">
   <div><b>tool framework</b><span>The framework creates the tool with caller metadata, so scope is fixed before the model can call it.</span></div>
   <div><b>engine</b><span>The tool is a normal foreground read-only tool. It has no background policy, no sandbox context requirement, and no isolated-workspace lifecycle.</span></div>
-  <div><b>TaskCenter</b><span>TaskCenter/agent launch supplies the main skill message. <code>load_skill_reference</code> supplements that launch context with named reference files only.</span></div>
-  <div><b>terminal tools</b><span>Skill references can guide terminal-submission quality, but the tool does not submit or mutate TaskCenter state.</span></div>
+  <div><b>Workflow</b><span>Workflow/agent launch supplies the main skill message. <code>load_skill_reference</code> supplements that launch context with named reference files only.</span></div>
+  <div><b>terminal tools</b><span>Skill references can guide terminal-submission quality, but the tool does not submit or mutate Workflow state.</span></div>
   <div><b>sandbox</b><span>Reference loading reads the process skill registry, not repository files inside a sandbox workspace. It does not publish through OCC and does not allocate an ephemeral or isolated workspace overlay.</span></div>
 </div>
 </section>

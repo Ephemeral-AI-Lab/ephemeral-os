@@ -56,7 +56,7 @@
 
 <p class="lead">
   Tool hooks are explicit per-tool gates in <code>backend/src/tools/_framework</code>. They are not a
-  global orchestrator, not provider schema fields, and not TaskCenter lifecycle state. The current
+  global orchestrator, not provider schema fields, and not Workflow lifecycle state. The current
   implementation has a small contract module for hook results and target validation, plus a runtime
   pipeline that runs hooks around one validated tool body call.
 </p>
@@ -80,7 +80,7 @@
   <div><b>exports</b><span><code>tools.__init__</code> and <code>tools._framework.core</code> expose <code>HookResult</code> with the core tool primitives.</span></div>
   <div><b>exports</b><span><code>core.hooks</code> defines <code>HookResult</code>, <code>ToolPreHook</code>, <code>ToolPostHook</code>, <code>hook_name</code>, and <code>validate_hook_targets</code>.</span></div>
   <div><b>calls</b><span><code>execute_tool_once</code> creates <code>ToolHookExecutionPipeline</code> for every tool call and delegates both hook phases to it.</span></div>
-  <div><b>documented-by</b><span>This page records that hooks do not own provider schema decoration, background task dispatch, terminal stamping, TaskCenter mutation, or sandbox workspace routing.</span></div>
+  <div><b>documented-by</b><span>This page records that hooks do not own provider schema decoration, background task dispatch, terminal stamping, Workflow mutation, or sandbox workspace routing.</span></div>
 </div>
 </section>
 

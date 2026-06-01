@@ -75,7 +75,7 @@ async def test_run_ephemeral_agent_stamps_agent_run_id_and_task_id(
     # The task id lands on its dedicated field; the stream identity is the
     # freshly minted agent_run_id (the agent_run_store is not ready in this
     # unit test, so the run is not persisted but the id is still minted).
-    assert fake_agent.query_context.task_center_task_id == "run-1:t2"
+    assert fake_agent.query_context.task_id == "run-1:t2"
     minted = fake_agent.query_context.agent_run_id
     assert minted and minted != "run-1:t2"
     assert captured == [

@@ -13,8 +13,8 @@ from types import SimpleNamespace
 
 import pytest
 
-from workflow import start_task_center_run
-from runtime.sandbox_provisioning import TaskCenterSandboxProvisioner
+from workflow import start_request
+from runtime.sandbox_provisioning import RequestSandboxProvisioner
 from workflow._core.primitives import planner_task_id, root_task_id
 from task import AgentRole, TaskStatus
 
@@ -40,7 +40,7 @@ async def test_entry_bootstrap_converts_prompt_to_root_workflow(
         return SimpleNamespace(status="ok")
 
     runtime_cfg = SimpleNamespace(cwd="/tmp")
-    handle = start_task_center_run(
+    handle = start_request(
         config=runtime_cfg,
         prompt="solve the user request",
         sandbox_id=None,
@@ -50,7 +50,7 @@ async def test_entry_bootstrap_converts_prompt_to_root_workflow(
         iteration_store=iteration_store,
         attempt_store=attempt_store,
         runner=runner,
-        sandbox_provisioner=TaskCenterSandboxProvisioner(
+        sandbox_provisioner=RequestSandboxProvisioner(
             create_fn=lambda **_kwargs: {"id": "sandbox-entry-test"}
         ),
     )

@@ -16,8 +16,8 @@ from datetime import UTC, datetime
 import pytest
 
 from workflow._core.primitives import (
-    TaskCenterInvariantViolation,
-    TaskCenterLifecycleConfig,
+    WorkflowInvariantViolation,
+    WorkflowLifecycleConfig,
     generator_task_id,
     planner_task_id,
 )
@@ -231,7 +231,7 @@ def test_root_workflow_close_routes_through_run_close_handler(
         iteration_store=iteration_store,
         attempt_store=attempt_store,
         iteration_coordinators=OpenIterationCoordinatorRegistry(),
-        config=TaskCenterLifecycleConfig(),
+        config=WorkflowLifecycleConfig(),
         orchestrator_registry=runtime.orchestrator_registry,
         run_close_handler=lambda *, child_workflow: handled.append(child_workflow),
         task_store=task_store,
@@ -249,7 +249,7 @@ def test_child_workflow_close_raises_when_parent_orchestrator_missing(
     workflow_store, iteration_store, attempt_store, task_store, task_center_run_id, composer
 ) -> None:
     """No-restart invariant: a child-workflow close whose parent attempt has no
-    registered orchestrator is a hard ``TaskCenterInvariantViolation``."""
+    registered orchestrator is a hard ``WorkflowInvariantViolation``."""
     runtime = _build_runtime(
         workflow_store, iteration_store, attempt_store, task_store, composer=composer
     )
@@ -267,13 +267,13 @@ def test_child_workflow_close_raises_when_parent_orchestrator_missing(
         iteration_store=iteration_store,
         attempt_store=attempt_store,
         iteration_coordinators=OpenIterationCoordinatorRegistry(),
-        config=TaskCenterLifecycleConfig(),
+        config=WorkflowLifecycleConfig(),
         orchestrator_registry=runtime.orchestrator_registry,
         run_close_handler=lambda *, child_workflow: None,
         task_store=task_store,
     )
 
-    with pytest.raises(TaskCenterInvariantViolation):
+    with pytest.raises(WorkflowInvariantViolation):
         # The child is already closed; routing alone must raise on the missing
         # orchestrator.
         lifecycle._route_close(child)

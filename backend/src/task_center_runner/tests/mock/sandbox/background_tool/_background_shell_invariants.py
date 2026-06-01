@@ -82,7 +82,7 @@ async def run_background_shell_scenario(
         audit_dir=audit_dir,
         stores=stores,
     )
-    assert report.task_center_status == "done", report.metrics
+    assert report.request_status == "done", report.metrics
     assert report.passed_prompt_inspections, [
         item for item in report.prompt_inspections if not item.passed
     ]

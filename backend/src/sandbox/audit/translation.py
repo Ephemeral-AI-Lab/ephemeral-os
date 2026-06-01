@@ -136,10 +136,10 @@ def node_from_caller(
         return AuditNode(sandbox_id=sandbox_id, tool_name=operation)
     return AuditNode(
         request_id=_none_if_empty(caller.request_id or caller.run_id),
-        workflow_id=_none_if_empty(caller.task_center_workflow_id),
-        attempt_id=_none_if_empty(caller.task_center_attempt_id),
-        task_center_task_id=_none_if_empty(
-            caller.task_center_task_id or caller.task_id
+        workflow_id=_none_if_empty(caller.workflow_id),
+        attempt_id=_none_if_empty(caller.attempt_id),
+        task_id=_none_if_empty(
+            caller.task_id or caller.task_id
         ),
         agent_name=_none_if_empty(caller.agent_id),
         agent_run_id=_none_if_empty(caller.agent_run_id),

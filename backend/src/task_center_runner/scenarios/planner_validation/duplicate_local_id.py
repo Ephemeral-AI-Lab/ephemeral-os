@@ -11,7 +11,7 @@ Both attempts in the iteration run the same invalid plan, so iteration 1 closes
 with ``status=failed`` and the workflow closes ``status=failed``. No generator
 or reducer task was created.
 
-Asserts: ``report.task_center_status == "failed"``; graph state contains two
+Asserts: ``report.request_status == "failed"``; graph state contains two
 planner attempts, no accepted planner task, and no generator or reducer tasks.
 """
 

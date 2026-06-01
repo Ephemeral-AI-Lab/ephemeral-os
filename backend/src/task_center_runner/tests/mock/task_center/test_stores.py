@@ -90,7 +90,7 @@ def test_per_schema_isolation_round_trip() -> None:
                 ).scalar()
             assert rows_in_bundle == 1, "row not found in sqlite bundle db"
 
-        fetched = bundle.task_store.get_run(run_id)
+        fetched = bundle.task_store.get_request(run_id)
         assert fetched is not None and fetched["id"] == run_id
     finally:
         bundle.close()
@@ -133,8 +133,8 @@ def test_two_bundles_dont_collide() -> None:
         assert visible_in_a == 1
         assert cross_in_a == 0
         # And b's bundle does NOT see a's row.
-        assert b.task_store.get_run(run_a) is None
-        assert a.task_store.get_run(run_b) is None
+        assert b.task_store.get_request(run_a) is None
+        assert a.task_store.get_request(run_b) is None
     finally:
         a.close()
         b.close()

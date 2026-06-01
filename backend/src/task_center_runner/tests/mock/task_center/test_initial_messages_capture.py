@@ -77,7 +77,7 @@ async def test_initial_messages_capture(
 
     # 1) Workflow closes succeeded, 2 iterations, 3 attempts total
     #    (iter1 attempts 1 and 2; iter2 attempt 1).
-    assert report.task_center_status == "done", report.metrics
+    assert report.request_status == "done", report.metrics
     workflow = report.graph_summary["workflows"][0]
     assert workflow["status"] == "succeeded"
     assert len(workflow["iterations"]) == 2, workflow

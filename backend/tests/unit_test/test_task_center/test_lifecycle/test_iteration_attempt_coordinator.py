@@ -539,10 +539,10 @@ def test_failed_attempt_without_budget_signals_failure_with_outcomes(
 def test_creating_initial_attempt_twice_raises(
     workflow_store, iteration_store, attempt_store, task_center_run_id
 ):
-    from workflow._core.primitives import TaskCenterInvariantViolation
+    from workflow._core.primitives import WorkflowInvariantViolation
 
     iter_id = _seed_iteration(workflow_store, iteration_store, task_center_run_id)
     coordinator, _ = _make_coordinator(iter_id, iteration_store, attempt_store)
     coordinator.create_attempt()
-    with pytest.raises(TaskCenterInvariantViolation):
+    with pytest.raises(WorkflowInvariantViolation):
         coordinator.create_attempt()

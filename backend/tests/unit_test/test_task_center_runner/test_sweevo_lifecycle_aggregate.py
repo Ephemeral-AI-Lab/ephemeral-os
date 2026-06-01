@@ -33,15 +33,15 @@ def _instance() -> SWEEvoInstance:
     )
 
 
-def _report(run_dir: Path, *, task_center_run_id: str = "tcr-1") -> PipelineReport:
+def _report(run_dir: Path, *, request_id: str = "tcr-1") -> PipelineReport:
     return PipelineReport(
         status="completed",
-        task_center_run_id=task_center_run_id,
+        request_id=request_id,
         request_id="req",
         sandbox_id="sbx-77",
         instance_id="dask__dask_2023.3.2_2023.4.0",
         run_dir=run_dir,
-        task_center_status="done",
+        request_status="done",
         duration_s=12.5,
         task_count=7,
         tasks_completed=7,
@@ -146,7 +146,7 @@ async def test_lifecycle_aggregate_two_lines_append(
             _instance(), repo_dir="/testbed", aggregate_jsonl_path=aggregate
         )
         await lifecycle.after_run(
-            ctx=AsyncMock(), report=_report(run_dir, task_center_run_id=f"tcr-{i}")
+            ctx=AsyncMock(), report=_report(run_dir, request_id=f"tcr-{i}")
         )
 
     lines = aggregate.read_text(encoding="utf-8").splitlines()
@@ -185,7 +185,7 @@ async def test_lifecycle_aggregate_records_failure_status(
 
     report = _report(run_dir)
     report.aborted_by_timeout = True
-    report.task_center_status = "running"
+    report.request_status = "running"
 
     lifecycle = lifecycle_mod.SweevoLifecycle(
         _instance(), repo_dir="/testbed", aggregate_jsonl_path=aggregate

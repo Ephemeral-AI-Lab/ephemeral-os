@@ -7,7 +7,7 @@ from typing import Literal
 from pydantic import BaseModel, Field, field_validator
 
 from sandbox.shared.models import Intent
-from workflow import TaskCenterInvariantViolation
+from workflow import WorkflowInvariantViolation
 from tools._framework.core.context import ToolExecutionContextService
 from tools._framework.core.decorator import tool
 from tools._framework.core.results import TextToolOutput, ToolResult
@@ -58,14 +58,14 @@ async def submit_generator_outcome(
     try:
         submission_context = resolve_generator_submission_context(context)
         submission_context.submit_generator_outcome(status=status, outcome=outcome)
-    except (AttemptSubmissionContextError, TaskCenterInvariantViolation) as exc:
+    except (AttemptSubmissionContextError, WorkflowInvariantViolation) as exc:
         return ToolResult(output=str(exc), is_error=True)
 
     return ToolResult(
         output=f"Accepted generator {status}.",
         metadata={
             "submission_kind": f"generator_{'success' if status == 'success' else 'failure'}",
-            "task_center_task_id": submission_context.task_center_task_id,
+            "task_id": submission_context.task_id,
             "attempt_id": submission_context.attempt_id,
         },
     )

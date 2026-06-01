@@ -154,6 +154,7 @@ class WorkflowBackgroundRecord:
             self.status == BackgroundTaskStatus.DELIVERED
             or self.terminal_reported_by_status_tool
             or self.terminal_reported_by_notification
+            or self.cancelled_by_cancel_tool
         )
 
     @property

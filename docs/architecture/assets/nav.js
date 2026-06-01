@@ -8,8 +8,8 @@
     { module: 'sandbox', href: 'sandbox/index.html', title: 'Sandbox Workspace' },
     { module: 'tools', href: 'tools/index.html', title: 'Tools' },
     { module: 'agent-loops', href: 'agent_loops/index.html', title: 'Agent Loops' },
-    { module: 'task-center', href: 'task_center/index.html', title: 'TaskCenter' },
-    { module: 'task-center-runner', href: 'task_center_runner/index.html', title: 'TaskCenter Runner (Testing)' }
+    { module: 'workflow', href: 'workflow/index.html', title: 'Workflow' },
+    { module: 'workflow-runner', href: 'task_center_runner/index.html', title: 'Workflow Runner (Testing)' }
   ];
 
   function withRoot(path) {

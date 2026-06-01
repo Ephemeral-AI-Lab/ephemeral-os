@@ -368,7 +368,7 @@ class AuditRecorder:
         try:
             import asyncio
 
-            asyncio.get_running_loop()
+            asyncio.get_requestning_loop()
         except RuntimeError:
             # Recorder constructed outside an event loop (test fixtures,
             # synchronous host paths). Caller can still attach manually.

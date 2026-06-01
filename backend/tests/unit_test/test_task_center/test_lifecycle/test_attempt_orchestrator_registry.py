@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from workflow._core.primitives import TaskCenterInvariantViolation
+from workflow._core.primitives import WorkflowInvariantViolation
 from workflow.attempt.orchestrator_registry import (
     AttemptOrchestratorRegistry,
 )
@@ -19,7 +19,7 @@ def test_registry_enforces_one_orchestrator_per_graph():
     registry = AttemptOrchestratorRegistry()
     registry.register(_FakeOrchestrator("g1"))  # type: ignore[arg-type]
 
-    with pytest.raises(TaskCenterInvariantViolation):
+    with pytest.raises(WorkflowInvariantViolation):
         registry.register(_FakeOrchestrator("g1"))  # type: ignore[arg-type]
 
 

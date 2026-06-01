@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any
 
-from workflow._core.primitives import TaskCenterInvariantViolation
+from workflow._core.primitives import WorkflowInvariantViolation
 from workflow._core.state import (
     AttemptFailReason,
     AttemptStatus,
@@ -59,11 +59,11 @@ class WorkflowStarter:
     def start(self, *, prompt: str, parent_task_id: str) -> StartedWorkflow:
         prompt = prompt.strip()
         if not prompt:
-            raise TaskCenterInvariantViolation("Workflow prompt must be nonblank.")
+            raise WorkflowInvariantViolation("Workflow prompt must be nonblank.")
         parent_task = self._assert_parent_running_and_no_open_child(parent_task_id)
         request_id = str(parent_task.get("request_id") or "")
         if not request_id.strip():
-            raise TaskCenterInvariantViolation(
+            raise WorkflowInvariantViolation(
                 f"Parent task {parent_task_id!r} has no request id."
             )
         parent_attempt_id = str(parent_task.get("attempt_id") or "") or None
@@ -101,7 +101,7 @@ class WorkflowStarter:
     def _build_workflow_lifecycle(self) -> WorkflowLifecycle:
         iteration_coordinators = self._runtime.iteration_coordinators
         if iteration_coordinators is None:
-            raise TaskCenterInvariantViolation("WorkflowStarter requires open iteration coordinators.")
+            raise WorkflowInvariantViolation("WorkflowStarter requires open iteration coordinators.")
         return WorkflowLifecycle(
             workflow_store=self._runtime.workflow_store,
             iteration_store=self._runtime.iteration_store,
@@ -116,9 +116,9 @@ class WorkflowStarter:
     def _assert_parent_running_and_no_open_child(self, parent_task_id: str) -> dict[str, Any]:
         task = self._runtime.task_store.get_task(parent_task_id)
         if task is None:
-            raise TaskCenterInvariantViolation(f"TaskCenter task {parent_task_id!r} was not found.")
+            raise WorkflowInvariantViolation(f"TaskCenter task {parent_task_id!r} was not found.")
         if task.get("status") != TaskStatus.RUNNING.value:
-            raise TaskCenterInvariantViolation(
+            raise WorkflowInvariantViolation(
                 f"TaskCenter task {parent_task_id!r} is not running; "
                 "delegated workflow start requires a running parent task."
             )
@@ -126,7 +126,7 @@ class WorkflowStarter:
             r for r in self._runtime.workflow_store.list_for_parent_task(parent_task_id) if r.is_open
         ]
         if open_workflows:
-            raise TaskCenterInvariantViolation(
+            raise WorkflowInvariantViolation(
                 f"TaskCenter task {parent_task_id!r} already has an open "
                 f"delegated workflow {open_workflows[0].id!r}."
             )

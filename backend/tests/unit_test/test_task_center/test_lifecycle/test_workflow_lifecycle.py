@@ -12,8 +12,8 @@ from __future__ import annotations
 import pytest
 
 from workflow._core.primitives import (
-    TaskCenterInvariantViolation,
-    TaskCenterLifecycleConfig,
+    WorkflowInvariantViolation,
+    WorkflowLifecycleConfig,
     root_task_id,
 )
 from workflow.lifecycle import WorkflowLifecycle
@@ -48,7 +48,7 @@ def workflow_lifecycle(
         iteration_store=iteration_store,
         attempt_store=attempt_store,
         iteration_coordinators=iteration_coordinators,
-        config=TaskCenterLifecycleConfig(default_attempt_budget=2),
+        config=WorkflowLifecycleConfig(default_attempt_budget=2),
         orchestrator_registry=AttemptOrchestratorRegistry(),
         run_close_handler=run_close_handler,
     )
@@ -264,7 +264,7 @@ def test_continuation_iteration_only_from_succeeded_predecessor_with_goal(
     )
 
     # Predecessor still OPEN -> invariant violation.
-    with pytest.raises(TaskCenterInvariantViolation):
+    with pytest.raises(WorkflowInvariantViolation):
         workflow_lifecycle.create_iteration_with_coordinator(
             workflow_id=iteration1.workflow_id
         )
@@ -273,7 +273,7 @@ def test_continuation_iteration_only_from_succeeded_predecessor_with_goal(
     iteration_store.set_status(iteration1.id, status=IterationStatus.SUCCEEDED)
     iteration1_no_goal = iteration_store.get(iteration1.id)
     assert iteration1_no_goal is not None
-    with pytest.raises(TaskCenterInvariantViolation):
+    with pytest.raises(WorkflowInvariantViolation):
         workflow_lifecycle.create_iteration_with_coordinator(
             workflow_id=iteration1_no_goal.workflow_id
         )
@@ -291,7 +291,7 @@ def test_open_iteration_coordinators_enforces_unique_per_iteration(
     workflow_lifecycle.create_iteration_with_coordinator(workflow_id=workflow.id)
     # Calling it again must fail: the only iteration is still OPEN, so it cannot
     # serve as a SUCCEEDED predecessor for a continuation iteration.
-    with pytest.raises(TaskCenterInvariantViolation):
+    with pytest.raises(WorkflowInvariantViolation):
         workflow_lifecycle.create_iteration_with_coordinator(workflow_id=workflow.id)
 
 
@@ -308,7 +308,7 @@ def test_close_workflow_routes_to_run_close_handler_for_root(
         iteration_store=iteration_store,
         attempt_store=attempt_store,
         iteration_coordinators=OpenIterationCoordinatorRegistry(),
-        config=TaskCenterLifecycleConfig(default_attempt_budget=2),
+        config=WorkflowLifecycleConfig(default_attempt_budget=2),
         orchestrator_registry=AttemptOrchestratorRegistry(),
         run_close_handler=run_close_handler,
     )
@@ -347,7 +347,7 @@ def test_workflow_lifecycle_passes_orchestrator_factory_to_spawned_coordinator(
         iteration_store=iteration_store,
         attempt_store=attempt_store,
         iteration_coordinators=registry,
-        config=TaskCenterLifecycleConfig(default_attempt_budget=2),
+        config=WorkflowLifecycleConfig(default_attempt_budget=2),
         orchestrator_registry=AttemptOrchestratorRegistry(),
         run_close_handler=lambda **_: None,
         orchestrator_factory=factory,

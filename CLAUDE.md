@@ -11,8 +11,8 @@ not as a reason to stop.
 - Use `uv` for dependency management and command execution. Typical setup is
   `uv sync --extra dev`; run project commands with `uv run ...` when the virtual
   environment is not already active.
-- Main backend areas are `backend/src/task_center`, `backend/src/engine`, and
-  `backend/src/sandbox`.
+- Main backend areas are `backend/src/task`, `backend/src/workflow`,
+  `backend/src/runtime`, `backend/src/engine`, and `backend/src/sandbox`.
 
 ## Codebase Memory And Architecture
 
@@ -31,42 +31,38 @@ cross-module map now lives under `docs/architecture`.
   code anchor and update the smallest affected architecture page rather than
   adding disconnected notes. When refreshing architecture docs, follow each
   page's `data-last-reviewed-commit` and `data-evidence-paths` metadata.
-- TaskCenter is the persisted multi-agent control plane. Coordination flows
-  through TaskCenter state, terminal submissions, context packets, and persisted
-  outcomes; do not introduce peer-to-peer agent communication or a global agent
-  orchestrator. Its durable model is Workflow -> Iteration -> Attempt, with each
-  Attempt owning one planner-authored plan: a DAG of generator and reducer tasks
-  whose edges are `needs`. Stages collapse to PLAN -> RUN -> CLOSED (the single
-  RUN stage schedules both task tuples to quiescence); the attempt PASSES iff
-  every plan task is DONE and FAILS (TASK_FAILED) if any failed or blocked. The
-  structural gate (in `attempt/plan_dag.py`) requires >=1 reducer and
-  reachability (every generator transitively needed by a reducer). There is no
-  separate "node" concept and no evaluator/verifier role — the reducer is the
-  exit gate. Every workflow, including the root, is generator-spawned via a
-  synthetic `<run_id>:root` bootstrap generator owned by `run_controller.py`.
-- `ContextEngine` builds recipe-driven packets from store state for role,
-  retry, and deferral contexts. Keep lifecycle policy in TaskCenter
-  handlers/managers, not hidden in context construction. Recipes live under
-  `backend/src/task_center/context_engine/recipes` (planner, generator, reducer).
-- TaskCenter state is consolidated in `backend/src/task_center/_core/state.py`
+- Task is the persisted agent interface. A top-level request mints a root
+  `Task(role=root, workflow_id=None)` and runs the root agent directly through
+  `backend/src/runtime/entry.py`; the request finishes through
+  `submit_root_outcome`. Delegated decomposition is launched by agents with the
+  non-terminal `delegate_workflow` tool and persists Workflow -> Iteration ->
+  Attempt state under `backend/src/workflow`. Coordination still flows through
+  persisted state, terminal submissions, context packets, and outcomes; do not
+  introduce peer-to-peer agent communication or a global agent orchestrator.
+  Each Attempt owns one planner-authored DAG of generator and reducer Task rows
+  whose edges are `needs`. Stages are PLAN -> RUN -> CLOSED, and the reducer is
+  the exit gate.
+- `ContextEngine` builds role packets from store state for workflow agents only.
+  Keep lifecycle policy in workflow handlers/managers, not hidden in context
+  construction. The context code lives under
+  `backend/src/workflow/context_engine`.
+- Workflow state is consolidated in `backend/src/workflow/_core/state.py`
   (Workflow, Iteration, Attempt) and results in
-  `backend/src/task_center/_core/outcomes.py` (the recursive `Outcome` algebra;
-  `iteration.outcomes` persisted, `workflow.outcomes` derived from the last
-  iteration). There is no closure abstraction: a generator handoff runs through
-  `submit_workflow_handoff`, `WorkflowStarter.start(prompt, parent_task_id)`, and
-  `AttemptOrchestrator.start_child_workflow` /
-  `apply_child_workflow_outcome` / `cancel_child_workflow`, with bidirectional
-  `Task.child_workflow_id` <-> `Workflow.parent_task_id`. "Close" is a state
-  transition, not a closure report.
+  `backend/src/workflow/_core/outcomes.py`. `WorkflowStarter.start(prompt,
+  parent_task_id)` creates delegated workflow state from a running Task and
+  leaves the parent Task running. Agents inspect or cancel the background handle
+  with `check_workflow_status` / `cancel_workflow`, then submit their own
+  terminal outcome. There is no synthetic root workflow, legacy waiting status,
+  child-workflow link column, or close-time parent mutation.
 - `AttemptOrchestrator` is per-Attempt lifecycle machinery, not permission to
   add a global orchestration layer. Related launch, stage-advance, and close
-  behavior lives under `backend/src/task_center/attempt`.
+  behavior lives under `backend/src/workflow/attempt`.
 - The engine loop owns agent execution and terminal-tool enforcement.
   Successful terminal tools are stamped as terminating by
   `backend/src/tools/_framework/execution/tool_call.py`; dispatch and loop exit
   run through `backend/src/engine/tool_call/dispatch.py` and
   `backend/src/engine/query/loop.py`. Terminal tools must be called alone;
-  those terminal results are TaskCenter state inputs, not just user-facing
+  those terminal results are persisted task/workflow state inputs, not just user-facing
   messages. Background execution is an engine dispatch mode, not a provider-level
   persistent shell session.
 - Sandbox is the tool-execution environment. Agents run outside the sandbox and

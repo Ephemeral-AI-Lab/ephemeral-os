@@ -12,9 +12,9 @@ from __future__ import annotations
 import logging
 from collections.abc import Callable
 
-from workflow._core.audit import TaskCenterAuditEmitter
+from workflow._core.audit import WorkflowAuditEmitter
 from workflow._core.outcomes import execution_outcome_for_submission, to_record
-from workflow._core.primitives import TaskCenterInvariantViolation
+from workflow._core.primitives import WorkflowInvariantViolation
 from workflow._core.state import (
     Attempt,
     AttemptFailReason,
@@ -47,7 +47,7 @@ class AttemptStageAdvancer:
         self._attempt_id = attempt_id
         self._runtime = runtime
         self._close_attempt = close_attempt
-        self._audit = TaskCenterAuditEmitter(runtime.audit_sink)
+        self._audit = WorkflowAuditEmitter(runtime.audit_sink)
 
     # ---- public API -----------------------------------------------------
 
@@ -95,7 +95,7 @@ class AttemptStageAdvancer:
         for task_id in (*attempt.generator_task_ids, *attempt.reducer_task_ids):
             task = runtime.task_store.get_task(task_id)
             if task is None:
-                raise TaskCenterInvariantViolation(f"Plan task {task_id!r} not found")
+                raise WorkflowInvariantViolation(f"Plan task {task_id!r} not found")
             records.append(task)
         return records
 
@@ -134,12 +134,12 @@ class AttemptStageAdvancer:
         runtime = self._runtime
         current = runtime.task_store.get_task(task_id)
         if current is None:
-            raise TaskCenterInvariantViolation(f"Plan task {task_id!r} not found")
+            raise WorkflowInvariantViolation(f"Plan task {task_id!r} not found")
         is_reducer = role == AgentRole.REDUCER.value
         role_label = "Reducer" if is_reducer else "Generator"
         agent_name = str(current.get("agent_name") or "").strip()
         if not agent_name:
-            raise TaskCenterInvariantViolation(
+            raise WorkflowInvariantViolation(
                 f"Task {current.get('task_id')!r} has no persisted agent profile"
             )
         self._audit.task_ready(
@@ -172,5 +172,5 @@ class AttemptStageAdvancer:
     def _fresh_attempt(self) -> Attempt:
         attempt = self._runtime.attempt_store.get(self._attempt_id)
         if attempt is None:
-            raise TaskCenterInvariantViolation(f"Attempt {self._attempt_id!r} not found")
+            raise WorkflowInvariantViolation(f"Attempt {self._attempt_id!r} not found")
         return attempt

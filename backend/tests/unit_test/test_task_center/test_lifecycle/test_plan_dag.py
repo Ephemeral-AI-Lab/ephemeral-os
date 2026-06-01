@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import pytest
 
-from workflow._core.primitives import TaskCenterInvariantViolation
+from workflow._core.primitives import WorkflowInvariantViolation
 from workflow.attempt.plan_dag import (
     dag_status,
     ordered_plan_tasks,
@@ -82,7 +82,7 @@ def test_ordered_plan_tasks_allows_multiple_reducer_lanes():
 
 
 def test_ordered_plan_tasks_rejects_missing_reducer():
-    with pytest.raises(TaskCenterInvariantViolation, match="at least one reducer"):
+    with pytest.raises(WorkflowInvariantViolation, match="at least one reducer"):
         ordered_plan_tasks((_gen("a"),), ())
 
 
@@ -92,13 +92,13 @@ def test_ordered_plan_tasks_rejects_unreachable_generator():
     b = _gen("b")
     r = _red("r", ("a",))
 
-    with pytest.raises(TaskCenterInvariantViolation, match="no downstream task needs"):
+    with pytest.raises(WorkflowInvariantViolation, match="no downstream task needs"):
         ordered_plan_tasks((a, b), (r,))
 
 
 def test_ordered_plan_tasks_rejects_reducer_without_generator_need():
     with pytest.raises(
-        TaskCenterInvariantViolation, match="must need at least one generator"
+        WorkflowInvariantViolation, match="must need at least one generator"
     ):
         ordered_plan_tasks((_gen("a"),), (_red("r", ()),))
 
@@ -109,7 +109,7 @@ def test_ordered_plan_tasks_rejects_reducer_needing_reducer():
     r1 = _red("r1", ("b",))
     r2 = _red("r2", ("r1",))
 
-    with pytest.raises(TaskCenterInvariantViolation, match="cannot need reducer"):
+    with pytest.raises(WorkflowInvariantViolation, match="cannot need reducer"):
         ordered_plan_tasks((a, b), (r1, r2))
 
 
@@ -118,7 +118,7 @@ def test_ordered_plan_tasks_rejects_generator_needing_reducer():
     b = _gen("b", ("r",))
     r = _red("r", ("a",))
 
-    with pytest.raises(TaskCenterInvariantViolation, match="cannot need reducer"):
+    with pytest.raises(WorkflowInvariantViolation, match="cannot need reducer"):
         ordered_plan_tasks((a, b), (r,))
 
 
@@ -127,7 +127,7 @@ def test_ordered_plan_tasks_rejects_duplicate_local_id():
     a2 = _gen("a")
     r = _red("r", ("a",))
 
-    with pytest.raises(TaskCenterInvariantViolation, match="duplicate local ids"):
+    with pytest.raises(WorkflowInvariantViolation, match="duplicate local ids"):
         ordered_plan_tasks((a1, a2), (r,))
 
 
@@ -136,14 +136,14 @@ def test_ordered_plan_tasks_rejects_duplicate_id_across_roles():
     a = _gen("a")
     r = _red("a", ("a",))
 
-    with pytest.raises(TaskCenterInvariantViolation, match="duplicate local ids"):
+    with pytest.raises(WorkflowInvariantViolation, match="duplicate local ids"):
         ordered_plan_tasks((a,), (r,))
 
 
 def test_ordered_plan_tasks_rejects_unknown_needs():
     r = _red("r", ("missing",))
 
-    with pytest.raises(TaskCenterInvariantViolation, match="unknown needs"):
+    with pytest.raises(WorkflowInvariantViolation, match="unknown needs"):
         ordered_plan_tasks((), (r,))
 
 
@@ -152,7 +152,7 @@ def test_ordered_plan_tasks_rejects_cycle():
     b = _gen("b", ("a",))
     r = _red("r", ("a",))
 
-    with pytest.raises(TaskCenterInvariantViolation, match="dependency cycle"):
+    with pytest.raises(WorkflowInvariantViolation, match="dependency cycle"):
         ordered_plan_tasks((a, b), (r,))
 
 

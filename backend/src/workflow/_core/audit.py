@@ -1,4 +1,4 @@
-"""TaskCenter audit-event types and emitter.
+"""Workflow audit-event types and emitter.
 
 Thin write-only facade around an :class:`AuditSink`. Keeps the event-name
 constants, payload shaping, and node construction in one place so callers
@@ -19,7 +19,7 @@ TASK_LAUNCHED = "workflow.task.launched"
 TASK_FAILED = "workflow.task.failed"
 
 
-class TaskCenterAuditEmitter:
+class WorkflowAuditEmitter:
     """Small write-only facade around a shared audit sink."""
 
     def __init__(self, sink: AuditSink | None = None) -> None:
@@ -34,7 +34,7 @@ class TaskCenterAuditEmitter:
     ) -> None:
         self._sink.publish(
             AuditEvent(
-                source="task_center",
+                source="workflow",
                 type=event_type,
                 node=node,
                 payload=dict(payload or {}),
@@ -102,16 +102,16 @@ def _task_node(task: Mapping[str, Any], *, attempt_id: str | None) -> AuditNode:
     return AuditNode(
         request_id=_text(task.get("request_id")),
         attempt_id=_text(attempt_id),
-        task_center_task_id=_text(task.get("task_id")),
+        task_id=_text(task.get("task_id")),
         agent_name=_text(task.get("agent_name")),
     )
 
 
 def _task_payload(task: Mapping[str, Any], *, attempt_id: str | None = None) -> dict[str, Any]:
     return {
-        "run_id": _text(task.get("request_id")),
+        "request_id": _text(task.get("request_id")),
         "attempt_id": _text(attempt_id),
-        "task_center_task_id": _text(task.get("task_id")),
+        "task_id": _text(task.get("task_id")),
         "role": _text(task.get("role")),
         "agent_name": _text(task.get("agent_name")),
         "needs": [str(dep) for dep in task.get("needs", ()) or ()],
@@ -129,5 +129,5 @@ __all__ = [
     "TASK_FAILED",
     "TASK_LAUNCHED",
     "TASK_READY",
-    "TaskCenterAuditEmitter",
+    "WorkflowAuditEmitter",
 ]

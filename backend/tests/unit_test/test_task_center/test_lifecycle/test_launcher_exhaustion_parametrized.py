@@ -15,7 +15,7 @@ from __future__ import annotations
 import pytest
 
 from workflow.attempt import launch as launcher_module
-from workflow._core.primitives import TaskCenterInvariantViolation
+from workflow._core.primitives import WorkflowInvariantViolation
 
 
 def test_role_dispatch_table_is_gone() -> None:
@@ -57,7 +57,7 @@ def test_report_exhaustion_unknown_role_raises() -> None:
         launcher_module._require_attempt_orchestrator = (
             lambda *a, **k: fake_orchestrator
         )
-        with pytest.raises(TaskCenterInvariantViolation):
+        with pytest.raises(WorkflowInvariantViolation):
             launcher_module._report_exhaustion(
                 MagicMock(), fake_launch, summary="boom"
             )
