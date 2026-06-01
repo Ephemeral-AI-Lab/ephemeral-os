@@ -59,14 +59,14 @@ async def test_entry_bootstrap_converts_prompt_to_root_workflow(
     workflow = workflow_store.get(handle.workflow_id)
     iteration = iteration_store.get(handle.iteration_id)
     attempt = attempt_store.get(handle.attempt_id)
-    root_task = task_store.get_task(root_task_id(handle.task_center_run_id))
+    root_task = task_store.get_task(root_task_id(handle.request_id))
     planner_task = task_store.get_task(planner_task_id(handle.attempt_id))
-    run_tasks = task_store.list_tasks_for_run(handle.task_center_run_id)
+    run_tasks = task_store.list_tasks_for_run(handle.request_id)
 
     assert workflow is not None
     # No origin abstraction anymore: the root workflow links back to the
     # synthetic bootstrap generator via parent_task_id.
-    assert workflow.parent_task_id == root_task_id(handle.task_center_run_id)
+    assert workflow.parent_task_id == root_task_id(handle.request_id)
     assert workflow.workflow_goal == "solve the user request"
     assert iteration is not None
     assert iteration.iteration_goal == "solve the user request"

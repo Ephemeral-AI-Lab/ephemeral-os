@@ -40,9 +40,7 @@ def test_advisor_profile_body_contains_identity_sentence():
 _MAIN_AGENT_IDENTITY_PINS = {
     "main/executor.md": "You are the **main-agent generator executor**.",
     "main/reducer.md": "You are the **main-agent reducer**.",
-    "main/planner.md": (
-        "You are the **planner** for one attempt in the TaskCenter harness."
-    ),
+    "main/planner.md": "You are the **planner** for one workflow attempt.",
     "subagent/explorer.md": "You are the explorer subagent.",
 }
 

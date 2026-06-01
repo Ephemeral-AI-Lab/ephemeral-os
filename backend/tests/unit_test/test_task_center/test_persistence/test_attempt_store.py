@@ -12,10 +12,10 @@ from workflow._core.state import (
 
 
 def _seed_segment(
-    workflow_store, iteration_store, task_center_run_id, sequence_no=1
+    workflow_store, iteration_store, request_id, sequence_no=1
 ) -> str:
     req = workflow_store.insert(
-        task_center_run_id=task_center_run_id,
+        request_id=request_id,
         parent_task_id="t1",
         workflow_goal="g",
     )
@@ -30,9 +30,9 @@ def _seed_segment(
 
 
 def test_insert_returns_running_planning_dto(
-    attempt_store, iteration_store, workflow_store, task_center_run_id
+    attempt_store, iteration_store, workflow_store, request_id
 ):
-    seg_id = _seed_segment(workflow_store, iteration_store, task_center_run_id)
+    seg_id = _seed_segment(workflow_store, iteration_store, request_id)
     g = attempt_store.insert(iteration_id=seg_id, attempt_sequence_no=1)
     assert isinstance(g, Attempt)
     assert g.stage == AttemptStage.PLAN
@@ -43,9 +43,9 @@ def test_insert_returns_running_planning_dto(
 
 
 def test_set_deferred_goal_and_reducer_task_ids_persist(
-    attempt_store, iteration_store, workflow_store, task_center_run_id
+    attempt_store, iteration_store, workflow_store, request_id
 ):
-    seg_id = _seed_segment(workflow_store, iteration_store, task_center_run_id)
+    seg_id = _seed_segment(workflow_store, iteration_store, request_id)
     g = attempt_store.insert(iteration_id=seg_id, attempt_sequence_no=1)
     g = attempt_store.set_deferred_goal(
         g.id,
@@ -57,9 +57,9 @@ def test_set_deferred_goal_and_reducer_task_ids_persist(
 
 
 def test_close_records_status_fail_reason_and_closed_at(
-    attempt_store, iteration_store, workflow_store, task_center_run_id
+    attempt_store, iteration_store, workflow_store, request_id
 ):
-    seg_id = _seed_segment(workflow_store, iteration_store, task_center_run_id)
+    seg_id = _seed_segment(workflow_store, iteration_store, request_id)
     g = attempt_store.insert(iteration_id=seg_id, attempt_sequence_no=1)
     closed = attempt_store.close(
         g.id,
@@ -73,9 +73,9 @@ def test_close_records_status_fail_reason_and_closed_at(
 
 
 def test_list_for_iteration_orders_by_attempt_sequence_no(
-    attempt_store, iteration_store, workflow_store, task_center_run_id
+    attempt_store, iteration_store, workflow_store, request_id
 ):
-    seg_id = _seed_segment(workflow_store, iteration_store, task_center_run_id)
+    seg_id = _seed_segment(workflow_store, iteration_store, request_id)
     g2 = attempt_store.insert(iteration_id=seg_id, attempt_sequence_no=2)
     g1 = attempt_store.insert(iteration_id=seg_id, attempt_sequence_no=1)
     listed = attempt_store.list_for_iteration(seg_id)
@@ -83,9 +83,9 @@ def test_list_for_iteration_orders_by_attempt_sequence_no(
 
 
 def test_get_by_sequence(
-    attempt_store, iteration_store, workflow_store, task_center_run_id
+    attempt_store, iteration_store, workflow_store, request_id
 ):
-    seg_id = _seed_segment(workflow_store, iteration_store, task_center_run_id)
+    seg_id = _seed_segment(workflow_store, iteration_store, request_id)
     g = attempt_store.insert(iteration_id=seg_id, attempt_sequence_no=1)
     found = attempt_store.get_by_sequence(
         iteration_id=seg_id, attempt_sequence_no=1

@@ -77,9 +77,9 @@ class _FailingReducerComposer:
         return self._inner.compose(base_agent_name=base_agent_name, scope=scope)
 
 
-def _seed_graph(workflow_store, iteration_store, attempt_store, task_center_run_id):
+def _seed_graph(workflow_store, iteration_store, attempt_store, request_id):
     workflow = workflow_store.insert(
-        task_center_run_id=task_center_run_id,
+        request_id=request_id,
         parent_task_id="outer-task",
         workflow_goal="solve the task",
     )
@@ -98,13 +98,13 @@ def _build_orchestrator(
     iteration_store,
     attempt_store,
     task_store,
-    task_center_run_id,
+    request_id,
     *,
     composer,
     launcher=None,
 ):
     attempt = _seed_graph(
-        workflow_store, iteration_store, attempt_store, task_center_run_id
+        workflow_store, iteration_store, attempt_store, request_id
     )
     launcher = launcher or _FakeLauncher()
     registry = AttemptOrchestratorRegistry()
@@ -190,10 +190,10 @@ def _reducer_submission(attempt_id: str, status: str) -> ReducerSubmission:
 
 
 def test_start_creates_planner_task_and_sets_attempt_planner_id(
-    workflow_store, iteration_store, attempt_store, task_store, task_center_run_id, composer
+    workflow_store, iteration_store, attempt_store, task_store, request_id, composer
 ):
     orchestrator, attempt, launcher, _, _ = _build_orchestrator(
-        workflow_store, iteration_store, attempt_store, task_store, task_center_run_id, composer=composer
+        workflow_store, iteration_store, attempt_store, task_store, request_id, composer=composer
     )
 
     orchestrator.start()
@@ -208,10 +208,10 @@ def test_start_creates_planner_task_and_sets_attempt_planner_id(
 
 
 def test_apply_plan_submission_runs_and_persists_plan_task_ids(
-    workflow_store, iteration_store, attempt_store, task_store, task_center_run_id, composer
+    workflow_store, iteration_store, attempt_store, task_store, request_id, composer
 ):
     orchestrator, attempt, launcher, _, _ = _build_orchestrator(
-        workflow_store, iteration_store, attempt_store, task_store, task_center_run_id, composer=composer
+        workflow_store, iteration_store, attempt_store, task_store, request_id, composer=composer
     )
     orchestrator.start()
     tasks = (
@@ -239,10 +239,10 @@ def test_apply_plan_submission_runs_and_persists_plan_task_ids(
 
 
 def test_apply_partial_plan_submission_stores_deferred_goal(
-    workflow_store, iteration_store, attempt_store, task_store, task_center_run_id, composer
+    workflow_store, iteration_store, attempt_store, task_store, request_id, composer
 ):
     orchestrator, attempt, _, _, _ = _build_orchestrator(
-        workflow_store, iteration_store, attempt_store, task_store, task_center_run_id, composer=composer
+        workflow_store, iteration_store, attempt_store, task_store, request_id, composer=composer
     )
     orchestrator.start()
 
@@ -262,10 +262,10 @@ def test_apply_partial_plan_submission_stores_deferred_goal(
 
 
 def test_apply_planner_failure_marks_task_and_closes_attempt(
-    workflow_store, iteration_store, attempt_store, task_store, task_center_run_id, composer
+    workflow_store, iteration_store, attempt_store, task_store, request_id, composer
 ):
     orchestrator, attempt, _, registry, closed = _build_orchestrator(
-        workflow_store, iteration_store, attempt_store, task_store, task_center_run_id, composer=composer
+        workflow_store, iteration_store, attempt_store, task_store, request_id, composer=composer
     )
     orchestrator.start()
 
@@ -288,10 +288,10 @@ def test_apply_planner_failure_marks_task_and_closes_attempt(
 
 
 def test_apply_generator_success_launches_newly_ready_dependents(
-    workflow_store, iteration_store, attempt_store, task_store, task_center_run_id, composer
+    workflow_store, iteration_store, attempt_store, task_store, request_id, composer
 ):
     orchestrator, attempt, launcher, _, _ = _build_orchestrator(
-        workflow_store, iteration_store, attempt_store, task_store, task_center_run_id, composer=composer
+        workflow_store, iteration_store, attempt_store, task_store, request_id, composer=composer
     )
     orchestrator.start()
     orchestrator.apply_plan_submission(
@@ -319,10 +319,10 @@ def test_apply_generator_success_launches_newly_ready_dependents(
 
 
 def test_missing_generator_agent_profile_is_invariant_violation(
-    workflow_store, iteration_store, attempt_store, task_store, task_center_run_id, composer
+    workflow_store, iteration_store, attempt_store, task_store, request_id, composer
 ):
     orchestrator, attempt, _, _, _ = _build_orchestrator(
-        workflow_store, iteration_store, attempt_store, task_store, task_center_run_id, composer=composer
+        workflow_store, iteration_store, attempt_store, task_store, request_id, composer=composer
     )
     orchestrator.start()
     orchestrator.apply_plan_submission(
@@ -341,10 +341,10 @@ def test_missing_generator_agent_profile_is_invariant_violation(
     # Strip the persisted agent profile so the launch cannot resolve a target.
     task_store.upsert_task(
         task_id=task_b_id,
-        task_center_run_id=task_b["task_center_run_id"],
+        request_id=task_b["request_id"],
         role=task_b["role"],
         agent_name=None,
-        context_message=task_b["context_message"],
+        instruction=task_b["instruction"],
         status=task_b["status"],
         outcomes=task_b["outcomes"],
         needs=task_b["needs"],
@@ -359,7 +359,7 @@ def test_missing_generator_agent_profile_is_invariant_violation(
 
 
 def test_generator_launch_failure_marks_task_failed_and_closes_attempt(
-    workflow_store, iteration_store, attempt_store, task_store, task_center_run_id, composer
+    workflow_store, iteration_store, attempt_store, task_store, request_id, composer
 ):
     launcher = _FailingRoleLauncher(AgentRole.GENERATOR)
     orchestrator, attempt, _, registry, closed = _build_orchestrator(
@@ -367,7 +367,7 @@ def test_generator_launch_failure_marks_task_failed_and_closes_attempt(
         iteration_store,
         attempt_store,
         task_store,
-        task_center_run_id,
+        request_id,
         launcher=launcher,
         composer=composer,
     )
@@ -394,7 +394,7 @@ def test_generator_launch_failure_marks_task_failed_and_closes_attempt(
 
 
 def test_reducer_launch_failure_marks_task_failed_and_closes_attempt(
-    workflow_store, iteration_store, attempt_store, task_store, task_center_run_id, composer
+    workflow_store, iteration_store, attempt_store, task_store, request_id, composer
 ):
     launcher = _FailingRoleLauncher(AgentRole.REDUCER)
     orchestrator, attempt, _, registry, closed = _build_orchestrator(
@@ -402,7 +402,7 @@ def test_reducer_launch_failure_marks_task_failed_and_closes_attempt(
         iteration_store,
         attempt_store,
         task_store,
-        task_center_run_id,
+        request_id,
         launcher=launcher,
         composer=composer,
     )
@@ -430,14 +430,14 @@ def test_reducer_launch_failure_marks_task_failed_and_closes_attempt(
 
 
 def test_reducer_compose_failure_marks_task_failed_and_closes_attempt(
-    workflow_store, iteration_store, attempt_store, task_store, task_center_run_id, composer
+    workflow_store, iteration_store, attempt_store, task_store, request_id, composer
 ):
     orchestrator, attempt, _, registry, closed = _build_orchestrator(
         workflow_store,
         iteration_store,
         attempt_store,
         task_store,
-        task_center_run_id,
+        request_id,
         composer=_FailingReducerComposer(composer),
     )
     orchestrator.start()
@@ -466,10 +466,10 @@ def test_reducer_compose_failure_marks_task_failed_and_closes_attempt(
 
 
 def test_apply_generator_blocker_leaves_pending_descendants_not_started(
-    workflow_store, iteration_store, attempt_store, task_store, task_center_run_id, composer
+    workflow_store, iteration_store, attempt_store, task_store, request_id, composer
 ):
     orchestrator, attempt, _, _, _ = _build_orchestrator(
-        workflow_store, iteration_store, attempt_store, task_store, task_center_run_id, composer=composer
+        workflow_store, iteration_store, attempt_store, task_store, request_id, composer=composer
     )
     orchestrator.start()
     orchestrator.apply_plan_submission(
@@ -498,10 +498,10 @@ def test_apply_generator_blocker_leaves_pending_descendants_not_started(
 
 
 def test_generator_blocker_waits_then_closes_after_runnable_siblings_finish(
-    workflow_store, iteration_store, attempt_store, task_store, task_center_run_id, composer
+    workflow_store, iteration_store, attempt_store, task_store, request_id, composer
 ):
     orchestrator, attempt, _, _, closed = _build_orchestrator(
-        workflow_store, iteration_store, attempt_store, task_store, task_center_run_id, composer=composer
+        workflow_store, iteration_store, attempt_store, task_store, request_id, composer=composer
     )
     orchestrator.start()
     orchestrator.apply_plan_submission(
@@ -528,10 +528,10 @@ def test_generator_blocker_waits_then_closes_after_runnable_siblings_finish(
 
 
 def test_all_generators_done_launches_reducer(
-    workflow_store, iteration_store, attempt_store, task_store, task_center_run_id, composer
+    workflow_store, iteration_store, attempt_store, task_store, request_id, composer
 ):
     orchestrator, attempt, launcher, _, _ = _build_orchestrator(
-        workflow_store, iteration_store, attempt_store, task_store, task_center_run_id, composer=composer
+        workflow_store, iteration_store, attempt_store, task_store, request_id, composer=composer
     )
     orchestrator.start()
     orchestrator.apply_plan_submission(
@@ -553,10 +553,10 @@ def test_all_generators_done_launches_reducer(
 
 
 def test_reducer_success_closes_attempt_passed(
-    workflow_store, iteration_store, attempt_store, task_store, task_center_run_id, composer
+    workflow_store, iteration_store, attempt_store, task_store, request_id, composer
 ):
     orchestrator, attempt, _, _, closed = _build_orchestrator(
-        workflow_store, iteration_store, attempt_store, task_store, task_center_run_id, composer=composer
+        workflow_store, iteration_store, attempt_store, task_store, request_id, composer=composer
     )
     orchestrator.start()
     orchestrator.apply_plan_submission(
@@ -578,10 +578,10 @@ def test_reducer_success_closes_attempt_passed(
 
 
 def test_reducer_failure_closes_attempt_failed(
-    workflow_store, iteration_store, attempt_store, task_store, task_center_run_id, composer
+    workflow_store, iteration_store, attempt_store, task_store, request_id, composer
 ):
     orchestrator, attempt, _, _, closed = _build_orchestrator(
-        workflow_store, iteration_store, attempt_store, task_store, task_center_run_id, composer=composer
+        workflow_store, iteration_store, attempt_store, task_store, request_id, composer=composer
     )
     orchestrator.start()
     orchestrator.apply_plan_submission(
@@ -605,13 +605,13 @@ def test_reducer_failure_closes_attempt_failed(
 # ---- child-workflow handoff -------------------------------------------------
 
 
-def _waiting_workflow(task_center_run_id: str, *, status: WorkflowStatus, parent_task_id: str) -> Workflow:
+def _waiting_workflow(request_id: str, *, status: WorkflowStatus, parent_task_id: str) -> Workflow:
     from datetime import UTC, datetime
 
     now = datetime.now(UTC)
     return Workflow(
         id="delegated-1",
-        task_center_run_id=task_center_run_id,
+        request_id=request_id,
         workflow_goal="child",
         status=status,
         iteration_ids=(),
@@ -623,10 +623,10 @@ def _waiting_workflow(task_center_run_id: str, *, status: WorkflowStatus, parent
 
 
 def test_child_workflow_success_resumes_waiting_generator(
-    workflow_store, iteration_store, attempt_store, task_store, task_center_run_id, composer
+    workflow_store, iteration_store, attempt_store, task_store, request_id, composer
 ):
     orchestrator, attempt, _, _, _ = _build_orchestrator(
-        workflow_store, iteration_store, attempt_store, task_store, task_center_run_id, composer=composer
+        workflow_store, iteration_store, attempt_store, task_store, request_id, composer=composer
     )
     orchestrator.start()
     orchestrator.apply_plan_submission(
@@ -638,7 +638,7 @@ def test_child_workflow_success_resumes_waiting_generator(
     )
     task_id = generator_task_id(attempt.id, "a")
     child = _waiting_workflow(
-        task_center_run_id, status=WorkflowStatus.SUCCEEDED, parent_task_id=task_id
+        request_id, status=WorkflowStatus.SUCCEEDED, parent_task_id=task_id
     )
     orchestrator.start_child_workflow(
         generator_task=task_store.get_task(task_id), child_workflow=child
@@ -660,10 +660,10 @@ def test_child_workflow_success_resumes_waiting_generator(
 
 
 def test_child_workflow_failure_leaves_dependents_pending_and_closes_attempt(
-    workflow_store, iteration_store, attempt_store, task_store, task_center_run_id, composer
+    workflow_store, iteration_store, attempt_store, task_store, request_id, composer
 ):
     orchestrator, attempt, _, _, closed = _build_orchestrator(
-        workflow_store, iteration_store, attempt_store, task_store, task_center_run_id, composer=composer
+        workflow_store, iteration_store, attempt_store, task_store, request_id, composer=composer
     )
     orchestrator.start()
     orchestrator.apply_plan_submission(
@@ -679,7 +679,7 @@ def test_child_workflow_failure_leaves_dependents_pending_and_closes_attempt(
     task_id = generator_task_id(attempt.id, "a")
     dependent_id = generator_task_id(attempt.id, "b")
     child = _waiting_workflow(
-        task_center_run_id, status=WorkflowStatus.FAILED, parent_task_id=task_id
+        request_id, status=WorkflowStatus.FAILED, parent_task_id=task_id
     )
     orchestrator.start_child_workflow(
         generator_task=task_store.get_task(task_id), child_workflow=child
@@ -703,10 +703,10 @@ def test_child_workflow_failure_leaves_dependents_pending_and_closes_attempt(
 
 
 def test_cancel_child_workflow_restores_generator_running(
-    workflow_store, iteration_store, attempt_store, task_store, task_center_run_id, composer
+    workflow_store, iteration_store, attempt_store, task_store, request_id, composer
 ):
     orchestrator, attempt, _, _, _ = _build_orchestrator(
-        workflow_store, iteration_store, attempt_store, task_store, task_center_run_id, composer=composer
+        workflow_store, iteration_store, attempt_store, task_store, request_id, composer=composer
     )
     orchestrator.start()
     orchestrator.apply_plan_submission(
@@ -718,7 +718,7 @@ def test_cancel_child_workflow_restores_generator_running(
     )
     task_id = generator_task_id(attempt.id, "a")
     child = _waiting_workflow(
-        task_center_run_id, status=WorkflowStatus.OPEN, parent_task_id=task_id
+        request_id, status=WorkflowStatus.OPEN, parent_task_id=task_id
     )
     orchestrator.start_child_workflow(
         generator_task=task_store.get_task(task_id), child_workflow=child
@@ -732,10 +732,10 @@ def test_cancel_child_workflow_restores_generator_running(
 
 
 def test_orchestrator_never_creates_retry_attempt(
-    workflow_store, iteration_store, attempt_store, task_store, task_center_run_id, composer
+    workflow_store, iteration_store, attempt_store, task_store, request_id, composer
 ):
     orchestrator, attempt, _, _, _ = _build_orchestrator(
-        workflow_store, iteration_store, attempt_store, task_store, task_center_run_id, composer=composer
+        workflow_store, iteration_store, attempt_store, task_store, request_id, composer=composer
     )
     orchestrator.start()
     orchestrator.apply_plan_submission(

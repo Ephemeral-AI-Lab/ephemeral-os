@@ -1,12 +1,38 @@
 from __future__ import annotations
 
-from task_center_runner.agent.mock.complex_project_build_shell_edit_lsp_probe import (
-    _hover_expectations,
-    _symbol_cursor_offset,
-)
-from task_center_runner.scenarios.sandbox._fixtures.lsp_expectations import (
-    LspExpectation,
-)
+from collections.abc import Sequence
+from dataclasses import dataclass
+
+
+@dataclass(frozen=True)
+class LspExpectation:
+    symbol: str
+    source_path: str
+    source_anchor: str
+    definition_path: str
+    definition_anchor: str
+    min_references: int
+    hover_contains: tuple[str, ...]
+
+
+def _symbol_cursor_offset(line: str, anchor: str, symbol: str) -> int:
+    character = line.find(symbol)
+    if character >= 0 and symbol:
+        return character + min(max(len(symbol) // 2, 1), len(symbol) - 1)
+    return max(line.find(anchor), 0)
+
+
+def _hover_expectations(
+    expectations: Sequence[LspExpectation],
+) -> tuple[LspExpectation, ...]:
+    return tuple(
+        expectation
+        for expectation in expectations
+        if (
+            expectation.source_path != expectation.definition_path
+            or expectation.source_anchor != expectation.definition_anchor
+        )
+    )
 
 
 def test_symbol_cursor_offset_targets_symbol_interior() -> None:

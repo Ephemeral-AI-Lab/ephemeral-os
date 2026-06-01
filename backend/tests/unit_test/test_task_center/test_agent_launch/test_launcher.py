@@ -41,10 +41,10 @@ async def test_wait_for_idle_prunes_done_tasks_before_next_loop() -> None:
 
 @pytest.mark.asyncio
 async def test_missing_orchestrator_exhaustion_closes_attempt(
-    workflow_store, iteration_store, attempt_store, task_store, task_center_run_id
+    workflow_store, iteration_store, attempt_store, task_store, request_id
 ) -> None:
     workflow = workflow_store.insert(
-        task_center_run_id=task_center_run_id,
+        request_id=request_id,
         parent_task_id="outer-task",
         workflow_goal="solve",
     )
@@ -61,10 +61,10 @@ async def test_missing_orchestrator_exhaustion_closes_attempt(
     task_id = planner_task_id(attempt.id)
     task_store.upsert_task(
         task_id=task_id,
-        task_center_run_id=task_center_run_id,
+        request_id=request_id,
         role=AgentRole.PLANNER.value,
         agent_name="planner",
-        context_message="plan",
+        instruction="plan",
         status=TaskStatus.RUNNING.value,
         outcomes=[],
         needs=[],
@@ -85,7 +85,7 @@ async def test_missing_orchestrator_exhaustion_closes_attempt(
     await launcher._report_unfinished_running_task(  # noqa: SLF001 - regression seam
         AgentLaunch(
             task_id=task_id,
-            task_center_run_id=task_center_run_id,
+            request_id=request_id,
             attempt_id=attempt.id,
             role=AgentRole.PLANNER,
             agent_name="planner",
@@ -108,10 +108,10 @@ async def test_missing_orchestrator_exhaustion_closes_attempt(
 
 @pytest.mark.asyncio
 async def test_unowned_generator_exhaustion_persists_attempt_outcome(
-    workflow_store, iteration_store, attempt_store, task_store, task_center_run_id
+    workflow_store, iteration_store, attempt_store, task_store, request_id
 ) -> None:
     workflow = workflow_store.insert(
-        task_center_run_id=task_center_run_id,
+        request_id=request_id,
         parent_task_id="outer-task",
         workflow_goal="solve",
     )
@@ -129,10 +129,10 @@ async def test_unowned_generator_exhaustion_persists_attempt_outcome(
     attempt_store.set_generator_task_ids(attempt.id, [task_id])
     task_store.upsert_task(
         task_id=task_id,
-        task_center_run_id=task_center_run_id,
+        request_id=request_id,
         role=AgentRole.GENERATOR.value,
         agent_name="executor",
-        context_message="build api",
+        instruction="build api",
         status=TaskStatus.RUNNING.value,
         outcomes=[],
         needs=[],
@@ -153,7 +153,7 @@ async def test_unowned_generator_exhaustion_persists_attempt_outcome(
     await launcher._report_unfinished_running_task(  # noqa: SLF001 - regression seam
         AgentLaunch(
             task_id=task_id,
-            task_center_run_id=task_center_run_id,
+            request_id=request_id,
             attempt_id=attempt.id,
             role=AgentRole.GENERATOR,
             agent_name="executor",

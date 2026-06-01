@@ -40,7 +40,7 @@ path as the behavioral reference.
    tool call is either against the active LayerStack manifest generation or
    fails with a retryable stale-projection error.
 4. The generic read-only service path is daemon-managed
-   `long_lived_protocol_refresh`. Arbitrary packages run behind a small service
+   `workspace_snapshot_refresh`. Arbitrary packages run behind a small service
    harness that speaks the daemon refresh protocol; package-native file watching
    may be used as an internal optimization, but not as the correctness source.
 5. The read-only service path never publishes. Write-capable plugin tools, when
@@ -94,33 +94,97 @@ PluginServiceKey {
   workspace_root,
   plugin_id,
   plugin_digest,
+  service_id,
+  service_profile_digest,
   service_mode,
+  refresh_strategy,
 }
 ```
 
 The registry owns process lifetime, PPC routing, projection freshness, event
 subscriptions, and teardown. A service instance is not "the Pyright session"; it
 is a daemon-managed read-only process behind the unified refresh protocol.
+`service_profile_digest` covers launch command, environment, protocol version,
+service mode, and refresh strategy so reuse cannot cross incompatible services.
 
 Plugin manifests should describe:
 
 - `plugin_id`, `plugin_version`, and content digest.
+- `service_id` plus the service profile digest.
 - Runtime launch command and payload requirements.
 - PPC protocol version, using the existing newline-delimited daemon envelope
   framing.
 - Service role:
-  - `readonly_service` uses `long_lived_protocol_refresh`.
+  - `readonly_service` uses `workspace_snapshot_refresh`.
   - `write_worker` uses `oneshot_overlay` or self-managed daemon callbacks.
 - Refresh strategy for read-only services:
-  - `remount_and_notify`
-  - `remount_only`
-  - `restart_on_refresh`
+  - `remount_workspace_and_notify`
+  - `remount_workspace`
+  - `restart_service`
 - Operation list with `Intent`, `auto_workspace_overlay`, timeout, and whether
   the operation needs a warm service or an operation worker.
 
+The service mode names the daemon-owned freshness model. The strategy names are
+mechanism names; `refresh_strategy` already supplies the refresh context, so the
+enum values should not repeat it.
+
+## Rust Crate Reuse and File Layout
+
+Yes, reuse `eos-ephemeral`, but only as the shared ephemeral contract crate. The
+current checkout intentionally keeps `sandbox/crates/eos-ephemeral` small: it
+exports `OccRuntimeServicesPort`, `PublishedFile`, and `EphemeralError`, and it
+does not own the concrete overlay, LayerStack, OCC, runner, plugin registry, or
+route model. Keep that boundary.
+
+Plugin refresh should therefore reuse `eos-ephemeral` for the write/self-managed
+publish contract only: both `WRITE_ALLOWED` plugin workers and self-managed PPC
+callbacks must publish through the daemon-injected `OccRuntimeServicesPort`.
+Do not move `workspace_snapshot_refresh` runtime orchestration into
+`eos-ephemeral`.
+
+The resulting crate ownership should be:
+
+```text
+sandbox/crates/eos-ephemeral/src/
+  lib.rs                 # unchanged public contract surface
+  error.rs               # shared ephemeral errors
+  ports.rs               # OccRuntimeServicesPort + PublishedFile
+
+sandbox/crates/eos-plugin/src/
+  lib.rs                 # exports plugin contracts
+  context.rs             # per-call identity and intent
+  dispatch.rs            # mode selection and deferred dispatch contracts
+  error.rs               # plugin errors
+  manifest.rs            # NEW: plugin/service manifest validation
+  ppc.rs                 # PPC envelope over eos-protocol framing
+  refresh.rs             # NEW: Prepare/Quiesce/Swap/Notify/Resume/Health types
+  registry.rs            # op registration and public plugin.* names
+  service.rs             # NEW: PluginServiceKey, ServiceMode, RefreshStrategy
+  service_registry.rs    # NEW: logical registry contract, no daemon I/O
+  warm_server.rs         # evolves into service process handle compatibility
+
+sandbox/crates/eos-daemon/src/
+  plugin/mod.rs          # NEW: daemon plugin module boundary
+  plugin/ops.rs          # NEW: api.plugin.ensure/status + dynamic plugin.* ops
+  plugin/service_registry.rs
+                         # NEW: live PluginServiceRegistry implementation
+  plugin/process.rs      # NEW: spawn, kill, reap, PPC socket lifecycle
+  plugin/snapshot_refresh.rs
+                         # NEW: leased snapshot refresh/remount/restart logic
+  plugin/ppc_router.rs   # NEW: message-id multiplexing and callbacks
+  plugin/occ_callbacks.rs
+                         # NEW: implements self-managed commit via same OCC port
+  plugin/telemetry.rs    # NEW: refresh, lease, queue, restart metrics
+```
+
+`eos-plugin` may depend on `eos-ephemeral`, `eos-layerstack`, and
+`eos-protocol`. It must not depend on `eos-occ`, `eos-overlay`, `nix`, or
+`tokio`. The daemon is the impure owner that combines `eos-layerstack`,
+`eos-overlay`, `eos-occ`, `eos-runner`, and `eos-plugin` into a live service.
+
 ## Service Modes
 
-### 1. `long_lived_protocol_refresh`
+### 1. `workspace_snapshot_refresh`
 
 This is the unified mode for arbitrary read-only plugin services.
 
@@ -149,12 +213,12 @@ Flow:
 4. Before every request, run `ensure_service_current(target_manifest_key)`.
 5. If the active manifest changed, acquire a fresh snapshot and refresh the
    service according to its strategy:
-   - `remount_and_notify`: quiesce, remount the service namespace, send the
-     daemon refresh notification, then resume.
-   - `remount_only`: quiesce, remount, invalidate daemon-side request caches,
+   - `remount_workspace_and_notify`: quiesce, remount the service namespace,
+     send the daemon refresh notification, then resume.
+   - `remount_workspace`: quiesce, remount, invalidate daemon-side request caches,
      then resume. The service must read the filesystem on demand and not rely on
      stale internal indexes for correctness.
-   - `restart_on_refresh`: terminate and restart the service on the new
+   - `restart_service`: terminate and restart the service on the new
      snapshot. This is the generic fallback for arbitrary packages with no safe
      refresh API.
 6. If refresh fails, do not answer from stale state. Retry, restart, or return a
@@ -166,7 +230,7 @@ read.
 
 Package-native file watching is optional. It may improve internal cache
 latency, but the daemon refresh protocol is authoritative. A service that only
-supports raw OS watches can still be supported through `restart_on_refresh`;
+supports raw OS watches can still be supported through `restart_service`;
 that is slower than an adapter-specific refresh hook, but it is generic and
 does not require a materialized projection as the default.
 
@@ -220,7 +284,7 @@ Concurrency rules:
 
 ## Overlay and OCC Workflow
 
-Read-only `long_lived_protocol_refresh` workflow:
+Read-only `workspace_snapshot_refresh` workflow:
 
 1. The daemon acquires a LayerStack snapshot lease for the active shared
    ephemeral workspace.
@@ -253,7 +317,7 @@ write mount or publish directly.
 Sharing rule:
 
 - Multiple operations from the same `PluginServiceKey` may share one
-  `long_lived_protocol_refresh` process.
+  `workspace_snapshot_refresh` process.
 - Multiple plugin services on the same `layer_stack_root` may share daemon-side
   latest-manifest observation, event coalescing, and snapshot-acquire work.
 - They must not share process memory, namespace state, PPC sessions, service
@@ -323,9 +387,48 @@ the active-lease guard and full projection semantics are working as designed.
 It may remain useful as an explicit "materialize to target workspace now" API,
 not as the freshness source for long-running read-only services.
 
+### Experiment Result - 2026-06-01
+
+Harness:
+
+- Script: `backend/scripts/bench_plugin_refresh_strategies.py`
+- Existing container: `2856103e0c53`
+- Experiment paths: `/eos/plugin/workspace`, `/eos/plugin/layer-stack`, and
+  watcher files under `/eos/plugin/*`
+- Transport: daemon TCP endpoint, not Docker exec for measured daemon calls
+- Artifacts:
+  `bench/plugin-refresh-strategies-20260601.json`,
+  `bench/plugin-refresh-strategies-20260601.md`
+
+Results:
+
+- `workspace_snapshot_refresh` refreshed through acquire/release/read in
+  p95 `5.612 ms` and never served stale content.
+- `commit_to_workspace_timer` materialized in p95 `11.290 ms` on this small
+  workspace, and did produce native watcher events.
+- `raw_workspace_fs_watch` without materialization stayed stale: daemon reads saw
+  `watch-no-commit`, raw workspace still had `initial`, and the watcher saw
+  zero target events.
+- A synthetic held snapshot lease was not observed by the current
+  `api.commit_to_workspace` path in this daemon run; commit succeeded and reset
+  storage. That means a periodic materializer would need an explicit daemon
+  plugin-service guard before it can be considered safe around long-lived
+  plugin services.
+- Auto-squash plus post-drain commit passed: after 104 writes, pre-commit
+  manifest depth was `10` at version `111`; post-commit manifest depth was `1`,
+  raw bytes matched the daemon view, and orphan/missing layer counts were `0`.
+
+Conclusion:
+
+Use `workspace_snapshot_refresh` as the default. It is faster on measured
+refresh, does not require raw workspace materialization, and gives the daemon a
+generic place to enforce freshness before reads. `commit_to_workspace` remains
+an explicit materialization boundary, not a timer. `long_lived_fs_watch` is not
+correct by itself because LayerStack publishes do not mutate the raw workspace.
+
 ## Write Semantics
 
-The `long_lived_protocol_refresh` service is read-only. It can answer queries or
+The `workspace_snapshot_refresh` service is read-only. It can answer queries or
 return an edit plan, but it does not mutate workspace truth and does not publish.
 Write-capable plugin tools must use a separate daemon-owned write path.
 
@@ -358,7 +461,7 @@ Python importlib compatibility.
 
 Resolution:
 
-- Promote `readonly_service` plus `long_lived_protocol_refresh` into the
+- Promote `readonly_service` plus `workspace_snapshot_refresh` into the
   manifest contract.
 - Require a non-LSP daemon-refresh probe before declaring generic read-only
   service support.
@@ -376,8 +479,8 @@ Resolution:
 - Do not make package-native file watches the correctness contract.
 - Define a daemon-to-harness refresh protocol that every read-only service must
   implement.
-- Let package adapters choose `remount_and_notify`, `remount_only`, or
-  `restart_on_refresh`.
+- Let package adapters choose `remount_workspace_and_notify`,
+  `remount_workspace`, or `restart_service`.
 - Validate with a non-LSP dummy service that caches file content and proves the
   daemon refresh protocol invalidates or restarts it before the next read.
 
@@ -389,7 +492,7 @@ overlay promise.
 
 Resolution:
 
-- Keep `long_lived_protocol_refresh` on leased LayerStack lowerdirs plus a
+- Keep `workspace_snapshot_refresh` on leased LayerStack lowerdirs plus a
   service-private read-only overlay/remount path.
 - Treat materialized projections as a rejected default and a future escape hatch
   only if a separate plan proves bounded space.
@@ -484,13 +587,13 @@ Checks:
 - Python parity for `test_plugin_write_allowed_apply_workspace_edit_publishes`.
 - Rust unit/integration test proving one publish through the existing OCC writer.
 
-### Phase 4 - Unified Read-Only Protocol Refresh Service
+### Phase 4 - `workspace_snapshot_refresh` Service
 
-- Implement `long_lived_protocol_refresh`.
+- Implement `workspace_snapshot_refresh`.
 - Implement the daemon-to-harness refresh protocol:
   `PrepareRefresh`, `Quiesce`, `SwapWorkspace`, `NotifyRefresh`, `Resume`,
   `Restart`, and `Health`.
-- Support `remount_and_notify`, `remount_only`, and `restart_on_refresh`.
+- Support `remount_workspace_and_notify`, `remount_workspace`, and `restart_service`.
 - Port Pyright/LSP as one adapter, not as the service model itself.
 - Add a non-LSP read-only dummy service that caches workspace content and only
   stays correct if the daemon refresh protocol works.
@@ -511,8 +614,8 @@ Checks:
 - Keep process, namespace, PPC connection, and service cache state isolated per
   `PluginServiceKey`.
 - Allow multiple operations from the same plugin service to reuse one read-only
-  service instance when plugin id, digest, workspace root, and refresh strategy
-  match.
+  service instance when plugin id, digest, service id, service profile digest,
+  workspace root, and refresh strategy match.
 
 Checks:
 
@@ -524,8 +627,8 @@ Checks:
 ### Phase 6 - Contention and Parity Gates
 
 - Add AV-10 plugin parity for READ_ONLY, WRITE_ALLOWED, and self-managed modes.
-- Add CP-4 interleave with direct writes, shell publishes, protocol-refresh
-  service calls, and self-managed callbacks.
+- Add CP-4 interleave with direct writes, shell publishes,
+  `workspace_snapshot_refresh` service calls, and self-managed callbacks.
 - Add forward/back parity where Python publishes, Rust plugin reads, Rust plugin
   publishes, and Python reads.
 
@@ -567,11 +670,11 @@ Reject as the universal design. It is generic and fresh, but it makes Pyright an
 other indexing services unusably expensive because every call pays cold start and
 full index cost.
 
-### Unmanaged Remount-Only Long-Lived Services
+### Unmanaged Workspace Remount Long-Lived Services
 
 Reject. A bare remount without the daemon refresh protocol can leave service
 caches stale. Remount is allowed only as one step inside
-`long_lived_protocol_refresh`.
+`workspace_snapshot_refresh`.
 
 ### Materialized File-Watch Projection As The Default
 
@@ -595,7 +698,7 @@ few-second daemon timer feeding plugin watchers.
 
 Ship one daemon-managed read-only service layer:
 
-1. `long_lived_protocol_refresh` is the unified abstraction for arbitrary
+1. `workspace_snapshot_refresh` is the unified abstraction for arbitrary
    read-only plugin services.
 2. The daemon owns manifest freshness, remount/restart, service health, and
    event coalescing.
@@ -610,6 +713,6 @@ Ship one daemon-managed read-only service layer:
    watcher, and auto-squash behavior.
 
 Do not claim generic arbitrary-package support until a non-LSP read-only service
-proves `restart_on_refresh` or `remount_only` correctness under peer publishes,
-and Pyright proves `remount_and_notify` parity without plugin-specific daemon
-logic.
+proves `restart_service` or `remount_workspace` correctness under peer publishes,
+and Pyright proves `remount_workspace_and_notify` parity without plugin-specific
+daemon logic.

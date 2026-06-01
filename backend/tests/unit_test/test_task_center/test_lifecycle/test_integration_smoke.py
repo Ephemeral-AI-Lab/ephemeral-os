@@ -81,16 +81,16 @@ def _build(workflow_store, iteration_store, attempt_store, task_store):
 def _root_workflow(workflow_lifecycle, task_store, run_id, *, goal):
     task_store.upsert_task(
         task_id=root_task_id(run_id),
-        task_center_run_id=run_id,
+        request_id=run_id,
         role=AgentRole.GENERATOR.value,
         agent_name=None,
-        context_message="",
+        instruction="",
         status=TaskStatus.RUNNING.value,
         outcomes=[],
         needs=[],
     )
     return workflow_lifecycle.create_workflow(
-        task_center_run_id=run_id, parent_task_id=root_task_id(run_id), workflow_goal=goal
+        request_id=run_id, parent_task_id=root_task_id(run_id), workflow_goal=goal
     )
 
 
@@ -114,13 +114,13 @@ def _drive_iteration(
 
 
 def test_smoke_terminal_success(
-    workflow_store, iteration_store, attempt_store, task_store, task_center_run_id
+    workflow_store, iteration_store, attempt_store, task_store, request_id
 ):
     workflow_lifecycle, iteration_coordinators, closed = _build(
         workflow_store, iteration_store, attempt_store, task_store
     )
     workflow = _root_workflow(
-        workflow_lifecycle, task_store, task_center_run_id, goal="solve X"
+        workflow_lifecycle, task_store, request_id, goal="solve X"
     )
     iteration, _ = workflow_lifecycle.create_iteration_with_coordinator(
         workflow_id=workflow.id
@@ -140,13 +140,13 @@ def test_smoke_terminal_success(
 
 
 def test_smoke_attempt_failed_exhausts_budget(
-    workflow_store, iteration_store, attempt_store, task_store, task_center_run_id
+    workflow_store, iteration_store, attempt_store, task_store, request_id
 ):
     workflow_lifecycle, iteration_coordinators, closed = _build(
         workflow_store, iteration_store, attempt_store, task_store
     )
     workflow = _root_workflow(
-        workflow_lifecycle, task_store, task_center_run_id, goal="solve X"
+        workflow_lifecycle, task_store, request_id, goal="solve X"
     )
     iteration, _ = workflow_lifecycle.create_iteration_with_coordinator(
         workflow_id=workflow.id
@@ -177,13 +177,13 @@ def test_smoke_attempt_failed_exhausts_budget(
 
 
 def test_smoke_success_continue_then_terminal(
-    workflow_store, iteration_store, attempt_store, task_store, task_center_run_id
+    workflow_store, iteration_store, attempt_store, task_store, request_id
 ):
     workflow_lifecycle, iteration_coordinators, closed = _build(
         workflow_store, iteration_store, attempt_store, task_store
     )
     workflow = _root_workflow(
-        workflow_lifecycle, task_store, task_center_run_id, goal="initial-goal"
+        workflow_lifecycle, task_store, request_id, goal="initial-goal"
     )
     iteration1, _ = workflow_lifecycle.create_iteration_with_coordinator(
         workflow_id=workflow.id

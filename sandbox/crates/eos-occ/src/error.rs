@@ -26,6 +26,10 @@ pub enum OccError {
     #[error("occ commit queue worker panicked")]
     WorkerPanicked,
 
+    /// A process-local commit queue mutex was poisoned.
+    #[error("occ commit queue state lock poisoned: {0}")]
+    QueueStatePoisoned(&'static str),
+
     /// The single-writer reply channel dropped before delivering a result.
     #[error("occ commit reply channel disconnected")]
     ReplyDisconnected,

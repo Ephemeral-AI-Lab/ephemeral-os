@@ -50,6 +50,10 @@ pub enum DaemonError {
     #[error("forbidden: {0}")]
     Forbidden(String),
 
+    /// A process-local daemon state mutex was poisoned.
+    #[error("daemon state lock poisoned: {0}")]
+    StateLockPoisoned(&'static str),
+
     /// The layer-stack storage / publish layer failed.
     #[error(transparent)]
     LayerStack(#[from] eos_layerstack::LayerStackError),

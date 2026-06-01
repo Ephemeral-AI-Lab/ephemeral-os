@@ -57,11 +57,11 @@ def _build_runtime(workflow_store, iteration_store, attempt_store, task_store, *
 
 
 def _seed_attempt_with_waiting_generator(
-    *, runtime: AttemptDeps, task_center_run_id: str
+    *, runtime: AttemptDeps, request_id: str
 ) -> tuple[str, str]:
     """Seed a parent attempt whose generator ``a`` is waiting on a child workflow."""
     workflow = runtime.workflow_store.insert(
-        task_center_run_id=task_center_run_id,
+        request_id=request_id,
         parent_task_id=None,
         workflow_goal="outer",
     )
@@ -112,7 +112,7 @@ def _mark_waiting(runtime: AttemptDeps, task_id: str, child_workflow: Workflow) 
 
 def _closed_child(runtime: AttemptDeps, run_id: str, *, succeeded: bool, parent_task_id: str) -> Workflow:
     child = runtime.workflow_store.insert(
-        task_center_run_id=run_id,
+        request_id=run_id,
         parent_task_id=parent_task_id,
         workflow_goal="child",
     )
@@ -124,16 +124,16 @@ def _closed_child(runtime: AttemptDeps, run_id: str, *, succeeded: bool, parent_
 
 
 def test_child_workflow_success_marks_waiting_generator_done(
-    workflow_store, iteration_store, attempt_store, task_store, task_center_run_id, composer
+    workflow_store, iteration_store, attempt_store, task_store, request_id, composer
 ) -> None:
     runtime = _build_runtime(
         workflow_store, iteration_store, attempt_store, task_store, composer=composer
     )
     parent_task_id, parent_attempt_id = _seed_attempt_with_waiting_generator(
-        runtime=runtime, task_center_run_id=task_center_run_id
+        runtime=runtime, request_id=request_id
     )
     child = _closed_child(
-        runtime, task_center_run_id, succeeded=True, parent_task_id=parent_task_id
+        runtime, request_id, succeeded=True, parent_task_id=parent_task_id
     )
     _mark_waiting(runtime, parent_task_id, child)
 
@@ -150,17 +150,17 @@ def test_child_workflow_success_marks_waiting_generator_done(
 
 
 def test_child_workflow_failure_marks_waiting_generator_failed(
-    workflow_store, iteration_store, attempt_store, task_store, task_center_run_id, composer
+    workflow_store, iteration_store, attempt_store, task_store, request_id, composer
 ) -> None:
     runtime = _build_runtime(
         workflow_store, iteration_store, attempt_store, task_store, composer=composer
     )
     parent_task_id, parent_attempt_id = _seed_attempt_with_waiting_generator(
-        runtime=runtime, task_center_run_id=task_center_run_id
+        runtime=runtime, request_id=request_id
     )
     dependent_id = generator_task_id(parent_attempt_id, "b")
     child = _closed_child(
-        runtime, task_center_run_id, succeeded=False, parent_task_id=parent_task_id
+        runtime, request_id, succeeded=False, parent_task_id=parent_task_id
     )
     _mark_waiting(runtime, parent_task_id, child)
 
@@ -180,16 +180,16 @@ def test_child_workflow_failure_marks_waiting_generator_failed(
 
 
 def test_child_workflow_outcome_is_idempotent_on_second_delivery(
-    workflow_store, iteration_store, attempt_store, task_store, task_center_run_id, composer
+    workflow_store, iteration_store, attempt_store, task_store, request_id, composer
 ) -> None:
     runtime = _build_runtime(
         workflow_store, iteration_store, attempt_store, task_store, composer=composer
     )
     parent_task_id, parent_attempt_id = _seed_attempt_with_waiting_generator(
-        runtime=runtime, task_center_run_id=task_center_run_id
+        runtime=runtime, request_id=request_id
     )
     child = _closed_child(
-        runtime, task_center_run_id, succeeded=True, parent_task_id=parent_task_id
+        runtime, request_id, succeeded=True, parent_task_id=parent_task_id
     )
     _mark_waiting(runtime, parent_task_id, child)
     orchestrator = runtime.orchestrator_registry.get_or_raise(parent_attempt_id)
@@ -211,15 +211,15 @@ def test_child_workflow_outcome_is_idempotent_on_second_delivery(
 
 
 def test_root_workflow_close_routes_through_run_close_handler(
-    workflow_store, iteration_store, attempt_store, task_store, task_center_run_id, composer
+    workflow_store, iteration_store, attempt_store, task_store, request_id, composer
 ) -> None:
     """The root workflow has no attempt parent; its close hits the run handler."""
     runtime = _build_runtime(
         workflow_store, iteration_store, attempt_store, task_store, composer=composer
     )
-    root_parent = f"{task_center_run_id}:root"
+    root_parent = f"{request_id}:root"
     root_workflow = workflow_store.insert(
-        task_center_run_id=task_center_run_id,
+        request_id=request_id,
         parent_task_id=root_parent,
         workflow_goal="root",
     )
@@ -246,7 +246,7 @@ def test_root_workflow_close_routes_through_run_close_handler(
 
 
 def test_child_workflow_close_raises_when_parent_orchestrator_missing(
-    workflow_store, iteration_store, attempt_store, task_store, task_center_run_id, composer
+    workflow_store, iteration_store, attempt_store, task_store, request_id, composer
 ) -> None:
     """No-restart invariant: a child-workflow close whose parent attempt has no
     registered orchestrator is a hard ``WorkflowInvariantViolation``."""
@@ -254,10 +254,10 @@ def test_child_workflow_close_raises_when_parent_orchestrator_missing(
         workflow_store, iteration_store, attempt_store, task_store, composer=composer
     )
     parent_task_id, parent_attempt_id = _seed_attempt_with_waiting_generator(
-        runtime=runtime, task_center_run_id=task_center_run_id
+        runtime=runtime, request_id=request_id
     )
     child = _closed_child(
-        runtime, task_center_run_id, succeeded=True, parent_task_id=parent_task_id
+        runtime, request_id, succeeded=True, parent_task_id=parent_task_id
     )
     _mark_waiting(runtime, parent_task_id, child)
     runtime.orchestrator_registry.deregister(parent_attempt_id)

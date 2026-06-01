@@ -77,12 +77,12 @@ def _build_runtime(
 
 
 def _seed_outer_running_generator(
-    *, runtime: AttemptDeps, task_center_run_id: str
+    *, runtime: AttemptDeps, request_id: str
 ) -> tuple[str, str]:
     """Seed an outer parent attempt whose generator ``outer`` is RUNNING."""
     outer_workflow = runtime.workflow_store.insert(
-        task_center_run_id=task_center_run_id,
-        parent_task_id=f"{task_center_run_id}:root",
+        request_id=request_id,
+        parent_task_id=f"{request_id}:root",
         workflow_goal="outer goal",
     )
     outer_iteration = runtime.iteration_store.insert(
@@ -121,13 +121,13 @@ def _seed_outer_running_generator(
 
 
 def test_workflow_start_creates_request_iteration_attempt_and_marks_parent_waiting(
-    workflow_store, iteration_store, attempt_store, task_store, task_center_run_id, composer
+    workflow_store, iteration_store, attempt_store, task_store, request_id, composer
 ) -> None:
     runtime = _build_runtime(
         workflow_store, iteration_store, attempt_store, task_store, composer=composer
     )
     parent_task_id, parent_attempt_id = _seed_outer_running_generator(
-        runtime=runtime, task_center_run_id=task_center_run_id
+        runtime=runtime, request_id=request_id
     )
     starter = WorkflowStarter(runtime=runtime)
 
@@ -157,13 +157,13 @@ def test_workflow_start_creates_request_iteration_attempt_and_marks_parent_waiti
 
 
 def test_workflow_start_startup_failure_leaves_parent_running(
-    workflow_store, iteration_store, attempt_store, task_store, task_center_run_id, composer
+    workflow_store, iteration_store, attempt_store, task_store, request_id, composer
 ) -> None:
     runtime = _build_runtime(
         workflow_store, iteration_store, attempt_store, task_store, composer=composer
     )
     parent_task_id, parent_attempt_id = _seed_outer_running_generator(
-        runtime=runtime, task_center_run_id=task_center_run_id
+        runtime=runtime, request_id=request_id
     )
 
     def _failing_factory(attempt, on_attempt_closed):
@@ -196,7 +196,7 @@ def test_workflow_start_startup_failure_leaves_parent_running(
 
 
 def test_workflow_start_startup_failure_closes_started_attempt_and_deregisters(
-    workflow_store, iteration_store, attempt_store, task_store, task_center_run_id, composer
+    workflow_store, iteration_store, attempt_store, task_store, request_id, composer
 ) -> None:
     # Outer attempt uses 2 launches (planner + generator); fail on the 3rd —
     # the delegated planner launch.
@@ -209,7 +209,7 @@ def test_workflow_start_startup_failure_closes_started_attempt_and_deregisters(
         composer=composer,
     )
     parent_task_id, parent_attempt_id = _seed_outer_running_generator(
-        runtime=runtime, task_center_run_id=task_center_run_id
+        runtime=runtime, request_id=request_id
     )
     starter = WorkflowStarter(runtime=runtime)
 
@@ -234,13 +234,13 @@ def test_workflow_start_startup_failure_closes_started_attempt_and_deregisters(
 
 
 def test_workflow_start_rejects_second_open_child_for_same_generator(
-    workflow_store, iteration_store, attempt_store, task_store, task_center_run_id, composer
+    workflow_store, iteration_store, attempt_store, task_store, request_id, composer
 ) -> None:
     runtime = _build_runtime(
         workflow_store, iteration_store, attempt_store, task_store, composer=composer
     )
     parent_task_id, parent_attempt_id = _seed_outer_running_generator(
-        runtime=runtime, task_center_run_id=task_center_run_id
+        runtime=runtime, request_id=request_id
     )
     starter = WorkflowStarter(runtime=runtime)
     starter.start(prompt="first delegation", parent_task_id=parent_task_id)
@@ -257,13 +257,13 @@ def test_workflow_start_rejects_second_open_child_for_same_generator(
 
 
 def test_workflow_start_rejects_non_running_parent(
-    workflow_store, iteration_store, attempt_store, task_store, task_center_run_id, composer
+    workflow_store, iteration_store, attempt_store, task_store, request_id, composer
 ) -> None:
     runtime = _build_runtime(
         workflow_store, iteration_store, attempt_store, task_store, composer=composer
     )
     parent_task_id, parent_attempt_id = _seed_outer_running_generator(
-        runtime=runtime, task_center_run_id=task_center_run_id
+        runtime=runtime, request_id=request_id
     )
     task_store.set_task_status(parent_task_id, status=TaskStatus.DONE.value)
 

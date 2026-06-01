@@ -72,12 +72,12 @@ def _build_runtime(
 
 
 def _seed_outer_running_generator(
-    *, runtime: AttemptDeps, task_center_run_id: str
+    *, runtime: AttemptDeps, request_id: str
 ) -> tuple[str, str]:
     """Seed an outer parent attempt whose generator ``outer`` is RUNNING."""
     outer_workflow = runtime.workflow_store.insert(
-        task_center_run_id=task_center_run_id,
-        parent_task_id=f"{task_center_run_id}:root",
+        request_id=request_id,
+        parent_task_id=f"{request_id}:root",
         workflow_goal="outer goal",
     )
     outer_iteration = runtime.iteration_store.insert(
@@ -165,13 +165,13 @@ def _drive_delegated_attempt_to_fail(*, runtime: AttemptDeps, delegated_attempt_
 
 
 def test_delegated_continuation_waits_until_final_iteration(
-    workflow_store, iteration_store, attempt_store, task_store, task_center_run_id, composer
+    workflow_store, iteration_store, attempt_store, task_store, request_id, composer
 ) -> None:
     runtime = _build_runtime(
         workflow_store, iteration_store, attempt_store, task_store, composer=composer
     )
     parent_task_id, parent_attempt_id = _seed_outer_running_generator(
-        runtime=runtime, task_center_run_id=task_center_run_id
+        runtime=runtime, request_id=request_id
     )
     started = WorkflowStarter(runtime=runtime).start(
         prompt="delegated continuation", parent_task_id=parent_task_id
@@ -213,7 +213,7 @@ def test_delegated_continuation_waits_until_final_iteration(
 
 
 def test_continuation_startup_failure_reports_continuation_attempt(
-    workflow_store, iteration_store, attempt_store, task_store, task_center_run_id, composer
+    workflow_store, iteration_store, attempt_store, task_store, request_id, composer
 ) -> None:
     # Outer attempt: 2 launches; child iter1 planner/gen/reducer: 3 launches;
     # the continuation planner is launch 6 — make it fail.
@@ -222,7 +222,7 @@ def test_continuation_startup_failure_reports_continuation_attempt(
         workflow_store, iteration_store, attempt_store, task_store, composer=composer, launcher=launcher
     )
     parent_task_id, parent_attempt_id = _seed_outer_running_generator(
-        runtime=runtime, task_center_run_id=task_center_run_id
+        runtime=runtime, request_id=request_id
     )
     started = WorkflowStarter(runtime=runtime).start(
         prompt="delegated continuation", parent_task_id=parent_task_id
@@ -252,13 +252,13 @@ def test_continuation_startup_failure_reports_continuation_attempt(
 
 
 def test_delegated_retry_waits_until_final_attempt(
-    workflow_store, iteration_store, attempt_store, task_store, task_center_run_id, composer
+    workflow_store, iteration_store, attempt_store, task_store, request_id, composer
 ) -> None:
     runtime = _build_runtime(
         workflow_store, iteration_store, attempt_store, task_store, composer=composer
     )
     parent_task_id, parent_attempt_id = _seed_outer_running_generator(
-        runtime=runtime, task_center_run_id=task_center_run_id
+        runtime=runtime, request_id=request_id
     )
     started = WorkflowStarter(runtime=runtime).start(
         prompt="delegated retry", parent_task_id=parent_task_id

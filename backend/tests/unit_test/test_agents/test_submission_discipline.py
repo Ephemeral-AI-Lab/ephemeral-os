@@ -30,11 +30,13 @@ _REQUIRED_FRAGMENTS = (
 
 
 def _main_profile_mds() -> list[pathlib.Path]:
-    """Profiles that should carry the discipline paragraph."""
+    """Advisor-gated main profiles that should carry the discipline paragraph."""
     out: list[pathlib.Path] = []
     for md_path in _MAIN_PROFILE_DIR.glob("*.md"):
         text = md_path.read_text(encoding="utf-8")
         if "role" not in text:
+            continue
+        if "submit_root_outcome" in text:
             continue
         out.append(md_path)
     return out

@@ -59,7 +59,7 @@ def test_operation_catalog_covers_payload_and_operation_types() -> None:
     )
 
 
-def test_node_from_caller_uses_task_center_fields_before_legacy_run_id() -> None:
+def test_node_from_caller_uses_request_fields_before_legacy_run_id() -> None:
     node = node_from_caller(
         sandbox_id="sb-1",
         operation="edit_file",
@@ -67,9 +67,7 @@ def test_node_from_caller_uses_task_center_fields_before_legacy_run_id() -> None
             agent_id="agent-1",
             run_id="legacy-run",
             agent_run_id="agent-run-1",
-            task_id="legacy-task",
-            task_center_run_id="tc-run",
-            task_id="tc-task",
+            task_id="task-1",
             attempt_id="attempt-1",
             workflow_id="goal-1",
             request_id="request-1",
@@ -77,11 +75,10 @@ def test_node_from_caller_uses_task_center_fields_before_legacy_run_id() -> None
         ),
     )
 
-    assert node.task_center_run_id == "tc-run"
-    assert node.task_id == "tc-task"
+    assert node.request_id == "request-1"
+    assert node.task_id == "task-1"
     assert node.attempt_id == "attempt-1"
     assert node.workflow_id == "goal-1"
-    assert node.request_id == "request-1"
     assert node.agent_name == "agent-1"
     assert node.agent_run_id == "agent-run-1"
     assert node.sandbox_id == "sb-1"

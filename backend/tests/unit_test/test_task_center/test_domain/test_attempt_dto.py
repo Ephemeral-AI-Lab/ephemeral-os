@@ -16,6 +16,7 @@ def _graph(**overrides) -> Attempt:
     base = dict(
         id="g1",
         iteration_id="s1",
+        workflow_id="r1",
         attempt_sequence_no=1,
         stage=AttemptStage.PLAN,
         status=AttemptStatus.RUNNING,

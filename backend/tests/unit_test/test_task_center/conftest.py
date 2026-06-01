@@ -78,7 +78,7 @@ def task_store(session_factory) -> TaskStore:
 
 
 @pytest.fixture
-def task_center_run_id() -> str:
+def request_id() -> str:
     return "run1"
 
 

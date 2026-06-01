@@ -18,6 +18,8 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use eos_protocol::{LayerRef, Manifest};
 
+use crate::error::LayerStackError;
+
 /// One active snapshot lease: an id bound to the frozen manifest it pins.
 /// `// PORT backend/src/sandbox/layer_stack/lease.py:14-17 — LayerStackLeaseRecord`
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -46,9 +48,15 @@ impl LeaseRegistry {
     /// Register a new lease over `manifest`, owned by `owner_request_id`,
     /// incrementing the per-layer refcount. Rejects an empty owner id.
     /// `// PORT backend/src/sandbox/layer_stack/lease.py:33-47 — acquire`
-    pub fn acquire(&mut self, manifest: Manifest, owner_request_id: &str) -> LayerStackLeaseRecord {
+    pub fn acquire(
+        &mut self,
+        manifest: Manifest,
+        owner_request_id: &str,
+    ) -> Result<LayerStackLeaseRecord, LayerStackError> {
         if owner_request_id.is_empty() {
-            panic!("owner_request_id must not be empty");
+            return Err(LayerStackError::InvalidLeaseOwner(
+                "owner_request_id must not be empty".to_owned(),
+            ));
         }
         let lease = LayerStackLeaseRecord {
             lease_id: new_lease_id(),
@@ -58,7 +66,7 @@ impl LeaseRegistry {
             *self.refcounts.entry(LayerRefKey::from(layer)).or_insert(0) += 1;
         }
         self.leases.insert(lease.lease_id.clone(), lease.clone());
-        lease
+        Ok(lease)
     }
 
     /// Release a lease by id, decrementing per-layer refcounts. Returns the
@@ -139,4 +147,18 @@ fn new_lease_id() -> String {
         .unwrap_or_default();
     let counter = COUNTER.fetch_add(1, Ordering::Relaxed);
     format!("{nanos:032x}{counter:016x}")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn acquire_rejects_empty_owner_without_panicking() {
+        let manifest = Manifest::new(0, Vec::new(), 1).expect("valid empty manifest");
+        let err = LeaseRegistry::new()
+            .acquire(manifest, "")
+            .expect_err("empty owner id is invalid");
+        assert!(matches!(err, LayerStackError::InvalidLeaseOwner(_)));
+    }
 }

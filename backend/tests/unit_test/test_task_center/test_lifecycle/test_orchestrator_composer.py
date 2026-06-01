@@ -1,7 +1,7 @@
 """Orchestrator + stage advancer composer wiring.
 
 Confirms that when ``AttemptDeps.composer`` is set, the orchestrator asks the
-composer for the planner agent name and context_message, and that planner
+composer for the planner agent name and instruction, and that planner
 terminal selection stays stable; nested deferral policy is enforced by the
 ``submit_planner_outcome`` prehook rather than mutating launch terminals.
 """
@@ -104,12 +104,12 @@ def _seed_workflow_iteration_attempt(
     workflow_store,
     iteration_store,
     attempt_store,
-    task_center_run_id,
+    request_id,
     *,
     parent_task_id: str | None,
 ):
     workflow = workflow_store.insert(
-        task_center_run_id=task_center_run_id,
+        request_id=request_id,
         parent_task_id=parent_task_id,
         workflow_goal="overall",
     )
@@ -130,7 +130,7 @@ def test_planner_launched_via_composer_uses_base_when_top_level(
     iteration_store,
     attempt_store,
     task_store,
-    task_center_run_id,
+    request_id,
 ):
     runtime, launcher = composer_runtime
     _register_planner_agents()
@@ -140,11 +140,11 @@ def test_planner_launched_via_composer_uses_base_when_top_level(
         workflow_store,
         iteration_store,
         attempt_store,
-        task_center_run_id,
-        parent_task_id=f"{task_center_run_id}:root",
+        request_id,
+        parent_task_id=f"{request_id}:root",
     )
     attempt = attempt_store.list_for_iteration(
-        iteration_store.list_for_workflow(workflow_store.list_for_run(task_center_run_id)[0].id)[
+        iteration_store.list_for_workflow(workflow_store.list_for_request(request_id)[0].id)[
             0
         ].id
     )[0]
@@ -168,7 +168,7 @@ def test_nested_planner_keeps_unified_plan_terminal(
     iteration_store,
     attempt_store,
     task_store,
-    task_center_run_id,
+    request_id,
 ):
     runtime, launcher = composer_runtime
     _register_planner_agents()
@@ -178,13 +178,13 @@ def test_nested_planner_keeps_unified_plan_terminal(
         workflow_store,
         iteration_store,
         attempt_store,
-        task_center_run_id,
-        parent_task_id=f"{task_center_run_id}:root",
+        request_id,
+        parent_task_id=f"{request_id}:root",
     )
     spawning_generator_id = generator_task_id(outer_attempt.id, "g")
 
     child_workflow = workflow_store.insert(
-        task_center_run_id=task_center_run_id,
+        request_id=request_id,
         parent_task_id=spawning_generator_id,
         workflow_goal="child",
     )

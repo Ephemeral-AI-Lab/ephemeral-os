@@ -11,17 +11,17 @@ from workflow._core.state import (
 )
 
 
-def _seed_request(workflow_store, task_center_run_id) -> str:
+def _seed_request(workflow_store, request_id) -> str:
     req = workflow_store.insert(
-        task_center_run_id=task_center_run_id,
+        request_id=request_id,
         parent_task_id="t1",
         workflow_goal="g",
     )
     return req.id
 
 
-def test_insert_returns_dto(iteration_store, workflow_store, task_center_run_id):
-    request_id = _seed_request(workflow_store, task_center_run_id)
+def test_insert_returns_dto(iteration_store, workflow_store, request_id):
+    request_id = _seed_request(workflow_store, request_id)
     seg = iteration_store.insert(
         workflow_id=request_id,
         sequence_no=1,
@@ -35,8 +35,8 @@ def test_insert_returns_dto(iteration_store, workflow_store, task_center_run_id)
     assert seg.attempt_budget == 2
 
 
-def test_get_round_trip(iteration_store, workflow_store, task_center_run_id):
-    request_id = _seed_request(workflow_store, task_center_run_id)
+def test_get_round_trip(iteration_store, workflow_store, request_id):
+    request_id = _seed_request(workflow_store, request_id)
     inserted = iteration_store.insert(
         workflow_id=request_id,
         sequence_no=1,
@@ -51,9 +51,9 @@ def test_get_round_trip(iteration_store, workflow_store, task_center_run_id):
 
 
 def test_append_attempt_id_preserves_order(
-    iteration_store, workflow_store, task_center_run_id
+    iteration_store, workflow_store, request_id
 ):
-    request_id = _seed_request(workflow_store, task_center_run_id)
+    request_id = _seed_request(workflow_store, request_id)
     seg = iteration_store.insert(
         workflow_id=request_id,
         sequence_no=1,
@@ -69,7 +69,7 @@ def test_append_attempt_id_preserves_order(
 
 
 def test_deferred_goal_dto_field_maps_to_deferred_goal_db_column(
-    iteration_store, workflow_store, task_center_run_id
+    iteration_store, workflow_store, request_id
 ):
     """Store seam translates DTO field `deferred_goal_for_next_iteration`
     to DB column `deferred_goal`. Raw-SQL queries must target the column name,
@@ -77,7 +77,7 @@ def test_deferred_goal_dto_field_maps_to_deferred_goal_db_column(
     """
     from db.models.iteration import IterationRecord
 
-    request_id = _seed_request(workflow_store, task_center_run_id)
+    request_id = _seed_request(workflow_store, request_id)
     seg = iteration_store.insert(
         workflow_id=request_id,
         sequence_no=1,
@@ -95,9 +95,9 @@ def test_deferred_goal_dto_field_maps_to_deferred_goal_db_column(
 
 
 def test_set_deferred_goal_for_next_iteration_and_status(
-    iteration_store, workflow_store, task_center_run_id
+    iteration_store, workflow_store, request_id
 ):
-    request_id = _seed_request(workflow_store, task_center_run_id)
+    request_id = _seed_request(workflow_store, request_id)
     seg = iteration_store.insert(
         workflow_id=request_id,
         sequence_no=1,
@@ -117,9 +117,9 @@ def test_set_deferred_goal_for_next_iteration_and_status(
 
 
 def test_list_for_goal_orders_by_sequence_no(
-    iteration_store, workflow_store, task_center_run_id
+    iteration_store, workflow_store, request_id
 ):
-    request_id = _seed_request(workflow_store, task_center_run_id)
+    request_id = _seed_request(workflow_store, request_id)
     s2 = iteration_store.insert(
         workflow_id=request_id,
         sequence_no=2,
@@ -138,8 +138,8 @@ def test_list_for_goal_orders_by_sequence_no(
     assert [s.id for s in listed] == [s1.id, s2.id]
 
 
-def test_get_by_sequence(iteration_store, workflow_store, task_center_run_id):
-    request_id = _seed_request(workflow_store, task_center_run_id)
+def test_get_by_sequence(iteration_store, workflow_store, request_id):
+    request_id = _seed_request(workflow_store, request_id)
     seg = iteration_store.insert(
         workflow_id=request_id,
         sequence_no=1,

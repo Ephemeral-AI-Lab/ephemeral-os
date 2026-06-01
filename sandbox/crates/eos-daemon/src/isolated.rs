@@ -17,7 +17,7 @@ use std::os::fd::{AsRawFd, IntoRawFd, RawFd};
 use std::path::PathBuf;
 #[cfg(target_os = "linux")]
 use std::process::{Child, Command, Stdio};
-use std::sync::{Arc, Mutex, OnceLock};
+use std::sync::{Arc, Mutex, MutexGuard, OnceLock};
 use std::thread;
 use std::time::{Duration, Instant};
 
@@ -78,6 +78,13 @@ fn holder_children() -> &'static Mutex<HashMap<i32, Child>> {
     CHILDREN.get_or_init(|| Mutex::new(HashMap::new()))
 }
 
+#[cfg(target_os = "linux")]
+fn lock_holder_children() -> Result<MutexGuard<'static, HashMap<i32, Child>>, IsolatedError> {
+    holder_children()
+        .lock()
+        .map_err(|_| setup_error("ns-holder child registry lock poisoned"))
+}
+
 #[derive(Clone)]
 struct DaemonLayerStackPort {
     stack: Arc<Mutex<LayerStack>>,
@@ -85,7 +92,10 @@ struct DaemonLayerStackPort {
 
 impl LayerStackSnapshotPort for DaemonLayerStackPort {
     fn acquire_snapshot(&self, request_id: &str) -> Result<SnapshotLease, IsolatedError> {
-        let mut stack = self.stack.lock().expect("layer stack poisoned");
+        let mut stack = self
+            .stack
+            .lock()
+            .map_err(|_| setup_error("layer stack lock poisoned"))?;
         let lease = stack.acquire_snapshot(request_id).map_err(setup_error)?;
         Ok(SnapshotLease {
             lease_id: lease.lease_id,
@@ -96,12 +106,18 @@ impl LayerStackSnapshotPort for DaemonLayerStackPort {
     }
 
     fn release_lease(&self, lease_id: &str) -> Result<bool, IsolatedError> {
-        let mut stack = self.stack.lock().expect("layer stack poisoned");
+        let mut stack = self
+            .stack
+            .lock()
+            .map_err(|_| setup_error("layer stack lock poisoned"))?;
         stack.release_lease(lease_id).map_err(setup_error)
     }
 
     fn active_lease_count(&self) -> Result<Option<usize>, IsolatedError> {
-        let stack = self.stack.lock().expect("layer stack poisoned");
+        let stack = self
+            .stack
+            .lock()
+            .map_err(|_| setup_error("layer stack lock poisoned"))?;
         Ok(Some(stack.active_lease_count()))
     }
 }
@@ -156,10 +172,7 @@ impl NamespaceRuntimePort for DaemonNamespaceRuntime {
                 return Err(error);
             }
             let holder_pid = child.id() as i32;
-            holder_children()
-                .lock()
-                .expect("ns-holder child registry poisoned")
-                .insert(holder_pid, child);
+            lock_holder_children()?.insert(holder_pid, child);
             Ok(holder_pid)
         }
     }
@@ -287,11 +300,7 @@ impl NamespaceRuntimePort for DaemonNamespaceRuntime {
         }
         #[cfg(target_os = "linux")]
         {
-            if let Some(mut child) = holder_children()
-                .lock()
-                .expect("ns-holder child registry poisoned")
-                .remove(&holder_pid)
-            {
+            if let Some(mut child) = lock_holder_children()?.remove(&holder_pid) {
                 let _ = kill(Pid::from_raw(holder_pid), Signal::SIGTERM);
                 let deadline = Instant::now() + Duration::from_secs_f64(grace_s.max(0.0));
                 while Instant::now() < deadline {
@@ -427,9 +436,7 @@ pub(crate) fn op_test_reset(
             json!({}),
         ));
     }
-    let mut guard = state_cell()
-        .lock()
-        .expect("isolated workspace state poisoned");
+    let mut guard = lock_state_cell();
     let exited_agents = if let Some(state) = guard.as_mut() {
         let agents = state.session.list_open_agents();
         state.active_ptys.clear();
@@ -454,9 +461,7 @@ pub(crate) fn command_handle_for_args(args: &Value) -> Option<CommandHandle> {
     if agent_id.is_empty() {
         return None;
     }
-    let guard = state_cell()
-        .lock()
-        .expect("isolated workspace state poisoned");
+    let guard = lock_state_cell();
     let state = guard.as_ref()?;
     let handle = state.session.get_handle(&AgentId(agent_id.clone()))?;
     Some(command_handle_from(&state.layer_stack_root, handle))
@@ -464,9 +469,7 @@ pub(crate) fn command_handle_for_args(args: &Value) -> Option<CommandHandle> {
 
 #[cfg_attr(not(target_os = "linux"), allow(dead_code))]
 pub(crate) fn register_pty(agent_id: &str, pty_session_id: &str) {
-    let mut guard = state_cell()
-        .lock()
-        .expect("isolated workspace state poisoned");
+    let mut guard = lock_state_cell();
     if let Some(state) = guard.as_mut() {
         state
             .active_ptys
@@ -476,9 +479,7 @@ pub(crate) fn register_pty(agent_id: &str, pty_session_id: &str) {
 
 #[cfg_attr(not(target_os = "linux"), allow(dead_code))]
 pub(crate) fn unregister_pty(agent_id: &str, pty_session_id: &str) {
-    let mut guard = state_cell()
-        .lock()
-        .expect("isolated workspace state poisoned");
+    let mut guard = lock_state_cell();
     if let Some(state) = guard.as_mut() {
         if state
             .active_ptys
@@ -491,9 +492,7 @@ pub(crate) fn unregister_pty(agent_id: &str, pty_session_id: &str) {
 }
 
 pub(crate) fn unregister_pty_id(pty_session_id: &str) {
-    let mut guard = state_cell()
-        .lock()
-        .expect("isolated workspace state poisoned");
+    let mut guard = lock_state_cell();
     if let Some(state) = guard.as_mut() {
         state.active_ptys.remove(pty_session_id);
     }
@@ -501,9 +500,7 @@ pub(crate) fn unregister_pty_id(pty_session_id: &str) {
 
 #[cfg_attr(not(target_os = "linux"), allow(dead_code))]
 pub(crate) fn record_tool_call(agent_id: &str, payload: Value) {
-    let mut guard = state_cell()
-        .lock()
-        .expect("isolated workspace state poisoned");
+    let mut guard = lock_state_cell();
     if let Some(state) = guard.as_mut() {
         state
             .session
@@ -512,9 +509,7 @@ pub(crate) fn record_tool_call(agent_id: &str, payload: Value) {
 }
 
 fn ensure_state(root: PathBuf) -> Result<(), IsolatedError> {
-    let mut guard = state_cell()
-        .lock()
-        .expect("isolated workspace state poisoned");
+    let mut guard = lock_state_cell();
     if guard.is_none() {
         let caps = ResourceCaps::from_env();
         if !caps.enabled {
@@ -544,9 +539,7 @@ fn ensure_state(root: PathBuf) -> Result<(), IsolatedError> {
 fn with_state<T>(
     f: impl FnOnce(&mut DaemonIsolatedState) -> Result<T, IsolatedError>,
 ) -> Result<T, IsolatedError> {
-    let mut guard = state_cell()
-        .lock()
-        .expect("isolated workspace state poisoned");
+    let mut guard = lock_state_cell();
     let Some(state) = guard.as_mut() else {
         return Err(IsolatedError::FeatureDisabled);
     };
@@ -554,9 +547,7 @@ fn with_state<T>(
 }
 
 fn active_pty_ids(agent_id: &str) -> Vec<String> {
-    let guard = state_cell()
-        .lock()
-        .expect("isolated workspace state poisoned");
+    let guard = lock_state_cell();
     guard
         .as_ref()
         .map(|state| {
@@ -731,6 +722,12 @@ fn run_ns_runner_mount_overlay_child(request: &RunRequest) -> Result<(), Isolate
 fn state_cell() -> &'static Mutex<Option<DaemonIsolatedState>> {
     static STATE: OnceLock<Mutex<Option<DaemonIsolatedState>>> = OnceLock::new();
     STATE.get_or_init(|| Mutex::new(None))
+}
+
+fn lock_state_cell() -> MutexGuard<'static, Option<DaemonIsolatedState>> {
+    state_cell()
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner())
 }
 
 fn require_arg(args: &Value, key: &str) -> Result<String, Value> {

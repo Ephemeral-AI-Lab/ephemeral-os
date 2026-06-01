@@ -146,8 +146,8 @@ async def test_start_mounts_active_manifest_and_stop_unmounts(
     assert mounts[0][0] == workspace
     assert len(mounts[0][1]) == 1
     assert all(path.as_posix().startswith("/proc/self/fd/") for path in mounts[0][1])
-    assert mounts[0][2].as_posix().startswith("/proc/self/fd/")
-    assert mounts[0][3].as_posix().startswith("/proc/self/fd/")
+    assert mounts[0][2] == overlay.upperdir
+    assert mounts[0][3] == overlay.runtime_dir / "work"
     assert unmounts == [workspace]
     assert layer_stack.released == ["lease-1-1"]
 

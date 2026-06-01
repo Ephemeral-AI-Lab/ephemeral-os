@@ -20,10 +20,11 @@
 //!
 //! The snapshot/lease port lives HERE, not in `eos-occ`. It is deliberately
 //! SPLIT from the publish-side transaction so the no-publish guarantee holds at
-//! the type level: [`SnapshotLeasePort`] (what `eos-isolated` + `eos-plugin`
-//! need — NEVER publishes) vs [`LayerCommitTransaction`] (what `eos-occ` +
-//! `eos-ephemeral` need). Because the HINGE is here, isolated/plugin link
-//! `eos-layerstack` and never `eos-occ`. See [`port`].
+//! the type level: [`SnapshotLeasePort`] (directly consumed by `eos-plugin`,
+//! NEVER publishes) vs [`LayerCommitTransaction`] (what `eos-occ` +
+//! daemon publish paths need). `eos-isolated` mirrors only the snapshot/lease
+//! shape as a smaller daemon-injected port so it links neither `eos-layerstack`
+//! nor `eos-occ`. See [`port`].
 //!
 //! # Build-time / threading guarantee
 //!

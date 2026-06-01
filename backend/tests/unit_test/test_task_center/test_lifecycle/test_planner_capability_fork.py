@@ -101,11 +101,21 @@ def _seed_partial_plan_caller(
     iteration_store,
     attempt_store,
     task_store,
-    task_center_run_id,
+    request_id,
 ):
+    task_store.upsert_task(
+        task_id="root-task",
+        request_id=request_id,
+        role="root",
+        agent_name="root",
+        instruction="root",
+        status="running",
+        outcomes=[],
+        needs=[],
+    )
     parent_req = workflow_store.insert(
-        task_center_run_id=task_center_run_id,
-        parent_task_id=None,
+        request_id=request_id,
+        parent_task_id="root-task",
         workflow_goal="parent",
     )
     parent_seg = iteration_store.insert(
@@ -126,30 +136,33 @@ def _seed_partial_plan_caller(
     caller_task_id = generator_task_id(caller_attempt.id, "caller")
     task_store.upsert_task(
         task_id=caller_task_id,
-        task_center_run_id=task_center_run_id,
+        request_id=request_id,
         role="generator",
         agent_name="executor",
-        context_message="x",
+        instruction="x",
         status="running",
         outcomes=[],
         needs=[],
+        workflow_id=parent_req.id,
+        iteration_id=parent_seg.id,
+        attempt_id=caller_attempt.id,
     )
     return parent_req, caller_task_id
 
 
 def test_partial_plan_caller_child_planner_keeps_unified_plan_terminal(
-    workflow_store, iteration_store, attempt_store, task_store, task_center_run_id
+    workflow_store, iteration_store, attempt_store, task_store, request_id
 ):
     runtime, launcher = _runtime_with_composer(
         workflow_store, iteration_store, attempt_store, task_store
     )
     _parent_req, caller_task_id = _seed_partial_plan_caller(
-        workflow_store, iteration_store, attempt_store, task_store, task_center_run_id
+        workflow_store, iteration_store, attempt_store, task_store, request_id
     )
 
     # Child request spawned by the partial-plan caller task.
     child_req = workflow_store.insert(
-        task_center_run_id=task_center_run_id,
+        request_id=request_id,
         parent_task_id=caller_task_id,
         workflow_goal="child",
     )

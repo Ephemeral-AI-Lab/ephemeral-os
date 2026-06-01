@@ -54,21 +54,21 @@ def workflow_lifecycle(
     )
 
 
-def _root_parent(task_center_run_id: str) -> str:
+def _root_parent(request_id: str) -> str:
     """A parent task id that resolves to the root close branch."""
-    return root_task_id(task_center_run_id)
+    return root_task_id(request_id)
 
 
 def test_create_workflow_links_parent_task(
-    workflow_lifecycle, workflow_store, task_center_run_id
+    workflow_lifecycle, workflow_store, request_id
 ):
     workflow = workflow_lifecycle.create_workflow(
-        task_center_run_id=task_center_run_id,
+        request_id=request_id,
         parent_task_id="executor-1",
         workflow_goal="solve X",
     )
     assert workflow.parent_task_id == "executor-1"
-    assert workflow.task_center_run_id == task_center_run_id
+    assert workflow.request_id == request_id
     assert workflow.is_open
     assert workflow.iteration_ids == ()
     persisted = workflow_store.get(workflow.id)
@@ -77,10 +77,10 @@ def test_create_workflow_links_parent_task(
 
 
 def test_workflow_records_iterations_in_iteration_ids(
-    workflow_lifecycle, workflow_store, task_center_run_id
+    workflow_lifecycle, workflow_store, request_id
 ):
     workflow = workflow_lifecycle.create_workflow(
-        task_center_run_id=task_center_run_id,
+        request_id=request_id,
         parent_task_id="t1",
         workflow_goal="g",
     )
@@ -93,10 +93,10 @@ def test_workflow_records_iterations_in_iteration_ids(
 
 
 def test_initial_iteration_has_sequence_one_and_initial_reason(
-    workflow_lifecycle, task_center_run_id
+    workflow_lifecycle, request_id
 ):
     workflow = workflow_lifecycle.create_workflow(
-        task_center_run_id=task_center_run_id,
+        request_id=request_id,
         parent_task_id="t1",
         workflow_goal="g",
     )
@@ -111,10 +111,10 @@ def test_initial_iteration_has_sequence_one_and_initial_reason(
 
 
 def test_continuation_iteration_inherits_deferred_goal(
-    workflow_lifecycle, iteration_store, task_center_run_id
+    workflow_lifecycle, iteration_store, request_id
 ):
     workflow = workflow_lifecycle.create_workflow(
-        task_center_run_id=task_center_run_id,
+        request_id=request_id,
         parent_task_id="t1",
         workflow_goal="initial-goal",
     )
@@ -137,10 +137,10 @@ def test_continuation_iteration_inherits_deferred_goal(
 
 
 def test_iteration_ids_holds_multiple_iterations(
-    workflow_lifecycle, workflow_store, iteration_store, task_center_run_id
+    workflow_lifecycle, workflow_store, iteration_store, request_id
 ):
     workflow = workflow_lifecycle.create_workflow(
-        task_center_run_id=task_center_run_id,
+        request_id=request_id,
         parent_task_id="t1",
         workflow_goal="g1",
     )
@@ -162,11 +162,11 @@ def test_iteration_ids_holds_multiple_iterations(
 
 
 def test_handle_iteration_closed_success_closes_workflow_succeeded(
-    workflow_lifecycle, workflow_store, root_closes, task_center_run_id
+    workflow_lifecycle, workflow_store, root_closes, request_id
 ):
     workflow = workflow_lifecycle.create_workflow(
-        task_center_run_id=task_center_run_id,
-        parent_task_id=_root_parent(task_center_run_id),
+        request_id=request_id,
+        parent_task_id=_root_parent(request_id),
         workflow_goal="g",
     )
     iteration, _ = workflow_lifecycle.create_iteration_with_coordinator(
@@ -183,11 +183,11 @@ def test_handle_iteration_closed_success_closes_workflow_succeeded(
 
 
 def test_handle_iteration_closed_failure_closes_workflow_failed(
-    workflow_lifecycle, workflow_store, root_closes, task_center_run_id
+    workflow_lifecycle, workflow_store, root_closes, request_id
 ):
     workflow = workflow_lifecycle.create_workflow(
-        task_center_run_id=task_center_run_id,
-        parent_task_id=_root_parent(task_center_run_id),
+        request_id=request_id,
+        parent_task_id=_root_parent(request_id),
         workflow_goal="g",
     )
     iteration, _ = workflow_lifecycle.create_iteration_with_coordinator(
@@ -204,11 +204,11 @@ def test_handle_iteration_closed_failure_closes_workflow_failed(
 
 
 def test_handle_iteration_closed_success_continue_creates_continuation(
-    workflow_lifecycle, workflow_store, iteration_store, task_center_run_id
+    workflow_lifecycle, workflow_store, iteration_store, request_id
 ):
     workflow = workflow_lifecycle.create_workflow(
-        task_center_run_id=task_center_run_id,
-        parent_task_id=_root_parent(task_center_run_id),
+        request_id=request_id,
+        parent_task_id=_root_parent(request_id),
         workflow_goal="g",
     )
     iteration1, _ = workflow_lifecycle.create_iteration_with_coordinator(
@@ -233,11 +233,11 @@ def test_handle_iteration_closed_success_continue_creates_continuation(
 
 
 def test_handle_iteration_closed_deregisters_coordinator(
-    workflow_lifecycle, iteration_coordinators, task_center_run_id
+    workflow_lifecycle, iteration_coordinators, request_id
 ):
     workflow = workflow_lifecycle.create_workflow(
-        task_center_run_id=task_center_run_id,
-        parent_task_id=_root_parent(task_center_run_id),
+        request_id=request_id,
+        parent_task_id=_root_parent(request_id),
         workflow_goal="g",
     )
     iteration, _ = workflow_lifecycle.create_iteration_with_coordinator(
@@ -252,10 +252,10 @@ def test_handle_iteration_closed_deregisters_coordinator(
 
 
 def test_continuation_iteration_only_from_succeeded_predecessor_with_goal(
-    workflow_lifecycle, iteration_store, task_center_run_id
+    workflow_lifecycle, iteration_store, request_id
 ):
     workflow = workflow_lifecycle.create_workflow(
-        task_center_run_id=task_center_run_id,
+        request_id=request_id,
         parent_task_id="t1",
         workflow_goal="g",
     )
@@ -280,11 +280,11 @@ def test_continuation_iteration_only_from_succeeded_predecessor_with_goal(
 
 
 def test_open_iteration_coordinators_enforces_unique_per_iteration(
-    workflow_lifecycle, task_center_run_id
+    workflow_lifecycle, request_id
 ):
     """Exactly one IterationAttemptCoordinator active per open iteration."""
     workflow = workflow_lifecycle.create_workflow(
-        task_center_run_id=task_center_run_id,
+        request_id=request_id,
         parent_task_id="t1",
         workflow_goal="g",
     )
@@ -296,7 +296,7 @@ def test_open_iteration_coordinators_enforces_unique_per_iteration(
 
 
 def test_close_workflow_routes_to_run_close_handler_for_root(
-    workflow_store, iteration_store, attempt_store, root_closes, task_center_run_id
+    workflow_store, iteration_store, attempt_store, root_closes, request_id
 ):
     delivered: list = []
 
@@ -313,8 +313,8 @@ def test_close_workflow_routes_to_run_close_handler_for_root(
         run_close_handler=run_close_handler,
     )
     workflow = workflow_lifecycle.create_workflow(
-        task_center_run_id=task_center_run_id,
-        parent_task_id=_root_parent(task_center_run_id),
+        request_id=request_id,
+        parent_task_id=_root_parent(request_id),
         workflow_goal="g",
     )
     workflow_lifecycle.create_iteration_with_coordinator(workflow_id=workflow.id)
@@ -326,7 +326,7 @@ def test_close_workflow_routes_to_run_close_handler_for_root(
 
 
 def test_workflow_lifecycle_passes_orchestrator_factory_to_spawned_coordinator(
-    workflow_store, iteration_store, attempt_store, task_center_run_id
+    workflow_store, iteration_store, attempt_store, request_id
 ):
     started: list[str] = []
 
@@ -353,7 +353,7 @@ def test_workflow_lifecycle_passes_orchestrator_factory_to_spawned_coordinator(
         orchestrator_factory=factory,
     )
     workflow = workflow_lifecycle.create_workflow(
-        task_center_run_id=task_center_run_id,
+        request_id=request_id,
         parent_task_id="executor-1",
         workflow_goal="g",
     )
@@ -369,12 +369,12 @@ def test_workflow_lifecycle_passes_orchestrator_factory_to_spawned_coordinator(
 
 
 def test_no_legacy_entry_creation_reason_in_lifecycle(
-    workflow_lifecycle, task_center_run_id
+    workflow_lifecycle, request_id
 ):
     """No special entry creation reason is allowed: only INITIAL or
     DEFERRED_GOAL_CONTINUATION."""
     workflow = workflow_lifecycle.create_workflow(
-        task_center_run_id=task_center_run_id,
+        request_id=request_id,
         parent_task_id="t1",
         workflow_goal="g",
     )

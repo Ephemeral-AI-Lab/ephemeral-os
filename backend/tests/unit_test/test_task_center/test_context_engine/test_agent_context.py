@@ -33,18 +33,18 @@ def deps(workflow_store, iteration_store, attempt_store, task_store) -> ContextE
     )
 
 
-def _workflow(workflow_store, task_center_run_id):
+def _workflow(workflow_store, request_id):
     return workflow_store.insert(
-        task_center_run_id=task_center_run_id,
+        request_id=request_id,
         parent_task_id="root",
         workflow_goal="Build the complete feature.",
     )
 
 
 def test_planner_context_uses_workflow_shape_and_execution_outcomes(
-    deps, workflow_store, iteration_store, attempt_store, task_store, task_center_run_id
+    deps, workflow_store, iteration_store, attempt_store, task_store, request_id
 ) -> None:
-    workflow = _workflow(workflow_store, task_center_run_id)
+    workflow = _workflow(workflow_store, request_id)
     prior = iteration_store.insert(
         workflow_id=workflow.id,
         sequence_no=1,
@@ -83,10 +83,10 @@ def test_planner_context_uses_workflow_shape_and_execution_outcomes(
     attempt_store.set_reducer_task_ids(previous_attempt.id, [red_id])
     task_store.upsert_task(
         task_id=gen_id,
-        task_center_run_id=task_center_run_id,
+        request_id=request_id,
         role="generator",
         agent_name="executor",
-        context_message="Implement API.",
+        instruction="Implement API.",
         status="done",
         outcomes=[
             to_record(
@@ -97,10 +97,10 @@ def test_planner_context_uses_workflow_shape_and_execution_outcomes(
     )
     task_store.upsert_task(
         task_id=red_id,
-        task_center_run_id=task_center_run_id,
+        request_id=request_id,
         role="reducer",
         agent_name="reducer",
-        context_message="Verify API.",
+        instruction="Verify API.",
         status="failed",
         outcomes=[
             to_record(
@@ -164,9 +164,9 @@ def test_planner_context_uses_workflow_shape_and_execution_outcomes(
 
 
 def test_generator_context_is_dependencies_plus_assigned_task(
-    deps, workflow_store, iteration_store, attempt_store, task_store, task_center_run_id
+    deps, workflow_store, iteration_store, attempt_store, task_store, request_id
 ) -> None:
-    workflow = _workflow(workflow_store, task_center_run_id)
+    workflow = _workflow(workflow_store, request_id)
     iteration = iteration_store.insert(
         workflow_id=workflow.id,
         sequence_no=1,
@@ -179,20 +179,20 @@ def test_generator_context_is_dependencies_plus_assigned_task(
     task_id = generator_task_id(attempt.id, "api")
     task_store.upsert_task(
         task_id=dep_id,
-        task_center_run_id=task_center_run_id,
+        request_id=request_id,
         role="generator",
         agent_name="executor",
-        context_message="Build storage.",
+        instruction="Build storage.",
         status="done",
         outcomes=[to_record(ExecutionTaskOutcome("success", "generator", dep_id, "Storage done."))],
         needs=[],
     )
     task_store.upsert_task(
         task_id=task_id,
-        task_center_run_id=task_center_run_id,
+        request_id=request_id,
         role="generator",
         agent_name="executor",
-        context_message="Implement the API endpoints.",
+        instruction="Implement the API endpoints.",
         status="pending",
         outcomes=[],
         needs=[dep_id],
@@ -221,9 +221,9 @@ def test_generator_context_is_dependencies_plus_assigned_task(
 
 
 def test_dependency_context_preserves_all_execution_outcomes(
-    deps, workflow_store, iteration_store, attempt_store, task_store, task_center_run_id
+    deps, workflow_store, iteration_store, attempt_store, task_store, request_id
 ) -> None:
-    workflow = _workflow(workflow_store, task_center_run_id)
+    workflow = _workflow(workflow_store, request_id)
     iteration = iteration_store.insert(
         workflow_id=workflow.id,
         sequence_no=1,
@@ -238,10 +238,10 @@ def test_dependency_context_preserves_all_execution_outcomes(
     second_child = reducer_task_id("child-attempt-2", "verify_api")
     task_store.upsert_task(
         task_id=dep_id,
-        task_center_run_id=task_center_run_id,
+        request_id=request_id,
         role="generator",
         agent_name="executor",
-        context_message="Run child workflow.",
+        instruction="Run child workflow.",
         status="done",
         outcomes=[
             to_record(
@@ -265,10 +265,10 @@ def test_dependency_context_preserves_all_execution_outcomes(
     )
     task_store.upsert_task(
         task_id=task_id,
-        task_center_run_id=task_center_run_id,
+        request_id=request_id,
         role="generator",
         agent_name="executor",
-        context_message="Consume child workflow results.",
+        instruction="Consume child workflow results.",
         status="pending",
         outcomes=[],
         needs=[dep_id],
@@ -306,9 +306,9 @@ def test_context_recipe_must_match_scope_role(deps) -> None:
 
 
 def test_reducer_context_uses_assigned_task_not_assigned_prompt(
-    deps, workflow_store, iteration_store, attempt_store, task_store, task_center_run_id
+    deps, workflow_store, iteration_store, attempt_store, task_store, request_id
 ) -> None:
-    workflow = _workflow(workflow_store, task_center_run_id)
+    workflow = _workflow(workflow_store, request_id)
     iteration = iteration_store.insert(
         workflow_id=workflow.id,
         sequence_no=1,
@@ -321,20 +321,20 @@ def test_reducer_context_uses_assigned_task_not_assigned_prompt(
     task_id = reducer_task_id(attempt.id, "verify_api")
     task_store.upsert_task(
         task_id=dep_id,
-        task_center_run_id=task_center_run_id,
+        request_id=request_id,
         role="generator",
         agent_name="executor",
-        context_message="Build API.",
+        instruction="Build API.",
         status="done",
         outcomes=[to_record(ExecutionTaskOutcome("success", "generator", dep_id, "API done."))],
         needs=[],
     )
     task_store.upsert_task(
         task_id=task_id,
-        task_center_run_id=task_center_run_id,
+        request_id=request_id,
         role="reducer",
         agent_name="reducer",
-        context_message="Verify the API and CLI slice.",
+        instruction="Verify the API and CLI slice.",
         status="pending",
         outcomes=[],
         needs=[dep_id],

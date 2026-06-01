@@ -106,7 +106,7 @@ async def test_shell_prehook_blocks_git_mutation_before_ci_requirement() -> None
 
     assert result.is_error
     payload = json.loads(result.output)
-    assert payload["hookName"] == "sandbox_shell:destructive_git"
+    assert payload["hookName"] == "sandbox_shell:destructive_git:shell"
     assert payload["phase"] == "pre"
     assert "git mutation commands are forbidden" in result.metadata["hook_failure"]["reason"]
 
@@ -121,7 +121,7 @@ async def test_shell_prehook_blocks_destructive_shell_before_ci_requirement() ->
 
     assert result.is_error
     payload = json.loads(result.output)
-    assert payload["hookName"] == "sandbox_shell:destructive_shell"
+    assert payload["hookName"] == "sandbox_shell:destructive_shell:shell"
     assert payload["phase"] == "pre"
     assert "destructive shell command" in result.metadata["hook_failure"]["reason"]
 

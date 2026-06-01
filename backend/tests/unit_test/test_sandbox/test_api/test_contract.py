@@ -142,8 +142,6 @@ def test_sandbox_caller_defaults_and_immutability() -> None:
     assert caller.run_id == ""
     assert caller.agent_run_id == ""
     assert caller.task_id == ""
-    assert caller.task_center_run_id == ""
-    assert caller.task_id == ""
     assert caller.attempt_id == ""
     assert caller.workflow_id == ""
     assert caller.request_id == ""

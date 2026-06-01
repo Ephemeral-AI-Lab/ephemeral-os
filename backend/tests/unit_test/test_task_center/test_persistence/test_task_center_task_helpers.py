@@ -14,13 +14,14 @@ def _upsert(
 ) -> None:
     task_store.upsert_task(
         task_id=task_id,
-        task_center_run_id="run1",
+        request_id="run1",
         role=role,
         agent_name=role,
-        context_message=f"input-{task_id}",
+        instruction=f"input-{task_id}",
         status=status,
         outcomes=outcomes or [],
         needs=needs or [],
+        attempt_id=task_id.split(":", 1)[0],
     )
 
 
@@ -35,19 +36,15 @@ def test_get_task_returns_serialized_task(task_store):
     assert task["needs"] == []
     assert task["outcomes"] == []
     assert task["terminal_tool_result"] is None
-    assert task["child_workflow_id"] is None
 
 
 def test_request_and_run_helpers_return_serialized_rows(task_store):
-    request = task_store.get_request("req1")
-    run = task_store.get_run("run1")
+    request = task_store.get_request("run1")
 
     assert request is not None
-    assert request["id"] == "req1"
+    assert request["id"] == "run1"
     assert request["cwd"] == "/tmp"
-    assert run is not None
-    assert run["id"] == "run1"
-    assert run["status"] == "running"
+    assert request["status"] == "running"
 
 
 def test_list_tasks_for_attempt_filters_by_attempt_id(task_store):

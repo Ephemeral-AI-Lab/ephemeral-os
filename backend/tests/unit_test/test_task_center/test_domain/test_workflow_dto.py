@@ -16,11 +16,12 @@ from workflow._core.state import (
 def _request(**overrides) -> Workflow:
     base = dict(
         id="r1",
-        task_center_run_id="run1",
+        request_id="run1",
         workflow_goal="goal",
         status=WorkflowStatus.OPEN,
         iteration_ids=(),
-        parent_task_id=None,
+        parent_task_id="root-task",
+        outcomes=None,
         created_at=datetime.now(UTC),
         updated_at=datetime.now(UTC),
         closed_at=None,

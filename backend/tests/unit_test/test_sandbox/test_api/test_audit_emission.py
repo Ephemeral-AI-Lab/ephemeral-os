@@ -48,7 +48,7 @@ async def test_read_file_publishes_started_and_completed(
             path="a.txt",
             caller=SandboxCaller(
                 agent_id="agent-1",
-                task_center_run_id="run-1",
+                request_id="request-1",
                 task_id="task-1",
                 tool_id="tool-1",
             ),
@@ -63,7 +63,7 @@ async def test_read_file_publishes_started_and_completed(
         events.OPERATION_COMPLETED,
     ]
     assert published[0].payload == {"operation": "read_file", "path": "a.txt"}
-    assert published[1].node.task_center_run_id == "run-1"
+    assert published[1].node.request_id == "request-1"
     assert published[1].node.task_id == "task-1"
     assert published[1].node.tool_name == "read_file"
     assert published[1].node.tool_use_id == "tool-1"

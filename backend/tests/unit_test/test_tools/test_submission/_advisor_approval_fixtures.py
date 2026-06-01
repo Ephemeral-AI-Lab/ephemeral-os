@@ -1,17 +1,53 @@
-"""Shared fixture: construct a synthetic ask_advisor approval transcript pair.
-
-This module is a thin re-export of
-``task_center_runner.agent.mock._advisor_approval.build_advisor_approval_messages``.
-The canonical helper lives under ``src/`` so the mock runner can import it
-without inverting the test→src dependency direction. Test imports of the form
-``from .test_submission._advisor_approval_fixtures import
-build_advisor_approval_messages`` continue to work unchanged.
-"""
+"""Shared fixture: construct a synthetic ask_advisor approval transcript pair."""
 
 from __future__ import annotations
 
-from task_center_runner.agent.mock._advisor_approval import (
-    build_advisor_approval_messages,
+from message.message import (
+    Message,
+    ToolResultBlock,
+    ToolUseBlock,
 )
+
+
+_DEFAULT_ID = "toolu_test_advisor_approval"
+
+
+def build_advisor_approval_messages(
+    *,
+    tool_name: str,
+    verdict: str = "approve",
+    summary: str = "ok",
+    tool_payload: dict | None = None,
+    tool_use_id: str = _DEFAULT_ID,
+    is_error: bool = False,
+) -> list[Message]:
+    """Return the engine-style ``ask_advisor`` call/result message pair."""
+    return [
+        Message(
+            role="assistant",
+            content=[
+                ToolUseBlock(
+                    tool_use_id=tool_use_id,
+                    name="ask_advisor",
+                    input={
+                        "tool_name": tool_name,
+                        "tool_payload": tool_payload or {},
+                    },
+                )
+            ],
+        ),
+        Message(
+            role="user",
+            content=[
+                ToolResultBlock(
+                    tool_use_id=tool_use_id,
+                    content=summary,
+                    is_error=is_error,
+                    metadata={"helper_role": "advisor", "verdict": verdict},
+                )
+            ],
+        ),
+    ]
+
 
 __all__ = ["build_advisor_approval_messages"]

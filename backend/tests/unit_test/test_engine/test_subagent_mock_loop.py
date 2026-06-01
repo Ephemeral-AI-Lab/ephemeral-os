@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 import asyncio
-from collections.abc import AsyncIterator, Callable, Iterator
+from collections.abc import AsyncGenerator, AsyncIterator, Callable, Iterator
+from dataclasses import dataclass, field
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
+from uuid import uuid4
 
 import pytest
 from pydantic import BaseModel
@@ -22,19 +24,24 @@ from engine.agent.lifecycle import EphemeralRunResult
 from engine.query.context import QueryContext
 from engine.query.loop import run_query
 from message.events import (
+    AssistantMessageCompleteEvent,
+    AssistantTextDeltaEvent,
     BackgroundTaskStartedEvent,
     StreamEvent,
+    ThinkingDeltaEvent,
     ToolExecutionCompletedEvent,
+    ToolUseDeltaEvent,
 )
-from message.message import Message, TextBlock
+from message.message import (
+    Message,
+    TextBlock,
+    ThinkingBlock,
+    ToolResultBlock,
+    ToolUseBlock,
+)
 from notification import SystemNotification
+from providers.types import UsageSnapshot
 from sandbox.shared.models import Intent
-from task_center_runner.agent.mock.event_source import (
-    ScenarioEventSource,
-    ToolCall,
-    Turn,
-    TurnScript,
-)
 from tools._framework.core.base import (
     BaseTool,
     ExecutionMetadata,
@@ -46,6 +53,85 @@ from tools.subagent.control import CancelSubagentTool, CheckSubagentProgressTool
 from tools.subagent.run_subagent import run_subagent
 
 pytestmark = pytest.mark.asyncio
+
+
+@dataclass(frozen=True, slots=True)
+class ToolCall:
+    name: str
+    input: dict = field(default_factory=dict)
+
+
+@dataclass(frozen=True, slots=True)
+class Turn:
+    calls: tuple[ToolCall, ...] = ()
+    thinking: str | None = None
+    text: str | None = None
+
+
+TurnScript = AsyncGenerator[Turn, list[ToolResultBlock]]
+
+
+def _latest_tool_results(run_request: Any) -> list[ToolResultBlock]:
+    for message in reversed(run_request.request.messages):
+        if getattr(message, "role", None) != "user":
+            continue
+        blocks = [block for block in message.content if isinstance(block, ToolResultBlock)]
+        if blocks:
+            return blocks
+    return []
+
+
+class ScenarioEventSource:
+    def __init__(self, script: TurnScript, *, agent_name: str = "") -> None:
+        self._script = script
+        self._agent_name = agent_name
+        self._primed = False
+
+    async def __call__(
+        self,
+        context: QueryContext,
+        run_request: Any,
+    ) -> AsyncIterator[StreamEvent]:
+        del context
+        turn = await self._advance(run_request)
+        thinking_blocks = [ThinkingBlock(text=turn.thinking)] if turn.thinking else []
+        text_blocks = [TextBlock(text=turn.text)] if turn.text else []
+        tool_use_blocks = [
+            ToolUseBlock(
+                tool_use_id=f"toolu_{uuid4().hex}",
+                name=call.name,
+                input=dict(call.input),
+            )
+            for call in turn.calls
+        ]
+        if turn.thinking:
+            yield ThinkingDeltaEvent(text=turn.thinking, agent_name=self._agent_name)
+        if turn.text:
+            yield AssistantTextDeltaEvent(text=turn.text, agent_name=self._agent_name)
+        for block in tool_use_blocks:
+            yield ToolUseDeltaEvent(
+                tool_use_id=block.tool_use_id,
+                name=block.name,
+                input=block.input,
+                agent_name=self._agent_name,
+            )
+        yield AssistantMessageCompleteEvent(
+            message=Message(
+                role="assistant",
+                content=[*thinking_blocks, *text_blocks, *tool_use_blocks],
+            ),
+            usage=UsageSnapshot(),
+            agent_name=self._agent_name,
+        )
+
+    async def _advance(self, run_request: Any) -> Turn:
+        try:
+            if not self._primed:
+                self._primed = True
+                return await self._script.asend(None)
+            return await self._script.asend(_latest_tool_results(run_request))
+        except StopAsyncIteration:
+            return Turn()
 
 
 class _UnusedClient:

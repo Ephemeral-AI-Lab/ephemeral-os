@@ -13,10 +13,10 @@ def _seed_attempt(
     workflow_store,
     iteration_store,
     attempt_store,
-    task_center_run_id: str,
+    request_id: str,
 ):
     workflow = workflow_store.insert(
-        task_center_run_id=task_center_run_id,
+        request_id=request_id,
         parent_task_id="root",
         workflow_goal="Build the feature.",
     )
@@ -38,13 +38,13 @@ def test_compose_returns_separate_context_and_guidance_rows(
     workflow_store,
     iteration_store,
     attempt_store,
-    task_center_run_id,
+    request_id,
 ) -> None:
     workflow, iteration, attempt = _seed_attempt(
         workflow_store=workflow_store,
         iteration_store=iteration_store,
         attempt_store=attempt_store,
-        task_center_run_id=task_center_run_id,
+        request_id=request_id,
     )
 
     messages = composer.compose(
@@ -70,21 +70,21 @@ def test_compose_generator_context_uses_new_terminal_names(
     iteration_store,
     attempt_store,
     task_store,
-    task_center_run_id,
+    request_id,
 ) -> None:
     workflow, iteration, attempt = _seed_attempt(
         workflow_store=workflow_store,
         iteration_store=iteration_store,
         attempt_store=attempt_store,
-        task_center_run_id=task_center_run_id,
+        request_id=request_id,
     )
     task_id = generator_task_id(attempt.id, "api")
     task_store.upsert_task(
         task_id=task_id,
-        task_center_run_id=task_center_run_id,
+        request_id=request_id,
         role="generator",
         agent_name="executor",
-        context_message="Implement API.",
+        instruction="Implement API.",
         status="pending",
         outcomes=[],
         needs=[],

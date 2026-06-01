@@ -25,6 +25,7 @@ def _attempt(
     return Attempt(
         id=attempt_id,
         iteration_id="s1",
+        workflow_id="r1",
         attempt_sequence_no=int(attempt_id[-1]),
         stage=AttemptStage.CLOSED,
         status=status,

@@ -172,13 +172,13 @@ impl<T: CommitTransactionPort + 'static> CommitQueue<T> {
         let receiver = self
             .receiver
             .lock()
-            .expect("commit queue receiver slot poisoned")
+            .map_err(|_| OccError::QueueStatePoisoned("receiver slot"))?
             .take()
             .ok_or(OccError::QueueNotStarted)?;
         let transaction = self
             .transaction
             .lock()
-            .expect("commit queue transaction slot poisoned")
+            .map_err(|_| OccError::QueueStatePoisoned("transaction slot"))?
             .take()
             .ok_or(OccError::QueueNotStarted)?;
         let max_batch_size = self.max_batch_size;
@@ -211,8 +211,10 @@ impl<T: CommitTransactionPort + 'static> CommitQueue<T> {
             return Ok(());
         }
         let _ = self.sender.send(QueueItem::Stop);
-        let handle = self.handle.take().expect("checked above");
-        handle.join().map_err(|_| OccError::WorkerPanicked)
+        match self.handle.take() {
+            Some(handle) => handle.join().map_err(|_| OccError::WorkerPanicked),
+            None => Ok(()),
+        }
     }
 
     /// Enqueue a prepared changeset and return a reply receiver to await on.
@@ -275,7 +277,9 @@ impl<T: CommitTransactionPort + 'static> CommitQueue<T> {
     /// path's [`FileResult`](crate::FileResult) back to its submitter.
     // PORT backend/src/sandbox/occ/commit_queue.py:168 — _commit_batch(): retry + fan-out
     fn commit_batch(transaction: &T, batch: Vec<WorkItem>, max_cas_retries: u32) {
-        let combined = combine_prepared(batch.iter().map(|item| &item.prepared));
+        let Some(combined) = combine_prepared(batch.iter().map(|item| &item.prepared)) else {
+            return;
+        };
         let mut attempts = 0;
         let result = loop {
             match transaction.revalidate_and_publish(&combined) {
@@ -351,13 +355,13 @@ fn disjoint_batches(items: Vec<WorkItem>) -> Vec<Vec<WorkItem>> {
     batches
 }
 
-fn combine_prepared<'a>(items: impl Iterator<Item = &'a PreparedChangeset>) -> PreparedChangeset {
+fn combine_prepared<'a>(
+    items: impl Iterator<Item = &'a PreparedChangeset>,
+) -> Option<PreparedChangeset> {
     let items: Vec<&PreparedChangeset> = items.collect();
-    let first = items
-        .first()
-        .expect("commit queue only combines non-empty batches");
+    let first = items.first()?;
     debug_assert!(items.len() == 1 || !items.iter().any(|prepared| prepared.atomic));
-    PreparedChangeset {
+    Some(PreparedChangeset {
         snapshot_version: first.snapshot_version,
         path_groups: items
             .iter()
@@ -368,7 +372,7 @@ fn combine_prepared<'a>(items: impl Iterator<Item = &'a PreparedChangeset>) -> P
             .flat_map(|prepared| prepared.changes.iter().cloned())
             .collect(),
         atomic: first.atomic,
-    }
+    })
 }
 
 fn result_files_for_item(

@@ -12,10 +12,11 @@
 //! So the port is SPLIT into two traits, BOTH owned by `eos-layerstack`:
 //!
 //! - [`SnapshotLeasePort`] — snapshot / acquire_lease / release_lease + reads
-//!   ONLY. This is what isolated + plugin need. It can NEVER publish. Linking
-//!   this never drags in occ.
+//!   ONLY. This is what plugin consumes directly; isolated mirrors the same
+//!   narrow shape behind a daemon-injected port to avoid a direct layerstack
+//!   edge. It can NEVER publish. Linking this never drags in occ.
 //! - [`LayerCommitTransaction`] — the publish-side transaction (open layer,
-//!   `publish_layer`). Only `eos-occ` + `eos-ephemeral` need this.
+//!   `publish_layer`). `eos-occ` and daemon publish paths need this.
 //!
 //! Keeping these as separate traits is the load-bearing structural fact that
 //! makes the no-publish guarantee a *type-level* property.
@@ -37,9 +38,10 @@ use crate::stack::Lease;
 
 /// THE HINGE: snapshot / lease / read capability with NO publish surface.
 ///
-/// What `eos-isolated` and `eos-plugin` consume. Implementing or holding this
-/// trait can never publish a layer — that is the build-time no-publish
-/// guarantee expressed as a type. Deliberately split from
+/// What `eos-plugin` consumes directly; `eos-isolated` uses an equivalent
+/// daemon-injected port to keep its Cargo graph smaller. Implementing or
+/// holding this trait can never publish a layer — that is the build-time
+/// no-publish guarantee expressed as a type. Deliberately split from
 /// [`LayerCommitTransaction`].
 /// `// PORT backend/src/sandbox/occ/layer_stack_adapter.py:31-73 — read/snapshot/lease/squash half`
 pub trait SnapshotLeasePort {

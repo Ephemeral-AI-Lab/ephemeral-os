@@ -13,7 +13,7 @@ def test_audit_event_defaults_are_serializable_with_dataclass_projection() -> No
         source="sandbox",
         type="sandbox.operation.completed",
         node=AuditNode(
-            task_center_run_id="run-1",
+            request_id="req-1",
             task_id="task-1",
             sandbox_id="sb-1",
             tool_name="edit_file",
@@ -26,7 +26,7 @@ def test_audit_event_defaults_are_serializable_with_dataclass_projection() -> No
 
     assert projected["source"] == "sandbox"
     assert projected["type"] == "sandbox.operation.completed"
-    assert projected["node"]["task_center_run_id"] == "run-1"
+    assert projected["node"]["request_id"] == "req-1"
     assert projected["node"]["sandbox_id"] == "sb-1"
     assert projected["payload"] == {"operation": "edit_file", "status": "ok"}
     assert event.ts.tzinfo is UTC

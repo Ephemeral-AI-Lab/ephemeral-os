@@ -25,10 +25,10 @@ from workflow._core.primitives import reducer_task_id
 
 
 def _seed_iteration(
-    workflow_store, iteration_store, task_center_run_id, attempt_budget=2
+    workflow_store, iteration_store, request_id, attempt_budget=2
 ) -> str:
     workflow = workflow_store.insert(
-        task_center_run_id=task_center_run_id,
+        request_id=request_id,
         parent_task_id="t1",
         workflow_goal="g",
     )
@@ -96,9 +96,9 @@ class _FakeTaskStore:
 
 
 def test_initial_iteration_creates_attempt_sequence_1(
-    workflow_store, iteration_store, attempt_store, task_center_run_id
+    workflow_store, iteration_store, attempt_store, request_id
 ):
-    iter_id = _seed_iteration(workflow_store, iteration_store, task_center_run_id)
+    iter_id = _seed_iteration(workflow_store, iteration_store, request_id)
     coordinator, _ = _make_coordinator(iter_id, iteration_store, attempt_store)
     attempt = coordinator.create_attempt()
     assert attempt.attempt_sequence_no == 1
@@ -108,9 +108,9 @@ def test_initial_iteration_creates_attempt_sequence_1(
 
 
 def test_retry_creates_attempt_in_same_iteration(
-    workflow_store, iteration_store, attempt_store, task_center_run_id
+    workflow_store, iteration_store, attempt_store, request_id
 ):
-    iter_id = _seed_iteration(workflow_store, iteration_store, task_center_run_id)
+    iter_id = _seed_iteration(workflow_store, iteration_store, request_id)
     coordinator, _ = _make_coordinator(iter_id, iteration_store, attempt_store)
     g1 = coordinator.create_attempt()
     g2 = coordinator.create_attempt(previous_attempt_id=g1.id)
@@ -122,9 +122,9 @@ def test_retry_creates_attempt_in_same_iteration(
 
 
 def test_passing_attempt_with_null_continuation_signals_success(
-    workflow_store, iteration_store, attempt_store, task_center_run_id
+    workflow_store, iteration_store, attempt_store, request_id
 ):
-    iter_id = _seed_iteration(workflow_store, iteration_store, task_center_run_id)
+    iter_id = _seed_iteration(workflow_store, iteration_store, request_id)
     coordinator, captured = _make_coordinator(iter_id, iteration_store, attempt_store)
     attempt = coordinator.create_attempt()
     attempt_store.close(attempt.id, status=AttemptStatus.PASSED, fail_reason=None)
@@ -138,11 +138,11 @@ def test_passing_attempt_with_null_continuation_signals_success(
 
 
 def test_close_iteration_passed_writes_reducer_outcomes(
-    workflow_store, iteration_store, attempt_store, task_center_run_id
+    workflow_store, iteration_store, attempt_store, request_id
 ):
     """At successful close the coordinator denormalizes the passing attempt's
     REDUCER tasks onto ``Iteration.outcomes`` as execution outcome records."""
-    iter_id = _seed_iteration(workflow_store, iteration_store, task_center_run_id)
+    iter_id = _seed_iteration(workflow_store, iteration_store, request_id)
     attempt = attempt_store.insert(iteration_id=iter_id, attempt_sequence_no=1)
     iteration_store.append_attempt_id(iter_id, attempt.id)
     red_a = reducer_task_id(attempt.id, "red_a")
@@ -151,8 +151,16 @@ def test_close_iteration_passed_writes_reducer_outcomes(
     attempt_store.close(attempt.id, status=AttemptStatus.PASSED, fail_reason=None)
     task_store = _FakeTaskStore(
         {
-            red_a: {"status": "done", "outcomes": [{"outcome": "Storage layer ok."}]},
-            red_b: {"status": "done", "outcomes": [{"outcome": "Add command ok."}]},
+            red_a: {
+                "role": "reducer",
+                "status": "done",
+                "outcomes": [{"outcome": "Storage layer ok."}],
+            },
+            red_b: {
+                "role": "reducer",
+                "status": "done",
+                "outcomes": [{"outcome": "Add command ok."}],
+            },
         }
     )
     coordinator, _ = _make_coordinator(
@@ -180,10 +188,10 @@ def test_close_iteration_passed_writes_reducer_outcomes(
 
 
 def test_close_iteration_passed_outcomes_empty_without_reducers(
-    workflow_store, iteration_store, attempt_store, task_center_run_id
+    workflow_store, iteration_store, attempt_store, request_id
 ):
     """A passing attempt with no reducers yields an empty JSON outcomes record."""
-    iter_id = _seed_iteration(workflow_store, iteration_store, task_center_run_id)
+    iter_id = _seed_iteration(workflow_store, iteration_store, request_id)
     attempt = attempt_store.insert(iteration_id=iter_id, attempt_sequence_no=1)
     iteration_store.append_attempt_id(iter_id, attempt.id)
     attempt_store.close(attempt.id, status=AttemptStatus.PASSED, fail_reason=None)
@@ -197,9 +205,9 @@ def test_close_iteration_passed_outcomes_empty_without_reducers(
 
 
 def test_passing_attempt_with_continuation_signals_deferred_goal(
-    workflow_store, iteration_store, attempt_store, task_center_run_id
+    workflow_store, iteration_store, attempt_store, request_id
 ):
-    iter_id = _seed_iteration(workflow_store, iteration_store, task_center_run_id)
+    iter_id = _seed_iteration(workflow_store, iteration_store, request_id)
     coordinator, captured = _make_coordinator(iter_id, iteration_store, attempt_store)
     attempt = coordinator.create_attempt()
     attempt_store.set_deferred_goal(
@@ -216,10 +224,10 @@ def test_passing_attempt_with_continuation_signals_deferred_goal(
 
 
 def test_passing_attempt_does_not_retry(
-    workflow_store, iteration_store, attempt_store, task_center_run_id
+    workflow_store, iteration_store, attempt_store, request_id
 ):
     """Spec rule: passing attempt always closes the iteration; no second attempt."""
-    iter_id = _seed_iteration(workflow_store, iteration_store, task_center_run_id)
+    iter_id = _seed_iteration(workflow_store, iteration_store, request_id)
     coordinator, _ = _make_coordinator(iter_id, iteration_store, attempt_store)
     attempt = coordinator.create_attempt()
     attempt_store.close(attempt.id, status=AttemptStatus.PASSED, fail_reason=None)
@@ -231,10 +239,10 @@ def test_passing_attempt_does_not_retry(
 
 
 def test_failed_attempt_with_budget_creates_next_attempt(
-    workflow_store, iteration_store, attempt_store, task_center_run_id
+    workflow_store, iteration_store, attempt_store, request_id
 ):
     iter_id = _seed_iteration(
-        workflow_store, iteration_store, task_center_run_id, attempt_budget=2
+        workflow_store, iteration_store, request_id, attempt_budget=2
     )
     coordinator, captured = _make_coordinator(iter_id, iteration_store, attempt_store)
     g1 = coordinator.create_attempt()
@@ -250,10 +258,10 @@ def test_failed_attempt_with_budget_creates_next_attempt(
 
 
 def test_failed_partial_plan_attempt_retries_without_propagating_continuation(
-    workflow_store, iteration_store, attempt_store, task_center_run_id
+    workflow_store, iteration_store, attempt_store, request_id
 ):
     iter_id = _seed_iteration(
-        workflow_store, iteration_store, task_center_run_id, attempt_budget=2
+        workflow_store, iteration_store, request_id, attempt_budget=2
     )
     coordinator, captured = _make_coordinator(iter_id, iteration_store, attempt_store)
     g1 = coordinator.create_attempt()
@@ -275,9 +283,9 @@ def test_failed_partial_plan_attempt_retries_without_propagating_continuation(
 
 
 def test_coordinator_starts_orchestrator_when_factory_present(
-    workflow_store, iteration_store, attempt_store, task_center_run_id
+    workflow_store, iteration_store, attempt_store, request_id
 ):
-    iter_id = _seed_iteration(workflow_store, iteration_store, task_center_run_id)
+    iter_id = _seed_iteration(workflow_store, iteration_store, request_id)
     started: list[str] = []
 
     def factory(attempt, on_attempt_closed):
@@ -298,9 +306,9 @@ def test_coordinator_starts_orchestrator_when_factory_present(
 
 
 def test_initial_attempt_start_can_be_deferred(
-    workflow_store, iteration_store, attempt_store, task_center_run_id
+    workflow_store, iteration_store, attempt_store, request_id
 ):
-    iter_id = _seed_iteration(workflow_store, iteration_store, task_center_run_id)
+    iter_id = _seed_iteration(workflow_store, iteration_store, request_id)
     started: list[str] = []
 
     def factory(attempt, on_attempt_closed):
@@ -324,9 +332,9 @@ def test_initial_attempt_start_can_be_deferred(
 
 
 def test_initial_start_failure_closes_inserted_attempt(
-    workflow_store, iteration_store, attempt_store, task_center_run_id
+    workflow_store, iteration_store, attempt_store, request_id
 ):
-    iter_id = _seed_iteration(workflow_store, iteration_store, task_center_run_id)
+    iter_id = _seed_iteration(workflow_store, iteration_store, request_id)
 
     def factory(attempt, on_attempt_closed):
         del on_attempt_closed
@@ -355,9 +363,9 @@ def test_initial_start_failure_closes_inserted_attempt(
 
 
 def test_deferred_start_failure_closes_inserted_attempt(
-    workflow_store, iteration_store, attempt_store, task_center_run_id
+    workflow_store, iteration_store, attempt_store, request_id
 ):
-    iter_id = _seed_iteration(workflow_store, iteration_store, task_center_run_id)
+    iter_id = _seed_iteration(workflow_store, iteration_store, request_id)
 
     def factory(attempt, on_attempt_closed):
         del on_attempt_closed
@@ -385,13 +393,13 @@ def test_deferred_start_failure_closes_inserted_attempt(
 
 
 def test_retry_start_failure_exhausts_budget_and_signals_failure(
-    workflow_store, iteration_store, attempt_store, task_center_run_id
+    workflow_store, iteration_store, attempt_store, request_id
 ):
     """Retry-path startup failure closes the new attempt STARTUP_FAILED and,
     when budget is exhausted, signals a failed close instead of leaving the
     iteration open."""
     iter_id = _seed_iteration(
-        workflow_store, iteration_store, task_center_run_id, attempt_budget=2
+        workflow_store, iteration_store, request_id, attempt_budget=2
     )
     started: list[str] = []
 
@@ -430,12 +438,12 @@ def test_retry_start_failure_exhausts_budget_and_signals_failure(
 
 
 def test_retry_start_failure_with_budget_remaining_creates_next_attempt(
-    workflow_store, iteration_store, attempt_store, task_center_run_id
+    workflow_store, iteration_store, attempt_store, request_id
 ):
     """When budget remains after a startup failure on retry, the coordinator
     keeps trying until a non-failing factory or budget exhaustion."""
     iter_id = _seed_iteration(
-        workflow_store, iteration_store, task_center_run_id, attempt_budget=3
+        workflow_store, iteration_store, request_id, attempt_budget=3
     )
     started: list[str] = []
 
@@ -472,10 +480,10 @@ def test_retry_start_failure_with_budget_remaining_creates_next_attempt(
 
 
 def test_failed_attempt_with_budget_starts_next_attempt_orchestrator(
-    workflow_store, iteration_store, attempt_store, task_center_run_id
+    workflow_store, iteration_store, attempt_store, request_id
 ):
     iter_id = _seed_iteration(
-        workflow_store, iteration_store, task_center_run_id, attempt_budget=2
+        workflow_store, iteration_store, request_id, attempt_budget=2
     )
     started: list[str] = []
 
@@ -505,10 +513,10 @@ def test_failed_attempt_with_budget_starts_next_attempt_orchestrator(
 
 
 def test_failed_attempt_without_budget_signals_failure_with_outcomes(
-    workflow_store, iteration_store, attempt_store, task_center_run_id
+    workflow_store, iteration_store, attempt_store, request_id
 ):
     iter_id = _seed_iteration(
-        workflow_store, iteration_store, task_center_run_id, attempt_budget=2
+        workflow_store, iteration_store, request_id, attempt_budget=2
     )
     coordinator, captured = _make_coordinator(
         iter_id, iteration_store, attempt_store, _FakeTaskStore()
@@ -537,11 +545,11 @@ def test_failed_attempt_without_budget_signals_failure_with_outcomes(
 
 
 def test_creating_initial_attempt_twice_raises(
-    workflow_store, iteration_store, attempt_store, task_center_run_id
+    workflow_store, iteration_store, attempt_store, request_id
 ):
     from workflow._core.primitives import WorkflowInvariantViolation
 
-    iter_id = _seed_iteration(workflow_store, iteration_store, task_center_run_id)
+    iter_id = _seed_iteration(workflow_store, iteration_store, request_id)
     coordinator, _ = _make_coordinator(iter_id, iteration_store, attempt_store)
     coordinator.create_attempt()
     with pytest.raises(WorkflowInvariantViolation):

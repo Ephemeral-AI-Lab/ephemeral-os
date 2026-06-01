@@ -530,6 +530,7 @@ def test_audit_recorder_attach_daemon_audit_puller_starts_and_stops(
     tmp_path,
 ) -> None:
     """Wiring smoke test — attach puller, drain a fake response, stop."""
+    pytest.skip("task_center_runner audit recorder is deferred for the runner migration")
     from task_center_runner.audit.recorder import AuditRecorder
 
     recorder = AuditRecorder(

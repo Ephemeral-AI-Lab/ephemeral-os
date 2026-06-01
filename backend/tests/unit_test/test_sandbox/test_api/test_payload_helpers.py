@@ -18,7 +18,7 @@ from sandbox.shared.models import SandboxCaller
 def test_sandbox_caller_audit_fields_keeps_required_keys_and_non_empty_fields() -> None:
     caller = SandboxCaller(
         agent_id="agent-1",
-        task_center_run_id="tc-run",
+        request_id="request-1",
         tool_id="tool-1",
     )
 
@@ -27,7 +27,7 @@ def test_sandbox_caller_audit_fields_keeps_required_keys_and_non_empty_fields() 
         "run_id": "",
         "agent_run_id": "",
         "task_id": "",
-        "task_center_run_id": "tc-run",
+        "request_id": "request-1",
         "tool_id": "tool-1",
     }
 

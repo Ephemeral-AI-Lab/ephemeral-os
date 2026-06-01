@@ -15,7 +15,7 @@ use std::process::{Command, Stdio};
 #[cfg(target_os = "linux")]
 use std::sync::atomic::{AtomicU64, Ordering};
 #[cfg(target_os = "linux")]
-use std::sync::{Arc, Mutex, OnceLock};
+use std::sync::{Arc, Mutex, MutexGuard, OnceLock};
 #[cfg(target_os = "linux")]
 use std::thread;
 #[cfg(target_os = "linux")]
@@ -304,6 +304,13 @@ const PTY_RING_MAX_BYTES: usize = 1024 * 1024;
 const PTY_SPOOL_MAX_BYTES: u64 = 32 * 1024 * 1024;
 
 #[cfg(target_os = "linux")]
+fn lock_pty_state<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
+    mutex
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner())
+}
+
+#[cfg(target_os = "linux")]
 struct PtyOutput {
     chunks: Mutex<VecDeque<PtyChunk>>,
     bytes: Mutex<usize>,
@@ -330,8 +337,8 @@ impl PtyOutput {
 
     fn append(&self, text: String) {
         let byte_len = text.len();
-        let mut chunks = self.chunks.lock().expect("pty output ring poisoned");
-        let mut bytes = self.bytes.lock().expect("pty output bytes poisoned");
+        let mut chunks = lock_pty_state(&self.chunks);
+        let mut bytes = lock_pty_state(&self.bytes);
         chunks.push_back(PtyChunk {
             at: Instant::now(),
             text,
@@ -346,7 +353,7 @@ impl PtyOutput {
     }
 
     fn recent_since(&self, since: Instant, max_tokens: Option<u64>) -> String {
-        let chunks = self.chunks.lock().expect("pty output ring poisoned");
+        let chunks = lock_pty_state(&self.chunks);
         bounded_output(
             chunks
                 .iter()
@@ -357,17 +364,14 @@ impl PtyOutput {
     }
 
     fn all_recent(&self, max_tokens: Option<u64>) -> String {
-        let chunks = self.chunks.lock().expect("pty output ring poisoned");
+        let chunks = lock_pty_state(&self.chunks);
         bounded_output(chunks.iter().map(|chunk| chunk.text.as_str()), max_tokens)
     }
 
     fn note_spooled(&self, bytes: u64) -> bool {
-        let mut spool_bytes = self.spool_bytes.lock().expect("pty spool bytes poisoned");
+        let mut spool_bytes = lock_pty_state(&self.spool_bytes);
         if *spool_bytes >= PTY_SPOOL_MAX_BYTES {
-            *self
-                .spool_truncated
-                .lock()
-                .expect("pty spool truncation flag poisoned") = true;
+            *lock_pty_state(&self.spool_truncated) = true;
             return false;
         }
         *spool_bytes = (*spool_bytes + bytes).min(PTY_SPOOL_MAX_BYTES);
@@ -375,10 +379,7 @@ impl PtyOutput {
     }
 
     fn spool_truncated(&self) -> bool {
-        *self
-            .spool_truncated
-            .lock()
-            .expect("pty spool truncation flag poisoned")
+        *lock_pty_state(&self.spool_truncated)
     }
 }
 
@@ -432,48 +433,30 @@ impl PtyRegistry {
     }
 
     fn insert(&self, session: Arc<PtySession>) {
-        self.sessions
-            .lock()
-            .expect("pty registry poisoned")
-            .insert(session.id.clone(), session);
+        lock_pty_state(&self.sessions).insert(session.id.clone(), session);
     }
 
     fn get(&self, id: &str) -> Option<Arc<PtySession>> {
-        self.sessions
-            .lock()
-            .expect("pty registry poisoned")
-            .get(id)
-            .cloned()
+        lock_pty_state(&self.sessions).get(id).cloned()
     }
 
     fn remove(&self, id: &str) -> Option<Arc<PtySession>> {
-        self.sessions
-            .lock()
-            .expect("pty registry poisoned")
-            .remove(id)
+        lock_pty_state(&self.sessions).remove(id)
     }
 
     fn count_by_agent(&self, agent_id: &str) -> usize {
-        self.sessions
-            .lock()
-            .expect("pty registry poisoned")
+        lock_pty_state(&self.sessions)
             .values()
             .filter(|session| agent_id.is_empty() || session.agent_id == agent_id)
             .count()
     }
 
     fn push_completed(&self, completion: Value) {
-        self.completed
-            .lock()
-            .expect("pty completion mailbox poisoned")
-            .push(completion);
+        lock_pty_state(&self.completed).push(completion);
     }
 
     fn take_completed_result(&self, id: &str) -> Option<Value> {
-        let mut completed = self
-            .completed
-            .lock()
-            .expect("pty completion mailbox poisoned");
+        let mut completed = lock_pty_state(&self.completed);
         let mut kept = Vec::with_capacity(completed.len());
         let mut found = None;
         for item in completed.drain(..) {
@@ -506,10 +489,7 @@ impl PtyRegistry {
             .and_then(Value::as_str)
             .unwrap_or_default()
             .to_owned();
-        let mut completed = self
-            .completed
-            .lock()
-            .expect("pty completion mailbox poisoned");
+        let mut completed = lock_pty_state(&self.completed);
         let mut kept = Vec::new();
         let mut returned = Vec::new();
         for item in completed.drain(..) {
@@ -1074,11 +1054,7 @@ fn finish_pty_session(
         .and_then(Value::as_str)
         .unwrap_or("error")
         .to_owned();
-    if *session
-        .cancelled
-        .lock()
-        .expect("pty cancelled flag poisoned")
-    {
+    if *lock_pty_state(&session.cancelled) {
         command_status = "cancelled".to_owned();
         if exit_code == 0 {
             exit_code = 130;
@@ -1145,11 +1121,7 @@ fn finish_isolated_pty_session(
         .and_then(Value::as_str)
         .unwrap_or("error")
         .to_owned();
-    if *session
-        .cancelled
-        .lock()
-        .expect("pty cancelled flag poisoned")
-    {
+    if *lock_pty_state(&session.cancelled) {
         command_status = "cancelled".to_owned();
         if exit_code == 0 {
             exit_code = 130;
@@ -1380,11 +1352,10 @@ fn pty_write_stdin(args: &Value) -> Result<Value, DaemonError> {
         return Ok(pty_not_found());
     };
     let since = Instant::now();
-    session
-        .writer
-        .lock()
-        .expect("pty writer poisoned")
-        .write_all(chars.as_bytes())?;
+    {
+        let mut writer = lock_pty_state(&session.writer);
+        writer.write_all(chars.as_bytes())?;
+    }
     thread::sleep(Duration::from_millis(yield_time_ms));
     if let Some(result) = pty_registry().take_completed_result(&id) {
         return Ok(result);
@@ -1433,10 +1404,7 @@ fn pty_cancel(args: &Value) -> Result<Value, DaemonError> {
     let Some(session) = pty_registry().remove(&id) else {
         return Ok(pty_not_found());
     };
-    *session
-        .cancelled
-        .lock()
-        .expect("pty cancelled flag poisoned") = true;
+    *lock_pty_state(&session.cancelled) = true;
     let _ = killpg(Pid::from_raw(session.pgid), Signal::SIGTERM);
     thread::sleep(Duration::from_millis(50));
     crate::isolated::unregister_pty(&session.agent_id, &id);
@@ -1455,10 +1423,7 @@ pub(crate) fn cancel_pty_session_for_exit(id: &str) -> Result<bool, DaemonError>
         crate::isolated::unregister_pty_id(id);
         return Ok(false);
     };
-    *session
-        .cancelled
-        .lock()
-        .expect("pty cancelled flag poisoned") = true;
+    *lock_pty_state(&session.cancelled) = true;
     let _ = killpg(Pid::from_raw(session.pgid), Signal::SIGTERM);
     thread::sleep(Duration::from_millis(50));
     crate::isolated::unregister_pty(&session.agent_id, id);

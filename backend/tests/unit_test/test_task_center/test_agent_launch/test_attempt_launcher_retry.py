@@ -47,12 +47,12 @@ def _seed_planner_attempt(
     iteration_store: Any,
     attempt_store: Any,
     task_store: Any,
-    task_center_run_id: str,
+    request_id: str,
     attempt_sequence_no: int = 1,
 ) -> tuple[Any, Any, str]:
     """Insert a workflow/iteration/attempt/planner-task row set; return key handles."""
     workflow = workflow_store.insert(
-        task_center_run_id=task_center_run_id,
+        request_id=request_id,
         parent_task_id="outer-task",
         workflow_goal="solve",
     )
@@ -72,10 +72,10 @@ def _seed_planner_attempt(
     task_id = planner_task_id(attempt.id)
     task_store.upsert_task(
         task_id=task_id,
-        task_center_run_id=task_center_run_id,
+        request_id=request_id,
         role=AgentRole.PLANNER.value,
         agent_name="planner",
-        context_message="plan",
+        instruction="plan",
         status=TaskStatus.RUNNING.value,
         outcomes=[],
         needs=[],
@@ -83,10 +83,10 @@ def _seed_planner_attempt(
     return workflow, attempt, task_id
 
 
-def _build_launch(*, attempt: Any, workflow: Any, task_id: str, task_center_run_id: str) -> AgentLaunch:
+def _build_launch(*, attempt: Any, workflow: Any, task_id: str, request_id: str) -> AgentLaunch:
     return AgentLaunch(
         task_id=task_id,
-        task_center_run_id=task_center_run_id,
+        request_id=request_id,
         attempt_id=attempt.id,
         role=AgentRole.PLANNER,
         agent_name="planner",
@@ -116,7 +116,7 @@ async def test_main_planner_engine_retry_keeps_attempt_sequence_no_at_one(
     iteration_store,
     attempt_store,
     task_store,
-    task_center_run_id,
+    request_id,
     register_test_agents,
 ) -> None:
     """A successful inner runner result keeps the attempt sequence at 1.
@@ -130,10 +130,10 @@ async def test_main_planner_engine_retry_keeps_attempt_sequence_no_at_one(
         iteration_store=iteration_store,
         attempt_store=attempt_store,
         task_store=task_store,
-        task_center_run_id=task_center_run_id,
+        request_id=request_id,
     )
     launch = _build_launch(
-        attempt=attempt, workflow=workflow, task_id=task_id, task_center_run_id=task_center_run_id
+        attempt=attempt, workflow=workflow, task_id=task_id, request_id=request_id
     )
     deps = _build_deps(
         workflow_store=workflow_store,
@@ -186,7 +186,7 @@ async def test_main_planner_no_terminal_result_marks_attempt_failed(
     iteration_store,
     attempt_store,
     task_store,
-    task_center_run_id,
+    request_id,
     register_test_agents,
 ) -> None:
     """Runner returns no terminal_result → launcher closes that one Attempt FAILED.
@@ -202,10 +202,10 @@ async def test_main_planner_no_terminal_result_marks_attempt_failed(
         iteration_store=iteration_store,
         attempt_store=attempt_store,
         task_store=task_store,
-        task_center_run_id=task_center_run_id,
+        request_id=request_id,
     )
     launch = _build_launch(
-        attempt=attempt, workflow=workflow, task_id=task_id, task_center_run_id=task_center_run_id
+        attempt=attempt, workflow=workflow, task_id=task_id, request_id=request_id
     )
     deps = _build_deps(
         workflow_store=workflow_store,
@@ -257,7 +257,7 @@ async def test_attempt_harness_records_runner_token_usage(
     iteration_store,
     attempt_store,
     task_store,
-    task_center_run_id,
+    request_id,
     register_test_agents,
 ) -> None:
     """Token-count accounting passes through unchanged from the runner.
@@ -271,10 +271,10 @@ async def test_attempt_harness_records_runner_token_usage(
         iteration_store=iteration_store,
         attempt_store=attempt_store,
         task_store=task_store,
-        task_center_run_id=task_center_run_id,
+        request_id=request_id,
     )
     launch = _build_launch(
-        attempt=attempt, workflow=workflow, task_id=task_id, task_center_run_id=task_center_run_id
+        attempt=attempt, workflow=workflow, task_id=task_id, request_id=request_id
     )
     deps = _build_deps(
         workflow_store=workflow_store,
@@ -319,7 +319,7 @@ async def test_continuation_planner_attempt_does_not_pass_retry_kwarg(
     iteration_store,
     attempt_store,
     task_store,
-    task_center_run_id,
+    request_id,
     register_test_agents,
 ) -> None:
     """For attempt_sequence_no>1, the launcher does not pass ``max_terminal_retries``.
@@ -334,11 +334,11 @@ async def test_continuation_planner_attempt_does_not_pass_retry_kwarg(
         iteration_store=iteration_store,
         attempt_store=attempt_store,
         task_store=task_store,
-        task_center_run_id=task_center_run_id,
+        request_id=request_id,
         attempt_sequence_no=2,
     )
     launch = _build_launch(
-        attempt=attempt, workflow=workflow, task_id=task_id, task_center_run_id=task_center_run_id
+        attempt=attempt, workflow=workflow, task_id=task_id, request_id=request_id
     )
     deps = _build_deps(
         workflow_store=workflow_store,
@@ -405,7 +405,7 @@ async def test_main_agent_launches_with_two_user_messages(
     iteration_store,
     attempt_store,
     task_store,
-    task_center_run_id,
+    request_id,
     register_test_agents,
 ) -> None:
     """Non-entry agents launch with initial_messages=[<context>] + prompt=<task_guidance>."""
@@ -416,10 +416,10 @@ async def test_main_agent_launches_with_two_user_messages(
         iteration_store=iteration_store,
         attempt_store=attempt_store,
         task_store=task_store,
-        task_center_run_id=task_center_run_id,
+        request_id=request_id,
     )
     launch = _build_launch(
-        attempt=attempt, workflow=workflow, task_id=task_id, task_center_run_id=task_center_run_id
+        attempt=attempt, workflow=workflow, task_id=task_id, request_id=request_id
     )
     deps = _build_deps(
         workflow_store=workflow_store,
@@ -472,7 +472,7 @@ async def test_launch_without_task_guidance_falls_back_to_single_user_message(
     iteration_store,
     attempt_store,
     task_store,
-    task_center_run_id,
+    request_id,
     register_test_agents,
 ) -> None:
     """Agents whose recipe emits no task_guidance launch single-message.
@@ -485,7 +485,7 @@ async def test_launch_without_task_guidance_falls_back_to_single_user_message(
         iteration_store=iteration_store,
         attempt_store=attempt_store,
         task_store=task_store,
-        task_center_run_id=task_center_run_id,
+        request_id=request_id,
     )
     # Use the planner agent (registered by the fixture) but with
     # ``task_guidance=None`` to exercise the single-message
@@ -493,7 +493,7 @@ async def test_launch_without_task_guidance_falls_back_to_single_user_message(
     # ``task_guidance``, not on role.
     launch = AgentLaunch(
         task_id=task_id,
-        task_center_run_id=task_center_run_id,
+        request_id=request_id,
         attempt_id=attempt.id,
         role=AgentRole.PLANNER,
         agent_name="planner",
@@ -546,7 +546,7 @@ async def test_main_agent_launches_with_skill_as_prompt_and_context_guidance_ini
     iteration_store,
     attempt_store,
     task_store,
-    task_center_run_id,
+    request_id,
     register_test_agents,
 ) -> None:
     """Skill+guidance (4-row) shape: the skill is the spawn prompt (lands last),
@@ -558,11 +558,11 @@ async def test_main_agent_launches_with_skill_as_prompt_and_context_guidance_ini
         iteration_store=iteration_store,
         attempt_store=attempt_store,
         task_store=task_store,
-        task_center_run_id=task_center_run_id,
+        request_id=request_id,
     )
     launch = AgentLaunch(
         task_id=task_id,
-        task_center_run_id=task_center_run_id,
+        request_id=request_id,
         attempt_id=attempt.id,
         role=AgentRole.PLANNER,
         agent_name="planner",

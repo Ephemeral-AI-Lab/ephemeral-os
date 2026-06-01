@@ -30,6 +30,7 @@ class _FakeAgent:
         self.query_context = SimpleNamespace(
             tool_metadata=ExecutionMetadata(),
             agent_run_id="",
+            system_prompt="mock",
             terminal_result=None,
         )
 

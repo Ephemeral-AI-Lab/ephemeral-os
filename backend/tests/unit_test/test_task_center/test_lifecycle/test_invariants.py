@@ -39,11 +39,12 @@ def _goal(
     now = datetime.now(UTC)
     return Workflow(
         id="r1",
-        task_center_run_id="run1",
+        request_id="run1",
         workflow_goal="g",
         status=status,
         iteration_ids=iteration_ids,
         parent_task_id="t1",
+        outcomes=None,
         created_at=now,
         updated_at=now,
         closed_at=None,
@@ -86,6 +87,7 @@ def _attempt(
     return Attempt(
         id=attempt_id,
         iteration_id=iteration_id,
+        workflow_id="r1",
         attempt_sequence_no=1,
         stage=AttemptStage.PLAN,
         status=status,

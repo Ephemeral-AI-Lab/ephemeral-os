@@ -27,6 +27,14 @@ pub enum LayerStackError {
     #[error("layer-stack storage writer lock is closed")]
     StorageWriterLockClosed,
 
+    /// A caller supplied an invalid snapshot lease owner.
+    #[error("invalid lease owner: {0}")]
+    InvalidLeaseOwner(String),
+
+    /// A process-local storage lock was poisoned by a panic in another holder.
+    #[error("layer-stack lock poisoned: {0}")]
+    LockPoisoned(&'static str),
+
     /// A squash/checkpoint plan invariant was violated (e.g. <2-layer segment).
     /// `// PORT backend/src/sandbox/layer_stack/squash.py:24-26,38-44,69-72`
     #[error("invalid squash plan: {0}")]

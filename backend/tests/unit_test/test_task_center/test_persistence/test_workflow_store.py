@@ -10,9 +10,9 @@ from workflow._core.state import (
 )
 
 
-def test_insert_returns_dto(workflow_store, task_center_run_id):
+def test_insert_returns_dto(workflow_store, request_id):
     req = workflow_store.insert(
-        task_center_run_id=task_center_run_id,
+        request_id=request_id,
         parent_task_id="t1",
         workflow_goal="g",
     )
@@ -21,9 +21,9 @@ def test_insert_returns_dto(workflow_store, task_center_run_id):
     assert req.iteration_ids == ()
 
 
-def test_get_round_trip(workflow_store, task_center_run_id):
+def test_get_round_trip(workflow_store, request_id):
     inserted = workflow_store.insert(
-        task_center_run_id=task_center_run_id,
+        request_id=request_id,
         parent_task_id="t1",
         workflow_goal="g",
     )
@@ -35,9 +35,9 @@ def test_get_round_trip(workflow_store, task_center_run_id):
     assert got.iteration_ids == ()
 
 
-def test_append_iteration_id_persists_tuple(workflow_store, task_center_run_id):
+def test_append_iteration_id_persists_tuple(workflow_store, request_id):
     req = workflow_store.insert(
-        task_center_run_id=task_center_run_id,
+        request_id=request_id,
         parent_task_id="t1",
         workflow_goal="g",
     )
@@ -49,10 +49,10 @@ def test_append_iteration_id_persists_tuple(workflow_store, task_center_run_id):
 
 
 def test_set_status_records_closed_at(
-    workflow_store, task_center_run_id
+    workflow_store, request_id
 ):
     req = workflow_store.insert(
-        task_center_run_id=task_center_run_id,
+        request_id=request_id,
         parent_task_id="t1",
         workflow_goal="g",
     )
@@ -67,20 +67,20 @@ def test_set_status_records_closed_at(
 
 
 def test_list_for_parent_task_orders_by_created_at(
-    workflow_store, task_center_run_id
+    workflow_store, request_id
 ):
     a = workflow_store.insert(
-        task_center_run_id=task_center_run_id,
+        request_id=request_id,
         parent_task_id="parent-task-A",
         workflow_goal="ga",
     )
     b = workflow_store.insert(
-        task_center_run_id=task_center_run_id,
+        request_id=request_id,
         parent_task_id="parent-task-A",
         workflow_goal="gb",
     )
     workflow_store.insert(
-        task_center_run_id=task_center_run_id,
+        request_id=request_id,
         parent_task_id="parent-task-B",
         workflow_goal="gc",
     )

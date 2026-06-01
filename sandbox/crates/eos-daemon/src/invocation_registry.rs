@@ -27,7 +27,7 @@
 //!   `// PORT backend/src/sandbox/daemon/rpc/in_flight.py — InFlightInvocationRegistry`
 
 use std::collections::HashMap;
-use std::sync::{Mutex, OnceLock};
+use std::sync::{Mutex, MutexGuard, OnceLock};
 use std::time::Instant;
 
 use tokio::task::AbortHandle;
@@ -108,6 +108,15 @@ impl InFlightRegistry {
         self.reaper_interval_s
     }
 
+    // The registry is best-effort daemon control state. If another task panics
+    // while holding the mutex, keep cancellation/heartbeat cleanup available
+    // instead of panicking future control operations.
+    fn lock_state(&self) -> MutexGuard<'_, RegistryState> {
+        self.inner
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
+    }
+
     /// Register a task under `invocation_id`. Empty ids are ignored.
     // PORT backend/src/sandbox/daemon/rpc/in_flight.py:54-77 — register()
     pub fn register(
@@ -121,7 +130,7 @@ impl InFlightRegistry {
         if invocation_id.is_empty() {
             return;
         }
-        let mut state = self.inner.lock().expect("in-flight registry poisoned");
+        let mut state = self.lock_state();
         state.by_invocation.insert(
             invocation_id.to_owned(),
             InFlightInvocation {
@@ -140,17 +149,13 @@ impl InFlightRegistry {
     /// Remove the entry for `invocation_id` (the dispatch `finally` path).
     // PORT backend/src/sandbox/daemon/rpc/in_flight.py:79-81 — deregister()
     pub fn deregister(&self, invocation_id: &str) {
-        self.inner
-            .lock()
-            .expect("in-flight registry poisoned")
-            .by_invocation
-            .remove(invocation_id);
+        self.lock_state().by_invocation.remove(invocation_id);
     }
 
     /// Cancel the task for `invocation_id`; returns whether an entry existed.
     // PORT backend/src/sandbox/daemon/rpc/in_flight.py:83-88 — cancel_task()
     pub fn cancel(&self, invocation_id: &str) -> bool {
-        let state = self.inner.lock().expect("in-flight registry poisoned");
+        let state = self.lock_state();
         let Some(entry) = state.by_invocation.get(invocation_id) else {
             return false;
         };
@@ -162,7 +167,7 @@ impl InFlightRegistry {
     /// Backs `api.v1.heartbeat`.
     // PORT backend/src/sandbox/daemon/rpc/in_flight.py:90-98 — heartbeat()
     pub fn heartbeat(&self, invocation_ids: &[String]) -> usize {
-        let mut state = self.inner.lock().expect("in-flight registry poisoned");
+        let mut state = self.lock_state();
         let now = monotonic_seconds();
         let mut touched = 0;
         for invocation_id in invocation_ids {
@@ -178,9 +183,7 @@ impl InFlightRegistry {
     /// `api.v1.inflight_count`.
     // PORT backend/src/sandbox/daemon/rpc/in_flight.py:100-106 — count_by_agent()
     pub fn count_by_agent(&self, agent_id: &str) -> usize {
-        self.inner
-            .lock()
-            .expect("in-flight registry poisoned")
+        self.lock_state()
             .by_invocation
             .values()
             .filter(|entry| {
@@ -197,13 +200,7 @@ impl InFlightRegistry {
     /// decrements on drop.
     // PORT backend/src/sandbox/daemon/rpc/in_flight.py:54-77 — active-call bookkeeping (Drop-guard structure per task)
     pub fn enter_call<'r>(&'r self, invocation_id: &str) -> ActiveCallGuard<'r> {
-        if let Some(entry) = self
-            .inner
-            .lock()
-            .expect("in-flight registry poisoned")
-            .by_invocation
-            .get_mut(invocation_id)
-        {
+        if let Some(entry) = self.lock_state().by_invocation.get_mut(invocation_id) {
             entry.active_calls = entry.active_calls.saturating_add(1);
         }
         ActiveCallGuard {
@@ -218,7 +215,7 @@ impl InFlightRegistry {
     /// tasks regardless of activity) by the active-call gate the task requires.
     // PORT backend/src/sandbox/daemon/rpc/in_flight.py:118-141 — reap_stale(): select stale background, cancel, mark ttl_reaped
     pub fn ttl_sweep(&self) {
-        let mut state = self.inner.lock().expect("in-flight registry poisoned");
+        let mut state = self.lock_state();
         let now = monotonic_seconds();
         let mut reaped = 0;
         for entry in state.by_invocation.values_mut() {
@@ -238,7 +235,7 @@ impl InFlightRegistry {
     /// `(active_invocations, ttl_reaped_total)` for diagnostics.
     // PORT backend/src/sandbox/daemon/rpc/in_flight.py:108-113 — metrics()
     pub fn metrics(&self) -> (usize, u64) {
-        let state = self.inner.lock().expect("in-flight registry poisoned");
+        let state = self.lock_state();
         (state.by_invocation.len(), state.ttl_reaped_total)
     }
 }
@@ -261,9 +258,7 @@ impl Drop for ActiveCallGuard<'_> {
     fn drop(&mut self) {
         if let Some(entry) = self
             .registry
-            .inner
-            .lock()
-            .expect("in-flight registry poisoned")
+            .lock_state()
             .by_invocation
             .get_mut(&self.invocation_id)
         {
@@ -300,6 +295,7 @@ fn monotonic_seconds() -> f64 {
 #[cfg(test)]
 mod tests {
     use std::future;
+    use std::sync::Arc;
     use std::thread;
     use std::time::Duration;
 
@@ -324,6 +320,41 @@ mod tests {
         assert_eq!(registry.count_by_agent("agent-a"), 0);
 
         registry.deregister("bg-1");
+        assert_eq!(registry.metrics(), (0, 0));
+    }
+
+    #[tokio::test]
+    async fn control_paths_recover_poisoned_registry_lock() {
+        let registry = Arc::new(InFlightRegistry::new(300.0, 30.0));
+        let poisoned = registry.clone();
+        assert!(thread::spawn(move || {
+            let _guard = poisoned.inner.lock().expect("poison test can lock");
+            panic!("poison in-flight registry");
+        })
+        .join()
+        .is_err());
+
+        let task = tokio::spawn(future::pending::<()>());
+        registry.register(
+            "bg-poisoned",
+            task.abort_handle(),
+            "agent-a",
+            "api.v1.shell",
+            true,
+        );
+
+        assert_eq!(registry.count_by_agent("agent-a"), 1);
+        assert_eq!(registry.heartbeat(&["bg-poisoned".to_owned()]), 1);
+        {
+            let _guard = registry.enter_call("bg-poisoned");
+            registry.ttl_sweep();
+        }
+        assert!(registry.cancel("bg-poisoned"));
+        assert!(task
+            .await
+            .expect_err("task should be cancelled")
+            .is_cancelled());
+        registry.deregister("bg-poisoned");
         assert_eq!(registry.metrics(), (0, 0));
     }
 

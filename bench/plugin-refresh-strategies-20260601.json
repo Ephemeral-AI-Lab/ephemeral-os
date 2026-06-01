@@ -1,0 +1,640 @@
+{
+  "api_transport": "tcp",
+  "auto_squash_then_commit": {
+    "after_commit": {
+      "active_leases": 0,
+      "layer_dirs": 1,
+      "leased_layers": 0,
+      "manifest_depth": 1,
+      "manifest_version": 1,
+      "missing_layer_count": 0,
+      "orphan_layer_count": 0,
+      "storage_bytes": 646
+    },
+    "before_commit": {
+      "active_leases": 0,
+      "layer_dirs": 10,
+      "leased_layers": 0,
+      "manifest_depth": 10,
+      "manifest_version": 111,
+      "missing_layer_count": 0,
+      "orphan_layer_count": 0,
+      "storage_bytes": 2116
+    },
+    "commit": {
+      "manifest_version": 1,
+      "success": true,
+      "timings_ms": {
+        "api.commit_to_workspace.total_s": 13.315459014847875,
+        "layer_stack.commit_to_workspace.project_s": 1.628790982067585,
+        "layer_stack.commit_to_workspace.rebuild_base_s": 11.029249988496304,
+        "layer_stack.commit_to_workspace.replace_workspace_s": 0.1522080274298787,
+        "layer_stack.commit_to_workspace.total_s": 13.027334003709257,
+        "runtime.boot_to_dispatch_s": 0.06970798131078482,
+        "runtime.dispatch_s": 13.359042000956833,
+        "runtime.read_request_s": 0.058375007938593626
+      },
+      "wall_ms": 14.458916033618152
+    },
+    "daemon_read_matches": true,
+    "gate_pass": true,
+    "raw_matches": true,
+    "writes": 104
+  },
+  "commit_during_protocol_lease": {
+    "active_leases_during_attempt": 0,
+    "blocked_by_active_lease": false,
+    "manifest_version": 1,
+    "success": true,
+    "timings_ms": {
+      "api.commit_to_workspace.total_s": 7.009332999587059,
+      "layer_stack.commit_to_workspace.project_s": 0.8657919825054705,
+      "layer_stack.commit_to_workspace.rebuild_base_s": 5.478666978888214,
+      "layer_stack.commit_to_workspace.replace_workspace_s": 0.08883298141881824,
+      "layer_stack.commit_to_workspace.total_s": 6.690334004815668,
+      "runtime.boot_to_dispatch_s": 0.0861250446178019,
+      "runtime.dispatch_s": 7.050958985928446,
+      "runtime.read_request_s": 0.07079204078763723
+    },
+    "wall_ms": 8.365291985683143
+  },
+  "commit_to_workspace_timer": {
+    "all_samples_ok": true,
+    "commit_wall_ms": {
+      "count": 3,
+      "max": 11.873292038217187,
+      "min": 11.023542028851807,
+      "p50": 11.290416994597763,
+      "p95": 11.290416994597763,
+      "samples_ms": [
+        11.023542028851807,
+        11.290416994597763,
+        11.873292038217187
+      ]
+    },
+    "samples": [
+      {
+        "commit": {
+          "manifest_version": 1,
+          "success": true,
+          "timings_ms": {
+            "api.commit_to_workspace.total_s": 9.330708999186754,
+            "layer_stack.commit_to_workspace.project_s": 0.6578750326298177,
+            "layer_stack.commit_to_workspace.rebuild_base_s": 7.883999962359667,
+            "layer_stack.commit_to_workspace.replace_workspace_s": 0.09262497769668698,
+            "layer_stack.commit_to_workspace.total_s": 8.930957992561162,
+            "runtime.boot_to_dispatch_s": 0.8098329999484122,
+            "runtime.dispatch_s": 9.379416995216161,
+            "runtime.read_request_s": 0.7819579914212227
+          },
+          "wall_ms": 11.873292038217187
+        },
+        "index": 0,
+        "raw_matches": true,
+        "target_events": 2,
+        "write_ms": 12.343499984126538,
+        "write_success": true
+      },
+      {
+        "commit": {
+          "manifest_version": 1,
+          "success": true,
+          "timings_ms": {
+            "api.commit_to_workspace.total_s": 9.20562498504296,
+            "layer_stack.commit_to_workspace.project_s": 0.4855419974774122,
+            "layer_stack.commit_to_workspace.rebuild_base_s": 7.970917038619518,
+            "layer_stack.commit_to_workspace.replace_workspace_s": 0.09445898467674851,
+            "layer_stack.commit_to_workspace.total_s": 8.813874970655888,
+            "runtime.boot_to_dispatch_s": 0.11091603664681315,
+            "runtime.dispatch_s": 9.24654200207442,
+            "runtime.read_request_s": 0.08754100417718291
+          },
+          "wall_ms": 11.023542028851807
+        },
+        "index": 1,
+        "raw_matches": true,
+        "target_events": 2,
+        "write_ms": 12.016499997116625,
+        "write_success": true
+      },
+      {
+        "commit": {
+          "manifest_version": 1,
+          "success": true,
+          "timings_ms": {
+            "api.commit_to_workspace.total_s": 9.50375001411885,
+            "layer_stack.commit_to_workspace.project_s": 0.4532500170171261,
+            "layer_stack.commit_to_workspace.rebuild_base_s": 8.332375029567629,
+            "layer_stack.commit_to_workspace.replace_workspace_s": 0.09279098594561219,
+            "layer_stack.commit_to_workspace.total_s": 9.12337499903515,
+            "runtime.boot_to_dispatch_s": 0.11016702046617866,
+            "runtime.dispatch_s": 9.546291024889797,
+            "runtime.read_request_s": 0.08579203858971596
+          },
+          "wall_ms": 11.290416994597763
+        },
+        "index": 2,
+        "raw_matches": true,
+        "target_events": 2,
+        "write_ms": 12.845541990827769,
+        "write_success": true
+      }
+    ],
+    "target_event_delta": 6,
+    "write_ms": {
+      "count": 3,
+      "max": 12.845541990827769,
+      "min": 12.016499997116625,
+      "p50": 12.343499984126538,
+      "p95": 12.343499984126538,
+      "samples_ms": [
+        12.016499997116625,
+        12.343499984126538,
+        12.845541990827769
+      ]
+    }
+  },
+  "concurrent_commit_with_writes": {
+    "all_writes_returned": true,
+    "commit": {
+      "manifest_version": 1,
+      "success": true,
+      "timings_ms": {
+        "api.commit_to_workspace.total_s": 8.762333949562162,
+        "layer_stack.commit_to_workspace.project_s": 0.37833303213119507,
+        "layer_stack.commit_to_workspace.rebuild_base_s": 7.4248340097256005,
+        "layer_stack.commit_to_workspace.replace_workspace_s": 0.09062496246770024,
+        "layer_stack.commit_to_workspace.total_s": 8.112416020594537,
+        "runtime.boot_to_dispatch_s": 2.9506669961847365,
+        "runtime.dispatch_s": 8.79716599592939,
+        "runtime.read_request_s": 2.937000012025237
+      },
+      "wall_ms": 13.751957972999662
+    },
+    "final_reads": [
+      {
+        "content": "concurrent-0\n",
+        "exists": true,
+        "index": 0
+      },
+      {
+        "content": "concurrent-1\n",
+        "exists": true,
+        "index": 1
+      },
+      {
+        "content": "concurrent-2\n",
+        "exists": true,
+        "index": 2
+      },
+      {
+        "content": "concurrent-3\n",
+        "exists": true,
+        "index": 3
+      },
+      {
+        "content": "concurrent-4\n",
+        "exists": true,
+        "index": 4
+      }
+    ],
+    "readable_after": true,
+    "writes": [
+      {
+        "index": 0,
+        "status": "committed",
+        "success": true,
+        "wall_ms": 29.33462499640882
+      },
+      {
+        "index": 1,
+        "status": "committed",
+        "success": true,
+        "wall_ms": 47.0573750208132
+      },
+      {
+        "index": 2,
+        "status": "committed",
+        "success": true,
+        "wall_ms": 40.739124990068376
+      },
+      {
+        "index": 3,
+        "status": "committed",
+        "success": true,
+        "wall_ms": 34.43112497916445
+      },
+      {
+        "index": 4,
+        "status": "committed",
+        "success": true,
+        "wall_ms": 22.736874991096556
+      }
+    ]
+  },
+  "config": {
+    "auto_squash_writes": 104,
+    "layer_stack_root": "/eos/plugin/layer-stack",
+    "samples": 3,
+    "target": "/eos/plugin/workspace/plugin_refresh_target.txt",
+    "workspace_root": "/eos/plugin/workspace"
+  },
+  "container_id": "2856103e0c53",
+  "experiment_complete": true,
+  "final_metrics": {
+    "active_leases": 0,
+    "base_root_hash": "f92d1c1d833993c7fa6df3a0a5fd10b9442352e25dbd32cd2125d512ff43e77f",
+    "layer_dirs": 1,
+    "leased_layers": 0,
+    "manifest_depth": 1,
+    "manifest_version": 1,
+    "missing_layer_count": 0,
+    "missing_layer_ids": [],
+    "orphan_layer_count": 0,
+    "orphan_layer_ids": [],
+    "referenced_layers": 1,
+    "staging_dirs": 0,
+    "storage_bytes": 646,
+    "success": true,
+    "timings": {
+      "runtime.boot_to_dispatch_s": 0.0001503750099800527,
+      "runtime.dispatch_s": 0.000562167027965188,
+      "runtime.read_request_s": 0.00011912500485777855
+    },
+    "workspace_bound": true,
+    "workspace_root": "/eos/plugin/workspace"
+  },
+  "fs_watch_without_materialization": {
+    "daemon_content": "watch-no-commit\n",
+    "daemon_read_ms": 2.663916035089642,
+    "raw_content": "initial\n",
+    "raw_workspace_stale": true,
+    "target_events": 0,
+    "watcher_saw_overlay_write": false,
+    "write_ms": 12.482209014706314,
+    "write_success": true
+  },
+  "gate_pass": true,
+  "host": {
+    "platform": "macOS-26.4.1-arm64-arm-64bit",
+    "python": "3.12.6"
+  },
+  "initial_commit": {
+    "manifest_version": 1,
+    "success": true,
+    "timings_ms": {
+      "api.commit_to_workspace.total_s": 6.736958050169051,
+      "layer_stack.commit_to_workspace.project_s": 0.3530000103637576,
+      "layer_stack.commit_to_workspace.rebuild_base_s": 5.7152920053340495,
+      "layer_stack.commit_to_workspace.replace_workspace_s": 0.0677499920129776,
+      "layer_stack.commit_to_workspace.total_s": 6.380583974532783,
+      "runtime.boot_to_dispatch_s": 0.0944170169532299,
+      "runtime.dispatch_s": 6.786416983231902,
+      "runtime.read_request_s": 0.0764590222388506
+    },
+    "wall_ms": 8.21479200385511
+  },
+  "layer_stack_seed": {
+    "binding": {
+      "active_manifest_version": 1,
+      "active_root_hash": "79d1d0b514a5f3bd1234233f089871e3f8ed9c2d1e828b53547103ca8f5e9218",
+      "base_manifest_version": 1,
+      "base_root_hash": "79d1d0b514a5f3bd1234233f089871e3f8ed9c2d1e828b53547103ca8f5e9218",
+      "layer_stack_root": "/eos/plugin/layer-stack",
+      "workspace_root": "/eos/plugin/workspace"
+    },
+    "created": true,
+    "success": true,
+    "timings": {
+      "api.workspace_base.total_s": 0.028392125037498772,
+      "runtime.boot_to_dispatch_s": 0.00011470902245491743,
+      "runtime.dispatch_s": 0.028459707973524928,
+      "runtime.read_request_s": 9.004201274365187e-05,
+      "workspace_base.collect_s": 0.00020445894915610552,
+      "workspace_base.inventory.bytes": 5.0,
+      "workspace_base.inventory.dirs": 0.0,
+      "workspace_base.inventory.files": 1.0,
+      "workspace_base.inventory.symlinks": 0.0,
+      "workspace_base.prepare_stack_s": 0.0002835830091498792,
+      "workspace_base.write_binding_s": 0.001047208032105118,
+      "workspace_base.write_layer_s": 0.004254250030498952,
+      "workspace_base.write_manifest_s": 0.0014922920381650329
+    }
+  },
+  "long_lived_protocol_refresh": {
+    "acquire_ms": {
+      "count": 3,
+      "max": 2.6952080079354346,
+      "min": 1.730541989672929,
+      "p50": 1.9184999982826412,
+      "p95": 1.9184999982826412,
+      "samples_ms": [
+        1.730541989672929,
+        1.9184999982826412,
+        2.6952080079354346
+      ]
+    },
+    "all_samples_ok": true,
+    "read_ms": {
+      "count": 3,
+      "max": 2.543417038396001,
+      "min": 1.6551660373806953,
+      "p50": 1.6723750159144402,
+      "p95": 1.6723750159144402,
+      "samples_ms": [
+        1.6551660373806953,
+        1.6723750159144402,
+        2.543417038396001
+      ]
+    },
+    "refresh_total_ms": {
+      "count": 3,
+      "max": 6.430459034163505,
+      "min": 4.873832978773862,
+      "p50": 5.612375040072948,
+      "p95": 5.612375040072948,
+      "samples_ms": [
+        4.873832978773862,
+        5.612375040072948,
+        6.430459034163505
+      ]
+    },
+    "release_ms": {
+      "count": 3,
+      "max": 2.1836659871041775,
+      "min": 1.1579999700188637,
+      "p50": 1.262791978660971,
+      "p95": 1.262791978660971,
+      "samples_ms": [
+        1.1579999700188637,
+        1.262791978660971,
+        2.1836659871041775
+      ]
+    },
+    "samples": [
+      {
+        "acquire_ms": 2.1613750141113997,
+        "index": "start",
+        "manifest_version": 1
+      },
+      {
+        "acquire_ms": 1.730541989672929,
+        "index": 0,
+        "layer_count": 2,
+        "manifest_version": 2,
+        "read_matches": true,
+        "read_ms": 1.6723750159144402,
+        "refresh_total_ms": 5.612375040072948,
+        "release_ms": 2.1836659871041775,
+        "release_success": true,
+        "write_ms": 11.328541964758188,
+        "write_success": true
+      },
+      {
+        "acquire_ms": 1.9184999982826412,
+        "index": 1,
+        "layer_count": 3,
+        "manifest_version": 3,
+        "read_matches": true,
+        "read_ms": 1.6551660373806953,
+        "refresh_total_ms": 4.873832978773862,
+        "release_ms": 1.262791978660971,
+        "release_success": true,
+        "write_ms": 11.495249986182898,
+        "write_success": true
+      },
+      {
+        "acquire_ms": 2.6952080079354346,
+        "index": 2,
+        "layer_count": 4,
+        "manifest_version": 4,
+        "read_matches": true,
+        "read_ms": 2.543417038396001,
+        "refresh_total_ms": 6.430459034163505,
+        "release_ms": 1.1579999700188637,
+        "release_success": true,
+        "write_ms": 9.655208967160434,
+        "write_success": true
+      }
+    ],
+    "write_ms": {
+      "count": 3,
+      "max": 11.495249986182898,
+      "min": 9.655208967160434,
+      "p50": 11.328541964758188,
+      "p95": 11.328541964758188,
+      "samples_ms": [
+        9.655208967160434,
+        11.328541964758188,
+        11.495249986182898
+      ]
+    }
+  },
+  "mode": "docker-existing-container-plugin-refresh-strategy-comparison",
+  "ready": {
+    "daemon_pid": 66159,
+    "probes": [
+      {
+        "details": {
+          "base_root_hash": "79d1d0b514a5f3bd1234233f089871e3f8ed9c2d1e828b53547103ca8f5e9218",
+          "manifest_depth": 1,
+          "manifest_version": 1,
+          "workspace_root": "/eos/plugin/workspace"
+        },
+        "name": "control_plane",
+        "status": "ok"
+      },
+      {
+        "details": {
+          "handlers_services_ready": true,
+          "shell_services_ready": true,
+          "workspace_mount_mode": "private_namespace"
+        },
+        "name": "data_plane",
+        "status": "ok"
+      },
+      {
+        "details": {
+          "backend_fields": [
+            "layer_stack",
+            "occ_service",
+            "occ_client",
+            "gitignore",
+            "layer_stack_manager"
+          ],
+          "backend_ready": true,
+          "occ_client_class": "OccClient"
+        },
+        "name": "mutation_gate",
+        "status": "ok"
+      }
+    ],
+    "ready": true,
+    "success": true,
+    "timings": {
+      "runtime.boot_to_dispatch_s": 0.0001336249988526106,
+      "runtime.dispatch_s": 0.038571499986574054,
+      "runtime.read_request_s": 0.00010087498230859637,
+      "runtime.ready.control_plane_s": 0.0004064589738845825,
+      "runtime.ready.data_plane_s": 0.03768741700332612,
+      "runtime.ready.mutation_gate_s": 0.0002876669750548899,
+      "runtime.ready.total_s": 0.0384498750208877
+    },
+    "uptime_s": 5443.382360438001
+  },
+  "recommendation": {
+    "auto_squash_commit_gate_pass": true,
+    "commit_blocked_by_protocol_lease": false,
+    "commit_lease_guard_observed": false,
+    "commit_p95_ms": 11.290416994597763,
+    "fs_watch_without_materialization_stale": true,
+    "protocol_gate_pass": true,
+    "protocol_p95_ms": 5.612375040072948,
+    "reasons": [
+      "protocol refresh kept reads current without publishing or materializing the raw workspace",
+      "raw filesystem watches did not observe LayerStack writes without materialization",
+      "commit_to_workspace did not observe the held synthetic snapshot lease; periodic materialization can reset storage under a long-lived service unless the daemon adds an explicit plugin-service guard",
+      "protocol refresh p95=5.612ms versus commit_to_workspace p95=11.290ms"
+    ],
+    "strategy_scores": {
+      "commit_to_workspace_timer": {
+        "arbitrary_plugin_ease": 2,
+        "implementation_simplicity": 4,
+        "notes": "simple timer, but full materialization, active-lease refusal, and storage reset make it unsafe as steady-state refresh",
+        "performance": 1
+      },
+      "long_lived_fs_watch": {
+        "arbitrary_plugin_ease": 3,
+        "implementation_simplicity": 2,
+        "notes": "native watches need materialized projection; without it watchers stay stale",
+        "performance": 2
+      },
+      "long_lived_protocol_refresh": {
+        "arbitrary_plugin_ease": 4,
+        "implementation_simplicity": 3,
+        "notes": "requires a small harness protocol; supports remount/restart strategies generically",
+        "performance": 5
+      }
+    },
+    "winner": "long_lived_protocol_refresh"
+  },
+  "run_id": "local-f20fcf621152",
+  "runtime": "python-daemon-thin-client",
+  "safety_gate_pass": true,
+  "watcher_events": [
+    {
+      "event": "started",
+      "path": "/eos/plugin/workspace",
+      "target": "plugin_refresh_target.txt",
+      "time": 1780325060.637348
+    },
+    {
+      "cookie": 0,
+      "event": "inotify",
+      "mask": 512,
+      "name": "plugin_refresh_target.txt",
+      "target": true,
+      "time": 1780325061.8565102,
+      "wd": 1
+    },
+    {
+      "cookie": 949107,
+      "event": "inotify",
+      "mask": 128,
+      "name": "plugin_refresh_target.txt",
+      "target": true,
+      "time": 1780325061.8567758,
+      "wd": 1
+    },
+    {
+      "cookie": 0,
+      "event": "inotify",
+      "mask": 512,
+      "name": "plugin_refresh_target.txt",
+      "target": true,
+      "time": 1780325062.4579334,
+      "wd": 1
+    },
+    {
+      "cookie": 949124,
+      "event": "inotify",
+      "mask": 128,
+      "name": "plugin_refresh_target.txt",
+      "target": true,
+      "time": 1780325062.458005,
+      "wd": 1
+    },
+    {
+      "cookie": 0,
+      "event": "inotify",
+      "mask": 512,
+      "name": "plugin_refresh_target.txt",
+      "target": true,
+      "time": 1780325063.0275545,
+      "wd": 1
+    },
+    {
+      "cookie": 949141,
+      "event": "inotify",
+      "mask": 128,
+      "name": "plugin_refresh_target.txt",
+      "target": true,
+      "time": 1780325063.0276778,
+      "wd": 1
+    },
+    {
+      "cookie": 0,
+      "event": "inotify",
+      "mask": 512,
+      "name": "plugin_refresh_target.txt",
+      "target": true,
+      "time": 1780325063.6531067,
+      "wd": 1
+    },
+    {
+      "cookie": 949170,
+      "event": "inotify",
+      "mask": 128,
+      "name": "plugin_refresh_target.txt",
+      "target": true,
+      "time": 1780325063.6531978,
+      "wd": 1
+    },
+    {
+      "cookie": 0,
+      "event": "inotify",
+      "mask": 512,
+      "name": "plugin_refresh_target.txt",
+      "target": true,
+      "time": 1780325063.6671765,
+      "wd": 1
+    },
+    {
+      "cookie": 949180,
+      "event": "inotify",
+      "mask": 128,
+      "name": "plugin_refresh_target.txt",
+      "target": true,
+      "time": 1780325063.6672537,
+      "wd": 1
+    },
+    {
+      "cookie": 0,
+      "event": "inotify",
+      "mask": 512,
+      "name": "plugin_refresh_target.txt",
+      "target": true,
+      "time": 1780325065.0710135,
+      "wd": 1
+    },
+    {
+      "cookie": 949643,
+      "event": "inotify",
+      "mask": 128,
+      "name": "plugin_refresh_target.txt",
+      "target": true,
+      "time": 1780325065.071166,
+      "wd": 1
+    }
+  ]
+}

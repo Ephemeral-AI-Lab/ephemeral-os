@@ -68,8 +68,8 @@ def test_initialize_db_creates_workflows_table_on_fresh_db(tmp_path, monkeypatch
     store = WorkflowStore()
     store.initialize(sf)
     workflow = store.insert(
-        task_center_run_id="run1",
-        parent_task_id=None,
+        request_id="run1",
+        parent_task_id="root-task",
         workflow_goal="fresh objective",
     )
     assert store.get(workflow.id) == workflow

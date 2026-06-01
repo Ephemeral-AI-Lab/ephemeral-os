@@ -19,7 +19,7 @@ use std::collections::{BTreeMap, HashMap, HashSet, VecDeque};
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
-use std::sync::{Arc, Mutex, OnceLock};
+use std::sync::{Arc, Mutex, MutexGuard, OnceLock};
 use std::time::Instant;
 
 use serde_json::{json, Value};
@@ -1491,9 +1491,7 @@ fn occ_service_for_root(root: &Path) -> Result<OccServiceLookup, DaemonError> {
     let key = normalize_root_key(root);
     let lock_start = Instant::now();
     {
-        let mut cache = occ_services()
-            .lock()
-            .expect("occ service registry poisoned");
+        let mut cache = lock_occ_services()?;
         if let Some(lookup) = cache.get(&key, lock_start.elapsed().as_secs_f64()) {
             return Ok(lookup);
         }
@@ -1509,15 +1507,19 @@ fn occ_service_for_root(root: &Path) -> Result<OccServiceLookup, DaemonError> {
         route_provider,
     )?);
     let lock_start = Instant::now();
-    let mut cache = occ_services()
-        .lock()
-        .expect("occ service registry poisoned");
+    let mut cache = lock_occ_services()?;
     Ok(cache.insert_or_get(key, service.clone(), lock_start.elapsed().as_secs_f64()))
 }
 
 fn occ_services() -> &'static Mutex<OccServiceCache> {
     static SERVICES: OnceLock<Mutex<OccServiceCache>> = OnceLock::new();
     SERVICES.get_or_init(|| Mutex::new(OccServiceCache::default()))
+}
+
+fn lock_occ_services() -> Result<MutexGuard<'static, OccServiceCache>, DaemonError> {
+    occ_services()
+        .lock()
+        .map_err(|_| DaemonError::StateLockPoisoned("occ service registry"))
 }
 
 fn normalize_root_key(root: &Path) -> String {
@@ -1529,9 +1531,17 @@ fn normalize_root_key(root: &Path) -> String {
 
 fn occ_service_cache_snapshot() -> Value {
     let lock_start = Instant::now();
-    let mut cache = occ_services()
-        .lock()
-        .expect("occ service registry poisoned");
+    let mut cache = match lock_occ_services() {
+        Ok(cache) => cache,
+        Err(err) => {
+            return json!({
+                "capacity": OCC_SERVICE_CACHE_MAX,
+                "size": 0,
+                "poisoned": true,
+                "error": err.to_string(),
+            });
+        }
+    };
     let lock_wait_s = lock_start.elapsed().as_secs_f64();
     cache.record_lock_wait(lock_wait_s);
     json!({
@@ -1551,7 +1561,7 @@ fn occ_service_cache_snapshot() -> Value {
 fn clear_occ_service_cache_for_tests() {
     let mut cache = occ_services()
         .lock()
-        .expect("occ service registry poisoned");
+        .unwrap_or_else(|poisoned| poisoned.into_inner());
     *cache = OccServiceCache::default();
 }
 
@@ -1582,13 +1592,13 @@ fn validate_prepared(
                     .clone()
                     .unwrap_or_else(|| "change rejected".to_owned()),
             },
-            Route::Direct => validate_direct_group(group.path.as_str()),
+            Route::Direct => validate_direct_group(&group.path),
             Route::Gated => validate_gated_group(
                 root,
                 view,
                 manifest,
                 prepared,
-                group.path.as_str(),
+                &group.path,
                 &group.base_hash,
                 &mut parent_absent_cache,
             ),
@@ -1601,10 +1611,9 @@ fn validate_prepared(
         .collect()
 }
 
-fn validate_direct_group(path: &str) -> FileResult {
-    let layer_path = LayerPath::parse(path).expect("prepared paths are normalized");
+fn validate_direct_group(path: &LayerPath) -> FileResult {
     FileResult {
-        path: layer_path,
+        path: path.clone(),
         status: OccStatus::Accepted,
         message: String::new(),
     }
@@ -1615,47 +1624,47 @@ fn validate_gated_group(
     view: &MergedView,
     manifest: &Manifest,
     prepared: &PreparedChangeset,
-    path: &str,
+    path: &LayerPath,
     base_hash: &Option<String>,
     parent_absent_cache: &mut HashMap<String, bool>,
 ) -> FileResult {
-    let layer_path = LayerPath::parse(path).expect("prepared paths are normalized");
+    let path_str = path.as_str();
     if prepared.changes.iter().any(|change| {
-        change.path().as_str() == path && matches!(change, LayerChange::Symlink { .. })
+        change.path().as_str() == path_str && matches!(change, LayerChange::Symlink { .. })
     }) {
         return FileResult {
-            path: layer_path,
+            path: path.clone(),
             status: OccStatus::Rejected,
             message: "unsupported gated change kind: SymlinkChange".to_owned(),
         };
     }
     if base_hash.is_none() {
-        if let Some(parent) = parent_dir(path) {
+        if let Some(parent) = parent_dir(path_str) {
             let parent_absent = *parent_absent_cache
                 .entry(parent.to_owned())
                 .or_insert_with(|| parent_absent_from_manifest(root, manifest, parent));
             if parent_absent {
                 return FileResult {
-                    path: layer_path,
+                    path: path.clone(),
                     status: OccStatus::Accepted,
                     message: String::new(),
                 };
             }
         }
     }
-    match view.read_bytes(path, manifest) {
+    match view.read_bytes(path_str, manifest) {
         Ok((bytes, exists)) if hash_current(bytes.as_deref(), exists) == *base_hash => FileResult {
-            path: layer_path,
+            path: path.clone(),
             status: OccStatus::Accepted,
             message: String::new(),
         },
         Ok(_) => FileResult {
-            path: layer_path,
+            path: path.clone(),
             status: OccStatus::AbortedVersion,
             message: "content changed".to_owned(),
         },
         Err(err) => FileResult {
-            path: layer_path,
+            path: path.clone(),
             status: OccStatus::Failed,
             message: err.to_string(),
         },

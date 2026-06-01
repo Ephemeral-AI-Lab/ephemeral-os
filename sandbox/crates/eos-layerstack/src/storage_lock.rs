@@ -33,7 +33,7 @@ use std::collections::HashMap;
 use std::fs::{File, OpenOptions};
 use std::marker::PhantomData;
 use std::path::Path;
-use std::sync::{Arc, Condvar, Mutex, OnceLock};
+use std::sync::{Arc, Condvar, Mutex, MutexGuard, OnceLock};
 use std::thread::ThreadId;
 
 use rustix::fs::{flock, FlockOperation};
@@ -67,7 +67,7 @@ impl StorageWriterLockLease {
             .unwrap_or_else(|_| storage_root.to_path_buf())
             .to_string_lossy()
             .into_owned();
-        let mut registry = registry().lock().expect("storage lock registry poisoned");
+        let mut registry = lock_registry()?;
         if let Some(record) = registry.get_mut(&key) {
             record.refcount += 1;
             return Ok(Self { key });
@@ -108,13 +108,13 @@ impl StorageWriterLockLease {
     /// `// PORT backend/src/sandbox/layer_stack/storage_lock.py:33-40 — exclusive`
     pub fn exclusive(&self) -> Result<ExclusiveGuard<'_>, LayerStackError> {
         let lock = {
-            let registry = registry().lock().expect("storage lock registry poisoned");
+            let registry = lock_registry()?;
             registry
                 .get(&self.key)
                 .map(|record| record.mutex.clone())
                 .ok_or(LayerStackError::StorageWriterLockClosed)?
         };
-        lock.lock();
+        lock.lock()?;
         Ok(ExclusiveGuard {
             lock,
             _lease: PhantomData,
@@ -124,7 +124,9 @@ impl StorageWriterLockLease {
 
 impl Drop for StorageWriterLockLease {
     fn drop(&mut self) {
-        let mut registry = registry().lock().expect("storage lock registry poisoned");
+        let mut registry = registry()
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
         let Some(record) = registry.get_mut(&self.key) else {
             return;
         };
@@ -172,25 +174,28 @@ struct ReentrantState {
 }
 
 impl ReentrantMutex {
-    fn lock(&self) {
+    fn lock(&self) -> Result<(), LayerStackError> {
         let current = std::thread::current().id();
-        let mut state = self.state.lock().expect("storage root mutex poisoned");
+        let mut state = self
+            .state
+            .lock()
+            .map_err(|_| LayerStackError::LockPoisoned("storage root mutex"))?;
         loop {
             match state.owner {
                 None => {
                     state.owner = Some(current);
                     state.depth = 1;
-                    return;
+                    return Ok(());
                 }
                 Some(owner) if owner == current => {
                     state.depth += 1;
-                    return;
+                    return Ok(());
                 }
                 Some(_) => {
                     state = self
                         .waiters
                         .wait(state)
-                        .expect("storage root mutex poisoned while waiting");
+                        .map_err(|_| LayerStackError::LockPoisoned("storage root mutex wait"))?;
                 }
             }
         }
@@ -198,7 +203,10 @@ impl ReentrantMutex {
 
     fn unlock(&self) {
         let current = std::thread::current().id();
-        let mut state = self.state.lock().expect("storage root mutex poisoned");
+        let mut state = self
+            .state
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
         if state.owner != Some(current) {
             return;
         }
@@ -213,4 +221,10 @@ impl ReentrantMutex {
 fn registry() -> &'static Mutex<HashMap<String, LockRecord>> {
     static REGISTRY: OnceLock<Mutex<HashMap<String, LockRecord>>> = OnceLock::new();
     REGISTRY.get_or_init(|| Mutex::new(HashMap::new()))
+}
+
+fn lock_registry() -> Result<MutexGuard<'static, HashMap<String, LockRecord>>, LayerStackError> {
+    registry()
+        .lock()
+        .map_err(|_| LayerStackError::LockPoisoned("storage lock registry"))
 }

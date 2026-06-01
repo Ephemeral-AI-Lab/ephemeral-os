@@ -55,6 +55,19 @@ def build_harness_fixture(
     task_store: Any,
     composer: Any,
 ) -> TaskCenterFixture:
+    task_store.upsert_task(
+        task_id="outer-task",
+        request_id="run1",
+        role=AgentRole.ROOT.value,
+        agent_name="root",
+        instruction="root task",
+        status=TaskStatus.RUNNING.value,
+        outcomes=[],
+        needs=[],
+        workflow_id=None,
+        iteration_id=None,
+        attempt_id=None,
+    )
     workflow = workflow_store.insert(
         request_id="run1",
         parent_task_id="outer-task",

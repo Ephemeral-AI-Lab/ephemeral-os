@@ -303,7 +303,7 @@ impl LayerStack {
     pub fn acquire_snapshot(&mut self, owner_request_id: &str) -> Result<Lease, LayerStackError> {
         let _guard = self._writer_lock.exclusive()?;
         let manifest = self.read_active_manifest()?;
-        let lease = self._leases.acquire(manifest.clone(), owner_request_id);
+        let lease = self._leases.acquire(manifest.clone(), owner_request_id)?;
         let layer_paths = manifest
             .layers
             .iter()
@@ -360,7 +360,7 @@ impl LayerStack {
         let squash_lease = self._leases.acquire(
             active.clone(),
             &format!("squash-{}", NEXT_LAYER.fetch_add(1, Ordering::Relaxed)),
-        );
+        )?;
 
         let mut checkpoints = Vec::new();
         let mut committed = false;

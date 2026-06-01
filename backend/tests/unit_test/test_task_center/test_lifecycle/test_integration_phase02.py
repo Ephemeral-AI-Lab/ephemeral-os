@@ -114,16 +114,16 @@ def _create_root_workflow(workflow_lifecycle, task_store, run_id):
 
     task_store.upsert_task(
         task_id=root_task_id(run_id),
-        task_center_run_id=run_id,
+        request_id=run_id,
         role=AgentRole.GENERATOR.value,
         agent_name=None,
-        context_message="",
+        instruction="",
         status=TaskStatus.RUNNING.value,
         outcomes=[],
         needs=[],
     )
     return workflow_lifecycle.create_workflow(
-        task_center_run_id=run_id,
+        request_id=run_id,
         parent_task_id=root_task_id(run_id),
         workflow_goal="g",
     )
@@ -134,13 +134,13 @@ def test_full_plan_execution_success_closes_workflow_succeeded(
     iteration_store,
     attempt_store,
     task_store,
-    task_center_run_id,
+    request_id,
     composer,
 ):
     workflow_lifecycle, iteration_coordinators, orchestrator_registry, closed = _build(
         workflow_store, iteration_store, attempt_store, task_store, composer=composer
     )
-    workflow = _create_root_workflow(workflow_lifecycle, task_store, task_center_run_id)
+    workflow = _create_root_workflow(workflow_lifecycle, task_store, request_id)
     iteration, coordinator = workflow_lifecycle.create_iteration_with_coordinator(
         workflow_id=workflow.id
     )
@@ -168,13 +168,13 @@ def test_generator_failure_retry_then_reducer_success(
     iteration_store,
     attempt_store,
     task_store,
-    task_center_run_id,
+    request_id,
     composer,
 ):
     workflow_lifecycle, iteration_coordinators, orchestrator_registry, closed = _build(
         workflow_store, iteration_store, attempt_store, task_store, composer=composer
     )
-    workflow = _create_root_workflow(workflow_lifecycle, task_store, task_center_run_id)
+    workflow = _create_root_workflow(workflow_lifecycle, task_store, request_id)
     iteration, coordinator = workflow_lifecycle.create_iteration_with_coordinator(
         workflow_id=workflow.id
     )

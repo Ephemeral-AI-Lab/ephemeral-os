@@ -11,9 +11,8 @@ from sqlalchemy import create_engine, inspect, text
 import db.engine as engine_mod
 import db.models  # noqa: F401 - populate Base.metadata
 from config.settings import DatabaseSettings
-from db.base import Base
 from db.stores.agent_run_store import AgentRunStore
-from db.stores.task_center_store import TaskCenterStore
+from db.stores.task_store import TaskStore
 
 
 @pytest.fixture(autouse=True)
@@ -88,24 +87,23 @@ def test_initialize_db_migrates_legacy_agent_runs_schema(
     assert {"task_id", "terminal_tool_result", "token_count"} <= agent_columns
     assert not any(index["name"] == "ix_agent_runs_session_id" for index in insp.get_indexes("agent_runs"))
 
-    task_center_store = TaskCenterStore()
-    task_center_store.initialize(sf)
+    task_store = TaskStore()
+    task_store.initialize(sf)
     agent_run_store = AgentRunStore()
     agent_run_store.initialize(sf)
 
-    task_center_store.create_request(
+    task_store.create_request(
         request_id="req",
         cwd="/repo",
         sandbox_id=None,
         request_prompt="prompt",
     )
-    task_center_store.create_run(task_center_run_id="run", request_id="req")
-    task_center_store.upsert_task(
-        task_id="run:t1",
-        task_center_run_id="run",
+    task_store.upsert_task(
+        task_id="task1",
+        request_id="req",
         role="executor",
         agent_name="executor",
-        context_message="prompt",
+        instruction="prompt",
         status="running",
         outcomes=[],
         needs=[],
@@ -113,39 +111,50 @@ def test_initialize_db_migrates_legacy_agent_runs_schema(
 
     agent_run_store.create_run(
         agent_run_id="agent1",
-        task_id="run:t1",
+        task_id="task1",
         agent_name="executor",
     )
 
-    tasks = task_center_store.list_tasks_for_run("run")
-    assert tasks[0]["task_center_run_id"] == "run"
-    assert "run_id" not in tasks[0]
+    tasks = task_store.list_tasks_for_request("req")
+    assert tasks[0]["request_id"] == "req"
+    assert "task_center_run_id" not in tasks[0]
     assert agent_run_store.get_run("agent1") is not None
 
 
-def test_initialize_db_fresh_sqlite_creates_context_message_column(
+def test_initialize_db_fresh_sqlite_creates_instruction_column(
     tmp_path: Path,
 ) -> None:
-    """Fresh DB boot creates ``context_message`` (not ``rendered_prompt``)."""
+    """Fresh DB boot creates ``instruction`` for first-class tasks."""
     db_path = tmp_path / "fresh.db"
     sf = engine_mod.initialize_db(DatabaseSettings(url=f"sqlite:///{db_path}"))
     assert sf is not None
     engine = engine_mod.get_engine()
     assert engine is not None
-    columns = {col["name"] for col in inspect(engine).get_columns("task_center_tasks")}
-    assert "context_message" in columns
-    assert "rendered_prompt" not in columns
+    columns = {col["name"] for col in inspect(engine).get_columns("tasks")}
+    assert "instruction" in columns
+    assert "context_message" not in columns
 
 
-def test_initialize_db_drops_dead_task_center_lifecycle_columns(
+def test_initialize_db_drops_legacy_task_center_tables(
     tmp_path: Path,
 ) -> None:
     db_path = tmp_path / "dead-columns.db"
     legacy_engine = create_engine(f"sqlite:///{db_path}")
-    Base.metadata.create_all(legacy_engine)
     with legacy_engine.begin() as conn:
-        conn.execute(text('ALTER TABLE "task_center_tasks" ADD COLUMN "system_prompt" TEXT'))
-        conn.execute(text('ALTER TABLE "task_center_tasks" ADD COLUMN "user_prompt" TEXT'))
+        conn.execute(
+            text(
+                """
+                CREATE TABLE task_center_tasks (
+                    id VARCHAR(96) NOT NULL,
+                    task_center_run_id VARCHAR(36),
+                    context_message TEXT,
+                    system_prompt TEXT,
+                    user_prompt TEXT,
+                    PRIMARY KEY (id)
+                )
+                """
+            )
+        )
     legacy_engine.dispose()
 
     sf = engine_mod.initialize_db(DatabaseSettings(url=f"sqlite:///{db_path}"))
@@ -154,6 +163,4 @@ def test_initialize_db_drops_dead_task_center_lifecycle_columns(
     engine = engine_mod.get_engine()
     assert engine is not None
     insp = inspect(engine)
-    task_columns = {col["name"] for col in insp.get_columns("task_center_tasks")}
-    assert "system_prompt" not in task_columns
-    assert "user_prompt" not in task_columns
+    assert not insp.has_table("task_center_tasks")
