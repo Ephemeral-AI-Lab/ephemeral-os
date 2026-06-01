@@ -305,6 +305,15 @@ fn isolated_workspace_lifecycle_ops_open_status_list_and_exit_when_enabled() {
         enter["workspace_handle_id"].as_str().map(str::len),
         Some(20)
     );
+    let handle_id = enter["workspace_handle_id"]
+        .as_str()
+        .expect("workspace handle id");
+    let handle_scratch = scratch
+        .join("runtime")
+        .join("isolated-workspace")
+        .join(handle_id);
+    let private_file = handle_scratch.join("upper").join("private.txt");
+    std::fs::write(&private_file, "private scratch\n").expect("write isolated upper file");
 
     let status = table.dispatch(&Request {
         op: "api.isolated_workspace.status".to_owned(),
@@ -340,8 +349,47 @@ fn isolated_workspace_lifecycle_ops_open_status_list_and_exit_when_enabled() {
         args: json!({"agent_id": "agent-enabled"}),
     });
     assert_eq!(exit["success"], Value::Bool(true));
-    assert!(exit["evicted_upperdir_bytes"].is_number());
+    assert_eq!(exit["force_cancel_requested"], Value::Bool(false));
+    assert_eq!(exit["force_cancelled_pty_session_ids"], json!([]));
+    assert_eq!(exit["stale_pty_session_ids"], json!([]));
+    assert_eq!(exit["active_pty_session_ids_after"], json!([]));
+    assert!(exit["evicted_upperdir_bytes"].as_u64().unwrap_or(0) > 0);
+    assert_eq!(exit["inspection"]["handle_registered_after"], json!(false));
+    assert_eq!(exit["inspection"]["agent_registered_after"], json!(false));
+    assert_eq!(exit["inspection"]["open_handle_count_after"], json!(0));
+    assert_eq!(exit["inspection"]["open_agent_count_after"], json!(0));
+    assert_eq!(exit["inspection"]["lease_released"], json!(true));
+    assert_eq!(exit["inspection"]["active_leases_after"], json!(0));
+    assert_eq!(exit["inspection"]["scratch_exists_after"], json!(false));
+    assert_eq!(exit["inspection"]["upperdir_exists_after"], json!(false));
+    assert_eq!(exit["inspection"]["workdir_exists_after"], json!(false));
+    assert_eq!(exit["inspection"]["cgroup_exists_after"], Value::Null);
+    assert!(!handle_scratch.exists());
     assert!(audit_path.exists());
+    let audit_events = std::fs::read_to_string(&audit_path)
+        .expect("read isolated audit")
+        .lines()
+        .map(|line| serde_json::from_str::<Value>(line).expect("audit json"))
+        .collect::<Vec<_>>();
+    assert_eq!(
+        audit_events
+            .iter()
+            .map(|event| event["type"].as_str().unwrap_or_default())
+            .collect::<Vec<_>>(),
+        vec![
+            "sandbox_isolated_workspace_enter",
+            "sandbox_isolated_workspace_exit"
+        ]
+    );
+    let exit_audit = audit_events.last().expect("exit audit event");
+    assert_eq!(
+        exit_audit["payload"]["inspection"]["scratch_exists_after"],
+        json!(false)
+    );
+    assert_eq!(
+        exit_audit["payload"]["inspection"]["active_leases_after"],
+        json!(0)
+    );
 
     let status_after_exit = table.dispatch(&Request {
         op: "api.isolated_workspace.status".to_owned(),

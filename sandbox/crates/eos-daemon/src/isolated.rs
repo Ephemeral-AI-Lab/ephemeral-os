@@ -99,6 +99,11 @@ impl LayerStackSnapshotPort for DaemonLayerStackPort {
         let mut stack = self.stack.lock().expect("layer stack poisoned");
         stack.release_lease(lease_id).map_err(setup_error)
     }
+
+    fn active_lease_count(&self) -> Result<Option<usize>, IsolatedError> {
+        let stack = self.stack.lock().expect("layer stack poisoned");
+        Ok(Some(stack.active_lease_count()))
+    }
 }
 
 #[derive(Default)]
@@ -341,6 +346,8 @@ pub(crate) fn op_exit(args: &Value, _context: DispatchContext<'_>) -> Result<Val
         .unwrap_or(false);
     let grace_s = args.get("grace_s").and_then(Value::as_f64);
     let active_ptys = active_pty_ids(&agent_id);
+    let mut cancelled_pty_session_ids = Vec::new();
+    let mut stale_pty_session_ids = Vec::new();
     if !active_ptys.is_empty() {
         if !force_cancel {
             return Ok(active_pty_error(&agent_id, active_ptys));
@@ -349,6 +356,9 @@ pub(crate) fn op_exit(args: &Value, _context: DispatchContext<'_>) -> Result<Val
             let cancelled = command::cancel_pty_session_for_exit(pty_session_id)?;
             if !cancelled {
                 unregister_pty_id(pty_session_id);
+                stale_pty_session_ids.push(pty_session_id.clone());
+            } else {
+                cancelled_pty_session_ids.push(pty_session_id.clone());
             }
         }
         let deadline = Instant::now() + Duration::from_secs_f64(grace_s.unwrap_or(0.25).max(0.0));
@@ -361,8 +371,19 @@ pub(crate) fn op_exit(args: &Value, _context: DispatchContext<'_>) -> Result<Val
         }
     }
 
-    with_state(|state| state.session.exit(&AgentId(agent_id), grace_s))
-        .map_or_else(|error| Ok(error_payload(error)), Ok)
+    with_state(|state| state.session.exit(&AgentId(agent_id.clone()), grace_s)).map_or_else(
+        |error| Ok(error_payload(error)),
+        |mut response| {
+            annotate_pty_force_cancel(
+                &mut response,
+                force_cancel,
+                cancelled_pty_session_ids,
+                stale_pty_session_ids,
+                active_pty_ids(&agent_id),
+            );
+            Ok(response)
+        },
+    )
 }
 
 pub(crate) fn op_status(args: &Value, _context: DispatchContext<'_>) -> Result<Value, DaemonError> {
@@ -547,6 +568,31 @@ fn active_pty_ids(agent_id: &str) -> Vec<String> {
                 .collect()
         })
         .unwrap_or_default()
+}
+
+fn annotate_pty_force_cancel(
+    response: &mut Value,
+    force_cancel: bool,
+    cancelled_pty_session_ids: Vec<String>,
+    stale_pty_session_ids: Vec<String>,
+    active_pty_session_ids_after: Vec<String>,
+) {
+    let Some(object) = response.as_object_mut() else {
+        return;
+    };
+    object.insert("force_cancel_requested".to_owned(), json!(force_cancel));
+    object.insert(
+        "force_cancelled_pty_session_ids".to_owned(),
+        json!(cancelled_pty_session_ids),
+    );
+    object.insert(
+        "stale_pty_session_ids".to_owned(),
+        json!(stale_pty_session_ids),
+    );
+    object.insert(
+        "active_pty_session_ids_after".to_owned(),
+        json!(active_pty_session_ids_after),
+    );
 }
 
 fn command_handle_from(
@@ -792,10 +838,20 @@ mod tests {
         assert_eq!(blocked["success"], false);
         assert_eq!(blocked["error"]["kind"], "active_pty_sessions");
 
-        unregister_pty("agent-pty", "pty-block");
-        let exited = op_exit(&json!({"agent_id": "agent-pty"}), DispatchContext::empty())
-            .expect("exit response");
+        let exited = op_exit(
+            &json!({"agent_id": "agent-pty", "force_cancel": true}),
+            DispatchContext::empty(),
+        )
+        .expect("exit response");
         assert_eq!(exited["success"], true);
+        assert_eq!(exited["force_cancel_requested"], true);
+        assert_eq!(exited["force_cancelled_pty_session_ids"], json!([]));
+        assert_eq!(exited["stale_pty_session_ids"], json!(["pty-block"]));
+        assert_eq!(exited["active_pty_session_ids_after"], json!([]));
+        assert_eq!(
+            exited["inspection"]["handle_registered_after"],
+            json!(false)
+        );
         let _ = op_test_reset(&json!({}), DispatchContext::empty());
         clear_env("EOS_ISOLATED_WORKSPACE_ENABLED");
         clear_env(TEST_HARNESS_ENV);

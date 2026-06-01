@@ -47,6 +47,10 @@ use std::net::Ipv4Addr;
 use std::os::fd::FromRawFd;
 use std::os::fd::{OwnedFd, RawFd};
 use std::path::Path;
+#[cfg(target_os = "linux")]
+use std::thread;
+#[cfg(target_os = "linux")]
+use std::time::Duration;
 
 #[cfg(target_os = "linux")]
 use rustix::mount::{mount_change, MountPropagationFlags};
@@ -105,8 +109,14 @@ pub enum NsHolderError {
     #[error("handshake pipe i/o failed")]
     PipeIo(#[source] std::io::Error),
     /// Namespace setup opened/wrote a procfs control file unsuccessfully.
-    #[error("namespace setup io failed")]
-    SetupIo(#[source] std::io::Error),
+    #[error("namespace setup io failed at {path}")]
+    SetupIo {
+        /// Path being opened or written when namespace setup failed.
+        path: String,
+        /// Underlying I/O failure.
+        #[source]
+        source: std::io::Error,
+    },
     /// Test-only holder crash injection fired after `ns-up`.
     #[error("test holder crash injected")]
     TestCrash,
@@ -142,6 +152,28 @@ pub struct HeldNamespaces {
     pub pid: OwnedFd,
     /// Network namespace FD (`/proc/self/ns/net`).
     pub net: OwnedFd,
+    #[cfg(target_os = "linux")]
+    _pid_init: Option<PidNamespaceInit>,
+}
+
+#[cfg(target_os = "linux")]
+#[derive(Debug)]
+struct PidNamespaceInit {
+    pid: libc::pid_t,
+}
+
+#[cfg(target_os = "linux")]
+impl Drop for PidNamespaceInit {
+    fn drop(&mut self) {
+        // SAFETY: `pid` came from `fork` in this process. Sending SIGTERM and
+        // reaping with WNOHANG are best-effort cleanup for error paths; the
+        // child also has PR_SET_PDEATHSIG for abrupt holder termination.
+        unsafe {
+            libc::kill(self.pid, libc::SIGTERM);
+            let mut status = 0;
+            libc::waitpid(self.pid, &mut status, libc::WNOHANG);
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -425,10 +457,10 @@ fn add_ipv4_default_route(index: libc::c_uint, gateway: Ipv4Addr) {
         rtm_dst_len: 0,
         rtm_src_len: 0,
         rtm_tos: 0,
-        rtm_table: libc::RT_TABLE_MAIN as u8,
-        rtm_protocol: libc::RTPROT_STATIC as u8,
-        rtm_scope: libc::RT_SCOPE_UNIVERSE as u8,
-        rtm_type: libc::RTN_UNICAST as u8,
+        rtm_table: libc::RT_TABLE_MAIN,
+        rtm_protocol: libc::RTPROT_STATIC,
+        rtm_scope: libc::RT_SCOPE_UNIVERSE,
+        rtm_type: libc::RTN_UNICAST,
         rtm_flags: 0,
     };
     let attrs = [
@@ -453,10 +485,10 @@ fn flush_ipv6_default_route() {
             rtm_dst_len: 0,
             rtm_src_len: 0,
             rtm_tos: 0,
-            rtm_table: libc::RT_TABLE_MAIN as u8,
-            rtm_protocol: libc::RTPROT_UNSPEC as u8,
-            rtm_scope: libc::RT_SCOPE_UNIVERSE as u8,
-            rtm_type: libc::RTN_UNICAST as u8,
+            rtm_table: libc::RT_TABLE_MAIN,
+            rtm_protocol: libc::RTPROT_UNSPEC,
+            rtm_scope: libc::RT_SCOPE_UNIVERSE,
+            rtm_type: libc::RTN_UNICAST,
             rtm_flags: 0,
         };
         let _ = send_netlink_message(libc::RTM_DELROUTE, netlink_request_flags(), &route);
@@ -661,7 +693,10 @@ struct NetlinkSocketAddress {
 /// subprocess.
 // PORT backend/src/sandbox/isolated_workspace/_control_plane/namespace_runtime.py:84-96 — `unshare --user --map-root-user --net --pid --mount --fork --kill-child --propagation private` consolidated into a single unshare(CLONE_NEWUSER|NEWNS|NEWPID|NEWNET) + uid/gid map + MS_PRIVATE in-process
 #[cfg(target_os = "linux")]
-fn unshare_namespace_stack() -> Result<HeldNamespaces, NsHolderError> {
+fn unshare_namespace_stack(
+    readiness_fd: RawFd,
+    control_fd: RawFd,
+) -> Result<HeldNamespaces, NsHolderError> {
     let host_uid = rustix::process::getuid().as_raw();
     let host_gid = rustix::process::getgid().as_raw();
     unshare(
@@ -669,8 +704,8 @@ fn unshare_namespace_stack() -> Result<HeldNamespaces, NsHolderError> {
     )
     .map_err(|_| NsHolderError::Unshare)?;
     write_if_exists("/proc/self/setgroups", b"deny\n")?;
-    fs::write("/proc/self/uid_map", format!("0 {host_uid} 1\n")).map_err(NsHolderError::SetupIo)?;
-    fs::write("/proc/self/gid_map", format!("0 {host_gid} 1\n")).map_err(NsHolderError::SetupIo)?;
+    write_setup_file("/proc/self/uid_map", format!("0 {host_uid} 1\n").as_bytes())?;
+    write_setup_file("/proc/self/gid_map", format!("0 {host_gid} 1\n").as_bytes())?;
     set_thread_gid(rustix::process::Gid::ROOT).map_err(|_| NsHolderError::Unshare)?;
     set_thread_uid(rustix::process::Uid::ROOT).map_err(|_| NsHolderError::Unshare)?;
     mount_change(
@@ -678,16 +713,22 @@ fn unshare_namespace_stack() -> Result<HeldNamespaces, NsHolderError> {
         MountPropagationFlags::PRIVATE | MountPropagationFlags::REC,
     )
     .map_err(|_| NsHolderError::Unshare)?;
+    let pid_init = fork_pid_namespace_init(readiness_fd, control_fd)?;
+    wait_for_path("/proc/self/ns/pid_for_children")?;
     Ok(HeldNamespaces {
         user: open_owned_fd("/proc/self/ns/user")?,
         mnt: open_owned_fd("/proc/self/ns/mnt")?,
         pid: open_owned_fd("/proc/self/ns/pid_for_children")?,
         net: open_owned_fd("/proc/self/ns/net")?,
+        _pid_init: Some(pid_init),
     })
 }
 
 #[cfg(not(target_os = "linux"))]
-fn unshare_namespace_stack() -> Result<HeldNamespaces, NsHolderError> {
+fn unshare_namespace_stack(
+    _readiness_fd: RawFd,
+    _control_fd: RawFd,
+) -> Result<HeldNamespaces, NsHolderError> {
     Err(NsHolderError::Unshare)
 }
 
@@ -700,7 +741,7 @@ fn unshare_namespace_stack() -> Result<HeldNamespaces, NsHolderError> {
 /// write [`READY`] → install a `SIGTERM` handler and `pause()`.
 // PORT backend/src/sandbox/isolated_workspace/scripts/ns_holder.py:89-115 — main(argv): rbind /proc, ns-up, crash-knob, net-ready read, lo up + purge, ready, SIGTERM handler + signal.pause()
 pub fn run(readiness_fd: RawFd, control_fd: RawFd) -> Result<(), NsHolderError> {
-    let namespaces = unshare_namespace_stack()?;
+    let namespaces = unshare_namespace_stack(readiness_fd, control_fd)?;
     rbind_proc();
     let mut handshake = Handshake::new(readiness_fd, control_fd, namespaces);
     handshake.state = HandshakeState::ProcBound;
@@ -766,20 +807,106 @@ fn read_fd(fd: RawFd, bytes: &mut [u8]) -> Result<usize, NsHolderError> {
 
 #[cfg(target_os = "linux")]
 fn write_if_exists(path: impl AsRef<Path>, value: &[u8]) -> Result<(), NsHolderError> {
-    match fs::write(path.as_ref(), value) {
+    let path = path.as_ref();
+    match fs::write(path, value) {
         Ok(()) => Ok(()),
         Err(err) if err.kind() == std::io::ErrorKind::NotFound => Ok(()),
-        Err(err) => Err(NsHolderError::SetupIo(err)),
+        Err(err) => Err(setup_io(path, err)),
     }
 }
 
 #[cfg(target_os = "linux")]
 fn open_owned_fd(path: impl AsRef<Path>) -> Result<OwnedFd, NsHolderError> {
-    let file = fs::File::open(path.as_ref()).map_err(NsHolderError::SetupIo)?;
+    let path = path.as_ref();
+    let file = fs::File::open(path).map_err(|err| setup_io(path, err))?;
     let raw_fd = std::os::fd::IntoRawFd::into_raw_fd(file);
     // SAFETY: `raw_fd` came from `File::into_raw_fd`, so this function becomes
     // the sole owner and closes it through `OwnedFd` drop.
     Ok(unsafe { OwnedFd::from_raw_fd(raw_fd) })
+}
+
+#[cfg(target_os = "linux")]
+fn write_setup_file(path: impl AsRef<Path>, value: &[u8]) -> Result<(), NsHolderError> {
+    let path = path.as_ref();
+    fs::write(path, value).map_err(|err| setup_io(path, err))
+}
+
+#[cfg(target_os = "linux")]
+fn setup_io(path: &Path, source: std::io::Error) -> NsHolderError {
+    NsHolderError::SetupIo {
+        path: path.display().to_string(),
+        source,
+    }
+}
+
+#[cfg(target_os = "linux")]
+fn fork_pid_namespace_init(
+    readiness_fd: RawFd,
+    control_fd: RawFd,
+) -> Result<PidNamespaceInit, NsHolderError> {
+    // SAFETY: The holder is a dedicated single-threaded process. `fork` is used
+    // here to reproduce `unshare --pid --fork`: the first child becomes PID 1 in
+    // the new PID namespace, which materializes `/proc/self/ns/pid_for_children`
+    // for the parent holder to pin and later hand to ns-runner children.
+    let pid = unsafe { libc::fork() };
+    if pid < 0 {
+        return Err(NsHolderError::Unshare);
+    }
+    if pid == 0 {
+        run_pid_namespace_init(readiness_fd, control_fd);
+    }
+    Ok(PidNamespaceInit { pid })
+}
+
+#[cfg(target_os = "linux")]
+fn run_pid_namespace_init(readiness_fd: RawFd, control_fd: RawFd) -> ! {
+    // SAFETY: The child does not participate in the handshake and must not keep
+    // inherited pipe descriptors open; closing the standard descriptors is not
+    // necessary because the daemon starts ns-holder with stdio redirected.
+    unsafe {
+        libc::close(readiness_fd);
+        libc::close(control_fd);
+        libc::signal(
+            libc::SIGTERM,
+            exit_signal_handler as *const () as libc::sighandler_t,
+        );
+        libc::signal(
+            libc::SIGINT,
+            exit_signal_handler as *const () as libc::sighandler_t,
+        );
+        libc::prctl(libc::PR_SET_PDEATHSIG, libc::SIGTERM, 0, 0, 0);
+        if libc::getppid() == 1 {
+            libc::_exit(0);
+        }
+    }
+    loop {
+        // SAFETY: `pause` has no pointer arguments and simply waits for a
+        // signal. The SIGTERM/SIGINT handler above exits this PID-namespace init.
+        unsafe {
+            libc::pause();
+        }
+    }
+}
+
+#[cfg(target_os = "linux")]
+extern "C" fn exit_signal_handler(_signal: libc::c_int) {
+    // SAFETY: `_exit` is async-signal-safe and terminates the PID-namespace init
+    // without running Rust destructors from inside a signal handler.
+    unsafe {
+        libc::_exit(0);
+    }
+}
+
+#[cfg(target_os = "linux")]
+fn wait_for_path(path: impl AsRef<Path>) -> Result<(), NsHolderError> {
+    let path = path.as_ref();
+    for _ in 0..100 {
+        if path.exists() {
+            return Ok(());
+        }
+        thread::sleep(Duration::from_millis(10));
+    }
+    open_owned_fd(path).map(drop)
 }
 
 #[cfg(test)]
@@ -878,6 +1005,8 @@ mod tests {
             mnt: dev_null_fd(),
             pid: dev_null_fd(),
             net: dev_null_fd(),
+            #[cfg(target_os = "linux")]
+            _pid_init: None,
         }
     }
 

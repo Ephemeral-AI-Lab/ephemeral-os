@@ -149,6 +149,8 @@ dependencies = [
  "eos-protocol",
  "eos-runner",
  "futures-util",
+ "libc",
+ "netlink-sys",
  "nix 0.29.0",
  "rtnetlink",
  "serde_json",

@@ -18,6 +18,8 @@ nix.workspace = true
 
 [target.'cfg(target_os = "linux")'.dependencies]
 futures-util.workspace = true
+libc.workspace = true
+netlink-sys.workspace = true
 rtnetlink.workspace = true
 tokio.workspace = true
 

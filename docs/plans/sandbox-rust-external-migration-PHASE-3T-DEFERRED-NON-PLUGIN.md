@@ -59,9 +59,19 @@ Current state:
   isolated teardown. Linux command/PTY requests choose `RunMode::SetNs` when the
   active isolated handle has namespace FDs. Holder-side loopback-up,
   IPv6-default-route deletion, namespace-side veth link/address/default-route
-  programming, and daemon-side bridge/veth creation now use shell-free netlink
-  hooks. nftables NAT/filter parity, live holder network validation, and live
-  Docker isolated command/PTY evidence are still open.
+  programming, daemon-side bridge/veth creation, and static nftables NAT/filter
+  table/chain/rule setup now use shell-free netlink hooks. The local amd64
+  Docker/dask proof passed with the target image lacking `ip` and `nft`: the
+  Rust path created the shared bridge and veth pair, exposed the namespace-side
+  interface/default route, installed static nftables NAT/filter rules through
+  netlink, kept finite command and PTY writes private to isolated scratch,
+  blocked non-forced exit while a PTY was active, force-exited cleanly, closed
+  status/list state, removed the host veth, and left shared OCC unpublished.
+- Rust isolated exit now returns daemon-local inspection fields and mirrors them
+  into the exit audit event: handle/agent map counts, lease-release status,
+  active lease count, holder PID/kill error, namespace FD count, cgroup
+  existence, scratch/upper/workdir existence, mountinfo reference count when
+  `/proc/self/mountinfo` is available, and PTY force-cancel cleanup arrays.
 
 Last focused verification:
 
@@ -90,6 +100,19 @@ Last focused verification:
   `cargo check -p eos-daemon --target x86_64-unknown-linux-musl`, and
   `cargo check -p eosd --target x86_64-unknown-linux-musl`. Existing warnings
   are from pre-existing `eos-overlay`/`eos-ephemeral` code.
+- Follow-up focused inspection checks passed after the exit-inspection update:
+  `cargo fmt --all --check`, `cargo check -p eos-ns-holder -p eos-isolated -p
+  eos-daemon --target x86_64-unknown-linux-musl`, `cargo check -p
+  eos-ns-holder -p eos-isolated -p eos-daemon --target
+  aarch64-unknown-linux-musl`, `cargo clippy -p eos-ns-holder -p
+  eos-isolated -p eos-daemon --target x86_64-unknown-linux-musl --all-targets`
+  (pre-existing adjacent warnings only), `cargo test -p eos-isolated`,
+  `cargo test -p eos-runner`, `cargo test -p eos-ns-holder`, `cargo test -p
+  eos-daemon isolated_workspace --test phase2_read_paths`, `cargo test -p
+  eos-daemon active_pty_records_block_exit_until_cleared`, and both
+  `xtask package` targets. Current packaged SHAs are amd64
+  `6f94b650023186b9b4e282d20ad1bd0cd53b97c44759c313547c47f158ebecf6` and
+  arm64 `f2ef28b4a0a5c93b78c16ae47a064a39e59a2add8e25e329c8c2c52b97b3fc08`.
 - A broader mock contract spike was attempted but did not reach the relevant
   assertions because the live SWE-EVO fixture failed setup on `/eos`
   writability in the existing container. Treat that as environment/setup debt,
@@ -97,8 +120,8 @@ Last focused verification:
 
 Next work should start with hardening/verifying Rust isolated-workspace
 command/PTY semantics under live Docker, then finishing the remaining Rust
-isolated network parity work: nftables NAT/filter plus live validation of the
-bridge/veth and holder netlink hooks. Do not reintroduce
+isolated network proof: live validation of bridge/veth, static nftables
+NAT/filter, and holder netlink hooks. Do not reintroduce
 `shell(background=true)`, `BaseTool.background`, model-facing generic
 background controls, or `bg_N` as a subagent reference.
 
@@ -134,30 +157,30 @@ audit emission, and routes Linux `exec_command` / PTY start through the active
 agent handle with isolated/no-OCC-publish result metadata. Active PTY records
 now block non-forced isolated exit.
 
-The implementation is not closed: the Rust namespace/runtime side now has a
-holder spawn, namespace FD handoff, setns runner entry, setns overlay mount,
-and compile-checked bridge/veth netlink slice, but the network side still lacks
-nftables NAT/filter parity and the isolated command/PTY path has compile +
-focused lifecycle evidence rather than live Docker evidence.
+The local amd64 Docker/dask live proof is now closed for the Rust
+namespace/runtime, bridge/veth/nftables, finite command, PTY, forced exit, and
+shared-publish isolation slice. The implementation still needs broader
+daemon-local audit/leak inspection before treating isolated mode as fully
+closed, and the remaining Phase 3T non-plugin gates still live outside this
+isolated slice.
 
 Required work:
 
-- finish the Rust isolated network lifecycle: nftables NAT/filter setup, live
-  bridge/veth and namespace-side interface/route validation, holder netlink hook
-  validation, and teardown verification;
-- harden the Rust ns-holder/setns handoff under live Docker, including namespace
-  FD inheritance, overlay mount persistence, cgroup join, and holder kill/cleanup
-  behavior;
-- run live Docker proof that finite `exec_command` writes stay private to the
-  isolated workspace and unpublished to shared OCC;
-- prove isolated PTY start/progress/write/cancel/natural-exit behavior against
-  the active agent handle;
-- keep isolated handles alive while PTY sessions are active and verify the
-  explicit force-cancel exit path under a real running PTY;
-- prove natural PTY exit keeps changes visible only inside the same isolated
-  workspace until isolated exit;
-- prove isolated exit discards scratch state and releases the pinned snapshot
-  lease.
+- run the live Docker isolated proof again and assert the new exit inspection
+  fields under the real kernel path for holder, mountinfo, cgroup, lease,
+  scratch, and PTY force-cancel cleanup;
+- preserve the proven Rust ns-holder/setns handoff under live Docker, including
+  namespace FD inheritance, overlay mount persistence, cgroup join, and holder
+  kill/cleanup behavior;
+- preserve the live Docker proof that finite `exec_command` writes stay private
+  to the isolated workspace and unpublished to shared OCC;
+- preserve isolated PTY start/progress/write/natural-exit behavior
+  against the active agent handle;
+- preserve the explicit force-cancel exit path under a real running PTY and the
+  non-forced active-PTY exit block;
+- preserve natural PTY exit visibility only inside the same isolated workspace
+  until isolated exit;
+- preserve isolated exit scratch discard and pinned snapshot lease release.
 
 Minimum evidence:
 
@@ -168,10 +191,20 @@ Minimum evidence:
   `eos-ns-holder`, `eos-daemon`, and `eosd`;
 - ✅ bridge/veth netlink slice compiles for Linux target and preserves host
   `eos-isolated` checks through target-gated Linux dependencies;
-- live Docker isolated-workspace scenarios for finite command, PTY start,
-  progress/write/cancel, natural exit, peer shared publish, and teardown;
-- daemon-local isolated audit inspection with no leaked handles, mounts,
-  cgroups, leases, or scratch dirs.
+- ✅ static nftables NAT/filter netlink slice compiles for Linux target without
+  adding an `nft` binary dependency;
+- ✅ live Docker isolated-workspace scenario on amd64 Docker/dask with no `ip`
+  or `nft` in the target image: finite command, PTY start/progress/write,
+  natural PTY exit, active-PTY exit blocking, force exit, peer shared-publish
+  isolation, status/list closure, host-veth teardown, and no shared publish
+  during or after isolated exit;
+- ✅ focused daemon-local isolated exit inspection coverage: exit response and
+  audit JSONL prove no registered handle/agent remains, active leases return to
+  zero, scratch/upper/workdir are removed, cgroup absence is represented, and
+  stale PTY force-cancel cleanup clears active PTY state;
+- live Docker rerun asserting the new inspection fields show no leaked holder,
+  mountinfo refs, cgroups, leases, scratch dirs, or active PTY records under the
+  real isolated kernel path.
 
 ### 2. Typed Subagent Surface
 
@@ -341,14 +374,10 @@ Minimum evidence:
 
 ## Suggested Order
 
-1. Finish the Rust isolated network parity slice: nftables NAT/filter setup,
-   live bridge/veth and namespace-side interface/route validation, holder
-   netlink hook validation, and teardown.
-2. Harden the Rust holder/setns handoff under live Docker, then run
-   isolated-workspace Docker live coverage for finite command and PTY semantics.
-3. Add daemon-local isolated audit/leak inspection for handles, mounts, cgroups,
-   leases, scratch dirs, and PTY force-cancel exit.
-4. Run CP-4 mixed non-plugin load with attached AV-4 audit pull.
-5. Run CP-5 cache-lock churn.
-6. Run AV-7 forward/back parity.
-7. Run the non-plugin Section 7 differential/property contention suite.
+1. Rerun the live Rust isolated Docker proof with the new exit inspection fields
+   and assert no leaked holder, mountinfo refs, cgroups, leases, scratch dirs,
+   or active PTY records.
+2. Run CP-4 mixed non-plugin load with attached AV-4 audit pull.
+3. Run CP-5 cache-lock churn.
+4. Run AV-7 forward/back parity.
+5. Run the non-plugin Section 7 differential/property contention suite.

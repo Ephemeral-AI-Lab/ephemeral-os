@@ -104,6 +104,13 @@ pub trait LayerStackSnapshotPort {
     /// Release the lease held by `lease_id`. Returns whether it was held.
     // PORT backend/src/sandbox/occ/layer_stack_adapter.py:66 — release_lease
     fn release_lease(&self, lease_id: &str) -> Result<bool, IsolatedError>;
+
+    /// Optional daemon-local diagnostic count for active leases owned by this
+    /// port instance. This is intentionally diagnostic-only and exposes no
+    /// publish surface.
+    fn active_lease_count(&self) -> Result<Option<usize>, IsolatedError> {
+        Ok(None)
+    }
 }
 
 /// Kernel-touching namespace operations the pipeline delegates to.
@@ -371,7 +378,7 @@ where
         }
         let timer = Instant::now();
         let upperdir_bytes = directory_file_bytes(&handle.upperdir);
-        self.teardown_handle(&handle, grace_s.unwrap_or(self.caps.exit_grace_s));
+        let inspection = self.teardown_handle(&handle, grace_s.unwrap_or(self.caps.exit_grace_s));
         let lifetime_s = (monotonic_seconds() - handle.created_at).max(0.0);
         let total_ms = timer.elapsed().as_secs_f64() * 1000.0;
         let _ = self.audit.emit(
@@ -385,6 +392,7 @@ where
                 "total_ms": total_ms,
                 "phases_ms": {},
                 "scratch_removed": !handle.scratch_dir.exists(),
+                "inspection": inspection,
             }),
         );
         Ok(json!({
@@ -393,6 +401,7 @@ where
             "lifetime_s": lifetime_s,
             "total_ms": total_ms,
             "phases_ms": {},
+            "inspection": inspection,
         }))
     }
 
@@ -464,19 +473,54 @@ where
         let _ = std::fs::remove_dir_all(&handle.scratch_dir);
     }
 
-    fn teardown_handle(&mut self, handle: &WorkspaceHandle, grace_s: f64) {
-        if handle.holder_pid > 0 {
-            let _ = self.runtime.kill_holder(handle.holder_pid, grace_s);
-        }
+    fn teardown_handle(&mut self, handle: &WorkspaceHandle, grace_s: f64) -> Value {
+        let holder_kill_error = if handle.holder_pid > 0 {
+            self.runtime
+                .kill_holder(handle.holder_pid, grace_s)
+                .err()
+                .map(|err| err.to_string())
+        } else {
+            None
+        };
         close_handle_fds(handle);
         if let Some(veth) = handle.veth.as_ref() {
             self.network.teardown_veth(veth);
         }
-        let _ = self.layer_stack.release_lease(&handle.lease_id);
+        let lease_released = self.layer_stack.release_lease(&handle.lease_id).ok();
         if let Some(cgroup_path) = handle.cgroup_path.as_ref() {
             let _ = std::fs::remove_dir(cgroup_path);
         }
         let _ = std::fs::remove_dir_all(&handle.scratch_dir);
+        let cgroup_exists_after = handle.cgroup_path.as_ref().map(|path| path.exists());
+        json!({
+            "handle_registered_after": self.handles.contains_key(&handle.workspace_handle_id),
+            "agent_registered_after": self.by_agent.contains_key(&handle.agent_id),
+            "open_handle_count_after": self.handles.len(),
+            "open_agent_count_after": self.by_agent.len(),
+            "lease_released": lease_released,
+            "active_leases_after": self.layer_stack.active_lease_count().ok().flatten(),
+            "holder_pid": handle.holder_pid,
+            "holder_kill_error": holder_kill_error,
+            "ns_fd_count": handle.ns_fds.len(),
+            "readiness_fd_was_open": handle.readiness_fd >= 0,
+            "control_fd_was_open": handle.control_fd >= 0,
+            "veth_host_name": handle.veth.as_ref().map(|veth| veth.host_name.as_str()),
+            "veth_ns_name": handle.veth.as_ref().map(|veth| veth.ns_name.as_str()),
+            "cgroup_path": handle
+                .cgroup_path
+                .as_ref()
+                .map(|path| path.to_string_lossy().into_owned()),
+            "cgroup_exists_after": cgroup_exists_after,
+            "scratch_dir": handle.scratch_dir.to_string_lossy(),
+            "scratch_exists_after": handle.scratch_dir.exists(),
+            "upperdir_exists_after": handle.upperdir.exists(),
+            "workdir_exists_after": handle.workdir.exists(),
+            "mountinfo_reference_count_after": mountinfo_reference_count(&[
+                &handle.scratch_dir,
+                &handle.upperdir,
+                &handle.workdir,
+            ]),
+        })
     }
 }
 
@@ -527,4 +571,19 @@ fn directory_file_bytes(path: &Path) -> u64 {
         }
     }
     total
+}
+
+fn mountinfo_reference_count(paths: &[&Path]) -> Option<usize> {
+    let mountinfo = std::fs::read_to_string("/proc/self/mountinfo").ok()?;
+    let needles = paths
+        .iter()
+        .map(|path| path.to_string_lossy().into_owned())
+        .filter(|path| !path.is_empty())
+        .collect::<Vec<_>>();
+    Some(
+        mountinfo
+            .lines()
+            .filter(|line| needles.iter().any(|needle| line.contains(needle)))
+            .count(),
+    )
 }
