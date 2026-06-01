@@ -24,14 +24,14 @@
 //! `// PORT backend/src/sandbox/daemon/audit_schema.py:294,310 — safe_emit / safe_record_phase`
 
 use std::collections::VecDeque;
-use std::panic::{catch_unwind, AssertUnwindSafe};
+use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::sync::{Mutex, MutexGuard, OnceLock};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use serde_json::Value;
 
 use eos_protocol::audit::{
-    Lane, DEFAULT_MAX_BYTES, DEFAULT_MAX_EVENTS, DEFAULT_PRESSURE_THRESHOLD, SCHEMA_VERSION,
+    DEFAULT_MAX_BYTES, DEFAULT_MAX_EVENTS, DEFAULT_PRESSURE_THRESHOLD, Lane, SCHEMA_VERSION,
 };
 
 /// A single buffered event: its monotonic sequence, lane, encoded size, and the
@@ -93,13 +93,15 @@ struct RingState {
 }
 
 impl AuditBuffer {
-    /// Build a ring with the default caps (50_000 events / 8 MiB) and a fresh
+    /// Build a ring with the default caps (`50_000` events / 8 MiB) and a fresh
     /// boot epoch id. `// PORT backend/src/sandbox/daemon/audit_buffer.py:122-152`
+    #[must_use]
     pub fn new() -> Self {
         Self::with_caps(DEFAULT_MAX_EVENTS, DEFAULT_MAX_BYTES, None)
     }
 
     /// Build a ring with explicit caps and an optional fixed boot epoch id.
+    #[must_use]
     pub fn with_caps(max_events: u64, max_bytes: u64, boot_epoch_id: Option<i64>) -> Self {
         Self {
             inner: Mutex::new(RingState {
@@ -324,8 +326,15 @@ fn retained_bytes(state: &RingState) -> u64 {
 }
 
 fn pressure_locked(state: &RingState) -> f64 {
-    (retained_events(state) as f64 / state.max_events as f64)
-        .max(retained_bytes(state) as f64 / state.max_bytes as f64)
+    (u64_to_f64_lossy(retained_events(state)) / u64_to_f64_lossy(state.max_events))
+        .max(u64_to_f64_lossy(retained_bytes(state)) / u64_to_f64_lossy(state.max_bytes))
+}
+
+fn u64_to_f64_lossy(value: u64) -> f64 {
+    const U32_FACTOR: f64 = 4_294_967_296.0;
+    let high = u32::try_from(value >> 32).unwrap_or(u32::MAX);
+    let low = u32::try_from(value & u64::from(u32::MAX)).unwrap_or(u32::MAX);
+    f64::from(high).mul_add(U32_FACTOR, f64::from(low))
 }
 
 fn buffer_block(state: &RingState) -> Value {

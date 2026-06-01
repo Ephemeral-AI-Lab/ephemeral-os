@@ -82,6 +82,7 @@ impl DaemonError {
     /// otherwise-unclassified handler failure becomes
     /// [`eos_protocol::ErrorKind::InternalError`] with a generated `error_id`.
     /// `// PORT backend/src/sandbox/daemon/rpc/dispatcher.py:127-160 — internal_error wrap`
+    #[must_use]
     pub fn wire_kind(&self) -> eos_protocol::ErrorKind {
         use eos_protocol::ErrorKind;
         match self {

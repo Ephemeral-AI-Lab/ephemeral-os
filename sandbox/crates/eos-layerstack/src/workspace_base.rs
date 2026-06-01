@@ -514,39 +514,58 @@ fn update_root_hash(digest: &mut Sha256, entry: &BaseEntry) {
 fn record_inventory(timings: &mut BTreeMap<String, f64>, entries: &[BaseEntry]) {
     timings.insert(
         "workspace_base.inventory.files".to_owned(),
-        entries
-            .iter()
-            .filter(|entry| matches!(entry, BaseEntry::File { .. }))
-            .count() as f64,
+        usize_to_f64_lossy(
+            entries
+                .iter()
+                .filter(|entry| matches!(entry, BaseEntry::File { .. }))
+                .count(),
+        ),
     );
     timings.insert(
         "workspace_base.inventory.dirs".to_owned(),
-        entries
-            .iter()
-            .filter(|entry| matches!(entry, BaseEntry::Directory { .. }))
-            .count() as f64,
+        usize_to_f64_lossy(
+            entries
+                .iter()
+                .filter(|entry| matches!(entry, BaseEntry::Directory { .. }))
+                .count(),
+        ),
     );
     timings.insert(
         "workspace_base.inventory.symlinks".to_owned(),
-        entries
-            .iter()
-            .filter(|entry| matches!(entry, BaseEntry::Symlink { .. }))
-            .count() as f64,
+        usize_to_f64_lossy(
+            entries
+                .iter()
+                .filter(|entry| matches!(entry, BaseEntry::Symlink { .. }))
+                .count(),
+        ),
     );
     timings.insert(
         "workspace_base.inventory.bytes".to_owned(),
-        entries
-            .iter()
-            .map(|entry| match entry {
-                BaseEntry::File { size, .. } => *size,
-                _ => 0,
-            })
-            .sum::<u64>() as f64,
+        u64_to_f64_lossy(
+            entries
+                .iter()
+                .map(|entry| match entry {
+                    BaseEntry::File { size, .. } => *size,
+                    _ => 0,
+                })
+                .sum::<u64>(),
+        ),
     );
 }
 
 fn record_elapsed(timings: &mut BTreeMap<String, f64>, key: &str, start: Instant) {
     timings.insert(key.to_owned(), start.elapsed().as_secs_f64());
+}
+
+fn usize_to_f64_lossy(value: usize) -> f64 {
+    u64_to_f64_lossy(u64::try_from(value).unwrap_or(u64::MAX))
+}
+
+fn u64_to_f64_lossy(value: u64) -> f64 {
+    const U32_FACTOR: f64 = 4_294_967_296.0;
+    let high = u32::try_from(value >> 32).unwrap_or(u32::MAX);
+    let low = u32::try_from(value & u64::from(u32::MAX)).unwrap_or(u32::MAX);
+    f64::from(high).mul_add(U32_FACTOR, f64::from(low))
 }
 
 fn relative_path(workspace: &Path, path: &Path) -> String {
@@ -623,9 +642,9 @@ fn hex_digest(bytes: impl AsRef<[u8]>) -> String {
     const HEX: &[u8; 16] = b"0123456789abcdef";
     let bytes = bytes.as_ref();
     let mut out = String::with_capacity(bytes.len() * 2);
-    for byte in bytes {
-        out.push(HEX[(byte >> 4) as usize] as char);
-        out.push(HEX[(byte & 0x0f) as usize] as char);
+    for &byte in bytes {
+        out.push(char::from(HEX[usize::from(byte >> 4)]));
+        out.push(char::from(HEX[usize::from(byte & 0x0f)]));
     }
     out
 }

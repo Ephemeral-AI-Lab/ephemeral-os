@@ -377,15 +377,27 @@ fn bring_loopback_up() {
         if index == 0 {
             return;
         }
+        let Some(ifi_family) = libc_c_int_to_u8(libc::AF_UNSPEC) else {
+            return;
+        };
+        let Ok(ifi_index) = i32::try_from(index) else {
+            return;
+        };
+        let Some(iff_up) = libc_c_int_to_u32(libc::IFF_UP) else {
+            return;
+        };
         let msg = IfInfoMsg {
-            ifi_family: libc::AF_UNSPEC as u8,
+            ifi_family,
             ifi_pad: 0,
             ifi_type: 0,
-            ifi_index: index as i32,
-            ifi_flags: libc::IFF_UP as u32,
-            ifi_change: libc::IFF_UP as u32,
+            ifi_index,
+            ifi_flags: iff_up,
+            ifi_change: iff_up,
         };
-        let _ = send_netlink_message(libc::RTM_NEWLINK, netlink_request_flags(), &msg);
+        let Some(flags) = netlink_request_flags() else {
+            return;
+        };
+        let _ = send_netlink_message(libc::RTM_NEWLINK, flags, &msg);
     }
 }
 
@@ -421,21 +433,36 @@ fn link_index(name: &str) -> libc::c_uint {
 
 #[cfg(target_os = "linux")]
 fn set_link_up(index: libc::c_uint) {
+    let Some(ifi_family) = libc_c_int_to_u8(libc::AF_UNSPEC) else {
+        return;
+    };
+    let Ok(ifi_index) = i32::try_from(index) else {
+        return;
+    };
+    let Some(iff_up) = libc_c_int_to_u32(libc::IFF_UP) else {
+        return;
+    };
     let msg = IfInfoMsg {
-        ifi_family: libc::AF_UNSPEC as u8,
+        ifi_family,
         ifi_pad: 0,
         ifi_type: 0,
-        ifi_index: index as i32,
-        ifi_flags: libc::IFF_UP as u32,
-        ifi_change: libc::IFF_UP as u32,
+        ifi_index,
+        ifi_flags: iff_up,
+        ifi_change: iff_up,
     };
-    let _ = send_netlink_message(libc::RTM_NEWLINK, netlink_request_flags(), &msg);
+    let Some(flags) = netlink_request_flags() else {
+        return;
+    };
+    let _ = send_netlink_message(libc::RTM_NEWLINK, flags, &msg);
 }
 
 #[cfg(target_os = "linux")]
 fn add_ipv4_address(index: libc::c_uint, ip: Ipv4Addr, prefix_len: u8) {
+    let Some(ifa_family) = libc_c_int_to_u8(libc::AF_INET) else {
+        return;
+    };
     let msg = IfAddrMsg {
-        ifa_family: libc::AF_INET as u8,
+        ifa_family,
         ifa_prefixlen: prefix_len,
         ifa_flags: 0,
         ifa_scope: 0,
@@ -445,14 +472,19 @@ fn add_ipv4_address(index: libc::c_uint, ip: Ipv4Addr, prefix_len: u8) {
         NetlinkAttr::new(IFA_ADDRESS, ip.octets().to_vec()),
         NetlinkAttr::new(IFA_LOCAL, ip.octets().to_vec()),
     ];
-    let _ =
-        send_netlink_message_with_attrs(libc::RTM_NEWADDR, netlink_create_flags(), &msg, &attrs);
+    let Some(flags) = netlink_create_flags() else {
+        return;
+    };
+    let _ = send_netlink_message_with_attrs(libc::RTM_NEWADDR, flags, &msg, &attrs);
 }
 
 #[cfg(target_os = "linux")]
 fn add_ipv4_default_route(index: libc::c_uint, gateway: Ipv4Addr) {
+    let Some(rtm_family) = libc_c_int_to_u8(libc::AF_INET) else {
+        return;
+    };
     let route = RouteMsg {
-        rtm_family: libc::AF_INET as u8,
+        rtm_family,
         rtm_dst_len: 0,
         rtm_src_len: 0,
         rtm_tos: 0,
@@ -466,8 +498,10 @@ fn add_ipv4_default_route(index: libc::c_uint, gateway: Ipv4Addr) {
         NetlinkAttr::new(RTA_GATEWAY, gateway.octets().to_vec()),
         NetlinkAttr::new(RTA_OIF, index.to_ne_bytes().to_vec()),
     ];
-    let _ =
-        send_netlink_message_with_attrs(libc::RTM_NEWROUTE, netlink_create_flags(), &route, &attrs);
+    let Some(flags) = netlink_create_flags() else {
+        return;
+    };
+    let _ = send_netlink_message_with_attrs(libc::RTM_NEWROUTE, flags, &route, &attrs);
 }
 
 /// Flush the IPv6 default route via rtnetlink, shell-free.
@@ -479,8 +513,11 @@ fn add_ipv4_default_route(index: libc::c_uint, gateway: Ipv4Addr) {
 fn flush_ipv6_default_route() {
     #[cfg(target_os = "linux")]
     {
+        let Some(rtm_family) = libc_c_int_to_u8(libc::AF_INET6) else {
+            return;
+        };
         let route = RouteMsg {
-            rtm_family: libc::AF_INET6 as u8,
+            rtm_family,
             rtm_dst_len: 0,
             rtm_src_len: 0,
             rtm_tos: 0,
@@ -490,18 +527,21 @@ fn flush_ipv6_default_route() {
             rtm_type: libc::RTN_UNICAST,
             rtm_flags: 0,
         };
-        let _ = send_netlink_message(libc::RTM_DELROUTE, netlink_request_flags(), &route);
+        let Some(flags) = netlink_request_flags() else {
+            return;
+        };
+        let _ = send_netlink_message(libc::RTM_DELROUTE, flags, &route);
     }
 }
 
 #[cfg(target_os = "linux")]
-fn netlink_request_flags() -> u16 {
-    (libc::NLM_F_REQUEST | libc::NLM_F_ACK) as u16
+fn netlink_request_flags() -> Option<u16> {
+    libc_c_int_to_u16(libc::NLM_F_REQUEST | libc::NLM_F_ACK)
 }
 
 #[cfg(target_os = "linux")]
-fn netlink_create_flags() -> u16 {
-    (libc::NLM_F_REQUEST | libc::NLM_F_ACK | libc::NLM_F_CREATE | libc::NLM_F_EXCL) as u16
+fn netlink_create_flags() -> Option<u16> {
+    libc_c_int_to_u16(libc::NLM_F_REQUEST | libc::NLM_F_ACK | libc::NLM_F_CREATE | libc::NLM_F_EXCL)
 }
 
 #[cfg(target_os = "linux")]
@@ -525,9 +565,15 @@ fn send_netlink_message_with_attrs<T>(
         .iter()
         .map(|attr| align4(RTATTR_HEADER_LEN + attr.value.len()))
         .sum();
+    let nlmsg_len = u32::try_from(length + attrs_len).map_err(|_| {
+        std::io::Error::new(
+            std::io::ErrorKind::InvalidInput,
+            "netlink message too large",
+        )
+    })?;
     let mut message = Vec::with_capacity(length + attrs_len);
     let header = libc::nlmsghdr {
-        nlmsg_len: (length + attrs_len) as u32,
+        nlmsg_len,
         nlmsg_type: message_type,
         nlmsg_flags: flags,
         nlmsg_seq: 1,
@@ -538,8 +584,14 @@ fn send_netlink_message_with_attrs<T>(
     for attr in attrs {
         append_attr(&mut message, attr);
     }
+    let nl_family = libc_c_int_to_sock_family(libc::AF_NETLINK).ok_or_else(|| {
+        std::io::Error::new(
+            std::io::ErrorKind::InvalidInput,
+            "invalid netlink socket family",
+        )
+    })?;
     let addr = NetlinkSocketAddress {
-        nl_family: libc::AF_NETLINK as libc::sa_family_t,
+        nl_family,
         nl_pad: 0,
         nl_pid: 0,
         nl_groups: 0,
@@ -566,7 +618,12 @@ fn send_netlink_message_with_attrs<T>(
             message.len(),
             0,
             (&addr as *const NetlinkSocketAddress).cast(),
-            std::mem::size_of::<NetlinkSocketAddress>() as libc::socklen_t,
+            libc_socklen(std::mem::size_of::<NetlinkSocketAddress>()).ok_or_else(|| {
+                std::io::Error::new(
+                    std::io::ErrorKind::InvalidInput,
+                    "netlink socket address too large",
+                )
+            })?,
         )
     };
     let result = if rc < 0 {
@@ -592,11 +649,41 @@ fn append_struct_bytes<T>(buffer: &mut Vec<u8>, value: &T) {
 #[cfg(target_os = "linux")]
 fn append_attr(buffer: &mut Vec<u8>, attr: &NetlinkAttr) {
     let length = RTATTR_HEADER_LEN + attr.value.len();
-    buffer.extend_from_slice(&(length as u16).to_ne_bytes());
+    buffer.extend_from_slice(&usize_to_u16_saturating(length).to_ne_bytes());
     buffer.extend_from_slice(&attr.kind.to_ne_bytes());
     buffer.extend_from_slice(&attr.value);
     let padded = align4(length);
     buffer.resize(buffer.len() + padded - length, 0);
+}
+
+#[cfg(target_os = "linux")]
+fn libc_c_int_to_u8(value: libc::c_int) -> Option<u8> {
+    u8::try_from(value).ok()
+}
+
+#[cfg(target_os = "linux")]
+fn libc_c_int_to_u16(value: libc::c_int) -> Option<u16> {
+    u16::try_from(value).ok()
+}
+
+#[cfg(target_os = "linux")]
+fn libc_c_int_to_u32(value: libc::c_int) -> Option<u32> {
+    u32::try_from(value).ok()
+}
+
+#[cfg(target_os = "linux")]
+fn libc_c_int_to_sock_family(value: libc::c_int) -> Option<libc::sa_family_t> {
+    libc::sa_family_t::try_from(value).ok()
+}
+
+#[cfg(target_os = "linux")]
+fn libc_socklen(value: usize) -> Option<libc::socklen_t> {
+    libc::socklen_t::try_from(value).ok()
+}
+
+#[cfg(target_os = "linux")]
+fn usize_to_u16_saturating(value: usize) -> u16 {
+    u16::try_from(value).unwrap_or(u16::MAX)
 }
 
 #[cfg(target_os = "linux")]

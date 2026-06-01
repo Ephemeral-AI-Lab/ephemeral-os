@@ -1,5 +1,23 @@
 # Plugin Live E2E Iteration Report
 
+## Iteration 6 - 2026-06-01 23:59 CST
+
+- Exact command run: `EOS_SANDBOX_PROVIDER=docker EOS_LIVE_E2E_IMAGE=xingyaoww/sweb.eval.x86_64.dask_s_dask-10042:latest EOS_PLUGIN_REFRESH_SAMPLES=1 EOS_PLUGIN_REFRESH_AUTO_SQUASH_WRITES=104 uv run pytest -q -x -rs --tb=short --durations=10 backend/tests/live_e2e_test/sandbox/plugin/test_plugin_refresh_strategies.py`.
+- Artifact paths inspected: pytest output and the refreshed `.omc/results/plugin-refresh-strategies-*` artifact emitted by the test.
+- Pass/fail/skip status: passed; focused plugin live test `1 passed in 12.38s`.
+- Findings summary: The benchmark-backed live plugin refresh case remains green after adding daemon-owned service process lifecycle behind `api.plugin.ensure start_services=true`. The live case still uses the Python refresh-strategy benchmark until the Rust harness accept/connect path is wired.
+- Fix applied: None; this was a verification rerun after the Rust service lifecycle changes.
+- Remaining risk or next iteration target: Wire the real plugin harness accept/connect path so a live Rust plugin case can start a service process, connect PPC, issue a read-only `plugin.*` op, and then exercise refresh.
+
+## Iteration 5 - 2026-06-01 23:47 CST
+
+- Exact command run: `EOS_SANDBOX_PROVIDER=docker EOS_LIVE_E2E_IMAGE=xingyaoww/sweb.eval.x86_64.dask_s_dask-10042:latest EOS_PLUGIN_REFRESH_SAMPLES=1 EOS_PLUGIN_REFRESH_AUTO_SQUASH_WRITES=104 uv run pytest -q -x -rs --tb=short --durations=10 backend/tests/live_e2e_test/sandbox/plugin/test_plugin_refresh_strategies.py`.
+- Artifact paths inspected: pytest output and the refreshed `.omc/results/plugin-refresh-strategies-*` artifact emitted by the test.
+- Pass/fail/skip status: passed; focused plugin live test `1 passed in 12.30s`.
+- Findings summary: The existing Docker fixture plus benchmark-script path remains stable after the Rust daemon PPC route slice. The live evidence still covers `workspace_snapshot_refresh`, stale raw workspace watch behavior, commit-to-workspace timer unsuitability, auto-squash/post-drain materialization, and final cleanup.
+- Fix applied: None; this was a verification rerun after the Rust PPC route changes.
+- Remaining risk or next iteration target: Add a Rust-runtime live plugin case after daemon service spawn/reap is wired to real plugin harness processes.
+
 ## Iteration 4 - 2026-06-01 23:32 CST
 
 - Exact command run: `EOS_SANDBOX_PROVIDER=docker EOS_LIVE_E2E_IMAGE=xingyaoww/sweb.eval.x86_64.dask_s_dask-10042:latest EOS_PLUGIN_REFRESH_SAMPLES=1 EOS_PLUGIN_REFRESH_AUTO_SQUASH_WRITES=104 uv run pytest -q -x -rs --tb=short --durations=10 backend/tests/live_e2e_test/sandbox/plugin/test_plugin_refresh_strategies.py`.

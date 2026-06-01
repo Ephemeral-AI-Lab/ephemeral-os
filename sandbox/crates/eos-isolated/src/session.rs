@@ -264,7 +264,8 @@ where
         if self.by_agent.contains_key(agent_id) {
             return Err(IsolatedError::AlreadyOpen);
         }
-        if self.handles.len() >= self.caps.total_cap as usize {
+        let total_cap = usize::try_from(self.caps.total_cap).unwrap_or(usize::MAX);
+        if self.handles.len() >= total_cap {
             return Err(IsolatedError::QuotaExceeded);
         }
 

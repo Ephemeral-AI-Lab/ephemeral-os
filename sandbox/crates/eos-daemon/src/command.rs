@@ -25,13 +25,13 @@ use std::time::Instant;
 #[cfg(target_os = "linux")]
 use nix::pty::openpty;
 #[cfg(target_os = "linux")]
-use nix::sys::signal::{killpg, Signal};
+use nix::sys::signal::{Signal, killpg};
 #[cfg(target_os = "linux")]
 use nix::unistd::Pid;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
 #[cfg(target_os = "linux")]
-use eos_layerstack::{require_workspace_binding, LayerStack};
+use eos_layerstack::{LayerStack, require_workspace_binding};
 #[cfg(target_os = "linux")]
 use eos_overlay::{allocate_overlay_writable_dirs, capture_upperdir, overlay_writable_root};
 #[cfg(target_os = "linux")]
@@ -39,13 +39,13 @@ use eos_protocol::Intent;
 #[cfg(target_os = "linux")]
 use eos_runner::{Fd, NsFds, RunMode, RunRequest, RunResult, ToolCall, WorkspaceRoot};
 
+use crate::dispatcher::{DispatchContext, run_shell_overlay, u64_to_f64_saturating};
 #[cfg(target_os = "linux")]
 use crate::dispatcher::{
     apply_occ_changeset, base_hashes_for_snapshot, guarded_changeset_response,
-    insert_occ_route_timings, layer_change_kind, merge_runner_timings, occ_route_metrics,
-    overlay_daemon_error, resource_timings, run_ns_runner_child,
+    insert_occ_route_timings, layer_change_kind, manifest_version_u64, merge_runner_timings,
+    occ_route_metrics, overlay_daemon_error, resource_timings, run_ns_runner_child,
 };
-use crate::dispatcher::{run_shell_overlay, DispatchContext};
 use crate::error::DaemonError;
 
 /// `api.v1.exec_command` — final Phase 3T command contract.
@@ -57,7 +57,7 @@ pub(crate) fn op_exec_command(
     let tty = args.get("tty").and_then(Value::as_bool).unwrap_or(false);
     let timeout_seconds = optional_u64(args, "timeout")
         .or_else(|| optional_u64(args, "timeout_seconds"))
-        .map(|value| value as f64);
+        .map(u64_to_f64_saturating);
     if let Some(handle) = crate::isolated::command_handle_for_args(args) {
         #[cfg(target_os = "linux")]
         {
@@ -1011,7 +1011,7 @@ fn spawn_pty_reader(mut master: File, output: Arc<PtyOutput>, transcript_path: P
                 Ok(n) => {
                     let text = String::from_utf8_lossy(&buf[..n]).into_owned();
                     output.append(text);
-                    if output.note_spooled(n as u64) {
+                    if output.note_spooled(u64::try_from(n).unwrap_or(u64::MAX)) {
                         if let Some(file) = transcript.as_mut() {
                             let _ = file.write_all(&buf[..n]);
                         }
@@ -1038,13 +1038,14 @@ fn finish_pty_session(
         .and_then(|bytes| serde_json::from_slice::<RunResult>(&bytes).ok());
     let mut exit_code = runner
         .as_ref()
-        .map(|result| result.exit_code as i64)
+        .map(|result| i64::from(result.exit_code))
         .or_else(|| {
             status.ok().map(|status| {
                 status
                     .code()
-                    .or_else(|| status.signal().map(|signal| -signal))
-                    .unwrap_or(1) as i64
+                    .map(i64::from)
+                    .or_else(|| status.signal().map(|signal| -i64::from(signal)))
+                    .unwrap_or(1)
             })
         })
         .unwrap_or(1);
@@ -1105,13 +1106,14 @@ fn finish_isolated_pty_session(
         .and_then(|bytes| serde_json::from_slice::<RunResult>(&bytes).ok());
     let mut exit_code = runner
         .as_ref()
-        .map(|result| result.exit_code as i64)
+        .map(|result| i64::from(result.exit_code))
         .or_else(|| {
             status.ok().map(|status| {
                 status
                     .code()
-                    .or_else(|| status.signal().map(|signal| -signal))
-                    .unwrap_or(1) as i64
+                    .map(i64::from)
+                    .or_else(|| status.signal().map(|signal| -i64::from(signal)))
+                    .unwrap_or(1)
             })
         })
         .unwrap_or(1);
@@ -1277,7 +1279,7 @@ fn finalize_pty_workspace(
     let occ_start = Instant::now();
     let changeset = apply_occ_changeset(
         &workspace.root,
-        Some(workspace.manifest_version as u64),
+        Some(manifest_version_u64(workspace.manifest_version)?),
         &changes,
         &base_hashes,
     )?;

@@ -37,7 +37,7 @@ pub(crate) fn glob_tool_result(
         tool_s,
         json!({
             "filenames": filenames,
-            "num_files": filenames.len() as i64,
+            "num_files": usize_to_i64_saturating(filenames.len()),
             "truncated": truncated,
         }),
     ))
@@ -86,7 +86,7 @@ pub(crate) fn grep_tool_result(
             continue;
         }
         filenames.push(rel.clone());
-        num_matches += matches.len() as i64;
+        num_matches = num_matches.saturating_add(usize_to_i64_saturating(matches.len()));
         match output_mode.as_str() {
             "count" => content_lines.push(format!("{}:{}", rel, matches.len())),
             "content" => {
@@ -112,8 +112,8 @@ pub(crate) fn grep_tool_result(
             "output_mode": output_mode,
             "filenames": filenames,
             "content": content,
-            "num_files": filenames.len() as i64,
-            "num_lines": if output_mode == "content" { content_lines.len() as i64 } else { 0 },
+            "num_files": usize_to_i64_saturating(filenames.len()),
+            "num_lines": if output_mode == "content" { usize_to_i64_saturating(content_lines.len()) } else { 0 },
             "num_matches": num_matches,
             "applied_limit": null,
             "applied_offset": 0,
@@ -145,6 +145,10 @@ fn base_result(mount_s: f64, tool_s: f64, fields: Value) -> Value {
         result_obj.insert(key, value);
     }
     result
+}
+
+fn usize_to_i64_saturating(value: usize) -> i64 {
+    i64::try_from(value).unwrap_or(i64::MAX)
 }
 
 fn search_root(args: &Value, workspace_root: &Path) -> Result<PathBuf, RunnerError> {
@@ -212,7 +216,7 @@ fn read_utf8_file_no_follow(path: &Path) -> Result<Option<String>, RunnerError> 
     };
     if metadata.file_type().is_symlink()
         || !metadata.is_file()
-        || metadata.len() > MAX_FILE_BYTES as u64
+        || metadata.len() > u64::try_from(MAX_FILE_BYTES).unwrap_or(u64::MAX)
     {
         return Ok(None);
     }

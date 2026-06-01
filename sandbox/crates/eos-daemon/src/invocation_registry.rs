@@ -86,6 +86,7 @@ struct RegistryState {
 
 impl InFlightRegistry {
     /// Build a registry with explicit timing values.
+    #[must_use]
     pub fn new(ttl_s: f64, reaper_interval_s: f64) -> Self {
         Self {
             inner: Mutex::new(RegistryState::default()),
@@ -96,6 +97,7 @@ impl InFlightRegistry {
 
     /// Build a registry, sourcing TTL / reaper interval from env (falling back
     /// to the defaults). `// PORT backend/src/sandbox/daemon/rpc/in_flight.py:34-52`
+    #[must_use]
     pub fn from_env() -> Self {
         Self::new(
             env_positive_f64(ENV_TTL_S, DEFAULT_TTL_S),
@@ -311,10 +313,11 @@ mod tests {
             1
         );
         assert!(registry.cancel("bg-1"));
-        assert!(task
-            .await
-            .expect_err("task should be cancelled")
-            .is_cancelled());
+        assert!(
+            task.await
+                .expect_err("task should be cancelled")
+                .is_cancelled()
+        );
         assert_eq!(registry.count_by_agent("agent-a"), 0);
 
         registry.deregister("bg-1");
@@ -325,12 +328,14 @@ mod tests {
     async fn control_paths_recover_poisoned_registry_lock() {
         let registry = Arc::new(InFlightRegistry::new(300.0, 30.0));
         let poisoned = registry.clone();
-        assert!(thread::spawn(move || {
-            let _guard = poisoned.inner.lock().expect("poison test can lock");
-            panic!("poison in-flight registry");
-        })
-        .join()
-        .is_err());
+        assert!(
+            thread::spawn(move || {
+                let _guard = poisoned.inner.lock().expect("poison test can lock");
+                panic!("poison in-flight registry");
+            })
+            .join()
+            .is_err()
+        );
 
         let task = tokio::spawn(future::pending::<()>());
         registry.register(
@@ -348,10 +353,11 @@ mod tests {
             registry.ttl_sweep();
         }
         assert!(registry.cancel("bg-poisoned"));
-        assert!(task
-            .await
-            .expect_err("task should be cancelled")
-            .is_cancelled());
+        assert!(
+            task.await
+                .expect_err("task should be cancelled")
+                .is_cancelled()
+        );
         registry.deregister("bg-poisoned");
         assert_eq!(registry.metrics(), (0, 0));
     }
@@ -378,10 +384,11 @@ mod tests {
 
         registry.ttl_sweep();
         assert_eq!(registry.metrics(), (1, 1));
-        assert!(task
-            .await
-            .expect_err("task should be ttl-cancelled")
-            .is_cancelled());
+        assert!(
+            task.await
+                .expect_err("task should be ttl-cancelled")
+                .is_cancelled()
+        );
         assert_eq!(registry.count_by_agent("agent-a"), 0);
     }
 }

@@ -50,8 +50,20 @@ Landed:
   `plugin_dispatch_deferred` response instead of `unknown_op`; undeclared
   `plugin.*` names still return `unknown_op`, and digest reload replaces the
   previous route set.
+- Added the first daemon PPC/process boundary slice:
+  `sandbox/crates/eos-daemon/src/plugin/process.rs` derives per-service
+  `/eos/plugin/ppc/*.sock` endpoints and harness environment from
+  `PluginServiceKey`, `api.plugin.ensure/status` now expose `service_processes`,
+  and `plugin/ppc_router.rs` performs message-id checked AF_UNIX request/reply.
+  Connected read-only routes can now dispatch through PPC without holding the
+  daemon plugin registry lock during I/O.
+- Added opt-in service process lifecycle behind `api.plugin.ensure`:
+  `start_services: true` spawns service commands with the PPC harness
+  environment, reports `running_service_processes`, and tears processes down
+  through the daemon registry/drop path. This proves daemon ownership of service
+  lifetime without requiring Pyright in focused tests.
 - Added focused Rust coverage: `cargo test -p eos-plugin` (`26 passed`) and
-  `cargo test -p eos-daemon plugin` (`5 passed`).
+  `cargo test -p eos-daemon plugin` (`13 passed`).
 - Added live plugin refresh coverage at
   `backend/tests/live_e2e_test/sandbox/plugin/test_plugin_refresh_strategies.py`,
   backed by `backend/scripts/bench_plugin_refresh_strategies.py`, with
@@ -59,12 +71,13 @@ Landed:
   `backend/tests/live_e2e_test/sandbox/plugin/ITERATION-REPORT.md`.
 - Live verification passed:
   `EOS_SANDBOX_PROVIDER=docker EOS_LIVE_E2E_IMAGE=xingyaoww/sweb.eval.x86_64.dask_s_dask-10042:latest EOS_PLUGIN_REFRESH_SAMPLES=1 EOS_PLUGIN_REFRESH_AUTO_SQUASH_WRITES=104 uv run pytest -q -x -rs --tb=short --durations=10 backend/tests/live_e2e_test/sandbox/plugin/test_plugin_refresh_strategies.py`
-  (`1 passed in 12.55s` on the latest rerun).
+  (`1 passed in 12.38s` on the latest rerun).
 
 Still open:
 
-- Process-backed PPC spawn, AF_UNIX routing, request/reply multiplexing,
-  callback servicing, dynamic route execution, and crash/teardown behavior.
+- Real plugin harness accept/connect wiring, concurrent request multiplexing,
+  callback servicing, WRITE_ALLOWED route execution, and crash/teardown
+  hardening.
 - Actual `workspace_snapshot_refresh` namespace remount/restart execution in
   Rust; current Rust service state is the validated logical/status surface.
 - `WRITE_ALLOWED` overlay wrapping and self-managed plugin commit callbacks
@@ -116,15 +129,21 @@ runtime boundary:
 The Rust path is deliberately incomplete:
 
 - `eos-plugin` has the registry, dispatch-mode selection, PPC envelope framing,
-  no-`eos-occ` crate edge, and warm-server registry scaffolding.
+  no-`eos-occ` crate edge, warm-server registry scaffolding, generic service
+  manifests, refresh messages, service keys, and logical service status.
 - `dispatch_read_only`, `dispatch_write_allowed`, and
   `dispatch_self_managed` still return typed deferred errors.
-- `eos-daemon` links `eos-plugin`, but the runtime op table does not yet register
-  `api.plugin.ensure`, `api.plugin.status`, or dynamically flushed `plugin.*`
-  operations.
-- The existing `WarmServerRegistry` is keyed by `layer_stack_root` only. That is
-  too coarse for arbitrary plugin packages with distinct payload digests,
-  runtimes, environment, and service modes.
+- `eos-daemon` registers `api.plugin.ensure` and `api.plugin.status`, records
+  manifest-declared services and operation routes, and resolves exact
+  `plugin.<plugin>.<op>` names. Read-only routes with a connected PPC client
+  perform a message-id checked AF_UNIX round trip; otherwise registered routes
+  still return a structured `plugin_dispatch_deferred` response. With
+  `start_services: true`, service commands are spawned and reported as daemon
+  owned processes, but the generic harness accept/connect loop is not wired yet.
+- The compatibility `WarmServerRegistry` is still keyed by `layer_stack_root`
+  only. The daemon-owned service registry must use `PluginServiceKey` so
+  arbitrary plugin packages with distinct payload digests, runtimes,
+  environment, and service modes do not share incompatible processes.
 
 ## Design Decision
 
@@ -208,13 +227,13 @@ sandbox/crates/eos-plugin/src/
 
 sandbox/crates/eos-daemon/src/
   plugin/mod.rs          # NEW: daemon plugin module boundary
-  plugin/ops.rs          # NEW: api.plugin.ensure/status + dynamic plugin.* ops
+  plugin/ops.rs          # FUTURE: split api.plugin.ensure/status + plugin.* ops
   plugin/service_registry.rs
                          # NEW: live PluginServiceRegistry implementation
-  plugin/process.rs      # NEW: spawn, kill, reap, PPC socket lifecycle
+  plugin/process.rs      # NEW: PluginServiceKey -> /eos/plugin/ppc/*.sock spec
   plugin/snapshot_refresh.rs
                          # NEW: leased snapshot refresh/remount/restart logic
-  plugin/ppc_router.rs   # NEW: message-id multiplexing and callbacks
+  plugin/ppc_router.rs   # NEW: message-id checked PPC round trip
   plugin/occ_callbacks.rs
                          # NEW: implements self-managed commit via same OCC port
   plugin/telemetry.rs    # NEW: refresh, lease, queue, restart metrics
@@ -607,15 +626,19 @@ Checks:
 
 ### Phase 2 - Process-Backed PPC
 
-- Spawn plugin service processes as process groups.
-- Connect through AF_UNIX PPC using the existing envelope framing.
+- Spawn plugin service processes as process groups. The focused
+  `start_services: true` lifecycle is landed; real harness socket handoff,
+  heartbeat, and crash recovery remain.
+- Connect through AF_UNIX PPC using the existing envelope framing. The focused
+  single-request route is landed for connected read-only services; process
+  accept/connect handoff and concurrent multiplexing remain.
 - Support message-id matched request/reply and plugin-to-daemon callbacks.
 - Add explicit teardown, timeout, heartbeat, and crash recovery.
 
 Checks:
 
-- PPC round trip with concurrent in-flight requests.
-- Unknown message id rejection.
+- PPC round trip with message-id matched reply.
+- Mismatched message id rejection.
 - Service crash returns structured plugin error and reaps process group.
 - No daemon registry lock is held during PPC I/O.
 

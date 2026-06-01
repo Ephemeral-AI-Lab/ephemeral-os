@@ -210,8 +210,13 @@ impl IsolatedNetwork {
             {
                 let host = host_name.clone();
                 let ns = ns_name.clone();
+                let holder_pid = u32::try_from(holder_pid).map_err(|_| {
+                    IsolatedError::NetworkUnavailable(format!(
+                        "invalid isolated holder pid {holder_pid}"
+                    ))
+                })?;
                 if let Err(error) = run_netlink(move |handle| async move {
-                    install_veth_pair(&handle, &host, &ns, holder_pid as u32).await
+                    install_veth_pair(&handle, &host, &ns, holder_pid).await
                 }) {
                     self.pool.free(ns_ip);
                     return Err(error);
@@ -323,7 +328,7 @@ fn install_static_rules(
         NFT_NAT_TABLE,
         "postrouting",
         "nat",
-        libc::NF_INET_POST_ROUTING as u32,
+        libc_c_int_to_u32(libc::NF_INET_POST_ROUTING, "NF_INET_POST_ROUTING")?,
         100,
     )?;
     add_nft_rule(
@@ -337,7 +342,7 @@ fn install_static_rules(
         NFT_FILTER_TABLE,
         "forward",
         "filter",
-        libc::NF_INET_FORWARD as u32,
+        libc_c_int_to_u32(libc::NF_INET_FORWARD, "NF_INET_FORWARD")?,
         0,
     )?;
     add_nft_rule(NFT_FILTER_TABLE, "forward", nft_imds_drop_rule_exprs()?)?;
@@ -360,7 +365,7 @@ fn add_nft_table(name: &str) -> Result<(), IsolatedError> {
     append_be_u32_attr(&mut attrs, NFTA_TABLE_FLAGS, 0);
     send_nft_command(
         format!("create nft table {name}"),
-        libc::NFT_MSG_NEWTABLE as u16,
+        libc_c_int_to_u16(libc::NFT_MSG_NEWTABLE, "NFT_MSG_NEWTABLE")?,
         nft_create_flags(),
         attrs,
         true,
@@ -386,7 +391,7 @@ fn add_nft_base_chain(
     append_nested_attr(&mut attrs, NFTA_CHAIN_HOOK, &hook_attrs);
     send_nft_command(
         format!("create nft chain {table}/{name}"),
-        libc::NFT_MSG_NEWCHAIN as u16,
+        libc_c_int_to_u16(libc::NFT_MSG_NEWCHAIN, "NFT_MSG_NEWCHAIN")?,
         nft_create_flags(),
         attrs,
         true,
@@ -406,7 +411,7 @@ fn add_nft_rule(table: &str, chain: &str, expressions: Vec<Vec<u8>>) -> Result<(
     append_nested_attr(&mut attrs, NFTA_RULE_EXPRESSIONS, &expression_list);
     send_nft_command(
         format!("add nft rule {table}/{chain}"),
-        libc::NFT_MSG_NEWRULE as u16,
+        libc_c_int_to_u16(libc::NFT_MSG_NEWRULE, "NFT_MSG_NEWRULE")?,
         nft_rule_flags(),
         attrs,
         true,
@@ -418,7 +423,10 @@ fn nft_masquerade_rule_exprs(bridge_index: u32) -> Result<Vec<Vec<u8>>, Isolated
     let (bridge_net, bridge_prefix) = bridge_network();
     let mut expressions =
         nft_ipv4_network_match(IPV4_SADDR_OFFSET, bridge_net, bridge_prefix, NFT_CMP_EQ)?;
-    expressions.push(nft_meta_expr(libc::NFT_META_OIF as u32));
+    expressions.push(nft_meta_expr(libc_c_int_to_u32(
+        libc::NFT_META_OIF,
+        "NFT_META_OIF",
+    )?));
     expressions.push(nft_cmp_expr(
         NFT_CMP_NEQ,
         bridge_index.to_ne_bytes().as_slice(),
@@ -430,10 +438,10 @@ fn nft_masquerade_rule_exprs(bridge_index: u32) -> Result<Vec<Vec<u8>>, Isolated
 #[cfg(target_os = "linux")]
 fn nft_imds_drop_rule_exprs() -> Result<Vec<Vec<u8>>, IsolatedError> {
     let imds = parse_ipv4_addr(IMDS_ADDR)?;
-    let mut expressions = nft_ipv4_guard_exprs();
-    expressions.push(nft_payload_ipv4_expr(IPV4_DADDR_OFFSET));
+    let mut expressions = nft_ipv4_guard_exprs()?;
+    expressions.push(nft_payload_ipv4_expr(IPV4_DADDR_OFFSET)?);
     expressions.push(nft_cmp_expr(NFT_CMP_EQ, &imds.octets()));
-    expressions.push(nft_drop_expr());
+    expressions.push(nft_drop_expr()?);
     Ok(expressions)
 }
 
@@ -449,7 +457,7 @@ fn nft_rfc1918_drop_rule_exprs(cidr: &str) -> Result<Vec<Vec<u8>>, IsolatedError
         bridge_prefix,
         NFT_CMP_NEQ,
     )?);
-    expressions.push(nft_drop_expr());
+    expressions.push(nft_drop_expr()?);
     Ok(expressions)
 }
 
@@ -460,36 +468,46 @@ fn nft_ipv4_network_match(
     prefix_len: u8,
     op: u32,
 ) -> Result<Vec<Vec<u8>>, IsolatedError> {
-    let mut expressions = nft_ipv4_guard_exprs();
-    expressions.push(nft_payload_ipv4_expr(offset));
+    let mut expressions = nft_ipv4_guard_exprs()?;
+    expressions.push(nft_payload_ipv4_expr(offset)?);
     expressions.push(nft_bitwise_mask_expr(&ipv4_mask(prefix_len)?));
     expressions.push(nft_cmp_expr(op, &network.octets()));
     Ok(expressions)
 }
 
 #[cfg(target_os = "linux")]
-fn nft_ipv4_guard_exprs() -> Vec<Vec<u8>> {
+fn nft_ipv4_guard_exprs() -> Result<Vec<Vec<u8>>, IsolatedError> {
     let mut data = Vec::new();
     append_be_u32_attr(&mut data, NFTA_META_DREG, NFT_REG_1);
-    append_be_u32_attr(&mut data, NFTA_META_KEY, libc::NFT_META_NFPROTO as u32);
-    vec![
+    append_be_u32_attr(
+        &mut data,
+        NFTA_META_KEY,
+        libc_c_int_to_u32(libc::NFT_META_NFPROTO, "NFT_META_NFPROTO")?,
+    );
+    Ok(vec![
         nft_expr("meta", data),
-        nft_cmp_expr(NFT_CMP_EQ, &[libc::NFPROTO_IPV4 as u8]),
-    ]
+        nft_cmp_expr(
+            NFT_CMP_EQ,
+            &[libc_c_int_to_u8(libc::NFPROTO_IPV4, "NFPROTO_IPV4")?],
+        ),
+    ])
 }
 
 #[cfg(target_os = "linux")]
-fn nft_payload_ipv4_expr(offset: u32) -> Vec<u8> {
+fn nft_payload_ipv4_expr(offset: u32) -> Result<Vec<u8>, IsolatedError> {
     let mut data = Vec::new();
     append_be_u32_attr(&mut data, NFTA_PAYLOAD_DREG, NFT_REG_1);
     append_be_u32_attr(
         &mut data,
         NFTA_PAYLOAD_BASE,
-        libc::NFT_PAYLOAD_NETWORK_HEADER as u32,
+        libc_c_int_to_u32(
+            libc::NFT_PAYLOAD_NETWORK_HEADER,
+            "NFT_PAYLOAD_NETWORK_HEADER",
+        )?,
     );
     append_be_u32_attr(&mut data, NFTA_PAYLOAD_OFFSET, offset);
     append_be_u32_attr(&mut data, NFTA_PAYLOAD_LEN, IPV4_ADDR_LEN);
-    nft_expr("payload", data)
+    Ok(nft_expr("payload", data))
 }
 
 #[cfg(target_os = "linux")]
@@ -521,9 +539,13 @@ fn nft_cmp_expr(op: u32, value: &[u8]) -> Vec<u8> {
 }
 
 #[cfg(target_os = "linux")]
-fn nft_drop_expr() -> Vec<u8> {
+fn nft_drop_expr() -> Result<Vec<u8>, IsolatedError> {
     let mut verdict = Vec::new();
-    append_be_u32_attr(&mut verdict, NFTA_VERDICT_CODE, libc::NF_DROP as u32);
+    append_be_u32_attr(
+        &mut verdict,
+        NFTA_VERDICT_CODE,
+        libc_c_int_to_u32(libc::NF_DROP, "NF_DROP")?,
+    );
 
     let mut data_value = Vec::new();
     append_nested_attr(&mut data_value, NFTA_DATA_VERDICT, &verdict);
@@ -531,7 +553,7 @@ fn nft_drop_expr() -> Vec<u8> {
     let mut data = Vec::new();
     append_be_u32_attr(&mut data, NFTA_IMMEDIATE_DREG, NFT_REG_VERDICT);
     append_nested_attr(&mut data, NFTA_IMMEDIATE_DATA, &data_value);
-    nft_expr("immediate", data)
+    Ok(nft_expr("immediate", data))
 }
 
 #[cfg(target_os = "linux")]
@@ -556,14 +578,20 @@ fn send_nft_command(
     let batch_start_seq = 1;
     let operation_seq = 2;
     let batch_end_seq = 3;
-    let mut message = nft_batch_message(libc::NFNL_MSG_BATCH_BEGIN as u16, batch_start_seq);
-    message.extend(nft_message(message_type, flags, operation_seq, &attrs));
+    let mut message = nft_batch_message(
+        libc_c_int_to_u16(libc::NFNL_MSG_BATCH_BEGIN, "NFNL_MSG_BATCH_BEGIN")?,
+        batch_start_seq,
+    )?;
+    message.extend(nft_message(message_type, flags, operation_seq, &attrs)?);
     message.extend(nft_batch_message(
-        libc::NFNL_MSG_BATCH_END as u16,
+        libc_c_int_to_u16(libc::NFNL_MSG_BATCH_END, "NFNL_MSG_BATCH_END")?,
         batch_end_seq,
-    ));
-    let mut socket = NlSocket::new(libc::NETLINK_NETFILTER as isize)
-        .map_err(|err| network_error_at(step.as_str(), err))?;
+    )?);
+    let mut socket = NlSocket::new(libc_c_int_to_isize(
+        libc::NETLINK_NETFILTER,
+        "NETLINK_NETFILTER",
+    )?)
+    .map_err(|err| network_error_at(step.as_str(), err))?;
     socket
         .bind_auto()
         .map_err(|err| network_error_at(step.as_str(), err))?;
@@ -603,7 +631,11 @@ fn recv_nft_ack(
                     "short nftables netlink header".to_owned(),
                 ));
             };
-            let message_len = message_len as usize;
+            let message_len = usize::try_from(message_len).map_err(|_| {
+                IsolatedError::NetworkUnavailable(
+                    "nftables netlink message length does not fit usize".to_owned(),
+                )
+            })?;
             if message_len < NLMSG_HEADER_LEN || offset + message_len > received {
                 return Err(IsolatedError::NetworkUnavailable(
                     "invalid nftables netlink message length".to_owned(),
@@ -661,25 +693,30 @@ fn handle_nft_ack_errno(errno: i32, ignore_exists: bool) -> Result<(), IsolatedE
 }
 
 #[cfg(target_os = "linux")]
-fn nft_message(message_type: u16, flags: u16, seq: u32, attrs: &[u8]) -> Vec<u8> {
+fn nft_message(
+    message_type: u16,
+    flags: u16,
+    seq: u32,
+    attrs: &[u8],
+) -> Result<Vec<u8>, IsolatedError> {
     nfnetlink_message(
-        nft_msg_type(message_type),
+        nft_msg_type(message_type)?,
         flags,
         seq,
-        libc::NFPROTO_INET as u8,
+        libc_c_int_to_u8(libc::NFPROTO_INET, "NFPROTO_INET")?,
         0,
         attrs,
     )
 }
 
 #[cfg(target_os = "linux")]
-fn nft_batch_message(message_type: u16, seq: u32) -> Vec<u8> {
+fn nft_batch_message(message_type: u16, seq: u32) -> Result<Vec<u8>, IsolatedError> {
     nfnetlink_message(
         message_type,
         NLM_F_REQUEST,
         seq,
-        libc::AF_UNSPEC as u8,
-        libc::NFNL_SUBSYS_NFTABLES as u16,
+        libc_c_int_to_u8(libc::AF_UNSPEC, "AF_UNSPEC")?,
+        libc_c_int_to_u16(libc::NFNL_SUBSYS_NFTABLES, "NFNL_SUBSYS_NFTABLES")?,
         &[],
     )
 }
@@ -692,10 +729,13 @@ fn nfnetlink_message(
     family: u8,
     res_id: u16,
     attrs: &[u8],
-) -> Vec<u8> {
-    let total_len = (NLMSG_HEADER_LEN + NFGENMSG_LEN + attrs.len()) as u32;
-    let mut message = Vec::with_capacity(total_len as usize);
-    message.extend_from_slice(&total_len.to_ne_bytes());
+) -> Result<Vec<u8>, IsolatedError> {
+    let total_len = NLMSG_HEADER_LEN + NFGENMSG_LEN + attrs.len();
+    let total_len_wire = u32::try_from(total_len).map_err(|_| {
+        IsolatedError::NetworkUnavailable("nftables netlink message too large".to_owned())
+    })?;
+    let mut message = Vec::with_capacity(total_len);
+    message.extend_from_slice(&total_len_wire.to_ne_bytes());
     message.extend_from_slice(&message_type.to_ne_bytes());
     message.extend_from_slice(&flags.to_ne_bytes());
     message.extend_from_slice(&seq.to_ne_bytes());
@@ -704,7 +744,7 @@ fn nfnetlink_message(
     message.push(NFNETLINK_V0);
     message.extend_from_slice(&res_id.to_be_bytes());
     message.extend_from_slice(attrs);
-    message
+    Ok(message)
 }
 
 #[cfg(target_os = "linux")]
@@ -739,7 +779,7 @@ fn append_nested_attr(buffer: &mut Vec<u8>, kind: u16, value: &[u8]) {
 #[cfg(target_os = "linux")]
 fn append_attr(buffer: &mut Vec<u8>, kind: u16, value: &[u8]) {
     let length = NLA_HEADER_LEN + value.len();
-    buffer.extend_from_slice(&(length as u16).to_ne_bytes());
+    buffer.extend_from_slice(&usize_to_u16_saturating(length).to_ne_bytes());
     buffer.extend_from_slice(&kind.to_ne_bytes());
     buffer.extend_from_slice(value);
     buffer.resize(buffer.len() + align4(length) - length, 0);
@@ -792,8 +832,11 @@ fn bridge_network() -> (Ipv4Addr, u8) {
 }
 
 #[cfg(target_os = "linux")]
-fn nft_msg_type(message_type: u16) -> u16 {
-    ((libc::NFNL_SUBSYS_NFTABLES as u16) << 8) | message_type
+fn nft_msg_type(message_type: u16) -> Result<u16, IsolatedError> {
+    Ok(
+        (libc_c_int_to_u16(libc::NFNL_SUBSYS_NFTABLES, "NFNL_SUBSYS_NFTABLES")? << 8)
+            | message_type,
+    )
 }
 
 #[cfg(target_os = "linux")]
@@ -804,6 +847,39 @@ fn nft_create_flags() -> u16 {
 #[cfg(target_os = "linux")]
 fn nft_rule_flags() -> u16 {
     NLM_F_REQUEST | NLM_F_ACK | NLM_F_CREATE | NLM_F_APPEND
+}
+
+#[cfg(target_os = "linux")]
+fn libc_c_int_to_u8(value: libc::c_int, name: &str) -> Result<u8, IsolatedError> {
+    u8::try_from(value).map_err(|_| {
+        IsolatedError::NetworkUnavailable(format!("invalid libc {name} value {value}"))
+    })
+}
+
+#[cfg(target_os = "linux")]
+fn libc_c_int_to_u16(value: libc::c_int, name: &str) -> Result<u16, IsolatedError> {
+    u16::try_from(value).map_err(|_| {
+        IsolatedError::NetworkUnavailable(format!("invalid libc {name} value {value}"))
+    })
+}
+
+#[cfg(target_os = "linux")]
+fn libc_c_int_to_u32(value: libc::c_int, name: &str) -> Result<u32, IsolatedError> {
+    u32::try_from(value).map_err(|_| {
+        IsolatedError::NetworkUnavailable(format!("invalid libc {name} value {value}"))
+    })
+}
+
+#[cfg(target_os = "linux")]
+fn libc_c_int_to_isize(value: libc::c_int, name: &str) -> Result<isize, IsolatedError> {
+    isize::try_from(value).map_err(|_| {
+        IsolatedError::NetworkUnavailable(format!("invalid libc {name} value {value}"))
+    })
+}
+
+#[cfg(target_os = "linux")]
+fn usize_to_u16_saturating(value: usize) -> u16 {
+    u16::try_from(value).unwrap_or(u16::MAX)
 }
 
 #[cfg(target_os = "linux")]

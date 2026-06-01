@@ -36,11 +36,12 @@ use tokio::time::timeout;
 use tokio_util::sync::CancellationToken;
 
 use eos_protocol::{
-    audit::{build_event, Lane, ToolCallSection},
-    decode, encode, Envelope, ErrorKind, LayerChange, Request,
+    Envelope, ErrorKind, LayerChange, Request,
+    audit::{Lane, ToolCallSection, build_event},
+    decode, encode,
 };
 
-use crate::audit_buffer::{safe_emit, AuditBuffer};
+use crate::audit_buffer::{AuditBuffer, safe_emit};
 use crate::dispatcher::{DispatchContext, OpTable};
 use crate::error::DaemonError;
 use crate::invocation_registry::InFlightRegistry;
@@ -88,6 +89,7 @@ impl DaemonServer {
     /// Assemble a daemon over `config`, wiring the op table, audit ring, the
     /// invocation registry, and the OCC single-writer queue. The returned
     /// [`OccWriterQueue`] consumer must be driven by [`Self::serve`].
+    #[must_use]
     pub fn new(config: ServerConfig) -> (Self, OccWriterQueue) {
         let (occ_tx, occ_rx) = mpsc::channel(MAX_OCC_QUEUE_DEPTH);
         let shutdown = CancellationToken::new();

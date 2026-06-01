@@ -22,12 +22,12 @@ use std::process::{Command, Stdio};
 use std::sync::{Arc, Mutex, MutexGuard, OnceLock};
 use std::time::Instant;
 
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
 
 use eos_layerstack::{
-    build_workspace_base, ensure_workspace_base, read_workspace_binding, require_workspace_binding,
-    LayerStack, MergedView, WorkspaceBinding, AUTO_SQUASH_MAX_DEPTH,
+    AUTO_SQUASH_MAX_DEPTH, LayerStack, MergedView, WorkspaceBinding, build_workspace_base,
+    ensure_workspace_base, read_workspace_binding, require_workspace_binding,
 };
 use eos_occ::{
     ChangesetResult, CommitQueue, CommitTransactionPort, FileResult, OccRouteProvider, OccService,
@@ -35,10 +35,10 @@ use eos_occ::{
 };
 use eos_overlay::{allocate_overlay_writable_dirs, capture_upperdir, overlay_writable_root};
 use eos_protocol::{
-    apply_search_replace,
-    audit::{build_event, Lane},
-    models::{SearchReplaceEdit, MAX_READ_BYTES},
     ErrorKind, Intent, LayerChange, LayerPath, Manifest, Request, SearchReplaceError,
+    apply_search_replace,
+    audit::{Lane, build_event},
+    models::{MAX_READ_BYTES, SearchReplaceEdit},
 };
 use eos_runner::{RunMode, RunRequest, RunResult, ToolCall, WorkspaceRoot};
 
@@ -65,6 +65,7 @@ pub struct DispatchContext<'ctx> {
 
 impl<'ctx> DispatchContext<'ctx> {
     /// Empty context for direct unit dispatch.
+    #[must_use]
     pub fn empty() -> Self {
         Self {
             invocation_registry: None,
@@ -72,6 +73,7 @@ impl<'ctx> DispatchContext<'ctx> {
     }
 
     /// Context carrying the server's invocation registry.
+    #[must_use]
     pub fn with_invocation_registry(invocation_registry: &'ctx InFlightRegistry) -> Self {
         Self {
             invocation_registry: Some(invocation_registry),
@@ -172,11 +174,13 @@ impl OpTable {
     /// envelope value. Validates the envelope, runs the handler, and on an
     /// unknown op returns the `unknown_op` envelope.
     // PORT backend/src/sandbox/daemon/rpc/dispatcher.py:60-160 — dispatch_envelope_async core
+    #[must_use]
     pub fn dispatch(&self, request: &Request) -> Value {
         self.dispatch_with_context(request, DispatchContext::empty())
     }
 
     /// Route `request` with daemon runtime context.
+    #[must_use]
     pub fn dispatch_with_context(&self, request: &Request, context: DispatchContext<'_>) -> Value {
         let dispatch_start = Instant::now();
         if request.op.trim().is_empty() {
@@ -190,9 +194,12 @@ impl OpTable {
             );
         }
         let Some(handler) = self.handlers.get(&request.op) else {
-            if let Some(response) =
-                crate::plugin::dispatch_registered_op(&request.op, &request.args, context)
-            {
+            if let Some(response) = crate::plugin::dispatch_registered_op(
+                &request.op,
+                &request.invocation_id,
+                &request.args,
+                context,
+            ) {
                 let response = match response {
                     Ok(mut response) => {
                         attach_runtime_timings(&mut response);
@@ -226,6 +233,7 @@ impl OpTable {
 /// `warnings`/`timings` are always `[]`/`{}` at the builder; `details` defaults
 /// to `{}`.
 /// `// PORT backend/src/sandbox/daemon/rpc/dispatcher.py:215-229 — _error_envelope`
+#[must_use]
 pub fn error_envelope(kind: ErrorKind, message: &str, details: Value) -> Value {
     let kind_str = serde_json::to_value(kind).unwrap_or(Value::Null);
     json!({
@@ -406,7 +414,10 @@ fn op_workspace_binding(args: &Value, _context: DispatchContext<'_>) -> Result<V
 // PORT backend/src/sandbox/daemon/rpc/dispatcher.py:413-421 — _audit_pull_handler
 fn op_audit_pull(args: &Value, _context: DispatchContext<'_>) -> Result<Value, DaemonError> {
     let after_seq = args.get("after_seq").and_then(Value::as_i64).unwrap_or(-1);
-    let limit = args.get("limit").and_then(Value::as_u64).unwrap_or(1000) as usize;
+    let limit = args
+        .get("limit")
+        .and_then(Value::as_u64)
+        .map_or(1000, u64_to_usize_saturating);
     let mut response = crate::audit_buffer::global_audit_buffer().pull(after_seq, limit);
     response["success"] = Value::Bool(true);
     Ok(response)
@@ -471,8 +482,8 @@ fn op_read_file(args: &Value, _context: DispatchContext<'_>) -> Result<Value, Da
         "encoding": "utf-8",
         "timings": {
             "resource.command_exec.changed_path_count": 0.0,
-            "resource.layer_stack.manifest_depth": manifest.depth() as f64,
-            "resource.layer_stack.manifest_path_count": manifest.depth() as f64,
+            "resource.layer_stack.manifest_depth": usize_to_f64_saturating(manifest.depth()),
+            "resource.layer_stack.manifest_path_count": usize_to_f64_saturating(manifest.depth()),
             "resource.command_exec.run_dir_tree_exists": 0.0,
             "resource.command_exec.run_dir_tree_bytes": 0.0,
             "resource.command_exec.run_dir_tree_file_count": 0.0,
@@ -539,7 +550,7 @@ fn op_write_file(args: &Value, _context: DispatchContext<'_>) -> Result<Value, D
     let path = LayerPath::parse(&layer_path).map_err(eos_layerstack::LayerStackError::from)?;
     let result = apply_occ_changeset(
         &root,
-        Some(manifest.version as u64),
+        Some(manifest_version_u64(manifest.version)?),
         &[LayerChange::Write {
             path: path.clone(),
             content,
@@ -616,7 +627,7 @@ fn op_edit_file(args: &Value, _context: DispatchContext<'_>) -> Result<Value, Da
     let path = LayerPath::parse(&layer_path).map_err(eos_layerstack::LayerStackError::from)?;
     let result = apply_occ_changeset(
         &root,
-        Some(manifest.version as u64),
+        Some(manifest_version_u64(manifest.version)?),
         &[LayerChange::Write {
             path: path.clone(),
             content: content.into_bytes(),
@@ -634,7 +645,7 @@ fn op_edit_file(args: &Value, _context: DispatchContext<'_>) -> Result<Value, Da
         &result,
         timings,
         total_start,
-        Some(edits.len() as i64),
+        Some(usize_to_i64_saturating(edits.len())),
     ))
 }
 
@@ -725,7 +736,7 @@ pub(crate) fn run_shell_overlay(args: &Value, total_start: Instant) -> Result<Va
         let occ_start = Instant::now();
         let changeset = apply_occ_changeset(
             &root,
-            Some(lease.manifest_version as u64),
+            Some(manifest_version_u64(lease.manifest_version)?),
             &changes,
             &base_hashes,
         )?;
@@ -1086,13 +1097,13 @@ impl CommitTransactionPort for LayerStackCommitTransaction {
                             }
                         })
                         .collect(),
-                    published_manifest_version: Some(manifest.version as u64),
+                    published_manifest_version: manifest_version_u64_optional(manifest.version),
                     timings,
                 })
             }
             Err(eos_layerstack::LayerStackError::ManifestConflict { found, .. }) => {
                 Err(PublishConflict {
-                    observed_version: Some(found as u64),
+                    observed_version: manifest_version_u64_optional(found),
                 })
             }
             Err(err) => {
@@ -1205,11 +1216,11 @@ pub(crate) fn insert_occ_route_timings(
         ("occ.commit.total_s", occ_s),
         (
             "occ.commit.gated_path_count",
-            metrics.gated_path_count as f64,
+            usize_to_f64_saturating(metrics.gated_path_count),
         ),
         (
             "occ.commit.direct_path_count",
-            metrics.direct_path_count as f64,
+            usize_to_f64_saturating(metrics.direct_path_count),
         ),
     ] {
         timings.insert(key.to_owned(), json!(value));
@@ -1393,12 +1404,15 @@ impl OccServiceLookup {
             ),
             (
                 "occ.runtime_service.cache_evicted_count",
-                self.evicted_count as f64,
+                usize_to_f64_saturating(self.evicted_count),
             ),
-            ("occ.runtime_service.cache_size", self.cache_size as f64),
+            (
+                "occ.runtime_service.cache_size",
+                usize_to_f64_saturating(self.cache_size),
+            ),
             (
                 "occ.runtime_service.cache_capacity",
-                OCC_SERVICE_CACHE_MAX as f64,
+                usize_to_f64_saturating(OCC_SERVICE_CACHE_MAX),
             ),
         ] {
             timings.entry(key.to_owned()).or_insert(value);
@@ -1612,7 +1626,7 @@ fn validate_prepared(
                 manifest,
                 prepared,
                 &group.path,
-                &group.base_hash,
+                group.base_hash.as_deref(),
                 &mut parent_absent_cache,
             ),
             _ => FileResult {
@@ -1638,7 +1652,7 @@ fn validate_gated_group(
     manifest: &Manifest,
     prepared: &PreparedChangeset,
     path: &LayerPath,
-    base_hash: &Option<String>,
+    base_hash: Option<&str>,
     parent_absent_cache: &mut HashMap<String, bool>,
 ) -> FileResult {
     let path_str = path.as_str();
@@ -1666,11 +1680,13 @@ fn validate_gated_group(
         }
     }
     match view.read_bytes(path_str, manifest) {
-        Ok((bytes, exists)) if hash_current(bytes.as_deref(), exists) == *base_hash => FileResult {
-            path: path.clone(),
-            status: OccStatus::Accepted,
-            message: String::new(),
-        },
+        Ok((bytes, exists)) if hash_current(bytes.as_deref(), exists).as_deref() == base_hash => {
+            FileResult {
+                path: path.clone(),
+                status: OccStatus::Accepted,
+                message: String::new(),
+            }
+        }
         Ok(_) => FileResult {
             path: path.clone(),
             status: OccStatus::AbortedVersion,
@@ -1698,11 +1714,10 @@ fn parent_absent_from_manifest(root: &Path, manifest: &Manifest, parent: &str) -
         } else {
             root.join(path)
         };
-        match std::fs::symlink_metadata(layer_dir.join(parent)) {
-            Ok(_) => false,
-            Err(err) if err.kind() == std::io::ErrorKind::NotFound => true,
-            Err(_) => false,
-        }
+        matches!(
+            std::fs::symlink_metadata(layer_dir.join(parent)),
+            Err(err) if err.kind() == std::io::ErrorKind::NotFound
+        )
     })
 }
 
@@ -1838,24 +1853,28 @@ fn commit_timings(
     timings.insert("occ.commit.publish_layer_s".to_owned(), publish_s);
     timings.insert(
         "occ.commit.stager_write_count".to_owned(),
-        prepared.changes.len() as f64,
+        usize_to_f64_saturating(prepared.changes.len()),
     );
     timings.insert("occ.commit.stager_write_total_s".to_owned(), publish_s);
     timings.insert(
         "occ.commit.gated_path_count".to_owned(),
-        prepared
-            .path_groups
-            .iter()
-            .filter(|group| group.route == Route::Gated)
-            .count() as f64,
+        usize_to_f64_saturating(
+            prepared
+                .path_groups
+                .iter()
+                .filter(|group| group.route == Route::Gated)
+                .count(),
+        ),
     );
     timings.insert(
         "occ.commit.direct_path_count".to_owned(),
-        prepared
-            .path_groups
-            .iter()
-            .filter(|group| group.route == Route::Direct)
-            .count() as f64,
+        usize_to_f64_saturating(
+            prepared
+                .path_groups
+                .iter()
+                .filter(|group| group.route == Route::Direct)
+                .count(),
+        ),
     );
     for key in [
         "occ.commit.gated_read_current_total_s",
@@ -1974,7 +1993,6 @@ fn occ_status_wire(status: OccStatus) -> &'static str {
         OccStatus::AbortedOverlap => "aborted_overlap",
         OccStatus::Dropped => "dropped",
         OccStatus::Rejected => "rejected",
-        OccStatus::Failed => "failed",
         _ => "failed",
     }
 }
@@ -2021,15 +2039,15 @@ pub(crate) fn resource_timings(
     let mut timings = serde_json::Map::new();
     timings.insert(
         "resource.command_exec.changed_path_count".to_owned(),
-        json!(changed_path_count as f64),
+        json!(usize_to_f64_saturating(changed_path_count)),
     );
     timings.insert(
         "resource.layer_stack.manifest_depth".to_owned(),
-        json!(manifest.depth() as f64),
+        json!(usize_to_f64_saturating(manifest.depth())),
     );
     timings.insert(
         "resource.layer_stack.manifest_path_count".to_owned(),
-        json!(manifest.depth() as f64),
+        json!(usize_to_f64_saturating(manifest.depth())),
     );
     for key in [
         "resource.command_exec.run_dir_tree_exists",
@@ -2241,7 +2259,7 @@ fn emit_occ_audit(request: &Request, response: &Value) {
     let changed_path_count = response
         .get("changed_paths")
         .and_then(Value::as_array)
-        .map_or(0_i64, |paths| paths.len() as i64);
+        .map_or(0_i64, |paths| usize_to_i64_saturating(paths.len()));
     let conflict = response.get("conflict").filter(|value| !value.is_null());
     let event_type = if conflict.is_some() {
         "occ.conflict"
@@ -2327,7 +2345,7 @@ fn emit_workspace_lifecycle_audit(request: &Request, response: &Value, total_ms:
                 "changed_path_count": response
                     .get("changed_paths")
                     .and_then(Value::as_array)
-                    .map(|paths| paths.len() as i64),
+                    .map(|paths| usize_to_i64_saturating(paths.len())),
             }),
         ),
         Lane::Normal,
@@ -2432,8 +2450,57 @@ fn timing_ms(response: &Value, key: &str) -> Option<f64> {
     timing_f64(response, key).map(|seconds| seconds * 1000.0)
 }
 
+pub(crate) fn manifest_version_u64(version: i64) -> Result<u64, DaemonError> {
+    u64::try_from(version).map_err(|_| {
+        DaemonError::LayerStack(eos_layerstack::LayerStackError::Manifest(format!(
+            "manifest version must be non-negative: {version}"
+        )))
+    })
+}
+
+fn manifest_version_u64_optional(version: i64) -> Option<u64> {
+    u64::try_from(version).ok()
+}
+
+fn usize_to_i64_saturating(value: usize) -> i64 {
+    i64::try_from(value).unwrap_or(i64::MAX)
+}
+
+fn usize_to_f64_saturating(value: usize) -> f64 {
+    u32::try_from(value).map_or(f64::from(u32::MAX), f64::from)
+}
+
+pub(crate) fn u64_to_f64_saturating(value: u64) -> f64 {
+    u32::try_from(value).map_or(f64::from(u32::MAX), f64::from)
+}
+
+fn u64_to_usize_saturating(value: u64) -> usize {
+    usize::try_from(value).unwrap_or(usize::MAX)
+}
+
 fn timing_i64(response: &Value, key: &str) -> Option<i64> {
-    timing_f64(response, key).map(|value| value.round() as i64)
+    timing_f64(response, key).map(f64_to_i64_rounded_saturating)
+}
+
+fn f64_to_i64_rounded_saturating(value: f64) -> i64 {
+    if value.is_nan() {
+        return 0;
+    }
+    if value.is_infinite() {
+        return if value.is_sign_negative() {
+            i64::MIN
+        } else {
+            i64::MAX
+        };
+    }
+    let rounded = value.round();
+    format!("{rounded:.0}").parse::<i64>().unwrap_or_else(|_| {
+        if rounded.is_sign_negative() {
+            i64::MIN
+        } else {
+            i64::MAX
+        }
+    })
 }
 
 fn timing_f64(response: &Value, key: &str) -> Option<f64> {
@@ -2634,15 +2701,21 @@ mod tests {
             root: fixture.root.clone(),
         };
 
-        assert!(provider
-            .is_ignored(&lp("target/out.txt"))
-            .expect("gitignore read succeeds"));
-        assert!(provider
-            .is_ignored(&lp("pkg/cache.pyc"))
-            .expect("gitignore read succeeds"));
-        assert!(!provider
-            .is_ignored(&lp("src/main.rs"))
-            .expect("gitignore read succeeds"));
+        assert!(
+            provider
+                .is_ignored(&lp("target/out.txt"))
+                .expect("gitignore read succeeds")
+        );
+        assert!(
+            provider
+                .is_ignored(&lp("pkg/cache.pyc"))
+                .expect("gitignore read succeeds")
+        );
+        assert!(
+            !provider
+                .is_ignored(&lp("src/main.rs"))
+                .expect("gitignore read succeeds")
+        );
     }
 
     #[test]
@@ -2696,9 +2769,11 @@ mod tests {
         .expect("pull response");
 
         let events = pulled["events"].as_array().expect("events array");
-        assert!(events
-            .iter()
-            .any(|event| event["type"].as_str() == Some(marker.as_str())));
+        assert!(
+            events
+                .iter()
+                .any(|event| event["type"].as_str() == Some(marker.as_str()))
+        );
     }
 
     #[test]

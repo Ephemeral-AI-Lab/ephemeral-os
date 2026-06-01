@@ -140,13 +140,13 @@ fn push_json_ascii_escaped(out: &mut String, s: &str) {
             '\u{000A}' => out.push_str("\\n"),
             '\u{000C}' => out.push_str("\\f"),
             '\u{000D}' => out.push_str("\\r"),
-            c if (0x20..=0x7E).contains(&(c as u32)) => out.push(c),
-            c if (c as u32) < 0x20 => {
+            c if (0x20..=0x7E).contains(&u32::from(c)) => out.push(c),
+            c if u32::from(c) < 0x20 => {
                 // other control chars: lowercase 4-digit \u00XX
-                push_u_escape(out, c as u32);
+                push_u_escape(out, u32::from(c));
             }
             c => {
-                let cp = c as u32;
+                let cp = u32::from(c);
                 if cp <= 0xFFFF {
                     push_u_escape(out, cp);
                 } else {
@@ -164,10 +164,10 @@ fn push_json_ascii_escaped(out: &mut String, s: &str) {
 
 fn push_u_escape(out: &mut String, value: u32) {
     out.push_str("\\u");
-    out.push(LOWER_HEX[((value >> 12) & 0x0f) as usize] as char);
-    out.push(LOWER_HEX[((value >> 8) & 0x0f) as usize] as char);
-    out.push(LOWER_HEX[((value >> 4) & 0x0f) as usize] as char);
-    out.push(LOWER_HEX[(value & 0x0f) as usize] as char);
+    out.push(hex_char((value >> 12) & 0x0f));
+    out.push(hex_char((value >> 8) & 0x0f));
+    out.push(hex_char((value >> 4) & 0x0f));
+    out.push(hex_char(value & 0x0f));
 }
 
 /// Build the exact `json.dumps({"layers":[...]}, sort_keys=True,
@@ -280,11 +280,16 @@ pub fn layer_digest(changes: &[LayerChange]) -> String {
 /// Lowercase hex of a digest, matching Python `hexdigest()`.
 fn hex_lower(bytes: &[u8]) -> String {
     let mut s = String::with_capacity(bytes.len() * 2);
-    for b in bytes {
-        s.push(LOWER_HEX[(b >> 4) as usize] as char);
-        s.push(LOWER_HEX[(b & 0x0f) as usize] as char);
+    for &b in bytes {
+        s.push(char::from(LOWER_HEX[usize::from(b >> 4)]));
+        s.push(char::from(LOWER_HEX[usize::from(b & 0x0f)]));
     }
     s
+}
+
+fn hex_char(nibble: u32) -> char {
+    let index = usize::try_from(nibble & 0x0f).unwrap_or(0);
+    char::from(LOWER_HEX[index])
 }
 
 #[cfg(test)]

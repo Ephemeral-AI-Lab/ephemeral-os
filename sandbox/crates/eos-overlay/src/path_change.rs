@@ -358,7 +358,13 @@ fn xattr_value(path: &Path, name: &str) -> Result<Option<Vec<u8>>> {
             _ => Err(OverlayError::Capture(err)),
         };
     }
-    let mut buffer = vec![0u8; len as usize];
+    let len = usize::try_from(len).map_err(|_| {
+        OverlayError::Capture(std::io::Error::new(
+            std::io::ErrorKind::InvalidData,
+            "xattr length does not fit usize",
+        ))
+    })?;
+    let mut buffer = vec![0u8; len];
     // SAFETY: `buffer` is allocated with the size returned by the first
     // getxattr call, and its mutable pointer remains valid for `buffer.len()`
     // bytes for the duration of this FFI call.
@@ -373,7 +379,13 @@ fn xattr_value(path: &Path, name: &str) -> Result<Option<Vec<u8>>> {
     if read < 0 {
         return Err(OverlayError::Capture(std::io::Error::last_os_error()));
     }
-    buffer.truncate(read as usize);
+    let read = usize::try_from(read).map_err(|_| {
+        OverlayError::Capture(std::io::Error::new(
+            std::io::ErrorKind::InvalidData,
+            "xattr read length does not fit usize",
+        ))
+    })?;
+    buffer.truncate(read);
     Ok(Some(buffer))
 }
 
