@@ -6,7 +6,7 @@
 //! This is the ONLY tokio crate. It runs the newline-delimited compact-JSON
 //! protocol-v1 RPC server on an AF_UNIX socket AND a 127.0.0.1 TCP listener
 //! ([`server`]), routes ops through the [`dispatcher`] op table, tracks in-flight
-//! invocations with a TTL reaper ([`in_flight`]), houses the audit RING BUFFER
+//! invocations with a TTL reaper ([`invocation_registry`]), houses the audit RING BUFFER
 //! plus the impure emit bridges ([`audit_buffer`]), and orchestrates background
 //! execution.
 //!
@@ -16,17 +16,11 @@
 //! single-threaded `eosd ns-holder` / `eosd ns-runner` children and wires their
 //! pinned namespace FDs in — it does the namespace syscalls only by delegation.
 //!
-//! It IMPLEMENTS and injects the inverted port traits the lower crates DEFINE
-//! ([`ports`]), so the crate graph stays leaf->root:
-//!
-//! * [`eos_occ::OccRuntimeServicesPort`] + [`eos_ephemeral::OccRuntimeServicesPort`]
-//!   (severing #2) — both on one daemon injector keyed per `layer_stack_root`,
-//!   so the WRITE_ALLOWED publish path always routes through the ONE
-//!   `occ-commit-queue` writer per root (MF-1 single-writer).
-//! * [`eos_layerstack::LayerStackRuntimePort`] (severing #3) — the daemon-side
-//!   per-root manager cache + base construction.
-//! * [`eos_ephemeral::ChangesetProjectionPort`] (severing #4) — published-file
-//!   projection + the per-agent dispatch drain-gate.
+//! Concrete Phase 3/3T handlers own the direct LayerStack/OCC/overlay runtime
+//! paths in [`dispatcher`], [`command`], and [`isolated`]. There is no parallel
+//! daemon port-injector skeleton: write-capable shared-workspace operations
+//! route through the same per-root OCC service cache and single writer used by
+//! the live dispatcher.
 //!
 //! # The single-writer / no-lock-across-await discipline (§5)
 //!
@@ -47,9 +41,8 @@ pub mod audit_buffer;
 pub(crate) mod command;
 pub mod dispatcher;
 pub mod error;
-pub mod in_flight;
+pub mod invocation_registry;
 pub(crate) mod isolated;
-pub mod ports;
 pub mod server;
 
 pub use audit_buffer::{safe_emit, safe_record_phase, AuditBuffer, BufferedEvent, LaneCounters};
@@ -57,13 +50,9 @@ pub use dispatcher::{
     error_envelope, DispatchContext, Handler, OpTable, AUDIT_ALLOW_FLOOR_RESET_ENV,
 };
 pub use error::{DaemonError, Result};
-pub use in_flight::{
+pub use invocation_registry::{
     ActiveCallGuard, InFlightInvocation, InFlightRegistry, DEFAULT_REAPER_INTERVAL_S,
     DEFAULT_TTL_S, ENV_REAPER_INTERVAL_S, ENV_TTL_S,
-};
-pub use ports::{
-    ChangesetProjectionInjector, DaemonCommitTransaction, LayerStackRuntimeInjector,
-    OccServicesInjector,
 };
 pub use server::{
     DaemonServer, OccWork, OccWriterQueue, ServerConfig, MAX_OCC_QUEUE_DEPTH, MAX_REQUEST_BYTES,

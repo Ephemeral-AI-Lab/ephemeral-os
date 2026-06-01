@@ -13,6 +13,7 @@ from sandbox.api.transport import (
     DAEMON_OP_PTY_CANCEL,
     DAEMON_OP_PTY_COLLECT_COMPLETED,
     DAEMON_OP_PTY_PROGRESS,
+    DAEMON_OP_PTY_SESSION_COUNT,
     DAEMON_OP_PTY_WRITE_STDIN,
     DAEMON_OP_WRITE_FILE,
     SandboxTransport,
@@ -47,6 +48,7 @@ def test_public_daemon_ops_use_api_v1_names() -> None:
     assert DAEMON_OP_PTY_PROGRESS == "api.v1.pty.progress"
     assert DAEMON_OP_PTY_CANCEL == "api.v1.pty.cancel"
     assert DAEMON_OP_PTY_COLLECT_COMPLETED == "api.v1.pty.collect_completed"
+    assert DAEMON_OP_PTY_SESSION_COUNT == "api.v1.pty_session_count"
     assert DAEMON_OP_INVOCATION_CANCEL == "api.v1.cancel"
     assert DAEMON_OP_INVOCATION_HEARTBEAT == "api.v1.heartbeat"
     assert DAEMON_OP_INFLIGHT_COUNT == "api.v1.inflight_count"

@@ -18,7 +18,7 @@ not as a reason to stop.
 
 Use `docs/architecture/index.html` as the maintained codebase-memory and
 architecture bundle before making architecture-shaped changes. The root page
-links the module pages for `docs/architecture/task_center`,
+links the module pages for `docs/architecture/workflow`,
 `docs/architecture/agent_loops`, `docs/architecture/tools`, and
 `docs/architecture/sandbox`; those pages are the first stop for ownership,
 workflow, invariants, diagnostics, and refresh triggers. Treat the older

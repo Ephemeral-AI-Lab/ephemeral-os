@@ -81,6 +81,7 @@ from sandbox.api.daemon_invocations import (
     heartbeat,
     inflight_count,
     isolated_active,
+    pty_session_count,
 )
 from sandbox.api.daemon_audit import audit_pull, audit_reset_floor, audit_snapshot
 
@@ -146,6 +147,7 @@ __all__ = [
     "list_snapshots",
     "raw_exec",
     "read_file",
+    "pty_session_count",
     "set_sandbox_labels",
     "shell",
     "start_sandbox",

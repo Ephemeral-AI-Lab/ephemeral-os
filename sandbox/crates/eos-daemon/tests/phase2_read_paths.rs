@@ -447,7 +447,7 @@ async fn control_ops_use_inflight_registry() {
         "api.v1.shell",
         true,
     );
-    let context = DispatchContext::with_in_flight(&registry);
+    let context = DispatchContext::with_invocation_registry(&registry);
 
     let count = table.dispatch_with_context(
         &Request {
@@ -459,6 +459,17 @@ async fn control_ops_use_inflight_registry() {
     );
     assert_eq!(count["success"], Value::Bool(true));
     assert_eq!(count["count"], json!(1));
+
+    let pty_count = table.dispatch_with_context(
+        &Request {
+            op: "api.v1.pty_session_count".to_owned(),
+            invocation_id: "pty-count".to_owned(),
+            args: json!({"agent_id": "agent-a"}),
+        },
+        context,
+    );
+    assert_eq!(pty_count["success"], Value::Bool(true));
+    assert_eq!(pty_count["count"], json!(0));
 
     let heartbeat = table.dispatch_with_context(
         &Request {

@@ -11,7 +11,7 @@
 //!
 //! 1. **Never hold a lock across `.await`.** Connection handlers clone the data
 //!    they need out of any guarded state, drop the guard, THEN await. The audit
-//!    ring + in-flight registry use synchronous mutexes held only across
+//!    ring + invocation registry use synchronous mutexes held only across
 //!    non-await sections.
 //! 2. **One OCC writer per root via an mpsc work queue.** The single-writer
 //!    publish path is reached NOT by locking shared OCC state across awaits but
@@ -43,7 +43,7 @@ use eos_protocol::{
 use crate::audit_buffer::{safe_emit, AuditBuffer};
 use crate::dispatcher::{DispatchContext, OpTable};
 use crate::error::DaemonError;
-use crate::in_flight::InFlightRegistry;
+use crate::invocation_registry::InFlightRegistry;
 
 /// Maximum bytes read for a single request line (re-exported for the listener
 /// buffer cap). `// PORT backend/src/sandbox/daemon/rpc/server.py:58 — MAX_REQUEST_BYTES`
@@ -68,7 +68,7 @@ pub struct ServerConfig {
     pub auth_token: Option<String>,
 }
 
-/// The running daemon: the op table, audit ring, in-flight registry, the OCC
+/// The running daemon: the op table, audit ring, invocation registry, the OCC
 /// work-queue sender, and the shutdown token.
 ///
 /// It ORCHESTRATES but NEVER enters a namespace: namespace work is delegated to
@@ -79,14 +79,14 @@ pub struct DaemonServer {
     config: ServerConfig,
     op_table: OpTable,
     audit: AuditBuffer,
-    in_flight: Arc<InFlightRegistry>,
+    invocation_registry: Arc<InFlightRegistry>,
     occ_tx: mpsc::Sender<OccWork>,
     shutdown: CancellationToken,
 }
 
 impl DaemonServer {
     /// Assemble a daemon over `config`, wiring the op table, audit ring, the
-    /// in-flight registry, and the OCC single-writer queue. The returned
+    /// invocation registry, and the OCC single-writer queue. The returned
     /// [`OccWriterQueue`] consumer must be driven by [`Self::serve`].
     pub fn new(config: ServerConfig) -> (Self, OccWriterQueue) {
         let (occ_tx, occ_rx) = mpsc::channel(MAX_OCC_QUEUE_DEPTH);
@@ -95,7 +95,7 @@ impl DaemonServer {
             config,
             op_table: OpTable::with_builtins(),
             audit: AuditBuffer::new(),
-            in_flight: Arc::new(InFlightRegistry::from_env()),
+            invocation_registry: Arc::new(InFlightRegistry::from_env()),
             occ_tx,
             shutdown: shutdown.clone(),
         };
@@ -124,7 +124,7 @@ impl DaemonServer {
         let server = Arc::new(self);
         let _occ_task = tokio::spawn(occ_queue.run());
         let _reaper_task = {
-            let registry = Arc::clone(&server.in_flight);
+            let registry = Arc::clone(&server.invocation_registry);
             let shutdown = server.shutdown.clone();
             tokio::spawn(async move {
                 loop {
@@ -137,7 +137,7 @@ impl DaemonServer {
                 }
             })
         };
-        let _ = (&server.audit, &server.in_flight, &server.occ_tx);
+        let _ = (&server.audit, &server.invocation_registry, &server.occ_tx);
 
         if let Some(parent) = server.config.socket_path.parent() {
             tokio::fs::create_dir_all(parent).await?;
@@ -298,14 +298,17 @@ impl DaemonServer {
             );
         }
         let table = self.op_table.clone();
-        let registry = Arc::clone(&self.in_flight);
+        let registry = Arc::clone(&self.invocation_registry);
         let task_invocation_id = invocation_id.clone();
         let task_registry = Arc::clone(&registry);
         let (start_tx, start_rx) = oneshot::channel::<()>();
         let task = tokio::spawn(async move {
             let _ = start_rx.await;
             let _active_call = task_registry.enter_call(&task_invocation_id);
-            table.dispatch_with_context(&request, DispatchContext::with_in_flight(&task_registry))
+            table.dispatch_with_context(
+                &request,
+                DispatchContext::with_invocation_registry(&task_registry),
+            )
         });
         registry.register(
             &invocation_id,
@@ -367,7 +370,11 @@ impl DaemonServer {
 }
 
 fn should_emit_tool_call_event(op: &str) -> bool {
-    !op.starts_with("api.audit.") && !matches!(op, "api.v1.heartbeat" | "api.v1.inflight_count")
+    !op.starts_with("api.audit.")
+        && !matches!(
+            op,
+            "api.v1.heartbeat" | "api.v1.inflight_count" | "api.v1.pty_session_count"
+        )
 }
 
 fn emit_tool_call_event(

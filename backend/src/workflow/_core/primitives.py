@@ -1,4 +1,4 @@
-"""Workflow package primitives: invariant exception, task-id helpers, lifecycle config.
+"""Workflow package primitives: invariant exception, task-id builders, lifecycle config.
 
 Persistence I/O Protocols live in :mod:`workflow._core.persistence`.
 """
@@ -33,21 +33,6 @@ def reducer_task_id(attempt_id: str, local_task_id: str) -> str:
     return f"{attempt_id}:red:{local_task_id}"
 
 
-def attempt_id_from_task_id(task_id: str) -> str | None:
-    """Return the attempt id encoded in a plan task id, or ``None``.
-
-    Plan tasks are ``<attempt_id>:planner`` / ``<attempt_id>:gen:<local>`` /
-    ``<attempt_id>:red:<local>``. Root tasks are not attempt tasks and yield
-    ``None``.
-    """
-    for sep in (":gen:", ":red:"):
-        if sep in task_id:
-            return task_id.split(sep, 1)[0]
-    if task_id.endswith(":planner"):
-        return task_id[: -len(":planner")]
-    return None
-
-
 # ---- Runtime configuration -------------------------------------------------
 
 
@@ -65,7 +50,6 @@ class WorkflowLifecycleConfig:
 __all__ = [
     "WorkflowInvariantViolation",
     "WorkflowLifecycleConfig",
-    "attempt_id_from_task_id",
     "generator_task_id",
     "planner_task_id",
     "reducer_task_id",

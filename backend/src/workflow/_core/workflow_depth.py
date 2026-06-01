@@ -4,10 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from workflow._core.primitives import (
-    WorkflowInvariantViolation,
-    attempt_id_from_task_id,
-)
+from workflow._core.primitives import WorkflowInvariantViolation
 
 
 def workflow_depth(*, workflow_id: str, deps: Any) -> int:
@@ -24,11 +21,13 @@ def workflow_depth(*, workflow_id: str, deps: Any) -> int:
         workflow = deps.workflow_store.get(current)
         if workflow is None:
             raise WorkflowInvariantViolation(f"Workflow {current!r} was not found.")
-        if workflow.parent_task_id is None:
-            return depth
-
-        parent_attempt_id = attempt_id_from_task_id(workflow.parent_task_id)
-        if parent_attempt_id is None:
+        parent_task = deps.task_store.get_task(workflow.parent_task_id)
+        if parent_task is None:
+            raise WorkflowInvariantViolation(
+                f"Parent task {workflow.parent_task_id!r} was not found."
+            )
+        parent_attempt_id = str(parent_task.get("attempt_id") or "")
+        if not parent_attempt_id:
             return depth
 
         parent_attempt = deps.attempt_store.get(parent_attempt_id)

@@ -206,9 +206,9 @@
   <div><b>registers</b><span><code>dispatch_envelope_async()</code> registers the current daemon asyncio task by invocation id, agent id, op, and background flag before invoking the handler.</span></div>
   <div><b>cancels</b><span>Engine cancellation calls <code>sandbox.api.cancel(sandbox_id, invocation_id)</code>, which routes to <code>api.v1.cancel</code> and cancels the daemon task before local asyncio cancellation.</span></div>
   <div><b>heartbeats</b><span>The supervisor periodically groups running sandbox invocation ids by sandbox and calls <code>sandbox.api.heartbeat()</code>; the daemon refreshes <code>last_seen</code> and TTL reaps stale background invocations.</span></div>
-  <div><b>gates</b><span><code>enter_isolated_workspace()</code> checks both local background count and daemon <code>inflight_count</code> before opening private scratch.</span></div>
+  <div><b>gates</b><span><code>enter_isolated_workspace()</code> checks both local background count and daemon <code>pty_session_count</code> before opening private scratch.</span></div>
 </div>
-<p>The daemon exposes <code>api.v1.cancel</code>, <code>api.v1.heartbeat</code>, and <code>api.v1.inflight_count</code> in the same operation table as workspace tools. <code>InFlightInvocationRegistry</code> counts only background invocations for an agent, so foreground requests do not block isolated entry through the daemon count path.</p>
+<p>The daemon exposes <code>api.v1.cancel</code>, <code>api.v1.heartbeat</code>, and <code>api.v1.inflight_count</code> for invocation registry control, while <code>api.v1.pty_session_count</code> reads the daemon PTY registry used by typed command sessions. Foreground requests do not block isolated entry through the invocation registry path; live PTY sessions are counted through the PTY-specific path.</p>
 </section>
 
 <section id="tests-failures" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="backend/tests/unit_test/test_sandbox/test_api/test_raw_exec.py backend/tests/unit_test/test_sandbox/test_api/test_transport_protocol.py backend/tests/unit_test/test_sandbox/test_api/test_shell_background_dispatch.py backend/tests/unit_test/test_sandbox/test_daemon/test_file_dispatch.py backend/tests/unit_test/test_sandbox/test_daemon/test_routing_invariants.py backend/tests/unit_test/test_sandbox/test_daemon/test_in_flight_registry.py backend/tests/unit_test/test_sandbox/test_isolated_workspace_lifecycle_background.py backend/tests/unit_test/test_engine/test_background_tasks.py backend/tests/integration_test/test_sandbox/test_provider_parity.py backend/tests/integration_test/test_sandbox/test_docker_post_lifecycle.py backend/tests/live_e2e_test/sandbox/layer_stack_overlay_occ backend/tests/live_e2e_test/sandbox/phase-05-public-file-ops-report.md">
@@ -239,7 +239,7 @@
       <li>Daemon connect failure: host respawns daemon, checks readiness, and retries; repeated failure surfaces transport error.</li>
       <li>Outside-workspace file path: direct file fast path returns <code>None</code> and daemon falls back to overlay.</li>
       <li>Stale background invocation: daemon TTL reaper cancels background tasks that miss heartbeats.</li>
-      <li>Isolated entry with running sandbox background work: host returns <code>ephemeral_jobs_in_flight</code> or <code>inflight_count_unavailable</code>.</li>
+      <li>Isolated entry with running sandbox background work: host returns <code>ephemeral_jobs_in_flight</code> or <code>pty_session_count_unavailable</code>.</li>
     </ul>
   </div>
 </div>

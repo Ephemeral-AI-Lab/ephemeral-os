@@ -1,4 +1,4 @@
-"""TaskCenter submission notification trigger factories."""
+"""Submission notification trigger factories."""
 
 from __future__ import annotations
 

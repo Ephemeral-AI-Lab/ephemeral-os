@@ -363,15 +363,15 @@ mod tests {
     #[test]
     fn intent_wire_values() {
         assert_eq!(
-            serde_json::to_value(Intent::ReadOnly).unwrap(),
+            serde_json::to_value(Intent::ReadOnly).expect("serialize read-only intent"),
             Value::String("read_only".to_owned())
         );
         assert_eq!(
-            serde_json::to_value(Intent::WriteAllowed).unwrap(),
+            serde_json::to_value(Intent::WriteAllowed).expect("serialize write-allowed intent"),
             Value::String("write_allowed".to_owned())
         );
         assert_eq!(
-            serde_json::to_value(Intent::Lifecycle).unwrap(),
+            serde_json::to_value(Intent::Lifecycle).expect("serialize lifecycle intent"),
             Value::String("lifecycle".to_owned())
         );
     }
@@ -386,7 +386,7 @@ mod tests {
                 timeout_seconds: None,
                 background: false,
             })
-            .unwrap(),
+            .expect("serialize shell args"),
             serde_json::json!({"command":"ls","cwd":".","timeout_seconds":null})
         );
         assert_eq!(
@@ -396,7 +396,7 @@ mod tests {
                 yield_time_ms: Some(250),
                 timeout_seconds: None,
             })
-            .unwrap(),
+            .expect("serialize exec command args"),
             serde_json::json!({"cmd":"printf hi","tty":true,"yield_time_ms":250})
         );
         assert_eq!(
@@ -409,7 +409,7 @@ mod tests {
                 },
                 pty_session_id: Some("pty_1".to_owned()),
             })
-            .unwrap(),
+            .expect("serialize exec command result"),
             serde_json::json!({
                 "status": "running",
                 "exit_code": null,
@@ -423,7 +423,7 @@ mod tests {
                 pattern: "*.rs".to_owned(),
                 path: None,
             })
-            .unwrap(),
+            .expect("serialize glob args"),
             serde_json::json!({"pattern":"*.rs"})
         );
         // grep: optional path/glob_filter/head_limit omitted when None.
@@ -439,7 +439,7 @@ mod tests {
                 glob_filter: None,
                 head_limit: None,
             })
-            .unwrap(),
+            .expect("serialize grep args"),
             serde_json::json!({
                 "pattern":"fn","output_mode":"content","offset":0,
                 "case_insensitive":false,"line_numbers":true,"multiline":false
@@ -454,18 +454,23 @@ mod tests {
                 replace_all: false,
             }],
         };
-        let v = serde_json::to_value(&edit).unwrap();
-        assert_eq!(serde_json::from_value::<EditFileArgs>(v).unwrap(), edit);
+        let v = serde_json::to_value(&edit).expect("serialize edit file args");
+        assert_eq!(
+            serde_json::from_value::<EditFileArgs>(v).expect("deserialize edit file args"),
+            edit
+        );
     }
 
     #[test]
     fn conflict_info_wire_shape() {
         assert_eq!(
-            serde_json::to_value(ConflictInfo::overlap("/w/f.txt", "overlap")).unwrap(),
+            serde_json::to_value(ConflictInfo::overlap("/w/f.txt", "overlap"))
+                .expect("serialize overlap conflict"),
             serde_json::json!({"reason":"aborted_overlap","conflict_file":"/w/f.txt","message":"overlap"})
         );
         assert_eq!(
-            serde_json::to_value(ConflictInfo::rejected("rejected", "")).unwrap(),
+            serde_json::to_value(ConflictInfo::rejected("rejected", ""))
+                .expect("serialize rejected conflict"),
             serde_json::json!({"reason":"rejected","conflict_file":null,"message":""})
         );
     }
@@ -473,10 +478,13 @@ mod tests {
     #[test]
     fn search_replace_semantics() {
         assert_eq!(
-            apply_search_replace("a b a", "a", "X", true).unwrap(),
+            apply_search_replace("a b a", "a", "X", true).expect("replace all search matches"),
             "X b X"
         );
-        assert_eq!(apply_search_replace("a b", "a", "X", false).unwrap(), "X b");
+        assert_eq!(
+            apply_search_replace("a b", "a", "X", false).expect("replace one search match"),
+            "X b"
+        );
         // empty `old` -> EmptyAnchor regardless of text/replace_all.
         assert_eq!(
             apply_search_replace("anything", "", "X", false),
@@ -495,7 +503,11 @@ mod tests {
             Err(SearchReplaceError::CountMismatch)
         );
         // non-overlapping count: "aa" in "aaa" occurs once
-        assert_eq!(apply_search_replace("aaa", "aa", "X", false).unwrap(), "Xa");
+        assert_eq!(
+            apply_search_replace("aaa", "aa", "X", false)
+                .expect("replace one non-overlapping match"),
+            "Xa"
+        );
     }
 
     #[test]
@@ -509,7 +521,8 @@ mod tests {
             env!("CARGO_MANIFEST_DIR"),
             "/fixtures/envelopes/read_file_response.json"
         ));
-        let fixture: Value = serde_json::from_str(FIXTURE.trim_end()).unwrap();
+        let fixture: Value =
+            serde_json::from_str(FIXTURE.trim_end()).expect("parse read_file fixture");
         let result = ReadFileResult {
             success: true,
             workspace: "ephemeral".to_owned(),
@@ -522,8 +535,8 @@ mod tests {
             exists: true,
             encoding: "utf-8".to_owned(),
         };
-        let actual = serde_json::to_value(&result).unwrap();
-        for (key, want) in fixture.as_object().unwrap() {
+        let actual = serde_json::to_value(&result).expect("serialize read file result");
+        for (key, want) in fixture.as_object().expect("read_file fixture object") {
             if key == "timings" {
                 continue;
             }

@@ -30,9 +30,9 @@ pub const MAX_WARM_SERVERS: usize = 256;
 /// A warm per-session plugin server handle, keyed by `layer_stack_root`.
 ///
 /// Owns the server child process group + its PPC endpoint. Tearing it down on
-/// `Drop` is the AV-3 guarantee. Body fields are intentionally minimal at the
-/// skeleton stage; the future port stores the child PID / socket path / loaded
-/// op set here.
+/// `Drop` is the AV-3 guarantee. Because plugin PPC execution is deferred, this
+/// handle currently stores only the session identity and registered op set; the
+/// process-backed port will add the child PID / socket path here.
 /// `// PORT backend/src/sandbox/ephemeral_workspace/plugin/runtime_api.py:59-63 — _LoadedPluginRuntime`
 #[derive(Debug)]
 pub struct WarmServer {
@@ -65,8 +65,9 @@ impl WarmServer {
             return Ok(());
         }
         self.torn_down = true;
-        // No child process handle exists in the skeleton yet. The process-backed
-        // port will kill/reap the warm-server group and close the PPC socket here.
+        // Plugin PPC execution is deferred, so no child process handle exists
+        // yet. The process-backed port will kill/reap the warm-server group and
+        // close the PPC socket here.
         Ok(())
     }
 }

@@ -18,7 +18,6 @@ from workflow._core.invariants import (
 from workflow._core.outcomes import (
     ExecutionRole,
     execution_outcome_for_submission,
-    planner_outcome_from_submission,
     project_attempt_outcomes,
     to_record,
 )
@@ -123,7 +122,7 @@ class AttemptOrchestrator:
         runtime.task_store.set_task_status(
             submission.planner_task_id,
             status=TaskStatus.DONE.value,
-            outcomes=[to_record(planner_outcome_from_submission(submission))],
+            outcomes=[],
             terminal_tool_result={"kind": submission.kind},
         )
         runtime.attempt_store.set_deferred_goal(

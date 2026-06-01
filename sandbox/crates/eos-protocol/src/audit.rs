@@ -372,7 +372,8 @@ mod tests {
     #[test]
     fn isolated_default_drops_none_keeps_defaults() {
         // Doc §1.1 ground truth: only the four non-None defaults survive.
-        let v = serde_json::to_value(IsolatedWorkspaceSection::default()).unwrap();
+        let v = serde_json::to_value(IsolatedWorkspaceSection::default())
+            .expect("serialize default isolated workspace section");
         assert_eq!(
             v,
             serde_json::json!({
@@ -392,7 +393,7 @@ mod tests {
             ..Default::default()
         };
         assert_eq!(
-            serde_json::to_value(&s).unwrap(),
+            serde_json::to_value(&s).expect("serialize daemon section"),
             serde_json::json!({"boot_epoch_id": 123, "pid": 42})
         );
     }
@@ -408,7 +409,7 @@ mod tests {
                 pid: Some(1),
                 ..Default::default()
             })
-            .unwrap(),
+            .expect("serialize daemon event section"),
         );
         assert_eq!(
             daemon_evt,
@@ -432,7 +433,7 @@ mod tests {
                 bytes_out: None,
                 phase_totals_rollup: None,
             })
-            .unwrap(),
+            .expect("serialize tool call event section"),
         );
         assert_eq!(
             tool_evt,
@@ -446,7 +447,7 @@ mod tests {
     #[test]
     fn lane_wire_and_orders() {
         assert_eq!(
-            serde_json::to_value(Lane::Critical).unwrap(),
+            serde_json::to_value(Lane::Critical).expect("serialize audit lane"),
             Value::String("critical".to_owned())
         );
         assert_eq!(

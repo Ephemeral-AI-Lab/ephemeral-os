@@ -8,12 +8,9 @@
 //! requirement at module-load time — see
 //! `isolated_workspace/scripts/setns_overlay_mount.py:55-73`).
 //!
-//! `eos-overlay` is being written concurrently and is empty in this skeleton
-//! pass, so — per the workspace rule "reference sibling crates only for items you
-//! are CERTAIN exist" — the contract is expressed here as a local port trait and
-//! input struct. When `eos-overlay::kernel_mount` lands, the daemon wires a thin
-//! adapter implementing [`KernelMountPort`] over it; the runner keeps depending
-//! only on this trait.
+//! The contract is expressed here as a local port trait and input struct so
+//! the runner depends only on validated mount inputs; the daemon wires a thin
+//! adapter implementing [`KernelMountPort`] over `eos-overlay::kernel_mount`.
 
 use std::fmt::Debug;
 use std::path::PathBuf;

@@ -59,10 +59,10 @@
 <h2>Scope And Verdict <a class="anchor" href="#scope-verdict">#</a></h2>
 <div class="summary">
   <ul>
-    <li>Main agents are planner, executor (generator role), and reducer. Their role contracts live in <code>backend/src/agents/profile/main/*.md</code>. The evaluator role and the verifier profile are gone — the reducer (a plan task) is the attempt's exit gate.</li>
+    <li>Main agents are root, planner, executor (generator role), and reducer. Their role contracts live in <code>backend/src/agents/profile/main/*.md</code>. The root agent handles the top-level request directly; workflow agents exist only inside delegated Workflow attempts.</li>
     <li>Every main profile gets <code>_main_role_contract.md</code> prepended at load time, so the shared terminal discipline and XML-context boundaries are part of the actual system prompt.</li>
     <li>Planner generator tasks may target only registered <code>generator</code>-role profiles (executor) — the gate is <code>role == AgentRole.GENERATOR</code>. Reducers always run the <code>reducer</code> profile and carry no <code>agent_name</code>.</li>
-    <li>Delegation is state-backed. <code>submit_workflow_handoff</code> starts a child workflow through <code>WorkflowStarter.start(prompt, parent_task_id)</code>, the parent task moves to <code>WAITING_WORKFLOW</code>, and <code>AttemptOrchestrator.apply_child_workflow_outcome()</code> resumes the parent. There is no closure-report router.</li>
+    <li>Delegation is state-backed and non-terminal. <code>delegate_workflow</code> starts a delegated workflow through <code>WorkflowStarter.start(prompt, parent_task_id)</code>, returns a workflow handle, and leaves the launching Task <code>RUNNING</code>. The launching agent inspects or cancels that handle and later submits its own terminal outcome.</li>
   </ul>
 </div>
 <div class="wiki-links" aria-label="Agent roles related pages">
@@ -112,8 +112,9 @@
   <table>
     <thead><tr><th>Profile (name)</th><th>Role</th><th>Tools</th><th>Terminals</th><th>Context and skill</th></tr></thead>
     <tbody>
+      <tr><td><code>root.md</code></td><td><code>root</code></td><td>Read/write/edit, shell/search/LSP, isolated-workspace, <code>run_subagent</code>, <code>ask_advisor</code>, and delegated workflow tools.</td><td><code>submit_root_outcome</code>.</td><td><code>context_recipe: null</code>; launches from <code>task.instruction</code>, not ContextEngine.</td></tr>
       <tr><td><code>planner.md</code></td><td><code>planner</code></td><td>Read/search, <code>run_subagent</code>, <code>ask_advisor</code>, <code>load_skill_reference</code>.</td><td><code>submit_planner_outcome</code>.</td><td><code>context_recipe: planner</code>; planner skill row; <code>nested_planner_deferral_disabled</code> trigger.</td></tr>
-      <tr><td><code>executor.md</code></td><td><code>generator</code></td><td>Read/write/edit, shell/search/LSP, isolated-workspace, <code>run_subagent</code>, <code>ask_advisor</code>.</td><td><code>submit_workflow_handoff</code>, <code>submit_generator_outcome</code>.</td><td><code>context_recipe: generator</code>; executor skill row; <code>request_workflow_after_edit</code> and <code>nested_workflow_handoff_disabled</code> triggers.</td></tr>
+      <tr><td><code>executor.md</code></td><td><code>generator</code></td><td>Read/write/edit, shell/search/LSP, isolated-workspace, <code>run_subagent</code>, <code>ask_advisor</code>, and delegated workflow tools.</td><td><code>submit_generator_outcome</code>.</td><td><code>context_recipe: generator</code>; executor skill row; no notification triggers.</td></tr>
       <tr><td><code>reducer.md</code></td><td><code>reducer</code></td><td>Read/shell/search plus <code>ask_advisor</code>, <code>write_file</code>, <code>edit_file</code>; may inline-edit for trivial defects per profile prose.</td><td><code>submit_reducer_outcome</code>.</td><td><code>context_recipe: reducer</code>; reducer skill row; no notification triggers.</td></tr>
     </tbody>
   </table>
@@ -121,12 +122,12 @@
 <div class="edge-list">
   <div><b>shared submission discipline</b><span>All three main profiles require an advisor approval loop before terminal submission and exactly one terminal call per run.</span></div>
   <div><b>planner is not an implementer</b><span>The planner profile says it designs and submits a single executable plan (a generator + reducer DAG). It does not run the work itself.</span></div>
-  <div><b>executor is the edit-capable generator</b><span>The executor can edit and run commands, and root-workflow generators can hand off through <code>submit_workflow_handoff</code>; nested handoff attempts are rejected by the submission prehook.</span></div>
+  <div><b>executor is the edit-capable generator</b><span>The executor can edit, run commands, call <code>delegate_workflow</code> for decomposed background work, inspect the handle with <code>check_workflow_status</code>, and synthesize the result into <code>submit_generator_outcome</code>.</span></div>
   <div><b>reducer is the attempt exit gate</b><span>A reducer digests <code>&lt;dependencies&gt;</code> and completes its <code>&lt;assigned_task&gt;</code>. It may apply trivial inline fixes via <code>edit_file</code> / <code>write_file</code>; scope is enforced by profile prose and the advisor's pre-terminal audit (which sees full edit-input transcripts).</span></div>
 </div>
 </section>
 
-<section id="dispatch-terminal-routing" data-last-reviewed-commit="HEAD-plus-worktree" data-evidence-paths="backend/src/tools/submission/planner/_schemas.py backend/src/tools/_hooks/disallow_nested_planner_deferral.py backend/src/tools/_hooks/disallow_nested_workflow_handoff.py backend/src/tools/_terminals/registry.py backend/src/engine/agent/factory.py backend/src/tools/_framework/factory.py backend/src/workflow/context_engine/skill_message.py backend/tests/unit_test/test_agents/test_routing_acceptance.py backend/tests/unit_test/test_agents/test_skill_message.py backend/tests/unit_test/test_tools/test_submission_main_role_terminals.py">
+<section id="dispatch-terminal-routing" data-last-reviewed-commit="HEAD-plus-worktree" data-evidence-paths="backend/src/tools/submission/planner/_schemas.py backend/src/tools/_hooks/disallow_nested_planner_deferral.py backend/src/tools/_terminals/registry.py backend/src/tools/workflow backend/src/engine/agent/factory.py backend/src/tools/_framework/factory.py backend/src/workflow/context_engine/skill_message.py backend/tests/unit_test/test_agents/test_routing_acceptance.py backend/tests/unit_test/test_agents/test_skill_message.py backend/tests/unit_test/test_tools/test_submission_main_role_terminals.py">
 <h2>Dispatch And Terminals <a class="anchor" href="#dispatch-terminal-routing">#</a></h2>
 <p>Profiles declare the broad tool surface and Workflow now uses those terminal lists directly. The engine registers the union of <code>allowed_tools</code> and <code>terminals</code>; planner-submission validation and submission prehooks enforce role/depth policy at the actual decision point.</p>
 <div class="trace-grid">
@@ -134,7 +135,7 @@
   <div>Planner dispatch gate</div><div><code>_is_generator_capable_agent()</code> requires <code>role == AgentRole.GENERATOR</code> (only the executor profile). Reducers carry no <code>agent_name</code> and always run the <code>reducer</code> profile.</div>
   <div>Terminal descriptors</div><div><code>tools/_terminals/registry.py</code> owns selection guidance and advisor-review focus for every terminal. Row 3, row 4, and advisor prompts render from the same catalog.</div>
   <div>Nested planner policy</div><div><code>submit_planner_outcome</code> remains visible everywhere, but <code>DisallowNestedPlannerDeferral</code> rejects nonblank <code>deferred_goal_for_next_iteration</code> inside delegated workflows.</div>
-  <div>Nested generator policy</div><div><code>submit_workflow_handoff</code> remains visible everywhere, but <code>DisallowNestedWorkflowHandoff</code> rejects handoff from a nested workflow generator.</div>
+  <div>Delegated workflow policy</div><div><code>delegate_workflow</code>, <code>check_workflow_status</code>, and <code>cancel_workflow</code> are ordinary non-terminal tools. The background supervisor rejects a second outstanding delegated workflow for the same parent Task until the caller checks or cancels the existing one.</div>
 </div>
 <pre class="diagram" aria-label="Terminal policy workflow diagram">
 [profile submission tools]
@@ -154,10 +155,10 @@
         [engine enforces terminal-only batch at runtime]
 </pre>
 <div class="edge-list" aria-label="Terminal policy branches">
-  <div><b>root workflow</b><span>Depth 1 permits planner deferral and generator workflow handoff when the payload is otherwise valid.</span></div>
-  <div><b>delegated workflow</b><span>Depth 2 blocks planner deferral payloads and nested generator handoff calls through prehooks, while still allowing <code>submit_planner_outcome</code> completes and <code>submit_generator_outcome</code>.</span></div>
+  <div><b>root request</b><span>The root profile has no ContextEngine recipe and terminates through <code>submit_root_outcome</code>.</span></div>
+  <div><b>delegated workflow</b><span>Planner deferral payloads remain depth-guarded; generators use non-terminal delegated workflow tools and still end with <code>submit_generator_outcome</code>.</span></div>
   <div><b>unchanged roles</b><span>The reducer terminal set is not depth-filtered; it has one outcome terminal.</span></div>
-  <div><b>prompting</b><span>One-shot notifications remind nested planners/generators about blocked capabilities after initial launch messages.</span></div>
+  <div><b>prompting</b><span>Launch guidance is profile-driven: root starts from the request prompt, while planner/generator/reducer agents receive ContextEngine context plus task guidance.</span></div>
 </div>
 <div class="callout warn">
   <span class="label">Do not mutate profiles</span>
@@ -176,26 +177,26 @@
   <div class="flow-row">
     <div class="node warn"><strong>Terminal submission</strong><small>state mutation, not prose</small></div>
     <div class="node"><strong>AttemptOrchestrator</strong><small>stage and task transitions</small></div>
-    <div class="node"><strong>WorkflowStarter</strong><small>child workflow from handoff</small></div>
-    <div class="node"><strong>apply_child_workflow_outcome</strong><small>parent task resume</small></div>
+    <div class="node"><strong>WorkflowStarter</strong><small>delegated workflow from Task</small></div>
+    <div class="node"><strong>workflow tools</strong><small>check/cancel background handle</small></div>
   </div>
 </div>
 <div class="edge-list">
   <div><b>planner boundary</b><span>The planner writes one attempt plan: generator tasks, task specs, and reducers (edges are <code>needs</code>). It does not execute tasks, close iterations, or decide final workflow state.</span></div>
-  <div><b>executor boundary</b><span>The executor completes <code>&lt;assigned_task&gt;</code>, submits a concrete failure outcome, or starts a delegated workflow through <code>WorkflowStarter</code> when <code>submit_workflow_handoff</code> is exposed.</span></div>
+  <div><b>executor boundary</b><span>The executor completes <code>&lt;assigned_task&gt;</code>, submits a concrete failure outcome, or starts delegated background work with <code>delegate_workflow</code> and then incorporates that result into its own terminal submission.</span></div>
   <div><b>reducer boundary</b><span>A reducer runs after the plan tasks its <code>&lt;dependencies&gt;</code> depend on produce outcomes, then completes its <code>&lt;assigned_task&gt;</code>; it may apply trivial inline fixes via <code>edit_file</code> / <code>write_file</code> and then submit reduction success or failure. The attempt PASSES iff every plan task is <code>DONE</code> and FAILS (<code>TASK_FAILED</code>) if any task failed or is unreachable behind a failed dependency.</span></div>
   <div><b>structural gate</b><span>A plan must contain at least one reducer. Generator <code>needs</code> can reference one or more generators (or be empty for roots); reducer <code>needs</code> must contain one or more generators and cannot reference reducers; every generator must feed at least one downstream generator or reducer. <code>ordered_plan_tasks</code> enforces this multi-lane DAG shape at planner-submission time.</span></div>
-  <div><b>handoff boundary</b><span>A handoff marks the parent generator task <code>WAITING_WORKFLOW</code>. When the child workflow closes, the parent orchestrator runs <code>apply_child_workflow_outcome()</code> and advances ready tasks. There is no closure-report object.</span></div>
+  <div><b>delegation boundary</b><span>Delegation does not mutate the parent Task status. The parent stays <code>RUNNING</code>, the delegated Workflow records its own lifecycle, and the launching agent decides when to submit its terminal outcome.</span></div>
   <div><b>coordination boundary</b><span>No role sends peer-to-peer instructions to another role. Durable fields, task outcomes, rendered role context, and terminal payloads are the handoff surfaces.</span></div>
 </div>
 </section>
 
-<section id="helper-profiles" data-last-reviewed-commit="8f5e415f6a22ad46517dd60aca89ce151028c715" data-evidence-paths="backend/src/agents/profile/helper/advisor.md backend/src/agents/profile/subagent/explorer.md backend/src/tools/subagent/explorer_guidance.py backend/src/tools/subagent/run_subagent.py backend/src/tools/submission/notification_triggers/request_workflow_after_edit.py backend/tests/unit_test/test_agents/test_helper_profile_identity_sentences.py backend/tests/unit_test/test_tools/test_subagent_explorer_guidance.py">
+<section id="helper-profiles" data-last-reviewed-commit="HEAD-plus-worktree" data-evidence-paths="backend/src/agents/profile/helper/advisor.md backend/src/agents/profile/subagent/explorer.md backend/src/tools/subagent/explorer_guidance.py backend/src/tools/subagent/run_subagent.py backend/src/tools/workflow backend/tests/unit_test/test_agents/test_helper_profile_identity_sentences.py backend/tests/unit_test/test_tools/test_subagent_explorer_guidance.py">
 <h2>Helper Profiles <a class="anchor" href="#helper-profiles">#</a></h2>
 <div class="concept-grid">
   <div class="concept-card"><strong><code>advisor</code></strong><p>Blocking read-only helper. It audits a parent agent's pending terminal submission and must end with <code>submit_advisor_feedback</code>.</p></div>
   <div class="concept-card"><strong><code>explorer</code></strong><p>Read-only subagent for focused investigation. It uses <code>read_file</code>, <code>glob</code>, and <code>submit_exploration_result</code>.</p></div>
-  <div class="concept-card"><strong>Notification triggers</strong><p><code>request_workflow_after_edit</code> reminds executors about handoff timing after edits. The reducer declares no notification triggers; its inline-edit policy is enforced by profile prose plus the advisor pre-terminal gate.</p></div>
+  <div class="concept-card"><strong>Delegation controls</strong><p><code>delegate_workflow</code>, <code>check_workflow_status</code>, and <code>cancel_workflow</code> are non-terminal tools on root and generator profiles. Reducer declares no delegation tools; its inline-edit policy is enforced by profile prose plus the advisor pre-terminal gate.</p></div>
 </div>
 <p>Helper and subagent profiles may omit <code>context_recipe</code>. <code>validate_agent_definitions_resolved()</code> allows definitions with no recipe, and <code>build_explorer_launch_prompt()</code> documents that explorer subagents do not go through the Workflow composer path.</p>
 </section>
@@ -228,7 +229,7 @@
     <ul>
       <li>Any profile frontmatter change to <code>role</code>, <code>allowed_tools</code>, <code>terminals</code>, <code>notification_triggers</code>, <code>context_recipe</code>, or <code>skill</code>.</li>
       <li>Terminal descriptor or advisor-review guidance changes.</li>
-      <li>Child-workflow handoff, <code>WAITING_WORKFLOW</code>, or <code>apply_child_workflow_outcome</code> changes.</li>
+      <li>Delegated workflow tool, root-task, or workflow launch policy changes.</li>
       <li>Loader validation or skill-lint changes.</li>
     </ul>
   </div>

@@ -17,6 +17,7 @@ from collections.abc import Callable, Iterator, Mapping
 from dataclasses import dataclass, field, replace
 from typing import Any, ClassVar
 
+
 @dataclass
 class ExecutionMetadata:
     """Typed bag of runtime metadata passed to tool executions.
@@ -38,7 +39,6 @@ class ExecutionMetadata:
     task_id: str | None = None
     attempt_id: str | None = None
     workflow_id: str | None = None
-    request_id: str | None = None
     attempt_runtime: Any | None = None
     # Per-request AgentEntryComposer used by helper tools (ask_advisor)
     # to build the parent-inheriting prompt for the helper agent.
@@ -87,7 +87,6 @@ class ExecutionMetadata:
             "task_id",
             "attempt_id",
             "workflow_id",
-            "request_id",
             "attempt_runtime",
             "composer",
             "conversation_messages",

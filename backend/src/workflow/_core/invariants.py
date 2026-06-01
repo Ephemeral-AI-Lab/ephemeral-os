@@ -1,4 +1,4 @@
-"""TaskCenter domain invariants — assertion helpers.
+"""Workflow domain invariants and assertion helpers.
 
 Each ``assert_*`` validates one harness lifecycle invariant and raises
 :class:`WorkflowInvariantViolation` on breach. Used by the workflow lifecycle,

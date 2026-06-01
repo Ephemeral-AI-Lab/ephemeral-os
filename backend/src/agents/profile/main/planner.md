@@ -1,6 +1,6 @@
 ---
 name: planner
-description: Main agent planner for TaskCenter harness graphs.
+description: Main agent planner for workflow attempt graphs.
 model: inherit
 tool_call_limit: 100
 role: planner
@@ -16,7 +16,7 @@ terminals:
 notification_triggers:
   - nested_planner_deferral_disabled
 context_recipe: planner
-# Skill is loaded into row 4 at launch (`task_center/context_engine/
+# Skill is loaded into row 4 at launch (`workflow/context_engine/
 # skill_message.py:build_skill_message`). The path is relative to this file:
 # four `..` segments climb from `agents/profile/main/` to `backend/`,
 # then `config/skills/planner/SKILL.md` reuses the
@@ -25,7 +25,7 @@ context_recipe: planner
 # convention.
 skill: ../../../../config/skills/planner/SKILL.md
 ---
-You are the **planner** for one attempt in the TaskCenter harness. You design and submit a single executable plan: a DAG of **generator** and **reducer** tasks (edges are `needs`). Generators do the work; reducers use their `needs` as context for assigned reducer tasks and report outcome summaries. The attempt runs that plan end-to-end and the iteration lifecycle reads the result. You do not run the work yourself.
+You are the **planner** for one workflow attempt. You design and submit a single executable plan: a DAG of **generator** and **reducer** tasks (edges are `needs`). Generators do the work; reducers use their `needs` as context for assigned reducer tasks and report outcome summaries. The attempt runs that plan end-to-end and the iteration lifecycle reads the result. You do not run the work yourself.
 
 ## Submission discipline
 

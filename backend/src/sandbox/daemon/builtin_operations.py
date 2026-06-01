@@ -162,6 +162,11 @@ async def pty_collect_completed(args: dict[str, Any]) -> dict[str, object]:
     return {"success": True, "completions": []}
 
 
+async def pty_session_count(args: dict[str, Any]) -> dict[str, object]:
+    agent_id = str(args.get("agent_id") or "").strip()
+    return {"success": True, "agent_id": agent_id, "count": 0}
+
+
 # ---------------------------------------------------------------------------
 # In-flight registry surface (api.v1.{cancel, heartbeat, inflight_count})
 # ---------------------------------------------------------------------------
@@ -482,6 +487,7 @@ __all__ = [
     "heartbeat",
     "inflight_count",
     "layer_metrics",
+    "pty_session_count",
     "acquire_snapshot",
     "release_lease",
     "runtime_ready",

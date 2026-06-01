@@ -25,10 +25,8 @@ _CALLER_AUDIT_FIELDS = (
     "agent_run_id",
     "task_id",
     "request_id",
-    "task_id",
     "attempt_id",
     "workflow_id",
-    "request_id",
     "tool_name",
     "tool_id",
 )

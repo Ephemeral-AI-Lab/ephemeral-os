@@ -1,4 +1,4 @@
-"""Role-scoped TaskCenter context documents."""
+"""Role-scoped workflow context documents."""
 
 from __future__ import annotations
 

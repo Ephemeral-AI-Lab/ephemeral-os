@@ -9,6 +9,7 @@ from sandbox.api.transport import (
     DAEMON_OP_INVOCATION_CANCEL,
     DAEMON_OP_INVOCATION_HEARTBEAT,
     DAEMON_OP_ISOLATED_WORKSPACE_STATUS,
+    DAEMON_OP_PTY_SESSION_COUNT,
     SandboxTransport,
     call_sandbox_daemon,
 )
@@ -66,6 +67,23 @@ async def inflight_count(
     return int(response.get("count") or 0)
 
 
+async def pty_session_count(
+    sandbox_id: str,
+    agent_id: str,
+    *,
+    transport: SandboxTransport | None = None,
+) -> int:
+    """Return daemon-visible live PTY command session count for one agent."""
+    response = await call_sandbox_daemon(
+        sandbox_id,
+        DAEMON_OP_PTY_SESSION_COUNT,
+        {"agent_id": agent_id},
+        timeout=_CONTROL_TIMEOUT_S,
+        transport=transport,
+    )
+    return int(response.get("count") or 0)
+
+
 async def isolated_active(
     sandbox_id: str,
     agent_id: str,
@@ -88,4 +106,10 @@ async def isolated_active(
     return bool(response.get("open", False))
 
 
-__all__ = ["cancel", "heartbeat", "inflight_count", "isolated_active"]
+__all__ = [
+    "cancel",
+    "heartbeat",
+    "inflight_count",
+    "isolated_active",
+    "pty_session_count",
+]

@@ -3,8 +3,8 @@
 These wrap the daemon-side ``IsolatedPipeline.{enter,exit}`` RPCs with the
 host-only concerns the tool layer needs:
 
-* in-flight background-task gating on enter (rejects when ephemeral jobs
-  are still running for this agent — local + daemon counts)
+* background-task gating on enter (rejects when ephemeral jobs are still
+  running for this agent — local count plus daemon PTY session count)
 * background-task drain on exit (cancels per-agent background work before
   tearing the pipeline handle down)
 * the ``lifecycle_operation`` audit wrapper
@@ -47,7 +47,7 @@ async def enter_isolated_workspace(
     agent_id = request.caller.agent_id
     try:
         local_count = _count_by_agent(background_manager, agent_id)
-        daemon_count = await _daemon_inflight_count(sandbox_id, agent_id)
+        daemon_count = await _daemon_pty_session_count(sandbox_id, agent_id)
         in_flight = max(local_count, daemon_count)
         if in_flight > 0:
             return EnterIsolatedWorkspaceResult(
@@ -79,7 +79,7 @@ async def enter_isolated_workspace(
         return EnterIsolatedWorkspaceResult(
             success=False,
             error=LifecycleError(
-                kind="inflight_count_unavailable",
+                kind="pty_session_count_unavailable",
                 message=str(exc),
                 details={"sandbox_id": sandbox_id},
             ),
@@ -264,15 +264,15 @@ async def _cancel_by_agent(
     return int(await canceller(agent_id, grace_s=grace_s))
 
 
-async def _daemon_inflight_count(sandbox_id: str, agent_id: str) -> int:
+async def _daemon_pty_session_count(sandbox_id: str, agent_id: str) -> int:
     if not sandbox_id:
         return 0
     try:
         import sandbox.api as sandbox_api
 
-        return await sandbox_api.inflight_count(sandbox_id, agent_id)
+        return await sandbox_api.pty_session_count(sandbox_id, agent_id)
     except Exception as exc:
-        raise RuntimeError("daemon in-flight request count check failed") from exc
+        raise RuntimeError("daemon PTY session count check failed") from exc
 
 
 __all__ = ["enter_isolated_workspace", "exit_isolated_workspace"]

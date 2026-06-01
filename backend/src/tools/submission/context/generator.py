@@ -1,4 +1,4 @@
-"""TaskCenter generator submission context resolution."""
+"""Generator submission context resolution."""
 
 from __future__ import annotations
 
@@ -76,7 +76,7 @@ def resolve_generator_submission_context(
     attempt_id = str(task.get("attempt_id") or "")
     if not attempt_id:
         raise AttemptSubmissionContextError(
-            f"TaskCenter task {task_id!r} is not attempt-bound; generator "
+            f"Task {task_id!r} is not attempt-bound; generator "
             "terminal submissions require a generator task."
         )
     attempt_ctx = _resolve_attempt_context(

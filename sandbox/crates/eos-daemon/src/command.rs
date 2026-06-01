@@ -174,6 +174,27 @@ pub(crate) fn op_pty_collect_completed(
     }
 }
 
+pub(crate) fn op_pty_session_count(
+    args: &Value,
+    _context: DispatchContext<'_>,
+) -> Result<Value, DaemonError> {
+    let agent_id = args
+        .get("agent_id")
+        .and_then(Value::as_str)
+        .unwrap_or_default()
+        .trim()
+        .to_owned();
+    #[cfg(target_os = "linux")]
+    {
+        let count = pty_registry().count_by_agent(&agent_id);
+        Ok(json!({"success": true, "agent_id": agent_id, "count": count}))
+    }
+    #[cfg(not(target_os = "linux"))]
+    {
+        Ok(json!({"success": true, "agent_id": agent_id, "count": 0}))
+    }
+}
+
 fn require_command_string(args: &Value, key: &str) -> Result<String, DaemonError> {
     let value = require_string(args, key)?;
     if value.trim().is_empty() {
@@ -430,6 +451,15 @@ impl PtyRegistry {
             .lock()
             .expect("pty registry poisoned")
             .remove(id)
+    }
+
+    fn count_by_agent(&self, agent_id: &str) -> usize {
+        self.sessions
+            .lock()
+            .expect("pty registry poisoned")
+            .values()
+            .filter(|session| agent_id.is_empty() || session.agent_id == agent_id)
+            .count()
     }
 
     fn push_completed(&self, completion: Value) {
@@ -1473,6 +1503,44 @@ mod tests {
 
         let remaining = registry.collect_completed(&json!({"pty_session_ids": ["pty_keep"]}));
         assert_eq!(remaining["completions"].as_array().unwrap().len(), 1);
+    }
+
+    #[test]
+    #[cfg(target_os = "linux")]
+    fn pty_session_count_counts_live_sessions_by_agent() {
+        let registry = PtyRegistry::new();
+        let output = Arc::new(PtyOutput::new());
+        let writer = || {
+            Mutex::new(
+                OpenOptions::new()
+                    .read(true)
+                    .write(true)
+                    .open("/dev/null")
+                    .expect("open /dev/null"),
+            )
+        };
+        registry.insert(Arc::new(PtySession {
+            id: "pty_a".to_owned(),
+            agent_id: "agent-a".to_owned(),
+            command: "python".to_owned(),
+            pgid: 1,
+            writer: writer(),
+            output: Arc::clone(&output),
+            cancelled: Mutex::new(false),
+        }));
+        registry.insert(Arc::new(PtySession {
+            id: "pty_b".to_owned(),
+            agent_id: "agent-b".to_owned(),
+            command: "bash".to_owned(),
+            pgid: 2,
+            writer: writer(),
+            output,
+            cancelled: Mutex::new(false),
+        }));
+
+        assert_eq!(registry.count_by_agent("agent-a"), 1);
+        assert_eq!(registry.count_by_agent("agent-b"), 1);
+        assert_eq!(registry.count_by_agent(""), 2);
     }
 
     #[test]

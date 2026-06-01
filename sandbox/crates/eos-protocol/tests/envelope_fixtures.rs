@@ -78,7 +78,7 @@ fn responses_canonical_stable() {
 #[test]
 fn protocol_version_field_inside_args() {
     let raw = fixture!("read_file_request.json");
-    let value: Value = serde_json::from_slice(raw).unwrap();
+    let value: Value = serde_json::from_slice(raw).expect("parse read_file request fixture");
     assert!(value.get("_eos_daemon_protocol_version").is_none());
     assert_eq!(
         value["args"]["_eos_daemon_protocol_version"],

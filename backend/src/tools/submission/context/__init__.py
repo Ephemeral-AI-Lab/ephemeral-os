@@ -1,4 +1,4 @@
-"""TaskCenter submission context resolution."""
+"""Task submission context resolution."""
 
 from tools.submission.context.attempt import (
     AttemptSubmissionContext,

@@ -56,10 +56,10 @@ Legend: ✅ done · 🟡 partial · ⬜ not started.
 
 **Rust workspace `/sandbox` — 11 crates + xtask, ~7,800 LOC**
 - ✅ `eos-protocol` **fully implemented + tested**: version/envelope/cas/audit/models/canonical. **29 tests green incl 18 executed CAS golden fixtures** (the `ensure_ascii` Unicode trap reproduced).
-- ✅ Faithful **skeletons** for layerstack/overlay/occ/ephemeral/isolated/plugin/runner/ns-holder/daemon/eosd — `// PORT backend/…:line` anchors remain the precise later-phase work map; remaining `todo!()` bodies now live mostly in Phase 3.5/plugin/port-adapter skeletons.
-- ✅ `cargo check --workspace` green (12 crates) · Phase 1 deny-gate clippy green for `eos-overlay`, `eos-runner`, and `eosd` on host and Linux-musl targets · `cargo fmt --all --check` clean. Later-phase skeleton crates still emit expected unused/dead-code warnings until their bodies land.
+- ✅ Faithful `// PORT backend/…:line` anchors remain where they still map deferred work. The obsolete Rust `eos-ephemeral` runtime pipeline/registry skeleton and unused `eos-daemon::ports` injector skeleton have been removed; deferred plugin PPC dispatch now returns typed `PluginError::Ensure` errors instead of `todo!()` panic stubs.
+- ✅ `cargo check --workspace` green (12 crates) · `cargo clippy --workspace --all-targets` clean · `cargo fmt --all --check` clean. The Phase 3/3T/3.5 Rust cleanup removed the stale unused/dead-code skeleton warnings from `eos-ephemeral` and `eos-daemon`, and the protocol tests no longer rely on `unwrap()`.
 - ✅ `xtask package` implemented for `eosd-linux-{amd64,arm64}`: default builder is `rust-lld` (`cargo` with `RUSTFLAGS=-C linker=rust-lld`), with optional `cargo`/`cross`; writes binary-only `SHA256SUMS`, `protocol_version`, per-artifact JSON manifests, and optional minisign `.minisig` signatures. Current artifacts package locally (`amd64` SHA `81eb221542666647a3b0a80a0ed254dff674a0ead27d814bfcea26bd14996d53`, `arm64` SHA `e07a59546cecf931922386a91bf08a8ee5e1fa08747cbc45ee56462eeac4417b`).
-- ✅ **Build-time guarantee holds**: `cargo tree -p eos-isolated` has no `eos-occ` edge (direct/transitive), and `cargo tree -p eos-plugin --edges normal` shows no `eos-occ` edge after the `eos-ephemeral` port surface stopped linking OCC directly. HINGE split (`SnapshotLeasePort` vs `CommitTransactionPort` in `eos-layerstack`) + 3 severings wired (`OccServicesInjector` impls both `eos_occ::` and `eos_ephemeral::OccRuntimeServicesPort`, returns the per-root single writer — MF-1-aware).
+- ✅ **Build-time guarantee holds**: `cargo tree -p eos-isolated` has no `eos-occ` edge (direct/transitive), and `cargo tree -p eos-plugin --edges normal` shows no `eos-occ` edge. `eos-ephemeral` has been reduced to the protocol/error contract needed by deferred plugin PPC (`cargo tree -p eos-ephemeral --edges normal` now shows only `eos-protocol` + `thiserror`), while the live daemon dispatcher owns the concrete per-root OCC service cache and single-writer publish path.
 
 **Contracts & fixtures (ground truth)**
 - ✅ `sandbox/docs/contract/01-06.md` — source-verified wire/CAS/audit/models/provider/crate-map specs.
@@ -250,7 +250,7 @@ cd .. && .venv/bin/python -m pytest backend/tests/unit_test/test_sandbox/test_pr
 ---
 
 ## Notes / risks for next session
-- **Skeletons are not logic.** Remaining `todo!()` bodies plus `// PORT` anchors are the precise work-list; each cites the exact Python `file:line` to port.
-- **macOS can build/package this pure-Rust static musl amd64 skeleton with `rust-lld`, but cannot validate Linux syscall behavior.** All syscall/overlay/OCC-contention work must be checked in the dask container (PLAN §12.2 recipe) — `cargo check` on macOS only validates the non-Linux `cfg` surface.
+- **Deferred anchors are not logic.** There are no remaining Rust `todo!()` bodies in the Phase 3/3T/3.5 crates checked by the cleanup pass; the plugin PPC `// PORT` anchors remain as the precise skipped work-list and currently fail with typed deferred errors.
+- **macOS can build/package the pure-Rust static musl amd64 artifact with `rust-lld`, but cannot validate Linux syscall behavior.** All syscall/overlay/OCC-contention work must be checked in the dask container (PLAN §12.2 recipe) — `cargo check` on macOS only validates the non-Linux `cfg` surface.
 - **Not committed.** Treat the worktree as parallel-agent dirty; stage intentionally.
 - **CAS byte-identity is the sharpest correctness lever** — any new code computing `manifest_root_hash`/`layer_digest` must pass `fixtures/cas/cases.json` (esp. the unicode cases).

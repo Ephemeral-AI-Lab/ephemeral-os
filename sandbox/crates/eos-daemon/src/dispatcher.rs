@@ -43,7 +43,7 @@ use eos_protocol::{
 use eos_runner::{RunMode, RunRequest, RunResult, ToolCall, WorkspaceRoot};
 
 use crate::error::DaemonError;
-use crate::in_flight::InFlightRegistry;
+use crate::invocation_registry::InFlightRegistry;
 
 /// Env gate for `api.audit.reset_floor` (must be `"true"`).
 /// `// PORT backend/src/sandbox/daemon/rpc/dispatcher.py:404 — EOS_DAEMON_AUDIT_ALLOW_FLOOR_RESET`
@@ -52,27 +52,29 @@ pub const AUDIT_ALLOW_FLOOR_RESET_ENV: &str = "EOS_DAEMON_AUDIT_ALLOW_FLOOR_RESE
 /// A synchronous op handler: decoded args -> response value.
 ///
 /// The Python handlers are a mix of sync + async; the Rust dispatcher resolves
-/// that at the call site. This skeleton models the registered routing surface
-/// rather than each handler's async-ness.
+/// that at the call site. The daemon keeps the routing surface explicit here
+/// and lets command/file/isolated handlers own their runtime details.
 /// `// PORT backend/src/sandbox/daemon/rpc/dispatcher.py:37 — Handler = Callable[[dict], Any]`
 pub type Handler = for<'ctx> fn(&Value, DispatchContext<'ctx>) -> Result<Value, DaemonError>;
 
 /// Per-dispatch daemon services used by handlers that need runtime state.
 #[derive(Clone, Copy, Default)]
 pub struct DispatchContext<'ctx> {
-    in_flight: Option<&'ctx InFlightRegistry>,
+    invocation_registry: Option<&'ctx InFlightRegistry>,
 }
 
 impl<'ctx> DispatchContext<'ctx> {
     /// Empty context for direct unit dispatch.
     pub fn empty() -> Self {
-        Self { in_flight: None }
+        Self {
+            invocation_registry: None,
+        }
     }
 
-    /// Context carrying the server's in-flight registry.
-    pub fn with_in_flight(in_flight: &'ctx InFlightRegistry) -> Self {
+    /// Context carrying the server's invocation registry.
+    pub fn with_invocation_registry(invocation_registry: &'ctx InFlightRegistry) -> Self {
         Self {
-            in_flight: Some(in_flight),
+            invocation_registry: Some(invocation_registry),
         }
     }
 }
@@ -135,11 +137,14 @@ impl OpTable {
             "api.v1.pty.collect_completed",
             crate::command::op_pty_collect_completed,
         );
+        table.register(
+            "api.v1.pty_session_count",
+            crate::command::op_pty_session_count,
+        );
         table
     }
 
-    /// Register `handler` under `op`. Last-wins in this skeleton; the port-time
-    /// impl reproduces the same-handler no-op / different-handler reject.
+    /// Register `handler` under `op`.
     // PORT backend/src/sandbox/daemon/rpc/dispatcher.py:42-57 — register_op (collision reject)
     pub fn register(&mut self, op: &str, handler: Handler) {
         self.handlers.insert(op.to_owned(), handler);
@@ -240,7 +245,7 @@ fn op_cancel(args: &Value, context: DispatchContext<'_>) -> Result<Value, Daemon
         .trim()
         .to_owned();
     let cancelled = context
-        .in_flight
+        .invocation_registry
         .is_some_and(|registry| registry.cancel(&invocation_id));
     Ok(json!({
         "success": true,
@@ -265,7 +270,7 @@ fn op_heartbeat(args: &Value, context: DispatchContext<'_>) -> Result<Value, Dae
         })
         .unwrap_or_default();
     let touched = context
-        .in_flight
+        .invocation_registry
         .map_or(0, |registry| registry.heartbeat(&invocation_ids));
     Ok(json!({"success": true, "touched": touched}))
 }
@@ -280,7 +285,7 @@ fn op_inflight_count(args: &Value, context: DispatchContext<'_>) -> Result<Value
         .trim()
         .to_owned();
     let count = context
-        .in_flight
+        .invocation_registry
         .map_or(0, |registry| registry.count_by_agent(&agent_id));
     Ok(json!({"success": true, "agent_id": agent_id, "count": count}))
 }
@@ -2179,7 +2184,10 @@ fn skip_dispatch_audit(op: &str) -> bool {
     op.starts_with("api.audit.")
         || matches!(
             op,
-            "api.runtime.ready" | "api.v1.heartbeat" | "api.v1.inflight_count"
+            "api.runtime.ready"
+                | "api.v1.heartbeat"
+                | "api.v1.inflight_count"
+                | "api.v1.pty_session_count"
         )
 }
 

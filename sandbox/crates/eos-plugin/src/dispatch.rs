@@ -94,7 +94,9 @@ pub fn ensure_not_isolated(isolated_active: bool) -> Result<()> {
 pub fn dispatch_read_only(_server: &mut WarmServer, _request: PpcEnvelope) -> Result<PpcEnvelope> {
     // PORT overlay_child.py:129 — send the request frame to the warm server over
     //   PPC and await the message-id-matched reply (no overlay, no publish).
-    todo!("PORT overlay_child.py:129 — READ_ONLY warm-server PPC round-trip")
+    Err(deferred_dispatch_error(
+        "READ_ONLY warm-server PPC round-trip",
+    ))
 }
 
 /// WRITE_ALLOWED (auto overlay): `eosd` owns the per-op overlay + the OCC publish
@@ -116,7 +118,9 @@ where
     // PORT overlay_dispatch.py:64-71 — run the op in the warm server over PPC.
     // PORT overlay_dispatch.py:72-88 — publish_cycle through the ONE OCC writer
     //   (services.apply_changeset), then release the lease.
-    todo!("PORT overlay_dispatch.py:29-91 — eosd-owned overlay + single-writer OCC publish around the warm-server call")
+    Err(deferred_dispatch_error(
+        "WRITE_ALLOWED eosd-owned overlay plus single-writer OCC publish",
+    ))
 }
 
 /// Self-managed (`auto_workspace_overlay = false`): the plugin owns its overlay
@@ -137,7 +141,13 @@ where
     //   OCC commit callback on the SAME PPC channel, routing the changeset through
     //   `services.apply_changeset` (MF-1: the same single writer the primary path
     //   uses — never a second writer instance).
-    todo!("PORT op_registry.py:226-229 — self-managed op with OCC commit callback routed through the SAME single writer (MF-1)")
+    Err(deferred_dispatch_error(
+        "self-managed plugin OCC callback through the same single writer",
+    ))
+}
+
+fn deferred_dispatch_error(mode: &'static str) -> PluginError {
+    PluginError::Ensure(format!("plugin PPC dispatch is deferred: {mode}"))
 }
 
 #[cfg(test)]
@@ -183,5 +193,20 @@ mod tests {
             Err(PluginError::ForbiddenInIsolatedWorkspace)
         ));
         assert!(ensure_not_isolated(false).is_ok());
+    }
+
+    #[test]
+    fn deferred_dispatch_paths_return_typed_errors() {
+        for mode in [
+            "READ_ONLY warm-server PPC round-trip",
+            "WRITE_ALLOWED eosd-owned overlay plus single-writer OCC publish",
+            "self-managed plugin OCC callback through the same single writer",
+        ] {
+            assert!(matches!(
+                deferred_dispatch_error(mode),
+                PluginError::Ensure(message)
+                    if message == format!("plugin PPC dispatch is deferred: {mode}")
+            ));
+        }
     }
 }

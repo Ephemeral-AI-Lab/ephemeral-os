@@ -438,6 +438,7 @@ def _register_builtin_operations() -> None:
         "api.v1.pty.progress": builtin_operations.pty_progress,
         "api.v1.pty.cancel": builtin_operations.pty_cancel,
         "api.v1.pty.collect_completed": builtin_operations.pty_collect_completed,
+        "api.v1.pty_session_count": builtin_operations.pty_session_count,
         "api.v1.cancel": builtin_operations.cancel,
         "api.v1.heartbeat": builtin_operations.heartbeat,
         "api.v1.inflight_count": builtin_operations.inflight_count,

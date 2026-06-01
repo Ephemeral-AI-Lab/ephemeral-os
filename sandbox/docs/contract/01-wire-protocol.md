@@ -492,7 +492,7 @@ api.layer_stack.fence_stale_staging
 api.layer_metrics
 api.plugin.{ensure,status}
 api.runtime.ready
-api.v1.{cancel,heartbeat,inflight_count}
+api.v1.{cancel,heartbeat,inflight_count,pty_session_count}
 api.workspace_binding
 api.audit.{pull,snapshot,reset_floor}
 ```

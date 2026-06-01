@@ -1,1 +1,1 @@
-"""TaskCenter cross-cutting infrastructure."""
+"""Workflow cross-cutting infrastructure."""

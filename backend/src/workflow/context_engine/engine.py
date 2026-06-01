@@ -1,4 +1,4 @@
-"""TaskCenter context engine.
+"""Workflow context engine.
 
 The engine builds one explicit :class:`AgentContext` for the launch role. It
 does not own lifecycle policy, terminal routing, token budgeting, or a generic
@@ -15,7 +15,6 @@ from workflow._core.outcomes import (
     attempt_execution_outcomes,
     execution_outcomes_from_row,
     parse_outcomes_record,
-    role_from_task_id,
 )
 from workflow._core.state import Attempt
 from workflow.context_engine.context import AgentContext, ContextSection
@@ -175,7 +174,7 @@ def _build_execution_context(
         raise ContextEngineError(f"Attempt {attempt_id!r} not found")
     task = deps.task_store.get_task(task_id)
     if task is None:
-        raise ContextEngineError(f"TaskCenterTask {task_id!r} not found")
+        raise ContextEngineError(f"Task {task_id!r} not found")
 
     sections: list[ContextSection] = []
     dependency_sections = _dependency_sections(
@@ -267,7 +266,7 @@ def _dependency_sections(
             outcomes = (
                 ExecutionTaskOutcome(
                     status="success",
-                    role=role_from_task_id(task_id) or "generator",
+                    role=_execution_role(task.get("role")),
                     task_id=task_id,
                     outcome="(no outcome recorded)",
                 ),
@@ -280,3 +279,9 @@ def _dependency_sections(
             )
         )
     return tuple(sections)
+
+
+def _execution_role(raw_role: object) -> Literal["generator", "reducer"]:
+    if raw_role == "reducer":
+        return "reducer"
+    return "generator"

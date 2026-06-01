@@ -156,7 +156,7 @@ def build_planner_submission(
 ) -> tuple[PlannerSubmission | None, str | None]:
     task_id = submission_context.task_id
     if task_id != submission_context.attempt.planner_task_id:
-        return None, "Current TaskCenter task is not this attempt's planner task."
+        return None, "Current task is not this attempt's planner task."
 
     seen: set[str] = set()
     for task in tasks:

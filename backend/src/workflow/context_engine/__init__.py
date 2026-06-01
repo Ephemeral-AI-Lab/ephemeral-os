@@ -1,1 +1,1 @@
-"""TaskCenter context-engine internals. Use ``task_center`` externally."""
+"""Workflow context-engine internals. Use ``workflow`` externally."""

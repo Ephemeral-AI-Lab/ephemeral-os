@@ -192,7 +192,6 @@ class RequestEntry:
         metadata = ExecutionMetadata(
             request_id=request_id,
             task_id=root_task_id,
-            request_id=request_id,
             attempt_runtime=runtime,
         )
         metadata["task_store"] = self._task_store

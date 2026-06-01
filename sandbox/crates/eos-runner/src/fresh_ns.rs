@@ -570,7 +570,7 @@ mod tests {
     }
 
     #[test]
-    fn legacy_shell_still_accepts_argv_command() {
+    fn daemon_shell_compat_accepts_argv_command() {
         let argv = shell_argv(&request(
             "shell",
             serde_json::json!({"command": ["echo", "hi"]}),

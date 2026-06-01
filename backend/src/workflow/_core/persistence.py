@@ -1,16 +1,16 @@
-"""Persistence Protocols at the TaskCenter boundary.
+"""Persistence protocols at the workflow boundary.
 
-These are the narrow store contracts that ``task_center`` actually consumes.
-Concrete implementations live in ``db.stores.*`` but task_center modules
+These are the narrow store contracts that ``workflow`` actually consumes.
+Concrete implementations live in ``db.stores.*`` but workflow modules
 depend only on these protocols, so:
 
 - Tests can substitute in-memory or fake stores without monkey-patching
   ``db.stores`` module paths.
 - The store contract can evolve independently of one implementation.
 - Adding a second persistence backend (e.g. a Redis cache layer) does not
-  require changes in ``task_center`` code.
+  require changes in workflow code.
 
-Each protocol lists ONLY the methods task_center calls. Unused methods on
+Each protocol lists ONLY the methods workflow calls. Unused methods on
 the concrete store classes (analytics queries, admin helpers) are out of
 scope.
 """

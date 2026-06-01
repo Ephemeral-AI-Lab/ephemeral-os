@@ -21,10 +21,8 @@ def sandbox_caller_from_tool_context(
         agent_run_id=agent_run_id,
         task_id=str(context.get("task_id") or ""),
         request_id=str(context.get("request_id") or ""),
-        task_id=str(context.get("task_id") or ""),
         attempt_id=str(context.get("attempt_id") or ""),
         workflow_id=str(context.get("workflow_id") or ""),
-        request_id=str(context.get("request_id") or ""),
         tool_id=str(context.get("tool_use_id") or ""),
     )
 

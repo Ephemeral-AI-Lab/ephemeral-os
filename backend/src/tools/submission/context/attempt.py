@@ -1,4 +1,4 @@
-"""TaskCenter attempt-bound submission context resolution."""
+"""Workflow attempt-bound submission context resolution."""
 
 from __future__ import annotations
 
@@ -24,7 +24,7 @@ class AttemptSubmissionContextError(RuntimeError):
 class AttemptSubmissionContext:
     """Attempt-bound submission context.
 
-    Resolved when a TaskCenter task is attached to an Attempt. Tools that
+    Resolved when a task is attached to an Attempt. Tools that
     strictly require attempt context (planner and reducer submissions) keep
     using this resolver.
     """
@@ -41,7 +41,7 @@ class AttemptSubmissionContext:
 def resolve_attempt_submission_context(
     context: ToolExecutionContextService,
 ) -> AttemptSubmissionContext:
-    """Resolve the current TaskCenter task into durable harness attempt context.
+    """Resolve the current task into durable workflow attempt context.
 
     Strict attempt mode — raises :class:`AttemptSubmissionContextError` if the
     task is not attached to an Attempt. Use this resolver from tools that
@@ -58,16 +58,16 @@ def _resolve_runtime_task(
     runtime = context.get("attempt_runtime")
     if not isinstance(runtime, AttemptDeps):
         raise AttemptSubmissionContextError(
-            "Missing harness attempt runtime for this TaskCenter submission."
+            "Missing workflow attempt runtime for this submission."
         )
 
     task_id = str(context.get("task_id") or "")
     if not task_id or task_id.isspace():
-        raise AttemptSubmissionContextError("Missing TaskCenter task id for this submission.")
+        raise AttemptSubmissionContextError("Missing task id for this submission.")
 
     task = runtime.task_store.get_task(task_id)
     if task is None:
-        raise AttemptSubmissionContextError(f"TaskCenter task {task_id!r} was not found.")
+        raise AttemptSubmissionContextError(f"Task {task_id!r} was not found.")
     return runtime, task, task_id
 
 
@@ -87,15 +87,15 @@ def _resolve_attempt_context(
     attempt_id = str(task.get("attempt_id") or "")
     if not attempt_id:
         raise AttemptSubmissionContextError(
-            f"TaskCenter task {task_id!r} is not attached to a harness attempt."
+            f"Task {task_id!r} is not attached to a workflow attempt."
         )
 
     metadata_attempt_id = str(context.get("attempt_id") or "")
     if metadata_attempt_id.isspace():
-        raise AttemptSubmissionContextError("TaskCenter attempt metadata is blank.")
+        raise AttemptSubmissionContextError("Workflow attempt metadata is blank.")
     if metadata_attempt_id and metadata_attempt_id != attempt_id:
         raise AttemptSubmissionContextError(
-            "TaskCenter attempt metadata does not match the persisted task row."
+            "Workflow attempt metadata does not match the persisted task row."
         )
 
     attempt = runtime.attempt_store.get(attempt_id)

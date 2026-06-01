@@ -525,7 +525,7 @@ sandbox/crates/eos-daemon/src/command/workspace.rs
 sandbox/crates/eos-daemon/src/command/gc.rs
 sandbox/crates/eos-daemon/src/dispatcher.rs
 sandbox/crates/eos-daemon/src/server.rs
-sandbox/crates/eos-daemon/src/in_flight.rs
+sandbox/crates/eos-daemon/src/invocation_registry.rs
 ```
 
 Rust runner:

@@ -147,13 +147,13 @@ async def test_exit_drains_agent_background_tasks(
     assert result.phases_ms["evicted_background_tasks"] == 1.0
 
 
-async def test_enter_fails_closed_when_daemon_count_unavailable(
+async def test_enter_fails_closed_when_daemon_pty_session_count_unavailable(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    async def _inflight_count(sandbox_id: str, agent_id: str) -> int:
+    async def _pty_session_count(sandbox_id: str, agent_id: str) -> int:
         raise RuntimeError(f"{sandbox_id}:{agent_id}")
 
-    monkeypatch.setattr("sandbox.api.inflight_count", _inflight_count)
+    monkeypatch.setattr("sandbox.api.pty_session_count", _pty_session_count)
 
     result = await enter_isolated_workspace(
         EnterIsolatedWorkspaceRequest(
@@ -166,5 +166,5 @@ async def test_enter_fails_closed_when_daemon_count_unavailable(
 
     assert result.success is False
     assert result.error is not None
-    assert result.error.kind == "inflight_count_unavailable"
+    assert result.error.kind == "pty_session_count_unavailable"
     assert result.error.details == {"sandbox_id": "sandbox-1"}

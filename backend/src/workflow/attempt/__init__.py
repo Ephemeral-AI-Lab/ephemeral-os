@@ -1,4 +1,4 @@
-"""TaskCenter attempt lifecycle package."""
+"""Workflow attempt lifecycle package."""
 
 from workflow._core.state import (
     Attempt,

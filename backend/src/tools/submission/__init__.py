@@ -1,4 +1,4 @@
-"""TaskCenter submission tools."""
+"""Task and workflow submission tools."""
 
 from __future__ import annotations
 

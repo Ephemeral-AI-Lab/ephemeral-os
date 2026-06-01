@@ -29,10 +29,8 @@ class SandboxCaller:
     agent_run_id: str = ""
     task_id: str = ""
     request_id: str = ""
-    task_id: str = ""
     attempt_id: str = ""
     workflow_id: str = ""
-    request_id: str = ""
     tool_name: str = ""
     tool_id: str = ""
 

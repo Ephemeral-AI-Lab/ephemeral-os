@@ -1,9 +1,8 @@
 """Workflow outcome records and aggregate projections.
 
-Task outcomes are bounded to a single persisted task. Planner outcomes are
-UI/rendering metadata for planner tasks; attempt, iteration, and workflow
-outcomes are execution evidence and therefore contain only generator/reducer
-outcomes.
+Task outcomes are bounded to a single persisted task. Planner submissions create
+real generator/reducer task rows, so attempt, iteration, and workflow outcomes
+contain only generator/reducer execution evidence.
 
 Writers and readers in this module use only the flat
 ``{status, role, task_id, ...}`` record shape.
@@ -20,25 +19,11 @@ from workflow._core.state import Attempt, AttemptStatus
 if TYPE_CHECKING:  # pragma: no cover - typing-only
     from workflow._core.persistence import IterationStoreProtocol, TaskStoreProtocol
     from workflow._core.state import Workflow
-    from workflow.submissions import PlannerSubmission
 
 TaskOutcomeStatus: TypeAlias = Literal["success", "failed"]
 ExecutionRole: TypeAlias = Literal["generator", "reducer"]
 
 _NO_OUTCOME = "(no outcome recorded)"
-
-_GEN_SEP = ":gen:"
-_RED_SEP = ":red:"
-
-
-@dataclass(frozen=True, slots=True)
-class PlannerTaskOutcome:
-    status: TaskOutcomeStatus
-    role: Literal["planner"]
-    task_id: str
-    task_ids: tuple[str, ...]
-    deferred_goal_for_next_iteration: str | None = None
-
 
 @dataclass(frozen=True, slots=True)
 class ExecutionTaskOutcome:
@@ -48,27 +33,19 @@ class ExecutionTaskOutcome:
     outcome: str
 
 
-TaskOutcome: TypeAlias = PlannerTaskOutcome | ExecutionTaskOutcome
-
-
-def role_from_task_id(task_id: str) -> ExecutionRole | None:
-    if _GEN_SEP in task_id:
-        return "generator"
-    if _RED_SEP in task_id:
-        return "reducer"
-    return None
+TaskOutcome: TypeAlias = ExecutionTaskOutcome
 
 
 def present_status(raw_status: str) -> TaskOutcomeStatus:
     return "success" if raw_status == "done" else "failed"
 
 
-def task_outcomes_from_row(task_id: str, task: dict[str, Any] | None) -> tuple[TaskOutcome, ...]:
+def task_outcomes_from_row(task_id: str, task: dict[str, Any] | None) -> tuple[ExecutionTaskOutcome, ...]:
     """Parse all stored outcomes on one task row.
 
     Missing rows and tasks with no terminal outcome return an empty tuple. This
     reflects the new model: startup failures and handoff starts are not task
-    outcomes until TaskCenter writes an explicit terminal/flattened result.
+    outcomes until a terminal writes an explicit flattened result.
     """
     if task is None:
         return ()
@@ -79,33 +56,20 @@ def task_outcomes_from_row(task_id: str, task: dict[str, Any] | None) -> tuple[T
         normalized = dict(record)
         normalized.setdefault("task_id", task_id)
         normalized.setdefault("status", present_status(str(task.get("status") or "failed")))
-        if "role" not in normalized:
-            role = role_from_task_id(task_id)
-            if role is not None:
-                normalized["role"] = role
-        parsed.extend(_outcomes_from_record(normalized, fallback_task_id=task_id))
+        parsed.extend(
+            _outcomes_from_record(
+                normalized,
+                fallback_task_id=task_id,
+                fallback_role=_execution_role(task.get("role")),
+            )
+        )
     return tuple(parsed)
 
 
 def execution_outcomes_from_row(
     task_id: str, task: dict[str, Any] | None
 ) -> tuple[ExecutionTaskOutcome, ...]:
-    return tuple(
-        outcome
-        for outcome in task_outcomes_from_row(task_id, task)
-        if isinstance(outcome, ExecutionTaskOutcome)
-    )
-
-
-def planner_outcome_from_submission(submission: PlannerSubmission) -> PlannerTaskOutcome:
-    """Build the planner task outcome from created plan task ids."""
-    return PlannerTaskOutcome(
-        status="success",
-        role="planner",
-        task_id=submission.planner_task_id,
-        task_ids=(*submission.generator_task_ids, *submission.reducer_task_ids),
-        deferred_goal_for_next_iteration=submission.deferred_goal_for_next_iteration,
-    )
+    return task_outcomes_from_row(task_id, task)
 
 
 def execution_outcome_for_submission(
@@ -177,20 +141,8 @@ def workflow_outcomes(
 # ---- JSON round-trip ------------------------------------------------------
 
 
-def to_record(outcome: TaskOutcome) -> dict[str, Any]:
-    """Serialize a planner or execution outcome to a JSON-safe dict."""
-    if isinstance(outcome, PlannerTaskOutcome):
-        record: dict[str, Any] = {
-            "status": outcome.status,
-            "role": outcome.role,
-            "task_id": outcome.task_id,
-            "task_ids": list(outcome.task_ids),
-        }
-        if outcome.deferred_goal_for_next_iteration is not None:
-            record["deferred_goal_for_next_iteration"] = (
-                outcome.deferred_goal_for_next_iteration
-            )
-        return record
+def to_record(outcome: ExecutionTaskOutcome) -> dict[str, Any]:
+    """Serialize an execution outcome to a JSON-safe dict."""
     if isinstance(outcome, ExecutionTaskOutcome):
         return {
             "status": outcome.status,
@@ -217,9 +169,10 @@ def parse_outcomes_record(value: Any) -> tuple[ExecutionTaskOutcome, ...]:
         parsed.extend(
             outcome
             for outcome in _outcomes_from_record(
-                record, fallback_task_id=str(record.get("task_id") or "")
+                record,
+                fallback_task_id=str(record.get("task_id") or ""),
+                fallback_role=None,
             )
-            if isinstance(outcome, ExecutionTaskOutcome)
         )
     return tuple(parsed)
 
@@ -238,22 +191,21 @@ def _normalize_status(value: Any) -> TaskOutcomeStatus:
     return "failed"
 
 
-def _outcomes_from_record(record: dict[str, Any], *, fallback_task_id: str) -> tuple[TaskOutcome, ...]:
-    role = record.get("role")
+def _execution_role(value: Any) -> ExecutionRole | None:
+    if value in ("generator", "reducer"):
+        return value
+    return None
+
+
+def _outcomes_from_record(
+    record: dict[str, Any],
+    *,
+    fallback_task_id: str,
+    fallback_role: ExecutionRole | None,
+) -> tuple[ExecutionTaskOutcome, ...]:
+    role = _execution_role(record.get("role")) or fallback_role
     task_id = str(record.get("task_id") or fallback_task_id or "")
-    if role == "planner":
-        return (
-            PlannerTaskOutcome(
-                status=_normalize_status(record.get("status")),
-                role="planner",
-                task_id=task_id,
-                task_ids=tuple(str(item) for item in record.get("task_ids") or ()),
-                deferred_goal_for_next_iteration=record.get(
-                    "deferred_goal_for_next_iteration"
-                ),
-            ),
-        )
-    if role in ("generator", "reducer"):
+    if role is not None:
         return (
             ExecutionTaskOutcome(
                 status=_normalize_status(record.get("status")),
@@ -263,11 +215,10 @@ def _outcomes_from_record(record: dict[str, Any], *, fallback_task_id: str) -> t
             ),
         )
 
-    inferred = role_from_task_id(task_id) or "generator"
     return (
         ExecutionTaskOutcome(
             status=_normalize_status(record.get("status")),
-            role=inferred,
+            role="generator",
             task_id=task_id,
             outcome=str(record.get("outcome") or _NO_OUTCOME),
         ),
@@ -276,7 +227,6 @@ def _outcomes_from_record(record: dict[str, Any], *, fallback_task_id: str) -> t
 __all__ = [
     "ExecutionRole",
     "ExecutionTaskOutcome",
-    "PlannerTaskOutcome",
     "TaskOutcome",
     "TaskOutcomeStatus",
     "attempt_execution_outcomes",
@@ -284,11 +234,9 @@ __all__ = [
     "execution_outcomes_from_row",
     "parse_outcomes_record",
     "present_status",
-    "planner_outcome_from_submission",
     "project_attempt_outcomes",
     "project_iteration_outcomes",
     "records_json",
-    "role_from_task_id",
     "task_outcomes_from_row",
     "to_record",
     "workflow_outcomes",

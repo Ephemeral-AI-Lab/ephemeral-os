@@ -132,10 +132,7 @@ dependencies = [
 name = "eos-ephemeral"
 version = "0.1.0"
 dependencies = [
- "eos-layerstack",
- "eos-overlay",
  "eos-protocol",
- "eos-runner",
  "thiserror 2.0.18",
 ]
 

@@ -137,13 +137,14 @@ mod tests {
 
     #[test]
     fn error_kind_snake_case_wire() {
-        let v = serde_json::to_value(ErrorKind::ForbiddenInIsolatedWorkspace).unwrap();
+        let v = serde_json::to_value(ErrorKind::ForbiddenInIsolatedWorkspace)
+            .expect("serialize forbidden isolated workspace error kind");
         assert_eq!(
             v,
             Value::String("forbidden_in_isolated_workspace".to_owned())
         );
         assert_eq!(
-            serde_json::to_value(ErrorKind::UnknownOp).unwrap(),
+            serde_json::to_value(ErrorKind::UnknownOp).expect("serialize unknown op error kind"),
             Value::String("unknown_op".to_owned())
         );
     }
@@ -151,17 +152,17 @@ mod tests {
     #[test]
     fn encode_appends_single_newline() {
         let env = Envelope::Response(serde_json::json!({"success": true, "touched": 0}));
-        let bytes = encode(&env).unwrap();
-        assert_eq!(*bytes.last().unwrap(), b'\n');
+        let bytes = encode(&env).expect("encode response envelope");
+        assert_eq!(*bytes.last().expect("encoded envelope has bytes"), b'\n');
         assert_ne!(bytes[bytes.len() - 2], b'\n');
     }
 
     #[test]
     fn request_args_order_preserved_roundtrip() {
         let raw = b"{\"op\":\"x\",\"invocation_id\":\"i\",\"args\":{\"z\":1,\"a\":2,\"_eos_daemon_protocol_version\":1}}\n";
-        let env = decode(raw).unwrap();
+        let env = decode(raw).expect("decode request envelope");
         assert!(matches!(env, Envelope::Request(_)));
-        assert_eq!(encode(&env).unwrap(), raw);
+        assert_eq!(encode(&env).expect("re-encode request envelope"), raw);
     }
 
     // Build arbitrary JSON values with only finite numbers (NaN/Inf are not JSON).
@@ -186,8 +187,8 @@ mod tests {
         fn decode_encode_roundtrips_requests(op in "[a-z.]{1,12}", id in "[a-z0-9]{0,16}", args in arb_json()) {
             let args = if args.is_object() { args } else { serde_json::json!({"v": args}) };
             let env = Envelope::Request(Request { op, invocation_id: id, args });
-            let bytes = encode(&env).unwrap();
-            let back = decode(&bytes).unwrap();
+            let bytes = encode(&env).expect("encode generated request envelope");
+            let back = decode(&bytes).expect("decode generated request envelope");
             prop_assert_eq!(env, back);
         }
     }

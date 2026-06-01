@@ -1,4 +1,4 @@
-"""Production launcher, runtime DI bundle, and AgentLaunchFactory for TaskCenter agents.
+"""Production launcher, runtime DI bundle, and AgentLaunchFactory for workflow agents.
 
 :class:`AttemptDeps` threads stores, orchestration, launch, and audit concerns
 into every attempt-scoped spawn. :class:`EphemeralAttemptAgentLauncher`
@@ -158,13 +158,13 @@ class EphemeralAttemptAgentLauncher:
         agent_def = launch.agent_def or get_definition(launch.agent_name)
         if agent_def is None:
             raise WorkflowInvariantViolation(
-                f"TaskCenter agent definition {launch.agent_name!r} is not registered."
+                f"Workflow agent definition {launch.agent_name!r} is not registered."
             )
         try:
             loop = asyncio.get_running_loop()
         except RuntimeError as exc:
             raise WorkflowInvariantViolation(
-                "TaskCenter agent launcher requires an active asyncio event loop."
+                "Workflow agent launcher requires an active asyncio event loop."
             ) from exc
 
         task = loop.create_task(self._run_launch(launch, agent_def))
@@ -186,7 +186,7 @@ class EphemeralAttemptAgentLauncher:
     ) -> None:
         runtime = self._deps_provider()
         if runtime is None:
-            raise WorkflowInvariantViolation("TaskCenter attempt runtime is not initialized.")
+            raise WorkflowInvariantViolation("Workflow attempt runtime is not initialized.")
         runner = self._runner
         if runner is None:
             from engine.api import run_ephemeral_agent
@@ -200,7 +200,6 @@ class EphemeralAttemptAgentLauncher:
             task_id=launch.task_id,
             attempt_id=launch.attempt_id,
             workflow_id=launch.workflow_id,
-            request_id=launch.workflow_id,
             attempt_runtime=runtime,
             composer=runtime.composer,
         )
