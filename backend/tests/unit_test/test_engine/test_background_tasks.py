@@ -263,7 +263,10 @@ async def test_count_by_agent_includes_active_pty_commands() -> None:
     )
 
     assert mgr.count_by_agent("agent-a") == 1
-    mgr.mark_pty_cancelled_by_tool("pty_1")
+    mgr.mark_pty_result_reported_by_tool(
+        pty_session_id="pty_1",
+        result={"status": "cancelled", "exit_code": None, "output": {}},
+    )
     assert mgr.count_by_agent("agent-a") == 0
     await mgr.cancel_all()
 

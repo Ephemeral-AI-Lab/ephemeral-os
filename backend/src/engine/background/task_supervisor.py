@@ -378,11 +378,20 @@ class BackgroundTaskSupervisor:
         )
         self._ensure_heartbeat_task()
 
-    def mark_pty_cancelled_by_tool(self, pty_session_id: str) -> None:
+    def mark_pty_result_reported_by_tool(
+        self,
+        *,
+        pty_session_id: str,
+        result: dict[str, Any],
+    ) -> None:
         tracked = self._pty_commands.get(pty_session_id)
         if tracked is None:
             return
-        tracked.status = BackgroundTaskStatus.CANCELLED
+        status = str(result.get("status") or "")
+        if status == "running":
+            return
+        tracked.result = dict(result)
+        tracked.status = BackgroundTaskStatus.DELIVERED
         self._stop_heartbeat_if_idle()
 
     def append_progress(self, task_id: str, line: str) -> None:

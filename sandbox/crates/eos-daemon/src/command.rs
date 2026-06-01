@@ -412,6 +412,28 @@ impl PtyRegistry {
             .push(completion);
     }
 
+    fn take_completed_result(&self, id: &str) -> Option<Value> {
+        let mut completed = self
+            .completed
+            .lock()
+            .expect("pty completion mailbox poisoned");
+        let mut kept = Vec::with_capacity(completed.len());
+        let mut found = None;
+        for item in completed.drain(..) {
+            let item_id = item
+                .get("pty_session_id")
+                .and_then(Value::as_str)
+                .unwrap_or_default();
+            if found.is_none() && item_id == id {
+                found = item.get("result").cloned();
+            } else {
+                kept.push(item);
+            }
+        }
+        *completed = kept;
+        found
+    }
+
     fn collect_completed(&self, args: &Value) -> Value {
         let wanted: Option<HashSet<String>> = args
             .get("pty_session_ids")
@@ -836,6 +858,9 @@ fn pty_write_stdin(args: &Value) -> Result<Value, DaemonError> {
         .expect("pty writer poisoned")
         .write_all(chars.as_bytes())?;
     thread::sleep(Duration::from_millis(yield_time_ms));
+    if let Some(result) = pty_registry().take_completed_result(&id) {
+        return Ok(result);
+    }
     Ok(command_result(
         "running",
         None,
@@ -901,5 +926,28 @@ mod tests {
     fn exec_command_requires_string_wire_shape() {
         assert!(require_command_string(&json!({"cmd": "echo hi"}), "cmd").is_ok());
         assert!(require_command_string(&json!({"cmd": ["true"]}), "cmd").is_err());
+    }
+
+    #[test]
+    #[cfg(target_os = "linux")]
+    fn pty_completion_result_can_be_claimed_by_control_tool() {
+        let registry = PtyRegistry::new();
+        registry.push_completed(json!({
+            "pty_session_id": "pty_keep",
+            "result": {"status": "ok", "exit_code": 0},
+        }));
+        registry.push_completed(json!({
+            "pty_session_id": "pty_done",
+            "result": {"status": "ok", "exit_code": 0},
+        }));
+
+        let result = registry
+            .take_completed_result("pty_done")
+            .expect("matching completion should be returned");
+        assert_eq!(result["status"], "ok");
+        assert!(registry.take_completed_result("pty_done").is_none());
+
+        let remaining = registry.collect_completed(&json!({"pty_session_ids": ["pty_keep"]}));
+        assert_eq!(remaining["completions"].as_array().unwrap().len(), 1);
     }
 }

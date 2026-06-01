@@ -46,8 +46,12 @@ Fresh progress is tracked in
 
 Latest evidence:
 
+- Review cleanup focused Docker PTY/load gate:
+  `bench/phase3t-pty-command-docker-20260601-review-cleanup.json`.
+- Current rebuilt amd64 package SHA-256:
+  `0a7f5a17268ab097cd5d5918b2590ce9f90bcb86d23bdd79ea99de5d84a02585`.
 - Linux target compile:
-  `cargo check -p eos-daemon --target x86_64-unknown-linux-musl`.
+  `cargo check -p eosd --target x86_64-unknown-linux-musl`.
 - Docker artifact upload gate:
   `bench/local-eosd-amd64-phase3t-pty-cleanup-conditional-20260601.json`.
 - Strict Docker PTY/load/p95 gate with explicit `tty=true`/`tty=false` nohup

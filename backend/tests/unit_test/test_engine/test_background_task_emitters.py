@@ -317,7 +317,7 @@ async def test_pty_timeout_completion_notification_is_failed(
 
 
 @pytest.mark.asyncio
-async def test_explicit_pty_cancel_suppresses_completion_notification(
+async def test_tool_reported_pty_result_suppresses_completion_notification(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     import sandbox.api as sandbox_api
@@ -328,20 +328,27 @@ async def test_explicit_pty_cancel_suppresses_completion_notification(
         agent_id: str,
         pty_session_ids: list[str],
     ) -> list[dict[str, Any]]:
-        raise AssertionError("cancelled PTY records should not be polled")
+        raise AssertionError("tool-reported PTY records should not be polled")
 
     monkeypatch.setattr(sandbox_api, "collect_pty_completions", _collect_pty_completions)
 
     sup = BackgroundTaskSupervisor()
     sup.register_pty_command(
-        pty_session_id="pty_cancelled",
+        pty_session_id="pty_reported",
         sandbox_id="sb-1",
         agent_id="agent-1",
         command="sleep 60",
     )
     assert sup.has_pending()
 
-    sup.mark_pty_cancelled_by_tool("pty_cancelled")
+    sup.mark_pty_result_reported_by_tool(
+        pty_session_id="pty_reported",
+        result={
+            "status": "cancelled",
+            "exit_code": None,
+            "output": {"stdout": "", "stderr": ""},
+        },
+    )
 
     assert await sup.collect_pty_completion_notifications() == []
     assert not sup.has_pending()

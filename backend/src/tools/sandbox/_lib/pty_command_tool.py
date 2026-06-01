@@ -7,7 +7,7 @@ import json
 from pydantic import BaseModel
 
 from sandbox.shared.models import ExecCommandResult
-from tools._framework.core.base import ToolResult
+from tools._framework.core.base import ToolExecutionContextService, ToolResult
 
 
 class PtyCommandOutput(BaseModel):
@@ -35,4 +35,36 @@ def pty_tool_result(result: ExecCommandResult) -> ToolResult:
     )
 
 
-__all__ = ["PtyCommandOutput", "pty_tool_result"]
+def mark_pty_result_reported_by_tool(
+    context: ToolExecutionContextService,
+    result: ExecCommandResult,
+    *,
+    pty_session_id: str | None = None,
+) -> None:
+    session_id = result.pty_session_id or pty_session_id
+    if not session_id or result.status == "running":
+        return
+    if result.status == "error" and result.pty_session_id is None:
+        return
+    manager = context.get("background_task_manager")
+    mark = getattr(manager, "mark_pty_result_reported_by_tool", None)
+    if not callable(mark):
+        return
+    mark(
+        pty_session_id=session_id,
+        result={
+            "status": result.status,
+            "exit_code": result.exit_code,
+            "output": {
+                "stdout": result.output.stdout,
+                "stderr": result.output.stderr,
+            },
+        },
+    )
+
+
+__all__ = [
+    "PtyCommandOutput",
+    "mark_pty_result_reported_by_tool",
+    "pty_tool_result",
+]

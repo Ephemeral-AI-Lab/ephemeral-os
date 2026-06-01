@@ -8,7 +8,11 @@ import sandbox.api as sandbox_api
 from sandbox.shared.models import Intent, PtyCancelRequest
 from tools._framework.core.base import ToolExecutionContextService, ToolResult
 from tools._framework.core.decorator import tool
-from tools.sandbox._lib.pty_command_tool import PtyCommandOutput, pty_tool_result
+from tools.sandbox._lib.pty_command_tool import (
+    PtyCommandOutput,
+    mark_pty_result_reported_by_tool,
+    pty_tool_result,
+)
 from tools.sandbox._lib.tool_context import (
     sandbox_caller_from_tool_context,
     sandbox_id_or_missing_error_result,
@@ -42,10 +46,7 @@ async def cancel_pty_command(
             pty_session_id=pty_session_id,
         ),
     )
-    manager = context.get("background_task_manager")
-    mark = getattr(manager, "mark_pty_cancelled_by_tool", None)
-    if callable(mark):
-        mark(pty_session_id)
+    mark_pty_result_reported_by_tool(context, result, pty_session_id=pty_session_id)
     return pty_tool_result(result)
 
 

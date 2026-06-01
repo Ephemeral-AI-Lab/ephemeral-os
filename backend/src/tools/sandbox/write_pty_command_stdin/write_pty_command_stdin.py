@@ -8,7 +8,11 @@ import sandbox.api as sandbox_api
 from sandbox.shared.models import Intent, PtyWriteRequest
 from tools._framework.core.base import ToolExecutionContextService, ToolResult
 from tools._framework.core.decorator import tool
-from tools.sandbox._lib.pty_command_tool import PtyCommandOutput, pty_tool_result
+from tools.sandbox._lib.pty_command_tool import (
+    PtyCommandOutput,
+    mark_pty_result_reported_by_tool,
+    pty_tool_result,
+)
 from tools.sandbox._lib.tool_context import (
     sandbox_caller_from_tool_context,
     sandbox_id_or_missing_error_result,
@@ -51,6 +55,7 @@ async def write_pty_command_stdin(
             max_tokens=max_tokens,
         ),
     )
+    mark_pty_result_reported_by_tool(context, result, pty_session_id=pty_session_id)
     return pty_tool_result(result)
 
 

@@ -398,3 +398,44 @@ the process group.
   the dispatcher, so a Rust PTY isolated-workspace comparison remains a later
   implementation gap; focused Python/IWS lifecycle tests passed for the local
   PTY-blocking behavior.
+
+## 2026-06-01 Review Cleanup Pass
+
+### Cleanup Changes
+
+- Replaced the PTY cancel-only Python marker with a generic
+  `mark_pty_result_reported_by_tool(...)` path. Any PTY control tool that
+  observes a terminal result now marks the local PTY record delivered, so the
+  query-loop completion bridge does not later emit a duplicate notification.
+- Updated `write_pty_command_stdin` to claim a daemon completion that appears
+  during its post-write yield window. If the PTY process exits quickly after
+  receiving stdin and finalization has reached the daemon completion mailbox,
+  the write tool can return the terminal `ok`/`timed_out`/`error` result instead
+  of the legacy unconditional `running` response.
+- Removed the obsolete `mark_pty_cancelled_by_tool(...)` path and updated
+  tests to use the result-reported marker.
+- Refreshed `docs/architecture/tools/background.html` so it no longer claims
+  there is no automatic PTY completion notification path.
+
+### Review Cleanup Verification
+
+- Rebuilt package:
+  `cargo run -p xtask -- package --target x86_64-unknown-linux-musl --out-dir dist --builder rust-lld`.
+- New amd64 SHA-256 pinned in `runtime_artifact`:
+  `0a7f5a17268ab097cd5d5918b2590ce9f90bcb86d23bdd79ea99de5d84a02585`.
+- `cargo fmt --all --check`: passed.
+- `cargo check -p eosd --target x86_64-unknown-linux-musl`: passed with
+  pre-existing adjacent-crate warnings.
+- `cargo test -p eos-runner --lib`: passed, 3 tests.
+- `.venv/bin/python -m pytest backend/tests/unit_test/test_engine/test_background_task_emitters.py backend/tests/unit_test/test_engine/test_background_tasks.py backend/tests/unit_test/test_sandbox/test_api/test_command.py -q`:
+  passed, 33 tests.
+- `.venv/bin/python -m ruff check` over the touched background/PTY tool files
+  and tests: passed.
+- Focused live Docker PTY/load gate:
+  `bench/phase3t-pty-command-docker-20260601-review-cleanup.json`,
+  top-level gate passed. `write_pty_command_stdin` echo p95 was 53.365 ms.
+- Explicit long-yield stdin edge probe:
+  `write_pty_command_stdin(..., yield_time_ms=1000)` returned `status=ok`,
+  `exit_code=0`, stdout containing `echo:edge`, and a subsequent
+  `api.v1.pty.collect_completed` call returned no remaining completion for that
+  PTY id.
