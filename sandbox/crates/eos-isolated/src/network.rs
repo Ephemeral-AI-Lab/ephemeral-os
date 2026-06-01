@@ -1,4 +1,4 @@
-//! Shared bridge + per-workspace veth + nftables wiring for isolated workspaces.
+//! Shared bridge + per-workspace veth wiring for isolated workspaces.
 //!
 //! Daemon-scope state: one bridge `eos-shared0` with gateway `10.244.0.1/24`, a
 //! MASQUERADE rule on outbound from `10.244.0.0/24`, an IMDS drop rule, and an
@@ -135,11 +135,11 @@ impl BridgeAddressPool {
     }
 }
 
-/// Owns the `eos-shared0` bridge + static nft rules + per-workspace veth wiring.
+/// Owns the `eos-shared0` bridge + per-workspace veth wiring.
 ///
 /// The Python implementation shells out to `ip`/`nft`; the Rust port replaces
-/// those with `rtnetlink` (link/addr/route) and an nftables netlink path — NO
-/// `ip`/`nft` binaries. Bodies are deferred to the syscall port phase.
+/// the bridge/veth path with `rtnetlink` link/address operations — NO `ip`
+/// binaries. The nftables NAT/filter path remains the follow-up slice.
 /// `// PORT backend/src/sandbox/isolated_workspace/network.py:78-228 — IsolatedNetwork`
 #[derive(Debug)]
 pub struct IsolatedNetwork {
@@ -163,14 +163,17 @@ impl IsolatedNetwork {
         self.initialized
     }
 
-    /// Install the bridge + MASQUERADE + IMDS drop (+ optional RFC1918 deny).
-    /// Idempotent.
+    /// Install the ported bridge slice. Idempotent.
+    ///
+    /// MASQUERADE, IMDS drop, and optional RFC1918 deny remain the nftables
+    /// follow-up slice.
     // PORT backend/src/sandbox/isolated_workspace/network.py:95-100 — IsolatedNetwork.initialize (require_tools/ensure_bridge/install_static_rules)
     pub fn initialize(&mut self) -> Result<(), IsolatedError> {
         if test_harness_enabled() {
             self.initialized = true;
             return Ok(());
         }
+        let _nft_policy_for_follow_up = self.rfc1918_egress;
         #[cfg(target_os = "linux")]
         {
             run_netlink(|handle| async move {
@@ -178,10 +181,6 @@ impl IsolatedNetwork {
                 // nftables NAT/filter wiring remains the live-kernel follow-up.
                 Ok(())
             })?;
-        }
-        #[cfg(not(target_os = "linux"))]
-        {
-            let _ = self.rfc1918_egress;
         }
         self.initialized = true;
         Ok(())

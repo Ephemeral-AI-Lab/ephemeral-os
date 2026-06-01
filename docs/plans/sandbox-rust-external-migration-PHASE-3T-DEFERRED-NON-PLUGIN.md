@@ -57,9 +57,11 @@ Current state:
   `eosd ns-runner --mount-overlay`, signals the holder ready handshake, tracks
   and kills the holder child, and closes retained namespace/control FDs on
   isolated teardown. Linux command/PTY requests choose `RunMode::SetNs` when the
-  active isolated handle has namespace FDs. Holder-side loopback-up and
-  IPv6-default-route deletion now use best-effort rtnetlink hooks. Bridge/veth
-  netlink wiring and live Docker isolated command/PTY evidence are still open.
+  active isolated handle has namespace FDs. Holder-side loopback-up,
+  IPv6-default-route deletion, namespace-side veth link/address/default-route
+  programming, and daemon-side bridge/veth creation now use shell-free netlink
+  hooks. nftables NAT/filter parity, live holder network validation, and live
+  Docker isolated command/PTY evidence are still open.
 
 Last focused verification:
 
@@ -78,8 +80,9 @@ Last focused verification:
 - `git diff --check` passed.
 - Rust focused isolated checks passed:
   `cargo test -p eos-runner` (`7 passed`), `cargo check -p eos-runner --target
-  x86_64-unknown-linux-musl`,
-  `cargo test -p eos-ns-holder` (`4 passed`),
+  x86_64-unknown-linux-musl`, `cargo check -p eos-isolated`,
+  `cargo check -p eos-isolated --target x86_64-unknown-linux-musl`,
+  `cargo test -p eos-ns-holder` (`5 passed`),
   `cargo check -p eos-ns-holder --target x86_64-unknown-linux-musl`,
   `cargo test -p eos-daemon isolated_workspace --test phase2_read_paths`
   (`3 passed`), `cargo test -p eos-daemon
@@ -94,8 +97,8 @@ Last focused verification:
 
 Next work should start with hardening/verifying Rust isolated-workspace
 command/PTY semantics under live Docker, then finishing the remaining Rust
-isolated network parity work: netlink bridge/veth setup plus live validation of
-the holder netlink hardening hooks. Do not reintroduce
+isolated network parity work: nftables NAT/filter plus live validation of the
+bridge/veth and holder netlink hooks. Do not reintroduce
 `shell(background=true)`, `BaseTool.background`, model-facing generic
 background controls, or `bg_N` as a subagent reference.
 
@@ -132,16 +135,16 @@ agent handle with isolated/no-OCC-publish result metadata. Active PTY records
 now block non-forced isolated exit.
 
 The implementation is not closed: the Rust namespace/runtime side now has a
-holder spawn, namespace FD handoff, setns runner entry, and setns overlay mount
-slice, but the network side still lacks bridge/veth netlink setup and the
-isolated command/PTY path has compile + focused lifecycle evidence rather than
-live Docker evidence.
+holder spawn, namespace FD handoff, setns runner entry, setns overlay mount,
+and compile-checked bridge/veth netlink slice, but the network side still lacks
+nftables NAT/filter parity and the isolated command/PTY path has compile +
+focused lifecycle evidence rather than live Docker evidence.
 
 Required work:
 
-- finish the Rust isolated network lifecycle: bridge/veth netlink setup,
-  namespace-side interface/route programming, holder netlink hook validation,
-  and teardown verification;
+- finish the Rust isolated network lifecycle: nftables NAT/filter setup, live
+  bridge/veth and namespace-side interface/route validation, holder netlink hook
+  validation, and teardown verification;
 - harden the Rust ns-holder/setns handoff under live Docker, including namespace
   FD inheritance, overlay mount persistence, cgroup join, and holder kill/cleanup
   behavior;
@@ -163,6 +166,8 @@ Minimum evidence:
 - ✅ runner-side setns request-shape coverage and Linux target compile check;
 - ✅ ns-holder handshake unit coverage plus Linux target compile checks for
   `eos-ns-holder`, `eos-daemon`, and `eosd`;
+- ✅ bridge/veth netlink slice compiles for Linux target and preserves host
+  `eos-isolated` checks through target-gated Linux dependencies;
 - live Docker isolated-workspace scenarios for finite command, PTY start,
   progress/write/cancel, natural exit, peer shared publish, and teardown;
 - daemon-local isolated audit inspection with no leaked handles, mounts,
@@ -336,9 +341,9 @@ Minimum evidence:
 
 ## Suggested Order
 
-1. Finish the Rust isolated network parity slice: bridge/veth netlink setup,
-   namespace-side interface/route programming, holder netlink hook validation,
-   and teardown.
+1. Finish the Rust isolated network parity slice: nftables NAT/filter setup,
+   live bridge/veth and namespace-side interface/route validation, holder
+   netlink hook validation, and teardown.
 2. Harden the Rust holder/setns handoff under live Docker, then run
    isolated-workspace Docker live coverage for finite command and PTY semantics.
 3. Add daemon-local isolated audit/leak inspection for handles, mounts, cgroups,
