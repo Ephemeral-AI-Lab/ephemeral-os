@@ -35,9 +35,9 @@ then proves a vanilla plugin service can:
   refreshed read-only service path.
 * resolve a real Pyright LSP ``textDocument/typeDefinition`` response through
   the same refreshed read-only service path.
-* resolve a real Pyright LSP ``textDocument/prepareCallHierarchy`` response
-  and call-hierarchy incoming calls through the same refreshed read-only service
-  path.
+* resolve real Pyright LSP ``textDocument/prepareCallHierarchy`` responses and
+  call-hierarchy incoming/outgoing calls through the same refreshed read-only
+  service path.
 * resolve a real Pyright LSP ``textDocument/documentHighlight`` response through
   the same refreshed read-only service path.
 * resolve a real Pyright LSP ``textDocument/prepareRename`` response through
@@ -149,6 +149,8 @@ PYRIGHT_CALL_HIERARCHY_LINE = 0
 PYRIGHT_CALL_HIERARCHY_CHARACTER = len("def live_ca")
 PYRIGHT_CALL_HIERARCHY_SYMBOL = "live_callee"
 PYRIGHT_CALL_HIERARCHY_CALLER = "live_caller"
+PYRIGHT_CALL_HIERARCHY_OUTGOING_LINE = 3
+PYRIGHT_CALL_HIERARCHY_OUTGOING_CHARACTER = len("def live_ca")
 PYRIGHT_RENAMED_SYMBOL = "live_total"
 PYRIGHT_RENAMED_CONTENT = PYRIGHT_CONTENT.replace(PYRIGHT_SYMBOL, PYRIGHT_RENAMED_SYMBOL)
 
@@ -3092,6 +3094,27 @@ async def run(args: argparse.Namespace) -> dict[str, Any]:
                 )
             except Exception as exc:
                 report["pyright_call_hierarchy"] = {
+                    "success": False,
+                    "from_pyright_adapter": False,
+                    "error": str(exc),
+                }
+            try:
+                report["pyright_call_hierarchy_outgoing"] = (
+                    await daemon_client.call_daemon_api(
+                        bench.sandbox_id,
+                        "plugin.generic.pyright_call_hierarchy",
+                        {
+                            "agent_id": AGENT_ID,
+                            "read_path": PYRIGHT_CALL_HIERARCHY_TARGET_REL,
+                            "line": PYRIGHT_CALL_HIERARCHY_OUTGOING_LINE,
+                            "character": PYRIGHT_CALL_HIERARCHY_OUTGOING_CHARACTER,
+                        },
+                        layer_stack_root=LAYER_STACK_ROOT,
+                        timeout=150,
+                    )
+                )
+            except Exception as exc:
+                report["pyright_call_hierarchy_outgoing"] = {
                     "success": False,
                     "from_pyright_adapter": False,
                     "error": str(exc),

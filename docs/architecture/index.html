@@ -20,7 +20,7 @@
     <li><a href="./tools/index.html" data-doc-module="tools">Tools</a></li>
     <li><a href="./agent_loops/index.html" data-doc-module="agent-loops">Agent Loops</a></li>
     <li><a href="./workflow/index.html" data-doc-module="workflow">Workflow</a></li>
-    <li><a href="./task_center_runner/index.html" data-doc-module="workflow-runner">Workflow Runner (Testing)</a></li>
+    <li><a href="./test_runner/index.html" data-doc-module="test-runner">Test Runner</a></li>
   </ol>
 </nav>
 <main>
@@ -264,7 +264,7 @@
 <a class="module-card" href="tools/index.html"><strong>Tools</strong><span>Agent-facing tool definitions, framework lifecycle, terminals, helpers, background tasks, and Workflow submission surfaces.</span></a>
 <a class="module-card" href="agent_loops/index.html"><strong>Agent Loops</strong><span>Engine run lifecycle, model-provider streaming, prompt assembly, background operations, sandbox-provider runtimes, notifications, and message artifacts.</span></a>
 <a class="module-card" href="workflow/index.html"><strong>Workflow</strong><span>Workflow -> Iteration -> Attempt state model, planner-authored generator + reducer plan harness, context engine, role profiles, and terminal state submissions.</span></a>
-<a class="module-card" href="task_center_runner/index.html"><strong>Workflow Runner (Testing)</strong><span>Test-only harness for scenario-based mocked-agent coverage and the SWE-EVO benchmark pipeline; one engine, three modes.</span></a>
+<a class="module-card" href="test_runner/index.html"><strong>Test Runner</strong><span>Test-only harness for scenario-based mocked-agent coverage and the SWE-EVO benchmark pipeline; one engine, three modes.</span></a>
 </div>
 </section>
 <section id="cross-module-map" data-last-reviewed-commit="d32994314" data-evidence-paths="backend/src/tools backend/src/sandbox backend/src/engine backend/src/workflow backend/src/message backend/src/notification backend/src/prompt">
@@ -279,7 +279,7 @@
   <div><b>agent loop to Workflow</b><span><a class="wiki-link" href="agent_loops/prompt-context.html">Prompt Assembly</a> shows how Workflow profiles, context recipes, terminal routing, task guidance, and skill rows become launch-time prompt rows.</span></div>
   <div><b>Workflow to tools</b><span><a class="wiki-link" href="workflow/terminal-tools.html">Workflow Terminal Tools</a> explains how planner, executor, reducer, advisor, and explorer submissions enter the tool framework and engine terminal stop path.</span></div>
   <div><b>Workflow to sandbox</b><span><a class="wiki-link" href="workflow/bridges.html">Workflow Runtime Boundaries</a> traces run bootstrap, sandbox binding, agent launch metadata, workspace tools, and live harness artifacts across engine, tools, and sandbox modules.</span></div>
-  <div><b>runner to Workflow</b><span><a class="wiki-link" href="task_center_runner/core-harness.html">Core Harness</a> drives a real Workflow run through one engine entrypoint; the <a class="wiki-link" href="task_center_runner/scenarios.html">Scenarios</a> and <a class="wiki-link" href="task_center_runner/benchmark-sweevo.html">SWE-EVO Benchmark</a> pages are the two lanes that share it.</span></div>
+  <div><b>runner to Workflow</b><span><a class="wiki-link" href="test_runner/core-harness.html">Core Harness</a> drives a real Workflow run through one engine entrypoint; the <a class="wiki-link" href="test_runner/scenarios.html">Scenarios</a> and <a class="wiki-link" href="test_runner/benchmark-sweevo.html">SWE-EVO Benchmark</a> pages are the two lanes that share it.</span></div>
 </div>
 </section>
 <section id="maintenance" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="docs/architecture/assets/search-index.js docs/architecture/assets/nav.js docs/architecture/agent_loops/maintenance.html .agents/skills/codebase-wiki-builder/SKILL.md">

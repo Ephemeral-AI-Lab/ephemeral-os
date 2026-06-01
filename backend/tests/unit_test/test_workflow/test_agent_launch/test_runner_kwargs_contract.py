@@ -34,7 +34,7 @@ def test_run_launch_calls_runner_with_frozen_kwarg_set() -> None:
     """Extract the runner(...) call inside ``_run_launch`` and assert kwargs match.
 
     The frozen set is exactly what the benchmark_sweevo runner delegate forwards
-    in ``task_center_runner.benchmarks.sweevo.run.``
+    in ``test_runner.benchmarks.sweevo.run.``
     ``_delegate_to_real_runner``. ``config`` and ``prompt`` are
     positional, so they are intentionally NOT in the kwarg set.
     """
@@ -57,6 +57,6 @@ def test_run_launch_calls_runner_with_frozen_kwarg_set() -> None:
         f"  expected: {sorted(_FROZEN_KWARG_SET)}\n"
         f"  actual:   {sorted(kwargs)}\n"
         f"Update ``_delegate_to_real_runner`` in "
-        f"``task_center_runner/benchmarks/sweevo/agent_runner.py`` to forward the new "
+        f"``test_runner/benchmarks/sweevo/agent_runner.py`` to forward the new "
         f"kwargs in lockstep, then update _FROZEN_KWARG_SET here."
     )

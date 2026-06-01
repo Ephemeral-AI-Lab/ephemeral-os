@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from task_center_runner.audit.daemon_event_normalizer import (
+from test_runner.audit.daemon_event_normalizer import (
     FORENSIC_RAW_ENV,
     normalize_pulled_event,
 )

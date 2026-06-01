@@ -59,20 +59,20 @@ from tools.sandbox.write_file import write_file as write_file_tool
 
 import sandbox.api as sandbox_api
 
-from task_center_runner.audit.events import EventType
-from task_center_runner.scenarios.sandbox._fixtures.refactor_passes import (
+from test_runner.audit.events import EventType
+from test_runner.scenarios.sandbox._fixtures.refactor_passes import (
     REFACTOR_PASSES,
     RefactorPass,
 )
-from task_center_runner.scenarios.sandbox._fixtures.scheduler_demo_data import (
+from test_runner.scenarios.sandbox._fixtures.scheduler_demo_data import (
     SCHEDULER_DEMO_FILES,
     SMOKE_FILE_PATHS,
     FixtureFile,
 )
-from task_center_runner.scenarios.sandbox._metrics import (
+from test_runner.scenarios.sandbox._metrics import (
     aggregate_perf_metrics,
 )
-from task_center_runner.agent.mock.sandbox_probe import SandboxCheck
+from test_runner.agent.mock.sandbox_probe import SandboxCheck
 
 
 EmitStreamEvent = Callable[[StreamEvent], Awaitable[None]]

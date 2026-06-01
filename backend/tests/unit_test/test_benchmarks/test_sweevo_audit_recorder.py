@@ -21,19 +21,16 @@ from sqlalchemy.orm import Session, sessionmaker
 import db.models  # noqa: F401 - populate Base.metadata
 from db.base import Base
 from db.models.agent_run import AgentRunRecord
-from db.models.task_center import (
-    TaskCenterRequestRecord,
-    TaskCenterRunRecord,
-    TaskCenterTaskRecord,
-)
+from db.models.request import RequestRecord
+from db.models.task import TaskRecord
 from db.stores.attempt_store import AttemptStore
 from db.stores.iteration_store import IterationStore
 from db.stores.workflow_store import WorkflowStore
-from db.stores.task_center_store import TaskCenterStore
-from task_center_runner.audit.bus import AuditEventBus
-from task_center_runner.audit.events import Event, EventType
-from task_center_runner.audit.node_id import NodeId
-from task_center_runner.audit.recorder import AuditRecorder
+from db.stores.task_store import TaskStore
+from test_runner.audit.bus import AuditEventBus
+from test_runner.audit.events import Event, EventType
+from test_runner.audit.node_id import NodeId
+from test_runner.audit.recorder import AuditRecorder
 from workflow import (
     IterationCreationReason,
     WorkflowStatus,
@@ -45,7 +42,6 @@ from workflow._core.primitives import (
 )
 
 
-_RUN_ID = "run-abc"
 _REQUEST_ID = "req-1"
 
 
@@ -53,7 +49,7 @@ _REQUEST_ID = "req-1"
 class _TestStoreBundle:
     engine: Engine
     session_factory: sessionmaker[Session]
-    task_store: TaskCenterStore
+    task_store: TaskStore
     workflow_store: WorkflowStore
     iteration_store: IterationStore
     attempt_store: AttemptStore
@@ -74,7 +70,7 @@ def stores() -> Iterator[_TestStoreBundle]:
     bundle = _TestStoreBundle(
         engine=engine,
         session_factory=session_factory,
-        task_store=TaskCenterStore(),
+        task_store=TaskStore(),
         workflow_store=WorkflowStore(),
         iteration_store=IterationStore(),
         attempt_store=AttemptStore(),
@@ -92,26 +88,18 @@ def stores() -> Iterator[_TestStoreBundle]:
         bundle.close()
 
 
-def _seed_run(bundle: _TestStoreBundle, run_id: str = _RUN_ID) -> None:
+def _seed_run(bundle: _TestStoreBundle, request_id: str = _REQUEST_ID) -> None:
     sf = bundle.session_factory
     with sf() as db:
         now = datetime.now(UTC)
         db.add(
-            TaskCenterRequestRecord(
-                id=_REQUEST_ID,
+            RequestRecord(
+                id=request_id,
                 cwd="/testbed",
                 sandbox_id="sbx-1",
                 request_prompt="goal",
                 created_at=now,
                 updated_at=now,
-            )
-        )
-        db.add(
-            TaskCenterRunRecord(
-                id=run_id,
-                request_id=_REQUEST_ID,
-                status="running",
-                started_at=now,
             )
         )
         db.commit()
@@ -128,12 +116,12 @@ def _read_json(path: Path) -> dict:
 def _make_recorder(
     tmp_path: Path,
     *,
-    run_id: str = _RUN_ID,
+    request_id: str = _REQUEST_ID,
     bus: AuditEventBus | None = None,
 ) -> AuditRecorder:
     return AuditRecorder(
         run_dir=tmp_path / "run",
-        task_center_run_id=run_id,
+        request_id=request_id,
         bus=bus,
         scenario_name="correctness_testing",
         instance_id="dask__dask_2023.3.2_2023.4.0",
@@ -149,7 +137,7 @@ def test_workflow_insert_writes_latest_snapshot(
     recorder.start()
     try:
         workflow = stores.workflow_store.insert(
-            task_center_run_id=_RUN_ID,
+            request_id=_REQUEST_ID,
             parent_task_id="parent_task_1",
             workflow_goal="solve the problem",
         )
@@ -177,7 +165,7 @@ def test_workflow_update_overwrites_latest_snapshot(
     recorder.start()
     try:
         workflow = stores.workflow_store.insert(
-            task_center_run_id=_RUN_ID,
+            request_id=_REQUEST_ID,
             parent_task_id="parent_task_1",
             workflow_goal="solve the problem",
         )
@@ -203,7 +191,7 @@ def test_iteration_and_attempt_listeners(
     recorder.start()
     try:
         workflow = stores.workflow_store.insert(
-            task_center_run_id=_RUN_ID,
+            request_id=_REQUEST_ID,
             parent_task_id="parent_task_1",
             workflow_goal="solve the problem",
         )
@@ -216,6 +204,7 @@ def test_iteration_and_attempt_listeners(
         )
         attempt = stores.attempt_store.insert(
             iteration_id=iteration.id,
+            workflow_id=workflow.id,
             attempt_sequence_no=1,
         )
     finally:
@@ -241,20 +230,22 @@ def _insert_task(
     *,
     task_id: str,
     role: str,
-    run_id: str = _RUN_ID,
+    request_id: str = _REQUEST_ID,
+    attempt_id: str | None = None,
     agent_name: str | None = None,
 ) -> None:
     sf = bundle.session_factory
     with sf() as db:
         now = datetime.now(UTC)
         db.add(
-            TaskCenterTaskRecord(
+            TaskRecord(
                 id=task_id,
-                task_center_run_id=run_id,
+                request_id=request_id,
                 role=role,
                 agent_name=agent_name,
-                context_message="input",
+                instruction="input",
                 status="pending",
+                attempt_id=attempt_id,
                 outcomes=[],
                 needs=[],
                 created_at=now,
@@ -272,8 +263,8 @@ def test_task_dir_placement_per_role(
     recorder.start()
     try:
         workflow = stores.workflow_store.insert(
-            task_center_run_id=_RUN_ID,
-            parent_task_id=None,
+            request_id=_REQUEST_ID,
+            parent_task_id="parent_task_1",
             workflow_goal="goal",
         )
         iteration = stores.iteration_store.insert(
@@ -285,20 +276,22 @@ def test_task_dir_placement_per_role(
         )
         attempt = stores.attempt_store.insert(
             iteration_id=iteration.id,
+            workflow_id=workflow.id,
             attempt_sequence_no=1,
         )
 
         planner_id = planner_task_id(attempt.id)
         executor_id = generator_task_id(attempt.id, "g1")
         reducer_id = reducer_task_id(attempt.id, "r1")
-        _insert_task(stores, task_id=planner_id, role="planner")
+        _insert_task(stores, task_id=planner_id, role="planner", attempt_id=attempt.id)
         _insert_task(
             stores,
             task_id=executor_id,
             role="generator",
+            attempt_id=attempt.id,
             agent_name="executor",
         )
-        _insert_task(stores, task_id=reducer_id, role="reducer")
+        _insert_task(stores, task_id=reducer_id, role="reducer", attempt_id=attempt.id)
     finally:
         recorder.dispose()
 
@@ -336,7 +329,7 @@ def test_generator_executor_task_uses_executor_dir_and_message_recorder(
     recorder.start()
     try:
         workflow = stores.workflow_store.insert(
-            task_center_run_id=_RUN_ID,
+            request_id=_REQUEST_ID,
             parent_task_id="parent_task_1",
             workflow_goal="goal",
         )
@@ -349,6 +342,7 @@ def test_generator_executor_task_uses_executor_dir_and_message_recorder(
         )
         attempt = stores.attempt_store.insert(
             iteration_id=iteration.id,
+            workflow_id=workflow.id,
             attempt_sequence_no=1,
         )
         executor_id = generator_task_id(attempt.id, "g1")
@@ -356,6 +350,7 @@ def test_generator_executor_task_uses_executor_dir_and_message_recorder(
             stores,
             task_id=executor_id,
             role="generator",
+            attempt_id=attempt.id,
             agent_name="executor",
         )
     finally:
@@ -380,7 +375,7 @@ def test_sandbox_events_are_mirrored_to_run_jsonl(tmp_path: Path) -> None:
         bus.publish(
             Event(
                 type=EventType.SANDBOX_OCC_CHANGES_COMMITTED,
-                node=NodeId(task_center_run_id=_RUN_ID, tool_name="write_file"),
+                node=NodeId(request_id=_REQUEST_ID, tool_name="write_file"),
                 payload={"status": "committed", "changed_paths": ["a.txt"]},
                 correlation_id="corr-1",
             )
@@ -388,7 +383,7 @@ def test_sandbox_events_are_mirrored_to_run_jsonl(tmp_path: Path) -> None:
         bus.publish(
             Event(
                 type=EventType.RUN_COMPLETED,
-                node=NodeId(task_center_run_id=_RUN_ID),
+                node=NodeId(request_id=_REQUEST_ID),
                 payload={"status": "done"},
             )
         )
@@ -398,7 +393,7 @@ def test_sandbox_events_are_mirrored_to_run_jsonl(tmp_path: Path) -> None:
     rows = _read_jsonl(recorder.run_dir / "sandbox_events.jsonl")
     assert len(rows) == 1
     assert rows[0]["event_type"] == "sandbox_occ_changes_committed"
-    assert rows[0]["node"]["task_center_run_id"] == _RUN_ID
+    assert rows[0]["node"]["request_id"] == _REQUEST_ID
     assert rows[0]["node"]["tool_name"] == "write_file"
     assert rows[0]["payload"] == {
         "status": "committed",
@@ -415,7 +410,7 @@ def test_dispose_unregisters_listeners(
     recorder.start()
     try:
         m1 = stores.workflow_store.insert(
-            task_center_run_id=_RUN_ID,
+            request_id=_REQUEST_ID,
             parent_task_id="parent_task_1",
             workflow_goal="g1",
         )
@@ -423,7 +418,7 @@ def test_dispose_unregisters_listeners(
         recorder.dispose()
 
     m2 = stores.workflow_store.insert(
-        task_center_run_id=_RUN_ID,
+        request_id=_REQUEST_ID,
         parent_task_id="parent_task_2",
         workflow_goal="g2",
     )
@@ -442,7 +437,7 @@ def test_run_json_and_metrics_json_written(
     assert run_json.exists()
     started = json.loads(run_json.read_text())
     assert started["status"] == "running"
-    assert started["task_center_run_id"] == _RUN_ID
+    assert started["request_id"] == _REQUEST_ID
 
     recorder.dispose()
     finished = json.loads(run_json.read_text())
@@ -462,7 +457,7 @@ def test_write_performance_reports_produces_detailed_report(tmp_path: Path) -> N
     recorder.start()
     try:
         node = NodeId(
-            task_center_run_id=_RUN_ID,
+            request_id=_REQUEST_ID,
             agent_name="executor",
             agent_run_id="agent-run-1",
             tool_name="write_file",
@@ -597,7 +592,7 @@ def test_write_performance_reports_produces_detailed_report(tmp_path: Path) -> N
         "an async post-dispose task driven by the caller."
     )
 
-    from task_center_runner.audit.performance_report import write_performance_reports
+    from test_runner.audit.performance_report import write_performance_reports
 
     write_performance_reports(recorder.run_dir, snapshot)
 
@@ -605,7 +600,7 @@ def test_write_performance_reports_produces_detailed_report(tmp_path: Path) -> N
     # Phase 3 bumped the perf-report schema string; legacy ``tools`` /
     # ``hotspots`` / ``sandbox.families`` blocks remain populated for
     # back-compat (see ``performance_report._build_legacy_sandbox_report``).
-    assert report["schema"] == "task_center_runner.performance_report.v3"
+    assert report["schema"] == "test_runner.performance_report.v3"
     assert report["totals"]["tool_calls_total"] == 1
     assert report["tools"]["per_tool"]["write_file"]["p95_ms"] == 125.0
     assert report["tools"]["per_tool"]["write_file"]["samples"][0][
@@ -667,8 +662,8 @@ def test_agent_run_id_to_task_id_mapping(
     recorder.start()
     try:
         workflow = stores.workflow_store.insert(
-            task_center_run_id=_RUN_ID,
-            parent_task_id=None,
+            request_id=_REQUEST_ID,
+            parent_task_id="parent_task_1",
             workflow_goal="goal",
         )
         iteration = stores.iteration_store.insert(
@@ -680,6 +675,7 @@ def test_agent_run_id_to_task_id_mapping(
         )
         attempt = stores.attempt_store.insert(
             iteration_id=iteration.id,
+            workflow_id=workflow.id,
             attempt_sequence_no=1,
         )
         planner_id = planner_task_id(attempt.id)
@@ -687,6 +683,7 @@ def test_agent_run_id_to_task_id_mapping(
             stores,
             task_id=planner_id,
             role="planner",
+            attempt_id=attempt.id,
             agent_name="planner",
         )
         agent_run_id = str(uuid.uuid4())

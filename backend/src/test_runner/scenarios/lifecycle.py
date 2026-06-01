@@ -10,18 +10,18 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from task_center_runner.audit.events import EventType
-from task_center_runner.agent.mock.prompt_inspector import (
+from test_runner.audit.events import EventType
+from test_runner.agent.mock.prompt_inspector import (
     LaunchRecord,
     PromptInspection,
     ToolCallRecord,
 )
-from task_center_runner.agent.mock.sandbox_probe import SandboxCheck
+from test_runner.agent.mock.sandbox_probe import SandboxCheck
 
 if TYPE_CHECKING:
-    from task_center_runner.audit.events import Event
-    from task_center_runner.core.config import RunContext
-    from task_center_runner.core.report import PipelineReport
+    from test_runner.audit.events import Event
+    from test_runner.core.config import RunContext
+    from test_runner.core.report import PipelineReport
 
 
 class ScenarioLifecycle:

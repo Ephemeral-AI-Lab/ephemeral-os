@@ -23,7 +23,7 @@ from typing import Any
 from tools.submission.reducer import submit_reducer_outcome
 from tools.submission.planner import submit_planner_outcome
 
-from task_center_runner.scenarios.base import ScenarioBase, ScenarioContext, ToolCallSpec
+from test_runner.scenarios.base import ScenarioBase, ScenarioContext, ToolCallSpec
 
 
 def _duplicate_local_id_plan() -> dict[str, Any]:

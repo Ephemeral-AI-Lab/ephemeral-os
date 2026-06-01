@@ -24,15 +24,15 @@ from typing import TYPE_CHECKING, Any
 from message.events import StreamEvent, ToolExecutionCompletedEvent
 from tools import ExecutionMetadata
 
-from task_center_runner.audit.events import Event, EventType
-from task_center_runner.audit.node_id import NodeId
-from task_center_runner.agent.mock.event_source import ScenarioEventSource
-from task_center_runner.agent.mock.prompt_inspector import (
+from test_runner.audit.events import Event, EventType
+from test_runner.audit.node_id import NodeId
+from test_runner.agent.mock.event_source import ScenarioEventSource
+from test_runner.agent.mock.prompt_inspector import (
     LaunchRecord,
     PromptInspection,
     ToolCallRecord,
 )
-from task_center_runner.agent.mock.scenario_adapter import (
+from test_runner.agent.mock.scenario_adapter import (
     _attempt_and_iteration,
     scenario_script_for,
 )
@@ -40,8 +40,8 @@ from task_center_runner.agent.mock.scenario_adapter import (
 if TYPE_CHECKING:
     from agents import AgentDefinition
     from runtime.app_factory import RuntimeConfig
-    from task_center_runner.audit.bus import AuditEventBus
-    from task_center_runner.scenarios.base import Scenario
+    from test_runner.audit.bus import AuditEventBus
+    from test_runner.scenarios.base import Scenario
 
 
 _HIGH_VOLUME_MOCK_TOOL_CALL_LIMIT = 5_000
@@ -225,7 +225,7 @@ class ScenarioLoopRunner:
     ) -> PromptInspection:
         """Verify the launch payload carries the right XML envelopes for the role.
 
-        Only the four main TaskCenter roles reach ``ScenarioLoopRunner.__call__``
+        Only the four main task/request roles reach ``ScenarioLoopRunner.__call__``
         (advisor / explorer sub-agents are spawned inside the loop), so those
         branches cover every inspected agent.
         """

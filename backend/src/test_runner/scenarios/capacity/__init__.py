@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-from task_center_runner.scenarios.capacity.full_system_capacity_matrix import (
+from test_runner.scenarios.capacity.full_system_capacity_matrix import (
     FullSystemCapacityMatrix,
 )
-from task_center_runner.scenarios.capacity.pack_catalog import (
+from test_runner.scenarios.capacity.pack_catalog import (
     CAPACITY_PACK_SPECS,
     CapacityPackSpec,
 )

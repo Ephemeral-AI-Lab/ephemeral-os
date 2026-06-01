@@ -1,5 +1,5 @@
 {
-  "schema": "task_center_runner.run_report_structural_golden.v1",
+  "schema": "test_runner.run_report_structural_golden.v1",
   "field_names": [
     "duration_s",
     "entry_prompt_length",
@@ -19,11 +19,10 @@
     "sandbox_checks",
     "sandbox_id",
     "scenario_name",
-    "task_center_run_id",
-    "task_center_status",
+    "request_status",
     "tool_calls"
   ],
-  "field_count": 21,
+  "field_count": 20,
   "captured_at_commit": "1bdb21de",
-  "captured_for": "task_center_runner restructure plan \u00a77 Risk #4 \u2014 invariance contract for the Phase 4 run_scenario shim"
+  "captured_for": "test_runner restructure plan \u00a77 Risk #4 \u2014 invariance contract for the Phase 4 run_scenario shim"
 }

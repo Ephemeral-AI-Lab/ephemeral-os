@@ -6,16 +6,16 @@ from pathlib import Path
 
 import pytest
 
-from task_center_runner.benchmarks.sweevo.models import SWEEvoInstance
-from task_center_runner.agent.mock.plugin_workspace_probe import (
+from test_runner.benchmarks.sweevo.models import SWEEvoInstance
+from test_runner.agent.mock.plugin_workspace_probe import (
     READ_ONLY_LSP_REFRESH_SUMMARY,
 )
-from task_center_runner.core.stores import TaskStoreBundle
-from task_center_runner.tests._live_config import (
+from test_runner.core.stores import TaskStoreBundle
+from test_runner.tests._live_config import (
     database_configured,
     live_e2e_heavy_enabled,
 )
-from task_center_runner.tests.mock.sandbox.plugin._plugin_invariants import (
+from test_runner.tests.mock.sandbox.plugin._plugin_invariants import (
     assert_no_internal_sandbox_errors,
     assert_plugin_o1_artifacts,
     run_plugin_scenario,
@@ -47,7 +47,7 @@ async def test_plugin_read_only_lsp_refresh_without_publish(
         stores=stores,
     )
 
-    assert summary["schema"] == "task_center_runner.plugin_workspace.v1"
+    assert summary["schema"] == "test_runner.plugin_workspace.v1"
     assert summary["mode"] == "read_only_lsp_refresh"
     assert summary["lsp_read_only_publish_count"] == 0
     assert summary["lsp_overlay_publish_timing_count"] == 0

@@ -6,8 +6,8 @@ import json
 from collections import Counter
 from typing import Any
 
-from task_center_runner.scenarios.base import ScenarioContext
-from task_center_runner.agent.mock.tool_scripts import PreparedToolScript, ToolScriptStep
+from test_runner.scenarios.base import ScenarioContext
+from test_runner.agent.mock.tool_scripts import PreparedToolScript, ToolScriptStep
 from tools.sandbox.read_file import read_file as read_file_tool
 from tools.sandbox.write_file import write_file as write_file_tool
 

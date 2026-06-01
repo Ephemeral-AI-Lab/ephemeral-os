@@ -5,7 +5,7 @@ lives here so individual test files read as intent, not boilerplate.
 
 Audit events are read from a ``sandbox_events.jsonl`` path. The format matches
 the recorder's per-line JSON envelope (see
-``task_center_runner.audit.recorder``).
+``test_runner.audit.recorder``).
 """
 
 from __future__ import annotations

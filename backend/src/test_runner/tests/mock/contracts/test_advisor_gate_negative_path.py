@@ -22,7 +22,7 @@ from typing import Any
 
 import pytest
 
-from task_center_runner.agent.mock._advisor_approval import (
+from test_runner.agent.mock._advisor_approval import (
     build_advisor_approval_messages,
 )
 from tools._framework.core.context import ToolExecutionContextService

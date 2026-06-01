@@ -18,9 +18,9 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Protocol
 
 if TYPE_CHECKING:
-    from task_center_runner.audit.events import Event
-    from task_center_runner.core.config import RunContext
-    from task_center_runner.core.report import PipelineReport
+    from test_runner.audit.events import Event
+    from test_runner.core.config import RunContext
+    from test_runner.core.report import PipelineReport
 
 
 class LifecycleHooks(Protocol):

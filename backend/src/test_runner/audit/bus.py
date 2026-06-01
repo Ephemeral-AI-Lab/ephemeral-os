@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
-from task_center_runner.audit.events import Event
+from test_runner.audit.events import Event
 
 __all__ = ["AuditEventBus"]
 

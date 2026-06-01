@@ -18,7 +18,7 @@ seams are five ``RunConfig`` fields:
   ``benchmark/sweevo/<instance_id>``).
 
 This module knows nothing about concrete mock-runner state, Daytona, or any
-``task_center_runner.benchmarks.sweevo.*`` symbol — that runner-agnostic property
+``test_runner.benchmarks.sweevo.*`` symbol — that runner-agnostic property
 is enforced by ``test_no_core_imports.py``.
 """
 
@@ -35,19 +35,19 @@ from types import SimpleNamespace
 from workflow import RequestSandboxProvisioner, start_request
 
 from config.model_config import try_get_active_model_kwargs
-from task_center_runner.audit.bus import AuditEventBus
-from task_center_runner.audit.events import Event, EventType
-from task_center_runner.audit.node_id import NodeId
-from task_center_runner.audit.performance_report import _write_perf_report_safe
-from task_center_runner.audit.recorder import (
+from test_runner.audit.bus import AuditEventBus
+from test_runner.audit.events import Event, EventType
+from test_runner.audit.node_id import NodeId
+from test_runner.audit.performance_report import _write_perf_report_safe
+from test_runner.audit.recorder import (
     DAEMON_AUDIT_PULL_ENABLED_ENV,
     AuditRecorder,
     _daemon_audit_pull_enabled,  # consults env + central RunnerConfig
 )
-from task_center_runner.audit.stream_bridge import stream_bridge
-from task_center_runner.core.config import RunConfig, RunContext
-from task_center_runner.core.report import PipelineReport
-from task_center_runner.core.stores import create_per_test_task_center_stores
+from test_runner.audit.stream_bridge import stream_bridge
+from test_runner.core.config import RunConfig, RunContext
+from test_runner.core.report import PipelineReport
+from test_runner.core.stores import create_per_test_task_stores
 
 STREAM_FALLBACK_ENV = "EOS_AUDIT_STREAM_FALLBACK"
 ISOLATED_WORKSPACE_ENABLED_ENV = "EOS_ISOLATED_WORKSPACE_ENABLED"
@@ -63,7 +63,7 @@ def _env_true(name: str, *, default: bool) -> bool:
 def _stream_fallback_enabled() -> bool:
     """V3 Phase 3 deferral D13: env wins; Pydantic config is the default.
 
-    Mirrors :func:`task_center_runner.audit.recorder._daemon_audit_pull_enabled`
+    Mirrors :func:`test_runner.audit.recorder._daemon_audit_pull_enabled`
     precedence: explicit env override first, then central config, then a
     hard ``True`` default.
     """
@@ -90,7 +90,7 @@ def _refuse_dual_disable_when_isolated_workspace_enabled() -> None:
     refuses to start so the operator sees the misconfig immediately.
 
     Phase 3 deferral D12: the check is also invoked from
-    :meth:`task_center_runner.audit.recorder.AuditRecorder.start` so any
+    :meth:`test_runner.audit.recorder.AuditRecorder.start` so any
     recorder construction (including non-engine code paths) refuses on the
     same misconfig.
     """
@@ -103,7 +103,7 @@ def _refuse_dual_disable_when_isolated_workspace_enabled() -> None:
     if pull_enabled or stream_enabled:
         return
     raise RuntimeError(
-        "task_center_runner refuses to start: "
+        "test_runner refuses to start: "
         f"{DAEMON_AUDIT_PULL_ENABLED_ENV}=false AND "
         f"{STREAM_FALLBACK_ENV}=false AND "
         f"{ISOLATED_WORKSPACE_ENABLED_ENV}=true "
@@ -165,7 +165,7 @@ async def run_pipeline(config: RunConfig) -> PipelineReport:
     if config.bootstrap is not None:
         config.bootstrap()
 
-    bundle = config.stores or create_per_test_task_center_stores()
+    bundle = config.stores or create_per_test_task_stores()
     owns_stores = config.stores is None
 
     bus = AuditEventBus()

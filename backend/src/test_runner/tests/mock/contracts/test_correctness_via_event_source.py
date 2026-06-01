@@ -16,13 +16,13 @@ from pathlib import Path
 import pytest
 
 from runtime.app_factory import model_store
-from task_center_runner.benchmarks.sweevo.models import SWEEvoInstance
-from task_center_runner.core.stores import TaskStoreBundle
-from task_center_runner.environments.sweevo_image.fixtures import (
+from test_runner.benchmarks.sweevo.models import SWEEvoInstance
+from test_runner.core.stores import TaskStoreBundle
+from test_runner.environments.sweevo_image.fixtures import (
     run_scenario_on_sweevo_image,
 )
-from task_center_runner.scenarios.correctness_testing import CorrectnessTesting
-from task_center_runner.tests._live_config import database_configured
+from test_runner.scenarios.correctness_testing import CorrectnessTesting
+from test_runner.tests._live_config import database_configured
 
 pytestmark = pytest.mark.asyncio
 

@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-from task_center_runner.agent.mock.capacity_actions.metrics import (
+from test_runner.agent.mock.capacity_actions.metrics import (
     full_system_capacity_metrics_script,
 )
-from task_center_runner.agent.mock.capacity_actions.types import CapacityActionResult
+from test_runner.agent.mock.capacity_actions.types import CapacityActionResult
 
 __all__ = [
     "CapacityActionResult",

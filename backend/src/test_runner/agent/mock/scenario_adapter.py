@@ -11,7 +11,7 @@ Per-role:
   step), then submit ``submit_generator_outcome(status="success", ...)``.
 
 ``ScenarioContext`` is built from ``context.tool_metadata`` at call time
-(``attempt_runtime`` carries the live TaskCenter stores), so a single per-agent
+(``attempt_runtime`` carries the live task/request stores), so a single per-agent
 source serves whichever task/attempt the launcher routes to it.
 """
 
@@ -23,24 +23,24 @@ from typing import TYPE_CHECKING, Any
 from tools import ToolResult
 from message.message import ToolResultBlock
 
-from task_center_runner.audit.events import EventType
-from task_center_runner.agent.mock.event_source import ToolCall, Turn, TurnScript
-from task_center_runner.agent.mock.probe_bridge import (
+from test_runner.audit.events import EventType
+from test_runner.agent.mock.event_source import ToolCall, Turn, TurnScript
+from test_runner.agent.mock.probe_bridge import (
     bridge_probe_for,
     bridge_script_for,
     bridge_turns,
 )
-from task_center_runner.agent.mock.probes import (
+from test_runner.agent.mock.probes import (
     PROBE_BUILDERS,
     PROBE_SUMMARY,
     ProbeContext,
 )
-from task_center_runner.scenarios.base import ScenarioContext, ToolCallSpec
+from test_runner.scenarios.base import ScenarioContext, ToolCallSpec
 
 if TYPE_CHECKING:
     from agents import AgentDefinition
     from engine.query.context import QueryContext
-    from task_center_runner.scenarios.base import Scenario
+    from test_runner.scenarios.base import Scenario
 
 
 def normalize_result(blocks: list[ToolResultBlock]) -> ToolResult:
@@ -287,7 +287,7 @@ def scenario_script_for(
     by role; the reducer scripts its own gating behavior.
     """
     role = agent_def.name
-    # Helper sub-agents (advisor) carry no TaskCenter attempt context — script
+    # Helper sub-agents (advisor) carry no task/request attempt context — script
     # them before touching ``tool_metadata``.
     if role == "advisor":
         return _advisor_script()

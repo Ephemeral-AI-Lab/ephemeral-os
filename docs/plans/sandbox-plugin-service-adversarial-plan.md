@@ -11,9 +11,9 @@ Pyright read-only `documentSymbol`/`workspace/symbol`/`completion`/
 `completionItem/resolve`/`publishDiagnostics`/`signatureHelp`/`hover`/
 `typeDefinition`/`declaration`/`callHierarchy`/`documentHighlight`/`prepareRename`/
 `definition`/`references` refresh and a Pyright-computed self-managed rename
-publish path are live. Live status health probes, service-crash,
-hung-service timeout fail-closed probes, and next-dispatch service recovery
-after a PPC/process failure are also green.
+publish path are live. Live status health probes, failed-health isolation,
+service-crash, hung-service timeout fail-closed probes, and next-dispatch
+service recovery after a PPC/process failure are also green.
 Broader AV-10 LSP parity, true operation-level out-of-order multiplexing if
 required, and
 broader crash recovery beyond the covered health/crash/timeout/recovery paths
@@ -192,7 +192,8 @@ Landed:
   verifies `api.plugin.status probe_services=true` can health-check the generic
   harness, restart harness, package adapter, Pyright adapter, crash-probe
   service, hang-probe service, and recover-probe service on their retained
-  daemon snapshot manifest,
+  daemon snapshot manifest while failing closed on a deliberately rejecting
+  `health_fail_harness`,
   verifies a read-only `plugin.generic.ping`, verifies a self-managed
   `plugin.generic.apply` publish through `daemon.occ.apply_changeset`, verifies
   `plugin.generic.apply_multi` can issue two daemon-owned
@@ -263,6 +264,8 @@ Landed:
   broken PPC route and marking only that service stopped, verifies
   `plugin.generic.hang_probe` fails closed on PPC timeout by dropping only the
   hung route and marking only that service stopped, verifies
+  `plugin.generic.health_fail_ping` is removed when its service rejects the
+  daemon health probe while unrelated services stay connected, verifies
   `plugin.generic.recover_probe` first fails closed by dropping only the
   recover route and then succeeds on the next dispatch after the daemon restarts
   the previously ready service.
@@ -270,14 +273,14 @@ Landed:
   refresh-strategy benchmark in the same integrated sandbox fixture.
 - Live verification passed:
   `EOS_SANDBOX_PROVIDER=docker EOS_LIVE_E2E_IMAGE=xingyaoww/sweb.eval.x86_64.dask_s_dask-10042:latest EOS_PLUGIN_REFRESH_SAMPLES=1 EOS_PLUGIN_REFRESH_AUTO_SQUASH_WRITES=104 EOS_RUST_PLUGIN_BENCH_TIMEOUT_S=600 uv run pytest -q -x -rs --tb=short --durations=10 backend/tests/live_e2e_test/sandbox/plugin/test_plugin_refresh_strategies.py`
-  (`1 passed in 40.33s` on the latest rerun). The Rust plugin artifact report
-  `.omc/results/rust-daemon-plugin-generic-20260601T233450Z-72557.json` used
+  (`1 passed in 45.19s` on the latest rerun). The Rust plugin artifact report
+  `.omc/results/rust-daemon-plugin-generic-20260601T234314Z-87525.json` used
   `eosd-linux-amd64` SHA
   `79f2592a55e565f00e2917c86cbeca2bfa26c073c316a1be6b6239d5830509fb` and
   proved registered routes `plugin.generic.adapter_query`,
   `plugin.generic.apply`, `plugin.generic.apply_multi`,
   `plugin.generic.crash_probe`,
-  `plugin.generic.hang_probe`,
+  `plugin.generic.hang_probe`, `plugin.generic.health_fail_ping`,
   `plugin.generic.oneshot_write`, `plugin.generic.ping`, and
   `plugin.generic.pyright_call_hierarchy`,
   `plugin.generic.pyright_completion`,
@@ -297,6 +300,7 @@ Landed:
   `plugin.generic.apply_multi`/
   `plugin.generic.crash_probe`/
   `plugin.generic.hang_probe`/
+  `plugin.generic.health_fail_ping`/
   `plugin.generic.ping`/`plugin.generic.pyright_call_hierarchy`/
   `plugin.generic.pyright_completion`/
   `plugin.generic.pyright_completion_resolve`/
@@ -316,7 +320,11 @@ Landed:
   `Health { manifest_key }` acknowledgements for `harness`, `restart_harness`,
   `adapter_harness`, `pyright_harness`, `crash_harness`, `hang_harness`, and
   `recover_harness` on retained manifest key
-  `1:f071e2d096b352b67daeb0f2e2f6dc503335246a98e209fa9f199d06314b5cb5`;
+  `1:f071e2d096b352b67daeb0f2e2f6dc503335246a98e209fa9f199d06314b5cb5`,
+  and failed-health isolation where `health_fail_harness` rejected the same
+  probe with `intentional health failure`, was marked `state=stopped`, and
+  had `plugin.generic.health_fail_ping` removed from
+  `connected_ppc_routes` while unrelated routes stayed connected;
   initial service `state=ready` on manifest key
   `1:f071e2d096b352b67daeb0f2e2f6dc503335246a98e209fa9f199d06314b5cb5`;
   callback file status `committed`; self-managed readback
@@ -416,12 +424,13 @@ Landed:
   routes, `recover_harness.state == "stopped"`, second
   `plugin.generic.recover_probe` returning `from_recovered_service=true` with
   `workspace_mounted=true`, restored connected route, and
-  `recover_harness.restart_count == 1`; final manifest version `12`; retained
-  service leases before cleanup `5`; post-cleanup active leases `0`; and zero
-  post-cleanup orphan layers and missing layers. The paired refresh-strategy
-  report `.omc/results/plugin-refresh-strategies-20260601T233450Z-72557.json`
-  still recommends `workspace_snapshot_refresh`; refresh p95 was `3.867 ms`
-  versus `commit_to_workspace` p95 `3.276 ms`.
+  `recover_harness.restart_count == 1`; final manifest version `12`; final
+  active service leases before cleanup `5`; post-cleanup active leases `0`; and
+  zero post-cleanup orphan layers and missing layers. The paired
+  refresh-strategy report
+  `.omc/results/plugin-refresh-strategies-20260601T234314Z-87525.json` still
+  recommends `workspace_snapshot_refresh`; refresh p95 was `6.064 ms` versus
+  `commit_to_workspace` p95 `3.704 ms`.
 
 Still open:
 

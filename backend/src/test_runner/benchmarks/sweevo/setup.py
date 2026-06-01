@@ -17,18 +17,18 @@ import time
 from pathlib import Path
 from typing import Any
 
-from task_center_runner.benchmarks.sweevo._provision import (
+from test_runner.benchmarks.sweevo._provision import (
     _create_sandbox,
     _find_existing_sandbox_by_name,
     _resume_sandbox,
     _service,
     setup_sweevo_sandbox,
 )
-from task_center_runner.benchmarks.sweevo._snapshot import (
+from test_runner.benchmarks.sweevo._snapshot import (
     SnapshotNotRegisteredError,
     verify_sweevo_snapshot_exists,
 )
-from task_center_runner.benchmarks.sweevo.models import (
+from test_runner.benchmarks.sweevo.models import (
     PreContext,
     SWEEvoInstance,
     _DEFAULT_DATASET_SOURCE,
@@ -195,7 +195,7 @@ def classify_sweevo_instance_size(bullet_count: int) -> str:
 
 
 def summarize_sweevo_instance(instance: SWEEvoInstance) -> dict[str, Any]:
-    from task_center_runner.benchmarks.sweevo.models import default_sweevo_snapshot_name
+    from test_runner.benchmarks.sweevo.models import default_sweevo_snapshot_name
 
     bullet_count = count_sweevo_changelog_items(instance)
     return {

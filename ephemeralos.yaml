@@ -40,7 +40,7 @@ providers:
 
 runner:
   audit_dir: .sweevo_runs
-  run_label: task_center_runner
+  run_label: test_runner
   sandbox_reuse_mode: reuse
   sandbox_quota: 3
   live_e2e:

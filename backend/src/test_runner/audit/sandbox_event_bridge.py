@@ -7,9 +7,9 @@ from typing import Any
 
 from audit.base import AuditEvent, AuditSink
 from sandbox.audit import events as sandbox_events
-from task_center_runner.audit.bus import AuditEventBus
-from task_center_runner.audit.events import Event, EventType
-from task_center_runner.audit.node_id import NodeId
+from test_runner.audit.bus import AuditEventBus
+from test_runner.audit.events import Event, EventType
+from test_runner.audit.node_id import NodeId
 
 
 _SANDBOX_EVENT_MAP = {

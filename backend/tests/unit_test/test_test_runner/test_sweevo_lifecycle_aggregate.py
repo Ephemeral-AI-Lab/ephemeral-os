@@ -13,9 +13,9 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from task_center_runner.benchmarks.sweevo.models import SWEEvoInstance, SWEEvoResult
-from task_center_runner.benchmarks.sweevo import eval as lifecycle_mod
-from task_center_runner.core.report import PipelineReport
+from test_runner.benchmarks.sweevo.models import SWEEvoInstance, SWEEvoResult
+from test_runner.benchmarks.sweevo import eval as lifecycle_mod
+from test_runner.core.report import PipelineReport
 
 
 def _instance() -> SWEEvoInstance:

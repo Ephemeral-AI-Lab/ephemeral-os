@@ -3,10 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Maintenance - Workflow Runner (Testing)</title>
+<title>Maintenance - Test Runner</title>
 <link rel="stylesheet" href="../assets/styles.css">
 </head>
-<body data-module="workflow-runner" data-page="maintenance" data-root="../">
+<body data-module="test-runner" data-page="maintenance" data-root="../">
 <nav class="toc">
   <h2>EphemeralOS Architecture</h2>
   <a class="home-link" href="../index.html">All Modules</a>
@@ -20,22 +20,22 @@
     <li><a href="../tools/index.html" data-doc-module="tools">Tools</a></li>
     <li><a href="../agent_loops/index.html" data-doc-module="agent-loops">Agent Loops</a></li>
     <li><a href="../workflow/index.html" data-doc-module="workflow">Workflow</a></li>
-    <li><a href="index.html" data-doc-module="workflow-runner" class="active">Workflow Runner (Testing)</a></li>
+    <li><a href="index.html" data-doc-module="test-runner" class="active">Test Runner</a></li>
   </ol>
-  <h2>Workflow Runner Pages</h2>
+  <h2>Test Runner Pages</h2>
   <ol>
-    <li><a href="index.html" data-doc-module="workflow-runner" data-doc-section="index" data-doc-page="index.html">Overview</a></li>
-    <li><a href="core-harness.html" data-doc-module="workflow-runner" data-doc-section="core-harness" data-doc-page="core-harness.html">Core Harness</a></li>
-    <li><a href="scenarios.html" data-doc-module="workflow-runner" data-doc-section="scenarios" data-doc-page="scenarios.html">Scenarios</a></li>
-    <li><a href="mocked-agents.html" data-doc-module="workflow-runner" data-doc-section="mocked-agents" data-doc-page="mocked-agents.html">Mocked Agents</a></li>
-    <li><a href="benchmark-sweevo.html" data-doc-module="workflow-runner" data-doc-section="benchmark-sweevo" data-doc-page="benchmark-sweevo.html">SWE-EVO Benchmark</a></li>
-    <li><a href="tests-layout.html" data-doc-module="workflow-runner" data-doc-section="tests-layout" data-doc-page="tests-layout.html">Test Suites</a></li>
-    <li><a href="maintenance.html" data-doc-module="workflow-runner" data-doc-section="maintenance" data-doc-page="maintenance.html" class="active">Maintenance</a></li>
+    <li><a href="index.html" data-doc-module="test-runner" data-doc-section="index" data-doc-page="index.html">Overview</a></li>
+    <li><a href="core-harness.html" data-doc-module="test-runner" data-doc-section="core-harness" data-doc-page="core-harness.html">Core Harness</a></li>
+    <li><a href="scenarios.html" data-doc-module="test-runner" data-doc-section="scenarios" data-doc-page="scenarios.html">Scenarios</a></li>
+    <li><a href="mocked-agents.html" data-doc-module="test-runner" data-doc-section="mocked-agents" data-doc-page="mocked-agents.html">Mocked Agents</a></li>
+    <li><a href="benchmark-sweevo.html" data-doc-module="test-runner" data-doc-section="benchmark-sweevo" data-doc-page="benchmark-sweevo.html">SWE-EVO Benchmark</a></li>
+    <li><a href="tests-layout.html" data-doc-module="test-runner" data-doc-section="tests-layout" data-doc-page="tests-layout.html">Test Suites</a></li>
+    <li><a href="maintenance.html" data-doc-module="test-runner" data-doc-section="maintenance" data-doc-page="maintenance.html" class="active">Maintenance</a></li>
   </ol>
 </nav>
 <main>
 <div class="doc-actions">
-  <span><a href="../index.html">Architecture</a> / <a href="index.html">Workflow Runner</a> / Maintenance</span>
+  <span><a href="../index.html">Architecture</a> / <a href="index.html">Test Runner</a> / Maintenance</span>
   <span class="nav-pair"><a href="tests-layout.html">Test Suites</a><a href="index.html">Overview</a></span>
 </div>
 <h1>Maintenance</h1>
@@ -52,11 +52,11 @@
 
 <p class="lead">All pages in this module share one baseline commit: <code>d32994314</code>. Refreshing the wiki is a delta-first task: <code>git diff</code> the baseline against <code>HEAD</code> for each page's evidence paths, then update only the sections whose claims drifted.</p>
 
-<section id="refresh-plan" data-last-reviewed-commit="d32994314" data-evidence-paths="docs/architecture/task_center_runner backend/src/task_center_runner">
+<section id="refresh-plan" data-last-reviewed-commit="d32994314" data-evidence-paths="docs/architecture/test_runner backend/src/test_runner">
 <h2>Refresh Plan <a class="anchor" href="#refresh-plan">#</a></h2>
 <div class="summary">
   <ul>
-    <li>Run <code>git log --oneline d32994314..HEAD -- backend/src/task_center_runner</code> first. If there are no commits, the wiki is current; skip.</li>
+    <li>Run <code>git log --oneline d32994314..HEAD -- backend/src/test_runner</code> first. If there are no commits, the wiki is current; skip.</li>
     <li>For each changed file, find the matching page via the <em>evidence paths</em> in section metadata. Use <code>git diff</code> on those exact paths to scope the section refresh.</li>
     <li>Update <code>data-last-reviewed-commit</code> on the section AND the page-level <code>data-page-baseline-commit</code> after refreshing claims. They should match unless the page intentionally mixes commits.</li>
     <li>Validate with <code>check_html_wiki.py</code> on every touched page before committing.</li>
@@ -69,76 +69,76 @@
 </div>
 </section>
 
-<section id="baselines" data-last-reviewed-commit="d32994314" data-evidence-paths="docs/architecture/task_center_runner">
+<section id="baselines" data-last-reviewed-commit="d32994314" data-evidence-paths="docs/architecture/test_runner">
 <h2>Per-Page Baselines <a class="anchor" href="#baselines">#</a></h2>
 <div class="edge-list" aria-label="Page-to-evidence map">
-  <div><b><a href="index.html">Overview</a></b><span>Evidence: <code>backend/src/task_center_runner/__init__.py</code>, <code>core/runner.py</code>, <code>core/engine.py</code>, <code>core/config.py</code>, <code>scenarios/__init__.py</code>, <code>benchmarks/sweevo/pipeline.py</code>.</span></div>
-  <div><b><a href="core-harness.html">Core Harness</a></b><span>Evidence: <code>backend/src/task_center_runner/core/</code>, <code>backend/src/task_center_runner/audit/</code>.</span></div>
-  <div><b><a href="scenarios.html">Scenarios</a></b><span>Evidence: <code>backend/src/task_center_runner/scenarios/</code>.</span></div>
-  <div><b><a href="mocked-agents.html">Mocked Agents</a></b><span>Evidence: <code>backend/src/task_center_runner/agent/mock/</code>.</span></div>
-  <div><b><a href="benchmark-sweevo.html">SWE-EVO Benchmark</a></b><span>Evidence: <code>backend/src/task_center_runner/benchmarks/sweevo/</code>, <code>backend/src/task_center_runner/environments/sweevo_image/</code>.</span></div>
-  <div><b><a href="tests-layout.html">Test Suites</a></b><span>Evidence: <code>backend/src/task_center_runner/tests/</code>, <code>backend/src/task_center_runner/environments/sweevo_image/</code>.</span></div>
+  <div><b><a href="index.html">Overview</a></b><span>Evidence: <code>backend/src/test_runner/__init__.py</code>, <code>core/runner.py</code>, <code>core/engine.py</code>, <code>core/config.py</code>, <code>scenarios/__init__.py</code>, <code>benchmarks/sweevo/pipeline.py</code>.</span></div>
+  <div><b><a href="core-harness.html">Core Harness</a></b><span>Evidence: <code>backend/src/test_runner/core/</code>, <code>backend/src/test_runner/audit/</code>.</span></div>
+  <div><b><a href="scenarios.html">Scenarios</a></b><span>Evidence: <code>backend/src/test_runner/scenarios/</code>.</span></div>
+  <div><b><a href="mocked-agents.html">Mocked Agents</a></b><span>Evidence: <code>backend/src/test_runner/agent/mock/</code>.</span></div>
+  <div><b><a href="benchmark-sweevo.html">SWE-EVO Benchmark</a></b><span>Evidence: <code>backend/src/test_runner/benchmarks/sweevo/</code>, <code>backend/src/test_runner/environments/sweevo_image/</code>.</span></div>
+  <div><b><a href="tests-layout.html">Test Suites</a></b><span>Evidence: <code>backend/src/test_runner/tests/</code>, <code>backend/src/test_runner/environments/sweevo_image/</code>.</span></div>
 </div>
 </section>
 
-<section id="delta-commands" data-last-reviewed-commit="d32994314" data-evidence-paths="docs/architecture/task_center_runner">
+<section id="delta-commands" data-last-reviewed-commit="d32994314" data-evidence-paths="docs/architecture/test_runner">
 <h2>Delta Commands <a class="anchor" href="#delta-commands">#</a></h2>
 <pre class="diagram" aria-label="Refresh command set">
 # 1. has anything changed since baseline?
 git log --oneline d32994314..HEAD \
-    -- backend/src/task_center_runner
+    -- backend/src/test_runner
 
 # 2. per-page deltas (skip ones with no log entries)
 git diff d32994314..HEAD \
-    -- backend/src/task_center_runner/core \
-       backend/src/task_center_runner/audit
+    -- backend/src/test_runner/core \
+       backend/src/test_runner/audit
 
 git diff d32994314..HEAD \
-    -- backend/src/task_center_runner/scenarios
+    -- backend/src/test_runner/scenarios
 
 git diff d32994314..HEAD \
-    -- backend/src/task_center_runner/agent/mock
+    -- backend/src/test_runner/agent/mock
 
 git diff d32994314..HEAD \
-    -- backend/src/task_center_runner/benchmarks/sweevo \
-       backend/src/task_center_runner/environments/sweevo_image
+    -- backend/src/test_runner/benchmarks/sweevo \
+       backend/src/test_runner/environments/sweevo_image
 
 git diff d32994314..HEAD \
-    -- backend/src/task_center_runner/tests
+    -- backend/src/test_runner/tests
 
 # 3. verify baseline commit is still in the tree
 git cat-file -e d32994314^{commit}
 </pre>
 </section>
 
-<section id="validation" data-last-reviewed-commit="d32994314" data-evidence-paths="docs/architecture/task_center_runner .claude/skills/codebase-wiki-builder/scripts/check_html_wiki.py">
+<section id="validation" data-last-reviewed-commit="d32994314" data-evidence-paths="docs/architecture/test_runner .claude/skills/codebase-wiki-builder/scripts/check_html_wiki.py">
 <h2>Validation <a class="anchor" href="#validation">#</a></h2>
 <pre class="diagram" aria-label="Validator invocations">
 # tag balance, Obsidian-link residue, duplicate ids, broken links, missing anchors,
 # stylesheet brace balance, long-token warnings
 python3 .claude/skills/codebase-wiki-builder/scripts/check_html_wiki.py \
-    docs/architecture/task_center_runner/index.html \
-    docs/architecture/task_center_runner/core-harness.html \
-    docs/architecture/task_center_runner/scenarios.html \
-    docs/architecture/task_center_runner/mocked-agents.html \
-    docs/architecture/task_center_runner/benchmark-sweevo.html \
-    docs/architecture/task_center_runner/tests-layout.html \
-    docs/architecture/task_center_runner/maintenance.html
+    docs/architecture/test_runner/index.html \
+    docs/architecture/test_runner/core-harness.html \
+    docs/architecture/test_runner/scenarios.html \
+    docs/architecture/test_runner/mocked-agents.html \
+    docs/architecture/test_runner/benchmark-sweevo.html \
+    docs/architecture/test_runner/tests-layout.html \
+    docs/architecture/test_runner/maintenance.html
 
 # search-index entries should mention every page above
-grep -F 'workflow-runner' docs/architecture/assets/search-index.js | wc -l
+grep -F 'test-runner' docs/architecture/assets/search-index.js | wc -l
 
 # no stray Obsidian-style double-bracket links in any new page
-rg -n 'double-open-bracket|double-close-bracket' docs/architecture/task_center_runner
+rg -n 'double-open-bracket|double-close-bracket' docs/architecture/test_runner
 # (the literal regex the skill validator runs is rg -n '\\[\\[|\\]\\]')
 </pre>
 </section>
 
-<section id="stale-claim-watch" data-last-reviewed-commit="d32994314" data-evidence-paths="backend/src/task_center_runner/benchmarks/sweevo backend/src/task_center_runner/agent/mock backend/src/task_center_runner/core docs/plans/sweevo_layerstack_migration_REPORT.md">
+<section id="stale-claim-watch" data-last-reviewed-commit="d32994314" data-evidence-paths="backend/src/test_runner/benchmarks/sweevo backend/src/test_runner/agent/mock backend/src/test_runner/core docs/plans/sweevo_layerstack_migration_REPORT.md">
 <h2>Stale-Claim Watch <a class="anchor" href="#stale-claim-watch">#</a></h2>
 <p>Areas that historically drift between code and docs. Audit these first on any refresh pass.</p>
 <div class="edge-list" aria-label="Stale-claim areas">
-  <div><b>Sweevo CLI location</b><span>Commit <code>f915434df</code> relocated the benchmark to <code>task_center_runner.benchmarks.sweevo</code>. Watch for old <code>backend.benchmark_sweevo</code> references or <code>python -m benchmark_sweevo</code> command lines.</span></div>
+  <div><b>Sweevo CLI location</b><span>Commit <code>f915434df</code> relocated the benchmark to <code>test_runner.benchmarks.sweevo</code>. Watch for old <code>backend.benchmark_sweevo</code> references or <code>python -m benchmark_sweevo</code> command lines.</span></div>
   <div><b>RunReport vs PipelineReport</b><span>Mock-rich fields (<code>launches</code>, <code>tool_calls</code>, <code>prompt_inspections</code>, <code>sandbox_checks</code>) live ONLY on <code>RunReport</code>. If a page describes them on <code>PipelineReport</code>, that page is stale.</span></div>
   <div><b>Scenario registry size</b><span>The catalog grows over time. Re-read <code>scenarios/__init__.py::SCENARIO_REGISTRY</code> on every refresh and update the catalog page if new lanes appear.</span></div>
   <div><b>Probe modes</b><span>New probe-mode tokens are easy to add in <code>scenario_adapter.py</code>, <code>probe_bridge.py</code>, or <code>PROBE_BUILDERS</code> without updating the mocked-agents page. Grep for new action-token branches and reflect them in the probe library section.</span></div>
@@ -151,7 +151,7 @@ rg -n 'double-open-bracket|double-close-bracket' docs/architecture/task_center_r
 <div class="page-baseline" data-page-baseline-commit="d32994314">
   <strong>Maintenance baseline</strong>
   <span>Maintenance page reviewed against <code>d32994314</code>.</span>
-  <code>git diff d32994314..HEAD -- backend/src/task_center_runner docs/architecture/task_center_runner</code>
+  <code>git diff d32994314..HEAD -- backend/src/test_runner docs/architecture/test_runner</code>
 </div>
 <div class="page-footer-nav"><span><a href="tests-layout.html">Test Suites</a></span><span><a href="index.html">Overview</a></span></div>
 </main>

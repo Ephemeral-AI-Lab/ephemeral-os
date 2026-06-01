@@ -57,7 +57,7 @@ from tools.sandbox.write_file import write_file as write_file_tool
 
 WORKSPACE_ROOT = "/testbed"
 ROOT = f"{WORKSPACE_ROOT}/.ephemeralos/sweevo-mock/plugin"
-SUMMARY_SCHEMA = "task_center_runner.plugin_workspace.v1"
+SUMMARY_SCHEMA = "test_runner.plugin_workspace.v1"
 
 READ_ONLY_LSP_REFRESH_SUMMARY = f"{ROOT}/read_only_lsp_refresh/summary.json"
 WRITE_ALLOWED_PUBLISH_SUMMARY = f"{ROOT}/write_allowed_publish/summary.json"

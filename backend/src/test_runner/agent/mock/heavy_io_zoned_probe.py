@@ -29,9 +29,9 @@ from tools.sandbox.read_file import read_file as read_file_tool
 from tools.sandbox.shell import shell as shell_tool
 from tools.sandbox.write_file import write_file as write_file_tool
 
-from task_center_runner.agent.mock.sandbox_probe import SandboxCheck
-from task_center_runner.audit.events import EventType
-from task_center_runner.scenarios.sandbox.heavy_io_zoned_concurrent import WORKER_COUNT
+from test_runner.agent.mock.sandbox_probe import SandboxCheck
+from test_runner.audit.events import EventType
+from test_runner.scenarios.sandbox.heavy_io_zoned_concurrent import WORKER_COUNT
 
 
 WORKSPACE_ROOT = "/testbed"
@@ -40,8 +40,8 @@ ROOT = f"{WORKSPACE_ROOT}/.ephemeralos/sweevo-mock/heavy_io_zoned"
 FRAGMENTS_DIR = f"{ROOT}/fragments"
 SUMMARY_PATH = f"{ROOT}/summary.json"
 
-WORKER_SCHEMA = "task_center_runner.heavy_io_zoned.worker.v1"
-SUMMARY_SCHEMA = "task_center_runner.heavy_io_zoned.v1"
+WORKER_SCHEMA = "test_runner.heavy_io_zoned.worker.v1"
+SUMMARY_SCHEMA = "test_runner.heavy_io_zoned.v1"
 
 # 11 chunks * 3 MB == 33 MB per zone, 3 zones == ~99 MB per worker.
 # 11 sleeps * 3 s == 33 s minimum wall time per shell (plus dd cost).
@@ -118,7 +118,7 @@ async def run_heavy_io_zoned_seed_probe(
 
     control_path = f"{ROOT}/control/seed.json"
     control_payload = {
-        "schema": "task_center_runner.heavy_io_zoned.seed.v1",
+        "schema": "test_runner.heavy_io_zoned.seed.v1",
         "worker_count": WORKER_COUNT,
         "chunk_count": CHUNK_COUNT,
         "chunk_mb": CHUNK_MB,

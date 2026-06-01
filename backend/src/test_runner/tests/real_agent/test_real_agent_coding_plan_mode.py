@@ -33,10 +33,10 @@ from typing import Any, Callable
 
 import pytest
 
-from task_center_runner.benchmarks.sweevo.models import SWEEvoInstance
-from task_center_runner.core.real_agent_run import run_sweevo_real_agent
-from task_center_runner.core.stores import TaskStoreBundle
-from task_center_runner.tests._live_config import real_agent_max_duration_s
+from test_runner.benchmarks.sweevo.models import SWEEvoInstance
+from test_runner.core.real_agent_run import run_sweevo_real_agent
+from test_runner.core.stores import TaskStoreBundle
+from test_runner.tests._live_config import real_agent_max_duration_s
 from tools.sandbox._lib.registry import make_sandbox_tools
 
 pytestmark = pytest.mark.real_agent

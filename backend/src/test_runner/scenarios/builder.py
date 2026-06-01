@@ -5,13 +5,13 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from task_center_runner.core.config import RunConfig
-from task_center_runner.core.sandbox import AttachExisting
-from task_center_runner.scenarios.base import Scenario
-from task_center_runner.scenarios.lifecycle import ScenarioLifecycle
+from test_runner.core.config import RunConfig
+from test_runner.core.sandbox import AttachExisting
+from test_runner.scenarios.base import Scenario
+from test_runner.scenarios.lifecycle import ScenarioLifecycle
 
 if TYPE_CHECKING:
-    from task_center_runner.core.config import RunContext
+    from test_runner.core.config import RunContext
 
 
 def build_scenario_config(
@@ -28,7 +28,7 @@ def build_scenario_config(
 
     def _make_runner(ctx: "RunContext"):
         # Imported lazily to keep scenario import-time setup free of runner state.
-        from task_center_runner.agent.mock.scenario_loop_runner import (
+        from test_runner.agent.mock.scenario_loop_runner import (
             ScenarioLoopRunner,
         )
 
@@ -42,7 +42,7 @@ def build_scenario_config(
     # passes it (not a bare ``SimpleNamespace``) to the runner: the event-source
     # path needs ``resolve_settings``/``external_api_client``/
     # ``event_source_factory`` to reach ``run_ephemeral_agent`` → ``spawn_agent``.
-    from task_center_runner.agent.mock.scenario_loop_runner import (
+    from test_runner.agent.mock.scenario_loop_runner import (
         make_mock_runtime_config,
     )
 

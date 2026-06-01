@@ -18,12 +18,12 @@ from typing import Any
 
 import pytest
 
-from task_center_runner.audit.daemon_event_normalizer import FORENSIC_RAW_ENV
-from task_center_runner.audit.performance_report import (
+from test_runner.audit.daemon_event_normalizer import FORENSIC_RAW_ENV
+from test_runner.audit.performance_report import (
     build_performance_report,
     render_performance_report_markdown,
 )
-from task_center_runner.audit.release_gates import (
+from test_runner.audit.release_gates import (
     evaluate_audit_overhead_gate,
     evaluate_isolated_workspace_gate,
 )
@@ -649,7 +649,7 @@ def test_isolated_workspace_gate_fails_on_mismatched_handle_ids(
 def test_engine_refuses_dual_disable_when_isolated_workspace_enabled(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    from task_center_runner.core.engine import (
+    from test_runner.core.engine import (
         _refuse_dual_disable_when_isolated_workspace_enabled,
     )
 
@@ -665,7 +665,7 @@ def test_engine_starts_when_only_one_audit_path_off(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Negative case: pull off but stream on is fine."""
-    from task_center_runner.core.engine import (
+    from test_runner.core.engine import (
         _refuse_dual_disable_when_isolated_workspace_enabled,
     )
 
@@ -681,7 +681,7 @@ def test_engine_starts_when_isolated_workspace_disabled(
 ) -> None:
     """Negative case: both audit paths off but isolated workspace also
     off — the gate's invariant doesn't apply."""
-    from task_center_runner.core.engine import (
+    from test_runner.core.engine import (
         _refuse_dual_disable_when_isolated_workspace_enabled,
     )
 
@@ -789,7 +789,7 @@ def test_recorder_skips_auto_start_when_env_gate_off(
     """When ``EOS_DAEMON_AUDIT_PULL_ENABLED=false`` the recorder MUST NOT
     auto-start a puller even if a sandbox_id is bound (per V3 §Default-on
     rollout)."""
-    from task_center_runner.audit.recorder import _daemon_audit_pull_enabled
+    from test_runner.audit.recorder import _daemon_audit_pull_enabled
 
     monkeypatch.setenv("EOS_DAEMON_AUDIT_PULL_ENABLED", "false")
     assert _daemon_audit_pull_enabled() is False
@@ -801,7 +801,7 @@ def test_recorder_auto_start_is_default_on(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """The default (env unset) must be ON."""
-    from task_center_runner.audit.recorder import _daemon_audit_pull_enabled
+    from test_runner.audit.recorder import _daemon_audit_pull_enabled
 
     monkeypatch.delenv("EOS_DAEMON_AUDIT_PULL_ENABLED", raising=False)
     assert _daemon_audit_pull_enabled() is True
@@ -814,7 +814,7 @@ def test_central_config_path_disables_puller_when_env_unset(
     govern. This pins the central-config plumbing so the spec's "runner
     config" wording isn't paper-only.
     """
-    from task_center_runner.audit import recorder as recorder_module
+    from test_runner.audit import recorder as recorder_module
 
     monkeypatch.delenv("EOS_DAEMON_AUDIT_PULL_ENABLED", raising=False)
 

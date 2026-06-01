@@ -1,7 +1,7 @@
 """Full-system capacity matrix scenario.
 
 This scenario is the capacity-suite facade over the existing full-stack
-adversarial flow. It keeps the proven TaskCenter/sandbox/LSP choreography and
+adversarial flow. It keeps the proven task/request/sandbox/LSP choreography and
 adds a capacity-specific metrics artifact before the final release guard.
 """
 
@@ -10,12 +10,12 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing import Any
 
-from task_center_runner.scenarios.base import ScenarioContext
-from task_center_runner.scenarios.full_stack_adversarial import FullStackAdversarial
+from test_runner.scenarios.base import ScenarioContext
+from test_runner.scenarios.full_stack_adversarial import FullStackAdversarial
 
 
 class FullSystemCapacityMatrix(FullStackAdversarial):
-    """Composite capacity run across TaskCenter, sandbox, plugins, and audit."""
+    """Composite capacity run across task/request, sandbox, plugins, and audit."""
 
     name = "capacity.full_system_capacity_matrix"
 
@@ -53,7 +53,7 @@ class FullSystemCapacityMatrix(FullStackAdversarial):
                 "needs": [task["id"] for task in tasks],
                 "prompt": (
                     "Final reconciliation passed and the capacity metrics "
-                    "artifact uses the task_center_runner.capacity.v1 schema."
+                    "artifact uses the test_runner.capacity.v1 schema."
                 ),
             }
         ]

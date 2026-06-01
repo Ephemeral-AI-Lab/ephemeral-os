@@ -9,7 +9,7 @@
     { module: 'tools', href: 'tools/index.html', title: 'Tools' },
     { module: 'agent-loops', href: 'agent_loops/index.html', title: 'Agent Loops' },
     { module: 'workflow', href: 'workflow/index.html', title: 'Workflow' },
-    { module: 'workflow-runner', href: 'task_center_runner/index.html', title: 'Workflow Runner (Testing)' }
+    { module: 'test-runner', href: 'test_runner/index.html', title: 'Test Runner' }
   ];
 
   function withRoot(path) {

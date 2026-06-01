@@ -16,8 +16,8 @@ from tools.sandbox.read_file import read_file as read_file_tool
 from tools.sandbox.shell import shell as shell_tool
 from tools.sandbox.write_file import write_file as write_file_tool
 
-from task_center_runner.agent.mock.sandbox_probe import SandboxCheck
-from task_center_runner.audit.events import EventType
+from test_runner.agent.mock.sandbox_probe import SandboxCheck
+from test_runner.audit.events import EventType
 
 
 ROOT = "/testbed/.ephemeralos/sweevo-mock/auto_squash_commit_resume"

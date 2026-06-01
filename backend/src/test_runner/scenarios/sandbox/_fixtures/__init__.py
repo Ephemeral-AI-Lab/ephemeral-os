@@ -13,7 +13,7 @@ guards against fixture drift over time.
 
 from __future__ import annotations
 
-from task_center_runner.scenarios.sandbox._fixtures.scheduler_demo_data import (
+from test_runner.scenarios.sandbox._fixtures.scheduler_demo_data import (
     FixtureFile,
     Patch,
     SCHEDULER_DEMO_FILES,

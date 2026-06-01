@@ -18,7 +18,7 @@ This test follows the same pattern as
 ``test_no_core_imports.py`` (Phase 4c invariant guard).
 
 The property is TRUE today (recorder.py imports only ``db.models.*`` and
-``task_center_runner.audit.*``) — this guard lands now to prevent
+``test_runner.audit.*``) — this guard lands now to prevent
 regression once Phase 1 lands and `provider.py`/`engine.py` start carrying
 coding-plan-mode-aware logic. recorder.py must NEVER follow them into
 coding-plan-mode territory.
@@ -34,7 +34,7 @@ import pytest
 RECORDER_PATH = (
     Path(__file__).resolve().parents[3]
     / "src"
-    / "task_center_runner"
+    / "test_runner"
     / "audit"
     / "recorder.py"
 )

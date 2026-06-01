@@ -6,8 +6,8 @@ from collections import Counter
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 
-from task_center_runner.audit.events import EventType
-from task_center_runner.core.runner import RunReport
+from test_runner.audit.events import EventType
+from test_runner.core.runner import RunReport
 
 
 @dataclass(frozen=True, slots=True)
@@ -46,7 +46,7 @@ def assert_focused_scenario_report(
 
 
 # Both FAILED and BLOCKED are non-success terminal generator statuses in
-# TaskCenter (TERMINAL_GENERATOR_STATUSES); either one fails its attempt. A
+# task/request (TERMINAL_GENERATOR_STATUSES); either one fails its attempt. A
 # ``submit_generator_outcome(status="failed", ...)`` call marks "a task that
 # failed the attempt" for the purposes of the scenario role counts.
 _FAILED_STATUSES: tuple[str, ...] = ("failed", "blocked")

@@ -27,9 +27,9 @@ from pathlib import Path
 from statistics import median
 from typing import Any
 
-from task_center_runner.audit.daemon_event_normalizer import collect_forensic_deltas
-from task_center_runner.audit.io import atomic_write_pretty_json, atomic_write_text
-from task_center_runner.audit.release_gates import (
+from test_runner.audit.daemon_event_normalizer import collect_forensic_deltas
+from test_runner.audit.io import atomic_write_pretty_json, atomic_write_text
+from test_runner.audit.release_gates import (
     evaluate_artifact_bound_gate,
     evaluate_audit_overhead_gate,
     evaluate_drop_free_pull_gate,
@@ -39,7 +39,7 @@ from task_center_runner.audit.release_gates import (
 
 logger = logging.getLogger(__name__)
 
-REPORT_SCHEMA = "task_center_runner.performance_report.v3"
+REPORT_SCHEMA = "test_runner.performance_report.v3"
 _SLOWEST_LIMIT = 25
 _PHASE_BREAKDOWN_TOP_N = 10
 
@@ -2407,7 +2407,7 @@ def _as_sequence(value: object) -> list[Any]:
 
 def _iter_jsonl(path: Path) -> Iterable[dict[str, Any]]:
     """Concatenate the live JSONL file with any ``.<N>.gz`` rotated history."""
-    from task_center_runner.audit.sandbox_events_sink import iter_rotated_jsonl
+    from test_runner.audit.sandbox_events_sink import iter_rotated_jsonl
 
     yield from iter_rotated_jsonl(path)
 

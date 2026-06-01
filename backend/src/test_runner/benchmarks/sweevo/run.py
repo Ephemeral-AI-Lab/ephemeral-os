@@ -11,15 +11,15 @@ from collections.abc import Awaitable, Callable
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from task_center_runner.benchmarks.sweevo._provision import setup_sweevo_sandbox
-from task_center_runner.benchmarks.sweevo.eval import SweevoLifecycle
-from task_center_runner.benchmarks.sweevo.models import PreContext, SWEEvoInstance
-from task_center_runner.core.sandbox import SandboxLease
+from test_runner.benchmarks.sweevo._provision import setup_sweevo_sandbox
+from test_runner.benchmarks.sweevo.eval import SweevoLifecycle
+from test_runner.benchmarks.sweevo.models import PreContext, SWEEvoInstance
+from test_runner.core.sandbox import SandboxLease
 from tools._framework.core.runtime import ExecutionMetadata
 
 if TYPE_CHECKING:
     from workflow.attempt.launch import AttemptAgentRunner
-    from task_center_runner.core.config import RunConfig, RunContext
+    from test_runner.core.config import RunConfig, RunContext
 
 
 class SweevoProvisioner:
@@ -140,8 +140,8 @@ def build_agent_delegate(
 def build_run_config(ctx: PreContext, sandbox_id: str) -> "RunConfig":
     """Assemble the ``RunConfig`` consumed by ``run_pipeline``."""
     from runtime.app_factory import RuntimeConfig
-    from task_center_runner.core.bootstrap import bootstrap_real_agent_runtime
-    from task_center_runner.core.config import RunConfig
+    from test_runner.core.bootstrap import bootstrap_real_agent_runtime
+    from test_runner.core.config import RunConfig
 
     runtime_cfg = RuntimeConfig(cwd=str(Path.cwd()), external_api_client=None)
     return RunConfig(

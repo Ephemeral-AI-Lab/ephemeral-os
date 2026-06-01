@@ -1,4 +1,4 @@
-"""Central-config helpers for task-center-runner live tests."""
+"""Central-config helpers for test-runner live tests."""
 
 from __future__ import annotations
 

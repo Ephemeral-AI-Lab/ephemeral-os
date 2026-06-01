@@ -20,7 +20,7 @@ from __future__ import annotations
 import pytest
 
 from sandbox.api import raw_exec
-from task_center_runner.tests._live_config import (
+from test_runner.tests._live_config import (
     database_configured,
     live_e2e_heavy_enabled,
 )

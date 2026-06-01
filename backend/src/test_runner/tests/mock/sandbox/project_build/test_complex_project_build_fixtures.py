@@ -22,16 +22,16 @@ from types import SimpleNamespace
 import pytest
 
 from tools._framework.core.results import ToolResult
-from task_center_runner.scenarios.sandbox._fixtures.refactor_passes import REFACTOR_PASSES
-from task_center_runner.scenarios.sandbox._fixtures.lsp_expectations import LSP_EXPECTATIONS
-from task_center_runner.scenarios.sandbox._fixtures.scheduler_demo_data import (
+from test_runner.scenarios.sandbox._fixtures.refactor_passes import REFACTOR_PASSES
+from test_runner.scenarios.sandbox._fixtures.lsp_expectations import LSP_EXPECTATIONS
+from test_runner.scenarios.sandbox._fixtures.scheduler_demo_data import (
     SCHEDULER_DEMO_FILES,
     SMOKE_FILE_PATHS,
 )
-from task_center_runner.agent.mock import complex_project_build_probe as complex_probe
-from task_center_runner.agent.mock import complex_project_build_grep_glob_probe as grep_glob_probe
-from task_center_runner.agent.mock import complex_project_build_shell_edit_lsp_probe as shell_lsp_probe
-from task_center_runner.agent.mock.complex_project_build_probe import (
+from test_runner.agent.mock import complex_project_build_probe as complex_probe
+from test_runner.agent.mock import complex_project_build_grep_glob_probe as grep_glob_probe
+from test_runner.agent.mock import complex_project_build_shell_edit_lsp_probe as shell_lsp_probe
+from test_runner.agent.mock.complex_project_build_probe import (
     ProbeStats,
     _compute_amp_pairs,
     _importable_dotted_names,
@@ -39,7 +39,7 @@ from task_center_runner.agent.mock.complex_project_build_probe import (
     _toolkit_calls,
     _total_calls,
 )
-from task_center_runner.agent.mock.complex_project_build_shell_edit_lsp_probe import (
+from test_runner.agent.mock.complex_project_build_shell_edit_lsp_probe import (
     ShellEditLspStats,
     _assert_lsp_diagnostics,
     _compute_mixed_amp_pairs,
@@ -252,7 +252,7 @@ async def test_broken_lsp_diagnostic_requires_at_least_one_diagnostic(
     monkeypatch.setattr(shell_lsp_probe, "_DIAGNOSTIC_NONBLOCKING_RETRIES", 2)
     monkeypatch.setattr(shell_lsp_probe, "_DIAGNOSTIC_NONBLOCKING_RETRY_SLEEP_S", 0)
     monkeypatch.setattr(
-        "task_center_runner.agent.mock.complex_project_build_shell_edit_lsp_probe."
+        "test_runner.agent.mock.complex_project_build_shell_edit_lsp_probe."
         "_lsp_semantic_call",
         fake_lsp_semantic_call,
     )
@@ -296,7 +296,7 @@ async def test_broken_lsp_diagnostic_always_uses_nonblocking_calls(
         )
 
     monkeypatch.setattr(
-        "task_center_runner.agent.mock.complex_project_build_shell_edit_lsp_probe."
+        "test_runner.agent.mock.complex_project_build_shell_edit_lsp_probe."
         "_lsp_semantic_call",
         fake_lsp_semantic_call,
     )

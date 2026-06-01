@@ -37,7 +37,7 @@ from pathlib import Path
 from typing import Any
 
 # Plan v9 spec said `backend/src/engine/context_engine/recipes/` but the
-# repo actually has `backend/src/task_center/context_engine/recipes/`. The
+# repo actually has `backend/src/request/context_engine/recipes/`. The
 # spike's pluggable system-prompt loader handles either path; the plan will
 # be updated alongside S3.
 REPO_ROOT = Path(__file__).resolve().parent.parent

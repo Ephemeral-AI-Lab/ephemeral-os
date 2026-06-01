@@ -322,7 +322,7 @@ async def iws_sandbox(
         # have skipped this (e.g. if the daemon crashed during initial
         # provisioning), so re-establish the binding directly via
         # call_daemon_api with the iws layer_stack_root.
-        from task_center_runner.benchmarks.sweevo.models import _REPO_DIR
+        from test_runner.benchmarks.sweevo.models import _REPO_DIR
         from sandbox.host.daemon_client import call_daemon_api
 
         from . import _iws_rpc as _iws_rpc_mod
@@ -542,7 +542,7 @@ async def iws_latency_baseline(iws_sandbox) -> dict[str, float]:
 
     from sandbox.api import raw_exec
 
-    from task_center_runner.tests._live_config import (
+    from test_runner.tests._live_config import (
         database_configured,
         live_e2e_heavy_enabled,
     )

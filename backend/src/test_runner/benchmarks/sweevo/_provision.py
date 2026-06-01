@@ -7,14 +7,14 @@ from typing import Any
 
 import sandbox.api as sandbox_api
 
-from task_center_runner.benchmarks.sweevo._exec import (
+from test_runner.benchmarks.sweevo._exec import (
     _exec,
     _wait_for_sandbox_exec_ready,
 )
-from task_center_runner.benchmarks.sweevo._snapshot import (
+from test_runner.benchmarks.sweevo._snapshot import (
     resolve_sweevo_snapshot,
 )
-from task_center_runner.benchmarks.sweevo.models import (
+from test_runner.benchmarks.sweevo.models import (
     SWEEvoInstance,
     _CONDA_ACTIVATE,
     _DEFAULT_SANDBOX_SETUP_TIMEOUT,
@@ -179,7 +179,7 @@ async def reset_sweevo_workspace(
     install_lsp: bool = False,
 ) -> str:
     """Restore a reused SWE-EVO sandbox and rebuild the public-tool base."""
-    from task_center_runner.benchmarks.sweevo.setup import load_sweevo_instance
+    from test_runner.benchmarks.sweevo.setup import load_sweevo_instance
 
     service = _service()
     sandbox_info = service.get_sandbox(sandbox_id)

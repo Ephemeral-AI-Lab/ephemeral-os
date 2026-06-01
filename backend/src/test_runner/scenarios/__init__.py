@@ -2,18 +2,18 @@
 
 Composite scenarios live at the top level for historical reasons. Focused
 scenarios are organized by concern under subpackages; see
-``docs/architecture/task_center/bridges.html`` for the maintained runner and
+``docs/architecture/request/bridges.html`` for the maintained runner and
 artifact boundary.
 """
 
 from __future__ import annotations
 
-from task_center_runner.scenarios.base import Scenario
-from task_center_runner.scenarios.capacity import FullSystemCapacityMatrix
-from task_center_runner.scenarios.correctness_testing import CorrectnessTesting
-from task_center_runner.scenarios.full_case_user_input import FullCaseUserInput
-from task_center_runner.scenarios.full_stack_adversarial import FullStackAdversarial
-from task_center_runner.scenarios.pipeline import (
+from test_runner.scenarios.base import Scenario
+from test_runner.scenarios.capacity import FullSystemCapacityMatrix
+from test_runner.scenarios.correctness_testing import CorrectnessTesting
+from test_runner.scenarios.full_case_user_input import FullCaseUserInput
+from test_runner.scenarios.full_stack_adversarial import FullStackAdversarial
+from test_runner.scenarios.pipeline import (
     AttemptBudgetExhausted,
     AttemptRetryReducerFailure,
     AttemptRetryGeneratorFailure,
@@ -31,7 +31,7 @@ from task_center_runner.scenarios.pipeline import (
     NestedWorkflowFailure,
     DeferredParentPlannerUnifiedTerminal,
 )
-from task_center_runner.scenarios.planner_validation import (
+from test_runner.scenarios.planner_validation import (
     PlannerCycleInDeps,
     PlannerDuplicateLocalId,
     PlannerEmptyTasks,
@@ -39,7 +39,7 @@ from task_center_runner.scenarios.planner_validation import (
     PlannerUnknownAgentName,
     PlannerUnknownDep,
 )
-from task_center_runner.scenarios.sandbox import (
+from test_runner.scenarios.sandbox import (
     AutoSquashCommitResume,
     BackgroundEngineRestartNoLeaseLeak,
     BackgroundExitIwsDrainsAgentTasks,

@@ -16,7 +16,7 @@ Two scenario classes are exported:
   calls per LSP tool).
 
 Both run the same probe machinery in
-``task_center_runner.agent.mock.complex_project_build_probe`` and emit a versioned perf
+``test_runner.agent.mock.complex_project_build_probe`` and emit a versioned perf
 artifact at ``/ephemeral-os/.metrics/perf.json``.
 """
 
@@ -27,7 +27,7 @@ from collections.abc import Sequence
 from tools.submission.planner import submit_planner_outcome
 from tools.submission.reducer import submit_reducer_outcome
 
-from task_center_runner.scenarios.base import ScenarioBase, ScenarioContext, ToolCallSpec
+from test_runner.scenarios.base import ScenarioBase, ScenarioContext, ToolCallSpec
 
 
 _REDUCER_PROMPT = (

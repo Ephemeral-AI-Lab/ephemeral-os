@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import pytest
 
-from task_center_runner.benchmarks.sweevo import eval as sweevo_evaluation
-from task_center_runner.benchmarks.sweevo.models import SWEEvoInstance, SWEEvoResult
+from test_runner.benchmarks.sweevo import eval as sweevo_evaluation
+from test_runner.benchmarks.sweevo.models import SWEEvoInstance, SWEEvoResult
 
 
 def _instance() -> SWEEvoInstance:

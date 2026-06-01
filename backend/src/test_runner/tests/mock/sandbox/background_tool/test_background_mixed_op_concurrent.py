@@ -6,7 +6,7 @@ run that (a) drives heterogeneous background ops to a terminal status, (b)
 proves OCC conflict detection on overlapping same-file background edits, and
 (c) proves disjoint background edits all land.
 
-Location note (plan §6 open question): this lives in the mock task-center
+Location note (plan §6 open question): this lives in the mock test-runner
 suite rather than ``integration_test/`` because it reuses the proven
 ``run_background_shell_scenario`` harness and needs the real OCC publish path
 behind ``BackgroundTaskSupervisor`` — which ``integration_test/test_sandbox``
@@ -19,18 +19,18 @@ from pathlib import Path
 
 import pytest
 
-from task_center_runner.benchmarks.sweevo.models import SWEEvoInstance
-from task_center_runner.agent.mock.background_shell_probe import (
+from test_runner.benchmarks.sweevo.models import SWEEvoInstance
+from test_runner.agent.mock.background_shell_probe import (
     MIXED_OP_CONCURRENT_SUMMARY,
     MIXED_OP_DISJOINT_WRITERS,
     MIXED_OP_OVERLAP_WRITERS,
 )
-from task_center_runner.core.stores import TaskStoreBundle
-from task_center_runner.tests._live_config import (
+from test_runner.core.stores import TaskStoreBundle
+from test_runner.tests._live_config import (
     database_configured,
     live_e2e_heavy_enabled,
 )
-from task_center_runner.tests.mock.sandbox.background_tool._background_shell_invariants import (
+from test_runner.tests.mock.sandbox.background_tool._background_shell_invariants import (
     assert_background_performance_artifacts,
     run_background_shell_scenario,
 )

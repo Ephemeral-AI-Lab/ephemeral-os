@@ -10,20 +10,20 @@ from pathlib import Path
 from typing import Any
 
 import sandbox.api as sandbox_api
-from task_center_runner.benchmarks.sweevo.models import SWEEvoInstance, _REPO_DIR
+from test_runner.benchmarks.sweevo.models import SWEEvoInstance, _REPO_DIR
 from sandbox.shared.models import ReadFileRequest, SandboxCaller
 from sandbox.daemon.paths import DAEMON_PID_PATH, DAEMON_SOCKET_PATH
 from sandbox.host.daemon_client import call_daemon_api
-from task_center_runner.agent.mock.background_shell_probe import (
+from test_runner.agent.mock.background_shell_probe import (
     BACKGROUND_IWS_LAYER_STACK_ROOT,
 )
-from task_center_runner.core.runner import RunReport
-from task_center_runner.core.stores import TaskStoreBundle
-from task_center_runner.environments.sweevo_image.fixtures import (
+from test_runner.core.runner import RunReport
+from test_runner.core.stores import TaskStoreBundle
+from test_runner.environments.sweevo_image.fixtures import (
     run_scenario_on_sweevo_image,
 )
-from task_center_runner.scenarios import SCENARIO_REGISTRY
-from task_center_runner.tests.mock._layer_stack_occ_overlay_assertions import (
+from test_runner.scenarios import SCENARIO_REGISTRY
+from test_runner.tests.mock._layer_stack_occ_overlay_assertions import (
     assert_o1_workspace_resource_snapshots,
     assert_resource_key_max,
     assert_timing_keys_present,

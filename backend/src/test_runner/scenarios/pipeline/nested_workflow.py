@@ -8,8 +8,8 @@ from typing import Any
 from tools.submission.planner import submit_planner_outcome
 from tools.submission.reducer import submit_reducer_outcome
 
-from task_center_runner.scenarios._scenario_helpers import is_recursive_workflow
-from task_center_runner.scenarios.base import ScenarioBase, ScenarioContext, ToolCallSpec
+from test_runner.scenarios._scenario_helpers import is_recursive_workflow
+from test_runner.scenarios.base import ScenarioBase, ScenarioContext, ToolCallSpec
 
 
 def _entry_origin_nested_plan(*, failing_child: bool) -> dict[str, Any]:

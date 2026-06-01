@@ -13,7 +13,7 @@ and user_msg_3 (planner only) is the skill row with its own
 Also produces the helper / subagent cases (09 advisor, 10 resolver, 11
 explorer) by calling the real builder code in
 ``tools/ask_helper/_lib/_compose.py`` and
-``task_center/task_guidance/builders.py`` against a representative
+``request/task_guidance/builders.py`` against a representative
 parent context lifted from the same live capture.
 """
 
@@ -32,7 +32,7 @@ from agents import get_definition, load_agents_tree, register_definition  # noqa
 for _ad in load_agents_tree(SRC / "agents" / "profile"):
     register_definition(_ad)
 
-from task_center.task_guidance.builders import build_explorer_task_guidance  # noqa: E402
+from request.task_guidance.builders import build_explorer_task_guidance  # noqa: E402
 from tools.ask_helper._lib._compose import HelperMessages, assemble_user_msg_1  # noqa: E402
 from tools.ask_helper.ask_advisor import _build_advisor_user_msg_2  # noqa: E402
 from tools.ask_helper.ask_resolver import _build_resolver_user_msg_2  # noqa: E402
@@ -278,7 +278,7 @@ def regenerate_helpers(run_dir: Path) -> None:
     print(f"wrote {CASES_DIR / '10_resolver__verifier_evaluator_issues.md'}")
 
     explorer_um1 = (
-        "Inspect the repository layout under backend/src/task_center to "
+        "Inspect the repository layout under backend/src/request to "
         "list every module that registers a context-recipe id and report "
         "file paths plus line numbers."
     )

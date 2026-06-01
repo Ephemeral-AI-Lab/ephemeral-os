@@ -1,9 +1,9 @@
-"""``run_scenario`` — thin shim around :func:`task_center_runner.core.engine.run_pipeline`.
+"""``run_scenario`` — thin shim around :func:`test_runner.core.engine.run_pipeline`.
 
 The actual orchestration happens inside
-:func:`task_center_runner.core.engine.run_pipeline`; this shim wires a
+:func:`test_runner.core.engine.run_pipeline`; this shim wires a
 ``ScenarioLoopRunner`` into the core engine and rebuilds the mock-specific
-``RunReport`` view from captured audit events and TaskCenter store state.
+``RunReport`` view from captured audit events and task/request store state.
 
 What the shim adds on top of the engine:
 
@@ -31,20 +31,20 @@ from pathlib import Path
 from typing import Any
 
 from workflow._core.outcomes import to_record, workflow_outcomes
-from task_center_runner.audit.events import Event
-from task_center_runner.core.engine import run_pipeline
-from task_center_runner.scenarios.base import Scenario
-from task_center_runner.scenarios.builder import build_scenario_config
-from task_center_runner.agent.mock.definitions import registered_mock_agents  # noqa: F401 — re-export
-from task_center_runner.agent.mock.prompt_inspector import (
+from test_runner.audit.events import Event
+from test_runner.core.engine import run_pipeline
+from test_runner.scenarios.base import Scenario
+from test_runner.scenarios.builder import build_scenario_config
+from test_runner.agent.mock.definitions import registered_mock_agents  # noqa: F401 — re-export
+from test_runner.agent.mock.prompt_inspector import (
     LaunchRecord,
     PromptInspection,
     ToolCallRecord,
 )
-from task_center_runner.agent.mock.sandbox_probe import SandboxCheck
-from task_center_runner.core.stores import (
+from test_runner.agent.mock.sandbox_probe import SandboxCheck
+from test_runner.core.stores import (
     TaskStoreBundle,
-    create_per_test_task_center_stores,
+    create_per_test_task_stores,
 )
 
 
@@ -207,7 +207,7 @@ async def run_scenario(
     ``runner_factory``.
     """
     owns_stores = stores is None
-    bundle = stores or create_per_test_task_center_stores()
+    bundle = stores or create_per_test_task_stores()
 
     config, lifecycle = build_scenario_config(
         scenario,

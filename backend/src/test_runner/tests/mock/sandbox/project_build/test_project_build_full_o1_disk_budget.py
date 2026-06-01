@@ -6,17 +6,17 @@ from pathlib import Path
 
 import pytest
 
-from task_center_runner.benchmarks.sweevo.models import SWEEvoInstance
-from task_center_runner.core.stores import TaskStoreBundle
-from task_center_runner.environments.sweevo_image.fixtures import (
+from test_runner.benchmarks.sweevo.models import SWEEvoInstance
+from test_runner.core.stores import TaskStoreBundle
+from test_runner.environments.sweevo_image.fixtures import (
     run_scenario_on_sweevo_image,
 )
-from task_center_runner.scenarios import SCENARIO_REGISTRY
-from task_center_runner.tests._live_config import (
+from test_runner.scenarios import SCENARIO_REGISTRY
+from test_runner.tests._live_config import (
     database_configured,
     live_e2e_heavy_enabled,
 )
-from task_center_runner.tests.mock._project_build_contracts import (
+from test_runner.tests.mock._project_build_contracts import (
     assert_complex_build_full_contract,
     assert_project_build_full_o1_disk_budget,
 )

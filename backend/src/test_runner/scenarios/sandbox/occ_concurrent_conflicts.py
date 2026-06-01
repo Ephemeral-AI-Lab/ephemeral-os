@@ -23,7 +23,7 @@ from collections.abc import Sequence
 from tools.submission.planner import submit_planner_outcome
 from tools.submission.reducer import submit_reducer_outcome
 
-from task_center_runner.scenarios.base import ScenarioBase, ScenarioContext, ToolCallSpec
+from test_runner.scenarios.base import ScenarioBase, ScenarioContext, ToolCallSpec
 
 
 _INTEGRITY_PLAN = {

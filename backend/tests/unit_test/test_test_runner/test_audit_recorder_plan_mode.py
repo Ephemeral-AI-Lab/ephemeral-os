@@ -16,7 +16,7 @@ import json
 from pathlib import Path
 from unittest.mock import patch
 
-from task_center_runner.audit.recorder import AuditRecorder
+from test_runner.audit.recorder import AuditRecorder
 
 
 def _read_run_json(run_dir: Path) -> dict:

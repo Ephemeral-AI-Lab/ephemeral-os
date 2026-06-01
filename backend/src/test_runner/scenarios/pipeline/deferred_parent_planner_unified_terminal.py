@@ -15,12 +15,12 @@ from typing import Any
 from tools.submission.planner import submit_planner_outcome
 from tools.submission.reducer import submit_reducer_outcome
 
-from task_center_runner.scenarios._scenario_helpers import (
+from test_runner.scenarios._scenario_helpers import (
     is_recursive_workflow,
     minimal_full_plan,
     preflight_full_plan,
 )
-from task_center_runner.scenarios.base import ScenarioBase, ScenarioContext, ToolCallSpec
+from test_runner.scenarios.base import ScenarioBase, ScenarioContext, ToolCallSpec
 
 
 _CHILD_PACKAGE_ID = "partial_parent_child"

@@ -4,10 +4,10 @@ from __future__ import annotations
 
 from collections.abc import Awaitable, Callable
 
-from task_center_runner.audit.bus import AuditEventBus
-from task_center_runner.audit.events import Event, EventType
-from task_center_runner.audit.node_id import NodeId
-from task_center_runner.audit.sandbox_events import (
+from test_runner.audit.bus import AuditEventBus
+from test_runner.audit.events import Event, EventType
+from test_runner.audit.node_id import NodeId
+from test_runner.audit.sandbox_events import (
     sandbox_events_from_tool_completion,
 )
 from message.events import ToolExecutionCompletedEvent, ToolExecutionStartedEvent

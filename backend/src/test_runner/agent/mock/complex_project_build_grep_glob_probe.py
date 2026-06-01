@@ -20,7 +20,7 @@ from tools._framework.core.runtime import ExecutionMetadata
 from tools.sandbox.glob import glob as glob_tool
 from tools.sandbox.grep import grep as grep_tool
 
-from task_center_runner.agent.mock.complex_project_build_probe import (
+from test_runner.agent.mock.complex_project_build_probe import (
     CallTool,
     EmitStreamEvent,
     METRICS_PATH,
@@ -46,13 +46,13 @@ from task_center_runner.agent.mock.complex_project_build_probe import (
     _shell,
     _write_file,
 )
-from task_center_runner.agent.mock.sandbox_probe import SandboxCheck
-from task_center_runner.audit.events import EventType
-from task_center_runner.scenarios.sandbox._fixtures.refactor_passes import RefactorPass
-from task_center_runner.scenarios.sandbox._fixtures.scheduler_demo_data import (
+from test_runner.agent.mock.sandbox_probe import SandboxCheck
+from test_runner.audit.events import EventType
+from test_runner.scenarios.sandbox._fixtures.refactor_passes import RefactorPass
+from test_runner.scenarios.sandbox._fixtures.scheduler_demo_data import (
     FixtureFile,
 )
-from task_center_runner.scenarios.sandbox._metrics import aggregate_perf_metrics
+from test_runner.scenarios.sandbox._metrics import aggregate_perf_metrics
 
 
 SUMMARY_PATH = f"{WORKSPACE_ROOT}/.metrics/summary.json"

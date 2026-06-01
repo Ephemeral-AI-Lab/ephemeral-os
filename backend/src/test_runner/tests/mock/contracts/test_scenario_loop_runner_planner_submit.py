@@ -2,7 +2,7 @@
 
 Before adapting the probe-heavy executor, prove the riskiest *new* path: the
 ``ScenarioLoopRunner`` + ``extras["runtime_config"]`` injection driving a real
-TaskCenter submission terminal (``submit_planner_outcome`` →
+task/request submission terminal (``submit_planner_outcome`` →
 ``submit_generator_outcome(status="success", ...)`` → ``submit_reducer_outcome``) through
 ``run_pipeline`` → ``start_request`` → launcher → ``run_ephemeral_agent``,
 landing a closed workflow in store state. Asserted via ``graph_summary`` /
@@ -18,10 +18,10 @@ from pathlib import Path
 import pytest
 
 from runtime.app_factory import model_store
-from task_center_runner.core.runner import run_scenario
-from task_center_runner.core.stores import TaskStoreBundle
-from task_center_runner.scenarios.base import ScenarioBase, ScenarioContext, ToolCallSpec
-from task_center_runner.tests._live_config import database_configured
+from test_runner.core.runner import run_scenario
+from test_runner.core.stores import TaskStoreBundle
+from test_runner.scenarios.base import ScenarioBase, ScenarioContext, ToolCallSpec
+from test_runner.tests._live_config import database_configured
 from tools.submission.reducer import submit_reducer_outcome
 from tools.submission.planner import submit_planner_outcome
 
@@ -100,7 +100,7 @@ async def test_planner_submission_through_real_loop(
     )
 
     # The workflow closed — which required planner + executor + reducer terminals
-    # to dispatch through the real loop and mutate TaskCenter store state.
+    # to dispatch through the real loop and mutate task/request store state.
     assert report.request_status == "done", report.metrics
     workflows = report.graph_summary["workflows"]
     assert len(workflows) == 1, workflows

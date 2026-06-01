@@ -19,11 +19,11 @@ import sandbox.api as sandbox_api
 from sandbox.api import EditFileRequest, SandboxCaller, SearchReplaceEdit
 from tools import ToolResult
 
-from task_center_runner.audit.events import Event, EventType
-from task_center_runner.audit.sandbox_event_bridge import SandboxAuditEventBridge
-from task_center_runner.audit.node_id import NodeId
-from task_center_runner.agent.mock.event_source import ToolCall
-from task_center_runner.agent.mock.sandbox_probe import SandboxCheck
+from test_runner.audit.events import Event, EventType
+from test_runner.audit.sandbox_event_bridge import SandboxAuditEventBridge
+from test_runner.audit.node_id import NodeId
+from test_runner.agent.mock.event_source import ToolCall
+from test_runner.agent.mock.sandbox_probe import SandboxCheck
 
 # A probe yields one ToolCall and is resumed with the normalized ToolResult.
 ProbeStep = AsyncGenerator[ToolCall, ToolResult]

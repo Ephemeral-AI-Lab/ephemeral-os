@@ -1,7 +1,7 @@
 """Live e2e regression for the SWE-EVO mock framework.
 
 Exercises the ``correctness_testing`` scenario end-to-end against a real
-Daytona sandbox + the real TaskCenter runtime + deterministic mock agents.
+Daytona sandbox + the real task/request runtime + deterministic mock agents.
 Verifies the on-disk audit tree, mid-run message.jsonl flushing, and
 helper-agent filtering.
 
@@ -18,16 +18,16 @@ from pathlib import Path
 
 import pytest
 
-from task_center_runner.environments.sweevo_image.health import (
+from test_runner.environments.sweevo_image.health import (
     require_sweevo_image_provider_healthy,
 )
-from task_center_runner.scenarios.correctness_testing import (
+from test_runner.scenarios.correctness_testing import (
     CorrectnessTesting,
 )
-from task_center_runner.core.stores import TaskStoreBundle
-from task_center_runner.environments.sweevo_image.fixtures import run_scenario_on_sweevo_image
-from task_center_runner.benchmarks.sweevo.models import SWEEvoInstance
-from task_center_runner.tests.mock._focused_scenario_contracts import count_role_tasks
+from test_runner.core.stores import TaskStoreBundle
+from test_runner.environments.sweevo_image.fixtures import run_scenario_on_sweevo_image
+from test_runner.benchmarks.sweevo.models import SWEEvoInstance
+from test_runner.tests.mock._focused_scenario_contracts import count_role_tasks
 
 
 @pytest.mark.asyncio
@@ -48,7 +48,7 @@ async def test_correctness_testing_scenario_runs_end_to_end(
         stores=stores,
     )
 
-    # --- TaskCenter outcome -------------------------------------------
+    # --- task/request outcome -------------------------------------------
     assert report.request_status == "done", (
         f"task center status was {report.request_status!r}: {report.metrics}"
     )

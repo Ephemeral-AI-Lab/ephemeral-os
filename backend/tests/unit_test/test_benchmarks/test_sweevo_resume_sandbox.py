@@ -20,8 +20,8 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from task_center_runner.benchmarks.sweevo import _provision
-from task_center_runner.benchmarks.sweevo.models import SWEEvoInstance
+from test_runner.benchmarks.sweevo import _provision
+from test_runner.benchmarks.sweevo.models import SWEEvoInstance
 
 
 def _instance() -> SWEEvoInstance:

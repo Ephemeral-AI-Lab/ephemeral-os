@@ -24,7 +24,7 @@ from typing import Any
 from tools.submission.planner import submit_planner_outcome
 from tools.submission.reducer import submit_reducer_outcome
 
-from task_center_runner.scenarios.base import ScenarioBase, ScenarioContext, ToolCallSpec
+from test_runner.scenarios.base import ScenarioBase, ScenarioContext, ToolCallSpec
 
 
 WORKER_COUNT = 5
@@ -77,7 +77,7 @@ def _plan() -> dict[str, Any]:
                     "the three placement zones, each zone write was observable "
                     "after the lease released and the OCC merge published, "
                     "changed_paths reflected zone semantics, and the final "
-                    "summary uses task_center_runner.heavy_io_zoned.v1."
+                    "summary uses test_runner.heavy_io_zoned.v1."
                 ),
             }
         ],

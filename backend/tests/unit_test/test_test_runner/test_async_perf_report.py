@@ -11,8 +11,8 @@ from pathlib import Path
 
 import pytest
 
-from task_center_runner.audit import performance_report as perf_module
-from task_center_runner.audit.performance_report import (
+from test_runner.audit import performance_report as perf_module
+from test_runner.audit.performance_report import (
     REPORT_SCHEMA,
     _write_perf_report_safe,
 )
@@ -40,7 +40,7 @@ async def test_write_perf_report_safe_produces_report_file(
     import json
 
     payload = json.loads(result.read_text())
-    assert payload["schema"] == REPORT_SCHEMA == "task_center_runner.performance_report.v3"
+    assert payload["schema"] == REPORT_SCHEMA == "test_runner.performance_report.v3"
 
 
 @pytest.mark.asyncio
@@ -74,4 +74,4 @@ async def test_write_perf_report_safe_swallows_writer_failures(
 
 def test_report_schema_constant_is_v3() -> None:
     """Phase 3 bumps the perf-report schema string."""
-    assert REPORT_SCHEMA == "task_center_runner.performance_report.v3"
+    assert REPORT_SCHEMA == "test_runner.performance_report.v3"

@@ -147,7 +147,7 @@ EOS__RUNNER__LIVE_E2E__HEAVY_ENABLED=true \
 EOS__RUNNER__SANDBOX_REUSE_MODE=reuse \
 EPHEMERALOS_DATABASE_URL="sqlite:///./.ephemeralos/ephemeralos.db" \
   .venv/bin/pytest \
-    backend/src/task_center_runner/tests/mock/sandbox/isolated_workspace/ \
+    backend/src/test_runner/tests/mock/sandbox/isolated_workspace/ \
     -m "not live_e2e_soak" \
     -v --tb=short -p no:randomly
 

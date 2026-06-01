@@ -1,5 +1,5 @@
 """Live e2e regression: ``CorrectnessTesting`` driven through the generic
-``task_center_runner.run_scenario`` (with SWE-EVO sandbox + entry prompt).
+``test_runner.run_scenario`` (with SWE-EVO sandbox + entry prompt).
 
 This complements ``test_correctness.py`` (which goes through the SWE-EVO
 adapter) by exercising the generic entry point directly. Both must produce the
@@ -18,14 +18,14 @@ from pathlib import Path
 
 import pytest
 
-from task_center_runner.benchmarks.sweevo.models import SWEEvoInstance, _REPO_DIR
-from task_center_runner.benchmarks.sweevo.setup import build_sweevo_user_prompt
-from task_center_runner import run_scenario
-from task_center_runner.scenarios.correctness_testing import CorrectnessTesting
-from task_center_runner.environments.sweevo_image.health import (
+from test_runner.benchmarks.sweevo.models import SWEEvoInstance, _REPO_DIR
+from test_runner.benchmarks.sweevo.setup import build_sweevo_user_prompt
+from test_runner import run_scenario
+from test_runner.scenarios.correctness_testing import CorrectnessTesting
+from test_runner.environments.sweevo_image.health import (
     require_sweevo_image_provider_healthy,
 )
-from task_center_runner.tests._live_config import database_configured
+from test_runner.tests._live_config import database_configured
 
 
 @pytest.mark.asyncio

@@ -15,21 +15,21 @@ import sandbox.api as sandbox_api
 from sandbox.api import ReadFileRequest, SandboxCaller, ShellRequest
 from sandbox.occ.service import AUTO_SQUASH_MAX_DEPTH
 
-from task_center_runner.agent.mock.complex_project_build_grep_glob_probe import (
+from test_runner.agent.mock.complex_project_build_grep_glob_probe import (
     METRICS_PATH as GREP_GLOB_METRICS_PATH,
     SUMMARY_PATH as GREP_GLOB_SUMMARY_PATH,
 )
-from task_center_runner.agent.mock.complex_project_build_probe import (
+from test_runner.agent.mock.complex_project_build_probe import (
     METRICS_PATH as BUILD_METRICS_PATH,
     WORKSPACE_ROOT,
 )
-from task_center_runner.agent.mock.complex_project_build_shell_edit_lsp_probe import (
+from test_runner.agent.mock.complex_project_build_shell_edit_lsp_probe import (
     METRICS_PATH as SHELL_EDIT_LSP_METRICS_PATH,
 )
-from task_center_runner.audit.events import EventType
-from task_center_runner.core.runner import RunReport
-from task_center_runner.scenarios.sandbox._metrics import PERF_SCHEMA
-from task_center_runner.tests.mock._layer_stack_occ_overlay_assertions import (
+from test_runner.audit.events import EventType
+from test_runner.core.runner import RunReport
+from test_runner.scenarios.sandbox._metrics import PERF_SCHEMA
+from test_runner.tests.mock._layer_stack_occ_overlay_assertions import (
     assert_o1_workspace_resource_snapshots,
     assert_resource_key_max,
     assert_timing_keys_present,
@@ -244,7 +244,7 @@ async def assert_grep_glob_full_contract(
 
 
 async def assert_project_build_full_o1_disk_budget(report: RunReport) -> None:
-    perf = await _load_task_center_performance_report(report)
+    perf = await _load_request_performance_report(report)
     _assert_no_internal_sandbox_errors(report.run_dir)
     _assert_project_build_per_tool_report(
         perf,
@@ -259,7 +259,7 @@ async def assert_project_build_full_o1_disk_budget(report: RunReport) -> None:
 async def assert_project_build_grep_glob_low_latency_after_many_edits(
     report: RunReport,
 ) -> None:
-    perf = await _load_task_center_performance_report(report)
+    perf = await _load_request_performance_report(report)
     _assert_no_internal_sandbox_errors(report.run_dir)
     _assert_project_build_per_tool_report(
         perf,
@@ -285,7 +285,7 @@ async def assert_project_build_shell_edit_lsp_remount_not_restart(
     *,
     sandbox_id: str,
 ) -> None:
-    perf = await _load_task_center_performance_report(report)
+    perf = await _load_request_performance_report(report)
     _assert_no_internal_sandbox_errors(report.run_dir)
     _assert_project_build_per_tool_report(
         perf,
@@ -637,7 +637,7 @@ def _jsonl_rows(path: Path) -> list[dict[str, Any]]:
     ]
 
 
-async def _load_task_center_performance_report(
+async def _load_request_performance_report(
     report: RunReport,
 ) -> Mapping[str, Any]:
     task = getattr(report, "performance_report_task", None)

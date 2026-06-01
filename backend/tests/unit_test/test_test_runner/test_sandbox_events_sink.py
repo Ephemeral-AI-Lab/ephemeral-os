@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 
-from task_center_runner.audit.sandbox_events_sink import (
+from test_runner.audit.sandbox_events_sink import (
     RotatingJsonlSink,
     iter_rotated_jsonl,
 )

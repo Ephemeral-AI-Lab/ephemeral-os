@@ -42,8 +42,8 @@ from tools.ask_helper.ask_advisor import _build_advisor_user_msg_2  # noqa: E402
 from tools.ask_helper.ask_resolver import (  # noqa: E402
     _build_resolver_user_msg_2,
 )
-from task_center.context_engine.role_directives import ROLE_DIRECTIVES  # noqa: E402
-from task_center.task_guidance.builders import build_explorer_task_guidance  # noqa: E402
+from request.context_engine.role_directives import ROLE_DIRECTIVES  # noqa: E402
+from request.task_guidance.builders import build_explorer_task_guidance  # noqa: E402
 
 
 RUNS_DIR = REPO / ".sweevo_runs" / "scenario_logs"
@@ -440,7 +440,7 @@ def build_helper_constructed(
     # user_msg_2 = explorer task guidance (spawn prompt). System = explorer
     # agent.md system_prompt.
     parent_prompt = (
-        "Inspect the repository layout under backend/src/task_center to "
+        "Inspect the repository layout under backend/src/request to "
         "list every module that registers a context-recipe id and report "
         "file paths plus line numbers."
     )
@@ -484,7 +484,7 @@ def synthesise_main_user_msg_1(capture: CapturedAgent) -> str:
     recorder only sees the task guidance spawn prompt (user_msg_2). The
     runner does pass ``initial_messages=[ConversationMessage.from_user_text(
     context_message)]`` for the 2-message launch shape (see
-    ``backend/src/task_center/attempt/launch.py:142``). We document that gap
+    ``backend/src/request/attempt/launch.py:142``). We document that gap
     and reconstruct a faithful illustration by composing the public block
     headings the renderer would emit for this role + iteration position. Real
     runs would store the verbatim block contents at row 2; here we stub the
@@ -746,7 +746,7 @@ def render_report(
         "`.sweevo_runs/scenario_logs/`. Source for helper/subagent: "
         "programmatic construction via the production builder code in "
         "`tools/ask_helper/_lib/_compose.py` and "
-        "`task_center/task_guidance/builders.py` against "
+        "`request/task_guidance/builders.py` against "
         "realistic parent context lifted from a real executor capture.\n"
     )
 
@@ -833,7 +833,7 @@ def render_report(
         out.append(
             "These rows show the **three** messages each main-agent role "
             "would receive if the launcher took the 2-user-message split "
-            "path (`task_center/attempt/launch.py:141-145`). system text is "
+            "path (`request/attempt/launch.py:141-145`). system text is "
             "the actual `agents/profile/main/<name>.md` body; user_msg_1 is "
             "a renderer-shaped context block (header names from "
             "`renderer._DEFAULT_HEADINGS`); user_msg_2 is the exact text "
@@ -913,16 +913,16 @@ def render_report(
         "`seeded_initial_messages` and write them between the system row "
         "and the spawn-prompt row. Both the live engine "
         "(`engine/query/request.py:_record_initial_messages_once`) and the "
-        "mock runner (`task_center_runner/agent/mock/runner.py:"
+        "mock runner (`test_runner/agent/mock/runner.py:"
         "_record_initial_messages`) now feed seeded messages through. "
         "Captured `message.jsonl` files for planner / executor / evaluator "
         "now hold three initial rows (system + user_msg_1 + user_msg_2).\n"
         "- **Scope notes:** the new scenario file "
-        "`backend/src/task_center_runner/scenarios/pipeline/"
+        "`backend/src/test_runner/scenarios/pipeline/"
         "initial_messages_capture.py` registers a complex run (2 "
         "iterations with deferred_goal + attempt retry + helper/"
         "subagent invocations). The matching pytest test "
-        "`backend/src/task_center_runner/tests/mock/task_center/"
+        "`backend/src/test_runner/tests/mock/request/"
         "test_initial_messages_capture.py` was attempted live with the "
         "containerised postgres (`backend/docker-compose.postgres.yml`) "
         "providing `EPHEMERALOS_DATABASE_URL`. The live run reached the "

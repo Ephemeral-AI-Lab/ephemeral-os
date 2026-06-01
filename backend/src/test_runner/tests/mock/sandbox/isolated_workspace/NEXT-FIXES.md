@@ -48,7 +48,7 @@ Each item is independent and shippable on its own.
    sweevo-image bump.
 
 2. **Conftest fixture change** in
-   `backend/src/task_center_runner/tests/mock/sandbox/isolated_workspace/conftest.py`:
+   `backend/src/test_runner/tests/mock/sandbox/isolated_workspace/conftest.py`:
 
    Replace the current `apt-get update + install` raw_exec with a
    `docker cp` of the cached debs + `dpkg -i`:
@@ -123,7 +123,7 @@ EOS_ISOLATED_WORKSPACE_ENABLED=true \
 EOS__RUNNER__LIVE_E2E__HEAVY_ENABLED=true \
 EPHEMERALOS_DATABASE_URL="sqlite:///./.ephemeralos/ephemeralos.db" \
   .venv/bin/pytest \
-    backend/src/task_center_runner/tests/mock/sandbox/isolated_workspace/ \
+    backend/src/test_runner/tests/mock/sandbox/isolated_workspace/ \
     -m "not live_e2e_soak" \
     -v --tb=short
 ```
@@ -149,7 +149,7 @@ surface here first instead of in the noisier daemon path.
    EOS__RUNNER__LIVE_E2E__HEAVY_ENABLED=true \
    EPHEMERALOS_DATABASE_URL="sqlite:///./.ephemeralos/ephemeralos.db" \
      .venv/bin/pytest \
-       backend/src/task_center_runner/tests/mock/sandbox/isolated_workspace/happy_path/test_mount_overlay_backstop.py \
+       backend/src/test_runner/tests/mock/sandbox/isolated_workspace/happy_path/test_mount_overlay_backstop.py \
        -p no:randomly --runxfail -v --tb=long
    ```
 
@@ -183,7 +183,7 @@ is committed.
    EOS_CI_REFERENCE_HOST=true \
    EOS_ISOLATED_WORKSPACE_BASELINE_RUNS=100 \
      .venv/bin/pytest \
-       backend/src/task_center_runner/tests/mock/sandbox/isolated_workspace/performance/ \
+       backend/src/test_runner/tests/mock/sandbox/isolated_workspace/performance/ \
        -v
    ```
 

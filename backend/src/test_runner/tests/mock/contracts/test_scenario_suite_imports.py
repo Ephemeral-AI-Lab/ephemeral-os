@@ -10,9 +10,9 @@ from __future__ import annotations
 
 import pytest
 
-from task_center_runner.scenarios import SCENARIO_REGISTRY
-from task_center_runner.scenarios.base import Scenario, ScenarioBase
-from task_center_runner.scenarios.capacity import CAPACITY_PACK_SPECS
+from test_runner.scenarios import SCENARIO_REGISTRY
+from test_runner.scenarios.base import Scenario, ScenarioBase
+from test_runner.scenarios.capacity import CAPACITY_PACK_SPECS
 
 pytestmark = pytest.mark.live_e2e_offline
 
@@ -75,8 +75,8 @@ def test_capacity_pack_catalog_has_coverage_anchor() -> None:
 
 
 def test_capacity_action_contract_and_modules_import() -> None:
-    from task_center_runner.agent.mock import capacity_actions  # noqa: PLC0415
-    from task_center_runner.agent.mock.capacity_actions import metrics  # noqa: PLC0415
+    from test_runner.agent.mock import capacity_actions  # noqa: PLC0415
+    from test_runner.agent.mock.capacity_actions import metrics  # noqa: PLC0415
 
     result = capacity_actions.CapacityActionResult(
         name="smoke",
@@ -92,7 +92,7 @@ def test_capacity_action_contract_and_modules_import() -> None:
 def test_subpackage_imports_are_clean() -> None:
     # Smoke: each subpackage imports without side effects and exposes its
     # implemented scenarios via __all__.
-    from task_center_runner.scenarios import (  # noqa: PLC0415
+    from test_runner.scenarios import (  # noqa: PLC0415
         capacity,
         pipeline,
         planner_validation,

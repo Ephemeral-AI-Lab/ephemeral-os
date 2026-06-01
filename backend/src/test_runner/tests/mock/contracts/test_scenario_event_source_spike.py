@@ -35,14 +35,14 @@ from agents import AgentDefinition, AgentRole, AgentType
 from engine.api import run_ephemeral_agent
 from message.events import StreamEvent, ToolExecutionCompletedEvent
 from runtime.app_factory import RuntimeConfig, model_store
-from task_center_runner.agent.mock.event_source import (
+from test_runner.agent.mock.event_source import (
     ScenarioEventSource,
     ToolCall,
     Turn,
     TurnScript,
 )
-from task_center_runner.core.stores import TaskStoreBundle
-from task_center_runner.tests._live_config import database_configured
+from test_runner.core.stores import TaskStoreBundle
+from test_runner.tests._live_config import database_configured
 
 pytestmark = pytest.mark.asyncio
 

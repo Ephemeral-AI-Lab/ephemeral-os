@@ -4,8 +4,8 @@ from typing import Any
 
 import pytest
 
-from task_center_runner.benchmarks.sweevo.models import SWEEvoInstance
-from task_center_runner.core import real_agent_run
+from test_runner.benchmarks.sweevo.models import SWEEvoInstance
+from test_runner.core import real_agent_run
 
 
 def _instance() -> SWEEvoInstance:

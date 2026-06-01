@@ -44,9 +44,9 @@ inline and repeated in the risks of the returned summary.
 | `read_file` | **O(1)-snapshot / OCC fast-path** | `eos-occ` |
 | `write_file` | **OCC fast-path** (guarded publish) | `eos-occ` |
 | `edit_file` | **OCC fast-path** (guarded publish) | `eos-occ` |
-| `shell` | **overlay pipeline** | `eos-daemon` via `eos-runner` |
-| `glob` | **overlay pipeline** | `eos-daemon` via `eos-runner` |
-| `grep` | **overlay pipeline** | `eos-daemon` via `eos-runner` |
+| `shell` | **ephemeral overlay pipeline** | `eos-daemon` + `eos-runner` + `eos-overlay` |
+| `glob` | **ephemeral overlay pipeline** | `eos-daemon` + `eos-runner` + `eos-overlay` |
+| `grep` | **ephemeral overlay pipeline** | `eos-daemon` + `eos-runner` + `eos-overlay` |
 
 Note: the namespace `VERB_TABLE` (`tool_primitives/__init__.py:15-21`) contains
 `read_file`/`write_file`/`edit_file`/`grep`/`glob` — but that is the *overlay execution
@@ -392,7 +392,7 @@ payloads, not this RPC framing.
 
 ---
 
-## 7. `shell` — shell-string overlay pipeline, explicit CP-4s argv compatibility
+## 7. `shell` — shell-string overlay pipeline; historical CP-4s argv retired
 
 - Rust target request contract:
 

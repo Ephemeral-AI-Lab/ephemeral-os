@@ -1,6 +1,6 @@
 """Initial workflow, single attempt, single success.
 
-Reference scenario for the simplest task_center happy path: TaskCenter entry
+Reference scenario for the simplest request happy path: task/request entry
 creates the initial workflow → planner emits one full plan → executor runs ``preflight`` →
 reducer passes → workflow closes succeeded. One workflow, one iteration
 (``creation_reason=INITIAL``), one attempt (``attempt_sequence_no=1``).
@@ -17,8 +17,8 @@ from collections.abc import Sequence
 from tools.submission.planner import submit_planner_outcome
 from tools.submission.reducer import submit_reducer_outcome
 
-from task_center_runner.scenarios._scenario_helpers import preflight_full_plan
-from task_center_runner.scenarios.base import ScenarioBase, ScenarioContext, ToolCallSpec
+from test_runner.scenarios._scenario_helpers import preflight_full_plan
+from test_runner.scenarios.base import ScenarioBase, ScenarioContext, ToolCallSpec
 
 
 class InitialWorkflow(ScenarioBase):

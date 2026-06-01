@@ -1,6 +1,6 @@
 """High-concurrency layer-stack, overlay, and OCC pressure scenario.
 
-This scenario fans out executor tasks after a seed task so the TaskCenter
+This scenario fans out executor tasks after a seed task so the task/request
 dispatcher launches bounded public-tool traffic against the same sandbox. Each
 worker performs independent write/edit/read work, and the first few workers
 also race a shared OCC edit that must produce at least one conflict. The final
@@ -16,7 +16,7 @@ from typing import Any
 from tools.submission.planner import submit_planner_outcome
 from tools.submission.reducer import submit_reducer_outcome
 
-from task_center_runner.scenarios.base import ScenarioBase, ScenarioContext, ToolCallSpec
+from test_runner.scenarios.base import ScenarioBase, ScenarioContext, ToolCallSpec
 
 
 WORKER_COUNT = 20
@@ -74,7 +74,7 @@ def _plan() -> dict[str, Any]:
                     "calls, setup and reconciliation stayed bounded, the shared "
                     "OCC target recorded at least one success and one conflict, "
                     "and the final summary uses "
-                    "task_center_runner.high_concurrency.v1."
+                    "test_runner.high_concurrency.v1."
                 ),
             }
         ],

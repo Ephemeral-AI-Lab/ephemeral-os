@@ -50,7 +50,7 @@ native Linux (mostly socket/tmpfs behavior in §7 troubleshooting).
 |---|---|---|
 | Docker daemon reachable on `unix:///var/run/docker.sock` (or Docker Desktop) | the `docker` provider spawns the sweevo container | `docker info` succeeds |
 | Container kernel ≥ 5.11 (for required mount syscalls) | overlay `fsmount`, `setns(CLONE_NEWUSER)`, and cgroup v2 all need it. Docker Desktop's VM and any modern Linux host already satisfy this. | `docker run --rm ubuntu:22.04 uname -r` |
-| `uv` installed + repo synced | project standard wrapper for the venv — `uv run` is how `task_center_runner/read.md` documents every command | `uv --version`; `uv sync --extra dev` |
+| `uv` installed + repo synced | project standard wrapper for the venv — `uv run` is how `test_runner/read.md` documents every command | `uv --version`; `uv sync --extra dev` |
 | `nft` + `ip` binaries available inside the sweevo image | iws bridge/MASQUERADE + veth wiring | `bash backend/scripts/preflight_docker_a2_caps.sh` (skips on macOS — see §3) |
 | A valid SWE-EVO instance id baked into your local image cache | every test fixture boots a sweevo container by instance id | `docker images` lists `sweevo-test-<instance>-*`, or first-run pulls it |
 
@@ -83,7 +83,7 @@ need to be set explicitly per shell:
 ```bash
 # (a) Pick the sweevo instance to drive the test fixture. Every iws live
 #     test boots from a sweevo container; the instance id tells the
-#     fixture which image to spin up. See task_center_runner/read.md.
+#     fixture which image to spin up. See test_runner/read.md.
 export EOS_SWEEVO_INSTANCE=dask__dask_2023.3.2_2023.4.0   # known-good default
 
 # (b) Flip the live-e2e gate. Tier 1-9 tests skip without this.
@@ -93,7 +93,7 @@ export EOS__RUNNER__LIVE_E2E__HEAVY_ENABLED=true
 export EPHEMERALOS_DATABASE_URL="sqlite:///./.ephemeralos/ephemeralos.db"
 ```
 
-`heavy_enabled` is the ONE knob `task_center_runner.tests._live_config`
+`heavy_enabled` is the ONE knob `test_runner.tests._live_config`
 gates on; flipping it is what un-skips every Tier 1-9 test in this
 directory. The database URL just has to be valid — SQLite is fine for the
 test driver. `EOS_SWEEVO_INSTANCE` need not change between iws runs once
@@ -165,11 +165,11 @@ session — keep this in your edit-test loop:
 
 ```bash
 uv run pytest \
-    backend/src/task_center_runner/tests/mock/sandbox/isolated_workspace/pre_flight/ \
+    backend/src/test_runner/tests/mock/sandbox/isolated_workspace/pre_flight/ \
     backend/tests/unit_test/test_sandbox/test_daemon/ \
     backend/tests/unit_test/test_sandbox/test_import_fence.py \
     backend/tests/unit_test/test_audit/ \
-    backend/tests/unit_test/test_task_center/test_audit/ \
+    backend/tests/unit_test/test_request/test_audit/ \
     -q
 ```
 
@@ -189,7 +189,7 @@ EOS_ISOLATED_WORKSPACE_ENABLED=true \
 EOS__RUNNER__LIVE_E2E__HEAVY_ENABLED=true \
 EPHEMERALOS_DATABASE_URL="sqlite:///./.ephemeralos/ephemeralos.db" \
     uv run pytest \
-        backend/src/task_center_runner/tests/mock/sandbox/isolated_workspace/ \
+        backend/src/test_runner/tests/mock/sandbox/isolated_workspace/ \
         -m "not live_e2e_soak" \
         -v
 ```
@@ -240,7 +240,7 @@ EOS_ISOLATED_WORKSPACE_ENABLED=true \
 EOS__RUNNER__LIVE_E2E__HEAVY_ENABLED=true \
 EPHEMERALOS_DATABASE_URL="sqlite:///./.ephemeralos/ephemeralos.db" \
     uv run pytest \
-        backend/src/task_center_runner/tests/mock/sandbox/isolated_workspace/stress/ \
+        backend/src/test_runner/tests/mock/sandbox/isolated_workspace/stress/ \
         -m live_e2e_soak \
         -v
 ```
@@ -255,12 +255,12 @@ Each tier directory is independently runnable. Examples:
 ```bash
 # Just Tier 6 (concurrency) for an iws-network regression check
 uv run pytest \
-    backend/src/task_center_runner/tests/mock/sandbox/isolated_workspace/concurrency/ \
+    backend/src/test_runner/tests/mock/sandbox/isolated_workspace/concurrency/ \
     -v
 
 # Just a single failure_mode (e.g. when iterating on rollback paths)
 uv run pytest \
-    backend/src/task_center_runner/tests/mock/sandbox/isolated_workspace/failure_modes/test_setup_timeout_wedge.py \
+    backend/src/test_runner/tests/mock/sandbox/isolated_workspace/failure_modes/test_setup_timeout_wedge.py \
     -v
 ```
 
@@ -288,12 +288,12 @@ To refresh the budget on the reference CI host:
 EOS_CI_REFERENCE_HOST=true \
 EOS_ISOLATED_WORKSPACE_BASELINE_RUNS=100 \
     uv run pytest \
-        backend/src/task_center_runner/tests/mock/sandbox/isolated_workspace/performance/ \
+        backend/src/test_runner/tests/mock/sandbox/isolated_workspace/performance/ \
         -v
 ```
 
 Then dump the captured medians + p95s/p99s from the audit JSONL into
-`backend/src/task_center_runner/tests/mock/sandbox/isolated_workspace/_data/latency_budget.json`
+`backend/src/test_runner/tests/mock/sandbox/isolated_workspace/_data/latency_budget.json`
 with this shape:
 
 ```json
@@ -372,8 +372,8 @@ prior test ran (left-over from a flake can keep an old knob set).
 
 ```bash
 uv run pytest \
-    backend/src/task_center_runner/tests/mock/sandbox/isolated_workspace/pre_flight/ \
-    backend/src/task_center_runner/tests/mock/sandbox/isolated_workspace/happy_path/ \
+    backend/src/test_runner/tests/mock/sandbox/isolated_workspace/pre_flight/ \
+    backend/src/test_runner/tests/mock/sandbox/isolated_workspace/happy_path/ \
     -v
 ```
 
@@ -384,7 +384,7 @@ Goes red if structural fences fall OR happy-path daemon boot regresses.
 ```bash
 bash backend/scripts/preflight_docker_a2_caps.sh
 uv run pytest \
-    backend/src/task_center_runner/tests/mock/sandbox/isolated_workspace/ \
+    backend/src/test_runner/tests/mock/sandbox/isolated_workspace/ \
     -m "not live_e2e_soak" \
     -v
 ```
@@ -393,7 +393,7 @@ uv run pytest \
 
 ```bash
 uv run pytest \
-    backend/src/task_center_runner/tests/mock/sandbox/isolated_workspace/stress/ \
+    backend/src/test_runner/tests/mock/sandbox/isolated_workspace/stress/ \
     -m live_e2e_soak \
     --timeout=3600 \
     -v
@@ -404,7 +404,7 @@ uv run pytest \
 ```bash
 EOS_CI_REFERENCE_HOST=true \
     uv run pytest \
-        backend/src/task_center_runner/tests/mock/sandbox/isolated_workspace/performance/ \
+        backend/src/test_runner/tests/mock/sandbox/isolated_workspace/performance/ \
         -v
 ```
 

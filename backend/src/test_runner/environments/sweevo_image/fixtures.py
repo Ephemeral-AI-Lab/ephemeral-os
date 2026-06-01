@@ -1,8 +1,8 @@
-"""SWE-EVO image-backed fixtures for task-center-runner suites.
+"""SWE-EVO image-backed fixtures for test-runner suites.
 
 Mocked-agent and real-agent tests both use the SWE-EVO Docker image as an
 environment. Full benchmark orchestration remains under
-``task_center_runner.benchmarks.sweevo``.
+``test_runner.benchmarks.sweevo``.
 """
 
 from __future__ import annotations
@@ -16,15 +16,15 @@ from typing import IO
 
 import pytest
 
-from task_center_runner.benchmarks.sweevo.models import SWEEvoInstance, _REPO_DIR
-from task_center_runner.benchmarks.sweevo.setup import (
+from test_runner.benchmarks.sweevo.models import SWEEvoInstance, _REPO_DIR
+from test_runner.benchmarks.sweevo.setup import (
     build_sweevo_user_prompt,
     select_sweevo_instance,
 )
-from task_center_runner.core.runner import RunReport
-from task_center_runner.core.runner import run_scenario as _generic_run_scenario
-from task_center_runner.core.stores import TaskStoreBundle
-from task_center_runner.scenarios.base import Scenario
+from test_runner.core.runner import RunReport
+from test_runner.core.runner import run_scenario as _generic_run_scenario
+from test_runner.core.stores import TaskStoreBundle
+from test_runner.scenarios.base import Scenario
 
 _DEFAULT_INSTANCE_ID = "dask__dask_2023.3.2_2023.4.0"
 _SESSION_WORKSPACE_USED_ATTR = "_ephemeralos_sweevo_workspace_used_sandboxes"
@@ -75,7 +75,7 @@ async def run_scenario_on_sweevo_image(
         instance_id=instance.instance_id,
     )
     if commit_to_workspace:
-        from task_center_runner.benchmarks.sweevo.eval import apply_layerstack_to_repo
+        from test_runner.benchmarks.sweevo.eval import apply_layerstack_to_repo
 
         await apply_layerstack_to_repo(sandbox_id, repo_dir)
     return report
@@ -94,15 +94,15 @@ async def sweevo_image_sandbox(
     """Provision the persistent sweevo container for the configured instance."""
     from sandbox.provider.bootstrap import bootstrap_sandbox_provider
 
-    from task_center_runner.benchmarks.sweevo._provision import (
+    from test_runner.benchmarks.sweevo._provision import (
         _create_sandbox,
         _find_existing_sandbox_by_name,
         _resume_sandbox,
         _service,
         setup_sweevo_sandbox,
     )
-    from task_center_runner.benchmarks.sweevo.models import _sweevo_sandbox_name
-    from task_center_runner.environments.sweevo_image.health import (
+    from test_runner.benchmarks.sweevo.models import _sweevo_sandbox_name
+    from test_runner.environments.sweevo_image.health import (
         require_sweevo_image_provider_healthy,
     )
 
@@ -152,7 +152,7 @@ async def workspace(
     first_use = sandbox_id not in used_sandboxes
     should_reset = (not first_use) or bool(sweevo_image_sandbox.get("reused_existing"))
     if should_reset:
-        from task_center_runner.benchmarks.sweevo._provision import (
+        from test_runner.benchmarks.sweevo._provision import (
             reset_sweevo_workspace,
         )
 

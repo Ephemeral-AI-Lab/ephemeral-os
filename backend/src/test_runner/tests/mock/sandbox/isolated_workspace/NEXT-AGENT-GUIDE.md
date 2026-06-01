@@ -34,7 +34,7 @@ backend/src/sandbox/isolated_workspace/          ← all iws production code
     ├── setns_overlay_mount.py  setns then call kernel_mount.mount_overlay
     └── configure_dns_in_ns.py  setns then rewrite /etc/resolv.conf
 
-backend/src/task_center_runner/tests/mock/sandbox/isolated_workspace/  ← all iws tests
+backend/src/test_runner/tests/mock/sandbox/isolated_workspace/  ← all iws tests
 ├── PLAN.md                  the 1076-line spec — read §11–§23 for v2 enrichments
 ├── IMPLEMENTATION-REPORT.md what landed each session
 ├── NEXT-AGENT-GUIDE.md      this file
@@ -78,7 +78,7 @@ Before writing new code, check whether one of these already does the job.
 | Lease + snapshot lifecycle | `sandbox.daemon.layer_stack_runtime.acquire_snapshot` / `release_lease` | yes (`LayerStackPortAdapter` is bound during `_control_plane.pipeline_registry.ensure_pipeline`) |
 | Overlay writable-root resolution | `sandbox.overlay.writable_dirs.overlay_writable_root` | yes (`_control_plane.pipeline_registry.ensure_pipeline`) |
 | Daemon RPC client | `sandbox.host.daemon_client.call_daemon_api` | yes (`_iws_rpc`) |
-| Audit event types | `task_center_runner.audit.events.EventType` — the 5 `SANDBOX_ISOLATED_WORKSPACE_*` enum members are already defined | yes (events emitted via `IsolatedPipeline._emit`) |
+| Audit event types | `test_runner.audit.events.EventType` — the 5 `SANDBOX_ISOLATED_WORKSPACE_*` enum members are already defined | yes (events emitted via `IsolatedPipeline._emit`) |
 | Overlay path validation | `sandbox.shared.command_exec_policy.validate_overlay_path_text` + the `MountInputs` returned by `validate_mount_inputs` | yes (`scripts/setns_overlay_mount.py` validates and FD-pins paths before calling `mount_overlay`) |
 | Path-policy enforcement | `sandbox.shared.command_exec_policy.DEFAULT_COMMAND_EXEC_POLICY` | yes for overlay mount paths through `validate_mount_inputs`; command/path policy for iws tool args remains separate |
 
@@ -665,11 +665,11 @@ The iws test surface splits along **static vs live**, not host OS:
 
 ```bash
 .venv/bin/python -m pytest \
-    backend/src/task_center_runner/tests/mock/sandbox/isolated_workspace/pre_flight/ \
+    backend/src/test_runner/tests/mock/sandbox/isolated_workspace/pre_flight/ \
     backend/tests/unit_test/test_sandbox/test_daemon/ \
     backend/tests/unit_test/test_sandbox/test_import_fence.py \
     backend/tests/unit_test/test_audit/ \
-    backend/tests/unit_test/test_task_center/test_audit/ \
+    backend/tests/unit_test/test_request/test_audit/ \
     -v
 ```
 
@@ -682,7 +682,7 @@ something.
 EOS_SANDBOX_PROVIDER=docker \
 EOS_ISOLATED_WORKSPACE_ENABLED=true \
     .venv/bin/python -m pytest \
-        backend/src/task_center_runner/tests/mock/sandbox/isolated_workspace/ -v
+        backend/src/test_runner/tests/mock/sandbox/isolated_workspace/ -v
 ```
 
 Also requires ``runner.live_e2e.heavy_enabled = true`` and a configured
@@ -695,8 +695,8 @@ tests are added.
 ```bash
 .venv/bin/ruff check \
     backend/src/sandbox/isolated_workspace/ \
-    backend/src/task_center_runner/audit/events.py \
-    backend/src/task_center_runner/tests/mock/sandbox/isolated_workspace/
+    backend/src/test_runner/audit/events.py \
+    backend/src/test_runner/tests/mock/sandbox/isolated_workspace/
 ```
 
 ---

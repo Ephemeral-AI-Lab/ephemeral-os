@@ -58,7 +58,7 @@ ENGINE_RESTART_SUMMARY = f"{ROOT}/engine_restart/summary.json"
 MANY_SMALL_WRITES_SUMMARY = f"{ROOT}/many_small_writes/summary.json"
 MIXED_OP_CONCURRENT_SUMMARY = f"{ROOT}/mixed_op_concurrent/summary.json"
 
-SUMMARY_SCHEMA = "task_center_runner.background_shell.v1"
+SUMMARY_SCHEMA = "test_runner.background_shell.v1"
 BACKGROUND_IWS_LAYER_STACK_ROOT = "/eos/layer-stack"
 
 EmitStreamEvent = Callable[[StreamEvent], Awaitable[None]]

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from task_center_runner.scenarios.base import ScenarioContext
+from test_runner.scenarios.base import ScenarioContext
 
 
 def is_entry_origin_workflow(ctx: ScenarioContext) -> bool:

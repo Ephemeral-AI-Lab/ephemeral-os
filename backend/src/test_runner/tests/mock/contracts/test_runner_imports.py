@@ -1,4 +1,4 @@
-"""Offline integration test for the task_center_runner wiring.
+"""Offline integration test for the test_runner wiring.
 
 Verifies that the framework's public surface is importable, the scenario-loop
 runner constructs without an SWE-EVO instance, the agent registry can be
@@ -15,25 +15,25 @@ import pytest
 
 from agents import AgentDefinition, AgentRole
 from agents import list_definitions
-from task_center_runner import RunReport, run_scenario
-from task_center_runner.audit.bus import AuditEventBus
-from task_center_runner.scenarios.base import ScenarioContext
-from task_center_runner.scenarios.correctness_testing import CorrectnessTesting
-from task_center_runner.scenarios.full_case_user_input import FullCaseUserInput
-from task_center_runner.scenarios.full_stack_adversarial import FullStackAdversarial
-from task_center_runner.agent.mock.definitions import (
+from test_runner import RunReport, run_scenario
+from test_runner.audit.bus import AuditEventBus
+from test_runner.scenarios.base import ScenarioContext
+from test_runner.scenarios.correctness_testing import CorrectnessTesting
+from test_runner.scenarios.full_case_user_input import FullCaseUserInput
+from test_runner.scenarios.full_stack_adversarial import FullStackAdversarial
+from test_runner.agent.mock.definitions import (
     mock_agent_definitions,
     registered_mock_agents,
 )
-from task_center_runner.agent.mock import scenario_loop_runner as loop_runner_module
-from task_center_runner.agent.mock.scenario_loop_runner import ScenarioLoopRunner
+from test_runner.agent.mock import scenario_loop_runner as loop_runner_module
+from test_runner.agent.mock.scenario_loop_runner import ScenarioLoopRunner
 from tools._framework.core.runtime import ExecutionMetadata
 from tools.submission.planner import submit_planner_outcome
 
 
 def test_runner_top_level_exports_are_callable() -> None:
     assert callable(run_scenario)
-    assert RunReport.__module__ == "task_center_runner.core.runner"
+    assert RunReport.__module__ == "test_runner.core.runner"
     sig = inspect.signature(run_scenario)
     # de-sweevo-fied signature: no ``instance``, ``repo_dir`` is required, and
     # ``entry_prompt`` is required.
@@ -458,7 +458,7 @@ def test_full_case_recursive_planner_with_unified_terminal_closes_workflow() -> 
 
 def test_sweevo_image_environment_keeps_dataset_entrypoint_separate() -> None:
     """SWE-EVO image prompt wiring lives outside the generic runner."""
-    from task_center_runner.environments.sweevo_image.fixtures import (
+    from test_runner.environments.sweevo_image.fixtures import (
         run_scenario_on_sweevo_image,
     )
 

@@ -178,7 +178,8 @@ Legend: ✅ done · 🟡 partial · ⬜ not started.
   `api.plugin.ensure start_services=true`,
   verifies `api.plugin.status probe_services=true` health acknowledgements for
   the generic harness, restart harness, package adapter, Pyright adapter,
-  crash-probe service, hang-probe service, and recover-probe service,
+  crash-probe service, hang-probe service, and recover-probe service, plus
+  fail-closed isolation for a deliberately rejecting `health_fail_harness`,
   verifies `plugin.generic.ping`, verifies a self-managed `plugin.generic.apply` write
   through `daemon.occ.apply_changeset`, verifies `plugin.generic.apply_multi`
   can issue two daemon-owned `daemon.occ.apply_changeset` callbacks on the same
@@ -234,6 +235,8 @@ Legend: ✅ done · 🟡 partial · ⬜ not started.
   fails closed by dropping the broken PPC route and marking only that service
   stopped, verifies `plugin.generic.hang_probe` fails closed on PPC timeout by
   dropping only the hung route and marking only that service stopped, verifies
+  `plugin.generic.health_fail_ping` is removed when its service rejects the
+  daemon health probe while unrelated services stay connected, verifies
   `plugin.generic.recover_probe` first fails closed by dropping only the
   recover route and then succeeds on the next dispatch after the daemon restarts
   the previously ready service. Latest artifact
@@ -241,12 +244,12 @@ Legend: ✅ done · 🟡 partial · ⬜ not started.
   `79f2592a55e565f00e2917c86cbeca2bfa26c073c316a1be6b6239d5830509fb`.
 - ✅ Live verification:
   `EOS_SANDBOX_PROVIDER=docker EOS_LIVE_E2E_IMAGE=xingyaoww/sweb.eval.x86_64.dask_s_dask-10042:latest EOS_PLUGIN_REFRESH_SAMPLES=1 EOS_PLUGIN_REFRESH_AUTO_SQUASH_WRITES=104 EOS_RUST_PLUGIN_BENCH_TIMEOUT_S=600 uv run pytest -q -x -rs --tb=short --durations=10 backend/tests/live_e2e_test/sandbox/plugin/test_plugin_refresh_strategies.py`
-  passed (`1 passed in 40.33s` on the latest rerun). The generated Rust plugin
-  report `.omc/results/rust-daemon-plugin-generic-20260601T233450Z-72557.json`
+  passed (`1 passed in 45.19s` on the latest rerun). The generated Rust plugin
+  report `.omc/results/rust-daemon-plugin-generic-20260601T234314Z-87525.json`
   had `gate_pass=true`, registered routes `plugin.generic.adapter_query`,
   `plugin.generic.apply`, `plugin.generic.apply_multi`,
   `plugin.generic.crash_probe`,
-  `plugin.generic.hang_probe`,
+  `plugin.generic.hang_probe`, `plugin.generic.health_fail_ping`,
   `plugin.generic.oneshot_write`,
   `plugin.generic.ping`, `plugin.generic.pyright_call_hierarchy`,
   `plugin.generic.pyright_completion`,
@@ -266,6 +269,7 @@ Legend: ✅ done · 🟡 partial · ⬜ not started.
   `plugin.generic.apply_multi`/
   `plugin.generic.crash_probe`/
   `plugin.generic.hang_probe`/
+  `plugin.generic.health_fail_ping`/
   `plugin.generic.ping`/`plugin.generic.pyright_call_hierarchy`/
   `plugin.generic.pyright_completion`/
   `plugin.generic.pyright_completion_resolve`/
@@ -285,6 +289,10 @@ Legend: ✅ done · 🟡 partial · ⬜ not started.
   `adapter_harness`, `pyright_harness`, `crash_harness`, `hang_harness`, and
   `recover_harness` on retained manifest key
   `1:f071e2d096b352b67daeb0f2e2f6dc503335246a98e209fa9f199d06314b5cb5`,
+  failed-health isolation where `health_fail_harness` rejected the same probe
+  with `intentional health failure`, was marked `state=stopped`, and had
+  `plugin.generic.health_fail_ping` removed from connected routes while
+  unrelated routes stayed connected,
   callback file status `committed`, post-write `refresh_ping_from_ppc=true`,
   repeated self-managed callback evidence where
   `plugin.generic.apply_multi.callback_count == 2`, callback index `0`
@@ -361,13 +369,13 @@ Legend: ✅ done · 🟡 partial · ⬜ not started.
   routes, `recover_harness.state == "stopped"`, second
   `plugin.generic.recover_probe` returning `from_recovered_service=true` with
   `workspace_mounted=true`, restored connected route,
-  `recover_harness.restart_count == 1`, retained service leases before cleanup
-  `5`, post-cleanup active leases `0`, and post-cleanup orphan/missing layer
-  counts `0`.
+  `recover_harness.restart_count == 1`, final active service leases before
+  cleanup `5`, post-cleanup active leases `0`, and post-cleanup orphan/missing
+  layer counts `0`.
 - ✅ Durable benchmark refresh:
-  `.omc/results/plugin-refresh-strategies-20260601T233450Z-72557.json` / `.md`
-  recommend `workspace_snapshot_refresh`; p95 refresh `3.867 ms` vs
-  `commit_to_workspace` p95 `3.276 ms`; raw workspace watch without
+  `.omc/results/plugin-refresh-strategies-20260601T234314Z-87525.json` / `.md`
+  recommend `workspace_snapshot_refresh`; p95 refresh `6.064 ms` vs
+  `commit_to_workspace` p95 `3.704 ms`; raw workspace watch without
   materialization stayed stale; auto-squash plus post-drain commit passed with
   final active leases, orphan layers, and missing layers all `0`.
 - 🟡 Remaining plugin scope: broader AV-10 LSP parity beyond the representative
@@ -634,15 +642,17 @@ Legend: ✅ done · 🟡 partial · ⬜ not started.
   CP-4s raw-argv escape hatch: `api.v1.shell` requires a non-empty command
   string and rejects argv arrays. The last `cp4s_legacy_argv` runner-internal
   compatibility path was removed after plugin one-shot overlay workers were
-  switched to the dedicated `plugin_service` runner verb for argv commands.
-  Focused verification passed with `cargo test -p eos-daemon shell_command
-  --lib`, `cargo test -p eos-daemon --lib -- --skip plugin`, `cargo check -p
+  switched to the dedicated `plugin_service` runner verb for argv commands;
+  `plugin_service` now also uses a process group for timeout cleanup so worker
+  descendants are not left behind. Focused verification passed with `cargo test
+  -p eos-runner --lib`, `cargo test -p eos-daemon shell_command --lib`, `cargo
+  test -p eos-daemon plugin::tests -- --test-threads=1`, `cargo check -p
   eos-runner --target x86_64-unknown-linux-musl --lib --tests`, `cargo check
-  -p eos-daemon --target x86_64-unknown-linux-musl --lib --tests`, host strict
-  clippy for daemon production and runner all-targets, `cargo fmt --all
-  --check`, `uv run python -m py_compile
-  backend/scripts/bench_rust_daemon_phase3.py`, and `uv run ruff check
-  backend/scripts/bench_rust_daemon_phase3.py`.
+  -p eos-daemon --target x86_64-unknown-linux-musl --lib --tests`, `cargo
+  clippy --workspace --all-targets --no-deps -- -D warnings -D
+  clippy::unwrap_used -D clippy::expect_used -D
+  clippy::undocumented_unsafe_blocks`, `cargo fmt --all --check`, and focused
+  `git diff --check` / stale-legacy scans.
 - ✅ Follow-up plan-contract cleanup refreshed `PLAN.md` so CP-4s is described
   as historical raw-argv structural evidence, while the current public
   `api.v1.shell` boundary and `bench_rust_daemon_phase3.py` reruns use
@@ -746,8 +756,10 @@ Legend: ✅ done · 🟡 partial · ⬜ not started.
   clippy::undocumented_unsafe_blocks` is green across `eos-daemon`,
   `eos-isolated`, `eos-layerstack`, `eos-ns-holder`, `eos-occ`, `eos-overlay`,
   `eos-plugin`, `eos-protocol`, `eos-runner`, `eosd`, and `xtask`; `cargo test
-  --workspace --all-targets` also passed. A focused panic-style source scan over
-  those crates now finds no live `unwrap(...)`, `expect(...)`, `expect_err(...)`,
+  --workspace --all-targets` also passed before the final `cp4s_legacy_argv`
+  removal, and focused post-removal daemon/runner tests plus Linux-target
+  compile checks passed afterward. A focused panic-style source scan over those
+  crates now finds no live `unwrap(...)`, `expect(...)`, `expect_err(...)`,
   `panic!(...)`, `todo!(...)`, or `unimplemented!(...)` calls; the remaining
   textual matches are intentional lint attributes (`#[expect(...)]` /
   `cfg_attr(..., expect(...))`). The legacy `cp4s_legacy_argv` shell escape
@@ -1127,7 +1139,7 @@ cd .. && .venv/bin/python -m pytest backend/tests/unit_test/test_sandbox/test_pr
 5. **CP-5 cache-lock churn is closed for the sidecar scope.** Keep `bench/phase3t-cache-lock-churn-cp5-20260601.json` as the live Docker/dask evidence for >256 roots, bounded LRU eviction, readback, no stale reuse, and cache-lock wait metrics.
 6. **AV-7 forward/back parity is closed for the sidecar scope.** Keep `bench/phase3t-av7-forward-back-parity-20260601.json` as the bidirectional on-disk parity artifact.
 7. **§7 non-plugin differential/property contention is closed for the sidecar scope.** Keep `bench/phase3t-section7-non-plugin-differential-20260601.json` as the Python/Rust differential artifact. Plugin PPC/AV-10 remains outside this skipped scope.
-8. **Finish plugin PPC execution outside the non-plugin sidecar.** Implement process-backed service spawn/round-trip, READ_ONLY out-of-process dispatch, WRITE_ALLOWED eosd-owned overlay+OCC wrapping, and self-managed plugin OCC callback over PPC. MF-1 remains load-bearing: plugin callbacks route through the same per-root OCC writer and storage lock as primary publishes.
+8. **Plugin PPC/AV-10 remains skipped for the current closeout scope.** Do not treat this as a blocker for the non-plugin Phase 3T sidecar. When plugin implementation resumes, the remaining gate is broader AV-10 parity beyond the representative live coverage already listed above, including any required out-of-order operation multiplexing and broader crash-recovery lanes.
 9. **Refresh architecture docs only where surfaces change.** If tool names, terminal-session lifecycle, background identifiers, isolated-workspace routing, or plugin-dispatch ownership change, update the smallest affected `docs/architecture` page alongside the implementation.
 
 ### F. Phase 3.5 (isolated) then Phase 5 (cutover) — per PLAN §5

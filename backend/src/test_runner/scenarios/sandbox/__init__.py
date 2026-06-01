@@ -18,10 +18,10 @@ Implemented (reference scenarios):
 
 from __future__ import annotations
 
-from task_center_runner.scenarios.sandbox.auto_squash_commit_resume import (
+from test_runner.scenarios.sandbox.auto_squash_commit_resume import (
     AutoSquashCommitResume,
 )
-from task_center_runner.scenarios.sandbox.background_shell import (
+from test_runner.scenarios.sandbox.background_shell import (
     BackgroundEngineRestartNoLeaseLeak,
     BackgroundExitIwsDrainsAgentTasks,
     BackgroundHeartbeatLossReapsOnlyStaleBg,
@@ -36,19 +36,19 @@ from task_center_runner.scenarios.sandbox.background_shell import (
     BackgroundShellLateCancelRace,
     BackgroundShellPartialWriteCancel,
 )
-from task_center_runner.scenarios.sandbox.complex_project_build import (
+from test_runner.scenarios.sandbox.complex_project_build import (
     ComplexProjectBuild,
     ComplexProjectBuildSmoke,
 )
-from task_center_runner.scenarios.sandbox.complex_project_build_grep_glob import (
+from test_runner.scenarios.sandbox.complex_project_build_grep_glob import (
     ComplexProjectBuildGrepGlob,
     ComplexProjectBuildGrepGlobSmoke,
 )
-from task_center_runner.scenarios.sandbox.complex_project_build_shell_edit_lsp import (
+from test_runner.scenarios.sandbox.complex_project_build_shell_edit_lsp import (
     ComplexProjectBuildShellEditLsp,
     ComplexProjectBuildShellEditLspSmoke,
 )
-from task_center_runner.scenarios.sandbox.ephemeral_workspace import (
+from test_runner.scenarios.sandbox.ephemeral_workspace import (
     EphemeralWorkspaceAllVerbs,
     EphemeralWorkspaceCancellation,
     EphemeralWorkspaceConcurrentWrites,
@@ -56,16 +56,16 @@ from task_center_runner.scenarios.sandbox.ephemeral_workspace import (
     EphemeralWorkspacePolicy,
     EphemeralWorkspaceSamePathConflict,
 )
-from task_center_runner.scenarios.sandbox.heavy_io_zoned_concurrent import (
+from test_runner.scenarios.sandbox.heavy_io_zoned_concurrent import (
     HeavyIoZonedConcurrent,
 )
-from task_center_runner.scenarios.sandbox.high_concurrency_layerstack_overlay_occ import (
+from test_runner.scenarios.sandbox.high_concurrency_layerstack_overlay_occ import (
     HighConcurrencyLayerstackOverlayOcc,
 )
-from task_center_runner.scenarios.sandbox.occ_concurrent_conflicts import (
+from test_runner.scenarios.sandbox.occ_concurrent_conflicts import (
     OccConcurrentConflicts,
 )
-from task_center_runner.scenarios.sandbox.plugin import (
+from test_runner.scenarios.sandbox.plugin import (
     PluginIntentContract,
     PluginIwsPolicy,
     PluginReadOnlyLspRefresh,

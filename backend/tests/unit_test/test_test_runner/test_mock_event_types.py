@@ -6,7 +6,7 @@ ScenarioLifecycle consumes them when assembling the rich mock ``RunReport`` view
 
 from __future__ import annotations
 
-from task_center_runner.audit.events import EventType
+from test_runner.audit.events import EventType
 
 
 def test_mock_event_types_exist_with_expected_string_values() -> None:

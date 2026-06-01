@@ -32,10 +32,10 @@ from typing import Any
 from tools.submission.planner import submit_planner_outcome
 from tools.submission.reducer import submit_reducer_outcome
 
-from task_center_runner.scenarios._scenario_helpers import (
+from test_runner.scenarios._scenario_helpers import (
     instruction_field as _field,
 )
-from task_center_runner.scenarios.base import ScenarioBase, ScenarioContext, ToolCallSpec
+from test_runner.scenarios.base import ScenarioBase, ScenarioContext, ToolCallSpec
 
 
 _FAIL_TAG = "ACTION fail_on_attempt=1"

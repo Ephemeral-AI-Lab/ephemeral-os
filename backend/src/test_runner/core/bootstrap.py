@@ -4,7 +4,7 @@ Ensures the Daytona provider, the production runtime store singletons, and
 the markdown-defined agent registry are all populated before
 ``start_request`` runs with ``runner=None`` (real LLM). The
 scenario / mock path never invokes this — mocks register their own agents
-via ``task_center_runner.agent.mock.definitions.registered_mock_agents``.
+via ``test_runner.agent.mock.definitions.registered_mock_agents``.
 
 Idempotent. Safe to call from CLI startup and pytest fixtures alike.
 """
@@ -15,7 +15,7 @@ from pathlib import Path
 
 _BOOTSTRAPPED = False
 
-# ``__file__`` resolves to ``backend/src/task_center_runner/core/bootstrap.py``.
+# ``__file__`` resolves to ``backend/src/test_runner/core/bootstrap.py``.
 # ``parents[2]`` points at ``backend/src/``; the production agent definitions
 # live under ``backend/src/agents/profile/``.
 _PROFILE_ROOT = Path(__file__).resolve().parents[2] / "agents" / "profile"

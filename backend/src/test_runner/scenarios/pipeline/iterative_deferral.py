@@ -16,11 +16,11 @@ from collections.abc import Sequence
 from tools.submission.planner import submit_planner_outcome
 from tools.submission.reducer import submit_reducer_outcome
 
-from task_center_runner.scenarios._scenario_helpers import (
+from test_runner.scenarios._scenario_helpers import (
     preflight_full_plan,
     preflight_defers_plan,
 )
-from task_center_runner.scenarios.base import ScenarioBase, ScenarioContext, ToolCallSpec
+from test_runner.scenarios.base import ScenarioBase, ScenarioContext, ToolCallSpec
 
 
 _CONTINUATION_GOAL = (

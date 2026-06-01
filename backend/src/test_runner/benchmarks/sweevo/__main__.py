@@ -1,4 +1,4 @@
-"""SWE-EVO benchmark CLI entry: ``python -m task_center_runner.benchmarks.sweevo``."""
+"""SWE-EVO benchmark CLI entry: ``python -m test_runner.benchmarks.sweevo``."""
 
 from __future__ import annotations
 
@@ -7,11 +7,11 @@ import asyncio
 import logging
 import sys
 
-from task_center_runner.benchmarks.sweevo.models import (
+from test_runner.benchmarks.sweevo.models import (
     _DEFAULT_DATASET_SOURCE,
     _REPO_DIR,
 )
-from task_center_runner.benchmarks.sweevo.pipeline import run_benchmark_sweevo
+from test_runner.benchmarks.sweevo.pipeline import run_benchmark_sweevo
 
 
 def _configure_logging() -> None:
@@ -24,7 +24,7 @@ def _configure_logging() -> None:
 
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        prog="python -m task_center_runner.benchmarks.sweevo",
+        prog="python -m test_runner.benchmarks.sweevo",
         description="Run one SWE-EVO instance through the benchmark_sweevo lifecycle.",
     )
     parser.add_argument("--source", default=_DEFAULT_DATASET_SOURCE)
@@ -46,7 +46,7 @@ def _build_parser() -> argparse.ArgumentParser:
         "--max-duration-s",
         type=float,
         default=10800.0,
-        help="Wall-clock cap for the real-agent task_center run (default 3h).",
+        help="Wall-clock cap for the real-agent request run (default 3h).",
     )
     parser.add_argument(
         "--audit-dir",

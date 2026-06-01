@@ -8,7 +8,7 @@ from typing import Any
 
 import pytest
 
-from task_center_runner.audit.recorder import AuditRecorder
+from test_runner.audit.recorder import AuditRecorder
 
 
 def test_audit_recorder_aclose_awaits_puller_then_disposes(tmp_path: Path) -> None:

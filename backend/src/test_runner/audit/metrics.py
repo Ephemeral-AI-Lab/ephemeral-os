@@ -12,7 +12,7 @@ from datetime import datetime
 from statistics import median
 from typing import Any
 
-from task_center_runner.audit.events import Event, EventType
+from test_runner.audit.events import Event, EventType
 
 _PREVIEW_CHARS = 240
 _SLOWEST_CALL_LIMIT = 25

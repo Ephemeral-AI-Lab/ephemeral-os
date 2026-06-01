@@ -2,7 +2,7 @@
 
 Drive the orchestrator/task-dispatcher/iteration-coordinator/workflow-lifecycle control
 flow with the lightest possible executor action (`preflight` or `fail`).
-Failures here mean a regression in `task_center/` proper.
+Failures here mean a regression in `request/` proper.
 
 Implemented (reference scenarios):
 - :class:`AttemptBudgetExhausted`
@@ -24,48 +24,48 @@ Implemented (reference scenarios):
 
 from __future__ import annotations
 
-from task_center_runner.scenarios.pipeline.attempt_budget_exhausted import (
+from test_runner.scenarios.pipeline.attempt_budget_exhausted import (
     AttemptBudgetExhausted,
 )
-from task_center_runner.scenarios.pipeline.attempt_retry_reducer_failure import (
+from test_runner.scenarios.pipeline.attempt_retry_reducer_failure import (
     AttemptRetryReducerFailure,
 )
-from task_center_runner.scenarios.pipeline.attempt_retry_generator_failure import (
+from test_runner.scenarios.pipeline.attempt_retry_generator_failure import (
     AttemptRetryGeneratorFailure,
 )
-from task_center_runner.scenarios.pipeline.attempt_retry_planner_failure import (
+from test_runner.scenarios.pipeline.attempt_retry_planner_failure import (
     AttemptRetryPlannerFailure,
 )
-from task_center_runner.scenarios.pipeline.dependency_blocked_descendants import (
+from test_runner.scenarios.pipeline.dependency_blocked_descendants import (
     DependencyBlockedDescendants,
 )
-from task_center_runner.scenarios.pipeline.dependency_dag_diamond import (
+from test_runner.scenarios.pipeline.dependency_dag_diamond import (
     DependencyDagDiamond,
 )
-from task_center_runner.scenarios.pipeline.dependency_dag_mixed import (
+from test_runner.scenarios.pipeline.dependency_dag_mixed import (
     DependencyDagMixed,
 )
-from task_center_runner.scenarios.pipeline.dependency_dag_parallel import (
+from test_runner.scenarios.pipeline.dependency_dag_parallel import (
     DependencyDagParallel,
 )
-from task_center_runner.scenarios.pipeline.dependency_dag_serial import (
+from test_runner.scenarios.pipeline.dependency_dag_serial import (
     DependencyDagSerial,
 )
-from task_center_runner.scenarios.pipeline.initial_messages_capture import (
+from test_runner.scenarios.pipeline.initial_messages_capture import (
     InitialMessagesCapture,
 )
-from task_center_runner.scenarios.pipeline.iterative_deferral import (
+from test_runner.scenarios.pipeline.iterative_deferral import (
     IterativeDeferral,
 )
-from task_center_runner.scenarios.pipeline.generator_failure_quiescence import (
+from test_runner.scenarios.pipeline.generator_failure_quiescence import (
     GeneratorFailureQuiescence,
 )
-from task_center_runner.scenarios.pipeline.initial_workflow import InitialWorkflow
-from task_center_runner.scenarios.pipeline.nested_workflow import (
+from test_runner.scenarios.pipeline.initial_workflow import InitialWorkflow
+from test_runner.scenarios.pipeline.nested_workflow import (
     NestedWorkflow,
     NestedWorkflowFailure,
 )
-from task_center_runner.scenarios.pipeline.deferred_parent_planner_unified_terminal import (
+from test_runner.scenarios.pipeline.deferred_parent_planner_unified_terminal import (
     DeferredParentPlannerUnifiedTerminal,
 )
 

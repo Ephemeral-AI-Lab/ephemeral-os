@@ -33,7 +33,7 @@ _SUBAGENT_PROFILE_DIR = _PROFILE_ROOT / "subagent"
 
 @contextlib.contextmanager
 def registered_mock_agents() -> Iterator[None]:
-    """Temporarily install the TaskCenter agent profile definitions."""
+    """Temporarily install the task/request agent profile definitions."""
     previous = list_definitions()
     for definition in previous:
         unregister_definition(definition.name)

@@ -16,20 +16,20 @@ Implemented (reference scenarios):
 
 from __future__ import annotations
 
-from task_center_runner.scenarios.planner_validation.cycle_in_deps import (
+from test_runner.scenarios.planner_validation.cycle_in_deps import (
     PlannerCycleInDeps,
 )
-from task_center_runner.scenarios.planner_validation.duplicate_local_id import (
+from test_runner.scenarios.planner_validation.duplicate_local_id import (
     PlannerDuplicateLocalId,
 )
-from task_center_runner.scenarios.planner_validation.empty_tasks import PlannerEmptyTasks
-from task_center_runner.scenarios.planner_validation.blank_deferred_goal import (
+from test_runner.scenarios.planner_validation.empty_tasks import PlannerEmptyTasks
+from test_runner.scenarios.planner_validation.blank_deferred_goal import (
     PlannerBlankDeferredGoal,
 )
-from task_center_runner.scenarios.planner_validation.unknown_agent_name import (
+from test_runner.scenarios.planner_validation.unknown_agent_name import (
     PlannerUnknownAgentName,
 )
-from task_center_runner.scenarios.planner_validation.unknown_dep import PlannerUnknownDep
+from test_runner.scenarios.planner_validation.unknown_dep import PlannerUnknownDep
 
 __all__ = [
     "PlannerCycleInDeps",

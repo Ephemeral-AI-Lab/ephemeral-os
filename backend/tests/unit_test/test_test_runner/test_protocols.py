@@ -11,7 +11,7 @@ from dataclasses import fields
 from pathlib import Path
 from typing import Any
 
-from task_center_runner.core import (
+from test_runner.core import (
     AttachExisting,
     LifecycleHooks,
     NoopLifecycle,
@@ -86,7 +86,7 @@ def test_run_config_round_trip_with_minimal_stubs() -> None:
     assert isinstance(config.lifecycle, NoopLifecycle)
     assert config.bootstrap is None
     assert config.stores is None
-    assert config.run_label == "task_center_runner"
+    assert config.run_label == "test_runner"
     assert config.audit_dir == Path(".sweevo_runs")
     assert config.run_dir_factory is None
     assert config.instance_id == ""

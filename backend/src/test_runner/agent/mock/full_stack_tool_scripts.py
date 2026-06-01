@@ -7,9 +7,9 @@ from collections.abc import Sequence
 from typing import Any
 
 from sandbox.occ.service import AUTO_SQUASH_MAX_DEPTH
-from task_center_runner.scenarios._scenario_helpers import instruction_field
-from task_center_runner.scenarios.base import ScenarioContext
-from task_center_runner.agent.mock.tool_scripts import (
+from test_runner.scenarios._scenario_helpers import instruction_field
+from test_runner.scenarios.base import ScenarioContext
+from test_runner.agent.mock.tool_scripts import (
     PreparedToolScript,
     ToolScriptStep,
 )

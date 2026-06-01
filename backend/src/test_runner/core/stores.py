@@ -1,4 +1,4 @@
-"""Per-test database isolation for live e2e TaskCenter stores.
+"""Per-test database isolation for live e2e task/request stores.
 
 Reuses the project's shared SQLAlchemy engine via ``db.engine.initialize_db()``
 and carves a fresh isolated store per test so concurrent tests do not collide.
@@ -27,7 +27,7 @@ from db.stores.task_store import TaskStore
 
 @dataclass(slots=True)
 class TaskStoreBundle:
-    """Bundle of TaskCenter stores bound to an isolated test database."""
+    """Bundle of task/request stores bound to an isolated test database."""
 
     engine: Engine
     schema: str
@@ -71,7 +71,7 @@ def _ensure_initialized() -> Engine:
         raise RuntimeError(
             "database URL not configured — set database.url in ephemeralos.yaml "
             "or export an explicit database override before running "
-            "task_center_runner tests."
+            "test_runner tests."
         )
     return engine
 
@@ -137,7 +137,7 @@ def _sqlite_bundle_path(shared_engine: Engine, schema: str) -> Path | None:
     if not database or database == ":memory:":
         return None
     base_path = Path(database).expanduser().resolve()
-    bundle_dir = base_path.parent / "task_center_runner"
+    bundle_dir = base_path.parent / "test_runner"
     bundle_dir.mkdir(parents=True, exist_ok=True)
     return bundle_dir / f"{schema}.db"
 
@@ -178,22 +178,22 @@ def _create_sqlite_bundle(
     )
 
 
-def create_per_test_task_center_stores(
-    *, schema_prefix: str = "task_center_runner"
+def create_per_test_task_stores(
+    *, schema_prefix: str = "test_runner"
 ) -> TaskStoreBundle:
-    """Return isolated TaskCenter stores for the configured database dialect."""
+    """Return isolated task/request stores for the configured database dialect."""
     shared_engine = _ensure_initialized()
     if shared_engine.dialect.name == "postgresql":
         return _create_postgresql_bundle(shared_engine, schema_prefix=schema_prefix)
     if shared_engine.dialect.name == "sqlite":
         return _create_sqlite_bundle(shared_engine, schema_prefix=schema_prefix)
     raise RuntimeError(
-        "task_center_runner supports PostgreSQL or SQLite, "
+        "test_runner supports PostgreSQL or SQLite, "
         f"got dialect={shared_engine.dialect.name!r}"
     )
 
 
 __all__ = [
     "TaskStoreBundle",
-    "create_per_test_task_center_stores",
+    "create_per_test_task_stores",
 ]

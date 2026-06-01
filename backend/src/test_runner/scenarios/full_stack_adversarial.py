@@ -9,17 +9,17 @@ from typing import Any
 from tools.submission.reducer import submit_reducer_outcome
 from tools.submission.planner import submit_planner_outcome
 
-from task_center_runner.scenarios.base import (
+from test_runner.scenarios.base import (
     ScenarioBase,
     ScenarioContext,
     ToolCallSpec,
 )
-from task_center_runner.scenarios._scenario_helpers import (
+from test_runner.scenarios._scenario_helpers import (
     instruction_field,
     is_entry_origin_workflow,
     is_recursive_workflow,
 )
-from task_center_runner.scenarios.user_input import (
+from test_runner.scenarios.user_input import (
     UserInputPlan,
     WorkPackage,
     build_user_input_plan,
@@ -38,7 +38,7 @@ class FullStackCell:
 
 
 class FullStackAdversarial(ScenarioBase):
-    """Drive TaskCenter, sandbox, OCC, layer-stack, LSP, and recursion."""
+    """Drive task/request, sandbox, OCC, layer-stack, LSP, and recursion."""
 
     name = "full_stack_adversarial"
 

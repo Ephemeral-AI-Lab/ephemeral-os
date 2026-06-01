@@ -6,14 +6,14 @@ from pathlib import Path
 
 import pytest
 
-from task_center_runner.benchmarks.sweevo.models import SWEEvoInstance
-from task_center_runner.agent.mock.ephemeral_workspace_probe import ALL_VERBS_SUMMARY
-from task_center_runner.core.stores import TaskStoreBundle
-from task_center_runner.tests._live_config import (
+from test_runner.benchmarks.sweevo.models import SWEEvoInstance
+from test_runner.agent.mock.ephemeral_workspace_probe import ALL_VERBS_SUMMARY
+from test_runner.core.stores import TaskStoreBundle
+from test_runner.tests._live_config import (
     database_configured,
     live_e2e_heavy_enabled,
 )
-from task_center_runner.tests.mock.sandbox.ephemeral_workspace._ephemeral_workspace_invariants import (
+from test_runner.tests.mock.sandbox.ephemeral_workspace._ephemeral_workspace_invariants import (
     assert_ephemeral_performance_artifacts,
     assert_no_internal_sandbox_errors,
     assert_sandbox_events_have_source,
@@ -46,7 +46,7 @@ async def test_ephemeral_all_verbs_publish_and_cleanup(
         stores=stores,
     )
 
-    assert summary["schema"] == "task_center_runner.ephemeral_workspace.v1"
+    assert summary["schema"] == "test_runner.ephemeral_workspace.v1"
     assert summary["mode"] == "all_verbs"
     assert summary["read_only_publish_count"] == 0
     labels = {record["label"] for record in summary["records"]}

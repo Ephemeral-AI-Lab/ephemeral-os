@@ -54,7 +54,7 @@ EOS__RUNNER__LIVE_E2E__HEAVY_ENABLED=true \
 EOS__RUNNER__SANDBOX_REUSE_MODE=reuse \
 EPHEMERALOS_DATABASE_URL="sqlite:///./.ephemeralos/ephemeralos.db" \
   .venv/bin/pytest \
-    backend/src/task_center_runner/tests/mock/sandbox/isolated_workspace/stress/ \
+    backend/src/test_runner/tests/mock/sandbox/isolated_workspace/stress/ \
     -m live_e2e_soak \
     -v -p no:randomly
 ```
@@ -77,7 +77,7 @@ EOS__RUNNER__LIVE_E2E__HEAVY_ENABLED=true \
 EOS__RUNNER__SANDBOX_REUSE_MODE=reuse \
 EPHEMERALOS_DATABASE_URL="sqlite:///./.ephemeralos/ephemeralos.db" \
   .venv/bin/pytest \
-    backend/src/task_center_runner/tests/mock/sandbox/isolated_workspace/stress/test_rapid_create_destroy_cycle.py \
+    backend/src/test_runner/tests/mock/sandbox/isolated_workspace/stress/test_rapid_create_destroy_cycle.py \
     -m live_e2e_soak \
     -v -p no:randomly
 ```
@@ -97,7 +97,7 @@ EOS__RUNNER__LIVE_E2E__HEAVY_ENABLED=true \
 EOS__RUNNER__SANDBOX_REUSE_MODE=reuse \
 EPHEMERALOS_DATABASE_URL="sqlite:///./.ephemeralos/ephemeralos.db" \
   .venv/bin/pytest \
-    backend/src/task_center_runner/tests/mock/sandbox/isolated_workspace/stress/ \
+    backend/src/test_runner/tests/mock/sandbox/isolated_workspace/stress/ \
     -m live_e2e_soak \
     -k "not test_pip_install_then_run_e2e" \
     -v -p no:randomly
@@ -110,7 +110,7 @@ Soak tests are nightly-only by convention (`RUNNING-LIVE-TESTS.md` §8):
 ```bash
 # Nightly soak job — keep separate from the regular PR live-tier job
 .venv/bin/pytest \
-    backend/src/task_center_runner/tests/mock/sandbox/isolated_workspace/stress/ \
+    backend/src/test_runner/tests/mock/sandbox/isolated_workspace/stress/ \
     -m live_e2e_soak \
     -v
 ```

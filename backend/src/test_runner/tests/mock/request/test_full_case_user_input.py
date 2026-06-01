@@ -13,19 +13,19 @@ from typing import Any
 import pytest
 
 from runtime.app_factory import model_store
-from task_center_runner.benchmarks.sweevo.setup import select_sweevo_instance
-from task_center_runner.benchmarks.sweevo.setup import build_sweevo_user_prompt
-from task_center_runner.audit.events import EventType
-from task_center_runner.scenarios.full_case_user_input import (
+from test_runner.benchmarks.sweevo.setup import select_sweevo_instance
+from test_runner.benchmarks.sweevo.setup import build_sweevo_user_prompt
+from test_runner.audit.events import EventType
+from test_runner.scenarios.full_case_user_input import (
     FullCaseUserInput,
 )
-from task_center_runner.core.stores import TaskStoreBundle
-from task_center_runner.environments.sweevo_image.fixtures import run_scenario_on_sweevo_image
-from task_center_runner.environments.sweevo_image.health import (
+from test_runner.core.stores import TaskStoreBundle
+from test_runner.environments.sweevo_image.fixtures import run_scenario_on_sweevo_image
+from test_runner.environments.sweevo_image.health import (
     require_sweevo_image_provider_healthy,
 )
-from task_center_runner.tests.mock._focused_scenario_contracts import recursive_workflows
-from task_center_runner.benchmarks.sweevo.models import SWEEvoInstance
+from test_runner.tests.mock._focused_scenario_contracts import recursive_workflows
+from test_runner.benchmarks.sweevo.models import SWEEvoInstance
 
 
 _DEFAULT_INSTANCE_ID = "dask__dask_2023.3.2_2023.4.0"
@@ -127,7 +127,7 @@ async def test_full_case_user_input_runs_dynamic_verifier_dag(
     ), planner_inspections
 
     # A delegated (task-origin) workflow exists and succeeded. Checkpoint-gated
-    # ordering is now enforced by TaskCenter dependency and closure state.
+    # ordering is now enforced by task/request dependency and closure state.
     recursive = recursive_workflows(gs)
     assert recursive, gs
     assert all(workflow["status"] == "succeeded" for workflow in recursive), recursive
@@ -238,7 +238,7 @@ def _guard_task_done_with_checkpoint(
 
     The guard task's ``instruction`` is its ``VERIFY checkpoint=<x> ...``
     spec; the former checkpoint-gated event ordering is replaced by asserting
-    that the corresponding guard task reached ``done`` (TaskCenter's own
+    that the corresponding guard task reached ``done`` (task/request's own
     dependency enforcement guarantees it ran after its upstream tasks closed).
     """
     needle = f"checkpoint={checkpoint}"

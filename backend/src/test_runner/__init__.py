@@ -1,12 +1,12 @@
-"""Task-center-runner scenario and benchmark harness.
+"""Test runner scenario and benchmark harness.
 
 The generic scenario harness is dataset-agnostic. Mocked-agent scenario tests
-live under ``task_center_runner.tests.mock``. Real-agent tests live under
-``task_center_runner.tests.real_agent``. SWE-EVO Docker-image setup shared by
-both suites lives under ``task_center_runner.environments.sweevo_image``. The
+live under ``test_runner.tests.mock``. Real-agent tests live under
+``test_runner.tests.real_agent``. SWE-EVO Docker-image setup shared by
+both suites lives under ``test_runner.environments.sweevo_image``. The
 full SWE-EVO benchmark lifecycle lives under
-``task_center_runner.benchmarks.sweevo`` and is invoked through
-``python -m task_center_runner.benchmarks.sweevo --instance-id <id>``.
+``test_runner.benchmarks.sweevo`` and is invoked through
+``python -m test_runner.benchmarks.sweevo --instance-id <id>``.
 
 Subpackages:
 
@@ -19,20 +19,20 @@ Subpackages:
 Top-level exports:
 
 - :class:`RunReport` and :func:`run_scenario`
-- :class:`TaskStoreBundle` and :func:`create_per_test_task_center_stores`
+- :class:`TaskStoreBundle` and :func:`create_per_test_task_stores`
 """
 
 from __future__ import annotations
 
-from task_center_runner.core.runner import RunReport, run_scenario
-from task_center_runner.core.stores import (
+from test_runner.core.runner import RunReport, run_scenario
+from test_runner.core.stores import (
     TaskStoreBundle,
-    create_per_test_task_center_stores,
+    create_per_test_task_stores,
 )
 
 __all__ = [
     "RunReport",
     "TaskStoreBundle",
-    "create_per_test_task_center_stores",
+    "create_per_test_task_stores",
     "run_scenario",
 ]

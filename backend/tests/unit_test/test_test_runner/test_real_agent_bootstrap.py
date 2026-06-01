@@ -1,4 +1,4 @@
-from task_center_runner.core import bootstrap
+from test_runner.core import bootstrap
 
 
 def test_real_agent_bootstrap_profile_root_points_to_agent_profiles() -> None:

@@ -6,7 +6,7 @@ import asyncio
 
 import pytest
 
-from task_center_runner.agent.mock.probe_bridge import _CallToolBridge
+from test_runner.agent.mock.probe_bridge import _CallToolBridge
 from tools._framework.core.results import ToolResult
 
 

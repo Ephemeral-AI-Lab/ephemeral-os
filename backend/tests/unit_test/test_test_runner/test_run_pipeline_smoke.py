@@ -1,6 +1,6 @@
-"""Phase 4c+f smoke — exercise ``run_pipeline`` against a fully-stubbed TaskCenter.
+"""Phase 4c+f smoke — exercise ``run_pipeline`` against a fully-stubbed task/request.
 
-The mock-scenario suite under ``task_center_runner/tests/mock/`` is the
+The mock-scenario suite under ``test_runner/tests/mock/`` is the
 canonical end-to-end coverage for the shim → run_pipeline path, but it
 requires PG. This smoke test stubs every dependency so the unit-test gate
 catches contract drift in ``run_pipeline`` itself (e.g. the
@@ -26,10 +26,10 @@ from typing import Any
 
 import pytest
 
-from task_center_runner.audit.events import EventType
-from task_center_runner.core.config import RunConfig
-from task_center_runner.core.lifecycle import NoopLifecycle
-from task_center_runner.core.sandbox import SandboxLease
+from test_runner.audit.events import EventType
+from test_runner.core.config import RunConfig
+from test_runner.core.lifecycle import NoopLifecycle
+from test_runner.core.sandbox import SandboxLease
 
 
 class _StubProvisioner:
@@ -83,7 +83,7 @@ class _StubStores:
 @pytest.fixture
 def stubbed_engine(monkeypatch: pytest.MonkeyPatch) -> None:
     """Patch ``start_request`` + the AuditRecorder to be no-ops."""
-    from task_center_runner.core import engine as engine_module
+    from test_runner.core import engine as engine_module
 
     def _stub_start(**_kwargs: Any) -> _StubHandle:  # noqa: ANN001
         return _StubHandle()
@@ -127,12 +127,12 @@ def stubbed_engine(monkeypatch: pytest.MonkeyPatch) -> None:
     def _stub_create_stores() -> _StubStores:
         return _StubStores()
 
-    monkeypatch.setattr(engine_module, "create_per_test_task_center_stores", _stub_create_stores)
+    monkeypatch.setattr(engine_module, "create_per_test_task_stores", _stub_create_stores)
 
 
 @pytest.mark.asyncio
 async def test_run_pipeline_smoke(stubbed_engine: None, tmp_path: Path) -> None:
-    from task_center_runner.core.engine import run_pipeline
+    from test_runner.core.engine import run_pipeline
 
     provisioner = _StubProvisioner()
     config = RunConfig(
@@ -174,7 +174,7 @@ async def test_run_pipeline_lifecycle_hooks_fire(
     stubbed_engine: None, tmp_path: Path
 ) -> None:
     """before_run / on_event / after_run / on_aborted all dispatch through lifecycle."""
-    from task_center_runner.core.engine import run_pipeline
+    from test_runner.core.engine import run_pipeline
 
     class _RecordingLifecycle(NoopLifecycle):
         def __init__(self) -> None:

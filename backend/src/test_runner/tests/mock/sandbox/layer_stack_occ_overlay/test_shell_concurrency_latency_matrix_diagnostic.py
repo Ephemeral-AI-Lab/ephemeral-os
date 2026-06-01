@@ -70,7 +70,7 @@ async def test_shell_concurrency_latency_matrix(workspace: dict[str, object]) ->
         groups.append(_summarize_group(level, wall_s, results))
 
     payload = {
-        "schema": "task_center_runner.shell_concurrency_latency_matrix.v1",
+        "schema": "test_runner.shell_concurrency_latency_matrix.v1",
         "generated_at": datetime.now(UTC).isoformat(),
         "sandbox_id": sandbox_id,
         "levels": list(_LEVELS),

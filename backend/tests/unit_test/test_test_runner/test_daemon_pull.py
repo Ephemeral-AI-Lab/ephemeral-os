@@ -6,7 +6,7 @@ import asyncio
 
 import pytest
 
-from task_center_runner.audit.daemon_pull import (
+from test_runner.audit.daemon_pull import (
     DaemonAuditPuller,
     PRESSURE_ESCALATION_STREAK,
 )

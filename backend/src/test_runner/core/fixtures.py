@@ -1,4 +1,4 @@
-"""Pytest fixtures for ``task_center_runner`` — canonical location.
+"""Pytest fixtures for ``test_runner`` — canonical location.
 
 Fixtures:
 
@@ -27,9 +27,9 @@ import pytest
 
 from config import get_central_config
 from db.engine import get_engine, initialize_db
-from task_center_runner.core.stores import (
+from test_runner.core.stores import (
     TaskStoreBundle,
-    create_per_test_task_center_stores,
+    create_per_test_task_stores,
 )
 
 
@@ -53,14 +53,14 @@ def db_engine() -> object | None:
 
 @pytest.fixture
 def stores(db_engine: object | None) -> Iterator[TaskStoreBundle]:
-    """Per-test isolated TaskCenter stores.
+    """Per-test isolated task/request stores.
 
     Skipped when no database URL is configured so unit-test collections that
     import this fixture do not fail.
     """
     if db_engine is None:
         pytest.skip("database URL not configured")
-    bundle = create_per_test_task_center_stores()
+    bundle = create_per_test_task_stores()
     try:
         yield bundle
     finally:

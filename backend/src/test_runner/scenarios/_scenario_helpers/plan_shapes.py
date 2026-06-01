@@ -1,7 +1,7 @@
 """Plan-shape factories shared across focused scenarios.
 
 Keep these minimal and orthogonal: each helper returns a plan that exercises
-exactly one task_center configuration. Scenarios compose them per branch in
+exactly one request configuration. Scenarios compose them per branch in
 their `planner_response`.
 """
 

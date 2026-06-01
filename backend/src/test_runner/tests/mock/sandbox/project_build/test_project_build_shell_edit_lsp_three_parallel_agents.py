@@ -9,18 +9,18 @@ from typing import Any
 
 import pytest
 
-from task_center_runner.benchmarks.sweevo.models import SWEEvoInstance
-from task_center_runner.core.runner import RunReport
-from task_center_runner.core.stores import TaskStoreBundle
-from task_center_runner.environments.sweevo_image.fixtures import (
+from test_runner.benchmarks.sweevo.models import SWEEvoInstance
+from test_runner.core.runner import RunReport
+from test_runner.core.stores import TaskStoreBundle
+from test_runner.environments.sweevo_image.fixtures import (
     run_scenario_on_sweevo_image,
 )
-from task_center_runner.scenarios.base import (
+from test_runner.scenarios.base import (
     ScenarioBase,
     ScenarioContext,
     ToolCallSpec,
 )
-from task_center_runner.tests._live_config import (
+from test_runner.tests._live_config import (
     database_configured,
     live_e2e_heavy_enabled,
 )
@@ -34,7 +34,7 @@ _AGENT_TASK_IDS = tuple(f"complex_project_build_shell_edit_lsp_agent_{index}" fo
 
 
 class ComplexProjectBuildShellEditLspThreeParallelAgents(ScenarioBase):
-    """Three dependency-free executor tasks inside one TaskCenter run."""
+    """Three dependency-free executor tasks inside one task/request run."""
 
     name = "sandbox.complex_project_build_shell_edit_lsp_three_parallel_agents"
 
@@ -51,7 +51,7 @@ class ComplexProjectBuildShellEditLspThreeParallelAgents(ScenarioBase):
                 "status": "success",
                 "outcome": (
                     "Three parallel mixed shell-edit + LSP project-build "
-                    "executors completed in one TaskCenter run."
+                    "executors completed in one task/request run."
                 ),
             },
         )
@@ -94,7 +94,7 @@ def _three_agent_plan() -> dict[str, Any]:
         task_id: (
             "Run the smoke mixed shell-edit + LSP project-build "
             "probe under /ephemeral-os as one of three parallel executor "
-            "agents in the same TaskCenter attempt."
+            "agents in the same task/request attempt."
         )
         for task_id in _AGENT_TASK_IDS
     }

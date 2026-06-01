@@ -6,14 +6,14 @@ from pathlib import Path
 
 import pytest
 
-from task_center_runner.benchmarks.sweevo.models import SWEEvoInstance
-from task_center_runner.agent.mock.ephemeral_workspace_probe import O1_DISK_SUMMARY
-from task_center_runner.core.stores import TaskStoreBundle
-from task_center_runner.tests._live_config import (
+from test_runner.benchmarks.sweevo.models import SWEEvoInstance
+from test_runner.agent.mock.ephemeral_workspace_probe import O1_DISK_SUMMARY
+from test_runner.core.stores import TaskStoreBundle
+from test_runner.tests._live_config import (
     database_configured,
     live_e2e_heavy_enabled,
 )
-from task_center_runner.tests.mock.sandbox.ephemeral_workspace._ephemeral_workspace_invariants import (
+from test_runner.tests.mock.sandbox.ephemeral_workspace._ephemeral_workspace_invariants import (
     assert_ephemeral_performance_artifacts,
     assert_no_internal_sandbox_errors,
     assert_warm_tool_budgets,

@@ -15,10 +15,10 @@ from typing import Any
 
 import pytest
 
-from task_center_runner.tests.mock.sandbox.isolated_workspace import (
+from test_runner.tests.mock.sandbox.isolated_workspace import (
     _iws_invariants,
 )
-from task_center_runner.tests.mock.sandbox.isolated_workspace.conftest import (
+from test_runner.tests.mock.sandbox.isolated_workspace.conftest import (
     reference_ci_host,
 )
 

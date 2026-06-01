@@ -12,11 +12,11 @@ from __future__ import annotations
 import pytest
 
 import sandbox.api as sandbox_api
-from task_center_runner.benchmarks.sweevo._snapshot import (
+from test_runner.benchmarks.sweevo._snapshot import (
     SnapshotNotRegisteredError,
     verify_sweevo_snapshot_exists,
 )
-from task_center_runner.benchmarks.sweevo.models import (
+from test_runner.benchmarks.sweevo.models import (
     SWEEvoInstance,
     default_sweevo_snapshot_name,
 )

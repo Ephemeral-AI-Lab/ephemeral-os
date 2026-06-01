@@ -20,17 +20,17 @@ from tools.sandbox.read_file import read_file as read_file_tool
 from tools.sandbox.shell import shell as shell_tool
 from tools.sandbox.write_file import write_file as write_file_tool
 
-from task_center_runner.agent.mock.sandbox_probe import SandboxCheck
-from task_center_runner.audit.events import EventType
-from task_center_runner.scenarios.sandbox.high_concurrency_layerstack_overlay_occ import (
+from test_runner.agent.mock.sandbox_probe import SandboxCheck
+from test_runner.audit.events import EventType
+from test_runner.scenarios.sandbox.high_concurrency_layerstack_overlay_occ import (
     WORKER_COUNT,
 )
 
 
 ROOT = "/testbed/.ephemeralos/sweevo-mock/high_concurrency_layerstack_overlay_occ"
 SUMMARY_PATH = f"{ROOT}/summary.json"
-WORKER_SCHEMA = "task_center_runner.high_concurrency.worker.v1"
-SUMMARY_SCHEMA = "task_center_runner.high_concurrency.v1"
+WORKER_SCHEMA = "test_runner.high_concurrency.worker.v1"
+SUMMARY_SCHEMA = "test_runner.high_concurrency.v1"
 DATA_FILES_PER_WORKER = 1
 CONFLICT_WORKER_COUNT = 4
 READ_FILE_INDEXES = (0, DATA_FILES_PER_WORKER - 1)
@@ -52,7 +52,7 @@ async def run_high_concurrency_seed_probe(
 ) -> str:
     """Seed shared files before the concurrent worker fanout."""
     seed_payload = {
-        "schema": "task_center_runner.high_concurrency.seed.v1",
+        "schema": "test_runner.high_concurrency.seed.v1",
         "worker_count": WORKER_COUNT,
         "data_files_per_worker": DATA_FILES_PER_WORKER,
         "conflict_worker_count": CONFLICT_WORKER_COUNT,

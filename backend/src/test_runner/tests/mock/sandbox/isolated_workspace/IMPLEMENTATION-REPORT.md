@@ -75,20 +75,20 @@ prerequisite (`_LinuxRuntime.mount_overlay` / `configure_dns` async refactor
 
 ```text
 $ .venv/bin/python -m pytest \
-    backend/src/task_center_runner/tests/mock/sandbox/isolated_workspace/pre_flight/ \
+    backend/src/test_runner/tests/mock/sandbox/isolated_workspace/pre_flight/ \
     backend/tests/unit_test/test_sandbox/test_daemon/ \
     backend/tests/unit_test/test_sandbox/test_import_fence.py \
     backend/tests/unit_test/test_audit/ \
-    backend/tests/unit_test/test_task_center/test_audit/
+    backend/tests/unit_test/test_request/test_audit/
 152 passed, 1 warning in 1.22s
 
 $ .venv/bin/python -m pytest \
-    backend/src/task_center_runner/tests/mock/sandbox/isolated_workspace/ --collect-only
+    backend/src/test_runner/tests/mock/sandbox/isolated_workspace/ --collect-only
 94 tests collected
 
 $ .venv/bin/ruff check \
     backend/src/sandbox/isolated_workspace/ \
-    backend/src/task_center_runner/tests/mock/sandbox/isolated_workspace/
+    backend/src/test_runner/tests/mock/sandbox/isolated_workspace/
 All checks passed!
 
 $ .venv/bin/python -m pytest \
@@ -191,20 +191,20 @@ code each tier depends on.
 
 ```text
 $ .venv/bin/python -m pytest \
-    backend/src/task_center_runner/tests/mock/sandbox/isolated_workspace/pre_flight/ \
+    backend/src/test_runner/tests/mock/sandbox/isolated_workspace/pre_flight/ \
     backend/tests/unit_test/test_sandbox/test_daemon/ \
     backend/tests/unit_test/test_sandbox/test_import_fence.py \
     backend/tests/unit_test/test_audit/ \
-    backend/tests/unit_test/test_task_center/test_audit/
+    backend/tests/unit_test/test_request/test_audit/
 152 passed in 1.30s
 
 $ .venv/bin/python -m pytest \
-    backend/src/task_center_runner/tests/mock/sandbox/isolated_workspace/ --collect-only
+    backend/src/test_runner/tests/mock/sandbox/isolated_workspace/ --collect-only
 64 tests collected
 
 $ .venv/bin/ruff check \
     backend/src/sandbox/isolated_workspace/ \
-    backend/src/task_center_runner/tests/mock/sandbox/isolated_workspace/ \
+    backend/src/test_runner/tests/mock/sandbox/isolated_workspace/ \
     backend/src/sandbox/provider/docker/client.py
 All checks passed!
 ```
@@ -295,18 +295,18 @@ steps from `NEXT-AGENT-GUIDE.md`.
 
 ```text
 $ .venv/bin/python -m pytest \
-    backend/src/task_center_runner/tests/mock/sandbox/isolated_workspace/pre_flight/ \
+    backend/src/test_runner/tests/mock/sandbox/isolated_workspace/pre_flight/ \
     backend/tests/unit_test/test_sandbox/test_daemon/ \
     backend/tests/unit_test/test_sandbox/test_import_fence.py \
     backend/tests/unit_test/test_audit/ \
-    backend/tests/unit_test/test_task_center/test_audit/
+    backend/tests/unit_test/test_request/test_audit/
 152 passed in 1.29s
 
 $ .venv/bin/ruff check \
     backend/src/sandbox/isolated_workspace/ \
     backend/src/sandbox/provider/docker/client.py \
-    backend/src/task_center_runner/audit/events.py \
-    backend/src/task_center_runner/tests/mock/sandbox/isolated_workspace/
+    backend/src/test_runner/audit/events.py \
+    backend/src/test_runner/tests/mock/sandbox/isolated_workspace/
 All checks passed!
 ```
 
@@ -331,7 +331,7 @@ bash backend/scripts/preflight_docker_a2_caps.sh
 EOS_SANDBOX_PROVIDER=docker \
 EOS_ISOLATED_WORKSPACE_ENABLED=true \
     .venv/bin/python -m pytest \
-        backend/src/task_center_runner/tests/mock/sandbox/isolated_workspace/happy_path/ -v
+        backend/src/test_runner/tests/mock/sandbox/isolated_workspace/happy_path/ -v
 ```
 
 Tier 1 expectations: 5 tests pass (4 lifecycle + 1 mount_overlay backstop).
@@ -354,7 +354,7 @@ Each lifecycle test asserts both the RPC response AND the expected
 **Verification gate (macOS, single session):**
 - `pytest .../isolated_workspace/`: **17 passed, 4 skipped, 0 failed** (0.16 s)
 - `pytest .../test_sandbox/test_daemon/` (broader daemon suite): **106 passed**
-- `pytest .../test_audit/`, `.../test_task_center_runner/test_audit_recorder_*`, `.../test_benchmarks/test_sweevo_audit_recorder`: **29 passed**
+- `pytest .../test_audit/`, `.../test_test_runner/test_audit_recorder_*`, `.../test_benchmarks/test_sweevo_audit_recorder`: **29 passed**
 - `ruff check` on touched files: **All checks passed**
 
 The four Tier 1 tests are written to run end-to-end against the sweevo Docker
@@ -402,7 +402,7 @@ tools now flow through ``api.v1.<verb>`` and daemon pipeline resolution.
 ## 3. Files added (new this session)
 
 ```
-backend/src/task_center_runner/tests/mock/sandbox/isolated_workspace/
+backend/src/test_runner/tests/mock/sandbox/isolated_workspace/
 ├── IMPLEMENTATION-REPORT.md            (this file)
 ├── __init__.py
 ├── conftest.py
@@ -433,7 +433,7 @@ backend/src/sandbox/isolated_workspace/scripts/
 | File | Change |
 |---|---|
 | ``backend/src/sandbox/isolated_workspace/pipeline.py + extracted modules`` | PR 1: ``_PhaseTimer`` class + ``_PHASE_TIMER_OVERHEAD_BUDGET_MS``. Instrumented ``enter``, ``_wire_handle``, ``exit``, ``_teardown``, ``run_in_handle``, ``_reap_orphans``, ``ttl_sweep``. Enriched 5 emit sites with ``total_ms`` + ``phases_ms`` (conditional-key per P5) + ``lowerdir_layer_count`` + ``shared_layer_snapshot=True`` on enter. PR 0: live ``mount_overlay`` + ``configure_dns`` + new ``signal_net_ready`` Protocol method. Bug fixes: ``IsolatedWorkspaceHandle.readiness_fd`` + ``control_fd`` fields; ``open_ns_fds`` now merges via ``update`` instead of replacing; ``r_parent`` no longer closed eagerly. |
-| ``backend/src/task_center_runner/audit/events.py`` | Module docstring documenting the SUBSET-COVER invariant + conditional-key emission rule (PLAN §21 Follow-up #6). No ``EventType`` enum changes. |
+| ``backend/src/test_runner/audit/events.py`` | Module docstring documenting the SUBSET-COVER invariant + conditional-key emission rule (PLAN §21 Follow-up #6). No ``EventType`` enum changes. |
 | ``backend/src/sandbox/daemon/rpc/dispatcher.py`` | Lifecycle routes are inline ``_iws_*`` handlers; foreground tool routes use ``sandbox.daemon.workspace_tool_dispatch`` and the unified ``api.v1.<verb>`` handlers. |
 | ``backend/src/sandbox/host/runtime_bundle.py`` | Added ``sandbox/isolated_workspace/`` to the daemon runtime bundle so the in-sandbox daemon can import the package on startup. |
 | ``backend/tests/unit_test/test_sandbox/test_daemon/test_routing_invariants.py`` | Updated imports + OP_TABLE references to the new module paths. |
@@ -512,7 +512,7 @@ Bug-fix delta on `IsolatedWorkspaceHandle`:
 ## 6. Test inventory (this session)
 
 ```
-$ pytest backend/src/task_center_runner/tests/mock/sandbox/isolated_workspace/ -v
+$ pytest backend/src/test_runner/tests/mock/sandbox/isolated_workspace/ -v
 collected 21 items
 
 happy_path/test_enter_then_shell_then_exit.py     SKIPPED
@@ -647,7 +647,7 @@ cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS
 
 # Tier 0 + scaffolding (runs in <1 s on macOS)
 .venv/bin/python -m pytest \
-    backend/src/task_center_runner/tests/mock/sandbox/isolated_workspace/ -v
+    backend/src/test_runner/tests/mock/sandbox/isolated_workspace/ -v
 
 # Broader sandbox unit tests (filters pre-existing failures unrelated to this PR)
 .venv/bin/python -m pytest \
@@ -660,8 +660,8 @@ cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS
     backend/src/sandbox/daemon/service/isolated_workspace.py \
     backend/src/sandbox/daemon/scripts/setns_overlay_mount.py \
     backend/src/sandbox/daemon/scripts/configure_dns_in_ns.py \
-    backend/src/task_center_runner/audit/events.py \
-    backend/src/task_center_runner/tests/mock/sandbox/isolated_workspace/
+    backend/src/test_runner/audit/events.py \
+    backend/src/test_runner/tests/mock/sandbox/isolated_workspace/
 ```
 
 On Linux CI with the sweevo Docker image up:
@@ -670,7 +670,7 @@ On Linux CI with the sweevo Docker image up:
 EOS_SANDBOX_PROVIDER=docker \
 EOS_ISOLATED_WORKSPACE_ENABLED=true \
     .venv/bin/python -m pytest \
-        backend/src/task_center_runner/tests/mock/sandbox/isolated_workspace/happy_path/ -v
+        backend/src/test_runner/tests/mock/sandbox/isolated_workspace/happy_path/ -v
 ```
 
 ---
@@ -700,8 +700,8 @@ The 29 audit-related unit tests pass without modification:
 
 ```bash
 $ pytest backend/tests/unit_test/test_audit/ \
-         backend/tests/unit_test/test_task_center/test_audit/ \
-         backend/tests/unit_test/test_task_center_runner/test_audit_recorder_*.py \
+         backend/tests/unit_test/test_request/test_audit/ \
+         backend/tests/unit_test/test_test_runner/test_audit_recorder_*.py \
          backend/tests/unit_test/test_benchmarks/test_sweevo_audit_recorder.py
 29 passed in 0.28s
 ```

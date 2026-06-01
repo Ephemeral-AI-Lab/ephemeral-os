@@ -13,7 +13,7 @@ invocation-keyed daemon in-flight TTL tests):
 - ``sandbox.background_shell_late_cancel_race`` (T8)
 
 Each scenario uses a single executor action that drives the matching
-probe in :mod:`task_center_runner.agent.mock.background_shell_probe`.
+probe in :mod:`test_runner.agent.mock.background_shell_probe`.
 The probes call the shell tool with ``background_task_id`` set so the
 tool framework keeps the request correlated with the engine background task;
 the harness records full ``sandbox_events.jsonl`` plus
@@ -28,7 +28,7 @@ from typing import Any
 from tools.submission.planner import submit_planner_outcome
 from tools.submission.reducer import submit_reducer_outcome
 
-from task_center_runner.scenarios.base import (
+from test_runner.scenarios.base import (
     ScenarioBase,
     ScenarioContext,
     ToolCallSpec,

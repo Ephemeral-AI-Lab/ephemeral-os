@@ -23,7 +23,7 @@ from sandbox.occ.service import AUTO_SQUASH_MAX_DEPTH
 from tools.submission.planner import submit_planner_outcome
 from tools.submission.reducer import submit_reducer_outcome
 
-from task_center_runner.scenarios.base import ScenarioBase, ScenarioContext, ToolCallSpec
+from test_runner.scenarios.base import ScenarioBase, ScenarioContext, ToolCallSpec
 
 
 _AUTO_SQUASH_WRITE_COUNT = AUTO_SQUASH_MAX_DEPTH + 4

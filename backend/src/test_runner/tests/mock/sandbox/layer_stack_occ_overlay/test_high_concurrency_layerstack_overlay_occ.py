@@ -12,30 +12,30 @@ from typing import Any
 import pytest
 
 import sandbox.api as sandbox_api
-from task_center_runner.benchmarks.sweevo.models import SWEEvoInstance
+from test_runner.benchmarks.sweevo.models import SWEEvoInstance
 from sandbox.api import ReadFileRequest, SandboxCaller
-from task_center_runner.agent.mock.high_concurrency_probe import (
+from test_runner.agent.mock.high_concurrency_probe import (
     CONFLICT_WORKER_COUNT,
     DATA_FILES_PER_WORKER,
     READS_PER_WORKER,
     SUMMARY_PATH,
     SUMMARY_SCHEMA,
 )
-from task_center_runner.environments.sweevo_image.fixtures import run_scenario_on_sweevo_image
-from task_center_runner.core.runner import RunReport
-from task_center_runner.core.stores import TaskStoreBundle
-from task_center_runner.audit.events import EventType
-from task_center_runner.scenarios import SCENARIO_REGISTRY
-from task_center_runner.scenarios.sandbox.high_concurrency_layerstack_overlay_occ import (
+from test_runner.environments.sweevo_image.fixtures import run_scenario_on_sweevo_image
+from test_runner.core.runner import RunReport
+from test_runner.core.stores import TaskStoreBundle
+from test_runner.audit.events import EventType
+from test_runner.scenarios import SCENARIO_REGISTRY
+from test_runner.scenarios.sandbox.high_concurrency_layerstack_overlay_occ import (
     MAX_CONCURRENT_WORKERS,
     WORKER_COUNT,
 )
-from task_center_runner.tests._live_config import (
+from test_runner.tests._live_config import (
     database_configured,
     live_e2e_heavy_enabled,
 )
-from task_center_runner.tests.mock._focused_scenario_contracts import count_role_tasks
-from task_center_runner.tests.mock._layer_stack_occ_overlay_assertions import (
+from test_runner.tests.mock._focused_scenario_contracts import count_role_tasks
+from test_runner.tests.mock._layer_stack_occ_overlay_assertions import (
     assert_o1_workspace_resource_snapshots,
     assert_resource_key_max,
     assert_timing_keys_present,

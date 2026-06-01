@@ -1,4 +1,4 @@
-"""pytest conftest for mocked-agent task-center-runner tests."""
+"""pytest conftest for mocked-agent test-runner tests."""
 
 from __future__ import annotations
 
@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from task_center_runner.environments.sweevo_image.fixtures import (  # noqa: F401
+from test_runner.environments.sweevo_image.fixtures import (  # noqa: F401
     sweevo_image_instance,
     sweevo_image_sandbox,
     workspace,
@@ -15,7 +15,7 @@ from task_center_runner.environments.sweevo_image.fixtures import (  # noqa: F40
 _THIS_SUITE = Path(__file__).resolve().parent
 _CATEGORY_MARKER_BY_DIR = {
     _THIS_SUITE / "sandbox": pytest.mark.sandbox_integration,
-    _THIS_SUITE / "task_center": pytest.mark.task_center_integration,
+    _THIS_SUITE / "request": pytest.mark.request_integration,
 }
 
 

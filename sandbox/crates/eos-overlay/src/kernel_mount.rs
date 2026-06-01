@@ -151,7 +151,7 @@ pub fn unmount_overlay(workspace_root: &Path, lazy: bool) -> Result<()> {
     unmount(workspace_root, flags).map_io()
 }
 
-/// Non-Linux stub: overlayfs unmount syscalls do not exist off Linux.
+/// Non-Linux unsupported path: overlayfs unmount syscalls do not exist off Linux.
 ///
 /// # Errors
 ///
@@ -161,7 +161,7 @@ pub const fn unmount_overlay(_workspace_root: &Path, _lazy: bool) -> Result<()> 
     Err(OverlayError::Unsupported)
 }
 
-/// Non-Linux stub: overlayfs mount syscalls do not exist off Linux.
+/// Non-Linux unsupported path: overlayfs mount syscalls do not exist off Linux.
 ///
 /// # Errors
 ///

@@ -11,25 +11,25 @@ from typing import Any
 
 import pytest
 
-from task_center_runner.benchmarks.sweevo.setup import select_sweevo_instance
-from task_center_runner.benchmarks.sweevo.setup import build_sweevo_user_prompt
-from task_center_runner.audit.events import Event, EventType
-from task_center_runner.scenarios.full_stack_adversarial import (
+from test_runner.benchmarks.sweevo.setup import select_sweevo_instance
+from test_runner.benchmarks.sweevo.setup import build_sweevo_user_prompt
+from test_runner.audit.events import Event, EventType
+from test_runner.scenarios.full_stack_adversarial import (
     FullStackAdversarial,
 )
-from task_center_runner.core.stores import TaskStoreBundle
-from task_center_runner.environments.sweevo_image.fixtures import run_scenario_on_sweevo_image
-from task_center_runner.environments.sweevo_image.health import (
+from test_runner.core.stores import TaskStoreBundle
+from test_runner.environments.sweevo_image.fixtures import run_scenario_on_sweevo_image
+from test_runner.environments.sweevo_image.health import (
     require_sweevo_image_provider_healthy,
 )
-from task_center_runner.tests.mock._layer_stack_occ_overlay_assertions import (
+from test_runner.tests.mock._layer_stack_occ_overlay_assertions import (
     assert_o1_workspace_resource_snapshots,
     assert_resource_key_max,
     assert_timing_keys_present,
     load_performance_report,
     mapping,
 )
-from task_center_runner.benchmarks.sweevo.models import SWEEvoInstance
+from test_runner.benchmarks.sweevo.models import SWEEvoInstance
 
 
 _DEFAULT_INSTANCE_ID = "dask__dask_2023.3.2_2023.4.0"
@@ -135,7 +135,7 @@ async def test_full_stack_adversarial_runs_agent_tool_script_matrix(
     assert len(report.package_plan) >= 4
     assert len(report.matrix_plan) >= 32
 
-    _assert_task_center_shape(report.graph_summary)
+    _assert_request_shape(report.graph_summary)
     _assert_message_logs(report.run_dir)
     _assert_sandbox_monitor_events(report.events, report.run_dir)
     _assert_full_stack_performance_report_complete(report.run_dir)
@@ -145,7 +145,7 @@ async def test_full_stack_adversarial_runs_agent_tool_script_matrix(
     )
 
 
-def _assert_task_center_shape(graph_summary: dict[str, Any]) -> None:
+def _assert_request_shape(graph_summary: dict[str, Any]) -> None:
     assert _has_deferred_attempt(graph_summary)
     assert _has_closing_passed_attempt(graph_summary)
     assert _count_failed_reducer_tasks(graph_summary) >= 1

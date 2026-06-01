@@ -6,8 +6,8 @@ from typing import Any
 
 import pytest
 
-from task_center_runner.benchmarks.sweevo.models import SWEEvoInstance
-from task_center_runner.benchmarks.sweevo.setup import build_sweevo_user_prompt
+from test_runner.benchmarks.sweevo.models import SWEEvoInstance
+from test_runner.benchmarks.sweevo.setup import build_sweevo_user_prompt
 import sandbox.api as sandbox_api
 from sandbox.api import (
     ConflictInfo,
@@ -20,16 +20,16 @@ from sandbox.api import (
     WriteFileRequest,
     WriteFileResult,
 )
-from task_center_runner.core.stores import create_per_test_task_center_stores
-from task_center_runner.environments.sweevo_image.fixtures import (
+from test_runner.core.stores import create_per_test_task_stores
+from test_runner.environments.sweevo_image.fixtures import (
     run_scenario_on_sweevo_image,
 )
-from task_center_runner.scenarios.correctness_testing import CorrectnessTesting
+from test_runner.scenarios.correctness_testing import CorrectnessTesting
 
 pytestmark = pytest.mark.skipif(
     not os.environ.get("EPHEMERALOS_DATABASE_URL"),
     reason=(
-        "EPHEMERALOS_DATABASE_URL not configured — create_per_test_task_center_stores "
+        "EPHEMERALOS_DATABASE_URL not configured — create_per_test_task_stores "
         "requires PostgreSQL"
     ),
 )
@@ -199,7 +199,7 @@ async def test_run_scenario_correctness_testing_with_fake_sandbox(
     instance = _instance()
     user_prompt = build_sweevo_user_prompt(instance, _REPO_DIR)
 
-    bundle = create_per_test_task_center_stores()
+    bundle = create_per_test_task_stores()
     try:
         report = await run_scenario_on_sweevo_image(
             CorrectnessTesting(),
@@ -214,7 +214,7 @@ async def test_run_scenario_correctness_testing_with_fake_sandbox(
         bundle.close()
 
     # --- Existing parity assertions -----------------------------------
-    assert report.task_center_status == "done"
+    assert report.request_status == "done"
     assert report.passed_prompt_inspections
     assert report.passed_sandbox_checks
 

@@ -8,7 +8,7 @@ from typing import Any
 from tools.submission.planner import submit_planner_outcome
 from tools.submission.reducer import submit_reducer_outcome
 
-from task_center_runner.scenarios.base import (
+from test_runner.scenarios.base import (
     ScenarioBase,
     ScenarioContext,
     ToolCallSpec,
@@ -89,7 +89,7 @@ def _same_path_conflict_plan() -> dict[str, Any]:
                     "the four writers produced at least one success plus at "
                     "least one typed conflict or rejected write, the reconcile "
                     "retried failed writers after fresh reads, and the final "
-                    "summary uses task_center_runner.ephemeral_workspace.v1."
+                    "summary uses test_runner.ephemeral_workspace.v1."
                 ),
             }
         ],

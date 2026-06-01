@@ -133,6 +133,6 @@ If/when this lands upstream:
 2. Re-add `--mount-proc` to the unshare invocation in
    `sandbox/isolated_workspace/scripts/ns_holder.py`.
 3. Run the full iws live e2e suite to confirm no regression
-   (`backend/src/task_center_runner/tests/mock/sandbox/isolated_workspace/`).
+   (`backend/src/test_runner/tests/mock/sandbox/isolated_workspace/`).
 4. Update `RUNNING-LIVE-TESTS.md` to note the leaked-pid-visibility caveat
    is gone.

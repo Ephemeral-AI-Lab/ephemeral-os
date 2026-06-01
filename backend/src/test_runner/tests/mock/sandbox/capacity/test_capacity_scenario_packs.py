@@ -6,9 +6,9 @@ from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
 
-from task_center_runner.scenarios import SCENARIO_REGISTRY
-from task_center_runner.scenarios.base import ScenarioContext
-from task_center_runner.scenarios.capacity.pack_catalog import CAPACITY_PACK_SPECS, names
+from test_runner.scenarios import SCENARIO_REGISTRY
+from test_runner.scenarios.base import ScenarioContext
+from test_runner.scenarios.capacity.pack_catalog import CAPACITY_PACK_SPECS, names
 
 
 def _repo_root() -> Path:

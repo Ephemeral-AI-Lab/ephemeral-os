@@ -59,7 +59,7 @@
   <div>Schema</div><div>Every page separates durable invariants, current workflow, ownership boundary, code evidence, refresh triggers, and related pages. Search index entries should be updated when a new section becomes a useful query target.</div>
   <div>Maintenance loop</div><div>When code changes, update the smallest affected node, then update nearby backlinks and the search catalog. Do not bury contradictions: link the newer evidence and explain the mismatch.</div>
 </div>
-<section id="source-graph" data-last-reviewed-commit="2a3e6cc7c" data-evidence-paths="backend/src/sandbox/api/tool/_daemon_request_payloads.py backend/src/sandbox/api/tool/_daemon_response_parsing.py backend/src/sandbox/daemon/rpc/dispatcher.py backend/src/sandbox/daemon/workspace_tool_dispatch.py backend/src/sandbox/layer_stack/stack.py backend/src/sandbox/isolated_workspace/pipeline.py backend/tests/live_e2e_test/sandbox backend/src/task_center_runner/tests/mock/sandbox">
+<section id="source-graph" data-last-reviewed-commit="2a3e6cc7c" data-evidence-paths="backend/src/sandbox/api/tool/_daemon_request_payloads.py backend/src/sandbox/api/tool/_daemon_response_parsing.py backend/src/sandbox/daemon/rpc/dispatcher.py backend/src/sandbox/daemon/workspace_tool_dispatch.py backend/src/sandbox/layer_stack/stack.py backend/src/sandbox/isolated_workspace/pipeline.py backend/tests/live_e2e_test/sandbox backend/src/test_runner/tests/mock/sandbox">
 <h2>Source Graph <a class="anchor" href="#source-graph">§</a></h2>
 <p>The current sandbox workspace runtime is best read as a graph of ownership boundaries rather than a stack of folders. The daemon receives tool/API envelopes, routes work into direct LayerStack/OCC paths, per-operation overlay paths, or isolated private scratch, and every durable mutation converges on OCC before LayerStack publishes a new manifest.</p>
 <div class="edge-list">
@@ -68,7 +68,7 @@
   <div><b>calls</b><span><code>dispatch_workspace_tool_call()</code> chooses isolated pipeline first, then direct file fast paths, then the ephemeral overlay pipeline <span class="file-ref">backend/src/sandbox/daemon/workspace_tool_dispatch.py:53-75</span>.</span></div>
   <div><b>owns-state</b><span><code>LayerStack</code> owns active manifests, immutable layer directories, leases, merged reads, publish transactions, squash, and flush <span class="file-ref">backend/src/sandbox/layer_stack/stack.py:69-343</span>.</span></div>
   <div><b>owns-state</b><span><code>IsolatedPipeline</code> owns per-agent private handle maps, namespace holders, veth resources, TTL, persisted handle state, and JSONL audit events <span class="file-ref">backend/src/sandbox/isolated_workspace/pipeline.py:44-188</span>.</span></div>
-  <div><b>tested-by</b><span>Live and mock suites cover workspace base, LayerStack/OCC/overlay, background tools, plugins, and isolated workspace behavior under <span class="file-ref">backend/tests/live_e2e_test/sandbox</span> and <span class="file-ref">backend/src/task_center_runner/tests/mock/sandbox</span>.</span></div>
+  <div><b>tested-by</b><span>Live and mock suites cover workspace base, LayerStack/OCC/overlay, background tools, plugins, and isolated workspace behavior under <span class="file-ref">backend/tests/live_e2e_test/sandbox</span> and <span class="file-ref">backend/src/test_runner/tests/mock/sandbox</span>.</span></div>
 </div>
 </section>
 

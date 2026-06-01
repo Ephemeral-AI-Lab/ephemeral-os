@@ -6,14 +6,14 @@ from pathlib import Path
 
 import pytest
 
-from task_center_runner.benchmarks.sweevo.models import SWEEvoInstance
-from task_center_runner.agent.mock.plugin_workspace_probe import SERVICE_EVICT_SUMMARY
-from task_center_runner.core.stores import TaskStoreBundle
-from task_center_runner.tests._live_config import (
+from test_runner.benchmarks.sweevo.models import SWEEvoInstance
+from test_runner.agent.mock.plugin_workspace_probe import SERVICE_EVICT_SUMMARY
+from test_runner.core.stores import TaskStoreBundle
+from test_runner.tests._live_config import (
     database_configured,
     live_e2e_heavy_enabled,
 )
-from task_center_runner.tests.mock.sandbox.plugin._plugin_invariants import (
+from test_runner.tests.mock.sandbox.plugin._plugin_invariants import (
     assert_no_internal_sandbox_errors,
     assert_plugin_o1_artifacts,
     run_plugin_scenario,
@@ -45,7 +45,7 @@ async def test_plugin_service_survives_peer_publish_and_evict(
         stores=stores,
     )
 
-    assert summary["schema"] == "task_center_runner.plugin_workspace.v1"
+    assert summary["schema"] == "test_runner.plugin_workspace.v1"
     assert summary["mode"] == "service_evict"
     assert summary["peer_publish_count"] == 5
     assert summary["refresh_start_delta"] == 0.0

@@ -1,6 +1,6 @@
 """Real-agent SWE-EVO runner — thin shim around :func:`run_pipeline`.
 
-Delegates orchestration to ``task_center_runner.core.engine.run_pipeline``
+Delegates orchestration to ``test_runner.core.engine.run_pipeline``
 with a :class:`SweevoLifecycle` that runs F2P/P2P evaluation in
 ``after_run`` and a :class:`SweevoProvisioner` that runs
 ``setup_sweevo_sandbox`` against the externally-created Daytona sandbox.
@@ -13,20 +13,20 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from runtime.app_factory import RuntimeConfig
-from task_center_runner.benchmarks.sweevo.eval import SweevoLifecycle
-from task_center_runner.benchmarks.sweevo.models import (
+from test_runner.benchmarks.sweevo.eval import SweevoLifecycle
+from test_runner.benchmarks.sweevo.models import (
     SWEEvoInstance,
     SWEEvoResult,
     _REPO_DIR,
 )
-from task_center_runner.benchmarks.sweevo.run import SweevoProvisioner
-from task_center_runner.benchmarks.sweevo.setup import build_sweevo_user_prompt
-from task_center_runner.core.config import RunConfig
-from task_center_runner.core.engine import run_pipeline
-from task_center_runner.core.bootstrap import bootstrap_real_agent_runtime
-from task_center_runner.core.stores import (
+from test_runner.benchmarks.sweevo.run import SweevoProvisioner
+from test_runner.benchmarks.sweevo.setup import build_sweevo_user_prompt
+from test_runner.core.config import RunConfig
+from test_runner.core.engine import run_pipeline
+from test_runner.core.bootstrap import bootstrap_real_agent_runtime
+from test_runner.core.stores import (
     TaskStoreBundle,
-    create_per_test_task_center_stores,
+    create_per_test_task_stores,
 )
 
 
@@ -62,14 +62,14 @@ async def run_sweevo_real_agent(
     stores: TaskStoreBundle | None = None,
     max_duration_s: float = 1800.0,
 ) -> RealAgentRunReport:
-    """Drive one SWE-EVO instance through the real-LLM task-center pipeline.
+    """Drive one SWE-EVO instance through the real-LLM test-runner pipeline.
 
     Thin shim over :func:`run_pipeline`. The :class:`SweevoLifecycle` handles
     F2P/P2P scoring in ``after_run`` and writes ``sweevo_result.json``; the
     shim reads the stashed result back out of ``PipelineReport.lifecycle_extras``.
     """
     owns_stores = stores is None
-    bundle = stores or create_per_test_task_center_stores()
+    bundle = stores or create_per_test_task_stores()
 
     runtime_cfg = RuntimeConfig(cwd=str(Path.cwd()), external_api_client=None)
     config = RunConfig(

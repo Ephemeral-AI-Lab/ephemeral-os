@@ -9,7 +9,7 @@ implementations diverge on the state key and vocabulary:
 | Docker  | `status` | `created` / `running` / `paused` / `restarting` / `removing` / `exited` / `dead` |
 
 The sweevo benchmark used to patch around this locally. After the
-`task_center_runner.benchmarks.sweevo` refactor (see
+`test_runner.benchmarks.sweevo` refactor (see
 `docs/plans/sweevo_layerstack_migration_PLAN.md`), the benchmark is docker-only
 and reads `status` directly with docker vocabulary. Daytona-shaped responses
 are no longer handled here.

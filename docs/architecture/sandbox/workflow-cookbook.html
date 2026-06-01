@@ -296,17 +296,17 @@
 
 <p>Relevant code: session reconciliation <span class="file-ref">backend/src/plugins/catalog/lsp/runtime/session_manager.py:34-98</span>, overlay acquisition <span class="file-ref">backend/src/plugins/catalog/lsp/runtime/session_manager.py:176-221</span>, event pump <span class="file-ref">backend/src/plugins/catalog/lsp/runtime/session_manager.py:294-360</span>, Pyright remount/notification <span class="file-ref">backend/src/plugins/catalog/lsp/runtime/pyright_session.py:374-415</span>, <span class="file-ref">backend/src/plugins/catalog/lsp/runtime/pyright_session.py:583-650</span>, and LSP apply path <span class="file-ref">backend/src/plugins/catalog/lsp/runtime/apply.py:21-148</span>.</p>
 </section>
-<section id="cookbook-evidence-refresh" data-last-reviewed-commit="2a3e6cc7c" data-evidence-paths="backend/tests/live_e2e_test/sandbox/layer_stack_overlay_occ backend/src/task_center_runner/tests/mock/sandbox/ephemeral_workspace backend/src/task_center_runner/tests/mock/sandbox/background_tool backend/src/task_center_runner/tests/mock/sandbox/isolated_workspace backend/src/task_center_runner/tests/mock/sandbox/plugin backend/src/sandbox/isolated_workspace/_control_plane/pipeline_registry.py backend/src/task_center_runner/tests/mock/sandbox/isolated_workspace/conftest.py">
+<section id="cookbook-evidence-refresh" data-last-reviewed-commit="2a3e6cc7c" data-evidence-paths="backend/tests/live_e2e_test/sandbox/layer_stack_overlay_occ backend/src/test_runner/tests/mock/sandbox/ephemeral_workspace backend/src/test_runner/tests/mock/sandbox/background_tool backend/src/test_runner/tests/mock/sandbox/isolated_workspace backend/src/test_runner/tests/mock/sandbox/plugin backend/src/sandbox/isolated_workspace/_control_plane/pipeline_registry.py backend/src/test_runner/tests/mock/sandbox/isolated_workspace/conftest.py">
 <h3>10.7 Cross-workflow Evidence and Refresh <a class="anchor" href="#cookbook-evidence-refresh">§</a></h3>
 <div class="evidence-grid">
   <div class="evidence-card">
     <h4>Behavior suites</h4>
     <ul>
       <li><span class="file-ref">backend/tests/live_e2e_test/sandbox/layer_stack_overlay_occ</span> integrated public file, shell, OCC, and overlay workflows.</li>
-      <li><span class="file-ref">backend/src/task_center_runner/tests/mock/sandbox/ephemeral_workspace</span> ephemeral-mode cleanup and conflict workflows.</li>
-      <li><span class="file-ref">backend/src/task_center_runner/tests/mock/sandbox/background_tool</span> background shell heartbeat/cancel/isolated-gate workflows.</li>
-      <li><span class="file-ref">backend/src/task_center_runner/tests/mock/sandbox/isolated_workspace</span> direct daemon RPC lifecycle, isolation, GC, networking, stress, and performance workflows.</li>
-      <li><span class="file-ref">backend/src/task_center_runner/tests/mock/sandbox/plugin</span> plugin/LSP runtime workflows.</li>
+      <li><span class="file-ref">backend/src/test_runner/tests/mock/sandbox/ephemeral_workspace</span> ephemeral-mode cleanup and conflict workflows.</li>
+      <li><span class="file-ref">backend/src/test_runner/tests/mock/sandbox/background_tool</span> background shell heartbeat/cancel/isolated-gate workflows.</li>
+      <li><span class="file-ref">backend/src/test_runner/tests/mock/sandbox/isolated_workspace</span> direct daemon RPC lifecycle, isolation, GC, networking, stress, and performance workflows.</li>
+      <li><span class="file-ref">backend/src/test_runner/tests/mock/sandbox/plugin</span> plugin/LSP runtime workflows.</li>
     </ul>
   </div>
   <div class="evidence-card">
@@ -316,7 +316,7 @@
   <div class="evidence-card">
     <h4>Isolated audit sequence</h4>
     <p>The daemon audit sink appends <code>sandbox_isolated_workspace_enter</code>, <code>sandbox_isolated_workspace_tool_call</code>, <code>sandbox_isolated_workspace_exit</code>, and GC/eviction events. Test fixtures truncate and snapshot the in-container JSONL via <code>raw_exec</code>, then derive phase/latency assertions from the copied file.</p>
-    <p>Evidence anchors: <span class="file-ref">backend/src/sandbox/isolated_workspace/_control_plane/pipeline_registry.py:55-70</span>, <span class="file-ref">backend/src/sandbox/isolated_workspace/_control_plane/pipeline_registry.py:103-113</span>, <span class="file-ref">backend/src/task_center_runner/tests/mock/sandbox/isolated_workspace/conftest.py:440-465</span>, and <span class="file-ref">backend/src/task_center_runner/tests/mock/sandbox/isolated_workspace/conftest.py:596-610</span>.</p>
+    <p>Evidence anchors: <span class="file-ref">backend/src/sandbox/isolated_workspace/_control_plane/pipeline_registry.py:55-70</span>, <span class="file-ref">backend/src/sandbox/isolated_workspace/_control_plane/pipeline_registry.py:103-113</span>, <span class="file-ref">backend/src/test_runner/tests/mock/sandbox/isolated_workspace/conftest.py:440-465</span>, and <span class="file-ref">backend/src/test_runner/tests/mock/sandbox/isolated_workspace/conftest.py:596-610</span>.</p>
   </div>
   <div class="evidence-card">
     <h4>Refresh triggers</h4>

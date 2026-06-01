@@ -1,7 +1,7 @@
 # Test Plan — `isolated_workspace` mock-sandbox tier
 
 **Date:** 2026-05-23
-**Target dir:** `backend/src/task_center_runner/tests/mock/sandbox/isolated_workspace/`
+**Target dir:** `backend/src/test_runner/tests/mock/sandbox/isolated_workspace/`
 **Tier:** Mock sandbox (real Docker Linux daemon via `sweevo_image_sandbox`)
 **Source plan:** `.omc/plans/enter-workspace-with-isolated-network-20260522.md`
 **Implementation report:** `.omc/plans/enter-isolated-workspace-impl-report-20260523.md`
@@ -512,9 +512,9 @@ appear in `phases_ms` only if the codepath ran. Emitting a key with value
 `0.0` for an unrun branch is **FORBIDDEN**: absence and zero have distinct
 semantics. Existing audit-payload consumers:
 
-- `task_center_runner/audit/recorder.py:400-412` — passes payload opaquely
+- `test_runner/audit/recorder.py:400-412` — passes payload opaquely
   (no schema validation).
-- `task_center_runner/audit/performance_report.py:289-295` — reads
+- `test_runner/audit/performance_report.py:289-295` — reads
   `total_ms` as top-level numeric.
 
 Future consumers must inherit: `total_ms` top-level guaranteed across all

@@ -13,7 +13,7 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Protocol
 
 if TYPE_CHECKING:
-    from task_center_runner.core.config import RunContext
+    from test_runner.core.config import RunContext
 
 
 @dataclass(frozen=True, slots=True)

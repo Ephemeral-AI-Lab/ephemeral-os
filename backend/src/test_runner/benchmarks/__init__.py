@@ -1,1 +1,1 @@
-"""``task_center_runner.benchmarks`` — benchmark adapters package."""
+"""``test_runner.benchmarks`` — benchmark adapters package."""

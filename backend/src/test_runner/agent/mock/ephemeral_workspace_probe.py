@@ -35,7 +35,7 @@ from tools.sandbox.write_file import write_file as write_file_tool
 WORKSPACE_ROOT = "/testbed"
 CASE_ROOT = f"{WORKSPACE_ROOT}/eph_case"
 ROOT = f"{WORKSPACE_ROOT}/.ephemeralos/sweevo-mock/ephemeral_workspace"
-SUMMARY_SCHEMA = "task_center_runner.ephemeral_workspace.v1"
+SUMMARY_SCHEMA = "test_runner.ephemeral_workspace.v1"
 
 ALL_VERBS_SUMMARY = f"{ROOT}/all_verbs/summary.json"
 CONCURRENT_WRITES_SUMMARY = f"{ROOT}/concurrent_writes/summary.json"
@@ -810,7 +810,7 @@ async def run_ephemeral_same_path_conflict_seed_probe(
     call_tool: CallTool,
     record_tool_check: RecordToolCheck,
 ) -> str:
-    """Seed the shared target before TaskCenter fans out writer generators."""
+    """Seed the shared target before task/request fans out writer generators."""
     metadata.repo_root = WORKSPACE_ROOT
     mkdir = await _call_tool(
         label="same_path_fanout_seed_dirs",
@@ -898,7 +898,7 @@ async def run_ephemeral_same_path_conflict_reconcile_probe(
     record_tool_check: RecordToolCheck,
 ) -> str:
     """Retry failed first-wave writers and write the scenario summary contract."""
-    from task_center_runner.scenarios.sandbox.ephemeral_workspace import (
+    from test_runner.scenarios.sandbox.ephemeral_workspace import (
         SAME_PATH_CONFLICT_WRITER_COUNT,
     )
 

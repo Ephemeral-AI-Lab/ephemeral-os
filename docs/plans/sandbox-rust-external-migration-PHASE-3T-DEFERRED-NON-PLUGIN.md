@@ -549,5 +549,6 @@ Minimum evidence:
 
 ## Suggested Order
 
-All non-plugin sidecar items are closed. Resume plugin PPC execution/AV-10 from
-the main Phase 3T plan when that scope is no longer skipped.
+All non-plugin sidecar items are closed. Plugin PPC execution/AV-10 remains
+outside this document and should stay skipped until that scope is explicitly
+reopened.

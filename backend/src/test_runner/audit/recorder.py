@@ -22,14 +22,13 @@ from typing import Any
 from sqlalchemy import event
 
 from audit.jsonl import append_jsonl_event
-from workflow._core.primitives import attempt_id_from_task_id
-from task_center_runner.audit.bus import AuditEventBus
-from task_center_runner.audit.daemon_event_normalizer import normalize_pulled_event
-from task_center_runner.audit.daemon_pull import DaemonAuditPuller, PullerStats
-from task_center_runner.audit.events import Event as AuditEvent
-from task_center_runner.audit.io import atomic_write_json
-from task_center_runner.audit.metrics import MetricsAggregator
-from task_center_runner.audit.sandbox_events_sink import RotatingJsonlSink
+from test_runner.audit.bus import AuditEventBus
+from test_runner.audit.daemon_event_normalizer import normalize_pulled_event
+from test_runner.audit.daemon_pull import DaemonAuditPuller, PullerStats
+from test_runner.audit.events import Event as AuditEvent
+from test_runner.audit.io import atomic_write_json
+from test_runner.audit.metrics import MetricsAggregator
+from test_runner.audit.sandbox_events_sink import RotatingJsonlSink
 from db.models.agent_run import AgentRunRecord
 from db.models.attempt import AttemptRecord
 from db.models.iteration import IterationRecord
@@ -277,7 +276,7 @@ class AuditRecorder:
         """
         # Lazy import to avoid a recorder→engine import cycle. The
         # function is a pure env-var read; no heavy state.
-        from task_center_runner.core.engine import (
+        from test_runner.core.engine import (
             _refuse_dual_disable_when_isolated_workspace_enabled,
         )
 
@@ -368,7 +367,7 @@ class AuditRecorder:
         try:
             import asyncio
 
-            asyncio.get_requestning_loop()
+            asyncio.get_running_loop()
         except RuntimeError:
             # Recorder constructed outside an event loop (test fixtures,
             # synchronous host paths). Caller can still attach manually.
@@ -669,7 +668,7 @@ class AuditRecorder:
         self, target: TaskRecord
     ) -> Path | None:
         role = self._display_role(target)
-        attempt_id = attempt_id_from_task_id(target.id)
+        attempt_id = target.attempt_id
         if (
             role in _ATTEMPT_CHILD_ROLES
             and attempt_id

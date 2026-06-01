@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from task_center_runner.audit.events import Event, EventType
-from task_center_runner.audit.node_id import NodeId
+from test_runner.audit.events import Event, EventType
+from test_runner.audit.node_id import NodeId
 from message.events import ToolExecutionCompletedEvent
 
 

@@ -1,5 +1,25 @@
 # Plugin Live E2E Iteration Report
 
+## Iteration 39 - 2026-06-02 07:45 CST
+
+- Checkout/target summary: continued the Phase 3T Rust plugin implementation after the repeated-callback slice; focused on generic health-probe failure isolation for daemon-managed `workspace_snapshot_refresh` services.
+- Plan path and target files: `docs/plans/sandbox-plugin-service-adversarial-plan.md`; `docs/plans/sandbox-rust-external-migration-PROGRESS.md`; `backend/scripts/bench_rust_daemon_plugin.py`; `backend/tests/live_e2e_test/sandbox/plugin/test_plugin_refresh_strategies.py`.
+- Coverage gap found: status health probing proved healthy services and route cleanup in focused daemon tests, but the live generic plugin suite did not yet prove that one arbitrary service rejecting a daemon health frame is isolated from unrelated plugin services.
+- Tests, probes, and audit fields added: Added live `health_fail_harness` with `refresh_strategy="remount_workspace"` plus `plugin.generic.health_fail_ping`; the harness rejects `daemon.workspace_snapshot_refresh` `Health { manifest_key }` with `intentional health failure`, and the gate asserts route removal, `state=stopped`, and unrelated connected routes staying present.
+- Exact commands run:
+  - `python3 -m py_compile backend/scripts/bench_rust_daemon_plugin.py backend/tests/live_e2e_test/sandbox/plugin/test_plugin_refresh_strategies.py`.
+  - `uv run ruff check backend/scripts/bench_rust_daemon_plugin.py backend/tests/live_e2e_test/sandbox/plugin/test_plugin_refresh_strategies.py`.
+  - `uv run pytest --collect-only -q backend/tests/live_e2e_test/sandbox/plugin/test_plugin_refresh_strategies.py`.
+  - `cargo fmt --check`.
+  - `EOS_SANDBOX_PROVIDER=docker EOS_LIVE_E2E_IMAGE=xingyaoww/sweb.eval.x86_64.dask_s_dask-10042:latest EOS_PLUGIN_REFRESH_SAMPLES=1 EOS_PLUGIN_REFRESH_AUTO_SQUASH_WRITES=104 EOS_RUST_PLUGIN_BENCH_TIMEOUT_S=600 uv run pytest -q -x -rs --tb=short --durations=10 backend/tests/live_e2e_test/sandbox/plugin/test_plugin_refresh_strategies.py`.
+- Artifact paths inspected: `.omc/results/rust-daemon-plugin-generic-20260601T234314Z-87525.json`, `.omc/results/rust-daemon-plugin-generic-20260601T234314Z-87525.md`, `.omc/results/plugin-refresh-strategies-20260601T234314Z-87525.json`, `.omc/results/plugin-refresh-strategies-20260601T234314Z-87525.md`, plus pytest output.
+- Pass/fail/skip status: passed. The focused live test finished `1 passed in 45.19s`; packaged `eosd-linux-amd64` SHA was `79f2592a55e565f00e2917c86cbeca2bfa26c073c316a1be6b6239d5830509fb`; py_compile, ruff, collect-only, and cargo fmt check passed.
+- Findings summary: The live Rust plugin case now proves health-failure isolation for an arbitrary long-lived read-only service. `plugin.generic.health_fail_ping` was connected after ensure, `health_fail_harness` rejected the daemon `Health { manifest_key }` probe with `intentional health failure`, status removed only `plugin.generic.health_fail_ping` from connected routes, marked `health_fail_harness.state == "stopped"`, and left unrelated services connected and healthy.
+- Issues found and fixes applied: No daemon runtime failure. Added a failing-health live harness route, benchmark gate checks, markdown artifact fields, pytest assertions, and plan/progress evidence updates.
+- Correctness result: PASS. A bad service cannot poison the shared plugin service registry or other connected services during daemon-owned health probing.
+- Performance/O(1) result: PASS for this slice. The refresh-strategy report still recommends `workspace_snapshot_refresh`; refresh p95 was `6.064 ms` versus `commit_to_workspace` p95 `3.704 ms`; raw workspace watch remained stale without materialization; auto-squash plus post-drain commit passed. The Rust plugin report showed final active leases `5` before cleanup, post-cleanup active leases `0`, and final/post-cleanup orphan and missing layer counts all `0`.
+- Remaining risk or next iteration target: Broader AV-10 LSP parity beyond the current representative Pyright set, true operation-level out-of-order multiplexing if future protocols require concurrent in-flight plugin operations on one stream, and broader crash recovery beyond the covered health probe, failed-health isolation, closed PPC stream, PPC timeout, and next-dispatch restart paths.
+
 ## Iteration 38 - 2026-06-02 07:35 CST
 
 - Checkout/target summary: continued the Phase 3T Rust plugin implementation in the dirty multi-agent worktree; touched the daemon PPC router, live Rust plugin benchmark, pytest wrapper, and plugin progress docs only.

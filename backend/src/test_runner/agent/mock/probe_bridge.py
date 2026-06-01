@@ -45,7 +45,7 @@ from engine.background.dispatch import (
 from message.message import ToolResultBlock
 from tools._framework.core.results import ToolResult
 
-from task_center_runner.agent.mock.event_source import ToolCall, Turn
+from test_runner.agent.mock.event_source import ToolCall, Turn
 
 # A probe coroutine factory: given the bridging call_tool, returns the probe
 # coroutine (which returns the artifact path string).
@@ -361,7 +361,7 @@ def bridge_script_for(
         build: Callable[[], Any], summary: str
     ) -> tuple[ProbeFactory, str]:
         async def _run_script(call_tool: Any) -> str:
-            from task_center_runner.agent.mock.tool_scripts import (
+            from test_runner.agent.mock.tool_scripts import (
                 PreparedToolScriptEngine,
             )
 
@@ -375,7 +375,7 @@ def bridge_script_for(
 
     if action == "inspect_user_input":
         def _build() -> Any:
-            from task_center_runner.agent.mock.tool_scripts import (
+            from test_runner.agent.mock.tool_scripts import (
                 inspect_user_input_script,
             )
 
@@ -389,7 +389,7 @@ def bridge_script_for(
         package_id = action.split(":", 1)[1]
 
         def _build_execute() -> Any:
-            from task_center_runner.agent.mock.tool_scripts import (
+            from test_runner.agent.mock.tool_scripts import (
                 execute_package_script,
             )
 
@@ -401,7 +401,7 @@ def bridge_script_for(
 
     if action == "final_reconciliation":
         def _build_final() -> Any:
-            from task_center_runner.agent.mock.tool_scripts import (
+            from test_runner.agent.mock.tool_scripts import (
                 final_reconciliation_script,
             )
 
@@ -413,7 +413,7 @@ def bridge_script_for(
 
     if action == "recursive_step":
         def _build_recursive() -> Any:
-            from task_center_runner.agent.mock.tool_scripts import (
+            from test_runner.agent.mock.tool_scripts import (
                 recursive_step_script,
             )
 
@@ -426,7 +426,7 @@ def bridge_script_for(
     # --- full_stack scripts -------------------------------------------------
     if action == "inspect_full_user_input":
         def _build_inspect_full() -> Any:
-            from task_center_runner.agent.mock.full_stack_tool_scripts import (
+            from test_runner.agent.mock.full_stack_tool_scripts import (
                 inspect_full_user_input_script,
             )
 
@@ -438,7 +438,7 @@ def bridge_script_for(
 
     if action == "occ_conflict_matrix":
         def _build_occ() -> Any:
-            from task_center_runner.agent.mock.full_stack_tool_scripts import (
+            from test_runner.agent.mock.full_stack_tool_scripts import (
                 occ_conflict_matrix_script,
             )
 
@@ -448,7 +448,7 @@ def bridge_script_for(
 
     if action == "overlay_edge_matrix":
         def _build_overlay() -> Any:
-            from task_center_runner.agent.mock.full_stack_tool_scripts import (
+            from test_runner.agent.mock.full_stack_tool_scripts import (
                 overlay_edge_matrix_script,
             )
 
@@ -458,7 +458,7 @@ def bridge_script_for(
 
     if action == "layerstack_squash_lease":
         def _build_layerstack() -> Any:
-            from task_center_runner.agent.mock.full_stack_tool_scripts import (
+            from test_runner.agent.mock.full_stack_tool_scripts import (
                 layerstack_squash_lease_script,
             )
 
@@ -470,7 +470,7 @@ def bridge_script_for(
 
     if action == "lsp_refresh_semantics":
         def _build_lsp() -> Any:
-            from task_center_runner.agent.mock.full_stack_tool_scripts import (
+            from test_runner.agent.mock.full_stack_tool_scripts import (
                 lsp_refresh_semantics_script,
             )
 
@@ -480,7 +480,7 @@ def bridge_script_for(
 
     if action == "recursive_oversized_matrix":
         def _build_recursive_matrix() -> Any:
-            from task_center_runner.agent.mock.full_stack_tool_scripts import (
+            from test_runner.agent.mock.full_stack_tool_scripts import (
                 recursive_oversized_matrix_script,
             )
 
@@ -492,7 +492,7 @@ def bridge_script_for(
 
     if action == "full_stack_final_reconciliation":
         def _build_full_stack_final() -> Any:
-            from task_center_runner.agent.mock.full_stack_tool_scripts import (
+            from test_runner.agent.mock.full_stack_tool_scripts import (
                 final_reconciliation_script as full_stack_final_reconciliation_script,
             )
 
@@ -504,7 +504,7 @@ def bridge_script_for(
 
     if action == "capacity_metrics_full_system":
         def _build_capacity() -> Any:
-            from task_center_runner.agent.mock.capacity_actions import (
+            from test_runner.agent.mock.capacity_actions import (
                 full_system_capacity_metrics_script,
             )
 
@@ -534,7 +534,7 @@ def bridge_probe_for(
         smoke = action.endswith("_smoke")
 
         def _complex_project_build(call_tool: Any) -> Awaitable[str]:
-            from task_center_runner.agent.mock.complex_project_build_probe import (
+            from test_runner.agent.mock.complex_project_build_probe import (
                 run_complex_project_build_probe,
             )
 
@@ -560,7 +560,7 @@ def bridge_probe_for(
         smoke = action.endswith("_smoke")
 
         def _grep_glob(call_tool: Any) -> Awaitable[str]:
-            from task_center_runner.agent.mock.complex_project_build_grep_glob_probe import (
+            from test_runner.agent.mock.complex_project_build_grep_glob_probe import (
                 run_complex_project_build_grep_glob_probe,
             )
 
@@ -586,7 +586,7 @@ def bridge_probe_for(
         smoke = action.endswith("_smoke")
 
         def _shell_edit_lsp(call_tool: Any) -> Awaitable[str]:
-            from task_center_runner.agent.mock.complex_project_build_shell_edit_lsp_probe import (
+            from test_runner.agent.mock.complex_project_build_shell_edit_lsp_probe import (
                 run_complex_project_build_shell_edit_lsp_probe,
             )
 
@@ -614,7 +614,7 @@ def bridge_probe_for(
 
     if action == "high_concurrency_seed":
         def _seed(call_tool: Any) -> Awaitable[str]:
-            from task_center_runner.agent.mock.high_concurrency_probe import (
+            from test_runner.agent.mock.high_concurrency_probe import (
                 run_high_concurrency_seed_probe,
             )
 
@@ -631,7 +631,7 @@ def bridge_probe_for(
         index = int(action.split(":", 1)[1])
 
         def _worker(call_tool: Any) -> Awaitable[str]:
-            from task_center_runner.agent.mock.high_concurrency_probe import (
+            from test_runner.agent.mock.high_concurrency_probe import (
                 run_high_concurrency_worker_probe,
             )
 
@@ -649,7 +649,7 @@ def bridge_probe_for(
 
     if action == "high_concurrency_reconcile":
         def _reconcile(call_tool: Any) -> Awaitable[str]:
-            from task_center_runner.agent.mock.high_concurrency_probe import (
+            from test_runner.agent.mock.high_concurrency_probe import (
                 run_high_concurrency_reconcile_probe,
             )
 
@@ -664,7 +664,7 @@ def bridge_probe_for(
 
     if action == "heavy_io_zoned_seed":
         def _hiz_seed(call_tool: Any) -> Awaitable[str]:
-            from task_center_runner.agent.mock.heavy_io_zoned_probe import (
+            from test_runner.agent.mock.heavy_io_zoned_probe import (
                 run_heavy_io_zoned_seed_probe,
             )
 
@@ -681,7 +681,7 @@ def bridge_probe_for(
         index = int(action.split(":", 1)[1])
 
         def _hiz_worker(call_tool: Any) -> Awaitable[str]:
-            from task_center_runner.agent.mock.heavy_io_zoned_probe import (
+            from test_runner.agent.mock.heavy_io_zoned_probe import (
                 run_heavy_io_zoned_worker_probe,
             )
 
@@ -699,7 +699,7 @@ def bridge_probe_for(
 
     if action == "heavy_io_zoned_reconcile":
         def _hiz_reconcile(call_tool: Any) -> Awaitable[str]:
-            from task_center_runner.agent.mock.heavy_io_zoned_probe import (
+            from test_runner.agent.mock.heavy_io_zoned_probe import (
                 run_heavy_io_zoned_reconcile_probe,
             )
 
@@ -714,7 +714,7 @@ def bridge_probe_for(
 
     if action == "complex_project_build_shell_edit_lsp_shared_bootstrap":
         def _complex_shared_bootstrap(call_tool: Any) -> Awaitable[str]:
-            from task_center_runner.agent.mock.complex_project_build_shell_edit_lsp_probe import (
+            from test_runner.agent.mock.complex_project_build_shell_edit_lsp_probe import (
                 run_complex_project_build_shell_edit_lsp_shared_bootstrap_probe,
             )
 
@@ -737,7 +737,7 @@ def bridge_probe_for(
     # --- auto_squash_commit_resume fan-out -------------------------------
     if action == "auto_squash_seed":
         def _auto_seed(call_tool: Any) -> Awaitable[str]:
-            from task_center_runner.agent.mock.auto_squash_probe import (
+            from test_runner.agent.mock.auto_squash_probe import (
                 run_auto_squash_seed_probe,
             )
 
@@ -752,7 +752,7 @@ def bridge_probe_for(
 
     if action == "auto_squash_squash_a":
         def _auto_squash_a(call_tool: Any) -> Awaitable[str]:
-            from task_center_runner.agent.mock.auto_squash_probe import (
+            from test_runner.agent.mock.auto_squash_probe import (
                 run_auto_squash_squash_a_probe,
             )
 
@@ -767,7 +767,7 @@ def bridge_probe_for(
 
     if action == "auto_squash_squash_b":
         def _auto_squash_b(call_tool: Any) -> Awaitable[str]:
-            from task_center_runner.agent.mock.auto_squash_probe import (
+            from test_runner.agent.mock.auto_squash_probe import (
                 run_auto_squash_squash_b_probe,
             )
 
@@ -782,7 +782,7 @@ def bridge_probe_for(
 
     if action == "auto_squash_independent":
         def _auto_independent(call_tool: Any) -> Awaitable[str]:
-            from task_center_runner.agent.mock.auto_squash_probe import (
+            from test_runner.agent.mock.auto_squash_probe import (
                 run_auto_squash_independent_probe,
             )
 
@@ -797,7 +797,7 @@ def bridge_probe_for(
 
     if action == "auto_squash_reconcile":
         def _auto_reconcile(call_tool: Any) -> Awaitable[str]:
-            from task_center_runner.agent.mock.auto_squash_probe import (
+            from test_runner.agent.mock.auto_squash_probe import (
                 run_auto_squash_reconcile_probe,
             )
 
@@ -815,7 +815,7 @@ def bridge_probe_for(
     # --- plugin_workspace (single-action scenarios; all queue-bridge) -------
     if action == "plugin_read_only_lsp_refresh":
         def _plugin_read_only(call_tool: Any) -> Awaitable[str]:
-            from task_center_runner.agent.mock.plugin_workspace_probe import (
+            from test_runner.agent.mock.plugin_workspace_probe import (
                 run_plugin_read_only_lsp_refresh_probe,
             )
 
@@ -831,7 +831,7 @@ def bridge_probe_for(
 
     if action == "plugin_write_allowed_publish":
         def _plugin_write_allowed(call_tool: Any) -> Awaitable[str]:
-            from task_center_runner.agent.mock.plugin_workspace_probe import (
+            from test_runner.agent.mock.plugin_workspace_probe import (
                 run_plugin_write_allowed_publish_probe,
             )
 
@@ -847,7 +847,7 @@ def bridge_probe_for(
 
     if action == "plugin_intent_contract":
         def _plugin_intent(call_tool: Any) -> Awaitable[str]:
-            from task_center_runner.agent.mock.plugin_workspace_probe import (
+            from test_runner.agent.mock.plugin_workspace_probe import (
                 run_plugin_intent_contract_probe,
             )
 
@@ -862,7 +862,7 @@ def bridge_probe_for(
 
     if action == "plugin_iws_policy":
         def _plugin_iws(call_tool: Any) -> Awaitable[str]:
-            from task_center_runner.agent.mock.plugin_workspace_probe import (
+            from test_runner.agent.mock.plugin_workspace_probe import (
                 run_plugin_iws_policy_probe,
             )
 
@@ -878,7 +878,7 @@ def bridge_probe_for(
 
     if action == "plugin_setup_failure":
         def _plugin_setup_failure(call_tool: Any) -> Awaitable[str]:
-            from task_center_runner.agent.mock.plugin_workspace_probe import (
+            from test_runner.agent.mock.plugin_workspace_probe import (
                 run_plugin_setup_failure_probe,
             )
 
@@ -894,7 +894,7 @@ def bridge_probe_for(
 
     if action == "plugin_service_evict":
         def _plugin_service_evict(call_tool: Any) -> Awaitable[str]:
-            from task_center_runner.agent.mock.plugin_workspace_probe import (
+            from test_runner.agent.mock.plugin_workspace_probe import (
                 run_plugin_service_evict_probe,
             )
 
@@ -911,7 +911,7 @@ def bridge_probe_for(
     # --- ephemeral_workspace actions; queue-bridge -------------------------
     if action == "ephemeral_workspace_all_verbs":
         def _eph_all_verbs(call_tool: Any) -> Awaitable[str]:
-            from task_center_runner.agent.mock.ephemeral_workspace_probe import (
+            from test_runner.agent.mock.ephemeral_workspace_probe import (
                 run_ephemeral_all_verbs_probe,
             )
 
@@ -927,7 +927,7 @@ def bridge_probe_for(
 
     if action == "ephemeral_workspace_concurrent_writes":
         def _eph_concurrent(call_tool: Any) -> Awaitable[str]:
-            from task_center_runner.agent.mock.ephemeral_workspace_probe import (
+            from test_runner.agent.mock.ephemeral_workspace_probe import (
                 run_ephemeral_concurrent_writes_probe,
             )
 
@@ -943,7 +943,7 @@ def bridge_probe_for(
 
     if action == "ephemeral_workspace_policy":
         def _eph_policy(call_tool: Any) -> Awaitable[str]:
-            from task_center_runner.agent.mock.ephemeral_workspace_probe import (
+            from test_runner.agent.mock.ephemeral_workspace_probe import (
                 run_ephemeral_policy_probe,
             )
 
@@ -959,7 +959,7 @@ def bridge_probe_for(
 
     if action == "ephemeral_workspace_o1_disk":
         def _eph_o1_disk(call_tool: Any) -> Awaitable[str]:
-            from task_center_runner.agent.mock.ephemeral_workspace_probe import (
+            from test_runner.agent.mock.ephemeral_workspace_probe import (
                 run_ephemeral_o1_disk_probe,
             )
 
@@ -975,7 +975,7 @@ def bridge_probe_for(
 
     if action == "ephemeral_same_path_conflict_seed":
         def _eph_same_path_seed(call_tool: Any) -> Awaitable[str]:
-            from task_center_runner.agent.mock.ephemeral_workspace_probe import (
+            from test_runner.agent.mock.ephemeral_workspace_probe import (
                 run_ephemeral_same_path_conflict_seed_probe,
             )
 
@@ -992,7 +992,7 @@ def bridge_probe_for(
         index = int(action.split(":", 1)[1])
 
         def _eph_same_path_writer(call_tool: Any) -> Awaitable[str]:
-            from task_center_runner.agent.mock.ephemeral_workspace_probe import (
+            from test_runner.agent.mock.ephemeral_workspace_probe import (
                 run_ephemeral_same_path_conflict_writer_probe,
             )
 
@@ -1008,7 +1008,7 @@ def bridge_probe_for(
 
     if action == "ephemeral_same_path_conflict_reconcile":
         def _eph_same_path_reconcile(call_tool: Any) -> Awaitable[str]:
-            from task_center_runner.agent.mock.ephemeral_workspace_probe import (
+            from test_runner.agent.mock.ephemeral_workspace_probe import (
                 run_ephemeral_same_path_conflict_reconcile_probe,
             )
 
@@ -1088,7 +1088,7 @@ def _background_probe_factory(
     }
     if action == "ephemeral_workspace_cancellation":
         def _ephemeral_cancel(call_tool: Any) -> Awaitable[str]:
-            from task_center_runner.agent.mock.ephemeral_workspace_probe import (
+            from test_runner.agent.mock.ephemeral_workspace_probe import (
                 run_ephemeral_cancellation_probe,
             )
 
@@ -1108,7 +1108,7 @@ def _background_probe_factory(
     function_name, summary = item
 
     def _background(call_tool: Any) -> Awaitable[str]:
-        from task_center_runner.agent.mock import background_shell_probe
+        from test_runner.agent.mock import background_shell_probe
 
         probe = getattr(background_shell_probe, function_name)
         return probe(

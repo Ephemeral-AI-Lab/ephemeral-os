@@ -18,14 +18,14 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from workflow.attempt.launch import AttemptAgentRunner
-from task_center_runner.core.lifecycle import LifecycleHooks, NoopLifecycle
-from task_center_runner.core.sandbox import SandboxProvisioner
+from test_runner.core.lifecycle import LifecycleHooks, NoopLifecycle
+from test_runner.core.sandbox import SandboxProvisioner
 
 if TYPE_CHECKING:
     from runtime.sandbox_provisioning import RequestSandboxProvisioner
 
-    from task_center_runner.audit.bus import AuditEventBus
-    from task_center_runner.core.stores import TaskStoreBundle
+    from test_runner.audit.bus import AuditEventBus
+    from test_runner.core.stores import TaskStoreBundle
 
 
 @dataclass(frozen=True, slots=True)
@@ -40,7 +40,7 @@ class RunConfig:
     bootstrap: Callable[[], None] | None = None
     stores: "TaskStoreBundle | None" = None
     audit_dir: Path = Path(".sweevo_runs")
-    run_label: str = "task_center_runner"
+    run_label: str = "test_runner"
     run_dir_factory: Callable[[Path, "RunContext"], Path] | None = None
     sandbox_provisioner_factory: Callable[[], "RequestSandboxProvisioner"] | None = None
     instance_id: str = ""

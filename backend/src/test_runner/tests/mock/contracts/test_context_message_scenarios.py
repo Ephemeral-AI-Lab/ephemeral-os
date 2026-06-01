@@ -9,19 +9,19 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
-from task_center_runner.scenarios.base import ScenarioContext
-from task_center_runner.scenarios.full_case_user_input import FullCaseUserInput
-from task_center_runner.scenarios.full_stack_adversarial import (
+from test_runner.scenarios.base import ScenarioContext
+from test_runner.scenarios.full_case_user_input import FullCaseUserInput
+from test_runner.scenarios.full_stack_adversarial import (
     FullStackAdversarial,
 )
-from task_center_runner.scenarios.pipeline.generator_failure_quiescence import (
+from test_runner.scenarios.pipeline.generator_failure_quiescence import (
     GeneratorFailureQuiescence,
 )
-from task_center_runner.scenarios.pipeline.nested_workflow import (
+from test_runner.scenarios.pipeline.nested_workflow import (
     NestedWorkflow,
     NestedWorkflowFailure,
 )
-from task_center_runner.scenarios.sandbox.high_concurrency_layerstack_overlay_occ import (
+from test_runner.scenarios.sandbox.high_concurrency_layerstack_overlay_occ import (
     HighConcurrencyLayerstackOverlayOcc,
     MAX_CONCURRENT_WORKERS,
     WORKER_COUNT,

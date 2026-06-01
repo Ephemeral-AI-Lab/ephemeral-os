@@ -3,10 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Core Harness - Workflow Runner (Testing)</title>
+<title>Core Harness - Test Runner</title>
 <link rel="stylesheet" href="../assets/styles.css">
 </head>
-<body data-module="workflow-runner" data-page="core-harness" data-root="../">
+<body data-module="test-runner" data-page="core-harness" data-root="../">
 <nav class="toc">
   <h2>EphemeralOS Architecture</h2>
   <a class="home-link" href="../index.html">All Modules</a>
@@ -20,22 +20,22 @@
     <li><a href="../tools/index.html" data-doc-module="tools">Tools</a></li>
     <li><a href="../agent_loops/index.html" data-doc-module="agent-loops">Agent Loops</a></li>
     <li><a href="../workflow/index.html" data-doc-module="workflow">Workflow</a></li>
-    <li><a href="index.html" data-doc-module="workflow-runner" class="active">Workflow Runner (Testing)</a></li>
+    <li><a href="index.html" data-doc-module="test-runner" class="active">Test Runner</a></li>
   </ol>
-  <h2>Workflow Runner Pages</h2>
+  <h2>Test Runner Pages</h2>
   <ol>
-    <li><a href="index.html" data-doc-module="workflow-runner" data-doc-section="index" data-doc-page="index.html">Overview</a></li>
-    <li><a href="core-harness.html" data-doc-module="workflow-runner" data-doc-section="core-harness" data-doc-page="core-harness.html" class="active">Core Harness</a></li>
-    <li><a href="scenarios.html" data-doc-module="workflow-runner" data-doc-section="scenarios" data-doc-page="scenarios.html">Scenarios</a></li>
-    <li><a href="mocked-agents.html" data-doc-module="workflow-runner" data-doc-section="mocked-agents" data-doc-page="mocked-agents.html">Mocked Agents</a></li>
-    <li><a href="benchmark-sweevo.html" data-doc-module="workflow-runner" data-doc-section="benchmark-sweevo" data-doc-page="benchmark-sweevo.html">SWE-EVO Benchmark</a></li>
-    <li><a href="tests-layout.html" data-doc-module="workflow-runner" data-doc-section="tests-layout" data-doc-page="tests-layout.html">Test Suites</a></li>
-    <li><a href="maintenance.html" data-doc-module="workflow-runner" data-doc-section="maintenance" data-doc-page="maintenance.html">Maintenance</a></li>
+    <li><a href="index.html" data-doc-module="test-runner" data-doc-section="index" data-doc-page="index.html">Overview</a></li>
+    <li><a href="core-harness.html" data-doc-module="test-runner" data-doc-section="core-harness" data-doc-page="core-harness.html" class="active">Core Harness</a></li>
+    <li><a href="scenarios.html" data-doc-module="test-runner" data-doc-section="scenarios" data-doc-page="scenarios.html">Scenarios</a></li>
+    <li><a href="mocked-agents.html" data-doc-module="test-runner" data-doc-section="mocked-agents" data-doc-page="mocked-agents.html">Mocked Agents</a></li>
+    <li><a href="benchmark-sweevo.html" data-doc-module="test-runner" data-doc-section="benchmark-sweevo" data-doc-page="benchmark-sweevo.html">SWE-EVO Benchmark</a></li>
+    <li><a href="tests-layout.html" data-doc-module="test-runner" data-doc-section="tests-layout" data-doc-page="tests-layout.html">Test Suites</a></li>
+    <li><a href="maintenance.html" data-doc-module="test-runner" data-doc-section="maintenance" data-doc-page="maintenance.html">Maintenance</a></li>
   </ol>
 </nav>
 <main>
 <div class="doc-actions">
-  <span><a href="../index.html">Architecture</a> / <a href="index.html">Workflow Runner</a> / Core Harness</span>
+  <span><a href="../index.html">Architecture</a> / <a href="index.html">Test Runner</a> / Core Harness</span>
   <span class="nav-pair"><a href="index.html">Overview</a><a href="scenarios.html">Scenarios</a></span>
 </div>
 <h1>Core Harness</h1>
@@ -55,11 +55,11 @@
 
 <p class="lead">The core harness has one purpose: drive <code>workflow.start_workflow_run</code> with a per-test database, audit-bus fanout, sandbox lease, and lifecycle hooks. Three modes (mock, real-LLM, benchmark) reach the same coroutine through one frozen dataclass.</p>
 
-<section id="scope" data-last-reviewed-commit="d32994314" data-evidence-paths="backend/src/task_center_runner/core backend/src/task_center_runner/audit backend/src/task_center_runner/__init__.py">
+<section id="scope" data-last-reviewed-commit="d32994314" data-evidence-paths="backend/src/test_runner/core backend/src/test_runner/audit backend/src/test_runner/__init__.py">
 <h2>Scope <a class="anchor" href="#scope">#</a></h2>
 <div class="summary">
   <ul>
-    <li><code>core/engine.py::run_pipeline</code> is the single entrypoint. It knows nothing about concrete mock-runner state, Daytona, or sweevo symbols; <code>tests/unit_test/test_task_center_runner/test_no_core_imports.py</code> pins that.</li>
+    <li><code>core/engine.py::run_pipeline</code> is the single entrypoint. It knows nothing about concrete mock-runner state, Daytona, or sweevo symbols; <code>tests/unit_test/test_test_runner/test_no_core_imports.py</code> pins that.</li>
     <li><code>core/runner.py::run_scenario</code> is a thin shim that builds the mock-mode <code>RunConfig</code>, calls <code>run_pipeline</code>, and rebuilds the mock-rich <code>RunReport</code>.</li>
     <li><code>core/bootstrap.py</code> seeds production runtime state for the real-LLM path only — markdown agent registry, runtime stores, sandbox provider. Mock runs never call it.</li>
     <li>Everything else in <code>core/</code> is a typed protocol or dataclass — <code>RunConfig</code>, <code>RunContext</code>, <code>PipelineReport</code>, <code>LifecycleHooks</code>, <code>SandboxProvisioner</code>, <code>WorkflowStoreBundle</code>.</li>
@@ -73,7 +73,7 @@
 </div>
 </section>
 
-<section id="run-config" data-last-reviewed-commit="d32994314" data-evidence-paths="backend/src/task_center_runner/core/config.py backend/src/task_center_runner/scenarios/builder.py backend/src/task_center_runner/benchmarks/sweevo/run.py">
+<section id="run-config" data-last-reviewed-commit="d32994314" data-evidence-paths="backend/src/test_runner/core/config.py backend/src/test_runner/scenarios/builder.py backend/src/test_runner/benchmarks/sweevo/run.py">
 <h2>RunConfig And Mode Deltas <a class="anchor" href="#run-config">#</a></h2>
 <p><code>RunConfig</code> is a frozen dataclass with five mode-varying seams and a small bag of shared options. <code>RunContext</code> is the narrow handle (<code>config</code>, <code>bundle</code>, <code>bus</code>) passed to lifecycle hooks and sandbox provisioners — they cannot reach engine internals.</p>
 <pre class="diagram" aria-label="RunConfig mode delta table">
@@ -88,7 +88,7 @@
 | lifecycle         | LifecycleHooks  | ScenarioLifecycle       | NoopLifecycle           | SweevoLifecycle
 | sandbox           | SandboxProvis-  | AttachExisting          | AttachExisting          | SweevoProvisioner
 |                   |  ioner          | (fixture-managed)       | (caller-managed)        | (verify-only, persistent)
-| run_label         | str             | scenario_logs/&lt;name&gt;    | "task_center_runner"    | benchmark/sweevo/&lt;id&gt;
+| run_label         | str             | scenario_logs/&lt;name&gt;    | "test_runner"    | benchmark/sweevo/&lt;id&gt;
 +-------------------+-----------------+-------------------------+------------------------+------------------------
 </pre>
 <div class="edge-list" aria-label="RunConfig shared fields">
@@ -101,7 +101,7 @@
 </div>
 </section>
 
-<section id="run-pipeline" data-last-reviewed-commit="d32994314" data-evidence-paths="backend/src/task_center_runner/core/engine.py backend/src/task_center_runner/audit/recorder.py backend/src/task_center_runner/audit/stream_bridge.py backend/src/task_center_runner/audit/performance_report.py">
+<section id="run-pipeline" data-last-reviewed-commit="d32994314" data-evidence-paths="backend/src/test_runner/core/engine.py backend/src/test_runner/audit/recorder.py backend/src/test_runner/audit/stream_bridge.py backend/src/test_runner/audit/performance_report.py">
 <h2>run_pipeline Lifecycle <a class="anchor" href="#run-pipeline">#</a></h2>
 <pre class="diagram" aria-label="run_pipeline step-by-step diagram">
 run_pipeline(config) coroutine
@@ -156,7 +156,7 @@ run_pipeline(config) coroutine
 </div>
 </section>
 
-<section id="lifecycle-hooks" data-last-reviewed-commit="d32994314" data-evidence-paths="backend/src/task_center_runner/core/lifecycle.py backend/src/task_center_runner/scenarios/lifecycle.py backend/src/task_center_runner/benchmarks/sweevo/eval.py">
+<section id="lifecycle-hooks" data-last-reviewed-commit="d32994314" data-evidence-paths="backend/src/test_runner/core/lifecycle.py backend/src/test_runner/scenarios/lifecycle.py backend/src/test_runner/benchmarks/sweevo/eval.py">
 <h2>LifecycleHooks Protocol <a class="anchor" href="#lifecycle-hooks">#</a></h2>
 <p>One protocol, four entry points, three implementations.</p>
 <div class="edge-list" aria-label="LifecycleHooks methods">
@@ -174,7 +174,7 @@ run_pipeline(config) coroutine
 </div>
 </section>
 
-<section id="store-bundle" data-last-reviewed-commit="d32994314" data-evidence-paths="backend/src/task_center_runner/core/stores.py">
+<section id="store-bundle" data-last-reviewed-commit="d32994314" data-evidence-paths="backend/src/test_runner/core/stores.py">
 <h2>WorkflowStoreBundle <a class="anchor" href="#store-bundle">#</a></h2>
 <p>The bundle reuses the project's shared SQLAlchemy engine via <code>db.engine.initialize_db()</code> and carves a fresh isolated store per test so concurrent tests do not collide.</p>
 <div class="edge-list" aria-label="WorkflowStoreBundle dialects">
@@ -190,7 +190,7 @@ run_pipeline(config) coroutine
 </div>
 </section>
 
-<section id="sandbox-provisioner" data-last-reviewed-commit="d32994314" data-evidence-paths="backend/src/task_center_runner/core/sandbox.py backend/src/task_center_runner/benchmarks/sweevo/run.py backend/src/task_center_runner/environments/sweevo_image/fixtures.py">
+<section id="sandbox-provisioner" data-last-reviewed-commit="d32994314" data-evidence-paths="backend/src/test_runner/core/sandbox.py backend/src/test_runner/benchmarks/sweevo/run.py backend/src/test_runner/environments/sweevo_image/fixtures.py">
 <h2>SandboxProvisioner Protocol <a class="anchor" href="#sandbox-provisioner">#</a></h2>
 <div class="edge-list" aria-label="SandboxProvisioner implementations">
   <div><b>SandboxLease</b><span>Frozen handle: <code>sandbox_id</code> plus opaque <code>metadata</code> mapping. Returned by <code>provision(ctx)</code>; consumed by <code>release(lease)</code>.</span></div>
@@ -205,7 +205,7 @@ run_pipeline(config) coroutine
 </div>
 </section>
 
-<section id="audit-bus" data-last-reviewed-commit="d32994314" data-evidence-paths="backend/src/task_center_runner/audit/bus.py backend/src/task_center_runner/audit/events.py backend/src/task_center_runner/audit/recorder.py backend/src/task_center_runner/audit/stream_bridge.py backend/src/task_center_runner/audit/performance_report.py backend/src/task_center_runner/audit/metrics.py">
+<section id="audit-bus" data-last-reviewed-commit="d32994314" data-evidence-paths="backend/src/test_runner/audit/bus.py backend/src/test_runner/audit/events.py backend/src/test_runner/audit/recorder.py backend/src/test_runner/audit/stream_bridge.py backend/src/test_runner/audit/performance_report.py backend/src/test_runner/audit/metrics.py">
 <h2>Audit Bus And Recorder <a class="anchor" href="#audit-bus">#</a></h2>
 <p>Two layers: the in-memory <code>AuditEventBus</code> for lifecycle subscribers, and <code>AuditRecorder</code> for durable per-run artifacts.</p>
 <div class="edge-list" aria-label="Audit bus surfaces">
@@ -223,7 +223,7 @@ run_pipeline(config) coroutine
 </div>
 </section>
 
-<section id="reports" data-last-reviewed-commit="d32994314" data-evidence-paths="backend/src/task_center_runner/core/report.py backend/src/task_center_runner/core/runner.py">
+<section id="reports" data-last-reviewed-commit="d32994314" data-evidence-paths="backend/src/test_runner/core/report.py backend/src/test_runner/core/runner.py">
 <h2>PipelineReport And RunReport <a class="anchor" href="#reports">#</a></h2>
 <p><code>PipelineReport</code> is the engine's narrow return shape; the mock-rich <code>RunReport</code> is rebuilt by <code>run_scenario</code> from <code>ScenarioLifecycle</code> records and Workflow store state.</p>
 <div class="edge-list" aria-label="Report fields">
@@ -242,7 +242,7 @@ run_pipeline(config) coroutine
 <div class="page-baseline" data-page-baseline-commit="d32994314">
   <strong>Maintenance baseline</strong>
   <span>Core Harness reviewed against <code>d32994314</code>.</span>
-  <code>git diff d32994314..HEAD -- backend/src/task_center_runner/core backend/src/task_center_runner/audit</code>
+  <code>git diff d32994314..HEAD -- backend/src/test_runner/core backend/src/test_runner/audit</code>
 </div>
 <div class="page-footer-nav"><span><a href="index.html">Overview</a></span><span><a href="scenarios.html">Scenarios</a></span></div>
 </main>

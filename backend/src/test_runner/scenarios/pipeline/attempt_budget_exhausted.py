@@ -1,7 +1,7 @@
 """Attempt budget exhausted — every attempt fails, workflow closes failed.
 
 The default ``WorkflowLifecycleConfig.default_attempt_budget`` is ``2``
-(``backend/src/task_center/config.py:16``). This scenario plans a single
+(``backend/src/request/config.py:16``). This scenario plans a single
 generator task that **always** calls ``submit_generator_outcome(status="failed", ...)``, so each
 attempt closes ``status=failed``, ``fail_reason="task_failed"``. After
 attempt 2 fails, ``IterationAttemptCoordinator.has_budget_remaining`` is False — iteration
@@ -25,7 +25,7 @@ from typing import Any
 from tools.submission.planner import submit_planner_outcome
 from tools.submission.reducer import submit_reducer_outcome
 
-from task_center_runner.scenarios.base import ScenarioBase, ScenarioContext, ToolCallSpec
+from test_runner.scenarios.base import ScenarioBase, ScenarioContext, ToolCallSpec
 
 
 def _always_fail_plan() -> dict[str, Any]:

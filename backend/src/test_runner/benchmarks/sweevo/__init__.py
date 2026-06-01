@@ -1,4 +1,4 @@
-"""SWE-EVO benchmark adapter for ``task_center_runner``.
+"""SWE-EVO benchmark adapter for ``test_runner``.
 
 Sandboxes are persistent per ``instance_id`` (deterministic naming
 ``sweevo-<instance_id>``). The CLI does NOT destroy the container on exit;
@@ -49,7 +49,7 @@ def ensure_default_no_proxy() -> None:
 ensure_default_no_proxy()
 
 
-from task_center_runner.benchmarks.sweevo._snapshot import (  # noqa: E402
+from test_runner.benchmarks.sweevo._snapshot import (  # noqa: E402
     SnapshotNotRegisteredError,
     verify_sweevo_snapshot_exists,
 )

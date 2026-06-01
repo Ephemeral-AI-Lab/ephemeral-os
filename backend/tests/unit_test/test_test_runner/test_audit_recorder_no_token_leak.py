@@ -17,7 +17,7 @@ from pathlib import Path
 
 import pytest
 
-from task_center_runner.audit.recorder import AuditRecorder
+from test_runner.audit.recorder import AuditRecorder
 
 
 # Sentinel token literals — distinct, easy to grep for if a regression

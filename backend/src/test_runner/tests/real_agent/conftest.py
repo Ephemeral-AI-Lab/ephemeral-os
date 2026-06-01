@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from task_center_runner.environments.sweevo_image.fixtures import (  # noqa: F401
+from test_runner.environments.sweevo_image.fixtures import (  # noqa: F401
     sweevo_image_instance,
     sweevo_image_sandbox,
     workspace,

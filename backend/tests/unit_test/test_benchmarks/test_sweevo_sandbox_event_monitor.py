@@ -4,12 +4,12 @@ import asyncio
 import json
 from pathlib import Path
 
-from task_center_runner.audit.bus import AuditEventBus
-from task_center_runner.audit.events import Event, EventType
-from task_center_runner.audit.sandbox_event_bridge import SandboxAuditEventBridge
-from task_center_runner.audit.node_id import NodeId
-from task_center_runner.audit.recorder import AuditRecorder
-from task_center_runner.audit.stream_bridge import stream_bridge
+from test_runner.audit.bus import AuditEventBus
+from test_runner.audit.events import Event, EventType
+from test_runner.audit.sandbox_event_bridge import SandboxAuditEventBridge
+from test_runner.audit.node_id import NodeId
+from test_runner.audit.recorder import AuditRecorder
+from test_runner.audit.stream_bridge import stream_bridge
 from audit.base import AuditEvent, AuditNode
 from sandbox.audit import events as sandbox_events
 from message.events import ToolExecutionCompletedEvent
@@ -19,7 +19,7 @@ def test_stream_bridge_derives_sandbox_subsystem_events() -> None:
     bus = AuditEventBus()
     events: list[Event] = []
     bus.subscribe(events.append)
-    bridge = stream_bridge(bus, task_center_run_id="run-1")
+    bridge = stream_bridge(bus, request_id="run-1")
 
     asyncio.run(
         bridge(
@@ -85,7 +85,7 @@ def test_stream_bridge_sandbox_fallback_flag_blocks_derived_sandbox_events() -> 
     bus.subscribe(events.append)
     bridge = stream_bridge(
         bus,
-        task_center_run_id="run-1",
+        request_id="run-1",
         sandbox_fallback_enabled=False,
     )
 
@@ -118,7 +118,7 @@ def test_stream_bridge_skips_metadata_derivation_when_sandbox_audit_emitted() ->
     bus = AuditEventBus()
     events: list[Event] = []
     bus.subscribe(events.append)
-    bridge = stream_bridge(bus, task_center_run_id="run-1")
+    bridge = stream_bridge(bus, request_id="run-1")
 
     asyncio.run(
         bridge(
@@ -150,7 +150,7 @@ def test_stream_bridge_keeps_lease_event_when_sandbox_audit_emitted() -> None:
     bus = AuditEventBus()
     events: list[Event] = []
     bus.subscribe(events.append)
-    bridge = stream_bridge(bus, task_center_run_id="run-1")
+    bridge = stream_bridge(bus, request_id="run-1")
 
     asyncio.run(
         bridge(
@@ -184,7 +184,7 @@ def test_stream_bridge_derives_sandbox_conflict_event() -> None:
     bus = AuditEventBus()
     events: list[Event] = []
     bus.subscribe(events.append)
-    bridge = stream_bridge(bus, task_center_run_id="run-1")
+    bridge = stream_bridge(bus, request_id="run-1")
 
     asyncio.run(
         bridge(
@@ -214,13 +214,13 @@ def test_stream_bridge_derives_sandbox_conflict_event() -> None:
 
 def test_audit_recorder_persists_sandbox_events(tmp_path: Path) -> None:
     bus = AuditEventBus()
-    recorder = AuditRecorder(tmp_path / "run", task_center_run_id="run-1", bus=bus)
+    recorder = AuditRecorder(tmp_path / "run", request_id="run-1", bus=bus)
     recorder.start()
     try:
         bus.publish(
             Event(
                 type=EventType.SANDBOX_OCC_CHANGES_COMMITTED,
-                node=NodeId(task_center_run_id="run-1", tool_name="write_file"),
+                node=NodeId(request_id="run-1", tool_name="write_file"),
                 payload={"tool_name": "write_file"},
             )
         )
@@ -240,7 +240,7 @@ def test_audit_recorder_persists_sandbox_events(tmp_path: Path) -> None:
 
 def test_sandbox_audit_event_bridge_maps_namespaced_events_once(tmp_path: Path) -> None:
     bus = AuditEventBus()
-    recorder = AuditRecorder(tmp_path / "run", task_center_run_id="run-1", bus=bus)
+    recorder = AuditRecorder(tmp_path / "run", request_id="run-1", bus=bus)
     sink = SandboxAuditEventBridge(bus)
     recorder.start()
     try:
@@ -249,7 +249,7 @@ def test_sandbox_audit_event_bridge_maps_namespaced_events_once(tmp_path: Path) 
                 source="sandbox",
                 type=sandbox_events.OCC_COMMITTED,
                 node=AuditNode(
-                    task_center_run_id="run-1",
+                    request_id="run-1",
                     task_id="task-1",
                     tool_name="write_file",
                     tool_use_id="toolu_1",
@@ -281,7 +281,7 @@ def test_sandbox_audit_event_bridge_maps_namespaced_events_once(tmp_path: Path) 
 
 def test_sandbox_audit_event_bridge_maps_resource_snapshot(tmp_path: Path) -> None:
     bus = AuditEventBus()
-    recorder = AuditRecorder(tmp_path / "run", task_center_run_id="run-1", bus=bus)
+    recorder = AuditRecorder(tmp_path / "run", request_id="run-1", bus=bus)
     sink = SandboxAuditEventBridge(bus)
     recorder.start()
     try:
@@ -290,7 +290,7 @@ def test_sandbox_audit_event_bridge_maps_resource_snapshot(tmp_path: Path) -> No
                 source="sandbox",
                 type=sandbox_events.RESOURCE_SNAPSHOT,
                 node=AuditNode(
-                    task_center_run_id="run-1",
+                    request_id="run-1",
                     task_id="task-1",
                     tool_name="shell",
                     tool_use_id="toolu_1",

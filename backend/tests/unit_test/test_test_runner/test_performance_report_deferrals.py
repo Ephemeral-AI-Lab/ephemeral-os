@@ -14,14 +14,14 @@ from typing import Any
 
 import pytest
 
-from task_center_runner.audit.daemon_event_normalizer import FORENSIC_RAW_ENV
-from task_center_runner.audit.performance_report import (
+from test_runner.audit.daemon_event_normalizer import FORENSIC_RAW_ENV
+from test_runner.audit.performance_report import (
     _collect_artifact_inventory,
     _phase_bar,
     build_performance_report,
     render_performance_report_markdown,
 )
-from task_center_runner.audit.release_gates import evaluate_audit_overhead_gate
+from test_runner.audit.release_gates import evaluate_audit_overhead_gate
 
 
 def _write_jsonl(path: Path, rows: list[dict[str, Any]]) -> None:
@@ -416,7 +416,7 @@ def test_d10_phase_bar_normalizes_overlapping_fractions() -> None:
 def test_d12_recorder_start_refuses_dual_disable(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    from task_center_runner.audit.recorder import AuditRecorder
+    from test_runner.audit.recorder import AuditRecorder
 
     monkeypatch.setenv("EOS_DAEMON_AUDIT_PULL_ENABLED", "false")
     monkeypatch.setenv("EOS_AUDIT_STREAM_FALLBACK", "false")
@@ -436,7 +436,7 @@ def test_d13_floor_ms_central_config_overrides_default(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     import config as config_module
-    from task_center_runner.audit.daemon_pull import DaemonAuditPuller
+    from test_runner.audit.daemon_pull import DaemonAuditPuller
 
     monkeypatch.delenv("EOS_DAEMON_AUDIT_PULL_FLOOR_MS", raising=False)
 
@@ -464,7 +464,7 @@ def test_d13_stream_fallback_central_config(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     import config as config_module
-    from task_center_runner.core.engine import _stream_fallback_enabled
+    from test_runner.core.engine import _stream_fallback_enabled
 
     monkeypatch.delenv("EOS_AUDIT_STREAM_FALLBACK", raising=False)
 

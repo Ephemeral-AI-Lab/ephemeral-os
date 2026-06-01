@@ -7,7 +7,7 @@ import logging
 
 import sandbox.api as sandbox_api
 
-from task_center_runner.benchmarks.sweevo.models import (
+from test_runner.benchmarks.sweevo.models import (
     _DEFAULT_SANDBOX_COMMAND_TIMEOUT,
 )
 

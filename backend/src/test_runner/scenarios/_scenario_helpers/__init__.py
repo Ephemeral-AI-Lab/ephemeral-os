@@ -2,14 +2,14 @@
 
 from __future__ import annotations
 
-from task_center_runner.scenarios._scenario_helpers.instruction_tokens import (
+from test_runner.scenarios._scenario_helpers.instruction_tokens import (
     instruction_field,
 )
-from task_center_runner.scenarios._scenario_helpers.workflow_origin import (
+from test_runner.scenarios._scenario_helpers.workflow_origin import (
     is_recursive_workflow,
     is_entry_origin_workflow,
 )
-from task_center_runner.scenarios._scenario_helpers.plan_shapes import (
+from test_runner.scenarios._scenario_helpers.plan_shapes import (
     minimal_full_plan,
     preflight_full_plan,
     preflight_defers_plan,

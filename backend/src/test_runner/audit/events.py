@@ -25,7 +25,7 @@ Two rules every future emitter MUST respect:
    bookkeeping ε to absorb the timer's own overhead).
 
 These rules are pinned by the live tests under
-``task_center_runner/tests/mock/sandbox/isolated_workspace/performance/``.
+``test_runner/tests/mock/sandbox/isolated_workspace/performance/``.
 Aggregators (``performance_report.py``) consume ``total_ms`` and the
 ``phases_ms`` dict opaquely — they should never assume any specific phase
 key is present.
@@ -38,7 +38,7 @@ from datetime import UTC, datetime
 from enum import StrEnum
 from typing import Any
 
-from task_center_runner.audit.node_id import NodeId
+from test_runner.audit.node_id import NodeId
 
 
 class EventType(StrEnum):

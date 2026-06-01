@@ -10,28 +10,28 @@ from typing import Any
 import pytest
 
 import sandbox.api as sandbox_api
-from task_center_runner.benchmarks.sweevo.models import SWEEvoInstance
+from test_runner.benchmarks.sweevo.models import SWEEvoInstance
 from sandbox.api import ReadFileRequest, SandboxCaller
-from task_center_runner.agent.mock.heavy_io_zoned_probe import (
+from test_runner.agent.mock.heavy_io_zoned_probe import (
     CHUNK_COUNT,
     CHUNK_MB,
     SUMMARY_PATH,
     SUMMARY_SCHEMA,
     ZONE_NAMES,
 )
-from task_center_runner.environments.sweevo_image.fixtures import (
+from test_runner.environments.sweevo_image.fixtures import (
     run_scenario_on_sweevo_image,
 )
-from task_center_runner.core.runner import RunReport
-from task_center_runner.core.stores import TaskStoreBundle
-from task_center_runner.audit.events import EventType
-from task_center_runner.scenarios import SCENARIO_REGISTRY
-from task_center_runner.scenarios.sandbox.heavy_io_zoned_concurrent import WORKER_COUNT
-from task_center_runner.tests._live_config import (
+from test_runner.core.runner import RunReport
+from test_runner.core.stores import TaskStoreBundle
+from test_runner.audit.events import EventType
+from test_runner.scenarios import SCENARIO_REGISTRY
+from test_runner.scenarios.sandbox.heavy_io_zoned_concurrent import WORKER_COUNT
+from test_runner.tests._live_config import (
     database_configured,
     live_e2e_heavy_enabled,
 )
-from task_center_runner.tests.mock._layer_stack_occ_overlay_assertions import (
+from test_runner.tests.mock._layer_stack_occ_overlay_assertions import (
     assert_o1_workspace_resource_snapshots,
     assert_resource_key_max,
     load_performance_report,

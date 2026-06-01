@@ -1,12 +1,12 @@
-"""Phase 4c invariant — ``task_center_runner.core.*`` is runner-agnostic.
+"""Phase 4c invariant — ``test_runner.core.*`` is runner-agnostic.
 
 The unified engine must not reach into the mock-runner internals or any
 specific benchmark adapter. The test enforces two layers of insulation:
 
 1. Module-graph: source files under ``core/`` MUST NOT import
-   concrete mock-runner state, anything under ``task_center_runner.agent.mock``
-   (or its legacy alias ``task_center_runner.squad``), or anything under
-   ``task_center_runner.benchmarks.sweevo``.
+   concrete mock-runner state, anything under ``test_runner.agent.mock``
+   (or its legacy alias ``test_runner.squad``), or anything under
+   ``test_runner.benchmarks.sweevo``.
 
 2. Source-string: each ``core/*.py`` source MUST NOT contain
    ``hasattr(``, ``getattr(runner``, ``isinstance(runner``,
@@ -26,17 +26,17 @@ from pathlib import Path
 CORE_DIR = (
     Path(__file__).resolve().parents[3]
     / "src"
-    / "task_center_runner"
+    / "test_runner"
     / "core"
 )
 
 _FORBIDDEN_IMPORT_TOKENS = (
-    "task_center_runner.hooks",
-    "from task_center_runner.squad",
+    "test_runner.hooks",
+    "from test_runner.squad",
     "import workflow_runner.squad",
-    "from task_center_runner.agent.mock",
+    "from test_runner.agent.mock",
     "import workflow_runner.agent.mock",
-    "from task_center_runner.benchmarks.sweevo",
+    "from test_runner.benchmarks.sweevo",
     "import workflow_runner.benchmarks.sweevo",
 )
 
@@ -86,7 +86,7 @@ def test_core_has_no_forbidden_imports() -> None:
             if token in text:
                 offenders.append((source_path.relative_to(CORE_DIR), token))
     assert not offenders, (
-        "Forbidden runner-specific imports leaked into task_center_runner/core/:\n"
+        "Forbidden runner-specific imports leaked into test_runner/core/:\n"
         + "\n".join(f"  {path} contains {token!r}" for path, token in offenders)
     )
 
@@ -99,7 +99,7 @@ def test_core_source_has_no_runner_shape_escape_valves() -> None:
             if re.search(pattern, text):
                 offenders.append((source_path.relative_to(CORE_DIR), pattern))
     assert not offenders, (
-        "Forbidden runner-shape escape valves found in task_center_runner/core/:\n"
+        "Forbidden runner-shape escape valves found in test_runner/core/:\n"
         + "\n".join(f"  {path} matches /{pattern}/" for path, pattern in offenders)
     )
 
@@ -117,7 +117,7 @@ def test_no_legacy_benchmarks_imports_anywhere() -> None:
     """Per migration acceptance criterion 12 — no ``from benchmarks.`` anywhere.
 
     The legacy ``backend/src/benchmarks/`` package was deleted in favor of
-    ``task_center_runner.benchmarks.sweevo``; any remaining reference is a
+    ``test_runner.benchmarks.sweevo``; any remaining reference is a
     leak from before the rename and will ImportError at runtime.
 
     Patterns are matched after stripping comments and string literals so
@@ -145,6 +145,6 @@ def test_no_legacy_benchmarks_imports_anywhere() -> None:
                     break
     assert not offenders, (
         "Legacy `benchmarks.*` imports still present (use "
-        "`task_center_runner.benchmarks.sweevo.*` instead):\n"
+        "`test_runner.benchmarks.sweevo.*` instead):\n"
         + "\n".join(f"  {path} matches /{pattern}/" for path, pattern in offenders)
     )

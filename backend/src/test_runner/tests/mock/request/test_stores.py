@@ -1,4 +1,4 @@
-"""Integration test for task_center_runner.core.stores isolation.
+"""Integration test for test_runner.core.stores isolation.
 
 Skipped only when no database URL is configured. The repository default is
 SQLite, so local runs do not require Postgres. The test verifies that:
@@ -16,10 +16,10 @@ from pathlib import Path
 import pytest
 from sqlalchemy import text
 
-from task_center_runner.tests._live_config import database_configured
-from task_center_runner.core.stores import (
+from test_runner.tests._live_config import database_configured
+from test_runner.core.stores import (
     TaskStoreBundle,
-    create_per_test_task_center_stores,
+    create_per_test_task_stores,
 )
 
 
@@ -35,13 +35,13 @@ def _new_run(bundle: TaskStoreBundle, *, run_id: str, request_id: str) -> str:
         request_id=request_id,
         cwd="/tmp",
         sandbox_id=None,
-        request_prompt="task_center_runner stores test",
+        request_prompt="test_runner stores test",
     )
     return request_id
 
 
 def test_per_schema_isolation_round_trip() -> None:
-    bundle = create_per_test_task_center_stores()
+    bundle = create_per_test_task_stores()
     schema = bundle.schema
     db_path = (
         Path(bundle.engine.url.database)
@@ -49,7 +49,7 @@ def test_per_schema_isolation_round_trip() -> None:
         else None
     )
     try:
-        assert schema.startswith("task_center_runner_")
+        assert schema.startswith("test_runner_")
         if bundle.engine.dialect.name == "postgresql":
             with bundle.engine.connect() as conn:
                 existing = conn.execute(
@@ -69,7 +69,7 @@ def test_per_schema_isolation_round_trip() -> None:
             with bundle.engine.connect() as conn:
                 rows_in_schema = conn.execute(
                     text(
-                        f'SELECT count(*) FROM "{schema}".task_center_runs '
+                        f'SELECT count(*) FROM "{schema}".requests '
                         "WHERE id = :rid"
                     ),
                     {"rid": run_id},
@@ -78,14 +78,14 @@ def test_per_schema_isolation_round_trip() -> None:
 
             with bundle.engine.connect() as conn:
                 rows_in_public = conn.execute(
-                    text("SELECT count(*) FROM public.task_center_runs WHERE id = :rid"),
+                    text("SELECT count(*) FROM public.requests WHERE id = :rid"),
                     {"rid": run_id},
                 ).scalar()
             assert rows_in_public == 0, "row leaked into public schema"
         else:
             with bundle.engine.connect() as conn:
                 rows_in_bundle = conn.execute(
-                    text("SELECT count(*) FROM task_center_runs WHERE id = :rid"),
+                    text("SELECT count(*) FROM requests WHERE id = :rid"),
                     {"rid": run_id},
                 ).scalar()
             assert rows_in_bundle == 1, "row not found in sqlite bundle db"
@@ -110,17 +110,17 @@ def test_per_schema_isolation_round_trip() -> None:
 
 
 def test_two_bundles_dont_collide() -> None:
-    a = create_per_test_task_center_stores()
-    b = create_per_test_task_center_stores()
+    a = create_per_test_task_stores()
+    b = create_per_test_task_stores()
     try:
         assert a.schema != b.schema
         run_a = _new_run(a, run_id=f"a-{a.schema}", request_id="req-a")
         run_b = _new_run(b, run_id=f"b-{b.schema}", request_id="req-b")
 
         if a.engine.dialect.name == "postgresql":
-            table_name = f'"{a.schema}".task_center_runs'
+            table_name = f'"{a.schema}".requests'
         else:
-            table_name = "task_center_runs"
+            table_name = "requests"
         with a.engine.connect() as conn:
             visible_in_a = conn.execute(
                 text(f"SELECT count(*) FROM {table_name} WHERE id = :rid"),
@@ -142,8 +142,8 @@ def test_two_bundles_dont_collide() -> None:
 
 def test_bundle_engine_pool_is_shared() -> None:
     """Bundle pool ownership matches the configured database dialect."""
-    a: TaskStoreBundle = create_per_test_task_center_stores()
-    b: TaskStoreBundle = create_per_test_task_center_stores()
+    a: TaskStoreBundle = create_per_test_task_stores()
+    b: TaskStoreBundle = create_per_test_task_stores()
     try:
         if a.engine.dialect.name == "postgresql":
             # Each bundle's engine is a per-bundle execution_options clone but the

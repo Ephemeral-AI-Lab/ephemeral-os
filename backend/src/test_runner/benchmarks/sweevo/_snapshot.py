@@ -7,7 +7,7 @@ import subprocess
 
 import sandbox.api as sandbox_api
 
-from task_center_runner.benchmarks.sweevo.models import (
+from test_runner.benchmarks.sweevo.models import (
     SWEEvoInstance,
     _DEFAULT_SNAPSHOT_CREATE_TIMEOUT,
     _normalize_sweevo_image_ref,
@@ -92,7 +92,7 @@ def verify_sweevo_snapshot_exists(instance: SWEEvoInstance) -> str:
         raise SnapshotNotRegisteredError(
             f"Snapshot {name!r} for instance {instance.instance_id!r} is not "
             f"registered. Pre-register it before invoking the CLI, e.g. by "
-            f"calling task_center_runner.benchmarks.sweevo._snapshot."
+            f"calling test_runner.benchmarks.sweevo._snapshot."
             f"register_sweevo_snapshot(instance) from a Python shell."
         )
     return name
