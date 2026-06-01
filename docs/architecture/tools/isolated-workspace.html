@@ -43,7 +43,7 @@
 
 <section id="isolated-overview"
   data-last-reviewed-commit="HEAD-plus-worktree"
-  data-evidence-paths="backend/src/tools/isolated_workspace/__init__.py backend/src/tools/isolated_workspace/enter_isolated_workspace/definition.py backend/src/tools/isolated_workspace/exit_isolated_workspace/definition.py backend/src/tools/sandbox/_lib/registry.py backend/src/sandbox/host/isolated_workspace_lifecycle.py backend/src/sandbox/isolated_workspace/pipeline.py">
+  data-evidence-paths="backend/src/tools/isolated_workspace/__init__.py backend/src/tools/isolated_workspace/enter_isolated_workspace/definition.py backend/src/tools/isolated_workspace/exit_isolated_workspace/definition.py backend/src/tools/sandbox/_lib/registry.py backend/src/sandbox/host/isolated_workspace_lifecycle.py backend/src/sandbox/isolated_workspace/pipeline.py sandbox/crates/eos-daemon/src/isolated.rs sandbox/crates/eos-isolated/src/session.rs sandbox/crates/eos-daemon/src/command.rs">
 <h1>Isolated Workspace Tools</h1>
 <nav class="page-toc" aria-labelledby="page-toc-heading">
   <h3 id="page-toc-heading">Contents</h3>
@@ -58,6 +58,7 @@
 </nav>
 
 <p><code>backend/src/tools/isolated_workspace</code> exposes the explicit lifecycle tools for opening and closing a private sandbox workspace for one agent. The tools are registered with the sandbox tool set, but their behavior is lifecycle-oriented: <code>enter_isolated_workspace</code> pins a layer-stack snapshot and creates a persistent private namespace; <code>exit_isolated_workspace</code> cancels/drains per-agent background work, tears down the namespace and scratch state, and discards changes.</p>
+<p>The Rust daemon now has matching public lifecycle op names backed by <code>sandbox/crates/eos-daemon/src/isolated.rs</code> and <code>sandbox/crates/eos-isolated/src/session.rs</code>. The current Rust slice is session/control-plane plus Linux command/PTY routing with no OCC publish; real ns-holder/setns and bridge/veth syscalls still need live Docker proof before isolated workspace is closed.</p>
 <div class="summary">
   <ul>
     <li>Isolated mode is opt-in per agent, not the default shared collaboration path.</li>
@@ -84,7 +85,7 @@
 
 <section id="enter-tool"
   data-last-reviewed-commit="HEAD-plus-worktree"
-  data-evidence-paths="backend/src/tools/isolated_workspace/enter_isolated_workspace/definition.py backend/src/sandbox/host/isolated_workspace_lifecycle.py backend/src/sandbox/isolated_workspace/_control_plane/pipeline_registry.py backend/src/sandbox/isolated_workspace/_control_plane/workspace_handle_lifecycle.py backend/src/sandbox/isolated_workspace/_control_plane/namespace_runtime.py backend/src/sandbox/isolated_workspace/network.py backend/src/sandbox/daemon/builtin_operations.py">
+  data-evidence-paths="backend/src/tools/isolated_workspace/enter_isolated_workspace/definition.py backend/src/sandbox/host/isolated_workspace_lifecycle.py backend/src/sandbox/isolated_workspace/_control_plane/pipeline_registry.py backend/src/sandbox/isolated_workspace/_control_plane/workspace_handle_lifecycle.py backend/src/sandbox/isolated_workspace/_control_plane/namespace_runtime.py backend/src/sandbox/isolated_workspace/network.py backend/src/sandbox/daemon/builtin_operations.py sandbox/crates/eos-daemon/src/isolated.rs sandbox/crates/eos-isolated/src/session.rs">
 <h2>Enter Tool</h2>
 <p><code>enter_isolated_workspace</code> accepts an optional <code>layer_stack_root</code>. If the input is empty, the tool pulls the root from the sandbox execution context, builds an <code>EnterIsolatedWorkspaceRequest</code> with caller identity, and delegates to <code>sandbox.host.isolated_workspace_lifecycle.enter_isolated_workspace</code>.</p>
 <pre class="diagram" aria-label="Isolated workspace enter ASCII workflow">
@@ -103,7 +104,7 @@
 [pipeline registry creates isolated pipeline]
         |
         v
-[agent receives isolated_workspace_id for later tools]
+[agent id now has active isolated routing state]
 </pre>
 <div class="sequence" aria-label="Isolated workspace enter sequence">
   <ol>
@@ -119,9 +120,10 @@
 
 <section id="private-routing"
   data-last-reviewed-commit="HEAD-plus-worktree"
-  data-evidence-paths="backend/src/sandbox/daemon/workspace_tool_dispatch.py backend/src/sandbox/isolated_workspace/pipeline.py backend/src/sandbox/overlay/namespace_runner.py backend/src/sandbox/overlay/lifecycle.py backend/src/sandbox/isolated_workspace/_control_plane/pipeline_state.py backend/src/sandbox/isolated_workspace/_control_plane/workspace_handle_lifecycle.py backend/src/task_center_runner/tests/mock/sandbox/isolated_workspace/behavior_upgrade backend/src/task_center_runner/tests/mock/sandbox/isolated_workspace/concurrency">
+  data-evidence-paths="backend/src/sandbox/daemon/workspace_tool_dispatch.py backend/src/sandbox/isolated_workspace/pipeline.py backend/src/sandbox/overlay/namespace_runner.py backend/src/sandbox/overlay/lifecycle.py backend/src/sandbox/isolated_workspace/_control_plane/pipeline_state.py backend/src/sandbox/isolated_workspace/_control_plane/workspace_handle_lifecycle.py backend/src/task_center_runner/tests/mock/sandbox/isolated_workspace/behavior_upgrade backend/src/task_center_runner/tests/mock/sandbox/isolated_workspace/concurrency sandbox/crates/eos-daemon/src/command.rs sandbox/crates/eos-daemon/src/isolated.rs">
 <h2>Private Routing Override</h2>
 <p>Once the agent has an active isolated handle, <code>workspace_tool_dispatch</code> routes all typed workspace verbs through <code>IsolatedPipeline.run_tool_call</code> before attempting the default shared path. This applies to <code>read_file</code>, <code>write_file</code>, <code>edit_file</code>, <code>shell</code>, <code>glob</code>, and <code>grep</code>.</p>
+<p>Rust currently implements this override for the command surface: <code>api.v1.exec_command</code> and PTY start check the active <code>agent_id</code> handle, execute against retained isolated scratch upper/work directories on Linux, mark results <code>workspace=isolated</code>, and skip OCC publish. The Python file/search/plugin isolated routing remains the stronger completed behavior until the Rust namespace runtime is finished.</p>
 <div class="edge-list">
   <div><b>Overrides shared fast path</b><span>Direct layer-stack/OCC read/write/edit is skipped for that agent while the isolated handle exists.</span></div>
   <div><b>Uses existing namespace</b><span>The pipeline wraps the persistent handle as an overlay handle and calls the namespace runner with an isolated runner, so each tool call enters the existing namespace instead of creating a fresh per-call overlay mount.</span></div>
@@ -133,10 +135,11 @@
 
 <section id="exit-tool"
   data-last-reviewed-commit="HEAD-plus-worktree"
-  data-evidence-paths="backend/src/tools/isolated_workspace/exit_isolated_workspace/definition.py backend/src/sandbox/host/isolated_workspace_lifecycle.py backend/src/sandbox/isolated_workspace/pipeline.py backend/src/sandbox/isolated_workspace/_control_plane backend/src/task_center_runner/tests/mock/sandbox/isolated_workspace/pre_flight">
+  data-evidence-paths="backend/src/tools/isolated_workspace/exit_isolated_workspace/definition.py backend/src/sandbox/host/isolated_workspace_lifecycle.py backend/src/sandbox/isolated_workspace/pipeline.py backend/src/sandbox/isolated_workspace/_control_plane backend/src/task_center_runner/tests/mock/sandbox/isolated_workspace/pre_flight sandbox/crates/eos-daemon/src/isolated.rs sandbox/crates/eos-daemon/src/command.rs">
 <h2>Exit Tool</h2>
 <p><code>exit_isolated_workspace</code> accepts <code>grace_s</code>, builds an <code>ExitIsolatedWorkspaceRequest</code>, and delegates to the host lifecycle layer. The host first asks the background manager to cancel and drain per-agent background work, then calls daemon op <code>api.isolated_workspace.exit</code> when running against a sandbox daemon.</p>
 <p>The daemon-side exit path tears down the handle: namespace/runtime resources are closed, the snapshot lease is released, scratch upper/work data is removed, and lifecycle metrics such as evicted upperdir bytes and lifetime seconds are returned. Pre-flight tests enforce that exit and teardown do not call OCC publish-shaped primitives.</p>
+<p>The Rust daemon additionally records active PTY sessions against the isolated agent handle. A non-forced Rust isolated exit returns <code>active_pty_sessions</code> while any PTY record is live; the force-cancel path delegates through the PTY cancellation surface before retrying teardown.</p>
 <div class="callout">
   <span class="label">Discard boundary</span>
   Exit is a discard boundary. Current isolated workspace changes are intentionally not merged into the shared workspace by this tool. A future promotion workflow would need a separate explicit design; this page documents the current no-publish lifecycle.
@@ -182,7 +185,7 @@
 
 <section id="isolated-evidence-refresh"
   data-last-reviewed-commit="HEAD-plus-worktree"
-  data-evidence-paths="backend/src/tools/isolated_workspace backend/src/sandbox/host/isolated_workspace_lifecycle.py backend/src/sandbox/daemon/workspace_tool_dispatch.py backend/src/sandbox/daemon/rpc/dispatcher.py backend/src/sandbox/isolated_workspace backend/src/sandbox/overlay/namespace_runner.py backend/tests/unit_test/test_sandbox backend/src/task_center_runner/tests/mock/sandbox/plugin backend/src/task_center_runner/tests/mock/sandbox/isolated_workspace">
+  data-evidence-paths="backend/src/tools/isolated_workspace backend/src/sandbox/host/isolated_workspace_lifecycle.py backend/src/sandbox/daemon/workspace_tool_dispatch.py backend/src/sandbox/daemon/rpc/dispatcher.py backend/src/sandbox/isolated_workspace backend/src/sandbox/overlay/namespace_runner.py backend/tests/unit_test/test_sandbox backend/src/task_center_runner/tests/mock/sandbox/plugin backend/src/task_center_runner/tests/mock/sandbox/isolated_workspace sandbox/crates/eos-daemon/src/isolated.rs sandbox/crates/eos-daemon/src/command.rs sandbox/crates/eos-isolated/src/session.rs sandbox/crates/eos-daemon/tests/phase2_read_paths.rs">
 <h2>Evidence and Refresh</h2>
 <div class="evidence-grid">
   <div class="evidence-card">
@@ -193,6 +196,7 @@
       <li><code>backend/src/sandbox/daemon/workspace_tool_dispatch.py</code> for the active isolated routing override.</li>
       <li><code>backend/src/sandbox/isolated_workspace</code> for persistent handle/session, namespace, scratch, audit, TTL, and teardown behavior.</li>
       <li><code>backend/src/sandbox/daemon/rpc/dispatcher.py</code> for plugin/LSP blocking.</li>
+      <li><code>sandbox/crates/eos-daemon/src/isolated.rs</code>, <code>sandbox/crates/eos-daemon/src/command.rs</code>, and <code>sandbox/crates/eos-isolated/src/session.rs</code> for the Rust lifecycle/control-plane slice and Linux command/PTY isolated routing.</li>
     </ul>
   </div>
   <div class="evidence-card">
@@ -203,6 +207,7 @@
       <li><code>backend/src/task_center_runner/tests/mock/sandbox/plugin</code> for plugin-blocking coverage.</li>
       <li><code>backend/src/task_center_runner/tests/mock/sandbox/isolated_workspace/pre_flight</code></li>
       <li><code>backend/src/task_center_runner/tests/mock/sandbox/isolated_workspace</code> for behavior upgrade coverage.</li>
+      <li><code>sandbox/crates/eos-daemon/tests/phase2_read_paths.rs</code> and <code>isolated::tests::active_pty_records_block_exit_until_cleared</code> for the Rust lifecycle/status/list/exit and active-PTY exit gate slice.</li>
     </ul>
   </div>
   <div class="evidence-card">

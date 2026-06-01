@@ -9,12 +9,15 @@
 //! `// PORT backend/src/sandbox/isolated_workspace/_control_plane/workspace_handle_lifecycle.py:39-260`
 
 use std::collections::HashMap;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::time::{Instant, SystemTime, UNIX_EPOCH};
 
 use crate::audit::AuditSink;
-use crate::caps::ResourceCaps;
+use crate::caps::{ResourceCaps, ISOLATED_WORKSPACE_ROOT};
 use crate::error::IsolatedError;
 use crate::network::{IsolatedNetwork, VethAllocation};
+use serde_json::{json, Value};
 
 /// Newtype for an agent identity (the enter/exit key).
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -64,6 +67,8 @@ pub struct WorkspaceHandle {
     pub upperdir: PathBuf,
     /// Overlay workdir.
     pub workdir: PathBuf,
+    /// Lower-layer paths pinned by the snapshot lease.
+    pub layer_paths: Vec<String>,
     /// Open namespace FDs by name (`user`/`mnt`/`pid`/`net`).
     pub ns_fds: HashMap<String, i32>,
     /// ns-holder PID (`0` = not spawned).
@@ -172,6 +177,7 @@ where
     runtime: R,
     audit: A,
     network: IsolatedNetwork,
+    scratch_root: PathBuf,
     handles: HashMap<WorkspaceHandleId, WorkspaceHandle>,
     by_agent: HashMap<AgentId, WorkspaceHandleId>,
 }
@@ -184,6 +190,27 @@ where
 {
     /// Construct a session with injected ports, caps, and audit sink.
     pub fn new(caps: ResourceCaps, layer_stack: S, runtime: R, audit: A) -> Self {
+        Self::with_scratch_root(
+            caps,
+            layer_stack,
+            runtime,
+            audit,
+            PathBuf::from(eos_overlay::OVERLAY_WRITABLE_ROOT),
+        )
+    }
+
+    /// Construct a session with an explicit scratch root.
+    ///
+    /// The daemon uses the canonical `/eos/mount` root in Docker. Focused
+    /// unit tests inject a temporary scratch root through this constructor so
+    /// lifecycle behavior can be verified without depending on host `/eos`.
+    pub fn with_scratch_root(
+        caps: ResourceCaps,
+        layer_stack: S,
+        runtime: R,
+        audit: A,
+        scratch_root: PathBuf,
+    ) -> Self {
         let network = IsolatedNetwork::new(caps.rfc1918_egress);
         Self {
             caps,
@@ -191,6 +218,7 @@ where
             runtime,
             audit,
             network,
+            scratch_root,
             handles: HashMap::new(),
             by_agent: HashMap::new(),
         }
@@ -199,9 +227,16 @@ where
     /// Reconcile persisted handles + IP pool at startup before serving enters.
     // PORT backend/src/sandbox/isolated_workspace/pipeline.py:220 — IsolatedPipeline.initialize
     pub fn initialize(&mut self) -> Result<(), IsolatedError> {
-        let _ = (&self.caps, &self.network, &self.handles, &self.by_agent);
-        // PORT backend/src/sandbox/isolated_workspace/pipeline.py:220 — startup orphan recovery + IP-pool reconciliation
-        todo!("PORT pipeline.py:220 — startup orphan recovery + IP-pool reconciliation")
+        if !self.caps.enabled {
+            return Err(IsolatedError::FeatureDisabled);
+        }
+        self.network.initialize()?;
+        std::fs::create_dir_all(self.session_scratch_root()).map_err(|err| {
+            IsolatedError::SetupFailed {
+                step: format!("scratch_root: {err}"),
+            }
+        })?;
+        Ok(())
     }
 
     /// Enter (or reject) the isolated workspace for `agent_id`.
@@ -211,9 +246,84 @@ where
     /// on any wiring failure.
     // PORT backend/src/sandbox/isolated_workspace/_control_plane/workspace_handle_lifecycle.py:39-130 — _WorkspaceHandleLifecycleMixin.enter
     pub fn enter(&mut self, agent_id: &AgentId) -> Result<WorkspaceHandle, IsolatedError> {
-        let _ = (agent_id, &self.layer_stack, &self.runtime, &self.audit);
-        // PORT backend/src/sandbox/isolated_workspace/_control_plane/workspace_handle_lifecycle.py:39-130 — cap/dup checks, snapshot, wire, persist, emit
-        todo!("PORT workspace_handle_lifecycle.py:39-130 — cap/dup checks, snapshot, wire, persist, emit")
+        if !self.caps.enabled {
+            return Err(IsolatedError::FeatureDisabled);
+        }
+        if agent_id.0.trim().is_empty() {
+            return Err(IsolatedError::InvalidArgument(
+                "agent_id is required".to_owned(),
+            ));
+        }
+        if self.by_agent.contains_key(agent_id) {
+            return Err(IsolatedError::AlreadyOpen);
+        }
+        if self.handles.len() >= self.caps.total_cap as usize {
+            return Err(IsolatedError::QuotaExceeded);
+        }
+
+        let snapshot = self
+            .layer_stack
+            .acquire_snapshot(&format!("isolated-{}", next_handle_id()))?;
+        let workspace_handle_id = WorkspaceHandleId(next_handle_id());
+        let scratch_dir = self.session_scratch_root().join(&workspace_handle_id.0);
+        let upperdir = scratch_dir.join("upper");
+        let workdir = scratch_dir.join("work");
+        std::fs::create_dir_all(&upperdir).map_err(|err| IsolatedError::SetupFailed {
+            step: format!("upperdir: {err}"),
+        })?;
+        std::fs::create_dir_all(&workdir).map_err(|err| IsolatedError::SetupFailed {
+            step: format!("workdir: {err}"),
+        })?;
+
+        let now = monotonic_seconds();
+        let mut handle = WorkspaceHandle {
+            workspace_handle_id: workspace_handle_id.clone(),
+            agent_id: agent_id.clone(),
+            lease_id: snapshot.lease_id.clone(),
+            manifest_version: snapshot.manifest_version,
+            manifest_root_hash: snapshot.root_hash.clone(),
+            workspace_root: ISOLATED_WORKSPACE_ROOT.to_owned(),
+            scratch_dir,
+            upperdir,
+            workdir,
+            layer_paths: snapshot.layer_paths.clone(),
+            ns_fds: HashMap::new(),
+            holder_pid: 0,
+            readiness_fd: -1,
+            control_fd: -1,
+            veth: None,
+            cgroup_path: None,
+            created_at: now,
+            last_activity: now,
+            active_calls: 0,
+        };
+
+        if let Err(err) = self.wire_handle(&mut handle) {
+            self.rollback_partial(&handle);
+            let _ = self.layer_stack.release_lease(&snapshot.lease_id);
+            return Err(err);
+        }
+
+        self.by_agent
+            .insert(agent_id.clone(), workspace_handle_id.clone());
+        self.handles
+            .insert(workspace_handle_id.clone(), handle.clone());
+        let _ = self.audit.emit(
+            "sandbox_isolated_workspace_enter",
+            json!({
+                "workspace_handle_id": workspace_handle_id.0,
+                "agent_id": agent_id.0,
+                "manifest_version": handle.manifest_version,
+                "manifest_root_hash": handle.manifest_root_hash,
+                "lease_id": handle.lease_id,
+                "lowerdir_layer_count": handle.layer_paths.len(),
+                "workspace_root": handle.workspace_root,
+                "upperdir": handle.upperdir.to_string_lossy(),
+                "workdir": handle.workdir.to_string_lossy(),
+                "tree-copy": false,
+            }),
+        );
+        Ok(handle)
     }
 
     /// Exit the isolated workspace for `agent_id`.
@@ -225,9 +335,178 @@ where
         &mut self,
         agent_id: &AgentId,
         grace_s: Option<f64>,
-    ) -> Result<serde_json::Value, IsolatedError> {
-        let _ = (agent_id, grace_s);
-        // PORT backend/src/sandbox/isolated_workspace/_control_plane/workspace_handle_lifecycle.py:207-260 — drain, teardown, release lease, discard upperdir
-        todo!("PORT workspace_handle_lifecycle.py:207-260 — drain, teardown, release lease, discard upperdir")
+    ) -> Result<Value, IsolatedError> {
+        if agent_id.0.trim().is_empty() {
+            return Err(IsolatedError::InvalidArgument(
+                "agent_id is required".to_owned(),
+            ));
+        }
+        let Some(handle_id) = self.by_agent.remove(agent_id) else {
+            return Err(IsolatedError::NotOpen);
+        };
+        let Some(handle) = self.handles.remove(&handle_id) else {
+            return Err(IsolatedError::NotOpen);
+        };
+        if handle.active_calls > 0 {
+            self.by_agent.insert(agent_id.clone(), handle_id.clone());
+            self.handles.insert(handle_id, handle);
+            return Ok(json!({
+                "success": false,
+                "evicted_upperdir_bytes": 0,
+                "lifetime_s": 0.0,
+                "total_ms": 0.0,
+                "phases_ms": {},
+                "error": {
+                    "kind": "exit_drain_timeout",
+                    "message": "exit_isolated_workspace timed out waiting for in-flight dispatches to drain",
+                    "details": {
+                        "inflight": "1",
+                        "grace_s": grace_s.unwrap_or(self.caps.exit_grace_s).to_string(),
+                    },
+                },
+            }));
+        }
+        let timer = Instant::now();
+        let upperdir_bytes = directory_file_bytes(&handle.upperdir);
+        self.teardown_handle(&handle, grace_s.unwrap_or(self.caps.exit_grace_s));
+        let lifetime_s = (monotonic_seconds() - handle.created_at).max(0.0);
+        let total_ms = timer.elapsed().as_secs_f64() * 1000.0;
+        let _ = self.audit.emit(
+            "sandbox_isolated_workspace_exit",
+            json!({
+                "workspace_handle_id": handle.workspace_handle_id.0,
+                "agent_id": agent_id.0,
+                "reason": "explicit",
+                "lifetime_s": lifetime_s,
+                "upperdir_bytes_discarded": upperdir_bytes,
+                "total_ms": total_ms,
+                "phases_ms": {},
+                "scratch_removed": !handle.scratch_dir.exists(),
+            }),
+        );
+        Ok(json!({
+            "success": true,
+            "evicted_upperdir_bytes": upperdir_bytes,
+            "lifetime_s": lifetime_s,
+            "total_ms": total_ms,
+            "phases_ms": {},
+        }))
     }
+
+    /// Return a copy of the active handle for `agent_id`, if any.
+    pub fn get_handle(&self, agent_id: &AgentId) -> Option<WorkspaceHandle> {
+        self.by_agent
+            .get(agent_id)
+            .and_then(|handle_id| self.handles.get(handle_id))
+            .cloned()
+    }
+
+    /// Return every agent with an open handle.
+    pub fn list_open_agents(&self) -> Vec<String> {
+        self.by_agent.keys().map(|agent| agent.0.clone()).collect()
+    }
+
+    /// Emit an isolated tool-call audit event for an active handle.
+    pub fn record_tool_call(&self, agent_id: &AgentId, mut payload: Value) {
+        let Some(handle) = self.get_handle(agent_id) else {
+            return;
+        };
+        if let Some(object) = payload.as_object_mut() {
+            object.insert(
+                "workspace_handle_id".to_owned(),
+                json!(handle.workspace_handle_id.0),
+            );
+            object.insert("agent_id".to_owned(), json!(agent_id.0));
+        }
+        let _ = self
+            .audit
+            .emit("sandbox_isolated_workspace_tool_call", payload);
+    }
+
+    fn session_scratch_root(&self) -> PathBuf {
+        self.scratch_root.join("runtime").join("isolated-workspace")
+    }
+
+    fn wire_handle(&mut self, handle: &mut WorkspaceHandle) -> Result<(), IsolatedError> {
+        handle.holder_pid = self
+            .runtime
+            .spawn_ns_holder(handle, self.caps.setup_timeout_s)?;
+        handle.ns_fds = self.runtime.open_ns_fds(handle.holder_pid)?;
+        self.network.initialize()?;
+        handle.veth = Some(
+            self.network
+                .install_veth(&handle.workspace_handle_id.0, handle.holder_pid)?,
+        );
+        self.runtime.mount_overlay(handle, &handle.layer_paths)?;
+        let _dns_fallback_applied = self
+            .runtime
+            .configure_dns(handle, &self.caps.fallback_dns)?;
+        self.runtime
+            .signal_net_ready(handle, self.caps.setup_timeout_s)?;
+        let cgroup_path = self.runtime.create_cgroup(handle)?;
+        if !cgroup_path.as_os_str().is_empty() {
+            handle.cgroup_path = Some(cgroup_path);
+        }
+        Ok(())
+    }
+
+    fn rollback_partial(&mut self, handle: &WorkspaceHandle) {
+        if let Some(veth) = handle.veth.as_ref() {
+            self.network.teardown_veth(veth);
+        }
+        if handle.holder_pid > 0 {
+            let _ = self.runtime.kill_holder(handle.holder_pid, 1.0);
+        }
+        let _ = std::fs::remove_dir_all(&handle.scratch_dir);
+    }
+
+    fn teardown_handle(&mut self, handle: &WorkspaceHandle, grace_s: f64) {
+        if handle.holder_pid > 0 {
+            let _ = self.runtime.kill_holder(handle.holder_pid, grace_s);
+        }
+        if let Some(veth) = handle.veth.as_ref() {
+            self.network.teardown_veth(veth);
+        }
+        let _ = self.layer_stack.release_lease(&handle.lease_id);
+        if let Some(cgroup_path) = handle.cgroup_path.as_ref() {
+            let _ = std::fs::remove_dir(cgroup_path);
+        }
+        let _ = std::fs::remove_dir_all(&handle.scratch_dir);
+    }
+}
+
+fn next_handle_id() -> String {
+    static COUNTER: AtomicU64 = AtomicU64::new(1);
+    let nanos = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map_or(0, |duration| duration.as_nanos());
+    format!(
+        "{:016x}{:04x}",
+        nanos,
+        COUNTER.fetch_add(1, Ordering::Relaxed)
+    )
+}
+
+fn monotonic_seconds() -> f64 {
+    static START: std::sync::OnceLock<Instant> = std::sync::OnceLock::new();
+    START.get_or_init(Instant::now).elapsed().as_secs_f64()
+}
+
+fn directory_file_bytes(path: &Path) -> u64 {
+    let mut total = 0_u64;
+    let Ok(entries) = std::fs::read_dir(path) else {
+        return 0;
+    };
+    for entry in entries.flatten() {
+        let path = entry.path();
+        let Ok(metadata) = entry.metadata() else {
+            continue;
+        };
+        if metadata.is_file() {
+            total = total.saturating_add(metadata.len());
+        } else if metadata.is_dir() {
+            total = total.saturating_add(directory_file_bytes(&path));
+        }
+    }
+    total
 }

@@ -42,8 +42,8 @@ use eos_runner::{RunMode, RunRequest, RunResult, ToolCall, WorkspaceRoot};
 #[cfg(target_os = "linux")]
 use crate::dispatcher::{
     apply_occ_changeset, base_hashes_for_snapshot, guarded_changeset_response,
-    insert_occ_route_timings, layer_change_kind, occ_route_metrics, overlay_daemon_error,
-    resource_timings,
+    insert_occ_route_timings, layer_change_kind, merge_runner_timings, occ_route_metrics,
+    overlay_daemon_error, resource_timings, run_ns_runner_child,
 };
 use crate::dispatcher::{run_shell_overlay, DispatchContext};
 use crate::error::DaemonError;
@@ -58,6 +58,33 @@ pub(crate) fn op_exec_command(
     let timeout_seconds = optional_u64(args, "timeout")
         .or_else(|| optional_u64(args, "timeout_seconds"))
         .map(|value| value as f64);
+    if let Some(handle) = crate::isolated::command_handle_for_args(args) {
+        #[cfg(target_os = "linux")]
+        {
+            if tty {
+                let yield_time_ms = optional_u64(args, "yield_time_ms").unwrap_or(1000);
+                return start_isolated_pty_command(
+                    args,
+                    cmd,
+                    timeout_seconds,
+                    yield_time_ms,
+                    handle,
+                );
+            }
+            return run_isolated_command(args, cmd, timeout_seconds, handle, Instant::now());
+        }
+        #[cfg(not(target_os = "linux"))]
+        {
+            let _ = (cmd, timeout_seconds, handle);
+            return Ok(command_result(
+                "error",
+                None,
+                "",
+                "isolated exec_command is only supported on linux",
+                None,
+            ));
+        }
+    }
     if !tty {
         let mut shell_args = args.clone();
         shell_args["command"] = json!(cmd);
@@ -496,6 +523,292 @@ struct PtyWorkspace {
 }
 
 #[cfg(target_os = "linux")]
+struct IsolatedPtyWorkspace {
+    handle: crate::isolated::CommandHandle,
+    output_path: PathBuf,
+    final_path: PathBuf,
+}
+
+#[cfg(target_os = "linux")]
+fn run_isolated_command(
+    args: &Value,
+    cmd: String,
+    timeout_seconds: Option<f64>,
+    handle: crate::isolated::CommandHandle,
+    total_start: Instant,
+) -> Result<Value, DaemonError> {
+    let invocation_id = args
+        .get("invocation_id")
+        .and_then(Value::as_str)
+        .unwrap_or("exec_command")
+        .to_owned();
+    let cwd = args
+        .get("cwd")
+        .and_then(Value::as_str)
+        .unwrap_or(".")
+        .to_owned();
+    let request = RunRequest {
+        mode: RunMode::FreshNs,
+        tool_call: ToolCall {
+            invocation_id,
+            agent_id: handle.agent_id.clone(),
+            verb: "exec_command".to_owned(),
+            intent: Intent::WriteAllowed,
+            args: json!({
+                "command": cmd,
+                "cwd": cwd,
+            }),
+            background: false,
+        },
+        workspace_root: WorkspaceRoot(handle.workspace_root.clone()),
+        layer_paths: handle.layer_paths.clone(),
+        upperdir: Some(handle.upperdir.clone()),
+        workdir: Some(handle.workdir.clone()),
+        ns_fds: None,
+        cgroup_path: handle.cgroup_path.clone(),
+        timeout_seconds,
+    };
+    let runner = run_ns_runner_child(&request)?;
+    isolated_response_from_runner(&handle, &runner, total_start, false)
+}
+
+#[cfg(target_os = "linux")]
+fn isolated_response_from_runner(
+    handle: &crate::isolated::CommandHandle,
+    runner: &RunResult,
+    total_start: Instant,
+    include_pty_session_id: bool,
+) -> Result<Value, DaemonError> {
+    let capture_start = Instant::now();
+    let changes = capture_upperdir(&handle.upperdir)
+        .map_err(|err| overlay_daemon_error("capture isolated upperdir", err))?;
+    let capture_s = capture_start.elapsed().as_secs_f64();
+    let path_kinds: Vec<(String, String)> = changes
+        .iter()
+        .map(|change| {
+            (
+                change.path().as_str().to_owned(),
+                layer_change_kind(change).to_owned(),
+            )
+        })
+        .collect();
+    let changed_paths: Vec<String> = path_kinds.iter().map(|(path, _)| path.clone()).collect();
+    let manifest = LayerStack::open(handle.layer_stack_root.clone())?.read_active_manifest()?;
+    let mut timings = resource_timings(&manifest, path_kinds.len());
+    merge_runner_timings(&mut timings, runner);
+    timings.insert(
+        "command_exec.capture_upperdir_s".to_owned(),
+        json!(capture_s),
+    );
+    timings.insert("command_exec.occ_apply_s".to_owned(), json!(0.0));
+    timings.insert(
+        "command_exec.total_s".to_owned(),
+        json!(total_start.elapsed().as_secs_f64()),
+    );
+    timings.insert(
+        "api.exec_command.total_s".to_owned(),
+        json!(total_start.elapsed().as_secs_f64()),
+    );
+    let status = runner
+        .tool_result
+        .get("status")
+        .and_then(Value::as_str)
+        .unwrap_or(if runner.exit_code == 0 { "ok" } else { "error" });
+    let stdout = runner
+        .tool_result
+        .get("stdout")
+        .and_then(Value::as_str)
+        .unwrap_or_default();
+    let stderr = runner
+        .tool_result
+        .get("stderr")
+        .and_then(Value::as_str)
+        .unwrap_or_default();
+    let mut response = json!({
+        "success": true,
+        "workspace": "isolated",
+        "workspace_mode": "isolated",
+        "status": status,
+        "exit_code": runner.exit_code,
+        "output": {
+            "stdout": stdout,
+            "stderr": stderr,
+        },
+        "stdout": stdout,
+        "stderr": stderr,
+        "conflict": null,
+        "conflict_reason": null,
+        "changed_paths": changed_paths,
+        "changed_path_kinds": Value::Object(
+            path_kinds
+                .iter()
+                .map(|(path, kind)| (path.clone(), json!(kind)))
+                .collect()
+        ),
+        "mutation_source": "isolated_workspace",
+        "isolated_workspace": {
+            "agent_id": handle.agent_id.clone(),
+            "workspace_handle_id": handle.workspace_handle_id.clone(),
+            "manifest_version": handle.manifest_version,
+            "manifest_root_hash": handle.manifest_root_hash.clone(),
+            "published": false,
+        },
+        "timings": Value::Object(timings),
+        "warnings": runner
+            .tool_result
+            .get("warnings")
+            .cloned()
+            .unwrap_or_else(|| json!([])),
+    });
+    if include_pty_session_id {
+        if let Some(pty_session_id) = runner.tool_result.get("pty_session_id").cloned() {
+            response["pty_session_id"] = pty_session_id;
+        }
+    }
+    crate::isolated::record_tool_call(
+        &handle.agent_id,
+        json!({
+            "workspace_handle_id": handle.workspace_handle_id.clone(),
+            "exit_code": runner.exit_code,
+            "status": status,
+            "changed_paths": response["changed_paths"].clone(),
+            "published": false,
+            "duration_s": total_start.elapsed().as_secs_f64(),
+        }),
+    );
+    Ok(response)
+}
+
+#[cfg(target_os = "linux")]
+fn start_isolated_pty_command(
+    args: &Value,
+    cmd: String,
+    timeout_seconds: Option<f64>,
+    yield_time_ms: u64,
+    handle: crate::isolated::CommandHandle,
+) -> Result<Value, DaemonError> {
+    let invocation_id = args
+        .get("invocation_id")
+        .and_then(Value::as_str)
+        .unwrap_or("exec_command")
+        .to_owned();
+    let id = pty_registry().next_id();
+    let prepare_result: Result<
+        (IsolatedPtyWorkspace, Arc<PtySession>, std::process::Child),
+        DaemonError,
+    > = (|| {
+        let session_dir = handle.scratch_dir.join("pty-sessions").join(&id);
+        std::fs::create_dir_all(&session_dir)?;
+        let transcript_path = session_dir.join("transcript.log");
+        let final_path = session_dir.join("final.json");
+        let output_path = session_dir.join("runner-result.json");
+        let request_path = session_dir.join("runner-request.json");
+        std::fs::write(
+            session_dir.join("metadata.json"),
+            serde_json::to_vec_pretty(&json!({
+                "pty_session_id": id.clone(),
+                "agent_id": handle.agent_id.clone(),
+                "invocation_id": invocation_id.clone(),
+                "workspace": "isolated",
+                "workspace_handle_id": handle.workspace_handle_id.clone(),
+                "command": cmd.clone(),
+                "status": "running",
+            }))
+            .map_err(|err| DaemonError::InvalidEnvelope(err.to_string()))?,
+        )?;
+        let request = RunRequest {
+            mode: RunMode::FreshNs,
+            tool_call: ToolCall {
+                invocation_id: invocation_id.clone(),
+                agent_id: handle.agent_id.clone(),
+                verb: "exec_command".to_owned(),
+                intent: Intent::WriteAllowed,
+                args: json!({
+                    "command": cmd.clone(),
+                    "cwd": ".",
+                    "tty": true,
+                }),
+                background: false,
+            },
+            workspace_root: WorkspaceRoot(handle.workspace_root.clone()),
+            layer_paths: handle.layer_paths.clone(),
+            upperdir: Some(handle.upperdir.clone()),
+            workdir: Some(handle.workdir.clone()),
+            ns_fds: None,
+            cgroup_path: handle.cgroup_path.clone(),
+            timeout_seconds,
+        };
+        std::fs::write(
+            &request_path,
+            serde_json::to_vec(&request)
+                .map_err(|err| DaemonError::InvalidEnvelope(err.to_string()))?,
+        )?;
+
+        let pty = openpty(None, None).map_err(|err| {
+            DaemonError::Ephemeral(eos_ephemeral::EphemeralError::Overlay(format!(
+                "open pty: {err}"
+            )))
+        })?;
+        let master: File = pty.master.into();
+        let slave: File = pty.slave.into();
+        let mut child_command = Command::new(std::env::current_exe()?);
+        child_command
+            .arg("ns-runner")
+            .arg("--request")
+            .arg(&request_path)
+            .arg("--output")
+            .arg(&output_path)
+            .stdin(Stdio::from(slave.try_clone()?))
+            .stdout(Stdio::from(slave.try_clone()?))
+            .stderr(Stdio::from(slave))
+            .process_group(0);
+        let child = child_command.spawn()?;
+        let pgid = child.id() as i32;
+        let output = Arc::new(PtyOutput::new());
+        let session = Arc::new(PtySession {
+            id: id.clone(),
+            agent_id: handle.agent_id.clone(),
+            command: cmd.clone(),
+            pgid,
+            writer: Mutex::new(master.try_clone()?),
+            output: Arc::clone(&output),
+            cancelled: Mutex::new(false),
+        });
+        spawn_pty_reader(master, output, transcript_path);
+        Ok((
+            IsolatedPtyWorkspace {
+                handle,
+                output_path,
+                final_path,
+            },
+            session,
+            child,
+        ))
+    })();
+
+    let (workspace, session, mut child) = prepare_result?;
+    let deadline = Instant::now() + Duration::from_millis(yield_time_ms);
+    while Instant::now() < deadline {
+        if child.try_wait()?.is_some() {
+            let response = finish_isolated_pty_session(session, child, workspace, false);
+            return Ok(strip_session_id(response));
+        }
+        thread::sleep(Duration::from_millis(5));
+    }
+    if child.try_wait()?.is_some() {
+        let response = finish_isolated_pty_session(session, child, workspace, false);
+        return Ok(strip_session_id(response));
+    }
+    let stdout = session.output.all_recent(None);
+    pty_registry().insert(Arc::clone(&session));
+    crate::isolated::register_pty(&session.agent_id, &session.id);
+    thread::spawn(move || {
+        let _ = finish_isolated_pty_session(session, child, workspace, true);
+    });
+    Ok(command_result("running", None, &stdout, "", Some(id)))
+}
+
+#[cfg(target_os = "linux")]
 fn start_pty_command(
     args: &Value,
     cmd: String,
@@ -749,6 +1062,167 @@ fn finish_pty_session(
 }
 
 #[cfg(target_os = "linux")]
+fn finish_isolated_pty_session(
+    session: Arc<PtySession>,
+    mut child: std::process::Child,
+    workspace: IsolatedPtyWorkspace,
+    publish_completion: bool,
+) -> Value {
+    let status = child.wait();
+    terminate_pty_process_group(session.pgid);
+    let runner = std::fs::read(&workspace.output_path)
+        .ok()
+        .and_then(|bytes| serde_json::from_slice::<RunResult>(&bytes).ok());
+    let mut exit_code = runner
+        .as_ref()
+        .map(|result| result.exit_code as i64)
+        .or_else(|| {
+            status.ok().map(|status| {
+                status
+                    .code()
+                    .or_else(|| status.signal().map(|signal| -signal))
+                    .unwrap_or(1) as i64
+            })
+        })
+        .unwrap_or(1);
+    let mut command_status = runner
+        .as_ref()
+        .and_then(|result| result.tool_result.get("status"))
+        .and_then(Value::as_str)
+        .unwrap_or("error")
+        .to_owned();
+    if *session
+        .cancelled
+        .lock()
+        .expect("pty cancelled flag poisoned")
+    {
+        command_status = "cancelled".to_owned();
+        if exit_code == 0 {
+            exit_code = 130;
+        }
+    }
+    let response = finalize_isolated_pty_workspace(
+        &session,
+        &workspace,
+        runner.as_ref(),
+        &command_status,
+        exit_code,
+        publish_completion,
+    )
+    .unwrap_or_else(|err| {
+        command_result(
+            "error",
+            Some(exit_code),
+            &session.output.all_recent(None),
+            &err.to_string(),
+            Some(session.id.clone()),
+        )
+    });
+    let _ = pty_registry().remove(&session.id);
+    crate::isolated::unregister_pty(&session.agent_id, &session.id);
+    if publish_completion {
+        pty_registry().push_completed(json!({
+            "pty_session_id": session.id,
+            "agent_id": session.agent_id,
+            "command": session.command,
+            "result": response,
+        }));
+    }
+    response
+}
+
+#[cfg(target_os = "linux")]
+fn finalize_isolated_pty_workspace(
+    session: &PtySession,
+    workspace: &IsolatedPtyWorkspace,
+    runner: Option<&RunResult>,
+    status: &str,
+    exit_code: i64,
+    include_session_id: bool,
+) -> Result<Value, DaemonError> {
+    let stdout = session.output.all_recent(None);
+    let capture_start = Instant::now();
+    let changes = capture_upperdir(&workspace.handle.upperdir)
+        .map_err(|err| overlay_daemon_error("capture isolated upperdir", err))?;
+    let capture_s = capture_start.elapsed().as_secs_f64();
+    let path_kinds: Vec<(String, String)> = changes
+        .iter()
+        .map(|change| {
+            (
+                change.path().as_str().to_owned(),
+                layer_change_kind(change).to_owned(),
+            )
+        })
+        .collect();
+    let manifest =
+        LayerStack::open(workspace.handle.layer_stack_root.clone())?.read_active_manifest()?;
+    let mut timings = resource_timings(&manifest, path_kinds.len());
+    if let Some(runner) = runner {
+        merge_runner_timings(&mut timings, runner);
+    }
+    timings.insert(
+        "command_exec.capture_upperdir_s".to_owned(),
+        json!(capture_s),
+    );
+    timings.insert("command_exec.occ_apply_s".to_owned(), json!(0.0));
+    let changed_paths: Vec<String> = path_kinds.iter().map(|(path, _)| path.clone()).collect();
+    let changed_path_kinds = Value::Object(
+        path_kinds
+            .into_iter()
+            .map(|(path, kind)| (path, json!(kind)))
+            .collect(),
+    );
+    let mut response = json!({
+        "success": true,
+        "workspace": "isolated",
+        "workspace_mode": "isolated",
+        "status": status,
+        "exit_code": exit_code,
+        "output": {
+            "stdout": stdout.clone(),
+            "stderr": "",
+        },
+        "stdout": stdout,
+        "stderr": "",
+        "conflict": null,
+        "conflict_reason": null,
+        "changed_paths": changed_paths,
+        "changed_path_kinds": changed_path_kinds,
+        "mutation_source": "isolated_workspace",
+        "isolated_workspace": {
+            "agent_id": workspace.handle.agent_id.clone(),
+            "workspace_handle_id": workspace.handle.workspace_handle_id.clone(),
+            "manifest_version": workspace.handle.manifest_version,
+            "manifest_root_hash": workspace.handle.manifest_root_hash.clone(),
+            "published": false,
+        },
+        "timings": Value::Object(timings),
+        "warnings": [],
+        "spool_truncated": session.output.spool_truncated(),
+    });
+    if include_session_id {
+        response["pty_session_id"] = json!(session.id.clone());
+    }
+    std::fs::write(
+        &workspace.final_path,
+        serde_json::to_vec_pretty(&response)
+            .map_err(|err| DaemonError::InvalidEnvelope(err.to_string()))?,
+    )?;
+    crate::isolated::record_tool_call(
+        &workspace.handle.agent_id,
+        json!({
+            "workspace_handle_id": workspace.handle.workspace_handle_id.clone(),
+            "exit_code": exit_code,
+            "status": status,
+            "changed_paths": response["changed_paths"].clone(),
+            "published": false,
+            "pty_session_id": session.id.clone(),
+        }),
+    );
+    Ok(response)
+}
+
+#[cfg(target_os = "linux")]
 fn finalize_pty_workspace(
     session: &PtySession,
     workspace: &PtyWorkspace,
@@ -907,6 +1381,7 @@ fn pty_cancel(args: &Value) -> Result<Value, DaemonError> {
         .expect("pty cancelled flag poisoned") = true;
     let _ = killpg(Pid::from_raw(session.pgid), Signal::SIGTERM);
     thread::sleep(Duration::from_millis(50));
+    crate::isolated::unregister_pty(&session.agent_id, &id);
     Ok(command_result(
         "cancelled",
         None,
@@ -914,6 +1389,27 @@ fn pty_cancel(args: &Value) -> Result<Value, DaemonError> {
         "",
         None,
     ))
+}
+
+#[cfg(target_os = "linux")]
+pub(crate) fn cancel_pty_session_for_exit(id: &str) -> Result<bool, DaemonError> {
+    let Some(session) = pty_registry().remove(id) else {
+        crate::isolated::unregister_pty_id(id);
+        return Ok(false);
+    };
+    *session
+        .cancelled
+        .lock()
+        .expect("pty cancelled flag poisoned") = true;
+    let _ = killpg(Pid::from_raw(session.pgid), Signal::SIGTERM);
+    thread::sleep(Duration::from_millis(50));
+    crate::isolated::unregister_pty(&session.agent_id, id);
+    Ok(true)
+}
+
+#[cfg(not(target_os = "linux"))]
+pub(crate) fn cancel_pty_session_for_exit(_id: &str) -> Result<bool, DaemonError> {
+    Ok(false)
 }
 
 #[cfg(test)]

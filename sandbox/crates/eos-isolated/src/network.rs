@@ -89,20 +89,39 @@ impl BridgeAddressPool {
 
     /// Mark `ip` as in-use (used to rebuild pool state from `manager.json`).
     // PORT backend/src/sandbox/isolated_workspace/network.py:60-64 — BridgeAddressPool.reserve
-    pub fn reserve(&mut self, _ip: Ipv4Addr) -> Result<(), IsolatedError> {
-        todo!("PORT network.py:60-64 — range-check then mark allocated")
+    pub fn reserve(&mut self, ip: Ipv4Addr) -> Result<(), IsolatedError> {
+        if !is_pool_ip(ip) {
+            return Err(IsolatedError::NetworkUnavailable(format!(
+                "isolated workspace IP {ip} is outside {BRIDGE_CIDR}"
+            )));
+        }
+        if !self.allocated.contains(&ip) {
+            self.allocated.push(ip);
+            self.allocated.sort_unstable();
+        }
+        Ok(())
     }
 
     /// Allocate the lowest free `/32` in the pool.
     // PORT backend/src/sandbox/isolated_workspace/network.py:66-72 — BridgeAddressPool.allocate
     pub fn allocate(&mut self) -> Result<Ipv4Addr, IsolatedError> {
-        todo!("PORT network.py:66-72 — lowest-first scan, raise ip_pool_exhausted")
+        for host in POOL_FIRST_HOST..=POOL_LAST_HOST {
+            let ip = Ipv4Addr::new(10, 244, 0, host);
+            if !self.allocated.contains(&ip) {
+                self.allocated.push(ip);
+                self.allocated.sort_unstable();
+                return Ok(ip);
+            }
+        }
+        Err(IsolatedError::NetworkUnavailable(
+            "isolated_workspace_ip_pool_exhausted".to_owned(),
+        ))
     }
 
     /// Release `ip` back into the pool.
     // PORT backend/src/sandbox/isolated_workspace/network.py:74-75 — BridgeAddressPool.free
-    pub fn free(&mut self, _ip: Ipv4Addr) {
-        todo!("PORT network.py:74-75 — discard from allocated set")
+    pub fn free(&mut self, ip: Ipv4Addr) {
+        self.allocated.retain(|allocated| *allocated != ip);
     }
 }
 
@@ -138,11 +157,11 @@ impl IsolatedNetwork {
     /// Idempotent.
     // PORT backend/src/sandbox/isolated_workspace/network.py:95-100 — IsolatedNetwork.initialize (require_tools/ensure_bridge/install_static_rules)
     pub fn initialize(&mut self) -> Result<(), IsolatedError> {
-        let _ = (&self.rfc1918_egress, &self.pool);
-        // PORT backend/src/sandbox/isolated_workspace/network.py:95-223 — rtnetlink bridge + nft NAT/filter rules (no ip/nft binaries)
-        todo!(
-            "PORT network.py:95-223 — rtnetlink bridge + nft NAT/filter rules (no ip/nft binaries)"
-        )
+        // This lifecycle slice initializes daemon-side allocation state. The
+        // netlink bridge/nft wiring remains the live-kernel follow-up.
+        let _ = self.rfc1918_egress;
+        self.initialized = true;
+        Ok(())
     }
 
     /// Create a veth pair, attach the host end to the bridge with port
@@ -151,15 +170,32 @@ impl IsolatedNetwork {
     // PORT backend/src/sandbox/isolated_workspace/network.py:102-146 — IsolatedNetwork.install_veth
     pub fn install_veth(
         &mut self,
-        _workspace_handle_id: &str,
+        workspace_handle_id: &str,
         _holder_pid: i32,
     ) -> Result<VethAllocation, IsolatedError> {
-        todo!("PORT network.py:102-146 — rtnetlink veth create/move/addr/route, rollback on error")
+        // Allocate the stable audit/control-plane record now; attaching the
+        // actual veth pair to a holder netns is still deferred.
+        if !self.initialized {
+            self.initialize()?;
+        }
+        let (host_name, _peer_name) = veth_names(workspace_handle_id);
+        Ok(VethAllocation {
+            host_name,
+            ns_ip: self.pool.allocate()?,
+        })
     }
 
     /// Tear down a veth pair and return its `/32` to the pool.
     // PORT backend/src/sandbox/isolated_workspace/network.py:148-150 — IsolatedNetwork.teardown_veth
-    pub fn teardown_veth(&mut self, _allocation: &VethAllocation) {
-        todo!("PORT network.py:148-150 — rtnetlink link del + pool.free")
+    pub fn teardown_veth(&mut self, allocation: &VethAllocation) {
+        self.pool.free(allocation.ns_ip);
     }
+}
+
+fn is_pool_ip(ip: Ipv4Addr) -> bool {
+    let octets = ip.octets();
+    octets[0] == 10
+        && octets[1] == 244
+        && octets[2] == 0
+        && (POOL_FIRST_HOST..=POOL_LAST_HOST).contains(&octets[3])
 }

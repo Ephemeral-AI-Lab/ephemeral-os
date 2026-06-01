@@ -1,5 +1,6 @@
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::Mutex;
 
 use eos_daemon::{DaemonServer, ServerConfig};
 use eos_daemon::{DispatchContext, InFlightRegistry, OpTable};
@@ -8,6 +9,8 @@ use serde_json::{json, Value};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpListener, TcpStream, UnixStream};
 use tokio::time::{sleep, timeout, Duration};
+
+static ISOLATED_ENV_LOCK: Mutex<()> = Mutex::new(());
 
 #[test]
 fn dispatches_layerstack_read_file() {
@@ -206,7 +209,19 @@ fn unknown_op_uses_structured_contract() {
 }
 
 #[test]
-fn isolated_workspace_ops_are_registered_with_structured_disabled_payloads() {
+fn isolated_workspace_ops_are_registered_and_disabled_by_default() {
+    let _guard = ISOLATED_ENV_LOCK
+        .lock()
+        .expect("isolated env lock poisoned");
+    std::env::set_var("EOS_ISOLATED_WORKSPACE_TEST_HARNESS", "true");
+    let _ = OpTable::with_builtins().dispatch(&Request {
+        op: "api.isolated_workspace.test_reset".to_owned(),
+        invocation_id: "iws-reset".to_owned(),
+        args: json!({}),
+    });
+    std::env::remove_var("EOS_ISOLATED_WORKSPACE_ENABLED");
+    std::env::remove_var("EOS_ISOLATED_WORKSPACE_TEST_HARNESS");
+    std::env::remove_var("EOS_ISOLATED_WORKSPACE_TEST_SCRATCH_ROOT");
     let table = OpTable::with_builtins();
 
     let enter = table.dispatch(&Request {
@@ -244,7 +259,117 @@ fn isolated_workspace_ops_are_registered_with_structured_disabled_payloads() {
 }
 
 #[test]
+fn isolated_workspace_lifecycle_ops_open_status_list_and_exit_when_enabled() {
+    let _guard = ISOLATED_ENV_LOCK
+        .lock()
+        .expect("isolated env lock poisoned");
+    let (root, _workspace) = seed_layer_stack("isolated_lifecycle");
+    let scratch = root
+        .parent()
+        .expect("layer root parent")
+        .join("isolated-scratch");
+    let audit_path = root
+        .parent()
+        .expect("layer root parent")
+        .join("isolated-audit.jsonl");
+    std::env::set_var("EOS_ISOLATED_WORKSPACE_ENABLED", "true");
+    std::env::set_var("EOS_ISOLATED_WORKSPACE_TEST_HARNESS", "true");
+    std::env::set_var(
+        "EOS_ISOLATED_WORKSPACE_TEST_SCRATCH_ROOT",
+        scratch.to_string_lossy().as_ref(),
+    );
+    std::env::set_var(
+        "EOS_ISOLATED_WORKSPACE_AUDIT_PATH",
+        audit_path.to_string_lossy().as_ref(),
+    );
+    let table = OpTable::with_builtins();
+    let reset = table.dispatch(&Request {
+        op: "api.isolated_workspace.test_reset".to_owned(),
+        invocation_id: "iws-reset".to_owned(),
+        args: json!({}),
+    });
+    assert_eq!(reset["success"], Value::Bool(true));
+
+    let enter = table.dispatch(&Request {
+        op: "api.isolated_workspace.enter".to_owned(),
+        invocation_id: "iws-enter".to_owned(),
+        args: json!({
+            "agent_id": "agent-enabled",
+            "layer_stack_root": &root,
+        }),
+    });
+    assert_eq!(enter["success"], Value::Bool(true));
+    assert_eq!(enter["manifest_version"], json!(1));
+    assert_eq!(enter["manifest_root_hash"].as_str().map(str::len), Some(64));
+    assert_eq!(
+        enter["workspace_handle_id"].as_str().map(str::len),
+        Some(20)
+    );
+
+    let status = table.dispatch(&Request {
+        op: "api.isolated_workspace.status".to_owned(),
+        invocation_id: "iws-status".to_owned(),
+        args: json!({"agent_id": "agent-enabled"}),
+    });
+    assert_eq!(status["success"], Value::Bool(true));
+    assert_eq!(status["open"], Value::Bool(true));
+    assert_eq!(status["manifest_version"], json!(1));
+
+    let duplicate = table.dispatch(&Request {
+        op: "api.isolated_workspace.enter".to_owned(),
+        invocation_id: "iws-enter-again".to_owned(),
+        args: json!({
+            "agent_id": "agent-enabled",
+            "layer_stack_root": &root,
+        }),
+    });
+    assert_eq!(duplicate["success"], Value::Bool(false));
+    assert_eq!(duplicate["error"]["kind"], "already_open");
+
+    let open = table.dispatch(&Request {
+        op: "api.isolated_workspace.list_open".to_owned(),
+        invocation_id: "iws-list".to_owned(),
+        args: json!({}),
+    });
+    assert_eq!(open["success"], Value::Bool(true));
+    assert_eq!(open["open_agent_ids"], json!(["agent-enabled"]));
+
+    let exit = table.dispatch(&Request {
+        op: "api.isolated_workspace.exit".to_owned(),
+        invocation_id: "iws-exit".to_owned(),
+        args: json!({"agent_id": "agent-enabled"}),
+    });
+    assert_eq!(exit["success"], Value::Bool(true));
+    assert!(exit["evicted_upperdir_bytes"].is_number());
+    assert!(audit_path.exists());
+
+    let status_after_exit = table.dispatch(&Request {
+        op: "api.isolated_workspace.status".to_owned(),
+        invocation_id: "iws-status-closed".to_owned(),
+        args: json!({"agent_id": "agent-enabled"}),
+    });
+    assert_eq!(status_after_exit["success"], Value::Bool(true));
+    assert_eq!(status_after_exit["open"], Value::Bool(false));
+
+    let reset = table.dispatch(&Request {
+        op: "api.isolated_workspace.test_reset".to_owned(),
+        invocation_id: "iws-reset-end".to_owned(),
+        args: json!({}),
+    });
+    assert_eq!(reset["success"], Value::Bool(true));
+    std::env::remove_var("EOS_ISOLATED_WORKSPACE_ENABLED");
+    std::env::remove_var("EOS_ISOLATED_WORKSPACE_TEST_HARNESS");
+    std::env::remove_var("EOS_ISOLATED_WORKSPACE_TEST_SCRATCH_ROOT");
+    std::env::remove_var("EOS_ISOLATED_WORKSPACE_AUDIT_PATH");
+    let _ = std::fs::remove_dir_all(root.parent().expect("layer root parent"));
+}
+
+#[test]
 fn isolated_workspace_ops_validate_required_arguments() {
+    let _guard = ISOLATED_ENV_LOCK
+        .lock()
+        .expect("isolated env lock poisoned");
+    std::env::remove_var("EOS_ISOLATED_WORKSPACE_ENABLED");
     let response = OpTable::with_builtins().dispatch(&Request {
         op: "api.isolated_workspace.enter".to_owned(),
         invocation_id: "iws-enter-missing-agent".to_owned(),

@@ -115,19 +115,16 @@ impl OpTable {
         table.register("api.grep", op_grep);
         table.register("api.v1.grep", op_grep);
         table.register("api.v1.shell", op_shell);
-        table.register("api.isolated_workspace.enter", op_isolated_workspace_enter);
-        table.register("api.isolated_workspace.exit", op_isolated_workspace_exit);
-        table.register(
-            "api.isolated_workspace.status",
-            op_isolated_workspace_status,
-        );
+        table.register("api.isolated_workspace.enter", crate::isolated::op_enter);
+        table.register("api.isolated_workspace.exit", crate::isolated::op_exit);
+        table.register("api.isolated_workspace.status", crate::isolated::op_status);
         table.register(
             "api.isolated_workspace.list_open",
-            op_isolated_workspace_list_open,
+            crate::isolated::op_list_open,
         );
         table.register(
             "api.isolated_workspace.test_reset",
-            op_isolated_workspace_test_reset,
+            crate::isolated::op_test_reset,
         );
         table.register("api.v1.exec_command", crate::command::op_exec_command);
         table.register("api.v1.pty.write_stdin", crate::command::op_pty_write_stdin);
@@ -282,100 +279,6 @@ fn op_inflight_count(args: &Value, context: DispatchContext<'_>) -> Result<Value
         .in_flight
         .map_or(0, |registry| registry.count_by_agent(&agent_id));
     Ok(json!({"success": true, "agent_id": agent_id, "count": count}))
-}
-
-fn isolated_error(kind: &str, message: impl Into<String>, details: Value) -> Value {
-    json!({
-        "success": false,
-        "error": {
-            "kind": kind,
-            "message": message.into(),
-            "details": if details.is_null() { json!({}) } else { details },
-        },
-    })
-}
-
-fn require_isolated_arg(args: &Value, key: &str) -> Result<String, Value> {
-    let value = args
-        .get(key)
-        .and_then(Value::as_str)
-        .unwrap_or_default()
-        .trim()
-        .to_owned();
-    if value.is_empty() {
-        return Err(isolated_error(
-            "invalid_argument",
-            format!("{key} is required"),
-            json!({"key": key}),
-        ));
-    }
-    Ok(value)
-}
-
-fn isolated_feature_disabled() -> Value {
-    isolated_error(
-        "feature_disabled",
-        "rust isolated workspace lifecycle is not initialized",
-        json!({}),
-    )
-}
-
-fn op_isolated_workspace_enter(
-    args: &Value,
-    _context: DispatchContext<'_>,
-) -> Result<Value, DaemonError> {
-    if let Err(error) = require_isolated_arg(args, "agent_id") {
-        return Ok(error);
-    }
-    if let Err(error) = require_isolated_arg(args, "layer_stack_root") {
-        return Ok(error);
-    }
-    Ok(isolated_feature_disabled())
-}
-
-fn op_isolated_workspace_exit(
-    args: &Value,
-    _context: DispatchContext<'_>,
-) -> Result<Value, DaemonError> {
-    if let Err(error) = require_isolated_arg(args, "agent_id") {
-        return Ok(error);
-    }
-    Ok(isolated_feature_disabled())
-}
-
-fn op_isolated_workspace_status(
-    args: &Value,
-    _context: DispatchContext<'_>,
-) -> Result<Value, DaemonError> {
-    if let Err(error) = require_isolated_arg(args, "agent_id") {
-        return Ok(error);
-    }
-    Ok(isolated_feature_disabled())
-}
-
-fn op_isolated_workspace_list_open(
-    _args: &Value,
-    _context: DispatchContext<'_>,
-) -> Result<Value, DaemonError> {
-    Ok(json!({"success": true, "open_agent_ids": []}))
-}
-
-fn op_isolated_workspace_test_reset(
-    _args: &Value,
-    _context: DispatchContext<'_>,
-) -> Result<Value, DaemonError> {
-    let enabled = std::env::var("EOS_ISOLATED_WORKSPACE_TEST_HARNESS")
-        .unwrap_or_default()
-        .trim()
-        .eq_ignore_ascii_case("true");
-    if !enabled {
-        return Ok(isolated_error(
-            "forbidden",
-            "api.isolated_workspace.test_reset requires EOS_ISOLATED_WORKSPACE_TEST_HARNESS=true",
-            json!({}),
-        ));
-    }
-    Ok(json!({"success": true, "reset": true}))
 }
 
 /// `api.layer_metrics` — summarize layer-stack storage + lease state for a root.
@@ -1267,7 +1170,7 @@ pub(crate) fn insert_occ_route_timings(
     }
 }
 
-fn run_ns_runner_child(request: &RunRequest) -> Result<RunResult, DaemonError> {
+pub(crate) fn run_ns_runner_child(request: &RunRequest) -> Result<RunResult, DaemonError> {
     let payload =
         serde_json::to_vec(request).map_err(|err| DaemonError::InvalidEnvelope(err.to_string()))?;
     let mut child = Command::new(std::env::current_exe()?)
@@ -1320,7 +1223,7 @@ pub(crate) fn base_hashes_for_snapshot(
         .collect()
 }
 
-fn attach_runner_shell_fields(response: &mut Value, runner: &RunResult) {
+pub(crate) fn attach_runner_shell_fields(response: &mut Value, runner: &RunResult) {
     response["exit_code"] = runner
         .tool_result
         .get("exit_code")
@@ -1343,7 +1246,10 @@ fn attach_runner_shell_fields(response: &mut Value, runner: &RunResult) {
         .unwrap_or_else(|| json!([]));
 }
 
-fn merge_runner_timings(timings: &mut serde_json::Map<String, Value>, runner: &RunResult) {
+pub(crate) fn merge_runner_timings(
+    timings: &mut serde_json::Map<String, Value>,
+    runner: &RunResult,
+) {
     if let Some(runner_timings) = runner.tool_result.get("timings").and_then(Value::as_object) {
         for (key, value) in runner_timings {
             timings.entry(key.clone()).or_insert_with(|| value.clone());

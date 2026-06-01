@@ -48,6 +48,7 @@ pub(crate) mod command;
 pub mod dispatcher;
 pub mod error;
 pub mod in_flight;
+pub(crate) mod isolated;
 pub mod ports;
 pub mod server;
 

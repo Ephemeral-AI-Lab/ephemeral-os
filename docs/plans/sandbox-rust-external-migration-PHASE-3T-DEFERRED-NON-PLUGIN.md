@@ -35,11 +35,16 @@ Current state:
 - Generic background tool implementation classes still exist only as direct
   legacy probe/test code. Do not re-expose them to models or recreate
   `make_background_tools()`.
-- Rust `eos-daemon` now registers the public isolated-workspace lifecycle/status
-  op names (`api.isolated_workspace.enter`, `exit`, `status`, `list_open`,
-  `test_reset`) and returns structured disabled/empty-list payloads instead of
-  `unknown_op`. The actual Rust isolated session implementation and command/PTY
-  routing are still open.
+- Rust `eos-daemon` now backs the public isolated-workspace lifecycle/status op
+  names with daemon-local `eos-isolated` session state when
+  `EOS_ISOLATED_WORKSPACE_ENABLED=true`: `enter` opens an agent-keyed private
+  scratch/lease handle, `status`/`list_open` report live handles, `exit`
+  discards scratch, and `test_reset` clears the singleton under the test
+  harness gate. Linux `exec_command` / PTY start now consult the active
+  `agent_id` handle and return isolated/no-OCC-publish results; active PTY
+  records block `exit` unless the caller uses the force-cancel path. The real
+  ns-holder/setns + netlink bridge/veth wiring and live Docker isolated
+  command/PTY evidence are still open.
 
 Last focused verification:
 
@@ -56,17 +61,22 @@ Last focused verification:
   passed.
 - `ruff check` passed on the touched Python files.
 - `git diff --check` passed.
-- Rust focused dispatcher check passed:
-  `cargo test -p eos-daemon isolated_workspace_ops --test phase2_read_paths`
-  (`2 passed`; existing warnings are from pre-existing unfinished isolated/ns
-  holder skeleton code).
+- Rust focused isolated checks passed:
+  `cargo test -p eos-daemon isolated_workspace --test phase2_read_paths`
+  (`3 passed`), `cargo test -p eos-daemon
+  active_pty_records_block_exit_until_cleared` (`1 passed`), and
+  `cargo check -p eos-daemon --target x86_64-unknown-linux-musl`. Existing
+  warnings are from pre-existing unfinished isolated/ns-holder/overlay skeleton
+  code.
 - A broader mock contract spike was attempted but did not reach the relevant
   assertions because the live SWE-EVO fixture failed setup on `/eos`
   writability in the existing container. Treat that as environment/setup debt,
   not evidence against the typed subagent/background cleanup.
 
-Next work should start with Rust isolated-workspace command/PTY integration. Do
-not reintroduce
+Next work should start with hardening/verifying Rust isolated-workspace
+command/PTY semantics under live Docker and replacing the current Rust
+no-op namespace/network lifecycle placeholders with real ns-holder/setns +
+netlink bridge/veth wiring. Do not reintroduce
 `shell(background=true)`, `BaseTool.background`, model-facing generic
 background controls, or `bg_N` as a subagent reference.
 
@@ -95,24 +105,28 @@ The PTY command implementation is accepted for the Docker shared-workspace path:
 
 ### 1. Rust Isolated-Workspace Command/PTY Integration
 
-Rust daemon isolated-workspace public lifecycle op names are now registered in
-the Rust dispatcher with structured disabled/empty-list payloads. Rust
-`exec_command` and PTY behavior still cannot yet be compared against
-isolated-workspace mode because the Rust isolated session and routing logic are
-not implemented.
+Rust daemon isolated-workspace public lifecycle op names are now backed by
+daemon-local `eos-isolated` session state. The first Rust slice replaces the
+disabled stubs with enabled lifecycle/status/list/exit behavior, adds JSONL
+audit emission, and routes Linux `exec_command` / PTY start through the active
+agent handle with isolated/no-OCC-publish result metadata. Active PTY records
+now block non-forced isolated exit.
+
+The implementation is not closed: the Rust namespace/runtime side still uses
+control-plane placeholders for ns-holder/setns and bridge/veth wiring, and the
+isolated command/PTY path has compile + focused lifecycle evidence rather than
+live Docker evidence.
 
 Required work:
 
-- replace the Rust disabled isolated-workspace lifecycle/status stubs with real
-  session-backed `api.isolated_workspace.enter`, `api.isolated_workspace.exit`,
-  and related lifecycle/status ops;
-- route `exec_command` through the active isolated workspace handle for the
-  calling `agent_id` when isolated mode is active;
-- keep finite command writes private to the isolated workspace and unpublished
-  to shared OCC;
-- keep isolated handles alive while PTY sessions are active;
-- reject isolated exit while PTY sessions are active unless the caller uses an
-  explicit force-cancel path;
+- replace the Rust no-op `NamespaceRuntimePort` / `IsolatedNetwork` lifecycle
+  placeholders with real ns-holder/setns and netlink bridge/veth wiring;
+- run live Docker proof that finite `exec_command` writes stay private to the
+  isolated workspace and unpublished to shared OCC;
+- prove isolated PTY start/progress/write/cancel/natural-exit behavior against
+  the active agent handle;
+- keep isolated handles alive while PTY sessions are active and verify the
+  explicit force-cancel exit path under a real running PTY;
 - prove natural PTY exit keeps changes visible only inside the same isolated
   workspace until isolated exit;
 - prove isolated exit discards scratch state and releases the pinned snapshot
@@ -120,8 +134,8 @@ Required work:
 
 Minimum evidence:
 
-- focused Rust/Python unit coverage for active PTY records blocking isolated
-  lifecycle;
+- ✅ focused Rust coverage for enabled lifecycle ops and active PTY records
+  blocking isolated lifecycle;
 - live Docker isolated-workspace scenarios for finite command, PTY start,
   progress/write/cancel, natural exit, peer shared publish, and teardown;
 - daemon-local isolated audit inspection with no leaked handles, mounts,
@@ -295,9 +309,11 @@ Minimum evidence:
 
 ## Suggested Order
 
-1. Implement the Rust isolated-workspace session behind the registered lifecycle
-   ops, then wire command/PTY routing through it.
-2. Run isolated-workspace Docker live coverage for command and PTY semantics.
+1. Replace the current Rust isolated namespace/network placeholders with real
+   ns-holder/setns + netlink bridge/veth wiring, then run isolated-workspace
+   Docker live coverage for finite command and PTY semantics.
+2. Add daemon-local isolated audit/leak inspection for handles, mounts, cgroups,
+   leases, scratch dirs, and PTY force-cancel exit.
 3. Run CP-4 mixed non-plugin load with attached AV-4 audit pull.
 4. Run CP-5 cache-lock churn.
 5. Run AV-7 forward/back parity.
