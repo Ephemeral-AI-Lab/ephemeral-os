@@ -1054,11 +1054,12 @@ impl CommitTransactionPort for LayerStackCommitTransaction {
                 let publish_s = publish_start.elapsed().as_secs_f64();
                 let maintenance_start = Instant::now();
                 let mut squash_applied = 0.0;
-                if stack.can_squash(AUTO_SQUASH_MAX_DEPTH).unwrap_or(false)
+                if stack
+                    .can_squash(AUTO_SQUASH_MAX_DEPTH)
+                    .is_ok_and(|can_squash| can_squash)
                     && stack
                         .squash(AUTO_SQUASH_MAX_DEPTH)
-                        .map(|squashed| squashed.is_some())
-                        .unwrap_or(false)
+                        .is_ok_and(|squashed| squashed.is_some())
                 {
                     squash_applied = 1.0;
                 }

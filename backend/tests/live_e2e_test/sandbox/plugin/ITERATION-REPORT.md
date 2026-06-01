@@ -1,5 +1,14 @@
 # Plugin Live E2E Iteration Report
 
+## Iteration 4 - 2026-06-01 23:32 CST
+
+- Exact command run: `EOS_SANDBOX_PROVIDER=docker EOS_LIVE_E2E_IMAGE=xingyaoww/sweb.eval.x86_64.dask_s_dask-10042:latest EOS_PLUGIN_REFRESH_SAMPLES=1 EOS_PLUGIN_REFRESH_AUTO_SQUASH_WRITES=104 uv run pytest -q -x -rs --tb=short --durations=10 backend/tests/live_e2e_test/sandbox/plugin/test_plugin_refresh_strategies.py`.
+- Artifact paths inspected: pytest output and the refreshed `.omc/results/plugin-refresh-strategies-*` artifact emitted by the test.
+- Pass/fail/skip status: passed; focused plugin live test `1 passed in 12.55s`.
+- Findings summary: The pytest wrapper still reuses the Docker sandbox fixture and benchmark script successfully after the Rust registered-route documentation update. No new fixture setup, watcher visibility, auto-squash, or final cleanup regression appeared.
+- Fix applied: None; this was a verification rerun.
+- Remaining risk or next iteration target: Add the Rust-runtime live variant when process-backed PPC can execute behind the registered `plugin.*` routes.
+
 ## Iteration 3 - 2026-06-01 23:20 CST
 
 - Exact command run: `EOS_SANDBOX_PROVIDER=docker EOS_LIVE_E2E_IMAGE=xingyaoww/sweb.eval.x86_64.dask_s_dask-10042:latest EOS_PLUGIN_REFRESH_SAMPLES=1 EOS_PLUGIN_REFRESH_AUTO_SQUASH_WRITES=104 uv run pytest -q -x -rs --tb=short --durations=10 backend/tests/live_e2e_test/sandbox/plugin/test_plugin_refresh_strategies.py`.

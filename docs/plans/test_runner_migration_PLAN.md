@@ -77,8 +77,10 @@ Python sandbox infra is removed.
   `create_per_test_task_center_stores()` and docstrings still describe
   TaskCenter stores. This is a required rename/semantic cleanup.
 - `backend/src/task_center_runner/tests/mock/task_center/` still names the
-  old correctness bucket. It should become `tests/mock/workflow/` plus root
-  request tests where appropriate.
+  old correctness bucket. It should become a root-request-first
+  `tests/mock/request/` bucket; only scenarios whose subject is the
+  tool-launched decomposition machinery belong under
+  `tests/mock/delegated_workflow/`.
 - Scenario names and comments still include old root-workflow language:
   `pipeline.initial_workflow`, `recursive_handoff_goal`,
   `request_recursive_workflow`, and background shell scenarios that call
@@ -138,11 +140,16 @@ Goal: remove old terminology without changing the runner's role.
      `create_per_test_task_stores()`
    - test helpers and mocks that still mention `task_center_run_id` ->
      `request_id`
-2. Rename test buckets:
-   - `tests/mock/task_center/` -> `tests/mock/workflow/`
-   - keep sandbox tests under `tests/mock/sandbox/`
-   - add `tests/mock/root/` only for root-agent-only scenarios that do not
-     delegate a workflow.
+2. Reclassify test buckets around the new first-class unit:
+   - `tests/mock/task_center/` -> `tests/mock/request/` for the canonical
+     user request -> root Task -> root agent -> `submit_root_outcome` flow.
+   - `tests/mock/delegated_workflow/` only for cases whose direct subject is
+     `delegate_workflow` and the resulting Workflow -> Iteration -> Attempt
+     machinery.
+   - keep sandbox tests under `tests/mock/sandbox/`; they may drive full
+     request flows, but their ownership remains sandbox behavior.
+   - do not create a broad `tests/mock/workflow/` successor. Workflow is no
+     longer the first-class framework boundary.
 3. Rename scenario vocabulary:
    - `pipeline.initial_workflow` -> `pipeline.root_delegates_workflow`
    - `recursive_handoff_goal` -> `delegated_workflow_goal`
@@ -153,12 +160,24 @@ Goal: remove old terminology without changing the runner's role.
    "root Task context", not "entry-origin workflow".
 5. Keep graph summaries workflow-specific. Root request summaries belong in a
    separate root/request section of `RunReport`.
+6. Add persistence and schema-contract tests that mirror
+   `task_center_to_workflow_REFACTOR_PLAN.md`:
+   - request row owns `root_task_id`, status, and `finished_at`
+   - root Task has `workflow_id=None`, no iteration/attempt ids, and one
+     `agent_runs` row
+   - delegated planner/generator/reducer Tasks carry `workflow_id`,
+     `iteration_id`, and `attempt_id`
+   - `context_message` is gone from task-facing assertions; `instruction` is
+     the runner-visible field
+   - no scenario or report code parses task ids to recover role/attempt
+   - no serialized event/report key still depends on `task_center_run_id`
 
 Exit gate:
 
 ```bash
 uv run pytest -q backend/src/test_runner/tests/mock/contracts
-uv run pytest -q backend/src/test_runner/tests/mock/workflow
+uv run pytest -q backend/src/test_runner/tests/mock/request
+uv run pytest -q backend/src/test_runner/tests/mock/delegated_workflow
 uv run pytest -q backend/tests/unit_test/test_task_center_runner
 ```
 
@@ -176,20 +195,58 @@ Goal: make the runner test the actual production request lifecycle.
    - root terminal is `submit_root_outcome`
    - `delegate_workflow`, `check_workflow_status`, and `cancel_workflow` are
      non-terminal tools when present
-2. Add root-focused scenarios:
+2. Add request-focused scenarios:
    - root completes directly with `submit_root_outcome`
    - root delegates one workflow, waits/checks the handle, then submits root
      outcome
    - root delegation failure is synthesized into root outcome rather than
      closing the parent task by workflow close mutation
-3. Update workflow scenarios to cover executor delegation rather than terminal
-   handoff. The parent task remains `RUNNING` until its own terminal submission.
-4. Delete runner assumptions around:
+3. Add launch-seed and `AgentRunRecord` coverage:
+   - root `initial_messages` are `[system, user_prompt, skill?]`
+   - workflow agent `initial_messages` are `[system, context, task_guidance,
+     skill?]`
+   - subagent `initial_messages` are `[system, prompt]`
+   - advisor `initial_messages` are `[system, parent_transcript,
+     review_request]`
+   - `AgentEntryMessages.to_messages()` always puts system first
+   - `message_history` is written separately from launch-time
+     `initial_messages`
+   - root agent runs produce message history, token count, terminal result, and
+     audit events like any other Task-backed agent
+4. Add agent-tool surface scenarios:
+   - `tests/mock/agent_tools/subagent/` covers `run_subagent` / explorer-style
+     calls from root and executor agents. Assert subagents do not mint persisted
+     Task rows, do receive their own launch seed, can read the shared workspace
+     through normal tools, return a result into the parent conversation, and
+     propagate timeout/cancel/error results without terminating the parent
+     unless the parent chooses to submit a failed terminal.
+   - `tests/mock/agent_tools/advisor/` covers `ask_advisor` if the advisor
+     gate remains a separate helper surface. Assert it sees the parent
+     transcript/review request, never mutates request/workflow state directly,
+     and returns approval/rejection evidence to the parent agent.
+   - `tests/mock/agent_tools/workflow/` covers the workflow-control tools as
+     tools, not as the first-class framework: `delegate_workflow`,
+     `check_workflow_status`, and `cancel_workflow`. Assert immediate handle
+     return, parent Task remains `RUNNING`, second outstanding workflow is
+     rejected until checked/cancelled, generator delegation is allowed, reducer
+     delegation is not exposed, and cancel/status delivery is visible before
+     the parent terminal.
+5. Add terminal and role-exposure tests:
+   - `submit_root_outcome` may finish only the root Task and double-finish is
+     rejected
+   - planner/generator/reducer terminals remain scoped to workflow Tasks
+   - root profile has `context_recipe=None`
+   - reducer profiles do not expose delegation tools
+   - helper/subagent profiles do not expose root or workflow terminals
+6. Update delegated-workflow scenarios to cover executor delegation rather than
+   terminal handoff. The parent task remains `RUNNING` until its own terminal
+   submission.
+7. Delete runner assumptions around:
    - synthetic root Workflow
    - `submit_workflow_handoff`
    - `WAITING_WORKFLOW`
    - close-time mutation of the parent task
-5. Align architecture pages and evidence paths with current files:
+8. Align architecture pages and evidence paths with current files:
    `runtime/entry.py`, `workflow/starter.py`,
    `tools/workflow/delegate_workflow.py`, and `tools/submission/root`.
 
@@ -199,8 +256,9 @@ Exit gate:
 rg -n "submit_workflow_handoff|WAITING_WORKFLOW|root workflow|child workflow|handoff" \
   backend/src/test_runner backend/tests docs/architecture
 
-uv run pytest -q backend/src/test_runner/tests/mock/root
-uv run pytest -q backend/src/test_runner/tests/mock/workflow
+uv run pytest -q backend/src/test_runner/tests/mock/request
+uv run pytest -q backend/src/test_runner/tests/mock/agent_tools
+uv run pytest -q backend/src/test_runner/tests/mock/delegated_workflow
 uv run pytest -q backend/tests/unit_test/test_tools/test_submission_main_role_terminals.py
 ```
 
@@ -218,6 +276,19 @@ regression harness.
      coverage from Phase 3T:
      `exec_command`, PTY stdin/progress/cancel, non-login Bash, process-tree
      cleanup, and active-only session controls
+   - split command coverage into explicit directories:
+     - `tests/mock/sandbox/command/non_tty/` for `exec_command(..., tty=false)`:
+       finite command completion, stdout/stderr/exit-code shape, timeout,
+       non-login Bash environment, workspace-root cwd on every fresh command,
+       no stdin/session id, detached-descendant cleanup after Bash exits, and
+       OCC publish/capture behavior for successful writes.
+     - `tests/mock/sandbox/command/tty/` for `exec_command(..., tty=true)` plus
+       PTY controls: session id allocation, output ring/yield behavior,
+       `write_pty_command_stdin`, `check_pty_command_progress`,
+       `cancel_pty_command`, active-only control rejection after terminal
+       state, `cd` persistence inside one live PTY session, no `cd` persistence
+       across separate `tty=false` commands, process-group cleanup, lease
+       release, and terminal result reporting exactly once.
    - remove references to `shell(background=True)`,
      `check_background_task_result`, `wait_background_tasks`, and generic shell
      background cancellation from model-facing assertions
@@ -227,11 +298,37 @@ regression harness.
    - assert read-only service refresh does not publish
    - assert write/self-managed callbacks publish through the same daemon OCC
      writer/storage lock as primary publishes
+   - add generic service coverage from
+     `sandbox-plugin-service-adversarial-plan.md`:
+     - `api.plugin.ensure` / `api.plugin.status` and dynamic
+       `plugin.<plugin>.<op>` route resolution
+     - `PluginServiceKey` reuse isolation across plugin id, digest, service id,
+       service profile digest, workspace root, mode, and refresh strategy
+     - stale-manifest behavior: refresh, retryable `plugin_projection_stale`,
+       or restart; never silent stale responses
+     - `workspace_snapshot_refresh` strategies:
+       `remount_workspace_and_notify`, `remount_workspace`, and
+       `restart_service`
+     - non-LSP dummy read-only service that caches file content and proves the
+       daemon refresh protocol, so generic support is not inferred only from
+       Pyright/LSP
+     - warm-service process crash, timeout, heartbeat, LRU eviction, and
+       process-group teardown
+     - PPC request/reply multiplexing and plugin-to-daemon callbacks with
+       message-id matching
+     - service workspace byte growth remains bounded across repeated peer
+       publishes
 4. Isolated workspace:
    - run tests against `eosd ns-holder` + `eosd ns-runner` setns mode
    - assert enter rejects active sandbox-bound background work
    - assert exit drains/cancels active work and releases leases/scratch
    - assert no plugin/LSP operations while isolated mode is active
+   - assert isolated never links/publishes through OCC from runner-visible
+     behavior: writes are captured for audit and discarded on exit
+   - assert holder death, setup timeout, veth/network failure, and SIGTERM ->
+     SIGKILL fallback release leases and scratch
+   - assert shell-free network hardening expectations: no dependence on
+     in-image `ip`, `sysctl`, Python, cargo, or rustc
 5. Remove runner imports from Python sandbox internals. The runner may call
    public tools/API helpers, but must not import from these Python implementation
    packages:
@@ -322,6 +419,17 @@ Required live parity claims:
 - AV-9 isolated workspace lifecycle parity passes.
 - AV-10 plugin parity passes for read-only, write-allowed, and self-managed
   modes.
+- Protocol fixture pin and canonical envelope tests pass on both Python and
+  Rust sides.
+- `put_archive` upload verifies SHA/mode/version and does not require Rust,
+  Python, tar, gzip, or base64 inside the target sandbox image.
+- Minisign/SHA fail-closed cases reject unsigned, mis-signed, wrong-arch, and
+  SHA-mismatched artifacts before exec.
+- Capability-negative Docker runs (`EOS_DOCKER_NO_PRIVILEGE=1`) fail with a
+  structured capability/probe error and do not leave a half-started Rust
+  runtime.
+- Per-sandbox runtime selection is stable: no sandbox mixes Python and Rust
+  runtimes within its lifetime.
 
 All benchmark reports must state the benchmark category boundary. Raw mount-init
 speedups must not be presented as end-to-end shell/tool speedups.
@@ -360,16 +468,45 @@ Pass condition:
 
 ```bash
 rg -n "sandbox\\.(daemon|overlay|occ|layer_stack|shared|ephemeral_workspace|isolated_workspace)" \
-  backend/src backend/tests docs/architecture docs/plans
+  backend/src backend/tests
+
+rg -n "sandbox\\.(daemon|overlay|occ|layer_stack|shared|ephemeral_workspace|isolated_workspace)" \
+  docs/architecture
 
 find backend/src/sandbox -maxdepth 2 -type d | sort
 ```
 
 After confirmed safe removal, `backend/src/sandbox` contains only host/API/
 provider/config/protocol support for the Rust sandbox. No test runner code may
-import deleted Python sandbox implementation modules.
+import deleted Python sandbox implementation modules. Historical plan files may
+still describe removed Python internals, but active architecture pages should
+not present them as live implementation.
 
-## 4. Verification matrix
+## 4. Cross-plan coverage matrix
+
+This matrix is the review checklist against the three source plans. A migration
+phase is not complete until its row has deterministic unit coverage plus at
+least one runner scenario where the behavior crosses the real engine/tool path.
+
+| Source plan | Coverage lane | Must assert |
+| --- | --- | --- |
+| `task_center_to_workflow_REFACTOR_PLAN.md` | Request/root lifecycle | request row creation, root Task with `workflow_id=None`, root `AgentRunRecord`, `submit_root_outcome` success/failure, exhaustion-to-failed request, no synthetic root Workflow |
+| `task_center_to_workflow_REFACTOR_PLAN.md` | Launch messages | root, workflow, subagent, and advisor `initial_messages` shapes; system message first; launch seed separate from `message_history`; root does not use ContextEngine |
+| `task_center_to_workflow_REFACTOR_PLAN.md` | Task persistence | `request_id` replaces `task_center_run_id`; `instruction` replaces `context_message`; position columns replace id-string routing; planner-created generator/reducer Tasks carry needs and position columns |
+| `task_center_to_workflow_REFACTOR_PLAN.md` | Tool exposure | root terminal only `submit_root_outcome`; planner/generator/reducer terminals scoped to workflow Tasks; `delegate_workflow` non-terminal on root/executor; reducer cannot delegate |
+| `task_center_to_workflow_REFACTOR_PLAN.md` | Delegated workflow | immediate handle return, one outstanding workflow per parent Task, status/cancel delivery, parent remains `RUNNING`, parent crash/cancel propagates, no close-time parent mutation |
+| `task_center_to_workflow_REFACTOR_PLAN.md` | Planner DAG | at least one reducer, generator-only dependencies, reducer consumes generators, no reducer-to-reducer edges, no dangling generator, created Task-row validation rather than `Planned*` DTO validation |
+| `sandbox-rust-external-migration-PLAN.md` | Runtime artifact | `put_archive` upload, SHA/version/mode verification, protocol fixture pin, minisign fail-closed, wrong arch rejected, no target-image toolchain dependency |
+| `sandbox-rust-external-migration-PLAN.md` | Command tools | `tty=false` finite command lifecycle, `tty=true` PTY lifecycle, non-login Bash, explicit PATH/env, cwd semantics, detached descendant cleanup, active-only PTY controls, result reported once |
+| `sandbox-rust-external-migration-PLAN.md` | OCC/LayerStack | canonical result parity, CAS byte identity, O(1) lowerdir disk/memory, single commit queue, storage-lock serialization, squash/deferred-GC lease retention, forward/back on-disk parity |
+| `sandbox-rust-external-migration-PLAN.md` | Isolated workspace | `eosd ns-holder` enter/exit, setns runner, no OCC publish, audit-only writes, network hardening without shell tools, plugin/LSP block, holder teardown and lease cleanup under failures |
+| `sandbox-rust-external-migration-PLAN.md` | Cutover/deletion | Rust default only after AV/CP gates; capability-negative fallback/probe; no Python bundle/thin-client/runtime-bundle/importlib dispatch; runner import fence against deleted sandbox internals |
+| `sandbox-plugin-service-adversarial-plan.md` | Generic service registry | manifest validation, dynamic op route resolution, service key digest isolation, status shape, LRU eviction, crash/timeout/heartbeat teardown |
+| `sandbox-plugin-service-adversarial-plan.md` | Freshness | `workspace_snapshot_refresh` before every read, all three refresh strategies, retryable stale errors, non-LSP cached dummy service, no stale response after peer publish |
+| `sandbox-plugin-service-adversarial-plan.md` | Plugin writes | read-only never publishes, write workers publish through daemon overlay/OCC, self-managed callbacks use the same per-root writer/storage lock, interleave with direct write/edit/shell |
+| `sandbox-plugin-service-adversarial-plan.md` | Plugin isolation | `api.plugin.*`, dynamic `plugin.*`, and PPC callbacks all reject under active isolated workspace before warm start or status path |
+
+## 5. Verification commands
 
 Run after each relevant phase:
 
@@ -377,8 +514,9 @@ Run after each relevant phase:
 uv run ruff check backend/src/test_runner backend/tests/unit_test/test_test_runner
 uv run pytest -q backend/tests/unit_test/test_test_runner
 uv run pytest -q backend/src/test_runner/tests/mock/contracts
-uv run pytest -q backend/src/test_runner/tests/mock/root
-uv run pytest -q backend/src/test_runner/tests/mock/workflow
+uv run pytest -q backend/src/test_runner/tests/mock/request
+uv run pytest -q backend/src/test_runner/tests/mock/agent_tools
+uv run pytest -q backend/src/test_runner/tests/mock/delegated_workflow
 ```
 
 Run for sandbox cutover:
@@ -386,6 +524,10 @@ Run for sandbox cutover:
 ```bash
 EOS_SANDBOX_PROVIDER=docker EOS_SANDBOX_RUNTIME=rust \
 uv run pytest -q -n 3 backend/src/test_runner/tests/mock/sandbox
+
+EOS_SANDBOX_PROVIDER=docker EOS_SANDBOX_RUNTIME=rust \
+uv run pytest -q backend/src/test_runner/tests/mock/sandbox/command/non_tty \
+  backend/src/test_runner/tests/mock/sandbox/command/tty
 
 EOS_SANDBOX_PROVIDER=docker EOS_SANDBOX_RUNTIME=rust \
 uv run pytest -q backend/tests/live_e2e_test/sandbox/plugin
@@ -404,7 +546,7 @@ rg -n "sandbox\\.(daemon|overlay|occ|layer_stack|shared|ephemeral_workspace|isol
   backend/src/test_runner backend/tests/unit_test/test_test_runner
 ```
 
-## 5. Risk register
+## 6. Risk register
 
 | Risk | Mitigation |
 | --- | --- |
@@ -413,18 +555,26 @@ rg -n "sandbox\\.(daemon|overlay|occ|layer_stack|shared|ephemeral_workspace|isol
 | Runner still imports Python sandbox internals | Add import-fence tests before Phase G. |
 | Three parallel lanes overrun Docker resources | Back the runner with an explicit semaphore/cap of `3`; assert teardown. |
 | Plugin parity passes only for LSP | Add a non-LSP dummy service parity case before claiming generic plugin service support. |
+| Root-request tests still behave like workflow tests | Keep `tests/mock/request/` as the primary bucket and reserve `delegated_workflow/` for tool-launched decomposition only. |
+| Launch-message regressions hide behind terminal success | Assert `initial_messages` and `message_history` separately for root, workflow, subagent, and advisor launches. |
+| PTY and non-PTY command paths collapse into one test | Keep `command/non_tty` and `command/tty` suites separate; each has distinct lifecycle and cleanup assertions. |
+| Plugin freshness only tested through Pyright behavior | Require a non-LSP cached dummy service plus Pyright adapter parity before claiming generic plugin support. |
 | Rust rollback becomes unsafe after durable publish | Require AV-7 forward/back on-disk parity before write-phase cutover or Python removal. |
 | Docs drift after rename | Refresh `docs/architecture/test_runner/*`, evidence paths, and search index in the same phase as the rename. |
 
-## 6. Cutover checklist
+## 7. Cutover checklist
 
 - `backend/src/test_runner` exists; `backend/src/task_center_runner` is gone or
   contains only a temporary explicit compatibility shim.
 - CLI works: `uv run python -m test_runner.benchmarks.sweevo --help`.
-- Root-agent scenarios cover direct completion and delegated workflow
-  completion.
-- Workflow scenarios cover executor `delegate_workflow` without terminal
-  handoff or parent close mutation.
+- Request scenarios cover direct root completion and root-launched delegated
+  workflow completion.
+- Agent-tool scenarios cover subagent, advisor, and workflow-control tools as
+  ordinary tools used by root/executor agents.
+- Delegated-workflow scenarios cover executor `delegate_workflow` without
+  terminal handoff or parent close mutation.
+- Command scenarios cover both `tty=false` finite commands and `tty=true` PTY
+  sessions, including stdin/progress/cancel and cleanup.
 - Sandbox scenarios run with `EOS_SANDBOX_RUNTIME=rust`.
 - Three parallel live E2E lanes pass with no resource leaks.
 - Runner has no imports from deleted Python sandbox infra modules.

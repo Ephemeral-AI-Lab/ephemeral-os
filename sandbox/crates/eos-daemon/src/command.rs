@@ -592,7 +592,7 @@ fn isolated_response_from_runner(
 ) -> Result<Value, DaemonError> {
     let capture_start = Instant::now();
     let changes = capture_upperdir(&handle.upperdir)
-        .map_err(|err| overlay_daemon_error("capture isolated upperdir", err))?;
+        .map_err(|err| overlay_daemon_error("capture isolated upperdir", &err))?;
     let capture_s = capture_start.elapsed().as_secs_f64();
     let path_kinds: Vec<(String, String)> = changes
         .iter()
@@ -867,7 +867,7 @@ fn start_pty_command(
     let prepare_result: Result<(PtyWorkspace, Arc<PtySession>, std::process::Child), DaemonError> =
         (|| {
             let runtime_root = overlay_writable_root()
-                .map_err(|err| overlay_daemon_error("overlay writable root", err))?
+                .map_err(|err| overlay_daemon_error("overlay writable root", &err))?
                 .join("runtime");
             let run_root = runtime_root.join("sandbox-overlay").join(format!(
                 "{}-{}",
@@ -875,7 +875,7 @@ fn start_pty_command(
                 sanitize_path_component(&invocation_id)
             ));
             let dirs = allocate_overlay_writable_dirs(&run_root)
-                .map_err(|err| overlay_daemon_error("allocate overlay dirs", err))?;
+                .map_err(|err| overlay_daemon_error("allocate overlay dirs", &err))?;
             let session_dir = runtime_root.join("pty-sessions").join(&id);
             std::fs::create_dir_all(&session_dir)?;
             let transcript_path = session_dir.join("transcript.log");
@@ -1169,7 +1169,7 @@ fn finalize_isolated_pty_workspace(
     let stdout = session.output.all_recent(None);
     let capture_start = Instant::now();
     let changes = capture_upperdir(&workspace.handle.upperdir)
-        .map_err(|err| overlay_daemon_error("capture isolated upperdir", err))?;
+        .map_err(|err| overlay_daemon_error("capture isolated upperdir", &err))?;
     let capture_s = capture_start.elapsed().as_secs_f64();
     let path_kinds: Vec<(String, String)> = changes
         .iter()
@@ -1259,7 +1259,7 @@ fn finalize_pty_workspace(
     let stdout = session.output.all_recent(None);
     let capture_start = Instant::now();
     let changes = capture_upperdir(&workspace.upperdir)
-        .map_err(|err| overlay_daemon_error("capture upperdir", err))?;
+        .map_err(|err| overlay_daemon_error("capture upperdir", &err))?;
     let capture_s = capture_start.elapsed().as_secs_f64();
     let path_kinds: Vec<(String, String)> = changes
         .iter()

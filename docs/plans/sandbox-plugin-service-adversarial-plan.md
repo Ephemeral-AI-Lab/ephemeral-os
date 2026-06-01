@@ -45,8 +45,13 @@ Landed:
   plugin manifests/services, reports status, keeps the no-`eos-occ` plugin
   dependency edge, and applies the plugin-family isolated-workspace gate before
   ensure/status.
+- Added exact registered-op resolution for manifest-declared
+  `plugin.<plugin>.<op>` names. Registered ops now return a structured
+  `plugin_dispatch_deferred` response instead of `unknown_op`; undeclared
+  `plugin.*` names still return `unknown_op`, and digest reload replaces the
+  previous route set.
 - Added focused Rust coverage: `cargo test -p eos-plugin` (`26 passed`) and
-  `cargo test -p eos-daemon plugin` (`3 passed`).
+  `cargo test -p eos-daemon plugin` (`5 passed`).
 - Added live plugin refresh coverage at
   `backend/tests/live_e2e_test/sandbox/plugin/test_plugin_refresh_strategies.py`,
   backed by `backend/scripts/bench_plugin_refresh_strategies.py`, with
@@ -54,13 +59,12 @@ Landed:
   `backend/tests/live_e2e_test/sandbox/plugin/ITERATION-REPORT.md`.
 - Live verification passed:
   `EOS_SANDBOX_PROVIDER=docker EOS_LIVE_E2E_IMAGE=xingyaoww/sweb.eval.x86_64.dask_s_dask-10042:latest EOS_PLUGIN_REFRESH_SAMPLES=1 EOS_PLUGIN_REFRESH_AUTO_SQUASH_WRITES=104 uv run pytest -q -x -rs --tb=short --durations=10 backend/tests/live_e2e_test/sandbox/plugin/test_plugin_refresh_strategies.py`
-  (`1 passed in 12.19s`).
+  (`1 passed in 12.55s` on the latest rerun).
 
 Still open:
 
-- Exact dynamic `plugin.<plugin>.<op>` route registration and dispatch.
 - Process-backed PPC spawn, AF_UNIX routing, request/reply multiplexing,
-  callback servicing, and crash/teardown behavior.
+  callback servicing, dynamic route execution, and crash/teardown behavior.
 - Actual `workspace_snapshot_refresh` namespace remount/restart execution in
   Rust; current Rust service state is the validated logical/status surface.
 - `WRITE_ALLOWED` overlay wrapping and self-managed plugin commit callbacks
