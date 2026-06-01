@@ -8,7 +8,10 @@ from uuid import uuid4
 
 from pydantic import ValidationError
 
-from engine.background.task_supervisor import BackgroundTaskSupervisor
+from engine.background.task_supervisor import (
+    SUBAGENT_TASK_TYPE,
+    BackgroundTaskSupervisor,
+)
 from message.message import Message, ToolResultBlock, ToolUseBlock
 from message.events import (
     BackgroundTaskStartedEvent,
@@ -114,6 +117,12 @@ def launch_background_tool(
         )
 
     task_alias = background_tasks.next_alias()
+    task_type = getattr(tool_def, "task_type", "agent")
+    subagent_session_id = (
+        background_tasks.next_subagent_session_id()
+        if task_type == SUBAGENT_TASK_TYPE
+        else None
+    )
     uses_sandbox = SANDBOX_CONTEXT in getattr(
         tool_def,
         "context_requirements",
@@ -157,7 +166,8 @@ def launch_background_tool(
         tool_use.name,
         clean_input,
         _run_background_tool(),
-        task_type=getattr(tool_def, "task_type", "agent"),
+        task_type=task_type,
+        subagent_session_id=subagent_session_id,
         agent_id=agent_id or None,
         uses_sandbox=uses_sandbox,
         sandbox_id=sandbox_id or None,
@@ -165,9 +175,18 @@ def launch_background_tool(
         heartbeat_enabled=heartbeat_enabled,
     )
     record_tool_trace(tool_metadata, tool_use.name, clean_input)
-    tool_result = ToolResultBlock(
-        tool_use_id=tool_use.tool_use_id,
-        content=(
+    if subagent_session_id:
+        content = (
+            f'[SUBAGENT LAUNCHED] subagent_session_id="{subagent_session_id}" '
+            f'status=running agent_name="{clean_input.get("agent_name", "")}"\n'
+            f"Use check_subagent_progress("
+            f'subagent_session_id="{subagent_session_id}", last_n_messages=5) '
+            f"to inspect progress, or cancel_subagent("
+            f'subagent_session_id="{subagent_session_id}") to stop it. '
+            f"Keep using the current response on other ready work first."
+        )
+    else:
+        content = (
             f'[BACKGROUND LAUNCHED] task_id="{task_alias}" tool={tool_use.name}\n'
             f"Use this task_id with "
             f'check_background_task_result(task_id="{task_alias}"), '
@@ -175,7 +194,10 @@ def launch_background_tool(
             f'cancel_background_task(task_id="{task_alias}"). '
             f"Keep using the current response on other ready work first; do not "
             f"wait immediately unless this task is the only blocker left."
-        ),
+        )
+    tool_result = ToolResultBlock(
+        tool_use_id=tool_use.tool_use_id,
+        content=content,
         is_error=False,
     )
     return tool_result, started_event, None

@@ -83,6 +83,7 @@ class BackgroundTaskRecord:
     # Discriminator so monitoring/UI/audit can branch without sniffing tool_name.
     # "agent" for ordinary background tools, "subagent" for run_subagent.
     task_type: str = DEFAULT_BACKGROUND_TASK_TYPE
+    subagent_session_id: str | None = None
     agent_id: str | None = None
     uses_sandbox: bool = False
     sandbox_id: str | None = None
@@ -207,6 +208,7 @@ class BackgroundTaskSupervisor:
         self._tasks: dict[str, BackgroundTaskRecord] = {}
         self._pty_commands: dict[str, PtyCommandRecord] = {}
         self._alias_counter: int = 0
+        self._subagent_counter: int = 0
         self._heartbeat_task: asyncio.Task[None] | None = None
 
     def next_alias(self) -> str:
@@ -217,6 +219,11 @@ class BackgroundTaskSupervisor:
         """
         self._alias_counter += 1
         return f"bg_{self._alias_counter}"
+
+    def next_subagent_session_id(self) -> str:
+        """Return a model-facing subagent session id."""
+        self._subagent_counter += 1
+        return f"subagent_{self._subagent_counter}"
 
     def launch(
         self,
@@ -230,6 +237,7 @@ class BackgroundTaskSupervisor:
         sandbox_id: str | None = None,
         sandbox_invocation_id: str | None = None,
         heartbeat_enabled: bool = True,
+        subagent_session_id: str | None = None,
     ) -> BackgroundTaskStartedEvent:
         """Launch *coro* as a background task and return a started event."""
         asyncio_task = asyncio.create_task(coro)
@@ -239,6 +247,7 @@ class BackgroundTaskSupervisor:
             tool_input=tool_input,
             asyncio_task=asyncio_task,
             task_type=task_type,
+            subagent_session_id=subagent_session_id,
             agent_id=agent_id,
             uses_sandbox=uses_sandbox,
             sandbox_id=sandbox_id,
@@ -532,6 +541,48 @@ class BackgroundTaskSupervisor:
         """Return the tracked task for *task_id* (or None)."""
         return self._tasks.get(task_id)
 
+    def get_subagent_task(self, subagent_session_id: str) -> BackgroundTaskRecord | None:
+        """Return a subagent task by public session id."""
+        for tracked in self._tasks.values():
+            if (
+                tracked.task_type == SUBAGENT_TASK_TYPE
+                and tracked.subagent_session_id == subagent_session_id
+            ):
+                return tracked
+        return None
+
+    async def cancel_subagent_session(
+        self,
+        subagent_session_id: str,
+        reason: str = "",
+    ) -> bool:
+        """Cancel a running subagent by public session id."""
+        tracked = self.get_subagent_task(subagent_session_id)
+        if tracked is None:
+            return False
+        return await self.cancel(tracked.task_id, reason)
+
+    def collect_subagent_completion_notifications(self) -> list[str]:
+        """Return one notification string for each newly terminal subagent."""
+        notifications: list[str] = []
+        for tracked in self._tasks.values():
+            if (
+                tracked.task_type != SUBAGENT_TASK_TYPE
+                or tracked.status not in _TERMINAL_UNDELIVERED
+            ):
+                continue
+            notifications.append(_render_subagent_completion_notification(tracked))
+            tracked.status = BackgroundTaskStatus.DELIVERED
+            delivery_latency_ms = max(
+                0.0, (time.monotonic() - tracked.started_at) * 1000.0
+            )
+            _emit_background_tool(
+                "background_tool.delivered",
+                tracked,
+                delivery_latency_ms=delivery_latency_ms,
+            )
+        return notifications
+
     async def cancel_all(self) -> None:
         """Cancel all running tasks. Called on query loop exit."""
         pty_agents = {record.agent_id for record in self._running_pty_commands()}
@@ -751,4 +802,36 @@ def _render_pty_completion_notification(record: PtyCommandRecord) -> str:
         lines.append(f"stdout:\n{stdout.rstrip()}")
     if stderr:
         lines.append(f"stderr:\n{stderr.rstrip()}")
+    return "\n".join(lines)
+
+
+def _render_subagent_completion_notification(record: BackgroundTaskRecord) -> str:
+    result = record.result
+    metadata = result.metadata if result is not None else {}
+    terminal_called = bool(metadata.get("subagent_terminal_called"))
+    if record.status == BackgroundTaskStatus.CANCELLED:
+        status = "cancelled"
+    elif record.status == BackgroundTaskStatus.COMPLETED and terminal_called:
+        status = "finished"
+    else:
+        status = "failed"
+
+    session_id = record.subagent_session_id or record.task_id
+    agent_name = str(record.tool_input.get("agent_name") or "")
+    lines = [
+        (
+            f'[SUBAGENT COMPLETED] subagent_session_id="{session_id}" '
+            f"status={status}"
+        )
+    ]
+    if agent_name:
+        lines.append(f"agent_name: {agent_name}")
+    if result is not None and result.output:
+        label = "result" if status == "finished" else "details"
+        lines.append(f"{label}:\n{result.output.rstrip()}")
+    if status == "failed":
+        lines.append(
+            "Use check_subagent_progress(subagent_session_id=..., last_n_messages=5) "
+            "to inspect the final progress snapshot."
+        )
     return "\n".join(lines)
