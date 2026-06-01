@@ -165,6 +165,8 @@ async def _drain_background_completion_notifications(
 ) -> None:
     if background_tasks is None:
         return
+    for text in background_tasks.collect_subagent_completion_notifications():
+        await notification_service.notify_system(text)
     for text in await background_tasks.collect_pty_completion_notifications():
         await notification_service.notify_system(text)
 

@@ -22,7 +22,6 @@ from __future__ import annotations
 import pytest
 
 from tools.ask_helper import make_ask_helper_tools
-from tools.background import make_background_tools
 from tools.sandbox._lib.registry import make_sandbox_tools
 from tools.submission import make_submission_tools
 
@@ -62,8 +61,6 @@ def _all_static_tool_names() -> list[str]:
     """
     names: list[str] = []
     for tool in make_sandbox_tools():
-        names.append(tool.name)
-    for tool in make_background_tools():
         names.append(tool.name)
     for tool in make_submission_tools():
         names.append(tool.name)

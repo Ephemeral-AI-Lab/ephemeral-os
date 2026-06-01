@@ -115,6 +115,32 @@ class _TerminalFailingTool(_FailingTool):
     is_terminal_tool = True
 
 
+class _SubagentEchoTool(_EchoTool):
+    name = "run_subagent"
+    task_type = "subagent"
+
+
+class _SubagentSandboxArgs(BaseModel):
+    agent_name: str
+    prompt: str
+
+
+class _SubagentSandboxTool(BaseTool):
+    name = "run_subagent"
+    description = "Test subagent launcher."
+    input_model = _SubagentSandboxArgs
+    task_type = "subagent"
+    context_requirements = (SANDBOX_CONTEXT,)
+
+    async def execute(
+        self,
+        arguments: _SubagentSandboxArgs,
+        context: ToolExecutionContextService,
+    ) -> ToolResult:
+        del arguments, context
+        return ToolResult(output="ok")
+
+
 class _SequentialPreHook:
     target_tool = "echo_tool"
 
@@ -295,6 +321,21 @@ async def test_execute_tool_once_emits_started_and_executes_tool() -> None:
     assert [type(event) for event in events] == [ToolExecutionStartedEvent]
     assert isinstance(events[0], ToolExecutionStartedEvent)
     assert events[0].tool_input == {"value": "hello"}
+
+
+async def test_execute_tool_once_rejects_retired_background_argument() -> None:
+    tool = _EchoTool()
+
+    result = await execute_tool_once(
+        tool,
+        {"value": "hello", "background": True},
+        _context(),
+        emit=lambda event: _capture_emit([], event),
+    )
+
+    assert result.is_error is True
+    assert "`background` is not a tool argument" in result.output
+    assert tool.seen == []
 
 
 async def test_prehooks_run_sequentially_and_mutate_input() -> None:
@@ -1056,14 +1097,10 @@ async def test_streaming_executor_propagates_terminal_completion_marker() -> Non
 
 
 async def test_background_tool_runs_hooks_and_reports_failure() -> None:
-    class _BackgroundEchoTool(_EchoTool):
-        name = "background_echo"
-        background = "optional"
-
     class _BackgroundFailPreHook(_FailPreHook):
-        target_tool = "background_echo"
+        target_tool = "run_subagent"
 
-    tool = _BackgroundEchoTool()
+    tool = _SubagentEchoTool()
     tool.pre_hooks = (_BackgroundFailPreHook(),)
     registry = ToolRegistry()
     registry.register(tool)
@@ -1091,8 +1128,8 @@ async def test_background_tool_runs_hooks_and_reports_failure() -> None:
         background_tasks=manager,
         tool_use=ToolUseBlock(
             tool_use_id="toolu_bg",
-            name="background_echo",
-            input={"value": "hi", "background": True},
+            name="run_subagent",
+            input={"value": "hi"},
         ),
         execute_tool_call=_execute_tool_call,
     )
@@ -1119,13 +1156,8 @@ async def test_background_tool_runs_hooks_and_reports_failure() -> None:
 
 
 async def test_background_launch_honors_internal_sandbox_invocation_id() -> None:
-    class _BackgroundSandboxTool(_EchoTool):
-        name = "background_sandbox_echo"
-        background = "optional"
-        context_requirements = (SANDBOX_CONTEXT,)
-
     registry = ToolRegistry()
-    registry.register(_BackgroundSandboxTool())
+    registry.register(_SubagentSandboxTool())
     manager = BackgroundTaskSupervisor()
     metadata = ExecutionMetadata(sandbox_id="sandbox-1", agent_run_id="agent-a")
     captured: dict[str, object] = {}
@@ -1147,10 +1179,10 @@ async def test_background_launch_honors_internal_sandbox_invocation_id() -> None
         background_tasks=manager,
         tool_use=ToolUseBlock(
             tool_use_id="toolu_bg",
-            name="background_sandbox_echo",
+            name="run_subagent",
             input={
-                "value": "hi",
-                "background": True,
+                "agent_name": "worker",
+                "prompt": "do work",
                 SANDBOX_INVOCATION_ID_INPUT_KEY: "invocation-fixed",
                 DISABLE_SANDBOX_HEARTBEAT_INPUT_KEY: True,
             },
@@ -1163,11 +1195,11 @@ async def test_background_launch_honors_internal_sandbox_invocation_id() -> None
     assert tool_result.is_error is False
     assert bg_event is not None
     assert reject_event is None
-    assert captured["tool_input"] == {"value": "hi"}
+    assert captured["tool_input"] == {"agent_name": "worker", "prompt": "do work"}
     extra = captured["extra_metadata"]
     assert isinstance(extra, ExecutionMetadata)
     assert extra.sandbox_invocation_id == "invocation-fixed"
-    tracked = manager.get_task("bg_1")
+    tracked = manager.get_task("subagent_1")
     assert tracked is not None
     assert tracked.sandbox_invocation_id == "invocation-fixed"
     assert tracked.heartbeat_enabled is False
@@ -1176,13 +1208,8 @@ async def test_background_launch_honors_internal_sandbox_invocation_id() -> None
 
 
 async def test_background_launch_keeps_heartbeat_when_invocation_id_not_pinned() -> None:
-    class _BackgroundSandboxTool(_EchoTool):
-        name = "background_sandbox_echo"
-        background = "optional"
-        context_requirements = (SANDBOX_CONTEXT,)
-
     registry = ToolRegistry()
-    registry.register(_BackgroundSandboxTool())
+    registry.register(_SubagentSandboxTool())
     manager = BackgroundTaskSupervisor()
     metadata = ExecutionMetadata(sandbox_id="sandbox-1", agent_run_id="agent-a")
     captured: dict[str, object] = {}
@@ -1204,10 +1231,10 @@ async def test_background_launch_keeps_heartbeat_when_invocation_id_not_pinned()
         background_tasks=manager,
         tool_use=ToolUseBlock(
             tool_use_id="toolu_bg",
-            name="background_sandbox_echo",
+            name="run_subagent",
             input={
-                "value": "hi",
-                "background": True,
+                "agent_name": "worker",
+                "prompt": "do work",
                 DISABLE_SANDBOX_HEARTBEAT_INPUT_KEY: True,
             },
         ),
@@ -1219,11 +1246,11 @@ async def test_background_launch_keeps_heartbeat_when_invocation_id_not_pinned()
     assert tool_result.is_error is False
     assert bg_event is not None
     assert reject_event is None
-    assert captured["tool_input"] == {"value": "hi"}
+    assert captured["tool_input"] == {"agent_name": "worker", "prompt": "do work"}
     extra = captured["extra_metadata"]
     assert isinstance(extra, ExecutionMetadata)
     assert extra.sandbox_invocation_id
-    tracked = manager.get_task("bg_1")
+    tracked = manager.get_task("subagent_1")
     assert tracked is not None
     assert tracked.sandbox_invocation_id
     assert tracked.heartbeat_enabled is True
@@ -1232,14 +1259,10 @@ async def test_background_launch_keeps_heartbeat_when_invocation_id_not_pinned()
 
 
 async def test_background_dispatch_exposes_conversation_messages_to_prehooks() -> None:
-    class _BackgroundEchoTool(_EchoTool):
-        name = "background_echo"
-        background = "optional"
-
     class _BackgroundConversationMessagesPreHook(_ConversationMessagesPreHook):
-        target_tool = "background_echo"
+        target_tool = "run_subagent"
 
-    tool = _BackgroundEchoTool()
+    tool = _SubagentEchoTool()
     tool.pre_hooks = (_BackgroundConversationMessagesPreHook(),)
     registry = ToolRegistry()
     registry.register(tool)
@@ -1261,8 +1284,8 @@ async def test_background_dispatch_exposes_conversation_messages_to_prehooks() -
             content=[
                 ToolUseBlock(
                     tool_use_id="toolu_bg",
-                    name="background_echo",
-                    input={"value": "seen", "background": True},
+                    name="run_subagent",
+                    input={"value": "seen"},
                 )
             ],
         ),
@@ -1274,8 +1297,8 @@ async def test_background_dispatch_exposes_conversation_messages_to_prehooks() -
         manager,
         ToolUseBlock(
             tool_use_id="toolu_bg",
-            name="background_echo",
-            input={"value": "seen", "background": True},
+            name="run_subagent",
+            input={"value": "seen"},
         ),
         tool_results,
     )

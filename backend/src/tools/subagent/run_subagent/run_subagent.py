@@ -1,15 +1,15 @@
 """run_subagent — spawn a focused worker subagent as a background task.
 
-Backgrounded by the engine (``background="always"``) so the parent can keep
-working while the subagent runs. Peek progress with
-``check_background_task_result(task_id)``; block on completion with
-``wait_background_tasks()``.
+Hard-coded engine background dispatch lets the parent keep working while the
+subagent runs. Peek progress with
+``check_subagent_progress(subagent_session_id)``; cancel with
+``cancel_subagent(subagent_session_id)``.
 
 The subagent must terminate via a registered terminal tool; whatever
 ``ToolResult`` the engine stamps with ``is_terminal=True`` becomes this
 tool's output. If the subagent exits without calling a terminal tool, the bg
-task is marked failed and ``check_background_task_result`` falls back to the
-message peek.
+task is marked failed and ``check_subagent_progress`` falls back to the message
+peek.
 
 Subagents cannot spawn further subagents — recursion is rejected at
 validation time so the focused-worker contract holds.
@@ -167,7 +167,6 @@ def _validate_run_subagent_request(
     input_model=RunSubagentInput,
     output_model=TextToolOutput,
     intent=Intent.WRITE_ALLOWED,
-    background="always",
     task_type=SUBAGENT_TASK_TYPE,
 )
 async def run_subagent(
@@ -198,7 +197,7 @@ async def run_subagent(
     sub_meta["role"] = sub_def.role.value
 
     def _on_spawned(agent: Any) -> None:
-        # Register the live-peek provider so check_background_task_result
+        # Register the live-peek provider so check_subagent_progress
         # can render the inner agent's last N messages while it's running
         # (and after, if the terminal tool was never called).
         if bg_manager is None or not isinstance(bg_task_id, str):
@@ -235,7 +234,7 @@ async def run_subagent(
         initial_messages=[Message.from_user_text(prompt)],
     )
 
-    # Stamp the metadata flag check_background_task_result uses to
+    # Stamp the metadata flag check_subagent_progress uses to
     # distinguish "finished with terminal result" from "finished without
     # calling the terminal tool" (which we want to report as failed).
     if result.status == "failed":

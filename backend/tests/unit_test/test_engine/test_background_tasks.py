@@ -6,18 +6,49 @@ import asyncio
 from contextlib import suppress
 from typing import Any
 
+from pydantic import BaseModel
+
+from engine.background.dispatch import launch_background_tool
 from engine.background.task_supervisor import BackgroundTaskSupervisor
 from message.events import BackgroundTaskStartedEvent
+from message.message import ToolResultBlock, ToolUseBlock
 from tools.background.cancel_background_task import (
     CancelBackgroundTaskInput,
     CancelBackgroundTaskTool,
 )
-from tools._framework.core.base import ToolExecutionContextService, ToolResult
+from tools._framework.core.base import BaseTool, ToolExecutionContextService, ToolResult
+from tools._framework.core.registry import ToolRegistry
+from tools.subagent.control import (
+    CancelSubagentInput,
+    CancelSubagentTool,
+    CheckSubagentProgressInput,
+    CheckSubagentProgressTool,
+)
 
 
 # ---------------------------------------------------------------------------
 # Shared helpers
 # ---------------------------------------------------------------------------
+
+
+class _RunSubagentInput(BaseModel):
+    agent_name: str
+    prompt: str
+
+
+class _RunSubagentTool(BaseTool):
+    name = "run_subagent"
+    description = "test subagent launcher"
+    input_model = _RunSubagentInput
+    task_type = "subagent"
+
+    async def execute(
+        self,
+        arguments: BaseModel,
+        context: ToolExecutionContextService,
+    ) -> ToolResult:
+        del arguments, context
+        return ToolResult(output="done")
 
 
 async def _make_tool_coro(
@@ -51,7 +82,7 @@ def _launch(
 def _launch_subagent(
     mgr: BackgroundTaskSupervisor,
     *,
-    task_id: str = "bg_1",
+    task_id: str = "subagent_1",
     delay: float = 10.0,
     coro=None,
 ):
@@ -271,6 +302,108 @@ async def test_count_by_agent_includes_active_pty_commands() -> None:
     await mgr.cancel_all()
 
 
+async def test_subagent_launch_returns_public_session_id_not_private_task_id() -> None:
+    mgr = BackgroundTaskSupervisor()
+    registry = ToolRegistry()
+    registry.register(_RunSubagentTool())
+
+    async def _execute(
+        tool_name: str,
+        tool_use_id: str,
+        tool_input: dict[str, object],
+        extra_metadata=None,
+    ) -> ToolResultBlock:
+        del tool_name, tool_use_id, tool_input, extra_metadata
+        return ToolResultBlock(tool_use_id="toolu_1", content="done")
+
+    result, started, rejected = launch_background_tool(
+        tool_registry=registry,
+        tool_metadata=None,
+        background_tasks=mgr,
+        tool_use=ToolUseBlock(
+            tool_use_id="toolu_1",
+            name="run_subagent",
+            input={"agent_name": "explorer", "prompt": "look"},
+        ),
+        execute_tool_call=_execute,
+    )
+
+    assert rejected is None
+    assert isinstance(started, BackgroundTaskStartedEvent)
+    assert started.task_id == "subagent_1"
+    assert 'subagent_session_id="subagent_1"' in result.content
+    assert "bg_1" not in result.content
+    assert "task_id=" not in result.content
+    assert "check_subagent_progress" in result.content
+    assert "check_background_task_result" not in result.content
+    assert "bg_1" not in mgr._tasks
+    assert mgr._tasks["subagent_1"].task_id == "subagent_1"
+    assert mgr._tasks["subagent_1"].subagent_session_id == "subagent_1"
+    await mgr.cancel_all()
+
+
+async def test_check_subagent_progress_uses_public_session_id() -> None:
+    mgr = BackgroundTaskSupervisor()
+    mgr.launch(
+        task_id="subagent_1",
+        tool_name="run_subagent",
+        tool_input={"agent_name": "explorer"},
+        coro=_make_tool_coro(delay=60),
+        task_type="subagent",
+    )
+    mgr.set_progress_provider("subagent_1", lambda n: f"last {n}")
+    tool = CheckSubagentProgressTool()
+
+    ok = await tool.execute(
+        CheckSubagentProgressInput(
+            subagent_session_id="subagent_1",
+            last_n_messages=3,
+        ),
+        _make_ctx(mgr),
+    )
+    private_id = await tool.execute(
+        CheckSubagentProgressInput(subagent_session_id="bg_1"),
+        _make_ctx(mgr),
+    )
+
+    assert ok.is_error is False
+    assert '"subagent_session_id": "subagent_1"' in ok.output
+    assert '"status": "running"' in ok.output
+    assert "last 3" in ok.output
+    assert private_id.is_error is True
+    await mgr.cancel_all()
+
+
+async def test_cancel_subagent_uses_public_session_id() -> None:
+    mgr = BackgroundTaskSupervisor()
+    mgr.launch(
+        task_id="subagent_1",
+        tool_name="run_subagent",
+        tool_input={"agent_name": "explorer"},
+        coro=_make_tool_coro(delay=60),
+        task_type="subagent",
+    )
+    tool = CancelSubagentTool()
+
+    private_id = await tool.execute(
+        CancelSubagentInput(subagent_session_id="bg_1"),
+        _make_ctx(mgr),
+    )
+    public_id = await tool.execute(
+        CancelSubagentInput(
+            subagent_session_id="subagent_1",
+            reason="enough evidence",
+        ),
+        _make_ctx(mgr),
+    )
+
+    assert private_id.is_error is True
+    assert public_id.is_error is False
+    assert "subagent_1" in public_id.output
+    await asyncio.sleep(0)
+    assert mgr._tasks["subagent_1"].status in {"completed", "cancelled"}
+
+
 # ---------------------------------------------------------------------------
 # 9. cancel nonexistent task
 # ---------------------------------------------------------------------------
@@ -310,12 +443,12 @@ async def test_cancel_all_marks_subagent_cancelled_without_asyncio_cancel() -> N
             raise
         return ToolResult(output="done")
 
-    _launch_subagent(mgr, task_id="bg_1", coro=_subagent_coro())
+    _launch_subagent(mgr, task_id="subagent_1", coro=_subagent_coro())
 
     await mgr.cancel_all()
     await asyncio.sleep(0)
 
-    tracked = mgr._tasks["bg_1"]
+    tracked = mgr._tasks["subagent_1"]
     assert tracked.status == "cancelled"
     assert tracked.result is not None
     assert tracked.result.output == "Cancelled"
@@ -339,13 +472,13 @@ async def test_cancel_subagent_requests_early_stop_and_preserves_result() -> Non
             return ToolResult(output="partial summary")
         return ToolResult(output="done")
 
-    _launch_subagent(mgr, task_id="bg_early", coro=_subagent_coro())
+    _launch_subagent(mgr, task_id="subagent_early", coro=_subagent_coro())
 
-    ok = await mgr.cancel("bg_early", "enough evidence")
+    ok = await mgr.cancel("subagent_early", "enough evidence")
     assert ok is True
     await asyncio.sleep(0)
 
-    tracked = mgr._tasks["bg_early"]
+    tracked = mgr._tasks["subagent_early"]
     assert cancelled.is_set() is True
     assert tracked.status == "completed"
     assert tracked.stop_mode == "early_stop"

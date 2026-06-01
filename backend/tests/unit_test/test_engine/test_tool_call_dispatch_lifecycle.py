@@ -25,7 +25,7 @@ def _registry(intent_map: dict[str, Intent]):
             intent = intent_map.get(name)
             if intent is None:
                 return None
-            return SimpleNamespace(intent=intent, background="forbidden")
+            return SimpleNamespace(intent=intent)
 
     return _Registry()
 

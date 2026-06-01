@@ -49,13 +49,13 @@ def test_schema_summary_prints_live_input_and_output_models():
     assert "Tool: submit_advisor_feedback" in summary
 
 
-def test_tool_catalog_includes_runtime_background_tools_when_requested():
+def test_tool_catalog_omits_retired_runtime_background_tools_when_requested():
     catalog = collect_tool_catalog(include_runtime_tools=True)
 
     names = {entry.name for entry in catalog}
-    assert "wait_background_tasks" in names
-    assert "check_background_task_result" in names
-    assert "cancel_background_task" in names
+    assert "wait_background_tasks" not in names
+    assert "check_background_task_result" not in names
+    assert "cancel_background_task" not in names
 
 
 def test_schema_summary_has_input_and_output_section_for_every_tool():

@@ -35,7 +35,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 import inspect
-from typing import Any, Literal, cast
+from typing import Any, cast
 
 from pydantic import BaseModel
 
@@ -54,7 +54,6 @@ def tool(
     input_model: type[BaseModel],
     output_model: type[BaseModel],
     intent: Intent | None = None,
-    background: Literal["forbidden", "optional", "always"] = "forbidden",
     task_type: str = "agent",
     is_terminal_tool: bool = False,
     context_requirements: list[str] | tuple[str, ...] = (),
@@ -121,7 +120,6 @@ def tool(
         instance.input_model = input_model
         instance.output_model = output_model
         instance.intent = intent
-        instance.background = background
         instance.task_type = task_type
         instance.is_terminal_tool = is_terminal_tool
         instance.context_requirements = normalized_context_requirements

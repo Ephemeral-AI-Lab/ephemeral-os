@@ -15,7 +15,7 @@ from message import (
     ToolResultBlock,
     ToolUseBlock,
 )
-from tools import (
+from tools.background._lib.task_output import (
     build_background_snapshot_metadata,
     render_background_snapshot,
 )

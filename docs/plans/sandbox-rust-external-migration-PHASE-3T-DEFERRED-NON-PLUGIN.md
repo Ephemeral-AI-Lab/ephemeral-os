@@ -13,6 +13,49 @@ implementation, intentionally excluding:
 - plugin PPC execution and AV-10 plugin parity;
 - Daytona live execution.
 
+## Next Agent Handoff - 2026-06-01
+
+Current state:
+
+- CP-4t is closed for Docker shared-workspace command/PTY paths under the final
+  `exec_command` / PTY tool names and `/eos` runtime paths.
+- Model-facing generic background tools are retired from runtime/catalog/facade
+  exposure.
+- The `BaseTool.background` / `@tool(background=...)` concept is removed.
+  Background-manager attachment is hard-coded in `engine.background.policy` for
+  subagent launch and PTY session surfaces.
+- Subagent launch/progress/cancel is typed: `run_subagent` returns
+  `subagent_session_id`, `check_subagent_progress` and `cancel_subagent` accept
+  `subagent_session_id`, and subagent supervisor records no longer use a hidden
+  `bg_N` alias.
+- Generic background tool implementation classes still exist only as direct
+  legacy probe/test code. Do not re-expose them to models or recreate
+  `make_background_tools()`.
+
+Last focused verification:
+
+- `193 passed` for the engine/background/subagent/tool focused unit slice:
+  `backend/tests/unit_test/test_engine/test_background_tasks.py`,
+  `test_background_task_emitters.py`, `test_background_unit.py`,
+  `test_provider_history.py`, `test_spawn_agent.py`,
+  `test_tool_call_dispatch_lifecycle.py`, `test_prompt/test_runtime_prompt.py`,
+  `test_tools/test_schema_summary.py`, `test_no_claude_code_collision.py`,
+  `test_sandbox_toolkit/test_toolkit.py`, `test_subagent_retry.py`, and
+  `test_tool_execution.py`.
+- `backend/tests/unit_test/test_task_center_runner/test_probe_bridge.py`
+  passed.
+- `ruff check` passed on the touched Python files.
+- `git diff --check` passed.
+- A broader mock contract spike was attempted but did not reach the relevant
+  assertions because the live SWE-EVO fixture failed setup on `/eos`
+  writability in the existing container. Treat that as environment/setup debt,
+  not evidence against the typed subagent/background cleanup.
+
+Next work should start with subagent mock-loop evidence, then Rust
+isolated-workspace command/PTY integration. Do not reintroduce
+`shell(background=true)`, `BaseTool.background`, model-facing generic
+background controls, or `bg_N` as a subagent reference.
+
 ## Completed Baseline
 
 The PTY command implementation is accepted for the Docker shared-workspace path:
@@ -70,10 +113,15 @@ Minimum evidence:
 ### 2. Typed Subagent Surface
 
 The shell-session plan says subagents should no longer depend on generic
-background task tools. The current subagent surface still exposes generic
-`task_id`, `check_background_task_result`, and `wait_background_tasks` semantics.
+background task tools. That surface has now been replaced with typed
+`subagent_session_id` progress/cancel controls; only deeper parent-loop
+evidence remains.
 
-Required work:
+Status: launch/progress/cancel wiring landed on 2026-06-01 with focused unit
+coverage. The remaining work here is the deeper mock-loop evidence for parent
+loop interactions.
+
+Completed work:
 
 - keep `run_subagent(agent_name, prompt)` as the launch tool, but return a
   model-facing `subagent_session_id`;
@@ -81,14 +129,24 @@ Required work:
 - add or expose `cancel_subagent(subagent_session_id)`;
 - remove subagent instructions that tell the model to use generic background
   task tools;
-- keep internal background records private if the manager still uses them;
+- retire the model-facing generic background management tools from runtime and
+  catalog exposure;
+- remove the `BaseTool.background` / `@tool(background=...)` concept; background
+  manager attachment is now hard-coded in `engine.background.policy` for
+  subagent launch and PTY session surfaces;
+- use `subagent_session_id` as the only subagent supervisor/model reference
+  rather than keeping a hidden `bg_N` alias;
+
+Remaining work:
+
 - make subagent natural completion, no-terminal failure, explicit cancellation,
-  and parent terminal-abandon reasons typed and visible in notifications/audit.
+  and parent terminal-abandon reasons typed and visible in deeper mock-loop
+  notifications/audit evidence.
 
 Minimum evidence:
 
-- unit tests for launch/progress/cancel identifier separation;
-- provider-history compaction tests that preserve the typed subagent result
+- ✅ unit tests for launch/progress/cancel identifier separation;
+- ✅ provider-history compaction tests that preserve the typed subagent result
   surface;
 - mock-loop tests for natural completion, no-terminal failure, explicit cancel,
   and parent terminal submission while a subagent is active.
@@ -224,8 +282,9 @@ Minimum evidence:
 
 ## Suggested Order
 
-1. Finish the typed subagent surface, since it is independent of Rust
-   isolated-workspace work.
+1. Finish subagent mock-loop evidence for natural completion, no-terminal
+   failure, explicit cancel, and parent terminal submission while a subagent is
+   active.
 2. Implement Rust isolated-workspace lifecycle ops and command/PTY routing.
 3. Run isolated-workspace Docker live coverage for command and PTY semantics.
 4. Run CP-4 mixed non-plugin load with attached AV-4 audit pull.

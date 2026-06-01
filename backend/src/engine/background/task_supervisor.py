@@ -212,16 +212,12 @@ class BackgroundTaskSupervisor:
         self._heartbeat_task: asyncio.Task[None] | None = None
 
     def next_alias(self) -> str:
-        """Return a short mnemonic task_id like 'bg_1', 'bg_2', ...
-
-        These are easier for the LLM to retain in tool outputs than opaque
-        tool_use_ids and are what the agent sees as ``task_id`` everywhere.
-        """
+        """Return a short mnemonic task id for generic background tools."""
         self._alias_counter += 1
         return f"bg_{self._alias_counter}"
 
     def next_subagent_session_id(self) -> str:
-        """Return a model-facing subagent session id."""
+        """Return the single supervisor/model id for one subagent session."""
         self._subagent_counter += 1
         return f"subagent_{self._subagent_counter}"
 
@@ -240,9 +236,14 @@ class BackgroundTaskSupervisor:
         subagent_session_id: str | None = None,
     ) -> BackgroundTaskStartedEvent:
         """Launch *coro* as a background task and return a started event."""
+        record_id = task_id
+        if task_type == SUBAGENT_TASK_TYPE:
+            record_id = subagent_session_id or task_id
+        if task_type == SUBAGENT_TASK_TYPE:
+            subagent_session_id = record_id
         asyncio_task = asyncio.create_task(coro)
         tracked = BackgroundTaskRecord(
-            task_id=task_id,
+            task_id=record_id,
             tool_name=tool_name,
             tool_input=tool_input,
             asyncio_task=asyncio_task,
@@ -256,7 +257,7 @@ class BackgroundTaskSupervisor:
         )
         start_line = f"[started: {tool_name}]"
         tracked.progress_lines.append(start_line)
-        self._tasks[task_id] = tracked
+        self._tasks[record_id] = tracked
         _emit_background_tool("background_tool.started", tracked)
 
         def _done_callback(task: asyncio.Task[ToolResult]) -> None:
@@ -310,7 +311,7 @@ class BackgroundTaskSupervisor:
             self._ensure_heartbeat_task()
 
         return BackgroundTaskStartedEvent(
-            task_id=task_id,
+            task_id=record_id,
             tool_name=tool_name,
             tool_input=tool_input,
         )
@@ -542,7 +543,10 @@ class BackgroundTaskSupervisor:
         return self._tasks.get(task_id)
 
     def get_subagent_task(self, subagent_session_id: str) -> BackgroundTaskRecord | None:
-        """Return a subagent task by public session id."""
+        """Return a subagent task by its session id."""
+        direct = self._tasks.get(subagent_session_id)
+        if direct is not None and direct.task_type == SUBAGENT_TASK_TYPE:
+            return direct
         for tracked in self._tasks.values():
             if (
                 tracked.task_type == SUBAGENT_TASK_TYPE
@@ -556,7 +560,7 @@ class BackgroundTaskSupervisor:
         subagent_session_id: str,
         reason: str = "",
     ) -> bool:
-        """Cancel a running subagent by public session id."""
+        """Cancel a running subagent by session id."""
         tracked = self.get_subagent_task(subagent_session_id)
         if tracked is None:
             return False

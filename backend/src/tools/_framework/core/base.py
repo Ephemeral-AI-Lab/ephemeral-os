@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import Any, Literal
+from typing import Any
 
 from pydantic import BaseModel
 
@@ -21,9 +21,6 @@ __all__ = [
 ]
 
 
-BackgroundMode = Literal["forbidden", "optional", "always"]
-
-
 class BaseTool(ABC):
     """Base class for all EphemeralOS tools."""
 
@@ -38,14 +35,7 @@ class BaseTool(ABC):
     # path. Required on every @tool callsite; missing intent raises at
     # import time (see tools._framework.core.decorator).
     intent: Intent
-    # Background dispatch policy:
-    #   "forbidden" — tool cannot run in background (default)
-    #   "optional"  — LLM may opt in by passing background=true
-    #   "always"    — engine ALWAYS dispatches as background, regardless of input
-    background: BackgroundMode = "forbidden"
-    # Discriminator for monitoring/UI/audit so the engine never sniffs tool names.
-    # "agent" is the default for ordinary background tools; tools that spawn a
-    # nested agent (e.g. run_subagent) override it to "subagent".
+    # Discriminator for monitoring/UI/audit.
     task_type: str = "agent"
     # When True, a successful invocation ends the agent run. The
     # engine stamps is_terminal=True on the resulting ToolResult and the

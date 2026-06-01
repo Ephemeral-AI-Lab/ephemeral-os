@@ -43,10 +43,5 @@ class ToolRegistry:
         self._tools = {k: v for k, v in self._tools.items() if k in allowed}
 
     def to_api_schema(self) -> list[dict[str, Any]]:
-        """Return all tool schemas in API format.
-
-        Cross-cutting decorations like the optional ``background`` flag are
-        applied separately by :func:`decorate_schemas_for_background` so the
-        registry stays a dumb collection.
-        """
+        """Return all tool schemas in API format."""
         return [tool.to_api_schema() for tool in self._tools.values()]

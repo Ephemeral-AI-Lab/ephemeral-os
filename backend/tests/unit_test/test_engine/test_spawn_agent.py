@@ -54,9 +54,8 @@ class _TerminalTool(_DummyTool):
     is_terminal_tool = True
 
 
-class _BackgroundCapableTool(_DummyTool):
-    name = "bg_capable_tool"
-    background = "optional"
+class _ExecCommandTool(_DummyTool):
+    name = "exec_command"
 
 
 class _SandboxContextTool(_DummyTool):
@@ -161,9 +160,26 @@ def test_build_agent_tool_registry_skips_unknown_tools() -> None:
     assert registry.get("missing_tool") is None
 
 
-def test_finalize_adds_background_management_tools_for_background_capable_tool() -> None:
+def test_finalize_does_not_enable_background_manager_for_ordinary_tools() -> None:
     registry = ToolRegistry()
-    registry.register(_BackgroundCapableTool())
+    registry.register(_DummyTool())
+    registry.register(_TerminalTool())
+
+    _, has_background = _finalize_tool_registry_and_prompt(
+        registry,
+        "base",
+        agent_type="agent",
+    )
+
+    assert has_background is False
+    assert registry.get("wait_background_tasks") is None
+    assert registry.get("check_background_task_result") is None
+    assert registry.get("cancel_background_task") is None
+
+
+def test_finalize_enables_background_manager_for_pty_session_tools() -> None:
+    registry = ToolRegistry()
+    registry.register(_ExecCommandTool())
     registry.register(_TerminalTool())
 
     _, has_background = _finalize_tool_registry_and_prompt(
@@ -173,14 +189,14 @@ def test_finalize_adds_background_management_tools_for_background_capable_tool()
     )
 
     assert has_background is True
-    assert registry.get("wait_background_tasks") is not None
-    assert registry.get("cancel_background_task") is not None
+    assert registry.get("wait_background_tasks") is None
+    assert registry.get("check_background_task_result") is None
+    assert registry.get("cancel_background_task") is None
 
 
-def test_run_subagent_factory_preserves_always_background_policy() -> None:
+def test_run_subagent_factory_uses_typed_background_policy() -> None:
     tool = create_tool("run_subagent", ToolFactoryContext())
 
-    assert tool.background == "always"
     assert tool.task_type == "subagent"
 
     registry = ToolRegistry()
@@ -194,8 +210,10 @@ def test_run_subagent_factory_preserves_always_background_policy() -> None:
     )
 
     assert has_background is True
-    assert registry.get("wait_background_tasks") is not None
-    assert registry.get("check_background_task_result") is not None
+    assert registry.get("check_subagent_progress") is not None
+    assert registry.get("cancel_subagent") is not None
+    assert registry.get("wait_background_tasks") is None
+    assert registry.get("check_background_task_result") is None
 
 
 def test_attach_default_notification_rules_adds_budget_tiers_once() -> None:
@@ -214,7 +232,7 @@ def test_attach_default_notification_rules_adds_budget_tiers_once() -> None:
 
 def test_finalize_skips_background_management_tools_for_subagent() -> None:
     registry = ToolRegistry()
-    registry.register(_BackgroundCapableTool())
+    registry.register(create_tool("run_subagent", ToolFactoryContext()))
     registry.register(_TerminalTool())
 
     _, has_background = _finalize_tool_registry_and_prompt(
@@ -226,6 +244,8 @@ def test_finalize_skips_background_management_tools_for_subagent() -> None:
     assert has_background is False
     assert registry.get("wait_background_tasks") is None
     assert registry.get("cancel_background_task") is None
+    assert registry.get("check_subagent_progress") is None
+    assert registry.get("cancel_subagent") is None
 
 
 def test_finalize_derives_terminal_tool_guidance_from_registry() -> None:

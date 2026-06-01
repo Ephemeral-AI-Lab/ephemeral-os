@@ -399,6 +399,36 @@ async def test_generic_pty_not_found_does_not_suppress_completion_notification()
 
 
 @pytest.mark.asyncio
+async def test_subagent_completion_emits_typed_notification() -> None:
+    sup = BackgroundTaskSupervisor()
+
+    async def _done() -> ToolResult:
+        return ToolResult(
+            output="findings",
+            metadata={"subagent_terminal_called": True},
+        )
+
+    sup.launch(
+        task_id="subagent_1",
+        tool_name="run_subagent",
+        tool_input={"agent_name": "explorer"},
+        coro=_done(),
+        task_type="subagent",
+    )
+    await asyncio.sleep(0.05)
+
+    notes = sup.collect_subagent_completion_notifications()
+
+    assert len(notes) == 1
+    assert '[SUBAGENT COMPLETED] subagent_session_id="subagent_1"' in notes[0]
+    assert "status=finished" in notes[0]
+    assert "agent_name: explorer" in notes[0]
+    assert "result:\nfindings" in notes[0]
+    assert sup._tasks["subagent_1"].status == BackgroundTaskStatus.DELIVERED
+    assert sup.collect_subagent_completion_notifications() == []
+
+
+@pytest.mark.asyncio
 async def test_query_loop_helper_drains_pty_completion_into_notifications(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -440,6 +470,36 @@ async def test_query_loop_helper_drains_pty_completion_into_notifications(
     assert len(pending) == 1
     assert '[BACKGROUND COMPLETED] pty_session_id="pty_2"' in pending[0].text
     await asyncio.sleep(0)
+
+
+@pytest.mark.asyncio
+async def test_query_loop_helper_drains_subagent_completion_into_notifications() -> None:
+    from engine.query.loop import _drain_background_completion_notifications
+
+    sup = BackgroundTaskSupervisor()
+
+    async def _done() -> ToolResult:
+        return ToolResult(
+            output="summary",
+            metadata={"subagent_terminal_called": True},
+        )
+
+    sup.launch(
+        task_id="subagent_1",
+        tool_name="run_subagent",
+        tool_input={"agent_name": "explorer"},
+        coro=_done(),
+        task_type="subagent",
+    )
+    await asyncio.sleep(0.05)
+    service = SystemNotificationService()
+    service.register_agent_run()
+
+    await _drain_background_completion_notifications(sup, service)
+
+    pending = service.pop_pending_notifications()
+    assert len(pending) == 1
+    assert '[SUBAGENT COMPLETED] subagent_session_id="subagent_1"' in pending[0].text
 
 
 def test_audit_recorder_attach_daemon_audit_puller_starts_and_stops(

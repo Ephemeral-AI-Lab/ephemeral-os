@@ -65,7 +65,6 @@ class RestrictedRunSubagentTool(BaseTool):
             "description",
             "short_description",
             "output_model",
-            "background",
             "task_type",
             "is_terminal_tool",
             "pre_hooks",

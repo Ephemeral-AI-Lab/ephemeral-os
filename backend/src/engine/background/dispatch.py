@@ -8,10 +8,8 @@ from uuid import uuid4
 
 from pydantic import ValidationError
 
-from engine.background.task_supervisor import (
-    SUBAGENT_TASK_TYPE,
-    BackgroundTaskSupervisor,
-)
+from engine.background.policy import is_engine_background_tool
+from engine.background.task_supervisor import SUBAGENT_TASK_TYPE, BackgroundTaskSupervisor
 from message.message import Message, ToolResultBlock, ToolUseBlock
 from message.events import (
     BackgroundTaskStartedEvent,
@@ -39,7 +37,6 @@ SANDBOX_INVOCATION_ID_INPUT_KEY = "_sandbox_invocation_id"
 DISABLE_SANDBOX_HEARTBEAT_INPUT_KEY = "_disable_sandbox_heartbeat"
 _BACKGROUND_CONTROL_INPUT_KEYS = frozenset(
     {
-        "background",
         SANDBOX_INVOCATION_ID_INPUT_KEY,
         DISABLE_SANDBOX_HEARTBEAT_INPUT_KEY,
     }
@@ -86,7 +83,7 @@ def launch_background_tool(
     }
 
     tool_def = tool_registry.get(tool_use.name)
-    if tool_def is None or getattr(tool_def, "background", "forbidden") == "forbidden":
+    if tool_def is None or not is_engine_background_tool(tool_def):
         msg = f"Tool '{tool_use.name}' does not support background execution."
         return (
             ToolResultBlock(tool_use_id=tool_use.tool_use_id, content=msg, is_error=True),
@@ -116,13 +113,13 @@ def launch_background_tool(
             ),
         )
 
-    task_alias = background_tasks.next_alias()
     task_type = getattr(tool_def, "task_type", "agent")
-    subagent_session_id = (
-        background_tasks.next_subagent_session_id()
-        if task_type == SUBAGENT_TASK_TYPE
-        else None
-    )
+    subagent_session_id = None
+    if task_type == SUBAGENT_TASK_TYPE:
+        task_alias = background_tasks.next_subagent_session_id()
+        subagent_session_id = task_alias
+    else:
+        task_alias = background_tasks.next_alias()
     uses_sandbox = SANDBOX_CONTEXT in getattr(
         tool_def,
         "context_requirements",

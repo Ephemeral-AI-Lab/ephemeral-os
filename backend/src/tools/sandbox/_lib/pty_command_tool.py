@@ -1,4 +1,4 @@
-"""Shared helpers for PTY command control tools."""
+"""Shared helpers for command and PTY control tools."""
 
 from __future__ import annotations
 
@@ -10,14 +10,14 @@ from sandbox.shared.models import ExecCommandResult
 from tools._framework.core.base import ToolExecutionContextService, ToolResult
 
 
-class PtyCommandOutput(BaseModel):
+class CommandToolOutput(BaseModel):
     status: str
     exit_code: int | None
     output: dict[str, str]
     pty_session_id: str | None = None
 
 
-def pty_tool_result(result: ExecCommandResult) -> ToolResult:
+def command_result_payload(result: ExecCommandResult) -> dict[str, object]:
     payload = {
         "status": result.status,
         "exit_code": result.exit_code,
@@ -28,9 +28,14 @@ def pty_tool_result(result: ExecCommandResult) -> ToolResult:
     }
     if result.pty_session_id:
         payload["pty_session_id"] = result.pty_session_id
+    return payload
+
+
+def command_tool_result(result: ExecCommandResult) -> ToolResult:
+    payload = command_result_payload(result)
     return ToolResult(
         output=json.dumps(payload),
-        is_error=result.status == "error",
+        is_error=result.status in {"error", "timed_out"},
         metadata={"status": result.status, "pty_session_id": result.pty_session_id or ""},
     )
 
@@ -50,21 +55,16 @@ def mark_pty_result_reported_by_tool(
     mark = getattr(manager, "mark_pty_result_reported_by_tool", None)
     if not callable(mark):
         return
+    payload = command_result_payload(result)
     mark(
         pty_session_id=session_id,
-        result={
-            "status": result.status,
-            "exit_code": result.exit_code,
-            "output": {
-                "stdout": result.output.stdout,
-                "stderr": result.output.stderr,
-            },
-        },
+        result=payload,
     )
 
 
 __all__ = [
-    "PtyCommandOutput",
+    "CommandToolOutput",
+    "command_result_payload",
+    "command_tool_result",
     "mark_pty_result_reported_by_tool",
-    "pty_tool_result",
 ]

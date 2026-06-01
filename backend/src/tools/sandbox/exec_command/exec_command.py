@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 from uuid import uuid4
 
 from pydantic import BaseModel, Field
@@ -14,6 +13,10 @@ from tools._framework.core.decorator import tool
 from tools._hooks.destructive_shell import (
     DestructiveGitShellPreHook,
     DestructiveShellPreHook,
+)
+from tools.sandbox._lib.pty_command_tool import (
+    CommandToolOutput,
+    command_tool_result,
 )
 from tools.sandbox._lib.tool_context import (
     sandbox_audit_kwargs_from_tool_context,
@@ -29,19 +32,12 @@ class ExecCommandInput(BaseModel):
     timeout: int = Field(default=900, ge=1)
 
 
-class ExecCommandOutput(BaseModel):
-    status: str
-    exit_code: int | None
-    output: dict[str, str]
-    pty_session_id: str | None = None
-
-
 @tool(
     name="exec_command",
     description="Run a sandbox command, optionally as an interactive PTY session.",
     short_description="Run command.",
     input_model=ExecCommandInput,
-    output_model=ExecCommandOutput,
+    output_model=CommandToolOutput,
     intent=Intent.WRITE_ALLOWED,
     pre_hooks=(
         DestructiveGitShellPreHook("exec_command"),
@@ -84,21 +80,7 @@ async def exec_command(
                 agent_id=caller.agent_id,
                 command=cmd,
             )
-    payload = {
-        "status": result.status,
-        "exit_code": result.exit_code,
-        "output": {
-            "stdout": result.output.stdout,
-            "stderr": result.output.stderr,
-        },
-    }
-    if result.pty_session_id:
-        payload["pty_session_id"] = result.pty_session_id
-    return ToolResult(
-        output=json.dumps(payload),
-        is_error=result.status in {"error", "timed_out"},
-        metadata={"status": result.status, "pty_session_id": result.pty_session_id or ""},
-    )
+    return command_tool_result(result)
 
 
 __all__ = ["exec_command"]

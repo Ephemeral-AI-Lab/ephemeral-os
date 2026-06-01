@@ -1,10 +1,9 @@
-"""Tool input/output validation and schema decoration helpers."""
+"""Tool input/output validation helpers."""
 
 from __future__ import annotations
 
 import json
 import logging
-from collections.abc import Iterable
 from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, RootModel, ValidationError
@@ -16,17 +15,6 @@ logger = logging.getLogger(__name__)
 if TYPE_CHECKING:
     from tools._framework.core.base import BaseTool
     from tools._framework.core.context import ToolExecutionContextService
-    from tools._framework.core.registry import ToolRegistry
-
-
-# Engine-level schema decorations that may be injected into a tool's
-# input_schema by `decorate_schemas_for_background` (and any future
-# runtime-control decorator). Keep this set in sync with the property
-# names that `decorate_schemas_for_background` writes into the schema —
-# anything added there MUST also be added here, or pydantic
-# `extra="forbid"` models will reject the inflated input at validation
-# time.
-_RUNTIME_CONTROL_FIELDS: frozenset[str] = frozenset({"background"})
 
 
 def parse_tool_input(
@@ -34,9 +22,18 @@ def parse_tool_input(
     raw_input: dict[str, Any],
 ) -> ToolInputParseResult:
     """Validate raw tool input against the tool's pydantic model."""
-    clean_input = _strip_runtime_control_fields(tool, raw_input)
+    if "background" in raw_input and "background" not in tool.input_model.model_fields:
+        return ToolInputParseResult.failure(
+            ToolResult(
+                output=(
+                    f"Invalid input for {tool.name}: `background` is not a tool "
+                    "argument. Use typed subagent or PTY command controls instead."
+                ),
+                is_error=True,
+            )
+        )
     try:
-        parsed_input = tool.input_model.model_validate(clean_input)
+        parsed_input = tool.input_model.model_validate(raw_input)
     except ValidationError as exc:
         errors = _format_validation_errors(exc)
         return ToolInputParseResult.failure(
@@ -49,7 +46,7 @@ def parse_tool_input(
             )
         )
     except Exception as exc:
-        # Not a pydantic ValidationError: either `clean_input` is not a
+        # Not a pydantic ValidationError: either `raw_input` is not a
         # mapping, or a custom validator raised something exotic. This is
         # an internal error path, not an "invalid arguments" path — do not
         # tell the agent to retry; surface the type so triage can find it.
@@ -127,59 +124,7 @@ def validate_tool_output(tool: BaseTool, result: ToolResult) -> ToolResult:
     return result
 
 
-def decorate_schemas_for_background(
-    registry: ToolRegistry,
-    schemas: list[dict[str, Any]],
-    *,
-    terminal_tools: Iterable[str] = (),
-) -> list[dict[str, Any]]:
-    """Inject optional ``background`` fields for eligible non-terminal tools.
-
-    Mutates each schema in-place and returns the list. Terminal tools are
-    one-way submissions and must expose only their true payload schema.
-    ``background`` is added only to non-terminal tools whose ``background``
-    policy is ``"optional"`` (LLM may choose). Tools marked ``"always"`` are
-    dispatched in the background unconditionally and need no LLM-facing flag.
-    """
-    terminal_tool_names = set(terminal_tools)
-    for schema in schemas:
-        tool_name = str(schema["name"])
-        tool = registry.get(tool_name)
-        inp = schema.setdefault("input_schema", {})
-        props = inp.setdefault("properties", {})
-        is_terminal = tool_name in terminal_tool_names
-        if (
-            not is_terminal
-            and tool is not None
-            and getattr(tool, "background", "forbidden") == "optional"
-        ):
-            # Keep in sync with `_RUNTIME_CONTROL_FIELDS` above. Any new
-            # property key written into `props` here must also appear in
-            # that set so `_strip_runtime_control_fields` removes it
-            # before per-tool pydantic validation.
-            props["background"] = {
-                "type": "boolean",
-                "description": (
-                    "Set to true to run this tool asynchronously in the background. "
-                    "This supports long-running operations such as builds, test suites, "
-                    "and installs."
-                ),
-            }
-    return schemas
-
-
 def _format_validation_errors(exc: ValidationError) -> str:
     return "; ".join(
         f"{'.'.join(str(p) for p in e['loc'])}: {e['msg']}" for e in exc.errors()
     )
-
-
-def _strip_runtime_control_fields(tool: BaseTool, raw_input: dict[str, Any]) -> dict[str, Any]:
-    """Remove engine-level schema decorations before tool-local validation."""
-
-    model_fields = set(tool.input_model.model_fields)
-    return {
-        key: value
-        for key, value in raw_input.items()
-        if key not in _RUNTIME_CONTROL_FIELDS or key in model_fields
-    }

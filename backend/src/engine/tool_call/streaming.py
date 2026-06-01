@@ -15,6 +15,7 @@ from message.events import (
     ToolExecutionCompletedEvent,
     ToolExecutionProgressEvent,
 )
+from engine.background.policy import is_engine_background_tool
 from tools import (
     BaseTool,
     ToolExecutionContextService,
@@ -57,22 +58,9 @@ DeferPredicate = Callable[[BaseTool | None, dict[str, Any] | None], bool]
 def defer_background_dispatch(
     tool_def: BaseTool | None, tool_input: dict[str, Any] | None
 ) -> bool:
-    """Default defer predicate: skip tools that should run in the background.
-
-    A tool is deferred when it has ``background="always"`` or when it
-    has ``background="optional"`` and the LLM explicitly requested
-    background execution via the input flag. Callers wire this into
-    :class:`StreamingToolExecutor` via ``should_defer`` so the executor
-    itself never inspects the ``background`` attribute directly.
-    """
-    if tool_def is None:
-        return False
-    background_mode = getattr(tool_def, "background", "forbidden")
-    if background_mode == "always":
-        return True
-    return bool(
-        background_mode == "optional" and tool_input and tool_input.get("background")
-    )
+    """Default defer predicate for hard-coded engine background tools."""
+    del tool_input
+    return tool_def is not None and is_engine_background_tool(tool_def)
 
 
 class StreamingToolExecutor:

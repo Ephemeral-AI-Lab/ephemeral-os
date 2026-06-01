@@ -149,7 +149,6 @@ def _build_shell_tool_result(
     output_model=ShellOutput,
     intent=Intent.WRITE_ALLOWED,
     pre_hooks=(DestructiveGitShellPreHook(), DestructiveShellPreHook()),
-    background="optional",
 )
 async def shell(
     command: str,

@@ -22,6 +22,10 @@ from agents import AgentDefinition, AgentType
 from config import Settings
 from message.message import Message
 from message.events import StreamEvent
+from engine.background.policy import (
+    is_engine_background_tool,
+    needs_background_manager,
+)
 from providers.provider import make_api_client
 from providers.types import UsageSnapshot
 from prompt import build_runtime_system_prompt
@@ -32,7 +36,6 @@ from tools import (
     create_tool,
     create_default_tool_registry,
     has_tool,
-    make_background_tools,
     resolve_harness_notification_triggers,
 )
 
@@ -41,7 +44,9 @@ logger = logging.getLogger(__name__)
 _BACKGROUND_CONTROL_TOOL_NAMES = frozenset(
     {
         "cancel_background_task",
+        "cancel_subagent",
         "check_background_task_result",
+        "check_subagent_progress",
         "wait_background_tasks",
     }
 )
@@ -124,7 +129,7 @@ def _finalize_tool_registry_and_prompt(
     sets ``is_terminal_tool=True`` ends the query loop on success.
 
     Args:
-        tool_registry: The tool registry (mutated in-place to add background tools).
+        tool_registry: The tool registry, mutated in-place for typed subagent controls.
         system_prompt: The base system prompt.
         agent_type: Type label for the agent. Subagents cannot launch
             background tasks or spawn further subagents, so background
@@ -134,16 +139,16 @@ def _finalize_tool_registry_and_prompt(
         Tuple of (updated_system_prompt, has_background_tools).
     """
     from prompt.runtime_prompt import build_termination_condition_prompt
-    background_capable_tool_names = [
-        t.name
-        for t in tool_registry.list_tools()
-        if getattr(t, "background", "forbidden") != "forbidden"
-    ]
+    from tools.subagent import make_subagent_control_tools
+
+    listed_tools = tool_registry.list_tools()
     has_background_tools = (
-        bool(background_capable_tool_names) and agent_type != AgentType.SUBAGENT
+        any(needs_background_manager(tool) for tool in listed_tools)
+        and agent_type != AgentType.SUBAGENT
     )
     if has_background_tools:
-        tool_registry.register_many(make_background_tools())
+        if any(is_engine_background_tool(tool) for tool in listed_tools):
+            tool_registry.register_many(make_subagent_control_tools())
 
     terminal_tool_names = [
         t.name
@@ -243,9 +248,8 @@ def _register_requested_tools(
         if not clean_name or tool_registry.get(clean_name) is not None:
             continue
         if clean_name in _BACKGROUND_CONTROL_TOOL_NAMES:
-            # These are synthesized by _finalize_tool_registry_and_prompt when
-            # the registered tools include at least one background-capable
-            # tool. They are not ordinary tool factories.
+            # Retired generic background controls and typed subagent controls
+            # are not ordinary user-requested tool factories.
             continue
         if not has_tool(clean_name):
             logger.warning("No tool factory for %r requested by agent %r", clean_name, agent_name)

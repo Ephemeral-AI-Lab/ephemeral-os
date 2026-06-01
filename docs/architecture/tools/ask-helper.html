@@ -55,7 +55,7 @@
 <p class="lead"><code>ask_advisor</code> synchronously launches a helper agent and returns its terminal output to the caller.</p>
 <section id="tool-shape" data-last-reviewed-commit="422aa57100f55131995ca73977c22ea0f9402a09" data-evidence-paths="backend/src/tools/ask_helper/__init__.py backend/src/tools/ask_helper/ask_advisor/ask_advisor.py backend/src/tools/_framework/factory.py backend/tests/unit_test/test_tools/test_ask_advisor_retry.py">
 <h2>Tool Shape <a class="anchor" href="#tool-shape">#</a></h2>
-<p><code>backend/src/tools/ask_helper</code> exposes <code>ask_advisor</code>. It is a blocking helper launch, not a background task: it does not declare <code>background=&quot;always&quot;</code> or an optional background mode, and it awaits <code>run_ephemeral_agent()</code> directly inside its tool body.</p>
+<p><code>backend/src/tools/ask_helper</code> exposes <code>ask_advisor</code>. It is a blocking helper launch, not a background task: it is not listed in <code>engine.background.policy</code>, and it awaits <code>run_ephemeral_agent()</code> directly inside its tool body.</p>
 <table>
   <thead><tr><th>Tool</th><th>Intent</th><th>Helper terminal</th><th>Use case</th></tr></thead>
   <tbody>
@@ -104,7 +104,7 @@
   <div><b>terminal tools</b><span>The helper terminates through its own submission terminal, then the ask-helper tool forwards that terminal output to the parent as the tool result.</span></div>
   <div><b>TaskCenter</b><span>Helper advice is evidence for the parent. It does not directly close the parent TaskCenter attempt or bypass the parent's terminal submission contract.</span></div>
   <div><b>sandbox</b><span>The advisor uses normal tool permissions and sandbox routing. Active sandbox id is forwarded, but background task supervision is not involved.</span></div>
-  <div><b>subagent contrast</b><span><a class="wiki-link" href="subagent.html">run_subagent</a> is always-background and returns through check/wait. The ask helper is a synchronous tool call whose child terminal output is returned immediately to the current tool result.</span></div>
+  <div><b>subagent contrast</b><span><a class="wiki-link" href="subagent.html">run_subagent</a> is engine-background and returns through typed subagent controls. The ask helper is a synchronous tool call whose child terminal output is returned immediately to the current tool result.</span></div>
 </div>
 </section>
 

@@ -27,6 +27,10 @@ def test_sandbox_exports_expected_tools():
         "write_file",
         "edit_file",
         "multi_edit",
+        "exec_command",
+        "write_pty_command_stdin",
+        "check_pty_command_progress",
+        "cancel_pty_command",
         "enter_isolated_workspace",
         "exit_isolated_workspace",
         "glob",
@@ -51,6 +55,10 @@ async def test_registered_api_backed_tools_require_sandbox_id():
             "file_path": "/repo/app.py",
             "edits": [{"old_text": "old", "new_text": "new"}],
         },
+        "exec_command": {"cmd": "echo hi"},
+        "write_pty_command_stdin": {"pty_session_id": "pty-1", "chars": "q"},
+        "check_pty_command_progress": {"pty_session_id": "pty-1"},
+        "cancel_pty_command": {"pty_session_id": "pty-1"},
         "shell": {"command": "echo hi"},
         "glob": {"pattern": "*.py"},
         "grep": {"pattern": "needle"},
@@ -99,19 +107,14 @@ def test_shell_schema_describes_command():
     assert tool.short_description == "Run a shell command from the repo root."
 
 
-def test_shell_exposes_optional_background_execution():
-    """``shell`` is the only sandbox tool that supports background execution."""
+def test_shell_no_longer_exposes_optional_background_execution():
+    """Generic shell background mode is retired in favor of typed PTY commands."""
     tools = {tool.name: tool for tool in make_sandbox_tools()}
     tool = tools.get("shell")
     assert tool is not None
 
     schema = tool.to_api_schema()["input_schema"]
-    assert tool.background == "optional"
-    # The ``background`` flag is injected by the registry's
-    # ``decorate_schemas_for_background`` pass at tool registration, not by
-    # ``to_api_schema`` directly. Verify the per-tool schema is otherwise
-    # unchanged: the LLM-facing parameter list still excludes the runtime
-    # control field, but the BaseTool attribute opts the tool in.
+    assert not hasattr(tool, "background")
     assert "background" not in schema["properties"]
 
 
@@ -122,7 +125,7 @@ def test_missing_sandbox_tool_absent():
 
 def test_sandbox_tool_count():
     tools = make_sandbox_tools()
-    assert len(tools) == 9
+    assert len(tools) == 13
 
 
 def test_sandbox_tools_omit_instruction_block():

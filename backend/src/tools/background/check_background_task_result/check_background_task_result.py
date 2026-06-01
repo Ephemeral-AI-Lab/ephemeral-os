@@ -27,49 +27,6 @@ class CheckBackgroundTaskResultInput(BaseModel):
     task_id: str = BACKGROUND_TASK_ID_FIELD
 
 
-def _peek_messages(tracked, n: int = 5) -> str:
-    """Return the last *n* peek lines via the tracked task's progress provider."""
-    provider = getattr(tracked, "progress_provider", None)
-    if provider is None:
-        return "(no progress snapshot available)"
-    try:
-        return provider(n)
-    except Exception as exc:
-        return f"[progress provider error: {exc}]"
-
-
-def _subagent_terminal_called(tracked) -> bool:
-    """Whether the subagent finished by calling its terminal tool.
-
-    The flag is stamped by ``run_subagent`` on its returned ToolResult's
-    metadata; the bg manager preserves the ToolResult on tracked.result.
-    """
-    if tracked.result is None:
-        return False
-    meta = tracked.result.metadata or {}
-    return bool(meta.get("subagent_terminal_called"))
-
-
-def _build_subagent_result(tracked, raw_status: str) -> tuple[str, str]:
-    """Return (normalized_status, result) for a run_subagent task."""
-    if raw_status == "running":
-        return "running", _peek_messages(tracked, 5)
-
-    if raw_status in ("completed", "delivered") and _subagent_terminal_called(tracked):
-        return "finished", tracked.result.output if tracked.result else ""
-
-    # Caller-initiated cancellation: surface separately so the parent does
-    # not blame the subagent for what was its own action. Prefix the peek
-    # so it is clear in any log surface as well.
-    if raw_status == "cancelled":
-        return "cancelled", f"[cancelled] {_peek_messages(tracked, 5)}"
-
-    # Either crashed, or completed without calling the terminal tool —
-    # surface as failed and include the last 5 messages so the parent can
-    # see what the subagent was doing.
-    return "failed", _peek_messages(tracked, 5)
-
-
 def _build_generic_result(tracked, raw_status: str) -> str:
     """Return result text for non-subagent tools (e.g. shell).
 
@@ -112,18 +69,23 @@ class CheckBackgroundTaskResultTool(BaseTool):
                 output=f"No background task found with ID: {arguments.task_id}",
                 is_error=True,
             )
+        if getattr(tracked, "task_type", "") == "subagent":
+            return ToolResult(
+                output=(
+                    "Subagent sessions are not managed by "
+                    "check_background_task_result. Use "
+                    "check_subagent_progress(subagent_session_id=...) instead."
+                ),
+                is_error=True,
+            )
 
         raw_status = str(tracked.status)
         tool_command = render_background_tool_call(
             tracked.tool_name,
             tracked.tool_input,
         )
-
-        if tracked.tool_name == "run_subagent" or getattr(tracked, "task_type", "") == "subagent":
-            status, result = _build_subagent_result(tracked, raw_status)
-        else:
-            status = background_task_display_status(raw_status)
-            result = _build_generic_result(tracked, raw_status)
+        status = background_task_display_status(raw_status)
+        result = _build_generic_result(tracked, raw_status)
 
         # If the engine hasn't yet delivered this terminal task, mark it
         # delivered now so we don't get a duplicate [BACKGROUND COMPLETED]

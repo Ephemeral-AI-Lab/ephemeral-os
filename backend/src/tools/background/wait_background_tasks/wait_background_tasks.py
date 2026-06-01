@@ -38,9 +38,11 @@ class WaitBackgroundTasksInput(BaseModel):
 
 
 def _snapshot_all(manager) -> list[dict[str, str]]:
-    """Build the [{task_id, status, tool_command}] list for every tracked task."""
+    """Build status rows for generic background tasks."""
     out: list[dict[str, str]] = []
     for tracked in manager.iter_all():
+        if getattr(tracked, "task_type", "") == "subagent":
+            continue
         out.append(
             {
                 "task_id": tracked.task_id,
@@ -81,7 +83,12 @@ class WaitBackgroundTasksTool(BaseTool):
 
         assert isinstance(arguments, WaitBackgroundTasksInput)
 
-        if not list(manager.iter_all()):
+        generic_tasks = [
+            tracked
+            for tracked in manager.iter_all()
+            if getattr(tracked, "task_type", "") != "subagent"
+        ]
+        if not generic_tasks:
             return ToolResult(
                 output=render_background_snapshot("wait_no_tasks", []),
                 is_error=False,
@@ -92,7 +99,11 @@ class WaitBackgroundTasksTool(BaseTool):
 
         timeout = arguments.timeout
         start = time.monotonic()
-        running = [t.asyncio_task for t in manager.iter_running()]
+        running = [
+            t.asyncio_task
+            for t in manager.iter_running()
+            if getattr(t, "task_type", "") != "subagent"
+        ]
         if running:
             try:
                 await asyncio.wait(
@@ -110,7 +121,11 @@ class WaitBackgroundTasksTool(BaseTool):
 
         elapsed = time.monotonic() - start
         statuses = _snapshot_all(manager)
-        timed_out = manager.has_pending()
+        timed_out = any(
+            getattr(t, "task_type", "") != "subagent"
+            and background_task_display_status(t.status) == "running"
+            for t in manager.iter_all()
+        )
 
         if timed_out:
             return ToolResult(

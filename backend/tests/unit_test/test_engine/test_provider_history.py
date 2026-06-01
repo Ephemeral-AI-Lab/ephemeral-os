@@ -280,6 +280,34 @@ class TestPrepareProviderMessages:
             for msg in provider
         )
 
+    def test_reduce_background_task_history_preserves_typed_subagent_progress(self) -> None:
+        display = [
+            _tool_use(
+                "toolu_subagent",
+                "check_subagent_progress",
+                {"subagent_session_id": "subagent_1", "last_n_messages": 5},
+            ),
+            Message(
+                role="user",
+                content=[
+                    ToolResultBlock(
+                        tool_use_id="toolu_subagent",
+                        content='{"status":"finished","result":"summary"}',
+                        metadata={
+                            "subagent_snapshot": {
+                                "subagent_session_id": "subagent_1",
+                                "status": "finished",
+                            }
+                        },
+                    )
+                ],
+            ),
+        ]
+
+        provider = reduce_background_task_history(display)
+
+        assert provider == display
+
 
 class TestSystemNotificationBlock:
     """SystemNotificationBlock must round-trip and serialize as provider text."""

@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 from tools._names import (
-    CHECK_BACKGROUND_TASK_RESULT_TOOL_NAME,
+    CANCEL_SUBAGENT_TOOL_NAME,
+    CHECK_SUBAGENT_PROGRESS_TOOL_NAME,
     RUN_SUBAGENT_TOOL_NAME,
     SUBMIT_EXPLORATION_RESULT_TOOL_NAME,
-    WAIT_BACKGROUND_TASKS_TOOL_NAME,
 )
 
 
@@ -44,7 +44,8 @@ def get_run_subagent_description() -> str:
         "  \"list the file paths\").\n"
         "- Terse command-style prompts produce shallow, generic work.\n"
         "\n"
-        "Don't peek. The launch returns a `task_id`; the subagent runs in the\n"
+        "Don't peek. The launch returns a `subagent_session_id`; the subagent\n"
+        "runs in the\n"
         "background. Don't read its transcript or poll progress unless the user\n"
         "explicitly asks for a status check — that defeats the point of forking\n"
         "off its tool noise. You'll be notified when it completes.\n"
@@ -54,11 +55,11 @@ def get_run_subagent_description() -> str:
         "follow-up before completion, give status, not a guess.\n"
         "\n"
         "Capabilities and constraints:\n"
-        "- The launch returns immediately with a `task_id`.\n"
-        f"- Peek progress with `{CHECK_BACKGROUND_TASK_RESULT_TOOL_NAME}(task_id)` — you get\n"
+        "- The launch returns immediately with a `subagent_session_id`.\n"
+        f"- Peek progress with `{CHECK_SUBAGENT_PROGRESS_TOOL_NAME}` — you get\n"
         "  the last few messages while it's running, the terminal output once it\n"
         "  finishes.\n"
-        f"- Block on completion with `{WAIT_BACKGROUND_TASKS_TOOL_NAME}`.\n"
+        f"- Cancel with `{CANCEL_SUBAGENT_TOOL_NAME}`.\n"
         "- A subagent that exits without calling a terminal tool is marked\n"
         "  failed.\n"
         "\n"

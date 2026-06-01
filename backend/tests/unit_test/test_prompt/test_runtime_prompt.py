@@ -10,7 +10,6 @@ from prompt.runtime_prompt import (
     build_runtime_system_prompt,
     build_termination_condition_prompt,
 )
-from tools.background import make_background_tools
 from tools._framework.core.base import BaseTool, ToolExecutionContextService, ToolResult
 from tools._framework.core.registry import ToolRegistry
 from tools.subagent import make_subagent_tools
@@ -49,16 +48,6 @@ def test_subagent_tools_expose_run_subagent_without_instruction_block():
 
     assert [tool.name for tool in tools] == ["run_subagent"]
     assert tools[0].short_description == "Spawn a subagent in the background."
-
-
-def test_background_tools_expose_management_tools_without_instruction_block():
-    tools = make_background_tools()
-
-    assert [tool.name for tool in tools] == [
-        "cancel_background_task",
-        "check_background_task_result",
-        "wait_background_tasks",
-    ]
 
 
 def test_termination_condition_prompt_omits_tool_call_notes_and_background_section():

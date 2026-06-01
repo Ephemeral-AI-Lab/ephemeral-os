@@ -10,7 +10,6 @@ from message.agent_message_recorder import recorder_for_run
 from message.message import Message, TextBlock
 from prompt.prompt_report_recorder import PromptReportRecorder, recorder_for_context
 from providers.types import MessageRequest
-from tools import decorate_schemas_for_background
 
 if TYPE_CHECKING:
     from engine.query.context import QueryContext
@@ -31,12 +30,6 @@ def build_query_run_request(
     prompt_report = recorder_for_context(context)
     prompt_report_seq = prompt_report.next_seq()
     tool_schemas = context.tool_registry.to_api_schema()
-    if context.enable_background_tasks:
-        tool_schemas = decorate_schemas_for_background(
-            context.tool_registry,
-            tool_schemas,
-            terminal_tools=context.terminal_tools,
-        )
 
     prompt_report.record_llm_request(
         seq=prompt_report_seq,

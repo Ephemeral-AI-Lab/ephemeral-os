@@ -44,14 +44,4 @@ def collect_tool_catalog(
     for tool in available_tools:
         _merge_tool(tool)
 
-    if include_runtime_tools:
-        from tools.background import make_background_tools
-
-        if any(
-            getattr(tool, "background", "forbidden") != "forbidden"
-            for tool in available_tools
-        ):
-            for tool in make_background_tools():
-                _merge_tool(tool)
-
     return sorted(by_name.values(), key=lambda entry: entry.name)

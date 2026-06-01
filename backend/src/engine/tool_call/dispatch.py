@@ -15,6 +15,7 @@ from engine.tool_call.phase_buffer import (
 )
 from engine.tool_call.streaming import StreamingToolExecutor
 from engine.background.dispatch import dispatch_background_tool_call
+from engine.background.policy import is_engine_background_tool
 from engine.background.task_supervisor import BackgroundTaskSupervisor
 from message.message import Message, ToolResultBlock, ToolUseBlock
 from message.events import (
@@ -405,11 +406,10 @@ async def _dispatch_deferred_tool_calls(
     foreground_tool_calls: list[ToolUseBlock] = []
     for tool_call in tool_calls:
         tool_def = context.tool_registry.get(tool_call.name)
-        requires_background = getattr(tool_def, "background", "forbidden") == "always"
-        should_run_in_background = (
-            (tool_call.input.get("background", False) or requires_background)
-            if background_tasks
-            else False
+        should_run_in_background = bool(
+            background_tasks is not None
+            and tool_def is not None
+            and is_engine_background_tool(tool_def)
         )
 
         if should_run_in_background:

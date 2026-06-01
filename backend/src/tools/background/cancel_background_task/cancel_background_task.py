@@ -92,19 +92,18 @@ class CancelBackgroundTaskTool(BaseTool):
                 )
 
         tracked = manager.get_task(task_id) if hasattr(manager, "get_task") else None
+        if tracked is not None and getattr(tracked, "task_type", "") == "subagent":
+            return ToolResult(
+                output=(
+                    "Subagent sessions are not cancelled by cancel_background_task. "
+                    "Use cancel_subagent(subagent_session_id=...) instead."
+                ),
+                is_error=True,
+            )
         cancelled = await manager.cancel(task_id, arguments.reason)
 
         if cancelled:
             reason_msg = f" Reason: {arguments.reason}" if arguments.reason else ""
-            if tracked is not None and getattr(tracked, "task_type", "") == "subagent":
-                return ToolResult(
-                    output=(
-                        f"Background task {task_id} early-stop requested.{reason_msg} "
-                        "The subagent was interrupted and will salvage any partial "
-                        "result before it reaches a terminal state."
-                    ),
-                    is_error=False,
-                )
             return ToolResult(
                 output=f"Background task {task_id} cancelled.{reason_msg}",
                 is_error=False,

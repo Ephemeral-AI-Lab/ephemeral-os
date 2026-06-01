@@ -212,7 +212,7 @@ class TestCheckBackgroundTaskResultExecute:
         # No truncation for shell.
         assert payload["result"] == "x" * 5000
 
-    async def test_subagent_finished_with_terminal_returns_findings(self) -> None:
+    async def test_subagent_is_rejected_by_generic_check_tool(self) -> None:
         tool = CheckBackgroundTaskResultTool()
         mgr = BackgroundTaskSupervisor()
 
@@ -222,42 +222,15 @@ class TestCheckBackgroundTaskResultExecute:
                 metadata={"subagent_terminal_called": True},
             )
 
-        mgr.launch("bg_1", "run_subagent", {"agent_name": "x", "prompt": "p"}, sub(),
+        mgr.launch("subagent_1", "run_subagent", {"agent_name": "x", "prompt": "p"}, sub(),
                    task_type="subagent")
         await asyncio.sleep(0.01)
 
         result = await tool.execute(
-            CheckBackgroundTaskResultInput(task_id="bg_1"), _ctx(mgr)
+            CheckBackgroundTaskResultInput(task_id="subagent_1"), _ctx(mgr)
         )
-        payload = json.loads(result.output)
-        assert payload["status"] == "finished"
-        assert payload["result"] == "my findings"
-        assert payload["tool_command"] == "run_subagent(x, p)"
-
-    async def test_subagent_finished_without_terminal_marked_failed(self) -> None:
-        tool = CheckBackgroundTaskResultTool()
-        mgr = BackgroundTaskSupervisor()
-
-        async def sub() -> ToolResult:
-            return ToolResult(
-                output="ran out of nudges",
-                is_error=True,
-                metadata={"subagent_terminal_called": False},
-            )
-
-        mgr.launch("bg_1", "run_subagent", {"agent_name": "x", "prompt": "p"}, sub(),
-                   task_type="subagent")
-        await asyncio.sleep(0.01)
-
-        # Register a peek provider so the failed branch has something to show.
-        mgr.set_progress_provider("bg_1", lambda _last_n: "peek-snapshot")
-
-        result = await tool.execute(
-            CheckBackgroundTaskResultInput(task_id="bg_1"), _ctx(mgr)
-        )
-        payload = json.loads(result.output)
-        assert payload["status"] == "failed"
-        assert payload["result"] == "peek-snapshot"
+        assert result.is_error is True
+        assert "check_subagent_progress" in result.output
 
 
 # ---------------------------------------------------------------------------
@@ -316,7 +289,7 @@ class TestCancelBackgroundTaskExecute:
         assert result.is_error
         assert "bg_missing" in result.output
 
-    async def test_subagent_cancel_reports_early_stop(self) -> None:
+    async def test_subagent_is_rejected_by_generic_cancel_tool(self) -> None:
         tool = CancelBackgroundTaskTool()
         mgr = BackgroundTaskSupervisor()
 
@@ -325,15 +298,18 @@ class TestCancelBackgroundTaskExecute:
             return ToolResult(output="done")
 
         mgr.launch(
-            task_id="bg_sub",
+            task_id="subagent_1",
             tool_name="run_subagent",
             tool_input={"agent_name": "test_subagent"},
             coro=_subagent(),
             task_type="subagent",
         )
-        result = await tool.execute(CancelBackgroundTaskInput(task_id="bg_sub"), _ctx(mgr))
-        assert result.is_error is False
-        assert "early-stop requested" in result.output
+        result = await tool.execute(
+            CancelBackgroundTaskInput(task_id="subagent_1"), _ctx(mgr)
+        )
+        assert result.is_error is True
+        assert "cancel_subagent" in result.output
+        await mgr.cancel("subagent_1")
 
 
 # ---------------------------------------------------------------------------

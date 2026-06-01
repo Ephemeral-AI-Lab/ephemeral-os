@@ -18,6 +18,8 @@ GLOB_TOOL_NAME = "glob"
 
 # Subagent
 RUN_SUBAGENT_TOOL_NAME = "run_subagent"
+CHECK_SUBAGENT_PROGRESS_TOOL_NAME = "check_subagent_progress"
+CANCEL_SUBAGENT_TOOL_NAME = "cancel_subagent"
 
 # Background task tools (backend/src/tools/background/)
 CHECK_BACKGROUND_TASK_RESULT_TOOL_NAME = "check_background_task_result"
@@ -53,6 +55,8 @@ __all__ = [
     "GREP_TOOL_NAME",
     "GLOB_TOOL_NAME",
     "RUN_SUBAGENT_TOOL_NAME",
+    "CHECK_SUBAGENT_PROGRESS_TOOL_NAME",
+    "CANCEL_SUBAGENT_TOOL_NAME",
     "CHECK_BACKGROUND_TASK_RESULT_TOOL_NAME",
     "WAIT_BACKGROUND_TASKS_TOOL_NAME",
     "CANCEL_BACKGROUND_TASK_TOOL_NAME",

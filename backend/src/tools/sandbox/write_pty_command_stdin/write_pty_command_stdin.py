@@ -9,9 +9,9 @@ from sandbox.shared.models import Intent, PtyWriteRequest
 from tools._framework.core.base import ToolExecutionContextService, ToolResult
 from tools._framework.core.decorator import tool
 from tools.sandbox._lib.pty_command_tool import (
-    PtyCommandOutput,
+    CommandToolOutput,
+    command_tool_result,
     mark_pty_result_reported_by_tool,
-    pty_tool_result,
 )
 from tools.sandbox._lib.tool_context import (
     sandbox_caller_from_tool_context,
@@ -31,7 +31,7 @@ class PtyWriteInput(BaseModel):
     description="Write literal text to an active PTY command session.",
     short_description="Write PTY input.",
     input_model=PtyWriteInput,
-    output_model=PtyCommandOutput,
+    output_model=CommandToolOutput,
     intent=Intent.WRITE_ALLOWED,
 )
 async def write_pty_command_stdin(
@@ -56,7 +56,7 @@ async def write_pty_command_stdin(
         ),
     )
     mark_pty_result_reported_by_tool(context, result, pty_session_id=pty_session_id)
-    return pty_tool_result(result)
+    return command_tool_result(result)
 
 
 __all__ = ["write_pty_command_stdin"]
