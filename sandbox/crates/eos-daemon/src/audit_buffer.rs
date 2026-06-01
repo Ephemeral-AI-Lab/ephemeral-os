@@ -228,7 +228,7 @@ pub fn safe_record_phase(phase: &str, duration_ms: f64) {
     let _ = (phase, duration_ms);
 }
 
-fn global_audit_buffer() -> &'static AuditBuffer {
+pub(crate) fn global_audit_buffer() -> &'static AuditBuffer {
     static BUFFER: OnceLock<AuditBuffer> = OnceLock::new();
     BUFFER.get_or_init(AuditBuffer::new)
 }

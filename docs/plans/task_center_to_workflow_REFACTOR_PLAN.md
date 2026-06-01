@@ -68,22 +68,22 @@ the root.
 ## The Task (the unifying DTO)
 
 ```python
-class TaskRole(StrEnum):
-    ROOT = "root"
-    PLANNER = "planner"
-    GENERATOR = "generator"
-    REDUCER = "reducer"
+# ONE role enum (was: AgentRole + the internal TaskCenterTaskRole). ROOT added once.
+class AgentRole(StrEnum):
+    ROOT = "root"; PLANNER = "planner"; GENERATOR = "generator"
+    REDUCER = "reducer"; HELPER = "helper"; SUBAGENT = "subagent"
+# Task-bearing subset = {ROOT, PLANNER, GENERATOR, REDUCER}.
+# HELPER/SUBAGENT are ephemeral agents that run WITHOUT a persisted Task (run_subagent / ask_advisor).
 
 @dataclass(frozen=True, slots=True)
 class Task:
     id: str
     request_id: str                  # threads the execution (run collapsed into request)
-    role: TaskRole
+    role: AgentRole                  # validated ∈ {ROOT, PLANNER, GENERATOR, REDUCER}
     instruction: str                 # the assigned instruction (was context_message)
     status: TaskStatus               # pending | running | done | failed | blocked
     # --- position (all optional) ---
-    root_task: bool = False          # True ⇒ the request's root task
-    workflow_id: str | None = None   # set ⇒ belongs to a delegated workflow
+    workflow_id: str | None = None   # ★ root discriminator: NULL ⇔ root; set ⇔ in a delegated workflow
     iteration_id: str | None = None
     attempt_id: str | None = None
     # --- payload ---
@@ -91,14 +91,25 @@ class Task:
     needs: tuple[str, ...] = ()
     outcomes: tuple[Any, ...] = ()
     terminal_tool_result: dict | None = None
+    root_task: bool = False          # redundant convenience flag (≡ workflow_id IS NULL); see note
 ```
 
-| Task kind | `root_task` | `workflow_id` | `iteration_id` | `attempt_id` | `instruction` is… |
+| Task kind | `role` | `workflow_id` | `iteration_id` | `attempt_id` | `instruction` is… |
 |---|---|---|---|---|---|
-| **root** | `True` | `None` | `None` | `None` | the user request |
-| **planner** | `False` | set | set | set | the workflow goal |
-| **generator** | `False` | set | set | set | the planner's task spec |
-| **reducer** | `False` | set | set | set | the planner's reducer prompt |
+| **root** | `ROOT` | `None` | `None` | `None` | the user request |
+| **planner** | `PLANNER` | set | set | set | the workflow goal |
+| **generator** | `GENERATOR` | set | set | set | the planner's task spec |
+| **reducer** | `REDUCER` | set | set | set | the planner's reducer prompt |
+
+> **Two simplifications the final review forced:**
+> - **One role enum.** `AgentRole` is the superset; `Task.role` is its
+>   task-bearing subset. Deletes the separate `TaskCenterTaskRole`/`TaskRole` and
+>   the dual-`ROOT` addition — `ROOT` is added to `AgentRole` *once*.
+> - **`root_task` is redundant** with `workflow_id IS NULL` (every non-root Task
+>   is minted with a `workflow_id`; the root is the only `NULL`). Kept only because
+>   you asked for it — as a convenience flag, not a third fact. **Recommend
+>   dropping it**; use `workflow_id IS NULL` as the sole discriminator +
+>   `request.root_task_id` as the forward pointer. Your call.
 
 `WAITING_WORKFLOW` is **gone** from `TaskStatus` — a delegating agent stays
 `RUNNING` (delegate_workflow is background; the agent waits via the
@@ -346,13 +357,97 @@ Task ──.agent_name──▶ AgentDefinition (which agent: prompt/tools/termi
   │                        │ runs via engine.run_ephemeral_agent
   └──────── 1:1 ──────────▶ AgentRunRecord (the execution: messages, tokens, terminal result, error)
 ```
-- Add **`AgentRole.ROOT`** (parallel to `TaskRole.ROOT`); `root.md` declares
+- Add **`ROOT` to the single `AgentRole`** (the unified enum); `root.md` declares
   `role: root`, `terminals: [submit_root_outcome]`, `context_recipe: null`.
+- `agent_runs` gains **exactly one column — `initial_messages`** (the only
+  `agent_runs` schema change; include it in the no-Alembic rebuild watchpoint).
+  `initial_messages` is the launch-time seed (written at `create`);
+  `message_history` is the finish-time transcript (written at `finish`) — not a
+  subset at t0; both justified by write-lifecycle + crash durability, not redundancy.
 - The root `Task` now produces a **real `AgentRunRecord`** (today the synthetic
-  root has none) — no `agent_runs` schema change, but it is a behavior flip (root
-  now has message history / tokens / event stream; verify audit/node-id consumers).
+  root has none) — otherwise reusing the existing shape. Behavior flip: root now
+  has message history / tokens / event stream; verify audit/node-id consumers.
 - `agent_runs.task_id` FK retargets `task_center_tasks.id` → the renamed `tasks`
   table; the `Mapped["TaskCenterTaskRecord"]` forward-ref string updates.
+
+## Resulting Workflow / Iteration / Attempt schemas
+
+These are **kept** (only `delegate_workflow` creates them; the root never does).
+Two forced changes: (1) `task_center_run_id → request_id`; (2)
+`Workflow.parent_task_id` becomes **non-null** (`str | None → str`,
+`WorkflowRecord.parent_task_id nullable=False`) — the only null-parent producer
+was the synthetic root workflow, now deleted. The `Iteration`/`Attempt` DTO field
+names below (`iteration_goal`, `deferred_goal_for_next_iteration`) are reproduced
+verbatim from `state.py`; the stores already map them onto the unchanged DB
+columns `goal` / `deferred_goal`, so those columns are untouched. The four
+child-id-list fields shown are **dropped** per the ★ Phase-4 cut above.
+
+```python
+# workflow/_core/state.py
+class WorkflowStatus(StrEnum):  OPEN; SUCCEEDED; FAILED; CANCELLED
+
+@dataclass(frozen=True, slots=True)
+class Workflow:                          # workflows table; created ONLY by delegate_workflow
+    id: str
+    request_id: str                      # ← was task_center_run_id (FK → requests)
+    parent_task_id: str                  # the launching Task (root agent OR a generator) — durable back-link
+    workflow_goal: str
+    status: WorkflowStatus
+    iteration_ids: tuple[str, ...]       # ordered (★ derivable — see note)
+    created_at; updated_at; closed_at
+
+class IterationStatus(StrEnum):          OPEN; SUCCEEDED; FAILED; CANCELLED
+class IterationCreationReason(StrEnum):  INITIAL; DEFERRED_GOAL_CONTINUATION
+
+@dataclass(frozen=True, slots=True)
+class Iteration:                         # iterations table; UNIQUE(workflow_id, sequence_no)
+    id: str
+    workflow_id: str                     # FK → workflows
+    sequence_no: int
+    creation_reason: IterationCreationReason
+    iteration_goal: str
+    attempt_budget: int
+    status: IterationStatus
+    attempt_ids: tuple[str, ...]         # ordered (★ derivable)
+    deferred_goal_for_next_iteration: str | None
+    outcomes: str | None                 # persisted projection (closing attempt's evidence); None while open
+    created_at; updated_at; closed_at
+
+class AttemptStage(StrEnum):       PLAN; RUN; CLOSED
+class AttemptStatus(StrEnum):      RUNNING; PASSED; FAILED
+class AttemptFailReason(StrEnum):  TASK_FAILED; STARTUP_FAILED
+
+@dataclass(frozen=True, slots=True)
+class Attempt:                           # attempts table; UNIQUE(iteration_id, attempt_sequence_no)
+    id: str
+    iteration_id: str                    # FK → iterations
+    attempt_sequence_no: int
+    stage: AttemptStage                  # PLAN → RUN → CLOSED
+    status: AttemptStatus                # PASSED iff every plan task DONE; FAILED if any failed/blocked
+    planner_task_id: str | None
+    generator_task_ids: tuple[str, ...]  # (★ derivable: tasks WHERE attempt_id=… AND role=generator)
+    reducer_task_ids: tuple[str, ...]    # (★ derivable: … AND role=reducer)  — reducer is the exit gate
+    deferred_goal_for_next_iteration: str | None
+    fail_reason: AttemptFailReason | None
+    outcomes: tuple[ExecutionTaskOutcome, ...]
+    created_at; updated_at; closed_at
+```
+
+**★ Mandatory simplification (Phase 4, not optional).** Now that `Task` carries
+explicit `workflow_id` / `iteration_id` / `attempt_id` / `role` columns, the
+child-id-list fields are **denormalized caches** — keeping them re-imports the
+dual-write bookkeeping the column model is meant to retire. **Drop all four**:
+- `Attempt.generator_task_ids` / `reducer_task_ids` ← `tasks WHERE attempt_id=? AND role=?` (ORDER BY `created_at,id`; list order is non-semantic — DAG order comes from `needs`)
+- `Iteration.attempt_ids` ← `WHERE iteration_id=?` ORDER BY `attempt_sequence_no`
+- `Workflow.iteration_ids` ← `WHERE workflow_id=?` ORDER BY `sequence_no`
+
+Remove the setters (`orchestrator.py` calls `set_generator_task_ids` /
+`set_reducer_task_ids` on every spawn — gone) and switch the only two readers —
+the RUN-stage scheduler (`run_stage.py`) and the reducer-membership check
+(`orchestrator.py`) — to `list_tasks_for_attempt(attempt_id, role)` (an indexed
+column equality, replacing the id-prefix `LIKE`). `planner_task_id` is *also*
+derivable but stays stored as a single-row fast path — an intentional asymmetry,
+not an inconsistency.
 
 ## Phased plan
 

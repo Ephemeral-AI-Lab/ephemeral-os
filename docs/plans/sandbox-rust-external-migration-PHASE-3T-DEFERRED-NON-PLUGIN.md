@@ -72,6 +72,20 @@ Current state:
   active lease count, holder PID/kill error, namespace FD count, cgroup
   existence, scratch/upper/workdir existence, mountinfo reference count when
   `/proc/self/mountinfo` is available, and PTY force-cancel cleanup arrays.
+- The live Docker/dask isolated inspection rerun is closed for current amd64
+  artifact `6f94b650023186b9b4e282d20ad1bd0cd53b97c44759c313547c47f158ebecf6`:
+  `bench/phase3t-rust-isolated-inspection-docker-20260601.json` passed 51/51
+  checks with the target image lacking `ip` and `nft`, verified holder process
+  teardown, zero mountinfo refs, removed cgroup/scratch/upper/workdir, released
+  leases, removed the host veth, cleared active PTY state after force cancel,
+  and mirrored the inspection payload into the JSONL exit audit.
+- The CP-4/AV-4/CP-5 non-plugin implementation artifacts are wired for the next
+  live capture: Rust daemon audit pull/snapshot reads the shared process ring,
+  request dispatch emits `tool_call.started`/`tool_call.finished`, OCC runtime
+  services are bounded by an LRU(256) with `occ.runtime_service.*` timings, and
+  `backend/scripts/bench_rust_daemon_phase3t_pty.py` now includes isolated exit
+  inspection, mixed non-plugin load plus audit pull, and >256-root cache-churn
+  modes.
 
 Last focused verification:
 
@@ -113,15 +127,24 @@ Last focused verification:
   `xtask package` targets. Current packaged SHAs are amd64
   `6f94b650023186b9b4e282d20ad1bd0cd53b97c44759c313547c47f158ebecf6` and
   arm64 `f2ef28b4a0a5c93b78c16ae47a064a39e59a2add8e25e329c8c2c52b97b3fc08`.
+- Live isolated inspection rerun passed:
+  `uv run python backend/scripts/bench_rust_daemon_isolated_inspection.py
+  --artifact sandbox/dist/eosd-linux-amd64 --report
+  bench/phase3t-rust-isolated-inspection-docker-20260601.json`; report
+  `run_id=local-f4d71d9fd6bb`, artifact SHA
+  `6f94b650023186b9b4e282d20ad1bd0cd53b97c44759c313547c47f158ebecf6`, 51/51
+  scenario checks passed, preflight showed `ip=nft=`, cgroup writable, and the
+  exit inspection reported `holder_pid=224`, `ns_fd_count=4`,
+  `active_leases_after=0`, `mountinfo_reference_count_after=0`,
+  `cgroup_exists_after=false`, and all scratch dirs removed.
 - A broader mock contract spike was attempted but did not reach the relevant
   assertions because the live SWE-EVO fixture failed setup on `/eos`
   writability in the existing container. Treat that as environment/setup debt,
   not evidence against the typed subagent/background cleanup.
 
-Next work should start with hardening/verifying Rust isolated-workspace
-command/PTY semantics under live Docker, then finishing the remaining Rust
-isolated network proof: live validation of bridge/veth, static nftables
-NAT/filter, and holder netlink hooks. Do not reintroduce
+Next work should start with live CP-4 mixed non-plugin load plus attached AV-4
+audit pull using the updated harness, then live CP-5 cache-lock churn, AV-7
+parity, and the non-plugin Section 7 differential/property contention suite. Do not reintroduce
 `shell(background=true)`, `BaseTool.background`, model-facing generic
 background controls, or `bg_N` as a subagent reference.
 
@@ -158,15 +181,13 @@ agent handle with isolated/no-OCC-publish result metadata. Active PTY records
 now block non-forced isolated exit.
 
 The local amd64 Docker/dask live proof is now closed for the Rust
-namespace/runtime, bridge/veth/nftables, finite command, PTY, forced exit, and
-shared-publish isolation slice. The implementation still needs broader
-daemon-local audit/leak inspection before treating isolated mode as fully
-closed, and the remaining Phase 3T non-plugin gates still live outside this
-isolated slice.
+namespace/runtime, bridge/veth/nftables, finite command, PTY, forced exit,
+shared-publish isolation, and daemon-local audit/leak inspection slice. The
+remaining Phase 3T non-plugin gates live outside this isolated slice.
 
 Required work:
 
-- run the live Docker isolated proof again and assert the new exit inspection
+- preserve the live Docker isolated proof asserting the new exit inspection
   fields under the real kernel path for holder, mountinfo, cgroup, lease,
   scratch, and PTY force-cancel cleanup;
 - preserve the proven Rust ns-holder/setns handoff under live Docker, including
@@ -202,9 +223,10 @@ Minimum evidence:
   audit JSONL prove no registered handle/agent remains, active leases return to
   zero, scratch/upper/workdir are removed, cgroup absence is represented, and
   stale PTY force-cancel cleanup clears active PTY state;
-- live Docker rerun asserting the new inspection fields show no leaked holder,
-  mountinfo refs, cgroups, leases, scratch dirs, or active PTY records under the
-  real isolated kernel path.
+- ✅ live Docker rerun asserting the new inspection fields show no leaked
+  holder, mountinfo refs, cgroups, leases, scratch dirs, or active PTY records
+  under the real isolated kernel path:
+  `bench/phase3t-rust-isolated-inspection-docker-20260601.json`.
 
 ### 2. Typed Subagent Surface
 
@@ -374,10 +396,8 @@ Minimum evidence:
 
 ## Suggested Order
 
-1. Rerun the live Rust isolated Docker proof with the new exit inspection fields
-   and assert no leaked holder, mountinfo refs, cgroups, leases, scratch dirs,
-   or active PTY records.
-2. Run CP-4 mixed non-plugin load with attached AV-4 audit pull.
-3. Run CP-5 cache-lock churn.
-4. Run AV-7 forward/back parity.
-5. Run the non-plugin Section 7 differential/property contention suite.
+1. Capture CP-4 mixed non-plugin load with attached AV-4 audit pull using the
+   updated Phase 3T Docker harness.
+2. Capture CP-5 cache-lock churn using the updated Phase 3T Docker harness.
+3. Run AV-7 forward/back parity.
+4. Run the non-plugin Section 7 differential/property contention suite.

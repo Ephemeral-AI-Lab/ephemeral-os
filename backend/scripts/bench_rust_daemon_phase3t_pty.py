@@ -1,15 +1,17 @@
 #!/usr/bin/env python3
-"""Live Docker Phase 3T exec_command and PTY gate benchmark."""
+"""Live Docker Phase 3T command, PTY, and non-plugin deferred-gate benchmark."""
 
 from __future__ import annotations
 
 import argparse
 import asyncio
+import io
 import json
 import os
 import platform
 import shlex
 import sys
+import tarfile
 import time
 import uuid
 from collections.abc import Awaitable, Callable
@@ -46,6 +48,10 @@ PTY_PROGRESS_P95_MS = 20.0
 PTY_WRITE_P95_MS = 100.0
 PTY_CANCEL_P95_MS = 500.0
 PTY_CANCEL_HARD_CLEANUP_MS = 2500.0
+ISOLATED_AGENT_ID = "phase3t-isolated-bench"
+ISOLATED_AUDIT_PATH = "/eos/isolated-workspace-audit.jsonl"
+MIXED_LOAD_P95_MS = 500.0
+DEFAULT_CACHE_ROOT_COUNT = 260
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -78,6 +84,10 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
     parser.add_argument("--samples", type=int, default=10)
     parser.add_argument("--load-concurrency", default="1,3,5,10")
     parser.add_argument("--load-rounds", type=int, default=5)
+    parser.add_argument("--skip-isolated", action="store_true")
+    parser.add_argument("--skip-mixed-load", action="store_true")
+    parser.add_argument("--skip-cache-churn", action="store_true")
+    parser.add_argument("--cache-root-count", type=int, default=DEFAULT_CACHE_ROOT_COUNT)
     parser.add_argument("--keep-container", action="store_true")
     parser.add_argument("--name-prefix", default="eos-phase3t-pty")
     return parser.parse_args(argv)
@@ -109,6 +119,7 @@ async def run(args: argparse.Namespace) -> dict[str, Any]:
         }
         await reset_runtime(bench)
         report["artifact"] = await upload_artifact(bench, args.artifact)
+        await configure_daemon_environment(bench)
 
         with temporary_env("EOS_SANDBOX_RUNTIME", "rust"):
             from sandbox.host import daemon_client
@@ -158,6 +169,29 @@ async def run(args: argparse.Namespace) -> dict[str, Any]:
                 concurrencies=parse_concurrency(args.load_concurrency),
                 rounds=max(0, args.load_rounds),
             )
+            report["isolated_exit_inspection"] = (
+                {"skipped": True, "gate_pass": True}
+                if args.skip_isolated
+                else await isolated_exit_inspection_checks(bench, client)
+            )
+            report["mixed_non_plugin_load"] = (
+                {"skipped": True, "gate_pass": True}
+                if args.skip_mixed_load
+                else await measure_mixed_non_plugin_load(
+                    client,
+                    concurrencies=parse_concurrency(args.load_concurrency),
+                    rounds=max(0, args.load_rounds),
+                )
+            )
+            report["cache_churn"] = (
+                {"skipped": True, "gate_pass": True}
+                if args.skip_cache_churn
+                else await measure_cache_churn(
+                    bench,
+                    client,
+                    root_count=max(0, args.cache_root_count),
+                )
+            )
 
         report["gates"] = evaluate_gates(report)
         report["gate_pass"] = bool(
@@ -166,6 +200,9 @@ async def run(args: argparse.Namespace) -> dict[str, Any]:
             and report["correctness"]["gate_pass"]
             and all(report["gates"].values())
             and report["load"]["gate_pass"]
+            and report["isolated_exit_inspection"]["gate_pass"]
+            and report["mixed_non_plugin_load"]["gate_pass"]
+            and report["cache_churn"]["gate_pass"]
         )
         return report
     finally:
@@ -177,11 +214,18 @@ class CommandClient:
         self.daemon_client = daemon_client
         self.endpoint = endpoint
 
-    async def call(self, op: str, args: dict[str, Any]) -> tuple[dict[str, Any], float]:
+    async def call(
+        self,
+        op: str,
+        args: dict[str, Any],
+        *,
+        layer_stack_root: str = LAYER_STACK_ROOT,
+        agent_id: str = AGENT_ID,
+    ) -> tuple[dict[str, Any], float]:
         invocation_id = args.setdefault("invocation_id", f"phase3t-{uuid.uuid4().hex}")
         wire_args = {
-            "layer_stack_root": LAYER_STACK_ROOT,
-            "agent_id": AGENT_ID,
+            "layer_stack_root": layer_stack_root,
+            "agent_id": agent_id,
             **args,
         }
         payload = json.dumps(
@@ -320,6 +364,330 @@ async def correctness_checks(bench: DockerBench, client: CommandClient) -> dict[
             "pty_nohup": trim_response(pty_nohup),
             "pty_nohup_marker_remaining": pty_descendants,
         },
+        "gate_pass": all(checks.values()),
+    }
+
+
+async def configure_daemon_environment(bench: DockerBench) -> None:
+    lines = {
+        "EOS_ISOLATED_WORKSPACE_ENABLED": "true",
+        "EOS_ISOLATED_WORKSPACE_AUDIT_PATH": ISOLATED_AUDIT_PATH,
+        "EOS_ISOLATED_WORKSPACE_SETUP_TIMEOUT_S": "30",
+        "EOS_ISOLATED_WORKSPACE_EXIT_GRACE_S": "0.25",
+    }
+    payload = "\n".join(f"{key}={value}" for key, value in lines.items()) + "\n"
+    await bench.exec(
+        "cat >> /etc/environment <<'EOF'\n"
+        f"{payload}"
+        "EOF\n",
+        timeout=15,
+    )
+
+
+async def isolated_exit_inspection_checks(
+    bench: DockerBench,
+    client: CommandClient,
+) -> dict[str, Any]:
+    enter, enter_ms = await client.call(
+        "api.isolated_workspace.enter",
+        {},
+        agent_id=ISOLATED_AGENT_ID,
+    )
+    private_path = f"phase3t-isolated-{uuid.uuid4().hex[:8]}.txt"
+    finite, finite_ms = await client.call(
+        "api.v1.exec_command",
+        {
+            "cmd": f"printf isolated > {shlex.quote(private_path)}",
+            "tty": False,
+            "yield_time_ms": 1000,
+            "timeout": 30,
+        },
+        agent_id=ISOLATED_AGENT_ID,
+    )
+    shared_read_during, _ = await client.call(
+        "api.v1.read_file",
+        {"path": f"/testbed/{private_path}"},
+    )
+    pty_start, pty_start_ms = await client.call(
+        "api.v1.exec_command",
+        {
+            "cmd": "sleep 30",
+            "tty": True,
+            "yield_time_ms": 50,
+            "timeout": 60,
+        },
+        agent_id=ISOLATED_AGENT_ID,
+    )
+    blocked_exit, blocked_exit_ms = await client.call(
+        "api.isolated_workspace.exit",
+        {"grace_s": 0.05},
+        agent_id=ISOLATED_AGENT_ID,
+    )
+    forced_exit, forced_exit_ms = await client.call(
+        "api.isolated_workspace.exit",
+        {"force_cancel": True, "grace_s": 0.5},
+        agent_id=ISOLATED_AGENT_ID,
+    )
+    status_after, _ = await client.call(
+        "api.isolated_workspace.status",
+        {},
+        agent_id=ISOLATED_AGENT_ID,
+    )
+    shared_read_after, _ = await client.call(
+        "api.v1.read_file",
+        {"path": f"/testbed/{private_path}"},
+    )
+    audit_tail = await read_container_text(bench, ISOLATED_AUDIT_PATH)
+    exit_audit = last_jsonl_event(audit_tail, "sandbox_isolated_workspace_exit")
+    inspection = forced_exit.get("inspection") if isinstance(forced_exit, dict) else None
+
+    checks = {
+        "enter_opened": enter.get("success") is True,
+        "finite_command_private": (
+            finite.get("status") == "ok"
+            and finite.get("workspace") == "isolated"
+            and private_path in finite.get("changed_paths", [])
+        ),
+        "private_write_unpublished_during": shared_read_during.get("exists") is False,
+        "active_pty_exit_blocked": (
+            blocked_exit.get("success") is False
+            and blocked_exit.get("error", {}).get("kind") == "active_pty_sessions"
+        ),
+        "force_exit_succeeded": forced_exit.get("success") is True,
+        "force_cancel_cleared_ptys": forced_exit.get("active_pty_session_ids_after") == [],
+        "status_closed_after": (
+            status_after.get("success") is True and status_after.get("open") is False
+        ),
+        "private_write_unpublished_after": shared_read_after.get("exists") is False,
+        "inspection_clean": inspection_is_clean(inspection),
+        "audit_carries_matching_inspection": (
+            isinstance(exit_audit, dict)
+            and exit_audit.get("payload", {}).get("inspection") == inspection
+        ),
+    }
+    return {
+        "checks": checks,
+        "latency_ms": {
+            "enter": enter_ms,
+            "finite": finite_ms,
+            "pty_start": pty_start_ms,
+            "blocked_exit": blocked_exit_ms,
+            "forced_exit": forced_exit_ms,
+        },
+        "responses": {
+            "enter": trim_isolated_response(enter),
+            "finite": trim_response(finite),
+            "shared_read_during": {
+                "success": shared_read_during.get("success"),
+                "exists": shared_read_during.get("exists"),
+            },
+            "pty_start": trim_response(pty_start),
+            "blocked_exit": trim_isolated_response(blocked_exit),
+            "forced_exit": trim_isolated_response(forced_exit),
+            "status_after": status_after,
+            "shared_read_after": {
+                "success": shared_read_after.get("success"),
+                "exists": shared_read_after.get("exists"),
+            },
+            "exit_audit": exit_audit,
+        },
+        "gate_pass": all(checks.values()),
+    }
+
+
+async def measure_mixed_non_plugin_load(
+    client: CommandClient,
+    *,
+    concurrencies: list[int],
+    rounds: int,
+) -> dict[str, Any]:
+    total_slots = sum(max(0, concurrency) * max(0, rounds) for concurrency in concurrencies)
+    edit_paths = [f"/testbed/phase3t-mixed-edit-{index:04d}.txt" for index in range(total_slots)]
+    for path in edit_paths:
+        await client.call("api.v1.write_file", {"path": path, "content": "old\n"})
+
+    snapshot, _ = await client.call("api.audit.snapshot", {})
+    after_seq = (
+        snapshot.get("snapshot", {})
+        .get("daemon", {})
+        .get("next_seq", 0)
+    ) - 1
+    operations: dict[str, Any] = {}
+    operation_counter = 0
+
+    async def call_for(index: int) -> tuple[dict[str, Any], float, str]:
+        operation = index % 8
+        if operation == 0:
+            response, wall_ms = await client.call(
+                "api.v1.read_file",
+                {"path": "/testbed/README.md"},
+            )
+            return response, wall_ms, "read"
+        if operation == 1:
+            path = f"/testbed/phase3t-mixed-write-{index:04d}.txt"
+            response, wall_ms = await client.call(
+                "api.v1.write_file",
+                {"path": path, "content": f"write-{index}\n"},
+            )
+            return response, wall_ms, "write"
+        if operation == 2:
+            response, wall_ms = await client.call(
+                "api.v1.edit_file",
+                {
+                    "path": edit_paths[index % len(edit_paths)],
+                    "edits": [
+                        {
+                            "old_text": "old",
+                            "new_text": f"new-{index}",
+                            "replace_all": False,
+                        }
+                    ],
+                },
+            )
+            return response, wall_ms, "edit"
+        if operation == 3:
+            response, wall_ms = await client.exec_command("true", tty=False)
+            return response, wall_ms, "exec_command"
+        if operation == 4:
+            response, wall_ms = await client.exec_command("true", tty=True)
+            return response, wall_ms, "pty_command"
+        if operation == 5:
+            response, wall_ms = await client.call(
+                "api.v1.glob",
+                {"pattern": "phase3t-mixed-*.txt", "path": "."},
+            )
+            return response, wall_ms, "glob"
+        if operation == 6:
+            response, wall_ms = await client.call(
+                "api.v1.grep",
+                {
+                    "pattern": "README",
+                    "path": ".",
+                    "output_mode": "content",
+                    "line_numbers": True,
+                },
+            )
+            return response, wall_ms, "grep"
+        response, wall_ms = await client.call(
+            "api.layer_metrics",
+            {},
+        )
+        return response, wall_ms, "layer_metrics"
+
+    for concurrency in concurrencies:
+        samples: list[dict[str, Any]] = []
+        for round_index in range(max(0, rounds)):
+            results = await asyncio.gather(
+                *(call_for(operation_counter + slot) for slot in range(concurrency))
+            )
+            for slot, (response, wall_ms, name) in enumerate(results):
+                samples.append(
+                    sample(
+                        operation_counter + slot,
+                        response,
+                        wall_ms,
+                        mixed_operation_ok(name, response),
+                        slot=slot,
+                        round_index=round_index,
+                    )
+                    | {"operation": name}
+                )
+            operation_counter += concurrency
+        operations[str(concurrency)] = summarize_samples_block(samples)
+
+    audit_pull, audit_pull_ms = await client.call(
+        "api.audit.pull",
+        {"after_seq": after_seq, "limit": max(1000, operation_counter * 3)},
+    )
+    audit_events = audit_pull.get("events", [])
+    audit_buffer = audit_pull.get("buffer", {})
+    audit_checks = {
+        "pull_success": audit_pull.get("success") is True,
+        "no_dropped_events": audit_buffer.get("dropped_event_count") == 0,
+        "no_cursor_loss": int(audit_buffer.get("lost_before_seq", 0)) <= max(after_seq + 1, 0),
+        "enough_events_for_load": isinstance(audit_events, list)
+        and len(audit_events) >= operation_counter,
+    }
+    gate_pass = (
+        all(cell["all_samples_ok"] for cell in operations.values())
+        and all(p95(cell) <= MIXED_LOAD_P95_MS for cell in operations.values())
+        and all(audit_checks.values())
+    )
+    return {
+        "operations": operations,
+        "operation_count": operation_counter,
+        "audit": {
+            "checks": audit_checks,
+            "pull_wall_ms": audit_pull_ms,
+            "event_count": len(audit_events) if isinstance(audit_events, list) else 0,
+            "cursor": audit_pull.get("cursor"),
+            "buffer": audit_buffer,
+            "sample_event_types": [
+                event.get("type")
+                for event in audit_events[:20]
+                if isinstance(event, dict)
+            ]
+            if isinstance(audit_events, list)
+            else [],
+        },
+        "gate_pass": gate_pass,
+    }
+
+
+async def measure_cache_churn(
+    bench: DockerBench,
+    client: CommandClient,
+    *,
+    root_count: int,
+) -> dict[str, Any]:
+    roots = await seed_cache_churn_roots(bench, root_count)
+    samples: list[dict[str, Any]] = []
+    for index, root in enumerate(roots):
+        response, wall_ms = await client.call(
+            "api.v1.write_file",
+            {
+                "path": f"/testbed/phase3t-cache-churn-{index:04d}.txt",
+                "content": f"cache-root-{index}\n",
+            },
+            layer_stack_root=root,
+        )
+        samples.append(sample(index, response, wall_ms, response.get("success") is True))
+    reuse_response: dict[str, Any] = {}
+    reuse_ms = 0.0
+    if roots:
+        reuse_response, reuse_ms = await client.call(
+            "api.v1.write_file",
+            {
+                "path": "/testbed/phase3t-cache-reuse.txt",
+                "content": "reuse\n",
+            },
+            layer_stack_root=roots[-1],
+        )
+    metrics, metrics_ms = await client.call(
+        "api.layer_metrics",
+        {},
+        layer_stack_root=roots[-1] if roots else LAYER_STACK_ROOT,
+    )
+    cache = metrics.get("occ_runtime_service_cache", {})
+    required_evictions = max(0, root_count - 256)
+    checks = {
+        "samples_ok": bool(samples) and all(item["ok"] for item in samples),
+        "reuse_hit": timing_value(reuse_response, "occ.runtime_service.cache_hit") == 1.0,
+        "cache_bounded": int(cache.get("size", 0)) <= 256,
+        "evicted_after_churn": int(cache.get("evictions_total", 0)) >= required_evictions,
+        "metrics_reported": "lock_wait_s_total" in cache,
+    }
+    return {
+        "root_count": root_count,
+        "sample_summary": summarize_samples_block(samples),
+        "reuse": {
+            "wall_ms": reuse_ms,
+            "response": trim_response(reuse_response),
+            "runtime_service_timings": runtime_service_timings(reuse_response),
+        },
+        "metrics_wall_ms": metrics_ms,
+        "cache": cache,
+        "checks": checks,
         "gate_pass": all(checks.values()),
     }
 
@@ -603,6 +971,199 @@ async def wait_for_process_gone(
             return True
         await asyncio.sleep(0.05)
     return await process_marker_count(bench, marker) == 0
+
+
+def inspection_is_clean(inspection: Any) -> bool:
+    if not isinstance(inspection, dict):
+        return False
+    exact = {
+        "handle_registered_after": False,
+        "agent_registered_after": False,
+        "open_handle_count_after": 0,
+        "open_agent_count_after": 0,
+        "lease_released": True,
+        "active_leases_after": 0,
+        "scratch_exists_after": False,
+        "upperdir_exists_after": False,
+        "workdir_exists_after": False,
+    }
+    for key, expected in exact.items():
+        if inspection.get(key) != expected:
+            return False
+    if inspection.get("holder_kill_error") is not None:
+        return False
+    if inspection.get("cgroup_exists_after") not in {False, None}:
+        return False
+    mount_refs = inspection.get("mountinfo_reference_count_after")
+    return mount_refs in {0, None}
+
+
+async def read_container_text(bench: DockerBench, path: str) -> str:
+    result = await bench.exec(
+        f"if [ -r {shlex.quote(path)} ]; then cat {shlex.quote(path)}; fi",
+        timeout=15,
+    )
+    return getattr(result, "stdout", "")
+
+
+def last_jsonl_event(raw: str, event_type: str) -> dict[str, Any] | None:
+    matched = None
+    for line in raw.splitlines():
+        try:
+            event = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(event, dict) and event.get("type") == event_type:
+            matched = event
+    return matched
+
+
+def mixed_operation_ok(name: str, response: dict[str, Any]) -> bool:
+    if name == "read":
+        return response.get("success") is True and response.get("exists") is True
+    if name in {"write", "edit"}:
+        return response.get("success") is True and response.get("status") == "committed"
+    if name in {"exec_command", "pty_command"}:
+        return response.get("status") == "ok" and response.get("exit_code") == 0
+    if name in {"glob", "grep"}:
+        return response.get("success") is True or response.get("status") == "ok"
+    if name == "layer_metrics":
+        return response.get("success") is True and "occ_runtime_service_cache" in response
+    return False
+
+
+async def seed_cache_churn_roots(bench: DockerBench, root_count: int) -> list[str]:
+    roots = [f"/eos/cache-churn/root-{index:04d}" for index in range(root_count)]
+    if not roots:
+        return roots
+    raw = io.BytesIO()
+    added_dirs: set[str] = set()
+    with tarfile.open(fileobj=raw, mode="w") as tar:
+        for root in roots:
+            add_tar_dir(tar, root, added_dirs)
+            add_tar_dir(tar, f"{root}/layers", added_dirs)
+            add_tar_dir(tar, f"{root}/layers/B000001-base", added_dirs)
+            add_tar_dir(tar, f"{root}/staging", added_dirs)
+            add_tar_file(
+                tar,
+                f"{root}/manifest.json",
+                json.dumps(
+                    {
+                        "schema_version": 1,
+                        "version": 1,
+                        "layers": [
+                            {
+                                "layer_id": "B000001-base",
+                                "path": "layers/B000001-base",
+                            }
+                        ],
+                    },
+                    separators=(",", ":"),
+                ).encode(),
+                added_dirs,
+            )
+            add_tar_file(
+                tar,
+                f"{root}/workspace.json",
+                json.dumps(
+                    {
+                        "workspace_root": WORKSPACE_ROOT,
+                        "layer_stack_root": root,
+                        "active_manifest_version": 1,
+                        "active_root_hash": f"phase3t-cache-root-{root_count}",
+                        "base_manifest_version": 1,
+                        "base_root_hash": f"phase3t-cache-base-{root_count}",
+                    },
+                    separators=(",", ":"),
+                ).encode(),
+                added_dirs,
+            )
+            add_tar_file(
+                tar,
+                f"{root}/layers/B000001-base/README.md",
+                b"# cache churn\n",
+                added_dirs,
+            )
+    await bench.adapter.put_archive(
+        bench.sandbox_id,
+        tar_stream=raw.getvalue(),
+        dest_dir="/",
+    )
+    return roots
+
+
+def add_tar_dir(tar: tarfile.TarFile, path: str, added: set[str]) -> None:
+    name = path.strip("/")
+    if not name or name in added:
+        return
+    parent = str(Path(name).parent)
+    if parent and parent != ".":
+        add_tar_dir(tar, f"/{parent}", added)
+    info = tarfile.TarInfo(name)
+    info.type = tarfile.DIRTYPE
+    info.mode = 0o755
+    info.uid = 0
+    info.gid = 0
+    info.mtime = 0
+    tar.addfile(info)
+    added.add(name)
+
+
+def add_tar_file(
+    tar: tarfile.TarFile,
+    path: str,
+    payload: bytes,
+    added: set[str],
+) -> None:
+    name = path.strip("/")
+    parent = str(Path(name).parent)
+    if parent and parent != ".":
+        add_tar_dir(tar, f"/{parent}", added)
+    info = tarfile.TarInfo(name)
+    info.size = len(payload)
+    info.mode = 0o644
+    info.uid = 0
+    info.gid = 0
+    info.mtime = 0
+    tar.addfile(info, io.BytesIO(payload))
+
+
+def timing_value(response: dict[str, Any], key: str) -> float | None:
+    timings = response.get("timings")
+    if not isinstance(timings, dict):
+        return None
+    value = timings.get(key)
+    return float(value) if isinstance(value, int | float) else None
+
+
+def runtime_service_timings(response: dict[str, Any]) -> dict[str, float]:
+    timings = response.get("timings")
+    if not isinstance(timings, dict):
+        return {}
+    return {
+        key: float(value)
+        for key, value in timings.items()
+        if key.startswith("occ.runtime_service.") and isinstance(value, int | float)
+    }
+
+
+def trim_isolated_response(response: dict[str, Any]) -> dict[str, Any]:
+    return {
+        key: response.get(key)
+        for key in (
+            "success",
+            "workspace_handle_id",
+            "manifest_version",
+            "manifest_root_hash",
+            "inspection",
+            "force_cancel_requested",
+            "force_cancelled_pty_session_ids",
+            "stale_pty_session_ids",
+            "active_pty_session_ids_after",
+            "error",
+        )
+        if key in response
+    }
 
 
 def trim_response(response: dict[str, Any]) -> dict[str, Any]:

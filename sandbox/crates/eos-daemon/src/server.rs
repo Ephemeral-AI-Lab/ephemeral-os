@@ -27,7 +27,7 @@
 
 use std::path::PathBuf;
 use std::sync::Arc;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
 use tokio::net::{TcpListener, UnixListener};
@@ -35,9 +35,12 @@ use tokio::sync::{mpsc, oneshot};
 use tokio::time::timeout;
 use tokio_util::sync::CancellationToken;
 
-use eos_protocol::{decode, encode, Envelope, ErrorKind, LayerChange, Request};
+use eos_protocol::{
+    audit::{build_event, Lane, ToolCallSection},
+    decode, encode, Envelope, ErrorKind, LayerChange, Request,
+};
 
-use crate::audit_buffer::AuditBuffer;
+use crate::audit_buffer::{safe_emit, AuditBuffer};
 use crate::dispatcher::{DispatchContext, OpTable};
 use crate::error::DaemonError;
 use crate::in_flight::InFlightRegistry;
@@ -282,6 +285,15 @@ impl DaemonServer {
             .and_then(serde_json::Value::as_bool)
             .unwrap_or(false);
         let op = request.op.clone();
+        let started = Instant::now();
+        emit_tool_call_event(
+            "tool_call.started",
+            &invocation_id,
+            &op,
+            &agent_id,
+            None,
+            None,
+        );
         let table = self.op_table.clone();
         let registry = Arc::clone(&self.in_flight);
         let task_invocation_id = invocation_id.clone();
@@ -314,6 +326,14 @@ impl DaemonServer {
             ),
         };
         registry.deregister(&invocation_id);
+        emit_tool_call_event(
+            "tool_call.finished",
+            &invocation_id,
+            &op,
+            &agent_id,
+            Some(started.elapsed().as_secs_f64() * 1000.0),
+            response_status(&response),
+        );
         response
     }
 
@@ -339,6 +359,46 @@ impl DaemonServer {
         encoded.push(b'\n');
         Ok(encoded)
     }
+}
+
+fn emit_tool_call_event(
+    event_type: &str,
+    invocation_id: &str,
+    op: &str,
+    agent_id: &str,
+    total_ms: Option<f64>,
+    exit_status: Option<String>,
+) {
+    let section = ToolCallSection {
+        tool_use_id: invocation_id.to_owned(),
+        tool_name: op.to_owned(),
+        agent_id: (!agent_id.is_empty()).then(|| agent_id.to_owned()),
+        workspace_mode: None,
+        workspace_handle_id: None,
+        phase: None,
+        duration_ms: None,
+        total_ms,
+        exit_status,
+        bytes_in: None,
+        bytes_out: None,
+        phase_totals_rollup: None,
+    };
+    if let Ok(section) = serde_json::to_value(section) {
+        safe_emit(build_event(event_type, "tool_call", section), Lane::Normal);
+    }
+}
+
+fn response_status(response: &serde_json::Value) -> Option<String> {
+    if response.get("success").and_then(serde_json::Value::as_bool) == Some(false)
+        || response.get("error").is_some_and(|error| !error.is_null())
+    {
+        return Some("error".to_owned());
+    }
+    response
+        .get("status")
+        .and_then(serde_json::Value::as_str)
+        .map(str::to_owned)
+        .or_else(|| Some("ok".to_owned()))
 }
 
 fn agent_id_from_args(args: &serde_json::Value) -> String {

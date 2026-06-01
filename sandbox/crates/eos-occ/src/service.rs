@@ -223,6 +223,12 @@ impl<T: CommitTransactionPort + 'static> OccService<T> {
     }
 }
 
+impl<T: CommitTransactionPort + 'static> Drop for OccService<T> {
+    fn drop(&mut self) {
+        let _ = self.commit_queue.close();
+    }
+}
+
 /// Inverted daemon accessor: the OCC runtime-services bundle, keyed per root.
 ///
 /// `eos-occ` (a lower crate) defines this PORT; `eos-daemon` implements and

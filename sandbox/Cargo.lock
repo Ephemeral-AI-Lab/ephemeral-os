@@ -215,6 +215,7 @@ dependencies = [
  "eos-layerstack",
  "eos-overlay",
  "eos-protocol",
+ "nix 0.29.0",
  "serde_json",
  "thiserror 2.0.18",
 ]

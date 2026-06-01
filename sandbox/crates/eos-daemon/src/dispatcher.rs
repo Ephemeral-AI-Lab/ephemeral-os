@@ -15,7 +15,7 @@
 //! `// PORT backend/src/sandbox/daemon/rpc/dispatcher.py:60-160 — dispatch_envelope_async`
 //! `// PORT backend/src/sandbox/daemon/rpc/dispatcher.py:404-449 — _register_builtin_operations / OP_TABLE`
 
-use std::collections::{BTreeMap, HashMap, HashSet};
+use std::collections::{BTreeMap, HashMap, HashSet, VecDeque};
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
@@ -36,6 +36,7 @@ use eos_occ::{
 use eos_overlay::{allocate_overlay_writable_dirs, capture_upperdir, overlay_writable_root};
 use eos_protocol::{
     apply_search_replace,
+    audit::{build_event, Lane},
     models::{SearchReplaceEdit, MAX_READ_BYTES},
     ErrorKind, Intent, LayerChange, LayerPath, Manifest, Request, SearchReplaceError,
 };
@@ -154,6 +155,7 @@ impl OpTable {
 
     /// Route `request` with daemon runtime context.
     pub fn dispatch_with_context(&self, request: &Request, context: DispatchContext<'_>) -> Value {
+        let dispatch_start = Instant::now();
         if request.op.trim().is_empty() {
             return error_envelope(ErrorKind::InvalidEnvelope, "op is required", json!({}));
         }
@@ -171,13 +173,15 @@ impl OpTable {
                 json!({"op": request.op}),
             );
         };
-        match handler(&request.args, context) {
+        let response = match handler(&request.args, context) {
             Ok(mut response) => {
                 attach_runtime_timings(&mut response);
                 response
             }
             Err(err) => error_envelope(err.wire_kind(), &err.to_string(), json!({})),
-        }
+        };
+        emit_dispatch_audit(request, &response, dispatch_start.elapsed().as_secs_f64());
+        response
     }
 }
 
@@ -305,6 +309,7 @@ fn op_layer_metrics(args: &Value, _context: DispatchContext<'_>) -> Result<Value
         "workspace_bound": binding.is_some(),
         "workspace_root": binding.as_ref().map(|binding| binding.workspace_root.as_str()).unwrap_or(""),
         "base_root_hash": binding.as_ref().map(|binding| binding.base_root_hash.as_str()).unwrap_or(""),
+        "occ_runtime_service_cache": occ_service_cache_snapshot(),
     }))
 }
 
@@ -366,7 +371,7 @@ fn op_workspace_binding(args: &Value, _context: DispatchContext<'_>) -> Result<V
 fn op_audit_pull(args: &Value, _context: DispatchContext<'_>) -> Result<Value, DaemonError> {
     let after_seq = args.get("after_seq").and_then(Value::as_i64).unwrap_or(-1);
     let limit = args.get("limit").and_then(Value::as_u64).unwrap_or(1000) as usize;
-    let mut response = crate::audit_buffer::AuditBuffer::new().pull(after_seq, limit);
+    let mut response = crate::audit_buffer::global_audit_buffer().pull(after_seq, limit);
     response["success"] = Value::Bool(true);
     Ok(response)
 }
@@ -375,7 +380,7 @@ fn op_audit_pull(args: &Value, _context: DispatchContext<'_>) -> Result<Value, D
 // PORT backend/src/sandbox/daemon/rpc/dispatcher.py:423-428 — _audit_snapshot_handler
 fn op_audit_snapshot(args: &Value, _context: DispatchContext<'_>) -> Result<Value, DaemonError> {
     let _ = args;
-    let mut response = crate::audit_buffer::AuditBuffer::new().snapshot();
+    let mut response = crate::audit_buffer::global_audit_buffer().snapshot();
     response["success"] = Value::Bool(true);
     Ok(response)
 }
@@ -1101,8 +1106,15 @@ pub(crate) fn apply_occ_changeset(
     changes: &[LayerChange],
     base_hashes: &[(LayerPath, Option<String>)],
 ) -> Result<ChangesetResult, DaemonError> {
-    let service = occ_service_for_root(root)?;
-    Ok(service.apply_changeset_with_base_hashes(changes, snapshot_version, true, base_hashes)?)
+    let lookup = occ_service_for_root(root)?;
+    let mut result = lookup.service.apply_changeset_with_base_hashes(
+        changes,
+        snapshot_version,
+        true,
+        base_hashes,
+    )?;
+    lookup.insert_timings(&mut result.timings);
+    Ok(result)
 }
 
 pub(crate) fn occ_route_metrics(
@@ -1300,15 +1312,156 @@ fn sanitize_path_component(value: &str) -> String {
     }
 }
 
-fn occ_service_for_root(
-    root: &Path,
-) -> Result<Arc<OccService<LayerStackCommitTransaction>>, DaemonError> {
-    let key = root.to_string_lossy().into_owned();
-    let mut services = occ_services()
-        .lock()
-        .expect("occ service registry poisoned");
-    if let Some(service) = services.get(&key) {
-        return Ok(service.clone());
+const OCC_SERVICE_CACHE_MAX: usize = 256;
+
+struct OccServiceLookup {
+    service: Arc<OccService<LayerStackCommitTransaction>>,
+    lock_wait_s: f64,
+    cache_hit: bool,
+    cache_created: bool,
+    evicted_count: usize,
+    cache_size: usize,
+}
+
+impl OccServiceLookup {
+    fn insert_timings(&self, timings: &mut BTreeMap<String, f64>) {
+        for (key, value) in [
+            ("occ.runtime_service.cache_lock_wait_s", self.lock_wait_s),
+            (
+                "occ.runtime_service.cache_hit",
+                if self.cache_hit { 1.0 } else { 0.0 },
+            ),
+            (
+                "occ.runtime_service.cache_miss",
+                if self.cache_hit { 0.0 } else { 1.0 },
+            ),
+            (
+                "occ.runtime_service.cache_created",
+                if self.cache_created { 1.0 } else { 0.0 },
+            ),
+            (
+                "occ.runtime_service.cache_reused",
+                if self.cache_created { 0.0 } else { 1.0 },
+            ),
+            (
+                "occ.runtime_service.cache_evicted_count",
+                self.evicted_count as f64,
+            ),
+            ("occ.runtime_service.cache_size", self.cache_size as f64),
+            (
+                "occ.runtime_service.cache_capacity",
+                OCC_SERVICE_CACHE_MAX as f64,
+            ),
+        ] {
+            timings.entry(key.to_owned()).or_insert(value);
+        }
+    }
+}
+
+#[derive(Default)]
+struct OccServiceCacheStats {
+    hits_total: u64,
+    misses_total: u64,
+    creates_total: u64,
+    evictions_total: u64,
+    lock_wait_s_total: f64,
+    lock_wait_s_max: f64,
+}
+
+#[derive(Default)]
+struct OccServiceCache {
+    entries: HashMap<String, Arc<OccService<LayerStackCommitTransaction>>>,
+    lru: VecDeque<String>,
+    stats: OccServiceCacheStats,
+}
+
+impl OccServiceCache {
+    fn record_lock_wait(&mut self, lock_wait_s: f64) {
+        self.stats.lock_wait_s_total += lock_wait_s;
+        self.stats.lock_wait_s_max = self.stats.lock_wait_s_max.max(lock_wait_s);
+    }
+
+    fn get(&mut self, key: &str, lock_wait_s: f64) -> Option<OccServiceLookup> {
+        self.record_lock_wait(lock_wait_s);
+        let service = self.entries.get(key)?.clone();
+        self.touch(key);
+        self.stats.hits_total += 1;
+        Some(OccServiceLookup {
+            service,
+            lock_wait_s,
+            cache_hit: true,
+            cache_created: false,
+            evicted_count: 0,
+            cache_size: self.entries.len(),
+        })
+    }
+
+    fn insert_or_get(
+        &mut self,
+        key: String,
+        service: Arc<OccService<LayerStackCommitTransaction>>,
+        lock_wait_s: f64,
+    ) -> OccServiceLookup {
+        self.record_lock_wait(lock_wait_s);
+        if let Some(existing) = self.entries.get(&key).cloned() {
+            self.touch(&key);
+            self.stats.hits_total += 1;
+            return OccServiceLookup {
+                service: existing,
+                lock_wait_s,
+                cache_hit: true,
+                cache_created: false,
+                evicted_count: 0,
+                cache_size: self.entries.len(),
+            };
+        }
+        self.stats.misses_total += 1;
+        self.stats.creates_total += 1;
+        self.lru.push_back(key.clone());
+        self.entries.insert(key, service.clone());
+        let evicted_count = self.evict_oldest();
+        self.stats.evictions_total += evicted_count as u64;
+        OccServiceLookup {
+            service,
+            lock_wait_s,
+            cache_hit: false,
+            cache_created: true,
+            evicted_count,
+            cache_size: self.entries.len(),
+        }
+    }
+
+    fn touch(&mut self, key: &str) {
+        if let Some(position) = self.lru.iter().position(|entry| entry == key) {
+            self.lru.remove(position);
+        }
+        self.lru.push_back(key.to_owned());
+    }
+
+    fn evict_oldest(&mut self) -> usize {
+        let mut evicted_count = 0;
+        while self.entries.len() > OCC_SERVICE_CACHE_MAX {
+            let Some(key) = self.lru.pop_front() else {
+                break;
+            };
+            if self.entries.remove(&key).is_some() {
+                evicted_count += 1;
+            }
+        }
+        evicted_count
+    }
+}
+
+fn occ_service_for_root(root: &Path) -> Result<OccServiceLookup, DaemonError> {
+    let key = normalize_root_key(root);
+    let lock_start = Instant::now();
+    {
+        let mut cache = occ_services()
+            .lock()
+            .expect("occ service registry poisoned");
+        if let Some(lookup) = cache.get(&key, lock_start.elapsed().as_secs_f64()) {
+            return Ok(lookup);
+        }
     }
     let transaction = LayerStackCommitTransaction {
         root: root.to_path_buf(),
@@ -1320,15 +1473,51 @@ fn occ_service_for_root(
         CommitQueue::new(transaction),
         route_provider,
     )?);
-    services.insert(key, service.clone());
-    Ok(service)
+    let lock_start = Instant::now();
+    let mut cache = occ_services()
+        .lock()
+        .expect("occ service registry poisoned");
+    Ok(cache.insert_or_get(key, service.clone(), lock_start.elapsed().as_secs_f64()))
 }
 
-fn occ_services() -> &'static Mutex<HashMap<String, Arc<OccService<LayerStackCommitTransaction>>>> {
-    static SERVICES: OnceLock<
-        Mutex<HashMap<String, Arc<OccService<LayerStackCommitTransaction>>>>,
-    > = OnceLock::new();
-    SERVICES.get_or_init(|| Mutex::new(HashMap::new()))
+fn occ_services() -> &'static Mutex<OccServiceCache> {
+    static SERVICES: OnceLock<Mutex<OccServiceCache>> = OnceLock::new();
+    SERVICES.get_or_init(|| Mutex::new(OccServiceCache::default()))
+}
+
+fn normalize_root_key(root: &Path) -> String {
+    root.canonicalize()
+        .unwrap_or_else(|_| root.to_path_buf())
+        .to_string_lossy()
+        .into_owned()
+}
+
+fn occ_service_cache_snapshot() -> Value {
+    let lock_start = Instant::now();
+    let mut cache = occ_services()
+        .lock()
+        .expect("occ service registry poisoned");
+    let lock_wait_s = lock_start.elapsed().as_secs_f64();
+    cache.record_lock_wait(lock_wait_s);
+    json!({
+        "capacity": OCC_SERVICE_CACHE_MAX,
+        "size": cache.entries.len(),
+        "hits_total": cache.stats.hits_total,
+        "misses_total": cache.stats.misses_total,
+        "creates_total": cache.stats.creates_total,
+        "evictions_total": cache.stats.evictions_total,
+        "lock_wait_s_total": cache.stats.lock_wait_s_total,
+        "lock_wait_s_max": cache.stats.lock_wait_s_max,
+        "last_lock_wait_s": lock_wait_s,
+    })
+}
+
+#[cfg(test)]
+fn clear_occ_service_cache_for_tests() {
+    let mut cache = occ_services()
+        .lock()
+        .expect("occ service registry poisoned");
+    *cache = OccServiceCache::default();
 }
 
 fn validate_prepared(
@@ -1923,6 +2112,273 @@ fn attach_runtime_timings(response: &mut Value) {
     }
 }
 
+fn emit_dispatch_audit(request: &Request, response: &Value, dispatch_s: f64) {
+    if skip_dispatch_audit(&request.op) {
+        return;
+    }
+    let total_ms = dispatch_s * 1000.0;
+    let invocation_id = request
+        .args
+        .get("invocation_id")
+        .and_then(Value::as_str)
+        .unwrap_or(&request.invocation_id);
+    let agent_id = request.args.get("agent_id").and_then(Value::as_str);
+    let workspace_mode = response
+        .get("workspace_mode")
+        .or_else(|| response.get("workspace"))
+        .and_then(Value::as_str)
+        .map(str::to_owned);
+    let exit_status = response
+        .get("status")
+        .and_then(Value::as_str)
+        .or_else(|| {
+            response
+                .get("success")
+                .and_then(Value::as_bool)
+                .map(|success| if success { "ok" } else { "error" })
+        })
+        .unwrap_or("unknown");
+    crate::audit_buffer::safe_emit(
+        build_event(
+            "tool_call.completed",
+            "tool_call",
+            json!({
+                "tool_use_id": invocation_id,
+                "tool_name": request.op,
+                "agent_id": agent_id,
+                "workspace_mode": workspace_mode,
+                "duration_ms": total_ms,
+                "total_ms": total_ms,
+                "exit_status": exit_status,
+                "phase_totals_rollup": response.get("timings").cloned().unwrap_or_else(|| json!({})),
+            }),
+        ),
+        Lane::Normal,
+    );
+
+    emit_occ_audit(request, response);
+    emit_workspace_lifecycle_audit(request, response, total_ms);
+    emit_background_audit(request, response, total_ms);
+}
+
+fn skip_dispatch_audit(op: &str) -> bool {
+    op.starts_with("api.audit.")
+        || matches!(
+            op,
+            "api.runtime.ready" | "api.v1.heartbeat" | "api.v1.inflight_count"
+        )
+}
+
+fn emit_occ_audit(request: &Request, response: &Value) {
+    if !is_occ_op(&request.op) {
+        return;
+    }
+    let changed_path_count = response
+        .get("changed_paths")
+        .and_then(Value::as_array)
+        .map_or(0_i64, |paths| paths.len() as i64);
+    let conflict = response.get("conflict").filter(|value| !value.is_null());
+    let event_type = if conflict.is_some() {
+        "occ.conflict"
+    } else {
+        "occ.publish"
+    };
+    let conflict_kind = conflict
+        .and_then(|value| value.get("reason"))
+        .and_then(Value::as_str)
+        .or_else(|| response.get("conflict_reason").and_then(Value::as_str));
+    crate::audit_buffer::safe_emit(
+        build_event(
+            event_type,
+            "occ",
+            json!({
+                "operation_id": request.invocation_id,
+                "changed_path_count": changed_path_count,
+                "prepare_ms": timing_ms(response, "occ.prepare.total_s"),
+                "apply_ms": timing_ms(response, "command_exec.occ_apply_s")
+                    .or_else(|| timing_ms(response, "api.write.occ_apply_s"))
+                    .or_else(|| timing_ms(response, "api.edit.occ_apply_s")),
+                "commit_ms": timing_ms(response, "occ.commit.total_s"),
+                "publish_layer_ms": timing_ms(response, "occ.commit.publish_layer_s"),
+                "conflict_kind": conflict_kind,
+                "conflict_path": conflict
+                    .and_then(|value| value.get("conflict_file"))
+                    .and_then(Value::as_str),
+                "conflict_reason": response.get("conflict_reason").and_then(Value::as_str),
+                "current_manifest_version": timing_i64(response, "resource.layer_stack.manifest_depth"),
+            }),
+        ),
+        Lane::Normal,
+    );
+}
+
+fn emit_workspace_lifecycle_audit(request: &Request, response: &Value, total_ms: f64) {
+    if request.op == "api.layer_metrics" {
+        crate::audit_buffer::safe_emit(
+            build_event(
+                "layer_stack.maintenance",
+                "layer_stack",
+                json!({
+                    "operation_id": request.invocation_id,
+                    "manifest_version": response.get("manifest_version").and_then(Value::as_i64),
+                    "layer_count": response.get("manifest_depth").and_then(Value::as_i64),
+                    "lease_hold_ms": total_ms,
+                }),
+            ),
+            Lane::Normal,
+        );
+        return;
+    }
+    if !uses_overlay_or_lease(&request.op, response) {
+        return;
+    }
+    crate::audit_buffer::safe_emit(
+        build_event(
+            "layer_stack.lease_released",
+            "layer_stack",
+            json!({
+                "operation_id": request.invocation_id,
+                "owner_request_id": request.invocation_id,
+                "manifest_version": timing_i64(response, "resource.layer_stack.manifest_depth"),
+                "layer_count": timing_i64(response, "resource.layer_stack.manifest_path_count"),
+                "lease_hold_ms": total_ms,
+            }),
+        ),
+        Lane::Normal,
+    );
+    crate::audit_buffer::safe_emit(
+        build_event(
+            "overlay_workspace.cleanup",
+            "overlay_workspace",
+            json!({
+                "operation_id": request.invocation_id,
+                "workspace_mode": response
+                    .get("workspace_mode")
+                    .or_else(|| response.get("workspace"))
+                    .and_then(Value::as_str)
+                    .unwrap_or("ephemeral"),
+                "cleanup_ms": total_ms,
+                "scratch_removed": true,
+                "changed_path_count": response
+                    .get("changed_paths")
+                    .and_then(Value::as_array)
+                    .map(|paths| paths.len() as i64),
+            }),
+        ),
+        Lane::Normal,
+    );
+}
+
+fn emit_background_audit(request: &Request, response: &Value, total_ms: f64) {
+    let Some((event_type, task_kind)) = background_event_kind(request, response) else {
+        return;
+    };
+    let pty_session_id = request
+        .args
+        .get("pty_session_id")
+        .and_then(Value::as_str)
+        .or_else(|| response.get("pty_session_id").and_then(Value::as_str))
+        .unwrap_or(&request.invocation_id);
+    crate::audit_buffer::safe_emit(
+        build_event(
+            event_type,
+            "background_tool",
+            json!({
+                "background_task_id": pty_session_id,
+                "task_kind": task_kind,
+                "tool_name": request.op,
+                "agent_id": request.args.get("agent_id").and_then(Value::as_str),
+                "status": response.get("status").and_then(Value::as_str),
+                "exit_code": response.get("exit_code").and_then(Value::as_i64),
+                "duration_ms": total_ms,
+            }),
+        ),
+        Lane::Normal,
+    );
+}
+
+fn background_event_kind(
+    request: &Request,
+    response: &Value,
+) -> Option<(&'static str, &'static str)> {
+    match request.op.as_str() {
+        "api.v1.exec_command"
+            if request
+                .args
+                .get("tty")
+                .and_then(Value::as_bool)
+                .unwrap_or(false)
+                && response.get("pty_session_id").is_some() =>
+        {
+            Some(("background_tool.started", "pty"))
+        }
+        "api.v1.exec_command"
+            if request
+                .args
+                .get("tty")
+                .and_then(Value::as_bool)
+                .unwrap_or(false) =>
+        {
+            Some(("background_tool.completed", "pty"))
+        }
+        "api.v1.pty.write_stdin" => Some(("background_tool.input", "pty")),
+        "api.v1.pty.progress" => Some(("background_tool.progress", "pty")),
+        "api.v1.pty.cancel" => Some(("background_tool.cancelled", "pty")),
+        "api.v1.pty.collect_completed" => Some(("background_tool.completed", "pty")),
+        _ => None,
+    }
+}
+
+fn is_occ_op(op: &str) -> bool {
+    matches!(
+        op,
+        "api.write_file"
+            | "api.v1.write_file"
+            | "api.edit_file"
+            | "api.v1.edit_file"
+            | "api.v1.shell"
+            | "api.v1.exec_command"
+    )
+}
+
+fn uses_overlay_or_lease(op: &str, response: &Value) -> bool {
+    if matches!(
+        op,
+        "api.glob"
+            | "api.v1.glob"
+            | "api.grep"
+            | "api.v1.grep"
+            | "api.v1.shell"
+            | "api.v1.pty.cancel"
+            | "api.v1.pty.collect_completed"
+    ) {
+        return true;
+    }
+    if op == "api.v1.exec_command" {
+        return response
+            .get("pty_session_id")
+            .and_then(Value::as_str)
+            .is_none();
+    }
+    false
+}
+
+fn timing_ms(response: &Value, key: &str) -> Option<f64> {
+    timing_f64(response, key).map(|seconds| seconds * 1000.0)
+}
+
+fn timing_i64(response: &Value, key: &str) -> Option<i64> {
+    timing_f64(response, key).map(|value| value.round() as i64)
+}
+
+fn timing_f64(response: &Value, key: &str) -> Option<f64> {
+    response
+        .get("timings")
+        .and_then(Value::as_object)
+        .and_then(|timings| timings.get(key))
+        .and_then(Value::as_f64)
+}
+
 fn daemon_uptime_s() -> f64 {
     static START: std::sync::OnceLock<Instant> = std::sync::OnceLock::new();
     START.get_or_init(Instant::now).elapsed().as_secs_f64()
@@ -1946,6 +2402,7 @@ fn error_type(err: &DaemonError) -> &'static str {
 mod tests {
     use std::sync::atomic::{AtomicU64, Ordering};
 
+    use eos_protocol::audit::Lane;
     use serde_json::json;
 
     use super::*;
@@ -2123,6 +2580,70 @@ mod tests {
 
         assert_eq!(metrics.gated_path_count, 1);
         assert_eq!(metrics.direct_path_count, 2);
+    }
+
+    #[test]
+    fn audit_pull_reads_shared_daemon_ring() {
+        let marker = format!("phase3t-audit-test-{}", unique_suffix());
+        let snapshot =
+            op_audit_snapshot(&json!({}), DispatchContext::empty()).expect("snapshot response");
+        let after_seq = snapshot["snapshot"]["daemon"]["next_seq"]
+            .as_i64()
+            .unwrap_or(0)
+            - 1;
+        crate::audit_buffer::safe_emit(
+            json!({"type": marker, "payload": {"source": "unit-test"}}),
+            Lane::Normal,
+        );
+
+        let pulled = op_audit_pull(
+            &json!({"after_seq": after_seq, "limit": 128}),
+            DispatchContext::empty(),
+        )
+        .expect("pull response");
+
+        let events = pulled["events"].as_array().expect("events array");
+        assert!(events
+            .iter()
+            .any(|event| event["type"].as_str() == Some(marker.as_str())));
+    }
+
+    #[test]
+    fn occ_service_cache_is_bounded_lru() {
+        clear_occ_service_cache_for_tests();
+        let base = std::env::temp_dir().join(format!("eosd-occ-cache-{}", unique_suffix()));
+        let _ = std::fs::remove_dir_all(&base);
+        std::fs::create_dir_all(&base).expect("create cache test root");
+
+        let first = base.join("root-000");
+        for index in 0..=OCC_SERVICE_CACHE_MAX {
+            let root = base.join(format!("root-{index:03}"));
+            std::fs::create_dir_all(&root).expect("create root");
+            let lookup = occ_service_for_root(&root).expect("create service");
+            assert!(lookup.cache_created);
+        }
+
+        let snapshot = occ_service_cache_snapshot();
+        assert_eq!(snapshot["capacity"], json!(OCC_SERVICE_CACHE_MAX));
+        assert_eq!(snapshot["size"], json!(OCC_SERVICE_CACHE_MAX));
+        assert_eq!(snapshot["evictions_total"], json!(1));
+
+        let recreated = occ_service_for_root(&first).expect("recreate evicted service");
+        assert!(!recreated.cache_hit);
+        assert!(recreated.cache_created);
+        assert_eq!(recreated.evicted_count, 1);
+
+        clear_occ_service_cache_for_tests();
+        let _ = std::fs::remove_dir_all(base);
+    }
+
+    fn unique_suffix() -> String {
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
+        format!(
+            "{}-{}",
+            std::process::id(),
+            COUNTER.fetch_add(1, Ordering::Relaxed)
+        )
     }
 
     fn transaction(fixture: &Fixture) -> LayerStackCommitTransaction {
