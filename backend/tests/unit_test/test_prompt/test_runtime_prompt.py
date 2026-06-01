@@ -47,7 +47,7 @@ def test_subagent_tools_expose_run_subagent_without_instruction_block():
     tools = make_subagent_tools()
 
     assert [tool.name for tool in tools] == ["run_subagent"]
-    assert tools[0].short_description == "Spawn a subagent in the background."
+    assert tools[0].short_description == "Spawn a subagent worker."
 
 
 def test_termination_condition_prompt_omits_tool_call_notes_and_background_section():

@@ -429,6 +429,30 @@ async def test_subagent_completion_emits_typed_notification() -> None:
 
 
 @pytest.mark.asyncio
+async def test_generic_completion_collection_does_not_deliver_subagents() -> None:
+    sup = BackgroundTaskSupervisor()
+
+    async def _done() -> ToolResult:
+        return ToolResult(
+            output="findings",
+            metadata={"subagent_terminal_called": True},
+        )
+
+    sup.launch(
+        task_id="subagent_1",
+        tool_name="run_subagent",
+        tool_input={"agent_name": "explorer"},
+        coro=_done(),
+        task_type="subagent",
+    )
+    await asyncio.sleep(0.05)
+
+    assert sup.collect_completed() == []
+    assert sup._tasks["subagent_1"].status == BackgroundTaskStatus.COMPLETED
+    assert sup.collect_subagent_completion_notifications()
+
+
+@pytest.mark.asyncio
 async def test_query_loop_helper_drains_pty_completion_into_notifications(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

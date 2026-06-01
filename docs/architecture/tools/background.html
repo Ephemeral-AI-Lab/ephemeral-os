@@ -66,7 +66,7 @@
   </div>
   <div class="flow-row">
     <div class="node"><strong>Running task</strong><small>progress callback or provider snapshot</small></div>
-    <div class="node"><strong>Check / wait</strong><small>collects completed or renders running status</small></div>
+    <div class="node"><strong>Typed delivery</strong><small>notifies completion or renders running status</small></div>
     <div class="node warn"><strong>Cancel</strong><small>asyncio cancel plus sandbox cancel when bound</small></div>
     <div class="node"><strong>Delivered</strong><small>terminal state is surfaced once</small></div>
   </div>
@@ -86,9 +86,9 @@
   <thead><tr><th>Status</th><th>Meaning</th><th>Delivery rule</th></tr></thead>
   <tbody>
     <tr><td><code>RUNNING</code></td><td>The asyncio task is still active.</td><td>Typed control tools return progress lines or a progress-provider snapshot.</td></tr>
-    <tr><td><code>COMPLETED</code></td><td>The task produced a successful <code>ToolResult</code>.</td><td>Undelivered until <code>collect_completed()</code> is called by check/wait or other engine delivery code.</td></tr>
-    <tr><td><code>FAILED</code></td><td>The task raised or returned an error result through the done callback.</td><td>Undelivered until collected.</td></tr>
-    <tr><td><code>CANCELLED</code></td><td>The supervisor marked the task cancelled.</td><td>Undelivered until collected; completion has higher terminal precedence than cancellation in races.</td></tr>
+    <tr><td><code>COMPLETED</code></td><td>The task produced a successful <code>ToolResult</code>.</td><td>Undelivered until the matching typed delivery path marks it delivered.</td></tr>
+    <tr><td><code>FAILED</code></td><td>The task raised or returned an error result through the done callback.</td><td>Undelivered until the matching delivery path marks it delivered.</td></tr>
+    <tr><td><code>CANCELLED</code></td><td>The supervisor marked the task cancelled.</td><td>Undelivered until delivered; completion has higher terminal precedence than cancellation in races.</td></tr>
     <tr><td><code>DELIVERED</code></td><td>The terminal state has already been surfaced to the model.</td><td>Not collected again.</td></tr>
   </tbody>
 </table>
@@ -103,7 +103,7 @@
   <div><b>PTY controls</b><span><code>check_pty_command_progress</code>, <code>write_pty_command_stdin</code>, and <code>cancel_pty_command</code> operate on <code>pty_session_id</code>.</span></div>
   <div><b>Subagent controls</b><span><code>check_subagent_progress</code> and <code>cancel_subagent</code> operate on <code>subagent_session_id</code>.</span></div>
 </div>
-<p>Ordinary engine-owned background tool results are still delivered through these management tools. Subagents and daemon-owned PTY commands also have automatic completion bridges: the query loop asks <code>BackgroundTaskSupervisor.collect_subagent_completion_notifications()</code> and <code>collect_pty_completion_notifications()</code> before the next provider request, then injects one typed system notification through <code>SystemNotificationService</code>. If a typed control tool already reports a terminal result, the supervisor marks that record delivered so the automatic bridge does not duplicate it.</p>
+<p>Legacy generic records can still be collected through internal helper paths, but the model-facing surfaces are typed. Subagents and daemon-owned PTY commands have automatic completion bridges: the query loop asks <code>BackgroundTaskSupervisor.collect_subagent_completion_notifications()</code> and <code>collect_pty_completion_notifications()</code> before the next provider request, then injects one typed system notification through <code>SystemNotificationService</code>. If a typed control tool already reports a terminal result, the supervisor marks that record delivered so the automatic bridge does not duplicate it.</p>
 </section>
 
 <section id="sandbox-bridge" data-last-reviewed-commit="569f12c3f39471dbaa643906856a8daf81a21a2d" data-evidence-paths="backend/src/engine/background/dispatch.py backend/src/engine/background/task_supervisor.py backend/src/sandbox/api/__init__.py backend/src/sandbox/api/tool backend/src/sandbox/daemon/workspace_tool_dispatch.py backend/tests/unit_test/test_engine/test_background_tasks.py">

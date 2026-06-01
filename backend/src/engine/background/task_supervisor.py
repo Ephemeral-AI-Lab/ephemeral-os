@@ -26,6 +26,8 @@ DEFAULT_BACKGROUND_TASK_TYPE = "agent"
 SUBAGENT_TASK_TYPE = "subagent"
 _EARLY_STOP_MODE = "early_stop"
 _EARLY_STOP_COMPLETION_MODE = "early_stopped"
+_PARENT_EXIT_STOP_MODE = "parent_exit"
+_PARENT_EXIT_REASON = "non_cancellation_tool_request"
 
 
 class BackgroundTaskStatus(StrEnum):
@@ -34,8 +36,7 @@ class BackgroundTaskStatus(StrEnum):
     Transitions:
         RUNNING -> {COMPLETED, FAILED, CANCELLED} -> DELIVERED
 
-    Only :meth:`BackgroundTaskSupervisor.collect_completed` advances a task
-    from a terminal state (COMPLETED/FAILED/CANCELLED) to DELIVERED.
+    Terminal records advance to DELIVERED through their typed delivery path.
     """
 
     RUNNING = "running"
@@ -61,8 +62,8 @@ _TERMINAL_PRECEDENCE: dict[BackgroundTaskStatus, int] = {
 }
 
 
-# Terminal states that are still "undelivered" and waiting for the engine
-# to pick them up via :meth:`BackgroundTaskSupervisor.collect_completed`.
+# Terminal states that are still "undelivered" and waiting for a typed delivery
+# path to pick them up.
 _TERMINAL_UNDELIVERED: frozenset[BackgroundTaskStatus] = frozenset(
     {
         BackgroundTaskStatus.COMPLETED,
@@ -197,6 +198,27 @@ async def _request_subagent_early_stop(
     await asyncio.sleep(0)
 
 
+def _parent_exit_result(reason: str) -> ToolResult:
+    return ToolResult(
+        output=f"Terminated by parent exit: {reason}",
+        is_error=True,
+        metadata={
+            "subagent_terminal_called": False,
+            "subagent_termination_reason": reason,
+        },
+    )
+
+
+def _cancelled_result(tracked: BackgroundTaskRecord, message: str) -> ToolResult:
+    metadata: dict[str, Any] = {}
+    if tracked.task_type == SUBAGENT_TASK_TYPE:
+        metadata = {
+            "subagent_terminal_called": False,
+            "subagent_cancelled": True,
+        }
+    return ToolResult(output=message, is_error=True, metadata=metadata)
+
+
 class BackgroundTaskSupervisor:
     """Supervise async background tasks launched by the query loop.
 
@@ -263,10 +285,15 @@ class BackgroundTaskSupervisor:
         def _done_callback(task: asyncio.Task[ToolResult]) -> None:
             try:
                 if task.cancelled():
+                    result = (
+                        _parent_exit_result(tracked.cancel_reason or _PARENT_EXIT_REASON)
+                        if tracked.stop_mode == _PARENT_EXIT_STOP_MODE
+                        else _cancelled_result(tracked, "Cancelled")
+                    )
                     self._apply_terminal_status_transition(
                         tracked,
                         new_status=BackgroundTaskStatus.CANCELLED,
-                        new_result=ToolResult(output="Cancelled", is_error=True),
+                        new_result=result,
                     )
                 elif task.exception() is not None:
                     exc = task.exception()
@@ -277,6 +304,15 @@ class BackgroundTaskSupervisor:
                     )
                 else:
                     real_result = task.result()
+                    if tracked.stop_mode == _PARENT_EXIT_STOP_MODE:
+                        self._apply_terminal_status_transition(
+                            tracked,
+                            new_status=BackgroundTaskStatus.CANCELLED,
+                            new_result=_parent_exit_result(
+                                tracked.cancel_reason or _PARENT_EXIT_REASON
+                            ),
+                        )
+                        return
                     applied = self._apply_terminal_status_transition(
                         tracked,
                         new_status=BackgroundTaskStatus.COMPLETED,
@@ -317,25 +353,21 @@ class BackgroundTaskSupervisor:
         )
 
     def collect_completed(self) -> list[BackgroundTaskRecord]:
-        """Return tasks that finished but haven't been delivered yet.
+        """Return generic tasks that finished but haven't been delivered yet.
 
         Each returned task is marked as ``delivered`` so it won't be
-        returned again. This is the *only* method that performs the
-        terminal → delivered transition.
+        returned again. Subagents use their own typed completion/progress
+        delivery path and are intentionally skipped here.
         """
         ready: list[BackgroundTaskRecord] = []
         for tracked in self._tasks.values():
-            if tracked.status in _TERMINAL_UNDELIVERED:
-                tracked.status = BackgroundTaskStatus.DELIVERED
-                delivery_latency_ms = max(
-                    0.0, (time.monotonic() - tracked.started_at) * 1000.0
-                )
-                _emit_background_tool(
-                    "background_tool.delivered",
-                    tracked,
-                    delivery_latency_ms=delivery_latency_ms,
-                )
-                ready.append(tracked)
+            if (
+                tracked.task_type == SUBAGENT_TASK_TYPE
+                or tracked.status not in _TERMINAL_UNDELIVERED
+            ):
+                continue
+            self._mark_delivered(tracked)
+            ready.append(tracked)
         return ready
 
     def iter_all(self) -> Iterator[BackgroundTaskRecord]:
@@ -566,6 +598,40 @@ class BackgroundTaskSupervisor:
             return False
         return await self.cancel(tracked.task_id, reason)
 
+    async def terminate_for_parent_exit(
+        self,
+        *,
+        reason: str = _PARENT_EXIT_REASON,
+        grace_s: float = 0.05,
+    ) -> list[str]:
+        """Terminate active subagents because the parent run is no longer continuing."""
+        targets = [
+            tracked
+            for tracked in self._tasks.values()
+            if tracked.task_type == SUBAGENT_TASK_TYPE
+            and tracked.status == BackgroundTaskStatus.RUNNING
+        ]
+        if not targets:
+            return []
+        for tracked in targets:
+            tracked.cancel_reason = reason
+            tracked.stop_mode = _PARENT_EXIT_STOP_MODE
+            result = _parent_exit_result(reason)
+            applied = self._apply_terminal_status_transition(
+                tracked,
+                new_status=BackgroundTaskStatus.CANCELLED,
+                new_result=result,
+            )
+            if applied:
+                tracked.progress_lines = [result.output]
+            tracked.asyncio_task.cancel()
+        if grace_s >= 0:
+            await asyncio.wait(
+                [tracked.asyncio_task for tracked in targets],
+                timeout=grace_s,
+            )
+        return self.collect_subagent_completion_notifications()
+
     def collect_subagent_completion_notifications(self) -> list[str]:
         """Return one notification string for each newly terminal subagent."""
         notifications: list[str] = []
@@ -576,16 +642,16 @@ class BackgroundTaskSupervisor:
             ):
                 continue
             notifications.append(_render_subagent_completion_notification(tracked))
-            tracked.status = BackgroundTaskStatus.DELIVERED
-            delivery_latency_ms = max(
-                0.0, (time.monotonic() - tracked.started_at) * 1000.0
-            )
-            _emit_background_tool(
-                "background_tool.delivered",
-                tracked,
-                delivery_latency_ms=delivery_latency_ms,
-            )
+            self._mark_delivered(tracked)
         return notifications
+
+    def mark_subagent_delivered(self, subagent_session_id: str) -> bool:
+        """Mark a terminal subagent delivered after an explicit progress check."""
+        tracked = self.get_subagent_task(subagent_session_id)
+        if tracked is None or tracked.status not in _TERMINAL_UNDELIVERED:
+            return False
+        self._mark_delivered(tracked)
+        return True
 
     async def cancel_all(self) -> None:
         """Cancel all running tasks. Called on query loop exit."""
@@ -618,10 +684,21 @@ class BackgroundTaskSupervisor:
         applied = self._apply_terminal_status_transition(
             tracked,
             new_status=BackgroundTaskStatus.CANCELLED,
-            new_result=ToolResult(output=message, is_error=True),
+            new_result=_cancelled_result(tracked, message),
         )
         if applied:
             tracked.progress_lines = [message]
+
+    def _mark_delivered(self, tracked: BackgroundTaskRecord) -> None:
+        tracked.status = BackgroundTaskStatus.DELIVERED
+        delivery_latency_ms = max(
+            0.0, (time.monotonic() - tracked.started_at) * 1000.0
+        )
+        _emit_background_tool(
+            "background_tool.delivered",
+            tracked,
+            delivery_latency_ms=delivery_latency_ms,
+        )
 
     def _apply_terminal_status_transition(
         self,
@@ -813,7 +890,12 @@ def _render_subagent_completion_notification(record: BackgroundTaskRecord) -> st
     result = record.result
     metadata = result.metadata if result is not None else {}
     terminal_called = bool(metadata.get("subagent_terminal_called"))
-    if record.status == BackgroundTaskStatus.CANCELLED:
+    parent_exit_reason = (
+        record.cancel_reason if record.stop_mode == _PARENT_EXIT_STOP_MODE else ""
+    )
+    if parent_exit_reason:
+        status = "terminated"
+    elif record.status == BackgroundTaskStatus.CANCELLED:
         status = "cancelled"
     elif record.status == BackgroundTaskStatus.COMPLETED and terminal_called:
         status = "finished"
@@ -830,6 +912,8 @@ def _render_subagent_completion_notification(record: BackgroundTaskRecord) -> st
     ]
     if agent_name:
         lines.append(f"agent_name: {agent_name}")
+    if parent_exit_reason:
+        lines.append(f"reason: {parent_exit_reason}")
     if result is not None and result.output:
         label = "result" if status == "finished" else "details"
         lines.append(f"{label}:\n{result.output.rstrip()}")

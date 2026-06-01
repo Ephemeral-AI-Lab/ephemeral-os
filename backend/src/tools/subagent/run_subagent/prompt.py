@@ -12,7 +12,7 @@ from tools._names import (
 
 def get_run_subagent_description() -> str:
     return (
-        f"Spawn a registered subagent as a background task. You hand it `prompt` as\n"
+        f"Spawn a registered subagent as a supervised async session. You hand it `prompt` as\n"
         "its only input. It must finish by calling its terminal tool; whatever that\n"
         "terminal tool emits becomes your result.\n"
         "\n"
@@ -45,10 +45,9 @@ def get_run_subagent_description() -> str:
         "- Terse command-style prompts produce shallow, generic work.\n"
         "\n"
         "Don't peek. The launch returns a `subagent_session_id`; the subagent\n"
-        "runs in the\n"
-        "background. Don't read its transcript or poll progress unless the user\n"
-        "explicitly asks for a status check — that defeats the point of forking\n"
-        "off its tool noise. You'll be notified when it completes.\n"
+        "runs asynchronously. Don't read its transcript or poll progress unless\n"
+        "the user explicitly asks for a status check — that defeats the point\n"
+        "of forking off its tool noise. You'll be notified when it completes.\n"
         "\n"
         "Don't race. After launching, you know nothing about what the subagent\n"
         "will find. Never predict its result in any format. If the user asks a\n"

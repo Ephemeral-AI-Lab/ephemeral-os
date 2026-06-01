@@ -114,12 +114,14 @@ def launch_background_tool(
         )
 
     task_type = getattr(tool_def, "task_type", "agent")
-    subagent_session_id = None
-    if task_type == SUBAGENT_TASK_TYPE:
-        task_alias = background_tasks.next_subagent_session_id()
-        subagent_session_id = task_alias
-    else:
-        task_alias = background_tasks.next_alias()
+    if task_type != SUBAGENT_TASK_TYPE:
+        msg = f"Tool '{tool_use.name}' does not support background-manager dispatch."
+        return (
+            ToolResultBlock(tool_use_id=tool_use.tool_use_id, content=msg, is_error=True),
+            None,
+            ToolExecutionCompletedEvent(tool_name=tool_use.name, output=msg, is_error=True),
+        )
+    subagent_session_id = background_tasks.next_subagent_session_id()
     uses_sandbox = SANDBOX_CONTEXT in getattr(
         tool_def,
         "context_requirements",
@@ -140,7 +142,7 @@ def launch_background_tool(
     if not agent_id:
         agent_id = str(getattr(tool_metadata, "agent_name", "") or "")
 
-    async def _run_background_tool(alias: str = task_alias) -> ToolResult:
+    async def _run_background_tool(alias: str = subagent_session_id) -> ToolResult:
         background_metadata = ExecutionMetadata(
             on_progress_line=background_tasks.make_progress_callback(alias),
             background_task_id=alias,
@@ -159,7 +161,7 @@ def launch_background_tool(
         )
 
     started_event = background_tasks.launch(
-        task_alias,
+        subagent_session_id,
         tool_use.name,
         clean_input,
         _run_background_tool(),
@@ -172,26 +174,15 @@ def launch_background_tool(
         heartbeat_enabled=heartbeat_enabled,
     )
     record_tool_trace(tool_metadata, tool_use.name, clean_input)
-    if subagent_session_id:
-        content = (
-            f'[SUBAGENT LAUNCHED] subagent_session_id="{subagent_session_id}" '
-            f'status=running agent_name="{clean_input.get("agent_name", "")}"\n'
-            f"Use check_subagent_progress("
-            f'subagent_session_id="{subagent_session_id}", last_n_messages=5) '
-            f"to inspect progress, or cancel_subagent("
-            f'subagent_session_id="{subagent_session_id}") to stop it. '
-            f"Keep using the current response on other ready work first."
-        )
-    else:
-        content = (
-            f'[BACKGROUND LAUNCHED] task_id="{task_alias}" tool={tool_use.name}\n'
-            f"Use this task_id with "
-            f'check_background_task_result(task_id="{task_alias}"), '
-            f"wait_background_tasks() to block until all tasks settle, or "
-            f'cancel_background_task(task_id="{task_alias}"). '
-            f"Keep using the current response on other ready work first; do not "
-            f"wait immediately unless this task is the only blocker left."
-        )
+    content = (
+        f'[SUBAGENT LAUNCHED] subagent_session_id="{subagent_session_id}" '
+        f'status=running agent_name="{clean_input.get("agent_name", "")}"\n'
+        f"Use check_subagent_progress("
+        f'subagent_session_id="{subagent_session_id}", last_n_messages=5) '
+        f"to inspect progress, or cancel_subagent("
+        f'subagent_session_id="{subagent_session_id}") to stop it. '
+        f"Keep using the current response on other ready work first."
+    )
     tool_result = ToolResultBlock(
         tool_use_id=tool_use.tool_use_id,
         content=content,

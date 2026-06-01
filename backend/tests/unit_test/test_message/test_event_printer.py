@@ -144,13 +144,13 @@ def test_printer_keeps_plain_shell_error_payload() -> None:
     ]
 
 
-def test_printer_renders_subagent_background_launch_context() -> None:
+def test_printer_renders_subagent_launch_context() -> None:
     lines: list[str] = []
     printer = MultiAgentEventPrinter(color=False, sink=lines.append)
 
     printer.emit(
         BackgroundTaskStartedEvent(
-            task_id="bg_1",
+            task_id="subagent_1",
             tool_name="run_subagent",
             tool_input={
                 "agent_name": "explorer",
@@ -162,7 +162,7 @@ def test_printer_renders_subagent_background_launch_context() -> None:
     )
 
     assert lines == [
-        "[executor      ] [t1] >> bg_start:   run_subagent task_id=bg_1 "
+        "[executor      ] [t1] >> subagent_start: run_subagent subagent_session_id=subagent_1 "
         'agent_name="explorer" prompt="Read alpha.txt\\nReturn concise findings."'
     ]
 
@@ -172,7 +172,7 @@ def test_printer_keeps_full_background_progress_notification_text() -> None:
     printer = MultiAgentEventPrinter(color=False, sink=lines.append)
     long_text = (
         'Background task_id="bg_1" status="running" source="engine_progress"\n'
-        "Tool: run_subagent\n"
+        "Tool: shell\n"
         "Note: Inspect pydantic/networks.py to understand URL and network type implementations\n"
         "Run ID: 84a5dde276554528\n"
         "Running for 19s\n"
@@ -180,7 +180,7 @@ def test_printer_keeps_full_background_progress_notification_text() -> None:
         "Keep working on any other ready analysis or tool tasks first. "
         "Only wait when this background task is the remaining blocker.\n\n"
         'Background task_id="bg_2" status="running" source="engine_progress"\n'
-        "Tool: run_subagent\n"
+        "Tool: shell\n"
         "Note: Second task still visible at the end of the notification."
     )
 
@@ -195,7 +195,7 @@ def test_printer_keeps_full_background_progress_notification_text() -> None:
     expected = [
         "[analysis_agent] [1a0578d4c4dd7f1f14dd] "
         '[system] Background task_id="bg_1" status="running" source="engine_progress"',
-        "[analysis_agent] [1a0578d4c4dd7f1f14dd] │ Tool: run_subagent",
+        "[analysis_agent] [1a0578d4c4dd7f1f14dd] │ Tool: shell",
         "[analysis_agent] [1a0578d4c4dd7f1f14dd] │ Note: Inspect pydantic/networks.py to understand URL and network type implementations",
         "[analysis_agent] [1a0578d4c4dd7f1f14dd] │ Run ID: 84a5dde276554528",
         "[analysis_agent] [1a0578d4c4dd7f1f14dd] │ Running for 19s",
@@ -203,7 +203,7 @@ def test_printer_keeps_full_background_progress_notification_text() -> None:
         "[analysis_agent] [1a0578d4c4dd7f1f14dd] │ Keep working on any other ready analysis or tool tasks first. Only wait when this background task is the remaining blocker.",
         "[analysis_agent] [1a0578d4c4dd7f1f14dd] │ ",
         '[analysis_agent] [1a0578d4c4dd7f1f14dd] │ Background task_id="bg_2" status="running" source="engine_progress"',
-        "[analysis_agent] [1a0578d4c4dd7f1f14dd] │ Tool: run_subagent",
+        "[analysis_agent] [1a0578d4c4dd7f1f14dd] │ Tool: shell",
         "[analysis_agent] [1a0578d4c4dd7f1f14dd] │ Note: Second task still visible at the end of the notification.",
     ]
 

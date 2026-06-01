@@ -7,7 +7,11 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-from engine.background.task_supervisor import BackgroundTaskStatus
+from engine.background.task_supervisor import (
+    BackgroundTaskRecord,
+    BackgroundTaskStatus,
+    BackgroundTaskSupervisor,
+)
 from tools._framework.core.base import (
     BaseTool,
     TextToolOutput,
@@ -26,8 +30,17 @@ class CancelSubagentInput(BaseModel):
     reason: str = Field(default="")
 
 
-def _peek_messages(tracked: Any, n: int) -> str:
-    provider = getattr(tracked, "progress_provider", None)
+def _get_manager(
+    context: ToolExecutionContextService,
+) -> BackgroundTaskSupervisor | None:
+    manager = context.get("background_task_manager")
+    if isinstance(manager, BackgroundTaskSupervisor):
+        return manager
+    return None
+
+
+def _peek_messages(tracked: BackgroundTaskRecord, n: int) -> str:
+    provider = tracked.progress_provider
     if provider is None:
         return "(no progress snapshot available)"
     try:
@@ -36,21 +49,40 @@ def _peek_messages(tracked: Any, n: int) -> str:
         return f"[progress provider error: {exc}]"
 
 
-def _terminal_called(tracked: Any) -> bool:
-    result = getattr(tracked, "result", None)
-    metadata = getattr(result, "metadata", {}) if result is not None else {}
+def _terminal_called(tracked: BackgroundTaskRecord) -> bool:
+    result = tracked.result
+    metadata = result.metadata if result is not None else {}
     return bool(metadata.get("subagent_terminal_called"))
 
 
-def _subagent_status_and_result(tracked: Any, *, last_n_messages: int) -> tuple[str, str]:
-    raw_status = str(getattr(tracked, "status", ""))
+def _result_metadata(tracked: BackgroundTaskRecord) -> dict[str, Any]:
+    result = tracked.result
+    metadata = result.metadata if result is not None else {}
+    return dict(metadata or {}) if isinstance(metadata, dict) else {}
+
+
+def _subagent_status_and_result(
+    tracked: BackgroundTaskRecord,
+    *,
+    last_n_messages: int,
+) -> tuple[str, str]:
+    raw_status = str(tracked.status)
+    metadata = _result_metadata(tracked)
+    termination_reason = metadata.get("subagent_termination_reason")
+    if termination_reason:
+        return (
+            "terminated",
+            f"[terminated: {termination_reason}] {_peek_messages(tracked, last_n_messages)}",
+        )
+    if metadata.get("subagent_cancelled"):
+        return "cancelled", f"[cancelled] {_peek_messages(tracked, last_n_messages)}"
     if raw_status == BackgroundTaskStatus.RUNNING.value:
         return "running", _peek_messages(tracked, last_n_messages)
     if raw_status in {
         BackgroundTaskStatus.COMPLETED.value,
         BackgroundTaskStatus.DELIVERED.value,
     } and _terminal_called(tracked):
-        result = getattr(tracked, "result", None)
+        result = tracked.result
         return "finished", result.output if result is not None else ""
     if raw_status == BackgroundTaskStatus.CANCELLED.value:
         return "cancelled", f"[cancelled] {_peek_messages(tracked, last_n_messages)}"
@@ -73,15 +105,14 @@ class CheckSubagentProgressTool(BaseTool):
         arguments: BaseModel,
         context: ToolExecutionContextService,
     ) -> ToolResult:
-        manager = context.get("background_task_manager")
+        manager = _get_manager(context)
         if manager is None:
             return ToolResult(
-                output="ERROR: background task manager is not available.",
+                output="ERROR: subagent session manager is not available.",
                 is_error=True,
             )
         assert isinstance(arguments, CheckSubagentProgressInput)
-        getter = getattr(manager, "get_subagent_task", None)
-        tracked = getter(arguments.subagent_session_id) if callable(getter) else None
+        tracked = manager.get_subagent_task(arguments.subagent_session_id)
         if tracked is None:
             return ToolResult(
                 output=(
@@ -100,7 +131,7 @@ class CheckSubagentProgressTool(BaseTool):
             BackgroundTaskStatus.FAILED.value,
             BackgroundTaskStatus.CANCELLED.value,
         }:
-            manager.collect_completed()
+            manager.mark_subagent_delivered(arguments.subagent_session_id)
 
         payload = {
             "subagent_session_id": arguments.subagent_session_id,
@@ -127,18 +158,16 @@ class CancelSubagentTool(BaseTool):
         arguments: BaseModel,
         context: ToolExecutionContextService,
     ) -> ToolResult:
-        manager = context.get("background_task_manager")
+        manager = _get_manager(context)
         if manager is None:
             return ToolResult(
-                output="ERROR: background task manager is not available.",
+                output="ERROR: subagent session manager is not available.",
                 is_error=True,
             )
         assert isinstance(arguments, CancelSubagentInput)
-        cancel = getattr(manager, "cancel_subagent_session", None)
-        cancelled = (
-            await cancel(arguments.subagent_session_id, arguments.reason)
-            if callable(cancel)
-            else False
+        cancelled = await manager.cancel_subagent_session(
+            arguments.subagent_session_id,
+            arguments.reason,
         )
         if not cancelled:
             return ToolResult(

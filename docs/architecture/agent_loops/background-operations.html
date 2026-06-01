@@ -71,13 +71,13 @@
 <div class="edge-list">
   <div><b>Subagent launch</b><span><code>run_subagent</code> is routed to the supervisor by engine policy. The supervisor record id and the model-facing control id are both <code>subagent_session_id</code>.</span></div>
   <div><b>PTY commands</b><span>Interactive command sessions expose <code>pty_session_id</code> and typed controls instead of generic background check/wait/cancel tools.</span></div>
-  <div><b>Validation failure</b><span>Invalid background input returns a normal tool-result error and no supervisor record. Unsupported tools produce a rejection completion event and no alias.</span></div>
+  <div><b>Validation failure</b><span>Invalid deferred input returns a normal tool-result error and no supervisor record. Unsupported tools produce a rejection completion event and no alias.</span></div>
 </div>
 </section>
 
-<section id="status-progress-and-delivery" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="backend/src/engine/background/task_supervisor.py backend/src/engine/background/history.py backend/src/message/message.py backend/src/message/events.py backend/tests/unit_test/test_engine/test_background_tasks.py backend/tests/unit_test/test_engine/test_background_unit.py backend/tests/unit_test/test_engine/test_background_terminal_latch.py">
+<section id="status-progress-and-delivery" data-last-reviewed-commit="HEAD" data-evidence-paths="backend/src/engine/background/task_supervisor.py backend/src/engine/query/loop.py backend/src/engine/background/history.py backend/src/message/message.py backend/src/message/events.py backend/tests/unit_test/test_engine/test_background_tasks.py backend/tests/unit_test/test_engine/test_background_unit.py backend/tests/unit_test/test_engine/test_background_terminal_latch.py backend/tests/unit_test/test_engine/test_subagent_mock_loop.py">
 <h2>Status Progress and Delivery</h2>
-<p><code>BackgroundTaskSupervisor</code> owns the in-memory records for the current agent run. Each record stores the alias, tool name, clean input, task type, agent id, sandbox binding, status, final result, progress lines, and an optional progress provider.</p>
+<p><code>BackgroundTaskSupervisor</code> owns the in-memory records for the current agent run. Each record stores the typed id, tool name, clean input, task type, agent id, sandbox binding, status, final result, progress lines, and an optional progress provider.</p>
 <pre class="diagram" aria-label="Background status lifecycle">
 [background launch]
         |
@@ -94,7 +94,7 @@
         |                              |
         +--------------+---------------+
                        v
-[collect_completed_tasks marks delivered]
+[typed delivery path marks delivered]
                        |
                        v
 [provider history omits delivered background updates]
@@ -102,11 +102,12 @@
 <div class="edge-list">
   <div><b><code>running</code></b><span>Created at launch with the initial progress line and updated while the asyncio task is active.</span></div>
   <div><b><code>completed</code> <code>failed</code> <code>cancelled</code></b><span>Chosen by the done callback or cancel path, with the latch preserving the highest-precedence terminal outcome during races.</span></div>
-  <div><b><code>delivered</code></b><span>Set only by <code>collect_completed()</code>, which keeps terminal background output from being surfaced twice.</span></div>
+  <div><b><code>delivered</code></b><span>Set by the matching delivery path: generic legacy records use <code>collect_completed()</code>, subagents use typed completion/progress delivery, and PTY commands use typed PTY completion collection.</span></div>
 </div>
 <div class="edge-list">
   <div><b>Provider history</b><span><code>reduce_background_task_history()</code> keeps provider input compact by retaining only the latest meaningful background snapshots, preferring terminal snapshots over stale running snapshots.</span></div>
   <div><b>Race handling</b><span>If a natural completion and cancellation race, the latch keeps the highest-precedence terminal outcome so a real completed result is not overwritten by a late cancel acknowledgement.</span></div>
+  <div><b>Parent exit</b><span>When a parent run submits a terminal while a subagent is still running, the loop calls <code>terminate_for_parent_exit(reason=&quot;non_cancellation_tool_request&quot;)</code>; the subagent is reported as <code>terminated</code> with a typed notification and background audit cancel reason.</span></div>
 </div>
 </section>
 
@@ -154,11 +155,11 @@
 </div>
 </section>
 
-<section id="tests-and-failure-modes" data-last-reviewed-commit="HEAD" data-evidence-paths="backend/src/engine/background/dispatch.py backend/src/engine/background/task_supervisor.py backend/src/tools/subagent/control.py backend/src/tools/sandbox/exec_command/exec_command.py backend/src/sandbox/daemon/rpc/in_flight.py backend/src/sandbox/daemon/builtin_operations.py backend/tests/unit_test/test_engine/test_background_tasks.py backend/tests/unit_test/test_engine/test_background_unit.py backend/tests/unit_test/test_engine/test_background_terminal_latch.py backend/tests/unit_test/test_engine/test_background_task_emitters.py backend/tests/unit_test/test_tools/test_tool_execution.py backend/tests/unit_test/test_sandbox/test_daemon/test_in_flight_registry.py">
+<section id="tests-and-failure-modes" data-last-reviewed-commit="HEAD" data-evidence-paths="backend/src/engine/background/dispatch.py backend/src/engine/background/task_supervisor.py backend/src/tools/subagent/control.py backend/src/tools/sandbox/exec_command/exec_command.py backend/src/sandbox/daemon/rpc/in_flight.py backend/src/sandbox/daemon/builtin_operations.py backend/tests/unit_test/test_engine/test_background_tasks.py backend/tests/unit_test/test_engine/test_background_unit.py backend/tests/unit_test/test_engine/test_background_terminal_latch.py backend/tests/unit_test/test_engine/test_background_task_emitters.py backend/tests/unit_test/test_engine/test_subagent_mock_loop.py backend/tests/unit_test/test_tools/test_tool_execution.py backend/tests/unit_test/test_sandbox/test_daemon/test_in_flight_registry.py">
 <h2>Tests and Failure Modes</h2>
 <div class="evidence-grid">
   <div><strong>Launch and dispatch</strong><p><code>test_tool_execution.py</code> covers background launch input cleaning, hook execution, failure propagation, and conversation-message exposure to background prehooks.</p></div>
-  <div><strong>Supervisor lifecycle</strong><p><code>test_background_tasks.py</code>, <code>test_background_unit.py</code>, and <code>test_background_terminal_latch.py</code> cover typed id generation, progress buffering, typed control output, sandbox wire cancel, <code>cancel_by_agent()</code>, and terminal status precedence.</p></div>
+  <div><strong>Supervisor lifecycle</strong><p><code>test_background_tasks.py</code>, <code>test_background_unit.py</code>, <code>test_background_terminal_latch.py</code>, and <code>test_subagent_mock_loop.py</code> cover typed id generation, progress buffering, typed control output, sandbox wire cancel, <code>cancel_by_agent()</code>, terminal status precedence, and parent terminal abandonment of active subagents.</p></div>
   <div><strong>Audit visibility</strong><p><code>test_background_task_emitters.py</code> covers started, completed, failed, cancelled, delivered events and verifies the emitter does not introduce a new thread per launch.</p></div>
   <div><strong>Daemon control</strong><p>In-flight registry tests cover invocation cancel, heartbeat refresh, background-only TTL reaping, and daemon handler routing for <code>api.v1.cancel</code>, <code>api.v1.heartbeat</code>, and <code>api.v1.inflight_count</code>.</p></div>
   <div><strong>Refresh triggers</strong><p>Refresh this page when background schema policy, typed ids, status precedence, control output JSON, sandbox invocation ids, heartbeat cadence, TTL behavior, or daemon audit payloads change.</p></div>

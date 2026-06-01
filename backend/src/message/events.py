@@ -113,7 +113,7 @@ class ToolExecutionCancelledEvent:
 
 @dataclass(frozen=True)
 class BackgroundTaskStartedEvent:
-    """A tool has been launched as a background task."""
+    """A supervised async tool/session has been launched."""
 
     task_id: str
     tool_name: str

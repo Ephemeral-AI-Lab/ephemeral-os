@@ -252,11 +252,11 @@
             </p>
           </div>
           <div class="callout ok">
-            <h3>Background tools</h3>
+            <h3>Async sessions</h3>
             <p>
-              <code>run_subagent</code> is always background. <code>shell</code> is optional background.
-              Completion is delivered by <code>check_background_task_result</code> or
-              <code>wait_background_tasks</code> in current code.
+              <code>run_subagent</code> uses <code>subagent_session_id</code> with typed
+              progress/cancel controls. PTY command sessions use <code>pty_session_id</code>.
+              Generic background check/wait/cancel tools are retired from the model surface.
             </p>
           </div>
           <div class="callout ok">

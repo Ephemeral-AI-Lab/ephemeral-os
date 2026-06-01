@@ -1,15 +1,15 @@
-"""run_subagent — spawn a focused worker subagent as a background task.
+"""run_subagent — spawn a focused worker subagent session.
 
-Hard-coded engine background dispatch lets the parent keep working while the
-subagent runs. Peek progress with
+Hard-coded engine supervision lets the parent keep working while the subagent
+runs. Peek progress with
 ``check_subagent_progress(subagent_session_id)``; cancel with
 ``cancel_subagent(subagent_session_id)``.
 
 The subagent must terminate via a registered terminal tool; whatever
 ``ToolResult`` the engine stamps with ``is_terminal=True`` becomes this
-tool's output. If the subagent exits without calling a terminal tool, the bg
-task is marked failed and ``check_subagent_progress`` falls back to the message
-peek.
+tool's output. If the subagent exits without calling a terminal tool, the
+session is marked failed and ``check_subagent_progress`` falls back to the
+message peek.
 
 Subagents cannot spawn further subagents — recursion is rejected at
 validation time so the focused-worker contract holds.
@@ -18,13 +18,11 @@ validation time so the focused-worker contract holds.
 from __future__ import annotations
 
 import json
-import logging
-from dataclasses import dataclass
 from typing import Any
 
 from pydantic import BaseModel, Field
 
-from agents import AgentType
+from agents import AgentDefinition, AgentType
 from sandbox.shared.models import Intent
 from engine.background.task_supervisor import SUBAGENT_TASK_TYPE
 from message.message import (
@@ -38,15 +36,8 @@ from tools._framework.core.base import ExecutionMetadata, TextToolOutput, ToolEx
 from tools._framework.core.decorator import tool
 from .prompt import get_run_subagent_description
 
-logger = logging.getLogger(__name__)
-
 
 PEEK_MESSAGE_MAX = 10
-
-
-@dataclass
-class _ValidatedRunSubagentRequest:
-    sub_def: Any
 
 
 def _compact_text(s: str) -> str:
@@ -115,7 +106,7 @@ def _validate_run_subagent_request(
     agent_name: str,
     prompt: str | None,
     context: ToolExecutionContextService,
-) -> ToolResult | _ValidatedRunSubagentRequest:
+) -> ToolResult | AgentDefinition:
     from agents import get_definition
 
     parent_cfg = context.runtime_config
@@ -157,13 +148,13 @@ def _validate_run_subagent_request(
             ),
             is_error=True,
         )
-    return _ValidatedRunSubagentRequest(sub_def=sub_def)
+    return sub_def
 
 
 @tool(
     name="run_subagent",
     description=get_run_subagent_description(),
-    short_description="Spawn a subagent in the background.",
+    short_description="Spawn a subagent worker.",
     input_model=RunSubagentInput,
     output_model=TextToolOutput,
     intent=Intent.WRITE_ALLOWED,
@@ -175,7 +166,7 @@ async def run_subagent(
     *,
     context: ToolExecutionContextService,
 ) -> ToolResult:
-    """Spawn a named subagent and rejoin via the background-task lifecycle."""
+    """Spawn a named subagent and rejoin via the subagent-session lifecycle."""
     from engine.api import run_ephemeral_agent
 
     validation = _validate_run_subagent_request(
@@ -185,12 +176,12 @@ async def run_subagent(
     )
     if isinstance(validation, ToolResult):
         return validation
-    sub_def = validation.sub_def
+    sub_def = validation
 
     parent_cfg = context.runtime_config
     sandbox_id = context.sandbox_id or None
-    bg_manager = context.background_task_manager
-    bg_task_id = context.background_task_id
+    manager = context.background_task_manager
+    subagent_session_id = context.background_task_id
 
     sub_meta = ExecutionMetadata()
     sub_meta["agent_type"] = AgentType.SUBAGENT.value
@@ -200,15 +191,15 @@ async def run_subagent(
         # Register the live-peek provider so check_subagent_progress
         # can render the inner agent's last N messages while it's running
         # (and after, if the terminal tool was never called).
-        if bg_manager is None or not isinstance(bg_task_id, str):
+        if manager is None or not isinstance(subagent_session_id, str):
             return
         # Snapshot `agent.messages` at progress-provider invocation time so
         # the iteration inside `format_last_n_messages` cannot observe a
         # partially constructed tail if the subagent appends concurrently.
         # asyncio cooperative scheduling makes this safe today, but the
         # copy makes the contract explicit and robust to future preemption.
-        bg_manager.set_progress_provider(
-            bg_task_id,
+        manager.set_progress_provider(
+            subagent_session_id,
             lambda last_n: format_last_n_messages(list(agent.messages), last_n),
         )
 

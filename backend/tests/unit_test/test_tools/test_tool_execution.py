@@ -1138,17 +1138,17 @@ async def test_background_tool_runs_hooks_and_reports_failure() -> None:
     assert bg_event is not None
     assert reject_event is None
 
-    completed = []
     for _ in range(20):
         await asyncio.sleep(0.01)
-        completed = manager.collect_completed()
-        if completed:
+        tracked = manager.get_subagent_task("subagent_1")
+        if tracked is not None and tracked.result is not None:
             break
 
-    assert completed
-    assert completed[0].result is not None
-    assert completed[0].result.is_error is True
-    payload = json.loads(completed[0].result.output)
+    tracked = manager.get_subagent_task("subagent_1")
+    assert tracked is not None
+    assert tracked.result is not None
+    assert tracked.result.is_error is True
+    payload = json.loads(tracked.result.output)
     assert payload["hookSpecificOutput"]["permissionDecisionReason"] == (
         "prehook denied for test"
     )
@@ -1307,15 +1307,15 @@ async def test_background_dispatch_exposes_conversation_messages_to_prehooks() -
     assert tool_results[0].is_error is False
     assert len(events) == 1
 
-    completed = []
     for _ in range(20):
         await asyncio.sleep(0.01)
-        completed = manager.collect_completed()
-        if completed:
+        tracked = manager.get_subagent_task("subagent_1")
+        if tracked is not None and tracked.result is not None:
             break
 
-    assert completed
-    assert completed[0].result is not None
-    assert completed[0].result.is_error is False
-    assert completed[0].result.output == "seen:2"
+    tracked = manager.get_subagent_task("subagent_1")
+    assert tracked is not None
+    assert tracked.result is not None
+    assert tracked.result.is_error is False
+    assert tracked.result.output == "seen:2"
     assert tool.seen == ["seen:2"]

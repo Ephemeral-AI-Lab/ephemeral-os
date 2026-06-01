@@ -28,13 +28,23 @@ Current state:
   `subagent_session_id`, `check_subagent_progress` and `cancel_subagent` accept
   `subagent_session_id`, and subagent supervisor records no longer use a hidden
   `bg_N` alias.
+- Subagent mock-loop evidence is closed for natural completion, no-terminal
+  failure, explicit cancel, and parent terminal submission while a subagent is
+  active. Parent terminal exit now terminates active subagents as
+  `non_cancellation_tool_request` and emits typed notification/audit evidence.
 - Generic background tool implementation classes still exist only as direct
   legacy probe/test code. Do not re-expose them to models or recreate
   `make_background_tools()`.
+- Rust `eos-daemon` now registers the public isolated-workspace lifecycle/status
+  op names (`api.isolated_workspace.enter`, `exit`, `status`, `list_open`,
+  `test_reset`) and returns structured disabled/empty-list payloads instead of
+  `unknown_op`. The actual Rust isolated session implementation and command/PTY
+  routing are still open.
 
 Last focused verification:
 
-- `193 passed` for the engine/background/subagent/tool focused unit slice:
+- `198 passed` for the engine/background/subagent/tool focused unit slice:
+  `backend/tests/unit_test/test_engine/test_subagent_mock_loop.py`,
   `backend/tests/unit_test/test_engine/test_background_tasks.py`,
   `test_background_task_emitters.py`, `test_background_unit.py`,
   `test_provider_history.py`, `test_spawn_agent.py`,
@@ -46,13 +56,17 @@ Last focused verification:
   passed.
 - `ruff check` passed on the touched Python files.
 - `git diff --check` passed.
+- Rust focused dispatcher check passed:
+  `cargo test -p eos-daemon isolated_workspace_ops --test phase2_read_paths`
+  (`2 passed`; existing warnings are from pre-existing unfinished isolated/ns
+  holder skeleton code).
 - A broader mock contract spike was attempted but did not reach the relevant
   assertions because the live SWE-EVO fixture failed setup on `/eos`
   writability in the existing container. Treat that as environment/setup debt,
   not evidence against the typed subagent/background cleanup.
 
-Next work should start with subagent mock-loop evidence, then Rust
-isolated-workspace command/PTY integration. Do not reintroduce
+Next work should start with Rust isolated-workspace command/PTY integration. Do
+not reintroduce
 `shell(background=true)`, `BaseTool.background`, model-facing generic
 background controls, or `bg_N` as a subagent reference.
 
@@ -81,14 +95,17 @@ The PTY command implementation is accepted for the Docker shared-workspace path:
 
 ### 1. Rust Isolated-Workspace Command/PTY Integration
 
-Rust daemon isolated-workspace public lifecycle ops are still not registered in
-the Rust dispatcher, so Rust `exec_command` and PTY behavior cannot yet be
-compared against isolated-workspace mode.
+Rust daemon isolated-workspace public lifecycle op names are now registered in
+the Rust dispatcher with structured disabled/empty-list payloads. Rust
+`exec_command` and PTY behavior still cannot yet be compared against
+isolated-workspace mode because the Rust isolated session and routing logic are
+not implemented.
 
 Required work:
 
-- register the Rust equivalents of `api.isolated_workspace.enter`,
-  `api.isolated_workspace.exit`, and related lifecycle/status ops;
+- replace the Rust disabled isolated-workspace lifecycle/status stubs with real
+  session-backed `api.isolated_workspace.enter`, `api.isolated_workspace.exit`,
+  and related lifecycle/status ops;
 - route `exec_command` through the active isolated workspace handle for the
   calling `agent_id` when isolated mode is active;
 - keep finite command writes private to the isolated workspace and unpublished
@@ -117,9 +134,8 @@ background task tools. That surface has now been replaced with typed
 `subagent_session_id` progress/cancel controls; only deeper parent-loop
 evidence remains.
 
-Status: launch/progress/cancel wiring landed on 2026-06-01 with focused unit
-coverage. The remaining work here is the deeper mock-loop evidence for parent
-loop interactions.
+Status: closed on 2026-06-01 with focused unit coverage and mocked query-loop
+evidence for parent-loop interactions.
 
 Completed work:
 
@@ -136,9 +152,6 @@ Completed work:
   subagent launch and PTY session surfaces;
 - use `subagent_session_id` as the only subagent supervisor/model reference
   rather than keeping a hidden `bg_N` alias;
-
-Remaining work:
-
 - make subagent natural completion, no-terminal failure, explicit cancellation,
   and parent terminal-abandon reasons typed and visible in deeper mock-loop
   notifications/audit evidence.
@@ -148,7 +161,7 @@ Minimum evidence:
 - ✅ unit tests for launch/progress/cancel identifier separation;
 - ✅ provider-history compaction tests that preserve the typed subagent result
   surface;
-- mock-loop tests for natural completion, no-terminal failure, explicit cancel,
+- ✅ mock-loop tests for natural completion, no-terminal failure, explicit cancel,
   and parent terminal submission while a subagent is active.
 
 ### 3. CP-4t Formal Closeout
@@ -282,12 +295,10 @@ Minimum evidence:
 
 ## Suggested Order
 
-1. Finish subagent mock-loop evidence for natural completion, no-terminal
-   failure, explicit cancel, and parent terminal submission while a subagent is
-   active.
-2. Implement Rust isolated-workspace lifecycle ops and command/PTY routing.
-3. Run isolated-workspace Docker live coverage for command and PTY semantics.
-4. Run CP-4 mixed non-plugin load with attached AV-4 audit pull.
-5. Run CP-5 cache-lock churn.
-6. Run AV-7 forward/back parity.
-7. Run the non-plugin Section 7 differential/property contention suite.
+1. Implement the Rust isolated-workspace session behind the registered lifecycle
+   ops, then wire command/PTY routing through it.
+2. Run isolated-workspace Docker live coverage for command and PTY semantics.
+3. Run CP-4 mixed non-plugin load with attached AV-4 audit pull.
+4. Run CP-5 cache-lock churn.
+5. Run AV-7 forward/back parity.
+6. Run the non-plugin Section 7 differential/property contention suite.

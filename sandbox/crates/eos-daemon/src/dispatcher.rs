@@ -90,9 +90,9 @@ impl OpTable {
     // PORT backend/src/sandbox/daemon/rpc/dispatcher.py:404-449 — _register_builtin_operations
     pub fn with_builtins() -> Self {
         let mut table = Self::default();
-        // The real registration also folds in WORKSPACE_TOOL_OPS, the
-        // isolated-workspace ops, plugin ops, and the layer-stack control
-        // surface; this skeleton registers the daemon-owned ops the task names.
+        // The real registration also folds in plugin ops and the full
+        // isolated-workspace implementation; this table pins public daemon op
+        // names as they are ported so callers never see unknown_op drift.
         table.register("api.runtime.ready", op_runtime_ready);
         table.register("api.v1.cancel", op_cancel);
         table.register("api.v1.heartbeat", op_heartbeat);
@@ -115,6 +115,20 @@ impl OpTable {
         table.register("api.grep", op_grep);
         table.register("api.v1.grep", op_grep);
         table.register("api.v1.shell", op_shell);
+        table.register("api.isolated_workspace.enter", op_isolated_workspace_enter);
+        table.register("api.isolated_workspace.exit", op_isolated_workspace_exit);
+        table.register(
+            "api.isolated_workspace.status",
+            op_isolated_workspace_status,
+        );
+        table.register(
+            "api.isolated_workspace.list_open",
+            op_isolated_workspace_list_open,
+        );
+        table.register(
+            "api.isolated_workspace.test_reset",
+            op_isolated_workspace_test_reset,
+        );
         table.register("api.v1.exec_command", crate::command::op_exec_command);
         table.register("api.v1.pty.write_stdin", crate::command::op_pty_write_stdin);
         table.register("api.v1.pty.progress", crate::command::op_pty_progress);
@@ -268,6 +282,100 @@ fn op_inflight_count(args: &Value, context: DispatchContext<'_>) -> Result<Value
         .in_flight
         .map_or(0, |registry| registry.count_by_agent(&agent_id));
     Ok(json!({"success": true, "agent_id": agent_id, "count": count}))
+}
+
+fn isolated_error(kind: &str, message: impl Into<String>, details: Value) -> Value {
+    json!({
+        "success": false,
+        "error": {
+            "kind": kind,
+            "message": message.into(),
+            "details": if details.is_null() { json!({}) } else { details },
+        },
+    })
+}
+
+fn require_isolated_arg(args: &Value, key: &str) -> Result<String, Value> {
+    let value = args
+        .get(key)
+        .and_then(Value::as_str)
+        .unwrap_or_default()
+        .trim()
+        .to_owned();
+    if value.is_empty() {
+        return Err(isolated_error(
+            "invalid_argument",
+            format!("{key} is required"),
+            json!({"key": key}),
+        ));
+    }
+    Ok(value)
+}
+
+fn isolated_feature_disabled() -> Value {
+    isolated_error(
+        "feature_disabled",
+        "rust isolated workspace lifecycle is not initialized",
+        json!({}),
+    )
+}
+
+fn op_isolated_workspace_enter(
+    args: &Value,
+    _context: DispatchContext<'_>,
+) -> Result<Value, DaemonError> {
+    if let Err(error) = require_isolated_arg(args, "agent_id") {
+        return Ok(error);
+    }
+    if let Err(error) = require_isolated_arg(args, "layer_stack_root") {
+        return Ok(error);
+    }
+    Ok(isolated_feature_disabled())
+}
+
+fn op_isolated_workspace_exit(
+    args: &Value,
+    _context: DispatchContext<'_>,
+) -> Result<Value, DaemonError> {
+    if let Err(error) = require_isolated_arg(args, "agent_id") {
+        return Ok(error);
+    }
+    Ok(isolated_feature_disabled())
+}
+
+fn op_isolated_workspace_status(
+    args: &Value,
+    _context: DispatchContext<'_>,
+) -> Result<Value, DaemonError> {
+    if let Err(error) = require_isolated_arg(args, "agent_id") {
+        return Ok(error);
+    }
+    Ok(isolated_feature_disabled())
+}
+
+fn op_isolated_workspace_list_open(
+    _args: &Value,
+    _context: DispatchContext<'_>,
+) -> Result<Value, DaemonError> {
+    Ok(json!({"success": true, "open_agent_ids": []}))
+}
+
+fn op_isolated_workspace_test_reset(
+    _args: &Value,
+    _context: DispatchContext<'_>,
+) -> Result<Value, DaemonError> {
+    let enabled = std::env::var("EOS_ISOLATED_WORKSPACE_TEST_HARNESS")
+        .unwrap_or_default()
+        .trim()
+        .eq_ignore_ascii_case("true");
+    if !enabled {
+        return Ok(isolated_error(
+            "forbidden",
+            "api.isolated_workspace.test_reset requires EOS_ISOLATED_WORKSPACE_TEST_HARNESS=true",
+            json!({}),
+        ));
+    }
+    Ok(json!({"success": true, "reset": true}))
 }
 
 /// `api.layer_metrics` — summarize layer-stack storage + lease state for a root.

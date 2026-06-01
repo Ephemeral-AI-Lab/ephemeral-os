@@ -302,6 +302,11 @@ async def _run_query_loop(
 
             if context.terminal_result is not None:
                 context.exit_reason = QueryExitReason.TOOL_STOP
+                if background_tasks is not None:
+                    for text in await background_tasks.terminate_for_parent_exit():
+                        await notification_service.notify_system(text)
+                    for event in flush_system_notification_events(notification_service):
+                        yield event, None
                 break
             if not final_message.tool_uses:
                 context.text_only_no_terminal_turns += 1

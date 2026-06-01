@@ -135,7 +135,7 @@ def _json_log_value(value: object) -> str:
 
 
 def format_background_start_detail(tool_name: str, tool_input: dict[str, Any]) -> str:
-    """Return compact launch context for background-start log lines."""
+    """Return compact launch context for async-start log lines."""
     if tool_name != "run_subagent":
         return ""
 
@@ -146,6 +146,19 @@ def format_background_start_detail(tool_name: str, tool_input: dict[str, Any]) -
     if "prompt" in tool_input:
         parts.append(f"prompt={_json_log_value(tool_input.get('prompt'))}")
     return f" {' '.join(parts)}" if parts else ""
+
+
+def format_background_start_parts(
+    event: BackgroundTaskStartedEvent,
+) -> tuple[str, str]:
+    """Return the printable label/body for a supervised async start event."""
+    detail = format_background_start_detail(event.tool_name, event.tool_input)
+    if event.tool_name == "run_subagent":
+        return (
+            ">> subagent_start:",
+            f"{event.tool_name} subagent_session_id={event.task_id}{detail}",
+        )
+    return ">> bg_start:", f"  {event.tool_name} task_id={event.task_id}{detail}"
 
 
 @dataclass
@@ -237,11 +250,11 @@ class MultiAgentEventPrinter:
                 f"{self._c('red', 'x  cancelled:')}  {event.tool_name} {_full_text(event.reason)}",
             )
         elif isinstance(event, BackgroundTaskStartedEvent):
-            detail = format_background_start_detail(event.tool_name, event.tool_input)
+            label, body = format_background_start_parts(event)
             self._line(
                 agent,
                 run_id,
-                f"{self._c('blue', '>> bg_start:')}   {event.tool_name} task_id={event.task_id}{detail}",
+                f"{self._c('blue', label)} {body}",
             )
         elif isinstance(event, AssistantMessageCompleteEvent):
             # Print full thinking/text blocks once per completed message.

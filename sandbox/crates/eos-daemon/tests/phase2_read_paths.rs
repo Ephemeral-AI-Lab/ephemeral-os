@@ -205,6 +205,63 @@ fn unknown_op_uses_structured_contract() {
     );
 }
 
+#[test]
+fn isolated_workspace_ops_are_registered_with_structured_disabled_payloads() {
+    let table = OpTable::with_builtins();
+
+    let enter = table.dispatch(&Request {
+        op: "api.isolated_workspace.enter".to_owned(),
+        invocation_id: "iws-enter".to_owned(),
+        args: json!({
+            "agent_id": "agent-a",
+            "layer_stack_root": "/tmp/layer-stack",
+        }),
+    });
+    assert_eq!(enter["success"], Value::Bool(false));
+    assert_eq!(
+        enter["error"]["kind"],
+        Value::String("feature_disabled".to_owned())
+    );
+
+    let status = table.dispatch(&Request {
+        op: "api.isolated_workspace.status".to_owned(),
+        invocation_id: "iws-status".to_owned(),
+        args: json!({"agent_id": "agent-a"}),
+    });
+    assert_eq!(status["success"], Value::Bool(false));
+    assert_eq!(
+        status["error"]["kind"],
+        Value::String("feature_disabled".to_owned())
+    );
+
+    let open = table.dispatch(&Request {
+        op: "api.isolated_workspace.list_open".to_owned(),
+        invocation_id: "iws-list".to_owned(),
+        args: json!({}),
+    });
+    assert_eq!(open["success"], Value::Bool(true));
+    assert_eq!(open["open_agent_ids"], json!([]));
+}
+
+#[test]
+fn isolated_workspace_ops_validate_required_arguments() {
+    let response = OpTable::with_builtins().dispatch(&Request {
+        op: "api.isolated_workspace.enter".to_owned(),
+        invocation_id: "iws-enter-missing-agent".to_owned(),
+        args: json!({"layer_stack_root": "/tmp/layer-stack"}),
+    });
+
+    assert_eq!(response["success"], Value::Bool(false));
+    assert_eq!(
+        response["error"]["kind"],
+        Value::String("invalid_argument".to_owned())
+    );
+    assert_eq!(
+        response["error"]["details"]["key"],
+        Value::String("agent_id".to_owned())
+    );
+}
+
 #[tokio::test]
 async fn control_ops_use_inflight_registry() {
     let table = OpTable::with_builtins();

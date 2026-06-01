@@ -35,7 +35,7 @@ def test_eval_agent_verbose_logging_keeps_full_background_start_and_system_messa
                     agent_run_id="wid-1",
                 ),
                 BackgroundTaskStartedEvent(
-                    task_id="bg_1",
+                    task_id="subagent_1",
                     tool_name="run_subagent",
                     tool_input={
                         "agent_name": "explorer",
@@ -68,7 +68,10 @@ def test_eval_agent_verbose_logging_keeps_full_background_start_and_system_messa
 
     out = capsys.readouterr().out
     assert f"    [system] {long_system}" in out
-    assert '    >> bg_start:   run_subagent task_id=bg_1 agent_name="explorer"' in out
+    assert (
+        '    >> subagent_start: run_subagent subagent_session_id=subagent_1 '
+        'agent_name="explorer"'
+    ) in out
     assert long_background_prompt in out
     assert "..." not in next(
         line for line in out.splitlines() if line.startswith("    [system] ")
