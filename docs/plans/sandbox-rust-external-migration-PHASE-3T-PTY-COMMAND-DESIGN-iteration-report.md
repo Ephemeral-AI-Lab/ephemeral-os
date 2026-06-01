@@ -428,7 +428,8 @@ the process group.
   pre-existing adjacent-crate warnings.
 - `cargo test -p eos-runner --lib`: passed, 3 tests.
 - `.venv/bin/python -m pytest backend/tests/unit_test/test_engine/test_background_task_emitters.py backend/tests/unit_test/test_engine/test_background_tasks.py backend/tests/unit_test/test_sandbox/test_api/test_command.py -q`:
-  passed, 33 tests.
+  passed, 34 tests, including the generic `pty_session_not_found` path that
+  must not suppress a later completion notification.
 - `.venv/bin/python -m ruff check` over the touched background/PTY tool files
   and tests: passed.
 - Focused live Docker PTY/load gate:

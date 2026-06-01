@@ -357,6 +357,48 @@ async def test_tool_reported_pty_result_suppresses_completion_notification(
 
 
 @pytest.mark.asyncio
+async def test_generic_pty_not_found_does_not_suppress_completion_notification() -> None:
+    from sandbox.shared.models import CommandOutput, ExecCommandResult
+    from tools._framework.core.context import ToolExecutionContextService
+    from tools.sandbox._lib.pty_command_tool import mark_pty_result_reported_by_tool
+
+    sup = BackgroundTaskSupervisor()
+    sup.register_pty_command(
+        pty_session_id="pty_missing",
+        sandbox_id="sb-1",
+        agent_id="agent-1",
+        command="printf done",
+    )
+
+    mark_pty_result_reported_by_tool(
+        ToolExecutionContextService(
+            cwd=".",
+            services={"background_task_manager": sup},
+        ),
+        ExecCommandResult(
+            success=False,
+            status="error",
+            exit_code=None,
+            output=CommandOutput(stderr="pty_session_not_found"),
+        ),
+        pty_session_id="pty_missing",
+    )
+
+    assert sup.has_pending()
+    assert sup.count_by_agent("agent-1") == 1
+
+    sup.mark_pty_result_reported_by_tool(
+        pty_session_id="pty_missing",
+        result={
+            "status": "cancelled",
+            "exit_code": None,
+            "output": {"stdout": "", "stderr": ""},
+        },
+    )
+    await asyncio.sleep(0)
+
+
+@pytest.mark.asyncio
 async def test_query_loop_helper_drains_pty_completion_into_notifications(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

@@ -95,25 +95,29 @@ Minimum evidence:
 
 ### 3. CP-4t Formal Closeout
 
-The Docker PTY report has the core CP-4t evidence, but the phase tracker still
-needs an explicit closeout pass that records CP-4t as closed under the final
-tool names and `/eos` runtime paths.
+Status: closed in the phase tracker on 2026-06-01 for Docker shared-workspace
+command/PTY paths under the final tool names and `/eos` runtime paths.
 
-Required work:
+Completed work:
 
-- record the final PTY report as the CP-4t artifact of record;
-- confirm the accepted samples all go through LayerStack lease, overlay mount,
+- recorded the final PTY report as the CP-4t artifact of record;
+- confirmed the accepted samples all go through LayerStack lease, overlay mount,
   command execution, capture, OCC publish/discard, cleanup, and lease release;
-- confirm no model-facing raw-argv performance gate remains;
-- refresh the progress tracker so Phase 3T no longer reads as if the PTY command
+- confirmed no model-facing raw-argv performance gate remains;
+- refreshed the progress tracker so Phase 3T no longer reads as if the PTY command
   work is still next.
 
-Minimum evidence:
+Closeout evidence:
 
 - `bench/phase3t-pty-command-docker-20260601-current-eos-paths-post-notify.json`;
+- `bench/phase3t-pty-command-docker-20260601-current-eos-paths-timeout-cancel-fix.json`;
+- `bench/phase3t-pty-command-docker-20260601-review-cleanup.json`;
 - full tiered Docker summary
   `.omc/results/progressive-test-summary-phase3t-rust-scratch-full-final-20260601.jsonl`;
-- final progress-doc update.
+- final `/eos` timeout/cancel tiered Docker summary
+  `.omc/results/progressive-test-summary-phase3t-current-eos-paths-timeout-cancel-fix-tier0-6-20260601.jsonl`;
+- final progress-doc update in
+  `docs/plans/sandbox-rust-external-migration-PROGRESS.md`.
 
 ### 4. CP-4 Mixed Throughput/Contention Without Plugin Interleave
 
@@ -220,12 +224,11 @@ Minimum evidence:
 
 ## Suggested Order
 
-1. Close CP-4t bookkeeping and refresh the progress tracker.
-2. Finish the typed subagent surface, since it is independent of Rust
+1. Finish the typed subagent surface, since it is independent of Rust
    isolated-workspace work.
-3. Implement Rust isolated-workspace lifecycle ops and command/PTY routing.
-4. Run isolated-workspace Docker live coverage for command and PTY semantics.
-5. Run CP-4 mixed non-plugin load with attached AV-4 audit pull.
-6. Run CP-5 cache-lock churn.
-7. Run AV-7 forward/back parity.
-8. Run the non-plugin Section 7 differential/property contention suite.
+2. Implement Rust isolated-workspace lifecycle ops and command/PTY routing.
+3. Run isolated-workspace Docker live coverage for command and PTY semantics.
+4. Run CP-4 mixed non-plugin load with attached AV-4 audit pull.
+5. Run CP-5 cache-lock churn.
+6. Run AV-7 forward/back parity.
+7. Run the non-plugin Section 7 differential/property contention suite.
