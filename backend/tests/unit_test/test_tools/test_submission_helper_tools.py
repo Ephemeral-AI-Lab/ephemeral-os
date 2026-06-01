@@ -42,7 +42,7 @@ def _helper_context(
     metadata = ExecutionMetadata(
         runtime_config=object(),
         task_id="t-parent",
-        request_id="run1",
+        request_id="req1",
         workflow_id="req-A",
         agent_name=agent_name,
     )

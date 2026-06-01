@@ -118,6 +118,8 @@ impl OpTable {
         table.register_builtin("api.grep", op_grep);
         table.register_builtin("api.v1.grep", op_grep);
         table.register_builtin("api.v1.shell", op_shell);
+        table.register_builtin("api.plugin.ensure", crate::plugin::op_ensure);
+        table.register_builtin("api.plugin.status", crate::plugin::op_status);
         table.register_builtin("api.isolated_workspace.enter", crate::isolated::op_enter);
         table.register_builtin("api.isolated_workspace.exit", crate::isolated::op_exit);
         table.register_builtin("api.isolated_workspace.status", crate::isolated::op_status);
@@ -188,6 +190,19 @@ impl OpTable {
             );
         }
         let Some(handler) = self.handlers.get(&request.op) else {
+            if let Some(response) =
+                crate::plugin::dispatch_registered_op(&request.op, &request.args, context)
+            {
+                let response = match response {
+                    Ok(mut response) => {
+                        attach_runtime_timings(&mut response);
+                        response
+                    }
+                    Err(err) => error_envelope(err.wire_kind(), &err.to_string(), json!({})),
+                };
+                emit_dispatch_audit(request, &response, dispatch_start.elapsed().as_secs_f64());
+                return response;
+            }
             return error_envelope(
                 ErrorKind::UnknownOp,
                 &format!("unknown op: {}", request.op),
@@ -328,8 +343,8 @@ fn op_layer_metrics(args: &Value, _context: DispatchContext<'_>) -> Result<Value
         "staging_dirs": count_dirs(&root.join("staging"))?,
         "storage_bytes": storage_bytes(&root)?,
         "workspace_bound": binding.is_some(),
-        "workspace_root": binding.as_ref().map(|binding| binding.workspace_root.as_str()).unwrap_or(""),
-        "base_root_hash": binding.as_ref().map(|binding| binding.base_root_hash.as_str()).unwrap_or(""),
+        "workspace_root": binding.as_ref().map_or("", |binding| binding.workspace_root.as_str()),
+        "base_root_hash": binding.as_ref().map_or("", |binding| binding.base_root_hash.as_str()),
         "occ_runtime_service_cache": occ_service_cache_snapshot(),
     }))
 }
@@ -410,10 +425,7 @@ fn op_audit_snapshot(args: &Value, _context: DispatchContext<'_>) -> Result<Valu
 // PORT backend/src/sandbox/daemon/rpc/dispatcher.py:430-438 — _audit_reset_floor_handler (env gate -> forbidden)
 fn op_audit_reset_floor(args: &Value, _context: DispatchContext<'_>) -> Result<Value, DaemonError> {
     let _ = args;
-    if std::env::var(AUDIT_ALLOW_FLOOR_RESET_ENV)
-        .map(|raw| raw == "true")
-        .unwrap_or(false)
-    {
+    if std::env::var(AUDIT_ALLOW_FLOOR_RESET_ENV).is_ok_and(|raw| raw == "true") {
         Ok(json!({"success": true, "reset": true}))
     } else {
         Err(DaemonError::Forbidden(
@@ -657,7 +669,7 @@ pub(crate) fn run_shell_overlay(args: &Value, total_start: Instant) -> Result<Va
     let lease = stack.acquire_snapshot(&format!("overlay:{agent_id}:{invocation_id}"))?;
     let run_result: Result<ShellRunOutcome, DaemonError> = (|| {
         let run_root = overlay_writable_root()
-            .map_err(|err| overlay_daemon_error("overlay writable root", err))?
+            .map_err(|err| overlay_daemon_error("overlay writable root", &err))?
             .join("runtime")
             .join("sandbox-overlay")
             .join(format!(
@@ -666,7 +678,7 @@ pub(crate) fn run_shell_overlay(args: &Value, total_start: Instant) -> Result<Va
                 sanitize_path_component(&invocation_id)
             ));
         let dirs = allocate_overlay_writable_dirs(&run_root)
-            .map_err(|err| overlay_daemon_error("allocate overlay dirs", err))?;
+            .map_err(|err| overlay_daemon_error("allocate overlay dirs", &err))?;
         let _cleanup = RunDirCleanup(dirs.run_dir.clone());
         let request = RunRequest {
             mode: RunMode::FreshNs,
@@ -695,7 +707,7 @@ pub(crate) fn run_shell_overlay(args: &Value, total_start: Instant) -> Result<Va
         let runner = run_ns_runner_child(&request)?;
         let capture_start = Instant::now();
         let changes = capture_upperdir(&dirs.upperdir)
-            .map_err(|err| overlay_daemon_error("capture upperdir", err))?;
+            .map_err(|err| overlay_daemon_error("capture upperdir", &err))?;
         let capture_s = capture_start.elapsed().as_secs_f64();
         let path_kinds = changes
             .iter()
@@ -802,7 +814,7 @@ fn run_overlay_read_tool(args: &Value, verb: &str) -> Result<Value, DaemonError>
     let lease = stack.acquire_snapshot(&format!("overlay:{agent_id}:{invocation_id}"))?;
     let run_result: Result<RunResult, DaemonError> = (|| {
         let run_root = overlay_writable_root()
-            .map_err(|err| overlay_daemon_error("overlay writable root", err))?
+            .map_err(|err| overlay_daemon_error("overlay writable root", &err))?
             .join("runtime")
             .join("sandbox-overlay")
             .join(format!(
@@ -811,7 +823,7 @@ fn run_overlay_read_tool(args: &Value, verb: &str) -> Result<Value, DaemonError>
                 sanitize_path_component(&invocation_id)
             ));
         let dirs = allocate_overlay_writable_dirs(&run_root)
-            .map_err(|err| overlay_daemon_error("allocate overlay dirs", err))?;
+            .map_err(|err| overlay_daemon_error("allocate overlay dirs", &err))?;
         let _cleanup = RunDirCleanup(dirs.run_dir.clone());
         let request = RunRequest {
             mode: RunMode::FreshNs,
@@ -962,7 +974,7 @@ impl CommitTransactionPort for LayerStackCommitTransaction {
                     commit_timings(combined, 0.0, 0.0, total_start.elapsed().as_secs_f64());
                 return Ok(failed_changeset_with_timings(
                     combined,
-                    err.to_string(),
+                    &err.to_string(),
                     timings,
                 ));
             }
@@ -975,7 +987,7 @@ impl CommitTransactionPort for LayerStackCommitTransaction {
                     commit_timings(combined, 0.0, 0.0, total_start.elapsed().as_secs_f64());
                 return Ok(failed_changeset_with_timings(
                     combined,
-                    err.to_string(),
+                    &err.to_string(),
                     timings,
                 ));
             }
@@ -1086,7 +1098,7 @@ impl CommitTransactionPort for LayerStackCommitTransaction {
                 let publish_s = publish_start.elapsed().as_secs_f64();
                 Ok(failed_changeset_with_timings(
                     combined,
-                    err.to_string(),
+                    &err.to_string(),
                     commit_timings(
                         combined,
                         validate_s,
@@ -1323,7 +1335,7 @@ pub(crate) fn layer_change_kind(change: &LayerChange) -> &'static str {
     }
 }
 
-pub(crate) fn overlay_daemon_error(context: &str, err: eos_overlay::OverlayError) -> DaemonError {
+pub(crate) fn overlay_daemon_error(context: &str, err: &eos_overlay::OverlayError) -> DaemonError {
     DaemonError::Ephemeral(eos_ephemeral::EphemeralError::Overlay(format!(
         "{context}: {err}"
     )))
@@ -1717,9 +1729,12 @@ fn hash_bytes(content: &[u8]) -> String {
 }
 
 fn hex_lower(bytes: &[u8]) -> String {
+    const LOWER_HEX: &[u8; 16] = b"0123456789abcdef";
+
     let mut out = String::with_capacity(bytes.len() * 2);
     for byte in bytes {
-        out.push_str(&format!("{byte:02x}"));
+        out.push(LOWER_HEX[(byte >> 4) as usize] as char);
+        out.push(LOWER_HEX[(byte & 0x0f) as usize] as char);
     }
     out
 }
@@ -1792,7 +1807,7 @@ fn wildcard_match(pattern: &[u8], value: &[u8]) -> bool {
 
 fn failed_changeset_with_timings(
     prepared: &PreparedChangeset,
-    message: String,
+    message: &str,
     timings: BTreeMap<String, f64>,
 ) -> ChangesetResult {
     ChangesetResult {
@@ -1802,7 +1817,7 @@ fn failed_changeset_with_timings(
             .map(|group| FileResult {
                 path: group.path.clone(),
                 status: OccStatus::Failed,
-                message: message.clone(),
+                message: message.to_owned(),
             })
             .collect(),
         published_manifest_version: None,
@@ -1918,7 +1933,9 @@ pub(crate) fn guarded_changeset_response(
         "changed_paths": changed_paths,
         "changed_path_kinds": Value::Object(changed_path_kinds),
         "mutation_source": mutation_source(verb),
-        "status": conflict.as_ref().map(|file| occ_status_wire(file.status)).unwrap_or("committed"),
+        "status": conflict
+            .as_ref()
+            .map_or("committed", |file| occ_status_wire(file.status)),
         "conflict": conflict.as_ref().map(|file| json!({
             "reason": occ_status_wire(file.status),
             "conflict_file": file.path.as_str(),

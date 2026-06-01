@@ -66,9 +66,19 @@ def _tool_context(
 
 
 def _build_runtime(workflow_store, iteration_store, attempt_store, task_store, *, composer):
+    task_store.upsert_task(
+        task_id="root-task",
+        request_id="req1",
+        role="root",
+        agent_name="root",
+        instruction="root",
+        status="running",
+        outcomes=[],
+        needs=[],
+    )
     workflow = workflow_store.insert(
-        request_id="run1",
-        parent_task_id="run1:root",
+        request_id="req1",
+        parent_task_id="root-task",
         workflow_goal="solve task",
     )
     iteration = iteration_store.insert(
@@ -79,7 +89,11 @@ def _build_runtime(workflow_store, iteration_store, attempt_store, task_store, *
         attempt_budget=2,
     )
     workflow_store.append_iteration_id(workflow.id, iteration.id)
-    attempt = attempt_store.insert(iteration_id=iteration.id, attempt_sequence_no=1)
+    attempt = attempt_store.insert(
+        iteration_id=iteration.id,
+        workflow_id=workflow.id,
+        attempt_sequence_no=1,
+    )
     iteration_store.append_attempt_id(iteration.id, attempt.id)
     registry = AttemptOrchestratorRegistry()
     runtime = AttemptDeps(

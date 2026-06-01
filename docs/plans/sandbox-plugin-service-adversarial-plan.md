@@ -1,6 +1,7 @@
 # Sandbox Plugin Service Adversarial Implementation Plan
 
-**Status:** Draft for adversarial review.
+**Status:** In progress; contract/status slice landed, process-backed PPC and
+refresh execution remain open.
 **Date:** 2026-06-01.
 **Scope:** `/sandbox` Rust plugin implementation, with the Python sandbox plugin
 path as the behavioral reference.
@@ -28,6 +29,44 @@ path as the behavioral reference.
   `sandbox/docs/contract/06-crate-map-and-invariants.md`,
   `docs/plans/sandbox-rust-external-migration-PLAN.md`,
   `docs/plans/sandbox-rust-external-migration-PROGRESS.md`.
+
+## Progress Update - 2026-06-01 23:22 CST
+
+Landed:
+
+- Added `eos-plugin` contract modules for generic plugin services:
+  `manifest.rs`, `refresh.rs`, `service.rs`, and `service_registry.rs`.
+  These define `PluginServiceKey`, `ServiceMode`,
+  `RefreshStrategy`, manifest validation, the
+  `workspace_snapshot_refresh` daemon-to-harness messages, and stale-manifest
+  health checks.
+- Added the daemon plugin module and registered `api.plugin.ensure` /
+  `api.plugin.status` in `eos-daemon`. The Rust daemon now records logical
+  plugin manifests/services, reports status, keeps the no-`eos-occ` plugin
+  dependency edge, and applies the plugin-family isolated-workspace gate before
+  ensure/status.
+- Added focused Rust coverage: `cargo test -p eos-plugin` (`26 passed`) and
+  `cargo test -p eos-daemon plugin` (`3 passed`).
+- Added live plugin refresh coverage at
+  `backend/tests/live_e2e_test/sandbox/plugin/test_plugin_refresh_strategies.py`,
+  backed by `backend/scripts/bench_plugin_refresh_strategies.py`, with
+  iteration notes in
+  `backend/tests/live_e2e_test/sandbox/plugin/ITERATION-REPORT.md`.
+- Live verification passed:
+  `EOS_SANDBOX_PROVIDER=docker EOS_LIVE_E2E_IMAGE=xingyaoww/sweb.eval.x86_64.dask_s_dask-10042:latest EOS_PLUGIN_REFRESH_SAMPLES=1 EOS_PLUGIN_REFRESH_AUTO_SQUASH_WRITES=104 uv run pytest -q -x -rs --tb=short --durations=10 backend/tests/live_e2e_test/sandbox/plugin/test_plugin_refresh_strategies.py`
+  (`1 passed in 12.19s`).
+
+Still open:
+
+- Exact dynamic `plugin.<plugin>.<op>` route registration and dispatch.
+- Process-backed PPC spawn, AF_UNIX routing, request/reply multiplexing,
+  callback servicing, and crash/teardown behavior.
+- Actual `workspace_snapshot_refresh` namespace remount/restart execution in
+  Rust; current Rust service state is the validated logical/status surface.
+- `WRITE_ALLOWED` overlay wrapping and self-managed plugin commit callbacks
+  still need to stop returning typed deferred errors.
+- Non-LSP dummy service parity and Pyright/LSP adapter parity remain required
+  before claiming arbitrary-package support.
 
 ## Success Criteria
 
@@ -403,8 +442,8 @@ Harness:
 Results:
 
 - `workspace_snapshot_refresh` refreshed through acquire/release/read in
-  p95 `5.612 ms` and never served stale content.
-- `commit_to_workspace_timer` materialized in p95 `11.290 ms` on this small
+  p95 `5.747 ms` and never served stale content.
+- `commit_to_workspace_timer` materialized in p95 `11.419 ms` on this small
   workspace, and did produce native watcher events.
 - `raw_workspace_fs_watch` without materialization stayed stale: daemon reads saw
   `watch-no-commit`, raw workspace still had `initial`, and the watcher saw
@@ -423,8 +462,9 @@ Conclusion:
 Use `workspace_snapshot_refresh` as the default. It is faster on measured
 refresh, does not require raw workspace materialization, and gives the daemon a
 generic place to enforce freshness before reads. `commit_to_workspace` remains
-an explicit materialization boundary, not a timer. `long_lived_fs_watch` is not
-correct by itself because LayerStack publishes do not mutate the raw workspace.
+an explicit materialization boundary, not a timer. `raw_workspace_fs_watch` is
+not correct by itself because LayerStack publishes do not mutate the raw
+workspace.
 
 ## Write Semantics
 

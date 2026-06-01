@@ -173,10 +173,15 @@ impl AuditBuffer {
     pub fn pull(&self, after_seq: i64, limit: usize) -> Value {
         let limit = limit.max(1);
         let state = self.lock_state();
+        let requested_after_seq = after_seq;
+        let after_seq = u64::try_from(after_seq).ok();
         let events: Vec<Value> = state
             .all
             .iter()
-            .filter(|event| after_seq < 0 || event.seq > after_seq as u64)
+            .filter(|event| match after_seq {
+                Some(after_seq) => event.seq > after_seq,
+                None => true,
+            })
             .take(limit)
             .map(|event| event.payload.clone())
             .collect();
@@ -184,7 +189,7 @@ impl AuditBuffer {
             .last()
             .and_then(|event| event.get("seq"))
             .and_then(Value::as_i64)
-            .unwrap_or(after_seq);
+            .unwrap_or(requested_after_seq);
         serde_json::json!({
             "schema": SCHEMA_VERSION,
             "cursor": {
@@ -246,14 +251,23 @@ pub(crate) fn global_audit_buffer() -> &'static AuditBuffer {
 fn default_boot_epoch_id() -> i64 {
     SystemTime::now()
         .duration_since(UNIX_EPOCH)
-        .map(|duration| duration.as_nanos().min(i64::MAX as u128) as i64)
+        .map(|duration| u128_to_i64_saturating(duration.as_nanos()))
         .unwrap_or_default()
 }
 
 fn encoded_size(value: &Value) -> u64 {
-    serde_json::to_vec(value)
-        .map(|bytes| bytes.len() as u64)
-        .unwrap_or_else(|_| format!("{value:?}").len() as u64)
+    serde_json::to_vec(value).map_or_else(
+        |_| usize_to_u64_saturating(format!("{value:?}").len()),
+        |bytes| usize_to_u64_saturating(bytes.len()),
+    )
+}
+
+fn u128_to_i64_saturating(value: u128) -> i64 {
+    i64::try_from(value).unwrap_or(i64::MAX)
+}
+
+fn usize_to_u64_saturating(value: usize) -> u64 {
+    u64::try_from(value).unwrap_or(u64::MAX)
 }
 
 fn lane_index(lane: Lane) -> usize {
@@ -343,4 +357,41 @@ fn snapshot_block(state: &RingState, boot_epoch_id: i64) -> Value {
             "next_seq": state.next_seq,
         }
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use serde_json::json;
+
+    use super::*;
+
+    #[test]
+    fn pull_preserves_negative_cursor_when_no_events_match() {
+        let buffer = AuditBuffer::with_caps(10, 1024, Some(1));
+
+        let pulled = buffer.pull(-3, 10);
+
+        assert_eq!(pulled["cursor"]["after_seq"], json!(-3));
+        assert_eq!(pulled["events"], json!([]));
+    }
+
+    #[test]
+    fn pull_filters_after_seq_with_checked_cursor_conversion() {
+        let buffer = AuditBuffer::with_caps(10, 1024, Some(1));
+        assert_eq!(buffer.append(json!({"event": "first"}), Lane::Normal), 0);
+        assert_eq!(buffer.append(json!({"event": "second"}), Lane::Normal), 1);
+
+        let all = buffer.pull(-1, 10);
+        let after_zero = buffer.pull(0, 10);
+
+        assert_eq!(all["events"].as_array().map_or(0, Vec::len), 2);
+        assert_eq!(after_zero["events"].as_array().map_or(0, Vec::len), 1);
+        assert_eq!(after_zero["events"][0]["seq"], json!(1));
+    }
+
+    #[test]
+    fn integer_size_helpers_saturate_at_wire_limits() {
+        assert_eq!(u128_to_i64_saturating(i64::MAX as u128 + 1), i64::MAX);
+        assert_eq!(usize_to_u64_saturating(7), 7);
+    }
 }

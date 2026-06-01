@@ -16,7 +16,7 @@ from workflow._core.state import (
 def _request(**overrides) -> Workflow:
     base = dict(
         id="r1",
-        request_id="run1",
+        request_id="req1",
         workflow_goal="goal",
         status=WorkflowStatus.OPEN,
         iteration_ids=(),

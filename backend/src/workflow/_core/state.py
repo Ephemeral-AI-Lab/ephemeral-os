@@ -7,9 +7,9 @@ module — depends only on stdlib, so the persistence protocols, outcomes
 algebra, invariants, and the three coordinators can all import it without a
 cycle.
 
-There is no ``*ClosureReport`` / ``WorkflowOrigin`` abstraction: workflow close
-persists the final projection on the Workflow row, and callers inspect that
-state through workflow tools.
+There is no close-report abstraction: workflow close persists the final
+projection on the Workflow row, and callers inspect that state through
+workflow tools.
 """
 
 from __future__ import annotations

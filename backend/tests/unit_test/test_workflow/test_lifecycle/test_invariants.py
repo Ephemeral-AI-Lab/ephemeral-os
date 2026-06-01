@@ -39,7 +39,7 @@ def _goal(
     now = datetime.now(UTC)
     return Workflow(
         id="r1",
-        request_id="run1",
+        request_id="req1",
         workflow_goal="g",
         status=status,
         iteration_ids=iteration_ids,

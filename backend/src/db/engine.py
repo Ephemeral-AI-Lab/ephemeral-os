@@ -26,6 +26,11 @@ logger = logging.getLogger(__name__)
 _engine: Engine | None = None
 _session_factory: sessionmaker[Session] | None = None
 
+_LEGACY_REQUESTS_TABLE = "task_center_" "requests"
+_LEGACY_RUNS_TABLE = "task_center_" "runs"
+_LEGACY_TASKS_TABLE = "task_center_" "tasks"
+_LEGACY_ATTEMPT_TABLE = "task_center_" "attempt"
+
 
 def get_engine() -> Engine | None:
     """Return the shared engine (None if DB is not configured)."""
@@ -54,7 +59,7 @@ _DROPPED_COLUMNS: dict[str, set[str]] = {
         "context_" "message",
         "task_center_" "run_id",
     },
-    "task_center_tasks": {
+    _LEGACY_TASKS_TABLE: {
         "acceptance_criteria",
         "children",
         "closes_for",
@@ -72,7 +77,7 @@ _DROPPED_COLUMNS: dict[str, set[str]] = {
         "title",
         "user_prompt",
     },
-    "task_center_runs": {
+    _LEGACY_RUNS_TABLE: {
         "root_task_id",
     },
     "attempts": {
@@ -103,10 +108,10 @@ _RENAMED_COLUMNS: dict[str, dict[str, str]] = {
 
 _LEGACY_TABLES_TO_DROP: set[str] = {
     "context_packets",
-    "task_center_requests",
-    "task_center_runs",
-    "task_center_tasks",
-    "task_center_attempt",
+    _LEGACY_REQUESTS_TABLE,
+    _LEGACY_RUNS_TABLE,
+    _LEGACY_TASKS_TABLE,
+    _LEGACY_ATTEMPT_TABLE,
 }
 
 

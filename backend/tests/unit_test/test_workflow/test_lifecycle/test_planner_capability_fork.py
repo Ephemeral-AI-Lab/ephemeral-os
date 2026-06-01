@@ -125,7 +125,11 @@ def _seed_partial_plan_caller(
         iteration_goal="parent seg",
         attempt_budget=2,
     )
-    caller_attempt = attempt_store.insert(iteration_id=parent_seg.id, attempt_sequence_no=1)
+    caller_attempt = attempt_store.insert(
+        iteration_id=parent_seg.id,
+        workflow_id=parent_req.id,
+        attempt_sequence_no=1,
+    )
     attempt_store.set_deferred_goal(
         caller_attempt.id,
         deferred_goal_for_next_iteration="continue here",
@@ -160,7 +164,7 @@ def test_partial_plan_caller_child_planner_keeps_unified_plan_terminal(
         workflow_store, iteration_store, attempt_store, task_store, request_id
     )
 
-    # Child request spawned by the partial-plan caller task.
+    # Child workflow spawned by the partial-plan caller task.
     child_req = workflow_store.insert(
         request_id=request_id,
         parent_task_id=caller_task_id,
@@ -173,7 +177,11 @@ def test_partial_plan_caller_child_planner_keeps_unified_plan_terminal(
         iteration_goal="child seg",
         attempt_budget=2,
     )
-    child_graph = attempt_store.insert(iteration_id=child_seg.id, attempt_sequence_no=1)
+    child_graph = attempt_store.insert(
+        iteration_id=child_seg.id,
+        workflow_id=child_req.id,
+        attempt_sequence_no=1,
+    )
     orchestrator = AttemptOrchestrator(
         attempt=child_graph,
         on_attempt_closed=lambda _id: None,

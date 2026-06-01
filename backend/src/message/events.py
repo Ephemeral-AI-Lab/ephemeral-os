@@ -15,7 +15,7 @@ from notification import SystemNotification
 #   agent_run_id  — the engine agent-run id (``AgentRunTracker.agent_run_id``)
 #                   of the run that produced the event. Distinct per agent run,
 #                   so printers/recorders group and indent events by run even
-#                   when agents interleave. The TaskCenter task id is carried
+#                   when agents interleave. The persisted Task id is carried
 #                   separately on tool metadata as ``task_id``.
 
 

@@ -17,7 +17,7 @@ use std::os::fd::{AsRawFd, IntoRawFd, RawFd};
 use std::path::PathBuf;
 #[cfg(target_os = "linux")]
 use std::process::{Child, Command, Stdio};
-use std::sync::{Arc, Mutex, MutexGuard, OnceLock};
+use std::sync::{Arc, Mutex, MutexGuard, OnceLock, PoisonError};
 use std::thread;
 use std::time::{Duration, Instant};
 
@@ -339,7 +339,7 @@ pub(crate) fn op_enter(args: &Value, _context: DispatchContext<'_>) -> Result<Va
             "manifest_root_hash": handle.manifest_root_hash,
             "workspace_handle_id": handle.workspace_handle_id.0,
         })),
-        Err(error) => Ok(error_payload(error)),
+        Err(error) => Ok(error_payload(&error)),
     }
 }
 
@@ -359,15 +359,15 @@ pub(crate) fn op_exit(args: &Value, _context: DispatchContext<'_>) -> Result<Val
     let mut stale_pty_session_ids = Vec::new();
     if !active_ptys.is_empty() {
         if !force_cancel {
-            return Ok(active_pty_error(&agent_id, active_ptys));
+            return Ok(active_pty_error(&agent_id, &active_ptys));
         }
         for pty_session_id in &active_ptys {
             let cancelled = command::cancel_pty_session_for_exit(pty_session_id)?;
-            if !cancelled {
+            if cancelled {
+                cancelled_pty_session_ids.push(pty_session_id.clone());
+            } else {
                 unregister_pty_id(pty_session_id);
                 stale_pty_session_ids.push(pty_session_id.clone());
-            } else {
-                cancelled_pty_session_ids.push(pty_session_id.clone());
             }
         }
         let deadline = Instant::now() + Duration::from_secs_f64(grace_s.unwrap_or(0.25).max(0.0));
@@ -376,19 +376,19 @@ pub(crate) fn op_exit(args: &Value, _context: DispatchContext<'_>) -> Result<Val
         }
         let still_active = active_pty_ids(&agent_id);
         if !still_active.is_empty() {
-            return Ok(active_pty_error(&agent_id, still_active));
+            return Ok(active_pty_error(&agent_id, &still_active));
         }
     }
 
     with_state(|state| state.session.exit(&AgentId(agent_id.clone()), grace_s)).map_or_else(
-        |error| Ok(error_payload(error)),
+        |error| Ok(error_payload(&error)),
         |mut response| {
             annotate_pty_force_cancel(
                 &mut response,
                 force_cancel,
-                cancelled_pty_session_ids,
-                stale_pty_session_ids,
-                active_pty_ids(&agent_id),
+                &cancelled_pty_session_ids,
+                &stale_pty_session_ids,
+                &active_pty_ids(&agent_id),
             );
             Ok(response)
         },
@@ -410,7 +410,7 @@ pub(crate) fn op_status(args: &Value, _context: DispatchContext<'_>) -> Result<V
             "last_activity": handle.last_activity,
         })),
         Ok(None) => Ok(json!({"success": true, "open": false})),
-        Err(error) => Ok(error_payload(error)),
+        Err(error) => Ok(error_payload(&error)),
     }
 }
 
@@ -421,7 +421,7 @@ pub(crate) fn op_list_open(
     match with_state(|state| Ok(state.session.list_open_agents())) {
         Ok(open_agent_ids) => Ok(json!({"success": true, "open_agent_ids": open_agent_ids})),
         Err(IsolatedError::FeatureDisabled) => Ok(json!({"success": true, "open_agent_ids": []})),
-        Err(error) => Ok(error_payload(error)),
+        Err(error) => Ok(error_payload(&error)),
     }
 }
 
@@ -465,6 +465,18 @@ pub(crate) fn command_handle_for_args(args: &Value) -> Option<CommandHandle> {
     let state = guard.as_ref()?;
     let handle = state.session.get_handle(&AgentId(agent_id.clone()))?;
     Some(command_handle_from(&state.layer_stack_root, handle))
+}
+
+pub(crate) fn agent_has_active_handle(agent_id: &str) -> bool {
+    let agent_id = agent_id.trim();
+    if agent_id.is_empty() {
+        return false;
+    }
+    let guard = lock_state_cell();
+    guard
+        .as_ref()
+        .and_then(|state| state.session.get_handle(&AgentId(agent_id.to_owned())))
+        .is_some()
 }
 
 #[cfg_attr(not(target_os = "linux"), allow(dead_code))]
@@ -564,9 +576,9 @@ fn active_pty_ids(agent_id: &str) -> Vec<String> {
 fn annotate_pty_force_cancel(
     response: &mut Value,
     force_cancel: bool,
-    cancelled_pty_session_ids: Vec<String>,
-    stale_pty_session_ids: Vec<String>,
-    active_pty_session_ids_after: Vec<String>,
+    cancelled_pty_session_ids: &[String],
+    stale_pty_session_ids: &[String],
+    active_pty_session_ids_after: &[String],
 ) {
     let Some(object) = response.as_object_mut() else {
         return;
@@ -725,9 +737,7 @@ fn state_cell() -> &'static Mutex<Option<DaemonIsolatedState>> {
 }
 
 fn lock_state_cell() -> MutexGuard<'static, Option<DaemonIsolatedState>> {
-    state_cell()
-        .lock()
-        .unwrap_or_else(|poisoned| poisoned.into_inner())
+    state_cell().lock().unwrap_or_else(PoisonError::into_inner)
 }
 
 fn require_arg(args: &Value, key: &str) -> Result<String, Value> {
@@ -753,11 +763,11 @@ fn setup_error(error: impl std::fmt::Display) -> IsolatedError {
     }
 }
 
-fn error_payload(error: IsolatedError) -> Value {
+fn error_payload(error: &IsolatedError) -> Value {
     error_json(error.kind(), error.to_string(), json!({}))
 }
 
-fn active_pty_error(agent_id: &str, pty_session_ids: Vec<String>) -> Value {
+fn active_pty_error(agent_id: &str, pty_session_ids: &[String]) -> Value {
     error_json(
         "active_pty_sessions",
         "exit_isolated_workspace refused while PTY sessions are active",

@@ -1,4 +1,4 @@
-"""Persistence tests for attempt-scoped TaskCenter task helpers."""
+"""Persistence tests for attempt-scoped TaskStore helpers."""
 
 from __future__ import annotations
 
@@ -14,7 +14,7 @@ def _upsert(
 ) -> None:
     task_store.upsert_task(
         task_id=task_id,
-        request_id="run1",
+        request_id="req1",
         role=role,
         agent_name=role,
         instruction=f"input-{task_id}",
@@ -39,10 +39,10 @@ def test_get_task_returns_serialized_task(task_store):
 
 
 def test_request_and_run_helpers_return_serialized_rows(task_store):
-    request = task_store.get_request("run1")
+    request = task_store.get_request("req1")
 
     assert request is not None
-    assert request["id"] == "run1"
+    assert request["id"] == "req1"
     assert request["cwd"] == "/tmp"
     assert request["status"] == "running"
 

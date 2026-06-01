@@ -21,7 +21,7 @@ _MSG_BLOCKED = (
 
 
 class DisallowNestedPlannerDeferral:
-    """Reject ``submit_planner_outcome`` deferrals below the root workflow."""
+    """Reject ``submit_planner_outcome`` deferrals below workflow depth one."""
 
     def __init__(self, target_tool: str) -> None:
         self.target_tool = target_tool

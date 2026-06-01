@@ -9,12 +9,12 @@ checkout.
 
 Strategies compared:
 
-* ``long_lived_protocol_refresh``: hold a read-only LayerStack snapshot lease,
+* ``workspace_snapshot_refresh``: hold a read-only LayerStack snapshot lease,
   refresh by acquiring the next snapshot, release the old lease, then serve
   reads against the active manifest.
 * ``commit_to_workspace_timer``: materialize the active LayerStack into the raw
   workspace, approximating a daemon timer that tries to wake native watchers.
-* ``long_lived_fs_watch``: rely on OS file-watch events from the raw workspace;
+* ``raw_workspace_fs_watch``: rely on OS file-watch events from the raw workspace;
   measured without materialization, then indirectly through commit events.
 """
 
@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import base64
 import json
 import os
 import platform
@@ -29,7 +30,6 @@ import shlex
 import statistics
 import subprocess
 import sys
-import tempfile
 import time
 import uuid
 from dataclasses import dataclass
@@ -215,13 +215,13 @@ async def run(args: argparse.Namespace) -> dict[str, Any]:
             samples=max(1, args.samples),
             timeout=args.commit_timeout,
         )
-        log("long_lived_protocol_refresh")
-        report["long_lived_protocol_refresh"] = await protocol_refresh_samples(
+        log("workspace_snapshot_refresh")
+        report["workspace_snapshot_refresh"] = await workspace_snapshot_refresh_samples(
             client,
             samples=max(1, args.samples),
         )
-        log("commit_during_protocol_lease")
-        report["commit_during_protocol_lease"] = await commit_during_protocol_lease(
+        log("commit_during_snapshot_refresh_lease")
+        report["commit_during_snapshot_refresh_lease"] = await commit_during_snapshot_refresh_lease(
             client,
             timeout=args.commit_timeout,
         )
@@ -243,7 +243,7 @@ async def run(args: argparse.Namespace) -> dict[str, Any]:
         report["safety_gate_pass"] = bool(
             report["ready"].get("ready") is True
             and report["fs_watch_without_materialization"]["raw_workspace_stale"]
-            and report["long_lived_protocol_refresh"]["all_samples_ok"]
+            and report["workspace_snapshot_refresh"]["all_samples_ok"]
             and report["auto_squash_then_commit"]["gate_pass"]
         )
         report["experiment_complete"] = True
@@ -555,8 +555,8 @@ async def commit_timer_samples(
     }
 
 
-async def protocol_refresh_samples(client: ThinClient, *, samples: int) -> dict[str, Any]:
-    current_lease, acquire_ms = await client.acquire_snapshot("protocol-start")
+async def workspace_snapshot_refresh_samples(client: ThinClient, *, samples: int) -> dict[str, Any]:
+    current_lease, acquire_ms = await client.acquire_snapshot("snapshot-refresh-start")
     current_lease_id = str(current_lease.get("lease_id") or "")
     rows: list[dict[str, Any]] = [
         {
@@ -567,10 +567,10 @@ async def protocol_refresh_samples(client: ThinClient, *, samples: int) -> dict[
     ]
     try:
         for index in range(samples):
-            content = f"protocol-refresh-{index}\n"
+            content = f"snapshot-refresh-{index}\n"
             write, write_ms = await client.write_file(TARGET_REL, content)
             started = time.perf_counter()
-            new_lease, acquire_ms = await client.acquire_snapshot(f"protocol-{index}")
+            new_lease, acquire_ms = await client.acquire_snapshot(f"snapshot-refresh-{index}")
             release, release_ms = await client.release_lease(current_lease_id)
             current_lease_id = str(new_lease.get("lease_id") or "")
             read, read_ms = await client.read_file(TARGET_REL)
@@ -612,7 +612,7 @@ async def protocol_refresh_samples(client: ThinClient, *, samples: int) -> dict[
     }
 
 
-async def commit_during_protocol_lease(
+async def commit_during_snapshot_refresh_lease(
     client: ThinClient,
     *,
     timeout: int,
@@ -710,10 +710,18 @@ async def auto_squash_then_commit(
 
 
 async def install_watcher(client: ThinClient) -> None:
-    with tempfile.TemporaryDirectory() as td:
-        local = Path(td) / Path(WATCHER_SCRIPT).name
-        local.write_text(WATCHER_SOURCE, encoding="utf-8")
-        await client.cp_to_container(local, WATCHER_SCRIPT)
+    encoded = base64.b64encode(WATCHER_SOURCE.encode("utf-8")).decode("ascii")
+    command = (
+        f"mkdir -p {shlex.quote(PLUGIN_ROOT)}; "
+        "python3 - <<'PY'\n"
+        "import base64\n"
+        "from pathlib import Path\n"
+        f"Path({WATCHER_SCRIPT!r}).write_bytes(base64.b64decode({encoded!r}))\n"
+        "PY"
+    )
+    result = await client.exec_shell(command, timeout=10)
+    if result.returncode != 0:
+        raise RuntimeError(f"install watcher failed: {result.stderr.strip()}")
     result = await client.exec_shell(f"chmod 755 {shlex.quote(WATCHER_SCRIPT)}", timeout=10)
     if result.returncode != 0:
         raise RuntimeError(f"chmod watcher failed: {result.stderr.strip()}")
@@ -827,14 +835,14 @@ def trim_metrics(metrics: dict[str, Any]) -> dict[str, Any]:
 
 
 def recommend(report: dict[str, Any]) -> dict[str, Any]:
-    protocol_p95 = stat_value(report, ["long_lived_protocol_refresh", "refresh_total_ms", "p95"])
+    snapshot_refresh_p95 = stat_value(report, ["workspace_snapshot_refresh", "refresh_total_ms", "p95"])
     commit_p95 = stat_value(report, ["commit_to_workspace_timer", "commit_wall_ms", "p95"])
     watch_stale = bool(report["fs_watch_without_materialization"]["raw_workspace_stale"])
-    commit_blocked = bool(report["commit_during_protocol_lease"]["blocked_by_active_lease"])
-    protocol_ok = bool(report["long_lived_protocol_refresh"]["all_samples_ok"])
+    commit_blocked = bool(report["commit_during_snapshot_refresh_lease"]["blocked_by_active_lease"])
+    snapshot_refresh_ok = bool(report["workspace_snapshot_refresh"]["all_samples_ok"])
     auto_squash_ok = bool(report["auto_squash_then_commit"]["gate_pass"])
     reasons = [
-        "protocol refresh kept reads current without publishing or materializing the raw workspace",
+        "workspace snapshot refresh kept reads current without publishing or materializing the raw workspace",
         "raw filesystem watches did not observe LayerStack writes without materialization",
     ]
     if commit_blocked:
@@ -845,22 +853,22 @@ def recommend(report: dict[str, Any]) -> dict[str, Any]:
             "periodic materialization can reset storage under a long-lived service "
             "unless the daemon adds an explicit plugin-service guard"
         )
-    if protocol_p95 is not None and commit_p95 is not None:
+    if snapshot_refresh_p95 is not None and commit_p95 is not None:
         reasons.append(
-            f"protocol refresh p95={protocol_p95:.3f}ms versus "
+            f"workspace snapshot refresh p95={snapshot_refresh_p95:.3f}ms versus "
             f"commit_to_workspace p95={commit_p95:.3f}ms"
         )
     return {
-        "winner": "long_lived_protocol_refresh",
-        "protocol_p95_ms": protocol_p95,
+        "winner": "workspace_snapshot_refresh",
+        "snapshot_refresh_p95_ms": snapshot_refresh_p95,
         "commit_p95_ms": commit_p95,
         "fs_watch_without_materialization_stale": watch_stale,
-        "commit_blocked_by_protocol_lease": commit_blocked,
+        "commit_blocked_by_snapshot_refresh_lease": commit_blocked,
         "commit_lease_guard_observed": commit_blocked,
         "auto_squash_commit_gate_pass": auto_squash_ok,
-        "protocol_gate_pass": protocol_ok,
+        "snapshot_refresh_gate_pass": snapshot_refresh_ok,
         "strategy_scores": {
-            "long_lived_protocol_refresh": {
+            "workspace_snapshot_refresh": {
                 "performance": 5,
                 "implementation_simplicity": 3,
                 "arbitrary_plugin_ease": 4,
@@ -872,7 +880,7 @@ def recommend(report: dict[str, Any]) -> dict[str, Any]:
                 "arbitrary_plugin_ease": 2,
                 "notes": "simple timer, but full materialization, active-lease refusal, and storage reset make it unsafe as steady-state refresh",
             },
-            "long_lived_fs_watch": {
+            "raw_workspace_fs_watch": {
                 "performance": 2,
                 "implementation_simplicity": 2,
                 "arbitrary_plugin_ease": 3,
@@ -901,8 +909,8 @@ def markdown_report(report: dict[str, Any]) -> str:
         "",
         f"- run_id: `{report['run_id']}`",
         f"- container_id: `{report['container_id']}`",
-            f"- runtime: `{report['runtime']}`",
-            f"- api_transport: `{report.get('api_transport')}`",
+        f"- runtime: `{report['runtime']}`",
+        f"- api_transport: `{report.get('api_transport')}`",
         f"- workspace_root: `{report['config']['workspace_root']}`",
         f"- recommendation: `{recommendation['winner']}`",
         "",
@@ -911,8 +919,8 @@ def markdown_report(report: dict[str, Any]) -> str:
         "| strategy | p50 refresh/materialize ms | p95 ms | max ms | correctness |",
         "|---|---:|---:|---:|---|",
         perf_row(
-            "long_lived_protocol_refresh",
-            report["long_lived_protocol_refresh"]["refresh_total_ms"],
+            "workspace_snapshot_refresh",
+            report["workspace_snapshot_refresh"]["refresh_total_ms"],
             "current reads",
         ),
         perf_row(
@@ -929,7 +937,7 @@ def markdown_report(report: dict[str, Any]) -> str:
     lines.extend(
         [
             f"- fs watch without materialization stale: `{recommendation['fs_watch_without_materialization_stale']}`",
-            f"- commit blocked by active protocol lease: `{recommendation['commit_blocked_by_protocol_lease']}`",
+            f"- commit blocked by active snapshot refresh lease: `{recommendation['commit_blocked_by_snapshot_refresh_lease']}`",
             f"- auto-squash then commit gate passed: `{recommendation['auto_squash_commit_gate_pass']}`",
             "",
             "## Strategy Scores",
@@ -950,7 +958,7 @@ def markdown_report(report: dict[str, Any]) -> str:
             "## Safety Gates",
             "",
             f"- safety gate pass: `{report.get('safety_gate_pass')}`",
-            f"- protocol samples ok: `{report['long_lived_protocol_refresh']['all_samples_ok']}`",
+            f"- snapshot refresh samples ok: `{report['workspace_snapshot_refresh']['all_samples_ok']}`",
             f"- commit timer samples ok: `{report['commit_to_workspace_timer']['all_samples_ok']}`",
             f"- concurrent commit/write readable after: `{report['concurrent_commit_with_writes']['readable_after']}`",
             f"- final active leases: `{report['final_metrics'].get('active_leases')}`",

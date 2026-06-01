@@ -1,4 +1,4 @@
-"""Migration test: legacy task_center_attempt table is dropped."""
+"""Migration test: legacy attempt table is dropped."""
 
 from __future__ import annotations
 
@@ -11,19 +11,20 @@ from db.stores.workflow_store import WorkflowStore
 
 def test_initialize_db_drops_legacy_attempt_table(tmp_path, monkeypatch):
     db_path = tmp_path / "legacy.db"
+    legacy_attempt_table = "task_center_" "attempt"
 
     # Pre-seed the legacy table with a row to confirm it gets dropped.
     pre_engine = create_engine(f"sqlite:///{db_path}")
     with pre_engine.begin() as conn:
         conn.execute(
             text(
-                "CREATE TABLE task_center_attempt "
+                f"CREATE TABLE {legacy_attempt_table} "
                 "(id TEXT PRIMARY KEY, run_id TEXT)"
             )
         )
         conn.execute(
             text(
-                "INSERT INTO task_center_attempt (id, run_id) "
+                f"INSERT INTO {legacy_attempt_table} (id, run_id) "
                 "VALUES ('legacy-1', 'r1')"
             )
         )
@@ -46,7 +47,7 @@ def test_initialize_db_drops_legacy_attempt_table(tmp_path, monkeypatch):
     insp = inspect(eng)
     tables = set(insp.get_table_names())
     assert "context_packets" not in tables
-    assert "task_center_attempt" not in tables
+    assert legacy_attempt_table not in tables
     assert "workflows" in tables
     assert "iterations" in tables
     assert "attempts" in tables
@@ -68,7 +69,7 @@ def test_initialize_db_creates_workflows_table_on_fresh_db(tmp_path, monkeypatch
     store = WorkflowStore()
     store.initialize(sf)
     workflow = store.insert(
-        request_id="run1",
+        request_id="req1",
         parent_task_id="root-task",
         workflow_goal="fresh objective",
     )

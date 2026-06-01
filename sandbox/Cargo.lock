@@ -199,6 +199,7 @@ dependencies = [
  "eos-ephemeral",
  "eos-layerstack",
  "eos-protocol",
+ "serde",
  "serde_json",
  "thiserror 2.0.18",
 ]

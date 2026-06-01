@@ -52,6 +52,16 @@ in the pytest process instead of the sandbox runtime guardrails.
   `7 passed` in `226.96 s` on 2026-05-07 UTC with documented budget overrides.
   Draft default c20 redlines still miss for write/edit/shell; see
   `phase-05-public-file-ops-report.md`.
+- **Plugin refresh strategy:** `sandbox/plugin/test_plugin_refresh_strategies.py`
+  reuses the existing Docker sandbox fixture and
+  `backend/scripts/bench_plugin_refresh_strategies.py` to compare
+  `workspace_snapshot_refresh`, `commit_to_workspace_timer`, and raw workspace
+  filesystem watching under `/eos/plugin/*`. Current focused live gate:
+  `1 passed` in `12.19 s` on 2026-06-01 CST. The durable benchmark artifact
+  recommends `workspace_snapshot_refresh` with p95 `5.747 ms`, confirms raw
+  workspace watchers stay stale without materialization, and passes the
+  auto-squash plus post-drain materialization gate. See
+  `plugin/ITERATION-REPORT.md`.
 
 Current overlay syscall run (2026-05-05, full battery, 1000 iter x 8 depths):
 
@@ -119,6 +129,7 @@ The suite is opt-in by directory:
 .venv/bin/pytest backend/tests/live_e2e_test
 .venv/bin/pytest backend/tests/live_e2e_test/sandbox/overlay
 .venv/bin/pytest backend/tests/live_e2e_test/sandbox/request_snapshot -q -s
+.venv/bin/pytest backend/tests/live_e2e_test/sandbox/plugin -q -s
 .venv/bin/pytest backend/tests/live_e2e_test/sandbox/workspace_base -v -rs -s --tb=short
 .venv/bin/pytest \
   backend/tests/live_e2e_test/sandbox/layer_stack_overlay_occ/test_phase05_public_file_ops_correctness.py \

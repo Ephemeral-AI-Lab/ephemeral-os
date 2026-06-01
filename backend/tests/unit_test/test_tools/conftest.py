@@ -1,4 +1,4 @@
-"""Fixtures for tool tests that need TaskCenter stores."""
+"""Fixtures for tool tests that need Workflow stores."""
 
 from __future__ import annotations
 
@@ -34,7 +34,7 @@ def session_factory():
     with sf() as session:
         session.add(
             RequestRecord(
-                id="run1",
+                id="req1",
                 cwd="/tmp",
                 sandbox_id=None,
                 request_prompt="prompt",

@@ -1,4 +1,4 @@
-"""Shared fixtures for task_center tests: in-memory SQLite DB + stores."""
+"""Shared fixtures for workflow tests: in-memory SQLite DB + stores."""
 
 from __future__ import annotations
 
@@ -35,7 +35,7 @@ def session_factory():
     with sf() as s:
         s.add(
             RequestRecord(
-                id="run1",
+                id="req1",
                 cwd="/tmp",
                 sandbox_id=None,
                 request_prompt="prompt",
@@ -79,7 +79,7 @@ def task_store(session_factory) -> TaskStore:
 
 @pytest.fixture
 def request_id() -> str:
-    return "run1"
+    return "req1"
 
 
 # ---------------------------------------------------------------------------

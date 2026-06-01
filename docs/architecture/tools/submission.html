@@ -97,7 +97,7 @@
   <li>Closing a delegated workflow persists workflow outcomes only. It does not mutate the parent generator Task; the launching agent reads the handle result and synthesizes its own <code>submit_generator_outcome</code>.</li>
   <li>The no-inflight terminal hook counts outstanding workflow handles. A generator/root terminal is allowed once the handle is reported by <code>check_workflow_status</code> or explicitly cancelled by <code>cancel_workflow</code>.</li>
 </ol>
-<p>This flow is the workflow-delegation boundary: agents do not communicate peer-to-peer, but they also do not terminate to delegate. The root request is a root Task finished by <code>submit_root_outcome</code>, not a synthetic root workflow.</p>
+<p>This flow is the workflow-delegation boundary: agents do not communicate peer-to-peer, but they also do not terminate to delegate. The root request is a root Task finished by <code>submit_root_outcome</code>, not a workflow-wrapped request.</p>
 </section>
 
 <section id="helper-and-explorer-results" data-last-reviewed-commit="d32994314" data-evidence-paths="backend/src/tools/submission/advisor/submit_advisor_feedback/submit_advisor_feedback.py backend/src/tools/submission/explorer/submit_exploration_result/submit_exploration_result.py backend/tests/unit_test/test_tools/test_submission_helper_tools.py backend/tests/unit_test/test_tools/test_ask_advisor_retry.py backend/tests/unit_test/test_tools/test_submission_tool_registration.py">

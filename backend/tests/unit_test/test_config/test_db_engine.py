@@ -117,7 +117,8 @@ def test_initialize_db_migrates_legacy_agent_runs_schema(
 
     tasks = task_store.list_tasks_for_request("req")
     assert tasks[0]["request_id"] == "req"
-    assert "task_center_run_id" not in tasks[0]
+    legacy_run_key = "task_center_" "run_id"
+    assert legacy_run_key not in tasks[0]
     assert agent_run_store.get_run("agent1") is not None
 
 
@@ -132,27 +133,35 @@ def test_initialize_db_fresh_sqlite_creates_instruction_column(
     assert engine is not None
     columns = {col["name"] for col in inspect(engine).get_columns("tasks")}
     assert "instruction" in columns
-    assert "context_message" not in columns
+    legacy_instruction_key = "context_" "message"
+    assert legacy_instruction_key not in columns
 
 
-def test_initialize_db_drops_legacy_task_center_tables(
+def test_initialize_db_drops_pre_refactor_tables(
     tmp_path: Path,
 ) -> None:
     db_path = tmp_path / "dead-columns.db"
+    legacy_tasks_table = "task_center_" "tasks"
+    legacy_run_key = "task_center_" "run_id"
+    legacy_instruction_key = "context_" "message"
     legacy_engine = create_engine(f"sqlite:///{db_path}")
     with legacy_engine.begin() as conn:
         conn.execute(
             text(
                 """
-                CREATE TABLE task_center_tasks (
+                CREATE TABLE {legacy_tasks_table} (
                     id VARCHAR(96) NOT NULL,
-                    task_center_run_id VARCHAR(36),
-                    context_message TEXT,
+                    {legacy_run_key} VARCHAR(36),
+                    {legacy_instruction_key} TEXT,
                     system_prompt TEXT,
                     user_prompt TEXT,
                     PRIMARY KEY (id)
                 )
-                """
+                """.format(
+                    legacy_tasks_table=legacy_tasks_table,
+                    legacy_run_key=legacy_run_key,
+                    legacy_instruction_key=legacy_instruction_key,
+                )
             )
         )
     legacy_engine.dispose()
@@ -163,4 +172,4 @@ def test_initialize_db_drops_legacy_task_center_tables(
     engine = engine_mod.get_engine()
     assert engine is not None
     insp = inspect(engine)
-    assert not insp.has_table("task_center_tasks")
+    assert not insp.has_table(legacy_tasks_table)

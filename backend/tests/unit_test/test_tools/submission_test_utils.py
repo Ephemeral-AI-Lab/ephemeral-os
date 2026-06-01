@@ -29,7 +29,7 @@ from .test_submission._advisor_approval_fixtures import (
 
 
 @dataclass
-class TaskCenterFixture:
+class WorkflowFixture:
     runtime: AttemptDeps
     orchestrator: AttemptOrchestrator
     attempt_id: str
@@ -54,10 +54,10 @@ def build_harness_fixture(
     attempt_store: Any,
     task_store: Any,
     composer: Any,
-) -> TaskCenterFixture:
+) -> WorkflowFixture:
     task_store.upsert_task(
         task_id="outer-task",
-        request_id="run1",
+        request_id="req1",
         role=AgentRole.ROOT.value,
         agent_name="root",
         instruction="root task",
@@ -69,7 +69,7 @@ def build_harness_fixture(
         attempt_id=None,
     )
     workflow = workflow_store.insert(
-        request_id="run1",
+        request_id="req1",
         parent_task_id="outer-task",
         workflow_goal="solve the task",
     )
@@ -107,7 +107,7 @@ def build_harness_fixture(
         runtime=runtime,
     )
     registry.register(orchestrator)
-    return TaskCenterFixture(
+    return WorkflowFixture(
         runtime=runtime,
         orchestrator=orchestrator,
         attempt_id=attempt.id,
@@ -119,7 +119,7 @@ def build_harness_fixture(
 
 
 def make_tool_context(
-    fixture: TaskCenterFixture,
+    fixture: WorkflowFixture,
     task_id: str,
     *,
     messages: list[Any] | None = None,
@@ -158,12 +158,12 @@ def make_tool_context(
     return ToolExecutionContextService(cwd=Path("/tmp"), services=metadata)
 
 
-def start_planner(fixture: TaskCenterFixture) -> str:
+def start_planner(fixture: WorkflowFixture) -> str:
     fixture.orchestrator.start()
     return planner_task_id(fixture.attempt_id)
 
 
-def ensure_planner_started(fixture: TaskCenterFixture) -> str:
+def ensure_planner_started(fixture: WorkflowFixture) -> str:
     attempt = fixture.runtime.attempt_store.get(fixture.attempt_id)
     if attempt is not None and attempt.planner_task_id is not None:
         return attempt.planner_task_id
@@ -171,7 +171,7 @@ def ensure_planner_started(fixture: TaskCenterFixture) -> str:
 
 
 def _persist_plan_task(
-    fixture: TaskCenterFixture,
+    fixture: WorkflowFixture,
     *,
     task_id: str,
     role: AgentRole,
@@ -195,7 +195,7 @@ def _persist_plan_task(
 
 
 def apply_single_generator_plan(
-    fixture: TaskCenterFixture,
+    fixture: WorkflowFixture,
     *,
     local_id: str = "a",
     reducer_id: str = "r",
@@ -233,7 +233,7 @@ def apply_single_generator_plan(
     return generator_id
 
 
-def spawn_reducer(fixture: TaskCenterFixture) -> str:
+def spawn_reducer(fixture: WorkflowFixture) -> str:
     """Drive the attempt to the point where its single reducer is RUNNING.
 
     Submits the generator success so the stage advancer launches the reducer

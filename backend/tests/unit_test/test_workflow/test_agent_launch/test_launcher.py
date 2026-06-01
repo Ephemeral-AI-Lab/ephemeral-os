@@ -1,4 +1,4 @@
-"""Regression tests for TaskCenter agent launcher scheduling."""
+"""Regression tests for workflow agent launcher scheduling."""
 
 from __future__ import annotations
 
@@ -56,7 +56,11 @@ async def test_missing_orchestrator_exhaustion_closes_attempt(
         attempt_budget=1,
     )
     workflow_store.append_iteration_id(workflow.id, iteration.id)
-    attempt = attempt_store.insert(iteration_id=iteration.id, attempt_sequence_no=1)
+    attempt = attempt_store.insert(
+        iteration_id=iteration.id,
+        workflow_id=workflow.id,
+        attempt_sequence_no=1,
+    )
     iteration_store.append_attempt_id(iteration.id, attempt.id)
     task_id = planner_task_id(attempt.id)
     task_store.upsert_task(
@@ -123,7 +127,11 @@ async def test_unowned_generator_exhaustion_persists_attempt_outcome(
         attempt_budget=1,
     )
     workflow_store.append_iteration_id(workflow.id, iteration.id)
-    attempt = attempt_store.insert(iteration_id=iteration.id, attempt_sequence_no=1)
+    attempt = attempt_store.insert(
+        iteration_id=iteration.id,
+        workflow_id=workflow.id,
+        attempt_sequence_no=1,
+    )
     iteration_store.append_attempt_id(iteration.id, attempt.id)
     task_id = generator_task_id(attempt.id, "api")
     attempt_store.set_generator_task_ids(attempt.id, [task_id])

@@ -1,8 +1,8 @@
 """Centralised agent_run persistence.
 
 :class:`AgentRunTracker` wraps the minimal ``agent_runs`` row for one
-TaskCenter task. Direct eval-agent invocations pass ``task_id=None`` and are
-not persisted.
+persisted Task. Direct eval-agent invocations pass ``task_id=None`` and are not
+persisted.
 
 Lifecycle:
 

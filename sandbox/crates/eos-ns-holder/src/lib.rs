@@ -777,13 +777,19 @@ fn write_all_fd(fd: RawFd, mut bytes: &[u8]) -> Result<(), NsHolderError> {
             }
             return Err(NsHolderError::PipeIo(err));
         }
+        let written = usize::try_from(written).map_err(|_| {
+            NsHolderError::PipeIo(std::io::Error::new(
+                std::io::ErrorKind::InvalidData,
+                "pipe write returned a negative byte count after error handling",
+            ))
+        })?;
         if written == 0 {
             return Err(NsHolderError::PipeIo(std::io::Error::new(
                 std::io::ErrorKind::WriteZero,
                 "pipe write returned zero",
             )));
         }
-        bytes = &bytes[written as usize..];
+        bytes = &bytes[written..];
     }
     Ok(())
 }
@@ -795,7 +801,12 @@ fn read_fd(fd: RawFd, bytes: &mut [u8]) -> Result<usize, NsHolderError> {
         // by the process that launched this single-threaded holder.
         let read = unsafe { libc::read(fd, bytes.as_mut_ptr().cast(), bytes.len()) };
         if read >= 0 {
-            return Ok(read as usize);
+            return usize::try_from(read).map_err(|_| {
+                NsHolderError::PipeIo(std::io::Error::new(
+                    std::io::ErrorKind::InvalidData,
+                    "pipe read returned a negative byte count after error handling",
+                ))
+            });
         }
         let err = std::io::Error::last_os_error();
         if err.kind() != std::io::ErrorKind::Interrupted {

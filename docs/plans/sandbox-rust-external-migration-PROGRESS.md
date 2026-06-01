@@ -3,7 +3,7 @@
 Living status tracker for `docs/plans/sandbox-rust-external-migration-PLAN.md`.
 Spec = PLAN.md. Landed-status snapshot = PLAN §13. This file = done/next checklist.
 
-**Last updated:** 2026-06-01 · **Phase:** 3 is closed at the structural core boundary: direct write/edit publish routes through `eos-occ`; shell/search overlay daemon paths, background registry/control ops, PPC framing/no-OCC plugin edge, LayerStack squash/GC, and CP-4s structural live evidence are in place. Phase 3T has closed CP-4t for the Docker shared-workspace path under the final `exec_command` / PTY tool names and `/eos` runtime paths. Model-facing generic background tools and `BaseTool.background` policy are retired; background-manager attachment is hard-coded for subagent launch and PTY sessions, and typed subagent launch/progress/cancel controls use `subagent_session_id` as the sole subagent reference with focused unit and mock-loop coverage. Rust isolated-workspace lifecycle ops now have daemon-local `eos-isolated` session state, JSONL audit emission, active-PTY exit blocking, Linux command/PTY routing through the active agent handle with no OCC publish, a first real ns-holder/setns handoff slice, shell-free bridge/veth plus nftables netlink setup, local amd64 Docker/dask proof for isolated command/PTY/network behavior in an image without `ip` or `nft`, focused exit inspection coverage, and a live Docker rerun proving no holder/mountinfo/cgroup/lease/scratch/PTY leaks under the real kernel path. The deferred non-plugin Phase 3T sidecar is now closed on current amd64 artifact SHA `81eb221542666647a3b0a80a0ed254dff674a0ead27d814bfcea26bd14996d53`: CP-4/AV-4 mixed load, CP-5 cache churn, AV-7 forward/back parity, and §7 non-plugin differential/property all pass. Remaining Phase 3T work is plugin PPC execution/AV-10, which is outside the skipped non-plugin sidecar.
+**Last updated:** 2026-06-01 · **Phase:** 3 is closed at the structural core boundary: direct write/edit publish routes through `eos-occ`; shell/search overlay daemon paths, background registry/control ops, PPC framing/no-OCC plugin edge, LayerStack squash/GC, and CP-4s structural live evidence are in place. Phase 3T has closed CP-4t for the Docker shared-workspace path under the final `exec_command` / PTY tool names and `/eos` runtime paths. Model-facing generic background tools and `BaseTool.background` policy are retired; background-manager attachment is hard-coded for subagent launch and PTY sessions, and typed subagent launch/progress/cancel controls use `subagent_session_id` as the sole subagent reference with focused unit and mock-loop coverage. Rust isolated-workspace lifecycle ops now have daemon-local `eos-isolated` session state, JSONL audit emission, active-PTY exit blocking, Linux command/PTY routing through the active agent handle with no OCC publish, a first real ns-holder/setns handoff slice, shell-free bridge/veth plus nftables netlink setup, local amd64 Docker/dask proof for isolated command/PTY/network behavior in an image without `ip` or `nft`, focused exit inspection coverage, and a live Docker rerun proving no holder/mountinfo/cgroup/lease/scratch/PTY leaks under the real kernel path. The deferred non-plugin Phase 3T sidecar is now closed on current amd64 artifact SHA `81eb221542666647a3b0a80a0ed254dff674a0ead27d814bfcea26bd14996d53`: CP-4/AV-4 mixed load, CP-5 cache churn, AV-7 forward/back parity, and §7 non-plugin differential/property all pass. Plugin work has advanced from a pure deferred edge to a Rust contract/status slice: `eos-plugin` now owns generic service manifest/refresh/key/status types, `eos-daemon` registers `api.plugin.ensure/status`, and live plugin refresh strategy coverage is in the suite. Remaining Phase 3T work is process-backed plugin PPC execution, dynamic `plugin.*` dispatch, Rust `workspace_snapshot_refresh` remount/restart execution, and AV-10.
 
 ---
 
@@ -15,11 +15,41 @@ Spec = PLAN.md. Landed-status snapshot = PLAN §13. This file = done/next checkl
 | 1 — ns-runner (fresh-ns) | `eos-runner` unshare→mount→exec | ✅ **scoped direct `eosd ns-runner` closeout complete; host dispatch is Phase 2** |
 | 2 — daemon + read paths | `eos-daemon` RPC, read verbs, readiness | ✅ **CP-3/AV-2 closed on local amd64 Docker/dask** |
 | 3 — write/publish + shell/search + background control core | OCC/LayerStack publish, structural shell/search, PPC scaffolding | ✅ **closed at the structural boundary:** direct `write_file`/`edit_file` publish flows through routed `eos-occ`; `api.v1.shell`/`glob`/`grep` overlay paths, background registry/control ops, PPC framing/no-OCC plugin edge, LayerStack squash/GC, and CP-4s structural live evidence are in place |
-| 3T — terminal sessions + deferred Phase 3 gates | non-login Bash shell/session tools, typed background/subagent controls, plugin PPC execution, CP-4/CP-5/AV gates | 🟡 **partial:** CP-4t is closed for Docker shared-workspace command/PTY paths under final `/eos` runtime paths; generic background tools are no longer model-facing and `BaseTool.background` is removed; typed subagent controls use `subagent_session_id` only and have focused unit/mock-loop coverage; Rust isolated lifecycle ops, ns-holder/setns handoff, Linux command/PTY routing, shell-free bridge/veth/nftables wiring, local amd64 Docker/dask isolated command/PTY/network proof, focused exit inspection coverage, and the live inspection-field rerun are in place; the deferred non-plugin sidecar is closed through CP-4/AV-4, CP-5, AV-7, and §7; remaining skipped scope is plugin PPC execution/AV-10 |
+| 3T — terminal sessions + deferred Phase 3 gates | non-login Bash shell/session tools, typed background/subagent controls, plugin PPC execution, CP-4/CP-5/AV gates | 🟡 **partial:** CP-4t is closed for Docker shared-workspace command/PTY paths under final `/eos` runtime paths; generic background tools are no longer model-facing and `BaseTool.background` is removed; typed subagent controls use `subagent_session_id` only and have focused unit/mock-loop coverage; Rust isolated lifecycle ops, ns-holder/setns handoff, Linux command/PTY routing, shell-free bridge/veth/nftables wiring, local amd64 Docker/dask isolated command/PTY/network proof, focused exit inspection coverage, and the live inspection-field rerun are in place; the deferred non-plugin sidecar is closed through CP-4/AV-4, CP-5, AV-7, and §7; plugin service manifest/refresh/status contracts plus `api.plugin.ensure/status` have landed; remaining skipped scope is process-backed plugin PPC execution, dynamic `plugin.*` dispatch, Rust `workspace_snapshot_refresh`, and AV-10 |
 | 3.5 — isolated workspace | ns-holder + setns + shell-free net | 🟡 lifecycle/control-plane plus first ns-holder/setns handoff, holder netlink-hardening, bridge/veth netlink, static nftables netlink setup, local amd64 Docker/dask live proof, focused exit inspection coverage, and live inspection-field rerun landed; broader isolated soak/cutover gates remain later-phase work |
 | 5 — cutover | flip default, delete Python | ⬜ |
 
 Legend: ✅ done · 🟡 partial · ⬜ not started.
+
+---
+
+## Latest Plugin Service Refresh (2026-06-01)
+
+- ✅ `eos-plugin` now has the generic service contract surface for the plugin
+  plan: `PluginServiceKey`, `ServiceMode`, `RefreshStrategy`,
+  `PluginManifest`, refresh request/ack messages, and logical service status.
+  Focused verification: `cargo test -p eos-plugin` (`26 passed`).
+- ✅ `eos-daemon` now registers `api.plugin.ensure` and `api.plugin.status`.
+  The daemon records logical plugin manifests/services, reports plugin status,
+  and checks the plugin-family isolated-workspace gate before ensure/status.
+  Focused verification: `cargo test -p eos-daemon plugin` (`3 passed`).
+- ✅ Live plugin refresh strategy coverage landed under
+  `backend/tests/live_e2e_test/sandbox/plugin/`. The test reuses the existing
+  Docker sandbox fixture and `backend/scripts/bench_plugin_refresh_strategies.py`
+  so it does not provision a separate benchmark container.
+- ✅ Live verification:
+  `EOS_SANDBOX_PROVIDER=docker EOS_LIVE_E2E_IMAGE=xingyaoww/sweb.eval.x86_64.dask_s_dask-10042:latest EOS_PLUGIN_REFRESH_SAMPLES=1 EOS_PLUGIN_REFRESH_AUTO_SQUASH_WRITES=104 uv run pytest -q -x -rs --tb=short --durations=10 backend/tests/live_e2e_test/sandbox/plugin/test_plugin_refresh_strategies.py`
+  passed (`1 passed in 12.19s`).
+- ✅ Durable benchmark refresh:
+  `bench/plugin-refresh-strategies-20260601.json` / `.md` recommend
+  `workspace_snapshot_refresh`; p95 refresh `5.747 ms` vs
+  `commit_to_workspace` p95 `11.419 ms`; raw workspace watch without
+  materialization stayed stale; auto-squash plus post-drain commit passed with
+  final active leases, orphan layers, and missing layers all `0`.
+- 🟡 Remaining plugin scope: exact dynamic `plugin.*` route registration,
+  process-backed PPC, self-managed callbacks through the same OCC writer,
+  daemon remount/restart execution for `workspace_snapshot_refresh`, non-LSP
+  dummy service parity, Pyright/LSP parity, and AV-10.
 
 ---
 
@@ -49,14 +79,24 @@ Legend: ✅ done · 🟡 partial · ⬜ not started.
   non-plugin load, CP-5 cache-lock churn, AV-7 forward/back parity, and the
   Section 7 non-plugin differential/property suite. Remaining Phase 3T scope is
   plugin PPC execution/AV-10 only.
+- ✅ The isolated-workspace bullets below are closed as the Phase 3T command
+  routing/control-plane slice: daemon RPC routing, daemon-owned session state,
+  ns-holder/setns execution, shell-free bridge/veth/nft setup, no-OCC isolated
+  command/PTY results, active-PTY exit blocking, and same-port network
+  isolation all have current Docker/dask evidence. They do not by themselves
+  close the later Phase 3.5/4 exit gate, which still requires the broader AV-9
+  parity and CP-1b BYO-image matrix work listed under section F.
 
 ---
 
 ## DONE (verified 2026-06-01, all checks re-run independently)
 
 **Rust workspace `/sandbox` — 11 crates + xtask, ~7,800 LOC**
-- ✅ `eos-protocol` **fully implemented + tested**: version/envelope/cas/audit/models/canonical. **29 tests green incl 18 executed CAS golden fixtures** (the `ensure_ascii` Unicode trap reproduced).
-- ✅ Faithful `// PORT backend/…:line` anchors remain where they still map deferred work. The obsolete Rust `eos-ephemeral` runtime pipeline/registry skeleton, unused `eos-daemon::ports` injector skeleton, stale `DispatchContext::with_in_flight` compatibility alias, unused public dispatcher registration surface, and stale `eos-occ` placeholder/skeleton comments have been removed; deferred plugin PPC dispatch now returns typed `PluginError::Ensure` errors instead of `todo!()` panic stubs, builtin op registration rejects different-handler collisions instead of silently overwriting routes, and `LayerStack` snapshot acquisition now returns a typed invalid-lease-owner error instead of panicking on an empty owner id. The layer-stack storage writer lock now reports registry/root mutex poisoning through `LayerStackError::LockPoisoned` on fallible acquire/exclusive paths, while RAII drop paths remain non-panicking; the daemon in-flight registry now recovers poisoned best-effort control-state locks instead of panicking heartbeat/cancel/count/drop cleanup paths; the OCC commit queue now reports poisoned receiver/transaction slots as `OccError::QueueStatePoisoned` and avoids invariant `expect(...)` calls in worker close/combine paths; the daemon OCC service cache now reports poisoned cache locks through `DaemonError::StateLockPoisoned` while route validation reuses normalized `LayerPath` values instead of reparsing with `expect(...)`; and daemon isolated-workspace lifecycle state now recovers poisoned best-effort control-state locks and maps layer-stack / holder-child lock poisoning to typed setup errors instead of panicking.
+- ✅ `eos-protocol` **fully implemented + tested**: version/envelope/cas/audit/models/canonical. **29 tests green incl 18 executed CAS golden fixtures** (the `ensure_ascii` Unicode trap reproduced). CAS ASCII escaping and digest hex encoding now use fixed lowercase hex tables instead of per-byte `format!` allocation while preserving byte-stable fixture output.
+- ✅ Faithful `// PORT backend/…:line` anchors remain where they still map deferred work. The obsolete Rust `eos-ephemeral` runtime pipeline/registry skeleton, unused `eos-daemon::ports` injector skeleton, stale `DispatchContext::with_in_flight` compatibility alias, unused public dispatcher registration surface, and stale `eos-occ` placeholder/skeleton comments have been removed; deferred plugin PPC dispatch now returns typed `PluginError::Ensure` errors instead of `todo!()` panic stubs, builtin op registration rejects different-handler collisions instead of silently overwriting routes, and `LayerStack` snapshot acquisition now returns a typed invalid-lease-owner error instead of panicking on an empty owner id. The layer-stack storage writer lock now reports registry/root mutex poisoning through `LayerStackError::LockPoisoned` on fallible acquire/exclusive paths, while RAII drop paths remain non-panicking; the daemon in-flight registry now recovers poisoned best-effort control-state locks instead of panicking heartbeat/cancel/count/drop cleanup paths; the OCC commit queue now reports poisoned receiver/transaction slots as `OccError::QueueStatePoisoned` and avoids invariant `expect(...)` calls in worker close/combine paths; the daemon OCC service cache now reports poisoned cache locks through `DaemonError::StateLockPoisoned` while route validation reuses normalized `LayerPath` values instead of reparsing with `expect(...)`; daemon isolated-workspace lifecycle state now recovers poisoned best-effort control-state locks and maps layer-stack / holder-child lock poisoning to typed setup errors instead of panicking; `eos-runner` setns namespace ordering now carries the `CLONE_NEW*` type beside each namespace FD instead of string-remapping through an `unreachable!()` fallback; `eos-ns-holder` pipe read/write helpers now use checked syscall byte-count conversions instead of unchecked signed-to-unsigned casts; and the Phase 3T PTY command/session path now recovers poisoned output-ring, completion-mailbox, live-session, writer, and cancellation state locks instead of panicking progress/stdin/cancel/natural-exit cleanup paths.
+- ✅ The 2026-06-01 daemon idiom pass tightened non-plugin production code without changing the wire contract: in-flight and isolated poison-lock recovery now use `PoisonError::into_inner` directly, isolated PTY force-cancel helpers borrow PTY id lists by slice and branch on the positive cancellation case, dispatcher overlay/changeset error helpers borrow display-only errors/messages, and the daemon server/reaper `tokio::select!` unit futures use explicit `()` patterns.
+- ✅ The daemon audit/command parsing cleanup now avoids signed cursor casts and manual size casts in the audit ring (`api.audit.pull` keeps negative cursor semantics and filters after-seq with checked conversion), uses saturating wire-size helpers for boot epoch / encoded-size accounting, and parses signed timeout-like command fields through `u64::try_from` instead of an `as` cast. Focused tests cover the audit cursor/filter path, saturating helper behavior, and signed/unsigned timeout parsing.
+- ✅ Latest focused daemon recheck passed: `cargo fmt --check -p eos-daemon`, `cargo test -p eos-daemon audit_buffer`, `cargo test -p eos-daemon optional_u64`, `cargo test -p eos-daemon`, and `cargo clippy -p eos-daemon --lib --bins --no-deps -- -W clippy::panic -W clippy::unwrap_used -W clippy::expect_used -W clippy::format_push_string`. Targeted pedantic rechecks confirmed the cleaned categories (`redundant_closure`, `if_not_else`, `needless_pass_by_value`, `ignored_unit_patterns`) and touched audit/timeout lines (`audit_buffer.rs:179/249/254`, `command.rs:225`) no longer report in the non-plugin daemon code.
 - ✅ `cargo check --workspace` green (12 crates) · `cargo clippy --workspace --all-targets` clean · `cargo fmt --all --check` clean · Linux-target syscall subset check green for `x86_64-unknown-linux-musl` · `cargo clippy --workspace --target x86_64-unknown-linux-musl --lib --bins` clean. The Phase 3/3T/3.5 Rust cleanup removed the stale unused/dead-code skeleton warnings from `eos-ephemeral` and `eos-daemon`, cleaned Linux PTY command wrappers to idiomatic tail expressions, the protocol tests no longer rely on `unwrap()`, all Rust workspace packages now inherit the explicit MSRV `rust-version = "1.85"`, and `RUSTFLAGS='-W unused-crate-dependencies' cargo check --workspace --all-targets` is down to known test-target false positives from protocol fixtures and daemon integration-test crates.
 - ✅ `xtask package` implemented for `eosd-linux-{amd64,arm64}`: default builder is `rust-lld` (`cargo` with `RUSTFLAGS=-C linker=rust-lld`), with optional `cargo`/`cross`; writes binary-only `SHA256SUMS`, `protocol_version`, per-artifact JSON manifests, and optional minisign `.minisig` signatures. Current artifacts package locally (`amd64` SHA `81eb221542666647a3b0a80a0ed254dff674a0ead27d814bfcea26bd14996d53`, `arm64` SHA `e07a59546cecf931922386a91bf08a8ee5e1fa08747cbc45ee56462eeac4417b`).
 - ✅ **Build-time guarantee holds**: `cargo tree -p eos-isolated` has no `eos-occ` edge (direct/transitive), and its direct normal graph is now only `eos-overlay`, `nix`, `serde_json`, and `thiserror` (no direct `eos-layerstack` / `eos-runner` / `eos-ns-holder` / `eos-protocol` runtime-child/protocol edges). `cargo tree -p eos-plugin --edges normal --depth 1` shows no `eos-occ`, `eos-overlay`, or `nix` edge; `eos-ephemeral` remains reduced to the protocol/error contract needed by deferred plugin PPC (`cargo tree -p eos-ephemeral --edges normal` now shows only `eos-protocol` + `thiserror`), while the live daemon dispatcher owns the concrete per-root OCC service cache and single-writer publish path.
@@ -252,7 +292,21 @@ cd .. && .venv/bin/python -m pytest backend/tests/unit_test/test_sandbox/test_pr
 8. **Finish plugin PPC execution outside the non-plugin sidecar.** Implement process-backed warm-server spawn/round-trip, READ_ONLY out-of-process dispatch, WRITE_ALLOWED eosd-owned overlay+OCC wrapping, and self-managed plugin OCC callback over PPC. MF-1 remains load-bearing: plugin callbacks route through the same per-root OCC writer and storage lock as primary publishes.
 9. **Refresh architecture docs only where surfaces change.** If tool names, terminal-session lifecycle, background identifiers, isolated-workspace routing, or plugin-dispatch ownership change, update the smallest affected `docs/architecture` page alongside the implementation.
 
-### F. Phase 3.5 (isolated) then Phase 5 (cutover) — per PLAN §5.
+### F. Phase 3.5 (isolated) then Phase 5 (cutover) — per PLAN §5
+- **Closed inside Phase 3T:** isolated daemon RPC routing, daemon-local handle
+  state, ns-holder/setns command routing, shell-free bridge/veth/nft setup,
+  no-OCC isolated command/PTY writes, active-PTY exit blocking, leak inspection,
+  and same-port `3000` network isolation.
+- **Still later-phase non-plugin work:** AV-9 full isolated lifecycle parity
+  against Python, including enter-gate/exit-drain/background-work semantics,
+  resource-cap quota/RAM-pressure parity, and the existing IWS concurrency and
+  phase-budget suites against Rust.
+- **Still later-phase environment work:** CP-1b setns validation across the
+  full BYO matrix (kernel floor/LTS, amd64 and arm64, non-root image, and
+  read-only-rootfs image). The current proof is local amd64 Docker/dask.
+- **Still cutover work:** AV-5a/AV-5b read/write A/B traffic, AV-8 minisign
+  fail-closed provenance, final AV-9/AV-10 checks, and the Phase 5 deletion of
+  Python runtime/bundle paths.
 
 ---
 

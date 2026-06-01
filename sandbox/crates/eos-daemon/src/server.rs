@@ -129,8 +129,8 @@ impl DaemonServer {
             tokio::spawn(async move {
                 loop {
                     tokio::select! {
-                        _ = shutdown.cancelled() => break,
-                        _ = tokio::time::sleep(Duration::from_secs_f64(registry.reaper_interval_s())) => {
+                        () = shutdown.cancelled() => break,
+                        () = tokio::time::sleep(Duration::from_secs_f64(registry.reaper_interval_s())) => {
                             registry.ttl_sweep();
                         }
                     }
@@ -163,7 +163,7 @@ impl DaemonServer {
             tokio::spawn(async move {
                 loop {
                     tokio::select! {
-                        _ = server.shutdown.cancelled() => break,
+                        () = server.shutdown.cancelled() => break,
                         accepted = unix_listener.accept() => {
                             let (stream, _) = accepted?;
                             let server = Arc::clone(&server);
@@ -184,7 +184,7 @@ impl DaemonServer {
                 Some(tokio::spawn(async move {
                     loop {
                         tokio::select! {
-                            _ = server.shutdown.cancelled() => break,
+                            () = server.shutdown.cancelled() => break,
                             accepted = listener.accept() => {
                                 let (stream, _) = accepted?;
                                 let server = Arc::clone(&server);
@@ -201,8 +201,8 @@ impl DaemonServer {
         };
 
         tokio::select! {
-            _ = shutdown.cancelled() => {}
-            _ = signal_shutdown() => shutdown.cancel(),
+            () = shutdown.cancelled() => {}
+            () = signal_shutdown() => shutdown.cancel(),
             result = unix_server => {
                 if let Ok(Err(err)) = result {
                     return Err(DaemonError::Io(err));
@@ -466,7 +466,7 @@ impl OccWriterQueue {
     pub async fn run(mut self) {
         loop {
             tokio::select! {
-                _ = self.shutdown.cancelled() => break,
+                () = self.shutdown.cancelled() => break,
                 work = self.rx.recv() => {
                     let Some(work) = work else { break };
                     let _ = work.reply.send(Err(DaemonError::Forbidden(

@@ -222,7 +222,7 @@ fn optional_u64(args: &Value, key: &str) -> Option<u64> {
     args.get(key).and_then(|value| {
         value
             .as_u64()
-            .or_else(|| value.as_i64().filter(|v| *v >= 0).map(|v| v as u64))
+            .or_else(|| value.as_i64().and_then(|value| u64::try_from(value).ok()))
     })
 }
 
@@ -1445,6 +1445,13 @@ mod tests {
     fn exec_command_requires_string_wire_shape() {
         assert!(require_command_string(&json!({"cmd": "echo hi"}), "cmd").is_ok());
         assert!(require_command_string(&json!({"cmd": ["true"]}), "cmd").is_err());
+    }
+
+    #[test]
+    fn optional_u64_accepts_unsigned_and_nonnegative_signed_numbers() {
+        assert_eq!(optional_u64(&json!({"timeout": 7_u64}), "timeout"), Some(7));
+        assert_eq!(optional_u64(&json!({"timeout": 7_i64}), "timeout"), Some(7));
+        assert_eq!(optional_u64(&json!({"timeout": -1_i64}), "timeout"), None);
     }
 
     #[test]

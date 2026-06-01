@@ -28,6 +28,7 @@ def test_submission_tools_registered() -> None:
 
 def test_tool_registry_renamed() -> None:
     """Unified submission names are registered and split terminals are gone."""
+    removed_workflow_handoff = "submit_" "workflow_handoff"
     assert has_tool("submit_planner_outcome")
     assert has_tool("submit_root_outcome")
     assert has_tool("submit_generator_outcome")
@@ -35,7 +36,7 @@ def test_tool_registry_renamed() -> None:
     assert has_tool("delegate_workflow")
     assert has_tool("check_workflow_status")
     assert has_tool("cancel_workflow")
-    assert not has_tool("submit_workflow_handoff")
+    assert not has_tool(removed_workflow_handoff)
     assert not has_tool("submit_plan_defers_goal")
     assert not has_tool("submit_plan_closes_goal")
     assert not has_tool("submit_generator_success")

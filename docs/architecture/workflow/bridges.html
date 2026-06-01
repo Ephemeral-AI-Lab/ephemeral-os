@@ -57,7 +57,7 @@
   <p>This boundary map is deliberately not a global orchestrator. Workflow starts a run, prepares one sandbox binding, composes launch messages, schedules attempt-scoped agents, and receives terminal submissions through persisted state. The engine loop remains the enforcement layer for terminal tools, and sandbox operations still pass through <code>tools/sandbox</code>, <code>sandbox.api</code>, and daemon workspace routing.</p>
 </div>
 
-<section id="bridge-boundary-map" data-last-reviewed-commit="d32994314" data-evidence-paths="backend/src/workflow/entry/bootstrap.py backend/src/workflow/entry/sandbox_provisioning.py backend/src/workflow/attempt/launch.py backend/src/engine/api.py backend/src/engine/agent/lifecycle.py backend/src/engine/query/loop.py backend/src/tools/_framework/core/runtime.py backend/src/tools/sandbox backend/src/sandbox/api backend/src/sandbox/daemon/workspace_tool_dispatch.py docs/architecture/agent_loops/main-loop.html docs/architecture/agent_loops/prompt-context.html docs/architecture/agent_loops/provider-sandbox-bridge.html">
+<section id="bridge-boundary-map" data-last-reviewed-commit="d32994314" data-evidence-paths="backend/src/runtime/entry.py backend/src/runtime/sandbox_provisioning.py backend/src/workflow/attempt/launch.py backend/src/engine/api.py backend/src/engine/agent/lifecycle.py backend/src/engine/query/loop.py backend/src/tools/_framework/core/runtime.py backend/src/tools/sandbox backend/src/sandbox/api backend/src/sandbox/daemon/workspace_tool_dispatch.py docs/architecture/agent_loops/main-loop.html docs/architecture/agent_loops/prompt-context.html docs/architecture/agent_loops/provider-sandbox-bridge.html">
 <h2>Runtime Boundary Map <a class="anchor" href="#bridge-boundary-map">#</a></h2>
 <div class="diagram" aria-label="Workflow engine tools sandbox boundary map">
   <div class="flow-row">
@@ -74,7 +74,7 @@
   </div>
 </div>
 <div class="edge-list">
-  <div><b>Workflow owns state</b><span><code>start_workflow_run()</code> creates the top-level run and delegates normal progress to <code>WorkflowStarter</code>, iteration coordinators, and per-attempt orchestrators.</span></div>
+  <div><b>Runtime owns entry</b><span><code>runtime/entry.py</code> creates the request row, root Task, workflow runtime, and direct root-agent run; delegated progress later flows through <code>WorkflowStarter</code>, iteration coordinators, and per-attempt orchestrators.</span></div>
   <div><b>Engine owns agent execution</b><span><code>EphemeralAttemptAgentLauncher</code> calls a supplied runner or falls back to <code>engine.api.run_ephemeral_agent</code>. The query loop drives provider turns and terminal-tool stop conditions.</span></div>
   <div><b>Tools own call adaptation</b><span>Terminal submission tools convert validated payloads into Workflow submissions. Sandbox tools convert agent-facing inputs into <code>sandbox.api</code> requests.</span></div>
   <div><b>Sandbox owns workspace effects</b><span><code>dispatch_workspace_tool_call()</code> routes file, shell, search, and isolated-workspace work through daemon-owned workspace pipelines and OCC publish paths.</span></div>
@@ -82,29 +82,30 @@
 </div>
 </section>
 
-<section id="entry-sandbox-provisioning" data-last-reviewed-commit="d32994314" data-evidence-paths="backend/src/workflow/entry/bootstrap.py backend/src/workflow/entry/sandbox_provisioning.py backend/src/workflow/run_controller.py backend/src/workflow/starter.py backend/src/workflow/_core/state.py backend/src/workflow/attempt/launch.py backend/tests/unit_test/test_workflow/test_lifecycle/test_entry_bootstrap.py backend/tests/unit_test/test_workflow/test_lifecycle/test_sandbox_provisioning.py backend/src/sandbox/api/provider_control.py">
+<section id="entry-sandbox-provisioning" data-last-reviewed-commit="HEAD-plus-worktree" data-evidence-paths="backend/src/runtime/entry.py backend/src/runtime/sandbox_provisioning.py backend/src/workflow/starter.py backend/src/workflow/_core/state.py backend/src/workflow/attempt/launch.py backend/tests/unit_test/test_workflow/test_lifecycle/test_sandbox_provisioning.py backend/src/sandbox/api/provider_control.py">
 <h2>Entry And Sandbox Provisioning <a class="anchor" href="#entry-sandbox-provisioning">#</a></h2>
-<p><code>start_workflow_run()</code> is the entry seam for top-level Workflow work. It receives stores, runtime config, prompt, optional sandbox id, event callback, optional runner, and optional sandbox provisioner. It does not run an agent directly; it constructs the run shell and hands off to <code>RunController.start_root_run()</code>, which seeds a synthetic root bootstrap generator task (id <code>&lt;run_id&gt;:root</code>) so even the root workflow is generator-spawned, then lets Workflow -> Iteration -> Attempt startup launch the initial planner.</p>
+<p><code>start_request()</code> is the entry seam for top-level request work. It receives stores, runtime config, prompt, optional sandbox id, event callback, and optional sandbox provisioner. It creates the request row, mints a root Task with <code>workflow_id=NULL</code>, builds the workflow runtime for future delegated work, and schedules the root agent directly through <code>engine.run_ephemeral_agent</code>. <code>WorkflowStarter.start()</code> is used only after an agent calls <code>delegate_workflow</code>.</p>
 <pre class="diagram" aria-label="Workflow entry workflow diagram">
 [user / external task request]
         |
         v
-[Workflow entry bootstrap]
+[runtime/entry.py]
         |
         v
-[RunController.start_root_run]
-        |  seeds synthetic &lt;run_id&gt;:root bootstrap generator
+[create request + root Task]
+        |  root Task has workflow_id=NULL
+        v
+[root agent run]
+        |  optional delegate_workflow
         v
 [WorkflowStarter.start(prompt, parent_task_id)]
-        |  creates workflow, first iteration, first attempt
-        v
-[AttemptOrchestrator]
+        |  creates delegated workflow, first iteration, first attempt
         |
         v
-[AgentLaunch through engine]
+[AttemptOrchestrator + AgentLaunch through engine]
         |
         v
-[terminal submission updates Workflow state]
+[terminal submissions update request or Workflow state]
 </pre>
 <div class="edge-list" aria-label="Workflow entry transitions">
   <div><b>preflight</b><span><code>runtime/entry.py</code> verifies task, workflow, iteration, and attempt stores before mutating request state.</span></div>
@@ -208,12 +209,12 @@
 </div>
 </section>
 
-<section id="tests-maintenance" data-last-reviewed-commit="d32994314" data-evidence-paths="backend/tests/unit_test/test_workflow/test_lifecycle/test_entry_bootstrap.py backend/tests/unit_test/test_workflow/test_lifecycle/test_sandbox_provisioning.py backend/tests/unit_test/test_workflow/test_agent_launch/test_runner_kwargs_contract.py backend/tests/unit_test/test_workflow/test_agent_launch/test_attempt_launcher_retry.py backend/src/task_center_runner/tests/mock/workflow/test_initial_messages_capture.py backend/src/task_center_runner/tests/mock/workflow/test_correctness.py backend/src/task_center_runner/tests/mock/workflow/test_full_case_user_input.py docs/architecture/agent_loops/main-loop.html docs/architecture/agent_loops/prompt-context.html docs/architecture/agent_loops/provider-sandbox-bridge.html docs/architecture/tools/sandbox.html docs/architecture/sandbox/workspaces.html">
+<section id="tests-maintenance" data-last-reviewed-commit="d32994314" data-evidence-paths="backend/tests/unit_test/test_workflow/test_lifecycle/test_phase03_submission_integration.py backend/tests/unit_test/test_workflow/test_lifecycle/test_sandbox_provisioning.py backend/tests/unit_test/test_workflow/test_agent_launch/test_runner_kwargs_contract.py backend/tests/unit_test/test_workflow/test_agent_launch/test_attempt_launcher_retry.py backend/src/task_center_runner/tests/mock/workflow/test_initial_messages_capture.py backend/src/task_center_runner/tests/mock/workflow/test_correctness.py backend/src/task_center_runner/tests/mock/workflow/test_full_case_user_input.py docs/architecture/agent_loops/main-loop.html docs/architecture/agent_loops/prompt-context.html docs/architecture/agent_loops/provider-sandbox-bridge.html docs/architecture/tools/sandbox.html docs/architecture/sandbox/workspaces.html">
 <h2>Tests And Maintenance <a class="anchor" href="#tests-maintenance">#</a></h2>
 <div class="evidence-grid">
   <div class="evidence-card">
-    <h3>Entry bootstrap</h3>
-    <p><code>test_entry_bootstrap.py</code> verifies prompt to initial workflow conversion, run task creation, planner task spawn, and launcher idle behavior. <code>test_sandbox_provisioning.py</code> pins explicit sandbox start, new sandbox create labels, and missing-id rejection.</p>
+    <h3>Request and submission path</h3>
+    <p><code>test_phase03_submission_integration.py</code> verifies workflow task submission and orchestrator state updates through the active request/task model. <code>test_sandbox_provisioning.py</code> pins explicit sandbox start, new sandbox create labels, and missing-id rejection.</p>
   </div>
   <div class="evidence-card">
     <h3>Launcher contract</h3>

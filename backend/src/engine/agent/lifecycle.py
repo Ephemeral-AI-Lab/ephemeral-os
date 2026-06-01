@@ -113,10 +113,10 @@ async def run_ephemeral_agent(
 ) -> EphemeralRunResult:
     """Spawn → track → run → persist a minimal agent run.
 
-    Single source of truth for the ephemeral-agent lifecycle. TaskCenter
+    Single source of truth for the ephemeral-agent lifecycle. Task-backed
     callers pass ``task_id`` so the run can be attached to the corresponding
-    ``task_center_tasks`` row. Subagent dispatches omit ``task_id`` and remain
-    transient background work.
+    ``tasks`` row. Subagent dispatches omit ``task_id`` and remain transient
+    background work.
 
     Terminal tools end the run immediately on success. When the agent exits
     without delivering a terminal result the lifecycle returns

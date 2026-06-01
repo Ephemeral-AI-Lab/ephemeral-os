@@ -43,6 +43,7 @@ pub mod dispatcher;
 pub mod error;
 pub mod invocation_registry;
 pub(crate) mod isolated;
+pub(crate) mod plugin;
 pub mod server;
 
 pub use audit_buffer::{safe_emit, safe_record_phase, AuditBuffer, BufferedEvent, LaneCounters};

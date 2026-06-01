@@ -74,7 +74,9 @@ def test_planner_context_uses_workflow_shape_and_execution_outcomes(
     )
     workflow_store.append_iteration_id(workflow.id, current.id)
     previous_attempt = attempt_store.insert(
-        iteration_id=current.id, attempt_sequence_no=1
+        iteration_id=current.id,
+        workflow_id=workflow.id,
+        attempt_sequence_no=1,
     )
     iteration_store.append_attempt_id(current.id, previous_attempt.id)
     gen_id = generator_task_id(previous_attempt.id, "api")
@@ -94,6 +96,9 @@ def test_planner_context_uses_workflow_shape_and_execution_outcomes(
             )
         ],
         needs=[],
+        workflow_id=workflow.id,
+        iteration_id=current.id,
+        attempt_id=previous_attempt.id,
     )
     task_store.upsert_task(
         task_id=red_id,
@@ -113,6 +118,9 @@ def test_planner_context_uses_workflow_shape_and_execution_outcomes(
             )
         ],
         needs=[gen_id],
+        workflow_id=workflow.id,
+        iteration_id=current.id,
+        attempt_id=previous_attempt.id,
     )
     attempt_store.close(
         previous_attempt.id,
@@ -130,7 +138,11 @@ def test_planner_context_uses_workflow_shape_and_execution_outcomes(
             ),
         ],
     )
-    current_attempt = attempt_store.insert(iteration_id=current.id, attempt_sequence_no=2)
+    current_attempt = attempt_store.insert(
+        iteration_id=current.id,
+        workflow_id=workflow.id,
+        attempt_sequence_no=2,
+    )
     iteration_store.append_attempt_id(current.id, current_attempt.id)
 
     context = ContextEngine(deps).build(
@@ -174,7 +186,11 @@ def test_generator_context_is_dependencies_plus_assigned_task(
         iteration_goal=workflow.workflow_goal,
         attempt_budget=2,
     )
-    attempt = attempt_store.insert(iteration_id=iteration.id, attempt_sequence_no=1)
+    attempt = attempt_store.insert(
+        iteration_id=iteration.id,
+        workflow_id=workflow.id,
+        attempt_sequence_no=1,
+    )
     dep_id = generator_task_id(attempt.id, "storage")
     task_id = generator_task_id(attempt.id, "api")
     task_store.upsert_task(
@@ -186,6 +202,9 @@ def test_generator_context_is_dependencies_plus_assigned_task(
         status="done",
         outcomes=[to_record(ExecutionTaskOutcome("success", "generator", dep_id, "Storage done."))],
         needs=[],
+        workflow_id=workflow.id,
+        iteration_id=iteration.id,
+        attempt_id=attempt.id,
     )
     task_store.upsert_task(
         task_id=task_id,
@@ -196,6 +215,9 @@ def test_generator_context_is_dependencies_plus_assigned_task(
         status="pending",
         outcomes=[],
         needs=[dep_id],
+        workflow_id=workflow.id,
+        iteration_id=iteration.id,
+        attempt_id=attempt.id,
     )
 
     context = ContextEngine(deps).build(
@@ -231,7 +253,11 @@ def test_dependency_context_preserves_all_execution_outcomes(
         iteration_goal=workflow.workflow_goal,
         attempt_budget=2,
     )
-    attempt = attempt_store.insert(iteration_id=iteration.id, attempt_sequence_no=1)
+    attempt = attempt_store.insert(
+        iteration_id=iteration.id,
+        workflow_id=workflow.id,
+        attempt_sequence_no=1,
+    )
     dep_id = generator_task_id(attempt.id, "handoff")
     task_id = generator_task_id(attempt.id, "consumer")
     first_child = generator_task_id("child-attempt-1", "api")
@@ -262,6 +288,9 @@ def test_dependency_context_preserves_all_execution_outcomes(
             ),
         ],
         needs=[],
+        workflow_id=workflow.id,
+        iteration_id=iteration.id,
+        attempt_id=attempt.id,
     )
     task_store.upsert_task(
         task_id=task_id,
@@ -272,6 +301,9 @@ def test_dependency_context_preserves_all_execution_outcomes(
         status="pending",
         outcomes=[],
         needs=[dep_id],
+        workflow_id=workflow.id,
+        iteration_id=iteration.id,
+        attempt_id=attempt.id,
     )
 
     context = ContextEngine(deps).build(
@@ -316,7 +348,11 @@ def test_reducer_context_uses_assigned_task_not_assigned_prompt(
         iteration_goal=workflow.workflow_goal,
         attempt_budget=2,
     )
-    attempt = attempt_store.insert(iteration_id=iteration.id, attempt_sequence_no=1)
+    attempt = attempt_store.insert(
+        iteration_id=iteration.id,
+        workflow_id=workflow.id,
+        attempt_sequence_no=1,
+    )
     dep_id = generator_task_id(attempt.id, "api")
     task_id = reducer_task_id(attempt.id, "verify_api")
     task_store.upsert_task(
@@ -328,6 +364,9 @@ def test_reducer_context_uses_assigned_task_not_assigned_prompt(
         status="done",
         outcomes=[to_record(ExecutionTaskOutcome("success", "generator", dep_id, "API done."))],
         needs=[],
+        workflow_id=workflow.id,
+        iteration_id=iteration.id,
+        attempt_id=attempt.id,
     )
     task_store.upsert_task(
         task_id=task_id,
@@ -338,6 +377,9 @@ def test_reducer_context_uses_assigned_task_not_assigned_prompt(
         status="pending",
         outcomes=[],
         needs=[dep_id],
+        workflow_id=workflow.id,
+        iteration_id=iteration.id,
+        attempt_id=attempt.id,
     )
 
     context = ContextEngine(deps).build(

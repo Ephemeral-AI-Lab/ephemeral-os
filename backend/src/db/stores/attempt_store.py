@@ -6,7 +6,6 @@ import uuid
 from datetime import UTC, datetime
 
 from db.models.attempt import AttemptRecord
-from db.models.iteration import IterationRecord
 from db.stores.base import SyncStoreMixin
 from workflow._core.outcomes import parse_outcomes_record
 from workflow._core.state import (
@@ -25,14 +24,9 @@ class AttemptStore(SyncStoreMixin):
         *,
         iteration_id: str,
         attempt_sequence_no: int,
-        workflow_id: str | None = None,
+        workflow_id: str,
     ) -> Attempt:
         with self._sf() as db:
-            if workflow_id is None:
-                iteration = db.get(IterationRecord, iteration_id)
-                if iteration is None:
-                    raise LookupError(f"Iteration {iteration_id!r} not found")
-                workflow_id = iteration.workflow_id
             now = datetime.now(UTC)
             record = AttemptRecord(
                 id=str(uuid.uuid4()),

@@ -66,6 +66,7 @@ def _seed_planner_attempt(
     workflow_store.append_iteration_id(workflow.id, iteration.id)
     attempt = attempt_store.insert(
         iteration_id=iteration.id,
+        workflow_id=workflow.id,
         attempt_sequence_no=attempt_sequence_no,
     )
     iteration_store.append_attempt_id(iteration.id, attempt.id)

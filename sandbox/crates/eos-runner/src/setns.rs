@@ -122,7 +122,15 @@ fn require_ns_fds(request: &RunRequest) -> Result<NsFds, RunnerError> {
         .ok_or_else(|| RunnerError::InvalidRequest("setns mode requires ns_fds".to_owned()))
 }
 
-#[cfg(any(test, target_os = "linux"))]
+#[cfg(all(test, target_os = "linux"))]
+fn namespace_fd_order(ns_fds: &NsFds) -> Vec<(&'static str, RawFd)> {
+    namespace_fd_order_with_types(ns_fds)
+        .into_iter()
+        .map(|(name, fd, _)| (name, fd))
+        .collect()
+}
+
+#[cfg(all(test, not(target_os = "linux")))]
 fn namespace_fd_order(ns_fds: &NsFds) -> Vec<(&'static str, RawFd)> {
     [
         ("user", ns_fds.user),
@@ -132,6 +140,19 @@ fn namespace_fd_order(ns_fds: &NsFds) -> Vec<(&'static str, RawFd)> {
     ]
     .into_iter()
     .filter_map(|(name, fd)| fd.map(|fd| (name, fd.0)))
+    .collect()
+}
+
+#[cfg(target_os = "linux")]
+fn namespace_fd_order_with_types(ns_fds: &NsFds) -> Vec<(&'static str, RawFd, libc::c_int)> {
+    [
+        ("user", ns_fds.user, libc::CLONE_NEWUSER),
+        ("mnt", ns_fds.mnt, libc::CLONE_NEWNS),
+        ("pid", ns_fds.pid, libc::CLONE_NEWPID),
+        ("net", ns_fds.net, libc::CLONE_NEWNET),
+    ]
+    .into_iter()
+    .filter_map(|(name, fd, nstype)| fd.map(|fd| (name, fd.0, nstype)))
     .collect()
 }
 
@@ -166,21 +187,10 @@ fn join_cgroup(request: &RunRequest) {
 
 #[cfg(target_os = "linux")]
 fn join_namespaces(ns_fds: &NsFds) -> Result<(), RunnerError> {
-    for (name, fd) in namespace_fd_order(ns_fds) {
-        setns_fd(name, fd, namespace_type(name))?;
+    for (name, fd, nstype) in namespace_fd_order_with_types(ns_fds) {
+        setns_fd(name, fd, nstype)?;
     }
     Ok(())
-}
-
-#[cfg(target_os = "linux")]
-fn namespace_type(name: &str) -> libc::c_int {
-    match name {
-        "user" => libc::CLONE_NEWUSER,
-        "mnt" => libc::CLONE_NEWNS,
-        "pid" => libc::CLONE_NEWPID,
-        "net" => libc::CLONE_NEWNET,
-        _ => unreachable!("namespace_fd_order only returns known namespace names"),
-    }
 }
 
 #[cfg(target_os = "linux")]

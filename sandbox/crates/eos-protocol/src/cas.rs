@@ -24,6 +24,8 @@ use thiserror::Error;
 
 use crate::version::MANIFEST_SCHEMA_VERSION;
 
+const LOWER_HEX: &[u8; 16] = b"0123456789abcdef";
+
 /// Errors raised while parsing CAS path / manifest values.
 #[derive(Debug, Clone, PartialEq, Eq, Error)]
 #[non_exhaustive]
@@ -141,22 +143,31 @@ fn push_json_ascii_escaped(out: &mut String, s: &str) {
             c if (0x20..=0x7E).contains(&(c as u32)) => out.push(c),
             c if (c as u32) < 0x20 => {
                 // other control chars: lowercase 4-digit \u00XX
-                out.push_str(&format!("\\u{:04x}", c as u32));
+                push_u_escape(out, c as u32);
             }
             c => {
                 let cp = c as u32;
                 if cp <= 0xFFFF {
-                    out.push_str(&format!("\\u{:04x}", cp));
+                    push_u_escape(out, cp);
                 } else {
                     // UTF-16 surrogate pair, both lowercase.
                     let v = cp - 0x10000;
                     let hi = 0xD800 + (v >> 10);
                     let lo = 0xDC00 + (v & 0x3FF);
-                    out.push_str(&format!("\\u{:04x}\\u{:04x}", hi, lo));
+                    push_u_escape(out, hi);
+                    push_u_escape(out, lo);
                 }
             }
         }
     }
+}
+
+fn push_u_escape(out: &mut String, value: u32) {
+    out.push_str("\\u");
+    out.push(LOWER_HEX[((value >> 12) & 0x0f) as usize] as char);
+    out.push(LOWER_HEX[((value >> 8) & 0x0f) as usize] as char);
+    out.push(LOWER_HEX[((value >> 4) & 0x0f) as usize] as char);
+    out.push(LOWER_HEX[(value & 0x0f) as usize] as char);
 }
 
 /// Build the exact `json.dumps({"layers":[...]}, sort_keys=True,
@@ -270,7 +281,8 @@ pub fn layer_digest(changes: &[LayerChange]) -> String {
 fn hex_lower(bytes: &[u8]) -> String {
     let mut s = String::with_capacity(bytes.len() * 2);
     for b in bytes {
-        s.push_str(&format!("{:02x}", b));
+        s.push(LOWER_HEX[(b >> 4) as usize] as char);
+        s.push(LOWER_HEX[(b & 0x0f) as usize] as char);
     }
     s
 }

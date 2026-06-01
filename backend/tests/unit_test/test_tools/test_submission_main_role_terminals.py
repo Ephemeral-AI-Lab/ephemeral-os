@@ -19,7 +19,7 @@ from tools.submission.reducer import submit_reducer_outcome
 from tools.workflow import cancel_workflow, check_workflow_status, delegate_workflow
 
 from .submission_test_utils import (
-    TaskCenterFixture,
+    WorkflowFixture,
     apply_single_generator_plan,
     build_harness_fixture,
     make_tool_context,
@@ -39,7 +39,7 @@ def _json_payload(result: ToolResult) -> dict:
 
 
 async def _start_delegated_workflow(
-    fixture: TaskCenterFixture,
+    fixture: WorkflowFixture,
     generator_id: str,
     *,
     goal: str = "solve delegated task",
@@ -55,11 +55,11 @@ async def _start_delegated_workflow(
 
 
 def _delegated_fixture(
-    fixture: TaskCenterFixture, delegated_result: ToolResult
-) -> TaskCenterFixture:
+    fixture: WorkflowFixture, delegated_result: ToolResult
+) -> WorkflowFixture:
     delegated_attempt_id = delegated_result.metadata["initial_attempt_id"]
     delegated_workflow_id = delegated_result.metadata["workflow_id"]
-    return TaskCenterFixture(
+    return WorkflowFixture(
         runtime=fixture.runtime,
         orchestrator=fixture.runtime.orchestrator_registry.get_or_raise(
             delegated_attempt_id
@@ -78,7 +78,7 @@ def _build_fixture(
     attempt_store,
     task_store,
     composer,
-) -> TaskCenterFixture:
+) -> WorkflowFixture:
     return build_harness_fixture(
         workflow_store=workflow_store,
         iteration_store=iteration_store,

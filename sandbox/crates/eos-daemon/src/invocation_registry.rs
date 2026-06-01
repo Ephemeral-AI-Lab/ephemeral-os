@@ -27,7 +27,7 @@
 //!   `// PORT backend/src/sandbox/daemon/rpc/in_flight.py — InFlightInvocationRegistry`
 
 use std::collections::HashMap;
-use std::sync::{Mutex, MutexGuard, OnceLock};
+use std::sync::{Mutex, MutexGuard, OnceLock, PoisonError};
 use std::time::Instant;
 
 use tokio::task::AbortHandle;
@@ -112,9 +112,7 @@ impl InFlightRegistry {
     // while holding the mutex, keep cancellation/heartbeat cleanup available
     // instead of panicking future control operations.
     fn lock_state(&self) -> MutexGuard<'_, RegistryState> {
-        self.inner
-            .lock()
-            .unwrap_or_else(|poisoned| poisoned.into_inner())
+        self.inner.lock().unwrap_or_else(PoisonError::into_inner)
     }
 
     /// Register a task under `invocation_id`. Empty ids are ignored.

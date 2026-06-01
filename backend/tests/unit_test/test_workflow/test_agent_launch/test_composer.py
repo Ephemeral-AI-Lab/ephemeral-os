@@ -28,7 +28,11 @@ def _seed_attempt(
         attempt_budget=2,
     )
     workflow_store.append_iteration_id(workflow.id, iteration.id)
-    attempt = attempt_store.insert(iteration_id=iteration.id, attempt_sequence_no=1)
+    attempt = attempt_store.insert(
+        iteration_id=iteration.id,
+        workflow_id=workflow.id,
+        attempt_sequence_no=1,
+    )
     iteration_store.append_attempt_id(iteration.id, attempt.id)
     return workflow, iteration, attempt
 
@@ -88,6 +92,9 @@ def test_compose_generator_context_uses_new_terminal_names(
         status="pending",
         outcomes=[],
         needs=[],
+        workflow_id=workflow.id,
+        iteration_id=iteration.id,
+        attempt_id=attempt.id,
     )
 
     messages = composer.compose(

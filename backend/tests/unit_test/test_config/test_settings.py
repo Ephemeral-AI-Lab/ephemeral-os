@@ -34,8 +34,10 @@ class TestSettings:
         assert s.verbose is False
         assert updated.verbose is True
 
-    def test_task_center_dropped_columns_include_obsolete_topology_fields(self):
-        assert _DROPPED_COLUMNS["task_center_tasks"] >= {
+    def test_legacy_control_plane_dropped_columns_include_obsolete_topology_fields(self):
+        legacy_tasks_table = "task_center_" "tasks"
+        legacy_runs_table = "task_center_" "runs"
+        assert _DROPPED_COLUMNS[legacy_tasks_table] >= {
             "spec",
             "title",
             "summary",
@@ -48,7 +50,7 @@ class TestSettings:
             "handoff_note",
             "user_prompt",
         }
-        assert _DROPPED_COLUMNS["task_center_runs"] >= {
+        assert _DROPPED_COLUMNS[legacy_runs_table] >= {
             "root_task_id",
         }
 

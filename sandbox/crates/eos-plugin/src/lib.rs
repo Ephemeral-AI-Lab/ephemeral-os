@@ -55,8 +55,12 @@
 pub mod context;
 pub mod dispatch;
 pub mod error;
+pub mod manifest;
 pub mod ppc;
+pub mod refresh;
 pub mod registry;
+pub mod service;
+pub mod service_registry;
 pub mod warm_server;
 
 pub use context::{PluginCaller, PluginOpContext};
@@ -65,8 +69,12 @@ pub use dispatch::{
     DispatchMode,
 };
 pub use error::{PluginError, Result};
+pub use manifest::{PluginManifest, PluginOperationManifest, PluginServiceManifest};
 pub use ppc::{PpcDirection, PpcEnvelope};
+pub use refresh::{RefreshAck, RefreshRequest};
 pub use registry::{
     public_op_name, OpRegistry, PluginOpRegistration, DEFAULT_AUTO_WORKSPACE_OVERLAY,
 };
+pub use service::{PluginServiceKey, RefreshStrategy, ServiceMode};
+pub use service_registry::{PluginServiceRegistry, PluginServiceState, PluginServiceStatus};
 pub use warm_server::{WarmServer, WarmServerRegistry, MAX_WARM_SERVERS};

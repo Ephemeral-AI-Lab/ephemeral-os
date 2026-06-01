@@ -1,8 +1,37 @@
 # Refactor: TaskCenter → a Task-based agentic framework (`task/` + `workflow/`)
 
-Status: draft (v2 — reshaped per design review)
+Status: implemented (non-runner verification passed 2026-06-01; `task_center_runner` deferred)
 Date: 2026-06-01
 Builds on: `docs/plans/delegate_workflow_BACKGROUND_IMPLEMENTATION_PLAN.md`
+
+## Implementation progress (2026-06-01)
+
+- The active control-plane refactor is implemented in `backend/src/task/`,
+  `backend/src/workflow/`, `backend/src/runtime/`,
+  `backend/src/tools/workflow/`, and `backend/src/tools/submission/root/`.
+  `backend/src/task_center_runner/` is intentionally left in place for the later
+  runner phase.
+- The root request path now mints a first-class root `Task` with
+  `workflow_id=None` and finishes through `submit_root_outcome`; `Workflow` rows
+  are created only by `delegate_workflow`, which remains non-terminal.
+- Legacy active-path surfaces were removed: `WAITING_WORKFLOW`,
+  `submit_workflow_handoff`, the old root/child workflow close split, `Planned*`
+  DTOs, synthetic root workflow tests, and backward-compatible
+  `AttemptStore.insert()` workflow-id inference.
+- The schema now uses `requests`, `tasks`, `agent_runs`, `workflows`,
+  `iterations`, and `attempts`; `tasks` has `request_id`, `instruction`, and
+  nullable `workflow_id`/`iteration_id`/`attempt_id` position columns, while
+  `attempts.workflow_id` is explicit and `workflows.parent_task_id` is
+  non-null. No `root_task` column is present; `workflow_id IS NULL` plus
+  `requests.root_task_id` identifies the root.
+- Architecture docs now live under `docs/architecture/workflow/`; the only
+  remaining `task_center` architecture namespace is
+  `docs/architecture/task_center_runner/`, matching the deferred runner scope.
+- Verification passed:
+  `uv run python -m pytest backend/tests/unit_test/test_workflow backend/tests/unit_test/test_tools backend/tests/unit_test/test_config backend/tests/unit_test/test_engine/test_background_task_emitters.py -q --tb=short`
+  (`432 passed`) and
+  `uv run python -m pytest $(find backend/tests/unit_test -mindepth 1 -maxdepth 1 -type d ! -name '__pycache__' ! -name 'fixtures' ! -name 'test_task_center_runner' ! -name 'test_benchmarks' | sort) -q --tb=short`
+  (`1755 passed, 2 skipped`).
 
 ## Framing: Task is the unifying agent interface
 
@@ -12,7 +41,7 @@ against a `Task`.**
 
 ```
 user input
-  → create root Task        (request.root_task_id; root_task=True, workflow_id=None)
+  → create root Task        (request.root_task_id; workflow_id=None)
   → run root agent loop      (prompt = task.instruction; tools incl. delegate_workflow)
   → submit_root_outcome      (terminal) → request result → user
 ```
@@ -142,7 +171,7 @@ prompt → TaskCenterEntry → create request/run/sandbox
 ### After: agent-first, Task-unified
 ```
 prompt → RequestEntry (task/)
-       → create request (+ sandbox);  root_task_id = mint Task(role=root, root_task=True,
+       → create request (+ sandbox);  root_task_id = mint Task(role=root,
                                        workflow_id=None, instruction=prompt, status=RUNNING)
        → task/ runs the root agent loop directly (prompt = task.instruction)
                                        — NO ContextEngine, NO composer
@@ -192,14 +221,16 @@ reducer + reachability), now validating the **created Task rows** via their
 - **`request`** table gains `root_task_id` + `status` (+ `finished_at`); the
   `task_center_runs` table and `task_center_run_id` are **removed**.
 - **`task`** table: FK `request_id` (was `task_center_run_id`); **add** columns
-  `root_task` (bool), `workflow_id`, `iteration_id`, `attempt_id` (nullable);
-  **rename** `context_message` → `instruction`.
+  `workflow_id`, `iteration_id`, `attempt_id` (nullable); **rename**
+  `context_message` → `instruction`. There is no `root_task` column; root is
+  `workflow_id IS NULL` plus `requests.root_task_id`.
 - `workflow` / `iteration` / `attempt` tables: `task_center_run_id` → `request_id`.
 - This **is** a schema change (decision 1 reverses the earlier "keep on-disk
   names"). `task_center_run_id` is also a serialized dict key + a metadata name
   crossing into `sandbox/…/op_context.py`, `tools/_framework/core/runtime.py`,
-  `tools/sandbox/_lib/tool_context.py`, `engine/audit/stream.py`, and
-  `task_center_runner` — all rename to `request_id`.
+  `tools/sandbox/_lib/tool_context.py`, and `engine/audit/stream.py` — all active
+  paths rename to `request_id`. `task_center_runner` keeps its historical package
+  name until the deferred runner phase.
 
 ### Launch paths (decision 7)
 ```
@@ -225,9 +256,7 @@ task/  ◄────────  workflow/  ◄────────  runt
 ```text
 backend/src/task/                      # PURE LEAF — the Task primitive only (imports nothing upward)
 ├── __init__.py
-├── task.py                            # ★ Task DTO + TaskRole + TaskStatus
-├── outcomes.py                        # generic per-task outcome record (workflow projections stay in workflow/)
-└── store.py                           # spawn / transition / fetch a Task
+└── task.py                            # ★ Task DTO + AgentRole-bearing TaskStatus
 
 backend/src/workflow/                  # delegated decomposition; imports task/ for the Task type
 ├── __init__.py                        # lazy __getattr__ facade (keeps the db.stores cycle broken)
@@ -240,7 +269,6 @@ backend/src/workflow/                  # delegated decomposition; imports task/ 
 
 backend/src/runtime/                   # COMPOSITION ROOT (was task_center/entry + run_controller)
 ├── entry.py                           # ← entry/bootstrap.py : create request → mint root Task → run root agent (engine.run_ephemeral_agent)
-├── run_controller.py                  # ← run_controller.py : finish_request on submit_root_outcome (no synthetic bootstrap)
 └── sandbox_provisioning.py            # ← entry/sandbox_provisioning.py
 
 backend/src/tools/workflow/            # delegate_workflow · check_workflow_status · cancel_workflow (non-terminal)
@@ -571,17 +599,18 @@ Note the `requests.root_task_id ↔ tasks.request_id` reference is cyclic, so
   position columns (`workflow_id`, `iteration_id`, `attempt_id`).
 - DB: drop `task_center_runs`; `request` gains `root_task_id` + `status`; `task`
   FK → `request_id`, add position columns, rename `context_message` → `instruction`.
-- Rename `task_center_run_id` → `request_id` across src + tests + the wire
-  consumers + `task_center_runner` + `db/models/__init__.py` + `db/stores/__init__.py`
-  + the `Mapped["…Record"]` forward-ref strings.
+- Rename `task_center_run_id` → `request_id` across active src + tests + wire
+  consumers + `db/models/__init__.py` + `db/stores/__init__.py` + the
+  `Mapped["…Record"]` forward-ref strings. Defer `task_center_runner` package
+  naming to the later runner phase.
 - Replace id-string routing with column reads (`workflow_id IS NULL`, `WHERE attempt_id=`,
   `task.role`).
-- Verify: `uv run pytest -q backend/tests/unit_test/test_task_center/test_persistence/`
+- Verify: `uv run pytest -q backend/tests/unit_test/test_workflow/test_persistence/`
   (renamed) + a request-lifecycle test.
 
 ### Phase 2 — Root agent + `submit_root_outcome` + entry
 - `runtime/entry.py` (composition, NOT `task/`): create request → mint root Task
-  (`role=root`, `root_task=True`, `instruction=prompt`, RUNNING) → run root agent
+  (`role=root`, `workflow_id=None`, `instruction=prompt`, RUNNING) → run root agent
   via `engine.run_ephemeral_agent` (no ContextEngine, no `root_agent.py`).
 - `root.md` profile (terminals: `submit_root_outcome` only).
 - New `submit_root_outcome` tool + handler: write root Task + finish request.
@@ -614,7 +643,7 @@ Note the `requests.root_task_id ↔ tasks.request_id` reference is cyclic, so
 ### Phase 5 — Package split + facades + docs
 - Split `task_center` → `task/` + `workflow/` per the tree above; one lazy
   `__init__` facade each (zero eager imports — verified cycle-safe).
-- Update all external importers + `task_center_runner` + `pyproject.toml` ruff pin.
+- Update all external importers + `pyproject.toml` ruff pin.
 - Rename `backend/tests/unit_test/test_task_center/` and `docs/architecture/task_center/`;
   regenerate `search-index.js`.
 - **Rewrite the CLAUDE.md invariant** (it currently hard-codes "TaskCenter is the
@@ -660,8 +689,8 @@ Note the `requests.root_task_id ↔ tasks.request_id` reference is cyclic, so
   new `request_id` FK + the added `workflow_id`/position columns; existing dev DBs
   need that rebuild path to run.
 - **The root task is now a *real* agent.** It produces an `agent_run` row
-  (`Task`↔`agent_run` one-to-one), audit/node-id graph entries
-  (`task_center_runner/audit/recorder.py`, `node_id.py`), and an event stream.
+  (`Task`↔`agent_run` one-to-one) and an event stream. The deferred
+  `task_center_runner` phase still needs to refresh its audit/node-id assumptions.
   Verify nothing assumes "the root has no agent_run" / "every request has exactly
   one root workflow."
 - **Adding position columns to Task** must keep `needs` wiring intact (planner

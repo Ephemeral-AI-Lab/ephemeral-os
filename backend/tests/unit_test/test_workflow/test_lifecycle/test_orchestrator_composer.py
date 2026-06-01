@@ -120,7 +120,11 @@ def _seed_workflow_iteration_attempt(
         iteration_goal="seg goal",
         attempt_budget=2,
     )
-    attempt = attempt_store.insert(iteration_id=iteration.id, attempt_sequence_no=1)
+    attempt = attempt_store.insert(
+        iteration_id=iteration.id,
+        workflow_id=workflow.id,
+        attempt_sequence_no=1,
+    )
     return workflow, iteration, attempt
 
 
@@ -134,14 +138,13 @@ def test_planner_launched_via_composer_uses_base_when_top_level(
 ):
     runtime, launcher = composer_runtime
     _register_planner_agents()
-    # Top-level workflow: parent task is the synthetic root bootstrap (encodes
-    # no attempt), so depth == 1 and the planner is NOT nested.
+    # Workflow launched by the root task, so depth == 1 and the planner is NOT nested.
     _seed_workflow_iteration_attempt(
         workflow_store,
         iteration_store,
         attempt_store,
         request_id,
-        parent_task_id=f"{request_id}:root",
+        parent_task_id="root-task",
     )
     attempt = attempt_store.list_for_iteration(
         iteration_store.list_for_workflow(workflow_store.list_for_request(request_id)[0].id)[
@@ -179,23 +182,27 @@ def test_nested_planner_keeps_unified_plan_terminal(
         iteration_store,
         attempt_store,
         request_id,
-        parent_task_id=f"{request_id}:root",
+        parent_task_id="root-task",
     )
     spawning_generator_id = generator_task_id(outer_attempt.id, "g")
 
-    child_workflow = workflow_store.insert(
+    delegated_workflow = workflow_store.insert(
         request_id=request_id,
         parent_task_id=spawning_generator_id,
         workflow_goal="child",
     )
     child_seg = iteration_store.insert(
-        workflow_id=child_workflow.id,
+        workflow_id=delegated_workflow.id,
         sequence_no=1,
         creation_reason=IterationCreationReason.INITIAL,
         iteration_goal="child seg",
         attempt_budget=2,
     )
-    child_attempt = attempt_store.insert(iteration_id=child_seg.id, attempt_sequence_no=1)
+    child_attempt = attempt_store.insert(
+        iteration_id=child_seg.id,
+        workflow_id=delegated_workflow.id,
+        attempt_sequence_no=1,
+    )
     orchestrator = AttemptOrchestrator(
         attempt=child_attempt,
         on_attempt_closed=lambda _id: None,

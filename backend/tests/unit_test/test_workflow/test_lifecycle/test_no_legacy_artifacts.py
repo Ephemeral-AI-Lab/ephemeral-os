@@ -1,4 +1,4 @@
-"""Static guard against removed TaskCenter lifecycle/context surfaces."""
+"""Static guard against removed pre-workflow lifecycle/context surfaces."""
 
 from __future__ import annotations
 
@@ -7,7 +7,10 @@ from pathlib import Path
 
 _REPO_ROOT = Path(__file__).resolve().parents[5]
 _SCAN_ROOTS = (
-    _REPO_ROOT / "backend" / "src" / "task_center",
+    _REPO_ROOT / "backend" / "src" / "task",
+    _REPO_ROOT / "backend" / "src" / "workflow",
+    _REPO_ROOT / "backend" / "src" / "runtime",
+    _REPO_ROOT / "backend" / "src" / "tools" / "workflow",
     _REPO_ROOT / "backend" / "src" / "tools" / "submission",
 )
 _REMOVED_TOKENS = (
@@ -48,10 +51,26 @@ _REMOVED_TOKENS = (
     "submit_generator_failure",
     "submit_reduction_success",
     "submit_reduction_failure",
+    # Pre-workflow refactor removals.
+    "TaskStatus." "WAITING_" "WORKFLOW",
+    "waiting_" "workflow",
+    "submit_" "workflow_handoff",
+    "Planned" "GeneratorTask",
+    "Planned" "ReducerTask",
+    "Planner" "TaskOutcome",
+    "Planned" "TaskRef",
+    "Workflow" "Origin",
+    "apply_child_" "workflow_outcome",
+    "start_child_" "workflow",
+    "run_close_" "handler",
+    "on_root_" "workflow_closed",
+    "child_" "workflow_id",
+    "root_" "workflow",
+    "child_" "workflow",
 )
 
 
-def test_removed_task_center_submission_surfaces_stay_removed() -> None:
+def test_removed_workflow_refactor_surfaces_stay_removed() -> None:
     offenders: list[str] = []
     for root in _SCAN_ROOTS:
         for path in root.rglob("*.py"):

@@ -117,7 +117,7 @@
 </div>
 </section>
 
-<section id="iteration-retry-deferral" data-last-reviewed-commit="d32994314" data-evidence-paths="backend/src/workflow/_core/state.py backend/src/workflow/iteration/attempt_coordinator.py backend/src/workflow/lifecycle.py backend/src/workflow/_core/invariants.py backend/src/workflow/_core/outcomes.py backend/tests/unit_test/test_workflow/test_lifecycle/test_workflow_lifecycle.py backend/tests/unit_test/test_workflow/test_lifecycle/test_iteration_attempt_coordinator.py backend/tests/unit_test/test_workflow/test_lifecycle/test_phase04_deferred_retry.py">
+<section id="iteration-retry-deferral" data-last-reviewed-commit="d32994314" data-evidence-paths="backend/src/workflow/_core/state.py backend/src/workflow/iteration/attempt_coordinator.py backend/src/workflow/lifecycle.py backend/src/workflow/_core/invariants.py backend/src/workflow/_core/outcomes.py backend/tests/unit_test/test_workflow/test_lifecycle/test_iteration_attempt_coordinator.py backend/tests/unit_test/test_workflow/test_lifecycle/test_iteration_attempt_coordinator.py backend/tests/unit_test/test_workflow/test_lifecycle/test_iteration_attempt_coordinator.py">
 <h2>Retry And Deferral <a class="anchor" href="#iteration-retry-deferral">#</a></h2>
 <p>Retry and deferral are separate Workflow -> Iteration -> Attempt decisions. A failed Attempt can retry inside the same Iteration while budget remains. A passed Attempt can either terminally close the Workflow or carry <code>deferred_goal_for_next_iteration</code>, which closes the current Iteration as succeeded and starts the next Iteration under the same Workflow.</p>
 <div class="diagram" aria-label="Retry versus deferral workflow">

@@ -32,6 +32,14 @@ pub enum PluginError {
     #[error("plugin ensure failed: {0}")]
     Ensure(String),
 
+    /// A plugin/service manifest or service key was malformed.
+    #[error("plugin manifest error: {0}")]
+    Manifest(String),
+
+    /// A read-only plugin service tried to answer from an old projection.
+    #[error("plugin projection stale: {0}")]
+    ProjectionStale(String),
+
     /// A PPC envelope could not be framed/parsed, or the warm server's reply
     /// carried an unknown / unmatched message id.
     /// `// PORT backend/src/sandbox/ephemeral_workspace/plugin/overlay_child.py:39-45 — payload decode`

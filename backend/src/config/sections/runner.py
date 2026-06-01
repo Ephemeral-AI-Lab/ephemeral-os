@@ -50,7 +50,7 @@ class AuditWarningsConfig(ModuleConfigBase):
 
 
 class RunnerConfig(ModuleConfigBase):
-    """TaskCenter runner defaults."""
+    """Workflow runner defaults."""
 
     audit_dir: Path = Path(".sweevo_runs")
     run_label: str = "task_center_runner"
