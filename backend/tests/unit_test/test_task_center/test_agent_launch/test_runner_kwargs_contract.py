@@ -15,7 +15,7 @@ from __future__ import annotations
 import inspect
 import re
 
-from task_center.attempt.launch import EphemeralAttemptAgentLauncher
+from workflow.attempt.launch import EphemeralAttemptAgentLauncher
 
 _FROZEN_KWARG_SET: frozenset[str] = frozenset(
     {

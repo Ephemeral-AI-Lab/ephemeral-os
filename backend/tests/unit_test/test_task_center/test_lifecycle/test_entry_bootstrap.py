@@ -13,10 +13,10 @@ from types import SimpleNamespace
 
 import pytest
 
-from task_center import start_task_center_run
-from task_center.entry import TaskCenterSandboxProvisioner
-from task_center._core.primitives import planner_task_id, root_task_id
-from task_center._core.task_state import TaskCenterTaskRole, TaskCenterTaskStatus
+from workflow import start_task_center_run
+from runtime.sandbox_provisioning import TaskCenterSandboxProvisioner
+from workflow._core.primitives import planner_task_id, root_task_id
+from task import AgentRole, TaskStatus
 
 
 @pytest.mark.asyncio
@@ -74,19 +74,19 @@ async def test_entry_bootstrap_converts_prompt_to_root_workflow(
 
     # The synthetic root bootstrap generator is waiting on the root workflow.
     assert root_task is not None
-    assert root_task["role"] == TaskCenterTaskRole.GENERATOR.value
-    assert root_task["status"] == TaskCenterTaskStatus.WAITING_WORKFLOW.value
+    assert root_task["role"] == AgentRole.GENERATOR.value
+    assert root_task["status"] == TaskStatus.WAITING_WORKFLOW.value
     assert root_task["child_workflow_id"] == workflow.id
 
     # The first attempt launched the planner.
     assert planner_task is not None
-    assert planner_task["role"] == TaskCenterTaskRole.PLANNER.value
-    assert planner_task["status"] == TaskCenterTaskStatus.RUNNING.value
+    assert planner_task["role"] == AgentRole.PLANNER.value
+    assert planner_task["status"] == TaskStatus.RUNNING.value
 
     roles = sorted(task["role"] for task in run_tasks)
     assert roles == [
-        TaskCenterTaskRole.GENERATOR.value,
-        TaskCenterTaskRole.PLANNER.value,
+        AgentRole.GENERATOR.value,
+        AgentRole.PLANNER.value,
     ]
 
     assert release_runner is not None

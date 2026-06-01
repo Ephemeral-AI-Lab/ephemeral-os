@@ -12,11 +12,11 @@ from __future__ import annotations
 from collections.abc import Callable
 
 from db.stores.attempt_store import AttemptStore
-from task_center._core.primitives import (
+from workflow._core.primitives import (
     TaskCenterLifecycleConfig,
     root_task_id,
 )
-from task_center._core.state import (
+from workflow._core.state import (
     Attempt,
     AttemptFailReason,
     AttemptStatus,
@@ -24,13 +24,13 @@ from task_center._core.state import (
     WorkflowStatus,
     IterationStatus,
 )
-from task_center._core.task_state import TaskCenterTaskRole, TaskCenterTaskStatus
-from task_center.workflow.lifecycle import WorkflowLifecycle
-from task_center.iteration import (
+from task import AgentRole, TaskStatus
+from workflow.lifecycle import WorkflowLifecycle
+from workflow.iteration import (
     IterationAttemptCoordinator,
     OpenIterationCoordinatorRegistry,
 )
-from task_center.attempt.orchestrator_registry import AttemptOrchestratorRegistry
+from workflow.attempt.orchestrator_registry import AttemptOrchestratorRegistry
 
 
 class _StubOrchestrator:
@@ -82,10 +82,10 @@ def _root_workflow(workflow_lifecycle, task_store, run_id, *, goal):
     task_store.upsert_task(
         task_id=root_task_id(run_id),
         task_center_run_id=run_id,
-        role=TaskCenterTaskRole.GENERATOR.value,
+        role=AgentRole.GENERATOR.value,
         agent_name=None,
         context_message="",
-        status=TaskCenterTaskStatus.RUNNING.value,
+        status=TaskStatus.RUNNING.value,
         outcomes=[],
         needs=[],
     )

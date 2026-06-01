@@ -157,7 +157,7 @@ class AgentMessageJsonlRecorder:
         For the two-user-message launch shape (see
         ``task_center/attempt/launch.py:140-148``), ``seeded_initial_messages``
         carries the messages the launcher passed via the ``initial_messages``
-        kwarg (i.e. the composer's context_message). They are written
+        kwarg (i.e. the composer's instruction). They are written
         BETWEEN the system row and the task-guidance ``user_prompt`` row so
         on-disk transcripts hold the full three-message launch shape.
         """

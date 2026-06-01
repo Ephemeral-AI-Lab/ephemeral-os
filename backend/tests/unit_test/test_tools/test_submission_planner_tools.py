@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from task_center.attempt import AttemptStage
+from workflow.attempt import AttemptStage
 from tools._framework.execution.tool_call import execute_tool_once
 from tools.submission.planner import submit_planner_outcome
 from tools.submission.planner._prompt_guidance import (

@@ -28,7 +28,7 @@ from task_center_runner.agent.mock._advisor_approval import (
 from tools._framework.core.context import ToolExecutionContextService
 from tools._framework.core.runtime import ExecutionMetadata
 from tools._framework.execution.tool_call import execute_tool_once
-from tools.submission.generator import submit_generator_outcome, submit_workflow_handoff
+from tools.submission.generator import submit_generator_outcome
 
 
 async def _noop_emit(_event: Any) -> None:
@@ -66,7 +66,7 @@ def _metadata_with_advisor_approval(
 
 @pytest.mark.asyncio
 async def test_wrong_tool_approval_blocks_terminal_dispatch() -> None:
-    """Approve ``submit_workflow_handoff`` → submit ``submit_generator_outcome``.
+    """Approve a different terminal → submit ``submit_generator_outcome``.
 
     The gate must reject with the canonical ``BLOCKED`` prose. Verifies that
     the transcript helper produces metadata the gate reads correctly, and
@@ -75,7 +75,7 @@ async def test_wrong_tool_approval_blocks_terminal_dispatch() -> None:
     """
     gated_metadata = _metadata_with_advisor_approval(
         ExecutionMetadata(),
-        tool_name=submit_workflow_handoff.name,
+        tool_name="submit_reducer_outcome",
     )
     context = ToolExecutionContextService(cwd=Path("/tmp"), services=gated_metadata)
 

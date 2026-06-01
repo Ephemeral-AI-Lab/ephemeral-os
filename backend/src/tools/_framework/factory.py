@@ -105,10 +105,12 @@ def _register_builtins() -> None:
     from tools.submission import make_submission_tools
     from tools.subagent import make_subagent_tool_from_context
     from tools.skills import make_load_skill_reference_from_context
+    from tools.workflow import make_workflow_tools
 
     _register_many(make_sandbox_tools())
     _register_many(make_submission_tools())
     _register_many(make_ask_helper_tools())
+    _register_many(make_workflow_tools())
     register_tool_factory("run_subagent", make_subagent_tool_from_context)
     register_tool_factory(
         "load_skill_reference", make_load_skill_reference_from_context

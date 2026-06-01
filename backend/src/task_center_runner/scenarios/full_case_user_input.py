@@ -15,7 +15,7 @@ from task_center_runner.scenarios.base import (
     ToolCallSpec,
 )
 from task_center_runner.scenarios._scenario_helpers import (
-    context_message_field,
+    instruction_field,
     is_entry_origin_workflow,
     is_recursive_workflow,
 )
@@ -56,22 +56,22 @@ class FullCaseUserInput(ScenarioBase):
         return self._entry_origin_planner_response(ctx)
 
     def executor_actions(self, ctx: ScenarioContext) -> Sequence[str]:
-        context_message = ctx.context_message or ctx.prompt or ""
-        if "ACTION inspect_user_input" in context_message:
+        instruction = ctx.instruction or ctx.prompt or ""
+        if "ACTION inspect_user_input" in instruction:
             return ("inspect_user_input",)
-        if "ACTION request_recursive_workflow" in context_message:
+        if "ACTION request_recursive_workflow" in instruction:
             package_id = (
-                context_message_field(context_message, "package")
+                instruction_field(instruction, "package")
                 or self._recursive_package_id
                 or ""
             )
             return (f"request_recursive_workflow:{package_id}",)
-        if "ACTION execute_package" in context_message:
-            package_id = context_message_field(context_message, "package") or "unknown"
+        if "ACTION execute_package" in instruction:
+            package_id = instruction_field(instruction, "package") or "unknown"
             return (f"execute_package:{package_id}",)
-        if "ACTION final_reconciliation" in context_message:
+        if "ACTION final_reconciliation" in instruction:
             return ("final_reconciliation",)
-        if "ACTION recursive_" in context_message:
+        if "ACTION recursive_" in instruction:
             return ("recursive_step",)
         return ("execute_package:generic",)
 
@@ -96,8 +96,8 @@ class FullCaseUserInput(ScenarioBase):
         )
 
     def recursive_handoff_goal(self, ctx: ScenarioContext) -> str | None:
-        context_message = ctx.context_message or ""
-        package_id = context_message_field(context_message, "package") or self._recursive_package_id
+        instruction = ctx.instruction or ""
+        package_id = instruction_field(instruction, "package") or self._recursive_package_id
         if not package_id:
             return None
         plan = self._ensure_user_input_plan(ctx)
@@ -256,7 +256,7 @@ class FullCaseUserInput(ScenarioBase):
         if ctx.workflow is not None and is_entry_origin_workflow(ctx):
             prompt = str(ctx.workflow.workflow_goal or "")
         if not prompt:
-            prompt = ctx.prompt or ctx.context_message or ""
+            prompt = ctx.prompt or ctx.instruction or ""
         self._entry_prompt = prompt
         self._user_input_plan = build_user_input_plan(prompt)
         return self._user_input_plan

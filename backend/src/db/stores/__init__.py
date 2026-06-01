@@ -10,7 +10,7 @@ __all__ = [
     "WorkflowStore",
     "AttemptStore",
     "ModelStore",
-    "TaskCenterStore",
+    "TaskStore",
     "IterationStore",
 ]
 
@@ -25,7 +25,7 @@ _EXPORTS = {
         "AttemptStore",
     ),
     "ModelStore": ("db.stores.model_store", "ModelStore"),
-    "TaskCenterStore": ("db.stores.task_center_store", "TaskCenterStore"),
+    "TaskStore": ("db.stores.task_store", "TaskStore"),
     "IterationStore": (
         "db.stores.iteration_store",
         "IterationStore",

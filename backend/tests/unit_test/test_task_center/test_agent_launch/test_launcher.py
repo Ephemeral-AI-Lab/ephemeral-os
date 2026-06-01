@@ -7,16 +7,16 @@ from types import SimpleNamespace
 
 import pytest
 
-from task_center.attempt import AttemptFailReason, AttemptStatus
-from task_center.attempt.launch import (
+from workflow.attempt import AttemptFailReason, AttemptStatus
+from workflow.attempt.launch import (
     AgentLaunch,
     AttemptDeps,
     EphemeralAttemptAgentLauncher,
 )
-from task_center.attempt.orchestrator_registry import AttemptOrchestratorRegistry
-from task_center._core.state import IterationCreationReason
-from task_center._core.task_state import TaskCenterTaskRole, TaskCenterTaskStatus
-from task_center._core.primitives import generator_task_id, planner_task_id
+from workflow.attempt.orchestrator_registry import AttemptOrchestratorRegistry
+from workflow._core.state import IterationCreationReason
+from task import AgentRole, TaskStatus
+from workflow._core.primitives import generator_task_id, planner_task_id
 
 
 class _NoopLauncher:
@@ -62,10 +62,10 @@ async def test_missing_orchestrator_exhaustion_closes_attempt(
     task_store.upsert_task(
         task_id=task_id,
         task_center_run_id=task_center_run_id,
-        role=TaskCenterTaskRole.PLANNER.value,
+        role=AgentRole.PLANNER.value,
         agent_name="planner",
         context_message="plan",
-        status=TaskCenterTaskStatus.RUNNING.value,
+        status=TaskStatus.RUNNING.value,
         outcomes=[],
         needs=[],
     )
@@ -87,7 +87,7 @@ async def test_missing_orchestrator_exhaustion_closes_attempt(
             task_id=task_id,
             task_center_run_id=task_center_run_id,
             attempt_id=attempt.id,
-            role=TaskCenterTaskRole.PLANNER,
+            role=AgentRole.PLANNER,
             agent_name="planner",
             context="plan",
             task_guidance="plan the work",
@@ -100,7 +100,7 @@ async def test_missing_orchestrator_exhaustion_closes_attempt(
     task = task_store.get_task(task_id)
     refreshed = attempt_store.get(attempt.id)
     assert task is not None
-    assert task["status"] == TaskCenterTaskStatus.FAILED.value
+    assert task["status"] == TaskStatus.FAILED.value
     assert refreshed is not None
     assert refreshed.status == AttemptStatus.FAILED
     assert refreshed.fail_reason == AttemptFailReason.TASK_FAILED
@@ -130,10 +130,10 @@ async def test_unowned_generator_exhaustion_persists_attempt_outcome(
     task_store.upsert_task(
         task_id=task_id,
         task_center_run_id=task_center_run_id,
-        role=TaskCenterTaskRole.GENERATOR.value,
+        role=AgentRole.GENERATOR.value,
         agent_name="executor",
         context_message="build api",
-        status=TaskCenterTaskStatus.RUNNING.value,
+        status=TaskStatus.RUNNING.value,
         outcomes=[],
         needs=[],
     )
@@ -155,7 +155,7 @@ async def test_unowned_generator_exhaustion_persists_attempt_outcome(
             task_id=task_id,
             task_center_run_id=task_center_run_id,
             attempt_id=attempt.id,
-            role=TaskCenterTaskRole.GENERATOR,
+            role=AgentRole.GENERATOR,
             agent_name="executor",
             context="build api",
             task_guidance="build api",
@@ -168,7 +168,7 @@ async def test_unowned_generator_exhaustion_persists_attempt_outcome(
     task = task_store.get_task(task_id)
     refreshed = attempt_store.get(attempt.id)
     assert task is not None
-    assert task["status"] == TaskCenterTaskStatus.FAILED.value
+    assert task["status"] == TaskStatus.FAILED.value
     assert refreshed is not None
     assert refreshed.status == AttemptStatus.FAILED
     assert refreshed.fail_reason == AttemptFailReason.TASK_FAILED

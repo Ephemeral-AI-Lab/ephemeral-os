@@ -21,7 +21,6 @@ _MAIN_TERMINAL_NAMES = frozenset(
     {
         "submit_planner_outcome",
         "submit_generator_outcome",
-        "submit_workflow_handoff",
         "submit_reducer_outcome",
     }
 )

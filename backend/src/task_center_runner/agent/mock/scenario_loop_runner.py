@@ -209,7 +209,7 @@ class ScenarioLoopRunner:
         if self._bus is None:
             return
         self._bus.publish(
-            Event(type=event_type, node=NodeId(task_center_run_id=""), payload=payload)
+            Event(type=event_type, node=NodeId(request_id=""), payload=payload)
         )
 
     # -- prompt inspection + initial-message recording (ported from runner) --

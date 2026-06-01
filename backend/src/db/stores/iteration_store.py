@@ -7,7 +7,7 @@ from datetime import UTC, datetime
 
 from db.models.iteration import IterationRecord
 from db.stores.base import SyncStoreMixin
-from task_center._core.state import (
+from workflow._core.state import (
     Iteration,
     IterationCreationReason,
     IterationStatus,

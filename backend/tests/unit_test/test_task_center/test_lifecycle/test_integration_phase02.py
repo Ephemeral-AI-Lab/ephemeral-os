@@ -8,31 +8,31 @@ workflow, routing the close through the run-close handler.
 
 from __future__ import annotations
 
-from task_center._core.primitives import (
+from workflow._core.primitives import (
     TaskCenterLifecycleConfig,
     generator_task_id,
     planner_task_id,
     reducer_task_id,
     root_task_id,
 )
-from task_center._core.state import (
+from workflow._core.state import (
     AttemptStatus,
     IterationStatus,
     Workflow,
     WorkflowStatus,
 )
-from task_center.attempt.launch import AgentLaunch, AttemptDeps
-from task_center.attempt.orchestrator import AttemptOrchestrator
-from task_center.attempt.orchestrator_registry import AttemptOrchestratorRegistry
-from task_center.iteration import OpenIterationCoordinatorRegistry
-from task_center.submissions import (
+from workflow.attempt.launch import AgentLaunch, AttemptDeps
+from workflow.attempt.orchestrator import AttemptOrchestrator
+from workflow.attempt.orchestrator_registry import AttemptOrchestratorRegistry
+from workflow.iteration import OpenIterationCoordinatorRegistry
+from workflow.submissions import (
     GeneratorSubmission,
     PlannedGeneratorTask,
     PlannedReducerTask,
     PlannerSubmission,
     ReducerSubmission,
 )
-from task_center.workflow.lifecycle import WorkflowLifecycle
+from workflow.lifecycle import WorkflowLifecycle
 
 
 class _FakeLauncher:
@@ -110,15 +110,15 @@ def _reducer(attempt_id: str, status: str) -> ReducerSubmission:
 def _create_root_workflow(workflow_lifecycle, task_store, run_id):
     # Seed the synthetic root bootstrap generator so the close routes through
     # the run-close handler.
-    from task_center._core.task_state import TaskCenterTaskRole, TaskCenterTaskStatus
+    from task import AgentRole, TaskStatus
 
     task_store.upsert_task(
         task_id=root_task_id(run_id),
         task_center_run_id=run_id,
-        role=TaskCenterTaskRole.GENERATOR.value,
+        role=AgentRole.GENERATOR.value,
         agent_name=None,
         context_message="",
-        status=TaskCenterTaskStatus.RUNNING.value,
+        status=TaskStatus.RUNNING.value,
         outcomes=[],
         needs=[],
     )

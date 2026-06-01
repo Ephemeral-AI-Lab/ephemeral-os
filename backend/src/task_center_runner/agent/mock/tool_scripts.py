@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import Any, Protocol
 
 from sandbox.occ.service import AUTO_SQUASH_MAX_DEPTH
-from task_center_runner.scenarios._scenario_helpers import context_message_field
+from task_center_runner.scenarios._scenario_helpers import instruction_field
 from task_center_runner.scenarios.base import ScenarioContext
 from message.events import AssistantTextDeltaEvent, StreamEvent
 from tools._framework.core.base import BaseTool
@@ -244,12 +244,12 @@ def execute_package_script(
     payload = {
         "task_id": ctx.task_id,
         "package_id": package_id,
-        "wave": context_message_field(ctx.context_message or "", "wave"),
-        "subsystem": context_message_field(ctx.context_message or "", "subsystem")
+        "wave": instruction_field(ctx.instruction or "", "wave"),
+        "subsystem": instruction_field(ctx.instruction or "", "subsystem")
         or package.get("subsystem"),
-        "risk": context_message_field(ctx.context_message or "", "risk")
+        "risk": instruction_field(ctx.instruction or "", "risk")
         or package.get("risk"),
-        "item_count": context_message_field(ctx.context_message or "", "item_count")
+        "item_count": instruction_field(ctx.instruction or "", "item_count")
         or len(package.get("item_ids") or ()),
         "item_ids": list(package.get("item_ids") or ()),
         "edited": False,
@@ -302,14 +302,14 @@ def execute_package_script(
 def recursive_step_script(ctx: ScenarioContext) -> PreparedToolScript:
     """Persist evidence for a delegated recursive workflow step."""
     task_id = _safe_slug(ctx.task_id or "recursive")
-    context_message = ctx.context_message or ""
+    instruction = ctx.instruction or ""
     evidence_path = f"{_RECURSIVE_DIR}/{task_id}.json"
-    is_close = "recursive_reconcile" in context_message
+    is_close = "recursive_reconcile" in instruction
     payload = {
         "task_id": ctx.task_id,
-        "action": context_message,
-        "checkpoint": context_message_field(context_message, "checkpoint"),
-        "slice": context_message_field(context_message, "slice"),
+        "action": instruction,
+        "checkpoint": instruction_field(instruction, "checkpoint"),
+        "slice": instruction_field(instruction, "slice"),
         "close_report": is_close,
     }
     steps: list[ToolScriptStep] = [
@@ -366,9 +366,9 @@ def recursive_step_script(ctx: ScenarioContext) -> PreparedToolScript:
 
 def final_reconciliation_script(ctx: ScenarioContext) -> PreparedToolScript:
     """Write and verify final release-bundle reconciliation evidence."""
-    stage = context_message_field(ctx.context_message or "", "stage") or "final"
-    high_risk_count = context_message_field(
-        ctx.context_message or "", "high_risk_count"
+    stage = instruction_field(ctx.instruction or "", "stage") or "final"
+    high_risk_count = instruction_field(
+        ctx.instruction or "", "high_risk_count"
     )
     payload = {
         "task_id": ctx.task_id,

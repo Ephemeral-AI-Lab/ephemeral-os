@@ -33,11 +33,11 @@ CORE_DIR = (
 _FORBIDDEN_IMPORT_TOKENS = (
     "task_center_runner.hooks",
     "from task_center_runner.squad",
-    "import task_center_runner.squad",
+    "import workflow_runner.squad",
     "from task_center_runner.agent.mock",
-    "import task_center_runner.agent.mock",
+    "import workflow_runner.agent.mock",
     "from task_center_runner.benchmarks.sweevo",
-    "import task_center_runner.benchmarks.sweevo",
+    "import workflow_runner.benchmarks.sweevo",
 )
 
 _FORBIDDEN_SOURCE_PATTERNS = (

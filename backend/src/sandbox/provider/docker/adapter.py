@@ -147,6 +147,7 @@ class DockerProviderAdapter:
         language: str = "python",
         env_vars: dict[str, str] | None = None,
         labels: dict[str, str] | None = None,
+        platform: str | None = None,
     ) -> dict[str, Any]:
         image_ref = (image or snapshot or "").strip()
         if not image_ref:
@@ -192,13 +193,18 @@ class DockerProviderAdapter:
             "labels": merged_labels,
             **host_kwargs,
         }
+        if platform:
+            create_kwargs["platform"] = platform
         try:
             container = client.containers.create(**create_kwargs)
         except Exception as exc:
             if not _is_image_not_found(exc):
                 raise
             logger.info("Docker image %s missing locally; pulling before create", image_ref)
-            client.images.pull(image_ref)
+            if platform:
+                client.images.pull(image_ref, platform=platform)
+            else:
+                client.images.pull(image_ref)
             container = client.containers.create(**create_kwargs)
         container.start()
         container.reload()

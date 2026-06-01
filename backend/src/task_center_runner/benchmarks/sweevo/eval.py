@@ -457,7 +457,7 @@ class SweevoLifecycle:
             report.task_center_status == "done" and not report.aborted_by_timeout
         )
         result = SWEEvoResult(
-            plan_id=report.task_center_run_id,
+            plan_id=report.request_id,
             instance_id=self._instance.instance_id,
             status="completed" if completed_cleanly else "failed",
             duration_s=report.duration_s,
@@ -493,7 +493,7 @@ class SweevoLifecycle:
         path.parent.mkdir(parents=True, exist_ok=True)
         payload = {
             "instance_id": result.instance_id,
-            "run_id": report.task_center_run_id,
+            "run_id": report.request_id,
             "resolved": result.resolved,
             "fix_rate": result.fix_rate,
             "fail_to_pass_passed": result.fail_to_pass_passed,
@@ -525,7 +525,7 @@ def format_verdict(report: "PipelineReport") -> tuple[str, int]:
     resolved = bool(getattr(sweevo_result, "resolved", False))
     fix_rate = float(getattr(sweevo_result, "fix_rate", 0.0))
     line = (
-        f"benchmark_sweevo task_center_run_id={report.task_center_run_id} "
+        f"benchmark_sweevo request_id={report.request_id} "
         f"status={report.task_center_status} "
         f"resolved={resolved} fix_rate={fix_rate:.2f} "
         f"sandbox_id={report.sandbox_id} run_dir={report.run_dir}"

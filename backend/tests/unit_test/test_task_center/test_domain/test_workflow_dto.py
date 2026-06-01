@@ -7,7 +7,7 @@ from datetime import UTC, datetime
 
 import pytest
 
-from task_center._core.state import (
+from workflow._core.state import (
     Workflow,
     WorkflowStatus,
 )

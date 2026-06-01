@@ -135,8 +135,7 @@ def node_from_caller(
     if caller is None:
         return AuditNode(sandbox_id=sandbox_id, tool_name=operation)
     return AuditNode(
-        task_center_run_id=_none_if_empty(caller.task_center_run_id or caller.run_id),
-        request_id=_none_if_empty(caller.task_center_request_id),
+        request_id=_none_if_empty(caller.request_id or caller.run_id),
         workflow_id=_none_if_empty(caller.task_center_workflow_id),
         attempt_id=_none_if_empty(caller.task_center_attempt_id),
         task_center_task_id=_none_if_empty(

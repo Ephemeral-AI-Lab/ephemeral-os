@@ -6,7 +6,7 @@ from datetime import UTC, datetime
 
 import pytest
 
-from task_center._core.invariants import (
+from workflow._core.invariants import (
     assert_attempt_belongs_to_iteration,
     assert_attempt_sequence_contiguous,
     assert_predecessor_has_deferred_goal_for_next_iteration,
@@ -17,8 +17,8 @@ from task_center._core.invariants import (
     assert_iteration_open,
     assert_iteration_sequence_contiguous,
 )
-from task_center.iteration import OpenIterationCoordinatorRegistry
-from task_center._core.state import (
+from workflow.iteration import OpenIterationCoordinatorRegistry
+from workflow._core.state import (
     Attempt,
     AttemptFailReason,
     AttemptStage,
@@ -29,7 +29,7 @@ from task_center._core.state import (
     Workflow,
     WorkflowStatus,
 )
-from task_center._core.primitives import TaskCenterInvariantViolation
+from workflow._core.primitives import TaskCenterInvariantViolation
 
 
 def _goal(

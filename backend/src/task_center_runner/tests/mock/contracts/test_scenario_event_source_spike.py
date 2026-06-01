@@ -41,7 +41,7 @@ from task_center_runner.agent.mock.event_source import (
     Turn,
     TurnScript,
 )
-from task_center_runner.core.stores import TaskCenterStoreBundle
+from task_center_runner.core.stores import TaskStoreBundle
 from task_center_runner.tests._live_config import database_configured
 
 pytestmark = pytest.mark.asyncio
@@ -56,7 +56,7 @@ class _UnusedClient:
 
 
 @pytest.fixture
-def _active_spike_model(stores: TaskCenterStoreBundle) -> Iterator[None]:
+def _active_spike_model(stores: TaskStoreBundle) -> Iterator[None]:
     """Register + activate a throwaway model row so ``spawn_agent`` resolves a
     model id (mirrors the real_agent suite's ``_register_plan_mode_row``)."""
     prior_sf = model_store._session_factory  # noqa: SLF001 — restored on teardown
@@ -164,7 +164,7 @@ def _completions(
 @pytest.mark.skipif(not database_configured(), reason="database URL not configured")
 async def test_foreground_tool_effect_and_budget_through_real_loop(
     workspace: dict[str, object],
-    stores: TaskCenterStoreBundle,
+    stores: TaskStoreBundle,
     _active_spike_model: None,
 ) -> None:
     async def script() -> TurnScript:
@@ -209,7 +209,7 @@ async def test_foreground_tool_effect_and_budget_through_real_loop(
 @pytest.mark.skipif(not database_configured(), reason="database URL not configured")
 async def test_terminal_alone_enforced_and_rejected_batch_budget(
     workspace: dict[str, object],
-    stores: TaskCenterStoreBundle,
+    stores: TaskStoreBundle,
     _active_spike_model: None,
 ) -> None:
     async def script() -> TurnScript:
@@ -264,7 +264,7 @@ async def test_terminal_alone_enforced_and_rejected_batch_budget(
 @pytest.mark.skipif(not database_configured(), reason="database URL not configured")
 async def test_background_tool_counted_twice(
     workspace: dict[str, object],
-    stores: TaskCenterStoreBundle,
+    stores: TaskStoreBundle,
     _active_spike_model: None,
 ) -> None:
     async def script() -> TurnScript:

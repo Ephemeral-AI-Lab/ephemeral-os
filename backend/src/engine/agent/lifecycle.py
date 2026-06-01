@@ -78,6 +78,26 @@ def _last_terminal_tool_result(
     return None
 
 
+def _initial_message_records(
+    *,
+    system_prompt: str,
+    seed_messages: list[Message],
+    prompt: str,
+) -> list[dict[str, Any]]:
+    records: list[dict[str, Any]] = []
+    if system_prompt.strip():
+        records.append(
+            {
+                "role": "system",
+                "content": [{"type": "text", "text": system_prompt}],
+            }
+        )
+    records.extend(message.model_dump(mode="json") for message in seed_messages)
+    if prompt.strip():
+        records.append(Message.from_user_text(prompt).model_dump(mode="json"))
+    return records
+
+
 async def run_ephemeral_agent(
     config: RuntimeConfig,
     prompt: str,
@@ -132,6 +152,11 @@ async def run_ephemeral_agent(
     tracker = AgentRunTracker.create(
         task_id=task_id if persist_agent_run else None,
         agent_name=agent.agent_name,
+        initial_messages=_initial_message_records(
+            system_prompt=agent.query_context.system_prompt,
+            seed_messages=messages,
+            prompt=prompt,
+        ),
     )
     agent_run_id = tracker.agent_run_id
 

@@ -25,7 +25,7 @@ from task_center_runner.core.config import RunConfig
 from task_center_runner.core.engine import run_pipeline
 from task_center_runner.core.bootstrap import bootstrap_real_agent_runtime
 from task_center_runner.core.stores import (
-    TaskCenterStoreBundle,
+    TaskStoreBundle,
     create_per_test_task_center_stores,
 )
 
@@ -44,7 +44,7 @@ class RealAgentRunReport:
     """
 
     instance_id: str
-    task_center_run_id: str
+    request_id: str
     sandbox_id: str
     run_dir: Path
     task_center_status: str | None
@@ -59,7 +59,7 @@ async def run_sweevo_real_agent(
     sandbox_id: str,
     audit_dir: Path,
     repo_dir: str = _REPO_DIR,
-    stores: TaskCenterStoreBundle | None = None,
+    stores: TaskStoreBundle | None = None,
     max_duration_s: float = 1800.0,
 ) -> RealAgentRunReport:
     """Drive one SWE-EVO instance through the real-LLM task-center pipeline.
@@ -98,7 +98,7 @@ async def run_sweevo_real_agent(
         # Defensive: ``SweevoLifecycle.after_run`` always stashes the result;
         # if it ever fails to we still hand back a sensible sentinel.
         sweevo_result = SWEEvoResult(
-            plan_id=pipeline_report.task_center_run_id,
+            plan_id=pipeline_report.request_id,
             instance_id=instance.instance_id,
             status="failed",
             duration_s=pipeline_report.duration_s,
@@ -110,7 +110,7 @@ async def run_sweevo_real_agent(
 
     return RealAgentRunReport(
         instance_id=instance.instance_id,
-        task_center_run_id=pipeline_report.task_center_run_id,
+        request_id=pipeline_report.request_id,
         sandbox_id=pipeline_report.sandbox_id,
         run_dir=pipeline_report.run_dir,
         task_center_status=pipeline_report.task_center_status,

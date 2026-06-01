@@ -14,7 +14,7 @@ import pytest
 
 from task_center_runner.benchmarks.sweevo.models import SWEEvoInstance
 from task_center_runner.core.real_agent_run import run_sweevo_real_agent
-from task_center_runner.core.stores import TaskCenterStoreBundle
+from task_center_runner.core.stores import TaskStoreBundle
 from task_center_runner.tests._live_config import real_agent_max_duration_s
 
 pytestmark = pytest.mark.real_agent
@@ -25,7 +25,7 @@ async def test_real_agent_resolves_canonical_instance(
     sweevo_image_instance: SWEEvoInstance,
     workspace: dict[str, object],
     audit_dir: Path,
-    stores: TaskCenterStoreBundle,
+    stores: TaskStoreBundle,
 ) -> None:
     report = await run_sweevo_real_agent(
         instance=sweevo_image_instance,
@@ -34,7 +34,7 @@ async def test_real_agent_resolves_canonical_instance(
         stores=stores,
         max_duration_s=real_agent_max_duration_s(),
     )
-    assert report.task_center_run_id
+    assert report.request_id
     assert report.run_dir.is_dir()
     assert (report.run_dir / "run.json").is_file()
     assert (report.run_dir / "sweevo_result.json").is_file()

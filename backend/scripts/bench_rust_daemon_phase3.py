@@ -63,6 +63,26 @@ from bench_sandbox_e2e import (  # noqa: E402
 
 AGENT_ID = "phase3-cp4s-bench"
 BASE_LAYER_ID = "B000001-base"
+TARGETS: dict[str, dict[str, Any]] = {
+    "amd64": {
+        "platform": "linux/amd64",
+        "image": DEFAULT_DOCKER_IMAGE,
+        "artifact": ROOT / "sandbox" / "dist" / "eosd-linux-amd64",
+        "phase1_baseline": ROOT / "bench" / "phase1-ns-runner-amd64.json",
+        "phase0_baseline": ROOT / "bench" / "baseline-amd64.json",
+        "report": ROOT / "bench" / "phase3-rust-daemon-amd64.json",
+        "container_arch": "amd64",
+    },
+    "arm64": {
+        "platform": "linux/arm64",
+        "image": None,
+        "artifact": ROOT / "sandbox" / "dist" / "eosd-linux-arm64",
+        "phase1_baseline": ROOT / "bench" / "phase1-ns-runner-arm64.json",
+        "phase0_baseline": ROOT / "bench" / "baseline-arm64.json",
+        "report": ROOT / "bench" / "phase3-rust-daemon-arm64.json",
+        "container_arch": "arm64",
+    },
+}
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -83,9 +103,20 @@ def main(argv: list[str] | None = None) -> int:
 def parse_args(argv: list[str] | None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
+        "--arch",
+        choices=sorted(TARGETS),
+        default="amd64",
+        help="Target artifact/baseline architecture.",
+    )
+    parser.add_argument(
+        "--docker-platform",
+        default=None,
+        help="Docker platform to request, e.g. linux/amd64 or linux/arm64.",
+    )
+    parser.add_argument(
         "--docker-image",
-        default=DEFAULT_DOCKER_IMAGE,
-        help=f"Docker image for the live run (default: {DEFAULT_DOCKER_IMAGE}).",
+        default=None,
+        help="Docker image for the live run. Defaults by --arch when available.",
     )
     parser.add_argument(
         "--container-id",
@@ -95,24 +126,24 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
     parser.add_argument(
         "--artifact",
         type=Path,
-        default=ROOT / "sandbox" / "dist" / "eosd-linux-amd64",
-        help="Locally packaged amd64 eosd binary.",
+        default=None,
+        help="Locally packaged eosd binary. Defaults by --arch.",
     )
     parser.add_argument(
         "--phase1-baseline",
         type=Path,
-        default=ROOT / "bench" / "phase1-ns-runner-amd64.json",
+        default=None,
         help="Phase 1 direct-runner report used for shell latency thresholds.",
     )
     parser.add_argument(
         "--phase0-baseline",
         type=Path,
-        default=ROOT / "bench" / "baseline-amd64.json",
+        default=None,
         help="Phase 0 baseline report used for daemon memory fallback thresholds.",
     )
     parser.add_argument(
         "--report",
-        default=str(ROOT / "bench" / "phase3-rust-daemon-amd64.json"),
+        default=None,
         help="JSON report path.",
     )
     parser.add_argument(
@@ -153,31 +184,109 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
         default="eos-phase3-rust-daemon",
         help="Name prefix for created containers.",
     )
-    return parser.parse_args(argv)
+    args = parser.parse_args(argv)
+    target = TARGETS[args.arch]
+    args.docker_platform = args.docker_platform or target["platform"]
+    if args.docker_image is None:
+        args.docker_image = target["image"]
+    if args.docker_image is None and args.container_id is None:
+        parser.error(
+            f"--docker-image is required for --arch {args.arch}; no default "
+            "Phase 3 workspace image is checked in for that target"
+        )
+    args.artifact = args.artifact or target["artifact"]
+    args.phase1_baseline = args.phase1_baseline or target["phase1_baseline"]
+    args.phase0_baseline = args.phase0_baseline or target["phase0_baseline"]
+    args.report = str(args.report or target["report"])
+    return args
+
+
+def validate_target_inputs(args: argparse.Namespace) -> dict[str, Any] | None:
+    if not args.artifact.exists():
+        raise SystemExit(f"missing eosd artifact for --arch {args.arch}: {args.artifact}")
+    for label, path in [
+        ("Phase 1 baseline", args.phase1_baseline),
+        ("Phase 0 baseline", args.phase0_baseline),
+    ]:
+        if not path.exists():
+            raise SystemExit(f"missing {label} for --arch {args.arch}: {path}")
+    metadata_path = args.artifact.with_suffix(".json")
+    if not metadata_path.exists():
+        return None
+    metadata = json.loads(metadata_path.read_text())
+    metadata_arch = metadata.get("arch")
+    if metadata_arch != args.arch:
+        raise SystemExit(
+            f"artifact metadata arch {metadata_arch!r} does not match --arch "
+            f"{args.arch!r}: {metadata_path}"
+        )
+    return metadata
+
+
+def validate_baseline_architecture(path: Path, report: dict[str, Any], arch: str) -> None:
+    environment_arch = normalize_container_arch(
+        report.get("environment", {}).get("architecture", {}).get("stdout")
+    )
+    if environment_arch is None:
+        raise SystemExit(f"baseline lacks environment architecture: {path}")
+    if environment_arch != arch:
+        raise SystemExit(
+            f"baseline architecture {environment_arch!r} does not match --arch "
+            f"{arch!r}: {path}"
+        )
+
+
+def normalize_container_arch(raw: object) -> str | None:
+    value = str(raw or "").strip().lower()
+    if value in {"x86_64", "amd64"}:
+        return "amd64"
+    if value in {"aarch64", "arm64"}:
+        return "arm64"
+    return None
 
 
 async def run_phase3(args: argparse.Namespace) -> dict[str, Any]:
-    if not args.artifact.exists():
-        raise SystemExit(f"missing eosd artifact: {args.artifact}")
+    target = TARGETS[args.arch]
+    artifact_metadata = validate_target_inputs(args)
     phase1 = json.loads(args.phase1_baseline.read_text())
     phase0 = json.loads(args.phase0_baseline.read_text())
+    validate_baseline_architecture(args.phase1_baseline, phase1, args.arch)
+    validate_baseline_architecture(args.phase0_baseline, phase0, args.arch)
     bench = await DockerBench.create(
         image=args.docker_image,
         container_id=args.container_id,
         name_prefix=args.name_prefix,
+        platform=args.docker_platform,
     )
     try:
+        environment = await collect_environment(bench)
+        environment_arch = normalize_container_arch(
+            environment.get("architecture", {}).get("stdout")
+        )
+        if environment_arch != args.arch:
+            raise RuntimeError(
+                f"container architecture {environment_arch!r} from uname -m does "
+                f"not match --arch {args.arch!r} / platform {args.docker_platform!r}"
+            )
         report: dict[str, Any] = {
             "mode": "docker-phase3-rust-daemon-cp4s",
             "run_id": os.environ.get("EOS_TIER_RUN_ID")
             or f"local-{uuid.uuid4().hex[:12]}",
+            "target": {
+                "arch": args.arch,
+                "docker_platform": args.docker_platform,
+                "docker_image": args.docker_image,
+                "expected_container_arch": target["container_arch"],
+                "artifact": str(args.artifact),
+                "artifact_metadata": artifact_metadata,
+            },
             "sandbox_id": bench.sandbox_id,
             "created_container": bench.created,
             "host": {
                 "platform": platform.platform(),
                 "python": sys.version.split()[0],
             },
-            "environment": await collect_environment(bench),
+            "environment": environment,
             "baseline_paths": {
                 "phase1": str(args.phase1_baseline),
                 "phase0": str(args.phase0_baseline),

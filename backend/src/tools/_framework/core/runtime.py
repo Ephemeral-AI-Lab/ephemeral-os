@@ -34,7 +34,7 @@ class ExecutionMetadata:
     cwd: str = ""
     repo_root: str = ""
     exec_cwd: str = ""
-    task_center_run_id: str | None = None
+    request_id: str | None = None
     task_center_task_id: str | None = None
     task_center_attempt_id: str | None = None
     task_center_workflow_id: str | None = None
@@ -83,7 +83,7 @@ class ExecutionMetadata:
             "cwd",
             "repo_root",
             "exec_cwd",
-            "task_center_run_id",
+            "request_id",
             "task_center_task_id",
             "task_center_attempt_id",
             "task_center_workflow_id",

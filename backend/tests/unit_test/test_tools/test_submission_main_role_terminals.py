@@ -4,16 +4,16 @@ from __future__ import annotations
 
 import pytest
 
-from task_center._core.state import WorkflowStatus
-from task_center.attempt import AttemptStage, AttemptStatus
-from task_center._core.task_state import TaskCenterTaskStatus
-from task_center.submissions import (
+from workflow._core.state import WorkflowStatus
+from workflow.attempt import AttemptStage, AttemptStatus
+from task import TaskStatus
+from workflow.submissions import (
     GeneratorSubmission,
     PlannedGeneratorTask,
     PlannedReducerTask,
     PlannerSubmission,
 )
-from task_center._core.primitives import (
+from workflow._core.primitives import (
     generator_task_id,
     planner_task_id,
     reducer_task_id,
@@ -120,7 +120,7 @@ async def test_submit_generator_outcome_with_success_status_calls_apply_generato
     assert not result.is_error
     assert result.is_terminal
     assert task is not None
-    assert task["status"] == TaskCenterTaskStatus.DONE.value
+    assert task["status"] == TaskStatus.DONE.value
     assert task["terminal_tool_result"]["generator_role"] == "executor"
 
 
@@ -146,7 +146,7 @@ async def test_submit_generator_outcome_failed_status_calls_apply_generator_subm
     task = task_store.get_task(generator_id)
     assert not result.is_error
     assert task is not None
-    assert task["status"] == TaskCenterTaskStatus.FAILED.value
+    assert task["status"] == TaskStatus.FAILED.value
     assert task["terminal_tool_result"]["generator_role"] == "executor"
 
 
@@ -222,7 +222,7 @@ async def test_submit_workflow_handoff_starts_delegated_request(
     assert not result.is_error
     assert result.is_terminal
     assert task is not None
-    assert task["status"] == TaskCenterTaskStatus.WAITING_WORKFLOW.value
+    assert task["status"] == TaskStatus.WAITING_WORKFLOW.value
     assert delegated_request is not None
     assert delegated_request.status == WorkflowStatus.OPEN
     assert delegated_request.parent_task_id == generator_id
@@ -283,7 +283,7 @@ async def test_generator_terminals_reject_non_generator_tasks(
     assert result.is_error
     assert f"Task {planner_id!r} is not a generator task" in str(result.output)
     assert task is not None
-    assert task["status"] == TaskCenterTaskStatus.RUNNING.value
+    assert task["status"] == TaskStatus.RUNNING.value
 
 
 async def test_nested_planner_deferral_prehook_blocks_deferred_goal(
@@ -366,7 +366,7 @@ async def test_nested_generator_handoff_prehook_blocks_workflow_handoff(
         result.output
     )
     assert task is not None
-    assert task["status"] == TaskCenterTaskStatus.RUNNING.value
+    assert task["status"] == TaskStatus.RUNNING.value
 
 
 async def test_submit_workflow_handoff_accepts_any_generator_agent_profile(
@@ -410,7 +410,7 @@ async def test_submit_workflow_handoff_accepts_any_generator_agent_profile(
     assert not result.is_error
     assert result.is_terminal
     assert task is not None
-    assert task["status"] == TaskCenterTaskStatus.WAITING_WORKFLOW.value
+    assert task["status"] == TaskStatus.WAITING_WORKFLOW.value
 
 
 async def test_submit_workflow_handoff_child_outcome_updates_outer_generator(
@@ -480,7 +480,7 @@ async def test_submit_workflow_handoff_child_outcome_updates_outer_generator(
     )
     # Reducer success closes the delegated attempt PASSED; closure flows the
     # delegated workflow to SUCCEEDED and resolves the outer generator.
-    from task_center.submissions import ReducerSubmission
+    from workflow.submissions import ReducerSubmission
 
     delegated_orchestrator.apply_reducer_submission(
         ReducerSubmission(
@@ -501,7 +501,7 @@ async def test_submit_workflow_handoff_child_outcome_updates_outer_generator(
     # The outer generator that delegated is resolved off WAITING_WORKFLOW and
     # linked to the child workflow it spawned.
     assert outer_task is not None
-    assert outer_task["status"] == TaskCenterTaskStatus.DONE.value
+    assert outer_task["status"] == TaskStatus.DONE.value
     assert outer_task["terminal_tool_result"]["child_workflow_id"] == delegated_workflow_id
     # The outer attempt remains in its single RUN stage (no EVALUATE stage).
     assert outer_attempt is not None

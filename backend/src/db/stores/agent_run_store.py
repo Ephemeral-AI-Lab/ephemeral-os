@@ -20,13 +20,15 @@ class AgentRunStore(SyncStoreMixin):
         agent_run_id: str,
         task_id: str,
         agent_name: str,
+        initial_messages: list[dict[str, Any]] | None = None,
     ) -> AgentRunRecord:
-        """Create a new agent run record for one TaskCenter task."""
+        """Create a new agent run record for one persisted task."""
         with self._sf() as db:
             record = AgentRunRecord(
                 id=agent_run_id,
                 task_id=task_id,
                 agent_name=agent_name,
+                initial_messages=initial_messages,
                 created_at=datetime.now(UTC),
             )
             db.add(record)

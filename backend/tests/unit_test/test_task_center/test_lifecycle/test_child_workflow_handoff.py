@@ -15,24 +15,24 @@ from datetime import UTC, datetime
 
 import pytest
 
-from task_center._core.primitives import (
+from workflow._core.primitives import (
     TaskCenterInvariantViolation,
     TaskCenterLifecycleConfig,
     generator_task_id,
     planner_task_id,
 )
-from task_center._core.state import Workflow, WorkflowStatus
-from task_center._core.task_state import TaskCenterTaskStatus
-from task_center.attempt.launch import AgentLaunch, AttemptDeps
-from task_center.attempt.orchestrator import AttemptOrchestrator
-from task_center.attempt.orchestrator_registry import AttemptOrchestratorRegistry
-from task_center.iteration import OpenIterationCoordinatorRegistry
-from task_center.submissions import (
+from workflow._core.state import Workflow, WorkflowStatus
+from task import TaskStatus
+from workflow.attempt.launch import AgentLaunch, AttemptDeps
+from workflow.attempt.orchestrator import AttemptOrchestrator
+from workflow.attempt.orchestrator_registry import AttemptOrchestratorRegistry
+from workflow.iteration import OpenIterationCoordinatorRegistry
+from workflow.submissions import (
     PlannedGeneratorTask,
     PlannedReducerTask,
     PlannerSubmission,
 )
-from task_center.workflow.lifecycle import WorkflowLifecycle
+from workflow.lifecycle import WorkflowLifecycle
 
 
 class _FakeLauncher:
@@ -65,7 +65,7 @@ def _seed_attempt_with_waiting_generator(
         parent_task_id=None,
         workflow_goal="outer",
     )
-    from task_center._core.state import IterationCreationReason
+    from workflow._core.state import IterationCreationReason
 
     iteration = runtime.iteration_store.insert(
         workflow_id=workflow.id,
@@ -104,8 +104,8 @@ def _seed_attempt_with_waiting_generator(
 def _mark_waiting(runtime: AttemptDeps, task_id: str, child_workflow: Workflow) -> None:
     runtime.task_store.set_task_status_if_current(
         task_id,
-        expected_status=TaskCenterTaskStatus.RUNNING.value,
-        status=TaskCenterTaskStatus.WAITING_WORKFLOW.value,
+        expected_status=TaskStatus.RUNNING.value,
+        status=TaskStatus.WAITING_WORKFLOW.value,
         child_workflow_id=child_workflow.id,
     )
 
@@ -145,7 +145,7 @@ def test_child_workflow_success_marks_waiting_generator_done(
 
     parent_task = task_store.get_task(parent_task_id)
     assert parent_task is not None
-    assert parent_task["status"] == TaskCenterTaskStatus.DONE.value
+    assert parent_task["status"] == TaskStatus.DONE.value
     assert parent_task["child_workflow_id"] == child.id
 
 
@@ -173,10 +173,10 @@ def test_child_workflow_failure_marks_waiting_generator_failed(
     parent_task = task_store.get_task(parent_task_id)
     dependent = task_store.get_task(dependent_id)
     assert parent_task is not None
-    assert parent_task["status"] == TaskCenterTaskStatus.FAILED.value
+    assert parent_task["status"] == TaskStatus.FAILED.value
     # The dependent generator is still pending; the failed parent blocks it.
     assert dependent is not None
-    assert dependent["status"] == TaskCenterTaskStatus.PENDING.value
+    assert dependent["status"] == TaskStatus.PENDING.value
 
 
 def test_child_workflow_outcome_is_idempotent_on_second_delivery(
@@ -206,7 +206,7 @@ def test_child_workflow_outcome_is_idempotent_on_second_delivery(
 
     parent_task = task_store.get_task(parent_task_id)
     assert parent_task is not None
-    assert parent_task["status"] == TaskCenterTaskStatus.DONE.value
+    assert parent_task["status"] == TaskStatus.DONE.value
     assert parent_task["outcomes"] == []
 
 
@@ -280,4 +280,4 @@ def test_child_workflow_close_raises_when_parent_orchestrator_missing(
 
     parent_task = task_store.get_task(parent_task_id)
     assert parent_task is not None
-    assert parent_task["status"] == TaskCenterTaskStatus.WAITING_WORKFLOW.value
+    assert parent_task["status"] == TaskStatus.WAITING_WORKFLOW.value

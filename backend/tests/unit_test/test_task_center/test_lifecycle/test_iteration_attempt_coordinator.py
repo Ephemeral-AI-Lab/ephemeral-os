@@ -14,14 +14,14 @@ import json
 
 import pytest
 
-from task_center.iteration import IterationAttemptCoordinator
-from task_center._core.state import (
+from workflow.iteration import IterationAttemptCoordinator
+from workflow._core.state import (
     AttemptFailReason,
     AttemptStatus,
     IterationCreationReason,
     IterationStatus,
 )
-from task_center._core.primitives import reducer_task_id
+from workflow._core.primitives import reducer_task_id
 
 
 def _seed_iteration(
@@ -539,7 +539,7 @@ def test_failed_attempt_without_budget_signals_failure_with_outcomes(
 def test_creating_initial_attempt_twice_raises(
     workflow_store, iteration_store, attempt_store, task_center_run_id
 ):
-    from task_center._core.primitives import TaskCenterInvariantViolation
+    from workflow._core.primitives import TaskCenterInvariantViolation
 
     iter_id = _seed_iteration(workflow_store, iteration_store, task_center_run_id)
     coordinator, _ = _make_coordinator(iter_id, iteration_store, attempt_store)

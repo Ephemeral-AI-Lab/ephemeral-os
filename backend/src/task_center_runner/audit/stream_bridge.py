@@ -18,7 +18,7 @@ __all__ = ["stream_bridge"]
 def stream_bridge(
     bus: AuditEventBus,
     *,
-    task_center_run_id: str,
+    request_id: str,
     sandbox_fallback_enabled: bool = True,
 ) -> Callable[[object], Awaitable[None]]:
     """Return an async on_agent_event callable that translates StreamEvents to audit Events."""
@@ -26,7 +26,7 @@ def stream_bridge(
     async def _on_event(stream_event: object) -> None:
         if isinstance(stream_event, ToolExecutionStartedEvent):
             node = NodeId(
-                task_center_run_id=task_center_run_id,
+                request_id=request_id,
                 agent_name=stream_event.agent_name or None,
                 agent_run_id=stream_event.agent_run_id or None,
                 tool_name=stream_event.tool_name or None,
@@ -45,7 +45,7 @@ def stream_bridge(
         elif isinstance(stream_event, ToolExecutionCompletedEvent):
             metadata = dict(stream_event.metadata or {})
             node = NodeId(
-                task_center_run_id=task_center_run_id,
+                request_id=request_id,
                 agent_name=stream_event.agent_name or None,
                 agent_run_id=stream_event.agent_run_id or None,
                 tool_name=stream_event.tool_name or None,
@@ -72,7 +72,7 @@ def stream_bridge(
             if sandbox_fallback_enabled:
                 for sandbox_event in sandbox_events_from_tool_completion(
                     stream_event,
-                    task_center_run_id=task_center_run_id,
+                    request_id=request_id,
                 ):
                     if (
                         not metadata.get("sandbox_audit_emitted")

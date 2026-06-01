@@ -24,7 +24,7 @@ from task_center_runner.environments.sweevo_image.health import (
 from task_center_runner.scenarios.correctness_testing import (
     CorrectnessTesting,
 )
-from task_center_runner.core.stores import TaskCenterStoreBundle
+from task_center_runner.core.stores import TaskStoreBundle
 from task_center_runner.environments.sweevo_image.fixtures import run_scenario_on_sweevo_image
 from task_center_runner.benchmarks.sweevo.models import SWEEvoInstance
 from task_center_runner.tests.mock._focused_scenario_contracts import count_role_tasks
@@ -35,7 +35,7 @@ async def test_correctness_testing_scenario_runs_end_to_end(
     sweevo_image_instance: SWEEvoInstance,
     workspace: dict[str, object],
     audit_dir: Path,
-    stores: TaskCenterStoreBundle,
+    stores: TaskStoreBundle,
 ) -> None:
     require_sweevo_image_provider_healthy(sweevo_image_instance)
 
@@ -116,7 +116,7 @@ async def test_correctness_testing_scenario_runs_end_to_end(
 
     # --- run.json carries the bound run id ----------------------------
     run_payload = json.loads((run_dir / "run.json").read_text(encoding="utf-8"))
-    assert run_payload["task_center_run_id"] == report.task_center_run_id
+    assert run_payload["request_id"] == report.request_id
     assert run_payload["scenario_name"] == scenario.name
     assert run_payload["status"] in {"running", "finished"}
 

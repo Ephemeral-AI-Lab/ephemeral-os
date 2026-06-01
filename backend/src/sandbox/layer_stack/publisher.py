@@ -159,12 +159,12 @@ def _prepare_changes(
 
 
 def _fsync_tree_files(root: Path) -> None:
-    """fsync every regular file under *root* (skip symlinks)."""
+    """fsync every regular file under *root*."""
     for current_root, _dirnames, filenames in os.walk(root, followlinks=False):
         current = Path(current_root)
         for filename in filenames:
             file_path = current / filename
-            if not file_path.is_symlink():
+            if not file_path.is_symlink() and file_path.is_file():
                 fsync_path(file_path)
 
 

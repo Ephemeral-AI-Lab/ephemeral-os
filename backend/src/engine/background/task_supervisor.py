@@ -24,6 +24,7 @@ logger = logging.getLogger(__name__)
 _HEARTBEAT_INTERVAL_S = float(os.environ.get("EOS_BACKGROUND_HEARTBEAT_INTERVAL_S", "60"))
 DEFAULT_BACKGROUND_TASK_TYPE = "agent"
 SUBAGENT_TASK_TYPE = "subagent"
+WORKFLOW_TASK_TYPE = "workflow"
 _EARLY_STOP_MODE = "early_stop"
 _EARLY_STOP_COMPLETION_MODE = "early_stopped"
 _PARENT_EXIT_STOP_MODE = "parent_exit"
@@ -124,6 +125,42 @@ class PtyCommandRecord:
     status: BackgroundTaskStatus = BackgroundTaskStatus.RUNNING
     result: dict[str, Any] | None = None
     started_at: float = field(default_factory=time.monotonic)
+
+
+@dataclass
+class WorkflowBackgroundRecord:
+    """Lightweight supervision state for one delegated workflow handle."""
+
+    workflow_task_id: str
+    workflow_id: str
+    parent_task_id: str
+    parent_attempt_id: str | None
+    request_id: str
+    agent_id: str
+    goal: str
+    status: BackgroundTaskStatus = BackgroundTaskStatus.RUNNING
+    final_status: str | None = None
+    final_outcomes: list[dict[str, Any]] = field(default_factory=list)
+    terminal_reported_by_status_tool: bool = False
+    terminal_reported_by_notification: bool = False
+    cancelled_by_cancel_tool: bool = False
+    parent_cancelled: bool = False
+    started_at: float = field(default_factory=time.monotonic)
+    last_seen_at: float = field(default_factory=time.monotonic)
+
+    @property
+    def delivered(self) -> bool:
+        return (
+            self.status == BackgroundTaskStatus.DELIVERED
+            or self.terminal_reported_by_status_tool
+            or self.terminal_reported_by_notification
+        )
+
+    @property
+    def outstanding(self) -> bool:
+        return self.status == BackgroundTaskStatus.RUNNING or (
+            self.status in _TERMINAL_UNDELIVERED and not self.delivered
+        )
 
 
 _TERMINAL_EVENT_TYPE: dict[str, str] = {
@@ -229,8 +266,10 @@ class BackgroundTaskSupervisor:
     def __init__(self) -> None:
         self._tasks: dict[str, BackgroundTaskRecord] = {}
         self._pty_commands: dict[str, PtyCommandRecord] = {}
+        self._workflows: dict[str, WorkflowBackgroundRecord] = {}
         self._alias_counter: int = 0
         self._subagent_counter: int = 0
+        self._workflow_counter: int = 0
         self._heartbeat_task: asyncio.Task[None] | None = None
 
     def next_alias(self) -> str:
@@ -242,6 +281,11 @@ class BackgroundTaskSupervisor:
         """Return the single supervisor/model id for one subagent session."""
         self._subagent_counter += 1
         return f"subagent_{self._subagent_counter}"
+
+    def next_workflow_task_id(self) -> str:
+        """Return the agent-facing id for one delegated workflow."""
+        self._workflow_counter += 1
+        return f"wf_{self._workflow_counter}"
 
     def launch(
         self,
@@ -374,6 +418,10 @@ class BackgroundTaskSupervisor:
         """Iterate every task the supervisor has ever tracked."""
         return iter(self._tasks.values())
 
+    def iter_workflows(self) -> Iterator[WorkflowBackgroundRecord]:
+        """Iterate delegated workflow handle records."""
+        return iter(self._workflows.values())
+
     def iter_running(self) -> Iterator[BackgroundTaskRecord]:
         """Iterate tasks that are still running."""
         return (
@@ -401,7 +449,142 @@ class BackgroundTaskSupervisor:
             if tracked.status == BackgroundTaskStatus.RUNNING
             and tracked.agent_id == agent_id
         )
-        return task_count + pty_count
+        workflow_count = sum(
+            1
+            for tracked in self._workflows.values()
+            if tracked.agent_id == agent_id and tracked.outstanding
+        )
+        return task_count + pty_count + workflow_count
+
+    def register_workflow(
+        self,
+        *,
+        workflow_id: str,
+        parent_task_id: str,
+        parent_attempt_id: str | None,
+        request_id: str,
+        agent_id: str,
+        goal: str,
+    ) -> WorkflowBackgroundRecord:
+        """Track a delegated workflow handle owned by one parent agent."""
+        existing = self.find_outstanding_workflow_for_parent(
+            parent_task_id=parent_task_id,
+            agent_id=agent_id,
+        )
+        if existing is not None:
+            return existing
+        workflow_task_id = self.next_workflow_task_id()
+        record = WorkflowBackgroundRecord(
+            workflow_task_id=workflow_task_id,
+            workflow_id=workflow_id,
+            parent_task_id=parent_task_id,
+            parent_attempt_id=parent_attempt_id,
+            request_id=request_id,
+            agent_id=agent_id,
+            goal=goal,
+        )
+        self._workflows[workflow_task_id] = record
+        return record
+
+    def find_outstanding_workflow_for_parent(
+        self,
+        *,
+        parent_task_id: str,
+        agent_id: str,
+    ) -> WorkflowBackgroundRecord | None:
+        """Return the first undelivered workflow for the parent task."""
+        for record in self._workflows.values():
+            if (
+                record.parent_task_id == parent_task_id
+                and record.agent_id == agent_id
+                and record.outstanding
+            ):
+                return record
+        return None
+
+    def find_workflow_record(
+        self,
+        *,
+        workflow_id: str,
+        workflow_task_id: str | None = None,
+        agent_id: str | None = None,
+    ) -> WorkflowBackgroundRecord | None:
+        """Resolve a delegated workflow handle by exact id or workflow id."""
+        if workflow_task_id:
+            record = self._workflows.get(workflow_task_id)
+            if record is None:
+                return None
+            if workflow_id and record.workflow_id != workflow_id:
+                return None
+            if agent_id is not None and record.agent_id != agent_id:
+                return None
+            return record
+        matches = [
+            record
+            for record in self._workflows.values()
+            if record.workflow_id == workflow_id
+            and (agent_id is None or record.agent_id == agent_id)
+        ]
+        if len(matches) == 1:
+            return matches[0]
+        return None
+
+    def refresh_workflow_status(
+        self,
+        *,
+        workflow_id: str,
+        status: str,
+        outcomes: list[dict[str, Any]] | None = None,
+    ) -> None:
+        """Refresh all records for a workflow from durable workflow state."""
+        terminal_status = {
+            "succeeded": BackgroundTaskStatus.COMPLETED,
+            "failed": BackgroundTaskStatus.FAILED,
+            "cancelled": BackgroundTaskStatus.CANCELLED,
+        }.get(status)
+        if terminal_status is None:
+            return
+        for record in self._workflows.values():
+            if record.workflow_id != workflow_id or record.status == BackgroundTaskStatus.DELIVERED:
+                continue
+            record.status = terminal_status
+            record.final_status = status
+            record.final_outcomes = list(outcomes or [])
+            record.last_seen_at = time.monotonic()
+
+    def mark_workflow_reported_by_status_tool(self, workflow_task_id: str) -> bool:
+        """Mark terminal workflow outcomes delivered through an explicit status check."""
+        record = self._workflows.get(workflow_task_id)
+        if record is None or record.status not in _TERMINAL_UNDELIVERED:
+            return False
+        record.terminal_reported_by_status_tool = True
+        record.status = BackgroundTaskStatus.DELIVERED
+        record.last_seen_at = time.monotonic()
+        return True
+
+    def mark_workflow_cancelled_by_tool(
+        self,
+        *,
+        workflow_task_id: str,
+        reason: str = "",
+    ) -> WorkflowBackgroundRecord | None:
+        """Record an explicit model-requested workflow cancellation."""
+        record = self._workflows.get(workflow_task_id)
+        if record is None:
+            return None
+        record.cancelled_by_cancel_tool = True
+        record.status = BackgroundTaskStatus.CANCELLED
+        record.final_status = "cancelled"
+        record.final_outcomes = [
+            {
+                "status": "failed",
+                "role": "workflow",
+                "task_id": workflow_task_id,
+                "outcome": reason or "Delegated workflow was cancelled.",
+            }
+        ]
+        record.last_seen_at = time.monotonic()
+        return record
 
     def register_pty_command(
         self,

@@ -32,7 +32,7 @@ class ScenarioContext:
     audit_recorder: Any  # AuditRecorder | None
     task_id: str | None = None
     agent_name: str | None = None
-    context_message: str | None = None
+    instruction: str | None = None
     requirement_ledger: Any = None
     package_plan: Any = None
     matrix_plan: Any = None

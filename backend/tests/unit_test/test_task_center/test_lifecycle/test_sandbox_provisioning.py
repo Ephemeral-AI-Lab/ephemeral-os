@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from task_center.entry import TaskCenterSandboxProvisioner
+from runtime.sandbox_provisioning import TaskCenterSandboxProvisioner
 
 
 def test_prepares_explicit_sandbox_id_without_create() -> None:

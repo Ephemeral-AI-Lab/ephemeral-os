@@ -82,9 +82,8 @@ def count_role_tasks(
 def recursive_workflows(graph_summary: Mapping[str, object]) -> list[dict]:
     """Return the delegated (recursive) workflows from ``graph_summary``.
 
-    A recursive workflow is one started by an executor ``submit_workflow_handoff``;
-    its ``parent_task_id`` points at a generator task rather than the synthetic
-    run-level bootstrap task ``<run_id>:root`` that parents the entry workflow.
+    A recursive workflow is one started by an executor through `delegate_workflow`;
+    its ``parent_task_id`` points at the launching generator task.
     """
     workflows = graph_summary["workflows"]  # type: ignore[index]
     return [

@@ -5,8 +5,8 @@ Resurrects the runtime surface from the pre-deletion ``server.app_factory``
 restored — only the symbols that production code still imports lazily:
 
 * :class:`RuntimeConfig` — durable runtime config consumed by
-  ``engine.agent.factory`` and ``task_center.launcher``.
-* Module-level store singletons (``task_center_store``, ``agent_run_store``,
+  ``engine.agent.factory`` and ``workflow.launcher``.
+* Module-level store singletons (``task_store``, ``agent_run_store``,
   ``model_store``).
 * :func:`ensure_runtime_stores_ready` — idempotent bootstrap that initialises
   the singletons against the project SQLAlchemy session factory and seeds the
@@ -29,7 +29,7 @@ from typing import TYPE_CHECKING
 from config.settings import Settings, load_settings
 from db.stores.agent_run_store import AgentRunStore
 from db.stores.model_store import ModelStore
-from db.stores.task_center_store import TaskCenterStore
+from db.stores.task_store import TaskStore
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -46,7 +46,7 @@ class RuntimeConfig:
     """Durable runtime configuration shared by request-scoped agents.
 
     Read by ``engine.agent.factory`` (cwd, external_api_client, resolve_settings)
-    and ``task_center.launcher``. ``_initial_messages`` is part of
+    and ``workflow.launcher``. ``_initial_messages`` is part of
     the resurrected public shape; ``system_prompt_override`` is intentionally
     absent — see module docstring.
     """
@@ -70,7 +70,7 @@ class RuntimeConfig:
 # Store singletons — initialised lazily via ensure_runtime_stores_ready.
 # ---------------------------------------------------------------------------
 
-task_center_store = TaskCenterStore()
+task_store = TaskStore()
 agent_run_store = AgentRunStore()
 model_store = ModelStore()
 
@@ -103,8 +103,8 @@ def ensure_runtime_stores_ready(settings: "Settings | None" = None):
         logger.info("Running without database — file-based persistence only")
         return None
 
-    if not task_center_store.is_ready:
-        task_center_store.initialize(sf)
+    if not task_store.is_ready:
+        task_store.initialize(sf)
     if not agent_run_store.is_ready:
         agent_run_store.initialize(sf)
     if not model_store.is_ready:
@@ -125,5 +125,5 @@ __all__ = [
     "agent_run_store",
     "ensure_runtime_stores_ready",
     "model_store",
-    "task_center_store",
+    "task_store",
 ]

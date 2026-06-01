@@ -19,7 +19,6 @@ class AuditNode:
     infer missing identifiers from unrelated payload text.
     """
 
-    task_center_run_id: str | None = None
     request_id: str | None = None
     workflow_id: str | None = None
     iteration_id: str | None = None

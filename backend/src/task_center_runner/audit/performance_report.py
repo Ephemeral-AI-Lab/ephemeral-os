@@ -211,7 +211,7 @@ def render_performance_report_markdown(report: Mapping[str, Any]) -> str:
     sandbox = _as_mapping(report.get("sandbox"))
     sections = _as_mapping(sandbox.get("sections"))
     run_id = (
-        run.get("task_center_run_id")
+        run.get("request_id")
         or run.get("instance_id")
         or "(unknown-run)"
     )
@@ -2198,7 +2198,7 @@ def _normalize_sandbox_event(row: Mapping[str, Any]) -> dict[str, Any]:
         "tool_use_id": payload.get("tool_use_id"),
         "agent_name": node.get("agent_name"),
         "agent_run_id": node.get("agent_run_id"),
-        "task_center_run_id": node.get("task_center_run_id"),
+        "request_id": node.get("request_id"),
         "status": payload.get("status"),
         "conflict_reason": payload.get("conflict_reason"),
         "changed_paths": changed_paths,

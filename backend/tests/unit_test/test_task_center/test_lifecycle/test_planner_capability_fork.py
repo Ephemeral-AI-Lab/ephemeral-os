@@ -20,21 +20,21 @@ from agents import (
     register_definition,
     unregister_definition,
 )
-from task_center._core.primitives import (
+from workflow._core.primitives import (
     TaskCenterLifecycleConfig,
     generator_task_id,
 )
-from task_center.agent_launch.composer import AgentEntryComposer
-from task_center.context_engine.engine import ContextEngine, ContextEngineDeps
-from task_center.attempt.orchestrator import AttemptOrchestrator
-from task_center.attempt.orchestrator_registry import (
+from workflow.agent_launch.composer import AgentEntryComposer
+from workflow.context_engine.engine import ContextEngine, ContextEngineDeps
+from workflow.attempt.orchestrator import AttemptOrchestrator
+from workflow.attempt.orchestrator_registry import (
     AttemptOrchestratorRegistry,
 )
-from task_center.attempt.launch import (
+from workflow.attempt.launch import (
     AgentLaunch,
     AttemptDeps,
 )
-from task_center._core.state import IterationCreationReason
+from workflow._core.state import IterationCreationReason
 
 
 REPO_ROOT = next(

@@ -18,7 +18,7 @@ from __future__ import annotations
 
 import inspect
 
-from task_center.attempt import orchestrator as orchestrator_module
+from workflow.attempt import orchestrator as orchestrator_module
 
 
 def test_orchestrator_persists_task_spec_for_generator_tasks():

@@ -28,7 +28,7 @@ class SandboxCaller:
     run_id: str = ""
     agent_run_id: str = ""
     task_id: str = ""
-    task_center_run_id: str = ""
+    request_id: str = ""
     task_center_task_id: str = ""
     task_center_attempt_id: str = ""
     task_center_workflow_id: str = ""

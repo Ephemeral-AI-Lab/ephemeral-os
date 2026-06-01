@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from task_center._core.state import (
+from workflow._core.state import (
     Attempt,
     AttemptFailReason,
     AttemptStage,

@@ -18,7 +18,7 @@ from task_center_runner.agent.mock.background_shell_probe import (
     BACKGROUND_IWS_LAYER_STACK_ROOT,
 )
 from task_center_runner.core.runner import RunReport
-from task_center_runner.core.stores import TaskCenterStoreBundle
+from task_center_runner.core.stores import TaskStoreBundle
 from task_center_runner.environments.sweevo_image.fixtures import (
     run_scenario_on_sweevo_image,
 )
@@ -68,7 +68,7 @@ async def run_background_shell_scenario(
     sweevo_image_instance: SWEEvoInstance,
     workspace: dict[str, object],
     audit_dir: Path,
-    stores: TaskCenterStoreBundle,
+    stores: TaskStoreBundle,
     preserve_inflight_ttl: bool = False,
 ) -> tuple[RunReport, dict[str, Any]]:
     scenario = SCENARIO_REGISTRY[scenario_name]()

@@ -8,7 +8,7 @@ import pytest
 
 from task_center_runner.benchmarks.sweevo.models import SWEEvoInstance
 from task_center_runner.agent.mock.plugin_workspace_probe import IWS_POLICY_SUMMARY
-from task_center_runner.core.stores import TaskCenterStoreBundle
+from task_center_runner.core.stores import TaskStoreBundle
 from task_center_runner.tests._live_config import (
     database_configured,
     live_e2e_heavy_enabled,
@@ -36,7 +36,7 @@ async def test_plugin_blocked_in_open_isolated_workspace(
     sweevo_image_instance: SWEEvoInstance,
     workspace: dict[str, object],
     audit_dir: Path,
-    stores: TaskCenterStoreBundle,
+    stores: TaskStoreBundle,
 ) -> None:
     await configure_isolated_workspace_for_background(str(workspace["sandbox_id"]))
     report, summary = await run_plugin_scenario(

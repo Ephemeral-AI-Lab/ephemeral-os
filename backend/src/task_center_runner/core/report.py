@@ -25,7 +25,6 @@ class PipelineReport:
     """Result returned by ``run_pipeline``; lifecycle hooks may mutate extras."""
 
     status: Literal["completed", "aborted"]
-    task_center_run_id: str
     request_id: str
     sandbox_id: str
     instance_id: str

@@ -14,8 +14,8 @@ from __future__ import annotations
 
 import pytest
 
-from task_center.attempt import launch as launcher_module
-from task_center._core.primitives import TaskCenterInvariantViolation
+from workflow.attempt import launch as launcher_module
+from workflow._core.primitives import TaskCenterInvariantViolation
 
 
 def test_role_dispatch_table_is_gone() -> None:

@@ -1,7 +1,7 @@
-"""Offline regressions for scenario dispatchers that now read context_message.
+"""Offline regressions for scenario dispatchers that now read instruction.
 
 These assertions pin the recent ScenarioContext rename at the scenario seam:
-executor/verifier helpers must consult ``ctx.context_message`` directly rather
+executor/verifier helpers must consult ``ctx.instruction`` directly rather
 than the removed ``ctx.rendered_prompt`` field.
 """
 
@@ -30,7 +30,7 @@ from task_center_runner.scenarios.sandbox.high_concurrency_layerstack_overlay_oc
 
 def _ctx(
     *,
-    context_message: str,
+    instruction: str,
     prompt: str = "",
     attempt_no: int = 1,
     parent_task_id: str = "parent-task-id",
@@ -47,24 +47,24 @@ def _ctx(
         audit_recorder=None,
         task_id="task-id",
         agent_name="executor",
-        context_message=context_message,
+        instruction=instruction,
     )
 
 
-def test_full_case_executor_actions_use_context_message() -> None:
+def test_full_case_executor_actions_use_instruction() -> None:
     scenario = FullCaseUserInput()
     ctx = _ctx(
-        context_message="ACTION request_recursive_workflow package=pkg_42",
+        instruction="ACTION request_recursive_workflow package=pkg_42",
         prompt="this prompt should be ignored",
     )
 
     assert scenario.executor_actions(ctx) == ("request_recursive_workflow:pkg_42",)
 
 
-def test_full_stack_executor_actions_use_context_message() -> None:
+def test_full_stack_executor_actions_use_instruction() -> None:
     scenario = FullStackAdversarial()
     ctx = _ctx(
-        context_message="ACTION request_recursive_matrix package=matrix_pkg",
+        instruction="ACTION request_recursive_matrix package=matrix_pkg",
         prompt="fallback prompt",
     )
 
@@ -73,22 +73,22 @@ def test_full_stack_executor_actions_use_context_message() -> None:
     )
 
 
-def test_nested_workflow_dispatch_uses_context_message() -> None:
+def test_nested_workflow_dispatch_uses_instruction() -> None:
     success = NestedWorkflow()
     failure = NestedWorkflowFailure()
 
     assert success.executor_actions(
-        _ctx(context_message="ACTION request_recursive_workflow package=child_success")
+        _ctx(instruction="ACTION request_recursive_workflow package=child_success")
     ) == ("request_recursive_workflow:child_success",)
     assert failure.executor_actions(
-        _ctx(context_message="ACTION child_failure reason=nested_workflow")
+        _ctx(instruction="ACTION child_failure reason=nested_workflow")
     ) == ("fail:Intentional child workflow failure.",)
 
 
-def test_generator_failure_quiescence_uses_context_message_on_attempt_one() -> None:
+def test_generator_failure_quiescence_uses_instruction_on_attempt_one() -> None:
     scenario = GeneratorFailureQuiescence()
     ctx = _ctx(
-        context_message="Run preflight ACTION fail_on_attempt=1 tag=quiescence_b",
+        instruction="Run preflight ACTION fail_on_attempt=1 tag=quiescence_b",
         attempt_no=1,
     )
 
@@ -97,24 +97,24 @@ def test_generator_failure_quiescence_uses_context_message_on_attempt_one() -> N
     )
 
 
-def test_high_concurrency_dispatch_uses_context_message_index() -> None:
+def test_high_concurrency_dispatch_uses_instruction_index() -> None:
     scenario = HighConcurrencyLayerstackOverlayOcc()
 
     assert scenario.executor_actions(
-        _ctx(context_message="ACTION high_concurrency_seed")
+        _ctx(instruction="ACTION high_concurrency_seed")
     ) == ("high_concurrency_seed",)
     assert scenario.executor_actions(
-        _ctx(context_message="ACTION high_concurrency_worker index=07")
+        _ctx(instruction="ACTION high_concurrency_worker index=07")
     ) == ("high_concurrency_worker:7",)
     assert scenario.executor_actions(
-        _ctx(context_message="ACTION high_concurrency_reconcile")
+        _ctx(instruction="ACTION high_concurrency_reconcile")
     ) == ("high_concurrency_reconcile",)
 
 
 def test_high_concurrency_plan_honors_configured_worker_overlap() -> None:
     scenario = HighConcurrencyLayerstackOverlayOcc()
 
-    plan = scenario.planner_response(_ctx(context_message="")).args
+    plan = scenario.planner_response(_ctx(instruction="")).args
     needs_by_id = {
         str(task["id"]): tuple(task.get("needs") or ()) for task in plan["tasks"]
     }

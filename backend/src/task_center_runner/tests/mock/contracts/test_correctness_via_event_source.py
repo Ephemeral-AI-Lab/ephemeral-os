@@ -17,7 +17,7 @@ import pytest
 
 from runtime.app_factory import model_store
 from task_center_runner.benchmarks.sweevo.models import SWEEvoInstance
-from task_center_runner.core.stores import TaskCenterStoreBundle
+from task_center_runner.core.stores import TaskStoreBundle
 from task_center_runner.environments.sweevo_image.fixtures import (
     run_scenario_on_sweevo_image,
 )
@@ -28,7 +28,7 @@ pytestmark = pytest.mark.asyncio
 
 
 @pytest.fixture
-def _active_mock_model(stores: TaskCenterStoreBundle) -> Iterator[None]:
+def _active_mock_model(stores: TaskStoreBundle) -> Iterator[None]:
     prior_sf = model_store._session_factory  # noqa: SLF001
     model_store.initialize(stores.session_factory)
     key = f"test/mock-loop-{uuid.uuid4().hex[:8]}"
@@ -54,7 +54,7 @@ async def test_correctness_testing_through_event_source(
     sweevo_image_instance: SWEEvoInstance,
     workspace: dict[str, object],
     audit_dir: Path,
-    stores: TaskCenterStoreBundle,
+    stores: TaskStoreBundle,
     _active_mock_model: None,
 ) -> None:
     report = await run_scenario_on_sweevo_image(

@@ -94,10 +94,10 @@ class DeferredParentPlannerUnifiedTerminal(ScenarioBase):
         )
 
     def executor_actions(self, ctx: ScenarioContext) -> Sequence[str]:
-        context_message = ctx.context_message or ""
-        if "request_recursive_workflow" in context_message:
+        instruction = ctx.instruction or ""
+        if "request_recursive_workflow" in instruction:
             return (f"request_recursive_workflow:{_CHILD_PACKAGE_ID}",)
-        if "ACTION recursive_" in context_message:
+        if "ACTION recursive_" in instruction:
             return ("recursive_step",)
         return ("preflight",)
 

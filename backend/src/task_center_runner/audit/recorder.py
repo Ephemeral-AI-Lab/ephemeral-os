@@ -1,7 +1,7 @@
 """AuditRecorder — directory writer + ORM commit listeners.
 
 Wires five SQLAlchemy ``after_insert``/``after_update`` listeners (one per
-``WorkflowRecord``/``IterationRecord``/``AttemptRecord``/``TaskCenterTaskRecord``
+``WorkflowRecord``/``IterationRecord``/``AttemptRecord``/``TaskRecord``
 plus a fifth on ``AgentRunRecord`` for ``agent_run_id`` -> ``task_id``
 mapping). Task stream events append conversation-message rows to
 ``message.jsonl``. Lifecycle rows are mirrored as latest-state ``*.json``
@@ -22,7 +22,7 @@ from typing import Any
 from sqlalchemy import event
 
 from audit.jsonl import append_jsonl_event
-from task_center._core.primitives import attempt_id_from_task_id
+from workflow._core.primitives import attempt_id_from_task_id
 from task_center_runner.audit.bus import AuditEventBus
 from task_center_runner.audit.daemon_event_normalizer import normalize_pulled_event
 from task_center_runner.audit.daemon_pull import DaemonAuditPuller, PullerStats
@@ -34,7 +34,7 @@ from db.models.agent_run import AgentRunRecord
 from db.models.attempt import AttemptRecord
 from db.models.iteration import IterationRecord
 from db.models.workflow import WorkflowRecord
-from db.models.task_center import TaskCenterTaskRecord
+from db.models.task import TaskRecord
 from message.agent_message_recorder import (
     AgentMessageJsonlRecorder,
     clear_recorder,
@@ -103,7 +103,7 @@ def _isoformat(value: datetime | None) -> str | None:
 def _serialize_workflow(record: WorkflowRecord) -> dict[str, Any]:
     return {
         "id": record.id,
-        "task_center_run_id": record.task_center_run_id,
+        "request_id": record.request_id,
         "parent_task_id": record.parent_task_id,
         "goal": record.goal,
         "status": record.status,
@@ -150,18 +150,20 @@ def _serialize_attempt(record: AttemptRecord) -> dict[str, Any]:
     }
 
 
-def _serialize_task(record: TaskCenterTaskRecord) -> dict[str, Any]:
+def _serialize_task(record: TaskRecord) -> dict[str, Any]:
     return {
         "task_id": record.id,
-        "task_center_run_id": record.task_center_run_id,
+        "request_id": record.request_id,
         "role": record.role,
         "agent_name": record.agent_name,
-        "context_message": record.context_message,
+        "instruction": record.instruction,
         "status": record.status,
         "outcomes": list(record.outcomes or []),
         "terminal_tool_result": record.terminal_tool_result,
         "needs": list(record.needs or []),
-        "child_workflow_id": record.child_workflow_id,
+        "workflow_id": record.workflow_id,
+        "iteration_id": record.iteration_id,
+        "attempt_id": record.attempt_id,
         "created_at": _isoformat(record.created_at),
         "updated_at": _isoformat(record.updated_at),
     }
@@ -186,7 +188,7 @@ class AuditRecorder:
         self,
         run_dir: Path,
         *,
-        task_center_run_id: str,
+        request_id: str,
         bus: AuditEventBus | None = None,
         primary_roles: frozenset[str] = PRIMARY_ROLES,
         scenario_name: str = "",
@@ -195,7 +197,7 @@ class AuditRecorder:
         coding_plan_mode_active: bool = False,
     ) -> None:
         self._run_dir = Path(run_dir)
-        self._task_center_run_id = task_center_run_id
+        self._request_id = request_id
         self._bus = bus
         self._primary_roles = frozenset(primary_roles)
         self._scenario_name = scenario_name
@@ -249,9 +251,9 @@ class AuditRecorder:
     ) -> AgentMessageJsonlRecorder | None:
         return self._task_recorder.get(task_id)
 
-    def bind_task_center_run_id(self, task_center_run_id: str) -> None:
+    def bind_request_id(self, request_id: str) -> None:
         """Bind the run id once known. Triggers a refresh of run.json."""
-        self._task_center_run_id = task_center_run_id
+        self._request_id = request_id
         if self._started_ts is not None:
             self._write_run_json()
 
@@ -316,12 +318,12 @@ class AuditRecorder:
             lambda mapper, connection, target: self._handle_attempt(target),
         )
         self._register(
-            TaskCenterTaskRecord,
+            TaskRecord,
             "after_insert",
             lambda mapper, connection, target: self._handle_task(target),
         )
         self._register(
-            TaskCenterTaskRecord,
+            TaskRecord,
             "after_update",
             lambda mapper, connection, target: self._handle_task(target),
         )
@@ -421,7 +423,7 @@ class AuditRecorder:
                 normalized = normalize_pulled_event(
                     event_payload,
                     boot_epoch_id=self._daemon_audit_boot_epoch_id,
-                    task_center_run_id=self._task_center_run_id,
+                    request_id=self._request_id,
                 )
                 sink.append_event(normalized)
 
@@ -545,8 +547,8 @@ class AuditRecorder:
 
     def _handle_workflow(self, target: WorkflowRecord) -> None:
         if (
-            self._task_center_run_id
-            and target.task_center_run_id != self._task_center_run_id
+            self._request_id
+            and target.request_id != self._request_id
         ):
             return
         workflow_dir = self._ensure_workflow_dir(target.id)
@@ -570,10 +572,10 @@ class AuditRecorder:
         )
         _atomic_write_json(attempt_dir / "attempt.json", _serialize_attempt(target))
 
-    def _handle_task(self, target: TaskCenterTaskRecord) -> None:
+    def _handle_task(self, target: TaskRecord) -> None:
         if (
-            self._task_center_run_id
-            and target.task_center_run_id != self._task_center_run_id
+            self._request_id
+            and target.request_id != self._request_id
         ):
             return
         task_dir = self._task_dir.get(target.id)
@@ -590,7 +592,7 @@ class AuditRecorder:
                     task_dir / "message.jsonl",
                     base_event={
                         "task_id": target.id,
-                        "task_center_run_id": self._task_center_run_id,
+                        "request_id": self._request_id,
                     },
                 )
                 self._task_recorder[target.id] = recorder
@@ -664,7 +666,7 @@ class AuditRecorder:
         return path
 
     def _resolve_task_dir(
-        self, target: TaskCenterTaskRecord
+        self, target: TaskRecord
     ) -> Path | None:
         role = self._display_role(target)
         attempt_id = attempt_id_from_task_id(target.id)
@@ -680,7 +682,7 @@ class AuditRecorder:
         return None
 
     @staticmethod
-    def _display_role(target: TaskCenterTaskRecord) -> str:
+    def _display_role(target: TaskRecord) -> str:
         if target.role == "generator" and target.agent_name == "executor":
             return str(target.agent_name)
         return str(target.role)
@@ -691,7 +693,7 @@ class AuditRecorder:
 
     def _write_run_json(self) -> None:
         payload: dict[str, Any] = {
-            "task_center_run_id": self._task_center_run_id,
+            "request_id": self._request_id,
             "scenario_name": self._scenario_name,
             "instance_id": self._instance_id,
             "sandbox_id": self._sandbox_id,

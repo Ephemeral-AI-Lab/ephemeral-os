@@ -13,7 +13,7 @@ What the shim adds on top of the engine:
 - Rebuilds the ``RunReport`` view from ``ScenarioLifecycle`` event
   accumulation, ``MOCK_*`` records, and the ``PipelineReport`` returned by the
   engine.
-- Owns the ``TaskCenterStoreBundle`` lifecycle: passes the bundle to
+- Owns the ``TaskStoreBundle`` lifecycle: passes the bundle to
   ``run_pipeline`` via ``config.stores`` so the engine does not close it,
   then computes :func:`_graph_summary` against the still-open stores before
   closing.
@@ -30,7 +30,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from task_center._core.outcomes import to_record, workflow_outcomes
+from workflow._core.outcomes import to_record, workflow_outcomes
 from task_center_runner.audit.events import Event
 from task_center_runner.core.engine import run_pipeline
 from task_center_runner.scenarios.base import Scenario
@@ -43,7 +43,7 @@ from task_center_runner.agent.mock.prompt_inspector import (
 )
 from task_center_runner.agent.mock.sandbox_probe import SandboxCheck
 from task_center_runner.core.stores import (
-    TaskCenterStoreBundle,
+    TaskStoreBundle,
     create_per_test_task_center_stores,
 )
 
@@ -53,7 +53,6 @@ class RunReport:
     """Result of one :func:`run_scenario` invocation."""
 
     scenario_name: str
-    task_center_run_id: str
     request_id: str
     sandbox_id: str
     instance_id: str
@@ -84,11 +83,11 @@ class RunReport:
 
 
 def _graph_summary(
-    bundle: TaskCenterStoreBundle,
-    task_center_run_id: str,
+    bundle: TaskStoreBundle,
+    request_id: str,
 ) -> dict[str, Any]:
     workflows: list[dict[str, Any]] = []
-    for workflow in bundle.workflow_store.list_for_run(task_center_run_id):
+    for workflow in bundle.workflow_store.list_for_request(request_id):
         iterations: list[dict[str, Any]] = []
         for iteration in bundle.iteration_store.list_for_workflow(workflow.id):
             attempts: list[dict[str, Any]] = []
@@ -145,7 +144,7 @@ def _graph_summary(
 
 
 @contextlib.contextmanager
-def _active_mock_model(bundle: TaskCenterStoreBundle):
+def _active_mock_model(bundle: TaskStoreBundle):
     """Register a throwaway active model row for the event-source runner path.
 
     The mock drives the REAL loop via ``spawn_agent``, which requires an active
@@ -197,7 +196,7 @@ async def run_scenario(
     audit_dir: Path,
     repo_dir: str,
     entry_prompt: str,
-    stores: TaskCenterStoreBundle | None = None,
+    stores: TaskStoreBundle | None = None,
     instance_id: str = "",
 ) -> RunReport:
     """Run *scenario* end-to-end against ``sandbox_id``.
@@ -227,14 +226,13 @@ async def run_scenario(
         pipeline_report = await run_pipeline(config)
 
     try:
-        graph_summary = _graph_summary(bundle, pipeline_report.task_center_run_id)
+        graph_summary = _graph_summary(bundle, pipeline_report.request_id)
     finally:
         if owns_stores:
             bundle.close()
 
     return RunReport(
         scenario_name=scenario.name,
-        task_center_run_id=pipeline_report.task_center_run_id,
         request_id=pipeline_report.request_id,
         sandbox_id=pipeline_report.sandbox_id,
         instance_id=pipeline_report.instance_id,

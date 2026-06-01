@@ -26,14 +26,14 @@ def full_system_capacity_metrics_script(ctx: ScenarioContext) -> PreparedToolScr
         count for tool, count in tool_counts.items() if tool.startswith("lsp.")
     )
     run_id = str(
-        ctx.metadata.get("task_center_run_id")
+        ctx.metadata.get("request_id")
         or ctx.metadata.get("run_id")
         or "unknown-run"
     )
     planned_graph = {
         "schema": "live_e2e.capacity.planned_graph.v1",
         "scenario": "capacity.full_system_capacity_matrix",
-        "task_center_run_id": run_id,
+        "request_id": run_id,
         "package_count": len(packages),
         "requirement_count": len(requirements),
         "matrix_cell_count": len(matrix),
@@ -52,7 +52,7 @@ def full_system_capacity_metrics_script(ctx: ScenarioContext) -> PreparedToolScr
     summary = {
         "schema": "live_e2e.capacity.v1",
         "scenario": "capacity.full_system_capacity_matrix",
-        "task_center_run_id": run_id,
+        "request_id": run_id,
         "profile": "project",
         "graph": {
             "workflows": 0,

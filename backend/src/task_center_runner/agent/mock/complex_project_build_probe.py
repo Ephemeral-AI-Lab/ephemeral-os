@@ -490,7 +490,7 @@ async def _shared_attempt_bootstrap_state(
 def _shared_attempt_bootstrap_key(
     ctx: ProbeContext,
 ) -> tuple[str, str, str, str]:
-    run_id = str(ctx.metadata.get("task_center_run_id") or "")
+    run_id = str(ctx.metadata.get("request_id") or "")
     attempt_id = str(ctx.metadata.get("task_center_attempt_id") or "")
     task_id = str(ctx.metadata.get("task_center_task_id") or "")
     return (

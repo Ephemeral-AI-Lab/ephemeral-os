@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import pytest
 
-from task_center._core.primitives import TaskCenterInvariantViolation
-from task_center.attempt.orchestrator_registry import (
+from workflow._core.primitives import TaskCenterInvariantViolation
+from workflow.attempt.orchestrator_registry import (
     AttemptOrchestratorRegistry,
 )
 

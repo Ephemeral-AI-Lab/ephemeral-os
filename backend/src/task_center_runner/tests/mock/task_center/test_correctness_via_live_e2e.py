@@ -61,5 +61,5 @@ async def test_correctness_testing_via_live_e2e(
     run_dir = report.run_dir
     assert (run_dir / "run.json").exists()
     run_payload = json.loads((run_dir / "run.json").read_text(encoding="utf-8"))
-    assert run_payload["task_center_run_id"] == report.task_center_run_id
+    assert run_payload["request_id"] == report.request_id
     assert run_payload["scenario_name"] == scenario.name

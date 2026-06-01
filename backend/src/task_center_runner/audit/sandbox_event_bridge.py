@@ -63,7 +63,7 @@ def runner_events_from_sandbox_audit_event(event: AuditEvent) -> tuple[Event, ..
 def _runner_node(event: AuditEvent) -> NodeId:
     node = event.node
     return NodeId(
-        task_center_run_id=node.task_center_run_id or "",
+        request_id=node.request_id or "",
         workflow_id=node.workflow_id,
         iteration_id=node.iteration_id,
         attempt_id=node.attempt_id,

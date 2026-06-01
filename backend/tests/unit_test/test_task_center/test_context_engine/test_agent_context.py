@@ -6,21 +6,21 @@ from datetime import UTC, datetime
 
 import pytest
 
-from task_center._core.outcomes import ExecutionTaskOutcome, records_json, to_record
-from task_center._core.primitives import generator_task_id, reducer_task_id
-from task_center._core.state import (
+from workflow._core.outcomes import ExecutionTaskOutcome, records_json, to_record
+from workflow._core.primitives import generator_task_id, reducer_task_id
+from workflow._core.state import (
     AttemptFailReason,
     AttemptStatus,
     IterationCreationReason,
 )
-from task_center.context_engine.engine import (
+from workflow.context_engine.engine import (
     ContextEngine,
     ContextEngineDeps,
     RecipeScopeError,
 )
-from task_center.context_engine.scope import ContextScope
-from task_center.context_engine.task_guidance import render_task_guidance
-from task_center.context_engine.xml import render_context_xml
+from workflow.context_engine.scope import ContextScope
+from workflow.context_engine.task_guidance import render_task_guidance
+from workflow.context_engine.xml import render_context_xml
 
 
 @pytest.fixture

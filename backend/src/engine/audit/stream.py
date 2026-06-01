@@ -16,7 +16,7 @@ def audit_events_from_stream_event(
     stream_event: object,
     *,
     metadata: Mapping[str, Any] | None = None,
-    task_center_run_id: str | None = None,
+    request_id: str | None = None,
 ) -> tuple[AuditEvent, ...]:
     """Translate supported StreamEvent objects into engine-owned audit events."""
     if isinstance(stream_event, ToolExecutionStartedEvent):
@@ -27,7 +27,7 @@ def audit_events_from_stream_event(
                 node=_node_from_stream(
                     stream_event,
                     metadata=metadata,
-                    task_center_run_id=task_center_run_id,
+                    request_id=request_id,
                 ),
                 payload={
                     "tool_name": stream_event.tool_name,
@@ -49,7 +49,7 @@ def audit_events_from_stream_event(
                 node=_node_from_stream(
                     stream_event,
                     metadata=metadata,
-                    task_center_run_id=task_center_run_id,
+                    request_id=request_id,
                 ),
                 payload={
                     "tool_name": stream_event.tool_name,
@@ -75,14 +75,13 @@ def _node_from_stream(
     stream_event: ToolExecutionStartedEvent | ToolExecutionCompletedEvent,
     *,
     metadata: Mapping[str, Any] | None,
-    task_center_run_id: str | None,
+    request_id: str | None,
 ) -> AuditNode:
     return AuditNode(
-        task_center_run_id=_first_text(
-            _metadata_get(metadata, "task_center_run_id"),
-            task_center_run_id,
+        request_id=_first_text(
+            _metadata_get(metadata, "request_id"),
+            request_id,
         ),
-        request_id=_text_or_none(_metadata_get(metadata, "task_center_request_id")),
         workflow_id=_text_or_none(_metadata_get(metadata, "task_center_workflow_id")),
         attempt_id=_text_or_none(_metadata_get(metadata, "task_center_attempt_id")),
         task_center_task_id=_text_or_none(

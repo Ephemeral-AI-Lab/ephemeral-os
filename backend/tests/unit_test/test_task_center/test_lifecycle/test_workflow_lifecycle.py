@@ -11,15 +11,15 @@ from __future__ import annotations
 
 import pytest
 
-from task_center._core.primitives import (
+from workflow._core.primitives import (
     TaskCenterInvariantViolation,
     TaskCenterLifecycleConfig,
     root_task_id,
 )
-from task_center.workflow.lifecycle import WorkflowLifecycle
-from task_center.iteration import OpenIterationCoordinatorRegistry
-from task_center.attempt.orchestrator_registry import AttemptOrchestratorRegistry
-from task_center._core.state import (
+from workflow.lifecycle import WorkflowLifecycle
+from workflow.iteration import OpenIterationCoordinatorRegistry
+from workflow.attempt.orchestrator_registry import AttemptOrchestratorRegistry
+from workflow._core.state import (
     IterationCreationReason,
     IterationStatus,
     WorkflowStatus,

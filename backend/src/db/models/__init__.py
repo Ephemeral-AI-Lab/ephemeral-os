@@ -4,11 +4,8 @@ from db.models.agent_run import AgentRunRecord
 from db.models.workflow import WorkflowRecord
 from db.models.attempt import AttemptRecord
 from db.models.model_registration import ModelRegistrationRecord
-from db.models.task_center import (
-    TaskCenterRequestRecord,
-    TaskCenterRunRecord,
-    TaskCenterTaskRecord,
-)
+from db.models.request import RequestRecord
+from db.models.task import TaskRecord
 from db.models.iteration import IterationRecord
 
 __all__ = [
@@ -16,8 +13,7 @@ __all__ = [
     "WorkflowRecord",
     "AttemptRecord",
     "ModelRegistrationRecord",
-    "TaskCenterRequestRecord",
-    "TaskCenterRunRecord",
-    "TaskCenterTaskRecord",
+    "RequestRecord",
+    "TaskRecord",
     "IterationRecord",
 ]

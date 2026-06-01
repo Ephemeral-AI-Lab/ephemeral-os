@@ -93,12 +93,12 @@ class HeavyIoZonedConcurrent(ScenarioBase):
         return ToolCallSpec(submit_planner_outcome, _plan())
 
     def executor_actions(self, ctx: ScenarioContext) -> Sequence[str]:
-        context_message = ctx.context_message or ctx.prompt or ""
-        if "ACTION heavy_io_zoned_seed" in context_message:
+        instruction = ctx.instruction or ctx.prompt or ""
+        if "ACTION heavy_io_zoned_seed" in instruction:
             return ("heavy_io_zoned_seed",)
-        if "ACTION heavy_io_zoned_reconcile" in context_message:
+        if "ACTION heavy_io_zoned_reconcile" in instruction:
             return ("heavy_io_zoned_reconcile",)
-        worker_index = _worker_index(context_message)
+        worker_index = _worker_index(instruction)
         if worker_index is not None:
             return (f"heavy_io_zoned_worker:{worker_index}",)
         return ()
@@ -117,11 +117,11 @@ class HeavyIoZonedConcurrent(ScenarioBase):
         )
 
 
-def _worker_index(context_message: str) -> int | None:
+def _worker_index(instruction: str) -> int | None:
     marker = "ACTION heavy_io_zoned_worker"
-    if marker not in context_message:
+    if marker not in instruction:
         return None
-    for token in context_message.split():
+    for token in instruction.split():
         if not token.startswith("index="):
             continue
         raw = token.split("=", 1)[1].rstrip(".,;")

@@ -643,17 +643,31 @@ async def measure_cache_churn(
     root_count: int,
 ) -> dict[str, Any]:
     roots = await seed_cache_churn_roots(bench, root_count)
+    churn_path = "/testbed/phase3t-cache-churn.txt"
     samples: list[dict[str, Any]] = []
     for index, root in enumerate(roots):
         response, wall_ms = await client.call(
             "api.v1.write_file",
             {
-                "path": f"/testbed/phase3t-cache-churn-{index:04d}.txt",
+                "path": churn_path,
                 "content": f"cache-root-{index}\n",
             },
             layer_stack_root=root,
         )
         samples.append(sample(index, response, wall_ms, response.get("success") is True))
+    readbacks: list[dict[str, Any]] = []
+    for index, root in enumerate(roots):
+        expected_content = f"cache-root-{index}\n"
+        response, wall_ms = await client.call(
+            "api.v1.read_file",
+            {"path": churn_path},
+            layer_stack_root=root,
+        )
+        actual_content = response.get("content")
+        readback = sample(index, response, wall_ms, actual_content == expected_content)
+        readback["expected_content"] = expected_content
+        readback["actual_content"] = actual_content if isinstance(actual_content, str) else None
+        readbacks.append(readback)
     reuse_response: dict[str, Any] = {}
     reuse_ms = 0.0
     if roots:
@@ -672,8 +686,14 @@ async def measure_cache_churn(
     )
     cache = metrics.get("occ_runtime_service_cache", {})
     required_evictions = max(0, root_count - 256)
+    readback_contents = [
+        item["actual_content"] for item in readbacks if isinstance(item.get("actual_content"), str)
+    ]
     checks = {
         "samples_ok": bool(samples) and all(item["ok"] for item in samples),
+        "readbacks_ok": bool(readbacks) and all(item["ok"] for item in readbacks),
+        "distinct_root_contents": len(readback_contents) == root_count
+        and len(set(readback_contents)) == root_count,
         "reuse_hit": timing_value(reuse_response, "occ.runtime_service.cache_hit") == 1.0,
         "cache_bounded": int(cache.get("size", 0)) <= 256,
         "evicted_after_churn": int(cache.get("evictions_total", 0)) >= required_evictions,
@@ -682,6 +702,7 @@ async def measure_cache_churn(
     return {
         "root_count": root_count,
         "sample_summary": summarize_samples_block(samples),
+        "readback_summary": summarize_samples_block(readbacks),
         "reuse": {
             "wall_ms": reuse_ms,
             "response": trim_response(reuse_response),

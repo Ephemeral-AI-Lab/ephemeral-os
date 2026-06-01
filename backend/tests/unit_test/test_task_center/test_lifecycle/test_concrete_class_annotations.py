@@ -18,18 +18,18 @@ import pytest
 
 def test_prompt_renderer_protocol_gone() -> None:
     with pytest.raises(ModuleNotFoundError):
-        importlib.import_module("task_center.context_engine.renderer")
+        importlib.import_module("workflow.context_engine.renderer")
 
 
 def test_attempt_agent_launcher_protocol_gone() -> None:
-    import task_center.attempt.launch as mod
+    import workflow.attempt.launch as mod
 
     assert not hasattr(mod, "AttemptAgentLauncher")
 
 
 def test_concrete_classes_importable() -> None:
-    from task_center.attempt.launch import EphemeralAttemptAgentLauncher
-    from task_center.context_engine.xml import render_context_xml
+    from workflow.attempt.launch import EphemeralAttemptAgentLauncher
+    from workflow.context_engine.xml import render_context_xml
 
     assert render_context_xml is not None
     assert EphemeralAttemptAgentLauncher is not None

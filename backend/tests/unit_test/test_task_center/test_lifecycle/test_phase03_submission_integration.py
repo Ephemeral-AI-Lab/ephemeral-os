@@ -4,18 +4,18 @@ from __future__ import annotations
 
 import pytest
 
-from task_center._core.primitives import (
+from workflow._core.primitives import (
     generator_task_id,
     planner_task_id,
     reducer_task_id,
 )
-from task_center._core.state import AttemptStatus, IterationCreationReason
-from task_center.attempt.launch import AgentLaunch, AttemptDeps
-from task_center.attempt.orchestrator import AttemptOrchestrator
-from task_center.attempt.orchestrator_registry import (
+from workflow._core.state import AttemptStatus, IterationCreationReason
+from workflow.attempt.launch import AgentLaunch, AttemptDeps
+from workflow.attempt.orchestrator import AttemptOrchestrator
+from workflow.attempt.orchestrator_registry import (
     AttemptOrchestratorRegistry,
 )
-from task_center.iteration import OpenIterationCoordinatorRegistry
+from workflow.iteration import OpenIterationCoordinatorRegistry
 from tools._framework.core.context import ToolExecutionContextService
 from tools._framework.core.runtime import ExecutionMetadata
 from tools._framework.execution.tool_call import execute_tool_once

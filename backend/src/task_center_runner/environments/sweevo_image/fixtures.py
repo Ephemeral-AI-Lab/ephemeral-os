@@ -23,7 +23,7 @@ from task_center_runner.benchmarks.sweevo.setup import (
 )
 from task_center_runner.core.runner import RunReport
 from task_center_runner.core.runner import run_scenario as _generic_run_scenario
-from task_center_runner.core.stores import TaskCenterStoreBundle
+from task_center_runner.core.stores import TaskStoreBundle
 from task_center_runner.scenarios.base import Scenario
 
 _DEFAULT_INSTANCE_ID = "dask__dask_2023.3.2_2023.4.0"
@@ -44,7 +44,7 @@ async def run_scenario_on_sweevo_image(
     instance: SWEEvoInstance,
     sandbox_id: str,
     audit_dir: Path,
-    stores: TaskCenterStoreBundle | None = None,
+    stores: TaskStoreBundle | None = None,
     repo_dir: str = _REPO_DIR,
     user_prompt: str | None = None,
     commit_to_workspace: bool = False,

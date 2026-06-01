@@ -28,16 +28,16 @@ from typing import Any
 import pytest
 
 from engine.agent.lifecycle import EphemeralRunResult
-from task_center._core.primitives import planner_task_id
-from task_center.attempt import AttemptFailReason, AttemptStatus
-from task_center.attempt.launch import (
+from workflow._core.primitives import planner_task_id
+from workflow.attempt import AttemptFailReason, AttemptStatus
+from workflow.attempt.launch import (
     AgentLaunch,
     AttemptDeps,
     EphemeralAttemptAgentLauncher,
 )
-from task_center.attempt.orchestrator_registry import AttemptOrchestratorRegistry
-from task_center._core.state import IterationCreationReason
-from task_center._core.task_state import TaskCenterTaskRole, TaskCenterTaskStatus
+from workflow.attempt.orchestrator_registry import AttemptOrchestratorRegistry
+from workflow._core.state import IterationCreationReason
+from task import AgentRole, TaskStatus
 from tools._framework.core.base import ToolResult
 
 
@@ -73,10 +73,10 @@ def _seed_planner_attempt(
     task_store.upsert_task(
         task_id=task_id,
         task_center_run_id=task_center_run_id,
-        role=TaskCenterTaskRole.PLANNER.value,
+        role=AgentRole.PLANNER.value,
         agent_name="planner",
         context_message="plan",
-        status=TaskCenterTaskStatus.RUNNING.value,
+        status=TaskStatus.RUNNING.value,
         outcomes=[],
         needs=[],
     )
@@ -88,7 +88,7 @@ def _build_launch(*, attempt: Any, workflow: Any, task_id: str, task_center_run_
         task_id=task_id,
         task_center_run_id=task_center_run_id,
         attempt_id=attempt.id,
-        role=TaskCenterTaskRole.PLANNER,
+        role=AgentRole.PLANNER,
         agent_name="planner",
         context="plan context",
         task_guidance="plan the work",
@@ -149,7 +149,7 @@ async def test_main_planner_engine_retry_keeps_attempt_sequence_no_at_one(
         # Simulate the planner's terminal submission tool transitioning
         # the task off RUNNING — real submission tools do this via
         # ``set_task_status``.
-        task_store.set_task_status(task_id, status=TaskCenterTaskStatus.DONE.value)
+        task_store.set_task_status(task_id, status=TaskStatus.DONE.value)
         return EphemeralRunResult(
             status="completed",
             error=None,
@@ -177,7 +177,7 @@ async def test_main_planner_engine_retry_keeps_attempt_sequence_no_at_one(
     # Task moved off RUNNING via the simulated terminal submission.
     refreshed_task = task_store.get_task(task_id)
     assert refreshed_task is not None
-    assert refreshed_task["status"] == TaskCenterTaskStatus.DONE.value
+    assert refreshed_task["status"] == TaskStatus.DONE.value
 
 
 @pytest.mark.asyncio
@@ -248,7 +248,7 @@ async def test_main_planner_no_terminal_result_marks_attempt_failed(
     assert refreshed_attempt.fail_reason == AttemptFailReason.TASK_FAILED
     refreshed_task = task_store.get_task(task_id)
     assert refreshed_task is not None
-    assert refreshed_task["status"] == TaskCenterTaskStatus.FAILED.value
+    assert refreshed_task["status"] == TaskStatus.FAILED.value
 
 
 @pytest.mark.asyncio
@@ -296,7 +296,7 @@ async def test_attempt_harness_records_runner_token_usage(
             tool_call_count=42,  # mimics aggregated cross-attempt count
         )
         captured_results.append(result)
-        task_store.set_task_status(task_id, status=TaskCenterTaskStatus.DONE.value)
+        task_store.set_task_status(task_id, status=TaskStatus.DONE.value)
         return result
 
     launcher = EphemeralAttemptAgentLauncher(
@@ -351,7 +351,7 @@ async def test_continuation_planner_attempt_does_not_pass_retry_kwarg(
 
     async def _runner(*args: Any, **kwargs: Any) -> EphemeralRunResult:
         captured_kwargs.append(kwargs)
-        task_store.set_task_status(task_id, status=TaskCenterTaskStatus.DONE.value)
+        task_store.set_task_status(task_id, status=TaskStatus.DONE.value)
         return EphemeralRunResult(
             status="completed",
             error=None,
@@ -432,7 +432,7 @@ async def test_main_agent_launches_with_two_user_messages(
 
     async def _spy_runner(*args: Any, **kwargs: Any) -> EphemeralRunResult:
         captured.append({"args": args, "kwargs": kwargs})
-        task_store.set_task_status(task_id, status=TaskCenterTaskStatus.DONE.value)
+        task_store.set_task_status(task_id, status=TaskStatus.DONE.value)
         return EphemeralRunResult(
             status="completed",
             error=None,
@@ -495,7 +495,7 @@ async def test_launch_without_task_guidance_falls_back_to_single_user_message(
         task_id=task_id,
         task_center_run_id=task_center_run_id,
         attempt_id=attempt.id,
-        role=TaskCenterTaskRole.PLANNER,
+        role=AgentRole.PLANNER,
         agent_name="planner",
         context="execute this task",
         task_guidance=None,  # no task-guidance prose
@@ -513,7 +513,7 @@ async def test_launch_without_task_guidance_falls_back_to_single_user_message(
 
     async def _spy_runner(*args: Any, **kwargs: Any) -> EphemeralRunResult:
         captured.append({"args": args, "kwargs": kwargs})
-        task_store.set_task_status(task_id, status=TaskCenterTaskStatus.DONE.value)
+        task_store.set_task_status(task_id, status=TaskStatus.DONE.value)
         return EphemeralRunResult(
             status="completed",
             error=None,
@@ -564,7 +564,7 @@ async def test_main_agent_launches_with_skill_as_prompt_and_context_guidance_ini
         task_id=task_id,
         task_center_run_id=task_center_run_id,
         attempt_id=attempt.id,
-        role=TaskCenterTaskRole.PLANNER,
+        role=AgentRole.PLANNER,
         agent_name="planner",
         context="plan context",
         task_guidance="plan the work",
@@ -583,7 +583,7 @@ async def test_main_agent_launches_with_skill_as_prompt_and_context_guidance_ini
 
     async def _spy_runner(*args: Any, **kwargs: Any) -> EphemeralRunResult:
         captured.append({"args": args, "kwargs": kwargs})
-        task_store.set_task_status(task_id, status=TaskCenterTaskStatus.DONE.value)
+        task_store.set_task_status(task_id, status=TaskStatus.DONE.value)
         return EphemeralRunResult(
             status="completed",
             error=None,

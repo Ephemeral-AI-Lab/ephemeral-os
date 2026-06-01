@@ -2,7 +2,7 @@
 
 Lever #18 (plan iter4 §Phase 1) deleted four unused dataclasses
 (_BaseTaskPayload, TaskReadyPayload, TaskLaunchedPayload, TaskFailedPayload)
-from task_center.audit. The emit sites were already constructing payload
+from workflow.audit. The emit sites were already constructing payload
 dicts inline — the deletion is mechanically inert for emission shape, but
 the regression test pins the dict-key set so future edits cannot drop keys
 without surfacing here.
@@ -13,8 +13,8 @@ Plan: .omc/plans/task-center-folder-reframe-20260514.md (lever #18, AC #12)
 from __future__ import annotations
 
 from audit.base import AuditEvent
-from task_center._core import audit as events
-from task_center._core.audit import TaskCenterAuditEmitter
+from workflow._core import audit as events
+from workflow._core.audit import TaskCenterAuditEmitter
 
 
 class CollectingSink:

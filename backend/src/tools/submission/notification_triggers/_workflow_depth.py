@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from task_center._core.primitives import TaskCenterInvariantViolation
-from task_center._core.workflow_depth import is_nested_workflow
+from workflow._core.primitives import TaskCenterInvariantViolation
+from workflow._core.workflow_depth import is_nested_workflow
 
 
 def tool_context_is_nested_workflow(context: Any) -> bool:

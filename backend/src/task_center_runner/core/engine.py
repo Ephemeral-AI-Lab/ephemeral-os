@@ -32,7 +32,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from types import SimpleNamespace
 
-from task_center import TaskCenterSandboxProvisioner, start_task_center_run
+from workflow import TaskCenterSandboxProvisioner, start_task_center_run
 
 from config.model_config import try_get_active_model_kwargs
 from task_center_runner.audit.bus import AuditEventBus
@@ -187,7 +187,7 @@ async def run_pipeline(config: RunConfig) -> PipelineReport:
 
     recorder = AuditRecorder(
         run_dir,
-        task_center_run_id="",
+        request_id="",
         bus=bus,
         scenario_name=scenario_name,
         instance_id=config.instance_id,
@@ -204,13 +204,13 @@ async def run_pipeline(config: RunConfig) -> PipelineReport:
         config.sandbox_provisioner_factory or _default_sandbox_provisioner
     )
     sandbox_provisioner = sandbox_provisioner_factory()
-    stream_task_center_run_id = ""
+    stream_request_id = ""
     sandbox_stream_fallback_enabled = _stream_fallback_enabled()
 
     async def _on_agent_event(event) -> None:  # type: ignore[no-untyped-def]
         stream_callback = stream_bridge(
             bus,
-            task_center_run_id=stream_task_center_run_id,
+            request_id=stream_request_id,
             sandbox_fallback_enabled=sandbox_stream_fallback_enabled,
         )
         await stream_callback(event)
@@ -246,10 +246,10 @@ async def run_pipeline(config: RunConfig) -> PipelineReport:
             runner=runner,
             sandbox_provisioner=sandbox_provisioner,
         )
-        tcrid = str(handle.task_center_run_id)
-        stream_task_center_run_id = tcrid
-        recorder.bind_task_center_run_id(tcrid)
-        bus.publish(Event(type=EventType.RUN_STARTED, node=NodeId(task_center_run_id=tcrid)))
+        tcrid = str(handle.request_id)
+        stream_request_id = tcrid
+        recorder.bind_request_id(tcrid)
+        bus.publish(Event(type=EventType.RUN_STARTED, node=NodeId(request_id=tcrid)))
 
         try:
             if config.max_duration_s is not None:
@@ -266,7 +266,7 @@ async def run_pipeline(config: RunConfig) -> PipelineReport:
             await asyncio.gather(*pending, return_exceptions=True)
             await config.lifecycle.on_aborted(ctx, "timeout")
 
-        bus.publish(Event(type=EventType.RUN_COMPLETED, node=NodeId(task_center_run_id=tcrid)))
+        bus.publish(Event(type=EventType.RUN_COMPLETED, node=NodeId(request_id=tcrid)))
 
         run_row = bundle.task_store.get_run(tcrid) or {}
         task_rows = bundle.task_store.list_tasks_for_run(tcrid)
@@ -310,7 +310,6 @@ async def run_pipeline(config: RunConfig) -> PipelineReport:
 
     report = PipelineReport(
         status="aborted" if aborted_by_timeout else "completed",
-        task_center_run_id=tcrid,
         request_id=str(handle.request_id) if handle is not None else "",
         sandbox_id=lease.sandbox_id,
         instance_id=config.instance_id,

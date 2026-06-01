@@ -31,7 +31,7 @@ def bootstrap_real_agent_runtime() -> None:
     """Populate sandbox provider, runtime stores, and agent registry.
 
     Idempotent via a module-level sentinel. Safe to call from any entrypoint
-    that drives :func:`task_center.start_task_center_run` with
+    that drives :func:`workflow.start_task_center_run` with
     ``runner=None`` (real LLM path).
     """
     global _BOOTSTRAPPED

@@ -12,13 +12,13 @@ from __future__ import annotations
 
 import pytest
 
-from task_center._core.primitives import TaskCenterInvariantViolation
-from task_center.attempt.plan_dag import (
+from workflow._core.primitives import TaskCenterInvariantViolation
+from workflow.attempt.plan_dag import (
     dag_status,
     ordered_plan_tasks,
     ready_pending_plan_ids,
 )
-from task_center.submissions import PlannedGeneratorTask, PlannedReducerTask
+from workflow.submissions import PlannedGeneratorTask, PlannedReducerTask
 
 
 def _gen(local_id: str, needs: tuple[str, ...] = ()) -> PlannedGeneratorTask:

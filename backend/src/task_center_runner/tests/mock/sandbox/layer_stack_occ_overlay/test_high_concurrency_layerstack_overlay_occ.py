@@ -23,7 +23,7 @@ from task_center_runner.agent.mock.high_concurrency_probe import (
 )
 from task_center_runner.environments.sweevo_image.fixtures import run_scenario_on_sweevo_image
 from task_center_runner.core.runner import RunReport
-from task_center_runner.core.stores import TaskCenterStoreBundle
+from task_center_runner.core.stores import TaskStoreBundle
 from task_center_runner.audit.events import EventType
 from task_center_runner.scenarios import SCENARIO_REGISTRY
 from task_center_runner.scenarios.sandbox.high_concurrency_layerstack_overlay_occ import (
@@ -73,7 +73,7 @@ async def test_high_concurrency_layerstack_overlay_occ_capacity(
     sweevo_image_instance: SWEEvoInstance,
     workspace: dict[str, object],
     audit_dir: Path,
-    stores: TaskCenterStoreBundle,
+    stores: TaskStoreBundle,
 ) -> None:
     scenario_cls = SCENARIO_REGISTRY["sandbox.high_concurrency_layerstack_overlay_occ"]
     scenario = scenario_cls()

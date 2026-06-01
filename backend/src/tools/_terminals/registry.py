@@ -34,6 +34,18 @@ class TerminalToolDescriptor(BaseModel):
 
 
 TERMINAL_DESCRIPTORS: dict[str, TerminalToolDescriptor] = {
+    "submit_root_outcome": TerminalToolDescriptor(
+        name="submit_root_outcome",
+        selection_guidance=(
+            'Call with status="success" when the user request is complete and '
+            'verified; call with status="failed" when it cannot be completed. '
+            "The outcome is the user-facing request result."
+        ),
+        advisor_review_focus=(
+            "Verify the root outcome is complete, factual, and supported by "
+            "the work done. For failure, confirm the blocker is concrete."
+        ),
+    ),
     "submit_generator_outcome": TerminalToolDescriptor(
         name="submit_generator_outcome",
         selection_guidance=(
@@ -47,21 +59,6 @@ TERMINAL_DESCRIPTORS: dict[str, TerminalToolDescriptor] = {
             "the deliverable exists, satisfies the task specification, and is "
             "consistent with dependencies. For failure, confirm the blocker is "
             "real, specific, and not a premature give-up."
-        ),
-    ),
-    "submit_workflow_handoff": TerminalToolDescriptor(
-        name="submit_workflow_handoff",
-        selection_guidance=(
-            "Call when you have not started edits, the `<assigned_task>` is "
-            "too broad or complex for one executor pass, and this is not a "
-            "nested workflow. Name the delegated goal and why planner "
-            "decomposition is needed."
-        ),
-        advisor_review_focus=(
-            "Verify the generator has not started edits and the handoff scope "
-            "is specific and actionable. Flag vague handoffs that kick the "
-            "problem downstream without naming the delegated goal, findings, "
-            "or why decomposition is needed."
         ),
     ),
     "submit_planner_outcome": TerminalToolDescriptor(

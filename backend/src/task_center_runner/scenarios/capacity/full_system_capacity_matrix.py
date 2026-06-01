@@ -20,8 +20,8 @@ class FullSystemCapacityMatrix(FullStackAdversarial):
     name = "capacity.full_system_capacity_matrix"
 
     def executor_actions(self, ctx: ScenarioContext) -> Sequence[str]:
-        context_message = ctx.context_message or ctx.prompt or ""
-        if "ACTION capacity_metrics_full_system" in context_message:
+        instruction = ctx.instruction or ctx.prompt or ""
+        if "ACTION capacity_metrics_full_system" in instruction:
             return ("capacity_metrics_full_system",)
         return super().executor_actions(ctx)
 

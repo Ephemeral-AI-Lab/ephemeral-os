@@ -4,7 +4,7 @@ Fixtures:
 
 - ``db_engine``: session-scoped; bootstraps the configured database engine.
   The repository default is SQLite.
-- ``stores``: per-test; yields an isolated ``TaskCenterStoreBundle`` for the
+- ``stores``: per-test; yields an isolated ``TaskStoreBundle`` for the
   configured dialect. SQLite uses per-test database files; PostgreSQL uses
   per-test schemas.
 - ``audit_dir``: per-test; resolves the audit base directory honoring
@@ -28,7 +28,7 @@ import pytest
 from config import get_central_config
 from db.engine import get_engine, initialize_db
 from task_center_runner.core.stores import (
-    TaskCenterStoreBundle,
+    TaskStoreBundle,
     create_per_test_task_center_stores,
 )
 
@@ -52,7 +52,7 @@ def db_engine() -> object | None:
 
 
 @pytest.fixture
-def stores(db_engine: object | None) -> Iterator[TaskCenterStoreBundle]:
+def stores(db_engine: object | None) -> Iterator[TaskStoreBundle]:
     """Per-test isolated TaskCenter stores.
 
     Skipped when no database URL is configured so unit-test collections that

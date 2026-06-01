@@ -7,7 +7,7 @@ from datetime import UTC, datetime
 
 from db.models.workflow import WorkflowRecord
 from db.stores.base import SyncStoreMixin
-from task_center._core.state import Workflow, WorkflowStatus
+from workflow._core.state import Workflow, WorkflowStatus
 
 
 class WorkflowStore(SyncStoreMixin):
@@ -16,19 +16,20 @@ class WorkflowStore(SyncStoreMixin):
     def insert(
         self,
         *,
-        task_center_run_id: str,
-        parent_task_id: str | None,
+        request_id: str,
+        parent_task_id: str,
         workflow_goal: str,
     ) -> Workflow:
         with self._sf() as db:
             now = datetime.now(UTC)
             record = WorkflowRecord(
                 id=str(uuid.uuid4()),
-                task_center_run_id=task_center_run_id,
+                request_id=request_id,
                 parent_task_id=parent_task_id,
                 goal=workflow_goal,
                 status=WorkflowStatus.OPEN.value,
                 iteration_ids=[],
+                outcomes=None,
                 created_at=now,
                 updated_at=now,
             )
@@ -62,6 +63,7 @@ class WorkflowStore(SyncStoreMixin):
         *,
         status: WorkflowStatus,
         closed_at: datetime | None = None,
+        outcomes: str | None = None,
     ) -> Workflow:
         with self._sf() as db:
             record = db.get(WorkflowRecord, workflow_id)
@@ -70,6 +72,8 @@ class WorkflowStore(SyncStoreMixin):
             record.status = status.value
             if closed_at is not None:
                 record.closed_at = closed_at
+            if outcomes is not None:
+                record.outcomes = outcomes
             db.commit()
             db.refresh(record)
             return self._to_dto(record)
@@ -83,15 +87,13 @@ class WorkflowStore(SyncStoreMixin):
             )
             return [self._to_dto(r) for r in q.all()]
 
-    def list_for_run(
-        self, task_center_run_id: str
-    ) -> list[Workflow]:
+    def list_for_request(self, request_id: str) -> list[Workflow]:
         with self._sf() as db:
             q = (
                 db.query(WorkflowRecord)
                 .filter(
-                    WorkflowRecord.task_center_run_id
-                    == task_center_run_id
+                    WorkflowRecord.request_id
+                    == request_id
                 )
                 .order_by(WorkflowRecord.created_at.asc())
             )
@@ -100,11 +102,12 @@ class WorkflowStore(SyncStoreMixin):
     def _to_dto(self, record: WorkflowRecord) -> Workflow:
         return Workflow(
             id=record.id,
-            task_center_run_id=record.task_center_run_id,
+            request_id=record.request_id,
             workflow_goal=record.goal,
             status=WorkflowStatus(record.status),
             iteration_ids=tuple(record.iteration_ids or ()),
             parent_task_id=record.parent_task_id,
+            outcomes=record.outcomes,
             created_at=record.created_at,
             updated_at=record.updated_at,
             closed_at=record.closed_at,

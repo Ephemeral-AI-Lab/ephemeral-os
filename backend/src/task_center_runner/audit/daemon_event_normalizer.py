@@ -44,7 +44,7 @@ def normalize_pulled_event(
     raw: dict[str, Any],
     *,
     boot_epoch_id: int | None = None,
-    task_center_run_id: str = "",
+    request_id: str = "",
 ) -> dict[str, Any]:
     """Promote subsystem sections to ``payload[<section>]``; optionally retain raw.
 
@@ -78,8 +78,8 @@ def normalize_pulled_event(
     }
     if seq is not None:
         row["seq"] = seq
-    if task_center_run_id:
-        row["task_center_run_id"] = task_center_run_id
+    if request_id:
+        row["request_id"] = request_id
     return row
 
 

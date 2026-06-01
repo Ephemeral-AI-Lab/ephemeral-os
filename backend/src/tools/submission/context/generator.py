@@ -5,9 +5,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Literal
 
-from task_center import TaskCenterInvariantViolation
-from task_center._core.invariants import assert_generator_task_for_submission
-from task_center._core.primitives import attempt_id_from_task_id
+from workflow import TaskCenterInvariantViolation
+from workflow._core.invariants import assert_generator_task_for_submission
 from tools._framework.core.context import ToolExecutionContextService
 from tools.submission.context.attempt import (
     AttemptSubmissionContext,
@@ -17,7 +16,7 @@ from tools.submission.context.attempt import (
 )
 
 if TYPE_CHECKING:
-    from task_center import AttemptDeps, StartedWorkflow
+    from workflow import AttemptDeps, StartedWorkflow
 
 
 @dataclass(frozen=True, slots=True)
@@ -40,7 +39,7 @@ class GeneratorSubmissionContext:
     def submit_generator_outcome(
         self, *, status: Literal["success", "failed"], outcome: str
     ) -> None:
-        from task_center import GeneratorSubmission
+        from workflow import GeneratorSubmission
 
         self.attempt_ctx.orchestrator.apply_generator_submission(
             GeneratorSubmission(
@@ -57,7 +56,7 @@ class GeneratorSubmissionContext:
     def start_delegated_workflow(
         self, *, goal_handoff: str
     ) -> StartedWorkflow:
-        from task_center import WorkflowStarter
+        from workflow import WorkflowStarter
 
         coordinator = WorkflowStarter(runtime=self.runtime)
         return coordinator.start(
@@ -74,7 +73,7 @@ def resolve_generator_submission_context(
     Generator terminal tools are valid only for attempt-bound generator tasks.
     """
     runtime, task, task_id = _resolve_runtime_task(context)
-    attempt_id = attempt_id_from_task_id(task_id) or ""
+    attempt_id = str(task.get("attempt_id") or "")
     if not attempt_id:
         raise AttemptSubmissionContextError(
             f"TaskCenter task {task_id!r} is not attempt-bound; generator "

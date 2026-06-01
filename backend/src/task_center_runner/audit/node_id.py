@@ -20,7 +20,7 @@ PrimaryRole = Literal[
 class NodeId:
     """Hierarchical breadcrumb identifying where in the run an event occurred."""
 
-    task_center_run_id: str
+    request_id: str
     workflow_id: str | None = None
     workflow_seq: int | None = None
     iteration_id: str | None = None

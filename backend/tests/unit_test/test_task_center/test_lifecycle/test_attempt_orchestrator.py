@@ -12,24 +12,24 @@ from __future__ import annotations
 
 import pytest
 
-from task_center._core.primitives import TaskCenterInvariantViolation
-from task_center._core.state import (
+from workflow._core.primitives import TaskCenterInvariantViolation
+from workflow._core.state import (
     AttemptFailReason,
     AttemptStage,
     AttemptStatus,
     Workflow,
     WorkflowStatus,
 )
-from task_center.attempt.orchestrator import AttemptOrchestrator
-from task_center.attempt.orchestrator_registry import (
+from workflow.attempt.orchestrator import AttemptOrchestrator
+from workflow.attempt.orchestrator_registry import (
     AttemptOrchestratorRegistry,
 )
-from task_center.attempt.launch import (
+from workflow.attempt.launch import (
     AgentLaunch,
     AttemptDeps,
 )
-from task_center._core.task_state import TaskCenterTaskRole, TaskCenterTaskStatus
-from task_center.submissions import (
+from task import AgentRole, TaskStatus
+from workflow.submissions import (
     GeneratorSubmission,
     PlannedGeneratorTask,
     PlannedReducerTask,
@@ -37,12 +37,12 @@ from task_center.submissions import (
     PlannerSubmission,
     ReducerSubmission,
 )
-from task_center._core.primitives import (
+from workflow._core.primitives import (
     generator_task_id,
     planner_task_id,
     reducer_task_id,
 )
-from task_center._core.state import IterationCreationReason
+from workflow._core.state import IterationCreationReason
 
 
 class _FakeLauncher:
@@ -54,7 +54,7 @@ class _FakeLauncher:
 
 
 class _FailingRoleLauncher(_FakeLauncher):
-    def __init__(self, role: TaskCenterTaskRole) -> None:
+    def __init__(self, role: AgentRole) -> None:
         super().__init__()
         self._role = role
 
@@ -203,7 +203,7 @@ def test_start_creates_planner_task_and_sets_attempt_planner_id(
     planner_task = task_store.get_task(task_id)
     assert refreshed is not None and refreshed.planner_task_id == task_id
     assert planner_task is not None
-    assert planner_task["status"] == TaskCenterTaskStatus.RUNNING.value
+    assert planner_task["status"] == TaskStatus.RUNNING.value
     assert [launch.task_id for launch in launcher.launches] == [task_id]
 
 
@@ -282,7 +282,7 @@ def test_apply_planner_failure_marks_task_and_closes_attempt(
     assert refreshed is not None
     assert refreshed.status == AttemptStatus.FAILED
     assert refreshed.fail_reason == AttemptFailReason.TASK_FAILED
-    assert task is not None and task["status"] == TaskCenterTaskStatus.FAILED.value
+    assert task is not None and task["status"] == TaskStatus.FAILED.value
     assert closed == [attempt.id]
     assert registry.get(attempt.id) is None
 
@@ -355,13 +355,13 @@ def test_missing_generator_agent_profile_is_invariant_violation(
 
     refreshed_task_b = task_store.get_task(task_b_id)
     assert refreshed_task_b is not None
-    assert refreshed_task_b["status"] == TaskCenterTaskStatus.PENDING.value
+    assert refreshed_task_b["status"] == TaskStatus.PENDING.value
 
 
 def test_generator_launch_failure_marks_task_failed_and_closes_attempt(
     workflow_store, iteration_store, attempt_store, task_store, task_center_run_id, composer
 ):
-    launcher = _FailingRoleLauncher(TaskCenterTaskRole.GENERATOR)
+    launcher = _FailingRoleLauncher(AgentRole.GENERATOR)
     orchestrator, attempt, _, registry, closed = _build_orchestrator(
         workflow_store,
         iteration_store,
@@ -384,7 +384,7 @@ def test_generator_launch_failure_marks_task_failed_and_closes_attempt(
     task = task_store.get_task(generator_task_id(attempt.id, "a"))
     refreshed = attempt_store.get(attempt.id)
     assert task is not None
-    assert task["status"] == TaskCenterTaskStatus.FAILED.value
+    assert task["status"] == TaskStatus.FAILED.value
     assert task["terminal_tool_result"]["fail_reason"] == "agent_launch_failed"
     assert refreshed is not None
     assert refreshed.status == AttemptStatus.FAILED
@@ -396,7 +396,7 @@ def test_generator_launch_failure_marks_task_failed_and_closes_attempt(
 def test_reducer_launch_failure_marks_task_failed_and_closes_attempt(
     workflow_store, iteration_store, attempt_store, task_store, task_center_run_id, composer
 ):
-    launcher = _FailingRoleLauncher(TaskCenterTaskRole.REDUCER)
+    launcher = _FailingRoleLauncher(AgentRole.REDUCER)
     orchestrator, attempt, _, registry, closed = _build_orchestrator(
         workflow_store,
         iteration_store,
@@ -420,7 +420,7 @@ def test_reducer_launch_failure_marks_task_failed_and_closes_attempt(
     task = task_store.get_task(reducer_task_id(attempt.id, "r"))
     refreshed = attempt_store.get(attempt.id)
     assert task is not None
-    assert task["status"] == TaskCenterTaskStatus.FAILED.value
+    assert task["status"] == TaskStatus.FAILED.value
     assert task["terminal_tool_result"]["fail_reason"] == "agent_launch_failed"
     assert refreshed is not None
     assert refreshed.status == AttemptStatus.FAILED
@@ -456,7 +456,7 @@ def test_reducer_compose_failure_marks_task_failed_and_closes_attempt(
     task = task_store.get_task(reducer_task_id(attempt.id, "r"))
     refreshed = attempt_store.get(attempt.id)
     assert task is not None
-    assert task["status"] == TaskCenterTaskStatus.FAILED.value
+    assert task["status"] == TaskStatus.FAILED.value
     assert task["terminal_tool_result"]["fail_reason"] == "agent_launch_failed"
     assert refreshed is not None
     assert refreshed.status == AttemptStatus.FAILED
@@ -643,7 +643,7 @@ def test_child_workflow_success_resumes_waiting_generator(
     orchestrator.start_child_workflow(
         generator_task=task_store.get_task(task_id), child_workflow=child
     )
-    assert task_store.get_task(task_id)["status"] == TaskCenterTaskStatus.WAITING_WORKFLOW.value
+    assert task_store.get_task(task_id)["status"] == TaskStatus.WAITING_WORKFLOW.value
 
     orchestrator.apply_child_workflow_outcome(
         generator_task=task_store.get_task(task_id),
@@ -652,7 +652,7 @@ def test_child_workflow_success_resumes_waiting_generator(
 
     task = task_store.get_task(task_id)
     assert task is not None
-    assert task["status"] == TaskCenterTaskStatus.DONE.value
+    assert task["status"] == TaskStatus.DONE.value
     assert task["terminal_tool_result"]["child_workflow_id"] == "delegated-1"
     # Generator done -> reducer became ready and launched.
     reducer_task = task_store.get_task(reducer_task_id(attempt.id, "r"))
@@ -694,9 +694,9 @@ def test_child_workflow_failure_leaves_dependents_pending_and_closes_attempt(
     dependent = task_store.get_task(dependent_id)
     refreshed = attempt_store.get(attempt.id)
     assert task is not None
-    assert task["status"] == TaskCenterTaskStatus.FAILED.value
+    assert task["status"] == TaskStatus.FAILED.value
     assert dependent is not None
-    assert dependent["status"] == TaskCenterTaskStatus.PENDING.value
+    assert dependent["status"] == TaskStatus.PENDING.value
     assert refreshed is not None
     assert refreshed.status == AttemptStatus.FAILED
     assert closed == [attempt.id]
@@ -728,7 +728,7 @@ def test_cancel_child_workflow_restores_generator_running(
 
     task = task_store.get_task(task_id)
     assert task is not None
-    assert task["status"] == TaskCenterTaskStatus.RUNNING.value
+    assert task["status"] == TaskStatus.RUNNING.value
 
 
 def test_orchestrator_never_creates_retry_attempt(

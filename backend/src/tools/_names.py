@@ -29,9 +29,16 @@ CANCEL_BACKGROUND_TASK_TOOL_NAME = "cancel_background_task"
 # Helper-ask tools (backend/src/tools/ask_helper/)
 ASK_ADVISOR_TOOL_NAME = "ask_advisor"
 
+# Workflow tools
+DELEGATE_WORKFLOW_TOOL_NAME = "delegate_workflow"
+CHECK_WORKFLOW_STATUS_TOOL_NAME = "check_workflow_status"
+CANCEL_WORKFLOW_TOOL_NAME = "cancel_workflow"
+
 # Generator terminal tools
 SUBMIT_GENERATOR_OUTCOME_TOOL_NAME = "submit_generator_outcome"
-SUBMIT_WORKFLOW_HANDOFF_TOOL_NAME = "submit_workflow_handoff"
+
+# Root terminal tools
+SUBMIT_ROOT_OUTCOME_TOOL_NAME = "submit_root_outcome"
 
 # Reducer terminal tools
 SUBMIT_REDUCER_OUTCOME_TOOL_NAME = "submit_reducer_outcome"
@@ -61,8 +68,11 @@ __all__ = [
     "WAIT_BACKGROUND_TASKS_TOOL_NAME",
     "CANCEL_BACKGROUND_TASK_TOOL_NAME",
     "ASK_ADVISOR_TOOL_NAME",
+    "DELEGATE_WORKFLOW_TOOL_NAME",
+    "CHECK_WORKFLOW_STATUS_TOOL_NAME",
+    "CANCEL_WORKFLOW_TOOL_NAME",
     "SUBMIT_GENERATOR_OUTCOME_TOOL_NAME",
-    "SUBMIT_WORKFLOW_HANDOFF_TOOL_NAME",
+    "SUBMIT_ROOT_OUTCOME_TOOL_NAME",
     "SUBMIT_REDUCER_OUTCOME_TOOL_NAME",
     "SUBMIT_PLANNER_OUTCOME_TOOL_NAME",
     "SUBMIT_ADVISOR_FEEDBACK_TOOL_NAME",

@@ -65,9 +65,9 @@ markers = [
     "live_e2e_daytona: live-e2e tests that require a Daytona sandbox",
     "live_e2e_capacity: opt-in composite live-e2e capacity tests",
     "live_e2e_soak: opt-in long-running live-e2e soak/performance tests",
-    "mock: deterministic mocked-agent task-center-runner tests",
+    "mock: deterministic mocked-agent workflow-runner tests",
     "sandbox_integration: mocked-agent sandbox connection, stability, and load tests",
-    "task_center_integration: mocked-agent TaskCenter workflow correctness tests",
+    "workflow_integration: mocked-agent workflow correctness tests",
     "real_agent: tests that run real LLM agents",
     "slow: long-running tests (heavy-run regressions, 1 M-event mock suites)",
     "timeout(seconds): per-test timeout budget when pytest-timeout is available",
@@ -78,11 +78,11 @@ line-length = 100
 target-version = "py311"
 
 [tool.ruff.lint.per-file-ignores]
-# task_center/__init__.py is a re-export facade with a dynamic ``__all__`` built
+# workflow/__init__.py is a re-export facade with a dynamic ``__all__`` built
 # from ``_EXPORTS``; the ``if TYPE_CHECKING:`` imports exist to give type
 # checkers visibility into the lazy ``__getattr__`` surface and are not used
 # at runtime by design.
-"backend/src/task_center/__init__.py" = ["F401"]
+"backend/src/workflow/__init__.py" = ["F401"]
 
 [tool.mypy]
 python_version = "3.11"

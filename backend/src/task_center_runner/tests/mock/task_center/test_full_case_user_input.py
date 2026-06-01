@@ -19,7 +19,7 @@ from task_center_runner.audit.events import EventType
 from task_center_runner.scenarios.full_case_user_input import (
     FullCaseUserInput,
 )
-from task_center_runner.core.stores import TaskCenterStoreBundle
+from task_center_runner.core.stores import TaskStoreBundle
 from task_center_runner.environments.sweevo_image.fixtures import run_scenario_on_sweevo_image
 from task_center_runner.environments.sweevo_image.health import (
     require_sweevo_image_provider_healthy,
@@ -32,7 +32,7 @@ _DEFAULT_INSTANCE_ID = "dask__dask_2023.3.2_2023.4.0"
 
 
 @pytest.fixture
-def _active_mock_model(stores: TaskCenterStoreBundle) -> Iterator[None]:
+def _active_mock_model(stores: TaskStoreBundle) -> Iterator[None]:
     prior_sf = model_store._session_factory  # noqa: SLF001
     model_store.initialize(stores.session_factory)
     key = f"test/mock-loop-{uuid.uuid4().hex[:8]}"
@@ -66,7 +66,7 @@ async def test_full_case_user_input_runs_dynamic_verifier_dag(
     sweevo_image_instance: SWEEvoInstance,
     workspace: dict[str, object],
     audit_dir: Path,
-    stores: TaskCenterStoreBundle,
+    stores: TaskStoreBundle,
     _active_mock_model: None,
 ) -> None:
     require_sweevo_image_provider_healthy(sweevo_image_instance)
@@ -168,10 +168,10 @@ def _is_guard_task(task: dict[str, Any]) -> bool:
 
     Guard tasks were ``verifier`` agents in the old model; they are now plain
     executor generators gated by the reducer, identified by their preserved
-    ``VERIFY checkpoint=`` ``context_message`` spec.
+    ``VERIFY checkpoint=`` ``instruction`` spec.
     """
     return task.get("agent_name") == "executor" and "VERIFY checkpoint=" in str(
-        task.get("context_message") or ""
+        task.get("instruction") or ""
     )
 
 
@@ -236,7 +236,7 @@ def _guard_task_done_with_checkpoint(
 ) -> bool:
     """A guard executor task whose spec carries ``checkpoint=<checkpoint>`` is done.
 
-    The guard task's ``context_message`` is its ``VERIFY checkpoint=<x> ...``
+    The guard task's ``instruction`` is its ``VERIFY checkpoint=<x> ...``
     spec; the former checkpoint-gated event ordering is replaced by asserting
     that the corresponding guard task reached ``done`` (TaskCenter's own
     dependency enforcement guarantees it ran after its upstream tasks closed).
@@ -245,7 +245,7 @@ def _guard_task_done_with_checkpoint(
     return any(
         _is_guard_task(task)
         and task.get("status") == "done"
-        and needle in str(task.get("context_message") or "")
+        and needle in str(task.get("instruction") or "")
         for workflow in graph_summary["workflows"]
         for iteration in workflow["iterations"]
         for attempt in iteration["attempts"]

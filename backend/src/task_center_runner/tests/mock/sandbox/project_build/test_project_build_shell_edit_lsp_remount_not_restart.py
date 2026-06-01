@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 
 from task_center_runner.benchmarks.sweevo.models import SWEEvoInstance
-from task_center_runner.core.stores import TaskCenterStoreBundle
+from task_center_runner.core.stores import TaskStoreBundle
 from task_center_runner.environments.sweevo_image.fixtures import (
     run_scenario_on_sweevo_image,
 )
@@ -38,7 +38,7 @@ async def test_project_build_shell_edit_lsp_remount_not_restart(
     sweevo_image_instance: SWEEvoInstance,
     workspace: dict[str, object],
     audit_dir: Path,
-    stores: TaskCenterStoreBundle,
+    stores: TaskStoreBundle,
 ) -> None:
     scenario = SCENARIO_REGISTRY["sandbox.complex_project_build_shell_edit_lsp"]()
     sandbox_id = str(workspace["sandbox_id"])

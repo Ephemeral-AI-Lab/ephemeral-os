@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from tools._names import SUBMIT_WORKFLOW_HANDOFF_TOOL_NAME
+from tools._names import DELEGATE_WORKFLOW_TOOL_NAME
 from tools.submission.generator._prompt_guidance import (
     GENERATOR_SUBMISSION_CHOICE_GUIDANCE,
 )
@@ -20,9 +20,9 @@ Terminate your generator run with SUCCESS or FAILED for the current generator ta
   concrete blocker and evidence.
 
 ## Do Not Use This Tool When
-- The task is too broad or genuinely needs planner decomposition before edits
-  begin; use `{SUBMIT_WORKFLOW_HANDOFF_TOOL_NAME}` when that handoff path is
-  available.
+- A delegated workflow you started is still outstanding; use
+  `{DELEGATE_WORKFLOW_TOOL_NAME}` only for new delegated work, then inspect or
+  cancel outstanding workflow handles before submitting your final outcome.
 
 ## Behavior
 - Records reducer-visible generator success or failure on the current task.

@@ -103,16 +103,16 @@ class AutoSquashCommitResume(ScenarioBase):
         return ToolCallSpec(submit_planner_outcome, _auto_squash_plan())
 
     def executor_actions(self, ctx: ScenarioContext) -> Sequence[str]:
-        context_message = ctx.context_message or ctx.prompt or ""
-        if "ACTION auto_squash_seed" in context_message:
+        instruction = ctx.instruction or ctx.prompt or ""
+        if "ACTION auto_squash_seed" in instruction:
             return ("auto_squash_seed",)
-        if "ACTION auto_squash_squash_a" in context_message:
+        if "ACTION auto_squash_squash_a" in instruction:
             return ("auto_squash_squash_a",)
-        if "ACTION auto_squash_squash_b" in context_message:
+        if "ACTION auto_squash_squash_b" in instruction:
             return ("auto_squash_squash_b",)
-        if "ACTION auto_squash_independent" in context_message:
+        if "ACTION auto_squash_independent" in instruction:
             return ("auto_squash_independent",)
-        if "ACTION auto_squash_reconcile" in context_message:
+        if "ACTION auto_squash_reconcile" in instruction:
             return ("auto_squash_reconcile",)
         return ()
 

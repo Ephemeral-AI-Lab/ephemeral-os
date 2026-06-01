@@ -7,6 +7,13 @@ from typing import Any
 from engine.background.task_supervisor import SUBAGENT_TASK_TYPE
 
 SUBAGENT_LAUNCH_TOOL_NAMES = frozenset({"run_subagent"})
+WORKFLOW_TOOL_NAMES = frozenset(
+    {
+        "delegate_workflow",
+        "check_workflow_status",
+        "cancel_workflow",
+    }
+)
 PTY_SESSION_TOOL_NAMES = frozenset(
     {
         "cancel_pty_command",
@@ -30,4 +37,5 @@ def needs_background_manager(tool: Any) -> bool:
     return (
         is_engine_background_tool(tool)
         or getattr(tool, "name", "") in PTY_SESSION_TOOL_NAMES
+        or getattr(tool, "name", "") in WORKFLOW_TOOL_NAMES
     )

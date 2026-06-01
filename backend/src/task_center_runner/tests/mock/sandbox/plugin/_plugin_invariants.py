@@ -11,7 +11,7 @@ import sandbox.api as sandbox_api
 from task_center_runner.benchmarks.sweevo.models import SWEEvoInstance
 from sandbox.shared.models import ReadFileRequest, SandboxCaller
 from task_center_runner.core.runner import RunReport
-from task_center_runner.core.stores import TaskCenterStoreBundle
+from task_center_runner.core.stores import TaskStoreBundle
 from task_center_runner.environments.sweevo_image.fixtures import (
     run_scenario_on_sweevo_image,
 )
@@ -31,7 +31,7 @@ async def run_plugin_scenario(
     sweevo_image_instance: SWEEvoInstance,
     workspace: dict[str, object],
     audit_dir: Path,
-    stores: TaskCenterStoreBundle,
+    stores: TaskStoreBundle,
 ) -> tuple[RunReport, dict[str, Any]]:
     scenario = SCENARIO_REGISTRY[scenario_name]()
     sandbox_id = str(workspace["sandbox_id"])

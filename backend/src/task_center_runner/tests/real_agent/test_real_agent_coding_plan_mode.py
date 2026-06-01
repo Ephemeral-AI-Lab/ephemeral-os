@@ -35,7 +35,7 @@ import pytest
 
 from task_center_runner.benchmarks.sweevo.models import SWEEvoInstance
 from task_center_runner.core.real_agent_run import run_sweevo_real_agent
-from task_center_runner.core.stores import TaskCenterStoreBundle
+from task_center_runner.core.stores import TaskStoreBundle
 from task_center_runner.tests._live_config import real_agent_max_duration_s
 from tools.sandbox._lib.registry import make_sandbox_tools
 
@@ -109,7 +109,7 @@ _SKIP_NO_PLAN_INFRA = pytest.mark.skipif(
 
 @pytest.fixture
 def _register_plan_mode_row(
-    stores: TaskCenterStoreBundle,
+    stores: TaskStoreBundle,
 ) -> Iterator[Callable[..., str]]:
     """Register a coding-plan-mode ``model_registrations`` row for one test.
 
@@ -167,7 +167,7 @@ def _setup_caplog(caplog: pytest.LogCaptureFixture) -> None:
 
 def _assert_outcome_shape(report: Any) -> None:
     """Outcome-shape assertions verbatim from ``test_real_agent.py:42-49``."""
-    assert report.task_center_run_id
+    assert report.request_id
     assert report.run_dir.is_dir()
     assert (report.run_dir / "run.json").is_file()
     assert (report.run_dir / "sweevo_result.json").is_file()
@@ -262,7 +262,7 @@ async def test_anthropic_coding_plan_mode_e2e(
     sweevo_image_instance: SWEEvoInstance,
     workspace: dict[str, object],
     audit_dir: Path,
-    stores: TaskCenterStoreBundle,
+    stores: TaskStoreBundle,
     caplog: pytest.LogCaptureFixture,
     _register_plan_mode_row: Callable[..., str],
 ) -> None:
@@ -299,7 +299,7 @@ async def test_codex_coding_plan_mode_e2e(
     sweevo_image_instance: SWEEvoInstance,
     workspace: dict[str, object],
     audit_dir: Path,
-    stores: TaskCenterStoreBundle,
+    stores: TaskStoreBundle,
     caplog: pytest.LogCaptureFixture,
     _register_plan_mode_row: Callable[..., str],
 ) -> None:
@@ -338,7 +338,7 @@ async def test_api_mode_regression(
     sweevo_image_instance: SWEEvoInstance,
     workspace: dict[str, object],
     audit_dir: Path,
-    stores: TaskCenterStoreBundle,
+    stores: TaskStoreBundle,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """A18.3 — API-mode regression: no plan-mode row registered.

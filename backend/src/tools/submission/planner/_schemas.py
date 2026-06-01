@@ -2,24 +2,42 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from agents import AgentRole, get_definition
-from task_center import (
-    PlannedGeneratorTask,
-    PlannedReducerTask,
+from task import TaskStatus
+from workflow import (
     PlannerSubmission,
     TaskCenterInvariantViolation,
     ordered_plan_tasks,
 )
+from workflow._core.primitives import generator_task_id, reducer_task_id
 from tools.submission.context import AttemptSubmissionContext
 
 
 # `submission_kind` payload string constants.
 SUBMISSION_KIND_PLANNER_DEFERS = "planner_defers"
 SUBMISSION_KIND_PLANNER_COMPLETES = "planner_completes"
+
+_REDUCER_AGENT_NAME = "reducer"
+
+
+@dataclass(frozen=True, slots=True)
+class _GeneratorDraft:
+    local_id: str
+    agent_name: str
+    needs: tuple[str, ...]
+    instruction: str
+
+
+@dataclass(frozen=True, slots=True)
+class _ReducerDraft:
+    local_id: str
+    needs: tuple[str, ...]
+    instruction: str
 
 
 class PlanTaskInput(BaseModel):
@@ -161,26 +179,26 @@ def build_planner_submission(
         if not spec or spec.isspace():
             return None, f"Task spec for {task_id_for_spec!r} is blank."
 
-    planned_generators = tuple(
-        PlannedGeneratorTask(
+    generator_drafts = tuple(
+        _GeneratorDraft(
             local_id=task.id,
             agent_name=task.agent_name,
             needs=tuple(task.needs),
-            task_spec=task_specs[task.id],
+            instruction=task_specs[task.id],
         )
         for task in tasks
     )
-    planned_reducers = tuple(
-        PlannedReducerTask(
+    reducer_drafts = tuple(
+        _ReducerDraft(
             local_id=reducer.id,
             needs=tuple(reducer.needs),
-            prompt=reducer.prompt,
+            instruction=reducer.prompt,
         )
         for reducer in reducers
     )
     try:
         ordered_generators, ordered_reducers = ordered_plan_tasks(
-            planned_generators, planned_reducers
+            generator_drafts, reducer_drafts
         )
     except TaskCenterInvariantViolation as exc:
         message = str(exc)
@@ -188,13 +206,55 @@ def build_planner_submission(
             return None, "Plan contains a dependency cycle."
         return None, message
 
+    attempt = submission_context.attempt
+    id_map = {
+        task.local_id: generator_task_id(attempt.id, task.local_id)
+        for task in ordered_generators
+    }
+    id_map.update(
+        {
+            reducer.local_id: reducer_task_id(attempt.id, reducer.local_id)
+            for reducer in ordered_reducers
+        }
+    )
+    runtime = submission_context.runtime
+    request_id = submission_context.workflow.request_id
+    for task in ordered_generators:
+        runtime.task_store.upsert_task(
+            task_id=id_map[task.local_id],
+            request_id=request_id,
+            role=AgentRole.GENERATOR.value,
+            agent_name=task.agent_name,
+            instruction=task.instruction,
+            status=TaskStatus.PENDING.value,
+            outcomes=[],
+            needs=[id_map[dep] for dep in task.needs],
+            workflow_id=submission_context.workflow.id,
+            iteration_id=submission_context.iteration.id,
+            attempt_id=attempt.id,
+        )
+    for reducer in ordered_reducers:
+        runtime.task_store.upsert_task(
+            task_id=id_map[reducer.local_id],
+            request_id=request_id,
+            role=AgentRole.REDUCER.value,
+            agent_name=_REDUCER_AGENT_NAME,
+            instruction=reducer.instruction,
+            status=TaskStatus.PENDING.value,
+            outcomes=[],
+            needs=[id_map[dep] for dep in reducer.needs],
+            workflow_id=submission_context.workflow.id,
+            iteration_id=submission_context.iteration.id,
+            attempt_id=attempt.id,
+        )
+
     return (
         PlannerSubmission(
-            attempt_id=submission_context.attempt.id,
+            attempt_id=attempt.id,
             planner_task_id=task_id,
             kind=kind,
-            generators=ordered_generators,
-            reducers=ordered_reducers,
+            generator_task_ids=tuple(id_map[task.local_id] for task in ordered_generators),
+            reducer_task_ids=tuple(id_map[reducer.local_id] for reducer in ordered_reducers),
             deferred_goal_for_next_iteration=deferred_goal_for_next_iteration,
         ),
         None,

@@ -34,11 +34,11 @@ from task_center_runner.audit.bus import AuditEventBus
 from task_center_runner.audit.events import Event, EventType
 from task_center_runner.audit.node_id import NodeId
 from task_center_runner.audit.recorder import AuditRecorder
-from task_center import (
+from workflow import (
     IterationCreationReason,
     WorkflowStatus,
 )
-from task_center._core.primitives import (
+from workflow._core.primitives import (
     generator_task_id,
     planner_task_id,
     reducer_task_id,

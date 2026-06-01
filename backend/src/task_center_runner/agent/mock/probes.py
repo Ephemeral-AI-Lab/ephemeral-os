@@ -76,7 +76,7 @@ class ProbeContext:
             run_id=str(md.get("run_id") or ""),
             agent_run_id=str(md.agent_run_id or ""),
             task_id=str(md.get("task_center_task_id") or ""),
-            task_center_run_id=str(md.get("task_center_run_id") or ""),
+            request_id=str(md.get("request_id") or ""),
             task_center_task_id=str(md.get("task_center_task_id") or ""),
             task_center_attempt_id=str(md.get("task_center_attempt_id") or ""),
             task_center_workflow_id=str(md.get("task_center_workflow_id") or ""),
@@ -91,7 +91,7 @@ class ProbeContext:
         if self._bus is None:
             return
         self._bus.publish(
-            Event(type=event_type, node=NodeId(task_center_run_id=""), payload=payload)
+            Event(type=event_type, node=NodeId(request_id=""), payload=payload)
         )
 
     def publish(
@@ -116,7 +116,7 @@ class ProbeContext:
             else dict(record)
         )
         self._bus.publish(
-            Event(type=event_type, node=NodeId(task_center_run_id=""), payload=payload)
+            Event(type=event_type, node=NodeId(request_id=""), payload=payload)
         )
 
     def _publish_check(self, check: SandboxCheck) -> None:
@@ -127,7 +127,7 @@ class ProbeContext:
         self._bus.publish(
             Event(
                 type=EventType.MOCK_SANDBOX_CHECK_RECORDED,
-                node=NodeId(task_center_run_id=""),
+                node=NodeId(request_id=""),
                 payload=dataclasses.asdict(check),
             )
         )

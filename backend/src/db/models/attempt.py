@@ -25,6 +25,7 @@ class AttemptRecord(Base):
         ForeignKey("iterations.id", ondelete="CASCADE"),
         index=True,
     )
+    workflow_id: Mapped[str] = mapped_column(String(36), index=True)
     attempt_sequence_no: Mapped[int] = mapped_column(Integer)
     stage: Mapped[str] = mapped_column(String(16))
     status: Mapped[str] = mapped_column(String(16))

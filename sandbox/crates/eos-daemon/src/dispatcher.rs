@@ -27,7 +27,7 @@ use sha2::{Digest, Sha256};
 
 use eos_layerstack::{
     build_workspace_base, ensure_workspace_base, read_workspace_binding, require_workspace_binding,
-    LayerStack, MergedView, WorkspaceBinding,
+    LayerStack, MergedView, WorkspaceBinding, AUTO_SQUASH_MAX_DEPTH,
 };
 use eos_occ::{
     ChangesetResult, CommitQueue, CommitTransactionPort, FileResult, OccRouteProvider, OccService,
@@ -1019,6 +1019,25 @@ impl CommitTransactionPort for LayerStackCommitTransaction {
         match stack.publish_layer(&publishable_changes) {
             Ok(manifest) => {
                 let publish_s = publish_start.elapsed().as_secs_f64();
+                let maintenance_start = Instant::now();
+                let mut squash_applied = 0.0;
+                if stack.can_squash(AUTO_SQUASH_MAX_DEPTH).unwrap_or(false)
+                    && stack
+                        .squash(AUTO_SQUASH_MAX_DEPTH)
+                        .map(|squashed| squashed.is_some())
+                        .unwrap_or(false)
+                {
+                    squash_applied = 1.0;
+                }
+                let maintenance_s = maintenance_start.elapsed().as_secs_f64();
+                let mut timings = commit_timings(
+                    combined,
+                    validate_s,
+                    publish_s,
+                    total_start.elapsed().as_secs_f64(),
+                );
+                timings.insert("occ.maintenance.total_s".to_owned(), maintenance_s);
+                timings.insert("occ.maintenance.squash_applied".to_owned(), squash_applied);
                 Ok(ChangesetResult {
                     files: validations
                         .into_iter()
@@ -1034,12 +1053,7 @@ impl CommitTransactionPort for LayerStackCommitTransaction {
                         })
                         .collect(),
                     published_manifest_version: Some(manifest.version as u64),
-                    timings: commit_timings(
-                        combined,
-                        validate_s,
-                        publish_s,
-                        total_start.elapsed().as_secs_f64(),
-                    ),
+                    timings,
                 })
             }
             Err(eos_layerstack::LayerStackError::ManifestConflict { found, .. }) => {

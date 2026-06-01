@@ -22,17 +22,17 @@ from db.engine import get_engine, initialize_db
 from db.stores.attempt_store import AttemptStore
 from db.stores.iteration_store import IterationStore
 from db.stores.workflow_store import WorkflowStore
-from db.stores.task_center_store import TaskCenterStore
+from db.stores.task_store import TaskStore
 
 
 @dataclass(slots=True)
-class TaskCenterStoreBundle:
+class TaskStoreBundle:
     """Bundle of TaskCenter stores bound to an isolated test database."""
 
     engine: Engine
     schema: str
     session_factory: sessionmaker[Session]
-    task_store: TaskCenterStore
+    task_store: TaskStore
     workflow_store: WorkflowStore
     iteration_store: IterationStore
     attempt_store: AttemptStore
@@ -83,12 +83,12 @@ def _initialize_bundle(
     session_factory: sessionmaker[Session],
     owns_engine: bool = False,
     cleanup_paths: tuple[Path, ...] = (),
-) -> TaskCenterStoreBundle:
-    bundle = TaskCenterStoreBundle(
+) -> TaskStoreBundle:
+    bundle = TaskStoreBundle(
         engine=engine,
         schema=schema,
         session_factory=session_factory,
-        task_store=TaskCenterStore(),
+        task_store=TaskStore(),
         workflow_store=WorkflowStore(),
         iteration_store=IterationStore(),
         attempt_store=AttemptStore(),
@@ -107,7 +107,7 @@ def _initialize_bundle(
 
 def _create_postgresql_bundle(
     shared_engine: Engine, *, schema_prefix: str
-) -> TaskCenterStoreBundle:
+) -> TaskStoreBundle:
     """Carve a fresh PostgreSQL schema and route ORM calls into it."""
     schema = f"{schema_prefix}_{uuid4().hex[:12]}"
 
@@ -144,7 +144,7 @@ def _sqlite_bundle_path(shared_engine: Engine, schema: str) -> Path | None:
 
 def _create_sqlite_bundle(
     shared_engine: Engine, *, schema_prefix: str
-) -> TaskCenterStoreBundle:
+) -> TaskStoreBundle:
     """Create an isolated SQLite database file for one test bundle."""
     schema = f"{schema_prefix}_{uuid4().hex[:12]}"
     db_path = _sqlite_bundle_path(shared_engine, schema)
@@ -180,7 +180,7 @@ def _create_sqlite_bundle(
 
 def create_per_test_task_center_stores(
     *, schema_prefix: str = "task_center_runner"
-) -> TaskCenterStoreBundle:
+) -> TaskStoreBundle:
     """Return isolated TaskCenter stores for the configured database dialect."""
     shared_engine = _ensure_initialized()
     if shared_engine.dialect.name == "postgresql":
@@ -194,6 +194,6 @@ def create_per_test_task_center_stores(
 
 
 __all__ = [
-    "TaskCenterStoreBundle",
+    "TaskStoreBundle",
     "create_per_test_task_center_stores",
 ]

@@ -1,7 +1,7 @@
 # Sandbox Rust Migration - Phase 3T Deferred Non-Plugin Items
 
-**Status:** Sidecar deferred-item list after the Phase 3T PTY command
-implementation.
+**Status:** Closed for the deferred non-plugin Phase 3T sidecar. Plugin PPC
+execution and AV-10 remain out of scope for this document.
 **Date:** 2026-06-01.
 **Primary plan:** `docs/plans/sandbox-rust-external-migration-PHASE-3T-SHELL-SESSIONS.md`.
 **PTY addendum:** `docs/plans/sandbox-rust-external-migration-PHASE-3T-PTY-COMMAND-DESIGN.md`.
@@ -72,20 +72,50 @@ Current state:
   active lease count, holder PID/kill error, namespace FD count, cgroup
   existence, scratch/upper/workdir existence, mountinfo reference count when
   `/proc/self/mountinfo` is available, and PTY force-cancel cleanup arrays.
-- The live Docker/dask isolated inspection rerun is closed for current amd64
-  artifact `6f94b650023186b9b4e282d20ad1bd0cd53b97c44759c313547c47f158ebecf6`:
+- The live Docker/dask isolated inspection rerun was closed on the then-current
+  amd64 artifact
+  `6f94b650023186b9b4e282d20ad1bd0cd53b97c44759c313547c47f158ebecf6`:
   `bench/phase3t-rust-isolated-inspection-docker-20260601.json` passed 51/51
   checks with the target image lacking `ip` and `nft`, verified holder process
   teardown, zero mountinfo refs, removed cgroup/scratch/upper/workdir, released
   leases, removed the host veth, cleared active PTY state after force cancel,
   and mirrored the inspection payload into the JSONL exit audit.
-- The CP-4/AV-4/CP-5 non-plugin implementation artifacts are wired for the next
-  live capture: Rust daemon audit pull/snapshot reads the shared process ring,
-  request dispatch emits `tool_call.started`/`tool_call.finished`, OCC runtime
-  services are bounded by an LRU(256) with `occ.runtime_service.*` timings, and
-  `backend/scripts/bench_rust_daemon_phase3t_pty.py` now includes isolated exit
-  inspection, mixed non-plugin load plus audit pull, and >256-root cache-churn
-  modes.
+- CP-4/AV-4 mixed non-plugin load is closed for the sidecar scope:
+  `bench/phase3t-mixed-non-plugin-cp4-av4-20260601.json` passed with
+  `run_id=local-12cb8bd20f51`, current amd64 artifact SHA
+  `81eb221542666647a3b0a80a0ed254dff674a0ead27d814bfcea26bd14996d53`,
+  44 green cells across the 1/3/5/10 matrix, 418 load samples, final-state
+  hash `83312110b4ab6fffcd046279741d8b5c8d283617c9a6995d1d0a783d2bd6926d`,
+  and attached AV-4 audit artifact paths
+  `bench/phase3t-mixed-non-plugin-cp4-av4-20260601.sandbox_events.jsonl`,
+  `.performance_report.json`, and `.performance_report.md`.
+- CP-5 cache-lock churn is closed for the sidecar scope:
+  `bench/phase3t-cache-lock-churn-cp5-20260601.json` passed with
+  `run_id=local-56cf60c52d6f`, 260 synthetic `layer_stack_root` values, 260/260
+  writes and 260/260 same-path readbacks, distinct per-root contents, bounded
+  LRU size 256, 5 evictions, reuse cache hit, and OCC cache-lock max wait
+  `0.0265 ms`.
+- AV-7 forward/back on-disk parity is closed:
+  `bench/phase3t-av7-forward-back-parity-20260601.json` passed with
+  `run_id=local-a82fa8f20194`, Python reading Rust-published state, Rust
+  reading Python-published state, byte-identical non-base `layer_digest`
+  streams, equal final workspace hashes, and identical duplicate-head dedup
+  decisions.
+- The Section 7 non-plugin differential/property gate is closed:
+  `bench/phase3t-section7-non-plugin-differential-20260601.json` passed with
+  `run_id=local-42770354ec75`; Python and Rust produced equal canonical
+  outcome classes, equal conflict counts, equal final workspace hash
+  `30c095482f7ea23fd5d777e4563aaeb5a725cea2bfb2d8a8ec73dd11a37e01a9`, and
+  bounded post-squash manifest depth 16 in both runtimes.
+- Rust `api.v1.pty.progress` now consults the PTY completion mailbox before
+  returning `pty_session_not_found`, so natural PTY completion can be collected
+  through the progress API without a harness-only `collect_completed` fallback.
+- Rust daemon OCC publishes now run the existing LayerStack auto-squash
+  maintenance path after successful publishes. This keeps Rust direct/OCC
+  manifest depth aligned with Python under the Section 7 squash pressure lane.
+- Python `LayerPublisher` now skips non-regular files during the staging fsync
+  pass, avoiding `EACCES` on kernel whiteout device entries emitted by delete
+  capture.
 
 Last focused verification:
 
@@ -125,8 +155,8 @@ Last focused verification:
   eos-daemon isolated_workspace --test phase2_read_paths`, `cargo test -p
   eos-daemon active_pty_records_block_exit_until_cleared`, and both
   `xtask package` targets. Current packaged SHAs are amd64
-  `6f94b650023186b9b4e282d20ad1bd0cd53b97c44759c313547c47f158ebecf6` and
-  arm64 `f2ef28b4a0a5c93b78c16ae47a064a39e59a2add8e25e329c8c2c52b97b3fc08`.
+  `81eb221542666647a3b0a80a0ed254dff674a0ead27d814bfcea26bd14996d53` and
+  arm64 `e07a59546cecf931922386a91bf08a8ee5e1fa08747cbc45ee56462eeac4417b`.
 - Live isolated inspection rerun passed:
   `uv run python backend/scripts/bench_rust_daemon_isolated_inspection.py
   --artifact sandbox/dist/eosd-linux-amd64 --report
@@ -142,9 +172,7 @@ Last focused verification:
   writability in the existing container. Treat that as environment/setup debt,
   not evidence against the typed subagent/background cleanup.
 
-Next work should start with live CP-4 mixed non-plugin load plus attached AV-4
-audit pull using the updated harness, then live CP-5 cache-lock churn, AV-7
-parity, and the non-plugin Section 7 differential/property contention suite. Do not reintroduce
+No non-plugin sidecar gates remain open. Do not reintroduce
 `shell(background=true)`, `BaseTool.background`, model-facing generic
 background controls, or `bg_N` as a subagent reference.
 
@@ -293,111 +321,126 @@ Closeout evidence:
 
 ### 4. CP-4 Mixed Throughput/Contention Without Plugin Interleave
 
-With plugin interleave explicitly out of scope for this sidecar, CP-4 still
-needs a mixed non-plugin contention gate using the final non-login Bash command
-contract.
+Status: closed on 2026-06-01 for the sidecar non-plugin scope, with plugin
+interleave explicitly out of scope.
 
-Required work:
+Completed work:
 
-- run contention against `read_file`, `write_file`, `edit_file`,
+- ran contention against `read_file`, `write_file`, `edit_file`,
   `exec_command(tty=false)`, `exec_command(tty=true)`, search/glob/grep, and
   LayerStack maintenance;
-- include read-heavy, write-heavy, conflict-heavy, PTY long-session, PTY input,
+- included read-heavy, write-heavy, conflict-heavy, PTY long-session, PTY input,
   and mixed shared-workspace load cells;
-- verify disjoint writes publish, overlapping writes conflict without silent
+- verified disjoint writes publish, overlapping writes conflict without silent
   clobber, PTY leases pin lower layers while active, and GC reclaims only
   unleased layers after finalization;
-- keep plugin operations out of this gate.
+- kept plugin operations out of this gate.
 
 Minimum evidence:
 
-- 1/3/5/10 concurrency matrix for the mixed non-plugin cells;
-- final workspace-state hashes and manifest metrics;
-- phase timing breakdowns for snapshot, mount, exec/session, capture, OCC, audit,
+- ✅ 1/3/5/10 concurrency matrix for the mixed non-plugin cells:
+  `bench/phase3t-mixed-non-plugin-cp4-av4-20260601.json` passed
+  `cp4.gate_pass=true` with 44 green cells, 418 samples, worst p95
+  `434.037 ms` in the `pty_input` concurrency-10 cell, and no failed cells;
+- ✅ final workspace-state hash and conflict check:
+  `83312110b4ab6fffcd046279741d8b5c8d283617c9a6995d1d0a783d2bd6926d`,
+  81 checked paths, no mismatches, and a single conflict winner;
+- ✅ phase timing breakdowns for snapshot, mount, exec/session, capture, OCC, audit,
   cleanup, and release.
 
 ### 5. CP-5 OCC Service Cache-Lock Churn
 
-CP-5 remains open: OCC service cache-lock wait/contention must be measured under
-LRU churn across more than 256 distinct `layer_stack_root` values.
+Status: closed on 2026-06-01 for the sidecar non-plugin scope.
 
-Required work:
+Completed work:
 
-- drive >256 distinct layer-stack roots through the Rust OCC runtime services;
-- force LRU eviction churn while writes and reads continue;
-- measure cache-lock wait, service creation/reuse, eviction, and publish latency;
-- compare against the Python service cache behavior where applicable.
+- drove 260 distinct layer-stack roots through the Rust OCC runtime services;
+- forced LRU eviction churn while writes and reads continued;
+- measured cache-lock wait, service creation/reuse, eviction, write publish
+  latency, and readback latency;
+- used same-path per-root readbacks to prove no lost writes, duplicate root
+  contents, or stale service reuse.
 
 Minimum evidence:
 
-- `bench/cache-lock-*.json` or equivalent artifact with wait p50/p95/max;
-- proof that cache churn does not introduce lost writes, duplicate writers, or
+- ✅ `bench/phase3t-cache-lock-churn-cp5-20260601.json` with wait, create/reuse,
+  eviction, write, and readback metrics;
+- ✅ proof that cache churn does not introduce lost writes, duplicate writers, or
   stale service reuse;
-- clear pass/fail threshold recorded in the progress tracker.
+- ✅ clear pass/fail threshold recorded in the progress tracker: `samples_ok`,
+  `readbacks_ok`, `distinct_root_contents`, `reuse_hit`, `cache_bounded`,
+  `evicted_after_churn`, and `metrics_reported` must all be true.
 
 ### 6. AV-4 Audit Pull Under Non-Plugin CP-4 Load
 
-Focused PTY runs and prior mock suites show audit pull can be drop-free, but
-AV-4 for Phase 3T must be tied to the final CP-4 mixed non-plugin load.
+Status: closed on 2026-06-01 for the sidecar non-plugin CP-4 load.
 
-Required work:
+Completed work:
 
-- attach daemon audit pull to the CP-4 mixed-load run;
-- preserve `sandbox_events.jsonl`, `performance_report.json`, and
+- attached daemon audit pull to the CP-4 mixed-load run;
+- preserved `sandbox_events.jsonl`, `performance_report.json`, and
   `performance_report.md`;
-- verify `dropped_event_count == 0` and `lost_before_seq == 0`;
-- verify report artifact size and audit buffer pressure remain within gates.
+- verified `dropped_event_count == 0` and `lost_before_seq == 0`;
+- verified report artifact size and audit buffer pressure remain within gates.
 
 Minimum evidence:
 
-- CP-4 performance report with daemon audit pull stats;
-- host artifact with zero lost/dropped audit events;
-- no missing PTY lifecycle, OCC publish/conflict, lease, cleanup, or GC events.
+- ✅ CP-4 performance report with daemon audit pull stats:
+  `bench/phase3t-mixed-non-plugin-cp4-av4-20260601.performance_report.json`
+  and `.md`;
+- ✅ host artifact with zero lost/dropped audit events:
+  `bench/phase3t-mixed-non-plugin-cp4-av4-20260601.sandbox_events.jsonl`,
+  2,422 pulled events, 1,253,654 bytes, buffer pressure `0.1574`,
+  `dropped_event_count=0`, and `lost_before_seq=0`;
+- ✅ no missing PTY lifecycle, OCC publish/conflict, lease, cleanup, or GC events.
 
 ### 7. AV-7 Forward/Back On-Disk Parity
 
-Forward/back on-disk parity remains open.
+Status: closed on 2026-06-01 for the sidecar non-plugin scope.
 
-Required work:
+Completed work:
 
-- prove Python can read Rust-published LayerStack/OCC state;
-- prove Rust can read Python-published LayerStack/OCC state;
-- compare canonical typed results, final workspace hashes, `layer_digest`
+- proved Python can read Rust-published LayerStack/OCC state;
+- proved Rust can read Python-published LayerStack/OCC state;
+- compared canonical typed results, final workspace hashes, `layer_digest`
   byte streams, and head-dedup decisions;
-- include command-produced writes from the final non-login Bash contract.
+- included command-produced writes from the final non-login Bash contract.
 
 Minimum evidence:
 
-- bidirectional parity fixture artifacts;
-- byte-identical `layer_digest` streams for equivalent states;
-- identical head-dedup decisions for no-op and duplicate captures.
+- ✅ bidirectional parity fixture artifact:
+  `bench/phase3t-av7-forward-back-parity-20260601.json`;
+- ✅ byte-identical `layer_digest` streams for equivalent states:
+  Rust-first and Python-first non-base digest streams are identical;
+- ✅ identical head-dedup decisions for duplicate captures in both directions.
 
 ### 8. Section 7 Differential/Property Contention Suite
 
-The high-risk OCC/LayerStack differential/property suite remains open for the
-non-plugin scope.
+Status: closed on 2026-06-01 for the sidecar non-plugin scope.
 
-Required work:
+Completed work:
 
-- drive identical operation sequences through Python and Rust against separate
+- drove identical operation sequences through Python and Rust against separate
   state under parallel contention;
-- include `read_file`, `write_file`, `edit_file`, search/glob/grep, and
+- included `read_file`, `write_file`, `edit_file`, search/glob/grep, and
   `exec_command` shell verbs using `/bin/bash --noprofile --norc -c <cmd>`;
-- include conflict, atomic multi-path, delete/whiteout, symlink, no-op capture,
+- included conflict, atomic multi-path, delete/whiteout, symlink, no-op capture,
   squash/GC, and PTY finalization cases;
-- exclude plugin/PPC operation lanes.
+- excluded plugin/PPC operation lanes.
 
 Minimum evidence:
 
-- canonical result equality;
-- equal final workspace-state hash;
-- no lost writes or silent clobbers;
-- property-test seed/log artifacts for any failing or minimized case.
+- ✅ canonical result equality:
+  `bench/phase3t-section7-non-plugin-differential-20260601.json` reports
+  `canonical_result_classes_equal=true`;
+- ✅ equal final workspace-state hash:
+  `30c095482f7ea23fd5d777e4563aaeb5a725cea2bfb2d8a8ec73dd11a37e01a9`;
+- ✅ no lost writes or silent clobbers: both runtimes report one conflict winner
+  and four loser attempts, plus equal final file view;
+- ✅ property-test seed/log artifact for the closing run:
+  `bench/phase3t-section7-non-plugin-differential-20260601.json`.
 
 ## Suggested Order
 
-1. Capture CP-4 mixed non-plugin load with attached AV-4 audit pull using the
-   updated Phase 3T Docker harness.
-2. Capture CP-5 cache-lock churn using the updated Phase 3T Docker harness.
-3. Run AV-7 forward/back parity.
-4. Run the non-plugin Section 7 differential/property contention suite.
+All non-plugin sidecar items are closed. Resume plugin PPC execution/AV-10 from
+the main Phase 3T plan when that scope is no longer skipped.

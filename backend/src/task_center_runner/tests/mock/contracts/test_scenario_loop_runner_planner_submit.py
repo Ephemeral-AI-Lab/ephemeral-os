@@ -19,7 +19,7 @@ import pytest
 
 from runtime.app_factory import model_store
 from task_center_runner.core.runner import run_scenario
-from task_center_runner.core.stores import TaskCenterStoreBundle
+from task_center_runner.core.stores import TaskStoreBundle
 from task_center_runner.scenarios.base import ScenarioBase, ScenarioContext, ToolCallSpec
 from task_center_runner.tests._live_config import database_configured
 from tools.submission.reducer import submit_reducer_outcome
@@ -60,7 +60,7 @@ class _PlannerSubmitProof(ScenarioBase):
 
 
 @pytest.fixture
-def _active_mock_model(stores: TaskCenterStoreBundle) -> Iterator[None]:
+def _active_mock_model(stores: TaskStoreBundle) -> Iterator[None]:
     """Throwaway active model row so ``spawn_agent`` resolves a model id (the
     mock path now goes through the real spawn). Mirrors the real_agent suite."""
     prior_sf = model_store._session_factory  # noqa: SLF001 — restored on teardown
@@ -87,7 +87,7 @@ def _active_mock_model(stores: TaskCenterStoreBundle) -> Iterator[None]:
 async def test_planner_submission_through_real_loop(
     workspace: dict[str, object],
     audit_dir: Path,
-    stores: TaskCenterStoreBundle,
+    stores: TaskStoreBundle,
     _active_mock_model: None,
 ) -> None:
     report = await run_scenario(

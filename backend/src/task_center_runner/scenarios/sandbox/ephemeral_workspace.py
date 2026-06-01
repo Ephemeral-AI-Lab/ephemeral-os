@@ -108,8 +108,8 @@ class _EphemeralWorkspaceScenarioBase(ScenarioBase):
         )
 
     def executor_actions(self, ctx: ScenarioContext) -> Sequence[str]:
-        context_message = ctx.context_message or ctx.prompt or ""
-        if f"ACTION {self.action_id}" in context_message:
+        instruction = ctx.instruction or ctx.prompt or ""
+        if f"ACTION {self.action_id}" in instruction:
             return (self.action_id,)
         return ()
 
@@ -187,22 +187,22 @@ class EphemeralWorkspaceSamePathConflict(_EphemeralWorkspaceScenarioBase):
         return ToolCallSpec(submit_planner_outcome, _same_path_conflict_plan())
 
     def executor_actions(self, ctx: ScenarioContext) -> Sequence[str]:
-        context_message = ctx.context_message or ctx.prompt or ""
-        if "ACTION ephemeral_same_path_conflict_seed" in context_message:
+        instruction = ctx.instruction or ctx.prompt or ""
+        if "ACTION ephemeral_same_path_conflict_seed" in instruction:
             return ("ephemeral_same_path_conflict_seed",)
-        if "ACTION ephemeral_same_path_conflict_reconcile" in context_message:
+        if "ACTION ephemeral_same_path_conflict_reconcile" in instruction:
             return ("ephemeral_same_path_conflict_reconcile",)
         marker = "ACTION ephemeral_same_path_conflict_writer"
-        if marker in context_message:
-            return (f"ephemeral_same_path_conflict_writer:{_writer_index(context_message)}",)
+        if marker in instruction:
+            return (f"ephemeral_same_path_conflict_writer:{_writer_index(instruction)}",)
         return ()
 
 
-def _writer_index(context_message: str) -> int:
+def _writer_index(instruction: str) -> int:
     marker = "index="
-    if marker not in context_message:
-        raise RuntimeError(f"missing same-path writer index in: {context_message!r}")
-    raw = context_message.split(marker, 1)[1].split(".", 1)[0].strip()
+    if marker not in instruction:
+        raise RuntimeError(f"missing same-path writer index in: {instruction!r}")
+    raw = instruction.split(marker, 1)[1].split(".", 1)[0].strip()
     return int(raw)
 
 

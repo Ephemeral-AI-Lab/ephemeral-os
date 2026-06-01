@@ -7,7 +7,7 @@ from collections.abc import Sequence
 from typing import Any
 
 from sandbox.occ.service import AUTO_SQUASH_MAX_DEPTH
-from task_center_runner.scenarios._scenario_helpers import context_message_field
+from task_center_runner.scenarios._scenario_helpers import instruction_field
 from task_center_runner.scenarios.base import ScenarioContext
 from task_center_runner.agent.mock.tool_scripts import (
     PreparedToolScript,
@@ -48,7 +48,7 @@ _RECURSIVE_CLOSE_PATH = f"{_RECURSIVE_ROOT}/full-stack-close-report.json"
 def full_stack_metrics_path(ctx: ScenarioContext) -> str:
     """Return the scenario metrics JSONL path inside the sandbox workspace."""
     run_id = str(
-        ctx.metadata.get("task_center_run_id")
+        ctx.metadata.get("request_id")
         or ctx.metadata.get("run_id")
         or "unknown-run"
     )
@@ -766,10 +766,10 @@ def lsp_refresh_semantics_script(ctx: ScenarioContext) -> PreparedToolScript:
 
 def recursive_oversized_matrix_script(ctx: ScenarioContext) -> PreparedToolScript:
     """Persist recursive workflow evidence and close report through tools."""
-    context_message = ctx.context_message or ""
-    slice_id = context_message_field(context_message, "slice") or "slice"
+    instruction = ctx.instruction or ""
+    slice_id = instruction_field(instruction, "slice") or "slice"
     is_close = (
-        context_message_field(context_message, "close") == "true"
+        instruction_field(instruction, "close") == "true"
         or slice_id == "close"
     )
     evidence_path = f"{_RECURSIVE_ROOT}/oversized-{_safe_slug(slice_id)}.json"
@@ -869,7 +869,7 @@ def final_reconciliation_script(ctx: ScenarioContext) -> PreparedToolScript:
     payload = {
         **summary,
         "task_id": ctx.task_id,
-        "stage": context_message_field(ctx.context_message or "", "stage") or "final",
+        "stage": instruction_field(ctx.instruction or "", "stage") or "final",
         "metrics_artifact": full_stack_metrics_path(ctx),
         "matrix_cells": matrix_cells,
     }
@@ -1109,7 +1109,7 @@ def _overlay_mutation_command(root: str) -> str:
 
 def _run_id(ctx: ScenarioContext) -> str:
     return str(
-        ctx.metadata.get("task_center_run_id")
+        ctx.metadata.get("request_id")
         or ctx.metadata.get("run_id")
         or "unknown-run"
     )

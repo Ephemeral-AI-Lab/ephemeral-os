@@ -38,7 +38,7 @@ _CONFLICT_STATUSES = frozenset(
 def sandbox_events_from_tool_completion(
     stream_event: ToolExecutionCompletedEvent,
     *,
-    task_center_run_id: str,
+    request_id: str,
 ) -> tuple[Event, ...]:
     """Translate sandbox timing metadata into explicit subsystem events."""
     tool_name = str(stream_event.tool_name or "")
@@ -54,7 +54,7 @@ def sandbox_events_from_tool_completion(
     mutation_source = str(metadata.get("mutation_source") or "")
     error_kind = str(metadata.get("error_kind") or "")
     node = NodeId(
-        task_center_run_id=task_center_run_id,
+        request_id=request_id,
         agent_name=stream_event.agent_name or None,
         agent_run_id=stream_event.agent_run_id or None,
         tool_name=tool_name,

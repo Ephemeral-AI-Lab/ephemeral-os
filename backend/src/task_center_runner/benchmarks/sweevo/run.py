@@ -18,7 +18,7 @@ from task_center_runner.core.sandbox import SandboxLease
 from tools._framework.core.runtime import ExecutionMetadata
 
 if TYPE_CHECKING:
-    from task_center.attempt.launch import AttemptAgentRunner
+    from workflow.attempt.launch import AttemptAgentRunner
     from task_center_runner.core.config import RunConfig, RunContext
 
 

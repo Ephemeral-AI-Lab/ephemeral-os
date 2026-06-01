@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from task_center.context_engine.engine import validate_context_recipe
-from task_center.context_engine.exceptions import (
+from workflow.context_engine.engine import validate_context_recipe
+from workflow.context_engine.exceptions import (
     AgentDefinitionValidationError,
     ContextEngineError,
 )

@@ -70,6 +70,7 @@ class AgentRunTracker:
         *,
         task_id: str | None,
         agent_name: str,
+        initial_messages: list[dict[str, Any]] | None = None,
     ) -> AgentRunTracker:
         """Mint an agent-run id and, when possible, persist its ``agent_runs`` row.
 
@@ -91,6 +92,7 @@ class AgentRunTracker:
                 agent_run_id=resolved_agent_run_id,
                 task_id=task_id,
                 agent_name=agent_name,
+                initial_messages=initial_messages,
             )
         except Exception:
             logger.warning(

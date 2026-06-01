@@ -44,7 +44,7 @@ class DependencyBlockedDescendants(ScenarioBase):
         return ToolCallSpec(submit_planner_outcome, _unreachable_pending_plan())
 
     def executor_actions(self, ctx: ScenarioContext) -> Sequence[str]:
-        if "ACTION fail_root" in (ctx.context_message or ""):
+        if "ACTION fail_root" in (ctx.instruction or ""):
             return ("fail:Intentional root failure for blocked-descendant coverage.",)
         return ("preflight",)
 

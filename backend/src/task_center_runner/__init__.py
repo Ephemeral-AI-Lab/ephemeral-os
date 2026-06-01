@@ -19,20 +19,20 @@ Subpackages:
 Top-level exports:
 
 - :class:`RunReport` and :func:`run_scenario`
-- :class:`TaskCenterStoreBundle` and :func:`create_per_test_task_center_stores`
+- :class:`TaskStoreBundle` and :func:`create_per_test_task_center_stores`
 """
 
 from __future__ import annotations
 
 from task_center_runner.core.runner import RunReport, run_scenario
 from task_center_runner.core.stores import (
-    TaskCenterStoreBundle,
+    TaskStoreBundle,
     create_per_test_task_center_stores,
 )
 
 __all__ = [
     "RunReport",
-    "TaskCenterStoreBundle",
+    "TaskStoreBundle",
     "create_per_test_task_center_stores",
     "run_scenario",
 ]

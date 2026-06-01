@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import inspect
 
-from task_center.attempt.launch import AgentLaunchFactory
+from workflow.attempt.launch import AgentLaunchFactory
 
 
 def test_agent_launch_factory_public_surface_preserved() -> None:

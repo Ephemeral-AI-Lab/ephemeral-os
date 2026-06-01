@@ -33,7 +33,7 @@ from tools.submission.planner import submit_planner_outcome
 from tools.submission.reducer import submit_reducer_outcome
 
 from task_center_runner.scenarios._scenario_helpers import (
-    context_message_field as _field,
+    instruction_field as _field,
 )
 from task_center_runner.scenarios.base import ScenarioBase, ScenarioContext, ToolCallSpec
 
@@ -79,9 +79,9 @@ class GeneratorFailureQuiescence(ScenarioBase):
         return ToolCallSpec(submit_planner_outcome, _three_plus_one_plan())
 
     def executor_actions(self, ctx: ScenarioContext) -> Sequence[str]:
-        context_message = ctx.context_message or ctx.prompt or ""
-        if _FAIL_TAG in context_message and ctx.attempt.attempt_sequence_no == 1:
-            tag = _field(context_message, "tag") or "quiescence"
+        instruction = ctx.instruction or ctx.prompt or ""
+        if _FAIL_TAG in instruction and ctx.attempt.attempt_sequence_no == 1:
+            tag = _field(instruction, "tag") or "quiescence"
             return (f"fail:Intentional generator failure on attempt 1 ({tag}).",)
         return ("preflight",)
 

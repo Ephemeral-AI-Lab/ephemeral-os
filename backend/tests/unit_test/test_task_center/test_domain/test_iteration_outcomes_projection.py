@@ -12,8 +12,8 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from task_center._core.outcomes import ExecutionTaskOutcome, project_iteration_outcomes
-from task_center.attempt import Attempt, AttemptStage, AttemptStatus
+from workflow._core.outcomes import ExecutionTaskOutcome, project_iteration_outcomes
+from workflow.attempt import Attempt, AttemptStage, AttemptStatus
 
 
 def _attempt(

@@ -24,7 +24,7 @@ _CALLER_AUDIT_FIELDS = (
     "run_id",
     "agent_run_id",
     "task_id",
-    "task_center_run_id",
+    "request_id",
     "task_center_task_id",
     "task_center_attempt_id",
     "task_center_workflow_id",

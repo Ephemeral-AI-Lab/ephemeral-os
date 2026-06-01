@@ -10,7 +10,7 @@ def test_audit_event_bus_fans_out_in_subscription_order() -> None:
     bus = AuditEventBus()
     event = AuditEvent(
         source="task_center",
-        type="task_center.task.ready",
+        type="workflow.task.ready",
         node=AuditNode(task_center_task_id="task-1"),
     )
     calls: list[str] = []
@@ -20,7 +20,7 @@ def test_audit_event_bus_fans_out_in_subscription_order() -> None:
 
     bus.publish(event)
 
-    assert calls == ["first:task_center.task.ready", "second:task_center"]
+    assert calls == ["first:workflow.task.ready", "second:task_center"]
     assert bus.errors == []
 
 

@@ -30,6 +30,7 @@ class AgentRole(StrEnum):
     ``HELPER`` is the advisor, ``SUBAGENT`` is the explorer.
     """
 
+    ROOT = "root"
     PLANNER = "planner"
     GENERATOR = "generator"
     REDUCER = "reducer"

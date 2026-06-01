@@ -13,7 +13,7 @@ import sandbox.api as sandbox_api
 from task_center_runner.benchmarks.sweevo.models import SWEEvoInstance
 from task_center_runner.audit.events import EventType
 from task_center_runner.scenarios import SCENARIO_REGISTRY
-from task_center_runner.core.stores import TaskCenterStoreBundle
+from task_center_runner.core.stores import TaskStoreBundle
 from task_center_runner.environments.sweevo_image.fixtures import run_scenario_on_sweevo_image
 from task_center_runner.tests._live_config import (
     database_configured,
@@ -51,7 +51,7 @@ async def test_full_system_capacity_matrix_records_artifacts_and_metrics(
     sweevo_image_instance: SWEEvoInstance,
     workspace: dict[str, object],
     audit_dir: Path,
-    stores: TaskCenterStoreBundle,
+    stores: TaskStoreBundle,
 ) -> None:
     require_sweevo_image_provider_healthy(sweevo_image_instance)
 
@@ -82,7 +82,7 @@ async def test_full_system_capacity_matrix_records_artifacts_and_metrics(
     _assert_no_forbidden_signatures(report.run_dir)
     await _assert_capacity_workspace_artifacts(
         report.sandbox_id,
-        report.task_center_run_id,
+        report.request_id,
     )
 
 def _is_guard_task(task: dict[str, Any]) -> bool:
@@ -92,7 +92,7 @@ def _is_guard_task(task: dict[str, Any]) -> bool:
     executor generators gated by the reducer.
     """
     return task.get("agent_name") == "executor" and "VERIFY checkpoint=" in str(
-        task.get("context_message") or ""
+        task.get("instruction") or ""
     )
 
 
@@ -197,7 +197,7 @@ def _assert_no_forbidden_signatures(run_dir: Path) -> None:
 
 async def _assert_capacity_workspace_artifacts(
     sandbox_id: str,
-    task_center_run_id: str,
+    request_id: str,
 ) -> None:
     caller = SandboxCaller(agent_id="capacity-full-system-test")
     summary = await sandbox_api.read_file(
@@ -214,7 +214,7 @@ async def _assert_capacity_workspace_artifacts(
     summary_payload = json.loads(summary.content)
     assert summary_payload["schema"] == "live_e2e.capacity.v1"
     assert summary_payload["scenario"] == "capacity.full_system_capacity_matrix"
-    assert summary_payload["task_center_run_id"] == task_center_run_id
+    assert summary_payload["request_id"] == request_id
     assert summary_payload["graph"]["planned_matrix_cells"] >= 32
     assert summary_payload["tool_use"]["lsp"] >= 5
 

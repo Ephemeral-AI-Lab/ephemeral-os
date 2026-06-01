@@ -272,7 +272,7 @@ class MetricsAggregator:
             "tool_use_id": str(event.payload.get("tool_use_id") or "") or None,
             "agent_name": event.node.agent_name,
             "agent_run_id": event.node.agent_run_id,
-            "task_center_run_id": event.node.task_center_run_id,
+            "request_id": event.node.request_id,
             "started_ts": start.ts.isoformat() if start is not None else None,
             "completed_ts": event.ts.isoformat(),
             "duration_ms": duration_ms,

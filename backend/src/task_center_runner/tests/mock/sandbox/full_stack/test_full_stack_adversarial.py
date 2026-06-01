@@ -17,7 +17,7 @@ from task_center_runner.audit.events import Event, EventType
 from task_center_runner.scenarios.full_stack_adversarial import (
     FullStackAdversarial,
 )
-from task_center_runner.core.stores import TaskCenterStoreBundle
+from task_center_runner.core.stores import TaskStoreBundle
 from task_center_runner.environments.sweevo_image.fixtures import run_scenario_on_sweevo_image
 from task_center_runner.environments.sweevo_image.health import (
     require_sweevo_image_provider_healthy,
@@ -106,7 +106,7 @@ async def test_full_stack_adversarial_runs_agent_tool_script_matrix(
     sweevo_image_instance: SWEEvoInstance,
     workspace: dict[str, object],
     audit_dir: Path,
-    stores: TaskCenterStoreBundle,
+    stores: TaskStoreBundle,
 ) -> None:
     require_sweevo_image_provider_healthy(sweevo_image_instance)
 
@@ -141,7 +141,7 @@ async def test_full_stack_adversarial_runs_agent_tool_script_matrix(
     _assert_full_stack_performance_report_complete(report.run_dir)
     await _assert_final_sandbox_state(
         sandbox_id=report.sandbox_id,
-        task_center_run_id=report.task_center_run_id,
+        request_id=report.request_id,
     )
 
 
@@ -180,10 +180,10 @@ def _is_guard_task(task: dict[str, Any]) -> bool:
 
     Guard tasks were ``verifier`` agents in the old model; they are now plain
     executor generators gated by the reducer, identified by their preserved
-    ``VERIFY checkpoint=`` ``context_message`` spec.
+    ``VERIFY checkpoint=`` ``instruction`` spec.
     """
     return task.get("agent_name") == "executor" and "VERIFY checkpoint=" in str(
-        task.get("context_message") or ""
+        task.get("instruction") or ""
     )
 
 
@@ -237,7 +237,7 @@ def _guard_task_done_with_checkpoint(
     return any(
         _is_guard_task(task)
         and task.get("status") == "done"
-        and needle in str(task.get("context_message") or "")
+        and needle in str(task.get("instruction") or "")
         for workflow in graph_summary["workflows"]
         for iteration in workflow["iterations"]
         for attempt in iteration["attempts"]
@@ -440,7 +440,7 @@ def _tool_uses_for_task(
 async def _assert_final_sandbox_state(
     *,
     sandbox_id: str,
-    task_center_run_id: str,
+    request_id: str,
 ) -> None:
     import sandbox.api as sandbox_api
     from sandbox.api import ReadFileRequest, SandboxCaller, ShellRequest
@@ -468,7 +468,7 @@ async def _assert_final_sandbox_state(
 
     metrics_path = (
         "/testbed/.omc/results/"
-        f"full-stack-adversarial-{_safe_slug(task_center_run_id)}.jsonl"
+        f"full-stack-adversarial-{_safe_slug(request_id)}.jsonl"
     )
     metrics = await sandbox_api.read_file(
         sandbox_id,

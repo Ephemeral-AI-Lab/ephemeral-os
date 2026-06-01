@@ -49,6 +49,11 @@ _DROPPED_COLUMNS: dict[str, set[str]] = {
         "started_at",
         "status",
     },
+    "tasks": {
+        "child_" "workflow_id",
+        "context_" "message",
+        "task_center_" "run_id",
+    },
     "task_center_tasks": {
         "acceptance_criteria",
         "children",
@@ -89,13 +94,18 @@ _RENAMED_COLUMNS: dict[str, dict[str, str]] = {
     "iterations": {
         "task_summary": "outcomes",
     },
-    "task_center_tasks": {
+    "tasks": {
+        "context_" "message": "instruction",
+        "task_center_" "run_id": "request_id",
         "summaries": "outcomes",
     },
 }
 
 _LEGACY_TABLES_TO_DROP: set[str] = {
     "context_packets",
+    "task_center_requests",
+    "task_center_runs",
+    "task_center_tasks",
     "task_center_attempt",
 }
 

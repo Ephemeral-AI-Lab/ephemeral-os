@@ -69,8 +69,8 @@ class _BackgroundShellScenarioBase(ScenarioBase):
         )
 
     def executor_actions(self, ctx: ScenarioContext) -> Sequence[Any]:
-        context_message = ctx.context_message or ctx.prompt or ""
-        if f"ACTION {self.action_id}" in context_message:
+        instruction = ctx.instruction or ctx.prompt or ""
+        if f"ACTION {self.action_id}" in instruction:
             return (self.action_id,)
         return ()
 

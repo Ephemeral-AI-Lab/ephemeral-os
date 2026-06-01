@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from task_center.attempt import (
+from workflow.attempt import (
     Attempt,
     AttemptFailReason,
     AttemptStage,

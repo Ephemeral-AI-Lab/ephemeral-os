@@ -10,30 +10,30 @@ from __future__ import annotations
 
 import pytest
 
-from task_center.workflow.starter import (
+from workflow.starter import (
     StartedWorkflow,
     WorkflowStarter,
 )
-from task_center._core.primitives import (
+from workflow._core.primitives import (
     TaskCenterInvariantViolation,
     generator_task_id,
     planner_task_id,
 )
-from task_center._core.state import (
+from workflow._core.state import (
     AttemptFailReason,
     AttemptStatus,
     IterationCreationReason,
     IterationStatus,
     WorkflowStatus,
 )
-from task_center.attempt.launch import AgentLaunch, AttemptDeps
-from task_center.attempt.orchestrator import AttemptOrchestrator
-from task_center.attempt.orchestrator_registry import (
+from workflow.attempt.launch import AgentLaunch, AttemptDeps
+from workflow.attempt.orchestrator import AttemptOrchestrator
+from workflow.attempt.orchestrator_registry import (
     AttemptOrchestratorRegistry,
 )
-from task_center.iteration import OpenIterationCoordinatorRegistry
-from task_center._core.task_state import TaskCenterTaskStatus
-from task_center.submissions import (
+from workflow.iteration import OpenIterationCoordinatorRegistry
+from task import TaskStatus
+from workflow.submissions import (
     PlannedGeneratorTask,
     PlannedReducerTask,
     PlannerSubmission,
@@ -151,7 +151,7 @@ def test_workflow_start_creates_request_iteration_attempt_and_marks_parent_waiti
     assert initial_attempt is not None
     assert initial_attempt.iteration_id == initial_iteration.id
     assert parent_task is not None
-    assert parent_task["status"] == TaskCenterTaskStatus.WAITING_WORKFLOW.value
+    assert parent_task["status"] == TaskStatus.WAITING_WORKFLOW.value
     assert parent_task["child_workflow_id"] == delegated.id
     assert runtime.orchestrator_registry.get(initial_attempt.id) is not None
 
@@ -176,7 +176,7 @@ def test_workflow_start_startup_failure_leaves_parent_running(
 
     parent_task = task_store.get_task(parent_task_id)
     assert parent_task is not None
-    assert parent_task["status"] == TaskCenterTaskStatus.RUNNING.value
+    assert parent_task["status"] == TaskStatus.RUNNING.value
     open_requests = [
         r for r in workflow_store.list_for_parent_task(parent_task_id) if r.is_open
     ]
@@ -230,7 +230,7 @@ def test_workflow_start_startup_failure_closes_started_attempt_and_deregisters(
     assert runtime.iteration_coordinators.get(cancelled_iteration.id) is None
     planner_task = task_store.get_task(planner_task_id(failed_attempt.id))
     assert planner_task is not None
-    assert planner_task["status"] == TaskCenterTaskStatus.FAILED.value
+    assert planner_task["status"] == TaskStatus.FAILED.value
 
 
 def test_workflow_start_rejects_second_open_child_for_same_generator(
@@ -248,7 +248,7 @@ def test_workflow_start_rejects_second_open_child_for_same_generator(
     # Restore the parent to running so the second call passes the running gate
     # but is rejected by the duplicate-open-child check.
     task_store.set_task_status(
-        parent_task_id, status=TaskCenterTaskStatus.RUNNING.value
+        parent_task_id, status=TaskStatus.RUNNING.value
     )
 
     with pytest.raises(TaskCenterInvariantViolation) as exc:
@@ -265,7 +265,7 @@ def test_workflow_start_rejects_non_running_parent(
     parent_task_id, parent_attempt_id = _seed_outer_running_generator(
         runtime=runtime, task_center_run_id=task_center_run_id
     )
-    task_store.set_task_status(parent_task_id, status=TaskCenterTaskStatus.DONE.value)
+    task_store.set_task_status(parent_task_id, status=TaskStatus.DONE.value)
 
     starter = WorkflowStarter(runtime=runtime)
     with pytest.raises(TaskCenterInvariantViolation) as exc:

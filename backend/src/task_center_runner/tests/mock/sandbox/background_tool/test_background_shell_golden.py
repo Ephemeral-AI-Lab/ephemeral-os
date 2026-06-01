@@ -18,7 +18,7 @@ import sandbox.api as sandbox_api
 from task_center_runner.benchmarks.sweevo.models import SWEEvoInstance
 from sandbox.shared.models import ReadFileRequest, SandboxCaller
 from task_center_runner.agent.mock.background_shell_probe import GOLDEN_SUMMARY
-from task_center_runner.core.stores import TaskCenterStoreBundle
+from task_center_runner.core.stores import TaskStoreBundle
 from task_center_runner.environments.sweevo_image.fixtures import (
     run_scenario_on_sweevo_image,
 )
@@ -48,7 +48,7 @@ async def test_background_shell_golden(
     sweevo_image_instance: SWEEvoInstance,
     workspace: dict[str, object],
     audit_dir: Path,
-    stores: TaskCenterStoreBundle,
+    stores: TaskStoreBundle,
 ) -> None:
     scenario_cls = SCENARIO_REGISTRY["sandbox.background_shell_golden"]
     scenario = scenario_cls()

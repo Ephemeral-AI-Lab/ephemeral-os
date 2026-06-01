@@ -7,8 +7,8 @@ from datetime import UTC, datetime
 
 from db.models.attempt import AttemptRecord
 from db.stores.base import SyncStoreMixin
-from task_center._core.outcomes import parse_outcomes_record
-from task_center._core.state import (
+from workflow._core.outcomes import parse_outcomes_record
+from workflow._core.state import (
     Attempt,
     AttemptFailReason,
     AttemptStage,
@@ -20,13 +20,14 @@ class AttemptStore(SyncStoreMixin):
     """CRUD for Attempt. Returns frozen Attempt DTOs."""
 
     def insert(
-        self, *, iteration_id: str, attempt_sequence_no: int
+        self, *, iteration_id: str, workflow_id: str, attempt_sequence_no: int
     ) -> Attempt:
         with self._sf() as db:
             now = datetime.now(UTC)
             record = AttemptRecord(
                 id=str(uuid.uuid4()),
                 iteration_id=iteration_id,
+                workflow_id=workflow_id,
                 attempt_sequence_no=attempt_sequence_no,
                 stage=AttemptStage.PLAN.value,
                 status=AttemptStatus.RUNNING.value,
@@ -163,6 +164,7 @@ class AttemptStore(SyncStoreMixin):
         return Attempt(
             id=record.id,
             iteration_id=record.iteration_id,
+            workflow_id=record.workflow_id,
             attempt_sequence_no=record.attempt_sequence_no,
             stage=AttemptStage(record.stage),
             status=AttemptStatus(record.status),

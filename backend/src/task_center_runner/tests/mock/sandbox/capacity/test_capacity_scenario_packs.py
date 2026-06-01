@@ -144,5 +144,5 @@ def _ctx(*, attempt_no: int = 1, iteration_no: int = 1, recursive: bool = False)
         audit_recorder=None,
         task_id="task-id",
         agent_name="executor",
-        context_message="",
+        instruction="",
     )

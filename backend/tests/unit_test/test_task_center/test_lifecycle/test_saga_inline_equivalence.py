@@ -1,6 +1,6 @@
 """Phase 5j regression test - Saga inlining (lever #4).
 
-After inlining task_center.saga.Saga directly into WorkflowStarter's
+After inlining workflow.saga.Saga directly into WorkflowStarter's
 _compensate_failed_start method, this test pins:
 
 1. The Saga module and its shim are gone.
@@ -18,11 +18,11 @@ import inspect
 
 import pytest
 
-from task_center.workflow.starter import WorkflowStarter
+from workflow.starter import WorkflowStarter
 
 
 def test_saga_module_is_gone() -> None:
-    for path in ("task_center.saga", "task_center.workflow.saga"):
+    for path in ("workflow.saga", "workflow.saga"):
         with pytest.raises(ModuleNotFoundError):
             importlib.import_module(path)
 

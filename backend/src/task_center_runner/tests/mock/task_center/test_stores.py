@@ -18,7 +18,7 @@ from sqlalchemy import text
 
 from task_center_runner.tests._live_config import database_configured
 from task_center_runner.core.stores import (
-    TaskCenterStoreBundle,
+    TaskStoreBundle,
     create_per_test_task_center_stores,
 )
 
@@ -29,17 +29,15 @@ pytestmark = pytest.mark.skipif(
 )
 
 
-def _new_run(bundle: TaskCenterStoreBundle, *, run_id: str, request_id: str) -> str:
+def _new_run(bundle: TaskStoreBundle, *, run_id: str, request_id: str) -> str:
+    del run_id
     bundle.task_store.create_request(
         request_id=request_id,
         cwd="/tmp",
         sandbox_id=None,
         request_prompt="task_center_runner stores test",
     )
-    row = bundle.task_store.create_run(
-        task_center_run_id=run_id, request_id=request_id
-    )
-    return row["id"]
+    return request_id
 
 
 def test_per_schema_isolation_round_trip() -> None:
@@ -144,8 +142,8 @@ def test_two_bundles_dont_collide() -> None:
 
 def test_bundle_engine_pool_is_shared() -> None:
     """Bundle pool ownership matches the configured database dialect."""
-    a: TaskCenterStoreBundle = create_per_test_task_center_stores()
-    b: TaskCenterStoreBundle = create_per_test_task_center_stores()
+    a: TaskStoreBundle = create_per_test_task_center_stores()
+    b: TaskStoreBundle = create_per_test_task_center_stores()
     try:
         if a.engine.dialect.name == "postgresql":
             # Each bundle's engine is a per-bundle execution_options clone but the

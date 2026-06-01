@@ -22,8 +22,8 @@ from db.stores.workflow_store import WorkflowStore
 from db.stores.attempt_store import AttemptStore
 from db.stores.task_center_store import TaskCenterStore
 from db.stores.iteration_store import IterationStore
-from task_center.agent_launch.composer import AgentEntryComposer
-from task_center.context_engine.engine import ContextEngine, ContextEngineDeps
+from workflow.agent_launch.composer import AgentEntryComposer
+from workflow.context_engine.engine import ContextEngine, ContextEngineDeps
 
 
 @pytest.fixture

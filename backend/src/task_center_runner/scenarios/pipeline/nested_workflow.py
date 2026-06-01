@@ -99,10 +99,10 @@ class NestedWorkflow(ScenarioBase):
         )
 
     def executor_actions(self, ctx: ScenarioContext) -> Sequence[str]:
-        context_message = ctx.context_message or ""
-        if "request_recursive_workflow" in context_message:
+        instruction = ctx.instruction or ""
+        if "request_recursive_workflow" in instruction:
             return ("request_recursive_workflow:child_success",)
-        if "ACTION recursive_" in context_message:
+        if "ACTION recursive_" in instruction:
             return ("recursive_step",)
         return ("preflight",)
 
@@ -133,10 +133,10 @@ class NestedWorkflowFailure(ScenarioBase):
         )
 
     def executor_actions(self, ctx: ScenarioContext) -> Sequence[str]:
-        context_message = ctx.context_message or ""
-        if "request_recursive_workflow" in context_message:
+        instruction = ctx.instruction or ""
+        if "request_recursive_workflow" in instruction:
             return ("request_recursive_workflow:child_failure",)
-        if "child_failure" in context_message:
+        if "child_failure" in instruction:
             return ("fail:Intentional child workflow failure.",)
         return ("preflight",)
 

@@ -409,7 +409,7 @@ def test_full_stack_recursive_planner_with_unified_terminal_closes_workflow() ->
         audit_recorder=None,
         task_id="recursive-workflow:planner",
         agent_name="planner",
-        context_message=None,
+        instruction=None,
     )
 
     spec = scenario.planner_response(ctx)
@@ -439,7 +439,7 @@ def test_full_case_recursive_planner_with_unified_terminal_closes_workflow() -> 
         audit_recorder=None,
         task_id="recursive-workflow:planner",
         agent_name="planner",
-        context_message=None,
+        instruction=None,
     )
 
     spec = scenario.planner_response(ctx)

@@ -144,6 +144,15 @@ def test_create_can_disable_tcp_daemon_endpoint(
     assert "ports" not in kwargs
 
 
+def test_create_passes_requested_platform(
+    adapter: DockerProviderAdapter, fake_client: MagicMock
+) -> None:
+    adapter.create(name="sb1", image="sweevo:abc", platform="linux/arm64")
+
+    kwargs = fake_client.containers.create.call_args.kwargs
+    assert kwargs["platform"] == "linux/arm64"
+
+
 def test_create_pulls_missing_image_once(
     adapter: DockerProviderAdapter, fake_client: MagicMock, monkeypatch: pytest.MonkeyPatch
 ) -> None:

@@ -17,15 +17,15 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from task_center.attempt.launch import AttemptAgentRunner
+from workflow.attempt.launch import AttemptAgentRunner
 from task_center_runner.core.lifecycle import LifecycleHooks, NoopLifecycle
 from task_center_runner.core.sandbox import SandboxProvisioner
 
 if TYPE_CHECKING:
-    from task_center.entry import TaskCenterSandboxProvisioner
+    from runtime.sandbox_provisioning import TaskCenterSandboxProvisioner
 
     from task_center_runner.audit.bus import AuditEventBus
-    from task_center_runner.core.stores import TaskCenterStoreBundle
+    from task_center_runner.core.stores import TaskStoreBundle
 
 
 @dataclass(frozen=True, slots=True)
@@ -38,7 +38,7 @@ class RunConfig:
     runner_factory: Callable[["RunContext"], AttemptAgentRunner | None]
     lifecycle: LifecycleHooks = field(default_factory=NoopLifecycle)
     bootstrap: Callable[[], None] | None = None
-    stores: "TaskCenterStoreBundle | None" = None
+    stores: "TaskStoreBundle | None" = None
     audit_dir: Path = Path(".sweevo_runs")
     run_label: str = "task_center_runner"
     run_dir_factory: Callable[[Path, "RunContext"], Path] | None = None
@@ -53,7 +53,7 @@ class RunContext:
     """Per-run handle passed to lifecycle hooks + the sandbox provisioner."""
 
     config: RunConfig
-    bundle: "TaskCenterStoreBundle"
+    bundle: "TaskStoreBundle"
     bus: "AuditEventBus"
 
 

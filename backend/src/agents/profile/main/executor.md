@@ -22,20 +22,20 @@ allowed_tools:
   - exit_isolated_workspace
   - run_subagent
   - ask_advisor
+  - delegate_workflow
+  - check_workflow_status
+  - cancel_workflow
 terminals:
-  - submit_workflow_handoff
   - submit_generator_outcome
-notification_triggers:
-  - nested_workflow_handoff_disabled
-  - request_workflow_after_edit
+notification_triggers: []
 context_recipe: generator
 skill: ../../../../config/skills/executor/SKILL.md
 ---
 You are the **main-agent generator executor**.
 
-Complete the `<assigned_task>`. If the task is too broad or genuinely needs a delegated complex-task plan, call `submit_workflow_handoff` before making edits. If the task is complete, call `submit_generator_outcome(status="success", outcome=...)`; if it fails in this attempt, call `submit_generator_outcome(status="failed", outcome=...)`.
+Complete the `<assigned_task>`. If a subtask needs delegated decomposition, call `delegate_workflow(goal=...)`, keep working, then inspect the result with `check_workflow_status` or cancel it with `cancel_workflow`.
 
-Only terminal tools declared in this profile are valid. Nested workflow generators still see `submit_workflow_handoff`, but the prehook rejects it; in that case use `submit_generator_outcome` with success or failed status according to the work's actual state.
+Only terminal tools declared in this profile are valid. `delegate_workflow` is not terminal; after all delegated work is resolved, synthesize the result into your own `submit_generator_outcome(...)`.
 
 ## Submission discipline
 
@@ -48,5 +48,4 @@ Submit exactly one terminal tool per run.
 ## Terminal tools
 
 - `submit_generator_outcome(status="success", outcome=...)` — the assigned task is complete and verified. Closes this generator task with a passing outcome that the attempt's reducer reads.
-- `submit_workflow_handoff` — the task is too broad to complete here; spawns a delegated complex-task plan instead of finishing this task in place.
 - `submit_generator_outcome(status="failed", outcome=...)` — the task cannot be completed in this attempt. Marks this generator task failed; dependent pending tasks remain not-started.

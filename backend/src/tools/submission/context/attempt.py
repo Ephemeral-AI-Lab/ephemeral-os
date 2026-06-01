@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from task_center import (
+from workflow import (
     Attempt,
     AttemptOrchestrator,
     AttemptDeps,
@@ -13,7 +13,6 @@ from task_center import (
     Workflow,
     TaskCenterInvariantViolation,
 )
-from task_center._core.primitives import attempt_id_from_task_id
 from tools._framework.core.context import ToolExecutionContextService
 
 
@@ -85,7 +84,7 @@ def _resolve_attempt_context(
     attempt-mode branch of :func:`resolve_generator_submission_context` so the
     task row is fetched exactly once per call.
     """
-    attempt_id = attempt_id_from_task_id(task_id) or ""
+    attempt_id = str(task.get("attempt_id") or "")
     if not attempt_id:
         raise AttemptSubmissionContextError(
             f"TaskCenter task {task_id!r} is not attached to a harness attempt."

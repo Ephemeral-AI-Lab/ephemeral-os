@@ -8,27 +8,27 @@ delegated workflow closes terminally, then resolves DONE (success) or FAILED.
 
 from __future__ import annotations
 
-from task_center.workflow.starter import WorkflowStarter
-from task_center._core.primitives import (
+from workflow.starter import WorkflowStarter
+from workflow._core.primitives import (
     generator_task_id,
     planner_task_id,
     reducer_task_id,
 )
-from task_center._core.state import (
+from workflow._core.state import (
     AttemptFailReason,
     AttemptStatus,
     IterationCreationReason,
     IterationStatus,
     WorkflowStatus,
 )
-from task_center.attempt.launch import AgentLaunch, AttemptDeps
-from task_center.attempt.orchestrator import AttemptOrchestrator
-from task_center.attempt.orchestrator_registry import (
+from workflow.attempt.launch import AgentLaunch, AttemptDeps
+from workflow.attempt.orchestrator import AttemptOrchestrator
+from workflow.attempt.orchestrator_registry import (
     AttemptOrchestratorRegistry,
 )
-from task_center.iteration import OpenIterationCoordinatorRegistry
-from task_center._core.task_state import TaskCenterTaskStatus
-from task_center.submissions import (
+from workflow.iteration import OpenIterationCoordinatorRegistry
+from task import TaskStatus
+from workflow.submissions import (
     GeneratorSubmission,
     PlannedGeneratorTask,
     PlannedReducerTask,
@@ -185,7 +185,7 @@ def test_delegated_continuation_waits_until_final_iteration(
     )
     parent_after_1 = task_store.get_task(parent_task_id)
     assert parent_after_1 is not None
-    assert parent_after_1["status"] == TaskCenterTaskStatus.WAITING_WORKFLOW.value
+    assert parent_after_1["status"] == TaskStatus.WAITING_WORKFLOW.value
     delegated_after_1 = workflow_store.get(started.workflow_id)
     assert delegated_after_1 is not None
     assert delegated_after_1.status == WorkflowStatus.OPEN
@@ -205,7 +205,7 @@ def test_delegated_continuation_waits_until_final_iteration(
     delegated_final = workflow_store.get(started.workflow_id)
     iteration2_final = iteration_store.get(iteration2_id)
     assert parent_final is not None
-    assert parent_final["status"] == TaskCenterTaskStatus.DONE.value
+    assert parent_final["status"] == TaskStatus.DONE.value
     assert delegated_final is not None
     assert delegated_final.status == WorkflowStatus.SUCCEEDED
     assert iteration2_final is not None
@@ -248,7 +248,7 @@ def test_continuation_startup_failure_reports_continuation_attempt(
 
     parent_final = task_store.get_task(parent_task_id)
     assert parent_final is not None
-    assert parent_final["status"] == TaskCenterTaskStatus.FAILED.value
+    assert parent_final["status"] == TaskStatus.FAILED.value
 
 
 def test_delegated_retry_waits_until_final_attempt(
@@ -273,7 +273,7 @@ def test_delegated_retry_waits_until_final_attempt(
     assert len(iteration1.attempt_ids) == 2
     parent_mid = task_store.get_task(parent_task_id)
     assert parent_mid is not None
-    assert parent_mid["status"] == TaskCenterTaskStatus.WAITING_WORKFLOW.value
+    assert parent_mid["status"] == TaskStatus.WAITING_WORKFLOW.value
     delegated_mid = workflow_store.get(started.workflow_id)
     assert delegated_mid is not None
     assert delegated_mid.status == WorkflowStatus.OPEN
@@ -288,7 +288,7 @@ def test_delegated_retry_waits_until_final_attempt(
     delegated_final = workflow_store.get(started.workflow_id)
     iteration1_final = iteration_store.get(started.iteration_id)
     assert parent_final is not None
-    assert parent_final["status"] == TaskCenterTaskStatus.DONE.value
+    assert parent_final["status"] == TaskStatus.DONE.value
     assert delegated_final is not None
     assert delegated_final.status == WorkflowStatus.SUCCEEDED
     assert iteration1_final is not None

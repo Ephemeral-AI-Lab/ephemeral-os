@@ -98,6 +98,7 @@ class DockerBench:
         image: str | None,
         container_id: str | None,
         name_prefix: str,
+        platform: str | None = None,
     ) -> "DockerBench":
         from sandbox.provider.docker.adapter import DockerProviderAdapter
         from sandbox.provider.registry import register_adapter
@@ -114,6 +115,7 @@ class DockerBench:
                 name=name,
                 image=image_ref,
                 labels={"purpose": "sandbox-rust-phase0-bench"},
+                platform=platform,
             )
             sandbox_id = str(sandbox["id"])
             created = True

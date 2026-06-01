@@ -64,7 +64,7 @@ def _record_initial_messages_once(
     ``message.agent_message_recorder.register_recorder``).
 
     For two-user-message launches the launcher seeds
-    ``initial_messages=[context_message]`` and passes task guidance as the
+    ``initial_messages=[instruction]`` and passes task guidance as the
     spawn prompt — we hand the recorder the additional seeded user
     rows so the on-disk transcript holds the full launch shape (system +
     user_msg_1 + user_msg_2) rather than just system + the last user row.

@@ -7,7 +7,7 @@ from typing import Literal
 from pydantic import BaseModel, Field, field_validator
 
 from sandbox.shared.models import Intent
-from task_center import TaskCenterInvariantViolation
+from workflow import TaskCenterInvariantViolation
 from tools._framework.core.context import ToolExecutionContextService
 from tools._framework.core.decorator import tool
 from tools._framework.core.results import TextToolOutput, ToolResult

@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-from task_center._core.primitives import generator_task_id
-from task_center._core.state import IterationCreationReason
-from task_center.agent_launch.entry_messages import AgentEntryMessages
-from task_center.context_engine.scope import ContextScope
+from workflow._core.primitives import generator_task_id
+from workflow._core.state import IterationCreationReason
+from workflow.agent_launch.entry_messages import AgentEntryMessages
+from workflow.context_engine.scope import ContextScope
 
 
 def _seed_attempt(

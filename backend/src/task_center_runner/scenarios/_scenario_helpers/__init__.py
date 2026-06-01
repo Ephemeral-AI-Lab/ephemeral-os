@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from task_center_runner.scenarios._scenario_helpers.context_message_tokens import (
-    context_message_field,
+from task_center_runner.scenarios._scenario_helpers.instruction_tokens import (
+    instruction_field,
 )
 from task_center_runner.scenarios._scenario_helpers.workflow_origin import (
     is_recursive_workflow,
@@ -16,7 +16,7 @@ from task_center_runner.scenarios._scenario_helpers.plan_shapes import (
 )
 
 __all__ = [
-    "context_message_field",
+    "instruction_field",
     "is_recursive_workflow",
     "is_entry_origin_workflow",
     "minimal_full_plan",

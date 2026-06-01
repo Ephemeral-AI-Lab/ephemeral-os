@@ -10,7 +10,7 @@ from task_center_runner.benchmarks.sweevo.models import SWEEvoInstance
 from task_center_runner.agent.mock.background_shell_probe import (
     MANY_SMALL_WRITES_SUMMARY,
 )
-from task_center_runner.core.stores import TaskCenterStoreBundle
+from task_center_runner.core.stores import TaskStoreBundle
 from task_center_runner.tests._live_config import (
     database_configured,
     live_e2e_heavy_enabled,
@@ -36,7 +36,7 @@ async def test_background_many_small_writes_do_not_starve_dispatcher(
     sweevo_image_instance: SWEEvoInstance,
     workspace: dict[str, object],
     audit_dir: Path,
-    stores: TaskCenterStoreBundle,
+    stores: TaskStoreBundle,
 ) -> None:
     report, summary = await run_background_shell_scenario(
         scenario_name="sandbox.background_many_small_writes_do_not_starve_dispatcher",

@@ -47,12 +47,11 @@ _LSP_NAMES = (
 )
 
 _SUBMISSION_TOOL_NAMES = {
-    "submit_workflow_handoff",
     "submit_planner_outcome",
     "submit_generator_outcome",
     "submit_reducer_outcome",
 }
-_NON_PROBE_TOOL_NAMES = _SUBMISSION_TOOL_NAMES | {"ask_advisor"}
+_NON_PROBE_TOOL_NAMES = _SUBMISSION_TOOL_NAMES | {"ask_advisor", "delegate_workflow"}
 
 _DIRECT_FILE_TOOLS = ("read_file", "write_file", "edit_file")
 _PROJECT_BUILD_REQUIRED_TOOLS = (*_DIRECT_FILE_TOOLS, "shell")

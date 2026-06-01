@@ -11,21 +11,22 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from db.base import Base
 
 if TYPE_CHECKING:
-    from db.models.task_center import TaskCenterTaskRecord
+    from db.models.task import TaskRecord
 
 
 class AgentRunRecord(Base):
-    """One agent execution for one TaskCenter task."""
+    """One agent execution for one persisted task."""
 
     __tablename__ = "agent_runs"
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
     task_id: Mapped[str] = mapped_column(
         String(96),
-        ForeignKey("task_center_tasks.id", ondelete="CASCADE"),
+        ForeignKey("tasks.id", ondelete="CASCADE"),
         unique=True,
         index=True,
     )
+    initial_messages: Mapped[list | None] = mapped_column(JSON, nullable=True)
     agent_name: Mapped[str] = mapped_column(String(128))
     message_history: Mapped[list | None] = mapped_column(JSON, nullable=True)
     terminal_tool_result: Mapped[dict | None] = mapped_column(JSON, nullable=True)
@@ -36,8 +37,8 @@ class AgentRunRecord(Base):
     )
     finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
-    task: Mapped["TaskCenterTaskRecord"] = relationship(
-        "TaskCenterTaskRecord",
+    task: Mapped["TaskRecord"] = relationship(
+        "TaskRecord",
         back_populates="agent_run",
     )
 

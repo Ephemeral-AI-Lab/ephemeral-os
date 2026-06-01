@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pydantic import BaseModel
 
-from task_center._core.workflow_depth import is_nested_workflow
+from workflow._core.workflow_depth import is_nested_workflow
 from tools._framework.core.context import ToolExecutionContextService
 from tools._framework.core.hooks import HookResult
 from tools.submission.context import (

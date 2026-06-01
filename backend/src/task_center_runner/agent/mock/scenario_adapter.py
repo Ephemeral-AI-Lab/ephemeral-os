@@ -17,6 +17,7 @@ source serves whichever task/attempt the launcher routes to it.
 
 from __future__ import annotations
 
+import json
 from typing import TYPE_CHECKING, Any
 
 from tools import ToolResult
@@ -92,7 +93,7 @@ def build_scenario_context(
         audit_recorder=audit_recorder,
         task_id=task_id or None,
         agent_name=str(metadata.agent_name or "") or None,
-        context_message=(str(task.get("context_message") or "") if task else None),
+        instruction=(str(task.get("instruction") or "") if task else None),
         requirement_ledger=getattr(scenario, "requirement_ledger", None),
         package_plan=getattr(scenario, "package_plan", None),
         matrix_plan=getattr(scenario, "matrix_plan", None),
@@ -188,9 +189,33 @@ async def _executor_script(
             goal_handoff = scenario.recursive_handoff_goal(ctx) or (
                 f"Resolve recursive package {package_id}."
             )
-            handoff_args = {"goal_handoff": goal_handoff}
-            _ = yield _ask_advisor_turn("submit_workflow_handoff", handoff_args)
-            _ = yield Turn(calls=(ToolCall("submit_workflow_handoff", handoff_args),))
+            delegate_args = {"goal": goal_handoff}
+            blocks = yield Turn(calls=(ToolCall("delegate_workflow", delegate_args),))
+            result = normalize_result(blocks)
+            workflow_task_id = ""
+            if not result.is_error:
+                try:
+                    workflow_task_id = str(json.loads(result.output).get("workflow_task_id") or "")
+                except (TypeError, ValueError):
+                    workflow_task_id = ""
+            if workflow_task_id:
+                _ = yield Turn(
+                    calls=(
+                        ToolCall(
+                            "cancel_workflow",
+                            {
+                                "workflow_task_id": workflow_task_id,
+                                "reason": "Mock recursive lane cancelled by scenario adapter.",
+                            },
+                        ),
+                    )
+                )
+            blocker_args = {
+                "status": "failed",
+                "outcome": "Delegated workflow requested by mock scenario adapter.",
+            }
+            _ = yield _ask_advisor_turn("submit_generator_outcome", blocker_args)
+            _ = yield Turn(calls=(ToolCall("submit_generator_outcome", blocker_args),))
             return
 
         builder = PROBE_BUILDERS.get(action)

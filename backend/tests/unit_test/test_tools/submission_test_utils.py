@@ -6,20 +6,20 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from task_center.attempt.orchestrator import AttemptOrchestrator
-from task_center.attempt.orchestrator_registry import (
+from workflow.attempt.orchestrator import AttemptOrchestrator
+from workflow.attempt.orchestrator_registry import (
     AttemptOrchestratorRegistry,
 )
-from task_center.attempt.launch import AgentLaunch, AttemptDeps
-from task_center.iteration import OpenIterationCoordinatorRegistry
-from task_center._core.state import IterationCreationReason
-from task_center.submissions import (
+from workflow.attempt.launch import AgentLaunch, AttemptDeps
+from workflow.iteration import OpenIterationCoordinatorRegistry
+from workflow._core.state import IterationCreationReason
+from workflow.submissions import (
     GeneratorSubmission,
     PlannedGeneratorTask,
     PlannedReducerTask,
     PlannerSubmission,
 )
-from task_center._core.primitives import generator_task_id, planner_task_id, reducer_task_id
+from workflow._core.primitives import generator_task_id, planner_task_id, reducer_task_id
 from tools._framework.core.context import ToolExecutionContextService
 from tools._framework.core.runtime import ExecutionMetadata
 

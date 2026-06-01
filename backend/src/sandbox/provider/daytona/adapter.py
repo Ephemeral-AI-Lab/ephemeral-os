@@ -189,7 +189,9 @@ class DaytonaProviderAdapter:
         language: str = "python",
         env_vars: dict[str, str] | None = None,
         labels: dict[str, str] | None = None,
+        platform: str | None = None,
     ) -> dict[str, Any]:
+        _ = platform
         normalized_name = _normalize_optional_text(name)
         normalized_snapshot = _normalize_optional_text(snapshot)
         normalized_image = _normalize_optional_text(image)
