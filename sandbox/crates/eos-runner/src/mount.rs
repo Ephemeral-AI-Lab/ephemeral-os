@@ -17,8 +17,10 @@ use std::path::PathBuf;
 
 use crate::error::RunnerError;
 
-/// Validated overlay-mount inputs (newest-first lower layers + upper/work dirs),
-/// the runner's mirror of the Python `MountInputs` the entrypoint builds.
+/// Validated overlay-mount inputs.
+///
+/// This is the runner's mirror of the Python `MountInputs` the entrypoint
+/// builds: newest-first lower layers plus upper/work dirs.
 /// `// PORT backend/src/sandbox/overlay/kernel_mount.py — MountInputs / validate_mount_inputs`
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct MountInputs {
@@ -49,5 +51,10 @@ pub trait KernelMountPort {
     /// Mount the overlay described by `inputs` at its workspace root. Must be
     /// called on a caller that already holds `CAP_SYS_ADMIN` in the target
     /// mount namespace (post-unshare / post-setns).
+    ///
+    /// # Errors
+    ///
+    /// Returns [`RunnerError`] when the kernel overlay mount fails or when the
+    /// mount inputs are rejected by the concrete mount port.
     fn mount_overlay(&self, inputs: &MountInputs) -> Result<Box<dyn MountedOverlay>, RunnerError>;
 }

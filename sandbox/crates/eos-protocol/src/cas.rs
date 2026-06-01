@@ -49,6 +49,11 @@ impl LayerPath {
     /// Normalize a raw path string exactly as Python `normalize_layer_path`:
     /// `\` -> `/`, strip surrounding whitespace, drop empty / `.` segments,
     /// reject absolute / `..` / NUL / empty-result.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`CasError::InvalidPath`] when the normalized path would be
+    /// empty, absolute, escaping, or contain a NUL byte.
     pub fn parse(path: &str) -> Result<Self, CasError> {
         let raw = path.replace('\\', "/");
         let raw = raw.trim();
@@ -76,6 +81,7 @@ impl LayerPath {
     }
 
     /// The normalized path string.
+    #[must_use]
     pub fn as_str(&self) -> &str {
         &self.0
     }
@@ -108,6 +114,11 @@ pub struct Manifest {
 impl Manifest {
     /// Construct a manifest, rejecting an unsupported `schema_version` exactly
     /// as Python `Manifest.__post_init__`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`CasError::UnsupportedSchemaVersion`] when `schema_version`
+    /// does not match [`MANIFEST_SCHEMA_VERSION`].
     /// `// PORT backend/src/sandbox/layer_stack/manifest.py:78-82`
     pub fn new(version: i64, layers: Vec<LayerRef>, schema_version: i64) -> Result<Self, CasError> {
         if schema_version != MANIFEST_SCHEMA_VERSION {
@@ -121,13 +132,15 @@ impl Manifest {
     }
 
     /// Number of layers (the manifest-depth invariant surface).
+    #[must_use]
     pub fn depth(&self) -> usize {
         self.layers.len()
     }
 }
 
 /// Append the Python `json.dumps(ensure_ascii=True)` escaping of `s` (without
-/// surrounding quotes) to `out`. Matches CPython's `c_encode_basestring_ascii`.
+/// surrounding quotes) to `out`. Matches `CPython`'s
+/// `c_encode_basestring_ascii`.
 ///
 /// `// PORT backend/src/sandbox/layer_stack/manifest.py:137 — json.dumps default ensure_ascii`
 fn push_json_ascii_escaped(out: &mut String, s: &str) {
@@ -189,9 +202,12 @@ fn manifest_layers_json(layers: &[LayerRef]) -> String {
     out
 }
 
-/// Stable identity hash for a manifest's root view. Hashes ONLY `{"layers":...}`
-/// in GIVEN order (order-sensitive); `ensure_ascii=True` escaping applied.
+/// Stable identity hash for a manifest's root view.
+///
+/// Hashes ONLY `{"layers":...}` in GIVEN order (order-sensitive);
+/// `ensure_ascii=True` escaping applied.
 /// `// PORT backend/src/sandbox/layer_stack/manifest.py:134-138`
+#[must_use]
 pub fn manifest_root_hash(manifest: &Manifest) -> String {
     let encoded = manifest_layers_json(&manifest.layers);
     let mut hasher = Sha256::new();
@@ -199,9 +215,11 @@ pub fn manifest_root_hash(manifest: &Manifest) -> String {
     hex_lower(&hasher.finalize())
 }
 
-/// A storage-level layer change (tagged union by kind). `path` is the
-/// post-normalization form; `Write` carries raw bytes hashed verbatim.
-/// `// PORT backend/src/sandbox/layer_stack/changes.py:42-` (LayerChange)
+/// A storage-level layer change.
+///
+/// Tagged union by kind. `path` is the post-normalization form; `Write` carries
+/// raw bytes hashed verbatim.
+/// `// PORT backend/src/sandbox/layer_stack/changes.py:42-` (`LayerChange`)
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum LayerChange {
     /// File write; `content` is hashed RAW (may be empty / contain NUL / binary).
@@ -219,22 +237,24 @@ pub enum LayerChange {
 
 impl LayerChange {
     /// The `kind` discriminator string fed to the digest.
-    pub fn kind(&self) -> &'static str {
+    #[must_use]
+    pub const fn kind(&self) -> &'static str {
         match self {
-            LayerChange::Write { .. } => "write",
-            LayerChange::Delete { .. } => "delete",
-            LayerChange::Symlink { .. } => "symlink",
-            LayerChange::OpaqueDir { .. } => "opaque_dir",
+            Self::Write { .. } => "write",
+            Self::Delete { .. } => "delete",
+            Self::Symlink { .. } => "symlink",
+            Self::OpaqueDir { .. } => "opaque_dir",
         }
     }
 
     /// The normalized path this change targets.
-    pub fn path(&self) -> &LayerPath {
+    #[must_use]
+    pub const fn path(&self) -> &LayerPath {
         match self {
-            LayerChange::Write { path, .. }
-            | LayerChange::Delete { path }
-            | LayerChange::Symlink { path, .. }
-            | LayerChange::OpaqueDir { path } => path,
+            Self::Write { path, .. }
+            | Self::Delete { path }
+            | Self::Symlink { path, .. }
+            | Self::OpaqueDir { path } => path,
         }
     }
 }
@@ -242,6 +262,7 @@ impl LayerChange {
 /// Last-write-wins per `path`, then emit in ascending `path` order.
 /// Input-order-insensitive (the OPPOSITE of `manifest_root_hash`).
 /// `// PORT backend/src/sandbox/layer_stack/changes.py:160-165`
+#[must_use]
 pub fn aggregate_layer_changes(changes: &[LayerChange]) -> Vec<LayerChange> {
     // BTreeMap gives sorted-by-path emission; insertion overwrites (last-write-wins).
     let mut by_path: BTreeMap<String, LayerChange> = BTreeMap::new();
@@ -269,6 +290,7 @@ fn update_digest(hasher: &mut Sha256, change: &LayerChange) {
 
 /// Per-layer change-set digest: sha256 over `aggregate_layer_changes(changes)`.
 /// `// PORT backend/src/sandbox/layer_stack/publisher.py:144-158 — _prepare_changes`
+#[must_use]
 pub fn layer_digest(changes: &[LayerChange]) -> String {
     let mut hasher = Sha256::new();
     for change in aggregate_layer_changes(changes) {
@@ -297,8 +319,10 @@ mod tests {
     use super::*;
     use proptest::prelude::*;
 
-    fn lp(s: &str) -> LayerPath {
-        LayerPath::parse(s).expect("BUG: test path must be valid")
+    type TestResult<T = ()> = Result<T, Box<dyn std::error::Error + Send + Sync>>;
+
+    fn lp(s: &str) -> Result<LayerPath, CasError> {
+        LayerPath::parse(s)
     }
 
     #[test]
@@ -334,15 +358,16 @@ mod tests {
     }
 
     #[test]
-    fn normalize_layer_path_rules() {
-        assert_eq!(lp("a/b/c").as_str(), "a/b/c");
-        assert_eq!(lp(" a//b/./c ").as_str(), "a/b/c");
-        assert_eq!(lp("a\\b").as_str(), "a/b");
+    fn normalize_layer_path_rules() -> TestResult {
+        assert_eq!(lp("a/b/c")?.as_str(), "a/b/c");
+        assert_eq!(lp(" a//b/./c ")?.as_str(), "a/b/c");
+        assert_eq!(lp("a\\b")?.as_str(), "a/b");
         assert!(LayerPath::parse("/abs").is_err());
         assert!(LayerPath::parse("a/../b").is_err());
         assert!(LayerPath::parse("").is_err());
         assert!(LayerPath::parse("./").is_err());
         assert!(LayerPath::parse("a\0b").is_err());
+        Ok(())
     }
 
     #[test]
@@ -352,21 +377,21 @@ mod tests {
     }
 
     #[test]
-    fn aggregate_is_idempotent_and_order_insensitive() {
+    fn aggregate_is_idempotent_and_order_insensitive() -> TestResult {
         let changes = vec![
             LayerChange::Write {
-                path: lp("z.txt"),
+                path: lp("z.txt")?,
                 content: b"z".to_vec(),
             },
-            LayerChange::Delete { path: lp("a.txt") },
+            LayerChange::Delete { path: lp("a.txt")? },
             LayerChange::Symlink {
-                path: lp("m"),
+                path: lp("m")?,
                 source_path: "t".to_owned(),
             },
         ];
         let agg = aggregate_layer_changes(&changes);
         assert_eq!(agg, aggregate_layer_changes(&agg));
-        let mut reversed = changes.clone();
+        let mut reversed = changes;
         reversed.reverse();
         assert_eq!(agg, aggregate_layer_changes(&reversed));
         // sorted by path: a.txt, m, z.txt
@@ -374,27 +399,29 @@ mod tests {
             agg.iter().map(|c| c.path().as_str()).collect::<Vec<_>>(),
             vec!["a.txt", "m", "z.txt"]
         );
+        Ok(())
     }
 
     #[test]
-    fn aggregate_last_write_wins() {
+    fn aggregate_last_write_wins() -> TestResult {
         let changes = vec![
             LayerChange::Write {
-                path: lp("x"),
+                path: lp("x")?,
                 content: b"first".to_vec(),
             },
-            LayerChange::Delete { path: lp("x") },
+            LayerChange::Delete { path: lp("x")? },
         ];
         let agg = aggregate_layer_changes(&changes);
         assert_eq!(agg.len(), 1);
         assert_eq!(agg[0].kind(), "delete");
+        Ok(())
     }
 
     // A change over a UNIQUE relative path (no collisions, so order-insensitivity
     // holds — colliding paths would change the last-write-wins survivor).
     fn arb_change_unique() -> impl Strategy<Value = LayerChange> {
         // single-segment lowercase paths keep them unique-able and always valid.
-        let path = "[a-z]{1,8}".prop_map(|s| lp(&s));
+        let path = "[a-z]{1,8}".prop_map(LayerPath);
         prop_oneof![
             (path.clone(), prop::collection::vec(any::<u8>(), 0..32))
                 .prop_map(|(path, content)| LayerChange::Write { path, content }),
@@ -418,7 +445,7 @@ mod tests {
             // idempotent
             prop_assert_eq!(agg.clone(), aggregate_layer_changes(&agg));
             // input-order-insensitive
-            let mut shuffled = unique.clone();
+            let mut shuffled = unique;
             shuffled.reverse();
             prop_assert_eq!(&agg, &aggregate_layer_changes(&shuffled));
             // emitted sorted by path

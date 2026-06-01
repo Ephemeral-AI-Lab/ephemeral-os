@@ -12,9 +12,11 @@ use tokio::time::{sleep, timeout, Duration};
 
 static ISOLATED_ENV_LOCK: Mutex<()> = Mutex::new(());
 
+type TestResult<T = ()> = Result<T, Box<dyn std::error::Error + Send + Sync>>;
+
 #[test]
-fn dispatches_layerstack_read_file() {
-    let (root, workspace) = seed_layer_stack("read_file");
+fn dispatches_layerstack_read_file() -> TestResult {
+    let (root, workspace) = seed_layer_stack("read_file")?;
     let request = Request {
         op: "api.v1.read_file".to_owned(),
         invocation_id: "inv-1".to_owned(),
@@ -31,11 +33,12 @@ fn dispatches_layerstack_read_file() {
     assert_eq!(response["content"], Value::String("# README\n".to_owned()));
     assert_eq!(response["exists"], Value::Bool(true));
     assert!(response["timings"]["api.read.layer_stack_read_s"].is_number());
+    Ok(())
 }
 
 #[test]
-fn dispatches_runtime_ready_probe() {
-    let (root, _workspace) = seed_layer_stack("ready");
+fn dispatches_runtime_ready_probe() -> TestResult {
+    let (root, _workspace) = seed_layer_stack("ready")?;
     let request = Request {
         op: "api.runtime.ready".to_owned(),
         invocation_id: "inv-1".to_owned(),
@@ -54,25 +57,28 @@ fn dispatches_runtime_ready_probe() {
         response["probes"][0]["status"],
         Value::String("ok".to_owned())
     );
+    Ok(())
 }
 
 #[test]
-fn dispatches_workspace_base_control_ops_for_fresh_stack() {
-    let (root, workspace) = empty_workspace("workspace_base");
-    std::fs::create_dir_all(workspace.join("src")).expect("create src");
-    std::fs::write(workspace.join("README.md"), "# base\n").expect("write readme");
-    std::fs::write(workspace.join("src").join("a.py"), "print('base')\n").expect("write source");
-    std::os::unix::fs::symlink("src/a.py", workspace.join("link.py")).expect("create symlink");
-    std::fs::create_dir_all(workspace.join("links")).expect("create links");
+#[expect(
+    clippy::too_many_lines,
+    reason = "integration test keeps the workspace-base wire contract in one scenario"
+)]
+fn dispatches_workspace_base_control_ops_for_fresh_stack() -> TestResult {
+    let (root, workspace) = empty_workspace("workspace_base")?;
+    std::fs::create_dir_all(workspace.join("src"))?;
+    std::fs::write(workspace.join("README.md"), "# base\n")?;
+    std::fs::write(workspace.join("src").join("a.py"), "print('base')\n")?;
+    std::os::unix::fs::symlink("src/a.py", workspace.join("link.py"))?;
+    std::fs::create_dir_all(workspace.join("links"))?;
     let outside_target = workspace
         .parent()
-        .expect("workspace parent")
+        .ok_or("workspace parent")?
         .join("outside.txt");
-    std::fs::write(&outside_target, "outside\n").expect("write outside target");
-    std::os::unix::fs::symlink("../src/a.py", workspace.join("links").join("inside"))
-        .expect("create relative symlink with parent component");
-    std::os::unix::fs::symlink(&outside_target, workspace.join("links").join("outside"))
-        .expect("create absolute symlink");
+    std::fs::write(&outside_target, "outside\n")?;
+    std::os::unix::fs::symlink("../src/a.py", workspace.join("links").join("inside"))?;
+    std::os::unix::fs::symlink(&outside_target, workspace.join("links").join("outside"))?;
     let table = OpTable::with_builtins();
 
     let ensure = table.dispatch(&Request {
@@ -106,8 +112,7 @@ fn dispatches_workspace_base_control_ops_for_fresh_stack() {
                 .join("B000001-base")
                 .join("links")
                 .join("inside")
-        )
-        .expect("inside symlink")
+        )?
         .to_string_lossy(),
         "../src/a.py"
     );
@@ -117,8 +122,7 @@ fn dispatches_workspace_base_control_ops_for_fresh_stack() {
                 .join("B000001-base")
                 .join("links")
                 .join("outside")
-        )
-        .expect("outside symlink"),
+        )?,
         outside_target
     );
 
@@ -155,7 +159,7 @@ fn dispatches_workspace_base_control_ops_for_fresh_stack() {
     assert_eq!(ensure_again["success"], Value::Bool(true));
     assert_eq!(ensure_again["created"], Value::Bool(false));
 
-    std::fs::write(workspace.join("README.md"), "# reset\n").expect("rewrite readme");
+    std::fs::write(workspace.join("README.md"), "# reset\n")?;
     let rebuilt = table.dispatch(&Request {
         op: "api.build_workspace_base".to_owned(),
         invocation_id: "rebuild".to_owned(),
@@ -185,6 +189,7 @@ fn dispatches_workspace_base_control_ops_for_fresh_stack() {
         read_after_reset["content"],
         Value::String("# reset\n".to_owned())
     );
+    Ok(())
 }
 
 #[test]
@@ -209,10 +214,10 @@ fn unknown_op_uses_structured_contract() {
 }
 
 #[test]
-fn isolated_workspace_ops_are_registered_and_disabled_by_default() {
+fn isolated_workspace_ops_are_registered_and_disabled_by_default() -> TestResult {
     let _guard = ISOLATED_ENV_LOCK
         .lock()
-        .expect("isolated env lock poisoned");
+        .map_err(|_| "isolated env lock poisoned")?;
     std::env::set_var("EOS_ISOLATED_WORKSPACE_TEST_HARNESS", "true");
     let _ = OpTable::with_builtins().dispatch(&Request {
         op: "api.isolated_workspace.test_reset".to_owned(),
@@ -256,21 +261,26 @@ fn isolated_workspace_ops_are_registered_and_disabled_by_default() {
     });
     assert_eq!(open["success"], Value::Bool(true));
     assert_eq!(open["open_agent_ids"], json!([]));
+    Ok(())
 }
 
 #[test]
-fn isolated_workspace_lifecycle_ops_open_status_list_and_exit_when_enabled() {
+#[expect(
+    clippy::too_many_lines,
+    reason = "integration test keeps the isolated lifecycle wire contract in one scenario"
+)]
+fn isolated_workspace_lifecycle_ops_open_status_list_and_exit_when_enabled() -> TestResult {
     let _guard = ISOLATED_ENV_LOCK
         .lock()
-        .expect("isolated env lock poisoned");
-    let (root, _workspace) = seed_layer_stack("isolated_lifecycle");
+        .map_err(|_| "isolated env lock poisoned")?;
+    let (root, _workspace) = seed_layer_stack("isolated_lifecycle")?;
     let scratch = root
         .parent()
-        .expect("layer root parent")
+        .ok_or("layer root parent")?
         .join("isolated-scratch");
     let audit_path = root
         .parent()
-        .expect("layer root parent")
+        .ok_or("layer root parent")?
         .join("isolated-audit.jsonl");
     std::env::set_var("EOS_ISOLATED_WORKSPACE_ENABLED", "true");
     std::env::set_var("EOS_ISOLATED_WORKSPACE_TEST_HARNESS", "true");
@@ -307,13 +317,13 @@ fn isolated_workspace_lifecycle_ops_open_status_list_and_exit_when_enabled() {
     );
     let handle_id = enter["workspace_handle_id"]
         .as_str()
-        .expect("workspace handle id");
+        .ok_or("workspace handle id")?;
     let handle_scratch = scratch
         .join("runtime")
         .join("isolated-workspace")
         .join(handle_id);
     let private_file = handle_scratch.join("upper").join("private.txt");
-    std::fs::write(&private_file, "private scratch\n").expect("write isolated upper file");
+    std::fs::write(&private_file, "private scratch\n")?;
 
     let status = table.dispatch(&Request {
         op: "api.isolated_workspace.status".to_owned(),
@@ -366,11 +376,10 @@ fn isolated_workspace_lifecycle_ops_open_status_list_and_exit_when_enabled() {
     assert_eq!(exit["inspection"]["cgroup_exists_after"], Value::Null);
     assert!(!handle_scratch.exists());
     assert!(audit_path.exists());
-    let audit_events = std::fs::read_to_string(&audit_path)
-        .expect("read isolated audit")
+    let audit_events = std::fs::read_to_string(&audit_path)?
         .lines()
-        .map(|line| serde_json::from_str::<Value>(line).expect("audit json"))
-        .collect::<Vec<_>>();
+        .map(serde_json::from_str::<Value>)
+        .collect::<Result<Vec<_>, _>>()?;
     assert_eq!(
         audit_events
             .iter()
@@ -381,7 +390,7 @@ fn isolated_workspace_lifecycle_ops_open_status_list_and_exit_when_enabled() {
             "sandbox_isolated_workspace_exit"
         ]
     );
-    let exit_audit = audit_events.last().expect("exit audit event");
+    let exit_audit = audit_events.last().ok_or("exit audit event")?;
     assert_eq!(
         exit_audit["payload"]["inspection"]["scratch_exists_after"],
         json!(false)
@@ -409,14 +418,15 @@ fn isolated_workspace_lifecycle_ops_open_status_list_and_exit_when_enabled() {
     std::env::remove_var("EOS_ISOLATED_WORKSPACE_TEST_HARNESS");
     std::env::remove_var("EOS_ISOLATED_WORKSPACE_TEST_SCRATCH_ROOT");
     std::env::remove_var("EOS_ISOLATED_WORKSPACE_AUDIT_PATH");
-    let _ = std::fs::remove_dir_all(root.parent().expect("layer root parent"));
+    let _ = std::fs::remove_dir_all(root.parent().ok_or("layer root parent")?);
+    Ok(())
 }
 
 #[test]
-fn isolated_workspace_ops_validate_required_arguments() {
+fn isolated_workspace_ops_validate_required_arguments() -> TestResult {
     let _guard = ISOLATED_ENV_LOCK
         .lock()
-        .expect("isolated env lock poisoned");
+        .map_err(|_| "isolated env lock poisoned")?;
     std::env::remove_var("EOS_ISOLATED_WORKSPACE_ENABLED");
     let response = OpTable::with_builtins().dispatch(&Request {
         op: "api.isolated_workspace.enter".to_owned(),
@@ -433,10 +443,11 @@ fn isolated_workspace_ops_validate_required_arguments() {
         response["error"]["details"]["key"],
         Value::String("agent_id".to_owned())
     );
+    Ok(())
 }
 
 #[tokio::test]
-async fn control_ops_use_inflight_registry() {
+async fn control_ops_use_inflight_registry() -> TestResult {
     let table = OpTable::with_builtins();
     let registry = InFlightRegistry::new(300.0, 30.0);
     let task = tokio::spawn(std::future::pending::<()>());
@@ -492,10 +503,11 @@ async fn control_ops_use_inflight_registry() {
     );
     assert_eq!(cancel["success"], Value::Bool(true));
     assert_eq!(cancel["cancelled"], Value::Bool(true));
-    assert!(task
-        .await
-        .expect_err("task should be cancelled")
-        .is_cancelled());
+    match task.await {
+        Ok(()) => return Err("expected task cancellation, but task completed".into()),
+        Err(error) if error.is_cancelled() => {}
+        Err(error) => return Err(format!("expected task cancellation, got {error}").into()),
+    }
 
     registry.deregister("bg-shell");
     let count = table.dispatch_with_context(
@@ -507,16 +519,17 @@ async fn control_ops_use_inflight_registry() {
         context,
     );
     assert_eq!(count["count"], json!(0));
+    Ok(())
 }
 
 #[tokio::test]
-async fn unix_server_dispatches_framed_ready_request() {
-    let (root, _workspace) = seed_layer_stack("unix_server");
+async fn unix_server_dispatches_framed_ready_request() -> TestResult {
+    let (root, _workspace) = seed_layer_stack("unix_server")?;
     let runtime_dir = root
         .parent()
-        .expect("seeded layer-stack root must have parent")
+        .ok_or("seeded layer-stack root must have parent")?
         .join("runtime");
-    std::fs::create_dir_all(&runtime_dir).expect("create runtime dir");
+    std::fs::create_dir_all(&runtime_dir)?;
     let config = ServerConfig {
         socket_path: runtime_dir.join("runtime.sock"),
         pid_path: runtime_dir.join("runtime.pid"),
@@ -524,9 +537,9 @@ async fn unix_server_dispatches_framed_ready_request() {
         tcp_port: None,
         auth_token: None,
     };
-    let (server, occ_queue) = DaemonServer::new(config.clone());
+    let server = DaemonServer::new(config.clone());
     let shutdown = server.shutdown_token();
-    let task = tokio::spawn(server.serve(occ_queue));
+    let task = tokio::spawn(server.serve());
     for _ in 0..50 {
         if config.socket_path.exists() {
             break;
@@ -539,45 +552,33 @@ async fn unix_server_dispatches_framed_ready_request() {
         invocation_id: "inv-1".to_owned(),
         args: json!({"layer_stack_root": root}),
     });
-    let mut stream = UnixStream::connect(&config.socket_path)
-        .await
-        .expect("connect to daemon unix socket");
-    stream
-        .write_all(&encode(&request).expect("encode request"))
-        .await
-        .expect("write request");
-    stream.shutdown().await.expect("shutdown request writer");
+    let mut stream = UnixStream::connect(&config.socket_path).await?;
+    stream.write_all(&encode(&request)?).await?;
+    stream.shutdown().await?;
     let mut response = Vec::new();
-    timeout(Duration::from_secs(2), stream.read_to_end(&mut response))
-        .await
-        .expect("daemon response read timed out")
-        .expect("read daemon response");
+    timeout(Duration::from_secs(2), stream.read_to_end(&mut response)).await??;
     shutdown.cancel();
-    let _ = timeout(Duration::from_secs(2), task)
-        .await
-        .expect("daemon shutdown timed out")
-        .expect("daemon task join failed");
+    let _ = timeout(Duration::from_secs(2), task).await??;
 
-    let response = match decode(&response).expect("decode daemon response") {
+    let response = match decode(&response)? {
         Envelope::Response(value) => value,
-        other => panic!("expected response, got {other:?}"),
+        other => return Err(format!("expected response, got {other:?}").into()),
     };
     assert_eq!(response["success"], Value::Bool(true));
     assert_eq!(response["ready"], Value::Bool(true));
+    Ok(())
 }
 
 #[tokio::test]
-async fn tcp_server_dispatches_authenticated_ready_request() {
-    let (root, _workspace) = seed_layer_stack("tcp_server");
+async fn tcp_server_dispatches_authenticated_ready_request() -> TestResult {
+    let (root, _workspace) = seed_layer_stack("tcp_server")?;
     let runtime_dir = root
         .parent()
-        .expect("seeded layer-stack root must have parent")
+        .ok_or("seeded layer-stack root must have parent")?
         .join("runtime");
-    std::fs::create_dir_all(&runtime_dir).expect("create runtime dir");
-    let probe = TcpListener::bind(("127.0.0.1", 0))
-        .await
-        .expect("reserve tcp port");
-    let port = probe.local_addr().expect("tcp local addr").port();
+    std::fs::create_dir_all(&runtime_dir)?;
+    let probe = TcpListener::bind(("127.0.0.1", 0)).await?;
+    let port = probe.local_addr()?.port();
     drop(probe);
     let config = ServerConfig {
         socket_path: runtime_dir.join("runtime.sock"),
@@ -586,9 +587,9 @@ async fn tcp_server_dispatches_authenticated_ready_request() {
         tcp_port: Some(port),
         auth_token: Some("secret".to_owned()),
     };
-    let (server, occ_queue) = DaemonServer::new(config.clone());
+    let server = DaemonServer::new(config.clone());
     let shutdown = server.shutdown_token();
-    let task = tokio::spawn(server.serve(occ_queue));
+    let task = tokio::spawn(server.serve());
     for _ in 0..50 {
         if TcpStream::connect(("127.0.0.1", port)).await.is_ok() {
             break;
@@ -600,42 +601,31 @@ async fn tcp_server_dispatches_authenticated_ready_request() {
         op: "api.runtime.ready".to_owned(),
         invocation_id: "inv-1".to_owned(),
         args: json!({"layer_stack_root": root}),
-    })
-    .expect("encode request value");
+    })?;
     value
         .as_object_mut()
-        .expect("request value object")
+        .ok_or("request value object")?
         .insert(DAEMON_AUTH_FIELD.to_owned(), json!("secret"));
-    let mut request = serde_json::to_vec(&value).expect("encode authenticated request");
+    let mut request = serde_json::to_vec(&value)?;
     request.push(b'\n');
-    let mut stream = TcpStream::connect(("127.0.0.1", port))
-        .await
-        .expect("connect to daemon tcp socket");
-    stream
-        .write_all(&request)
-        .await
-        .expect("write authenticated request");
-    stream.shutdown().await.expect("shutdown request writer");
+    let mut stream = TcpStream::connect(("127.0.0.1", port)).await?;
+    stream.write_all(&request).await?;
+    stream.shutdown().await?;
     let mut response = Vec::new();
-    timeout(Duration::from_secs(2), stream.read_to_end(&mut response))
-        .await
-        .expect("daemon tcp response read timed out")
-        .expect("read daemon tcp response");
+    timeout(Duration::from_secs(2), stream.read_to_end(&mut response)).await??;
     shutdown.cancel();
-    let _ = timeout(Duration::from_secs(2), task)
-        .await
-        .expect("daemon shutdown timed out")
-        .expect("daemon task join failed");
+    let _ = timeout(Duration::from_secs(2), task).await??;
 
-    let response = match decode(&response).expect("decode daemon response") {
+    let response = match decode(&response)? {
         Envelope::Response(value) => value,
-        other => panic!("expected response, got {other:?}"),
+        other => return Err(format!("expected response, got {other:?}").into()),
     };
     assert_eq!(response["success"], Value::Bool(true));
     assert_eq!(response["ready"], Value::Bool(true));
+    Ok(())
 }
 
-fn seed_layer_stack(label: &str) -> (PathBuf, PathBuf) {
+fn seed_layer_stack(label: &str) -> TestResult<(PathBuf, PathBuf)> {
     static COUNTER: AtomicU64 = AtomicU64::new(0);
     let base = PathBuf::from("/tmp").join(format!(
         "eosd-p2-{label}-{}-{}",
@@ -646,10 +636,10 @@ fn seed_layer_stack(label: &str) -> (PathBuf, PathBuf) {
     let workspace = base.join("workspace");
     let root = base.join("layer-stack");
     let layer = root.join("layers").join("B000001-base");
-    std::fs::create_dir_all(&workspace).expect("create workspace dir");
-    std::fs::create_dir_all(&layer).expect("create base layer dir");
-    std::fs::create_dir_all(root.join("staging")).expect("create staging dir");
-    std::fs::write(layer.join("README.md"), "# README\n").expect("write read fixture");
+    std::fs::create_dir_all(&workspace)?;
+    std::fs::create_dir_all(&layer)?;
+    std::fs::create_dir_all(root.join("staging"))?;
+    std::fs::write(layer.join("README.md"), "# README\n")?;
     write_json(
         &root.join("manifest.json"),
         &json!({
@@ -657,7 +647,7 @@ fn seed_layer_stack(label: &str) -> (PathBuf, PathBuf) {
             "version": 1,
             "layers": [{"layer_id": "B000001-base", "path": "layers/B000001-base"}],
         }),
-    );
+    )?;
     write_json(
         &root.join("workspace.json"),
         &json!({
@@ -668,11 +658,11 @@ fn seed_layer_stack(label: &str) -> (PathBuf, PathBuf) {
             "base_manifest_version": 1,
             "base_root_hash": "base",
         }),
-    );
-    (root, workspace)
+    )?;
+    Ok((root, workspace))
 }
 
-fn empty_workspace(label: &str) -> (PathBuf, PathBuf) {
+fn empty_workspace(label: &str) -> TestResult<(PathBuf, PathBuf)> {
     static COUNTER: AtomicU64 = AtomicU64::new(0);
     let base = PathBuf::from("/tmp").join(format!(
         "eosd-empty-{label}-{}-{}",
@@ -682,11 +672,12 @@ fn empty_workspace(label: &str) -> (PathBuf, PathBuf) {
     let _ = std::fs::remove_dir_all(&base);
     let workspace = base.join("workspace");
     let root = base.join("layer-stack");
-    std::fs::create_dir_all(&workspace).expect("create workspace dir");
-    (root, workspace)
+    std::fs::create_dir_all(&workspace)?;
+    Ok((root, workspace))
 }
 
-fn write_json(path: &Path, value: &Value) {
-    let encoded = serde_json::to_string_pretty(value).expect("serialize fixture json");
-    std::fs::write(path, encoded).expect("write fixture json");
+fn write_json(path: &Path, value: &Value) -> TestResult {
+    let encoded = serde_json::to_string_pretty(value)?;
+    std::fs::write(path, encoded)?;
+    Ok(())
 }

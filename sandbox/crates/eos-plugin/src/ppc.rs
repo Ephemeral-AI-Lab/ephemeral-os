@@ -5,13 +5,13 @@
 //!
 //! The PPC reuses the daemon's newline-delimited compact-JSON framing — one
 //! [`eos_protocol::Envelope`] per message, a single trailing `\n` — over an
-//! AF_UNIX socket to the warm per-session plugin server. It is BIDIRECTIONAL and
-//! message-id'd: the daemon multiplexes many in-flight ops over one warm-server
+//! `AF_UNIX` socket to the daemon-managed service process. It is BIDIRECTIONAL and
+//! message-id'd: the daemon multiplexes many in-flight ops over one service
 //! connection, and the self-managed mode lets the plugin call BACK to the daemon
 //! (the OCC commit callback) on the same channel. The `message_id` correlates a
 //! reply to its request and is carried as the envelope's `invocation_id` so the
 //! existing [`eos_protocol::encode`]/[`eos_protocol::decode`] framing applies
-//! unchanged (no second wire format, no `serde_json` edge in this crate).
+//! unchanged (no second wire format).
 //!
 //! `// PORT backend/src/sandbox/ephemeral_workspace/plugin/overlay_child.py:39-69 — JSON payload <-> reply framing`
 //! `// PORT backend/src/sandbox/ephemeral_workspace/plugin/overlay_dispatch.py:135-173 — request/output_ref handoff (becomes the PPC channel)`
@@ -24,25 +24,27 @@ use crate::error::PluginError;
 /// Direction of a PPC message on the bidirectional channel.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PpcDirection {
-    /// Daemon -> warm server: invoke a plugin op.
+    /// Request frame. Daemon -> service invokes a plugin op; service -> daemon
+    /// invokes a daemon callback such as self-managed OCC publish.
     Request,
-    /// Warm server -> daemon: the op's reply, OR (self-managed) an OCC commit
-    /// callback the daemon must service and answer on the same `message_id`.
+    /// Reply frame for either direction's request, correlated by `message_id`.
     Reply,
 }
 
-/// A message-id'd PPC frame. `op` carries the public op name (`plugin.<p>.<op>`)
-/// for a request, or a reply/callback sentinel for the return direction; `body`
-/// is opaque JSON text (the verb args, the tool result, or a callback payload),
-/// kept as `String` to avoid pulling `serde_json` onto this crate's dep edge.
+/// A message-id'd PPC frame.
+///
+/// `op` carries the public op name (`plugin.<p>.<op>`) for a request, or a
+/// reply/callback sentinel for the return direction. `body` is opaque JSON text
+/// so PPC does not parse operation-specific payload schemas.
 /// `// PORT backend/src/sandbox/ephemeral_workspace/plugin/overlay_child.py:77-99 — _PluginOverlayInvocation payload`
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PpcEnvelope {
     /// Correlates a reply to its request (== the wire `invocation_id`).
     pub message_id: String,
-    /// `Request` or `Reply` (the bidirectional callback rides the `Reply` lane).
+    /// Request or reply. Callbacks are plugin-originated requests on the same
+    /// bidirectional channel.
     pub direction: PpcDirection,
-    /// Op name for a request; a `"reply"`/`"occ_commit_callback"` sentinel otherwise.
+    /// Op name for a request; a `"reply"` sentinel for replies.
     pub op: String,
     /// Opaque JSON payload text.
     pub body: String,
@@ -53,14 +55,23 @@ impl PpcEnvelope {
     /// [`eos_protocol::encode`] the daemon uses (no second wire format). The
     /// `{direction, body}` args object is built by the future port; `message_id`
     /// maps to the envelope `invocation_id` and `op` to the envelope `op`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PluginError::Ppc`] if shared protocol framing fails.
     pub fn encode(&self) -> Result<Vec<u8>, PluginError> {
         let envelope = self.to_envelope();
-        encode(&envelope).map_err(map_protocol)
+        encode(&envelope).map_err(|err| map_protocol(&err))
     }
 
     /// Decode one framed PPC message produced by [`PpcEnvelope::encode`].
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PluginError::Ppc`] if the shared frame is invalid or if it does
+    /// not contain a PPC request-shaped payload.
     pub fn decode(bytes: &[u8]) -> Result<Self, PluginError> {
-        let envelope = decode(bytes).map_err(map_protocol)?;
+        let envelope = decode(bytes).map_err(|err| map_protocol(&err))?;
         Self::from_envelope(envelope)
     }
 
@@ -107,7 +118,7 @@ impl PpcEnvelope {
     }
 }
 
-fn direction_wire(direction: PpcDirection) -> &'static str {
+const fn direction_wire(direction: PpcDirection) -> &'static str {
     match direction {
         PpcDirection::Request => "request",
         PpcDirection::Reply => "reply",
@@ -122,7 +133,7 @@ fn parse_direction(raw: &str) -> Result<PpcDirection, PluginError> {
     }
 }
 
-fn map_protocol(err: ProtocolError) -> PluginError {
+fn map_protocol(err: &ProtocolError) -> PluginError {
     PluginError::Ppc(err.to_string())
 }
 
@@ -130,8 +141,10 @@ fn map_protocol(err: ProtocolError) -> PluginError {
 mod tests {
     use super::*;
 
+    type TestResult = std::result::Result<(), Box<dyn std::error::Error + Send + Sync>>;
+
     #[test]
-    fn ppc_envelope_round_trips_through_protocol_framing() {
+    fn ppc_envelope_round_trips_through_protocol_framing() -> TestResult {
         let envelope = PpcEnvelope {
             message_id: "msg-1".to_owned(),
             direction: PpcDirection::Request,
@@ -139,36 +152,37 @@ mod tests {
             body: r#"{"path":"main.py"}"#.to_owned(),
         };
 
-        let encoded = envelope.encode().expect("encode ppc envelope");
+        let encoded = envelope.encode()?;
         assert!(encoded.ends_with(b"\n"));
-        let decoded = PpcEnvelope::decode(&encoded).expect("decode ppc envelope");
+        let decoded = PpcEnvelope::decode(&encoded)?;
 
         assert_eq!(decoded, envelope);
+        Ok(())
     }
 
     #[test]
-    fn ppc_decode_rejects_non_request_frames() {
-        let encoded =
-            encode(&Envelope::Response(json!({"success": true}))).expect("encode response frame");
+    fn ppc_decode_rejects_non_request_frames() -> TestResult {
+        let encoded = encode(&Envelope::Response(json!({"success": true})))?;
 
         assert!(matches!(
             PpcEnvelope::decode(&encoded),
             Err(PluginError::Ppc(message)) if message.contains("request envelope")
         ));
+        Ok(())
     }
 
     #[test]
-    fn ppc_decode_rejects_unknown_direction() {
+    fn ppc_decode_rejects_unknown_direction() -> TestResult {
         let encoded = encode(&Envelope::Request(Request {
             op: "plugin.lsp.hover".to_owned(),
             invocation_id: "msg-1".to_owned(),
             args: json!({"direction": "sideways", "body": "{}"}),
-        }))
-        .expect("encode request frame");
+        }))?;
 
         assert!(matches!(
             PpcEnvelope::decode(&encoded),
             Err(PluginError::Ppc(message)) if message.contains("unknown ppc direction")
         ));
+        Ok(())
     }
 }

@@ -33,6 +33,15 @@ pub enum IsolatedError {
     #[error("global isolated workspace cap reached")]
     QuotaExceeded,
 
+    /// `host_ram_pressure` — projected upperdir reservation exceeds host RAM budget.
+    #[error("host RAM gate refuses new isolated workspace")]
+    HostRamPressure {
+        /// Bytes required for the next workspace admission.
+        required_bytes: u64,
+        /// Bytes admitted by the current host-memory budget.
+        budget_bytes: u64,
+    },
+
     /// `setup_timeout` — a setup phase exceeded its deadline (rollback runs).
     #[error("setup timed out at step {step}")]
     SetupTimeout {
@@ -65,16 +74,17 @@ pub enum IsolatedError {
 
 impl IsolatedError {
     /// The wire error `kind` string this error maps to.
-    pub fn kind(&self) -> &'static str {
+    #[must_use]
+    pub const fn kind(&self) -> &'static str {
         match self {
             Self::FeatureDisabled => "feature_disabled",
             Self::InvalidArgument(_) => "invalid_argument",
             Self::AlreadyOpen => "already_open",
             Self::NotOpen => "not_open",
             Self::QuotaExceeded => "quota_exceeded",
+            Self::HostRamPressure { .. } => "host_ram_pressure",
             Self::SetupTimeout { .. } => "setup_timeout",
-            Self::SetupFailed { .. } => "setup_failed",
-            Self::NetworkUnavailable(_) => "setup_failed",
+            Self::SetupFailed { .. } | Self::NetworkUnavailable(_) => "setup_failed",
             Self::AuditWrite { .. } => "internal_error",
         }
     }

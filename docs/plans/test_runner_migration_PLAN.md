@@ -53,6 +53,17 @@ Python sandbox infra is removed.
 - Convert runner sandbox coverage to the Rust sandbox contract: non-login Bash
   command/session semantics, Rust PPC plugin service behavior, Rust isolated
   workspace lifecycle, and Rust-only daemon/runner paths.
+- Use the existing root sandbox benchmark scripts as the reference for fast
+  sandbox setup, artifact upload, runtime startup, and live-gate evidence:
+  `backend/scripts/bench_sandbox_e2e.py`,
+  `backend/scripts/bench_rust_daemon_phase2.py`,
+  `backend/scripts/bench_rust_daemon_phase3.py`,
+  `backend/scripts/bench_rust_daemon_phase3t_pty.py`,
+  `backend/scripts/bench_rust_daemon_phase3t_av7_parity.py`,
+  `backend/scripts/bench_rust_daemon_phase3t_mixed_non_plugin.py`,
+  `backend/scripts/bench_rust_daemon_phase3t_section7_non_plugin.py`,
+  `backend/scripts/bench_rust_daemon_isolated_inspection.py`, and
+  `backend/scripts/bench_plugin_refresh_strategies.py`.
 - Set live concurrent sandbox runners to `3` and verify that three parallel
   live E2E lanes run without exceeding sandbox quota or leaking leases.
 - Define the final pass condition for deleting Python sandbox infra.
@@ -91,6 +102,17 @@ Python sandbox infra is removed.
 - `ephemeralos.yaml` already sets `runner.sandbox_quota: 3`; `RunnerConfig`
   currently defaults `sandbox_quota` to `5`. The migration should make the
   three-runner live E2E contract explicit and tested.
+- The current fast-setup references are
+  `backend/scripts/bench_sandbox_e2e.py`,
+  `backend/scripts/bench_rust_daemon_phase2.py`,
+  `backend/scripts/bench_rust_daemon_phase3.py`,
+  `backend/scripts/bench_rust_daemon_phase3t_pty.py`,
+  `backend/scripts/bench_rust_daemon_phase3t_av7_parity.py`,
+  `backend/scripts/bench_rust_daemon_phase3t_mixed_non_plugin.py`,
+  `backend/scripts/bench_rust_daemon_phase3t_section7_non_plugin.py`,
+  `backend/scripts/bench_rust_daemon_isolated_inspection.py`, and
+  `backend/scripts/bench_plugin_refresh_strategies.py`; do not invent a
+  parallel provisioning path for the runner before checking those helpers.
 - `backend/src/task_center_runner/agent/mock/tool_scripts.py` imports
   `sandbox.occ.service.AUTO_SQUASH_MAX_DEPTH` directly. Any runner import from
   Python sandbox internals is a blocker before Python sandbox removal.
@@ -362,14 +384,20 @@ resource leakage or false serialization.
    and document that it is the live E2E runner cap.
 3. Gate fixture provisioning with a semaphore of size `3` so tests cannot
    accidentally overrun the configured sandbox cap.
-4. Add a smoke command for parallel live execution:
+4. Build fixture provisioning from the fast setup path already exercised by
+   `backend/scripts/bench_sandbox_e2e.py`,
+   `backend/scripts/bench_rust_daemon_phase3t_pty.py`, and
+   `backend/scripts/bench_rust_daemon_isolated_inspection.py`: build/upload the
+   Rust `eosd` artifact once, start the Rust runtime through the same bootstrap
+   path, and then lease at most three live sandboxes to pytest workers.
+5. Add a smoke command for parallel live execution:
 
 ```bash
 EOS_SANDBOX_PROVIDER=docker EOS_SANDBOX_RUNTIME=rust \
 uv run pytest -q -n 3 backend/src/test_runner/tests/mock/sandbox/project_build
 ```
 
-5. Add a teardown assertion that all three lanes release:
+6. Add a teardown assertion that all three lanes release:
    sandbox leases, daemon invocations, PTY/session handles, plugin services, and
    isolated workspace holders.
 
@@ -389,6 +417,10 @@ Goal: attach the runner cutover to measured Rust sandbox evidence.
 
 Required benchmark/script lanes:
 
+These scripts are also the fast-setup implementation reference for live E2E
+fixture provisioning; runner code should reuse or extract their setup pieces
+instead of creating a second sandbox bootstrap path.
+
 ```bash
 uv run python backend/scripts/build_upload_eosd_docker.py --arch amd64
 uv run python backend/scripts/bench_sandbox_e2e.py
@@ -396,6 +428,9 @@ uv run python backend/scripts/bench_rust_daemon_phase2.py
 uv run python backend/scripts/bench_rust_daemon_phase3.py
 uv run python backend/scripts/bench_rust_daemon_phase3t_pty.py
 uv run python backend/scripts/bench_rust_daemon_phase3t_av7_parity.py
+uv run python backend/scripts/bench_rust_daemon_phase3t_mixed_non_plugin.py
+uv run python backend/scripts/bench_rust_daemon_phase3t_section7_non_plugin.py
+uv run python backend/scripts/bench_rust_daemon_isolated_inspection.py
 uv run python backend/scripts/bench_plugin_refresh_strategies.py
 ```
 

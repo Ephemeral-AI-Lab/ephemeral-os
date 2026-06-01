@@ -42,7 +42,8 @@ pub struct PluginServiceStatus {
 }
 
 impl PluginServiceStatus {
-    pub fn new(key: PluginServiceKey) -> Self {
+    #[must_use]
+    pub const fn new(key: PluginServiceKey) -> Self {
         Self {
             key,
             state: PluginServiceState::Starting,
@@ -55,6 +56,11 @@ impl PluginServiceStatus {
     }
 
     /// Ensure this status is current before a read-only request answers.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PluginError::ProjectionStale`] when the service is not ready or
+    /// is ready for a different manifest key.
     pub fn require_ready_on_manifest(&self, target_manifest_key: &str) -> Result<()> {
         if self.state != PluginServiceState::Ready {
             return Err(PluginError::ProjectionStale(format!(
@@ -79,6 +85,7 @@ pub struct PluginServiceRegistry {
 }
 
 impl PluginServiceRegistry {
+    #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
@@ -90,10 +97,16 @@ impl PluginServiceRegistry {
             .or_insert_with(|| PluginServiceStatus::new(key))
     }
 
+    #[must_use]
     pub fn get(&self, key: &PluginServiceKey) -> Option<&PluginServiceStatus> {
         self.services.get(key)
     }
 
+    /// Mark a registered service ready for `manifest_key`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PluginError::Ensure`] when `key` has not been registered.
     pub fn mark_ready(&mut self, key: &PluginServiceKey, manifest_key: String) -> Result<()> {
         let status = self.services.get_mut(key).ok_or_else(|| {
             PluginError::Ensure(format!(
@@ -107,6 +120,11 @@ impl PluginServiceRegistry {
         Ok(())
     }
 
+    /// Mark a registered service stale.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PluginError::Ensure`] when `key` has not been registered.
     pub fn mark_stale(&mut self, key: &PluginServiceKey, reason: impl Into<String>) -> Result<()> {
         let status = self.services.get_mut(key).ok_or_else(|| {
             PluginError::Ensure(format!(
@@ -119,14 +137,17 @@ impl PluginServiceRegistry {
         Ok(())
     }
 
+    #[must_use]
     pub fn statuses(&self) -> Vec<&PluginServiceStatus> {
         self.services.values().collect()
     }
 
+    #[must_use]
     pub fn len(&self) -> usize {
         self.services.len()
     }
 
+    #[must_use]
     pub fn is_empty(&self) -> bool {
         self.services.is_empty()
     }
@@ -135,43 +156,46 @@ impl PluginServiceRegistry {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::service::PluginServiceKeyParts;
     use crate::service::{RefreshStrategy, ServiceMode};
 
-    fn key(profile: &str) -> PluginServiceKey {
-        PluginServiceKey::new(
-            "/eos/plugin/layer-stack",
-            "/eos/plugin/workspace",
-            "lsp",
-            "digest-a",
-            "pyright",
-            profile,
-            ServiceMode::WorkspaceSnapshotRefresh,
-            RefreshStrategy::RemountWorkspaceAndNotify,
-        )
-        .expect("valid key")
+    type TestResult = std::result::Result<(), PluginError>;
+
+    fn key(profile: &str) -> Result<PluginServiceKey> {
+        PluginServiceKey::new(PluginServiceKeyParts {
+            layer_stack_root: "/eos/plugin/layer-stack".to_owned(),
+            workspace_root: "/eos/plugin/workspace".to_owned(),
+            plugin_id: "lsp".to_owned(),
+            plugin_digest: "digest-a".to_owned(),
+            service_id: "pyright".to_owned(),
+            service_profile_digest: profile.to_owned(),
+            service_mode: ServiceMode::WorkspaceSnapshotRefresh,
+            refresh_strategy: RefreshStrategy::RemountWorkspaceAndNotify,
+        })
     }
 
     #[test]
-    fn registry_reuses_exact_key_only() {
+    fn registry_reuses_exact_key_only() -> TestResult {
         let mut registry = PluginServiceRegistry::new();
-        registry.ensure(key("profile-a"));
-        registry.ensure(key("profile-a"));
-        registry.ensure(key("profile-b"));
+        registry.ensure(key("profile-a")?);
+        registry.ensure(key("profile-a")?);
+        registry.ensure(key("profile-b")?);
         assert_eq!(registry.len(), 2);
+        Ok(())
     }
 
     #[test]
-    fn ready_check_rejects_stale_manifest() {
+    fn ready_check_rejects_stale_manifest() -> TestResult {
         let mut registry = PluginServiceRegistry::new();
-        let key = key("profile-a");
+        let key = key("profile-a")?;
         registry.ensure(key.clone());
-        registry
-            .mark_ready(&key, "manifest@1".to_owned())
-            .expect("mark ready");
-        assert!(registry
-            .get(&key)
-            .expect("status")
-            .require_ready_on_manifest("manifest@2")
-            .is_err());
+        registry.mark_ready(&key, "manifest@1".to_owned())?;
+        let Some(status) = registry.get(&key) else {
+            return Err(PluginError::Ensure(
+                "expected service status after ensure".to_owned(),
+            ));
+        };
+        assert!(status.require_ready_on_manifest("manifest@2").is_err());
+        Ok(())
     }
 }

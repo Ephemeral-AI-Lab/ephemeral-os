@@ -54,7 +54,10 @@ mod tests {
         assert_eq!(CONNECT_FAILED, 97);
         assert_eq!(IO_FAILED, 98);
         assert_eq!(MAX_REQUEST_BYTES, 16_777_216);
-        assert_eq!(REQUEST_READ_TIMEOUT_S, 30.0);
-        assert_eq!(CONNECT_RETRY_DELAYS_S, [0.25, 0.5, 1.0, 2.0]);
+        assert!((REQUEST_READ_TIMEOUT_S - 30.0).abs() < f64::EPSILON);
+        assert_eq!(
+            CONNECT_RETRY_DELAYS_S.map(f64::to_bits),
+            [0.25_f64, 0.5, 1.0, 2.0].map(f64::to_bits)
+        );
     }
 }

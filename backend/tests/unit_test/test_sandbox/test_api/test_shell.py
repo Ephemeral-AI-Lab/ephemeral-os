@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any, cast
+
 import pytest
 
 from sandbox.api import SandboxCaller, ShellRequest
@@ -106,32 +108,20 @@ async def test_shell_overlay_policy_error_maps_to_rejected_result(
 
 
 @pytest.mark.asyncio
-async def test_shell_dispatch_preserves_argv_command(
+async def test_shell_rejects_argv_command_without_cp4s_flag(
     monkeypatch: pytest.MonkeyPatch,
     recording_transport_factory,
 ) -> None:
-    async def fake_call_daemon_api(sandbox_id, op, args, timeout):
-        del sandbox_id, op, args, timeout
-        return {
-            "success": True,
-            "exit_code": 0,
-            "stdout": "",
-            "stderr": "",
-            "changed_paths": [],
-            "status": "ok",
-            "conflict": None,
-            "conflict_reason": None,
-            "warnings": [],
-            "timings": {"api.shell.total_s": 0.02},
-        }
+    async def fail_call_daemon_api(_sandbox_id, _op, _args, _timeout):
+        raise AssertionError("daemon dispatch should not be called")
 
     del monkeypatch
-    transport = recording_transport_factory(fake_call_daemon_api)
+    transport = recording_transport_factory(fail_call_daemon_api)
 
     result = await shell(
         "sb-shell",
         ShellRequest(
-            command=("true",),
+            command=cast(Any, ("true",)),
             cwd=".",
             timeout=12,
             caller=SandboxCaller(agent_id="agent-1"),
@@ -139,8 +129,11 @@ async def test_shell_dispatch_preserves_argv_command(
         transport=transport,
     )
 
-    assert result.success is True
-    assert transport.calls[0][2]["command"] == ("true",)
+    assert result.success is False
+    assert result.status == "error"
+    assert result.conflict is not None
+    assert result.conflict.reason == "raw_argv_not_supported"
+    assert transport.calls == []
 
 
 @pytest.mark.asyncio

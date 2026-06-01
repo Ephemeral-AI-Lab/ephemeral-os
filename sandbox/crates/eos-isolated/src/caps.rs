@@ -1,6 +1,6 @@
 //! Resource caps and lifecycle config, sourced from the environment.
 //!
-//! Reproduces the `_PipelineConfig.from_env()` defaults byte-for-byte.
+//! Matches the `_PipelineConfig.from_env()` defaults and environment keys.
 //! `// PORT backend/src/sandbox/isolated_workspace/_control_plane/types.py:144-185 — _PipelineConfig`
 
 use std::env;
@@ -22,8 +22,11 @@ pub const CGROUP_ROOT: &str = "/sys/fs/cgroup";
 /// Mount target inside the isolated namespace. `// PORT backend/src/sandbox/isolated_workspace/_control_plane/types.py:21`
 pub const ISOLATED_WORKSPACE_ROOT: &str = "/testbed";
 
-/// RFC1918 egress policy. `allow` (default) leaves private-network egress open;
-/// `deny` installs the RFC1918 drop rules. `// PORT backend/src/sandbox/isolated_workspace/_control_plane/types.py:153,177-179`
+/// RFC1918 egress policy.
+///
+/// `allow` (default) leaves private-network egress open; `deny` installs the
+/// RFC1918 drop rules.
+/// `// PORT backend/src/sandbox/isolated_workspace/_control_plane/types.py:153,177-179`
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Rfc1918Egress {
     /// Private-network egress permitted (default).
@@ -76,9 +79,13 @@ impl Default for ResourceCaps {
 }
 
 impl ResourceCaps {
-    /// Build the caps from the process environment, reproducing
-    /// `_PipelineConfig.from_env()` parsing + clamping exactly.
+    /// Build the caps from the process environment.
+    ///
+    /// This mirrors Python's defaults, environment keys, and clamped fields.
+    /// Malformed numeric values fall back to defaults so daemon startup does
+    /// not fail before it can return a structured isolated-workspace error.
     // PORT backend/src/sandbox/isolated_workspace/_control_plane/types.py:161-185 — _PipelineConfig.from_env
+    #[must_use]
     pub fn from_env() -> Self {
         let mut caps = Self::default();
         caps.enabled = env_bool("EOS_ISOLATED_WORKSPACE_ENABLED", false);

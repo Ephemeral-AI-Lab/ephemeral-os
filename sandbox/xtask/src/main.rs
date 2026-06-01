@@ -6,6 +6,7 @@
 
 use std::env;
 use std::ffi::OsString;
+use std::fmt::Write as _;
 use std::fs;
 use std::io::Read;
 use std::path::{Path, PathBuf};
@@ -25,8 +26,8 @@ fn main() -> Result<()> {
         .and_then(|arg| arg.into_string().ok())
         .as_deref()
     {
-        Some("package") => package(PackageArgs::parse(args)?),
-        Some("help") | Some("--help") | Some("-h") | None => {
+        Some("package") => package(&PackageArgs::parse(args)?),
+        Some("help" | "--help" | "-h") | None => {
             print_help();
             Ok(())
         }
@@ -91,7 +92,7 @@ impl PackageArgs {
     }
 }
 
-fn package(args: PackageArgs) -> Result<()> {
+fn package(args: &PackageArgs) -> Result<()> {
     let root = workspace_root()?;
     let out_dir = absolutize(&root, &args.out_dir);
     fs::create_dir_all(&out_dir)
@@ -232,7 +233,7 @@ fn set_executable(path: &Path) -> Result<()> {
 fn sha256_file(path: &Path) -> Result<String> {
     let mut file = fs::File::open(path).with_context(|| format!("open {}", path.display()))?;
     let mut hasher = Sha256::new();
-    let mut buf = [0_u8; 64 * 1024];
+    let mut buf = vec![0_u8; 64 * 1024];
     loop {
         let n = file
             .read(&mut buf)
@@ -272,7 +273,8 @@ fn write_checksums(out_dir: &Path) -> Result<()> {
             .file_name()
             .and_then(|name| name.to_str())
             .context("artifact filename must be valid UTF-8")?;
-        body.push_str(&format!("{}  {name}\n", sha256_file(&path)?));
+        writeln!(&mut body, "{}  {name}", sha256_file(&path)?)
+            .map_err(|_| anyhow::anyhow!("write checksum body"))?;
     }
     fs::write(out_dir.join("SHA256SUMS"), body)
         .with_context(|| format!("write {}", out_dir.join("SHA256SUMS").display()))

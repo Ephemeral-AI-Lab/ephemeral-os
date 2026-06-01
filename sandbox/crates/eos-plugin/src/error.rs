@@ -1,16 +1,13 @@
-//! Error type for plugin registration, PPC framing, and the three dispatch modes.
+//! Error type for plugin registration, manifests, service state, and PPC framing.
 
 use thiserror::Error;
 
-/// Failures surfaced by the plugin op registry, the PPC channel, the warm-server
-/// registry, and the three dispatch modes.
+/// Failures surfaced by plugin contracts and the PPC channel.
 ///
 /// The Python side raises bare `PluginOpRegistrationError` / `PluginOpConflictError`
 /// / `PluginEnsureError` / `RuntimeError` at the same boundaries; this enum
 /// reproduces those failure classes as a typed surface the daemon translates into
-/// the wire error envelope. The OCC-publish failures from the WRITE_ALLOWED and
-/// self-managed paths flow up through [`EphemeralError`](eos_ephemeral::EphemeralError)
-/// (the SAME single-writer port — no second writer, MF-1).
+/// the wire error envelope. Concrete overlay/OCC failures are daemon-owned.
 #[derive(Debug, Error)]
 #[non_exhaustive]
 pub enum PluginError {
@@ -40,7 +37,7 @@ pub enum PluginError {
     #[error("plugin projection stale: {0}")]
     ProjectionStale(String),
 
-    /// A PPC envelope could not be framed/parsed, or the warm server's reply
+    /// A PPC envelope could not be framed/parsed, or the service process reply
     /// carried an unknown / unmatched message id.
     /// `// PORT backend/src/sandbox/ephemeral_workspace/plugin/overlay_child.py:39-45 — payload decode`
     #[error("ppc channel error: {0}")]
@@ -52,18 +49,6 @@ pub enum PluginError {
     /// `// PORT backend/src/sandbox/ephemeral_workspace/plugin/op_registry.py:14-23 — isolated-mode blocks plugin ops`
     #[error("plugin operations are forbidden while an isolated workspace is active")]
     ForbiddenInIsolatedWorkspace,
-
-    /// The WRITE_ALLOWED / self-managed overlay+OCC publish cycle failed. Carries
-    /// the underlying single-writer error so the failure provenance (the ONE
-    /// `occ-commit-queue` writer per `layer_stack_root`) is preserved.
-    /// `// PORT backend/src/sandbox/ephemeral_workspace/plugin/overlay_dispatch.py:197-203 — plugin_overlay_publish_failed`
-    #[error("plugin overlay publish failed: {0}")]
-    Overlay(#[from] eos_ephemeral::EphemeralError),
-
-    /// A read/snapshot through the layer-stack HINGE failed (projection path).
-    /// `// PORT backend/src/sandbox/ephemeral_workspace/plugin/projection.py:97-101 — active_manifest_key`
-    #[error("layer stack projection failed: {0}")]
-    Projection(#[from] eos_layerstack::LayerStackError),
 }
 
 /// Convenience alias for fallible plugin operations.

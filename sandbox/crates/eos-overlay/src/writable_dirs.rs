@@ -31,6 +31,12 @@ pub struct OverlayWritableDirs {
 /// Mirrors Python `overlay_writable_root()`: create `OVERLAY_WRITABLE_ROOT`
 /// only when its parent is already a directory, then require the result to be a
 /// directory or raise [`OverlayError::WritableRootUnavailable`]. No fallback.
+///
+/// # Errors
+///
+/// Returns [`OverlayError::Capture`] when directory creation fails, or
+/// [`OverlayError::WritableRootUnavailable`] when the canonical root is not a
+/// directory.
 /// `// PORT backend/src/sandbox/overlay/writable_dirs.py:29-43 — overlay_writable_root`
 pub fn overlay_writable_root() -> Result<PathBuf> {
     // PORT backend/src/sandbox/overlay/writable_dirs.py:36-42 — mkdir-if-parent then is_dir gate
@@ -48,6 +54,11 @@ pub fn overlay_writable_root() -> Result<PathBuf> {
 }
 
 /// Create and return the `upper`/`work` dirs for one overlay instance.
+///
+/// # Errors
+///
+/// Returns [`OverlayError::Capture`] when either writable directory cannot be
+/// created.
 /// `// PORT backend/src/sandbox/overlay/writable_dirs.py:46-52 — allocate_overlay_writable_dirs`
 pub fn allocate_overlay_writable_dirs(run_dir: &Path) -> Result<OverlayWritableDirs> {
     // PORT backend/src/sandbox/overlay/writable_dirs.py:48-52 — mkdir upper/work (parents, exist_ok)
@@ -66,15 +77,18 @@ pub fn allocate_overlay_writable_dirs(run_dir: &Path) -> Result<OverlayWritableD
 mod tests {
     use super::allocate_overlay_writable_dirs;
 
+    type TestResult<T = ()> = Result<T, Box<dyn std::error::Error + Send + Sync>>;
+
     #[test]
-    fn allocates_upper_and_work_dirs() {
+    fn allocates_upper_and_work_dirs() -> TestResult {
         let run_dir = std::env::temp_dir().join(format!("eos-overlay-test-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&run_dir);
 
-        let dirs = allocate_overlay_writable_dirs(&run_dir).expect("allocate dirs");
+        let dirs = allocate_overlay_writable_dirs(&run_dir)?;
         assert!(dirs.upperdir.is_dir());
         assert!(dirs.workdir.is_dir());
 
         let _ = std::fs::remove_dir_all(&run_dir);
+        Ok(())
     }
 }

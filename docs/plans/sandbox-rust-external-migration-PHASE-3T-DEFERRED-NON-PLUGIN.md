@@ -13,18 +13,42 @@ implementation, intentionally excluding:
 - plugin PPC execution and AV-10 plugin parity;
 - Daytona live execution.
 
-## Current Closeout Refresh - 2026-06-01
+## Current Closeout Refresh - 2026-06-02
 
-Latest non-plugin evidence is green on current amd64 artifact
-`81eb221542666647a3b0a80a0ed254dff674a0ead27d814bfcea26bd14996d53`:
+Latest isolated-workspace command/PTY/network evidence is green on rebuilt
+amd64 artifact `2cd435f95b3de918c6344c647c84ee67b78990b6bc9ff9012d804342a5c5b699`.
+The broader non-plugin sidecar gates remain green on the 2026-06-01 artifact
+listed below.
 
-- `bench/phase3t-rust-isolated-inspection-docker-20260601.json`
-  (`run_id=local-7d7cbbea6e84`) passed `gate_pass=true` with 74/74 scenario
-  checks green. It now covers isolated PTY stdin, progress, natural completion
-  notification, timeout notification, explicit cancel, cancel duplicate
-  suppression, and the literal two-agent port `3000` isolation case: both
-  isolated agents bind `127.0.0.1:3000`, each reaches its own server, and
-  cross-agent access is blocked.
+- `bench/phase3t-rust-isolated-inspection-docker-20260602-pty-cancel-termination-fix.json`
+  (`run_id=local-b913335431e4`) passed `gate_pass=true` with 74/74 scenario
+  checks green after PTY cancel and isolated force-exit cleanup were routed
+  through the shared process-group termination helper. The run covers PTY
+  progress, stdin echo, natural completion notification, timeout notification,
+  explicit cancel, cancel duplicate suppression, active-PTY exit blocking and
+  force cancel, scratch/no-OCC-publish behavior, leak inspection, and the
+  two-agent same-port `3000` network-isolation probe. The target image still
+  lacked `ip` and `nft`.
+- `bench/phase3t-rust-isolated-inspection-docker-20260602-host-ram-gate.json`
+  (`run_id=local-d416d299bff8`) passed `gate_pass=true` with 74/74 scenario
+  checks green after Rust `eos-isolated` began enforcing Python-parity
+  `host_ram_pressure` admission before snapshot/lease acquisition. The bench
+  sets `EOS_ISOLATED_WORKSPACE_UPPERDIR_BYTES=67108864` so its two-agent port
+  `3000` namespace-isolation probe exercises network isolation rather than
+  intentionally tripping the host RAM gate on memory-constrained Docker hosts.
+  The target image still lacked `ip` and `nft`, both isolated agents entered,
+  same-port binding/isolation remained green, and forced exit left
+  `active_leases_after=0`.
+- `bench/phase3t-rust-isolated-inspection-docker-20260602-post-ephemeral-removal.json`
+  (`run_id=local-d8e7bff8015a`) passed `gate_pass=true` with 74/74 scenario
+  checks green after the `eos-ephemeral` crate removal. It covers isolated PTY
+  stdin, progress, natural completion notification, timeout notification,
+  explicit cancel, cancel duplicate suppression, active-PTY exit blocking and
+  force cancel, scratch/no-OCC-publish behavior, and the literal two-agent port
+  `3000` isolation case: both isolated agents bind `127.0.0.1:3000`, each
+  reaches its own server, cross-agent access is blocked, force exit cancels the
+  server PTYs, and served files are not published to the shared workspace. The
+  preflight still shows the target image lacks `ip` and `nft`.
 - `bench/phase3t-pty-command-docker-20260601-current-eos-paths-post-notify.json`
   (`run_id=local-7b9deab71f9f`) passed `gate_pass=true`,
   `operation_samples_ok=true`, and `load.gate_pass=true`; all 50 operation
@@ -66,9 +90,11 @@ Current state:
   `EOS_ISOLATED_WORKSPACE_ENABLED=true`: `enter` opens an agent-keyed private
   scratch/lease handle, `status`/`list_open` report live handles, `exit`
   discards scratch, and `test_reset` clears the singleton under the test
-  harness gate. Linux `exec_command` / PTY start now consult the active
-  `agent_id` handle and return isolated/no-OCC-publish results; active PTY
-  records block `exit` unless the caller uses the force-cancel path.
+  harness gate. `enter` now rejects both `quota_exceeded` and
+  `host_ram_pressure` before taking a snapshot/lease. Linux `exec_command` /
+  PTY start now consult the active `agent_id` handle and return
+  isolated/no-OCC-publish results; active PTY records block `exit` unless the
+  caller uses the force-cancel path.
 - Rust `eos-runner` now has a Linux `RunMode::SetNs` implementation instead of
   the previous `todo!()` body: it validates namespace FDs, joins the optional
   isolated cgroup, calls `setns` in `user` -> `mnt` -> `pid` -> `net` order, and
@@ -100,9 +126,9 @@ Current state:
   `/proc/self/mountinfo` is available, and PTY force-cancel cleanup arrays.
 - The live Docker/dask isolated inspection rerun is closed on the current amd64
   artifact
-  `81eb221542666647a3b0a80a0ed254dff674a0ead27d814bfcea26bd14996d53`:
-  `bench/phase3t-rust-isolated-inspection-docker-20260601.json`
-  (`run_id=local-7d7cbbea6e84`) passed 74/74 checks with the target image
+  `ddb923eb0f1a3e6b1cd367ab978f7056088175532a26c6b262a94d3ff029b6e7`:
+  `bench/phase3t-rust-isolated-inspection-docker-20260602-post-ephemeral-removal.json`
+  (`run_id=local-d8e7bff8015a`) passed 74/74 checks with the target image
   lacking `ip` and `nft`. It verifies holder process teardown, zero mountinfo
   refs, removed cgroup/scratch/upper/workdir, released leases, removed host
   veth, cleared active PTY state after force cancel, isolated PTY
@@ -156,11 +182,21 @@ Last focused verification:
   `test_tools/test_schema_summary.py`, `test_no_claude_code_collision.py`,
   `test_sandbox_toolkit/test_toolkit.py`, `test_subagent_retry.py`, and
   `test_tool_execution.py`.
-- `backend/tests/unit_test/test_task_center_runner/test_probe_bridge.py`
-  passed.
+- The Rust migration closeout does not use the `task_center_runner` harness.
+  Live command/PTY/isolated evidence comes from the Rust daemon bench scripts
+  and focused Rust/engine unit slices listed here.
 - `ruff check` passed on the touched Python files.
 - `git diff --check` passed.
-- Rust focused isolated checks passed:
+- Current post-cleanup Rust verification passed: `cargo check --workspace`,
+  `cargo fmt --all --check`, `cargo test -p eos-runner -p eos-isolated -p
+  eos-ns-holder -p eos-plugin`, `cargo test -p eos-daemon isolated_workspace
+  --test phase2_read_paths`, `cargo test -p eos-daemon
+  active_pty_records_block_exit_until_cleared`, `cargo clippy --workspace
+  --all-targets -- -D warnings`, `cargo check --workspace --target
+  x86_64-unknown-linux-musl`, and `cargo run -p xtask -- package --target
+  x86_64-unknown-linux-musl` (amd64 package SHA
+  `ddb923eb0f1a3e6b1cd367ab978f7056088175532a26c6b262a94d3ff029b6e7`).
+- Earlier focused isolated checks also passed:
   `cargo test -p eos-runner` (`7 passed`), `cargo check -p eos-runner --target
   x86_64-unknown-linux-musl`, `cargo check -p eos-isolated`,
   `cargo check -p eos-isolated --target x86_64-unknown-linux-musl`,
@@ -170,8 +206,7 @@ Last focused verification:
   (`3 passed`), `cargo test -p eos-daemon
   active_pty_records_block_exit_until_cleared` (`1 passed`),
   `cargo check -p eos-daemon --target x86_64-unknown-linux-musl`, and
-  `cargo check -p eosd --target x86_64-unknown-linux-musl`. Existing warnings
-  are from pre-existing `eos-overlay`/`eos-ephemeral` code.
+  `cargo check -p eosd --target x86_64-unknown-linux-musl`.
 - Follow-up focused inspection checks passed after the exit-inspection update:
   `cargo fmt --all --check`, `cargo check -p eos-ns-holder -p eos-isolated -p
   eos-daemon --target x86_64-unknown-linux-musl`, `cargo check -p
@@ -182,15 +217,15 @@ Last focused verification:
   `cargo test -p eos-runner`, `cargo test -p eos-ns-holder`, `cargo test -p
   eos-daemon isolated_workspace --test phase2_read_paths`, `cargo test -p
   eos-daemon active_pty_records_block_exit_until_cleared`, and both
-  `xtask package` targets. Current packaged SHAs are amd64
+  `xtask package` targets. Earlier packaged SHAs were amd64
   `81eb221542666647a3b0a80a0ed254dff674a0ead27d814bfcea26bd14996d53` and
   arm64 `e07a59546cecf931922386a91bf08a8ee5e1fa08747cbc45ee56462eeac4417b`.
-- Live isolated inspection rerun passed:
+- Current post-cleanup live isolated inspection rerun passed:
   `uv run python backend/scripts/bench_rust_daemon_isolated_inspection.py
   --artifact sandbox/dist/eosd-linux-amd64 --report
-  bench/phase3t-rust-isolated-inspection-docker-20260601.json`; report
-  `run_id=local-7d7cbbea6e84`, artifact SHA
-  `81eb221542666647a3b0a80a0ed254dff674a0ead27d814bfcea26bd14996d53`, 74/74
+  bench/phase3t-rust-isolated-inspection-docker-20260602-post-ephemeral-removal.json`;
+  report `run_id=local-d8e7bff8015a`, artifact SHA
+  `ddb923eb0f1a3e6b1cd367ab978f7056088175532a26c6b262a94d3ff029b6e7`, 74/74
   scenario checks passed, preflight showed `ip=nft=`, cgroup writable, and the
   exit inspection reported zero leaked leases/mountinfo refs/cgroup/scratch
   state. The same report now covers isolated PTY stdin/progress/natural
@@ -232,9 +267,14 @@ The PTY command implementation is accepted for the Docker shared-workspace path:
 - PTY completion notifications now fire once for natural exit and timeout, and
   explicit cancel suppresses duplicate completion notification.
 
-## Deferred Items
+## Closed Deferred Item Ledger
 
 ### 1. Rust Isolated-Workspace Command/PTY Integration
+
+Status: closed for the Phase 3T non-plugin command-routing/control-plane
+sidecar. This status does not close the broader Phase 3.5 / AV-9 isolated
+lifecycle gate, which still requires Python-parity lifecycle coverage and
+CP-1b BYO-image matrix validation.
 
 Rust daemon isolated-workspace public lifecycle op names are now backed by
 daemon-local `eos-isolated` session state. The first Rust slice replaces the
@@ -264,7 +304,10 @@ Required work:
   non-forced active-PTY exit block;
 - preserve natural PTY exit visibility only inside the same isolated workspace
   until isolated exit;
-- preserve isolated exit scratch discard and pinned snapshot lease release.
+- preserve isolated exit scratch discard and pinned snapshot lease release;
+- preserve the ResourceCaps admission gates: `TOTAL_CAP` quota and
+  `host_ram_pressure` with structured `required_bytes` / `budget_bytes`
+  details.
 
 Minimum evidence:
 
@@ -289,16 +332,36 @@ Minimum evidence:
 - ✅ live Docker rerun asserting the new inspection fields show no leaked
   holder, mountinfo refs, cgroups, leases, scratch dirs, or active PTY records
   under the real isolated kernel path:
-  `bench/phase3t-rust-isolated-inspection-docker-20260601.json`.
+  `bench/phase3t-rust-isolated-inspection-docker-20260602-post-ephemeral-removal.json`;
 - ✅ live Docker isolated PTY-control coverage for progress, stdin write,
   natural-exit notification, timeout notification, explicit cancel, and cancel
   duplicate suppression in
-  `bench/phase3t-rust-isolated-inspection-docker-20260601.json`
-  (`run_id=local-7d7cbbea6e84`);
+  `bench/phase3t-rust-isolated-inspection-docker-20260602-post-ephemeral-removal.json`
+  (`run_id=local-d8e7bff8015a`);
 - ✅ live Docker isolated network same-port coverage: two agents both bind TCP
   port `3000`, each reaches its own localhost server, cross-agent access is
   blocked, force exit cancels the server PTYs, and served files are not
-  published after exit.
+  published after exit;
+- ✅ ResourceCaps host-capacity parity coverage: focused Rust tests cover
+  `MemAvailable` parsing, Python-style floor conversion, required-byte
+  saturation, and `host_ram_pressure` rejection; daemon tests preserve
+  `required_bytes` / `budget_bytes` on the wire; live Docker rerun
+  `bench/phase3t-rust-isolated-inspection-docker-20260602-host-ram-gate.json`
+  proves the current rebuilt artifact stays green with an explicit
+  benchmark-only upperdir cap.
+- ✅ post-cleanup current-checkout rerun:
+  `bench/phase3t-rust-isolated-inspection-docker-20260602-post-ephemeral-removal.json`
+  (`run_id=local-d8e7bff8015a`, artifact SHA
+  `ddb923eb0f1a3e6b1cd367ab978f7056088175532a26c6b262a94d3ff029b6e7`)
+  passed the same 74/74 isolated inspection checks after the `eos-ephemeral`
+  crate removal.
+- ✅ latest termination-cleanup rerun:
+  `bench/phase3t-rust-isolated-inspection-docker-20260602-pty-cancel-termination-fix.json`
+  (`run_id=local-b913335431e4`, artifact SHA
+  `2cd435f95b3de918c6344c647c84ee67b78990b6bc9ff9012d804342a5c5b699`)
+  passed the same 74/74 isolated inspection checks after explicit PTY cancel
+  and isolated force-exit cleanup were routed through the shared process-group
+  termination helper.
 
 ### 2. Typed Subagent Surface
 

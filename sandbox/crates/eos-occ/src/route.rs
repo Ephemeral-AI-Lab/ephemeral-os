@@ -63,12 +63,14 @@ pub enum OccStatus {
 
 impl OccStatus {
     /// Did this path actually land in a published manifest?
-    pub fn is_published(self) -> bool {
+    #[must_use]
+    pub const fn is_published(self) -> bool {
         matches!(self, Self::Accepted | Self::Committed)
     }
 
     /// Is this a success outcome (published, or a deliberate drop)?
-    pub fn is_success(self) -> bool {
+    #[must_use]
+    pub const fn is_success(self) -> bool {
         matches!(self, Self::Accepted | Self::Committed | Self::Dropped)
     }
 }
@@ -117,6 +119,7 @@ pub struct ChangesetResult {
 
 impl ChangesetResult {
     /// True iff every path reached a success status.
+    #[must_use]
     pub fn success(&self) -> bool {
         self.files.iter().all(|f| f.status.is_success())
     }

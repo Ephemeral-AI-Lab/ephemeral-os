@@ -31,8 +31,10 @@ pub enum RunMode {
     SetNs,
 }
 
-/// A raw file descriptor handle. `#[repr(transparent)]` so it can cross the FFI
-/// boundary into the `setns(2)` syscall unchanged.
+/// A raw file descriptor handle.
+///
+/// `#[repr(transparent)]` lets this cross the FFI boundary into the `setns(2)`
+/// syscall unchanged.
 /// `// PORT backend/src/sandbox/isolated_workspace/scripts/setns_exec.py:14-19 — ns_fds`
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[repr(transparent)]
@@ -43,7 +45,9 @@ pub struct Fd(pub RawFd);
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct WorkspaceRoot(pub PathBuf);
 
-/// The ns-holder's pre-opened namespace FDs, applied in this exact order:
+/// The ns-holder's pre-opened namespace FDs.
+///
+/// Applied in this exact order:
 /// `user` (privilege change), `mnt` (mount table), `pid` (descendants only,
 /// before `fork`), `net`. A wrong order breaks the setns sequence.
 /// `// PORT backend/src/sandbox/isolated_workspace/scripts/setns_exec.py:54-66 — setns order`
@@ -113,11 +117,13 @@ pub struct RunRequest {
     pub timeout_seconds: Option<f64>,
 }
 
-/// The runner's result: the in-namespace tool result JSON plus the child's exit
-/// code. The Python helpers return the tool primitive's `asdict` dict verbatim
+/// The runner's result.
+///
+/// Contains the in-namespace tool result JSON plus the child's exit code. The
+/// Python helpers return the tool primitive's `asdict` dict verbatim
 /// (defaulting `workspace`), which the runner forwards opaquely as [`Value`].
 /// `// PORT backend/src/sandbox/overlay/namespace_runner.py:192-205 — result forwarding`
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct RunResult {
     /// The tool primitive's result object (`SandboxResultBase`/`GuardedResultBase`
     /// `asdict`), forwarded unchanged.

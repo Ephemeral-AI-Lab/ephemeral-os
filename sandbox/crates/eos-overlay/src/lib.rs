@@ -33,7 +33,7 @@ pub mod path_change;
 pub mod writable_dirs;
 
 pub use error::{OverlayError, Result};
-pub use kernel_mount::{mount_overlay, OverlayHandle, OverlayMount};
+pub use kernel_mount::{mount_overlay, unmount_overlay, OverlayHandle, OverlayMount};
 pub use path_change::{capture_upperdir, OverlayPathChange, OverlayPathChangeKind};
 pub use writable_dirs::{
     allocate_overlay_writable_dirs, overlay_writable_root, OverlayWritableDirs,

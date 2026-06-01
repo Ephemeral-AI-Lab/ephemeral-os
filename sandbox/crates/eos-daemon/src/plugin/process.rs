@@ -7,30 +7,45 @@
 
 use std::collections::BTreeMap;
 use std::io::ErrorKind;
+#[cfg(all(target_os = "linux", not(test)))]
+use std::io::Write;
 use std::os::unix::net::UnixListener;
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
 use std::time::{Duration, Instant};
 
 use eos_plugin::{PluginError, PluginServiceKey};
+#[cfg(all(target_os = "linux", not(test)))]
+use eos_protocol::Intent;
+#[cfg(all(target_os = "linux", not(test)))]
+use eos_runner::{RunMode, RunRequest, ToolCall, WorkspaceRoot};
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
 
 use super::ppc_router::PpcClient;
 use crate::error::DaemonError;
 
-pub(crate) const PLUGIN_PPC_ROOT: &str = "/eos/plugin/ppc";
-pub(crate) const ENV_PLUGIN_PPC_SOCKET: &str = "EOS_PLUGIN_PPC_SOCKET";
-pub(crate) const ENV_PLUGIN_LAYER_STACK_ROOT: &str = "EOS_PLUGIN_LAYER_STACK_ROOT";
-pub(crate) const ENV_PLUGIN_WORKSPACE_ROOT: &str = "EOS_PLUGIN_WORKSPACE_ROOT";
-pub(crate) const ENV_PLUGIN_ID: &str = "EOS_PLUGIN_ID";
-pub(crate) const ENV_PLUGIN_DIGEST: &str = "EOS_PLUGIN_DIGEST";
-pub(crate) const ENV_PLUGIN_SERVICE_ID: &str = "EOS_PLUGIN_SERVICE_ID";
-pub(crate) const ENV_PLUGIN_SERVICE_PROFILE_DIGEST: &str = "EOS_PLUGIN_SERVICE_PROFILE_DIGEST";
-pub(crate) const ENV_PLUGIN_PPC_PROTOCOL_VERSION: &str = "EOS_PLUGIN_PPC_PROTOCOL_VERSION";
+pub(super) const PLUGIN_PPC_ROOT: &str = "/eos/plugin/ppc";
+pub(super) const ENV_PLUGIN_PPC_SOCKET: &str = "EOS_PLUGIN_PPC_SOCKET";
+pub(super) const ENV_PLUGIN_LAYER_STACK_ROOT: &str = "EOS_PLUGIN_LAYER_STACK_ROOT";
+pub(super) const ENV_PLUGIN_WORKSPACE_ROOT: &str = "EOS_PLUGIN_WORKSPACE_ROOT";
+pub(super) const ENV_PLUGIN_ID: &str = "EOS_PLUGIN_ID";
+pub(super) const ENV_PLUGIN_DIGEST: &str = "EOS_PLUGIN_DIGEST";
+pub(super) const ENV_PLUGIN_SERVICE_ID: &str = "EOS_PLUGIN_SERVICE_ID";
+pub(super) const ENV_PLUGIN_SERVICE_PROFILE_DIGEST: &str = "EOS_PLUGIN_SERVICE_PROFILE_DIGEST";
+pub(super) const ENV_PLUGIN_PPC_PROTOCOL_VERSION: &str = "EOS_PLUGIN_PPC_PROTOCOL_VERSION";
+pub(super) const ENV_PLUGIN_WORKSPACE_MOUNTED: &str = "EOS_PLUGIN_WORKSPACE_MOUNTED";
 
 #[derive(Debug, Clone)]
-pub(crate) struct PluginProcessSpec {
+pub(super) struct PluginServiceOverlay {
+    pub(super) run_dir: PathBuf,
+    pub(super) layer_paths: Vec<PathBuf>,
+    pub(super) upperdir: PathBuf,
+    pub(super) workdir: PathBuf,
+}
+
+#[derive(Debug, Clone)]
+pub(super) struct PluginProcessSpec {
     key: PluginServiceKey,
     command: Vec<String>,
     ppc_protocol_version: u32,
@@ -94,6 +109,7 @@ impl PluginProcessSpec {
                 ENV_PLUGIN_PPC_PROTOCOL_VERSION,
                 self.ppc_protocol_version.to_string(),
             ),
+            (ENV_PLUGIN_WORKSPACE_MOUNTED, "0".to_owned()),
         ])
     }
 
@@ -101,11 +117,25 @@ impl PluginProcessSpec {
         self.key.service_instance_id()
     }
 
+    pub(crate) const fn key(&self) -> &PluginServiceKey {
+        &self.key
+    }
+
     pub(crate) fn spawn(&self) -> Result<PluginServiceProcess, DaemonError> {
-        let mut command = Command::new(&self.command[0]);
+        let mut env = self.environment();
+        env.insert(ENV_PLUGIN_WORKSPACE_MOUNTED, "0".to_owned());
+        self.spawn_command(&self.command, env)
+    }
+
+    fn spawn_command(
+        &self,
+        argv: &[String],
+        env: BTreeMap<&'static str, String>,
+    ) -> Result<PluginServiceProcess, DaemonError> {
+        let mut command = Command::new(&argv[0]);
         command
-            .args(&self.command[1..])
-            .envs(self.environment())
+            .args(&argv[1..])
+            .envs(env)
             .stdin(Stdio::null())
             .stdout(Stdio::null())
             .stderr(Stdio::null());
@@ -124,18 +154,101 @@ impl PluginProcessSpec {
         })
     }
 
-    pub(crate) fn spawn_connected(
+    pub(crate) fn spawn_connected_with_overlay(
         &self,
+        overlay: Option<&PluginServiceOverlay>,
         timeout: Duration,
     ) -> Result<(PluginServiceProcess, PpcClient), DaemonError> {
         let listener = bind_ppc_listener(&self.socket_path)?;
-        let mut process = self.spawn()?;
+        let mut process = self.spawn_for_overlay(overlay)?;
         match accept_ppc_client(&listener, &mut process, timeout) {
             Ok(client) => Ok((process, client)),
             Err(err) => {
                 process.teardown();
                 Err(err)
             }
+        }
+    }
+
+    fn spawn_for_overlay(
+        &self,
+        overlay: Option<&PluginServiceOverlay>,
+    ) -> Result<PluginServiceProcess, DaemonError> {
+        if let Some(overlay) = overlay {
+            return self.spawn_overlay_runner(overlay);
+        }
+        self.spawn()
+    }
+
+    #[cfg(all(target_os = "linux", not(test)))]
+    fn spawn_overlay_runner(
+        &self,
+        overlay: &PluginServiceOverlay,
+    ) -> Result<PluginServiceProcess, DaemonError> {
+        let request = self.overlay_run_request(overlay);
+        let payload = serde_json::to_vec(&request)
+            .map_err(|err| DaemonError::InvalidEnvelope(err.to_string()))?;
+        let mut command = Command::new(std::env::current_exe()?);
+        command
+            .arg("ns-runner")
+            .stdin(Stdio::piped())
+            .stdout(Stdio::null())
+            .stderr(Stdio::null());
+        #[cfg(unix)]
+        {
+            use std::os::unix::process::CommandExt;
+            command.process_group(0);
+        }
+        let mut child = command.spawn()?;
+        child
+            .stdin
+            .as_mut()
+            .ok_or_else(|| DaemonError::InvalidEnvelope("ns-runner stdin unavailable".to_owned()))?
+            .write_all(&payload)?;
+        drop(child.stdin.take());
+        let process_group_id = i32::try_from(child.id()).ok();
+        Ok(PluginServiceProcess {
+            spec: self.clone(),
+            child,
+            process_group_id,
+            torn_down: false,
+        })
+    }
+
+    #[cfg(any(not(target_os = "linux"), test))]
+    fn spawn_overlay_runner(
+        &self,
+        overlay: &PluginServiceOverlay,
+    ) -> Result<PluginServiceProcess, DaemonError> {
+        let _ = (&overlay.layer_paths, &overlay.upperdir, &overlay.workdir);
+        self.spawn()
+    }
+
+    #[cfg(all(target_os = "linux", not(test)))]
+    fn overlay_run_request(&self, overlay: &PluginServiceOverlay) -> RunRequest {
+        let mut env = self.environment();
+        env.insert(ENV_PLUGIN_WORKSPACE_MOUNTED, "1".to_owned());
+        RunRequest {
+            mode: RunMode::FreshNs,
+            tool_call: ToolCall {
+                invocation_id: format!("plugin-service:{}", self.key.service_instance_id()),
+                agent_id: "plugin-service".to_owned(),
+                verb: "plugin_service".to_owned(),
+                intent: Intent::ReadOnly,
+                args: json!({
+                    "command": self.command.clone(),
+                    "cwd": ".",
+                    "env": env,
+                }),
+                background: true,
+            },
+            workspace_root: WorkspaceRoot(PathBuf::from(&self.key.workspace_root)),
+            layer_paths: overlay.layer_paths.clone(),
+            upperdir: Some(overlay.upperdir.clone()),
+            workdir: Some(overlay.workdir.clone()),
+            ns_fds: None,
+            cgroup_path: None,
+            timeout_seconds: None,
         }
     }
 
@@ -153,7 +266,7 @@ impl PluginProcessSpec {
 }
 
 #[derive(Debug)]
-pub(crate) struct PluginServiceProcess {
+pub(super) struct PluginServiceProcess {
     spec: PluginProcessSpec,
     child: Child,
     process_group_id: Option<i32>,
@@ -161,6 +274,10 @@ pub(crate) struct PluginServiceProcess {
 }
 
 impl PluginServiceProcess {
+    pub(crate) fn pid(&self) -> u32 {
+        self.child.id()
+    }
+
     pub(crate) fn status_json(&mut self) -> Value {
         let exit_status = self.child.try_wait().ok().flatten();
         let running = exit_status.is_none();
@@ -189,6 +306,118 @@ impl PluginServiceProcess {
     }
 }
 
+#[cfg(all(target_os = "linux", not(test)))]
+pub(super) fn remount_workspace_overlay(
+    target_pid: u32,
+    workspace_root: &str,
+    overlay: &PluginServiceOverlay,
+    timeout: Duration,
+) -> Result<(), DaemonError> {
+    let request = RunRequest {
+        mode: RunMode::FreshNs,
+        tool_call: ToolCall {
+            invocation_id: format!("plugin-service-remount:{target_pid}"),
+            agent_id: "plugin-service".to_owned(),
+            verb: "remount_overlay".to_owned(),
+            intent: Intent::ReadOnly,
+            args: json!({}),
+            background: false,
+        },
+        workspace_root: WorkspaceRoot(PathBuf::from(workspace_root)),
+        layer_paths: overlay.layer_paths.clone(),
+        upperdir: Some(overlay.upperdir.clone()),
+        workdir: Some(overlay.workdir.clone()),
+        ns_fds: None,
+        cgroup_path: None,
+        timeout_seconds: None,
+    };
+    let payload = serde_json::to_vec(&request)
+        .map_err(|err| DaemonError::InvalidEnvelope(err.to_string()))?;
+    let mut command = Command::new("nsenter");
+    command
+        .arg("-t")
+        .arg(target_pid.to_string())
+        .arg("-U")
+        .arg("-m")
+        .arg("--preserve-credentials")
+        .arg("--")
+        .arg(std::env::current_exe()?)
+        .arg("ns-runner")
+        .arg("--remount-overlay")
+        .stdin(Stdio::piped())
+        .stdout(Stdio::null())
+        .stderr(Stdio::piped());
+    #[cfg(unix)]
+    {
+        use std::os::unix::process::CommandExt;
+        command.process_group(0);
+    }
+    let mut child = command.spawn().map_err(|err| {
+        DaemonError::OverlayPipeline(format!(
+            "failed to spawn nsenter for plugin service remount: {err}"
+        ))
+    })?;
+    child
+        .stdin
+        .as_mut()
+        .ok_or_else(|| DaemonError::OverlayPipeline("nsenter stdin unavailable".to_owned()))?
+        .write_all(&payload)?;
+    drop(child.stdin.take());
+    let output = wait_for_helper(child, timeout, "plugin service remount")?;
+    if output.status.success() {
+        return Ok(());
+    }
+    Err(DaemonError::OverlayPipeline(format!(
+        "plugin service remount failed with status {}: {}",
+        output.status,
+        String::from_utf8_lossy(&output.stderr).trim()
+    )))
+}
+
+#[cfg(any(not(target_os = "linux"), test))]
+// Keep the same fallible signature as the Linux remount path so refresh callers
+// stay cfg-free; off-Linux/test builds only validate overlay metadata plumbing.
+#[expect(
+    clippy::missing_const_for_fn,
+    clippy::unnecessary_wraps,
+    reason = "non-Linux/test parity keeps the Linux fallible helper signature"
+)]
+pub(super) fn remount_workspace_overlay(
+    _target_pid: u32,
+    _workspace_root: &str,
+    overlay: &PluginServiceOverlay,
+    _timeout: Duration,
+) -> Result<(), DaemonError> {
+    let _ = (&overlay.layer_paths, &overlay.upperdir, &overlay.workdir);
+    Ok(())
+}
+
+#[cfg(all(target_os = "linux", not(test)))]
+fn wait_for_helper(
+    mut child: Child,
+    timeout: Duration,
+    label: &str,
+) -> Result<std::process::Output, DaemonError> {
+    let process_group_id = i32::try_from(child.id()).ok();
+    let deadline = Instant::now() + timeout;
+    loop {
+        if child.try_wait()?.is_some() {
+            return child.wait_with_output().map_err(DaemonError::from);
+        }
+        if Instant::now() >= deadline {
+            terminate_process_group(process_group_id);
+            let _ = child.kill();
+            let output = child.wait_with_output()?;
+            return Err(DaemonError::OverlayPipeline(format!(
+                "{label} timed out after {:.3}s: {}",
+                timeout.as_secs_f64(),
+                String::from_utf8_lossy(&output.stderr).trim()
+            )));
+        }
+        std::thread::sleep(Duration::from_millis(10));
+    }
+}
+
 impl Drop for PluginServiceProcess {
     fn drop(&mut self) {
         self.teardown();
@@ -210,7 +439,7 @@ fn terminate_process_group(process_group_id: Option<i32>) {
 }
 
 #[cfg(not(target_os = "linux"))]
-fn terminate_process_group(_process_group_id: Option<i32>) {}
+const fn terminate_process_group(_process_group_id: Option<i32>) {}
 
 fn socket_path_for_key(key: &PluginServiceKey, socket_root: &Path) -> PathBuf {
     let mut hasher = Sha256::new();
@@ -282,108 +511,119 @@ fn accept_ppc_client(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use eos_plugin::{RefreshStrategy, ServiceMode};
+    use eos_plugin::{PluginServiceKeyParts, RefreshStrategy, ServiceMode};
 
-    fn key(profile: &str) -> PluginServiceKey {
-        PluginServiceKey::new(
-            "/eos/plugin/layer-stack",
-            "/eos/plugin/workspace",
-            "demo",
-            "digest-a",
-            "indexer",
-            profile,
-            ServiceMode::WorkspaceSnapshotRefresh,
-            RefreshStrategy::RemountWorkspaceAndNotify,
-        )
-        .expect("valid key")
+    type TestResult = std::result::Result<(), Box<dyn std::error::Error + Send + Sync>>;
+
+    fn key(profile: &str) -> std::result::Result<PluginServiceKey, PluginError> {
+        PluginServiceKey::new(PluginServiceKeyParts {
+            layer_stack_root: "/eos/plugin/layer-stack".to_owned(),
+            workspace_root: "/eos/plugin/workspace".to_owned(),
+            plugin_id: "demo".to_owned(),
+            plugin_digest: "digest-a".to_owned(),
+            service_id: "indexer".to_owned(),
+            service_profile_digest: profile.to_owned(),
+            service_mode: ServiceMode::WorkspaceSnapshotRefresh,
+            refresh_strategy: RefreshStrategy::RemountWorkspaceAndNotify,
+        })
     }
 
     #[test]
-    fn process_spec_uses_stable_eos_plugin_socket_and_env() {
+    fn process_spec_uses_stable_eos_plugin_socket_and_env() -> TestResult {
         let spec = PluginProcessSpec::new(
-            key("profile-a"),
+            key("profile-a")?,
             vec!["demo-indexer".to_owned(), "--stdio".to_owned()],
             1,
-        )
-        .expect("process spec");
+        )?;
         let env = spec.environment();
 
         assert!(env[ENV_PLUGIN_PPC_SOCKET].starts_with("/eos/plugin/ppc/"));
-        assert!(env[ENV_PLUGIN_PPC_SOCKET].ends_with(".sock"));
+        assert!(std::path::Path::new(&env[ENV_PLUGIN_PPC_SOCKET])
+            .extension()
+            .is_some_and(|ext| ext.eq_ignore_ascii_case("sock")));
         assert_eq!(env[ENV_PLUGIN_LAYER_STACK_ROOT], "/eos/plugin/layer-stack");
         assert_eq!(env[ENV_PLUGIN_WORKSPACE_ROOT], "/eos/plugin/workspace");
         assert_eq!(env[ENV_PLUGIN_ID], "demo");
         assert_eq!(env[ENV_PLUGIN_SERVICE_ID], "indexer");
         assert_eq!(env[ENV_PLUGIN_PPC_PROTOCOL_VERSION], "1");
+        Ok(())
     }
 
     #[test]
-    fn process_spec_key_changes_socket_path() {
-        let first = PluginProcessSpec::new(key("profile-a"), vec!["svc".to_owned()], 1)
-            .expect("first spec");
-        let second = PluginProcessSpec::new(key("profile-b"), vec!["svc".to_owned()], 1)
-            .expect("second spec");
+    fn process_spec_key_changes_socket_path() -> TestResult {
+        let first = PluginProcessSpec::new(key("profile-a")?, vec!["svc".to_owned()], 1)?;
+        let second = PluginProcessSpec::new(key("profile-b")?, vec!["svc".to_owned()], 1)?;
 
         assert_ne!(
             first.environment()[ENV_PLUGIN_PPC_SOCKET],
             second.environment()[ENV_PLUGIN_PPC_SOCKET]
         );
+        Ok(())
     }
 
     #[test]
-    fn process_spec_rejects_empty_command() {
+    fn process_spec_rejects_empty_command() -> TestResult {
+        let service_key = key("profile-a")?;
         assert!(matches!(
-            PluginProcessSpec::new(key("profile-a"), Vec::new(), 1),
+            PluginProcessSpec::new(service_key, Vec::new(), 1),
             Err(PluginError::Manifest(message)) if message.contains("launch command")
         ));
+        Ok(())
     }
 
     #[test]
-    fn spawned_process_reports_running_then_tears_down() {
+    fn spawned_process_reports_running_then_tears_down() -> TestResult {
         let spec = PluginProcessSpec::new(
-            key("profile-a"),
+            key("profile-a")?,
             vec![
                 "/bin/sh".to_owned(),
                 "-c".to_owned(),
                 "test \"$EOS_PLUGIN_SERVICE_ID\" = indexer && sleep 30".to_owned(),
             ],
             1,
-        )
-        .expect("process spec");
-        let mut process = spec.spawn().expect("spawn service process");
+        )?;
+        let mut process = spec.spawn()?;
 
         let status = process.status_json();
         assert_eq!(status["service_id"], "indexer");
         assert_eq!(status["running"], true);
-        assert!(status["pid"].as_u64().expect("pid") > 0);
+        let pid = status["pid"]
+            .as_u64()
+            .ok_or_else(|| std::io::Error::new(ErrorKind::InvalidData, "missing process pid"))?;
+        assert!(pid > 0);
 
         process.teardown();
         let status = process.status_json();
         assert_eq!(status["running"], false);
+        Ok(())
     }
 
     #[test]
-    fn spawn_connected_accepts_ppc_socket() {
+    fn spawn_connected_accepts_ppc_socket() -> TestResult {
         let root = test_socket_root("spawn-connected");
         let spec = PluginProcessSpec::new_with_socket_root(
-            key("profile-a"),
+            key("profile-a")?,
             vec!["/bin/sh".to_owned(), "-c".to_owned(), "sleep 30".to_owned()],
             1,
             &root,
-        )
-        .expect("process spec");
+        )?;
         let socket_root = root.clone();
         let connector = std::thread::spawn(move || {
-            let socket = wait_for_socket(&socket_root);
-            std::os::unix::net::UnixStream::connect(socket).expect("connect ppc socket");
+            let socket = wait_for_socket(&socket_root)?;
+            std::os::unix::net::UnixStream::connect(socket).map(|_| ())
         });
 
-        let (mut process, _client) = spec
-            .spawn_connected(Duration::from_secs(1))
-            .expect("spawn and accept service PPC");
-        connector.join().expect("connector thread");
+        let (mut process, _client) =
+            spec.spawn_connected_with_overlay(None, Duration::from_secs(1))?;
+        match connector.join() {
+            Ok(result) => result?,
+            Err(_) => {
+                return Err(std::io::Error::other("connector thread panicked").into());
+            }
+        }
         process.teardown();
         let _ = std::fs::remove_dir_all(root);
+        Ok(())
     }
 
     fn test_socket_root(name: &str) -> PathBuf {
@@ -392,22 +632,23 @@ mod tests {
         root
     }
 
-    fn wait_for_socket(root: &Path) -> PathBuf {
+    fn wait_for_socket(root: &Path) -> std::io::Result<PathBuf> {
         let deadline = Instant::now() + Duration::from_secs(1);
         loop {
             if let Ok(entries) = std::fs::read_dir(root) {
                 for entry in entries.flatten() {
                     let path = entry.path();
                     if path.extension().and_then(|ext| ext.to_str()) == Some("sock") {
-                        return path;
+                        return Ok(path);
                     }
                 }
             }
-            assert!(
-                Instant::now() < deadline,
-                "timed out waiting for socket under {}",
-                root.display()
-            );
+            if Instant::now() >= deadline {
+                return Err(std::io::Error::new(
+                    ErrorKind::TimedOut,
+                    format!("timed out waiting for socket under {}", root.display()),
+                ));
+            }
             std::thread::sleep(Duration::from_millis(10));
         }
     }

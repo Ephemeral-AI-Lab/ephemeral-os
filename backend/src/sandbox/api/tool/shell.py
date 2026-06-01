@@ -46,6 +46,23 @@ async def shell(
                 warnings=(),
                 timings={"api.shell.total_s": monotonic_now() - total_start},
             )
+        if not isinstance(request.command, str):
+            message = "snapshot overlay shell command must be a string"
+            return ShellResult(
+                success=False,
+                exit_code=1,
+                stdout="",
+                stderr="",
+                changed_paths=(),
+                status="error",
+                conflict=ConflictInfo.rejected(
+                    reason="raw_argv_not_supported",
+                    message=message,
+                ),
+                conflict_reason=message,
+                warnings=(),
+                timings={"api.shell.total_s": monotonic_now() - total_start},
+            )
         payload = daemon_request_identity_fields(request) | {
             "command": request.command,
             "cwd": cwd,

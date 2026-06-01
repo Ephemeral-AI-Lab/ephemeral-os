@@ -20,8 +20,15 @@ pub struct CommitStagingArea {
     pub path: PathBuf,
 }
 
-/// Allocate a fresh staging directory under `storage_root/staging`, prefixed by
-/// a filesystem-safe slice of `request_id`.
+/// Allocate a fresh staging directory under `storage_root/staging`.
+///
+/// The directory basename is prefixed by a filesystem-safe slice of
+/// `request_id`.
+///
+/// # Errors
+///
+/// Returns [`LayerStackError`] when the staging root cannot be created or a
+/// unique staging directory cannot be allocated.
 /// `// PORT backend/src/sandbox/layer_stack/commit_staging.py:19-31 — allocate_commit_staging`
 pub fn allocate_commit_staging(
     storage_root: &Path,
@@ -44,7 +51,7 @@ pub fn allocate_commit_staging(
                     path,
                 });
             }
-            Err(err) if err.kind() == std::io::ErrorKind::AlreadyExists => continue,
+            Err(err) if err.kind() == std::io::ErrorKind::AlreadyExists => {}
             Err(err) => return Err(err.into()),
         }
     }
@@ -54,6 +61,11 @@ pub fn allocate_commit_staging(
 }
 
 /// Remove a previously-allocated staging directory by id (best-effort rmtree).
+///
+/// # Errors
+///
+/// Returns [`LayerStackError`] when `staging_id` is malformed or when removing
+/// the staging directory fails for any reason other than not found.
 /// `// PORT backend/src/sandbox/layer_stack/commit_staging.py:34-37 — drop_commit_staging`
 pub fn drop_commit_staging(storage_root: &Path, staging_id: &str) -> Result<(), LayerStackError> {
     if staging_id.is_empty()

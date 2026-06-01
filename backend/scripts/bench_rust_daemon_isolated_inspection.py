@@ -818,6 +818,7 @@ async def configure_container_environment(bench: DockerBench) -> None:
         "EOS_ISOLATED_WORKSPACE_AUDIT_PATH": AUDIT_PATH,
         "EOS_ISOLATED_WORKSPACE_EXIT_GRACE_S": "2.0",
         "EOS_ISOLATED_WORKSPACE_SETUP_TIMEOUT_S": "30.0",
+        "EOS_ISOLATED_WORKSPACE_UPPERDIR_BYTES": str(64 * 1024 * 1024),
     }
     keys = "|".join(shlex.quote(key) for key in assignments)
     lines = "\n".join(f"{key}={value}" for key, value in assignments.items()) + "\n"

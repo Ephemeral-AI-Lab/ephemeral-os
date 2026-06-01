@@ -60,6 +60,7 @@ pub struct OverlayMount {
 
 impl OverlayMount {
     /// The workspace root this overlay is mounted at.
+    #[must_use]
     pub fn workspace_root(&self) -> &std::path::Path {
         &self.workspace_root
     }
@@ -93,6 +94,11 @@ impl Drop for OverlayMount {
 /// (newest-first), then `"upperdir"`, `"workdir"`, `fsconfig_create`,
 /// `fsmount`, and finally `move_mount` onto the real `workspace_root` (NOT a
 /// `/proc/self/fd` symlink — `move_mount(2)` rejects that as a destination).
+///
+/// # Errors
+///
+/// Returns [`OverlayError`] when mount inputs are invalid or a kernel mount
+/// syscall fails.
 /// `// PORT backend/src/sandbox/overlay/kernel_mount.py:49-75 — mount_overlay`
 #[cfg(target_os = "linux")]
 pub fn mount_overlay(workspace_root: &Path, handle: &OverlayHandle) -> Result<OverlayMount> {
@@ -125,9 +131,46 @@ pub fn mount_overlay(workspace_root: &Path, handle: &OverlayHandle) -> Result<Ov
     })
 }
 
-/// Non-Linux stub: overlayfs mount syscalls do not exist off Linux.
+/// Unmount the current overlay at `workspace_root`.
+///
+/// `lazy=true` maps to `MNT_DETACH`, matching the Python LSP remount helper.
+/// This is required for long-lived services whose process may keep its cwd or
+/// open descriptors under the old mount while future absolute path lookups
+/// should resolve through a freshly mounted snapshot.
+///
+/// # Errors
+///
+/// Returns [`OverlayError::MountSyscall`] when `umount(2)` fails.
+#[cfg(target_os = "linux")]
+pub fn unmount_overlay(workspace_root: &Path, lazy: bool) -> Result<()> {
+    let flags = if lazy {
+        UnmountFlags::DETACH
+    } else {
+        UnmountFlags::empty()
+    };
+    unmount(workspace_root, flags).map_io()
+}
+
+/// Non-Linux stub: overlayfs unmount syscalls do not exist off Linux.
+///
+/// # Errors
+///
+/// Always returns [`OverlayError::Unsupported`].
 #[cfg(not(target_os = "linux"))]
-pub fn mount_overlay(_workspace_root: &Path, _handle: &OverlayHandle) -> Result<OverlayMount> {
+pub const fn unmount_overlay(_workspace_root: &Path, _lazy: bool) -> Result<()> {
+    Err(OverlayError::Unsupported)
+}
+
+/// Non-Linux stub: overlayfs mount syscalls do not exist off Linux.
+///
+/// # Errors
+///
+/// Always returns [`OverlayError::Unsupported`].
+#[cfg(not(target_os = "linux"))]
+pub const fn mount_overlay(
+    _workspace_root: &Path,
+    _handle: &OverlayHandle,
+) -> Result<OverlayMount> {
     Err(OverlayError::Unsupported)
 }
 

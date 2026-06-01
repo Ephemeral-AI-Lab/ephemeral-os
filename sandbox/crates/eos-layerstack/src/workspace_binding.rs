@@ -27,6 +27,11 @@ pub struct WorkspaceBinding {
 
 impl WorkspaceBinding {
     /// Translate a repo-relative path into the normalized layer path.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`LayerStackError`] when the path is empty, absolute, or fails
+    /// layer-path normalization.
     pub fn layer_path_from_relative(&self, path: &str) -> Result<String, LayerStackError> {
         let raw = path.trim();
         if raw.is_empty() {
@@ -43,6 +48,11 @@ impl WorkspaceBinding {
     }
 
     /// Translate a workspace-absolute path into the normalized layer path.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`LayerStackError`] when the path is empty, relative, outside the
+    /// bound workspace root, or fails layer-path normalization.
     pub fn layer_path_from_absolute(&self, path: &str) -> Result<String, LayerStackError> {
         let raw = path.trim();
         if raw.is_empty() {
@@ -68,6 +78,10 @@ impl WorkspaceBinding {
 }
 
 /// Read the optional workspace binding.
+///
+/// # Errors
+///
+/// Returns [`LayerStackError`] when the binding file cannot be read or decoded.
 pub fn read_workspace_binding(
     layer_stack_root: impl AsRef<Path>,
 ) -> Result<Option<WorkspaceBinding>, LayerStackError> {
@@ -82,6 +96,11 @@ pub fn read_workspace_binding(
 }
 
 /// Read the required workspace binding.
+///
+/// # Errors
+///
+/// Returns [`LayerStackError`] when the binding is missing, unreadable, or
+/// invalid.
 pub fn require_workspace_binding(
     layer_stack_root: impl AsRef<Path>,
 ) -> Result<WorkspaceBinding, LayerStackError> {

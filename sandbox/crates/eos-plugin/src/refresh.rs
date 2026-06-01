@@ -1,6 +1,6 @@
 //! Daemon-to-plugin-harness refresh protocol.
 //!
-//! The daemon is authoritative for LayerStack freshness. A read-only service
+//! The daemon is authoritative for `LayerStack` freshness. A read-only service
 //! must either acknowledge the target manifest key or fail/restart; stale
 //! service state must never answer silently.
 
@@ -41,6 +41,7 @@ pub enum RefreshRequest {
 
 impl RefreshRequest {
     /// The manifest key this message targets, when the message carries one.
+    #[must_use]
     pub fn manifest_key(&self) -> Option<&str> {
         match self {
             Self::PrepareRefresh {
@@ -68,6 +69,11 @@ pub struct RefreshAck {
 
 impl RefreshAck {
     /// Ensure the service acknowledged the target manifest.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PluginError::ProjectionStale`] when the service rejected the
+    /// refresh or acknowledged a different manifest key.
     pub fn require_manifest(&self, target_manifest_key: &str) -> Result<()> {
         if !self.accepted {
             return Err(PluginError::ProjectionStale(

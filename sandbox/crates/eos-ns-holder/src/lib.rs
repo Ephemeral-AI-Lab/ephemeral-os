@@ -60,9 +60,10 @@ use rustix::thread::{set_thread_gid, set_thread_uid, unshare, UnshareFlags};
 /// inside the new namespace stack. PORT `ns_holder.py:94` (`b"ns-up\n"`).
 pub const NS_UP: &[u8] = b"ns-up\n";
 
-/// Control-pipe token the daemon writes once the network is wired. The holder
-/// requires the newline-terminated control read to *start with* this prefix —
-/// it is a `startswith` check, not an equality compare.
+/// Control-pipe token the daemon writes once the network is wired.
+///
+/// The holder requires the newline-terminated control read to *start with* this
+/// prefix; it is a `startswith` check, not an equality compare.
 /// PORT `ns_holder.py:106` (`buf.startswith(b"net-ready")`).
 pub const NET_READY: &[u8] = b"net-ready";
 
@@ -70,9 +71,12 @@ pub const NET_READY: &[u8] = b"net-ready";
 /// best-effort network hardening hooks. PORT `ns_holder.py:111` (`b"ready\n"`).
 pub const READY: &[u8] = b"ready\n";
 
-/// Test-only environment knob: when set to `"true"`, the holder exits with
-/// [`NsHolderError::TEST_CRASH_EXIT`] after writing [`NS_UP`] and before reading
-/// the control pipe, to exercise the daemon's holder-crash recovery path.
+/// Test-only holder crash knob.
+///
+/// When set to `"true"`, the holder exits with
+/// [`NsHolderError::TEST_CRASH_EXIT`] after writing [`NS_UP`] and before
+/// reading the control pipe, to exercise the daemon's holder-crash recovery
+/// path.
 /// PORT `ns_holder.py:97` (`EOS_ISOLATED_WORKSPACE_TEST_HOLDER_CRASH`).
 pub const TEST_HOLDER_CRASH_ENV: &str = "EOS_ISOLATED_WORKSPACE_TEST_HOLDER_CRASH";
 
@@ -170,7 +174,7 @@ impl Drop for PidNamespaceInit {
         unsafe {
             libc::kill(self.pid, libc::SIGTERM);
             let mut status = 0;
-            libc::waitpid(self.pid, &mut status, libc::WNOHANG);
+            libc::waitpid(self.pid, std::ptr::addr_of_mut!(status), libc::WNOHANG);
         }
     }
 }
@@ -183,8 +187,10 @@ struct NetworkConfig {
     gateway: Ipv4Addr,
 }
 
-/// Where the handshake driver currently is, mirroring the linear flow in
-/// `ns_holder.py:main` (`:89-115`). The transitions are total and ordered:
+/// Where the handshake driver currently is.
+///
+/// Mirrors the linear flow in `ns_holder.py:main` (`:89-115`). The transitions
+/// are total and ordered:
 /// `Unshared → ProcBound → NsUpSent → NetReadyReceived → Ready → Paused`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[non_exhaustive]
@@ -223,7 +229,8 @@ impl Handshake {
     /// pinned namespaces, starting in [`HandshakeState::Unshared`]. The pipe FDs
     /// are inherited (the daemon owns the far ends), so they are passed as
     /// `RawFd`, not `OwnedFd`.
-    pub fn new(readiness_fd: RawFd, control_fd: RawFd, namespaces: HeldNamespaces) -> Self {
+    #[must_use]
+    pub const fn new(readiness_fd: RawFd, control_fd: RawFd, namespaces: HeldNamespaces) -> Self {
         Self {
             readiness_fd,
             control_fd,
@@ -234,12 +241,17 @@ impl Handshake {
     }
 
     /// The current handshake position.
-    pub fn state(&self) -> HandshakeState {
+    #[must_use]
+    pub const fn state(&self) -> HandshakeState {
         self.state
     }
 
     /// Write [`NS_UP`] to the readiness FD (handshake step 1) and advance to
     /// [`HandshakeState::NsUpSent`].
+    ///
+    /// # Errors
+    ///
+    /// Returns [`NsHolderError::PipeIo`] when the readiness pipe write fails.
     // PORT backend/src/sandbox/isolated_workspace/scripts/ns_holder.py:94 — os.write(readiness_fd, b"ns-up\n") after the /proc rbind
     pub fn signal_ns_up(&mut self) -> Result<(), NsHolderError> {
         write_all_fd(self.readiness_fd, NS_UP)?;
@@ -250,6 +262,12 @@ impl Handshake {
     /// Read the control FD until newline and require a [`NET_READY`] prefix
     /// (handshake step 2). EOF before a token → [`NsHolderError::ControlPipeClosed`];
     /// a non-matching token → [`NsHolderError::UnexpectedToken`].
+    ///
+    /// # Errors
+    ///
+    /// Returns [`NsHolderError::ControlPipeClosed`] on EOF,
+    /// [`NsHolderError::UnexpectedToken`] for a non-`net-ready` token, or
+    /// [`NsHolderError::PipeIo`] for read failures.
     // PORT backend/src/sandbox/isolated_workspace/scripts/ns_holder.py:100-107 — read 64-byte chunks until b"\n", reject EOF (exit 1) / wrong prefix (exit 2)
     pub fn await_net_ready(&mut self) -> Result<(), NsHolderError> {
         let mut buf = Vec::new();
@@ -271,6 +289,11 @@ impl Handshake {
 
     /// Apply best-effort loopback and IPv6 hardening, then write [`READY`]
     /// (handshake step 3) and advance to [`HandshakeState::Ready`].
+    ///
+    /// # Errors
+    ///
+    /// Returns [`NsHolderError::PipeIo`] when the final readiness pipe write
+    /// fails.
     // PORT backend/src/sandbox/isolated_workspace/scripts/ns_holder.py:109-111 — `ip link set lo up`, _purge_ipv6_default_routes(), os.write(readiness_fd, b"ready\n")
     pub fn finish_ready(&mut self) -> Result<(), NsHolderError> {
         bring_loopback_up();
@@ -310,6 +333,13 @@ fn parse_network_config(buf: &[u8]) -> Option<NetworkConfig> {
 /// "--rbind", "/proc", "/proc"], check=False)` with a raw `mount(MS_BIND |
 /// MS_REC)` syscall. Failure must NOT abort the holder.
 // PORT backend/src/sandbox/isolated_workspace/scripts/ns_holder.py:81-86 — mount --rbind /proc /proc, best-effort (check=False)
+#[cfg_attr(
+    not(target_os = "linux"),
+    expect(
+        clippy::missing_const_for_fn,
+        reason = "non-Linux parity keeps the Linux syscall helper shape"
+    )
+)]
 fn rbind_proc() {
     #[cfg(target_os = "linux")]
     {
@@ -323,7 +353,7 @@ fn rbind_proc() {
                 proc.as_ptr().cast(),
                 proc.as_ptr().cast(),
                 std::ptr::null::<libc::c_char>(),
-                (libc::MS_BIND | libc::MS_REC) as libc::c_ulong,
+                libc::MS_BIND | libc::MS_REC,
                 std::ptr::null::<c_void>(),
             )
         };
@@ -349,7 +379,8 @@ fn disable_ipv6_ra() {
         interfaces.extend(
             FALLBACK_IPV6_CONF_INTERFACES
                 .iter()
-                .map(|iface| iface.to_string()),
+                .copied()
+                .map(str::to_owned),
         );
     }
     for iface in interfaces {
@@ -365,6 +396,13 @@ fn disable_ipv6_ra() {
 /// Replaces `ip link set lo up` with `RTM_NEWLINK` so holder readiness does not
 /// depend on `ip(8)` being present inside the image. Best-effort.
 // PORT backend/src/sandbox/isolated_workspace/scripts/ns_holder.py:109 — ip link set lo up
+#[cfg_attr(
+    not(target_os = "linux"),
+    expect(
+        clippy::missing_const_for_fn,
+        reason = "non-Linux parity keeps the Linux syscall helper shape"
+    )
+)]
 fn bring_loopback_up() {
     #[cfg(target_os = "linux")]
     {
@@ -406,6 +444,13 @@ fn bring_loopback_up() {
 /// The daemon owns veth creation and host-side bridge attachment. The holder is
 /// already in the target netns, so it configures the peer's link state, address,
 /// and default route without `nsenter(1)` or `ip(8)`. Best-effort.
+#[cfg_attr(
+    not(target_os = "linux"),
+    expect(
+        clippy::missing_const_for_fn,
+        reason = "non-Linux parity keeps the Linux syscall helper shape"
+    )
+)]
 fn configure_namespace_veth(config: &NetworkConfig) {
     #[cfg(not(target_os = "linux"))]
     let _ = config;
@@ -510,6 +555,13 @@ fn add_ipv4_default_route(index: libc::c_uint, gateway: Ipv4Addr) {
 /// dump+delete) so no bridge-side RA can repopulate a v6 default route and
 /// bypass the v4-only MASQUERADE filter. Best-effort.
 // PORT backend/src/sandbox/isolated_workspace/scripts/ns_holder.py:45 — ip -6 route flush default → rtnetlink RTM_DELROUTE, shell-free
+#[cfg_attr(
+    not(target_os = "linux"),
+    expect(
+        clippy::missing_const_for_fn,
+        reason = "non-Linux parity keeps the Linux syscall helper shape"
+    )
+)]
 fn flush_ipv6_default_route() {
     #[cfg(target_os = "linux")]
     {
@@ -617,7 +669,7 @@ fn send_netlink_message_with_attrs<T>(
             message.as_ptr().cast(),
             message.len(),
             0,
-            (&addr as *const NetlinkSocketAddress).cast(),
+            std::ptr::from_ref(&addr).cast(),
             libc_socklen(std::mem::size_of::<NetlinkSocketAddress>()).ok_or_else(|| {
                 std::io::Error::new(
                     std::io::ErrorKind::InvalidInput,
@@ -641,7 +693,10 @@ fn append_struct_bytes<T>(buffer: &mut Vec<u8>, value: &T) {
     // SAFETY: `value` is valid for `size_of::<T>()` bytes, and the bytes are
     // copied immediately into `buffer` without outliving `value`.
     let bytes = unsafe {
-        std::slice::from_raw_parts((value as *const T).cast::<u8>(), std::mem::size_of::<T>())
+        std::slice::from_raw_parts(
+            std::ptr::from_ref(value).cast::<u8>(),
+            std::mem::size_of::<T>(),
+        )
     };
     buffer.extend_from_slice(bytes);
 }
@@ -687,7 +742,7 @@ fn usize_to_u16_saturating(value: usize) -> u16 {
 }
 
 #[cfg(target_os = "linux")]
-fn align4(length: usize) -> usize {
+const fn align4(length: usize) -> usize {
     (length + 3) & !3
 }
 
@@ -710,12 +765,16 @@ struct NetlinkAttr {
 
 #[cfg(target_os = "linux")]
 impl NetlinkAttr {
-    fn new(kind: u16, value: Vec<u8>) -> Self {
+    const fn new(kind: u16, value: Vec<u8>) -> Self {
         Self { kind, value }
     }
 }
 
 #[cfg(target_os = "linux")]
+#[expect(
+    clippy::struct_field_names,
+    reason = "repr(C) layout mirrors the Linux ifinfomsg field names"
+)]
 #[repr(C)]
 struct IfInfoMsg {
     ifi_family: u8,
@@ -727,6 +786,10 @@ struct IfInfoMsg {
 }
 
 #[cfg(target_os = "linux")]
+#[expect(
+    clippy::struct_field_names,
+    reason = "repr(C) layout mirrors the Linux ifaddrmsg field names"
+)]
 #[repr(C)]
 struct IfAddrMsg {
     ifa_family: u8,
@@ -737,6 +800,10 @@ struct IfAddrMsg {
 }
 
 #[cfg(target_os = "linux")]
+#[expect(
+    clippy::struct_field_names,
+    reason = "repr(C) layout mirrors the Linux rtmsg field names"
+)]
 #[repr(C)]
 struct RouteMsg {
     rtm_family: u8,
@@ -751,6 +818,10 @@ struct RouteMsg {
 }
 
 #[cfg(target_os = "linux")]
+#[expect(
+    clippy::struct_field_names,
+    reason = "repr(C) layout mirrors the Linux sockaddr_nl field names"
+)]
 #[repr(C)]
 struct NetlinkSocketAddress {
     nl_family: libc::sa_family_t,
@@ -762,10 +833,10 @@ struct NetlinkSocketAddress {
 /// `unshare` the full namespace stack on the calling (single-threaded) task and
 /// pin the resulting `/proc/self/ns/*` FDs.
 ///
-/// This is the Rust *consolidation* of the launcher's `unshare(1)` flags: the
-/// daemon today spawns `ns_holder.py` via
+/// This is the Rust *consolidation* of the former Python launcher's
+/// `unshare(1)` flags. The previous path spawned `ns_holder.py` via
 /// `unshare --user --map-root-user --net --pid --mount --fork --kill-child
-/// --propagation private`, so the namespaces are created by the `unshare`
+/// --propagation private`, so the namespaces were created by the `unshare`
 /// binary, not inside `ns_holder.py`. The Rust holder owns that step directly:
 /// `unshare(CLONE_NEWUSER | CLONE_NEWNS | CLONE_NEWPID | CLONE_NEWNET)` plus the
 /// uid/gid map writes and `MS_PRIVATE` mount-propagation, then opens its own
@@ -779,19 +850,29 @@ struct NetlinkSocketAddress {
 /// subprocess.
 // PORT backend/src/sandbox/isolated_workspace/_control_plane/namespace_runtime.py:84-96 — `unshare --user --map-root-user --net --pid --mount --fork --kill-child --propagation private` consolidated into a single unshare(CLONE_NEWUSER|NEWNS|NEWPID|NEWNET) + uid/gid map + MS_PRIVATE in-process
 #[cfg(target_os = "linux")]
+#[expect(
+    clippy::similar_names,
+    reason = "uid/gid mapping code naturally handles the paired identifiers together"
+)]
 fn unshare_namespace_stack(
     readiness_fd: RawFd,
     control_fd: RawFd,
 ) -> Result<HeldNamespaces, NsHolderError> {
-    let host_uid = rustix::process::getuid().as_raw();
-    let host_gid = rustix::process::getgid().as_raw();
+    let caller_uid = rustix::process::getuid().as_raw();
+    let caller_gid = rustix::process::getgid().as_raw();
     unshare(
         UnshareFlags::NEWUSER | UnshareFlags::NEWNS | UnshareFlags::NEWPID | UnshareFlags::NEWNET,
     )
     .map_err(|_| NsHolderError::Unshare)?;
     write_if_exists("/proc/self/setgroups", b"deny\n")?;
-    write_setup_file("/proc/self/uid_map", format!("0 {host_uid} 1\n").as_bytes())?;
-    write_setup_file("/proc/self/gid_map", format!("0 {host_gid} 1\n").as_bytes())?;
+    write_setup_file(
+        "/proc/self/uid_map",
+        format!("0 {caller_uid} 1\n").as_bytes(),
+    )?;
+    write_setup_file(
+        "/proc/self/gid_map",
+        format!("0 {caller_gid} 1\n").as_bytes(),
+    )?;
     set_thread_gid(rustix::process::Gid::ROOT).map_err(|_| NsHolderError::Unshare)?;
     set_thread_uid(rustix::process::Uid::ROOT).map_err(|_| NsHolderError::Unshare)?;
     mount_change(
@@ -811,20 +892,27 @@ fn unshare_namespace_stack(
 }
 
 #[cfg(not(target_os = "linux"))]
-fn unshare_namespace_stack(
+const fn unshare_namespace_stack(
     _readiness_fd: RawFd,
     _control_fd: RawFd,
 ) -> Result<HeldNamespaces, NsHolderError> {
     Err(NsHolderError::Unshare)
 }
 
-/// Holder entry point: mirrors `ns_holder.py:main(argv)` but takes the two
-/// already-parsed pipe FDs (argv → FD parsing stays in `eosd`'s `main`, per the
-/// lib/main split). Returns once `SIGTERM` is received.
+/// Holder entry point.
+///
+/// Mirrors `ns_holder.py:main(argv)` but takes the two already-parsed pipe FDs
+/// (argv → FD parsing stays in `eosd`'s `main`, per the lib/main split).
+/// Returns once `SIGTERM` is received.
 ///
 /// Sequence: [`unshare_namespace_stack`] → [`rbind_proc`] → write [`NS_UP`] →
 /// (test-crash knob) → await [`NET_READY`] → best-effort network hardening →
 /// write [`READY`] → install a `SIGTERM` handler and `pause()`.
+///
+/// # Errors
+///
+/// Returns [`NsHolderError`] when namespace setup, handshake pipe I/O, or the
+/// test crash knob fails the holder before it reaches the paused state.
 // PORT backend/src/sandbox/isolated_workspace/scripts/ns_holder.py:89-115 — main(argv): rbind /proc, ns-up, crash-knob, net-ready read, lo up + purge, ready, SIGTERM handler + signal.pause()
 pub fn run(readiness_fd: RawFd, control_fd: RawFd) -> Result<(), NsHolderError> {
     let namespaces = unshare_namespace_stack(readiness_fd, control_fd)?;
@@ -963,14 +1051,8 @@ fn run_pid_namespace_init(readiness_fd: RawFd, control_fd: RawFd) -> ! {
     unsafe {
         libc::close(readiness_fd);
         libc::close(control_fd);
-        libc::signal(
-            libc::SIGTERM,
-            exit_signal_handler as *const () as libc::sighandler_t,
-        );
-        libc::signal(
-            libc::SIGINT,
-            exit_signal_handler as *const () as libc::sighandler_t,
-        );
+        install_exit_signal_handler(libc::SIGTERM);
+        install_exit_signal_handler(libc::SIGINT);
         libc::prctl(libc::PR_SET_PDEATHSIG, libc::SIGTERM, 0, 0, 0);
         if libc::getppid() == 1 {
             libc::_exit(0);
@@ -983,6 +1065,23 @@ fn run_pid_namespace_init(readiness_fd: RawFd, control_fd: RawFd) -> ! {
             libc::pause();
         }
     }
+}
+
+#[cfg(target_os = "linux")]
+fn install_exit_signal_handler(signal: libc::c_int) {
+    use nix::sys::signal::{sigaction, SaFlags, SigAction, SigHandler, SigSet, Signal};
+
+    let Ok(signal) = Signal::try_from(signal) else {
+        return;
+    };
+    let action = SigAction::new(
+        SigHandler::Handler(exit_signal_handler),
+        SaFlags::empty(),
+        SigSet::empty(),
+    );
+    // SAFETY: `exit_signal_handler` is an `extern "C"` handler that only calls
+    // async-signal-safe `_exit(2)`, and the action uses an empty mask/flags.
+    let _ = unsafe { sigaction(signal, &action) };
 }
 
 #[cfg(target_os = "linux")]
@@ -1015,101 +1114,107 @@ mod tests {
         READY,
     };
 
+    type TestResult<T = ()> = Result<T, Box<dyn std::error::Error + Send + Sync>>;
+
     #[test]
-    fn signal_ns_up_writes_readiness_token() {
-        let (readiness_read, readiness_write) = nix::unistd::pipe().expect("readiness pipe");
-        let (_control_read, control_write) = nix::unistd::pipe().expect("control pipe");
+    fn signal_ns_up_writes_readiness_token() -> TestResult {
+        let (readiness_read, readiness_write) = nix::unistd::pipe()?;
+        let (_control_read, control_write) = nix::unistd::pipe()?;
         let mut handshake = Handshake::new(
             readiness_write.as_raw_fd(),
             control_write.as_raw_fd(),
-            dummy_namespaces(),
+            dummy_namespaces()?,
         );
 
-        handshake.signal_ns_up().expect("ns-up write succeeds");
+        handshake.signal_ns_up()?;
 
         let mut buf = [0_u8; 16];
-        let read = nix::unistd::read(readiness_read.as_raw_fd(), &mut buf).expect("read ns-up");
+        let read = nix::unistd::read(readiness_read.as_raw_fd(), &mut buf)?;
         assert_eq!(&buf[..read], NS_UP);
         assert_eq!(handshake.state(), HandshakeState::NsUpSent);
+        Ok(())
     }
 
     #[test]
-    fn await_net_ready_accepts_prefixed_line() {
-        let (_readiness_read, readiness_write) = nix::unistd::pipe().expect("readiness pipe");
-        let (control_read, control_write) = nix::unistd::pipe().expect("control pipe");
-        nix::unistd::write(&control_write, b"net-ready extra\n").expect("write control token");
+    fn await_net_ready_accepts_prefixed_line() -> TestResult {
+        let (_readiness_read, readiness_write) = nix::unistd::pipe()?;
+        let (control_read, control_write) = nix::unistd::pipe()?;
+        nix::unistd::write(&control_write, b"net-ready extra\n")?;
         let mut handshake = Handshake::new(
             readiness_write.as_raw_fd(),
             control_read.as_raw_fd(),
-            dummy_namespaces(),
+            dummy_namespaces()?,
         );
 
-        handshake.await_net_ready().expect("net-ready accepted");
+        handshake.await_net_ready()?;
 
         assert_eq!(handshake.state(), HandshakeState::NetReadyReceived);
+        Ok(())
     }
 
     #[test]
-    fn await_net_ready_rejects_wrong_token() {
-        let (_readiness_read, readiness_write) = nix::unistd::pipe().expect("readiness pipe");
-        let (control_read, control_write) = nix::unistd::pipe().expect("control pipe");
-        nix::unistd::write(&control_write, b"wrong\n").expect("write control token");
+    fn await_net_ready_rejects_wrong_token() -> TestResult {
+        let (_readiness_read, readiness_write) = nix::unistd::pipe()?;
+        let (control_read, control_write) = nix::unistd::pipe()?;
+        nix::unistd::write(&control_write, b"wrong\n")?;
         let mut handshake = Handshake::new(
             readiness_write.as_raw_fd(),
             control_read.as_raw_fd(),
-            dummy_namespaces(),
+            dummy_namespaces()?,
         );
 
-        let error = handshake
-            .await_net_ready()
-            .expect_err("wrong token rejected");
+        let error = match handshake.await_net_ready() {
+            Ok(()) => return Err(std::io::Error::other("wrong token was accepted").into()),
+            Err(error) => error,
+        };
 
         assert!(matches!(error, NsHolderError::UnexpectedToken));
+        Ok(())
     }
 
     #[test]
-    fn finish_ready_writes_ready_token() {
-        let (readiness_read, readiness_write) = nix::unistd::pipe().expect("readiness pipe");
-        let (_control_read, control_write) = nix::unistd::pipe().expect("control pipe");
+    fn finish_ready_writes_ready_token() -> TestResult {
+        let (readiness_read, readiness_write) = nix::unistd::pipe()?;
+        let (_control_read, control_write) = nix::unistd::pipe()?;
         let mut handshake = Handshake::new(
             readiness_write.as_raw_fd(),
             control_write.as_raw_fd(),
-            dummy_namespaces(),
+            dummy_namespaces()?,
         );
 
-        handshake.finish_ready().expect("ready write succeeds");
+        handshake.finish_ready()?;
 
         let mut buf = [0_u8; 16];
-        let read = nix::unistd::read(readiness_read.as_raw_fd(), &mut buf).expect("read ready");
+        let read = nix::unistd::read(readiness_read.as_raw_fd(), &mut buf)?;
         assert_eq!(&buf[..read], READY);
         assert_eq!(handshake.state(), HandshakeState::Ready);
+        Ok(())
     }
 
     #[test]
-    fn parse_net_ready_with_optional_veth_config() {
+    fn parse_net_ready_with_optional_veth_config() -> TestResult {
         let config = parse_network_config(b"net-ready eos-iws-abcden 10.244.0.2 24 10.244.0.1\n")
-            .expect("network config parses");
+            .ok_or_else(|| std::io::Error::other("network config should parse"))?;
 
         assert_eq!(config.iface, "eos-iws-abcden");
         assert_eq!(config.ns_ip.to_string(), "10.244.0.2");
         assert_eq!(config.prefix_len, 24);
         assert_eq!(config.gateway.to_string(), "10.244.0.1");
+        Ok(())
     }
 
-    fn dummy_namespaces() -> HeldNamespaces {
-        HeldNamespaces {
-            user: dev_null_fd(),
-            mnt: dev_null_fd(),
-            pid: dev_null_fd(),
-            net: dev_null_fd(),
+    fn dummy_namespaces() -> TestResult<HeldNamespaces> {
+        Ok(HeldNamespaces {
+            user: dev_null_fd()?,
+            mnt: dev_null_fd()?,
+            pid: dev_null_fd()?,
+            net: dev_null_fd()?,
             #[cfg(target_os = "linux")]
             _pid_init: None,
-        }
+        })
     }
 
-    fn dev_null_fd() -> OwnedFd {
-        std::fs::File::open("/dev/null")
-            .expect("open /dev/null")
-            .into()
+    fn dev_null_fd() -> TestResult<OwnedFd> {
+        Ok(std::fs::File::open("/dev/null")?.into())
     }
 }

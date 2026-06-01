@@ -78,6 +78,10 @@ pub struct PreparedChangeset {
 pub trait CommitTransactionPort: Send {
     /// Revalidate the base hash and atomically publish, or signal a CAS
     /// conflict so the queue can retry.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PublishConflict`] when the manifest CAS base is stale.
     fn revalidate_and_publish(
         &self,
         combined: &PreparedChangeset,
@@ -157,6 +161,11 @@ impl<T: CommitTransactionPort + 'static> CommitQueue<T> {
     }
 
     /// Spawn the single `occ-commit-queue` consumer thread.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`OccError`] when the queue is closed, has already consumed its
+    /// startup state, or the worker thread cannot be spawned.
     // PORT backend/src/sandbox/occ/commit_queue.py:90 — Thread(target=_run, name="occ-commit-queue", daemon=True)
     pub fn start(&mut self) -> Result<(), OccError> {
         if self.closed {
@@ -201,6 +210,10 @@ impl<T: CommitTransactionPort + 'static> CommitQueue<T> {
     }
 
     /// Stop the worker after pending queued work drains.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`OccError::WorkerPanicked`] when the worker thread panicked.
     // PORT backend/src/sandbox/occ/commit_queue.py — close(): put _STOP then join
     pub fn close(&mut self) -> Result<(), OccError> {
         if self.closed {
@@ -211,10 +224,9 @@ impl<T: CommitTransactionPort + 'static> CommitQueue<T> {
             return Ok(());
         }
         let _ = self.sender.send(QueueItem::Stop);
-        match self.handle.take() {
-            Some(handle) => handle.join().map_err(|_| OccError::WorkerPanicked),
-            None => Ok(()),
-        }
+        self.handle.take().map_or(Ok(()), |handle| {
+            handle.join().map_err(|_| OccError::WorkerPanicked)
+        })
     }
 
     /// Enqueue a prepared changeset and return a reply receiver to await on.
@@ -222,6 +234,11 @@ impl<T: CommitTransactionPort + 'static> CommitQueue<T> {
     /// The reply channel is the std analogue of a tokio `oneshot`; the async
     /// daemon awaits it off-thread without the queue holding any lock across
     /// `.await` (RUST-GUIDANCE §5).
+    ///
+    /// # Errors
+    ///
+    /// Returns [`OccError::QueueClosed`] if the queue is closed/disconnected and
+    /// [`OccError::QueueNotStarted`] if no live worker is available.
     // PORT backend/src/sandbox/occ/commit_queue.py:108-124 — submit(): future + enqueue
     pub fn submit(
         &self,
@@ -233,7 +250,7 @@ impl<T: CommitTransactionPort + 'static> CommitQueue<T> {
         if self
             .handle
             .as_ref()
-            .is_none_or(|handle| handle.is_finished())
+            .is_none_or(std::thread::JoinHandle::is_finished)
         {
             return Err(OccError::QueueNotStarted);
         }
@@ -246,6 +263,11 @@ impl<T: CommitTransactionPort + 'static> CommitQueue<T> {
 
     /// Consumer loop: block for the first item, non-blocking-drain the rest,
     /// pay the batch window only with headroom, then commit disjoint batches.
+    /// Takes ownership because it is moved into the worker thread.
+    #[expect(
+        clippy::needless_pass_by_value,
+        reason = "worker thread owns the receiver and transaction"
+    )]
     // PORT backend/src/sandbox/occ/commit_queue.py:131 — _run() consumer loop
     fn run(
         receiver: mpsc::Receiver<QueueItem>,
@@ -311,9 +333,8 @@ fn drain_ready(
     while items.len() < max_batch_size {
         match receiver.try_recv() {
             Ok(QueueItem::Work(item)) => items.push(item),
-            Ok(QueueItem::Stop) => return true,
+            Ok(QueueItem::Stop) | Err(mpsc::TryRecvError::Disconnected) => return true,
             Err(mpsc::TryRecvError::Empty) => return false,
-            Err(mpsc::TryRecvError::Disconnected) => return true,
         }
     }
     false
@@ -438,6 +459,8 @@ mod tests {
     use super::*;
     use crate::{FileResult, OccStatus, Route};
 
+    type TestResult<T = ()> = Result<T, Box<dyn std::error::Error + Send + Sync>>;
+
     #[derive(Clone)]
     struct RecordingTransaction {
         calls: Arc<Mutex<Vec<PreparedChangeset>>>,
@@ -460,14 +483,21 @@ mod tests {
         ) -> Result<ChangesetResult, PublishConflict> {
             self.calls
                 .lock()
-                .expect("calls poisoned")
+                .unwrap_or_else(std::sync::PoisonError::into_inner)
                 .push(combined.clone());
-            let mut remaining = self
-                .conflicts_before_success
-                .lock()
-                .expect("counter poisoned");
-            if *remaining > 0 {
-                *remaining -= 1;
+            let should_conflict = {
+                let mut remaining = self
+                    .conflicts_before_success
+                    .lock()
+                    .unwrap_or_else(std::sync::PoisonError::into_inner);
+                if *remaining > 0 {
+                    *remaining -= 1;
+                    true
+                } else {
+                    false
+                }
+            };
+            if should_conflict {
                 return Err(PublishConflict {
                     observed_version: Some(42),
                 });
@@ -488,9 +518,9 @@ mod tests {
         }
     }
 
-    fn prepared(path: &str, atomic: bool) -> PreparedChangeset {
-        let path = LayerPath::parse(path).expect("valid test path");
-        PreparedChangeset {
+    fn prepared(path: &str, atomic: bool) -> TestResult<PreparedChangeset> {
+        let path = LayerPath::parse(path)?;
+        Ok(PreparedChangeset {
             snapshot_version: Some(1),
             path_groups: vec![crate::PublishDecision {
                 path: path.clone(),
@@ -503,90 +533,100 @@ mod tests {
                 content: b"x".to_vec(),
             }],
             atomic,
+        })
+    }
+
+    fn recv_ok(
+        receiver: &mpsc::Receiver<Result<ChangesetResult, OccError>>,
+    ) -> TestResult<ChangesetResult> {
+        match receiver.recv()? {
+            Ok(result) => Ok(result),
+            Err(error) => Err(Box::new(error)),
         }
     }
 
-    fn recv_ok(receiver: mpsc::Receiver<Result<ChangesetResult, OccError>>) -> ChangesetResult {
-        receiver
-            .recv()
-            .expect("commit queue reply channel stayed open")
-            .expect("commit queue returned a changeset result")
-    }
-
     #[test]
-    fn batches_disjoint_non_atomic_changesets() {
+    fn batches_disjoint_non_atomic_changesets() -> TestResult {
         let transaction = RecordingTransaction::new(0);
         let calls = transaction.calls.clone();
         let mut queue = CommitQueue::with_config(transaction, 64, 0.02, 3);
-        queue.start().expect("queue starts");
-        let first = queue
-            .submit(prepared("a.txt", false))
-            .expect("first submit succeeds");
-        let second = queue
-            .submit(prepared("b.txt", false))
-            .expect("second submit succeeds");
+        queue.start()?;
+        let first = queue.submit(prepared("a.txt", false)?)?;
+        let second = queue.submit(prepared("b.txt", false)?)?;
 
-        assert!(recv_ok(first).success());
-        assert!(recv_ok(second).success());
-        queue.close().expect("queue closes");
+        assert!(recv_ok(&first)?.success());
+        assert!(recv_ok(&second)?.success());
+        queue.close()?;
 
-        let calls = calls.lock().expect("calls lock not poisoned");
-        assert_eq!(calls.len(), 1);
-        assert_eq!(calls[0].path_groups.len(), 2);
+        {
+            let calls = calls
+                .lock()
+                .map_err(|_| std::io::Error::other("calls lock poisoned"))?;
+            assert_eq!(calls.len(), 1);
+            assert_eq!(calls[0].path_groups.len(), 2);
+            drop(calls);
+        }
+        Ok(())
     }
 
     #[test]
-    fn atomic_changesets_are_not_batched() {
+    fn atomic_changesets_are_not_batched() -> TestResult {
         let transaction = RecordingTransaction::new(0);
         let calls = transaction.calls.clone();
         let mut queue = CommitQueue::with_config(transaction, 64, 0.02, 3);
-        queue.start().expect("queue starts");
-        let first = queue
-            .submit(prepared("a.txt", true))
-            .expect("first submit succeeds");
-        let second = queue
-            .submit(prepared("b.txt", true))
-            .expect("second submit succeeds");
+        queue.start()?;
+        let first = queue.submit(prepared("a.txt", true)?)?;
+        let second = queue.submit(prepared("b.txt", true)?)?;
 
-        assert!(recv_ok(first).success());
-        assert!(recv_ok(second).success());
-        queue.close().expect("queue closes");
+        assert!(recv_ok(&first)?.success());
+        assert!(recv_ok(&second)?.success());
+        queue.close()?;
 
-        let calls = calls.lock().expect("calls lock not poisoned");
-        assert_eq!(calls.len(), 2);
-        assert_eq!(calls[0].path_groups.len(), 1);
-        assert_eq!(calls[1].path_groups.len(), 1);
+        {
+            let calls = calls
+                .lock()
+                .map_err(|_| std::io::Error::other("calls lock poisoned"))?;
+            assert_eq!(calls.len(), 2);
+            assert_eq!(calls[0].path_groups.len(), 1);
+            assert_eq!(calls[1].path_groups.len(), 1);
+            drop(calls);
+        }
+        Ok(())
     }
 
     #[test]
-    fn retries_cas_conflict_then_succeeds() {
+    fn retries_cas_conflict_then_succeeds() -> TestResult {
         let transaction = RecordingTransaction::new(1);
         let calls = transaction.calls.clone();
         let mut queue = CommitQueue::with_config(transaction, 64, 0.0, 3);
-        queue.start().expect("queue starts");
-        let result = queue
-            .submit(prepared("a.txt", true))
-            .expect("submit succeeds");
+        queue.start()?;
+        let result = queue.submit(prepared("a.txt", true)?)?;
 
-        assert!(recv_ok(result).success());
-        queue.close().expect("queue closes");
+        assert!(recv_ok(&result)?.success());
+        queue.close()?;
 
-        assert_eq!(calls.lock().expect("calls lock not poisoned").len(), 2);
+        assert_eq!(
+            calls
+                .lock()
+                .map_err(|_| std::io::Error::other("calls lock poisoned"))?
+                .len(),
+            2
+        );
+        Ok(())
     }
 
     #[test]
-    fn cas_retry_exhaustion_surfaces_aborted_version() {
+    fn cas_retry_exhaustion_surfaces_aborted_version() -> TestResult {
         let transaction = RecordingTransaction::new(3);
         let mut queue = CommitQueue::with_config(transaction, 64, 0.0, 3);
-        queue.start().expect("queue starts");
-        let result = queue
-            .submit(prepared("a.txt", true))
-            .expect("submit succeeds");
+        queue.start()?;
+        let result = queue.submit(prepared("a.txt", true)?)?;
 
-        let result = recv_ok(result);
-        queue.close().expect("queue closes");
+        let result = recv_ok(&result)?;
+        queue.close()?;
 
         assert!(!result.success());
         assert_eq!(result.files[0].status, OccStatus::AbortedVersion);
+        Ok(())
     }
 }

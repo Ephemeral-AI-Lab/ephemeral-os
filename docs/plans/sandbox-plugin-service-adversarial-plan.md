@@ -1,8 +1,24 @@
 # Sandbox Plugin Service Adversarial Implementation Plan
 
-**Status:** In progress; contract/status slice landed, process-backed PPC and
-refresh execution remain open.
-**Date:** 2026-06-01.
+**Status:** In progress; contract/status/routing/PPC lifecycle, retained
+snapshot-refresh freshness gating, `restart_service` fallback, self-managed OCC
+callbacks including repeated callback frames before a final reply, one-shot
+WRITE_ALLOWED overlay execution, and live generic Rust
+plugin coverage landed. Long-lived services now start in a daemon-owned private
+overlay namespace on Linux and stale remount strategies now perform daemon-owned
+in-place namespace remount; a generic package-adapter harness is live, while
+Pyright read-only `documentSymbol`/`workspace/symbol`/`completion`/
+`completionItem/resolve`/`publishDiagnostics`/`signatureHelp`/`hover`/
+`typeDefinition`/`declaration`/`callHierarchy`/`documentHighlight`/`prepareRename`/
+`definition`/`references` refresh and a Pyright-computed self-managed rename
+publish path are live. Live status health probes, service-crash,
+hung-service timeout fail-closed probes, and next-dispatch service recovery
+after a PPC/process failure are also green.
+Broader AV-10 LSP parity, true operation-level out-of-order multiplexing if
+required, and
+broader crash recovery beyond the covered health/crash/timeout/recovery paths
+remain open.
+**Date:** 2026-06-02.
 **Scope:** `/sandbox` Rust plugin implementation, with the Python sandbox plugin
 path as the behavioral reference.
 
@@ -30,7 +46,7 @@ path as the behavioral reference.
   `docs/plans/sandbox-rust-external-migration-PLAN.md`,
   `docs/plans/sandbox-rust-external-migration-PROGRESS.md`.
 
-## Progress Update - 2026-06-01 23:22 CST
+## Progress Update - 2026-06-02 07:34 CST
 
 Landed:
 
@@ -56,34 +72,371 @@ Landed:
   `PluginServiceKey`, `api.plugin.ensure/status` now expose `service_processes`,
   and `plugin/ppc_router.rs` performs message-id checked AF_UNIX request/reply.
   Connected read-only routes can now dispatch through PPC without holding the
-  daemon plugin registry lock during I/O.
+  daemon plugin registry lock during I/O; same-service concurrent read-only
+  requests share the connected client and serialize on a per-client lock rather
+  than falling back to deferred dispatch, and failed PPC I/O drops the connected
+  route so status does not report a stale service connection.
+- Added the first self-managed callback transport slice: the daemon PPC client
+  can now service plugin-originated request frames on the same AF_UNIX stream
+  before the final operation reply arrives, validates callback reply direction
+  and message id, and preserves the existing one-request `round_trip` behavior
+  by failing unexpected callbacks with a typed PPC error. Follow-up coverage now
+  proves multiple callback request frames can be serviced on the same plugin
+  request before the final operation reply.
+- Added the first OCC-backed self-managed callback slice:
+  `sandbox/crates/eos-daemon/src/plugin/occ_callbacks.rs` parses the generic
+  `daemon.occ.apply_changeset` callback payload, validates that the callback
+  targets the service's `layer_stack_root`, converts callback changes into
+  `LayerChange`s, and publishes through `dispatcher::apply_occ_changeset` so
+  self-managed plugin callbacks use the same daemon-owned per-root OCC writer.
+  A connected self-managed `plugin.*` route can now run over PPC, service the OCC
+  callback, repeat that callback sequence for more than one daemon-managed
+  write, and return the plugin's final reply.
+- Added daemon-owned one-shot overlay execution for generic WRITE_ALLOWED plugin
+  workers. Manifest services using `service_mode: "oneshot_overlay"` require a
+  launch command but are not started as long-lived processes. At dispatch time,
+  auto-overlay WRITE_ALLOWED routes acquire a LayerStack snapshot lease, allocate
+  a fresh overlay upper/work dir, write a generic request JSON, run the worker in
+  `RunMode::FreshNs` against the bound workspace root, read the optional worker
+  result JSON, capture the upperdir, compute snapshot base hashes, and publish
+  through the same OCC path as shell/write routes.
 - Added opt-in service process lifecycle behind `api.plugin.ensure`:
   `start_services: true` spawns service commands with the PPC harness
   environment, reports `running_service_processes`, and tears processes down
   through the daemon registry/drop path. This proves daemon ownership of service
   lifetime without requiring Pyright in focused tests.
-- Added focused Rust coverage: `cargo test -p eos-plugin` (`26 passed`) and
-  `cargo test -p eos-daemon plugin` (`13 passed`).
+- Wired the daemon-side service PPC accept/connect handoff: the daemon binds the
+  per-service `/eos/plugin/ppc/*.sock` endpoint, starts the service command,
+  accepts the harness connection, restores the accepted stream to blocking mode,
+  and registers the connected client by `PluginServiceKey` service instance.
+  Focused coverage proves a `start_services: true` service can handle a
+  registered read-only `plugin.*` request over that accepted PPC stream.
+- Added Linux private-overlay launch for long-lived read-only plugin services.
+  `api.plugin.ensure start_services=true` now acquires a service snapshot,
+  allocates daemon-owned `/eos/mount/runtime/plugin-service/*` upper/work dirs,
+  starts the service through the existing single-threaded `eosd ns-runner`
+  boundary with a new `plugin_service` runner verb, mounts the leased LayerStack
+  snapshot at the bound workspace root, then executes the vanilla service
+  command with the normal PPC environment plus
+  `EOS_PLUGIN_WORKSPACE_MOUNTED=1`. Non-Linux/test builds keep the direct-spawn
+  path so host unit tests stay portable.
+- Added daemon-owned in-place workspace remount for stale long-lived services.
+  `eos-overlay` now exposes lazy overlay unmount, `eosd ns-runner
+  --remount-overlay` replaces the workspace mount inside the caller's current
+  namespace, and `eos-daemon` drives `nsenter -t <service-wrapper-pid> -U -m`
+  while the service is quiesced. The refresh order is now
+  `PrepareRefresh -> Quiesce -> daemon remount -> SwapWorkspace ->
+  NotifyRefresh -> Resume -> Health`, so a package harness receives a normal
+  generic refresh protocol while the daemon owns the actual LayerStack snapshot
+  mount.
+- Added the first `workspace_snapshot_refresh` freshness gate. Started
+  long-lived services now retain a daemon LayerStack snapshot lease and record a
+  manifest key in status. Before each connected read-only request, the daemon
+  compares that service manifest key with the active manifest key. If stale, it
+  runs the generic PPC refresh sequence for remount strategies, performs the
+  daemon remount after `Quiesce` and before `SwapWorkspace`, swaps the retained
+  lease only after the harness acknowledges the new manifest, increments
+  `refresh_count`, and only then sends the plugin operation. The focused test
+  publishes a peer write, verifies the refresh frames are sent before the next
+  read-only request, and confirms status returns `state=ready` with
+  `refresh_count=1`.
+- Added the generic `restart_service` fallback for stale read-only services.
+  When a `workspace_snapshot_refresh` route uses `restart_service`, the daemon
+  tears down the old service process/client/snapshot, starts the same declared
+  service command against a fresh LayerStack snapshot, accepts a new PPC
+  connection, marks the service ready on the active manifest, and increments
+  `restart_count` instead of sending refresh frames. Focused coverage publishes
+  a peer write before the next read-only request and verifies the restarted
+  service answers with `restart_count=1` and `refresh_count=0`.
+- Added the first service-crash fail-closed hardening. Before connected
+  read-only or self-managed dispatch, the daemon checks any tracked service
+  process, removes dead process/client/snapshot state, marks the service
+  stopped, releases the retained lease, and returns a structured plugin error
+  instead of letting a stale PPC route answer. Focused coverage proves an exited
+  tracked process is reaped before dispatch.
+- Added live hung-service timeout fail-closed coverage. A separate
+  `hang_harness` long-lived service intentionally sleeps past the manifest
+  operation timeout; the daemon PPC read timeout tears down that service,
+  removes `plugin.generic.hang_probe` from connected routes, releases retained
+  snapshot state, records the timeout in service status, and leaves unrelated
+  plugin services ready.
+- Added the generic service health-probe hardening slice. `api.plugin.status`
+  now reaps dead service processes before building `loaded_plugins`; when called
+  with `probe_services: true`, it sends the same
+  `daemon.workspace_snapshot_refresh` `Health { manifest_key }` frame to every
+  connected long-lived service with a retained daemon snapshot, reports
+  per-service `service_health`, and fails closed by tearing down only the service
+  that cannot acknowledge its retained manifest. Focused coverage proves both
+  successful health reporting and failed-health route/snapshot cleanup.
+- Added next-dispatch recovery for previously ready read-only services. If a
+  `workspace_snapshot_refresh` service had already reached a retained manifest
+  and a PPC/process failure later tears down its client, the next dispatch for
+  that same route restarts the declared service command against the current
+  daemon-owned snapshot instead of leaving the route indefinitely deferred.
+  Focused coverage proves the first request fails closed, status reports no
+  connected route and `state=stopped`, and the second request returns from the
+  restarted service with `restart_count=1`.
+- Added focused Rust coverage: `cargo test -p eos-plugin` (`18 passed`) and
+  `cargo test -p eos-daemon plugin -- --test-threads=1` (`30 passed`).
 - Added live plugin refresh coverage at
   `backend/tests/live_e2e_test/sandbox/plugin/test_plugin_refresh_strategies.py`,
   backed by `backend/scripts/bench_plugin_refresh_strategies.py`, with
   iteration notes in
   `backend/tests/live_e2e_test/sandbox/plugin/ITERATION-REPORT.md`.
+- Added live Rust-runtime generic plugin coverage:
+  `backend/scripts/bench_rust_daemon_plugin.py` reuses the existing Docker
+  sandbox benchmark helpers, uploads the current packaged Rust `eosd`, installs
+  a small generic PPC harness, one-shot worker, and vanilla JSON-lines package
+  adapter subprocess plus a Pyright setup script under `/eos/plugin/*`, starts
+  only the long-lived PPC services through `api.plugin.ensure start_services=true`,
+  verifies `api.plugin.status probe_services=true` can health-check the generic
+  harness, restart harness, package adapter, Pyright adapter, crash-probe
+  service, hang-probe service, and recover-probe service on their retained
+  daemon snapshot manifest,
+  verifies a read-only `plugin.generic.ping`, verifies a self-managed
+  `plugin.generic.apply` publish through `daemon.occ.apply_changeset`, verifies
+  `plugin.generic.apply_multi` can issue two daemon-owned
+  `daemon.occ.apply_changeset` callbacks on the same PPC request before the
+  plugin's final reply and then reads both committed files from LayerStack,
+  verifies
+  the next read-only `plugin.generic.ping` triggers
+  `workspace_snapshot_refresh` and advances the harness service to the new
+  manifest key, verifies the same refreshed service reads the post-write file
+  through its daemon-remounted `EOS_PLUGIN_WORKSPACE_ROOT`, verifies
+  `plugin.generic.adapter_query` reaches a package adapter behind
+  `refresh_strategy: "remount_workspace"` and returns cached post-refresh file
+  content from the adapter process, seeds a Python file through `api.v1.write_file`,
+  verifies `plugin.generic.pyright_symbols` reaches a real
+  `pyright-langserver --stdio` adapter behind
+  `refresh_strategy: "remount_workspace_and_notify"` after daemon remount and
+  returns the `live_value` document symbol, verifies
+  `plugin.generic.pyright_workspace_symbols` asks that same Pyright service for
+  a real LSP `workspace/symbol` response and returns `live_value` from the
+  refreshed workspace-wide symbol index, verifies
+  `plugin.generic.pyright_completion` asks that same Pyright service for a real
+  LSP `textDocument/completion` response and returns a `live_value` completion
+  label from a second seeded Python file, verifies
+  `plugin.generic.pyright_completion_resolve` resolves the selected
+  `live_value` completion item, verifies
+  `plugin.generic.pyright_diagnostics` consumes a real
+  `textDocument/publishDiagnostics` notification for a separately seeded
+  undefined `List` type and normalizes the `reportUndefinedVariable` diagnostic,
+  verifies
+  `plugin.generic.pyright_signature_help` asks that same Pyright service for a
+  real LSP `textDocument/signatureHelp` response and returns active-parameter
+  evidence for a second argument in a typed function call, verifies
+  `plugin.generic.pyright_hover` asks that same Pyright service for a real LSP
+  `textDocument/hover` response and returns hover text for the call site,
+  verifies
+  `plugin.generic.pyright_type_definition` asks that same Pyright service for a
+  real LSP `textDocument/typeDefinition` response and resolves an instance use
+  back to its class definition in a separately seeded file, verifies
+  `plugin.generic.pyright_declaration` asks that same Pyright service for a
+  real LSP `textDocument/declaration` response and resolves the call site back
+  to the seeded function declaration, verifies
+  `plugin.generic.pyright_call_hierarchy` asks that same Pyright service for a
+  real LSP `textDocument/prepareCallHierarchy` response and
+  `callHierarchy/incomingCalls` relationship from `live_caller` to
+  `live_callee`, verifies
+  `plugin.generic.pyright_document_highlight` asks that same Pyright service
+  for a real LSP `textDocument/documentHighlight` response and returns symbol
+  highlights for both the declaration and call site, verifies
+  `plugin.generic.pyright_prepare_rename` asks that same Pyright service for a
+  real LSP `textDocument/prepareRename` response and returns a call-site rename
+  range, verifies
+  `plugin.generic.pyright_definition` asks that same Pyright service for a real
+  LSP `textDocument/definition` response and resolves the call site back to the
+  seeded function definition inside the refreshed workspace, verifies
+  `plugin.generic.pyright_references` asks that same Pyright service for a real
+  LSP `textDocument/references` response and resolves both the declaration line
+  and call-site line inside the refreshed workspace, verifies
+  `plugin.generic.pyright_rename` asks that same Pyright service for a real LSP
+  `textDocument/rename` WorkspaceEdit and publishes the resulting write through
+  the daemon-owned `daemon.occ.apply_changeset` callback, verifies a second
+  read-only
+  `plugin.generic.restart_ping`
+  triggers the `restart_service` fallback for a separate generic service,
+  verifies that restarted service reads the post-write file through its mounted
+  `EOS_PLUGIN_WORKSPACE_ROOT`,
+  verifies `plugin.generic.oneshot_write` through daemon-owned overlay/OCC
+  execution, verifies `plugin.generic.crash_probe` fails closed by dropping the
+  broken PPC route and marking only that service stopped, verifies
+  `plugin.generic.hang_probe` fails closed on PPC timeout by dropping only the
+  hung route and marking only that service stopped, verifies
+  `plugin.generic.recover_probe` first fails closed by dropping only the
+  recover route and then succeeds on the next dispatch after the daemon restarts
+  the previously ready service.
+  The pytest wrapper now runs this Rust plugin benchmark after the
+  refresh-strategy benchmark in the same integrated sandbox fixture.
 - Live verification passed:
-  `EOS_SANDBOX_PROVIDER=docker EOS_LIVE_E2E_IMAGE=xingyaoww/sweb.eval.x86_64.dask_s_dask-10042:latest EOS_PLUGIN_REFRESH_SAMPLES=1 EOS_PLUGIN_REFRESH_AUTO_SQUASH_WRITES=104 uv run pytest -q -x -rs --tb=short --durations=10 backend/tests/live_e2e_test/sandbox/plugin/test_plugin_refresh_strategies.py`
-  (`1 passed in 12.38s` on the latest rerun).
+  `EOS_SANDBOX_PROVIDER=docker EOS_LIVE_E2E_IMAGE=xingyaoww/sweb.eval.x86_64.dask_s_dask-10042:latest EOS_PLUGIN_REFRESH_SAMPLES=1 EOS_PLUGIN_REFRESH_AUTO_SQUASH_WRITES=104 EOS_RUST_PLUGIN_BENCH_TIMEOUT_S=600 uv run pytest -q -x -rs --tb=short --durations=10 backend/tests/live_e2e_test/sandbox/plugin/test_plugin_refresh_strategies.py`
+  (`1 passed in 40.33s` on the latest rerun). The Rust plugin artifact report
+  `.omc/results/rust-daemon-plugin-generic-20260601T233450Z-72557.json` used
+  `eosd-linux-amd64` SHA
+  `79f2592a55e565f00e2917c86cbeca2bfa26c073c316a1be6b6239d5830509fb` and
+  proved registered routes `plugin.generic.adapter_query`,
+  `plugin.generic.apply`, `plugin.generic.apply_multi`,
+  `plugin.generic.crash_probe`,
+  `plugin.generic.hang_probe`,
+  `plugin.generic.oneshot_write`, `plugin.generic.ping`, and
+  `plugin.generic.pyright_call_hierarchy`,
+  `plugin.generic.pyright_completion`,
+  `plugin.generic.pyright_completion_resolve`,
+  `plugin.generic.pyright_definition`,
+  `plugin.generic.pyright_declaration`,
+  `plugin.generic.pyright_diagnostics`,
+  `plugin.generic.pyright_document_highlight`, `plugin.generic.pyright_hover`,
+  `plugin.generic.pyright_prepare_rename`,
+  `plugin.generic.pyright_references`, `plugin.generic.pyright_rename`,
+  `plugin.generic.pyright_signature_help`, `plugin.generic.pyright_symbols`,
+  `plugin.generic.pyright_type_definition`,
+  `plugin.generic.pyright_workspace_symbols`, `plugin.generic.recover_probe`,
+  and `plugin.generic.restart_ping`;
+  connected routes
+  `plugin.generic.adapter_query`/`plugin.generic.apply`/
+  `plugin.generic.apply_multi`/
+  `plugin.generic.crash_probe`/
+  `plugin.generic.hang_probe`/
+  `plugin.generic.ping`/`plugin.generic.pyright_call_hierarchy`/
+  `plugin.generic.pyright_completion`/
+  `plugin.generic.pyright_completion_resolve`/
+  `plugin.generic.pyright_declaration`/
+  `plugin.generic.pyright_definition`/
+  `plugin.generic.pyright_diagnostics`/
+  `plugin.generic.pyright_document_highlight`/
+  `plugin.generic.pyright_hover`/`plugin.generic.pyright_prepare_rename`/
+  `plugin.generic.pyright_references`/`plugin.generic.pyright_rename`/
+  `plugin.generic.pyright_signature_help`/
+  `plugin.generic.pyright_symbols`/
+  `plugin.generic.pyright_type_definition`/
+  `plugin.generic.pyright_workspace_symbols`/
+  `plugin.generic.recover_probe`/
+  `plugin.generic.restart_ping`;
+  `status_after_health_probe.service_health` proved successful
+  `Health { manifest_key }` acknowledgements for `harness`, `restart_harness`,
+  `adapter_harness`, `pyright_harness`, `crash_harness`, `hang_harness`, and
+  `recover_harness` on retained manifest key
+  `1:f071e2d096b352b67daeb0f2e2f6dc503335246a98e209fa9f199d06314b5cb5`;
+  initial service `state=ready` on manifest key
+  `1:f071e2d096b352b67daeb0f2e2f6dc503335246a98e209fa9f199d06314b5cb5`;
+  callback file status `committed`; self-managed readback
+  `from live rust plugin\n`; repeated self-managed callback evidence where
+  `plugin.generic.apply_multi.callback_count == 2`, callback index `0`
+  committed `live_plugin_multi_a.txt` at published manifest version `3`,
+  callback index `1` committed `live_plugin_multi_b.txt` at published manifest
+  version `4`, and LayerStack readbacks returned
+  `from live rust plugin multi a\n` / `from live rust plugin multi b\n`;
+  post-write refresh `state=ready` with
+  `refresh_count=1` on manifest key
+  `4:97a4e2b61acb6c3488ba7f0b41580dffb0c6bccbe243d20d3da2f82738600a12`;
+  daemon-remount evidence from the original long-lived service
+  `workspace_mounted=true` and
+  `refresh_ping.workspace_read.content == "from live rust plugin\n"`;
+  package-adapter evidence from `adapter_harness` with
+  `refresh_strategy="remount_workspace"`, `state=ready`, `refresh_count=1`,
+  `workspace_mounted=true`, and cached package response
+  `{"protocol":"line-json-v1","cached":true,"content":"from live rust plugin\n"}`;
+  Pyright adapter evidence from `pyright_harness` with
+  `refresh_strategy="remount_workspace_and_notify"`, `state=ready`,
+  `refresh_count=1`, `workspace_mounted=true`, and LSP response
+  `{"protocol":"lsp-jsonrpc","server":"pyright-langserver","symbol_names":["live_value"]}`;
+  Pyright workspace-symbol evidence where
+  `plugin.generic.pyright_workspace_symbols` returned `symbol_count=1`,
+  `symbol_names=["live_value"]`, and `symbol_paths=["live_plugin_pyright.py"]`;
+  Pyright completion evidence where `plugin.generic.pyright_completion`
+  returned `item_count=2`, `matching_labels=["live_value"]`, and position
+  `live_plugin_completion.py` line `3`, character `14`;
+  Pyright completion-resolve evidence where
+  `plugin.generic.pyright_completion_resolve` advertised
+  `completion_resolve=true`, returned `data_present=true`,
+  `documentation_text == "def live_value() -> int"`, and resolved
+  `request_label == resolved_label == "live_value"` at
+  `live_plugin_completion.py` line `3`, character `14`;
+  Pyright diagnostics evidence where
+  `plugin.generic.pyright_diagnostics` consumed
+  `textDocument/publishDiagnostics` for `live_plugin_diagnostics.py`, returned
+  `diagnostic_count=1`, `diagnostic_codes=["reportUndefinedVariable"]`, and
+  diagnostic message `"List" is not defined`;
+  Pyright signature-help evidence where
+  `plugin.generic.pyright_signature_help` returned `signature_count=1`,
+  `active_parameter=1`, and label `(left: int, right: str) -> str` for
+  `live_plugin_signature.py` line `3`, character `28`;
+  Pyright hover evidence where `plugin.generic.pyright_hover` returned
+  `hover_text == "(function) def live_value() -> int"` for the call at line
+  `3`, character `12`;
+  Pyright type-definition evidence where
+  `plugin.generic.pyright_type_definition` returned `type_definition_count=1`
+  and resolved the instance use in `live_plugin_type.py` at line `4`, character
+  `11` back to the class definition range starting at line `0`, character `6`;
+  Pyright declaration evidence where
+  `plugin.generic.pyright_declaration` advertised `declaration=true`, returned
+  `declaration_count=1`, and resolved the call at line `3`, character `12` to
+  `live_plugin_pyright.py` range start line `0`, character `4`;
+  Pyright call-hierarchy evidence where
+  `plugin.generic.pyright_call_hierarchy` advertised
+  `call_hierarchy=true`, returned `item_count=1` and
+  `item_names=["live_callee"]` for `live_plugin_call_hierarchy.py` at line `0`,
+  character `11`, then returned `incoming_count=1` with
+  `incoming_names=["live_caller"]`;
+  Pyright document-highlight evidence where
+  `plugin.generic.pyright_document_highlight` returned `highlight_count=2` with
+  `live_plugin_pyright.py` range start lines `0` and `3`;
+  Pyright prepare-rename evidence where
+  `plugin.generic.pyright_prepare_rename` returned a call-site range at line
+  `3`, characters `9..19`;
+  Pyright definition evidence where `plugin.generic.pyright_definition`
+  returned `definition_count=1` and resolved the call at line `3`, character
+  `12` to `live_plugin_pyright.py` range start line `0`, character `4`;
+  Pyright references evidence where `plugin.generic.pyright_references`
+  returned `reference_count=2` with `include_declaration=true` and locations in
+  `live_plugin_pyright.py` at range start lines `0` and `3`;
+  Pyright self-managed write evidence where `plugin.generic.pyright_rename`
+  returned a real LSP `documentChanges` WorkspaceEdit for
+  `live_plugin_pyright.py`, converted it to one generic write changeset, and
+  published through `daemon.occ.apply_changeset` with callback status
+  `success=true`, file status `committed`, and published manifest version `11`;
+  LayerStack readback was
+  `def live_total() -> int:\n    return 42\n\nRESULT = live_total()\n`;
+  restart fallback `state=ready` with `restart_count=1` and `refresh_count=0`
+  on that same post-write manifest key; mounted workspace evidence
+  `workspace_mounted=true` and `workspace_read.content == "from live rust plugin\n"`
+  from inside the restarted service process;
+  one-shot worker exit code `0`; one-shot readback
+  `from live rust oneshot plugin\n`; crash probe evidence
+  `expected_failure=true` with `ppc channel error: plugin PPC stream closed
+  before reply`, `plugin.generic.crash_probe` removed from connected routes, and
+  `crash_harness.state == "stopped"` with the same error recorded in
+  `last_error`; hung-service timeout evidence `expected_failure=true` with
+  `daemon io error: Resource temporarily unavailable (os error 11)`,
+  `plugin.generic.hang_probe` removed from connected routes, and
+  `hang_harness.state == "stopped"` with the same error recorded in
+  `last_error`; recovery probe evidence `expected_failure=true` on the first
+  `plugin.generic.recover_probe` with `ppc channel error: plugin PPC stream
+  closed before reply`, `plugin.generic.recover_probe` removed from connected
+  routes, `recover_harness.state == "stopped"`, second
+  `plugin.generic.recover_probe` returning `from_recovered_service=true` with
+  `workspace_mounted=true`, restored connected route, and
+  `recover_harness.restart_count == 1`; final manifest version `12`; retained
+  service leases before cleanup `5`; post-cleanup active leases `0`; and zero
+  post-cleanup orphan layers and missing layers. The paired refresh-strategy
+  report `.omc/results/plugin-refresh-strategies-20260601T233450Z-72557.json`
+  still recommends `workspace_snapshot_refresh`; refresh p95 was `3.867 ms`
+  versus `commit_to_workspace` p95 `3.276 ms`.
 
 Still open:
 
-- Real plugin harness accept/connect wiring, concurrent request multiplexing,
-  callback servicing, WRITE_ALLOWED route execution, and crash/teardown
-  hardening.
-- Actual `workspace_snapshot_refresh` namespace remount/restart execution in
-  Rust; current Rust service state is the validated logical/status surface.
-- `WRITE_ALLOWED` overlay wrapping and self-managed plugin commit callbacks
-  still need to stop returning typed deferred errors.
-- Non-LSP dummy service parity and Pyright/LSP adapter parity remain required
-  before claiming arbitrary-package support.
+- True operation-level out-of-order multiplexing if needed by a future
+  bidirectional protocol,
+  broader crash recovery beyond the now-covered health probe, closed PPC stream,
+  PPC timeout, and next-dispatch restart paths, and broader AV-10 LSP parity beyond the representative Pyright
+  `documentSymbol` + `workspace/symbol` + `completion` +
+  `completionItem/resolve` + `publishDiagnostics` + `signatureHelp` + `hover` + `typeDefinition` +
+  `declaration` + `callHierarchy` + `documentHighlight` + `prepareRename` +
+  `definition` + `references` + `rename` path.
+- Generic non-LSP PPC, package-adapter coverage, read-only Pyright refresh, and
+  a representative Pyright WRITE_ALLOWED/self-managed rename path are live;
+  canonical Python-importlib vs Rust-PPC LSP parity still needs broader
+  operation coverage before claiming full AV-10.
 
 ## Success Criteria
 
@@ -128,22 +481,32 @@ runtime boundary:
 
 The Rust path is deliberately incomplete:
 
-- `eos-plugin` has the registry, dispatch-mode selection, PPC envelope framing,
-  no-`eos-occ` crate edge, warm-server registry scaffolding, generic service
-  manifests, refresh messages, service keys, and logical service status.
-- `dispatch_read_only`, `dispatch_write_allowed`, and
-  `dispatch_self_managed` still return typed deferred errors.
+- `eos-plugin` has the registry/public-op helpers, PPC envelope framing,
+  generic service manifests, refresh messages, service keys, and logical
+  service status. The old standalone warm-server/dispatch/context scaffold has
+  been removed; daemon-connected read-only routes and connected self-managed
+  routes execute through the daemon plugin module.
 - `eos-daemon` registers `api.plugin.ensure` and `api.plugin.status`, records
   manifest-declared services and operation routes, and resolves exact
   `plugin.<plugin>.<op>` names. Read-only routes with a connected PPC client
   perform a message-id checked AF_UNIX round trip; otherwise registered routes
   still return a structured `plugin_dispatch_deferred` response. With
   `start_services: true`, service commands are spawned and reported as daemon
-  owned processes, but the generic harness accept/connect loop is not wired yet.
-- The compatibility `WarmServerRegistry` is still keyed by `layer_stack_root`
-  only. The daemon-owned service registry must use `PluginServiceKey` so
-  arbitrary plugin packages with distinct payload digests, runtimes,
-  environment, and service modes do not share incompatible processes.
+  owned processes, and the daemon binds/accepts the per-service PPC socket before
+  dispatching registered read-only routes through the accepted stream. Concurrent
+  read-only calls to the same service now share the connected client and
+  serialize on a per-client lock without holding the daemon registry mutex.
+  Broken PPC streams are removed from the connected-service map. The PPC client
+  can also service plugin-originated callback request frames before the final
+  operation reply. For connected self-managed routes, the
+  `daemon.occ.apply_changeset` callback now publishes through the same per-root
+  daemon OCC writer after validating the callback's layer-stack root. For
+  auto-overlay WRITE_ALLOWED routes using `service_mode: "oneshot_overlay"`, the
+  daemon runs the service command per operation in a fresh overlay namespace,
+  captures the upperdir, and publishes through OCC.
+- The daemon-owned service registry uses `PluginServiceKey` so arbitrary plugin
+  packages with distinct payload digests, runtimes, environment, and service
+  modes do not share incompatible processes.
 
 ## Design Decision
 
@@ -184,7 +547,7 @@ Plugin manifests should describe:
   - `remount_workspace`
   - `restart_service`
 - Operation list with `Intent`, `auto_workspace_overlay`, timeout, and whether
-  the operation needs a warm service or an operation worker.
+  the operation needs a long-lived service process or an operation worker.
 
 The service mode names the daemon-owned freshness model. The strategy names are
 mechanism names; `refresh_strategy` already supplies the refresh context, so the
@@ -192,57 +555,93 @@ enum values should not repeat it.
 
 ## Rust Crate Reuse and File Layout
 
-Yes, reuse `eos-ephemeral`, but only as the shared ephemeral contract crate. The
-current checkout intentionally keeps `sandbox/crates/eos-ephemeral` small: it
-exports `OccRuntimeServicesPort`, `PublishedFile`, and `EphemeralError`, and it
-does not own the concrete overlay, LayerStack, OCC, runner, plugin registry, or
-route model. Keep that boundary.
+There is no `sandbox/crates/eos-ephemeral` crate in the current Rust workspace.
+Do not add one for plugin refresh. The implementation should reuse the existing
+ephemeral workspace semantics as the behavioral contract, while sharing the
+current Rust overlay, runner, LayerStack, OCC, and protocol crates directly.
 
-Plugin refresh should therefore reuse `eos-ephemeral` for the write/self-managed
-publish contract only: both `WRITE_ALLOWED` plugin workers and self-managed PPC
-callbacks must publish through the daemon-injected `OccRuntimeServicesPort`.
-Do not move `workspace_snapshot_refresh` runtime orchestration into
-`eos-ephemeral`.
+The reuse boundary is:
 
-The resulting crate ownership should be:
+- Python `backend/src/sandbox/ephemeral_workspace/**` remains the parity source
+  for plugin overlay behavior and route semantics during the migration.
+- `eos-overlay` owns overlay writable directory allocation and overlay helpers.
+- `eos-runner` owns fresh namespace execution, including the long-lived
+  read-only `plugin_service` verb.
+- `eos-daemon` is the only impure owner that combines LayerStack leases,
+  overlay dirs, runner requests, PPC sockets, process lifecycle, and OCC
+  callbacks.
+- `eos-plugin` stays pure: manifest, service, registry, refresh, and PPC
+  contracts only. It must not depend on overlay, LayerStack, OCC, runner, nix,
+  or tokio.
+
+The resulting crate/module ownership is:
 
 ```text
-sandbox/crates/eos-ephemeral/src/
-  lib.rs                 # unchanged public contract surface
-  error.rs               # shared ephemeral errors
-  ports.rs               # OccRuntimeServicesPort + PublishedFile
+sandbox/crates/eos-overlay/src/
+  lib.rs                 # exports overlay helpers
+  writable_dirs.rs       # /eos/mount allocation for upper/work dirs
+  kernel_mount.rs        # Linux overlay mount helpers
+  path_change.rs         # captured upperdir change classification
 
 sandbox/crates/eos-plugin/src/
   lib.rs                 # exports plugin contracts
-  context.rs             # per-call identity and intent
-  dispatch.rs            # mode selection and deferred dispatch contracts
   error.rs               # plugin errors
-  manifest.rs            # NEW: plugin/service manifest validation
+  manifest.rs            # plugin/service manifest validation
   ppc.rs                 # PPC envelope over eos-protocol framing
-  refresh.rs             # NEW: Prepare/Quiesce/Swap/Notify/Resume/Health types
+  refresh.rs             # Prepare/Quiesce/Swap/Notify/Resume/Health types
   registry.rs            # op registration and public plugin.* names
-  service.rs             # NEW: PluginServiceKey, ServiceMode, RefreshStrategy
-  service_registry.rs    # NEW: logical registry contract, no daemon I/O
-  warm_server.rs         # evolves into service process handle compatibility
+  service.rs             # PluginServiceKey, ServiceMode, RefreshStrategy
+  service_registry.rs    # logical registry contract, no daemon I/O
+
+sandbox/crates/eos-runner/src/
+  lib.rs                 # RunMode dispatch
+  request.rs             # RunRequest, ToolCall, WorkspaceRoot
+  fresh_ns.rs            # FreshNs mount + shell/search/plugin_service verbs
+  mount.rs               # workspace overlay mount setup
+  setns.rs               # existing namespace entry helpers
 
 sandbox/crates/eos-daemon/src/
-  plugin/mod.rs          # NEW: daemon plugin module boundary
-  plugin/ops.rs          # FUTURE: split api.plugin.ensure/status + plugin.* ops
-  plugin/service_registry.rs
-                         # NEW: live PluginServiceRegistry implementation
-  plugin/process.rs      # NEW: PluginServiceKey -> /eos/plugin/ppc/*.sock spec
-  plugin/snapshot_refresh.rs
-                         # NEW: leased snapshot refresh/remount/restart logic
-  plugin/ppc_router.rs   # NEW: message-id checked PPC round trip
+  plugin/mod.rs          # daemon plugin ensure/status + route dispatch
+  plugin/process.rs      # PluginServiceKey -> /eos/plugin/ppc/*.sock process spec
+  plugin/ppc_router.rs   # message-id checked PPC round trip + callbacks
   plugin/occ_callbacks.rs
-                         # NEW: implements self-managed commit via same OCC port
-  plugin/telemetry.rs    # NEW: refresh, lease, queue, restart metrics
+                         # self-managed commit via the daemon OCC writer
+  dispatcher.rs          # shared overlay runner, including plugin oneshot wrapper
+
+sandbox/crates/eosd/src/
+  main.rs                # ns-runner --mount-overlay / --remount-overlay entrypoint
+
+backend/scripts/
+  bench_plugin_refresh_strategies.py
+                         # refresh/materialization/auto-squash strategy experiment
+  bench_rust_daemon_plugin.py
+                         # live generic plugin PPC/OCC/refresh/Pyright harness
+
+backend/tests/live_e2e_test/sandbox/plugin/
+  test_plugin_refresh_strategies.py
+                         # focused live E2E wrapper for both benchmark scripts
+  ITERATION-REPORT.md    # try-by-try findings and artifacts
 ```
 
-`eos-plugin` may depend on `eos-ephemeral`, `eos-layerstack`, and
-`eos-protocol`. It must not depend on `eos-occ`, `eos-overlay`, `nix`, or
-`tokio`. The daemon is the impure owner that combines `eos-layerstack`,
-`eos-overlay`, `eos-occ`, `eos-runner`, and `eos-plugin` into a live service.
+Live runtime experiment files are staged under `/eos/plugin/*`; the plan does
+not use the legacy tmp/plugin-refresh roots.
+
+Potential later cleanup, if the daemon plugin module keeps growing:
+
+```text
+sandbox/crates/eos-daemon/src/
+
+  plugin/snapshot_refresh.rs
+                         # move leased snapshot remount/restart logic out of mod.rs
+  plugin/overlay.rs      # move plugin-specific one-shot wrapper out of dispatcher
+  plugin/telemetry.rs    # refresh, lease, queue, restart metrics
+```
+
+`eos-plugin` may depend on `eos-protocol` plus serde/JSON/error support. It
+must not depend on `eos-layerstack`, `eos-occ`, `eos-overlay`, `eos-runner`,
+`nix`, or `tokio`. The daemon is the impure owner that combines
+`eos-layerstack`, `eos-overlay`, `eos-occ`, `eos-runner`, and `eos-plugin` into
+a live service.
 
 ## Service Modes
 
@@ -500,8 +899,8 @@ Allowed write paths:
 1. `WRITE_ALLOWED` with `auto_workspace_overlay=true`: daemon acquires a fresh
    operation overlay, runs a worker/adapter, captures upperdir, and publishes
    through OCC.
-2. Service-query-plus-daemon-apply: a warm service returns an edit plan, then the
-   daemon applies it inside a fresh operation overlay and publishes.
+2. Service-query-plus-daemon-apply: a long-lived service returns an edit plan,
+   then the daemon applies it inside a fresh operation overlay and publishes.
 3. `auto_workspace_overlay=false`: the service uses PPC callbacks for advanced
    self-managed apply, but those callbacks route into the same daemon-owned
    per-root OCC writer and storage lock.
@@ -589,8 +988,8 @@ Resolution:
 - Treat every `api.plugin.*` and `plugin.*` op as plugin-family.
 - Extract `agent_id` from the daemon envelope.
 - If that agent has an active isolated handle, return
-  `forbidden_in_isolated_workspace` before ensure, status, warm start, or tool
-  dispatch.
+  `forbidden_in_isolated_workspace` before ensure, status, service start, or
+  tool dispatch.
 - Preserve no-agent legacy status only for daemon diagnostics that do not observe
   an agent workspace.
 
@@ -616,31 +1015,44 @@ Checks:
 - Register `api.plugin.ensure` and `api.plugin.status` in `eos-daemon`.
 - Add dynamic registration for `plugin.<plugin>.<op>`.
 - Add the plugin-family isolated gate in Rust before handler dispatch.
-- Replace `WarmServerRegistry` with or wrap it in `PluginServiceRegistry` keyed
-  by `PluginServiceKey`.
+- Use `PluginServiceRegistry` keyed by `PluginServiceKey`; do not reintroduce
+  the old layer-stack-root-only warm-server registry.
 
 Checks:
 
-- Unit tests for keying, registration conflict, status shape, digest reload, LRU
-  eviction, and isolated blocking.
+- Unit tests for keying, registration conflict, status shape, exact-key service
+  reuse, digest reload, and isolated blocking.
 
 ### Phase 2 - Process-Backed PPC
 
 - Spawn plugin service processes as process groups. The focused
-  `start_services: true` lifecycle is landed; real harness socket handoff,
-  heartbeat, and crash recovery remain.
+  `start_services: true` lifecycle and daemon-side socket handoff are landed;
+  on-demand status health probes are landed; periodic heartbeat, broader crash
+  recovery, and broader AV-10 LSP parity remain.
 - Connect through AF_UNIX PPC using the existing envelope framing. The focused
   single-request route is landed for connected read-only services; process
-  accept/connect handoff and concurrent multiplexing remain.
-- Support message-id matched request/reply and plugin-to-daemon callbacks.
-- Add explicit teardown, timeout, heartbeat, and crash recovery.
+  accept/connect handoff and same-service concurrent serialization are landed;
+  plugin-to-daemon callback-frame servicing and OCC callback body handling are
+  landed for connected self-managed services, including repeated callback
+  frames before the final plugin reply; any future operation-level
+  out-of-order multiplexing remains.
+- Support message-id matched request/reply and plugin-to-daemon callbacks. The
+  transport loop and daemon OCC callback handling are landed for the current
+  connected-service path.
+- Add explicit teardown, timeout, on-demand health probing, and crash recovery.
 
 Checks:
 
 - PPC round trip with message-id matched reply.
 - Mismatched message id rejection.
+- Callback request before final reply with message-id checked callback response.
+- Connected self-managed route publishes through the daemon OCC callback and
+  returns the plugin's final reply.
+- Same-service concurrent read-only requests share the connected service client.
+- Broken PPC streams are removed from connected-route status.
 - Service crash returns structured plugin error and reaps process group.
-- No daemon registry lock is held during PPC I/O.
+- No daemon registry lock is held during PPC I/O or service process
+  spawn/accept handoff.
 
 ### Phase 3 - `oneshot_overlay` Writes
 
@@ -661,7 +1073,11 @@ Checks:
   `PrepareRefresh`, `Quiesce`, `SwapWorkspace`, `NotifyRefresh`, `Resume`,
   `Restart`, and `Health`.
 - Support `remount_workspace_and_notify`, `remount_workspace`, and `restart_service`.
-- Port Pyright/LSP as one adapter, not as the service model itself.
+- Port Pyright/LSP as one adapter, not as the service model itself. The current
+  live slice proves a representative read-only `pyright-langserver` operation
+  set after daemon remount plus a Pyright-computed self-managed
+  `textDocument/rename` publish through the daemon OCC callback; broader LSP
+  operation parity remains in AV-10.
 - Add a non-LSP read-only dummy service that caches workspace content and only
   stays correct if the daemon refresh protocol works.
 
@@ -669,7 +1085,7 @@ Checks:
 
 - Read-only LSP refresh after peer publish, with no plugin publish timing.
 - Peer publish plus service refresh without cold restart.
-- Evict and ensure starts a new warm service.
+- Stale-key replacement and ensure starts a new service process.
 - Non-LSP service reads the post-publish content and never serves its cached
   pre-publish value.
 
@@ -779,7 +1195,9 @@ Ship one daemon-managed read-only service layer:
    experiment proves it only skips under active work and has acceptable latency,
    watcher, and auto-squash behavior.
 
-Do not claim generic arbitrary-package support until a non-LSP read-only service
-proves `restart_service` or `remount_workspace` correctness under peer publishes,
-and Pyright proves `remount_workspace_and_notify` parity without plugin-specific
-daemon logic.
+Do not claim full AV-10 until the representative LSP READ_ONLY and
+WRITE_ALLOWED/self-managed paths are canonically compared against the Python
+importlib path across the broader operation set. The generic non-LSP package
+adapter, read-only Pyright remount, and Pyright self-managed rename paths are
+now live evidence for the daemon-owned refresh and publish model, not the full
+parity closeout.

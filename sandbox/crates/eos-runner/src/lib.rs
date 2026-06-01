@@ -63,6 +63,11 @@ pub use request::{Fd, NsFds, RunMode, RunRequest, RunResult, ToolCall, Workspace
 /// `mount` supplies the overlay-mount port; in fresh-ns mode the runner calls it
 /// after `unshare` to build the workspace mount, mirroring the Python entrypoint's
 /// `mount_overlay` call.
+///
+/// # Errors
+///
+/// Returns [`RunnerError`] when the request is invalid for the selected mode,
+/// namespace setup fails, overlay mounting fails, or child execution fails.
 // PORT backend/src/sandbox/overlay/namespace_runner.py:48 — run_in_namespace dispatch
 pub fn run(request: &RunRequest, mount: &dyn KernelMountPort) -> Result<RunResult, RunnerError> {
     match request.mode {

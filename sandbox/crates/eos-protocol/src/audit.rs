@@ -40,9 +40,9 @@ pub enum Lane {
 
 impl Lane {
     /// Storage/iteration order (`_LANES`).
-    pub const STORAGE_ORDER: [Lane; 3] = [Lane::Critical, Lane::Normal, Lane::Sample];
+    pub const STORAGE_ORDER: [Self; 3] = [Self::Critical, Self::Normal, Self::Sample];
     /// Eviction order (`_EVICTION_ORDER`): sample first, critical last.
-    pub const EVICTION_ORDER: [Lane; 3] = [Lane::Sample, Lane::Normal, Lane::Critical];
+    pub const EVICTION_ORDER: [Self; 3] = [Self::Sample, Self::Normal, Self::Critical];
 }
 
 /// `daemon` section. `// PORT audit_schema.py:28-39`
@@ -358,10 +358,13 @@ pub struct OsResourceSection {
 /// Wrap a section into the channel-A event envelope:
 /// `{"type": <event_type>, "payload": {<section_key>: <section>}}`.
 /// `// PORT backend/src/sandbox/daemon/audit_schema.py — build_*_event`
+#[must_use]
 pub fn build_event(event_type: &str, section_key: &str, section: Value) -> Value {
+    let mut payload = serde_json::Map::new();
+    payload.insert(section_key.to_owned(), section);
     serde_json::json!({
         "type": event_type,
-        "payload": { section_key: section },
+        "payload": payload,
     })
 }
 
@@ -369,11 +372,12 @@ pub fn build_event(event_type: &str, section_key: &str, section: Value) -> Value
 mod tests {
     use super::*;
 
+    type TestResult<T = ()> = Result<T, Box<dyn std::error::Error + Send + Sync>>;
+
     #[test]
-    fn isolated_default_drops_none_keeps_defaults() {
+    fn isolated_default_drops_none_keeps_defaults() -> TestResult {
         // Doc §1.1 ground truth: only the four non-None defaults survive.
-        let v = serde_json::to_value(IsolatedWorkspaceSection::default())
-            .expect("serialize default isolated workspace section");
+        let v = serde_json::to_value(IsolatedWorkspaceSection::default())?;
         assert_eq!(
             v,
             serde_json::json!({
@@ -383,23 +387,25 @@ mod tests {
                 "workspace_mode": "isolated"
             })
         );
+        Ok(())
     }
 
     #[test]
-    fn daemon_section_drops_none() {
+    fn daemon_section_drops_none() -> TestResult {
         let s = DaemonSection {
             pid: Some(42),
             boot_epoch_id: Some(123),
             ..Default::default()
         };
         assert_eq!(
-            serde_json::to_value(&s).expect("serialize daemon section"),
+            serde_json::to_value(&s)?,
             serde_json::json!({"boot_epoch_id": 123, "pid": 42})
         );
+        Ok(())
     }
 
     #[test]
-    fn event_payloads_match_fixture_embedded_events() {
+    fn event_payloads_match_fixture_embedded_events() -> TestResult {
         // From audit_pull_two_events.json: a daemon.started with {pid:1} and a
         // tool_call.started with {tool_use_id, tool_name}.
         let daemon_evt = build_event(
@@ -408,8 +414,7 @@ mod tests {
             serde_json::to_value(DaemonSection {
                 pid: Some(1),
                 ..Default::default()
-            })
-            .expect("serialize daemon event section"),
+            })?,
         );
         assert_eq!(
             daemon_evt,
@@ -432,8 +437,7 @@ mod tests {
                 bytes_in: None,
                 bytes_out: None,
                 phase_totals_rollup: None,
-            })
-            .expect("serialize tool call event section"),
+            })?,
         );
         assert_eq!(
             tool_evt,
@@ -442,12 +446,13 @@ mod tests {
                 "payload":{"tool_call":{"tool_use_id":"t","tool_name":"read_file"}}
             })
         );
+        Ok(())
     }
 
     #[test]
-    fn lane_wire_and_orders() {
+    fn lane_wire_and_orders() -> TestResult {
         assert_eq!(
-            serde_json::to_value(Lane::Critical).expect("serialize audit lane"),
+            serde_json::to_value(Lane::Critical)?,
             Value::String("critical".to_owned())
         );
         assert_eq!(
@@ -458,5 +463,6 @@ mod tests {
             Lane::EVICTION_ORDER,
             [Lane::Sample, Lane::Normal, Lane::Critical]
         );
+        Ok(())
     }
 }

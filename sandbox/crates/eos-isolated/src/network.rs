@@ -76,6 +76,7 @@ pub struct VethAllocation {
 /// Linux `IFNAMSIZ` caps names at 15 chars: `eos-iws-` (8) + `handle[:6]` (6) +
 /// suffix (1) = 15 exactly. Host ends in `h`, peer ends in `n`.
 /// `// PORT backend/src/sandbox/isolated_workspace/network.py:231-235 — _veth_names`
+#[must_use]
 pub fn veth_names(workspace_handle_id: &str) -> (String, String) {
     let short: String = workspace_handle_id.chars().take(6).collect();
     (
@@ -95,11 +96,17 @@ pub struct BridgeAddressPool {
 
 impl BridgeAddressPool {
     /// Build an empty pool spanning the bridge CIDR's allocatable range.
+    #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
 
     /// Mark `ip` as in-use (used to rebuild pool state from `manager.json`).
+    ///
+    /// # Errors
+    ///
+    /// Returns [`IsolatedError::NetworkUnavailable`] when `ip` is outside
+    /// [`BRIDGE_CIDR`].
     // PORT backend/src/sandbox/isolated_workspace/network.py:60-64 — BridgeAddressPool.reserve
     pub fn reserve(&mut self, ip: Ipv4Addr) -> Result<(), IsolatedError> {
         if !is_pool_ip(ip) {
@@ -115,6 +122,11 @@ impl BridgeAddressPool {
     }
 
     /// Allocate the lowest free `/32` in the pool.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`IsolatedError::NetworkUnavailable`] when the address pool is
+    /// exhausted.
     // PORT backend/src/sandbox/isolated_workspace/network.py:66-72 — BridgeAddressPool.allocate
     pub fn allocate(&mut self) -> Result<Ipv4Addr, IsolatedError> {
         for host in POOL_FIRST_HOST..=POOL_LAST_HOST {
@@ -152,6 +164,7 @@ pub struct IsolatedNetwork {
 
 impl IsolatedNetwork {
     /// Construct an uninitialized network with the given egress policy.
+    #[must_use]
     pub fn new(rfc1918_egress: Rfc1918Egress) -> Self {
         Self {
             rfc1918_egress,
@@ -161,13 +174,19 @@ impl IsolatedNetwork {
     }
 
     /// Whether [`initialize`](Self::initialize) has installed the bridge + rules.
-    pub fn initialized(&self) -> bool {
+    #[must_use]
+    pub const fn initialized(&self) -> bool {
         self.initialized
     }
 
     /// Install the bridge + MASQUERADE + IMDS drop (+ optional RFC1918 deny).
     /// Idempotent for table/chain creation; rule insertion mirrors Python's
     /// sequential `nft add rule` calls.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`IsolatedError::NetworkUnavailable`] when route or netfilter
+    /// netlink setup fails.
     // PORT backend/src/sandbox/isolated_workspace/network.py:95-100 — IsolatedNetwork.initialize (require_tools/ensure_bridge/install_static_rules)
     pub fn initialize(&mut self) -> Result<(), IsolatedError> {
         if test_harness_enabled() {
@@ -194,6 +213,11 @@ impl IsolatedNetwork {
     /// Create a veth pair, attach the host end to the bridge with port
     /// isolation, and configure the namespace-side end (up, `/24` addr,
     /// default route via gateway).
+    ///
+    /// # Errors
+    ///
+    /// Returns [`IsolatedError::NetworkUnavailable`] when bridge initialization,
+    /// IP allocation, holder PID conversion, or veth netlink wiring fails.
     // PORT backend/src/sandbox/isolated_workspace/network.py:102-146 — IsolatedNetwork.install_veth
     pub fn install_veth(
         &mut self,
@@ -254,12 +278,11 @@ impl IsolatedNetwork {
 
 fn test_harness_enabled() -> bool {
     std::env::var("EOS_ISOLATED_WORKSPACE_TEST_HARNESS")
-        .map(|value| matches!(value.as_str(), "1" | "true" | "TRUE" | "yes" | "YES"))
-        .unwrap_or(false)
+        .is_ok_and(|value| matches!(value.as_str(), "1" | "true" | "TRUE" | "yes" | "YES"))
 }
 
 #[cfg(target_os = "linux")]
-fn gateway_addr() -> Ipv4Addr {
+const fn gateway_addr() -> Ipv4Addr {
     Ipv4Addr::new(10, 244, 0, 1)
 }
 
@@ -367,7 +390,7 @@ fn add_nft_table(name: &str) -> Result<(), IsolatedError> {
         format!("create nft table {name}"),
         libc_c_int_to_u16(libc::NFT_MSG_NEWTABLE, "NFT_MSG_NEWTABLE")?,
         nft_create_flags(),
-        attrs,
+        &attrs,
         true,
     )
 }
@@ -393,7 +416,7 @@ fn add_nft_base_chain(
         format!("create nft chain {table}/{name}"),
         libc_c_int_to_u16(libc::NFT_MSG_NEWCHAIN, "NFT_MSG_NEWCHAIN")?,
         nft_create_flags(),
-        attrs,
+        &attrs,
         true,
     )
 }
@@ -413,7 +436,7 @@ fn add_nft_rule(table: &str, chain: &str, expressions: Vec<Vec<u8>>) -> Result<(
         format!("add nft rule {table}/{chain}"),
         libc_c_int_to_u16(libc::NFT_MSG_NEWRULE, "NFT_MSG_NEWRULE")?,
         nft_rule_flags(),
-        attrs,
+        &attrs,
         true,
     )
 }
@@ -431,7 +454,7 @@ fn nft_masquerade_rule_exprs(bridge_index: u32) -> Result<Vec<Vec<u8>>, Isolated
         NFT_CMP_NEQ,
         bridge_index.to_ne_bytes().as_slice(),
     ));
-    expressions.push(nft_expr("masq", Vec::new()));
+    expressions.push(nft_expr("masq", &[]));
     Ok(expressions)
 }
 
@@ -470,7 +493,7 @@ fn nft_ipv4_network_match(
 ) -> Result<Vec<Vec<u8>>, IsolatedError> {
     let mut expressions = nft_ipv4_guard_exprs()?;
     expressions.push(nft_payload_ipv4_expr(offset)?);
-    expressions.push(nft_bitwise_mask_expr(&ipv4_mask(prefix_len)?));
+    expressions.push(nft_bitwise_mask_expr(ipv4_mask(prefix_len)?));
     expressions.push(nft_cmp_expr(op, &network.octets()));
     Ok(expressions)
 }
@@ -485,7 +508,7 @@ fn nft_ipv4_guard_exprs() -> Result<Vec<Vec<u8>>, IsolatedError> {
         libc_c_int_to_u32(libc::NFT_META_NFPROTO, "NFT_META_NFPROTO")?,
     );
     Ok(vec![
-        nft_expr("meta", data),
+        nft_expr("meta", &data),
         nft_cmp_expr(
             NFT_CMP_EQ,
             &[libc_c_int_to_u8(libc::NFPROTO_IPV4, "NFPROTO_IPV4")?],
@@ -507,7 +530,7 @@ fn nft_payload_ipv4_expr(offset: u32) -> Result<Vec<u8>, IsolatedError> {
     );
     append_be_u32_attr(&mut data, NFTA_PAYLOAD_OFFSET, offset);
     append_be_u32_attr(&mut data, NFTA_PAYLOAD_LEN, IPV4_ADDR_LEN);
-    Ok(nft_expr("payload", data))
+    Ok(nft_expr("payload", &data))
 }
 
 #[cfg(target_os = "linux")]
@@ -515,18 +538,18 @@ fn nft_meta_expr(key: u32) -> Vec<u8> {
     let mut data = Vec::new();
     append_be_u32_attr(&mut data, NFTA_META_DREG, NFT_REG_1);
     append_be_u32_attr(&mut data, NFTA_META_KEY, key);
-    nft_expr("meta", data)
+    nft_expr("meta", &data)
 }
 
 #[cfg(target_os = "linux")]
-fn nft_bitwise_mask_expr(mask: &[u8; 4]) -> Vec<u8> {
+fn nft_bitwise_mask_expr(mask: [u8; 4]) -> Vec<u8> {
     let mut data = Vec::new();
     append_be_u32_attr(&mut data, NFTA_BITWISE_SREG, NFT_REG_1);
     append_be_u32_attr(&mut data, NFTA_BITWISE_DREG, NFT_REG_1);
     append_be_u32_attr(&mut data, NFTA_BITWISE_LEN, IPV4_ADDR_LEN);
-    append_data_value_attr(&mut data, NFTA_BITWISE_MASK, mask);
+    append_data_value_attr(&mut data, NFTA_BITWISE_MASK, &mask);
     append_data_value_attr(&mut data, NFTA_BITWISE_XOR, &[0, 0, 0, 0]);
-    nft_expr("bitwise", data)
+    nft_expr("bitwise", &data)
 }
 
 #[cfg(target_os = "linux")]
@@ -535,7 +558,7 @@ fn nft_cmp_expr(op: u32, value: &[u8]) -> Vec<u8> {
     append_be_u32_attr(&mut data, NFTA_CMP_SREG, NFT_REG_1);
     append_be_u32_attr(&mut data, NFTA_CMP_OP, op);
     append_data_value_attr(&mut data, NFTA_CMP_DATA, value);
-    nft_expr("cmp", data)
+    nft_expr("cmp", &data)
 }
 
 #[cfg(target_os = "linux")]
@@ -553,15 +576,15 @@ fn nft_drop_expr() -> Result<Vec<u8>, IsolatedError> {
     let mut data = Vec::new();
     append_be_u32_attr(&mut data, NFTA_IMMEDIATE_DREG, NFT_REG_VERDICT);
     append_nested_attr(&mut data, NFTA_IMMEDIATE_DATA, &data_value);
-    Ok(nft_expr("immediate", data))
+    Ok(nft_expr("immediate", &data))
 }
 
 #[cfg(target_os = "linux")]
-fn nft_expr(name: &str, data: Vec<u8>) -> Vec<u8> {
+fn nft_expr(name: &str, data: &[u8]) -> Vec<u8> {
     let mut expression = Vec::new();
     append_cstr_attr(&mut expression, NFTA_EXPR_NAME, name);
     if !data.is_empty() {
-        append_nested_attr(&mut expression, NFTA_EXPR_DATA, &data);
+        append_nested_attr(&mut expression, NFTA_EXPR_DATA, data);
     }
     expression
 }
@@ -571,7 +594,7 @@ fn send_nft_command(
     step: impl Into<String>,
     message_type: u16,
     flags: u16,
-    attrs: Vec<u8>,
+    attrs: &[u8],
     ignore_exists: bool,
 ) -> Result<(), IsolatedError> {
     let step = step.into();
@@ -582,7 +605,7 @@ fn send_nft_command(
         libc_c_int_to_u16(libc::NFNL_MSG_BATCH_BEGIN, "NFNL_MSG_BATCH_BEGIN")?,
         batch_start_seq,
     )?;
-    message.extend(nft_message(message_type, flags, operation_seq, &attrs)?);
+    message.extend(nft_message(message_type, flags, operation_seq, attrs)?);
     message.extend(nft_batch_message(
         libc_c_int_to_u16(libc::NFNL_MSG_BATCH_END, "NFNL_MSG_BATCH_END")?,
         batch_end_seq,
@@ -827,7 +850,7 @@ fn ipv4_mask(prefix_len: u8) -> Result<[u8; 4], IsolatedError> {
 }
 
 #[cfg(target_os = "linux")]
-fn bridge_network() -> (Ipv4Addr, u8) {
+const fn bridge_network() -> (Ipv4Addr, u8) {
     (Ipv4Addr::new(10, 244, 0, 0), BRIDGE_PREFIX_LEN)
 }
 
@@ -840,12 +863,12 @@ fn nft_msg_type(message_type: u16) -> Result<u16, IsolatedError> {
 }
 
 #[cfg(target_os = "linux")]
-fn nft_create_flags() -> u16 {
+const fn nft_create_flags() -> u16 {
     NLM_F_REQUEST | NLM_F_ACK | NLM_F_EXCL | NLM_F_CREATE
 }
 
 #[cfg(target_os = "linux")]
-fn nft_rule_flags() -> u16 {
+const fn nft_rule_flags() -> u16 {
     NLM_F_REQUEST | NLM_F_ACK | NLM_F_CREATE | NLM_F_APPEND
 }
 
@@ -901,7 +924,7 @@ fn read_i32_ne(bytes: &[u8]) -> Option<i32> {
 }
 
 #[cfg(target_os = "linux")]
-fn align4(length: usize) -> usize {
+const fn align4(length: usize) -> usize {
     (length + 3) & !3
 }
 

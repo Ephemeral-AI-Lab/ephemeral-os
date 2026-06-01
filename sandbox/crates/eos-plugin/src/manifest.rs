@@ -22,6 +22,12 @@ pub struct PluginManifest {
 
 impl PluginManifest {
     /// Validate manifest identity, service uniqueness, and operation references.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PluginError::Manifest`] when identifiers are malformed, required
+    /// fields are empty, services or operations are duplicated, or an operation
+    /// references an unknown service.
     pub fn validate(&self) -> Result<()> {
         validate_identifier("plugin_id", &self.plugin_id)?;
         require_non_empty("plugin_version", &self.plugin_version)?;
@@ -66,6 +72,13 @@ pub struct PluginServiceManifest {
 }
 
 impl PluginServiceManifest {
+    /// Validate this service declaration.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PluginError::Manifest`] when the service identity/profile is
+    /// invalid, the PPC protocol is zero, or an executable service mode lacks a
+    /// launch command.
     pub fn validate(&self) -> Result<()> {
         validate_identifier("service_id", &self.service_id)?;
         require_non_empty("service_profile_digest", &self.service_profile_digest)?;
@@ -74,7 +87,11 @@ impl PluginServiceManifest {
                 "ppc_protocol_version must be positive".to_owned(),
             ));
         }
-        if self.service_mode == ServiceMode::WorkspaceSnapshotRefresh && self.command.is_empty() {
+        if matches!(
+            self.service_mode,
+            ServiceMode::WorkspaceSnapshotRefresh | ServiceMode::OneshotOverlay
+        ) && self.command.is_empty()
+        {
             return Err(PluginError::Manifest(format!(
                 "service {} requires a launch command",
                 self.service_id
@@ -130,17 +147,19 @@ impl PluginOperationManifest {
     }
 }
 
-fn default_ppc_protocol() -> u32 {
+const fn default_ppc_protocol() -> u32 {
     1
 }
 
-fn default_auto_workspace_overlay() -> bool {
+const fn default_auto_workspace_overlay() -> bool {
     true
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    type TestResult = std::result::Result<(), PluginError>;
 
     fn manifest() -> PluginManifest {
         PluginManifest {
@@ -166,8 +185,9 @@ mod tests {
     }
 
     #[test]
-    fn validates_read_only_service_manifest() {
-        manifest().validate().expect("manifest is valid");
+    fn validates_read_only_service_manifest() -> TestResult {
+        manifest().validate()?;
+        Ok(())
     }
 
     #[test]
@@ -187,6 +207,17 @@ mod tests {
         assert!(matches!(
             manifest.validate(),
             Err(PluginError::Manifest(message)) if message.contains("duplicate op_name")
+        ));
+    }
+
+    #[test]
+    fn oneshot_overlay_service_requires_command() {
+        let mut manifest = manifest();
+        manifest.services[0].service_mode = ServiceMode::OneshotOverlay;
+        manifest.services[0].command.clear();
+        assert!(matches!(
+            manifest.validate(),
+            Err(PluginError::Manifest(message)) if message.contains("requires a launch command")
         ));
     }
 }

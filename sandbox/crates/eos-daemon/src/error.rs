@@ -62,9 +62,9 @@ pub enum DaemonError {
     #[error(transparent)]
     Occ(#[from] eos_occ::OccError),
 
-    /// The ephemeral pipeline / dispatch failed.
-    #[error(transparent)]
-    Ephemeral(#[from] eos_ephemeral::EphemeralError),
+    /// The daemon-owned overlay pipeline / dispatch failed.
+    #[error("overlay pipeline failure: {0}")]
+    OverlayPipeline(String),
 
     /// The plugin (PPC) dispatch failed.
     #[error(transparent)]
@@ -83,19 +83,16 @@ impl DaemonError {
     /// [`eos_protocol::ErrorKind::InternalError`] with a generated `error_id`.
     /// `// PORT backend/src/sandbox/daemon/rpc/dispatcher.py:127-160 — internal_error wrap`
     #[must_use]
-    pub fn wire_kind(&self) -> eos_protocol::ErrorKind {
+    pub const fn wire_kind(&self) -> eos_protocol::ErrorKind {
         use eos_protocol::ErrorKind;
         match self {
-            DaemonError::Protocol(_) => ErrorKind::BadJson,
-            DaemonError::UnknownOp(_) => ErrorKind::UnknownOp,
-            DaemonError::InvalidEnvelope(_) => ErrorKind::InvalidEnvelope,
-            DaemonError::RequestTooLarge { .. } => ErrorKind::RequestTooLarge,
-            DaemonError::Unauthorized => ErrorKind::Unauthorized,
-            DaemonError::Forbidden(_) => ErrorKind::Forbidden,
-            DaemonError::Ephemeral(eos_ephemeral::EphemeralError::LifecycleInProgress(_)) => {
-                ErrorKind::LifecycleInProgress
-            }
-            DaemonError::Plugin(eos_plugin::PluginError::ForbiddenInIsolatedWorkspace) => {
+            Self::Protocol(_) => ErrorKind::BadJson,
+            Self::UnknownOp(_) => ErrorKind::UnknownOp,
+            Self::InvalidEnvelope(_) => ErrorKind::InvalidEnvelope,
+            Self::RequestTooLarge { .. } => ErrorKind::RequestTooLarge,
+            Self::Unauthorized => ErrorKind::Unauthorized,
+            Self::Forbidden(_) => ErrorKind::Forbidden,
+            Self::Plugin(eos_plugin::PluginError::ForbiddenInIsolatedWorkspace) => {
                 ErrorKind::ForbiddenInIsolatedWorkspace
             }
             _ => ErrorKind::InternalError,

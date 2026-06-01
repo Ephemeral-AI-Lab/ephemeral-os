@@ -25,7 +25,10 @@ use eos_protocol::{
 };
 
 use crate::error::LayerStackError;
-use crate::lease::LeaseRegistry;
+use crate::lease::{
+    lock_shared_registry, lock_shared_registry_recover, shared_registry_for_root, LeaseRegistry,
+    SharedLeaseRegistry,
+};
 use crate::squash::{manifest_prefix_before_plan, LayerCheckpointSquasher, SquashPlanEntry};
 use crate::storage_lock::StorageWriterLockLease;
 use crate::{ACTIVE_MANIFEST_FILE, LAYERS_DIR, LAYER_METADATA_DIR, STAGING_DIR};
@@ -41,6 +44,7 @@ const WHITEOUT_DEVICE_MINOR: u32 = 0;
 
 /// Immutable result of an O(1) snapshot: a lease id + the pinned manifest's
 /// existing on-disk layer paths. NEVER a rendered tree.
+///
 /// `// PORT backend/src/sandbox/layer_stack/stack.py:52-70 — LayerStackSnapshotLease`
 // No `Eq`: `timings` holds `f64` (no total ordering).
 #[derive(Debug, Clone, PartialEq)]
@@ -56,6 +60,7 @@ pub struct Lease {
 }
 
 /// Layered read view over a storage root's manifest (lowest→highest precedence).
+///
 /// Reads resolve through the manifest's layer directories without materializing
 /// a tree; this is the pure-read sibling of the overlay mount.
 /// `// PORT backend/src/sandbox/layer_stack/view.py:44-* — MergedView`
@@ -67,11 +72,18 @@ pub struct MergedView {
 impl MergedView {
     /// Bind a merged view to a storage root.
     /// `// PORT backend/src/sandbox/layer_stack/view.py:45-* — MergedView.__init__`
-    pub fn new(storage_root: PathBuf) -> Self {
+    #[must_use]
+    pub const fn new(storage_root: PathBuf) -> Self {
         Self { storage_root }
     }
 
     /// Read a path's raw bytes through `manifest`. Returns `(bytes, found)`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`LayerStackError`] when `path` is invalid, a manifest layer is
+    /// missing, or a referenced file cannot be read.
+    ///
     /// `// PORT backend/src/sandbox/layer_stack/view.py:66 — read_bytes`
     pub fn read_bytes(
         &self,
@@ -81,39 +93,45 @@ impl MergedView {
         let rel = LayerPath::parse(path)?;
         for layer in &manifest.layers {
             let layer_dir = self.layer_dir(layer)?;
-            if self.is_whiteouted(&layer_dir, rel.as_str()) {
+            if Self::is_whiteouted(&layer_dir, rel.as_str()) {
                 return Ok((None, false));
             }
-            if self.lookup_blocked_by_layer(&layer_dir, rel.as_str()) {
+            if Self::lookup_blocked_by_layer(&layer_dir, rel.as_str()) {
                 return Ok((None, false));
             }
             let target = join_layer_path(&layer_dir, rel.as_str());
             match std::fs::symlink_metadata(&target) {
                 Ok(meta) if meta.file_type().is_symlink() => {
                     let target = std::fs::read_link(&target)
-                        .map_err(|err| stale_layer_error(layer, rel.as_str(), err))?;
+                        .map_err(|err| stale_layer_error(layer, rel.as_str(), &err))?;
                     return Ok((Some(target.to_string_lossy().as_bytes().to_vec()), true));
                 }
                 Ok(meta) if meta.is_file() => {
                     let bytes = std::fs::read(&target)
-                        .map_err(|err| stale_layer_error(layer, rel.as_str(), err))?;
+                        .map_err(|err| stale_layer_error(layer, rel.as_str(), &err))?;
                     return Ok((Some(bytes), true));
                 }
                 Ok(_) => return Err(stale_layer_error_value(layer, rel.as_str())),
-                Err(err) if err.kind() == ErrorKind::NotFound => continue,
-                Err(err) => return Err(stale_layer_error(layer, rel.as_str(), err)),
+                Err(err) if err.kind() == ErrorKind::NotFound => {}
+                Err(err) => return Err(stale_layer_error(layer, rel.as_str(), &err)),
             }
         }
         Ok((None, false))
     }
 
     /// Project the merged view of `manifest` into `destination` (full render).
+    ///
+    /// # Errors
+    ///
+    /// Returns [`LayerStackError`] when destination reset, directory creation,
+    /// source layer reads, or file/symlink projection fails.
+    ///
     /// `// PORT backend/src/sandbox/layer_stack/view.py:195 — project`
     pub fn project(&self, destination: &Path, manifest: &Manifest) -> Result<(), LayerStackError> {
         remove_path(destination)?;
         std::fs::create_dir_all(destination)?;
         for layer in manifest.layers.iter().rev() {
-            self.apply_layer(&self.layer_dir(layer)?, destination)?;
+            Self::apply_layer(&self.layer_dir(layer)?, destination)?;
         }
         Ok(())
     }
@@ -135,7 +153,7 @@ impl MergedView {
         Ok(path)
     }
 
-    fn is_whiteouted(&self, layer_dir: &Path, rel: &str) -> bool {
+    fn is_whiteouted(layer_dir: &Path, rel: &str) -> bool {
         if is_kernel_whiteout(&join_layer_path(layer_dir, rel)) {
             return true;
         }
@@ -158,7 +176,7 @@ impl MergedView {
         marker.exists()
     }
 
-    fn lookup_blocked_by_layer(&self, layer_dir: &Path, rel: &str) -> bool {
+    fn lookup_blocked_by_layer(layer_dir: &Path, rel: &str) -> bool {
         let parts: Vec<&str> = rel.split('/').collect();
         for index in 1..parts.len() {
             let ancestor = parts[..index].join("/");
@@ -178,7 +196,7 @@ impl MergedView {
         false
     }
 
-    fn apply_layer(&self, layer_dir: &Path, destination: &Path) -> Result<(), LayerStackError> {
+    fn apply_layer(layer_dir: &Path, destination: &Path) -> Result<(), LayerStackError> {
         let mut entries = collect_project_entries(layer_dir)?;
         entries.sort_by(|left, right| left.rel.cmp(&right.rel));
         for entry in entries
@@ -263,35 +281,49 @@ impl MergedView {
 #[derive(Debug)]
 pub struct LayerStack {
     storage_root: PathBuf,
-    _writer_lock: StorageWriterLockLease,
-    _leases: LeaseRegistry,
-    _view: MergedView,
+    writer_lock: StorageWriterLockLease,
+    leases: SharedLeaseRegistry,
+    view: MergedView,
 }
 
 impl LayerStack {
     /// Open (creating dirs as needed) a layer stack at `storage_root`, acquiring
     /// the cross-process writer lease and seeding an empty manifest if absent.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`LayerStackError`] when storage directories, the writer lock, or
+    /// the initial manifest cannot be prepared.
+    ///
     /// `// PORT backend/src/sandbox/layer_stack/stack.py:76-96 — __init__`
     pub fn open(storage_root: PathBuf) -> Result<Self, LayerStackError> {
         // PORT backend/src/sandbox/layer_stack/stack.py:80-96 — mkdir storage/layers/staging, acquire writer lock, seed empty manifest
         std::fs::create_dir_all(storage_root.join(LAYERS_DIR))?;
         std::fs::create_dir_all(storage_root.join(STAGING_DIR))?;
         let writer_lock = StorageWriterLockLease::acquire(&storage_root)?;
+        let leases = shared_registry_for_root(&storage_root)?;
         let view = MergedView::new(storage_root.clone());
         Ok(Self {
             storage_root,
-            _writer_lock: writer_lock,
-            _leases: LeaseRegistry::new(),
-            _view: view,
+            writer_lock,
+            leases,
+            view,
         })
     }
 
     /// The storage root this stack manages.
+    #[must_use]
     pub fn storage_root(&self) -> &Path {
         &self.storage_root
     }
 
     /// Read the current active manifest from `manifest.json`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`LayerStackError`] when `manifest.json` cannot be read or
+    /// decoded.
+    ///
     /// `// PORT backend/src/sandbox/layer_stack/stack.py:98-99 — read_active_manifest`
     pub fn read_active_manifest(&self) -> Result<Manifest, LayerStackError> {
         read_manifest(self.storage_root.join(ACTIVE_MANIFEST_FILE))
@@ -299,11 +331,20 @@ impl LayerStack {
 
     /// O(1) snapshot: acquire a lease over the active manifest and return its
     /// existing layer paths. NEVER renders a tree.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`LayerStackError`] when the writer lock, active manifest, or
+    /// lease registry cannot be acquired.
+    ///
     /// `// PORT backend/src/sandbox/layer_stack/stack.py:108-135 — acquire_snapshot`
     pub fn acquire_snapshot(&mut self, owner_request_id: &str) -> Result<Lease, LayerStackError> {
-        let _guard = self._writer_lock.exclusive()?;
+        let _guard = self.writer_lock.exclusive()?;
         let manifest = self.read_active_manifest()?;
-        let lease = self._leases.acquire(manifest.clone(), owner_request_id)?;
+        let lease = {
+            let mut leases = lock_shared_registry(&self.leases)?;
+            leases.acquire(manifest.clone(), owner_request_id)?
+        };
         let layer_paths = manifest
             .layers
             .iter()
@@ -330,37 +371,62 @@ impl LayerStack {
 
     /// Release a snapshot lease by id and GC any now-unreferenced layers.
     /// Returns `false` if the lease id was unknown.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`LayerStackError`] when the writer lock cannot be acquired or
+    /// unreferenced layer cleanup fails.
+    ///
     /// `// PORT backend/src/sandbox/layer_stack/stack.py:137-149 — release_lease`
     pub fn release_lease(&mut self, lease_id: &str) -> Result<bool, LayerStackError> {
-        let _guard = self._writer_lock.exclusive()?;
-        release_lease_locked(&self.storage_root, &mut self._leases, lease_id)
+        let _guard = self.writer_lock.exclusive()?;
+        let mut leases = lock_shared_registry(&self.leases)?;
+        release_lease_locked(&self.storage_root, &mut leases, lease_id)
     }
 
     /// Whether a squash would reduce manifest depth below `max_depth`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`LayerStackError`] when manifest reads or squash planning fail.
+    ///
     /// `// PORT backend/src/sandbox/layer_stack/stack.py:157-168 — can_squash`
     pub fn can_squash(&self, max_depth: usize) -> Result<bool, LayerStackError> {
         let active = self.read_active_manifest()?;
         let squasher = LayerCheckpointSquasher::new(self.storage_root.clone());
+        let lease_head_layers = lock_shared_registry(&self.leases)?.lease_head_layers();
         Ok(squasher
-            .plan(&active, max_depth, &self._leases.lease_head_layers(), 2)?
+            .plan(&active, max_depth, &lease_head_layers, 2)?
             .is_some())
     }
 
     /// Non-destructively squash foldable runs, swapping a shorter manifest.
     /// Returns the new manifest, or `None` if nothing was foldable.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`LayerStackError`] when locking, planning, checkpoint creation,
+    /// manifest swapping, lease release, or rollback cleanup fails.
+    ///
     /// `// PORT backend/src/sandbox/layer_stack/stack.py:236-298 — squash`
     pub fn squash(&mut self, max_depth: usize) -> Result<Option<Manifest>, LayerStackError> {
-        let _guard = self._writer_lock.exclusive()?;
+        let _guard = self.writer_lock.exclusive()?;
         let active = self.read_active_manifest()?;
         let squasher = LayerCheckpointSquasher::new(self.storage_root.clone());
-        let Some(plan) = squasher.plan(&active, max_depth, &self._leases.lease_head_layers(), 1)?
-        else {
+        let lease_head_layers = {
+            let leases = lock_shared_registry(&self.leases)?;
+            leases.lease_head_layers()
+        };
+        let Some(plan) = squasher.plan(&active, max_depth, &lease_head_layers, 1)? else {
             return Ok(None);
         };
-        let squash_lease = self._leases.acquire(
-            active.clone(),
-            &format!("squash-{}", NEXT_LAYER.fetch_add(1, Ordering::Relaxed)),
-        )?;
+        let squash_lease = {
+            let mut leases = lock_shared_registry(&self.leases)?;
+            leases.acquire(
+                active,
+                &format!("squash-{}", NEXT_LAYER.fetch_add(1, Ordering::Relaxed)),
+            )?
+        };
 
         let mut checkpoints = Vec::new();
         let mut committed = false;
@@ -403,41 +469,54 @@ impl LayerStack {
                 let _ = squasher.discard_checkpoint(checkpoint);
             }
         }
-        let release = release_lease_locked(
-            &self.storage_root,
-            &mut self._leases,
-            &squash_lease.lease_id,
-        );
+        let release = {
+            let mut leases = lock_shared_registry(&self.leases)?;
+            release_lease_locked(&self.storage_root, &mut leases, &squash_lease.lease_id)
+        };
         match (outcome, release) {
-            (Err(err), _) => Err(err),
-            (Ok(_), Err(err)) => Err(err),
+            (Err(err), _) | (Ok(_), Err(err)) => Err(err),
             (Ok(manifest), Ok(_)) => Ok(manifest),
         }
     }
 
     /// Full retention keep-set (GC). DISTINCT from squash barriers.
     /// `// PORT backend/src/sandbox/layer_stack/stack.py:151-152 — leased_layers`
+    #[must_use]
     pub fn leased_layers(&self) -> Vec<LayerRef> {
-        self._leases.leased_layers()
+        lock_shared_registry_recover(&self.leases).leased_layers()
     }
 
     /// Squash-keep barrier set. DISTINCT from the GC retention set.
     /// `// PORT backend/src/sandbox/layer_stack/lease.py:68-85 — lease_head_layers`
+    #[must_use]
     pub fn lease_head_layers(&self) -> Vec<LayerRef> {
-        self._leases.lease_head_layers()
+        lock_shared_registry_recover(&self.leases).lease_head_layers()
     }
 
     /// Number of active snapshot leases.
+    #[must_use]
     pub fn active_lease_count(&self) -> usize {
-        self._leases.active_count()
+        lock_shared_registry_recover(&self.leases).active_count()
     }
 
     /// Read raw bytes through the active manifest.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`LayerStackError`] when the active manifest cannot be read or
+    /// the merged read fails.
+    ///
     pub fn read_bytes(&self, path: &str) -> Result<(Option<Vec<u8>>, bool), LayerStackError> {
-        self._view.read_bytes(path, &self.read_active_manifest()?)
+        self.view.read_bytes(path, &self.read_active_manifest()?)
     }
 
     /// Read UTF-8 text through the active manifest.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`LayerStackError`] when bytes cannot be read or decoded as
+    /// UTF-8.
+    ///
     pub fn read_text(&self, path: &str) -> Result<(String, bool), LayerStackError> {
         let (bytes, exists) = self.read_bytes(path)?;
         if !exists {
@@ -452,12 +531,18 @@ impl LayerStack {
     /// Publish accepted changes as one immutable layer under the storage-writer
     /// guard, returning the active manifest after publish.
     ///
-    /// This is the policy-blind LayerStack half of Phase 3: callers are
+    /// This is the policy-blind `LayerStack` half of Phase 3: callers are
     /// responsible for OCC route/conflict decisions before they hand changes
     /// here. The CAS byte-identity pieces come from `eos-protocol`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`LayerStackError`] when locking, staging, layer persistence,
+    /// digest persistence, CAS validation, or manifest writes fail.
+    ///
     /// `// PORT backend/src/sandbox/layer_stack/publisher.py:49-138 — publish_layer`
     pub fn publish_layer(&mut self, changes: &[LayerChange]) -> Result<Manifest, LayerStackError> {
-        let _guard = self._writer_lock.exclusive()?;
+        let _guard = self.writer_lock.exclusive()?;
         let active = self.read_active_manifest()?;
         if changes.is_empty() {
             return Ok(active);
@@ -574,10 +659,10 @@ fn unreferenced_layers(
     active: &Manifest,
     leases: &LeaseRegistry,
 ) -> Vec<LayerRef> {
-    let leased = leases.leased_layers();
+    let retained_layers = leases.leased_layers();
     candidates
         .iter()
-        .filter(|layer| !active.layers.contains(layer) && !leased.contains(layer))
+        .filter(|layer| !active.layers.contains(layer) && !retained_layers.contains(layer))
         .cloned()
         .collect()
 }
@@ -626,7 +711,7 @@ fn collect_project_entries(layer_dir: &Path) -> Result<Vec<ProjectEntry>, LayerS
         for entry in std::fs::read_dir(&dir)? {
             children.push(entry?);
         }
-        children.sort_by_key(|entry| entry.path());
+        children.sort_by_key(std::fs::DirEntry::path);
         for entry in children {
             let path = entry.path();
             let rel = path
@@ -960,7 +1045,7 @@ fn write_atomic(path: impl AsRef<Path>, bytes: &[u8]) -> Result<(), LayerStackEr
     Ok(())
 }
 
-fn stale_layer_error(layer: &LayerRef, rel: &str, err: std::io::Error) -> LayerStackError {
+fn stale_layer_error(layer: &LayerRef, rel: &str, err: &std::io::Error) -> LayerStackError {
     LayerStackError::Storage(format!(
         "layer no longer present while reading {rel}: {} ({err})",
         layer.layer_id
@@ -978,96 +1063,126 @@ fn stale_layer_error_value(layer: &LayerRef, rel: &str) -> LayerStackError {
 mod tests {
     use super::*;
 
-    #[test]
-    fn squash_coalesces_layers_and_preserves_merged_reads() {
-        let fixture = Fixture::new("squash_basic");
-        let mut stack = LayerStack::open(fixture.root.clone()).expect("open stack");
-        publish_text(&mut stack, "a.txt", "one\n");
-        publish_text(&mut stack, "b.txt", "two\n");
-        publish_text(&mut stack, "a.txt", "three\n");
+    type TestResult<T = ()> = std::result::Result<T, Box<dyn std::error::Error + Send + Sync>>;
 
-        assert!(stack.can_squash(2).expect("can squash"));
+    #[test]
+    fn squash_coalesces_layers_and_preserves_merged_reads() -> TestResult {
+        let fixture = Fixture::new("squash_basic");
+        let mut stack = LayerStack::open(fixture.root.clone())?;
+        publish_text(&mut stack, "a.txt", "one\n")?;
+        publish_text(&mut stack, "b.txt", "two\n")?;
+        publish_text(&mut stack, "a.txt", "three\n")?;
+
+        assert!(stack.can_squash(2)?);
         let squashed = stack
-            .squash(2)
-            .expect("squash succeeds")
-            .expect("squash produces manifest");
+            .squash(2)?
+            .ok_or_else(|| std::io::Error::other("squash should produce a manifest"))?;
 
         assert_eq!(squashed.layers.len(), 1);
-        assert_eq!(stack.read_text("a.txt").expect("read a").0, "three\n");
-        assert_eq!(stack.read_text("b.txt").expect("read b").0, "two\n");
-        assert!(stack.squash(2).expect("idempotent squash").is_none());
+        assert_eq!(stack.read_text("a.txt")?.0, "three\n");
+        assert_eq!(stack.read_text("b.txt")?.0, "two\n");
+        assert!(stack.squash(2)?.is_none());
+        Ok(())
     }
 
     #[test]
-    fn release_lease_gcs_squashed_layers_after_retaining_lease_drops() {
+    fn release_lease_gcs_squashed_layers_after_retaining_lease_drops() -> TestResult {
         let fixture = Fixture::new("squash_gc");
-        let mut stack = LayerStack::open(fixture.root.clone()).expect("open stack");
-        publish_text(&mut stack, "a.txt", "one\n");
-        publish_text(&mut stack, "b.txt", "two\n");
-        publish_text(&mut stack, "c.txt", "three\n");
+        let mut stack = LayerStack::open(fixture.root.clone())?;
+        publish_text(&mut stack, "a.txt", "one\n")?;
+        publish_text(&mut stack, "b.txt", "two\n")?;
+        publish_text(&mut stack, "c.txt", "three\n")?;
 
-        let lease = stack.acquire_snapshot("reader").expect("acquire lease");
+        let lease = stack.acquire_snapshot("reader")?;
         let old_tail: Vec<LayerRef> = lease.manifest.layers[1..].to_vec();
         let squashed = stack
-            .squash(2)
-            .expect("squash succeeds")
-            .expect("squash produces manifest");
+            .squash(2)?
+            .ok_or_else(|| std::io::Error::other("squash should produce a manifest"))?;
         assert_eq!(squashed.layers.len(), 2);
         for layer in &old_tail {
             assert!(fixture.root.join(&layer.path).exists());
         }
 
-        assert!(stack.release_lease(&lease.lease_id).expect("release lease"));
+        assert!(stack.release_lease(&lease.lease_id)?);
         for layer in &old_tail {
             assert!(!fixture.root.join(&layer.path).exists());
         }
+        Ok(())
     }
 
     #[test]
-    fn delete_layer_hides_files_in_reads_and_projection() {
+    fn cross_instance_lease_retains_squashed_layers_until_reopened_release() -> TestResult {
+        let fixture = Fixture::new("squash_gc_cross_instance");
+        let mut stack = LayerStack::open(fixture.root.clone())?;
+        publish_text(&mut stack, "a.txt", "one\n")?;
+        publish_text(&mut stack, "b.txt", "two\n")?;
+        publish_text(&mut stack, "c.txt", "three\n")?;
+        drop(stack);
+
+        let mut lease_stack = LayerStack::open(fixture.root.clone())?;
+        let lease = lease_stack.acquire_snapshot("reader")?;
+        let old_tail: Vec<LayerRef> = lease.manifest.layers[1..].to_vec();
+        assert_eq!(
+            LayerStack::open(fixture.root.clone())?.active_lease_count(),
+            1
+        );
+
+        let mut squash_stack = LayerStack::open(fixture.root.clone())?;
+        let squashed = squash_stack
+            .squash(2)?
+            .ok_or_else(|| std::io::Error::other("squash should produce a manifest"))?;
+        assert_eq!(squashed.layers.len(), 2);
+        for layer in &old_tail {
+            assert!(fixture.root.join(&layer.path).exists());
+        }
+
+        assert!(LayerStack::open(fixture.root.clone())?.release_lease(&lease.lease_id)?);
+        assert_eq!(
+            LayerStack::open(fixture.root.clone())?.active_lease_count(),
+            0
+        );
+        for layer in &old_tail {
+            assert!(!fixture.root.join(&layer.path).exists());
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn delete_layer_hides_files_in_reads_and_projection() -> TestResult {
         let fixture = Fixture::new("delete_hides");
-        let mut stack = LayerStack::open(fixture.root.clone()).expect("open stack");
-        publish_text(&mut stack, "dir/a.txt", "one\n");
-        publish_text(&mut stack, "dir/b.txt", "two\n");
+        let mut stack = LayerStack::open(fixture.root.clone())?;
+        publish_text(&mut stack, "dir/a.txt", "one\n")?;
+        publish_text(&mut stack, "dir/b.txt", "two\n")?;
 
-        stack
-            .publish_layer(&[LayerChange::Delete {
-                path: LayerPath::parse("dir/a.txt").expect("valid layer path"),
-            }])
-            .expect("publish delete");
+        stack.publish_layer(&[LayerChange::Delete {
+            path: LayerPath::parse("dir/a.txt")?,
+        }])?;
 
-        assert_eq!(
-            stack.read_text("dir/a.txt").expect("read deleted path"),
-            (String::new(), false)
-        );
-        assert_eq!(
-            stack.read_text("dir/b.txt").expect("read sibling path"),
-            ("two\n".to_owned(), true)
-        );
+        assert_eq!(stack.read_text("dir/a.txt")?, (String::new(), false));
+        assert_eq!(stack.read_text("dir/b.txt")?, ("two\n".to_owned(), true));
 
         let projected = fixture.root.join("projected");
         stack
-            ._view
-            .project(&projected, &stack.read_active_manifest().expect("manifest"))
-            .expect("project manifest");
+            .view
+            .project(&projected, &stack.read_active_manifest()?)?;
         assert!(!projected.join("dir/a.txt").exists());
         assert_eq!(
-            std::fs::read_to_string(projected.join("dir/b.txt")).expect("read projected sibling"),
+            std::fs::read_to_string(projected.join("dir/b.txt"))?,
             "two\n"
         );
         assert!(
             !projected.join("dir/.wh.a.txt").exists(),
             "logical whiteout marker must not leak into projections"
         );
+        Ok(())
     }
 
-    fn publish_text(stack: &mut LayerStack, path: &str, content: &str) {
-        stack
-            .publish_layer(&[LayerChange::Write {
-                path: LayerPath::parse(path).expect("valid layer path"),
-                content: content.as_bytes().to_vec(),
-            }])
-            .expect("publish layer");
+    fn publish_text(stack: &mut LayerStack, path: &str, content: &str) -> TestResult {
+        stack.publish_layer(&[LayerChange::Write {
+            path: LayerPath::parse(path)?,
+            content: content.as_bytes().to_vec(),
+        }])?;
+        Ok(())
     }
 
     struct Fixture {

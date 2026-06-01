@@ -1,6 +1,6 @@
-//! The async RPC server: AF_UNIX + loopback-TCP listeners, framing, shutdown.
+//! The async RPC server: `AF_UNIX` + loopback-TCP listeners, framing, shutdown.
 //!
-//! This is the ONLY tokio surface in the workspace. It listens on an AF_UNIX
+//! This is the primary daemon tokio surface. It listens on an `AF_UNIX`
 //! socket AND (optionally) a 127.0.0.1 TCP port, reads ONE newline-delimited
 //! compact-JSON request per connection (capped at [`eos_protocol::MAX_REQUEST_BYTES`],
 //! read-timed at [`eos_protocol::REQUEST_READ_TIMEOUT_S`]), pops the TCP-only
@@ -13,11 +13,10 @@
 //!    they need out of any guarded state, drop the guard, THEN await. The audit
 //!    ring + invocation registry use synchronous mutexes held only across
 //!    non-await sections.
-//! 2. **One OCC writer per root via an mpsc work queue.** The single-writer
-//!    publish path is reached NOT by locking shared OCC state across awaits but
-//!    by sending a [`OccWork`] item down an [`tokio::sync::mpsc`] channel to a
-//!    dedicated consumer task, which replies on a [`tokio::sync::oneshot`]. This
-//!    serializes publishes without a long-held lock.
+//! 2. **One OCC writer per root.** Write-capable handlers run inside their
+//!    per-request dispatch task and route to the dispatcher-owned per-root
+//!    `OccService` cache. The server never holds a mutex guard across an await
+//!    point while doing that dispatch.
 //!
 //! Shutdown is driven by a [`tokio_util::sync::CancellationToken`]: a SIGTERM /
 //! SIGINT cancels it, the serve loops select on it, in-flight pipelines are
@@ -31,17 +30,16 @@ use std::time::{Duration, Instant};
 
 use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
 use tokio::net::{TcpListener, UnixListener};
-use tokio::sync::{mpsc, oneshot};
+use tokio::sync::oneshot;
 use tokio::time::timeout;
 use tokio_util::sync::CancellationToken;
 
 use eos_protocol::{
-    Envelope, ErrorKind, LayerChange, Request,
-    audit::{Lane, ToolCallSection, build_event},
-    decode, encode,
+    audit::{build_event, Lane, ToolCallSection},
+    decode, encode, Envelope, ErrorKind, Request,
 };
 
-use crate::audit_buffer::{AuditBuffer, safe_emit};
+use crate::audit_buffer::{safe_emit, AuditBuffer};
 use crate::dispatcher::{DispatchContext, OpTable};
 use crate::error::DaemonError;
 use crate::invocation_registry::InFlightRegistry;
@@ -57,7 +55,7 @@ pub const REQUEST_READ_TIMEOUT_S: f64 = eos_protocol::REQUEST_READ_TIMEOUT_S;
 /// `// PORT backend/src/sandbox/daemon/rpc/server.py:148-205 — serve(socket_path, pid_path, tcp_host, tcp_port, auth_token)`
 #[derive(Debug, Clone)]
 pub struct ServerConfig {
-    /// AF_UNIX socket path (chmod 0o600 after bind).
+    /// `AF_UNIX` socket path (chmod 0o600 after bind).
     pub socket_path: PathBuf,
     /// Pid file path written after the listeners bind.
     pub pid_path: PathBuf,
@@ -69,8 +67,8 @@ pub struct ServerConfig {
     pub auth_token: Option<String>,
 }
 
-/// The running daemon: the op table, audit ring, invocation registry, the OCC
-/// work-queue sender, and the shutdown token.
+/// The running daemon: the op table, audit ring, invocation registry, and the
+/// shutdown token.
 ///
 /// It ORCHESTRATES but NEVER enters a namespace: namespace work is delegated to
 /// the `eosd ns-holder` / `eosd ns-runner` children it spawns; the daemon stays
@@ -81,33 +79,21 @@ pub struct DaemonServer {
     op_table: OpTable,
     audit: AuditBuffer,
     invocation_registry: Arc<InFlightRegistry>,
-    occ_tx: mpsc::Sender<OccWork>,
     shutdown: CancellationToken,
 }
 
 impl DaemonServer {
     /// Assemble a daemon over `config`, wiring the op table, audit ring, the
-    /// invocation registry, and the OCC single-writer queue. The returned
-    /// [`OccWriterQueue`] consumer must be driven by [`Self::serve`].
+    /// invocation registry, and the shutdown token.
     #[must_use]
-    pub fn new(config: ServerConfig) -> (Self, OccWriterQueue) {
-        let (occ_tx, occ_rx) = mpsc::channel(MAX_OCC_QUEUE_DEPTH);
-        let shutdown = CancellationToken::new();
-        let server = Self {
+    pub fn new(config: ServerConfig) -> Self {
+        Self {
             config,
             op_table: OpTable::with_builtins(),
             audit: AuditBuffer::new(),
             invocation_registry: Arc::new(InFlightRegistry::from_env()),
-            occ_tx,
-            shutdown: shutdown.clone(),
-        };
-        (
-            server,
-            OccWriterQueue {
-                rx: occ_rx,
-                shutdown,
-            },
-        )
+            shutdown: CancellationToken::new(),
+        }
     }
 
     /// The shutdown token; cancel it to drain + tear down the serve loops.
@@ -115,16 +101,20 @@ impl DaemonServer {
         self.shutdown.clone()
     }
 
-    /// Bind the AF_UNIX (and optional TCP) listeners, write the pid file, install
+    /// Bind the `AF_UNIX` (and optional TCP) listeners, write the pid file, install
     /// the SIGTERM/SIGINT handlers, and serve until the shutdown token fires.
     ///
-    /// On shutdown: cancel the serve tasks, drain in-flight ephemeral pipelines,
-    /// remove the pid file, and unlink the socket.
-    // PORT backend/src/sandbox/daemon/rpc/server.py:148-249 — serve(): start_unix_server + start_server, signal handlers, AsyncExitStack, stop_all_ephemeral_pipelines + pid/socket cleanup
-    pub async fn serve(self, occ_queue: OccWriterQueue) -> Result<(), DaemonError> {
+    /// On shutdown: cancel the serve tasks, remove the pid file, and unlink the
+    /// socket.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when listener binding, pid-file setup, signal handling,
+    /// request dispatch, or shutdown cleanup fails.
+    // PORT backend/src/sandbox/daemon/rpc/server.py:148-249 — serve(): listeners, signal handlers, pid/socket cleanup
+    pub async fn serve(self) -> Result<(), DaemonError> {
         let shutdown = self.shutdown.clone();
         let server = Arc::new(self);
-        let _occ_task = tokio::spawn(occ_queue.run());
         let _reaper_task = {
             let registry = Arc::clone(&server.invocation_registry);
             let shutdown = server.shutdown.clone();
@@ -139,7 +129,7 @@ impl DaemonServer {
                 }
             })
         };
-        let _ = (&server.audit, &server.invocation_registry, &server.occ_tx);
+        let _ = (&server.audit, &server.invocation_registry);
 
         if let Some(parent) = server.config.socket_path.parent() {
             tokio::fs::create_dir_all(parent).await?;
@@ -425,59 +415,6 @@ fn agent_id_from_args(args: &serde_json::Value) -> String {
         .unwrap_or_default()
         .trim()
         .to_owned()
-}
-
-/// Bound on the OCC work-queue depth (back-pressures publishers onto the single
-/// writer). `// PORT backend/src/sandbox/occ/commit_queue.py:66 — max_batch_size headroom`
-pub const MAX_OCC_QUEUE_DEPTH: usize = 1024;
-
-/// One unit of OCC publish work plus its reply channel.
-///
-/// The single-writer guarantee is reached by SENDING this down the mpsc queue to
-/// the one consumer task — never by holding a shared OCC lock across an `.await`
-/// (§5). The consumer replies on `reply`.
-/// `// PORT backend/src/sandbox/occ/commit_queue.py:90-91 — single "occ-commit-queue" writer thread`
-pub struct OccWork {
-    /// The `layer_stack_root` whose single writer this work targets.
-    pub layer_stack_root: String,
-    /// The changeset to publish through that one writer.
-    pub changes: Vec<LayerChange>,
-    /// Whether the changeset must publish atomically (all-or-nothing).
-    pub atomic: bool,
-    /// Reply channel: the consumer sends the publish outcome back here.
-    pub reply: oneshot::Sender<Result<eos_occ::ChangesetResult, DaemonError>>,
-}
-
-/// The receive side of the OCC single-writer queue, driven by one consumer task.
-///
-/// Owning the single `mpsc::Receiver` is what makes the writer single: exactly
-/// one consumer task drains it, so all publishes for all roots serialize through
-/// this one task (which dispatches per-root to the matching [`OccService`]).
-/// `// PORT backend/src/sandbox/occ/commit_queue.py:120-160 — drain loop (batch window, single thread)`
-///
-/// [`OccService`]: eos_occ::OccService
-pub struct OccWriterQueue {
-    rx: mpsc::Receiver<OccWork>,
-    shutdown: CancellationToken,
-}
-
-impl OccWriterQueue {
-    /// Run the single consumer: receive [`OccWork`], drive the per-root OCC
-    /// writer, reply on the oneshot, until the queue closes or shutdown fires.
-    // PORT backend/src/sandbox/occ/commit_queue.py:120-160 — _drain_loop: recv batch, commit_prepared, reply, honor batch_window
-    pub async fn run(mut self) {
-        loop {
-            tokio::select! {
-                () = self.shutdown.cancelled() => break,
-                work = self.rx.recv() => {
-                    let Some(work) = work else { break };
-                    let _ = work.reply.send(Err(DaemonError::Forbidden(
-                        "OCC publish is not implemented in Phase 2".to_owned(),
-                    )));
-                }
-            }
-        }
-    }
 }
 
 async fn read_request_line<R>(reader: &mut R) -> Result<Vec<u8>, DaemonError>

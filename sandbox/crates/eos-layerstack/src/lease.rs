@@ -13,7 +13,9 @@
 //! `// PORT backend/src/sandbox/layer_stack/lease.py`
 
 use std::collections::{BTreeMap, BTreeSet, HashMap};
+use std::path::Path;
 use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::{Arc, Mutex, MutexGuard, OnceLock};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use eos_protocol::{LayerRef, Manifest};
@@ -39,14 +41,57 @@ pub struct LeaseRegistry {
     refcounts: BTreeMap<LayerRefKey, usize>,
 }
 
+pub(crate) type SharedLeaseRegistry = Arc<Mutex<LeaseRegistry>>;
+
+pub(crate) fn shared_registry_for_root(
+    storage_root: &Path,
+) -> Result<SharedLeaseRegistry, LayerStackError> {
+    // Leases outlive individual `LayerStack` values: daemon call paths often
+    // retain only `lease_id`, then reopen the root later for release/metrics.
+    let key = storage_root
+        .canonicalize()
+        .unwrap_or_else(|_| storage_root.to_path_buf())
+        .to_string_lossy()
+        .into_owned();
+    let mut registries = shared_registries()
+        .lock()
+        .map_err(|_| LayerStackError::LockPoisoned("lease registry map"))?;
+    Ok(registries
+        .entry(key)
+        .or_insert_with(|| Arc::new(Mutex::new(LeaseRegistry::new())))
+        .clone())
+}
+
+pub(crate) fn lock_shared_registry(
+    registry: &SharedLeaseRegistry,
+) -> Result<MutexGuard<'_, LeaseRegistry>, LayerStackError> {
+    registry
+        .lock()
+        .map_err(|_| LayerStackError::LockPoisoned("lease registry"))
+}
+
+pub(crate) fn lock_shared_registry_recover(
+    registry: &SharedLeaseRegistry,
+) -> MutexGuard<'_, LeaseRegistry> {
+    registry
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
+}
+
 impl LeaseRegistry {
     /// Create an empty registry.
+    #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
 
     /// Register a new lease over `manifest`, owned by `owner_request_id`,
     /// incrementing the per-layer refcount. Rejects an empty owner id.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`LayerStackError::InvalidLeaseOwner`] when `owner_request_id` is
+    /// empty.
     /// `// PORT backend/src/sandbox/layer_stack/lease.py:33-47 — acquire`
     pub fn acquire(
         &mut self,
@@ -110,6 +155,7 @@ impl LeaseRegistry {
 
     /// Number of active leases.
     /// `// PORT backend/src/sandbox/layer_stack/lease.py:87-89 — active_count`
+    #[must_use]
     pub fn active_count(&self) -> usize {
         self.leases.len()
     }
@@ -149,16 +195,25 @@ fn new_lease_id() -> String {
     format!("{nanos:032x}{counter:016x}")
 }
 
+fn shared_registries() -> &'static Mutex<HashMap<String, SharedLeaseRegistry>> {
+    static REGISTRIES: OnceLock<Mutex<HashMap<String, SharedLeaseRegistry>>> = OnceLock::new();
+    REGISTRIES.get_or_init(|| Mutex::new(HashMap::new()))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
+    type TestResult<T = ()> = std::result::Result<T, Box<dyn std::error::Error + Send + Sync>>;
+
     #[test]
-    fn acquire_rejects_empty_owner_without_panicking() {
-        let manifest = Manifest::new(0, Vec::new(), 1).expect("valid empty manifest");
-        let err = LeaseRegistry::new()
-            .acquire(manifest, "")
-            .expect_err("empty owner id is invalid");
+    fn acquire_rejects_empty_owner_without_panicking() -> TestResult {
+        let manifest = Manifest::new(0, Vec::new(), 1)?;
+        let err = match LeaseRegistry::new().acquire(manifest, "") {
+            Ok(_) => return Err(std::io::Error::other("empty owner id was accepted").into()),
+            Err(error) => error,
+        };
         assert!(matches!(err, LayerStackError::InvalidLeaseOwner(_)));
+        Ok(())
     }
 }

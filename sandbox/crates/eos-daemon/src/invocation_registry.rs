@@ -106,7 +106,7 @@ impl InFlightRegistry {
     }
 
     /// Reaper sweep interval (seconds) the daemon's reaper loop sleeps between.
-    pub fn reaper_interval_s(&self) -> f64 {
+    pub const fn reaper_interval_s(&self) -> f64 {
         self.reaper_interval_s
     }
 
@@ -155,11 +155,16 @@ impl InFlightRegistry {
     /// Cancel the task for `invocation_id`; returns whether an entry existed.
     // PORT backend/src/sandbox/daemon/rpc/in_flight.py:83-88 — cancel_task()
     pub fn cancel(&self, invocation_id: &str) -> bool {
-        let state = self.lock_state();
-        let Some(entry) = state.by_invocation.get(invocation_id) else {
+        let Some(abort) = ({
+            let state = self.lock_state();
+            state
+                .by_invocation
+                .get(invocation_id)
+                .map(|entry| entry.abort.clone())
+        }) else {
             return false;
         };
-        entry.abort.abort();
+        abort.abort();
         true
     }
 
@@ -270,13 +275,11 @@ impl Drop for ActiveCallGuard<'_> {
 /// Read a positive `f64` env var, falling back to `default` on absent/invalid/<=0.
 /// `// PORT backend/src/sandbox/daemon/rpc/in_flight.py:144-158 — _env_float / _positive_float`
 fn env_positive_f64(name: &str, default: f64) -> f64 {
-    match std::env::var(name) {
-        Ok(raw) => match raw.trim().parse::<f64>() {
-            Ok(value) => positive_f64(value, default),
-            Err(_) => default,
-        },
-        Err(_) => default,
-    }
+    std::env::var(name).map_or(default, |raw| {
+        raw.trim()
+            .parse::<f64>()
+            .map_or(default, |value| positive_f64(value, default))
+    })
 }
 
 fn positive_f64(value: f64, default: f64) -> f64 {
@@ -300,9 +303,12 @@ mod tests {
     use std::time::Duration;
 
     use super::InFlightRegistry;
+    use tokio::task::JoinHandle;
+
+    type TestResult = Result<(), Box<dyn std::error::Error + Send + Sync>>;
 
     #[tokio::test]
-    async fn cancel_heartbeat_and_count_track_background_task() {
+    async fn cancel_heartbeat_and_count_track_background_task() -> TestResult {
         let registry = InFlightRegistry::new(300.0, 30.0);
         let task = tokio::spawn(future::pending::<()>());
         registry.register("bg-1", task.abort_handle(), "agent-a", "api.v1.shell", true);
@@ -313,29 +319,29 @@ mod tests {
             1
         );
         assert!(registry.cancel("bg-1"));
-        assert!(
-            task.await
-                .expect_err("task should be cancelled")
-                .is_cancelled()
-        );
+        assert_task_cancelled(task).await?;
         assert_eq!(registry.count_by_agent("agent-a"), 0);
 
         registry.deregister("bg-1");
         assert_eq!(registry.metrics(), (0, 0));
+        Ok(())
     }
 
     #[tokio::test]
-    async fn control_paths_recover_poisoned_registry_lock() {
+    async fn control_paths_recover_poisoned_registry_lock() -> TestResult {
         let registry = Arc::new(InFlightRegistry::new(300.0, 30.0));
         let poisoned = registry.clone();
-        assert!(
-            thread::spawn(move || {
-                let _guard = poisoned.inner.lock().expect("poison test can lock");
-                panic!("poison in-flight registry");
-            })
-            .join()
-            .is_err()
-        );
+        let poison_result = thread::spawn(move || {
+            let _guard = match poisoned.inner.lock() {
+                Ok(guard) => guard,
+                Err(error) => error.into_inner(),
+            };
+            std::panic::resume_unwind(Box::new("poison in-flight registry"));
+        })
+        .join();
+        if poison_result.is_ok() {
+            return Err("poison helper thread completed without unwinding".into());
+        }
 
         let task = tokio::spawn(future::pending::<()>());
         registry.register(
@@ -353,17 +359,14 @@ mod tests {
             registry.ttl_sweep();
         }
         assert!(registry.cancel("bg-poisoned"));
-        assert!(
-            task.await
-                .expect_err("task should be cancelled")
-                .is_cancelled()
-        );
+        assert_task_cancelled(task).await?;
         registry.deregister("bg-poisoned");
         assert_eq!(registry.metrics(), (0, 0));
+        Ok(())
     }
 
     #[tokio::test]
-    async fn ttl_sweep_skips_active_calls_then_reaps_idle_background_task() {
+    async fn ttl_sweep_skips_active_calls_then_reaps_idle_background_task() -> TestResult {
         let registry = InFlightRegistry::new(0.001, 30.0);
         let task = tokio::spawn(future::pending::<()>());
         registry.register(
@@ -384,11 +387,16 @@ mod tests {
 
         registry.ttl_sweep();
         assert_eq!(registry.metrics(), (1, 1));
-        assert!(
-            task.await
-                .expect_err("task should be ttl-cancelled")
-                .is_cancelled()
-        );
+        assert_task_cancelled(task).await?;
         assert_eq!(registry.count_by_agent("agent-a"), 0);
+        Ok(())
+    }
+
+    async fn assert_task_cancelled(task: JoinHandle<()>) -> TestResult {
+        match task.await {
+            Ok(()) => Err("expected task cancellation, but task completed".into()),
+            Err(error) if error.is_cancelled() => Ok(()),
+            Err(error) => Err(format!("expected task cancellation, got {error}").into()),
+        }
     }
 }

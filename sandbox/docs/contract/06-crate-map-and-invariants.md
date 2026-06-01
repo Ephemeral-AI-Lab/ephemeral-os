@@ -4,13 +4,15 @@
 
 Scope: plan §1 (External project layout) + §11 (Resulting structure & loose-coupling contract), cross-checked against §0 (PND/PPC/MF-1) and §12 (verified env).
 
-A Rust author who never reads the Python should be able to lay out the 11-crate workspace and reproduce every constant byte-for-byte from this file alone.
+A Rust author who never reads the Python should be able to lay out the current
+10-runtime-crate workspace plus the `xtask` packaging helper and reproduce every
+constant byte-for-byte from this file alone.
 
 ---
 
 ## CRITICAL METHODOLOGY NOTE — crate edges are NOT package edges
 
-Two of the eleven crates are **carved out of Python directories that map to other crates**; they have no 1:1 directory. Naive `grep "from sandbox.occ"` by current directory gives *package* edges, which over- or under-attribute dependencies. The edges in §A are computed at **crate-source granularity**, not directory granularity. The carve-outs:
+Two runtime crates are **carved out of Python directories that map to other crates**; they have no 1:1 directory. Naive `grep "from sandbox.occ"` by current directory gives *package* edges, which over- or under-attribute dependencies. The edges in §A are computed at **crate-source granularity**, not directory granularity. The carve-outs:
 
 - **`eos-runner`** sources span two directories: `overlay/namespace_runner.py` + `overlay/namespace_entrypoint.py` (fresh-ns path) AND `isolated_workspace/scripts/setns_exec.py` + `setns_overlay_mount.py` + `_setns_libc.py` + `configure_dns_in_ns.py` (setns mode, PND). These live *inside* `overlay/` and `isolated_workspace/` today.
 - **`eos-ns-holder`** = the single file `isolated_workspace/scripts/ns_holder.py`, today *inside* `isolated_workspace/`.
@@ -19,9 +21,10 @@ Therefore `eos-isolated`'s real deps are computed **excluding `scripts/ns_holder
 
 ---
 
-## A) The 11-Crate Dependency Edge Table
+## A) The Runtime Crate Dependency Edge Table
 
-The table below is the current Rust direct Cargo graph as of 2026-06-01. The
+The table below is the current Rust direct Cargo graph as of 2026-06-02 for the
+10 runtime crates; the workspace also contains `xtask` for packaging. The
 source-derived carve-out rationale remains the evidence for ownership, but the
 implementation deliberately avoids some direct edges by injecting narrow ports
 from `eos-daemon` and by spawning `eosd ns-holder` / `eosd ns-runner` children
@@ -35,11 +38,10 @@ instead of linking those runtime children into `eos-isolated`.
 | 4 | **eos-layerstack** | `eos-protocol` | `serde`, `serde_json`, `rustix`, `sha2`, `thiserror` | single-threaded core + per-root `RLock`-equivalent (reentrant) mutex; no tokio |
 | 5 | **eos-overlay** | `eos-protocol` | `sha2`, `thiserror`; Linux target `rustix`, `libc` (raw `fsopen`/`fsconfig`/`fsmount`/`move_mount`) | syscall path single-threaded; no tokio required |
 | 6 | **eos-occ** | `eos-overlay` (one-way only), `eos-protocol` | `serde`, `thiserror` | dedicated single **writer thread** per `layer_stack_root` (`occ-commit-queue`); daemon injects layer-stack-backed maintenance/transaction ports |
-| 7 | **eos-ephemeral** | `eos-protocol` | `thiserror` | reduced to the protocol/error contract needed by deferred plugin PPC; concrete overlay/OCC/runner ownership stays outside this crate until plugin PPC lands |
-| 8 | **eos-isolated** | `eos-overlay` — **NOT `eos-occ`** (build-time no-publish guarantee) | `serde_json`, `thiserror`, `nix`; Linux target `futures-util`, `libc`, `netlink-sys`, `rtnetlink`, `tokio` | daemon-owned orchestration; ns syscalls delegated to spawned holder/runner children, and Linux netlink helpers are target-gated |
-| 9 | **eos-plugin** | `eos-ephemeral`, `eos-layerstack`, `eos-protocol` — **NOT `eos-occ`** and no direct `eos-overlay`/`nix` edge | `serde`, `serde_json`, `thiserror` | plugin manifest/service/refresh contracts plus warm per-session child + pipe; lives naturally in the daemon control plane (no single-threaded constraint — plan §0 line 49) |
-| 10 | **eos-daemon** | `eos-protocol`, `eos-layerstack`, `eos-overlay`, `eos-occ`, `eos-ephemeral`, `eos-isolated`, `eos-runner`, `eos-plugin` — implements + injects the port traits lower crates define, and spawns holder/runner children by binary subcommand | `serde_json`, `sha2`, **`tokio`**, `tokio-util`, `thiserror`; Linux target `nix` | **tokio control plane** for AF_UNIX + TCP async multiplexing and PTY/session supervision |
-| 11 | **eosd** | `eos-daemon`, `eos-runner`, `eos-ns-holder`, `eos-overlay`, `eos-protocol` (subcommand dispatch only) | `anyhow`, `serde_json`, `tokio` | binary entry; `eosd daemon` / `eosd ns-runner` / `eosd ns-holder` |
+| 7 | **eos-isolated** | `eos-overlay` — **NOT `eos-occ`** (build-time no-publish guarantee) | `serde_json`, `thiserror`, `nix`; Linux target `futures-util`, `libc`, `netlink-sys`, `rtnetlink`, `tokio` | daemon-owned orchestration; ns syscalls delegated to spawned holder/runner children, and Linux netlink helpers are target-gated |
+| 8 | **eos-plugin** | `eos-protocol` — **NOT `eos-occ`**, `eos-overlay`, `eos-layerstack`, `nix`, or `tokio` | `serde`, `serde_json`, `thiserror` | pure plugin manifest/service/refresh/PPC contracts; daemon owns service processes, overlay, snapshot refresh, and OCC callbacks |
+| 9 | **eos-daemon** | `eos-protocol`, `eos-layerstack`, `eos-overlay`, `eos-occ`, `eos-isolated`, `eos-runner`, `eos-plugin` — implements + injects the port traits lower crates define, and spawns holder/runner children by binary subcommand | `serde`, `serde_json`, `sha2`, **`tokio`**, `tokio-util`, `thiserror`; Linux target `nix` | **tokio control plane** for AF_UNIX + TCP async multiplexing and PTY/session supervision |
+| 10 | **eosd** | `eos-daemon`, `eos-runner`, `eos-ns-holder`, `eos-overlay`, `eos-protocol` (subcommand dispatch only) | `anyhow`, `serde_json`, `tokio` | binary entry; `eosd daemon` / `eosd ns-runner` / `eosd ns-holder` |
 
 ### Enforced-edge checklist (source evidence plus current Rust edge)
 
@@ -49,9 +51,9 @@ instead of linking those runtime children into `eos-isolated`.
 | `eos-layerstack ← eos-protocol` | ✅ | `layer_stack/` has ZERO imports of `sandbox.occ` / `sandbox.overlay` (base layer) |
 | `eos-overlay ← eos-layerstack` | ✅ source, intentionally severed in Rust | `overlay/` imports `sandbox.layer_stack.*`; Rust `eos-overlay` now consumes concrete lowerdir inputs and protocol changes without a direct `eos-layerstack` Cargo edge. `overlay/` imports of `sandbox.occ` = **NONE** (no back-edge). |
 | `eos-occ ← eos-layerstack (+ eos-overlay, one-way only)` | ✅ source, intentionally port-inverted in Rust | occ's ONLY overlay import: `occ/overlay_change_conversion.py:16` → `sandbox.overlay.path_change.OverlayPathChange`. Rust `eos-occ` keeps the `eos-overlay`/`eos-protocol` edge and accepts daemon-injected layer-stack transaction/maintenance ports instead of directly linking `eos-layerstack`. |
-| `eos-ephemeral ← eos-overlay + eos-occ + eos-runner (+ eos-layerstack DIRECT)` | ✅ source, deferred in Rust | `ephemeral_workspace/` (excl. plugin): `overlay`, `occ`, AND direct `layer_stack` imports at `ephemeral_workspace/pipeline.py` + `ephemeral_workspace/pipeline_registry.py`. Current Rust `eos-ephemeral` is deliberately reduced to `eos-protocol` + `thiserror` until plugin PPC execution lands. |
+| Python `ephemeral_workspace/` source edge | ✅ source, intentionally not mirrored as a Rust crate | `ephemeral_workspace/` (excl. plugin): `overlay`, `occ`, AND direct `layer_stack` imports at `ephemeral_workspace/pipeline.py` + `ephemeral_workspace/pipeline_registry.py`. The old Rust `eos-ephemeral` crate was removed; daemon/runner/OCC crates own the concrete overlay, publish, and namespace paths. |
 | `eos-isolated ← overlay + runner + ns-holder + layerstack, NOT eos-occ` | ✅ current Rust no-publish guarantee | isolated control-plane (excl. scripts/) touches occ ONLY via `_control_plane/pipeline_registry.py:22` → `sandbox.occ.layer_stack_adapter` (the HINGE). Current Rust preserves **no `eos-occ` edge** and narrows direct deps to `eos-overlay`; daemon injects the layer-stack snapshot/lease port and spawns holder/runner children. |
-| `eos-plugin ← ?` (task open) | ✅ RESOLVED | plugin's ONLY occ import is `ephemeral_workspace/plugin/projection.py:10` → `sandbox.occ.layer_stack_adapter` (the SAME HINGE adapter, used for snapshot/lease/projection — never publish). Current Rust `eos-plugin` links `eos-ephemeral` + `eos-layerstack` + `eos-protocol`; it links neither `eos-occ` nor `eos-overlay`. `PluginServiceKey`, `ServiceMode`, `RefreshStrategy`, manifest validation, and refresh messages are pure contracts. WRITE_ALLOWED publish stays owned by eos-daemon. |
+| Historical `eos-plugin ← ?` edge | ✅ RESOLVED | plugin's ONLY occ import is `ephemeral_workspace/plugin/projection.py:10` → `sandbox.occ.layer_stack_adapter` (the SAME HINGE adapter, used for snapshot/lease/projection — never publish). Current Rust `eos-plugin` is narrowed to `eos-protocol` plus serde/JSON/error support; it links neither `eos-occ`, `eos-overlay`, nor `eos-layerstack`. `PluginServiceKey`, `ServiceMode`, `RefreshStrategy`, manifest validation, refresh messages, public op names, and PPC frames are pure contracts. WRITE_ALLOWED publish stays owned by eos-daemon. |
 | `eosd ← all` | ✅ adjusted | binary subcommand dispatch depends on `eos-daemon`, `eos-runner`, `eos-ns-holder`, `eos-overlay`, and `eos-protocol`. The daemon links the runtime service crates it actually calls and spawns holder/runner subcommands instead of depending on `eos-ns-holder` directly. |
 
 ### tokio vs no-tokio justification (task requirement)
@@ -78,17 +80,18 @@ Verified facts (the reason the `eos-isolated ⊥ eos-occ` and `eos-plugin ⊥ eo
 
 **Rust placement rule:** Keep snapshot/lease access outside `eos-occ`, split
 from publish transactions. Current Rust uses two narrow forms of that rule:
-`eos-plugin` consumes `eos-layerstack`'s snapshot/lease surface directly, while
-`eos-isolated` defines a smaller `LayerStackSnapshotPort` and the daemon injects
-the layer-stack-backed implementation. The publish-transaction half —
+`eos-isolated` defines a small `LayerStackSnapshotPort` and the daemon injects
+the layer-stack-backed implementation. `eos-plugin` no longer consumes any
+snapshot/lease surface directly; service-process refresh, projection, and
+publish callbacks are daemon-owned. The publish-transaction half —
 `begin_transaction` → `LayerCommitTransaction`, `allocate_commit_staging`,
 `drop_commit_staging` (`layer_stack_adapter.py:48-55`) — remains owned by
 eos-occ/daemon publish paths. The snapshot/lease half — `acquire_snapshot`
 (`:57`), `release_lease` (`:66`), `read_active_manifest` (`:31`),
 `read_bytes`/`read_text` (`:34-46`), plus `can_squash`/`squash` (`:69-73`) —
-is what isolated/plugin need. **If this surface moves back into `eos-occ`, both
-eos-isolated and eos-plugin would be forced to link `eos-occ` and the build-time
-no-publish guarantee would silently break.**
+is what isolated mode and daemon-owned plugin refresh need. **If this surface
+moves back into `eos-occ`, eos-isolated would be forced to link `eos-occ` and
+the build-time no-publish guarantee would silently break.**
 
 ### B.2 The 4 acyclic severings (sever current upward Python edges → leaf→root crate graph)
 
@@ -278,6 +281,14 @@ The "RLock" the task warns about is the **layer-stack storage writer lock**, NOT
 
 7. **eos-runner is NOT internal-dep-free.** It depends on eos-overlay (`namespace_entrypoint.py:18` and `setns_overlay_mount.py:65` both import `overlay.kernel_mount`) and eos-protocol (ToolCallRequest/Result/Intent from `shared.models`). The plan's §1 line 87 phrasing ("eos-runner and eos-ns-holder are single-threaded, syscall-only … no tokio") is about the *threading model*, not dep-freedom — only eos-ns-holder is a true near-leaf (no internal deps; tokens inline).
 
-8. **eos-plugin ⊥ eos-occ is a real, derivable guarantee** (task left it open). plugin's sole occ touch is `projection.py:10` → the HINGE adapter (snapshot/lease/projection, never publish). Current Rust links eos-plugin to eos-layerstack, not eos-occ, and also avoids the older direct eos-overlay edge. WRITE_ALLOWED publish is owned by eos-daemon via the inverted `occ_runtime_services`/`layer_stack_runtime` port traits (the 6 `sandbox.daemon` imports in `plugin/`). This is NOT contradicted by source, but is stronger than the plan spells out — flagged so the Rust author treats `eos-plugin ⊥ eos-occ` as an enforced build-time edge, parallel to eos-isolated.
+8. **eos-plugin ⊥ eos-occ is a real, derivable guarantee** (task left it open).
+plugin's sole occ touch is `projection.py:10` → the HINGE adapter
+(snapshot/lease/projection, never publish). Current Rust narrows `eos-plugin`
+to pure contracts and PPC framing; it does not link `eos-layerstack`,
+`eos-occ` or `eos-overlay`. WRITE_ALLOWED publish is owned by
+eos-daemon via its concrete OCC/LayerStack services. This is NOT contradicted
+by source, but is stronger than the plan spells out — flagged so the Rust author
+treats `eos-plugin ⊥ eos-occ` as an enforced build-time edge, parallel to
+eos-isolated.
 
-9. **eos-ephemeral → eos-layerstack is a DIRECT source edge** (not merely transitive via overlay/occ). `ephemeral_workspace/pipeline.py` and `pipeline_registry.py` import `sandbox.layer_stack.*` directly. The task's "eos-ephemeral ← overlay+occ+runner" omits this. Current Rust intentionally does **not** carry that full runtime graph yet: `eos-ephemeral` is reduced to `eos-protocol` + `thiserror` for the deferred plugin PPC contract, and the daemon/other crates own the concrete overlay/OCC/runner paths until plugin PPC execution is implemented.
+9. **Python `ephemeral_workspace` → layerstack is a DIRECT source edge** (not merely transitive via overlay/occ). `ephemeral_workspace/pipeline.py` and `pipeline_registry.py` import `sandbox.layer_stack.*` directly. The task's old "eos-ephemeral ← overlay+occ+runner" phrasing omitted this. Current Rust intentionally does **not** carry that full runtime graph as its own crate: the old `eos-ephemeral` crate is removed, and the daemon/other crates own the concrete overlay/OCC/runner/plugin paths.

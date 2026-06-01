@@ -3,9 +3,10 @@
 //! `IsolatedSession` owns the per-agent persistent workspace. `enter` acquires a
 //! layer-stack snapshot/lease, allocates scratch (upper/work), wires the
 //! namespace (ns-holder spawn -> ns FDs -> overlay mount -> DNS -> net-ready),
-//! and persists the handle. `exit` drains in-flight work, tears down the
-//! namespace + network + cgroup, releases the lease, and DISCARDS the upperdir
-//! (writes are captured for audit only, never published).
+//! and persists the handle. `exit` tears down the namespace + network + cgroup,
+//! releases the lease, and DISCARDS the upperdir (writes are captured for audit
+//! only, never published). Daemon-side gates own active command/PTY quiescence
+//! for the current Rust slice.
 //! `// PORT backend/src/sandbox/isolated_workspace/_control_plane/workspace_handle_lifecycle.py:39-260`
 
 use std::collections::HashMap;
@@ -18,6 +19,9 @@ use crate::caps::{ResourceCaps, ISOLATED_WORKSPACE_ROOT};
 use crate::error::IsolatedError;
 use crate::network::{IsolatedNetwork, VethAllocation};
 use serde_json::{json, Value};
+
+const HOST_BUDGET_FALLBACK_BYTES: u64 = 1_u64 << 62;
+const KIB_BYTES: u64 = 1_024;
 
 /// Newtype for an agent identity (the enter/exit key).
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -85,8 +89,6 @@ pub struct WorkspaceHandle {
     pub created_at: f64,
     /// Monotonic last-activity time (TTL input).
     pub last_activity: f64,
-    /// In-flight foreground call count.
-    pub active_calls: u32,
 }
 
 /// Snapshot/lease HINGE port — the ONLY layer-stack surface isolated models.
@@ -98,16 +100,31 @@ pub struct WorkspaceHandle {
 /// `// PORT backend/src/sandbox/occ/layer_stack_adapter.py:31-67 — snapshot/lease half`
 pub trait LayerStackSnapshotPort {
     /// Acquire a read snapshot + lease for `request_id`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`IsolatedError`] when the layer-stack snapshot or lease cannot
+    /// be acquired.
     // PORT backend/src/sandbox/occ/layer_stack_adapter.py:57 — acquire_snapshot
     fn acquire_snapshot(&self, request_id: &str) -> Result<SnapshotLease, IsolatedError>;
 
     /// Release the lease held by `lease_id`. Returns whether it was held.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`IsolatedError`] when the layer-stack lease release cannot be
+    /// checked or completed.
     // PORT backend/src/sandbox/occ/layer_stack_adapter.py:66 — release_lease
     fn release_lease(&self, lease_id: &str) -> Result<bool, IsolatedError>;
 
     /// Optional daemon-local diagnostic count for active leases owned by this
     /// port instance. This is intentionally diagnostic-only and exposes no
     /// publish surface.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`IsolatedError`] when the backing diagnostic state cannot be
+    /// inspected.
     fn active_lease_count(&self) -> Result<Option<usize>, IsolatedError> {
         Ok(None)
     }
@@ -124,6 +141,11 @@ pub trait LayerStackSnapshotPort {
 pub trait NamespaceRuntimePort {
     /// Spawn `eosd ns-holder` under `unshare(--user --net --pid --mount ...)`,
     /// wait for the `ns-up` handshake token, and return its PID.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`IsolatedError`] when holder launch or readiness signaling
+    /// fails.
     // PORT backend/src/sandbox/isolated_workspace/_control_plane/namespace_runtime.py:79-116 — spawn_ns_holder (ns_holder.py handshake step 1)
     fn spawn_ns_holder(
         &self,
@@ -132,10 +154,18 @@ pub trait NamespaceRuntimePort {
     ) -> Result<i32, IsolatedError>;
 
     /// Open `/proc/<pid>/ns/{user,mnt,pid,net}` FDs for `holder_pid`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`IsolatedError`] when namespace FDs cannot be opened.
     // PORT backend/src/sandbox/isolated_workspace/_control_plane/namespace_runtime.py:118-125 — open_ns_fds
     fn open_ns_fds(&self, holder_pid: i32) -> Result<HashMap<String, i32>, IsolatedError>;
 
     /// Mount the overlay inside the namespace (via `eosd ns-runner` setns helper).
+    ///
+    /// # Errors
+    ///
+    /// Returns [`IsolatedError`] when the setns overlay mount helper fails.
     // PORT backend/src/sandbox/isolated_workspace/_control_plane/namespace_runtime.py:127-165 — mount_overlay (setns_overlay_mount)
     fn mount_overlay(
         &self,
@@ -144,6 +174,11 @@ pub trait NamespaceRuntimePort {
     ) -> Result<(), IsolatedError>;
 
     /// Configure DNS inside the namespace; returns whether the fallback applied.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`IsolatedError`] when DNS configuration cannot be applied or
+    /// inspected.
     // PORT backend/src/sandbox/isolated_workspace/_control_plane/namespace_runtime.py:167-199 — configure_dns (configure_dns_in_ns)
     fn configure_dns(
         &self,
@@ -152,6 +187,11 @@ pub trait NamespaceRuntimePort {
     ) -> Result<bool, IsolatedError>;
 
     /// Send `net-ready` and await the `ready` token (handshake steps 2-3).
+    ///
+    /// # Errors
+    ///
+    /// Returns [`IsolatedError`] when the holder control/readiness handshake
+    /// fails or times out.
     // PORT backend/src/sandbox/isolated_workspace/_control_plane/namespace_runtime.py:201-214 — signal_net_ready (ns_holder.py handshake)
     fn signal_net_ready(
         &self,
@@ -160,10 +200,18 @@ pub trait NamespaceRuntimePort {
     ) -> Result<(), IsolatedError>;
 
     /// Create the per-workspace cgroup and return its path.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`IsolatedError`] when cgroup creation fails.
     // PORT backend/src/sandbox/isolated_workspace/_control_plane/namespace_runtime.py:216-219 — create_cgroup
     fn create_cgroup(&self, handle: &WorkspaceHandle) -> Result<PathBuf, IsolatedError>;
 
     /// SIGTERM (then SIGKILL after `grace_s`) the ns-holder and reap children.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`IsolatedError`] when holder teardown fails.
     // PORT backend/src/sandbox/isolated_workspace/_control_plane/namespace_runtime.py:221-253 — kill_holder
     fn kill_holder(&self, holder_pid: i32, grace_s: f64) -> Result<(), IsolatedError>;
 }
@@ -196,6 +244,7 @@ where
     A: AuditSink,
 {
     /// Construct a session with injected ports, caps, and audit sink.
+    #[must_use]
     pub fn new(caps: ResourceCaps, layer_stack: S, runtime: R, audit: A) -> Self {
         Self::with_scratch_root(
             caps,
@@ -211,6 +260,7 @@ where
     /// The daemon uses the canonical `/eos/mount` root in Docker. Focused
     /// unit tests inject a temporary scratch root through this constructor so
     /// lifecycle behavior can be verified without depending on host `/eos`.
+    #[must_use]
     pub fn with_scratch_root(
         caps: ResourceCaps,
         layer_stack: S,
@@ -232,6 +282,11 @@ where
     }
 
     /// Reconcile persisted handles + IP pool at startup before serving enters.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`IsolatedError`] when the feature is disabled, network setup
+    /// fails, or the session scratch root cannot be created.
     // PORT backend/src/sandbox/isolated_workspace/pipeline.py:220 — IsolatedPipeline.initialize
     pub fn initialize(&mut self) -> Result<(), IsolatedError> {
         if !self.caps.enabled {
@@ -251,6 +306,12 @@ where
     /// Acquires the snapshot/lease, allocates scratch, wires the namespace, and
     /// registers the handle. Rolls back partial state (and releases the lease)
     /// on any wiring failure.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`IsolatedError`] when the feature is disabled, `agent_id` is
+    /// invalid, capacity is exhausted, snapshot acquisition fails, or namespace
+    /// wiring fails.
     // PORT backend/src/sandbox/isolated_workspace/_control_plane/workspace_handle_lifecycle.py:39-130 — _WorkspaceHandleLifecycleMixin.enter
     pub fn enter(&mut self, agent_id: &AgentId) -> Result<WorkspaceHandle, IsolatedError> {
         if !self.caps.enabled {
@@ -268,6 +329,7 @@ where
         if self.handles.len() >= total_cap {
             return Err(IsolatedError::QuotaExceeded);
         }
+        self.check_host_capacity()?;
 
         let snapshot = self
             .layer_stack
@@ -303,7 +365,6 @@ where
             cgroup_path: None,
             created_at: now,
             last_activity: now,
-            active_calls: 0,
         };
 
         if let Err(err) = self.wire_handle(&mut handle) {
@@ -339,8 +400,13 @@ where
 
     /// Exit the isolated workspace for `agent_id`.
     ///
-    /// Drains in-flight dispatches, tears down namespace/network/cgroup,
-    /// releases the lease, and DISCARDS the upperdir (no publish).
+    /// Tears down namespace/network/cgroup, releases the lease, and DISCARDS
+    /// the upperdir (no publish).
+    ///
+    /// # Errors
+    ///
+    /// Returns [`IsolatedError`] when `agent_id` is invalid or no isolated
+    /// workspace is open for the agent.
     // PORT backend/src/sandbox/isolated_workspace/_control_plane/workspace_handle_lifecycle.py:207-260 — _WorkspaceHandleLifecycleMixin.exit
     pub fn exit(
         &mut self,
@@ -358,25 +424,6 @@ where
         let Some(handle) = self.handles.remove(&handle_id) else {
             return Err(IsolatedError::NotOpen);
         };
-        if handle.active_calls > 0 {
-            self.by_agent.insert(agent_id.clone(), handle_id.clone());
-            self.handles.insert(handle_id, handle);
-            return Ok(json!({
-                "success": false,
-                "evicted_upperdir_bytes": 0,
-                "lifetime_s": 0.0,
-                "total_ms": 0.0,
-                "phases_ms": {},
-                "error": {
-                    "kind": "exit_drain_timeout",
-                    "message": "exit_isolated_workspace timed out waiting for in-flight dispatches to drain",
-                    "details": {
-                        "inflight": "1",
-                        "grace_s": grace_s.unwrap_or(self.caps.exit_grace_s).to_string(),
-                    },
-                },
-            }));
-        }
         let timer = Instant::now();
         let upperdir_bytes = directory_file_bytes(&handle.upperdir);
         let inspection = self.teardown_handle(&handle, grace_s.unwrap_or(self.caps.exit_grace_s));
@@ -438,6 +485,14 @@ where
 
     fn session_scratch_root(&self) -> PathBuf {
         self.scratch_root.join("runtime").join("isolated-workspace")
+    }
+
+    fn check_host_capacity(&self) -> Result<(), IsolatedError> {
+        check_host_capacity_against_budget(
+            self.handles.len(),
+            self.caps.upperdir_bytes,
+            host_capacity_budget_bytes(self.caps.memavail_fraction),
+        )
     }
 
     fn wire_handle(&mut self, handle: &mut WorkspaceHandle) -> Result<(), IsolatedError> {
@@ -574,6 +629,77 @@ fn directory_file_bytes(path: &Path) -> u64 {
     total
 }
 
+fn check_host_capacity_against_budget(
+    open_handles: usize,
+    upperdir_bytes: u64,
+    budget_bytes: u64,
+) -> Result<(), IsolatedError> {
+    let required_bytes = required_host_capacity_bytes(open_handles, upperdir_bytes);
+    if required_bytes > budget_bytes {
+        return Err(IsolatedError::HostRamPressure {
+            required_bytes,
+            budget_bytes,
+        });
+    }
+    Ok(())
+}
+
+fn required_host_capacity_bytes(open_handles: usize, upperdir_bytes: u64) -> u64 {
+    u64::try_from(open_handles)
+        .unwrap_or(u64::MAX)
+        .saturating_add(1)
+        .saturating_mul(upperdir_bytes)
+}
+
+fn host_capacity_budget_bytes(memavail_fraction: f64) -> u64 {
+    std::fs::read_to_string("/proc/meminfo")
+        .ok()
+        .and_then(|meminfo| parse_memavailable_kib(&meminfo))
+        .map_or(HOST_BUDGET_FALLBACK_BYTES, |memavailable_kib| {
+            host_capacity_budget_bytes_from_memavailable_kib(memavailable_kib, memavail_fraction)
+        })
+}
+
+fn parse_memavailable_kib(meminfo: &str) -> Option<u64> {
+    meminfo.lines().find_map(|line| {
+        let rest = line.trim_start().strip_prefix("MemAvailable:")?;
+        rest.split_whitespace().next()?.parse().ok()
+    })
+}
+
+fn host_capacity_budget_bytes_from_memavailable_kib(
+    memavailable_kib: u64,
+    memavail_fraction: f64,
+) -> u64 {
+    let memavailable_bytes = memavailable_kib.saturating_mul(KIB_BYTES);
+    f64_floor_to_u64_saturating(u64_to_f64_lossy(memavailable_bytes) * memavail_fraction)
+}
+
+fn f64_floor_to_u64_saturating(value: f64) -> u64 {
+    if !value.is_finite() {
+        return if value.is_sign_positive() {
+            u64::MAX
+        } else {
+            0
+        };
+    }
+    if value <= 0.0 {
+        return 0;
+    }
+    let floored = value.floor();
+    if floored >= u64_to_f64_lossy(u64::MAX) {
+        return u64::MAX;
+    }
+    format!("{floored:.0}").parse().unwrap_or(u64::MAX)
+}
+
+fn u64_to_f64_lossy(value: u64) -> f64 {
+    const U32_FACTOR: f64 = 4_294_967_296.0;
+    let high = u32::try_from(value >> 32).unwrap_or(u32::MAX);
+    let low = u32::try_from(value & u64::from(u32::MAX)).unwrap_or(u32::MAX);
+    f64::from(high).mul_add(U32_FACTOR, f64::from(low))
+}
+
 fn mountinfo_reference_count(paths: &[&Path]) -> Option<usize> {
     let mountinfo = std::fs::read_to_string("/proc/self/mountinfo").ok()?;
     let needles = paths
@@ -587,4 +713,47 @@ fn mountinfo_reference_count(paths: &[&Path]) -> Option<usize> {
             .filter(|line| needles.iter().any(|needle| line.contains(needle)))
             .count(),
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parses_memavailable_from_proc_meminfo() {
+        let meminfo = "MemTotal:       1024 kB\nMemAvailable:    2048 kB\n";
+        assert_eq!(parse_memavailable_kib(meminfo), Some(2_048));
+    }
+
+    #[test]
+    fn host_capacity_budget_matches_python_floor() {
+        assert_eq!(
+            host_capacity_budget_bytes_from_memavailable_kib(1_001, 0.5),
+            512_512
+        );
+    }
+
+    #[test]
+    fn host_capacity_required_saturates() {
+        assert_eq!(required_host_capacity_bytes(usize::MAX, u64::MAX), u64::MAX);
+    }
+
+    #[test]
+    fn host_capacity_rejects_when_required_exceeds_budget() -> Result<(), Box<dyn std::error::Error>>
+    {
+        let error = match check_host_capacity_against_budget(2, 10, 29) {
+            Ok(()) => return Err("expected host RAM pressure rejection".into()),
+            Err(error) => error,
+        };
+        let (required_bytes, budget_bytes) = match error {
+            IsolatedError::HostRamPressure {
+                required_bytes,
+                budget_bytes,
+            } => (required_bytes, budget_bytes),
+            other => return Err(format!("expected host RAM pressure error, got {other}").into()),
+        };
+        assert_eq!(required_bytes, 30);
+        assert_eq!(budget_bytes, 29);
+        Ok(())
+    }
 }

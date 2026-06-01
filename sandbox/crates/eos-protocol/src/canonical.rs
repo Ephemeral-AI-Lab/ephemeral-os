@@ -41,9 +41,7 @@ pub fn canonicalize(value: &Value) -> Value {
                 if n.as_i64().is_none() && n.as_u64().is_none() {
                     // Quantize to 1e-9; reuse string round-trip for stability.
                     let q = (f * 1e9).round() / 1e9;
-                    return serde_json::Number::from_f64(q)
-                        .map(Value::Number)
-                        .unwrap_or(Value::Null);
+                    return serde_json::Number::from_f64(q).map_or(Value::Null, Value::Number);
                 }
             }
             value.clone()

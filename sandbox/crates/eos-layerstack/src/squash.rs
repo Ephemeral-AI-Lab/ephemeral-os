@@ -16,6 +16,7 @@ use crate::error::LayerStackError;
 use crate::{MergedView, LAYERS_DIR, STAGING_DIR};
 
 /// Format string for a freshly-built checkpoint layer id: `B{version:06}-{uuid8}`.
+///
 /// The Rust port must reproduce `f"B{next_version:06d}-{uuid4().hex[:8]}"` exactly
 /// for layer-id parity.
 /// `// PORT backend/src/sandbox/layer_stack/squash.py:179-180 — _default_checkpoint_id`
@@ -30,6 +31,12 @@ pub struct CheckpointSegment {
 
 impl CheckpointSegment {
     /// Construct a segment, enforcing the >=2-layer invariant.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`LayerStackError::InvalidSquashPlan`] when fewer than two
+    /// layers are provided.
+    ///
     /// `// PORT backend/src/sandbox/layer_stack/squash.py:24-26 — __post_init__`
     pub fn new(layers: Vec<LayerRef>) -> Result<Self, LayerStackError> {
         if layers.len() <= 1 {
@@ -52,6 +59,7 @@ pub enum SquashPlanEntry {
 }
 
 /// A computed squash plan: the active manifest snapshot + the per-run entries.
+///
 /// Requires >=1 checkpoint segment (else there is nothing to fold).
 /// `// PORT backend/src/sandbox/layer_stack/squash.py:32-48 — SquashPlan`
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -64,6 +72,12 @@ pub struct SquashPlan {
 impl SquashPlan {
     /// Construct + validate (non-empty active layers, non-empty entries, >=1
     /// checkpoint segment).
+    ///
+    /// # Errors
+    ///
+    /// Returns [`LayerStackError::InvalidSquashPlan`] when the plan has no
+    /// active layers, no entries, or no foldable checkpoint segment.
+    ///
     /// `// PORT backend/src/sandbox/layer_stack/squash.py:38-44 — __post_init__`
     pub fn new(
         active_version: i64,
@@ -97,6 +111,7 @@ impl SquashPlan {
 
     /// The checkpoint segments of this plan, in order.
     /// `// PORT backend/src/sandbox/layer_stack/squash.py:46-48 — checkpoint_segments`
+    #[must_use]
     pub fn checkpoint_segments(&self) -> Vec<&CheckpointSegment> {
         self.entries
             .iter()
@@ -119,6 +134,7 @@ pub struct LayerCheckpointSquasher {
 impl LayerCheckpointSquasher {
     /// Bind a squasher to a storage root (owns its own [`crate::MergedView`]).
     /// `// PORT backend/src/sandbox/layer_stack/squash.py:54-59 — __init__`
+    #[must_use]
     pub fn new(storage_root: PathBuf) -> Self {
         Self {
             view: MergedView::new(storage_root.clone()),
@@ -129,6 +145,12 @@ impl LayerCheckpointSquasher {
     /// Compute a squash plan, or `None` when the manifest is already within
     /// `max_depth` or no run yields >= `min_reduction` folds. Segments around
     /// the `lease_head_layers` barrier set (those layers stay visible).
+    ///
+    /// # Errors
+    ///
+    /// Returns [`LayerStackError`] when the depth/reduction inputs are invalid
+    /// or a candidate segment violates squash-plan invariants.
+    ///
     /// `// PORT backend/src/sandbox/layer_stack/squash.py:61-93 — plan`
     pub fn plan(
         &self,
@@ -183,6 +205,13 @@ impl LayerCheckpointSquasher {
 
     /// Project a segment's layers into a fresh checkpoint layer directory and
     /// return its `LayerRef` (id format `B{active_version+1:06}-{uuid8}`).
+    ///
+    /// # Errors
+    ///
+    /// Returns [`LayerStackError`] when checkpoint paths cannot be allocated,
+    /// the segment cannot be projected, or the staging directory cannot be
+    /// persisted as a layer.
+    ///
     /// `// PORT backend/src/sandbox/layer_stack/squash.py:95-113 — build_checkpoint`
     pub fn build_checkpoint(
         &self,
@@ -216,6 +245,12 @@ impl LayerCheckpointSquasher {
 
     /// Rename a prebuilt checkpoint so its id matches the publishing manifest
     /// version (the `B{manifest_version:06}-…` prefix invariant).
+    ///
+    /// # Errors
+    ///
+    /// Returns [`LayerStackError`] when the checkpoint path is invalid, missing,
+    /// or cannot be renamed into its final layer id.
+    ///
     /// `// PORT backend/src/sandbox/layer_stack/squash.py:115-126 — relabel_checkpoint`
     pub fn relabel_checkpoint(
         &self,
@@ -242,6 +277,12 @@ impl LayerCheckpointSquasher {
     }
 
     /// Best-effort removal of an uncommitted checkpoint (rollback path).
+    ///
+    /// # Errors
+    ///
+    /// Returns [`LayerStackError`] when the checkpoint path is invalid or
+    /// removal fails for a reason other than the path already being absent.
+    ///
     /// `// PORT backend/src/sandbox/layer_stack/squash.py:128-130 — discard_checkpoint`
     pub fn discard_checkpoint(&self, checkpoint: &LayerRef) -> Result<(), LayerStackError> {
         let path = self.layer_path(checkpoint)?;
@@ -292,7 +333,9 @@ impl LayerCheckpointSquasher {
 
 /// If the active manifest's tail still equals the plan's snapshotted active
 /// layers, return the live prefix above them; else `None` (CAS lost).
+///
 /// `// PORT backend/src/sandbox/layer_stack/squash.py:167-176 — manifest_prefix_before_plan`
+#[must_use]
 pub fn manifest_prefix_before_plan<'m>(
     manifest: &'m Manifest,
     plan: &SquashPlan,

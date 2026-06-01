@@ -24,6 +24,10 @@ pub const AUTO_SQUASH_MAX_DEPTH: u32 = 100;
 // PORT backend/src/sandbox/occ/maintenance.py:15 — class MaintenancePolicy(Protocol)
 pub trait MaintenancePolicy {
     /// Run maintenance after a publish lands; returns timing keys.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`OccError`] when post-publish maintenance fails.
     fn after_publish_sync(&self, result: &ChangesetResult) -> Result<(), OccError>;
 }
 
@@ -37,6 +41,10 @@ pub trait LayerSquashPort {
     fn can_squash(&self, max_depth: u32) -> bool;
 
     /// Squash to `max_depth`; returns the new active manifest version, if any.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`OccError`] when squash maintenance fails.
     fn squash(&self, max_depth: u32) -> Result<Option<u64>, OccError>;
 }
 
@@ -48,9 +56,17 @@ pub trait LayerSquashPort {
 /// tests and custom queues a conservative default.
 pub trait OccRouteProvider: Send + Sync {
     /// Is this normalized path gitignored in the operation snapshot?
+    ///
+    /// # Errors
+    ///
+    /// Returns [`OccError`] when ignore-state lookup fails.
     fn is_ignored(&self, path: &LayerPath) -> Result<bool, OccError>;
 
     /// Content hash of `path` in the operation snapshot, or `None` if absent.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`OccError`] when snapshot content lookup fails.
     fn base_hash(&self, path: &LayerPath) -> Result<Option<String>, OccError>;
 }
 
@@ -80,7 +96,8 @@ pub struct AutoSquashMaintenancePolicy<S: LayerSquashPort> {
 
 impl<S: LayerSquashPort> AutoSquashMaintenancePolicy<S> {
     /// Build a policy that squashes above `max_depth`.
-    pub fn new(squasher: S, max_depth: u32) -> Self {
+    #[must_use]
+    pub const fn new(squasher: S, max_depth: u32) -> Self {
         Self {
             squasher,
             max_depth,
@@ -109,11 +126,19 @@ pub struct OccService<T: CommitTransactionPort + 'static> {
 
 impl<T: CommitTransactionPort + 'static> OccService<T> {
     /// Build a service and start its owned commit queue.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`OccError`] when the owned commit queue cannot be started.
     pub fn new(commit_queue: CommitQueue<T>) -> Result<Self, OccError> {
         Self::with_route_provider(commit_queue, Arc::new(AllGatedRouteProvider))
     }
 
     /// Build a service with a daemon-provided route/base-hash provider.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`OccError`] when the owned commit queue cannot be started.
     pub fn with_route_provider(
         mut commit_queue: CommitQueue<T>,
         route_provider: Arc<dyn OccRouteProvider>,
@@ -126,6 +151,11 @@ impl<T: CommitTransactionPort + 'static> OccService<T> {
     }
 
     /// Prepare and commit a changeset through the layer stack.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`OccError`] when preparation, queue submission, or the commit
+    /// worker reply fails.
     // PORT backend/src/sandbox/occ/service.py:63 — apply_changeset()
     pub fn apply_changeset(
         &self,
@@ -143,6 +173,11 @@ impl<T: CommitTransactionPort + 'static> OccService<T> {
     /// Direct file APIs use this to pin the hash observed before applying edit
     /// anchors. Overlay callers can pass hashes from their leased snapshot once
     /// the shell/search pipeline is wired.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`OccError`] when preparation, queue submission, or the commit
+    /// worker reply fails.
     pub fn apply_changeset_with_base_hashes(
         &self,
         changes: &[LayerChange],
@@ -161,6 +196,10 @@ impl<T: CommitTransactionPort + 'static> OccService<T> {
     }
 
     /// Route raw changes into a [`PreparedChangeset`] (Drop/Direct/Gated/Reject).
+    ///
+    /// # Errors
+    ///
+    /// Returns [`OccError`] when route or base-hash lookup fails.
     // PORT backend/src/sandbox/occ/service.py:230 — prepare_changeset()
     pub fn prepare_changeset(
         &self,
@@ -173,6 +212,10 @@ impl<T: CommitTransactionPort + 'static> OccService<T> {
 
     /// Route raw changes into a [`PreparedChangeset`] with optional base-hash
     /// overrides supplied by the caller.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`OccError`] when route or base-hash lookup fails.
     pub fn prepare_changeset_with_base_hashes(
         &self,
         changes: &[LayerChange],
@@ -233,11 +276,11 @@ impl<T: CommitTransactionPort + 'static> Drop for OccService<T> {
 ///
 /// `eos-occ` (a lower crate) defines this PORT; `eos-daemon` implements and
 /// injects it so the upward Python edge (`daemon.occ_runtime_services` imported
-/// by ephemeral/isolated) becomes a leaf→root trait dependency. The single
-/// per-root services instance is the MF-1 owner of the one `occ-commit-queue`
-/// writer — implementations MUST return the same bundle (and thus the same
-/// queue + storage lease) for a given `layer_stack_root`, never a second
-/// writer.
+/// by shared-overlay and isolated control-plane paths) becomes a leaf→root trait
+/// dependency. The single per-root services instance is the MF-1 owner of the
+/// one `occ-commit-queue` writer — implementations MUST return the same bundle
+/// (and thus the same queue + storage lease) for a given `layer_stack_root`,
+/// never a second writer.
 // PORT backend/src/sandbox/daemon/occ_runtime_services.py:48 — get_occ_runtime_services(layer_stack_root)
 pub trait OccRuntimeServicesPort {
     /// Concrete commit-transaction implementation the queue drives.
@@ -246,6 +289,11 @@ pub trait OccRuntimeServicesPort {
     /// Return the daemon-local OCC service for `layer_stack_root`.
     ///
     /// Cached per root (LRU, max 256) so the single writer is reused.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`OccError`] when the per-root service cannot be created or
+    /// retrieved.
     // PORT backend/src/sandbox/daemon/occ_runtime_services.py:48 — per-root LRU cache
     fn occ_runtime_services(
         &self,

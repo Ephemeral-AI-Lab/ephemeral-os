@@ -15,6 +15,11 @@ pub use eos_overlay::OverlayPathChange;
 /// The overlay crate owns the capture field validation and the storage-level
 /// `LayerChange` conversion; OCC only wraps conversion failures in its own
 /// error algebra so callers get one publish-path error type.
+///
+/// # Errors
+///
+/// Returns [`OccError::InvalidOverlayChange`] when any captured overlay change
+/// cannot be converted into a storage-level mutation.
 // PORT backend/src/sandbox/occ/overlay_change_conversion.py:16 — overlay.path_change -> OCC changes
 pub fn overlay_path_changes_to_occ_changes(
     path_changes: &[OverlayPathChange],
@@ -44,13 +49,15 @@ mod tests {
 
     use super::*;
 
+    type TestResult<T = ()> = Result<T, Box<dyn std::error::Error + Send + Sync>>;
+
     #[test]
-    fn converts_write_delete_symlink_and_opaque_dir() {
-        let fixture = Fixture::new("overlay_convert");
+    fn converts_write_delete_symlink_and_opaque_dir() -> TestResult {
+        let fixture = Fixture::new("overlay_convert")?;
         let write_path = fixture.base.join("content.txt");
-        std::fs::write(&write_path, b"hello").expect("write content fixture");
+        std::fs::write(&write_path, b"hello")?;
         let link_path = fixture.base.join("link");
-        std::os::unix::fs::symlink("../target", &link_path).expect("write symlink fixture");
+        std::os::unix::fs::symlink("../target", &link_path)?;
 
         let changes = overlay_path_changes_to_occ_changes(&[
             OverlayPathChange::new(
@@ -58,54 +65,58 @@ mod tests {
                 OverlayPathChangeKind::Write,
                 Some(write_path.to_string_lossy().into_owned()),
                 Some("hash".to_owned()),
-            )
-            .expect("valid write change"),
-            OverlayPathChange::new("old.txt", OverlayPathChangeKind::Delete, None, None)
-                .expect("valid delete change"),
+            )?,
+            OverlayPathChange::new("old.txt", OverlayPathChangeKind::Delete, None, None)?,
             OverlayPathChange::new(
                 "link.txt",
                 OverlayPathChangeKind::Symlink,
                 Some(link_path.to_string_lossy().into_owned()),
                 Some("hash".to_owned()),
-            )
-            .expect("valid symlink change"),
-            OverlayPathChange::new("dir", OverlayPathChangeKind::OpaqueDir, None, None)
-                .expect("valid opaque change"),
-        ])
-        .expect("overlay changes convert");
+            )?,
+            OverlayPathChange::new("dir", OverlayPathChangeKind::OpaqueDir, None, None)?,
+        ])?;
 
         assert_eq!(
             changes,
             vec![
                 LayerChange::Write {
-                    path: LayerPath::parse("a.txt").expect("valid path"),
+                    path: LayerPath::parse("a.txt")?,
                     content: b"hello".to_vec(),
                 },
                 LayerChange::Delete {
-                    path: LayerPath::parse("old.txt").expect("valid path"),
+                    path: LayerPath::parse("old.txt")?,
                 },
                 LayerChange::Symlink {
-                    path: LayerPath::parse("link.txt").expect("valid path"),
+                    path: LayerPath::parse("link.txt")?,
                     source_path: "../target".to_owned(),
                 },
                 LayerChange::OpaqueDir {
-                    path: LayerPath::parse("dir").expect("valid path"),
+                    path: LayerPath::parse("dir")?,
                 },
             ]
         );
+        Ok(())
     }
 
     #[test]
-    fn conversion_error_is_wrapped_as_occ_error() {
-        let err = overlay_path_changes_to_occ_changes(&[OverlayPathChange {
+    fn conversion_error_is_wrapped_as_occ_error() -> TestResult {
+        let err = match overlay_path_changes_to_occ_changes(&[OverlayPathChange {
             kind: OverlayPathChangeKind::Write,
             path: "a.txt".to_owned(),
             content_path: None,
             final_hash: Some("hash".to_owned()),
-        }])
-        .expect_err("missing content path is invalid");
+        }]) {
+            Ok(changes) => {
+                return Err(std::io::Error::other(format!(
+                    "missing content path unexpectedly converted: {changes:?}"
+                ))
+                .into());
+            }
+            Err(error) => error,
+        };
 
         assert!(matches!(err, OccError::InvalidOverlayChange { .. }));
+        Ok(())
     }
 
     struct Fixture {
@@ -113,7 +124,7 @@ mod tests {
     }
 
     impl Fixture {
-        fn new(label: &str) -> Self {
+        fn new(label: &str) -> TestResult<Self> {
             static COUNTER: AtomicU64 = AtomicU64::new(0);
             let base = std::env::temp_dir().join(format!(
                 "eos-occ-{label}-{}-{}",
@@ -121,8 +132,8 @@ mod tests {
                 COUNTER.fetch_add(1, Ordering::Relaxed)
             ));
             let _ = std::fs::remove_dir_all(&base);
-            std::fs::create_dir_all(&base).expect("create fixture dir");
-            Self { base }
+            std::fs::create_dir_all(&base)?;
+            Ok(Self { base })
         }
     }
 

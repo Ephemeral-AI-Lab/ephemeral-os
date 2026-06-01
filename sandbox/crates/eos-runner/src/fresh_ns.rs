@@ -55,6 +55,11 @@ const CHILD_WAIT_POLL: Duration = Duration::from_millis(5);
 /// Will call `setsid(2)` and `unshare(2)`, then spawn a child in the new
 /// namespace. The namespace syscalls require the process to be single-threaded
 /// (the crate-level invariant) and the caller to own the namespace it creates.
+///
+/// # Errors
+///
+/// Returns [`RunnerError`] when namespace setup, overlay mounting, request
+/// validation, or child execution fails.
 // PORT backend/src/sandbox/overlay/namespace_runner.py:72 — _run_tool_call_in_fresh_namespace
 // PORT backend/src/sandbox/overlay/namespace_runner.py:227-250 — _run_namespace_entrypoint_async (unshare -Urm, start_new_session=True)
 // PORT backend/src/sandbox/overlay/namespace_entrypoint.py:92-135 — mount_and_execute_tool_payload (mount overlay then exec)
@@ -93,10 +98,16 @@ pub fn run_fresh_ns(
     })?;
     let mount_s = mount_start.elapsed().as_secs_f64();
 
-    execute_tool(request, mount_s, output_dir, Instant::now())
+    execute_tool(request, mount_s, &output_dir, Instant::now())
 }
 
 #[cfg(not(target_os = "linux"))]
+/// Return the non-Linux unsupported error for fresh-namespace execution.
+///
+/// # Errors
+///
+/// Always returns [`RunnerError::Unsupported`] outside Linux because the
+/// namespace syscalls do not exist.
 pub fn run_fresh_ns(
     _request: &RunRequest,
     _mount: &dyn KernelMountPort,
@@ -105,9 +116,13 @@ pub fn run_fresh_ns(
 }
 
 #[cfg(target_os = "linux")]
+#[expect(
+    clippy::similar_names,
+    reason = "uid/gid mapping code naturally handles the paired identifiers together"
+)]
 fn enter_fresh_namespace() -> Result<(), RunnerError> {
-    let host_uid = rustix::process::getuid().as_raw();
-    let host_gid = rustix::process::getgid().as_raw();
+    let caller_uid = rustix::process::getuid().as_raw();
+    let caller_gid = rustix::process::getgid().as_raw();
 
     if let Err(err) = setsid() {
         // Docker exec may launch the runner as a process-group leader. In that
@@ -119,8 +134,8 @@ fn enter_fresh_namespace() -> Result<(), RunnerError> {
     }
     unshare(UnshareFlags::NEWUSER | UnshareFlags::NEWNS).map_syscall()?;
     write_if_exists("/proc/self/setgroups", "deny\n")?;
-    fs::write("/proc/self/uid_map", format!("0 {host_uid} 1\n")).map_err(RunnerError::Syscall)?;
-    fs::write("/proc/self/gid_map", format!("0 {host_gid} 1\n")).map_err(RunnerError::Syscall)?;
+    fs::write("/proc/self/uid_map", format!("0 {caller_uid} 1\n")).map_err(RunnerError::Syscall)?;
+    fs::write("/proc/self/gid_map", format!("0 {caller_gid} 1\n")).map_err(RunnerError::Syscall)?;
     set_thread_gid(rustix::process::Gid::ROOT).map_syscall()?;
     set_thread_uid(rustix::process::Uid::ROOT).map_syscall()?;
     mount_change(
@@ -135,11 +150,12 @@ fn enter_fresh_namespace() -> Result<(), RunnerError> {
 pub(crate) fn execute_tool(
     request: &RunRequest,
     mount_s: f64,
-    output_dir: PathBuf,
+    output_dir: &Path,
     run_start: Instant,
 ) -> Result<RunResult, RunnerError> {
     match request.tool_call.verb.as_str() {
         "shell" | "exec_command" => execute_shell(request, mount_s, output_dir, run_start),
+        "plugin_service" => execute_plugin_service(request, mount_s, run_start),
         "glob" => Ok(RunResult {
             exit_code: 0,
             tool_result: glob_tool_result(
@@ -161,7 +177,7 @@ pub(crate) fn execute_tool(
         _ => Ok(error_result(
             2,
             "unsupported_runner_verb",
-            format!(
+            &format!(
                 "fresh namespace runner does not support verb {}",
                 request.tool_call.verb
             ),
@@ -170,15 +186,66 @@ pub(crate) fn execute_tool(
 }
 
 #[cfg(target_os = "linux")]
+fn execute_plugin_service(
+    request: &RunRequest,
+    mount_s: f64,
+    run_start: Instant,
+) -> Result<RunResult, RunnerError> {
+    let argv = plugin_service_argv(request)?;
+    let cwd = shell_cwd(request)?;
+    let mut command = Command::new(&argv[0]);
+    command
+        .args(&argv[1..])
+        .current_dir(cwd)
+        .envs(command_environment(&request.tool_call.args))
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .process_group(0);
+
+    let mut child = command.spawn().map_err(RunnerError::Child)?;
+    let child_pid = Pid::from_child(&child);
+    let (exit_code, timed_out) = match wait_for_child(
+        &mut child,
+        request.timeout_seconds,
+        TimeoutKill::ProcessGroup,
+    ) {
+        Ok(exit_code) => (exit_code, false),
+        Err(RunnerError::TimedOut) => (124, true),
+        Err(err) => return Err(err),
+    };
+    let _ = kill_process_group(child_pid, Signal::Kill);
+    let status = if timed_out {
+        "timed_out"
+    } else if exit_code == 0 {
+        "ok"
+    } else {
+        "error"
+    };
+    Ok(RunResult {
+        exit_code,
+        tool_result: serde_json::json!({
+            "success": exit_code == 0,
+            "workspace": "ephemeral",
+            "timings": {
+                "workspace.mount_s": mount_s,
+                "workspace.tool_s": run_start.elapsed().as_secs_f64(),
+            },
+            "status": status,
+        }),
+    })
+}
+
+#[cfg(target_os = "linux")]
 fn execute_shell(
     request: &RunRequest,
     mount_s: f64,
-    output_dir: PathBuf,
+    output_dir: &Path,
     run_start: Instant,
 ) -> Result<RunResult, RunnerError> {
     let argv = shell_argv(request)?;
     let cwd = shell_cwd(request)?;
-    fs::create_dir_all(&output_dir).map_err(RunnerError::Child)?;
+    fs::create_dir_all(output_dir).map_err(RunnerError::Child)?;
     if request
         .tool_call
         .args
@@ -186,7 +253,7 @@ fn execute_shell(
         .and_then(serde_json::Value::as_bool)
         .unwrap_or(false)
     {
-        return execute_shell_pty(request, mount_s, run_start, argv, cwd);
+        return execute_shell_pty(request, mount_s, run_start, &argv, &cwd);
     }
     let stdout_path = output_dir.join(format!("{}.stdout", request.tool_call.invocation_id));
     let stderr_path = output_dir.join(format!("{}.stderr", request.tool_call.invocation_id));
@@ -196,7 +263,7 @@ fn execute_shell(
     let mut command = Command::new(&argv[0]);
     command
         .args(&argv[1..])
-        .current_dir(&cwd)
+        .current_dir(cwd)
         .env_clear()
         .envs(command_environment(&request.tool_call.args))
         .stdin(Stdio::null())
@@ -256,13 +323,13 @@ fn execute_shell_pty(
     request: &RunRequest,
     mount_s: f64,
     run_start: Instant,
-    argv: Vec<String>,
-    cwd: PathBuf,
+    argv: &[String],
+    cwd: &Path,
 ) -> Result<RunResult, RunnerError> {
     let mut command = Command::new(&argv[0]);
     command
         .args(&argv[1..])
-        .current_dir(&cwd)
+        .current_dir(cwd)
         .env_clear()
         .envs(command_environment(&request.tool_call.args))
         .stdin(Stdio::inherit())
@@ -311,6 +378,7 @@ fn execute_shell_pty(
 }
 
 #[cfg(target_os = "linux")]
+#[derive(Clone, Copy)]
 enum TimeoutKill {
     ProcessGroup,
     DirectChild,
@@ -350,9 +418,46 @@ fn wait_for_child(
 }
 
 #[cfg(target_os = "linux")]
+fn plugin_service_argv(request: &RunRequest) -> Result<Vec<String>, RunnerError> {
+    let Some(command) = request.tool_call.args.get("command") else {
+        return Err(RunnerError::InvalidRequest(
+            "plugin_service requires command argv".to_owned(),
+        ));
+    };
+    let parts = command.as_array().ok_or_else(|| {
+        RunnerError::InvalidRequest("plugin_service command must be an argv list".to_owned())
+    })?;
+    if parts.is_empty() {
+        return Err(RunnerError::InvalidRequest(
+            "plugin_service command argv must not be empty".to_owned(),
+        ));
+    }
+    let argv: Result<Vec<String>, RunnerError> = parts
+        .iter()
+        .map(|part| {
+            part.as_str().map_or_else(
+                || {
+                    Err(RunnerError::InvalidRequest(
+                        "plugin_service command argv entries must be strings".to_owned(),
+                    ))
+                },
+                |value| Ok(value.to_owned()),
+            )
+        })
+        .collect();
+    let argv = argv?;
+    if argv[0].trim().is_empty() {
+        return Err(RunnerError::InvalidRequest(
+            "plugin_service command argv[0] must not be empty".to_owned(),
+        ));
+    }
+    Ok(argv)
+}
+
+#[cfg(target_os = "linux")]
 fn shell_argv(request: &RunRequest) -> Result<Vec<String>, RunnerError> {
-    let args = &request.tool_call.args;
-    let Some(command) = args.get("command") else {
+    let shell_args = &request.tool_call.args;
+    let Some(command) = shell_args.get("command") else {
         return Err(RunnerError::InvalidRequest(
             "shell args require command".to_owned(),
         ));
@@ -377,31 +482,8 @@ fn shell_argv(request: &RunRequest) -> Result<Vec<String>, RunnerError> {
             "exec_command requires a shell-format command string".to_owned(),
         ));
     }
-    if let Some(parts) = command.as_array() {
-        if parts.is_empty() {
-            return Err(RunnerError::InvalidRequest(
-                "shell command argv must not be empty".to_owned(),
-            ));
-        }
-        let argv: Result<Vec<String>, RunnerError> = parts
-            .iter()
-            .map(|part| match part.as_str() {
-                Some(value) => Ok(value.to_owned()),
-                None => Err(RunnerError::InvalidRequest(
-                    "shell command argv entries must be strings".to_owned(),
-                )),
-            })
-            .collect();
-        let argv = argv?;
-        if argv[0].trim().is_empty() {
-            return Err(RunnerError::InvalidRequest(
-                "shell command argv[0] must not be empty".to_owned(),
-            ));
-        }
-        return Ok(argv);
-    }
     Err(RunnerError::InvalidRequest(
-        "shell command must be a string or argv list".to_owned(),
+        "shell command must be a string".to_owned(),
     ))
 }
 
@@ -492,8 +574,7 @@ fn command_environment(args: &serde_json::Value) -> BTreeMap<String, String> {
                     key.to_owned(),
                     value
                         .as_str()
-                        .map(str::to_owned)
-                        .unwrap_or_else(|| value.to_string()),
+                        .map_or_else(|| value.to_string(), str::to_owned),
                 );
             }
         }
@@ -512,7 +593,7 @@ fn write_if_exists(path: impl AsRef<Path>, value: impl AsRef<OsStr>) -> Result<(
 }
 
 #[cfg(target_os = "linux")]
-fn error_result(exit_code: i32, kind: &str, message: String) -> RunResult {
+fn error_result(exit_code: i32, kind: &str, message: &str) -> RunResult {
     RunResult {
         exit_code,
         tool_result: serde_json::json!({
@@ -542,41 +623,80 @@ impl<T> SyscallResult<T> for rustix::io::Result<T> {
 
 #[cfg(all(test, target_os = "linux"))]
 mod tests {
-    use super::{normalize_lexical, shell_argv};
+    use super::{normalize_lexical, plugin_service_argv, shell_argv};
     use crate::request::{RunMode, RunRequest, ToolCall, WorkspaceRoot};
     use eos_protocol::Intent;
     use std::path::Path;
 
+    type TestResult = Result<(), Box<dyn std::error::Error + Send + Sync>>;
+
     #[test]
-    fn shell_string_uses_non_login_bash() {
-        let argv = shell_argv(&request("shell", serde_json::json!({"command": "echo hi"})))
-            .expect("string command is valid");
+    fn shell_string_uses_non_login_bash() -> TestResult {
+        let argv = shell_argv(&request("shell", serde_json::json!({"command": "echo hi"})))?;
         assert_eq!(
             argv,
             ["/bin/bash", "--noprofile", "--norc", "-c", "echo hi"]
                 .map(str::to_owned)
                 .to_vec()
         );
+        Ok(())
     }
 
     #[test]
-    fn exec_command_rejects_raw_argv() {
-        let error = shell_argv(&request(
+    fn exec_command_rejects_raw_argv() -> TestResult {
+        let error = match shell_argv(&request(
             "exec_command",
             serde_json::json!({"command": ["echo", "hi"]}),
-        ))
-        .expect_err("exec_command raw argv is rejected");
+        )) {
+            Ok(argv) => {
+                return Err(format!("exec_command raw argv unexpectedly accepted: {argv:?}").into())
+            }
+            Err(error) => error,
+        };
         assert!(error.to_string().contains("shell-format command string"));
+        Ok(())
     }
 
     #[test]
-    fn daemon_shell_compat_accepts_argv_command() {
-        let argv = shell_argv(&request(
+    fn daemon_shell_rejects_argv_command() -> TestResult {
+        let error = match shell_argv(&request(
             "shell",
             serde_json::json!({"command": ["echo", "hi"]}),
-        ))
-        .expect("valid shell argv");
-        assert_eq!(argv, ["echo", "hi"].map(str::to_owned).to_vec());
+        )) {
+            Ok(argv) => return Err(format!("raw argv unexpectedly accepted: {argv:?}").into()),
+            Err(error) => error,
+        };
+        assert!(error.to_string().contains("shell command must be a string"));
+        Ok(())
+    }
+
+    #[test]
+    fn plugin_service_requires_argv_command() -> TestResult {
+        let argv = plugin_service_argv(&request(
+            "plugin_service",
+            serde_json::json!({"command": ["python3", "/eos/plugin/harness.py"]}),
+        ))?;
+        assert_eq!(
+            argv,
+            ["python3", "/eos/plugin/harness.py"]
+                .map(str::to_owned)
+                .to_vec()
+        );
+
+        let error = match plugin_service_argv(&request(
+            "plugin_service",
+            serde_json::json!({"command": "python3 /eos/plugin/harness.py"}),
+        )) {
+            Ok(argv) => {
+                return Err(format!(
+                    "plugin_service string command unexpectedly accepted: {argv:?}"
+                )
+                .into());
+            }
+            Err(error) => error,
+        };
+        assert!(error.to_string().contains("argv list"));
+        Ok(())
     }
 
     #[test]

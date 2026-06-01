@@ -1,14 +1,14 @@
-//! Daemon: the AF_UNIX + loopback-TCP RPC server that owns the async runtime,
+//! Daemon: the `AF_UNIX` + loopback-TCP RPC server that owns the async runtime,
 //! the op dispatcher, and every inverted port implementation.
 //!
 //! # Invariant this crate owns
 //!
-//! This is the ONLY tokio crate. It runs the newline-delimited compact-JSON
-//! protocol-v1 RPC server on an AF_UNIX socket AND a 127.0.0.1 TCP listener
-//! ([`server`]), routes ops through the [`dispatcher`] op table, tracks in-flight
-//! invocations with a TTL reaper ([`invocation_registry`]), houses the audit RING BUFFER
-//! plus the impure emit bridges ([`audit_buffer`]), and orchestrates background
-//! execution.
+//! This is the primary tokio control-plane crate. It runs the
+//! newline-delimited compact-JSON protocol-v1 RPC server on an `AF_UNIX` socket
+//! AND a 127.0.0.1 TCP listener ([`server`]), routes ops through the
+//! [`dispatcher`] op table, tracks in-flight invocations with a TTL reaper
+//! ([`invocation_registry`]), houses the audit RING BUFFER plus the impure emit
+//! bridges ([`audit_buffer`]), and orchestrates background execution.
 //!
 //! It ORCHESTRATES but NEVER enters a namespace. The kernel requires the
 //! `unshare(CLONE_NEWUSER)` / `setns`-into-a-userns caller to be single-threaded,
@@ -24,11 +24,11 @@
 //!
 //! # The single-writer / no-lock-across-await discipline (§5)
 //!
-//! The OCC single writer is reached through an `mpsc` work queue with a single
-//! consumer task and `oneshot` replies, NOT by holding a shared OCC lock across
-//! an `.await`. No mutex guard is ever held across an await point. Shutdown is a
-//! [`tokio_util::sync::CancellationToken`]; the cancel path kills the full child
-//! process group (the Python `start_new_session=True`).
+//! The live OCC single-writer path is the dispatcher-owned per-root
+//! `OccService` cache, not a second daemon queue. The async server runs request
+//! dispatch in a spawned task and keeps synchronous mutex guards out of await
+//! points. Shutdown is a [`tokio_util::sync::CancellationToken`]; the cancel
+//! path kills the full child process group (the Python `start_new_session=True`).
 //!
 //! `// PORT backend/src/sandbox/daemon/rpc/server.py — serve loop`
 //! `// PORT backend/src/sandbox/daemon/rpc/dispatcher.py — OP_TABLE + dispatch`
@@ -53,7 +53,4 @@ pub use invocation_registry::{
     ActiveCallGuard, InFlightInvocation, InFlightRegistry, DEFAULT_REAPER_INTERVAL_S,
     DEFAULT_TTL_S, ENV_REAPER_INTERVAL_S, ENV_TTL_S,
 };
-pub use server::{
-    DaemonServer, OccWork, OccWriterQueue, ServerConfig, MAX_OCC_QUEUE_DEPTH, MAX_REQUEST_BYTES,
-    REQUEST_READ_TIMEOUT_S,
-};
+pub use server::{DaemonServer, ServerConfig, MAX_REQUEST_BYTES, REQUEST_READ_TIMEOUT_S};

@@ -20,8 +20,8 @@ Phase 3 is accepted as the structural substrate:
 - shell/search overlay plumbing through daemon-owned LayerStack leases;
 - background in-flight registry, heartbeat, cancel, and active-call TTL guard;
 - LayerStack squash/GC primitives;
-- PPC frame, mode-selection, no-OCC crate edge, warm-server registry, and
-  teardown scaffolding;
+- PPC frame and pure plugin contract scaffolding with no OCC/overlay/layerstack
+  crate edge;
 - CP-4s raw-argv structural smoke evidence.
 
 The following items are exported from Phase 3 to Phase 3T:
@@ -119,9 +119,9 @@ Create these shell tools:
 
 ```text
 exec_command(cmd, tty, yield_time_ms?, timeout?)
-write_stdin_exec_command(shell_session_id, chars, yield_time_ms?)
-check_shell_progress(shell_session_id, seconds)
-cancel_exec_command(shell_session_id)
+write_pty_command_stdin(pty_session_id, chars, yield_time_ms?, max_tokens?)
+check_pty_command_progress(pty_session_id, time, max_tokens?)
+cancel_pty_command(pty_session_id)
 ```
 
 `exec_command` inputs:
@@ -141,7 +141,7 @@ All shell tool responses use a minimal shape:
 ```text
 status
 output
-shell_session_id    # only when tty=true is still running
+pty_session_id    # only when tty=true is still running
 ```
 
 `output` is only real captured stdout/stderr/PTY bytes. Do not synthesize
@@ -157,7 +157,7 @@ lifecycle text, command classifications, or guessed messages.
    command process group/cgroup.
 4. Drain real stdout/stderr bytes produced before cleanup.
 5. Return `status` and `output`.
-6. Never return `shell_session_id`.
+6. Never return `pty_session_id`.
 
 This means detached shell patterns do not escape the finite command boundary.
 For example:
@@ -181,7 +181,7 @@ post-hoc concatenation.
    attached to a PTY slave.
 2. Read from the PTY master.
 3. If the session is still running after `yield_time_ms`, return
-   `status=running`, the real terminal `output`, and `shell_session_id`.
+   `status=running`, the real terminal `output`, and `pty_session_id`.
 4. Keep the PTY, process group/cgroup, output ring, and workspace resources
    alive until exit, timeout, or cancellation.
 
@@ -192,16 +192,16 @@ For `tty=true`, `output` is the actual terminal display transcript:
 - hidden input, raw-mode input, and no-echo prompts must not be fabricated;
 - lifecycle reminders must not be inserted into `output`.
 
-`check_shell_progress(shell_session_id, seconds)` is PTY-only. It returns the
-actual terminal output observed during the last `seconds`. It does not use a
-cursor and does not wait for new output.
+`check_pty_command_progress(pty_session_id, time, max_tokens?)` is PTY-only. It
+returns the actual terminal output observed during the requested window. It does
+not use a cursor and does not wait for new output.
 
-`write_stdin_exec_command(shell_session_id, chars, yield_time_ms?)` writes bytes
-to the PTY, waits up to `yield_time_ms`, and returns only the real PTY output
-observed after the write.
+`write_pty_command_stdin(pty_session_id, chars, yield_time_ms?, max_tokens?)`
+writes bytes to the PTY, waits up to `yield_time_ms`, and returns only the real
+PTY output observed after the write.
 
-`cancel_exec_command(shell_session_id)` terminates the session process
-group/cgroup, drains final real output, and releases held resources.
+`cancel_pty_command(pty_session_id)` terminates the session process group/cgroup,
+drains final real output, and releases held resources.
 
 ### Ephemeral Workspace Handling
 
@@ -225,7 +225,7 @@ For `tty=true`:
 2. Allocate overlay upper/work directories.
 3. Mount overlay at the workspace root.
 4. Start the PTY-backed Bash session.
-5. If still running, return `shell_session_id` and keep the lease, overlay
+5. If still running, return `pty_session_id` and keep the lease, overlay
    directories, PTY, process group/cgroup, and output ring alive.
 6. On session exit, cancellation, or timeout, capture changes, publish or
    discard through OCC, release the lease, and delete runtime directories.
@@ -249,7 +249,7 @@ In isolated mode:
 - do not create a publishable per-command OCC overlay;
 - do not publish shell writes to the shared workspace;
 - keep writes inside the isolated private workspace;
-- keep the isolated workspace handle alive while `shell_session_id` is active;
+- keep the isolated workspace handle alive while `pty_session_id` is active;
 - reject `exit_isolated_workspace` while shell sessions are active unless the
   caller explicitly force-cancels them;
 - on normal shell exit, keep changes in the isolated workspace until isolated
@@ -269,13 +269,13 @@ In isolated mode:
 3. **PTY session core.** Add `exec_command(cmd, tty=true, ...)` with PTY master,
    process group/cgroup, output ring, retained overlay lease, and terminal-state
    cleanup.
-4. **Session control tools.** Add `write_stdin_exec_command`,
-   `check_shell_progress`, and `cancel_exec_command`, all returning only real
-   captured terminal output and status.
+4. **Session control tools.** Add `write_pty_command_stdin`,
+   `check_pty_command_progress`, and `cancel_pty_command`, all returning only
+   real captured terminal output and status.
 5. **Typed background and subagent surface.** Retire the model-facing generic
    background shell tools, keep the internal manager, and expose shell-session
    and subagent progress/cancel identifiers separately.
-6. **Plugin PPC execution.** Complete process-backed warm-server
+6. **Plugin PPC execution.** Complete process-backed service
    spawn/round-trip, READ_ONLY out-of-process dispatch, WRITE_ALLOWED
    eosd-owned overlay+OCC wrapping, and self-managed OCC callback over PPC.
    Self-managed plugin callbacks must route through the same per-root OCC writer
@@ -304,7 +304,7 @@ The manager tracks typed work:
 
 | Kind | Public identifier | Created by |
 | --- | --- | --- |
-| `command` | `shell_session_id` | `exec_command(..., tty=true)` when still running after yield. |
+| `command` | `pty_session_id` | `exec_command(..., tty=true)` when still running after yield. |
 | `subagent` | `subagent_session_id` | `run_subagent(...)`. |
 
 `tty=false` shell commands are blocking and never enter the background manager as
@@ -341,11 +341,11 @@ Replace generic background reminders with typed reminders.
 Reminders for shell sessions include:
 
 ```text
-shell_session_id
+pty_session_id
 status
-instruction to use check_shell_progress
-instruction to use write_stdin_exec_command
-instruction to use cancel_exec_command
+instruction to use check_pty_command_progress
+instruction to use write_pty_command_stdin
+instruction to use cancel_pty_command
 ```
 
 Reminders for subagents include:
@@ -383,12 +383,12 @@ Phase 3T should close with overlay-inclusive evidence for:
   command environment setup, not through login Bash;
 - `tty=false` timeout cleanup;
 - `tty=false` `nohup ... &` descendant termination on Bash exit;
-- `tty=true` short command exit with no `shell_session_id`;
-- `tty=true` long-running command returning `shell_session_id`;
-- `tty=true` PTY input via `write_stdin_exec_command`;
-- `check_shell_progress(shell_session_id, seconds)` returning only recent real
-  terminal output;
-- `cancel_exec_command(shell_session_id)` killing the full process group/cgroup;
+- `tty=true` short command exit with no `pty_session_id`;
+- `tty=true` long-running command returning `pty_session_id`;
+- `tty=true` PTY input via `write_pty_command_stdin`;
+- `check_pty_command_progress(pty_session_id, time, max_tokens?)` returning only
+  recent real terminal output;
+- `cancel_pty_command(pty_session_id)` killing the full process group/cgroup;
 - ephemeral overlay lease retention until PTY session terminal state;
 - isolated workspace exit rejection while shell sessions are active;
 - isolated workspace force-cancel cleanup;

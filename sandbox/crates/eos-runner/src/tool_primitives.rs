@@ -9,7 +9,7 @@ use serde_json::{json, Value};
 
 use crate::RunnerError;
 
-pub(crate) fn glob_tool_result(
+pub fn glob_tool_result(
     args: &Value,
     workspace_root: &Path,
     mount_s: f64,
@@ -23,7 +23,7 @@ pub(crate) fn glob_tool_result(
     }
     let root = search_root(args, workspace_root)?;
     let mut matches = Vec::new();
-    for path in walk_files_no_follow(&root)? {
+    for path in walk_files_no_follow(&root) {
         let rel = display_workspace_path(&path, workspace_root);
         if !has_git_component(&path) && glob_matches(&rel, &pattern) {
             matches.push(rel);
@@ -43,7 +43,7 @@ pub(crate) fn glob_tool_result(
     ))
 }
 
-pub(crate) fn grep_tool_result(
+pub fn grep_tool_result(
     args: &Value,
     workspace_root: &Path,
     mount_s: f64,
@@ -64,7 +64,7 @@ pub(crate) fn grep_tool_result(
         .map_err(|err| RunnerError::InvalidRequest(err.to_string()))?;
     let root = search_root(args, workspace_root)?;
     let glob_filter = optional_string_arg(args, "glob_filter");
-    let mut files = candidate_files_no_follow(&root)?;
+    let mut files = candidate_files_no_follow(&root);
     files.sort();
 
     let mut filenames = Vec::new();
@@ -168,14 +168,14 @@ fn search_root(args: &Value, workspace_root: &Path) -> Result<PathBuf, RunnerErr
     Ok(resolved)
 }
 
-fn candidate_files_no_follow(root: &Path) -> Result<Vec<PathBuf>, RunnerError> {
-    if is_regular_file_no_follow(root)? {
-        return Ok(vec![root.to_path_buf()]);
+fn candidate_files_no_follow(root: &Path) -> Vec<PathBuf> {
+    if is_regular_file_no_follow(root) {
+        return vec![root.to_path_buf()];
     }
     walk_files_no_follow(root)
 }
 
-fn walk_files_no_follow(root: &Path) -> Result<Vec<PathBuf>, RunnerError> {
+fn walk_files_no_follow(root: &Path) -> Vec<PathBuf> {
     let mut files = Vec::new();
     let mut stack = vec![root.to_path_buf()];
     while let Some(dir) = stack.pop() {
@@ -206,13 +206,12 @@ fn walk_files_no_follow(root: &Path) -> Result<Vec<PathBuf>, RunnerError> {
             }
         }
     }
-    Ok(files)
+    files
 }
 
 fn read_utf8_file_no_follow(path: &Path) -> Result<Option<String>, RunnerError> {
-    let metadata = match fs::symlink_metadata(path) {
-        Ok(metadata) => metadata,
-        Err(_) => return Ok(None),
+    let Ok(metadata) = fs::symlink_metadata(path) else {
+        return Ok(None);
     };
     if metadata.file_type().is_symlink()
         || !metadata.is_file()
@@ -224,12 +223,11 @@ fn read_utf8_file_no_follow(path: &Path) -> Result<Option<String>, RunnerError> 
     Ok(String::from_utf8(bytes).ok())
 }
 
-fn is_regular_file_no_follow(path: &Path) -> Result<bool, RunnerError> {
-    let metadata = match fs::symlink_metadata(path) {
-        Ok(metadata) => metadata,
-        Err(_) => return Ok(false),
+fn is_regular_file_no_follow(path: &Path) -> bool {
+    let Ok(metadata) = fs::symlink_metadata(path) else {
+        return false;
     };
-    Ok(!metadata.file_type().is_symlink() && metadata.is_file())
+    !metadata.file_type().is_symlink() && metadata.is_file()
 }
 
 fn matching_lines(rel: &str, text: &str, regex: &regex::Regex, line_numbers: bool) -> Vec<String> {
@@ -342,25 +340,27 @@ mod tests {
     use super::*;
 
     #[test]
-    fn glob_matches_root_files_and_skips_nested_for_basename_pattern() {
-        let fixture = Fixture::new("glob");
-        fixture.write("a.py", "hit");
-        fixture.write("pkg/b.py", "hit");
-        fixture.write(".git/config", "secret");
+    fn glob_matches_root_files_and_skips_nested_for_basename_pattern(
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        let fixture = Fixture::new("glob")?;
+        fixture.write("a.py", "hit")?;
+        fixture.write("pkg/b.py", "hit")?;
+        fixture.write(".git/config", "secret")?;
 
-        let result = glob_tool_result(&json!({"pattern": "*.py"}), &fixture.root, 0.1, 0.2)
-            .expect("glob result");
+        let result = glob_tool_result(&json!({"pattern": "*.py"}), &fixture.root, 0.1, 0.2)?;
 
         assert_eq!(result["success"], json!(true));
         assert_eq!(result["filenames"], json!(["a.py"]));
         assert_eq!(result["num_files"], json!(1));
+        Ok(())
     }
 
     #[test]
-    fn grep_content_counts_and_line_numbers_match_wire_contract() {
-        let fixture = Fixture::new("grep");
-        fixture.write("a.py", "one\nHit\n");
-        fixture.write("pkg/b.txt", "hit\nhit\n");
+    fn grep_content_counts_and_line_numbers_match_wire_contract(
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        let fixture = Fixture::new("grep")?;
+        fixture.write("a.py", "one\nHit\n")?;
+        fixture.write("pkg/b.txt", "hit\nhit\n")?;
 
         let result = grep_tool_result(
             &json!({
@@ -374,27 +374,30 @@ mod tests {
             &fixture.root,
             0.1,
             0.2,
-        )
-        .expect("grep result");
+        )?;
 
         assert_eq!(result["filenames"], json!(["a.py"]));
         assert_eq!(result["content"], json!("a.py:2:Hit\n"));
         assert_eq!(result["num_lines"], json!(1));
         assert_eq!(result["num_matches"], json!(1));
         assert_eq!(result["applied_limit"], Value::Null);
+        Ok(())
     }
 
     #[test]
-    fn search_root_rejects_parent_escape() {
-        let fixture = Fixture::new("escape");
-        let err = grep_tool_result(
+    fn search_root_rejects_parent_escape() -> Result<(), Box<dyn std::error::Error>> {
+        let fixture = Fixture::new("escape")?;
+        let err = match grep_tool_result(
             &json!({"pattern": "x", "output_mode": "count", "path": "../outside"}),
             &fixture.root,
             0.0,
             0.0,
-        )
-        .expect_err("escape rejected");
+        ) {
+            Ok(_) => return Err("parent escape should be rejected".into()),
+            Err(error) => error,
+        };
         assert!(err.to_string().contains("invalid namespace runner request"));
+        Ok(())
     }
 
     struct Fixture {
@@ -402,7 +405,7 @@ mod tests {
     }
 
     impl Fixture {
-        fn new(label: &str) -> Self {
+        fn new(label: &str) -> Result<Self, std::io::Error> {
             static COUNTER: AtomicU64 = AtomicU64::new(0);
             let root = std::env::temp_dir().join(format!(
                 "eos-runner-{label}-{}-{}",
@@ -410,15 +413,20 @@ mod tests {
                 COUNTER.fetch_add(1, Ordering::Relaxed)
             ));
             let _ = fs::remove_dir_all(&root);
-            fs::create_dir_all(&root).expect("create root");
-            Self { root }
+            fs::create_dir_all(&root)?;
+            Ok(Self { root })
         }
 
-        fn write(&self, path: &str, content: &str) {
+        fn write(&self, path: &str, content: &str) -> Result<(), std::io::Error> {
             let path = self.root.join(path);
-            fs::create_dir_all(path.parent().expect("fixture path has parent"))
-                .expect("create parent");
-            fs::write(path, content).expect("write fixture");
+            let parent = path.parent().ok_or_else(|| {
+                std::io::Error::new(
+                    std::io::ErrorKind::InvalidInput,
+                    "fixture path has no parent",
+                )
+            })?;
+            fs::create_dir_all(parent)?;
+            fs::write(path, content)
         }
     }
 

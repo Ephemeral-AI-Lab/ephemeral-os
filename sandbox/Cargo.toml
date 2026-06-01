@@ -9,7 +9,6 @@ members = [
     "crates/eos-layerstack",
     "crates/eos-overlay",
     "crates/eos-occ",
-    "crates/eos-ephemeral",
     "crates/eos-isolated",
     "crates/eos-plugin",
     "xtask",
@@ -47,7 +46,6 @@ eos-protocol = { path = "crates/eos-protocol" }
 eos-layerstack = { path = "crates/eos-layerstack" }
 eos-overlay = { path = "crates/eos-overlay" }
 eos-occ = { path = "crates/eos-occ" }
-eos-ephemeral = { path = "crates/eos-ephemeral" }
 eos-isolated = { path = "crates/eos-isolated" }
 eos-plugin = { path = "crates/eos-plugin" }
 eos-runner = { path = "crates/eos-runner" }
@@ -66,6 +64,7 @@ complexity = { level = "warn", priority = -1 }
 perf = { level = "warn", priority = -1 }
 unwrap_used = "warn"
 dbg_macro = "warn"
+undocumented_unsafe_blocks = "deny"
 
 [workspace.lints.rust]
 unused_must_use = "warn"

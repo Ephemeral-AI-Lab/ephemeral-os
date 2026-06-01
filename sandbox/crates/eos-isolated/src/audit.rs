@@ -22,12 +22,18 @@ pub const DEFAULT_AUDIT_JSONL_PATH: &str = "/tmp/sandbox_isolated_workspace_even
 /// `// PORT backend/src/sandbox/isolated_workspace/_control_plane/pipeline_registry.py:104`
 pub const AUDIT_PATH_ENV: &str = "EOS_ISOLATED_WORKSPACE_AUDIT_PATH";
 
-/// Sink for isolated-workspace audit events. The only implementation is the
-/// JSONL sink; the trait exists so tests can substitute a recording double
-/// without touching the filesystem.
+/// Sink for isolated-workspace audit events.
+///
+/// The only production implementation is the JSONL sink; the trait exists so
+/// tests can substitute a recording double without touching the filesystem.
 /// `// PORT backend/src/sandbox/isolated_workspace/_control_plane/types.py:99-100 — IsolatedWorkspaceAuditSink Protocol`
 pub trait AuditSink {
     /// Record one lifecycle event with its structured payload.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`IsolatedError::AuditWrite`] when the sink cannot persist the
+    /// event.
     fn emit(&self, event_type: &str, payload: Value) -> Result<(), IsolatedError>;
 }
 
@@ -39,6 +45,7 @@ pub struct JsonlAuditSink {
 
 impl JsonlAuditSink {
     /// Build a sink writing to `path`.
+    #[must_use]
     pub fn new(path: impl AsRef<Path>) -> Self {
         Self {
             path: path.as_ref().to_path_buf(),
@@ -48,6 +55,7 @@ impl JsonlAuditSink {
     /// Build a sink from `EOS_ISOLATED_WORKSPACE_AUDIT_PATH`, falling back to
     /// [`DEFAULT_AUDIT_JSONL_PATH`] when unset or blank.
     // PORT backend/src/sandbox/isolated_workspace/_control_plane/pipeline_registry.py:103-106 — audit path env resolution
+    #[must_use]
     pub fn from_env() -> Self {
         let path = std::env::var(AUDIT_PATH_ENV)
             .unwrap_or_default()

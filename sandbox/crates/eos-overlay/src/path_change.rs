@@ -32,9 +32,10 @@ pub enum OverlayPathChangeKind {
     OpaqueDir,
 }
 
-/// A single change captured from the overlay upperdir, before layer-stack
-/// policy is applied. `path` is normalized; `write`/`symlink` carry a staged
-/// `content_path` + `final_hash`, the others carry neither.
+/// A single change captured from the overlay upperdir.
+///
+/// Before layer-stack policy is applied. `path` is normalized; `write`/`symlink`
+/// carry a staged `content_path` + `final_hash`, the others carry neither.
 /// `// PORT backend/src/sandbox/overlay/path_change.py:15-35 — OverlayPathChange`
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct OverlayPathChange {
@@ -52,6 +53,11 @@ impl OverlayPathChange {
     /// Validate-and-construct exactly as Python `OverlayPathChange.__post_init__`:
     /// normalize the path (root allowed only for `opaque_dir`), require
     /// `content_path`+`final_hash` for `write`/`symlink`, forbid them otherwise.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`OverlayError::InvalidPathChange`] when path normalization or
+    /// per-kind payload validation fails.
     /// `// PORT backend/src/sandbox/overlay/path_change.py:22-35 — __post_init__`
     pub fn new(
         path: &str,
@@ -99,6 +105,11 @@ impl OverlayPathChange {
     /// `eos_protocol::LayerChange`. ONE-WAY: occ consumes this; overlay never
     /// imports occ. `write` threads the precomputed `content_path`/`final_hash`;
     /// `symlink` reads the link target (`os.readlink`).
+    ///
+    /// # Errors
+    ///
+    /// Returns [`OverlayError`] when the captured path is invalid or when staged
+    /// content/link-target reads fail.
     /// `// PORT backend/src/sandbox/occ/overlay_change_conversion.py:19-72 — overlay_path_changes_to_occ_changes`
     pub fn into_layer_change(self) -> Result<LayerChange> {
         // PORT backend/src/sandbox/occ/overlay_change_conversion.py:32-71 — per-kind dispatch
@@ -129,11 +140,17 @@ impl OverlayPathChange {
     }
 }
 
-/// Walk the overlay `upperdir` and capture the full write set as ordered
-/// changes. Walks ONLY the upperdir (never the lower layers): capture + publish
-/// is one atomic unit, so the returned set is the complete delta for this op.
-/// Overlay whiteouts -> `Delete`, opaque markers -> `OpaqueDir`, symlinks ->
-/// `Symlink`, regular files -> `Write`.
+/// Walk the overlay `upperdir` and capture the full write set.
+///
+/// Walks ONLY the upperdir (never the lower layers): capture + publish is one
+/// atomic unit, so the returned set is the complete delta for this op. Overlay
+/// whiteouts -> `Delete`, opaque markers -> `OpaqueDir`, symlinks -> `Symlink`,
+/// regular files -> `Write`.
+///
+/// # Errors
+///
+/// Returns [`OverlayError`] when upperdir traversal, path normalization, xattr
+/// probing, hashing, or staged content conversion fails.
 /// `// PORT backend/src/sandbox/overlay/capture.py:19-32 — walk_upperdir`
 pub fn capture_upperdir(upperdir: &Path) -> Result<Vec<LayerChange>> {
     // PORT backend/src/sandbox/overlay/capture.py:49-89 — _walk_upperdir (os.walk, whiteout/opaque/symlink/write)
@@ -157,7 +174,7 @@ fn walk_upperdir(
         .map_err(OverlayError::Capture)?
         .collect::<std::result::Result<Vec<_>, _>>()
         .map_err(OverlayError::Capture)?;
-    entries.sort_by_key(|entry| entry.file_name());
+    entries.sort_by_key(std::fs::DirEntry::file_name);
 
     let mut dirs = Vec::new();
     let mut files = Vec::new();
@@ -301,10 +318,12 @@ fn whiteout_target(rel: &Path) -> PathBuf {
         .and_then(|name| name.to_str())
         .unwrap_or_default();
     let target_name = &name[WHITEOUT_PREFIX.len()..];
-    match rel.parent().filter(|parent| !parent.as_os_str().is_empty()) {
-        Some(parent) => parent.join(target_name),
-        None => PathBuf::from(target_name),
-    }
+    rel.parent()
+        .filter(|parent| !parent.as_os_str().is_empty())
+        .map_or_else(
+            || PathBuf::from(target_name),
+            |parent| parent.join(target_name),
+        )
 }
 
 fn is_overlay_whiteout(entry: &Path) -> Result<bool> {
@@ -390,7 +409,13 @@ fn xattr_value(path: &Path, name: &str) -> Result<Option<Vec<u8>>> {
 }
 
 #[cfg(not(target_os = "linux"))]
-fn xattr_value(_path: &Path, _name: &str) -> Result<Option<Vec<u8>>> {
+// Keep the same fallible helper signature as Linux so whiteout/opaque detection
+// call sites stay cfg-free; xattrs simply do not contribute off Linux.
+#[expect(
+    clippy::unnecessary_wraps,
+    reason = "non-Linux parity keeps the Linux fallible helper signature"
+)]
+const fn xattr_value(_path: &Path, _name: &str) -> Result<Option<Vec<u8>>> {
     Ok(None)
 }
 
@@ -400,6 +425,8 @@ mod tests {
     use std::sync::atomic::{AtomicU64, Ordering};
 
     use super::*;
+
+    type TestResult<T = ()> = std::result::Result<T, Box<dyn std::error::Error + Send + Sync>>;
 
     #[test]
     fn validates_overlay_path_change_fields() {
@@ -421,31 +448,31 @@ mod tests {
     }
 
     #[test]
-    fn captures_upperdir_files_whiteouts_symlinks_and_opaque_markers() {
-        let fixture = Fixture::new("capture_upperdir");
-        std::fs::create_dir_all(fixture.base.join("dir")).expect("create dir");
-        std::fs::write(fixture.base.join("dir/file.txt"), b"hello").expect("write file");
-        std::fs::write(fixture.base.join(".wh.old.txt"), b"").expect("write whiteout");
-        std::fs::write(fixture.base.join("dir").join(OPAQUE_MARKER), b"")
-            .expect("write opaque marker");
-        std::os::unix::fs::symlink("../target", fixture.base.join("link")).expect("write symlink");
+    fn captures_upperdir_files_whiteouts_symlinks_and_opaque_markers() -> TestResult {
+        let fixture = Fixture::new("capture_upperdir")?;
+        std::fs::create_dir_all(fixture.base.join("dir"))?;
+        std::fs::write(fixture.base.join("dir/file.txt"), b"hello")?;
+        std::fs::write(fixture.base.join(".wh.old.txt"), b"")?;
+        std::fs::write(fixture.base.join("dir").join(OPAQUE_MARKER), b"")?;
+        std::os::unix::fs::symlink("../target", fixture.base.join("link"))?;
 
-        let changes = capture_upperdir(&fixture.base).expect("capture upperdir");
+        let changes = capture_upperdir(&fixture.base)?;
 
         assert!(changes.contains(&LayerChange::Write {
-            path: LayerPath::parse("dir/file.txt").expect("valid path"),
+            path: LayerPath::parse("dir/file.txt")?,
             content: b"hello".to_vec(),
         }));
         assert!(changes.contains(&LayerChange::Delete {
-            path: LayerPath::parse("old.txt").expect("valid path"),
+            path: LayerPath::parse("old.txt")?,
         }));
         assert!(changes.contains(&LayerChange::Symlink {
-            path: LayerPath::parse("link").expect("valid path"),
+            path: LayerPath::parse("link")?,
             source_path: "../target".to_owned(),
         }));
         assert!(changes.contains(&LayerChange::OpaqueDir {
-            path: LayerPath::parse("dir").expect("valid path"),
+            path: LayerPath::parse("dir")?,
         }));
+        Ok(())
     }
 
     struct Fixture {
@@ -453,7 +480,7 @@ mod tests {
     }
 
     impl Fixture {
-        fn new(label: &str) -> Self {
+        fn new(label: &str) -> TestResult<Self> {
             static COUNTER: AtomicU64 = AtomicU64::new(0);
             let base = std::env::temp_dir().join(format!(
                 "eos-overlay-{label}-{}-{}",
@@ -461,8 +488,8 @@ mod tests {
                 COUNTER.fetch_add(1, Ordering::Relaxed)
             ));
             let _ = std::fs::remove_dir_all(&base);
-            std::fs::create_dir_all(&base).expect("create fixture dir");
-            Self { base }
+            std::fs::create_dir_all(&base)?;
+            Ok(Self { base })
         }
     }
 

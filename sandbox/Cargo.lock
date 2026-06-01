@@ -110,7 +110,6 @@ dependencies = [
 name = "eos-daemon"
 version = "0.1.0"
 dependencies = [
- "eos-ephemeral",
  "eos-isolated",
  "eos-layerstack",
  "eos-occ",
@@ -119,19 +118,12 @@ dependencies = [
  "eos-protocol",
  "eos-runner",
  "nix 0.29.0",
+ "serde",
  "serde_json",
  "sha2",
  "thiserror 2.0.18",
  "tokio",
  "tokio-util",
-]
-
-[[package]]
-name = "eos-ephemeral"
-version = "0.1.0"
-dependencies = [
- "eos-protocol",
- "thiserror 2.0.18",
 ]
 
 [[package]]
@@ -196,8 +188,6 @@ dependencies = [
 name = "eos-plugin"
 version = "0.1.0"
 dependencies = [
- "eos-ephemeral",
- "eos-layerstack",
  "eos-protocol",
  "serde",
  "serde_json",

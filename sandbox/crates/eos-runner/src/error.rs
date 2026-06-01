@@ -33,7 +33,7 @@ pub enum RunnerError {
     #[error("child process failed")]
     Child(#[source] std::io::Error),
 
-    /// The tool call exceeded its timeout; the group was SIGKILLed.
+    /// The tool call exceeded its timeout; the group was `SIGKILL`ed.
     /// `// PORT backend/src/sandbox/overlay/namespace_runner.py:265-269`
     #[error("tool call timed out")]
     TimedOut,

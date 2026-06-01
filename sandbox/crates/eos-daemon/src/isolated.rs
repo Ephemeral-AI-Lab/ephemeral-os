@@ -14,7 +14,7 @@ use std::fs::{File, OpenOptions};
 use std::io::Write;
 #[cfg(target_os = "linux")]
 use std::os::fd::{AsRawFd, IntoRawFd, RawFd};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 #[cfg(target_os = "linux")]
 use std::process::{Child, Command, Stdio};
 use std::sync::{Arc, Mutex, MutexGuard, OnceLock, PoisonError};
@@ -44,14 +44,14 @@ use crate::command;
 use crate::dispatcher::DispatchContext;
 use crate::error::DaemonError;
 
-pub(crate) const TEST_HARNESS_ENV: &str = "EOS_ISOLATED_WORKSPACE_TEST_HARNESS";
-pub(crate) const TEST_SCRATCH_ROOT_ENV: &str = "EOS_ISOLATED_WORKSPACE_TEST_SCRATCH_ROOT";
+const TEST_HARNESS_ENV: &str = "EOS_ISOLATED_WORKSPACE_TEST_HARNESS";
+const TEST_SCRATCH_ROOT_ENV: &str = "EOS_ISOLATED_WORKSPACE_TEST_SCRATCH_ROOT";
 
 type DaemonSession = IsolatedSession<DaemonLayerStackPort, DaemonNamespaceRuntime, JsonlAuditSink>;
 
+#[cfg(target_os = "linux")]
 #[derive(Debug, Clone)]
-#[cfg_attr(not(target_os = "linux"), allow(dead_code))]
-pub(crate) struct CommandHandle {
+pub struct CommandHandle {
     pub agent_id: String,
     pub workspace_handle_id: String,
     pub layer_stack_root: PathBuf,
@@ -67,6 +67,7 @@ pub(crate) struct CommandHandle {
 }
 
 struct DaemonIsolatedState {
+    #[cfg(target_os = "linux")]
     layer_stack_root: PathBuf,
     session: DaemonSession,
     active_ptys: HashMap<String, String>,
@@ -92,11 +93,13 @@ struct DaemonLayerStackPort {
 
 impl LayerStackSnapshotPort for DaemonLayerStackPort {
     fn acquire_snapshot(&self, request_id: &str) -> Result<SnapshotLease, IsolatedError> {
-        let mut stack = self
-            .stack
-            .lock()
-            .map_err(|_| setup_error("layer stack lock poisoned"))?;
-        let lease = stack.acquire_snapshot(request_id).map_err(setup_error)?;
+        let lease = {
+            let mut stack = self
+                .stack
+                .lock()
+                .map_err(|_| setup_error("layer stack lock poisoned"))?;
+            stack.acquire_snapshot(request_id).map_err(setup_error)?
+        };
         Ok(SnapshotLease {
             lease_id: lease.lease_id,
             manifest_version: lease.manifest_version,
@@ -171,7 +174,16 @@ impl NamespaceRuntimePort for DaemonNamespaceRuntime {
                 let _ = close(control_fd);
                 return Err(error);
             }
-            let holder_pid = child.id() as i32;
+            let Ok(holder_pid) = i32::try_from(child.id()) else {
+                let _ = child.kill();
+                let _ = child.wait();
+                let _ = close(readiness_fd);
+                let _ = close(control_fd);
+                return Err(setup_error(format!(
+                    "ns-holder pid does not fit i32: {}",
+                    child.id()
+                )));
+            };
             lock_holder_children()?.insert(holder_pid, child);
             Ok(holder_pid)
         }
@@ -260,17 +272,18 @@ impl NamespaceRuntimePort for DaemonNamespaceRuntime {
         }
         #[cfg(target_os = "linux")]
         {
-            let payload = if let Some(veth) = handle.veth.as_ref() {
-                format!(
-                    "net-ready {} {} {} {}\n",
-                    veth.ns_name,
-                    veth.ns_ip,
-                    eos_isolated::BRIDGE_PREFIX_LEN,
-                    eos_isolated::GATEWAY
-                )
-            } else {
-                "net-ready\n".to_owned()
-            };
+            let payload = handle.veth.as_ref().map_or_else(
+                || "net-ready\n".to_owned(),
+                |veth| {
+                    format!(
+                        "net-ready {} {} {} {}\n",
+                        veth.ns_name,
+                        veth.ns_ip,
+                        eos_isolated::BRIDGE_PREFIX_LEN,
+                        eos_isolated::GATEWAY
+                    )
+                },
+            );
             write_all_fd(handle.control_fd, payload.as_bytes())?;
             expect_line(handle.readiness_fd, b"ready", setup_timeout_s)?;
         }
@@ -300,8 +313,9 @@ impl NamespaceRuntimePort for DaemonNamespaceRuntime {
         }
         #[cfg(target_os = "linux")]
         {
-            if let Some(mut child) = lock_holder_children()?.remove(&holder_pid) {
-                let _ = kill(Pid::from_raw(holder_pid), Signal::SIGTERM);
+            let _ = kill(Pid::from_raw(holder_pid), Signal::SIGTERM);
+            let child = lock_holder_children()?.remove(&holder_pid);
+            if let Some(mut child) = child {
                 let deadline = Instant::now() + Duration::from_secs_f64(grace_s.max(0.0));
                 while Instant::now() < deadline {
                     if child.try_wait().map_err(setup_error)?.is_some() {
@@ -312,7 +326,6 @@ impl NamespaceRuntimePort for DaemonNamespaceRuntime {
                 let _ = kill(Pid::from_raw(holder_pid), Signal::SIGKILL);
                 let _ = child.wait();
             } else {
-                let _ = kill(Pid::from_raw(holder_pid), Signal::SIGTERM);
                 thread::sleep(Duration::from_secs_f64(grace_s.max(0.0)));
                 let _ = kill(Pid::from_raw(holder_pid), Signal::SIGKILL);
             }
@@ -321,7 +334,13 @@ impl NamespaceRuntimePort for DaemonNamespaceRuntime {
     }
 }
 
-pub(crate) fn op_enter(args: &Value, _context: DispatchContext<'_>) -> Result<Value, DaemonError> {
+// Dispatcher op handlers share the `Result<Value, DaemonError>` ABI even when
+// isolated-workspace failures are represented as structured JSON responses.
+#[expect(
+    clippy::unnecessary_wraps,
+    reason = "dispatcher handlers share a fallible ABI"
+)]
+pub fn op_enter(args: &Value, _context: DispatchContext<'_>) -> Result<Value, DaemonError> {
     let agent_id = match require_arg(args, "agent_id") {
         Ok(agent_id) => agent_id,
         Err(error) => return Ok(error),
@@ -330,7 +349,7 @@ pub(crate) fn op_enter(args: &Value, _context: DispatchContext<'_>) -> Result<Va
         Ok(root) => PathBuf::from(root),
         Err(error) => return Ok(error),
     };
-    match ensure_state(root)
+    match ensure_state(&root)
         .and_then(|()| with_state(|state| state.session.enter(&AgentId(agent_id))))
     {
         Ok(handle) => Ok(json!({
@@ -343,7 +362,7 @@ pub(crate) fn op_enter(args: &Value, _context: DispatchContext<'_>) -> Result<Va
     }
 }
 
-pub(crate) fn op_exit(args: &Value, _context: DispatchContext<'_>) -> Result<Value, DaemonError> {
+pub fn op_exit(args: &Value, _context: DispatchContext<'_>) -> Result<Value, DaemonError> {
     let agent_id = match require_arg(args, "agent_id") {
         Ok(agent_id) => agent_id,
         Err(error) => return Ok(error),
@@ -395,7 +414,13 @@ pub(crate) fn op_exit(args: &Value, _context: DispatchContext<'_>) -> Result<Val
     )
 }
 
-pub(crate) fn op_status(args: &Value, _context: DispatchContext<'_>) -> Result<Value, DaemonError> {
+// Dispatcher op handlers share the fallible ABI even though status misses are
+// represented as `{success: true, open: false}`.
+#[expect(
+    clippy::unnecessary_wraps,
+    reason = "dispatcher handlers share a fallible ABI"
+)]
+pub fn op_status(args: &Value, _context: DispatchContext<'_>) -> Result<Value, DaemonError> {
     let agent_id = match require_arg(args, "agent_id") {
         Ok(agent_id) => agent_id,
         Err(error) => return Ok(error),
@@ -414,10 +439,13 @@ pub(crate) fn op_status(args: &Value, _context: DispatchContext<'_>) -> Result<V
     }
 }
 
-pub(crate) fn op_list_open(
-    _args: &Value,
-    _context: DispatchContext<'_>,
-) -> Result<Value, DaemonError> {
+// Dispatcher op handlers share the fallible ABI even though disabled state is
+// represented as an empty open-agent list.
+#[expect(
+    clippy::unnecessary_wraps,
+    reason = "dispatcher handlers share a fallible ABI"
+)]
+pub fn op_list_open(_args: &Value, _context: DispatchContext<'_>) -> Result<Value, DaemonError> {
     match with_state(|state| Ok(state.session.list_open_agents())) {
         Ok(open_agent_ids) => Ok(json!({"success": true, "open_agent_ids": open_agent_ids})),
         Err(IsolatedError::FeatureDisabled) => Ok(json!({"success": true, "open_agent_ids": []})),
@@ -425,10 +453,13 @@ pub(crate) fn op_list_open(
     }
 }
 
-pub(crate) fn op_test_reset(
-    _args: &Value,
-    _context: DispatchContext<'_>,
-) -> Result<Value, DaemonError> {
+// Dispatcher op handlers share the fallible ABI even though harness gating is
+// represented as a structured JSON error.
+#[expect(
+    clippy::unnecessary_wraps,
+    reason = "dispatcher handlers share a fallible ABI"
+)]
+pub fn op_test_reset(_args: &Value, _context: DispatchContext<'_>) -> Result<Value, DaemonError> {
     if !env_true(TEST_HARNESS_ENV) {
         return Ok(error_json(
             "forbidden",
@@ -436,22 +467,26 @@ pub(crate) fn op_test_reset(
             json!({}),
         ));
     }
-    let mut guard = lock_state_cell();
-    let exited_agents = if let Some(state) = guard.as_mut() {
-        let agents = state.session.list_open_agents();
-        state.active_ptys.clear();
-        for agent_id in &agents {
-            let _ = state.session.exit(&AgentId(agent_id.clone()), Some(0.0));
-        }
-        agents
-    } else {
-        Vec::new()
+    let exited_agents = {
+        let mut guard = lock_state_cell();
+        let exited_agents = if let Some(state) = guard.as_mut() {
+            let agents = state.session.list_open_agents();
+            state.active_ptys.clear();
+            for agent_id in &agents {
+                let _ = state.session.exit(&AgentId(agent_id.clone()), Some(0.0));
+            }
+            agents
+        } else {
+            Vec::new()
+        };
+        *guard = None;
+        exited_agents
     };
-    *guard = None;
     Ok(json!({"success": true, "reset": true, "exited_agents": exited_agents}))
 }
 
-pub(crate) fn command_handle_for_args(args: &Value) -> Option<CommandHandle> {
+#[cfg(target_os = "linux")]
+pub fn command_handle_for_args(args: &Value) -> Option<CommandHandle> {
     let agent_id = args
         .get("agent_id")
         .and_then(Value::as_str)
@@ -461,13 +496,19 @@ pub(crate) fn command_handle_for_args(args: &Value) -> Option<CommandHandle> {
     if agent_id.is_empty() {
         return None;
     }
-    let guard = lock_state_cell();
-    let state = guard.as_ref()?;
-    let handle = state.session.get_handle(&AgentId(agent_id.clone()))?;
-    Some(command_handle_from(&state.layer_stack_root, handle))
+    let (layer_stack_root, handle) = {
+        let guard = lock_state_cell();
+        guard.as_ref().and_then(|state| {
+            state
+                .session
+                .get_handle(&AgentId(agent_id))
+                .map(|handle| (state.layer_stack_root.clone(), handle))
+        })
+    }?;
+    Some(command_handle_from(&layer_stack_root, handle))
 }
 
-pub(crate) fn agent_has_active_handle(agent_id: &str) -> bool {
+pub fn agent_has_active_handle(agent_id: &str) -> bool {
     let agent_id = agent_id.trim();
     if agent_id.is_empty() {
         return false;
@@ -479,8 +520,8 @@ pub(crate) fn agent_has_active_handle(agent_id: &str) -> bool {
         .is_some()
 }
 
-#[cfg_attr(not(target_os = "linux"), allow(dead_code))]
-pub(crate) fn register_pty(agent_id: &str, pty_session_id: &str) {
+#[cfg(any(target_os = "linux", test))]
+pub fn register_pty(agent_id: &str, pty_session_id: &str) {
     let mut guard = lock_state_cell();
     if let Some(state) = guard.as_mut() {
         state
@@ -489,8 +530,8 @@ pub(crate) fn register_pty(agent_id: &str, pty_session_id: &str) {
     }
 }
 
-#[cfg_attr(not(target_os = "linux"), allow(dead_code))]
-pub(crate) fn unregister_pty(agent_id: &str, pty_session_id: &str) {
+#[cfg(target_os = "linux")]
+pub fn unregister_pty(agent_id: &str, pty_session_id: &str) {
     let mut guard = lock_state_cell();
     if let Some(state) = guard.as_mut() {
         if state
@@ -503,15 +544,15 @@ pub(crate) fn unregister_pty(agent_id: &str, pty_session_id: &str) {
     }
 }
 
-pub(crate) fn unregister_pty_id(pty_session_id: &str) {
+pub fn unregister_pty_id(pty_session_id: &str) {
     let mut guard = lock_state_cell();
     if let Some(state) = guard.as_mut() {
         state.active_ptys.remove(pty_session_id);
     }
 }
 
-#[cfg_attr(not(target_os = "linux"), allow(dead_code))]
-pub(crate) fn record_tool_call(agent_id: &str, payload: Value) {
+#[cfg(target_os = "linux")]
+pub fn record_tool_call(agent_id: &str, payload: Value) {
     let mut guard = lock_state_cell();
     if let Some(state) = guard.as_mut() {
         state
@@ -520,34 +561,43 @@ pub(crate) fn record_tool_call(agent_id: &str, payload: Value) {
     }
 }
 
-fn ensure_state(root: PathBuf) -> Result<(), IsolatedError> {
-    let mut guard = lock_state_cell();
-    if guard.is_none() {
-        let caps = ResourceCaps::from_env();
-        if !caps.enabled {
-            return Err(IsolatedError::FeatureDisabled);
+fn ensure_state(root: &Path) -> Result<(), IsolatedError> {
+    {
+        let mut guard = lock_state_cell();
+        if guard.is_none() {
+            let caps = ResourceCaps::from_env();
+            if !caps.enabled {
+                return Err(IsolatedError::FeatureDisabled);
+            }
+            let scratch_root = scratch_root();
+            let stack = LayerStack::open(root.to_path_buf()).map_err(setup_error)?;
+            let mut session = IsolatedSession::with_scratch_root(
+                caps,
+                DaemonLayerStackPort {
+                    stack: Arc::new(Mutex::new(stack)),
+                },
+                DaemonNamespaceRuntime,
+                JsonlAuditSink::from_env(),
+                scratch_root,
+            );
+            session.initialize()?;
+            *guard = Some(DaemonIsolatedState {
+                #[cfg(target_os = "linux")]
+                layer_stack_root: root.to_path_buf(),
+                session,
+                active_ptys: HashMap::new(),
+            });
         }
-        let scratch_root = scratch_root();
-        let stack = LayerStack::open(root.clone()).map_err(setup_error)?;
-        let mut session = IsolatedSession::with_scratch_root(
-            caps,
-            DaemonLayerStackPort {
-                stack: Arc::new(Mutex::new(stack)),
-            },
-            DaemonNamespaceRuntime,
-            JsonlAuditSink::from_env(),
-            scratch_root,
-        );
-        session.initialize()?;
-        *guard = Some(DaemonIsolatedState {
-            layer_stack_root: root,
-            session,
-            active_ptys: HashMap::new(),
-        });
     }
     Ok(())
 }
 
+// Keep the state guard alive for exactly the caller closure; tightening around
+// the generic closure would make the lock lifetime less explicit.
+#[expect(
+    clippy::significant_drop_tightening,
+    reason = "state guard lifetime intentionally spans the caller closure"
+)]
 fn with_state<T>(
     f: impl FnOnce(&mut DaemonIsolatedState) -> Result<T, IsolatedError>,
 ) -> Result<T, IsolatedError> {
@@ -598,6 +648,7 @@ fn annotate_pty_force_cancel(
     );
 }
 
+#[cfg(target_os = "linux")]
 fn command_handle_from(
     layer_stack_root: &std::path::Path,
     handle: WorkspaceHandle,
@@ -666,7 +717,7 @@ fn expect_line(fd: RawFd, prefix: &[u8], timeout_s: f64) -> Result<(), IsolatedE
                         return Ok(());
                     }
                     return Err(IsolatedError::SetupFailed {
-                        step: format!("unexpected ns_holder signal: {:?}", buf),
+                        step: format!("unexpected ns_holder signal: {buf:?}"),
                     });
                 }
             }
@@ -764,7 +815,17 @@ fn setup_error(error: impl std::fmt::Display) -> IsolatedError {
 }
 
 fn error_payload(error: &IsolatedError) -> Value {
-    error_json(error.kind(), error.to_string(), json!({}))
+    let details = match error {
+        IsolatedError::HostRamPressure {
+            required_bytes,
+            budget_bytes,
+        } => json!({
+            "required_bytes": required_bytes,
+            "budget_bytes": budget_bytes,
+        }),
+        _ => json!({}),
+    };
+    error_json(error.kind(), error.to_string(), details)
 }
 
 fn active_pty_error(agent_id: &str, pty_session_ids: &[String]) -> Value {
@@ -813,21 +874,22 @@ fn scratch_root() -> PathBuf {
 mod tests {
     use super::*;
 
+    type TestResult = Result<(), Box<dyn std::error::Error + Send + Sync>>;
+
     #[test]
-    fn active_pty_records_block_exit_until_cleared() {
-        let _guard = TEST_LOCK.lock().expect("test lock poisoned");
+    fn active_pty_records_block_exit_until_cleared() -> TestResult {
+        let _guard = TEST_LOCK.lock().map_err(|_| "test lock poisoned")?;
         let _ = op_test_reset(&json!({}), DispatchContext::empty());
         let root =
             std::env::temp_dir().join(format!("eos-daemon-iws-pty-block-{}", std::process::id()));
         let scratch = root.join("scratch");
         let _ = std::fs::remove_dir_all(&root);
-        std::fs::create_dir_all(root.join("layers")).expect("layers");
-        std::fs::create_dir_all(root.join("staging")).expect("staging");
+        std::fs::create_dir_all(root.join("layers"))?;
+        std::fs::create_dir_all(root.join("staging"))?;
         std::fs::write(
             root.join("manifest.json"),
             r#"{"schema_version":1,"version":1,"layers":[]}"#,
-        )
-        .expect("manifest");
+        )?;
         set_env("EOS_ISOLATED_WORKSPACE_ENABLED", "true");
         set_env(TEST_HARNESS_ENV, "true");
         set_env(TEST_SCRATCH_ROOT_ENV, &scratch.to_string_lossy());
@@ -835,21 +897,18 @@ mod tests {
         let entered = op_enter(
             &json!({"agent_id": "agent-pty", "layer_stack_root": root}),
             DispatchContext::empty(),
-        )
-        .expect("enter response");
+        )?;
         assert_eq!(entered["success"], true);
         register_pty("agent-pty", "pty-block");
 
-        let blocked = op_exit(&json!({"agent_id": "agent-pty"}), DispatchContext::empty())
-            .expect("exit response");
+        let blocked = op_exit(&json!({"agent_id": "agent-pty"}), DispatchContext::empty())?;
         assert_eq!(blocked["success"], false);
         assert_eq!(blocked["error"]["kind"], "active_pty_sessions");
 
         let exited = op_exit(
             &json!({"agent_id": "agent-pty", "force_cancel": true}),
             DispatchContext::empty(),
-        )
-        .expect("exit response");
+        )?;
         assert_eq!(exited["success"], true);
         assert_eq!(exited["force_cancel_requested"], true);
         assert_eq!(exited["force_cancelled_pty_session_ids"], json!([]));
@@ -864,6 +923,19 @@ mod tests {
         clear_env(TEST_HARNESS_ENV);
         clear_env(TEST_SCRATCH_ROOT_ENV);
         let _ = std::fs::remove_dir_all(&root);
+        Ok(())
+    }
+
+    #[test]
+    fn host_ram_pressure_error_keeps_capacity_details() {
+        let response = error_payload(&IsolatedError::HostRamPressure {
+            required_bytes: 30,
+            budget_bytes: 29,
+        });
+        assert_eq!(response["success"], false);
+        assert_eq!(response["error"]["kind"], "host_ram_pressure");
+        assert_eq!(response["error"]["details"]["required_bytes"], 30);
+        assert_eq!(response["error"]["details"]["budget_bytes"], 29);
     }
 
     static TEST_LOCK: Mutex<()> = Mutex::new(());

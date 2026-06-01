@@ -24,20 +24,20 @@
 //! `// PORT backend/src/sandbox/daemon/audit_schema.py:294,310 — safe_emit / safe_record_phase`
 
 use std::collections::VecDeque;
-use std::panic::{AssertUnwindSafe, catch_unwind};
+use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::sync::{Mutex, MutexGuard, OnceLock};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use serde_json::Value;
 
 use eos_protocol::audit::{
-    DEFAULT_MAX_BYTES, DEFAULT_MAX_EVENTS, DEFAULT_PRESSURE_THRESHOLD, Lane, SCHEMA_VERSION,
+    Lane, DEFAULT_MAX_BYTES, DEFAULT_MAX_EVENTS, DEFAULT_PRESSURE_THRESHOLD, SCHEMA_VERSION,
 };
 
 /// A single buffered event: its monotonic sequence, lane, encoded size, and the
 /// payload (already stamped with `seq`/`lane`).
 /// `// PORT backend/src/sandbox/daemon/audit_buffer.py:69-74 — BufferedEvent`
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct BufferedEvent {
     /// Monotonic per-buffer sequence number.
     pub seq: u64,
@@ -122,7 +122,7 @@ impl AuditBuffer {
     }
 
     /// The boot epoch id stamped on `daemon.*` events and the snapshot block.
-    pub fn boot_epoch_id(&self) -> i64 {
+    pub const fn boot_epoch_id(&self) -> i64 {
         self.boot_epoch_id
     }
 
@@ -174,32 +174,38 @@ impl AuditBuffer {
     // PORT backend/src/sandbox/daemon/audit_buffer.py:202-225 — pull(after_seq, limit)
     pub fn pull(&self, after_seq: i64, limit: usize) -> Value {
         let limit = limit.max(1);
-        let state = self.lock_state();
         let requested_after_seq = after_seq;
         let after_seq = u64::try_from(after_seq).ok();
-        let events: Vec<Value> = state
-            .all
-            .iter()
-            .filter(|event| match after_seq {
-                Some(after_seq) => event.seq > after_seq,
-                None => true,
-            })
-            .take(limit)
-            .map(|event| event.payload.clone())
-            .collect();
-        let cursor_after = events
-            .last()
-            .and_then(|event| event.get("seq"))
-            .and_then(Value::as_i64)
-            .unwrap_or(requested_after_seq);
+        let (events, cursor_after, lost_before_seq, buffer, snapshot) = {
+            let state = self.lock_state();
+            let events: Vec<Value> = state
+                .all
+                .iter()
+                .filter(|event| after_seq.is_none_or(|after_seq| event.seq > after_seq))
+                .take(limit)
+                .map(|event| event.payload.clone())
+                .collect();
+            let cursor_after = events
+                .last()
+                .and_then(|event| event.get("seq"))
+                .and_then(Value::as_i64)
+                .unwrap_or(requested_after_seq);
+            (
+                events,
+                cursor_after,
+                state.lost_before_seq,
+                buffer_block(&state),
+                snapshot_block(&state, self.boot_epoch_id),
+            )
+        };
         serde_json::json!({
             "schema": SCHEMA_VERSION,
             "cursor": {
                 "after_seq": cursor_after,
-                "lost_before_seq": state.lost_before_seq,
+                "lost_before_seq": lost_before_seq,
             },
-            "buffer": buffer_block(&state),
-            "snapshot": snapshot_block(&state, self.boot_epoch_id),
+            "buffer": buffer,
+            "snapshot": snapshot,
             "events": events,
         })
     }
@@ -241,7 +247,7 @@ pub fn safe_emit(event: Value, lane: Lane) {
 /// no-ops when no per-call buffer is active. Used by the overlay/OCC publish
 /// boundaries. IMPURE: it reaches the (out-of-scope) engine package.
 // PORT backend/src/sandbox/daemon/audit_schema.py:310-326 — safe_record_phase(phase, duration_ms): lazy engine.tool_call.phase_buffer.record_phase, swallow
-pub fn safe_record_phase(phase: &str, duration_ms: f64) {
+pub const fn safe_record_phase(phase: &str, duration_ms: f64) {
     let _ = (phase, duration_ms);
 }
 
@@ -272,7 +278,7 @@ fn usize_to_u64_saturating(value: usize) -> u64 {
     u64::try_from(value).unwrap_or(u64::MAX)
 }
 
-fn lane_index(lane: Lane) -> usize {
+const fn lane_index(lane: Lane) -> usize {
     match lane {
         Lane::Critical => 0,
         Lane::Normal => 1,
@@ -280,7 +286,7 @@ fn lane_index(lane: Lane) -> usize {
     }
 }
 
-fn lane_name(lane: Lane) -> &'static str {
+const fn lane_name(lane: Lane) -> &'static str {
     match lane {
         Lane::Critical => "critical",
         Lane::Normal => "normal",

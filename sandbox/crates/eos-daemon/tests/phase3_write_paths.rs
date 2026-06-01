@@ -5,9 +5,11 @@ use eos_daemon::OpTable;
 use eos_protocol::Request;
 use serde_json::{json, Value};
 
+type TestResult<T = ()> = Result<T, Box<dyn std::error::Error + Send + Sync>>;
+
 #[test]
-fn dispatches_layerstack_write_file_and_reads_published_bytes() {
-    let fixture = seed_layer_stack("write_file");
+fn dispatches_layerstack_write_file_and_reads_published_bytes() -> TestResult {
+    let fixture = seed_layer_stack("write_file")?;
     let write = Request {
         op: "api.v1.write_file".to_owned(),
         invocation_id: "inv-write".to_owned(),
@@ -46,11 +48,12 @@ fn dispatches_layerstack_write_file_and_reads_published_bytes() {
     assert_eq!(response["success"], Value::Bool(true));
     assert_eq!(response["content"], Value::String("hello\n".to_owned()));
     assert_eq!(response["exists"], Value::Bool(true));
+    Ok(())
 }
 
 #[test]
-fn write_file_create_only_existing_returns_guarded_conflict() {
-    let fixture = seed_layer_stack("write_create_only");
+fn write_file_create_only_existing_returns_guarded_conflict() -> TestResult {
+    let fixture = seed_layer_stack("write_create_only")?;
     let request = Request {
         op: "api.v1.write_file".to_owned(),
         invocation_id: "inv-write".to_owned(),
@@ -75,11 +78,12 @@ fn write_file_create_only_existing_returns_guarded_conflict() {
             "message": "file already exists",
         })
     );
+    Ok(())
 }
 
 #[test]
-fn write_file_git_path_is_dropped_by_occ_routing() {
-    let fixture = seed_layer_stack("write_git_drop");
+fn write_file_git_path_is_dropped_by_occ_routing() -> TestResult {
+    let fixture = seed_layer_stack("write_git_drop")?;
     let table = OpTable::with_builtins();
     let write = Request {
         op: "api.v1.write_file".to_owned(),
@@ -112,11 +116,12 @@ fn write_file_git_path_is_dropped_by_occ_routing() {
     let response = table.dispatch(&read);
     assert_eq!(response["success"], Value::Bool(true));
     assert_eq!(response["exists"], Value::Bool(false));
+    Ok(())
 }
 
 #[test]
-fn dispatches_layerstack_edit_file_and_reads_published_bytes() {
-    let fixture = seed_layer_stack("edit_file");
+fn dispatches_layerstack_edit_file_and_reads_published_bytes() -> TestResult {
+    let fixture = seed_layer_stack("edit_file")?;
     let edit = Request {
         op: "api.v1.edit_file".to_owned(),
         invocation_id: "inv-edit".to_owned(),
@@ -148,11 +153,12 @@ fn dispatches_layerstack_edit_file_and_reads_published_bytes() {
     };
     let response = table.dispatch(&read);
     assert_eq!(response["content"], Value::String("# NOTES\n".to_owned()));
+    Ok(())
 }
 
 #[test]
-fn identical_head_write_is_idempotent() {
-    let fixture = seed_layer_stack("write_idempotent");
+fn identical_head_write_is_idempotent() -> TestResult {
+    let fixture = seed_layer_stack("write_idempotent")?;
     let table = OpTable::with_builtins();
     let request = Request {
         op: "api.v1.write_file".to_owned(),
@@ -174,6 +180,7 @@ fn identical_head_write_is_idempotent() {
     };
     let response = table.dispatch(&metrics);
     assert_eq!(response["manifest_depth"], json!(2));
+    Ok(())
 }
 
 struct Fixture {
@@ -188,7 +195,7 @@ impl Drop for Fixture {
     }
 }
 
-fn seed_layer_stack(label: &str) -> Fixture {
+fn seed_layer_stack(label: &str) -> TestResult<Fixture> {
     static COUNTER: AtomicU64 = AtomicU64::new(0);
     let base = std::env::temp_dir().join(format!(
         "eosd-p3-{label}-{}-{}",
@@ -199,10 +206,10 @@ fn seed_layer_stack(label: &str) -> Fixture {
     let workspace = base.join("workspace");
     let root = base.join("layer-stack");
     let layer = root.join("layers").join("B000001-base");
-    std::fs::create_dir_all(&workspace).expect("create workspace dir");
-    std::fs::create_dir_all(&layer).expect("create base layer dir");
-    std::fs::create_dir_all(root.join("staging")).expect("create staging dir");
-    std::fs::write(layer.join("README.md"), "# README\n").expect("write read fixture");
+    std::fs::create_dir_all(&workspace)?;
+    std::fs::create_dir_all(&layer)?;
+    std::fs::create_dir_all(root.join("staging"))?;
+    std::fs::write(layer.join("README.md"), "# README\n")?;
     write_json(
         &root.join("manifest.json"),
         &json!({
@@ -210,7 +217,7 @@ fn seed_layer_stack(label: &str) -> Fixture {
             "version": 1,
             "layers": [{"layer_id": "B000001-base", "path": "layers/B000001-base"}],
         }),
-    );
+    )?;
     write_json(
         &root.join("workspace.json"),
         &json!({
@@ -221,15 +228,16 @@ fn seed_layer_stack(label: &str) -> Fixture {
             "base_manifest_version": 1,
             "base_root_hash": "base",
         }),
-    );
-    Fixture {
+    )?;
+    Ok(Fixture {
         base,
         root,
         workspace,
-    }
+    })
 }
 
-fn write_json(path: &Path, value: &Value) {
-    let encoded = serde_json::to_string_pretty(value).expect("serialize fixture json");
-    std::fs::write(path, encoded).expect("write fixture json");
+fn write_json(path: &Path, value: &Value) -> TestResult {
+    let encoded = serde_json::to_string_pretty(value)?;
+    std::fs::write(path, encoded)?;
+    Ok(())
 }

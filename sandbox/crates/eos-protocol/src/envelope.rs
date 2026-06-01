@@ -28,8 +28,10 @@ pub enum ProtocolError {
     NotAnObject,
 }
 
-/// Request envelope (host -> daemon): `{op, invocation_id, args}`. Field order on
-/// the wire is exactly this (top-level keys are not sorted by the daemon).
+/// Request envelope (host -> daemon): `{op, invocation_id, args}`.
+///
+/// Field order on the wire is exactly this; top-level keys are not sorted by the
+/// daemon.
 /// `// PORT backend/src/sandbox/host/daemon_client.py:114-117`
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Request {
@@ -41,7 +43,7 @@ pub struct Request {
 /// Daemon error envelope (`success:false`). `warnings`/`timings` are always
 /// `[]`/`{}` at the builder.
 /// `// PORT backend/src/sandbox/daemon/rpc/dispatcher.py:215-229 — _error_envelope`
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ErrorEnvelope {
     pub success: bool,
     #[serde(default)]
@@ -52,7 +54,7 @@ pub struct ErrorEnvelope {
 }
 
 /// The `error` body of an [`ErrorEnvelope`].
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ErrorBody {
     pub kind: ErrorKind,
     pub message: String,
@@ -60,7 +62,7 @@ pub struct ErrorBody {
     pub details: Value,
 }
 
-/// Verified daemon error `kind` values. Serialized snake_case on the wire.
+/// Verified daemon error `kind` values. Serialized `snake_case` on the wire.
 /// `// PORT backend/src/sandbox/daemon/rpc/dispatcher.py:147-273`
 /// `// PORT backend/src/sandbox/daemon/rpc/server.py:104-120`
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -90,7 +92,7 @@ pub enum ErrorKind {
 /// A framed wire message: a request, an error envelope, or any response
 /// `Value`. Untagged: a request has `op`; an error has `success:false` + `error`;
 /// any other object is a response.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum Envelope {
     /// Host -> daemon request.
@@ -102,8 +104,13 @@ pub enum Envelope {
 }
 
 /// Serialize an envelope as compact JSON plus a single trailing `\n`.
+///
 /// `serde_json` compact formatting matches the daemon for these ASCII payloads;
 /// `args` key order is preserved (the `preserve_order` feature is required).
+///
+/// # Errors
+///
+/// Returns [`ProtocolError::BadJson`] when serde cannot serialize the envelope.
 pub fn encode(envelope: &Envelope) -> Result<Vec<u8>, ProtocolError> {
     let mut bytes = serde_json::to_vec(envelope)?;
     bytes.push(b'\n');
@@ -112,6 +119,11 @@ pub fn encode(envelope: &Envelope) -> Result<Vec<u8>, ProtocolError> {
 
 /// Decode one framed message. A trailing `\n` (and surrounding whitespace) is
 /// tolerated; the body must be a single JSON object.
+///
+/// # Errors
+///
+/// Returns [`ProtocolError::BadJson`] for invalid JSON and
+/// [`ProtocolError::NotAnObject`] when the decoded value is not a JSON object.
 pub fn decode(bytes: &[u8]) -> Result<Envelope, ProtocolError> {
     let value: Value = serde_json::from_slice(bytes)?;
     if !value.is_object() {
@@ -134,35 +146,40 @@ pub fn decode(bytes: &[u8]) -> Result<Envelope, ProtocolError> {
 mod tests {
     use super::*;
     use proptest::prelude::*;
+    use proptest::test_runner::TestCaseError;
+
+    type TestResult<T = ()> = Result<T, Box<dyn std::error::Error + Send + Sync>>;
 
     #[test]
-    fn error_kind_snake_case_wire() {
-        let v = serde_json::to_value(ErrorKind::ForbiddenInIsolatedWorkspace)
-            .expect("serialize forbidden isolated workspace error kind");
+    fn error_kind_snake_case_wire() -> TestResult {
+        let v = serde_json::to_value(ErrorKind::ForbiddenInIsolatedWorkspace)?;
         assert_eq!(
             v,
             Value::String("forbidden_in_isolated_workspace".to_owned())
         );
         assert_eq!(
-            serde_json::to_value(ErrorKind::UnknownOp).expect("serialize unknown op error kind"),
+            serde_json::to_value(ErrorKind::UnknownOp)?,
             Value::String("unknown_op".to_owned())
         );
+        Ok(())
     }
 
     #[test]
-    fn encode_appends_single_newline() {
+    fn encode_appends_single_newline() -> TestResult {
         let env = Envelope::Response(serde_json::json!({"success": true, "touched": 0}));
-        let bytes = encode(&env).expect("encode response envelope");
-        assert_eq!(*bytes.last().expect("encoded envelope has bytes"), b'\n');
+        let bytes = encode(&env)?;
+        assert_eq!(bytes.last(), Some(&b'\n'));
         assert_ne!(bytes[bytes.len() - 2], b'\n');
+        Ok(())
     }
 
     #[test]
-    fn request_args_order_preserved_roundtrip() {
+    fn request_args_order_preserved_roundtrip() -> TestResult {
         let raw = b"{\"op\":\"x\",\"invocation_id\":\"i\",\"args\":{\"z\":1,\"a\":2,\"_eos_daemon_protocol_version\":1}}\n";
-        let env = decode(raw).expect("decode request envelope");
+        let env = decode(raw)?;
         assert!(matches!(env, Envelope::Request(_)));
-        assert_eq!(encode(&env).expect("re-encode request envelope"), raw);
+        assert_eq!(encode(&env)?, raw);
+        Ok(())
     }
 
     // Build arbitrary JSON values with only finite numbers (NaN/Inf are not JSON).
@@ -187,8 +204,10 @@ mod tests {
         fn decode_encode_roundtrips_requests(op in "[a-z.]{1,12}", id in "[a-z0-9]{0,16}", args in arb_json()) {
             let args = if args.is_object() { args } else { serde_json::json!({"v": args}) };
             let env = Envelope::Request(Request { op, invocation_id: id, args });
-            let bytes = encode(&env).expect("encode generated request envelope");
-            let back = decode(&bytes).expect("decode generated request envelope");
+            let bytes = encode(&env)
+                .map_err(|error| TestCaseError::fail(error.to_string()))?;
+            let back = decode(&bytes)
+                .map_err(|error| TestCaseError::fail(error.to_string()))?;
             prop_assert_eq!(env, back);
         }
     }

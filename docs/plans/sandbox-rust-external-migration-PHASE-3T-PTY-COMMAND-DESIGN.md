@@ -625,10 +625,13 @@ Add Rust daemon tests under `sandbox/crates/eos-daemon/tests/` for:
 
 These tests should inspect process state where possible, not only returned JSON.
 
-### Mock Agent / Model-Facing Tests
+### Model-Facing Tests
 
-Use the existing `ScenarioLoopRunner` path under
-`backend/src/task_center_runner/tests/mock`.
+Use focused engine/tool unit tests for catalog exposure, typed tool-result
+loops, and notification text. Use
+`backend/scripts/bench_rust_daemon_phase3t_pty.py` for live command/PTY
+behavior; do not use the `task_center_runner` harness for this Rust migration
+closeout.
 
 Coverage:
 

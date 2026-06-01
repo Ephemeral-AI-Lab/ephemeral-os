@@ -48,22 +48,26 @@ enum BaseEntry {
 impl BaseEntry {
     fn path(&self) -> &str {
         match self {
-            BaseEntry::Directory { path }
-            | BaseEntry::File { path, .. }
-            | BaseEntry::Symlink { path, .. } => path,
+            Self::Directory { path } | Self::File { path, .. } | Self::Symlink { path, .. } => path,
         }
     }
 
-    fn kind(&self) -> &'static str {
+    const fn kind(&self) -> &'static str {
         match self {
-            BaseEntry::Directory { .. } => "directory",
-            BaseEntry::File { .. } => "file",
-            BaseEntry::Symlink { .. } => "symlink",
+            Self::Directory { .. } => "directory",
+            Self::File { .. } => "file",
+            Self::Symlink { .. } => "symlink",
         }
     }
 }
 
 /// Return the existing workspace base, or build it if the stack is unbound.
+///
+/// # Errors
+///
+/// Returns [`LayerStackError`] when the binding cannot be read, does not match
+/// the requested workspace root, or base construction fails.
+///
 /// `// PORT backend/src/sandbox/daemon/layer_stack_runtime.py:119-134`
 pub fn ensure_workspace_base(
     layer_stack_root: impl AsRef<Path>,
@@ -87,6 +91,13 @@ pub fn ensure_workspace_base(
 }
 
 /// Build or rebuild the workspace base for one layer-stack root.
+///
+/// # Errors
+///
+/// Returns [`LayerStackError`] when workspace/stack paths are invalid, base
+/// state already exists, source inventory cannot be collected, or base
+/// manifest/layer files cannot be written.
+///
 /// `// PORT backend/src/sandbox/layer_stack/workspace_base.py:82-141`
 pub fn build_workspace_base(
     layer_stack_root: impl AsRef<Path>,
@@ -227,7 +238,7 @@ fn collect_dir(
         }
         Err(err) => return Err(err.into()),
     };
-    children.sort_by_key(|entry| entry.file_name());
+    children.sort_by_key(std::fs::DirEntry::file_name);
     for child in children {
         let path = child.path();
         let rel = relative_path(workspace, &path);
@@ -479,7 +490,7 @@ fn write_layer_digest(stack: &Path, layer_id: &str, digest: &str) -> Result<(), 
 fn file_hash(path: &Path) -> Result<String, std::io::Error> {
     let mut file = std::fs::File::open(path)?;
     let mut digest = Sha256::new();
-    let mut buffer = [0_u8; 1024 * 1024];
+    let mut buffer = vec![0_u8; 1024 * 1024].into_boxed_slice();
     loop {
         let count = file.read(&mut buffer)?;
         if count == 0 {

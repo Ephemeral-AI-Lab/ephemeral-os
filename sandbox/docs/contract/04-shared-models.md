@@ -36,17 +36,17 @@ inline and repeated in the risks of the returned summary.
 ### Routing (plan §1 line 89, authoritative)
 
 > Verb routing stays in `eos-daemon` dispatch: `read`/`write`/`edit` fast-path → `eos-occ`;
-> `shell`/`glob`/`grep` → `eos-ephemeral` via `eos-runner` (the shared search/replace
-> primitive lives in `eos-protocol`).
+> `shell`/`glob`/`grep` overlay execution is daemon-owned and delegates namespace work to
+> `eos-runner` (the shared search/replace primitive lives in `eos-protocol`).
 
 | Verb | Path | Crate target |
 |------|------|--------------|
 | `read_file` | **O(1)-snapshot / OCC fast-path** | `eos-occ` |
 | `write_file` | **OCC fast-path** (guarded publish) | `eos-occ` |
 | `edit_file` | **OCC fast-path** (guarded publish) | `eos-occ` |
-| `shell` | **overlay pipeline** | `eos-ephemeral` via `eos-runner` |
-| `glob` | **overlay pipeline** | `eos-ephemeral` via `eos-runner` |
-| `grep` | **overlay pipeline** | `eos-ephemeral` via `eos-runner` |
+| `shell` | **overlay pipeline** | `eos-daemon` via `eos-runner` |
+| `glob` | **overlay pipeline** | `eos-daemon` via `eos-runner` |
+| `grep` | **overlay pipeline** | `eos-daemon` via `eos-runner` |
 
 Note: the namespace `VERB_TABLE` (`tool_primitives/__init__.py:15-21`) contains
 `read_file`/`write_file`/`edit_file`/`grep`/`glob` — but that is the *overlay execution
@@ -392,13 +392,13 @@ payloads, not this RPC framing.
 
 ---
 
-## 7. `shell` — argv/no-shell overlay pipeline
+## 7. `shell` — shell-string overlay pipeline, explicit CP-4s argv compatibility
 
 - Rust target request contract:
 
   | field | type | default | notes |
   |-------|------|---------|-------|
-  | `command` | `list[str]` | (required) | raw argv only; string shell commands are rejected |
+  | `command` | `str` | (required) | shell-format command string |
   | `cwd` | `str \| None` | `None` | |
   | `timeout` | `int \| None` | `None` | |
   | `stdin` | `str \| None` | `None` | **rejected** by wrapper (see below) |
@@ -412,15 +412,19 @@ payloads, not this RPC framing.
     shell does not accept stdin"), conflict_reason=message)`. `stdin` is therefore NEVER on
     the snapshot-overlay shell wire. (Isolated-workspace exec is a different path that DOES
     support stdin via base64 — out of scope here, see `isolated_workspace/...`.)
-  - Wire object: `identity | {"command": [...], "cwd", "timeout_seconds": request.timeout,
-    "description": default_description("shell")}`; adds `"background": true` only when
-    `request.background` is set.
+  - Wire object: `identity | {"command": request.command, "cwd",
+    "timeout_seconds": request.timeout, "description": default_description("shell")}`;
+    adds `"background": true` only when `request.background` is set.
   - **Key rename: dataclass `timeout` → wire `timeout_seconds`** (value is the int as-is, or `null`).
 
 - Daemon primitive path reads from `args` and `payload`:
   - `_shell_argv(req.args)` / Rust equivalent builds argv from `args["command"]`.
-    `command` must be a non-empty **`list[str]`**; `command[0]` must be non-empty.
-    String commands, shell interpretation, `sh`, and `bash` are not supported fallback lanes.
+    A string `command` must be non-empty and is executed as
+    `/bin/bash --noprofile --norc -c <command>`. The Rust daemon shell boundary
+    rejects raw argv; historical CP-4s raw-argv evidence is no longer a live
+    public shell contract. Plugin one-shot workers use the dedicated
+    `plugin_service` runner verb for argv commands instead of a shell escape
+    hatch.
   - `cwd = str(req.args.get("cwd") or ".")` — default `"."`.
   - `env = _string_mapping(req.args.get("env"))` — the primitive **reads `env`** even though
     no model field exists for it (str→str map; out-of-band wire key).
@@ -434,7 +438,8 @@ payloads, not this RPC framing.
 | wire arg | type | source | primitive reads | notes |
 |----------|------|--------|-----------------|-------|
 | identity envelope | — | wrapper | — | §1 |
-| `command` | `list[str]` | wrapper / direct daemon caller | yes (via `_shell_argv`) | raw argv only; no shell/bash fallback |
+| `command` | `str` | wrapper | yes (via `_shell_argv`) | non-login Bash string |
+| `command` | `list[str]` | historical CP-4s harness | no at daemon shell boundary | rejected; retained only as historical evidence |
 | `cwd` | `str` | wrapper (`.`-default) | yes (`or "."`) | |
 | `timeout_seconds` | `int \| null` | wrapper (renamed from `timeout`) | yes (→float) | alias `timeout` also accepted |
 | `description` | `str` | wrapper | no | |

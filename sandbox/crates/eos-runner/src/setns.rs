@@ -36,6 +36,11 @@ use crate::request::{RunRequest, RunResult};
 /// Calls `setns(2)` (which requires this to be the only thread in the process),
 /// then delegates child spawning to the shared shell/tool primitive. The setns
 /// FD order (`user`, `mnt`, `pid`, `net`) is load-bearing.
+///
+/// # Errors
+///
+/// Returns [`RunnerError`] when namespace FDs are missing, `setns`/cgroup join
+/// fails, request validation fails, or child execution fails.
 // PORT backend/src/sandbox/overlay/namespace_runner.py:138 — _run_tool_call_in_existing_namespace
 // PORT backend/src/sandbox/isolated_workspace/scripts/setns_exec.py:34-94 — setns(order) → cgroup join → fork → execvp → waitpid
 // PORT backend/src/sandbox/isolated_workspace/scripts/_setns_libc.py:18-25 — libc setns(2) wrapper
@@ -51,10 +56,17 @@ pub fn run_setns(
     let ns_fds = require_ns_fds(request)?;
     join_cgroup(request);
     join_namespaces(&ns_fds)?;
-    crate::fresh_ns::execute_tool(request, 0.0, setns_output_dir(request)?, Instant::now())
+    let output_dir = setns_output_dir(request)?;
+    crate::fresh_ns::execute_tool(request, 0.0, &output_dir, Instant::now())
 }
 
 #[cfg(not(target_os = "linux"))]
+/// Return the non-Linux unsupported error for setns execution.
+///
+/// # Errors
+///
+/// Always returns [`RunnerError::Unsupported`] outside Linux because `setns(2)`
+/// is unavailable.
 pub fn run_setns(
     _request: &RunRequest,
     _mount: &dyn KernelMountPort,
@@ -62,14 +74,20 @@ pub fn run_setns(
     Err(RunnerError::Unsupported)
 }
 
-/// Mount the overlay inside an existing workspace mount namespace: `setns` into
-/// the holder's `user` then `mnt` FDs (granting `CAP_SYS_ADMIN` in that ns and
-/// switching the mount table), then delegate to [`KernelMountPort`].
+/// Mount the overlay inside an existing workspace mount namespace.
+///
+/// The runner `setns`es into the holder's `user` then `mnt` FDs, gaining
+/// `CAP_SYS_ADMIN` in that namespace before delegating to [`KernelMountPort`].
 ///
 /// # Safety (future)
 ///
 /// Calls `setns(2)` twice (`user`, then `mnt`) before the mount; must run on a
 /// single-threaded caller until both setns calls complete.
+///
+/// # Errors
+///
+/// Returns [`RunnerError`] when required namespace/overlay paths are missing,
+/// `setns` fails, or the overlay mount port fails.
 // PORT backend/src/sandbox/isolated_workspace/scripts/setns_overlay_mount.py:43-86 — setns(user)→setns(mnt)→mount_overlay
 #[cfg(target_os = "linux")]
 pub fn setns_overlay_mount(
@@ -108,6 +126,12 @@ pub fn setns_overlay_mount(
 }
 
 #[cfg(not(target_os = "linux"))]
+/// Return the non-Linux unsupported error for setns overlay mounting.
+///
+/// # Errors
+///
+/// Always returns [`RunnerError::Unsupported`] outside Linux because `setns(2)`
+/// is unavailable.
 pub fn setns_overlay_mount(
     _request: &RunRequest,
     _mount: &dyn KernelMountPort,
@@ -219,9 +243,13 @@ mod tests {
     use std::path::Path;
 
     #[test]
-    fn require_ns_fds_rejects_missing_setns_payload() {
-        let error = require_ns_fds(&request(None)).expect_err("ns_fds are required");
+    fn require_ns_fds_rejects_missing_setns_payload() -> Result<(), Box<dyn std::error::Error>> {
+        let error = match require_ns_fds(&request(None)) {
+            Ok(_) => return Err("ns_fds should be required".into()),
+            Err(error) => error,
+        };
         assert!(error.to_string().contains("requires ns_fds"));
+        Ok(())
     }
 
     #[test]
@@ -239,15 +267,13 @@ mod tests {
     }
 
     #[test]
-    fn setns_output_dir_is_parent_of_upperdir() {
+    fn setns_output_dir_is_parent_of_upperdir() -> Result<(), Box<dyn std::error::Error>> {
         let request = RunRequest {
             upperdir: Some(Path::new("/tmp/iws/upper").to_path_buf()),
             ..request(Some(default_ns_fds()))
         };
-        assert_eq!(
-            setns_output_dir(&request).expect("upperdir has parent"),
-            Path::new("/tmp/iws")
-        );
+        assert_eq!(setns_output_dir(&request)?, Path::new("/tmp/iws"));
+        Ok(())
     }
 
     #[test]

@@ -5,11 +5,11 @@ The harness uploads a locally packaged ``eosd`` into the Docker sandbox, seeds a
 LayerStack fixture from the image's real workspace, starts the Rust daemon, then
 measures:
 
-* ``api.v1.shell`` no-op latency for the canonical argv/no-shell form.
+* ``api.v1.shell`` no-op latency for the current non-login Bash string form.
 * ``api.v1.shell`` small-write publish latency.
 * ``api.v1.glob`` and ``api.v1.grep`` read-only overlay search latency.
-* 1/3/5/10 concurrent raw-argv ``api.v1.shell`` load for no-op and unique write
-  commands.
+* 1/3/5/10 concurrent shell-string ``api.v1.shell`` load for
+  no-op and unique write commands.
 * daemon memory before load, between operation groups, and after drain.
 
 It intentionally records gate failures instead of smoothing them over. CP-4s is
@@ -94,7 +94,7 @@ def main(argv: list[str] | None = None) -> int:
     print(
         f"wrote {out} "
         f"(cp4s={report['cp4s']['gate_pass']} all={report['gate_pass']} "
-        f"argv_noop={report['cp4s']['gates'].get('argv_noop_70pct_faster_than_phase1')} "
+        f"shell_noop={report['cp4s']['gates'].get('shell_noop_70pct_faster_than_phase1')} "
         f"run_id={report['run_id']})"
     )
     return 0 if report["gate_pass"] else 1
@@ -161,7 +161,7 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
     parser.add_argument(
         "--load-concurrency",
         default="1,3,5,10",
-        help="Comma-separated concurrent command counts for the raw-argv load matrix.",
+        help="Comma-separated concurrent command counts for the shell-string load matrix.",
     )
     parser.add_argument(
         "--load-rounds",
@@ -172,7 +172,7 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
     parser.add_argument(
         "--skip-load",
         action="store_true",
-        help="Skip the concurrent raw-argv load matrix.",
+        help="Skip the concurrent shell-string load matrix.",
     )
     parser.add_argument(
         "--keep-container",
@@ -337,15 +337,15 @@ async def run_phase3(args: argparse.Namespace) -> dict[str, Any]:
 
             memory_samples = [await sample_daemon_memory(bench, "idle_before_load")]
             operations: dict[str, Any] = {}
-            operations["noop_argv"] = await measure_operation(
+            operations["noop_shell"] = await measure_operation(
                 daemon_client,
                 endpoint,
-                "noop_argv",
+                "noop_shell",
                 args.samples,
                 lambda _index, invocation_id: (
                     "api.v1.shell",
                     {
-                        "command": ["true"],
+                        "command": "true",
                         "cwd": ".",
                         "timeout_seconds": 10,
                         "invocation_id": invocation_id,
@@ -353,7 +353,7 @@ async def run_phase3(args: argparse.Namespace) -> dict[str, Any]:
                 ),
                 expect_noop_shell,
             )
-            memory_samples.append(await sample_daemon_memory(bench, "after_noop_argv"))
+            memory_samples.append(await sample_daemon_memory(bench, "after_noop_shell"))
 
             operations["small_write"] = await measure_operation(
                 daemon_client,
@@ -639,7 +639,7 @@ def small_write_request(index: int, invocation_id: str) -> tuple[str, dict[str, 
     return (
         "api.v1.shell",
         {
-            "command": ["touch", filename],
+            "command": f"touch {filename}",
             "cwd": ".",
             "timeout_seconds": 10,
             "invocation_id": invocation_id,
@@ -662,7 +662,7 @@ def load_small_write_request(
     return (
         "api.v1.shell",
         {
-            "command": ["touch", filename],
+            "command": f"touch {filename}",
             "cwd": ".",
             "timeout_seconds": 10,
             "invocation_id": invocation_id,
@@ -717,19 +717,19 @@ async def measure_load_matrix(
     concurrencies: list[int],
     rounds: int,
 ) -> dict[str, Any]:
-    operations: dict[str, dict[str, Any]] = {"noop_argv": {}, "small_write": {}}
+    operations: dict[str, dict[str, Any]] = {"noop_shell": {}, "small_write": {}}
     for concurrency in concurrencies:
-        operations["noop_argv"][str(concurrency)] = await measure_concurrent_operation(
+        operations["noop_shell"][str(concurrency)] = await measure_concurrent_operation(
             daemon_client,
             endpoint,
-            name="load_noop_argv",
-            operation_key="noop_argv",
+            name="load_noop_shell",
+            operation_key="noop_shell",
             concurrency=concurrency,
             rounds=rounds,
             build_request=lambda _index, _concurrency, _round, _slot, invocation_id: (
                 "api.v1.shell",
                 {
-                    "command": ["true"],
+                    "command": "true",
                     "cwd": ".",
                     "timeout_seconds": 10,
                     "invocation_id": invocation_id,
@@ -902,7 +902,7 @@ def derived_timings_ms(
     timings: dict[str, float],
 ) -> dict[str, float]:
     api_keys = {
-        "noop_argv": "api.shell.total_s",
+        "noop_shell": "api.shell.total_s",
         "small_write": "api.shell.total_s",
         "glob": "api.glob.total_s",
         "grep": "api.grep.total_s",
@@ -1131,7 +1131,7 @@ def evaluate_cp4s(report: dict[str, Any], phase1: dict[str, Any]) -> dict[str, A
     phase1_perf = phase1["performance"]
     phase1_host = phase1_perf["host_wall_ms"]
     phase1_tool = phase1_perf["runner_tool_ms"]
-    noop = operations["noop_argv"]
+    noop = operations["noop_shell"]
     noop_host = noop["host_wall_ms"]
     noop_run_command = stat_block(noop, "phase_timing_ms", "command_exec.run_command_s")
     noop_mount = stat_block(noop, "phase_timing_ms", "command_exec.mount_workspace_s")
@@ -1141,7 +1141,7 @@ def evaluate_cp4s(report: dict[str, Any], phase1: dict[str, Any]) -> dict[str, A
         stat_value(noop_host, "p50") <= float(phase1_host["p50"])
         and stat_value(noop_host, "p95") <= float(phase1_host["p95"])
     )
-    argv_gate = stat_value(noop_run_command, "p50") <= float(phase1_tool["p50"]) * 0.30
+    shell_gate = stat_value(noop_run_command, "p50") <= float(phase1_tool["p50"]) * 0.30
     mount_gate = stat_value(noop_mount, "p95") <= 5.0
     dispatch_gate = stat_value(noop_dispatch, "p95") <= 5.0
     operations_gate = all(
@@ -1152,7 +1152,7 @@ def evaluate_cp4s(report: dict[str, Any], phase1: dict[str, Any]) -> dict[str, A
         [
             operations_gate,
             host_latency_gate,
-            argv_gate,
+            shell_gate,
             mount_gate,
             dispatch_gate,
             memory_gate,
@@ -1163,20 +1163,20 @@ def evaluate_cp4s(report: dict[str, Any], phase1: dict[str, Any]) -> dict[str, A
             "phase1_noop_shell_host_wall_p50_ms": phase1_host["p50"],
             "phase1_noop_shell_host_wall_p95_ms": phase1_host["p95"],
             "phase1_runner_tool_p50_ms": phase1_tool["p50"],
-            "required_argv_runner_tool_p50_ms": float(phase1_tool["p50"]) * 0.30,
+            "required_shell_runner_tool_p50_ms": float(phase1_tool["p50"]) * 0.30,
             "overlay_mount_p95_max_ms": 5.0,
             "host_minus_api_total_p95_max_ms": 5.0,
         },
         "observed": {
-            "noop_argv_host_wall_ms": noop_host,
-            "noop_argv_run_command_ms": noop_run_command,
-            "noop_argv_mount_ms": noop_mount,
-            "noop_argv_host_minus_api_total_ms": noop_dispatch,
+            "noop_shell_host_wall_ms": noop_host,
+            "noop_shell_run_command_ms": noop_run_command,
+            "noop_shell_mount_ms": noop_mount,
+            "noop_shell_host_minus_api_total_ms": noop_dispatch,
         },
         "gates": {
             "operations_all_samples_ok": operations_gate,
             "noop_host_no_worse_than_phase1": host_latency_gate,
-            "argv_noop_70pct_faster_than_phase1": argv_gate,
+            "shell_noop_70pct_faster_than_phase1": shell_gate,
             "overlay_mount_p95_lte_5ms": mount_gate,
             "host_minus_api_total_p95_lte_5ms": dispatch_gate,
             "daemon_memory": memory_gate,
@@ -1207,7 +1207,7 @@ def evaluate_load_matrix(load: dict[str, Any], phase1: dict[str, Any]) -> dict[s
                 "host_p95_no_worse_than_phase1": stat_value(host, "p95")
                 <= phase1_host_p95,
             }
-            if operation_name == "noop_argv":
+            if operation_name == "noop_shell":
                 gates["run_command_p50_70pct_faster_than_phase1"] = (
                     stat_value(run_command, "p50") <= required_run_p50
                 )

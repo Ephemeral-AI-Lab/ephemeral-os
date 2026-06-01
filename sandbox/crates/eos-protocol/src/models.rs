@@ -190,14 +190,18 @@ pub struct GrepArgs {
     pub head_limit: Option<i64>,
 }
 
-#[allow(clippy::trivially_copy_pass_by_ref)]
-fn is_false(b: &bool) -> bool {
+// Serde `skip_serializing_if` predicates receive references.
+#[expect(
+    clippy::trivially_copy_pass_by_ref,
+    reason = "serde skip_serializing_if predicates receive references"
+)]
+const fn is_false(b: &bool) -> bool {
     !*b
 }
 
 /// `read_file` response (`SandboxResultBase` + content/exists/encoding).
 /// `// PORT backend/src/sandbox/shared/models.py:162-166`
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ReadFileResult {
     pub success: bool,
     pub workspace: String,
@@ -213,7 +217,7 @@ pub struct ReadFileResult {
 
 /// `write_file` response (`GuardedResultBase`, no added fields).
 /// `// PORT backend/src/sandbox/shared/models.py:176-178`
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct WriteFileResult {
     pub success: bool,
     pub workspace: String,
@@ -229,7 +233,7 @@ pub struct WriteFileResult {
 
 /// `edit_file` response (`GuardedResultBase` + `applied_edits`).
 /// `// PORT backend/src/sandbox/shared/models.py:196-198`
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct EditFileResult {
     pub success: bool,
     pub workspace: String,
@@ -246,7 +250,7 @@ pub struct EditFileResult {
 
 /// `shell` response (`GuardedResultBase` + exit/stdout/stderr/warnings).
 /// `// PORT backend/src/sandbox/shared/models.py:212-217`
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ShellResult {
     pub success: bool,
     pub workspace: String,
@@ -264,9 +268,9 @@ pub struct ShellResult {
     pub warnings: Vec<String>,
 }
 
-/// `glob` response (`SandboxResultBase` + filenames/num_files/truncated).
+/// `glob` response (`SandboxResultBase` + `filenames/num_files/truncated`).
 /// `// PORT backend/src/sandbox/shared/models.py:226-230`
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct GlobResult {
     pub success: bool,
     pub workspace: String,
@@ -282,7 +286,7 @@ pub struct GlobResult {
 
 /// `grep` response (`SandboxResultBase` + grep counters/content).
 /// `// PORT backend/src/sandbox/shared/models.py:246-256`
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct GrepResult {
     pub success: bool,
     pub workspace: String,
@@ -328,8 +332,17 @@ pub enum SearchReplaceError {
     CountMismatch,
 }
 
-/// Apply one search/replace edit. Pure; mirrors Python `apply_search_replace`
-/// including non-overlapping `str.count` semantics and exact error messages.
+/// Apply one search/replace edit.
+///
+/// Pure; mirrors Python `apply_search_replace` including non-overlapping
+/// `str.count` semantics and exact error messages.
+///
+/// # Errors
+///
+/// Returns [`SearchReplaceError::EmptyAnchor`] for an empty anchor,
+/// [`SearchReplaceError::NotFound`] when the anchor is absent, or
+/// [`SearchReplaceError::CountMismatch`] when `replace_all=false` and the
+/// anchor appears more than once.
 /// `// PORT backend/src/sandbox/shared/edit_apply.py:21-48`
 pub fn apply_search_replace(
     text: &str,
@@ -360,24 +373,27 @@ pub fn apply_search_replace(
 mod tests {
     use super::*;
 
+    type TestResult<T = ()> = Result<T, Box<dyn std::error::Error + Send + Sync>>;
+
     #[test]
-    fn intent_wire_values() {
+    fn intent_wire_values() -> TestResult {
         assert_eq!(
-            serde_json::to_value(Intent::ReadOnly).expect("serialize read-only intent"),
+            serde_json::to_value(Intent::ReadOnly)?,
             Value::String("read_only".to_owned())
         );
         assert_eq!(
-            serde_json::to_value(Intent::WriteAllowed).expect("serialize write-allowed intent"),
+            serde_json::to_value(Intent::WriteAllowed)?,
             Value::String("write_allowed".to_owned())
         );
         assert_eq!(
-            serde_json::to_value(Intent::Lifecycle).expect("serialize lifecycle intent"),
+            serde_json::to_value(Intent::Lifecycle)?,
             Value::String("lifecycle".to_owned())
         );
+        Ok(())
     }
 
     #[test]
-    fn request_args_wire_shapes() {
+    fn request_args_wire_shapes() -> TestResult {
         // shell: timeout -> timeout_seconds rename; background omitted when false.
         assert_eq!(
             serde_json::to_value(ShellArgs {
@@ -385,8 +401,7 @@ mod tests {
                 cwd: ".".to_owned(),
                 timeout_seconds: None,
                 background: false,
-            })
-            .expect("serialize shell args"),
+            })?,
             serde_json::json!({"command":"ls","cwd":".","timeout_seconds":null})
         );
         assert_eq!(
@@ -395,8 +410,7 @@ mod tests {
                 tty: true,
                 yield_time_ms: Some(250),
                 timeout_seconds: None,
-            })
-            .expect("serialize exec command args"),
+            })?,
             serde_json::json!({"cmd":"printf hi","tty":true,"yield_time_ms":250})
         );
         assert_eq!(
@@ -408,8 +422,7 @@ mod tests {
                     stderr: String::new(),
                 },
                 pty_session_id: Some("pty_1".to_owned()),
-            })
-            .expect("serialize exec command result"),
+            })?,
             serde_json::json!({
                 "status": "running",
                 "exit_code": null,
@@ -422,8 +435,7 @@ mod tests {
             serde_json::to_value(GlobArgs {
                 pattern: "*.rs".to_owned(),
                 path: None,
-            })
-            .expect("serialize glob args"),
+            })?,
             serde_json::json!({"pattern":"*.rs"})
         );
         // grep: optional path/glob_filter/head_limit omitted when None.
@@ -438,8 +450,7 @@ mod tests {
                 path: None,
                 glob_filter: None,
                 head_limit: None,
-            })
-            .expect("serialize grep args"),
+            })?,
             serde_json::json!({
                 "pattern":"fn","output_mode":"content","offset":0,
                 "case_insensitive":false,"line_numbers":true,"multiline":false
@@ -454,37 +465,28 @@ mod tests {
                 replace_all: false,
             }],
         };
-        let v = serde_json::to_value(&edit).expect("serialize edit file args");
-        assert_eq!(
-            serde_json::from_value::<EditFileArgs>(v).expect("deserialize edit file args"),
-            edit
-        );
+        let v = serde_json::to_value(&edit)?;
+        assert_eq!(serde_json::from_value::<EditFileArgs>(v)?, edit);
+        Ok(())
     }
 
     #[test]
-    fn conflict_info_wire_shape() {
+    fn conflict_info_wire_shape() -> TestResult {
         assert_eq!(
-            serde_json::to_value(ConflictInfo::overlap("/w/f.txt", "overlap"))
-                .expect("serialize overlap conflict"),
+            serde_json::to_value(ConflictInfo::overlap("/w/f.txt", "overlap"))?,
             serde_json::json!({"reason":"aborted_overlap","conflict_file":"/w/f.txt","message":"overlap"})
         );
         assert_eq!(
-            serde_json::to_value(ConflictInfo::rejected("rejected", ""))
-                .expect("serialize rejected conflict"),
+            serde_json::to_value(ConflictInfo::rejected("rejected", ""))?,
             serde_json::json!({"reason":"rejected","conflict_file":null,"message":""})
         );
+        Ok(())
     }
 
     #[test]
-    fn search_replace_semantics() {
-        assert_eq!(
-            apply_search_replace("a b a", "a", "X", true).expect("replace all search matches"),
-            "X b X"
-        );
-        assert_eq!(
-            apply_search_replace("a b", "a", "X", false).expect("replace one search match"),
-            "X b"
-        );
+    fn search_replace_semantics() -> TestResult {
+        assert_eq!(apply_search_replace("a b a", "a", "X", true)?, "X b X");
+        assert_eq!(apply_search_replace("a b", "a", "X", false)?, "X b");
         // empty `old` -> EmptyAnchor regardless of text/replace_all.
         assert_eq!(
             apply_search_replace("anything", "", "X", false),
@@ -503,15 +505,12 @@ mod tests {
             Err(SearchReplaceError::CountMismatch)
         );
         // non-overlapping count: "aa" in "aaa" occurs once
-        assert_eq!(
-            apply_search_replace("aaa", "aa", "X", false)
-                .expect("replace one non-overlapping match"),
-            "Xa"
-        );
+        assert_eq!(apply_search_replace("aaa", "aa", "X", false)?, "Xa");
+        Ok(())
     }
 
     #[test]
-    fn read_file_result_superset_of_fixture() {
+    fn read_file_result_superset_of_fixture() -> TestResult {
         // The read_file_response fixture is the minimal OCC fast-path dispatch
         // dict (dispatch.py:302-318): success/workspace/content/exists/encoding
         // + timings. Our typed model is the FULL dataclass asdict (doc 04 §6),
@@ -521,8 +520,7 @@ mod tests {
             env!("CARGO_MANIFEST_DIR"),
             "/fixtures/envelopes/read_file_response.json"
         ));
-        let fixture: Value =
-            serde_json::from_str(FIXTURE.trim_end()).expect("parse read_file fixture");
+        let fixture: Value = serde_json::from_str(FIXTURE.trim_end())?;
         let result = ReadFileResult {
             success: true,
             workspace: "ephemeral".to_owned(),
@@ -535,12 +533,16 @@ mod tests {
             exists: true,
             encoding: "utf-8".to_owned(),
         };
-        let actual = serde_json::to_value(&result).expect("serialize read file result");
-        for (key, want) in fixture.as_object().expect("read_file fixture object") {
+        let actual = serde_json::to_value(&result)?;
+        let fixture = fixture
+            .as_object()
+            .ok_or_else(|| std::io::Error::other("read_file fixture must be an object"))?;
+        for (key, want) in fixture {
             if key == "timings" {
                 continue;
             }
             assert_eq!(actual.get(key), Some(want), "key {key} mismatch");
         }
+        Ok(())
     }
 }

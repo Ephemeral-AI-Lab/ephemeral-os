@@ -9,10 +9,10 @@
 //! - `eosd ns-runner`  -> the single-threaded namespace runner in `eos-runner`.
 //! - `eosd ns-holder`  -> the single-threaded namespace holder in `eos-ns-holder`.
 //!
-//! Three real processes, one static binary — this replaces the Python launcher
-//! chain (`daemon/scripts/launch_daemon.sh` spawns `python -m <module>`, and the
-//! isolated-workspace control plane spawns `ns_holder.py` / `setns_exec.py` as
-//! separate interpreters). In Rust they collapse into `eosd <subcommand>`.
+//! Three real processes, one static binary. This is the Rust replacement for
+//! the Python launcher chain: `daemon` owns the RPC server, `ns-runner` owns
+//! fresh/setns tool execution, and `ns-holder` owns the persistent isolated
+//! namespace holder lifecycle.
 //!
 //! `anyhow` is allowed here (binary crate); library crates keep `thiserror`. A
 //! tiny hand-rolled arg match is used instead of `clap` — the surface is three
@@ -30,7 +30,9 @@
 //! - thin-client / daemon connect path: `97` (`CONNECT_FAILED`), `98`
 //!   (`IO_FAILED`) — `eos_protocol::{CONNECT_FAILED, IO_FAILED}`.
 //!
-//! PORT backend/src/sandbox/daemon/scripts/launch_daemon.sh + backend/src/sandbox/host/daemon_client.py — the launcher + thin-client this binary replaces.
+//! PORT `backend/src/sandbox/daemon/scripts/launch_daemon.sh` +
+//! `backend/src/sandbox/host/daemon_client.py` — the launcher + thin-client
+//! this binary replaces.
 #![forbid(unsafe_code)]
 
 use std::io::{Read, Write};
@@ -49,7 +51,7 @@ fn main() -> Result<()> {
     let _argv0 = args.next();
 
     match args.next().as_deref() {
-        Some("--version") | Some("-V") => {
+        Some("--version" | "-V") => {
             println!("eosd {}", env!("CARGO_PKG_VERSION"));
             Ok(())
         }
@@ -73,14 +75,15 @@ fn main() -> Result<()> {
 ///   starts a detached foreground child and returns.
 /// - `eosd daemon --client SOCKET JSON` is the Rust replacement for
 ///   `thin_client.py`, preserving exit codes 97/98.
-// PORT backend/src/sandbox/daemon/scripts/launch_daemon.sh:78-80 — nohup python -m <MODULE> --socket <SOCK> --pid-file <PID>; daemon serve loop entry to be added to eos-daemon
+// PORT backend/src/sandbox/daemon/scripts/launch_daemon.sh:78-80 — daemon
+// foreground/spawn/client entrypoint replacement.
 fn run_daemon(args: std::env::Args) -> Result<()> {
     let config = DaemonCliConfig::parse(args)?;
     if let Some((socket_path, payload)) = config.client {
         return run_daemon_client(&socket_path, &payload);
     }
     if config.spawn {
-        return spawn_daemon(config);
+        return spawn_daemon(&config);
     }
     let server_config = eos_daemon::ServerConfig {
         socket_path: config.socket_path,
@@ -95,33 +98,46 @@ fn run_daemon(args: std::env::Args) -> Result<()> {
         .build()
         .context("failed to build daemon tokio runtime")?;
     runtime.block_on(async move {
-        let (server, occ_queue) = eos_daemon::DaemonServer::new(server_config);
-        server.serve(occ_queue).await
+        let server = eos_daemon::DaemonServer::new(server_config);
+        server.serve().await
     })?;
     Ok(())
 }
 
 fn daemon_worker_threads() -> usize {
     std::thread::available_parallelism()
-        .map(|threads| threads.get().min(MAX_DAEMON_WORKER_THREADS))
-        .unwrap_or(MAX_DAEMON_WORKER_THREADS)
+        .map_or(MAX_DAEMON_WORKER_THREADS, |threads| {
+            threads.get().min(MAX_DAEMON_WORKER_THREADS)
+        })
         .max(1)
 }
 
 /// `eosd ns-runner` — execute one tool call inside a namespace (fresh-ns or
 /// setns), reading the resolved `RunRequest` payload and emitting the
-/// `RunResult` JSON, the way `namespace_entrypoint.py` / `setns_exec.py` run as
-/// child interpreters today.
+/// `RunResult` JSON.
 ///
 /// This is a thin call into `eos-runner`: read the request payload from stdin
 /// or `--request <path>`, construct the overlay mount adapter, call `run`, and
 /// write compact JSON to stdout or `--output <path>`.
-// PORT backend/src/sandbox/overlay/namespace_entrypoint.py:1 + backend/src/sandbox/isolated_workspace/scripts/setns_exec.py:1 — child-interpreter entry; call eos_runner::run once a runner CLI entry exists
+// PORT backend/src/sandbox/overlay/namespace_entrypoint.py:1 +
+// backend/src/sandbox/isolated_workspace/scripts/setns_exec.py:1 — child
+// interpreter replacement.
 fn run_ns_runner(args: std::env::Args) -> Result<()> {
     let config = RunnerCliConfig::parse(args)?;
     let request_json = read_payload(config.request_path.as_ref())?;
     let request: eos_runner::RunRequest =
         serde_json::from_str(&request_json).context("failed to decode ns-runner request JSON")?;
+    if config.remount_overlay {
+        remount_overlay_from_request(&request).context("ns-runner remount overlay failed")?;
+        let result = eos_runner::RunResult {
+            exit_code: 0,
+            tool_result: serde_json::json!({"success": true, "status": "ok"}),
+        };
+        let output =
+            serde_json::to_vec(&result).context("failed to encode ns-runner result JSON")?;
+        write_payload(config.output_path.as_ref(), &output)?;
+        return Ok(());
+    }
     if config.mount_overlay {
         eos_runner::setns::setns_overlay_mount(&request, &OverlayMountPort)
             .context("ns-runner setns overlay mount failed")?;
@@ -208,13 +224,13 @@ impl DaemonCliConfig {
         let mut auth_token = None;
         let mut spawn = false;
         let mut client = None;
-        let mut args = args.peekable();
+        let mut args = args;
         while let Some(arg) = args.next() {
             match arg.as_str() {
                 "--socket" => socket_path = PathBuf::from(required_arg(&mut args, "--socket")?),
                 "--pid-file" => pid_path = PathBuf::from(required_arg(&mut args, "--pid-file")?),
                 "--log-file" => {
-                    log_path = Some(PathBuf::from(required_arg(&mut args, "--log-file")?))
+                    log_path = Some(PathBuf::from(required_arg(&mut args, "--log-file")?));
                 }
                 "--tcp-host" => tcp_host = Some(required_arg(&mut args, "--tcp-host")?),
                 "--tcp-port" => {
@@ -274,7 +290,7 @@ impl DaemonCliConfig {
     }
 }
 
-fn required_arg(args: &mut std::iter::Peekable<std::env::Args>, flag: &str) -> Result<String> {
+fn required_arg(args: &mut impl Iterator<Item = String>, flag: &str) -> Result<String> {
     args.next()
         .ok_or_else(|| anyhow!("{flag} requires a value"))
 }
@@ -317,7 +333,7 @@ fn run_daemon_client(_socket_path: &PathBuf, _payload: &str) -> Result<()> {
     std::process::exit(eos_protocol::CONNECT_FAILED);
 }
 
-fn spawn_daemon(config: DaemonCliConfig) -> Result<()> {
+fn spawn_daemon(config: &DaemonCliConfig) -> Result<()> {
     if daemon_already_running(&config.pid_path, &config.socket_path) {
         return Ok(());
     }
@@ -390,6 +406,7 @@ struct RunnerCliConfig {
     request_path: Option<PathBuf>,
     output_path: Option<PathBuf>,
     mount_overlay: bool,
+    remount_overlay: bool,
 }
 
 impl RunnerCliConfig {
@@ -397,11 +414,13 @@ impl RunnerCliConfig {
         let mut request_path = None;
         let mut output_path = None;
         let mut mount_overlay = false;
+        let mut remount_overlay = false;
         let mut positional = Vec::new();
-        let mut args = args.peekable();
+        let mut args = args;
         while let Some(arg) = args.next() {
             match arg.as_str() {
                 "--mount-overlay" => mount_overlay = true,
+                "--remount-overlay" => remount_overlay = true,
                 "--request" => {
                     request_path = Some(PathBuf::from(
                         args.next()
@@ -416,7 +435,7 @@ impl RunnerCliConfig {
                 }
                 "--help" | "-h" => {
                     println!(
-                        "usage: eosd ns-runner [--mount-overlay] [--request PATH] [--output PATH]"
+                        "usage: eosd ns-runner [--mount-overlay | --remount-overlay] [--request PATH] [--output PATH]"
                     );
                     std::process::exit(0);
                 }
@@ -433,12 +452,43 @@ impl RunnerCliConfig {
                 "ns-runner accepts at most one positional request path"
             ));
         }
+        if mount_overlay && remount_overlay {
+            return Err(anyhow!(
+                "ns-runner accepts only one of --mount-overlay or --remount-overlay"
+            ));
+        }
         Ok(Self {
             request_path,
             output_path,
             mount_overlay,
+            remount_overlay,
         })
     }
+}
+
+fn remount_overlay_from_request(request: &eos_runner::RunRequest) -> Result<()> {
+    let upperdir = request
+        .upperdir
+        .clone()
+        .ok_or_else(|| anyhow!("remount overlay requires upperdir"))?;
+    let workdir = request
+        .workdir
+        .clone()
+        .ok_or_else(|| anyhow!("remount overlay requires workdir"))?;
+    if request.layer_paths.is_empty() {
+        return Err(anyhow!("remount overlay requires layer_paths"));
+    }
+    let handle = eos_overlay::OverlayHandle {
+        upperdir,
+        workdir,
+        layer_paths: request.layer_paths.clone(),
+    };
+    eos_overlay::unmount_overlay(&request.workspace_root.0, true)
+        .context("failed to unmount old workspace overlay")?;
+    let mount = eos_overlay::mount_overlay(&request.workspace_root.0, &handle)
+        .context("failed to mount refreshed workspace overlay")?;
+    std::mem::forget(mount);
+    Ok(())
 }
 
 fn read_payload(path: Option<&PathBuf>) -> Result<String> {

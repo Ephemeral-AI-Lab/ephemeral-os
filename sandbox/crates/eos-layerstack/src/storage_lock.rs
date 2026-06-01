@@ -18,8 +18,8 @@
 //!
 //! Python holds a `threading.RLock` (REENTRANT). The same thread re-acquires it
 //! via `.exclusive()` while it already holds it — e.g. `LayerStack.squash`
-//! takes `_storage_write_guard()` (the RLock) and then `self._lock` (a SECOND
-//! RLock), and `release_lease` is called *inside* `squash`'s `finally` while the
+//! takes `_storage_write_guard()` (the `RLock`) and then `self._lock` (a SECOND
+//! `RLock`), and `release_lease` is called *inside* `squash`'s `finally` while the
 //! write guard is still held. A naive 1:1 port to `std::sync::Mutex`
 //! (NON-reentrant) **DEADLOCKS** on the second same-thread acquire.
 //!
@@ -59,6 +59,11 @@ impl StorageWriterLockLease {
     ///
     /// Fails with [`LayerStackError::StorageRootOwned`] if another process holds
     /// the `flock`. The registry key is the canonicalized absolute path.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`LayerStackError`] when the storage root cannot be created,
+    /// canonicalized/locked, or when the process-local registry is poisoned.
     /// `// PORT backend/src/sandbox/layer_stack/storage_lock.py:59-84 — acquire_storage_writer_lock`
     pub fn acquire(storage_root: &Path) -> Result<Self, LayerStackError> {
         std::fs::create_dir_all(storage_root)?;
@@ -98,6 +103,7 @@ impl StorageWriterLockLease {
                 mutex: Arc::new(ReentrantMutex::default()),
             },
         );
+        drop(registry);
         Ok(Self { key })
     }
 
@@ -105,6 +111,11 @@ impl StorageWriterLockLease {
     ///
     /// See the module-level DEADLOCK TRAP: the returned guard must tolerate
     /// same-thread re-entry (Python `threading.RLock`).
+    ///
+    /// # Errors
+    ///
+    /// Returns [`LayerStackError`] when the registry or reentrant lock state is
+    /// poisoned, or when this lease has already been closed.
     /// `// PORT backend/src/sandbox/layer_stack/storage_lock.py:33-40 — exclusive`
     pub fn exclusive(&self) -> Result<ExclusiveGuard<'_>, LayerStackError> {
         let lock = {
@@ -126,7 +137,7 @@ impl Drop for StorageWriterLockLease {
     fn drop(&mut self) {
         let mut registry = registry()
             .lock()
-            .unwrap_or_else(|poisoned| poisoned.into_inner());
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
         let Some(record) = registry.get_mut(&self.key) else {
             return;
         };
@@ -206,13 +217,14 @@ impl ReentrantMutex {
         let mut state = self
             .state
             .lock()
-            .unwrap_or_else(|poisoned| poisoned.into_inner());
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
         if state.owner != Some(current) {
             return;
         }
         state.depth = state.depth.saturating_sub(1);
         if state.depth == 0 {
             state.owner = None;
+            drop(state);
             self.waiters.notify_one();
         }
     }

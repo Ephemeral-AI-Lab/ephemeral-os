@@ -18,16 +18,21 @@ Priority order when rules conflict: **correctness (byte-identity) > the contract
   (`err-from-impl`), `?` for propagation, lowercase messages with no trailing punctuation
   (`err-lowercase-msg`). No `Box<dyn Error>` in public APIs (`err-custom-type`). `anyhow` only in
   `eosd`/`xtask` binaries, never in library crates.
-- **`todo!("PORT: …")` is the only placeholder.** Every unimplemented body that represents a real
-  future port must be `todo!()` (NOT `unimplemented!()`, NOT a silent stub) and carry a
-  `// PORT backend/src/sandbox/<file>.py:<line> — <what>` anchor immediately above it. A reader must
-  be able to jump from the Rust stub to the exact Python source it will replace.
+- **Deferred ports are explicit, typed, and anchored.** Callable surfaces must return a typed
+  deferred/unsupported error rather than panic. Do not use `unimplemented!()` or silent success
+  stubs. Keep a `// PORT backend/src/sandbox/<file>.py:<line> — <what>` anchor beside each real
+  future port so a reader can jump from the Rust deferred edge to the exact Python source it will
+  replace. Use `todo!("PORT: ...")` only for an unwired future port scaffold, never in an
+  implemented Phase 3/3T/3.5 runtime path.
 - **`#![forbid(unsafe_code)]` in every crate that has no syscalls.** Only `eos-runner`,
   `eos-ns-holder`, and `eos-overlay` may contain `unsafe` (raw mount/ns syscalls). Those crates use
   `#![deny(unsafe_op_in_unsafe_fn)]` and **every** `unsafe` block carries a `// SAFETY: …` comment
-  (`doc-safety-section`, `lint-unsafe-doc`); every `pub unsafe fn` has a `# Safety` doc section.
+  (`doc-safety-section`, `lint-unsafe-doc`); the workspace denies
+  `clippy::undocumented_unsafe_blocks`, and every `pub unsafe fn` has a `# Safety` doc section.
 - **Lints are inherited from the workspace** (`lint-workspace-lints`): each crate's `Cargo.toml` has
-  `[lints] workspace = true`. Do not set per-crate lint levels except a documented `allow` with a reason.
+  `[lints] workspace = true`. For intentional lint exceptions, prefer
+  `#[expect(..., reason = "...")]` so stale suppressions fail the build; use `allow` only when a
+  target/test cfg matrix cannot be represented as a checked expectation.
 - **Module docs (`//!`) state the invariant the crate owns** (`doc-module-inner`). For the subsystem
   crates, the first lines of `lib.rs` must name the architecture invariant being enforced and, where
   relevant, the *build-time* guarantee (see §4).
@@ -116,20 +121,20 @@ absolute / `..` / NUL. Reproduce it as a `parse`-style constructor (`api-parse-d
 - `proj-lib-main-split`: `eosd/src/main.rs` is subcommand dispatch only; all logic in libraries.
 - **The dependency edges ARE the architecture.** The single sharpest invariant —
   *isolated captures writes for audit but NEVER publishes* — is encoded by **`eos-isolated`'s
-  `Cargo.toml` not listing `eos-occ`** (and `eos-plugin` likewise omitting `eos-occ`). The HINGE:
-  the snapshot/lease port lives in **`eos-layerstack`**, so isolated/plugin link layerstack, never
-  occ. Verified edges (get these EXACTLY right):
+  `Cargo.toml` not listing `eos-occ`**. `eos-plugin` is even narrower now:
+  it is a pure contract/PPC crate, while snapshot/overlay/publish/process
+  behavior stays daemon-owned. Verified edges (get these EXACTLY right):
   - `eos-protocol` → (nothing internal)
   - `eos-layerstack` → protocol
-  - `eos-overlay` → layerstack, protocol
-  - `eos-occ` → layerstack, overlay, protocol  (overlay edge is one-way; overlay has no occ dep)
-  - `eos-ephemeral` → overlay, occ, runner, **layerstack** (direct), protocol
-  - `eos-isolated` → overlay, runner, ns-holder, layerstack, protocol  — **NOT occ**
-  - `eos-plugin` → ephemeral, overlay, layerstack, protocol  — **NOT occ**
+  - `eos-overlay` → protocol  (lowerdir inputs are concrete paths; no layerstack dep)
+  - `eos-occ` → overlay, protocol  (daemon injects layerstack transaction/maintenance ports)
+  - `eos-isolated` → overlay  — **NOT occ**; daemon injects layer-stack ports and spawns holder/runner children
+  - `eos-plugin` → protocol  — **NOT occ/overlay/layerstack**
   - `eos-runner` → overlay, protocol  (NOT a leaf — corrects plan §1)
-  - `eos-ns-holder` → protocol  (true near-leaf)
-  - `eos-daemon` → all of the above; implements + injects the inverted port traits; **only tokio crate**
-  - `eosd` → daemon, runner, ns-holder, protocol
+  - `eos-ns-holder` → (nothing internal)  (true near-leaf)
+  - `eos-daemon` → protocol, layerstack, overlay, occ, isolated, plugin, runner; implements + injects the inverted port traits; primary tokio control plane
+  - `eosd` → daemon, runner, ns-holder, overlay, protocol
+  - `xtask` is a workspace package for packaging and is not part of the runtime architecture graph.
 - **Port traits invert the upward edges** (so the graph stays leaf→root). Lower crates *define* a
   trait (e.g. `OccRuntimeServicesPort`, `LayerStackRuntimePort`, `ChangesetProjectionPort`);
   `eos-daemon` implements and injects it. The audit *schema* (pure dataclasses) moves into
@@ -137,22 +142,26 @@ absolute / `..` / NUL. Reproduce it as a `parse`-style constructor (`api-parse-d
 
 ---
 
-## 5. Async (eos-daemon only) — `async-*`
+## 5. Async and syscall boundaries — `async-*`
 
-- `tokio` is justified only in `eos-daemon` (the Python uses `asyncio.start_unix_server` +
-  `start_server` TCP + signal handlers). `eos-runner`/`eos-ns-holder` are **single-threaded,
-  syscall-only, NO tokio** (kernel requires a single-threaded caller for `unshare(CLONE_NEWUSER)` /
-  `setns` into a userns — this is a correctness requirement, not a style choice).
+- `tokio` is justified in `eos-daemon` and `eosd`; `eos-isolated` has Linux-target `tokio`
+  only for rtnetlink/netlink helpers. `eos-runner` and `eos-ns-holder` remain
+  **single-threaded, syscall-only, NO tokio** (kernel requires a single-threaded caller for
+  `unshare(CLONE_NEWUSER)` / `setns` into a userns — this is a correctness requirement, not a
+  style choice).
 - **Never hold a lock across `.await`** (`async-no-lock-await`, `anti-lock-across-await`): clone the
-  data out, drop the guard, then await. The OCC single-writer queue maps to an `mpsc` work queue +
-  one consumer task (`async-mpsc-queue`) with `oneshot` reply (`async-oneshot-response`).
+  data out, drop the guard, then await. The live OCC single-writer path is the
+  dispatcher-owned per-root `OccService` cache; do not reintroduce a second
+  daemon-side publish queue.
 - Cancellation/teardown uses `tokio_util::sync::CancellationToken` (`async-cancellation-token`); the
   cancel path must kill the full process group (Python `start_new_session=True`).
 - **The reentrant-lock trap**: the Python `storage_lock` uses a *reentrant* `threading.RLock`
   re-acquired on the same thread. A naive 1:1 port to `std::sync::Mutex` (non-reentrant) **deadlocks**.
   Restructure the re-entrant sections; reproduce BOTH lease layers (the `flock(LOCK_EX|LOCK_NB)`
-  cross-process lease AND the in-process refcount + shared mutex). This is a `todo!()` skeleton this
-  phase — but the module doc must call out the trap so the future implementer doesn't 1:1-port it.
+  cross-process lease AND the in-process refcount + shared mutex). The current
+  `eos-layerstack::storage_lock` implementation uses a small reentrant guard;
+  keep the module doc warning intact so future edits do not regress to a
+  deadlocking 1:1 `Mutex` port.
 
 ---
 
@@ -195,5 +204,7 @@ absolute / `..` / NUL. Reproduce it as a `parse`-style constructor (`api-parse-d
   strip=true` (`perf-release-profile`) — static-musl artifact.
 - Every crate must `cargo fmt`-clean and `cargo clippy`-clean (workspace lints). On **macOS** only
   the non-Linux `cfg` surface compiles; gate syscall bodies behind `#[cfg(target_os = "linux")]`
-  with a `#[cfg(not(target_os="linux"))]` `todo!()`/`unsupported` arm so `cargo check --workspace`
-  is green on the dev host. Real Linux/musl + runtime checks happen in CI / the dask image.
+  with `#[cfg(not(target_os="linux"))]` typed unsupported or no-op parity arms so
+  `cargo check --workspace` is green on the dev host. Use `todo!("PORT: ...")` only for true
+  deferred ports, never for implemented cfg parity stubs. Real Linux/musl + runtime checks happen
+  in CI / the dask image.
