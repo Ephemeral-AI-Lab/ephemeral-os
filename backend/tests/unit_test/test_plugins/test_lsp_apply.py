@@ -73,6 +73,32 @@ class _OperationOverlay(_Overlay):
         )
 
 
+class _MountedOverlay(_Overlay):
+    def __init__(self, workspace_root: str, *, manifest_key: str = "hash@1") -> None:
+        super().__init__(workspace_root)
+        self.manifest_key = manifest_key
+        self.published_paths: list[str] = []
+        self.published_workspace_root = ""
+
+    def active_manifest_key(self) -> str:
+        return self.manifest_key
+
+    async def publish_mounted_workspace_changes(
+        self,
+        changed_paths: list[str],
+        *,
+        workspace_root: str,
+    ) -> dict[str, Any]:
+        self.published_paths = list(changed_paths)
+        self.published_workspace_root = workspace_root
+        return {
+            "success": True,
+            "published_manifest_version": 4,
+            "files": [{"path": path, "status": "committed"} for path in changed_paths],
+            "timings": {"lsp.apply.ppc_callback_s": 0.01, "occ.apply.total_s": 0.02},
+        }
+
+
 @dataclass(frozen=True)
 class _Caller:
     agent_id: str = "agent"
@@ -236,3 +262,49 @@ async def test_apply_workspace_edit_uses_operation_overlay_upperdir(
     assert result["success"] is True
     assert result["changed_paths"] == ["pkg/mod.py"]
     assert result["manifest_version"] == 3
+
+
+@pytest.mark.asyncio
+async def test_apply_workspace_edit_uses_mounted_workspace_callback(
+    tmp_path: Path,
+) -> None:
+    workspace = tmp_path / "testbed"
+    module = workspace / "pkg" / "mod.py"
+    module.parent.mkdir(parents=True)
+    module.write_text("value = 1\n", encoding="utf-8")
+    overlay = _MountedOverlay(workspace.as_posix())
+
+    result = await apply_workspace_edit(
+        {
+            "changes": {
+                module.as_uri(): [
+                    {
+                        "range": {
+                            "start": {"line": 0, "character": 8},
+                            "end": {"line": 0, "character": 9},
+                        },
+                        "newText": "2",
+                    }
+                ]
+            }
+        },
+        _Ctx(overlay=overlay),
+        workspace_root=workspace.as_posix(),
+        expected_manifest_key="hash@1",
+    )
+
+    assert module.read_text(encoding="utf-8") == "value = 2\n"
+    assert overlay.published_paths == ["pkg/mod.py"]
+    assert overlay.published_workspace_root == workspace.as_posix()
+    assert result == {
+        "success": True,
+        "changed_paths": ["pkg/mod.py"],
+        "manifest_version": 4,
+        "files": [{"path": "pkg/mod.py", "status": "committed"}],
+        "timings": {
+            "command_exec.capture_upperdir_s": 0.0,
+            "command_exec.occ_apply_s": 0.02,
+            "lsp.apply.ppc_callback_s": 0.01,
+            "occ.apply.total_s": 0.02,
+        },
+    }

@@ -102,6 +102,14 @@ async def test_plugin_workspace_snapshot_refresh_strategy(
         in rust_payload["status_after_ensure"]["connected_ppc_routes"]
     )
     assert (
+        "plugin.generic.runtime_bridge_ping"
+        in rust_payload["status_after_ensure"]["connected_ppc_routes"]
+    )
+    assert (
+        "plugin.generic.runtime_bridge_apply"
+        in rust_payload["status_after_ensure"]["connected_ppc_routes"]
+    )
+    assert (
         "plugin.generic.pyright_symbols"
         in rust_payload["status_after_ensure"]["connected_ppc_routes"]
     )
@@ -229,6 +237,7 @@ async def test_plugin_workspace_snapshot_refresh_strategy(
         "harness",
         "restart_harness",
         "adapter_harness",
+        "runtime_bridge",
         "pyright_harness",
         "crash_harness",
         "hang_harness",
@@ -297,6 +306,33 @@ async def test_plugin_workspace_snapshot_refresh_strategy(
     assert rust_payload["apply"]["from_self_managed"] is True
     assert rust_payload["apply"]["callback"]["success"] is True
     assert rust_payload["readback"]["content"] == "from live rust plugin\n"
+    assert rust_payload["runtime_bridge_ping"]["from_runtime_bridge"] is True
+    assert rust_payload["runtime_bridge_ping"]["from_ppc_service_bridge"] is True
+    assert rust_payload["runtime_bridge_ping"]["workspace_mounted"] is True
+    assert (
+        rust_payload["runtime_bridge_ping"]["workspace_read"]["content"]
+        == "from live rust plugin\n"
+    )
+    runtime_bridge_status = _service_status(
+        rust_payload["status_after_runtime_bridge_ping"], "runtime_bridge"
+    )
+    assert runtime_bridge_status["state"] == "ready"
+    assert runtime_bridge_status["refresh_count"] >= 1
+    assert rust_payload["runtime_bridge_apply"]["from_runtime_bridge"] is True
+    assert rust_payload["runtime_bridge_apply"]["from_ppc_service_bridge"] is True
+    assert (
+        rust_payload["runtime_bridge_apply"]["from_mounted_workspace_callback"]
+        is True
+    )
+    assert rust_payload["runtime_bridge_apply"]["workspace_mounted"] is True
+    assert rust_payload["runtime_bridge_apply"]["callback"]["success"] is True
+    assert "live_plugin_runtime_bridge.txt" in rust_payload["runtime_bridge_apply"][
+        "changed_paths"
+    ]
+    assert (
+        rust_payload["runtime_bridge_readback"]["content"]
+        == "from reusable ppc bridge\n"
+    )
     assert rust_payload["apply_multi"]["from_self_managed"] is True
     assert rust_payload["apply_multi"]["callback_count"] == 2
     assert len(rust_payload["apply_multi"]["callbacks"]) == 2

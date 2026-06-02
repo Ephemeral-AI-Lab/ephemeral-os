@@ -29,7 +29,7 @@ use crate::dispatcher::{DispatchContext, PluginOverlayCommand};
 use crate::error::DaemonError;
 use process::{PluginProcessSpec, PluginServiceOverlay};
 
-type SharedPpcClient = Arc<Mutex<ppc_router::PpcClient>>;
+type SharedPpcClient = Arc<ppc_router::PpcClient>;
 
 const WORKSPACE_SNAPSHOT_REFRESH_OP: &str = "daemon.workspace_snapshot_refresh";
 
@@ -311,7 +311,7 @@ fn register_ppc_client_for_tests(
     }
     state.service_ppc_clients.insert(
         service_instance_id,
-        Arc::new(Mutex::new(ppc_router::PpcClient { stream })),
+        Arc::new(ppc_router::PpcClient::new(stream)?),
     );
     drop(state);
     Ok(())
@@ -665,7 +665,7 @@ fn spawn_service_processes(
         started.push(StartedPluginService {
             service_instance_id: spec.service_instance_id(),
             process,
-            client: Arc::new(Mutex::new(client)),
+            client: Arc::new(client),
             snapshot,
         });
     }
@@ -1009,11 +1009,7 @@ fn probe_connected_service_health(
         op: WORKSPACE_SNAPSHOT_REFRESH_OP.to_owned(),
         body: serde_json::to_string(&request).map_err(|err| PluginError::Ppc(err.to_string()))?,
     };
-    let reply = target
-        .client
-        .lock()
-        .map_err(|_| DaemonError::StateLockPoisoned("plugin ppc client"))?
-        .round_trip(&envelope, timeout)?;
+    let reply = target.client.round_trip(&envelope, timeout)?;
     let ack: RefreshAck =
         serde_json::from_str(&reply.body).map_err(|err| PluginError::Ppc(err.to_string()))?;
     ack.require_manifest(&target.manifest_key)?;
@@ -1084,10 +1080,7 @@ fn dispatch_connected_read_only_route(
         op: route.public_op.clone(),
         body: serde_json::to_string(args).map_err(|err| PluginError::Ppc(err.to_string()))?,
     };
-    let reply = client
-        .lock()
-        .map_err(|_| DaemonError::StateLockPoisoned("plugin ppc client"))?
-        .round_trip(&request, timeout);
+    let reply = client.round_trip(&request, timeout);
     let reply = match reply {
         Ok(reply) => reply,
         Err(err) => {
@@ -1185,11 +1178,8 @@ fn refresh_connected_service(
             .unwrap_or(ppc_router::DEFAULT_PLUGIN_PPC_TIMEOUT_MS),
     );
     let refresh_result = {
-        let mut client = client
-            .lock()
-            .map_err(|_| DaemonError::StateLockPoisoned("plugin ppc client"))?;
         send_refresh_sequence(
-            &mut client,
+            client,
             service_key,
             service_instance_id,
             invocation_id,
@@ -1218,7 +1208,7 @@ fn refresh_connected_service(
 }
 
 fn send_refresh_sequence(
-    client: &mut ppc_router::PpcClient,
+    client: &ppc_router::PpcClient,
     service_key: &PluginServiceKey,
     service_instance_id: &str,
     invocation_id: &str,
@@ -1307,7 +1297,7 @@ fn service_process_pid(service_instance_id: &str) -> Result<u32, DaemonError> {
 }
 
 fn send_refresh_request(
-    client: &mut ppc_router::PpcClient,
+    client: &ppc_router::PpcClient,
     invocation_id: &str,
     index: usize,
     request: &RefreshRequest,
@@ -1451,12 +1441,9 @@ fn dispatch_connected_self_managed_route(
         body: serde_json::to_string(args).map_err(|err| PluginError::Ppc(err.to_string()))?,
     };
     let expected_root = PathBuf::from(layer_stack_root);
-    let reply = client
-        .lock()
-        .map_err(|_| DaemonError::StateLockPoisoned("plugin ppc client"))?
-        .round_trip_with_callbacks(&request, timeout, |callback| {
-            occ_callbacks::handle_callback_for_root(&expected_root, callback)
-        });
+    let reply = client.round_trip_with_callbacks(&request, timeout, move |callback| {
+        occ_callbacks::handle_callback_for_root(&expected_root, callback)
+    });
     let reply = match reply {
         Ok(reply) => reply,
         Err(err) => {

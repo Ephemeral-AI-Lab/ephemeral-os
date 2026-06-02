@@ -6,7 +6,8 @@ callbacks including repeated callback frames before a final reply, one-shot
 WRITE_ALLOWED overlay execution, and live generic Rust
 plugin coverage landed. Long-lived services now start in a daemon-owned private
 overlay namespace on Linux and stale remount strategies now perform daemon-owned
-in-place namespace remount; a generic package-adapter harness is live, while
+in-place namespace remount; a generic package-adapter harness and the reusable
+bundled Python PPC service bridge are live, while
 Pyright read-only `documentSymbol`/`workspace/symbol`/`completion`/
 `completionItem/resolve`/`publishDiagnostics`/`codeAction`/`signatureHelp`/
 `hover`/`typeDefinition`/`declaration`/`callHierarchy` incoming/outgoing/
@@ -19,7 +20,7 @@ routed through PPC as structured unsupported responses based on the server's
 advertised capability boundary, while a generic positive LSP formatting
 and execute-command provider path is covered separately through the daemon OCC
 callback. Live status health
-probes, failed-health isolation,
+probes, failed-health isolation plus same-service failed-health recovery,
 service-crash fail-closed plus same-service crash recovery, hung-service
 timeout fail-closed probes, timeout next-dispatch recovery, and next-dispatch
 service recovery after a PPC/process failure are
@@ -314,6 +315,14 @@ Landed:
   next dispatch and restores the hung-service routes, verifies
   `plugin.generic.health_fail_ping` is removed when its service rejects the
   daemon health probe while unrelated services stay connected, verifies
+  `plugin.generic.health_fail_recover_ping` restarts that same failed-health
+  service on the next dispatch and restores the health-fail service routes,
+  verifies the bundled `sandbox.ephemeral_workspace.plugin.ppc_service` bridge
+  can launch an installed `plugins.catalog.generic.runtime.server` module,
+  serve `plugin.generic.runtime_bridge_ping`, and publish
+  `plugin.generic.runtime_bridge_apply` through its mounted-workspace OCC
+  callback,
+  verifies
   `plugin.generic.recover_probe` first fails closed by dropping only the
   recover route and then succeeds on the next dispatch after the daemon restarts
   the previously ready service, verifies active isolated workspace mode blocks
@@ -324,15 +333,16 @@ Landed:
   refresh-strategy benchmark in the same integrated sandbox fixture.
 - Live verification passed:
   `EOS_SANDBOX_PROVIDER=docker EOS_LIVE_E2E_IMAGE=xingyaoww/sweb.eval.x86_64.dask_s_dask-10042:latest EOS_PLUGIN_REFRESH_SAMPLES=1 EOS_PLUGIN_REFRESH_AUTO_SQUASH_WRITES=104 EOS_RUST_PLUGIN_BENCH_TIMEOUT_S=600 uv run pytest -q -x -rs --tb=short --durations=10 backend/tests/live_e2e_test/sandbox/plugin/test_plugin_refresh_strategies.py`
-  (`1 passed in 47.42s` on the latest rerun). The Rust plugin artifact report
-  `.omc/results/rust-daemon-plugin-generic-20260602T025157Z-90949.json` used
+  (`1 passed in 49.31s` on the latest rerun). The Rust plugin artifact report
+  `.omc/results/rust-daemon-plugin-generic-20260602T033206Z-57542.json` used
   `eosd-linux-amd64` SHA
-  `94a9fa39fdb8744f2f2dd31a6b34393870eb3a5e15d0b7e06add2f60a9e896ea` and
+  `dfb9334466e2a32365e944e74e3a809acdb68d39808ba7d595e6e61d52dfc960` and
   proved registered routes `plugin.generic.adapter_query`,
   `plugin.generic.apply`, `plugin.generic.apply_multi`,
   `plugin.generic.crash_probe`, `plugin.generic.crash_recover_ping`,
   `plugin.generic.hang_probe`, `plugin.generic.hang_recover_ping`,
   `plugin.generic.health_fail_ping`,
+  `plugin.generic.health_fail_recover_ping`,
   `plugin.generic.lsp_apply_code_action`,
   `plugin.generic.lsp_execute_command`,
   `plugin.generic.lsp_format_document`,
@@ -354,7 +364,8 @@ Landed:
   `plugin.generic.pyright_signature_help`, `plugin.generic.pyright_symbols`,
   `plugin.generic.pyright_type_definition`,
   `plugin.generic.pyright_workspace_symbols`, `plugin.generic.recover_probe`,
-  and `plugin.generic.restart_ping`;
+  `plugin.generic.restart_ping`, `plugin.generic.runtime_bridge_apply`, and
+  `plugin.generic.runtime_bridge_ping`;
   connected routes
   `plugin.generic.adapter_query`/`plugin.generic.apply`/
   `plugin.generic.apply_multi`/
@@ -363,6 +374,7 @@ Landed:
   `plugin.generic.hang_probe`/
   `plugin.generic.hang_recover_ping`/
   `plugin.generic.health_fail_ping`/
+  `plugin.generic.health_fail_recover_ping`/
   `plugin.generic.lsp_apply_code_action`/
   `plugin.generic.lsp_execute_command`/
   `plugin.generic.lsp_format_document`/
@@ -385,20 +397,40 @@ Landed:
   `plugin.generic.pyright_type_definition`/
   `plugin.generic.pyright_workspace_symbols`/
   `plugin.generic.recover_probe`/
-  `plugin.generic.restart_ping`;
+  `plugin.generic.restart_ping`/
+  `plugin.generic.runtime_bridge_apply`/
+  `plugin.generic.runtime_bridge_ping`;
   `status_after_health_probe.service_health` proved successful
   `Health { manifest_key }` acknowledgements for `harness`, `restart_harness`,
-  `adapter_harness`, `pyright_harness`, `crash_harness`, `hang_harness`, and
-  `recover_harness` on retained manifest key
+  `adapter_harness`, `runtime_bridge`, `pyright_harness`, `crash_harness`,
+  `hang_harness`, and `recover_harness` on retained manifest key
   `1:f071e2d096b352b67daeb0f2e2f6dc503335246a98e209fa9f199d06314b5cb5`,
   and failed-health isolation where `health_fail_harness` rejected the same
   probe with `intentional health failure`, was marked `state=stopped`, and
-  had `plugin.generic.health_fail_ping` removed from
+  had `plugin.generic.health_fail_ping` and
+  `plugin.generic.health_fail_recover_ping` removed from
   `connected_ppc_routes` while unrelated routes stayed connected;
+  same-service failed-health recovery evidence where
+  `plugin.generic.health_fail_recover_ping` returned `success=true`,
+  `from_health_recovered_service=true`, `from_ppc=true`,
+  `workspace_mounted=true`, and `echo == "after-health-fail-recover"`,
+  restored `plugin.generic.health_fail_ping` and
+  `plugin.generic.health_fail_recover_ping` to connected routes, and left
+  `health_fail_harness.state == "ready"` with `restart_count == 1` and
+  `last_error == null`;
   initial service `state=ready` on manifest key
   `1:f071e2d096b352b67daeb0f2e2f6dc503335246a98e209fa9f199d06314b5cb5`;
   callback file status `committed`; self-managed readback
-  `from live rust plugin\n`; repeated self-managed callback evidence where
+  `from live rust plugin\n`; reusable PPC bridge evidence where
+  `plugin.generic.runtime_bridge_ping` returned
+  `from_ppc_service_bridge=true`, `from_runtime_bridge=true`,
+  `workspace_mounted=true`, and read `live_plugin_result.txt` as
+  `from live rust plugin\n` after daemon refresh, while
+  `runtime_bridge.refresh_count == 1`; `plugin.generic.runtime_bridge_apply`
+  returned `from_mounted_workspace_callback=true`, published
+  `live_plugin_runtime_bridge.txt` through `daemon.occ.apply_changeset` with
+  callback `success=true` at published manifest version `3`, and LayerStack
+  readback returned `from reusable ppc bridge\n`; repeated self-managed callback evidence where
   `plugin.generic.apply_multi.callback_count == 2`, callback index `0`
   committed `live_plugin_multi_a.txt` at published manifest version `3`,
   callback index `1` committed `live_plugin_multi_b.txt` at published manifest
@@ -583,30 +615,30 @@ Landed:
   routes, `recover_harness.state == "stopped"`, second
   `plugin.generic.recover_probe` returning `from_recovered_service=true` with
   `workspace_mounted=true`, restored connected route, and
-  `recover_harness.restart_count == 1`; final manifest version `22`; final
-  active service leases before cleanup `7`; post-cleanup active leases `0`; and
+  `recover_harness.restart_count == 1`; final manifest version `23`; final
+  active service leases before cleanup `9`; post-cleanup active leases `0`; and
   zero post-cleanup orphan layers and missing layers; isolated-workspace gate
   evidence where the daemon enabled `/eos/plugin/iws-scratch`, entered isolated
   mode for the same `AGENT_ID`, rejected both `api.plugin.status` and
   `plugin.generic.ping` with `forbidden_in_isolated_workspace`, exited
   successfully, released the isolated lease, and reported
   `status_after_exit.open=false`; teardown evidence showed
-  eight plugin harness processes before cleanup, zero after cleanup, empty
+  ten plugin service processes before cleanup, zero after cleanup, empty
   `connected_ppc_routes`, empty `connected_ppc_services`, and empty
   `running_service_processes` after cleanup. The paired
   refresh-strategy report
-  `.omc/results/plugin-refresh-strategies-20260602T025157Z-90949.json` still
-  recommends `workspace_snapshot_refresh`; refresh p95 was `6.275 ms` versus
-  `commit_to_workspace` p95 `4.593 ms`.
+  `.omc/results/plugin-refresh-strategies-20260602T033206Z-57542.json` still
+  recommends `workspace_snapshot_refresh`; refresh p95 was `6.087 ms` versus
+  `commit_to_workspace` p95 `4.567 ms`.
 
 Still open:
 
 - True operation-level out-of-order multiplexing if needed by a future
   bidirectional protocol,
   broader crash-recovery matrix beyond the now-covered health probe,
-  failed-health isolation, closed PPC stream fail-closed, same-service crash
-  recovery, PPC timeout fail-closed, timeout restart recovery, and
-  next-dispatch restart paths,
+  failed-health isolation, same-service failed-health recovery, closed PPC
+  stream fail-closed, same-service crash recovery, PPC timeout fail-closed,
+  timeout restart recovery, and next-dispatch restart paths,
   and broader AV-10 LSP parity beyond the representative Pyright
   `documentSymbol` + `workspace/symbol` + `completion` +
   `completionItem/resolve` + `publishDiagnostics` + `codeAction` +

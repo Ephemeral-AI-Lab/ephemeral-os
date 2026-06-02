@@ -44,6 +44,17 @@ if TYPE_CHECKING:
     from test_runner.scenarios.base import Scenario
 
 
+_DELEGATED_WORKFLOW_POLL_ATTEMPTS = 90
+_DELEGATED_WORKFLOW_POLL_INTERVAL_S = 1.0
+_TERMINAL_WORKFLOW_STATUSES = {
+    "closed",
+    "completed",
+    "succeeded",
+    "failed",
+    "cancelled",
+}
+
+
 def normalize_result(blocks: list[ToolResultBlock]) -> ToolResult:
     """Normalize the loop's trailing ``ToolResultBlock``(s) into the
     ``ToolResult`` shape the imperative probe bodies inspect (``.output`` etc.)."""
@@ -189,7 +200,7 @@ async def _root_script(scenario: "Scenario", ctx: ScenarioContext) -> TurnScript
                 "workflow_id": workflow_id,
                 "workflow_task_id": workflow_task_id or None,
             }
-            for _index in range(50):
+            for _index in range(_DELEGATED_WORKFLOW_POLL_ATTEMPTS):
                 blocks = yield Turn(calls=(ToolCall("check_workflow_status", check_args),))
                 status_result = normalize_result(blocks)
                 if status_result.is_error:
@@ -201,18 +212,12 @@ async def _root_script(scenario: "Scenario", ctx: ScenarioContext) -> TurnScript
                 except (TypeError, ValueError):
                     status_payload = {}
                 workflow_status = str(status_payload.get("status") or "")
-                if workflow_status in {
-                    "closed",
-                    "completed",
-                    "succeeded",
-                    "failed",
-                    "cancelled",
-                }:
+                if workflow_status in _TERMINAL_WORKFLOW_STATUSES:
                     if workflow_status in {"failed", "cancelled"}:
                         status = "failed"
                         outcome = f"Root delegated workflow {workflow_status}."
                     break
-                await asyncio.sleep(0.05)
+                await asyncio.sleep(_DELEGATED_WORKFLOW_POLL_INTERVAL_S)
             else:
                 status = "failed"
                 outcome = "Root delegated workflow did not finish before polling budget."
@@ -287,7 +292,7 @@ async def _executor_script(
                     "workflow_id": workflow_id,
                     "workflow_task_id": workflow_task_id or None,
                 }
-                for _index in range(50):
+                for _index in range(_DELEGATED_WORKFLOW_POLL_ATTEMPTS):
                     blocks = yield Turn(calls=(ToolCall("check_workflow_status", check_args),))
                     status_result = normalize_result(blocks)
                     if status_result.is_error:
@@ -299,18 +304,12 @@ async def _executor_script(
                     except (TypeError, ValueError):
                         status_payload = {}
                     workflow_status = str(status_payload.get("status") or "")
-                    if workflow_status in {
-                        "closed",
-                        "completed",
-                        "succeeded",
-                        "failed",
-                        "cancelled",
-                    }:
+                    if workflow_status in _TERMINAL_WORKFLOW_STATUSES:
                         if workflow_status in {"failed", "cancelled"}:
                             status = "failed"
                             outcome = f"Delegated workflow {workflow_status}."
                         break
-                    await asyncio.sleep(0.05)
+                    await asyncio.sleep(_DELEGATED_WORKFLOW_POLL_INTERVAL_S)
                 else:
                     status = "failed"
                     outcome = "Delegated workflow did not finish before polling budget."

@@ -482,7 +482,7 @@ fn accept_ppc_client(
         match listener.accept() {
             Ok((stream, _addr)) => {
                 stream.set_nonblocking(false)?;
-                return Ok(PpcClient { stream });
+                return PpcClient::new(stream);
             }
             Err(err) if err.kind() == ErrorKind::WouldBlock => {}
             Err(err) => return Err(err.into()),

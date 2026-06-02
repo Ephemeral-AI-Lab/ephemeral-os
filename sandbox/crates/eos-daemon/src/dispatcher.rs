@@ -880,12 +880,14 @@ pub(crate) fn run_shell_overlay(args: &Value, total_start: Instant) -> Result<Va
     };
     let binding = require_workspace_binding(&spec.layer_stack_root)?;
     let mut stack = LayerStack::open(spec.layer_stack_root.clone())?;
+    let acquire_start = Instant::now();
     let lease =
         stack.acquire_snapshot(&format!("overlay:{}:{}", spec.agent_id, spec.invocation_id))?;
+    let lease_acquire_s = acquire_start.elapsed().as_secs_f64();
     let run_result = run_shell_overlay_once(&spec, &binding, &lease);
     let _ = stack.release_lease(&lease.lease_id);
     let shell = run_result?;
-    shell_overlay_response(&spec.layer_stack_root, shell, total_start)
+    shell_overlay_response(&spec.layer_stack_root, shell, total_start, lease_acquire_s)
 }
 
 fn run_shell_overlay_once(
@@ -945,15 +947,24 @@ fn shell_overlay_response(
     root: &Path,
     shell: ShellRunOutcome,
     total_start: Instant,
+    lease_acquire_s: f64,
 ) -> Result<Value, DaemonError> {
     let manifest = LayerStack::open(root.to_path_buf())?.read_active_manifest()?;
     let mut timings = resource_timings(&manifest, shell.path_kinds.len());
     merge_runner_timings(&mut timings, &shell.runner);
     timings.insert(
+        "layer_stack.acquire_snapshot.total_s".to_owned(),
+        json!(lease_acquire_s),
+    );
+    timings.insert(
         "command_exec.capture_upperdir_s".to_owned(),
         json!(shell.capture_s),
     );
     timings.insert("command_exec.occ_apply_s".to_owned(), json!(shell.occ_s));
+    timings.insert(
+        "command_exec.total_s".to_owned(),
+        json!(total_start.elapsed().as_secs_f64()),
+    );
     insert_occ_route_timings(
         &mut timings,
         shell.route_metrics,
@@ -1020,14 +1031,21 @@ pub(crate) fn run_plugin_overlay_command(
     }
     let binding = require_workspace_binding(&spec.layer_stack_root)?;
     let mut stack = LayerStack::open(spec.layer_stack_root.clone())?;
+    let acquire_start = Instant::now();
     let lease = stack.acquire_snapshot(&format!(
         "plugin-overlay:{}:{}",
         spec.agent_id, spec.invocation_id
     ))?;
+    let lease_acquire_s = acquire_start.elapsed().as_secs_f64();
     let run_result = run_plugin_overlay_once(spec, args, &binding, &lease);
     let _ = stack.release_lease(&lease.lease_id);
     let outcome = run_result?;
-    plugin_overlay_response(&spec.layer_stack_root, outcome, total_start)
+    plugin_overlay_response(
+        &spec.layer_stack_root,
+        outcome,
+        total_start,
+        lease_acquire_s,
+    )
 }
 
 fn run_plugin_overlay_once(
@@ -1075,15 +1093,24 @@ fn plugin_overlay_response(
     root: &Path,
     outcome: PluginOverlayRunOutcome,
     total_start: Instant,
+    lease_acquire_s: f64,
 ) -> Result<Value, DaemonError> {
     let manifest = LayerStack::open(root.to_path_buf())?.read_active_manifest()?;
     let mut timings = resource_timings(&manifest, outcome.path_kinds.len());
     merge_runner_timings(&mut timings, &outcome.runner);
     timings.insert(
+        "layer_stack.acquire_snapshot.total_s".to_owned(),
+        json!(lease_acquire_s),
+    );
+    timings.insert(
         "command_exec.capture_upperdir_s".to_owned(),
         json!(outcome.capture_s),
     );
     timings.insert("command_exec.occ_apply_s".to_owned(), json!(outcome.occ_s));
+    timings.insert(
+        "command_exec.total_s".to_owned(),
+        json!(total_start.elapsed().as_secs_f64()),
+    );
     insert_occ_route_timings(
         &mut timings,
         outcome.route_metrics,
@@ -1305,7 +1332,9 @@ fn run_overlay_read_tool(args: &Value, verb: &str) -> Result<Value, DaemonError>
     let binding = require_workspace_binding(&root)?;
 
     let mut stack = LayerStack::open(root.clone())?;
+    let acquire_start = Instant::now();
     let lease = stack.acquire_snapshot(&format!("overlay:{agent_id}:{invocation_id}"))?;
+    let lease_acquire_s = acquire_start.elapsed().as_secs_f64();
     let run_result: Result<RunResult, DaemonError> = (|| {
         let run_root = overlay_writable_root()
             .map_err(|err| overlay_daemon_error("overlay writable root", &err))?
@@ -1345,6 +1374,10 @@ fn run_overlay_read_tool(args: &Value, verb: &str) -> Result<Value, DaemonError>
     let manifest = LayerStack::open(root)?.read_active_manifest()?;
     let mut timings = resource_timings(&manifest, 0);
     merge_runner_timings(&mut timings, &runner);
+    timings.insert(
+        "layer_stack.acquire_snapshot.total_s".to_owned(),
+        json!(lease_acquire_s),
+    );
     let mut response = runner.tool_result;
     timings
         .entry("command_exec.capture_upperdir_s".to_owned())
@@ -1705,6 +1738,17 @@ fn committed_changeset_result(
         "occ.maintenance.squash_applied".to_owned(),
         phases.squash_applied,
     );
+    if phases.squash_applied > 0.0 {
+        timings.insert(
+            "layer_stack.auto_squash.total_s".to_owned(),
+            phases.maintenance_s,
+        );
+        timings.insert(
+            "layer_stack.auto_squash.max_depth".to_owned(),
+            usize_to_f64_saturating(AUTO_SQUASH_MAX_DEPTH),
+        );
+        timings.insert("layer_stack.auto_squash.applied".to_owned(), 1.0);
+    }
     ChangesetResult {
         files: validations
             .into_iter()
@@ -2463,6 +2507,7 @@ fn commit_timings(
     total_s: f64,
 ) -> BTreeMap<String, f64> {
     let mut timings = BTreeMap::new();
+    timings.insert("occ.apply.total_s".to_owned(), total_s);
     timings.insert("occ.commit.total_s".to_owned(), total_s);
     timings.insert("occ.commit.validate_groups_s".to_owned(), validate_s);
     timings.insert("occ.commit.publish_layer_s".to_owned(), publish_s);
@@ -2899,7 +2944,51 @@ pub(crate) fn resource_timings(
     ] {
         timings.insert(key.to_owned(), json!(0.0));
     }
+    insert_cgroup_resource_timings(&mut timings);
     timings
+}
+
+fn insert_cgroup_resource_timings(timings: &mut serde_json::Map<String, Value>) {
+    if let Ok(raw) = std::fs::read_to_string("/sys/fs/cgroup/cpu.stat") {
+        for line in raw.lines() {
+            let mut parts = line.split_whitespace();
+            let Some(name) = parts.next() else {
+                continue;
+            };
+            let Some(value) = parts.next().and_then(|raw| raw.parse::<f64>().ok()) else {
+                continue;
+            };
+            timings.insert(format!("resource.cgroup.cpu_{name}"), json!(value));
+        }
+    }
+
+    let Ok(raw) = std::fs::read_to_string("/sys/fs/cgroup/io.stat") else {
+        return;
+    };
+    let mut totals = BTreeMap::<&str, f64>::from([
+        ("rbytes", 0.0),
+        ("wbytes", 0.0),
+        ("rios", 0.0),
+        ("wios", 0.0),
+        ("dbytes", 0.0),
+        ("dios", 0.0),
+    ]);
+    for line in raw.lines() {
+        for token in line.split_whitespace().skip(1) {
+            let Some((name, raw_value)) = token.split_once('=') else {
+                continue;
+            };
+            let Some(total) = totals.get_mut(name) else {
+                continue;
+            };
+            if let Ok(value) = raw_value.parse::<f64>() {
+                *total += value;
+            }
+        }
+    }
+    for (name, value) in totals {
+        timings.insert(format!("resource.cgroup.io_{name}"), json!(value));
+    }
 }
 
 fn mutation_source(verb: &str) -> &'static str {
@@ -3066,6 +3155,7 @@ fn emit_dispatch_audit(request: &Request, response: &Value, dispatch_s: f64) {
     );
 
     emit_occ_audit(request, response);
+    emit_layer_stack_maintenance_audit(request, response);
     emit_workspace_lifecycle_audit(request, response, total_ms);
     emit_background_audit(request, response, total_ms);
 }
@@ -3144,6 +3234,22 @@ fn emit_workspace_lifecycle_audit(request: &Request, response: &Value, total_ms:
     if !uses_overlay_or_lease(&request.op, response) {
         return;
     }
+    if let Some(lease_wait_ms) = timing_ms(response, "layer_stack.acquire_snapshot.total_s") {
+        crate::audit_buffer::safe_emit(
+            build_event(
+                "layer_stack.lease_acquired",
+                "layer_stack",
+                json!({
+                    "operation_id": request.invocation_id,
+                    "owner_request_id": request.invocation_id,
+                    "manifest_version": timing_i64(response, "resource.layer_stack.manifest_depth"),
+                    "layer_count": timing_i64(response, "resource.layer_stack.manifest_path_count"),
+                    "lease_wait_ms": lease_wait_ms,
+                }),
+            ),
+            Lane::Normal,
+        );
+    }
     crate::audit_buffer::safe_emit(
         build_event(
             "layer_stack.lease_released",
@@ -3178,6 +3284,29 @@ fn emit_workspace_lifecycle_audit(request: &Request, response: &Value, total_ms:
             }),
         ),
         Lane::Normal,
+    );
+}
+
+fn emit_layer_stack_maintenance_audit(request: &Request, response: &Value) {
+    if timing_f64(response, "layer_stack.auto_squash.applied").unwrap_or(0.0) <= 0.0 {
+        return;
+    }
+    let input_layers = timing_i64(response, "resource.layer_stack.manifest_path_count");
+    let result_layers = timing_i64(response, "resource.layer_stack.manifest_depth");
+    crate::audit_buffer::safe_emit(
+        build_event(
+            "layer_stack.squash_completed",
+            "layer_stack",
+            json!({
+                "operation_id": request.invocation_id,
+                "owner_request_id": request.invocation_id,
+                "squash_trigger_reason": "auto_squash",
+                "squash_input_layers": input_layers,
+                "squash_result_layers": result_layers,
+                "total_ms": timing_ms(response, "layer_stack.auto_squash.total_s"),
+            }),
+        ),
+        Lane::Critical,
     );
 }
 

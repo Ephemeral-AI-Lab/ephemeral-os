@@ -56,8 +56,12 @@ then proves a vanilla plugin service can:
   the same service.
 * recover a previously ready read-only service on the next dispatch after a
   PPC/process failure.
+* launch the reusable bundled Python PPC service bridge for an installed
+  plugin module and publish mounted workspace changes through its generic OCC
+  callback.
 
-All experiment files live under ``/eos/plugin/*``.
+Workspace experiment files live under ``/eos/plugin/*``; the reusable bridge
+plugin module is installed under the daemon runtime bundle catalog.
 """
 
 from __future__ import annotations
@@ -97,6 +101,7 @@ from bench_sandbox_e2e import (  # noqa: E402
 )
 
 PLUGIN_ROOT = "/eos/plugin"
+BUNDLE_REMOTE_DIR = "/eos/daemon"
 LAYER_STACK_ROOT = f"{PLUGIN_ROOT}/rust-layer-stack"
 WORKSPACE_ROOT = f"{PLUGIN_ROOT}/rust-workspace"
 ISOLATED_SCRATCH_ROOT = f"{PLUGIN_ROOT}/iws-scratch"
@@ -106,9 +111,13 @@ RECOVER_MARKER = f"{PLUGIN_ROOT}/recover_probe_once.flag"
 ONESHOT_SCRIPT = f"{PLUGIN_ROOT}/rust_oneshot_worker.py"
 VANILLA_PACKAGE_SCRIPT = f"{PLUGIN_ROOT}/rust_vanilla_package.py"
 PYRIGHT_SETUP_SCRIPT = f"{PLUGIN_ROOT}/rust_pyright_setup.sh"
+RUNTIME_BRIDGE_PLUGIN_ROOT = f"{BUNDLE_REMOTE_DIR}/plugins/catalog/generic"
+RUNTIME_BRIDGE_SERVER = f"{RUNTIME_BRIDGE_PLUGIN_ROOT}/runtime/server.py"
 AGENT_ID = "rust-daemon-plugin-bench"
 TARGET_REL = "live_plugin_result.txt"
 TARGET_CONTENT = "from live rust plugin\n"
+RUNTIME_BRIDGE_TARGET_REL = "live_plugin_runtime_bridge.txt"
+RUNTIME_BRIDGE_CONTENT = "from reusable ppc bridge\n"
 MULTI_TARGET_A_REL = "live_plugin_multi_a.txt"
 MULTI_TARGET_A_CONTENT = "from live rust plugin multi a\n"
 MULTI_TARGET_B_REL = "live_plugin_multi_b.txt"
@@ -3107,6 +3116,78 @@ if __name__ == "__main__":
     raise SystemExit(main())
 '''
 
+RUNTIME_BRIDGE_SERVER_SOURCE = r'''
+from __future__ import annotations
+
+import os
+from pathlib import Path
+from typing import Any
+
+from sandbox.ephemeral_workspace.plugin.op_registry import register_plugin_op
+from sandbox.shared.models import Intent
+
+
+def _workspace_read(workspace_root: str, rel_path: str) -> dict[str, object]:
+    if not rel_path:
+        return {"requested": False}
+    target = Path(workspace_root) / rel_path
+    try:
+        return {
+            "requested": True,
+            "exists": True,
+            "path": rel_path,
+            "content": target.read_text(encoding="utf-8"),
+        }
+    except FileNotFoundError:
+        return {"requested": True, "exists": False, "path": rel_path}
+
+
+@register_plugin_op("generic", "runtime_bridge_ping", intent=Intent.READ_ONLY)
+def runtime_bridge_ping(args: dict[str, Any], ctx: Any) -> dict[str, Any]:
+    workspace_root = str(ctx.overlay.workspace_root)
+    return {
+        "success": True,
+        "from_runtime_bridge": True,
+        "from_ppc_service_bridge": True,
+        "workspace_mounted": os.environ.get("EOS_PLUGIN_WORKSPACE_MOUNTED") == "1",
+        "workspace_root": workspace_root,
+        "manifest_key": ctx.overlay.active_manifest_key(),
+        "projection_manifest_key": ctx.projection.active_manifest_key(),
+        "workspace_read": _workspace_read(workspace_root, str(args.get("read_path") or "")),
+    }
+
+
+@register_plugin_op(
+    "generic",
+    "runtime_bridge_apply",
+    intent=Intent.WRITE_ALLOWED,
+    auto_workspace_overlay=False,
+)
+async def runtime_bridge_apply(args: dict[str, Any], ctx: Any) -> dict[str, Any]:
+    rel_path = str(args.get("path") or "")
+    if not rel_path:
+        return {"success": False, "error": "missing path"}
+    workspace_root = str(ctx.overlay.workspace_root)
+    target = Path(workspace_root) / rel_path
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(str(args.get("content") or ""), encoding="utf-8")
+    callback = await ctx.overlay.publish_mounted_workspace_changes(
+        [rel_path],
+        workspace_root=workspace_root,
+    )
+    return {
+        "success": bool(callback.get("success")),
+        "from_runtime_bridge": True,
+        "from_ppc_service_bridge": True,
+        "from_mounted_workspace_callback": True,
+        "workspace_mounted": os.environ.get("EOS_PLUGIN_WORKSPACE_MOUNTED") == "1",
+        "workspace_root": workspace_root,
+        "manifest_key": ctx.overlay.active_manifest_key(),
+        "changed_paths": [rel_path],
+        "callback": callback,
+    }
+'''
+
 PYRIGHT_SETUP_SOURCE = r'''#!/usr/bin/env bash
 set -eu
 
@@ -3275,8 +3356,10 @@ async def run(args: argparse.Namespace) -> dict[str, Any]:
                 "oneshot_script": ONESHOT_SCRIPT,
                 "vanilla_package_script": VANILLA_PACKAGE_SCRIPT,
                 "pyright_setup_script": PYRIGHT_SETUP_SCRIPT,
+                "runtime_bridge_server": RUNTIME_BRIDGE_SERVER,
                 "recover_marker": RECOVER_MARKER,
                 "target": TARGET_REL,
+                "runtime_bridge_target": RUNTIME_BRIDGE_TARGET_REL,
                 "multi_targets": [MULTI_TARGET_A_REL, MULTI_TARGET_B_REL],
                 "oneshot_target": ONESHOT_TARGET_REL,
                 "pyright_target": PYRIGHT_TARGET_REL,
@@ -3424,6 +3507,41 @@ async def run(args: argparse.Namespace) -> dict[str, Any]:
                 bench.sandbox_id,
                 "api.v1.read_file",
                 {"agent_id": AGENT_ID, "path": TARGET_REL},
+                layer_stack_root=LAYER_STACK_ROOT,
+                timeout=30,
+            )
+            report["runtime_bridge_ping"] = await daemon_client.call_daemon_api(
+                bench.sandbox_id,
+                "plugin.generic.runtime_bridge_ping",
+                {
+                    "agent_id": AGENT_ID,
+                    "read_path": TARGET_REL,
+                },
+                layer_stack_root=LAYER_STACK_ROOT,
+                timeout=30,
+            )
+            report["status_after_runtime_bridge_ping"] = await daemon_client.call_daemon_api(
+                bench.sandbox_id,
+                "api.plugin.status",
+                {"agent_id": AGENT_ID},
+                layer_stack_root=LAYER_STACK_ROOT,
+                timeout=30,
+            )
+            report["runtime_bridge_apply"] = await daemon_client.call_daemon_api(
+                bench.sandbox_id,
+                "plugin.generic.runtime_bridge_apply",
+                {
+                    "agent_id": AGENT_ID,
+                    "path": RUNTIME_BRIDGE_TARGET_REL,
+                    "content": RUNTIME_BRIDGE_CONTENT,
+                },
+                layer_stack_root=LAYER_STACK_ROOT,
+                timeout=30,
+            )
+            report["runtime_bridge_readback"] = await daemon_client.call_daemon_api(
+                bench.sandbox_id,
+                "api.v1.read_file",
+                {"agent_id": AGENT_ID, "path": RUNTIME_BRIDGE_TARGET_REL},
                 layer_stack_root=LAYER_STACK_ROOT,
                 timeout=30,
             )
@@ -4471,6 +4589,16 @@ async def run(args: argparse.Namespace) -> dict[str, Any]:
             await bench.close(keep=args.keep_container)
 
 
+def ppc_service_command() -> list[str]:
+    launcher = (
+        "import sys; "
+        f"sys.path.insert(0, {BUNDLE_REMOTE_DIR!r}); "
+        "from sandbox.ephemeral_workspace.plugin.ppc_service import main; "
+        "raise SystemExit(main())"
+    )
+    return ["python3", "-c", launcher]
+
+
 def plugin_manifest() -> dict[str, Any]:
     return {
         "plugin_id": "generic",
@@ -4499,6 +4627,14 @@ def plugin_manifest() -> dict[str, Any]:
                 "service_mode": "workspace_snapshot_refresh",
                 "refresh_strategy": "remount_workspace",
                 "command": ["python3", HARNESS_SCRIPT],
+                "ppc_protocol_version": 1,
+            },
+            {
+                "service_id": "runtime_bridge",
+                "service_profile_digest": "generic-runtime-bridge-profile-v1",
+                "service_mode": "workspace_snapshot_refresh",
+                "refresh_strategy": "remount_workspace_and_notify",
+                "command": ppc_service_command(),
                 "ppc_protocol_version": 1,
             },
             {
@@ -4568,6 +4704,19 @@ def plugin_manifest() -> dict[str, Any]:
                 "intent": "read_only",
                 "service_id": "adapter_harness",
                 "timeout_ms": 5000,
+            },
+            {
+                "op_name": "runtime_bridge_ping",
+                "intent": "read_only",
+                "service_id": "runtime_bridge",
+                "timeout_ms": 10000,
+            },
+            {
+                "op_name": "runtime_bridge_apply",
+                "intent": "write_allowed",
+                "auto_workspace_overlay": False,
+                "service_id": "runtime_bridge",
+                "timeout_ms": 10000,
             },
             {
                 "op_name": "pyright_symbols",
@@ -4782,11 +4931,13 @@ async def install_harness(bench: DockerBench) -> dict[str, Any]:
     harness_payload = HARNESS_SOURCE.encode("utf-8")
     oneshot_payload = ONESHOT_SOURCE.encode("utf-8")
     vanilla_package_payload = VANILLA_PACKAGE_SOURCE.encode("utf-8")
+    runtime_bridge_payload = RUNTIME_BRIDGE_SERVER_SOURCE.encode("utf-8")
     pyright_setup_payload = PYRIGHT_SETUP_SOURCE.encode("utf-8")
     staging_dir = f"/tmp/eos-plugin-harness-{uuid.uuid4().hex}"
     staging_file = f"{staging_dir}/rust_ppc_harness.py"
     staging_oneshot = f"{staging_dir}/rust_oneshot_worker.py"
     staging_vanilla_package = f"{staging_dir}/rust_vanilla_package.py"
+    staging_runtime_bridge = f"{staging_dir}/runtime_bridge_server.py"
     staging_pyright_setup = f"{staging_dir}/rust_pyright_setup.sh"
     mkdir = await bench.exec(f"mkdir -p {shlex.quote(staging_dir)}", timeout=30)
     if getattr(mkdir, "exit_code", 1) != 0:
@@ -4799,6 +4950,7 @@ async def install_harness(bench: DockerBench) -> dict[str, Any]:
                 "harness": len(harness_payload),
                 "oneshot": len(oneshot_payload),
                 "vanilla_package": len(vanilla_package_payload),
+                "runtime_bridge": len(runtime_bridge_payload),
                 "pyright_setup": len(pyright_setup_payload),
             },
             "mkdir": result_block(mkdir),
@@ -4826,6 +4978,15 @@ async def install_harness(bench: DockerBench) -> dict[str, Any]:
     await bench.adapter.put_archive(
         bench.sandbox_id,
         tar_stream=tar_file_at_path(
+            "runtime_bridge_server.py",
+            runtime_bridge_payload,
+            mode=0o644,
+        ),
+        dest_dir=staging_dir,
+    )
+    await bench.adapter.put_archive(
+        bench.sandbox_id,
+        tar_stream=tar_file_at_path(
             "rust_pyright_setup.sh",
             pyright_setup_payload,
             mode=0o755,
@@ -4833,14 +4994,17 @@ async def install_harness(bench: DockerBench) -> dict[str, Any]:
         dest_dir=staging_dir,
     )
     finalize = await bench.exec(
-        f"mkdir -p {shlex.quote(PLUGIN_ROOT)} && "
+        f"mkdir -p {shlex.quote(PLUGIN_ROOT)} "
+        f"{shlex.quote(f'{RUNTIME_BRIDGE_PLUGIN_ROOT}/runtime')} && "
         f"cat {shlex.quote(staging_file)} > {shlex.quote(HARNESS_SCRIPT)} && "
         f"cat {shlex.quote(staging_oneshot)} > {shlex.quote(ONESHOT_SCRIPT)} && "
         f"cat {shlex.quote(staging_vanilla_package)} > {shlex.quote(VANILLA_PACKAGE_SCRIPT)} && "
+        f"cat {shlex.quote(staging_runtime_bridge)} > {shlex.quote(RUNTIME_BRIDGE_SERVER)} && "
         f"cat {shlex.quote(staging_pyright_setup)} > {shlex.quote(PYRIGHT_SETUP_SCRIPT)} && "
         f"chmod 755 {shlex.quote(HARNESS_SCRIPT)} && "
         f"chmod 755 {shlex.quote(ONESHOT_SCRIPT)} && "
         f"chmod 755 {shlex.quote(VANILLA_PACKAGE_SCRIPT)} && "
+        f"chmod 644 {shlex.quote(RUNTIME_BRIDGE_SERVER)} && "
         f"chmod 755 {shlex.quote(PYRIGHT_SETUP_SCRIPT)} && "
         f"rm -rf {shlex.quote(staging_dir)}",
         timeout=30,
@@ -4849,10 +5013,12 @@ async def install_harness(bench: DockerBench) -> dict[str, Any]:
         f"test -x {shlex.quote(HARNESS_SCRIPT)} && "
         f"test -x {shlex.quote(ONESHOT_SCRIPT)} && "
         f"test -x {shlex.quote(VANILLA_PACKAGE_SCRIPT)} && "
+        f"test -f {shlex.quote(RUNTIME_BRIDGE_SERVER)} && "
         f"test -x {shlex.quote(PYRIGHT_SETUP_SCRIPT)} && "
         f"wc -c {shlex.quote(HARNESS_SCRIPT)} "
         f"{shlex.quote(ONESHOT_SCRIPT)} "
         f"{shlex.quote(VANILLA_PACKAGE_SCRIPT)} "
+        f"{shlex.quote(RUNTIME_BRIDGE_SERVER)} "
         f"{shlex.quote(PYRIGHT_SETUP_SCRIPT)}",
         timeout=30,
     )
@@ -4865,6 +5031,7 @@ async def install_harness(bench: DockerBench) -> dict[str, Any]:
             "harness": len(harness_payload),
             "oneshot": len(oneshot_payload),
             "vanilla_package": len(vanilla_package_payload),
+            "runtime_bridge": len(runtime_bridge_payload),
             "pyright_setup": len(pyright_setup_payload),
         },
         "mkdir": result_block(mkdir),
@@ -4887,6 +5054,7 @@ async def cleanup_experiment_files(bench: DockerBench) -> None:
         f"{ONESHOT_SCRIPT} "
         f"{VANILLA_PACKAGE_SCRIPT} "
         f"{PYRIGHT_SETUP_SCRIPT} "
+        f"{RUNTIME_BRIDGE_PLUGIN_ROOT} "
         f"{RECOVER_MARKER} "
         f"{HARNESS_LOG}",
         timeout=30,
@@ -4895,9 +5063,11 @@ async def cleanup_experiment_files(bench: DockerBench) -> None:
 
 async def cleanup_processes(bench: DockerBench) -> None:
     await bench.exec(
-        f"pkill -f {HARNESS_SCRIPT} >/dev/null 2>&1 || true; "
-        f"pkill -f {VANILLA_PACKAGE_SCRIPT} >/dev/null 2>&1 || true; "
-        "pkill -f pyright-langserver >/dev/null 2>&1 || true",
+        "pkill -f '[r]ust_ppc_harness.py' >/dev/null 2>&1 || true; "
+        "pkill -f '[r]ust_vanilla_package.py' >/dev/null 2>&1 || true; "
+        "pkill -f '[s]andbox.ephemeral_workspace.plugin.ppc_service' "
+        ">/dev/null 2>&1 || true; "
+        "pkill -f '[p]yright-langserver' >/dev/null 2>&1 || true",
         timeout=15,
     )
 
@@ -5042,13 +5212,18 @@ async def read_harness_log(bench: DockerBench) -> list[dict[str, Any]]:
 
 async def process_snapshot(bench: DockerBench) -> dict[str, Any]:
     result = await bench.exec(
-        f"pgrep -af {HARNESS_SCRIPT} || true",
+        "pgrep -af '[r]ust_ppc_harness.py|"
+        "[s]andbox.ephemeral_workspace.plugin.ppc_service' || true",
         timeout=15,
     )
     lines = [
         line
         for line in str(getattr(result, "stdout", "") or "").splitlines()
-        if f"python3 {HARNESS_SCRIPT}" in line or line.endswith(HARNESS_SCRIPT)
+        if (
+            f"python3 {HARNESS_SCRIPT}" in line
+            or line.endswith(HARNESS_SCRIPT)
+            or "sandbox.ephemeral_workspace.plugin.ppc_service" in line
+        )
     ]
     return {"count": len(lines), "lines": lines}
 
@@ -5061,6 +5236,23 @@ def gate_pass(report: dict[str, Any]) -> bool:
         apply_multi.get("callbacks", []) if isinstance(apply_multi, dict) else []
     )
     readback = report.get("readback", {})
+    runtime_bridge_ping = report.get("runtime_bridge_ping", {})
+    runtime_bridge_ping_read = (
+        runtime_bridge_ping.get("workspace_read", {})
+        if isinstance(runtime_bridge_ping, dict)
+        else {}
+    )
+    runtime_bridge_status = service_status(
+        report.get("status_after_runtime_bridge_ping", {}),
+        "runtime_bridge",
+    )
+    runtime_bridge_apply = report.get("runtime_bridge_apply", {})
+    runtime_bridge_apply_callback = (
+        runtime_bridge_apply.get("callback", {})
+        if isinstance(runtime_bridge_apply, dict)
+        else {}
+    )
+    runtime_bridge_readback = report.get("runtime_bridge_readback", {})
     multi_readback_a = report.get("multi_readback_a", {})
     multi_readback_b = report.get("multi_readback_b", {})
     shell_publish = report.get("shell_publish", {})
@@ -5117,6 +5309,7 @@ def gate_pass(report: dict[str, Any]) -> bool:
         "harness",
         "restart_harness",
         "adapter_harness",
+        "runtime_bridge",
         "pyright_harness",
         "crash_harness",
         "hang_harness",
@@ -5329,6 +5522,10 @@ def gate_pass(report: dict[str, Any]) -> bool:
         in report.get("status_after_ensure", {}).get("connected_ppc_routes", [])
         and "plugin.generic.adapter_query"
         in report.get("status_after_ensure", {}).get("connected_ppc_routes", [])
+        and "plugin.generic.runtime_bridge_ping"
+        in report.get("status_after_ensure", {}).get("connected_ppc_routes", [])
+        and "plugin.generic.runtime_bridge_apply"
+        in report.get("status_after_ensure", {}).get("connected_ppc_routes", [])
         and "plugin.generic.pyright_symbols"
         in report.get("status_after_ensure", {}).get("connected_ppc_routes", [])
         and "plugin.generic.pyright_workspace_symbols"
@@ -5431,6 +5628,21 @@ def gate_pass(report: dict[str, Any]) -> bool:
         and callback.get("success") is True
         and readback.get("exists") is True
         and readback.get("content") == TARGET_CONTENT
+        and runtime_bridge_ping.get("from_runtime_bridge") is True
+        and runtime_bridge_ping.get("from_ppc_service_bridge") is True
+        and runtime_bridge_ping.get("workspace_mounted") is True
+        and runtime_bridge_ping_read.get("content") == TARGET_CONTENT
+        and runtime_bridge_status.get("state") == "ready"
+        and int(runtime_bridge_status.get("refresh_count", 0)) >= 1
+        and runtime_bridge_apply.get("from_runtime_bridge") is True
+        and runtime_bridge_apply.get("from_ppc_service_bridge") is True
+        and runtime_bridge_apply.get("from_mounted_workspace_callback") is True
+        and runtime_bridge_apply.get("workspace_mounted") is True
+        and runtime_bridge_apply_callback.get("success") is True
+        and RUNTIME_BRIDGE_TARGET_REL
+        in runtime_bridge_apply.get("changed_paths", [])
+        and runtime_bridge_readback.get("exists") is True
+        and runtime_bridge_readback.get("content") == RUNTIME_BRIDGE_CONTENT
         and apply_multi.get("from_self_managed") is True
         and apply_multi.get("callback_count") == 2
         and len(multi_callbacks) == 2
@@ -5876,6 +6088,10 @@ def markdown_report(report: dict[str, Any]) -> str:
         "recover_harness",
     )
     recover_status = service_status(report.get("status_after_recover", {}), "recover_harness")
+    runtime_bridge_status = service_status(
+        report.get("status_after_runtime_bridge_ping", {}),
+        "runtime_bridge",
+    )
     health_fail_recover_status = service_status(
         report.get("status_after_health_fail_recover", {}),
         "health_fail_harness",
@@ -5897,6 +6113,10 @@ def markdown_report(report: dict[str, Any]) -> str:
         f"- concurrent_ping: `{report.get('concurrent_ping')}`",
         f"- apply_from_self_managed: `{report.get('apply', {}).get('from_self_managed')}`",
         f"- readback_exists: `{report.get('readback', {}).get('exists')}`",
+        f"- runtime_bridge_ping: `{report.get('runtime_bridge_ping')}`",
+        f"- runtime_bridge_apply: `{report.get('runtime_bridge_apply')}`",
+        f"- runtime_bridge_readback: `{report.get('runtime_bridge_readback', {}).get('content')}`",
+        f"- runtime_bridge_refresh_count: `{runtime_bridge_status.get('refresh_count')}`",
         f"- apply_multi_callback_count: `{report.get('apply_multi', {}).get('callback_count')}`",
         f"- apply_multi_callbacks: `{report.get('apply_multi', {}).get('callbacks')}`",
         f"- multi_readback_a: `{report.get('multi_readback_a', {}).get('content')}`",

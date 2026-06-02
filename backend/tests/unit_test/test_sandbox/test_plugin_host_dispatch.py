@@ -186,7 +186,6 @@ def test_call_plugin_forwards_caller_audit_fields(
         "agent_id": "",
         "run_id": "",
         "agent_run_id": "",
-        "task_id": "",
         "task_id": "task-1",
         "attempt_id": "attempt-1",
         "workflow_id": "goal-1",

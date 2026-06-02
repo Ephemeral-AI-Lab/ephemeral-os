@@ -1,16 +1,21 @@
 //! Daemon-side PPC request/reply transport.
 //!
-//! This is the synchronous boundary the daemon uses once a plugin service has
-//! connected its `AF_UNIX` socket. The normal path sends exactly one
-//! [`eos_plugin::PpcEnvelope`] and waits for the matching reply envelope. The
-//! self-managed plugin path can additionally service plugin-originated callback
-//! requests on the same socket before the final operation reply arrives.
+//! This is the boundary the daemon uses once a plugin service has connected its
+//! `AF_UNIX` socket. Daemon callers use a synchronous API, but the connection
+//! itself can carry many in-flight operation requests. A dedicated reader thread
+//! routes reply frames by `message_id`; self-managed plugin operations can also
+//! service plugin-originated callback requests on the same socket before their
+//! final operation reply arrives.
 
+use std::collections::HashMap;
 use std::io::{Read, Write};
 use std::os::unix::net::UnixStream;
+use std::sync::{mpsc, Arc, Mutex};
+use std::thread;
 use std::time::Duration;
 
 use eos_plugin::{PluginError, PpcDirection, PpcEnvelope};
+use serde_json::json;
 
 use crate::error::DaemonError;
 
@@ -18,81 +23,363 @@ pub(super) const DEFAULT_PLUGIN_PPC_TIMEOUT_MS: u64 = 5_000;
 
 const MAX_PPC_FRAME_BYTES: usize = eos_protocol::MAX_REQUEST_BYTES;
 
-#[derive(Debug)]
+type CallbackHandler = Arc<dyn Fn(PpcEnvelope) -> Result<PpcEnvelope, DaemonError> + Send + Sync>;
+type PpcResult = Result<PpcEnvelope, DaemonError>;
+
+struct PendingRequest {
+    reply_tx: mpsc::Sender<PpcResult>,
+    callback_handler: Option<CallbackHandler>,
+}
+
 pub(super) struct PpcClient {
-    pub(super) stream: UnixStream,
+    writer: Arc<Mutex<UnixStream>>,
+    pending: Arc<Mutex<HashMap<String, PendingRequest>>>,
+}
+
+impl std::fmt::Debug for PpcClient {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter.debug_struct("PpcClient").finish_non_exhaustive()
+    }
 }
 
 impl PpcClient {
+    pub(super) fn new(stream: UnixStream) -> Result<Self, DaemonError> {
+        let reader_stream = stream.try_clone()?;
+        let writer = Arc::new(Mutex::new(stream));
+        let pending = Arc::new(Mutex::new(HashMap::new()));
+        spawn_reader_thread(
+            reader_stream,
+            Arc::clone(&writer),
+            Arc::clone(&pending),
+        )?;
+        Ok(Self { writer, pending })
+    }
+
     pub(super) fn round_trip(
-        &mut self,
+        &self,
         request: &PpcEnvelope,
         timeout: Duration,
     ) -> Result<PpcEnvelope, DaemonError> {
-        let request_id = request.message_id.clone();
-        self.round_trip_with_callbacks(request, timeout, move |callback| {
-            Err(PluginError::Ppc(format!(
-                "unexpected plugin PPC callback {} while waiting for reply {}",
-                callback.op, request_id
-            ))
-            .into())
-        })
+        self.send_request(request, timeout, None)
     }
 
     pub(super) fn round_trip_with_callbacks<F>(
-        &mut self,
+        &self,
         request: &PpcEnvelope,
         timeout: Duration,
-        mut handle_callback: F,
+        handle_callback: F,
     ) -> Result<PpcEnvelope, DaemonError>
     where
-        F: FnMut(PpcEnvelope) -> Result<PpcEnvelope, DaemonError>,
+        F: FnMut(PpcEnvelope) -> Result<PpcEnvelope, DaemonError> + Send + 'static,
     {
+        let callback = Arc::new(Mutex::new(handle_callback));
+        let handler: CallbackHandler = Arc::new(move |frame| {
+            callback
+                .lock()
+                .map_err(|_| DaemonError::StateLockPoisoned("plugin ppc callback handler"))?(
+                frame,
+            )
+        });
+        self.send_request(request, timeout, Some(handler))
+    }
+
+    fn send_request(
+        &self,
+        request: &PpcEnvelope,
+        timeout: Duration,
+        callback_handler: Option<CallbackHandler>,
+    ) -> Result<PpcEnvelope, DaemonError> {
         if request.direction != PpcDirection::Request {
             return Err(PluginError::Ppc(
                 "daemon PPC round trip requires a request envelope".to_owned(),
             )
             .into());
         }
-        self.stream.set_write_timeout(Some(timeout))?;
-        self.stream.set_read_timeout(Some(timeout))?;
-        self.stream.write_all(&request.encode()?)?;
-        self.stream.flush()?;
+        let message_id = request.message_id.clone();
+        let (reply_tx, reply_rx) = mpsc::channel();
+        {
+            let mut pending = self
+                .pending
+                .lock()
+                .map_err(|_| DaemonError::StateLockPoisoned("plugin ppc pending"))?;
+            if pending.contains_key(&message_id) {
+                return Err(PluginError::Ppc(format!(
+                    "duplicate in-flight plugin PPC message_id {message_id}"
+                ))
+                .into());
+            }
+            pending.insert(
+                message_id.clone(),
+                PendingRequest {
+                    reply_tx,
+                    callback_handler,
+                },
+            );
+        }
 
-        loop {
-            let frame = PpcEnvelope::decode(&read_frame(&mut self.stream)?)?;
-            match frame.direction {
-                PpcDirection::Reply => {
-                    if frame.message_id != request.message_id {
-                        return Err(PluginError::Ppc(format!(
-                            "plugin PPC reply message_id {} did not match request {}",
-                            frame.message_id, request.message_id
-                        ))
-                        .into());
-                    }
-                    return Ok(frame);
-                }
-                PpcDirection::Request => {
-                    let callback_message_id = frame.message_id.clone();
-                    let callback_reply = handle_callback(frame)?;
-                    if callback_reply.direction != PpcDirection::Reply {
-                        return Err(PluginError::Ppc(
-                            "plugin PPC callback response must use reply direction".to_owned(),
-                        )
-                        .into());
-                    }
-                    if callback_reply.message_id != callback_message_id {
-                        return Err(PluginError::Ppc(format!(
-                            "plugin PPC callback response message_id {} did not match callback {}",
-                            callback_reply.message_id, callback_message_id
-                        ))
-                        .into());
-                    }
-                    self.stream.write_all(&callback_reply.encode()?)?;
-                    self.stream.flush()?;
-                }
+        let write_result = self.write_frame(request, timeout);
+        if let Err(err) = write_result {
+            let _ = self.remove_pending(&message_id);
+            return Err(err);
+        }
+
+        match reply_rx.recv_timeout(timeout) {
+            Ok(result) => result,
+            Err(mpsc::RecvTimeoutError::Timeout) => {
+                let _ = self.remove_pending(&message_id);
+                Err(PluginError::Ppc(format!(
+                    "timed out waiting for plugin PPC reply {message_id}"
+                ))
+                .into())
+            }
+            Err(mpsc::RecvTimeoutError::Disconnected) => Err(PluginError::Ppc(format!(
+                "plugin PPC reply channel closed for {message_id}"
+            ))
+            .into()),
+        }
+    }
+
+    fn write_frame(&self, frame: &PpcEnvelope, timeout: Duration) -> Result<(), DaemonError> {
+        let mut writer = self
+            .writer
+            .lock()
+            .map_err(|_| DaemonError::StateLockPoisoned("plugin ppc writer"))?;
+        writer.set_write_timeout(Some(timeout))?;
+        writer.write_all(&frame.encode()?)?;
+        writer.flush()?;
+        Ok(())
+    }
+
+    fn remove_pending(&self, message_id: &str) -> Result<(), DaemonError> {
+        self.pending
+            .lock()
+            .map_err(|_| DaemonError::StateLockPoisoned("plugin ppc pending"))?
+            .remove(message_id);
+        Ok(())
+    }
+}
+
+fn spawn_reader_thread(
+    mut stream: UnixStream,
+    writer: Arc<Mutex<UnixStream>>,
+    pending: Arc<Mutex<HashMap<String, PendingRequest>>>,
+) -> Result<(), DaemonError> {
+    thread::Builder::new()
+        .name("eos-plugin-ppc-reader".to_owned())
+        .spawn(move || reader_loop(&mut stream, &writer, &pending))?;
+    Ok(())
+}
+
+fn reader_loop(
+    stream: &mut UnixStream,
+    writer: &Arc<Mutex<UnixStream>>,
+    pending: &Arc<Mutex<HashMap<String, PendingRequest>>>,
+) {
+    loop {
+        let frame = match read_frame(stream).and_then(|bytes| {
+            PpcEnvelope::decode(&bytes).map_err(DaemonError::from)
+        }) {
+            Ok(frame) => frame,
+            Err(err) => {
+                fail_all_pending(pending, err.to_string());
+                return;
+            }
+        };
+
+        match frame.direction {
+            PpcDirection::Reply => route_reply(frame, pending),
+            PpcDirection::Request => handle_callback(frame, writer, pending),
+        }
+    }
+}
+
+fn route_reply(frame: PpcEnvelope, pending: &Arc<Mutex<HashMap<String, PendingRequest>>>) {
+    let pending_request = match pending.lock() {
+        Ok(mut pending) => pending.remove(&frame.message_id),
+        Err(_) => return,
+    };
+    if let Some(pending_request) = pending_request {
+        let _ = pending_request.reply_tx.send(Ok(frame));
+        return;
+    }
+    fail_all_pending(
+        pending,
+        format!(
+            "plugin PPC reply message_id {} did not match any in-flight request",
+            frame.message_id
+        ),
+    );
+}
+
+fn handle_callback(
+    frame: PpcEnvelope,
+    writer: &Arc<Mutex<UnixStream>>,
+    pending: &Arc<Mutex<HashMap<String, PendingRequest>>>,
+) {
+    let callback_message_id = frame.message_id.clone();
+    let (owner_id, handler) = match callback_handler_for_frame(&frame, pending) {
+        Ok(found) => found,
+        Err(message) => {
+            let _ = write_callback_error(writer, &callback_message_id, &message);
+            return;
+        }
+    };
+    match handler(frame) {
+        Ok(reply) => {
+            if reply.direction != PpcDirection::Reply {
+                fail_pending(
+                    pending,
+                    &owner_id,
+                    "plugin PPC callback response must use reply direction".to_owned(),
+                );
+                return;
+            }
+            if reply.message_id != callback_message_id {
+                fail_pending(
+                    pending,
+                    &owner_id,
+                    format!(
+                        "plugin PPC callback response message_id {} did not match callback {}",
+                        reply.message_id, callback_message_id
+                    ),
+                );
+                return;
+            }
+            if let Err(err) = write_frame_locked(writer, &reply) {
+                fail_pending(pending, &owner_id, err.to_string());
             }
         }
+        Err(err) => {
+            let message = err.to_string();
+            let _ = write_callback_error(writer, &callback_message_id, &message);
+            fail_pending(pending, &owner_id, message);
+        }
+    }
+}
+
+fn callback_handler_for_frame(
+    frame: &PpcEnvelope,
+    pending: &Arc<Mutex<HashMap<String, PendingRequest>>>,
+) -> Result<(String, CallbackHandler), String> {
+    let pending = pending
+        .lock()
+        .map_err(|_| "plugin ppc pending lock poisoned".to_owned())?;
+    if let Some(parent_id) = callback_parent_message_id(frame) {
+        let pending_request = pending.get(&parent_id).ok_or_else(|| {
+            format!(
+                "plugin PPC callback {} referenced unknown parent_message_id {}",
+                frame.message_id, parent_id
+            )
+        })?;
+        let handler = pending_request.callback_handler.as_ref().ok_or_else(|| {
+            format!(
+                "plugin PPC callback {} referenced read-only request {}",
+                frame.message_id, parent_id
+            )
+        })?;
+        return Ok((parent_id, Arc::clone(handler)));
+    }
+
+    if let Some((prefix, _)) = frame.message_id.split_once(':') {
+        if let Some(pending_request) = pending.get(prefix) {
+            if let Some(handler) = &pending_request.callback_handler {
+                return Ok((prefix.to_owned(), Arc::clone(handler)));
+            }
+        }
+    }
+
+    let callback_ready = pending
+        .iter()
+        .filter_map(|(message_id, request)| {
+            request
+                .callback_handler
+                .as_ref()
+                .map(|handler| (message_id.clone(), Arc::clone(handler)))
+        })
+        .collect::<Vec<_>>();
+    match callback_ready.as_slice() {
+        [(message_id, handler)] => Ok((message_id.clone(), Arc::clone(handler))),
+        [] => Err(format!(
+            "unexpected plugin PPC callback {} while no callback-enabled operation is in flight",
+            frame.op
+        )),
+        _ => Err(format!(
+            "ambiguous plugin PPC callback {} without parent_message_id while {} callback-enabled operations are in flight",
+            frame.op,
+            callback_ready.len()
+        )),
+    }
+}
+
+fn callback_parent_message_id(frame: &PpcEnvelope) -> Option<String> {
+    let body = serde_json::from_str::<serde_json::Value>(&frame.body).ok()?;
+    body.get("parent_message_id")
+        .and_then(serde_json::Value::as_str)
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(str::to_owned)
+}
+
+fn write_callback_error(
+    writer: &Arc<Mutex<UnixStream>>,
+    callback_message_id: &str,
+    message: &str,
+) -> Result<(), DaemonError> {
+    let body = json!({
+        "success": false,
+        "error": {
+            "kind": "ppc_callback_error",
+            "message": message,
+        },
+    });
+    write_frame_locked(
+        writer,
+        &PpcEnvelope {
+            message_id: callback_message_id.to_owned(),
+            direction: PpcDirection::Reply,
+            op: "reply".to_owned(),
+            body: body.to_string(),
+        },
+    )
+}
+
+fn write_frame_locked(
+    writer: &Arc<Mutex<UnixStream>>,
+    frame: &PpcEnvelope,
+) -> Result<(), DaemonError> {
+    let mut writer = writer
+        .lock()
+        .map_err(|_| DaemonError::StateLockPoisoned("plugin ppc writer"))?;
+    writer.write_all(&frame.encode()?)?;
+    writer.flush()?;
+    Ok(())
+}
+
+fn fail_pending(
+    pending: &Arc<Mutex<HashMap<String, PendingRequest>>>,
+    message_id: &str,
+    message: String,
+) {
+    let pending_request = match pending.lock() {
+        Ok(mut pending) => pending.remove(message_id),
+        Err(_) => return,
+    };
+    if let Some(pending_request) = pending_request {
+        let _ = pending_request
+            .reply_tx
+            .send(Err(PluginError::Ppc(message).into()));
+    }
+}
+
+fn fail_all_pending(pending: &Arc<Mutex<HashMap<String, PendingRequest>>>, message: String) {
+    let pending_requests = match pending.lock() {
+        Ok(mut pending) => pending.drain().map(|(_, request)| request).collect::<Vec<_>>(),
+        Err(_) => return,
+    };
+    for pending_request in pending_requests {
+        let _ = pending_request
+            .reply_tx
+            .send(Err(PluginError::Ppc(message.clone()).into()));
     }
 }
 
@@ -141,9 +428,7 @@ mod tests {
             Ok(())
         });
 
-        let mut client = PpcClient {
-            stream: client_stream,
-        };
+        let client = PpcClient::new(client_stream)?;
         let reply = client.round_trip(
             &PpcEnvelope {
                 message_id: "msg-1".to_owned(),
@@ -175,9 +460,7 @@ mod tests {
             Ok(())
         });
 
-        let mut client = PpcClient {
-            stream: client_stream,
-        };
+        let client = PpcClient::new(client_stream)?;
         let Err(err) = client.round_trip(
             &PpcEnvelope {
                 message_id: "msg-1".to_owned(),
@@ -190,7 +473,79 @@ mod tests {
             return Err("mismatched reply unexpectedly succeeded".into());
         };
 
-        assert!(err.to_string().contains("did not match request msg-1"));
+        assert!(err
+            .to_string()
+            .contains("did not match any in-flight request"));
+        join_server(server)?;
+        Ok(())
+    }
+
+    #[test]
+    fn ppc_client_matches_out_of_order_replies_by_message_id() -> TestResult {
+        let (client_stream, mut server_stream) = UnixStream::pair()?;
+        let server = thread::spawn(move || -> TestResult {
+            let first = PpcEnvelope::decode(&read_frame(&mut server_stream)?)?;
+            let second = PpcEnvelope::decode(&read_frame(&mut server_stream)?)?;
+            assert_eq!(first.message_id, "msg-1");
+            assert_eq!(second.message_id, "msg-2");
+
+            server_stream.write_all(
+                &PpcEnvelope {
+                    message_id: second.message_id,
+                    direction: PpcDirection::Reply,
+                    op: "reply".to_owned(),
+                    body: r#"{"success":true,"seq":2}"#.to_owned(),
+                }
+                .encode()?,
+            )?;
+            server_stream.write_all(
+                &PpcEnvelope {
+                    message_id: first.message_id,
+                    direction: PpcDirection::Reply,
+                    op: "reply".to_owned(),
+                    body: r#"{"success":true,"seq":1}"#.to_owned(),
+                }
+                .encode()?,
+            )?;
+            Ok(())
+        });
+
+        let client = Arc::new(PpcClient::new(client_stream)?);
+        let first_client = Arc::clone(&client);
+        let first = thread::spawn(move || {
+            first_client.round_trip(
+                &PpcEnvelope {
+                    message_id: "msg-1".to_owned(),
+                    direction: PpcDirection::Request,
+                    op: "plugin.echo.ping".to_owned(),
+                    body: r#"{"seq":1}"#.to_owned(),
+                },
+                Duration::from_secs(1),
+            )
+        });
+        let second_client = Arc::clone(&client);
+        let second = thread::spawn(move || {
+            second_client.round_trip(
+                &PpcEnvelope {
+                    message_id: "msg-2".to_owned(),
+                    direction: PpcDirection::Request,
+                    op: "plugin.echo.ping".to_owned(),
+                    body: r#"{"seq":2}"#.to_owned(),
+                },
+                Duration::from_secs(1),
+            )
+        });
+
+        let first_reply = first
+            .join()
+            .unwrap_or_else(|_| Err(std::io::Error::other("first thread panicked").into()))?;
+        let second_reply = second
+            .join()
+            .unwrap_or_else(|_| Err(std::io::Error::other("second thread panicked").into()))?;
+        assert_eq!(first_reply.message_id, "msg-1");
+        assert_eq!(first_reply.body, r#"{"success":true,"seq":1}"#);
+        assert_eq!(second_reply.message_id, "msg-2");
+        assert_eq!(second_reply.body, r#"{"success":true,"seq":2}"#);
         join_server(server)?;
         Ok(())
     }
@@ -225,9 +580,7 @@ mod tests {
             Ok(())
         });
 
-        let mut client = PpcClient {
-            stream: client_stream,
-        };
+        let client = PpcClient::new(client_stream)?;
         let reply = client.round_trip_with_callbacks(
             &PpcEnvelope {
                 message_id: "msg-1".to_owned(),
@@ -290,9 +643,7 @@ mod tests {
         });
 
         let mut callback_count = 0_usize;
-        let mut client = PpcClient {
-            stream: client_stream,
-        };
+        let client = PpcClient::new(client_stream)?;
         let reply = client.round_trip_with_callbacks(
             &PpcEnvelope {
                 message_id: "msg-1".to_owned(),
@@ -341,9 +692,7 @@ mod tests {
             Ok(())
         });
 
-        let mut client = PpcClient {
-            stream: client_stream,
-        };
+        let client = PpcClient::new(client_stream)?;
         let Err(err) = client.round_trip_with_callbacks(
             &PpcEnvelope {
                 message_id: "msg-1".to_owned(),

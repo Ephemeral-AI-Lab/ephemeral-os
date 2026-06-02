@@ -26,12 +26,56 @@ async def apply_workspace_edit(
     expected_manifest_key: str | None = None,
 ) -> dict[str, Any]:
     workspace_root = str(workspace_root or ctx.overlay.workspace_root)
+    publish_mounted = getattr(ctx.overlay, "publish_mounted_workspace_changes", None)
+    if callable(publish_mounted):
+        return await _apply_with_mounted_workspace_callback(
+            edit,
+            ctx,
+            workspace_root=workspace_root,
+            expected_manifest_key=expected_manifest_key,
+            publish_mounted=publish_mounted,
+        )
     return await _apply_with_operation_overlay(
         edit,
         ctx,
         workspace_root=workspace_root,
         expected_manifest_key=expected_manifest_key,
     )
+
+
+async def _apply_with_mounted_workspace_callback(
+    edit: dict[str, Any],
+    ctx: Any,
+    *,
+    workspace_root: str,
+    expected_manifest_key: str | None,
+    publish_mounted: Any,
+) -> dict[str, Any]:
+    active_manifest_key = ""
+    active_manifest_key_fn = getattr(ctx.overlay, "active_manifest_key", None)
+    if callable(active_manifest_key_fn):
+        active_manifest_key = str(active_manifest_key_fn())
+    if (
+        expected_manifest_key
+        and active_manifest_key
+        and active_manifest_key != expected_manifest_key
+    ):
+        raise RuntimeError(
+            "workspace changed before LSP edit could be applied; retry the tool"
+        )
+    changed_paths = _apply_edit_payload(edit, workspace_root=workspace_root)
+    publish = await publish_mounted(changed_paths, workspace_root=workspace_root)
+    timings = dict(publish.get("timings") or {})
+    if "occ.apply.total_s" in timings:
+        timings.setdefault("command_exec.occ_apply_s", float(timings["occ.apply.total_s"]))
+    timings.setdefault("command_exec.capture_upperdir_s", 0.0)
+    return {
+        "success": bool(publish.get("success")),
+        "changed_paths": changed_paths,
+        "manifest_version": publish.get("published_manifest_version"),
+        "files": publish.get("files") or [],
+        "timings": timings,
+    }
 
 
 async def _apply_with_operation_overlay(
