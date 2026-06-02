@@ -16,14 +16,21 @@ message that names the failing step so callers can disambiguate.
 from __future__ import annotations
 
 import asyncio
+import hashlib
+import importlib
 import json
 import logging
+import sys
 from collections.abc import Callable, Mapping
 from typing import Any
 
 from plugins.core.discovery import discover_plugins
 from plugins.core.manifest import PluginManifest
 from sandbox.shared.models import Intent
+from sandbox.ephemeral_workspace.plugin.op_registry import (
+    clear_plugin_registrations,
+    pending_plugin_registrations,
+)
 from sandbox.host.daemon_client import (
     DEFAULT_LAYER_STACK_ROOT,
     call_daemon_api,
@@ -126,11 +133,11 @@ async def call_plugin(
                 await dispatch_fn(
                     sandbox_id,
                     "api.plugin.ensure",
-                    {
-                        "plugin": plugin,
-                        "digest": digest,
-                        "workspace_root": str(context.get("repo_root") or "").strip(),
-                    },
+                    _ensure_payload(
+                        manifest,
+                        digest=digest,
+                        workspace_root=str(context.get("repo_root") or "").strip(),
+                    ),
                     timeout=timeout,
                     layer_stack_root=layer_stack_root,
                 )
@@ -206,6 +213,109 @@ async def call_plugin_write(
         daemon_dispatcher=daemon_dispatcher,
         install_runner=install_runner,
     )
+
+
+def _ensure_payload(
+    manifest: PluginManifest,
+    *,
+    digest: str,
+    workspace_root: str,
+) -> dict[str, Any]:
+    payload: dict[str, Any] = {
+        "plugin": manifest.name,
+        "digest": digest,
+        "workspace_root": workspace_root,
+    }
+    daemon_manifest = _daemon_manifest_for(manifest, digest=digest)
+    if daemon_manifest is not None:
+        payload["manifest"] = daemon_manifest
+        payload["start_services"] = True
+    return payload
+
+
+def _daemon_manifest_for(
+    manifest: PluginManifest,
+    *,
+    digest: str,
+) -> dict[str, Any] | None:
+    if manifest.runtime is None:
+        return None
+
+    registrations = _runtime_registrations(manifest)
+    if not registrations:
+        return None
+
+    service_ops = [
+        entry
+        for entry in registrations
+        if entry.intent is Intent.READ_ONLY
+        or (entry.intent is Intent.WRITE_ALLOWED and not entry.auto_workspace_overlay)
+    ]
+    service_id = "runtime"
+    operations: list[dict[str, Any]] = []
+    for entry in registrations:
+        operation: dict[str, Any] = {
+            "op_name": entry.op_name,
+            "intent": entry.intent.value,
+            "auto_workspace_overlay": bool(entry.auto_workspace_overlay),
+        }
+        if entry in service_ops:
+            operation["service_id"] = service_id
+        operations.append(operation)
+
+    services: list[dict[str, Any]] = []
+    if service_ops:
+        services.append(
+            {
+                "service_id": service_id,
+                "service_profile_digest": _service_profile_digest(manifest, digest),
+                "service_mode": "workspace_snapshot_refresh",
+                "refresh_strategy": "remount_workspace_and_notify",
+                "command": [
+                    "python3",
+                    "-m",
+                    "sandbox.ephemeral_workspace.plugin.ppc_service",
+                ],
+                "ppc_protocol_version": 1,
+            }
+        )
+
+    return {
+        "plugin_id": manifest.name,
+        "plugin_version": "0.1.0",
+        "plugin_digest": digest,
+        "services": services,
+        "operations": operations,
+    }
+
+
+def _runtime_registrations(manifest: PluginManifest) -> tuple[Any, ...]:
+    module_name = _runtime_module_name(manifest)
+    if module_name in sys.modules:
+        clear_plugin_registrations(manifest.name)
+        module = sys.modules[module_name]
+        module = importlib.reload(module)
+    else:
+        clear_plugin_registrations(manifest.name)
+        module = importlib.import_module(module_name)
+    del module
+    return pending_plugin_registrations(manifest.name)
+
+
+def _runtime_module_name(manifest: PluginManifest) -> str:
+    runtime = manifest.runtime
+    if runtime is None:
+        return ""
+    rel = runtime.relative_to(manifest.source_dir).with_suffix("")
+    return ".".join(("plugins", "catalog", manifest.name, *rel.parts))
+
+
+def _service_profile_digest(manifest: PluginManifest, digest: str) -> str:
+    runtime_rel = ""
+    if manifest.runtime is not None:
+        runtime_rel = manifest.runtime.relative_to(manifest.source_dir).as_posix()
+    source = f"{manifest.name}\0{digest}\0{runtime_rel}\0ppc-service-v1"
+    return hashlib.sha256(source.encode("utf-8")).hexdigest()
 
 
 def _wrap_response(

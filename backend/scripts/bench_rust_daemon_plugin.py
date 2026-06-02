@@ -50,6 +50,8 @@ then proves a vanilla plugin service can:
   daemon's self-managed OCC callback path, independent of Pyright's unsupported
   formatting boundary.
 * fail closed when a dedicated service process exits during a connected route.
+* recover that crashed service on the next dispatch through another route on
+  the same service.
 * recover a previously ready read-only service on the next dispatch after a
   PPC/process failure.
 
@@ -2876,6 +2878,7 @@ def handle_request(sock: socket.socket, request: dict[str, object]) -> None:
     if op in {
         "plugin.generic.ping",
         "plugin.generic.restart_ping",
+        "plugin.generic.crash_recover_ping",
         "plugin.generic.hang_recover_ping",
     }:
         workspace_read: dict[str, object] = {"requested": False}
@@ -2903,6 +2906,8 @@ def handle_request(sock: socket.socket, request: dict[str, object]) -> None:
                 "success": True,
                 "from_ppc": True,
                 "from_restart_service": op == "plugin.generic.restart_ping",
+                "from_crash_recovered_service": op
+                == "plugin.generic.crash_recover_ping",
                 "from_timeout_recovered_service": op
                 == "plugin.generic.hang_recover_ping",
                 "plugin_id": os.environ.get("EOS_PLUGIN_ID"),
@@ -4281,6 +4286,30 @@ async def run(args: argparse.Namespace) -> dict[str, Any]:
                 timeout=30,
             )
             try:
+                report["crash_recover_ping"] = await daemon_client.call_daemon_api(
+                    bench.sandbox_id,
+                    "plugin.generic.crash_recover_ping",
+                    {
+                        "agent_id": AGENT_ID,
+                        "message": "after-crash-recover",
+                    },
+                    layer_stack_root=LAYER_STACK_ROOT,
+                    timeout=30,
+                )
+            except Exception as exc:
+                report["crash_recover_ping"] = {
+                    "success": False,
+                    "from_crash_recovered_service": False,
+                    "error": str(exc),
+                }
+            report["status_after_crash_recover"] = await daemon_client.call_daemon_api(
+                bench.sandbox_id,
+                "api.plugin.status",
+                {"agent_id": AGENT_ID},
+                layer_stack_root=LAYER_STACK_ROOT,
+                timeout=30,
+            )
+            try:
                 hang_response = await daemon_client.call_daemon_api(
                     bench.sandbox_id,
                     "plugin.generic.hang_probe",
@@ -4664,6 +4693,12 @@ def plugin_manifest() -> dict[str, Any]:
                 "timeout_ms": 5000,
             },
             {
+                "op_name": "crash_recover_ping",
+                "intent": "read_only",
+                "service_id": "crash_harness",
+                "timeout_ms": 5000,
+            },
+            {
                 "op_name": "hang_probe",
                 "intent": "read_only",
                 "service_id": "hang_harness",
@@ -5013,6 +5048,10 @@ def gate_pass(report: dict[str, Any]) -> bool:
     pyright_status = service_status(report.get("status_after_pyright", {}), "pyright_harness")
     restart_status = service_status(report.get("status_after_restart", {}), "restart_harness")
     crash_status = service_status(report.get("status_after_crash", {}), "crash_harness")
+    crash_recover_status = service_status(
+        report.get("status_after_crash_recover", {}),
+        "crash_harness",
+    )
     hang_status = service_status(report.get("status_after_hang", {}), "hang_harness")
     hang_recover_status = service_status(
         report.get("status_after_hang_recover", {}),
@@ -5300,6 +5339,8 @@ def gate_pass(report: dict[str, Any]) -> bool:
         and "plugin.generic.lsp_execute_command"
         in report.get("status_after_ensure", {}).get("connected_ppc_routes", [])
         and "plugin.generic.crash_probe"
+        in report.get("status_after_ensure", {}).get("connected_ppc_routes", [])
+        and "plugin.generic.crash_recover_ping"
         in report.get("status_after_ensure", {}).get("connected_ppc_routes", [])
         and "plugin.generic.hang_probe"
         in report.get("status_after_ensure", {}).get("connected_ppc_routes", [])
@@ -5669,7 +5710,18 @@ def gate_pass(report: dict[str, Any]) -> bool:
         and report.get("crash_probe", {}).get("expected_failure") is True
         and "plugin.generic.crash_probe"
         not in report.get("status_after_crash", {}).get("connected_ppc_routes", [])
+        and "plugin.generic.crash_recover_ping"
+        not in report.get("status_after_crash", {}).get("connected_ppc_routes", [])
         and crash_status.get("state") == "stopped"
+        and report.get("crash_recover_ping", {}).get("from_crash_recovered_service")
+        is True
+        and report.get("crash_recover_ping", {}).get("from_ppc") is True
+        and report.get("crash_recover_ping", {}).get("workspace_mounted") is True
+        and report.get("crash_recover_ping", {}).get("echo") == "after-crash-recover"
+        and "plugin.generic.crash_recover_ping"
+        in report.get("status_after_crash_recover", {}).get("connected_ppc_routes", [])
+        and crash_recover_status.get("state") == "ready"
+        and int(crash_recover_status.get("restart_count", 0)) >= 1
         and report.get("hang_probe", {}).get("expected_failure") is True
         and "plugin.generic.hang_probe"
         not in report.get("status_after_hang", {}).get("connected_ppc_routes", [])
@@ -5758,6 +5810,10 @@ def markdown_report(report: dict[str, Any]) -> str:
     pyright_status = service_status(report.get("status_after_pyright", {}), "pyright_harness")
     restart_status = service_status(report.get("status_after_restart", {}), "restart_harness")
     crash_status = service_status(report.get("status_after_crash", {}), "crash_harness")
+    crash_recover_status = service_status(
+        report.get("status_after_crash_recover", {}),
+        "crash_harness",
+    )
     hang_status = service_status(report.get("status_after_hang", {}), "hang_harness")
     hang_recover_status = service_status(
         report.get("status_after_hang_recover", {}),
@@ -5835,6 +5891,9 @@ def markdown_report(report: dict[str, Any]) -> str:
         f"- crash_probe: `{report.get('crash_probe')}`",
         f"- crash_service_state: `{crash_status.get('state')}`",
         f"- connected_routes_after_crash: `{report.get('status_after_crash', {}).get('connected_ppc_routes')}`",
+        f"- crash_recover_ping: `{report.get('crash_recover_ping')}`",
+        f"- crash_recover_restart_count: `{crash_recover_status.get('restart_count')}`",
+        f"- connected_routes_after_crash_recover: `{report.get('status_after_crash_recover', {}).get('connected_ppc_routes')}`",
         f"- hang_probe: `{report.get('hang_probe')}`",
         f"- hang_service_state: `{hang_status.get('state')}`",
         f"- connected_routes_after_hang: `{report.get('status_after_hang', {}).get('connected_ppc_routes')}`",

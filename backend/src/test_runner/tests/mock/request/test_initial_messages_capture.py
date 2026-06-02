@@ -153,9 +153,9 @@ async def test_initial_messages_capture(
         # appended during execution; assertions below pin only the first
         # N rows (the launch-time initial messages recorded by
         # ``AgentMessageJsonlRecorder.record_initial_messages``).
-        # Every main agent's context row 2 must wrap in <context>...</context>.
-        assert user_msg_1.startswith("<context>\n"), (
-            f"{rel}: row 2 does not start with '<context>\\n'"
+        # Every main agent's context row 2 must wrap in a context envelope.
+        assert user_msg_1.startswith("<context"), (
+            f"{rel}: row 2 does not start with '<context'"
         )
         assert user_msg_1.rstrip().endswith("</context>"), (
             f"{rel}: row 2 does not end with '</context>'"

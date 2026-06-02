@@ -20,8 +20,9 @@ advertised capability boundary, while a generic positive LSP formatting
 and execute-command provider path is covered separately through the daemon OCC
 callback. Live status health
 probes, failed-health isolation,
-service-crash, hung-service timeout fail-closed probes, timeout next-dispatch
-recovery, and next-dispatch service recovery after a PPC/process failure are
+service-crash fail-closed plus same-service crash recovery, hung-service
+timeout fail-closed probes, timeout next-dispatch recovery, and next-dispatch
+service recovery after a PPC/process failure are
 also green. The isolated-workspace plugin-family gate is now live-gated:
 `api.plugin.status` and manifest-declared `plugin.*` calls fail with
 `forbidden_in_isolated_workspace` while the same agent has an active isolated
@@ -37,9 +38,8 @@ Pyright negative capability boundary:
 unsupported-route gates for this Pyright harness, not positive provider parity
 targets themselves.
 Broader AV-10 LSP parity, true operation-level out-of-order multiplexing if
-required, and
-broader crash recovery beyond the covered health/crash/timeout/recovery paths
-remain open.
+required, and the broader crash-recovery matrix beyond the covered
+health/crash/timeout/recovery paths remain open.
 **Date:** 2026-06-02.
 **Scope:** `/sandbox` Rust plugin implementation, with the Python sandbox plugin
 path as the behavioral reference.
@@ -306,6 +306,8 @@ Landed:
   verifies `plugin.generic.oneshot_write` through daemon-owned overlay/OCC
   execution, verifies `plugin.generic.crash_probe` fails closed by dropping the
   broken PPC route and marking only that service stopped, verifies
+  `plugin.generic.crash_recover_ping` restarts that same crashed service on the
+  next dispatch and restores the crash-service routes, verifies
   `plugin.generic.hang_probe` fails closed on PPC timeout by dropping only the
   hung-service routes and marking only that service stopped, verifies
   `plugin.generic.hang_recover_ping` restarts that timed-out service on the
@@ -322,13 +324,13 @@ Landed:
   refresh-strategy benchmark in the same integrated sandbox fixture.
 - Live verification passed:
   `EOS_SANDBOX_PROVIDER=docker EOS_LIVE_E2E_IMAGE=xingyaoww/sweb.eval.x86_64.dask_s_dask-10042:latest EOS_PLUGIN_REFRESH_SAMPLES=1 EOS_PLUGIN_REFRESH_AUTO_SQUASH_WRITES=104 EOS_RUST_PLUGIN_BENCH_TIMEOUT_S=600 uv run pytest -q -x -rs --tb=short --durations=10 backend/tests/live_e2e_test/sandbox/plugin/test_plugin_refresh_strategies.py`
-  (`1 passed in 49.30s` on the latest rerun). The Rust plugin artifact report
-  `.omc/results/rust-daemon-plugin-generic-20260602T023906Z-45132.json` used
+  (`1 passed in 47.42s` on the latest rerun). The Rust plugin artifact report
+  `.omc/results/rust-daemon-plugin-generic-20260602T025157Z-90949.json` used
   `eosd-linux-amd64` SHA
   `94a9fa39fdb8744f2f2dd31a6b34393870eb3a5e15d0b7e06add2f60a9e896ea` and
   proved registered routes `plugin.generic.adapter_query`,
   `plugin.generic.apply`, `plugin.generic.apply_multi`,
-  `plugin.generic.crash_probe`,
+  `plugin.generic.crash_probe`, `plugin.generic.crash_recover_ping`,
   `plugin.generic.hang_probe`, `plugin.generic.hang_recover_ping`,
   `plugin.generic.health_fail_ping`,
   `plugin.generic.lsp_apply_code_action`,
@@ -357,6 +359,7 @@ Landed:
   `plugin.generic.adapter_query`/`plugin.generic.apply`/
   `plugin.generic.apply_multi`/
   `plugin.generic.crash_probe`/
+  `plugin.generic.crash_recover_ping`/
   `plugin.generic.hang_probe`/
   `plugin.generic.hang_recover_ping`/
   `plugin.generic.health_fail_ping`/
@@ -554,9 +557,16 @@ Landed:
   one-shot worker exit code `0`; one-shot readback
   `from live rust oneshot plugin\n`; crash probe evidence
   `expected_failure=true` with `ppc channel error: plugin PPC stream closed
-  before reply`, `plugin.generic.crash_probe` removed from connected routes, and
+  before reply`, `plugin.generic.crash_probe` and
+  `plugin.generic.crash_recover_ping` removed from connected routes, and
   `crash_harness.state == "stopped"` with the same error recorded in
-  `last_error`; hung-service timeout evidence `expected_failure=true` with
+  `last_error`; same-service crash recovery evidence where
+  `plugin.generic.crash_recover_ping` restarted `crash_harness` on the next
+  dispatch, returned `from_crash_recovered_service=true`, `from_ppc=true`,
+  `workspace_mounted=true`, and `echo == "after-crash-recover"`, restored both
+  crash-service routes, and left `crash_harness.state == "ready"` with
+  `restart_count == 1` and `last_error == null`; hung-service timeout evidence
+  `expected_failure=true` with
   `daemon io error: Resource temporarily unavailable (os error 11)`,
   `plugin.generic.hang_probe` removed from connected routes, and
   `hang_harness.state == "stopped"` with the same error recorded in
@@ -574,28 +584,29 @@ Landed:
   `plugin.generic.recover_probe` returning `from_recovered_service=true` with
   `workspace_mounted=true`, restored connected route, and
   `recover_harness.restart_count == 1`; final manifest version `22`; final
-  active service leases before cleanup `6`; post-cleanup active leases `0`; and
+  active service leases before cleanup `7`; post-cleanup active leases `0`; and
   zero post-cleanup orphan layers and missing layers; isolated-workspace gate
   evidence where the daemon enabled `/eos/plugin/iws-scratch`, entered isolated
   mode for the same `AGENT_ID`, rejected both `api.plugin.status` and
   `plugin.generic.ping` with `forbidden_in_isolated_workspace`, exited
   successfully, released the isolated lease, and reported
   `status_after_exit.open=false`; teardown evidence showed
-  seven plugin harness processes before cleanup, zero after cleanup, empty
+  eight plugin harness processes before cleanup, zero after cleanup, empty
   `connected_ppc_routes`, empty `connected_ppc_services`, and empty
   `running_service_processes` after cleanup. The paired
   refresh-strategy report
-  `.omc/results/plugin-refresh-strategies-20260602T023906Z-45132.json` still
-  recommends `workspace_snapshot_refresh`; refresh p95 was `5.432 ms` versus
-  `commit_to_workspace` p95 `4.398 ms`.
+  `.omc/results/plugin-refresh-strategies-20260602T025157Z-90949.json` still
+  recommends `workspace_snapshot_refresh`; refresh p95 was `6.275 ms` versus
+  `commit_to_workspace` p95 `4.593 ms`.
 
 Still open:
 
 - True operation-level out-of-order multiplexing if needed by a future
   bidirectional protocol,
-  broader crash recovery beyond the now-covered health probe, failed-health
-  isolation, closed PPC stream, PPC timeout fail-closed, timeout restart
-  recovery, and next-dispatch restart paths,
+  broader crash-recovery matrix beyond the now-covered health probe,
+  failed-health isolation, closed PPC stream fail-closed, same-service crash
+  recovery, PPC timeout fail-closed, timeout restart recovery, and
+  next-dispatch restart paths,
   and broader AV-10 LSP parity beyond the representative Pyright
   `documentSymbol` + `workspace/symbol` + `completion` +
   `completionItem/resolve` + `publishDiagnostics` + `codeAction` +

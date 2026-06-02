@@ -259,6 +259,7 @@ def _runtime_bundle_bytes() -> bytes:
             "op_registry.py",
             "overlay_child.py",
             "overlay_dispatch.py",
+            "ppc_service.py",
             "projection.py",
             "runtime_api.py",
         ):

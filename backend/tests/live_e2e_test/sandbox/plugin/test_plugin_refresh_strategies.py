@@ -198,6 +198,10 @@ async def test_plugin_workspace_snapshot_refresh_strategy(
         in rust_payload["status_after_ensure"]["connected_ppc_routes"]
     )
     assert (
+        "plugin.generic.crash_recover_ping"
+        in rust_payload["status_after_ensure"]["connected_ppc_routes"]
+    )
+    assert (
         "plugin.generic.hang_probe"
         in rust_payload["status_after_ensure"]["connected_ppc_routes"]
     )
@@ -692,8 +696,25 @@ async def test_plugin_workspace_snapshot_refresh_strategy(
         "plugin.generic.crash_probe"
         not in rust_payload["status_after_crash"]["connected_ppc_routes"]
     )
+    assert (
+        "plugin.generic.crash_recover_ping"
+        not in rust_payload["status_after_crash"]["connected_ppc_routes"]
+    )
     crash_status = _service_status(rust_payload["status_after_crash"], "crash_harness")
     assert crash_status["state"] == "stopped"
+    assert rust_payload["crash_recover_ping"]["from_crash_recovered_service"] is True
+    assert rust_payload["crash_recover_ping"]["from_ppc"] is True
+    assert rust_payload["crash_recover_ping"]["workspace_mounted"] is True
+    assert rust_payload["crash_recover_ping"]["echo"] == "after-crash-recover"
+    assert (
+        "plugin.generic.crash_recover_ping"
+        in rust_payload["status_after_crash_recover"]["connected_ppc_routes"]
+    )
+    crash_recover_status = _service_status(
+        rust_payload["status_after_crash_recover"], "crash_harness"
+    )
+    assert crash_recover_status["state"] == "ready"
+    assert crash_recover_status["restart_count"] >= 1
     assert rust_payload["hang_probe"]["expected_failure"] is True
     assert (
         "plugin.generic.hang_probe"

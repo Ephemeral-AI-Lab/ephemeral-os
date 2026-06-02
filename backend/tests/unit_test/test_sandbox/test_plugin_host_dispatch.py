@@ -10,7 +10,9 @@ from typing import Any
 
 import pytest
 
+from plugins.core.discovery import DEFAULT_CATALOG_DIR
 from plugins.core.manifest import PluginManifest, parse_plugin_manifest
+from sandbox.ephemeral_workspace.plugin.op_registry import clear_plugin_registrations
 from sandbox.ephemeral_workspace.plugin import host_dispatch as host_dispatch_mod
 from sandbox.shared.models import Intent
 from sandbox.ephemeral_workspace.plugin.host_dispatch import call_plugin, call_plugin_write
@@ -92,6 +94,54 @@ def test_call_plugin_happy_path(tmp_path: Path, monkeypatch: pytest.MonkeyPatch)
         "workspace_root": "/testbed",
     }
     assert dispatch_calls[1][2]["intent"] == Intent.READ_ONLY.value
+
+
+def test_ensure_payload_includes_runtime_manifest_for_rust_daemon() -> None:
+    manifest = parse_plugin_manifest(DEFAULT_CATALOG_DIR / "lsp")
+    try:
+        payload = host_dispatch_mod._ensure_payload(
+            manifest,
+            digest="digest-lsp",
+            workspace_root="/testbed",
+        )
+    finally:
+        clear_plugin_registrations("lsp")
+
+    assert payload["plugin"] == "lsp"
+    assert payload["digest"] == "digest-lsp"
+    assert payload["start_services"] is True
+    daemon_manifest = payload["manifest"]
+    assert daemon_manifest["plugin_id"] == "lsp"
+    assert daemon_manifest["plugin_digest"] == "digest-lsp"
+    assert daemon_manifest["services"] == [
+        {
+            "service_id": "runtime",
+            "service_profile_digest": daemon_manifest["services"][0][
+                "service_profile_digest"
+            ],
+            "service_mode": "workspace_snapshot_refresh",
+            "refresh_strategy": "remount_workspace_and_notify",
+            "command": [
+                "python3",
+                "-m",
+                "sandbox.ephemeral_workspace.plugin.ppc_service",
+            ],
+            "ppc_protocol_version": 1,
+        }
+    ]
+    operations = {entry["op_name"]: entry for entry in daemon_manifest["operations"]}
+    assert operations["diagnostics"] == {
+        "op_name": "diagnostics",
+        "intent": Intent.READ_ONLY.value,
+        "auto_workspace_overlay": True,
+        "service_id": "runtime",
+    }
+    assert operations["apply_workspace_edit"] == {
+        "op_name": "apply_workspace_edit",
+        "intent": Intent.WRITE_ALLOWED.value,
+        "auto_workspace_overlay": False,
+        "service_id": "runtime",
+    }
 
 
 def test_call_plugin_forwards_caller_audit_fields(
