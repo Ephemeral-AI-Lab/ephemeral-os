@@ -25,12 +25,11 @@
 //! `// PORT backend/src/sandbox/daemon/rpc/server.py:58,62,116-143,183,193 — caps/timeout/auth/listeners`
 
 use std::path::PathBuf;
-use std::sync::Arc;
+use std::sync::{mpsc as std_mpsc, Arc};
 use std::time::{Duration, Instant};
 
 use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
 use tokio::net::{TcpListener, UnixListener};
-use tokio::sync::oneshot;
 use tokio::time::timeout;
 use tokio_util::sync::CancellationToken;
 
@@ -293,9 +292,9 @@ impl DaemonServer {
         let registry = Arc::clone(&self.invocation_registry);
         let task_invocation_id = invocation_id.clone();
         let task_registry = Arc::clone(&registry);
-        let (start_tx, start_rx) = oneshot::channel::<()>();
-        let task = tokio::spawn(async move {
-            let _ = start_rx.await;
+        let (start_tx, start_rx) = std_mpsc::channel::<()>();
+        let task = tokio::task::spawn_blocking(move || {
+            let _ = start_rx.recv();
             let _active_call = task_registry.enter_call(&task_invocation_id);
             table.dispatch_with_context(
                 &request,

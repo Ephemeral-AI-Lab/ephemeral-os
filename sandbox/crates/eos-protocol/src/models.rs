@@ -119,47 +119,39 @@ pub struct CommandOutput {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ExecCommandArgs {
     pub cmd: String,
-    pub tty: bool,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub yield_time_ms: Option<u64>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub timeout_seconds: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub max_output_tokens: Option<u64>,
 }
 
-/// Public `exec_command` / PTY-control result payload.
+/// Public `exec_command` / command-session result payload.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ExecCommandResult {
     pub status: String,
     pub exit_code: Option<i64>,
     pub output: CommandOutput,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub pty_session_id: Option<String>,
+    pub command_session_id: Option<String>,
 }
 
-/// `write_pty_command_stdin` request args.
+/// `write_stdin` request args.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct PtyWriteArgs {
-    pub pty_session_id: String,
+pub struct CommandSessionWriteArgs {
+    pub command_session_id: String,
     pub chars: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub yield_time_ms: Option<u64>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub max_tokens: Option<u64>,
+    pub max_output_tokens: Option<u64>,
 }
 
-/// `check_pty_command_progress` request args.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct PtyProgressArgs {
-    pub pty_session_id: String,
-    pub time: f64,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub max_tokens: Option<u64>,
-}
-
-/// `cancel_pty_command` request args.
+/// Internal `api.v1.command.cancel` request args.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct PtyCancelArgs {
-    pub pty_session_id: String,
+pub struct CommandSessionCancelArgs {
+    pub command_session_id: String,
 }
 
 /// `glob` request args. `path` sent only when non-None.
@@ -407,11 +399,11 @@ mod tests {
         assert_eq!(
             serde_json::to_value(ExecCommandArgs {
                 cmd: "printf hi".to_owned(),
-                tty: true,
                 yield_time_ms: Some(250),
                 timeout_seconds: None,
+                max_output_tokens: None,
             })?,
-            serde_json::json!({"cmd":"printf hi","tty":true,"yield_time_ms":250})
+            serde_json::json!({"cmd":"printf hi","yield_time_ms":250})
         );
         assert_eq!(
             serde_json::to_value(ExecCommandResult {
@@ -421,13 +413,13 @@ mod tests {
                     stdout: "hi".to_owned(),
                     stderr: String::new(),
                 },
-                pty_session_id: Some("pty_1".to_owned()),
+                command_session_id: Some("cmd_1".to_owned()),
             })?,
             serde_json::json!({
                 "status": "running",
                 "exit_code": null,
                 "output": {"stdout": "hi", "stderr": ""},
-                "pty_session_id": "pty_1",
+                "command_session_id": "cmd_1",
             })
         );
         // glob: path omitted when None.

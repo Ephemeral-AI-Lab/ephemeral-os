@@ -12,6 +12,8 @@ from __future__ import annotations
 
 from sandbox.shared.models import (
     CommandOutput,
+    CommandSessionCancelRequest,
+    CommandSessionWriteRequest,
     ConflictInfo,
     EditFileRequest,
     EditFileResult,
@@ -29,9 +31,6 @@ from sandbox.shared.models import (
     Intent,
     LifecycleError,
     LifecycleResultBase,
-    PtyCancelRequest,
-    PtyProgressRequest,
-    PtyWriteRequest,
     RawExecResult,
     ReadFileRequest,
     ReadFileResult,
@@ -47,11 +46,10 @@ from sandbox.shared.models import (
     WriteFileResult,
 )
 from sandbox.api.tool.command import (
-    cancel_pty_command,
-    check_pty_command_progress,
-    collect_pty_completions,
+    cancel_command_session,
+    collect_command_completions,
     exec_command,
-    write_pty_command_stdin,
+    write_stdin,
 )
 from sandbox.api.provider_control import (  # isort: skip -- models precede provider control
     configured_sandbox_defaults,
@@ -78,16 +76,18 @@ from sandbox.api.tool.write import write_file
 from sandbox.api.raw_exec import raw_exec
 from sandbox.api.daemon_invocations import (
     cancel,
+    command_session_count,
     heartbeat,
     inflight_count,
     isolated_active,
-    pty_session_count,
 )
 from sandbox.api.daemon_audit import audit_pull, audit_reset_floor, audit_snapshot
 
 __all__ = [
     "ConflictInfo",
     "CommandOutput",
+    "CommandSessionCancelRequest",
+    "CommandSessionWriteRequest",
     "EditFileRequest",
     "EditFileResult",
     "EnterIsolatedWorkspaceRequest",
@@ -104,9 +104,6 @@ __all__ = [
     "Intent",
     "LifecycleError",
     "LifecycleResultBase",
-    "PtyCancelRequest",
-    "PtyProgressRequest",
-    "PtyWriteRequest",
     "RawExecResult",
     "ReadFileRequest",
     "ReadFileResult",
@@ -123,12 +120,12 @@ __all__ = [
     "audit_pull",
     "audit_reset_floor",
     "audit_snapshot",
-    "cancel_pty_command",
-    "check_pty_command_progress",
-    "collect_pty_completions",
+    "cancel_command_session",
     "configured_sandbox_defaults",
     "context_preparer_for",
     "cancel",
+    "command_session_count",
+    "collect_command_completions",
     "create_sandbox",
     "delete_sandbox",
     "edit_file",
@@ -147,11 +144,10 @@ __all__ = [
     "list_snapshots",
     "raw_exec",
     "read_file",
-    "pty_session_count",
     "set_sandbox_labels",
     "shell",
     "start_sandbox",
     "stop_sandbox",
-    "write_pty_command_stdin",
+    "write_stdin",
     "write_file",
 ]

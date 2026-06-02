@@ -6,7 +6,7 @@ main-role terminals (wired *before* ``AdvisorApprovalPreHook`` so the
 background rejection is the one surfaced). "In-flight" means *running,
 sandbox-bound* background tasks for this agent — the same definition as
 ``BackgroundTaskSupervisor.count_by_agent`` plus the daemon's
-``pty_session_count``; subagent / non-sandbox background work is not counted.
+``command_session_count``; subagent / non-sandbox background work is not counted.
 
 The decision uses ``max(local, daemon)`` like
 ``sandbox.host.isolated_workspace_lifecycle``: confirmed in-flight blocks. On
@@ -30,7 +30,7 @@ logger = logging.getLogger(__name__)
 
 _MSG_IN_FLIGHT = (
     "BLOCKED: {count} sandbox-bound background task(s) are still in flight for "
-    "this agent. Cancel active PTY commands with cancel_pty_command before calling "
+    "this agent. Finish or interrupt active command sessions before calling "
     "{tool}, then retry."
 )
 _MSG_UNAVAILABLE = (
@@ -72,7 +72,7 @@ class RequireNoInflightBackgroundTasks:
         import sandbox.api as sandbox_api
 
         try:
-            daemon = await sandbox_api.pty_session_count(sandbox_id, agent_id)
+            daemon = await sandbox_api.command_session_count(sandbox_id, agent_id)
         except Exception as exc:  # noqa: BLE001 - any daemon RPC failure
             return self._fail_or_bailout(tool_input, exc)
         if daemon > 0:
@@ -100,7 +100,7 @@ class RequireNoInflightBackgroundTasks:
     def _fail_or_bailout(self, tool_input: BaseModel, exc: Exception) -> HookResult[BaseModel]:
         if self._is_bailout_submission(tool_input):
             logger.warning(
-                "no_bg_tasks gate fail-open on %s: daemon PTY session count unavailable (%s)",
+                "no_bg_tasks gate fail-open on %s: daemon command session count unavailable (%s)",
                 self.target_tool,
                 exc,
             )
@@ -115,7 +115,7 @@ class RequireNoInflightBackgroundTasks:
             _MSG_UNAVAILABLE.format(tool=self.target_tool),
             metadata={
                 "policy": "no_inflight_background_tasks",
-                "reason": "pty_session_count_unavailable",
+                "reason": "command_session_count_unavailable",
             },
         )
 

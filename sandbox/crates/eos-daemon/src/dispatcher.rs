@@ -16,6 +16,7 @@
 //! `// PORT backend/src/sandbox/daemon/rpc/dispatcher.py:404-449 — _register_builtin_operations / OP_TABLE`
 
 use std::collections::{BTreeMap, HashMap, HashSet, VecDeque};
+use std::fs;
 use std::io::Write;
 #[cfg(target_os = "linux")]
 use std::os::unix::process::CommandExt;
@@ -56,6 +57,7 @@ use crate::invocation_registry::InFlightRegistry;
 /// Env gate for `api.audit.reset_floor` (must be `"true"`).
 /// `// PORT backend/src/sandbox/daemon/rpc/dispatcher.py:404 — EOS_DAEMON_AUDIT_ALLOW_FLOOR_RESET`
 pub const AUDIT_ALLOW_FLOOR_RESET_ENV: &str = "EOS_DAEMON_AUDIT_ALLOW_FLOOR_RESET";
+const TREE_RESOURCE_ENTRY_LIMIT: usize = 2_000;
 
 /// A synchronous op handler: decoded args -> response value.
 ///
@@ -949,6 +951,7 @@ fn run_shell_overlay_once(
     };
     let runner = run_ns_runner_child(&request, invocation_registry)?;
     let (changes, path_kinds, capture_s) = capture_upperdir_for_occ(&dirs.upperdir)?;
+    let upperdir_stats = TreeResourceStats::collect(&dirs.upperdir);
     let route_start = Instant::now();
     let route_metrics = occ_route_metrics(&spec.layer_stack_root, &changes)?;
     let route_s = route_start.elapsed().as_secs_f64();
@@ -969,6 +972,7 @@ fn run_shell_overlay_once(
         route_s,
         capture_s,
         occ_s,
+        upperdir_stats,
     })
 }
 
@@ -981,6 +985,11 @@ fn shell_overlay_response(
     let manifest = LayerStack::open(root.to_path_buf())?.read_active_manifest()?;
     let mut timings = resource_timings(&manifest, shell.path_kinds.len());
     merge_runner_timings(&mut timings, &shell.runner);
+    insert_tree_resource_timings(
+        &mut timings,
+        "resource.command_exec.upperdir",
+        &shell.upperdir_stats,
+    );
     timings.insert(
         "layer_stack.acquire_snapshot.total_s".to_owned(),
         json!(lease_acquire_s),
@@ -1094,6 +1103,7 @@ fn run_plugin_overlay_once(
     let runner = run_ns_runner_child(&request, None)?;
     let plugin_result = read_plugin_overlay_result(&result_path)?;
     let (changes, path_kinds, capture_s) = capture_upperdir_for_occ(&dirs.upperdir)?;
+    let upperdir_stats = TreeResourceStats::collect(&dirs.upperdir);
     let route_start = Instant::now();
     let route_metrics = occ_route_metrics(&spec.layer_stack_root, &changes)?;
     let route_s = route_start.elapsed().as_secs_f64();
@@ -1115,6 +1125,7 @@ fn run_plugin_overlay_once(
         route_s,
         capture_s,
         occ_s,
+        upperdir_stats,
     })
 }
 
@@ -1127,6 +1138,11 @@ fn plugin_overlay_response(
     let manifest = LayerStack::open(root.to_path_buf())?.read_active_manifest()?;
     let mut timings = resource_timings(&manifest, outcome.path_kinds.len());
     merge_runner_timings(&mut timings, &outcome.runner);
+    insert_tree_resource_timings(
+        &mut timings,
+        "resource.command_exec.upperdir",
+        &outcome.upperdir_stats,
+    );
     timings.insert(
         "layer_stack.acquire_snapshot.total_s".to_owned(),
         json!(lease_acquire_s),
@@ -1535,6 +1551,7 @@ struct ShellRunOutcome {
     route_s: f64,
     capture_s: f64,
     occ_s: f64,
+    upperdir_stats: TreeResourceStats,
 }
 
 struct PluginOverlayRunOutcome {
@@ -1546,12 +1563,87 @@ struct PluginOverlayRunOutcome {
     route_s: f64,
     capture_s: f64,
     occ_s: f64,
+    upperdir_stats: TreeResourceStats,
 }
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub(crate) struct OccRouteMetrics {
     gated_path_count: usize,
     direct_path_count: usize,
+}
+
+#[derive(Clone, Copy, Debug)]
+struct TreeResourceStats {
+    exists: f64,
+    bytes: f64,
+    file_count: f64,
+    dir_count: f64,
+    entry_count: f64,
+    truncated: f64,
+}
+
+impl TreeResourceStats {
+    fn missing() -> Self {
+        Self {
+            exists: 0.0,
+            bytes: 0.0,
+            file_count: 0.0,
+            dir_count: 0.0,
+            entry_count: 0.0,
+            truncated: 0.0,
+        }
+    }
+
+    fn collect(path: &Path) -> Self {
+        let Ok(root_metadata) = fs::symlink_metadata(path) else {
+            return Self::missing();
+        };
+        let root_is_dir = root_metadata.is_dir();
+        let mut stats = Self {
+            exists: 1.0,
+            bytes: allocated_bytes(&root_metadata),
+            file_count: if root_is_dir { 0.0 } else { 1.0 },
+            dir_count: if root_is_dir { 1.0 } else { 0.0 },
+            entry_count: 1.0,
+            truncated: 0.0,
+        };
+        if !root_is_dir {
+            return stats;
+        }
+
+        let mut queue = VecDeque::from([path.to_path_buf()]);
+        while let Some(current) = queue.pop_front() {
+            let Ok(entries) = fs::read_dir(current) else {
+                continue;
+            };
+            for entry in entries.flatten() {
+                if stats.entry_count >= usize_to_f64_saturating(TREE_RESOURCE_ENTRY_LIMIT) {
+                    stats.truncated = 1.0;
+                    break;
+                }
+                let entry_path = entry.path();
+                let Ok(metadata) = fs::symlink_metadata(&entry_path) else {
+                    continue;
+                };
+                let is_dir = metadata.is_dir();
+                stats.entry_count += 1.0;
+                stats.bytes += allocated_bytes(&metadata);
+                if is_dir {
+                    stats.dir_count += 1.0;
+                    queue.push_back(entry_path);
+                } else {
+                    stats.file_count += 1.0;
+                }
+            }
+            if stats.truncated > 0.0 {
+                break;
+            }
+        }
+        if !queue.is_empty() {
+            stats.truncated = 1.0;
+        }
+        stats
+    }
 }
 
 struct RunDirCleanup(PathBuf);
@@ -1621,7 +1713,7 @@ impl CommitTransactionPort for LayerStackCommitTransaction {
         match stack.publish_layer(&publishable_changes) {
             Ok(manifest) => {
                 let publish_s = publish_start.elapsed().as_secs_f64();
-                let (maintenance_s, squash_applied) = run_auto_squash_maintenance(&mut stack);
+                let maintenance_timings = run_auto_squash_maintenance(&mut stack);
                 Ok(committed_changeset_result(
                     combined,
                     validations,
@@ -1629,8 +1721,7 @@ impl CommitTransactionPort for LayerStackCommitTransaction {
                     PublishedCommitTimings {
                         validate_s,
                         publish_s,
-                        maintenance_s,
-                        squash_applied,
+                        maintenance_timings,
                         total_start,
                     },
                 ))
@@ -1734,20 +1825,68 @@ fn no_publish_result(
     }
 }
 
-fn run_auto_squash_maintenance(stack: &mut LayerStack) -> (f64, f64) {
+fn run_auto_squash_maintenance(stack: &mut LayerStack) -> BTreeMap<String, f64> {
     let maintenance_start = Instant::now();
-    let squash_applied = if stack
-        .can_squash(AUTO_SQUASH_MAX_DEPTH)
-        .is_ok_and(|can_squash| can_squash)
-        && stack
-            .squash(AUTO_SQUASH_MAX_DEPTH)
-            .is_ok_and(|squashed| squashed.is_some())
-    {
-        1.0
-    } else {
-        0.0
+    let mut timings = BTreeMap::new();
+    let Some(active) = stack.read_active_manifest().ok() else {
+        timings.insert(
+            "occ.maintenance.total_s".to_owned(),
+            maintenance_start.elapsed().as_secs_f64(),
+        );
+        timings.insert("occ.maintenance.squash_applied".to_owned(), 0.0);
+        return timings;
     };
-    (maintenance_start.elapsed().as_secs_f64(), squash_applied)
+    if active.depth() <= AUTO_SQUASH_MAX_DEPTH
+        || !stack
+            .can_squash(AUTO_SQUASH_MAX_DEPTH)
+            .is_ok_and(|can_squash| can_squash)
+    {
+        timings.insert(
+            "occ.maintenance.total_s".to_owned(),
+            maintenance_start.elapsed().as_secs_f64(),
+        );
+        timings.insert("occ.maintenance.squash_applied".to_owned(), 0.0);
+        return timings;
+    }
+
+    let squash_start = Instant::now();
+    let squashed = stack.squash(AUTO_SQUASH_MAX_DEPTH).ok().flatten();
+    let squash_elapsed_s = squash_start.elapsed().as_secs_f64();
+    timings.insert(
+        "layer_stack.auto_squash.total_s".to_owned(),
+        squash_elapsed_s,
+    );
+    timings.insert(
+        "layer_stack.auto_squash.max_depth".to_owned(),
+        usize_to_f64_saturating(AUTO_SQUASH_MAX_DEPTH),
+    );
+    timings.insert(
+        "layer_stack.auto_squash.depth_before".to_owned(),
+        usize_to_f64_saturating(active.depth()),
+    );
+    match squashed {
+        Some(manifest) => {
+            timings.insert("occ.maintenance.squash_applied".to_owned(), 1.0);
+            timings.insert("layer_stack.auto_squash.applied".to_owned(), 1.0);
+            timings.insert(
+                "layer_stack.auto_squash.depth_after".to_owned(),
+                usize_to_f64_saturating(manifest.depth()),
+            );
+            timings.insert(
+                "layer_stack.auto_squash.manifest_version".to_owned(),
+                i64_to_f64_saturating(manifest.version),
+            );
+        }
+        None => {
+            timings.insert("occ.maintenance.squash_applied".to_owned(), 0.0);
+            timings.insert("layer_stack.auto_squash.raced".to_owned(), 1.0);
+        }
+    }
+    timings.insert(
+        "occ.maintenance.total_s".to_owned(),
+        maintenance_start.elapsed().as_secs_f64(),
+    );
+    timings
 }
 
 fn committed_changeset_result(
@@ -1762,22 +1901,7 @@ fn committed_changeset_result(
         phases.publish_s,
         phases.total_start.elapsed().as_secs_f64(),
     );
-    timings.insert("occ.maintenance.total_s".to_owned(), phases.maintenance_s);
-    timings.insert(
-        "occ.maintenance.squash_applied".to_owned(),
-        phases.squash_applied,
-    );
-    if phases.squash_applied > 0.0 {
-        timings.insert(
-            "layer_stack.auto_squash.total_s".to_owned(),
-            phases.maintenance_s,
-        );
-        timings.insert(
-            "layer_stack.auto_squash.max_depth".to_owned(),
-            usize_to_f64_saturating(AUTO_SQUASH_MAX_DEPTH),
-        );
-        timings.insert("layer_stack.auto_squash.applied".to_owned(), 1.0);
-    }
+    timings.extend(phases.maintenance_timings);
     ChangesetResult {
         files: validations
             .into_iter()
@@ -1797,12 +1921,10 @@ fn committed_changeset_result(
     }
 }
 
-#[derive(Clone, Copy)]
 struct PublishedCommitTimings {
     validate_s: f64,
     publish_s: f64,
-    maintenance_s: f64,
-    squash_applied: f64,
+    maintenance_timings: BTreeMap<String, f64>,
     total_start: Instant,
 }
 
@@ -2994,6 +3116,40 @@ pub(crate) fn resource_timings(
     timings
 }
 
+fn insert_tree_resource_timings(
+    timings: &mut serde_json::Map<String, Value>,
+    prefix: &str,
+    stats: &TreeResourceStats,
+) {
+    timings.insert(format!("{prefix}_tree_exists"), json!(stats.exists));
+    timings.insert(format!("{prefix}_tree_bytes"), json!(stats.bytes));
+    timings.insert(format!("{prefix}_tree_file_count"), json!(stats.file_count));
+    timings.insert(format!("{prefix}_tree_dir_count"), json!(stats.dir_count));
+    timings.insert(
+        format!("{prefix}_tree_entry_count"),
+        json!(stats.entry_count),
+    );
+    timings.insert(format!("{prefix}_tree_truncated"), json!(stats.truncated));
+}
+
+fn allocated_bytes(metadata: &fs::Metadata) -> f64 {
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::MetadataExt;
+
+        let allocated = metadata.blocks().saturating_mul(512);
+        return u64_to_f64_saturating(if allocated > 0 {
+            allocated
+        } else {
+            metadata.len()
+        });
+    }
+    #[cfg(not(unix))]
+    {
+        u64_to_f64_saturating(metadata.len())
+    }
+}
+
 fn insert_cgroup_resource_timings(timings: &mut serde_json::Map<String, Value>) {
     if let Ok(raw) = std::fs::read_to_string("/sys/fs/cgroup/cpu.stat") {
         for line in raw.lines() {
@@ -3473,6 +3629,10 @@ fn usize_to_f64_saturating(value: usize) -> f64 {
     u32::try_from(value).map_or_else(|_| f64::from(u32::MAX), f64::from)
 }
 
+fn i64_to_f64_saturating(value: i64) -> f64 {
+    u64::try_from(value).map_or(0.0, u64_to_f64_saturating)
+}
+
 pub(crate) fn u64_to_f64_saturating(value: u64) -> f64 {
     u32::try_from(value).map_or_else(|_| f64::from(u32::MAX), f64::from)
 }
@@ -3568,6 +3728,37 @@ mod tests {
         assert!(require_shell_command(&json!({"command": []})).is_err());
         assert!(require_shell_command(&json!({"command": [""]})).is_err());
         assert!(require_shell_command(&json!({"command": [true]})).is_err());
+    }
+
+    #[test]
+    fn upperdir_tree_resource_timings_capture_bounded_payload() -> TestResult {
+        let fixture = Fixture::new("upperdir_tree_stats")?;
+        let upperdir = fixture.base.join("upperdir");
+        std::fs::create_dir_all(upperdir.join("nested"))?;
+        std::fs::write(upperdir.join("nested/payload.bin"), vec![7_u8; 4096])?;
+
+        let manifest = LayerStack::open(fixture.root.clone())?.read_active_manifest()?;
+        let mut timings = resource_timings(&manifest, 1);
+        insert_tree_resource_timings(
+            &mut timings,
+            "resource.command_exec.upperdir",
+            &TreeResourceStats::collect(&upperdir),
+        );
+
+        assert_eq!(
+            timing_f64_value(&timings, "resource.command_exec.workspace_tree_bytes"),
+            0.0
+        );
+        assert_eq!(
+            timing_f64_value(&timings, "resource.command_exec.upperdir_tree_exists"),
+            1.0
+        );
+        assert!(timing_f64_value(&timings, "resource.command_exec.upperdir_tree_bytes") >= 4096.0);
+        assert_eq!(
+            timing_f64_value(&timings, "resource.command_exec.upperdir_tree_truncated"),
+            0.0
+        );
+        Ok(())
     }
 
     #[test]
@@ -3896,6 +4087,10 @@ mod tests {
 
     fn read_text(fixture: &Fixture, path: &str) -> TestResult<String> {
         Ok(LayerStack::open(fixture.root.clone())?.read_text(path)?.0)
+    }
+
+    fn timing_f64_value(timings: &serde_json::Map<String, Value>, key: &str) -> f64 {
+        timings.get(key).and_then(Value::as_f64).unwrap_or(0.0)
     }
 
     struct Fixture {

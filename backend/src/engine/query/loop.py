@@ -167,7 +167,7 @@ async def _drain_background_completion_notifications(
         return
     for text in background_tasks.collect_subagent_completion_notifications():
         await notification_service.notify_system(text)
-    for text in await background_tasks.collect_pty_completion_notifications():
+    for text in await background_tasks.collect_command_session_completion_notifications():
         await notification_service.notify_system(text)
 
 

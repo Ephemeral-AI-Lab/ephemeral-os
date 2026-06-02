@@ -1,4 +1,4 @@
-"""Shared helpers for command and PTY control tools."""
+"""Shared helpers for command-session tools."""
 
 from __future__ import annotations
 
@@ -15,7 +15,7 @@ class CommandToolOutput(BaseModel):
     status: str
     exit_code: int | None
     output: dict[str, str]
-    pty_session_id: str | None = None
+    command_session_id: str | None = None
     stdout: str = ""
     stderr: str = ""
     changed_paths: list[str] = Field(default_factory=list)
@@ -40,8 +40,8 @@ def command_result_payload(result: ExecCommandResult) -> dict[str, object]:
         "mutation_source": result.mutation_source,
         "conflict_reason": result.conflict_reason,
     }
-    if result.pty_session_id:
-        payload["pty_session_id"] = result.pty_session_id
+    if result.command_session_id:
+        payload["command_session_id"] = result.command_session_id
     if result.error:
         payload["error"] = dict(result.error)
     return payload
@@ -51,7 +51,7 @@ def command_tool_result(result: ExecCommandResult) -> ToolResult:
     payload = command_result_payload(result)
     metadata: dict[str, object] = {
         "status": result.status,
-        "pty_session_id": result.pty_session_id or "",
+        "command_session_id": result.command_session_id or "",
         "changed_paths": list(result.changed_paths),
         "changed_path_kinds": dict(result.changed_path_kinds),
         "mutation_source": result.mutation_source,
@@ -66,63 +66,63 @@ def command_tool_result(result: ExecCommandResult) -> ToolResult:
     )
 
 
-def recover_pty_result_from_supervisor(
+def recover_command_session_result_from_supervisor(
     context: ToolExecutionContextService,
     result: ExecCommandResult,
     *,
-    pty_session_id: str,
+    command_session_id: str,
 ) -> ExecCommandResult:
     """Recover a terminal result already claimed by background notification polling."""
-    if not _is_pty_not_found(result):
+    if not _is_command_session_not_found(result):
         return result
     manager = context.get("background_task_manager")
-    get_result = getattr(manager, "get_pty_command_result", None)
+    get_result = getattr(manager, "get_command_session_result", None)
     if not callable(get_result):
         return result
-    stored = get_result(pty_session_id)
+    stored = get_result(command_session_id)
     if not isinstance(stored, dict):
         return result
     return _exec_command_result_from_payload(
         stored,
-        pty_session_id=pty_session_id,
+        command_session_id=command_session_id,
         timings=result.timings,
     )
 
 
-def mark_pty_result_reported_by_tool(
+def mark_command_session_result_reported_by_tool(
     context: ToolExecutionContextService,
     result: ExecCommandResult,
     *,
-    pty_session_id: str | None = None,
+    command_session_id: str | None = None,
 ) -> None:
-    session_id = result.pty_session_id or pty_session_id
+    session_id = result.command_session_id or command_session_id
     if not session_id or result.status == "running":
         return
-    if result.status == "error" and result.pty_session_id is None:
+    if result.status == "error" and result.command_session_id is None:
         return
     manager = context.get("background_task_manager")
-    mark = getattr(manager, "mark_pty_result_reported_by_tool", None)
+    mark = getattr(manager, "mark_command_session_result_reported_by_tool", None)
     if not callable(mark):
         return
     payload = command_result_payload(result)
     mark(
-        pty_session_id=session_id,
+        command_session_id=session_id,
         result=payload,
     )
 
 
-def _is_pty_not_found(result: ExecCommandResult) -> bool:
+def _is_command_session_not_found(result: ExecCommandResult) -> bool:
     return (
         result.status == "error"
-        and result.pty_session_id is None
-        and result.output.stderr == "pty_session_not_found"
+        and result.command_session_id is None
+        and result.output.stderr == "command_session_not_found"
     )
 
 
 def _exec_command_result_from_payload(
     payload: dict[str, object],
     *,
-    pty_session_id: str,
+    command_session_id: str,
     timings: dict[str, float] | None,
 ) -> ExecCommandResult:
     output_raw = payload.get("output")
@@ -141,7 +141,7 @@ def _exec_command_result_from_payload(
             stdout=str(output.get("stdout") or ""),
             stderr=str(output.get("stderr") or ""),
         ),
-        pty_session_id=str(payload.get("pty_session_id") or pty_session_id),
+        command_session_id=str(payload.get("command_session_id") or command_session_id),
         timings=timings or {},
         changed_paths=(
             [str(path) for path in changed_paths_raw]
@@ -167,6 +167,6 @@ __all__ = [
     "CommandToolOutput",
     "command_result_payload",
     "command_tool_result",
-    "mark_pty_result_reported_by_tool",
-    "recover_pty_result_from_supervisor",
+    "mark_command_session_result_reported_by_tool",
+    "recover_command_session_result_from_supervisor",
 ]

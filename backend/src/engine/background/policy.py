@@ -14,12 +14,10 @@ WORKFLOW_TOOL_NAMES = frozenset(
         "cancel_workflow",
     }
 )
-PTY_SESSION_TOOL_NAMES = frozenset(
+COMMAND_SESSION_TOOL_NAMES = frozenset(
     {
-        "cancel_pty_command",
-        "check_pty_command_progress",
         "exec_command",
-        "write_pty_command_stdin",
+        "write_stdin",
     }
 )
 
@@ -36,6 +34,6 @@ def needs_background_manager(tool: Any) -> bool:
     """Return whether this tool surface needs the per-query background manager."""
     return (
         is_engine_background_tool(tool)
-        or getattr(tool, "name", "") in PTY_SESSION_TOOL_NAMES
+        or getattr(tool, "name", "") in COMMAND_SESSION_TOOL_NAMES
         or getattr(tool, "name", "") in WORKFLOW_TOOL_NAMES
     )

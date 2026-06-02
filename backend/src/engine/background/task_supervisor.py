@@ -51,7 +51,7 @@ class BackgroundTaskStatus(StrEnum):
 # :meth:`BackgroundTaskSupervisor._apply_terminal_status_transition`.
 # A status with a *higher* precedence overwrites a lower one; otherwise the
 # attempt is dropped. Cancel + natural-completion races resolve to COMPLETED so
-# a long-running task or PTY session that finishes between cancel and reap
+# a long-running task or command session that finishes between cancel and reap
 # returns its real result, not a late cancellation result.
 _TERMINAL_PRECEDENCE: dict[BackgroundTaskStatus, int] = {
     BackgroundTaskStatus.RUNNING: 0,
@@ -114,10 +114,10 @@ class BackgroundTaskRecord:
 
 
 @dataclass
-class PtyCommandRecord:
-    """Lightweight supervision state for a daemon-owned PTY command."""
+class CommandSessionRecord:
+    """Lightweight supervision state for a daemon-owned command session."""
 
-    pty_session_id: str
+    command_session_id: str
     sandbox_id: str
     agent_id: str
     command: str = ""
@@ -265,7 +265,7 @@ class BackgroundTaskSupervisor:
 
     def __init__(self) -> None:
         self._tasks: dict[str, BackgroundTaskRecord] = {}
-        self._pty_commands: dict[str, PtyCommandRecord] = {}
+        self._command_sessions: dict[str, CommandSessionRecord] = {}
         self._workflows: dict[str, WorkflowBackgroundRecord] = {}
         self._alias_counter: int = 0
         self._subagent_counter: int = 0
@@ -434,7 +434,7 @@ class BackgroundTaskSupervisor:
         """Return True if any task is still running."""
         return any(
             task.status == BackgroundTaskStatus.RUNNING for task in self._tasks.values()
-        ) or bool(self._running_pty_commands())
+        ) or bool(self._running_command_sessions())
 
     def count_by_agent(self, agent_id: str) -> int:
         """Return running sandbox-bound background task count for one agent."""
@@ -443,9 +443,9 @@ class BackgroundTaskSupervisor:
             for tracked in self._tasks.values()
             if _running_sandbox_task(tracked, agent_id)
         )
-        pty_count = sum(
+        command_session_count = sum(
             1
-            for tracked in self._pty_commands.values()
+            for tracked in self._command_sessions.values()
             if tracked.status == BackgroundTaskStatus.RUNNING
             and tracked.agent_id == agent_id
         )
@@ -454,7 +454,7 @@ class BackgroundTaskSupervisor:
             for tracked in self._workflows.values()
             if tracked.agent_id == agent_id and tracked.outstanding
         )
-        return task_count + pty_count + workflow_count
+        return task_count + command_session_count + workflow_count
 
     def register_workflow(
         self,
@@ -586,30 +586,30 @@ class BackgroundTaskSupervisor:
         record.last_seen_at = time.monotonic()
         return record
 
-    def register_pty_command(
+    def register_command_session(
         self,
         *,
-        pty_session_id: str,
+        command_session_id: str,
         sandbox_id: str,
         agent_id: str,
         command: str = "",
     ) -> None:
-        """Track a daemon-owned PTY command for lifecycle gates."""
-        self._pty_commands[pty_session_id] = PtyCommandRecord(
-            pty_session_id=pty_session_id,
+        """Track a daemon-owned command session for lifecycle gates."""
+        self._command_sessions[command_session_id] = CommandSessionRecord(
+            command_session_id=command_session_id,
             sandbox_id=sandbox_id,
             agent_id=agent_id,
             command=command,
         )
         self._ensure_heartbeat_task()
 
-    def mark_pty_result_reported_by_tool(
+    def mark_command_session_result_reported_by_tool(
         self,
         *,
-        pty_session_id: str,
+        command_session_id: str,
         result: dict[str, Any],
     ) -> None:
-        tracked = self._pty_commands.get(pty_session_id)
+        tracked = self._command_sessions.get(command_session_id)
         if tracked is None:
             return
         status = str(result.get("status") or "")
@@ -619,9 +619,9 @@ class BackgroundTaskSupervisor:
         tracked.status = BackgroundTaskStatus.DELIVERED
         self._stop_heartbeat_if_idle()
 
-    def get_pty_command_result(self, pty_session_id: str) -> dict[str, Any] | None:
-        """Return a stored terminal PTY result, if notification polling claimed it."""
-        tracked = self._pty_commands.get(pty_session_id)
+    def get_command_session_result(self, command_session_id: str) -> dict[str, Any] | None:
+        """Return a stored terminal result, if notification polling claimed it."""
+        tracked = self._command_sessions.get(command_session_id)
         if (
             tracked is None
             or tracked.result is None
@@ -693,7 +693,7 @@ class BackgroundTaskSupervisor:
 
         Returns the number of asyncio tasks still not done after ``grace_s``.
         """
-        await self.cancel_pty_by_agent(agent_id)
+        await self.cancel_command_sessions_by_agent(agent_id)
         targets = [
             tracked
             for tracked in self._tasks.values()
@@ -720,11 +720,11 @@ class BackgroundTaskSupervisor:
             task.cancel()
         return len([task for task in pending if not task.done()])
 
-    async def cancel_pty_by_agent(self, agent_id: str) -> int:
-        """Cancel active PTY command records for one agent."""
+    async def cancel_command_sessions_by_agent(self, agent_id: str) -> int:
+        """Cancel active command-session records for one agent."""
         targets = [
             record
-            for record in self._pty_commands.values()
+            for record in self._command_sessions.values()
             if record.status == BackgroundTaskStatus.RUNNING
             and record.agent_id == agent_id
         ]
@@ -735,11 +735,11 @@ class BackgroundTaskSupervisor:
 
             await asyncio.gather(
                 *(
-                    sandbox_api.cancel_pty_command(
+                    sandbox_api.cancel_command_session(
                         record.sandbox_id,
-                        sandbox_api.PtyCancelRequest(
+                        sandbox_api.CommandSessionCancelRequest(
                             caller=sandbox_api.SandboxCaller(agent_id=record.agent_id),
-                            pty_session_id=record.pty_session_id,
+                            command_session_id=record.command_session_id,
                         ),
                     )
                     for record in targets
@@ -751,14 +751,14 @@ class BackgroundTaskSupervisor:
                 record.status = BackgroundTaskStatus.CANCELLED
         return len(targets)
 
-    async def collect_pty_completion_notifications(self) -> list[str]:
-        """Return one notification string for each newly terminal PTY session."""
-        await self._collect_pty_completions_once()
+    async def collect_command_session_completion_notifications(self) -> list[str]:
+        """Return one notification string for each newly terminal command session."""
+        await self._collect_command_completions_once()
         notifications: list[str] = []
-        for record in self._pty_commands.values():
+        for record in self._command_sessions.values():
             if record.status not in _TERMINAL_UNDELIVERED or record.result is None:
                 continue
-            notifications.append(_render_pty_completion_notification(record))
+            notifications.append(_render_command_session_completion_notification(record))
             record.status = BackgroundTaskStatus.DELIVERED
         self._stop_heartbeat_if_idle()
         return notifications
@@ -848,9 +848,14 @@ class BackgroundTaskSupervisor:
 
     async def cancel_all(self) -> None:
         """Cancel all running tasks. Called on query loop exit."""
-        pty_agents = {record.agent_id for record in self._running_pty_commands()}
+        command_session_agents = {
+            record.agent_id for record in self._running_command_sessions()
+        }
         await asyncio.gather(
-            *(self.cancel_pty_by_agent(agent_id) for agent_id in pty_agents),
+            *(
+                self.cancel_command_sessions_by_agent(agent_id)
+                for agent_id in command_session_agents
+            ),
             return_exceptions=True,
         )
         cancelled_tasks: list[asyncio.Task[ToolResult]] = []
@@ -949,7 +954,7 @@ class BackgroundTaskSupervisor:
         self._heartbeat_task = asyncio.create_task(self._heartbeat_loop())
 
     def _stop_heartbeat_if_idle(self) -> None:
-        if self._running_sandbox_invocation_ids() or self._running_pty_commands():
+        if self._running_sandbox_invocation_ids() or self._running_command_sessions():
             return
         if self._heartbeat_task is not None and not self._heartbeat_task.done():
             self._heartbeat_task.cancel()
@@ -959,8 +964,8 @@ class BackgroundTaskSupervisor:
         while True:
             await asyncio.sleep(_HEARTBEAT_INTERVAL_S)
             by_sandbox = self._running_sandbox_invocation_ids()
-            await self._collect_pty_completions_once()
-            if not by_sandbox and not self._running_pty_commands():
+            await self._collect_command_completions_once()
+            if not by_sandbox and not self._running_command_sessions():
                 self._heartbeat_task = None
                 return
             for tracked in list(self._tasks.values()):
@@ -1007,15 +1012,15 @@ class BackgroundTaskSupervisor:
                 )
         return by_sandbox
 
-    def _running_pty_commands(self) -> list[PtyCommandRecord]:
+    def _running_command_sessions(self) -> list[CommandSessionRecord]:
         return [
             record
-            for record in self._pty_commands.values()
+            for record in self._command_sessions.values()
             if record.status == BackgroundTaskStatus.RUNNING
         ]
 
-    async def _collect_pty_completions_once(self) -> None:
-        running = self._running_pty_commands()
+    async def _collect_command_completions_once(self) -> None:
+        running = self._running_command_sessions()
         if not running:
             return
         try:
@@ -1026,16 +1031,16 @@ class BackgroundTaskSupervisor:
                 by_sandbox_agent.setdefault(
                     (record.sandbox_id, record.agent_id),
                     [],
-                ).append(record.pty_session_id)
+                ).append(record.command_session_id)
             for (sandbox_id, agent_id), ids in by_sandbox_agent.items():
-                completions = await sandbox_api.collect_pty_completions(
+                completions = await sandbox_api.collect_command_completions(
                     sandbox_id,
                     agent_id=agent_id,
-                    pty_session_ids=ids,
+                    command_session_ids=ids,
                 )
                 for completion in completions:
-                    pty_session_id = str(completion.get("pty_session_id") or "")
-                    record = self._pty_commands.get(pty_session_id)
+                    command_session_id = str(completion.get("command_session_id") or "")
+                    record = self._command_sessions.get(command_session_id)
                     if record is None:
                         continue
                     result = completion.get("result")
@@ -1054,10 +1059,10 @@ class BackgroundTaskSupervisor:
                     else:
                         record.status = BackgroundTaskStatus.FAILED
         except Exception:
-            logger.debug("pty completion collection failed", exc_info=True)
+            logger.debug("command-session completion collection failed", exc_info=True)
 
 
-def _render_pty_completion_notification(record: PtyCommandRecord) -> str:
+def _render_command_session_completion_notification(record: CommandSessionRecord) -> str:
     result = record.result or {}
     status = str(result.get("status") or record.status.value)
     exit_code = result.get("exit_code")
@@ -1066,7 +1071,7 @@ def _render_pty_completion_notification(record: PtyCommandRecord) -> str:
     stderr = str(output.get("stderr") or "")
     lines = [
         (
-            f'[BACKGROUND COMPLETED] pty_session_id="{record.pty_session_id}" '
+            f'[BACKGROUND COMPLETED] command_session_id="{record.command_session_id}" '
             f"status={status} exit_code={exit_code}"
         )
     ]

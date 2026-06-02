@@ -6,6 +6,7 @@
 //! auto-squash maintenance policy once a publish lands.
 
 use std::sync::Arc;
+use std::time::Instant;
 
 use eos_protocol::{LayerChange, LayerPath};
 
@@ -164,8 +165,7 @@ impl<T: CommitTransactionPort + 'static> OccService<T> {
         atomic: bool,
     ) -> Result<ChangesetResult, OccError> {
         let prepared = self.prepare_changeset(changes, snapshot_version, atomic)?;
-        let receiver = self.commit_queue.submit(prepared)?;
-        receiver.recv().map_err(|_| OccError::ReplyDisconnected)?
+        self.apply_prepared_changeset(prepared)
     }
 
     /// Prepare and commit with caller-supplied base hashes.
@@ -191,8 +191,7 @@ impl<T: CommitTransactionPort + 'static> OccService<T> {
             atomic,
             base_hashes,
         )?;
-        let receiver = self.commit_queue.submit(prepared)?;
-        receiver.recv().map_err(|_| OccError::ReplyDisconnected)?
+        self.apply_prepared_changeset(prepared)
     }
 
     /// Route raw changes into a [`PreparedChangeset`] (Drop/Direct/Gated/Reject).
@@ -264,11 +263,144 @@ impl<T: CommitTransactionPort + 'static> OccService<T> {
             atomic,
         })
     }
+
+    fn apply_prepared_changeset(
+        &self,
+        prepared: PreparedChangeset,
+    ) -> Result<ChangesetResult, OccError> {
+        let total_start = Instant::now();
+        let snapshot_version = prepared.snapshot_version;
+        let receiver = self.commit_queue.submit(prepared)?;
+        let commit_start = Instant::now();
+        let result = receiver.recv().map_err(|_| OccError::ReplyDisconnected)??;
+        Ok(finalize_apply_result(
+            result,
+            snapshot_version,
+            commit_start.elapsed().as_secs_f64(),
+            total_start.elapsed().as_secs_f64(),
+        ))
+    }
+}
+
+fn finalize_apply_result(
+    mut result: ChangesetResult,
+    snapshot_version: Option<u64>,
+    commit_elapsed_s: f64,
+    total_s: f64,
+) -> ChangesetResult {
+    let commit_queue_wait_s = timing_or_default(&result.timings, "occ.serial.queue_wait_s");
+    let commit_worker_s = timing_or_default(&result.timings, "occ.commit.total_s")
+        .max(timing_or_default(&result.timings, "occ.serial.commit_s"));
+    result.timings.insert(
+        "occ.apply.commit_queue_wait_s".to_owned(),
+        commit_queue_wait_s,
+    );
+    result
+        .timings
+        .insert("occ.apply.commit_resume_wait_s".to_owned(), 0.0);
+    result
+        .timings
+        .insert("occ.apply.commit_worker_s".to_owned(), commit_worker_s);
+    result
+        .timings
+        .insert("occ.apply.commit_s".to_owned(), commit_elapsed_s);
+    result
+        .timings
+        .insert("occ.apply.total_s".to_owned(), total_s);
+    if let (Some(published), Some(snapshot)) = (result.published_manifest_version, snapshot_version)
+    {
+        result.timings.insert(
+            "occ.apply.manifest_lag".to_owned(),
+            published.saturating_sub(snapshot + 1) as f64,
+        );
+    }
+    result
+}
+
+fn timing_or_default(timings: &std::collections::BTreeMap<String, f64>, key: &str) -> f64 {
+    timings.get(key).copied().unwrap_or(0.0)
 }
 
 impl<T: CommitTransactionPort + 'static> Drop for OccService<T> {
     fn drop(&mut self) {
         let _ = self.commit_queue.close();
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::collections::BTreeMap;
+
+    use eos_protocol::{LayerChange, LayerPath};
+
+    use super::*;
+    use crate::{CommitQueue, FileResult, OccStatus};
+
+    type TestResult<T = ()> = Result<T, Box<dyn std::error::Error + Send + Sync>>;
+
+    struct RecordingTransaction;
+
+    impl CommitTransactionPort for RecordingTransaction {
+        fn revalidate_and_publish(
+            &self,
+            combined: &PreparedChangeset,
+        ) -> Result<ChangesetResult, crate::PublishConflict> {
+            let mut timings = BTreeMap::new();
+            timings.insert("occ.commit.total_s".to_owned(), 0.123);
+            Ok(ChangesetResult {
+                files: combined
+                    .path_groups
+                    .iter()
+                    .map(|group| FileResult {
+                        path: group.path.clone(),
+                        status: OccStatus::Committed,
+                        message: String::new(),
+                    })
+                    .collect(),
+                published_manifest_version: Some(3),
+                timings,
+            })
+        }
+    }
+
+    #[test]
+    fn apply_changeset_adds_public_apply_timing_envelope() -> TestResult {
+        let queue = CommitQueue::with_config(RecordingTransaction, 64, 0.0, 3);
+        let service = OccService::new(queue)?;
+        let path = LayerPath::parse("timed.txt")?;
+        let result = service.apply_changeset(
+            &[LayerChange::Write {
+                path,
+                content: b"x".to_vec(),
+            }],
+            Some(1),
+            true,
+        )?;
+
+        assert!(result.success());
+        assert!(result.timings.contains_key("occ.apply.commit_queue_wait_s"));
+        assert_eq!(
+            result
+                .timings
+                .get("occ.apply.commit_resume_wait_s")
+                .copied(),
+            Some(0.0)
+        );
+        assert!(
+            result
+                .timings
+                .get("occ.apply.commit_worker_s")
+                .copied()
+                .unwrap_or_default()
+                >= 0.123
+        );
+        assert!(result.timings.contains_key("occ.apply.commit_s"));
+        assert!(result.timings.contains_key("occ.apply.total_s"));
+        assert_eq!(
+            result.timings.get("occ.apply.manifest_lag").copied(),
+            Some(1.0)
+        );
+        Ok(())
     }
 }
 

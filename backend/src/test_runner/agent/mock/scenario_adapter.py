@@ -55,6 +55,24 @@ _TERMINAL_WORKFLOW_STATUSES = {
 }
 
 
+def _delegated_workflow_poll_attempts(scenario: "Scenario") -> int:
+    raw = getattr(scenario, "delegated_workflow_poll_attempts", None)
+    try:
+        attempts = int(raw)
+    except (TypeError, ValueError):
+        return _DELEGATED_WORKFLOW_POLL_ATTEMPTS
+    return max(1, attempts)
+
+
+def _delegated_workflow_poll_interval_s(scenario: "Scenario") -> float:
+    raw = getattr(scenario, "delegated_workflow_poll_interval_s", None)
+    try:
+        interval_s = float(raw)
+    except (TypeError, ValueError):
+        return _DELEGATED_WORKFLOW_POLL_INTERVAL_S
+    return max(0.0, interval_s)
+
+
 def normalize_result(blocks: list[ToolResultBlock]) -> ToolResult:
     """Normalize the loop's trailing ``ToolResultBlock``(s) into the
     ``ToolResult`` shape the imperative probe bodies inspect (``.output`` etc.)."""
@@ -196,11 +214,13 @@ async def _root_script(scenario: "Scenario", ctx: ScenarioContext) -> TurnScript
         workflow_id = str(payload.get("workflow_id") or "")
         workflow_task_id = str(payload.get("workflow_task_id") or "")
         if workflow_id:
+            poll_attempts = _delegated_workflow_poll_attempts(scenario)
+            poll_interval_s = _delegated_workflow_poll_interval_s(scenario)
             check_args = {
                 "workflow_id": workflow_id,
                 "workflow_task_id": workflow_task_id or None,
             }
-            for _index in range(_DELEGATED_WORKFLOW_POLL_ATTEMPTS):
+            for _index in range(poll_attempts):
                 blocks = yield Turn(calls=(ToolCall("check_workflow_status", check_args),))
                 status_result = normalize_result(blocks)
                 if status_result.is_error:
@@ -217,7 +237,7 @@ async def _root_script(scenario: "Scenario", ctx: ScenarioContext) -> TurnScript
                         status = "failed"
                         outcome = f"Root delegated workflow {workflow_status}."
                     break
-                await asyncio.sleep(_DELEGATED_WORKFLOW_POLL_INTERVAL_S)
+                await asyncio.sleep(poll_interval_s)
             else:
                 status = "failed"
                 outcome = "Root delegated workflow did not finish before polling budget."
@@ -288,11 +308,13 @@ async def _executor_script(
                 workflow_id = str(payload.get("workflow_id") or "")
                 workflow_task_id = str(payload.get("workflow_task_id") or "")
             if workflow_id:
+                poll_attempts = _delegated_workflow_poll_attempts(scenario)
+                poll_interval_s = _delegated_workflow_poll_interval_s(scenario)
                 check_args = {
                     "workflow_id": workflow_id,
                     "workflow_task_id": workflow_task_id or None,
                 }
-                for _index in range(_DELEGATED_WORKFLOW_POLL_ATTEMPTS):
+                for _index in range(poll_attempts):
                     blocks = yield Turn(calls=(ToolCall("check_workflow_status", check_args),))
                     status_result = normalize_result(blocks)
                     if status_result.is_error:
@@ -309,7 +331,7 @@ async def _executor_script(
                             status = "failed"
                             outcome = f"Delegated workflow {workflow_status}."
                         break
-                    await asyncio.sleep(_DELEGATED_WORKFLOW_POLL_INTERVAL_S)
+                    await asyncio.sleep(poll_interval_s)
                 else:
                     status = "failed"
                     outcome = "Delegated workflow did not finish before polling budget."

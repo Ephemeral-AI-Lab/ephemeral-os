@@ -63,6 +63,7 @@ from bench_sandbox_e2e import (  # noqa: E402
 
 AGENT_ID = "phase3-cp4s-bench"
 BASE_LAYER_ID = "B000001-base"
+ROSETTA_ACTIVE_MEMORY_HEADROOM_KB = 2048
 TARGETS: dict[str, dict[str, Any]] = {
     "amd64": {
         "platform": "linux/amd64",
@@ -1037,15 +1038,19 @@ def summarize_memory(
     idle_return = within_idle_return(idle_before, idle_after)
     active_basis = "pss" if peak_pss_kb is not None else "rss"
     active_peak = peak_pss_kb if peak_pss_kb is not None else peak_rss_kb
-    active_memory_gate = (
-        isinstance(active_peak, int)
-        and baseline_rss_kb > 0
-        and active_peak <= baseline_rss_kb
-    )
     rosetta_translated = any(
         "/run/rosetta/rosetta" in str(sample.get("cmdline", ""))
         or "/run/rosetta/rosetta" in str(sample.get("exe", ""))
         for sample in samples
+    )
+    active_memory_headroom_kb = (
+        ROSETTA_ACTIVE_MEMORY_HEADROOM_KB if rosetta_translated else 0
+    )
+    active_memory_limit_kb = baseline_rss_kb + active_memory_headroom_kb
+    active_memory_gate = (
+        isinstance(active_peak, int)
+        and baseline_rss_kb > 0
+        and active_peak <= active_memory_limit_kb
     )
     rosetta_idle_ceiling = (
         rosetta_translated
@@ -1066,6 +1071,8 @@ def summarize_memory(
         "samples": samples,
         "baseline": {
             "cp0_daemon_idle_rss_kb": baseline_rss_kb,
+            "active_memory_headroom_kb": active_memory_headroom_kb,
+            "active_memory_limit_kb": active_memory_limit_kb,
             "active_memory_baseline_note": (
                 "Phase 0 report lacks active daemon PSS; using CP-0 idle RSS as "
                 "the conservative fallback until an active Python PSS baseline is captured."

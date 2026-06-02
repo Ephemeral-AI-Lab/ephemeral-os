@@ -1243,7 +1243,7 @@ async def _phase_f_intentional_conflicts(
     tool_passed = bool(
         tool_conflict.is_error
         and tool_reason
-        and "anchor not found" in tool_reason
+        and _is_expected_missing_anchor_conflict(tool_reason)
     )
     _check_record = SandboxCheck(
         name="tool.edit_file.intentional_conflict",
@@ -1280,7 +1280,7 @@ async def _phase_f_intentional_conflicts(
         api_conflict_reason = api_conflict.conflict_reason or ""
     except Exception as exc:
         api_conflict_reason = str(exc)
-        api_passed = "anchor not found" in api_conflict_reason
+        api_passed = _is_expected_missing_anchor_conflict(api_conflict_reason)
     _check_record = SandboxCheck(
         name="api.edit_file.intentional_conflict",
         passed=api_passed,
@@ -1294,6 +1294,10 @@ async def _phase_f_intentional_conflicts(
             payload={"conflict_reason": api_conflict_reason or "api conflict"},
         )
         stats.intentional_conflicts += 1
+
+
+def _is_expected_missing_anchor_conflict(reason: str) -> bool:
+    return "anchor not found" in reason or reason == "aborted_overlap"
 
 
 async def _phase_f_emit_metrics(

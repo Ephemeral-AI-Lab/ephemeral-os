@@ -37,6 +37,8 @@ class ComplexProjectBuildShellEditLspThreeParallelAgents(ScenarioBase):
     """Three dependency-free executor tasks inside one task/request run."""
 
     name = "sandbox.complex_project_build_shell_edit_lsp_three_parallel_agents"
+    delegated_workflow_poll_attempts = 96
+    delegated_workflow_poll_interval_s = 3.0
 
     def planner_response(self, ctx: ScenarioContext) -> ToolCallSpec:  # noqa: ARG002
         return ToolCallSpec(submit_planner_outcome, _three_agent_plan())

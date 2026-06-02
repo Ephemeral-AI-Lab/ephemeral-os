@@ -1,4 +1,4 @@
-//! Command and PTY operations for the daemon dispatcher.
+//! Command-session operations for the daemon dispatcher.
 
 #[cfg(target_os = "linux")]
 use std::collections::{HashMap, HashSet, VecDeque};
@@ -48,10 +48,18 @@ use crate::dispatcher::{
 use crate::dispatcher::{run_shell_overlay, u64_to_f64_saturating, DispatchContext};
 use crate::error::DaemonError;
 
-/// `api.v1.exec_command` — final Phase 3T command contract.
+/// `api.v1.exec_command` — command-session start contract.
 pub fn op_exec_command(args: &Value, _context: DispatchContext<'_>) -> Result<Value, DaemonError> {
     let cmd = require_command_string(args, "cmd")?;
-    let tty = args.get("tty").and_then(Value::as_bool).unwrap_or(false);
+    if args.get("tty").is_some() {
+        return Ok(command_result(
+            "error",
+            None,
+            "",
+            "tty is not a public exec_command parameter",
+            None,
+        ));
+    }
     let timeout_seconds = optional_u64(args, "timeout")
         .or_else(|| optional_u64(args, "timeout_seconds"))
         .map(u64_to_f64_saturating);
@@ -67,21 +75,8 @@ pub fn op_exec_command(args: &Value, _context: DispatchContext<'_>) -> Result<Va
     }
     #[cfg(target_os = "linux")]
     if let Some(handle) = crate::isolated::command_handle_for_args(args) {
-        if tty {
-            let yield_time_ms = optional_u64(args, "yield_time_ms").unwrap_or(1000);
-            return start_isolated_pty_command(args, &cmd, timeout_seconds, yield_time_ms, handle);
-        }
-        return run_isolated_command(args, &cmd, timeout_seconds, &handle, Instant::now());
-    }
-    if !tty {
-        let mut shell_args = args.clone();
-        shell_args["command"] = json!(cmd);
-        shell_args["cwd"] = json!(".");
-        if let Some(timeout) = timeout_seconds {
-            shell_args["timeout_seconds"] = json!(timeout);
-        }
-        let shell = run_shell_overlay(&shell_args, Instant::now(), None)?;
-        return Ok(command_response_from_shell(&shell, None));
+        let yield_time_ms = optional_u64(args, "yield_time_ms").unwrap_or(1000);
+        return start_isolated_pty_command(args, &cmd, timeout_seconds, yield_time_ms, handle);
     }
 
     #[cfg(target_os = "linux")]
@@ -126,6 +121,13 @@ pub fn op_pty_write_stdin(
     }
 }
 
+pub fn op_command_write_stdin(
+    args: &Value,
+    context: DispatchContext<'_>,
+) -> Result<Value, DaemonError> {
+    op_pty_write_stdin(args, context)
+}
+
 #[cfg_attr(
     not(target_os = "linux"),
     expect(
@@ -164,6 +166,10 @@ pub fn op_pty_cancel(args: &Value, _context: DispatchContext<'_>) -> Result<Valu
     }
 }
 
+pub fn op_command_cancel(args: &Value, context: DispatchContext<'_>) -> Result<Value, DaemonError> {
+    op_pty_cancel(args, context)
+}
+
 #[expect(
     clippy::unnecessary_wraps,
     reason = "dispatcher handlers share a fallible ABI"
@@ -181,6 +187,13 @@ pub fn op_pty_collect_completed(
         let _ = args;
         Ok(json!({"success": true, "completions": []}))
     }
+}
+
+pub fn op_command_collect_completed(
+    args: &Value,
+    context: DispatchContext<'_>,
+) -> Result<Value, DaemonError> {
+    op_pty_collect_completed(args, context)
 }
 
 #[expect(
@@ -206,6 +219,13 @@ pub fn op_pty_session_count(
     {
         Ok(json!({"success": true, "agent_id": agent_id, "count": 0}))
     }
+}
+
+pub fn op_command_session_count(
+    args: &Value,
+    context: DispatchContext<'_>,
+) -> Result<Value, DaemonError> {
+    op_pty_session_count(args, context)
 }
 
 fn require_command_string(args: &Value, key: &str) -> Result<String, DaemonError> {
@@ -269,7 +289,7 @@ fn sanitize_path_component(value: &str) -> String {
     }
 }
 
-fn command_response_from_shell(shell: &Value, pty_session_id: Option<String>) -> Value {
+fn command_response_from_shell(shell: &Value, command_session_id: Option<String>) -> Value {
     let status = shell
         .get("status")
         .and_then(Value::as_str)
@@ -277,7 +297,7 @@ fn command_response_from_shell(shell: &Value, pty_session_id: Option<String>) ->
     let exit_code = shell.get("exit_code").and_then(Value::as_i64);
     let stdout = shell.get("stdout").and_then(Value::as_str).unwrap_or("");
     let stderr = shell.get("stderr").and_then(Value::as_str).unwrap_or("");
-    let mut response = command_result(status, exit_code, stdout, stderr, pty_session_id);
+    let mut response = command_result(status, exit_code, stdout, stderr, command_session_id);
     for key in [
         "success",
         "workspace",
@@ -302,7 +322,7 @@ fn command_result(
     exit_code: Option<i64>,
     stdout: &str,
     stderr: &str,
-    pty_session_id: Option<String>,
+    command_session_id: Option<String>,
 ) -> Value {
     let mut response = json!({
         "status": status,
@@ -312,14 +332,14 @@ fn command_result(
             "stderr": stderr,
         },
     });
-    if let Some(pty_session_id) = pty_session_id {
-        response["pty_session_id"] = json!(pty_session_id);
+    if let Some(command_session_id) = command_session_id {
+        response["command_session_id"] = json!(command_session_id);
     }
     response
 }
 
 fn pty_not_found() -> Value {
-    command_result("error", None, "", "pty_session_not_found", None)
+    command_result("error", None, "", "command_session_not_found", None)
 }
 
 #[cfg(any(target_os = "linux", test))]
@@ -464,7 +484,7 @@ impl PtyRegistry {
     }
 
     fn next_id(&self) -> String {
-        format!("pty_{}", self.counter.fetch_add(1, Ordering::Relaxed))
+        format!("cmd_{}", self.counter.fetch_add(1, Ordering::Relaxed))
     }
 
     fn insert(&self, session: Arc<PtySession>) {
@@ -496,7 +516,7 @@ impl PtyRegistry {
         let mut found = None;
         for item in completed.drain(..) {
             let item_id = item
-                .get("pty_session_id")
+                .get("command_session_id")
                 .and_then(Value::as_str)
                 .unwrap_or_default();
             if found.is_none() && item_id == id {
@@ -511,7 +531,7 @@ impl PtyRegistry {
 
     fn collect_completed(&self, args: &Value) -> Value {
         let wanted: Option<HashSet<String>> = args
-            .get("pty_session_ids")
+            .get("command_session_ids")
             .and_then(Value::as_array)
             .map(|ids| {
                 ids.iter()
@@ -529,7 +549,7 @@ impl PtyRegistry {
         let mut returned = Vec::new();
         for item in completed.drain(..) {
             let id = item
-                .get("pty_session_id")
+                .get("command_session_id")
                 .and_then(Value::as_str)
                 .unwrap_or_default();
             let item_agent = item
@@ -633,7 +653,7 @@ fn isolated_response_from_runner(
     handle: &crate::isolated::CommandHandle,
     runner: &RunResult,
     total_start: Instant,
-    include_pty_session_id: bool,
+    include_command_session_id: bool,
 ) -> Result<Value, DaemonError> {
     let (path_kinds, capture_s) = capture_isolated_path_kinds(handle)?;
     let changed_paths: Vec<String> = path_kinds.iter().map(|(path, _)| path.clone()).collect();
@@ -690,9 +710,9 @@ fn isolated_response_from_runner(
             .cloned()
             .unwrap_or_else(|| json!([])),
     });
-    if include_pty_session_id {
-        if let Some(pty_session_id) = runner.tool_result.get("pty_session_id").cloned() {
-            response["pty_session_id"] = pty_session_id;
+    if include_command_session_id {
+        if let Some(command_session_id) = runner.tool_result.get("command_session_id").cloned() {
+            response["command_session_id"] = command_session_id;
         }
     }
     record_isolated_runner_tool_call(handle, runner, status, &response, total_start);
@@ -940,7 +960,7 @@ fn prepare_isolated_pty_command(
     std::fs::write(
         session_dir.join("metadata.json"),
         serde_json::to_vec_pretty(&json!({
-            "pty_session_id": spec.id,
+            "command_session_id": spec.id,
             "agent_id": handle.agent_id,
             "invocation_id": spec.invocation_id,
             "workspace": "isolated",
@@ -1011,7 +1031,7 @@ fn prepare_pty_command(
     std::fs::write(
         session_dir.join("metadata.json"),
         serde_json::to_vec_pretty(&json!({
-            "pty_session_id": spec.id,
+            "command_session_id": spec.id,
             "agent_id": spec.agent_id,
             "invocation_id": spec.invocation_id,
             "command": spec.command,
@@ -1209,7 +1229,7 @@ impl PtyFinalizer {
             finalizer_owned_live_session,
         ) {
             pty_registry().push_completed(json!({
-                "pty_session_id": self.session.id,
+                "command_session_id": self.session.id,
                 "agent_id": self.session.agent_id,
                 "command": self.session.command,
                 "result": response,
@@ -1285,7 +1305,7 @@ impl IsolatedPtyFinalizer {
             finalizer_owned_live_session,
         ) {
             pty_registry().push_completed(json!({
-                "pty_session_id": self.session.id,
+                "command_session_id": self.session.id,
                 "agent_id": self.session.agent_id,
                 "command": self.session.command,
                 "result": response,
@@ -1365,7 +1385,7 @@ fn finalize_isolated_pty_workspace(
         "spool_truncated": session.output.spool_truncated(),
     });
     if include_session_id {
-        response["pty_session_id"] = json!(session.id.clone());
+        response["command_session_id"] = json!(session.id.clone());
     }
     std::fs::write(
         &workspace.final_path,
@@ -1381,7 +1401,7 @@ fn finalize_isolated_pty_workspace(
             "status": status,
             "changed_paths": response["changed_paths"].clone(),
             "published": false,
-            "pty_session_id": session.id.clone(),
+            "command_session_id": session.id.clone(),
             "duration_s": 0.0,
             "total_ms": 0.0,
             "phases_ms": {
@@ -1446,7 +1466,7 @@ fn finalize_pty_workspace(
     response["timings"]["command_exec.occ_apply_s"] = json!(occ_s);
     response["spool_truncated"] = json!(session.output.spool_truncated());
     if include_session_id {
-        response["pty_session_id"] = json!(session.id);
+        response["command_session_id"] = json!(session.id);
     }
     std::fs::write(
         &workspace.final_path,
@@ -1469,7 +1489,7 @@ fn finalize_pty_workspace(
 #[cfg(target_os = "linux")]
 fn strip_session_id(mut response: Value) -> Value {
     if let Some(object) = response.as_object_mut() {
-        object.remove("pty_session_id");
+        object.remove("command_session_id");
     }
     response
 }
@@ -1484,14 +1504,14 @@ fn terminate_pty_process_group(pgid: i32) {
 
 #[cfg(target_os = "linux")]
 fn pty_write_stdin(args: &Value) -> Result<Value, DaemonError> {
-    let id = require_string(args, "pty_session_id")?;
+    let id = require_string(args, "command_session_id")?;
     let chars = args
         .get("chars")
         .and_then(Value::as_str)
         .unwrap_or_default()
         .to_owned();
     let yield_time_ms = optional_u64(args, "yield_time_ms").unwrap_or(1000);
-    let max_tokens = optional_u64(args, "max_tokens");
+    let max_tokens = optional_u64(args, "max_output_tokens");
     let registry = pty_registry();
     let Some(session) = registry.get(&id) else {
         if let Some(result) = registry.take_completed_result(&id) {
@@ -1519,9 +1539,9 @@ fn pty_write_stdin(args: &Value) -> Result<Value, DaemonError> {
 
 #[cfg(target_os = "linux")]
 fn pty_progress(args: &Value) -> Result<Value, DaemonError> {
-    let id = require_string(args, "pty_session_id")?;
+    let id = require_string(args, "command_session_id")?;
     let seconds = args.get("time").and_then(Value::as_f64).unwrap_or(1.0);
-    let max_tokens = optional_u64(args, "max_tokens");
+    let max_tokens = optional_u64(args, "max_output_tokens");
     let registry = pty_registry();
     let Some(session) = registry.get(&id) else {
         if let Some(result) = registry.take_completed_result(&id) {
@@ -1548,7 +1568,7 @@ fn pty_progress(args: &Value) -> Result<Value, DaemonError> {
 
 #[cfg(target_os = "linux")]
 fn pty_cancel(args: &Value) -> Result<Value, DaemonError> {
-    let id = require_string(args, "pty_session_id")?;
+    let id = require_string(args, "command_session_id")?;
     let registry = pty_registry();
     let Some(session) = registry.remove(&id) else {
         if let Some(result) = registry.take_completed_result(&id) {
@@ -1562,7 +1582,7 @@ fn pty_cancel(args: &Value) -> Result<Value, DaemonError> {
     Ok(command_result(
         "cancelled",
         None,
-        &session.output.all_recent(optional_u64(args, "max_tokens")),
+        &session.output.all_recent(optional_u64(args, "max_output_tokens")),
         "",
         None,
     ))

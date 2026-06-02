@@ -24,7 +24,7 @@
 
 use std::collections::HashSet;
 use std::sync::{mpsc, Mutex};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use eos_protocol::LayerChange;
 
@@ -102,6 +102,7 @@ pub struct PublishConflict {
 struct WorkItem {
     prepared: PreparedChangeset,
     reply: mpsc::Sender<Result<ChangesetResult, OccError>>,
+    enqueued_at: Instant,
 }
 
 /// Either real work or the stop sentinel that drains and exits the worker.
@@ -262,7 +263,11 @@ impl<T: CommitTransactionPort + 'static> CommitQueue<T> {
         }
         let (reply, receiver) = mpsc::channel();
         self.sender
-            .send(QueueItem::Work(WorkItem { prepared, reply }))
+            .send(QueueItem::Work(WorkItem {
+                prepared,
+                reply,
+                enqueued_at: Instant::now(),
+            }))
             .map_err(|_| OccError::QueueClosed)?;
         Ok(receiver)
     }
@@ -271,6 +276,7 @@ impl<T: CommitTransactionPort + 'static> CommitQueue<T> {
     /// path's [`FileResult`](crate::FileResult) back to its submitter.
     // PORT backend/src/sandbox/occ/commit_queue.py:168 — _commit_batch(): retry + fan-out
     fn commit_batch(transaction: &T, batch: Vec<WorkItem>, max_cas_retries: u32) {
+        let commit_start = Instant::now();
         let Some(combined) = combine_prepared(batch.iter().map(|item| &item.prepared)) else {
             return;
         };
@@ -286,12 +292,25 @@ impl<T: CommitTransactionPort + 'static> CommitQueue<T> {
                 }
             }
         };
+        let commit_elapsed_s = commit_start.elapsed().as_secs_f64();
+        let batch_size = usize_to_f64_saturating(batch.len());
         for item in batch {
             let files = result_files_for_item(&result, &item.prepared);
+            let mut timings = result.timings.clone();
+            timings.insert(
+                "occ.serial.queue_wait_s".to_owned(),
+                commit_start.duration_since(item.enqueued_at).as_secs_f64(),
+            );
+            timings.insert("occ.serial.batch_size".to_owned(), batch_size);
+            timings.insert("occ.serial.commit_s".to_owned(), commit_elapsed_s);
+            timings.insert(
+                "occ.serial.cas_attempts".to_owned(),
+                f64::from(attempts + 1),
+            );
             let _ = item.reply.send(Ok(ChangesetResult {
                 files,
                 published_manifest_version: result.published_manifest_version,
-                timings: result.timings.clone(),
+                timings,
             }));
         }
     }
@@ -335,6 +354,10 @@ fn drain_ready(
         }
     }
     false
+}
+
+fn usize_to_f64_saturating(value: usize) -> f64 {
+    u32::try_from(value).map_or(f64::from(u32::MAX), f64::from)
 }
 
 fn disjoint_batches(items: Vec<WorkItem>) -> Vec<Vec<WorkItem>> {

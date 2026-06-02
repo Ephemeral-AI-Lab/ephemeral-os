@@ -15,7 +15,7 @@ from tools._hooks.destructive_shell import (
     DestructiveGitShellPreHook,
     DestructiveShellPreHook,
 )
-from tools.sandbox._lib.pty_command_tool import (
+from tools.sandbox._lib.command_session_tool import (
     CommandToolOutput,
     command_tool_result,
 )
@@ -29,14 +29,14 @@ from tools.sandbox._lib.tool_context import (
 
 class ExecCommandInput(BaseModel):
     cmd: str = Field(..., min_length=1)
-    tty: bool = False
     yield_time_ms: int = Field(default=1000, ge=0, le=30_000)
-    timeout: int = Field(default=900, ge=1)
+    timeout: int | None = Field(default=None, ge=1)
+    max_output_tokens: int | None = Field(default=None, ge=1)
 
 
 @tool(
     name="exec_command",
-    description="Run a sandbox command, optionally as an interactive PTY session.",
+    description="Run a managed sandbox command session.",
     short_description="Run command.",
     input_model=ExecCommandInput,
     output_model=CommandToolOutput,
@@ -48,9 +48,9 @@ class ExecCommandInput(BaseModel):
 )
 async def exec_command(
     cmd: str,
-    tty: bool = False,
     yield_time_ms: int = 1000,
-    timeout: int = 900,
+    timeout: int | None = None,
+    max_output_tokens: int | None = None,
     *,
     context: ToolExecutionContextService,
 ) -> ToolResult:
@@ -64,20 +64,20 @@ async def exec_command(
         ExecCommandRequest(
             invocation_id=invocation_id,
             cmd=cmd,
-            tty=tty,
             yield_time_ms=yield_time_ms,
             timeout=timeout,
+            max_output_tokens=max_output_tokens,
             caller=caller,
             description="exec_command",
         ),
         **sandbox_audit_kwargs_from_tool_context(context),
     )
-    if result.pty_session_id:
+    if result.command_session_id:
         manager = context.get("background_task_manager")
-        register = getattr(manager, "register_pty_command", None)
+        register = getattr(manager, "register_command_session", None)
         if callable(register):
             register(
-                pty_session_id=result.pty_session_id,
+                command_session_id=result.command_session_id,
                 sandbox_id=sandbox_id,
                 agent_id=caller.agent_id,
                 command=cmd,

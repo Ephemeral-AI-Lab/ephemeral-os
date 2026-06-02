@@ -224,9 +224,9 @@ class CommandOutput:
 @dataclass(frozen=True, kw_only=True)
 class ExecCommandRequest(SandboxRequestBase):
     cmd: str
-    tty: bool = False
     yield_time_ms: int | None = None
     timeout: int | None = None
+    max_output_tokens: int | None = None
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -234,29 +234,22 @@ class ExecCommandResult(SandboxResultBase):
     status: str
     exit_code: int | None
     output: CommandOutput
-    pty_session_id: str | None = None
+    command_session_id: str | None = None
     changed_path_kinds: dict[str, str] = field(default_factory=dict)
     mutation_source: str = ""
 
 
 @dataclass(frozen=True, kw_only=True)
-class PtyWriteRequest(SandboxRequestBase):
-    pty_session_id: str
+class CommandSessionWriteRequest(SandboxRequestBase):
+    command_session_id: str
     chars: str
     yield_time_ms: int | None = None
-    max_tokens: int | None = None
+    max_output_tokens: int | None = None
 
 
 @dataclass(frozen=True, kw_only=True)
-class PtyProgressRequest(SandboxRequestBase):
-    pty_session_id: str
-    time: float
-    max_tokens: int | None = None
-
-
-@dataclass(frozen=True, kw_only=True)
-class PtyCancelRequest(SandboxRequestBase):
-    pty_session_id: str
+class CommandSessionCancelRequest(SandboxRequestBase):
+    command_session_id: str
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -341,6 +334,8 @@ class ExitIsolatedWorkspaceResult(LifecycleResultBase):
 
 __all__ = [
     "CommandOutput",
+    "CommandSessionCancelRequest",
+    "CommandSessionWriteRequest",
     "ConflictInfo",
     "EditFileRequest",
     "EditFileResult",
@@ -358,9 +353,6 @@ __all__ = [
     "Intent",
     "LifecycleError",
     "LifecycleResultBase",
-    "PtyCancelRequest",
-    "PtyProgressRequest",
-    "PtyWriteRequest",
     "RawExecResult",
     "ReadFileRequest",
     "ReadFileResult",

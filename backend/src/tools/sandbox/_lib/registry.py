@@ -7,9 +7,7 @@ from tools.sandbox._lib.context import SANDBOX_CONTEXT
 
 from tools.sandbox.edit_file import edit_file
 from tools.sandbox.exec_command import exec_command
-from tools.sandbox.write_pty_command_stdin import write_pty_command_stdin
-from tools.sandbox.check_pty_command_progress import check_pty_command_progress
-from tools.sandbox.cancel_pty_command import cancel_pty_command
+from tools.sandbox.write_stdin import write_stdin
 from tools.sandbox.multi_edit import multi_edit
 from tools.sandbox.glob import glob
 from tools.sandbox.grep import grep
@@ -26,9 +24,7 @@ def make_sandbox_tools() -> list[BaseTool]:
         edit_file,
         multi_edit,
         exec_command,
-        write_pty_command_stdin,
-        check_pty_command_progress,
-        cancel_pty_command,
+        write_stdin,
         glob,
         grep,
         enter_isolated_workspace,

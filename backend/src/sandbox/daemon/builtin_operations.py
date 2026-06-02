@@ -4,7 +4,7 @@ Module layout:
 
 * In-flight registry surface — ``cancel``, ``heartbeat``, ``inflight_count``.
 * Tool operation routes — ``read_file``, ``write_file``, ``edit_file``,
-  ``glob``, ``grep``, ``shell``, and the Phase 3T command/PTY aliases.
+  ``glob``, ``grep``, ``shell``, and the Phase 3T command-session aliases.
   ``WORKSPACE_TOOL_OPS`` threads ``args`` and the static verb/intent pair through
   :func:`sandbox.daemon.workspace_tool.dispatch.dispatch_workspace_tool_call`.
 * Layer-stack diagnostic surface — ``layer_metrics``, ``runtime_ready``.
@@ -92,7 +92,7 @@ def _command_result(
     exit_code: int | None,
     stdout: str = "",
     stderr: str = "",
-    pty_session_id: str | None = None,
+    command_session_id: str | None = None,
     error: dict[str, object] | None = None,
     timings: dict[str, float] | None = None,
 ) -> dict[str, object]:
@@ -101,8 +101,8 @@ def _command_result(
         "exit_code": exit_code,
         "output": {"stdout": stdout, "stderr": stderr},
     }
-    if pty_session_id:
-        payload["pty_session_id"] = pty_session_id
+    if command_session_id:
+        payload["command_session_id"] = command_session_id
     if error is not None:
         payload["error"] = error
     if timings:
@@ -110,30 +110,24 @@ def _command_result(
     return payload
 
 
-def _pty_not_found() -> dict[str, object]:
+def _command_session_not_found() -> dict[str, object]:
     return _command_result(
         "error",
         exit_code=None,
-        stderr="pty_session_not_found",
+        stderr="command_session_not_found",
     )
 
 
 async def exec_command(args: dict[str, Any]) -> dict[str, object]:
     """Compatibility implementation for the Python daemon path.
 
-    The production Rust daemon owns native PTY sessions. The Python daemon keeps
-    finite command semantics in sync and returns the generic PTY not-found shape
-    for PTY controls so callers do not branch on daemon implementation details.
+    The production Rust daemon owns native command sessions. The Python daemon keeps
+    finite command semantics in sync and returns the generic command-session not-found shape
+    for command controls so callers do not branch on daemon implementation details.
     """
     cmd = str(args.get("cmd") or "").strip()
     if not cmd:
         raise ValueError("cmd is required")
-    if bool(args.get("tty", False)):
-        return _command_result(
-            "error",
-            exit_code=None,
-            stderr="pty commands require the Rust sandbox daemon",
-        )
     payload = dict(args)
     payload["command"] = cmd
     payload["cwd"] = "."
@@ -165,23 +159,19 @@ async def exec_command(args: dict[str, Any]) -> dict[str, object]:
     )
 
 
-async def write_pty_stdin(args: dict[str, Any]) -> dict[str, object]:
-    return _pty_not_found()
+async def command_write_stdin(args: dict[str, Any]) -> dict[str, object]:
+    return _command_session_not_found()
 
 
-async def pty_progress(args: dict[str, Any]) -> dict[str, object]:
-    return _pty_not_found()
+async def command_cancel(args: dict[str, Any]) -> dict[str, object]:
+    return _command_session_not_found()
 
 
-async def pty_cancel(args: dict[str, Any]) -> dict[str, object]:
-    return _pty_not_found()
-
-
-async def pty_collect_completed(args: dict[str, Any]) -> dict[str, object]:
+async def command_collect_completed(args: dict[str, Any]) -> dict[str, object]:
     return {"success": True, "completions": []}
 
 
-async def pty_session_count(args: dict[str, Any]) -> dict[str, object]:
+async def command_session_count(args: dict[str, Any]) -> dict[str, object]:
     agent_id = str(args.get("agent_id") or "").strip()
     return {"success": True, "agent_id": agent_id, "count": 0}
 
@@ -500,13 +490,16 @@ __all__ = [
     "WORKSPACE_TOOL_ROUTES",
     "build_workspace_base",
     "cancel",
+    "command_cancel",
+    "command_collect_completed",
+    "command_session_count",
+    "command_write_stdin",
     "commit_to_workspace",
     "ensure_workspace_base",
     "fence_stale_staging",
     "heartbeat",
     "inflight_count",
     "layer_metrics",
-    "pty_session_count",
     "acquire_snapshot",
     "release_lease",
     "runtime_ready",

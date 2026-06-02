@@ -88,6 +88,7 @@ class HeavyIoZonedConcurrent(ScenarioBase):
     """Long-running zoned-IO scenario for layerstack lease + OCC merge."""
 
     name = "sandbox.heavy_io_zoned_concurrent"
+    delegated_workflow_poll_attempts = 240
 
     def planner_response(self, ctx: ScenarioContext) -> ToolCallSpec:  # noqa: ARG002
         return ToolCallSpec(submit_planner_outcome, _plan())

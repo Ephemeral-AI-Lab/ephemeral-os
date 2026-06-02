@@ -15,6 +15,12 @@ class _Scenario:
     name = "polling_regression"
 
 
+class _SlowPollScenario:
+    name = "slow_polling_regression"
+    delegated_workflow_poll_attempts = 96
+    delegated_workflow_poll_interval_s = 3.0
+
+
 def _result(payload: dict[str, object], *, is_error: bool = False) -> list[ToolResultBlock]:
     return [
         ToolResultBlock(
@@ -58,3 +64,8 @@ async def test_root_script_does_not_cancel_after_legacy_short_poll_budget(
         "status": "success",
         "outcome": "Root delegated workflow completed.",
     }
+
+
+def test_scenario_can_override_delegated_workflow_poll_interval() -> None:
+    assert scenario_adapter._delegated_workflow_poll_attempts(_SlowPollScenario()) == 96  # noqa: SLF001
+    assert scenario_adapter._delegated_workflow_poll_interval_s(_SlowPollScenario()) == 3.0  # noqa: SLF001
