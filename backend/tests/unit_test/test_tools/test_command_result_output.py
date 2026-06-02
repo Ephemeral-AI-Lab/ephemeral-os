@@ -50,6 +50,26 @@ def test_command_tool_result_marks_timeout_as_error() -> None:
     }
 
 
+def test_command_tool_result_preserves_timings_metadata() -> None:
+    result = command_tool_result(
+        ExecCommandResult(
+            success=True,
+            status="ok",
+            exit_code=0,
+            output=CommandOutput(stdout="ok\n"),
+            timings={
+                "command_exec.total_s": 0.25,
+                "api.exec_command.dispatch_total_s": 0.3,
+            },
+        )
+    )
+
+    assert result.metadata["timings"] == {
+        "command_exec.total_s": 0.25,
+        "api.exec_command.dispatch_total_s": 0.3,
+    }
+
+
 @pytest.mark.asyncio
 async def test_pty_not_found_recovers_supervisor_terminal_result() -> None:
     supervisor = BackgroundTaskSupervisor()

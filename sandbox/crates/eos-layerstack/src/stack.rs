@@ -16,6 +16,7 @@ use std::io::ErrorKind;
 use std::os::unix::fs::{FileTypeExt, MetadataExt};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
+use std::time::Instant;
 
 use serde_json::{json, Value};
 
@@ -30,7 +31,8 @@ use crate::lease::{
     SharedLeaseRegistry,
 };
 use crate::squash::{manifest_prefix_before_plan, LayerCheckpointSquasher, SquashPlanEntry};
-use crate::storage_lock::StorageWriterLockLease;
+use crate::storage_lock::{StorageWriterLockLease, STORAGE_WRITER_LOCK_FILE};
+use crate::workspace_base::build_workspace_base;
 use crate::{ACTIVE_MANIFEST_FILE, LAYERS_DIR, LAYER_METADATA_DIR, STAGING_DIR};
 
 const LOGICAL_WHITEOUT_PREFIX: &str = ".wh.";
@@ -499,6 +501,78 @@ impl LayerStack {
         lock_shared_registry_recover(&self.leases).active_count()
     }
 
+    /// Collapse the active manifest back into the bound workspace base.
+    ///
+    /// Refuses to run while any snapshot lease is active. The projection
+    /// materializes the current merged view into `workspace_root`, resets
+    /// layer-stack storage, and rebuilds a fresh base layer from those bytes.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`LayerStackError`] when the workspace is invalid, active leases
+    /// exist, projection/replacement fails, or base rebuild fails.
+    ///
+    /// `// PORT backend/src/sandbox/layer_stack/stack.py:300-359 — commit_to_workspace`
+    pub fn commit_to_workspace(
+        &mut self,
+        workspace_root: &Path,
+    ) -> Result<(Manifest, BTreeMap<String, f64>), LayerStackError> {
+        let writer_lock = StorageWriterLockLease::acquire(&self.storage_root)?;
+        let _guard = writer_lock.exclusive()?;
+        let total_start = Instant::now();
+        if !workspace_root.is_dir() {
+            return Err(LayerStackError::WorkspaceBinding(format!(
+                "workspace_root does not exist: {}",
+                workspace_root.display()
+            )));
+        }
+        if lock_shared_registry(&self.leases)?.active_count() > 0 {
+            return Err(LayerStackError::Storage(
+                "commit_to_workspace blocked by active leases".to_owned(),
+            ));
+        }
+
+        let active = self.read_active_manifest()?;
+        let projection = self.commit_projection_dir()?;
+        let mut timings = BTreeMap::new();
+        let outcome = (|| {
+            let project_start = Instant::now();
+            self.view.project(&projection, &active)?;
+            record_elapsed(
+                &mut timings,
+                "layer_stack.commit_to_workspace.project_s",
+                project_start,
+            );
+
+            let replace_start = Instant::now();
+            replace_workspace_contents(workspace_root, &projection)?;
+            record_elapsed(
+                &mut timings,
+                "layer_stack.commit_to_workspace.replace_workspace_s",
+                replace_start,
+            );
+
+            let rebuild_start = Instant::now();
+            clear_storage_root_preserving_lock(&self.storage_root)?;
+            let _ = build_workspace_base(&self.storage_root, workspace_root, false)?;
+            self.view = MergedView::new(self.storage_root.clone());
+            let new_manifest = self.read_active_manifest()?;
+            record_elapsed(
+                &mut timings,
+                "layer_stack.commit_to_workspace.rebuild_base_s",
+                rebuild_start,
+            );
+            record_elapsed(
+                &mut timings,
+                "layer_stack.commit_to_workspace.total_s",
+                total_start,
+            );
+            Ok(new_manifest)
+        })();
+        let _ = remove_path(&projection);
+        outcome.map(|manifest| (manifest, timings))
+    }
+
     /// Read raw bytes through the active manifest.
     ///
     /// # Errors
@@ -638,6 +712,90 @@ impl LayerStack {
         let path = self.layer_digest_path(layer_id);
         write_atomic(path, digest.as_bytes())
     }
+
+    fn commit_projection_dir(&self) -> Result<PathBuf, LayerStackError> {
+        let parent = self.storage_root.join("runtime").join("commit");
+        std::fs::create_dir_all(&parent)?;
+        for _ in 0..100 {
+            let candidate = parent.join(format!(
+                "projected-{}-{}",
+                std::process::id(),
+                NEXT_TMP_WRITE.fetch_add(1, Ordering::Relaxed)
+            ));
+            match std::fs::create_dir(&candidate) {
+                Ok(()) => return Ok(candidate),
+                Err(err) if err.kind() == ErrorKind::AlreadyExists => continue,
+                Err(err) => return Err(err.into()),
+            }
+        }
+        Err(LayerStackError::Storage(
+            "could not allocate commit projection directory".to_owned(),
+        ))
+    }
+}
+
+fn replace_workspace_contents(destination: &Path, source: &Path) -> Result<(), LayerStackError> {
+    std::fs::create_dir_all(destination)?;
+    for child in std::fs::read_dir(destination)? {
+        remove_path(&child?.path())?;
+    }
+    for child in std::fs::read_dir(source)? {
+        let child = child?;
+        move_path(&child.path(), &destination.join(child.file_name()))?;
+    }
+    Ok(())
+}
+
+fn move_path(source: &Path, destination: &Path) -> Result<(), LayerStackError> {
+    match std::fs::rename(source, destination) {
+        Ok(()) => Ok(()),
+        Err(err) if err.raw_os_error() == Some(18) => {
+            copy_path(source, destination)?;
+            remove_path(source)
+        }
+        Err(err) => Err(err.into()),
+    }
+}
+
+fn copy_path(source: &Path, destination: &Path) -> Result<(), LayerStackError> {
+    let meta = std::fs::symlink_metadata(source)?;
+    if meta.file_type().is_symlink() {
+        if let Some(parent) = destination.parent() {
+            std::fs::create_dir_all(parent)?;
+        }
+        let target = std::fs::read_link(source)?;
+        remove_path(destination)?;
+        std::os::unix::fs::symlink(target, destination)?;
+    } else if meta.is_dir() {
+        std::fs::create_dir_all(destination)?;
+        for child in std::fs::read_dir(source)? {
+            let child = child?;
+            copy_path(&child.path(), &destination.join(child.file_name()))?;
+        }
+    } else if meta.is_file() {
+        if let Some(parent) = destination.parent() {
+            std::fs::create_dir_all(parent)?;
+        }
+        remove_path(destination)?;
+        std::fs::copy(source, destination)?;
+    }
+    Ok(())
+}
+
+fn clear_storage_root_preserving_lock(storage_root: &Path) -> Result<(), LayerStackError> {
+    std::fs::create_dir_all(storage_root)?;
+    for child in std::fs::read_dir(storage_root)? {
+        let child = child?;
+        if child.file_name() == STORAGE_WRITER_LOCK_FILE {
+            continue;
+        }
+        remove_path(&child.path())?;
+    }
+    Ok(())
+}
+
+fn record_elapsed(timings: &mut BTreeMap<String, f64>, key: &str, start: Instant) {
+    timings.insert(key.to_owned(), start.elapsed().as_secs_f64());
 }
 
 fn release_lease_locked(
@@ -1177,6 +1335,41 @@ mod tests {
         Ok(())
     }
 
+    #[test]
+    fn commit_to_workspace_projects_active_manifest_and_rebuilds_base() -> TestResult {
+        let fixture = Fixture::new("commit_workspace");
+        std::fs::create_dir_all(fixture.workspace.join(".git"))?;
+        std::fs::write(fixture.workspace.join(".git/config"), "[core]\n")?;
+        std::fs::write(fixture.workspace.join("tracked.txt"), "base\n")?;
+        build_workspace_base(&fixture.root, &fixture.workspace, false)?;
+
+        let mut stack = LayerStack::open(fixture.root.clone())?;
+        publish_text(&mut stack, "tracked.txt", "overlay\n")?;
+        publish_text(&mut stack, "new.txt", "new\n")?;
+
+        let (manifest, timings) = stack.commit_to_workspace(&fixture.workspace)?;
+
+        assert_eq!(manifest.version, 1);
+        assert_eq!(
+            std::fs::read_to_string(fixture.workspace.join("tracked.txt"))?,
+            "overlay\n"
+        );
+        assert_eq!(
+            std::fs::read_to_string(fixture.workspace.join("new.txt"))?,
+            "new\n"
+        );
+        assert_eq!(
+            std::fs::read_to_string(fixture.workspace.join(".git/config"))?,
+            "[core]\n"
+        );
+        assert!(timings.contains_key("layer_stack.commit_to_workspace.project_s"));
+        assert!(timings.contains_key("layer_stack.commit_to_workspace.replace_workspace_s"));
+        assert!(timings.contains_key("layer_stack.commit_to_workspace.rebuild_base_s"));
+        assert!(timings.contains_key("layer_stack.commit_to_workspace.total_s"));
+        assert_eq!(stack.read_text("tracked.txt")?.0, "overlay\n");
+        Ok(())
+    }
+
     fn publish_text(stack: &mut LayerStack, path: &str, content: &str) -> TestResult {
         stack.publish_layer(&[LayerChange::Write {
             path: LayerPath::parse(path)?,
@@ -1187,6 +1380,7 @@ mod tests {
 
     struct Fixture {
         root: PathBuf,
+        workspace: PathBuf,
     }
 
     impl Fixture {
@@ -1196,14 +1390,17 @@ mod tests {
                 std::process::id(),
                 NEXT_TMP_WRITE.fetch_add(1, Ordering::Relaxed)
             ));
+            let workspace = root.with_extension("workspace");
             let _ = std::fs::remove_dir_all(&root);
-            Self { root }
+            let _ = std::fs::remove_dir_all(&workspace);
+            Self { root, workspace }
         }
     }
 
     impl Drop for Fixture {
         fn drop(&mut self) {
             let _ = std::fs::remove_dir_all(&self.root);
+            let _ = std::fs::remove_dir_all(&self.workspace);
         }
     }
 }

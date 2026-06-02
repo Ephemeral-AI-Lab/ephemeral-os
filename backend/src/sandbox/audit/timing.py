@@ -34,7 +34,16 @@ def timing_audit_signals(
         return ()
 
     emitted: list[TimingAuditSignal] = []
-    if _has_timing(timings, "occ.prepare."):
+    if _has_any_timing(
+        timings,
+        (
+            "occ.prepare.",
+            "occ.apply.",
+            "api.write.occ_apply_s",
+            "api.edit.occ_apply_s",
+            "command_exec.occ_apply_s",
+        ),
+    ):
         emitted.append("occ_prepared")
     if _has_timing(timings, "occ.") and status == "conflict":
         emitted.append("occ_conflicted")

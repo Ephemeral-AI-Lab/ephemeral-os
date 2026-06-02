@@ -15,6 +15,8 @@ _COMMAND_EXEC_OVERLAY_TIMINGS = (
     "command_exec.run_command_s",
     "command_exec.capture_upperdir_s",
     "command_exec.total_s",
+    "api.exec_command.dispatch_total_s",
+    "api.exec_command.total_s",
     "api.read.total_s",
     "api.write.total_s",
     "api.edit.total_s",
@@ -130,14 +132,26 @@ def sandbox_events_from_tool_completion(
             )
         )
 
-    if _has_prefix(timings, "occ.prepare"):
+    if _has_any(
+        timings,
+        "api.write.occ_apply_s",
+        "api.edit.occ_apply_s",
+        "command_exec.occ_apply_s",
+    ) or _has_prefix(timings, "occ.prepare") or _has_prefix(timings, "occ.apply"):
         events.append(
             Event(
                 type=EventType.SANDBOX_OCC_CHANGESET_RECEIVED,
                 node=node,
                 payload={
                     **base_payload,
-                    "timings": _select(timings, "occ.prepare"),
+                    "timings": _select(
+                        timings,
+                        "api.write.occ_apply_s",
+                        "api.edit.occ_apply_s",
+                        "command_exec.occ_apply_s",
+                        "occ.prepare",
+                        "occ.apply",
+                    ),
                 },
             )
         )

@@ -3,7 +3,21 @@
 Living status tracker for `docs/plans/sandbox-rust-external-migration-PLAN.md`.
 Spec = PLAN.md. Landed-status snapshot = PLAN §13. This file = done/next checklist.
 
-**Last updated:** 2026-06-02 · **Phase:** 3 is closed at the structural core boundary; Phase 3T has closed CP-4t and the deferred non-plugin sidecar through CP-4/AV-4, CP-5, AV-7, and §7. Plugin work has advanced from a pure deferred edge to a Rust contract/status/routing/PPC/lifecycle/freshness slice: `eos-plugin` owns generic service manifest/refresh/key/status types, `eos-daemon` owns `api.plugin.ensure/status`, manifest-declared `plugin.*` routing, service process lifecycle, private-overlay service launch, retained snapshot leases, in-place namespace remount, stale-read refresh sequencing, per-service refresh/remount singleflight, restart fallback, connected self-managed OCC callbacks including repeated callback frames before a final reply, daemon-owned `oneshot_overlay` execution, status health probes over the generic `Health { manifest_key }` frame, next-dispatch recovery for previously ready read-only services after PPC/process failure, operation serialization forbidden with same-service concurrent read-only/self-managed multiplexing and out-of-order reply preservation on the connected PPC client, parent-message-id routed concurrent callbacks, mixed `api.v1.shell` overlay/OCC publish plus long-lived plugin refresh/readback, isolated-workspace plugin-family blocking for `api.plugin.*` and `plugin.*`, daemon cleanup that drops connected PPC routes/services and reaps plugin harness processes, a generic package-adapter harness over `remount_workspace`, a reusable bundled Python PPC service bridge over `remount_workspace_and_notify`, explicit co-shared read-only refresh evidence across two services on one workspace, real Pyright read-only LSP `documentSymbol`, `workspace/symbol`, `completion`, `completionItem/resolve`, `publishDiagnostics`, `codeAction`, `signatureHelp`, `hover`, `typeDefinition`, `declaration`, `callHierarchy` incoming/outgoing, `documentHighlight`, `prepareRename`, `definition`, and `references` adapters over `remount_workspace_and_notify`, Pyright-computed rename plus generic LSP `apply_workspace_edit`, `apply_code_action`, `format_document`, and `execute_command` self-managed publishes through the daemon OCC callback, canonical Python importlib LSP bridge query/hover/diagnostics/code_actions/signature_help/document_highlight/find_definitions/find_references/rename/apply_workspace_edit/apply_code_action over the reusable PPC service, lock-protected and prewarmed shared Pyright setup for concurrent plugin service startup, routed structured unsupported Pyright `document_formatting` and `workspace/executeCommand` responses matching the server's advertised capability boundary, cleanup-aware retained-lease release evidence, failed-health isolation plus same-service failed-health recovery, live service-crash fail-closed plus same-service crash recovery, and hung-service timeout fail-closed plus timeout-restart probes. Live plugin refresh strategy coverage and live Rust-runtime generic PPC/OCC/repeated-callback/concurrent-read-dispatch/concurrent-refresh-singleflight/concurrent-runtime-bridge-delay/concurrent-runtime-bridge-apply/shell-publish-refresh/isolated-gate/cleanup-reap/refresh/status-health/failed-health/failed-health-recovery/recovery/remount-read/co-shared-refresh/package-adapter/runtime-bridge/Pyright-read/Pyright-workspaceSymbol/Pyright-completion/Pyright-completionResolve/Pyright-diagnostics/Pyright-codeActions/Pyright-unsupportedDocumentFormatting/Pyright-unsupportedExecuteCommand/Pyright-signatureHelp/Pyright-hover/Pyright-typeDefinition/Pyright-declaration/Pyright-callHierarchy-incoming-outgoing/Pyright-documentHighlight/Pyright-prepareRename/Pyright-definition/Pyright-references/Pyright-rename/LSP-applyWorkspaceEdit/LSP-applyCodeAction/LSP-formatDocument/LSP-executeCommand/canonical-importlib-LSP-bridge/canonical-importlib-LSP-bridge-findDefinitions/canonical-importlib-LSP-bridge-findReferences/canonical-importlib-LSP-bridge-diagnostics/canonical-importlib-LSP-bridge-codeActions/canonical-importlib-LSP-bridge-signatureHelp/canonical-importlib-LSP-bridge-documentHighlight/canonical-importlib-LSP-bridge-hover/canonical-importlib-LSP-bridge-apply/canonical-importlib-LSP-bridge-apply-code-action/restart/crash/crash-recovery/timeout/timeout-recovery/mounted-workspace/runtime-bridge/oneshot-overlay coverage are in the suite. Remaining Phase 3T plugin work is broader AV-10 LSP parity beyond the representative `documentSymbol` + `workspace/symbol` + `completion` + `completionItem/resolve` + `publishDiagnostics` + `codeAction` + routed unsupported `document_formatting`/`workspace.executeCommand` + `signatureHelp` + `hover` + `typeDefinition` + `declaration` + `callHierarchy` incoming/outgoing + `documentHighlight` + `prepareRename` + `definition` + `references` + `rename` + `apply_workspace_edit` + `apply_code_action` + `format_document` + `execute_command` + canonical importlib LSP bridge path and a broader crash-recovery matrix beyond the covered status health probe, failed-health isolation, same-service failed-health recovery, closed PPC stream fail-closed, same-service crash recovery, PPC timeout fail-closed, timeout restart recovery, and next-dispatch restart paths.
+**Last updated:** 2026-06-02 · **Phase:** 3 is closed at the structural core
+boundary; Phase 3T has closed CP-4t and the deferred non-plugin sidecar through
+CP-4/AV-4, CP-5, AV-7, and §7. Plugin service work is live-gated through the
+Rust contract/status/routing/PPC/lifecycle/freshness/OCC slice, including
+long-lived private-overlay services, retained snapshot leases, in-place remount
+or restart refresh, same-service multiplexing with out-of-order replies,
+parent-message-id routed callbacks, `oneshot_overlay` writes, isolated-workspace
+plugin-family blocking, cleanup reaping, Pyright read-only and negative
+capability gates, generic positive LSP publish gates, canonical importlib LSP
+bridge query/read/write gates, and failed-health/crash/timeout recovery. The
+current `sandbox-plugin-service-adversarial-plan.md` closeout is complete for
+that representative matrix; remaining plugin work is future provider-specific
+adapter expansion, the explicit periodic `commit_to_workspace` guard
+experiment, and broader migration/cutover work rather than an open AV-10/crash
+tail in the current plan.
 
 ---
 
@@ -15,7 +29,7 @@ Spec = PLAN.md. Landed-status snapshot = PLAN §13. This file = done/next checkl
 | 1 — ns-runner (fresh-ns) | `eos-runner` unshare→mount→exec | ✅ **scoped direct `eosd ns-runner` closeout complete; host dispatch is Phase 2** |
 | 2 — daemon + read paths | `eos-daemon` RPC, read verbs, readiness | ✅ **CP-3/AV-2 closed on local amd64 Docker/dask** |
 | 3 — write/publish + shell/search + background control core | OCC/LayerStack publish, structural shell/search, PPC scaffolding | ✅ **closed at the structural boundary:** direct `write_file`/`edit_file` publish flows through routed `eos-occ`; `api.v1.shell`/`glob`/`grep` overlay paths, background registry/control ops, PPC framing/no-OCC plugin edge, LayerStack squash/GC, and CP-4s structural live evidence are in place |
-| 3T — terminal sessions + deferred Phase 3 gates | non-login Bash shell/session tools, typed background/subagent controls, plugin PPC execution, CP-4/CP-5/AV gates | 🟡 **partial:** CP-4t and the deferred non-plugin sidecar are closed; plugin service manifest/refresh/status contracts plus `api.plugin.ensure/status`, manifest-declared `plugin.*` routing, service process specs, connected read-only AF_UNIX PPC round trips, opt-in service process lifecycle, daemon-side service socket accept/connect, private-overlay service launch on Linux, retained service snapshot leases, in-place namespace remount for stale remount strategies, stale-read refresh sequencing before dispatch, per-service refresh/remount singleflight, stale-service restart fallback, next-dispatch recovery for previously ready read-only services, status health probes, failed-health isolation plus same-service failed-health recovery, operation serialization forbidden with same-service concurrent multiplexing and out-of-order reply preservation, parent-message-id routed concurrent callbacks, mixed `api.v1.shell` overlay/OCC publish plus plugin refresh/readback, isolated-workspace plugin-family blocking, broken-client status cleanup, cleanup route/process reap proof, callback-frame servicing, connected self-managed OCC callbacks including repeated callback frames before a final reply, daemon-owned oneshot WRITE_ALLOWED overlay execution, cleanup-aware retained-lease release evidence, explicit co-shared refresh evidence, reusable bundled Python PPC service bridge proof, canonical importlib LSP bridge proof including definitions, references, diagnostics, code-actions, hover, and apply-code-action, shared Pyright setup locking for concurrent plugin service startup, explicit Pyright unsupported-surface gates for formatting/execute-command, and live Rust-runtime generic PPC/OCC/repeated-callback/concurrent-read-dispatch/concurrent-refresh-singleflight/concurrent-runtime-bridge-delay/concurrent-runtime-bridge-apply/shell-publish-refresh/isolated-gate/cleanup-reap/refresh/status-health/failed-health/failed-health-recovery/recovery/remount-read/co-shared-refresh/package-adapter/runtime-bridge/Pyright-read/Pyright-workspaceSymbol/Pyright-completion/Pyright-completionResolve/Pyright-diagnostics/Pyright-codeActions/Pyright-unsupportedDocumentFormatting/Pyright-unsupportedExecuteCommand/Pyright-signatureHelp/Pyright-hover/Pyright-typeDefinition/Pyright-declaration/Pyright-callHierarchy-incoming-outgoing/Pyright-documentHighlight/Pyright-prepareRename/Pyright-definition/Pyright-references/Pyright-rename/LSP-applyWorkspaceEdit/LSP-applyCodeAction/LSP-formatDocument/LSP-executeCommand/canonical-importlib-LSP-bridge/canonical-importlib-LSP-bridge-findDefinitions/canonical-importlib-LSP-bridge-findReferences/canonical-importlib-LSP-bridge-diagnostics/canonical-importlib-LSP-bridge-codeActions/canonical-importlib-LSP-bridge-hover/canonical-importlib-LSP-bridge-apply/canonical-importlib-LSP-bridge-apply-code-action/restart/crash/crash-recovery/timeout/timeout-recovery/mounted-workspace/runtime-bridge/oneshot-overlay coverage have landed; remaining skipped scope is broader AV-10 LSP parity beyond the representative `documentSymbol` + `workspace/symbol` + `completion` + `completionItem/resolve` + `publishDiagnostics` + `codeAction` + routed unsupported `document_formatting`/`workspace.executeCommand` + `signatureHelp` + `hover` + `typeDefinition` + `declaration` + `callHierarchy` incoming/outgoing + `documentHighlight` + `prepareRename` + `definition` + `references` + `rename` + `apply_workspace_edit` + `apply_code_action` + `format_document` + `execute_command` + canonical importlib LSP bridge path and a broader crash-recovery matrix beyond the covered status health probe, failed-health isolation, same-service failed-health recovery, closed PPC stream fail-closed, same-service crash recovery, PPC timeout fail-closed, timeout restart recovery, and next-dispatch restart paths |
+| 3T — terminal sessions + deferred Phase 3 gates | non-login Bash shell/session tools, typed background/subagent controls, plugin PPC execution, CP-4/CP-5/AV gates | 🟡 **partial overall, plugin adversarial slice closed for the current matrix:** CP-4t and the deferred non-plugin sidecar are closed; plugin service manifest/refresh/status contracts, `api.plugin.ensure/status`, manifest-declared `plugin.*` routing, service lifecycle, private-overlay launch, retained leases, remount/restart refresh, same-service multiplexing with out-of-order replies, callback/OCC publish paths, `oneshot_overlay`, isolated-workspace blocking, cleanup reaping, Pyright read-only and unsupported formatting/execute-command gates, generic positive LSP write gates, canonical importlib bridge read/write gates including format and execute-command, and failed-health/crash/timeout recovery are live-gated. Remaining skipped scope is future provider-specific adapter expansion, the periodic `commit_to_workspace` guard experiment, and full migration/cutover work. |
 | 3.5 — isolated workspace | ns-holder + setns + shell-free net | 🟡 broader later-phase scope: the Phase 3T command-routing/control-plane slice is ✅ closed with ns-holder/setns handoff, shell-free bridge/veth/nft setup, local amd64 Docker/dask live proof, exit inspection, PTY controls, and same-port `3000` isolation; broader isolated soak/cutover gates remain later-phase work |
 | 5 — cutover | flip default, delete Python | ⬜ |
 
@@ -25,6 +39,24 @@ Legend: ✅ done · 🟡 partial · ⬜ not started.
 
 ## Latest Plugin Service Refresh (2026-06-02)
 
+- ✅ The current plugin-service adversarial matrix is closed for the documented
+  representative scope. The latest live run reused the existing Docker sandbox
+  fixture and `backend/scripts/bench_plugin_refresh_strategies.py` plus
+  `backend/scripts/bench_rust_daemon_plugin.py` through
+  `backend/tests/live_e2e_test/sandbox/plugin/test_plugin_refresh_strategies.py`;
+  it passed
+  `EOS_SANDBOX_PROVIDER=docker EOS_LIVE_E2E_IMAGE=xingyaoww/sweb.eval.x86_64.dask_s_dask-10042:latest EOS_PLUGIN_REFRESH_SAMPLES=1 EOS_PLUGIN_REFRESH_AUTO_SQUASH_WRITES=104 EOS_RUST_PLUGIN_BENCH_TIMEOUT_S=600 uv run pytest -q -x -rs --tb=short --durations=10 backend/tests/live_e2e_test/sandbox/plugin/test_plugin_refresh_strategies.py`
+  (`1 passed in 301.74s`). The generated Rust plugin report
+  `.omc/results/rust-daemon-plugin-generic-20260602T072455Z-33657.json`
+  had `gate_pass=true`, `pyright_setup.exit_code=0`, canonical importlib bridge
+  formatting and execute-command publish/readback evidence, post-crash
+  peer-publish readback through the restarted crash service, same-service
+  runtime-bridge multiplexing evidence, and post-cleanup active leases,
+  orphan layers, and missing layers all `0`. The paired refresh report
+  `.omc/results/plugin-refresh-strategies-20260602T072455Z-33657.json` had
+  `gate_pass=true`, winner `workspace_snapshot_refresh`, refresh p95
+  `5.113 ms`, `commit_to_workspace` p95 `3.422 ms`, raw filesystem watch stale
+  without materialization, and auto-squash plus post-drain commit green.
 - ✅ `eos-plugin` now has the generic service contract surface for the plugin
   plan: `PluginServiceKey`, `ServiceMode`, `RefreshStrategy`,
   `PluginManifest`, refresh request/ack messages, and logical service status.
@@ -307,9 +339,9 @@ Legend: ✅ done · 🟡 partial · ⬜ not started.
   Latest artifact
   SHA:
   `62e6d703964fb5525874629cb39c522e1aa96e25fd80f9619c3da205ef98b83f`.
-- ✅ Live verification:
+- ✅ Earlier live verification before the final bridge closeout:
   `EOS_SANDBOX_PROVIDER=docker EOS_LIVE_E2E_IMAGE=xingyaoww/sweb.eval.x86_64.dask_s_dask-10042:latest EOS_PLUGIN_REFRESH_SAMPLES=1 EOS_PLUGIN_REFRESH_AUTO_SQUASH_WRITES=104 EOS_RUST_PLUGIN_BENCH_TIMEOUT_S=600 uv run pytest -q -x -rs --tb=short --durations=10 backend/tests/live_e2e_test/sandbox/plugin/test_plugin_refresh_strategies.py`
-  passed (`1 passed in 56.28s` on the latest rerun). The generated Rust plugin
+  passed (`1 passed in 56.28s` on that rerun). The generated Rust plugin
   report `.omc/results/rust-daemon-plugin-generic-20260602T055538Z-57861.json`
   had `gate_pass=true`, registered routes `plugin.generic.adapter_query`,
   `plugin.generic.apply`, `plugin.generic.apply_multi`,
@@ -651,24 +683,15 @@ Legend: ✅ done · 🟡 partial · ⬜ not started.
   `commit_to_workspace` p95 `4.165 ms`; raw workspace watch without
   materialization stayed stale; auto-squash plus post-drain commit passed with
   final active leases, orphan layers, and missing layers all `0`.
-- 🟡 Remaining plugin scope: broader AV-10 LSP parity beyond the representative
-  Pyright `documentSymbol` + `workspace/symbol` + `completion` +
-  `completionItem/resolve` + `publishDiagnostics` + `codeAction` +
-  routed unsupported `document_formatting`/`workspace.executeCommand` +
-  `signatureHelp` + `hover` + `typeDefinition` +
-  `declaration` + `callHierarchy` incoming/outgoing + `documentHighlight` + `prepareRename` +
-  `definition` + `references` + self-managed `rename` + `apply_workspace_edit` +
-  `apply_code_action` + `format_document` + `execute_command` path plus canonical
-  importlib bridge `query_symbols` + `hover` + `rename` +
-  `apply_workspace_edit` + `apply_code_action`. Current Pyright live artifacts route document
+- 🟡 Remaining plugin scope after this closeout: no remaining item in the
+  current adversarial plan's representative matrix. Pyright live artifacts route
   formatting and execute-command as structured unsupported operations because
   this server does not advertise document/range formatting or executable
-  commands; positive generic provider coverage for both operation shapes is
-  live separately. Remaining plugin work is broader AV-10 LSP parity and a
-  broader crash-recovery matrix beyond the covered status health probe,
-  failed-health isolation, same-service failed-health recovery, closed PPC
-  stream fail-closed, same-service crash recovery, PPC timeout fail-closed,
-  timeout restart recovery, and next-dispatch restart paths.
+  commands; positive generic provider coverage and canonical importlib bridge
+  coverage for both operation shapes are live separately. Future work is
+  provider-specific adapter expansion, the periodic `commit_to_workspace`
+  plugin-service guard experiment, and full migration/cutover, not an open
+  AV-10/crash tail in the current plan.
 
 ---
 
@@ -1699,7 +1722,7 @@ cd .. && .venv/bin/python -m pytest backend/tests/unit_test/test_sandbox/test_pr
 5. **CP-5 cache-lock churn is closed for the sidecar scope.** Keep `bench/phase3t-cache-lock-churn-cp5-20260601.json` as the live Docker/dask evidence for >256 roots, bounded LRU eviction, readback, no stale reuse, and cache-lock wait metrics.
 6. **AV-7 forward/back parity is closed for the sidecar scope.** Keep `bench/phase3t-av7-forward-back-parity-20260601.json` as the bidirectional on-disk parity artifact.
 7. **§7 non-plugin differential/property contention is closed for the sidecar scope.** Keep `bench/phase3t-section7-non-plugin-differential-20260601.json` as the Python/Rust differential artifact. Plugin PPC/AV-10 remains outside this skipped scope.
-8. **Plugin PPC/AV-10 remains skipped for the current closeout scope.** Do not treat this as a blocker for the non-plugin Phase 3T sidecar. Plugin PPC multiplexing is now landed and live-gated; the remaining plugin gate is broader AV-10 parity beyond the representative live coverage already listed above, plus broader crash-recovery lanes.
+8. **Plugin PPC/AV-10 is closed for the current representative matrix.** Do not treat plugin work as part of the non-plugin Phase 3T sidecar boundary. Plugin PPC multiplexing, canonical bridge read/write coverage, and same-service failed-health/crash/timeout recovery are now landed and live-gated; future plugin work is provider-specific adapter expansion and migration/cutover, not the current adversarial closeout.
 9. **Refresh architecture docs only where surfaces change.** If tool names, terminal-session lifecycle, background identifiers, isolated-workspace routing, or plugin-dispatch ownership change, update the smallest affected `docs/architecture` page alongside the implementation.
 
 ### F. Phase 3.5 (isolated) then Phase 5 (cutover) — per PLAN §5
@@ -1722,7 +1745,7 @@ cd .. && .venv/bin/python -m pytest backend/tests/unit_test/test_sandbox/test_pr
 ---
 
 ## Notes / risks for next session
-- **Deferred anchors are not logic.** There are no remaining Rust `todo!()` bodies in the Phase 3/3T/3.5 crates checked by the cleanup pass. Plugin `// PORT` anchors remain useful source-evidence labels, while the skipped work-list is now the broader AV-10 parity and crash-recovery scope called out above; PPC operation multiplexing is no longer skipped.
+- **Deferred anchors are not logic.** There are no remaining Rust `todo!()` bodies in the Phase 3/3T/3.5 crates checked by the cleanup pass. Plugin `// PORT` anchors remain useful source-evidence labels, while the current plugin-service adversarial matrix is now closed for the representative live coverage called out above; PPC operation multiplexing is no longer skipped.
 - **macOS can build/package the pure-Rust static musl amd64 artifact with `rust-lld`, but cannot validate Linux syscall behavior.** All syscall/overlay/OCC-contention work must be checked in the dask container (PLAN §12.2 recipe) — `cargo check` on macOS only validates the non-Linux `cfg` surface.
 - **Not committed.** Treat the worktree as parallel-agent dirty; stage intentionally.
 - **CAS byte-identity is the sharpest correctness lever** — any new code computing `manifest_root_hash`/`layer_digest` must pass `fixtures/cas/cases.json` (esp. the unicode cases).

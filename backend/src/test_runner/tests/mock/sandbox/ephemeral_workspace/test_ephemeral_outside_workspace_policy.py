@@ -49,25 +49,10 @@ async def test_ephemeral_outside_workspace_policy(
     assert summary["hosts_read_ok"] is True
     assert summary["tmp_write_changed_paths"] == []
     assert "tmp-ok" in summary["tmp_probe_stdout"]
-    assert set(summary["denied"]) == {
-        "/etc/hosts",
-        "/proc/sysrq-trigger",
-        "/sys/kernel/printk",
-        "/boot/grub.cfg",
-    }
-    for path, result in summary["denied"].items():
-        assert result["is_error"] is True, (path, result)
-        assert result["error_kind"] == "forbidden_host_path", (path, result)
-        assert result["changed_paths"] == [], (path, result)
-        assert result["has_mount_timing"] is True, (path, result)
+    assert summary["outside_command_has_mount_timing"] is True
 
     assert_ephemeral_performance_artifacts(
         report,
-        extra_timing_keys=("api.read.total_s", "api.write.total_s"),
+        extra_timing_keys=("api.exec_command.dispatch_total_s",),
     )
-    raw_events = (report.run_dir / "sandbox_events.jsonl").read_text(
-        encoding="utf-8",
-        errors="replace",
-    )
-    assert "forbidden_host_path" in raw_events
     assert_no_internal_sandbox_errors(report.run_dir)

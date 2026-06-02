@@ -115,6 +115,7 @@ impl OpTable {
         table.register_builtin("api.layer_metrics", op_layer_metrics);
         table.register_builtin("api.ensure_workspace_base", op_ensure_workspace_base);
         table.register_builtin("api.build_workspace_base", op_build_workspace_base);
+        table.register_builtin("api.commit_to_workspace", op_commit_to_workspace);
         table.register_builtin("api.workspace_binding", op_workspace_binding);
         table.register_builtin("api.audit.pull", op_audit_pull);
         table.register_builtin("api.audit.snapshot", op_audit_snapshot);
@@ -425,6 +426,27 @@ fn op_ensure_workspace_base(
         "created": created,
         "binding": binding,
         "timings": timings,
+    }))
+}
+
+fn op_commit_to_workspace(
+    args: &Value,
+    _context: DispatchContext<'_>,
+) -> Result<Value, DaemonError> {
+    let total_start = Instant::now();
+    let root = PathBuf::from(require_string(args, "layer_stack_root")?);
+    let workspace_root = PathBuf::from(require_string(args, "workspace_root")?);
+    let mut stack = LayerStack::open(root)?;
+    let (manifest, commit_timings) = stack.commit_to_workspace(&workspace_root)?;
+    let mut timings = timings_to_value_map(&commit_timings);
+    timings.insert(
+        "api.commit_to_workspace.total_s".to_owned(),
+        json!(total_start.elapsed().as_secs_f64()),
+    );
+    Ok(json!({
+        "success": true,
+        "manifest_version": manifest.version,
+        "timings": Value::Object(timings),
     }))
 }
 
@@ -1951,6 +1973,9 @@ pub(crate) fn base_hashes_for_snapshot(
     changes
         .iter()
         .map(|change| {
+            if matches!(change, LayerChange::OpaqueDir { .. }) {
+                return Ok((change.path().clone(), None));
+            }
             let (bytes, exists) = view.read_bytes(change.path().as_str(), manifest)?;
             Ok((
                 change.path().clone(),
@@ -3579,6 +3604,44 @@ mod tests {
             args: json!({}),
         });
         assert_eq!(response["handler"], "first");
+    }
+
+    #[test]
+    fn builtin_table_routes_commit_to_workspace() {
+        let response = OpTable::with_builtins().dispatch(&Request {
+            op: "api.commit_to_workspace".to_owned(),
+            invocation_id: "commit-to-workspace-route-test".to_owned(),
+            args: json!({}),
+        });
+
+        assert_ne!(response["error"]["kind"], json!("unknown_op"));
+        assert_eq!(response["error"]["kind"], json!("invalid_envelope"));
+        assert!(response["error"]["message"]
+            .as_str()
+            .unwrap_or_default()
+            .contains("layer_stack_root is required"));
+    }
+
+    #[test]
+    fn base_hashes_accept_opaque_dir_over_existing_directory() -> TestResult {
+        let fixture = Fixture::new("opaque_base_hash")?;
+        std::fs::create_dir_all(fixture.root.join("layers/B000001-base/opaque_dir"))?;
+        std::fs::write(
+            fixture.root.join("layers/B000001-base/opaque_dir/old.txt"),
+            "old\n",
+        )?;
+        let manifest = LayerStack::open(fixture.root.clone())?.read_active_manifest()?;
+
+        let hashes = base_hashes_for_snapshot(
+            &fixture.root,
+            &manifest,
+            &[LayerChange::OpaqueDir {
+                path: lp("opaque_dir")?,
+            }],
+        )?;
+
+        assert_eq!(hashes, vec![(lp("opaque_dir")?, None)]);
+        Ok(())
     }
 
     #[test]

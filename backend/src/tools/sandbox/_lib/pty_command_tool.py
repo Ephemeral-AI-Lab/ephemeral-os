@@ -6,6 +6,7 @@ import json
 
 from pydantic import BaseModel, Field
 
+from sandbox.shared.clock import normalize_timing_map
 from sandbox.shared.models import CommandOutput, ExecCommandResult
 from tools._framework.core.base import ToolExecutionContextService, ToolResult
 
@@ -48,17 +49,20 @@ def command_result_payload(result: ExecCommandResult) -> dict[str, object]:
 
 def command_tool_result(result: ExecCommandResult) -> ToolResult:
     payload = command_result_payload(result)
+    metadata: dict[str, object] = {
+        "status": result.status,
+        "pty_session_id": result.pty_session_id or "",
+        "changed_paths": list(result.changed_paths),
+        "changed_path_kinds": dict(result.changed_path_kinds),
+        "mutation_source": result.mutation_source,
+        "conflict_reason": result.conflict_reason,
+    }
+    if result.timings:
+        metadata["timings"] = normalize_timing_map(result.timings)
     return ToolResult(
         output=json.dumps(payload),
         is_error=result.status in {"error", "timed_out"},
-        metadata={
-            "status": result.status,
-            "pty_session_id": result.pty_session_id or "",
-            "changed_paths": list(result.changed_paths),
-            "changed_path_kinds": dict(result.changed_path_kinds),
-            "mutation_source": result.mutation_source,
-            "conflict_reason": result.conflict_reason,
-        },
+        metadata=metadata,
     )
 
 

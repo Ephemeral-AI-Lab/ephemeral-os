@@ -59,7 +59,11 @@ async def test_ephemeral_all_verbs_publish_and_cleanup(
 
     perf = assert_ephemeral_performance_artifacts(
         report,
-        extra_timing_keys=("api.shell.total_s", "api.grep.total_s", "api.glob.total_s"),
+        extra_timing_keys=(
+            "api.exec_command.dispatch_total_s",
+            "api.grep.total_s",
+            "api.glob.total_s",
+        ),
     )
     del perf
     assert_sandbox_events_have_source(report.run_dir, mutation_source="api_write")

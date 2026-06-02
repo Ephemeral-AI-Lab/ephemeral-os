@@ -59,6 +59,8 @@ then proves a vanilla plugin service can:
 * launch the reusable bundled Python PPC service bridge for an installed
   plugin module and publish mounted workspace changes through its generic OCC
   callback.
+* publish canonical importlib LSP bridge formatting and execute-command shaped
+  writes through the reusable PPC service bridge.
 
 Workspace experiment files live under ``/eos/plugin/*``; the reusable bridge
 plugin module is installed under the daemon runtime bundle catalog.
@@ -155,6 +157,13 @@ LSP_BRIDGE_CODE_ACTION_CONTENT = "status = 'before'\n"
 LSP_BRIDGE_CODE_ACTION_CONTENT_AFTER = "status = 'after'\n"
 LSP_BRIDGE_CODE_ACTION_TITLE = "Bridge replace status"
 LSP_BRIDGE_CODE_ACTION_KIND = "quickfix"
+LSP_BRIDGE_FORMAT_TARGET_REL = "live_plugin_lsp_bridge_format.py"
+LSP_BRIDGE_FORMAT_CONTENT = "def bridge_format():\n    return    2\n"
+LSP_BRIDGE_FORMAT_CONTENT_AFTER = "def bridge_format() -> int:\n    return 2\n"
+LSP_BRIDGE_EXECUTE_COMMAND_TARGET_REL = "live_plugin_lsp_bridge_execute_command.py"
+LSP_BRIDGE_EXECUTE_COMMAND_CONTENT = "value = 'before-bridge'\n"
+LSP_BRIDGE_EXECUTE_COMMAND_CONTENT_AFTER = "value = 'after-bridge'\n"
+LSP_BRIDGE_EXECUTE_COMMAND_NAME = "generic.applyWorkspaceEdit"
 LSP_BRIDGE_DIAGNOSTICS_TARGET_REL = "live_plugin_lsp_bridge_diagnostics.py"
 LSP_BRIDGE_DIAGNOSTICS_CONTENT = "value: List[int] = []\n"
 LSP_BRIDGE_DIAGNOSTICS_LINE = 0
@@ -168,6 +177,8 @@ SHELL_TARGET_REL = "live_plugin_shell_result.txt"
 SHELL_CONTENT = "from live rust shell publish\n"
 ONESHOT_TARGET_REL = "live_plugin_oneshot_result.txt"
 ONESHOT_CONTENT = "from live rust oneshot plugin\n"
+CRASH_RECOVERY_TARGET_REL = "live_plugin_crash_recovery.txt"
+CRASH_RECOVERY_CONTENT = "from crash recovery peer publish\n"
 PYRIGHT_TARGET_REL = "live_plugin_pyright.py"
 PYRIGHT_CONTENT = "def live_value() -> int:\n    return 42\n\nRESULT = live_value()\n"
 PYRIGHT_SYMBOL = "live_value"
@@ -3745,6 +3756,125 @@ async def lsp_bridge_apply_code_action(
     }
 
 
+@register_plugin_op(
+    "generic",
+    "lsp_bridge_format_document",
+    intent=Intent.WRITE_ALLOWED,
+    auto_workspace_overlay=False,
+)
+async def lsp_bridge_format_document(
+    args: dict[str, Any],
+    ctx: Any,
+) -> dict[str, Any]:
+    from plugins.catalog.lsp.runtime.apply import apply_workspace_edit
+
+    path = str(args.get("path") or "")
+    raw_edits = args.get("edits")
+    if not path:
+        return {"success": False, "error": "missing path"}
+    workspace_root = str(ctx.overlay.workspace_root)
+    edit = {
+        "changes": {
+            f"file://{workspace_root}/{path}": (
+                raw_edits if isinstance(raw_edits, list) else []
+            ),
+        },
+    }
+    result = await apply_workspace_edit(edit, ctx, workspace_root=workspace_root)
+    changed_paths = [
+        str(path) for path in result.get("changed_paths", []) if isinstance(path, str)
+    ]
+    return {
+        "success": bool(result.get("success")),
+        "from_lsp_importlib_bridge": True,
+        "from_ppc_service_bridge": True,
+        "from_mounted_workspace_callback": True,
+        "workspace_mounted": os.environ.get("EOS_PLUGIN_WORKSPACE_MOUNTED") == "1",
+        "manifest_key": ctx.overlay.active_manifest_key(),
+        "changed_paths": changed_paths,
+        "lsp": {
+            "protocol": "lsp-python-importlib",
+            "server": "plugins.catalog.lsp.runtime.apply",
+            "method": "textDocument/formatting",
+            "path": path,
+            "edits": raw_edits if isinstance(raw_edits, list) else [],
+            "edit_count": len(raw_edits) if isinstance(raw_edits, list) else 0,
+            "apply": result,
+        },
+    }
+
+
+@register_plugin_op(
+    "generic",
+    "lsp_bridge_execute_command",
+    intent=Intent.WRITE_ALLOWED,
+    auto_workspace_overlay=False,
+)
+async def lsp_bridge_execute_command(
+    args: dict[str, Any],
+    ctx: Any,
+) -> dict[str, Any]:
+    from plugins.catalog.lsp.runtime.apply import apply_workspace_edit
+
+    command = str(args.get("command") or "")
+    commands = ["generic.applyWorkspaceEdit"]
+    raw_arguments = args.get("arguments")
+    first_argument = (
+        raw_arguments[0]
+        if isinstance(raw_arguments, list)
+        and raw_arguments
+        and isinstance(raw_arguments[0], dict)
+        else {}
+    )
+    raw_edit = first_argument.get("edit") if isinstance(first_argument, dict) else None
+    if command not in commands:
+        return {
+            "success": False,
+            "from_lsp_importlib_bridge": True,
+            "from_ppc_service_bridge": True,
+            "workspace_mounted": os.environ.get("EOS_PLUGIN_WORKSPACE_MOUNTED") == "1",
+            "protocol": "lsp-python-importlib",
+            "method": "workspace/executeCommand",
+            "command": command,
+            "commands": commands,
+            "supported": False,
+            "unsupported": True,
+            "error": "unsupported command",
+        }
+    result = await apply_workspace_edit(
+        raw_edit if isinstance(raw_edit, dict) else {},
+        ctx,
+        workspace_root=str(ctx.overlay.workspace_root),
+    )
+    changed_paths = [
+        str(path) for path in result.get("changed_paths", []) if isinstance(path, str)
+    ]
+    return {
+        "success": bool(result.get("success")),
+        "from_lsp_importlib_bridge": True,
+        "from_ppc_service_bridge": True,
+        "from_mounted_workspace_callback": True,
+        "workspace_mounted": os.environ.get("EOS_PLUGIN_WORKSPACE_MOUNTED") == "1",
+        "manifest_key": ctx.overlay.active_manifest_key(),
+        "changed_paths": changed_paths,
+        "lsp": {
+            "protocol": "lsp-python-importlib",
+            "server": "plugins.catalog.lsp.runtime.apply",
+            "method": "workspace/executeCommand",
+            "command": command,
+            "commands": commands,
+            "supported": True,
+            "unsupported": False,
+            "arguments": raw_arguments if isinstance(raw_arguments, list) else [],
+            "apply": result,
+            "result": {
+                "applied": bool(result.get("success")),
+                "changed_paths": changed_paths,
+            },
+        },
+    }
+
+
 @register_plugin_op("generic", "runtime_bridge_delay_ping", intent=Intent.READ_ONLY)
 async def runtime_bridge_delay_ping(args: dict[str, Any], ctx: Any) -> dict[str, Any]:
     delay_s = float(args.get("delay_s") or 0)
@@ -4425,6 +4555,35 @@ async def run(args: argparse.Namespace) -> dict[str, Any]:
                 },
                 layer_stack_root=LAYER_STACK_ROOT,
                 timeout=30,
+            )
+            report["lsp_bridge_format_seed"] = await daemon_client.call_daemon_api(
+                bench.sandbox_id,
+                "api.v1.write_file",
+                {
+                    "agent_id": AGENT_ID,
+                    "path": f"{WORKSPACE_ROOT}/{LSP_BRIDGE_FORMAT_TARGET_REL}",
+                    "content": LSP_BRIDGE_FORMAT_CONTENT,
+                    "overwrite": True,
+                },
+                layer_stack_root=LAYER_STACK_ROOT,
+                timeout=30,
+            )
+            report["lsp_bridge_execute_command_seed"] = (
+                await daemon_client.call_daemon_api(
+                    bench.sandbox_id,
+                    "api.v1.write_file",
+                    {
+                        "agent_id": AGENT_ID,
+                        "path": (
+                            f"{WORKSPACE_ROOT}/"
+                            f"{LSP_BRIDGE_EXECUTE_COMMAND_TARGET_REL}"
+                        ),
+                        "content": LSP_BRIDGE_EXECUTE_COMMAND_CONTENT,
+                        "overwrite": True,
+                    },
+                    layer_stack_root=LAYER_STACK_ROOT,
+                    timeout=30,
+                )
             )
             report["lsp_bridge_diagnostics_seed"] = await daemon_client.call_daemon_api(
                 bench.sandbox_id,
@@ -5388,6 +5547,102 @@ async def run(args: argparse.Namespace) -> dict[str, Any]:
                 )
             )
             try:
+                report["lsp_bridge_format_document"] = (
+                    await daemon_client.call_daemon_api(
+                        bench.sandbox_id,
+                        "plugin.generic.lsp_bridge_format_document",
+                        {
+                            "agent_id": AGENT_ID,
+                            "path": LSP_BRIDGE_FORMAT_TARGET_REL,
+                            "edits": [
+                                {
+                                    "range": {
+                                        "start": {"line": 0, "character": 0},
+                                        "end": {"line": 2, "character": 0},
+                                    },
+                                    "newText": LSP_BRIDGE_FORMAT_CONTENT_AFTER,
+                                }
+                            ],
+                        },
+                        layer_stack_root=LAYER_STACK_ROOT,
+                        timeout=150,
+                    )
+                )
+            except Exception as exc:
+                report["lsp_bridge_format_document"] = {
+                    "success": False,
+                    "from_lsp_importlib_bridge": False,
+                    "error": str(exc),
+                }
+            report["lsp_bridge_format_readback"] = await daemon_client.call_daemon_api(
+                bench.sandbox_id,
+                "api.v1.read_file",
+                {"agent_id": AGENT_ID, "path": LSP_BRIDGE_FORMAT_TARGET_REL},
+                layer_stack_root=LAYER_STACK_ROOT,
+                timeout=30,
+            )
+            lsp_bridge_execute_command_uri = (
+                f"file://{WORKSPACE_ROOT}/{LSP_BRIDGE_EXECUTE_COMMAND_TARGET_REL}"
+            )
+            try:
+                report["lsp_bridge_execute_command"] = (
+                    await daemon_client.call_daemon_api(
+                        bench.sandbox_id,
+                        "plugin.generic.lsp_bridge_execute_command",
+                        {
+                            "agent_id": AGENT_ID,
+                            "command": LSP_BRIDGE_EXECUTE_COMMAND_NAME,
+                            "arguments": [
+                                {
+                                    "edit": {
+                                        "changes": {
+                                            lsp_bridge_execute_command_uri: [
+                                                {
+                                                    "range": {
+                                                        "start": {
+                                                            "line": 0,
+                                                            "character": 0,
+                                                        },
+                                                        "end": {
+                                                            "line": 0,
+                                                            "character": len(
+                                                                LSP_BRIDGE_EXECUTE_COMMAND_CONTENT.strip()
+                                                            ),
+                                                        },
+                                                    },
+                                                    "newText": (
+                                                        LSP_BRIDGE_EXECUTE_COMMAND_CONTENT_AFTER.strip()
+                                                    ),
+                                                }
+                                            ]
+                                        }
+                                    }
+                                }
+                            ],
+                        },
+                        layer_stack_root=LAYER_STACK_ROOT,
+                        timeout=150,
+                    )
+                )
+            except Exception as exc:
+                report["lsp_bridge_execute_command"] = {
+                    "success": False,
+                    "from_lsp_importlib_bridge": False,
+                    "error": str(exc),
+                }
+            report["lsp_bridge_execute_command_readback"] = (
+                await daemon_client.call_daemon_api(
+                    bench.sandbox_id,
+                    "api.v1.read_file",
+                    {
+                        "agent_id": AGENT_ID,
+                        "path": LSP_BRIDGE_EXECUTE_COMMAND_TARGET_REL,
+                    },
+                    layer_stack_root=LAYER_STACK_ROOT,
+                    timeout=30,
+                )
+            )
+            try:
                 report["pyright_rename"] = await daemon_client.call_daemon_api(
                     bench.sandbox_id,
                     "plugin.generic.pyright_rename",
@@ -5483,6 +5738,18 @@ async def run(args: argparse.Namespace) -> dict[str, Any]:
                 layer_stack_root=LAYER_STACK_ROOT,
                 timeout=30,
             )
+            report["crash_recover_seed"] = await daemon_client.call_daemon_api(
+                bench.sandbox_id,
+                "api.v1.write_file",
+                {
+                    "agent_id": AGENT_ID,
+                    "path": f"{WORKSPACE_ROOT}/{CRASH_RECOVERY_TARGET_REL}",
+                    "content": CRASH_RECOVERY_CONTENT,
+                    "overwrite": True,
+                },
+                layer_stack_root=LAYER_STACK_ROOT,
+                timeout=30,
+            )
             try:
                 report["crash_recover_ping"] = await daemon_client.call_daemon_api(
                     bench.sandbox_id,
@@ -5490,6 +5757,7 @@ async def run(args: argparse.Namespace) -> dict[str, Any]:
                     {
                         "agent_id": AGENT_ID,
                         "message": "after-crash-recover",
+                        "read_path": CRASH_RECOVERY_TARGET_REL,
                     },
                     layer_stack_root=LAYER_STACK_ROOT,
                     timeout=30,
@@ -5842,6 +6110,20 @@ def plugin_manifest() -> dict[str, Any]:
             },
             {
                 "op_name": "lsp_bridge_apply_code_action",
+                "intent": "write_allowed",
+                "auto_workspace_overlay": False,
+                "service_id": "runtime_bridge",
+                "timeout_ms": 150000,
+            },
+            {
+                "op_name": "lsp_bridge_format_document",
+                "intent": "write_allowed",
+                "auto_workspace_overlay": False,
+                "service_id": "runtime_bridge",
+                "timeout_ms": 150000,
+            },
+            {
+                "op_name": "lsp_bridge_execute_command",
                 "intent": "write_allowed",
                 "auto_workspace_overlay": False,
                 "service_id": "runtime_bridge",
@@ -6527,6 +6809,33 @@ def gate_pass(report: dict[str, Any]) -> bool:
         "lsp_bridge_code_action_readback",
         {},
     )
+    lsp_bridge_format = report.get("lsp_bridge_format_document", {})
+    lsp_bridge_format_lsp = (
+        lsp_bridge_format.get("lsp", {})
+        if isinstance(lsp_bridge_format, dict)
+        else {}
+    )
+    lsp_bridge_format_apply = (
+        lsp_bridge_format_lsp.get("apply", {})
+        if isinstance(lsp_bridge_format_lsp, dict)
+        else {}
+    )
+    lsp_bridge_format_readback = report.get("lsp_bridge_format_readback", {})
+    lsp_bridge_execute_command = report.get("lsp_bridge_execute_command", {})
+    lsp_bridge_execute_command_lsp = (
+        lsp_bridge_execute_command.get("lsp", {})
+        if isinstance(lsp_bridge_execute_command, dict)
+        else {}
+    )
+    lsp_bridge_execute_command_apply = (
+        lsp_bridge_execute_command_lsp.get("apply", {})
+        if isinstance(lsp_bridge_execute_command_lsp, dict)
+        else {}
+    )
+    lsp_bridge_execute_command_readback = report.get(
+        "lsp_bridge_execute_command_readback",
+        {},
+    )
     multi_readback_a = report.get("multi_readback_a", {})
     multi_readback_b = report.get("multi_readback_b", {})
     shell_publish = report.get("shell_publish", {})
@@ -6825,6 +7134,10 @@ def gate_pass(report: dict[str, Any]) -> bool:
         in report.get("status_after_ensure", {}).get("connected_ppc_routes", [])
         and "plugin.generic.lsp_bridge_apply_code_action"
         in report.get("status_after_ensure", {}).get("connected_ppc_routes", [])
+        and "plugin.generic.lsp_bridge_format_document"
+        in report.get("status_after_ensure", {}).get("connected_ppc_routes", [])
+        and "plugin.generic.lsp_bridge_execute_command"
+        in report.get("status_after_ensure", {}).get("connected_ppc_routes", [])
         and "plugin.generic.pyright_symbols"
         in report.get("status_after_ensure", {}).get("connected_ppc_routes", [])
         and "plugin.generic.pyright_workspace_symbols"
@@ -7111,6 +7424,40 @@ def gate_pass(report: dict[str, Any]) -> bool:
         and lsp_bridge_code_action_readback.get("exists") is True
         and lsp_bridge_code_action_readback.get("content")
         == LSP_BRIDGE_CODE_ACTION_CONTENT_AFTER
+        and report.get("lsp_bridge_format_seed", {}).get("success") is True
+        and lsp_bridge_format.get("from_lsp_importlib_bridge") is True
+        and lsp_bridge_format.get("from_ppc_service_bridge") is True
+        and lsp_bridge_format.get("from_mounted_workspace_callback") is True
+        and lsp_bridge_format.get("workspace_mounted") is True
+        and lsp_bridge_format_lsp.get("protocol") == "lsp-python-importlib"
+        and lsp_bridge_format_lsp.get("server")
+        == "plugins.catalog.lsp.runtime.apply"
+        and lsp_bridge_format_lsp.get("method") == "textDocument/formatting"
+        and int(lsp_bridge_format_lsp.get("edit_count", 0)) >= 1
+        and lsp_bridge_format_apply.get("success") is True
+        and LSP_BRIDGE_FORMAT_TARGET_REL in lsp_bridge_format.get("changed_paths", [])
+        and lsp_bridge_format_readback.get("exists") is True
+        and lsp_bridge_format_readback.get("content")
+        == LSP_BRIDGE_FORMAT_CONTENT_AFTER
+        and report.get("lsp_bridge_execute_command_seed", {}).get("success") is True
+        and lsp_bridge_execute_command.get("from_lsp_importlib_bridge") is True
+        and lsp_bridge_execute_command.get("from_ppc_service_bridge") is True
+        and lsp_bridge_execute_command.get("from_mounted_workspace_callback") is True
+        and lsp_bridge_execute_command.get("workspace_mounted") is True
+        and lsp_bridge_execute_command_lsp.get("protocol") == "lsp-python-importlib"
+        and lsp_bridge_execute_command_lsp.get("server")
+        == "plugins.catalog.lsp.runtime.apply"
+        and lsp_bridge_execute_command_lsp.get("method") == "workspace/executeCommand"
+        and lsp_bridge_execute_command_lsp.get("command")
+        == LSP_BRIDGE_EXECUTE_COMMAND_NAME
+        and lsp_bridge_execute_command_lsp.get("supported") is True
+        and lsp_bridge_execute_command_lsp.get("unsupported") is False
+        and lsp_bridge_execute_command_apply.get("success") is True
+        and LSP_BRIDGE_EXECUTE_COMMAND_TARGET_REL
+        in lsp_bridge_execute_command.get("changed_paths", [])
+        and lsp_bridge_execute_command_readback.get("exists") is True
+        and lsp_bridge_execute_command_readback.get("content")
+        == LSP_BRIDGE_EXECUTE_COMMAND_CONTENT_AFTER
         and apply_multi.get("from_self_managed") is True
         and apply_multi.get("callback_count") == 2
         and len(multi_callbacks) == 2
@@ -7445,11 +7792,16 @@ def gate_pass(report: dict[str, Any]) -> bool:
         and "plugin.generic.crash_recover_ping"
         not in report.get("status_after_crash", {}).get("connected_ppc_routes", [])
         and crash_status.get("state") == "stopped"
+        and report.get("crash_recover_seed", {}).get("success") is True
         and report.get("crash_recover_ping", {}).get("from_crash_recovered_service")
         is True
         and report.get("crash_recover_ping", {}).get("from_ppc") is True
         and report.get("crash_recover_ping", {}).get("workspace_mounted") is True
         and report.get("crash_recover_ping", {}).get("echo") == "after-crash-recover"
+        and report.get("crash_recover_ping", {}).get("workspace_read", {}).get(
+            "content",
+        )
+        == CRASH_RECOVERY_CONTENT
         and "plugin.generic.crash_recover_ping"
         in report.get("status_after_crash_recover", {}).get("connected_ppc_routes", [])
         and crash_recover_status.get("state") == "ready"
@@ -7603,6 +7955,10 @@ def markdown_report(report: dict[str, Any]) -> str:
         f"- lsp_bridge_apply_readback: `{report.get('lsp_bridge_apply_readback', {}).get('content')}`",
         f"- lsp_bridge_apply_code_action: `{report.get('lsp_bridge_apply_code_action', {}).get('lsp')}`",
         f"- lsp_bridge_code_action_readback: `{report.get('lsp_bridge_code_action_readback', {}).get('content')}`",
+        f"- lsp_bridge_format_document: `{report.get('lsp_bridge_format_document', {}).get('lsp')}`",
+        f"- lsp_bridge_format_readback: `{report.get('lsp_bridge_format_readback', {}).get('content')}`",
+        f"- lsp_bridge_execute_command: `{report.get('lsp_bridge_execute_command', {}).get('lsp')}`",
+        f"- lsp_bridge_execute_command_readback: `{report.get('lsp_bridge_execute_command_readback', {}).get('content')}`",
         f"- apply_multi_callback_count: `{report.get('apply_multi', {}).get('callback_count')}`",
         f"- apply_multi_callbacks: `{report.get('apply_multi', {}).get('callbacks')}`",
         f"- multi_readback_a: `{report.get('multi_readback_a', {}).get('content')}`",
@@ -7656,6 +8012,7 @@ def markdown_report(report: dict[str, Any]) -> str:
         f"- crash_probe: `{report.get('crash_probe')}`",
         f"- crash_service_state: `{crash_status.get('state')}`",
         f"- connected_routes_after_crash: `{report.get('status_after_crash', {}).get('connected_ppc_routes')}`",
+        f"- crash_recover_seed: `{report.get('crash_recover_seed')}`",
         f"- crash_recover_ping: `{report.get('crash_recover_ping')}`",
         f"- crash_recover_restart_count: `{crash_recover_status.get('restart_count')}`",
         f"- connected_routes_after_crash_recover: `{report.get('status_after_crash_recover', {}).get('connected_ppc_routes')}`",

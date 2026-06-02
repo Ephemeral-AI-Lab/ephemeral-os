@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Plugin Setup - EphemeralOS Sandbox Workspace Architecture</title>
+<link rel="stylesheet" href="../assets/styles.css">
+</head>
+<body data-module="sandbox" data-page="plugin-setup" data-root="../">
+<nav class="toc">
+  <h2>EphemeralOS Architecture</h2>
+<a class="home-link" href="../index.html">All Modules</a>
+  <div class="search-box">
+    <input type="search" placeholder="Search architecture" data-doc-search aria-label="Search architecture">
+    <div class="search-results" data-doc-search-results></div>
+  </div>
+  <h2>Modules</h2>
+  <ol class="module-list">
+    <li><a href="../sandbox/index.html" data-doc-module="sandbox" class="active">Sandbox Workspace</a></li>
+    <li><a href="../tools/index.html" data-doc-module="tools">Tools</a></li>
+  </ol>
+  <h2>Sandbox Workspace Pages</h2>
+  <ol>
+    <li><a href="index.html" data-doc-module="sandbox" data-doc-section="index" data-doc-page="index.html">Index</a></li>
+    <li><a href="overview.html" data-doc-module="sandbox" data-doc-section="overview" data-doc-page="overview.html">1. Overview</a></li>
+    <li><a href="layerstack.html" data-doc-module="sandbox" data-doc-section="layerstack" data-doc-page="layerstack.html">2. LayerStack</a></li>
+    <li><a href="overlay.html" data-doc-module="sandbox" data-doc-section="overlay" data-doc-page="overlay.html">3. Overlay</a></li>
+    <li><a href="occ.html" data-doc-module="sandbox" data-doc-section="occ" data-doc-page="occ.html">4. OCC</a></li>
+    <li><a href="workspaces.html" data-doc-module="sandbox" data-doc-section="workspaces" data-doc-page="workspaces.html">5. Workspace Modes</a></li>
+    <li><a href="daemon.html" data-doc-module="sandbox" data-doc-section="daemon" data-doc-page="daemon.html">6. Daemon and Background Tasks</a></li>
+    <li><a href="provider.html" data-doc-module="sandbox" data-doc-section="provider" data-doc-page="provider.html">7. Provider</a></li>
+    <li><a href="plugins.html" data-doc-module="sandbox" data-doc-section="plugins" data-doc-page="plugins.html">8. Plugin in ephemeral_workspace</a></li>
+    <li><a href="plugin-setup.html" data-doc-module="sandbox" data-doc-section="plugin-setup" data-doc-page="plugin-setup.html" class="active">Plugin Setup</a></li>
+    <li><a href="space-model.html" data-doc-module="sandbox" data-doc-section="space-model" data-doc-page="space-model.html">9. Space Model</a></li>
+    <li><a href="workflow-cookbook.html" data-doc-module="sandbox" data-doc-section="workflow-cookbook" data-doc-page="workflow-cookbook.html">10. Workflow Cookbook</a></li>
+    <li><a href="maintenance.html" data-doc-module="sandbox" data-doc-section="maintenance" data-doc-page="maintenance.html">11. Wiki Maintenance</a></li>
+  </ol>
+</nav>
+<main>
+<div class="doc-actions">
+  <span><a href="index.html">Index</a> / Plugin Setup</span>
+  <span class="nav-pair"><a href="plugins.html">&larr; 8. Plugin in ephemeral_workspace</a><a href="space-model.html">9. Space Model &rarr;</a></span>
+</div>
+<section id="plugin-setup"
+  data-last-reviewed-commit="d52a5616d"
+  data-evidence-paths="sandbox/crates/eos-plugin/src/manifest.rs sandbox/crates/eos-plugin/src/service.rs sandbox/crates/eos-daemon/src/plugin/mod.rs sandbox/crates/eos-daemon/src/plugin/process.rs backend/src/sandbox/ephemeral_workspace/plugin/host_dispatch.py backend/src/sandbox/ephemeral_workspace/plugin/install.py backend/src/sandbox/ephemeral_workspace/plugin/ppc_service.py backend/scripts/bench_rust_daemon_plugin.py backend/tests/live_e2e_test/sandbox/plugin/test_plugin_refresh_strategies.py">
+<h2>Plugin Setup <a class="anchor" href="#plugin-setup">§</a></h2>
+<nav class="page-toc" aria-labelledby="page-toc-heading">
+  <h3 id="page-toc-heading">Contents</h3>
+  <ol>
+    <li><a href="#setup-entrypoints"><span>1</span> Setup Entrypoints</a></li>
+    <li><a href="#manifest-contract"><span>2</span> Manifest Contract</a></li>
+    <li><a href="#service-process-contract"><span>3</span> Service Process Contract</a></li>
+    <li><a href="#deployment-flow"><span>4</span> Deployment Flow</a></li>
+    <li><a href="#operation-shapes"><span>5</span> Operation Shapes</a></li>
+    <li><a href="#verification-checklist"><span>6</span> Verification Checklist</a></li>
+    <li><a href="#setup-evidence-refresh"><span>7</span> Evidence and Refresh</a></li>
+  </ol>
+</nav>
+
+<div class="summary">
+  <ul>
+    <li>The daemon-managed plugin path is manifest driven: install the payload, call <code>api.plugin.ensure</code>, then dispatch <code>plugin.&lt;plugin_id&gt;.&lt;op_name&gt;</code>.</li>
+    <li>The sandbox daemon owns workspace freshness, PPC routing, process lifecycle, OCC publish, cleanup, and isolated-workspace blocking.</li>
+    <li>The easiest new plugin is a <code>workspace_snapshot_refresh</code> read-only service that answers PPC requests from the current mounted workspace.</li>
+    <li>Write plugins choose either daemon-owned <code>oneshot_overlay</code> execution or a self-managed long-lived service that publishes through daemon callbacks.</li>
+  </ul>
+</div>
+<div class="wiki-links" aria-label="Plugin setup links">
+  <a href="plugins.html">Plugin Architecture</a>
+  <a href="daemon.html#operation-surface">Daemon Operation Surface</a>
+  <a href="occ.html">OCC</a>
+  <a href="workflow-cookbook.html#cookbook-plugin-write">Plugin Write Trace</a>
+</div>
+</section>
+
+<section id="setup-entrypoints"
+  data-last-reviewed-commit="d52a5616d"
+  data-evidence-paths="backend/src/sandbox/ephemeral_workspace/plugin/host_dispatch.py backend/src/sandbox/ephemeral_workspace/plugin/install.py sandbox/crates/eos-daemon/src/plugin/mod.rs backend/scripts/bench_rust_daemon_plugin.py">
+<h3>Setup Entrypoints <a class="anchor" href="#setup-entrypoints">§</a></h3>
+<p>There are two setup entrypoints in the current checkout. The older host/catalog path is best when the plugin is part of <code>backend/src/plugins/catalog/&lt;name&gt;</code> and exposes Python tools that call <code>call_plugin</code>. The newer daemon-managed service path is best when the plugin should be launched as a sandbox service from an explicit manifest.</p>
+
+<table>
+  <thead><tr><th>Path</th><th>Use when</th><th>Who installs payload?</th><th>Who registers ops?</th></tr></thead>
+  <tbody>
+    <tr><td>Host/catalog plugin</td><td>The plugin is a bundled Python catalog plugin with <code>plugin.md</code>, <code>tools/</code>, optional <code>runtime/</code>, and optional <code>setup.sh</code>.</td><td><code>ensure_installed()</code> uploads the bundle to <code>/eos/daemon/plugins/catalog/&lt;name&gt;/</code> and writes an install marker <span class="file-ref">backend/src/sandbox/ephemeral_workspace/plugin/install.py:1-12</span>, <span class="file-ref">backend/src/sandbox/ephemeral_workspace/plugin/install.py:145-169</span>.</td><td><code>call_plugin()</code> calls <code>api.plugin.ensure</code>, then dispatches <code>plugin.&lt;name&gt;.&lt;op&gt;</code> <span class="file-ref">backend/src/sandbox/ephemeral_workspace/plugin/host_dispatch.py:76-185</span>.</td></tr>
+    <tr><td>Daemon-managed service manifest</td><td>The plugin service should be launched by the Rust daemon with a declared PPC process, refresh strategy, and operation table.</td><td>The caller copies the service binary/script into the sandbox, as the live harness does with <code>put_archive</code> plus final install into <code>/eos/plugin</code> and <code>/eos/daemon</code> paths <span class="file-ref">backend/scripts/bench_rust_daemon_plugin.py:6341-6465</span>.</td><td><code>api.plugin.ensure</code> parses the manifest and registers <code>plugin.&lt;plugin_id&gt;.&lt;op_name&gt;</code> routes <span class="file-ref">sandbox/crates/eos-daemon/src/plugin/mod.rs:349-405</span>.</td></tr>
+  </tbody>
+</table>
+
+<div class="callout">
+  <span class="label">Practical default</span>
+  For a new sandbox service today, start with the daemon-managed service manifest. It is the path covered by the live Rust plugin E2E, and it makes service mode, refresh strategy, operation intent, and timeout explicit.
+</div>
+</section>
+
+<section id="manifest-contract"
+  data-last-reviewed-commit="d52a5616d"
+  data-evidence-paths="sandbox/crates/eos-plugin/src/manifest.rs sandbox/crates/eos-plugin/src/service.rs backend/scripts/bench_rust_daemon_plugin.py">
+<h3>Manifest Contract <a class="anchor" href="#manifest-contract">§</a></h3>
+<p><code>PluginManifest</code> is the daemon input contract: identity fields plus service declarations and public operation declarations <span class="file-ref">sandbox/crates/eos-plugin/src/manifest.rs:11-21</span>. Validation rejects malformed identifiers, duplicate services or operations, operations referencing unknown services, plugin lifecycle intents, read-only operations without a service, and zero timeouts <span class="file-ref">sandbox/crates/eos-plugin/src/manifest.rs:31-57</span>, <span class="file-ref">sandbox/crates/eos-plugin/src/manifest.rs:117-147</span>.</p>
+
+<pre><code>{
+  "plugin_id": "my_plugin",
+  "plugin_version": "0.1.0",
+  "plugin_digest": "my-plugin-digest-v1",
+  "services": [
+    {
+      "service_id": "main",
+      "service_profile_digest": "main-profile-v1",
+      "service_mode": "workspace_snapshot_refresh",
+      "refresh_strategy": "remount_workspace_and_notify",
+      "command": ["python3", "/eos/plugin/my_plugin/service.py"],
+      "ppc_protocol_version": 1
+    }
+  ],
+  "operations": [
+    {
+      "op_name": "query",
+      "intent": "read_only",
+      "service_id": "main",
+      "timeout_ms": 5000
+    }
+  ]
+}</code></pre>
+
+<div class="inline-kv">
+  <div><code>plugin_id</code></div><div>Identifier used in public op names: <code>plugin.my_plugin.query</code>.</div>
+  <div><code>plugin_digest</code></div><div>Part of service identity. Change it when the deployed payload changes.</div>
+  <div><code>service_profile_digest</code></div><div>Part of the service key so two different service profiles do not accidentally share one process.</div>
+  <div><code>service_mode</code></div><div><code>workspace_snapshot_refresh</code> for long-lived services, <code>oneshot_overlay</code> for per-operation write workers <span class="file-ref">sandbox/crates/eos-plugin/src/service.rs:11-21</span>.</div>
+  <div><code>refresh_strategy</code></div><div><code>remount_workspace_and_notify</code>, <code>remount_workspace</code>, or <code>restart_service</code> when a long-lived service is stale <span class="file-ref">sandbox/crates/eos-plugin/src/service.rs:23-36</span>.</div>
+  <div><code>auto_workspace_overlay</code></div><div>Defaults true. For self-managed long-lived writes, set it false and publish through daemon callbacks instead of per-operation overlay capture.</div>
+</div>
+</section>
+
+<section id="service-process-contract"
+  data-last-reviewed-commit="d52a5616d"
+  data-evidence-paths="sandbox/crates/eos-daemon/src/plugin/process.rs backend/src/sandbox/ephemeral_workspace/plugin/ppc_service.py sandbox/crates/eos-daemon/src/plugin/mod.rs">
+<h3>Service Process Contract <a class="anchor" href="#service-process-contract">§</a></h3>
+<p>For <code>workspace_snapshot_refresh</code> services, the daemon builds a process spec, creates a stable AF_UNIX PPC socket under <code>/eos/plugin/ppc</code>, starts the declared command, and injects environment variables into the process <span class="file-ref">sandbox/crates/eos-daemon/src/plugin/process.rs:1-6</span>, <span class="file-ref">sandbox/crates/eos-daemon/src/plugin/process.rs:28-38</span>, <span class="file-ref">sandbox/crates/eos-daemon/src/plugin/process.rs:90-114</span>.</p>
+
+<div class="trace-grid">
+  <div><code>EOS_PLUGIN_PPC_SOCKET</code></div><div>AF_UNIX socket path the service must connect to.</div>
+  <div><code>EOS_PLUGIN_LAYER_STACK_ROOT</code></div><div>LayerStack root backing the service workspace.</div>
+  <div><code>EOS_PLUGIN_WORKSPACE_ROOT</code></div><div>Path the service should treat as the mounted workspace root.</div>
+  <div><code>EOS_PLUGIN_ID</code> / <code>EOS_PLUGIN_DIGEST</code></div><div>Manifest identity for the running payload.</div>
+  <div><code>EOS_PLUGIN_SERVICE_ID</code></div><div>Service id from the manifest.</div>
+  <div><code>EOS_PLUGIN_WORKSPACE_MOUNTED</code></div><div>Starts as <code>0</code>; long-lived Linux services are launched in a private overlay namespace and then see a mounted workspace.</div>
+</div>
+
+<p>A service can implement the PPC protocol directly, or it can run the bundled Python PPC service bridge. The bridge connects to <code>EOS_PLUGIN_PPC_SOCKET</code>, reads newline-delimited JSON frames, imports <code>plugins.catalog.&lt;plugin&gt;.runtime.server</code>, finds the registered handler, and dispatches the request <span class="file-ref">backend/src/sandbox/ephemeral_workspace/plugin/ppc_service.py:33-74</span>, <span class="file-ref">backend/src/sandbox/ephemeral_workspace/plugin/ppc_service.py:121-167</span>.</p>
+
+<pre class="diagram" aria-label="Plugin service process contract">
+[api.plugin.ensure start_services=true]
+        |
+        v
+[daemon validates manifest and builds service key]
+        |
+        v
+[daemon binds /eos/plugin/ppc/*.sock]
+        |
+        v
+[service command starts with EOS_PLUGIN_* env]
+        |
+        v
+[service connects back and handles plugin.&lt;id&gt;.&lt;op&gt; frames]
+</pre>
+</section>
+
+<section id="deployment-flow"
+  data-last-reviewed-commit="d52a5616d"
+  data-evidence-paths="backend/scripts/bench_rust_daemon_plugin.py sandbox/crates/eos-daemon/src/plugin/mod.rs backend/src/sandbox/daemon/rpc/dispatcher.py">
+<h3>Deployment Flow <a class="anchor" href="#deployment-flow">§</a></h3>
+<div class="sequence" aria-label="Plugin deployment workflow">
+  <ol>
+    <li><span><strong>Package the payload.</strong> Copy the service script/binary and any bridge/runtime files into the sandbox filesystem. The live harness stages files with <code>put_archive</code>, then installs executable scripts and runtime bridge files into stable <code>/eos/plugin</code> and <code>/eos/daemon</code> locations <span class="file-ref">backend/scripts/bench_rust_daemon_plugin.py:6341-6465</span>.</span></li>
+    <li><span><strong>Build the manifest.</strong> Declare services, service modes, refresh strategies, commands, and operations. The live manifest is a broad reference example <span class="file-ref">backend/scripts/bench_rust_daemon_plugin.py:5924-6338</span>.</span></li>
+    <li><span><strong>Ensure the plugin.</strong> Call <code>api.plugin.ensure</code> with <code>workspace_root</code>, <code>layer_stack_root</code>, <code>start_services: true</code>, and the manifest <span class="file-ref">backend/scripts/bench_rust_daemon_plugin.py:4208-4220</span>.</span></li>
+    <li><span><strong>Probe status.</strong> Call <code>api.plugin.status</code>, optionally with service probes, to confirm connected PPC routes and service health. The daemon registers <code>api.plugin.ensure</code> and <code>api.plugin.status</code> in the main op table <span class="file-ref">backend/src/sandbox/daemon/rpc/dispatcher.py:420-435</span>.</span></li>
+    <li><span><strong>Dispatch operations.</strong> Call <code>plugin.&lt;plugin_id&gt;.&lt;op_name&gt;</code>. The daemon chooses connected read-only, daemon-owned oneshot overlay, connected self-managed write, or deferred fallback routing <span class="file-ref">sandbox/crates/eos-daemon/src/plugin/mod.rs:1039-1064</span>.</span></li>
+  </ol>
+</div>
+
+<pre><code>await call_daemon_api(
+    sandbox_id,
+    "api.plugin.ensure",
+    {
+        "agent_id": agent_id,
+        "workspace_root": "/testbed",
+        "start_services": True,
+        "manifest": manifest,
+    },
+    layer_stack_root="/eos/layer-stack",
+)
+
+await call_daemon_api(
+    sandbox_id,
+    "plugin.my_plugin.query",
+    {"agent_id": agent_id, "path": "pyproject.toml"},
+    layer_stack_root="/eos/layer-stack",
+)</code></pre>
+</section>
+
+<section id="operation-shapes"
+  data-last-reviewed-commit="d52a5616d"
+  data-evidence-paths="sandbox/crates/eos-daemon/src/plugin/mod.rs sandbox/crates/eos-plugin/src/manifest.rs backend/scripts/bench_rust_daemon_plugin.py docs/plans/sandbox-plugin-service-adversarial-plan.md">
+<h3>Operation Shapes <a class="anchor" href="#operation-shapes">§</a></h3>
+<table>
+  <thead><tr><th>Shape</th><th>Manifest</th><th>Runtime behavior</th><th>Use for</th></tr></thead>
+  <tbody>
+    <tr><td>Long-lived read-only</td><td><code>intent: "read_only"</code>, <code>service_mode: "workspace_snapshot_refresh"</code></td><td>The daemon refreshes/remounts/restarts the service to the latest manifest before the request enters the PPC stream <span class="file-ref">sandbox/crates/eos-daemon/src/plugin/mod.rs:1099-1158</span>.</td><td>Indexers, language servers, package metadata readers, cached analyzers.</td></tr>
+    <tr><td>Self-managed long-lived write</td><td><code>intent: "write_allowed"</code>, <code>auto_workspace_overlay: false</code>, service id present</td><td>The request is sent to the connected service; the service publishes by calling daemon callbacks such as OCC apply. The LSP bridge and generic apply routes use this shape.</td><td>Language-server edits, apply-code-action, multi-step writes where the service owns edit computation.</td></tr>
+    <tr><td>Daemon-owned oneshot write</td><td><code>service_mode: "oneshot_overlay"</code>, <code>intent: "write_allowed"</code>, default <code>auto_workspace_overlay: true</code></td><td>The daemon launches the worker in a fresh overlay, captures upperdir changes, and publishes through OCC <span class="file-ref">sandbox/crates/eos-daemon/src/plugin/mod.rs:1378-1415</span>.</td><td>Small stateless write workers that should not manage OCC callbacks themselves.</td></tr>
+  </tbody>
+</table>
+
+<div class="callout">
+  <span class="label">Isolated workspace gate</span>
+  Plugin-family operations are blocked while the same agent owns an active isolated workspace. The daemon checks this before ensure/status and before route dispatch <span class="file-ref">sandbox/crates/eos-daemon/src/plugin/mod.rs:325-337</span>, <span class="file-ref">sandbox/crates/eos-daemon/src/plugin/mod.rs:1039-1045</span>.
+</div>
+</section>
+
+<section id="verification-checklist"
+  data-last-reviewed-commit="d52a5616d"
+  data-evidence-paths="backend/tests/live_e2e_test/sandbox/plugin/test_plugin_refresh_strategies.py backend/tests/live_e2e_test/sandbox/plugin/ITERATION-REPORT.md backend/scripts/bench_rust_daemon_plugin.py docs/plans/sandbox-plugin-service-adversarial-plan.md">
+<h3>Verification Checklist <a class="anchor" href="#verification-checklist">§</a></h3>
+<div class="refresh-list">
+  <div><strong>Manifest validation</strong><span>Every operation references a known service where required; no duplicate service ids or op names; no zero timeout.</span></div>
+  <div><strong>Payload install</strong><span>The declared command exists, is executable when needed, and can import any runtime package files after upload.</span></div>
+  <div><strong>Ensure/status</strong><span><code>api.plugin.ensure</code> returns registered routes; <code>api.plugin.status</code> reports expected connected PPC routes and healthy services.</span></div>
+  <div><strong>Freshness</strong><span>After a peer publish, a read-only service sees the new LayerStack manifest and does not serve stale cached bytes.</span></div>
+  <div><strong>Write safety</strong><span>Write operations publish only through daemon-owned OCC paths, either oneshot overlay capture or self-managed callbacks.</span></div>
+  <div><strong>Cleanup</strong><span>After daemon cleanup, connected routes and service processes are gone, active leases are released, and orphan/missing layer counts stay zero.</span></div>
+</div>
+
+<pre><code>uv run python -m py_compile backend/scripts/bench_rust_daemon_plugin.py backend/tests/live_e2e_test/sandbox/plugin/test_plugin_refresh_strategies.py
+uv run ruff check backend/scripts/bench_rust_daemon_plugin.py backend/tests/live_e2e_test/sandbox/plugin/test_plugin_refresh_strategies.py
+uv run pytest --collect-only -q backend/tests/live_e2e_test/sandbox/plugin/test_plugin_refresh_strategies.py
+EOS_SANDBOX_PROVIDER=docker EOS_LIVE_E2E_IMAGE=&lt;image&gt; uv run pytest -q -x -rs --tb=short backend/tests/live_e2e_test/sandbox/plugin/test_plugin_refresh_strategies.py</code></pre>
+
+<p>The current broad live reference is the plugin refresh strategy test, which reuses the sandbox Docker fixture plus <code>backend/scripts/bench_plugin_refresh_strategies.py</code> and <code>backend/scripts/bench_rust_daemon_plugin.py</code> rather than creating a separate harness. The iteration report records the latest plugin-service findings and closeout evidence <span class="file-ref">backend/tests/live_e2e_test/sandbox/plugin/ITERATION-REPORT.md</span>.</p>
+</section>
+
+<section id="setup-evidence-refresh"
+  data-last-reviewed-commit="d52a5616d"
+  data-evidence-paths="docs/architecture/sandbox/plugin-setup.html docs/architecture/sandbox/plugins.html docs/architecture/sandbox/index.html docs/architecture/assets/search-index.js backend/scripts/bench_rust_daemon_plugin.py sandbox/crates/eos-plugin/src/manifest.rs sandbox/crates/eos-daemon/src/plugin/mod.rs">
+<h3>Evidence and Refresh <a class="anchor" href="#setup-evidence-refresh">§</a></h3>
+<div class="evidence-grid">
+  <div class="evidence-card">
+    <h4>Source files</h4>
+    <ul>
+      <li><span class="file-ref">sandbox/crates/eos-plugin/src/manifest.rs</span> manifest validation contract.</li>
+      <li><span class="file-ref">sandbox/crates/eos-plugin/src/service.rs</span> service mode, refresh strategy, and service key contract.</li>
+      <li><span class="file-ref">sandbox/crates/eos-daemon/src/plugin/mod.rs</span> ensure/status parsing and route dispatch.</li>
+      <li><span class="file-ref">sandbox/crates/eos-daemon/src/plugin/process.rs</span> service process launch and environment.</li>
+      <li><span class="file-ref">backend/src/sandbox/ephemeral_workspace/plugin/install.py</span> host/catalog bundle upload path.</li>
+      <li><span class="file-ref">backend/src/sandbox/ephemeral_workspace/plugin/ppc_service.py</span> reusable Python PPC bridge.</li>
+    </ul>
+  </div>
+  <div class="evidence-card">
+    <h4>Live reference</h4>
+    <p><span class="file-ref">backend/scripts/bench_rust_daemon_plugin.py</span> is the most complete setup example: payload staging, manifest construction, ensure/status calls, route dispatch, freshness gates, write paths, crash/timeout recovery, and cleanup checks.</p>
+  </div>
+  <div class="evidence-card">
+    <h4>Refresh triggers</h4>
+    <p>Update this page when manifest fields, service modes, refresh strategies, PPC frame shape, install locations, <code>api.plugin.ensure/status</code>, or plugin deployment helpers change.</p>
+  </div>
+</div>
+<div class="maintenance-note">
+  Backlinks: <a class="wiki-link" href="plugins.html">Plugin in ephemeral_workspace</a> explains the runtime architecture; <a class="wiki-link" href="workflow-cookbook.html#cookbook-plugin-write">Workflow Cookbook</a> traces a plugin write; <a class="wiki-link" href="maintenance.html#refresh-checklist">Wiki Maintenance</a> owns navigation and search refresh rules.
+</div>
+</section>
+
+<div class="page-baseline" data-page-baseline-commit="d52a5616d">
+  <strong>Maintenance baseline</strong>
+  <span>Local section metadata reviewed at <code>d52a5616d</code>.</span>
+  <code>git diff d52a5616d..HEAD -- &lt;section data-evidence-paths&gt;</code>
+</div>
+<div class="page-footer-nav"><span><a href="plugins.html">&larr; 8. Plugin in ephemeral_workspace</a></span><span><a href="space-model.html">9. Space Model &rarr;</a></span></div>
+</main>
+<script src="../assets/search-index.js"></script>
+<script src="../assets/nav.js"></script>
+</body>
+</html>

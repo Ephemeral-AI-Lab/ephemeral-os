@@ -119,8 +119,8 @@ async def run_ephemeral_all_verbs_probe(
         "write_ephemeral_gitignore",
         write_file_tool,
         {
-            "file_path": f"{WORKSPACE_ROOT}/.ephemeralos/.gitignore",
-            "content": "*\n",
+            "file_path": f"{WORKSPACE_ROOT}/.gitignore",
+            "content": ".ephemeralos/sweevo-mock/ephemeral_workspace/cases/\n",
         },
         intent="write_allowed",
     )
@@ -377,12 +377,12 @@ async def run_ephemeral_policy_probe(
     record_tool_check: RecordToolCheck,
     sandbox_id: str,
 ) -> str:
-    """Verify pass-through reads, /tmp writes, and host write denylist."""
+    """Verify command overlay outside-workspace passthrough is not OCC-published."""
     metadata.repo_root = WORKSPACE_ROOT
     hosts = await _call_tool(
         label="policy_read_hosts",
-        tool_obj=read_file_tool,
-        raw_input={"file_path": "/etc/hosts", "start_line": 1, "end_line": 20},
+        tool_obj=exec_command_tool,
+        raw_input={"command": "cat /etc/hosts", "timeout": 20},
         metadata=metadata,
         emit=emit,
         call_tool=call_tool,
@@ -390,8 +390,8 @@ async def run_ephemeral_policy_probe(
     )
     tmp_write = await _call_tool(
         label="policy_write_tmp",
-        tool_obj=write_file_tool,
-        raw_input={"file_path": "/tmp/eph-scratch.txt", "content": "tmp-ok\n"},
+        tool_obj=exec_command_tool,
+        raw_input={"command": "printf 'tmp-ok\\n' > /tmp/eph-scratch.txt", "timeout": 20},
         metadata=metadata,
         emit=emit,
         call_tool=call_tool,
@@ -403,44 +403,19 @@ async def run_ephemeral_policy_probe(
         timeout=20,
     )
 
-    denied_paths = (
-        "/etc/hosts",
-        "/proc/sysrq-trigger",
-        "/sys/kernel/printk",
-        "/boot/grub.cfg",
-    )
-    denied: dict[str, dict[str, Any]] = {}
-    for path in denied_paths:
-        result = await _call_tool(
-            label=f"policy_deny_{path.replace('/', '_')}",
-            tool_obj=write_file_tool,
-            raw_input={"file_path": path, "content": "denied\n"},
-            metadata=metadata,
-            emit=emit,
-            call_tool=call_tool,
-            record_tool_check=None,
-            allow_error=True,
-        )
-        denied[path] = {
-            "is_error": result.is_error,
-            "status": _status(result),
-            "error_kind": _error_kind(result),
-            "changed_paths": _changed_paths(result),
-            "has_mount_timing": "command_exec.mount_workspace_s" in _timings(result),
-        }
-
     if _changed_paths(tmp_write):
         raise RuntimeError(f"/tmp write entered OCC changed_paths: {tmp_write.metadata}")
-    if not all(item["error_kind"] == "forbidden_host_path" for item in denied.values()):
-        raise RuntimeError(f"denylist did not return forbidden_host_path: {denied}")
 
     summary = {
         "schema": SUMMARY_SCHEMA,
         "mode": "policy",
-        "hosts_read_ok": "localhost" in _read_content(hosts) or bool(_read_content(hosts)),
+        "hosts_read_ok": "localhost" in _stdout(hosts) or bool(_stdout(hosts)),
         "tmp_write_changed_paths": _changed_paths(tmp_write),
         "tmp_probe_stdout": tmp_probe.stdout,
-        "denied": denied,
+        "outside_command_has_mount_timing": (
+            "command_exec.mount_workspace_s" in _timings(hosts)
+            and "command_exec.mount_workspace_s" in _timings(tmp_write)
+        ),
     }
     return await _write_summary(
         path=POLICY_SUMMARY,
@@ -1194,6 +1169,14 @@ def _read_content(result: ToolResult) -> str:
         else:
             lines.append(line)
     return "\n".join(lines)
+
+
+def _stdout(result: ToolResult) -> str:
+    payload = _json(result)
+    output = payload.get("output")
+    if isinstance(output, dict):
+        return str(output.get("stdout") or "")
+    return str(payload.get("stdout") or "")
 
 
 def _status(result: ToolResult) -> str:

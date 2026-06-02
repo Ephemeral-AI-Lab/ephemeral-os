@@ -30,6 +30,7 @@
     <li><a href="daemon.html" data-doc-module="sandbox" data-doc-section="daemon" data-doc-page="daemon.html">6. Daemon and Background Tasks</a></li>
     <li><a href="provider.html" data-doc-module="sandbox" data-doc-section="provider" data-doc-page="provider.html">7. Provider</a></li>
     <li><a href="plugins.html" data-doc-module="sandbox" data-doc-section="plugins" data-doc-page="plugins.html">8. Plugin in ephemeral_workspace</a></li>
+    <li><a href="plugin-setup.html" data-doc-module="sandbox" data-doc-section="plugin-setup" data-doc-page="plugin-setup.html">Plugin Setup</a></li>
     <li><a href="space-model.html" data-doc-module="sandbox" data-doc-section="space-model" data-doc-page="space-model.html">9. Space Model</a></li>
     <li><a href="workflow-cookbook.html" data-doc-module="sandbox" data-doc-section="workflow-cookbook" data-doc-page="workflow-cookbook.html">10. Workflow Cookbook</a></li>
     <li><a href="maintenance.html" data-doc-module="sandbox" data-doc-section="maintenance" data-doc-page="maintenance.html">11. Wiki Maintenance</a></li>
@@ -72,7 +73,7 @@
 </div>
 </section>
 
-<section id="reading-paths" data-last-reviewed-commit="2a3e6cc7c" data-evidence-paths="docs/architecture/sandbox/overview.html docs/architecture/sandbox/workflow-cookbook.html docs/architecture/sandbox/layerstack.html docs/architecture/sandbox/overlay.html docs/architecture/sandbox/occ.html docs/architecture/sandbox/workspaces.html docs/architecture/sandbox/daemon.html docs/architecture/sandbox/provider.html docs/architecture/sandbox/plugins.html docs/architecture/sandbox/space-model.html">
+<section id="reading-paths" data-last-reviewed-commit="2a3e6cc7c" data-evidence-paths="docs/architecture/sandbox/overview.html docs/architecture/sandbox/workflow-cookbook.html docs/architecture/sandbox/layerstack.html docs/architecture/sandbox/overlay.html docs/architecture/sandbox/occ.html docs/architecture/sandbox/workspaces.html docs/architecture/sandbox/daemon.html docs/architecture/sandbox/provider.html docs/architecture/sandbox/plugins.html docs/architecture/sandbox/plugin-setup.html docs/architecture/sandbox/space-model.html">
 <h2>Reading Paths <a class="anchor" href="#reading-paths">§</a></h2>
 <div class="wiki-map">
   <div class="wiki-node">
@@ -102,8 +103,8 @@
   </div>
   <div class="wiki-node">
     <strong>Plugin and LSP</strong>
-    <p>Use this path for plugin registration, operation overlay wrappers, Pyright sessions, and projection refresh.</p>
-    <div class="wiki-links"><a href="plugins.html">Plugin in ephemeral_workspace</a><a href="plugins.html#plugin-refresh-detail">Projection Refresh</a></div>
+    <p>Use this path for plugin registration, sandbox deployment, operation overlay wrappers, Pyright sessions, and projection refresh.</p>
+    <div class="wiki-links"><a href="plugins.html">Plugin in ephemeral_workspace</a><a href="plugin-setup.html">Plugin Setup</a><a href="plugins.html#plugin-refresh-detail">Projection Refresh</a></div>
   </div>
 </div>
 </section>
@@ -119,13 +120,14 @@
 <a class="section-card" href="daemon.html"><strong>6. Daemon and Background Tasks</strong><span>Wiki graph, startup transport, RPC dispatch, operation routing, workflow traces, background lifecycle, heartbeats, cancellation, and isolated gating.</span></a>
 <a class="section-card" href="provider.html"><strong>7. Provider</strong><span>Provider-neutral sandbox lifecycle, Docker/Daytona adapters, daemon transport, and runtime bootstrap boundary.</span></a>
 <a class="section-card" href="plugins.html"><strong>8. Plugin in ephemeral_workspace</strong><span>Plugin runtime ensure, operation registry, projection APIs, write overlays, Pyright refresh, and LSP apply.</span></a>
+<a class="section-card" href="plugin-setup.html"><strong>Plugin Setup</strong><span>How to install a plugin payload, declare a daemon manifest, start services, dispatch plugin ops, and verify status.</span></a>
 <a class="section-card" href="space-model.html"><strong>9. Space Model</strong><span>O(1) lowerdir repository bytes and O(n * per-operation changed bytes) writable scratch for concurrent work.</span></a>
 <a class="section-card" href="workflow-cookbook.html"><strong>10. Workflow Cookbook</strong><span>End-to-end traces for direct reads, ephemeral shell, OCC publish, isolated lifecycle, plugins, and Pyright refresh.</span></a>
 <a class="section-card" href="maintenance.html"><strong>11. Wiki Maintenance</strong><span>Page conventions, evidence policy, graph vocabulary, refresh checklist, validation commands, and change log.</span></a>
 </div>
 </section>
 
-<section id="question-map" data-last-reviewed-commit="2a3e6cc7c" data-evidence-paths="docs/architecture/sandbox/workspaces.html docs/architecture/sandbox/daemon.html docs/architecture/sandbox/occ.html docs/architecture/sandbox/overlay.html docs/architecture/sandbox/workflow-cookbook.html docs/architecture/sandbox/space-model.html docs/architecture/sandbox/plugins.html docs/architecture/sandbox/provider.html">
+<section id="question-map" data-last-reviewed-commit="2a3e6cc7c" data-evidence-paths="docs/architecture/sandbox/workspaces.html docs/architecture/sandbox/daemon.html docs/architecture/sandbox/occ.html docs/architecture/sandbox/overlay.html docs/architecture/sandbox/workflow-cookbook.html docs/architecture/sandbox/space-model.html docs/architecture/sandbox/plugins.html docs/architecture/sandbox/plugin-setup.html docs/architecture/sandbox/provider.html">
 <h2>Question Map <a class="anchor" href="#question-map">§</a></h2>
 <table>
   <thead><tr><th>Question</th><th>Start here</th><th>Then follow</th></tr></thead>
@@ -134,6 +136,7 @@
     <tr><td>When does an operation allocate an overlay?</td><td><a class="wiki-link" href="overlay.html">Overlay</a></td><td><a class="wiki-link" href="workflow-cookbook.html#cookbook-ephemeral-shell">Ephemeral Shell or Search Operation</a></td></tr>
     <tr><td>What does <code>isolated_workspace</code> change?</td><td><a class="wiki-link" href="workspaces.html#isolated-workspace">isolated_workspace</a></td><td><a class="wiki-link" href="daemon.html#isolated-background-gate">Isolated Background Gate</a>, <a class="wiki-link" href="space-model.html">Space Model</a></td></tr>
     <tr><td>Why is storage not copied for every agent?</td><td><a class="wiki-link" href="space-model.html">Space Model</a></td><td><a class="wiki-link" href="layerstack.html#layerstack-projection">Projection</a>, <a class="wiki-link" href="overlay.html">Overlay</a></td></tr>
+    <tr><td>How do I deploy a new sandbox plugin?</td><td><a class="wiki-link" href="plugin-setup.html">Plugin Setup</a></td><td><a class="wiki-link" href="plugins.html">Plugin in ephemeral_workspace</a>, <a class="wiki-link" href="daemon.html#operation-surface">Operation Surface</a></td></tr>
     <tr><td>How does a plugin write safely?</td><td><a class="wiki-link" href="plugins.html">Plugin in ephemeral_workspace</a></td><td><a class="wiki-link" href="workflow-cookbook.html#cookbook-plugin-write">Plugin Write Operation</a>, <a class="wiki-link" href="occ.html">OCC</a></td></tr>
     <tr><td>Where do daemon failures surface?</td><td><a class="wiki-link" href="daemon.html#diagnostics-failure-modes">Diagnostics and Failure Modes</a></td><td><a class="wiki-link" href="provider.html">Provider</a>, <a class="wiki-link" href="daemon.html#startup-transport">Startup and Transport</a></td></tr>
   </tbody>

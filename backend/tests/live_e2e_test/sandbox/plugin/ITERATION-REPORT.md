@@ -1,5 +1,84 @@
 # Plugin Live E2E Iteration Report
 
+## Iteration 64 - 2026-06-02 15:32 CST
+
+- Checkout/target summary: continued the Phase 3T Rust plugin implementation in
+  the multi-agent worktree; focused on closing the remaining
+  sandbox-plugin-service adversarial plan gap without changing the production
+  daemon crates.
+- Plan path and target files:
+  `docs/plans/sandbox-plugin-service-adversarial-plan.md`;
+  `docs/plans/sandbox-rust-external-migration-PROGRESS.md`;
+  `backend/scripts/bench_rust_daemon_plugin.py`;
+  `backend/tests/live_e2e_test/sandbox/plugin/test_plugin_refresh_strategies.py`.
+- Coverage gaps found against the plan: the canonical importlib bridge over the
+  reusable PPC `runtime_bridge` service still lacked formatting and
+  execute-command shaped write coverage, and same-service crash recovery needed
+  proof that the restarted service reads a peer-published manifest created
+  after the crash.
+- Tests, probes, and audit fields added: added
+  `plugin.generic.lsp_bridge_format_document` and
+  `plugin.generic.lsp_bridge_execute_command` on the existing
+  `runtime_bridge` service. Both delegate to
+  `plugins.catalog.lsp.runtime.apply`, publish through the mounted-workspace
+  daemon OCC callback, and read back the committed LayerStack bytes. Added
+  `crash_recover_seed` plus a `crash_recover_ping` readback of
+  `live_plugin_crash_recovery.txt` after the crash fail-closed path.
+- Issues found and fixes applied: no live production failure in this iteration.
+  The only stop signal was the expected long Pyright setup prewarm while
+  `/eos/plugin/rust_pyright_setup.sh` downloaded Node and installed Pyright;
+  setup completed with `pyright_setup.exit_code=0` before daemon PPC dispatch.
+  The code change was a coverage fix, not a production bug fix.
+- Exact commands run:
+  - `uv run python -m py_compile backend/scripts/bench_rust_daemon_plugin.py backend/tests/live_e2e_test/sandbox/plugin/test_plugin_refresh_strategies.py`.
+  - `uv run ruff check backend/scripts/bench_rust_daemon_plugin.py backend/tests/live_e2e_test/sandbox/plugin/test_plugin_refresh_strategies.py`.
+  - `uv run pytest --collect-only -q backend/tests/live_e2e_test/sandbox/plugin/test_plugin_refresh_strategies.py`.
+  - `git diff --check -- backend/scripts/bench_rust_daemon_plugin.py backend/tests/live_e2e_test/sandbox/plugin/test_plugin_refresh_strategies.py`.
+  - `EOS_SANDBOX_PROVIDER=docker EOS_LIVE_E2E_IMAGE=xingyaoww/sweb.eval.x86_64.dask_s_dask-10042:latest EOS_PLUGIN_REFRESH_SAMPLES=1 EOS_PLUGIN_REFRESH_AUTO_SQUASH_WRITES=104 EOS_RUST_PLUGIN_BENCH_TIMEOUT_S=600 uv run pytest -q -x -rs --tb=short --durations=10 backend/tests/live_e2e_test/sandbox/plugin/test_plugin_refresh_strategies.py`.
+- Artifact paths inspected:
+  `.omc/results/rust-daemon-plugin-generic-20260602T072455Z-33657.json`;
+  `.omc/results/rust-daemon-plugin-generic-20260602T072455Z-33657.md`;
+  `.omc/results/plugin-refresh-strategies-20260602T072455Z-33657.json`;
+  `.omc/results/plugin-refresh-strategies-20260602T072455Z-33657.md`;
+  plus pytest, ruff, collect-only, jq, ps, and diff-check output.
+- Pass/fail/skip status: passed. The focused live test finished
+  `1 passed in 301.74s`; the Rust report had `gate_pass=true`,
+  `pyright_setup.exit_code=0`, and stdout `pyright 1.1.409`.
+- Findings summary: the Rust report connected
+  `plugin.generic.lsp_bridge_format_document` and
+  `plugin.generic.lsp_bridge_execute_command`. Formatting returned protocol
+  `lsp-python-importlib`, server `plugins.catalog.lsp.runtime.apply`,
+  method `textDocument/formatting`, `edit_count=1`, callback apply
+  `success=true`, changed `live_plugin_lsp_bridge_format.py`, and read back
+  `def bridge_format() -> int:\n    return 2\n`. Execute-command returned
+  method `workspace/executeCommand`, command `generic.applyWorkspaceEdit`,
+  `supported=true`, `unsupported=false`, callback apply `success=true`,
+  changed `live_plugin_lsp_bridge_execute_command.py`, and read back
+  `value = 'after-bridge'\n`. The crash recovery proof seeded
+  `live_plugin_crash_recovery.txt` after the crash and the recovered service
+  read `from crash recovery peer publish\n`.
+- Correctness result: PASS. The artifact preserved non-serialized operation
+  proof: `runtime_bridge_concurrent` returned `fast-second` in `0.0042s` while
+  `slow-first` took `0.3610s` on the same service connection. Crash recovery,
+  timeout recovery, failed-health recovery, mounted workspace callbacks, and
+  cleanup gates all remained green.
+- Performance/O(1) result: PASS for this slice. Direct peer write and importlib
+  bridge callback publishes stayed on daemon OCC paths with
+  `command_exec.capture_upperdir_s=0.0`; cleanup ended with
+  `post_cleanup_metrics.active_leases=0` and zero orphan/missing layers. The
+  paired refresh-strategy report passed with winner
+  `workspace_snapshot_refresh`, refresh p95 `5.113 ms`,
+  `commit_to_workspace` p95 `3.422 ms`, raw filesystem watch stale without
+  materialization, and auto-squash plus post-drain commit green.
+- Remaining risk or next iteration target: the current adversarial plan's AV-10
+  representative plugin-service matrix is closed for Pyright read-only,
+  Pyright unsupported formatting/execute-command boundaries, generic positive
+  formatting/execute-command provider paths, canonical importlib bridge
+  read/write paths, and same-service crash/timeout/failed-health recovery.
+  Future work should not extrapolate this to every possible LSP server/provider;
+  new adapters need their own gates, and the periodic
+  `commit_to_workspace` plugin-service guard remains an explicit experiment.
+
 ## Iteration 63 - 2026-06-02 15:01 CST
 
 - Checkout/target summary: continued the Phase 3T Rust plugin implementation in

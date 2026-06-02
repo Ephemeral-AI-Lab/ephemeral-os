@@ -1,6 +1,6 @@
 # Sandbox Plugin Service Adversarial Implementation Plan
 
-**Status:** In progress; contract/status/routing/PPC lifecycle, retained
+**Status:** Closed for the current representative matrix; contract/status/routing/PPC lifecycle, retained
 snapshot-refresh freshness gating, `restart_service` fallback, self-managed OCC
 callbacks including repeated callback frames before a final reply, one-shot
 WRITE_ALLOWED overlay execution, and live generic Rust
@@ -24,7 +24,8 @@ callback. The canonical Python importlib LSP bridge over the reusable PPC
 service now covers query, hover, diagnostics, read-only code-actions,
 signature-help, document-highlight, find-definitions, find-references, rename,
 direct `apply_workspace_edit`, and
-`apply_code_action` publish through the mounted-workspace callback. Live status health
+`apply_code_action`/`format_document`/`execute_command` publish through the
+mounted-workspace callback. Live status health
 probes, failed-health isolation plus same-service failed-health recovery,
 service-crash fail-closed plus same-service crash recovery, hung-service
 timeout fail-closed probes, timeout next-dispatch recovery, and next-dispatch
@@ -44,20 +45,86 @@ ids, mixed `api.v1.shell` overlay/OCC publish followed by long-lived plugin
 refresh/readback, explicit daemon cleanup that removes PPC routes/services and
 reaps plugin harness processes, canonical importlib LSP bridge apply/readback
 and definition/reference/diagnostics/code-actions/signature-help/
-document-highlight/hover/code-action evidence, explicit Pyright setup prewarm
-before daemon PPC dispatch so dependency bootstrap cannot consume the first
-operation timeout and produce late unmatched replies,
+document-highlight/hover/code-action/format-document/execute-command
+publish/readback evidence, explicit Pyright setup prewarm before daemon PPC
+dispatch so dependency bootstrap cannot consume the first operation timeout and
+produce late unmatched replies,
 and the current
 Pyright negative capability boundary:
 `document_formatting=false`, `document_range_formatting=false`, and
 `executeCommandProvider.commands=[]`, so Pyright formatting/execute-command are
 unsupported-route gates for this Pyright harness, not positive provider parity
 targets themselves.
-Broader AV-10 LSP parity and the broader crash-recovery matrix beyond the
-covered health/crash/timeout/recovery paths remain open.
+The remaining adversarial plugin-service closeout items in this plan are now
+covered for the representative matrix: Pyright read-only plus unsupported
+format/execute boundaries, generic positive format/execute provider paths,
+canonical importlib bridge read/write paths, and same-service
+failed-health/crash/timeout recovery. Do not extrapolate that to every possible
+LSP server or provider-specific adapter; new servers still need adapter-specific
+capability gates, and the periodic `commit_to_workspace` guard remains an
+explicit experiment rather than recommended architecture.
 **Date:** 2026-06-02.
 **Scope:** `/sandbox` Rust plugin implementation, with the Python sandbox plugin
 path as the behavioral reference.
+
+## Progress Update - 2026-06-02 15:32 CST
+
+Landed:
+
+- Closed the remaining representative AV-10 bridge gap by adding canonical
+  Python importlib LSP bridge write coverage for
+  `plugin.generic.lsp_bridge_format_document` and
+  `plugin.generic.lsp_bridge_execute_command` on the reusable
+  `runtime_bridge` PPC service. Both routes delegate through
+  `plugins.catalog.lsp.runtime.apply`, publish through the mounted-workspace
+  daemon OCC callback, and read back the committed LayerStack bytes.
+- Closed the current crash-recovery tail by seeding
+  `live_plugin_crash_recovery.txt` after the crash fail-closed path and proving
+  `plugin.generic.crash_recover_ping` restarts the same service and reads the
+  post-crash peer-published manifest.
+- Preserved the capability split: Pyright formatting and execute-command remain
+  structured unsupported responses because this Pyright harness advertises
+  `document_formatting=false`, `document_range_formatting=false`, and no
+  executable commands; positive formatting and execute-command provider paths
+  are covered by generic provider routes and now by the canonical importlib
+  bridge shape.
+
+Live verification:
+
+- Passed:
+  `EOS_SANDBOX_PROVIDER=docker EOS_LIVE_E2E_IMAGE=xingyaoww/sweb.eval.x86_64.dask_s_dask-10042:latest EOS_PLUGIN_REFRESH_SAMPLES=1 EOS_PLUGIN_REFRESH_AUTO_SQUASH_WRITES=104 EOS_RUST_PLUGIN_BENCH_TIMEOUT_S=600 uv run pytest -q -x -rs --tb=short --durations=10 backend/tests/live_e2e_test/sandbox/plugin/test_plugin_refresh_strategies.py`
+  (`1 passed in 301.74s`).
+- Focused checks also passed:
+  `uv run python -m py_compile ...`, `uv run ruff check ...`,
+  `uv run pytest --collect-only -q ...`, and scoped `git diff --check`.
+
+Artifact evidence:
+
+- `.omc/results/rust-daemon-plugin-generic-20260602T072455Z-33657.json`
+  had `gate_pass=true`, `pyright_setup.exit_code=0`, connected
+  `plugin.generic.lsp_bridge_format_document` and
+  `plugin.generic.lsp_bridge_execute_command`, formatting readback
+  `def bridge_format() -> int:\n    return 2\n`, execute-command readback
+  `value = 'after-bridge'\n`, and crash-recovery readback
+  `from crash recovery peer publish\n`.
+- The same artifact preserved non-serialized same-service PPC behavior:
+  `runtime_bridge_concurrent` returned `fast-second` in `0.0042s` while
+  `slow-first` took `0.3610s`. Cleanup ended with
+  `post_cleanup_metrics.active_leases=0` and no orphan/missing layers.
+- `.omc/results/plugin-refresh-strategies-20260602T072455Z-33657.json`
+  had `gate_pass=true`, winner `workspace_snapshot_refresh`, snapshot refresh
+  p95 `5.113 ms`, `commit_to_workspace` p95 `3.422 ms`, raw filesystem watch
+  stale without materialization, auto-squash plus post-drain commit green, and
+  the existing warning that periodic `commit_to_workspace` can reset storage
+  under a long-lived service unless the daemon adds an explicit plugin-service
+  guard.
+
+Remaining risk:
+
+- No remaining closeout item in this adversarial plan's current representative
+  plugin-service matrix. Future LSP providers still need adapter-specific gates
+  for their advertised capabilities, and the periodic `commit_to_workspace`
+  kill-switch remains an experiment, not default architecture.
 
 ## Progress Update - 2026-06-02 15:01 CST
 
@@ -1627,8 +1694,10 @@ Checks:
 
 - Spawn plugin service processes as process groups. The focused
   `start_services: true` lifecycle and daemon-side socket handoff are landed;
-  on-demand status health probes are landed; periodic heartbeat, broader crash
-  recovery, and broader AV-10 LSP parity remain.
+  on-demand status health probes, representative failed-health/crash/timeout
+  recovery, and the current AV-10 plugin-service parity matrix are live-gated.
+  Periodic heartbeat and provider-specific adapter expansion remain future
+  hardening work.
 - Connect through AF_UNIX PPC using the existing envelope framing. The focused
   single-request route is landed for connected read-only services; process
   accept/connect handoff and same-service concurrent multiplexing are landed.
@@ -1797,9 +1866,14 @@ Ship one daemon-managed read-only service layer:
    experiment proves it only skips under active work and has acceptable latency,
    watcher, and auto-squash behavior.
 
-Do not claim full AV-10 until the representative LSP READ_ONLY and
-WRITE_ALLOWED/self-managed paths are canonically compared against the Python
-importlib path across the broader operation set. The generic non-LSP package
-adapter, read-only Pyright remount, and Pyright self-managed rename paths are
-now live evidence for the daemon-owned refresh and publish model, not the full
-parity closeout.
+AV-10 is closed for this adversarial plan's representative matrix: Pyright
+read-only LSP operations, Pyright structured unsupported
+formatting/execute-command boundaries, generic positive
+formatting/execute-command provider paths, canonical importlib bridge read and
+write paths over the reusable PPC service, and same-service
+failed-health/crash/timeout recovery. Do not extrapolate this closeout to every
+possible LSP server or provider-specific adapter; new server capabilities need
+their own adapter gates. Keep `commit_to_workspace` as an explicit
+materialization boundary unless the separate kill-switch experiment proves it
+only skips under active plugin service work and preserves latency, watcher, and
+auto-squash behavior.

@@ -214,7 +214,16 @@ def _timings_for_signal(
     timings: Mapping[str, Any],
 ) -> dict[str, Any]:
     if signal == "occ_prepared":
-        return _select_timings(timings, ("occ.prepare.",))
+        return _select_timings(
+            timings,
+            (
+                "occ.prepare.",
+                "occ.apply.",
+                "api.write.occ_apply_s",
+                "api.edit.occ_apply_s",
+                "command_exec.occ_apply_s",
+            ),
+        )
     if signal in {"occ_committed", "occ_conflicted"}:
         return _select_timings(
             timings,
@@ -236,6 +245,7 @@ def _timings_for_signal(
                 "api.read.",
                 "api.write.",
                 "api.edit.",
+                "api.exec_command.",
                 "api.shell.",
                 "api.grep.",
                 "api.glob.",

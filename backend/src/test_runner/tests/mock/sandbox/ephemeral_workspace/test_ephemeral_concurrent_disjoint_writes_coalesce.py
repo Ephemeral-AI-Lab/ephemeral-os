@@ -61,7 +61,7 @@ async def test_ephemeral_concurrent_disjoint_writes_coalesce(
 
     assert_ephemeral_performance_artifacts(
         report,
-        extra_timing_keys=("api.shell.total_s",),
+        extra_timing_keys=("api.exec_command.dispatch_total_s",),
     )
     assert_sandbox_events_have_source(report.run_dir, mutation_source="api_write")
     assert_sandbox_events_have_source(report.run_dir, mutation_source="overlay_capture")
