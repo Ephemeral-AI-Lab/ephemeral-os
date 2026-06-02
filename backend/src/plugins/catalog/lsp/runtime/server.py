@@ -67,6 +67,24 @@ async def find_references(args: dict[str, Any], ctx: Any) -> dict[str, Any]:
     )
 
 
+@register_plugin_op("lsp", "signature_help", intent=Intent.READ_ONLY)
+async def signature_help(args: dict[str, Any], ctx: Any) -> dict[str, Any]:
+    return await _run_timed_lsp_op(
+        "signature_help",
+        ctx,
+        lambda session: session.signature_help(args),
+    )
+
+
+@register_plugin_op("lsp", "document_highlight", intent=Intent.READ_ONLY)
+async def document_highlight(args: dict[str, Any], ctx: Any) -> dict[str, Any]:
+    return await _run_timed_lsp_op(
+        "document_highlight",
+        ctx,
+        lambda session: session.document_highlight(args),
+    )
+
+
 @register_plugin_op("lsp", "diagnostics", intent=Intent.READ_ONLY)
 async def diagnostics(args: dict[str, Any], ctx: Any) -> dict[str, Any]:
     return await _run_timed_lsp_op(

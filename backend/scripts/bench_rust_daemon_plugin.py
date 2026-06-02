@@ -155,6 +155,11 @@ LSP_BRIDGE_CODE_ACTION_CONTENT = "status = 'before'\n"
 LSP_BRIDGE_CODE_ACTION_CONTENT_AFTER = "status = 'after'\n"
 LSP_BRIDGE_CODE_ACTION_TITLE = "Bridge replace status"
 LSP_BRIDGE_CODE_ACTION_KIND = "quickfix"
+LSP_BRIDGE_DIAGNOSTICS_TARGET_REL = "live_plugin_lsp_bridge_diagnostics.py"
+LSP_BRIDGE_DIAGNOSTICS_CONTENT = "value: List[int] = []\n"
+LSP_BRIDGE_DIAGNOSTICS_LINE = 0
+LSP_BRIDGE_DIAGNOSTICS_CHARACTER = len("value: Li")
+LSP_BRIDGE_DIAGNOSTICS_SYMBOL = "List"
 MULTI_TARGET_A_REL = "live_plugin_multi_a.txt"
 MULTI_TARGET_A_CONTENT = "from live rust plugin multi a\n"
 MULTI_TARGET_B_REL = "live_plugin_multi_b.txt"
@@ -3252,6 +3257,32 @@ def _lsp_location_start_lines(locations: Any) -> list[int]:
     return lines
 
 
+def _lsp_range_start_lines(items: Any) -> list[int]:
+    if not isinstance(items, list):
+        return []
+    lines: list[int] = []
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        range_value = item.get("range")
+        if not isinstance(range_value, dict):
+            continue
+        start = range_value.get("start")
+        if isinstance(start, dict) and isinstance(start.get("line"), int):
+            lines.append(start["line"])
+    return lines
+
+
+def _lsp_diagnostic_messages(diagnostics: Any) -> list[str]:
+    if not isinstance(diagnostics, list):
+        return []
+    return [
+        str(diagnostic.get("message") or "")
+        for diagnostic in diagnostics
+        if isinstance(diagnostic, dict)
+    ]
+
+
 @register_plugin_op("generic", "runtime_bridge_ping", intent=Intent.READ_ONLY)
 def runtime_bridge_ping(args: dict[str, Any], ctx: Any) -> dict[str, Any]:
     workspace_root = str(ctx.overlay.workspace_root)
@@ -3347,6 +3378,179 @@ async def lsp_bridge_find_references(
             "reference_paths": _lsp_location_paths(workspace_root, references),
             "reference_start_lines": _lsp_location_start_lines(references),
             "references": references,
+            "raw": result,
+        },
+    }
+
+
+@register_plugin_op("generic", "lsp_bridge_signature_help", intent=Intent.READ_ONLY)
+async def lsp_bridge_signature_help(args: dict[str, Any], ctx: Any) -> dict[str, Any]:
+    from plugins.catalog.lsp.runtime import server as lsp_server
+
+    file_path = str(args.get("file_path") or args.get("read_path") or "")
+    line = int(args.get("line") or 0)
+    character = int(args.get("character") or 0)
+    result = await lsp_server.signature_help(
+        {
+            "file_path": file_path,
+            "line": line,
+            "character": character,
+        },
+        ctx,
+    )
+    signatures = result.get("signatures") if isinstance(result, dict) else []
+    signatures = signatures if isinstance(signatures, list) else []
+    labels = result.get("labels") if isinstance(result, dict) else []
+    labels = labels if isinstance(labels, list) else []
+    return {
+        "success": True,
+        "from_lsp_importlib_bridge": True,
+        "from_ppc_service_bridge": True,
+        "workspace_mounted": os.environ.get("EOS_PLUGIN_WORKSPACE_MOUNTED") == "1",
+        "manifest_key": ctx.overlay.active_manifest_key(),
+        "lsp": {
+            "protocol": "lsp-python-importlib",
+            "server": "plugins.catalog.lsp.runtime.server",
+            "path": file_path,
+            "position": {"line": line, "character": character},
+            "signature_count": len(signatures),
+            "labels": [str(label) for label in labels],
+            "active_signature": (
+                result.get("active_signature") if isinstance(result, dict) else None
+            ),
+            "active_parameter": (
+                result.get("active_parameter") if isinstance(result, dict) else None
+            ),
+            "signatures": signatures,
+            "raw": result,
+        },
+    }
+
+
+@register_plugin_op("generic", "lsp_bridge_document_highlight", intent=Intent.READ_ONLY)
+async def lsp_bridge_document_highlight(
+    args: dict[str, Any],
+    ctx: Any,
+) -> dict[str, Any]:
+    from plugins.catalog.lsp.runtime import server as lsp_server
+
+    file_path = str(args.get("file_path") or args.get("read_path") or "")
+    line = int(args.get("line") or 0)
+    character = int(args.get("character") or 0)
+    result = await lsp_server.document_highlight(
+        {
+            "file_path": file_path,
+            "line": line,
+            "character": character,
+        },
+        ctx,
+    )
+    highlights = result.get("highlights") if isinstance(result, dict) else []
+    highlights = highlights if isinstance(highlights, list) else []
+    return {
+        "success": True,
+        "from_lsp_importlib_bridge": True,
+        "from_ppc_service_bridge": True,
+        "workspace_mounted": os.environ.get("EOS_PLUGIN_WORKSPACE_MOUNTED") == "1",
+        "manifest_key": ctx.overlay.active_manifest_key(),
+        "lsp": {
+            "protocol": "lsp-python-importlib",
+            "server": "plugins.catalog.lsp.runtime.server",
+            "path": file_path,
+            "position": {"line": line, "character": character},
+            "highlight_count": len(highlights),
+            "highlight_start_lines": _lsp_range_start_lines(highlights),
+            "highlights": highlights,
+            "raw": result,
+        },
+    }
+
+
+@register_plugin_op("generic", "lsp_bridge_diagnostics", intent=Intent.READ_ONLY)
+async def lsp_bridge_diagnostics(args: dict[str, Any], ctx: Any) -> dict[str, Any]:
+    from plugins.catalog.lsp.runtime import server as lsp_server
+
+    file_path = str(args.get("file_path") or args.get("read_path") or "")
+    line = int(args.get("line") or 0)
+    character = int(args.get("character") or 0)
+    wait_for_diagnostics = bool(args.get("wait_for_diagnostics", False))
+    result = await lsp_server.diagnostics(
+        {
+            "file_path": file_path,
+            "line": line,
+            "character": character,
+            "wait_for_diagnostics": wait_for_diagnostics,
+        },
+        ctx,
+    )
+    diagnostics = result.get("diagnostics") if isinstance(result, dict) else []
+    diagnostics = diagnostics if isinstance(diagnostics, list) else []
+    return {
+        "success": True,
+        "from_lsp_importlib_bridge": True,
+        "from_ppc_service_bridge": True,
+        "workspace_mounted": os.environ.get("EOS_PLUGIN_WORKSPACE_MOUNTED") == "1",
+        "manifest_key": ctx.overlay.active_manifest_key(),
+        "lsp": {
+            "protocol": "lsp-python-importlib",
+            "server": "plugins.catalog.lsp.runtime.server",
+            "path": file_path,
+            "position": {"line": line, "character": character},
+            "wait_for_diagnostics": wait_for_diagnostics,
+            "diagnostic_count": len(diagnostics),
+            "diagnostic_messages": _lsp_diagnostic_messages(diagnostics),
+            "diagnostics": diagnostics,
+            "raw": result,
+        },
+    }
+
+
+@register_plugin_op("generic", "lsp_bridge_code_actions", intent=Intent.READ_ONLY)
+async def lsp_bridge_code_actions(args: dict[str, Any], ctx: Any) -> dict[str, Any]:
+    from plugins.catalog.lsp.runtime import server as lsp_server
+
+    file_path = str(args.get("file_path") or args.get("read_path") or "")
+    line = int(args.get("line") or 0)
+    character = int(args.get("character") or 0)
+    only = args.get("only") if isinstance(args.get("only"), list) else []
+    request_args: dict[str, Any] = {
+        "file_path": file_path,
+        "line": line,
+        "character": character,
+    }
+    if only:
+        request_args["only"] = only
+    if isinstance(args.get("range"), dict):
+        request_args["range"] = args["range"]
+    if isinstance(args.get("diagnostics"), list):
+        request_args["diagnostics"] = args["diagnostics"]
+    result = await lsp_server.code_actions(request_args, ctx)
+    actions = result.get("code_actions") if isinstance(result, dict) else []
+    actions = actions if isinstance(actions, list) else []
+    return {
+        "success": True,
+        "from_lsp_importlib_bridge": True,
+        "from_ppc_service_bridge": True,
+        "workspace_mounted": os.environ.get("EOS_PLUGIN_WORKSPACE_MOUNTED") == "1",
+        "manifest_key": ctx.overlay.active_manifest_key(),
+        "lsp": {
+            "protocol": "lsp-python-importlib",
+            "server": "plugins.catalog.lsp.runtime.server",
+            "path": file_path,
+            "position": {"line": line, "character": character},
+            "only": only,
+            "action_count": len(actions),
+            "action_titles": [
+                str(action.get("title") or "")
+                for action in actions
+                if isinstance(action, dict)
+            ],
+            "action_kinds": [
+                str(action.get("kind") or "")
+                for action in actions
+                if isinstance(action, dict)
+            ],
+            "actions": actions,
             "raw": result,
         },
     }
@@ -3599,8 +3803,57 @@ NODE_HOME="${EOS_NODE_HOME:-/tmp/eos-node22}"
 NODE_VERSION="${EOS_NODE_VERSION:-22.13.1}"
 PYRIGHT_VERSION="${EOS_PYRIGHT_VERSION:-1.1.409}"
 MARKER="/eos/plugin/.rust_pyright_installed"
+LOCK_DIR="/eos/plugin/.rust_pyright_setup.lock"
+LOCK_OWNER="$LOCK_DIR/owner"
+LOCK_STALE_AFTER_S="${EOS_PYRIGHT_SETUP_LOCK_STALE_AFTER_S:-900}"
 
 export PATH="$NODE_HOME/bin:$PATH"
+
+if [ -f "$MARKER" ] && command -v pyright-langserver >/dev/null 2>&1; then
+    exit 0
+fi
+
+now_s() {
+    date +%s
+}
+
+cleanup_stale_lock() {
+    if [ ! -d "$LOCK_DIR" ]; then
+        return 0
+    fi
+    owner_pid=""
+    owner_started_s="0"
+    if [ -f "$LOCK_OWNER" ]; then
+        read -r owner_pid owner_started_s < "$LOCK_OWNER" || true
+    fi
+    if [ -n "$owner_pid" ] && kill -0 "$owner_pid" 2>/dev/null; then
+        age_s=$(( $(now_s) - ${owner_started_s:-0} ))
+        if [ "$age_s" -le "$LOCK_STALE_AFTER_S" ]; then
+            return 0
+        fi
+    fi
+    rm -rf "$LOCK_DIR"
+}
+
+while ! mkdir "$LOCK_DIR" 2>/dev/null; do
+    if [ -f "$MARKER" ] && command -v pyright-langserver >/dev/null 2>&1; then
+        exit 0
+    fi
+    cleanup_stale_lock
+    sleep 0.2
+done
+printf '%s %s\n' "$$" "$(now_s)" > "$LOCK_OWNER"
+
+cleanup_lock() {
+    owner_pid=""
+    if [ -f "$LOCK_OWNER" ]; then
+        read -r owner_pid _ < "$LOCK_OWNER" || true
+    fi
+    if [ "$owner_pid" = "$$" ]; then
+        rm -rf "$LOCK_DIR"
+    fi
+}
+trap cleanup_lock EXIT INT TERM
 
 if [ -f "$MARKER" ] && command -v pyright-langserver >/dev/null 2>&1; then
     exit 0
@@ -3779,10 +4032,13 @@ async def run(args: argparse.Namespace) -> dict[str, Any]:
         report["isolated_gate_environment"] = await configure_isolated_gate_environment(
             bench,
         )
+        pyright_setup = await bench.exec(PYRIGHT_SETUP_SCRIPT, timeout=600)
+        report["pyright_setup"] = result_block(pyright_setup)
         if (
             not report["harness"]["gate_pass"]
             or not report["experiment_dirs"]["gate_pass"]
             or not report["isolated_gate_environment"]["gate_pass"]
+            or report["pyright_setup"]["exit_code"] != 0
         ):
             report["gate_pass"] = False
             return report
@@ -4165,6 +4421,18 @@ async def run(args: argparse.Namespace) -> dict[str, Any]:
                     "agent_id": AGENT_ID,
                     "path": f"{WORKSPACE_ROOT}/{LSP_BRIDGE_CODE_ACTION_TARGET_REL}",
                     "content": LSP_BRIDGE_CODE_ACTION_CONTENT,
+                    "overwrite": True,
+                },
+                layer_stack_root=LAYER_STACK_ROOT,
+                timeout=30,
+            )
+            report["lsp_bridge_diagnostics_seed"] = await daemon_client.call_daemon_api(
+                bench.sandbox_id,
+                "api.v1.write_file",
+                {
+                    "agent_id": AGENT_ID,
+                    "path": f"{WORKSPACE_ROOT}/{LSP_BRIDGE_DIAGNOSTICS_TARGET_REL}",
+                    "content": LSP_BRIDGE_DIAGNOSTICS_CONTENT,
                     "overwrite": True,
                 },
                 layer_stack_root=LAYER_STACK_ROOT,
@@ -4896,6 +5164,18 @@ async def run(args: argparse.Namespace) -> dict[str, Any]:
                 "line": 3,
                 "character": len("RESULT = bri"),
             }
+            lsp_bridge_diagnostics_position = {
+                "line": LSP_BRIDGE_DIAGNOSTICS_LINE,
+                "character": LSP_BRIDGE_DIAGNOSTICS_CHARACTER,
+            }
+            lsp_bridge_signature_position = {
+                "line": PYRIGHT_SIGNATURE_LINE,
+                "character": PYRIGHT_SIGNATURE_CHARACTER,
+            }
+            lsp_bridge_highlight_position = {
+                "line": 3,
+                "character": len("RESULT = liv"),
+            }
 
             async def call_lsp_bridge_read_only(
                 public_op: str,
@@ -4920,6 +5200,10 @@ async def run(args: argparse.Namespace) -> dict[str, Any]:
             (
                 report["lsp_bridge_find_definitions"],
                 report["lsp_bridge_find_references"],
+                report["lsp_bridge_signature_help"],
+                report["lsp_bridge_document_highlight"],
+                report["lsp_bridge_diagnostics"],
+                report["lsp_bridge_code_actions"],
             ) = await asyncio.gather(
                 call_lsp_bridge_read_only(
                     "plugin.generic.lsp_bridge_find_definitions",
@@ -4936,6 +5220,40 @@ async def run(args: argparse.Namespace) -> dict[str, Any]:
                         "read_path": LSP_BRIDGE_TARGET_REL,
                         **lsp_bridge_position,
                         "include_declaration": True,
+                    },
+                ),
+                call_lsp_bridge_read_only(
+                    "plugin.generic.lsp_bridge_signature_help",
+                    {
+                        "agent_id": AGENT_ID,
+                        "read_path": PYRIGHT_SIGNATURE_TARGET_REL,
+                        **lsp_bridge_signature_position,
+                    },
+                ),
+                call_lsp_bridge_read_only(
+                    "plugin.generic.lsp_bridge_document_highlight",
+                    {
+                        "agent_id": AGENT_ID,
+                        "read_path": PYRIGHT_TARGET_REL,
+                        **lsp_bridge_highlight_position,
+                    },
+                ),
+                call_lsp_bridge_read_only(
+                    "plugin.generic.lsp_bridge_diagnostics",
+                    {
+                        "agent_id": AGENT_ID,
+                        "read_path": LSP_BRIDGE_DIAGNOSTICS_TARGET_REL,
+                        **lsp_bridge_diagnostics_position,
+                        "wait_for_diagnostics": True,
+                    },
+                ),
+                call_lsp_bridge_read_only(
+                    "plugin.generic.lsp_bridge_code_actions",
+                    {
+                        "agent_id": AGENT_ID,
+                        "read_path": LSP_BRIDGE_DIAGNOSTICS_TARGET_REL,
+                        **lsp_bridge_diagnostics_position,
+                        "only": [LSP_BRIDGE_CODE_ACTION_KIND],
                     },
                 ),
             )
@@ -5474,6 +5792,30 @@ def plugin_manifest() -> dict[str, Any]:
             },
             {
                 "op_name": "lsp_bridge_find_references",
+                "intent": "read_only",
+                "service_id": "runtime_bridge",
+                "timeout_ms": 150000,
+            },
+            {
+                "op_name": "lsp_bridge_signature_help",
+                "intent": "read_only",
+                "service_id": "runtime_bridge",
+                "timeout_ms": 150000,
+            },
+            {
+                "op_name": "lsp_bridge_document_highlight",
+                "intent": "read_only",
+                "service_id": "runtime_bridge",
+                "timeout_ms": 150000,
+            },
+            {
+                "op_name": "lsp_bridge_diagnostics",
+                "intent": "read_only",
+                "service_id": "runtime_bridge",
+                "timeout_ms": 150000,
+            },
+            {
+                "op_name": "lsp_bridge_code_actions",
                 "intent": "read_only",
                 "service_id": "runtime_bridge",
                 "timeout_ms": 150000,
@@ -6112,6 +6454,38 @@ def gate_pass(report: dict[str, Any]) -> bool:
         if isinstance(lsp_bridge_find_references, dict)
         else {}
     )
+    lsp_bridge_signature_help = report.get("lsp_bridge_signature_help", {})
+    lsp_bridge_signature_help_lsp = (
+        lsp_bridge_signature_help.get("lsp", {})
+        if isinstance(lsp_bridge_signature_help, dict)
+        else {}
+    )
+    lsp_bridge_signature_labels = lsp_bridge_signature_help_lsp.get("labels", [])
+    lsp_bridge_document_highlight = report.get("lsp_bridge_document_highlight", {})
+    lsp_bridge_document_highlight_lsp = (
+        lsp_bridge_document_highlight.get("lsp", {})
+        if isinstance(lsp_bridge_document_highlight, dict)
+        else {}
+    )
+    lsp_bridge_highlight_start_lines = set(
+        lsp_bridge_document_highlight_lsp.get("highlight_start_lines", [])
+    )
+    lsp_bridge_diagnostics = report.get("lsp_bridge_diagnostics", {})
+    lsp_bridge_diagnostics_lsp = (
+        lsp_bridge_diagnostics.get("lsp", {})
+        if isinstance(lsp_bridge_diagnostics, dict)
+        else {}
+    )
+    lsp_bridge_diagnostic_messages = lsp_bridge_diagnostics_lsp.get(
+        "diagnostic_messages",
+        [],
+    )
+    lsp_bridge_code_actions = report.get("lsp_bridge_code_actions", {})
+    lsp_bridge_code_actions_lsp = (
+        lsp_bridge_code_actions.get("lsp", {})
+        if isinstance(lsp_bridge_code_actions, dict)
+        else {}
+    )
     lsp_bridge_hover = report.get("lsp_bridge_hover", {})
     lsp_bridge_hover_lsp = (
         lsp_bridge_hover.get("lsp", {}) if isinstance(lsp_bridge_hover, dict) else {}
@@ -6413,6 +6787,7 @@ def gate_pass(report: dict[str, Any]) -> bool:
         report.get("artifact", {}).get("gate_pass")
         and report.get("harness", {}).get("gate_pass")
         and report.get("experiment_dirs", {}).get("gate_pass")
+        and report.get("pyright_setup", {}).get("exit_code") == 0
         and report.get("ready", {}).get("ready") is True
         and report.get("ensure", {}).get("success") is True
         and report.get("ensure", {}).get("service_processes_started") is True
@@ -6433,6 +6808,14 @@ def gate_pass(report: dict[str, Any]) -> bool:
         and "plugin.generic.lsp_bridge_find_definitions"
         in report.get("status_after_ensure", {}).get("connected_ppc_routes", [])
         and "plugin.generic.lsp_bridge_find_references"
+        in report.get("status_after_ensure", {}).get("connected_ppc_routes", [])
+        and "plugin.generic.lsp_bridge_signature_help"
+        in report.get("status_after_ensure", {}).get("connected_ppc_routes", [])
+        and "plugin.generic.lsp_bridge_document_highlight"
+        in report.get("status_after_ensure", {}).get("connected_ppc_routes", [])
+        and "plugin.generic.lsp_bridge_diagnostics"
+        in report.get("status_after_ensure", {}).get("connected_ppc_routes", [])
+        and "plugin.generic.lsp_bridge_code_actions"
         in report.get("status_after_ensure", {}).get("connected_ppc_routes", [])
         and "plugin.generic.lsp_bridge_hover"
         in report.get("status_after_ensure", {}).get("connected_ppc_routes", [])
@@ -6619,6 +7002,67 @@ def gate_pass(report: dict[str, Any]) -> bool:
         and {0, 3}.issubset(
             set(lsp_bridge_find_references_lsp.get("reference_start_lines", []))
         )
+        and lsp_bridge_signature_help.get("from_lsp_importlib_bridge") is True
+        and lsp_bridge_signature_help.get("from_ppc_service_bridge") is True
+        and lsp_bridge_signature_help.get("workspace_mounted") is True
+        and lsp_bridge_signature_help_lsp.get("protocol") == "lsp-python-importlib"
+        and lsp_bridge_signature_help_lsp.get("server")
+        == "plugins.catalog.lsp.runtime.server"
+        and lsp_bridge_signature_help_lsp.get("path") == PYRIGHT_SIGNATURE_TARGET_REL
+        and lsp_bridge_signature_help_lsp.get("position", {}).get("line")
+        == PYRIGHT_SIGNATURE_LINE
+        and lsp_bridge_signature_help_lsp.get("position", {}).get("character")
+        == PYRIGHT_SIGNATURE_CHARACTER
+        and int(lsp_bridge_signature_help_lsp.get("signature_count", 0)) >= 1
+        and lsp_bridge_signature_help_lsp.get("active_parameter") == 1
+        and any(
+            isinstance(label, str) and "left: int" in label and "right: str" in label
+            for label in lsp_bridge_signature_labels
+        )
+        and lsp_bridge_document_highlight.get("from_lsp_importlib_bridge") is True
+        and lsp_bridge_document_highlight.get("from_ppc_service_bridge") is True
+        and lsp_bridge_document_highlight.get("workspace_mounted") is True
+        and lsp_bridge_document_highlight_lsp.get("protocol")
+        == "lsp-python-importlib"
+        and lsp_bridge_document_highlight_lsp.get("server")
+        == "plugins.catalog.lsp.runtime.server"
+        and lsp_bridge_document_highlight_lsp.get("path") == PYRIGHT_TARGET_REL
+        and int(lsp_bridge_document_highlight_lsp.get("highlight_count", 0)) >= 2
+        and {0, 3}.issubset(lsp_bridge_highlight_start_lines)
+        and report.get("lsp_bridge_diagnostics_seed", {}).get("success") is True
+        and lsp_bridge_diagnostics.get("from_lsp_importlib_bridge") is True
+        and lsp_bridge_diagnostics.get("from_ppc_service_bridge") is True
+        and lsp_bridge_diagnostics.get("workspace_mounted") is True
+        and lsp_bridge_diagnostics_lsp.get("protocol") == "lsp-python-importlib"
+        and lsp_bridge_diagnostics_lsp.get("server")
+        == "plugins.catalog.lsp.runtime.server"
+        and lsp_bridge_diagnostics_lsp.get("path")
+        == LSP_BRIDGE_DIAGNOSTICS_TARGET_REL
+        and lsp_bridge_diagnostics_lsp.get("position", {}).get("line")
+        == LSP_BRIDGE_DIAGNOSTICS_LINE
+        and lsp_bridge_diagnostics_lsp.get("position", {}).get("character")
+        == LSP_BRIDGE_DIAGNOSTICS_CHARACTER
+        and lsp_bridge_diagnostics_lsp.get("wait_for_diagnostics") is True
+        and int(lsp_bridge_diagnostics_lsp.get("diagnostic_count", 0)) >= 1
+        and any(
+            isinstance(message, str) and LSP_BRIDGE_DIAGNOSTICS_SYMBOL in message
+            for message in lsp_bridge_diagnostic_messages
+        )
+        and lsp_bridge_code_actions.get("from_lsp_importlib_bridge") is True
+        and lsp_bridge_code_actions.get("from_ppc_service_bridge") is True
+        and lsp_bridge_code_actions.get("workspace_mounted") is True
+        and lsp_bridge_code_actions_lsp.get("protocol") == "lsp-python-importlib"
+        and lsp_bridge_code_actions_lsp.get("server")
+        == "plugins.catalog.lsp.runtime.server"
+        and lsp_bridge_code_actions_lsp.get("path")
+        == LSP_BRIDGE_DIAGNOSTICS_TARGET_REL
+        and lsp_bridge_code_actions_lsp.get("position", {}).get("line")
+        == LSP_BRIDGE_DIAGNOSTICS_LINE
+        and lsp_bridge_code_actions_lsp.get("position", {}).get("character")
+        == LSP_BRIDGE_DIAGNOSTICS_CHARACTER
+        and LSP_BRIDGE_CODE_ACTION_KIND in lsp_bridge_code_actions_lsp.get("only", [])
+        and isinstance(lsp_bridge_code_actions_lsp.get("actions"), list)
+        and int(lsp_bridge_code_actions_lsp.get("action_count", -1)) >= 0
         and lsp_bridge_hover.get("from_lsp_importlib_bridge") is True
         and lsp_bridge_hover.get("from_ppc_service_bridge") is True
         and lsp_bridge_hover.get("workspace_mounted") is True
@@ -7148,6 +7592,10 @@ def markdown_report(report: dict[str, Any]) -> str:
         f"- lsp_bridge_query_symbols: `{report.get('lsp_bridge_query_symbols', {}).get('lsp')}`",
         f"- lsp_bridge_find_definitions: `{report.get('lsp_bridge_find_definitions', {}).get('lsp')}`",
         f"- lsp_bridge_find_references: `{report.get('lsp_bridge_find_references', {}).get('lsp')}`",
+        f"- lsp_bridge_signature_help: `{report.get('lsp_bridge_signature_help', {}).get('lsp')}`",
+        f"- lsp_bridge_document_highlight: `{report.get('lsp_bridge_document_highlight', {}).get('lsp')}`",
+        f"- lsp_bridge_diagnostics: `{report.get('lsp_bridge_diagnostics', {}).get('lsp')}`",
+        f"- lsp_bridge_code_actions: `{report.get('lsp_bridge_code_actions', {}).get('lsp')}`",
         f"- lsp_bridge_hover: `{report.get('lsp_bridge_hover', {}).get('lsp')}`",
         f"- lsp_bridge_rename: `{report.get('lsp_bridge_rename', {}).get('lsp')}`",
         f"- lsp_bridge_rename_readback: `{report.get('lsp_bridge_rename_readback', {}).get('content')}`",

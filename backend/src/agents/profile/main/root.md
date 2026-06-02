@@ -13,7 +13,6 @@ allowed_tools:
   - write_pty_command_stdin
   - check_pty_command_progress
   - cancel_pty_command
-  - shell
   - glob
   - grep
   - lsp.hover

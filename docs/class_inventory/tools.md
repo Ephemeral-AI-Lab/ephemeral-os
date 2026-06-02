@@ -6,9 +6,9 @@
 > reviewer summary). This generated inventory is distinct from the hand-curated
 > `docs/architecture/` memory layer.
 
-**65 classes across 44 files.**
+**69 classes across 46 files.**
 
-The `tools` module is EphemeralOS's tool layer: it defines the abstract tool contract and runtime plumbing under `_framework` — `BaseTool`, the `ToolRegistry` name-to-implementation map, normalized `ToolResult`/`TextToolOutput`, the `ToolExecutionContextService` and `ExecutionMetadata` runtime state, the `ToolPreHook`/`ToolPostHook` protocols driven by `ToolHookExecutionPipeline`, and the `ToolFactoryContext`/`ToolCatalogEntry` construction and introspection surfaces. Concrete tool families implement this contract with paired pydantic input/output models: sandbox file and shell operations (`read_file`, `write_file`, `edit_file`, `multi_edit`, `glob`, `grep`, `shell`), background task control (`cancel`/`check_result`/`wait`), the `enter`/`exit` isolated-workspace lifecycle, `run_subagent` (including the caller-aware `RestrictedRunSubagentTool`), skill-reference loading, and the `ask_helper`/`ask_advisor` helper-messaging tools. The largest group is the role-scoped terminal `submission` family — planner (`submit_plan_closes_goal`/`defers_goal` over a shared schema), executor (success/blocker/handoff), evaluator, verifier, explorer, and advisor-feedback tools, backed by `AttemptSubmissionContext`/`ExecutorSubmissionContext` and the `TerminalToolDescriptor`. Cross-cutting `_hooks` enforce policy across tools — advisor approval, blocking in isolated mode, rejecting destructive git/filesystem shell commands, and requiring no in-flight background tasks.
+The `tools` module is EphemeralOS's tool layer: it defines the abstract tool contract and runtime plumbing under `_framework` — `BaseTool`, the `ToolRegistry` name-to-implementation map, normalized `ToolResult`/`TextToolOutput`, the `ToolExecutionContextService` and `ExecutionMetadata` runtime state, the `ToolPreHook`/`ToolPostHook` protocols driven by `ToolHookExecutionPipeline`, and the `ToolFactoryContext`/`ToolCatalogEntry` construction and introspection surfaces. Concrete tool families implement this contract with paired pydantic input/output models: sandbox file and command operations (`read_file`, `write_file`, `edit_file`, `multi_edit`, `glob`, `grep`, `exec_command`, and PTY command controls), typed subagent and workflow background controls, the `enter`/`exit` isolated-workspace lifecycle, `run_subagent` (including the caller-aware `RestrictedRunSubagentTool`), skill-reference loading, and the `ask_helper`/`ask_advisor` helper-messaging tools. The largest group is the role-scoped terminal `submission` family — planner/generator/reducer/root, explorer, and advisor-feedback tools, backed by submission contexts and the `TerminalToolDescriptor`. Cross-cutting `_hooks` enforce policy across tools — advisor approval, blocking in isolated mode, rejecting destructive git/filesystem shell commands, and requiring no in-flight background tasks.
 
 ## Contents
 
@@ -28,17 +28,18 @@ The `tools` module is EphemeralOS's tool layer: it defines the abstract tool con
 - **`tools/_terminals/registry.py`** — `TerminalToolDescriptor`
 - **`tools/ask_helper/_lib/_compose.py`** — `HelperMessageError`, `HelperMessages`
 - **`tools/ask_helper/ask_advisor/ask_advisor.py`** — `AskAdvisorInput`
-- **`tools/background/cancel_background_task/cancel_background_task.py`** — `CancelBackgroundTaskInput`, `CancelBackgroundTaskTool`
-- **`tools/background/check_background_task_result/check_background_task_result.py`** — `CheckBackgroundTaskResultInput`, `CheckBackgroundTaskResultTool`
-- **`tools/background/wait_background_tasks/wait_background_tasks.py`** — `WaitBackgroundTasksInput`, `WaitBackgroundTasksTool`
 - **`tools/isolated_workspace/enter_isolated_workspace/definition.py`** — `EnterIsolatedWorkspaceInput`
 - **`tools/isolated_workspace/exit_isolated_workspace/definition.py`** — `ExitIsolatedWorkspaceInput`
 - **`tools/sandbox/_lib/file_payloads.py`** — `ReadFileInput`, `ReadFileOutput`, `WriteFileInput`, `WriteFileOutput`
+- **`tools/sandbox/_lib/pty_command_tool.py`** — `CommandToolOutput`
+- **`tools/sandbox/cancel_pty_command/cancel_pty_command.py`** — `PtyCancelInput`
+- **`tools/sandbox/check_pty_command_progress/check_pty_command_progress.py`** — `PtyProgressInput`
 - **`tools/sandbox/edit_file/edit_file.py`** — `EditFileInput`, `EditFileOutput`
+- **`tools/sandbox/exec_command/exec_command.py`** — `ExecCommandInput`
 - **`tools/sandbox/glob/glob.py`** — `GlobInput`, `GlobOutput`
 - **`tools/sandbox/grep/grep.py`** — `GrepInput`, `GrepOutput`
 - **`tools/sandbox/multi_edit/multi_edit.py`** — `MultiEditOp`, `MultiEditInput`, `MultiEditOutput`
-- **`tools/sandbox/shell/shell.py`** — `ShellInput`, `ShellOutput`
+- **`tools/sandbox/write_pty_command_stdin/write_pty_command_stdin.py`** — `PtyWriteInput`
 - **`tools/skills/load_skill_reference.py`** — `LoadSkillReferenceInput`
 - **`tools/subagent/_factory.py`** — `RestrictedRunSubagentTool`
 - **`tools/subagent/run_subagent/run_subagent.py`** — `_ValidatedRunSubagentRequest`, `RunSubagentInput`
@@ -458,106 +459,57 @@ Input schema naming the terminal tool and payload an advisor reviews before subm
 
 ---
 
-## `tools/background/cancel_background_task/cancel_background_task.py`
+## `tools/sandbox/_lib/pty_command_tool.py`
 
-#### `CancelBackgroundTaskInput`  ·  _pydantic_  ·  bases: `BaseModel`  ·  [L18]
+#### `CommandToolOutput`  ·  _pydantic_  ·  bases: `BaseModel`  ·  [L13]
 
-Input for cancel_background_task tool.
-
-**Fields**
-
-| name | type | default |
-|------|------|---------|
-| `task_id` | `str` | `BACKGROUND_TASK_ID_FIELD` |
-| `reason` | `str` | `Field(default='', description='Optional reason for cancellation.')` |
-
-#### `CancelBackgroundTaskTool`  ·  _class_  ·  bases: `BaseTool`  ·  [L27]
-
-Cancel a running background task.
+Output schema shared by `exec_command` and typed PTY command controls.
 
 **Fields**
 
 | name | type | default |
 |------|------|---------|
-| `name` | `str` | `'cancel_background_task'` |
-| `description` | `str` | `get_cancel_background_task_description()` |
-| `short_description` | `str` | `'Cancel a background task.'` |
-| `input_model` | `type[BaseModel]` | `CancelBackgroundTaskInput` |
-| `output_model` | `type[BaseModel]` | `TextToolOutput` |
-
-<details><summary>Methods (1)</summary>
-
-`execute`
-
-</details>
+| `status` | `str` | required |
+| `exit_code` | `int \| None` | required |
+| `output` | `dict[str, str]` | required |
+| `pty_session_id` | `str \| None` | `None` |
+| `stdout` | `str` | `''` |
+| `stderr` | `str` | `''` |
+| `changed_paths` | `list[str]` | `Field(default_factory=list)` |
+| `changed_path_kinds` | `dict[str, str]` | `Field(default_factory=dict)` |
+| `mutation_source` | `str` | `''` |
+| `conflict_reason` | `str \| None` | `None` |
+| `error` | `dict[str, object] \| None` | `None` |
 
 ---
 
-## `tools/background/check_background_task_result/check_background_task_result.py`
+## `tools/sandbox/cancel_pty_command/cancel_pty_command.py`
 
-#### `CheckBackgroundTaskResultInput`  ·  _pydantic_  ·  bases: `BaseModel`  ·  [L25]
+#### `PtyCancelInput`  ·  _pydantic_  ·  bases: `BaseModel`  ·  [L24]
 
-Input for check_background_task_result tool.
-
-**Fields**
-
-| name | type | default |
-|------|------|---------|
-| `task_id` | `str` | `BACKGROUND_TASK_ID_FIELD` |
-
-#### `CheckBackgroundTaskResultTool`  ·  _class_  ·  bases: `BaseTool`  ·  [L87]
-
-Fetch the current result of a single background task.
+Input for the `cancel_pty_command` tool.
 
 **Fields**
 
 | name | type | default |
 |------|------|---------|
-| `name` | `str` | `'check_background_task_result'` |
-| `description` | `str` | `get_check_background_task_result_description()` |
-| `short_description` | `str` | `"Check a background task's result."` |
-| `input_model` | `type[BaseModel]` | `CheckBackgroundTaskResultInput` |
-| `output_model` | `type[BaseModel]` | `TextToolOutput` |
-
-<details><summary>Methods (1)</summary>
-
-`execute`
-
-</details>
+| `pty_session_id` | `str` | `Field(..., min_length=1)` |
 
 ---
 
-## `tools/background/wait_background_tasks/wait_background_tasks.py`
+## `tools/sandbox/check_pty_command_progress/check_pty_command_progress.py`
 
-#### `WaitBackgroundTasksInput`  ·  _pydantic_  ·  bases: `BaseModel`  ·  [L26]
+#### `PtyProgressInput`  ·  _pydantic_  ·  bases: `BaseModel`  ·  [L24]
 
-Input for wait_background_tasks tool.
-
-**Fields**
-
-| name | type | default |
-|------|------|---------|
-| `timeout` | `float` | `Field(default=30, ge=1, le=300, description='Maximum seconds to block waiting for ALL background tasks to settle. Must be in [1, 300]; values outside this range are rejected by schema validation.')` |
-
-#### `WaitBackgroundTasksTool`  ·  _class_  ·  bases: `BaseTool`  ·  [L57]
-
-Block until all background tasks complete or timeout.
+Input for the `check_pty_command_progress` tool.
 
 **Fields**
 
 | name | type | default |
 |------|------|---------|
-| `name` | `str` | `'wait_background_tasks'` |
-| `description` | `str` | `get_wait_background_tasks_description()` |
-| `short_description` | `str` | `'Wait for all background tasks.'` |
-| `input_model` | `type[BaseModel]` | `WaitBackgroundTasksInput` |
-| `output_model` | `type[BaseModel]` | `TextToolOutput` |
-
-<details><summary>Methods (1)</summary>
-
-`execute`
-
-</details>
+| `pty_session_id` | `str` | `Field(..., min_length=1)` |
+| `time` | `float` | `Field(default=1.0, ge=0.0)` |
+| `max_tokens` | `int \| None` | `Field(default=None, ge=1)` |
 
 ---
 
@@ -818,38 +770,37 @@ Output schema reporting multi_edit results including status, changed paths, conf
 
 ---
 
-## `tools/sandbox/shell/shell.py`
+## `tools/sandbox/exec_command/exec_command.py`
 
-#### `ShellInput`  ·  _pydantic_  ·  bases: `BaseModel`  ·  [L33]
+#### `ExecCommandInput`  ·  _pydantic_  ·  bases: `BaseModel`  ·  [L27]
 
-Input for shell.
-
-**Fields**
-
-| name | type | default |
-|------|------|---------|
-| `command` | `str` | `Field(..., min_length=1, description='Shell command to run for tests, builds, or verification.')` |
-| `timeout` | `int` | `Field(default=_SHELL_DEFAULT_TIMEOUT, description='Shell command timeout in seconds.')` |
-
-#### `ShellOutput`  ·  _pydantic_  ·  bases: `BaseModel`  ·  [L47]
-
-Output schema reporting shell command execution including status, exit code, stdout/stderr, and changed paths.
+Input for the model-facing sandbox command tool.
 
 **Fields**
 
 | name | type | default |
 |------|------|---------|
-| `cwd` | `str` | `Field(..., description='Current sandbox working directory.')` |
-| `status` | `str` | `Field(..., description='Execution status: ok or error.')` |
-| `changed_paths` | `list[str]` | `Field(default_factory=list, description='Files changed by the command.')` |
-| `changed_path_kinds` | `dict[str, str]` | `Field(default_factory=dict, description='Captured changed paths keyed to write/delete/symlink/opaque_dir.')` |
-| `mutation_source` | `str` | `Field(default='', description='Mutation source tag.')` |
-| `conflict_reason` | `str \| None` | `Field(default=None, description='Conflict reason when auditing failed.')` |
-| `command` | `str` | `Field(..., description='Shell command that was run.')` |
-| `exit_code` | `int \| str` | `Field(..., description='Command exit code.')` |
-| `stdout` | `str` | `Field(..., description='Captured stdout.')` |
-| `stderr` | `str` | `Field(..., description='Captured stderr.')` |
-| `error` | `str` | `Field(default='', description='Error detail when status is error.')` |
+| `cmd` | `str` | `Field(..., min_length=1)` |
+| `tty` | `bool` | `False` |
+| `yield_time_ms` | `int` | `Field(default=1000, ge=0, le=30_000)` |
+| `timeout` | `int` | `Field(default=900, ge=1)` |
+
+---
+
+## `tools/sandbox/write_pty_command_stdin/write_pty_command_stdin.py`
+
+#### `PtyWriteInput`  ·  _pydantic_  ·  bases: `BaseModel`  ·  [L24]
+
+Input for the `write_pty_command_stdin` tool.
+
+**Fields**
+
+| name | type | default |
+|------|------|---------|
+| `pty_session_id` | `str` | `Field(..., min_length=1)` |
+| `chars` | `str` | `''` |
+| `yield_time_ms` | `int` | `Field(default=1000, ge=0, le=30_000)` |
+| `max_tokens` | `int \| None` | `Field(default=None, ge=1)` |
 
 ---
 
@@ -1170,4 +1121,3 @@ Input schema for the terminal tool reporting a successful verification attempt w
 |------|------|---------|
 | `summary` | `str` | `Field(..., min_length=1)` |
 | `checks` | `list[str]` | `Field(default_factory=list)` |
-

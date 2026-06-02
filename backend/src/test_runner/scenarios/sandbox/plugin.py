@@ -143,7 +143,7 @@ PluginServiceEvict = _scenario(
     action_id="plugin_service_evict",
     action_spec=(
         "ACTION plugin_service_evict. Start the Pyright service, publish several "
-        "peer edits, verify warm refresh/remount, force plugin runtime eviction "
+        "peer edits, verify daemon service refresh and health, force plugin runtime eviction "
         "through api.plugin.ensure digest churn, and verify a clean service "
         "restart."
     ),

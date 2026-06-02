@@ -84,12 +84,29 @@ async def _wait_for_background_drain(metadata: ExecutionMetadata) -> None:
     deadline = time.perf_counter() + _BACKGROUND_DRAIN_TIMEOUT_S
     while time.perf_counter() < deadline:
         try:
-            count = await sandbox_api.inflight_count(sandbox_id, agent_id)
+            count = await sandbox_api.pty_session_count(sandbox_id, agent_id)
         except Exception:
             return
         if count <= 0:
             return
         await asyncio.sleep(0.1)
+
+
+async def _wait_for_tracked_task_settled(
+    manager: BackgroundTaskSupervisor,
+    task_id: str,
+    *,
+    timeout_s: float = 3.0,
+) -> str:
+    deadline = time.perf_counter() + timeout_s
+    status = "missing"
+    while time.perf_counter() < deadline:
+        tracked = manager.get_task(task_id)
+        status = str(tracked.status.value) if tracked is not None else "missing"
+        if status != "running":
+            return status
+        await asyncio.sleep(0.1)
+    return status
 
 
 def _command_payload(result: ToolResult) -> dict[str, Any]:
@@ -184,7 +201,6 @@ async def _call_probe_tool(
     record_tool_check: RecordToolCheck | None,
     allow_error: bool = False,
     background_task_id: str | None = None,
-    sandbox_invocation_id: str | None = None,
 ) -> ToolResult:
     result = await call_tool(
         tool_obj,
@@ -193,14 +209,13 @@ async def _call_probe_tool(
         emit,
         allow_error=allow_error,
         background_task_id=background_task_id,
-        sandbox_invocation_id=sandbox_invocation_id,
     )
     if record_tool_check is not None:
         record_tool_check(f"tool.{tool_obj.name}.background_shell.{label}", result)
     return result
 
 
-async def _wait_for_inflight_count(
+async def _wait_for_pty_session_count(
     *,
     sandbox_id: str,
     agent_id: str,
@@ -210,29 +225,11 @@ async def _wait_for_inflight_count(
     deadline = time.perf_counter() + timeout_s
     last_count = 0
     while time.perf_counter() < deadline:
-        last_count = await sandbox_api.inflight_count(sandbox_id, agent_id)
+        last_count = await sandbox_api.pty_session_count(sandbox_id, agent_id)
         if last_count >= minimum:
             return last_count
         await asyncio.sleep(0.1)
     return last_count
-
-
-async def _heartbeat_until(
-    *,
-    sandbox_id: str,
-    invocation_id: str,
-    stop: asyncio.Event,
-    interval_s: float = 0.2,
-) -> list[dict[str, object]]:
-    responses: list[dict[str, object]] = []
-    while not stop.is_set():
-        try:
-            response = await sandbox_api.heartbeat(sandbox_id, [invocation_id])
-            responses.append(dict(response))
-        except Exception as exc:  # noqa: BLE001 - telemetry only
-            responses.append({"success": False, "error": type(exc).__name__})
-        await asyncio.sleep(interval_s)
-    return responses
 
 
 async def _await_task_record(
@@ -598,37 +595,69 @@ async def run_background_shell_exhaustion_probe(
     call_tool: CallTool,
     record_tool_check: RecordToolCheck,
 ) -> str:
-    """T5: N parallel launches cancelled in unison; assert AC-14 read budget."""
+    """T5: N PTY launches cancelled in unison; assert AC-14 read budget."""
     started = time.perf_counter()
 
-    async def _launch_then_cancel(index: int) -> str:
-        try:
-            await asyncio.wait_for(
-                call_tool(
-                    exec_command_tool,
-                    {
-                        "command": (
-                            f"sleep {EXHAUSTION_BACKGROUND_SLEEP_S}; "
-                            f"echo done-{index}"
-                        ),
-                        "timeout": EXHAUSTION_BACKGROUND_SLEEP_S + 30,
-                    },
-                    metadata,
-                    emit,
-                    background_task_id=_bg_id(f"exhaust-{index}"),
+    async def _launch_one(index: int) -> dict[str, Any]:
+        result = await _call_probe_tool(
+            label=f"exhaustion.launch.{index}",
+            tool_obj=exec_command_tool,
+            raw_input={
+                "command": (
+                    f"sleep {EXHAUSTION_BACKGROUND_SLEEP_S}; "
+                    f"echo done-{index}"
                 ),
-                timeout=EXHAUSTION_CANCEL_DEADLINE_S,
-            )
-            return "ok"
-        except asyncio.TimeoutError:
-            return "cancelled"
-        except Exception as exc:  # noqa: BLE001 — capture-all for telemetry
-            return f"error:{type(exc).__name__}"
+                "timeout": EXHAUSTION_BACKGROUND_SLEEP_S + 30,
+                "tty": True,
+                "yield_time_ms": 50,
+            },
+            metadata=metadata,
+            emit=emit,
+            call_tool=call_tool,
+            record_tool_check=None,
+            allow_error=True,
+        )
+        payload = _json_payload(result)
+        return {
+            "index": index,
+            "is_error": bool(result.is_error),
+            "status": payload.get("status") or result.metadata.get("status"),
+            "pty_session_id": payload.get("pty_session_id")
+            or result.metadata.get("pty_session_id"),
+        }
 
-    outcomes = await asyncio.gather(
-        *(_launch_then_cancel(i) for i in range(EXHAUSTION_LAUNCH_COUNT)),
+    launch_records = await asyncio.gather(
+        *(_launch_one(i) for i in range(EXHAUSTION_LAUNCH_COUNT)),
         return_exceptions=False,
     )
+    session_ids = [
+        str(record["pty_session_id"])
+        for record in launch_records
+        if record.get("pty_session_id")
+    ]
+
+    async def _cancel_one(pty_session_id: str) -> dict[str, Any]:
+        result = await _call_probe_tool(
+            label=f"exhaustion.cancel.{pty_session_id}",
+            tool_obj=cancel_pty_command_tool,
+            raw_input={"pty_session_id": pty_session_id},
+            metadata=metadata,
+            emit=emit,
+            call_tool=call_tool,
+            record_tool_check=None,
+            allow_error=True,
+        )
+        record = _tool_record(result)
+        record["pty_session_id"] = pty_session_id
+        return record
+
+    cancel_t0 = time.perf_counter()
+    cancel_records = await asyncio.gather(
+        *(_cancel_one(pty_session_id) for pty_session_id in session_ids),
+        return_exceptions=False,
+    )
+    cancel_elapsed = time.perf_counter() - cancel_t0
+    await _wait_for_background_drain(metadata)
 
     # AC-14: a follow-up foreground read_file must complete in < 1 s, proving
     # the daemon RPC dispatcher executor is NOT shared with CommandExecutor.
@@ -665,11 +694,29 @@ async def run_background_shell_exhaustion_probe(
         "mode": "exhaustion",
         "launch_count": EXHAUSTION_LAUNCH_COUNT,
         "cancel_deadline_s": EXHAUSTION_CANCEL_DEADLINE_S,
+        "cancel_elapsed_s": cancel_elapsed,
         "duration_s": time.perf_counter() - started,
-        "outcomes": outcomes,
-        "cancelled_count": sum(1 for o in outcomes if o == "cancelled"),
-        "ok_count": sum(1 for o in outcomes if o == "ok"),
-        "error_count": sum(1 for o in outcomes if o.startswith("error:")),
+        "launches": launch_records,
+        "cancellations": cancel_records,
+        "outcomes": [
+            (
+                "cancelled"
+                if not record.get("is_error") and record.get("status") == "cancelled"
+                else f"error:{record.get('status') or 'unknown'}"
+            )
+            for record in cancel_records
+        ],
+        "cancelled_count": sum(
+            1
+            for record in cancel_records
+            if not record.get("is_error") and record.get("status") == "cancelled"
+        ),
+        "ok_count": sum(1 for record in launch_records if not record.get("is_error")),
+        "error_count": (
+            sum(1 for record in launch_records if record.get("is_error"))
+            + sum(1 for record in cancel_records if record.get("is_error"))
+            + (EXHAUSTION_LAUNCH_COUNT - len(session_ids))
+        ),
         "post_exhaustion_read_s": fg_elapsed,
         "post_exhaustion_read_error": bool(read_result.is_error),
     }
@@ -904,7 +951,7 @@ async def run_background_mixed_fg_bg_same_path_conflict_probe(
     call_tool: CallTool,
     record_tool_check: RecordToolCheck,
 ) -> str:
-    """3.4.1: foreground direct write races a background command on one path."""
+    """3.4.1: foreground direct write wins over a sleeping background command."""
     started = time.perf_counter()
     target = f"{ROOT}/mixed_fg_bg_same_path_conflict/bg-shared.txt"
 
@@ -995,12 +1042,10 @@ async def run_background_heartbeat_loss_probe(
     call_tool: CallTool,
     record_tool_check: RecordToolCheck,
 ) -> str:
-    """3.4.2: keep one invocation alive and let another go stale."""
+    """3.4.2: one PTY completes while another is cancelled without publish."""
     started = time.perf_counter()
     sandbox_id = str(metadata.sandbox_id or "")
     agent_id = _agent_id(metadata)
-    protected_invocation_id = f"hb-protected-{uuid4().hex}"
-    stale_invocation_id = f"hb-stale-{uuid4().hex}"
     protected_target = f"{ROOT}/heartbeat_loss/protected.txt"
     stale_target = f"{ROOT}/heartbeat_loss/stale.txt"
 
@@ -1022,7 +1067,6 @@ async def run_background_heartbeat_loss_probe(
             record_tool_check=None,
             allow_error=True,
             background_task_id=_bg_id("heartbeat-protected"),
-            sandbox_invocation_id=protected_invocation_id,
         )
     )
     stale_task = asyncio.create_task(
@@ -1043,22 +1087,13 @@ async def run_background_heartbeat_loss_probe(
             record_tool_check=None,
             allow_error=True,
             background_task_id=_bg_id("heartbeat-stale"),
-            sandbox_invocation_id=stale_invocation_id,
         )
     )
 
-    inflight_during_launch = await _wait_for_inflight_count(
+    pty_sessions_during_launch = await _wait_for_pty_session_count(
         sandbox_id=sandbox_id,
         agent_id=agent_id,
         minimum=2,
-    )
-    stop_heartbeat = asyncio.Event()
-    heartbeat_task = asyncio.create_task(
-        _heartbeat_until(
-            sandbox_id=sandbox_id,
-            invocation_id=protected_invocation_id,
-            stop=stop_heartbeat,
-        )
     )
     await asyncio.sleep(HEARTBEAT_STALE_WAIT_S)
 
@@ -1080,16 +1115,8 @@ async def run_background_heartbeat_loss_probe(
     }
 
     protected_record = await _await_task_record(protected_task)
-    stop_heartbeat.set()
-    heartbeat_responses = await heartbeat_task
-    try:
-        stale_record = await asyncio.wait_for(
-            _await_task_record(stale_task),
-            timeout=6,
-        )
-    except asyncio.TimeoutError:
-        stale_task.cancel()
-        stale_record = await _await_task_record(stale_task)
+    stale_task.cancel()
+    stale_record = await _await_task_record(stale_task)
 
     protected_read = await _call_probe_tool(
         label="heartbeat_loss.protected_read",
@@ -1111,20 +1138,14 @@ async def run_background_heartbeat_loss_probe(
         record_tool_check=None,
         allow_error=True,
     )
-    inflight_after = await sandbox_api.inflight_count(sandbox_id, agent_id)
+    pty_sessions_after = await sandbox_api.pty_session_count(sandbox_id, agent_id)
 
     summary = {
         "schema": SUMMARY_SCHEMA,
         "mode": "heartbeat_loss",
         "duration_s": time.perf_counter() - started,
-        "protected_invocation_id": protected_invocation_id,
-        "stale_invocation_id": stale_invocation_id,
-        "inflight_during_launch": inflight_during_launch,
-        "inflight_after": inflight_after,
-        "heartbeat_response_count": len(heartbeat_responses),
-        "heartbeat_touched_total": sum(
-            int(item.get("touched") or 0) for item in heartbeat_responses
-        ),
+        "pty_sessions_during_launch": pty_sessions_during_launch,
+        "pty_sessions_after": pty_sessions_after,
         "foreground": foreground_record,
         "protected": protected_record,
         "stale": stale_record,
@@ -1177,7 +1198,7 @@ async def run_background_exit_iws_drains_agent_tasks_probe(
             background_task_id=_bg_id("iws-default-blocker"),
         )
     )
-    default_inflight = await _wait_for_inflight_count(
+    default_pty_sessions = await _wait_for_pty_session_count(
         sandbox_id=sandbox_id,
         agent_id=agent_id,
         minimum=1,
@@ -1261,9 +1282,9 @@ async def run_background_exit_iws_drains_agent_tasks_probe(
         record_tool_check=record_tool_check,
         allow_error=True,
     )
-    # Let the daemon in-flight registry settle to zero before retrying so the
-    # retry's max(local, daemon) check sees no in-flight work (local is already
-    # settled by the cancel above).
+    # Let both the bridge task and daemon PTY registry settle before retrying
+    # so the retry's max(local, daemon) check sees no in-flight work.
+    tracked_status = await _wait_for_tracked_task_settled(manager, task_id)
     await _wait_for_background_drain(iws_metadata)
     iws_exit = await _call_probe_tool(
         label="exit_iws.exit_after_cancel",
@@ -1275,7 +1296,10 @@ async def run_background_exit_iws_drains_agent_tasks_probe(
         record_tool_check=record_tool_check,
         allow_error=True,
     )
-    await asyncio.sleep(0.2)
+    iws_pty_sessions_after = await sandbox_api.pty_session_count(
+        sandbox_id,
+        _agent_id(iws_metadata),
+    )
     tracked = manager.get_task(task_id)
 
     default_read = await _call_probe_tool(
@@ -1303,7 +1327,7 @@ async def run_background_exit_iws_drains_agent_tasks_probe(
         "schema": SUMMARY_SCHEMA,
         "mode": "exit_iws_drain",
         "duration_s": time.perf_counter() - started,
-        "default_inflight": default_inflight,
+        "default_pty_sessions": default_pty_sessions,
         "blocked_enter": _tool_record(blocked_enter),
         "blocked_enter_payload": _json_payload(blocked_enter),
         "blocked_enter_reason": _hook_failure_reason(blocked_enter),
@@ -1315,9 +1339,11 @@ async def run_background_exit_iws_drains_agent_tasks_probe(
         "cancel_bg": _tool_record(cancel_bg),
         "iws_exit": _tool_record(iws_exit),
         "iws_exit_payload": _json_payload(iws_exit),
+        "tracked_status_after_cancel": tracked_status,
         "tracked_status_after_exit": (
             str(tracked.status.value) if tracked is not None else "missing"
         ),
+        "iws_pty_sessions_after": iws_pty_sessions_after,
         "default_published": "default-leak" in _read_content(default_read),
         "iws_published": "iws-leak" in _read_content(iws_read),
     }
@@ -1344,11 +1370,10 @@ async def run_background_engine_restart_no_lease_leak_probe(
     call_tool: CallTool,
     record_tool_check: RecordToolCheck,
 ) -> str:
-    """3.4.4: abandon a background invocation, then prove foreground recovery."""
+    """3.4.4: abandon a PTY command, then prove foreground recovery."""
     started = time.perf_counter()
     sandbox_id = str(metadata.sandbox_id or "")
     agent_id = _agent_id(metadata)
-    invocation_id = f"engine-abandon-{uuid4().hex}"
     abandoned_target = f"{ROOT}/engine_restart/abandoned.txt"
     recovery_target = f"{ROOT}/engine_restart/recovery.txt"
 
@@ -1371,23 +1396,16 @@ async def run_background_engine_restart_no_lease_leak_probe(
             record_tool_check=None,
             allow_error=True,
             background_task_id=_bg_id("engine-abandon"),
-            sandbox_invocation_id=invocation_id,
         )
     )
-    inflight_during_launch = await _wait_for_inflight_count(
+    pty_sessions_during_launch = await _wait_for_pty_session_count(
         sandbox_id=sandbox_id,
         agent_id=agent_id,
         minimum=1,
     )
     await asyncio.sleep(ENGINE_RESTART_STALE_WAIT_S)
-    try:
-        abandoned_record = await asyncio.wait_for(
-            _await_task_record(abandoned_task),
-            timeout=6,
-        )
-    except asyncio.TimeoutError:
-        abandoned_task.cancel()
-        abandoned_record = await _await_task_record(abandoned_task)
+    abandoned_task.cancel()
+    abandoned_record = await _await_task_record(abandoned_task)
 
     partial_read = await _call_probe_tool(
         label="engine_restart.abandoned_read",
@@ -1429,15 +1447,14 @@ async def run_background_engine_restart_no_lease_leak_probe(
         record_tool_check=record_tool_check,
         allow_error=True,
     )
-    inflight_after = await sandbox_api.inflight_count(sandbox_id, agent_id)
+    pty_sessions_after = await sandbox_api.pty_session_count(sandbox_id, agent_id)
 
     summary = {
         "schema": SUMMARY_SCHEMA,
         "mode": "engine_restart_no_lease_leak",
         "duration_s": time.perf_counter() - started,
-        "invocation_id": invocation_id,
-        "inflight_during_launch": inflight_during_launch,
-        "inflight_after": inflight_after,
+        "pty_sessions_during_launch": pty_sessions_during_launch,
+        "pty_sessions_after": pty_sessions_after,
         "abandoned": abandoned_record,
         "abandoned_published": "chunk-" in _read_content(partial_read),
         "foreground_shell": {
@@ -1576,7 +1593,7 @@ async def run_background_many_small_writes_probe(
                 "content": _read_content(read),
             }
         )
-    inflight_after = await sandbox_api.inflight_count(sandbox_id, agent_id)
+    pty_sessions_after = await sandbox_api.pty_session_count(sandbox_id, agent_id)
     fg_durations = [float(item["duration_s"]) for item in foreground_records]
 
     summary = {
@@ -1589,7 +1606,7 @@ async def run_background_many_small_writes_probe(
         "background": background_records,
         "foreground": foreground_records,
         "verified_background_files": verify_records,
-        "inflight_after": inflight_after,
+        "pty_sessions_after": pty_sessions_after,
         "background_success_count": sum(
             1 for item in background_records if not item.get("is_error")
         ),
@@ -1611,14 +1628,8 @@ MIXED_OP_OVERLAP_WRITERS = 4
 MIXED_OP_DISJOINT_WRITERS = 4
 MIXED_OP_EDIT_LINES = 20
 
-# A publish that did not error and is not an OCC abort landed; a versioned/
-# overlap/lock abort is the conflict-loser surface SC4 cares about.
-_MIXED_OP_ABORT_STATUSES = ("aborted_version", "aborted_overlap", "aborted_lock")
-
-
 def _publish_accepted(record: dict[str, Any]) -> bool:
-    status = str(record.get("status") or "")
-    return (not bool(record.get("is_error"))) and status not in _MIXED_OP_ABORT_STATUSES
+    return not bool(record.get("is_error"))
 
 
 async def run_background_mixed_op_concurrent_probe(
@@ -1637,9 +1648,9 @@ async def run_background_mixed_op_concurrent_probe(
       status (none stuck), proving the supervisor drives heterogeneous
       workloads to completion. (``pip install`` is offline/``--no-index`` so it
       terminates fast and deterministically without a network dependency.)
-    * **Overlapping same-file edits** — N background commands overwrite one
-      seeded path concurrently; exactly the OCC winner lands and the rest abort
-      with a versioned/overlap/lock conflict (≥1 accepted, ≥1 aborted).
+    * **Overlapping same-file edits** — N background PTY commands overwrite one
+      seeded path concurrently; each command reaches a terminal status, and the
+      final file content is one complete writer payload.
     * **Disjoint edits** — N background commands write distinct paths; all land
       and read back their own content.
     """
@@ -1705,7 +1716,7 @@ async def run_background_mixed_op_concurrent_probe(
         )
         mixed_records[name] = record
 
-    # --- overlapping same-file edits race for one OCC winner ----------------
+    # --- overlapping same-file PTY edits converge to one final writer -------
     shared = f"{root}/overlap-shared.txt"
     await _call_probe_tool(
         label="mixed_op.overlap.seed",

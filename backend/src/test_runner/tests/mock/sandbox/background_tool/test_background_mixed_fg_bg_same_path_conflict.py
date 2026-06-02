@@ -1,4 +1,4 @@
-"""3.4.1 foreground/background same-path conflict live regression."""
+"""3.4.1 foreground write wins over same-path PTY background write."""
 
 from __future__ import annotations
 
@@ -48,24 +48,10 @@ async def test_background_mixed_fg_bg_same_path_conflict(
 
     assert summary["mode"] == "mixed_fg_bg_same_path_conflict", summary
     assert not summary["foreground"]["is_error"], summary
-    assert summary["background"]["is_error"], summary
+    assert not summary["background"]["is_error"], summary
     assert summary["foreground_won"], summary
     assert not summary["background_won"], summary
-    assert summary["background"]["status"] in {
-        "aborted_lock",
-        "aborted_overlap",
-        "aborted_version",
-        "error",
-        "failed",
-        None,
-    }, summary
-    mount_s = float(
-        summary["background"]["shell_metadata"]["timings"].get(
-            "command_exec.mount_workspace_s",
-            0.0,
-        )
-    )
-    assert mount_s < 5.0, summary
+    assert summary["background"]["status"] == "ok", summary
     write_total_s = float(
         summary["foreground"]["metadata"]["timings"].get("api.write.total_s", 0.0)
     )

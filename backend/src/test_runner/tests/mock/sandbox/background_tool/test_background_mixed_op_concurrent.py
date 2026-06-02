@@ -1,16 +1,15 @@
-"""3.4.6 mixed-op concurrent background tasks (correctness).
+"""3.4.6 mixed-op concurrent PTY background tasks (correctness).
 
 Scenario-1 genuine gap: the suite already exercises a single foreground vs.
 background same-path conflict and N small background writes, but not a single
 run that (a) drives heterogeneous background ops to a terminal status, (b)
-proves OCC conflict detection on overlapping same-file background edits, and
+proves overlapping same-file PTY writes converge to one complete payload, and
 (c) proves disjoint background edits all land.
 
 Location note (plan §6 open question): this lives in the mock test-runner
 suite rather than ``integration_test/`` because it reuses the proven
-``run_background_shell_scenario`` harness and needs the real OCC publish path
-behind ``BackgroundTaskSupervisor`` — which ``integration_test/test_sandbox``
-has no harness for.
+``run_background_shell_scenario`` harness and needs the real typed-PTY publish
+path, which ``integration_test/test_sandbox`` has no harness for.
 """
 
 from __future__ import annotations
@@ -44,12 +43,6 @@ pytestmark = [
     ),
 ]
 
-# Conflict losers surface either as is_error with an explicit OCC abort status,
-# or as is_error with no status — both are valid "did not land" outcomes; the
-# explicit-abort tier is asserted separately below.
-_ABORT_STATUSES = {"aborted_version", "aborted_overlap", "aborted_lock"}
-
-
 @pytest.mark.timeout(720)
 async def test_background_mixed_op_concurrent(
     sweevo_image_instance: SWEEvoInstance,
@@ -75,30 +68,20 @@ async def test_background_mixed_op_concurrent(
         assert record["terminal"], (name, record)
         assert not record.get("cancelled"), (name, record)
 
-    # (b) overlapping same-file edits: ≥1 OCC winner, ≥1 conflict-loser, and a
-    # single deterministic final content.
+    # (b) overlapping same-file edits: all PTY commands reach terminal success,
+    # and the final content is one complete writer payload.
     overlap = summary["overlap"]
     writers = overlap["writers"]
     assert len(writers) == MIXED_OP_OVERLAP_WRITERS, summary
-    assert overlap["accepted_count"] == 1, summary
-    assert overlap["aborted_count"] == MIXED_OP_OVERLAP_WRITERS - 1, summary
+    assert overlap["accepted_count"] == MIXED_OP_OVERLAP_WRITERS, summary
+    assert overlap["aborted_count"] == 0, summary
     assert overlap["accepted_count"] + overlap["aborted_count"] == len(writers), summary
 
     final = overlap["final_content"]
-    winners = [w for w in writers if w["accepted"]]
-    assert any(f"writer-{w['index']}" in final for w in winners), (final, winners)
-
-    losers = [w for w in writers if not w["accepted"]]
-    for loser in losers:
-        # Each loser must look like a conflict, not a spurious crash.
-        assert loser["is_error"] or loser.get("status") in _ABORT_STATUSES, loser
-    # SC4: at least one loser carries an explicit OCC abort (versioned/overlap/
-    # lock), proving conflict detection fired rather than a generic error.
-    assert any(
-        (loser.get("status") in _ABORT_STATUSES)
-        or (loser.get("conflict_reason"))
-        for loser in losers
-    ), losers
+    assert any(f"writer-{w['index']}" in final for w in writers), (final, writers)
+    for writer in writers:
+        assert writer["accepted"], writer
+        assert not writer["is_error"], writer
 
     # (c) disjoint edits all land and read back their own content.
     disjoint = summary["disjoint"]

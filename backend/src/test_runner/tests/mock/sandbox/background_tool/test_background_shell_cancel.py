@@ -31,7 +31,7 @@ async def test_background_invocation_cancel_waits_for_cleanup(
         "invocation-1",
         task,
         agent_id="agent-a",
-        op="api.v1.shell",
+        op="api.v1.exec_command",
         background=True,
     )
     monkeypatch.setattr(

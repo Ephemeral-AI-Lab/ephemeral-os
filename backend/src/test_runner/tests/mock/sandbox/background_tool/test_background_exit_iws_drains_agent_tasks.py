@@ -51,7 +51,7 @@ async def test_background_exit_iws_drains_agent_tasks(
     )
 
     assert summary["mode"] == "exit_iws_drain", summary
-    assert summary["default_inflight"] >= 1, summary
+    assert summary["default_pty_sessions"] >= 1, summary
     # Enter is refused at the bg prehook (a hook_failure ToolResult), so the
     # reason tag lives in the hook trace, not a LifecycleError payload.
     assert summary["blocked_enter"]["is_error"], summary
@@ -68,8 +68,7 @@ async def test_background_exit_iws_drains_agent_tasks(
     assert not summary["iws_exit"]["is_error"], summary
     phases = summary["iws_exit_payload"]["phases_ms"]
     assert "evicted_background_tasks" in phases, summary
-    # The local bridge task can complete after it observes the real background
-    # task's terminal cancel/fail result; the invariant is that it is settled.
+    assert summary["iws_pty_sessions_after"] == 0, summary
     assert summary["tracked_status_after_exit"] in {"cancelled", "completed", "failed"}, summary
     assert not summary["iws_published"], summary
 

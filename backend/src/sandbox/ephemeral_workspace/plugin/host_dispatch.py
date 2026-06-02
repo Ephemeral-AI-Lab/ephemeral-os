@@ -55,7 +55,7 @@ logger = logging.getLogger(__name__)
 
 _PLUGIN_MANIFESTS_BY_NAME: dict[str, PluginManifest] | None = None
 _RUNTIME_DIGEST_BY_SANDBOX_PLUGIN: dict[tuple[str, str], str] = {}
-_PLUGIN_CALL_LOCKS: dict[tuple[str, str], asyncio.Lock] = {}
+_PLUGIN_SETUP_LOCKS: dict[tuple[str, str], asyncio.Lock] = {}
 _MAX_RESPONSE_BYTES = 8 * 1024 * 1024
 
 
@@ -82,6 +82,7 @@ async def call_plugin(
     timeout: int = 60,
     daemon_dispatcher: Callable[..., Any] | None = None,
     install_runner: Callable[..., Any] | None = None,
+    _retry_unknown_op: bool = True,
 ) -> ToolResult:
     """Call a plugin op end-to-end. See module docstring for the 5-step flow."""
     sandbox_id, error = sandbox_id_or_missing_error_result(context)
@@ -99,59 +100,67 @@ async def call_plugin(
 
     install_fn = install_runner or ensure_installed
     dispatch_fn = daemon_dispatcher or call_daemon_api
-    lock = _PLUGIN_CALL_LOCKS.setdefault((sandbox_id, plugin), asyncio.Lock())
 
-    async with lock:
-        try:
-            digest = await install_fn(sandbox_id, manifest)
-        except PluginInstallError as exc:
-            logger.warning(
-                "plugin install failed: sandbox=%s plugin=%s op=%s err=%s",
-                sandbox_id,
-                plugin,
-                op,
-                exc,
-            )
-            return _plugin_error_result(
-                "install",
-                plugin,
-                op,
-                _exception_message(exc),
-                details=_plugin_install_error_details(exc, plugin=plugin),
-            )
-        except Exception as exc:
-            logger.warning(
-                "plugin install failed: sandbox=%s plugin=%s op=%s err=%s",
-                sandbox_id,
-                plugin,
-                op,
-                exc,
-            )
-            return _plugin_error_result("install", plugin, op, _exception_message(exc))
+    try:
+        digest = await install_fn(sandbox_id, manifest)
+    except PluginInstallError as exc:
+        logger.warning(
+            "plugin install failed: sandbox=%s plugin=%s op=%s err=%s",
+            sandbox_id,
+            plugin,
+            op,
+            exc,
+        )
+        return _plugin_error_result(
+            "install",
+            plugin,
+            op,
+            _exception_message(exc),
+            details=_plugin_install_error_details(exc, plugin=plugin),
+        )
+    except Exception as exc:
+        logger.warning(
+            "plugin install failed: sandbox=%s plugin=%s op=%s err=%s",
+            sandbox_id,
+            plugin,
+            op,
+            exc,
+        )
+        return _plugin_error_result("install", plugin, op, _exception_message(exc))
 
-        if _RUNTIME_DIGEST_BY_SANDBOX_PLUGIN.get((sandbox_id, plugin)) != digest:
-            try:
-                await dispatch_fn(
-                    sandbox_id,
-                    "api.plugin.ensure",
-                    _ensure_payload(
-                        manifest,
-                        digest=digest,
-                        workspace_root=str(context.get("repo_root") or "").strip(),
-                    ),
-                    timeout=timeout,
-                    layer_stack_root=layer_stack_root,
-                )
-            except Exception as exc:
-                logger.warning(
-                    "plugin ensure failed: sandbox=%s plugin=%s op=%s err=%s",
-                    sandbox_id,
-                    plugin,
-                    op,
-                    exc,
-                )
-                return _plugin_error_result("ensure-runtime", plugin, op, _exception_message(exc))
-            _RUNTIME_DIGEST_BY_SANDBOX_PLUGIN[(sandbox_id, plugin)] = digest
+    if _RUNTIME_DIGEST_BY_SANDBOX_PLUGIN.get((sandbox_id, plugin)) != digest:
+        setup_lock = _PLUGIN_SETUP_LOCKS.setdefault((sandbox_id, plugin), asyncio.Lock())
+        async with setup_lock:
+            if _RUNTIME_DIGEST_BY_SANDBOX_PLUGIN.get((sandbox_id, plugin)) == digest:
+                pass
+            else:
+                try:
+                    await dispatch_fn(
+                        sandbox_id,
+                        "api.plugin.ensure",
+                        _ensure_payload(
+                            manifest,
+                            digest=digest,
+                            workspace_root=str(context.get("repo_root") or "").strip(),
+                        ),
+                        timeout=timeout,
+                        layer_stack_root=layer_stack_root,
+                    )
+                except Exception as exc:
+                    logger.warning(
+                        "plugin ensure failed: sandbox=%s plugin=%s op=%s err=%s",
+                        sandbox_id,
+                        plugin,
+                        op,
+                        exc,
+                    )
+                    return _plugin_error_result(
+                        "ensure-runtime",
+                        plugin,
+                        op,
+                        _exception_message(exc),
+                    )
+                _RUNTIME_DIGEST_BY_SANDBOX_PLUGIN[(sandbox_id, plugin)] = digest
 
     caller = sandbox_caller_from_tool_context(context)
     raw_intent = context.get("__intent")
@@ -175,6 +184,25 @@ async def call_plugin(
             layer_stack_root=layer_stack_root,
         )
     except Exception as exc:
+        if _retry_unknown_op and _is_unknown_plugin_op_error(exc):
+            _RUNTIME_DIGEST_BY_SANDBOX_PLUGIN.pop((sandbox_id, plugin), None)
+            logger.info(
+                "plugin runtime cache stale; re-ensuring runtime: "
+                "sandbox=%s plugin=%s op=%s",
+                sandbox_id,
+                plugin,
+                op,
+            )
+            return await call_plugin(
+                context,
+                plugin=plugin,
+                op=op,
+                payload=payload,
+                timeout=timeout,
+                daemon_dispatcher=daemon_dispatcher,
+                install_runner=install_runner,
+                _retry_unknown_op=False,
+            )
         logger.warning(
             "plugin dispatch failed: sandbox=%s plugin=%s op=%s err=%s",
             sandbox_id,
@@ -395,6 +423,12 @@ def _exception_message(exc: Exception) -> str:
     return exc.__class__.__name__
 
 
+def _is_unknown_plugin_op_error(exc: Exception) -> bool:
+    kind = str(getattr(exc, "kind", "") or "")
+    message = _exception_message(exc)
+    return kind == "unknown_op" and "plugin." in message
+
+
 def _plugin_install_error_details(
     exc: PluginInstallError,
     *,
@@ -414,15 +448,15 @@ def reset_host_dispatch_cache_for_tests() -> None:
     global _PLUGIN_MANIFESTS_BY_NAME
     _PLUGIN_MANIFESTS_BY_NAME = None
     _RUNTIME_DIGEST_BY_SANDBOX_PLUGIN.clear()
-    _PLUGIN_CALL_LOCKS.clear()
+    _PLUGIN_SETUP_LOCKS.clear()
 
 
 def forget_plugin_dispatch_state(sandbox_id: str) -> None:
-    """Drop host-side runtime-digest cache + per-plugin async locks for one sandbox id."""
+    """Drop host-side runtime-digest cache + setup singleflight locks for one sandbox."""
     sandbox_id = str(sandbox_id or "").strip()
     for key in [
         key for key in _RUNTIME_DIGEST_BY_SANDBOX_PLUGIN if key[0] == sandbox_id
     ]:
         _RUNTIME_DIGEST_BY_SANDBOX_PLUGIN.pop(key, None)
-    for key in [key for key in _PLUGIN_CALL_LOCKS if key[0] == sandbox_id]:
-        _PLUGIN_CALL_LOCKS.pop(key, None)
+    for key in [key for key in _PLUGIN_SETUP_LOCKS if key[0] == sandbox_id]:
+        _PLUGIN_SETUP_LOCKS.pop(key, None)

@@ -50,13 +50,16 @@ async def test_plugin_service_survives_peer_publish_and_evict(
     assert summary["peer_publish_count"] == 5
     assert summary["refresh_start_delta"] == 0.0
     assert summary["refresh_total"] >= 1.0
-    assert summary["refresh_remount_total"] >= 1.0
+    assert summary["refresh_service_state"] == "ready"
+    assert summary["refresh_service_refresh_count"] >= 1.0
+    assert summary["refresh_service_health_ok"] is True
     assert summary["refresh_lsp_ms"] > 0.0
     assert summary["post_refresh_warm_lsp_ms"] > 0.0
     assert summary["evict_ensure"]["success"] is True
     assert summary["evict_ensure"]["already_loaded"] is False
-    assert summary["evict_ensure"]["runtime_warmed"] is True
-    assert summary["post_evict_call_start_delta"] == 0.0
+    assert summary["evict_ensure"]["service_processes_started"] is True
+    assert summary["evict_ensure"]["started_service_process_count"] >= 1
+    assert summary["post_evict_call_start_delta"] >= 1.0
     assert summary["post_evict_call_start_total"] >= 1.0
     assert summary["post_evict_call_lsp_ms"] > 0.0
     assert summary["warm_lsp_p95_ms"] <= 500.0

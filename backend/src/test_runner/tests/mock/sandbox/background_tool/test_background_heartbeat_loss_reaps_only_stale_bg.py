@@ -1,4 +1,4 @@
-"""3.4.2 heartbeat-loss live regression for background command invocations."""
+"""3.4.2 PTY cancel/drain regression for background command sessions."""
 
 from __future__ import annotations
 
@@ -17,7 +17,6 @@ from test_runner.tests._live_config import (
 )
 from test_runner.tests.mock.sandbox.background_tool._background_shell_invariants import (
     assert_background_performance_artifacts,
-    configure_short_inflight_ttl,
     run_background_shell_scenario,
 )
 
@@ -38,9 +37,6 @@ async def test_background_heartbeat_loss_reaps_only_stale_bg(
     audit_dir: Path,
     stores: TaskStoreBundle,
 ) -> None:
-    sandbox_id = str(workspace["sandbox_id"])
-    await configure_short_inflight_ttl(sandbox_id)
-
     report, summary = await run_background_shell_scenario(
         scenario_name="sandbox.background_heartbeat_loss_reaps_only_stale_bg",
         summary_path=HEARTBEAT_LOSS_SUMMARY,
@@ -48,18 +44,15 @@ async def test_background_heartbeat_loss_reaps_only_stale_bg(
         workspace=workspace,
         audit_dir=audit_dir,
         stores=stores,
-        preserve_inflight_ttl=True,
     )
 
     assert summary["mode"] == "heartbeat_loss", summary
-    assert summary["inflight_during_launch"] >= 2, summary
-    assert summary["heartbeat_response_count"] > 0, summary
-    assert summary["heartbeat_touched_total"] > 0, summary
+    assert summary["pty_sessions_during_launch"] >= 2, summary
     assert not summary["foreground"]["is_error"], summary
     assert not summary["protected"]["is_error"], summary
     assert summary["protected_published"], summary
     assert summary["stale"]["is_error"] or summary["stale"]["cancelled"], summary
     assert not summary["stale_published"], summary
-    assert summary["inflight_after"] == 0, summary
+    assert summary["pty_sessions_after"] == 0, summary
 
     assert_background_performance_artifacts(report)

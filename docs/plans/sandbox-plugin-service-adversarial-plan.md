@@ -21,7 +21,9 @@ routed through PPC as structured unsupported responses based on the server's
 advertised capability boundary, while a generic positive LSP formatting
 and execute-command provider path is covered separately through the daemon OCC
 callback. The canonical Python importlib LSP bridge over the reusable PPC
-service now covers query, hover, rename, direct `apply_workspace_edit`, and
+service now covers query, hover, diagnostics, read-only code-actions,
+signature-help, document-highlight, find-definitions, find-references, rename,
+direct `apply_workspace_edit`, and
 `apply_code_action` publish through the mounted-workspace callback. Live status health
 probes, failed-health isolation plus same-service failed-health recovery,
 service-crash fail-closed plus same-service crash recovery, hung-service
@@ -41,7 +43,11 @@ concurrent mounted-workspace write callbacks with distinct parent operation
 ids, mixed `api.v1.shell` overlay/OCC publish followed by long-lived plugin
 refresh/readback, explicit daemon cleanup that removes PPC routes/services and
 reaps plugin harness processes, canonical importlib LSP bridge apply/readback
-and hover/code-action evidence, and the current
+and definition/reference/diagnostics/code-actions/signature-help/
+document-highlight/hover/code-action evidence, explicit Pyright setup prewarm
+before daemon PPC dispatch so dependency bootstrap cannot consume the first
+operation timeout and produce late unmatched replies,
+and the current
 Pyright negative capability boundary:
 `document_formatting=false`, `document_range_formatting=false`, and
 `executeCommandProvider.commands=[]`, so Pyright formatting/execute-command are
@@ -52,6 +58,179 @@ covered health/crash/timeout/recovery paths remain open.
 **Date:** 2026-06-02.
 **Scope:** `/sandbox` Rust plugin implementation, with the Python sandbox plugin
 path as the behavioral reference.
+
+## Progress Update - 2026-06-02 15:01 CST
+
+Landed:
+
+- Broadened the canonical Python importlib LSP bridge over the reusable
+  `runtime_bridge` PPC service with read-only
+  `plugin.generic.lsp_bridge_signature_help` and
+  `plugin.generic.lsp_bridge_document_highlight`. Both routes delegate through
+  `plugins.catalog.lsp.runtime.server`, keeping the daemon as a generic
+  manifest/PPC/OCC transport.
+- Wired both routes into the concurrent read-only bridge batch. The passing
+  artifact shows the same `runtime_bridge` service connection handling the
+  slow/fast delay proof, while the LSP bridge returned signature-help label
+  `(left: int, right: str) -> str` with `active_parameter=1` and
+  document-highlight start lines `[0, 3]`.
+- Fixed two live issues found during adversarial reruns: the first run used an
+  over-strict signature label gate that expected the function name even though
+  Pyright returns the signature shape without it; the gate now asserts the
+  parameters/active parameter. A later run exposed an abandoned
+  `/eos/plugin/.rust_pyright_setup.lock`; the generated setup script now
+  records owner metadata and removes stale locks when the owner is gone or past
+  the stale threshold.
+- Fixed the request-timeout surface by moving Pyright dependency setup into an
+  explicit benchmark setup phase before daemon PPC dispatch. The failed
+  artifact
+  `.omc/results/rust-daemon-plugin-generic-20260602T064613Z-12850.json` proved
+  why this matters: the first Pyright requests spent too long in bootstrap,
+  timed out at the daemon request layer, and later produced unmatched PPC
+  replies. Dependency setup may singleflight; plugin operations remain
+  multiplexed and non-serialized.
+- Live verification passed:
+  `EOS_SANDBOX_PROVIDER=docker EOS_LIVE_E2E_IMAGE=xingyaoww/sweb.eval.x86_64.dask_s_dask-10042:latest EOS_PLUGIN_REFRESH_SAMPLES=1 EOS_PLUGIN_REFRESH_AUTO_SQUASH_WRITES=104 EOS_RUST_PLUGIN_BENCH_TIMEOUT_S=600 uv run pytest -q -x -rs --tb=short --durations=10 backend/tests/live_e2e_test/sandbox/plugin/test_plugin_refresh_strategies.py`
+  (`1 passed in 259.62s`). The Rust plugin report
+  `.omc/results/rust-daemon-plugin-generic-20260602T065555Z-37672.json` had
+  `gate_pass=true`, `pyright_setup.exit_code=0`, connected routes
+  `plugin.generic.lsp_bridge_signature_help` and
+  `plugin.generic.lsp_bridge_document_highlight`, Pyright setup stdout
+  `pyright 1.1.409`, and no early Pyright timeout/mismatched-reply failures.
+- The passing artifact preserved the non-serialized operation proof:
+  `runtime_bridge_concurrent` returned `fast-second` in `0.0048s` while
+  `slow-first` took `0.3572s` on the same service connection. Cleanup ended
+  with plugin process count `12 -> 0`, `post_cleanup_metrics.active_leases=0`,
+  and no orphan/missing layers. The paired refresh-strategy report
+  `.omc/results/plugin-refresh-strategies-20260602T065555Z-37672.json` had
+  `gate_pass=true`, winner `workspace_snapshot_refresh`, snapshot refresh p95
+  `5.703 ms`, raw filesystem watch stale without materialization, auto-squash
+  plus post-drain commit green, and the warning that periodic
+  `commit_to_workspace` can reset storage under a long-lived service unless the
+  daemon adds an explicit plugin-service guard.
+- Focused verification also passed:
+  `uv run python -m py_compile ...`, `uv run ruff check ...`,
+  `uv run pytest --collect-only -q ...`,
+  `uv run pytest -q backend/tests/unit_test/test_plugins/test_lsp_session_refresh.py`,
+  `cargo fmt --all -- --check`, scoped `git diff --check`, and
+  `cargo test -p eos-daemon concurrent_read_only --lib` (`3 passed`).
+
+Still open:
+
+- Broader AV-10 LSP parity and broader crash-recovery matrix coverage. The
+  intended concurrency split remains explicit: plugin operations multiplex
+  freely over one service connection; daemon-owned refresh/remount and shared
+  dependency setup are the only singleflight sections.
+
+## Progress Update - 2026-06-02 14:20 CST
+
+Landed:
+
+- Broadened the canonical Python importlib LSP bridge over the reusable
+  `runtime_bridge` PPC service with read-only
+  `plugin.generic.lsp_bridge_diagnostics` and
+  `plugin.generic.lsp_bridge_code_actions`. Both routes delegate to
+  `plugins.catalog.lsp.runtime.server`, so the daemon remains a generic
+  manifest/PPC/OCC transport and does not gain LSP-specific dispatch logic.
+- Wired the new routes into the existing concurrent read-only bridge batch.
+  `find_definitions`, `find_references`, `diagnostics`, and `code_actions`
+  now dispatch together against one long-lived service connection; the daemon
+  still only singleflights stale-service refresh/remount before requests enter
+  the multiplexed PPC stream.
+- Updated the live gate and pytest assertions to require both connected routes,
+  mounted workspace evidence, protocol `lsp-python-importlib`, server
+  `plugins.catalog.lsp.runtime.server`, a diagnostic for unresolved `List`, and
+  a stable read-only code-action result shape that tolerates Pyright returning
+  zero quick fixes.
+- Live verification passed:
+  `EOS_SANDBOX_PROVIDER=docker EOS_LIVE_E2E_IMAGE=xingyaoww/sweb.eval.x86_64.dask_s_dask-10042:latest EOS_PLUGIN_REFRESH_SAMPLES=1 EOS_PLUGIN_REFRESH_AUTO_SQUASH_WRITES=104 EOS_RUST_PLUGIN_BENCH_TIMEOUT_S=600 uv run pytest -q -x -rs --tb=short --durations=10 backend/tests/live_e2e_test/sandbox/plugin/test_plugin_refresh_strategies.py`
+  (`1 passed in 84.88s`). The Rust plugin report
+  `.omc/results/rust-daemon-plugin-generic-20260602T061752Z-42349.json` had
+  `gate_pass=true`, connected routes
+  `plugin.generic.lsp_bridge_diagnostics` and
+  `plugin.generic.lsp_bridge_code_actions`, diagnostic count `1` with
+  `"List" is not defined`, code-action count `0` for `only=["quickfix"]`, and
+  packaged artifact SHA
+  `62e6d703964fb5525874629cb39c522e1aa96e25fd80f9619c3da205ef98b83f`.
+- The passing artifact preserved the non-serialized operation proof:
+  `runtime_bridge_concurrent` returned `fast-second` in `0.0041s` while
+  `slow-first` took `0.3627s` on the same service connection. Cleanup ended
+  with plugin process count `12 -> 0`, `post_cleanup_metrics.active_leases=0`,
+  and no orphan/missing layers. The paired refresh-strategy report
+  `.omc/results/plugin-refresh-strategies-20260602T061752Z-42349.json` still
+  recommends `workspace_snapshot_refresh`; snapshot refresh p95 was
+  `4.834 ms`, raw filesystem watch without materialization stayed stale, and
+  auto-squash plus post-drain commit passed.
+- Focused verification also passed:
+  `uv run python -m py_compile ...`, `uv run ruff check ...`,
+  `uv run pytest --collect-only -q ...`, `cargo fmt --all -- --check`, scoped
+  `git diff --check`, and
+  `cargo test -p eos-daemon concurrent_read_only --lib` (`3 passed`).
+
+Still open:
+
+- Broader AV-10 LSP parity and broader crash-recovery matrix coverage. The
+  intended concurrency split remains explicit: plugin operations multiplex
+  freely; daemon-owned service refresh/remount and shared dependency setup are
+  the only singleflight sections.
+
+## Progress Update - 2026-06-02 13:57 CST
+
+Landed:
+
+- Preserved the hard rule that plugin operations must not serialize while
+  making shared plugin dependency setup safe under concurrent service startup.
+  Two live attempts after the importlib bridge broadened to definitions and
+  references reproduced a package-install race: the custom Pyright harness and
+  reusable importlib LSP bridge could start independent Pyright users at the
+  same time, both running `npm install -g pyright` against the shared
+  `/tmp/eos-node22` prefix and failing with npm `ENOTEMPTY`.
+- Fixed the race in the live generic plugin package by adding
+  `/eos/plugin/.rust_pyright_setup.lock` plus a marker recheck around
+  `/eos/plugin/rust_pyright_setup.sh`. This is dependency-install singleflight
+  only; the daemon PPC client, reusable Python PPC bridge, and plugin operation
+  dispatch remain multiplexed with many in-flight operations over one service
+  connection.
+- Revalidated the canonical importlib bridge definition/reference coverage that
+  is already in the checkout: `plugin.generic.lsp_bridge_find_definitions`
+  returns one definition at line `0` in `live_plugin_lsp_bridge.py`, and
+  `plugin.generic.lsp_bridge_find_references` returns declaration plus call-site
+  references at lines `0` and `3`.
+- Tightened the Rust daemon concurrency regression so it no longer assumes
+  concurrent request arrival order. The test now accepts either arrival order,
+  replies to request `b` before request `a` by message id, and verifies the
+  original callers still receive the correct responses.
+- Live verification passed after the setup-lock fix:
+  `EOS_SANDBOX_PROVIDER=docker EOS_LIVE_E2E_IMAGE=xingyaoww/sweb.eval.x86_64.dask_s_dask-10042:latest EOS_PLUGIN_REFRESH_SAMPLES=1 EOS_PLUGIN_REFRESH_AUTO_SQUASH_WRITES=104 EOS_RUST_PLUGIN_BENCH_TIMEOUT_S=600 uv run pytest -q -x -rs --tb=short --durations=10 backend/tests/live_e2e_test/sandbox/plugin/test_plugin_refresh_strategies.py`
+  (`1 passed in 56.28s`). The Rust plugin report
+  `.omc/results/rust-daemon-plugin-generic-20260602T055538Z-57861.json` had
+  `gate_pass=true`, connected routes
+  `plugin.generic.lsp_bridge_find_definitions`,
+  `plugin.generic.lsp_bridge_find_references`,
+  `plugin.generic.lsp_bridge_hover`, `plugin.generic.lsp_bridge_query_symbols`,
+  and `plugin.generic.runtime_bridge_delay_ping`, and artifact SHA
+  `62e6d703964fb5525874629cb39c522e1aa96e25fd80f9619c3da205ef98b83f`.
+- The passing artifact preserved the non-serialized operation proof:
+  `runtime_bridge_concurrent` returned `fast-second` in `0.0046s` while
+  `slow-first` took `0.3610s` on the same service connection, and
+  `runtime_bridge_concurrent_apply` committed both concurrent mounted-workspace
+  callback writes. Cleanup ended with plugin process count `12 -> 0`,
+  `post_cleanup_metrics.active_leases=0`, and no orphan/missing layers. The
+  paired refresh-strategy report
+  `.omc/results/plugin-refresh-strategies-20260602T055538Z-57861.json` still
+  recommends `workspace_snapshot_refresh`; snapshot refresh p95 was `5.059 ms`
+  versus `commit_to_workspace` p95 `4.165 ms`, raw filesystem watch without
+  materialization stayed stale, and auto-squash plus post-drain commit passed.
+- Focused Rust verification passed from `sandbox/`:
+  `cargo fmt --all -- --check` and
+  `cargo test -p eos-daemon concurrent_read_only --lib` (`3 passed`).
+
+Still open:
+
+- Broader AV-10 LSP parity and broader crash-recovery matrix coverage. The
+  current plugin-concurrency lane is intentionally split: operations multiplex
+  freely, service refresh/remount coalesces per service, and shared package
+  installation coalesces per dependency prefix.
 
 ## Source Anchors
 

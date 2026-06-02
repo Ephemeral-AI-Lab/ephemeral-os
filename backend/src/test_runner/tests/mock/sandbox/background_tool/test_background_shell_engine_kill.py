@@ -21,7 +21,7 @@ async def test_ttl_reaper_cancels_abandoned_background_invocation() -> None:
         "bg-invocation",
         task,
         agent_id="agent-a",
-        op="api.v1.shell",
+        op="api.v1.exec_command",
         background=True,
     )
     registry._by_invocation["bg-invocation"].last_seen -= 1.0  # noqa: SLF001

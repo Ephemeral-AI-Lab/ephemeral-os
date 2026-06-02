@@ -20,14 +20,14 @@ async def test_inflight_count_ignores_foreground_maintenance_invocation() -> Non
         "foreground-maintenance",
         foreground,
         agent_id="agent-a",
-        op="api.v1.shell",
+        op="api.v1.exec_command",
         background=False,
     )
     registry.register(
-        "background-shell",
+        "background-exec-command",
         background,
         agent_id="agent-a",
-        op="api.v1.shell",
+        op="api.v1.exec_command",
         background=True,
     )
 

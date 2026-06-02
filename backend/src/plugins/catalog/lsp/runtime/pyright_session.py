@@ -177,6 +177,68 @@ class PyrightSession:
             return {"references": [], "timeout": True}
         return {"references": self._normalize_locations(raw)}
 
+    async def signature_help(self, args: dict[str, Any]) -> dict[str, Any]:
+        await self.start()
+        uri = await self._open_document(args["file_path"])
+        params = {
+            "textDocument": {"uri": uri},
+            "position": {
+                "line": int(args["line"]),
+                "character": int(args["character"]),
+            },
+            "context": {
+                "triggerKind": int(args.get("trigger_kind", 1)),
+                "isRetrigger": bool(args.get("is_retrigger", False)),
+            },
+        }
+        raw = await self._send_request("textDocument/signatureHelp", params)
+        signatures = raw.get("signatures") if isinstance(raw, dict) else []
+        signatures = signatures if isinstance(signatures, list) else []
+        return {
+            "signatures": signatures,
+            "signature_count": len(signatures),
+            "labels": [
+                str(signature.get("label") or "")
+                for signature in signatures
+                if isinstance(signature, dict)
+            ],
+            "active_signature": (
+                raw.get("activeSignature") if isinstance(raw, dict) else None
+            ),
+            "active_parameter": (
+                raw.get("activeParameter") if isinstance(raw, dict) else None
+            ),
+            "raw": raw,
+        }
+
+    async def document_highlight(self, args: dict[str, Any]) -> dict[str, Any]:
+        await self.start()
+        file_path = str(args["file_path"])
+        uri = await self._open_document(file_path)
+        params = {
+            "textDocument": {"uri": uri},
+            "position": {
+                "line": int(args["line"]),
+                "character": int(args["character"]),
+            },
+        }
+        raw = await self._send_request("textDocument/documentHighlight", params)
+        raw_highlights = raw if isinstance(raw, list) else []
+        highlights = [
+            {
+                "file_path": file_path,
+                "range": highlight.get("range"),
+                "kind": highlight.get("kind"),
+            }
+            for highlight in raw_highlights
+            if isinstance(highlight, dict) and isinstance(highlight.get("range"), dict)
+        ]
+        return {
+            "highlights": highlights,
+            "highlight_count": len(highlights),
+            "raw": raw,
+        }
+
     async def diagnostics(self, args: dict[str, Any]) -> dict[str, Any]:
         await self.start()
         uri = await self._open_document(args["file_path"])

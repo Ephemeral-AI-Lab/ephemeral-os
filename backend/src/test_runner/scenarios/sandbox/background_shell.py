@@ -187,7 +187,7 @@ BackgroundShellLateCancelRace = _scenario(
     ),
     summary_path_hint="/testbed/.ephemeralos/sweevo-mock/background_shell/late_cancel/summary.json",
 )
-# 3.3.1: direct foreground write races a background command publish.
+# 3.3.1: direct foreground write wins over a sleeping background command.
 BackgroundMixedFgBgSamePathConflict = _scenario(
     "BackgroundMixedFgBgSamePathConflict",
     action_id="background_mixed_fg_bg_same_path_conflict",
@@ -195,19 +195,19 @@ BackgroundMixedFgBgSamePathConflict = _scenario(
         "ACTION background_mixed_fg_bg_same_path_conflict. Launch a background "
         "command that writes /testbed/bg-shared.txt after a short sleep, run a "
         "foreground write_file to the same path while it sleeps, then record the "
-        "OCC winner and conflict metadata."
+        "terminal command result and final foreground workspace content."
     ),
     summary_path_hint="/testbed/.ephemeralos/sweevo-mock/background_shell/mixed_fg_bg_same_path_conflict/summary.json",
 )
-# 3.3.2: heartbeat one background invocation while another goes stale.
+# 3.3.2: one PTY command completes while another is cancelled.
 BackgroundHeartbeatLossReapsOnlyStaleBg = _scenario(
     "BackgroundHeartbeatLossReapsOnlyStaleBg",
     action_id="background_heartbeat_loss_reaps_only_stale_bg",
     action_spec=(
         "ACTION background_heartbeat_loss_reaps_only_stale_bg. Launch two "
-        "background command invocations with explicit invocation ids, heartbeat "
-        "only the protected invocation, let the stale invocation hit the daemon "
-        "TTL reaper, and run a foreground command during recovery."
+        "PTY-backed background commands, let the protected command complete, "
+        "cancel the stale command before it publishes, and run a foreground "
+        "command during recovery."
     ),
     summary_path_hint="/testbed/.ephemeralos/sweevo-mock/background_shell/heartbeat_loss/summary.json",
 )
@@ -246,7 +246,7 @@ BackgroundManySmallWritesDoNotStarveDispatcher = _scenario(
     ),
     summary_path_hint="/testbed/.ephemeralos/sweevo-mock/background_shell/many_small_writes/summary.json",
 )
-# 3.3.6: heterogeneous + conflicting + disjoint concurrent background work.
+# 3.3.6: heterogeneous + overlapping + disjoint concurrent background work.
 BackgroundMixedOpConcurrent = _scenario(
     "BackgroundMixedOpConcurrent",
     action_id="background_mixed_op_concurrent",
@@ -254,7 +254,7 @@ BackgroundMixedOpConcurrent = _scenario(
         "ACTION background_mixed_op_concurrent. Launch a pytest run, a pip "
         "install, and a python edit-loop as concurrent background tasks and "
         "confirm each reaches a terminal status; race N background commands "
-        "overwriting one seeded path (exactly one OCC winner, the rest abort); "
+        "overwriting one seeded path (final content is one complete writer); "
         "and write N disjoint paths concurrently (all land)."
     ),
     summary_path_hint="/testbed/.ephemeralos/sweevo-mock/background_shell/mixed_op_concurrent/summary.json",

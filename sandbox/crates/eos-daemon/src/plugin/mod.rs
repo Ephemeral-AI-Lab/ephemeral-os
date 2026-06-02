@@ -250,6 +250,9 @@ pub fn dispatch_registered_op(
     if !op.starts_with("plugin.") {
         return None;
     }
+    if let Err(err) = ensure_plugin_family_allowed(args) {
+        return Some(Err(err));
+    }
     let route = match route_for_op(op) {
         Ok(Some(route)) => route,
         Ok(None) => return None,
@@ -1614,6 +1617,29 @@ mod tests {
         }
     }
 
+    struct TestEnvVar {
+        key: &'static str,
+        previous: Option<String>,
+    }
+
+    impl TestEnvVar {
+        fn set(key: &'static str, value: &str) -> Self {
+            let previous = std::env::var(key).ok();
+            std::env::set_var(key, value);
+            Self { key, previous }
+        }
+    }
+
+    impl Drop for TestEnvVar {
+        fn drop(&mut self) {
+            if let Some(previous) = &self.previous {
+                std::env::set_var(self.key, previous);
+            } else {
+                std::env::remove_var(self.key);
+            }
+        }
+    }
+
     fn value_array<'a>(
         value: &'a Value,
         context: &'static str,
@@ -1861,6 +1887,60 @@ mod tests {
             args: json!({}),
         });
         assert_eq!(missing["error"]["kind"], "unknown_op");
+        Ok(())
+    }
+
+    #[test]
+    fn dynamic_plugin_op_is_blocked_in_isolated_workspace_before_route_lookup() -> TestResult {
+        let _guard = PluginTestGuard::new()?;
+        let table = OpTable::with_builtins();
+        let (layer_stack_root, _workspace_root) = test_bound_workspace("plugin-iws-block")?;
+        let scratch = some_value(
+            layer_stack_root.parent(),
+            "test layer root must have a parent",
+        )?
+        .join("scratch");
+        let _enabled = TestEnvVar::set("EOS_ISOLATED_WORKSPACE_ENABLED", "true");
+        let _harness = TestEnvVar::set("EOS_ISOLATED_WORKSPACE_TEST_HARNESS", "true");
+        let _scratch = TestEnvVar::set(
+            "EOS_ISOLATED_WORKSPACE_TEST_SCRATCH_ROOT",
+            &scratch.to_string_lossy(),
+        );
+
+        let _ = table.dispatch(&Request {
+            op: "api.isolated_workspace.test_reset".to_owned(),
+            invocation_id: "iws-reset-before-plugin-block".to_owned(),
+            args: json!({}),
+        });
+        let entered = table.dispatch(&Request {
+            op: "api.isolated_workspace.enter".to_owned(),
+            invocation_id: "iws-enter-before-plugin-block".to_owned(),
+            args: json!({
+                "agent_id": "agent-plugin",
+                "layer_stack_root": layer_stack_root.to_string_lossy(),
+            }),
+        });
+        assert_eq!(entered["success"], true);
+
+        let blocked = table.dispatch(&Request {
+            op: "plugin.lsp.not_loaded_yet".to_owned(),
+            invocation_id: "plugin-dynamic-iws-block".to_owned(),
+            args: json!({"agent_id": "agent-plugin"}),
+        });
+        assert_eq!(blocked["error"]["kind"], "forbidden_in_isolated_workspace");
+
+        let exited = table.dispatch(&Request {
+            op: "api.isolated_workspace.exit".to_owned(),
+            invocation_id: "iws-exit-after-plugin-block".to_owned(),
+            args: json!({"agent_id": "agent-plugin", "force_cancel": true}),
+        });
+        assert_eq!(exited["success"], true);
+        let _ = table.dispatch(&Request {
+            op: "api.isolated_workspace.test_reset".to_owned(),
+            invocation_id: "iws-reset-after-plugin-block".to_owned(),
+            args: json!({}),
+        });
+        remove_test_tree(&layer_stack_root)?;
         Ok(())
     }
 
@@ -2606,17 +2686,27 @@ mod tests {
         let server = std::thread::spawn(move || -> TestResult {
             let first = read_ppc_request(&mut server_stream, "read first ppc request")?;
             let second = read_ppc_request(&mut server_stream, "read second ppc request")?;
-            both_seen_tx.send((first.message_id.clone(), second.message_id.clone()))?;
-            write_ppc_reply_result(
-                &mut server_stream,
-                second.message_id,
-                r#"{"success":true,"seq":2}"#,
-            )?;
-            write_ppc_reply_result(
-                &mut server_stream,
-                first.message_id,
-                r#"{"success":true,"seq":1}"#,
-            )?;
+            let mut message_ids = vec![first.message_id.clone(), second.message_id.clone()];
+            message_ids.sort();
+            both_seen_tx.send(message_ids)?;
+            let request_a = "plugin-hover-concurrent-a";
+            let request_b = "plugin-hover-concurrent-b";
+            let reply_a = if first.message_id == request_a {
+                first.message_id.clone()
+            } else if second.message_id == request_a {
+                second.message_id.clone()
+            } else {
+                return Err("missing concurrent request a".into());
+            };
+            let reply_b = if first.message_id == request_b {
+                first.message_id.clone()
+            } else if second.message_id == request_b {
+                second.message_id.clone()
+            } else {
+                return Err("missing concurrent request b".into());
+            };
+            write_ppc_reply_result(&mut server_stream, reply_b, r#"{"success":true,"seq":2}"#)?;
+            write_ppc_reply_result(&mut server_stream, reply_a, r#"{"success":true,"seq":1}"#)?;
             Ok(())
         });
 
@@ -2638,8 +2728,13 @@ mod tests {
         });
 
         let seen = both_seen_rx.recv_timeout(Duration::from_secs(1))?;
-        assert_eq!(seen.0, "plugin-hover-concurrent-a");
-        assert_eq!(seen.1, "plugin-hover-concurrent-b");
+        assert_eq!(
+            seen,
+            vec![
+                "plugin-hover-concurrent-a".to_owned(),
+                "plugin-hover-concurrent-b".to_owned()
+            ]
+        );
         let first_response = join_value_thread(first, "first dispatch thread panicked")?;
         let second_response = join_value_thread(second, "second dispatch thread panicked")?;
         assert_eq!(first_response["success"], true);

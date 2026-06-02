@@ -7,7 +7,9 @@ role: reducer
 agent_type: agent
 allowed_tools:
   - read_file
-  - shell
+  - exec_command
+  - check_pty_command_progress
+  - cancel_pty_command
   - glob
   - grep
   - ask_advisor

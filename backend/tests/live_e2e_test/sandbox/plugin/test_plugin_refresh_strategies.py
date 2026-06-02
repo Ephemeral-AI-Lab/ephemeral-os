@@ -126,6 +126,22 @@ async def test_plugin_workspace_snapshot_refresh_strategy(
         in rust_payload["status_after_ensure"]["connected_ppc_routes"]
     )
     assert (
+        "plugin.generic.lsp_bridge_signature_help"
+        in rust_payload["status_after_ensure"]["connected_ppc_routes"]
+    )
+    assert (
+        "plugin.generic.lsp_bridge_document_highlight"
+        in rust_payload["status_after_ensure"]["connected_ppc_routes"]
+    )
+    assert (
+        "plugin.generic.lsp_bridge_diagnostics"
+        in rust_payload["status_after_ensure"]["connected_ppc_routes"]
+    )
+    assert (
+        "plugin.generic.lsp_bridge_code_actions"
+        in rust_payload["status_after_ensure"]["connected_ppc_routes"]
+    )
+    assert (
         "plugin.generic.lsp_bridge_hover"
         in rust_payload["status_after_ensure"]["connected_ppc_routes"]
     )
@@ -485,6 +501,119 @@ async def test_plugin_workspace_snapshot_refresh_strategy(
             "reference_start_lines"
         ]
     )
+    assert rust_payload["lsp_bridge_signature_help"]["from_lsp_importlib_bridge"] is True
+    assert rust_payload["lsp_bridge_signature_help"]["from_ppc_service_bridge"] is True
+    assert rust_payload["lsp_bridge_signature_help"]["workspace_mounted"] is True
+    assert (
+        rust_payload["lsp_bridge_signature_help"]["lsp"]["protocol"]
+        == "lsp-python-importlib"
+    )
+    assert (
+        rust_payload["lsp_bridge_signature_help"]["lsp"]["server"]
+        == "plugins.catalog.lsp.runtime.server"
+    )
+    assert (
+        rust_payload["lsp_bridge_signature_help"]["lsp"]["path"]
+        == "live_plugin_signature.py"
+    )
+    assert rust_payload["lsp_bridge_signature_help"]["lsp"]["position"]["line"] == 3
+    assert (
+        rust_payload["lsp_bridge_signature_help"]["lsp"]["position"]["character"]
+        == len("RESULT = live_signature(42, ")
+    )
+    assert rust_payload["lsp_bridge_signature_help"]["lsp"]["signature_count"] >= 1
+    assert rust_payload["lsp_bridge_signature_help"]["lsp"]["active_parameter"] == 1
+    assert any(
+        "left: int" in label and "right: str" in label
+        for label in rust_payload["lsp_bridge_signature_help"]["lsp"]["labels"]
+    )
+    assert (
+        rust_payload["lsp_bridge_document_highlight"]["from_lsp_importlib_bridge"]
+        is True
+    )
+    assert rust_payload["lsp_bridge_document_highlight"]["from_ppc_service_bridge"] is True
+    assert rust_payload["lsp_bridge_document_highlight"]["workspace_mounted"] is True
+    assert (
+        rust_payload["lsp_bridge_document_highlight"]["lsp"]["protocol"]
+        == "lsp-python-importlib"
+    )
+    assert (
+        rust_payload["lsp_bridge_document_highlight"]["lsp"]["server"]
+        == "plugins.catalog.lsp.runtime.server"
+    )
+    assert (
+        rust_payload["lsp_bridge_document_highlight"]["lsp"]["path"]
+        == "live_plugin_pyright.py"
+    )
+    assert (
+        rust_payload["lsp_bridge_document_highlight"]["lsp"]["highlight_count"]
+        >= 2
+    )
+    assert {0, 3}.issubset(
+        rust_payload["lsp_bridge_document_highlight"]["lsp"][
+            "highlight_start_lines"
+        ]
+    )
+    assert rust_payload["lsp_bridge_diagnostics_seed"]["success"] is True
+    assert (
+        rust_payload["lsp_bridge_diagnostics"]["from_lsp_importlib_bridge"]
+        is True
+    )
+    assert rust_payload["lsp_bridge_diagnostics"]["from_ppc_service_bridge"] is True
+    assert rust_payload["lsp_bridge_diagnostics"]["workspace_mounted"] is True
+    assert (
+        rust_payload["lsp_bridge_diagnostics"]["lsp"]["protocol"]
+        == "lsp-python-importlib"
+    )
+    assert (
+        rust_payload["lsp_bridge_diagnostics"]["lsp"]["server"]
+        == "plugins.catalog.lsp.runtime.server"
+    )
+    assert (
+        rust_payload["lsp_bridge_diagnostics"]["lsp"]["path"]
+        == "live_plugin_lsp_bridge_diagnostics.py"
+    )
+    assert (
+        rust_payload["lsp_bridge_diagnostics"]["lsp"]["position"]["line"] == 0
+    )
+    assert (
+        rust_payload["lsp_bridge_diagnostics"]["lsp"]["position"]["character"]
+        == len("value: Li")
+    )
+    assert (
+        rust_payload["lsp_bridge_diagnostics"]["lsp"]["wait_for_diagnostics"]
+        is True
+    )
+    assert rust_payload["lsp_bridge_diagnostics"]["lsp"]["diagnostic_count"] >= 1
+    assert any(
+        "List" in message
+        for message in rust_payload["lsp_bridge_diagnostics"]["lsp"][
+            "diagnostic_messages"
+        ]
+    )
+    assert rust_payload["lsp_bridge_code_actions"]["from_lsp_importlib_bridge"] is True
+    assert rust_payload["lsp_bridge_code_actions"]["from_ppc_service_bridge"] is True
+    assert rust_payload["lsp_bridge_code_actions"]["workspace_mounted"] is True
+    assert (
+        rust_payload["lsp_bridge_code_actions"]["lsp"]["protocol"]
+        == "lsp-python-importlib"
+    )
+    assert (
+        rust_payload["lsp_bridge_code_actions"]["lsp"]["server"]
+        == "plugins.catalog.lsp.runtime.server"
+    )
+    assert (
+        rust_payload["lsp_bridge_code_actions"]["lsp"]["path"]
+        == "live_plugin_lsp_bridge_diagnostics.py"
+    )
+    assert rust_payload["lsp_bridge_code_actions"]["lsp"]["position"]["line"] == 0
+    assert (
+        rust_payload["lsp_bridge_code_actions"]["lsp"]["position"]["character"]
+        == len("value: Li")
+    )
+    assert "quickfix" in rust_payload["lsp_bridge_code_actions"]["lsp"]["only"]
+    assert isinstance(rust_payload["lsp_bridge_code_actions"]["lsp"]["actions"], list)
+    assert rust_payload["lsp_bridge_code_actions"]["lsp"]["action_count"] >= 0
     assert rust_payload["lsp_bridge_hover"]["from_lsp_importlib_bridge"] is True
     assert rust_payload["lsp_bridge_hover"]["from_ppc_service_bridge"] is True
     assert rust_payload["lsp_bridge_hover"]["workspace_mounted"] is True

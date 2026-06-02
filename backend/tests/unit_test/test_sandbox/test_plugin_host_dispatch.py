@@ -432,6 +432,55 @@ def test_call_plugin_reensures_runtime_when_digest_changes(
     ]
 
 
+def test_call_plugin_recovers_stale_runtime_cache_on_unknown_op(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    manifest = _seed_demo_manifest(tmp_path)
+    monkeypatch.setattr(
+        host_dispatch_mod, "_PLUGIN_MANIFESTS_BY_NAME", {"demo": manifest}, raising=False
+    )
+    host_dispatch_mod._RUNTIME_DIGEST_BY_SANDBOX_PLUGIN[("sb-1", "demo")] = "abc"
+    dispatch_ops: list[str] = []
+    plugin_attempts = 0
+
+    class UnknownPluginOp(RuntimeError):
+        kind = "unknown_op"
+
+    async def fake_install(sandbox_id: str, m: PluginManifest) -> str:
+        del sandbox_id, m
+        return "abc"
+
+    async def fake_dispatch(
+        sandbox_id: str,
+        op: str,
+        args: dict[str, Any],
+        **kwargs: Any,
+    ) -> dict[str, Any]:
+        del sandbox_id, args, kwargs
+        nonlocal plugin_attempts
+        dispatch_ops.append(op)
+        if op == "plugin.demo.run":
+            plugin_attempts += 1
+            if plugin_attempts == 1:
+                raise UnknownPluginOp("unknown op: plugin.demo.run")
+        return {"success": True, "result": "ok"}
+
+    result = asyncio.run(
+        call_plugin(
+            _make_context(),
+            plugin="demo",
+            op="run",
+            payload={},
+            install_runner=fake_install,
+            daemon_dispatcher=fake_dispatch,
+        )
+    )
+
+    assert not result.is_error
+    assert dispatch_ops == ["plugin.demo.run", "api.plugin.ensure", "plugin.demo.run"]
+
+
 def test_call_plugin_missing_sandbox_id_returns_error() -> None:
     ctx = ToolExecutionContextService(cwd=Path("/tmp"))
     # No sandbox_id set.
@@ -474,7 +523,7 @@ def test_call_plugin_unknown_plugin_returns_error(
     assert result.metadata["step"] == "manifest"
 
 
-def test_call_plugin_serializes_concurrent_installs(
+def test_call_plugin_singleflights_concurrent_runtime_ensure(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     manifest = _seed_demo_manifest(tmp_path)
@@ -482,26 +531,28 @@ def test_call_plugin_serializes_concurrent_installs(
         host_dispatch_mod, "_PLUGIN_MANIFESTS_BY_NAME", {"demo": manifest}, raising=False
     )
 
-    install_starts: list[int] = []
-    install_running = 0
-    max_install_concurrency = 0
+    ensure_count = 0
+    ensure_running = 0
+    max_ensure_concurrency = 0
+    dispatch_count = 0
 
     async def fake_install(sandbox_id: str, m: PluginManifest) -> str:
-        nonlocal install_running, max_install_concurrency
-        install_running += 1
-        max_install_concurrency = max(
-            max_install_concurrency, install_running
-        )
-        await asyncio.sleep(0.01)
-        install_starts.append(install_running)
-        install_running -= 1
+        del sandbox_id, m
         return "abc"
 
     async def fake_dispatch(
         sandbox_id: str, op: str, args: dict[str, Any], **kwargs: Any
     ) -> dict[str, Any]:
+        nonlocal ensure_count, ensure_running, max_ensure_concurrency, dispatch_count
+        del sandbox_id, args, kwargs
         if op == "api.plugin.ensure":
+            ensure_running += 1
+            max_ensure_concurrency = max(max_ensure_concurrency, ensure_running)
+            await asyncio.sleep(0.01)
+            ensure_count += 1
+            ensure_running -= 1
             return {"success": True, "registered_ops": []}
+        dispatch_count += 1
         return {"success": True}
 
     async def runner() -> None:
@@ -520,4 +571,53 @@ def test_call_plugin_serializes_concurrent_installs(
         )
 
     asyncio.run(runner())
-    assert max_install_concurrency == 1
+    assert ensure_count == 1
+    assert max_ensure_concurrency == 1
+    assert dispatch_count == 5
+
+
+def test_call_plugin_does_not_serialize_dispatch_after_runtime_loaded(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    manifest = _seed_demo_manifest(tmp_path)
+    monkeypatch.setattr(
+        host_dispatch_mod, "_PLUGIN_MANIFESTS_BY_NAME", {"demo": manifest}, raising=False
+    )
+    host_dispatch_mod._RUNTIME_DIGEST_BY_SANDBOX_PLUGIN[("sb-1", "demo")] = "abc"
+    dispatch_running = 0
+    max_dispatch_concurrency = 0
+
+    async def fake_install(sandbox_id: str, m: PluginManifest) -> str:
+        del sandbox_id, m
+        return "abc"
+
+    async def fake_dispatch(
+        sandbox_id: str, op: str, args: dict[str, Any], **kwargs: Any
+    ) -> dict[str, Any]:
+        nonlocal dispatch_running, max_dispatch_concurrency
+        del sandbox_id, args, kwargs
+        if op == "api.plugin.ensure":
+            raise AssertionError("runtime ensure should be skipped for cached digest")
+        dispatch_running += 1
+        max_dispatch_concurrency = max(max_dispatch_concurrency, dispatch_running)
+        await asyncio.sleep(0.01)
+        dispatch_running -= 1
+        return {"success": True}
+
+    async def runner() -> None:
+        await asyncio.gather(
+            *(
+                call_plugin(
+                    _make_context(),
+                    plugin="demo",
+                    op="run",
+                    payload={},
+                    install_runner=fake_install,
+                    daemon_dispatcher=fake_dispatch,
+                )
+                for _ in range(5)
+            )
+        )
+
+    asyncio.run(runner())
+    assert max_dispatch_concurrency > 1

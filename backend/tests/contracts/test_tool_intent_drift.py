@@ -26,6 +26,9 @@ from tools._framework.core.base import BaseTool
 
 # Canonical source: backend/src/sandbox/daemon/builtin_operations.py.
 DAEMON_TOOL_ROUTE_INTENTS: dict[str, Intent] = dict(WORKSPACE_TOOL_ROUTES)
+DAEMON_VERB_TOOL_NAME_ALIASES = {
+    "shell": "exec_command",
+}
 
 
 _TOOL_MODULES = (
@@ -85,8 +88,9 @@ def test_every_decorated_tool_has_intent_attribute() -> None:
 @pytest.mark.parametrize("verb,daemon_intent", sorted(DAEMON_TOOL_ROUTE_INTENTS.items()))
 def test_tool_intent_matches_daemon_handlers_table(verb: str, daemon_intent: Intent) -> None:
     """Sibling @tool and daemon handler for the same verb MUST agree on intent."""
-    matching = [t for t in _iter_decorated_tools() if t.name == verb]
-    assert matching, f"no @tool with name={verb!r}"
+    tool_name = DAEMON_VERB_TOOL_NAME_ALIASES.get(verb, verb)
+    matching = [t for t in _iter_decorated_tools() if t.name == tool_name]
+    assert matching, f"no @tool with name={tool_name!r} for daemon verb={verb!r}"
     tool = matching[0]
     assert tool.intent == daemon_intent, (
         f"@tool {verb!r} declares intent={tool.intent.value} but daemon "

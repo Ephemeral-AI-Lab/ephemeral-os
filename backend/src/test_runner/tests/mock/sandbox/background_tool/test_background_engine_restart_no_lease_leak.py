@@ -17,7 +17,6 @@ from test_runner.tests._live_config import (
 )
 from test_runner.tests.mock.sandbox.background_tool._background_shell_invariants import (
     assert_background_performance_artifacts,
-    configure_short_inflight_ttl,
     run_background_shell_scenario,
 )
 
@@ -38,9 +37,6 @@ async def test_background_engine_restart_no_lease_leak(
     audit_dir: Path,
     stores: TaskStoreBundle,
 ) -> None:
-    sandbox_id = str(workspace["sandbox_id"])
-    await configure_short_inflight_ttl(sandbox_id)
-
     report, summary = await run_background_shell_scenario(
         scenario_name="sandbox.background_engine_restart_no_lease_leak",
         summary_path=ENGINE_RESTART_SUMMARY,
@@ -48,14 +44,13 @@ async def test_background_engine_restart_no_lease_leak(
         workspace=workspace,
         audit_dir=audit_dir,
         stores=stores,
-        preserve_inflight_ttl=True,
     )
 
     assert summary["mode"] == "engine_restart_no_lease_leak", summary
-    assert summary["inflight_during_launch"] >= 1, summary
+    assert summary["pty_sessions_during_launch"] >= 1, summary
     assert summary["abandoned"]["is_error"] or summary["abandoned"]["cancelled"], summary
     assert not summary["abandoned_published"], summary
-    assert summary["inflight_after"] == 0, summary
+    assert summary["pty_sessions_after"] == 0, summary
     assert not summary["foreground_shell"]["is_error"], summary
     assert not summary["recovery_write"]["is_error"], summary
     assert "recovery-ok" in summary["recovery_read_content"], summary

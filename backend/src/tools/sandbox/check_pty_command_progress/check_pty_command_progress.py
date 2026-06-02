@@ -12,6 +12,7 @@ from tools.sandbox._lib.pty_command_tool import (
     CommandToolOutput,
     command_tool_result,
     mark_pty_result_reported_by_tool,
+    recover_pty_result_from_supervisor,
 )
 from tools.sandbox._lib.tool_context import (
     sandbox_caller_from_tool_context,
@@ -51,6 +52,11 @@ async def check_pty_command_progress(
             time=time,
             max_tokens=max_tokens,
         ),
+    )
+    result = recover_pty_result_from_supervisor(
+        context,
+        result,
+        pty_session_id=pty_session_id,
     )
     mark_pty_result_reported_by_tool(context, result, pty_session_id=pty_session_id)
     return command_tool_result(result)

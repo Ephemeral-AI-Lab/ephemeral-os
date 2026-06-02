@@ -261,3 +261,237 @@ Verification pending:
 - Run focused lint and unit tests for the touched engine/tool/probe paths.
 - Re-run focused live background/command scenarios, then resume the broader
   mock migration suite.
+
+## Iteration 5 continuation - 2026-06-02 13:49:44 +0800 CST
+
+Checkout summary:
+- Current `HEAD`: `56ca1b668 refactor(tools): retire shell background tool surface`.
+- Additional local edits in this continuation: `backend/tests/contracts/test_tool_intent_drift.py`, `docs/class_inventory/README.md`, and `docs/class_inventory/tools.md`.
+
+Coverage gaps found:
+- The daemon workspace route table still names the internal route verb `shell`, while the public decorated tool is now `exec_command`. The drift contract was still requiring a deleted `@tool(name="shell")`.
+- `docs/class_inventory/tools.md` still advertised deleted `tools/background/*` and `tools/sandbox/shell/shell.py` classes.
+
+Fixes applied:
+- Added an explicit daemon-route to public-tool alias in `test_tool_intent_drift.py`: daemon verb `shell` is checked against public tool `exec_command` with the same `WRITE_ALLOWED` intent.
+- Trimmed the tools class inventory to remove deleted background/shell classes and added the replacement `exec_command` / PTY command input/output schemas.
+
+Commands run:
+- `uv run ruff check backend/src/engine/background backend/src/engine/agent/factory.py backend/src/engine/tool_call/dispatch.py backend/src/engine/tool_call/streaming.py backend/src/tools/sandbox backend/src/tools/_names.py backend/src/test_runner/agent/mock backend/tests/unit_test/test_tools/test_sandbox_toolkit backend/tests/unit_test/test_engine/test_background_tasks.py backend/tests/unit_test/test_engine/test_spawn_agent.py backend/tests/unit_test/test_engine/test_provider_history.py backend/tests/unit_test/test_test_runner/test_probe_bridge.py backend/tests/contracts/test_tool_intent_drift.py`
+  - Result: passed.
+- `uv run pytest -q backend/tests/unit_test/test_tools/test_sandbox_toolkit backend/tests/unit_test/test_engine/test_background_tasks.py backend/tests/unit_test/test_engine/test_spawn_agent.py backend/tests/unit_test/test_engine/test_provider_history.py backend/tests/unit_test/test_test_runner/test_probe_bridge.py backend/tests/contracts/test_tool_intent_drift.py --tb=short`
+  - First result: failed once in `test_tool_intent_matches_daemon_handlers_table[shell-write_allowed]`.
+  - Fix: map daemon verb `shell` to public `exec_command` in the contract.
+- `uv run ruff check backend/tests/contracts/test_tool_intent_drift.py`
+  - Result: passed.
+- `uv run pytest -q backend/tests/unit_test/test_tools/test_sandbox_toolkit backend/tests/unit_test/test_engine/test_background_tasks.py backend/tests/unit_test/test_engine/test_spawn_agent.py backend/tests/unit_test/test_engine/test_provider_history.py backend/tests/unit_test/test_test_runner/test_probe_bridge.py backend/tests/contracts/test_tool_intent_drift.py --tb=short`
+  - Result: passed with `139 passed`.
+- `git diff --check`
+  - Result: passed.
+
+Fresh artifacts inspected:
+- No `.sweevo_runs` or live sandbox artifacts were produced in this continuation.
+- Verified the current source tree has no tracked files under `backend/src/tools/background` or `backend/src/tools/sandbox/shell`.
+
+Current verdict:
+- Correctness: PASS for the focused unit/contract slice covering sandbox toolkit, background supervisor/subagent controls, probe bridge PTY mapping, spawn-agent registry synthesis, provider-history background reduction, and tool-intent drift.
+- O(1) memory/disk: not re-measured in this continuation because no live sandbox run was executed.
+- Latency: not re-measured in this continuation because no live sandbox run was executed.
+
+Next iteration entry point:
+- Run focused mock background command scenarios and then resume the broader `backend/src/test_runner/tests/mock` migration suite, still skipping `backend/src/test_runner/tests/real_agent` and real-LLM tests.
+
+## Iteration 6 - 2026-06-02 13:59:16 +0800 CST
+
+Checkout summary:
+- Current `HEAD`: `56ca1b668 refactor(tools): retire shell background tool surface`.
+- Additional local edits before this iteration: Iteration 5 contract/class-inventory edits plus PTY completion handoff fixes in `backend/src/engine/background/task_supervisor.py`, `backend/src/tools/sandbox/_lib/pty_command_tool.py`, and typed PTY control tools.
+
+Plan path and target files:
+- Plan: `docs/plans/test_runner_migration_PLAN.md`.
+- Focus target: `backend/src/test_runner/tests/mock/sandbox/background_tool/test_background_shell_golden.py::test_background_shell_golden`.
+- Supporting code touched: `backend/src/test_runner/agent/mock/probe_bridge.py` behavior from prior iteration, PTY control tools, and `BackgroundTaskSupervisor`.
+
+Coverage gaps found:
+- No new coverage gap before the live run; this iteration is a correctness fix for the focused background-command golden scenario.
+
+Commands run:
+- `uv run pytest --collect-only -q backend/src/test_runner/tests/mock/sandbox/background_tool`
+  - Result: passed collection with 14 tests.
+- `env EOS_SANDBOX_PROVIDER=docker EOS_SANDBOX_RUNTIME=rust EOS_LIVE_E2E_IMAGE=sweevo-dask__dask-10042:latest uv run pytest -q backend/src/test_runner/tests/mock/sandbox/background_tool/test_background_shell_golden.py::test_background_shell_golden --tb=short --durations=10`
+  - First result: failed after a live run.
+- `uv run ruff check backend/src/engine/background/task_supervisor.py backend/src/tools/sandbox/_lib/pty_command_tool.py backend/src/tools/sandbox/check_pty_command_progress backend/src/tools/sandbox/write_pty_command_stdin backend/src/tools/sandbox/cancel_pty_command backend/tests/unit_test/test_tools/test_command_result_output.py`
+  - Result: passed.
+- `uv run pytest -q backend/tests/unit_test/test_tools/test_command_result_output.py backend/tests/unit_test/test_engine/test_background_task_emitters.py backend/tests/unit_test/test_tools/test_sandbox_toolkit --tb=short`
+  - First result: failed because the new supervisor-backed unit test registered a PTY outside a running event loop.
+  - Fix: made the unit test async.
+- `uv run pytest -q backend/tests/unit_test/test_tools/test_command_result_output.py backend/tests/unit_test/test_engine/test_background_task_emitters.py backend/tests/unit_test/test_tools/test_sandbox_toolkit --tb=short`
+  - Result: passed with `93 passed`.
+
+Fresh artifacts inspected:
+- `.sweevo_runs/scenario_logs/sandbox.background_shell_golden/20260602T055218Z_3983ec5bcb41/run.json`
+- `.sweevo_runs/scenario_logs/sandbox.background_shell_golden/20260602T055218Z_3983ec5bcb41/sandbox_events.jsonl`
+- `.sweevo_runs/scenario_logs/sandbox.background_shell_golden/20260602T055218Z_3983ec5bcb41/workflow_01_c58f194c-c32a-4af3-bd66-1752516adc90/.../02_executor_f99d5b93-aa56-4c4f-8d36-fe1cb4bf2253:gen:background_shell_golden/message.jsonl`
+
+First failure/stop signal:
+- `test_background_shell_golden` observed `report.request_status == "failed"` because the executor failed with `exec_command failed: {"status": "error", ... "stderr": "pty_session_not_found"}` while polling `check_pty_command_progress`.
+
+Root-cause hypothesis and evidence:
+- `sandbox_events.jsonl` showed the launch path was correct: `api.v1.exec_command` registered `pty_4`, `pty_5`, and `pty_6` under one Rust daemon boot epoch and progress calls initially returned `running`.
+- The failure appeared after one sibling PTY returned `ok`: `api.v1.pty.collect_completed` had already consumed terminal completions for the other PTYs, so later `api.v1.pty.progress` calls for `pty_5` and `pty_6` returned `pty_session_not_found`.
+- This is a PTY completion ownership race between engine-side background notification polling and model-facing typed PTY controls, not LSP cold start, daemon restart, or serialized plugin/tool execution.
+
+Fixes applied:
+- Added `BackgroundTaskSupervisor.get_pty_command_result()` so typed controls can recover a terminal result already claimed by notification polling.
+- Added `recover_pty_result_from_supervisor()` in `tools.sandbox._lib.pty_command_tool`.
+- Wired recovery into `check_pty_command_progress`, `write_pty_command_stdin`, and `cancel_pty_command`.
+- Added a unit test for recovering the stored terminal PTY result when the daemon control call reports `pty_session_not_found`.
+
+Current verdict:
+- Correctness: PASS for the focused PTY handoff unit slice; live rerun pending.
+- O(1) memory/disk: not re-measured yet in this iteration because the post-fix live rerun is pending.
+- Latency: not re-measured yet in this iteration because the post-fix live rerun is pending.
+
+Next iteration entry point:
+- Rerun the focused Docker live `test_background_shell_golden` and inspect the new `.sweevo_runs` artifact before expanding to the rest of `backend/src/test_runner/tests/mock/sandbox/background_tool`.
+
+### Iteration 6 continuation - 2026-06-02 14:02:17 +0800 CST
+
+Post-fix command run:
+- `env EOS_SANDBOX_PROVIDER=docker EOS_SANDBOX_RUNTIME=rust EOS_LIVE_E2E_IMAGE=sweevo-dask__dask-10042:latest uv run pytest -q backend/src/test_runner/tests/mock/sandbox/background_tool/test_background_shell_golden.py::test_background_shell_golden --tb=short --durations=10`
+  - Result: passed with `1 passed in 25.39s`.
+  - Pytest durations: setup `17.99s`, call `7.31s`.
+
+Fresh artifacts inspected:
+- `.sweevo_runs/scenario_logs/sandbox.background_shell_golden/20260602T060007Z_097133a30c5f/run.json`
+- `.sweevo_runs/scenario_logs/sandbox.background_shell_golden/20260602T060007Z_097133a30c5f/sandbox_events.jsonl`
+- `.sweevo_runs/scenario_logs/sandbox.background_shell_golden/20260602T060007Z_097133a30c5f/metrics.json`
+- `.sweevo_runs/scenario_logs/sandbox.background_shell_golden/20260602T060007Z_097133a30c5f/performance_report.json`
+- `.sweevo_runs/scenario_logs/sandbox.background_shell_golden/20260602T060007Z_097133a30c5f/performance_report.md`
+
+Artifact findings:
+- `run.json`: status `finished`.
+- Workflow/attempt artifacts: generator status `done`, reducer status `done`, iteration status `succeeded`.
+- `metrics.json`: `tool_calls_total=60`, `tool_errors_total=0`.
+- `sandbox_events.jsonl`: all three PTYs (`pty_1`, `pty_2`, `pty_3`) progressed from `running` to `ok`; no `pty_session_not_found` in the fresh run.
+- Daemon audit pull: `events_pulled=367`, `dropped_event_count=0`, `daemon_restarts_observed=0`.
+
+Performance/resource result:
+- Daemon API totals from `performance_report.json`:
+  - `api.v1.exec_command`: 4 calls, p50 `59.9ms`, p95/max `86.0ms`.
+  - `api.v1.pty.progress`: 40 calls, p50 `0.13ms`, p95 `0.29ms`, max `0.48ms`.
+  - `api.v1.pty.collect_completed`: 42 calls, p50 `0.11ms`, p95 `0.19ms`, max `0.69ms`.
+  - `api.v1.write_file`: 1 call, max `8.85ms`.
+- Resource maxima from fresh events: `resource.command_exec.workspace_tree_exists=0`, `workspace_tree_bytes=0`, `run_dir_tree_exists=0`, `run_dir_tree_bytes=0`, `upperdir_tree_bytes=0`; max manifest depth observed `2`.
+- Performance report summary: peak `upperdir_bytes_total=0`, peak `layer_count=1`, warnings `(none)`.
+
+Current verdict:
+- Correctness: PASS for the focused live background-command golden scenario.
+- O(1) memory/disk: PASS for this focused scenario; no workspace/run-dir/upperdir tree growth was observed for command resources, and artifact inventory stayed bounded.
+- Latency: PASS for this focused scenario; PTY progress/collection stayed sub-millisecond p95, and finite command p95/max was `86.0ms`.
+
+Next iteration entry point:
+- Run the full `backend/src/test_runner/tests/mock/sandbox/background_tool` folder under Docker/Rust and inspect the newest artifacts before broadening to the rest of `backend/src/test_runner/tests/mock`.
+
+## Iteration 7 - 2026-06-02 14:19:26 +0800 CST
+
+Checkout summary:
+- Current `HEAD`: `56ca1b668 refactor(tools): retire shell background tool surface`.
+- `backend/src/tools/background` and `backend/src/tools/sandbox/shell` are absent in the live checkout.
+- Local edits entering this iteration included the Iteration 6 PTY terminal-result recovery and the class-inventory/tool-intent cleanup.
+
+Plan path and target files:
+- Plan: `docs/plans/test_runner_migration_PLAN.md`.
+- Focus target: `backend/src/test_runner/tests/mock/sandbox/background_tool`.
+- Supporting code touched: `backend/src/test_runner/agent/mock/probe_bridge.py`, `backend/src/test_runner/agent/mock/background_shell_probe.py`, and selected background-command tests.
+
+Commands run:
+- `env EOS_SANDBOX_PROVIDER=docker EOS_SANDBOX_RUNTIME=rust EOS_LIVE_E2E_IMAGE=sweevo-dask__dask-10042:latest uv run pytest -q backend/src/test_runner/tests/mock/sandbox/background_tool --tb=short --durations=20`
+  - Result: produced failures and then became CPU-bound in report/provider-history preparation after `sandbox.background_shell_exhaustion`; the process was terminated to inspect the first actionable failure from the generated artifacts.
+- `env EOS_SANDBOX_PROVIDER=docker EOS_SANDBOX_RUNTIME=rust EOS_LIVE_E2E_IMAGE=sweevo-dask__dask-10042:latest uv run pytest -q backend/src/test_runner/tests/mock/sandbox/background_tool/test_background_engine_restart_no_lease_leak.py::test_background_engine_restart_no_lease_leak --tb=short --durations=10`
+  - First result: failed with `assert summary["inflight_during_launch"] >= 1`, where the summary value was `0`.
+- `uv run ruff check backend/src/test_runner/agent/mock/probe_bridge.py backend/src/test_runner/agent/mock/background_shell_probe.py backend/src/test_runner/tests/mock/sandbox/background_tool/test_background_engine_restart_no_lease_leak.py backend/src/test_runner/tests/mock/sandbox/background_tool/test_background_heartbeat_loss_reaps_only_stale_bg.py backend/src/test_runner/tests/mock/sandbox/background_tool/test_background_exit_iws_drains_agent_tasks.py backend/src/test_runner/tests/mock/sandbox/background_tool/test_background_many_small_writes_do_not_starve_dispatcher.py backend/src/test_runner/scenarios/sandbox/background_shell.py`
+  - Result: passed.
+- `uv run pytest -q backend/tests/unit_test/test_test_runner/test_probe_bridge.py backend/tests/unit_test/test_tools/test_command_result_output.py --tb=short`
+  - Result: passed with `4 passed`.
+
+Fresh artifacts inspected:
+- `.sweevo_runs/scenario_logs/sandbox.background_engine_restart_no_lease_leak/20260602T061011Z_8550576f1bdd/run.json`
+- `.sweevo_runs/scenario_logs/sandbox.background_engine_restart_no_lease_leak/20260602T061011Z_8550576f1bdd/metrics.json`
+- `.sweevo_runs/scenario_logs/sandbox.background_engine_restart_no_lease_leak/20260602T061011Z_8550576f1bdd/sandbox_events.jsonl`
+- `.sweevo_runs/scenario_logs/sandbox.background_engine_restart_no_lease_leak/20260602T061011Z_8550576f1bdd/performance_report.json`
+
+First failure/stop signal:
+- The isolated engine-restart test failed because the probe measured `api.v1.inflight_count` for an `exec_command(tty=true)` launch.
+- The artifact showed the PTY was alive and progressing: `api.v1.exec_command` returned `running`, `background_tool.started` recorded `pty_1`, and repeated `api.v1.pty.progress` calls returned `running` before terminal `ok`.
+
+Root-cause hypothesis and evidence:
+- After the migration, a background command is no longer a long-running daemon RPC invocation. `exec_command(tty=true)` returns quickly and leaves daemon-owned work in the PTY registry.
+- `api.v1.inflight_count` correctly returned zero because it counts background RPC invocations, not live PTY sessions.
+- The mock bridge still injected hidden `_sandbox_invocation_id` / `_disable_sandbox_heartbeat` controls for PTY launches; that was stale generic-background compatibility and had no useful contract with typed PTY sessions.
+
+Fixes applied:
+- Removed hidden invocation-control injection from `backend/src/test_runner/agent/mock/probe_bridge.py` for PTY launches.
+- Switched background-command probes from `inflight_count` diagnostics to `pty_session_count` diagnostics.
+- Reworked the heartbeat-loss probe into the post-migration typed behavior: one PTY session completes and publishes, one PTY session is cancelled and does not publish, and a foreground command still runs during recovery.
+- Reworked the engine-abandon probe to cancel the PTY-backed bridge task at the abandonment point instead of waiting for nonexistent invocation TTL cleanup.
+- Updated tests to assert `pty_sessions_during_launch`, `pty_sessions_after`, and `default_pty_sessions`.
+- Updated scenario prose so the historical heartbeat-loss scenario no longer claims explicit invocation ids or daemon TTL reaping for PTY-backed command sessions.
+
+Current verdict:
+- Correctness: PASS for the focused unit/static slice after the PTY-session contract fix; live rerun pending.
+- O(1) memory/disk: not re-measured after the fix yet.
+- Latency: not re-measured after the fix yet.
+
+Next iteration entry point:
+- Rerun `test_background_engine_restart_no_lease_leak` and `test_background_heartbeat_loss_reaps_only_stale_bg` under Docker/Rust, inspect the fresh artifacts, then retry the full `backend/src/test_runner/tests/mock/sandbox/background_tool` folder.
+
+### Iteration 7 continuation - 2026-06-02 14:23:24 +0800 CST
+
+Post-fix commands run:
+- `env EOS_SANDBOX_PROVIDER=docker EOS_SANDBOX_RUNTIME=rust EOS_LIVE_E2E_IMAGE=sweevo-dask__dask-10042:latest uv run pytest -q backend/src/test_runner/tests/mock/sandbox/background_tool/test_background_engine_restart_no_lease_leak.py::test_background_engine_restart_no_lease_leak backend/src/test_runner/tests/mock/sandbox/background_tool/test_background_heartbeat_loss_reaps_only_stale_bg.py::test_background_heartbeat_loss_reaps_only_stale_bg --tb=short --durations=10`
+  - First post-fix result: both scenario assertions passed, but both tests failed in `assert_background_performance_artifacts()` because it still required deleted shell timing keys: `command_exec.mount_workspace_s`, `command_exec.run_command_s`, `command_exec.capture_upperdir_s`, and `api.shell.total_s`.
+- `uv run ruff check backend/src/agents/profile/main/root.md backend/src/agents/profile/main/executor.md backend/src/agents/profile/main/reducer.md backend/src/test_runner/tests/mock/sandbox/background_tool/_background_shell_invariants.py backend/src/test_runner/agent/mock/probe_bridge.py backend/src/test_runner/agent/mock/background_shell_probe.py backend/src/test_runner/tests/mock/sandbox/background_tool/test_background_engine_restart_no_lease_leak.py backend/src/test_runner/tests/mock/sandbox/background_tool/test_background_heartbeat_loss_reaps_only_stale_bg.py backend/src/test_runner/tests/mock/sandbox/background_tool/test_background_exit_iws_drains_agent_tasks.py backend/src/test_runner/tests/mock/sandbox/background_tool/test_background_many_small_writes_do_not_starve_dispatcher.py backend/src/test_runner/scenarios/sandbox/background_shell.py`
+  - Result: passed.
+- Repeated the same two live tests under Docker/Rust.
+  - Result: passed with `2 passed in 36.61s`.
+  - Pytest durations: engine-restart setup `17.07s`, engine-restart call `5.26s`, heartbeat setup `7.96s`, heartbeat call `6.19s`.
+
+Additional fixes applied:
+- Removed stale `shell` entries from `backend/src/agents/profile/main/root.md`, `executor.md`, and `reducer.md`; reducer now requests `exec_command`, `check_pty_command_progress`, and `cancel_pty_command`.
+- Replaced the background-command artifact helper's old shell timing-key requirement with current tool-metric presence checks for `exec_command` and `check_pty_command_progress`.
+
+Fresh artifacts inspected:
+- `.sweevo_runs/scenario_logs/sandbox.background_engine_restart_no_lease_leak/20260602T062243Z_80881019cc89/run.json`
+- `.sweevo_runs/scenario_logs/sandbox.background_engine_restart_no_lease_leak/20260602T062243Z_80881019cc89/metrics.json`
+- `.sweevo_runs/scenario_logs/sandbox.background_engine_restart_no_lease_leak/20260602T062243Z_80881019cc89/sandbox_events.jsonl`
+- `.sweevo_runs/scenario_logs/sandbox.background_engine_restart_no_lease_leak/20260602T062243Z_80881019cc89/performance_report.json`
+- `.sweevo_runs/scenario_logs/sandbox.background_heartbeat_loss_reaps_only_stale_bg/20260602T062256Z_f74534216465/run.json`
+- `.sweevo_runs/scenario_logs/sandbox.background_heartbeat_loss_reaps_only_stale_bg/20260602T062256Z_f74534216465/metrics.json`
+- `.sweevo_runs/scenario_logs/sandbox.background_heartbeat_loss_reaps_only_stale_bg/20260602T062256Z_f74534216465/sandbox_events.jsonl`
+- `.sweevo_runs/scenario_logs/sandbox.background_heartbeat_loss_reaps_only_stale_bg/20260602T062256Z_f74534216465/performance_report.json`
+
+Artifact findings:
+- Both `run.json` files reported status `finished`.
+- Engine-restart metrics: `tool_calls_total=29`, `tool_errors_total=1`; the one tool error is the expected negative `read_file` check for the cancelled/non-published path.
+- Heartbeat-loss metrics: `tool_calls_total=46`, `tool_errors_total=1`; the one tool error is the expected negative `read_file` check for the cancelled/non-published stale path.
+- Tool metrics present:
+  - Engine-restart: `exec_command` count `3`, `check_pty_command_progress` count `8`, `cancel_pty_command` count `1`.
+  - Heartbeat-loss: `exec_command` count `4`, `check_pty_command_progress` count `24`, `cancel_pty_command` count `1`.
+- PTY audit events:
+  - Engine-restart: one `background_tool.started`, eight `background_tool.progress`, one `background_tool.cancelled`.
+  - Heartbeat-loss: two `background_tool.started`, twenty-four `background_tool.progress`, one `background_tool.cancelled`; one PTY reached `ok`, the stale PTY was cancelled.
+
+Performance/resource result:
+- Engine-restart p95 tool latency: `exec_command=0.061ms`, `check_pty_command_progress=0.179ms`, `cancel_pty_command=0.162ms`.
+- Heartbeat-loss p95 tool latency: `exec_command=0.115ms`, `check_pty_command_progress=0.104ms`, `cancel_pty_command=0.051ms`.
+- Both fresh reports had no warnings.
+- For both fresh reports, command resource max values were bounded at zero for `resource.command_exec.workspace_tree_bytes`, `workspace_tree_exists`, `run_dir_tree_bytes`, and `upperdir_tree_bytes`.
+
+Current verdict:
+- Correctness: PASS for the two affected live scenarios and for the focused static/unit slice.
+- O(1) memory/disk: PASS for these two scenarios; command workspace/run-dir/upperdir tree bytes stayed zero.
+- Latency: PASS for these two scenarios; typed command and PTY-control tool p95s stayed sub-millisecond.
+
+Next iteration entry point:
+- Rerun the full `backend/src/test_runner/tests/mock/sandbox/background_tool` folder under Docker/Rust.

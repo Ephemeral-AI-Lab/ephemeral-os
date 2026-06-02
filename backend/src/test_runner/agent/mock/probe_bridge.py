@@ -35,10 +35,6 @@ import re
 from collections.abc import AsyncGenerator, Awaitable, Callable
 from typing import Any
 
-from engine.background.dispatch import (
-    DISABLE_SANDBOX_HEARTBEAT_INPUT_KEY,
-    SANDBOX_INVOCATION_ID_INPUT_KEY,
-)
 from message.message import ToolResultBlock
 from tools._framework.core.results import ToolResult
 
@@ -85,7 +81,6 @@ class _CallToolBridge:
         *,
         allow_error: bool = False,
         background_task_id: str | None = None,
-        sandbox_invocation_id: str | None = None,
         **_kwargs: Any,
     ) -> ToolResult:
         if background_task_id is not None:
@@ -94,7 +89,6 @@ class _CallToolBridge:
                 raw_input=raw_input,
                 allow_error=allow_error,
                 requested_background_task_id=background_task_id,
-                sandbox_invocation_id=sandbox_invocation_id,
             )
             if result.is_error and not allow_error:
                 raise RuntimeError(f"{tool_obj.name} failed: {result.output}")
@@ -129,15 +123,11 @@ class _CallToolBridge:
         raw_input: dict[str, Any],
         allow_error: bool,
         requested_background_task_id: str,
-        sandbox_invocation_id: str | None,
     ) -> ToolResult:
         launch_input = dict(raw_input)
         _normalize_exec_command_input(launch_input)
         launch_input["tty"] = True
         launch_input.setdefault("yield_time_ms", 50)
-        if sandbox_invocation_id:
-            launch_input[SANDBOX_INVOCATION_ID_INPUT_KEY] = sandbox_invocation_id
-            launch_input[DISABLE_SANDBOX_HEARTBEAT_INPUT_KEY] = True
         launch = await self._call_loop_tool(
             tool_name,
             launch_input,

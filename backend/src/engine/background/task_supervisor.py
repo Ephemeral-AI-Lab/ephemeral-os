@@ -619,6 +619,17 @@ class BackgroundTaskSupervisor:
         tracked.status = BackgroundTaskStatus.DELIVERED
         self._stop_heartbeat_if_idle()
 
+    def get_pty_command_result(self, pty_session_id: str) -> dict[str, Any] | None:
+        """Return a stored terminal PTY result, if notification polling claimed it."""
+        tracked = self._pty_commands.get(pty_session_id)
+        if (
+            tracked is None
+            or tracked.result is None
+            or tracked.status == BackgroundTaskStatus.RUNNING
+        ):
+            return None
+        return dict(tracked.result)
+
     def append_progress(self, task_id: str, line: str) -> None:
         """Append a live progress line for *task_id*.
 

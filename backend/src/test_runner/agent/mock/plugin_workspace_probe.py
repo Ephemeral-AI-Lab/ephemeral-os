@@ -514,6 +514,13 @@ async def run_plugin_service_evict_probe(
         sandbox_id=sandbox_id,
     )
     records.append(refreshed)
+    refresh_status = await call_daemon_api(
+        sandbox_id,
+        "api.plugin.status",
+        {"agent_id": _agent_id(metadata), "probe_services": True},
+        timeout=60,
+    )
+    refresh_service = _lsp_service_status(refresh_status)
     post_refresh_warm = await _call_recorded_tool(
         "service.hover_after_peer_refresh",
         lsp_hover_tool,
@@ -526,12 +533,21 @@ async def run_plugin_service_evict_probe(
     )
     records.append(post_refresh_warm)
     forced_digest = f"service-evict-{uuid4().hex[:8]}"
+    lsp_manifest = plugin_host_dispatch._manifest_for("lsp")
+    daemon_manifest = plugin_host_dispatch._daemon_manifest_for(
+        lsp_manifest,
+        digest=forced_digest,
+    )
+    if daemon_manifest is None:
+        raise RuntimeError("lsp daemon manifest projection unexpectedly missing")
     evict_ensure = await call_daemon_api(
         sandbox_id,
         "api.plugin.ensure",
         {
             "plugin": "lsp",
             "digest": forced_digest,
+            "manifest": daemon_manifest,
+            "start_services": True,
             "workspace_root": WORKSPACE_ROOT,
             "agent_id": _agent_id(metadata),
         },
@@ -557,6 +573,16 @@ async def run_plugin_service_evict_probe(
         "refresh_start_delta": _timing(refreshed, "lsp.session.start_count_delta"),
         "refresh_total": _timing(refreshed, "lsp.session.refresh_count_total"),
         "refresh_remount_total": _timing(refreshed, "lsp.session.remount_count_total"),
+        "refresh_session_has_overlay_handle": bool(
+            _timing(refreshed, "lsp.session.has_overlay_handle")
+        ),
+        "refresh_service_status": refresh_service,
+        "refresh_service_state": str(refresh_service.get("state") or ""),
+        "refresh_service_refresh_count": float(
+            refresh_service.get("refresh_count") or 0.0
+        ),
+        "refresh_service_health_ok": _service_health_ok(refresh_status, refresh_service),
+        "refresh_status": refresh_status,
         "refresh_lsp_ms": _timing(refreshed, "lsp.total_s") * 1000.0,
         "post_refresh_warm_lsp_ms": _timing(post_refresh_warm, "lsp.total_s")
         * 1000.0,
@@ -1017,6 +1043,46 @@ def _looks_like_overlay_publish_key(key: str) -> bool:
         "command_exec.run_command_s",
     )
     return any(needle in key for needle in needles)
+
+
+def _lsp_service_status(status: Mapping[str, Any]) -> dict[str, Any]:
+    loaded = status.get("loaded_plugins")
+    if not isinstance(loaded, list):
+        return {}
+    for plugin in loaded:
+        if not isinstance(plugin, Mapping) or plugin.get("name") != "lsp":
+            continue
+        services = plugin.get("services")
+        if not isinstance(services, list):
+            return {}
+        for service in services:
+            if not isinstance(service, Mapping):
+                continue
+            key = service.get("key")
+            if isinstance(key, Mapping) and key.get("service_id") == "runtime":
+                return dict(service)
+    return {}
+
+
+def _service_health_ok(
+    status: Mapping[str, Any],
+    service: Mapping[str, Any],
+) -> bool:
+    key = service.get("key")
+    if not isinstance(key, Mapping):
+        return False
+    manifest_key = str(service.get("manifest_key") or "")
+    health = status.get("service_health")
+    if not isinstance(health, list):
+        return False
+    return any(
+        isinstance(item, Mapping)
+        and item.get("success") is True
+        and item.get("plugin") == key.get("plugin_id")
+        and item.get("service_id") == key.get("service_id")
+        and str(item.get("manifest_key") or "") == manifest_key
+        for item in health
+    )
 
 
 def _case_root(mode: str) -> str:

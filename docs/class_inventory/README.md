@@ -29,5 +29,4 @@ come from docstrings, or a reviewer summary where a docstring is absent.
 | `skills` | 2 | 2 | [skills.md](./skills.md) |
 | `task_center` | 78 | 32 | [task_center.md](./task_center.md) |
 | `task_center_runner` | 150 | 84 | [task_center_runner.md](./task_center_runner.md) |
-| `tools` | 65 | 44 | [tools.md](./tools.md) |
-
+| `tools` | 69 | 46 | [tools.md](./tools.md) |

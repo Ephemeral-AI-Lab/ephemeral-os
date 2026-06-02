@@ -50,7 +50,7 @@ async def test_background_many_small_writes_do_not_starve_dispatcher(
     assert summary["mode"] == "many_small_writes", summary
     assert summary["background_success_count"] == summary["background_count"], summary
     assert summary["foreground_p95_s"] < 5.0, summary
-    assert summary["inflight_after"] == 0, summary
+    assert summary["pty_sessions_after"] == 0, summary
     assert len(summary["verified_background_files"]) == summary["background_count"]
     for record in summary["verified_background_files"]:
         assert not record["is_error"], record

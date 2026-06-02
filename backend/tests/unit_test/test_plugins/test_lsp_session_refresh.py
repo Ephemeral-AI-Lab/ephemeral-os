@@ -703,3 +703,99 @@ async def test_pyright_find_references_timeout_returns_empty_list(
 
     assert result == {"references": [], "timeout": True}
     assert client.closed is True
+
+
+@pytest.mark.asyncio
+async def test_pyright_signature_help_normalizes_labels(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    workspace = tmp_path / "testbed"
+    (workspace / "pkg").mkdir(parents=True)
+    (workspace / "pkg" / "sig.py").write_text(
+        "def target(left: int, right: str) -> str:\n"
+        "    return right\n\n"
+        "value = target(1, \n",
+        encoding="utf-8",
+    )
+    session = PyrightSession(
+        manifest_key="hash-a@1",
+        workspace_root=str(workspace),
+    )
+    session._client = _Client()  # type: ignore[assignment]
+    session._started = True
+
+    async def _send_request(method: str, params: dict[str, Any]) -> dict[str, Any]:
+        assert method == "textDocument/signatureHelp"
+        assert params["textDocument"]["uri"].endswith("/pkg/sig.py")
+        assert params["position"] == {"line": 3, "character": 18}
+        return {
+            "signatures": [
+                {"label": "target(left: int, right: str) -> str"},
+            ],
+            "activeSignature": 0,
+            "activeParameter": 1,
+        }
+
+    monkeypatch.setattr(session, "_send_request", _send_request)
+
+    result = await session.signature_help(
+        {"file_path": "pkg/sig.py", "line": 3, "character": 18}
+    )
+
+    assert result["signature_count"] == 1
+    assert result["labels"] == ["target(left: int, right: str) -> str"]
+    assert result["active_signature"] == 0
+    assert result["active_parameter"] == 1
+
+
+@pytest.mark.asyncio
+async def test_pyright_document_highlight_normalizes_ranges(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    workspace = tmp_path / "testbed"
+    (workspace / "pkg").mkdir(parents=True)
+    (workspace / "pkg" / "mod.py").write_text(
+        "def target() -> int:\n"
+        "    return 1\n\n"
+        "value = target()\n",
+        encoding="utf-8",
+    )
+    session = PyrightSession(
+        manifest_key="hash-a@1",
+        workspace_root=str(workspace),
+    )
+    session._client = _Client()  # type: ignore[assignment]
+    session._started = True
+
+    async def _send_request(method: str, params: dict[str, Any]) -> list[dict[str, Any]]:
+        assert method == "textDocument/documentHighlight"
+        assert params["textDocument"]["uri"].endswith("/pkg/mod.py")
+        assert params["position"] == {"line": 3, "character": 10}
+        return [
+            {
+                "range": {
+                    "start": {"line": 0, "character": 4},
+                    "end": {"line": 0, "character": 10},
+                },
+                "kind": 1,
+            },
+            {
+                "range": {
+                    "start": {"line": 3, "character": 8},
+                    "end": {"line": 3, "character": 14},
+                },
+                "kind": 2,
+            },
+        ]
+
+    monkeypatch.setattr(session, "_send_request", _send_request)
+
+    result = await session.document_highlight(
+        {"file_path": "pkg/mod.py", "line": 3, "character": 10}
+    )
+
+    assert result["highlight_count"] == 2
+    assert {item["range"]["start"]["line"] for item in result["highlights"]} == {0, 3}
+    assert {item["file_path"] for item in result["highlights"]} == {"pkg/mod.py"}

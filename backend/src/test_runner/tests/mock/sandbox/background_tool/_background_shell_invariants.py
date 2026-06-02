@@ -26,7 +26,6 @@ from test_runner.scenarios import SCENARIO_REGISTRY
 from test_runner.tests.mock._layer_stack_occ_overlay_assertions import (
     assert_o1_workspace_resource_snapshots,
     assert_resource_key_max,
-    assert_timing_keys_present,
     load_performance_report,
     mapping,
 )
@@ -45,12 +44,7 @@ _DELETED_SHELL_RPC_NEEDLES = (
     "ShellJob",
     "shell_job",
 )
-_OVERLAY_TIMING_KEYS = (
-    "command_exec.mount_workspace_s",
-    "command_exec.run_command_s",
-    "command_exec.capture_upperdir_s",
-    "api.shell.total_s",
-)
+_REQUIRED_TOOL_METRICS = ("exec_command", "check_pty_command_progress")
 _IWS_APT_CACHE_DIR = (
     Path(__file__).resolve().parents[6]
     / "tests"
@@ -255,7 +249,7 @@ def assert_background_performance_artifacts(report: RunReport) -> dict[str, Any]
     assert_shell_audit_invariants(events_path)
     assert_o1_workspace_resource_snapshots(events_path)
     perf = dict(load_performance_report(report.run_dir))
-    assert_timing_keys_present(perf, _OVERLAY_TIMING_KEYS)
+    _assert_tool_metrics_present(perf, _REQUIRED_TOOL_METRICS)
     assert_resource_key_max(perf, "resource.command_exec.workspace_tree_bytes", 0.0)
     assert_resource_key_max(perf, "resource.command_exec.workspace_tree_exists", 0.0)
     resources = mapping(mapping(perf["sandbox"])["resource_keys"])
@@ -266,6 +260,16 @@ def assert_background_performance_artifacts(report: RunReport) -> dict[str, Any]
     ):
         assert float(mapping(resources[key])["max"]) == 0.0
     return perf
+
+
+def _assert_tool_metrics_present(perf: dict[str, Any], tool_names: tuple[str, ...]) -> None:
+    per_tool = mapping(mapping(mapping(perf["tools"])["per_tool"]))
+    missing = [name for name in tool_names if name not in per_tool]
+    assert not missing, f"missing tool metrics: {missing}"
+    empty = [
+        name for name in tool_names if int(mapping(per_tool[name]).get("count") or 0) <= 0
+    ]
+    assert not empty, f"tool metrics have no samples: {empty}"
 
 
 def tool_p95_ms(perf: dict[str, Any], tool_name: str) -> float:
