@@ -697,6 +697,13 @@ async def test_plugin_workspace_snapshot_refresh_strategy(
     recover_status = _service_status(rust_payload["status_after_recover"], "recover_harness")
     assert recover_status["state"] == "ready"
     assert recover_status["restart_count"] >= 1
+    isolated_gate = rust_payload["isolated_plugin_gate"]
+    assert isolated_gate["gate_pass"] is True
+    assert isolated_gate["enter"]["success"] is True
+    assert _is_forbidden_in_isolated_workspace(isolated_gate["plugin_status"])
+    assert _is_forbidden_in_isolated_workspace(isolated_gate["plugin_dispatch"])
+    assert isolated_gate["exit"]["success"] is True
+    assert isolated_gate["status_after_exit"]["open"] is False
     assert rust_payload["final_metrics"]["active_leases"] >= 1
     assert rust_payload["final_metrics"]["orphan_layer_count"] == 0
     assert rust_payload["final_metrics"]["missing_layer_count"] == 0
@@ -722,6 +729,13 @@ def _service_status(status_payload: dict[str, Any], service_id: str) -> dict[str
             ):
                 return service
     raise AssertionError(f"missing service status for {service_id}")
+
+
+def _is_forbidden_in_isolated_workspace(response: dict[str, Any]) -> bool:
+    error = response.get("error")
+    if isinstance(error, dict) and error.get("kind") == "forbidden_in_isolated_workspace":
+        return True
+    return "forbidden_in_isolated_workspace" in json.dumps(response, sort_keys=True)
 
 
 def _run_bench(cmd: list[str], *, timeout_s: int, label: str) -> None:

@@ -474,10 +474,14 @@ where
     }
 
     /// Emit an isolated tool-call audit event for an active handle.
-    pub fn record_tool_call(&self, agent_id: &AgentId, mut payload: Value) {
-        let Some(handle) = self.get_handle(agent_id) else {
+    pub fn record_tool_call(&mut self, agent_id: &AgentId, mut payload: Value) {
+        let Some(handle_id) = self.by_agent.get(agent_id).cloned() else {
             return;
         };
+        let Some(handle) = self.handles.get_mut(&handle_id) else {
+            return;
+        };
+        handle.last_activity = monotonic_seconds();
         if let Some(object) = payload.as_object_mut() {
             object.insert(
                 "workspace_handle_id".to_owned(),
@@ -512,7 +516,7 @@ where
             .runtime
             .spawn_ns_holder(handle, self.caps.setup_timeout_s)?;
         phases_ms.insert(
-            "spawn_holder".to_owned(),
+            "spawn_ns_holder".to_owned(),
             phase_start.elapsed().as_secs_f64() * 1000.0,
         );
         phase_start = Instant::now();
@@ -523,11 +527,6 @@ where
         );
         phase_start = Instant::now();
         self.network.initialize()?;
-        phases_ms.insert(
-            "network_initialize".to_owned(),
-            phase_start.elapsed().as_secs_f64() * 1000.0,
-        );
-        phase_start = Instant::now();
         handle.veth = Some(
             self.network
                 .install_veth(&handle.workspace_handle_id.0, handle.holder_pid)?,
@@ -546,15 +545,10 @@ where
         let _dns_fallback_applied = self
             .runtime
             .configure_dns(handle, &self.caps.fallback_dns)?;
-        phases_ms.insert(
-            "configure_dns".to_owned(),
-            phase_start.elapsed().as_secs_f64() * 1000.0,
-        );
-        phase_start = Instant::now();
         self.runtime
             .signal_net_ready(handle, self.caps.setup_timeout_s)?;
         phases_ms.insert(
-            "signal_net_ready".to_owned(),
+            "configure_dns".to_owned(),
             phase_start.elapsed().as_secs_f64() * 1000.0,
         );
         phase_start = Instant::now();

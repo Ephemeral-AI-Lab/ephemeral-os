@@ -17,8 +17,12 @@ Pyright-computed self-managed rename publish, and generic LSP
 as structured unsupported responses based on the server's advertised capability
 boundary. Live status health
 probes, failed-health isolation,
-service-crash, hung-service timeout fail-closed probes, and next-dispatch
-service recovery after a PPC/process failure are also green. The latest live
+service-crash, hung-service timeout fail-closed probes, timeout next-dispatch
+recovery, and next-dispatch service recovery after a PPC/process failure are
+also green. The isolated-workspace plugin-family gate is now live-gated:
+`api.plugin.status` and manifest-declared `plugin.*` calls fail with
+`forbidden_in_isolated_workspace` while the same agent has an active isolated
+workspace. The latest live
 artifact records two read-only services co-observing the same refreshed
 manifest without restart, same-service concurrent read-only dispatch preserving
 distinct replies on the connected PPC client, mixed `api.v1.shell` overlay/OCC
@@ -175,6 +179,11 @@ Landed:
   removes `plugin.generic.hang_probe` from connected routes, releases retained
   snapshot state, records the timeout in service status, and leaves unrelated
   plugin services ready.
+- Added live timeout recovery for that same hung service.
+  `plugin.generic.hang_recover_ping` restarts `hang_harness` on the next
+  dispatch after the timeout, answers from the current daemon-owned snapshot
+  with `from_timeout_recovered_service=true`, and restores both
+  `plugin.generic.hang_probe` and `plugin.generic.hang_recover_ping`.
 - Added the generic service health-probe hardening slice. `api.plugin.status`
   now reaps dead service processes before building `loaded_plugins`; when called
   with `probe_services: true`, it sends the same
@@ -288,28 +297,35 @@ Landed:
   execution, verifies `plugin.generic.crash_probe` fails closed by dropping the
   broken PPC route and marking only that service stopped, verifies
   `plugin.generic.hang_probe` fails closed on PPC timeout by dropping only the
-  hung route and marking only that service stopped, verifies
+  hung-service routes and marking only that service stopped, verifies
+  `plugin.generic.hang_recover_ping` restarts that timed-out service on the
+  next dispatch and restores the hung-service routes, verifies
   `plugin.generic.health_fail_ping` is removed when its service rejects the
   daemon health probe while unrelated services stay connected, verifies
   `plugin.generic.recover_probe` first fails closed by dropping only the
   recover route and then succeeds on the next dispatch after the daemon restarts
-  the previously ready service.
+  the previously ready service, verifies active isolated workspace mode blocks
+  both `api.plugin.status` and manifest-declared `plugin.generic.ping` with
+  `forbidden_in_isolated_workspace`, and verifies isolated exit closes the
+  handle before plugin cleanup.
   The pytest wrapper now runs this Rust plugin benchmark after the
   refresh-strategy benchmark in the same integrated sandbox fixture.
 - Live verification passed:
   `EOS_SANDBOX_PROVIDER=docker EOS_LIVE_E2E_IMAGE=xingyaoww/sweb.eval.x86_64.dask_s_dask-10042:latest EOS_PLUGIN_REFRESH_SAMPLES=1 EOS_PLUGIN_REFRESH_AUTO_SQUASH_WRITES=104 EOS_RUST_PLUGIN_BENCH_TIMEOUT_S=600 uv run pytest -q -x -rs --tb=short --durations=10 backend/tests/live_e2e_test/sandbox/plugin/test_plugin_refresh_strategies.py`
-  (`1 passed in 60.82s` on the latest rerun). The Rust plugin artifact report
-  `.omc/results/rust-daemon-plugin-generic-20260602T014118Z-68247.json` used
+  (`1 passed in 51.58s` on the latest rerun). The Rust plugin artifact report
+  `.omc/results/rust-daemon-plugin-generic-20260602T020945Z-23569.json` used
   `eosd-linux-amd64` SHA
-  `ab3cada1569c18b02863d8298a0ec5f48090c7b69e5c909a34671d9f14b2a93b` and
+  `94a9fa39fdb8744f2f2dd31a6b34393870eb3a5e15d0b7e06add2f60a9e896ea` and
   proved registered routes `plugin.generic.adapter_query`,
   `plugin.generic.apply`, `plugin.generic.apply_multi`,
   `plugin.generic.crash_probe`,
-  `plugin.generic.hang_probe`, `plugin.generic.health_fail_ping`,
+  `plugin.generic.hang_probe`, `plugin.generic.hang_recover_ping`,
+  `plugin.generic.health_fail_ping`,
   `plugin.generic.lsp_apply_code_action`,
   `plugin.generic.lsp_apply_workspace_edit`,
   `plugin.generic.oneshot_write`, `plugin.generic.ping`, and
   `plugin.generic.pyright_call_hierarchy`,
+  `plugin.generic.pyright_capabilities`,
   `plugin.generic.pyright_completion`,
   `plugin.generic.pyright_completion_resolve`,
   `plugin.generic.pyright_definition`,
@@ -330,10 +346,12 @@ Landed:
   `plugin.generic.apply_multi`/
   `plugin.generic.crash_probe`/
   `plugin.generic.hang_probe`/
+  `plugin.generic.hang_recover_ping`/
   `plugin.generic.health_fail_ping`/
   `plugin.generic.lsp_apply_code_action`/
   `plugin.generic.lsp_apply_workspace_edit`/
   `plugin.generic.ping`/`plugin.generic.pyright_call_hierarchy`/
+  `plugin.generic.pyright_capabilities`/
   `plugin.generic.pyright_completion`/
   `plugin.generic.pyright_completion_resolve`/
   `plugin.generic.pyright_declaration`/
@@ -512,29 +530,42 @@ Landed:
   `daemon io error: Resource temporarily unavailable (os error 11)`,
   `plugin.generic.hang_probe` removed from connected routes, and
   `hang_harness.state == "stopped"` with the same error recorded in
-  `last_error`; recovery probe evidence `expected_failure=true` on the first
+  `last_error`; timeout recovery evidence where
+  `plugin.generic.hang_recover_ping` returned `success=true`,
+  `from_timeout_recovered_service=true`, `from_ppc=true`,
+  `workspace_mounted=true`, and `echo == "after-timeout-recover"`, restored
+  `plugin.generic.hang_probe` and `plugin.generic.hang_recover_ping` to
+  connected routes, and left `hang_harness.state == "ready"` with
+  `restart_count == 1` and `last_error == null`; recovery probe evidence
+  `expected_failure=true` on the first
   `plugin.generic.recover_probe` with `ppc channel error: plugin PPC stream
   closed before reply`, `plugin.generic.recover_probe` removed from connected
   routes, `recover_harness.state == "stopped"`, second
   `plugin.generic.recover_probe` returning `from_recovered_service=true` with
   `workspace_mounted=true`, restored connected route, and
   `recover_harness.restart_count == 1`; final manifest version `18`; final
-  active service leases before cleanup `5`; post-cleanup active leases `0`; and
-  zero post-cleanup orphan layers and missing layers; teardown evidence showed
-  six plugin harness processes before cleanup, zero after cleanup, empty
+  active service leases before cleanup `6`; post-cleanup active leases `0`; and
+  zero post-cleanup orphan layers and missing layers; isolated-workspace gate
+  evidence where the daemon enabled `/eos/plugin/iws-scratch`, entered isolated
+  mode for the same `AGENT_ID`, rejected both `api.plugin.status` and
+  `plugin.generic.ping` with `forbidden_in_isolated_workspace`, exited
+  successfully, released the isolated lease, and reported
+  `status_after_exit.open=false`; teardown evidence showed
+  seven plugin harness processes before cleanup, zero after cleanup, empty
   `connected_ppc_routes`, empty `connected_ppc_services`, and empty
   `running_service_processes` after cleanup. The paired
   refresh-strategy report
-  `.omc/results/plugin-refresh-strategies-20260602T014118Z-68247.json` still
-  recommends `workspace_snapshot_refresh`; refresh p95 was `7.315 ms` versus
-  `commit_to_workspace` p95 `12.197 ms`.
+  `.omc/results/plugin-refresh-strategies-20260602T020945Z-23569.json` still
+  recommends `workspace_snapshot_refresh`; refresh p95 was `5.934 ms` versus
+  `commit_to_workspace` p95 `3.732 ms`.
 
 Still open:
 
 - True operation-level out-of-order multiplexing if needed by a future
   bidirectional protocol,
   broader crash recovery beyond the now-covered health probe, failed-health
-  isolation, closed PPC stream, PPC timeout, and next-dispatch restart paths,
+  isolation, closed PPC stream, PPC timeout fail-closed, timeout restart
+  recovery, and next-dispatch restart paths,
   and broader AV-10 LSP parity beyond the representative Pyright
   `documentSymbol` + `workspace/symbol` + `completion` +
   `completionItem/resolve` + `publishDiagnostics` + `codeAction` +

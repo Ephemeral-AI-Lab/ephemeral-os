@@ -2602,10 +2602,18 @@ fn isolated_manifest(handle: &crate::isolated::CommandHandle) -> Manifest {
             .enumerate()
             .map(|(index, path)| LayerRef {
                 layer_id: format!("isolated-{index}"),
-                path: path.to_string_lossy().into_owned(),
+                path: isolated_manifest_layer_path(handle, path),
             })
             .collect(),
     }
+}
+
+#[cfg(target_os = "linux")]
+fn isolated_manifest_layer_path(handle: &crate::isolated::CommandHandle, path: &Path) -> String {
+    path.strip_prefix(&handle.layer_stack_root)
+        .unwrap_or(path)
+        .to_string_lossy()
+        .into_owned()
 }
 
 #[cfg(target_os = "linux")]

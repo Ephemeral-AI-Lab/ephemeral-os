@@ -219,7 +219,9 @@ fn execute_plugin_service(
         Err(RunnerError::TimedOut) => (124, true),
         Err(err) => return Err(err),
     };
-    let _ = kill_process_group(child_pid, Signal::Kill);
+    if timed_out || !matches!(request.mode, crate::request::RunMode::SetNs) {
+        let _ = kill_process_group(child_pid, Signal::Kill);
+    }
     let status = if timed_out {
         "timed_out"
     } else if exit_code == 0 {
@@ -287,7 +289,9 @@ fn execute_shell(
         Err(RunnerError::TimedOut) => (124, true),
         Err(err) => return Err(err),
     };
-    let _ = kill_process_group(child_pid, Signal::Kill);
+    if timed_out || !matches!(request.mode, crate::request::RunMode::SetNs) {
+        let _ = kill_process_group(child_pid, Signal::Kill);
+    }
     let stdout = fs::read_to_string(&stdout_path).unwrap_or_else(|_| String::new());
     let stderr = fs::read_to_string(&stderr_path).unwrap_or_else(|_| String::new());
     let tool_s = run_start.elapsed().as_secs_f64();

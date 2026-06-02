@@ -92,6 +92,7 @@ from bench_sandbox_e2e import (  # noqa: E402
 PLUGIN_ROOT = "/eos/plugin"
 LAYER_STACK_ROOT = f"{PLUGIN_ROOT}/rust-layer-stack"
 WORKSPACE_ROOT = f"{PLUGIN_ROOT}/rust-workspace"
+ISOLATED_SCRATCH_ROOT = f"{PLUGIN_ROOT}/iws-scratch"
 HARNESS_SCRIPT = f"{PLUGIN_ROOT}/rust_ppc_harness.py"
 HARNESS_LOG = f"{PLUGIN_ROOT}/rust_ppc_harness.jsonl"
 RECOVER_MARKER = f"{PLUGIN_ROOT}/recover_probe_once.flag"
@@ -3097,7 +3098,14 @@ async def run(args: argparse.Namespace) -> dict[str, Any]:
         report["artifact"] = await upload_artifact(bench, args.artifact)
         report["harness"] = await install_harness(bench)
         report["experiment_dirs"] = await prepare_experiment_dirs(bench)
-        if not report["harness"]["gate_pass"] or not report["experiment_dirs"]["gate_pass"]:
+        report["isolated_gate_environment"] = await configure_isolated_gate_environment(
+            bench,
+        )
+        if (
+            not report["harness"]["gate_pass"]
+            or not report["experiment_dirs"]["gate_pass"]
+            or not report["isolated_gate_environment"]["gate_pass"]
+        ):
             report["gate_pass"] = False
             return report
 
@@ -4071,6 +4079,10 @@ async def run(args: argparse.Namespace) -> dict[str, Any]:
                 layer_stack_root=LAYER_STACK_ROOT,
                 timeout=30,
             )
+            report["isolated_plugin_gate"] = await probe_isolated_plugin_gate(
+                daemon_client,
+                bench.sandbox_id,
+            )
             report["final_metrics"] = await daemon_client.call_daemon_api(
                 bench.sandbox_id,
                 "api.layer_metrics",
@@ -4515,15 +4527,124 @@ async def cleanup_processes(bench: DockerBench) -> None:
 
 async def prepare_experiment_dirs(bench: DockerBench) -> dict[str, Any]:
     result = await bench.exec(
-        f"mkdir -p {WORKSPACE_ROOT} {PLUGIN_ROOT}/ppc",
+        f"mkdir -p {WORKSPACE_ROOT} {PLUGIN_ROOT}/ppc {ISOLATED_SCRATCH_ROOT}",
         timeout=30,
     )
     return {
         "workspace_root": WORKSPACE_ROOT,
         "ppc_root": f"{PLUGIN_ROOT}/ppc",
+        "isolated_scratch_root": ISOLATED_SCRATCH_ROOT,
         "mkdir": result_block(result),
         "gate_pass": getattr(result, "exit_code", 1) == 0,
     }
+
+
+async def configure_isolated_gate_environment(bench: DockerBench) -> dict[str, Any]:
+    values = {
+        "EOS_ISOLATED_WORKSPACE_ENABLED": "true",
+        "EOS_ISOLATED_WORKSPACE_TEST_HARNESS": "true",
+        "EOS_ISOLATED_WORKSPACE_TEST_SCRATCH_ROOT": ISOLATED_SCRATCH_ROOT,
+        "EOS_ISOLATED_WORKSPACE_SETUP_TIMEOUT_S": "30",
+        "EOS_ISOLATED_WORKSPACE_EXIT_GRACE_S": "0.25",
+        "EOS_ISOLATED_WORKSPACE_UPPERDIR_BYTES": str(64 * 1024 * 1024),
+    }
+    script = ["set -e"]
+    for key, value in values.items():
+        script.append(f"sed -i '/^{key}=/d' /etc/environment 2>/dev/null || true")
+        script.append(f"printf '%s\\n' {shlex.quote(f'{key}={value}')} >> /etc/environment")
+    script.append(f"mkdir -p {shlex.quote(ISOLATED_SCRATCH_ROOT)}")
+    result = await bench.exec("; ".join(script), timeout=30)
+    return {
+        "values": values,
+        "configure": result_block(result),
+        "gate_pass": getattr(result, "exit_code", 1) == 0,
+    }
+
+
+async def probe_isolated_plugin_gate(
+    daemon_client: Any,
+    sandbox_id: str,
+) -> dict[str, Any]:
+    report: dict[str, Any] = {}
+    report["enter"] = await daemon_client.call_daemon_api(
+        sandbox_id,
+        "api.isolated_workspace.enter",
+        {"agent_id": AGENT_ID},
+        layer_stack_root=LAYER_STACK_ROOT,
+        timeout=30,
+    )
+    try:
+        report["plugin_status"] = await daemon_policy_call(
+            daemon_client,
+            sandbox_id,
+            "api.plugin.status",
+            {"agent_id": AGENT_ID},
+        )
+        report["plugin_dispatch"] = await daemon_policy_call(
+            daemon_client,
+            sandbox_id,
+            "plugin.generic.ping",
+            {"agent_id": AGENT_ID, "message": "blocked-in-isolated"},
+        )
+    finally:
+        report["exit"] = await daemon_client.call_daemon_api(
+            sandbox_id,
+            "api.isolated_workspace.exit",
+            {"agent_id": AGENT_ID, "force_cancel": True, "grace_s": 0.25},
+            layer_stack_root=LAYER_STACK_ROOT,
+            timeout=30,
+        )
+        report["status_after_exit"] = await daemon_client.call_daemon_api(
+            sandbox_id,
+            "api.isolated_workspace.status",
+            {"agent_id": AGENT_ID},
+            layer_stack_root=LAYER_STACK_ROOT,
+            timeout=30,
+        )
+    report["gate_pass"] = (
+        report.get("enter", {}).get("success") is True
+        and forbidden_in_isolated_workspace(report.get("plugin_status", {}))
+        and forbidden_in_isolated_workspace(report.get("plugin_dispatch", {}))
+        and report.get("exit", {}).get("success") is True
+        and report.get("status_after_exit", {}).get("open") is False
+    )
+    return report
+
+
+async def daemon_policy_call(
+    daemon_client: Any,
+    sandbox_id: str,
+    op: str,
+    payload: dict[str, Any],
+) -> dict[str, Any]:
+    try:
+        response = await daemon_client.call_daemon_api(
+            sandbox_id,
+            op,
+            payload,
+            layer_stack_root=LAYER_STACK_ROOT,
+            timeout=30,
+        )
+    except Exception as exc:  # daemon client raises some policy denials.
+        return {
+            "success": False,
+            "raised": True,
+            "error": {
+                "kind": str(getattr(exc, "kind", "")),
+                "message": str(getattr(exc, "message", str(exc))),
+                "details": getattr(exc, "details", {}),
+            },
+            "error_text": str(exc),
+        }
+    return {**response, "raised": False}
+
+
+def forbidden_in_isolated_workspace(response: dict[str, Any]) -> bool:
+    error = response.get("error")
+    if isinstance(error, dict) and error.get("kind") == "forbidden_in_isolated_workspace":
+        return True
+    text = json.dumps(response, sort_keys=True, default=str)
+    return "forbidden_in_isolated_workspace" in text
 
 
 async def read_harness_log(bench: DockerBench) -> list[dict[str, Any]]:
@@ -4622,6 +4743,7 @@ def gate_pass(report: dict[str, Any]) -> bool:
     status_after_cleanup = report.get("status_after_cleanup", {})
     processes_before_cleanup = report.get("processes_before_cleanup", {})
     processes_after_cleanup = report.get("processes_after_cleanup", {})
+    isolated_plugin_gate = report.get("isolated_plugin_gate", {})
     adapter_query = report.get("adapter_query", {})
     adapter_package = adapter_query.get("package", {}) if isinstance(adapter_query, dict) else {}
     co_shared_refresh = report.get("co_shared_refresh", {})
@@ -5219,6 +5341,7 @@ def gate_pass(report: dict[str, Any]) -> bool:
         in report.get("status_after_recover", {}).get("connected_ppc_routes", [])
         and recover_status.get("state") == "ready"
         and int(recover_status.get("restart_count", 0)) >= 1
+        and isolated_plugin_gate.get("gate_pass") is True
         and final_metrics.get("orphan_layer_count") == 0
         and final_metrics.get("missing_layer_count") == 0
         and post_cleanup_metrics.get("active_leases") == 0
@@ -5364,6 +5487,7 @@ def markdown_report(report: dict[str, Any]) -> str:
         f"- recover_probe_second: `{report.get('recover_probe_second')}`",
         f"- recover_service_restart_count: `{recover_status.get('restart_count')}`",
         f"- connected_routes_after_recover: `{report.get('status_after_recover', {}).get('connected_ppc_routes')}`",
+        f"- isolated_plugin_gate: `{report.get('isolated_plugin_gate')}`",
         f"- retained_service_leases_before_cleanup: `{report.get('final_metrics', {}).get('active_leases')}`",
         f"- processes_before_cleanup: `{report.get('processes_before_cleanup')}`",
         f"- post_cleanup_active_leases: `{report.get('post_cleanup_metrics', {}).get('active_leases')}`",

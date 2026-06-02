@@ -266,6 +266,7 @@ class IsolatedClient:
 async def run_scenario(bench: DockerBench, client: IsolatedClient) -> dict[str, Any]:
     checks: dict[str, bool] = {}
     details: dict[str, Any] = {}
+    shared_client = client.for_agent(f"{AGENT_ID}-shared-probe")
 
     enter, enter_ms = await client.enter()
     checks["enter_success"] = enter.get("success") is True
@@ -302,7 +303,7 @@ async def run_scenario(bench: DockerBench, client: IsolatedClient) -> dict[str, 
         f"printf isolated-finite > {shlex.quote(private_path)}",
         tty=False,
     )
-    shared_read_during, _ = await client.read_file(f"{WORKSPACE_ROOT}/{private_path}")
+    shared_read_during, _ = await shared_client.read_file(f"{WORKSPACE_ROOT}/{private_path}")
     checks["finite_write_success"] = finite_write.get("status") == "ok"
     checks["finite_write_not_published_during_open"] = not read_exists(shared_read_during)
 
@@ -315,7 +316,7 @@ async def run_scenario(bench: DockerBench, client: IsolatedClient) -> dict[str, 
         f"test -f {shlex.quote(pty_path)} && cat {shlex.quote(pty_path)}",
         tty=False,
     )
-    shared_read_pty, _ = await client.read_file(f"{WORKSPACE_ROOT}/{pty_path}")
+    shared_read_pty, _ = await shared_client.read_file(f"{WORKSPACE_ROOT}/{pty_path}")
     checks["pty_natural_write_success"] = pty_write.get("status") == "ok"
     checks["pty_natural_write_visible_inside"] = "isolated-pty" in combined_output(pty_visible_inside)
     checks["pty_natural_write_not_published"] = not read_exists(shared_read_pty)
@@ -362,7 +363,7 @@ async def run_scenario(bench: DockerBench, client: IsolatedClient) -> dict[str, 
 
     status_closed, _ = await client.status()
     list_closed, _ = await client.list_open()
-    shared_read_after, _ = await client.read_file(f"{WORKSPACE_ROOT}/{private_path}")
+    shared_read_after, _ = await shared_client.read_file(f"{WORKSPACE_ROOT}/{private_path}")
     checks["status_closed"] = status_closed.get("open") is False
     checks["list_open_closed"] = AGENT_ID not in list_closed.get("open_agent_ids", [])
     checks["finite_write_not_published_after_exit"] = not read_exists(shared_read_after)
@@ -395,7 +396,14 @@ async def run_isolated_pty_control_probe(client: IsolatedClient) -> dict[str, An
         timeout=120,
     )
     progress_id = str(progress_start.get("pty_session_id") or "")
-    progress, _ = await client.pty_progress(progress_id, seconds=5.0)
+    progress = progress_start
+    if progress_id:
+        deadline = time.monotonic() + 3.0
+        while time.monotonic() < deadline:
+            progress, _ = await client.pty_progress(progress_id, seconds=5.0)
+            if "progress-ready" in combined_output(progress) or progress.get("status") != "running":
+                break
+            await asyncio.sleep(0.1)
     progress_cancel, _ = await client.pty_cancel(progress_id) if progress_id else ({}, 0.0)
     checks["isolated_pty_progress_running"] = (
         progress_start.get("status") == "running"

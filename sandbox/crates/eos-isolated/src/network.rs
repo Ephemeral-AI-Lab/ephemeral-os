@@ -73,12 +73,17 @@ pub struct VethAllocation {
 
 /// Host/peer veth names for a workspace handle.
 ///
-/// Linux `IFNAMSIZ` caps names at 15 chars: `eos-iws-` (8) + `handle[:6]` (6) +
+/// Linux `IFNAMSIZ` caps names at 15 chars: `eos-iws-` (8) + 6 handle chars +
 /// suffix (1) = 15 exactly. Host ends in `h`, peer ends in `n`.
 /// `// PORT backend/src/sandbox/isolated_workspace/network.py:231-235 — _veth_names`
 #[must_use]
 pub fn veth_names(workspace_handle_id: &str) -> (String, String) {
-    let short: String = workspace_handle_id.chars().take(6).collect();
+    let tail = workspace_handle_id
+        .chars()
+        .rev()
+        .take(6)
+        .collect::<Vec<_>>();
+    let short: String = tail.into_iter().rev().collect();
     (
         format!("{VETH_PREFIX}{short}h"),
         format!("{VETH_PREFIX}{short}n"),
@@ -279,6 +284,8 @@ impl IsolatedNetwork {
 fn test_harness_enabled() -> bool {
     std::env::var("EOS_ISOLATED_WORKSPACE_TEST_HARNESS")
         .is_ok_and(|value| matches!(value.as_str(), "1" | "true" | "TRUE" | "yes" | "YES"))
+        && std::env::var("EOS_ISOLATED_WORKSPACE_TEST_SCRATCH_ROOT")
+            .is_ok_and(|value| !value.trim().is_empty())
 }
 
 #[cfg(target_os = "linux")]

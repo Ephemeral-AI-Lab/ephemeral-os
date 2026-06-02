@@ -134,7 +134,7 @@ impl NamespaceRuntimePort for DaemonNamespaceRuntime {
         handle: &mut WorkspaceHandle,
         setup_timeout_s: f64,
     ) -> Result<i32, IsolatedError> {
-        if env_true(TEST_HARNESS_ENV) {
+        if test_runtime_stub_enabled() {
             return Ok(0);
         }
         #[cfg(not(target_os = "linux"))]
@@ -190,7 +190,7 @@ impl NamespaceRuntimePort for DaemonNamespaceRuntime {
     }
 
     fn open_ns_fds(&self, holder_pid: i32) -> Result<HashMap<String, i32>, IsolatedError> {
-        if env_true(TEST_HARNESS_ENV) || holder_pid <= 0 {
+        if test_runtime_stub_enabled() || holder_pid <= 0 {
             return Ok(HashMap::new());
         }
         #[cfg(not(target_os = "linux"))]
@@ -218,7 +218,7 @@ impl NamespaceRuntimePort for DaemonNamespaceRuntime {
         handle: &WorkspaceHandle,
         layer_paths: &[String],
     ) -> Result<(), IsolatedError> {
-        if env_true(TEST_HARNESS_ENV) || handle.holder_pid <= 0 {
+        if test_runtime_stub_enabled() || handle.holder_pid <= 0 {
             return Ok(());
         }
         #[cfg(not(target_os = "linux"))]
@@ -255,7 +255,7 @@ impl NamespaceRuntimePort for DaemonNamespaceRuntime {
         handle: &WorkspaceHandle,
         fallback_dns: &str,
     ) -> Result<bool, IsolatedError> {
-        if env_true(TEST_HARNESS_ENV) || handle.holder_pid <= 0 {
+        if test_runtime_stub_enabled() || handle.holder_pid <= 0 {
             return Ok(false);
         }
         #[cfg(not(target_os = "linux"))]
@@ -295,7 +295,7 @@ impl NamespaceRuntimePort for DaemonNamespaceRuntime {
         handle: &WorkspaceHandle,
         setup_timeout_s: f64,
     ) -> Result<(), IsolatedError> {
-        if env_true(TEST_HARNESS_ENV) || handle.holder_pid <= 0 {
+        if test_runtime_stub_enabled() || handle.holder_pid <= 0 {
             return Ok(());
         }
         #[cfg(not(target_os = "linux"))]
@@ -323,7 +323,7 @@ impl NamespaceRuntimePort for DaemonNamespaceRuntime {
     }
 
     fn create_cgroup(&self, handle: &WorkspaceHandle) -> Result<PathBuf, IsolatedError> {
-        if env_true(TEST_HARNESS_ENV) {
+        if test_runtime_stub_enabled() {
             return Ok(PathBuf::new());
         }
         let path = PathBuf::from(eos_isolated::CGROUP_ROOT).join(format!(
@@ -336,7 +336,7 @@ impl NamespaceRuntimePort for DaemonNamespaceRuntime {
     }
 
     fn kill_holder(&self, holder_pid: i32, grace_s: f64) -> Result<(), IsolatedError> {
-        if env_true(TEST_HARNESS_ENV) || holder_pid <= 0 {
+        if test_runtime_stub_enabled() || holder_pid <= 0 {
             return Ok(());
         }
         #[cfg(not(target_os = "linux"))]
@@ -921,6 +921,14 @@ fn env_true(key: &str) -> bool {
         .unwrap_or_default()
         .trim()
         .eq_ignore_ascii_case("true")
+}
+
+fn test_runtime_stub_enabled() -> bool {
+    env_true(TEST_HARNESS_ENV)
+        && !std::env::var(TEST_SCRATCH_ROOT_ENV)
+            .unwrap_or_default()
+            .trim()
+            .is_empty()
 }
 
 fn scratch_root() -> PathBuf {

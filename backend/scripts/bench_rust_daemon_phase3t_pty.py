@@ -39,6 +39,7 @@ from bench_rust_daemon_phase2 import (  # noqa: E402
 from bench_sandbox_e2e import (  # noqa: E402
     DEFAULT_DOCKER_IMAGE,
     DockerBench,
+    _text,
     elapsed_ms,
     summarize_samples,
 )
@@ -59,7 +60,11 @@ DEFAULT_CACHE_ROOT_COUNT = 260
 
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
-    report = asyncio.run(run(args))
+    if args.privileged:
+        with temporary_env("EOS_DOCKER_PRIVILEGED", "1"):
+            report = asyncio.run(run(args))
+    else:
+        report = asyncio.run(run(args))
     out = Path(args.report)
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(report, indent=2, sort_keys=True))
@@ -93,6 +98,11 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
     parser.add_argument("--cache-root-count", type=int, default=DEFAULT_CACHE_ROOT_COUNT)
     parser.add_argument("--keep-container", action="store_true")
     parser.add_argument("--name-prefix", default="eos-phase3t-pty")
+    parser.add_argument(
+        "--privileged",
+        action="store_true",
+        help="Create a privileged Docker container for isolated-workspace coverage.",
+    )
     return parser.parse_args(argv)
 
 
@@ -114,6 +124,7 @@ async def run(args: argparse.Namespace) -> dict[str, Any]:
                 "platform": platform.platform(),
                 "python": sys.version.split()[0],
             },
+            "docker_privileged": bool(args.privileged),
             "samples_per_operation": args.samples,
             "load": {
                 "concurrency_levels": parse_concurrency(args.load_concurrency),
@@ -224,6 +235,7 @@ class CommandClient:
         *,
         layer_stack_root: str = LAYER_STACK_ROOT,
         agent_id: str = AGENT_ID,
+        allow_error: bool = False,
     ) -> tuple[dict[str, Any], float]:
         invocation_id = args.setdefault("invocation_id", f"phase3t-{uuid.uuid4().hex}")
         wire_args = {
@@ -236,7 +248,16 @@ class CommandClient:
             separators=(",", ":"),
         )
         started = time.perf_counter()
-        response = await call_tcp(self.daemon_client, self.endpoint, payload)
+        if allow_error:
+            result = await self.daemon_client._call_tcp_daemon(  # noqa: SLF001
+                self.endpoint,
+                payload,
+                timeout=30,
+            )
+            require_success(result, f"TCP daemon client {op}")
+            response = decode_response(result)
+        else:
+            response = await call_tcp(self.daemon_client, self.endpoint, payload)
         return response, elapsed_ms(started)
 
     async def exec_command(
@@ -296,6 +317,17 @@ class CommandClient:
             "api.v1.pty.cancel",
             {"pty_session_id": pty_session_id},
         )
+
+
+def decode_response(result: Any) -> dict[str, Any]:
+    text = _text(result, "stdout").strip()
+    try:
+        decoded = json.loads(text)
+    except json.JSONDecodeError as exc:
+        raise RuntimeError(f"daemon returned invalid JSON: {text!r}") from exc
+    if not isinstance(decoded, dict):
+        raise RuntimeError(f"daemon returned non-object JSON: {decoded!r}")
+    return decoded
 
 
 async def correctness_checks(bench: DockerBench, client: CommandClient) -> dict[str, Any]:
@@ -377,6 +409,7 @@ async def configure_daemon_environment(bench: DockerBench) -> None:
         "EOS_ISOLATED_WORKSPACE_AUDIT_PATH": ISOLATED_AUDIT_PATH,
         "EOS_ISOLATED_WORKSPACE_SETUP_TIMEOUT_S": "30",
         "EOS_ISOLATED_WORKSPACE_EXIT_GRACE_S": "0.25",
+        "EOS_ISOLATED_WORKSPACE_UPPERDIR_BYTES": str(64 * 1024 * 1024),
     }
     payload = "\n".join(f"{key}={value}" for key, value in lines.items()) + "\n"
     await bench.exec(
@@ -385,6 +418,7 @@ async def configure_daemon_environment(bench: DockerBench) -> None:
         "EOF\n",
         timeout=15,
     )
+    await bench.exec("mount -o remount,rw /sys/fs/cgroup 2>/dev/null || true", timeout=15)
 
 
 async def isolated_exit_inspection_checks(
@@ -425,6 +459,7 @@ async def isolated_exit_inspection_checks(
         "api.isolated_workspace.exit",
         {"grace_s": 0.05},
         agent_id=ISOLATED_AGENT_ID,
+        allow_error=True,
     )
     forced_exit, forced_exit_ms = await client.call(
         "api.isolated_workspace.exit",
@@ -505,6 +540,11 @@ async def measure_mixed_non_plugin_load(
     rounds: int,
 ) -> dict[str, Any]:
     total_slots = sum(max(0, concurrency) * max(0, rounds) for concurrency in concurrencies)
+    read_path = "/testbed/phase3t-mixed-read-target.txt"
+    read_seed, _ = await client.call(
+        "api.v1.write_file",
+        {"path": read_path, "content": "phase3t-mixed-read-target\n"},
+    )
     edit_paths = [f"/testbed/phase3t-mixed-edit-{index:04d}.txt" for index in range(total_slots)]
     for path in edit_paths:
         await client.call("api.v1.write_file", {"path": path, "content": "old\n"})
@@ -523,7 +563,7 @@ async def measure_mixed_non_plugin_load(
         if operation == 0:
             response, wall_ms = await client.call(
                 "api.v1.read_file",
-                {"path": "/testbed/README.md"},
+                {"path": read_path},
             )
             return response, wall_ms, "read"
         if operation == 1:
@@ -564,7 +604,7 @@ async def measure_mixed_non_plugin_load(
             response, wall_ms = await client.call(
                 "api.v1.grep",
                 {
-                    "pattern": "README",
+                    "pattern": "phase3t-mixed-read-target",
                     "path": ".",
                     "output_mode": "content",
                     "line_numbers": True,
@@ -619,6 +659,7 @@ async def measure_mixed_non_plugin_load(
     return {
         "operations": operations,
         "operation_count": operation_counter,
+        "read_seed": trim_response(read_seed),
         "audit": {
             "checks": audit_checks,
             "pull_wall_ms": audit_pull_ms,

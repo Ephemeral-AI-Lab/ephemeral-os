@@ -437,7 +437,11 @@ async def prove_phase2_transports(
     tcp_heartbeat = await call_tcp(
         daemon_client,
         endpoint,
-        request("api.v1.heartbeat", {"invocation_ids": ["phase2-live"]}),
+        request(
+            "api.v1.heartbeat",
+            {"invocation_ids": ["phase2-live"]},
+            invocation_id="phase2-live",
+        ),
     )
     tcp_metrics = await call_tcp(daemon_client, endpoint, request("api.layer_metrics", {}))
 
@@ -555,11 +559,11 @@ async def prove_respawn_and_cache_invalidation(
     }
 
 
-def request(op: str, args: dict[str, Any]) -> str:
+def request(op: str, args: dict[str, Any], *, invocation_id: str | None = None) -> str:
     return json.dumps(
         {
             "op": op,
-            "invocation_id": f"phase2-{uuid.uuid4().hex}",
+            "invocation_id": invocation_id or f"phase2-{uuid.uuid4().hex}",
             "args": {"layer_stack_root": LAYER_STACK_ROOT, **args},
         },
         separators=(",", ":"),
@@ -687,8 +691,23 @@ async def mount_entries_for_runtime(bench: DockerBench) -> dict[str, Any]:
         timeout=10,
     )
     text = _text(result, "stdout").strip()
-    lines = [line for line in text.splitlines() if line.strip()]
-    return {"count": len(lines), "lines": lines}
+    root_lines: list[str] = []
+    nested_lines: list[str] = []
+    for line in text.splitlines():
+        if not line.strip():
+            continue
+        fields = line.split()
+        mount_point = fields[4] if len(fields) > 4 else ""
+        if mount_point == "/eos":
+            root_lines.append(line)
+        elif mount_point.startswith("/eos/"):
+            nested_lines.append(line)
+    return {
+        "count": len(nested_lines),
+        "lines": nested_lines,
+        "ignored_root_count": len(root_lines),
+        "ignored_root_lines": root_lines,
+    }
 
 
 def decode_stdout(result: Any) -> dict[str, Any]:
