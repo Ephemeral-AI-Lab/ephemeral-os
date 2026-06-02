@@ -145,7 +145,7 @@ def _assert_report_shape(report: RunReport, summary: Mapping[str, Any]) -> None:
         WORKER_COUNT * DATA_FILES_PER_WORKER + CONFLICT_WORKER_COUNT
     )
     assert tool_counts["read_file"] >= WORKER_COUNT * (READS_PER_WORKER + 1) + 1
-    assert tool_counts["shell"] >= 1
+    assert tool_counts["exec_command"] >= 1
 
 
 def _assert_sandbox_events(path: Path, summary: Mapping[str, Any]) -> None:
@@ -185,7 +185,7 @@ async def _assert_performance_report(
     assert _max_overlapping_sandbox_tool_calls(per_tool) <= MAX_CONCURRENT_WORKERS
     write_stats = mapping(per_tool["write_file"])
     edit_stats = mapping(per_tool["edit_file"])
-    shell_stats = mapping(per_tool["shell"])
+    shell_stats = mapping(per_tool["exec_command"])
     assert int(write_stats["count"]) >= (
         WORKER_COUNT * DATA_FILES_PER_WORKER + WORKER_COUNT + 2
     )
@@ -224,7 +224,7 @@ async def _assert_performance_report(
 
 def _max_overlapping_sandbox_tool_calls(per_tool: Mapping[str, Any]) -> int:
     points: list[tuple[float, int]] = []
-    for tool_name in ("read_file", "write_file", "edit_file", "shell"):
+    for tool_name in ("read_file", "write_file", "edit_file", "exec_command"):
         for sample in mapping(per_tool[tool_name]).get("samples") or ():
             sample_map = mapping(sample)
             points.append((_timestamp(sample_map["started_ts"]), 1))

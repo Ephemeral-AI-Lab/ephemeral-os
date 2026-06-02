@@ -127,7 +127,7 @@ async def test_cancel_then_natural_completion_returns_real_result() -> None:
         return ToolResult(output="real result")
 
     alias = mgr.next_alias()
-    mgr.launch(alias, "shell", {"cmd": "true"}, _quick())
+    mgr.launch(alias, "exec_command", {"cmd": "true"}, _quick())
     await fired.wait()
     await asyncio.sleep(0)  # let done_callback run
     # Now issue cancel: must NOT overwrite the COMPLETED status.

@@ -8,7 +8,7 @@ or prefix any colliding names; we instead enforce snake_case + non-collision
 by convention and verify with this CI test.
 
 Today: zero collisions are possible because every EphemeralOS tool is
-snake_case (`read_file`, `edit_file`, `shell`, ...) while Claude Code's
+snake_case (`read_file`, `edit_file`, `exec_command`, ...) while Claude Code's
 reserved set is PascalCase (`Read`, `Edit`, `Bash`, ...). This test future-
 proofs against an accidental PascalCase introduction.
 

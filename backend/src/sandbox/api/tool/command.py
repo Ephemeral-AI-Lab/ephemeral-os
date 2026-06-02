@@ -167,6 +167,10 @@ def _parse_exec_command_result(
     output = output_raw if isinstance(output_raw, Mapping) else {}
     exit_code_raw = response.get("exit_code")
     exit_code = int(exit_code_raw) if isinstance(exit_code_raw, int) else None
+    changed_paths_raw = response.get("changed_paths")
+    changed_path_kinds_raw = response.get("changed_path_kinds")
+    conflict_reason_raw = response.get("conflict_reason")
+    mutation_source_raw = response.get("mutation_source")
     return ExecCommandResult(
         success=str(response.get("status") or "") not in {"error", "timed_out"},
         status=str(response.get("status") or "error"),
@@ -181,6 +185,22 @@ def _parse_exec_command_result(
             else None
         ),
         timings=timings or parse_timing_map_field(response.get("timings")),
+        conflict_reason=(
+            str(conflict_reason_raw) if conflict_reason_raw is not None else None
+        ),
+        changed_paths=(
+            [str(path) for path in changed_paths_raw]
+            if isinstance(changed_paths_raw, list)
+            else []
+        ),
+        changed_path_kinds=(
+            {str(key): str(value) for key, value in changed_path_kinds_raw.items()}
+            if isinstance(changed_path_kinds_raw, Mapping)
+            else {}
+        ),
+        mutation_source=(
+            str(mutation_source_raw) if mutation_source_raw is not None else ""
+        ),
         error=response.get("error") if isinstance(response.get("error"), dict) else None,
     )
 

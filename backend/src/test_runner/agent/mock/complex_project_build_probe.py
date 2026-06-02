@@ -54,7 +54,7 @@ from tools._framework.core.results import ToolResult
 from tools._framework.core.runtime import ExecutionMetadata
 from tools.sandbox.edit_file import edit_file as edit_file_tool
 from tools.sandbox.read_file import read_file as read_file_tool
-from tools.sandbox.shell import shell as shell_tool
+from tools.sandbox.exec_command import exec_command as exec_command_tool
 from tools.sandbox.write_file import write_file as write_file_tool
 
 import sandbox.api as sandbox_api
@@ -1351,7 +1351,7 @@ async def _phase_f_emit_metrics(
             "write": stats.write_count,
             "edit": stats.edit_count,
             "read": stats.read_count,
-            "shell": stats.shell_count,
+            "exec_command": stats.shell_count,
             "lsp": dict(stats.lsp_counts),
             "toolkit_total": _toolkit_calls(stats),
             "edit_to_write_ratio": stats.edit_to_write_ratio(),
@@ -1359,7 +1359,7 @@ async def _phase_f_emit_metrics(
         "api_calls": {
             "read": stats.api_read_count,
             "edit": stats.api_edit_count,
-            "shell": stats.api_shell_count,
+            "exec_command": stats.api_shell_count,
         },
         "intentional_conflicts": stats.intentional_conflicts,
     }
@@ -1462,19 +1462,19 @@ async def _shell(
     timeout: int = 60,
 ) -> ToolResult:
     """Run a toolkit shell command. cwd is controlled by ctx.metadata.repo_root
-    (the toolkit shell tool uses ``sandbox_repo_root_from_tool_context(context)`` as cwd) — the
+    (the toolkit exec_command tool uses ``sandbox_repo_root_from_tool_context(context)`` as cwd) — the
     probe rebinds workspace_root in Phase 0 and updates metadata.repo_root so
     subsequent shells run inside ``/ephemeral-os``."""
     args: dict[str, Any] = {"command": command, "timeout": timeout}
     result = await ctx.call_tool(
-        shell_tool,
+        exec_command_tool,
         args,
         ctx.metadata,
         ctx.emit,
         allow_error=True,
     )
     stats.shell_count += 1
-    stats.tool_call_metadata.append(_capture_metadata("shell", result))
+    stats.tool_call_metadata.append(_capture_metadata("exec_command", result))
     return result
 
 

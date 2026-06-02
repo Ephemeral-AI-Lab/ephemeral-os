@@ -1,5 +1,5 @@
-"""Background-shell scenarios that drive ``shell(background=True)`` through the
-engine-owned background task harness.
+"""Background-command scenarios that drive ``exec_command(tty=True)`` through the
+typed PTY command harness.
 
 Seven scenarios (T1-T3, T5-T8 from the Phase 2 plan; T4 is covered by the
 invocation-keyed daemon in-flight TTL tests):
@@ -14,8 +14,8 @@ invocation-keyed daemon in-flight TTL tests):
 
 Each scenario uses a single executor action that drives the matching
 probe in :mod:`test_runner.agent.mock.background_shell_probe`.
-The probes call the shell tool with ``background_task_id`` set so the
-tool framework keeps the request correlated with the engine background task;
+The probes call the exec_command tool with ``background_task_id`` set so the
+mock bridge keeps the request correlated with the returned PTY session id;
 the harness records full ``sandbox_events.jsonl`` plus
 ``performance_report.json`` artifacts.
 """
@@ -46,7 +46,7 @@ def _plan(action_id: str, action_spec: str, summary_hint: str) -> dict[str, Any]
                 "id": "reduce",
                 "needs": [action_id],
                 "prompt": (
-                    f"Confirm background-shell probe '{action_id}' wrote its "
+                    f"Confirm background-command probe '{action_id}' wrote its "
                     f"summary to {summary_hint} and that daemon cancellation and "
                     "engine background status were consistent for every launch."
                 ),
@@ -79,7 +79,7 @@ class _BackgroundShellScenarioBase(ScenarioBase):
             submit_reducer_outcome,
             {
                 "status": "success",
-                "outcome": (f"{self.action_id} background-shell scenario completed."),
+                "outcome": (f"{self.action_id} background-command scenario completed."),
             },
         )
 
@@ -91,7 +91,7 @@ def _scenario(
     action_spec: str,
     summary_path_hint: str,
 ) -> type[_BackgroundShellScenarioBase]:
-    """Build a data-only background-shell scenario leaf.
+    """Build a data-only background-command scenario leaf.
 
     ``name`` is derived as ``f"sandbox.{action_id}"`` — the invariant every
     former hand-written leaf class satisfied.
@@ -113,31 +113,31 @@ BackgroundShellGolden = _scenario(
     "BackgroundShellGolden",
     action_id="background_shell_golden",
     action_spec=(
-        "ACTION background_shell_golden. Launch 3 concurrent background shells "
+        "ACTION background_shell_golden. Launch 3 concurrent background commands "
         "(each sleeps 5 s, echoes 'done'); wait for natural exit; write the "
         "per-launch summary."
     ),
     summary_path_hint="/testbed/.ephemeralos/sweevo-mock/background_shell/golden/summary.json",
 )
-# T2: launch background shells; cancel mid-flight; no leftover state.
+# T2: launch background commands; cancel mid-flight; no leftover state.
 BackgroundShellStop = _scenario(
     "BackgroundShellStop",
     action_id="background_shell_stop",
     action_spec=(
-        "ACTION background_shell_stop. Launch 3 long-running background shells, "
+        "ACTION background_shell_stop. Launch 3 long-running background commands, "
         "cancel each via asyncio.wait_for after 1 s, then issue a follow-up "
-        "foreground shell to confirm post-cancel mount latency stays under "
+        "foreground command to confirm post-cancel mount latency stays under "
         "budget."
     ),
     summary_path_hint="/testbed/.ephemeralos/sweevo-mock/background_shell/stop/summary.json",
 )
-# T3: 1 long background + M foreground shells, record fg p95 mount.
+# T3: 1 long background + M foreground commands, record fg p95 mount.
 BackgroundShellInterleave = _scenario(
     "BackgroundShellInterleave",
     action_id="background_shell_interleave",
     action_spec=(
         "ACTION background_shell_interleave. Launch 1 long-running background "
-        "shell (sleep 30 s) and 5 foreground shells interleaved; record "
+        "command (sleep 30 s) and 5 foreground commands interleaved; record "
         "per-foreground mount-latency timings."
     ),
     summary_path_hint="/testbed/.ephemeralos/sweevo-mock/background_shell/interleave/summary.json",
@@ -147,10 +147,10 @@ BackgroundShellExhaustion = _scenario(
     "BackgroundShellExhaustion",
     action_id="background_shell_exhaustion",
     action_spec=(
-        "ACTION background_shell_exhaustion. Fire 80 background shell launches in "
+        "ACTION background_shell_exhaustion. Fire 80 background command launches in "
         "parallel, each cancelled after 2 s; issue a follow-up foreground "
         "read_file to validate the daemon RPC dispatcher is not blocked by the "
-        "shell executor (Pre-mortem #3 / AC-14)."
+        "command executor (Pre-mortem #3 / AC-14)."
     ),
     summary_path_hint="/testbed/.ephemeralos/sweevo-mock/background_shell/exhaustion/summary.json",
 )
@@ -160,18 +160,18 @@ BackgroundShellPartialWriteCancel = _scenario(
     action_id="background_shell_partial_write_cancel",
     action_spec=(
         "ACTION background_shell_partial_write_cancel. Run an 800 MB dd into a "
-        "tracked path as a background shell, cancel at 2 s, then read the target "
+        "tracked path as a background command, cancel at 2 s, then read the target "
         "back to confirm the upperdir was discarded."
     ),
     summary_path_hint="/testbed/.ephemeralos/sweevo-mock/background_shell/partial_write/summary.json",
 )
-# T7: short shell + maintenance; verify OCC consistency afterwards.
+# T7: short command + maintenance; verify OCC consistency afterwards.
 BackgroundShellStopDuringMaintenance = _scenario(
     "BackgroundShellStopDuringMaintenance",
     action_id="background_shell_stop_during_maintenance",
     action_spec=(
         "ACTION background_shell_stop_during_maintenance. Run a short background "
-        "shell that writes one file and then sleeps; confirm the publish + "
+        "command that writes one file and then sleeps; confirm the publish + "
         "maintenance sequence leaves a consistent OCC state."
     ),
     summary_path_hint="/testbed/.ephemeralos/sweevo-mock/background_shell/maintenance/summary.json",
@@ -181,19 +181,19 @@ BackgroundShellLateCancelRace = _scenario(
     "BackgroundShellLateCancelRace",
     action_id="background_shell_late_cancel_race",
     action_spec=(
-        "ACTION background_shell_late_cancel_race. Await a short background shell "
+        "ACTION background_shell_late_cancel_race. Await a short background command "
         "to completion (1 s sleep + echo); assert exit_code 0 and stdout "
         "preserved."
     ),
     summary_path_hint="/testbed/.ephemeralos/sweevo-mock/background_shell/late_cancel/summary.json",
 )
-# 3.3.1: direct foreground write races a background shell publish.
+# 3.3.1: direct foreground write races a background command publish.
 BackgroundMixedFgBgSamePathConflict = _scenario(
     "BackgroundMixedFgBgSamePathConflict",
     action_id="background_mixed_fg_bg_same_path_conflict",
     action_spec=(
         "ACTION background_mixed_fg_bg_same_path_conflict. Launch a background "
-        "shell that writes /testbed/bg-shared.txt after a short sleep, run a "
+        "command that writes /testbed/bg-shared.txt after a short sleep, run a "
         "foreground write_file to the same path while it sleeps, then record the "
         "OCC winner and conflict metadata."
     ),
@@ -205,9 +205,9 @@ BackgroundHeartbeatLossReapsOnlyStaleBg = _scenario(
     action_id="background_heartbeat_loss_reaps_only_stale_bg",
     action_spec=(
         "ACTION background_heartbeat_loss_reaps_only_stale_bg. Launch two "
-        "background shell invocations with explicit invocation ids, heartbeat "
+        "background command invocations with explicit invocation ids, heartbeat "
         "only the protected invocation, let the stale invocation hit the daemon "
-        "TTL reaper, and run a foreground shell during recovery."
+        "TTL reaper, and run a foreground command during recovery."
     ),
     summary_path_hint="/testbed/.ephemeralos/sweevo-mock/background_shell/heartbeat_loss/summary.json",
 )
@@ -218,8 +218,8 @@ BackgroundExitIwsDrainsAgentTasks = _scenario(
     action_spec=(
         "ACTION background_exit_iws_drains_agent_tasks. Prove "
         "enter_isolated_workspace rejects while this agent has default background "
-        "shell work in flight, then open an isolated workspace for another agent "
-        "and exit while its background shell is running."
+        "command work in flight, then open an isolated workspace for another agent "
+        "and exit while its background command is running."
     ),
     summary_path_hint="/testbed/.ephemeralos/sweevo-mock/background_shell/exit_iws_drain/summary.json",
 )
@@ -229,8 +229,8 @@ BackgroundEngineRestartNoLeaseLeak = _scenario(
     action_id="background_engine_restart_no_lease_leak",
     action_spec=(
         "ACTION background_engine_restart_no_lease_leak. Launch a chunked "
-        "background shell without heartbeats, wait for daemon stale-invocation "
-        "cleanup, then run a normal foreground shell plus write/read cycle."
+        "background command without heartbeats, wait for daemon stale-invocation "
+        "cleanup, then run a normal foreground command plus write/read cycle."
     ),
     summary_path_hint="/testbed/.ephemeralos/sweevo-mock/background_shell/engine_restart/summary.json",
 )
@@ -240,7 +240,7 @@ BackgroundManySmallWritesDoNotStarveDispatcher = _scenario(
     action_id="background_many_small_writes_do_not_starve_dispatcher",
     action_spec=(
         "ACTION background_many_small_writes_do_not_starve_dispatcher. Launch "
-        "many small background shell writes and interleave foreground read_file "
+        "many small background command writes and interleave foreground read_file "
         "and write_file calls, recording dispatcher responsiveness and final "
         "daemon in-flight count."
     ),
@@ -253,7 +253,7 @@ BackgroundMixedOpConcurrent = _scenario(
     action_spec=(
         "ACTION background_mixed_op_concurrent. Launch a pytest run, a pip "
         "install, and a python edit-loop as concurrent background tasks and "
-        "confirm each reaches a terminal status; race N background shells "
+        "confirm each reaches a terminal status; race N background commands "
         "overwriting one seeded path (exactly one OCC winner, the rest abort); "
         "and write N disjoint paths concurrently (all land)."
     ),

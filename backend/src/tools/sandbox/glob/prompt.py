@@ -6,7 +6,7 @@ from tools._names import (
     GLOB_TOOL_NAME,
     GREP_TOOL_NAME,
     READ_FILE_TOOL_NAME,
-    SHELL_TOOL_NAME,
+    EXEC_COMMAND_TOOL_NAME,
 )
 
 
@@ -21,7 +21,7 @@ def get_glob_description() -> str:
         f"  `{READ_FILE_TOOL_NAME}` per file).\n"
         "\n"
         "Prefer over:\n"
-        f"- `{SHELL_TOOL_NAME}` with `find`/`ls` — `{GLOB_TOOL_NAME}` returns structured output.\n"
+        f"- `{EXEC_COMMAND_TOOL_NAME}` with `find`/`ls` — `{GLOB_TOOL_NAME}` returns structured output.\n"
         "\n"
         "Do NOT use for:\n"
         f"- Searching file CONTENTS — use `{GREP_TOOL_NAME}`.\n"

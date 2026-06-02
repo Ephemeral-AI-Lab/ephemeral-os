@@ -1,9 +1,9 @@
-"""T1 — Golden path live regression for ``shell(background=True)``.
+"""T1 — Golden path live regression for ``exec_command(tty=True)``.
 
 Drives ``BackgroundShellGolden`` through the mock-agent scenario harness so
 the run produces full ``.sweevo_runs/scenario_logs/.../sandbox_events.jsonl``
 plus ``performance_report.json`` artifacts. The probe launches 3 concurrent
-background shells (sleep 5 s, echo done), waits for natural exit, and writes
+background commands (sleep 5 s, echo done), waits for natural exit, and writes
 a JSON summary the test reads back via ``sandbox_api.read_file``.
 """
 

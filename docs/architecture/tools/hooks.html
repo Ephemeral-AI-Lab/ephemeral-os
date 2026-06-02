@@ -73,7 +73,7 @@
   </div>
   <div class="flow-row">
     <div class="node"><strong><code>execute_tool_once</code></strong><small>pre-hooks, body, validation, post-hooks</small></div>
-    <div class="node warn"><strong>Concrete hook owner</strong><small>for example sandbox shell policy</small></div>
+    <div class="node warn"><strong>Concrete hook owner</strong><small>for example sandbox command policy</small></div>
   </div>
 </div>
 <div class="edge-list">
@@ -144,22 +144,22 @@
 
 <section id="sandbox-shell-prehooks"
   data-last-reviewed-commit="6c45d4565cc912df20e5e688185982fdbe237550"
-  data-evidence-paths="backend/src/tools/sandbox/shell/shell.py backend/src/tools/sandbox/_lib/shell_policy.py backend/tests/unit_test/test_tools/test_sandbox_toolkit/test_shell_prehooks.py backend/tests/unit_test/test_sandbox/test_api/test_shell.py docs/architecture/tools/sandbox.html">
-<h2>Sandbox Shell Pre-Hooks</h2>
+  data-evidence-paths="backend/src/tools/sandbox/exec_command/exec_command.py backend/src/tools/_hooks/destructive_shell.py backend/tests/unit_test/test_tools/test_sandbox_toolkit/test_shell_prehooks.py docs/architecture/tools/sandbox.html">
+<h2>Sandbox Command Pre-Hooks</h2>
 <p>
-  The main concrete hook family is the sandbox shell policy. <code>shell</code> registers
+  The main concrete hook family is the sandbox command policy. <code>exec_command</code> registers
   <code>DestructiveGitShellPreHook()</code> and <code>DestructiveShellPreHook()</code> as pre-hooks.
-  They inspect the shell command before sandbox API dispatch and block destructive git mutations or
+  They inspect the command before sandbox API dispatch and block destructive git mutations or
   high-risk filesystem commands that would bypass the intended write/audit path.
 </p>
 <div class="edge-list">
-  <div><b>registers</b><span><code>tools.sandbox.shell.shell</code> passes both pre-hook instances to the <code>@tool</code> decorator for <code>shell</code>.</span></div>
-  <div><b>calls</b><span>Each shell pre-hook reads the command field from the parsed input and returns <code>HookResult.fail(...)</code> with policy metadata when blocked.</span></div>
+  <div><b>registers</b><span><code>tools.sandbox.exec_command.exec_command</code> passes both pre-hook instances to the <code>@tool</code> decorator for <code>exec_command</code>.</span></div>
+  <div><b>calls</b><span>Each command pre-hook reads the <code>cmd</code> field from the parsed input and returns <code>HookResult.fail(...)</code> with policy metadata when blocked.</span></div>
   <div><b>tested-by</b><span><code>test_shell_prehooks.py</code> checks blocked git commands, allowed read-only git commands, destructive shell commands, and the before-sandbox-requirement failure path.</span></div>
 </div>
 <div class="callout warn">
   <span class="label">Boundary</span>
-  Shell pre-hooks are a front-door policy gate for obvious command forms. The sandbox write/audit
+  Command pre-hooks are a front-door policy gate for obvious command forms. The sandbox write/audit
   and OCC publish boundaries remain the authoritative isolation boundary for commands that evade a
   regular-expression pre-check.
 </div>
@@ -221,7 +221,7 @@
 
 <section id="evidence-refresh"
   data-last-reviewed-commit="b1f90277db47df4796821e86513bed67cf7afa22"
-  data-evidence-paths="backend/src/tools/_framework/core/hooks.py backend/src/tools/_framework/execution/hook_pipeline.py backend/src/tools/_framework/execution/tool_call.py backend/src/tools/sandbox/_lib/shell_policy.py backend/src/tools/sandbox/shell/shell.py backend/src/tools/submission/_advisor_approval_prehook.py backend/tests/unit_test/test_tools/test_tool_execution.py backend/tests/unit_test/test_tools/test_sandbox_toolkit/test_shell_prehooks.py backend/tests/unit_test/test_tools/test_submission/test_advisor_approval_prehook.py docs/architecture/tools/framework.html docs/architecture/tools/sandbox.html docs/architecture/tools/submission.html">
+  data-evidence-paths="backend/src/tools/_framework/core/hooks.py backend/src/tools/_framework/execution/hook_pipeline.py backend/src/tools/_framework/execution/tool_call.py backend/src/tools/_hooks/destructive_shell.py backend/src/tools/sandbox/exec_command/exec_command.py backend/src/tools/submission/_advisor_approval_prehook.py backend/tests/unit_test/test_tools/test_tool_execution.py backend/tests/unit_test/test_tools/test_sandbox_toolkit/test_shell_prehooks.py backend/tests/unit_test/test_tools/test_submission/test_advisor_approval_prehook.py docs/architecture/tools/framework.html docs/architecture/tools/sandbox.html docs/architecture/tools/submission.html">
 <h2>Evidence and Refresh</h2>
 <div class="evidence-grid">
   <div class="evidence-card">
@@ -230,7 +230,7 @@
       <li><code>backend/src/tools/_framework/core/hooks.py</code> for the hook contract.</li>
       <li><code>backend/src/tools/_framework/execution/hook_pipeline.py</code> for runtime execution and hook-failure metadata.</li>
       <li><code>backend/src/tools/_framework/execution/tool_call.py</code> for hook placement in the tool lifecycle.</li>
-      <li><code>backend/src/tools/sandbox/_lib/shell_policy.py</code> for concrete shell pre-hook policy.</li>
+      <li><code>backend/src/tools/_hooks/destructive_shell.py</code> for concrete command pre-hook policy.</li>
       <li><code>backend/src/tools/submission/_advisor_approval_prehook.py</code> for the advisor approval gate on main-agent terminal submissions.</li>
     </ul>
   </div>
@@ -246,14 +246,14 @@
     <h3>Refresh triggers</h3>
     <p>
       Re-check this page when hook target validation, hook trace metadata, system notification
-      capture, background tool execution, shell pre-hook policy, the advisor approval gate
+      capture, background tool execution, command pre-hook policy, the advisor approval gate
       (terminal wiring, verdict shape, or pairing logic), or the tool execution order changes.
     </p>
   </div>
 </div>
 <div class="wiki-links">
   <a href="framework.html">Tools Framework</a>
-  <a href="sandbox.html#shell-background-policy">Sandbox Shell Policy</a>
+  <a href="sandbox.html#command-background-policy">Sandbox Command Policy</a>
   <a href="submission.html">Submission Tools</a>
   <a href="ask-helper.html">Ask Helper</a>
   <a href="background.html">Background Tools</a>

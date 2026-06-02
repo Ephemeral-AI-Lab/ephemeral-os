@@ -9,9 +9,7 @@ from uuid import uuid4
 from pydantic import ValidationError
 
 from engine.background.policy import (
-    BACKGROUND_TOOL_INPUT_KEY,
     is_engine_background_tool,
-    is_explicit_generic_background_tool,
 )
 from engine.background.task_supervisor import SUBAGENT_TASK_TYPE, BackgroundTaskSupervisor
 from message.message import Message, ToolResultBlock, ToolUseBlock
@@ -41,7 +39,6 @@ SANDBOX_INVOCATION_ID_INPUT_KEY = "_sandbox_invocation_id"
 DISABLE_SANDBOX_HEARTBEAT_INPUT_KEY = "_disable_sandbox_heartbeat"
 _BACKGROUND_CONTROL_INPUT_KEYS = frozenset(
     {
-        BACKGROUND_TOOL_INPUT_KEY,
         SANDBOX_INVOCATION_ID_INPUT_KEY,
         DISABLE_SANDBOX_HEARTBEAT_INPUT_KEY,
     }
@@ -88,8 +85,7 @@ def launch_background_tool(
     }
 
     tool_def = tool_registry.get(tool_use.name)
-    explicit_generic = is_explicit_generic_background_tool(tool_def, tool_use.input)
-    if tool_def is None or not (is_engine_background_tool(tool_def) or explicit_generic):
+    if tool_def is None or not is_engine_background_tool(tool_def):
         msg = f"Tool '{tool_use.name}' does not support background execution."
         return (
             ToolResultBlock(tool_use_id=tool_use.tool_use_id, content=msg, is_error=True),
@@ -120,18 +116,14 @@ def launch_background_tool(
         )
 
     task_type = getattr(tool_def, "task_type", "agent")
-    if task_type != SUBAGENT_TASK_TYPE and not explicit_generic:
+    if task_type != SUBAGENT_TASK_TYPE:
         msg = f"Tool '{tool_use.name}' does not support background-manager dispatch."
         return (
             ToolResultBlock(tool_use_id=tool_use.tool_use_id, content=msg, is_error=True),
             None,
             ToolExecutionCompletedEvent(tool_name=tool_use.name, output=msg, is_error=True),
         )
-    task_id = (
-        background_tasks.next_subagent_session_id()
-        if task_type == SUBAGENT_TASK_TYPE
-        else background_tasks.next_alias()
-    )
+    task_id = background_tasks.next_subagent_session_id()
     uses_sandbox = SANDBOX_CONTEXT in getattr(
         tool_def,
         "context_requirements",
@@ -184,23 +176,15 @@ def launch_background_tool(
         heartbeat_enabled=heartbeat_enabled,
     )
     record_tool_trace(tool_metadata, tool_use.name, clean_input)
-    if task_type == SUBAGENT_TASK_TYPE:
-        content = (
-            f'[SUBAGENT LAUNCHED] subagent_session_id="{task_id}" '
-            f'status=running agent_name="{clean_input.get("agent_name", "")}"\n'
-            f"Use check_subagent_progress("
-            f'subagent_session_id="{task_id}", last_n_messages=5) '
-            f"to inspect progress, or cancel_subagent("
-            f'subagent_session_id="{task_id}") to stop it. '
-            f"Keep using the current response on other ready work first."
-        )
-    else:
-        content = (
-            f'[BACKGROUND LAUNCHED] task_id="{task_id}" '
-            f'status=running tool_name="{tool_use.name}"\n'
-            f'Use check_background_task_result(task_id="{task_id}") to inspect '
-            f'progress, or cancel_background_task(task_id="{task_id}") to stop it.'
-        )
+    content = (
+        f'[SUBAGENT LAUNCHED] subagent_session_id="{task_id}" '
+        f'status=running agent_name="{clean_input.get("agent_name", "")}"\n'
+        f"Use check_subagent_progress("
+        f'subagent_session_id="{task_id}", last_n_messages=5) '
+        f"to inspect progress, or cancel_subagent("
+        f'subagent_session_id="{task_id}") to stop it. '
+        f"Keep using the current response on other ready work first."
+    )
     tool_result = ToolResultBlock(
         tool_use_id=tool_use.tool_use_id,
         content=content,

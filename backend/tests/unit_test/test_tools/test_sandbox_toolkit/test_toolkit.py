@@ -22,7 +22,6 @@ def _ctx(services=None) -> ToolExecutionContextService:
 def test_sandbox_exports_expected_tools():
     names = {tool.name for tool in make_sandbox_tools()}
     expected = {
-        "shell",
         "read_file",
         "write_file",
         "edit_file",
@@ -59,7 +58,6 @@ async def test_registered_api_backed_tools_require_sandbox_id():
         "write_pty_command_stdin": {"pty_session_id": "pty-1", "chars": "q"},
         "check_pty_command_progress": {"pty_session_id": "pty-1"},
         "cancel_pty_command": {"pty_session_id": "pty-1"},
-        "shell": {"command": "echo hi"},
         "glob": {"pattern": "*.py"},
         "grep": {"pattern": "needle"},
     }
@@ -80,37 +78,38 @@ async def test_registered_api_backed_tools_require_sandbox_id():
         assert result.metadata.get("sandbox_required") is True, tool_name
 
 
-def test_make_sandbox_tools_includes_shell():
+def test_make_sandbox_tools_includes_exec_command_not_shell():
     names = {tool.name for tool in make_sandbox_tools()}
 
-    assert "shell" in names
+    assert "exec_command" in names
+    assert "shell" not in names
     assert "edit_file" in names
     assert "daytona_list_files" not in names
 
 
 def test_get_sandbox_tool_by_name():
     tools = {tool.name: tool for tool in make_sandbox_tools()}
-    tool = tools.get("shell")
+    tool = tools.get("exec_command")
     assert tool is not None
-    assert tool.name == "shell"
+    assert tool.name == "exec_command"
 
 
-def test_shell_schema_describes_command():
+def test_exec_command_schema_describes_command():
     tools = {tool.name: tool for tool in make_sandbox_tools()}
-    tool = tools.get("shell")
+    tool = tools.get("exec_command")
     assert tool is not None
 
     schema = tool.to_api_schema()["input_schema"]
-    command_description = schema["properties"]["command"]["description"]
-    assert command_description == "Shell command to run for tests, builds, or verification."
+    assert "cmd" in schema["properties"]
+    assert "tty" in schema["properties"]
 
-    assert tool.short_description == "Run a shell command from the repo root."
+    assert tool.short_description == "Run command."
 
 
-def test_shell_no_longer_exposes_optional_background_execution():
-    """Generic shell background mode is retired in favor of typed PTY commands."""
+def test_exec_command_no_longer_exposes_generic_background_execution():
+    """Generic background mode is retired in favor of typed PTY controls."""
     tools = {tool.name: tool for tool in make_sandbox_tools()}
-    tool = tools.get("shell")
+    tool = tools.get("exec_command")
     assert tool is not None
 
     schema = tool.to_api_schema()["input_schema"]
@@ -125,7 +124,7 @@ def test_missing_sandbox_tool_absent():
 
 def test_sandbox_tool_count():
     tools = make_sandbox_tools()
-    assert len(tools) == 13
+    assert len(tools) == 12
 
 
 def test_sandbox_tools_omit_instruction_block():

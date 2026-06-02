@@ -25,7 +25,6 @@ from message.events import StreamEvent
 from engine.background.policy import (
     is_engine_background_tool,
     needs_background_manager,
-    supports_explicit_generic_background,
 )
 from providers.provider import make_api_client
 from providers.types import UsageSnapshot
@@ -44,11 +43,8 @@ logger = logging.getLogger(__name__)
 
 _BACKGROUND_CONTROL_TOOL_NAMES = frozenset(
     {
-        "cancel_background_task",
         "cancel_subagent",
-        "check_background_task_result",
         "check_subagent_progress",
-        "wait_background_tasks",
     }
 )
 
@@ -150,15 +146,6 @@ def _finalize_tool_registry_and_prompt(
     if has_background_tools:
         if any(is_engine_background_tool(tool) for tool in listed_tools):
             tool_registry.register_many(make_subagent_control_tools())
-        if any(supports_explicit_generic_background(tool) for tool in listed_tools):
-            from tools.background import (
-                CancelBackgroundTaskTool,
-                CheckBackgroundTaskResultTool,
-            )
-
-            tool_registry.register_many(
-                [CheckBackgroundTaskResultTool(), CancelBackgroundTaskTool()]
-            )
 
     terminal_tool_names = [
         t.name
@@ -258,8 +245,8 @@ def _register_requested_tools(
         if not clean_name or tool_registry.get(clean_name) is not None:
             continue
         if clean_name in _BACKGROUND_CONTROL_TOOL_NAMES:
-            # Retired generic background controls and typed subagent controls
-            # are not ordinary user-requested tool factories.
+            # Typed subagent controls are synthesized from run_subagent rather
+            # than ordinary profile-requested factories.
             continue
         if not has_tool(clean_name):
             logger.warning("No tool factory for %r requested by agent %r", clean_name, agent_name)

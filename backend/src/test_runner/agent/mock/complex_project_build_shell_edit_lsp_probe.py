@@ -261,7 +261,7 @@ async def run_complex_project_build_shell_edit_lsp_shared_bootstrap_probe(
         ),
         timeout=120,
     )
-    ctx.record_tool_check("tool.shell.shared_bootstrap.import", shell_result)
+    ctx.record_tool_check("tool.exec_command.shared_bootstrap.import", shell_result)
     diagnostics = await _lsp(
         ctx,
         stats,
@@ -283,7 +283,7 @@ async def run_complex_project_build_shell_edit_lsp_shared_bootstrap_probe(
             "write": stats.write_count,
             "edit": stats.edit_count,
             "read": stats.read_count,
-            "shell": stats.shell_count,
+            "exec_command": stats.shell_count,
             "lsp": dict(stats.lsp_counts),
         },
     }
@@ -523,7 +523,7 @@ async def _phase_e_diagnostic_probe(
         new_text="    return (\n",
         description="diagnostic probe inject syntax error",
         expectations=expectations,
-        forced_route="shell",
+        forced_route="exec_command",
     )
     broken_checks = 5 if not ctx.smoke else 2
     for index in range(broken_checks):
@@ -605,7 +605,7 @@ async def _apply_logical_edit(
     logical_index = stats.logical_edit_count
     stats.logical_edit_count += 1
     use_shell = (
-        forced_route == "shell"
+        forced_route == "exec_command"
         if forced_route is not None
         else logical_index % 3 == 2
     )
@@ -661,7 +661,7 @@ async def _apply_shell_edit(
     wall_seconds = time.monotonic() - started
     stats.shell_edit_count += 1
     stats.shell_edit_wall_seconds.append(wall_seconds)
-    stats.shell_edit_tool_metadata.append(_capture_metadata("shell", result))
+    stats.shell_edit_tool_metadata.append(_capture_metadata("exec_command", result))
 
     exit_code = _shell_exit_code(result)
     payload = _parse_shell_edit_payload(result)
@@ -1396,14 +1396,14 @@ async def _phase_f_emit_metrics(
             "write": stats.write_count,
             "edit": stats.edit_count,
             "read": stats.read_count,
-            "shell": stats.shell_count,
+            "exec_command": stats.shell_count,
             "lsp": dict(stats.lsp_counts),
             "edit_to_write_ratio": stats.edit_to_write_ratio(),
         },
         "api_calls": {
             "read": stats.api_read_count,
             "edit": stats.api_edit_count,
-            "shell": stats.api_shell_count,
+            "exec_command": stats.api_shell_count,
         },
         "edit_routing": {
             "logical_edit_count": stats.logical_edit_count,

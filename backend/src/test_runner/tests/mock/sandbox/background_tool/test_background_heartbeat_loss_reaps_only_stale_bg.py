@@ -1,4 +1,4 @@
-"""3.4.2 heartbeat-loss live regression for background shell invocations."""
+"""3.4.2 heartbeat-loss live regression for background command invocations."""
 
 from __future__ import annotations
 

@@ -6,7 +6,7 @@ from tools._names import (
     GLOB_TOOL_NAME,
     GREP_TOOL_NAME,
     READ_FILE_TOOL_NAME,
-    SHELL_TOOL_NAME,
+    EXEC_COMMAND_TOOL_NAME,
 )
 
 
@@ -21,7 +21,7 @@ def get_grep_description() -> str:
         "- You need to extract matching lines for inspection (`content` mode).\n"
         "\n"
         "Prefer over:\n"
-        f"- `{SHELL_TOOL_NAME}` with `grep`/`rg` — `{GREP_TOOL_NAME}` is cheaper, routed read-only, and\n"
+        f"- `{EXEC_COMMAND_TOOL_NAME}` with `grep`/`rg` — `{GREP_TOOL_NAME}` is cheaper, routed read-only, and\n"
         "  returns structured output.\n"
         "\n"
         "Do NOT use for:\n"

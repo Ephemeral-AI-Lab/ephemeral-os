@@ -217,4 +217,47 @@ Current verdict:
 - Latency: PASS for the concurrency assertion. `fast-second` client elapsed was about `0.005s`; delayed `slow-first` was about `0.361s`. Concurrent callback OCC apply timings were about `0.00023s` and `0.00039s`.
 
 Next iteration entry point:
-- Resume the broader `backend/src/test_runner/tests/mock` migration suite. Known non-sandbox assertion drifts from the interrupted broad lane remain: old `exec_command` expectation should move to `shell`, and old `<iteration_goal>` planner-context expectation should move to current `<goal>` semantics.
+- Resume the broader `backend/src/test_runner/tests/mock` migration suite. Known non-sandbox assertion drifts from the interrupted broad lane remain: public command-tool expectations should stay on `exec_command`, and old `<iteration_goal>` planner-context expectations should move to current `<goal>` semantics.
+
+## Iteration 5 - 2026-06-02 13:23:00 +0800 CST
+
+Updated scope:
+- Mid-flight user correction: the public `backend/src/tools/sandbox/shell`
+  package must be removed and replaced by `backend/src/tools/sandbox/exec_command`.
+- The public `backend/src/tools/background` package must also be removed.
+  Background is now typed-only for `exec_command(tty=true)`, `run_subagent`,
+  and `delegate_workflow`.
+
+Findings and issues:
+- The previous compatibility path added a hidden generic background dispatch
+  key for `shell`. That conflicts with the corrected contract and had to be
+  reverted instead of retargeted.
+- Mock background probes used stable test `background_task_id` values and
+  generic `check_background_task_result` / `cancel_background_task` turns.
+  Under the typed model those IDs must map to PTY session IDs and use
+  `check_pty_command_progress` / `cancel_pty_command`.
+- `exec_command` exposed the newer command output shape but did not carry the
+  shell-era guarded-operation fields that migration probes still assert
+  (`changed_paths`, `changed_path_kinds`, `mutation_source`,
+  `conflict_reason`).
+
+Fixes applied:
+- Deleted the tracked `tools.sandbox.shell` and `tools.background` packages
+  and removed leftover ignored cache directories from those paths.
+- Removed the generic background compatibility branch from engine streaming,
+  dispatch, and agent registry finalization. `run_subagent` remains the only
+  engine-background-dispatched tool; PTY command and workflow background state
+  remain typed through their own controls.
+- Updated sandbox registry, prompt constants, schema/tool tests, request
+  assertions, and mock probe imports so public command calls use
+  `exec_command`.
+- Updated the mock queue bridge so probe-requested stable background IDs launch
+  `exec_command(tty=true)`, map to returned `pty_session_id`, poll with
+  `check_pty_command_progress`, and cancel with `cancel_pty_command`.
+- Extended `ExecCommandResult` / `command_tool_result` to preserve command
+  stdout/stderr plus guarded-operation metadata needed by the migration probes.
+
+Verification pending:
+- Run focused lint and unit tests for the touched engine/tool/probe paths.
+- Re-run focused live background/command scenarios, then resume the broader
+  mock migration suite.

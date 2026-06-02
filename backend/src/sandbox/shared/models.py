@@ -235,6 +235,8 @@ class ExecCommandResult(SandboxResultBase):
     exit_code: int | None
     output: CommandOutput
     pty_session_id: str | None = None
+    changed_path_kinds: dict[str, str] = field(default_factory=dict)
+    mutation_source: str = ""
 
 
 @dataclass(frozen=True, kw_only=True)

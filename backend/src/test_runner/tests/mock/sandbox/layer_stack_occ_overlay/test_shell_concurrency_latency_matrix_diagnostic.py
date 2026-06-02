@@ -98,7 +98,7 @@ async def _run_shell(
     caller = SandboxCaller(
         agent_id=f"shell-latency-{_mode_slug()}-c{level}-{index}",
         agent_run_id=f"shell-latency-{_mode_slug()}-c{level}-{index}",
-        tool_name="shell",
+        tool_name="exec_command",
         tool_id=f"diagnostic-{_mode_slug()}-c{level}-{index}",
     )
     command = (

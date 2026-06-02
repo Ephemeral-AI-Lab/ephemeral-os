@@ -41,7 +41,7 @@ class _FakeAgent:
     async def run(self, _prompt, *, auto_close: bool = True):
         del auto_close
         yield ToolExecutionStartedEvent(
-            tool_name="shell",
+            tool_name="exec_command",
             tool_input={},
             agent_name=self.agent_name,
             agent_run_id=self.query_context.agent_run_id,
@@ -81,7 +81,7 @@ async def test_run_ephemeral_agent_stamps_agent_run_id_and_task_id(
     assert minted and minted != "run-1:t2"
     assert captured == [
         ToolExecutionStartedEvent(
-            tool_name="shell",
+            tool_name="exec_command",
             tool_input={},
             agent_name="executor",
             agent_run_id=minted,

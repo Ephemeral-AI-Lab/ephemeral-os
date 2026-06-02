@@ -65,7 +65,7 @@ def test_agent_message_recorder_appends_conversation_messages(tmp_path) -> None:
     )
     recorder.emit(
         ToolExecutionCompletedEvent(
-            tool_name="shell",
+            tool_name="exec_command",
             output="ok",
             tool_use_id="toolu_1",
             agent_name="executor",

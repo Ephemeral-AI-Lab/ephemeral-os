@@ -56,7 +56,7 @@ async def test_background_tool_lifecycle_emits_started_completed_delivered() -> 
 
     sup.launch(
         task_id="bg_1",
-        tool_name="shell",
+        tool_name="exec_command",
         tool_input={"cmd": "ls"},
         coro=_ok(),
         agent_id="agent-x",
@@ -79,7 +79,7 @@ async def test_background_tool_lifecycle_emits_started_completed_delivered() -> 
     section = completed_event["payload"]["background_tool"]
     assert section["background_task_id"] == "bg_1"
     assert section["status"] == BackgroundTaskStatus.COMPLETED.value
-    assert section["tool_name"] == "shell"
+    assert section["tool_name"] == "exec_command"
 
 
 @pytest.mark.asyncio
@@ -91,7 +91,7 @@ async def test_background_tool_failed_lifecycle() -> None:
 
     sup.launch(
         task_id="bg_fail",
-        tool_name="shell",
+        tool_name="exec_command",
         tool_input={},
         coro=_boom(),
     )
@@ -114,7 +114,7 @@ async def test_background_tool_cancelled_lifecycle() -> None:
 
     sup.launch(
         task_id="bg_cancel",
-        tool_name="shell",
+        tool_name="exec_command",
         tool_input={},
         coro=_long_running(),
     )
@@ -139,7 +139,7 @@ def test_background_tool_emitter_adds_no_new_threads_on_launch() -> None:
 
         sup.launch(
             task_id="bg_thread",
-            tool_name="shell",
+            tool_name="exec_command",
             tool_input={},
             coro=_ok(),
         )
@@ -186,7 +186,7 @@ async def test_background_tool_heartbeat_reuses_existing_timer(
 
     sup.launch(
         task_id="bg_hb",
-        tool_name="shell",
+        tool_name="exec_command",
         tool_input={},
         coro=_long(),
         agent_id="agent-hb",

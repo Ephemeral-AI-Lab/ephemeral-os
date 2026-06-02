@@ -1,4 +1,4 @@
-"""Tests for sandbox shell prehooks."""
+"""Tests for sandbox command prehooks."""
 
 from __future__ import annotations
 
@@ -12,7 +12,7 @@ from tools._hooks.destructive_shell import (
     destructive_git_command_error,
     destructive_shell_command_error,
 )
-from tools.sandbox.shell import shell
+from tools.sandbox.exec_command import exec_command
 
 from ._helpers import run_tool_safely
 
@@ -97,40 +97,40 @@ def test_destructive_shell_guard_allows_deleted_prehook_safe_cases(command: str)
 
 
 @pytest.mark.asyncio
-async def test_shell_prehook_blocks_git_mutation_before_ci_requirement() -> None:
+async def test_exec_command_prehook_blocks_git_mutation_before_ci_requirement() -> None:
     result = await run_tool_safely(
-        shell,
-        {"command": "git reset --hard"},
+        exec_command,
+        {"cmd": "git reset --hard"},
         context=_ctx(),
     )
 
     assert result.is_error
     payload = json.loads(result.output)
-    assert payload["hookName"] == "sandbox_shell:destructive_git:shell"
+    assert payload["hookName"] == "sandbox_shell:destructive_git:exec_command"
     assert payload["phase"] == "pre"
     assert "git mutation commands are forbidden" in result.metadata["hook_failure"]["reason"]
 
 
 @pytest.mark.asyncio
-async def test_shell_prehook_blocks_destructive_shell_before_ci_requirement() -> None:
+async def test_exec_command_prehook_blocks_destructive_shell_before_ci_requirement() -> None:
     result = await run_tool_safely(
-        shell,
-        {"command": "rm -rf /testbed/dask"},
+        exec_command,
+        {"cmd": "rm -rf /testbed/dask"},
         context=_ctx(),
     )
 
     assert result.is_error
     payload = json.loads(result.output)
-    assert payload["hookName"] == "sandbox_shell:destructive_shell:shell"
+    assert payload["hookName"] == "sandbox_shell:destructive_shell:exec_command"
     assert payload["phase"] == "pre"
     assert "destructive shell command" in result.metadata["hook_failure"]["reason"]
 
 
 @pytest.mark.asyncio
-async def test_shell_prehook_allows_safe_command_to_reach_sandbox_requirement() -> None:
+async def test_exec_command_prehook_allows_safe_command_to_reach_sandbox_requirement() -> None:
     result = await run_tool_safely(
-        shell,
-        {"command": "git status"},
+        exec_command,
+        {"cmd": "git status"},
         context=_ctx(),
     )
 

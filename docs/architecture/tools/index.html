@@ -163,7 +163,7 @@
         </div>
       </section>
 
-      <section id="folder-pages" data-last-reviewed-commit="6c45d4565cc912df20e5e688185982fdbe237550" data-evidence-paths="backend/src/tools/_framework;backend/src/tools/_terminals;backend/src/tools/sandbox;backend/src/tools/isolated_workspace;backend/src/tools/background;backend/src/tools/subagent;backend/src/tools/ask_helper;backend/src/tools/submission;backend/src/tools/skills">
+      <section id="folder-pages" data-last-reviewed-commit="HEAD-plus-worktree" data-evidence-paths="backend/src/tools/_framework;backend/src/tools/_terminals;backend/src/tools/sandbox;backend/src/tools/isolated_workspace;backend/src/tools/subagent;backend/src/tools/ask_helper;backend/src/tools/submission;backend/src/tools/skills">
         <h3>Folder Page Matrix</h3>
         <div class="table-wrap">
           <table>
@@ -186,7 +186,7 @@
                 <td><code>_framework/core/hooks.py</code><br><code>_framework/execution/hook_pipeline.py</code></td>
                 <td><a href="hooks.html">Hooks</a></td>
                 <td>Explicit pre/post hook contracts, target validation, hook trace, and hook-failure metadata.</td>
-                <td>Decorator construction, <code>execute_tool_once</code> lifecycle, sandbox shell pre-hooks.</td>
+                <td>Decorator construction, <code>execute_tool_once</code> lifecycle, sandbox command pre-hooks.</td>
               </tr>
               <tr>
                 <td><code>_terminals</code></td>
@@ -197,7 +197,7 @@
               <tr>
                 <td><code>sandbox</code></td>
                 <td><a href="sandbox.html">Sandbox</a></td>
-                <td>Agent-facing read/write/edit/shell/search wrappers.</td>
+                <td>Agent-facing read/write/edit/command/search wrappers.</td>
                 <td>Typed sandbox API, daemon workspace routing, layer-stack/OCC, ephemeral overlay.</td>
               </tr>
               <tr>
@@ -241,7 +241,7 @@
         </div>
       </section>
 
-      <section id="critical-routes" data-last-reviewed-commit="HEAD-plus-worktree" data-evidence-paths="backend/src/engine/background;backend/src/tools/background;backend/src/tools/subagent;backend/src/tools/isolated_workspace;backend/src/sandbox/host/isolated_workspace_lifecycle.py;backend/src/sandbox/ephemeral_workspace/pipeline.py">
+      <section id="critical-routes" data-last-reviewed-commit="HEAD-plus-worktree" data-evidence-paths="backend/src/engine/background;backend/src/tools/sandbox/exec_command;backend/src/tools/subagent;backend/src/tools/isolated_workspace;backend/src/sandbox/host/isolated_workspace_lifecycle.py;backend/src/sandbox/ephemeral_workspace/pipeline.py">
         <h3>Critical Routes To Keep Straight</h3>
         <div class="grid">
           <div class="callout ok">
@@ -262,7 +262,7 @@
           <div class="callout ok">
             <h3>Ephemeral workspace</h3>
             <p>
-              Without an isolated handle, shell/search and non-fast-path operations use a per-call overlay.
+              Without an isolated handle, command/search and non-fast-path operations use a per-call overlay.
               Write-capable captures publish through OCC when they should affect the shared workspace.
             </p>
           </div>

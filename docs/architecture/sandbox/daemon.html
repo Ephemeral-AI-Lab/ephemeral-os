@@ -413,61 +413,61 @@
 </section>
 <section id="background-lifecycle-detail"
   data-last-reviewed-commit="2a3e6cc7c"
-  data-evidence-paths="backend/src/engine/background/task_supervisor.py backend/src/engine/background/dispatch.py backend/src/tools/sandbox/shell/shell.py backend/src/sandbox/daemon/rpc/dispatcher.py backend/src/tools/background">
+  data-evidence-paths="backend/src/engine/background/task_supervisor.py backend/src/engine/background/dispatch.py backend/src/tools/sandbox/exec_command/exec_command.py backend/src/tools/sandbox/check_pty_command_progress/check_pty_command_progress.py backend/src/tools/sandbox/cancel_pty_command/cancel_pty_command.py backend/src/sandbox/daemon/rpc/dispatcher.py">
 <h3>6.7 Background Task Lifecycle <a class="anchor" href="#background-lifecycle-detail">§</a></h3>
 
-<p>Background execution is split across two control planes. The engine owns user-visible task aliases, result delivery, progress snapshots, and task status. The daemon owns the sandbox invocation that may still be running inside the sandbox. The correlation key between them is the sandbox invocation id passed in execution metadata and then into the daemon envelope.</p>
+<p>Background execution is split across typed control planes. The engine owns subagent records, delegated workflow records, PTY completion notifications, progress snapshots, and task status. The daemon owns long-running command sessions and cancellable in-flight sandbox work. The public model surface no longer exposes generic background check, wait, or cancel tools.</p>
 
 <table>
   <thead><tr><th>State</th><th>Owner</th><th>Purpose</th><th>Evidence</th></tr></thead>
   <tbody>
-    <tr><td><code>bg_1</code>, <code>bg_2</code> aliases</td><td>Engine <code>BackgroundTaskSupervisor</code></td><td>User-facing ids for result, wait, and cancel tools.</td><td><span class="file-ref">backend/src/engine/background/task_supervisor.py:154-161</span></td></tr>
-    <tr><td>Task status and terminal result</td><td>Engine <code>BackgroundTaskRecord</code></td><td>Tracks running/completed/failed/cancelled/delivered state, progress lines, and the final tool result.</td><td><span class="file-ref">backend/src/engine/background/task_supervisor.py:70-105</span>, <span class="file-ref">backend/src/engine/background/task_supervisor.py:163-240</span></td></tr>
-    <tr><td><code>sandbox_invocation_id</code></td><td>Engine launch path, then daemon envelope</td><td>Stable correlation id between a background task alias and the daemon task that must receive heartbeat/cancel.</td><td><span class="file-ref">backend/src/engine/background/dispatch.py:101-141</span>, <span class="file-ref">backend/src/tools/sandbox/shell/shell.py:169-180</span></td></tr>
+    <tr><td><code>subagent_session_id</code></td><td>Engine <code>BackgroundTaskSupervisor</code></td><td>User-facing id for <code>run_subagent</code>, <code>check_subagent_progress</code>, and <code>cancel_subagent</code>.</td><td><span class="file-ref">backend/src/engine/background/dispatch.py</span>, <span class="file-ref">backend/src/engine/background/task_supervisor.py</span></td></tr>
+    <tr><td><code>workflow_task_id</code> / workflow id</td><td>Engine <code>WorkflowBackgroundRecord</code> plus durable Workflow state</td><td>User-facing delegated workflow handle for <code>delegate_workflow</code>, <code>check_workflow_status</code>, and <code>cancel_workflow</code>.</td><td><span class="file-ref">backend/src/engine/background/task_supervisor.py</span>, <span class="file-ref">backend/src/tools/workflow</span></td></tr>
+    <tr><td><code>pty_session_id</code></td><td>Daemon PTY registry plus engine <code>PtyCommandRecord</code></td><td>User-facing id for <code>exec_command(tty=true)</code>, <code>check_pty_command_progress</code>, <code>write_pty_command_stdin</code>, and <code>cancel_pty_command</code>.</td><td><span class="file-ref">backend/src/tools/sandbox/exec_command/exec_command.py</span>, <span class="file-ref">backend/src/engine/background/task_supervisor.py</span></td></tr>
+    <tr><td>Task status and terminal result</td><td>Engine records and daemon PTY/session handlers</td><td>Tracks running/completed/failed/cancelled/delivered state, progress lines, and final typed result.</td><td><span class="file-ref">backend/src/engine/background/task_supervisor.py</span></td></tr>
+    <tr><td><code>sandbox_invocation_id</code></td><td>Daemon envelope for ordinary in-flight requests</td><td>Correlates cancellable daemon work where the transport still needs invocation-level cancel/heartbeat.</td><td><span class="file-ref">backend/src/sandbox/daemon/rpc/in_flight.py</span>, <span class="file-ref">backend/src/sandbox/api/daemon_invocations.py</span></td></tr>
     <tr><td>In-flight daemon entry</td><td>Daemon registry</td><td>Tracks asyncio task, agent id, op, last heartbeat time, background flag, and TTL reaped flag.</td><td><span class="file-ref">backend/src/sandbox/daemon/rpc/in_flight.py:20-74</span></td></tr>
-    <tr><td>Visible result snapshots</td><td>Background result tools</td><td>Expose current or terminal state without reading daemon internals directly.</td><td><span class="file-ref">backend/src/tools/background/check_background_task_result/check_background_task_result.py:79-128</span>, <span class="file-ref">backend/src/tools/background/wait_background_tasks/wait_background_tasks.py:48-123</span></td></tr>
+    <tr><td>Visible result snapshots</td><td>Typed control tools</td><td>Expose progress or terminal state through the matching subagent, workflow, or PTY control tool.</td><td><span class="file-ref">backend/src/tools/subagent/control.py</span>, <span class="file-ref">backend/src/tools/workflow</span>, <span class="file-ref">backend/src/tools/sandbox/check_pty_command_progress/check_pty_command_progress.py</span></td></tr>
   </tbody>
 </table>
 
 <pre class="diagram" aria-label="Background task lifecycle correlation">
-[engine starts background tool]
+[agent starts typed background surface]
         |
         v
-[daemon schedules background task]
+[engine or daemon registers typed handle]
         |
         v
-[task registry: pending -&gt; running]
+[task/session state: running]
         |
-        +--&gt; [poll/status request]
+        +--&gt; [typed poll/status request]
         |       -&gt; [current progress snapshot]
         |
-        +--&gt; [task finishes]
+        +--&gt; [task/session finishes]
                 |
                 v
         [completed / failed / cancelled state]
                 |
                 v
-        [result fetched once and marked delivered]
+        [typed result reported once and marked delivered]
 </pre>
 
 <div class="sequence" aria-label="Background task lifecycle">
   <ol>
-    <li><span>The engine background policy launches only hard-coded manager surfaces, such as <code>run_subagent</code>, and assigns typed ids instead of accepting a model-supplied <code>background=true</code> flag <span class="file-ref">backend/src/engine/background/policy.py</span>, <span class="file-ref">backend/src/engine/background/dispatch.py:59-106</span>.</span></li>
-    <li><span>If a manager-launched tool requires sandbox context, dispatch creates a daemon <code>sandbox_invocation_id</code> and carries it in <code>ExecutionMetadata</code>; sandbox tools can copy that invocation id into their typed request payloads <span class="file-ref">backend/src/engine/background/dispatch.py:107-141</span>.</span></li>
-    <li><span><code>BackgroundTaskSupervisor.launch()</code> stores task id, tool input, asyncio task, agent id, sandbox id, sandbox invocation id, and <code>uses_sandbox</code>; sandbox-bound tasks start the heartbeat loop <span class="file-ref">backend/src/engine/background/task_supervisor.py:163-240</span>.</span></li>
-    <li><span>When a request reaches the daemon with its internal background flag set, the dispatcher registers the same invocation id with <code>agent_id</code> and op name <span class="file-ref">backend/src/sandbox/daemon/rpc/dispatcher.py:69-83</span>.</span></li>
-    <li><span>The task runs through normal daemon workspace routing: background shell is still an ordinary sandbox tool call that may publish through OCC unless it is inside isolated workspace.</span></li>
-    <li><span>Result tools read the engine manager state. <code>check_background_task_result</code> returns current or terminal output; <code>wait_background_tasks</code> blocks up to a bounded timeout and marks newly completed tasks delivered <span class="file-ref">backend/src/tools/background/check_background_task_result/check_background_task_result.py:78-128</span>, <span class="file-ref">backend/src/tools/background/wait_background_tasks/wait_background_tasks.py:47-123</span>.</span></li>
+    <li><span>The engine background policy launches only hard-coded manager surfaces such as <code>run_subagent</code>; <code>exec_command(tty=true)</code> registers a daemon-owned PTY session after the command tool returns <span class="file-ref">backend/src/engine/background/policy.py</span>, <span class="file-ref">backend/src/tools/sandbox/exec_command/exec_command.py</span>.</span></li>
+    <li><span><code>delegate_workflow</code> persists a workflow and registers a typed workflow handle on the parent agent's supervisor; the parent stays running and decides when to inspect or cancel the workflow.</span></li>
+    <li><span><code>BackgroundTaskSupervisor</code> stores subagent records, workflow records, and PTY records. Running PTY records keep the heartbeat/completion collection loop active so terminal PTY output can be reported once.</span></li>
+    <li><span>When command execution reaches the daemon, it still runs through normal workspace routing and OCC publish semantics. PTY state changes lifecycle control, not workspace mutation rules.</span></li>
+    <li><span>Typed control tools read the matching state surface. Subagent controls read engine progress, workflow controls read durable workflow state plus the supervisor handle, and PTY controls poll or cancel daemon sessions.</span></li>
   </ol>
 </div>
 
 <table>
-  <thead><tr><th>Background-facing tool</th><th>Behavior</th><th>Evidence</th></tr></thead>
+  <thead><tr><th>Background-facing surface</th><th>Behavior</th><th>Evidence</th></tr></thead>
   <tbody>
-    <tr><td><code>check_background_task_result</code></td><td>Finds a tracked task, normalizes status, returns JSON with task id, status, rendered command, and result/progress snapshot.</td><td><span class="file-ref">backend/src/tools/background/check_background_task_result/check_background_task_result.py:91-128</span></td></tr>
-    <tr><td><code>wait_background_tasks</code></td><td>Waits for all currently running tracked tasks up to a schema-bounded timeout, collects completed tasks, and returns a compact status snapshot.</td><td><span class="file-ref">backend/src/tools/background/wait_background_tasks/wait_background_tasks.py:21-32</span>, <span class="file-ref">backend/src/tools/background/wait_background_tasks/wait_background_tasks.py:83-123</span></td></tr>
-    <tr><td><code>cancel_background_task</code></td><td>Rejects ambiguous <code>all</code>, resolves <code>auto</code> only when exactly one task is running, and calls manager cancellation.</td><td><span class="file-ref">backend/src/tools/background/cancel_background_task/cancel_background_task.py:35-112</span></td></tr>
-    <tr><td>Background task output rendering</td><td>Render exact tool command text, collapse internal statuses, and build wait/check snapshot metadata.</td><td><span class="file-ref">backend/src/tools/background/_lib/task_output.py:24-99</span></td></tr>
+    <tr><td><code>run_subagent</code></td><td>Launches a child agent in the supervisor and returns <code>subagent_session_id</code>; typed controls inspect or stop it.</td><td><span class="file-ref">backend/src/tools/subagent/run_subagent/run_subagent.py</span>, <span class="file-ref">backend/src/tools/subagent/control.py</span></td></tr>
+    <tr><td><code>delegate_workflow</code></td><td>Launches delegated workflow state and returns a typed workflow handle; status/cancel tools operate on that handle.</td><td><span class="file-ref">backend/src/tools/workflow/delegate_workflow/delegate_workflow.py</span>, <span class="file-ref">backend/src/tools/workflow/check_workflow_status/check_workflow_status.py</span></td></tr>
+    <tr><td><code>exec_command(tty=true)</code></td><td>Creates a daemon-owned PTY command session and returns <code>pty_session_id</code>; typed PTY controls poll, write stdin, and cancel.</td><td><span class="file-ref">backend/src/tools/sandbox/exec_command/exec_command.py</span>, <span class="file-ref">backend/src/tools/sandbox/cancel_pty_command/cancel_pty_command.py</span></td></tr>
   </tbody>
 </table>
 
@@ -515,7 +515,7 @@
 
 <div class="callout warn">
   <span class="label">Isolated vs ephemeral background behavior</span>
-  Ephemeral background shell tasks are normal sandbox-bound daemon invocations with heartbeats and TTL cleanup. Isolated enter is blocked while those tasks are still running for the same agent. Isolated exit cancels sandbox-bound background work before tearing down the namespace.
+  Active PTY command sessions are daemon-owned command work that may still mutate through the default ephemeral/OCC path. Isolated enter is blocked while those sessions are still running for the same agent. Isolated exit cancels per-agent PTY work before tearing down the namespace.
 </div>
 
 <p>The host-side isolated lifecycle checks both local manager state and daemon-visible PTY session state before entering. A nonzero count returns <code>ephemeral_jobs_in_flight</code>, because an active background task may still write through the default ephemeral/OCC path and should not race an isolated namespace transition <span class="file-ref">backend/src/sandbox/host/isolated_workspace_lifecycle.py:41-77</span>, <span class="file-ref">backend/src/sandbox/host/isolated_workspace_lifecycle.py:244-275</span>. On exit, the host lifecycle cancels per-agent sandbox-bound background tasks, then calls daemon isolated exit and includes the eviction count in the returned phases <span class="file-ref">backend/src/sandbox/host/isolated_workspace_lifecycle.py:98-136</span>, <span class="file-ref">backend/src/sandbox/host/isolated_workspace_lifecycle.py:253-264</span>.</p>

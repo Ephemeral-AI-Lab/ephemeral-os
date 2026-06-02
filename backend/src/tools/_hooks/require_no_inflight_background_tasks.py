@@ -30,7 +30,7 @@ logger = logging.getLogger(__name__)
 
 _MSG_IN_FLIGHT = (
     "BLOCKED: {count} sandbox-bound background task(s) are still in flight for "
-    "this agent. Cancel them with cancel_background_task before calling "
+    "this agent. Cancel active PTY commands with cancel_pty_command before calling "
     "{tool}, then retry."
 )
 _MSG_UNAVAILABLE = (

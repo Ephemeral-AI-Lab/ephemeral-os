@@ -17,7 +17,7 @@ from tools._framework.core.results import ToolResult
 from tools._framework.core.runtime import ExecutionMetadata
 from tools.sandbox.edit_file import edit_file as edit_file_tool
 from tools.sandbox.read_file import read_file as read_file_tool
-from tools.sandbox.shell import shell as shell_tool
+from tools.sandbox.exec_command import exec_command as exec_command_tool
 from tools.sandbox.write_file import write_file as write_file_tool
 
 from test_runner.agent.mock.sandbox_probe import SandboxCheck
@@ -58,7 +58,7 @@ async def run_high_concurrency_seed_probe(
         "conflict_worker_count": CONFLICT_WORKER_COUNT,
     }
     setup = await call_tool(
-        shell_tool,
+        exec_command_tool,
         {
             "command": (
                 f"mkdir -p {ROOT}/workers {ROOT}/fragments {ROOT}/shared "
@@ -69,7 +69,7 @@ async def run_high_concurrency_seed_probe(
         metadata,
         emit,
     )
-    record_tool_check("tool.shell.high_concurrency.seed_dirs", setup)
+    record_tool_check("tool.exec_command.high_concurrency.seed_dirs", setup)
 
     conflict_seed = await call_tool(
         write_file_tool,
@@ -419,7 +419,7 @@ def _worker_summary(
         "write_count": by_tool.get("write_file", 0),
         "edit_count": by_tool.get("edit_file", 0),
         "read_count": by_tool.get("read_file", 0),
-        "shell_count": by_tool.get("shell", 0),
+        "shell_count": by_tool.get("exec_command", 0),
         "conflict_status": conflict_status,
         "conflict_reason": conflict_reason,
         "unexpected_error_count": unexpected_errors,

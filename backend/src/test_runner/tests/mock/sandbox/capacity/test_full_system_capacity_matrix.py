@@ -146,7 +146,7 @@ def _assert_tool_and_event_capacity(report: Any) -> None:
     assert tool_counts["write_file"] >= 30
     assert tool_counts["edit_file"] >= 5
     assert tool_counts["read_file"] >= 20
-    assert tool_counts["shell"] >= 10
+    assert tool_counts["exec_command"] >= 10
     assert (
         sum(count for name, count in tool_counts.items() if name.startswith("lsp."))
         >= 5

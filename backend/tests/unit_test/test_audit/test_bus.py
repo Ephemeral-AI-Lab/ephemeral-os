@@ -51,7 +51,7 @@ def test_audit_event_bus_captures_handler_errors() -> None:
     event = AuditEvent(
         source="engine",
         type="engine.tool.failed",
-        node=AuditNode(tool_name="shell"),
+        node=AuditNode(tool_name="exec_command"),
     )
     calls: list[str] = []
 

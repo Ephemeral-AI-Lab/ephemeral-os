@@ -146,7 +146,7 @@ def _assert_gitignore_route_filtering(report: RunReport) -> None:
     tracked_shells = 0
     gitignored_shells = 0
     for call in report.tool_calls:
-        if call.tool_name != "shell":
+        if call.tool_name != "exec_command":
             continue
         changed = [str(path) for path in (call.metadata or {}).get("changed_paths", ())]
         timings = (call.metadata or {}).get("timings") or {}

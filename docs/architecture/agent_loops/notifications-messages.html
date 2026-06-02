@@ -95,7 +95,7 @@
         [API request + observable message.jsonl stream]
 </pre>
 <div class="edge-list">
-  <div><b>Background snapshots</b><span>Only the latest provider-visible status for each background task is retained from <code>wait_background_tasks</code> output.</span></div>
+  <div><b>Typed async state</b><span>Provider history is sanitized for valid tool-use/result pairing; generic <code>wait_background_tasks</code> snapshots are no longer part of the model surface.</span></div>
   <div><b>Transcript safety</b><span>Malformed historical tool-use/result pairs are removed from the provider copy without mutating the durable transcript.</span></div>
   <div><b>Local-only fields</b><span>Thinking blocks and terminal metadata remain local, while artifacts record the system prompt, initial user rows, assistant messages, and tool results.</span></div>
 </div>

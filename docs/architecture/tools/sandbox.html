@@ -42,8 +42,8 @@
 </div>
 
 <section id="sandbox-overview"
-  data-last-reviewed-commit="569f12c3f39471dbaa643906856a8daf81a21a2d"
-  data-evidence-paths="backend/src/tools/sandbox/_lib/registry.py backend/src/tools/sandbox/read_file/read_file.py backend/src/tools/sandbox/write_file/write_file.py backend/src/tools/sandbox/edit_file/edit_file.py backend/src/tools/sandbox/shell/shell.py backend/src/tools/sandbox/glob/glob.py backend/src/tools/sandbox/grep/grep.py backend/src/tools/isolated_workspace/enter_isolated_workspace/definition.py backend/src/tools/isolated_workspace/exit_isolated_workspace/definition.py">
+  data-last-reviewed-commit="HEAD-plus-worktree"
+  data-evidence-paths="backend/src/tools/sandbox/_lib/registry.py backend/src/tools/sandbox/read_file/read_file.py backend/src/tools/sandbox/write_file/write_file.py backend/src/tools/sandbox/edit_file/edit_file.py backend/src/tools/sandbox/exec_command/exec_command.py backend/src/tools/sandbox/write_pty_command_stdin/write_pty_command_stdin.py backend/src/tools/sandbox/check_pty_command_progress/check_pty_command_progress.py backend/src/tools/sandbox/cancel_pty_command/cancel_pty_command.py backend/src/tools/sandbox/glob/glob.py backend/src/tools/sandbox/grep/grep.py backend/src/tools/isolated_workspace/enter_isolated_workspace/definition.py backend/src/tools/isolated_workspace/exit_isolated_workspace/definition.py">
 <h1>Sandbox Tools</h1>
 <nav class="page-toc" aria-labelledby="page-toc-heading">
   <h3 id="page-toc-heading">Contents</h3>
@@ -51,48 +51,51 @@
     <li><a href="#tool-surface"><span>1</span> Tool Surface</a></li>
     <li><a href="#api-daemon-hop"><span>2</span> API and Daemon Hop</a></li>
     <li><a href="#shared-routing"><span>3</span> Default Shared Workspace Routing</a></li>
-    <li><a href="#shell-background-policy"><span>4</span> Shell Background and Policy</a></li>
+    <li><a href="#command-background-policy"><span>4</span> Command Sessions and Policy</a></li>
     <li><a href="#workflow-engine-connections"><span>5</span> Engine and Workflow Connections</a></li>
     <li><a href="#sandbox-evidence-refresh"><span>6</span> Evidence and Refresh</a></li>
   </ol>
 </nav>
 
-<p><code>backend/src/tools/sandbox</code> is the agent-facing tool folder for file, search, and shell work inside a sandboxed workspace. Its registry returns <code>read_file</code>, <code>write_file</code>, <code>edit_file</code>, <code>shell</code>, <code>glob</code>, and <code>grep</code>, and it also includes the isolated workspace lifecycle tools in the same sandbox context so the engine can register one coherent sandbox tool surface.</p>
+<p><code>backend/src/tools/sandbox</code> is the agent-facing tool folder for file, command, search, and isolated-workspace work inside a sandboxed workspace. Its registry returns <code>read_file</code>, <code>write_file</code>, <code>edit_file</code>, <code>multi_edit</code>, <code>exec_command</code>, PTY command controls, <code>glob</code>, and <code>grep</code>, and it also includes the isolated workspace lifecycle tools in the same sandbox context so the engine can register one coherent sandbox tool surface.</p>
 <div class="summary">
   <ul>
     <li>Read/write/edit wrappers normalize tool input and call the public <code>sandbox.api</code> facade.</li>
-    <li><code>shell</code> is write-capable and runs destructive command pre-hooks before daemon dispatch; model-facing background command work now uses <code>exec_command</code> and PTY controls.</li>
+    <li><code>exec_command</code> is write-capable and runs destructive command pre-hooks before daemon dispatch; model-facing background command work uses <code>exec_command(tty=true)</code> and typed PTY controls.</li>
     <li>The public API facade sends <code>api.v1.*</code> daemon operations over the sandbox transport.</li>
     <li>The daemon routes each workspace tool through <code>workspace_tool_dispatch</code>, which prefers an active isolated workspace, then direct layer-stack/OCC file paths, then ephemeral overlay execution.</li>
   </ul>
 </div>
 <div class="diagram" aria-label="Sandbox tool routing workflow">
   <div class="flow-row">
-    <div class="node info"><strong>Tool wrapper</strong><small><code>read_file</code>, <code>write_file</code>, <code>edit_file</code>, <code>shell</code>, <code>glob</code>, <code>grep</code></small></div>
+    <div class="node info"><strong>Tool wrapper</strong><small><code>read_file</code>, <code>write_file</code>, <code>edit_file</code>, <code>exec_command</code>, <code>glob</code>, <code>grep</code></small></div>
     <div class="node"><strong><code>sandbox.api.tool</code></strong><small>typed request, audit wrapper, daemon op</small></div>
     <div class="node"><strong>Daemon envelope</strong><small>in-flight registration and plugin/isolation gates</small></div>
     <div class="node good"><strong>Workspace dispatcher</strong><small>isolated, direct LayerStack/OCC, or overlay</small></div>
   </div>
   <div class="flow-row">
     <div class="node"><strong>Direct file path</strong><small>read/write/edit against LayerStack + OCC</small></div>
-    <div class="node"><strong>Ephemeral overlay</strong><small>shell/search or unbound file work</small></div>
+    <div class="node"><strong>Ephemeral overlay</strong><small>command/search or unbound file work</small></div>
     <div class="node warn"><strong>Isolated handle</strong><small>private persistent scratch; no publish</small></div>
   </div>
 </div>
 </section>
 
 <section id="tool-surface"
-  data-last-reviewed-commit="569f12c3f39471dbaa643906856a8daf81a21a2d"
-  data-evidence-paths="backend/src/tools/sandbox/_lib/registry.py backend/src/tools/sandbox/read_file/read_file.py backend/src/tools/sandbox/write_file/write_file.py backend/src/tools/sandbox/edit_file/edit_file.py backend/src/tools/sandbox/_lib/mutation_result.py backend/src/tools/sandbox/shell/shell.py backend/src/tools/sandbox/glob/glob.py backend/src/tools/sandbox/grep/grep.py">
+  data-last-reviewed-commit="HEAD-plus-worktree"
+  data-evidence-paths="backend/src/tools/sandbox/_lib/registry.py backend/src/tools/sandbox/read_file/read_file.py backend/src/tools/sandbox/write_file/write_file.py backend/src/tools/sandbox/edit_file/edit_file.py backend/src/tools/sandbox/_lib/mutation_result.py backend/src/tools/sandbox/exec_command/exec_command.py backend/src/tools/sandbox/write_pty_command_stdin/write_pty_command_stdin.py backend/src/tools/sandbox/check_pty_command_progress/check_pty_command_progress.py backend/src/tools/sandbox/cancel_pty_command/cancel_pty_command.py backend/src/tools/sandbox/glob/glob.py backend/src/tools/sandbox/grep/grep.py">
 <h2>Tool Surface</h2>
-<p>The registry is intentionally narrow: it returns the six default workspace verbs plus <code>enter_isolated_workspace</code> and <code>exit_isolated_workspace</code>, then stamps every tool with <code>SANDBOX_CONTEXT</code>. That means all of these tools expect the engine/tool framework to provide the sandbox id, caller metadata, layer-stack root, repo root, invocation id, audit sink, and background manager in the execution context.</p>
+<p>The registry is intentionally narrow: it returns the default workspace verbs plus command/session controls and <code>enter_isolated_workspace</code> / <code>exit_isolated_workspace</code>, then stamps every tool with <code>SANDBOX_CONTEXT</code>. That means all of these tools expect the engine/tool framework to provide the sandbox id, caller metadata, layer-stack root, repo root, invocation id, audit sink, and background manager in the execution context.</p>
 <table>
   <thead><tr><th>Tool</th><th>Intent</th><th>Agent-facing role</th><th>Next hop</th></tr></thead>
   <tbody>
     <tr><td><code>read_file</code></td><td>Read-only</td><td>Read one UTF-8 text file and return content/existence.</td><td><code>sandbox_api.read_file</code></td></tr>
     <tr><td><code>write_file</code></td><td>Write allowed</td><td>Create or overwrite one file. Mutation results are normalized through the sandbox tool mutation result helper.</td><td><code>sandbox_api.write_file</code></td></tr>
     <tr><td><code>edit_file</code></td><td>Write allowed</td><td>Apply search/replace edits and preserve conflict/status fields in the tool result.</td><td><code>sandbox_api.edit_file</code></td></tr>
-    <tr><td><code>shell</code></td><td>Write allowed</td><td>Run a command from the repo root, return stdout/stderr/exit code, and surface changed paths/conflict metadata.</td><td><code>sandbox_api.shell</code></td></tr>
+    <tr><td><code>exec_command</code></td><td>Write allowed</td><td>Run a finite command or start a PTY session, return stdout/stderr/exit code, and surface changed paths/conflict metadata.</td><td><code>sandbox_api.exec_command</code></td></tr>
+    <tr><td><code>write_pty_command_stdin</code></td><td>Write allowed</td><td>Send input to an active PTY command session.</td><td><code>sandbox_api.write_pty_command_stdin</code></td></tr>
+    <tr><td><code>check_pty_command_progress</code></td><td>Read-only</td><td>Read recent output or final result for a PTY command session.</td><td><code>sandbox_api.check_pty_command_progress</code></td></tr>
+    <tr><td><code>cancel_pty_command</code></td><td>Write allowed</td><td>Cancel an active PTY command session.</td><td><code>sandbox_api.cancel_pty_command</code></td></tr>
     <tr><td><code>glob</code></td><td>Read-only</td><td>Enumerate workspace paths by pattern.</td><td><code>sandbox_api.glob</code></td></tr>
     <tr><td><code>grep</code></td><td>Read-only</td><td>Regex-scan workspace files with output mode, glob filter, and limit options.</td><td><code>sandbox_api.grep</code></td></tr>
   </tbody>
@@ -145,17 +148,17 @@
   <div><b>Fast read</b><span><code>read_file</code> resolves the requested path through the workspace binding and reads text from the active layer-stack manager.</span></div>
   <div><b>Fast write</b><span><code>write_file</code> turns the final content into an API write change and applies it through the OCC service.</span></div>
   <div><b>Fast edit</b><span><code>edit_file</code> turns each search/replace edit into an OCC edit change and reports applied edit count from the changeset result.</span></div>
-  <div><b>Fallback</b><span>Unbound file requests, shell, glob, grep, outside-workspace paths, and other overlay-shaped work use the ephemeral overlay pipeline.</span></div>
+  <div><b>Fallback</b><span>Unbound file requests, finite commands, glob, grep, outside-workspace paths, and other overlay-shaped work use the ephemeral overlay pipeline.</span></div>
 </div>
 <p>The ephemeral pipeline acquires a fresh overlay handle for one call, executes the tool payload in a new namespace, captures upperdir changes for write-allowed calls, publishes accepted changes through OCC, attaches timing/resource metadata, and destroys the handle. Read-only search work can use the overlay execution shape without publishing. Write-capable overlay results must pass through the OCC-gated publish boundary before becoming part of the shared layer-stack state.</p>
 </section>
 
-<section id="shell-background-policy"
+<section id="command-background-policy"
   data-last-reviewed-commit="HEAD"
-  data-evidence-paths="backend/src/tools/sandbox/shell/shell.py backend/src/tools/sandbox/exec_command/exec_command.py backend/src/tools/sandbox/check_pty_command_progress/check_pty_command_progress.py backend/src/tools/sandbox/write_pty_command_stdin/write_pty_command_stdin.py backend/src/tools/sandbox/cancel_pty_command/cancel_pty_command.py backend/src/sandbox/api/tool/shell.py backend/src/sandbox/daemon/rpc/in_flight.py backend/src/sandbox/daemon/builtin_operations.py">
-<h2>Shell and Command Policy</h2>
-<p><code>shell</code> is declared <code>WRITE_ALLOWED</code> but no longer opts into the generic <code>background=true</code> schema path. Model-facing command sessions use <code>exec_command</code>: finite <code>tty=false</code> calls return directly, while interactive <code>tty=true</code> calls return <code>pty_session_id</code> and are controlled by typed PTY tools.</p>
-<p>Before daemon dispatch, <code>shell</code> runs destructive git and destructive shell pre-hooks through the <a class="wiki-link" href="hooks.html">Tool Hooks</a> pipeline. These hooks block command forms that would bypass the sandbox write/audit path or destructively mutate workspace/system state. That policy keeps shell useful for builds and tests while steering file edits toward <code>edit_file</code> and <code>write_file</code>.</p>
+  data-evidence-paths="backend/src/tools/sandbox/exec_command/exec_command.py backend/src/tools/sandbox/check_pty_command_progress/check_pty_command_progress.py backend/src/tools/sandbox/write_pty_command_stdin/write_pty_command_stdin.py backend/src/tools/sandbox/cancel_pty_command/cancel_pty_command.py backend/src/sandbox/api/tool/command.py backend/src/sandbox/api/tool/shell.py backend/src/sandbox/daemon/rpc/in_flight.py backend/src/sandbox/daemon/builtin_operations.py">
+<h2>Command Sessions and Policy</h2>
+<p><code>exec_command</code> is declared <code>WRITE_ALLOWED</code> and is the model-facing replacement for the deleted public <code>shell</code> tool package. Finite <code>tty=false</code> calls return directly, while interactive <code>tty=true</code> calls return <code>pty_session_id</code> and are controlled by typed PTY tools. Generic <code>background=true</code> and generic background check/wait/cancel tools are not exposed.</p>
+<p>Before daemon dispatch, <code>exec_command</code> runs destructive git and destructive shell pre-hooks through the <a class="wiki-link" href="hooks.html">Tool Hooks</a> pipeline. These hooks block command forms that would bypass the sandbox write/audit path or destructively mutate workspace/system state. That policy keeps commands useful for builds and tests while steering file edits toward <code>edit_file</code> and <code>write_file</code>.</p>
 <div class="callout">
   <span class="label">Session connection</span>
   The internal background/session manager still tracks long-running PTY sessions for completion notifications and isolated-workspace lifecycle gates, but generic background management tools are no longer exposed to the model.
@@ -166,14 +169,14 @@
   data-last-reviewed-commit="569f12c3f39471dbaa643906856a8daf81a21a2d"
   data-evidence-paths="backend/src/engine/query/loop.py backend/src/engine/tool_call/dispatch.py backend/src/tools/_framework/execution/tool_call.py backend/src/tools/_framework/core/decorator.py backend/src/tools/_framework/core/registry.py backend/src/workflow/context_engine/engine.py backend/src/workflow/context_engine/xml.py backend/src/workflow/_core/state.py backend/src/tools/submission backend/src/tools/_terminals">
 <h2>Engine and Workflow Connections</h2>
-<p>The sandbox tools are ordinary framework tools from the engine's perspective. The engine loop and tool-call dispatch layer enforce tool execution, background wrapping, and terminal-tool completion rules; sandbox tools provide the workspace mutation/search/shell substrate those tasks use while working toward terminal submission.</p>
+<p>The sandbox tools are ordinary framework tools from the engine's perspective. The engine loop and tool-call dispatch layer enforce tool execution, background wrapping, and terminal-tool completion rules; sandbox tools provide the workspace mutation/search/command substrate those tasks use while working toward terminal submission.</p>
 <p>Workflow does not receive peer-to-peer messages from sandbox tools. It observes persisted workflow, iteration, attempt, task, terminal, and context state. The important contract is that sandbox tool results carry enough structured metadata for later role context: status, conflicts, changed paths, timings, and background task state. Terminal tools then mark completion and handoff state; sandbox tools only mutate or inspect the workspace that those terminal decisions refer to.</p>
 <p>The isolated workspace lifecycle tools share this registry context, but their routing semantics differ: once an agent enters isolated mode, typed sandbox verbs for that agent are intercepted by the isolated pipeline before the shared layer-stack/OCC path. See <a href="isolated-workspace.html">Isolated Workspace</a> for the private scratch workflow and exit behavior.</p>
 </section>
 
 <section id="sandbox-evidence-refresh"
   data-last-reviewed-commit="HEAD-plus-worktree"
-  data-evidence-paths="backend/src/tools/sandbox backend/src/sandbox/api/tool backend/src/sandbox/daemon/builtin_operations.py backend/src/sandbox/daemon/workspace_tool_dispatch.py backend/src/sandbox/ephemeral_workspace/pipeline.py backend/src/sandbox/overlay/namespace_runner.py backend/tests/unit_test/test_sandbox/test_daemon/test_file_dispatch.py backend/tests/unit_test/test_sandbox/test_api/test_shell.py backend/tests/unit_test/test_sandbox/test_api/test_shell_background_dispatch.py backend/tests/unit_test/test_sandbox/test_static_background_lifecycle.py backend/src/test_runner/tests/mock/sandbox/background_tool backend/src/test_runner/tests/mock/sandbox/layer_stack_occ_overlay backend/src/test_runner/tests/mock/sandbox/ephemeral_workspace">
+  data-evidence-paths="backend/src/tools/sandbox backend/src/sandbox/api/tool backend/src/sandbox/daemon/builtin_operations.py backend/src/sandbox/daemon/workspace_tool_dispatch.py backend/src/sandbox/ephemeral_workspace/pipeline.py backend/src/sandbox/overlay/namespace_runner.py backend/tests/unit_test/test_sandbox/test_daemon/test_file_dispatch.py backend/tests/unit_test/test_sandbox/test_api/test_shell.py backend/tests/unit_test/test_sandbox/test_static_background_lifecycle.py backend/src/test_runner/tests/mock/sandbox/background_tool backend/src/test_runner/tests/mock/sandbox/layer_stack_occ_overlay backend/src/test_runner/tests/mock/sandbox/ephemeral_workspace">
 <h2>Evidence and Refresh</h2>
 <div class="evidence-grid">
   <div class="evidence-card">
@@ -191,7 +194,7 @@
     <ul>
       <li><code>backend/tests/unit_test/test_sandbox/test_daemon/test_file_dispatch.py</code></li>
       <li><code>backend/tests/unit_test/test_sandbox/test_api/test_shell.py</code></li>
-      <li><code>backend/tests/unit_test/test_sandbox/test_api/test_shell_background_dispatch.py</code></li>
+      <li><code>backend/tests/unit_test/test_tools/test_sandbox_toolkit/test_exec_command.py</code></li>
       <li><code>backend/tests/unit_test/test_sandbox/test_static_background_lifecycle.py</code></li>
       <li><code>backend/src/test_runner/tests/mock/sandbox/background_tool</code></li>
       <li><code>backend/src/test_runner/tests/mock/sandbox/ephemeral_workspace</code></li>
@@ -199,7 +202,7 @@
   </div>
   <div class="evidence-card">
     <h3>Refresh triggers</h3>
-    <p>Re-check this page when tool registration, daemon op names, shell pre-hooks, background schema decoration, workspace binding, OCC result projection, or ephemeral overlay publish semantics change.</p>
+    <p>Re-check this page when tool registration, daemon op names, command pre-hooks, PTY session controls, workspace binding, OCC result projection, or ephemeral overlay publish semantics change.</p>
   </div>
 </div>
 </section>

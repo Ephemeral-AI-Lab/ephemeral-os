@@ -147,6 +147,14 @@ LSP_BRIDGE_RENAMED_CONTENT = LSP_BRIDGE_CONTENT.replace(
     LSP_BRIDGE_SYMBOL,
     LSP_BRIDGE_RENAMED_SYMBOL,
 )
+LSP_BRIDGE_APPLY_TARGET_REL = "live_plugin_lsp_bridge_apply.py"
+LSP_BRIDGE_APPLY_CONTENT = "VALUE = 'before'\n"
+LSP_BRIDGE_APPLY_CONTENT_AFTER = "VALUE = 'after'\n"
+LSP_BRIDGE_CODE_ACTION_TARGET_REL = "live_plugin_lsp_bridge_code_action.py"
+LSP_BRIDGE_CODE_ACTION_CONTENT = "status = 'before'\n"
+LSP_BRIDGE_CODE_ACTION_CONTENT_AFTER = "status = 'after'\n"
+LSP_BRIDGE_CODE_ACTION_TITLE = "Bridge replace status"
+LSP_BRIDGE_CODE_ACTION_KIND = "quickfix"
 MULTI_TARGET_A_REL = "live_plugin_multi_a.txt"
 MULTI_TARGET_A_CONTENT = "from live rust plugin multi a\n"
 MULTI_TARGET_B_REL = "live_plugin_multi_b.txt"
@@ -3185,6 +3193,65 @@ def _flatten_lsp_symbols(symbols: Any) -> list[dict[str, Any]]:
     return flat
 
 
+def _lsp_hover_text(value: Any) -> str:
+    if isinstance(value, str):
+        return value
+    if isinstance(value, dict):
+        raw = value.get("value")
+        if isinstance(raw, str):
+            return raw
+        raw = value.get("contents")
+        if raw is not value:
+            return _lsp_hover_text(raw)
+        return ""
+    if isinstance(value, list):
+        return "\n".join(
+            text for item in value if (text := _lsp_hover_text(item))
+        )
+    return ""
+
+
+def _lsp_location_path(workspace_root: str, location: Any) -> str:
+    if not isinstance(location, dict):
+        return ""
+    raw_path = location.get("path") or location.get("file_path")
+    if not isinstance(raw_path, str) or not raw_path:
+        return ""
+    path = Path(raw_path)
+    if not path.is_absolute():
+        return path.as_posix()
+    try:
+        return path.relative_to(Path(workspace_root)).as_posix()
+    except ValueError:
+        return path.name
+
+
+def _lsp_location_paths(workspace_root: str, locations: Any) -> list[str]:
+    if not isinstance(locations, list):
+        return []
+    return [
+        path
+        for location in locations
+        if (path := _lsp_location_path(workspace_root, location))
+    ]
+
+
+def _lsp_location_start_lines(locations: Any) -> list[int]:
+    if not isinstance(locations, list):
+        return []
+    lines: list[int] = []
+    for location in locations:
+        if not isinstance(location, dict):
+            continue
+        range_value = location.get("range")
+        if not isinstance(range_value, dict):
+            continue
+        start = range_value.get("start")
+        if isinstance(start, dict) and isinstance(start.get("line"), int):
+            lines.append(start["line"])
+    return lines
+
+
 @register_plugin_op("generic", "runtime_bridge_ping", intent=Intent.READ_ONLY)
 def runtime_bridge_ping(args: dict[str, Any], ctx: Any) -> dict[str, Any]:
     workspace_root = str(ctx.overlay.workspace_root)
@@ -3197,6 +3264,124 @@ def runtime_bridge_ping(args: dict[str, Any], ctx: Any) -> dict[str, Any]:
         "manifest_key": ctx.overlay.active_manifest_key(),
         "projection_manifest_key": ctx.projection.active_manifest_key(),
         "workspace_read": _workspace_read(workspace_root, str(args.get("read_path") or "")),
+    }
+
+
+@register_plugin_op("generic", "lsp_bridge_find_definitions", intent=Intent.READ_ONLY)
+async def lsp_bridge_find_definitions(
+    args: dict[str, Any],
+    ctx: Any,
+) -> dict[str, Any]:
+    from plugins.catalog.lsp.runtime import server as lsp_server
+
+    file_path = str(args.get("file_path") or args.get("read_path") or "")
+    line = int(args.get("line") or 0)
+    character = int(args.get("character") or 0)
+    workspace_root = str(ctx.overlay.workspace_root)
+    result = await lsp_server.find_definitions(
+        {
+            "file_path": file_path,
+            "line": line,
+            "character": character,
+        },
+        ctx,
+    )
+    definitions = result.get("definitions") if isinstance(result, dict) else []
+    definitions = definitions if isinstance(definitions, list) else []
+    return {
+        "success": True,
+        "from_lsp_importlib_bridge": True,
+        "from_ppc_service_bridge": True,
+        "workspace_mounted": os.environ.get("EOS_PLUGIN_WORKSPACE_MOUNTED") == "1",
+        "manifest_key": ctx.overlay.active_manifest_key(),
+        "lsp": {
+            "protocol": "lsp-python-importlib",
+            "server": "plugins.catalog.lsp.runtime.server",
+            "path": file_path,
+            "position": {"line": line, "character": character},
+            "definition_count": len(definitions),
+            "definition_paths": _lsp_location_paths(workspace_root, definitions),
+            "definition_start_lines": _lsp_location_start_lines(definitions),
+            "definitions": definitions,
+            "raw": result,
+        },
+    }
+
+
+@register_plugin_op("generic", "lsp_bridge_find_references", intent=Intent.READ_ONLY)
+async def lsp_bridge_find_references(
+    args: dict[str, Any],
+    ctx: Any,
+) -> dict[str, Any]:
+    from plugins.catalog.lsp.runtime import server as lsp_server
+
+    file_path = str(args.get("file_path") or args.get("read_path") or "")
+    line = int(args.get("line") or 0)
+    character = int(args.get("character") or 0)
+    include_declaration = bool(args.get("include_declaration", True))
+    workspace_root = str(ctx.overlay.workspace_root)
+    result = await lsp_server.find_references(
+        {
+            "file_path": file_path,
+            "line": line,
+            "character": character,
+            "include_declaration": include_declaration,
+        },
+        ctx,
+    )
+    references = result.get("references") if isinstance(result, dict) else []
+    references = references if isinstance(references, list) else []
+    return {
+        "success": True,
+        "from_lsp_importlib_bridge": True,
+        "from_ppc_service_bridge": True,
+        "workspace_mounted": os.environ.get("EOS_PLUGIN_WORKSPACE_MOUNTED") == "1",
+        "manifest_key": ctx.overlay.active_manifest_key(),
+        "lsp": {
+            "protocol": "lsp-python-importlib",
+            "server": "plugins.catalog.lsp.runtime.server",
+            "path": file_path,
+            "position": {"line": line, "character": character},
+            "include_declaration": include_declaration,
+            "reference_count": len(references),
+            "reference_paths": _lsp_location_paths(workspace_root, references),
+            "reference_start_lines": _lsp_location_start_lines(references),
+            "references": references,
+            "raw": result,
+        },
+    }
+
+
+@register_plugin_op("generic", "lsp_bridge_hover", intent=Intent.READ_ONLY)
+async def lsp_bridge_hover(args: dict[str, Any], ctx: Any) -> dict[str, Any]:
+    from plugins.catalog.lsp.runtime import server as lsp_server
+
+    file_path = str(args.get("file_path") or args.get("read_path") or "")
+    line = int(args.get("line") or 0)
+    character = int(args.get("character") or 0)
+    result = await lsp_server.hover(
+        {
+            "file_path": file_path,
+            "line": line,
+            "character": character,
+        },
+        ctx,
+    )
+    hover = result.get("hover") if isinstance(result, dict) else {}
+    return {
+        "success": True,
+        "from_lsp_importlib_bridge": True,
+        "from_ppc_service_bridge": True,
+        "workspace_mounted": os.environ.get("EOS_PLUGIN_WORKSPACE_MOUNTED") == "1",
+        "manifest_key": ctx.overlay.active_manifest_key(),
+        "lsp": {
+            "protocol": "lsp-python-importlib",
+            "server": "plugins.catalog.lsp.runtime.server",
+            "path": file_path,
+            "position": {"line": line, "character": character},
+            "hover_text": _lsp_hover_text(hover),
+            "raw": result,
+        },
     }
 
 
@@ -3278,6 +3463,79 @@ async def lsp_bridge_rename(args: dict[str, Any], ctx: Any) -> dict[str, Any]:
             "position": {"line": line, "character": character},
             "new_name": new_name,
             "edit": result.get("edit") if isinstance(result, dict) else {},
+            "apply": apply_result,
+        },
+    }
+
+
+@register_plugin_op(
+    "generic",
+    "lsp_bridge_apply_workspace_edit",
+    intent=Intent.WRITE_ALLOWED,
+    auto_workspace_overlay=False,
+)
+async def lsp_bridge_apply_workspace_edit(
+    args: dict[str, Any],
+    ctx: Any,
+) -> dict[str, Any]:
+    from plugins.catalog.lsp.runtime import server as lsp_server
+
+    result = await lsp_server.apply_workspace_edit_op(args, ctx)
+    changed_paths = [
+        str(path) for path in result.get("changed_paths", []) if isinstance(path, str)
+    ]
+    return {
+        "success": bool(result.get("success")),
+        "from_lsp_importlib_bridge": True,
+        "from_ppc_service_bridge": True,
+        "from_mounted_workspace_callback": True,
+        "workspace_mounted": os.environ.get("EOS_PLUGIN_WORKSPACE_MOUNTED") == "1",
+        "manifest_key": ctx.overlay.active_manifest_key(),
+        "changed_paths": changed_paths,
+        "lsp": {
+            "protocol": "lsp-python-importlib",
+            "server": "plugins.catalog.lsp.runtime.server",
+            "apply": result,
+        },
+    }
+
+
+@register_plugin_op(
+    "generic",
+    "lsp_bridge_apply_code_action",
+    intent=Intent.WRITE_ALLOWED,
+    auto_workspace_overlay=False,
+)
+async def lsp_bridge_apply_code_action(
+    args: dict[str, Any],
+    ctx: Any,
+) -> dict[str, Any]:
+    from plugins.catalog.lsp.runtime import server as lsp_server
+
+    result = await lsp_server.apply_code_action(args, ctx)
+    action = result.get("action") if isinstance(result, dict) else {}
+    action = action if isinstance(action, dict) else {}
+    apply_result = result.get("apply") if isinstance(result, dict) else {}
+    apply_result = apply_result if isinstance(apply_result, dict) else {}
+    changed_paths = [
+        str(path)
+        for path in apply_result.get("changed_paths", [])
+        if isinstance(path, str)
+    ]
+    return {
+        "success": bool(apply_result.get("success")),
+        "from_lsp_importlib_bridge": True,
+        "from_ppc_service_bridge": True,
+        "from_mounted_workspace_callback": True,
+        "workspace_mounted": os.environ.get("EOS_PLUGIN_WORKSPACE_MOUNTED") == "1",
+        "manifest_key": ctx.overlay.active_manifest_key(),
+        "changed_paths": changed_paths,
+        "lsp": {
+            "protocol": "lsp-python-importlib",
+            "server": "plugins.catalog.lsp.runtime.server",
+            "action_title": str(action.get("title") or ""),
+            "action_kind": str(action.get("kind") or ""),
+            "action": action,
             "apply": apply_result,
         },
     }
@@ -3883,6 +4141,30 @@ async def run(args: argparse.Namespace) -> dict[str, Any]:
                     "agent_id": AGENT_ID,
                     "path": f"{WORKSPACE_ROOT}/{LSP_BRIDGE_TARGET_REL}",
                     "content": LSP_BRIDGE_CONTENT,
+                    "overwrite": True,
+                },
+                layer_stack_root=LAYER_STACK_ROOT,
+                timeout=30,
+            )
+            report["lsp_bridge_apply_seed"] = await daemon_client.call_daemon_api(
+                bench.sandbox_id,
+                "api.v1.write_file",
+                {
+                    "agent_id": AGENT_ID,
+                    "path": f"{WORKSPACE_ROOT}/{LSP_BRIDGE_APPLY_TARGET_REL}",
+                    "content": LSP_BRIDGE_APPLY_CONTENT,
+                    "overwrite": True,
+                },
+                layer_stack_root=LAYER_STACK_ROOT,
+                timeout=30,
+            )
+            report["lsp_bridge_code_action_seed"] = await daemon_client.call_daemon_api(
+                bench.sandbox_id,
+                "api.v1.write_file",
+                {
+                    "agent_id": AGENT_ID,
+                    "path": f"{WORKSPACE_ROOT}/{LSP_BRIDGE_CODE_ACTION_TARGET_REL}",
+                    "content": LSP_BRIDGE_CODE_ACTION_CONTENT,
                     "overwrite": True,
                 },
                 layer_stack_root=LAYER_STACK_ROOT,
@@ -4610,6 +4892,183 @@ async def run(args: argparse.Namespace) -> dict[str, Any]:
                     "from_lsp_importlib_bridge": False,
                     "error": str(exc),
                 }
+            lsp_bridge_position = {
+                "line": 3,
+                "character": len("RESULT = bri"),
+            }
+
+            async def call_lsp_bridge_read_only(
+                public_op: str,
+                args: dict[str, Any],
+            ) -> dict[str, Any]:
+                try:
+                    return await daemon_client.call_daemon_api(
+                        bench.sandbox_id,
+                        public_op,
+                        args,
+                        layer_stack_root=LAYER_STACK_ROOT,
+                        timeout=150,
+                    )
+                except Exception as exc:
+                    return {
+                        "success": False,
+                        "from_lsp_importlib_bridge": False,
+                        "from_ppc_service_bridge": False,
+                        "error": str(exc),
+                    }
+
+            (
+                report["lsp_bridge_find_definitions"],
+                report["lsp_bridge_find_references"],
+            ) = await asyncio.gather(
+                call_lsp_bridge_read_only(
+                    "plugin.generic.lsp_bridge_find_definitions",
+                    {
+                        "agent_id": AGENT_ID,
+                        "read_path": LSP_BRIDGE_TARGET_REL,
+                        **lsp_bridge_position,
+                    },
+                ),
+                call_lsp_bridge_read_only(
+                    "plugin.generic.lsp_bridge_find_references",
+                    {
+                        "agent_id": AGENT_ID,
+                        "read_path": LSP_BRIDGE_TARGET_REL,
+                        **lsp_bridge_position,
+                        "include_declaration": True,
+                    },
+                ),
+            )
+            try:
+                report["lsp_bridge_hover"] = await daemon_client.call_daemon_api(
+                    bench.sandbox_id,
+                    "plugin.generic.lsp_bridge_hover",
+                    {
+                        "agent_id": AGENT_ID,
+                        "read_path": LSP_BRIDGE_TARGET_REL,
+                        **lsp_bridge_position,
+                    },
+                    layer_stack_root=LAYER_STACK_ROOT,
+                    timeout=150,
+                )
+            except Exception as exc:
+                report["lsp_bridge_hover"] = {
+                    "success": False,
+                    "from_lsp_importlib_bridge": False,
+                    "error": str(exc),
+                }
+            lsp_bridge_apply_uri = (
+                f"file://{WORKSPACE_ROOT}/{LSP_BRIDGE_APPLY_TARGET_REL}"
+            )
+            try:
+                report["lsp_bridge_apply_workspace_edit"] = (
+                    await daemon_client.call_daemon_api(
+                        bench.sandbox_id,
+                        "plugin.generic.lsp_bridge_apply_workspace_edit",
+                        {
+                            "agent_id": AGENT_ID,
+                            "edit": {
+                                "changes": {
+                                    lsp_bridge_apply_uri: [
+                                        {
+                                            "range": {
+                                                "start": {
+                                                    "line": 0,
+                                                    "character": 0,
+                                                },
+                                                "end": {
+                                                    "line": 0,
+                                                    "character": len(
+                                                        LSP_BRIDGE_APPLY_CONTENT.rstrip(
+                                                            "\n"
+                                                        )
+                                                    ),
+                                                },
+                                            },
+                                            "newText": LSP_BRIDGE_APPLY_CONTENT_AFTER.rstrip(
+                                                "\n"
+                                            ),
+                                        }
+                                    ]
+                                }
+                            },
+                        },
+                        layer_stack_root=LAYER_STACK_ROOT,
+                        timeout=150,
+                    )
+                )
+            except Exception as exc:
+                report["lsp_bridge_apply_workspace_edit"] = {
+                    "success": False,
+                    "from_lsp_importlib_bridge": False,
+                    "error": str(exc),
+                }
+            report["lsp_bridge_apply_readback"] = await daemon_client.call_daemon_api(
+                bench.sandbox_id,
+                "api.v1.read_file",
+                {"agent_id": AGENT_ID, "path": LSP_BRIDGE_APPLY_TARGET_REL},
+                layer_stack_root=LAYER_STACK_ROOT,
+                timeout=30,
+            )
+            lsp_bridge_code_action_uri = (
+                f"file://{WORKSPACE_ROOT}/{LSP_BRIDGE_CODE_ACTION_TARGET_REL}"
+            )
+            try:
+                report["lsp_bridge_apply_code_action"] = (
+                    await daemon_client.call_daemon_api(
+                        bench.sandbox_id,
+                        "plugin.generic.lsp_bridge_apply_code_action",
+                        {
+                            "agent_id": AGENT_ID,
+                            "action": {
+                                "title": LSP_BRIDGE_CODE_ACTION_TITLE,
+                                "kind": LSP_BRIDGE_CODE_ACTION_KIND,
+                                "edit": {
+                                    "changes": {
+                                        lsp_bridge_code_action_uri: [
+                                            {
+                                                "range": {
+                                                    "start": {
+                                                        "line": 0,
+                                                        "character": 0,
+                                                    },
+                                                    "end": {
+                                                        "line": 0,
+                                                        "character": len(
+                                                            LSP_BRIDGE_CODE_ACTION_CONTENT.rstrip(
+                                                                "\n"
+                                                            )
+                                                        ),
+                                                    },
+                                                },
+                                                "newText": LSP_BRIDGE_CODE_ACTION_CONTENT_AFTER.rstrip(
+                                                    "\n"
+                                                ),
+                                            }
+                                        ]
+                                    }
+                                },
+                            },
+                        },
+                        layer_stack_root=LAYER_STACK_ROOT,
+                        timeout=150,
+                    )
+                )
+            except Exception as exc:
+                report["lsp_bridge_apply_code_action"] = {
+                    "success": False,
+                    "from_lsp_importlib_bridge": False,
+                    "error": str(exc),
+                }
+            report["lsp_bridge_code_action_readback"] = (
+                await daemon_client.call_daemon_api(
+                    bench.sandbox_id,
+                    "api.v1.read_file",
+                    {"agent_id": AGENT_ID, "path": LSP_BRIDGE_CODE_ACTION_TARGET_REL},
+                    layer_stack_root=LAYER_STACK_ROOT,
+                    timeout=30,
+                )
+            )
             try:
                 report["pyright_rename"] = await daemon_client.call_daemon_api(
                     bench.sandbox_id,
@@ -5008,7 +5467,39 @@ def plugin_manifest() -> dict[str, Any]:
                 "timeout_ms": 150000,
             },
             {
+                "op_name": "lsp_bridge_find_definitions",
+                "intent": "read_only",
+                "service_id": "runtime_bridge",
+                "timeout_ms": 150000,
+            },
+            {
+                "op_name": "lsp_bridge_find_references",
+                "intent": "read_only",
+                "service_id": "runtime_bridge",
+                "timeout_ms": 150000,
+            },
+            {
+                "op_name": "lsp_bridge_hover",
+                "intent": "read_only",
+                "service_id": "runtime_bridge",
+                "timeout_ms": 150000,
+            },
+            {
                 "op_name": "lsp_bridge_rename",
+                "intent": "write_allowed",
+                "auto_workspace_overlay": False,
+                "service_id": "runtime_bridge",
+                "timeout_ms": 150000,
+            },
+            {
+                "op_name": "lsp_bridge_apply_workspace_edit",
+                "intent": "write_allowed",
+                "auto_workspace_overlay": False,
+                "service_id": "runtime_bridge",
+                "timeout_ms": 150000,
+            },
+            {
+                "op_name": "lsp_bridge_apply_code_action",
                 "intent": "write_allowed",
                 "auto_workspace_overlay": False,
                 "service_id": "runtime_bridge",
@@ -5609,6 +6100,22 @@ def gate_pass(report: dict[str, Any]) -> bool:
         if isinstance(lsp_bridge_query_symbols, dict)
         else {}
     )
+    lsp_bridge_find_definitions = report.get("lsp_bridge_find_definitions", {})
+    lsp_bridge_find_definitions_lsp = (
+        lsp_bridge_find_definitions.get("lsp", {})
+        if isinstance(lsp_bridge_find_definitions, dict)
+        else {}
+    )
+    lsp_bridge_find_references = report.get("lsp_bridge_find_references", {})
+    lsp_bridge_find_references_lsp = (
+        lsp_bridge_find_references.get("lsp", {})
+        if isinstance(lsp_bridge_find_references, dict)
+        else {}
+    )
+    lsp_bridge_hover = report.get("lsp_bridge_hover", {})
+    lsp_bridge_hover_lsp = (
+        lsp_bridge_hover.get("lsp", {}) if isinstance(lsp_bridge_hover, dict) else {}
+    )
     lsp_bridge_rename = report.get("lsp_bridge_rename", {})
     lsp_bridge_rename_lsp = (
         lsp_bridge_rename.get("lsp", {})
@@ -5621,6 +6128,31 @@ def gate_pass(report: dict[str, Any]) -> bool:
         else {}
     )
     lsp_bridge_rename_readback = report.get("lsp_bridge_rename_readback", {})
+    lsp_bridge_apply = report.get("lsp_bridge_apply_workspace_edit", {})
+    lsp_bridge_apply_lsp = (
+        lsp_bridge_apply.get("lsp", {}) if isinstance(lsp_bridge_apply, dict) else {}
+    )
+    lsp_bridge_apply_result = (
+        lsp_bridge_apply_lsp.get("apply", {})
+        if isinstance(lsp_bridge_apply_lsp, dict)
+        else {}
+    )
+    lsp_bridge_apply_readback = report.get("lsp_bridge_apply_readback", {})
+    lsp_bridge_code_action = report.get("lsp_bridge_apply_code_action", {})
+    lsp_bridge_code_action_lsp = (
+        lsp_bridge_code_action.get("lsp", {})
+        if isinstance(lsp_bridge_code_action, dict)
+        else {}
+    )
+    lsp_bridge_code_action_apply = (
+        lsp_bridge_code_action_lsp.get("apply", {})
+        if isinstance(lsp_bridge_code_action_lsp, dict)
+        else {}
+    )
+    lsp_bridge_code_action_readback = report.get(
+        "lsp_bridge_code_action_readback",
+        {},
+    )
     multi_readback_a = report.get("multi_readback_a", {})
     multi_readback_b = report.get("multi_readback_b", {})
     shell_publish = report.get("shell_publish", {})
@@ -5898,7 +6430,17 @@ def gate_pass(report: dict[str, Any]) -> bool:
         in report.get("status_after_ensure", {}).get("connected_ppc_routes", [])
         and "plugin.generic.lsp_bridge_query_symbols"
         in report.get("status_after_ensure", {}).get("connected_ppc_routes", [])
+        and "plugin.generic.lsp_bridge_find_definitions"
+        in report.get("status_after_ensure", {}).get("connected_ppc_routes", [])
+        and "plugin.generic.lsp_bridge_find_references"
+        in report.get("status_after_ensure", {}).get("connected_ppc_routes", [])
+        and "plugin.generic.lsp_bridge_hover"
+        in report.get("status_after_ensure", {}).get("connected_ppc_routes", [])
         and "plugin.generic.lsp_bridge_rename"
+        in report.get("status_after_ensure", {}).get("connected_ppc_routes", [])
+        and "plugin.generic.lsp_bridge_apply_workspace_edit"
+        in report.get("status_after_ensure", {}).get("connected_ppc_routes", [])
+        and "plugin.generic.lsp_bridge_apply_code_action"
         in report.get("status_after_ensure", {}).get("connected_ppc_routes", [])
         and "plugin.generic.pyright_symbols"
         in report.get("status_after_ensure", {}).get("connected_ppc_routes", [])
@@ -6054,6 +6596,37 @@ def gate_pass(report: dict[str, Any]) -> bool:
         == "plugins.catalog.lsp.runtime.server"
         and LSP_BRIDGE_RENAMED_SYMBOL
         in lsp_bridge_query_symbols_lsp.get("symbol_names", [])
+        and lsp_bridge_find_definitions.get("from_lsp_importlib_bridge") is True
+        and lsp_bridge_find_definitions.get("from_ppc_service_bridge") is True
+        and lsp_bridge_find_definitions.get("workspace_mounted") is True
+        and lsp_bridge_find_definitions_lsp.get("protocol")
+        == "lsp-python-importlib"
+        and lsp_bridge_find_definitions_lsp.get("server")
+        == "plugins.catalog.lsp.runtime.server"
+        and int(lsp_bridge_find_definitions_lsp.get("definition_count", 0)) >= 1
+        and LSP_BRIDGE_TARGET_REL
+        in lsp_bridge_find_definitions_lsp.get("definition_paths", [])
+        and 0 in lsp_bridge_find_definitions_lsp.get("definition_start_lines", [])
+        and lsp_bridge_find_references.get("from_lsp_importlib_bridge") is True
+        and lsp_bridge_find_references.get("from_ppc_service_bridge") is True
+        and lsp_bridge_find_references.get("workspace_mounted") is True
+        and lsp_bridge_find_references_lsp.get("protocol") == "lsp-python-importlib"
+        and lsp_bridge_find_references_lsp.get("server")
+        == "plugins.catalog.lsp.runtime.server"
+        and int(lsp_bridge_find_references_lsp.get("reference_count", 0)) >= 2
+        and LSP_BRIDGE_TARGET_REL
+        in lsp_bridge_find_references_lsp.get("reference_paths", [])
+        and {0, 3}.issubset(
+            set(lsp_bridge_find_references_lsp.get("reference_start_lines", []))
+        )
+        and lsp_bridge_hover.get("from_lsp_importlib_bridge") is True
+        and lsp_bridge_hover.get("from_ppc_service_bridge") is True
+        and lsp_bridge_hover.get("workspace_mounted") is True
+        and lsp_bridge_hover_lsp.get("protocol") == "lsp-python-importlib"
+        and lsp_bridge_hover_lsp.get("server")
+        == "plugins.catalog.lsp.runtime.server"
+        and LSP_BRIDGE_RENAMED_SYMBOL
+        in str(lsp_bridge_hover_lsp.get("hover_text", ""))
         and lsp_bridge_rename.get("from_lsp_importlib_bridge") is True
         and lsp_bridge_rename.get("from_ppc_service_bridge") is True
         and lsp_bridge_rename.get("from_mounted_workspace_callback") is True
@@ -6064,6 +6637,36 @@ def gate_pass(report: dict[str, Any]) -> bool:
         and LSP_BRIDGE_TARGET_REL in lsp_bridge_rename.get("changed_paths", [])
         and lsp_bridge_rename_readback.get("exists") is True
         and lsp_bridge_rename_readback.get("content") == LSP_BRIDGE_RENAMED_CONTENT
+        and report.get("lsp_bridge_apply_seed", {}).get("success") is True
+        and lsp_bridge_apply.get("from_lsp_importlib_bridge") is True
+        and lsp_bridge_apply.get("from_ppc_service_bridge") is True
+        and lsp_bridge_apply.get("from_mounted_workspace_callback") is True
+        and lsp_bridge_apply.get("workspace_mounted") is True
+        and lsp_bridge_apply_lsp.get("protocol") == "lsp-python-importlib"
+        and lsp_bridge_apply_lsp.get("server")
+        == "plugins.catalog.lsp.runtime.server"
+        and lsp_bridge_apply_result.get("success") is True
+        and LSP_BRIDGE_APPLY_TARGET_REL in lsp_bridge_apply.get("changed_paths", [])
+        and lsp_bridge_apply_readback.get("exists") is True
+        and lsp_bridge_apply_readback.get("content") == LSP_BRIDGE_APPLY_CONTENT_AFTER
+        and report.get("lsp_bridge_code_action_seed", {}).get("success") is True
+        and lsp_bridge_code_action.get("from_lsp_importlib_bridge") is True
+        and lsp_bridge_code_action.get("from_ppc_service_bridge") is True
+        and lsp_bridge_code_action.get("from_mounted_workspace_callback") is True
+        and lsp_bridge_code_action.get("workspace_mounted") is True
+        and lsp_bridge_code_action_lsp.get("protocol") == "lsp-python-importlib"
+        and lsp_bridge_code_action_lsp.get("server")
+        == "plugins.catalog.lsp.runtime.server"
+        and lsp_bridge_code_action_lsp.get("action_title")
+        == LSP_BRIDGE_CODE_ACTION_TITLE
+        and lsp_bridge_code_action_lsp.get("action_kind")
+        == LSP_BRIDGE_CODE_ACTION_KIND
+        and lsp_bridge_code_action_apply.get("success") is True
+        and LSP_BRIDGE_CODE_ACTION_TARGET_REL
+        in lsp_bridge_code_action.get("changed_paths", [])
+        and lsp_bridge_code_action_readback.get("exists") is True
+        and lsp_bridge_code_action_readback.get("content")
+        == LSP_BRIDGE_CODE_ACTION_CONTENT_AFTER
         and apply_multi.get("from_self_managed") is True
         and apply_multi.get("callback_count") == 2
         and len(multi_callbacks) == 2
@@ -6543,8 +7146,15 @@ def markdown_report(report: dict[str, Any]) -> str:
         f"- runtime_bridge_concurrent_readback_b: `{report.get('runtime_bridge_concurrent_readback_b', {}).get('content')}`",
         f"- runtime_bridge_refresh_count: `{runtime_bridge_status.get('refresh_count')}`",
         f"- lsp_bridge_query_symbols: `{report.get('lsp_bridge_query_symbols', {}).get('lsp')}`",
+        f"- lsp_bridge_find_definitions: `{report.get('lsp_bridge_find_definitions', {}).get('lsp')}`",
+        f"- lsp_bridge_find_references: `{report.get('lsp_bridge_find_references', {}).get('lsp')}`",
+        f"- lsp_bridge_hover: `{report.get('lsp_bridge_hover', {}).get('lsp')}`",
         f"- lsp_bridge_rename: `{report.get('lsp_bridge_rename', {}).get('lsp')}`",
         f"- lsp_bridge_rename_readback: `{report.get('lsp_bridge_rename_readback', {}).get('content')}`",
+        f"- lsp_bridge_apply_workspace_edit: `{report.get('lsp_bridge_apply_workspace_edit', {}).get('lsp')}`",
+        f"- lsp_bridge_apply_readback: `{report.get('lsp_bridge_apply_readback', {}).get('content')}`",
+        f"- lsp_bridge_apply_code_action: `{report.get('lsp_bridge_apply_code_action', {}).get('lsp')}`",
+        f"- lsp_bridge_code_action_readback: `{report.get('lsp_bridge_code_action_readback', {}).get('content')}`",
         f"- apply_multi_callback_count: `{report.get('apply_multi', {}).get('callback_count')}`",
         f"- apply_multi_callbacks: `{report.get('apply_multi', {}).get('callbacks')}`",
         f"- multi_readback_a: `{report.get('multi_readback_a', {}).get('content')}`",

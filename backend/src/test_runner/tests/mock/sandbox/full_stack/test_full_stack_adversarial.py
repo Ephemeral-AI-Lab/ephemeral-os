@@ -34,12 +34,12 @@ from test_runner.benchmarks.sweevo.models import SWEEvoInstance
 
 _DEFAULT_INSTANCE_ID = "dask__dask_2023.3.2_2023.4.0"
 _FOREGROUND_SANDBOX_P95_BUDGET_MS = 1_000.0
-# shell's tail latency runs high under the loop-driving generator DAG and
-# concurrent sandbox load; gate shell on p99 with a generous ceiling so the
+# exec_command tail latency runs high under the loop-driving generator DAG and
+# concurrent sandbox load; gate exec_command on p99 with a generous ceiling so the
 # perf budget still catches regressions in the cheap foreground tools.
 _SHELL_P99_BUDGET_MS = 15_000.0
 _REQUIRED_PERFORMANCE_TOOLS = (
-    "shell",
+    "exec_command",
     "read_file",
     "write_file",
     "edit_file",
@@ -51,7 +51,7 @@ _REQUIRED_PERFORMANCE_TOOLS = (
     "lsp.apply_workspace_edit",
 )
 _FOREGROUND_SANDBOX_TOOLS = (
-    "shell",
+    "exec_command",
     "read_file",
     "write_file",
     "edit_file",
@@ -71,7 +71,7 @@ _REQUIRED_TOOL_SAMPLE_TIMINGS = {
     "read_file": ("api.read.total_s", "api.read.layer_stack_read_s"),
     "write_file": ("api.write.total_s", "occ.apply.total_s"),
     "edit_file": ("api.edit.total_s", "occ.apply.total_s"),
-    "shell": (
+    "exec_command": (
         "command_exec.mount_workspace_s",
         "command_exec.run_command_s",
         "command_exec.capture_upperdir_s",
@@ -268,7 +268,7 @@ def _assert_message_logs(run_dir: Path) -> None:
         "write_file",
         "edit_file",
         "read_file",
-        "shell",
+        "exec_command",
         "lsp.hover",
         "lsp.find_definitions",
         "lsp.find_references",
@@ -360,9 +360,9 @@ def _assert_foreground_tool_latency(
     per_tool: Mapping[str, Any],
     tool_name: str,
 ) -> None:
-    # shell rides the high-latency tail (p99 ceiling); the cheap foreground
+    # exec_command rides the high-latency tail (p99 ceiling); the cheap foreground
     # tools keep the tight p95 budget.
-    if tool_name == "shell":
+    if tool_name == "exec_command":
         _assert_tool_percentile_under(
             per_tool, tool_name, _SHELL_P99_BUDGET_MS, stat_key="p99_ms"
         )
@@ -419,7 +419,7 @@ def _assert_recursive_workflow_keeps_sandbox_responsive(
     final_reconciliation_tool_uses = _tool_uses_for_task(
         messages, "final_reconciliation"
     )
-    assert {"read_file", "shell"} <= final_reconciliation_tool_uses
+    assert {"read_file", "exec_command"} <= final_reconciliation_tool_uses
     for tool_name in _FOREGROUND_SANDBOX_TOOLS:
         _assert_foreground_tool_latency(per_tool, tool_name)
 

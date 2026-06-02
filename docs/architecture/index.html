@@ -261,7 +261,7 @@
 <h2>Modules <a class="anchor" href="#modules">§</a></h2>
 <div class="module-card-grid">
 <a class="module-card" href="sandbox/index.html"><strong>Sandbox Workspace</strong><span>LayerStack, overlay, OCC, daemon routing, providers, plugins, and workspace execution modes.</span></a>
-<a class="module-card" href="tools/index.html"><strong>Tools</strong><span>Agent-facing tool definitions, framework lifecycle, terminals, helpers, background tasks, and Workflow submission surfaces.</span></a>
+<a class="module-card" href="tools/index.html"><strong>Tools</strong><span>Agent-facing tool definitions, framework lifecycle, terminals, helpers, typed background surfaces, and Workflow submission surfaces.</span></a>
 <a class="module-card" href="agent_loops/index.html"><strong>Agent Loops</strong><span>Engine run lifecycle, model-provider streaming, prompt assembly, background operations, sandbox-provider runtimes, notifications, and message artifacts.</span></a>
 <a class="module-card" href="workflow/index.html"><strong>Workflow</strong><span>Workflow -> Iteration -> Attempt state model, planner-authored generator + reducer plan harness, context engine, role profiles, and terminal state submissions.</span></a>
 <a class="module-card" href="test_runner/index.html"><strong>Test Runner</strong><span>Test-only harness for scenario-based mocked-agent coverage and the SWE-EVO benchmark pipeline; one engine, three modes.</span></a>
@@ -271,7 +271,7 @@
 <h2>Cross-Module Map <a class="anchor" href="#cross-module-map">§</a></h2>
 <div class="edge-list">
   <div><b>tools to sandbox</b><span><a class="wiki-link" href="tools/sandbox.html">Sandbox tools</a> call typed sandbox APIs whose runtime semantics are explained by <a class="wiki-link" href="sandbox/overview.html">Sandbox Workspace</a>.</span></div>
-  <div><b>tools to daemon</b><span><a class="wiki-link" href="tools/background.html">Background tools</a>, <a class="wiki-link" href="tools/subagent.html">subagents</a>, and helper tools interact with engine and sandbox daemon lifecycles documented in <a class="wiki-link" href="sandbox/daemon.html">Daemon and Background Tasks</a>.</span></div>
+  <div><b>tools to daemon</b><span><a class="wiki-link" href="tools/background.html">Typed background surfaces</a>, <a class="wiki-link" href="tools/subagent.html">subagents</a>, and helper tools interact with engine and sandbox daemon lifecycles documented in <a class="wiki-link" href="sandbox/daemon.html">Daemon and Background Tasks</a>.</span></div>
   <div><b>private scratch</b><span><a class="wiki-link" href="tools/isolated-workspace.html">Isolated workspace tools</a> are the agent-facing entry points for the private scratch lifecycle detailed in <a class="wiki-link" href="sandbox/workspaces.html#isolated-workspace">isolated_workspace</a>.</span></div>
   <div><b>agent loop to tools</b><span><a class="wiki-link" href="agent_loops/main-loop.html">Main agent loop</a> defers, dispatches, and terminates tool calls whose framework contracts are documented in <a class="wiki-link" href="tools/framework.html">Tools Framework</a>.</span></div>
   <div><b>agent loop to model providers</b><span><a class="wiki-link" href="agent_loops/model-provider.html">Model Provider Runtime</a> follows <code>backend/src/providers</code> active model resolution, <code>MessageRequest</code>, stream event translation, auth, retry, and provider errors.</span></div>

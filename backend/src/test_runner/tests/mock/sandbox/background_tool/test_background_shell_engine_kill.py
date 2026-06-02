@@ -1,4 +1,4 @@
-"""Engine-abandon TTL coverage for invocation-keyed background shell calls."""
+"""Engine-abandon TTL coverage for invocation-keyed background command calls."""
 
 from __future__ import annotations
 

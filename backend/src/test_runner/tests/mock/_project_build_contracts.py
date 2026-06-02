@@ -54,7 +54,7 @@ _SUBMISSION_TOOL_NAMES = {
 _NON_PROBE_TOOL_NAMES = _SUBMISSION_TOOL_NAMES | {"ask_advisor", "delegate_workflow"}
 
 _DIRECT_FILE_TOOLS = ("read_file", "write_file", "edit_file")
-_PROJECT_BUILD_REQUIRED_TOOLS = (*_DIRECT_FILE_TOOLS, "shell")
+_PROJECT_BUILD_REQUIRED_TOOLS = (*_DIRECT_FILE_TOOLS, "exec_command")
 _SEARCH_TOOLS = ("grep", "glob")
 _PROJECT_BUILD_UPPERDIR_BUDGET_BYTES = 1_048_576
 _WARM_SEARCH_P95_BUDGET_MS = 500.0
@@ -441,10 +441,12 @@ async def _assert_complex_build_contract(
     api_calls = summary.get("api_calls") or {}
     api_read_count = int(api_calls.get("read") or 0)
     api_edit_count = int(api_calls.get("edit") or 0)
-    api_shell_count = int(api_calls.get("shell") or 0)
+    api_shell_count = int(api_calls.get("exec_command") or api_calls.get("shell") or 0)
     assert api_read_count >= contract.api_read_floor, f"api.read_file count={api_read_count}"
     assert api_edit_count >= contract.api_edit_floor, f"api.edit_file count={api_edit_count}"
-    assert api_shell_count >= contract.api_shell_floor, f"api.shell count={api_shell_count}"
+    assert api_shell_count >= contract.api_shell_floor, (
+        f"api.exec_command count={api_shell_count}"
+    )
 
     junit = await _read_text(
         sandbox_id,

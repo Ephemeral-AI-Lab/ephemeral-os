@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from tools._names import (
     EDIT_FILE_TOOL_NAME,
-    SHELL_TOOL_NAME,
+    EXEC_COMMAND_TOOL_NAME,
     WRITE_FILE_TOOL_NAME,
 )
 
@@ -19,8 +19,8 @@ def get_write_file_description() -> str:
         "  (e.g., a generated artifact, a config rewritten from a template).\n"
         "\n"
         "Prefer over:\n"
-        f"- `{SHELL_TOOL_NAME}` with `echo >` or here-docs — `{WRITE_FILE_TOOL_NAME}` is atomic and\n"
-        "  audited; shell redirection is not.\n"
+        f"- `{EXEC_COMMAND_TOOL_NAME}` with `echo >` or here-docs — `{WRITE_FILE_TOOL_NAME}` is atomic and\n"
+        "  audited; command redirection is not.\n"
         "\n"
         "Do NOT use for:\n"
         f"- Partial changes to an existing file — use `{EDIT_FILE_TOOL_NAME}`. `{WRITE_FILE_TOOL_NAME}`\n"
@@ -28,7 +28,7 @@ def get_write_file_description() -> str:
         "- Appending — there is no append mode. To add to a file, read it, then\n"
         "  write the combined content.\n"
         "- Creating directories — the parent directory must already exist. Use\n"
-        f"  `{SHELL_TOOL_NAME}` to `mkdir -p` first if needed.\n"
+        f"  `{EXEC_COMMAND_TOOL_NAME}` to `mkdir -p` first if needed.\n"
         "\n"
         "Capabilities and constraints:\n"
         "- The call always overwrites if the path exists. There is no \"create if\n"

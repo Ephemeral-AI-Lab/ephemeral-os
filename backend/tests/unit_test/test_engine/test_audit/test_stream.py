@@ -53,7 +53,7 @@ def test_tool_started_stream_event_maps_to_engine_audit_event() -> None:
 def test_tool_completed_stream_event_preserves_domain_timings_as_metadata() -> None:
     emitted = audit_events_from_stream_event(
         ToolExecutionCompletedEvent(
-            tool_name="shell",
+            tool_name="exec_command",
             output='{"status": "ok"}',
             is_error=False,
             tool_use_id="toolu_2",

@@ -1,4 +1,4 @@
-"""Background-shell probes that drive ``shell(background=True)`` through
+"""Background command probes that drive ``exec_command(tty=True)`` through
 the mock-agent tool framework so the scenario harness records full
 ``sandbox_events.jsonl`` / ``performance_report.json`` artifacts under
 ``.sweevo_runs/scenario_logs/...``.
@@ -8,8 +8,7 @@ summary to a known workspace path that the matching test reads back via
 ``sandbox_api.read_file`` after the scenario report returns.
 
 Background mode is enabled by passing ``background_task_id`` through
-``call_tool``. The shell tool still uses one ``api.v1.shell`` invocation; cancel
-propagation is invocation-keyed through the daemon in-flight registry.
+``call_tool``. The bridge maps that stable id to the returned PTY session id.
 """
 
 from __future__ import annotations
@@ -28,7 +27,6 @@ from message.events import StreamEvent
 from tools._framework.core.base import BaseTool
 from tools._framework.core.results import ToolResult
 from tools._framework.core.runtime import ExecutionMetadata
-from tools.background.cancel_background_task import CancelBackgroundTaskTool
 from tools.isolated_workspace.enter_isolated_workspace import (
     enter_isolated_workspace as enter_isolated_workspace_tool,
 )
@@ -36,11 +34,9 @@ from tools.isolated_workspace.exit_isolated_workspace import (
     exit_isolated_workspace as exit_isolated_workspace_tool,
 )
 from tools.sandbox.read_file import read_file as read_file_tool
-from tools.sandbox.shell import shell as shell_tool
+from tools.sandbox.exec_command import exec_command as exec_command_tool
+from tools.sandbox.cancel_pty_command import cancel_pty_command as cancel_pty_command_tool
 from tools.sandbox.write_file import write_file as write_file_tool
-
-cancel_background_task_tool = CancelBackgroundTaskTool()
-
 
 WORKSPACE_ROOT = "/testbed"
 ROOT = f"{WORKSPACE_ROOT}/.ephemeralos/sweevo-mock/background_shell"
@@ -96,15 +92,15 @@ async def _wait_for_background_drain(metadata: ExecutionMetadata) -> None:
         await asyncio.sleep(0.1)
 
 
-def _shell_payload(result: ToolResult) -> dict[str, Any]:
-    """Decode the JSON body the shell tool writes into ``ToolResult.output``."""
+def _command_payload(result: ToolResult) -> dict[str, Any]:
+    """Decode the JSON body exec_command writes into ``ToolResult.output``."""
     try:
         return json.loads(result.output or "{}")
     except json.JSONDecodeError:
         return {}
 
 
-def _shell_metadata(result: ToolResult) -> dict[str, Any]:
+def _command_metadata(result: ToolResult) -> dict[str, Any]:
     meta = dict(result.metadata or {})
     return {
         "timings": dict(meta.get("timings") or {}),
@@ -253,7 +249,7 @@ async def _await_task_record(
             "exception": type(exc).__name__,
             "message": str(exc)[:300],
         }
-    payload = _shell_payload(result)
+    payload = _command_payload(result)
     return {
         "cancelled": False,
         "is_error": bool(result.is_error),
@@ -261,7 +257,7 @@ async def _await_task_record(
         "status": payload.get("status"),
         "stdout_excerpt": str(payload.get("stdout") or "")[:300],
         "stderr_excerpt": str(payload.get("stderr") or "")[:300],
-        "shell_metadata": _shell_metadata(result),
+        "shell_metadata": _command_metadata(result),
     }
 
 
@@ -276,16 +272,16 @@ async def _write_summary(
 ) -> str:
     body = json.dumps(payload, indent=2, sort_keys=True) + "\n"
     mkdir = await call_tool(
-        shell_tool,
+        exec_command_tool,
         {"command": f"mkdir -p $(dirname {path})", "timeout": 30},
         metadata,
         emit,
     )
-    record_tool_check(f"tool.shell.background_shell.summary.mkdir.{path}", mkdir)
+    record_tool_check(f"tool.exec_command.background_shell.summary.mkdir.{path}", mkdir)
     if mkdir.is_error:
         raise RuntimeError(
             f"background_shell summary directory create failed for {path}: "
-            f"{_shell_payload(mkdir).get('stderr', '')[:200]}"
+            f"{_command_payload(mkdir).get('stderr', '')[:200]}"
         )
     written = await call_tool(
         write_file_tool,
@@ -335,7 +331,7 @@ async def run_background_shell_golden_probe(
     async def _one(index: int) -> dict[str, Any]:
         t0 = time.perf_counter()
         result = await call_tool(
-            shell_tool,
+            exec_command_tool,
             {
                 "command": f"sleep {GOLDEN_SLEEP_S}; echo done-{index}",
                 "timeout": 120,
@@ -344,8 +340,8 @@ async def run_background_shell_golden_probe(
             emit,
             background_task_id=_bg_id(f"golden-{index}"),
         )
-        record_tool_check(f"tool.shell.background_shell.golden.{index}", result)
-        payload = _shell_payload(result)
+        record_tool_check(f"tool.exec_command.background_shell.golden.{index}", result)
+        payload = _command_payload(result)
         return {
             "index": index,
             "duration_s": time.perf_counter() - t0,
@@ -353,7 +349,7 @@ async def run_background_shell_golden_probe(
             "status": str(payload.get("status") or ""),
             "stdout_excerpt": str(payload.get("stdout") or "")[:200],
             "is_error": bool(result.is_error),
-            "shell_metadata": _shell_metadata(result),
+            "shell_metadata": _command_metadata(result),
         }
 
     results = await asyncio.gather(
@@ -402,7 +398,7 @@ async def run_background_shell_stop_probe(
         try:
             result = await asyncio.wait_for(
                 call_tool(
-                    shell_tool,
+                    exec_command_tool,
                     {
                         "command": (
                             f"sleep {CANCEL_SLEEP_S}; echo done-{index}"
@@ -416,9 +412,9 @@ async def run_background_shell_stop_probe(
                 timeout=CANCEL_AFTER_S,
             )
             record_tool_check(
-                f"tool.shell.background_shell.cancel.{index}", result
+                f"tool.exec_command.background_shell.cancel.{index}", result
             )
-            payload = _shell_payload(result)
+            payload = _command_payload(result)
             return {
                 "index": index,
                 "duration_s": time.perf_counter() - t0,
@@ -426,7 +422,7 @@ async def run_background_shell_stop_probe(
                 "exit_code": int(payload.get("exit_code", -1)),
                 "status": str(payload.get("status") or ""),
                 "is_error": bool(result.is_error),
-                "shell_metadata": _shell_metadata(result),
+                "shell_metadata": _command_metadata(result),
             }
         except asyncio.TimeoutError:
             return {
@@ -445,19 +441,19 @@ async def run_background_shell_stop_probe(
     )
     await _wait_for_background_drain(metadata)
 
-    # AC-3: post-cancel foreground shell mount latency budget.
+    # AC-3: post-cancel foreground command mount latency budget.
     fg_t0 = time.perf_counter()
     fg_result = await call_tool(
-        shell_tool,
+        exec_command_tool,
         {"command": "echo post-cancel-ok", "timeout": 30},
         metadata,
         emit,
     )
-    record_tool_check("tool.shell.background_shell.cancel.post_foreground", fg_result)
+    record_tool_check("tool.exec_command.background_shell.cancel.post_foreground", fg_result)
     post_fg = {
         "duration_s": time.perf_counter() - fg_t0,
         "is_error": bool(fg_result.is_error),
-        "shell_metadata": _shell_metadata(fg_result),
+        "shell_metadata": _command_metadata(fg_result),
     }
 
     summary = {
@@ -494,12 +490,12 @@ async def run_background_shell_interleave_probe(
     call_tool: CallTool,
     record_tool_check: RecordToolCheck,
 ) -> str:
-    """T3: 1 long background + M foreground shells; capture fg mount p95."""
+    """T3: 1 long background + M foreground commands; capture fg mount p95."""
     started = time.perf_counter()
 
     bg_task = asyncio.create_task(
         call_tool(
-            shell_tool,
+            exec_command_tool,
             {
                 "command": (
                     f"sleep {INTERLEAVE_BACKGROUND_SLEEP_S}; echo bg-done"
@@ -517,18 +513,18 @@ async def run_background_shell_interleave_probe(
         for index in range(INTERLEAVE_FOREGROUND_COUNT):
             t0 = time.perf_counter()
             fg_result = await call_tool(
-                shell_tool,
+                exec_command_tool,
                 {"command": f"echo fg-{index}", "timeout": 30},
                 metadata,
                 emit,
             )
             record_tool_check(
-                f"tool.shell.background_shell.interleave.fg.{index}", fg_result
+                f"tool.exec_command.background_shell.interleave.fg.{index}", fg_result
             )
             duration = time.perf_counter() - t0
-            shell_meta = _shell_metadata(fg_result)
+            command_meta = _command_metadata(fg_result)
             mount_s = (
-                float(shell_meta["timings"].get("command_exec.mount_workspace_s", 0.0))
+                float(command_meta["timings"].get("command_exec.mount_workspace_s", 0.0))
                 or duration
             )
             foreground_records.append(
@@ -537,7 +533,7 @@ async def run_background_shell_interleave_probe(
                     "wall_duration_s": duration,
                     "mount_s": mount_s,
                     "is_error": bool(fg_result.is_error),
-                    "shell_metadata": shell_meta,
+                    "shell_metadata": command_meta,
                 }
             )
     finally:
@@ -545,13 +541,13 @@ async def run_background_shell_interleave_probe(
             bg_result = await asyncio.wait_for(
                 bg_task, timeout=INTERLEAVE_BACKGROUND_SLEEP_S + 30
             )
-            bg_payload = _shell_payload(bg_result)
+            bg_payload = _command_payload(bg_result)
             bg_record = {
                 "cancelled": False,
                 "exit_code": int(bg_payload.get("exit_code", -1)),
                 "status": str(bg_payload.get("status") or ""),
                 "is_error": bool(bg_result.is_error),
-                "shell_metadata": _shell_metadata(bg_result),
+                "shell_metadata": _command_metadata(bg_result),
             }
         except asyncio.TimeoutError:
             bg_task.cancel()
@@ -609,7 +605,7 @@ async def run_background_shell_exhaustion_probe(
         try:
             await asyncio.wait_for(
                 call_tool(
-                    shell_tool,
+                    exec_command_tool,
                     {
                         "command": (
                             f"sleep {EXHAUSTION_BACKGROUND_SLEEP_S}; "
@@ -635,12 +631,12 @@ async def run_background_shell_exhaustion_probe(
     )
 
     # AC-14: a follow-up foreground read_file must complete in < 1 s, proving
-    # the daemon RPC dispatcher executor is NOT shared with ShellExecutor.
-    # Seed a target file (write via foreground shell) so the read doesn't
+    # the daemon RPC dispatcher executor is NOT shared with CommandExecutor.
+    # Seed a target file (write via foreground command) so the read doesn't
     # depend on SWE-EVO repo layout.
     seed_path = f"{ROOT}/exhaustion/probe.txt"
     seed_result = await call_tool(
-        shell_tool,
+        exec_command_tool,
         {
             "command": (
                 f"mkdir -p $(dirname {seed_path}) && "
@@ -651,7 +647,7 @@ async def run_background_shell_exhaustion_probe(
         metadata,
         emit,
     )
-    record_tool_check("tool.shell.background_shell.exhaustion.seed", seed_result)
+    record_tool_check("tool.exec_command.background_shell.exhaustion.seed", seed_result)
     fg_t0 = time.perf_counter()
     read_result = await call_tool(
         read_file_tool,
@@ -705,12 +701,12 @@ async def run_background_shell_partial_write_cancel_probe(
     started = time.perf_counter()
     target = f"{ROOT}/partial_write/tracked.bin"
 
-    # Seed the parent directory via a separate foreground shell. We have to
+    # Seed the parent directory via a separate foreground command. We have to
     # also create a sentinel file inside the dir because OCC only persists
-    # files, not empty directories — without the sentinel the dd shell would
+    # files, not empty directories — without the sentinel the dd command would
     # land in a fresh lease whose snapshot has lost the dir.
     seed_result = await call_tool(
-        shell_tool,
+        exec_command_tool,
         {
             "command": (
                 f"mkdir -p $(dirname {target}) && "
@@ -722,7 +718,7 @@ async def run_background_shell_partial_write_cancel_probe(
         emit,
     )
     record_tool_check(
-        "tool.shell.background_shell.partial_write.seed_dir", seed_result
+        "tool.exec_command.background_shell.partial_write.seed_dir", seed_result
     )
 
     dd_command = (
@@ -735,7 +731,7 @@ async def run_background_shell_partial_write_cancel_probe(
     try:
         result = await asyncio.wait_for(
             call_tool(
-                shell_tool,
+                exec_command_tool,
                 {"command": dd_command, "timeout": 180},
                 metadata,
                 emit,
@@ -744,7 +740,7 @@ async def run_background_shell_partial_write_cancel_probe(
             timeout=PARTIAL_WRITE_CANCEL_S,
         )
         record_tool_check(
-            "tool.shell.background_shell.partial_write.dd", result
+            "tool.exec_command.background_shell.partial_write.dd", result
         )
         dd_completed = True
     except asyncio.TimeoutError:
@@ -798,7 +794,7 @@ async def run_background_shell_maintenance_probe(
     target = f"{ROOT}/maintenance/maint_test.txt"
     target_relative = target.removeprefix(f"{WORKSPACE_ROOT}/")
     result = await call_tool(
-        shell_tool,
+        exec_command_tool,
         {
             "command": (
                 f"mkdir -p $(dirname {target}) && "
@@ -811,9 +807,9 @@ async def run_background_shell_maintenance_probe(
         emit,
         background_task_id=_bg_id("maintenance"),
     )
-    record_tool_check("tool.shell.background_shell.maintenance.short_write", result)
-    payload = _shell_payload(result)
-    changed = list(_shell_metadata(result)["changed_paths"])
+    record_tool_check("tool.exec_command.background_shell.maintenance.short_write", result)
+    payload = _command_payload(result)
+    changed = list(_command_metadata(result)["changed_paths"])
 
     read_result = await call_tool(
         read_file_tool,
@@ -865,14 +861,14 @@ async def run_background_shell_late_cancel_probe(
     """T8: await full completion; late cancel must not mutate result."""
     started = time.perf_counter()
     result = await call_tool(
-        shell_tool,
+        exec_command_tool,
         {"command": "sleep 1; echo done-late-cancel", "timeout": 60},
         metadata,
         emit,
         background_task_id=_bg_id("late-cancel"),
     )
-    record_tool_check("tool.shell.background_shell.late_cancel.short", result)
-    payload = _shell_payload(result)
+    record_tool_check("tool.exec_command.background_shell.late_cancel.short", result)
+    payload = _command_payload(result)
 
     summary = {
         "schema": SUMMARY_SCHEMA,
@@ -883,7 +879,7 @@ async def run_background_shell_late_cancel_probe(
         "status": str(payload.get("status") or ""),
         "stdout_contains_marker": "done-late-cancel"
         in str(payload.get("stdout") or ""),
-        "shell_metadata": _shell_metadata(result),
+        "shell_metadata": _command_metadata(result),
     }
     return await _write_summary(
         path=LATE_CANCEL_SUMMARY,
@@ -908,14 +904,14 @@ async def run_background_mixed_fg_bg_same_path_conflict_probe(
     call_tool: CallTool,
     record_tool_check: RecordToolCheck,
 ) -> str:
-    """3.4.1: foreground direct write races a background shell on one path."""
+    """3.4.1: foreground direct write races a background command on one path."""
     started = time.perf_counter()
     target = f"{ROOT}/mixed_fg_bg_same_path_conflict/bg-shared.txt"
 
     bg_task = asyncio.create_task(
         _call_probe_tool(
             label="mixed_conflict.background",
-            tool_obj=shell_tool,
+            tool_obj=exec_command_tool,
             raw_input={
                 "command": (
                     f"mkdir -p $(dirname {target}) && "
@@ -1011,7 +1007,7 @@ async def run_background_heartbeat_loss_probe(
     protected_task = asyncio.create_task(
         _call_probe_tool(
             label="heartbeat_loss.protected",
-            tool_obj=shell_tool,
+            tool_obj=exec_command_tool,
             raw_input={
                 "command": (
                     f"mkdir -p $(dirname {protected_target}) && "
@@ -1032,7 +1028,7 @@ async def run_background_heartbeat_loss_probe(
     stale_task = asyncio.create_task(
         _call_probe_tool(
             label="heartbeat_loss.stale",
-            tool_obj=shell_tool,
+            tool_obj=exec_command_tool,
             raw_input={
                 "command": (
                     f"mkdir -p $(dirname {stale_target}) && "
@@ -1069,7 +1065,7 @@ async def run_background_heartbeat_loss_probe(
     fg_t0 = time.perf_counter()
     foreground = await _call_probe_tool(
         label="heartbeat_loss.foreground",
-        tool_obj=shell_tool,
+        tool_obj=exec_command_tool,
         raw_input={"command": "echo heartbeat-foreground-ok", "timeout": 30},
         metadata=metadata,
         emit=emit,
@@ -1080,7 +1076,7 @@ async def run_background_heartbeat_loss_probe(
     foreground_record = {
         **_tool_record(foreground),
         "duration_s": time.perf_counter() - fg_t0,
-        "payload": _shell_payload(foreground),
+        "payload": _command_payload(foreground),
     }
 
     protected_record = await _await_task_record(protected_task)
@@ -1165,7 +1161,7 @@ async def run_background_exit_iws_drains_agent_tasks_probe(
     default_task = asyncio.create_task(
         _call_probe_tool(
             label="exit_iws.default_background",
-            tool_obj=shell_tool,
+            tool_obj=exec_command_tool,
             raw_input={
                 "command": (
                     f"sleep 20 && mkdir -p $(dirname {default_target}) && "
@@ -1223,11 +1219,11 @@ async def run_background_exit_iws_drains_agent_tasks_probe(
     task_id = manager.next_alias()
     manager.launch(
         task_id,
-        "shell",
-        {"command": iws_command, "timeout": 60},
+        "exec_command",
+        {"cmd": iws_command, "tty": True, "timeout": 60},
         _call_probe_tool(
             label="exit_iws.iws_background",
-            tool_obj=shell_tool,
+            tool_obj=exec_command_tool,
             raw_input={"command": iws_command, "timeout": 60},
             metadata=iws_metadata,
             emit=emit,
@@ -1242,9 +1238,9 @@ async def run_background_exit_iws_drains_agent_tasks_probe(
         sandbox_invocation_id=f"iws-manager-{uuid4().hex}",
     )
     await asyncio.sleep(0.5)
-    # Exit is now GATED by the bg prehook: with a live sandbox-bound bg task it
+    # Exit is gated by the bg prehook: with a live sandbox-bound PTY command it
     # is refused (a hook_failure), not silently drained. The agent must cancel
-    # the task via the real cancel_background_task tool, then retry exit.
+    # the PTY command, then retry exit.
     blocked_exit = await _call_probe_tool(
         label="exit_iws.blocked_exit",
         tool_obj=exit_isolated_workspace_tool,
@@ -1257,8 +1253,8 @@ async def run_background_exit_iws_drains_agent_tasks_probe(
     )
     cancel_bg = await _call_probe_tool(
         label="exit_iws.cancel_bg",
-        tool_obj=cancel_background_task_tool,
-        raw_input={"task_id": task_id, "reason": "iws_exit_gate"},
+        tool_obj=cancel_pty_command_tool,
+        raw_input={"pty_session_id": task_id},
         metadata=iws_metadata,
         emit=emit,
         call_tool=call_tool,
@@ -1359,7 +1355,7 @@ async def run_background_engine_restart_no_lease_leak_probe(
     abandoned_task = asyncio.create_task(
         _call_probe_tool(
             label="engine_restart.abandoned",
-            tool_obj=shell_tool,
+            tool_obj=exec_command_tool,
             raw_input={
                 "command": (
                     f"mkdir -p $(dirname {abandoned_target}) && "
@@ -1405,7 +1401,7 @@ async def run_background_engine_restart_no_lease_leak_probe(
     )
     fg_shell = await _call_probe_tool(
         label="engine_restart.foreground_shell",
-        tool_obj=shell_tool,
+        tool_obj=exec_command_tool,
         raw_input={"command": "echo engine-restart-foreground-ok", "timeout": 30},
         metadata=metadata,
         emit=emit,
@@ -1446,7 +1442,7 @@ async def run_background_engine_restart_no_lease_leak_probe(
         "abandoned_published": "chunk-" in _read_content(partial_read),
         "foreground_shell": {
             **_tool_record(fg_shell),
-            "payload": _shell_payload(fg_shell),
+            "payload": _command_payload(fg_shell),
         },
         "recovery_write": _tool_record(recovery_write),
         "recovery_read_content": _read_content(recovery_read),
@@ -1479,7 +1475,7 @@ async def run_background_many_small_writes_probe(
     call_tool: CallTool,
     record_tool_check: RecordToolCheck,
 ) -> str:
-    """3.4.5: many small background shell writes with foreground file calls."""
+    """3.4.5: many small background command writes with foreground file calls."""
     started = time.perf_counter()
     sandbox_id = str(metadata.sandbox_id or "")
     agent_id = _agent_id(metadata)
@@ -1500,7 +1496,7 @@ async def run_background_many_small_writes_probe(
         task = asyncio.create_task(
             _call_probe_tool(
                 label=f"many_small_writes.bg.{index}",
-                tool_obj=shell_tool,
+                tool_obj=exec_command_tool,
                 raw_input={
                     "command": (
                         f"mkdir -p {root} && echo bg-{index} > {path} && "
@@ -1641,17 +1637,17 @@ async def run_background_mixed_op_concurrent_probe(
       status (none stuck), proving the supervisor drives heterogeneous
       workloads to completion. (``pip install`` is offline/``--no-index`` so it
       terminates fast and deterministically without a network dependency.)
-    * **Overlapping same-file edits** — N background shells overwrite one
+    * **Overlapping same-file edits** — N background commands overwrite one
       seeded path concurrently; exactly the OCC winner lands and the rest abort
       with a versioned/overlap/lock conflict (≥1 accepted, ≥1 aborted).
-    * **Disjoint edits** — N background shells write distinct paths; all land
+    * **Disjoint edits** — N background commands write distinct paths; all land
       and read back their own content.
     """
     started = time.perf_counter()
     root = f"{ROOT}/mixed_op_concurrent"
     await _call_probe_tool(
         label="mixed_op.seed_root",
-        tool_obj=shell_tool,
+        tool_obj=exec_command_tool,
         raw_input={"command": f"mkdir -p {root}", "timeout": 30},
         metadata=metadata,
         emit=emit,
@@ -1689,7 +1685,7 @@ async def run_background_mixed_op_concurrent_probe(
         name: asyncio.create_task(
             _call_probe_tool(
                 label=f"mixed_op.mixed.{name}",
-                tool_obj=shell_tool,
+                tool_obj=exec_command_tool,
                 raw_input={"command": command, "timeout": 120},
                 metadata=metadata,
                 emit=emit,
@@ -1724,7 +1720,7 @@ async def run_background_mixed_op_concurrent_probe(
     async def _overlap_one(index: int) -> ToolResult:
         return await _call_probe_tool(
             label=f"mixed_op.overlap.{index}",
-            tool_obj=shell_tool,
+            tool_obj=exec_command_tool,
             raw_input={
                 "command": f"sleep 0.3; printf 'writer-{index}\\n' > {shared}",
                 "timeout": 60,
@@ -1761,7 +1757,7 @@ async def run_background_mixed_op_concurrent_probe(
         path = f"{root}/disjoint-{index}.txt"
         result = await _call_probe_tool(
             label=f"mixed_op.disjoint.{index}",
-            tool_obj=shell_tool,
+            tool_obj=exec_command_tool,
             raw_input={
                 "command": f"sleep 0.3; printf 'disjoint-{index}\\n' > {path}",
                 "timeout": 60,

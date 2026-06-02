@@ -58,14 +58,14 @@
     <li>The main agent loop is engine-owned. Workflow submits and resumes state through terminal tools and persisted attempt/workflow state, not peer-to-peer agent messaging.</li>
     <li>The model-provider package is <code>backend/src/providers</code>. It owns the LLM API request/streaming contract, active model dispatch, auth strategies, provider errors, and Anthropic/Codex client translations.</li>
     <li>Prompt configuration has two layers: stable runtime/profile system prompt text, then Workflow launch rows built from role-scoped <code>AgentContext</code> XML, task guidance, and optional skill text.</li>
-    <li>Tool execution crosses into sandbox through typed tool wrappers and <code>sandbox.api</code>. Normal file and shell operations use daemon workspace routing; provider raw <code>exec</code> is a transport and diagnostic primitive.</li>
+    <li>Tool execution crosses into sandbox through typed tool wrappers and <code>sandbox.api</code>. Normal file and command operations use daemon workspace routing; provider raw <code>exec</code> is a transport and diagnostic primitive.</li>
     <li>Termination is a stamped tool-result condition. A successful terminal tool gets <code>is_terminal=true</code>, the query loop exits with <code>TOOL_STOP</code>, and Workflow lifecycle code reads the structured submission.</li>
   </ul>
 </div>
 <div class="wiki-links" aria-label="Agent loop related pages">
   <a href="../tools/framework.html">Tools Framework</a>
   <a href="../tools/terminals.html">Terminal Tools</a>
-  <a href="../tools/background.html">Background Tools</a>
+  <a href="../tools/background.html">Typed Background</a>
   <a href="../sandbox/daemon.html">Sandbox Daemon</a>
   <a href="../sandbox/provider.html">Sandbox Provider</a>
 </div>

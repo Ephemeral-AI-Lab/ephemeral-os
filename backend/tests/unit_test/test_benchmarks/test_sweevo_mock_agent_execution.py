@@ -252,8 +252,8 @@ async def test_run_scenario_correctness_testing_with_fake_sandbox(
     assert {
         "tool.write_file.direct_merge",
         "tool.edit_file.direct_merge",
-        "tool.shell.gated_merge",
-        "tool.shell.squash_append",
+        "tool.exec_command.gated_merge",
+        "tool.exec_command.squash_append",
         "api.edit_file.batch",
         "api.edit_file.conflict_detection",
     } <= check_names

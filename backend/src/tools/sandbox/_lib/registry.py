@@ -14,7 +14,6 @@ from tools.sandbox.multi_edit import multi_edit
 from tools.sandbox.glob import glob
 from tools.sandbox.grep import grep
 from tools.sandbox.read_file import read_file
-from tools.sandbox.shell import shell
 from tools.sandbox.write_file import write_file
 from tools.isolated_workspace import enter_isolated_workspace, exit_isolated_workspace
 
@@ -30,7 +29,6 @@ def make_sandbox_tools() -> list[BaseTool]:
         write_pty_command_stdin,
         check_pty_command_progress,
         cancel_pty_command,
-        shell,
         glob,
         grep,
         enter_isolated_workspace,

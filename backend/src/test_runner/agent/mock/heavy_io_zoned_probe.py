@@ -26,7 +26,7 @@ from tools._framework.core.base import BaseTool
 from tools._framework.core.results import ToolResult
 from tools._framework.core.runtime import ExecutionMetadata
 from tools.sandbox.read_file import read_file as read_file_tool
-from tools.sandbox.shell import shell as shell_tool
+from tools.sandbox.exec_command import exec_command as exec_command_tool
 from tools.sandbox.write_file import write_file as write_file_tool
 
 from test_runner.agent.mock.sandbox_probe import SandboxCheck
@@ -101,7 +101,7 @@ async def run_heavy_io_zoned_seed_probe(
 ) -> str:
     """Seed shared directories before workers fan out."""
     setup = await call_tool(
-        shell_tool,
+        exec_command_tool,
         {
             "command": (
                 f"mkdir -p {ROOT} {FRAGMENTS_DIR} "
@@ -114,7 +114,7 @@ async def run_heavy_io_zoned_seed_probe(
         metadata,
         emit,
     )
-    record_tool_check("tool.shell.heavy_io_zoned.seed_dirs", setup)
+    record_tool_check("tool.exec_command.heavy_io_zoned.seed_dirs", setup)
 
     control_path = f"{ROOT}/control/seed.json"
     control_payload = {
@@ -161,30 +161,30 @@ async def run_heavy_io_zoned_worker_probe(
         zone_started = time.perf_counter()
 
         write_result = await call_tool(
-            shell_tool,
+            exec_command_tool,
             {"command": _long_write_command(zone_dir), "timeout": SHELL_TIMEOUT_S},
             metadata,
             emit,
         )
         record_tool_check(
-            f"tool.shell.heavy_io_zoned.worker_{index:02d}.{zone}.write",
+            f"tool.exec_command.heavy_io_zoned.worker_{index:02d}.{zone}.write",
             write_result,
         )
-        write_meta = _capture_metadata("shell", write_result)
+        write_meta = _capture_metadata("exec_command", write_result)
         write_duration = time.perf_counter() - zone_started
 
         readback_started = time.perf_counter()
         readback_result = await call_tool(
-            shell_tool,
+            exec_command_tool,
             {"command": _readback_command(zone_dir), "timeout": 60},
             metadata,
             emit,
         )
         record_tool_check(
-            f"tool.shell.heavy_io_zoned.worker_{index:02d}.{zone}.readback",
+            f"tool.exec_command.heavy_io_zoned.worker_{index:02d}.{zone}.readback",
             readback_result,
         )
-        readback_meta = _capture_metadata("shell", readback_result)
+        readback_meta = _capture_metadata("exec_command", readback_result)
         readback_duration = time.perf_counter() - readback_started
 
         readback_stdout = _shell_stdout(readback_result)
@@ -343,12 +343,12 @@ summary = {{
 print(json.dumps(summary, sort_keys=True))
 PY"""
     shell_result = await call_tool(
-        shell_tool,
+        exec_command_tool,
         {"command": command, "timeout": 180},
         metadata,
         emit,
     )
-    record_tool_check("tool.shell.heavy_io_zoned.reconcile", shell_result)
+    record_tool_check("tool.exec_command.heavy_io_zoned.reconcile", shell_result)
     if SUMMARY_SCHEMA not in (shell_result.output or ""):
         raise RuntimeError(
             f"reconcile summary missing schema marker: {(shell_result.output or '')[:500]}"
@@ -413,7 +413,7 @@ def _shell_exit_code(result: ToolResult) -> int:
 
 
 # Silence unused-import warnings for symbols referenced via call_tool below.
-_USED_TOOLS: tuple[BaseTool, ...] = (shell_tool, write_file_tool, read_file_tool)
+_USED_TOOLS: tuple[BaseTool, ...] = (exec_command_tool, write_file_tool, read_file_tool)
 
 
 __all__ = [

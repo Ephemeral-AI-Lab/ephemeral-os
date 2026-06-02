@@ -8,7 +8,7 @@ can import these constants without risking circular imports.
 from __future__ import annotations
 
 # Workspace tools (backend/src/tools/sandbox/)
-SHELL_TOOL_NAME = "shell"
+EXEC_COMMAND_TOOL_NAME = "exec_command"
 READ_FILE_TOOL_NAME = "read_file"
 EDIT_FILE_TOOL_NAME = "edit_file"
 MULTI_EDIT_TOOL_NAME = "multi_edit"
@@ -20,11 +20,6 @@ GLOB_TOOL_NAME = "glob"
 RUN_SUBAGENT_TOOL_NAME = "run_subagent"
 CHECK_SUBAGENT_PROGRESS_TOOL_NAME = "check_subagent_progress"
 CANCEL_SUBAGENT_TOOL_NAME = "cancel_subagent"
-
-# Background task tools (backend/src/tools/background/)
-CHECK_BACKGROUND_TASK_RESULT_TOOL_NAME = "check_background_task_result"
-WAIT_BACKGROUND_TASKS_TOOL_NAME = "wait_background_tasks"
-CANCEL_BACKGROUND_TASK_TOOL_NAME = "cancel_background_task"
 
 # Helper-ask tools (backend/src/tools/ask_helper/)
 ASK_ADVISOR_TOOL_NAME = "ask_advisor"
@@ -54,7 +49,7 @@ SUBMIT_EXPLORATION_RESULT_TOOL_NAME = "submit_exploration_result"
 
 
 __all__ = [
-    "SHELL_TOOL_NAME",
+    "EXEC_COMMAND_TOOL_NAME",
     "READ_FILE_TOOL_NAME",
     "EDIT_FILE_TOOL_NAME",
     "MULTI_EDIT_TOOL_NAME",
@@ -64,9 +59,6 @@ __all__ = [
     "RUN_SUBAGENT_TOOL_NAME",
     "CHECK_SUBAGENT_PROGRESS_TOOL_NAME",
     "CANCEL_SUBAGENT_TOOL_NAME",
-    "CHECK_BACKGROUND_TASK_RESULT_TOOL_NAME",
-    "WAIT_BACKGROUND_TASKS_TOOL_NAME",
-    "CANCEL_BACKGROUND_TASK_TOOL_NAME",
     "ASK_ADVISOR_TOOL_NAME",
     "DELEGATE_WORKFLOW_TOOL_NAME",
     "CHECK_WORKFLOW_STATUS_TOOL_NAME",

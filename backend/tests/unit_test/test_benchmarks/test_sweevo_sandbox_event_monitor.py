@@ -24,7 +24,7 @@ def test_stream_bridge_derives_sandbox_subsystem_events() -> None:
     asyncio.run(
         bridge(
             ToolExecutionCompletedEvent(
-                tool_name="shell",
+                tool_name="exec_command",
                 output="{}",
                 is_error=False,
                 tool_use_id="toolu_1",
@@ -92,7 +92,7 @@ def test_stream_bridge_sandbox_fallback_flag_blocks_derived_sandbox_events() -> 
     asyncio.run(
         bridge(
             ToolExecutionCompletedEvent(
-                tool_name="shell",
+                tool_name="exec_command",
                 output="{}",
                 is_error=False,
                 tool_use_id="toolu_1",
@@ -123,7 +123,7 @@ def test_stream_bridge_skips_metadata_derivation_when_sandbox_audit_emitted() ->
     asyncio.run(
         bridge(
             ToolExecutionCompletedEvent(
-                tool_name="shell",
+                tool_name="exec_command",
                 output="{}",
                 is_error=False,
                 tool_use_id="toolu_1",
@@ -292,7 +292,7 @@ def test_sandbox_audit_event_bridge_maps_resource_snapshot(tmp_path: Path) -> No
                 node=AuditNode(
                     request_id="run-1",
                     task_id="task-1",
-                    tool_name="shell",
+                    tool_name="exec_command",
                     tool_use_id="toolu_1",
                 ),
                 payload={

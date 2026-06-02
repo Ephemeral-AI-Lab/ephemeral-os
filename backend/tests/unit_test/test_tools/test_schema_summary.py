@@ -90,7 +90,7 @@ def test_sandbox_summary_lists_unprefixed_tools_without_instruction_block():
     summary = format_tool_schema_summary(tools, include_descriptions=True)
 
     assert "Tool: write_file" in summary
-    assert "Tool: shell" in summary
+    assert "Tool: exec_command" in summary
     assert "Tool: daytona_write_file" not in summary
     assert "  instructions:" not in summary
 

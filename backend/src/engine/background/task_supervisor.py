@@ -50,10 +50,9 @@ class BackgroundTaskStatus(StrEnum):
 # Terminal status precedence used by
 # :meth:`BackgroundTaskSupervisor._apply_terminal_status_transition`.
 # A status with a *higher* precedence overwrites a lower one; otherwise the
-# attempt is dropped. This is the single-terminal-status latch the plan
-# requires (Pre-mortem #6): cancel + natural-completion races resolve to
-# COMPLETED so a long-running shell that finishes between cancel and reap
-# returns its real result, not the "cancelled" overlay.
+# attempt is dropped. Cancel + natural-completion races resolve to COMPLETED so
+# a long-running task or PTY session that finishes between cancel and reap
+# returns its real result, not a late cancellation result.
 _TERMINAL_PRECEDENCE: dict[BackgroundTaskStatus, int] = {
     BackgroundTaskStatus.RUNNING: 0,
     BackgroundTaskStatus.CANCELLED: 1,
@@ -83,7 +82,7 @@ class BackgroundTaskRecord:
     tool_input: dict[str, Any]
     asyncio_task: asyncio.Task[ToolResult]
     # Discriminator so monitoring/UI/audit can branch without sniffing tool_name.
-    # "agent" for ordinary background tools, "subagent" for run_subagent.
+    # "subagent" is the model-facing engine background task type.
     task_type: str = DEFAULT_BACKGROUND_TASK_TYPE
     subagent_session_id: str | None = None
     agent_id: str | None = None
@@ -274,7 +273,7 @@ class BackgroundTaskSupervisor:
         self._heartbeat_task: asyncio.Task[None] | None = None
 
     def next_alias(self) -> str:
-        """Return a short mnemonic task id for generic background tools."""
+        """Return a short mnemonic task id for internal supervisor tests."""
         self._alias_counter += 1
         return f"bg_{self._alias_counter}"
 
@@ -398,7 +397,7 @@ class BackgroundTaskSupervisor:
         )
 
     def collect_completed(self) -> list[BackgroundTaskRecord]:
-        """Return generic tasks that finished but haven't been delivered yet.
+        """Return non-subagent tasks that finished but haven't been delivered yet.
 
         Each returned task is marked as ``delivered`` so it won't be
         returned again. Subagents use their own typed completion/progress
@@ -623,11 +622,10 @@ class BackgroundTaskSupervisor:
     def append_progress(self, task_id: str, line: str) -> None:
         """Append a live progress line for *task_id*.
 
-        Used by streaming-capable tools to push incremental output into the
-        supervisor so that ``check_background_task_result`` can return a live
-        tail while the task is still running. Splits *line* on newlines so the
-        caller can pass either a single line or a chunk of multiple lines.
-        No-op if the task is unknown or already finished.
+        Used by streaming-capable engine tasks to push incremental output into
+        the supervisor. Splits *line* on newlines so the caller can pass either
+        a single line or a chunk of multiple lines. No-op if the task is
+        unknown or already finished.
         """
         tracked = self._tasks.get(task_id)
         if tracked is None or tracked.status != BackgroundTaskStatus.RUNNING:
@@ -659,11 +657,11 @@ class BackgroundTaskSupervisor:
         """Cancel a task by id. Returns True if found and cancelled.
 
         Subagents receive a cooperative early-stop cancellation so they can
-        salvage a partial result. Ordinary background tools are pure-Python
-        jobs and are cancelled through their asyncio task.
+        salvage a partial result. Non-subagent supervisor records are cancelled
+        through their asyncio task.
 
         Race-safe via the terminal-status latch: if the task already
-        completed (e.g. a 1 s shell that exited just before the user clicked
+        completed (e.g. a short command that exited just before the user clicked
         cancel), the COMPLETED result is preserved.
         """
         tracked = self._tasks.get(task_id)

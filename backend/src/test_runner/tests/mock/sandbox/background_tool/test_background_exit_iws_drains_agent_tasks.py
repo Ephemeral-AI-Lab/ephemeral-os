@@ -60,7 +60,7 @@ async def test_background_exit_iws_drains_agent_tasks(
     assert not summary["default_published"], summary
     assert not summary["iws_enter"]["is_error"], summary
     # Exit is now GATED: the first attempt is refused while the iws bg task is
-    # in flight; the agent cancels it via cancel_background_task, then exit
+    # in flight; the agent cancels it via cancel_pty_command, then exit
     # succeeds. (Drain stays as defense-in-depth but no longer fires here.)
     assert summary["blocked_exit"]["is_error"], summary
     assert summary["blocked_exit_reason"] == "ephemeral_jobs_in_flight", summary

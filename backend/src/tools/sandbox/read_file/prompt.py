@@ -7,7 +7,7 @@ from tools._names import (
     GLOB_TOOL_NAME,
     GREP_TOOL_NAME,
     READ_FILE_TOOL_NAME,
-    SHELL_TOOL_NAME,
+    EXEC_COMMAND_TOOL_NAME,
     WRITE_FILE_TOOL_NAME,
 )
 from tools.sandbox._lib.file_payloads import MAX_READ_FILE_LINES
@@ -23,7 +23,7 @@ def get_read_file_description() -> str:
         "  requires you to read first).\n"
         "\n"
         "Prefer over:\n"
-        f"- `{SHELL_TOOL_NAME}` with `cat`/`sed -n`/`head`/`tail` — `{READ_FILE_TOOL_NAME}` is cheaper,\n"
+        f"- `{EXEC_COMMAND_TOOL_NAME}` with `cat`/`sed -n`/`head`/`tail` — `{READ_FILE_TOOL_NAME}` is cheaper,\n"
         "  returns structured output, and integrates with the edit precondition\n"
         "  check.\n"
         "\n"

@@ -92,13 +92,13 @@
                               +--&gt; [terminal result] ----&gt; [TOOL_STOP]
 </pre>
 <div class="edge-list">
-  <div><b>Runtime setup</b><span>The loop coerces or creates <code>ExecutionMetadata</code>, installs the run-scoped notification service, and creates <code>BackgroundTaskSupervisor</code> only when background tools are enabled.</span></div>
+  <div><b>Runtime setup</b><span>The loop coerces or creates <code>ExecutionMetadata</code>, installs the run-scoped notification service, and creates <code>BackgroundTaskSupervisor</code> only when typed background surfaces are enabled.</span></div>
   <div><b>Request copy</b><span><code>build_provider_messages()</code> sanitizes the provider-visible history and feeds <code>MessageRequest</code> without changing the durable transcript.</span></div>
   <div><b>Dispatch precondition</b><span>Final tool dispatch waits for <code>AssistantMessageCompleteEvent</code> so the complete assistant message is available before side effects continue.</span></div>
 </div>
 </section>
 
-<section id="streaming-and-deferral" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="backend/src/engine/query/loop.py backend/src/engine/tool_call/streaming.py backend/src/engine/tool_call/dispatch.py backend/src/engine/background/dispatch.py backend/src/tools/background backend/src/message/events.py backend/tests/unit_test/test_tools/test_tool_execution.py">
+<section id="streaming-and-deferral" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="backend/src/engine/query/loop.py backend/src/engine/tool_call/streaming.py backend/src/engine/tool_call/dispatch.py backend/src/engine/background/dispatch.py backend/src/engine/background/policy.py backend/src/message/events.py backend/tests/unit_test/test_tools/test_tool_execution.py">
 <h2>Streaming and Deferral</h2>
 <p><code>StreamingToolExecutor</code> can execute normal foreground tools as soon as tool-use deltas arrive. The executor itself does not know background or terminal policy; the query loop passes a <code>should_defer</code> predicate.</p>
 <div class="edge-list">
@@ -206,7 +206,7 @@
   </p>
 </section>
 
-<section id="run-lifecycle-boundary" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="backend/src/engine/agent/lifecycle.py backend/src/engine/agent/factory.py backend/src/engine/query/loop.py backend/src/engine/query/context.py backend/src/tools/background backend/src/message/message.py backend/tests/unit_test/test_workflow/test_agent_launch/test_attempt_launcher_retry.py">
+<section id="run-lifecycle-boundary" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="backend/src/engine/agent/lifecycle.py backend/src/engine/agent/factory.py backend/src/engine/query/loop.py backend/src/engine/query/context.py backend/src/engine/background/policy.py backend/src/message/message.py backend/tests/unit_test/test_workflow/test_agent_launch/test_attempt_launcher_retry.py">
 <h2>Run Lifecycle Boundary</h2>
 <p><code>run_ephemeral_agent()</code> is the single lifecycle entry point for top-level agent runs and subagent launches. It spawns the agent, drives <code>agent.run(..., auto_close=False)</code>, forwards stream events, persists the agent run, closes the provider client, and returns an <code>EphemeralRunResult</code>.</p>
 <div class="summary">
@@ -225,7 +225,7 @@
               is the only failure mode.
 </pre>
 <div class="edge-list">
-  <div><b>Factory owns setup</b><span><code>spawn_agent()</code> builds the tool registry, registers background management tools only when needed and not for subagents, appends terminal guidance, and constructs the <code>QueryContext</code>.</span></div>
+  <div><b>Factory owns setup</b><span><code>spawn_agent()</code> builds the tool registry, registers typed subagent controls only when <code>run_subagent</code> is available and not for subagents, appends terminal guidance, and constructs the <code>QueryContext</code>.</span></div>
   <div><b>Query loop owns stop reason</b><span><code>QueryExitReason</code> distinguishes <code>TOOL_STOP</code> from <code>TERMINAL_NOT_SUBMITTED</code>.</span></div>
   <div><b>Lifecycle owns persistence</b><span>The run tracker receives the final transcript, terminal tool payload if present, token count, and crash error. It does not reinterpret background results or retry budget failure.</span></div>
 </div>

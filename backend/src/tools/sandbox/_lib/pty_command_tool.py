@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from sandbox.shared.models import ExecCommandResult
 from tools._framework.core.base import ToolExecutionContextService, ToolResult
@@ -15,6 +15,13 @@ class CommandToolOutput(BaseModel):
     exit_code: int | None
     output: dict[str, str]
     pty_session_id: str | None = None
+    stdout: str = ""
+    stderr: str = ""
+    changed_paths: list[str] = Field(default_factory=list)
+    changed_path_kinds: dict[str, str] = Field(default_factory=dict)
+    mutation_source: str = ""
+    conflict_reason: str | None = None
+    error: dict[str, object] | None = None
 
 
 def command_result_payload(result: ExecCommandResult) -> dict[str, object]:
@@ -25,9 +32,17 @@ def command_result_payload(result: ExecCommandResult) -> dict[str, object]:
             "stdout": result.output.stdout,
             "stderr": result.output.stderr,
         },
+        "stdout": result.output.stdout,
+        "stderr": result.output.stderr,
+        "changed_paths": list(result.changed_paths),
+        "changed_path_kinds": dict(result.changed_path_kinds),
+        "mutation_source": result.mutation_source,
+        "conflict_reason": result.conflict_reason,
     }
     if result.pty_session_id:
         payload["pty_session_id"] = result.pty_session_id
+    if result.error:
+        payload["error"] = dict(result.error)
     return payload
 
 
@@ -36,7 +51,14 @@ def command_tool_result(result: ExecCommandResult) -> ToolResult:
     return ToolResult(
         output=json.dumps(payload),
         is_error=result.status in {"error", "timed_out"},
-        metadata={"status": result.status, "pty_session_id": result.pty_session_id or ""},
+        metadata={
+            "status": result.status,
+            "pty_session_id": result.pty_session_id or "",
+            "changed_paths": list(result.changed_paths),
+            "changed_path_kinds": dict(result.changed_path_kinds),
+            "mutation_source": result.mutation_source,
+            "conflict_reason": result.conflict_reason,
+        },
     )
 
 

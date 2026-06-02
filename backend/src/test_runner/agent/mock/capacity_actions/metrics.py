@@ -70,7 +70,7 @@ def full_system_capacity_metrics_script(ctx: ScenarioContext) -> PreparedToolScr
             "write_file": tool_counts.get("write_file", 0),
             "edit_file": tool_counts.get("edit_file", 0),
             "read_file": tool_counts.get("read_file", 0),
-            "shell": tool_counts.get("shell", 0),
+            "exec_command": tool_counts.get("exec_command", 0),
             "lsp": lsp_calls,
             "expected_errors": 0,
             "unexpected_errors": 0,

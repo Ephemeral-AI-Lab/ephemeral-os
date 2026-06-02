@@ -382,7 +382,7 @@ async def _phase_f_emit_metrics(
             "write": stats.write_count,
             "edit": stats.edit_count,
             "read": stats.read_count,
-            "shell": stats.shell_count,
+            "exec_command": stats.shell_count,
             "grep": stats.grep_count,
             "glob": stats.glob_count,
             "lsp": dict(stats.lsp_counts),
@@ -391,7 +391,7 @@ async def _phase_f_emit_metrics(
         "api_calls": {
             "read": stats.api_read_count,
             "edit": stats.api_edit_count,
-            "shell": stats.api_shell_count,
+            "exec_command": stats.api_shell_count,
         },
         "grep_glob": _grep_glob_metrics(stats),
         "intentional_conflicts": stats.intentional_conflicts,

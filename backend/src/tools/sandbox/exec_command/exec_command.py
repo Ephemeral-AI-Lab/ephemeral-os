@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 from uuid import uuid4
 
 from pydantic import BaseModel, Field
@@ -19,6 +20,7 @@ from tools.sandbox._lib.pty_command_tool import (
     command_tool_result,
 )
 from tools.sandbox._lib.tool_context import (
+    sandbox_audit_metadata_from_tool_context,
     sandbox_audit_kwargs_from_tool_context,
     sandbox_caller_from_tool_context,
     sandbox_id_or_missing_error_result,
@@ -80,7 +82,14 @@ async def exec_command(
                 agent_id=caller.agent_id,
                 command=cmd,
             )
-    return command_tool_result(result)
+    tool_result = command_tool_result(result)
+    return replace(
+        tool_result,
+        metadata={
+            **tool_result.metadata,
+            **sandbox_audit_metadata_from_tool_context(context),
+        },
+    )
 
 
 __all__ = ["exec_command"]

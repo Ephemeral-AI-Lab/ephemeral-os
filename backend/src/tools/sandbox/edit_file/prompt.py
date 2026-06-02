@@ -6,7 +6,7 @@ from tools._names import (
     EDIT_FILE_TOOL_NAME,
     MULTI_EDIT_TOOL_NAME,
     READ_FILE_TOOL_NAME,
-    SHELL_TOOL_NAME,
+    EXEC_COMMAND_TOOL_NAME,
     WRITE_FILE_TOOL_NAME,
 )
 
@@ -25,7 +25,7 @@ def get_edit_file_description() -> str:
         f"- `{WRITE_FILE_TOOL_NAME}` — for ANY modification of an existing file. Use\n"
         f"  `{WRITE_FILE_TOOL_NAME}` only when you are creating a new file or intentionally\n"
         "  rewriting the whole thing.\n"
-        f"- `{SHELL_TOOL_NAME}` with `sed`/`awk` — `{EDIT_FILE_TOOL_NAME}` is atomic, audited, and refuses\n"
+        f"- `{EXEC_COMMAND_TOOL_NAME}` with `sed`/`awk` — `{EDIT_FILE_TOOL_NAME}` is atomic, audited, and refuses\n"
         "  ambiguous matches instead of silently mangling.\n"
         "\n"
         "Do NOT use for:\n"

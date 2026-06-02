@@ -118,7 +118,27 @@ async def test_plugin_workspace_snapshot_refresh_strategy(
         in rust_payload["status_after_ensure"]["connected_ppc_routes"]
     )
     assert (
+        "plugin.generic.lsp_bridge_find_definitions"
+        in rust_payload["status_after_ensure"]["connected_ppc_routes"]
+    )
+    assert (
+        "plugin.generic.lsp_bridge_find_references"
+        in rust_payload["status_after_ensure"]["connected_ppc_routes"]
+    )
+    assert (
+        "plugin.generic.lsp_bridge_hover"
+        in rust_payload["status_after_ensure"]["connected_ppc_routes"]
+    )
+    assert (
         "plugin.generic.lsp_bridge_rename"
+        in rust_payload["status_after_ensure"]["connected_ppc_routes"]
+    )
+    assert (
+        "plugin.generic.lsp_bridge_apply_workspace_edit"
+        in rust_payload["status_after_ensure"]["connected_ppc_routes"]
+    )
+    assert (
+        "plugin.generic.lsp_bridge_apply_code_action"
         in rust_payload["status_after_ensure"]["connected_ppc_routes"]
     )
     assert (
@@ -408,6 +428,75 @@ async def test_plugin_workspace_snapshot_refresh_strategy(
         "bridge_total"
         in rust_payload["lsp_bridge_query_symbols"]["lsp"]["symbol_names"]
     )
+    assert rust_payload["lsp_bridge_find_definitions"][
+        "from_lsp_importlib_bridge"
+    ] is True
+    assert rust_payload["lsp_bridge_find_definitions"][
+        "from_ppc_service_bridge"
+    ] is True
+    assert rust_payload["lsp_bridge_find_definitions"]["workspace_mounted"] is True
+    assert (
+        rust_payload["lsp_bridge_find_definitions"]["lsp"]["protocol"]
+        == "lsp-python-importlib"
+    )
+    assert (
+        rust_payload["lsp_bridge_find_definitions"]["lsp"]["server"]
+        == "plugins.catalog.lsp.runtime.server"
+    )
+    assert (
+        rust_payload["lsp_bridge_find_definitions"]["lsp"]["definition_count"]
+        >= 1
+    )
+    assert (
+        "live_plugin_lsp_bridge.py"
+        in rust_payload["lsp_bridge_find_definitions"]["lsp"]["definition_paths"]
+    )
+    assert (
+        0
+        in rust_payload["lsp_bridge_find_definitions"]["lsp"][
+            "definition_start_lines"
+        ]
+    )
+    assert rust_payload["lsp_bridge_find_references"][
+        "from_lsp_importlib_bridge"
+    ] is True
+    assert rust_payload["lsp_bridge_find_references"][
+        "from_ppc_service_bridge"
+    ] is True
+    assert rust_payload["lsp_bridge_find_references"]["workspace_mounted"] is True
+    assert (
+        rust_payload["lsp_bridge_find_references"]["lsp"]["protocol"]
+        == "lsp-python-importlib"
+    )
+    assert (
+        rust_payload["lsp_bridge_find_references"]["lsp"]["server"]
+        == "plugins.catalog.lsp.runtime.server"
+    )
+    assert (
+        rust_payload["lsp_bridge_find_references"]["lsp"]["reference_count"]
+        >= 2
+    )
+    assert (
+        "live_plugin_lsp_bridge.py"
+        in rust_payload["lsp_bridge_find_references"]["lsp"]["reference_paths"]
+    )
+    assert {0, 3}.issubset(
+        rust_payload["lsp_bridge_find_references"]["lsp"][
+            "reference_start_lines"
+        ]
+    )
+    assert rust_payload["lsp_bridge_hover"]["from_lsp_importlib_bridge"] is True
+    assert rust_payload["lsp_bridge_hover"]["from_ppc_service_bridge"] is True
+    assert rust_payload["lsp_bridge_hover"]["workspace_mounted"] is True
+    assert (
+        rust_payload["lsp_bridge_hover"]["lsp"]["protocol"]
+        == "lsp-python-importlib"
+    )
+    assert (
+        rust_payload["lsp_bridge_hover"]["lsp"]["server"]
+        == "plugins.catalog.lsp.runtime.server"
+    )
+    assert "bridge_total" in rust_payload["lsp_bridge_hover"]["lsp"]["hover_text"]
     assert rust_payload["lsp_bridge_rename"]["from_lsp_importlib_bridge"] is True
     assert rust_payload["lsp_bridge_rename"]["from_ppc_service_bridge"] is True
     assert (
@@ -428,6 +517,86 @@ async def test_plugin_workspace_snapshot_refresh_strategy(
     assert (
         rust_payload["lsp_bridge_rename_readback"]["content"]
         == "def bridge_total() -> int:\n    return 7\n\nRESULT = bridge_total()\n"
+    )
+    assert rust_payload["lsp_bridge_apply_seed"]["success"] is True
+    assert (
+        rust_payload["lsp_bridge_apply_workspace_edit"]["from_lsp_importlib_bridge"]
+        is True
+    )
+    assert (
+        rust_payload["lsp_bridge_apply_workspace_edit"]["from_ppc_service_bridge"]
+        is True
+    )
+    assert (
+        rust_payload["lsp_bridge_apply_workspace_edit"][
+            "from_mounted_workspace_callback"
+        ]
+        is True
+    )
+    assert rust_payload["lsp_bridge_apply_workspace_edit"]["workspace_mounted"] is True
+    assert (
+        rust_payload["lsp_bridge_apply_workspace_edit"]["lsp"]["protocol"]
+        == "lsp-python-importlib"
+    )
+    assert (
+        rust_payload["lsp_bridge_apply_workspace_edit"]["lsp"]["server"]
+        == "plugins.catalog.lsp.runtime.server"
+    )
+    assert (
+        rust_payload["lsp_bridge_apply_workspace_edit"]["lsp"]["apply"]["success"]
+        is True
+    )
+    assert (
+        "live_plugin_lsp_bridge_apply.py"
+        in rust_payload["lsp_bridge_apply_workspace_edit"]["changed_paths"]
+    )
+    assert (
+        rust_payload["lsp_bridge_apply_readback"]["content"]
+        == "VALUE = 'after'\n"
+    )
+    assert rust_payload["lsp_bridge_code_action_seed"]["success"] is True
+    assert (
+        rust_payload["lsp_bridge_apply_code_action"]["from_lsp_importlib_bridge"]
+        is True
+    )
+    assert (
+        rust_payload["lsp_bridge_apply_code_action"]["from_ppc_service_bridge"]
+        is True
+    )
+    assert (
+        rust_payload["lsp_bridge_apply_code_action"][
+            "from_mounted_workspace_callback"
+        ]
+        is True
+    )
+    assert rust_payload["lsp_bridge_apply_code_action"]["workspace_mounted"] is True
+    assert (
+        rust_payload["lsp_bridge_apply_code_action"]["lsp"]["protocol"]
+        == "lsp-python-importlib"
+    )
+    assert (
+        rust_payload["lsp_bridge_apply_code_action"]["lsp"]["server"]
+        == "plugins.catalog.lsp.runtime.server"
+    )
+    assert (
+        rust_payload["lsp_bridge_apply_code_action"]["lsp"]["action_title"]
+        == "Bridge replace status"
+    )
+    assert (
+        rust_payload["lsp_bridge_apply_code_action"]["lsp"]["action_kind"]
+        == "quickfix"
+    )
+    assert (
+        rust_payload["lsp_bridge_apply_code_action"]["lsp"]["apply"]["success"]
+        is True
+    )
+    assert (
+        "live_plugin_lsp_bridge_code_action.py"
+        in rust_payload["lsp_bridge_apply_code_action"]["changed_paths"]
+    )
+    assert (
+        rust_payload["lsp_bridge_code_action_readback"]["content"]
+        == "status = 'after'\n"
     )
     assert rust_payload["apply_multi"]["from_self_managed"] is True
     assert rust_payload["apply_multi"]["callback_count"] == 2

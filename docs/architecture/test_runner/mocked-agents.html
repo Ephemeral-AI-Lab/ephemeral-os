@@ -60,7 +60,7 @@
   <ul>
     <li>The mock runner lives at <code>backend/src/test_runner/agent/mock/scenario_loop_runner.py</code>. It is constructed by <code>build_scenario_config</code> and never imported directly by scenarios.</li>
     <li>Profile-name dispatch (<code>planner</code> / <code>executor</code> / <code>reducer</code>, plus <code>advisor</code> for the helper sub-agent) selects a <code>ScenarioEventSource</code> script; everything else flows through the real query loop and production tools.</li>
-    <li>Prepared <em>tool scripts</em> and <em>probes</em> let the executor lane exercise complex sandbox surfaces (LayerStack, OCC, overlay, plugin, ephemeral workspace, background shell) without growing the scenario protocol.</li>
+    <li>Prepared <em>tool scripts</em> and <em>probes</em> let the executor lane exercise complex sandbox surfaces (LayerStack, OCC, overlay, plugin, ephemeral workspace, background command sessions) without growing the scenario protocol.</li>
     <li>The runner emits four side-channel <code>MOCK_*</code> events that <code>ScenarioLifecycle</code> decodes into the rich <code>RunReport</code>.</li>
   </ul>
 </div>

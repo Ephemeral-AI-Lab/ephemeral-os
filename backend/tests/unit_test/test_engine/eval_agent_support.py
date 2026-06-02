@@ -10,7 +10,7 @@ Usage::
         sandbox_id="sb-123",
     )
     result = await agent.invoke("Run tests in the sandbox")
-    assert "shell" in result.tool_names
+    assert "exec_command" in result.tool_names
 
     # For raw client access (streaming protocol tests):
     client = agent.api_client
@@ -366,7 +366,7 @@ class EvalAgent:
                 "read_file",
                 "write_file",
                 "edit_file",
-                "shell",
+                "exec_command",
                 "run_subagent",
             ]
         agent_def = AgentDefinition(

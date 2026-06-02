@@ -22,11 +22,8 @@ Budget: a single agent is capped at its configured ``tool_call_limit`` plus the
 engine's hard ceiling. Heavy probes exceed that, so the scenario planner fans
 the work out into a generator DAG; each generator's tool stream is budget-sized
 and routes through the loop here. Background dispatch
-(``background_task_id``) is fire-and-forget through the loop and cannot satisfy
-the imperative probes' blocking-await contract by itself, so this bridge
-converts the requested stable background id into the real-agent model:
-an internal background-dispatch key plus ``check_background_task_result`` /
-``cancel_background_task``.
+(``background_task_id``) maps onto the typed PTY command model: ``exec_command``
+with ``tty=true`` plus ``check_pty_command_progress`` / ``cancel_pty_command``.
 """
 
 from __future__ import annotations
@@ -42,7 +39,6 @@ from engine.background.dispatch import (
     DISABLE_SANDBOX_HEARTBEAT_INPUT_KEY,
     SANDBOX_INVOCATION_ID_INPUT_KEY,
 )
-from engine.background.policy import BACKGROUND_TOOL_INPUT_KEY
 from message.message import ToolResultBlock
 from tools._framework.core.results import ToolResult
 
@@ -57,7 +53,7 @@ async def _noop_emit(_event: Any) -> None:
     return None
 
 
-_BACKGROUND_TASK_ID_RE = re.compile(r'task_id="([^"]+)"')
+_PTY_SESSION_ID_RE = re.compile(r'"pty_session_id"\s*:\s*"([^"]+)"')
 _BACKGROUND_POLL_INITIAL_S = 0.05
 _BACKGROUND_POLL_MAX_S = 0.5
 BackgroundCancelCallback = Callable[[dict[str, Any]], None]
@@ -117,11 +113,13 @@ class _CallToolBridge:
 
     def _loop_tool_input(self, tool_name: str, raw_input: dict[str, Any]) -> dict[str, Any]:
         tool_input = dict(raw_input)
-        if tool_name in {"cancel_background_task", "check_background_task_result"}:
-            task_id = str(tool_input.get("task_id") or "")
-            real_task_id = self._background_aliases.get(task_id)
-            if real_task_id:
-                tool_input["task_id"] = real_task_id
+        if tool_name == "exec_command":
+            _normalize_exec_command_input(tool_input)
+        if tool_name in {"cancel_pty_command", "check_pty_command_progress"}:
+            session_id = str(tool_input.get("pty_session_id") or "")
+            real_session_id = self._background_aliases.get(session_id)
+            if real_session_id:
+                tool_input["pty_session_id"] = real_session_id
         return tool_input
 
     async def _call_background_tool(
@@ -133,7 +131,10 @@ class _CallToolBridge:
         requested_background_task_id: str,
         sandbox_invocation_id: str | None,
     ) -> ToolResult:
-        launch_input = {**dict(raw_input), BACKGROUND_TOOL_INPUT_KEY: True}
+        launch_input = dict(raw_input)
+        _normalize_exec_command_input(launch_input)
+        launch_input["tty"] = True
+        launch_input.setdefault("yield_time_ms", 50)
         if sandbox_invocation_id:
             launch_input[SANDBOX_INVOCATION_ID_INPUT_KEY] = sandbox_invocation_id
             launch_input[DISABLE_SANDBOX_HEARTBEAT_INPUT_KEY] = True
@@ -143,20 +144,24 @@ class _CallToolBridge:
         )
         if launch.is_error:
             return launch
-        task_id = _parse_background_task_id(launch.output)
-        if not task_id:
+        launch_payload = _json_object(launch.output)
+        status = str(launch_payload.get("status") or "")
+        if status and status != "running":
+            return launch
+        pty_session_id = _parse_pty_session_id(launch.output)
+        if not pty_session_id:
             return ToolResult(
                 output=(
-                    "Background launch did not expose a task_id. "
+                    "PTY background launch did not expose a pty_session_id. "
                     f"requested_background_task_id={requested_background_task_id!r} "
                     f"output={launch.output!r}"
                 ),
                 is_error=True,
             )
-        self._background_aliases[requested_background_task_id] = task_id
+        self._background_aliases[requested_background_task_id] = pty_session_id
         try:
-            return await self._await_background_result(
-                task_id=task_id,
+            return await self._await_pty_result(
+                pty_session_id=pty_session_id,
                 allow_error=allow_error,
             )
         except asyncio.CancelledError:
@@ -167,20 +172,16 @@ class _CallToolBridge:
             cancel_result: ToolResult | None = None
             with contextlib.suppress(Exception):
                 cancel_result = await self._call_loop_tool(
-                    "cancel_background_task",
+                    "cancel_pty_command",
                     {
-                        "task_id": task_id,
-                        "reason": (
-                            "requested background_task_id cancellation: "
-                            f"{requested_background_task_id}"
-                        ),
+                        "pty_session_id": pty_session_id,
                     },
                 )
             if cancel_result is not None and not cancel_result.is_error:
                 self._publish_background_cancel(
                     tool_name=tool_name,
                     requested_background_task_id=requested_background_task_id,
-                    task_id=task_id,
+                    pty_session_id=pty_session_id,
                 )
             raise
 
@@ -189,7 +190,7 @@ class _CallToolBridge:
         *,
         tool_name: str,
         requested_background_task_id: str,
-        task_id: str,
+        pty_session_id: str,
     ) -> None:
         if self._on_background_cancel is None:
             return
@@ -198,36 +199,43 @@ class _CallToolBridge:
                 {
                     "tool_name": tool_name,
                     "background_task_id": requested_background_task_id,
-                    "real_background_task_id": task_id,
-                    "invocation_id": task_id,
+                    "pty_session_id": pty_session_id,
+                    "invocation_id": pty_session_id,
                 }
             )
 
-    async def _await_background_result(
+    async def _await_pty_result(
         self,
         *,
-        task_id: str,
+        pty_session_id: str,
         allow_error: bool,
     ) -> ToolResult:
+        del allow_error
         poll_s = _BACKGROUND_POLL_INITIAL_S
         while True:
             checked = await self._call_loop_tool(
-                "check_background_task_result", {"task_id": task_id}
+                "check_pty_command_progress",
+                {"pty_session_id": pty_session_id, "time": poll_s},
             )
             payload = _json_object(checked.output)
             status = str(payload.get("status") or "")
             if status != "running":
-                return _background_result_to_tool_result(
-                    checked,
-                    payload=payload,
-                    allow_error=allow_error,
-                )
+                return checked
             await asyncio.sleep(poll_s)
             poll_s = min(_BACKGROUND_POLL_MAX_S, poll_s * 2)
 
 
-def _parse_background_task_id(output: str) -> str:
-    match = _BACKGROUND_TASK_ID_RE.search(output or "")
+def _normalize_exec_command_input(tool_input: dict[str, Any]) -> None:
+    if "cmd" not in tool_input and "command" in tool_input:
+        tool_input["cmd"] = tool_input.pop("command")
+
+
+def _parse_pty_session_id(output: str) -> str:
+    payload = _json_object(output)
+    session_id = str(payload.get("pty_session_id") or "")
+    if session_id:
+        return session_id
+    match = _PTY_SESSION_ID_RE.search(output or "")
     return match.group(1) if match else ""
 
 
@@ -237,55 +245,6 @@ def _json_object(raw: str) -> dict[str, Any]:
     except json.JSONDecodeError:
         return {}
     return parsed if isinstance(parsed, dict) else {}
-
-
-def _raw_result_looks_like_error(raw: str) -> bool:
-    text = (raw or "").lstrip().lower()
-    return text.startswith(("execution failed:", "error:", "failed:")) or (
-        "exception_type=" in text
-    )
-
-
-def _background_result_to_tool_result(
-    checked: ToolResult,
-    *,
-    payload: dict[str, Any],
-    allow_error: bool,
-) -> ToolResult:
-    raw_result = str(payload.get("result") or "")
-    shell_payload = _json_object(raw_result)
-    status = str(payload.get("status") or "")
-    is_error = status not in {"finished", "completed", "delivered"}
-    if shell_payload:
-        is_error = str(shell_payload.get("status") or "") == "error"
-    elif _raw_result_looks_like_error(raw_result):
-        is_error = True
-    metadata: dict[str, Any] = {}
-    if shell_payload:
-        metadata.update(
-            {
-                "status": shell_payload.get("status"),
-                "changed_paths": list(shell_payload.get("changed_paths") or ()),
-                "changed_path_kinds": dict(
-                    shell_payload.get("changed_path_kinds") or {}
-                ),
-                "mutation_source": shell_payload.get("mutation_source"),
-                "conflict_reason": shell_payload.get("conflict_reason"),
-            }
-        )
-    if checked.metadata:
-        metadata.update(dict(checked.metadata))
-    if is_error and allow_error:
-        return ToolResult(
-            output=raw_result or checked.output,
-            is_error=True,
-            metadata=metadata,
-        )
-    return ToolResult(
-        output=raw_result or checked.output,
-        is_error=is_error,
-        metadata=metadata,
-    )
 
 
 async def bridge_turns(

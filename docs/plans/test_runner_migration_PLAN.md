@@ -94,8 +94,8 @@ Python sandbox infra is removed.
   `tests/mock/delegated_workflow/`.
 - Scenario names and comments still include old root-workflow language:
   `pipeline.initial_workflow`, `recursive_handoff_goal`,
-  `request_recursive_workflow`, and background shell scenarios that call
-  generic shell background tools.
+  `request_recursive_workflow`, and background command scenarios that still
+  assume deleted generic background-task tools.
 - `docs/architecture/task_center_runner/` is already titled "Workflow Runner
   (Testing)" but the path, evidence metadata, CLI examples, and prose still
   point at `task_center_runner`.
@@ -294,6 +294,14 @@ regression harness.
    - keep `EOS_SANDBOX_PROVIDER=docker` explicit for local live E2E
    - fail early if the Rust binary upload/signature/protocol pin is missing
 2. Command/session tools:
+   - remove the public `backend/src/tools/sandbox/shell` tool package; the
+     public command surface is `backend/src/tools/sandbox/exec_command`
+   - remove the public `backend/src/tools/background` tool package; background
+     work is typed-only through:
+     - `exec_command(..., tty=true)` plus `write_pty_command_stdin`,
+       `check_pty_command_progress`, and `cancel_pty_command`
+     - `run_subagent` plus `check_subagent_progress` / `cancel_subagent`
+     - `delegate_workflow` plus `check_workflow_status` / `cancel_workflow`
    - replace old generic background shell scenarios with typed command/session
      coverage from Phase 3T:
      `exec_command`, PTY stdin/progress/cancel, non-login Bash, process-tree
@@ -450,7 +458,8 @@ cargo test -p eos-daemon plugin
 Required live parity claims:
 
 - CP-4t non-login Bash command/session gate passes.
-- CP-4/CP-5 contention gates pass against Rust shell/session and plugin PPC.
+- CP-4/CP-5 contention gates pass against Rust `exec_command`/PTY session and
+  plugin PPC.
 - AV-3 cancellation/session cleanup passes under live load.
 - AV-4 audit pull loses zero records under CP-4 load.
 - AV-7 forward/back on-disk parity passes.

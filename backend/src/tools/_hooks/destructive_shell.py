@@ -64,7 +64,7 @@ _BLOCKED_GIT_SUBCOMMANDS = {
     "worktree",
 }
 _DESTRUCTIVE_GIT_MESSAGE = (
-    "BLOCKED: shell is for runtime commands, tests, and inspection. "
+    "BLOCKED: exec_command is for runtime commands, tests, and inspection. "
     "Destructive git mutation commands are forbidden here. "
     "They mutate repository metadata or working-tree files outside the "
     "OCC/write-scope audit path. Use edit_file or write_file instead. "

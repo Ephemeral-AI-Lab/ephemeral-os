@@ -32,7 +32,7 @@ _TOOL_MODULES = (
     "tools.sandbox.read_file.read_file",
     "tools.sandbox.write_file.write_file",
     "tools.sandbox.edit_file.edit_file",
-    "tools.sandbox.shell.shell",
+    "tools.sandbox.exec_command.exec_command",
     "tools.sandbox.grep.grep",
     "tools.sandbox.glob.glob",
     "tools.ask_helper.ask_advisor.ask_advisor",

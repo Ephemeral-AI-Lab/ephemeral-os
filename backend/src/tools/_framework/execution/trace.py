@@ -62,8 +62,8 @@ def record_tool_trace(
             _normalize_trace_paths(tool_input.get("file_paths")),
         )
         return
-    if tool_name == "shell":
-        _increment_trace_counter(metadata, "_shell_calls")
+    if tool_name == "exec_command":
+        _increment_trace_counter(metadata, "_exec_command_calls")
         return
     if tool_name == "read_file":
         _increment_trace_counter(metadata, "_read_file_calls")

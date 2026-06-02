@@ -20,7 +20,9 @@ live. Pyright `document_formatting` and `workspace/executeCommand` are now
 routed through PPC as structured unsupported responses based on the server's
 advertised capability boundary, while a generic positive LSP formatting
 and execute-command provider path is covered separately through the daemon OCC
-callback. Live status health
+callback. The canonical Python importlib LSP bridge over the reusable PPC
+service now covers query, hover, rename, direct `apply_workspace_edit`, and
+`apply_code_action` publish through the mounted-workspace callback. Live status health
 probes, failed-health isolation plus same-service failed-health recovery,
 service-crash fail-closed plus same-service crash recovery, hung-service
 timeout fail-closed probes, timeout next-dispatch recovery, and next-dispatch
@@ -38,7 +40,8 @@ second request replies before a slow first request on the same service connectio
 concurrent mounted-workspace write callbacks with distinct parent operation
 ids, mixed `api.v1.shell` overlay/OCC publish followed by long-lived plugin
 refresh/readback, explicit daemon cleanup that removes PPC routes/services and
-reaps plugin harness processes, and the current
+reaps plugin harness processes, canonical importlib LSP bridge apply/readback
+and hover/code-action evidence, and the current
 Pyright negative capability boundary:
 `document_formatting=false`, `document_range_formatting=false`, and
 `executeCommandProvider.commands=[]`, so Pyright formatting/execute-command are
@@ -73,6 +76,87 @@ path as the behavioral reference.
   `sandbox/docs/contract/06-crate-map-and-invariants.md`,
   `docs/plans/sandbox-rust-external-migration-PLAN.md`,
   `docs/plans/sandbox-rust-external-migration-PROGRESS.md`.
+
+## Progress Update - 2026-06-02 13:30 CST
+
+Landed:
+
+- Broadened the canonical Python importlib LSP bridge over the reusable
+  `runtime_bridge` PPC service with `plugin.generic.lsp_bridge_hover` and
+  `plugin.generic.lsp_bridge_apply_code_action`. Both delegate to
+  `plugins.catalog.lsp.runtime.server`, preserving the generic service model
+  while adding one READ_ONLY operation and one additional WRITE_ALLOWED
+  self-managed publish shape.
+- Updated the live benchmark and pytest gate so the new routes are mandatory.
+  The hover gate requires protocol `lsp-python-importlib` and hover text for
+  `bridge_total`; the code-action gate requires
+  `from_lsp_importlib_bridge=true`, `from_ppc_service_bridge=true`,
+  `from_mounted_workspace_callback=true`, action title
+  `Bridge replace status`, kind `quickfix`, apply `success=true`, changed path
+  `live_plugin_lsp_bridge_code_action.py`, and LayerStack readback
+  `status = 'after'\n`.
+- Live verification passed:
+  `EOS_SANDBOX_PROVIDER=docker EOS_LIVE_E2E_IMAGE=xingyaoww/sweb.eval.x86_64.dask_s_dask-10042:latest EOS_PLUGIN_REFRESH_SAMPLES=1 EOS_PLUGIN_REFRESH_AUTO_SQUASH_WRITES=104 EOS_RUST_PLUGIN_BENCH_TIMEOUT_S=600 uv run pytest -q -x -rs --tb=short --durations=10 backend/tests/live_e2e_test/sandbox/plugin/test_plugin_refresh_strategies.py`
+  (`1 passed in 53.27s`). The Rust plugin report
+  `.omc/results/rust-daemon-plugin-generic-20260602T052843Z-45190.json` had
+  `gate_pass=true`, connected routes `plugin.generic.lsp_bridge_hover` and
+  `plugin.generic.lsp_bridge_apply_code_action`, and artifact SHA
+  `62e6d703964fb5525874629cb39c522e1aa96e25fd80f9619c3da205ef98b83f`.
+- The same artifact preserved the non-serialized operation proof:
+  `runtime_bridge_concurrent` returned `fast-second` in `0.0043s` while
+  `slow-first` took `0.3599s` on the same service connection, and
+  `runtime_bridge_concurrent_apply` committed both concurrent mounted-workspace
+  callback writes. Cleanup ended with plugin process count `12 -> 0`,
+  `post_cleanup_metrics.active_leases=0`, and no orphan/missing layers. The
+  paired refresh-strategy report
+  `.omc/results/plugin-refresh-strategies-20260602T052843Z-45190.json` still
+  recommends `workspace_snapshot_refresh`; refresh p95 was `7.034 ms` versus
+  `commit_to_workspace` p95 `4.242 ms`, raw filesystem watch without
+  materialization stayed stale, and auto-squash plus post-drain commit passed.
+
+Still open:
+
+- Broader AV-10 LSP parity and broader crash-recovery matrix coverage. The
+  current reusable PPC service path now has live gates for canonical importlib
+  LSP query/hover/rename/apply/apply-code-action plus concurrent operation
+  multiplexing and duplicate refresh/remount singleflight.
+
+## Progress Update - 2026-06-02 13:16 CST
+
+Landed:
+
+- Extended the canonical Python importlib LSP bridge over the reusable
+  `runtime_bridge` PPC service with a WRITE_ALLOWED
+  `plugin.generic.lsp_bridge_apply_workspace_edit` route. The bridge delegates
+  to `plugins.catalog.lsp.runtime.server.apply_workspace_edit_op`, keeping the
+  plugin integration generic while proving direct LSP `WorkspaceEdit` publish
+  through the mounted-workspace callback.
+- Updated the live benchmark and pytest gate so the new route is mandatory. The
+  gate seeds `live_plugin_lsp_bridge_apply.py`, applies a LSP edit through the
+  canonical bridge, requires `from_lsp_importlib_bridge=true`,
+  `from_ppc_service_bridge=true`, `from_mounted_workspace_callback=true`, and
+  then verifies LayerStack readback `VALUE = 'after'\n`.
+- Live verification passed:
+  `EOS_SANDBOX_PROVIDER=docker EOS_LIVE_E2E_IMAGE=xingyaoww/sweb.eval.x86_64.dask_s_dask-10042:latest EOS_PLUGIN_REFRESH_SAMPLES=1 EOS_PLUGIN_REFRESH_AUTO_SQUASH_WRITES=104 EOS_RUST_PLUGIN_BENCH_TIMEOUT_S=600 uv run pytest -q -x -rs --tb=short --durations=10 backend/tests/live_e2e_test/sandbox/plugin/test_plugin_refresh_strategies.py`
+  (`1 passed in 160.72s`). The Rust plugin report
+  `.omc/results/rust-daemon-plugin-generic-20260602T051303Z-4687.json` had
+  `gate_pass=true`, connected route
+  `plugin.generic.lsp_bridge_apply_workspace_edit`, and artifact SHA
+  `62e6d703964fb5525874629cb39c522e1aa96e25fd80f9619c3da205ef98b83f`.
+- The same artifact preserved the non-serialized operation proof:
+  `runtime_bridge_concurrent` returned `fast-second` in `0.0047s` while
+  `slow-first` took `0.3584s` on the same service connection, and
+  `runtime_bridge_concurrent_apply` committed both concurrent mounted-workspace
+  callback writes. Cleanup ended with no connected routes/services, plugin
+  process count `12 -> 0`, `post_cleanup_metrics.active_leases=0`, and no
+  orphan/missing layers.
+
+Still open:
+
+- Broader AV-10 LSP parity and broader crash-recovery matrix coverage. The
+  current reusable PPC service path now has live gates for concurrent
+  operation multiplexing, duplicate refresh/remount singleflight, and canonical
+  importlib LSP bridge query/rename/apply publish.
 
 ## Progress Update - 2026-06-02 12:57 CST
 

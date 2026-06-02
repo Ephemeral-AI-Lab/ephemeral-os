@@ -28,7 +28,7 @@ from tools.sandbox.edit_file import edit_file as edit_file_tool
 from tools.sandbox.glob import glob as glob_tool
 from tools.sandbox.grep import grep as grep_tool
 from tools.sandbox.read_file import read_file as read_file_tool
-from tools.sandbox.shell import shell as shell_tool
+from tools.sandbox.exec_command import exec_command as exec_command_tool
 from tools.sandbox.write_file import write_file as write_file_tool
 
 
@@ -189,7 +189,7 @@ async def run_ephemeral_all_verbs_probe(
     )
     shell = await call(
         "shell_kinds",
-        shell_tool,
+        exec_command_tool,
         {
             "command": textwrap.dedent(
                 f"""\
@@ -266,7 +266,7 @@ async def run_ephemeral_concurrent_writes_probe(
     root = _case_subroot("concurrent")
     await _call_tool(
         label="concurrent_seed",
-        tool_obj=shell_tool,
+        tool_obj=exec_command_tool,
         raw_input={"command": f"mkdir -p {root}", "timeout": 60},
         metadata=metadata,
         emit=emit,
@@ -291,7 +291,7 @@ async def run_ephemeral_concurrent_writes_probe(
     async def shell_write(index: int) -> ToolResult:
         return await _call_tool(
             label=f"shell_write_{index}",
-            tool_obj=shell_tool,
+            tool_obj=exec_command_tool,
             raw_input={
                 "command": f"printf 'shell={index}\\n' > {root}/shell-{index}.txt",
                 "timeout": 60,
@@ -470,7 +470,7 @@ async def run_ephemeral_cancellation_probe(
     try:
         await asyncio.wait_for(
             call_tool(
-                shell_tool,
+                exec_command_tool,
                 {
                     "command": (
                         "python - <<'PY'\n"
@@ -814,7 +814,7 @@ async def run_ephemeral_same_path_conflict_seed_probe(
     metadata.repo_root = WORKSPACE_ROOT
     mkdir = await _call_tool(
         label="same_path_fanout_seed_dirs",
-        tool_obj=shell_tool,
+        tool_obj=exec_command_tool,
         raw_input={
             "command": f"mkdir -p {SAME_PATH_CONFLICT_FRAGMENT_DIR}",
             "timeout": 60,

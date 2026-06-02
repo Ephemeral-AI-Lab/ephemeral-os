@@ -13,7 +13,7 @@ from tools._framework.core.results import ToolResult
 from tools._framework.core.runtime import ExecutionMetadata
 from tools.sandbox.edit_file import edit_file as edit_file_tool
 from tools.sandbox.read_file import read_file as read_file_tool
-from tools.sandbox.shell import shell as shell_tool
+from tools.sandbox.exec_command import exec_command as exec_command_tool
 from tools.sandbox.write_file import write_file as write_file_tool
 
 from test_runner.agent.mock.sandbox_probe import SandboxCheck
@@ -44,12 +44,12 @@ async def run_auto_squash_seed_probe(
 ) -> str:
     result = await _call_checked(
         call_tool=call_tool,
-        tool_obj=shell_tool,
+        tool_obj=exec_command_tool,
         raw_input={"command": f"mkdir -p {ROOT}/fragments {ROOT}/independent", "timeout": 60},
         metadata=metadata,
         emit=emit,
         record_tool_check=record_tool_check,
-        check_name="tool.shell.auto_squash.seed_dirs",
+        check_name="tool.exec_command.auto_squash.seed_dirs",
     )
     if result.is_error:
         raise RuntimeError(f"auto-squash seed failed: {result.output}")
@@ -213,12 +213,12 @@ async def run_auto_squash_reconcile_probe(
 
     shell_listing = await _call_checked(
         call_tool=call_tool,
-        tool_obj=shell_tool,
+        tool_obj=exec_command_tool,
         raw_input={"command": f"ls {ROOT} | sort | head -n 200 && cat {EDIT_TARGET}", "timeout": 60},
         metadata=metadata,
         emit=emit,
         record_tool_check=record_tool_check,
-        check_name="tool.shell.auto_squash.readback",
+        check_name="tool.exec_command.auto_squash.readback",
     )
     _assert_contains(
         _shell_stdout(shell_listing),

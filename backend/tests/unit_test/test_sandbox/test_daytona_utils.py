@@ -19,40 +19,10 @@ from tools.sandbox._lib.file_payloads import (
     ReadFileInput,
     build_read_file_result,
 )
-from tools.sandbox.shell import _build_shell_tool_result
 
 
 def _ctx(services=None) -> ToolExecutionContextService:
     return ToolExecutionContextService(cwd=Path("/tmp"), services=services or {})
-
-
-def test_build_shell_tool_result_preserves_command_output_and_changes():
-    long_command = "python -c " + repr("x" * 200)
-    long_stdout = "start-" + ("x" * 9_000) + "-end"
-    long_error = "error-" + ("y" * 1_000)
-
-    result = _build_shell_tool_result(
-        context=_ctx(),
-        status="ok",
-        command=long_command,
-        exit_code=0,
-        stdout=long_stdout,
-        stderr="",
-        changed_paths=["/tmp/a.py"],
-        changed_path_kinds={"a.py": "write"},
-        mutation_source="shell",
-        conflict_reason=None,
-        error=long_error,
-    )
-    payload = json.loads(result.output)
-
-    assert payload["error"] == long_error
-    assert payload["command"] == long_command
-    assert payload["stdout"] == long_stdout
-    assert payload["changed_paths"] == ["/tmp/a.py"]
-    assert payload["changed_path_kinds"] == {"a.py": "write"}
-    assert payload["mutation_source"] == "shell"
-    assert "warnings" not in payload
 
 
 def test_build_read_file_result_preserves_full_selected_content():

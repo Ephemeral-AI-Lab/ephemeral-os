@@ -8,7 +8,7 @@ from message.events import ToolExecutionCompletedEvent
 
 
 _SANDBOX_TOOLS = frozenset(
-    {"read_file", "write_file", "edit_file", "shell", "grep", "glob"}
+    {"read_file", "write_file", "edit_file", "exec_command", "grep", "glob"}
 )
 _COMMAND_EXEC_OVERLAY_TIMINGS = (
     "command_exec.mount_workspace_s",
