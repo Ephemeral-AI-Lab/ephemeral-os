@@ -39,6 +39,10 @@ _FORBIDDEN_RUN_SIGNATURES = (
 )
 
 
+def _is_entry_workflow(workflow: dict[str, Any]) -> bool:
+    return str(workflow.get("parent_task_id") or "").startswith("root-")
+
+
 @pytest.mark.skipif(
     not live_e2e_capacity_enabled(),
     reason="capacity live e2e disabled in runner.live_e2e.capacity_enabled",
@@ -102,12 +106,12 @@ def _assert_graph_shape(graph_summary: dict[str, Any]) -> None:
     root = next(
         workflow
         for workflow in workflows
-        if str(workflow.get("parent_task_id") or "").endswith(":root")
+        if _is_entry_workflow(workflow)
     )
     recursive = [
         workflow
         for workflow in workflows
-        if not str(workflow.get("parent_task_id") or "").endswith(":root")
+        if not _is_entry_workflow(workflow)
     ]
     assert recursive, graph_summary
     assert root["status"] == "succeeded"

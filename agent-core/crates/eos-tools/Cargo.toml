@@ -1,0 +1,15 @@
+[package]
+name = "eos-tools"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+eos-state.workspace = true
+eos-sandbox-api.workspace = true
+eos-skills.workspace = true
+eos-audit.workspace = true
+eos-llm-client.workspace = true
+
+[lints]
+workspace = true

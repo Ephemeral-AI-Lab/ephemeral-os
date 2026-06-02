@@ -142,3 +142,64 @@ async def test_cancel_handler_targets_payload_invocation_id(
 
     assert response["cancelled"] is True
     assert task.cancelled()
+
+
+async def test_cancel_handler_waits_for_task_cleanup(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    cleanup_ran = False
+
+    async def _target() -> None:
+        nonlocal cleanup_ran
+        try:
+            await asyncio.sleep(60)
+        finally:
+            cleanup_ran = True
+
+    task = asyncio.create_task(_target())
+    registry = InFlightInvocationRegistry(ttl_seconds=60, reaper_interval_s=60)
+    registry.register(
+        "cleanup-invocation",
+        task,
+        agent_id="agent-a",
+        op="api.v1.exec_command",
+        background=True,
+    )
+    monkeypatch.setattr(
+        "sandbox.daemon.builtin_operations.get_in_flight_registry",
+        lambda: registry,
+    )
+
+    await asyncio.sleep(0)
+    response = await cancel_handler.cancel({"invocation_id": "cleanup-invocation"})
+
+    assert response["cancelled"] is True
+    assert response["cleanup_done"] is True
+    assert cleanup_ran is True
+    assert task.cancelled()
+
+
+async def test_inflight_count_ignores_foreground_maintenance_invocation() -> None:
+    foreground = asyncio.create_task(asyncio.sleep(60))
+    background = asyncio.create_task(asyncio.sleep(60))
+    registry = InFlightInvocationRegistry(ttl_seconds=60, reaper_interval_s=60)
+    registry.register(
+        "foreground-maintenance",
+        foreground,
+        agent_id="agent-a",
+        op="api.v1.exec_command",
+        background=False,
+    )
+    registry.register(
+        "background-exec-command",
+        background,
+        agent_id="agent-a",
+        op="api.v1.exec_command",
+        background=True,
+    )
+
+    assert registry.count_by_agent("agent-a") == 1
+
+    foreground.cancel()
+    background.cancel()
+    await asyncio.gather(foreground, background, return_exceptions=True)

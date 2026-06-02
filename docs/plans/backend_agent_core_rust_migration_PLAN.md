@@ -64,6 +64,11 @@ Non-goals:
 
 ## Target Workspace
 
+The `agent-core/` workspace is placed at the repository root —
+`/Users/yifanxu/machine_learning/LoVC/EphemeralOS/agent-core/` — as a sibling of
+`backend/` (the Python control plane) and the existing `sandbox/` Rust daemon
+workspace. It is a separate Cargo workspace, not a member of `sandbox/`.
+
 Recommended layout:
 
 ```text

@@ -48,7 +48,6 @@ from sandbox.api import (
     SearchReplaceEdit,
 )
 from sandbox.host.daemon_client import call_daemon_api
-from sandbox.occ.service import AUTO_SQUASH_MAX_DEPTH
 from tools._framework.core.base import BaseTool
 from tools._framework.core.results import ToolResult
 from tools._framework.core.runtime import ExecutionMetadata
@@ -72,6 +71,7 @@ from test_runner.scenarios.sandbox._fixtures.scheduler_demo_data import (
 from test_runner.scenarios.sandbox._metrics import (
     aggregate_perf_metrics,
 )
+from test_runner.scenarios.sandbox._constants import AUTO_SQUASH_MAX_DEPTH
 from test_runner.agent.mock.sandbox_probe import SandboxCheck
 
 

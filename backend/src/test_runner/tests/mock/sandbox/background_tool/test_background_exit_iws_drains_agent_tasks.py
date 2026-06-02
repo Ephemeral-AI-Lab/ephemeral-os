@@ -31,6 +31,15 @@ pytestmark = [
 ]
 
 
+def _cancel_bg_succeeded_or_already_drained(record: dict[str, object]) -> bool:
+    if record.get("is_error") is not True:
+        return True
+    return (
+        record.get("status") == "error"
+        and record.get("stderr") == "command_session_not_found"
+    )
+
+
 @pytest.mark.timeout(720)
 async def test_background_exit_iws_drains_agent_tasks(
     sweevo_image_instance: SWEEvoInstance,
@@ -64,7 +73,7 @@ async def test_background_exit_iws_drains_agent_tasks(
     # succeeds. (Drain stays as defense-in-depth but no longer fires here.)
     assert summary["blocked_exit"]["is_error"], summary
     assert summary["blocked_exit_reason"] == "ephemeral_jobs_in_flight", summary
-    assert not summary["cancel_bg"]["is_error"], summary
+    assert _cancel_bg_succeeded_or_already_drained(summary["cancel_bg"]), summary
     assert not summary["iws_exit"]["is_error"], summary
     phases = summary["iws_exit_payload"]["phases_ms"]
     assert "evicted_background_tasks" in phases, summary

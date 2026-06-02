@@ -11,6 +11,7 @@ from __future__ import annotations
 import asyncio
 import json
 import os
+import time
 from datetime import UTC, datetime
 from pathlib import Path
 from statistics import median
@@ -20,7 +21,6 @@ import pytest
 
 import sandbox.api as sandbox_api
 from sandbox.api import SandboxCaller, ShellRequest
-from sandbox.shared.clock import monotonic_now
 
 
 pytestmark = [
@@ -62,11 +62,11 @@ async def test_shell_concurrency_latency_matrix(workspace: dict[str, object]) ->
     sandbox_id = str(workspace["sandbox_id"])
     groups: list[dict[str, Any]] = []
     for level in _LEVELS:
-        wall_start = monotonic_now()
+        wall_start = time.monotonic()
         results = await asyncio.gather(
             *(_run_shell(sandbox_id, level, index) for index in range(level))
         )
-        wall_s = monotonic_now() - wall_start
+        wall_s = time.monotonic() - wall_start
         groups.append(_summarize_group(level, wall_s, results))
 
     payload = {
@@ -106,7 +106,7 @@ async def _run_shell(
         f"printf 'level={level}\\nworker={index}\\n' > {_ROOT}/c{level}/worker-{index:02d}.txt && "
         f"cat {_ROOT}/c{level}/worker-{index:02d}.txt"
     )
-    wall_start = monotonic_now()
+    wall_start = time.monotonic()
     result = await sandbox_api.shell(
         sandbox_id,
         ShellRequest(
@@ -120,7 +120,7 @@ async def _run_shell(
             ),
         ),
     )
-    wall_s = monotonic_now() - wall_start
+    wall_s = time.monotonic() - wall_start
     return {
         "index": index,
         "success": bool(result.success),

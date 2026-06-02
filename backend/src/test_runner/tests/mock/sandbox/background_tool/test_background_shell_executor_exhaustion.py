@@ -9,7 +9,7 @@ import pytest
 
 import sandbox.api as sandbox_api
 from test_runner.benchmarks.sweevo.models import SWEEvoInstance
-from sandbox.shared.models import ReadFileRequest, SandboxCaller
+from sandbox.api import ReadFileRequest, SandboxCaller
 from test_runner.agent.mock.background_shell_probe import (
     EXHAUSTION_LAUNCH_COUNT,
     EXHAUSTION_SUMMARY,
@@ -29,6 +29,14 @@ from test_runner.tests.mock.sandbox.background_tool._background_shell_invariants
 
 
 pytestmark = pytest.mark.asyncio
+
+
+def _is_missing_after_cancel(record: dict[str, object]) -> bool:
+    return (
+        record.get("is_error") is True
+        and record.get("status") == "error"
+        and record.get("stderr") == "command_session_not_found"
+    )
 
 
 @pytest.mark.skipif(
@@ -70,11 +78,25 @@ async def test_background_shell_executor_exhaustion(
     assert read.success and read.exists, read
     summary = json.loads(read.content or "{}")
     assert summary["mode"] == "exhaustion", summary
-    # Allow up to 5 % outright errors; the rest must be cancellations.
-    errored = int(summary["error_count"])
+    # Allow a small number of launch/transport errors. A mass Ctrl-C can race
+    # with session cleanup; command_session_not_found means the target is already
+    # terminal and is counted separately from hard executor errors.
+    missing_after_cancel = sum(
+        1 for record in summary["cancellations"] if _is_missing_after_cancel(record)
+    )
+    launch_errors = sum(1 for record in summary["launches"] if record.get("is_error"))
+    hard_cancel_errors = sum(
+        1
+        for record in summary["cancellations"]
+        if record.get("is_error") and not _is_missing_after_cancel(record)
+    )
+    errored = launch_errors + hard_cancel_errors
     cancelled = int(summary["cancelled_count"])
     assert errored <= max(1, EXHAUSTION_LAUNCH_COUNT // 20), summary
-    assert cancelled >= EXHAUSTION_LAUNCH_COUNT - errored - 4, summary
+    assert (
+        cancelled + missing_after_cancel
+        >= EXHAUSTION_LAUNCH_COUNT - launch_errors - 4
+    ), summary
 
     # AC-14: post-exhaustion read_file must complete in < 1 s.
     assert not summary["post_exhaustion_read_error"], summary

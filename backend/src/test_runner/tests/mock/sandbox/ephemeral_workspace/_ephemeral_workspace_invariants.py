@@ -9,8 +9,8 @@ from pathlib import Path
 from typing import Any
 
 import sandbox.api as sandbox_api
+from sandbox.api import ReadFileRequest, SandboxCaller
 from test_runner.benchmarks.sweevo.models import SWEEvoInstance
-from sandbox.shared.models import ReadFileRequest, SandboxCaller
 from test_runner.core.runner import RunReport
 from test_runner.core.stores import TaskStoreBundle
 from test_runner.environments.sweevo_image.fixtures import (

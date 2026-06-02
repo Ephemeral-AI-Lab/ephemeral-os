@@ -13,10 +13,10 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Protocol
 
-from sandbox.occ.service import AUTO_SQUASH_MAX_DEPTH
+from message.events import AssistantTextDeltaEvent, StreamEvent
 from test_runner.scenarios._scenario_helpers import instruction_field
 from test_runner.scenarios.base import ScenarioContext
-from message.events import AssistantTextDeltaEvent, StreamEvent
+from test_runner.scenarios.sandbox._constants import AUTO_SQUASH_MAX_DEPTH
 from tools._framework.core.base import BaseTool
 from tools._framework.core.results import ToolResult
 from tools._framework.core.runtime import ExecutionMetadata

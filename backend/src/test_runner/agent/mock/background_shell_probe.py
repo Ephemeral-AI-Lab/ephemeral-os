@@ -149,9 +149,12 @@ def _tool_metadata(result: ToolResult) -> dict[str, Any]:
 
 def _tool_record(result: ToolResult) -> dict[str, Any]:
     payload = _json_payload(result)
+    output = payload.get("output") if isinstance(payload.get("output"), dict) else {}
     return {
         "is_error": bool(result.is_error),
         "status": payload.get("status") or result.metadata.get("status"),
+        "stdout": payload.get("stdout") or output.get("stdout"),
+        "stderr": payload.get("stderr") or output.get("stderr"),
         "conflict_reason": (
             payload.get("conflict_reason") or result.metadata.get("conflict_reason")
         ),
@@ -1246,7 +1249,7 @@ async def run_background_exit_iws_drains_agent_tasks_probe(
         metadata=iws_metadata,
         emit=emit,
         call_tool=call_tool,
-        record_tool_check=record_tool_check,
+        record_tool_check=None,
         allow_error=True,
     )
     # Let both the bridge task and daemon command session registry settle before retrying

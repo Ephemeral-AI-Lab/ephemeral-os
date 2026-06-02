@@ -643,3 +643,199 @@ Remaining risk:
 
 Next iteration entry point:
 - Run final static/status checks for this batch, then retry the complete project-build folder without xdist or with a fresh xdist run depending on host Docker capacity.
+
+## Iteration 10 - 2026-06-02 20:03:55 +0800 CST
+
+Checkout summary:
+- Current `HEAD`: `70bdf241f`.
+- Active local edits from prior iterations were preserved. No additional code changes were needed in this iteration.
+
+Plan path and target files:
+- Plan: `docs/plans/test_runner_migration_PLAN.md`.
+- Focus target: Phase E project-build smoke/folder gate after the previous `-n 3` pytest/xdist teardown hang.
+- Target command scope: `backend/src/test_runner/tests/mock/sandbox/project_build`.
+
+Coverage gaps found:
+- The previous `-n 3` project-build run did not produce a clean final pytest report even though targeted reruns passed. This left the complete project-build folder gate unproven.
+
+Fixes applied:
+- None. This iteration was a verification-only pass to convert targeted evidence into a clean full-folder report.
+
+Commands run:
+- `env EOS_SANDBOX_PROVIDER=docker EOS_SANDBOX_RUNTIME=rust EOS_LIVE_E2E_IMAGE=sweevo-dask__dask-10042:latest uv run pytest -q backend/src/test_runner/tests/mock/sandbox/project_build --tb=short --durations=20`
+  - Result: passed with `30 passed in 1361.83s (0:22:41)`.
+
+Fresh artifacts inspected:
+- `.sweevo_runs/scenario_logs/sandbox.complex_project_build/20260602T114006Z_6b940cb69382`
+- `.sweevo_runs/scenario_logs/sandbox.complex_project_build/20260602T115154Z_94900d2a2cde`
+- `.sweevo_runs/scenario_logs/sandbox.complex_project_build_grep_glob/20260602T114341Z_a1993d9fcef2`
+- `.sweevo_runs/scenario_logs/sandbox.complex_project_build_grep_glob/20260602T115507Z_af584bacb40f`
+- `.sweevo_runs/scenario_logs/sandbox.complex_project_build_grep_glob_smoke/20260602T114730Z_079b95d06f4e`
+- `.sweevo_runs/scenario_logs/sandbox.complex_project_build_shell_edit_lsp/20260602T114754Z_dea43ddbe229`
+- `.sweevo_runs/scenario_logs/sandbox.complex_project_build_shell_edit_lsp/20260602T115909Z_c2c0e9988fff`
+- `.sweevo_runs/scenario_logs/sandbox.complex_project_build_shell_edit_lsp_smoke/20260602T115101Z_f057af9fc1af`
+- `.sweevo_runs/scenario_logs/sandbox.complex_project_build_shell_edit_lsp_three_parallel_agents/20260602T120220Z_a96698a10540`
+- `.sweevo_runs/scenario_logs/sandbox.complex_project_build_smoke/20260602T115134Z_57ada732bb84`
+
+Artifact findings:
+- All inspected `run.json` files reported `status=finished`.
+- All inspected `performance_report.json` files had zero report warnings.
+- Representative tool-call totals:
+  - full project build: `tool_calls_total=2072` or `2080`, `tool_errors_total=1`.
+  - full grep/glob: `tool_calls_total=2256` or `2252`, `tool_errors_total=1`.
+  - full shell/edit/LSP: `tool_calls_total=1285` or `1284`, `tool_errors_total=1`.
+  - three-parallel-agents: `tool_calls_total=58`, `tool_errors_total=3`; the pytest contract accepted these as expected typed conflict/error-path checks.
+- Resource maxima extracted from the fresh performance samples stayed at zero for:
+  - `resource.command_exec.workspace_tree_exists`
+  - `resource.command_exec.workspace_tree_bytes`
+  - `resource.command_exec.run_dir_tree_bytes`
+  - `resource.command_exec.upperdir_tree_bytes`
+- Representative p95 latency samples from the fresh artifacts stayed sub-millisecond:
+  - full project build: `exec_command` p95 `0.128ms` to `0.157ms`, direct `read_file` p95 `0.052ms` to `0.054ms`, `edit_file` p95 `0.065ms` to `0.067ms`.
+  - full grep/glob: `grep` p95 `0.063ms` to `0.067ms`, `glob` p95 `0.059ms`, `exec_command` p95 `0.117ms` to `0.157ms`.
+  - full shell/edit/LSP: `exec_command` p95 `0.175ms` to `0.191ms`, LSP tool p95 values remained below `0.215ms`.
+
+Current verdict:
+- Correctness: PASS for the complete non-xdist Rust/Docker project-build folder.
+- O(1) memory/disk: PASS for inspected project-build artifacts; command workspace/run-dir/upperdir tree fields stayed at zero in sampled performance data.
+- Latency: PASS for inspected project-build artifacts; direct file, grep/glob, command, and LSP p95 values remained sub-millisecond.
+
+Remaining risk:
+- The plan's Phase E explicit `-n 3` project-build smoke command still lacks a clean final pytest report because the prior xdist run hung in teardown. The non-xdist full folder now passes, and all failing/uncertain xdist scenarios have passed targeted reruns, but a clean xdist rerun is still required before claiming Phase E complete.
+- Broader Phase D/E/F/G plan exit gates remain incomplete: full sandbox `-n 3`, import-fence gates, benchmark lanes, Rust cargo lanes, and Python sandbox infra removal are not yet proven.
+
+Next iteration entry point:
+- Retry `EOS_SANDBOX_PROVIDER=docker EOS_SANDBOX_RUNTIME=rust uv run pytest -q -n 3 backend/src/test_runner/tests/mock/sandbox/project_build --tb=short --durations=20` after a clean container reset; if xdist teardown hangs again, inspect pytest worker shutdown/fixture teardown rather than changing scenario contracts.
+
+## Iteration 11 - 2026-06-02 20:48:33 +0800 CST
+
+Checkout summary:
+- Current `HEAD`: `70bdf241f`.
+- Active local edits from prior iterations were preserved. This iteration added only the project-build delegated workflow polling budget adjustment and verification/reporting updates.
+
+Plan path and target files:
+- Plan: `docs/plans/test_runner_migration_PLAN.md`.
+- Focus target: Phase E clean `-n 3` Rust/Docker project-build folder gate.
+- Target command scope: `backend/src/test_runner/tests/mock/sandbox/project_build`.
+
+Coverage gaps found:
+- The first `-n 3` retry after the direct-shell and LSP contract fixes still did not produce a clean final report because a shell/edit/LSP smoke workflow exceeded the default root polling budget and submitted its terminal outcome after the attempt had already closed.
+- After adding a 96x3s budget to the smoke scenario, the next `-n 3` retry exposed the same class in the full shell/edit/LSP scenario: `.sweevo_runs/scenario_logs/sandbox.complex_project_build_shell_edit_lsp/20260602T121815Z_8650b4a0b63e` closed as cancelled with `Root delegated workflow did not finish before polling budget`, then the generator terminal outcome was rejected because the attempt was already closed.
+- The failed artifact showed a budget problem, not a sandbox correctness regression: sibling project-build scenarios in the same xdist run finished, and a later shell/edit/LSP artifact in that same run finished when scheduled with less contention.
+
+Fixes applied:
+- Raised full project-build delegated workflow poll attempts from `96` to `180` in:
+  - `backend/src/test_runner/scenarios/sandbox/complex_project_build.py`
+  - `backend/src/test_runner/scenarios/sandbox/complex_project_build_grep_glob.py`
+  - `backend/src/test_runner/scenarios/sandbox/complex_project_build_shell_edit_lsp.py`
+- Raised the shell/edit/LSP smoke delegated workflow poll attempts to `180` so xdist contention does not close valid long-running LSP workflows before reducer completion.
+- Cleaned stale SWE-EVO Docker containers before the final retry.
+
+Commands run:
+- `uv run ruff check backend/src/test_runner/scenarios/sandbox/complex_project_build.py backend/src/test_runner/scenarios/sandbox/complex_project_build_grep_glob.py backend/src/test_runner/scenarios/sandbox/complex_project_build_shell_edit_lsp.py`
+  - Result: passed.
+- `git diff --check`
+  - Result: passed.
+- `docker ps -a --format '{{.ID}} {{.Names}}' | awk '$2 ~ /^sweevo-dask__dask_2023\.3\.2_2023\.4\.0/ {print $1}' | xargs -r docker rm -f`
+  - Result: removed three stale live test containers.
+- `env EOS_SANDBOX_PROVIDER=docker EOS_SANDBOX_RUNTIME=rust EOS_LIVE_E2E_IMAGE=sweevo-dask__dask-10042:latest uv run pytest -q -n 3 backend/src/test_runner/tests/mock/sandbox/project_build --tb=short --durations=20`
+  - Result: passed with `30 passed in 711.56s (0:11:51)`.
+
+Fresh artifacts inspected:
+- `.sweevo_runs/scenario_logs/sandbox.complex_project_build/20260602T123625Z_f9626ae6d439`
+- `.sweevo_runs/scenario_logs/sandbox.complex_project_build/20260602T124120Z_bef84131ca27`
+- `.sweevo_runs/scenario_logs/sandbox.complex_project_build_grep_glob/20260602T123625Z_f3b713deeb4c`
+- `.sweevo_runs/scenario_logs/sandbox.complex_project_build_grep_glob/20260602T124420Z_481f243146ec`
+- `.sweevo_runs/scenario_logs/sandbox.complex_project_build_grep_glob_smoke/20260602T124317Z_e5545bc85537`
+- `.sweevo_runs/scenario_logs/sandbox.complex_project_build_shell_edit_lsp/20260602T124342Z_01ba923ba3db`
+- `.sweevo_runs/scenario_logs/sandbox.complex_project_build_shell_edit_lsp/20260602T124349Z_16d8160f98a0`
+- `.sweevo_runs/scenario_logs/sandbox.complex_project_build_shell_edit_lsp_smoke/20260602T123625Z_b084494ea8a0`
+- `.sweevo_runs/scenario_logs/sandbox.complex_project_build_shell_edit_lsp_three_parallel_agents/20260602T124647Z_10b798f6043e`
+- `.sweevo_runs/scenario_logs/sandbox.complex_project_build_smoke/20260602T124059Z_2fbbdf55e956`
+
+Artifact findings:
+- All ten fresh `run.json` files reported `status=finished`.
+- All ten inspected `performance_report.json` files had zero report warnings.
+- Resource maxima extracted from the fresh performance samples stayed at zero for:
+  - `resource.command_exec.workspace_tree_exists`
+  - `resource.command_exec.workspace_tree_bytes`
+  - `resource.command_exec.run_dir_tree_bytes`
+  - `resource.command_exec.upperdir_tree_bytes`
+- Slowest pytest calls in the successful xdist run were the expected full project-build workflows: full grep/glob `434.54s`, full project build `404.04s`, shell/edit/LSP smoke `265.82s`, shell/edit/LSP full `175.07s`, and focused shell/edit/LSP remount-not-restart `176.36s`.
+
+Current verdict:
+- Correctness: PASS for the complete `-n 3` Rust/Docker project-build folder gate.
+- O(1) memory/disk: PASS for inspected project-build artifacts; command workspace/run-dir/upperdir tree fields stayed at zero in sampled performance data.
+- Latency: PASS for the project-build xdist gate; all scenario contracts passed, including low-latency and LSP warm-sample checks.
+
+Remaining risk:
+- Phase E project-build `-n 3` is now proven, but the broader migration plan is not complete. Remaining gates still include the full sandbox `-n 3` lane, import-fence removal gates, benchmark lanes, Rust cargo lanes, and final Python sandbox infra removal checks.
+
+Next iteration entry point:
+- Continue from the next unproven Phase D/E/F/G gate in `docs/plans/test_runner_migration_PLAN.md`, starting with the broader sandbox folder gate now that project-build xdist is clean.
+
+## Iteration 12 - 2026-06-02 20:56:58 +0800 CST
+
+Checkout summary:
+- Current `HEAD`: `70bdf241f`.
+- Active local edits from prior iterations were preserved. This iteration focused on Phase D import-fence cleanup before attempting the broader live sandbox `-n 3` gate.
+
+Plan path and target files:
+- Plan: `docs/plans/test_runner_migration_PLAN.md`.
+- Focus target: Phase D runner import fence against Python sandbox implementation modules.
+- Target command scope:
+  - `backend/src/test_runner`
+  - `backend/tests/unit_test/test_test_runner`
+  - moved pure sandbox pre-flight checks into `backend/tests/unit_test/test_sandbox/test_isolated_workspace_preflight`.
+
+Coverage gaps found:
+- The Phase D static import-fence command still failed before any broad live run. The initial hit set included runner imports from `sandbox.occ.service`, `sandbox.shared.models`, `sandbox.daemon.*`, `sandbox.overlay.*`, `sandbox.isolated_workspace.*`, and `sandbox.ephemeral_workspace.plugin.*`.
+- Several files under `backend/src/test_runner/tests/mock/sandbox` were actually sandbox implementation unit/pre-flight tests, not runner scenarios. Keeping them under the runner made the ownership boundary false and caused the import fence to fail.
+
+Fixes applied:
+- Added `backend/src/test_runner/scenarios/sandbox/_constants.py` with the runner-owned `AUTO_SQUASH_MAX_DEPTH = 100` contract constant.
+- Replaced active runner/probe/test imports of `sandbox.occ.service.AUTO_SQUASH_MAX_DEPTH` with `test_runner.scenarios.sandbox._constants.AUTO_SQUASH_MAX_DEPTH`.
+- Replaced `sandbox.shared.models` imports of public request/caller models with public `sandbox.api` imports in plugin, ephemeral-workspace, and background-tool test helpers.
+- Replaced the diagnostic `sandbox.shared.clock.monotonic_now` import with `time.monotonic`.
+- Moved pure isolated-workspace pre-flight unit checks from the runner tree into `backend/tests/unit_test/test_sandbox/test_isolated_workspace_preflight`.
+- Deleted three runner-owned daemon in-flight unit duplicates and moved their unique assertions into `backend/tests/unit_test/test_sandbox/test_daemon/test_in_flight_registry.py`.
+- Replaced live background helper imports of daemon PID/socket path constants with explicit in-sandbox runtime path constants.
+- Removed the overlay implementation import from the non-Docker IWS capability helper by using a local `/proc/filesystems` fallback.
+- Reworded a prose-only isolated-workspace plan example that tripped the literal import-fence grep.
+
+Commands run:
+- `uv run ruff check ...`
+  - Scope: all files touched in this iteration plus the moved unit-test folder.
+  - Result: passed.
+- `uv run pytest -q backend/tests/unit_test/test_sandbox/test_daemon/test_in_flight_registry.py backend/tests/unit_test/test_sandbox/test_isolated_workspace_preflight --tb=short`
+  - Result: passed with `20 passed in 0.15s`.
+- `uv run pytest --collect-only -q backend/src/test_runner/tests/mock/sandbox/background_tool backend/src/test_runner/tests/mock/sandbox/layer_stack_occ_overlay/test_auto_squash_commit_resume.py backend/src/test_runner/tests/mock/sandbox/layer_stack_occ_overlay/test_shell_concurrency_latency_matrix_diagnostic.py backend/src/test_runner/tests/mock/sandbox/isolated_workspace backend/tests/unit_test/test_sandbox/test_isolated_workspace_preflight backend/tests/unit_test/test_sandbox/test_daemon/test_in_flight_registry.py`
+  - Result: passed with `120 tests collected in 0.42s`.
+- `rg -n "from sandbox\\.(daemon|overlay|occ|layer_stack|ephemeral_workspace|isolated_workspace|shared)|import sandbox\\.(daemon|overlay|occ|layer_stack|ephemeral_workspace|isolated_workspace|shared)" backend/src/test_runner backend/tests/unit_test/test_test_runner || true`
+  - Result: still failing, but narrowed to plugin importlib/runtime hooks, SWE-EVO plugin provisioning install hook, and one isolated-workspace mount-overlay backstop with in-container implementation imports.
+
+Fresh artifacts inspected:
+- None. This was a static/unit/collect-only iteration; no live E2E command was run and no new `.sweevo_runs` artifact was required for the import-fence cleanup.
+
+Current remaining fence hits:
+- `backend/src/test_runner/agent/mock/plugin_workspace_probe.py`
+  - `sandbox.ephemeral_workspace.plugin.install.PluginInstallError`
+  - `sandbox.ephemeral_workspace.plugin.op_registry`
+  - `sandbox.ephemeral_workspace.plugin.overlay_dispatch`
+  - `sandbox.ephemeral_workspace.plugin.host_dispatch`
+- `backend/src/test_runner/benchmarks/sweevo/_provision.py`
+  - `sandbox.ephemeral_workspace.plugin.install.ensure_installed`
+- `backend/src/test_runner/tests/mock/sandbox/isolated_workspace/happy_path/test_mount_overlay_backstop.py`
+  - in-container imports of `sandbox.overlay.writable_dirs`, `sandbox.isolated_workspace`, and `_KernelNamespaceRuntime`.
+
+Current verdict:
+- Correctness: PASS for the static/unit changes made in this iteration; moved sandbox unit coverage still passes and affected runner tests collect.
+- O(1) memory/disk: not re-evaluated in this static iteration.
+- Latency: not re-evaluated in this static iteration.
+
+Remaining risk:
+- Phase D import-fence exit gate is still not green. The remaining plugin hits need a public plugin test-support/API boundary or relocation out of `test_runner`; the isolated mount-overlay backstop is a sandbox implementation live diagnostic that should either move out of the runner tree or gain a public test-support surface.
+- Because the static Phase D fence still fails, the broad Phase D/E `EOS_SANDBOX_PROVIDER=docker EOS_SANDBOX_RUNTIME=rust uv run pytest -q -n 3 backend/src/test_runner/tests/mock/sandbox` gate remains unproven.
+
+Next iteration entry point:
+- Create or reuse a public plugin test-support boundary for the remaining plugin importlib/runtime checks, or move those checks to sandbox-owned tests, then rerun the import-fence command before starting the broad live sandbox `-n 3` gate.

@@ -72,7 +72,7 @@ class ComplexProjectBuildShellEditLsp(ScenarioBase):
     """Full mixed shell-edit + semantic LSP project-build scenario."""
 
     name = "sandbox.complex_project_build_shell_edit_lsp"
-    delegated_workflow_poll_attempts = 96
+    delegated_workflow_poll_attempts = 180
     delegated_workflow_poll_interval_s = 3.0
 
     def planner_response(self, ctx: ScenarioContext) -> ToolCallSpec:  # noqa: ARG002
@@ -98,6 +98,8 @@ class ComplexProjectBuildShellEditLspSmoke(ScenarioBase):
     """Smoke variant of the mixed shell-edit + semantic LSP scenario."""
 
     name = "sandbox.complex_project_build_shell_edit_lsp_smoke"
+    delegated_workflow_poll_attempts = 180
+    delegated_workflow_poll_interval_s = 3.0
 
     def planner_response(self, ctx: ScenarioContext) -> ToolCallSpec:  # noqa: ARG002
         return ToolCallSpec(submit_planner_outcome, dict(_SMOKE_PLAN))

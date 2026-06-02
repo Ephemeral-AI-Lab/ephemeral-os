@@ -244,7 +244,7 @@ failure mode it would prevent, it doesn't belong here.
 
 | Test | Catches | What an innocent refactor would do to fail it |
 |---|---|---|
-| `test_import_graph_fence` | OCC reachable from `isolated_workspace_ops` transitive imports | Add `from sandbox.occ.changeset import …` to share a "convenient" change-set type |
+| `test_import_graph_fence` | OCC reachable from `isolated_workspace_ops` transitive imports | Add an OCC changeset implementation import to share a "convenient" change-set type |
 | `test_setns_exec_discipline` | `setns_exec.py` imports `logging` / `asyncio` / `subprocess` / `threading` | Add `import logging` for debug output — breaks `setns(CLONE_NEWUSER)` with EINVAL |
 | `test_handle_shape_no_publish` | `IsolatedWorkspaceHandle` gains a `publish_*` attr or subclasses `OperationOverlayHandle` | "Let's reuse `OperationOverlayHandle` so we don't duplicate fields" |
 | `test_exit_path_no_occ` | `exit()` / `_teardown()` source mentions `apply_changeset` / `commit_prepared` | Cleanup PR shares a "common cleanup helper" that flushes upperdir to OCC |

@@ -123,21 +123,12 @@ async def setup_sweevo_sandbox(
         logger.warning("Could not set project_dir label: %s", exc)
 
     if install_lsp:
-        from sandbox.host.daemon_client import call_daemon_api
-        from plugins.core.discovery import DEFAULT_CATALOG_DIR
-        from plugins.core.manifest import parse_plugin_manifest
-        from sandbox.ephemeral_workspace.plugin.install import ensure_installed
+        from sandbox.api.plugin_support import ensure_plugin_installed_and_loaded
 
-        manifest = parse_plugin_manifest(DEFAULT_CATALOG_DIR / "lsp")
-        digest = await ensure_installed(sandbox_id, manifest)
-        await call_daemon_api(
+        await ensure_plugin_installed_and_loaded(
             sandbox_id,
-            "api.plugin.ensure",
-            {
-                "plugin": "lsp",
-                "digest": digest,
-                "workspace_root": repo_dir,
-            },
+            plugin="lsp",
+            workspace_root=repo_dir,
             timeout=120,
         )
 

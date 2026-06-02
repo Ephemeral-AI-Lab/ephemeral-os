@@ -1,0 +1,11 @@
+[package]
+name = "eos-sandbox-api"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+eos-types.workspace = true
+
+[lints]
+workspace = true

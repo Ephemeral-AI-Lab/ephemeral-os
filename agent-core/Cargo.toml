@@ -1,0 +1,101 @@
+[workspace]
+resolver = "2"
+members = [
+  "crates/eos-types", "crates/eos-config", "crates/eos-state",
+  "crates/eos-db", "crates/eos-audit", "crates/eos-llm-client",
+  "crates/eos-agent-def", "crates/eos-sandbox-api", "crates/eos-skills",
+  "crates/eos-tools", "crates/eos-engine", "crates/eos-workflow",
+  "crates/eos-sandbox-host", "crates/eos-plugin-catalog", "crates/eos-runtime",
+  "parity",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.85"
+license = "MIT"
+
+[workspace.dependencies]
+# external (versions pinned once; consumed via `dep.workspace = true`)
+tokio       = { version = "1", features = ["rt-multi-thread", "macros", "sync", "time", "fs", "io-util", "tracing"] }
+tokio-util  = { version = "0.7", features = ["rt"] }
+futures     = "0.3"
+serde       = { version = "1", features = ["derive"] }
+serde_json  = "1"
+schemars    = "0.8"
+sqlx        = { version = "0.8", default-features = false, features = ["runtime-tokio", "sqlite", "macros", "migrate"] }
+reqwest     = { version = "0.12", default-features = false, features = ["json", "stream", "rustls-tls"] }
+thiserror   = "2"
+anyhow      = "1"
+tracing     = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt", "json"] }
+time        = { version = "0.3", features = ["serde", "formatting", "parsing", "macros"] }
+async-trait = "0.1"
+bytes       = "1"
+console-subscriber = "0.4"
+# dev
+insta             = { version = "1", features = ["json"] }
+proptest          = "1"
+wiremock          = "0.6"
+pretty_assertions = "1"
+loom              = "0.7"
+# internal crates — these path edges ARE the dependency DAG
+eos-types          = { path = "crates/eos-types" }
+eos-config         = { path = "crates/eos-config" }
+eos-state          = { path = "crates/eos-state" }
+eos-db             = { path = "crates/eos-db" }
+eos-audit          = { path = "crates/eos-audit" }
+eos-llm-client     = { path = "crates/eos-llm-client" }
+eos-agent-def      = { path = "crates/eos-agent-def" }
+eos-sandbox-api    = { path = "crates/eos-sandbox-api" }
+eos-skills         = { path = "crates/eos-skills" }
+eos-tools          = { path = "crates/eos-tools" }
+eos-engine         = { path = "crates/eos-engine" }
+eos-workflow       = { path = "crates/eos-workflow" }
+eos-sandbox-host   = { path = "crates/eos-sandbox-host" }
+eos-plugin-catalog = { path = "crates/eos-plugin-catalog" }
+eos-runtime        = { path = "crates/eos-runtime" }
+
+[profile.release]
+opt-level = 3
+lto = "fat"
+codegen-units = 1
+strip = true
+panic = "unwind"        # see GC-workspace-04 — deliberately NOT abort
+
+[profile.dev]
+opt-level = 0
+debug = true
+
+[profile.dev.package."*"]
+opt-level = 3            # optimize deps even in dev (faster test runs)
+
+[profile.bench]
+inherits = "release"
+debug = true
+strip = false
+
+[workspace.lints.clippy]
+correctness = { level = "deny",  priority = -1 }
+suspicious  = { level = "deny",  priority = -1 }
+style       = { level = "warn",  priority = -1 }
+complexity  = { level = "warn",  priority = -1 }
+perf        = { level = "warn",  priority = -1 }
+# selective pedantic (lint-pedantic-selective)
+doc_markdown = "warn"
+needless_pass_by_value = "warn"
+semicolon_if_nothing_returned = "warn"
+redundant_closure_for_method_calls = "warn"
+# restriction (selective) — production crates
+unwrap_used = "warn"
+dbg_macro   = "warn"
+print_stdout = "warn"
+undocumented_unsafe_blocks = "deny"
+
+[workspace.lints.rust]
+unsafe_code = "forbid"     # no agent-core crate needs unsafe; sandbox owns FFI
+unused_must_use = "warn"
+missing_debug_implementations = "warn"
+
+[workspace.lints.rustdoc]
+broken_intra_doc_links = "deny"

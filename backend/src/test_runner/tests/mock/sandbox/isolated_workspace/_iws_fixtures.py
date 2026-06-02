@@ -11,6 +11,7 @@ import contextlib
 import subprocess
 import uuid
 from dataclasses import dataclass
+from pathlib import Path
 
 
 @dataclass(frozen=True, slots=True)
@@ -67,13 +68,14 @@ async def publish_sentinel(sandbox_id: str) -> SentinelFile:
 def can_mount_overlay_natively() -> bool:
     """Probe whether the kernel supports the modern overlay mount API.
 
-    Delegates to :func:`sandbox.overlay.mount_syscalls.mount_syscalls_supported`
-    so the iws path shares the same namespace-only overlay probe as the
-    daemon's OCC overlay. Cached at the underlying layer.
+    Docker live tests use the container-side daemon probe. This host fallback is
+    only used for non-Docker local gating, where a simple filesystem support
+    check is enough to decide skip-vs-run.
     """
-    from sandbox.overlay.mount_syscalls import mount_syscalls_supported
-
-    return mount_syscalls_supported()
+    try:
+        return "overlay" in Path("/proc/filesystems").read_text(encoding="utf-8")
+    except OSError:
+        return False
 
 
 def has_unshare_netns() -> bool:

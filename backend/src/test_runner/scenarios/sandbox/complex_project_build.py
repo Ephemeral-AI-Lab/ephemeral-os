@@ -93,7 +93,7 @@ class ComplexProjectBuild(ScenarioBase):
     """Full nightly form of the complex project-build scenario."""
 
     name = "sandbox.complex_project_build"
-    delegated_workflow_poll_attempts = 96
+    delegated_workflow_poll_attempts = 180
     delegated_workflow_poll_interval_s = 3.0
 
     def planner_response(self, ctx: ScenarioContext) -> ToolCallSpec:  # noqa: ARG002

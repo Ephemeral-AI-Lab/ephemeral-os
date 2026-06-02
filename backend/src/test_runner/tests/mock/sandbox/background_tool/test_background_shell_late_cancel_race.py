@@ -9,7 +9,7 @@ import pytest
 
 import sandbox.api as sandbox_api
 from test_runner.benchmarks.sweevo.models import SWEEvoInstance
-from sandbox.shared.models import ReadFileRequest, SandboxCaller
+from sandbox.api import ReadFileRequest, SandboxCaller
 from test_runner.agent.mock.background_shell_probe import (
     LATE_CANCEL_SUMMARY,
 )

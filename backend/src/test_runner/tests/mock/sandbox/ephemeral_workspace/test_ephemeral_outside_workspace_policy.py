@@ -53,6 +53,11 @@ async def test_ephemeral_outside_workspace_policy(
 
     assert_ephemeral_performance_artifacts(
         report,
-        extra_timing_keys=("api.exec_command.dispatch_total_s",),
+        extra_timing_keys=(
+            "api.exec_command.dispatch_total_s",
+            "api.shell.total_s",
+            "command_exec.capture_upperdir_s",
+        ),
+        require_overlay_timings=False,
     )
     assert_no_internal_sandbox_errors(report.run_dir)

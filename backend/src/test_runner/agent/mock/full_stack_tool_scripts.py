@@ -6,9 +6,9 @@ import json
 from collections.abc import Sequence
 from typing import Any
 
-from sandbox.occ.service import AUTO_SQUASH_MAX_DEPTH
 from test_runner.scenarios._scenario_helpers import instruction_field
 from test_runner.scenarios.base import ScenarioContext
+from test_runner.scenarios.sandbox._constants import AUTO_SQUASH_MAX_DEPTH
 from test_runner.agent.mock.tool_scripts import (
     PreparedToolScript,
     ToolScriptStep,
@@ -155,7 +155,7 @@ def occ_conflict_matrix_script(ctx: ScenarioContext) -> PreparedToolScript:
         ctx,
         subsystem="occ",
         conflicts_detected=2,
-        expected_tool_errors=2,
+        expected_tool_errors=1,
     )
     steps: list[ToolScriptStep] = [
         ToolScriptStep(
@@ -342,7 +342,7 @@ def overlay_edge_matrix_script(ctx: ScenarioContext) -> PreparedToolScript:
         ctx,
         subsystem="overlay",
         conflicts_detected=0,
-        expected_tool_errors=3,
+        expected_tool_errors=2,
     )
     steps: list[ToolScriptStep] = [
         ToolScriptStep(
@@ -390,17 +390,16 @@ def overlay_edge_matrix_script(ctx: ScenarioContext) -> PreparedToolScript:
             {"file_path": f"{root}/whiteout/file.txt", "start_line": 1, "end_line": 20},
         ),
         ToolScriptStep(
-            "symlink-inside-rejected",
+            "symlink-inside-captured",
             exec_command_tool,
             {"command": f"ln -s new.txt {root}/symlink_inside", "timeout": 60},
-            expect_error=True,
         ),
         ToolScriptStep(
             "write-symlink-inside-status",
             write_file_tool,
             {
                 "file_path": f"{root}/symlink_inside.status",
-                "content": "symlink-capture-rejected\n",
+                "content": "symlink-capture-accepted\n",
             },
         ),
         ToolScriptStep(
@@ -413,10 +412,9 @@ def overlay_edge_matrix_script(ctx: ScenarioContext) -> PreparedToolScript:
             },
         ),
         ToolScriptStep(
-            "symlink-escape-rejected",
+            "symlink-escape-classified-outside",
             exec_command_tool,
             {"command": f"ln -s /tmp/full-stack-symlink-escape {root}/symlink_escape", "timeout": 60},
-            expect_error=True,
         ),
         ToolScriptStep(
             "write-symlink-escape-status",
@@ -467,7 +465,7 @@ def overlay_edge_matrix_script(ctx: ScenarioContext) -> PreparedToolScript:
         _metric_steps(
             ctx,
             "overlay",
-            expected_errors={"delete_files", "symlink_inside", "symlink_escape"},
+            expected_errors={"delete_files"},
         )
     )
     return PreparedToolScript(

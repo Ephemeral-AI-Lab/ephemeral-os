@@ -1,0 +1,32 @@
+[package]
+name = "eos-runtime"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+eos-db.workspace = true
+eos-engine.workspace = true
+eos-workflow.workspace = true
+eos-sandbox-host.workspace = true
+eos-plugin-catalog.workspace = true
+eos-skills.workspace = true
+eos-config.workspace = true
+eos-agent-def.workspace = true
+eos-sandbox-api.workspace = true
+eos-state.workspace = true
+eos-types.workspace = true
+eos-llm-client.workspace = true
+eos-tools.workspace = true
+eos-audit.workspace = true
+anyhow.workspace = true
+tokio.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+console-subscriber = { workspace = true, optional = true }
+
+[features]
+tokio-console = ["dep:console-subscriber"]
+
+[lints]
+workspace = true

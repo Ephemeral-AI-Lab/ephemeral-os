@@ -13,7 +13,6 @@ from xml.etree import ElementTree
 
 import sandbox.api as sandbox_api
 from sandbox.api import ExecCommandRequest, ReadFileRequest, SandboxCaller
-from sandbox.occ.service import AUTO_SQUASH_MAX_DEPTH
 
 from test_runner.agent.mock.complex_project_build_grep_glob_probe import (
     METRICS_PATH as GREP_GLOB_METRICS_PATH,
@@ -28,6 +27,7 @@ from test_runner.agent.mock.complex_project_build_shell_edit_lsp_probe import (
 )
 from test_runner.audit.events import EventType
 from test_runner.core.runner import RunReport
+from test_runner.scenarios.sandbox._constants import AUTO_SQUASH_MAX_DEPTH
 from test_runner.scenarios.sandbox._metrics import PERF_SCHEMA
 from test_runner.tests.mock._layer_stack_occ_overlay_assertions import (
     assert_o1_workspace_resource_snapshots,

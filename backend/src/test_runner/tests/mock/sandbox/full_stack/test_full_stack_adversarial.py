@@ -210,11 +210,15 @@ def _has_multi_dependency_guard(graph_summary: dict[str, Any]) -> bool:
     return False
 
 
+def _is_entry_workflow(workflow: dict[str, Any]) -> bool:
+    return str(workflow.get("parent_task_id") or "").startswith("root-")
+
+
 def _recursive_workflow_count(graph_summary: dict[str, Any]) -> int:
     return sum(
         1
         for workflow in graph_summary["workflows"]
-        if not str(workflow.get("parent_task_id") or "").endswith(":root")
+        if not _is_entry_workflow(workflow)
     )
 
 
@@ -222,7 +226,7 @@ def _recursive_workflows_succeeded(graph_summary: dict[str, Any]) -> bool:
     recursive = [
         workflow
         for workflow in graph_summary["workflows"]
-        if not str(workflow.get("parent_task_id") or "").endswith(":root")
+        if not _is_entry_workflow(workflow)
     ]
     return bool(recursive) and all(
         workflow.get("status") == "succeeded" for workflow in recursive

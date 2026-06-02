@@ -10,8 +10,6 @@ from __future__ import annotations
 import json
 import statistics
 from collections.abc import Awaitable, Callable, Mapping
-from pathlib import Path
-from types import SimpleNamespace
 from typing import Any
 from uuid import uuid4
 
@@ -25,23 +23,17 @@ from plugins.catalog.lsp.tools.find_definitions import (
     find_definitions as lsp_find_definitions_tool,
 )
 from plugins.catalog.lsp.tools.hover import hover as lsp_hover_tool
-from plugins.core.manifest import PluginManifest, ToolEntry
-from sandbox.shared.models import Intent
-from sandbox.ephemeral_workspace.plugin.install import PluginInstallError
-from sandbox.ephemeral_workspace.plugin import op_registry, overlay_dispatch
-from sandbox.ephemeral_workspace.plugin.op_registry import (
-    PluginOpRegistrationError,
-    flush_plugin_registrations,
-    register_plugin_op,
+from sandbox.api.plugin_support import (
+    daemon_plugin_manifest,
+    run_plugin_intent_contract_checks,
+    run_plugin_setup_failure_checks,
 )
-from sandbox.ephemeral_workspace.plugin import host_dispatch as plugin_host_dispatch
 from sandbox.host.daemon_client import (
     DEFAULT_LAYER_STACK_ROOT,
     _DaemonDispatchError,
     call_daemon_api,
 )
 from tools._framework.core.base import BaseTool
-from tools._framework.core.context import ToolExecutionContextService
 from tools._framework.core.results import ToolResult
 from tools._framework.core.runtime import ExecutionMetadata
 from tools.isolated_workspace.enter_isolated_workspace import (
@@ -330,7 +322,7 @@ async def run_plugin_intent_contract_probe(
 ) -> str:
     """Verify plugin intent registration and dispatch path selection."""
     metadata.repo_root = WORKSPACE_ROOT
-    summary = await _run_intent_contract_checks()
+    summary = await run_plugin_intent_contract_checks()
     summary.update({"schema": SUMMARY_SCHEMA, "mode": "intent_contract"})
     return await _write_summary(
         path=INTENT_CONTRACT_SUMMARY,
@@ -428,7 +420,10 @@ async def run_plugin_setup_failure_probe(
 ) -> str:
     """Classify setup/network failure and prove retry has no stale state."""
     metadata.repo_root = WORKSPACE_ROOT
-    failure, retry = await _run_setup_failure_checks(sandbox_id)
+    failure, retry = await run_plugin_setup_failure_checks(
+        sandbox_id,
+        workspace_root=WORKSPACE_ROOT,
+    )
     summary = {
         "schema": SUMMARY_SCHEMA,
         "mode": "setup_failure",
@@ -533,13 +528,7 @@ async def run_plugin_service_evict_probe(
     )
     records.append(post_refresh_warm)
     forced_digest = f"service-evict-{uuid4().hex[:8]}"
-    lsp_manifest = plugin_host_dispatch._manifest_for("lsp")
-    daemon_manifest = plugin_host_dispatch._daemon_manifest_for(
-        lsp_manifest,
-        digest=forced_digest,
-    )
-    if daemon_manifest is None:
-        raise RuntimeError("lsp daemon manifest projection unexpectedly missing")
+    daemon_manifest = daemon_plugin_manifest("lsp", digest=forced_digest)
     evict_ensure = await call_daemon_api(
         sandbox_id,
         "api.plugin.ensure",
@@ -754,219 +743,6 @@ async def _daemon_error_record(
             "details": exc.details,
         }
     return {"raised": False, "response": response}
-
-
-async def _run_intent_contract_checks() -> dict[str, Any]:
-    op_registry._PENDING.clear()
-    overlay_calls: list[dict[str, Any]] = []
-    try:
-        missing_intent_error = _registration_error(
-            """
-async def handler(args, ctx):
-    return {"ok": True}
-register_plugin_op("demo", "missing",)(handler)
-            """.strip(),
-            plugin="demo",
-        )
-        lifecycle_error = _registration_error(
-            """
-async def handler(args, ctx):
-    return {"ok": True}
-register_plugin_op("demo", "enter", intent=Intent.LIFECYCLE)(handler)
-            """.strip(),
-            plugin="demo",
-        )
-        _exec_in_plugin_namespace(
-            "demo",
-            """
-async def read_handler(args, ctx):
-    return {"success": True, "path": "service", "marker": ctx.marker}
-register_plugin_op("demo", "read", intent=Intent.READ_ONLY)(read_handler)
-            """.strip(),
-        )
-        registered: dict[str, Any] = {}
-
-        async def read_context_factory(
-            args: dict[str, Any],
-            plugin_name: str,
-            op_name: str,
-        ) -> Any:
-            del args, plugin_name, op_name
-            return SimpleNamespace(marker="read-context")
-
-        flush_plugin_registrations(
-            "demo",
-            registered.__setitem__,
-            context_factory=read_context_factory,
-            trusted_caller=True,
-        )
-        read_result = await registered["plugin.demo.read"]({"value": 1})
-
-        _exec_in_plugin_namespace(
-            "demo",
-            """
-async def write_handler(args, ctx):
-    return {"success": True, "path": "overlay", "marker": ctx.marker}
-register_plugin_op("demo", "write", intent=Intent.WRITE_ALLOWED)(write_handler)
-            """.strip(),
-        )
-        write_registered: dict[str, Any] = {}
-        original_runner = overlay_dispatch.run_plugin_op_with_workspace_overlay
-
-        async def stub_overlay_runner(
-            plugin_handler: Any,
-            args: dict[str, Any],
-            ctx: Any,
-            plugin_name: str,
-            op_name: str,
-        ) -> Any:
-            overlay_calls.append({"plugin": plugin_name, "op": op_name})
-            result = await plugin_handler(args, ctx)
-            result["overlay_runner_used"] = True
-            return result
-
-        async def write_context_factory(
-            args: dict[str, Any],
-            plugin_name: str,
-            op_name: str,
-        ) -> Any:
-            del args, plugin_name, op_name
-            return SimpleNamespace(marker="write-context")
-
-        try:
-            overlay_dispatch.run_plugin_op_with_workspace_overlay = stub_overlay_runner  # type: ignore[assignment]
-            flush_plugin_registrations(
-                "demo",
-                write_registered.__setitem__,
-                context_factory=write_context_factory,
-                trusted_caller=True,
-            )
-            write_result = await write_registered["plugin.demo.write"]({"value": 2})
-        finally:
-            overlay_dispatch.run_plugin_op_with_workspace_overlay = original_runner  # type: ignore[assignment]
-    finally:
-        op_registry._PENDING.clear()
-
-    return {
-        "missing_intent_error": missing_intent_error,
-        "lifecycle_error": lifecycle_error,
-        "read_only_result": read_result,
-        "write_allowed_result": write_result,
-        "overlay_calls": overlay_calls,
-    }
-
-
-async def _run_setup_failure_checks(sandbox_id: str) -> tuple[dict[str, Any], dict[str, Any]]:
-    plugin_name = "netfail"
-    old_cache = plugin_host_dispatch._PLUGIN_MANIFESTS_BY_NAME
-    plugin_host_dispatch.reset_host_dispatch_cache_for_tests()
-    plugin_host_dispatch._PLUGIN_MANIFESTS_BY_NAME = {plugin_name: _fake_manifest(plugin_name)}
-    install_attempts = 0
-    dispatch_calls: list[str] = []
-    try:
-        async def fail_install(_sandbox_id: str, _manifest: PluginManifest) -> str:
-            raise PluginInstallError(
-                "setup.sh could not reach registry.npmjs.org",
-                kind="plugin_setup_network_failure",
-                plugin_name=plugin_name,
-                setup_step="setup.sh",
-                command="curl -fsSL https://registry.npmjs.org/pyright",
-                stderr_excerpt="curl: (6) Could not resolve host: registry.npmjs.org",
-            )
-
-        failure = await plugin_host_dispatch.call_plugin(
-            _plugin_context(sandbox_id),
-            plugin=plugin_name,
-            op="run",
-            payload={},
-            install_runner=fail_install,
-            daemon_dispatcher=_never_dispatch,
-        )
-
-        async def retry_install(_sandbox_id: str, _manifest: PluginManifest) -> str:
-            nonlocal install_attempts
-            install_attempts += 1
-            return "digest-ok"
-
-        async def retry_dispatch(
-            _sandbox_id: str,
-            op: str,
-            args: dict[str, Any],
-            **_kwargs: Any,
-        ) -> dict[str, Any]:
-            dispatch_calls.append(op)
-            if op == "api.plugin.ensure":
-                return {"success": True, "registered_ops": [f"plugin.{plugin_name}.run"]}
-            return {"success": True, "result": "ok", "args": args}
-
-        retry = await plugin_host_dispatch.call_plugin(
-            _plugin_context(sandbox_id),
-            plugin=plugin_name,
-            op="run",
-            payload={"value": 1},
-            install_runner=retry_install,
-            daemon_dispatcher=retry_dispatch,
-        )
-    finally:
-        plugin_host_dispatch._PLUGIN_MANIFESTS_BY_NAME = old_cache
-        plugin_host_dispatch.reset_host_dispatch_cache_for_tests()
-
-    return (
-        {
-            "is_error": failure.is_error,
-            "output": failure.output,
-            "metadata": dict(failure.metadata or {}),
-        },
-        {
-            "is_error": retry.is_error,
-            "output": retry.output,
-            "metadata": dict(retry.metadata or {}),
-            "install_attempts": install_attempts,
-            "dispatch_calls": dispatch_calls,
-        },
-    )
-
-
-async def _never_dispatch(*_args: Any, **_kwargs: Any) -> dict[str, Any]:
-    raise AssertionError("dispatch should not run after setup failure")
-
-
-def _fake_manifest(plugin_name: str) -> PluginManifest:
-    source_dir = Path("/tmp") / plugin_name
-    return PluginManifest(
-        name=plugin_name,
-        description="synthetic network-failure plugin",
-        tools=(ToolEntry(name=f"{plugin_name}.run", module=source_dir / "tools" / "run.py"),),
-        setup=source_dir / "setup.sh",
-        runtime=None,
-        source_dir=source_dir,
-        body="",
-    )
-
-
-def _plugin_context(sandbox_id: str) -> ToolExecutionContextService:
-    ctx = ToolExecutionContextService(cwd=Path("/tmp"))
-    ctx["sandbox_id"] = sandbox_id
-    ctx["repo_root"] = WORKSPACE_ROOT
-    return ctx
-
-
-def _registration_error(code: str, *, plugin: str) -> dict[str, str]:
-    try:
-        _exec_in_plugin_namespace(plugin, code)
-    except (TypeError, PluginOpRegistrationError) as exc:
-        return {"type": type(exc).__name__, "message": str(exc)}
-    raise AssertionError("registration unexpectedly succeeded")
-
-
-def _exec_in_plugin_namespace(plugin_name: str, code: str) -> dict[str, object]:
-    namespace: dict[str, object] = {
-        "__name__": f"plugins.catalog.{plugin_name}.runtime.synthetic_probe",
-        "register_plugin_op": register_plugin_op,
-        "Intent": Intent,
-    }
-    exec(code, namespace)
-    return namespace
 
 
 def _tool_record(

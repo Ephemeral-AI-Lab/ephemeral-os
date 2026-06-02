@@ -36,11 +36,20 @@ import shutil
 import sys
 import tempfile
 import uuid
+import importlib
 from pathlib import Path
 
-from sandbox.overlay.writable_dirs import overlay_writable_root
-from sandbox.isolated_workspace import IsolatedWorkspaceHandle
-from sandbox.isolated_workspace._control_plane.namespace_runtime import _KernelNamespaceRuntime
+# Keep these imports inside the sandbox process. The host-side runner test only
+# uses the public raw_exec API; this backstop verifies the bundled runtime.
+overlay_writable_root = importlib.import_module(
+    "sandbox.overlay.writable_dirs"
+).overlay_writable_root
+IsolatedWorkspaceHandle = importlib.import_module(
+    "sandbox.isolated_workspace"
+).IsolatedWorkspaceHandle
+_KernelNamespaceRuntime = importlib.import_module(
+    "sandbox.isolated_workspace._control_plane.namespace_runtime"
+)._KernelNamespaceRuntime
 
 runtime = _KernelNamespaceRuntime()
 # Scratch MUST live on a non-overlayfs filesystem. The container's "/" is

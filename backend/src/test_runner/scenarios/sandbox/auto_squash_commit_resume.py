@@ -19,11 +19,11 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 
-from sandbox.occ.service import AUTO_SQUASH_MAX_DEPTH
 from tools.submission.planner import submit_planner_outcome
 from tools.submission.reducer import submit_reducer_outcome
 
 from test_runner.scenarios.base import ScenarioBase, ScenarioContext, ToolCallSpec
+from test_runner.scenarios.sandbox._constants import AUTO_SQUASH_MAX_DEPTH
 
 
 _AUTO_SQUASH_WRITE_COUNT = AUTO_SQUASH_MAX_DEPTH + 4

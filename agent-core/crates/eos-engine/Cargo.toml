@@ -1,0 +1,15 @@
+[package]
+name = "eos-engine"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+eos-state.workspace = true
+eos-llm-client.workspace = true
+eos-tools.workspace = true
+eos-audit.workspace = true
+eos-agent-def.workspace = true
+
+[lints]
+workspace = true

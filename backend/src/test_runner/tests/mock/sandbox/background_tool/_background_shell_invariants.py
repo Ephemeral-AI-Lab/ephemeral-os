@@ -11,8 +11,7 @@ from typing import Any
 
 import sandbox.api as sandbox_api
 from test_runner.benchmarks.sweevo.models import SWEEvoInstance, _REPO_DIR
-from sandbox.shared.models import ReadFileRequest, SandboxCaller
-from sandbox.daemon.paths import DAEMON_PID_PATH, DAEMON_SOCKET_PATH
+from sandbox.api import ReadFileRequest, SandboxCaller
 from sandbox.host.daemon_client import call_daemon_api
 from test_runner.agent.mock.background_shell_probe import (
     BACKGROUND_IWS_LAYER_STACK_ROOT,
@@ -49,6 +48,8 @@ _IWS_APT_CACHE_DIR = (
     Path(__file__).resolve().parents[6] / "tests" / "_assets" / "iws_apt_cache" / "jammy-amd64"
 )
 _IWS_TEST_UPPERDIR_BYTES = 67_108_864
+_DAEMON_PID_PATH = "/eos/daemon/runtime.pid"
+_DAEMON_SOCKET_PATH = "/eos/daemon/runtime.sock"
 
 
 async def run_background_shell_scenario(
@@ -102,8 +103,8 @@ async def configure_short_inflight_ttl(sandbox_id: str) -> None:
             "set -eu",
             "sed -i '/^EOS_INFLIGHT_TTL_S=/d; /^EOS_INFLIGHT_REAPER_INTERVAL_S=/d' /etc/environment 2>/dev/null || true",
             "printf '\\nEOS_INFLIGHT_TTL_S=1\\nEOS_INFLIGHT_REAPER_INTERVAL_S=0.2\\n' >> /etc/environment",
-            f'if [ -f {DAEMON_PID_PATH} ]; then kill -TERM "$(cat {DAEMON_PID_PATH})" 2>/dev/null || true; fi',
-            f"rm -f {DAEMON_SOCKET_PATH} {DAEMON_PID_PATH}",
+            f'if [ -f {_DAEMON_PID_PATH} ]; then kill -TERM "$(cat {_DAEMON_PID_PATH})" 2>/dev/null || true; fi',
+            f"rm -f {_DAEMON_SOCKET_PATH} {_DAEMON_PID_PATH}",
         ]
     )
     result = await sandbox_api.raw_exec(sandbox_id, command, timeout=30)
@@ -122,8 +123,8 @@ async def configure_default_inflight_ttl(sandbox_id: str) -> None:
         [
             "set -eu",
             "sed -i '/^EOS_INFLIGHT_TTL_S=/d; /^EOS_INFLIGHT_REAPER_INTERVAL_S=/d' /etc/environment 2>/dev/null || true",
-            f'if [ -f {DAEMON_PID_PATH} ]; then kill -TERM "$(cat {DAEMON_PID_PATH})" 2>/dev/null || true; fi',
-            f"rm -f {DAEMON_SOCKET_PATH} {DAEMON_PID_PATH}",
+            f'if [ -f {_DAEMON_PID_PATH} ]; then kill -TERM "$(cat {_DAEMON_PID_PATH})" 2>/dev/null || true; fi',
+            f"rm -f {_DAEMON_SOCKET_PATH} {_DAEMON_PID_PATH}",
         ]
     )
     result = await sandbox_api.raw_exec(sandbox_id, command, timeout=30)

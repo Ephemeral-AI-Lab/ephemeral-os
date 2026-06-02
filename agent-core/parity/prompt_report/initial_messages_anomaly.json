@@ -1,0 +1,23 @@
+{
+  "records": [
+    {
+      "content": [
+        {
+          "text": "You are a helpful coding agent.",
+          "type": "text"
+        }
+      ],
+      "role": "system"
+    },
+    {
+      "content": [
+        {
+          "text": "List the files in the repo.",
+          "type": "text"
+        }
+      ],
+      "role": "user"
+    }
+  ],
+  "source": "engine.agent.lifecycle._initial_message_records"
+}

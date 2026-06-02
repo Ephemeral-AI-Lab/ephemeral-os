@@ -74,7 +74,7 @@ class ComplexProjectBuildGrepGlob(ScenarioBase):
     """Full heavy grep + glob + edit_file project-build scenario."""
 
     name = "sandbox.complex_project_build_grep_glob"
-    delegated_workflow_poll_attempts = 96
+    delegated_workflow_poll_attempts = 180
     delegated_workflow_poll_interval_s = 3.0
 
     def planner_response(self, ctx: ScenarioContext) -> ToolCallSpec:  # noqa: ARG002

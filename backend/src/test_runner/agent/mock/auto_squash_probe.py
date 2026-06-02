@@ -7,7 +7,6 @@ from collections.abc import Awaitable, Callable
 from typing import Any
 
 from message.events import StreamEvent
-from sandbox.occ.service import AUTO_SQUASH_MAX_DEPTH
 from tools._framework.core.base import BaseTool
 from tools._framework.core.results import ToolResult
 from tools._framework.core.runtime import ExecutionMetadata
@@ -18,6 +17,7 @@ from tools.sandbox.write_file import write_file as write_file_tool
 
 from test_runner.agent.mock.sandbox_probe import SandboxCheck
 from test_runner.audit.events import EventType
+from test_runner.scenarios.sandbox._constants import AUTO_SQUASH_MAX_DEPTH
 
 
 ROOT = "/testbed/.ephemeralos/sweevo-mock/auto_squash_commit_resume"

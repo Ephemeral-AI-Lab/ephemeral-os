@@ -1,0 +1,14 @@
+[package]
+name = "eos-workflow"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+eos-state.workspace = true
+eos-tools.workspace = true
+eos-agent-def.workspace = true
+eos-audit.workspace = true
+
+[lints]
+workspace = true

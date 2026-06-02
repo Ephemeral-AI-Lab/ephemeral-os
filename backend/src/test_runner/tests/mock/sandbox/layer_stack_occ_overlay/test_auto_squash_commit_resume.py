@@ -31,10 +31,10 @@ import pytest
 import sandbox.api as sandbox_api
 from test_runner.benchmarks.sweevo.models import SWEEvoInstance
 from sandbox.api import ReadFileRequest, SandboxCaller, ShellRequest
-from sandbox.occ.service import AUTO_SQUASH_MAX_DEPTH
 
 from test_runner.audit.events import EventType
 from test_runner.scenarios import SCENARIO_REGISTRY
+from test_runner.scenarios.sandbox._constants import AUTO_SQUASH_MAX_DEPTH
 from test_runner.agent.mock.prompt_inspector import ToolCallRecord
 from test_runner.core.stores import TaskStoreBundle
 from test_runner.environments.sweevo_image.fixtures import run_scenario_on_sweevo_image

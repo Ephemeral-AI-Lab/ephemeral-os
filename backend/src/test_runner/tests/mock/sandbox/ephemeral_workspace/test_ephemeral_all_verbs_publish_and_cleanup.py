@@ -63,7 +63,10 @@ async def test_ephemeral_all_verbs_publish_and_cleanup(
             "api.exec_command.dispatch_total_s",
             "api.grep.total_s",
             "api.glob.total_s",
+            "api.shell.total_s",
+            "command_exec.capture_upperdir_s",
         ),
+        require_overlay_timings=False,
     )
     del perf
     assert_sandbox_events_have_source(report.run_dir, mutation_source="api_write")
