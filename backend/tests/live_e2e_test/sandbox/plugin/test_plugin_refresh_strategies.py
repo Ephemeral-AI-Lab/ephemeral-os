@@ -217,6 +217,10 @@ async def test_plugin_workspace_snapshot_refresh_strategy(
         "plugin.generic.health_fail_ping"
         in rust_payload["status_after_ensure"]["connected_ppc_routes"]
     )
+    assert (
+        "plugin.generic.health_fail_recover_ping"
+        in rust_payload["status_after_ensure"]["connected_ppc_routes"]
+    )
     service_health = {
         item["service_id"]: item
         for item in rust_payload["status_after_health_probe"]["service_health"]
@@ -240,10 +244,32 @@ async def test_plugin_workspace_snapshot_refresh_strategy(
         "plugin.generic.health_fail_ping"
         not in rust_payload["status_after_health_probe"]["connected_ppc_routes"]
     )
+    assert (
+        "plugin.generic.health_fail_recover_ping"
+        not in rust_payload["status_after_health_probe"]["connected_ppc_routes"]
+    )
     health_fail_status = _service_status(
         rust_payload["status_after_health_probe"], "health_fail_harness"
     )
     assert health_fail_status["state"] == "stopped"
+    assert (
+        rust_payload["health_fail_recover_ping"]["from_health_recovered_service"]
+        is True
+    )
+    assert rust_payload["health_fail_recover_ping"]["from_ppc"] is True
+    assert rust_payload["health_fail_recover_ping"]["workspace_mounted"] is True
+    assert rust_payload["health_fail_recover_ping"]["echo"] == (
+        "after-health-fail-recover"
+    )
+    assert (
+        "plugin.generic.health_fail_recover_ping"
+        in rust_payload["status_after_health_fail_recover"]["connected_ppc_routes"]
+    )
+    health_fail_recover_status = _service_status(
+        rust_payload["status_after_health_fail_recover"], "health_fail_harness"
+    )
+    assert health_fail_recover_status["state"] == "ready"
+    assert health_fail_recover_status["restart_count"] >= 1
     assert "plugin.generic.apply" in rust_payload["status_after_ensure"]["connected_ppc_routes"]
     assert (
         "plugin.generic.apply_multi"

@@ -12,6 +12,7 @@ import pytest
 
 from plugins.core.discovery import DEFAULT_CATALOG_DIR
 from plugins.core.manifest import PluginManifest, parse_plugin_manifest
+from sandbox.daemon.paths import BUNDLE_REMOTE_DIR
 from sandbox.ephemeral_workspace.plugin.op_registry import clear_plugin_registrations
 from sandbox.ephemeral_workspace.plugin import host_dispatch as host_dispatch_mod
 from sandbox.shared.models import Intent
@@ -113,22 +114,19 @@ def test_ensure_payload_includes_runtime_manifest_for_rust_daemon() -> None:
     daemon_manifest = payload["manifest"]
     assert daemon_manifest["plugin_id"] == "lsp"
     assert daemon_manifest["plugin_digest"] == "digest-lsp"
-    assert daemon_manifest["services"] == [
-        {
-            "service_id": "runtime",
-            "service_profile_digest": daemon_manifest["services"][0][
-                "service_profile_digest"
-            ],
-            "service_mode": "workspace_snapshot_refresh",
-            "refresh_strategy": "remount_workspace_and_notify",
-            "command": [
-                "python3",
-                "-m",
-                "sandbox.ephemeral_workspace.plugin.ppc_service",
-            ],
-            "ppc_protocol_version": 1,
-        }
-    ]
+    assert len(daemon_manifest["services"]) == 1
+    service = daemon_manifest["services"][0]
+    assert service == {
+        "service_id": "runtime",
+        "service_profile_digest": service["service_profile_digest"],
+        "service_mode": "workspace_snapshot_refresh",
+        "refresh_strategy": "remount_workspace_and_notify",
+        "command": service["command"],
+        "ppc_protocol_version": 1,
+    }
+    assert service["command"][:2] == ["python3", "-c"]
+    assert BUNDLE_REMOTE_DIR in service["command"][2]
+    assert "ppc_service" in service["command"][2]
     operations = {entry["op_name"]: entry for entry in daemon_manifest["operations"]}
     assert operations["diagnostics"] == {
         "op_name": "diagnostics",

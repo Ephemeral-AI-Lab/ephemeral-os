@@ -26,6 +26,7 @@ from typing import Any
 
 from plugins.core.discovery import discover_plugins
 from plugins.core.manifest import PluginManifest
+from sandbox.daemon.paths import BUNDLE_REMOTE_DIR
 from sandbox.shared.models import Intent
 from sandbox.ephemeral_workspace.plugin.op_registry import (
     clear_plugin_registrations,
@@ -271,11 +272,7 @@ def _daemon_manifest_for(
                 "service_profile_digest": _service_profile_digest(manifest, digest),
                 "service_mode": "workspace_snapshot_refresh",
                 "refresh_strategy": "remount_workspace_and_notify",
-                "command": [
-                    "python3",
-                    "-m",
-                    "sandbox.ephemeral_workspace.plugin.ppc_service",
-                ],
+                "command": _ppc_service_command(),
                 "ppc_protocol_version": 1,
             }
         )
@@ -316,6 +313,16 @@ def _service_profile_digest(manifest: PluginManifest, digest: str) -> str:
         runtime_rel = manifest.runtime.relative_to(manifest.source_dir).as_posix()
     source = f"{manifest.name}\0{digest}\0{runtime_rel}\0ppc-service-v1"
     return hashlib.sha256(source.encode("utf-8")).hexdigest()
+
+
+def _ppc_service_command() -> list[str]:
+    launcher = (
+        "import sys; "
+        f"sys.path.insert(0, {BUNDLE_REMOTE_DIR!r}); "
+        "from sandbox.ephemeral_workspace.plugin.ppc_service import main; "
+        "raise SystemExit(main())"
+    )
+    return ["python3", "-c", launcher]
 
 
 def _wrap_response(

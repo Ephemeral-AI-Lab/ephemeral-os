@@ -240,7 +240,7 @@ impl PluginProcessSpec {
                     "cwd": ".",
                     "env": env,
                 }),
-                background: true,
+                background: false,
             },
             workspace_root: WorkspaceRoot(PathBuf::from(&self.key.workspace_root)),
             layer_paths: overlay.layer_paths.clone(),

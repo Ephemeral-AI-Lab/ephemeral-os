@@ -13,6 +13,8 @@ then proves a vanilla plugin service can:
   daemon-managed OCC callbacks before the plugin's final reply, and
 * fail closed when one service rejects a daemon health probe without poisoning
   unrelated services, and
+* recover that same failed-health service on the next dispatch through another
+  route, and
 * restart a second read-only ``workspace_snapshot_refresh`` service through
   the generic ``restart_service`` fallback after a peer publish, and
 * run a vanilla one-shot ``plugin.generic.oneshot_write`` worker through the
@@ -2879,6 +2881,7 @@ def handle_request(sock: socket.socket, request: dict[str, object]) -> None:
         "plugin.generic.ping",
         "plugin.generic.restart_ping",
         "plugin.generic.crash_recover_ping",
+        "plugin.generic.health_fail_recover_ping",
         "plugin.generic.hang_recover_ping",
     }:
         workspace_read: dict[str, object] = {"requested": False}
@@ -2908,6 +2911,8 @@ def handle_request(sock: socket.socket, request: dict[str, object]) -> None:
                 "from_restart_service": op == "plugin.generic.restart_ping",
                 "from_crash_recovered_service": op
                 == "plugin.generic.crash_recover_ping",
+                "from_health_recovered_service": op
+                == "plugin.generic.health_fail_recover_ping",
                 "from_timeout_recovered_service": op
                 == "plugin.generic.hang_recover_ping",
                 "plugin_id": os.environ.get("EOS_PLUGIN_ID"),
@@ -3355,6 +3360,27 @@ async def run(args: argparse.Namespace) -> dict[str, Any]:
                     "probe_services": True,
                     "probe_timeout_ms": 5000,
                 },
+                layer_stack_root=LAYER_STACK_ROOT,
+                timeout=30,
+            )
+            try:
+                report["health_fail_recover_ping"] = await daemon_client.call_daemon_api(
+                    bench.sandbox_id,
+                    "plugin.generic.health_fail_recover_ping",
+                    {"agent_id": AGENT_ID, "message": "after-health-fail-recover"},
+                    layer_stack_root=LAYER_STACK_ROOT,
+                    timeout=30,
+                )
+            except Exception as exc:
+                report["health_fail_recover_ping"] = {
+                    "success": False,
+                    "from_health_recovered_service": False,
+                    "error": str(exc),
+                }
+            report["status_after_health_fail_recover"] = await daemon_client.call_daemon_api(
+                bench.sandbox_id,
+                "api.plugin.status",
+                {"agent_id": AGENT_ID},
                 layer_stack_root=LAYER_STACK_ROOT,
                 timeout=30,
             )
@@ -4723,6 +4749,12 @@ def plugin_manifest() -> dict[str, Any]:
                 "timeout_ms": 5000,
             },
             {
+                "op_name": "health_fail_recover_ping",
+                "intent": "read_only",
+                "service_id": "health_fail_harness",
+                "timeout_ms": 5000,
+            },
+            {
                 "op_name": "apply",
                 "intent": "write_allowed",
                 "auto_workspace_overlay": False,
@@ -5076,6 +5108,11 @@ def gate_pass(report: dict[str, Any]) -> bool:
         report.get("status_after_health_probe", {}),
         "health_fail_harness",
     )
+    health_fail_recover_status = service_status(
+        report.get("status_after_health_fail_recover", {}),
+        "health_fail_harness",
+    )
+    health_fail_recover_ping = report.get("health_fail_recover_ping", {})
     expected_health_services = {
         "harness",
         "restart_harness",
@@ -5350,6 +5387,8 @@ def gate_pass(report: dict[str, Any]) -> bool:
         in report.get("status_after_ensure", {}).get("connected_ppc_routes", [])
         and "plugin.generic.health_fail_ping"
         in report.get("status_after_ensure", {}).get("connected_ppc_routes", [])
+        and "plugin.generic.health_fail_recover_ping"
+        in report.get("status_after_ensure", {}).get("connected_ppc_routes", [])
         and "plugin.generic.apply_multi"
         in report.get("status_after_ensure", {}).get("connected_ppc_routes", [])
         and expected_health_services.issubset(health_probe)
@@ -5361,7 +5400,20 @@ def gate_pass(report: dict[str, Any]) -> bool:
         and "intentional health failure" in str(health_fail_probe.get("error", ""))
         and "plugin.generic.health_fail_ping"
         not in report.get("status_after_health_probe", {}).get("connected_ppc_routes", [])
+        and "plugin.generic.health_fail_recover_ping"
+        not in report.get("status_after_health_probe", {}).get("connected_ppc_routes", [])
         and health_fail_status.get("state") == "stopped"
+        and health_fail_recover_ping.get("from_health_recovered_service") is True
+        and health_fail_recover_ping.get("from_ppc") is True
+        and health_fail_recover_ping.get("workspace_mounted") is True
+        and health_fail_recover_ping.get("echo") == "after-health-fail-recover"
+        and "plugin.generic.health_fail_recover_ping"
+        in report.get("status_after_health_fail_recover", {}).get(
+            "connected_ppc_routes",
+            [],
+        )
+        and health_fail_recover_status.get("state") == "ready"
+        and int(health_fail_recover_status.get("restart_count", 0)) >= 1
         and report.get("ping", {}).get("from_ppc") is True
         and report.get("ping", {}).get("workspace_mounted") is True
         and len(concurrent_ping) == 2
@@ -5824,6 +5876,10 @@ def markdown_report(report: dict[str, Any]) -> str:
         "recover_harness",
     )
     recover_status = service_status(report.get("status_after_recover", {}), "recover_harness")
+    health_fail_recover_status = service_status(
+        report.get("status_after_health_fail_recover", {}),
+        "health_fail_harness",
+    )
     lines = [
         "# Rust Daemon Generic Plugin Benchmark",
         "",
@@ -5834,6 +5890,9 @@ def markdown_report(report: dict[str, Any]) -> str:
         f"- connected_routes: `{report.get('status_after_ensure', {}).get('connected_ppc_routes')}`",
         f"- status_health_probe: `{report.get('status_after_health_probe', {}).get('service_health')}`",
         f"- connected_routes_after_health_probe: `{report.get('status_after_health_probe', {}).get('connected_ppc_routes')}`",
+        f"- health_fail_recover_ping: `{report.get('health_fail_recover_ping')}`",
+        f"- health_fail_recover_restart_count: `{health_fail_recover_status.get('restart_count')}`",
+        f"- connected_routes_after_health_fail_recover: `{report.get('status_after_health_fail_recover', {}).get('connected_ppc_routes')}`",
         f"- ping_from_ppc: `{report.get('ping', {}).get('from_ppc')}`",
         f"- concurrent_ping: `{report.get('concurrent_ping')}`",
         f"- apply_from_self_managed: `{report.get('apply', {}).get('from_self_managed')}`",
