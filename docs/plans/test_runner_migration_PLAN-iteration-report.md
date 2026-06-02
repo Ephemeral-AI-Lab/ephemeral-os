@@ -839,3 +839,164 @@ Remaining risk:
 
 Next iteration entry point:
 - Create or reuse a public plugin test-support boundary for the remaining plugin importlib/runtime checks, or move those checks to sandbox-owned tests, then rerun the import-fence command before starting the broad live sandbox `-n 3` gate.
+
+## Iteration 13 - 2026-06-02 23:20:10 +0800 CST
+
+Checkout summary:
+- Current `HEAD`: `70bdf241f`.
+- The worktree also contains unrelated concurrent Rust migration edits under `agent-core/` and `docs/plans/backend_agent_core_rust_migration/`; they were left untouched.
+- This iteration focused on the plugin/LSP setup path after the live LSP test hung in sandbox-side package setup.
+
+Plan path and target files:
+- Plan: `docs/plans/test_runner_migration_PLAN.md`.
+- Target files:
+  - `backend/src/sandbox/ephemeral_workspace/plugin/install.py`
+  - `backend/src/plugins/catalog/lsp/setup.sh`
+  - `backend/src/plugins/catalog/lsp/runtime/pyright_session.py`
+  - `backend/tests/unit_test/test_sandbox/test_plugin_install.py`
+  - `backend/tests/unit_test/test_plugins/test_lsp_catalog.py`
+  - `backend/src/test_runner/tests/mock/sandbox/plugin/test_plugin_blocked_in_open_isolated_workspace.py`
+
+Coverage gaps and findings:
+- The focused live LSP test previously blocked inside sandbox setup while trying to download/extract plugin dependencies in the sandbox.
+- The intended standard is host-side download/cache of plugin setup artifacts, provider archive upload into the sandbox, and final storage under the EOS package area `/eos/plugin-packages/<plugin>`, not under `/tmp`.
+- A direct Docker probe showed `container.put_archive("/eos", ...)` returns success but does not materialize files because `/eos` is a tmpfs mount. The same archive materialized under `/tmp`, proving this was a Docker archive destination behavior rather than an archive-content bug.
+- A staging probe verified the working pattern: `put_archive` to `/var/lib/ephemeralos/plugin-archives/<id>`, then sandbox-side `cp -a` into `/eos`.
+- User clarified that isolated workspace should not use plugin. The plugin live suite therefore must not open isolated workspace; isolated workspace coverage owns that boundary.
+
+Fixes applied:
+- Standardized plugin package delivery in `sandbox.ephemeral_workspace.plugin.install`:
+  - LSP setup artifacts are prepared from the host cache.
+  - Provider `put_archive` uploads archive payloads into `/var/lib/ephemeralos/plugin-archives/<id>`.
+  - The sandbox materializes the archive into `/eos`, including `/eos/plugin-packages/lsp`.
+  - The installer verifies `/eos/plugin-packages/lsp/node.tar.xz` and `/eos/plugin-packages/lsp/pyright.tgz`.
+  - The old large-package fallback to shell/base64 extraction was removed for the provider archive path.
+- Kept `setup.sh` offline-only:
+  - default package dir is `/eos/plugin-packages/lsp`;
+  - Node is extracted from `node.tar.xz`;
+  - Pyright is installed from `pyright.tgz` with `npm install -g --offline`;
+  - no in-sandbox `curl` or `/tmp/eos-node22` path is used.
+- Updated the plugin installer unit test to assert archive staging, `/eos` materialization, no `/tmp`, no base64 upload, and `EOS_PLUGIN_PACKAGE_DIR=/eos/plugin-packages/lsp`.
+- Updated `docs/plans/test_runner_migration_PLAN.md` so plugin scenarios do not open isolated workspace and isolated workspace owns its no-plugin/LSP boundary.
+- Marked `test_plugin_blocked_in_open_isolated_workspace` as skipped with that boundary reason instead of running plugin operations through isolated workspace.
+
+Commands run:
+- `uv run ruff check backend/src/sandbox/ephemeral_workspace/plugin/install.py backend/tests/unit_test/test_sandbox/test_plugin_install.py backend/tests/unit_test/test_plugins/test_lsp_catalog.py backend/src/plugins/catalog/lsp/runtime/pyright_session.py`
+  - Result: passed.
+- `uv run pytest -q backend/tests/unit_test/test_sandbox/test_plugin_install.py backend/tests/unit_test/test_plugins/test_lsp_catalog.py --tb=short`
+  - Result: passed with `16 passed in 0.76s`, then again with `16 passed in 0.71s`.
+- Direct Docker archive probe against live container `b6f86549badb`:
+  - `put_archive("/eos", ...)` returned success but did not materialize files.
+  - `put_archive("/var/lib/ephemeralos/plugin-archives/probe-stage", ...)` followed by `cp -a ... /eos/` materialized `/eos/plugin-packages/probe-staged.txt`.
+- `env EOS_SANDBOX_PROVIDER=docker EOS_SANDBOX_RUNTIME=rust EOS_LIVE_E2E_IMAGE=sweevo-dask__dask-10042:latest uv run pytest -q backend/src/test_runner/tests/mock/sandbox/plugin/test_plugin_read_only_lsp_refresh_without_publish.py --tb=short --durations=20`
+  - Result: passed with `1 passed in 47.85s`.
+- `uv run pytest -q backend/tests/unit_test/test_plugins/test_lsp_session_refresh.py backend/tests/unit_test/test_plugins/test_lsp_session_overlay_refresh.py --tb=short`
+  - Result: passed with `18 passed in 0.34s`.
+- `env EOS_SANDBOX_PROVIDER=docker EOS_SANDBOX_RUNTIME=rust EOS_LIVE_E2E_IMAGE=sweevo-dask__dask-10042:latest uv run pytest -q backend/src/test_runner/tests/mock/sandbox/plugin --tb=short --durations=20`
+  - First result before the boundary correction: `1 failed, 5 passed in 75.67s`; failure was `test_plugin_blocked_in_open_isolated_workspace` because isolated workspace was disabled.
+  - Final result after applying the no-plugin/IWS boundary: `5 passed, 1 skipped in 61.99s`.
+
+Fresh artifacts inspected:
+- Live Docker container `6a0231636879` during the focused LSP run:
+  - `/eos/plugin-packages/lsp/PACKAGE_MANIFEST.txt`
+  - `/eos/plugin-packages/lsp/node.tar.xz` (`29885824` bytes)
+  - `/eos/plugin-packages/lsp/pyright.tgz` (`4454240` bytes)
+  - `/eos/plugin-packages/lsp/node/...`
+  - `/eos/plugin-packages/lsp/npm-cache/...`
+- `.sweevo_runs/scenario_logs/sandbox.plugin_iws_policy/20260602T151543Z_86e03bf36c63/run.json`
+  - Used only to identify the now-removed plugin/IWS failure mode.
+
+Current verdict:
+- Correctness: PASS for plugin package setup standardization and the plugin live folder gate, with the plugin/IWS crossing intentionally skipped.
+- O(1) memory/disk: PASS for the focused plugin/LSP path. Package artifacts are installed under `/eos/plugin-packages/lsp`; no package path is stored under `/tmp`.
+- Latency: PASS for the focused plugin gate. The focused LSP test completed in `47.85s`; the broader plugin folder completed in `61.99s`.
+
+Remaining risk:
+- The broad `backend/src/test_runner/tests/mock/sandbox` `-n 3` gate is still not proven after this iteration.
+- Phase D import-fence cleanup remains incomplete from Iteration 12.
+- The old plugin/IWS live scenario remains registered but is no longer part of the plugin live test gate; a later cleanup should remove the dead scenario/probe once the isolated-workspace suite owns the replacement assertion.
+
+Next iteration entry point:
+- Continue with the Phase D import-fence cleanup or the next narrow live sandbox folder gate. Do not reintroduce plugin operations into isolated workspace tests.
+
+## Iteration 14 - 2026-06-02 23:27:00 +0800 CST
+
+Checkout summary:
+- Current `HEAD`: `70bdf241f`.
+- Unrelated concurrent Rust migration edits under `agent-core/` and `docs/plans/backend_agent_core_rust_migration/` were preserved and not staged or reverted.
+- This iteration focused on closing the Phase D import fence and fully removing the plugin-owned isolated-workspace route after the user clarified that isolated workspace should not use plugin.
+
+Plan path and target files:
+- Plan: `docs/plans/test_runner_migration_PLAN.md`.
+- Target files:
+  - `backend/src/test_runner/agent/mock/plugin_workspace_probe.py`
+  - `backend/src/test_runner/agent/mock/probe_bridge.py`
+  - `backend/src/test_runner/scenarios/__init__.py`
+  - `backend/src/test_runner/scenarios/sandbox/__init__.py`
+  - `backend/src/test_runner/scenarios/sandbox/plugin.py`
+  - `backend/src/test_runner/tests/mock/sandbox/plugin/test_plugin_blocked_in_open_isolated_workspace.py`
+  - `backend/tests/unit_test/test_test_runner/test_run_pipeline_smoke.py`
+  - `backend/tests/unit_test/test_test_runner/test_sweevo_lifecycle_aggregate.py`
+
+Coverage gaps and findings:
+- The Phase D import-fence grep is now clean in the current checkout, but the full runner unit gate initially exposed two stale test issues:
+  - `test_sweevo_lifecycle_aggregate.py` had a duplicate `request_id` keyword.
+  - `test_run_pipeline_smoke.py` stubbed the request handle without the current `root_agent_task` field that `run_pipeline` waits on.
+- The plugin live suite no longer needed a skipped plugin/IWS test; leaving `plugin_iws_policy` registered would have preserved a runnable plugin path that opens isolated workspace, which contradicts the clarified boundary.
+
+Fixes applied:
+- Removed the plugin-owned isolated-workspace route:
+  - deleted `PluginIwsPolicy` from the scenario registry and sandbox scenario exports;
+  - removed the `plugin_iws_policy` bridge action;
+  - removed `run_plugin_iws_policy_probe`, IWS summary constants, and isolated workspace tool imports from `plugin_workspace_probe.py`;
+  - deleted the skipped `test_plugin_blocked_in_open_isolated_workspace.py` file.
+- Updated the plugin scenario reducer text so it no longer claims plugin scenarios validate isolated-workspace policy.
+- Fixed the runner unit stubs:
+  - removed the duplicate `request_id="req"` argument from the SWE-EVO lifecycle aggregate helper;
+  - added a completed `root_agent_task` to the `run_pipeline` smoke-test request-handle stub.
+
+Commands run:
+- `uv run ruff check backend/src/test_runner/agent/mock/plugin_workspace_probe.py backend/src/test_runner/agent/mock/probe_bridge.py backend/src/test_runner/scenarios backend/src/test_runner/tests/mock/sandbox/plugin backend/tests/unit_test/test_test_runner/test_run_pipeline_smoke.py backend/tests/unit_test/test_test_runner/test_sweevo_lifecycle_aggregate.py`
+  - Result: passed.
+- `uv run pytest --collect-only -q backend/src/test_runner/tests/mock/sandbox/plugin`
+  - Result: passed with `5 tests collected in 0.09s`.
+- `uv run ruff check backend/src/test_runner backend/tests/unit_test/test_test_runner`
+  - Result: passed.
+- `uv run pytest -q backend/tests/unit_test/test_test_runner --tb=short`
+  - First result: `2 failed, 89 passed in 2.22s`; both failures were stale `root_agent_task` expectations in the unit stub.
+  - Final result: passed with `91 passed in 1.97s`.
+- Import-fence command:
+  - `rg -n "from sandbox\\.(daemon|overlay|occ|layer_stack|ephemeral_workspace|isolated_workspace|shared)|import sandbox\\.(daemon|overlay|occ|layer_stack|ephemeral_workspace|isolated_workspace|shared)" backend/src/test_runner backend/tests/unit_test/test_test_runner`
+  - Result: clean; no matches.
+- `env EOS_SANDBOX_PROVIDER=docker EOS_SANDBOX_RUNTIME=rust EOS_LIVE_E2E_IMAGE=sweevo-dask__dask-10042:latest uv run pytest -q backend/src/test_runner/tests/mock/sandbox/plugin --tb=short --durations=20`
+  - Result: passed with `5 passed in 63.61s`.
+
+Fresh artifacts inspected:
+- `.sweevo_runs/scenario_logs/sandbox.plugin_intent_contract/20260602T152548Z_fbbcb956e2b7`
+- `.sweevo_runs/scenario_logs/sandbox.plugin_read_only_lsp_refresh/20260602T152558Z_f37fbd045fd9`
+- `.sweevo_runs/scenario_logs/sandbox.plugin_service_evict/20260602T152610Z_b9706c2a55f8`
+- `.sweevo_runs/scenario_logs/sandbox.plugin_setup_failure/20260602T152624Z_d9101ebb9cc2`
+- `.sweevo_runs/scenario_logs/sandbox.plugin_write_allowed_publish/20260602T152633Z_6c18e8691253`
+
+Artifact findings:
+- All five fresh plugin `run.json` files reported `status=finished`.
+- All five fresh plugin `performance_report.json` files had zero warnings.
+- Resource maxima were zero for all five fresh plugin artifacts:
+  - `resource.command_exec.workspace_tree_exists`
+  - `resource.command_exec.workspace_tree_bytes`
+  - `resource.command_exec.run_dir_tree_bytes`
+  - `resource.command_exec.upperdir_tree_bytes`
+
+Current verdict:
+- Correctness: PASS for the Phase D runner unit/static/import-fence gate and the cleaned plugin live folder.
+- O(1) memory/disk: PASS for the inspected plugin artifacts; command resource tree fields stayed at zero.
+- Latency: PASS for the plugin folder gate; the cleaned five-test suite completed in `63.61s`.
+
+Remaining risk:
+- The full sandbox `-n 3` gate remains unproven after the Phase D import-fence cleanup.
+- Benchmark lanes, Rust cargo lanes, and final Python sandbox infra deletion gates remain open.
+- Separate live plugin suites outside `backend/src/test_runner` may still contain plugin/IWS boundary checks; this iteration only removed the plugin-owned isolated-workspace route from the test-runner plugin scenarios.
+
+Next iteration entry point:
+- Start the broad Phase D/E live sandbox gate:
+  `EOS_SANDBOX_PROVIDER=docker EOS_SANDBOX_RUNTIME=rust uv run pytest -q -n 3 backend/src/test_runner/tests/mock/sandbox --tb=short --durations=20`.

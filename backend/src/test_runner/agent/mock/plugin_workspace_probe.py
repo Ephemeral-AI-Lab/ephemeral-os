@@ -29,19 +29,12 @@ from sandbox.api.plugin_support import (
     run_plugin_setup_failure_checks,
 )
 from sandbox.host.daemon_client import (
-    DEFAULT_LAYER_STACK_ROOT,
     _DaemonDispatchError,
     call_daemon_api,
 )
 from tools._framework.core.base import BaseTool
 from tools._framework.core.results import ToolResult
 from tools._framework.core.runtime import ExecutionMetadata
-from tools.isolated_workspace.enter_isolated_workspace import (
-    enter_isolated_workspace as enter_isolated_workspace_tool,
-)
-from tools.isolated_workspace.exit_isolated_workspace import (
-    exit_isolated_workspace as exit_isolated_workspace_tool,
-)
 from tools.sandbox.edit_file import edit_file as edit_file_tool
 from tools.sandbox.read_file import read_file as read_file_tool
 from tools.sandbox.write_file import write_file as write_file_tool
@@ -54,7 +47,6 @@ SUMMARY_SCHEMA = "test_runner.plugin_workspace.v1"
 READ_ONLY_LSP_REFRESH_SUMMARY = f"{ROOT}/read_only_lsp_refresh/summary.json"
 WRITE_ALLOWED_PUBLISH_SUMMARY = f"{ROOT}/write_allowed_publish/summary.json"
 INTENT_CONTRACT_SUMMARY = f"{ROOT}/intent_contract/summary.json"
-IWS_POLICY_SUMMARY = f"{ROOT}/iws_policy/summary.json"
 SETUP_FAILURE_SUMMARY = f"{ROOT}/setup_failure/summary.json"
 SERVICE_EVICT_SUMMARY = f"{ROOT}/service_evict/summary.json"
 
@@ -326,82 +318,6 @@ async def run_plugin_intent_contract_probe(
     summary.update({"schema": SUMMARY_SCHEMA, "mode": "intent_contract"})
     return await _write_summary(
         path=INTENT_CONTRACT_SUMMARY,
-        payload=summary,
-        metadata=metadata,
-        emit=emit,
-        call_tool=call_tool,
-        record_tool_check=record_tool_check,
-    )
-
-
-async def run_plugin_iws_policy_probe(
-    *,
-    metadata: ExecutionMetadata,
-    emit: EmitStreamEvent,
-    call_tool: CallTool,
-    record_tool_check: RecordToolCheck,
-    sandbox_id: str,
-) -> str:
-    """Open iws, prove plugin ops fail closed, then prove default mode permits."""
-    metadata.repo_root = WORKSPACE_ROOT
-    agent_id = _agent_id(metadata)
-    entered = await _call_probe_tool(
-        label="iws.enter",
-        tool_obj=enter_isolated_workspace_tool,
-        raw_input={"layer_stack_root": DEFAULT_LAYER_STACK_ROOT},
-        metadata=metadata,
-        emit=emit,
-        call_tool=call_tool,
-        record_tool_check=record_tool_check,
-    )
-    blocked_status: dict[str, Any]
-    blocked_lsp: dict[str, Any]
-    try:
-        blocked_status = await _daemon_error_record(
-            sandbox_id,
-            "api.plugin.status",
-            {"agent_id": agent_id},
-        )
-        blocked_lsp = await _daemon_error_record(
-            sandbox_id,
-            "plugin.lsp.hover",
-            {
-                "agent_id": agent_id,
-                "file_path": "/testbed/does-not-matter.py",
-                "line": 0,
-                "character": 0,
-            },
-        )
-    finally:
-        exited = await _call_probe_tool(
-            label="iws.exit",
-            tool_obj=exit_isolated_workspace_tool,
-            raw_input={"grace_s": 5.0},
-            metadata=metadata,
-            emit=emit,
-            call_tool=call_tool,
-            record_tool_check=record_tool_check,
-            allow_error=True,
-        )
-
-    default_status = await call_daemon_api(
-        sandbox_id,
-        "api.plugin.status",
-        {"agent_id": agent_id},
-        timeout=15,
-    )
-    summary = {
-        "schema": SUMMARY_SCHEMA,
-        "mode": "iws_policy",
-        "enter": _tool_record("iws.enter", entered),
-        "exit": _tool_record("iws.exit", exited),
-        "blocked_status": blocked_status,
-        "blocked_lsp": blocked_lsp,
-        "default_status_success": bool(default_status.get("success")),
-        "default_status": default_status,
-    }
-    return await _write_summary(
-        path=IWS_POLICY_SUMMARY,
         payload=summary,
         metadata=metadata,
         emit=emit,
@@ -871,13 +787,11 @@ def _agent_id(metadata: ExecutionMetadata) -> str:
 
 __all__ = [
     "INTENT_CONTRACT_SUMMARY",
-    "IWS_POLICY_SUMMARY",
     "READ_ONLY_LSP_REFRESH_SUMMARY",
     "SERVICE_EVICT_SUMMARY",
     "SETUP_FAILURE_SUMMARY",
     "WRITE_ALLOWED_PUBLISH_SUMMARY",
     "run_plugin_intent_contract_probe",
-    "run_plugin_iws_policy_probe",
     "run_plugin_read_only_lsp_refresh_probe",
     "run_plugin_service_evict_probe",
     "run_plugin_setup_failure_probe",

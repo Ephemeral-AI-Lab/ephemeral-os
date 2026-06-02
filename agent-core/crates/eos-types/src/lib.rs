@@ -2,7 +2,7 @@
 //!
 //! This is the leaf crate of the agent-core dependency DAG: the small,
 //! dependency-light value primitives every other crate shares. It holds the
-//! nine typed string [`ids`], the [`UtcDateTime`] wrapper, the [`Clock`] trait
+//! twelve typed string ids, the [`UtcDateTime`] wrapper, the [`Clock`] trait
 //! seam, the transitional [`JsonObject`]/[`JsonValue`] aliases, and the minimal
 //! [`CoreError`]. It deliberately holds no domain state, status enums, SQL,
 //! HTTP, or config — those belong to their owning crates (see
@@ -21,7 +21,7 @@ mod time;
 pub use error::CoreError;
 pub use ids::{
     AgentRunId, AttemptId, CommandSessionId, InvocationId, IterationId, RequestId, SandboxId,
-    SubagentSessionId, TaskId, ToolUseId, WorkflowId, WorkflowTaskId,
+    SubagentSessionId, TaskId, ToolUseId, WorkflowId, WorkflowSessionId,
 };
 pub use json::{JsonObject, JsonValue};
 pub use time::{Clock, SystemClock, TestClock, UtcDateTime};

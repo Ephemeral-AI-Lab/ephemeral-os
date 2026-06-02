@@ -53,6 +53,7 @@ logger = logging.getLogger(__name__)
 # — so ``import plugins.catalog.<name>.runtime.server`` resolves naturally.
 PLUGIN_BUNDLE_REMOTE_ROOT = f"{BUNDLE_REMOTE_DIR}/plugins/catalog"
 PLUGIN_PACKAGE_REMOTE_ROOT = "/eos/plugin-packages"
+PLUGIN_ARCHIVE_STAGING_ROOT = "/var/lib/ephemeralos/plugin-archives"
 
 # 600s headroom for plugin setup scripts that download runtime binaries or
 # install small dependencies over the network while staying inside Daytona's
@@ -376,33 +377,6 @@ async def _upload_and_run_setup(
             f"test -f {shlex.quote(staging_dir)}/plugin.md",
             timeout=10,
         )
-        if getattr(uploaded, "exit_code", 1) != 0 and put_archive_fn is not None:
-            logger.warning(
-                "plugin install: put_archive bundle upload did not materialize "
-                "for %s on %s; falling back to tar extraction",
-                manifest.name,
-                sandbox_id,
-            )
-            fallback_setup = await exec_fn(
-                sandbox_id,
-                f"mkdir -p {shlex.quote(staging_dir)}",
-                timeout=30,
-            )
-            _check(fallback_setup, "plugin install: fallback staging setup failed")
-            await _upload_entries(
-                exec_fn,
-                sandbox_id=sandbox_id,
-                entries=bundle_files,
-                dest_dir=staging_dir,
-                archive_prefix="",
-                put_archive_fn=None,
-                failure_prefix="plugin install: fallback bundle upload",
-            )
-            uploaded = await exec_fn(
-                sandbox_id,
-                f"test -f {shlex.quote(staging_dir)}/plugin.md",
-                timeout=10,
-            )
         _check(uploaded, "plugin install: bundle upload missing plugin.md")
 
         finalize = await exec_fn(
@@ -444,42 +418,6 @@ async def _upload_and_run_setup(
                     ),
                     timeout=10,
                 )
-                if (
-                    getattr(package_uploaded, "exit_code", 1) != 0
-                    and put_archive_fn is not None
-                ):
-                    logger.warning(
-                        "plugin install: put_archive package upload did not "
-                        "materialize for %s on %s; falling back to tar extraction",
-                        manifest.name,
-                        sandbox_id,
-                    )
-                    fallback_package_root = await exec_fn(
-                        sandbox_id,
-                        f"mkdir -p {shlex.quote(PLUGIN_PACKAGE_REMOTE_ROOT)}",
-                        timeout=30,
-                    )
-                    _check(
-                        fallback_package_root,
-                        "plugin install: fallback package root setup failed",
-                    )
-                    await _upload_entries(
-                        exec_fn,
-                        sandbox_id=sandbox_id,
-                        entries=package_files,
-                        dest_dir=PLUGIN_PACKAGE_REMOTE_ROOT,
-                        archive_prefix="",
-                        put_archive_fn=None,
-                        failure_prefix="plugin install: fallback package upload",
-                    )
-                    package_uploaded = await exec_fn(
-                        sandbox_id,
-                        (
-                            f"test -s {shlex.quote(package_dir)}/node.tar.xz && "
-                            f"test -s {shlex.quote(package_dir)}/pyright.tgz"
-                        ),
-                        timeout=10,
-                    )
                 _check(
                     package_uploaded,
                     "plugin install: package upload missing setup artifacts",
@@ -563,11 +501,31 @@ async def _upload_entries(
     failure_prefix: str,
 ) -> None:
     if put_archive_fn is not None:
+        staging_dir = f"{PLUGIN_ARCHIVE_STAGING_ROOT}/{uuid.uuid4().hex}"
+        prepare = await exec_fn(
+            sandbox_id,
+            (
+                f"rm -rf {shlex.quote(staging_dir)} && "
+                f"mkdir -p {shlex.quote(staging_dir)} {shlex.quote(dest_dir)}"
+            ),
+            timeout=30,
+        )
+        _check(prepare, f"{failure_prefix}: failed to prepare archive staging")
         await put_archive_fn(
             sandbox_id,
             tar_stream=_build_plain_tar(_prefixed_entries(entries, archive_prefix)),
-            dest_dir=dest_dir,
+            dest_dir=staging_dir,
         )
+        materialize = await exec_fn(
+            sandbox_id,
+            (
+                f"cp -a {shlex.quote(staging_dir)}/. "
+                f"{shlex.quote(dest_dir)}/ && "
+                f"rm -rf {shlex.quote(staging_dir)}"
+            ),
+            timeout=120,
+        )
+        _check(materialize, f"{failure_prefix}: failed to materialize archive")
         return
 
     tar_path = f"{dest_dir}/.upload-{uuid.uuid4().hex}.tar.gz"

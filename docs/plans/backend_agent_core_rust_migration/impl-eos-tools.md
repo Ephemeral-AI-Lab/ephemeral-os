@@ -193,7 +193,7 @@ agent-core crates implement them:
 
 | Port | Methods (sketch) | Implementor (edge to eos-tools) | Replaces (Python) |
 |---|---|---|---|
-| `WorkflowControlPort` | `start(parent_task_id: TaskId, agent_id: String, goal: String) -> StartedWorkflow { workflow_id, workflow_task_id }`, `status(WorkflowId, Option<WorkflowTaskId>)`, `cancel(WorkflowTaskId, reason)`, `find_outstanding(parent_task_id, agent_id)` | eos-workflow + eos-engine workflow-handle adapter | `delegate`/`check`/`cancel_workflow` runtime |
+| `WorkflowControlPort` | `start(parent_task_id: TaskId, agent_id: String, goal: String) -> StartedWorkflow { workflow_id, workflow_task_id }`, `status(WorkflowId, Option<WorkflowSessionId>)`, `cancel(WorkflowSessionId, reason)`, `find_outstanding(parent_task_id, agent_id)` | eos-workflow + eos-engine workflow-handle adapter | `delegate`/`check`/`cancel_workflow` runtime |
 | `PlanSubmissionPort` | `apply_plan(PlannerSubmission)`, `apply_reducer(ReducerSubmission)`, `submit_generator(status, outcome)` | eos-workflow `AttemptOrchestrator` | submission `orchestrator.apply_*` |
 | `SubagentSupervisorPort` | `spawn(agent, prompt) -> SubagentSessionId`, `progress(SubagentSessionId, n)`, `cancel(SubagentSessionId, reason)`, `set_progress_provider(...)` | eos-engine background supervisor | `run_subagent`/control |
 | `AdvisorPort` | `review(tool_name, payload) -> Verdict` | eos-engine helper-agent runner | `ask_advisor` / `AdvisorApprovalPreHook` |
@@ -362,8 +362,8 @@ feed `ToolSpec.input_schema`. Real field names from source:
   - `SubmitExplorationResultInput { summary: String(min 1), findings: Vec<String>, references: Vec<String> }`
 - Workflow inputs:
   - `DelegateWorkflowInput { goal: String(min 1, nonblank) }`
-  - `CheckWorkflowStatusInput { workflow_id: WorkflowId, workflow_task_id: Option<WorkflowTaskId> }`
-  - `CancelWorkflowInput { workflow_task_id: WorkflowTaskId, reason: String(default "") }`
+  - `CheckWorkflowStatusInput { workflow_id: WorkflowId, workflow_task_id: Option<WorkflowSessionId> }`
+  - `CancelWorkflowInput { workflow_task_id: WorkflowSessionId, reason: String(default "") }`
 - `RunSubagentInput { agent_name: String, prompt: String(min 1) }` — the registered tool is the **restricted** variant (`RestrictedRunSubagentTool`): `agent_name` carries a runtime-scoped `enum` of the caller's dispatchable subagents (`json_schema_extra={"enum": allowed_list}`), so the emitted spec's input schema is **patched per caller at spec-build time** with that enum (and validated against it). The crate-owned Phase-4 parity snapshot (AC-tools-08) must reflect the patched-enum schema, not a bare `agent_name: String`.
 - `CheckSubagentProgressInput { subagent_session_id: SubagentSessionId, last_n_messages: u8 (1..=10, default 5) }`
 - `CancelSubagentInput { subagent_session_id: SubagentSessionId, reason: String }`

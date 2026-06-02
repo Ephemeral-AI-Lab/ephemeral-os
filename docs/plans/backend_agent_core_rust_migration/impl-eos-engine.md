@@ -307,7 +307,7 @@ keyed by `task_id` (§7).
 `agent_id`, `command: String`, `status: BackgroundTaskStatus`, `result: Option<JsonObject>`,
 `started_at: Instant` (`tokio::time::Instant`; source `time.monotonic()`).
 
-`WorkflowBackgroundRecord`: `workflow_task_id: WorkflowTaskId`, `workflow_id: WorkflowId`,
+`WorkflowBackgroundRecord`: `workflow_task_id: WorkflowSessionId`, `workflow_id: WorkflowId`,
 `parent_task_id: TaskId`, `parent_attempt_id: Option<AttemptId>`, `request_id:
 RequestId`, `agent_id: String`, `goal: String`, `status`, `final_status:
 Option<String>`, `final_outcomes: Vec<JsonObject>`, `last_seen_at: Instant`

@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import re
 import types
+import asyncio
 from pathlib import Path
 from typing import Any
 
@@ -57,6 +58,11 @@ class _StubHandle:
     def __init__(self) -> None:
         self.request_id = "stub-request"
         self.launcher = _StubLauncher()
+        self.root_agent_task = asyncio.create_task(_completed_root_agent())
+
+
+async def _completed_root_agent() -> None:
+    return None
 
 
 class _StubStores:

@@ -10,7 +10,8 @@
 planner-authored generator/reducer DAG to a terminal outcome. It owns: `WorkflowStarter`
 (validate parent, create workflow + first iteration + first attempt; **leave the parent
 task running**); the per-Attempt `AttemptOrchestrator` state machine and its RUN-stage
-scheduler (`AttemptStageAdvancer`); `WorkflowLifecycle` (iteration-chain extension + close
+scheduler (`AttemptStageAdvancer`, bounded per-Attempt by the `max_concurrent_task_runs`
+launch cap); `WorkflowLifecycle` (iteration-chain extension + close
 projection); `IterationAttemptCoordinator` + `OpenIterationCoordinatorRegistry` (attempt
 retry budget); `AttemptOrchestratorRegistry`; the agent-launch surface (`AgentLaunch`,
 `AgentLaunchFactory`, `AttemptDeps`, the `AgentRunner` seam); and the
@@ -233,6 +234,7 @@ persisted dependency cycle.
 | `composer` | `Option<Arc<AgentEntryComposer>>` | |
 | `audit_sink` | `Arc<dyn AuditSink>` | eos-audit; default noop |
 | `runner` | `Arc<dyn AgentRunner>` | **Rust-only DI addition** (promotes the Python `EphemeralAttemptAgentLauncher._runner` param); the injected `AgentRunner` trait seam (§7, anchor §6a), wired by `eos-runtime`, no eos-engine edge |
+| `max_concurrent_task_runs` | `usize` | **Rust-only DI addition.** The **per-Attempt** cap on concurrently-launched plan-task (generator/reducer) agent runs; sourced from `config.attempt.max_concurrent_task_runs` (eos-config) and wired in by `eos-runtime` (eos-workflow has no eos-config edge — overview §4), never zero. Ready-but-unadmitted tasks wait in persisted `pending` state until a running task completes and frees a slot. This is the deadlock-free fan-out bound — see §7. |
 
 Representative snippet (the run-stage scheduler core — §7 single-writer loop, store as truth):
 
@@ -244,6 +246,7 @@ async fn advance_run_stage(&self, cancel: &CancellationToken) -> Result<(), Work
     loop {
         let tasks = self.plan_task_records().await?;                 // typed Vec<Task> from store
         for task_id in ready_pending_plan_ids(&tasks)? {            // re-derived each tick
+            if set.len() >= self.deps.max_concurrent_task_runs { break; } // per-attempt cap; surplus stay pending
             self.mark_running_and_audit(&task_id).await?;
             let launch = self.build_launch(&task_id, &tasks).await?;
             let run = self.deps.runner.run(launch.clone());         // injected trait; no engine edge
@@ -287,6 +290,27 @@ its absence → the scheduler synthesizes the matching failure, §8.4).
   (`async-cancellation-token`). **The store is the single source of truth**: readiness and
   quiescence are re-derived from `task_store` each tick — there is no in-memory DAG mutation
   that could diverge from persistence (anchor §7 last bullet).
+- **Per-attempt task-launch cap (`max_concurrent_task_runs`) — the deadlock-free fan-out bound.**
+  Each tick admits ready plan tasks into the `JoinSet` only while
+  `set.len() < max_concurrent_task_runs` (sourced from `config.attempt.max_concurrent_task_runs`,
+  never zero; read by `eos-runtime` and injected into `AttemptDeps`). Surplus ready
+  tasks are **not** queued in memory — they stay in persisted `pending` state and are
+  re-picked on a later tick when a running task completes and frees a slot (the store is the
+  admission queue; there is no separate dispatcher). This bounds how many generator/reducer
+  agents one Attempt runs at once, so a generator-heavy DAG cannot stampede the shared LLM,
+  sandbox, SQLite, and audit resources. **The cap is deliberately per-Attempt, never
+  per-request.** Each Attempt owns an independent `JoinSet` and an independent budget, so a
+  generator that blocks on a delegated child workflow — holding one slot in *its own*
+  attempt — never competes with that child for permits: the child runs under its own
+  Attempt's cap. A single flat per-request pool would couple parent and child budgets and
+  **deadlock** whenever the pool is smaller than the live delegation depth (parents hold
+  permits while waiting on children that can never acquire one); the hierarchical
+  per-Attempt budget is structurally deadlock-free, which is exactly why the limit lives
+  here and not at the request level (no global orchestrator, anchor §2). Scope note: this
+  cap is a **Rust-design addition** (Python spawned every ready run unbounded via
+  `loop.create_task`) and it bounds **per-Attempt** fan-out only — it intentionally does
+  **not** bound aggregate fan-out across nested attempts or engine-supervised
+  subagents/advisors.
 - **Single-writer rule:** exactly one scheduler task advances a given attempt; terminal
   reports are applied by that task only. This replaces Python's re-entrant
   `advance_ready_tasks` recursion and the tool→orchestrator callback. No lock is held across
@@ -323,7 +347,8 @@ State machine and ordering semantics preserved from the Python source (plan §9)
    submission belongs to this attempt and planner, enforces the full/partial plan rule
    (`completes` must not set `deferred_goal_for_next_iteration`; `defers` must), persists the
    plan (generator + reducer task ids, deferred goal), sets stage RUN, and advances. The RUN
-   scheduler runs the generator∪reducer set to **quiescence**; `all_done` → close PASSED;
+   scheduler runs the generator∪reducer set to **quiescence** (launches bounded per-Attempt by
+   `max_concurrent_task_runs`; surplus ready tasks stay persisted-`pending` — §7); `all_done` → close PASSED;
    `any_failed_or_blocked` (with no remaining ready/runnable work) → close FAILED `TASK_FAILED`.
    A passing attempt closes the iteration immediately (orchestrator.py:106-160, run_stage.py).
 3. **Plan reaching RUN is already structurally valid (precondition).** The structural
@@ -467,6 +492,10 @@ context tests under `backend/tests`; planner-DAG invariants; reducer exit gate.
 - **AC-eos-workflow-08 (no eos-engine edge)** — the crate compiles with `eos-engine` absent from
   `[dependencies]`; the runner is exercised via an injected test double. *Test:* `cargo` build +
   `run_stage::tests::injected_runner_double`.
+- **AC-eos-workflow-08b (per-attempt fan-out cap)** — with 10 ready generators and
+  `max_concurrent_task_runs = 3`, the scheduler launches only 3 agent futures before a
+  completion frees the next slot; surplus ready tasks stay persisted-`pending`, and reducers
+  still run only after their `needs` are done. *Test:* `run_stage::tests::fanout_respects_concurrency_cap`.
 - **AC-eos-workflow-09 (context builder)** — planner/generator/reducer `build` produces the
   expected `AgentContext` section tree from store state (insertion-ordered `Vec<(String, String)>` attrs matching the Python dict), and a
   recipe≠role mismatch raises `WorkflowError`. *Test:* `context::tests::build_*` + a Phase-0
@@ -486,8 +515,9 @@ context tests under `backend/tests`; planner-DAG invariants; reducer exit gate.
 6. `attempt/plan_dag.rs`: `DagStatus` + persisted-needs/reachability/quiescence (owned half) → AC-04.
 7. `attempt/launch.rs`: `AgentLaunch`, `AttemptDeps`, the `AgentRunner` trait, `AgentLaunchFactory` → AC-08.
 8. `attempt/orchestrator_registry.rs` (`pub(crate)`) + `attempt/orchestrator.rs` state machine → AC-06.
-9. `attempt/run_stage.rs`: single-writer `JoinSet` scheduler with `CancellationToken`, including
-   the no-terminal-report → synthesized-failure mapping (§8.4) → AC-06, AC-07.
+9. `attempt/run_stage.rs`: single-writer `JoinSet` scheduler with `CancellationToken`, the
+   per-attempt `max_concurrent_task_runs` admission cap, and the no-terminal-report →
+   synthesized-failure mapping (§8.4) → AC-06, AC-07, AC-08b.
 10. `iteration/coordinator.rs`: retry-budget loop + close routing → AC-10.
 11. `lifecycle.rs`: `WorkflowLifecycle` create/close/continuation → AC-05, AC-10.
 12. `starter.rs`: `WorkflowStarter` + compensation saga → AC-01, AC-02, AC-03.

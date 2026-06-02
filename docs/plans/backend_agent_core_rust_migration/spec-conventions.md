@@ -117,7 +117,7 @@ shared contract.
 
 | Contract / type | Owning crate | Referenced by |
 |---|---|---|
-| Newtype IDs (`TaskId`, `WorkflowId`, `IterationId`, `AttemptId`, `RequestId`, `AgentRunId`, `SandboxId`, `ToolUseId`, `InvocationId`, `WorkflowTaskId`, `CommandSessionId`, `SubagentSessionId`), `UtcDateTime`, `Clock` trait, `CoreError`, `JsonObject` | `eos-types` | all |
+| Newtype IDs (`TaskId`, `WorkflowId`, `IterationId`, `AttemptId`, `RequestId`, `AgentRunId`, `SandboxId`, `ToolUseId`, `InvocationId`, `WorkflowSessionId`, `CommandSessionId`, `SubagentSessionId`), `UtcDateTime`, `Clock` trait, `CoreError`, `JsonObject` | `eos-types` | all |
 | Domain state (`Task`, `Workflow`, `Iteration`, `Attempt`), status/stage/reason enums, outcome projections, terminal submission DTOs, **per-entity `Store` traits** | `eos-state` | `eos-db`, `eos-tools`, `eos-engine`, `eos-workflow`, `eos-runtime` |
 | SQLite row structs, repository impls, migrations, `SqlitePool` builder, model registry | `eos-db` | `eos-runtime` |
 | `CentralConfig` + section configs, env loading, path resolution, validation | `eos-config` | `eos-db`, `eos-llm-client`, `eos-sandbox-host`, `eos-skills`, `eos-plugin-catalog`, `eos-runtime` |

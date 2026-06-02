@@ -67,7 +67,6 @@ from test_runner.scenarios.sandbox.occ_concurrent_conflicts import (
 )
 from test_runner.scenarios.sandbox.plugin import (
     PluginIntentContract,
-    PluginIwsPolicy,
     PluginReadOnlyLspRefresh,
     PluginServiceEvict,
     PluginSetupFailure,
@@ -105,7 +104,6 @@ __all__ = [
     "HighConcurrencyLayerstackOverlayOcc",
     "OccConcurrentConflicts",
     "PluginIntentContract",
-    "PluginIwsPolicy",
     "PluginReadOnlyLspRefresh",
     "PluginServiceEvict",
     "PluginSetupFailure",

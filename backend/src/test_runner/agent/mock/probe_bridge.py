@@ -822,23 +822,6 @@ def bridge_probe_for(
 
         return _plugin_intent, "Plugin intent-contract probe passed."
 
-    if action == "plugin_iws_policy":
-
-        def _plugin_iws(call_tool: Any) -> Awaitable[str]:
-            from test_runner.agent.mock.plugin_workspace_probe import (
-                run_plugin_iws_policy_probe,
-            )
-
-            return run_plugin_iws_policy_probe(
-                metadata=metadata,
-                emit=_noop_emit,
-                call_tool=call_tool,
-                record_tool_check=probe_ctx.record_check,
-                sandbox_id=metadata.sandbox_id,
-            )
-
-        return _plugin_iws, "Plugin isolated-workspace policy probe passed."
-
     if action == "plugin_setup_failure":
 
         def _plugin_setup_failure(call_tool: Any) -> Awaitable[str]:

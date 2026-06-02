@@ -238,7 +238,8 @@ from regressing hot-path behavior while it is still staged:
   transcript, including foreground fan-in and terminal-batch rejection.
 - `eos-db`: concurrent SQLite store roundtrips under WAL/busy-timeout with
   workflow/iteration/attempt/task inserts and close updates.
-- `eos-workflow`: fan-out/fan-in scheduler load test with reducer gate.
+- `eos-workflow`: fan-out/fan-in scheduler load test with a configured per-attempt
+  `max_concurrent_task_runs` cap and reducer gate.
 - Phase 7: old/new adapter E2E latency comparison for root + delegated workflows,
   reported as an artifact before package retirement.
 
@@ -330,7 +331,7 @@ from regressing hot-path behavior while it is still staged:
 | Phase | Crate | Status | Date | Note / commit |
 |---|---|---|---|---|
 | 0 | (workspace) | DONE | 2026-06-02 | agent-core workspace + 15 crate skeletons + eos-parity harness; frozen DAG/profiles/schema/SSE/prompt-report guard tests green (`cargo fmt --check`, `clippy -D warnings`, `test -p eos-parity`); CI workflow `.github/workflows/agent-core.yml` added. Phase-0 gap pass (2026-06-02): (a) frozen DAG corrected to drop the spurious `eos-engine -> eos-state` edge so the §5/§4 edge set matches across all 16 rows (AC-workspace-02); (b) added the AC-workspace-10 CI "observability smoke" step (`cargo check --workspace --features eos-runtime/tokio-console`) — the default `build` never enabled `console-subscriber`, so AC-10's named proof was missing from CI; (c) the `eos-parity` `unwrap_used`/`print_stdout = allow` override (impl checklist step 5) is intentionally deferred — `[lints] workspace = true` cannot also carry per-lint overrides, and the guard tests use `.expect()` + `pretty_assertions` (no `unwrap`/`println`), so `clippy -D warnings` is green without it. Uncommitted. |
-| 1 | eos-types | NOT STARTED | — | — |
+| 1 | eos-types | DONE | 2026-06-02 | 12 newtype IDs via `define_id!` (`TryFrom<String>`/`TryFrom<&str>` parse-don't-validate; `new_v4` on all but `ToolUseId`); `UtcDateTime` (Copy, UTC-normalized incl. deserialize path, rfc3339 serde + `schema_with` date-time); `Clock`/`SystemClock`/`TestClock`; `CoreError`; `JsonValue`/`JsonObject`. AC-types-01..06 covered (47 tests). Gates green: `cargo fmt --check`, `clippy -p eos-types --all-targets -D warnings`, `test -p eos-types`; eos-parity unaffected. 3-lens adversarial review applied: fixed From→TryFrom (empty-id invariant), deserialize UTC-normalization blocker, and 9→12 IDs after a parallel spec edit. Per-user decision: the 12th ID is `WorkflowSessionId` (renamed from spec's `WorkflowTaskId` for consistency with `Command`/`SubagentSessionId`; wire/tool param stays `workflow_task_id`) — spec/anchor/tools/engine refs updated to match. Deferred (cutover, not Phase-1): exact `Z`-vs-`+00:00` byte parity with Python isoformat (parsing accepts both). Uncommitted. |
 | 2 | eos-config | NOT STARTED | — | — |
 | 2 | eos-state | NOT STARTED | — | — |
 | 2 | eos-audit | NOT STARTED | — | — |

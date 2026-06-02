@@ -161,7 +161,7 @@ and the `Intent` enum (`eos-sandbox-api`); `ToolSpec` (`eos-llm-client`).
 | `SandboxId` | `String` | sandbox host | audit, sandbox-api, sandbox-host |
 | `ToolUseId` | `String` | provider stream (model-assigned) | audit, llm-client, tools, engine |
 | `InvocationId` | `String` | tool dispatch | audit, sandbox-api, tools |
-| `WorkflowTaskId` | `String` | engine background workflow handle | tools, engine, workflow |
+| `WorkflowSessionId` | `String` | engine background workflow handle | tools, engine, workflow |
 | `CommandSessionId` | `String` | sandbox command-session tool | tools, engine |
 | `SubagentSessionId` | `String` | engine subagent supervisor | tools, engine |
 

@@ -37,7 +37,6 @@ def _report(run_dir: Path, *, request_id: str = "tcr-1") -> PipelineReport:
     return PipelineReport(
         status="completed",
         request_id=request_id,
-        request_id="req",
         sandbox_id="sbx-77",
         instance_id="dask__dask_2023.3.2_2023.4.0",
         run_dir=run_dir,

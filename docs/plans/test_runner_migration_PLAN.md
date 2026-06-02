@@ -324,7 +324,8 @@ regression harness.
      background cancellation from model-facing assertions
 3. Plugin service:
    - route plugin scenarios through Rust PPC service operations
-   - assert isolated-mode plugin blocking
+   - do not open isolated workspace from plugin scenarios; isolated workspace
+     owns its own no-plugin/LSP active-mode boundary
    - assert read-only service refresh does not publish
    - assert write/self-managed callbacks publish through the same daemon OCC
      writer/storage lock as primary publishes
@@ -355,7 +356,7 @@ regression harness.
    - run tests against `eosd ns-holder` + `eosd ns-runner` setns mode
    - assert enter rejects active sandbox-bound background work
    - assert exit drains/cancels active work and releases leases/scratch
-   - assert no plugin/LSP operations while isolated mode is active
+   - assert isolated mode never depends on plugin/LSP operations
    - assert isolated never links/publishes through OCC from runner-visible
      behavior: writes are captured for audit and discarded on exit
    - assert holder death, setup timeout, veth/network failure, and SIGTERM ->
@@ -551,7 +552,7 @@ least one runner scenario where the behavior crosses the real engine/tool path.
 | `sandbox-plugin-service-adversarial-plan.md` | Generic service registry | manifest validation, dynamic op route resolution, service key digest isolation, status shape, LRU eviction, crash/timeout/heartbeat teardown |
 | `sandbox-plugin-service-adversarial-plan.md` | Freshness | `workspace_snapshot_refresh` before every read, all three refresh strategies, retryable stale errors, non-LSP cached dummy service, no stale response after peer publish |
 | `sandbox-plugin-service-adversarial-plan.md` | Plugin writes | read-only never publishes, write workers publish through daemon overlay/OCC, self-managed callbacks use the same per-root writer/storage lock, interleave with direct write/edit/shell |
-| `sandbox-plugin-service-adversarial-plan.md` | Plugin isolation | `api.plugin.*`, dynamic `plugin.*`, and PPC callbacks all reject under active isolated workspace before warm start or status path |
+| `sandbox-plugin-service-adversarial-plan.md` | Plugin/IWS boundary | Plugin live scenarios must not open isolated workspace; isolated workspace coverage owns the active-mode no-plugin/LSP boundary |
 
 ## 5. Verification commands
 

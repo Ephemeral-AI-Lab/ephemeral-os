@@ -70,7 +70,6 @@ from test_runner.scenarios.sandbox import (
     HighConcurrencyLayerstackOverlayOcc,
     OccConcurrentConflicts,
     PluginIntentContract,
-    PluginIwsPolicy,
     PluginReadOnlyLspRefresh,
     PluginServiceEvict,
     PluginSetupFailure,
@@ -138,7 +137,6 @@ SCENARIO_REGISTRY: dict[str, type[Scenario]] = {
     "sandbox.plugin_read_only_lsp_refresh": PluginReadOnlyLspRefresh,
     "sandbox.plugin_write_allowed_publish": PluginWriteAllowedPublish,
     "sandbox.plugin_intent_contract": PluginIntentContract,
-    "sandbox.plugin_iws_policy": PluginIwsPolicy,
     "sandbox.plugin_setup_failure": PluginSetupFailure,
     "sandbox.plugin_service_evict": PluginServiceEvict,
     # Focused planner-validation scenarios.
@@ -207,7 +205,6 @@ __all__ = [
     "PlannerUnknownAgentName",
     "PlannerUnknownDep",
     "PluginIntentContract",
-    "PluginIwsPolicy",
     "PluginReadOnlyLspRefresh",
     "PluginServiceEvict",
     "PluginSetupFailure",

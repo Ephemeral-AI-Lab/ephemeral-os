@@ -64,6 +64,7 @@ No `dyn` trait objects are needed; this crate exposes concrete types only
 | `config/sections/providers.py` | `providers.rs` | `ProvidersConfig`/`RetryConfig`/`MinimaxConfig` port; retry defaults become the source of truth for `eos-llm-client` (GC-eos-config-04). |
 | `config/sections/runner.py` | **dropped** | Test-runner flavored; not imported (GC-eos-config-05). |
 | `config/sections/engine.py` | **dropped (empty)** | `EngineConfig` has zero fields; omit from Rust `CentralConfig` (YAGNI, GC-eos-config-07). |
+| — | `attempt.rs` | **new (Rust-only).** `AttemptConfig`: per-Attempt run-stage tunables (`max_concurrent_task_runs`). No Python parity — the Python attempt launcher spawned every ready run unbounded via `loop.create_task`. |
 | — | `validation.rs` | Contradiction checks: network DB URL reject, Docker `privileged + no_privilege`. |
 
 **In scope:** layered loading, `EOS__` nested env, legacy env adapters, path
@@ -77,13 +78,14 @@ any networking or DB access.
 src/
   lib.rs          # re-exports CentralConfig, section configs, ConfigError,
                   # load_central_config (proj-pub-use-reexport); crate lints.
-  config.rs       # CentralConfig { database, sandbox, providers } + builder/Default.
+  config.rs       # CentralConfig { database, sandbox, providers, attempt } + builder/Default.
   loader.rs       # load_central_config(): merge defaults<YAML<env<init; precedence.
   env.rs          # EOS__ nested parsing + legacy env adapter table; complex-value parse.
   paths.rs        # config/data/log dir + ephemeralos.yaml discovery; path env vars.
   database.rs     # DatabaseConfig (SQLite-only) + DatabaseUrl newtype.
   sandbox.rs      # SandboxConfig, DockerConfig, Docker-only SandboxProvider enum.
   providers.rs    # ProvidersConfig, RetryConfig, MinimaxConfig.
+  attempt.rs      # AttemptConfig (per-Attempt run-stage tunables: max_concurrent_task_runs).
   validation.rs   # validate(&CentralConfig) -> Result<(), ConfigError> contradictions.
   error.rs        # ConfigError (thiserror).
 ```
@@ -124,6 +126,7 @@ public structs that may grow (`api-non-exhaustive`).
 | `database` | `DatabaseConfig` | default = `DatabaseConfig::default()` | `central.py:31` |
 | `sandbox` | `SandboxConfig` | default | `central.py:32` |
 | `providers` | `ProvidersConfig` | default | `central.py:33` |
+| `attempt` | `AttemptConfig` | **new (Rust-only)**; default | — |
 
 `runner` and `engine` are intentionally absent (GC-eos-config-05, -07).
 
@@ -181,6 +184,25 @@ GC-eos-config-04):
 Schema itself has no ordering concept; see AC-10's normalization step).
 
 `MinimaxConfig`: `base_url: String = ""`, `model: String = ""`.
+
+### AttemptConfig — new (Rust-only); no Python source
+
+Per-Attempt run-stage tunables. There is no Python equivalent (the attempt
+launcher spawned every ready run unbounded via `loop.create_task`); this section
+is the configurable home of the per-Attempt fan-out cap consumed by `eos-workflow`
+(see impl-eos-workflow.md §7).
+
+| Field | Rust type | serde/schemars notes | Source-of-truth |
+|---|---|---|---|
+| `max_concurrent_task_runs` | `usize` | default `8`, `>= 1` (validate, §8 item 9); per-Attempt cap on concurrently-launched generator/reducer agent runs | — (Rust-only) |
+
+`eos-workflow` has **no `eos-config` edge** (overview §4 topology), so the value
+does not flow directly: `eos-runtime` (the composition root) reads
+`config.attempt.max_concurrent_task_runs` and injects it into the per-attempt
+`AttemptDeps.max_concurrent_task_runs` (a plain `usize`). This keeps the workflow
+crate config-agnostic while making the cap a first-class central-config knob,
+overridable via `EOS__ATTEMPT__MAX_CONCURRENT_TASK_RUNS` (§8 item 2) or YAML
+`attempt.max_concurrent_task_runs`.
 
 ### Representative snippets
 
@@ -252,6 +274,12 @@ pub(crate) fn validate(cfg: &CentralConfig) -> Result<(), ConfigError> {
         return Err(ConfigError::OutOfRange {
             field: "providers.retry.*delay_s".into(),
             detail: "must be >= 0".into(),
+        });
+    }
+    if cfg.attempt.max_concurrent_task_runs < 1 {
+        return Err(ConfigError::OutOfRange {
+            field: "attempt.max_concurrent_task_runs".into(),
+            detail: "must be >= 1".into(),
         });
     }
     Ok(())
@@ -363,8 +391,9 @@ pub enum ConfigError {
    (newtypes would ripple into the type tables, `Default` impls, and schema). Only
    constraints the Rust type does not already give are checked: `pool_size >= 1`
    (`database.py:26`), `timeout_s > 0` / `runtime_client_timeout_s > 0`
-   (`sandbox.py:42-43`), and `base_delay_s >= 0` / `max_delay_s >= 0`
-   (`providers.py:21-22`). `max_retries >= 0` is already enforced by `u32`, so no
+   (`sandbox.py:42-43`), `base_delay_s >= 0` / `max_delay_s >= 0`
+   (`providers.py:21-22`), and `attempt.max_concurrent_task_runs >= 1` (Rust-only,
+   §6). `max_retries >= 0` is already enforced by `u32`, so no
    runtime check is added. A range failure surfaces as `ConfigError::OutOfRange`.
    (Invariant → AC-eos-config-11.)
 
@@ -437,7 +466,8 @@ Anchor §11 maps this crate to **"env-override tests"**.
 - **AC-eos-config-02** *(defaults parity)* — `test_default_config_matches_python`:
   `CentralConfig::default()` yields `timeout_s=300.0`,
   `runtime_client_timeout_s=600.0`, retry `{3, 1.0, 30.0, {429,500,502,503,529}}`,
-  `pool_size=5`, `default_provider=Docker`, `wal=true`, `foreign_keys=true`.
+  `pool_size=5`, `default_provider=Docker`, `wal=true`, `foreign_keys=true`, and
+  the Rust-only `attempt.max_concurrent_task_runs=8`.
 - **AC-eos-config-03** *(EOS__ nested env + scalar coercion)* —
   `test_eos_nested_env_sets_path`: `EOS__SANDBOX__TIMEOUT_S=120` →
   `sandbox.timeout_s == 120.0` (string `"120"` YAML-coerced to `f64`, §8 item 8);
@@ -475,8 +505,9 @@ Anchor §11 maps this crate to **"env-override tests"**.
   `frozenset[int]` (array-of-integer, ignore item ordering).
 - **AC-eos-config-11** *(range constraints)* — `test_range_constraints_rejected`:
   `validate` rejects `database.pool_size=0`, `sandbox.timeout_s=0.0`,
-  `sandbox.runtime_client_timeout_s=0.0`, and
-  `providers.retry.base_delay_s=-1.0` with `ConfigError::OutOfRange` (Pydantic
+  `sandbox.runtime_client_timeout_s=0.0`,
+  `providers.retry.base_delay_s=-1.0`, and `attempt.max_concurrent_task_runs=0`
+  with `ConfigError::OutOfRange` (Pydantic
   `ge`/`gt` parity, §8 item 9); valid in-range values pass.
 
 ## 12. Implementation Checklist
@@ -488,8 +519,9 @@ Anchor §11 maps this crate to **"env-override tests"**.
    defaults. Test: AC-02 (sandbox subset).
 4. `providers.rs`: `ProvidersConfig`/`RetryConfig`/`MinimaxConfig` + defaults
    (`BTreeSet<u16>`). Test: AC-02 (retry).
-5. `config.rs`: `CentralConfig { database, sandbox, providers }` + `Default` +
-   optional builder (`api-builder-pattern`) for init overrides.
+5. `config.rs`: `CentralConfig { database, sandbox, providers, attempt }` + `Default` +
+   optional builder (`api-builder-pattern`) for init overrides. `attempt.rs`:
+   `AttemptConfig { max_concurrent_task_runs }` + `Default` (`= 8`). Test: AC-02 (attempt subset).
 6. `env.rs`: `EOS__` nested parser + all-scalar YAML coercion (§8 item 8) + the
    9-entry legacy adapter table + Docker default snapshot + provider alias. Tests:
    AC-03, AC-04, AC-05, AC-09.

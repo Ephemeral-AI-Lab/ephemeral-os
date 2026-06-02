@@ -377,8 +377,12 @@ def test_lsp_install_uploads_host_package_with_put_archive(
         for command in fake.calls
     )
     assert len(put_archive.calls) == 2
-    assert put_archive.calls[0][1] == "/eos"
-    assert put_archive.calls[1][1] == "/eos"
+    assert put_archive.calls[0][1].startswith(
+        "/var/lib/ephemeralos/plugin-archives/"
+    )
+    assert put_archive.calls[1][1].startswith(
+        "/var/lib/ephemeralos/plugin-archives/"
+    )
     assert any(
         name.endswith("/plugin.md") for name in put_archive.calls[0][2]
     )
@@ -393,3 +397,9 @@ def test_lsp_install_uploads_host_package_with_put_archive(
         "plugin-packages/lsp/pyright.tgz",
     }
     assert not any("base64 -d" in command for command in fake.calls)
+    assert not any("/tmp" in command for command in fake.calls)
+    assert any(
+        "cp -a /var/lib/ephemeralos/plugin-archives/" in command
+        and " /eos/" in command
+        for command in fake.calls
+    )

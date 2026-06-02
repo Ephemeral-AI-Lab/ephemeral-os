@@ -26,8 +26,8 @@ def _plan(action_id: str, action_spec: str, summary_hint: str) -> dict[str, Any]
                 "prompt": (
                     f"Confirm plugin probe '{action_id}' wrote its summary to "
                     f"{summary_hint} and that READ_ONLY service latency, "
-                    "WRITE_ALLOWED overlay/OCC behavior, and isolated-workspace "
-                    "policy matched the 3.5 live E2E contract."
+                    "WRITE_ALLOWED overlay/OCC behavior, and service lifecycle "
+                    "matched the 3.5 live E2E contract."
                 ),
             }
         ],
@@ -117,17 +117,6 @@ PluginIntentContract = _scenario(
     ),
     summary_path_hint="/testbed/.ephemeralos/sweevo-mock/plugin/intent_contract/summary.json",
 )
-PluginIwsPolicy = _scenario(
-    "PluginIwsPolicy",
-    action_id="plugin_iws_policy",
-    action_spec=(
-        "ACTION plugin_iws_policy. Enter isolated_workspace for the executor "
-        "agent, prove generic and dynamic plugin daemon ops are blocked with "
-        "forbidden_in_isolated_workspace, exit, and verify default mode permits "
-        "plugin status."
-    ),
-    summary_path_hint="/testbed/.ephemeralos/sweevo-mock/plugin/iws_policy/summary.json",
-)
 PluginSetupFailure = _scenario(
     "PluginSetupFailure",
     action_id="plugin_setup_failure",
@@ -152,7 +141,6 @@ PluginServiceEvict = _scenario(
 
 __all__ = [
     "PluginIntentContract",
-    "PluginIwsPolicy",
     "PluginReadOnlyLspRefresh",
     "PluginServiceEvict",
     "PluginSetupFailure",
