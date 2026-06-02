@@ -1,4 +1,4 @@
-"""3.4.2 PTY cancel/drain regression for background command sessions."""
+"""3.4.2 cancel/drain regression for background command sessions."""
 
 from __future__ import annotations
 
@@ -47,12 +47,12 @@ async def test_background_heartbeat_loss_reaps_only_stale_bg(
     )
 
     assert summary["mode"] == "heartbeat_loss", summary
-    assert summary["pty_sessions_during_launch"] >= 2, summary
+    assert summary["command_sessions_during_launch"] >= 2, summary
     assert not summary["foreground"]["is_error"], summary
     assert not summary["protected"]["is_error"], summary
     assert summary["protected_published"], summary
     assert summary["stale"]["is_error"] or summary["stale"]["cancelled"], summary
     assert not summary["stale_published"], summary
-    assert summary["pty_sessions_after"] == 0, summary
+    assert summary["command_sessions_after"] == 0, summary
 
     assert_background_performance_artifacts(report)

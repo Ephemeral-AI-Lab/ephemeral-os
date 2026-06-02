@@ -5,7 +5,7 @@
 //! namespace (ns-holder spawn -> ns FDs -> overlay mount -> DNS -> net-ready),
 //! and persists the handle. `exit` tears down the namespace + network + cgroup,
 //! releases the lease, and DISCARDS the upperdir (writes are captured for audit
-//! only, never published). Daemon-side gates own active command/PTY quiescence
+//! only, never published). Daemon-side gates own active command-session quiescence
 //! for the current Rust slice.
 //! `// PORT backend/src/sandbox/isolated_workspace/_control_plane/workspace_handle_lifecycle.py:39-260`
 

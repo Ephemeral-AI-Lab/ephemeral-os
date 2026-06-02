@@ -10,9 +10,7 @@ allowed_tools:
   - write_file
   - edit_file
   - exec_command
-  - write_pty_command_stdin
-  - check_pty_command_progress
-  - cancel_pty_command
+  - write_stdin
   - glob
   - grep
   - lsp.hover

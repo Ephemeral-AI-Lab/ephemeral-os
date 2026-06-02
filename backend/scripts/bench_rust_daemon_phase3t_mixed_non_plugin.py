@@ -58,7 +58,7 @@ RETRYABLE_DAEMON_OPS = {
     "api.v1.grep",
     "api.v1.read_file",
 }
-PTY_ECHO_PROGRESS_POLLS = 40
+COMMAND_SESSION_ECHO_PROGRESS_POLLS = 40
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -296,7 +296,9 @@ class DaemonClient:
     async def read_file(self, path: str) -> dict[str, Any]:
         return await self.call("api.v1.read_file", {"path": f"{WORKSPACE_ROOT}/{path}"})
 
-    async def write_file(self, path: str, content: str, *, overwrite: bool = True) -> dict[str, Any]:
+    async def write_file(
+        self, path: str, content: str, *, overwrite: bool = True
+    ) -> dict[str, Any]:
         return await self.call(
             "api.v1.write_file",
             {"path": f"{WORKSPACE_ROOT}/{path}", "content": content, "overwrite": overwrite},
@@ -315,38 +317,38 @@ class DaemonClient:
         self,
         cmd: str,
         *,
-        tty: bool,
         yield_time_ms: int = 1000,
         timeout: int = 30,
     ) -> dict[str, Any]:
         return await self.call(
             "api.v1.exec_command",
-            {"cmd": cmd, "tty": tty, "yield_time_ms": yield_time_ms, "timeout": timeout},
+            {"cmd": cmd, "yield_time_ms": yield_time_ms, "timeout": timeout},
         )
 
-    async def pty_write(self, pty_session_id: str, chars: str) -> dict[str, Any]:
+    async def command_session_write(self, command_session_id: str, chars: str) -> dict[str, Any]:
         return await self.call(
-            "api.v1.pty.write_stdin",
+            "api.v1.command.write_stdin",
             {
-                "pty_session_id": pty_session_id,
+                "command_session_id": command_session_id,
                 "chars": chars,
                 "yield_time_ms": 100,
-                "max_tokens": 2000,
+                "max_output_tokens": 2000,
             },
         )
 
-    async def pty_progress(self, pty_session_id: str) -> dict[str, Any]:
+    async def command_session_progress(self, command_session_id: str) -> dict[str, Any]:
         return await self.call(
-            "api.v1.pty.progress",
+            "api.v1.command.write_stdin",
             {
-                "pty_session_id": pty_session_id,
-                "time": 0.05,
-                "max_tokens": 2000,
+                "command_session_id": command_session_id,
+                "chars": "",
+                "yield_time_ms": 50,
+                "max_output_tokens": 2000,
             },
         )
 
-    async def pty_cancel(self, pty_session_id: str) -> dict[str, Any]:
-        return await self.call("api.v1.pty.cancel", {"pty_session_id": pty_session_id})
+    async def command_session_cancel(self, command_session_id: str) -> dict[str, Any]:
+        return await self.call("api.v1.command.cancel", {"command_session_id": command_session_id})
 
 
 async def setup_fixtures(
@@ -407,29 +409,31 @@ def operation_builders() -> dict[str, Callable[[int], LoadCall]]:
             {"path": f"{WORKSPACE_ROOT}/{CP4_DIR}/read-target.txt"},
             expect_read,
         ),
-        "write_heavy": lambda index: write_call(f"{CP4_DIR}/write-{index:04d}.txt", f"write-{index}\n"),
+        "write_heavy": lambda index: write_call(
+            f"{CP4_DIR}/write-{index:04d}.txt", f"write-{index}\n"
+        ),
         "edit_heavy": lambda index: edit_call(
             f"{CP4_DIR}/edit-{index:04d}.txt", "base", f"edited-{index}"
         ),
         "conflict_heavy": lambda index: edit_call(
             f"{CP4_DIR}/conflict.txt", "base-conflict", f"conflict-winner-{index}"
         ),
-        "exec_tty_false": lambda index: exec_call(
+        "exec_command_write": lambda index: exec_call(
             f"printf exec-false-{index} > {CP4_DIR}/exec-false-{index:04d}.txt",
-            tty=False,
             path=f"{CP4_DIR}/exec-false-{index:04d}.txt",
             content=f"exec-false-{index}",
         ),
-        "exec_tty_true": lambda index: exec_call(
+        "exec_command_session_write": lambda index: exec_call(
             f"printf exec-true-{index} > {CP4_DIR}/exec-true-{index:04d}.txt",
-            tty=True,
             path=f"{CP4_DIR}/exec-true-{index:04d}.txt",
             content=f"exec-true-{index}",
         ),
         "glob": lambda _index: LoadCall(
             "api.v1.glob",
             {"pattern": "cp4-mixed/*.txt", "path": "."},
-            lambda response: response.get("success") is True and int(response.get("num_files") or 0) > 0,
+            lambda response: (
+                response.get("success") is True and int(response.get("num_files") or 0) > 0
+            ),
         ),
         "grep": lambda _index: LoadCall(
             "api.v1.grep",
@@ -442,15 +446,19 @@ def operation_builders() -> dict[str, Callable[[int], LoadCall]]:
                 "line_numbers": True,
                 "multiline": False,
             },
-            lambda response: response.get("success") is True and int(response.get("num_files") or 0) > 0,
+            lambda response: (
+                response.get("success") is True and int(response.get("num_files") or 0) > 0
+            ),
         ),
-        "pty_input": lambda index: LoadCall(
-            "pty_input",
+        "command_session_input": lambda index: LoadCall(
+            "command_session_input",
             {"index": index},
-            lambda response: response.get("status") in {"ok", "running"} and "echo:input-" in text_out(response),
+            lambda response: (
+                response.get("status") in {"ok", "running"} and "echo:input-" in text_out(response)
+            ),
         ),
-        "pty_long_session": lambda index: LoadCall(
-            "pty_long_session",
+        "command_session_long_session": lambda index: LoadCall(
+            "command_session_long_session",
             {"index": index},
             lambda response: response.get("status") == "cancelled",
         ),
@@ -504,13 +512,12 @@ def edit_call(path: str, old: str, new: str) -> LoadCall:
 def exec_call(
     cmd: str,
     *,
-    tty: bool,
     path: str,
     content: str,
 ) -> LoadCall:
     return LoadCall(
         "api.v1.exec_command",
-        {"cmd": cmd, "tty": tty, "yield_time_ms": 1000, "timeout": 30},
+        {"cmd": cmd, "yield_time_ms": 1000, "timeout": 30},
         lambda response: response.get("status") == "ok" and response.get("exit_code") == 0,
         expected_path=path,
         expected_content=content,
@@ -522,8 +529,8 @@ def mixed_call(index: int) -> LoadCall:
         operation_builders()["read_heavy"],
         operation_builders()["write_heavy"],
         operation_builders()["edit_heavy"],
-        operation_builders()["exec_tty_false"],
-        operation_builders()["exec_tty_true"],
+        operation_builders()["exec_command_write"],
+        operation_builders()["exec_command_session_write"],
         operation_builders()["glob"],
         operation_builders()["grep"],
     ]
@@ -543,7 +550,10 @@ async def measure_concurrent(
     for round_index in range(rounds):
         started = time.perf_counter()
         wave = await asyncio.gather(
-            *(run_load_call(client, build(round_index * concurrency + slot), round_index, slot) for slot in range(concurrency))
+            *(
+                run_load_call(client, build(round_index * concurrency + slot), round_index, slot)
+                for slot in range(concurrency)
+            )
         )
         waves.append(elapsed_ms(started))
         samples.extend(wave)
@@ -576,10 +586,10 @@ async def run_load_call(
     slot: int,
 ) -> dict[str, Any]:
     started = time.perf_counter()
-    if call.op == "pty_input":
-        response = await run_pty_input(client, int(call.args["index"]))
-    elif call.op == "pty_long_session":
-        response = await run_pty_long_session(client)
+    if call.op == "command_session_input":
+        response = await run_command_session_input(client, int(call.args["index"]))
+    elif call.op == "command_session_long_session":
+        response = await run_command_session_long_session(client)
     else:
         response = await client.call(call.op, call.args)
     host_wall_ms = elapsed_ms(started)
@@ -604,31 +614,30 @@ async def run_load_call(
     }
 
 
-async def run_pty_input(client: DaemonClient, index: int) -> dict[str, Any]:
+async def run_command_session_input(client: DaemonClient, index: int) -> dict[str, Any]:
     expected = f"echo:input-{index}"
     start = await client.exec_command(
-        "python3 -c 'import sys; print(\"ready\", flush=True); line=sys.stdin.readline(); print(\"echo:\" + line.strip(), flush=True)'",
-        tty=True,
+        'python3 -c \'import sys; print("ready", flush=True); line=sys.stdin.readline(); print("echo:" + line.strip(), flush=True)\'',
         yield_time_ms=50,
         timeout=30,
     )
-    session_id = str(start.get("pty_session_id") or "")
+    session_id = str(start.get("command_session_id") or "")
     if not session_id:
         return start
     ready_text = text_out(start)
     readiness_polls = 0
-    while "ready" not in ready_text and readiness_polls < PTY_ECHO_PROGRESS_POLLS:
-        progress = await client.pty_progress(session_id)
+    while "ready" not in ready_text and readiness_polls < COMMAND_SESSION_ECHO_PROGRESS_POLLS:
+        progress = await client.command_session_progress(session_id)
         readiness_polls += 1
         ready_text += text_out(progress)
         if progress.get("status") != "running":
             break
-    write = await client.pty_write(session_id, f"input-{index}\n")
+    write = await client.command_session_write(session_id, f"input-{index}\n")
     write["start_response"] = trim_response(start)
     collected = ready_text + text_out(write)
     progress_polls = 0
-    while expected not in collected and progress_polls < PTY_ECHO_PROGRESS_POLLS:
-        progress = await client.pty_progress(session_id)
+    while expected not in collected and progress_polls < COMMAND_SESSION_ECHO_PROGRESS_POLLS:
+        progress = await client.command_session_progress(session_id)
         progress_polls += 1
         collected += text_out(progress)
         if progress.get("status") != "running":
@@ -640,12 +649,12 @@ async def run_pty_input(client: DaemonClient, index: int) -> dict[str, Any]:
     return write
 
 
-async def run_pty_long_session(client: DaemonClient) -> dict[str, Any]:
-    start = await client.exec_command("sleep 30", tty=True, yield_time_ms=50, timeout=60)
-    session_id = str(start.get("pty_session_id") or "")
+async def run_command_session_long_session(client: DaemonClient) -> dict[str, Any]:
+    start = await client.exec_command("sleep 30", yield_time_ms=50, timeout=60)
+    session_id = str(start.get("command_session_id") or "")
     if not session_id:
         return start
-    cancel = await client.pty_cancel(session_id)
+    cancel = await client.command_session_cancel(session_id)
     cancel["start_response"] = trim_response(start)
     return cancel
 
@@ -693,8 +702,7 @@ def summarize_audit(
         "events": events,
         "last_pull_buffer": buffer,
         "snapshot_buffer": snapshot.get("buffer", {}),
-        "drop_free": buffer.get("dropped_event_count") == 0
-        and buffer.get("lost_before_seq") == 0,
+        "drop_free": buffer.get("dropped_event_count") == 0 and buffer.get("lost_before_seq") == 0,
         "buffer_pressure_ok": float(buffer.get("pressure") or 0.0) < 0.8,
         "artifact_event_bytes": sum(len(json.dumps(event, sort_keys=True)) + 1 for event in events),
     }
@@ -724,8 +732,7 @@ async def collect_final_state(client: DaemonClient, load: dict[str, Any]) -> dic
         or conflict_content == "base-conflict\n",
         "gate_pass": not mismatches
         and (
-            conflict_content.startswith("conflict-winner-")
-            or conflict_content == "base-conflict\n"
+            conflict_content.startswith("conflict-winner-") or conflict_content == "base-conflict\n"
         ),
     }
 
@@ -763,7 +770,8 @@ def evaluate_cp4(report: dict[str, Any]) -> dict[str, Any]:
         "release",
     ]
     timing_coverage = {
-        fragment: any(fragment in key for key in timing_keys) for fragment in required_timing_fragments
+        fragment: any(fragment in key for key in timing_keys)
+        for fragment in required_timing_fragments
     }
     audit_counts = report.get("audit", {}).get("event_type_counts", {})
     timing_coverage["cleanup"] = timing_coverage["cleanup"] or bool(
@@ -877,7 +885,9 @@ def performance_markdown(report: dict[str, Any]) -> str:
 def daemon_request(op: str, args: dict[str, Any], invocation_id: str) -> str:
     wire_args = {"layer_stack_root": LAYER_STACK_ROOT, "agent_id": AGENT_ID, **args}
     wire_args.setdefault("invocation_id", invocation_id)
-    return json.dumps({"op": op, "invocation_id": invocation_id, "args": wire_args}, separators=(",", ":"))
+    return json.dumps(
+        {"op": op, "invocation_id": invocation_id, "args": wire_args}, separators=(",", ":")
+    )
 
 
 def expect_read(response: dict[str, Any]) -> bool:
@@ -926,7 +936,7 @@ def trim_response(response: dict[str, Any]) -> dict[str, Any]:
         "status",
         "exit_code",
         "workspace",
-        "pty_session_id",
+        "command_session_id",
         "changed_paths",
         "conflict",
         "conflict_reason",

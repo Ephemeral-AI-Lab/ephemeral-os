@@ -1,15 +1,12 @@
-# Sandbox Command Session TTY-Default Implementation Plan
+# Sandbox Command Session Default Implementation Plan
 
-**Status:** Draft.
+**Status:** Implemented.
 **Date:** 2026-06-02.
 **Parent scope:** Phase 3T sandbox command/session cleanup.
-**Supersedes:** The model-facing `tty`, `pty_session_id`,
-`write_pty_command_stdin`, `check_pty_command_progress`, and
-`cancel_pty_command` contract in
-`docs/plans/sandbox-rust-external-migration-PHASE-3T-PTY-COMMAND-DESIGN.md`.
+**Supersedes:** The prior model-facing split-mode command-session contract.
 
-This plan keeps the working PTY-backed daemon lifecycle, but removes PTY from
-the model-facing abstraction. The public contract is a managed command session:
+This plan keeps the working daemon lifecycle, but hides implementation details
+from the model-facing abstraction. The public contract is a managed command session:
 `exec_command` starts a command and yields quickly; `write_stdin` writes input or
 polls progress for the returned `command_session_id`.
 
@@ -22,16 +19,11 @@ scope is empty, cancelled, or timed out.
 
 ## Decisions
 
-- Remove the model-facing `tty` parameter from `exec_command`.
-- Use the existing Linux PTY-backed execution path as the default internal
-  command-session engine.
-- Rename the public session id from `pty_session_id` to `command_session_id`.
-- Replace `write_pty_command_stdin` with `write_stdin`.
-- Replace `check_pty_command_progress` with
-  `write_stdin(command_session_id, chars="")`.
-- Remove model-facing `cancel_pty_command`. Keep an internal command-session
-  cancellation path for timeout, query cleanup, isolated-workspace teardown, and
-  forced lifecycle cleanup.
+- Keep `exec_command` as the only command-session start tool.
+- Keep `write_stdin` as the only model-facing session-control tool.
+- Poll progress with `write_stdin(command_session_id, chars="")`.
+- Keep cancellation internal for timeout, query cleanup,
+  isolated-workspace teardown, and forced lifecycle cleanup.
 - Make `timeout` optional. `timeout=None` means no command wall-clock timeout.
 - Keep `yield_time_ms` as the tool-call wait window only; it is not a command
   timeout.
@@ -45,9 +37,9 @@ exec_command
 write_stdin
 ```
 
-There is no public `tty`, `pty_session_id`, `check_pty_command_progress`,
-`write_pty_command_stdin`, or `cancel_pty_command` contract. PTY remains an
-internal Linux implementation detail for the default command-session engine.
+There is no public mode selector and no separate public progress or cancellation
+tool. Internal terminal handling remains a Linux implementation detail for the
+default command-session engine.
 
 ### `exec_command`
 
@@ -67,7 +59,7 @@ exec_command(
 ```
 
 If the command execution scope finishes within `yield_time_ms`, return the
-terminal result inline:
+command result inline:
 
 ```json
 {
@@ -94,7 +86,7 @@ If the command execution scope is still alive after `yield_time_ms`, return:
 }
 ```
 
-Because the default engine is PTY-backed, command output is a terminal
+Because the default engine is terminal-backed, command output is a terminal
 transcript. stdout/stderr are not reliably separable. `output.stdout` is the
 transcript; `output.stderr` is reserved for daemon/tool errors.
 
@@ -161,7 +153,7 @@ as model tools.
 - `timeout=None` never means the RPC blocks forever. `exec_command` still
   returns after the `yield_time_ms` cycle when the execution scope is alive.
 - While a `timeout=None` command is running, it holds its command-session
-  resources: background-manager record, daemon registry entry, PTY fd/output
+  resources: background-manager record, daemon registry entry, terminal fd/output
   buffers, execution scope, LayerStack lease, overlay mount, upperdir/workdir,
   and finalizer ownership.
 
@@ -238,7 +230,7 @@ fallback:
 - finalize only when the execution scope is empty, timeout fires, or cancellation
   kills the scope;
 - on finalization, capture upperdir changes, publish through OCC when in shared
-  ephemeral workspace, release the LayerStack lease, remove run dirs, close PTY
+  ephemeral workspace, release the LayerStack lease, remove run dirs, close terminal
   fds, and clear background/session records exactly once.
 
 Required behavior:
@@ -257,24 +249,24 @@ Required behavior:
 - `timeout=N` kills the full execution scope after `N` seconds and finalizes as
   `status="timed_out"`.
 
-## PTY-Backed Lifecycle Workflow
+## Terminal-Backed Lifecycle Workflow
 
 ```mermaid
 flowchart TD
   A["Model calls exec_command(cmd, yield_time_ms, timeout, max_output_tokens)"] --> B["Python tool validates input and sends api.v1.exec_command"]
-  B --> C["Daemon allocates command_session_id, PTY, CommandOutputBuffer, and CommandSessionOutputCursor"]
+  B --> C["Daemon allocates command_session_id, terminal, CommandOutputBuffer, and CommandSessionOutputCursor"]
   C --> D["Acquire LayerStack snapshot lease and prepare shared overlay or isolated handle"]
-  D --> E["Spawn eosd ns-runner attached to PTY slave"]
+  D --> E["Spawn eosd ns-runner attached to terminal slave"]
   E --> F["Runner starts non-login Bash inside command execution scope"]
-  F --> G["PTY reader appends transcript bytes to daemon ring/spool"]
+  F --> G["terminal reader appends transcript bytes to daemon ring/spool"]
   G --> H{"Execution scope alive after yield_time_ms?"}
   H -- "No" --> I["Finalize inline: capture upperdir, publish or discard, release mount and lease"]
-  I --> J["Return terminal result without command_session_id"]
+  I --> J["Return command result without command_session_id"]
   H -- "Yes" --> K["Return status=running, command_session_id, and initial cursor output clipped by max_output_tokens"]
   K --> L["Engine registers background command-session record"]
   L --> M{"Next lifecycle event"}
   M -- "write_stdin chars empty" --> N["Read from model cursor, apply max_output_tokens, advance delivered cursor"]
-  M -- "write_stdin chars non-empty" --> O["Write bytes to PTY, optionally send Ctrl-C/SIGINT or Ctrl-D, then read cursor output"]
+  M -- "write_stdin chars non-empty" --> O["Write bytes to terminal, optionally send Ctrl-C/SIGINT or Ctrl-D, then read cursor output"]
   M -- "Natural exit: scope empty" --> P["Background finalizer runs"]
   M -- "timeout=N expires" --> Q["Kill or drain full execution scope"]
   M -- "Internal cancel or shutdown" --> Q
@@ -282,7 +274,7 @@ flowchart TD
   O --> M
   Q --> P
   P --> R["Capture upperdir and OCC-publish shared workspace or discard isolated workspace"]
-  R --> S["Release LayerStack lease, overlay mount, PTY fd, run dirs, cgroup/process scope"]
+  R --> S["Release LayerStack lease, overlay mount, terminal fd, run dirs, cgroup/process scope"]
   S --> T["Push one completion notification and clear daemon/background records"]
 ```
 
@@ -317,19 +309,19 @@ backend/src/tools/sandbox/
     tool_context.py
 ```
 
-Removed model-facing Python tool folders:
+Retired model-facing Python tool folders:
 
 ```text
-backend/src/tools/sandbox/write_pty_command_stdin/
-backend/src/tools/sandbox/check_pty_command_progress/
-backend/src/tools/sandbox/cancel_pty_command/
+backend/src/tools/sandbox/<old split-mode progress tool>/
+backend/src/tools/sandbox/<old split-mode input tool>/
+backend/src/tools/sandbox/<old split-mode cancellation tool>/
 ```
 
 Target Python API/model surfaces:
 
 ```text
 backend/src/sandbox/shared/models.py
-  ExecCommandRequest(timeout: int | None, max_output_tokens: int | None, no tty)
+  ExecCommandRequest(timeout: int | None, max_output_tokens: int | None, no mode switch)
   ExecCommandResult(command_session_id: str | None)
   CommandSessionWriteRequest(max_output_tokens: int | None)
   CommandSessionCancelRequest      # internal only
@@ -373,12 +365,12 @@ Target Rust daemon/runner layout:
 ```text
 sandbox/crates/eos-daemon/src/
   command.rs             # api.v1.exec_command entrypoint and response shaping
-  command_session.rs     # registry, PTY engine, output buffer/cursors, finalizer, controls
+  command_session.rs     # registry, terminal engine, output buffer/cursors, finalizer, controls
   dispatcher.rs          # command-session op registration and audit mapping
   invocation_registry.rs # internal cancellation/process-group plumbing
 
 sandbox/crates/eos-runner/src/
-  fresh_ns.rs            # shell execution and PTY delegation
+  fresh_ns.rs            # shell execution and terminal delegation
   setns.rs               # isolated command-session execution path
   command_scope.rs       # execution-scope liveness/kill helper if split out
 ```
@@ -404,28 +396,25 @@ CommandExecutionScope
 
 ### Phase 1 - Python Tool Surface
 
-- Remove `tty` from `backend/src/tools/sandbox/exec_command/exec_command.py`.
+- Remove the mode selector from `backend/src/tools/sandbox/exec_command/exec_command.py`.
 - Change `timeout` to `int | None = None` in tool input and shared request
   models.
 - Add `max_output_tokens` to `exec_command` and `write_stdin`; do not expose
   `max_tokens`.
-- Rename `write_pty_command_stdin` to `write_stdin` and change input from
-  `pty_session_id` to `command_session_id`.
-- Remove `check_pty_command_progress` and `cancel_pty_command` from the
-  model-facing sandbox registry.
-- Replace `Pty*Request`/`pty_session_id` public types with command-session
-  request/result names.
+- Remove separate progress and cancellation tools from the model-facing sandbox
+  registry.
+- Replace legacy public types with command-session request/result names.
 - Keep command result rendering centralized through the existing command-output
   helper, but update field names and descriptions.
 
 ### Phase 2 - Background Supervisor And Hooks
 
-- Rename `PtyCommandRecord` and related methods to command-session terminology.
+- Rename `CommandSessionRecord` and related methods to command-session terminology.
 - Register `command_session_id` when `exec_command` returns `status=running`.
 - Make natural exit, timeout, and cancellation notifications use
   command-session wording.
 - Update `RequireNoInflightBackgroundTasks` to consult local command-session
-  records and daemon `command_session_count`, not `pty_session_count`.
+  records and daemon `command_session_count`.
 - Update isolated workspace enter/exit gates to block on active command
   sessions.
 - Keep internal forced-cancel support for query shutdown, isolated force-exit,
@@ -433,19 +422,16 @@ CommandExecutionScope
 
 ### Phase 3 - Daemon Wire Surface
 
-- Keep `api.v1.exec_command` as the command start op, but reject any incoming
-  `tty` field in final behavior so callers cannot select a different lifecycle
-  model.
-- Replace daemon PTY control op names with command-session names:
+- Keep `api.v1.exec_command` as the command start op, with no lifecycle mode
+  branch.
+- Replace daemon terminal control op names with command-session names:
   - `api.v1.command.write_stdin`
   - `api.v1.command.collect_completed`
   - `api.v1.command.cancel` for internal callers only
   - `api.v1.command_session_count`
-- Rename daemon response fields from `pty_session_id` to
-  `command_session_id`.
 - Rename registry/audit/background event payload fields to
   `command_session_id` and `background_task.kind="command_session"`.
-- Keep the PTY implementation as an internal engine detail; do not leak PTY
+- Keep the terminal implementation as an internal engine detail; do not leak terminal
   names in model-facing tools or daemon audit intended for agents.
 
 ### Phase 4 - Execution-Scope Tracking
@@ -453,7 +439,7 @@ CommandExecutionScope
 - Introduce a `CommandExecutionScope` abstraction in the runner/daemon boundary.
 - Prefer cgroup membership for liveness and kill semantics when available.
 - Use process group as fallback only where cgroup scope tracking is unavailable.
-- Modify `eos-runner` PTY shell execution so direct child exit does not return
+- Modify `eos-runner` terminal shell execution so direct child exit does not return
   while descendants in the execution scope are still alive.
 - Make timeout and cancellation terminate the full execution scope.
 - Ensure runner final output is written only after the execution scope is empty
@@ -463,7 +449,7 @@ CommandExecutionScope
 
 ### Phase 5 - Cursor-Based Output
 
-- Replace time-window PTY reads with per-session byte/sequence cursors.
+- Replace time-window terminal reads with per-session byte/sequence cursors.
 - Track one model-facing cursor per command session.
 - Keep notification/collection reads independent from the model-facing cursor.
 - Apply `max_output_tokens` to the returned response without consuming
@@ -473,13 +459,12 @@ CommandExecutionScope
 
 ### Phase 6 - Docs, Profiles, And Compatibility Cleanup
 
-- Remove model-facing references to `tty`, `pty_session_id`,
-  `check_pty_command_progress`, `write_pty_command_stdin`, and
-  `cancel_pty_command` from profiles, docs, tests, and architecture pages.
+- Remove model-facing references to retired split-mode command controls from
+  profiles, docs, tests, and architecture pages.
 - Update `docs/architecture/tools/background.html`,
   `docs/architecture/tools/isolated-workspace.html`, and
   `docs/architecture/sandbox/daemon.html` after implementation.
-- Keep the historical Phase 3T PTY plan as history, but mark the new command
+- Keep the historical Phase 3T terminal plan as history, but mark the new command
   session plan as the active contract.
 
 ## Verification Checklist
@@ -487,14 +472,14 @@ CommandExecutionScope
 ### Static Contract
 
 - [ ] Tool registry exposes `exec_command` and `write_stdin`.
-- [ ] Tool registry does not expose `tty`, `write_pty_command_stdin`,
-      `check_pty_command_progress`, or `cancel_pty_command`.
-- [ ] Public output schema uses `command_session_id`, not `pty_session_id`.
+- [ ] Tool registry does not expose a mode selector or separate progress/cancel
+      command tools.
+- [ ] Public output schema uses `command_session_id`.
 - [ ] `timeout` accepts `None` and omits timeout from daemon payload.
 - [ ] `exec_command` and `write_stdin` expose `max_output_tokens`, not
       `max_tokens`.
-- [ ] Old PTY names are absent from model profiles and active architecture
-      pages, except historical notes.
+- [ ] Retired split-mode names are absent from model profiles and active
+      architecture pages, except historical notes.
 
 ### Exec/Yield Behavior
 
@@ -605,7 +590,7 @@ CommandExecutionScope
 Phase completion requires all of the following:
 
 - The public model-facing command API is only `exec_command` plus `write_stdin`.
-- No model-facing `tty` or PTY-named control remains.
+- No model-facing mode selector or extra command-control tool remains.
 - `python -m http.server 3000` and `nohup ... >out.log 2>&1 &` both become
   managed command sessions after `yield_time_ms`.
 - The command session remains background-managed until all child/descendant

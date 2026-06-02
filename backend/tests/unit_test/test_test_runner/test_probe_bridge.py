@@ -11,21 +11,21 @@ from tools._framework.core.results import ToolResult
 
 
 @pytest.mark.asyncio
-async def test_bridge_translates_requested_background_id_for_pty_cancel() -> None:
+async def test_bridge_translates_requested_background_id_for_write_stdin() -> None:
     bridge = _CallToolBridge()
-    bridge._background_aliases["requested-bg"] = "pty_2"  # noqa: SLF001
+    bridge._background_aliases["requested-bg"] = "cmd_2"  # noqa: SLF001
 
     pending = asyncio.create_task(
         bridge._call_loop_tool(  # noqa: SLF001
-            "cancel_pty_command",
-            {"pty_session_id": "requested-bg"},
+            "write_stdin",
+            {"command_session_id": "requested-bg", "chars": "\u0003"},
         )
     )
     kind, tool_name, raw_input, future = await bridge._queue.get()  # noqa: SLF001
 
     assert kind == "call"
-    assert tool_name == "cancel_pty_command"
-    assert raw_input == {"pty_session_id": "pty_2"}
+    assert tool_name == "write_stdin"
+    assert raw_input == {"command_session_id": "cmd_2", "chars": "\u0003"}
 
     future.set_result(ToolResult(output="cancelled", is_error=False))
     result = await pending
@@ -38,13 +38,20 @@ async def test_bridge_background_await_polls_without_wait_turn() -> None:
     bridge = _CallToolBridge()
 
     pending = asyncio.create_task(
-        bridge._await_pty_result(pty_session_id="pty_1", allow_error=True)  # noqa: SLF001
+        bridge._await_command_session_result(  # noqa: SLF001
+            command_session_id="cmd_1",
+            allow_error=True,
+        )
     )
     kind, tool_name, raw_input, future = await bridge._queue.get()  # noqa: SLF001
 
     assert kind == "call"
-    assert tool_name == "check_pty_command_progress"
-    assert raw_input == {"pty_session_id": "pty_1", "time": 0.05}
+    assert tool_name == "write_stdin"
+    assert raw_input == {
+        "command_session_id": "cmd_1",
+        "chars": "",
+        "yield_time_ms": 50,
+    }
 
     future.set_result(
         ToolResult(
@@ -59,8 +66,12 @@ async def test_bridge_background_await_polls_without_wait_turn() -> None:
         bridge._queue.get(), 0.2  # noqa: SLF001
     )
     assert kind == "call"
-    assert tool_name == "check_pty_command_progress"
-    assert raw_input == {"pty_session_id": "pty_1", "time": 0.1}
+    assert tool_name == "write_stdin"
+    assert raw_input == {
+        "command_session_id": "cmd_1",
+        "chars": "",
+        "yield_time_ms": 100,
+    }
 
     future.set_result(
         ToolResult(

@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import pytest
 
-from sandbox.api.daemon_invocations import inflight_count, pty_session_count
-from sandbox.api.transport import DAEMON_OP_INFLIGHT_COUNT, DAEMON_OP_PTY_SESSION_COUNT
+from sandbox.api.daemon_invocations import command_session_count, inflight_count
+from sandbox.api.transport import DAEMON_OP_COMMAND_SESSION_COUNT, DAEMON_OP_INFLIGHT_COUNT
 
 
 class _CannedTransport:
@@ -43,10 +43,10 @@ async def test_defaults_missing_count_to_zero() -> None:
 
 
 @pytest.mark.asyncio
-async def test_pty_session_count_calls_expected_op() -> None:
+async def test_command_session_count_calls_expected_op() -> None:
     transport = _CannedTransport({"success": True, "count": 2})
-    assert await pty_session_count("sbx-1", "agent-1", transport=transport) == 2
+    assert await command_session_count("sbx-1", "agent-1", transport=transport) == 2
     sandbox_id, op, payload = transport.calls[0]
     assert sandbox_id == "sbx-1"
-    assert op == DAEMON_OP_PTY_SESSION_COUNT
+    assert op == DAEMON_OP_COMMAND_SESSION_COUNT
     assert payload == {"agent_id": "agent-1"}

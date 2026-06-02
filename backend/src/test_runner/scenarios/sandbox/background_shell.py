@@ -1,5 +1,5 @@
-"""Background-command scenarios that drive ``exec_command(tty=True)`` through the
-typed PTY command harness.
+"""Background-command scenarios that drive ``exec_command`` through the
+typed command session harness.
 
 Seven scenarios (T1-T3, T5-T8 from the Phase 2 plan; T4 is covered by the
 invocation-keyed daemon in-flight TTL tests):
@@ -15,7 +15,7 @@ invocation-keyed daemon in-flight TTL tests):
 Each scenario uses a single executor action that drives the matching
 probe in :mod:`test_runner.agent.mock.background_shell_probe`.
 The probes call the exec_command tool with ``background_task_id`` set so the
-mock bridge keeps the request correlated with the returned PTY session id;
+mock bridge keeps the request correlated with the returned command session id;
 the harness records full ``sandbox_events.jsonl`` plus
 ``performance_report.json`` artifacts.
 """
@@ -199,13 +199,13 @@ BackgroundMixedFgBgSamePathConflict = _scenario(
     ),
     summary_path_hint="/testbed/.ephemeralos/sweevo-mock/background_shell/mixed_fg_bg_same_path_conflict/summary.json",
 )
-# 3.3.2: one PTY command completes while another is cancelled.
+# 3.3.2: one command session completes while another is cancelled.
 BackgroundHeartbeatLossReapsOnlyStaleBg = _scenario(
     "BackgroundHeartbeatLossReapsOnlyStaleBg",
     action_id="background_heartbeat_loss_reaps_only_stale_bg",
     action_spec=(
         "ACTION background_heartbeat_loss_reaps_only_stale_bg. Launch two "
-        "PTY-backed background commands, let the protected command complete, "
+        "command session-backed background commands, let the protected command complete, "
         "cancel the stale command before it publishes, and run a foreground "
         "command during recovery."
     ),

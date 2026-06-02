@@ -283,16 +283,16 @@ async fn control_ops_use_inflight_registry() -> TestResult {
     assert_eq!(count["success"], Value::Bool(true));
     assert_eq!(count["count"], json!(1));
 
-    let pty_count = table.dispatch_with_context(
+    let command_session_count = table.dispatch_with_context(
         &Request {
-            op: "api.v1.pty_session_count".to_owned(),
-            invocation_id: "pty-count".to_owned(),
+            op: "api.v1.command_session_count".to_owned(),
+            invocation_id: "command-session-count".to_owned(),
             args: json!({"agent_id": "agent-a"}),
         },
         context,
     );
-    assert_eq!(pty_count["success"], Value::Bool(true));
-    assert_eq!(pty_count["count"], json!(0));
+    assert_eq!(command_session_count["success"], Value::Bool(true));
+    assert_eq!(command_session_count["count"], json!(0));
 
     let heartbeat = table.dispatch_with_context(
         &Request {
@@ -646,9 +646,9 @@ fn assert_isolated_open_state(table: &OpTable, root: &Path) {
 fn assert_isolated_exit(exit: &Value, handle_scratch: &Path, audit_path: &Path) -> TestResult {
     assert_eq!(exit["success"], Value::Bool(true));
     assert_eq!(exit["force_cancel_requested"], Value::Bool(false));
-    assert_eq!(exit["force_cancelled_pty_session_ids"], json!([]));
-    assert_eq!(exit["stale_pty_session_ids"], json!([]));
-    assert_eq!(exit["active_pty_session_ids_after"], json!([]));
+    assert_eq!(exit["force_cancelled_command_session_ids"], json!([]));
+    assert_eq!(exit["stale_command_session_ids"], json!([]));
+    assert_eq!(exit["active_command_session_ids_after"], json!([]));
     assert!(exit["evicted_upperdir_bytes"].as_u64().unwrap_or(0) > 0);
     assert_eq!(exit["inspection"]["handle_registered_after"], json!(false));
     assert_eq!(exit["inspection"]["agent_registered_after"], json!(false));

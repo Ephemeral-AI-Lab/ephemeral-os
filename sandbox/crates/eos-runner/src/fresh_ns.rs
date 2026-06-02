@@ -16,7 +16,7 @@ use std::collections::BTreeMap;
 #[cfg(target_os = "linux")]
 use std::ffi::OsStr;
 #[cfg(target_os = "linux")]
-use std::fs::{self, File};
+use std::fs;
 #[cfg(target_os = "linux")]
 use std::os::unix::process::{CommandExt, ExitStatusExt};
 #[cfg(target_os = "linux")]
@@ -33,7 +33,7 @@ use rustix::io::Errno;
 #[cfg(target_os = "linux")]
 use rustix::mount::{mount_change, MountPropagationFlags};
 #[cfg(target_os = "linux")]
-use rustix::process::{kill_process_group, setsid, Pid, Signal};
+use rustix::process::{getpgrp, kill_process_group, setsid, Pid, Signal};
 #[cfg(target_os = "linux")]
 use rustix::thread::{set_thread_gid, set_thread_uid, unshare, UnshareFlags};
 
@@ -82,13 +82,6 @@ pub fn run_fresh_ns(
         .workdir
         .as_ref()
         .ok_or_else(|| RunnerError::InvalidRequest("fresh-ns requires workdir".to_owned()))?;
-    let output_dir = upperdir
-        .parent()
-        .ok_or_else(|| {
-            RunnerError::InvalidRequest("fresh-ns upperdir must have a parent".to_owned())
-        })?
-        .to_path_buf();
-
     let mount_start = Instant::now();
     let _mount_guard = mount.mount_overlay(&MountInputs {
         workspace_root: request.workspace_root.0.clone(),
@@ -98,7 +91,7 @@ pub fn run_fresh_ns(
     })?;
     let mount_s = mount_start.elapsed().as_secs_f64();
 
-    execute_tool(request, mount_s, &output_dir, Instant::now())
+    execute_tool(request, mount_s, Instant::now())
 }
 
 #[cfg(not(target_os = "linux"))]
@@ -155,11 +148,10 @@ fn enter_fresh_namespace() -> Result<(), RunnerError> {
 pub(crate) fn execute_tool(
     request: &RunRequest,
     mount_s: f64,
-    output_dir: &Path,
     run_start: Instant,
 ) -> Result<RunResult, RunnerError> {
     match request.tool_call.verb.as_str() {
-        "shell" | "exec_command" => execute_shell(request, mount_s, output_dir, run_start),
+        "shell" | "exec_command" => execute_shell(request, mount_s, run_start),
         "plugin_service" => execute_plugin_service(request, mount_s, run_start),
         "glob" => Ok(RunResult {
             exit_code: 0,
@@ -247,94 +239,10 @@ fn execute_plugin_service(
 fn execute_shell(
     request: &RunRequest,
     mount_s: f64,
-    output_dir: &Path,
     run_start: Instant,
 ) -> Result<RunResult, RunnerError> {
     let argv = shell_argv(request)?;
     let cwd = shell_cwd(request)?;
-    fs::create_dir_all(output_dir).map_err(RunnerError::Child)?;
-    if request
-        .tool_call
-        .args
-        .get("tty")
-        .and_then(serde_json::Value::as_bool)
-        .unwrap_or(false)
-    {
-        return execute_shell_pty(request, mount_s, run_start, &argv, &cwd);
-    }
-    let stdout_path = output_dir.join(format!("{}.stdout", request.tool_call.invocation_id));
-    let stderr_path = output_dir.join(format!("{}.stderr", request.tool_call.invocation_id));
-    let stdout_file = File::create(&stdout_path).map_err(RunnerError::Child)?;
-    let stderr_file = File::create(&stderr_path).map_err(RunnerError::Child)?;
-
-    let mut command = Command::new(&argv[0]);
-    command
-        .args(&argv[1..])
-        .current_dir(cwd)
-        .env_clear()
-        .envs(command_environment(&request.tool_call.args))
-        .stdin(Stdio::null())
-        .stdout(Stdio::from(stdout_file))
-        .stderr(Stdio::from(stderr_file))
-        .process_group(0);
-
-    let mut child = command.spawn().map_err(RunnerError::Child)?;
-    let child_pid = Pid::from_child(&child);
-    let (exit_code, timed_out) = match wait_for_child(
-        &mut child,
-        request.timeout_seconds,
-        TimeoutKill::ProcessGroup,
-    ) {
-        Ok(exit_code) => (exit_code, false),
-        Err(RunnerError::TimedOut) => (124, true),
-        Err(err) => return Err(err),
-    };
-    if timed_out || !matches!(request.mode, crate::request::RunMode::SetNs) {
-        let _ = kill_process_group(child_pid, Signal::Kill);
-    }
-    let stdout = fs::read_to_string(&stdout_path).unwrap_or_else(|_| String::new());
-    let stderr = fs::read_to_string(&stderr_path).unwrap_or_else(|_| String::new());
-    let tool_s = run_start.elapsed().as_secs_f64();
-
-    let status = if timed_out {
-        "timed_out"
-    } else if exit_code == 0 {
-        "ok"
-    } else {
-        "error"
-    };
-    Ok(RunResult {
-        exit_code,
-        tool_result: serde_json::json!({
-            "success": true,
-            "workspace": "ephemeral",
-            "timings": {
-                "workspace.mount_s": mount_s,
-                "workspace.tool_s": tool_s,
-            },
-            "conflict": null,
-            "conflict_reason": null,
-            "changed_paths": [],
-            "error": null,
-            "changed_path_kinds": {},
-            "mutation_source": "",
-            "status": status,
-            "exit_code": exit_code,
-            "stdout": stdout,
-            "stderr": stderr,
-            "warnings": [],
-        }),
-    })
-}
-
-#[cfg(target_os = "linux")]
-fn execute_shell_pty(
-    request: &RunRequest,
-    mount_s: f64,
-    run_start: Instant,
-    argv: &[String],
-    cwd: &Path,
-) -> Result<RunResult, RunnerError> {
     let mut command = Command::new(&argv[0]);
     command
         .args(&argv[1..])
@@ -346,15 +254,12 @@ fn execute_shell_pty(
         .stderr(Stdio::inherit());
 
     let mut child = command.spawn().map_err(RunnerError::Child)?;
-    let (exit_code, timed_out) = match wait_for_child(
-        &mut child,
-        request.timeout_seconds,
-        TimeoutKill::DirectChild,
-    ) {
-        Ok(exit_code) => (exit_code, false),
-        Err(RunnerError::TimedOut) => (124, true),
-        Err(err) => return Err(err),
-    };
+    let (exit_code, timed_out) =
+        match wait_for_command_execution_scope(&mut child, request.timeout_seconds) {
+            Ok(exit_code) => (exit_code, false),
+            Err(RunnerError::TimedOut) => (124, true),
+            Err(err) => return Err(err),
+        };
     let status = if timed_out {
         "timed_out"
     } else if exit_code == 0 {
@@ -390,7 +295,6 @@ fn execute_shell_pty(
 #[derive(Clone, Copy)]
 enum TimeoutKill {
     ProcessGroup,
-    DirectChild,
 }
 
 #[cfg(target_os = "linux")]
@@ -415,15 +319,79 @@ fn wait_for_child(
                     let pid = Pid::from_child(child);
                     let _ = kill_process_group(pid, Signal::Kill);
                 }
-                TimeoutKill::DirectChild => {
-                    let _ = child.kill();
-                }
             }
             let _ = child.wait();
             return Err(RunnerError::TimedOut);
         }
         thread::sleep(CHILD_WAIT_POLL);
     }
+}
+
+#[cfg(target_os = "linux")]
+fn wait_for_command_execution_scope(
+    child: &mut std::process::Child,
+    timeout_seconds: Option<f64>,
+) -> Result<i32, RunnerError> {
+    let deadline = timeout_seconds
+        .filter(|seconds| seconds.is_finite() && *seconds >= 0.0)
+        .map(|seconds| Instant::now() + Duration::from_secs_f64(seconds));
+    let pgid = getpgrp().as_raw_nonzero().get();
+    let self_pid = i32::try_from(std::process::id()).unwrap_or(i32::MAX);
+    let mut root_exit_code = None;
+    loop {
+        if root_exit_code.is_none() {
+            if let Some(status) = child.try_wait().map_err(RunnerError::Child)? {
+                root_exit_code = Some(
+                    status
+                        .code()
+                        .or_else(|| status.signal().map(|sig| -sig))
+                        .unwrap_or(128),
+                );
+            }
+        }
+        if root_exit_code.is_some() && !process_group_has_other_live_members(pgid, self_pid) {
+            return Ok(root_exit_code.unwrap_or(0));
+        }
+        if deadline.is_some_and(|deadline| Instant::now() >= deadline) {
+            if let Some(pid) = Pid::from_raw(pgid) {
+                let _ = kill_process_group(pid, Signal::Kill);
+            }
+            let _ = child.wait();
+            return Err(RunnerError::TimedOut);
+        }
+        thread::sleep(CHILD_WAIT_POLL);
+    }
+}
+
+#[cfg(target_os = "linux")]
+fn process_group_has_other_live_members(pgid: i32, self_pid: i32) -> bool {
+    let Ok(entries) = fs::read_dir("/proc") else {
+        return false;
+    };
+    entries.filter_map(Result::ok).any(|entry| {
+        let Some(pid) = entry
+            .file_name()
+            .to_str()
+            .and_then(|name| name.parse::<i32>().ok())
+        else {
+            return false;
+        };
+        if pid == self_pid {
+            return false;
+        }
+        proc_stat_process_group(pid)
+            .is_some_and(|(entry_pgid, state)| entry_pgid == pgid && state != 'Z')
+    })
+}
+
+#[cfg(target_os = "linux")]
+fn proc_stat_process_group(pid: i32) -> Option<(i32, char)> {
+    let stat = fs::read_to_string(format!("/proc/{pid}/stat")).ok()?;
+    let close = stat.rfind(") ")?;
+    let fields: Vec<&str> = stat[close + 2..].split_whitespace().collect();
+    let state = fields.first()?.chars().next()?;
+    let pgrp = fields.get(2)?.parse::<i32>().ok()?;
+    Some((pgrp, state))
 }
 
 #[cfg(target_os = "linux")]

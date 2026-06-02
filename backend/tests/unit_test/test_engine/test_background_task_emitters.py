@@ -26,11 +26,7 @@ def _drain_background_events() -> list[dict[str, Any]]:
     events = snap.get("events", [])
     if events:
         _AUDIT_CURSOR["seq"] = int(events[-1]["seq"])
-    return [
-        evt
-        for evt in events
-        if str(evt.get("type", "")).startswith("background_tool.")
-    ]
+    return [evt for evt in events if str(evt.get("type", "")).startswith("background_tool.")]
 
 
 @pytest.fixture(autouse=True)
@@ -73,9 +69,7 @@ async def test_background_tool_lifecycle_emits_started_completed_delivered() -> 
         "background_tool.completed",
         "background_tool.delivered",
     ]
-    completed_event = next(
-        e for e in events if e["type"] == "background_tool.completed"
-    )
+    completed_event = next(e for e in events if e["type"] == "background_tool.completed")
     section = completed_event["payload"]["background_tool"]
     assert section["background_task_id"] == "bg_1"
     assert section["status"] == BackgroundTaskStatus.COMPLETED.value
@@ -219,27 +213,27 @@ async def test_background_tool_heartbeat_reuses_existing_timer(
 
 
 @pytest.mark.asyncio
-async def test_pty_natural_exit_completion_emits_one_notification(
+async def test_command_session_natural_exit_completion_emits_one_notification(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     import sandbox.api as sandbox_api
 
     calls = 0
 
-    async def _collect_pty_completions(
+    async def _collect_command_completions(
         sandbox_id: str,
         *,
         agent_id: str,
-        pty_session_ids: list[str],
+        command_session_ids: list[str],
     ) -> list[dict[str, Any]]:
         nonlocal calls
         calls += 1
         assert sandbox_id == "sb-1"
         assert agent_id == "agent-1"
-        assert pty_session_ids == ["pty_1"]
+        assert command_session_ids == ["cmd_1"]
         return [
             {
-                "pty_session_id": "pty_1",
+                "command_session_id": "cmd_1",
                 "agent_id": "agent-1",
                 "command": "printf done",
                 "result": {
@@ -250,46 +244,46 @@ async def test_pty_natural_exit_completion_emits_one_notification(
             }
         ]
 
-    monkeypatch.setattr(sandbox_api, "collect_pty_completions", _collect_pty_completions)
+    monkeypatch.setattr(sandbox_api, "collect_command_completions", _collect_command_completions)
 
     sup = BackgroundTaskSupervisor()
-    sup.register_pty_command(
-        pty_session_id="pty_1",
+    sup.register_command_session(
+        command_session_id="cmd_1",
         sandbox_id="sb-1",
         agent_id="agent-1",
         command="printf done",
     )
 
-    notes = await sup.collect_pty_completion_notifications()
+    notes = await sup.collect_command_session_completion_notifications()
     assert len(notes) == 1
-    assert '[BACKGROUND COMPLETED] pty_session_id="pty_1"' in notes[0]
+    assert '[BACKGROUND COMPLETED] command_session_id="cmd_1"' in notes[0]
     assert "status=ok exit_code=0" in notes[0]
     assert "command: printf done" in notes[0]
     assert "stdout:\ndone" in notes[0]
     assert not sup.has_pending()
     assert sup.count_by_agent("agent-1") == 0
 
-    assert await sup.collect_pty_completion_notifications() == []
+    assert await sup.collect_command_session_completion_notifications() == []
     assert calls == 1
     await asyncio.sleep(0)
 
 
 @pytest.mark.asyncio
-async def test_pty_timeout_completion_notification_is_failed(
+async def test_command_session_timeout_completion_notification_is_failed(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     import sandbox.api as sandbox_api
 
-    async def _collect_pty_completions(
+    async def _collect_command_completions(
         sandbox_id: str,
         *,
         agent_id: str,
-        pty_session_ids: list[str],
+        command_session_ids: list[str],
     ) -> list[dict[str, Any]]:
-        del sandbox_id, agent_id, pty_session_ids
+        del sandbox_id, agent_id, command_session_ids
         return [
             {
-                "pty_session_id": "pty_timeout",
+                "command_session_id": "cmd_timeout",
                 "result": {
                     "status": "timed_out",
                     "exit_code": 124,
@@ -298,51 +292,51 @@ async def test_pty_timeout_completion_notification_is_failed(
             }
         ]
 
-    monkeypatch.setattr(sandbox_api, "collect_pty_completions", _collect_pty_completions)
+    monkeypatch.setattr(sandbox_api, "collect_command_completions", _collect_command_completions)
 
     sup = BackgroundTaskSupervisor()
-    sup.register_pty_command(
-        pty_session_id="pty_timeout",
+    sup.register_command_session(
+        command_session_id="cmd_timeout",
         sandbox_id="sb-1",
         agent_id="agent-1",
         command="sleep 60",
     )
 
-    notes = await sup.collect_pty_completion_notifications()
+    notes = await sup.collect_command_session_completion_notifications()
     assert len(notes) == 1
     assert "status=timed_out exit_code=124" in notes[0]
     assert "stderr:\ntimeout" in notes[0]
-    assert sup._pty_commands["pty_timeout"].status == BackgroundTaskStatus.DELIVERED
+    assert sup._command_sessions["cmd_timeout"].status == BackgroundTaskStatus.DELIVERED
     await asyncio.sleep(0)
 
 
 @pytest.mark.asyncio
-async def test_tool_reported_pty_result_suppresses_completion_notification(
+async def test_tool_reported_command_session_result_suppresses_completion_notification(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     import sandbox.api as sandbox_api
 
-    async def _collect_pty_completions(
+    async def _collect_command_completions(
         sandbox_id: str,
         *,
         agent_id: str,
-        pty_session_ids: list[str],
+        command_session_ids: list[str],
     ) -> list[dict[str, Any]]:
-        raise AssertionError("tool-reported PTY records should not be polled")
+        raise AssertionError("tool-reported command-session records should not be polled")
 
-    monkeypatch.setattr(sandbox_api, "collect_pty_completions", _collect_pty_completions)
+    monkeypatch.setattr(sandbox_api, "collect_command_completions", _collect_command_completions)
 
     sup = BackgroundTaskSupervisor()
-    sup.register_pty_command(
-        pty_session_id="pty_reported",
+    sup.register_command_session(
+        command_session_id="cmd_reported",
         sandbox_id="sb-1",
         agent_id="agent-1",
         command="sleep 60",
     )
     assert sup.has_pending()
 
-    sup.mark_pty_result_reported_by_tool(
-        pty_session_id="pty_reported",
+    sup.mark_command_session_result_reported_by_tool(
+        command_session_id="cmd_reported",
         result={
             "status": "cancelled",
             "exit_code": None,
@@ -350,27 +344,29 @@ async def test_tool_reported_pty_result_suppresses_completion_notification(
         },
     )
 
-    assert await sup.collect_pty_completion_notifications() == []
+    assert await sup.collect_command_session_completion_notifications() == []
     assert not sup.has_pending()
     assert sup.count_by_agent("agent-1") == 0
     await asyncio.sleep(0)
 
 
 @pytest.mark.asyncio
-async def test_generic_pty_not_found_does_not_suppress_completion_notification() -> None:
+async def test_generic_command_session_not_found_does_not_suppress_completion_notification() -> (
+    None
+):
     from sandbox.shared.models import CommandOutput, ExecCommandResult
     from tools._framework.core.context import ToolExecutionContextService
-    from tools.sandbox._lib.pty_command_tool import mark_pty_result_reported_by_tool
+    from tools.sandbox._lib.command_session_tool import mark_command_session_result_reported_by_tool
 
     sup = BackgroundTaskSupervisor()
-    sup.register_pty_command(
-        pty_session_id="pty_missing",
+    sup.register_command_session(
+        command_session_id="cmd_missing",
         sandbox_id="sb-1",
         agent_id="agent-1",
         command="printf done",
     )
 
-    mark_pty_result_reported_by_tool(
+    mark_command_session_result_reported_by_tool(
         ToolExecutionContextService(
             cwd=".",
             services={"background_task_manager": sup},
@@ -379,16 +375,16 @@ async def test_generic_pty_not_found_does_not_suppress_completion_notification()
             success=False,
             status="error",
             exit_code=None,
-            output=CommandOutput(stderr="pty_session_not_found"),
+            output=CommandOutput(stderr="command_session_not_found"),
         ),
-        pty_session_id="pty_missing",
+        command_session_id="cmd_missing",
     )
 
     assert sup.has_pending()
     assert sup.count_by_agent("agent-1") == 1
 
-    sup.mark_pty_result_reported_by_tool(
-        pty_session_id="pty_missing",
+    sup.mark_command_session_result_reported_by_tool(
+        command_session_id="cmd_missing",
         result={
             "status": "cancelled",
             "exit_code": None,
@@ -453,22 +449,22 @@ async def test_generic_completion_collection_does_not_deliver_subagents() -> Non
 
 
 @pytest.mark.asyncio
-async def test_query_loop_helper_drains_pty_completion_into_notifications(
+async def test_query_loop_helper_drains_command_session_completion_into_notifications(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     from engine.query.loop import _drain_background_completion_notifications
     import sandbox.api as sandbox_api
 
-    async def _collect_pty_completions(
+    async def _collect_command_completions(
         sandbox_id: str,
         *,
         agent_id: str,
-        pty_session_ids: list[str],
+        command_session_ids: list[str],
     ) -> list[dict[str, Any]]:
-        del sandbox_id, agent_id, pty_session_ids
+        del sandbox_id, agent_id, command_session_ids
         return [
             {
-                "pty_session_id": "pty_2",
+                "command_session_id": "cmd_2",
                 "result": {
                     "status": "ok",
                     "exit_code": 0,
@@ -477,11 +473,11 @@ async def test_query_loop_helper_drains_pty_completion_into_notifications(
             }
         ]
 
-    monkeypatch.setattr(sandbox_api, "collect_pty_completions", _collect_pty_completions)
+    monkeypatch.setattr(sandbox_api, "collect_command_completions", _collect_command_completions)
 
     sup = BackgroundTaskSupervisor()
-    sup.register_pty_command(
-        pty_session_id="pty_2",
+    sup.register_command_session(
+        command_session_id="cmd_2",
         sandbox_id="sb-1",
         agent_id="agent-1",
     )
@@ -492,7 +488,7 @@ async def test_query_loop_helper_drains_pty_completion_into_notifications(
 
     pending = service.pop_pending_notifications()
     assert len(pending) == 1
-    assert '[BACKGROUND COMPLETED] pty_session_id="pty_2"' in pending[0].text
+    assert '[BACKGROUND COMPLETED] command_session_id="cmd_2"' in pending[0].text
     await asyncio.sleep(0)
 
 

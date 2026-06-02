@@ -117,6 +117,7 @@ dependencies = [
  "eos-plugin",
  "eos-protocol",
  "eos-runner",
+ "eos-terminal-pair",
  "nix 0.29.0",
  "serde",
  "serde_json",
@@ -218,6 +219,13 @@ dependencies = [
  "serde",
  "serde_json",
  "thiserror 2.0.18",
+]
+
+[[package]]
+name = "eos-terminal-pair"
+version = "0.1.0"
+dependencies = [
+ "libc",
 ]
 
 [[package]]

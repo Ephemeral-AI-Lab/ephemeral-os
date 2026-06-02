@@ -364,7 +364,7 @@ fn should_emit_tool_call_event(op: &str) -> bool {
     !op.starts_with("api.audit.")
         && !matches!(
             op,
-            "api.v1.heartbeat" | "api.v1.inflight_count" | "api.v1.pty_session_count"
+            "api.v1.heartbeat" | "api.v1.inflight_count" | "api.v1.command_session_count"
         )
 }
 

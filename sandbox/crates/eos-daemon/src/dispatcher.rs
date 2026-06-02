@@ -147,16 +147,18 @@ impl OpTable {
             crate::isolated::op_test_reset,
         );
         table.register_builtin("api.v1.exec_command", crate::command::op_exec_command);
-        table.register_builtin("api.v1.pty.write_stdin", crate::command::op_pty_write_stdin);
-        table.register_builtin("api.v1.pty.progress", crate::command::op_pty_progress);
-        table.register_builtin("api.v1.pty.cancel", crate::command::op_pty_cancel);
         table.register_builtin(
-            "api.v1.pty.collect_completed",
-            crate::command::op_pty_collect_completed,
+            "api.v1.command.write_stdin",
+            crate::command::op_command_write_stdin,
+        );
+        table.register_builtin("api.v1.command.cancel", crate::command::op_command_cancel);
+        table.register_builtin(
+            "api.v1.command.collect_completed",
+            crate::command::op_command_collect_completed,
         );
         table.register_builtin(
-            "api.v1.pty_session_count",
-            crate::command::op_pty_session_count,
+            "api.v1.command_session_count",
+            crate::command::op_command_session_count,
         );
         table
     }
@@ -3369,7 +3371,7 @@ fn skip_dispatch_audit(op: &str) -> bool {
             "api.runtime.ready"
                 | "api.v1.heartbeat"
                 | "api.v1.inflight_count"
-                | "api.v1.pty_session_count"
+                | "api.v1.command_session_count"
         )
 }
 
@@ -3516,18 +3518,18 @@ fn emit_background_audit(request: &Request, response: &Value, total_ms: f64) {
     let Some((event_type, task_kind)) = background_event_kind(request, response) else {
         return;
     };
-    let pty_session_id = request
+    let command_session_id = request
         .args
-        .get("pty_session_id")
+        .get("command_session_id")
         .and_then(Value::as_str)
-        .or_else(|| response.get("pty_session_id").and_then(Value::as_str))
+        .or_else(|| response.get("command_session_id").and_then(Value::as_str))
         .unwrap_or(&request.invocation_id);
     crate::audit_buffer::safe_emit(
         build_event(
             event_type,
             "background_tool",
             json!({
-                "background_task_id": pty_session_id,
+                "background_task_id": command_session_id,
                 "task_kind": task_kind,
                 "tool_name": request.op,
                 "agent_id": request.args.get("agent_id").and_then(Value::as_str),
@@ -3545,29 +3547,14 @@ fn background_event_kind(
     response: &Value,
 ) -> Option<(&'static str, &'static str)> {
     match request.op.as_str() {
-        "api.v1.exec_command"
-            if request
-                .args
-                .get("tty")
-                .and_then(Value::as_bool)
-                .unwrap_or(false)
-                && response.get("pty_session_id").is_some() =>
-        {
-            Some(("background_tool.started", "pty"))
+        "api.v1.exec_command" if response.get("command_session_id").is_some() => {
+            Some(("background_tool.started", "command_session"))
         }
-        "api.v1.exec_command"
-            if request
-                .args
-                .get("tty")
-                .and_then(Value::as_bool)
-                .unwrap_or(false) =>
-        {
-            Some(("background_tool.completed", "pty"))
+        "api.v1.command.write_stdin" => Some(("background_tool.input", "command_session")),
+        "api.v1.command.cancel" => Some(("background_tool.cancelled", "command_session")),
+        "api.v1.command.collect_completed" => {
+            Some(("background_tool.completed", "command_session"))
         }
-        "api.v1.pty.write_stdin" => Some(("background_tool.input", "pty")),
-        "api.v1.pty.progress" => Some(("background_tool.progress", "pty")),
-        "api.v1.pty.cancel" => Some(("background_tool.cancelled", "pty")),
-        "api.v1.pty.collect_completed" => Some(("background_tool.completed", "pty")),
         _ => None,
     }
 }
@@ -3592,13 +3579,13 @@ fn uses_overlay_or_lease(op: &str, response: &Value) -> bool {
             | "api.grep"
             | "api.v1.grep"
             | "api.v1.shell"
-            | "api.v1.pty.cancel"
+            | "api.v1.command.cancel"
     ) {
         return true;
     }
     if op == "api.v1.exec_command" {
         return response
-            .get("pty_session_id")
+            .get("command_session_id")
             .and_then(Value::as_str)
             .is_none();
     }
@@ -3836,16 +3823,16 @@ mod tests {
     }
 
     #[test]
-    fn pty_collect_completed_is_background_only_not_overlay_lifecycle() {
+    fn command_collect_completed_is_background_only_not_overlay_lifecycle() {
         let request = Request {
-            op: "api.v1.pty.collect_completed".to_owned(),
+            op: "api.v1.command.collect_completed".to_owned(),
             invocation_id: "collect-completed".to_owned(),
-            args: json!({"pty_session_id": "pty-1", "agent_id": "agent-1"}),
+            args: json!({"command_session_id": "cmd-1", "agent_id": "agent-1"}),
         };
 
         assert_eq!(
             background_event_kind(&request, &json!({"success": true})),
-            Some(("background_tool.completed", "pty"))
+            Some(("background_tool.completed", "command_session"))
         );
         assert!(!uses_overlay_or_lease(
             &request.op,

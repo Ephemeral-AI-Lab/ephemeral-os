@@ -22,8 +22,8 @@ Budget: a single agent is capped at its configured ``tool_call_limit`` plus the
 engine's hard ceiling. Heavy probes exceed that, so the scenario planner fans
 the work out into a generator DAG; each generator's tool stream is budget-sized
 and routes through the loop here. Background dispatch
-(``background_task_id``) maps onto the typed PTY command model: ``exec_command``
-with ``tty=true`` plus ``check_pty_command_progress`` / ``cancel_pty_command``.
+(``background_task_id``) maps onto command sessions: ``exec_command`` returns
+``command_session_id`` and ``write_stdin`` polls or sends Ctrl-C.
 """
 
 from __future__ import annotations
@@ -49,7 +49,7 @@ async def _noop_emit(_event: Any) -> None:
     return None
 
 
-_PTY_SESSION_ID_RE = re.compile(r'"pty_session_id"\s*:\s*"([^"]+)"')
+_COMMAND_SESSION_ID_RE = re.compile(r'"command_session_id"\s*:\s*"([^"]+)"')
 _BACKGROUND_POLL_INITIAL_S = 0.05
 _BACKGROUND_POLL_MAX_S = 0.5
 BackgroundCancelCallback = Callable[[dict[str, Any]], None]
@@ -66,9 +66,7 @@ class _CallToolBridge:
         on_background_cancel: BackgroundCancelCallback | None = None,
     ) -> None:
         # items: ("call", tool_name, raw_input, future) | ("done", None, None, None)
-        self._queue: asyncio.Queue[tuple[str, str | None, dict | None, Any]] = (
-            asyncio.Queue()
-        )
+        self._queue: asyncio.Queue[tuple[str, str | None, dict | None, Any]] = asyncio.Queue()
         self._on_background_cancel = on_background_cancel
         self._background_aliases: dict[str, str] = {}
 
@@ -109,11 +107,11 @@ class _CallToolBridge:
         tool_input = dict(raw_input)
         if tool_name == "exec_command":
             _normalize_exec_command_input(tool_input)
-        if tool_name in {"cancel_pty_command", "check_pty_command_progress"}:
-            session_id = str(tool_input.get("pty_session_id") or "")
+        if tool_name == "write_stdin":
+            session_id = str(tool_input.get("command_session_id") or "")
             real_session_id = self._background_aliases.get(session_id)
             if real_session_id:
-                tool_input["pty_session_id"] = real_session_id
+                tool_input["command_session_id"] = real_session_id
         return tool_input
 
     async def _call_background_tool(
@@ -126,7 +124,6 @@ class _CallToolBridge:
     ) -> ToolResult:
         launch_input = dict(raw_input)
         _normalize_exec_command_input(launch_input)
-        launch_input["tty"] = True
         launch_input.setdefault("yield_time_ms", 50)
         launch = await self._call_loop_tool(
             tool_name,
@@ -138,20 +135,20 @@ class _CallToolBridge:
         status = str(launch_payload.get("status") or "")
         if status and status != "running":
             return launch
-        pty_session_id = _parse_pty_session_id(launch.output)
-        if not pty_session_id:
+        command_session_id = _parse_command_session_id(launch.output)
+        if not command_session_id:
             return ToolResult(
                 output=(
-                    "PTY background launch did not expose a pty_session_id. "
+                    "Background launch did not expose a command_session_id. "
                     f"requested_background_task_id={requested_background_task_id!r} "
                     f"output={launch.output!r}"
                 ),
                 is_error=True,
             )
-        self._background_aliases[requested_background_task_id] = pty_session_id
+        self._background_aliases[requested_background_task_id] = command_session_id
         try:
-            return await self._await_pty_result(
-                pty_session_id=pty_session_id,
+            return await self._await_command_session_result(
+                command_session_id=command_session_id,
                 allow_error=allow_error,
             )
         except asyncio.CancelledError:
@@ -162,16 +159,18 @@ class _CallToolBridge:
             cancel_result: ToolResult | None = None
             with contextlib.suppress(Exception):
                 cancel_result = await self._call_loop_tool(
-                    "cancel_pty_command",
+                    "write_stdin",
                     {
-                        "pty_session_id": pty_session_id,
+                        "command_session_id": command_session_id,
+                        "chars": "\u0003",
+                        "yield_time_ms": 50,
                     },
                 )
             if cancel_result is not None and not cancel_result.is_error:
                 self._publish_background_cancel(
                     tool_name=tool_name,
                     requested_background_task_id=requested_background_task_id,
-                    pty_session_id=pty_session_id,
+                    command_session_id=command_session_id,
                 )
             raise
 
@@ -180,7 +179,7 @@ class _CallToolBridge:
         *,
         tool_name: str,
         requested_background_task_id: str,
-        pty_session_id: str,
+        command_session_id: str,
     ) -> None:
         if self._on_background_cancel is None:
             return
@@ -189,29 +188,32 @@ class _CallToolBridge:
                 {
                     "tool_name": tool_name,
                     "background_task_id": requested_background_task_id,
-                    "pty_session_id": pty_session_id,
-                    "invocation_id": pty_session_id,
+                    "command_session_id": command_session_id,
+                    "invocation_id": command_session_id,
                 }
             )
 
-    async def _await_pty_result(
+    async def _await_command_session_result(
         self,
         *,
-        pty_session_id: str,
+        command_session_id: str,
         allow_error: bool,
     ) -> ToolResult:
         del allow_error
         poll_s = _BACKGROUND_POLL_INITIAL_S
         while True:
             checked = await self._call_loop_tool(
-                "check_pty_command_progress",
-                {"pty_session_id": pty_session_id, "time": poll_s},
+                "write_stdin",
+                {
+                    "command_session_id": command_session_id,
+                    "chars": "",
+                    "yield_time_ms": int(poll_s * 1000),
+                },
             )
             payload = _json_object(checked.output)
             status = str(payload.get("status") or "")
             if status != "running":
                 return checked
-            await asyncio.sleep(poll_s)
             poll_s = min(_BACKGROUND_POLL_MAX_S, poll_s * 2)
 
 
@@ -220,12 +222,12 @@ def _normalize_exec_command_input(tool_input: dict[str, Any]) -> None:
         tool_input["cmd"] = tool_input.pop("command")
 
 
-def _parse_pty_session_id(output: str) -> str:
+def _parse_command_session_id(output: str) -> str:
     payload = _json_object(output)
-    session_id = str(payload.get("pty_session_id") or "")
+    session_id = str(payload.get("command_session_id") or "")
     if session_id:
         return session_id
-    match = _PTY_SESSION_ID_RE.search(output or "")
+    match = _COMMAND_SESSION_ID_RE.search(output or "")
     return match.group(1) if match else ""
 
 
@@ -307,23 +309,20 @@ def bridge_script_for(
     fan-out splits them below 100.
     """
 
-    def _engine_factory(
-        build: Callable[[], Any], summary: str
-    ) -> tuple[ProbeFactory, str]:
+    def _engine_factory(build: Callable[[], Any], summary: str) -> tuple[ProbeFactory, str]:
         async def _run_script(call_tool: Any) -> str:
             from test_runner.agent.mock.tool_scripts import (
                 PreparedToolScriptEngine,
             )
 
             engine = PreparedToolScriptEngine(call_tool)
-            result = await engine.run(
-                build(), metadata=ctx.metadata, emit=_noop_emit
-            )
+            result = await engine.run(build(), metadata=ctx.metadata, emit=_noop_emit)
             return result.artifact
 
         return _run_script, summary
 
     if action == "inspect_user_input":
+
         def _build() -> Any:
             from test_runner.agent.mock.tool_scripts import (
                 inspect_user_input_script,
@@ -350,6 +349,7 @@ def bridge_script_for(
         )
 
     if action == "final_reconciliation":
+
         def _build_final() -> Any:
             from test_runner.agent.mock.tool_scripts import (
                 final_reconciliation_script,
@@ -357,11 +357,10 @@ def bridge_script_for(
 
             return final_reconciliation_script(ctx)
 
-        return _engine_factory(
-            _build_final, "Final coverage ledger and readback probe passed."
-        )
+        return _engine_factory(_build_final, "Final coverage ledger and readback probe passed.")
 
     if action == "recursive_step":
+
         def _build_recursive() -> Any:
             from test_runner.agent.mock.tool_scripts import (
                 recursive_step_script,
@@ -375,6 +374,7 @@ def bridge_script_for(
 
     # --- full_stack scripts -------------------------------------------------
     if action == "inspect_full_user_input":
+
         def _build_inspect_full() -> Any:
             from test_runner.agent.mock.full_stack_tool_scripts import (
                 inspect_full_user_input_script,
@@ -382,11 +382,10 @@ def bridge_script_for(
 
             return inspect_full_user_input_script(ctx)
 
-        return _engine_factory(
-            _build_inspect_full, "Full user-input inventory script passed."
-        )
+        return _engine_factory(_build_inspect_full, "Full user-input inventory script passed.")
 
     if action == "occ_conflict_matrix":
+
         def _build_occ() -> Any:
             from test_runner.agent.mock.full_stack_tool_scripts import (
                 occ_conflict_matrix_script,
@@ -397,6 +396,7 @@ def bridge_script_for(
         return _engine_factory(_build_occ, "OCC conflict matrix script passed.")
 
     if action == "overlay_edge_matrix":
+
         def _build_overlay() -> Any:
             from test_runner.agent.mock.full_stack_tool_scripts import (
                 overlay_edge_matrix_script,
@@ -407,6 +407,7 @@ def bridge_script_for(
         return _engine_factory(_build_overlay, "Overlay edge matrix script passed.")
 
     if action == "layerstack_squash_lease":
+
         def _build_layerstack() -> Any:
             from test_runner.agent.mock.full_stack_tool_scripts import (
                 layerstack_squash_lease_script,
@@ -414,11 +415,10 @@ def bridge_script_for(
 
             return layerstack_squash_lease_script(ctx)
 
-        return _engine_factory(
-            _build_layerstack, "LayerStack squash-lease script passed."
-        )
+        return _engine_factory(_build_layerstack, "LayerStack squash-lease script passed.")
 
     if action == "lsp_refresh_semantics":
+
         def _build_lsp() -> Any:
             from test_runner.agent.mock.full_stack_tool_scripts import (
                 lsp_refresh_semantics_script,
@@ -429,6 +429,7 @@ def bridge_script_for(
         return _engine_factory(_build_lsp, "LSP refresh-semantics script passed.")
 
     if action == "recursive_oversized_matrix":
+
         def _build_recursive_matrix() -> Any:
             from test_runner.agent.mock.full_stack_tool_scripts import (
                 recursive_oversized_matrix_script,
@@ -436,11 +437,10 @@ def bridge_script_for(
 
             return recursive_oversized_matrix_script(ctx)
 
-        return _engine_factory(
-            _build_recursive_matrix, "Recursive oversized matrix script passed."
-        )
+        return _engine_factory(_build_recursive_matrix, "Recursive oversized matrix script passed.")
 
     if action == "full_stack_final_reconciliation":
+
         def _build_full_stack_final() -> Any:
             from test_runner.agent.mock.full_stack_tool_scripts import (
                 final_reconciliation_script as full_stack_final_reconciliation_script,
@@ -453,6 +453,7 @@ def bridge_script_for(
         )
 
     if action == "capacity_metrics_full_system":
+
         def _build_capacity() -> Any:
             from test_runner.agent.mock.capacity_actions import (
                 full_system_capacity_metrics_script,
@@ -460,9 +461,7 @@ def bridge_script_for(
 
             return full_system_capacity_metrics_script(ctx)
 
-        return _engine_factory(
-            _build_capacity, "Full-system capacity metrics script passed."
-        )
+        return _engine_factory(_build_capacity, "Full-system capacity metrics script passed.")
 
     return None
 
@@ -563,6 +562,7 @@ def bridge_probe_for(
         return background_probe
 
     if action == "high_concurrency_seed":
+
         def _seed(call_tool: Any) -> Awaitable[str]:
             from test_runner.agent.mock.high_concurrency_probe import (
                 run_high_concurrency_seed_probe,
@@ -598,6 +598,7 @@ def bridge_probe_for(
         return _worker, f"High-concurrency worker {index:02d} passed."
 
     if action == "high_concurrency_reconcile":
+
         def _reconcile(call_tool: Any) -> Awaitable[str]:
             from test_runner.agent.mock.high_concurrency_probe import (
                 run_high_concurrency_reconcile_probe,
@@ -613,6 +614,7 @@ def bridge_probe_for(
         return _reconcile, "High-concurrency sandbox reconciliation passed."
 
     if action == "heavy_io_zoned_seed":
+
         def _hiz_seed(call_tool: Any) -> Awaitable[str]:
             from test_runner.agent.mock.heavy_io_zoned_probe import (
                 run_heavy_io_zoned_seed_probe,
@@ -648,6 +650,7 @@ def bridge_probe_for(
         return _hiz_worker, f"Heavy-IO zoned worker {index:02d} passed."
 
     if action == "heavy_io_zoned_reconcile":
+
         def _hiz_reconcile(call_tool: Any) -> Awaitable[str]:
             from test_runner.agent.mock.heavy_io_zoned_probe import (
                 run_heavy_io_zoned_reconcile_probe,
@@ -663,6 +666,7 @@ def bridge_probe_for(
         return _hiz_reconcile, "Heavy-IO zoned sandbox reconciliation passed."
 
     if action == "complex_project_build_shell_edit_lsp_shared_bootstrap":
+
         def _complex_shared_bootstrap(call_tool: Any) -> Awaitable[str]:
             from test_runner.agent.mock.complex_project_build_shell_edit_lsp_probe import (
                 run_complex_project_build_shell_edit_lsp_shared_bootstrap_probe,
@@ -686,6 +690,7 @@ def bridge_probe_for(
 
     # --- auto_squash_commit_resume fan-out -------------------------------
     if action == "auto_squash_seed":
+
         def _auto_seed(call_tool: Any) -> Awaitable[str]:
             from test_runner.agent.mock.auto_squash_probe import (
                 run_auto_squash_seed_probe,
@@ -701,6 +706,7 @@ def bridge_probe_for(
         return _auto_seed, "Auto-squash seed passed."
 
     if action == "auto_squash_squash_a":
+
         def _auto_squash_a(call_tool: Any) -> Awaitable[str]:
             from test_runner.agent.mock.auto_squash_probe import (
                 run_auto_squash_squash_a_probe,
@@ -716,6 +722,7 @@ def bridge_probe_for(
         return _auto_squash_a, "Auto-squash depth slice A passed."
 
     if action == "auto_squash_squash_b":
+
         def _auto_squash_b(call_tool: Any) -> Awaitable[str]:
             from test_runner.agent.mock.auto_squash_probe import (
                 run_auto_squash_squash_b_probe,
@@ -731,6 +738,7 @@ def bridge_probe_for(
         return _auto_squash_b, "Auto-squash depth slice B passed."
 
     if action == "auto_squash_independent":
+
         def _auto_independent(call_tool: Any) -> Awaitable[str]:
             from test_runner.agent.mock.auto_squash_probe import (
                 run_auto_squash_independent_probe,
@@ -746,6 +754,7 @@ def bridge_probe_for(
         return _auto_independent, "Auto-squash independent generator passed."
 
     if action == "auto_squash_reconcile":
+
         def _auto_reconcile(call_tool: Any) -> Awaitable[str]:
             from test_runner.agent.mock.auto_squash_probe import (
                 run_auto_squash_reconcile_probe,
@@ -764,6 +773,7 @@ def bridge_probe_for(
 
     # --- plugin_workspace (single-action scenarios; all queue-bridge) -------
     if action == "plugin_read_only_lsp_refresh":
+
         def _plugin_read_only(call_tool: Any) -> Awaitable[str]:
             from test_runner.agent.mock.plugin_workspace_probe import (
                 run_plugin_read_only_lsp_refresh_probe,
@@ -780,6 +790,7 @@ def bridge_probe_for(
         return _plugin_read_only, "Plugin read-only LSP refresh probe passed."
 
     if action == "plugin_write_allowed_publish":
+
         def _plugin_write_allowed(call_tool: Any) -> Awaitable[str]:
             from test_runner.agent.mock.plugin_workspace_probe import (
                 run_plugin_write_allowed_publish_probe,
@@ -796,6 +807,7 @@ def bridge_probe_for(
         return _plugin_write_allowed, "Plugin write-allowed publish probe passed."
 
     if action == "plugin_intent_contract":
+
         def _plugin_intent(call_tool: Any) -> Awaitable[str]:
             from test_runner.agent.mock.plugin_workspace_probe import (
                 run_plugin_intent_contract_probe,
@@ -811,6 +823,7 @@ def bridge_probe_for(
         return _plugin_intent, "Plugin intent-contract probe passed."
 
     if action == "plugin_iws_policy":
+
         def _plugin_iws(call_tool: Any) -> Awaitable[str]:
             from test_runner.agent.mock.plugin_workspace_probe import (
                 run_plugin_iws_policy_probe,
@@ -827,6 +840,7 @@ def bridge_probe_for(
         return _plugin_iws, "Plugin isolated-workspace policy probe passed."
 
     if action == "plugin_setup_failure":
+
         def _plugin_setup_failure(call_tool: Any) -> Awaitable[str]:
             from test_runner.agent.mock.plugin_workspace_probe import (
                 run_plugin_setup_failure_probe,
@@ -843,6 +857,7 @@ def bridge_probe_for(
         return _plugin_setup_failure, "Plugin setup-failure probe passed."
 
     if action == "plugin_service_evict":
+
         def _plugin_service_evict(call_tool: Any) -> Awaitable[str]:
             from test_runner.agent.mock.plugin_workspace_probe import (
                 run_plugin_service_evict_probe,
@@ -860,6 +875,7 @@ def bridge_probe_for(
 
     # --- ephemeral_workspace actions; queue-bridge -------------------------
     if action == "ephemeral_workspace_all_verbs":
+
         def _eph_all_verbs(call_tool: Any) -> Awaitable[str]:
             from test_runner.agent.mock.ephemeral_workspace_probe import (
                 run_ephemeral_all_verbs_probe,
@@ -876,6 +892,7 @@ def bridge_probe_for(
         return _eph_all_verbs, "Ephemeral workspace all-verbs probe passed."
 
     if action == "ephemeral_workspace_concurrent_writes":
+
         def _eph_concurrent(call_tool: Any) -> Awaitable[str]:
             from test_runner.agent.mock.ephemeral_workspace_probe import (
                 run_ephemeral_concurrent_writes_probe,
@@ -892,6 +909,7 @@ def bridge_probe_for(
         return _eph_concurrent, "Ephemeral workspace concurrent-writes probe passed."
 
     if action == "ephemeral_workspace_policy":
+
         def _eph_policy(call_tool: Any) -> Awaitable[str]:
             from test_runner.agent.mock.ephemeral_workspace_probe import (
                 run_ephemeral_policy_probe,
@@ -908,6 +926,7 @@ def bridge_probe_for(
         return _eph_policy, "Ephemeral workspace policy probe passed."
 
     if action == "ephemeral_workspace_o1_disk":
+
         def _eph_o1_disk(call_tool: Any) -> Awaitable[str]:
             from test_runner.agent.mock.ephemeral_workspace_probe import (
                 run_ephemeral_o1_disk_probe,
@@ -924,6 +943,7 @@ def bridge_probe_for(
         return _eph_o1_disk, "Ephemeral workspace O(1)-disk probe passed."
 
     if action == "ephemeral_same_path_conflict_seed":
+
         def _eph_same_path_seed(call_tool: Any) -> Awaitable[str]:
             from test_runner.agent.mock.ephemeral_workspace_probe import (
                 run_ephemeral_same_path_conflict_seed_probe,
@@ -957,6 +977,7 @@ def bridge_probe_for(
         return _eph_same_path_writer, f"Ephemeral same-path writer {index} passed."
 
     if action == "ephemeral_same_path_conflict_reconcile":
+
         def _eph_same_path_reconcile(call_tool: Any) -> Awaitable[str]:
             from test_runner.agent.mock.ephemeral_workspace_probe import (
                 run_ephemeral_same_path_conflict_reconcile_probe,
@@ -1037,6 +1058,7 @@ def _background_probe_factory(
         ),
     }
     if action == "ephemeral_workspace_cancellation":
+
         def _ephemeral_cancel(call_tool: Any) -> Awaitable[str]:
             from test_runner.agent.mock.ephemeral_workspace_probe import (
                 run_ephemeral_cancellation_probe,

@@ -10,7 +10,7 @@
     "remote_sha256": "321efbdb58b19269e8334910cdbf22c4c6da7b94020e091de03d9bcede90fcfe",
     "size_bytes": 5133872,
     "source_path": "/Users/yifanxu/machine_learning/LoVC/EphemeralOS/sandbox/dist/eosd-linux-amd64",
-    "upload_time_ms": 45.83516700040491,
+    "upload_time_ms": 39.663917000325455,
     "version": {
       "error": null,
       "exit_code": 0,
@@ -25,9 +25,9 @@
     "sleep",
     "infinity"
   ],
-  "container_id": "09ba1179300537fcac29d70a5b85cc90cba2da6ab129de6e74abd445359e67e1",
-  "container_name": "eos-eosd-upload-4547191663",
-  "container_start_ms": 228.64324999954988,
+  "container_id": "28dd1774cb814c4534594e80fd05c386dafa3ecc4e3471a9cb5203f19386108f",
+  "container_name": "eos-eosd-upload-58b4180da2",
+  "container_start_ms": 205.55391600009898,
   "image": "sweevo-dask__dask-10042:latest",
   "no_package_install_in_target": true,
   "platform": "linux/amd64",

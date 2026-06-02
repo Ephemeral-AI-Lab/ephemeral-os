@@ -27,7 +27,7 @@ def parse_tool_input(
             ToolResult(
                 output=(
                     f"Invalid input for {tool.name}: `background` is not a tool "
-                    "argument. Use typed subagent or PTY command controls instead."
+                    "argument. Use typed subagent or command-session controls instead."
                 ),
                 is_error=True,
             )

@@ -1,4 +1,4 @@
-"""T1 — Golden path live regression for ``exec_command(tty=True)``.
+"""T1 — Golden path live regression for ``exec_command``.
 
 Drives ``BackgroundShellGolden`` through the mock-agent scenario harness so
 the run produces full ``.sweevo_runs/scenario_logs/.../sandbox_events.jsonl``

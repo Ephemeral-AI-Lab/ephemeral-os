@@ -1,14 +1,14 @@
-"""3.4.6 mixed-op concurrent PTY background tasks (correctness).
+"""3.4.6 mixed-op concurrent command-session tasks (correctness).
 
 Scenario-1 genuine gap: the suite already exercises a single foreground vs.
 background same-path conflict and N small background writes, but not a single
 run that (a) drives heterogeneous background ops to a terminal status, (b)
-proves overlapping same-file PTY writes converge to one complete payload, and
+proves overlapping same-file command writes converge to one complete payload, and
 (c) proves disjoint background edits all land.
 
 Location note (plan §6 open question): this lives in the mock test-runner
 suite rather than ``integration_test/`` because it reuses the proven
-``run_background_shell_scenario`` harness and needs the real typed-PTY publish
+``run_background_shell_scenario`` harness and needs the real command-session publish
 path, which ``integration_test/test_sandbox`` has no harness for.
 """
 
@@ -43,6 +43,7 @@ pytestmark = [
     ),
 ]
 
+
 @pytest.mark.timeout(720)
 async def test_background_mixed_op_concurrent(
     sweevo_image_instance: SWEEvoInstance,
@@ -68,7 +69,7 @@ async def test_background_mixed_op_concurrent(
         assert record["terminal"], (name, record)
         assert not record.get("cancelled"), (name, record)
 
-    # (b) overlapping same-file edits: all PTY commands reach terminal success,
+    # (b) overlapping same-file edits: all command sessions reach terminal success,
     # and the final content is one complete writer payload.
     overlap = summary["overlap"]
     writers = overlap["writers"]

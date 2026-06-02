@@ -5,17 +5,15 @@ from __future__ import annotations
 import pytest
 
 from sandbox.api import (
+    CommandSessionCancelRequest,
+    CommandSessionWriteRequest,
     ExecCommandRequest,
-    PtyCancelRequest,
-    PtyProgressRequest,
-    PtyWriteRequest,
     SandboxCaller,
 )
 from sandbox.api.tool.command import (
-    cancel_pty_command,
-    check_pty_command_progress,
+    cancel_command_session,
     exec_command,
-    write_pty_command_stdin,
+    write_stdin,
 )
 
 
@@ -27,7 +25,7 @@ async def test_exec_command_dispatches_final_wire_shape(recording_transport_fact
             "status": "running",
             "exit_code": None,
             "output": {"stdout": "ready\n", "stderr": ""},
-            "pty_session_id": "pty_1",
+            "command_session_id": "cmd_1",
             "timings": {"api.exec_command.total_s": 0.01},
         }
 
@@ -38,16 +36,16 @@ async def test_exec_command_dispatches_final_wire_shape(recording_transport_fact
         ExecCommandRequest(
             invocation_id="inv-command",
             cmd="python -i",
-            tty=True,
             yield_time_ms=50,
             timeout=12,
+            max_output_tokens=2000,
             caller=SandboxCaller(agent_id="agent-1"),
         ),
         transport=transport,
     )
 
     assert result.status == "running"
-    assert result.pty_session_id == "pty_1"
+    assert result.command_session_id == "cmd_1"
     assert result.output.stdout == "ready\n"
     assert transport.calls == [
         (
@@ -55,9 +53,9 @@ async def test_exec_command_dispatches_final_wire_shape(recording_transport_fact
             "api.v1.exec_command",
             {
                 "cmd": "python -i",
-                "tty": True,
                 "yield_time_ms": 50,
                 "timeout": 12,
+                "max_output_tokens": 2000,
                 "invocation_id": "inv-command",
                 "agent_id": "agent-1",
                 "caller": {
@@ -73,39 +71,41 @@ async def test_exec_command_dispatches_final_wire_shape(recording_transport_fact
 
 
 @pytest.mark.asyncio
-async def test_pty_control_wrappers_parse_generic_not_found(recording_transport_factory) -> None:
+async def test_command_session_controls_parse_generic_not_found(
+    recording_transport_factory,
+) -> None:
     async def fake_call_daemon_api(sandbox_id, op, args, timeout):
         del sandbox_id, op, args, timeout
         return {
             "status": "error",
             "exit_code": None,
-            "output": {"stdout": "", "stderr": "pty_session_not_found"},
+            "output": {"stdout": "", "stderr": "command_session_not_found"},
         }
 
     transport = recording_transport_factory(fake_call_daemon_api)
     caller = SandboxCaller(agent_id="agent-1")
 
-    write = await write_pty_command_stdin(
+    write = await write_stdin(
         "sb-command",
-        PtyWriteRequest(caller=caller, pty_session_id="pty_missing", chars="x"),
+        CommandSessionWriteRequest(caller=caller, command_session_id="cmd_missing", chars="x"),
         transport=transport,
     )
-    progress = await check_pty_command_progress(
+    progress = await write_stdin(
         "sb-command",
-        PtyProgressRequest(caller=caller, pty_session_id="pty_missing", time=1),
+        CommandSessionWriteRequest(caller=caller, command_session_id="cmd_missing", chars=""),
         transport=transport,
     )
-    cancel = await cancel_pty_command(
+    cancel = await cancel_command_session(
         "sb-command",
-        PtyCancelRequest(caller=caller, pty_session_id="pty_missing"),
+        CommandSessionCancelRequest(caller=caller, command_session_id="cmd_missing"),
         transport=transport,
     )
 
-    assert write.output.stderr == "pty_session_not_found"
-    assert progress.output.stderr == "pty_session_not_found"
-    assert cancel.output.stderr == "pty_session_not_found"
+    assert write.output.stderr == "command_session_not_found"
+    assert progress.output.stderr == "command_session_not_found"
+    assert cancel.output.stderr == "command_session_not_found"
     assert [call[1] for call in transport.calls] == [
-        "api.v1.pty.write_stdin",
-        "api.v1.pty.progress",
-        "api.v1.pty.cancel",
+        "api.v1.command.write_stdin",
+        "api.v1.command.write_stdin",
+        "api.v1.command.cancel",
     ]

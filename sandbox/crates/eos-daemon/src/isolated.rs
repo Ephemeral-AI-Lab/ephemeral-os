@@ -3,7 +3,7 @@
 //! This module is the first Rust lifecycle slice behind
 //! `api.isolated_workspace.*`: it owns one daemon-local `eos-isolated`
 //! session, keeps the public routing key as `agent_id`, and exposes cloned
-//! command handles to the command/PTY dispatcher. The session holds only the
+//! command handles to the command-session dispatcher. The session holds only the
 //! snapshot/lease hinge and scratch upperdir; no OCC publish path is linked
 //! through `eos-isolated`.
 
@@ -70,7 +70,7 @@ struct DaemonIsolatedState {
     #[cfg(target_os = "linux")]
     layer_stack_root: PathBuf,
     session: DaemonSession,
-    active_ptys: HashMap<String, String>,
+    active_command_sessions: HashMap<String, String>,
 }
 
 #[cfg(target_os = "linux")]
@@ -401,45 +401,47 @@ pub fn op_exit(args: &Value, _context: DispatchContext<'_>) -> Result<Value, Dae
     };
     let force_cancel = args
         .get("force_cancel")
-        .or_else(|| args.get("force_cancel_pty"))
         .and_then(Value::as_bool)
         .unwrap_or(false);
     let grace_s = args.get("grace_s").and_then(Value::as_f64);
-    let active_ptys = active_pty_ids(&agent_id);
-    let mut cancelled_pty_session_ids = Vec::new();
-    let mut stale_pty_session_ids = Vec::new();
-    if !active_ptys.is_empty() {
+    let active_command_sessions = active_command_session_ids(&agent_id);
+    let mut cancelled_command_session_ids = Vec::new();
+    let mut stale_command_session_ids = Vec::new();
+    if !active_command_sessions.is_empty() {
         if !force_cancel {
-            return Ok(active_pty_error(&agent_id, &active_ptys));
+            return Ok(active_command_session_error(
+                &agent_id,
+                &active_command_sessions,
+            ));
         }
-        for pty_session_id in &active_ptys {
-            let cancelled = command::cancel_pty_session_for_exit(pty_session_id)?;
+        for command_session_id in &active_command_sessions {
+            let cancelled = command::cancel_command_session_for_exit(command_session_id)?;
             if cancelled {
-                cancelled_pty_session_ids.push(pty_session_id.clone());
+                cancelled_command_session_ids.push(command_session_id.clone());
             } else {
-                unregister_pty_id(pty_session_id);
-                stale_pty_session_ids.push(pty_session_id.clone());
+                unregister_command_session_id(command_session_id);
+                stale_command_session_ids.push(command_session_id.clone());
             }
         }
         let deadline = Instant::now() + Duration::from_secs_f64(grace_s.unwrap_or(0.25).max(0.0));
-        while !active_pty_ids(&agent_id).is_empty() && Instant::now() < deadline {
+        while !active_command_session_ids(&agent_id).is_empty() && Instant::now() < deadline {
             thread::sleep(Duration::from_millis(10));
         }
-        let still_active = active_pty_ids(&agent_id);
+        let still_active = active_command_session_ids(&agent_id);
         if !still_active.is_empty() {
-            return Ok(active_pty_error(&agent_id, &still_active));
+            return Ok(active_command_session_error(&agent_id, &still_active));
         }
     }
 
     with_state(|state| state.session.exit(&AgentId(agent_id.clone()), grace_s)).map_or_else(
         |error| Ok(error_payload(&error)),
         |mut response| {
-            annotate_pty_force_cancel(
+            annotate_command_session_force_cancel(
                 &mut response,
                 force_cancel,
-                &cancelled_pty_session_ids,
-                &stale_pty_session_ids,
-                &active_pty_ids(&agent_id),
+                &cancelled_command_session_ids,
+                &stale_command_session_ids,
+                &active_command_session_ids(&agent_id),
             );
             Ok(response)
         },
@@ -503,7 +505,7 @@ pub fn op_test_reset(_args: &Value, _context: DispatchContext<'_>) -> Result<Val
         let mut guard = lock_state_cell();
         let exited_agents = if let Some(state) = guard.as_mut() {
             let agents = state.session.list_open_agents();
-            state.active_ptys.clear();
+            state.active_command_sessions.clear();
             for agent_id in &agents {
                 let _ = state.session.exit(&AgentId(agent_id.clone()), Some(0.0));
             }
@@ -553,33 +555,33 @@ pub fn agent_has_active_handle(agent_id: &str) -> bool {
 }
 
 #[cfg(any(target_os = "linux", test))]
-pub fn register_pty(agent_id: &str, pty_session_id: &str) {
+pub fn register_command_session(agent_id: &str, command_session_id: &str) {
     let mut guard = lock_state_cell();
     if let Some(state) = guard.as_mut() {
         state
-            .active_ptys
-            .insert(pty_session_id.to_owned(), agent_id.to_owned());
+            .active_command_sessions
+            .insert(command_session_id.to_owned(), agent_id.to_owned());
     }
 }
 
 #[cfg(target_os = "linux")]
-pub fn unregister_pty(agent_id: &str, pty_session_id: &str) {
+pub fn unregister_command_session(agent_id: &str, command_session_id: &str) {
     let mut guard = lock_state_cell();
     if let Some(state) = guard.as_mut() {
         if state
-            .active_ptys
-            .get(pty_session_id)
+            .active_command_sessions
+            .get(command_session_id)
             .is_some_and(|owner| owner == agent_id)
         {
-            state.active_ptys.remove(pty_session_id);
+            state.active_command_sessions.remove(command_session_id);
         }
     }
 }
 
-pub fn unregister_pty_id(pty_session_id: &str) {
+pub fn unregister_command_session_id(command_session_id: &str) {
     let mut guard = lock_state_cell();
     if let Some(state) = guard.as_mut() {
-        state.active_ptys.remove(pty_session_id);
+        state.active_command_sessions.remove(command_session_id);
     }
 }
 
@@ -617,7 +619,7 @@ fn ensure_state(root: &Path) -> Result<(), IsolatedError> {
                 #[cfg(target_os = "linux")]
                 layer_stack_root: root.to_path_buf(),
                 session,
-                active_ptys: HashMap::new(),
+                active_command_sessions: HashMap::new(),
             });
         }
     }
@@ -633,13 +635,13 @@ fn with_state<T>(
         .and_then(f)
 }
 
-fn active_pty_ids(agent_id: &str) -> Vec<String> {
+fn active_command_session_ids(agent_id: &str) -> Vec<String> {
     let guard = lock_state_cell();
     guard
         .as_ref()
         .map(|state| {
             state
-                .active_ptys
+                .active_command_sessions
                 .iter()
                 .filter(|(_, owner)| owner.as_str() == agent_id)
                 .map(|(id, _)| id.clone())
@@ -648,28 +650,28 @@ fn active_pty_ids(agent_id: &str) -> Vec<String> {
         .unwrap_or_default()
 }
 
-fn annotate_pty_force_cancel(
+fn annotate_command_session_force_cancel(
     response: &mut Value,
     force_cancel: bool,
-    cancelled_pty_session_ids: &[String],
-    stale_pty_session_ids: &[String],
-    active_pty_session_ids_after: &[String],
+    cancelled_command_session_ids: &[String],
+    stale_command_session_ids: &[String],
+    active_command_session_ids_after: &[String],
 ) {
     let Some(object) = response.as_object_mut() else {
         return;
     };
     object.insert("force_cancel_requested".to_owned(), json!(force_cancel));
     object.insert(
-        "force_cancelled_pty_session_ids".to_owned(),
-        json!(cancelled_pty_session_ids),
+        "force_cancelled_command_session_ids".to_owned(),
+        json!(cancelled_command_session_ids),
     );
     object.insert(
-        "stale_pty_session_ids".to_owned(),
-        json!(stale_pty_session_ids),
+        "stale_command_session_ids".to_owned(),
+        json!(stale_command_session_ids),
     );
     object.insert(
-        "active_pty_session_ids_after".to_owned(),
-        json!(active_pty_session_ids_after),
+        "active_command_session_ids_after".to_owned(),
+        json!(active_command_session_ids_after),
     );
 }
 
@@ -894,13 +896,13 @@ fn error_payload(error: &IsolatedError) -> Value {
     error_json(error.kind(), error.to_string(), details)
 }
 
-fn active_pty_error(agent_id: &str, pty_session_ids: &[String]) -> Value {
+fn active_command_session_error(agent_id: &str, command_session_ids: &[String]) -> Value {
     error_json(
-        "active_pty_sessions",
-        "exit_isolated_workspace refused while PTY sessions are active",
+        "active_command_sessions",
+        "exit_isolated_workspace refused while command sessions are active",
         json!({
             "agent_id": agent_id,
-            "pty_session_ids": pty_session_ids,
+            "command_session_ids": command_session_ids,
         }),
     )
 }
@@ -951,11 +953,13 @@ mod tests {
     type TestResult = Result<(), Box<dyn std::error::Error + Send + Sync>>;
 
     #[test]
-    fn active_pty_records_block_exit_until_cleared() -> TestResult {
+    fn active_command_session_records_block_exit_until_cleared() -> TestResult {
         let _guard = TEST_LOCK.lock().map_err(|_| "test lock poisoned")?;
         let _ = op_test_reset(&json!({}), DispatchContext::empty());
-        let root =
-            std::env::temp_dir().join(format!("eos-daemon-iws-pty-block-{}", std::process::id()));
+        let root = std::env::temp_dir().join(format!(
+            "eos-daemon-iws-command-session-block-{}",
+            std::process::id()
+        ));
         let scratch = root.join("scratch");
         let _ = std::fs::remove_dir_all(&root);
         std::fs::create_dir_all(root.join("layers"))?;
@@ -969,25 +973,28 @@ mod tests {
         set_env(TEST_SCRATCH_ROOT_ENV, &scratch.to_string_lossy());
 
         let entered = op_enter(
-            &json!({"agent_id": "agent-pty", "layer_stack_root": root}),
+            &json!({"agent_id": "agent-command-session", "layer_stack_root": root}),
             DispatchContext::empty(),
         )?;
         assert_eq!(entered["success"], true);
-        register_pty("agent-pty", "pty-block");
+        register_command_session("agent-command-session", "cmd-block");
 
-        let blocked = op_exit(&json!({"agent_id": "agent-pty"}), DispatchContext::empty())?;
+        let blocked = op_exit(
+            &json!({"agent_id": "agent-command-session"}),
+            DispatchContext::empty(),
+        )?;
         assert_eq!(blocked["success"], false);
-        assert_eq!(blocked["error"]["kind"], "active_pty_sessions");
+        assert_eq!(blocked["error"]["kind"], "active_command_sessions");
 
         let exited = op_exit(
-            &json!({"agent_id": "agent-pty", "force_cancel": true}),
+            &json!({"agent_id": "agent-command-session", "force_cancel": true}),
             DispatchContext::empty(),
         )?;
         assert_eq!(exited["success"], true);
         assert_eq!(exited["force_cancel_requested"], true);
-        assert_eq!(exited["force_cancelled_pty_session_ids"], json!([]));
-        assert_eq!(exited["stale_pty_session_ids"], json!(["pty-block"]));
-        assert_eq!(exited["active_pty_session_ids_after"], json!([]));
+        assert_eq!(exited["force_cancelled_command_session_ids"], json!([]));
+        assert_eq!(exited["stale_command_session_ids"], json!(["cmd-block"]));
+        assert_eq!(exited["active_command_session_ids_after"], json!([]));
         assert_eq!(
             exited["inspection"]["handle_registered_after"],
             json!(false)

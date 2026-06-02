@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Live Docker Phase 3T command, PTY, and non-plugin deferred-gate benchmark."""
+"""Live Docker Phase 3T command-session and non-plugin deferred-gate benchmark."""
 
 from __future__ import annotations
 
@@ -44,14 +44,13 @@ from bench_sandbox_e2e import (  # noqa: E402
     summarize_samples,
 )
 
-AGENT_ID = "phase3t-pty-bench"
-FINITE_TRUE_P95_MS = 60.0
-PTY_TRUE_P95_MS = 100.0
-PTY_PROGRESS_P95_MS = 20.0
-PTY_WRITE_P95_MS = 100.0
-PTY_CANCEL_P95_MS = 500.0
-PTY_CANCEL_HARD_CLEANUP_MS = 2500.0
-PTY_ECHO_PROGRESS_POLLS = 40
+AGENT_ID = "phase3t-command-session-bench"
+COMMAND_SESSION_TRUE_P95_MS = 100.0
+COMMAND_SESSION_PROGRESS_P95_MS = 20.0
+COMMAND_SESSION_WRITE_P95_MS = 100.0
+COMMAND_SESSION_CANCEL_P95_MS = 500.0
+COMMAND_SESSION_CANCEL_HARD_CLEANUP_MS = 2500.0
+COMMAND_SESSION_ECHO_PROGRESS_POLLS = 40
 ISOLATED_AGENT_ID = "phase3t-isolated-bench"
 ISOLATED_AUDIT_PATH = "/eos/isolated-workspace-audit.jsonl"
 MIXED_LOAD_P95_MS = 500.0
@@ -70,8 +69,8 @@ def main(argv: list[str] | None = None) -> int:
     out.write_text(json.dumps(report, indent=2, sort_keys=True))
     print(
         f"wrote {out} "
-        f"(gates={report['gate_pass']} finite={report['gates']['finite_true_p95']} "
-        f"pty={report['gates']['pty_true_p95']} run_id={report['run_id']})"
+        f"(gates={report['gate_pass']} "
+        f"command_session={report['gates']['command_session_true_p95']} run_id={report['run_id']})"
     )
     return 0 if report["gate_pass"] else 1
 
@@ -87,7 +86,7 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
     )
     parser.add_argument(
         "--report",
-        default=str(ROOT / "bench" / "phase3t-pty-command-docker.json"),
+        default=str(ROOT / "bench" / "phase3t-command-session-command-docker.json"),
     )
     parser.add_argument("--samples", type=int, default=10)
     parser.add_argument("--load-concurrency", default="1,3,5,10")
@@ -97,7 +96,7 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
     parser.add_argument("--skip-cache-churn", action="store_true")
     parser.add_argument("--cache-root-count", type=int, default=DEFAULT_CACHE_ROOT_COUNT)
     parser.add_argument("--keep-container", action="store_true")
-    parser.add_argument("--name-prefix", default="eos-phase3t-pty")
+    parser.add_argument("--name-prefix", default="eos-phase3t-command-session")
     parser.add_argument(
         "--privileged",
         action="store_true",
@@ -116,7 +115,7 @@ async def run(args: argparse.Namespace) -> dict[str, Any]:
     )
     try:
         report: dict[str, Any] = {
-            "mode": "docker-phase3t-pty-command",
+            "mode": "docker-phase3t-command-session-command",
             "run_id": os.environ.get("EOS_TIER_RUN_ID") or f"local-{uuid.uuid4().hex[:12]}",
             "sandbox_id": bench.sandbox_id,
             "created_container": bench.created,
@@ -172,11 +171,16 @@ async def run(args: argparse.Namespace) -> dict[str, Any]:
             client = CommandClient(daemon_client, endpoint)
             report["correctness"] = await correctness_checks(bench, client)
             report["operations"] = {
-                "finite_true": await measure_finite_true(client, args.samples),
-                "pty_true": await measure_pty_true(client, args.samples),
-                "pty_progress": await measure_pty_progress(client, args.samples),
-                "pty_write_echo": await measure_pty_write_echo(client, args.samples),
-                "pty_cancel": await measure_pty_cancel(bench, client, args.samples),
+                "command_session_true": await measure_command_session_true(client, args.samples),
+                "command_session_progress": await measure_command_session_progress(
+                    client, args.samples
+                ),
+                "command_session_write_echo": await measure_command_session_write_echo(
+                    client, args.samples
+                ),
+                "command_session_cancel": await measure_command_session_cancel(
+                    bench, client, args.samples
+                ),
             }
             report["load"] = await measure_load_matrix(
                 client,
@@ -264,7 +268,6 @@ class CommandClient:
         self,
         cmd: str,
         *,
-        tty: bool,
         yield_time_ms: int = 1000,
         timeout: int = 30,
     ) -> tuple[dict[str, Any], float]:
@@ -272,50 +275,50 @@ class CommandClient:
             "api.v1.exec_command",
             {
                 "cmd": cmd,
-                "tty": tty,
                 "yield_time_ms": yield_time_ms,
                 "timeout": timeout,
             },
         )
 
-    async def pty_write(
+    async def command_session_write(
         self,
-        pty_session_id: str,
+        command_session_id: str,
         chars: str,
         *,
         yield_time_ms: int = 100,
-        max_tokens: int = 1000,
+        max_output_tokens: int = 1000,
     ) -> tuple[dict[str, Any], float]:
         return await self.call(
-            "api.v1.pty.write_stdin",
+            "api.v1.command.write_stdin",
             {
-                "pty_session_id": pty_session_id,
+                "command_session_id": command_session_id,
                 "chars": chars,
                 "yield_time_ms": yield_time_ms,
-                "max_tokens": max_tokens,
+                "max_output_tokens": max_output_tokens,
             },
         )
 
-    async def pty_progress(
+    async def command_session_progress(
         self,
-        pty_session_id: str,
+        command_session_id: str,
         *,
         seconds: float = 1.0,
-        max_tokens: int = 1000,
+        max_output_tokens: int = 1000,
     ) -> tuple[dict[str, Any], float]:
         return await self.call(
-            "api.v1.pty.progress",
+            "api.v1.command.write_stdin",
             {
-                "pty_session_id": pty_session_id,
-                "time": seconds,
-                "max_tokens": max_tokens,
+                "command_session_id": command_session_id,
+                "chars": "",
+                "yield_time_ms": int(seconds * 1000),
+                "max_output_tokens": max_output_tokens,
             },
         )
 
-    async def pty_cancel(self, pty_session_id: str) -> tuple[dict[str, Any], float]:
+    async def command_session_cancel(self, command_session_id: str) -> tuple[dict[str, Any], float]:
         return await self.call(
-            "api.v1.pty.cancel",
-            {"pty_session_id": pty_session_id},
+            "api.v1.command.cancel",
+            {"command_session_id": command_session_id},
         )
 
 
@@ -333,18 +336,15 @@ def decode_response(result: Any) -> dict[str, Any]:
 async def correctness_checks(bench: DockerBench, client: CommandClient) -> dict[str, Any]:
     separated, _ = await client.exec_command(
         "echo out; echo err >&2",
-        tty=False,
         yield_time_ms=1000,
     )
     python_path, _ = await client.exec_command(
         "python - <<'PY'\nimport sys\nprint(sys.executable)\nPY",
-        tty=False,
         yield_time_ms=1000,
     )
     write_path = f"phase3t-write-{uuid.uuid4().hex[:8]}.txt"
     write, _ = await client.exec_command(
         f"printf phase3t > {shlex.quote(write_path)}",
-        tty=False,
         yield_time_ms=1000,
     )
     readback, _ = await client.call(
@@ -355,36 +355,55 @@ async def correctness_checks(bench: DockerBench, client: CommandClient) -> dict[
     marker = f"eos_phase3t_nohup_{uuid.uuid4().hex[:8]}"
     nohup, _ = await client.exec_command(
         f"nohup bash -c 'exec -a {marker} sleep 60' >/tmp/{marker}.log 2>&1 &",
-        tty=False,
         yield_time_ms=1000,
     )
     await asyncio.sleep(0.2)
     descendants = await process_marker_count(bench, marker)
+    nohup_cancel, _ = await client.command_session_cancel(str(nohup.get("command_session_id")))
+    nohup_gone = await wait_for_process_gone(bench, marker, timeout_s=2.5)
 
-    pty_marker = f"eos_phase3t_pty_nohup_{uuid.uuid4().hex[:8]}"
-    pty_nohup, _ = await client.exec_command(
-        f"nohup bash -c 'exec -a {pty_marker} sleep 60' "
-        f">/tmp/{pty_marker}.log 2>&1 &",
-        tty=True,
+    command_session_marker = f"eos_phase3t_command_session_nohup_{uuid.uuid4().hex[:8]}"
+    command_session_nohup, _ = await client.exec_command(
+        f"nohup bash -c 'exec -a {command_session_marker} sleep 60' "
+        f">/tmp/{command_session_marker}.log 2>&1 &",
         yield_time_ms=1000,
     )
     await asyncio.sleep(0.2)
-    pty_descendants = await process_marker_count(bench, pty_marker)
+    command_session_descendants = await process_marker_count(bench, command_session_marker)
+    command_session_cancel, _ = await client.command_session_cancel(
+        str(command_session_nohup.get("command_session_id"))
+    )
+    command_session_gone = await wait_for_process_gone(
+        bench, command_session_marker, timeout_s=2.5
+    )
 
     checks = {
-        "stdout_stderr_split": (
+        "terminal_transcript_combines_output": (
             separated.get("status") == "ok"
-            and separated.get("output", {}).get("stdout") == "out\n"
-            and separated.get("output", {}).get("stderr") == "err\n"
+            and "out" in separated_text(separated)
+            and "err" in separated_text(separated)
+            and separated.get("output", {}).get("stderr") == ""
         ),
         "python_uses_testbed_env": "/opt/miniconda3/envs/testbed/bin/python"
         in separated_text(python_path),
         "finite_write_published": (
             write.get("status") == "ok" and readback.get("content") == "phase3t"
         ),
-        "nohup_descendant_cleanup": nohup.get("status") == "ok" and descendants == 0,
-        "pty_nohup_descendant_cleanup": (
-            pty_nohup.get("status") == "ok" and pty_descendants == 0
+        "nohup_becomes_command_session": (
+            nohup.get("status") == "running"
+            and bool(nohup.get("command_session_id"))
+            and descendants > 0
+        ),
+        "nohup_cancel_cleans_descendant": (
+            nohup_cancel.get("status") == "cancelled" and nohup_gone
+        ),
+        "command_session_nohup_becomes_command_session": (
+            command_session_nohup.get("status") == "running"
+            and bool(command_session_nohup.get("command_session_id"))
+            and command_session_descendants > 0
+        ),
+        "command_session_nohup_cancel_cleans_descendant": (
+            command_session_cancel.get("status") == "cancelled" and command_session_gone
         ),
     }
     return {
@@ -396,8 +415,12 @@ async def correctness_checks(bench: DockerBench, client: CommandClient) -> dict[
             "readback": {k: readback.get(k) for k in ("success", "content")},
             "nohup": trim_response(nohup),
             "nohup_marker_remaining": descendants,
-            "pty_nohup": trim_response(pty_nohup),
-            "pty_nohup_marker_remaining": pty_descendants,
+            "nohup_cancel": trim_response(nohup_cancel),
+            "nohup_marker_gone_after_cancel": nohup_gone,
+            "command_session_nohup": trim_response(command_session_nohup),
+            "command_session_nohup_marker_remaining": command_session_descendants,
+            "command_session_nohup_cancel": trim_response(command_session_cancel),
+            "command_session_nohup_marker_gone_after_cancel": command_session_gone,
         },
         "gate_pass": all(checks.values()),
     }
@@ -413,9 +436,7 @@ async def configure_daemon_environment(bench: DockerBench) -> None:
     }
     payload = "\n".join(f"{key}={value}" for key, value in lines.items()) + "\n"
     await bench.exec(
-        "cat >> /etc/environment <<'EOF'\n"
-        f"{payload}"
-        "EOF\n",
+        f"cat >> /etc/environment <<'EOF'\n{payload}EOF\n",
         timeout=15,
     )
     await bench.exec("mount -o remount,rw /sys/fs/cgroup 2>/dev/null || true", timeout=15)
@@ -435,7 +456,6 @@ async def isolated_exit_inspection_checks(
         "api.v1.exec_command",
         {
             "cmd": f"printf isolated > {shlex.quote(private_path)}",
-            "tty": False,
             "yield_time_ms": 1000,
             "timeout": 30,
         },
@@ -445,11 +465,10 @@ async def isolated_exit_inspection_checks(
         "api.v1.read_file",
         {"path": f"/testbed/{private_path}"},
     )
-    pty_start, pty_start_ms = await client.call(
+    command_session_start, command_session_start_ms = await client.call(
         "api.v1.exec_command",
         {
             "cmd": "sleep 30",
-            "tty": True,
             "yield_time_ms": 50,
             "timeout": 60,
         },
@@ -487,12 +506,13 @@ async def isolated_exit_inspection_checks(
             and private_path in finite.get("changed_paths", [])
         ),
         "private_write_unpublished_during": shared_read_during.get("exists") is False,
-        "active_pty_exit_blocked": (
+        "active_command_session_exit_blocked": (
             blocked_exit.get("success") is False
-            and blocked_exit.get("error", {}).get("kind") == "active_pty_sessions"
+            and blocked_exit.get("error", {}).get("kind") == "active_command_sessions"
         ),
         "force_exit_succeeded": forced_exit.get("success") is True,
-        "force_cancel_cleared_ptys": forced_exit.get("active_pty_session_ids_after") == [],
+        "force_cancel_cleared_command_sessions": forced_exit.get("active_command_session_ids_after")
+        == [],
         "status_closed_after": (
             status_after.get("success") is True and status_after.get("open") is False
         ),
@@ -508,7 +528,7 @@ async def isolated_exit_inspection_checks(
         "latency_ms": {
             "enter": enter_ms,
             "finite": finite_ms,
-            "pty_start": pty_start_ms,
+            "command_session_start": command_session_start_ms,
             "blocked_exit": blocked_exit_ms,
             "forced_exit": forced_exit_ms,
         },
@@ -519,7 +539,7 @@ async def isolated_exit_inspection_checks(
                 "success": shared_read_during.get("success"),
                 "exists": shared_read_during.get("exists"),
             },
-            "pty_start": trim_response(pty_start),
+            "command_session_start": trim_response(command_session_start),
             "blocked_exit": trim_isolated_response(blocked_exit),
             "forced_exit": trim_isolated_response(forced_exit),
             "status_after": status_after,
@@ -550,11 +570,7 @@ async def measure_mixed_non_plugin_load(
         await client.call("api.v1.write_file", {"path": path, "content": "old\n"})
 
     snapshot, _ = await client.call("api.audit.snapshot", {})
-    after_seq = (
-        snapshot.get("snapshot", {})
-        .get("daemon", {})
-        .get("next_seq", 0)
-    ) - 1
+    after_seq = (snapshot.get("snapshot", {}).get("daemon", {}).get("next_seq", 0)) - 1
     operations: dict[str, Any] = {}
     operation_counter = 0
 
@@ -589,11 +605,11 @@ async def measure_mixed_non_plugin_load(
             )
             return response, wall_ms, "edit"
         if operation == 3:
-            response, wall_ms = await client.exec_command("true", tty=False)
+            response, wall_ms = await client.exec_command("true")
             return response, wall_ms, "exec_command"
         if operation == 4:
-            response, wall_ms = await client.exec_command("true", tty=True)
-            return response, wall_ms, "pty_command"
+            response, wall_ms = await client.exec_command("true")
+            return response, wall_ms, "command_session_command"
         if operation == 5:
             response, wall_ms = await client.call(
                 "api.v1.glob",
@@ -667,9 +683,7 @@ async def measure_mixed_non_plugin_load(
             "cursor": audit_pull.get("cursor"),
             "buffer": audit_buffer,
             "sample_event_types": [
-                event.get("type")
-                for event in audit_events[:20]
-                if isinstance(event, dict)
+                event.get("type") for event in audit_events[:20] if isinstance(event, dict)
             ]
             if isinstance(audit_events, list)
             else [],
@@ -757,76 +771,69 @@ async def measure_cache_churn(
     }
 
 
-async def measure_finite_true(client: CommandClient, count: int) -> dict[str, Any]:
+async def measure_command_session_true(client: CommandClient, count: int) -> dict[str, Any]:
     return await measure_series(
         count,
-        lambda _i: client.exec_command("true", tty=False, yield_time_ms=1000),
-        expect=lambda response: response.get("status") == "ok" and response.get("exit_code") == 0,
-    )
-
-
-async def measure_pty_true(client: CommandClient, count: int) -> dict[str, Any]:
-    return await measure_series(
-        count,
-        lambda _i: client.exec_command("true", tty=True, yield_time_ms=1000),
+        lambda _i: client.exec_command("true", yield_time_ms=1000),
         expect=lambda response: (
             response.get("status") == "ok"
             and response.get("exit_code") == 0
-            and response.get("pty_session_id") is None
+            and response.get("command_session_id") is None
         ),
     )
 
 
-async def measure_pty_progress(client: CommandClient, count: int) -> dict[str, Any]:
+async def measure_command_session_progress(client: CommandClient, count: int) -> dict[str, Any]:
     start, _ = await client.exec_command(
         "while true; do echo phase3t-progress; sleep 0.05; done",
-        tty=True,
         yield_time_ms=50,
         timeout=30,
     )
-    session_id = str(start.get("pty_session_id") or "")
+    session_id = str(start.get("command_session_id") or "")
     samples: list[dict[str, Any]] = []
     if session_id:
         for index in range(max(0, count)):
-            response, wall_ms = await client.pty_progress(session_id, seconds=1.0)
-            samples.append(sample(index, response, wall_ms, "phase3t-progress" in separated_text(response)))
-        await client.pty_cancel(session_id)
+            await asyncio.sleep(0.06)
+            response, wall_ms = await client.command_session_progress(session_id, seconds=0.0)
+            samples.append(
+                sample(index, response, wall_ms, "phase3t-progress" in separated_text(response))
+            )
+        await client.command_session_cancel(session_id)
     return summarize_samples_block(samples, extra={"start": trim_response(start)})
 
 
-async def measure_pty_write_echo(client: CommandClient, count: int) -> dict[str, Any]:
+async def measure_command_session_write_echo(client: CommandClient, count: int) -> dict[str, Any]:
     samples: list[dict[str, Any]] = []
     for index in range(max(0, count)):
         expected = f"echo:hello-{index}"
         start, _ = await client.exec_command(
-            "python -c 'import sys; print(\"ready\", flush=True); line=sys.stdin.readline(); print(\"echo:\" + line.strip(), flush=True)'",
-            tty=True,
+            'python -c \'import sys; print("ready", flush=True); line=sys.stdin.readline(); print("echo:" + line.strip(), flush=True)\'',
             yield_time_ms=50,
             timeout=30,
         )
-        session_id = str(start.get("pty_session_id") or "")
+        session_id = str(start.get("command_session_id") or "")
         if not session_id:
             samples.append(sample(index, start, 0.0, False))
             continue
 
         ready_text = separated_text(start)
         readiness_polls = 0
-        while "ready" not in ready_text and readiness_polls < PTY_ECHO_PROGRESS_POLLS:
-            progress, _ = await client.pty_progress(session_id, seconds=0.05)
+        while "ready" not in ready_text and readiness_polls < COMMAND_SESSION_ECHO_PROGRESS_POLLS:
+            progress, _ = await client.command_session_progress(session_id, seconds=0.05)
             readiness_polls += 1
             ready_text += separated_text(progress)
             if progress.get("status") != "running":
                 break
 
-        write_response, write_ms = await client.pty_write(
+        write_response, write_ms = await client.command_session_write(
             session_id,
             f"hello-{index}\n",
             yield_time_ms=50,
         )
         collected = ready_text + separated_text(write_response)
         progress_polls = 0
-        while expected not in collected and progress_polls < PTY_ECHO_PROGRESS_POLLS:
-            progress, _ = await client.pty_progress(session_id, seconds=0.05)
+        while expected not in collected and progress_polls < COMMAND_SESSION_ECHO_PROGRESS_POLLS:
+            progress, _ = await client.command_session_progress(session_id, seconds=0.05)
             progress_polls += 1
             collected += separated_text(progress)
             if progress.get("status") != "running":
@@ -843,7 +850,7 @@ async def measure_pty_write_echo(client: CommandClient, count: int) -> dict[str,
     return summarize_samples_block(samples)
 
 
-async def measure_pty_cancel(
+async def measure_command_session_cancel(
     bench: DockerBench,
     client: CommandClient,
     count: int,
@@ -854,19 +861,20 @@ async def measure_pty_cancel(
         marker = f"eos_phase3t_cancel_{uuid.uuid4().hex[:8]}"
         start, _ = await client.exec_command(
             f"exec -a {marker} sleep 60",
-            tty=True,
             yield_time_ms=50,
             timeout=120,
         )
-        session_id = str(start.get("pty_session_id") or "")
+        session_id = str(start.get("command_session_id") or "")
         if not session_id:
             samples.append(sample(index, start, 0.0, False))
             continue
-        response, wall_ms = await client.pty_cancel(session_id)
+        response, wall_ms = await client.command_session_cancel(session_id)
         cleanup_started = time.perf_counter()
         gone = await wait_for_process_gone(bench, marker, timeout_s=2.5)
         cleanup_ms.append(elapsed_ms(cleanup_started))
-        samples.append(sample(index, response, wall_ms, response.get("status") == "cancelled" and gone))
+        samples.append(
+            sample(index, response, wall_ms, response.get("status") == "cancelled" and gone)
+        )
     return summarize_samples_block(samples, extra={"cleanup_ms": summarize_samples(cleanup_ms)})
 
 
@@ -876,35 +884,24 @@ async def measure_load_matrix(
     concurrencies: list[int],
     rounds: int,
 ) -> dict[str, Any]:
-    operations: dict[str, Any] = {"finite_true": {}, "finite_write": {}, "pty_true": {}}
+    operations: dict[str, Any] = {"finite_write": {}, "command_session_true": {}}
     for concurrency in concurrencies:
-        operations["finite_true"][str(concurrency)] = await measure_concurrent(
-            concurrency,
-            rounds,
-            lambda _index: client.exec_command("true", tty=False, yield_time_ms=1000),
-            expect=lambda response: response.get("status") == "ok",
-        )
         operations["finite_write"][str(concurrency)] = await measure_concurrent(
             concurrency,
             rounds,
             lambda index: client.exec_command(
                 f"printf x > phase3t-load-{concurrency}-{index}.txt",
-                tty=False,
                 yield_time_ms=1000,
             ),
             expect=lambda response: response.get("status") == "ok",
         )
-        operations["pty_true"][str(concurrency)] = await measure_concurrent(
+        operations["command_session_true"][str(concurrency)] = await measure_concurrent(
             concurrency,
             rounds,
-            lambda _index: client.exec_command("true", tty=True, yield_time_ms=1000),
+            lambda _index: client.exec_command("true", yield_time_ms=1000),
             expect=lambda response: response.get("status") == "ok",
         )
-    gate_pass = all(
-        cell["all_samples_ok"]
-        for op in operations.values()
-        for cell in op.values()
-    )
+    gate_pass = all(cell["all_samples_ok"] for op in operations.values() for cell in op.values())
     return {
         "operations": operations,
         "gate_pass": gate_pass,
@@ -972,7 +969,7 @@ def sample(
         "ok": ok,
         "status": response.get("status"),
         "exit_code": response.get("exit_code"),
-        "pty_session_id_present": bool(response.get("pty_session_id")),
+        "command_session_id_present": bool(response.get("command_session_id")),
         "response": trim_response(response),
     }
     if slot is not None:
@@ -1001,16 +998,19 @@ def summarize_samples_block(
 
 def evaluate_gates(report: dict[str, Any]) -> dict[str, bool]:
     ops = report["operations"]
-    pty_cancel = ops["pty_cancel"]
+    command_session_cancel = ops["command_session_cancel"]
     return {
         "operation_samples_ok": all(block["all_samples_ok"] for block in ops.values()),
-        "finite_true_p95": p95(ops["finite_true"]) <= FINITE_TRUE_P95_MS,
-        "pty_true_p95": p95(ops["pty_true"]) <= PTY_TRUE_P95_MS,
-        "pty_progress_p95": p95(ops["pty_progress"]) <= PTY_PROGRESS_P95_MS,
-        "pty_write_echo_p95": p95(ops["pty_write_echo"]) <= PTY_WRITE_P95_MS,
-        "pty_cancel_p95": p95(pty_cancel) <= PTY_CANCEL_P95_MS,
-        "pty_cancel_hard_cleanup": p95_summary(pty_cancel.get("cleanup_ms", {}))
-        <= PTY_CANCEL_HARD_CLEANUP_MS,
+        "command_session_true_p95": p95(ops["command_session_true"]) <= COMMAND_SESSION_TRUE_P95_MS,
+        "command_session_progress_p95": p95(ops["command_session_progress"])
+        <= COMMAND_SESSION_PROGRESS_P95_MS,
+        "command_session_write_echo_p95": p95(ops["command_session_write_echo"])
+        <= COMMAND_SESSION_WRITE_P95_MS,
+        "command_session_cancel_p95": p95(command_session_cancel) <= COMMAND_SESSION_CANCEL_P95_MS,
+        "command_session_cancel_hard_cleanup": p95_summary(
+            command_session_cancel.get("cleanup_ms", {})
+        )
+        <= COMMAND_SESSION_CANCEL_HARD_CLEANUP_MS,
     }
 
 
@@ -1098,7 +1098,7 @@ def mixed_operation_ok(name: str, response: dict[str, Any]) -> bool:
         return response.get("success") is True and response.get("exists") is True
     if name in {"write", "edit"}:
         return response.get("success") is True and response.get("status") == "committed"
-    if name in {"exec_command", "pty_command"}:
+    if name in {"exec_command", "command_session_command"}:
         return response.get("status") == "ok" and response.get("exit_code") == 0
     if name in {"glob", "grep"}:
         return response.get("success") is True or response.get("status") == "ok"
@@ -1173,8 +1173,7 @@ async def seed_cache_churn_roots(bench: DockerBench, root_count: int) -> list[st
     )
     require_success(
         await bench.exec(
-            f"tar -xf {shlex.quote(staging_tar)} -C / && "
-            f"rm -rf {shlex.quote(staging_dir)}",
+            f"tar -xf {shlex.quote(staging_tar)} -C / && rm -rf {shlex.quote(staging_dir)}",
             timeout=120,
         ),
         "extract cache churn roots",
@@ -1247,9 +1246,9 @@ def trim_isolated_response(response: dict[str, Any]) -> dict[str, Any]:
             "manifest_root_hash",
             "inspection",
             "force_cancel_requested",
-            "force_cancelled_pty_session_ids",
-            "stale_pty_session_ids",
-            "active_pty_session_ids_after",
+            "force_cancelled_command_session_ids",
+            "stale_command_session_ids",
+            "active_command_session_ids_after",
             "error",
         )
         if key in response
@@ -1263,7 +1262,7 @@ def trim_response(response: dict[str, Any]) -> dict[str, Any]:
             "success",
             "status",
             "exit_code",
-            "pty_session_id",
+            "command_session_id",
             "changed_paths",
             "conflict",
             "conflict_reason",

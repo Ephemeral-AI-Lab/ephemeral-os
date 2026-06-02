@@ -248,7 +248,10 @@ async def publish_sequence(bench: DockerBench, runtime: str, *, root: str) -> di
         (
             "write",
             "api.v1.write_file",
-            {"path": f"{WORKSPACE_ROOT}/av7/write.txt", "content": EXPECTED_CONTENT["av7/write.txt"]},
+            {
+                "path": f"{WORKSPACE_ROOT}/av7/write.txt",
+                "content": EXPECTED_CONTENT["av7/write.txt"],
+            },
         ),
         (
             "write_edit_base",
@@ -274,7 +277,6 @@ async def publish_sequence(bench: DockerBench, runtime: str, *, root: str) -> di
             "api.v1.exec_command",
             {
                 "cmd": "printf 'command-payload\\n' > av7/command.txt",
-                "tty": False,
                 "yield_time_ms": 1000,
                 "timeout": 30,
             },
@@ -282,13 +284,18 @@ async def publish_sequence(bench: DockerBench, runtime: str, *, root: str) -> di
         (
             "dedup_head_seed",
             "api.v1.write_file",
-            {"path": f"{WORKSPACE_ROOT}/av7/dedup.txt", "content": EXPECTED_CONTENT["av7/dedup.txt"]},
+            {
+                "path": f"{WORKSPACE_ROOT}/av7/dedup.txt",
+                "content": EXPECTED_CONTENT["av7/dedup.txt"],
+            },
         ),
     ]
     samples = []
     for name, op, payload in operations:
         response = await call_api(bench, runtime, op, payload, root=root, timeout=60)
-        samples.append({"name": name, "op": op, "ok": operation_ok(response), "response": trim(response)})
+        samples.append(
+            {"name": name, "op": op, "ok": operation_ok(response), "response": trim(response)}
+        )
     return {"samples": samples, "all_ok": all(item["ok"] for item in samples)}
 
 
@@ -327,7 +334,11 @@ async def read_expected(bench: DockerBench, runtime: str, *, root: str) -> dict[
     workspace_hash = sha256_text(
         json.dumps({item["path"]: EXPECTED_CONTENT[item["path"]] for item in reads}, sort_keys=True)
     )
-    return {"reads": reads, "all_ok": all(item["ok"] for item in reads), "workspace_hash": workspace_hash}
+    return {
+        "reads": reads,
+        "all_ok": all(item["ok"] for item in reads),
+        "workspace_hash": workspace_hash,
+    }
 
 
 async def inspect_stack(bench: DockerBench, root: str) -> dict[str, Any]:

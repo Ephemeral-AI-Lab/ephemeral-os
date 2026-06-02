@@ -63,8 +63,7 @@ pub fn run_setns(
     let ns_fds = require_ns_fds(request)?;
     join_cgroup(request);
     join_namespaces(&ns_fds)?;
-    let output_dir = setns_output_dir(request)?;
-    crate::fresh_ns::execute_tool(request, 0.0, &output_dir, Instant::now())
+    crate::fresh_ns::execute_tool(request, 0.0, Instant::now())
 }
 
 #[cfg(not(target_os = "linux"))]
@@ -252,17 +251,6 @@ fn namespace_fd_order_with_types(ns_fds: &NsFds) -> Vec<(&'static str, RawFd, li
 }
 
 #[cfg(any(test, target_os = "linux"))]
-fn setns_output_dir(request: &RunRequest) -> Result<PathBuf, RunnerError> {
-    request
-        .upperdir
-        .as_ref()
-        .and_then(|upperdir| upperdir.parent().map(PathBuf::from))
-        .ok_or_else(|| {
-            RunnerError::InvalidRequest("setns mode requires upperdir with parent".to_owned())
-        })
-}
-
-#[cfg(any(test, target_os = "linux"))]
 fn overlay_layer_paths(request: &RunRequest) -> Vec<PathBuf> {
     if request.layer_paths.is_empty() {
         vec![request.workspace_root.0.clone()]
@@ -374,7 +362,7 @@ fn setns_fd(name: &str, fd: RawFd, nstype: libc::c_int) -> Result<(), RunnerErro
 mod tests {
     use super::{
         first_nameserver, namespace_fd_order, needs_fallback_dns, overlay_layer_paths,
-        require_ns_fds, setns_output_dir,
+        require_ns_fds,
     };
     use crate::request::{Fd, NsFds, RunMode, RunRequest, ToolCall, WorkspaceRoot};
     use eos_protocol::Intent;
@@ -401,16 +389,6 @@ mod tests {
             namespace_fd_order(&ns_fds),
             vec![("user", 10), ("mnt", 11), ("net", 12)]
         );
-    }
-
-    #[test]
-    fn setns_output_dir_is_parent_of_upperdir() -> Result<(), Box<dyn std::error::Error>> {
-        let request = RunRequest {
-            upperdir: Some(Path::new("/tmp/iws/upper").to_path_buf()),
-            ..request(Some(default_ns_fds()))
-        };
-        assert_eq!(setns_output_dir(&request)?, Path::new("/tmp/iws"));
-        Ok(())
     }
 
     #[test]

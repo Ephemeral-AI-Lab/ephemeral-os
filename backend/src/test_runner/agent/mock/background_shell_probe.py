@@ -1,4 +1,4 @@
-"""Background command probes that drive ``exec_command(tty=True)`` through
+"""Background command probes that drive ``exec_command`` through
 the mock-agent tool framework so the scenario harness records full
 ``sandbox_events.jsonl`` / ``performance_report.json`` artifacts under
 ``.sweevo_runs/scenario_logs/...``.
@@ -8,7 +8,7 @@ summary to a known workspace path that the matching test reads back via
 ``sandbox_api.read_file`` after the scenario report returns.
 
 Background mode is enabled by passing ``background_task_id`` through
-``call_tool``. The bridge maps that stable id to the returned PTY session id.
+``call_tool``. The bridge maps that stable id to the returned command session id.
 """
 
 from __future__ import annotations
@@ -35,7 +35,7 @@ from tools.isolated_workspace.exit_isolated_workspace import (
 )
 from tools.sandbox.read_file import read_file as read_file_tool
 from tools.sandbox.exec_command import exec_command as exec_command_tool
-from tools.sandbox.cancel_pty_command import cancel_pty_command as cancel_pty_command_tool
+from tools.sandbox.write_stdin import write_stdin as write_stdin_tool
 from tools.sandbox.write_file import write_file as write_file_tool
 
 WORKSPACE_ROOT = "/testbed"
@@ -84,7 +84,7 @@ async def _wait_for_background_drain(metadata: ExecutionMetadata) -> None:
     deadline = time.perf_counter() + _BACKGROUND_DRAIN_TIMEOUT_S
     while time.perf_counter() < deadline:
         try:
-            count = await sandbox_api.pty_session_count(sandbox_id, agent_id)
+            count = await sandbox_api.command_session_count(sandbox_id, agent_id)
         except Exception:
             return
         if count <= 0:
@@ -153,13 +153,10 @@ def _tool_record(result: ToolResult) -> dict[str, Any]:
         "is_error": bool(result.is_error),
         "status": payload.get("status") or result.metadata.get("status"),
         "conflict_reason": (
-            payload.get("conflict_reason")
-            or result.metadata.get("conflict_reason")
+            payload.get("conflict_reason") or result.metadata.get("conflict_reason")
         ),
         "changed_paths": list(
-            payload.get("changed_paths")
-            or result.metadata.get("changed_paths")
-            or ()
+            payload.get("changed_paths") or result.metadata.get("changed_paths") or ()
         ),
         "error": payload.get("error") or result.metadata.get("error"),
         "metadata": _tool_metadata(result),
@@ -215,7 +212,7 @@ async def _call_probe_tool(
     return result
 
 
-async def _wait_for_pty_session_count(
+async def _wait_for_command_session_count(
     *,
     sandbox_id: str,
     agent_id: str,
@@ -225,7 +222,7 @@ async def _wait_for_pty_session_count(
     deadline = time.perf_counter() + timeout_s
     last_count = 0
     while time.perf_counter() < deadline:
-        last_count = await sandbox_api.pty_session_count(sandbox_id, agent_id)
+        last_count = await sandbox_api.command_session_count(sandbox_id, agent_id)
         if last_count >= minimum:
             return last_count
         await asyncio.sleep(0.1)
@@ -289,8 +286,7 @@ async def _write_summary(
     record_tool_check(f"tool.write_file.background_shell.summary.{path}", written)
     if written.is_error:
         raise RuntimeError(
-            f"background_shell summary write failed for {path}: "
-            f"{written.output[:200]}"
+            f"background_shell summary write failed for {path}: {written.output[:200]}"
         )
     return path
 
@@ -397,9 +393,7 @@ async def run_background_shell_stop_probe(
                 call_tool(
                     exec_command_tool,
                     {
-                        "command": (
-                            f"sleep {CANCEL_SLEEP_S}; echo done-{index}"
-                        ),
+                        "command": (f"sleep {CANCEL_SLEEP_S}; echo done-{index}"),
                         "timeout": 120,
                     },
                     metadata,
@@ -408,9 +402,7 @@ async def run_background_shell_stop_probe(
                 ),
                 timeout=CANCEL_AFTER_S,
             )
-            record_tool_check(
-                f"tool.exec_command.background_shell.cancel.{index}", result
-            )
+            record_tool_check(f"tool.exec_command.background_shell.cancel.{index}", result)
             payload = _command_payload(result)
             return {
                 "index": index,
@@ -494,9 +486,7 @@ async def run_background_shell_interleave_probe(
         call_tool(
             exec_command_tool,
             {
-                "command": (
-                    f"sleep {INTERLEAVE_BACKGROUND_SLEEP_S}; echo bg-done"
-                ),
+                "command": (f"sleep {INTERLEAVE_BACKGROUND_SLEEP_S}; echo bg-done"),
                 "timeout": 120,
             },
             metadata,
@@ -535,9 +525,7 @@ async def run_background_shell_interleave_probe(
             )
     finally:
         try:
-            bg_result = await asyncio.wait_for(
-                bg_task, timeout=INTERLEAVE_BACKGROUND_SLEEP_S + 30
-            )
+            bg_result = await asyncio.wait_for(bg_task, timeout=INTERLEAVE_BACKGROUND_SLEEP_S + 30)
             bg_payload = _command_payload(bg_result)
             bg_record = {
                 "cancelled": False,
@@ -556,9 +544,7 @@ async def run_background_shell_interleave_probe(
                 "shell_metadata": {},
             }
 
-    p95_mount_s = _percentile(
-        [r["mount_s"] for r in foreground_records], 95.0
-    )
+    p95_mount_s = _percentile([r["mount_s"] for r in foreground_records], 95.0)
 
     summary = {
         "schema": SUMMARY_SCHEMA,
@@ -595,7 +581,7 @@ async def run_background_shell_exhaustion_probe(
     call_tool: CallTool,
     record_tool_check: RecordToolCheck,
 ) -> str:
-    """T5: N PTY launches cancelled in unison; assert AC-14 read budget."""
+    """T5: N command-session launches cancelled in unison; assert AC-14 read budget."""
     started = time.perf_counter()
 
     async def _launch_one(index: int) -> dict[str, Any]:
@@ -603,12 +589,8 @@ async def run_background_shell_exhaustion_probe(
             label=f"exhaustion.launch.{index}",
             tool_obj=exec_command_tool,
             raw_input={
-                "command": (
-                    f"sleep {EXHAUSTION_BACKGROUND_SLEEP_S}; "
-                    f"echo done-{index}"
-                ),
+                "command": (f"sleep {EXHAUSTION_BACKGROUND_SLEEP_S}; echo done-{index}"),
                 "timeout": EXHAUSTION_BACKGROUND_SLEEP_S + 30,
-                "tty": True,
                 "yield_time_ms": 50,
             },
             metadata=metadata,
@@ -622,8 +604,8 @@ async def run_background_shell_exhaustion_probe(
             "index": index,
             "is_error": bool(result.is_error),
             "status": payload.get("status") or result.metadata.get("status"),
-            "pty_session_id": payload.get("pty_session_id")
-            or result.metadata.get("pty_session_id"),
+            "command_session_id": payload.get("command_session_id")
+            or result.metadata.get("command_session_id"),
         }
 
     launch_records = await asyncio.gather(
@@ -631,16 +613,20 @@ async def run_background_shell_exhaustion_probe(
         return_exceptions=False,
     )
     session_ids = [
-        str(record["pty_session_id"])
+        str(record["command_session_id"])
         for record in launch_records
-        if record.get("pty_session_id")
+        if record.get("command_session_id")
     ]
 
-    async def _cancel_one(pty_session_id: str) -> dict[str, Any]:
+    async def _cancel_one(command_session_id: str) -> dict[str, Any]:
         result = await _call_probe_tool(
-            label=f"exhaustion.cancel.{pty_session_id}",
-            tool_obj=cancel_pty_command_tool,
-            raw_input={"pty_session_id": pty_session_id},
+            label=f"exhaustion.cancel.{command_session_id}",
+            tool_obj=write_stdin_tool,
+            raw_input={
+                "command_session_id": command_session_id,
+                "chars": "\u0003",
+                "yield_time_ms": 50,
+            },
             metadata=metadata,
             emit=emit,
             call_tool=call_tool,
@@ -648,12 +634,12 @@ async def run_background_shell_exhaustion_probe(
             allow_error=True,
         )
         record = _tool_record(result)
-        record["pty_session_id"] = pty_session_id
+        record["command_session_id"] = command_session_id
         return record
 
     cancel_t0 = time.perf_counter()
     cancel_records = await asyncio.gather(
-        *(_cancel_one(pty_session_id) for pty_session_id in session_ids),
+        *(_cancel_one(command_session_id) for command_session_id in session_ids),
         return_exceptions=False,
     )
     cancel_elapsed = time.perf_counter() - cancel_t0
@@ -667,10 +653,7 @@ async def run_background_shell_exhaustion_probe(
     seed_result = await call_tool(
         exec_command_tool,
         {
-            "command": (
-                f"mkdir -p $(dirname {seed_path}) && "
-                f"echo probe-ok > {seed_path}"
-            ),
+            "command": (f"mkdir -p $(dirname {seed_path}) && echo probe-ok > {seed_path}"),
             "timeout": 30,
         },
         metadata,
@@ -684,9 +667,7 @@ async def run_background_shell_exhaustion_probe(
         metadata,
         emit,
     )
-    record_tool_check(
-        "tool.read_file.background_shell.exhaustion.read", read_result
-    )
+    record_tool_check("tool.read_file.background_shell.exhaustion.read", read_result)
     fg_elapsed = time.perf_counter() - fg_t0
 
     summary = {
@@ -755,18 +736,13 @@ async def run_background_shell_partial_write_cancel_probe(
     seed_result = await call_tool(
         exec_command_tool,
         {
-            "command": (
-                f"mkdir -p $(dirname {target}) && "
-                f"touch $(dirname {target})/.sentinel"
-            ),
+            "command": (f"mkdir -p $(dirname {target}) && touch $(dirname {target})/.sentinel"),
             "timeout": 30,
         },
         metadata,
         emit,
     )
-    record_tool_check(
-        "tool.exec_command.background_shell.partial_write.seed_dir", seed_result
-    )
+    record_tool_check("tool.exec_command.background_shell.partial_write.seed_dir", seed_result)
 
     dd_command = (
         f"for _ in 1; do "
@@ -786,9 +762,7 @@ async def run_background_shell_partial_write_cancel_probe(
             ),
             timeout=PARTIAL_WRITE_CANCEL_S,
         )
-        record_tool_check(
-            "tool.exec_command.background_shell.partial_write.dd", result
-        )
+        record_tool_check("tool.exec_command.background_shell.partial_write.dd", result)
         dd_completed = True
     except asyncio.TimeoutError:
         pass
@@ -844,9 +818,7 @@ async def run_background_shell_maintenance_probe(
         exec_command_tool,
         {
             "command": (
-                f"mkdir -p $(dirname {target}) && "
-                f"echo 'maintenance-test' > {target} && "
-                f"sleep 0.5"
+                f"mkdir -p $(dirname {target}) && echo 'maintenance-test' > {target} && sleep 0.5"
             ),
             "timeout": 60,
         },
@@ -865,9 +837,7 @@ async def run_background_shell_maintenance_probe(
         emit,
         allow_error=True,
     )
-    record_tool_check(
-        "tool.read_file.background_shell.maintenance.fg_check", read_result
-    )
+    record_tool_check("tool.read_file.background_shell.maintenance.fg_check", read_result)
 
     summary = {
         "schema": SUMMARY_SCHEMA,
@@ -878,12 +848,9 @@ async def run_background_shell_maintenance_probe(
         "shell_is_error": bool(result.is_error),
         "shell_exit_code": int(payload.get("exit_code", -1)),
         "changed_paths": changed,
-        "target_in_changed_paths": (
-            target_relative in changed or target in changed
-        ),
+        "target_in_changed_paths": (target_relative in changed or target in changed),
         "read_exists": not read_result.is_error,
-        "read_content_contains_marker": "maintenance-test"
-        in str(read_result.output or ""),
+        "read_content_contains_marker": "maintenance-test" in str(read_result.output or ""),
     }
     return await _write_summary(
         path=MAINTENANCE_SUMMARY,
@@ -924,8 +891,7 @@ async def run_background_shell_late_cancel_probe(
         "shell_is_error": bool(result.is_error),
         "exit_code": int(payload.get("exit_code", -1)),
         "status": str(payload.get("status") or ""),
-        "stdout_contains_marker": "done-late-cancel"
-        in str(payload.get("stdout") or ""),
+        "stdout_contains_marker": "done-late-cancel" in str(payload.get("stdout") or ""),
         "shell_metadata": _command_metadata(result),
     }
     return await _write_summary(
@@ -1042,7 +1008,7 @@ async def run_background_heartbeat_loss_probe(
     call_tool: CallTool,
     record_tool_check: RecordToolCheck,
 ) -> str:
-    """3.4.2: one PTY completes while another is cancelled without publish."""
+    """3.4.2: one command session completes while another is cancelled without publish."""
     started = time.perf_counter()
     sandbox_id = str(metadata.sandbox_id or "")
     agent_id = _agent_id(metadata)
@@ -1090,7 +1056,7 @@ async def run_background_heartbeat_loss_probe(
         )
     )
 
-    pty_sessions_during_launch = await _wait_for_pty_session_count(
+    command_sessions_during_launch = await _wait_for_command_session_count(
         sandbox_id=sandbox_id,
         agent_id=agent_id,
         minimum=2,
@@ -1138,14 +1104,14 @@ async def run_background_heartbeat_loss_probe(
         record_tool_check=None,
         allow_error=True,
     )
-    pty_sessions_after = await sandbox_api.pty_session_count(sandbox_id, agent_id)
+    command_sessions_after = await sandbox_api.command_session_count(sandbox_id, agent_id)
 
     summary = {
         "schema": SUMMARY_SCHEMA,
         "mode": "heartbeat_loss",
         "duration_s": time.perf_counter() - started,
-        "pty_sessions_during_launch": pty_sessions_during_launch,
-        "pty_sessions_after": pty_sessions_after,
+        "command_sessions_during_launch": command_sessions_during_launch,
+        "command_sessions_after": command_sessions_after,
         "foreground": foreground_record,
         "protected": protected_record,
         "stale": stale_record,
@@ -1198,7 +1164,7 @@ async def run_background_exit_iws_drains_agent_tasks_probe(
             background_task_id=_bg_id("iws-default-blocker"),
         )
     )
-    default_pty_sessions = await _wait_for_pty_session_count(
+    default_command_sessions = await _wait_for_command_session_count(
         sandbox_id=sandbox_id,
         agent_id=agent_id,
         minimum=1,
@@ -1233,15 +1199,12 @@ async def run_background_exit_iws_drains_agent_tasks_probe(
         record_tool_check=record_tool_check,
         allow_error=True,
     )
-    iws_command = (
-        f"sleep 20 && mkdir -p $(dirname {iws_target}) && "
-        f"echo iws-leak > {iws_target}"
-    )
+    iws_command = f"sleep 20 && mkdir -p $(dirname {iws_target}) && echo iws-leak > {iws_target}"
     task_id = manager.next_alias()
     manager.launch(
         task_id,
         "exec_command",
-        {"cmd": iws_command, "tty": True, "timeout": 60},
+        {"cmd": iws_command, "timeout": 60},
         _call_probe_tool(
             label="exit_iws.iws_background",
             tool_obj=exec_command_tool,
@@ -1259,9 +1222,9 @@ async def run_background_exit_iws_drains_agent_tasks_probe(
         sandbox_invocation_id=f"iws-manager-{uuid4().hex}",
     )
     await asyncio.sleep(0.5)
-    # Exit is gated by the bg prehook: with a live sandbox-bound PTY command it
+    # Exit is gated by the bg prehook: with a live sandbox-bound command session it
     # is refused (a hook_failure), not silently drained. The agent must cancel
-    # the PTY command, then retry exit.
+    # the command session, then retry exit.
     blocked_exit = await _call_probe_tool(
         label="exit_iws.blocked_exit",
         tool_obj=exit_isolated_workspace_tool,
@@ -1274,15 +1237,19 @@ async def run_background_exit_iws_drains_agent_tasks_probe(
     )
     cancel_bg = await _call_probe_tool(
         label="exit_iws.cancel_bg",
-        tool_obj=cancel_pty_command_tool,
-        raw_input={"pty_session_id": task_id},
+        tool_obj=write_stdin_tool,
+        raw_input={
+            "command_session_id": task_id,
+            "chars": "\u0003",
+            "yield_time_ms": 50,
+        },
         metadata=iws_metadata,
         emit=emit,
         call_tool=call_tool,
         record_tool_check=record_tool_check,
         allow_error=True,
     )
-    # Let both the bridge task and daemon PTY registry settle before retrying
+    # Let both the bridge task and daemon command session registry settle before retrying
     # so the retry's max(local, daemon) check sees no in-flight work.
     tracked_status = await _wait_for_tracked_task_settled(manager, task_id)
     await _wait_for_background_drain(iws_metadata)
@@ -1296,7 +1263,7 @@ async def run_background_exit_iws_drains_agent_tasks_probe(
         record_tool_check=record_tool_check,
         allow_error=True,
     )
-    iws_pty_sessions_after = await sandbox_api.pty_session_count(
+    iws_command_sessions_after = await sandbox_api.command_session_count(
         sandbox_id,
         _agent_id(iws_metadata),
     )
@@ -1327,7 +1294,7 @@ async def run_background_exit_iws_drains_agent_tasks_probe(
         "schema": SUMMARY_SCHEMA,
         "mode": "exit_iws_drain",
         "duration_s": time.perf_counter() - started,
-        "default_pty_sessions": default_pty_sessions,
+        "default_command_sessions": default_command_sessions,
         "blocked_enter": _tool_record(blocked_enter),
         "blocked_enter_payload": _json_payload(blocked_enter),
         "blocked_enter_reason": _hook_failure_reason(blocked_enter),
@@ -1343,7 +1310,7 @@ async def run_background_exit_iws_drains_agent_tasks_probe(
         "tracked_status_after_exit": (
             str(tracked.status.value) if tracked is not None else "missing"
         ),
-        "iws_pty_sessions_after": iws_pty_sessions_after,
+        "iws_command_sessions_after": iws_command_sessions_after,
         "default_published": "default-leak" in _read_content(default_read),
         "iws_published": "iws-leak" in _read_content(iws_read),
     }
@@ -1370,7 +1337,7 @@ async def run_background_engine_restart_no_lease_leak_probe(
     call_tool: CallTool,
     record_tool_check: RecordToolCheck,
 ) -> str:
-    """3.4.4: abandon a PTY command, then prove foreground recovery."""
+    """3.4.4: abandon a command session, then prove foreground recovery."""
     started = time.perf_counter()
     sandbox_id = str(metadata.sandbox_id or "")
     agent_id = _agent_id(metadata)
@@ -1398,7 +1365,7 @@ async def run_background_engine_restart_no_lease_leak_probe(
             background_task_id=_bg_id("engine-abandon"),
         )
     )
-    pty_sessions_during_launch = await _wait_for_pty_session_count(
+    command_sessions_during_launch = await _wait_for_command_session_count(
         sandbox_id=sandbox_id,
         agent_id=agent_id,
         minimum=1,
@@ -1447,14 +1414,14 @@ async def run_background_engine_restart_no_lease_leak_probe(
         record_tool_check=record_tool_check,
         allow_error=True,
     )
-    pty_sessions_after = await sandbox_api.pty_session_count(sandbox_id, agent_id)
+    command_sessions_after = await sandbox_api.command_session_count(sandbox_id, agent_id)
 
     summary = {
         "schema": SUMMARY_SCHEMA,
         "mode": "engine_restart_no_lease_leak",
         "duration_s": time.perf_counter() - started,
-        "pty_sessions_during_launch": pty_sessions_during_launch,
-        "pty_sessions_after": pty_sessions_after,
+        "command_sessions_during_launch": command_sessions_during_launch,
+        "command_sessions_after": command_sessions_after,
         "abandoned": abandoned_record,
         "abandoned_published": "chunk-" in _read_content(partial_read),
         "foreground_shell": {
@@ -1515,10 +1482,7 @@ async def run_background_many_small_writes_probe(
                 label=f"many_small_writes.bg.{index}",
                 tool_obj=exec_command_tool,
                 raw_input={
-                    "command": (
-                        f"mkdir -p {root} && echo bg-{index} > {path} && "
-                        "sleep 0.2"
-                    ),
+                    "command": (f"mkdir -p {root} && echo bg-{index} > {path} && sleep 0.2"),
                     "timeout": 30,
                 },
                 metadata=metadata,
@@ -1593,7 +1557,7 @@ async def run_background_many_small_writes_probe(
                 "content": _read_content(read),
             }
         )
-    pty_sessions_after = await sandbox_api.pty_session_count(sandbox_id, agent_id)
+    command_sessions_after = await sandbox_api.command_session_count(sandbox_id, agent_id)
     fg_durations = [float(item["duration_s"]) for item in foreground_records]
 
     summary = {
@@ -1606,7 +1570,7 @@ async def run_background_many_small_writes_probe(
         "background": background_records,
         "foreground": foreground_records,
         "verified_background_files": verify_records,
-        "pty_sessions_after": pty_sessions_after,
+        "command_sessions_after": command_sessions_after,
         "background_success_count": sum(
             1 for item in background_records if not item.get("is_error")
         ),
@@ -1628,6 +1592,7 @@ MIXED_OP_OVERLAP_WRITERS = 4
 MIXED_OP_DISJOINT_WRITERS = 4
 MIXED_OP_EDIT_LINES = 20
 
+
 def _publish_accepted(record: dict[str, Any]) -> bool:
     return not bool(record.get("is_error"))
 
@@ -1648,7 +1613,7 @@ async def run_background_mixed_op_concurrent_probe(
       status (none stuck), proving the supervisor drives heterogeneous
       workloads to completion. (``pip install`` is offline/``--no-index`` so it
       terminates fast and deterministically without a network dependency.)
-    * **Overlapping same-file edits** — N background PTY commands overwrite one
+    * **Overlapping same-file edits** — N background command sessions overwrite one
       seeded path concurrently; each command reaches a terminal status, and the
       final file content is one complete writer payload.
     * **Disjoint edits** — N background commands write distinct paths; all land
@@ -1716,7 +1681,7 @@ async def run_background_mixed_op_concurrent_probe(
         )
         mixed_records[name] = record
 
-    # --- overlapping same-file PTY edits converge to one final writer -------
+    # --- overlapping same-file command session edits converge to one final writer -------
     shared = f"{root}/overlap-shared.txt"
     await _call_probe_tool(
         label="mixed_op.overlap.seed",
@@ -1748,7 +1713,11 @@ async def run_background_mixed_op_concurrent_probe(
         *(_overlap_one(index) for index in range(MIXED_OP_OVERLAP_WRITERS))
     )
     overlap_writers = [
-        {"index": index, **_tool_record(result), "accepted": _publish_accepted(_tool_record(result))}
+        {
+            "index": index,
+            **_tool_record(result),
+            "accepted": _publish_accepted(_tool_record(result)),
+        }
         for index, result in enumerate(overlap_results)
     ]
     overlap_final = await _call_probe_tool(

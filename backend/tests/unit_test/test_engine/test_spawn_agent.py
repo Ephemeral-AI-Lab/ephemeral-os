@@ -177,7 +177,7 @@ def test_finalize_does_not_enable_background_manager_for_ordinary_tools() -> Non
     assert registry.get("cancel_background_task") is None
 
 
-def test_finalize_enables_background_manager_for_pty_session_tools() -> None:
+def test_finalize_enables_background_manager_for_command_session_tools() -> None:
     registry = ToolRegistry()
     registry.register(_ExecCommandTool())
     registry.register(_TerminalTool())

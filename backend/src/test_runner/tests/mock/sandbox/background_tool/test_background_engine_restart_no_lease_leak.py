@@ -47,10 +47,10 @@ async def test_background_engine_restart_no_lease_leak(
     )
 
     assert summary["mode"] == "engine_restart_no_lease_leak", summary
-    assert summary["pty_sessions_during_launch"] >= 1, summary
+    assert summary["command_sessions_during_launch"] >= 1, summary
     assert summary["abandoned"]["is_error"] or summary["abandoned"]["cancelled"], summary
     assert not summary["abandoned_published"], summary
-    assert summary["pty_sessions_after"] == 0, summary
+    assert summary["command_sessions_after"] == 0, summary
     assert not summary["foreground_shell"]["is_error"], summary
     assert not summary["recovery_write"]["is_error"], summary
     assert "recovery-ok" in summary["recovery_read_content"], summary

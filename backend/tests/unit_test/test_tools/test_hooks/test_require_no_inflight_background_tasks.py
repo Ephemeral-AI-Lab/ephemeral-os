@@ -74,7 +74,7 @@ def _patch_daemon(monkeypatch, *, count: int | None = None, error: bool = False)
         assert count is not None
         return count
 
-    monkeypatch.setattr(sandbox_api, "pty_session_count", _fake)
+    monkeypatch.setattr(sandbox_api, "command_session_count", _fake)
     return calls
 
 
@@ -129,7 +129,7 @@ async def test_daemon_error_fail_safe_blocks_non_bailout(monkeypatch, target) ->
     ctx = _context(manager=_FakeManager({"agent-1": 0}))
     result = await _hook(target).run(_DummyInput(), ctx)
     assert result.status == "fail"
-    assert _reason(result) == "pty_session_count_unavailable"
+    assert _reason(result) == "command_session_count_unavailable"
 
 
 @pytest.mark.asyncio

@@ -1,4 +1,4 @@
-"""3.4.1 foreground write wins over same-path PTY background write."""
+"""3.4.1 foreground write wins over same-path background command write."""
 
 from __future__ import annotations
 

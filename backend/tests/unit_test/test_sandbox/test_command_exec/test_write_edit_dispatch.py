@@ -35,9 +35,8 @@ def test_op_table_dispatches_data_ops_to_unified_handlers() -> None:
     assert server.OP_TABLE["api.v1.read_file"] is _tool_handler("read_file")
     assert server.OP_TABLE["api.v1.shell"] is _tool_handler("shell")
     assert server.OP_TABLE["api.v1.exec_command"] is builtin_operations.exec_command
-    assert server.OP_TABLE["api.v1.pty.write_stdin"] is builtin_operations.write_pty_stdin
-    assert server.OP_TABLE["api.v1.pty.progress"] is builtin_operations.pty_progress
-    assert server.OP_TABLE["api.v1.pty.cancel"] is builtin_operations.pty_cancel
+    assert server.OP_TABLE["api.v1.command.write_stdin"] is builtin_operations.command_write_stdin
+    assert server.OP_TABLE["api.v1.command.cancel"] is builtin_operations.command_cancel
     assert server.OP_TABLE["api.layer_metrics"] is builtin_operations.layer_metrics
 
 
@@ -170,9 +169,7 @@ async def test_layer_metrics_reports_orphan_and_missing_layers(tmp_path: Path) -
 
     source = tmp_path / "source.txt"
     source.write_text("changed\n", encoding="utf-8")
-    manager.publish_changes(
-        [WriteLayerChange(path="tracked.txt", source_path=source.as_posix())]
-    )
+    manager.publish_changes([WriteLayerChange(path="tracked.txt", source_path=source.as_posix())])
     manifest = manager.read_active_manifest()
     active_layer_id = manifest.layers[0].layer_id
 

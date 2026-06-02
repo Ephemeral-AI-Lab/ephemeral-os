@@ -147,13 +147,19 @@ async def run_scenario(
     ready = await call_api(bench, runtime, "api.runtime.ready", {}, root=root, timeout=30)
     samples: list[dict[str, Any]] = []
 
-    async def call(name: str, op: str, payload: dict[str, Any], *, timeout: int = 60) -> dict[str, Any]:
+    async def call(
+        name: str, op: str, payload: dict[str, Any], *, timeout: int = 60
+    ) -> dict[str, Any]:
         response = await call_api(bench, runtime, op, payload, root=root, timeout=timeout)
-        samples.append({"name": name, "op": op, "ok": operation_ok(response), "response": trim(response)})
+        samples.append(
+            {"name": name, "op": op, "ok": operation_ok(response), "response": trim(response)}
+        )
         return response
 
     await call("seed_read", "api.v1.write_file", write_payload("s7/read.txt", "read-seed\n"))
-    await call("seed_grep", "api.v1.write_file", write_payload("s7/grep.txt", "needle one\nneedle two\n"))
+    await call(
+        "seed_grep", "api.v1.write_file", write_payload("s7/grep.txt", "needle one\nneedle two\n")
+    )
     await call("seed_edit", "api.v1.write_file", write_payload("s7/edit.txt", "edit-before\n"))
     await call("seed_delete", "api.v1.write_file", write_payload("s7/delete.txt", "delete-me\n"))
     await call("seed_conflict", "api.v1.write_file", write_payload("s7/conflict.txt", "base\n"))
@@ -204,9 +210,7 @@ async def run_scenario(
                 "api.v1.edit_file",
                 {
                     "path": f"{WORKSPACE_ROOT}/s7/conflict.txt",
-                    "edits": [
-                        {"old_text": "base\n", "new_text": "winner\n", "replace_all": False}
-                    ],
+                    "edits": [{"old_text": "base\n", "new_text": "winner\n", "replace_all": False}],
                 },
                 root=root,
                 timeout=60,
@@ -228,7 +232,7 @@ async def run_scenario(
         )
         squash_samples.append(operation_ok(response))
 
-    pty = await run_pty_or_equivalent(bench, runtime, root=root)
+    command_session = await run_command_session_or_equivalent(bench, runtime, root=root)
     metrics = await call_api(bench, runtime, "api.layer_metrics", {}, root=root, timeout=30)
     final_view = await collect_final_view(bench, runtime, root=root)
     stack = await inspect_stack(bench, root)
@@ -236,9 +240,7 @@ async def run_scenario(
     checks = {
         "seed_success": seed.get("success") is True,
         "ready": ready.get("ready") is True,
-        "common_operations_ok": all(
-            item["ok"] or expected_rejection_ok(item) for item in samples
-        ),
+        "common_operations_ok": all(item["ok"] or expected_rejection_ok(item) for item in samples),
         "conflict_has_single_winner": conflict["success_count"] == 1
         and conflict["loser_count"] == 4,
         "noop_capture_no_new_layer": before_noop["manifest"] == after_noop["manifest"]
@@ -247,7 +249,7 @@ async def run_scenario(
         "manifest_depth_bounded": int(metrics.get("manifest_depth") or 0) <= 100,
         "no_missing_or_orphan_layers": int(metrics.get("missing_layer_count") or 0) == 0
         and int(metrics.get("orphan_layer_count") or 0) == 0,
-        "pty_or_equivalent_ok": pty["ok"],
+        "command_session_or_equivalent_ok": command_session["ok"],
         "final_view_ok": final_view["ok"],
     }
     return {
@@ -261,8 +263,11 @@ async def run_scenario(
             "before_digest_stream": before_noop["non_base_digest_stream_sha256"],
             "after_digest_stream": after_noop["non_base_digest_stream_sha256"],
         },
-        "squash": {"write_count": squash_writes, "success_count": sum(1 for ok in squash_samples if ok)},
-        "pty": pty,
+        "squash": {
+            "write_count": squash_writes,
+            "success_count": sum(1 for ok in squash_samples if ok),
+        },
+        "command_session": command_session,
         "metrics": trim_metrics(metrics),
         "final_view": final_view,
         "stack": {
@@ -275,43 +280,53 @@ async def run_scenario(
     }
 
 
-async def run_pty_or_equivalent(bench: DockerBench, runtime: str, *, root: str) -> dict[str, Any]:
+async def run_command_session_or_equivalent(
+    bench: DockerBench, runtime: str, *, root: str
+) -> dict[str, Any]:
     if runtime == "python":
         response = await call_api(
             bench,
             runtime,
             "api.v1.exec_command",
-            exec_payload("printf 'pty-final\\n' > s7/pty.txt"),
+            exec_payload("printf 'command-final\\n' > s7/command-session.txt"),
             root=root,
             timeout=60,
         )
-        return {"mode": "finite_equivalent", "ok": operation_ok(response), "response": trim(response)}
+        return {
+            "mode": "finite_equivalent",
+            "ok": operation_ok(response),
+            "response": trim(response),
+        }
 
     start = await call_api(
         bench,
         runtime,
         "api.v1.exec_command",
         {
-            "cmd": "sleep 0.1; printf 'pty-final\\n' > s7/pty.txt",
-            "tty": True,
+            "cmd": "sleep 0.1; printf 'command-final\\n' > s7/command-session.txt",
             "yield_time_ms": 10,
             "timeout": 5,
         },
         root=root,
         timeout=30,
     )
-    session_id = str(start.get("pty_session_id") or "")
+    session_id = str(start.get("command_session_id") or "")
     await asyncio.sleep(0.25)
     progress = await call_api(
         bench,
         runtime,
-        "api.v1.pty.progress",
-        {"pty_session_id": session_id, "time": 0.05, "max_tokens": 2000},
+        "api.v1.command.write_stdin",
+        {
+            "command_session_id": session_id,
+            "chars": "",
+            "yield_time_ms": 50,
+            "max_output_tokens": 2000,
+        },
         root=root,
         timeout=30,
     )
     return {
-        "mode": "pty_finalization",
+        "mode": "command_session_finalization",
         "ok": bool(session_id) and progress.get("status") == "ok",
         "start": trim(start),
         "progress": trim(progress),
@@ -333,7 +348,7 @@ paths = [
     "s7/multi-a.txt",
     "s7/multi-b.txt",
     "s7/link-to-write",
-    "s7/pty.txt",
+    "s7/command-session.txt",
 ]
 view = {}
 for path in paths:
@@ -383,7 +398,7 @@ def expected_final_view() -> dict[str, Any]:
         "s7/multi-a.txt": file_view("multi-a\n"),
         "s7/multi-b.txt": file_view("multi-b\n"),
         "s7/link-to-write": {"kind": "missing"},
-        "s7/pty.txt": file_view("pty-final\n"),
+        "s7/command-session.txt": file_view("command-final\n"),
     }
 
 
@@ -458,7 +473,7 @@ def write_payload(path: str, content: str) -> dict[str, Any]:
 
 
 def exec_payload(cmd: str) -> dict[str, Any]:
-    return {"cmd": cmd, "tty": False, "yield_time_ms": 1000, "timeout": 30}
+    return {"cmd": cmd, "yield_time_ms": 1000, "timeout": 30}
 
 
 def trim_metrics(response: dict[str, Any]) -> dict[str, Any]:

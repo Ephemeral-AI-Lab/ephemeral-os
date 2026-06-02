@@ -9,13 +9,13 @@ the scripted event-source approach:
      runs in the sandbox and its output reaches the agent.
   2. **Terminal-alone enforcement** — a terminal batched with a sibling is
      rejected by the real loop; nothing executes.
-  3. **Budget parity via tool_use deltas** — the source emits one
+      3. **Budget parity via tool_use deltas** — the source emits one
      ``ToolUseDeltaEvent`` per tool_use, so the loop's stream-time
      ``_count_tool_dispatch`` fires identically to the real provider:
        * foreground tool counted exactly once,
        * rejected-batch tools counted (at stream time) even though they never
          execute (the §7 Symptom A fix),
-       * typed PTY command controls use the current session tool surface.
+       * typed command sessions use the current session tool surface.
   4. **Terminal tool_use exposed** in the returned transcript.
 
 The api_client is built by ``spawn_agent`` but never used — ``event_source``
@@ -114,9 +114,7 @@ async def _run_script(
     config = RuntimeConfig(
         cwd=str(workspace["repo_dir"]),
         external_api_client=_UnusedClient(),
-        event_source_factory=lambda ad: ScenarioEventSource(
-            script_factory(), agent_name=ad.name
-        ),
+        event_source_factory=lambda ad: ScenarioEventSource(script_factory(), agent_name=ad.name),
     )
 
     async def on_event(event: StreamEvent) -> None:
@@ -266,7 +264,7 @@ async def test_terminal_alone_enforced_and_rejected_batch_budget(
 
 
 # ---------------------------------------------------------------------------
-# Criterion 3 (PTY): typed command/session controls replace legacy background shell.
+# Criterion 3: typed command/session controls replace legacy background shell.
 # ---------------------------------------------------------------------------
 
 
@@ -275,7 +273,7 @@ async def test_terminal_alone_enforced_and_rejected_batch_budget(
     _RUST_RUNTIME_UNAVAILABLE is not None,
     reason=_RUST_RUNTIME_UNAVAILABLE or "Rust sandbox runtime unavailable",
 )
-async def test_pty_command_control_budget_through_real_loop(
+async def test_command_session_control_budget_through_real_loop(
     workspace: dict[str, object],
     stores: TaskStoreBundle,
     _active_spike_model: None,
@@ -287,21 +285,20 @@ async def test_pty_command_control_budget_through_real_loop(
                     "exec_command",
                     {
                         "cmd": "bash --noprofile --norc",
-                        "tty": True,
                         "yield_time_ms": 0,
                     },
                 ),
             )
         )
         payload = json.loads(blocks[0].content)
-        pty_session_id = str(payload["pty_session_id"])
+        command_session_id = str(payload["command_session_id"])
         yield Turn(
             calls=(
                 ToolCall(
-                    "write_pty_command_stdin",
+                    "write_stdin",
                     {
-                        "pty_session_id": pty_session_id,
-                        "chars": "echo pty-done; exit\n",
+                        "command_session_id": command_session_id,
+                        "chars": "echo command-session-done; exit\n",
                     },
                 ),
             )
@@ -310,27 +307,28 @@ async def test_pty_command_control_budget_through_real_loop(
             calls=(
                 ToolCall(
                     "submit_advisor_feedback",
-                    {"verdict": "approve", "summary": "pty ok"},
+                    {"verdict": "approve", "summary": "command session ok"},
                 ),
             )
         )
 
     result, agent, events = await _run_script(
         workspace=workspace,
-        agent_def=_spike_agent_def(
-            tools=["exec_command", "write_pty_command_stdin"]
-        ),
+        agent_def=_spike_agent_def(tools=["exec_command", "write_stdin"]),
         script_factory=script,
     )
 
     assert result.status == "completed", result.error
     assert result.terminal_result is not None
-    assert result.terminal_result.output == "pty ok"
+    assert result.terminal_result.output == "command session ok"
 
-    # PTY body actually executed in the sandbox.
+    # Command-session body actually executed in the sandbox.
     assert any(
-        "pty-done" in event.output for event in _completions(events, is_error=False)
-    ), [e.output for e in _completions(events)]
+        "command-session-done" in event.output
+        for event in _completions(events, is_error=False)
+    ), [
+        e.output for e in _completions(events)
+    ]
 
-    # Accounting: exec_command + write_pty_command_stdin + terminal.
+    # Accounting: exec_command + write_stdin + terminal.
     assert agent.query_context.tool_calls_used == 3

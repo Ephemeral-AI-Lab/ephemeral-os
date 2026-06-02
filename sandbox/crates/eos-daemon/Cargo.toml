@@ -12,6 +12,7 @@ eos-overlay.workspace = true
 eos-occ.workspace = true
 eos-isolated.workspace = true
 eos-plugin.workspace = true
+eos-terminal-pair.workspace = true
 eos-runner.workspace = true
 serde_json.workspace = true
 serde.workspace = true
@@ -21,7 +22,7 @@ tokio-util.workspace = true
 thiserror.workspace = true
 
 [target.'cfg(target_os = "linux")'.dependencies]
-nix = { workspace = true, features = ["fs", "process", "signal", "term"] }
+nix = { workspace = true, features = ["fs", "process", "signal"] }
 
 [lints]
 workspace = true

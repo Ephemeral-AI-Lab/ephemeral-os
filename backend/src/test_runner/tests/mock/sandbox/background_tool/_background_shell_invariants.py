@@ -44,13 +44,9 @@ _DELETED_SHELL_RPC_NEEDLES = (
     "ShellJob",
     "shell_job",
 )
-_REQUIRED_TOOL_METRICS = ("exec_command", "check_pty_command_progress")
+_REQUIRED_TOOL_METRICS = ("exec_command", "write_stdin")
 _IWS_APT_CACHE_DIR = (
-    Path(__file__).resolve().parents[6]
-    / "tests"
-    / "_assets"
-    / "iws_apt_cache"
-    / "jammy-amd64"
+    Path(__file__).resolve().parents[6] / "tests" / "_assets" / "iws_apt_cache" / "jammy-amd64"
 )
 _IWS_TEST_UPPERDIR_BYTES = 67_108_864
 
@@ -80,9 +76,7 @@ async def run_background_shell_scenario(
     assert report.passed_prompt_inspections, [
         item for item in report.prompt_inspections if not item.passed
     ]
-    assert report.passed_sandbox_checks, [
-        item for item in report.sandbox_checks if not item.passed
-    ]
+    assert report.passed_sandbox_checks, [item for item in report.sandbox_checks if not item.passed]
     if report.performance_report_task is not None:
         await report.performance_report_task
     return report, await read_json_summary(sandbox_id, summary_path)
@@ -108,7 +102,7 @@ async def configure_short_inflight_ttl(sandbox_id: str) -> None:
             "set -eu",
             "sed -i '/^EOS_INFLIGHT_TTL_S=/d; /^EOS_INFLIGHT_REAPER_INTERVAL_S=/d' /etc/environment 2>/dev/null || true",
             "printf '\\nEOS_INFLIGHT_TTL_S=1\\nEOS_INFLIGHT_REAPER_INTERVAL_S=0.2\\n' >> /etc/environment",
-            f"if [ -f {DAEMON_PID_PATH} ]; then kill -TERM \"$(cat {DAEMON_PID_PATH})\" 2>/dev/null || true; fi",
+            f'if [ -f {DAEMON_PID_PATH} ]; then kill -TERM "$(cat {DAEMON_PID_PATH})" 2>/dev/null || true; fi',
             f"rm -f {DAEMON_SOCKET_PATH} {DAEMON_PID_PATH}",
         ]
     )
@@ -128,7 +122,7 @@ async def configure_default_inflight_ttl(sandbox_id: str) -> None:
         [
             "set -eu",
             "sed -i '/^EOS_INFLIGHT_TTL_S=/d; /^EOS_INFLIGHT_REAPER_INTERVAL_S=/d' /etc/environment 2>/dev/null || true",
-            f"if [ -f {DAEMON_PID_PATH} ]; then kill -TERM \"$(cat {DAEMON_PID_PATH})\" 2>/dev/null || true; fi",
+            f'if [ -f {DAEMON_PID_PATH} ]; then kill -TERM "$(cat {DAEMON_PID_PATH})" 2>/dev/null || true; fi',
             f"rm -f {DAEMON_SOCKET_PATH} {DAEMON_PID_PATH}",
         ]
     )
@@ -266,9 +260,7 @@ def _assert_tool_metrics_present(perf: dict[str, Any], tool_names: tuple[str, ..
     per_tool = mapping(mapping(mapping(perf["tools"])["per_tool"]))
     missing = [name for name in tool_names if name not in per_tool]
     assert not missing, f"missing tool metrics: {missing}"
-    empty = [
-        name for name in tool_names if int(mapping(per_tool[name]).get("count") or 0) <= 0
-    ]
+    empty = [name for name in tool_names if int(mapping(per_tool[name]).get("count") or 0) <= 0]
     assert not empty, f"tool metrics have no samples: {empty}"
 
 
@@ -306,9 +298,7 @@ def assert_shell_audit_invariants(
     if jsonl_path.exists():
         raw_text = jsonl_path.read_text(encoding="utf-8", errors="replace")
         for needle in _ERROR_NEEDLES:
-            assert needle not in raw_text, (
-                f"AC-11 violation: '{needle}' appears in {jsonl_path}"
-            )
+            assert needle not in raw_text, f"AC-11 violation: '{needle}' appears in {jsonl_path}"
         for needle in _DELETED_SHELL_RPC_NEEDLES:
             assert needle not in raw_text, (
                 f"deleted shell RPC surface '{needle}' appears in {jsonl_path}"

@@ -8,8 +8,7 @@ agent_type: agent
 allowed_tools:
   - read_file
   - exec_command
-  - check_pty_command_progress
-  - cancel_pty_command
+  - write_stdin
   - glob
   - grep
   - ask_advisor

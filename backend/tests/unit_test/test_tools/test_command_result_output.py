@@ -10,9 +10,9 @@ import pytest
 from engine.background.task_supervisor import BackgroundTaskSupervisor
 from sandbox.shared.models import CommandOutput, ExecCommandResult
 from tools._framework.core.context import ToolExecutionContextService
-from tools.sandbox._lib.pty_command_tool import (
+from tools.sandbox._lib.command_session_tool import (
     command_tool_result,
-    recover_pty_result_from_supervisor,
+    recover_command_session_result_from_supervisor,
 )
 
 
@@ -23,14 +23,14 @@ def test_command_tool_result_marks_timeout_as_error() -> None:
             status="timed_out",
             exit_code=124,
             output=CommandOutput(stderr="timeout\n"),
-            pty_session_id="pty_1",
+            command_session_id="cmd_1",
         )
     )
 
     assert result.is_error is True
     assert result.metadata == {
         "status": "timed_out",
-        "pty_session_id": "pty_1",
+        "command_session_id": "cmd_1",
         "changed_paths": [],
         "changed_path_kinds": {},
         "mutation_source": "",
@@ -46,7 +46,7 @@ def test_command_tool_result_marks_timeout_as_error() -> None:
         "changed_path_kinds": {},
         "mutation_source": "",
         "conflict_reason": None,
-        "pty_session_id": "pty_1",
+        "command_session_id": "cmd_1",
     }
 
 
@@ -71,16 +71,16 @@ def test_command_tool_result_preserves_timings_metadata() -> None:
 
 
 @pytest.mark.asyncio
-async def test_pty_not_found_recovers_supervisor_terminal_result() -> None:
+async def test_command_session_not_found_recovers_supervisor_terminal_result() -> None:
     supervisor = BackgroundTaskSupervisor()
-    supervisor.register_pty_command(
-        pty_session_id="pty_2",
+    supervisor.register_command_session(
+        command_session_id="cmd_2",
         sandbox_id="sb-1",
         agent_id="agent-1",
         command="printf done",
     )
-    supervisor.mark_pty_result_reported_by_tool(
-        pty_session_id="pty_2",
+    supervisor.mark_command_session_result_reported_by_tool(
+        command_session_id="cmd_2",
         result={
             "status": "ok",
             "exit_code": 0,
@@ -91,20 +91,20 @@ async def test_pty_not_found_recovers_supervisor_terminal_result() -> None:
         success=False,
         status="error",
         exit_code=None,
-        output=CommandOutput(stderr="pty_session_not_found"),
+        output=CommandOutput(stderr="command_session_not_found"),
     )
 
-    recovered = recover_pty_result_from_supervisor(
+    recovered = recover_command_session_result_from_supervisor(
         ToolExecutionContextService(
             cwd=".",
             services={"background_task_manager": supervisor},
         ),
         missing,
-        pty_session_id="pty_2",
+        command_session_id="cmd_2",
     )
 
     assert recovered.status == "ok"
     assert recovered.exit_code == 0
-    assert recovered.pty_session_id == "pty_2"
+    assert recovered.command_session_id == "cmd_2"
     assert recovered.output.stdout == "done\n"
     await asyncio.sleep(0)

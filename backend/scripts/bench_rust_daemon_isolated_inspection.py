@@ -164,7 +164,9 @@ class IsolatedClient:
     def for_agent(self, agent_id: str) -> IsolatedClient:
         return IsolatedClient(self.sandbox_id, self.daemon_client, self.endpoint, agent_id)
 
-    async def call(self, op: str, args: dict[str, Any] | None = None) -> tuple[dict[str, Any], float]:
+    async def call(
+        self, op: str, args: dict[str, Any] | None = None
+    ) -> tuple[dict[str, Any], float]:
         payload_args = {
             "layer_stack_root": LAYER_STACK_ROOT,
             "agent_id": self.agent_id,
@@ -198,7 +200,9 @@ class IsolatedClient:
     async def list_open(self) -> tuple[dict[str, Any], float]:
         return await self.call("api.isolated_workspace.list_open")
 
-    async def exit(self, *, force_cancel: bool = False, grace_s: float = 2.0) -> tuple[dict[str, Any], float]:
+    async def exit(
+        self, *, force_cancel: bool = False, grace_s: float = 2.0
+    ) -> tuple[dict[str, Any], float]:
         return await self.call(
             "api.isolated_workspace.exit",
             {"force_cancel": force_cancel, "grace_s": grace_s},
@@ -208,7 +212,6 @@ class IsolatedClient:
         self,
         cmd: str,
         *,
-        tty: bool,
         yield_time_ms: int = 1000,
         timeout: int = 30,
     ) -> tuple[dict[str, Any], float]:
@@ -216,7 +219,6 @@ class IsolatedClient:
             "api.v1.exec_command",
             {
                 "cmd": cmd,
-                "tty": tty,
                 "yield_time_ms": yield_time_ms,
                 "timeout": timeout,
             },
@@ -225,42 +227,43 @@ class IsolatedClient:
     async def read_file(self, path: str) -> tuple[dict[str, Any], float]:
         return await self.call("api.v1.read_file", {"path": path})
 
-    async def pty_write_stdin(
+    async def command_session_write_stdin(
         self,
-        pty_session_id: str,
+        command_session_id: str,
         chars: str,
         *,
         yield_time_ms: int = 1000,
-        max_tokens: int = 4000,
+        max_output_tokens: int = 4000,
     ) -> tuple[dict[str, Any], float]:
         return await self.call(
-            "api.v1.pty.write_stdin",
+            "api.v1.command.write_stdin",
             {
-                "pty_session_id": pty_session_id,
+                "command_session_id": command_session_id,
                 "chars": chars,
                 "yield_time_ms": yield_time_ms,
-                "max_tokens": max_tokens,
+                "max_output_tokens": max_output_tokens,
             },
         )
 
-    async def pty_progress(
+    async def command_session_progress(
         self,
-        pty_session_id: str,
+        command_session_id: str,
         *,
         seconds: float = 1.0,
-        max_tokens: int = 4000,
+        max_output_tokens: int = 4000,
     ) -> tuple[dict[str, Any], float]:
         return await self.call(
-            "api.v1.pty.progress",
+            "api.v1.command.write_stdin",
             {
-                "pty_session_id": pty_session_id,
-                "time": seconds,
-                "max_tokens": max_tokens,
+                "command_session_id": command_session_id,
+                "chars": "",
+                "yield_time_ms": int(seconds * 1000),
+                "max_output_tokens": max_output_tokens,
             },
         )
 
-    async def pty_cancel(self, pty_session_id: str) -> tuple[dict[str, Any], float]:
-        return await self.call("api.v1.pty.cancel", {"pty_session_id": pty_session_id})
+    async def command_session_cancel(self, command_session_id: str) -> tuple[dict[str, Any], float]:
+        return await self.call("api.v1.command.cancel", {"command_session_id": command_session_id})
 
 
 async def run_scenario(bench: DockerBench, client: IsolatedClient) -> dict[str, Any]:
@@ -285,7 +288,6 @@ async def run_scenario(bench: DockerBench, client: IsolatedClient) -> dict[str, 
 
     net_probe, _ = await client.exec_command(
         "cat /proc/net/dev; echo __ROUTE__; cat /proc/net/route",
-        tty=False,
     )
     net_text = combined_output(net_probe)
     checks["isolated_command_success"] = net_probe.get("status") == "ok"
@@ -301,58 +303,68 @@ async def run_scenario(bench: DockerBench, client: IsolatedClient) -> dict[str, 
     private_path = f"phase3t-iws-private-{uuid.uuid4().hex[:8]}.txt"
     finite_write, _ = await client.exec_command(
         f"printf isolated-finite > {shlex.quote(private_path)}",
-        tty=False,
     )
     shared_read_during, _ = await shared_client.read_file(f"{WORKSPACE_ROOT}/{private_path}")
     checks["finite_write_success"] = finite_write.get("status") == "ok"
     checks["finite_write_not_published_during_open"] = not read_exists(shared_read_during)
 
-    pty_path = f"phase3t-iws-pty-{uuid.uuid4().hex[:8]}.txt"
-    pty_write, _ = await client.exec_command(
-        f"printf isolated-pty > {shlex.quote(pty_path)}",
-        tty=True,
+    command_session_path = f"phase3t-iws-command-session-{uuid.uuid4().hex[:8]}.txt"
+    command_session_write, _ = await client.exec_command(
+        f"printf isolated-command-session > {shlex.quote(command_session_path)}",
     )
-    pty_visible_inside, _ = await client.exec_command(
-        f"test -f {shlex.quote(pty_path)} && cat {shlex.quote(pty_path)}",
-        tty=False,
+    command_session_visible_inside, _ = await client.exec_command(
+        f"test -f {shlex.quote(command_session_path)} && cat {shlex.quote(command_session_path)}",
     )
-    shared_read_pty, _ = await shared_client.read_file(f"{WORKSPACE_ROOT}/{pty_path}")
-    checks["pty_natural_write_success"] = pty_write.get("status") == "ok"
-    checks["pty_natural_write_visible_inside"] = "isolated-pty" in combined_output(pty_visible_inside)
-    checks["pty_natural_write_not_published"] = not read_exists(shared_read_pty)
+    shared_read_command_session, _ = await shared_client.read_file(
+        f"{WORKSPACE_ROOT}/{command_session_path}"
+    )
+    checks["command_session_natural_write_success"] = command_session_write.get("status") == "ok"
+    checks["command_session_natural_write_visible_inside"] = (
+        "isolated-command-session" in combined_output(command_session_visible_inside)
+    )
+    checks["command_session_natural_write_not_published"] = not read_exists(
+        shared_read_command_session
+    )
     details["private_write"] = {
         "finite": trim_response(finite_write),
         "shared_read_during": trim_response(shared_read_during),
-        "pty": trim_response(pty_write),
-        "pty_inside": trim_response(pty_visible_inside),
-        "shared_read_pty": trim_response(shared_read_pty),
+        "command_session": trim_response(command_session_write),
+        "command_session_inside": trim_response(command_session_visible_inside),
+        "shared_read_command_session": trim_response(shared_read_command_session),
     }
 
-    pty_controls = await run_isolated_pty_control_probe(client)
-    checks.update(pty_controls["checks"])
-    details["pty_controls"] = pty_controls["details"]
+    command_session_controls = await run_isolated_command_session_control_probe(client)
+    checks.update(command_session_controls["checks"])
+    details["command_session_controls"] = command_session_controls["details"]
 
-    long_pty, _ = await client.exec_command("sleep 60", tty=True, yield_time_ms=50, timeout=120)
-    pty_session_id = str(long_pty.get("pty_session_id") or "")
-    checks["long_pty_started"] = long_pty.get("status") == "running" and bool(pty_session_id)
+    long_command_session, _ = await client.exec_command("sleep 60", yield_time_ms=50, timeout=120)
+    command_session_id = str(long_command_session.get("command_session_id") or "")
+    checks["long_command_session_started"] = long_command_session.get(
+        "status"
+    ) == "running" and bool(command_session_id)
     blocked_exit, _ = await client.exit(force_cancel=False)
-    checks["nonforced_exit_blocks_active_pty"] = (
+    checks["nonforced_exit_blocks_active_command_session"] = (
         blocked_exit.get("success") is False
-        and nested(blocked_exit, "error", "kind") == "active_pty_sessions"
-        and pty_session_id in nested(blocked_exit, "error", "details", "pty_session_ids", default=[])
+        and nested(blocked_exit, "error", "kind") == "active_command_sessions"
+        and command_session_id
+        in nested(blocked_exit, "error", "details", "command_session_ids", default=[])
     )
     force_exit, force_exit_ms = await client.exit(force_cancel=True, grace_s=2.0)
-    details["pty_exit"] = {
-        "long_pty": trim_response(long_pty),
+    details["command_session_exit"] = {
+        "long_command_session": trim_response(long_command_session),
         "blocked_exit": trim_response(blocked_exit),
         "force_exit_wall_ms": force_exit_ms,
         "force_exit": trim_exit_response(force_exit),
     }
 
-    inspection = force_exit.get("inspection") if isinstance(force_exit.get("inspection"), dict) else {}
-    checks.update(inspection_checks(force_exit, inspection, pty_session_id))
+    inspection = (
+        force_exit.get("inspection") if isinstance(force_exit.get("inspection"), dict) else {}
+    )
+    checks.update(inspection_checks(force_exit, inspection, command_session_id))
     holder_pid = inspection.get("holder_pid")
-    holder_process = await process_exists(bench, holder_pid) if isinstance(holder_pid, int) else None
+    holder_process = (
+        await process_exists(bench, holder_pid) if isinstance(holder_pid, int) else None
+    )
     checks["holder_process_gone"] = holder_process is False
 
     host_veth = inspection.get("veth_host_name")
@@ -385,33 +397,38 @@ async def run_scenario(bench: DockerBench, client: IsolatedClient) -> dict[str, 
     }
 
 
-async def run_isolated_pty_control_probe(client: IsolatedClient) -> dict[str, Any]:
+async def run_isolated_command_session_control_probe(client: IsolatedClient) -> dict[str, Any]:
     checks: dict[str, bool] = {}
     details: dict[str, Any] = {}
 
     progress_start, _ = await client.exec_command(
         "printf progress-ready; sleep 30",
-        tty=True,
         yield_time_ms=100,
         timeout=120,
     )
-    progress_id = str(progress_start.get("pty_session_id") or "")
+    progress_id = str(progress_start.get("command_session_id") or "")
     progress = progress_start
     if progress_id:
         deadline = time.monotonic() + 3.0
         while time.monotonic() < deadline:
-            progress, _ = await client.pty_progress(progress_id, seconds=5.0)
+            progress, _ = await client.command_session_progress(progress_id, seconds=5.0)
             if "progress-ready" in combined_output(progress) or progress.get("status") != "running":
                 break
             await asyncio.sleep(0.1)
-    progress_cancel, _ = await client.pty_cancel(progress_id) if progress_id else ({}, 0.0)
-    checks["isolated_pty_progress_running"] = (
+    progress_cancel, _ = (
+        await client.command_session_cancel(progress_id) if progress_id else ({}, 0.0)
+    )
+    checks["isolated_command_session_progress_running"] = (
         progress_start.get("status") == "running"
         and progress.get("status") == "running"
         and bool(progress_id)
     )
-    checks["isolated_pty_progress_reads_output"] = "progress-ready" in combined_output(progress)
-    checks["isolated_pty_progress_probe_cancelled"] = progress_cancel.get("status") == "cancelled"
+    checks["isolated_command_session_progress_reads_output"] = "progress-ready" in combined_output(
+        progress
+    )
+    checks["isolated_command_session_progress_probe_cancelled"] = (
+        progress_cancel.get("status") == "cancelled"
+    )
     details["progress"] = {
         "start": trim_response(progress_start),
         "progress": trim_response(progress),
@@ -420,22 +437,27 @@ async def run_isolated_pty_control_probe(client: IsolatedClient) -> dict[str, An
 
     stdin_start, _ = await client.exec_command(
         "read line; printf 'stdin:%s\\n' \"$line\"",
-        tty=True,
         yield_time_ms=100,
         timeout=120,
     )
-    stdin_id = str(stdin_start.get("pty_session_id") or "")
-    stdin_write, _ = await client.pty_write_stdin(
-        stdin_id,
-        "isolated-stdin\n",
-        yield_time_ms=1000,
-    ) if stdin_id else ({}, 0.0)
-    stdin_done = await terminal_result_from_control(client, stdin_id, stdin_write)
-    checks["isolated_pty_write_stdin_started"] = (
-        stdin_start.get("status") == "running" and bool(stdin_id)
+    stdin_id = str(stdin_start.get("command_session_id") or "")
+    stdin_write, _ = (
+        await client.command_session_write_stdin(
+            stdin_id,
+            "isolated-stdin\n",
+            yield_time_ms=1000,
+        )
+        if stdin_id
+        else ({}, 0.0)
     )
-    checks["isolated_pty_write_stdin_completed"] = stdin_done.get("status") == "ok"
-    checks["isolated_pty_write_stdin_echoed"] = "stdin:isolated-stdin" in combined_output(stdin_done)
+    stdin_done = await terminal_result_from_control(client, stdin_id, stdin_write)
+    checks["isolated_command_session_write_stdin_started"] = stdin_start.get(
+        "status"
+    ) == "running" and bool(stdin_id)
+    checks["isolated_command_session_write_stdin_completed"] = stdin_done.get("status") == "ok"
+    checks["isolated_command_session_write_stdin_echoed"] = (
+        "stdin:isolated-stdin" in combined_output(stdin_done)
+    )
     details["write_stdin"] = {
         "start": trim_response(stdin_start),
         "write": trim_response(stdin_write),
@@ -445,24 +467,22 @@ async def run_isolated_pty_control_probe(client: IsolatedClient) -> dict[str, An
     natural_cmd = "sleep 0.2; printf notify-natural"
     natural_start, _ = await client.exec_command(
         natural_cmd,
-        tty=True,
         yield_time_ms=50,
         timeout=30,
     )
-    natural_id = str(natural_start.get("pty_session_id") or "")
-    natural_notes = await collect_pty_notifications(
+    natural_id = str(natural_start.get("command_session_id") or "")
+    natural_notes = await collect_command_session_notifications(
         client,
         natural_id,
         command=natural_cmd,
         timeout_s=5.0,
     )
-    checks["isolated_pty_natural_notification_started"] = (
-        natural_start.get("status") == "running" and bool(natural_id)
-    )
-    checks["isolated_pty_natural_notification_once"] = len(natural_notes) == 1
-    checks["isolated_pty_natural_notification_ok"] = bool(natural_notes) and (
-        "status=ok exit_code=0" in natural_notes[0]
-        and "notify-natural" in natural_notes[0]
+    checks["isolated_command_session_natural_notification_started"] = natural_start.get(
+        "status"
+    ) == "running" and bool(natural_id)
+    checks["isolated_command_session_natural_notification_once"] = len(natural_notes) == 1
+    checks["isolated_command_session_natural_notification_ok"] = bool(natural_notes) and (
+        "status=ok exit_code=0" in natural_notes[0] and "notify-natural" in natural_notes[0]
     )
     details["natural_notification"] = {
         "start": trim_response(natural_start),
@@ -472,22 +492,21 @@ async def run_isolated_pty_control_probe(client: IsolatedClient) -> dict[str, An
     timeout_cmd = "sleep 5"
     timeout_start, _ = await client.exec_command(
         timeout_cmd,
-        tty=True,
         yield_time_ms=50,
         timeout=1,
     )
-    timeout_id = str(timeout_start.get("pty_session_id") or "")
-    timeout_notes = await collect_pty_notifications(
+    timeout_id = str(timeout_start.get("command_session_id") or "")
+    timeout_notes = await collect_command_session_notifications(
         client,
         timeout_id,
         command=timeout_cmd,
         timeout_s=6.0,
     )
-    checks["isolated_pty_timeout_notification_started"] = (
-        timeout_start.get("status") == "running" and bool(timeout_id)
-    )
-    checks["isolated_pty_timeout_notification_once"] = len(timeout_notes) == 1
-    checks["isolated_pty_timeout_notification_failed"] = bool(timeout_notes) and (
+    checks["isolated_command_session_timeout_notification_started"] = timeout_start.get(
+        "status"
+    ) == "running" and bool(timeout_id)
+    checks["isolated_command_session_timeout_notification_once"] = len(timeout_notes) == 1
+    checks["isolated_command_session_timeout_notification_failed"] = bool(timeout_notes) and (
         "status=timed_out exit_code=124" in timeout_notes[0]
     )
     details["timeout_notification"] = {
@@ -498,21 +517,22 @@ async def run_isolated_pty_control_probe(client: IsolatedClient) -> dict[str, An
     cancel_cmd = "sleep 60"
     cancel_start, _ = await client.exec_command(
         cancel_cmd,
-        tty=True,
         yield_time_ms=50,
         timeout=120,
     )
-    cancel_id = str(cancel_start.get("pty_session_id") or "")
-    cancel_response, _ = await client.pty_cancel(cancel_id) if cancel_id else ({}, 0.0)
+    cancel_id = str(cancel_start.get("command_session_id") or "")
+    cancel_response, _ = await client.command_session_cancel(cancel_id) if cancel_id else ({}, 0.0)
     cancel_notes = await collect_cancel_suppression_notifications(
         client,
         cancel_id,
         cancel_cmd,
         cancel_response,
     )
-    checks["isolated_pty_cancel_started"] = cancel_start.get("status") == "running" and bool(cancel_id)
-    checks["isolated_pty_cancel_status"] = cancel_response.get("status") == "cancelled"
-    checks["isolated_pty_cancel_no_duplicate_notification"] = cancel_notes == []
+    checks["isolated_command_session_cancel_started"] = cancel_start.get(
+        "status"
+    ) == "running" and bool(cancel_id)
+    checks["isolated_command_session_cancel_status"] = cancel_response.get("status") == "cancelled"
+    checks["isolated_command_session_cancel_no_duplicate_notification"] = cancel_notes == []
     details["cancel"] = {
         "start": trim_response(cancel_start),
         "cancel": trim_response(cancel_response),
@@ -530,11 +550,15 @@ async def run_port_3000_probe(bench: DockerBench, client: IsolatedClient) -> dic
     server_ids: dict[str, str] = {}
 
     enters = await asyncio.gather(*(clients[agent].enter() for agent in agents))
-    enter_responses = {agent: response for agent, (response, _wall_ms) in zip(agents, enters, strict=True)}
+    enter_responses = {
+        agent: response for agent, (response, _wall_ms) in zip(agents, enters, strict=True)
+    }
     checks["port_3000_agents_entered"] = all(
         response.get("success") is True for response in enter_responses.values()
     )
-    details["enters"] = {agent: trim_response(response) for agent, response in enter_responses.items()}
+    details["enters"] = {
+        agent: trim_response(response) for agent, response in enter_responses.items()
+    }
 
     try:
         launches = await asyncio.gather(
@@ -545,7 +569,6 @@ async def run_port_3000_probe(bench: DockerBench, client: IsolatedClient) -> dic
                         f"{shlex.quote(port_3000_served_path(agent))}; "
                         "cd /testbed; python3 -m http.server 3000"
                     ),
-                    tty=True,
                     yield_time_ms=300,
                     timeout=120,
                 )
@@ -556,7 +579,7 @@ async def run_port_3000_probe(bench: DockerBench, client: IsolatedClient) -> dic
             agent: response for agent, (response, _wall_ms) in zip(agents, launches, strict=True)
         }
         server_ids = {
-            agent: str(response.get("pty_session_id") or "")
+            agent: str(response.get("command_session_id") or "")
             for agent, response in launch_responses.items()
         }
         checks["port_3000_binds_succeeded"] = all(
@@ -574,8 +597,12 @@ async def run_port_3000_probe(bench: DockerBench, client: IsolatedClient) -> dic
                 for agent in agents
             )
         )
-        fetch_responses = {agent: response for agent, (response, _attempts) in zip(agents, fetches, strict=True)}
-        fetch_attempts = {agent: attempts for agent, (_response, attempts) in zip(agents, fetches, strict=True)}
+        fetch_responses = {
+            agent: response for agent, (response, _attempts) in zip(agents, fetches, strict=True)
+        }
+        fetch_attempts = {
+            agent: attempts for agent, (_response, attempts) in zip(agents, fetches, strict=True)
+        }
         checks["port_3000_each_agent_reaches_own_localhost"] = all(
             response.get("status") == "ok" and f"served-by-{agent}" in combined_output(response)
             for agent, response in fetch_responses.items()
@@ -583,10 +610,13 @@ async def run_port_3000_probe(bench: DockerBench, client: IsolatedClient) -> dic
 
         ns_ips = await audit_ns_ips(bench, agents)
         peer_ip = ns_ips.get(agents[1], "")
-        cross, _ = await clients[agents[0]].exec_command(
-            f"{python_http_get_command(f'http://{peer_ip}:3000/')} || echo BLOCKED",
-            tty=False,
-        ) if peer_ip else ({}, 0.0)
+        cross, _ = (
+            await clients[agents[0]].exec_command(
+                f"{python_http_get_command(f'http://{peer_ip}:3000/')} || echo BLOCKED",
+            )
+            if peer_ip
+            else ({}, 0.0)
+        )
         checks["port_3000_peer_ip_discovered"] = bool(peer_ip)
         checks["port_3000_cross_agent_blocked"] = "BLOCKED" in combined_output(cross)
         details["launches"] = {
@@ -606,8 +636,8 @@ async def run_port_3000_probe(bench: DockerBench, client: IsolatedClient) -> dic
         checks["port_3000_force_exits_succeeded"] = all(
             response.get("success") is True for response in exits.values()
         )
-        checks["port_3000_server_ptys_cancelled"] = all(
-            server_ids.get(agent) in exits[agent].get("force_cancelled_pty_session_ids", [])
+        checks["port_3000_server_command_sessions_cancelled"] = all(
+            server_ids.get(agent) in exits[agent].get("force_cancelled_command_session_ids", [])
             for agent in server_ids
         )
         details["exits"] = {
@@ -620,7 +650,9 @@ async def run_port_3000_probe(bench: DockerBench, client: IsolatedClient) -> dic
             for agent in agents
         )
     )
-    miss_responses = {agent: response for agent, (response, _wall_ms) in zip(agents, misses, strict=True)}
+    miss_responses = {
+        agent: response for agent, (response, _wall_ms) in zip(agents, misses, strict=True)
+    }
     checks["port_3000_served_files_not_published"] = all(
         response.get("success") is True and response.get("exists") is False
         for response in miss_responses.values()
@@ -633,18 +665,18 @@ async def run_port_3000_probe(bench: DockerBench, client: IsolatedClient) -> dic
 
 async def terminal_result_from_control(
     client: IsolatedClient,
-    pty_session_id: str,
+    command_session_id: str,
     initial: dict[str, Any],
     *,
     timeout_s: float = 5.0,
 ) -> dict[str, Any]:
-    if not pty_session_id or initial.get("status") != "running":
+    if not command_session_id or initial.get("status") != "running":
         return initial
     deadline = time.monotonic() + timeout_s
     current = initial
     while time.monotonic() < deadline:
         await asyncio.sleep(0.1)
-        current, _ = await client.pty_progress(pty_session_id, seconds=5.0)
+        current, _ = await client.command_session_progress(command_session_id, seconds=5.0)
         if current.get("status") != "running":
             return current
     return current
@@ -663,7 +695,6 @@ async def fetch_http_until(
     while time.monotonic() < deadline:
         current, _ = await client.exec_command(
             f"{python_http_get_command(url)} || echo BAD",
-            tty=False,
         )
         attempts.append(trim_response(current))
         if expected in combined_output(current):
@@ -672,27 +703,27 @@ async def fetch_http_until(
     return current, attempts
 
 
-async def collect_pty_notifications(
+async def collect_command_session_notifications(
     client: IsolatedClient,
-    pty_session_id: str,
+    command_session_id: str,
     *,
     command: str,
     timeout_s: float,
 ) -> list[str]:
-    if not pty_session_id:
+    if not command_session_id:
         return []
     from engine.background.task_supervisor import BackgroundTaskSupervisor
 
     supervisor = BackgroundTaskSupervisor()
-    supervisor.register_pty_command(
-        pty_session_id=pty_session_id,
+    supervisor.register_command_session(
+        command_session_id=command_session_id,
         sandbox_id=client.sandbox_id,
         agent_id=client.agent_id,
         command=command,
     )
     deadline = time.monotonic() + timeout_s
     while time.monotonic() < deadline:
-        notes = await supervisor.collect_pty_completion_notifications()
+        notes = await supervisor.collect_command_session_completion_notifications()
         if notes:
             return notes
         await asyncio.sleep(0.1)
@@ -701,26 +732,26 @@ async def collect_pty_notifications(
 
 async def collect_cancel_suppression_notifications(
     client: IsolatedClient,
-    pty_session_id: str,
+    command_session_id: str,
     command: str,
     cancel_response: dict[str, Any],
 ) -> list[str]:
-    if not pty_session_id:
+    if not command_session_id:
         return []
     from engine.background.task_supervisor import BackgroundTaskSupervisor
 
     supervisor = BackgroundTaskSupervisor()
-    supervisor.register_pty_command(
-        pty_session_id=pty_session_id,
+    supervisor.register_command_session(
+        command_session_id=command_session_id,
         sandbox_id=client.sandbox_id,
         agent_id=client.agent_id,
         command=command,
     )
-    supervisor.mark_pty_result_reported_by_tool(
-        pty_session_id=pty_session_id,
+    supervisor.mark_command_session_result_reported_by_tool(
+        command_session_id=command_session_id,
         result=cancel_response,
     )
-    return await supervisor.collect_pty_completion_notifications()
+    return await supervisor.collect_command_session_completion_notifications()
 
 
 async def audit_ns_ips(bench: DockerBench, agents: tuple[str, ...]) -> dict[str, str]:
@@ -752,17 +783,20 @@ def python_http_get_command(url: str) -> str:
 def inspection_checks(
     force_exit: dict[str, Any],
     inspection: dict[str, Any],
-    pty_session_id: str,
+    command_session_id: str,
 ) -> dict[str, bool]:
     cgroup_path = inspection.get("cgroup_path")
     mountinfo_refs = inspection.get("mountinfo_reference_count_after")
     return {
         "force_exit_success": force_exit.get("success") is True,
         "force_cancel_requested": force_exit.get("force_cancel_requested") is True,
-        "force_cancelled_real_pty": pty_session_id
-        in force_exit.get("force_cancelled_pty_session_ids", []),
-        "force_cancel_no_stale_ptys": force_exit.get("stale_pty_session_ids") == [],
-        "force_cancel_no_active_ptys_after": force_exit.get("active_pty_session_ids_after") == [],
+        "force_cancelled_real_command_session": command_session_id
+        in force_exit.get("force_cancelled_command_session_ids", []),
+        "force_cancel_no_stale_command_sessions": force_exit.get("stale_command_session_ids") == [],
+        "force_cancel_no_active_command_sessions_after": force_exit.get(
+            "active_command_session_ids_after"
+        )
+        == [],
         "handle_unregistered": inspection.get("handle_registered_after") is False,
         "agent_unregistered": inspection.get("agent_registered_after") is False,
         "open_handle_count_zero": inspection.get("open_handle_count_after") == 0,
@@ -804,7 +838,9 @@ def audit_checks(audit: dict[str, Any], inspection: dict[str, Any]) -> dict[str,
         for event in audit.get("events", [])
         if event.get("type") == "sandbox_isolated_workspace_tool_call"
     ]
-    exit_inspection = nested(exit_events[-1], "payload", "inspection", default={}) if exit_events else {}
+    exit_inspection = (
+        nested(exit_events[-1], "payload", "inspection", default={}) if exit_events else {}
+    )
     return {
         "audit_readable": audit.get("readable") is True,
         "audit_has_enter": "sandbox_isolated_workspace_enter" in types,
@@ -858,7 +894,8 @@ async def collect_preflight(bench: DockerBench) -> dict[str, Any]:
     )
     return {
         "tool_probe": result_block(tools),
-        "target_lacks_ip": "ip=\n" in _text(tools, "stdout") or _text(tools, "stdout").startswith("ip=nft="),
+        "target_lacks_ip": "ip=\n" in _text(tools, "stdout")
+        or _text(tools, "stdout").startswith("ip=nft="),
         "target_lacks_nft": _text(tools, "stdout").rstrip().endswith("nft="),
         "cgroup_writable": _text(cgroup, "stdout").strip() == "writable",
     }
@@ -939,7 +976,7 @@ def trim_response(response: dict[str, Any]) -> dict[str, Any]:
         "exit_code",
         "workspace",
         "workspace_mode",
-        "pty_session_id",
+        "command_session_id",
         "changed_paths",
         "error",
         "exists",
@@ -960,9 +997,9 @@ def trim_exit_response(response: dict[str, Any]) -> dict[str, Any]:
     trimmed = trim_response(response)
     for key in (
         "force_cancel_requested",
-        "force_cancelled_pty_session_ids",
-        "stale_pty_session_ids",
-        "active_pty_session_ids_after",
+        "force_cancelled_command_session_ids",
+        "stale_command_session_ids",
+        "active_command_session_ids_after",
         "evicted_upperdir_bytes",
         "inspection",
     ):

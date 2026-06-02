@@ -281,17 +281,17 @@ async def test_sandbox_task_can_disable_supervisor_heartbeat() -> None:
     await mgr.cancel_all()
 
 
-async def test_count_by_agent_includes_active_pty_commands() -> None:
+async def test_count_by_agent_includes_active_command_sessions() -> None:
     mgr = BackgroundTaskSupervisor()
-    mgr.register_pty_command(
-        pty_session_id="pty_1",
+    mgr.register_command_session(
+        command_session_id="cmd_1",
         sandbox_id="sandbox-1",
         agent_id="agent-a",
     )
 
     assert mgr.count_by_agent("agent-a") == 1
-    mgr.mark_pty_result_reported_by_tool(
-        pty_session_id="pty_1",
+    mgr.mark_command_session_result_reported_by_tool(
+        command_session_id="cmd_1",
         result={"status": "cancelled", "exit_code": None, "output": {}},
     )
     assert mgr.count_by_agent("agent-a") == 0
