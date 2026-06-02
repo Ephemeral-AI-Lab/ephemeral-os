@@ -3364,11 +3364,7 @@ fn is_occ_op(op: &str) -> bool {
 fn uses_overlay_or_lease(op: &str, response: &Value) -> bool {
     if matches!(
         op,
-        "api.glob"
-            | "api.v1.glob"
-            | "api.grep"
-            | "api.v1.grep"
-            | "api.v1.command.cancel"
+        "api.glob" | "api.v1.glob" | "api.grep" | "api.v1.grep" | "api.v1.command.cancel"
     ) {
         return true;
     }

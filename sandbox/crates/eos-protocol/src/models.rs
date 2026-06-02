@@ -170,15 +170,6 @@ pub struct GrepArgs {
     pub head_limit: Option<i64>,
 }
 
-// Serde `skip_serializing_if` predicates receive references.
-#[expect(
-    clippy::trivially_copy_pass_by_ref,
-    reason = "serde skip_serializing_if predicates receive references"
-)]
-const fn is_false(b: &bool) -> bool {
-    !*b
-}
-
 /// `read_file` response (`SandboxResultBase` + content/exists/encoding).
 /// `// PORT backend/src/sandbox/shared/models.py:162-166`
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

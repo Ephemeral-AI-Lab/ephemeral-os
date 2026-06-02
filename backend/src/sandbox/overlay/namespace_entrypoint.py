@@ -158,7 +158,7 @@ def execute_tool_payload(
         denied = _check_host_denylist(req)
         if denied is not None:
             result_payload = denied
-        elif req.verb == "shell":
+        elif req.verb == "exec_command":
             result = shell.run(
                 _shell_argv(req.args),
                 workspace_root=workspace_root,
@@ -209,7 +209,7 @@ def _check_host_denylist(req: ToolCallRequest) -> dict[str, Any] | None:
     if req.intent != Intent.WRITE_ALLOWED and req.verb not in {
         "write_file",
         "edit_file",
-        "shell",
+        "exec_command",
     }:
         return None
     target = str(req.args.get("path") or req.args.get("cwd") or "")

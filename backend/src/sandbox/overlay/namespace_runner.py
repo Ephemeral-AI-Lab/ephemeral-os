@@ -219,7 +219,7 @@ def _tool_timeout(req: ToolCallRequest) -> float | None:
 
 
 def _build_verb_cancellation(req: ToolCallRequest) -> VerbCancellation:
-    if req.verb == "shell":
+    if req.verb == "exec_command":
         return ShellPgrpCancellation()
     return NO_OP_CANCELLATION
 

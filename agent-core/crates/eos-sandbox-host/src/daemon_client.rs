@@ -672,7 +672,7 @@ fn readiness_error_from_value(error: &Value, op: &str) -> SandboxHostError {
     }
 }
 
-fn plain_string(value: &Value) -> String {
+pub(crate) fn plain_string(value: &Value) -> String {
     match value {
         Value::String(s) => s.clone(),
         other => other.to_string(),

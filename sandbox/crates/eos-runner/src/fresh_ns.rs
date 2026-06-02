@@ -604,7 +604,10 @@ mod tests {
 
     #[test]
     fn exec_command_string_uses_non_login_bash() -> TestResult {
-        let argv = shell_argv(&request("exec_command", serde_json::json!({"command": "echo hi"})))?;
+        let argv = shell_argv(&request(
+            "exec_command",
+            serde_json::json!({"command": "echo hi"}),
+        ))?;
         assert_eq!(
             argv,
             ["/bin/bash", "--noprofile", "--norc", "-c", "echo hi"]

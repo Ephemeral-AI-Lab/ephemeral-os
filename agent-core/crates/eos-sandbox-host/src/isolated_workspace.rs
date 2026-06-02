@@ -20,7 +20,7 @@ use eos_sandbox_api::{
 use eos_types::{JsonObject, SandboxId};
 use serde_json::Value;
 
-use crate::daemon_client::{DaemonClient, DEFAULT_LAYER_STACK_ROOT};
+use crate::daemon_client::{plain_string, DaemonClient, DEFAULT_LAYER_STACK_ROOT};
 use crate::error::SandboxHostError;
 
 const ISOLATED_OP_TIMEOUT_S: u32 = 180;
@@ -296,13 +296,6 @@ fn lifecycle_error_from_mapping(error: &Value) -> LifecycleError {
             message: plain_string(other),
             details: BTreeMap::new(),
         },
-    }
-}
-
-fn plain_string(value: &Value) -> String {
-    match value {
-        Value::String(s) => s.clone(),
-        other => other.to_string(),
     }
 }
 

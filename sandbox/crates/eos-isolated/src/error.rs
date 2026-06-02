@@ -23,7 +23,12 @@ pub enum IsolatedError {
 
     /// `already_open` — the agent already holds an open isolated workspace.
     #[error("agent already has an open isolated workspace")]
-    AlreadyOpen,
+    AlreadyOpen {
+        /// Existing handle creation timestamp.
+        created_at: f64,
+        /// Existing handle last-activity timestamp.
+        last_activity: f64,
+    },
 
     /// `not_open` — the agent has no open isolated workspace.
     #[error("agent has no open isolated workspace")]
@@ -31,7 +36,10 @@ pub enum IsolatedError {
 
     /// `quota_exceeded` — the global concurrent-workspace cap is reached.
     #[error("global isolated workspace cap reached")]
-    QuotaExceeded,
+    QuotaExceeded {
+        /// Configured global isolated-workspace cap.
+        total_cap: u32,
+    },
 
     /// `host_ram_pressure` — projected upperdir reservation exceeds host RAM budget.
     #[error("host RAM gate refuses new isolated workspace")]
@@ -79,9 +87,9 @@ impl IsolatedError {
         match self {
             Self::FeatureDisabled => "feature_disabled",
             Self::InvalidArgument(_) => "invalid_argument",
-            Self::AlreadyOpen => "already_open",
+            Self::AlreadyOpen { .. } => "already_open",
             Self::NotOpen => "not_open",
-            Self::QuotaExceeded => "quota_exceeded",
+            Self::QuotaExceeded { .. } => "quota_exceeded",
             Self::HostRamPressure { .. } => "host_ram_pressure",
             Self::SetupTimeout { .. } => "setup_timeout",
             Self::SetupFailed { .. } | Self::NetworkUnavailable(_) => "setup_failed",

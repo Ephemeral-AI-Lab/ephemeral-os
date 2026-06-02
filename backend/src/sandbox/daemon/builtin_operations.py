@@ -133,7 +133,7 @@ async def exec_command(args: dict[str, Any]) -> dict[str, object]:
         payload["timeout_seconds"] = payload["timeout"]
     result = await dispatch_workspace_tool_call(
         payload,
-        verb="shell",
+        verb="exec_command",
         intent=Intent.WRITE_ALLOWED,
     )
     raw_exit_code = result.get("exit_code")

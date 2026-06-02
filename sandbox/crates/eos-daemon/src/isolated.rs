@@ -7,7 +7,7 @@
 //! snapshot/lease hinge and scratch upperdir; no OCC publish path is linked
 //! through `eos-isolated`.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 #[cfg(target_os = "linux")]
 use std::fs::{File, OpenOptions};
 #[cfg(target_os = "linux")]
@@ -556,6 +556,19 @@ pub fn agent_has_active_handle(agent_id: &str) -> bool {
         .is_some()
 }
 
+pub fn ttl_sweep() -> usize {
+    let mut guard = lock_state_cell();
+    let Some(state) = guard.as_mut() else {
+        return 0;
+    };
+    let active_agents = state
+        .active_command_sessions
+        .values()
+        .cloned()
+        .collect::<HashSet<_>>();
+    state.session.ttl_sweep(&active_agents)
+}
+
 #[cfg(any(target_os = "linux", test))]
 pub fn register_command_session(agent_id: &str, command_session_id: &str) {
     let mut guard = lock_state_cell();
@@ -886,6 +899,16 @@ fn setup_error(error: impl std::fmt::Display) -> IsolatedError {
 
 fn error_payload(error: &IsolatedError) -> Value {
     let details = match error {
+        IsolatedError::AlreadyOpen {
+            created_at,
+            last_activity,
+        } => json!({
+            "created_at": created_at,
+            "last_activity": last_activity,
+        }),
+        IsolatedError::QuotaExceeded { total_cap } => json!({
+            "total_cap": total_cap,
+        }),
         IsolatedError::HostRamPressure {
             required_bytes,
             budget_bytes,

@@ -130,35 +130,31 @@ impl ModelRegistry {
                 .cloned()
                 .unwrap_or_default();
             let label = entry.get("label").and_then(Value::as_str).unwrap_or(key);
-            self.register(key, label, class_path, &kwargs, key == active_key)
-                .await
-                .map_err(|e| {
-                    DbError::JsonDecode(serde_json::Error::io(std::io::Error::other(e.to_string())))
-                })?;
+            self.register_inner(key, label, class_path, &kwargs, key == active_key)
+                .await?;
             imported += 1;
         }
         Ok(imported)
     }
-}
 
-#[async_trait]
-impl ModelStore for ModelRegistry {
-    async fn register(
+    /// `register` shared by the `ModelStore` trait impl and `seed_from_json`,
+    /// returning the crate-native [`DbError`] so seeding propagates the real
+    /// store failure (the trait impl flattens it to `CoreError`).
+    async fn register_inner(
         &self,
         model_key: &str,
         label: &str,
         class_path: &str,
         kwargs: &JsonObject,
         activate: bool,
-    ) -> Result<ModelRegistration, CoreError> {
+    ) -> Result<ModelRegistration, DbError> {
         let now = OffsetDateTime::now_utc();
         let kwargs_json = json_col::encode(kwargs)?;
-        let mut tx = self.pool.begin().await.map_err(DbError::from)?;
+        let mut tx = self.pool.begin().await?;
         if activate {
             sqlx::query("UPDATE model_registrations SET is_active = 0 WHERE is_active = 1")
                 .execute(&mut *tx)
-                .await
-                .map_err(DbError::from)?;
+                .await?;
         }
         let row = sqlx::query_as::<Sqlite, ModelRegistrationRow>(
             "INSERT INTO model_registrations (key, label, class_path, kwargs_json, is_active, created_at, updated_at) \
@@ -177,10 +173,25 @@ impl ModelStore for ModelRegistry {
         .bind(now)
         .bind(now)
         .fetch_one(&mut *tx)
-        .await
-        .map_err(DbError::from)?;
-        tx.commit().await.map_err(DbError::from)?;
+        .await?;
+        tx.commit().await?;
         Ok(row_to_model(row, false))
+    }
+}
+
+#[async_trait]
+impl ModelStore for ModelRegistry {
+    async fn register(
+        &self,
+        model_key: &str,
+        label: &str,
+        class_path: &str,
+        kwargs: &JsonObject,
+        activate: bool,
+    ) -> Result<ModelRegistration, CoreError> {
+        Ok(self
+            .register_inner(model_key, label, class_path, kwargs, activate)
+            .await?)
     }
 
     async fn delete(&self, model_key: &str) -> Result<bool, CoreError> {

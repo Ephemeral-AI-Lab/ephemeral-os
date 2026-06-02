@@ -25,6 +25,9 @@ serde_json  = "1"
 serde_yaml  = "0.9"
 schemars    = "0.8"
 sha2        = "0.10"
+# eos-tools: faithful port of the destructive-shell / git-mutation prehook
+# patterns (RE2-compatible, no lookaround).
+regex       = "1"
 sqlx        = { version = "0.8", default-features = false, features = ["runtime-tokio", "sqlite", "macros", "migrate"] }
 reqwest     = { version = "0.12", default-features = false, features = ["json", "stream", "rustls-tls"] }
 thiserror   = "2"
@@ -40,7 +43,6 @@ secrecy     = "0.8"
 # eos-sandbox-host: typed async Docker Engine API client (hyper 1.x stack, already cached)
 bollard     = "0.17"
 tar         = "0.4"
-flate2      = "1"
 uuid        = { version = "1", features = ["v4", "serde"] }
 console-subscriber = "0.4"
 # dev

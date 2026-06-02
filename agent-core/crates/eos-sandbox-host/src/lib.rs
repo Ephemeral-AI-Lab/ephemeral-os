@@ -52,4 +52,4 @@ pub use provider::{
 };
 pub use provisioning::{RequestSandboxBinding, RequestSandboxProvisioner};
 pub use registry::{resolve_provider_kind, ProviderRegistry};
-pub use runtime_artifact::{EOSD_VERSION, MINISIGN_PUBLIC_KEY, PROTOCOL_VERSION};
+pub use runtime_artifact::{EOSD_VERSION, PROTOCOL_VERSION};

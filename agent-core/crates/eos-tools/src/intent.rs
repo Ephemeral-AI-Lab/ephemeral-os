@@ -79,7 +79,10 @@ mod tests {
 
     #[test]
     fn wire_values_match_python() {
-        assert_eq!(serde_json::to_value(ToolIntent::ReadOnly).unwrap(), "read_only");
+        assert_eq!(
+            serde_json::to_value(ToolIntent::ReadOnly).unwrap(),
+            "read_only"
+        );
         assert_eq!(
             serde_json::to_value(ToolIntent::WriteAllowed).unwrap(),
             "write_allowed"

@@ -133,7 +133,7 @@ class EphemeralPipeline(OperationOverlayMixin, WorkspacePublishMixin):
             raise RuntimeError("EphemeralPipeline.run_tool_call requires layer_stack")
         total_start = monotonic_now()
         pre_mount_timings: dict[str, float] = {}
-        if req.verb == "shell":
+        if req.verb == "exec_command":
             pre_mount_timings = await self._run_shell_pre_mount_maintenance()
         handle = overlay_lifecycle.acquire(
             self._layer_stack,
@@ -471,7 +471,7 @@ def _api_total_timing_key(verb: str) -> str:
         "read_file": "read",
         "write_file": "write",
         "edit_file": "edit",
-        "shell": "shell",
+        "exec_command": "exec_command",
         "grep": "grep",
         "glob": "glob",
     }.get(verb)

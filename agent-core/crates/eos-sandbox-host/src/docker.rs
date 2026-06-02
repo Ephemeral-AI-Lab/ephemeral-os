@@ -651,13 +651,14 @@ fn daemon_tcp_endpoint_from_inspect(
     {
         return None;
     }
-    let internal_port: u16 = labels
+    let internal_port: u16 = match labels
         .and_then(|l| l.get(DAEMON_TCP_PORT_LABEL))
         .map(String::as_str)
         .filter(|s| !s.is_empty())
-        .unwrap_or("37657")
-        .parse()
-        .ok()?;
+    {
+        Some(port) => port.parse().ok()?,
+        None => DAEMON_TCP_INTERNAL_PORT,
+    };
     let bindings = inspect
         .network_settings
         .as_ref()

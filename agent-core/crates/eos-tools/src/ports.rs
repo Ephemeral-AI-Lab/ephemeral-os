@@ -20,7 +20,6 @@ use eos_state::{GeneratorSubmission, PlannerKind, ReducerSubmission};
 use eos_types::{JsonObject, SandboxId, SubagentSessionId, TaskId, WorkflowId, WorkflowSessionId};
 
 use crate::error::ToolError;
-use crate::result::ToolResult;
 
 /// Friend-seal for the port traits (`api-sealed-trait`).
 ///
@@ -91,6 +90,11 @@ pub trait WorkflowControlPort: Sealed + Send + Sync {
         parent_task_id: &TaskId,
         agent_id: &str,
     ) -> Result<Vec<OutstandingWorkflow>, ToolError>;
+
+    /// Whether `workflow_id` is itself a nested (delegated-within-a-workflow)
+    /// workflow. Read by the `DisallowNestedPlannerDeferral` pre-hook (Python
+    /// `is_nested_workflow`).
+    async fn is_nested_workflow(&self, workflow_id: &WorkflowId) -> Result<bool, ToolError>;
 }
 
 // ---------------------------------------------------------------------------
@@ -146,18 +150,38 @@ pub struct PlannerPlan {
     pub reducers: Vec<PlanReducer>,
 }
 
+/// The result of applying a terminal submission: accepted, or rejected with a
+/// model-facing message (the Python `AttemptSubmissionContextError` /
+/// `WorkflowInvariantViolation` in-band path). `Err(ToolError)` stays reserved
+/// for genuine framework faults.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum SubmissionAck {
+    /// The submission was accepted by the orchestrator.
+    Accepted,
+    /// The submission was rejected; the message is shown to the model in-band.
+    Rejected(String),
+}
+
 /// Per-Attempt submission application for the planner/generator/reducer terminal
 /// tools. Implemented by the `eos-workflow` `AttemptOrchestrator`.
 #[async_trait]
 pub trait PlanSubmissionPort: Sealed + Send + Sync {
-    /// Apply a validated planner DAG (`orchestrator.apply_plan_submission`).
-    async fn apply_plan(&self, plan: PlannerPlan) -> Result<(), ToolError>;
+    /// Apply a validated planner DAG (`orchestrator.apply_plan_submission`). The
+    /// implementor performs the downstream-state checks (planner-task ownership,
+    /// unknown-agent, DAG cycle) and persists the task rows.
+    async fn apply_plan(&self, plan: PlannerPlan) -> Result<SubmissionAck, ToolError>;
 
     /// Record one generator task's terminal outcome.
-    async fn submit_generator(&self, submission: GeneratorSubmission) -> Result<(), ToolError>;
+    async fn submit_generator(
+        &self,
+        submission: GeneratorSubmission,
+    ) -> Result<SubmissionAck, ToolError>;
 
     /// Record one reducer task's terminal outcome (the attempt's exit gate).
-    async fn apply_reducer(&self, submission: ReducerSubmission) -> Result<(), ToolError>;
+    async fn apply_reducer(
+        &self,
+        submission: ReducerSubmission,
+    ) -> Result<SubmissionAck, ToolError>;
 }
 
 // ---------------------------------------------------------------------------
@@ -169,6 +193,9 @@ pub trait PlanSubmissionPort: Sealed + Send + Sync {
 pub struct SubagentRunOutcome {
     /// The subagent's terminal result text (or an error explanation).
     pub output: String,
+    /// Whether the result is an error (crash, no-terminal, or the terminal's own
+    /// `is_error`).
+    pub is_error: bool,
     /// Whether the subagent actually called a terminal tool.
     pub terminal_called: bool,
 }
@@ -277,10 +304,4 @@ pub struct SystemNotification {
 pub trait NotificationSink: Sealed + Send + Sync {
     /// Surface one system notification.
     async fn notify_system(&self, notification: SystemNotification) -> Result<(), ToolError>;
-}
-
-/// Helper: turn a port's `Ok(String)` outcome into a successful [`ToolResult`].
-#[must_use]
-pub(crate) fn text_result(output: String) -> ToolResult {
-    ToolResult::ok(output)
 }

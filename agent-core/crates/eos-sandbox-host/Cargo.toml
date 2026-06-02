@@ -26,7 +26,6 @@ serde_json.workspace = true
 thiserror.workspace = true
 sha2.workspace = true
 tar.workspace = true
-flate2.workspace = true
 tracing.workspace = true
 futures.workspace = true
 schemars.workspace = true

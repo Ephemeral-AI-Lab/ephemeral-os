@@ -13,6 +13,13 @@ use crate::error::DbError;
 use crate::json_col;
 use crate::rows::{enum_to_db, row_to_request, row_to_task, RequestRow, TaskRow};
 
+/// Shared UPDATE for both task-status setters. `COALESCE` keeps the existing
+/// column when the caller passes a NULL `outcomes`/`terminal_tool_result` bind.
+const UPDATE_TASK_STATUS_SQL: &str = "UPDATE tasks SET status = ?, \
+       outcomes = COALESCE(?, outcomes), \
+       terminal_tool_result = COALESCE(?, terminal_tool_result), \
+       updated_at = ? WHERE id = ? RETURNING *";
+
 /// `SQLite` repository for requests and tasks. Holds a cheap `SqlitePool` clone.
 #[derive(Debug)]
 pub struct SqlRequestTaskStore {
@@ -175,20 +182,15 @@ impl TaskStore for SqlRequestTaskStore {
         let now = OffsetDateTime::now_utc();
         let outcomes_json = outcomes.map(json_col::encode).transpose()?;
         let ttr_json = terminal_tool_result.map(json_col::encode).transpose()?;
-        let row = sqlx::query_as::<Sqlite, TaskRow>(
-            "UPDATE tasks SET status = ?, \
-               outcomes = COALESCE(?, outcomes), \
-               terminal_tool_result = COALESCE(?, terminal_tool_result), \
-               updated_at = ? WHERE id = ? RETURNING *",
-        )
-        .bind(enum_to_db(&status))
-        .bind(outcomes_json)
-        .bind(ttr_json)
-        .bind(now)
-        .bind(id.as_str())
-        .fetch_optional(&self.pool)
-        .await
-        .map_err(DbError::from)?;
+        let row = sqlx::query_as::<Sqlite, TaskRow>(UPDATE_TASK_STATUS_SQL)
+            .bind(enum_to_db(&status))
+            .bind(outcomes_json)
+            .bind(ttr_json)
+            .bind(now)
+            .bind(id.as_str())
+            .fetch_optional(&self.pool)
+            .await
+            .map_err(DbError::from)?;
         let row = row.ok_or_else(|| DbError::NotFound {
             table: "tasks",
             id: id.to_string(),
@@ -223,20 +225,15 @@ impl TaskStore for SqlRequestTaskStore {
         let now = OffsetDateTime::now_utc();
         let outcomes_json = outcomes.map(json_col::encode).transpose()?;
         let ttr_json = terminal_tool_result.map(json_col::encode).transpose()?;
-        let updated = sqlx::query_as::<Sqlite, TaskRow>(
-            "UPDATE tasks SET status = ?, \
-               outcomes = COALESCE(?, outcomes), \
-               terminal_tool_result = COALESCE(?, terminal_tool_result), \
-               updated_at = ? WHERE id = ? RETURNING *",
-        )
-        .bind(enum_to_db(&status))
-        .bind(outcomes_json)
-        .bind(ttr_json)
-        .bind(now)
-        .bind(id.as_str())
-        .fetch_one(&mut *tx)
-        .await
-        .map_err(DbError::from)?;
+        let updated = sqlx::query_as::<Sqlite, TaskRow>(UPDATE_TASK_STATUS_SQL)
+            .bind(enum_to_db(&status))
+            .bind(outcomes_json)
+            .bind(ttr_json)
+            .bind(now)
+            .bind(id.as_str())
+            .fetch_one(&mut *tx)
+            .await
+            .map_err(DbError::from)?;
         tx.commit().await.map_err(DbError::from)?;
         Ok(Some(row_to_task(updated)?))
     }

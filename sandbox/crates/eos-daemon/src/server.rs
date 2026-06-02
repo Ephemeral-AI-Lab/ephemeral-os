@@ -128,6 +128,19 @@ impl DaemonServer {
                 }
             })
         };
+        let _isolated_ttl_task = {
+            let shutdown = server.shutdown.clone();
+            tokio::spawn(async move {
+                loop {
+                    tokio::select! {
+                        () = shutdown.cancelled() => break,
+                        () = tokio::time::sleep(Duration::from_millis(500)) => {
+                            let _ = tokio::task::spawn_blocking(crate::isolated::ttl_sweep).await;
+                        }
+                    }
+                }
+            })
+        };
         let _ = (&server.audit, &server.invocation_registry);
 
         if let Some(parent) = server.config.socket_path.parent() {

@@ -1,0 +1,653 @@
+//! Pre-execution hooks — a **sealed, closed** set (GC-tools-06), not an open
+//! trait pipeline.
+//!
+//! The Python open `pre_hook` abstraction (not on the anchor §6 seam map) becomes
+//! a sealed [`Hook`] enum the pipeline matches exhaustively. The six wired Python
+//! hooks map one-to-one; `DestructiveGitShell` and `DestructiveShell` are distinct
+//! (different match logic, message, and `policy`). All six are pre-phase (every
+//! wired Python hook is a `pre_hook`; the unexercised post-hook stage is dropped),
+//! so the enum carries no pre/post discriminator.
+//!
+//! A `Deny` becomes an in-band [`ToolResult`]`{is_error:true}` carrying the
+//! `hook_failure` metadata shape the Python pipeline emits (`hook_pipeline.py`
+//! `_build_hook_failure_result`).
+
+use std::sync::LazyLock;
+
+use eos_types::JsonObject;
+use regex::Regex;
+use serde_json::{json, Value};
+
+use crate::error::ToolError;
+use crate::metadata::ExecutionMetadata;
+use crate::name::ToolName;
+use crate::result::ToolResult;
+
+/// One wired pre-hook. `#[non_exhaustive]`: hooks are added here, never as an
+/// open trait (the closed set is matched exhaustively by [`Hook::run`]).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[non_exhaustive]
+pub enum Hook {
+    /// Refuse a terminal / lifecycle tool while sandbox-bound background work is
+    /// in flight (Python `RequireNoInflightBackgroundTasks`).
+    RequireNoInflightBackgroundTasks {
+        /// The protected tool.
+        tool: ToolName,
+    },
+    /// Refuse a main-role terminal that lacks prior advisor approval (Python
+    /// `AdvisorApprovalPreHook`).
+    AdvisorApproval {
+        /// The protected tool.
+        tool: ToolName,
+    },
+    /// Refuse a nested-workflow planner that sets a deferred goal (Python
+    /// `DisallowNestedPlannerDeferral`).
+    DisallowNestedPlannerDeferral {
+        /// The protected tool.
+        tool: ToolName,
+    },
+    /// Refuse git working-tree / metadata mutation shell commands (Python
+    /// `DestructiveGitShellPreHook`).
+    DestructiveGitShell {
+        /// The protected tool.
+        tool: ToolName,
+    },
+    /// Refuse destructive filesystem shell commands (Python
+    /// `DestructiveShellPreHook`).
+    DestructiveShell {
+        /// The protected tool.
+        tool: ToolName,
+    },
+    /// Refuse a read-only helper (`ask_advisor`) while an isolated workspace is
+    /// open (Python `BlockInIsolatedMode`).
+    BlockInIsolatedMode {
+        /// The protected tool.
+        tool: ToolName,
+    },
+}
+
+/// The outcome of running one hook.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum HookOutcome {
+    /// The hook passed; execution proceeds.
+    Pass,
+    /// The hook denied execution; the pipeline returns an in-band error.
+    Deny(HookDenial),
+}
+
+/// A hook denial: the model-facing message plus the audit/policy metadata the
+/// Python `HookResult.fail(...)` carries.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct HookDenial {
+    /// The model-facing block message.
+    pub message: String,
+    /// The `policy` metadata value (`destructive_git`, `advisor_approval`, …).
+    pub policy: &'static str,
+    /// The classification `reason` tag, when the hook stamps one.
+    pub reason: Option<String>,
+    /// Additional metadata (e.g. `count` for in-flight rejections).
+    pub extra: JsonObject,
+}
+
+impl HookDenial {
+    fn new(message: impl Into<String>, policy: &'static str) -> Self {
+        Self {
+            message: message.into(),
+            policy,
+            reason: None,
+            extra: JsonObject::new(),
+        }
+    }
+
+    fn with_reason(mut self, reason: impl Into<String>) -> Self {
+        self.reason = Some(reason.into());
+        self
+    }
+
+    fn with_count(mut self, count: usize) -> Self {
+        self.extra.insert("count".to_owned(), json!(count));
+        self
+    }
+}
+
+impl Hook {
+    /// The protected tool name.
+    #[must_use]
+    pub const fn tool(self) -> ToolName {
+        match self {
+            Hook::RequireNoInflightBackgroundTasks { tool }
+            | Hook::AdvisorApproval { tool }
+            | Hook::DisallowNestedPlannerDeferral { tool }
+            | Hook::DestructiveGitShell { tool }
+            | Hook::DestructiveShell { tool }
+            | Hook::BlockInIsolatedMode { tool } => tool,
+        }
+    }
+
+    /// The Python hook `name` (used in the `hook_failure` trace).
+    #[must_use]
+    pub fn hook_name(self) -> String {
+        let tool = self.tool().as_str();
+        match self {
+            Hook::RequireNoInflightBackgroundTasks { .. } => format!("no_bg_tasks:{tool}"),
+            Hook::AdvisorApproval { .. } => format!("advisor_approval:{tool}"),
+            Hook::DisallowNestedPlannerDeferral { .. } => {
+                format!("no_nested_planner_deferral:{tool}")
+            }
+            Hook::DestructiveGitShell { .. } => format!("sandbox_shell:destructive_git:{tool}"),
+            Hook::DestructiveShell { .. } => format!("sandbox_shell:destructive_shell:{tool}"),
+            Hook::BlockInIsolatedMode { .. } => format!("block_in_isolated_mode:{tool}"),
+        }
+    }
+
+    /// Run this hook against the raw (post-`background`-check) input and context.
+    ///
+    /// # Errors
+    /// Returns [`ToolError`] only on a genuine framework fault while reading
+    /// downstream state; hook *denials* are returned as `Ok(HookOutcome::Deny)`.
+    pub async fn run(
+        self,
+        raw_input: &JsonObject,
+        ctx: &ExecutionMetadata,
+    ) -> Result<HookOutcome, ToolError> {
+        match self {
+            Hook::DestructiveGitShell { .. } => Ok(run_destructive_git(raw_input)),
+            Hook::DestructiveShell { .. } => Ok(run_destructive_shell(raw_input)),
+            Hook::BlockInIsolatedMode { .. } => run_block_in_isolated_mode(ctx).await,
+            Hook::RequireNoInflightBackgroundTasks { tool } => {
+                run_require_no_inflight(tool, raw_input, ctx).await
+            }
+            Hook::AdvisorApproval { tool } => run_advisor_approval(tool, ctx).await,
+            Hook::DisallowNestedPlannerDeferral { .. } => {
+                run_disallow_nested_planner_deferral(raw_input, ctx).await
+            }
+        }
+    }
+}
+
+/// Build the in-band `hook_failure` [`ToolResult`] (Python
+/// `_build_hook_failure_result`, pre-phase).
+#[must_use]
+pub(crate) fn hook_failure_result(hook: Hook, denial: &HookDenial) -> ToolResult {
+    let hook_name = hook.hook_name();
+    let tool_name = hook.tool().as_str();
+    let message = denial.message.clone();
+
+    let output = json!({
+        "hookSpecificOutput": {
+            "hookEventName": "PreToolUse",
+            "permissionDecision": "deny",
+            "permissionDecisionReason": message,
+        },
+        "hookName": hook_name,
+        "toolName": tool_name,
+        "phase": "pre",
+    });
+
+    let mut metadata = JsonObject::new();
+    metadata.insert(
+        "hook_failure".to_owned(),
+        json!({
+            "phase": "pre",
+            "hook_name": hook_name,
+            "tool_name": tool_name,
+            "reason": message,
+            "hook_event_name": "PreToolUse",
+            "permission_decision": "deny",
+            "permission_decision_reason": message,
+        }),
+    );
+    metadata.insert("policy".to_owned(), Value::String(denial.policy.to_owned()));
+    if let Some(reason) = &denial.reason {
+        metadata.insert("reason".to_owned(), Value::String(reason.clone()));
+    }
+    for (k, v) in &denial.extra {
+        metadata.insert(k.clone(), v.clone());
+    }
+
+    ToolResult {
+        output: output.to_string(),
+        is_error: true,
+        metadata,
+        is_terminal: false,
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Destructive shell / git command policy (pure; ports destructive_shell.py).
+// ---------------------------------------------------------------------------
+
+const DESTRUCTIVE_GIT_MESSAGE: &str = "BLOCKED: exec_command is for runtime commands, tests, and inspection. Destructive git mutation commands are forbidden here. They mutate repository metadata or working-tree files outside the OCC/write-scope audit path. Use edit_file or write_file instead. (Note: shell-substitution forms such as $(...), backticks, bash -c, or eval can bypass this prehook; the sandbox commit/write audit remains the authoritative isolation boundary.)";
+
+const DESTRUCTIVE_SHELL_MESSAGE: &str = "BLOCKED: destructive shell command that targets workspace or system directories (rm -r /testbed, mv /testbed, etc.) is forbidden. These commands destroy the shared workspace and cannot be undone. Use targeted file operations instead.";
+
+static GIT_COMMAND_PATTERN: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"(?i)(?:^|[;&|]\s*)(?:command\s+)?git\b([^;&|]*)").expect("valid git pattern")
+});
+
+static DESTRUCTIVE_SHELL_PATTERN: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(concat!(
+        r"(?i)(?:^|[;&|]\s*)(?:",
+        r"rm\s+(?:-\S*[rR]\S*\s+|--recursive\s+)(?:/(?:testbed|workspace|home|opt|usr|var|etc|tmp)\b|/\s|/\.\.|\.\.)",
+        r"|mv\s+/(?:testbed|workspace|home|opt|usr|var|etc)(?:/[^/\s]*)?(?:\s|$)",
+        r"|chmod\s+(?:-\S*R\S*\s+|--recursive\s+)\S*\s+/",
+        r"|chown\s+(?:-\S*R\S*\s+|--recursive\s+)\S*\s+/",
+        r"|rm\s+-\S*[rR]\S*\s+\.\s*$",
+        r"|mkfs\b|dd\s+.*of=/",
+        r")",
+    ))
+    .expect("valid destructive-shell pattern")
+});
+
+const GIT_OPTIONS_WITH_VALUES: &[&str] = &[
+    "-C",
+    "-c",
+    "--config-env",
+    "--exec-path",
+    "--git-dir",
+    "--namespace",
+    "--super-prefix",
+    "--work-tree",
+];
+const GIT_FLAG_OPTIONS: &[&str] = &[
+    "--bare",
+    "--glob-pathspecs",
+    "--icase-pathspecs",
+    "--literal-pathspecs",
+    "--no-pager",
+    "--no-replace-objects",
+    "--noglob-pathspecs",
+    "--paginate",
+    "-P",
+    "-p",
+];
+const BLOCKED_GIT_SUBCOMMANDS: &[&str] = &[
+    "add",
+    "am",
+    "branch",
+    "checkout",
+    "checkout-index",
+    "cherry-pick",
+    "commit",
+    "merge",
+    "mv",
+    "notes",
+    "prune",
+    "read-tree",
+    "rebase",
+    "replace",
+    "reset",
+    "restore",
+    "revert",
+    "rm",
+    "stash",
+    "submodule",
+    "switch",
+    "tag",
+    "update-index",
+    "update-ref",
+    "worktree",
+];
+/// git clean short flags that may legitimately appear alongside `-n` (Python
+/// `_GIT_CLEAN_SHORT_FLAGS = frozenset("ndfxXqi")`).
+const GIT_CLEAN_SHORT_FLAGS: &[char] = &['n', 'd', 'f', 'x', 'X', 'q', 'i'];
+
+/// `args.command` then `args.cmd`; `None` if missing or blank.
+fn shell_command(raw_input: &JsonObject) -> Option<&str> {
+    let command = raw_input
+        .get("command")
+        .or_else(|| raw_input.get("cmd"))
+        .and_then(Value::as_str)?;
+    if command.trim().is_empty() {
+        None
+    } else {
+        Some(command)
+    }
+}
+
+/// Faithful port of `_split_git_args`. Python prefers `shlex.split` (falling
+/// back to `str.split`); this uses whitespace splitting (the fallback path) —
+/// quote handling is best-effort and the prehook is explicitly not the
+/// authoritative isolation boundary (see [`DESTRUCTIVE_GIT_MESSAGE`]).
+fn split_git_args(raw_args: &str) -> Vec<&str> {
+    raw_args.split_whitespace().collect()
+}
+
+/// Port of `_git_subcommand`: skip global options, stop at `--`, return the
+/// first bare token (lowercased) plus the remaining args.
+fn git_subcommand<'a>(args: &[&'a str]) -> Option<(String, Vec<&'a str>)> {
+    let mut idx = 0;
+    while idx < args.len() {
+        let arg = args[idx];
+        if arg == "--" {
+            return None;
+        }
+        if GIT_OPTIONS_WITH_VALUES.contains(&arg) {
+            idx += 2;
+            continue;
+        }
+        if GIT_OPTIONS_WITH_VALUES
+            .iter()
+            .any(|opt| arg.starts_with(&format!("{opt}=")))
+        {
+            idx += 1;
+            continue;
+        }
+        if GIT_FLAG_OPTIONS.contains(&arg) {
+            idx += 1;
+            continue;
+        }
+        if arg.starts_with('-') {
+            idx += 1;
+            continue;
+        }
+        return Some((arg.to_lowercase(), args[idx + 1..].to_vec()));
+    }
+    None
+}
+
+/// Port of `_clean_args_are_dry_run`.
+fn clean_args_are_dry_run(args: &[&str]) -> bool {
+    for arg in args {
+        if *arg == "--" {
+            break;
+        }
+        if *arg == "--dry-run" {
+            return true;
+        }
+        if arg.starts_with("--") {
+            continue;
+        }
+        if arg.starts_with('-') && arg.len() > 1 {
+            let chars: Vec<char> = arg[1..].chars().collect();
+            let has_n = chars.contains(&'n');
+            let all_known = chars.iter().all(|c| GIT_CLEAN_SHORT_FLAGS.contains(c));
+            if has_n && all_known {
+                return true;
+            }
+        }
+    }
+    false
+}
+
+/// Port of `_git_apply_is_read_only`.
+fn git_apply_is_read_only(args: &[&str]) -> bool {
+    args.contains(&"--check") && !args.contains(&"--cached") && !args.contains(&"--index")
+}
+
+/// Port of `_has_git_mutation_command`.
+fn has_git_mutation_command(command: &str) -> bool {
+    for caps in GIT_COMMAND_PATTERN.captures_iter(command) {
+        let raw_args = caps.get(1).map_or("", |m| m.as_str());
+        let Some((subcommand, args)) = git_subcommand(&split_git_args(raw_args)) else {
+            continue;
+        };
+        match subcommand.as_str() {
+            "clean" => {
+                if !clean_args_are_dry_run(&args) {
+                    return true;
+                }
+            }
+            "apply" => {
+                if !git_apply_is_read_only(&args) {
+                    return true;
+                }
+            }
+            other if BLOCKED_GIT_SUBCOMMANDS.contains(&other) => return true,
+            _ => {}
+        }
+    }
+    false
+}
+
+fn run_destructive_git(raw_input: &JsonObject) -> HookOutcome {
+    match shell_command(raw_input) {
+        Some(command) if has_git_mutation_command(command) => {
+            HookOutcome::Deny(HookDenial::new(DESTRUCTIVE_GIT_MESSAGE, "destructive_git"))
+        }
+        _ => HookOutcome::Pass,
+    }
+}
+
+fn run_destructive_shell(raw_input: &JsonObject) -> HookOutcome {
+    match shell_command(raw_input) {
+        Some(command) if DESTRUCTIVE_SHELL_PATTERN.is_match(command) => HookOutcome::Deny(
+            HookDenial::new(DESTRUCTIVE_SHELL_MESSAGE, "destructive_shell"),
+        ),
+        _ => HookOutcome::Pass,
+    }
+}
+
+// ---------------------------------------------------------------------------
+// State-dependent hooks (read downstream state via ports / the transport).
+// ---------------------------------------------------------------------------
+
+const BLOCK_IN_ISOLATED_MESSAGE: &str = "BLOCKED: ask_advisor is unavailable inside an isolated workspace; call exit_isolated_workspace first, then ask_advisor and submit your terminal.";
+
+const ADVISOR_APPROVAL_MESSAGE_PREFIX: &str =
+    "BLOCKED: You must get approval from advisor before submitting this terminal. Call ask_advisor(tool_name=\"";
+const ADVISOR_APPROVAL_MESSAGE_SUFFIX: &str =
+    "\", tool_payload=...) and resubmit only after the advisor returns verdict=\"approve\".";
+
+const NESTED_PLANNER_DEFERRAL_MESSAGE: &str = "BLOCKED: nested workflow planners cannot set deferred_goal_for_next_iteration. Submit a plan that covers all current child-workflow goal items and leaves no remaining items.";
+
+/// `BlockInIsolatedMode`: fail-OPEN on any daemon RPC error (Python parity).
+async fn run_block_in_isolated_mode(ctx: &ExecutionMetadata) -> Result<HookOutcome, ToolError> {
+    let sandbox_id = match &ctx.sandbox_id {
+        Some(id) => id,
+        None => return Ok(HookOutcome::Pass),
+    };
+    let agent_id = ctx.agent_id();
+    match eos_sandbox_api::isolated_active(&*ctx.transport, sandbox_id, &agent_id).await {
+        Ok(true) => Ok(HookOutcome::Deny(
+            HookDenial::new(BLOCK_IN_ISOLATED_MESSAGE, "block_in_isolated_mode")
+                .with_reason("isolated_workspace_open"),
+        )),
+        // Active=false OR any daemon error → fail-open (pass).
+        Ok(false) | Err(_) => Ok(HookOutcome::Pass),
+    }
+}
+
+/// Whether this submission is a "bailout" that fails-open on a daemon error
+/// (Python `_is_bailout_submission`).
+fn is_bailout_submission(tool: ToolName, raw_input: &JsonObject) -> bool {
+    match tool {
+        ToolName::SubmitPlannerOutcome => raw_input
+            .get("deferred_goal_for_next_iteration")
+            .and_then(Value::as_str)
+            .is_some_and(|s| !s.trim().is_empty()),
+        ToolName::SubmitGeneratorOutcome | ToolName::SubmitReducerOutcome => raw_input
+            .get("status")
+            .and_then(Value::as_str)
+            .is_some_and(|s| s == "failed"),
+        _ => false,
+    }
+}
+
+fn in_flight_message(count: usize, tool: ToolName) -> String {
+    format!(
+        "BLOCKED: {count} sandbox-bound background task(s) are still in flight for this agent. \
+         Finish or interrupt active command sessions before calling {}, then retry.",
+        tool.as_str()
+    )
+}
+
+/// `RequireNoInflightBackgroundTasks`: local count (supervisor) then daemon count
+/// (transport); fail-OPEN only for bailout submissions on a daemon error.
+async fn run_require_no_inflight(
+    tool: ToolName,
+    raw_input: &JsonObject,
+    ctx: &ExecutionMetadata,
+) -> Result<HookOutcome, ToolError> {
+    let agent_id = ctx.agent_id();
+
+    let local = match &ctx.subagent_supervisor {
+        Some(supervisor) => supervisor.background_inflight_count(&agent_id).await,
+        None => 0,
+    };
+    if local > 0 {
+        return Ok(HookOutcome::Deny(
+            HookDenial::new(
+                in_flight_message(local, tool),
+                "no_inflight_background_tasks",
+            )
+            .with_reason("ephemeral_jobs_in_flight")
+            .with_count(local),
+        ));
+    }
+
+    let sandbox_id = match &ctx.sandbox_id {
+        Some(id) => id,
+        None => return Ok(HookOutcome::Pass),
+    };
+
+    let daemon = match eos_sandbox_api::command_session_count(
+        &*ctx.transport,
+        sandbox_id,
+        &agent_id,
+    )
+    .await
+    {
+        Ok(count) => count as usize,
+        Err(_) => {
+            if is_bailout_submission(tool, raw_input) {
+                return Ok(HookOutcome::Pass);
+            }
+            return Ok(HookOutcome::Deny(
+                HookDenial::new(
+                    format!(
+                        "BLOCKED: could not confirm background-task state from the sandbox daemon, \
+                         so {} is refused to avoid orphaning in-flight work. Retry shortly.",
+                        tool.as_str()
+                    ),
+                    "no_inflight_background_tasks",
+                )
+                .with_reason("command_session_count_unavailable"),
+            ));
+        }
+    };
+    if daemon > 0 {
+        return Ok(HookOutcome::Deny(
+            HookDenial::new(
+                in_flight_message(daemon, tool),
+                "no_inflight_background_tasks",
+            )
+            .with_reason("ephemeral_jobs_in_flight")
+            .with_count(daemon),
+        ));
+    }
+    Ok(HookOutcome::Pass)
+}
+
+/// `AdvisorApprovalPreHook`: a missing advisor port denies with `missing`
+/// (Python: no conversation → reason `missing`).
+async fn run_advisor_approval(
+    tool: ToolName,
+    ctx: &ExecutionMetadata,
+) -> Result<HookOutcome, ToolError> {
+    let message = format!(
+        "{ADVISOR_APPROVAL_MESSAGE_PREFIX}{}{ADVISOR_APPROVAL_MESSAGE_SUFFIX}",
+        tool.as_str()
+    );
+    let Some(advisor) = &ctx.advisor else {
+        return Ok(HookOutcome::Deny(
+            HookDenial::new(message, "advisor_approval").with_reason("missing"),
+        ));
+    };
+    let approval = advisor.approval_status(tool.as_str()).await?;
+    if approval.approved {
+        Ok(HookOutcome::Pass)
+    } else {
+        let mut denial = HookDenial::new(message, "advisor_approval");
+        if let Some(reason) = approval.reason {
+            denial = denial.with_reason(reason);
+        }
+        Ok(HookOutcome::Deny(denial))
+    }
+}
+
+/// `DisallowNestedPlannerDeferral`: only fires when a nonblank deferred goal is
+/// set; passes when nesting cannot be determined (the orchestrator still
+/// enforces on apply).
+async fn run_disallow_nested_planner_deferral(
+    raw_input: &JsonObject,
+    ctx: &ExecutionMetadata,
+) -> Result<HookOutcome, ToolError> {
+    let deferred = raw_input
+        .get("deferred_goal_for_next_iteration")
+        .and_then(Value::as_str)
+        .map(str::trim)
+        .filter(|s| !s.is_empty());
+    if deferred.is_none() {
+        return Ok(HookOutcome::Pass);
+    }
+    let (Some(workflow_id), Some(control)) = (&ctx.workflow_id, &ctx.workflow_control) else {
+        return Ok(HookOutcome::Pass);
+    };
+    if control.is_nested_workflow(workflow_id).await? {
+        Ok(HookOutcome::Deny(
+            HookDenial::new(NESTED_PLANNER_DEFERRAL_MESSAGE, "nested_planner_deferral")
+                .with_reason("nested_workflow"),
+        ))
+    } else {
+        Ok(HookOutcome::Pass)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn cmd_input(command: &str) -> JsonObject {
+        let mut obj = JsonObject::new();
+        obj.insert("cmd".to_owned(), Value::String(command.to_owned()));
+        obj
+    }
+
+    #[test]
+    fn destructive_git_blocks_mutations_and_passes_reads() {
+        for blocked in [
+            "git reset --hard",
+            "git commit -m x",
+            "ls; git checkout main",
+            "git -c user.name=x rebase main",
+            "git clean -fd",
+            "git apply --cached patch",
+        ] {
+            assert!(has_git_mutation_command(blocked), "should block: {blocked}");
+        }
+        for allowed in [
+            "git status",
+            "git log --oneline",
+            "git diff",
+            "git clean -nfd",
+            "git clean --dry-run",
+            "git apply --check patch",
+            "echo git reset", // 'git' is mid-token after `echo`, not at a `;&|`/start boundary
+        ] {
+            assert!(
+                !has_git_mutation_command(allowed),
+                "should allow: {allowed}"
+            );
+        }
+    }
+
+    #[test]
+    fn destructive_shell_blocks_and_passes() {
+        assert!(DESTRUCTIVE_SHELL_PATTERN.is_match("rm -rf /testbed"));
+        assert!(DESTRUCTIVE_SHELL_PATTERN.is_match("mv /workspace /tmp"));
+        assert!(DESTRUCTIVE_SHELL_PATTERN.is_match("mkfs.ext4 /dev/sda"));
+        assert!(!DESTRUCTIVE_SHELL_PATTERN.is_match("rm -rf ./build"));
+        assert!(!DESTRUCTIVE_SHELL_PATTERN.is_match("ls -la /testbed"));
+    }
+
+    #[test]
+    fn shell_command_prefers_command_then_cmd() {
+        let mut obj = JsonObject::new();
+        obj.insert("command".to_owned(), Value::String("echo hi".to_owned()));
+        obj.insert("cmd".to_owned(), Value::String("rm -rf /".to_owned()));
+        assert_eq!(shell_command(&obj), Some("echo hi"));
+        assert_eq!(shell_command(&cmd_input("  ")), None);
+        assert_eq!(shell_command(&JsonObject::new()), None);
+    }
+}

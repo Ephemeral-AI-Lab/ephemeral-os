@@ -54,6 +54,7 @@ pub use eos_types::{
 #[cfg(test)]
 mod tests {
     use super::*;
+    use proptest::prelude::*;
     use serde_json::json;
     use std::path::PathBuf;
 
@@ -108,6 +109,73 @@ mod tests {
         let s: IterationCreationReason =
             serde_json::from_value(json!("deferred_goal_continuation")).expect("parse");
         assert_eq!(s, IterationCreationReason::DeferredGoalContinuation);
+    }
+
+    // AC-eos-state-03 (proptest half): the `serialize -> deserialize == identity`
+    // round-trip the spec names, complementing the exact-wire-string table test
+    // above. Exercises the wire-bearing enums + newtype ids + free text over
+    // arbitrary field content (so the `proptest` dev-dep is a real test, not
+    // unused scaffolding).
+    fn any_task_outcome_status() -> impl Strategy<Value = TaskOutcomeStatus> {
+        prop_oneof![
+            Just(TaskOutcomeStatus::Success),
+            Just(TaskOutcomeStatus::Failed)
+        ]
+    }
+
+    fn any_execution_role() -> impl Strategy<Value = ExecutionRole> {
+        prop_oneof![Just(ExecutionRole::Generator), Just(ExecutionRole::Reducer)]
+    }
+
+    fn any_planner_kind() -> impl Strategy<Value = PlannerKind> {
+        prop_oneof![Just(PlannerKind::Completes), Just(PlannerKind::Defers)]
+    }
+
+    fn any_task_id() -> impl Strategy<Value = TaskId> {
+        "[A-Za-z0-9_:-]{1,24}".prop_map(|s| s.parse().expect("non-empty id"))
+    }
+
+    fn any_attempt_id() -> impl Strategy<Value = AttemptId> {
+        "[A-Za-z0-9_:-]{1,24}".prop_map(|s| s.parse().expect("non-empty id"))
+    }
+
+    proptest! {
+        #[test]
+        fn execution_task_outcome_serde_roundtrip(
+            status in any_task_outcome_status(),
+            role in any_execution_role(),
+            tid in any_task_id(),
+            outcome in ".{0,64}",
+        ) {
+            let value = ExecutionTaskOutcome { status, role, task_id: tid, outcome };
+            let encoded = serde_json::to_string(&value).expect("serialize");
+            let decoded: ExecutionTaskOutcome =
+                serde_json::from_str(&encoded).expect("deserialize");
+            prop_assert_eq!(value, decoded);
+        }
+
+        #[test]
+        fn planner_submission_serde_roundtrip(
+            attempt_id in any_attempt_id(),
+            planner_task_id in any_task_id(),
+            kind in any_planner_kind(),
+            generator_task_ids in prop::collection::vec(any_task_id(), 0..4),
+            reducer_task_ids in prop::collection::vec(any_task_id(), 0..4),
+            deferred in prop::option::of(".{0,32}"),
+        ) {
+            let value = PlannerSubmission {
+                attempt_id,
+                planner_task_id,
+                kind,
+                generator_task_ids,
+                reducer_task_ids,
+                deferred_goal_for_next_iteration: deferred,
+            };
+            let encoded = serde_json::to_string(&value).expect("serialize");
+            let decoded: PlannerSubmission =
+                serde_json::from_str(&encoded).expect("deserialize");
+            prop_assert_eq!(value, decoded);
+        }
     }
 
     // AC-eos-state-04: a Rust-side drift-guard snapshot of the submission +

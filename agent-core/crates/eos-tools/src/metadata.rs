@@ -27,8 +27,8 @@ use eos_types::{
 
 use crate::error::ToolError;
 use crate::ports::{
-    AdvisorPort, IsolatedWorkspacePort, NotificationSink, PlanSubmissionPort, SubagentSupervisorPort,
-    WorkflowControlPort,
+    AdvisorPort, IsolatedWorkspacePort, NotificationSink, PlanSubmissionPort,
+    SubagentSupervisorPort, WorkflowControlPort,
 };
 
 /// The typed bag of runtime context a tool executor reads. Built per tool call

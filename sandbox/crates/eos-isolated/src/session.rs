@@ -9,7 +9,7 @@
 //! for the current Rust slice.
 //! `// PORT backend/src/sandbox/isolated_workspace/_control_plane/workspace_handle_lifecycle.py:39-260`
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::net::Ipv4Addr;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -327,11 +327,23 @@ where
             ));
         }
         if self.by_agent.contains_key(agent_id) {
-            return Err(IsolatedError::AlreadyOpen);
+            let existing = self
+                .by_agent
+                .get(agent_id)
+                .and_then(|handle_id| self.handles.get(handle_id))
+                .ok_or_else(|| IsolatedError::SetupFailed {
+                    step: "agent handle index is inconsistent".to_owned(),
+                })?;
+            return Err(IsolatedError::AlreadyOpen {
+                created_at: existing.created_at,
+                last_activity: existing.last_activity,
+            });
         }
         let total_cap = usize::try_from(self.caps.total_cap).unwrap_or(usize::MAX);
         if self.handles.len() >= total_cap {
-            return Err(IsolatedError::QuotaExceeded);
+            return Err(IsolatedError::QuotaExceeded {
+                total_cap: self.caps.total_cap,
+            });
         }
         self.check_host_capacity()?;
 
@@ -465,6 +477,54 @@ where
             "phases_ms": phases_ms,
             "inspection": inspection,
         }))
+    }
+
+    /// Evict idle handles whose last activity exceeds the configured TTL.
+    ///
+    /// Agents listed in `active_agents` are skipped because the daemon still
+    /// owns at least one live command session for them.
+    pub fn ttl_sweep(&mut self, active_agents: &HashSet<String>) -> usize {
+        if self.caps.ttl_s <= 0.0 {
+            return 0;
+        }
+        let now = monotonic_seconds();
+        let stale = self
+            .handles
+            .values()
+            .filter(|handle| now - handle.last_activity > self.caps.ttl_s)
+            .filter(|handle| !active_agents.contains(&handle.agent_id.0))
+            .cloned()
+            .collect::<Vec<_>>();
+        let mut evicted = 0;
+        for handle in stale {
+            let Ok(stats) = self.exit(&handle.agent_id, None) else {
+                continue;
+            };
+            let upperdir_bytes = stats
+                .get("evicted_upperdir_bytes")
+                .and_then(Value::as_u64)
+                .unwrap_or(0);
+            let lifetime_s = stats
+                .get("lifetime_s")
+                .and_then(Value::as_f64)
+                .unwrap_or(0.0);
+            let total_ms = stats.get("total_ms").and_then(Value::as_f64).unwrap_or(0.0);
+            let phases_ms = stats.get("phases_ms").cloned().unwrap_or_else(|| json!({}));
+            let _ = self.audit.emit(
+                "sandbox_isolated_workspace_evicted",
+                json!({
+                    "workspace_handle_id": handle.workspace_handle_id.0,
+                    "agent_id": handle.agent_id.0,
+                    "reason": "ttl",
+                    "lifetime_s": lifetime_s,
+                    "upperdir_bytes_discarded": upperdir_bytes,
+                    "total_ms": total_ms,
+                    "phases_ms": phases_ms,
+                }),
+            );
+            evicted += 1;
+        }
+        evicted
     }
 
     /// Return a copy of the active handle for `agent_id`, if any.

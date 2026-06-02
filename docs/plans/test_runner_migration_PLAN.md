@@ -295,30 +295,35 @@ regression harness.
    - fail early if the Rust binary upload/signature/protocol pin is missing
 2. Command/session tools:
    - remove the public `backend/src/tools/sandbox/shell` tool package; the
-     public command surface is `backend/src/tools/sandbox/exec_command`
+     public command surface is `backend/src/tools/sandbox/exec_command` plus
+     `backend/src/tools/sandbox/write_stdin`
    - remove the public `backend/src/tools/background` tool package; background
      work is typed-only through:
-     - `exec_command(..., tty=true)` plus `write_pty_command_stdin`,
-       `check_pty_command_progress`, and `cancel_pty_command`
+     - `exec_command` to start finite or yielded command sessions, then
+       `write_stdin` to write input or poll with empty input
      - `run_subagent` plus `check_subagent_progress` / `cancel_subagent`
      - `delegate_workflow` plus `check_workflow_status` / `cancel_workflow`
+   - daemon RPCs for the command surface are `api.v1.exec_command` and
+     `api.v1.write_stdin`; `api.v1.command.write_stdin` may exist only as a
+     temporary compatibility alias, and `api.v1.shell` must not be registered,
+     exported, or used by test-runner mock tests
    - replace old generic background shell scenarios with typed command/session
      coverage from Phase 3T:
-     `exec_command`, PTY stdin/progress/cancel, non-login Bash, process-tree
+     `exec_command`, `write_stdin`, non-login Bash, process-tree
      cleanup, and active-only session controls
    - split command coverage into explicit directories:
-     - `tests/mock/sandbox/command/non_tty/` for `exec_command(..., tty=false)`:
+     - `tests/mock/sandbox/command/finite/` for finite `exec_command`:
        finite command completion, stdout/stderr/exit-code shape, timeout,
        non-login Bash environment, workspace-root cwd on every fresh command,
        no stdin/session id, detached-descendant cleanup after Bash exits, and
        OCC publish/capture behavior for successful writes.
-     - `tests/mock/sandbox/command/tty/` for `exec_command(..., tty=true)` plus
-       PTY controls: session id allocation, output ring/yield behavior,
-       `write_pty_command_stdin`, `check_pty_command_progress`,
-       `cancel_pty_command`, active-only control rejection after terminal
-       state, `cd` persistence inside one live PTY session, no `cd` persistence
-       across separate `tty=false` commands, process-group cleanup, lease
-       release, and terminal result reporting exactly once.
+     - `tests/mock/sandbox/command/session/` for yielded `exec_command` plus
+       `write_stdin`: session id allocation, output ring/yield behavior,
+       empty-input polling, Ctrl-C cancellation through `write_stdin`,
+       active-only control rejection after terminal state, `cd` persistence
+       inside one live command session, no `cd` persistence across separate
+       finite commands, process-group cleanup, lease release, and terminal
+       result reporting exactly once.
    - remove references to `shell(background=True)`,
      `check_background_task_result`, `wait_background_tasks`, and generic shell
      background cancellation from model-facing assertions

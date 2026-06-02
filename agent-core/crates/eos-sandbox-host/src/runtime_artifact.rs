@@ -19,9 +19,9 @@ use crate::provider::{ExecOpts, ProviderAdapter};
 /// The `eosd` artifact this host is pinned to (bumped on a coordinated release).
 pub const EOSD_VERSION: &str = "0.1.0-local.20260602";
 
-/// Minisign trust-anchor public key. Empty for the Phase-0 local-upload pin;
-/// fail-closed signature verification is deferred (not implemented here).
-pub const MINISIGN_PUBLIC_KEY: &str = "";
+// Minisign trust-anchor public-key verification is deferred (the Python key is
+// empty); the spec §6 mandates omitting a `MINISIGN_PUBLIC_KEY` const until it
+// carries a value, so none is declared here.
 
 /// The wire protocol version the pinned `eosd` speaks. Lockstep with
 /// [`crate::daemon_client::DAEMON_PROTOCOL_VERSION`].
