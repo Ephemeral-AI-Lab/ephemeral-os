@@ -35,7 +35,7 @@ async def test_imds_dropped(iws_clean_sandbox) -> None:
     )
     assert enter.get("success") is True, enter
     try:
-        result = await _iws_rpc.shell(
+        result = await _iws_rpc.exec_command(
             sandbox_id, "agent-A",
             "curl -s --max-time 2 -o /dev/null -w '%{http_code}' "
             "http://169.254.169.254/ || echo BLOCKED",

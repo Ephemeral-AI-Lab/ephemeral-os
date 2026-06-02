@@ -821,7 +821,7 @@ where
             phase_start.elapsed().as_secs_f64() * 1000.0,
         );
         phase_start = Instant::now();
-        maybe_inject_phase("overlay_mount")?;
+        maybe_inject_phase("mount_overlay")?;
         self.runtime.mount_overlay(handle, &handle.layer_paths)?;
         phases_ms.insert(
             "mount_overlay".to_owned(),
@@ -882,10 +882,7 @@ where
         );
         let phase_start = Instant::now();
         close_handle_fds(handle);
-        phases_ms.insert(
-            "close_fds".to_owned(),
-            phase_start.elapsed().as_secs_f64() * 1000.0,
-        );
+        let _close_fds_ms = phase_start.elapsed().as_secs_f64() * 1000.0;
         let phase_start = Instant::now();
         if let Some(veth) = handle.veth.as_ref() {
             self.network.teardown_veth(veth);
@@ -897,7 +894,7 @@ where
         let phase_start = Instant::now();
         let lease_released = self.layer_stack.release_lease(&handle.lease_id).ok();
         phases_ms.insert(
-            "release_lease".to_owned(),
+            "release_snapshot".to_owned(),
             phase_start.elapsed().as_secs_f64() * 1000.0,
         );
         let phase_start = Instant::now();
@@ -905,13 +902,13 @@ where
             let _ = std::fs::remove_dir(cgroup_path);
         }
         phases_ms.insert(
-            "remove_cgroup".to_owned(),
+            "cgroup_rmdir".to_owned(),
             phase_start.elapsed().as_secs_f64() * 1000.0,
         );
         let phase_start = Instant::now();
         let _ = std::fs::remove_dir_all(&handle.scratch_dir);
         phases_ms.insert(
-            "remove_scratch".to_owned(),
+            "rmtree_scratch".to_owned(),
             phase_start.elapsed().as_secs_f64() * 1000.0,
         );
         let cgroup_exists_after = handle.cgroup_path.as_ref().map(|path| path.exists());
@@ -984,22 +981,22 @@ fn kill_cgroup_pids(cgroup_path: &Path) {
 }
 
 fn maybe_inject_phase(phase: &str) -> Result<(), IsolatedError> {
-    if env_trimmed("EOS_ISOLATED_WORKSPACE_TEST_HANG_AT").as_deref() == Some(phase) {
-        return Err(IsolatedError::SetupTimeout {
-            step: phase.to_owned(),
-        });
+    if let Some(target) = env_trimmed("EOS_ISOLATED_WORKSPACE_TEST_HANG_AT") {
+        if phase_matches(&target, phase) {
+            return Err(IsolatedError::SetupTimeout { step: target });
+        }
     }
-    if env_trimmed("EOS_ISOLATED_WORKSPACE_TEST_FAIL_AT").as_deref() == Some(phase) {
-        return Err(IsolatedError::SetupFailed {
-            step: phase.to_owned(),
-        });
+    if let Some(target) = env_trimmed("EOS_ISOLATED_WORKSPACE_TEST_FAIL_AT") {
+        if phase_matches(&target, phase) {
+            return Err(IsolatedError::SetupFailed { step: target });
+        }
     }
     if let Some(delays) = env_trimmed("EOS_ISOLATED_WORKSPACE_TEST_PHASE_DELAY") {
         for spec in delays.split(',') {
             let Some((target, delay_ms)) = spec.split_once(':') else {
                 continue;
             };
-            if target.trim() != phase {
+            if !phase_matches(target, phase) {
                 continue;
             }
             let delay_ms = delay_ms.trim().trim_end_matches("ms").trim();
@@ -1012,6 +1009,11 @@ fn maybe_inject_phase(phase: &str) -> Result<(), IsolatedError> {
         }
     }
     Ok(())
+}
+
+fn phase_matches(target: &str, phase: &str) -> bool {
+    let target = target.trim();
+    target == phase || matches!((target, phase), ("overlay_mount", "mount_overlay"))
 }
 
 fn env_trimmed(key: &str) -> Option<String> {

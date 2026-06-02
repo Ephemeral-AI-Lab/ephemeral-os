@@ -57,7 +57,7 @@ async def test_write_file_streams_large_body_without_argv_e2big(iws_clean_sandbo
         assert write.get("success") is True, write
 
         # Read back size + a sentinel byte.
-        size = await _iws_rpc.shell(
+        size = await _iws_rpc.exec_command(
             sandbox_id,
             "agent-A",
             f"wc -c < {path}",
@@ -65,7 +65,7 @@ async def test_write_file_streams_large_body_without_argv_e2big(iws_clean_sandbo
         assert size.get("success") is True, size
         assert "5242880" in (size.get("stdout", "") or ""), size
 
-        head = await _iws_rpc.shell(
+        head = await _iws_rpc.exec_command(
             sandbox_id,
             "agent-A",
             f"head -c 16 {path}",

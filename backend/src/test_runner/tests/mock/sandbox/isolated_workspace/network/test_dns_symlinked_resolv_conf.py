@@ -45,7 +45,7 @@ async def test_dns_symlinked_resolv_conf(iws_clean_sandbox) -> None:
     try:
         await _iws_rpc.enter(sandbox_id, "agent-A", layer_stack_root=_iws_rpc.IWS_LAYER_STACK_ROOT)
         try:
-            shown = await _iws_rpc.shell(
+            shown = await _iws_rpc.exec_command(
                 sandbox_id, "agent-A", "cat /etc/resolv.conf",
             )
             content = shown.get("stdout", "") or ""

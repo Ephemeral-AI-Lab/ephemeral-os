@@ -105,7 +105,7 @@ async def test_iws_all_typed_verbs_same_session(iws_clean_sandbox) -> None:
         assert glob.get("success") is True, glob
         assert any(name.endswith("app.py") for name in glob.get("filenames", ())), glob
 
-        shell = await _iws_rpc.shell(
+        shell = await _iws_rpc.exec_command(
             sandbox_id,
             agent_id,
             f"printf 'from-shell-{token}\\n' > {generated_path}",

@@ -1,0 +1,286 @@
+//! The six narrow downstream-state **port traits** (anchor §6b), owned here and
+//! implemented downstream, injected at the composition root.
+//!
+//! These satisfy DIP for tools that need engine/workflow/host state without a
+//! backward DAG edge (`eos-tools` is upstream of `eos-engine`/`eos-workflow`).
+//! Each is `#[async_trait]` (stored behind `Arc<dyn _>` in [`ExecutionMetadata`])
+//! and **sealed** (`api-sealed-trait`) via the [`Sealed`] friend-marker so only
+//! agent-core crates implement them. Each has exactly one wired implementor
+//! (ISP), recorded on the anchor §6 SOLID Seam Map.
+//!
+//! Port methods return `Result<_, ToolError>`: an `Err` is a genuine framework
+//! fault (the implementor's own wiring/transport break); an in-band, model-facing
+//! "not found"/"rejected" outcome is carried in the `Ok` value (a rendered
+//! `String` or a typed outcome), which the tool wraps into a [`ToolResult`].
+
+use std::collections::BTreeMap;
+
+use async_trait::async_trait;
+use eos_state::{GeneratorSubmission, PlannerKind, ReducerSubmission};
+use eos_types::{JsonObject, SandboxId, SubagentSessionId, TaskId, WorkflowId, WorkflowSessionId};
+
+use crate::error::ToolError;
+use crate::result::ToolResult;
+
+/// Friend-seal for the port traits (`api-sealed-trait`).
+///
+/// `#[doc(hidden)] pub` rather than crate-private because the wired implementors
+/// live in separate downstream crates (`eos-engine`/`eos-workflow`/`eos-runtime`)
+/// and in-crate `#[cfg(test)]` fakes; a strictly-private marker would be
+/// unreachable to them. External (non-agent-core) crates must not implement the
+/// ports. Mirrors `eos_state::Sealed`.
+#[doc(hidden)]
+pub trait Sealed {}
+
+// ---------------------------------------------------------------------------
+// WorkflowControlPort — delegate / check / cancel workflow.
+// ---------------------------------------------------------------------------
+
+/// A started delegated workflow handle (returned by [`WorkflowControlPort::start`]).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct StartedWorkflow {
+    /// The persisted workflow id.
+    pub workflow_id: WorkflowId,
+    /// The agent-facing background handle (`wf_<n>`, Python `workflow_task_id`).
+    pub workflow_task_id: WorkflowSessionId,
+}
+
+/// One outstanding workflow launched by a parent task (for `find_outstanding`).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct OutstandingWorkflow {
+    /// The persisted workflow id.
+    pub workflow_id: WorkflowId,
+    /// The agent-facing background handle.
+    pub workflow_task_id: WorkflowSessionId,
+    /// The workflow goal.
+    pub workflow_goal: String,
+}
+
+/// Per-Attempt workflow control for the `delegate`/`check`/`cancel_workflow`
+/// tools. Implemented by the `eos-workflow` + `eos-engine` workflow-handle
+/// adapter. The live workflow/outcome state lives downstream, so `status`/
+/// `cancel` return already-rendered, model-facing text.
+#[async_trait]
+pub trait WorkflowControlPort: Sealed + Send + Sync {
+    /// Launch a delegated workflow from a running parent task; the parent keeps
+    /// running (no synthetic root workflow).
+    async fn start(
+        &self,
+        parent_task_id: &TaskId,
+        agent_id: &str,
+        workflow_goal: &str,
+    ) -> Result<StartedWorkflow, ToolError>;
+
+    /// Render delegated-workflow progress (and terminal outcomes when available).
+    async fn status(
+        &self,
+        workflow_id: &WorkflowId,
+        workflow_task_id: Option<&WorkflowSessionId>,
+    ) -> Result<String, ToolError>;
+
+    /// Cancel an outstanding delegated workflow by its background handle.
+    async fn cancel(
+        &self,
+        workflow_task_id: &WorkflowSessionId,
+        reason: &str,
+    ) -> Result<String, ToolError>;
+
+    /// All workflows this parent task still has outstanding for `agent_id`.
+    async fn find_outstanding(
+        &self,
+        parent_task_id: &TaskId,
+        agent_id: &str,
+    ) -> Result<Vec<OutstandingWorkflow>, ToolError>;
+}
+
+// ---------------------------------------------------------------------------
+// PlanSubmissionPort — planner / generator / reducer terminal submissions.
+// ---------------------------------------------------------------------------
+
+/// One planner-authored generator task (id + bound agent + `needs` edges).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PlanTask {
+    /// Caller-assigned task id (validated unique by the tool).
+    pub id: String,
+    /// Bound subagent profile name.
+    pub agent_name: String,
+    /// Ids this task depends on.
+    pub needs: Vec<String>,
+}
+
+/// One planner-authored reducer task (id + `needs` + prompt).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PlanReducer {
+    /// Caller-assigned reducer id.
+    pub id: String,
+    /// Ids this reducer depends on.
+    pub needs: Vec<String>,
+    /// The reducer's instruction prompt.
+    pub prompt: String,
+}
+
+/// A validated planner DAG submission.
+///
+/// Richer than `eos_state::PlannerSubmission` (which carries only resolved task
+/// ids): the generator/reducer rows do not exist yet, so the implementor
+/// (`eos-workflow` `AttemptOrchestrator`) creates the `Task` rows from this DAG,
+/// builds the `eos-state` `PlannerSubmission`, and applies it. The **structural**
+/// validation (duplicate ids, missing/extra `task_specs`, deferred-goal
+/// nonblank-when-present) is done by the tool before this DTO is built
+/// (AC-tools-12), so the port receives a well-formed DAG.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PlannerPlan {
+    /// Owning attempt (from execution context).
+    pub attempt_id: eos_types::AttemptId,
+    /// The planner's own task (from execution context).
+    pub planner_task_id: TaskId,
+    /// Whether the plan completes the attempt or defers a goal.
+    pub kind: PlannerKind,
+    /// Goal carried to the next iteration, normalized (nonblank) when present.
+    pub deferred_goal_for_next_iteration: Option<String>,
+    /// The generator tasks, in submission order.
+    pub tasks: Vec<PlanTask>,
+    /// Per-task instruction specs, keyed by task id.
+    pub task_specs: BTreeMap<String, String>,
+    /// The reducer tasks, in submission order.
+    pub reducers: Vec<PlanReducer>,
+}
+
+/// Per-Attempt submission application for the planner/generator/reducer terminal
+/// tools. Implemented by the `eos-workflow` `AttemptOrchestrator`.
+#[async_trait]
+pub trait PlanSubmissionPort: Sealed + Send + Sync {
+    /// Apply a validated planner DAG (`orchestrator.apply_plan_submission`).
+    async fn apply_plan(&self, plan: PlannerPlan) -> Result<(), ToolError>;
+
+    /// Record one generator task's terminal outcome.
+    async fn submit_generator(&self, submission: GeneratorSubmission) -> Result<(), ToolError>;
+
+    /// Record one reducer task's terminal outcome (the attempt's exit gate).
+    async fn apply_reducer(&self, submission: ReducerSubmission) -> Result<(), ToolError>;
+}
+
+// ---------------------------------------------------------------------------
+// SubagentSupervisorPort — run / check / cancel subagent + background count.
+// ---------------------------------------------------------------------------
+
+/// The outcome of a `run_subagent` dispatch.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SubagentRunOutcome {
+    /// The subagent's terminal result text (or an error explanation).
+    pub output: String,
+    /// Whether the subagent actually called a terminal tool.
+    pub terminal_called: bool,
+}
+
+/// The engine background supervisor, for the subagent tools and the
+/// no-inflight-background-tasks hook. Implemented by `eos-engine`.
+#[async_trait]
+pub trait SubagentSupervisorPort: Sealed + Send + Sync {
+    /// Run a dispatchable subagent to its terminal and return the outcome. The
+    /// implementor validates the agent (exists, is a subagent, no recursion).
+    async fn run(&self, agent_name: &str, prompt: &str) -> Result<SubagentRunOutcome, ToolError>;
+
+    /// Render the latest `last_n` messages / status for a tracked subagent.
+    async fn progress(
+        &self,
+        subagent_session_id: &SubagentSessionId,
+        last_n_messages: u8,
+    ) -> Result<String, ToolError>;
+
+    /// Cancel a tracked subagent session.
+    async fn cancel(
+        &self,
+        subagent_session_id: &SubagentSessionId,
+        reason: &str,
+    ) -> Result<String, ToolError>;
+
+    /// Count of this agent's in-flight local background tasks (the
+    /// `background_task_manager` count the no-inflight hook reads).
+    async fn background_inflight_count(&self, agent_id: &str) -> usize;
+}
+
+// ---------------------------------------------------------------------------
+// AdvisorPort — ask_advisor tool + AdvisorApproval pre-hook.
+// ---------------------------------------------------------------------------
+
+/// The result of checking prior advisor approval for a terminal (the
+/// AdvisorApproval pre-hook). When `approved` is false, `reason` is one of the
+/// Python classification tags (`missing`/`advisor_failed`/`structural`/
+/// `rejected`/`unpaired`/`wrong_tool`).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct AdvisorApproval {
+    /// Whether the conversation carries a valid approving advisor verdict.
+    pub approved: bool,
+    /// The denial classification tag when not approved.
+    pub reason: Option<String>,
+}
+
+/// The advisor helper-agent runner. Implemented by `eos-engine`.
+#[async_trait]
+pub trait AdvisorPort: Sealed + Send + Sync {
+    /// Run the advisor over the pending terminal payload (`ask_advisor` tool) and
+    /// return the advisor's rendered verdict + summary.
+    async fn review(&self, tool_name: &str, tool_payload: &JsonObject)
+        -> Result<String, ToolError>;
+
+    /// Whether the conversation already carries a valid approving advisor verdict
+    /// for `target_tool` (the AdvisorApproval pre-hook; the implementor inspects
+    /// the engine-owned conversation history).
+    async fn approval_status(&self, target_tool: &str) -> Result<AdvisorApproval, ToolError>;
+}
+
+// ---------------------------------------------------------------------------
+// IsolatedWorkspacePort — enter / exit isolated workspace.
+// ---------------------------------------------------------------------------
+
+/// The `eos-runtime` adapter over the `eos-sandbox-host` isolated-workspace
+/// lifecycle. The adapter enforces *no in-flight ephemeral jobs / command
+/// sessions* before `enter`, and cancels/drains per-agent background work before
+/// `exit`. Wired at the composition root (sandbox-host is upstream of
+/// `eos-tools`, so no direct `eos-sandbox-host -> eos-tools` edge).
+#[async_trait]
+pub trait IsolatedWorkspacePort: Sealed + Send + Sync {
+    /// Open this agent's private isolated workspace; returns model-facing text.
+    async fn enter(
+        &self,
+        agent_id: &str,
+        sandbox_id: &SandboxId,
+        layer_stack_root: &str,
+    ) -> Result<String, ToolError>;
+
+    /// Close and discard this agent's isolated workspace; returns model-facing
+    /// text.
+    async fn exit(
+        &self,
+        agent_id: &str,
+        sandbox_id: &SandboxId,
+        grace_s: f64,
+    ) -> Result<String, ToolError>;
+}
+
+// ---------------------------------------------------------------------------
+// NotificationSink — system notifications.
+// ---------------------------------------------------------------------------
+
+/// A system notification a tool/hook asks the engine to surface.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SystemNotification {
+    /// The notification event key (e.g. `nested_planner_deferral_disabled`).
+    pub event: String,
+    /// Free-text body.
+    pub message: String,
+}
+
+/// The engine notification service. Implemented by `eos-engine`.
+#[async_trait]
+pub trait NotificationSink: Sealed + Send + Sync {
+    /// Surface one system notification.
+    async fn notify_system(&self, notification: SystemNotification) -> Result<(), ToolError>;
+}
+
+/// Helper: turn a port's `Ok(String)` outcome into a successful [`ToolResult`].
+#[must_use]
+pub(crate) fn text_result(output: String) -> ToolResult {
+    ToolResult::ok(output)
+}

@@ -30,7 +30,7 @@ _AGENTS = ("agent-A", "agent-B", "agent-C", "agent-D", "agent-E")
 
 
 async def _read_memory_current(sandbox_id: str, agent: str) -> int:
-    res = await _iws_rpc.shell(
+    res = await _iws_rpc.exec_command(
         sandbox_id, agent,
         "cat /sys/fs/cgroup/$(awk -F: '{print $3}' /proc/self/cgroup | head -1)"
         "/memory.current 2>/dev/null || echo 0",
@@ -65,7 +65,7 @@ async def test_5_concurrent_cgroup_memory_isolated(iws_clean_sandbox) -> None:
         # memory.current without risking ENOSPC under stress.
         await asyncio.gather(
             *(
-                _iws_rpc.shell(
+                _iws_rpc.exec_command(
                     sandbox_id, agent,
                     f"dd if=/dev/zero of=/dev/shm/balloon-{agent} bs=1M count=10 "
                     "status=none 2>&1 || true",
@@ -85,7 +85,7 @@ async def test_5_concurrent_cgroup_memory_isolated(iws_clean_sandbox) -> None:
         # Kill agent-A's balloon then re-read everyone. agent-B..E values
         # must not have dropped by more than a small delta — i.e. each
         # cgroup is independent.
-        rm = await _iws_rpc.shell(
+        rm = await _iws_rpc.exec_command(
             sandbox_id, "agent-A", "rm -f /dev/shm/balloon-agent-A",
         )
         assert rm.get("success") is True, rm

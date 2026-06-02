@@ -29,9 +29,17 @@ fn frozen_edges() -> Edges {
         ("eos-agent-def", &["eos-types"]),
         ("eos-sandbox-api", &["eos-types"]),
         ("eos-skills", &["eos-types", "eos-config"]),
+        // Phase 4: eos-tools adds a direct eos-types edge when implemented. It
+        // names eos_types items (InvocationId / ToolUseId / WorkflowSessionId /
+        // CommandSessionId / SubagentSessionId in ExecutionMetadata + the DTOs,
+        // JsonObject / CoreError) in its own signatures, and none of its other
+        // upstream deps re-export them (eos-state re-exports only a subset) — so
+        // the edge is required to compile, per the crate's own impl-eos-tools.md
+        // §2. Mirrors the eos-sandbox-host / eos-plugin-catalog precedent.
         (
             "eos-tools",
             &[
+                "eos-types",
                 "eos-state",
                 "eos-sandbox-api",
                 "eos-skills",

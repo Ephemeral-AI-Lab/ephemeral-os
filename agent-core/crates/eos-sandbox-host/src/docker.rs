@@ -193,7 +193,8 @@ impl ProviderAdapter for DockerProviderAdapter {
         {
             Ok(created) => created,
             Err(err) if is_image_not_found(&err) => {
-                self.pull_image(&image_ref, spec.platform.as_deref()).await?;
+                self.pull_image(&image_ref, spec.platform.as_deref())
+                    .await?;
                 self.docker
                     .create_container(Some(options), config)
                     .await
@@ -257,8 +258,16 @@ impl ProviderAdapter for DockerProviderAdapter {
             force: true,
             ..Default::default()
         };
-        if let Err(err) = self.docker.remove_container(id.as_str(), Some(options)).await {
-            tracing::warn!(?err, sandbox = id.as_str(), "docker remove_container failed");
+        if let Err(err) = self
+            .docker
+            .remove_container(id.as_str(), Some(options))
+            .await
+        {
+            tracing::warn!(
+                ?err,
+                sandbox = id.as_str(),
+                "docker remove_container failed"
+            );
         }
         Ok(())
     }
@@ -348,7 +357,11 @@ impl ProviderAdapter for DockerProviderAdapter {
             ..Default::default()
         };
         self.docker
-            .upload_to_container(id.as_str(), Some(options), bytes::Bytes::copy_from_slice(tar_stream))
+            .upload_to_container(
+                id.as_str(),
+                Some(options),
+                bytes::Bytes::copy_from_slice(tar_stream),
+            )
             .await
             .map_err(SandboxHostError::Docker)
     }
@@ -464,7 +477,10 @@ fn normalize_string_map(map: &Labels) -> Labels {
 
 fn docker_daemon_tcp_enabled() -> bool {
     let raw = std::env::var("EOS_DOCKER_DAEMON_TCP").unwrap_or_else(|_| "1".to_owned());
-    !matches!(raw.trim().to_ascii_lowercase().as_str(), "0" | "false" | "no" | "off")
+    !matches!(
+        raw.trim().to_ascii_lowercase().as_str(),
+        "0" | "false" | "no" | "off"
+    )
 }
 
 fn env_is_one(name: &str) -> bool {
@@ -628,7 +644,11 @@ fn daemon_tcp_endpoint_from_inspect(
     inspect: &ContainerInspectResponse,
 ) -> Option<DaemonTcpEndpoint> {
     let labels = inspect.config.as_ref().and_then(|c| c.labels.as_ref());
-    if labels.and_then(|l| l.get(DAEMON_TCP_ENABLED_LABEL)).map(String::as_str) != Some("1") {
+    if labels
+        .and_then(|l| l.get(DAEMON_TCP_ENABLED_LABEL))
+        .map(String::as_str)
+        != Some("1")
+    {
         return None;
     }
     let internal_port: u16 = labels
@@ -750,8 +770,32 @@ mod tests {
             ..Default::default()
         };
         let env = container_env(&inspect);
-        assert_eq!(env.get("EOS_DAEMON_AUTH_TOKEN").map(String::as_str), Some("tok=en"));
+        assert_eq!(
+            env.get("EOS_DAEMON_AUTH_TOKEN").map(String::as_str),
+            Some("tok=en")
+        );
         assert!(!env.contains_key("NO_EQUALS"));
+    }
+
+    // AC-07: the eosd upload uses an UNCOMPRESSED tar via `put_archive` — the
+    // Docker fast path (no base64-chunk fallback exists in this crate). The live
+    // `upload_to_container` call is exercised only under the `docker` feature
+    // against a real daemon; here we assert the fast-path payload contract that
+    // `DockerProviderAdapter::put_archive` forwards verbatim.
+    #[test]
+    fn put_archive_fast_path() {
+        let stream = crate::runtime_artifact::tar_file_at_path("eosd", b"binary", 0o755).unwrap();
+        assert_ne!(
+            &stream[..2],
+            &[0x1f, 0x8b],
+            "fast path is a plain tar, never gzip"
+        );
+        let mut archive = tar::Archive::new(&stream[..]);
+        assert_eq!(
+            archive.entries().unwrap().count(),
+            1,
+            "single-file fast-path tar stream"
+        );
     }
 
     #[test]

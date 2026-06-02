@@ -151,7 +151,7 @@ pub(crate) fn execute_tool(
     run_start: Instant,
 ) -> Result<RunResult, RunnerError> {
     match request.tool_call.verb.as_str() {
-        "shell" | "exec_command" => execute_shell(request, mount_s, run_start),
+        "exec_command" => execute_shell(request, mount_s, run_start),
         "plugin_service" => execute_plugin_service(request, mount_s, run_start),
         "glob" => Ok(RunResult {
             exit_code: 0,
@@ -454,13 +454,8 @@ fn shell_argv(request: &RunRequest) -> Result<Vec<String>, RunnerError> {
             value.to_owned(),
         ]);
     }
-    if request.tool_call.verb == "exec_command" {
-        return Err(RunnerError::InvalidRequest(
-            "exec_command requires a shell-format command string".to_owned(),
-        ));
-    }
     Err(RunnerError::InvalidRequest(
-        "shell command must be a string".to_owned(),
+        "exec_command requires a shell-format command string".to_owned(),
     ))
 }
 
@@ -608,8 +603,8 @@ mod tests {
     type TestResult = Result<(), Box<dyn std::error::Error + Send + Sync>>;
 
     #[test]
-    fn shell_string_uses_non_login_bash() -> TestResult {
-        let argv = shell_argv(&request("shell", serde_json::json!({"command": "echo hi"})))?;
+    fn exec_command_string_uses_non_login_bash() -> TestResult {
+        let argv = shell_argv(&request("exec_command", serde_json::json!({"command": "echo hi"})))?;
         assert_eq!(
             argv,
             ["/bin/bash", "--noprofile", "--norc", "-c", "echo hi"]
@@ -631,19 +626,6 @@ mod tests {
             Err(error) => error,
         };
         assert!(error.to_string().contains("shell-format command string"));
-        Ok(())
-    }
-
-    #[test]
-    fn daemon_shell_rejects_argv_command() -> TestResult {
-        let error = match shell_argv(&request(
-            "shell",
-            serde_json::json!({"command": ["echo", "hi"]}),
-        )) {
-            Ok(argv) => return Err(format!("raw argv unexpectedly accepted: {argv:?}").into()),
-            Err(error) => error,
-        };
-        assert!(error.to_string().contains("shell command must be a string"));
         Ok(())
     }
 

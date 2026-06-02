@@ -337,7 +337,7 @@ mod tests {
     async fn cancel_heartbeat_and_count_track_background_task() -> TestResult {
         let registry = InFlightRegistry::new(300.0, 30.0);
         let task = tokio::spawn(future::pending::<()>());
-        registry.register("bg-1", task.abort_handle(), "agent-a", "api.v1.shell", true);
+        registry.register("bg-1", task.abort_handle(), "agent-a", "api.v1.exec_command", true);
 
         assert_eq!(registry.count_by_agent("agent-a"), 1);
         assert_eq!(
@@ -374,7 +374,7 @@ mod tests {
             "bg-poisoned",
             task.abort_handle(),
             "agent-a",
-            "api.v1.shell",
+            "api.v1.exec_command",
             true,
         );
 
@@ -399,7 +399,7 @@ mod tests {
             "bg-ttl",
             task.abort_handle(),
             "agent-a",
-            "api.v1.shell",
+            "api.v1.exec_command",
             true,
         );
 

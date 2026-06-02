@@ -6,13 +6,30 @@
 //! in-sandbox daemon with spawn/connect recovery and typed error decoding, and
 //! uploads + verifies the pinned `eosd` runtime artifact. See
 //! `docs/plans/backend_agent_core_rust_migration/impl-eos-sandbox-host.md`.
+//!
+//! AC-eos-sandbox-host-10 — the [`ProviderAdapter`] trait is **sealed**: its
+//! `Sealed` supertrait lives in a `pub(crate)` module, so a downstream crate
+//! cannot name it and therefore cannot implement the trait. This is enforced by
+//! the type system; the doctest below proves the path is unreachable (it fails
+//! to compile), which is exactly what would change if the seal were weakened:
+//!
+//! ```compile_fail
+//! // error[E0603]: module `provider` is private — `Sealed` is unreachable, so
+//! // no out-of-crate type can implement `ProviderAdapter`.
+//! use eos_sandbox_host::provider::sealed::Sealed;
+//! struct Foreign;
+//! impl Sealed for Foreign {}
+//! ```
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
 
 mod daemon_client;
 mod docker;
 mod error;
+mod isolated_workspace;
+mod lifecycle;
 mod provider;
+mod provisioning;
 mod registry;
 mod runtime_artifact;
 
@@ -24,10 +41,15 @@ pub use daemon_client::{
 };
 pub use docker::DockerProviderAdapter;
 pub use error::SandboxHostError;
+pub use isolated_workspace::{
+    enter_isolated_workspace, exit_isolated_workspace, BackgroundManager,
+};
+pub use lifecycle::SandboxLifecycle;
 pub use provider::{
     ContextPreparer, CreateSandboxSpec, DaemonTcpEndpoint, DockerContextPreparer, ExecOpts, Labels,
     PreviewUrl, ProviderAdapter, ProviderHealth, ProviderKind, RawExecResult, SandboxInfo,
     SnapshotInfo,
 };
+pub use provisioning::{RequestSandboxBinding, RequestSandboxProvisioner};
 pub use registry::{resolve_provider_kind, ProviderRegistry};
 pub use runtime_artifact::{EOSD_VERSION, MINISIGN_PUBLIC_KEY, PROTOCOL_VERSION};

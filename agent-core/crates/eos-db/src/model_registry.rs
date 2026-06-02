@@ -51,7 +51,7 @@ struct ModelRegistrationRow {
     updated_at: OffsetDateTime,
 }
 
-/// SQLite-backed model registry (concrete; not a `Store` seam).
+/// `SQLite`-backed model registry (concrete; not a `Store` seam).
 #[derive(Debug)]
 pub struct ModelRegistry {
     pool: SqlitePool,
@@ -94,9 +94,10 @@ impl ModelRegistry {
     /// # Errors
     /// Returns [`DbError`] on a query or registration failure.
     pub async fn seed_from_json(&self, json_path: &str) -> Result<usize, DbError> {
-        let count: i64 = sqlx::query_scalar::<Sqlite, i64>("SELECT COUNT(*) FROM model_registrations")
-            .fetch_one(&self.pool)
-            .await?;
+        let count: i64 =
+            sqlx::query_scalar::<Sqlite, i64>("SELECT COUNT(*) FROM model_registrations")
+                .fetch_one(&self.pool)
+                .await?;
         if count > 0 {
             return Ok(0);
         }
@@ -107,7 +108,11 @@ impl ModelRegistry {
             return Ok(0);
         };
         let active_key = data.get("active").and_then(Value::as_str).unwrap_or("");
-        let models = data.get("models").and_then(Value::as_array).cloned().unwrap_or_default();
+        let models = data
+            .get("models")
+            .and_then(Value::as_array)
+            .cloned()
+            .unwrap_or_default();
         let mut imported = 0;
         for entry in &models {
             let key = entry.get("key").and_then(Value::as_str).unwrap_or("");
@@ -115,7 +120,10 @@ impl ModelRegistry {
                 continue;
             }
             let factory = entry.get("factory").unwrap_or(entry);
-            let class_path = factory.get("class_path").and_then(Value::as_str).unwrap_or("");
+            let class_path = factory
+                .get("class_path")
+                .and_then(Value::as_str)
+                .unwrap_or("");
             let kwargs = factory
                 .get("kwargs")
                 .and_then(Value::as_object)
@@ -124,7 +132,9 @@ impl ModelRegistry {
             let label = entry.get("label").and_then(Value::as_str).unwrap_or(key);
             self.register(key, label, class_path, &kwargs, key == active_key)
                 .await
-                .map_err(|e| DbError::JsonDecode(serde_json::Error::io(std::io::Error::other(e.to_string()))))?;
+                .map_err(|e| {
+                    DbError::JsonDecode(serde_json::Error::io(std::io::Error::other(e.to_string())))
+                })?;
             imported += 1;
         }
         Ok(imported)
@@ -175,12 +185,13 @@ impl ModelStore for ModelRegistry {
 
     async fn delete(&self, model_key: &str) -> Result<bool, CoreError> {
         let mut tx = self.pool.begin().await.map_err(DbError::from)?;
-        let was_active: Option<bool> =
-            sqlx::query_scalar::<Sqlite, bool>("SELECT is_active FROM model_registrations WHERE key = ?")
-                .bind(model_key)
-                .fetch_optional(&mut *tx)
-                .await
-                .map_err(DbError::from)?;
+        let was_active: Option<bool> = sqlx::query_scalar::<Sqlite, bool>(
+            "SELECT is_active FROM model_registrations WHERE key = ?",
+        )
+        .bind(model_key)
+        .fetch_optional(&mut *tx)
+        .await
+        .map_err(DbError::from)?;
         let Some(was_active) = was_active else {
             return Ok(false);
         };
@@ -247,9 +258,7 @@ fn row_to_model(row: ModelRegistrationRow, redact: bool) -> ModelRegistration {
 
 fn redact_kwargs_json(kwargs_json: &str) -> String {
     match serde_json::from_str::<Value>(kwargs_json) {
-        Ok(Value::Object(map)) => {
-            Value::Object(redact_secrets(&map)).to_string()
-        }
+        Ok(Value::Object(map)) => Value::Object(redact_secrets(&map)).to_string(),
         _ => "{}".to_owned(),
     }
 }
@@ -277,7 +286,8 @@ fn redact_secrets(map: &Map<String, Value>) -> Map<String, Value> {
 }
 
 fn resolved_kwargs(kwargs_json: &str, lookup: &dyn Fn(&str) -> Option<String>) -> JsonObject {
-    let parsed: Value = serde_json::from_str(kwargs_json).unwrap_or_else(|_| Value::Object(Map::new()));
+    let parsed: Value =
+        serde_json::from_str(kwargs_json).unwrap_or_else(|_| Value::Object(Map::new()));
     match resolve_placeholders(&parsed, lookup) {
         Value::Object(map) => map,
         _ => Map::new(),
@@ -302,16 +312,21 @@ fn resolve_placeholders(value: &Value, lookup: &dyn Fn(&str) -> Option<String>) 
                 .map(|(k, v)| (k.clone(), resolve_placeholders(v, lookup)))
                 .collect(),
         ),
-        Value::Array(items) => {
-            Value::Array(items.iter().map(|v| resolve_placeholders(v, lookup)).collect())
-        }
+        Value::Array(items) => Value::Array(
+            items
+                .iter()
+                .map(|v| resolve_placeholders(v, lookup))
+                .collect(),
+        ),
         other => other.clone(),
     }
 }
 
 /// Match a full `${VAR}` or `$VAR` placeholder (Python `re.fullmatch(r"\$\{(\w+)\}|\$(\w+)")`).
+/// `is_word` uses Unicode `is_alphanumeric` (not ASCII-only) to match Python's
+/// Unicode `\w` on a `str` (e.g. a `${VÄR}` placeholder resolves identically).
 fn parse_dollar_var(s: &str) -> Option<&str> {
-    let is_word = |v: &str| !v.is_empty() && v.chars().all(|c| c.is_ascii_alphanumeric() || c == '_');
+    let is_word = |v: &str| !v.is_empty() && v.chars().all(|c| c.is_alphanumeric() || c == '_');
     if let Some(inner) = s.strip_prefix("${").and_then(|r| r.strip_suffix('}')) {
         if is_word(inner) {
             return Some(inner);
@@ -335,13 +350,17 @@ mod tests {
         let dir = tempfile::tempdir().expect("tempdir");
         let path = dir.path().join("models.db");
         let mut cfg = eos_config::DatabaseConfig::default();
-        cfg.url = eos_config::DatabaseUrl::parse(format!("sqlite://{}", path.display())).expect("url");
+        cfg.url =
+            eos_config::DatabaseUrl::parse(format!("sqlite://{}", path.display())).expect("url");
         let pool = crate::pool::open_pool(&cfg).await.expect("pool");
         (dir, ModelRegistry::new(pool))
     }
 
     fn obj(pairs: &[(&str, Value)]) -> JsonObject {
-        pairs.iter().map(|(k, v)| ((*k).to_owned(), v.clone())).collect()
+        pairs
+            .iter()
+            .map(|(k, v)| ((*k).to_owned(), v.clone()))
+            .collect()
     }
 
     #[test]
@@ -352,6 +371,8 @@ mod tests {
         assert_eq!(parse_dollar_var("${}"), None);
         assert_eq!(parse_dollar_var("$"), None);
         assert_eq!(parse_dollar_var("plain"), None);
+        // Unicode word chars match Python's `\w` (not ASCII-only).
+        assert_eq!(parse_dollar_var("${VÄR}"), Some("VÄR"));
     }
 
     #[test]
@@ -401,7 +422,13 @@ mod tests {
         let (_dir, reg) = registry().await;
 
         let a = reg
-            .register("a", "Model A", "pkg.A", &obj(&[("model", json!("m-a"))]), true)
+            .register(
+                "a",
+                "Model A",
+                "pkg.A",
+                &obj(&[("model", json!("m-a"))]),
+                true,
+            )
             .await
             .expect("register a");
         assert_eq!(a.model_key, "a");
@@ -422,8 +449,15 @@ mod tests {
         assert!(active.kwargs_json.contains("env:"));
 
         // active_resolved resolves the env placeholder to the real value.
-        let resolved = reg.active_resolved().await.expect("resolved").expect("some");
-        assert_eq!(resolved.kwargs.get("api_key"), Some(&json!("resolved-secret")));
+        let resolved = reg
+            .active_resolved()
+            .await
+            .expect("resolved")
+            .expect("some");
+        assert_eq!(
+            resolved.kwargs.get("api_key"),
+            Some(&json!("resolved-secret"))
+        );
         assert_eq!(resolved.class_path, "pkg.B");
 
         // Deleting the active row promotes the oldest remaining (a).
@@ -451,10 +485,21 @@ mod tests {
         )
         .expect("write seed");
 
-        let n = reg.seed_from_json(seed.to_str().expect("path")).await.expect("seed");
+        let n = reg
+            .seed_from_json(seed.to_str().expect("path"))
+            .await
+            .expect("seed");
         assert_eq!(n, 2);
-        assert_eq!(reg.active().await.expect("active").expect("some").model_key, "k2");
+        assert_eq!(
+            reg.active().await.expect("active").expect("some").model_key,
+            "k2"
+        );
         // Second seed is a no-op (DB already populated).
-        assert_eq!(reg.seed_from_json(seed.to_str().expect("path")).await.expect("seed2"), 0);
+        assert_eq!(
+            reg.seed_from_json(seed.to_str().expect("path"))
+                .await
+                .expect("seed2"),
+            0
+        );
     }
 }

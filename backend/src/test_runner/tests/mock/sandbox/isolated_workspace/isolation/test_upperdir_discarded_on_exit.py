@@ -45,7 +45,7 @@ async def test_upperdir_discarded_on_exit(iws_clean_sandbox) -> None:
     first = await _iws_rpc.enter(sandbox_id, agent_id, layer_stack_root=_iws_rpc.IWS_LAYER_STACK_ROOT)
     assert first.get("success") is True, first
     try:
-        write = await _iws_rpc.shell(
+        write = await _iws_rpc.exec_command(
             sandbox_id, agent_id, "echo cycle-1 > /testbed/scratch.txt",
         )
         assert write.get("success") is True, write

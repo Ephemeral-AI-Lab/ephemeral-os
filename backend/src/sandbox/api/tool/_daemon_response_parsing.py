@@ -13,7 +13,6 @@ from sandbox.shared.models import (
     GuardedResultBase,
     ReadFileResult,
     SandboxRequestBase,
-    ShellResult,
 )
 
 TGuarded = TypeVar("TGuarded", bound=GuardedResultBase)
@@ -162,19 +161,3 @@ def parse_changed_path_kinds_field(raw: object) -> dict[str, str]:
         for path, kind in raw.items()
         if str(path or "").strip() and str(kind or "").strip()
     }
-
-
-def parse_shell_result(
-    response: Mapping[str, object],
-    *,
-    timings: dict[str, float],
-) -> ShellResult:
-    return parse_guarded_mutation_result(
-        ShellResult,
-        response,
-        exit_code=strict_int_from_daemon_field(response.get("exit_code"), default=1),
-        stdout=str(response.get("stdout", "")),
-        stderr=str(response.get("stderr", "")),
-        warnings=parse_path_tuple_field(response.get("warnings")),
-        timings=timings,
-    )

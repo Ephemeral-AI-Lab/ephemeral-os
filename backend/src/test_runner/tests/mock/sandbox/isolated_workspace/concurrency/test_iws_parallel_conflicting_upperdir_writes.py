@@ -51,22 +51,22 @@ async def test_iws_parallel_conflicting_upperdir_writes(
         loop = asyncio.get_running_loop()
         started = loop.time()
         results = await asyncio.gather(
-            _iws_rpc.shell(
+            _iws_rpc.exec_command(
                 sandbox_id,
                 agent_id,
                 f"mkdir -p {base_dir}; sleep 0.45; printf 'winner-A\\n' > {same_path}",
             ),
-            _iws_rpc.shell(
+            _iws_rpc.exec_command(
                 sandbox_id,
                 agent_id,
                 f"mkdir -p {base_dir}; sleep 0.10; printf 'winner-B\\n' > {same_path}",
             ),
-            _iws_rpc.shell(
+            _iws_rpc.exec_command(
                 sandbox_id,
                 agent_id,
                 f"mkdir -p {base_dir}; sleep 0.20; printf 'one\\n' > {one_path}",
             ),
-            _iws_rpc.shell(
+            _iws_rpc.exec_command(
                 sandbox_id,
                 agent_id,
                 f"mkdir -p {base_dir}; sleep 0.30; printf 'two\\n' > {two_path}",

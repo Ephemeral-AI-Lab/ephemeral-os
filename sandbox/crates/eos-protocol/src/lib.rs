@@ -29,7 +29,7 @@ pub use models::{
     apply_search_replace, CommandOutput, CommandSessionCancelArgs, CommandSessionWriteArgs,
     ConflictInfo, EditFileArgs, EditFileResult, ExecCommandArgs, ExecCommandResult, GlobArgs,
     GlobResult, GrepArgs, GrepResult, Intent, ReadFileArgs, ReadFileResult, SearchReplaceEdit,
-    SearchReplaceError, ShellArgs, ShellResult, WriteFileArgs, WriteFileResult,
+    SearchReplaceError, WriteFileArgs, WriteFileResult,
 };
 pub use version::{
     CONNECT_FAILED, CONNECT_RETRY_DELAYS_S, DAEMON_AUTH_FIELD, DAEMON_PROTOCOL_FIELD,

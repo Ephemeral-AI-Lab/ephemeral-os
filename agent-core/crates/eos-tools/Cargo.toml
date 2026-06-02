@@ -5,11 +5,29 @@ edition.workspace = true
 rust-version.workspace = true
 
 [dependencies]
+# Direct eos-types edge: this crate names InvocationId, ToolUseId,
+# WorkflowSessionId, CommandSessionId, SubagentSessionId, and JsonObject/CoreError
+# in its own signatures, and none of the other upstream deps re-export them
+# (eos-state re-exports only a subset). Mirrors the eos-sandbox-host /
+# eos-plugin-catalog precedent; the frozen DAG is updated to match
+# (parity/tests/dependency_dag.rs).
+eos-types.workspace = true
 eos-state.workspace = true
 eos-sandbox-api.workspace = true
 eos-skills.workspace = true
 eos-audit.workspace = true
 eos-llm-client.workspace = true
+
+serde.workspace = true
+serde_json.workspace = true
+schemars.workspace = true
+thiserror.workspace = true
+async-trait.workspace = true
+
+[dev-dependencies]
+tokio = { workspace = true }
+insta.workspace = true
+pretty_assertions.workspace = true
 
 [lints]
 workspace = true

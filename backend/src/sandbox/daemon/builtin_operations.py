@@ -4,7 +4,7 @@ Module layout:
 
 * In-flight registry surface — ``cancel``, ``heartbeat``, ``inflight_count``.
 * Tool operation routes — ``read_file``, ``write_file``, ``edit_file``,
-  ``glob``, ``grep``, ``shell``, and the Phase 3T command-session aliases.
+  ``glob``, ``grep``, and the Phase 3T command-session aliases.
   ``WORKSPACE_TOOL_OPS`` threads ``args`` and the static verb/intent pair through
   :func:`sandbox.daemon.workspace_tool.dispatch.dispatch_workspace_tool_call`.
 * Layer-stack diagnostic surface — ``layer_metrics``, ``runtime_ready``.
@@ -51,7 +51,6 @@ WORKSPACE_TOOL_ROUTES: dict[str, Intent] = {
     "glob": Intent.READ_ONLY,
     "grep": Intent.READ_ONLY,
     "read_file": Intent.READ_ONLY,
-    "shell": Intent.WRITE_ALLOWED,
     "write_file": Intent.WRITE_ALLOWED,
 }
 _WORKSPACE_TOOL_OP_ALIASES: dict[str, tuple[str, ...]] = {
@@ -59,7 +58,6 @@ _WORKSPACE_TOOL_OP_ALIASES: dict[str, tuple[str, ...]] = {
     "glob": ("api.glob", "api.v1.glob"),
     "grep": ("api.grep", "api.v1.grep"),
     "read_file": ("api.read_file", "api.v1.read_file"),
-    "shell": ("api.v1.shell",),
     "write_file": ("api.write_file", "api.v1.write_file"),
 }
 

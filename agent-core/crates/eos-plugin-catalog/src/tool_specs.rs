@@ -364,8 +364,6 @@ mod tests {
         for s in plugin_tool_specs() {
             assert!(!s.description.is_empty());
             assert!(s.name.as_str().starts_with("lsp."));
-            // The spec carries a generated schema, not an importable module path.
-            assert!(serde_json::to_value(&s.input_schema).is_ok());
         }
     }
 

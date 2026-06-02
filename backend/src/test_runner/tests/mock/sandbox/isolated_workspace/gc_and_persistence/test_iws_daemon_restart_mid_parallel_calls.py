@@ -62,7 +62,7 @@ async def test_iws_daemon_restart_mid_parallel_calls(
 
     tasks = [
         asyncio.create_task(
-            _iws_rpc.shell(
+            _iws_rpc.exec_command(
                 sandbox_id,
                 agent_id,
                 f"mkdir -p {base_dir}; sleep 5; printf stale > {path}",

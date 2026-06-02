@@ -1,7 +1,7 @@
 """Thin async client for isolated workspace daemon RPCs.
 
 Wraps :func:`sandbox.host.daemon_client.call_daemon_api` so individual tests
-read as intent (``enter()``, ``shell()``, ``exit()``) instead of envelope
+read as intent (``enter()``, ``exec_command()``, ``exit()``) instead of envelope
 boilerplate.
 
 Each helper returns the raw daemon JSON response and lets the caller assert
@@ -115,7 +115,7 @@ async def poll_command_session(
 ) -> dict[str, Any]:
     return await call_daemon_api(
         sandbox_id,
-        "api.v1.command.write_stdin",
+        "api.v1.write_stdin",
         {"agent_id": agent_id, "command_session_id": command_session_id, "chars": ""},
         timeout=timeout,
     )
@@ -128,7 +128,16 @@ def stdout(response: dict[str, Any]) -> str:
     return str(response.get("stdout") or "")
 
 
-async def complete_shell(
+def _with_stdout(response: dict[str, Any], text: str) -> dict[str, Any]:
+    response = dict(response)
+    output = response.get("output")
+    if isinstance(output, dict):
+        response["output"] = {**output, "stdout": text}
+    response["stdout"] = text
+    return response
+
+
+async def complete_exec_command(
     sandbox_id: str,
     agent_id: str,
     response: dict[str, Any],
@@ -140,11 +149,20 @@ async def complete_shell(
         return response
     deadline = time.monotonic() + timeout_s
     current = response
+    stdout_chunks = [chunk for chunk in [stdout(current)] if chunk]
     while current.get("status") == "running" and time.monotonic() < deadline:
         await asyncio.sleep(0.1)
         current = await poll_command_session(sandbox_id, agent_id, command_session_id)
+        chunk = stdout(current)
+        if chunk:
+            stdout_chunks.append(chunk)
     if current.get("status") == "running":
-        await cancel_command_session(sandbox_id, agent_id, command_session_id)
+        current = await cancel_command_session(sandbox_id, agent_id, command_session_id)
+        chunk = stdout(current)
+        if chunk:
+            stdout_chunks.append(chunk)
+    if stdout_chunks:
+        current = _with_stdout(current, "".join(stdout_chunks))
     return current
 
 
@@ -188,23 +206,27 @@ async def test_reset(
     )
 
 
-async def shell(
+async def exec_command(
     sandbox_id: str,
     agent_id: str,
     command: str,
     *,
     timeout: int = DEFAULT_TIMEOUT_S,
     wait: bool = True,
+    yield_time_ms: int | None = None,
 ) -> dict[str, Any]:
+    args: dict[str, Any] = {"agent_id": agent_id, "cmd": command}
+    if yield_time_ms is not None:
+        args["yield_time_ms"] = yield_time_ms
     response = await call_daemon_api(
         sandbox_id,
-        "api.v1.shell",
-        {"agent_id": agent_id, "command": command},
+        "api.v1.exec_command",
+        args,
         timeout=timeout,
     )
     if not wait:
         return response
-    return await complete_shell(
+    return await complete_exec_command(
         sandbox_id,
         agent_id,
         response,
@@ -316,7 +338,7 @@ __all__ = [
     "DEFAULT_TIMEOUT_S",
     "IWS_LAYER_STACK_ROOT",
     "cancel_command_session",
-    "complete_shell",
+    "complete_exec_command",
     "edit_file",
     "enter",
     "exit_",
@@ -325,7 +347,7 @@ __all__ = [
     "list_open",
     "poll_command_session",
     "read_file",
-    "shell",
+    "exec_command",
     "status",
     "stdout",
     "test_reset",

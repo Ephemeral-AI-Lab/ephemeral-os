@@ -171,7 +171,10 @@ mod tests {
 
         // Explicit binding wins and is reported by `has`.
         assert!(registry.has(&sid("bound")));
-        assert!(Arc::ptr_eq(&registry.adapter(&sid("bound")).unwrap(), &bound));
+        assert!(Arc::ptr_eq(
+            &registry.adapter(&sid("bound")).unwrap(),
+            &bound
+        ));
 
         // Unknown id falls back to default WITHOUT caching.
         assert!(Arc::ptr_eq(
@@ -186,7 +189,10 @@ mod tests {
         // dispose removes the explicit binding.
         registry.dispose(&sid("bound"));
         assert!(!registry.has(&sid("bound")));
-        assert!(Arc::ptr_eq(&registry.adapter(&sid("bound")).unwrap(), &default));
+        assert!(Arc::ptr_eq(
+            &registry.adapter(&sid("bound")).unwrap(),
+            &default
+        ));
     }
 
     proptest::proptest! {

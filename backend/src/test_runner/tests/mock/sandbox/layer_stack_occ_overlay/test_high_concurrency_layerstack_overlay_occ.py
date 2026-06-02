@@ -56,7 +56,7 @@ _REQUIRED_LATENCY_KEYS = (
     "occ.apply.commit_queue_wait_s",
     "occ.apply.commit_resume_wait_s",
     "occ.apply.total_s",
-    "api.shell.total_s",
+    "api.exec_command.total_s",
 )
 
 

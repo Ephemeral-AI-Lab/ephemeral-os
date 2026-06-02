@@ -63,7 +63,7 @@ async def test_ephemeral_concurrent_disjoint_writes_coalesce(
         report,
         extra_timing_keys=(
             "api.exec_command.dispatch_total_s",
-            "api.shell.total_s",
+            "api.exec_command.total_s",
             "command_exec.capture_upperdir_s",
         ),
         require_overlay_timings=False,

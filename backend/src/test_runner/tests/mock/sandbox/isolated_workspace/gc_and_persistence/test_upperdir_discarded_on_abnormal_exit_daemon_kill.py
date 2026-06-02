@@ -42,7 +42,7 @@ async def test_upperdir_discarded_on_abnormal_exit_daemon_kill(
     enter = await _iws_rpc.enter(sandbox_id, "agent-A", layer_stack_root=_iws_rpc.IWS_LAYER_STACK_ROOT)
     assert enter.get("success") is True, enter
     # Write 5 MB to upperdir before the crash.
-    write = await _iws_rpc.shell(
+    write = await _iws_rpc.exec_command(
         sandbox_id, "agent-A",
         "dd if=/dev/zero of=/testbed/scratch.bin bs=1M count=5 2>/dev/null",
     )

@@ -41,7 +41,7 @@ async def test_two_agents_same_port(iws_clean_sandbox, iws_audit_jsonl) -> None:
         # Start an http server in each workspace on the same port. Rust
         # command sessions keep the server owned until explicit cancellation.
         for agent in ("agent-A", "agent-B"):
-            launched = await _iws_rpc.shell(
+            launched = await _iws_rpc.exec_command(
                 sandbox_id, agent,
                 f"cd /testbed && exec python3 -m http.server {_PORT}",
                 wait=False,
@@ -55,10 +55,10 @@ async def test_two_agents_same_port(iws_clean_sandbox, iws_audit_jsonl) -> None:
 
         # Each agent reaches its OWN localhost:3000.
         for agent in ("agent-A", "agent-B"):
-            curl = await _iws_rpc.complete_shell(
+            curl = await _iws_rpc.complete_exec_command(
                 sandbox_id,
                 agent,
-                await _iws_rpc.shell(
+                await _iws_rpc.exec_command(
                     sandbox_id, agent,
                     "curl -s --max-time 3 -o /dev/null -w '%{http_code}' "
                     f"http://127.0.0.1:{_PORT}/ || echo BAD",
@@ -77,10 +77,10 @@ async def test_two_agents_same_port(iws_clean_sandbox, iws_audit_jsonl) -> None:
             if (row.get("payload") or {}).get("agent_id") == "agent-B"
         )
         assert ip_b, enters
-        cross = await _iws_rpc.complete_shell(
+        cross = await _iws_rpc.complete_exec_command(
             sandbox_id,
             "agent-A",
-            await _iws_rpc.shell(
+            await _iws_rpc.exec_command(
                 sandbox_id, "agent-A",
                 f"curl -s --max-time 2 http://{ip_b}:{_PORT}/ || echo BLOCKED",
             ),

@@ -196,7 +196,7 @@ Thin client wrapping `call_daemon_api`. Exposes:
 async def enter(sandbox_id, agent_id, *, layer_stack_root=DEFAULT) -> dict
 async def exit(sandbox_id, agent_id) -> dict
 async def status(sandbox_id, agent_id) -> dict
-async def shell(sandbox_id, agent_id, command, *, timeout_s=30) -> dict
+async def exec_command(sandbox_id, agent_id, command, *, timeout_s=30) -> dict
 async def read_file(sandbox_id, agent_id, path) -> dict
 async def write_file(sandbox_id, agent_id, path, content: bytes | str) -> dict
 async def edit_file(sandbox_id, agent_id, path, content) -> dict
@@ -256,7 +256,7 @@ real Docker boot.
 
 | Test | Asserts |
 |---|---|
-| `test_enter_then_shell_then_exit` | Enter → `shell("echo hi")` → exit. Audit: `enter, tool_call, exit`. `status` returns `open=false` after exit. |
+| `test_enter_then_shell_then_exit` | Enter -> `exec_command("echo hi")` -> exit. Audit: `enter, tool_call, exit`. `status` returns `open=false` after exit. |
 | `test_server_survives_tool_call_boundary` | tool_call A starts `python -m http.server 8080 &`. tool_call B `curl localhost:8080` succeeds. `pgrep -f http.server` returns the same PID across both calls. **Driver #1** of the source plan. |
 | `test_status_reports_open_handle` | After enter, `status(agent_id)` returns `open=true, manifest_version, created_at, last_activity` — and `last_activity` advances after each tool call. |
 | `test_lowerdir_visible_inside_mntns` | Uses `sentinel_layer`. `cat /testbed/sentinel-{uuid}.txt` returns `lowerdir-visible-{uuid}` exactly. Regression guard for `setns(CLONE_NEWNS)` + `fsmount` propagation. |

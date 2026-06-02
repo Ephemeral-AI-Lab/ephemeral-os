@@ -32,12 +32,25 @@ pub const PROTOCOL_VERSION: u32 = 1;
 const _: () = assert!(crate::daemon_client::DAEMON_PROTOCOL_VERSION == PROTOCOL_VERSION);
 
 /// Per-arch SHA256 of the `eosd-linux-{arch}` binary, keyed by the container arch
-/// token. Source of truth: `runtime_artifact/__init__.py` (the spec §6 amd64
-/// value is stale — these are the working-tree values).
+/// token. Source of truth: the working-tree
+/// `backend/src/sandbox/host/runtime_artifact/__init__.py` pin, kept in lockstep
+/// with the actual `sandbox/dist/eosd-linux-{arch}` digest (the spec §6 amd64
+/// value is a stale placeholder).
+///
+/// VOLATILE: the amd64 `eosd` binary is rebuilt repeatedly during development
+/// (observed churn this session: `bb066eb…`→`0bf55d43…`→`033ed149…`→`5589fff8…`→
+/// `4c306b4e…`), so any hardcoded amd64 value is a best-effort snapshot that
+/// races the rebuild and is intentionally NOT unit-test-pinned (a value-coupled
+/// test would be permanently flaky). This crate is not yet wired into a running
+/// runtime (`eos-runtime` is Phase 6), so a lagging pin has no runtime impact
+/// today; Phase-7 cutover reconciles the final release pin against the stabilized
+/// binary. The upload/verify LOGIC (arch map, sha-mismatch, marker-skip decision)
+/// is what this crate owns and is fully unit-tested; the pin VALUE is a cutover
+/// concern. arm64 is stable.
 static EOSD_SHA256: &[(&str, &str)] = &[
     (
         "amd64",
-        "bb066eb41c6fa0a6d3a73549d5a6b1cb7fb0b4e18e0b2226c914125f03052333",
+        "4c306b4ea08f0cf07cbb01bba9320b417ec1e581227014e770e878d7e8e72825",
     ),
     (
         "arm64",
@@ -257,7 +270,10 @@ mod tests {
     // AC-08 lockstep is a compile-time assert above; assert the value here too.
     #[test]
     fn protocol_version_lockstep() {
-        assert_eq!(PROTOCOL_VERSION, crate::daemon_client::DAEMON_PROTOCOL_VERSION);
+        assert_eq!(
+            PROTOCOL_VERSION,
+            crate::daemon_client::DAEMON_PROTOCOL_VERSION
+        );
         assert_eq!(PROTOCOL_VERSION, 1);
     }
 
@@ -335,7 +351,11 @@ mod tests {
             .await
             .unwrap();
         let adapter = MockAdapter::new().with_exec(|cmd| {
-            let stdout = if cmd.contains("uname -m") { "x86_64" } else { "" };
+            let stdout = if cmd.contains("uname -m") {
+                "x86_64"
+            } else {
+                ""
+            };
             RawExecResult {
                 exit_code: 0,
                 stdout: stdout.to_owned(),
@@ -356,7 +376,9 @@ mod tests {
         ));
 
         // Remove the artifact → ArtifactMissing.
-        tokio::fs::remove_file(tmp.join("eosd-linux-amd64")).await.unwrap();
+        tokio::fs::remove_file(tmp.join("eosd-linux-amd64"))
+            .await
+            .unwrap();
         let err = ensure_eosd_uploaded(&*adapter_arc, &sid(), &tmp)
             .await
             .unwrap_err();

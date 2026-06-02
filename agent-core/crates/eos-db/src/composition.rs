@@ -31,11 +31,11 @@ pub struct Database {
 }
 
 impl Database {
-    /// Open the SQLite file, reject Postgres, apply PRAGMAs, run migrations, and
+    /// Open the `SQLite` file, reject Postgres, apply PRAGMAs, run migrations, and
     /// construct every store. The single composition-root constructor.
     ///
     /// # Errors
-    /// Returns [`DbError`] for a non-SQLite url, a connection/filesystem failure,
+    /// Returns [`DbError`] for a non-`SQLite` url, a connection/filesystem failure,
     /// or a migration failure.
     pub async fn open(config: &DatabaseConfig) -> Result<Self, DbError> {
         let pool = pool::open_pool(config).await?;

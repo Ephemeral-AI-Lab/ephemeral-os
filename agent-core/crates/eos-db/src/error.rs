@@ -2,11 +2,11 @@
 
 use eos_state::CoreError;
 
-/// Errors raised by the SQLite persistence layer.
+/// Errors raised by the `SQLite` persistence layer.
 #[derive(Debug, thiserror::Error)]
 #[non_exhaustive]
 pub enum DbError {
-    /// A non-SQLite (network) database url was configured (GC-eos-db-04).
+    /// A non-`SQLite` (network) database url was configured (GC-eos-db-04).
     #[error("postgresql is not supported in agent-core; configure a sqlite url")]
     PostgresRejected,
     /// An underlying `sqlx` error (connection, query, constraint violation).

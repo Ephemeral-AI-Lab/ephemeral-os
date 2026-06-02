@@ -132,7 +132,6 @@ impl OpTable {
         table.register_builtin("api.v1.glob", op_glob);
         table.register_builtin("api.grep", op_grep);
         table.register_builtin("api.v1.grep", op_grep);
-        table.register_builtin("api.v1.shell", op_shell);
         table.register_builtin("api.plugin.ensure", crate::plugin::op_ensure);
         table.register_builtin("api.plugin.status", crate::plugin::op_status);
         table.register_builtin("api.isolated_workspace.enter", crate::isolated::op_enter);
@@ -147,6 +146,7 @@ impl OpTable {
             crate::isolated::op_test_reset,
         );
         table.register_builtin("api.v1.exec_command", crate::command::op_exec_command);
+        table.register_builtin("api.v1.write_stdin", crate::command::op_command_write_stdin);
         table.register_builtin(
             "api.v1.command.write_stdin",
             crate::command::op_command_write_stdin,
@@ -866,187 +866,6 @@ fn isolated_edit_file(
     ))
 }
 
-/// `api.v1.shell` — isolated session when active, else overlay/OCC publish.
-// PORT backend/src/sandbox/ephemeral_workspace/pipeline.py:130-202 — run_tool_call overlay body
-fn op_shell(args: &Value, context: DispatchContext<'_>) -> Result<Value, DaemonError> {
-    let agent_id = args
-        .get("agent_id")
-        .and_then(Value::as_str)
-        .unwrap_or("default");
-    if crate::isolated::agent_has_active_handle(agent_id) {
-        let mut command_args = args.clone();
-        command_args["cmd"] = json!(require_shell_command(args)?);
-        return crate::command::op_exec_command(&command_args, context);
-    }
-    run_shell_overlay(args, Instant::now(), context.invocation_registry)
-}
-
-pub(crate) fn run_shell_overlay(
-    args: &Value,
-    total_start: Instant,
-    invocation_registry: Option<&InFlightRegistry>,
-) -> Result<Value, DaemonError> {
-    let spec = ShellOverlayCommand {
-        layer_stack_root: PathBuf::from(require_string(args, "layer_stack_root")?),
-        command: require_shell_command(args)?,
-        cwd: args
-            .get("cwd")
-            .and_then(Value::as_str)
-            .unwrap_or(".")
-            .to_owned(),
-        invocation_id: args
-            .get("invocation_id")
-            .and_then(Value::as_str)
-            .unwrap_or("shell")
-            .to_owned(),
-        agent_id: args
-            .get("agent_id")
-            .and_then(Value::as_str)
-            .unwrap_or("default")
-            .to_owned(),
-        background: args
-            .get("background")
-            .and_then(Value::as_bool)
-            .unwrap_or(false),
-        timeout_seconds: args.get("timeout_seconds").and_then(Value::as_f64),
-    };
-    let binding = require_workspace_binding(&spec.layer_stack_root)?;
-    let mut stack = LayerStack::open(spec.layer_stack_root.clone())?;
-    let acquire_start = Instant::now();
-    let lease =
-        stack.acquire_snapshot(&format!("overlay:{}:{}", spec.agent_id, spec.invocation_id))?;
-    let lease_acquire_s = acquire_start.elapsed().as_secs_f64();
-    let run_result = run_shell_overlay_once(&spec, &binding, &lease, invocation_registry);
-    let _ = stack.release_lease(&lease.lease_id);
-    let shell = run_result?;
-    shell_overlay_response(&spec.layer_stack_root, shell, total_start, lease_acquire_s)
-}
-
-fn run_shell_overlay_once(
-    spec: &ShellOverlayCommand,
-    binding: &WorkspaceBinding,
-    lease: &Lease,
-    invocation_registry: Option<&InFlightRegistry>,
-) -> Result<ShellRunOutcome, DaemonError> {
-    let dirs = overlay_run_dirs("sandbox-overlay", &spec.invocation_id)?;
-    let _cleanup = RunDirCleanup(dirs.run_dir.clone());
-    let request = RunRequest {
-        mode: RunMode::FreshNs,
-        tool_call: ToolCall {
-            invocation_id: spec.invocation_id.clone(),
-            agent_id: spec.agent_id.clone(),
-            verb: "shell".to_owned(),
-            intent: Intent::WriteAllowed,
-            args: json!({
-                "command": spec.command.clone(),
-                "cwd": spec.cwd.clone(),
-            }),
-            background: spec.background,
-        },
-        workspace_root: WorkspaceRoot(PathBuf::from(&binding.workspace_root)),
-        layer_paths: lease.layer_paths.iter().map(PathBuf::from).collect(),
-        upperdir: Some(dirs.upperdir.clone()),
-        workdir: Some(dirs.workdir.clone()),
-        ns_fds: None,
-        cgroup_path: None,
-        timeout_seconds: spec.timeout_seconds,
-    };
-    let runner = run_ns_runner_child(&request, invocation_registry)?;
-    let (changes, path_kinds, capture_s) = capture_upperdir_for_occ(&dirs.upperdir)?;
-    let upperdir_stats = TreeResourceStats::collect(&dirs.upperdir);
-    let route_start = Instant::now();
-    let route_metrics = occ_route_metrics(&spec.layer_stack_root, &changes)?;
-    let route_s = route_start.elapsed().as_secs_f64();
-    let base_hashes = base_hashes_for_snapshot(&spec.layer_stack_root, &lease.manifest, &changes)?;
-    let occ_start = Instant::now();
-    let changeset = apply_occ_changeset(
-        &spec.layer_stack_root,
-        Some(manifest_version_u64(lease.manifest_version)?),
-        &changes,
-        &base_hashes,
-    )?;
-    let occ_s = occ_start.elapsed().as_secs_f64();
-    Ok(ShellRunOutcome {
-        runner,
-        changeset,
-        path_kinds,
-        route_metrics,
-        route_s,
-        capture_s,
-        occ_s,
-        upperdir_stats,
-    })
-}
-
-fn shell_overlay_response(
-    root: &Path,
-    shell: ShellRunOutcome,
-    total_start: Instant,
-    lease_acquire_s: f64,
-) -> Result<Value, DaemonError> {
-    let manifest = LayerStack::open(root.to_path_buf())?.read_active_manifest()?;
-    let mut timings = resource_timings(&manifest, shell.path_kinds.len());
-    merge_runner_timings(&mut timings, &shell.runner);
-    insert_tree_resource_timings(
-        &mut timings,
-        "resource.command_exec.upperdir",
-        &shell.upperdir_stats,
-    );
-    timings.insert(
-        "layer_stack.acquire_snapshot.total_s".to_owned(),
-        json!(lease_acquire_s),
-    );
-    timings.insert(
-        "command_exec.capture_upperdir_s".to_owned(),
-        json!(shell.capture_s),
-    );
-    timings.insert("command_exec.occ_apply_s".to_owned(), json!(shell.occ_s));
-    timings.insert(
-        "command_exec.total_s".to_owned(),
-        json!(total_start.elapsed().as_secs_f64()),
-    );
-    insert_occ_route_timings(
-        &mut timings,
-        shell.route_metrics,
-        shell.route_s,
-        shell.occ_s,
-    );
-    timings.insert(
-        "api.shell.total_s".to_owned(),
-        json!(total_start.elapsed().as_secs_f64()),
-    );
-    let mut response =
-        guarded_changeset_response("shell", &shell.changeset, timings, total_start, None);
-    attach_runner_shell_fields(&mut response, &shell.runner);
-    response["changed_path_kinds"] = Value::Object(
-        shell
-            .path_kinds
-            .into_iter()
-            .map(|(path, kind)| (path, json!(kind)))
-            .collect(),
-    );
-    if shell.changeset.success() && response["conflict"].is_null() {
-        response["success"] = json!(true);
-        response["status"] = shell
-            .runner
-            .tool_result
-            .get("status")
-            .cloned()
-            .unwrap_or_else(|| json!("ok"));
-    }
-    Ok(response)
-}
-
-struct ShellOverlayCommand {
-    layer_stack_root: PathBuf,
-    command: String,
-    cwd: String,
-    invocation_id: String,
-    agent_id: String,
-    background: bool,
-    timeout_seconds: Option<f64>,
-}
-
 pub(crate) struct PluginOverlayCommand {
     pub(crate) layer_stack_root: PathBuf,
     pub(crate) invocation_id: String,
@@ -1521,39 +1340,9 @@ fn timings_to_value_map(
         .collect()
 }
 
-fn require_shell_command(args: &Value) -> Result<String, DaemonError> {
-    let Some(command) = args.get("command") else {
-        return Err(DaemonError::InvalidEnvelope(
-            "command is required".to_owned(),
-        ));
-    };
-    if let Some(value) = command.as_str() {
-        if value.trim().is_empty() {
-            return Err(DaemonError::InvalidEnvelope(
-                "command must be a non-empty string".to_owned(),
-            ));
-        }
-        return Ok(value.to_owned());
-    }
-    Err(DaemonError::InvalidEnvelope(
-        "command must be a non-empty string".to_owned(),
-    ))
-}
-
 #[derive(Clone)]
 struct LayerStackCommitTransaction {
     root: PathBuf,
-}
-
-struct ShellRunOutcome {
-    runner: RunResult,
-    changeset: ChangesetResult,
-    path_kinds: Vec<(String, String)>,
-    route_metrics: OccRouteMetrics,
-    route_s: f64,
-    capture_s: f64,
-    occ_s: f64,
-    upperdir_stats: TreeResourceStats,
 }
 
 struct PluginOverlayRunOutcome {
@@ -3199,7 +2988,7 @@ fn mutation_source(verb: &str) -> &'static str {
     match verb {
         "write" => "api_write",
         "edit" => "api_edit",
-        "shell" => "overlay_capture",
+        "exec_command" => "overlay_capture",
         "plugin_overlay" => "plugin_overlay",
         _ => "",
     }
@@ -3550,7 +3339,9 @@ fn background_event_kind(
         "api.v1.exec_command" if response.get("command_session_id").is_some() => {
             Some(("background_tool.started", "command_session"))
         }
-        "api.v1.command.write_stdin" => Some(("background_tool.input", "command_session")),
+        "api.v1.write_stdin" | "api.v1.command.write_stdin" => {
+            Some(("background_tool.input", "command_session"))
+        }
         "api.v1.command.cancel" => Some(("background_tool.cancelled", "command_session")),
         "api.v1.command.collect_completed" => {
             Some(("background_tool.completed", "command_session"))
@@ -3566,7 +3357,6 @@ fn is_occ_op(op: &str) -> bool {
             | "api.v1.write_file"
             | "api.edit_file"
             | "api.v1.edit_file"
-            | "api.v1.shell"
             | "api.v1.exec_command"
     )
 }
@@ -3578,7 +3368,6 @@ fn uses_overlay_or_lease(op: &str, response: &Value) -> bool {
             | "api.v1.glob"
             | "api.grep"
             | "api.v1.grep"
-            | "api.v1.shell"
             | "api.v1.command.cancel"
     ) {
         return true;
@@ -3690,32 +3479,6 @@ mod tests {
     use super::*;
 
     type TestResult<T = ()> = Result<T, Box<dyn std::error::Error + Send + Sync>>;
-
-    #[test]
-    fn shell_command_accepts_string_wire_shape() -> TestResult {
-        let command = require_shell_command(&json!({"command": "echo hi"}))?;
-
-        assert_eq!(command, "echo hi");
-        Ok(())
-    }
-
-    #[test]
-    fn shell_command_rejects_raw_argv() -> TestResult {
-        let error = match require_shell_command(&json!({"command": ["true"]})) {
-            Ok(command) => return Err(format!("raw argv unexpectedly accepted: {command}").into()),
-            Err(error) => error,
-        };
-
-        assert!(error.to_string().contains("non-empty string"));
-        Ok(())
-    }
-
-    #[test]
-    fn shell_command_rejects_empty_values() {
-        assert!(require_shell_command(&json!({"command": []})).is_err());
-        assert!(require_shell_command(&json!({"command": [""]})).is_err());
-        assert!(require_shell_command(&json!({"command": [true]})).is_err());
-    }
 
     #[test]
     fn upperdir_tree_resource_timings_capture_bounded_payload() -> TestResult {

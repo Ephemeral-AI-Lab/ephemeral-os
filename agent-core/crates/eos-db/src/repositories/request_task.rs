@@ -5,15 +5,15 @@ use sqlx::{Sqlite, SqlitePool};
 use time::OffsetDateTime;
 
 use eos_state::{
-    CoreError, ExecutionTaskOutcome, JsonObject, Request, RequestId, RequestStore, SandboxId,
-    Sealed, Task, TaskId, TaskStatus, TaskStore,
+    AttemptId, CoreError, ExecutionTaskOutcome, IterationId, JsonObject, Request, RequestId,
+    RequestStore, SandboxId, Sealed, Task, TaskId, TaskStatus, TaskStore, WorkflowId,
 };
 
 use crate::error::DbError;
 use crate::json_col;
 use crate::rows::{enum_to_db, row_to_request, row_to_task, RequestRow, TaskRow};
 
-/// SQLite repository for requests and tasks. Holds a cheap `SqlitePool` clone.
+/// `SQLite` repository for requests and tasks. Holds a cheap `SqlitePool` clone.
 #[derive(Debug)]
 pub struct SqlRequestTaskStore {
     pool: SqlitePool,
@@ -141,9 +141,9 @@ impl TaskStore for SqlRequestTaskStore {
         .bind(enum_to_db(&task.role))
         .bind(&task.instruction)
         .bind(enum_to_db(&task.status))
-        .bind(task.workflow_id.as_ref().map(|w| w.as_str()))
-        .bind(task.iteration_id.as_ref().map(|i| i.as_str()))
-        .bind(task.attempt_id.as_ref().map(|a| a.as_str()))
+        .bind(task.workflow_id.as_ref().map(WorkflowId::as_str))
+        .bind(task.iteration_id.as_ref().map(IterationId::as_str))
+        .bind(task.attempt_id.as_ref().map(AttemptId::as_str))
         .bind(task.agent_name.as_deref())
         .bind(json_col::encode(&task.needs)?)
         .bind(json_col::encode(&task.outcomes)?)

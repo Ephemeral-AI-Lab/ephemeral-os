@@ -197,25 +197,6 @@ class EditFileResult(GuardedResultBase):
 
 
 @dataclass(frozen=True, kw_only=True)
-class ShellRequest(SandboxRequestBase):
-    command: str
-    cwd: str | None = None
-    timeout: int | None = None
-    stdin: str | None = None
-    # Metadata only: the engine owns background lifecycle and still dispatches
-    # one api.v1.shell request for both foreground and background calls.
-    background: bool = False
-
-
-@dataclass(frozen=True, kw_only=True)
-class ShellResult(GuardedResultBase):
-    exit_code: int
-    stdout: str
-    stderr: str = ""
-    warnings: tuple[str, ...] = ()
-
-
-@dataclass(frozen=True, kw_only=True)
 class CommandOutput:
     stdout: str = ""
     stderr: str = ""
@@ -360,8 +341,6 @@ __all__ = [
     "SandboxRequestBase",
     "SandboxResultBase",
     "SearchReplaceEdit",
-    "ShellRequest",
-    "ShellResult",
     "ToolCallRequest",
     "ToolCallResult",
     "WriteFileRequest",

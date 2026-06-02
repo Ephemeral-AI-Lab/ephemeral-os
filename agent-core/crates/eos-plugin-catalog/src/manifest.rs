@@ -282,20 +282,13 @@ fn resolve_setup(
     plugin_dir: &Path,
     manifest_path: &Path,
 ) -> Result<Option<PluginResolvedPath>, PluginCatalogError> {
-    match raw {
-        None | Some(serde_yaml::Value::Null) => {
-            let default = PluginResolvedPath::resolve_under(plugin_dir, "setup.sh")?;
-            let exists = default.as_path().is_file();
-            Ok(exists.then_some(default))
-        }
-        Some(serde_yaml::Value::String(s)) if !s.trim().is_empty() => {
-            resolve_existing(plugin_dir, s.trim())
-        }
-        _ => Err(PluginCatalogError::MissingField {
-            path: manifest_path.to_owned(),
-            field: "setup".to_owned(),
-        }),
+    // The unset case defaults to `setup.sh` iff present; the set-string and error
+    // arms are identical to `resolve_optional_path`, so delegate them (DRY).
+    if matches!(raw, None | Some(serde_yaml::Value::Null)) {
+        let default = PluginResolvedPath::resolve_under(plugin_dir, "setup.sh")?;
+        return Ok(default.as_path().is_file().then_some(default));
     }
+    resolve_optional_path(raw, "setup", plugin_dir, manifest_path)
 }
 
 /// Resolve an optional declared path (`runtime`); `None` when unset, error when
@@ -514,6 +507,20 @@ Pyright-backed Python language tools.
             Err(PluginCatalogError::MissingField { .. })
         ));
 
+        // No `---` fence at all -> MissingFrontmatter (manifest.py 87-92).
+        let d7 = make_plugin(&root, "nofence", "name: nofence\n", &[]);
+        assert!(matches!(
+            parse_plugin_manifest(&d7),
+            Err(PluginCatalogError::MissingFrontmatter(_))
+        ));
+
+        // Fenced but malformed YAML -> Frontmatter (manifest.py 96-99).
+        let d8 = make_plugin(&root, "badyaml", "---\nname: [unterminated\n---\n", &[]);
+        assert!(matches!(
+            parse_plugin_manifest(&d8),
+            Err(PluginCatalogError::Frontmatter { .. })
+        ));
+
         let _ = std::fs::remove_dir_all(&root);
     }
 
@@ -559,6 +566,30 @@ Pyright-backed Python language tools.
             Err(PluginCatalogError::UnknownKind(_))
         ));
 
+        // A present-but-non-string kind -> KindNotString (manifest.py 154-157).
+        let d_nonstr = make_plugin(&root, "k", &manifest("kind: 123\n"), &["tools/x.py"]);
+        assert!(matches!(
+            parse_plugin_manifest(&d_nonstr),
+            Err(PluginCatalogError::KindNotString(_))
+        ));
+
+        let _ = std::fs::remove_dir_all(&root);
+    }
+
+    // AC-plugin-catalog-01 (setup default branch): an unset `setup:` resolves to
+    // `setup.sh` when that file exists on disk (manifest.py 224-226).
+    #[test]
+    fn setup_defaults_to_setup_sh_when_present() {
+        let root = temp_root("setup_default");
+        let dir = make_plugin(
+            &root,
+            "s",
+            "---\nname: s\ndescription: d\ntools:\n  - name: s.x\n    module: tools/x.py\n---\n",
+            &["tools/x.py", "setup.sh"],
+        );
+        let manifest = parse_plugin_manifest(&dir).expect("parses");
+        let setup = manifest.setup.expect("setup defaults to setup.sh");
+        assert!(setup.as_path().ends_with("setup.sh"));
         let _ = std::fs::remove_dir_all(&root);
     }
 }

@@ -40,7 +40,7 @@ async def test_server_survives_tool_call_boundary(
     server_session_id: str | None = None
     try:
         # Tool call A: launch the server in the background.
-        launch = await _iws_rpc.shell(
+        launch = await _iws_rpc.exec_command(
             sandbox_id,
             agent_id,
             "cd /tmp && (python3 -m http.server 18080 >/tmp/http.log 2>&1 & "
@@ -51,19 +51,19 @@ async def test_server_survives_tool_call_boundary(
         assert isinstance(server_session_id, str) and server_session_id, launch
         assert launch.get("status") == "running", launch
 
-        pid_a = await _iws_rpc.shell(sandbox_id, agent_id, "cat /tmp/http.pid")
+        pid_a = await _iws_rpc.exec_command(sandbox_id, agent_id, "cat /tmp/http.pid")
         first_pid = pid_a.get("stdout", "").strip()
         assert first_pid.isdigit(), pid_a
 
         # Tool call B: prove the server is still up. Same PID, responds to curl.
-        probe = await _iws_rpc.shell(
+        probe = await _iws_rpc.exec_command(
             sandbox_id, agent_id,
             "curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:18080/",
         )
         assert probe.get("success") is True, probe
         assert "200" in probe.get("stdout", ""), probe
 
-        pid_b = await _iws_rpc.shell(sandbox_id, agent_id, "cat /tmp/http.pid")
+        pid_b = await _iws_rpc.exec_command(sandbox_id, agent_id, "cat /tmp/http.pid")
         assert pid_b.get("stdout", "").strip() == first_pid, (
             "server PID changed across tool calls — daemon recycled the ns?",
             pid_a,

@@ -38,8 +38,6 @@ from sandbox.shared.models import (
     SandboxRequestBase,
     SandboxResultBase,
     SearchReplaceEdit,
-    ShellRequest,
-    ShellResult,
     ToolCallRequest,
     ToolCallResult,
     WriteFileRequest,
@@ -71,7 +69,6 @@ from sandbox.api.tool.edit import edit_file
 from sandbox.api.tool.glob import glob
 from sandbox.api.tool.grep import grep
 from sandbox.api.tool.read import read_file
-from sandbox.api.tool.shell import shell
 from sandbox.api.tool.write import write_file
 from sandbox.api.raw_exec import raw_exec
 from sandbox.api.daemon_invocations import (
@@ -111,8 +108,6 @@ __all__ = [
     "SandboxRequestBase",
     "SandboxResultBase",
     "SearchReplaceEdit",
-    "ShellRequest",
-    "ShellResult",
     "ToolCallRequest",
     "ToolCallResult",
     "WriteFileRequest",
@@ -145,7 +140,6 @@ __all__ = [
     "raw_exec",
     "read_file",
     "set_sandbox_labels",
-    "shell",
     "start_sandbox",
     "stop_sandbox",
     "write_stdin",

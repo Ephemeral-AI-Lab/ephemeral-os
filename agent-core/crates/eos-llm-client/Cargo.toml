@@ -22,7 +22,6 @@ tracing.workspace = true
 
 [dev-dependencies]
 proptest.workspace = true
-pretty_assertions.workspace = true
 tracing-test.workspace = true
 
 [lints]

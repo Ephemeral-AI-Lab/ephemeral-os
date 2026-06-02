@@ -37,7 +37,7 @@ async def test_dns_routable_resolver(iws_clean_sandbox) -> None:
     try:
         # The image installs a routable resolv.conf at /etc/resolv.conf;
         # if the daemon's configure_dns left it intact, getent succeeds.
-        result = await _iws_rpc.shell(
+        result = await _iws_rpc.exec_command(
             sandbox_id, "agent-A",
             "getent hosts cloudflare.com >/dev/null 2>&1 && echo OK || echo FAIL",
         )

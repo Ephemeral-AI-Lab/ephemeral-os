@@ -47,14 +47,33 @@ pub use workflow::{Workflow, WorkflowStatus};
 // API so downstream crates (notably `eos-db`) can name them without a direct
 // `eos-types` dependency edge — keeping the frozen DAG `eos-db -> {state, config}`.
 pub use eos_types::{
-    AgentRunId, AttemptId, CoreError, IterationId, JsonObject, JsonValue, RequestId, SandboxId,
-    TaskId, UtcDateTime, WorkflowId,
+    AgentRunId, AttemptId, CoreError, IterationId, JsonObject, RequestId, SandboxId, TaskId,
+    UtcDateTime, WorkflowId,
 };
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use serde_json::json;
+    use std::path::PathBuf;
+
+    /// Enumerate every `src/*.rs` file as `(path, contents)` for the AC
+    /// source-grep tests. Scoped to enumeration only: the per-test needle
+    /// assembly and matching logic stay inline so this helper never carries a
+    /// forbidden literal (it is itself walked by those greps).
+    fn crate_src_files() -> Vec<(PathBuf, String)> {
+        let src = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src");
+        let mut files = Vec::new();
+        for entry in std::fs::read_dir(&src).expect("read src dir") {
+            let path = entry.expect("dir entry").path();
+            if path.extension().and_then(|e| e.to_str()) != Some("rs") {
+                continue;
+            }
+            let text = std::fs::read_to_string(&path).expect("read src file");
+            files.push((path, text));
+        }
+        files
+    }
 
     // AC-eos-state-03: every enum serializes to the exact Python wire string.
     #[test]
@@ -116,14 +135,8 @@ mod tests {
         let _ = TaskRole::Generator;
 
         let needle = format!("exec{}", "utor"); // avoid the literal token here
-        let src = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src");
         let mut offenders = Vec::new();
-        for entry in std::fs::read_dir(&src).expect("read src dir") {
-            let path = entry.expect("dir entry").path();
-            if path.extension().and_then(|e| e.to_str()) != Some("rs") {
-                continue;
-            }
-            let text = std::fs::read_to_string(&path).expect("read src file");
+        for (path, text) in crate_src_files() {
             // Lowercase so any-case spelling is caught; `execution` (e-x-e-c-u-t-i-o-n)
             // does not contain the needle (e-x-e-c-u-t-o-r), so it is not a false hit.
             if text.to_lowercase().contains(&needle) {
@@ -133,6 +146,55 @@ mod tests {
         assert!(
             offenders.is_empty(),
             "forbidden role token found in: {offenders:?}"
+        );
+    }
+
+    // AC-eos-state-07: `ModelRegistration` exposes `model_key` (not `key`),
+    // treats `class_path` as an opaque migration field, and `eos-state` contains
+    // no `class_path`-based dispatch branch (GC-eos-state-04).
+    #[test]
+    fn model_registration_no_class_path_dispatch() {
+        // Field-presence (compile-time): the DTO exposes the normalized
+        // `model_key`, and the migration-only import path is an opaque field.
+        // Reading `.model_key` proves the rename away from the DB column `key`.
+        let reg = ModelRegistration {
+            id: 1,
+            model_key: "anthropic:claude".to_owned(),
+            label: "Claude".to_owned(),
+            class_path: "providers.anthropic.Client".to_owned(),
+            kwargs_json: "{}".to_owned(),
+            is_active: true,
+            created_at: UtcDateTime::now(),
+            updated_at: UtcDateTime::now(),
+        };
+        let _normalized_key: &str = &reg.model_key;
+        let _opaque_path: &str = &reg.class_path;
+
+        // Source-grep: the migration-only field is never used to branch. The
+        // needle is assembled so the contiguous token does not appear on this
+        // logic line (it would otherwise self-match), mirroring AC-02.
+        let needle = format!("class{}path", "_");
+        let dispatch_markers = [
+            "match ",
+            "=>",
+            "==",
+            " if ",
+            "else ",
+            ".starts_with(",
+            ".contains(",
+        ];
+        let mut offenders = Vec::new();
+        for (path, text) in crate_src_files() {
+            for line in text.lines() {
+                let lower = line.to_lowercase();
+                if lower.contains(&needle) && dispatch_markers.iter().any(|m| lower.contains(m)) {
+                    offenders.push(format!("{}: {}", path.display(), line.trim()));
+                }
+            }
+        }
+        assert!(
+            offenders.is_empty(),
+            "migration-only field used in a dispatch branch (forbidden, GC-eos-state-04): {offenders:?}"
         );
     }
 }

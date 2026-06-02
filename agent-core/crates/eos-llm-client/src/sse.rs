@@ -103,6 +103,39 @@ pub(crate) fn frame_data(frame: &str) -> Option<String> {
     data
 }
 
+/// Parse one SSE frame's `data:` payload into a JSON value.
+///
+/// Returns `Ok(None)` to skip the frame (no `data:` line, or the `[DONE]`
+/// sentinel), `Ok(Some(value))` for a parsed payload, or `Err` for malformed
+/// JSON. On the error path it logs content-free context only (frame index +
+/// request-id; never the payload, system prompt, tool input, or auth — §8.7)
+/// and the returned `Decode` error carries `request_id` (§8.8). Shared by both
+/// provider decoders so the per-frame preamble is defined once.
+pub(crate) fn parse_sse_value(
+    frame: &str,
+    request_id: &Option<String>,
+    provider: &str,
+    frame_index: usize,
+) -> Result<Option<Value>, ProviderError> {
+    let Some(data) = frame_data(frame) else {
+        return Ok(None);
+    };
+    if data == "[DONE]" {
+        return Ok(None);
+    }
+    serde_json::from_str(&data).map(Some).map_err(|_| {
+        tracing::warn!(
+            request_id = request_id.as_deref().unwrap_or_default(),
+            frame_index,
+            "{provider} sse frame failed to parse"
+        );
+        ProviderError::decode(
+            request_id.clone(),
+            format!("{provider} sse frame is not valid json"),
+        )
+    })
+}
+
 /// Adapt a byte `Stream` into a stream of SSE frames, flushing the final frame
 /// at end-of-stream. A byte-stream error is forwarded verbatim and ends the
 /// frame stream.
@@ -225,6 +258,23 @@ mod tests {
     fn concatenates_multi_line_data() {
         let frame = "data: line1\ndata: line2";
         assert_eq!(frame_data(frame).as_deref(), Some("line1\nline2"));
+    }
+
+    #[test]
+    fn never_bisects_a_multibyte_char_across_chunks() {
+        // `é` is 2 bytes, the emoji is 4 bytes. Splitting at every byte offset —
+        // including mid-codepoint — must still reconstruct the identical frame.
+        let frame = "data: caf\u{e9} \u{1f600}";
+        let buf = format!("{frame}\n\n");
+        let bytes = buf.as_bytes();
+        for cut in 1..bytes.len() {
+            let mut splitter = SseFrameSplitter::default();
+            let mut out = Vec::new();
+            splitter.push(&bytes[..cut], &mut out);
+            splitter.push(&bytes[cut..], &mut out);
+            splitter.finish(&mut out);
+            assert_eq!(out, vec![frame.to_owned()], "cut at byte {cut}");
+        }
     }
 
     // AC-llm-client-11: the splitter is invariant to chunk boundaries — feeding

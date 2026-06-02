@@ -46,7 +46,7 @@ async def test_enter_then_shell_then_exit(iws_clean_sandbox, iws_audit_jsonl) ->
     assert enter_response.get("success") is True, enter_response
     assert enter_response.get("manifest_root_hash"), enter_response
 
-    shell_response = await _iws_rpc.shell(sandbox_id, agent_id, "echo hi")
+    shell_response = await _iws_rpc.exec_command(sandbox_id, agent_id, "echo hi")
     assert shell_response.get("success") is True, shell_response
     assert "hi" in shell_response.get("stdout", ""), shell_response
 

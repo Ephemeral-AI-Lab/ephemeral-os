@@ -618,7 +618,8 @@ def _can_retry_empty_response(op: str) -> bool:
         "api.v1.edit_file",
         "api.write_file",
         "api.v1.write_file",
-        "api.v1.shell",
+        "api.v1.write_stdin",
+        "api.v1.command.write_stdin",
     } and not op.startswith("plugin.")
 
 

@@ -1,5 +1,5 @@
 //! Host-side daemon transport: serialize one JSON envelope per call, send it to
-//! the resident in-sandbox daemon (TCP fast path or AF_UNIX thin client through
+//! the resident in-sandbox daemon (TCP fast path or `AF_UNIX` thin client through
 //! `adapter.exec`), run the spawn/connect/empty-response recovery state machine,
 //! cache the per-sandbox TCP endpoint with single-flight, and decode typed
 //! errors. Faithful port of `sandbox/host/daemon_client.py`.
@@ -21,7 +21,7 @@ use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
 
 use crate::error::SandboxHostError;
-use crate::provider::{DaemonTcpEndpoint, ProviderAdapter, ExecOpts};
+use crate::provider::{DaemonTcpEndpoint, ExecOpts, ProviderAdapter};
 use crate::registry::ProviderRegistry;
 use crate::runtime_artifact::EOSD_VERSION;
 
@@ -47,7 +47,7 @@ const CONNECT_RETRY_DELAYS: [Duration; 4] = [ms(250), ms(500), ms(1000), ms(2000
 // --- resolved container-side paths (from sandbox/daemon/paths.py) -------------
 
 pub(crate) const BUNDLE_REMOTE_DIR: &str = "/eos/daemon";
-/// Default LayerStack root injected into every envelope's `args.layer_stack_root`.
+/// Default `LayerStack` root injected into every envelope's `args.layer_stack_root`.
 pub const DEFAULT_LAYER_STACK_ROOT: &str = "/eos/layer-stack";
 const DAEMON_SOCKET_PATH: &str = "/eos/daemon/runtime.sock";
 const DAEMON_PID_PATH: &str = "/eos/daemon/runtime.pid";
@@ -160,7 +160,11 @@ impl DaemonClient {
             .await;
         let command = daemon_spawn_command(tcp_endpoint.as_ref());
         let result = adapter
-            .exec(sandbox_id, &command, &exec_opts(BUNDLE_REMOTE_DIR, timeout_s))
+            .exec(
+                sandbox_id,
+                &command,
+                &exec_opts(BUNDLE_REMOTE_DIR, timeout_s),
+            )
             .await?;
         if result.exit_code != 0 {
             return Err(exec_failed(&result));
@@ -266,7 +270,8 @@ impl DaemonClient {
             "layer_stack_root".to_owned(),
             Value::String(layer_stack_root),
         );
-        let readiness_json = serialize_envelope("api.runtime.ready", &new_invocation_id(), &ready_args);
+        let readiness_json =
+            serialize_envelope("api.runtime.ready", &new_invocation_id(), &ready_args);
         let readiness_result = self
             .call_daemon_envelope_with_connect_retry(
                 adapter,
@@ -387,7 +392,11 @@ impl DaemonClient {
         }
         let command = daemon_thin_client_command(envelope_json);
         adapter
-            .exec(sandbox_id, &command, &exec_opts(BUNDLE_REMOTE_DIR, timeout_s))
+            .exec(
+                sandbox_id,
+                &command,
+                &exec_opts(BUNDLE_REMOTE_DIR, timeout_s),
+            )
             .await
     }
 
@@ -451,9 +460,15 @@ impl SandboxTransport for DaemonClient {
         timeout_s: u32,
     ) -> Result<JsonObject, SandboxApiError> {
         let payload = with_daemon_protocol_version(payload);
-        self.call_daemon_api(sandbox_id, op.as_wire(), payload, timeout_s, DEFAULT_LAYER_STACK_ROOT)
-            .await
-            .map_err(map_host_error_to_api_error)
+        self.call_daemon_api(
+            sandbox_id,
+            op.as_wire(),
+            payload,
+            timeout_s,
+            DEFAULT_LAYER_STACK_ROOT,
+        )
+        .await
+        .map_err(map_host_error_to_api_error)
     }
 }
 
@@ -564,8 +579,8 @@ fn can_retry_empty_response(op: &str) -> bool {
 }
 
 fn decode_response(stdout: &str) -> Result<JsonObject, SandboxHostError> {
-    let value: Value = serde_json::from_str(stdout.trim())
-        .map_err(|_| SandboxHostError::BadResponse {
+    let value: Value =
+        serde_json::from_str(stdout.trim()).map_err(|_| SandboxHostError::BadResponse {
             stdout: stdout.to_owned(),
         })?;
     match value {
@@ -612,7 +627,10 @@ fn dispatch_error_from_value(error: &Value) -> SandboxHostError {
                 .get("kind")
                 .and_then(truthy_to_string)
                 .unwrap_or_else(|| "RuntimeError".to_owned()),
-            message: map.get("message").and_then(truthy_to_string).unwrap_or_default(),
+            message: map
+                .get("message")
+                .and_then(truthy_to_string)
+                .unwrap_or_default(),
             details: match map.get("details") {
                 Some(Value::Object(d)) => d.clone(),
                 _ => JsonObject::new(),
@@ -632,7 +650,9 @@ fn readiness_error_from_value(error: &Value, op: &str) -> SandboxHostError {
             map.get("kind")
                 .and_then(truthy_to_string)
                 .unwrap_or_else(|| "RuntimeReadinessFailed".to_owned()),
-            map.get("message").and_then(truthy_to_string).unwrap_or_default(),
+            map.get("message")
+                .and_then(truthy_to_string)
+                .unwrap_or_default(),
             match map.get("details") {
                 Some(Value::Object(d)) => d.clone(),
                 _ => JsonObject::new(),
@@ -738,9 +758,10 @@ async fn call_tcp_daemon(
             THIN_CLIENT_CONNECT_FAILED,
             format!("EOS_DAEMON_CONNECT_FAILED:{token}"),
         ),
-        Ok(Err(TcpError::Io(token))) => {
-            io_failed(THIN_CLIENT_IO_FAILED, format!("EOS_DAEMON_IO_FAILED:{token}"))
-        }
+        Ok(Err(TcpError::Io(token))) => io_failed(
+            THIN_CLIENT_IO_FAILED,
+            format!("EOS_DAEMON_IO_FAILED:{token}"),
+        ),
         Err(_elapsed) => io_failed(
             THIN_CLIENT_IO_FAILED,
             "EOS_DAEMON_IO_FAILED:Elapsed".to_owned(),
@@ -775,7 +796,10 @@ async fn call_tcp_daemon_inner(
     exchange.await.map_err(|e| TcpError::Io(io_token(&e)))
 }
 
-pub(crate) fn authenticated_envelope_json(envelope_json: &str, endpoint: &DaemonTcpEndpoint) -> String {
+pub(crate) fn authenticated_envelope_json(
+    envelope_json: &str,
+    endpoint: &DaemonTcpEndpoint,
+) -> String {
     if endpoint.auth_token.is_empty() {
         return envelope_json.to_owned();
     }
@@ -799,7 +823,10 @@ pub(crate) fn posix_quote(s: &str) -> String {
     }
     if s.bytes().all(|b| {
         b.is_ascii_alphanumeric()
-            || matches!(b, b'@' | b'%' | b'_' | b'+' | b'=' | b':' | b',' | b'.' | b'/' | b'-')
+            || matches!(
+                b,
+                b'@' | b'%' | b'_' | b'+' | b'=' | b':' | b',' | b'.' | b'/' | b'-'
+            )
     }) {
         return s.to_owned();
     }
@@ -937,7 +964,10 @@ mod tests {
     }
 
     fn connect_failed() -> RawExecResult {
-        io_failed(THIN_CLIENT_CONNECT_FAILED, "EOS_DAEMON_CONNECT_FAILED:x".to_owned())
+        io_failed(
+            THIN_CLIENT_CONNECT_FAILED,
+            "EOS_DAEMON_CONNECT_FAILED:x".to_owned(),
+        )
     }
 
     fn empty_response() -> RawExecResult {
@@ -962,23 +992,40 @@ mod tests {
     // fresh id; the auth field is added only on the token TCP path.
     #[tokio::test]
     async fn envelope_shape_and_auth() {
-        let (client, calls) = client_with(MockAdapter::new().with_exec(|_cmd| ok_result("{\"ok\":true}")));
+        let (client, calls) =
+            client_with(MockAdapter::new().with_exec(|_cmd| ok_result("{\"ok\":true}")));
         client
-            .call_daemon_api(&sid(), "api.v1.read_file", JsonObject::new(), 60, "/eos/layer-stack")
+            .call_daemon_api(
+                &sid(),
+                "api.v1.read_file",
+                JsonObject::new(),
+                60,
+                "/eos/layer-stack",
+            )
             .await
             .unwrap();
         let cmd = calls.lock().unwrap()[0].clone();
         let env = envelope_from_command(&cmd);
         assert_eq!(env["op"], serde_json::json!("api.v1.read_file"));
-        assert_eq!(env["args"]["layer_stack_root"], serde_json::json!("/eos/layer-stack"));
+        assert_eq!(
+            env["args"]["layer_stack_root"],
+            serde_json::json!("/eos/layer-stack")
+        );
         let inv = env["invocation_id"].as_str().unwrap();
         assert_eq!(inv.len(), 32, "uuid4().hex is 32 hex chars (no dashes)");
         assert!(inv.bytes().all(|b| b.is_ascii_hexdigit()));
 
         // cancel mints a fresh top-level invocation id.
-        let (client, calls) = client_with(MockAdapter::new().with_exec(|_cmd| ok_result("{\"ok\":true}")));
+        let (client, calls) =
+            client_with(MockAdapter::new().with_exec(|_cmd| ok_result("{\"ok\":true}")));
         client
-            .call_daemon_api(&sid(), "api.v1.cancel", JsonObject::new(), 15, "/eos/layer-stack")
+            .call_daemon_api(
+                &sid(),
+                "api.v1.cancel",
+                JsonObject::new(),
+                15,
+                "/eos/layer-stack",
+            )
             .await
             .unwrap();
         let env = envelope_from_command(&calls.lock().unwrap()[0]);
@@ -1026,11 +1073,17 @@ mod tests {
             }
         }));
         let response = client
-            .call_daemon_api(&sid(), "api.v1.read_file", JsonObject::new(), 60, "/eos/layer-stack")
+            .call_daemon_api(
+                &sid(),
+                "api.v1.read_file",
+                JsonObject::new(),
+                60,
+                "/eos/layer-stack",
+            )
             .await
             .unwrap();
         assert_eq!(response["replayed"], serde_json::json!(true));
-        let log = calls.lock().unwrap();
+        let log = calls.lock().unwrap().clone();
         assert!(log.iter().any(|c| c.contains("--spawn")), "spawn must run");
         assert!(
             log.iter().any(|c| c.contains("api.runtime.ready")),
@@ -1045,10 +1098,19 @@ mod tests {
             empty_response()
         }));
         let err = client
-            .call_daemon_api(&sid(), "api.v1.write_file", JsonObject::new(), 60, "/eos/layer-stack")
+            .call_daemon_api(
+                &sid(),
+                "api.v1.write_file",
+                JsonObject::new(),
+                60,
+                "/eos/layer-stack",
+            )
             .await
             .unwrap_err();
-        assert!(matches!(err, SandboxHostError::ExecFailed { exit_code: 98, .. }));
+        assert!(matches!(
+            err,
+            SandboxHostError::ExecFailed { exit_code: 98, .. }
+        ));
         assert!(
             !calls.lock().unwrap().iter().any(|c| c.contains("--spawn")),
             "fail-closed: mutating op must not spawn/replay"
@@ -1109,16 +1171,28 @@ mod tests {
         );
         assert!(a.is_some() && b.is_some());
         assert_eq!(a.unwrap().port, 49153);
-        assert_eq!(resolves.load(Ordering::SeqCst), 1, "single-flight: one resolve");
+        assert_eq!(
+            resolves.load(Ordering::SeqCst),
+            1,
+            "single-flight: one resolve"
+        );
 
         // A third call hits the cache (no new resolve).
         let _ = client.resolve_daemon_tcp_endpoint(&*adapter_arc, &id).await;
-        assert_eq!(resolves.load(Ordering::SeqCst), 1, "cache hit: no new resolve");
+        assert_eq!(
+            resolves.load(Ordering::SeqCst),
+            1,
+            "cache hit: no new resolve"
+        );
 
         // Invalidation forces a fresh single-flight resolve.
         client.invalidate_daemon_tcp_endpoint(&id);
         let _ = client.resolve_daemon_tcp_endpoint(&*adapter_arc, &id).await;
-        assert_eq!(resolves.load(Ordering::SeqCst), 2, "re-resolve after invalidation");
+        assert_eq!(
+            resolves.load(Ordering::SeqCst),
+            2,
+            "re-resolve after invalidation"
+        );
     }
 
     #[test]

@@ -246,7 +246,6 @@ def _timings_for_signal(
                 "api.write.",
                 "api.edit.",
                 "api.exec_command.",
-                "api.shell.",
                 "api.grep.",
                 "api.glob.",
             ),

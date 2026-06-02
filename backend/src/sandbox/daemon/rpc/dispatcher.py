@@ -1,7 +1,7 @@
 """Generic in-sandbox daemon dispatcher.
 
 Host-to-guest contract: the resident AF_UNIX daemon decodes one JSON object
-such as ``{"op": "api.v1.shell", "args": {...}}`` and dispatches the decoded
+such as ``{"op": "api.v1.exec_command", "args": {...}}`` and dispatches the decoded
 envelope here. Handlers return JSON-safe values or dataclasses matching the
 public sandbox API result types.
 """
@@ -434,6 +434,7 @@ def _register_builtin_operations() -> None:
         "api.plugin.status": runtime_api.plugin_status,
         "api.runtime.ready": builtin_operations.runtime_ready,
         "api.v1.exec_command": builtin_operations.exec_command,
+        "api.v1.write_stdin": builtin_operations.command_write_stdin,
         "api.v1.command.write_stdin": builtin_operations.command_write_stdin,
         "api.v1.command.cancel": builtin_operations.command_cancel,
         "api.v1.command.collect_completed": builtin_operations.command_collect_completed,

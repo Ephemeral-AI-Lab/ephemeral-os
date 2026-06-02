@@ -40,11 +40,11 @@ async def test_dns_fallback_survives_tool_call_boundary(iws_clean_sandbox) -> No
     try:
         await _iws_rpc.enter(sandbox_id, "agent-A", layer_stack_root=_iws_rpc.IWS_LAYER_STACK_ROOT)
         try:
-            first = await _iws_rpc.shell(
+            first = await _iws_rpc.exec_command(
                 sandbox_id, "agent-A", "cat /etc/resolv.conf",
             )
-            await _iws_rpc.shell(sandbox_id, "agent-A", "true")
-            second = await _iws_rpc.shell(
+            await _iws_rpc.exec_command(sandbox_id, "agent-A", "true")
+            second = await _iws_rpc.exec_command(
                 sandbox_id, "agent-A", "cat /etc/resolv.conf",
             )
             assert first.get("stdout") == second.get("stdout"), (first, second)

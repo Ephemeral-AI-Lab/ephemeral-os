@@ -43,8 +43,8 @@ async def test_same_agent_tool_calls_can_overlap(
         loop = asyncio.get_running_loop()
         t0 = loop.time()
         results = await asyncio.gather(
-            _iws_rpc.shell(sandbox_id, "agent-A", "sleep 0.5"),
-            _iws_rpc.shell(sandbox_id, "agent-A", "sleep 0.5"),
+            _iws_rpc.exec_command(sandbox_id, "agent-A", "sleep 0.5"),
+            _iws_rpc.exec_command(sandbox_id, "agent-A", "sleep 0.5"),
         )
         wall = loop.time() - t0
         assert all(result.get("success") for result in results), results

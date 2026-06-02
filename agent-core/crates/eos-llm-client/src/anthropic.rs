@@ -23,12 +23,12 @@ use reqwest::header::{HeaderMap, HeaderName, HeaderValue, ACCEPT, CONTENT_TYPE};
 use serde_json::{json, Value};
 
 use crate::auth::Auth;
-use crate::client::{build_endpoint, error_detail, extract_request_id, LlmClient, LlmStream};
+use crate::client::{build_endpoint, open_stream, LlmClient, LlmStream};
 use crate::error::ProviderError;
 use crate::events::{LlmStreamEvent, StopReason};
 use crate::message::{ContentBlock, Message, MessageRole};
 use crate::retry::retry_stream;
-use crate::sse::{frame_data, frame_stream, json_str, json_u32, json_usize, parse_tool_args};
+use crate::sse::{json_str, json_u32, json_usize, parse_sse_value, parse_tool_args};
 use crate::types::{LlmRequest, ToolChoice, ToolSpec, UsageSnapshot};
 
 /// The mandatory Anthropic API version header value.
@@ -85,62 +85,23 @@ impl LlmClient for AnthropicClient {
         let url = self.endpoint.clone();
 
         // Each attempt replays the owned bytes; connect/status/decode errors
-        // surface as stream items, not the outer `Err`.
+        // surface as stream items, not the outer `Err`. The shared transport
+        // plumbing lives in `client::open_stream`; only the decode differs.
         let factory = move || {
             let http = http.clone();
             let url = url.clone();
             let headers = headers.clone();
             let body = body.clone();
-            Box::pin(open_anthropic_stream(http, url, headers, body))
-                as BoxFuture<'static, Result<LlmStream, ProviderError>>
+            Box::pin(open_stream(http, url, headers, body, |frames, rid| {
+                decode_anthropic(frames, rid)
+            })) as BoxFuture<'static, Result<LlmStream, ProviderError>>
         };
         Ok(retry_stream((*self.retry).clone(), factory))
     }
 }
 
-/// Open one streaming attempt: POST, capture the request-id, map a non-2xx
-/// status, then decode the SSE body.
-async fn open_anthropic_stream(
-    http: reqwest::Client,
-    url: reqwest::Url,
-    headers: HeaderMap,
-    body: Bytes,
-) -> Result<LlmStream, ProviderError> {
-    let response = http
-        .post(url)
-        .headers(headers)
-        .body(body)
-        .send()
-        .await
-        .map_err(|e| ProviderError::transport(format!("request send failed: {e}")))?;
-
-    let request_id = extract_request_id(response.headers());
-    let status = response.status();
-    if !status.is_success() {
-        let detail = response.text().await.unwrap_or_default();
-        return Err(ProviderError::from_status(
-            status.as_u16(),
-            request_id,
-            error_detail(&detail),
-        ));
-    }
-
-    // Stamp the captured request-id onto mid-stream transport errors too, so it
-    // survives the streaming error path (§8.8), not just decode errors.
-    let rid = request_id.clone();
-    let byte_stream = response.bytes_stream().map(move |chunk| {
-        chunk.map_err(|e| {
-            let mut err = ProviderError::transport(format!("stream read failed: {e}"));
-            err.request_id = rid.clone();
-            err
-        })
-    });
-    let events = decode_anthropic(frame_stream(byte_stream), request_id);
-    Ok(Box::pin(events))
-}
-
 /// In-flight reassembly state for one content block.
-#[derive(Debug, Clone, Default)]
+#[derive(Debug)]
 struct BlockAccum {
     block_type: String,
     id: String,
@@ -185,24 +146,11 @@ where
                     return;
                 }
             };
-            let Some(data) = frame_data(&frame) else { continue };
-            if data == "[DONE]" {
-                continue;
-            }
-            let value: Value = match serde_json::from_str(&data) {
-                Ok(value) => value,
-                Err(_) => {
-                    // Content-free context only (frame index + request-id); never
-                    // the frame payload, system_prompt, tool input, or auth (§8.7).
-                    tracing::warn!(
-                        request_id = request_id.as_deref().unwrap_or_default(),
-                        frame_index,
-                        "anthropic sse frame failed to parse"
-                    );
-                    yield Err(ProviderError::decode(
-                        request_id.clone(),
-                        "anthropic sse frame is not valid json",
-                    ));
+            let value = match parse_sse_value(&frame, &request_id, "anthropic", frame_index) {
+                Ok(Some(value)) => value,
+                Ok(None) => continue,
+                Err(err) => {
+                    yield Err(err);
                     return;
                 }
             };
@@ -254,7 +202,7 @@ where
                 }
                 Some("content_block_stop") => {
                     let index = json_usize(&value, &["index"]);
-                    if let Some(block) = state.blocks.get(&index).cloned() {
+                    if let Some(block) = state.blocks.remove(&index) {
                         match block.block_type.as_str() {
                             "tool_use" => {
                                 let input = parse_tool_args(&block.input_json);
@@ -425,6 +373,8 @@ mod tests {
     use super::*;
     use eos_types::JsonObject;
     use tracing_test::traced_test;
+
+    use crate::sse::frame_stream;
 
     async fn decode_fixture(raw: &str) -> Vec<Result<LlmStreamEvent, ProviderError>> {
         let bytes = Bytes::from(raw.to_owned());

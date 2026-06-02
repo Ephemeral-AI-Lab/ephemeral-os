@@ -585,7 +585,6 @@ dependencies = [
  "eos-config",
  "eos-types",
  "futures",
- "pretty_assertions",
  "proptest",
  "reqwest",
  "schemars 0.8.22",
@@ -615,7 +614,6 @@ dependencies = [
  "eos-config",
  "eos-sandbox-api",
  "eos-types",
- "pretty_assertions",
  "schemars 0.8.22",
  "serde",
  "serde_json",
@@ -721,11 +719,20 @@ dependencies = [
 name = "eos-tools"
 version = "0.1.0"
 dependencies = [
+ "async-trait",
  "eos-audit",
  "eos-llm-client",
  "eos-sandbox-api",
  "eos-skills",
  "eos-state",
+ "eos-types",
+ "insta",
+ "pretty_assertions",
+ "schemars 0.8.22",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.18",
+ "tokio",
 ]
 
 [[package]]

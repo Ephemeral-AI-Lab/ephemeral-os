@@ -20,8 +20,6 @@ _COMMAND_EXEC_OVERLAY_TIMINGS = (
     "api.read.total_s",
     "api.write.total_s",
     "api.edit.total_s",
-    "api.shell.overlay_s",
-    "api.shell.total_s",
     "api.grep.total_s",
     "api.glob.total_s",
 )

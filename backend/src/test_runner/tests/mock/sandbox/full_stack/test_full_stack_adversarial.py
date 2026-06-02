@@ -59,7 +59,7 @@ _FOREGROUND_SANDBOX_TOOLS = (
 )
 _REQUIRED_SANDBOX_TIMING_KEYS = (
     "api.exec_command.dispatch_total_s",
-    "api.shell.total_s",
+    "api.exec_command.total_s",
     "command_exec.capture_upperdir_s",
     "occ.commit.total_s",
     "occ.commit.publish_layer_s",
@@ -71,7 +71,7 @@ _REQUIRED_TOOL_SAMPLE_TIMINGS = {
     "edit_file": ("api.edit.total_s", "occ.apply.total_s"),
     "exec_command": (
         "api.exec_command.dispatch_total_s",
-        "api.shell.total_s",
+        "api.exec_command.total_s",
         "command_exec.capture_upperdir_s",
     ),
     "lsp.apply_workspace_edit": (

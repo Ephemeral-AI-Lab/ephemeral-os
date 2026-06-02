@@ -46,7 +46,7 @@ async def test_upperdir_fully_discarded_on_normal_exit(
     enter = await _iws_rpc.enter(sandbox_id, agent_id, layer_stack_root=_iws_rpc.IWS_LAYER_STACK_ROOT)
     assert enter.get("success") is True, enter
     # Write a measurable chunk so upperdir_bytes_discarded > 0.
-    write = await _iws_rpc.shell(
+    write = await _iws_rpc.exec_command(
         sandbox_id, agent_id,
         "dd if=/dev/zero of=/testbed/discard.bin bs=1024 count=100 2>/dev/null",
     )

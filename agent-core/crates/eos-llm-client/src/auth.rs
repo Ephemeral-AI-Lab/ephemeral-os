@@ -48,8 +48,10 @@ impl Auth {
     /// Apply the matching authentication header to `headers`.
     ///
     /// Returns [`ProviderError::request`] if the credential is not a valid
-    /// header value (e.g. contains control characters).
-    pub fn apply(&self, headers: &mut HeaderMap) -> Result<(), ProviderError> {
+    /// header value (e.g. contains control characters). Crate-internal: the
+    /// provider clients call this; the public surface is the `Auth` constructors
+    /// passed into `AnthropicClient::new`/`OpenAiClient::new`.
+    pub(crate) fn apply(&self, headers: &mut HeaderMap) -> Result<(), ProviderError> {
         match self {
             Self::ApiKey(secret) => {
                 let mut value = HeaderValue::from_str(secret.expose_secret())

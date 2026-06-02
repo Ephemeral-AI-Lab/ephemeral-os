@@ -267,7 +267,7 @@ async fn control_ops_use_inflight_registry() -> TestResult {
         "bg-shell",
         task.abort_handle(),
         "agent-a",
-        "api.v1.shell",
+        "api.v1.exec_command",
         true,
     );
     let context = DispatchContext::with_invocation_registry(&registry);

@@ -45,7 +45,7 @@ async def test_5_concurrent_fs_no_interference(iws_clean_sandbox) -> None:
         # Each agent writes a marker file whose contents == its agent_id.
         await asyncio.gather(
             *(
-                _iws_rpc.shell(
+                _iws_rpc.exec_command(
                     sandbox_id, agent,
                     f"echo '{agent}' > /testbed/own.bin && wc -c /testbed/own.bin",
                 )
@@ -56,7 +56,7 @@ async def test_5_concurrent_fs_no_interference(iws_clean_sandbox) -> None:
         # Each agent reads back — must see its own marker, no peer leakage.
         reads = await asyncio.gather(
             *(
-                _iws_rpc.shell(sandbox_id, agent, "cat /testbed/own.bin")
+                _iws_rpc.exec_command(sandbox_id, agent, "cat /testbed/own.bin")
                 for agent in _AGENTS
             )
         )

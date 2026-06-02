@@ -53,21 +53,23 @@ async def test_iws_parallelism_and_phase_budget(
     loop = asyncio.get_running_loop()
     try:
         baseline_t0 = loop.time()
-        baseline = await _iws_rpc.shell(sandbox_id, agent_id, "sleep 1")
+        baseline = await _iws_rpc.exec_command(sandbox_id, agent_id, "sleep 1")
         baseline_wall_s = loop.time() - baseline_t0
         assert baseline.get("success") is True, baseline
 
         parallel_t0 = loop.time()
         parallel = await asyncio.gather(
-            _iws_rpc.shell(
+            _iws_rpc.exec_command(
                 sandbox_id,
                 agent_id,
                 f"sleep 1; mkdir -p {base_dir}; touch {base_dir}/one.txt",
+                yield_time_ms=50,
             ),
-            _iws_rpc.shell(
+            _iws_rpc.exec_command(
                 sandbox_id,
                 agent_id,
                 f"sleep 1; mkdir -p {base_dir}; touch {base_dir}/two.txt",
+                yield_time_ms=50,
             ),
         )
         parallel_wall_s = loop.time() - parallel_t0

@@ -580,7 +580,7 @@ async def iws_latency_baseline(iws_sandbox) -> dict[str, float]:
 
     for _ in range(runs):
         await _iws_rpc.enter(sandbox_id, agent_id, layer_stack_root=_iws_rpc.IWS_LAYER_STACK_ROOT)
-        await _iws_rpc.shell(sandbox_id, agent_id, "true")
+        await _iws_rpc.exec_command(sandbox_id, agent_id, "true")
         await _iws_rpc.exit_(sandbox_id, agent_id)
         await asyncio.sleep(0.05)
 

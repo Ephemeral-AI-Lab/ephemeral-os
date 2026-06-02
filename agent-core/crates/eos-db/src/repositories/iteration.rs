@@ -12,7 +12,7 @@ use eos_state::{
 use crate::error::DbError;
 use crate::rows::{enum_to_db, row_to_iteration, IterationRow};
 
-/// SQLite repository for iterations. Returns frozen `Iteration` DTOs.
+/// `SQLite` repository for iterations. Returns frozen `Iteration` DTOs.
 #[derive(Debug)]
 pub struct SqlIterationStore {
     pool: SqlitePool,

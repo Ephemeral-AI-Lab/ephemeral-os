@@ -64,7 +64,7 @@ async def test_full_cycle_never_calls_occ(
     try:
         # Write something visible inside the isolated ws but it must NOT
         # leak to the layerstack tip.
-        shell_resp = await _iws_rpc.shell(
+        shell_resp = await _iws_rpc.exec_command(
             sandbox_id, agent_id, "echo ok > /testbed/iws_only.txt",
         )
         assert shell_resp.get("success") is True, shell_resp

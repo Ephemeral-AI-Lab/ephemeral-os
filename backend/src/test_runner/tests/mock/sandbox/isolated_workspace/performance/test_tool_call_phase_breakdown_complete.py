@@ -45,7 +45,7 @@ async def test_tool_call_phase_breakdown_complete(
     )
     assert opened.get("success") is True, opened
     try:
-        await _iws_rpc.shell(sandbox_id, "agent-A", "echo hi")
+        await _iws_rpc.exec_command(sandbox_id, "agent-A", "echo hi")
         jsonl = await iws_audit_jsonl()
         payloads = event_payloads(jsonl, "sandbox_isolated_workspace_tool_call")
         assert payloads, "expected at least one tool_call event"

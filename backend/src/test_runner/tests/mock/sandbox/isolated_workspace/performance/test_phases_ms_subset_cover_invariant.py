@@ -46,7 +46,7 @@ async def test_phases_ms_subset_cover_invariant(
         sandbox_id, "agent-A", layer_stack_root=_iws_rpc.IWS_LAYER_STACK_ROOT,
     )
     assert opened.get("success") is True, opened
-    await _iws_rpc.shell(sandbox_id, "agent-A", "echo hi")
+    await _iws_rpc.exec_command(sandbox_id, "agent-A", "echo hi")
     await _iws_rpc.exit_(sandbox_id, "agent-A")
 
     jsonl = await iws_audit_jsonl()

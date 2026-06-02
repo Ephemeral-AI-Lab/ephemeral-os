@@ -21,12 +21,12 @@ use reqwest::header::{HeaderMap, HeaderValue, ACCEPT, CONTENT_TYPE};
 use serde_json::{json, Value};
 
 use crate::auth::Auth;
-use crate::client::{build_endpoint, error_detail, extract_request_id, LlmClient, LlmStream};
+use crate::client::{build_endpoint, open_stream, LlmClient, LlmStream};
 use crate::error::ProviderError;
 use crate::events::{LlmStreamEvent, StopReason};
 use crate::message::{ContentBlock, Message, MessageRole};
 use crate::retry::retry_stream;
-use crate::sse::{frame_data, frame_stream, json_str, json_u32, parse_tool_args};
+use crate::sse::{json_str, json_u32, parse_sse_value, parse_tool_args};
 use crate::types::{LlmRequest, ToolChoice, ToolSpec, UsageSnapshot};
 
 /// The Responses streaming endpoint path.
@@ -77,53 +77,16 @@ impl LlmClient for OpenAiClient {
             let url = url.clone();
             let headers = headers.clone();
             let body = body.clone();
-            Box::pin(open_openai_stream(http, url, headers, body))
-                as BoxFuture<'static, Result<LlmStream, ProviderError>>
+            Box::pin(open_stream(http, url, headers, body, |frames, rid| {
+                decode_openai(frames, rid)
+            })) as BoxFuture<'static, Result<LlmStream, ProviderError>>
         };
         Ok(retry_stream((*self.retry).clone(), factory))
     }
 }
 
-async fn open_openai_stream(
-    http: reqwest::Client,
-    url: reqwest::Url,
-    headers: HeaderMap,
-    body: Bytes,
-) -> Result<LlmStream, ProviderError> {
-    let response = http
-        .post(url)
-        .headers(headers)
-        .body(body)
-        .send()
-        .await
-        .map_err(|e| ProviderError::transport(format!("request send failed: {e}")))?;
-
-    let request_id = extract_request_id(response.headers());
-    let status = response.status();
-    if !status.is_success() {
-        let detail = response.text().await.unwrap_or_default();
-        return Err(ProviderError::from_status(
-            status.as_u16(),
-            request_id,
-            error_detail(&detail),
-        ));
-    }
-
-    // Stamp the captured request-id onto mid-stream transport errors too (§8.8).
-    let rid = request_id.clone();
-    let byte_stream = response.bytes_stream().map(move |chunk| {
-        chunk.map_err(|e| {
-            let mut err = ProviderError::transport(format!("stream read failed: {e}"));
-            err.request_id = rid.clone();
-            err
-        })
-    });
-    let events = decode_openai(frame_stream(byte_stream), request_id);
-    Ok(Box::pin(events))
-}
-
 /// In-flight reassembly state for one function-call item.
-#[derive(Debug, Clone, Default)]
+#[derive(Debug)]
 struct ToolItem {
     call_id: String,
     name: String,
@@ -163,23 +126,11 @@ where
                     return;
                 }
             };
-            let Some(data) = frame_data(&frame) else { continue };
-            if data == "[DONE]" {
-                continue;
-            }
-            let value: Value = match serde_json::from_str(&data) {
-                Ok(value) => value,
-                Err(_) => {
-                    // Content-free context only (§8.7).
-                    tracing::warn!(
-                        request_id = request_id.as_deref().unwrap_or_default(),
-                        frame_index,
-                        "openai sse frame failed to parse"
-                    );
-                    yield Err(ProviderError::decode(
-                        request_id.clone(),
-                        "openai sse frame is not valid json",
-                    ));
+            let value = match parse_sse_value(&frame, &request_id, "openai", frame_index) {
+                Ok(Some(value)) => value,
+                Ok(None) => continue,
+                Err(err) => {
+                    yield Err(err);
                     return;
                 }
             };
@@ -379,6 +330,8 @@ mod tests {
     #![allow(clippy::unwrap_used)]
     use super::*;
     use eos_types::JsonObject;
+
+    use crate::sse::frame_stream;
 
     fn discriminant(event: &LlmStreamEvent) -> &'static str {
         match event {

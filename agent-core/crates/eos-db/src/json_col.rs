@@ -33,15 +33,17 @@ pub(crate) fn decode_default<T: DeserializeOwned + Default>(
 }
 
 /// Null-preserving decode for the nullable `agent_run` columns
-/// (initial_messages, message_history, terminal_tool_result): NULL/empty stays
-/// `None` — `agent_run_store` does not coerce to `[]`.
+/// (`initial_messages`, `message_history`, `terminal_tool_result`): NULL/empty
+/// stays `None` — `agent_run_store` does not coerce to `[]`.
 ///
 /// # Errors
 /// Returns [`DbError::JsonDecode`] if a non-empty cell is malformed JSON.
 pub(crate) fn decode_opt<T: DeserializeOwned>(text: Option<&str>) -> Result<Option<T>, DbError> {
     match text {
         None | Some("") => Ok(None),
-        Some(s) => serde_json::from_str(s).map(Some).map_err(DbError::JsonDecode),
+        Some(s) => serde_json::from_str(s)
+            .map(Some)
+            .map_err(DbError::JsonDecode),
     }
 }
 

@@ -7,10 +7,14 @@
 
 use std::pin::Pin;
 
-use futures::Stream;
+use bytes::Bytes;
+use futures::stream::BoxStream;
+use futures::{Stream, StreamExt};
+use reqwest::header::HeaderMap;
 
 use crate::error::ProviderError;
 use crate::events::LlmStreamEvent;
+use crate::sse::frame_stream;
 use crate::types::LlmRequest;
 
 /// A streamed model invocation: a single linear stream of normalized events or
@@ -62,6 +66,58 @@ pub(crate) fn error_detail(body: &str) -> String {
         return "no response body".to_owned();
     }
     trimmed.chars().take(500).collect()
+}
+
+/// Open one streaming attempt — the shared transport/SSE plumbing for both
+/// providers. POST the request, capture the request-id **before** the body is
+/// consumed (§8.8), map a non-2xx status, stamp the request-id onto mid-stream
+/// transport errors, then decode the SSE frames via the provider-specific
+/// `decode` closure. This is plumbing, not projection: the per-provider encode
+/// and SSE→event mapping stay in `anthropic.rs`/`openai.rs`.
+pub(crate) async fn open_stream<D, R>(
+    http: reqwest::Client,
+    url: reqwest::Url,
+    headers: HeaderMap,
+    body: Bytes,
+    decode: D,
+) -> Result<LlmStream, ProviderError>
+where
+    D: FnOnce(BoxStream<'static, Result<String, ProviderError>>, Option<String>) -> R,
+    R: Stream<Item = Result<LlmStreamEvent, ProviderError>> + Send + 'static,
+{
+    let response = http
+        .post(url)
+        .headers(headers)
+        .body(body)
+        .send()
+        .await
+        .map_err(|e| ProviderError::transport(format!("request send failed: {e}")))?;
+
+    let request_id = extract_request_id(response.headers());
+    let status = response.status();
+    if !status.is_success() {
+        let detail = response.text().await.unwrap_or_default();
+        return Err(ProviderError::from_status(
+            status.as_u16(),
+            request_id,
+            error_detail(&detail),
+        ));
+    }
+
+    // Stamp the captured request-id onto mid-stream transport errors too, so it
+    // survives the streaming error path (§8.8), not just decode errors.
+    let rid = request_id.clone();
+    let byte_stream = response.bytes_stream().map(move |chunk| {
+        chunk.map_err(|e| {
+            let mut err = ProviderError::transport(format!("stream read failed: {e}"));
+            err.request_id = rid.clone();
+            err
+        })
+    });
+    Ok(Box::pin(decode(
+        frame_stream(byte_stream).boxed(),
+        request_id,
+    )))
 }
 
 #[cfg(test)]

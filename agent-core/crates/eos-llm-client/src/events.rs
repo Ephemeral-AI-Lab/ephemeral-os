@@ -67,9 +67,11 @@ pub enum StopReason {
 }
 
 impl StopReason {
-    /// Parse a provider `stop_reason` string.
+    /// Parse a provider `stop_reason` string. Crate-internal: the decoders
+    /// construct `StopReason` from the wire here; consumers receive the parsed
+    /// `Option<StopReason>` on the event, never a raw provider string.
     #[must_use]
-    pub fn parse(raw: &str) -> Self {
+    pub(crate) fn parse(raw: &str) -> Self {
         match raw {
             "end_turn" => Self::EndTurn,
             "max_tokens" => Self::MaxTokens,

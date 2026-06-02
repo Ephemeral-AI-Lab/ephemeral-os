@@ -45,7 +45,7 @@ async def test_dns_systemd_resolved_fallback(iws_clean_sandbox) -> None:
         )
         assert enter.get("success") is True, enter
         try:
-            shown = await _iws_rpc.shell(
+            shown = await _iws_rpc.exec_command(
                 sandbox_id, "agent-A", "cat /etc/resolv.conf",
             )
             content = shown.get("stdout", "") or ""

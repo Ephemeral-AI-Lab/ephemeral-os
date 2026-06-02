@@ -37,14 +37,14 @@ async def test_no_ipv6_default_route(iws_clean_sandbox) -> None:
     )
     assert enter.get("success") is True, enter
     try:
-        routes = await _iws_rpc.shell(
+        routes = await _iws_rpc.exec_command(
             sandbox_id, "agent-A",
             "ip -6 route show default 2>/dev/null || true",
         )
         assert (routes.get("stdout", "") or "").strip() == "", (
             "no IPv6 default route should be visible", routes,
         )
-        accept_ra = await _iws_rpc.shell(
+        accept_ra = await _iws_rpc.exec_command(
             sandbox_id, "agent-A",
             "cat /proc/sys/net/ipv6/conf/eth0/accept_ra 2>/dev/null || echo 0",
         )

@@ -108,7 +108,7 @@ async def test_lowerdir_bytes_and_inodes_constant_as_n_grows(iws_clean_sandbox) 
             # Each workspace writes M MiB into its own upper.
             fills = await asyncio.gather(
                 *(
-                    _iws_rpc.shell(
+                    _iws_rpc.exec_command(
                         sandbox_id,
                         agent,
                         f"dd if=/dev/zero of=/testbed/iws-fill.bin "

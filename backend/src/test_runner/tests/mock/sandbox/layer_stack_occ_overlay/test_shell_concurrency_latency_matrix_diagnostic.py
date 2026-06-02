@@ -20,7 +20,7 @@ from typing import Any
 import pytest
 
 import sandbox.api as sandbox_api
-from sandbox.api import SandboxCaller, ShellRequest
+from sandbox.api import ExecCommandRequest, SandboxCaller
 
 
 pytestmark = [
@@ -40,8 +40,7 @@ _BACKGROUND = os.getenv("EOS_SHELL_LATENCY_MATRIX_BACKGROUND") == "1"
 _ROOT = "/testbed/.ephemeralos/sweevo-mock/shell_concurrency_latency_matrix"
 _ARTIFACT_DIR = Path(".sweevo_runs/manual_diagnostics/shell_concurrency_latency")
 _TIMING_KEYS = (
-    "api.shell.dispatch_total_s",
-    "api.shell.total_s",
+    "api.exec_command.dispatch_total_s",
     "command_exec.total_s",
     "command_exec.mount_workspace_s",
     "command_exec.run_command_s",
@@ -64,7 +63,7 @@ async def test_shell_concurrency_latency_matrix(workspace: dict[str, object]) ->
     for level in _LEVELS:
         wall_start = time.monotonic()
         results = await asyncio.gather(
-            *(_run_shell(sandbox_id, level, index) for index in range(level))
+            *(_run_exec_command(sandbox_id, level, index) for index in range(level))
         )
         wall_s = time.monotonic() - wall_start
         groups.append(_summarize_group(level, wall_s, results))
@@ -90,7 +89,7 @@ async def test_shell_concurrency_latency_matrix(workspace: dict[str, object]) ->
     )
 
 
-async def _run_shell(
+async def _run_exec_command(
     sandbox_id: str,
     level: int,
     index: int,
@@ -107,16 +106,15 @@ async def _run_shell(
         f"cat {_ROOT}/c{level}/worker-{index:02d}.txt"
     )
     wall_start = time.monotonic()
-    result = await sandbox_api.shell(
+    result = await sandbox_api.exec_command(
         sandbox_id,
-        ShellRequest(
-            command=command,
-            cwd="/testbed",
+        ExecCommandRequest(
+            cmd=command,
             timeout=120,
             caller=caller,
-            background=_BACKGROUND,
             description=(
-                f"shell latency diagnostic mode={_mode_slug()} concurrency={level}"
+                f"exec_command latency diagnostic mode={_mode_slug()} "
+                f"concurrency={level}"
             ),
         ),
     )

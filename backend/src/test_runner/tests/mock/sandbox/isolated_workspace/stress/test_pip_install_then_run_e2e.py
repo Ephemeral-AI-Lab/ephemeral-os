@@ -33,7 +33,7 @@ async def test_pip_install_then_run_e2e(iws_clean_sandbox) -> None:
     )
     assert opened.get("success") is True, opened
     try:
-        install = await _iws_rpc.shell(
+        install = await _iws_rpc.exec_command(
             sandbox_id, "agent-A",
             "set -o pipefail; "
             "PIP_DEFAULT_TIMEOUT=120 "
@@ -45,7 +45,7 @@ async def test_pip_install_then_run_e2e(iws_clean_sandbox) -> None:
         assert install.get("status") == "ok", install
         assert install.get("exit_code") == 0, install
 
-        run = await _iws_rpc.shell(
+        run = await _iws_rpc.exec_command(
             sandbox_id, "agent-A",
             "PYTHONPATH=/tmp/pkg python3 -c "
             "\"import httpx; "

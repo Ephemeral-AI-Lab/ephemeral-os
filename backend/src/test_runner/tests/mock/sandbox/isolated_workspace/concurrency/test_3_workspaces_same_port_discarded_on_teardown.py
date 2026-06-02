@@ -83,7 +83,7 @@ async def test_3_workspaces_same_port_discarded_on_teardown(
         # port. Independent netns ⇒ three successful binds, no EADDRINUSE.
         launches = await asyncio.gather(
             *(
-                _iws_rpc.shell(
+                _iws_rpc.exec_command(
                     sandbox_id, agent,
                     f"printf '{_served_body(agent)}\\n' > {_served_path(agent)} && "
                     f"cd /testbed && "
@@ -104,10 +104,10 @@ async def test_3_workspaces_same_port_discarded_on_teardown(
         # Each agent fetches ITS OWN artifact from its own loopback server.
         for agent in _AGENTS:
             for _attempt in range(12):
-                res = await _iws_rpc.complete_shell(
+                res = await _iws_rpc.complete_exec_command(
                     sandbox_id,
                     agent,
-                    await _iws_rpc.shell(
+                    await _iws_rpc.exec_command(
                         sandbox_id,
                         agent,
                         f"curl -s --max-time 3 http://127.0.0.1:{_PORT}/served-{agent}.html "
@@ -132,10 +132,10 @@ async def test_3_workspaces_same_port_discarded_on_teardown(
             if isinstance(agent, str) and isinstance(ns_ip, str):
                 ip_by_agent[agent] = ns_ip
         assert set(_AGENTS) <= set(ip_by_agent), ip_by_agent
-        cross = await _iws_rpc.complete_shell(
+        cross = await _iws_rpc.complete_exec_command(
             sandbox_id,
             "agent-A",
-            await _iws_rpc.shell(
+            await _iws_rpc.exec_command(
                 sandbox_id, "agent-A",
                 f"curl -s --max-time 2 http://{ip_by_agent['agent-B']}:{_PORT}/ "
                 "|| echo BLOCKED",

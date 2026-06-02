@@ -12,7 +12,7 @@ use eos_state::{
 use crate::error::DbError;
 use crate::rows::{enum_to_db, row_to_workflow, WorkflowRow};
 
-/// SQLite repository for workflows. Returns frozen `Workflow` DTOs.
+/// `SQLite` repository for workflows. Returns frozen `Workflow` DTOs.
 #[derive(Debug)]
 pub struct SqlWorkflowStore {
     pool: SqlitePool,

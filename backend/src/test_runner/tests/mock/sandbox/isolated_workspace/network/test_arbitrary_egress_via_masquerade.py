@@ -40,7 +40,7 @@ async def test_arbitrary_egress_via_masquerade(iws_clean_sandbox) -> None:
         # Reaching the bridge gateway proves both:
         #   1. The veth + masquerade postrouting is wired.
         #   2. conntrack is tracking the connection (return path works).
-        probe = await _iws_rpc.shell(
+        probe = await _iws_rpc.exec_command(
             sandbox_id, "agent-A",
             "ping -c 1 -W 3 10.244.0.1 >/dev/null 2>&1 && echo OK || echo FAIL",
         )

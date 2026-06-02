@@ -47,7 +47,7 @@ async def test_concurrent_default_and_isolated_in_same_agent(
     try:
         # Race a default-flow write and an isolated shell write.
         async def isolated_write() -> dict:
-            return await _iws_rpc.shell(
+            return await _iws_rpc.exec_command(
                 sandbox_id, "agent-A",
                 f"echo isolated-{token} > {iso_path} && cat {iso_path}",
             )
@@ -72,7 +72,7 @@ async def test_concurrent_default_and_isolated_in_same_agent(
         assert st.get("manifest_version") == initial_manifest, st
 
         # Inside isolated ws, the default-path write is invisible.
-        peek = await _iws_rpc.shell(
+        peek = await _iws_rpc.exec_command(
             sandbox_id, "agent-A", f"cat {default_path} 2>&1 || echo MISSING",
         )
         assert "MISSING" in (peek.get("stdout", "") or ""), peek

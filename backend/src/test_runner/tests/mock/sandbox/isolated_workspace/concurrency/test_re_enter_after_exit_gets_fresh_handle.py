@@ -42,7 +42,7 @@ async def test_re_enter_after_exit_gets_fresh_handle(
         sandbox_id, "agent-A", layer_stack_root=_iws_rpc.IWS_LAYER_STACK_ROOT,
     )
     assert first.get("success") is True, first
-    write = await _iws_rpc.shell(
+    write = await _iws_rpc.exec_command(
         sandbox_id, "agent-A", f"echo first > {scratch}",
     )
     assert write.get("success") is True, write
@@ -54,7 +54,7 @@ async def test_re_enter_after_exit_gets_fresh_handle(
     assert second.get("success") is True, second
     try:
         # Scratch file MUST be gone — the upperdir was discarded.
-        peek = await _iws_rpc.shell(
+        peek = await _iws_rpc.exec_command(
             sandbox_id, "agent-A", f"cat {scratch} 2>&1 || echo MISSING",
         )
         assert "MISSING" in (peek.get("stdout", "") or ""), peek

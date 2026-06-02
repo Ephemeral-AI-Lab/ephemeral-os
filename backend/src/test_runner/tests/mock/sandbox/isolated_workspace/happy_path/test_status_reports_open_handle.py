@@ -53,7 +53,7 @@ async def test_status_reports_open_handle(iws_clean_sandbox, iws_audit_jsonl) ->
 
         # Activity timestamp must advance after a tool call.
         await asyncio.sleep(0.05)
-        await _iws_rpc.shell(sandbox_id, agent_id, "true")
+        await _iws_rpc.exec_command(sandbox_id, agent_id, "true")
         second = await _iws_rpc.status(sandbox_id, agent_id)
         second_activity = float(second.get("last_activity") or 0.0)
         assert second_activity > first_activity, (first, second)

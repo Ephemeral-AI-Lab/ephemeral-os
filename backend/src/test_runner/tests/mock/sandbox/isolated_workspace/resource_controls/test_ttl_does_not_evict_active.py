@@ -54,7 +54,7 @@ async def test_ttl_does_not_evict_active(
         # spans ~4 s, well past TTL=2 s; eviction must NOT fire.
         for _ in range(5):
             await asyncio.sleep(0.8)
-            tick = await _iws_rpc.shell(sandbox_id, "agent-A", "true")
+            tick = await _iws_rpc.exec_command(sandbox_id, "agent-A", "true")
             assert tick.get("success") is True, tick
         jsonl = await iws_audit_jsonl()
         _iws_invariants.assert_no_event(

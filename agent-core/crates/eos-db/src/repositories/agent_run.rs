@@ -13,7 +13,7 @@ use crate::error::DbError;
 use crate::json_col;
 use crate::rows::{row_to_agent_run, AgentRunRow};
 
-/// SQLite repository for agent runs.
+/// `SQLite` repository for agent runs.
 #[derive(Debug)]
 pub struct SqlAgentRunStore {
     pool: SqlitePool,

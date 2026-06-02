@@ -1333,7 +1333,7 @@ fn finalize_command_workspace(
     let mut timings = resource_timings(&manifest, path_kinds.len());
     insert_occ_route_timings(&mut timings, route_metrics, route_s, occ_s);
     let mut response =
-        guarded_changeset_response("shell", &changeset, timings, Instant::now(), None);
+        guarded_changeset_response("exec_command", &changeset, timings, Instant::now(), None);
     response["status"] = json!(status);
     response["exit_code"] = json!(exit_code);
     response["output"] = json!({"stdout": stdout, "stderr": ""});

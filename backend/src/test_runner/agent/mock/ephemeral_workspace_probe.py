@@ -426,8 +426,8 @@ async def run_ephemeral_policy_probe(
         "outside_command_has_public_timing": (
             "api.exec_command.dispatch_total_s" in _timings(hosts)
             and "api.exec_command.dispatch_total_s" in _timings(tmp_write)
-            and "api.shell.total_s" in _timings(hosts)
-            and "api.shell.total_s" in _timings(tmp_write)
+            and "api.exec_command.total_s" in _timings(hosts)
+            and "api.exec_command.total_s" in _timings(tmp_write)
         ),
     }
     return await _write_summary(
@@ -1284,7 +1284,7 @@ def _total_timing_key(tool_name: str) -> str:
         "edit_file": "api.edit.total_s",
         "grep": "api.grep.total_s",
         "glob": "api.glob.total_s",
-        "shell": "api.shell.total_s",
+        "exec_command": "api.exec_command.total_s",
     }.get(tool_name, "command_exec.total_s")
 
 

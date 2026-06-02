@@ -64,7 +64,7 @@ async def test_cross_agent_unreachable(iws_clean_sandbox, iws_audit_jsonl) -> No
         assert ip_by_agent["agent-A"] != ip_by_agent["agent-B"], ip_by_agent
 
         # From ws-A, attempt to reach ws-B's IP. Both probes must fail.
-        ping = await _iws_rpc.shell(
+        ping = await _iws_rpc.exec_command(
             sandbox_id, "agent-A",
             f"ping -c 1 -W 2 {ip_by_agent['agent-B']} >/dev/null 2>&1; echo $?",
         )
@@ -75,7 +75,7 @@ async def test_cross_agent_unreachable(iws_clean_sandbox, iws_audit_jsonl) -> No
             ping,
         )
 
-        curl = await _iws_rpc.shell(
+        curl = await _iws_rpc.exec_command(
             sandbox_id, "agent-A",
             f"curl -s --max-time 2 -o /dev/null -w '%{{http_code}}' "
             f"http://{ip_by_agent['agent-B']}/ || echo BLOCKED",

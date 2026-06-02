@@ -49,7 +49,7 @@ async def test_rfc1918_egress_drop_opt_in(iws_clean_sandbox) -> None:
         )
         assert enter.get("success") is True, enter
         try:
-            blocked = await _iws_rpc.shell(
+            blocked = await _iws_rpc.exec_command(
                 sandbox_id, "agent-A",
                 "curl -s --max-time 2 -o /dev/null -w '%{http_code}' "
                 "http://10.99.99.99/ || echo BLOCKED",

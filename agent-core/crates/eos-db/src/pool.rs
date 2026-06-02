@@ -1,4 +1,4 @@
-//! `SqlitePool` builder: reject non-SQLite urls, apply PRAGMA discipline, create
+//! `SqlitePool` builder: reject non-`SQLite` urls, apply PRAGMA discipline, create
 //! the parent directory, and run the embedded migrations.
 
 use std::str::FromStr;
@@ -13,7 +13,7 @@ use crate::error::DbError;
 
 /// Defence-in-depth guard: reject a network database url (GC-eos-db-04). The
 /// primary fail-fast lives in `eos-config::DatabaseUrl::parse`; a `DatabaseConfig`
-/// therefore cannot normally carry a non-SQLite url, but this re-check keeps the
+/// therefore cannot normally carry a non-`SQLite` url, but this re-check keeps the
 /// invariant at the pool boundary too.
 pub(crate) fn ensure_sqlite_url(url: &str) -> Result<(), DbError> {
     let lower = url.to_ascii_lowercase();
@@ -26,7 +26,7 @@ pub(crate) fn ensure_sqlite_url(url: &str) -> Result<(), DbError> {
     Ok(())
 }
 
-/// Open the SQLite pool: reject Postgres, set WAL / foreign-keys / busy-timeout
+/// Open the `SQLite` pool: reject Postgres, set WAL / foreign-keys / busy-timeout
 /// PRAGMAs on every connection, create the parent directory for a file-backed
 /// db, and run `migrations/`.
 pub(crate) async fn open_pool(config: &DatabaseConfig) -> Result<SqlitePool, DbError> {
@@ -68,7 +68,7 @@ pub(crate) async fn open_pool(config: &DatabaseConfig) -> Result<SqlitePool, DbE
 mod tests {
     use super::*;
 
-    // AC-eos-db-06: a non-SQLite url is rejected before any connection. The
+    // AC-eos-db-06: a non-`SQLite` url is rejected before any connection. The
     // config layer also rejects it, so this guards the pool boundary directly.
     #[test]
     fn postgres_url_rejected() {

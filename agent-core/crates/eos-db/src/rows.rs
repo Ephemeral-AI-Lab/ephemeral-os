@@ -134,15 +134,18 @@ where
     raw.map(|s| parse_id(field, s)).transpose()
 }
 
-fn parse_enum<T: serde::de::DeserializeOwned>(field: &'static str, raw: &str) -> Result<T, DbError> {
+fn parse_enum<T: serde::de::DeserializeOwned>(
+    field: &'static str,
+    raw: &str,
+) -> Result<T, DbError> {
     serde_json::from_value(JsonValue::String(raw.to_owned())).map_err(|_| DbError::InvalidEnum {
         field,
         value: raw.to_owned(),
     })
 }
 
-/// Serialize a snake_case enum to its wire string for binding. Infallible: every
-/// status/stage/reason enum serializes to a JSON string (a true invariant).
+/// Serialize a `snake_case` enum to its wire string for binding. Infallible:
+/// every status/stage/reason enum serializes to a JSON string (a true invariant).
 pub(crate) fn enum_to_db<T: serde::Serialize>(value: &T) -> String {
     serde_json::to_value(value)
         .ok()
@@ -392,9 +395,24 @@ mod tests {
         assert_eq!(
             got.iter().map(ids).collect::<Vec<_>>(),
             vec![
-                (TaskOutcomeStatus::Failed, ExecutionRole::Generator, "g1".to_owned(), "x".to_owned()),
-                (TaskOutcomeStatus::Success, ExecutionRole::Reducer, "r1".to_owned(), "y".to_owned()),
-                (TaskOutcomeStatus::Success, ExecutionRole::Generator, "g2".to_owned(), "z".to_owned()),
+                (
+                    TaskOutcomeStatus::Failed,
+                    ExecutionRole::Generator,
+                    "g1".to_owned(),
+                    "x".to_owned()
+                ),
+                (
+                    TaskOutcomeStatus::Success,
+                    ExecutionRole::Reducer,
+                    "r1".to_owned(),
+                    "y".to_owned()
+                ),
+                (
+                    TaskOutcomeStatus::Success,
+                    ExecutionRole::Generator,
+                    "g2".to_owned(),
+                    "z".to_owned()
+                ),
                 (
                     TaskOutcomeStatus::Success,
                     ExecutionRole::Reducer,
@@ -422,7 +440,12 @@ mod tests {
         assert_eq!(
             got.iter().map(ids).collect::<Vec<_>>(),
             vec![
-                (TaskOutcomeStatus::Success, ExecutionRole::Reducer, "r1".to_owned(), "ok".to_owned()),
+                (
+                    TaskOutcomeStatus::Success,
+                    ExecutionRole::Reducer,
+                    "r1".to_owned(),
+                    "ok".to_owned()
+                ),
                 (
                     TaskOutcomeStatus::Failed,
                     ExecutionRole::Generator,

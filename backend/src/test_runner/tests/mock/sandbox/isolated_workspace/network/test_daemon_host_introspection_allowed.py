@@ -53,7 +53,7 @@ async def test_daemon_host_introspection_allowed(
         assert ns_ip
 
         # Start an HTTP server inside the workspace.
-        launch = await _iws_rpc.shell(
+        launch = await _iws_rpc.exec_command(
             sandbox_id, "agent-A",
             "cd /tmp && exec python3 -m http.server 18181 >/tmp/iws_http.log 2>&1",
             wait=False,

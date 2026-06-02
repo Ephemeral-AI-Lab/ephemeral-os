@@ -48,8 +48,8 @@ async def test_map_lock_serializes_enter_exit_only(
         loop = asyncio.get_running_loop()
         t0 = loop.time()
         res = await asyncio.gather(
-            _iws_rpc.shell(sandbox_id, "agent-A", "sleep 0.7"),
-            _iws_rpc.shell(sandbox_id, "agent-B", "sleep 0.7"),
+            _iws_rpc.exec_command(sandbox_id, "agent-A", "sleep 0.7"),
+            _iws_rpc.exec_command(sandbox_id, "agent-B", "sleep 0.7"),
         )
         wall = loop.time() - t0
         assert all(r.get("success") for r in res), res

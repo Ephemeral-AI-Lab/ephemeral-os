@@ -30,7 +30,7 @@ import pytest
 
 import sandbox.api as sandbox_api
 from test_runner.benchmarks.sweevo.models import SWEEvoInstance
-from sandbox.api import ReadFileRequest, SandboxCaller, ShellRequest
+from sandbox.api import ExecCommandRequest, ReadFileRequest, SandboxCaller
 
 from test_runner.audit.events import EventType
 from test_runner.scenarios import SCENARIO_REGISTRY
@@ -230,16 +230,15 @@ async def _assert_final_workspace_state(
     expected_edit_content = "alpha=new\nbeta=new\n"
     assert edit_read.content == expected_edit_content
 
-    shell_result = await sandbox_api.shell(
+    command_result = await sandbox_api.exec_command(
         sandbox_id,
-        ShellRequest(
-            command=f"cat {edit_target}",
-            cwd="/testbed",
+        ExecCommandRequest(
+            cmd=f"cat {edit_target}",
             timeout=60,
             caller=caller,
-            description="auto-squash commit-resume final shell readback",
+            description="auto-squash commit-resume final exec_command readback",
         ),
     )
-    assert shell_result.success
-    assert shell_result.exit_code == 0
-    assert shell_result.stdout == expected_edit_content
+    assert command_result.success
+    assert command_result.exit_code == 0
+    assert command_result.output.stdout == expected_edit_content

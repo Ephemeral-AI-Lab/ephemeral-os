@@ -35,7 +35,7 @@ async def test_daemon_restart_reaps_orphan_scratch(iws_clean_sandbox) -> None:
     )
     assert enter.get("success") is True, enter
     # Write something into the upperdir so the orphan dir is non-empty.
-    write = await _iws_rpc.shell(
+    write = await _iws_rpc.exec_command(
         sandbox_id, "agent-A", "echo orphan > /testbed/scratch.txt",
     )
     assert write.get("success") is True, write

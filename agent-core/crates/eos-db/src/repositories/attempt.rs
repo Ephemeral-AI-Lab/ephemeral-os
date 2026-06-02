@@ -13,7 +13,7 @@ use crate::error::DbError;
 use crate::json_col;
 use crate::rows::{enum_to_db, row_to_attempt, AttemptRow};
 
-/// SQLite repository for attempts. Returns frozen `Attempt` DTOs.
+/// `SQLite` repository for attempts. Returns frozen `Attempt` DTOs.
 #[derive(Debug)]
 pub struct SqlAttemptStore {
     pool: SqlitePool,

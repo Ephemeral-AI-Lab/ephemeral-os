@@ -22,9 +22,7 @@ pub type Labels = BTreeMap<String, String>;
 /// The sandbox backend selector (spec-conventions §4: `sandbox_provider`, never
 /// bare `provider`). `#[non_exhaustive]` so dispatch sites carry a catch-all
 /// arm, but the Rust migration ships only `Docker`.
-#[derive(
-    Debug, Clone, Copy, PartialEq, Eq, Hash, Default, Serialize, Deserialize, JsonSchema,
-)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 #[non_exhaustive]
 pub enum ProviderKind {

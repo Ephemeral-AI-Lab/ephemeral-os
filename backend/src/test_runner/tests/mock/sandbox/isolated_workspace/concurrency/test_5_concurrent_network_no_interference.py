@@ -50,7 +50,7 @@ async def test_5_concurrent_network_no_interference(
         # 5 servers on the same port — no EADDRINUSE thanks to per-ws netns.
         launches = await asyncio.gather(
             *(
-                _iws_rpc.shell(
+                _iws_rpc.exec_command(
                     sandbox_id, agent,
                     "cd /testbed && exec python3 -m http.server 8080",
                     wait=False,
@@ -69,10 +69,10 @@ async def test_5_concurrent_network_no_interference(
         # Each agent reaches localhost:8080 successfully.
         for agent in _AGENTS:
             for _attempt in range(12):
-                res = await _iws_rpc.complete_shell(
+                res = await _iws_rpc.complete_exec_command(
                     sandbox_id,
                     agent,
-                    await _iws_rpc.shell(
+                    await _iws_rpc.exec_command(
                         sandbox_id, agent,
                         "curl -s --max-time 3 -o /dev/null -w '%{http_code}' "
                         "http://127.0.0.1:8080/ || echo BAD",
@@ -98,10 +98,10 @@ async def test_5_concurrent_network_no_interference(
         assert set(_AGENTS) <= set(ip_by_agent), ip_by_agent
 
         peer_ip = ip_by_agent["agent-B"]
-        cross = await _iws_rpc.complete_shell(
+        cross = await _iws_rpc.complete_exec_command(
             sandbox_id,
             "agent-A",
-            await _iws_rpc.shell(
+            await _iws_rpc.exec_command(
                 sandbox_id, "agent-A",
                 f"curl -s --max-time 2 http://{peer_ip}:8080/ || echo BLOCKED",
             ),

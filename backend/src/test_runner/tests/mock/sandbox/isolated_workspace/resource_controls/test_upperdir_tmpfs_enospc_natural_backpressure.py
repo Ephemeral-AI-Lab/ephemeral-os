@@ -44,7 +44,7 @@ async def test_upperdir_tmpfs_enospc_natural_backpressure(
     assert opened.get("success") is True, opened
     try:
         # Write a small file first to prove the upperdir is writable.
-        baseline = await _iws_rpc.shell(
+        baseline = await _iws_rpc.exec_command(
             sandbox_id, "agent-A",
             "echo baseline > /testbed/probe.txt && cat /testbed/probe.txt",
         )
@@ -58,12 +58,12 @@ async def test_upperdir_tmpfs_enospc_natural_backpressure(
         #   * The upperdir isn't size-limited -> dd succeeds; that's OK too
         #     since the assertion is about "daemon survives", not about
         #     enforcing a tmpfs ceiling we don't yet implement.
-        fill = await _iws_rpc.shell(
+        fill = await _iws_rpc.exec_command(
             sandbox_id, "agent-A",
             "dd if=/dev/zero of=/testbed/bigfile bs=1M count=64 2>&1 || true",
         )
         # Daemon stays healthy regardless of dd's exit.
-        readback = await _iws_rpc.shell(
+        readback = await _iws_rpc.exec_command(
             sandbox_id, "agent-A", "cat /testbed/probe.txt",
         )
         assert readback.get("success") is True, readback

@@ -26,7 +26,6 @@ pub(crate) struct MockAdapter {
     project_dir: Option<String>,
     exec_handler: ExecHandler,
     calls: Arc<Mutex<Vec<String>>>,
-    put_archives: Arc<Mutex<Vec<(String, Vec<u8>)>>>,
     tcp_endpoint: Option<DaemonTcpEndpoint>,
     tcp_resolves: Arc<AtomicUsize>,
     tcp_delay_ms: u64,
@@ -52,7 +51,6 @@ impl MockAdapter {
                 success: true,
             }),
             calls: Arc::new(Mutex::new(Vec::new())),
-            put_archives: Arc::new(Mutex::new(Vec::new())),
             tcp_endpoint: None,
             tcp_resolves: Arc::new(AtomicUsize::new(0)),
             tcp_delay_ms: 0,
@@ -61,11 +59,6 @@ impl MockAdapter {
 
     pub(crate) fn with_id(mut self, id: &str) -> Self {
         self.id = id.to_owned();
-        self
-    }
-
-    pub(crate) fn with_project_dir(mut self, dir: &str) -> Self {
-        self.project_dir = Some(dir.to_owned());
         self
     }
 
@@ -90,11 +83,6 @@ impl MockAdapter {
     /// A shared handle to the recorded exec command log.
     pub(crate) fn call_log(&self) -> Arc<Mutex<Vec<String>>> {
         Arc::clone(&self.calls)
-    }
-
-    /// A shared handle to the recorded `put_archive` (dest_dir, bytes) log.
-    pub(crate) fn put_archive_log(&self) -> Arc<Mutex<Vec<(String, Vec<u8>)>>> {
-        Arc::clone(&self.put_archives)
     }
 
     /// A shared handle to the `daemon_tcp_endpoint` resolve counter — grab it
@@ -216,13 +204,9 @@ impl ProviderAdapter for MockAdapter {
     async fn put_archive(
         &self,
         _id: &SandboxId,
-        tar_stream: &[u8],
-        dest_dir: &str,
+        _tar_stream: &[u8],
+        _dest_dir: &str,
     ) -> Result<(), SandboxHostError> {
-        self.put_archives
-            .lock()
-            .expect("mock put_archive lock not poisoned")
-            .push((dest_dir.to_owned(), tar_stream.to_vec()));
         Ok(())
     }
 

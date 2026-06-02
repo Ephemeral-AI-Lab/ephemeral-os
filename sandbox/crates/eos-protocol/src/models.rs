@@ -96,18 +96,6 @@ pub struct EditFileArgs {
     pub edits: Vec<SearchReplaceEdit>,
 }
 
-/// `shell` request args. Key rename: dataclass `timeout` -> wire
-/// `timeout_seconds`. `cwd` defaults `"."` at the wrapper.
-/// `// PORT api/tool/shell.py:29,49-56`
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct ShellArgs {
-    pub command: String,
-    pub cwd: String,
-    pub timeout_seconds: Option<i64>,
-    #[serde(default, skip_serializing_if = "is_false")]
-    pub background: bool,
-}
-
 /// Public command output payload.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct CommandOutput {
@@ -240,26 +228,6 @@ pub struct EditFileResult {
     pub applied_edits: i64,
 }
 
-/// `shell` response (`GuardedResultBase` + exit/stdout/stderr/warnings).
-/// `// PORT backend/src/sandbox/shared/models.py:212-217`
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct ShellResult {
-    pub success: bool,
-    pub workspace: String,
-    pub timings: Map<String, Value>,
-    pub conflict: Option<ConflictInfo>,
-    pub conflict_reason: Option<String>,
-    pub changed_paths: Vec<String>,
-    pub error: Option<Value>,
-    pub changed_path_kinds: Map<String, Value>,
-    pub mutation_source: String,
-    pub status: String,
-    pub exit_code: i64,
-    pub stdout: String,
-    pub stderr: String,
-    pub warnings: Vec<String>,
-}
-
 /// `glob` response (`SandboxResultBase` + `filenames/num_files/truncated`).
 /// `// PORT backend/src/sandbox/shared/models.py:226-230`
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -386,16 +354,6 @@ mod tests {
 
     #[test]
     fn request_args_wire_shapes() -> TestResult {
-        // shell: timeout -> timeout_seconds rename; background omitted when false.
-        assert_eq!(
-            serde_json::to_value(ShellArgs {
-                command: "ls".to_owned(),
-                cwd: ".".to_owned(),
-                timeout_seconds: None,
-                background: false,
-            })?,
-            serde_json::json!({"command":"ls","cwd":".","timeout_seconds":null})
-        );
         assert_eq!(
             serde_json::to_value(ExecCommandArgs {
                 cmd: "printf hi".to_owned(),

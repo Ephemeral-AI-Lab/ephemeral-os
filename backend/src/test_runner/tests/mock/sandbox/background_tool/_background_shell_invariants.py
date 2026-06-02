@@ -36,10 +36,6 @@ _ERROR_NEEDLES = (
     "manifest references missing layer",
 )
 _DELETED_SHELL_RPC_NEEDLES = (
-    "api.v1.shell.launch",
-    "api.v1.shell.reap",
-    "api.v1.shell.poll",
-    "api.v1.shell.cancel",
     "ShellJob",
     "shell_job",
 )

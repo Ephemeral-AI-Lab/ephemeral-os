@@ -38,6 +38,24 @@ impl FakeTaskStore {
     }
 }
 
+/// Apply a status transition plus the two optional projection updates,
+/// mirroring the Python store's set-status write shape. Shared by both
+/// `set_task_status` and `set_task_status_if_current`.
+fn apply_task_updates(
+    task: &mut Task,
+    status: TaskStatus,
+    outcomes: Option<&[ExecutionTaskOutcome]>,
+    terminal_tool_result: Option<&JsonObject>,
+) {
+    task.status = status;
+    if let Some(o) = outcomes {
+        task.outcomes = o.to_vec();
+    }
+    if let Some(r) = terminal_tool_result {
+        task.terminal_tool_result = Some(r.clone());
+    }
+}
+
 impl Sealed for FakeTaskStore {}
 
 #[async_trait]
@@ -65,13 +83,7 @@ impl TaskStore for FakeTaskStore {
         let task = guard
             .get_mut(id)
             .ok_or_else(|| CoreError::Store(format!("task {id} not found")))?;
-        task.status = status;
-        if let Some(o) = outcomes {
-            task.outcomes = o.to_vec();
-        }
-        if let Some(r) = terminal_tool_result {
-            task.terminal_tool_result = Some(r.clone());
-        }
+        apply_task_updates(task, status, outcomes, terminal_tool_result);
         Ok(task.clone())
     }
 
@@ -90,13 +102,7 @@ impl TaskStore for FakeTaskStore {
         if task.status != expected {
             return Ok(None);
         }
-        task.status = status;
-        if let Some(o) = outcomes {
-            task.outcomes = o.to_vec();
-        }
-        if let Some(r) = terminal_tool_result {
-            task.terminal_tool_result = Some(r.clone());
-        }
+        apply_task_updates(task, status, outcomes, terminal_tool_result);
         Ok(Some(task.clone()))
     }
 }
