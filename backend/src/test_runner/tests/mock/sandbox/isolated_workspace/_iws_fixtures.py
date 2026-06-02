@@ -128,9 +128,9 @@ async def daemon_kill_and_respawn(
 
     Steps:
 
-    1. SIGKILL ``python -m sandbox.daemon`` so its in-memory state is lost
-       without an orderly shutdown (the abnormal-exit case Tier 7 cares
-       about).
+    1. SIGKILL the active sandbox daemon (Rust ``eosd daemon`` or legacy
+       ``python -m sandbox.daemon``) so its in-memory state is lost without an
+       orderly shutdown (the abnormal-exit case Tier 7 cares about).
     2. Wait briefly for the process to vanish.
     3. Issue an ``api.isolated_workspace.enter`` RPC for a throwaway agent —
        this triggers ``ensure_pipeline`` which calls
@@ -142,7 +142,10 @@ async def daemon_kill_and_respawn(
 
     await raw_exec(
         sandbox_id,
-        "pkill -9 -f '^.*python.*-m sandbox\\.daemon' || true",
+        "pkill -9 -f '^/eos/daemon/eosd daemon' || true; "
+        "pkill -9 -f '^.*python.*-m sandbox\\.daemon' || true; "
+        "rm -f /eos/daemon/runtime.sock /eos/daemon/runtime.pid "
+        "/eos/daemon/runtime.env",
         cwd="/",
         timeout=10,
     )
@@ -150,7 +153,9 @@ async def daemon_kill_and_respawn(
     while asyncio.get_event_loop().time() < deadline:
         probe = await raw_exec(
             sandbox_id,
-            "pgrep -f '^.*python.*-m sandbox\\.daemon' >/dev/null && echo UP || echo DOWN",
+            "if pgrep -f '^/eos/daemon/eosd daemon' >/dev/null || "
+            "pgrep -f '^.*python.*-m sandbox\\.daemon' >/dev/null; "
+            "then echo UP; else echo DOWN; fi",
             cwd="/",
             timeout=10,
         )

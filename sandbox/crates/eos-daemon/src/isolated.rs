@@ -509,6 +509,7 @@ pub fn op_test_reset(_args: &Value, _context: DispatchContext<'_>) -> Result<Val
             for agent_id in &agents {
                 let _ = state.session.exit(&AgentId(agent_id.clone()), Some(0.0));
             }
+            state.session.reap_orphan_resources();
             agents
         } else {
             Vec::new()
@@ -891,6 +892,9 @@ fn error_payload(error: &IsolatedError) -> Value {
         } => json!({
             "required_bytes": required_bytes,
             "budget_bytes": budget_bytes,
+        }),
+        IsolatedError::SetupFailed { step } | IsolatedError::SetupTimeout { step } => json!({
+            "failed_step": step,
         }),
         _ => json!({}),
     };

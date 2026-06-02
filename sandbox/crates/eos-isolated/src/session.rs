@@ -10,12 +10,15 @@
 //! `// PORT backend/src/sandbox/isolated_workspace/_control_plane/workspace_handle_lifecycle.py:39-260`
 
 use std::collections::HashMap;
+use std::net::Ipv4Addr;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
-use std::time::{Instant, SystemTime, UNIX_EPOCH};
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use crate::audit::AuditSink;
-use crate::caps::{ResourceCaps, ISOLATED_WORKSPACE_ROOT, PERSISTED_HANDLES_SCHEMA_VERSION};
+use crate::caps::{
+    ResourceCaps, HANDLE_PREFIX, ISOLATED_WORKSPACE_ROOT, PERSISTED_HANDLES_SCHEMA_VERSION,
+};
 use crate::error::IsolatedError;
 use crate::network::{IsolatedNetwork, VethAllocation};
 use serde_json::{json, Value};
@@ -298,6 +301,7 @@ where
                 step: format!("scratch_root: {err}"),
             }
         })?;
+        self.reap_startup_orphans()?;
         Ok(())
     }
 
@@ -434,7 +438,8 @@ where
         };
         let timer = Instant::now();
         let upperdir_bytes = directory_file_bytes(&handle.upperdir);
-        let inspection = self.teardown_handle(&handle, grace_s.unwrap_or(self.caps.exit_grace_s));
+        let (inspection, phases_ms) =
+            self.teardown_handle(&handle, grace_s.unwrap_or(self.caps.exit_grace_s));
         let _ = self.persist_handles();
         let lifetime_s = (monotonic_seconds() - handle.created_at).max(0.0);
         let total_ms = timer.elapsed().as_secs_f64() * 1000.0;
@@ -447,7 +452,7 @@ where
                 "lifetime_s": lifetime_s,
                 "upperdir_bytes_discarded": upperdir_bytes,
                 "total_ms": total_ms,
-                "phases_ms": {},
+                "phases_ms": phases_ms.clone(),
                 "scratch_removed": !handle.scratch_dir.exists(),
                 "inspection": inspection,
             }),
@@ -457,7 +462,7 @@ where
             "evicted_upperdir_bytes": upperdir_bytes,
             "lifetime_s": lifetime_s,
             "total_ms": total_ms,
-            "phases_ms": {},
+            "phases_ms": phases_ms,
             "inspection": inspection,
         }))
     }
@@ -558,6 +563,225 @@ where
         Ok(())
     }
 
+    fn reap_startup_orphans(&mut self) -> Result<(), IsolatedError> {
+        let rows = self.read_persisted_handle_rows();
+        self.handles.clear();
+        self.by_agent.clear();
+        for row in &rows {
+            if let Some(ns_ip) = persisted_ipv4(row, "ns_ip") {
+                let _ = self.network.reserve_persisted_ip(ns_ip);
+            }
+        }
+        for row in &rows {
+            self.reap_persisted_lease(row);
+            self.reap_persisted_holder(row);
+            self.reap_persisted_veth(row);
+            self.reap_persisted_cgroup(row);
+            self.reap_persisted_scratch(row);
+        }
+        self.reap_named_orphans();
+        self.persist_handles()
+    }
+
+    /// Sweep naming-convention resources that no longer have persisted rows.
+    ///
+    /// Test reset and daemon startup call this before accepting new handles.
+    /// On a fresh daemon there are no live handles, so every `eos-iws-*`
+    /// resource left in the host namespace is an orphan candidate.
+    pub fn reap_orphan_resources(&mut self) {
+        self.reap_named_orphans();
+    }
+
+    fn read_persisted_handle_rows(&self) -> Vec<Value> {
+        let Ok(raw) = std::fs::read(self.persisted_handles_path()) else {
+            return Vec::new();
+        };
+        let Ok(payload) = serde_json::from_slice::<Value>(&raw) else {
+            return Vec::new();
+        };
+        if payload.get("schema_version").and_then(Value::as_u64)
+            != Some(u64::from(PERSISTED_HANDLES_SCHEMA_VERSION))
+        {
+            return Vec::new();
+        }
+        payload
+            .get("handles")
+            .and_then(Value::as_array)
+            .cloned()
+            .unwrap_or_default()
+    }
+
+    fn reap_persisted_lease(&self, row: &Value) {
+        let Some(lease_id) = persisted_string(row, "lease_id") else {
+            return;
+        };
+        let timer = Instant::now();
+        let result = self.layer_stack.release_lease(&lease_id);
+        let mut extra = vec![("released", json!(result.as_ref().copied().unwrap_or(false)))];
+        if let Err(error) = result {
+            extra.push(("error", json!(error.to_string())));
+        }
+        self.emit_gc_orphan("lease", lease_id, timer, &extra);
+    }
+
+    fn reap_persisted_holder(&self, row: &Value) {
+        let Some(holder_pid) = persisted_i32(row, "holder_pid") else {
+            return;
+        };
+        if holder_pid <= 0 {
+            return;
+        }
+        let timer = Instant::now();
+        let result = self
+            .runtime
+            .kill_holder(holder_pid, self.caps.exit_grace_s.max(0.0));
+        let mut extra = Vec::new();
+        if let Err(error) = result {
+            extra.push(("error", json!(error.to_string())));
+        }
+        self.emit_gc_orphan("holder", holder_pid.to_string(), timer, &extra);
+    }
+
+    fn reap_persisted_veth(&mut self, row: &Value) {
+        let Some(host_name) = persisted_string(row, "veth_host_name") else {
+            return;
+        };
+        let Some(ns_name) = persisted_string(row, "veth_ns_name") else {
+            return;
+        };
+        let Some(ns_ip) = persisted_ipv4(row, "ns_ip") else {
+            return;
+        };
+        let allocation = VethAllocation {
+            host_name: host_name.clone(),
+            ns_name,
+            ns_ip,
+        };
+        let timer = Instant::now();
+        self.network.teardown_veth(&allocation);
+        let _ = self.network.reserve_persisted_ip(ns_ip);
+        self.emit_gc_orphan("veth", host_name, timer, &[]);
+    }
+
+    fn reap_persisted_cgroup(&self, row: &Value) {
+        let Some(cgroup_path) = persisted_path(row, "cgroup_path") else {
+            return;
+        };
+        if !cgroup_path.exists() {
+            return;
+        }
+        let timer = Instant::now();
+        kill_cgroup_pids(&cgroup_path);
+        let remove_result = std::fs::remove_dir(&cgroup_path);
+        let mut extra = Vec::new();
+        if let Err(error) = remove_result {
+            extra.push(("error", json!(error.to_string())));
+        }
+        self.emit_gc_orphan("cgroup", path_identifier(&cgroup_path), timer, &extra);
+    }
+
+    fn reap_persisted_scratch(&self, row: &Value) {
+        let Some(scratch_dir) = persisted_path(row, "scratch_dir") else {
+            return;
+        };
+        if !scratch_dir.exists() {
+            return;
+        }
+        let timer = Instant::now();
+        let remove_result = std::fs::remove_dir_all(&scratch_dir);
+        let mut extra = Vec::new();
+        if let Err(error) = remove_result {
+            extra.push(("error", json!(error.to_string())));
+        }
+        self.emit_gc_orphan("scratch", path_identifier(&scratch_dir), timer, &extra);
+    }
+
+    fn reap_named_orphans(&mut self) {
+        self.reap_named_veth_orphans();
+        self.reap_named_cgroup_orphans();
+        self.reap_named_scratch_orphans();
+    }
+
+    fn reap_named_veth_orphans(&mut self) {
+        let Ok(entries) = std::fs::read_dir("/sys/class/net") else {
+            return;
+        };
+        for entry in entries.flatten() {
+            let name = entry.file_name().to_string_lossy().into_owned();
+            if !name.starts_with(HANDLE_PREFIX) {
+                continue;
+            }
+            let timer = Instant::now();
+            self.network.teardown_host_veth(&name);
+            self.emit_gc_orphan("veth", name, timer, &[]);
+        }
+    }
+
+    fn reap_named_cgroup_orphans(&self) {
+        let Ok(entries) = std::fs::read_dir("/sys/fs/cgroup") else {
+            return;
+        };
+        for entry in entries.flatten() {
+            let path = entry.path();
+            let name = entry.file_name().to_string_lossy().into_owned();
+            if !name.starts_with(HANDLE_PREFIX) || !path.is_dir() {
+                continue;
+            }
+            let timer = Instant::now();
+            kill_cgroup_pids(&path);
+            let remove_result = std::fs::remove_dir(&path);
+            let mut extra = Vec::new();
+            if let Err(error) = remove_result {
+                extra.push(("error", json!(error.to_string())));
+            }
+            self.emit_gc_orphan("cgroup", name, timer, &extra);
+        }
+    }
+
+    fn reap_named_scratch_orphans(&self) {
+        let Ok(entries) = std::fs::read_dir(self.session_scratch_root()) else {
+            return;
+        };
+        for entry in entries.flatten() {
+            let path = entry.path();
+            let name = entry.file_name().to_string_lossy().into_owned();
+            if name == "manager.json" || !path.is_dir() {
+                continue;
+            }
+            let timer = Instant::now();
+            let remove_result = std::fs::remove_dir_all(&path);
+            let mut extra = Vec::new();
+            if let Err(error) = remove_result {
+                extra.push(("error", json!(error.to_string())));
+            }
+            self.emit_gc_orphan("scratch", name, timer, &extra);
+        }
+    }
+
+    fn emit_gc_orphan(
+        &self,
+        kind: &str,
+        identifier: String,
+        timer: Instant,
+        extra: &[(&str, Value)],
+    ) {
+        let total_ms = timer.elapsed().as_secs_f64() * 1000.0;
+        let mut payload = json!({
+            "kind": kind,
+            "identifier": identifier,
+            "total_ms": total_ms,
+            "phases_ms": {"reap": total_ms},
+        });
+        if let Some(object) = payload.as_object_mut() {
+            for (key, value) in extra {
+                object.insert((*key).to_owned(), value.clone());
+            }
+        }
+        let _ = self
+            .audit
+            .emit("sandbox_isolated_workspace_gc_orphan", payload);
+    }
+
     fn check_host_capacity(&self) -> Result<(), IsolatedError> {
         check_host_capacity_against_budget(
             self.handles.len(),
@@ -587,6 +811,7 @@ where
         );
         phase_start = Instant::now();
         self.network.initialize()?;
+        maybe_inject_phase("install_veth")?;
         handle.veth = Some(
             self.network
                 .install_veth(&handle.workspace_handle_id.0, handle.holder_pid)?,
@@ -596,12 +821,14 @@ where
             phase_start.elapsed().as_secs_f64() * 1000.0,
         );
         phase_start = Instant::now();
+        maybe_inject_phase("overlay_mount")?;
         self.runtime.mount_overlay(handle, &handle.layer_paths)?;
         phases_ms.insert(
             "mount_overlay".to_owned(),
             phase_start.elapsed().as_secs_f64() * 1000.0,
         );
         phase_start = Instant::now();
+        maybe_inject_phase("configure_dns")?;
         let _dns_fallback_applied = self
             .runtime
             .configure_dns(handle, &self.caps.fallback_dns)?;
@@ -634,7 +861,13 @@ where
         let _ = std::fs::remove_dir_all(&handle.scratch_dir);
     }
 
-    fn teardown_handle(&mut self, handle: &WorkspaceHandle, grace_s: f64) -> Value {
+    fn teardown_handle(
+        &mut self,
+        handle: &WorkspaceHandle,
+        grace_s: f64,
+    ) -> (Value, HashMap<String, f64>) {
+        let mut phases_ms = HashMap::new();
+        let phase_start = Instant::now();
         let holder_kill_error = if handle.holder_pid > 0 {
             self.runtime
                 .kill_holder(handle.holder_pid, grace_s)
@@ -643,17 +876,46 @@ where
         } else {
             None
         };
+        phases_ms.insert(
+            "kill_holder".to_owned(),
+            phase_start.elapsed().as_secs_f64() * 1000.0,
+        );
+        let phase_start = Instant::now();
         close_handle_fds(handle);
+        phases_ms.insert(
+            "close_fds".to_owned(),
+            phase_start.elapsed().as_secs_f64() * 1000.0,
+        );
+        let phase_start = Instant::now();
         if let Some(veth) = handle.veth.as_ref() {
             self.network.teardown_veth(veth);
         }
+        phases_ms.insert(
+            "teardown_veth".to_owned(),
+            phase_start.elapsed().as_secs_f64() * 1000.0,
+        );
+        let phase_start = Instant::now();
         let lease_released = self.layer_stack.release_lease(&handle.lease_id).ok();
+        phases_ms.insert(
+            "release_lease".to_owned(),
+            phase_start.elapsed().as_secs_f64() * 1000.0,
+        );
+        let phase_start = Instant::now();
         if let Some(cgroup_path) = handle.cgroup_path.as_ref() {
             let _ = std::fs::remove_dir(cgroup_path);
         }
+        phases_ms.insert(
+            "remove_cgroup".to_owned(),
+            phase_start.elapsed().as_secs_f64() * 1000.0,
+        );
+        let phase_start = Instant::now();
         let _ = std::fs::remove_dir_all(&handle.scratch_dir);
+        phases_ms.insert(
+            "remove_scratch".to_owned(),
+            phase_start.elapsed().as_secs_f64() * 1000.0,
+        );
         let cgroup_exists_after = handle.cgroup_path.as_ref().map(|path| path.exists());
-        json!({
+        let inspection = json!({
             "handle_registered_after": self.handles.contains_key(&handle.workspace_handle_id),
             "agent_registered_after": self.by_agent.contains_key(&handle.agent_id),
             "open_handle_count_after": self.handles.len(),
@@ -681,8 +943,83 @@ where
                 &handle.upperdir,
                 &handle.workdir,
             ]),
-        })
+        });
+        (inspection, phases_ms)
     }
+}
+
+fn persisted_string(row: &Value, key: &str) -> Option<String> {
+    let value = row.get(key)?.as_str()?.trim();
+    if value.is_empty() {
+        return None;
+    }
+    Some(value.to_owned())
+}
+
+fn persisted_i32(row: &Value, key: &str) -> Option<i32> {
+    let value = row.get(key)?.as_i64()?;
+    i32::try_from(value).ok()
+}
+
+fn persisted_ipv4(row: &Value, key: &str) -> Option<Ipv4Addr> {
+    persisted_string(row, key)?.parse().ok()
+}
+
+fn persisted_path(row: &Value, key: &str) -> Option<PathBuf> {
+    persisted_string(row, key).map(PathBuf::from)
+}
+
+fn path_identifier(path: &Path) -> String {
+    path.file_name()
+        .and_then(|name| name.to_str())
+        .filter(|name| !name.is_empty())
+        .map_or_else(|| path.to_string_lossy().into_owned(), ToOwned::to_owned)
+}
+
+fn kill_cgroup_pids(cgroup_path: &Path) {
+    let kill_file = cgroup_path.join("cgroup.kill");
+    if kill_file.exists() {
+        let _ = std::fs::write(kill_file, "1\n");
+    }
+}
+
+fn maybe_inject_phase(phase: &str) -> Result<(), IsolatedError> {
+    if env_trimmed("EOS_ISOLATED_WORKSPACE_TEST_HANG_AT").as_deref() == Some(phase) {
+        return Err(IsolatedError::SetupTimeout {
+            step: phase.to_owned(),
+        });
+    }
+    if env_trimmed("EOS_ISOLATED_WORKSPACE_TEST_FAIL_AT").as_deref() == Some(phase) {
+        return Err(IsolatedError::SetupFailed {
+            step: phase.to_owned(),
+        });
+    }
+    if let Some(delays) = env_trimmed("EOS_ISOLATED_WORKSPACE_TEST_PHASE_DELAY") {
+        for spec in delays.split(',') {
+            let Some((target, delay_ms)) = spec.split_once(':') else {
+                continue;
+            };
+            if target.trim() != phase {
+                continue;
+            }
+            let delay_ms = delay_ms.trim().trim_end_matches("ms").trim();
+            let Ok(delay_ms) = delay_ms.parse::<f64>() else {
+                continue;
+            };
+            if delay_ms.is_finite() && delay_ms > 0.0 {
+                std::thread::sleep(Duration::from_secs_f64(delay_ms / 1000.0));
+            }
+        }
+    }
+    Ok(())
+}
+
+fn env_trimmed(key: &str) -> Option<String> {
+    let value = std::env::var(key).ok()?.trim().to_owned();
+    if value.is_empty() {
+        return None;
+    }
+    Some(value)
 }
 
 fn close_handle_fds(handle: &WorkspaceHandle) {

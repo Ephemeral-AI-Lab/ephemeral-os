@@ -119,7 +119,7 @@ fn shell_conflict_result(error: &SandboxApiError) -> Option<ShellResult> {
         stdout: String::new(),
         stderr: String::new(),
         warnings: Vec::new(),
-    }
+    })
 }
 
 #[cfg(test)]

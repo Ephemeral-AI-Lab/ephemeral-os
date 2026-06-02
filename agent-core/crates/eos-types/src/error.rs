@@ -20,6 +20,12 @@ pub enum CoreError {
     /// An RFC 3339 timestamp string failed to parse into a `UtcDateTime`.
     #[error("invalid utc timestamp")]
     Timestamp(#[from] time::error::Parse),
+    /// A persistence/store operation failed. The per-entity `Store` traits in
+    /// `eos-state` return this `CoreError`, but the concrete richer error lives
+    /// downstream (e.g. `eos-db::DbError`), which this leaf crate cannot name —
+    /// so the downstream error is flattened to its `Display` string here.
+    #[error("{0}")]
+    Store(String),
 }
 
 #[cfg(test)]
@@ -60,5 +66,13 @@ mod tests {
         let err = parse("not-a-timestamp").unwrap_err();
         assert!(matches!(err, CoreError::Timestamp(_)));
         assert!(std::error::Error::source(&err).is_some());
+    }
+
+    // The `Store` variant carries a downstream error's flattened message and
+    // displays it verbatim (used by eos-db's `From<DbError>` at the trait seam).
+    #[test]
+    fn store_variant_displays_payload_verbatim() {
+        let err = CoreError::Store("row not found in workflows".to_owned());
+        assert_eq!(err.to_string(), "row not found in workflows");
     }
 }

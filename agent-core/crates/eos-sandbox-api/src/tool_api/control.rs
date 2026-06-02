@@ -62,7 +62,8 @@ pub async fn inflight_count(
     sandbox_id: &SandboxId,
     agent_id: &str,
 ) -> Result<u32, SandboxApiError> {
-    let response = call_with_agent(transport, sandbox_id, DaemonOp::InflightCount, agent_id).await?;
+    let response =
+        call_with_agent(transport, sandbox_id, DaemonOp::InflightCount, agent_id).await?;
     Ok(count_field(&response))
 }
 
@@ -72,8 +73,13 @@ pub async fn command_session_count(
     sandbox_id: &SandboxId,
     agent_id: &str,
 ) -> Result<u32, SandboxApiError> {
-    let response =
-        call_with_agent(transport, sandbox_id, DaemonOp::CommandSessionCount, agent_id).await?;
+    let response = call_with_agent(
+        transport,
+        sandbox_id,
+        DaemonOp::CommandSessionCount,
+        agent_id,
+    )
+    .await?;
     Ok(count_field(&response))
 }
 
@@ -105,7 +111,9 @@ async fn call_with_agent(
 ) -> Result<JsonObject, SandboxApiError> {
     let mut payload = JsonObject::new();
     payload.insert("agent_id".to_owned(), Value::String(agent_id.to_owned()));
-    transport.call(sandbox_id, op, payload, CONTROL_TIMEOUT_S).await
+    transport
+        .call(sandbox_id, op, payload, CONTROL_TIMEOUT_S)
+        .await
 }
 
 /// `int(response.get("count") or 0)`.

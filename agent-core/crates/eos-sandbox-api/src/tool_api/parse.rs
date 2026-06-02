@@ -17,7 +17,7 @@ use serde_json::Value;
 use crate::error::SandboxApiError;
 use crate::models::{
     CommandOutput, ConflictInfo, EditFileResult, ExecCommandResult, GlobResult, GrepResult,
-    ReadFileResult, SandboxRequestBase, SandboxResultBase, ShellResult, WriteFileResult, Workspace,
+    ReadFileResult, SandboxRequestBase, SandboxResultBase, ShellResult, Workspace, WriteFileResult,
 };
 
 // ---------------------------------------------------------------------------
@@ -165,6 +165,13 @@ fn optional_string(map: &JsonObject, key: &str) -> Option<String> {
     }
 }
 
+/// `str(response.get(key) or "")` — a falsy value (absent, null, `false`, `0`,
+/// empty string) collapses to `""`. Distinct from [`get_string`], whose default
+/// applies only on an absent/null key.
+fn truthy_or_empty(map: &JsonObject, key: &str) -> String {
+    map.get(key).map(py_truthy_str).unwrap_or_default()
+}
+
 /// `str(value) if value else None` — a truthy (non-empty) value yields `Some`.
 fn truthy_string(map: &JsonObject, key: &str) -> Option<String> {
     match map.get(key) {
@@ -221,7 +228,7 @@ fn parse_path_tuple(value: Option<&Value>) -> Vec<String> {
         Some(Value::Array(items)) => items
             .iter()
             .filter(|item| !py_truthy_str(item).trim().is_empty())
-            .map(|item| py_str(item))
+            .map(py_str)
             .collect(),
         _ => Vec::new(),
     }
@@ -304,19 +311,26 @@ fn parse_timing_map(value: Option<&Value>) -> BTreeMap<String, f64> {
 // Per-verb result parsers
 // ---------------------------------------------------------------------------
 
+/// The result base for the read-only verbs (read/glob/grep): only `success` and
+/// `timings` come from the envelope; conflict/changed-path/error fields stay at
+/// their empty defaults and `workspace` is always `Ephemeral` (invariant 9).
+fn simple_result_base(response: &JsonObject) -> SandboxResultBase {
+    SandboxResultBase {
+        success: get_bool(response, "success"),
+        workspace: Workspace::Ephemeral,
+        timings: parse_timing_map(response.get("timings")),
+        conflict: None,
+        conflict_reason: None,
+        changed_paths: Vec::new(),
+        error: None,
+    }
+}
+
 pub(crate) fn parse_read_file_result(
     response: &JsonObject,
 ) -> Result<ReadFileResult, SandboxApiError> {
     Ok(ReadFileResult {
-        base: SandboxResultBase {
-            success: get_bool(response, "success"),
-            workspace: Workspace::Ephemeral,
-            timings: parse_timing_map(response.get("timings")),
-            conflict: None,
-            conflict_reason: None,
-            changed_paths: Vec::new(),
-            error: None,
-        },
+        base: simple_result_base(response),
         content: get_string(response, "content", ""),
         exists: get_bool(response, "exists"),
         encoding: get_string(response, "encoding", "utf-8"),
@@ -325,15 +339,7 @@ pub(crate) fn parse_read_file_result(
 
 pub(crate) fn parse_glob_result(response: &JsonObject) -> Result<GlobResult, SandboxApiError> {
     Ok(GlobResult {
-        base: SandboxResultBase {
-            success: get_bool(response, "success"),
-            workspace: Workspace::Ephemeral,
-            timings: parse_timing_map(response.get("timings")),
-            conflict: None,
-            conflict_reason: None,
-            changed_paths: Vec::new(),
-            error: None,
-        },
+        base: simple_result_base(response),
         filenames: parse_path_tuple(response.get("filenames")),
         num_files: strict_int(response, "num_files", 0)? as u32,
         truncated: get_bool(response, "truncated"),
@@ -343,15 +349,7 @@ pub(crate) fn parse_glob_result(response: &JsonObject) -> Result<GlobResult, San
 pub(crate) fn parse_grep_result(response: &JsonObject) -> Result<GrepResult, SandboxApiError> {
     let applied_limit = optional_strict_int(response, "applied_limit")?.map(|value| value as u32);
     Ok(GrepResult {
-        base: SandboxResultBase {
-            success: get_bool(response, "success"),
-            workspace: Workspace::Ephemeral,
-            timings: parse_timing_map(response.get("timings")),
-            conflict: None,
-            conflict_reason: None,
-            changed_paths: Vec::new(),
-            error: None,
-        },
+        base: simple_result_base(response),
         output_mode: get_string(response, "output_mode", "files_with_matches"),
         filenames: parse_path_tuple(response.get("filenames")),
         content: get_string(response, "content", ""),
@@ -384,7 +382,9 @@ fn parse_guarded_common(response: &JsonObject) -> GuardedCommon {
             error: error_object(response.get("error")),
         },
         changed_path_kinds: parse_changed_path_kinds(response.get("changed_path_kinds")),
-        mutation_source: get_string(response, "mutation_source", ""),
+        // Guarded `mutation_source` collapses falsy values (`str(x or "")`),
+        // unlike `status` whose default applies only on an absent key.
+        mutation_source: truthy_or_empty(response, "mutation_source"),
         status: get_string(response, "status", ""),
     }
 }
@@ -479,7 +479,10 @@ mod tests {
     use crate::models::SandboxCaller;
 
     fn obj(value: Value) -> JsonObject {
-        value.as_object().expect("test json is an object").clone()
+        match value {
+            Value::Object(map) => map,
+            _ => panic!("test json is an object"),
+        }
     }
 
     fn caller() -> SandboxCaller {
@@ -508,7 +511,10 @@ mod tests {
         let payload = daemon_request_identity_fields(&base);
         assert_eq!(payload["agent_id"], serde_json::json!("agent-1"));
         assert!(payload["caller"].is_object());
-        assert_eq!(payload["caller"]["agent_run_id"], serde_json::json!("agent-1"));
+        assert_eq!(
+            payload["caller"]["agent_run_id"],
+            serde_json::json!("agent-1")
+        );
         assert!(!payload.contains_key("invocation_id"));
 
         let base = SandboxRequestBase {
@@ -589,7 +595,10 @@ mod tests {
         assert!(!result.exists, "missing exists is false");
 
         let guarded = parse_write_file_result(&obj(serde_json::json!({}))).expect("parse");
-        assert!(!guarded.base.success, "missing success is false for guarded");
+        assert!(
+            !guarded.base.success,
+            "missing success is false for guarded"
+        );
     }
 
     // AC-sandbox-api-03: blank/whitespace path entries and blank kind pairs are
@@ -636,9 +645,8 @@ mod tests {
         assert_eq!(ok.output.stdout, "hi");
 
         for failing in ["error", "timed_out"] {
-            let result =
-                parse_exec_command_result(&obj(serde_json::json!({"status": failing})))
-                    .expect("parse");
+            let result = parse_exec_command_result(&obj(serde_json::json!({"status": failing})))
+                .expect("parse");
             assert!(!result.base.success, "status {failing} is not success");
         }
 
@@ -698,11 +706,29 @@ mod tests {
     }
 
     #[test]
+    fn guarded_mutation_source_collapses_falsy() {
+        // Python `str(response.get("mutation_source") or "")`: a falsy value
+        // collapses to "" (not "False"/"0"); a truthy string is kept.
+        for falsy in [
+            serde_json::json!(false),
+            serde_json::json!(0),
+            serde_json::json!(""),
+            serde_json::Value::Null,
+        ] {
+            let response = obj(serde_json::json!({"success": true, "mutation_source": falsy}));
+            let result = parse_write_file_result(&response).expect("parse");
+            assert_eq!(result.mutation_source, "", "falsy mutation_source");
+        }
+        let kept = parse_write_file_result(&obj(
+            serde_json::json!({"success": true, "mutation_source": "overlay"}),
+        ))
+        .expect("parse");
+        assert_eq!(kept.mutation_source, "overlay");
+    }
+
+    #[test]
     fn user_visible_strips_internal_error_prefix() {
-        assert_eq!(
-            user_visible_error_message("internal_error: boom"),
-            "boom"
-        );
+        assert_eq!(user_visible_error_message("internal_error: boom"), "boom");
         assert_eq!(user_visible_error_message("plain"), "plain");
     }
 

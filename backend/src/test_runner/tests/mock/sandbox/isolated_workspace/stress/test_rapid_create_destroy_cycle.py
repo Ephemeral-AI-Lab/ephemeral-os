@@ -27,7 +27,10 @@ _CYCLES = 100
 async def _daemon_fd_count(sandbox_id: str) -> int:
     res = await raw_exec(
         sandbox_id,
+        "pid=$(pgrep -f '^/eos/daemon/eosd daemon' | head -1); "
+        "if [ -z \"$pid\" ]; then "
         "pid=$(pgrep -f '^.*python.*-m sandbox\\.daemon' | head -1); "
+        "fi; "
         "if [ -n \"$pid\" ]; then ls /proc/$pid/fd 2>/dev/null | wc -l; else echo 0; fi",
         cwd="/", timeout=15,
     )

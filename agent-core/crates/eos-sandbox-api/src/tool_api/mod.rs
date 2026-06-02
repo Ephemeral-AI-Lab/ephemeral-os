@@ -14,9 +14,7 @@ mod read;
 mod shell;
 mod write;
 
-pub use command::{
-    cancel_command_session, collect_command_completions, exec_command, write_stdin,
-};
+pub use command::{cancel_command_session, collect_command_completions, exec_command, write_stdin};
 pub use control::{cancel, command_session_count, heartbeat, inflight_count, isolated_active};
 pub use edit::edit_file;
 pub use glob::glob;

@@ -54,7 +54,7 @@ async def test_rfc1918_egress_drop_opt_in(iws_clean_sandbox) -> None:
                 "curl -s --max-time 2 -o /dev/null -w '%{http_code}' "
                 "http://10.99.99.99/ || echo BLOCKED",
             )
-            out = (blocked.get("stdout", "") or "").strip()
+            out = _iws_rpc.stdout(blocked).strip()
             assert "BLOCKED" in out or out == "000", (
                 "RFC1918 egress must be blocked under deny mode", blocked,
             )

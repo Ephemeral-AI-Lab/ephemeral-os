@@ -4,9 +4,40 @@ version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 
+[features]
+# Real Docker integration tests that require a running Docker daemon. The
+# bollard adapter always compiles; only the daemon-hitting tests are gated.
+docker = []
+
 [dependencies]
 eos-sandbox-api.workspace = true
 eos-config.workspace = true
+# Direct edge: this crate names eos_types items (SandboxId, JsonObject, Clock,
+# CoreError, RequestId, InvocationId) in its own signatures — see
+# impl-eos-sandbox-host.md §2. eos-sandbox-api does not re-export them.
+eos-types.workspace = true
+
+tokio = { workspace = true, features = ["net", "process"] }
+bollard.workspace = true
+async-trait.workspace = true
+parking_lot.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+sha2.workspace = true
+tar.workspace = true
+flate2.workspace = true
+tracing.workspace = true
+futures.workspace = true
+schemars.workspace = true
+uuid.workspace = true
+bytes.workspace = true
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["macros", "rt-multi-thread", "test-util"] }
+proptest.workspace = true
+pretty_assertions.workspace = true
+serde_json.workspace = true
 
 [lints]
 workspace = true

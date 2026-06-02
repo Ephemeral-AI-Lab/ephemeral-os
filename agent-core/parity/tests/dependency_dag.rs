@@ -47,10 +47,25 @@ fn frozen_edges() -> Edges {
             "eos-workflow",
             &["eos-state", "eos-tools", "eos-agent-def", "eos-audit"],
         ),
-        ("eos-sandbox-host", &["eos-sandbox-api", "eos-config"]),
+        // Phase 3: eos-sandbox-host adds a direct eos-types edge when implemented.
+        // It names eos_types items (SandboxId, JsonObject, Clock, CoreError,
+        // RequestId, InvocationId) in its own signatures (e.g. the SandboxTransport
+        // impl), and eos-sandbox-api does not re-export them — so the edge is
+        // required to compile, per the crate's own impl-eos-sandbox-host.md §2
+        // (which outranks the summary topology block that omitted it).
+        (
+            "eos-sandbox-host",
+            &["eos-sandbox-api", "eos-config", "eos-types"],
+        ),
+        // Phase 3: eos-plugin-catalog adds a direct eos-types edge when implemented.
+        // It names eos_types items (Clock in audit_plugin_call, JsonObject in the
+        // LSP input structs) in its own signatures, and neither eos-audit nor
+        // eos-sandbox-api re-exports them — so the edge is required to compile, per
+        // the crate's own impl-eos-plugin-catalog.md §2 (which outranks the summary
+        // topology block that omitted it).
         (
             "eos-plugin-catalog",
-            &["eos-sandbox-api", "eos-audit", "eos-config"],
+            &["eos-types", "eos-sandbox-api", "eos-audit", "eos-config"],
         ),
         (
             "eos-runtime",

@@ -130,7 +130,10 @@ mod tests {
                 DaemonOp::CommandCollectCompleted,
                 "api.v1.command.collect_completed",
             ),
-            (DaemonOp::CommandSessionCount, "api.v1.command_session_count"),
+            (
+                DaemonOp::CommandSessionCount,
+                "api.v1.command_session_count",
+            ),
             (DaemonOp::InvocationCancel, "api.v1.cancel"),
             (DaemonOp::InvocationHeartbeat, "api.v1.heartbeat"),
             (DaemonOp::InflightCount, "api.v1.inflight_count"),
@@ -138,7 +141,10 @@ mod tests {
                 DaemonOp::IsolatedWorkspaceEnter,
                 "api.isolated_workspace.enter",
             ),
-            (DaemonOp::IsolatedWorkspaceExit, "api.isolated_workspace.exit"),
+            (
+                DaemonOp::IsolatedWorkspaceExit,
+                "api.isolated_workspace.exit",
+            ),
             (
                 DaemonOp::IsolatedWorkspaceStatus,
                 "api.isolated_workspace.status",
@@ -156,9 +162,8 @@ mod tests {
                 serde_json::Value::String(wire.to_owned()),
                 "serde for {op:?}"
             );
-            let back: DaemonOp =
-                serde_json::from_value(serde_json::Value::String(wire.to_owned()))
-                    .expect("deserialize op");
+            let back: DaemonOp = serde_json::from_value(serde_json::Value::String(wire.to_owned()))
+                .expect("deserialize op");
             assert_eq!(back, op, "roundtrip for {op:?}");
         }
     }

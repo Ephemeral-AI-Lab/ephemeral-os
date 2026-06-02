@@ -7,7 +7,16 @@ rust-version.workspace = true
 [dependencies]
 eos-state.workspace = true
 eos-config.workspace = true
-uuid.workspace = true
+sqlx = { workspace = true, features = ["time"] }
+thiserror.workspace = true
+async-trait.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+time.workspace = true
+
+[dev-dependencies]
+tokio.workspace = true
+tempfile.workspace = true
 
 [lints]
 workspace = true

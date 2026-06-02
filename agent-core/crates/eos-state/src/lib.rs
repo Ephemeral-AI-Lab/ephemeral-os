@@ -1,3 +1,138 @@
-//! eos-state — domain state, status enums, outcome projections, and store traits.
-//! Phase-0 skeleton: contracts are specified in impl-eos-state.md.
+//! eos-state — pure agent-core domain state, outcome projections, terminal
+//! submission DTOs, and the per-entity async `Store` traits.
+//!
+//! This is the upstream domain contract that `eos-db` implements and that
+//! `eos-tools`/`eos-engine`/`eos-workflow`/`eos-runtime` consume. It defines
+//! *what is stored and what shapes flow between layers*; it never executes I/O.
+//! See `docs/plans/backend_agent_core_rust_migration/impl-eos-state.md`.
 #![forbid(unsafe_code)]
+#![warn(missing_docs)]
+
+mod agent_run;
+mod attempt;
+mod iteration;
+mod model;
+mod outcomes;
+mod request;
+mod store;
+mod submissions;
+mod task;
+mod workflow;
+
+#[cfg(test)]
+mod fakes;
+
+pub use agent_run::AgentRun;
+pub use attempt::{Attempt, AttemptFailReason, AttemptStage, AttemptStatus};
+pub use iteration::{Iteration, IterationCreationReason, IterationStatus};
+pub use model::ModelRegistration;
+pub use outcomes::{
+    attempt_execution_outcomes, execution_outcome_for_submission, latest_iteration, present_status,
+    project_attempt_outcomes, project_iteration_outcomes, ExecutionRole, ExecutionTaskOutcome,
+    TaskOutcomeStatus,
+};
+pub use request::Request;
+pub use store::{
+    AgentRunStore, AttemptStore, IterationStore, ModelStore, RequestStore, Sealed, StoreError,
+    TaskStore, WorkflowStore,
+};
+pub use submissions::{
+    GeneratorSubmission, PlannerFailReason, PlannerFailureSubmission, PlannerKind,
+    PlannerSubmission, ReducerSubmission,
+};
+pub use task::{Task, TaskRole, TaskStatus, TASK_AGENT_ROLES};
+pub use workflow::{Workflow, WorkflowStatus};
+
+// Re-export the upstream value primitives that appear in this crate's public
+// API so downstream crates (notably `eos-db`) can name them without a direct
+// `eos-types` dependency edge — keeping the frozen DAG `eos-db -> {state, config}`.
+pub use eos_types::{
+    AgentRunId, AttemptId, CoreError, IterationId, JsonObject, JsonValue, RequestId, SandboxId,
+    TaskId, UtcDateTime, WorkflowId,
+};
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    // AC-eos-state-03: every enum serializes to the exact Python wire string.
+    #[test]
+    fn serde_wire_values_match_python() {
+        assert_eq!(json!(TaskStatus::Pending), json!("pending"));
+        assert_eq!(json!(TaskStatus::Blocked), json!("blocked"));
+        assert_eq!(json!(TaskRole::Root), json!("root"));
+        assert_eq!(json!(TaskRole::Generator), json!("generator"));
+        assert_eq!(json!(WorkflowStatus::Open), json!("open"));
+        assert_eq!(json!(WorkflowStatus::Cancelled), json!("cancelled"));
+        assert_eq!(json!(IterationStatus::Succeeded), json!("succeeded"));
+        assert_eq!(
+            json!(IterationCreationReason::DeferredGoalContinuation),
+            json!("deferred_goal_continuation")
+        );
+        assert_eq!(json!(AttemptStage::Run), json!("run"));
+        assert_eq!(json!(AttemptStatus::Passed), json!("passed"));
+        assert_eq!(json!(AttemptFailReason::TaskFailed), json!("task_failed"));
+        assert_eq!(
+            json!(AttemptFailReason::StartupFailed),
+            json!("startup_failed")
+        );
+        assert_eq!(json!(TaskOutcomeStatus::Success), json!("success"));
+        assert_eq!(json!(ExecutionRole::Reducer), json!("reducer"));
+        assert_eq!(json!(PlannerKind::Completes), json!("completes"));
+        assert_eq!(
+            json!(PlannerFailReason::RunExhausted),
+            json!("run_exhausted")
+        );
+
+        // Round-trips back to the variant.
+        let s: IterationCreationReason =
+            serde_json::from_value(json!("deferred_goal_continuation")).expect("parse");
+        assert_eq!(s, IterationCreationReason::DeferredGoalContinuation);
+    }
+
+    // AC-eos-state-04: a Rust-side drift-guard snapshot of the submission +
+    // outcome schemas. (Type-level Pydantic parity is deferred to cutover, as
+    // there is no recorded Python golden — consistent with eos-config's note.)
+    #[test]
+    fn submission_schema_snapshot() {
+        let schemas = json!({
+            "ExecutionTaskOutcome": schemars::schema_for!(ExecutionTaskOutcome),
+            "PlannerSubmission": schemars::schema_for!(PlannerSubmission),
+            "PlannerFailureSubmission": schemars::schema_for!(PlannerFailureSubmission),
+            "GeneratorSubmission": schemars::schema_for!(GeneratorSubmission),
+            "ReducerSubmission": schemars::schema_for!(ReducerSubmission),
+        });
+        insta::assert_json_snapshot!("submission_schemas", schemas);
+    }
+
+    // AC-eos-state-02: the forbidden profile-alias role token (the non-generator
+    // execution alias) appears nowhere in crate source. The needle is assembled
+    // so the literal does not appear in this file.
+    #[test]
+    fn state_role_naming_is_generator() {
+        // Compile-time variant assertion: the execution role is Generator.
+        let _ = ExecutionRole::Generator;
+        let _ = TaskRole::Generator;
+
+        let needle = format!("exec{}", "utor"); // avoid the literal token here
+        let src = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src");
+        let mut offenders = Vec::new();
+        for entry in std::fs::read_dir(&src).expect("read src dir") {
+            let path = entry.expect("dir entry").path();
+            if path.extension().and_then(|e| e.to_str()) != Some("rs") {
+                continue;
+            }
+            let text = std::fs::read_to_string(&path).expect("read src file");
+            // Lowercase so any-case spelling is caught; `execution` (e-x-e-c-u-t-i-o-n)
+            // does not contain the needle (e-x-e-c-u-t-o-r), so it is not a false hit.
+            if text.to_lowercase().contains(&needle) {
+                offenders.push(path.display().to_string());
+            }
+        }
+        assert!(
+            offenders.is_empty(),
+            "forbidden role token found in: {offenders:?}"
+        );
+    }
+}

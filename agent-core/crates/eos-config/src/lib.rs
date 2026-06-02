@@ -21,6 +21,7 @@ mod database;
 mod env;
 mod error;
 mod loader;
+mod markdown;
 pub mod paths;
 mod providers;
 mod sandbox;
@@ -32,6 +33,7 @@ pub use database::{DatabaseConfig, DatabaseUrl, DEFAULT_SQLITE_DATABASE_URL};
 pub use env::EnvMap;
 pub use error::ConfigError;
 pub use loader::{load_central_config, ConfigLoader};
+pub use markdown::parse_markdown_frontmatter;
 pub use providers::{MinimaxConfig, ProvidersConfig, RetryConfig};
 pub use sandbox::{DockerConfig, SandboxConfig, SandboxProvider};
 
@@ -138,6 +140,10 @@ mod schema_parity {
                     map.remove("minimum");
                     map.remove("maximum");
                 }
+                // Drop doc-comment text so the snapshot guards schema *shape*
+                // only; a field's prose drifting must not trip it (Python field
+                // parity is covered by the cross-check test above).
+                map.remove("description");
                 for child in map.values_mut() {
                     normalize(child);
                 }

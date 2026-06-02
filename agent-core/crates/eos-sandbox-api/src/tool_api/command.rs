@@ -30,7 +30,10 @@ pub async fn exec_command(
         payload.insert("timeout".to_owned(), Value::from(timeout));
     }
     if let Some(max_output_tokens) = request.max_output_tokens {
-        payload.insert("max_output_tokens".to_owned(), Value::from(max_output_tokens));
+        payload.insert(
+            "max_output_tokens".to_owned(),
+            Value::from(max_output_tokens),
+        );
     }
     let response = transport
         .call(
@@ -59,7 +62,10 @@ pub async fn write_stdin(
         payload.insert("yield_time_ms".to_owned(), Value::from(yield_time_ms));
     }
     if let Some(max_output_tokens) = request.max_output_tokens {
-        payload.insert("max_output_tokens".to_owned(), Value::from(max_output_tokens));
+        payload.insert(
+            "max_output_tokens".to_owned(),
+            Value::from(max_output_tokens),
+        );
     }
     let response = transport
         .call(

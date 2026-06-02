@@ -6,6 +6,15 @@ rust-version.workspace = true
 
 [dependencies]
 eos-types.workspace = true
+serde.workspace = true
+schemars.workspace = true
+async-trait.workspace = true
+
+[dev-dependencies]
+serde_json.workspace = true
+tokio.workspace = true
+insta.workspace = true
+proptest.workspace = true
 
 [lints]
 workspace = true

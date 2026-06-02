@@ -37,7 +37,11 @@ pub async fn edit_file(
     payload.insert("edits".to_owned(), Value::Array(edits));
     payload.insert(
         "description".to_owned(),
-        Value::String(request.base.description_or(&format!("edit {}", request.path))),
+        Value::String(
+            request
+                .base
+                .description_or(&format!("edit {}", request.path)),
+        ),
     );
 
     match transport
@@ -130,7 +134,10 @@ mod tests {
         assert_eq!(conflict.conflict_file.as_deref(), Some("a.txt"));
         // The conflict message is the prefix-stripped user-visible message.
         assert_eq!(conflict.message, "anchor not found");
-        assert_eq!(result.base.conflict_reason.as_deref(), Some("anchor not found"));
+        assert_eq!(
+            result.base.conflict_reason.as_deref(),
+            Some("anchor not found")
+        );
     }
 
     // AC-sandbox-api-05: a non-conflict transport error propagates as Err.

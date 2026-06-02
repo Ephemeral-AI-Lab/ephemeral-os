@@ -33,8 +33,14 @@ tracing     = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt", "json"] }
 time        = { version = "0.3", features = ["serde", "formatting", "parsing", "macros"] }
 async-trait = "0.1"
+async-stream = "0.3"
 bytes       = "1"
 parking_lot = "0.12"
+secrecy     = "0.8"
+# eos-sandbox-host: typed async Docker Engine API client (hyper 1.x stack, already cached)
+bollard     = "0.17"
+tar         = "0.4"
+flate2      = "1"
 uuid        = { version = "1", features = ["v4", "serde"] }
 console-subscriber = "0.4"
 # dev
@@ -42,7 +48,9 @@ insta             = { version = "1", features = ["json"] }
 proptest          = "1"
 wiremock          = "0.6"
 pretty_assertions = "1"
+tracing-test      = "0.2"
 loom              = "0.7"
+tempfile          = "3"
 # internal crates — these path edges ARE the dependency DAG
 eos-types          = { path = "crates/eos-types" }
 eos-config         = { path = "crates/eos-config" }

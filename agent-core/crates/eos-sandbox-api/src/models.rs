@@ -625,7 +625,7 @@ pub struct EnterIsolatedWorkspaceRequest {
     /// Caller identity / description / invocation id.
     #[serde(flatten)]
     pub base: SandboxRequestBase,
-    /// LayerStack root to base the isolated workspace on.
+    /// `LayerStack` root to base the isolated workspace on.
     pub layer_stack_root: String,
 }
 

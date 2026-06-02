@@ -74,7 +74,10 @@ async def test_iws_daemon_restart_mid_parallel_calls(
     await asyncio.sleep(0.5)
     await raw_exec(
         sandbox_id,
-        "pkill -9 -f '^.*python.*-m sandbox\\.daemon' || true",
+        "pkill -9 -f '^/eos/daemon/eosd daemon' || true; "
+        "pkill -9 -f '^.*python.*-m sandbox\\.daemon' || true; "
+        "rm -f /eos/daemon/runtime.sock /eos/daemon/runtime.pid "
+        "/eos/daemon/runtime.env",
         cwd="/",
         timeout=10,
     )

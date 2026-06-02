@@ -15,7 +15,7 @@ use std::process::{Child, Command, Stdio};
 #[cfg(target_os = "linux")]
 use std::sync::atomic::{AtomicU64, Ordering};
 #[cfg(target_os = "linux")]
-use std::sync::{Arc, Mutex, MutexGuard, OnceLock};
+use std::sync::{mpsc as std_mpsc, Arc, Mutex, MutexGuard, OnceLock};
 #[cfg(target_os = "linux")]
 use std::thread;
 #[cfg(target_os = "linux")]
@@ -278,6 +278,8 @@ const fn should_publish_command_session_completion(
 const COMMAND_SESSION_RING_MAX_BYTES: usize = 1024 * 1024;
 #[cfg(target_os = "linux")]
 const COMMAND_SESSION_SPOOL_MAX_BYTES: u64 = 32 * 1024 * 1024;
+#[cfg(target_os = "linux")]
+const COMMAND_SESSION_OUTPUT_DRAIN_GRACE_MS: u64 = 500;
 
 #[cfg(target_os = "linux")]
 fn lock_command_session_state<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
@@ -452,9 +454,11 @@ struct CommandSession {
     id: String,
     agent_id: String,
     command: String,
+    started_at: Instant,
     pgid: i32,
     writer: Mutex<File>,
     output: Arc<CommandSessionOutput>,
+    reader_done: Mutex<Option<std_mpsc::Receiver<()>>>,
     cancelled: Mutex<bool>,
     interrupted: Mutex<bool>,
     model_cursor: Mutex<CommandSessionOutputCursor>,
@@ -590,6 +594,16 @@ impl CommandSessionRegistry {
 fn command_session_registry() -> &'static CommandSessionRegistry {
     static REGISTRY: OnceLock<CommandSessionRegistry> = OnceLock::new();
     REGISTRY.get_or_init(CommandSessionRegistry::new)
+}
+
+#[cfg(target_os = "linux")]
+fn completed_session_stdout(session: &CommandSession) -> String {
+    let reader_done = lock_command_session_state(&session.reader_done).take();
+    if let Some(reader_done) = reader_done {
+        let _ =
+            reader_done.recv_timeout(Duration::from_millis(COMMAND_SESSION_OUTPUT_DRAIN_GRACE_MS));
+    }
+    session.output.all_recent(None)
 }
 
 #[cfg(target_os = "linux")]
@@ -947,19 +961,22 @@ fn spawn_command_runner_session(
         )
     })?;
     let output = Arc::new(CommandSessionOutput::new());
+    let writer = master.try_clone()?;
+    let reader_done = spawn_command_output_reader(master, Arc::clone(&output), transcript_path);
     let session = Arc::new(CommandSession {
         id: spec.id.clone(),
         agent_id: spec.agent_id.clone(),
         command: spec.command.clone(),
+        started_at: Instant::now(),
         pgid,
-        writer: Mutex::new(master.try_clone()?),
+        writer: Mutex::new(writer),
         output: Arc::clone(&output),
+        reader_done: Mutex::new(Some(reader_done)),
         cancelled: Mutex::new(false),
         interrupted: Mutex::new(false),
         model_cursor: Mutex::new(CommandSessionOutputCursor::default()),
         notification_cursor: Mutex::new(CommandSessionOutputCursor::default()),
     });
-    spawn_command_output_reader(master, output, transcript_path);
     Ok((session, child))
 }
 
@@ -968,7 +985,8 @@ fn spawn_command_output_reader(
     mut master: File,
     output: Arc<CommandSessionOutput>,
     transcript_path: PathBuf,
-) {
+) -> std_mpsc::Receiver<()> {
+    let (done_tx, done_rx) = std_mpsc::channel();
     thread::spawn(move || {
         let mut transcript = OpenOptions::new()
             .create(true)
@@ -992,7 +1010,9 @@ fn spawn_command_output_reader(
                 Err(_) => break,
             }
         }
+        let _ = done_tx.send(());
     });
+    done_rx
 }
 
 #[cfg(target_os = "linux")]
@@ -1039,7 +1059,7 @@ impl CommandSessionFinalizer {
             "cancelled".clone_into(&mut command_status);
             exit_code = 130;
         }
-        let stdout = self.session.output.all_recent(None);
+        let stdout = completed_session_stdout(&self.session);
         let response = finalize_command_workspace(
             &self.session,
             &self.workspace,
@@ -1130,7 +1150,7 @@ impl IsolatedCommandSessionFinalizer {
             "cancelled".clone_into(&mut command_status);
             exit_code = 130;
         }
-        let stdout = self.session.output.all_recent(None);
+        let stdout = completed_session_stdout(&self.session);
         let response = finalize_isolated_command_workspace(
             &self.session,
             &self.workspace,
@@ -1253,6 +1273,8 @@ fn finalize_isolated_command_workspace(
         serde_json::to_vec_pretty(&response)
             .map_err(|err| DaemonError::InvalidEnvelope(err.to_string()))?,
     )?;
+    let duration_s = session.started_at.elapsed().as_secs_f64();
+    let duration_ms = duration_s * 1000.0;
     crate::isolated::record_tool_call(
         &workspace.handle.agent_id,
         json!({
@@ -1263,10 +1285,10 @@ fn finalize_isolated_command_workspace(
             "changed_paths": response["changed_paths"].clone(),
             "published": false,
             "command_session_id": session.id.clone(),
-            "duration_s": 0.0,
-            "total_ms": 0.0,
+            "duration_s": duration_s,
+            "total_ms": duration_ms,
             "phases_ms": {
-                "exec": 0.0,
+                "exec": duration_ms,
             },
         }),
     );
