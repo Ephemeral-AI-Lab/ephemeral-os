@@ -5,7 +5,7 @@ from __future__ import annotations
 from pydantic import BaseModel, Field
 
 import sandbox.api as sandbox_api
-from sandbox.shared.models import CommandSessionWriteRequest, Intent
+from sandbox.shared.models import CommandSessionCancelRequest, CommandSessionWriteRequest, Intent
 from tools._framework.core.base import ToolExecutionContextService, ToolResult
 from tools._framework.core.decorator import tool
 from tools.sandbox._lib.command_session_tool import (
@@ -56,6 +56,15 @@ async def write_stdin(
             max_output_tokens=max_output_tokens,
         ),
     )
+    caller = sandbox_caller_from_tool_context(context)
+    if "\x03" in chars and result.status == "running":
+        result = await sandbox_api.cancel_command_session(
+            sandbox_id,
+            CommandSessionCancelRequest(
+                caller=caller,
+                command_session_id=command_session_id,
+            ),
+        )
     result = recover_command_session_result_from_supervisor(
         context,
         result,

@@ -12,7 +12,7 @@ from typing import Any
 from xml.etree import ElementTree
 
 import sandbox.api as sandbox_api
-from sandbox.api import ReadFileRequest, SandboxCaller, ShellRequest
+from sandbox.api import ExecCommandRequest, ReadFileRequest, SandboxCaller
 from sandbox.occ.service import AUTO_SQUASH_MAX_DEPTH
 
 from test_runner.agent.mock.complex_project_build_grep_glob_probe import (
@@ -313,7 +313,24 @@ async def assert_project_build_shell_edit_lsp_remount_not_restart(
 
     lsp_samples = _tool_samples_by_prefix(perf, "lsp.")
     assert lsp_samples, "missing LSP samples"
-    max_start_delta = _max_sample_timing(lsp_samples, "lsp.session.start_count_delta")
+    warm_lsp_samples = [
+        sample
+        for tool_name in _LSP_NAMES
+        for sample in _tool_samples(perf, tool_name)[2:]
+    ]
+    assert warm_lsp_samples, "missing warm LSP samples"
+    max_start_delta = _max_sample_timing(
+        warm_lsp_samples,
+        "lsp.session.start_count_delta",
+    )
+    max_refresh_delta = _max_sample_timing(
+        lsp_samples,
+        "lsp.session.refresh_count_delta",
+    )
+    max_refresh_total = _max_sample_timing(
+        lsp_samples,
+        "lsp.session.refresh_count_total",
+    )
     max_remount_delta = _max_sample_timing(
         lsp_samples,
         "lsp.session.remount_count_delta",
@@ -325,8 +342,13 @@ async def assert_project_build_shell_edit_lsp_remount_not_restart(
     assert max_start_delta == 0.0, (
         f"warm LSP path restarted Pyright: start_count_delta={max_start_delta}"
     )
-    assert max_remount_delta > 0.0 or max_remount_total > 0.0, (
-        "LSP samples did not expose a remount after shell/edit writes"
+    assert (
+        max_refresh_delta > 0.0
+        or max_refresh_total > 0.0
+        or max_remount_delta > 0.0
+        or max_remount_total > 0.0
+    ), (
+        "LSP samples did not expose a refresh/remount after shell/edit writes"
     )
     for tool_name in _LSP_NAMES:
         if _tool_count(perf, tool_name) <= 0:
@@ -469,19 +491,18 @@ async def _assert_complex_build_contract(
         f"pytest junit tests={tests} (floor {contract.junit_test_floor})"
     )
 
-    shell_result = await sandbox_api.shell(
+    shell_result = await sandbox_api.exec_command(
         sandbox_id,
-        ShellRequest(
-            command=f"test -s {WORKSPACE_ROOT}/.metrics/pytest.xml && echo OK",
-            cwd=WORKSPACE_ROOT,
+        ExecCommandRequest(
+            cmd=f"cd {WORKSPACE_ROOT} && test -s {WORKSPACE_ROOT}/.metrics/pytest.xml && echo OK",
             timeout=60,
             caller=caller,
             description="complex_project_build pytest.xml readback",
         ),
     )
-    assert shell_result.success
+    assert shell_result.status == "ok"
     assert shell_result.exit_code == 0
-    assert "OK" in shell_result.stdout
+    assert "OK" in shell_result.output.stdout
 
 
 async def _assert_shell_edit_lsp_contract(

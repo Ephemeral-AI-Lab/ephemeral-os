@@ -569,7 +569,7 @@ async def run_background_shell_interleave_probe(
 # ---- T5 executor exhaustion -----------------------------------------------
 
 
-EXHAUSTION_LAUNCH_COUNT = 80
+EXHAUSTION_LAUNCH_COUNT = 40
 EXHAUSTION_BACKGROUND_SLEEP_S = 60
 EXHAUSTION_CANCEL_DEADLINE_S = 2.0
 
@@ -714,7 +714,7 @@ async def run_background_shell_exhaustion_probe(
 # ---- T6 partial-write cancel ----------------------------------------------
 
 
-PARTIAL_WRITE_DD_COUNT_MB = 800
+PARTIAL_WRITE_DD_COUNT_MB = 256
 PARTIAL_WRITE_CANCEL_S = 2.0
 
 

@@ -42,10 +42,10 @@ from plugins.catalog.lsp.tools.query_symbols import (
 )
 from sandbox.api import (
     EditFileRequest,
+    ExecCommandRequest,
     ReadFileRequest,
     SandboxCaller,
     SearchReplaceEdit,
-    ShellRequest,
 )
 from sandbox.host.daemon_client import call_daemon_api
 from sandbox.occ.service import AUTO_SQUASH_MAX_DEPTH
@@ -251,48 +251,33 @@ async def _phase0_bootstrap(
 ) -> None:
     phase_started = time.monotonic()
 
-    # Ensure /ephemeral-os exists on disk before rebinding the workspace_root.
-    # The daemon's workspace mount rejects any cwd that escapes the bound
-    # workspace_root, and the binding may already be /ephemeral-os from a
-    # previous attempt in the same session — so we try the SWE-EVO default
-    # (/testbed) first, fall through to /ephemeral-os if that escapes.
-    mkdir_result = None
-    last_err = ""
-    for candidate_cwd in ("/testbed", WORKSPACE_ROOT):
-        try:
-            candidate_result = await sandbox_api.shell(
-                ctx.sandbox_id,
-                ShellRequest(
-                    command=f"mkdir -p {WORKSPACE_ROOT}",
-                    cwd=candidate_cwd,
-                    timeout=60,
-                    caller=ctx.caller,
-                    description=f"bootstrap api.shell mkdir cwd={candidate_cwd}",
-                ),
-            )
-        except Exception as exc:
-            last_err = f"cwd={candidate_cwd} error={type(exc).__name__}: {exc}"
-            continue
-        if candidate_result.success and candidate_result.exit_code == 0:
-            stats.api_shell_count += 1
-            mkdir_result = candidate_result
-            break
-        last_err = (
-            f"cwd={candidate_cwd} exit={candidate_result.exit_code} "
-            f"stderr={candidate_result.stderr!r}"
-        )
-    if mkdir_result is None:
+    mkdir_result = await sandbox_api.exec_command(
+        ctx.sandbox_id,
+        ExecCommandRequest(
+            cmd=f"mkdir -p {WORKSPACE_ROOT}",
+            timeout=60,
+            caller=ctx.caller,
+            description="bootstrap api.exec_command mkdir workspace",
+        ),
+    )
+    if mkdir_result.status == "ok" and mkdir_result.exit_code == 0:
+        stats.api_shell_count += 1
+    else:
+        output = mkdir_result.output
         _check_record = SandboxCheck(
-            name="api.shell.bootstrap.mkdir_workspace",
+            name="api.exec_command.bootstrap.mkdir_workspace",
             passed=False,
-            detail=last_err,
+            detail=(
+                f"status={mkdir_result.status} exit_code={mkdir_result.exit_code} "
+                f"stdout={output.stdout!r} stderr={output.stderr!r}"
+            ),
         )
         ctx.publish_mock_record(EventType.MOCK_SANDBOX_CHECK_RECORDED, _check_record)
-        raise RuntimeError(f"mkdir {WORKSPACE_ROOT} failed: {last_err}")
+        raise RuntimeError(f"mkdir {WORKSPACE_ROOT} failed: {output.stderr!r}")
     _check_record = SandboxCheck(
-        name="api.shell.bootstrap.mkdir_workspace",
+        name="api.exec_command.bootstrap.mkdir_workspace",
         passed=True,
-        detail=f"exit_code={mkdir_result.exit_code}",
+        detail=f"status={mkdir_result.status} exit_code={mkdir_result.exit_code}",
     )
     ctx.publish_mock_record(EventType.MOCK_SANDBOX_CHECK_RECORDED, _check_record)
 
@@ -349,49 +334,51 @@ async def _phase0_bootstrap(
     )
     ctx.publish_mock_record(EventType.MOCK_SANDBOX_CHECK_RECORDED, _check_record)
 
-    api_shell = await sandbox_api.shell(
+    api_shell = await sandbox_api.exec_command(
         ctx.sandbox_id,
-        ShellRequest(
-            command="test -d . && printf 'workspace-exists\\n'",
-            cwd=WORKSPACE_ROOT,
+        ExecCommandRequest(
+            cmd=f"cd {WORKSPACE_ROOT} && test -d . && printf 'workspace-exists\\n'",
             timeout=60,
             caller=ctx.caller,
-            description="bootstrap api.shell workspace exists",
+            description="bootstrap api.exec_command workspace exists",
         ),
     )
-    if api_shell.success and api_shell.exit_code == 0:
+    if api_shell.status == "ok" and api_shell.exit_code == 0:
         stats.api_shell_count += 1
+    output = api_shell.output
     _check_record = SandboxCheck(
-        name="api.shell.bootstrap.workspace_exists",
-        passed=bool(api_shell.success and api_shell.exit_code == 0),
+        name="api.exec_command.bootstrap.workspace_exists",
+        passed=bool(api_shell.status == "ok" and api_shell.exit_code == 0),
         detail=(
+            f"status={api_shell.status} "
             f"exit_code={api_shell.exit_code} "
-            f"stdout={api_shell.stdout!r} stderr={api_shell.stderr!r}"
+            f"stdout={output.stdout!r} stderr={output.stderr!r}"
         ),
     )
     ctx.publish_mock_record(EventType.MOCK_SANDBOX_CHECK_RECORDED, _check_record)
 
-    api_shell_status = await sandbox_api.shell(
+    api_shell_status = await sandbox_api.exec_command(
         ctx.sandbox_id,
-        ShellRequest(
-            command="pwd",
-            cwd=WORKSPACE_ROOT,
+        ExecCommandRequest(
+            cmd=f"cd {WORKSPACE_ROOT} && pwd",
             timeout=60,
             caller=ctx.caller,
-            description="bootstrap api.shell workspace cwd",
+            description="bootstrap api.exec_command workspace cwd",
         ),
     )
-    if api_shell_status.success and api_shell_status.exit_code == 0:
+    if api_shell_status.status == "ok" and api_shell_status.exit_code == 0:
         stats.api_shell_count += 1
+    output = api_shell_status.output
     _check_record = SandboxCheck(
-        name="api.shell.bootstrap.workspace_cwd",
+        name="api.exec_command.bootstrap.workspace_cwd",
         passed=bool(
-            api_shell_status.success and api_shell_status.exit_code == 0
+            api_shell_status.status == "ok" and api_shell_status.exit_code == 0
         ),
         detail=(
+            f"status={api_shell_status.status} "
             f"exit_code={api_shell_status.exit_code} "
-            f"stdout={api_shell_status.stdout!r} "
-            f"stderr={api_shell_status.stderr!r}"
+            f"stdout={output.stdout!r} "
+            f"stderr={output.stderr!r}"
         ),
     )
     ctx.publish_mock_record(EventType.MOCK_SANDBOX_CHECK_RECORDED, _check_record)
@@ -1157,30 +1144,31 @@ async def _phase_f_tri_source_consistency(
     for fixture in targets:
         path = f"{WORKSPACE_ROOT}/{fixture.relative_path}"
         tool_read = await _read_file(ctx, stats, path=path)
-        tool_stripped = _strip_line_number_prefix(tool_read)
+        tool_content = _canonical_projection_content(
+            _strip_line_number_prefix(tool_read)
+        )
 
         cat = await _shell_cat_with_retry(ctx, stats, path=path)
-        cat_stdout = _shell_stdout(cat).rstrip("\n")
+        cat_stdout = _canonical_projection_content(_shell_stdout(cat))
         api_read = await sandbox_api.read_file(
             ctx.sandbox_id,
             ReadFileRequest(path=path, caller=ctx.caller),
         )
         stats.api_read_count += 1
-        api_content = (api_read.content if api_read.success else "").rstrip("\n")
+        api_content = _canonical_projection_content(
+            api_read.content if api_read.success else ""
+        )
 
-        # Byte-equality between cat (raw) and sandbox.api.read_file (raw); the
-        # toolkit read_file is stripped of its line-number annotation and
-        # compared against the same canonical content.
         passed = (
             bool(api_content)
             and api_content == cat_stdout
-            and api_content == tool_stripped
+            and api_content == tool_content
         )
         _check_record = SandboxCheck(
             name=f"projection.tri_source.{_short(path)}",
             passed=passed,
             detail=(
-                f"tool={len(tool_stripped)} cat={len(cat_stdout)} "
+                f"tool={len(tool_content)} cat={len(cat_stdout)} "
                 f"api={len(api_content)} cat_exit={_shell_exit_code(cat)}"
             ),
         )
@@ -1546,6 +1534,10 @@ def _strip_line_number_prefix(tool_read: ToolResult) -> str:
     return "\n".join(
         _LINE_NUMBER_PREFIX_RE.sub("", line) for line in raw.split("\n")
     )
+
+
+def _canonical_projection_content(content: str) -> str:
+    return content.replace("\r\n", "\n").rstrip("\n")
 
 
 def _capture_metadata(tool_name: str, result: ToolResult) -> dict[str, Any]:
