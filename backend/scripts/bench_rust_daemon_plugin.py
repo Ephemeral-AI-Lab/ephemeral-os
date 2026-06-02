@@ -46,6 +46,9 @@ then proves a vanilla plugin service can:
   same refreshed read-only service path.
 * compute a real Pyright LSP ``textDocument/rename`` edit and publish it
   through the daemon's self-managed OCC callback path.
+* apply a generic positive LSP ``textDocument/formatting`` edit through the
+  daemon's self-managed OCC callback path, independent of Pyright's unsupported
+  formatting boundary.
 * fail closed when a dedicated service process exits during a connected route.
 * recover a previously ready read-only service on the next dispatch after a
   PPC/process failure.
@@ -144,6 +147,15 @@ LSP_APPLY_CODE_ACTION_REPLACEMENT = "after"
 LSP_APPLY_CODE_ACTION_CONTENT_AFTER = "after\nunchanged\n"
 LSP_APPLY_CODE_ACTION_TITLE = "Replace first line"
 LSP_APPLY_CODE_ACTION_KIND = "quickfix"
+LSP_FORMAT_TARGET_REL = "live_plugin_format.py"
+LSP_FORMAT_CONTENT = "def format_me():\n    return    1\n"
+LSP_FORMAT_CONTENT_AFTER = "def format_me() -> int:\n    return 1\n"
+LSP_FORMAT_METHOD = "textDocument/formatting"
+LSP_EXECUTE_COMMAND_TARGET_REL = "live_plugin_execute_command.py"
+LSP_EXECUTE_COMMAND_CONTENT = "value = 'before'\n"
+LSP_EXECUTE_COMMAND_CONTENT_AFTER = "value = 'after'\n"
+LSP_EXECUTE_COMMAND_NAME = "generic.applyWorkspaceEdit"
+LSP_EXECUTE_COMMAND_METHOD = "workspace/executeCommand"
 PYRIGHT_SIGNATURE_TARGET_REL = "live_plugin_signature.py"
 PYRIGHT_SIGNATURE_CONTENT = (
     "def live_signature(left: int, right: str) -> str:\n"
@@ -2637,6 +2649,175 @@ def handle_request(sock: socket.socket, request: dict[str, object]) -> None:
         )
         return
 
+    if op == "plugin.generic.lsp_format_document":
+        path = str(body.get("path") or "")
+        raw_edits = body.get("edits")
+        if not path:
+            reply(sock, request, {"success": False, "error": "missing path"})
+            return
+        target_uri = file_uri(os.path.join(os.environ["EOS_PLUGIN_WORKSPACE_ROOT"], path))
+        raw_edit = {
+            "changes": {
+                target_uri: raw_edits if isinstance(raw_edits, list) else [],
+            }
+        }
+        try:
+            changes = workspace_edit_to_changes(
+                os.environ["EOS_PLUGIN_WORKSPACE_ROOT"],
+                raw_edit,
+            )
+        except Exception as exc:
+            reply(
+                sock,
+                request,
+                {
+                    "success": False,
+                    "from_ppc": True,
+                    "from_lsp_formatting": True,
+                    "from_self_managed": True,
+                    "method": "textDocument/formatting",
+                    "error": str(exc),
+                    "plugin_id": os.environ.get("EOS_PLUGIN_ID"),
+                    "service_id": os.environ.get("EOS_PLUGIN_SERVICE_ID"),
+                    "workspace_mounted": os.environ.get("EOS_PLUGIN_WORKSPACE_MOUNTED") == "1",
+                    "manifest_key": CURRENT_MANIFEST_KEY,
+                },
+            )
+            return
+        callback_body = send_occ_callback(
+            sock,
+            request,
+            suffix="occ",
+            changes=changes,
+        )
+        reply(
+            sock,
+            request,
+            {
+                "success": bool(callback_body.get("success")),
+                "from_ppc": True,
+                "from_lsp_formatting": True,
+                "from_self_managed": True,
+                "plugin_id": os.environ.get("EOS_PLUGIN_ID"),
+                "service_id": os.environ.get("EOS_PLUGIN_SERVICE_ID"),
+                "workspace_mounted": os.environ.get("EOS_PLUGIN_WORKSPACE_MOUNTED") == "1",
+                "manifest_key": CURRENT_MANIFEST_KEY,
+                "protocol": "lsp-jsonrpc",
+                "method": "textDocument/formatting",
+                "path": path,
+                "edits": raw_edits if isinstance(raw_edits, list) else [],
+                "edit_count": len(raw_edits) if isinstance(raw_edits, list) else 0,
+                "changed_paths": [str(change["path"]) for change in changes],
+                "changes": changes,
+                "callback": callback_body,
+            },
+        )
+        return
+
+    if op == "plugin.generic.lsp_execute_command":
+        command = str(body.get("command") or "")
+        commands = ["generic.applyWorkspaceEdit"]
+        raw_arguments = body.get("arguments")
+        first_argument = (
+            raw_arguments[0]
+            if isinstance(raw_arguments, list)
+            and raw_arguments
+            and isinstance(raw_arguments[0], dict)
+            else {}
+        )
+        raw_edit = (
+            first_argument.get("edit")
+            if isinstance(first_argument, dict)
+            else None
+        )
+        if command not in commands:
+            reply(
+                sock,
+                request,
+                {
+                    "success": False,
+                    "from_ppc": True,
+                    "from_lsp_execute_command": True,
+                    "from_self_managed": True,
+                    "protocol": "lsp-jsonrpc",
+                    "method": "workspace/executeCommand",
+                    "command": command,
+                    "commands": commands,
+                    "supported": False,
+                    "unsupported": True,
+                    "error": "unsupported command",
+                    "plugin_id": os.environ.get("EOS_PLUGIN_ID"),
+                    "service_id": os.environ.get("EOS_PLUGIN_SERVICE_ID"),
+                    "workspace_mounted": os.environ.get("EOS_PLUGIN_WORKSPACE_MOUNTED") == "1",
+                    "manifest_key": CURRENT_MANIFEST_KEY,
+                },
+            )
+            return
+        try:
+            changes = workspace_edit_to_changes(
+                os.environ["EOS_PLUGIN_WORKSPACE_ROOT"],
+                raw_edit,
+            )
+        except Exception as exc:
+            reply(
+                sock,
+                request,
+                {
+                    "success": False,
+                    "from_ppc": True,
+                    "from_lsp_execute_command": True,
+                    "from_self_managed": True,
+                    "protocol": "lsp-jsonrpc",
+                    "method": "workspace/executeCommand",
+                    "command": command,
+                    "commands": commands,
+                    "supported": True,
+                    "unsupported": False,
+                    "error": str(exc),
+                    "plugin_id": os.environ.get("EOS_PLUGIN_ID"),
+                    "service_id": os.environ.get("EOS_PLUGIN_SERVICE_ID"),
+                    "workspace_mounted": os.environ.get("EOS_PLUGIN_WORKSPACE_MOUNTED") == "1",
+                    "manifest_key": CURRENT_MANIFEST_KEY,
+                },
+            )
+            return
+        callback_body = send_occ_callback(
+            sock,
+            request,
+            suffix="occ",
+            changes=changes,
+        )
+        changed_paths = [str(change["path"]) for change in changes]
+        reply(
+            sock,
+            request,
+            {
+                "success": bool(callback_body.get("success")),
+                "from_ppc": True,
+                "from_lsp_execute_command": True,
+                "from_self_managed": True,
+                "plugin_id": os.environ.get("EOS_PLUGIN_ID"),
+                "service_id": os.environ.get("EOS_PLUGIN_SERVICE_ID"),
+                "workspace_mounted": os.environ.get("EOS_PLUGIN_WORKSPACE_MOUNTED") == "1",
+                "manifest_key": CURRENT_MANIFEST_KEY,
+                "protocol": "lsp-jsonrpc",
+                "method": "workspace/executeCommand",
+                "command": command,
+                "commands": commands,
+                "supported": True,
+                "unsupported": False,
+                "arguments": raw_arguments if isinstance(raw_arguments, list) else [],
+                "changed_paths": changed_paths,
+                "changes": changes,
+                "callback": callback_body,
+                "result": {
+                    "applied": bool(callback_body.get("success")),
+                    "changed_paths": changed_paths,
+                },
+            },
+        )
+        return
+
     if op == "plugin.generic.adapter_query":
         if ADAPTER is None:
             reply(sock, request, {"success": False, "error": "adapter was not started"})
@@ -3398,6 +3579,30 @@ async def run(args: argparse.Namespace) -> dict[str, Any]:
                 layer_stack_root=LAYER_STACK_ROOT,
                 timeout=30,
             )
+            report["lsp_format_seed"] = await daemon_client.call_daemon_api(
+                bench.sandbox_id,
+                "api.v1.write_file",
+                {
+                    "agent_id": AGENT_ID,
+                    "path": f"{WORKSPACE_ROOT}/{LSP_FORMAT_TARGET_REL}",
+                    "content": LSP_FORMAT_CONTENT,
+                    "overwrite": True,
+                },
+                layer_stack_root=LAYER_STACK_ROOT,
+                timeout=30,
+            )
+            report["lsp_execute_command_seed"] = await daemon_client.call_daemon_api(
+                bench.sandbox_id,
+                "api.v1.write_file",
+                {
+                    "agent_id": AGENT_ID,
+                    "path": f"{WORKSPACE_ROOT}/{LSP_EXECUTE_COMMAND_TARGET_REL}",
+                    "content": LSP_EXECUTE_COMMAND_CONTENT,
+                    "overwrite": True,
+                },
+                layer_stack_root=LAYER_STACK_ROOT,
+                timeout=30,
+            )
             report["pyright_signature_seed"] = await daemon_client.call_daemon_api(
                 bench.sandbox_id,
                 "api.v1.write_file",
@@ -3881,6 +4086,97 @@ async def run(args: argparse.Namespace) -> dict[str, Any]:
                 layer_stack_root=LAYER_STACK_ROOT,
                 timeout=30,
             )
+            try:
+                report["lsp_format_document"] = await daemon_client.call_daemon_api(
+                    bench.sandbox_id,
+                    "plugin.generic.lsp_format_document",
+                    {
+                        "agent_id": AGENT_ID,
+                        "path": LSP_FORMAT_TARGET_REL,
+                        "edits": [
+                            {
+                                "range": {
+                                    "start": {"line": 0, "character": 0},
+                                    "end": {"line": 2, "character": 0},
+                                },
+                                "newText": LSP_FORMAT_CONTENT_AFTER,
+                            }
+                        ],
+                    },
+                    layer_stack_root=LAYER_STACK_ROOT,
+                    timeout=150,
+                )
+            except Exception as exc:
+                report["lsp_format_document"] = {
+                    "success": False,
+                    "from_lsp_formatting": False,
+                    "from_self_managed": False,
+                    "error": str(exc),
+                }
+            report["lsp_format_readback"] = await daemon_client.call_daemon_api(
+                bench.sandbox_id,
+                "api.v1.read_file",
+                {"agent_id": AGENT_ID, "path": LSP_FORMAT_TARGET_REL},
+                layer_stack_root=LAYER_STACK_ROOT,
+                timeout=30,
+            )
+            lsp_execute_command_uri = (
+                f"file://{WORKSPACE_ROOT}/{LSP_EXECUTE_COMMAND_TARGET_REL}"
+            )
+            try:
+                report["lsp_execute_command"] = await daemon_client.call_daemon_api(
+                    bench.sandbox_id,
+                    "plugin.generic.lsp_execute_command",
+                    {
+                        "agent_id": AGENT_ID,
+                        "command": LSP_EXECUTE_COMMAND_NAME,
+                        "arguments": [
+                            {
+                                "edit": {
+                                    "changes": {
+                                        lsp_execute_command_uri: [
+                                            {
+                                                "range": {
+                                                    "start": {
+                                                        "line": 0,
+                                                        "character": 0,
+                                                    },
+                                                    "end": {
+                                                        "line": 0,
+                                                        "character": len(
+                                                            LSP_EXECUTE_COMMAND_CONTENT.strip()
+                                                        ),
+                                                    },
+                                                },
+                                                "newText": (
+                                                    LSP_EXECUTE_COMMAND_CONTENT_AFTER.strip()
+                                                ),
+                                            }
+                                        ]
+                                    }
+                                }
+                            }
+                        ],
+                    },
+                    layer_stack_root=LAYER_STACK_ROOT,
+                    timeout=150,
+                )
+            except Exception as exc:
+                report["lsp_execute_command"] = {
+                    "success": False,
+                    "from_lsp_execute_command": False,
+                    "from_self_managed": False,
+                    "error": str(exc),
+                }
+            report["lsp_execute_command_readback"] = (
+                await daemon_client.call_daemon_api(
+                    bench.sandbox_id,
+                    "api.v1.read_file",
+                    {"agent_id": AGENT_ID, "path": LSP_EXECUTE_COMMAND_TARGET_REL},
+                    layer_stack_root=LAYER_STACK_ROOT,
+                    timeout=30,
+                )
+            )
             report["status_after_pyright"] = await daemon_client.call_daemon_api(
                 bench.sandbox_id,
                 "api.plugin.status",
@@ -4342,6 +4638,20 @@ def plugin_manifest() -> dict[str, Any]:
             },
             {
                 "op_name": "lsp_apply_code_action",
+                "intent": "write_allowed",
+                "auto_workspace_overlay": False,
+                "service_id": "pyright_harness",
+                "timeout_ms": 150000,
+            },
+            {
+                "op_name": "lsp_format_document",
+                "intent": "write_allowed",
+                "auto_workspace_overlay": False,
+                "service_id": "pyright_harness",
+                "timeout_ms": 150000,
+            },
+            {
+                "op_name": "lsp_execute_command",
                 "intent": "write_allowed",
                 "auto_workspace_overlay": False,
                 "service_id": "pyright_harness",
@@ -4905,6 +5215,23 @@ def gate_pass(report: dict[str, Any]) -> bool:
         "lsp_apply_code_action_readback",
         {},
     )
+    lsp_format_document = report.get("lsp_format_document", {})
+    lsp_format_document_callback = (
+        lsp_format_document.get("callback", {})
+        if isinstance(lsp_format_document, dict)
+        else {}
+    )
+    lsp_format_readback = report.get("lsp_format_readback", {})
+    lsp_execute_command = report.get("lsp_execute_command", {})
+    lsp_execute_command_callback = (
+        lsp_execute_command.get("callback", {})
+        if isinstance(lsp_execute_command, dict)
+        else {}
+    )
+    lsp_execute_command_readback = report.get(
+        "lsp_execute_command_readback",
+        {},
+    )
     pyright_rename = report.get("pyright_rename", {})
     pyright_rename_lsp = (
         pyright_rename.get("lsp", {}) if isinstance(pyright_rename, dict) else {}
@@ -4967,6 +5294,10 @@ def gate_pass(report: dict[str, Any]) -> bool:
         and "plugin.generic.lsp_apply_workspace_edit"
         in report.get("status_after_ensure", {}).get("connected_ppc_routes", [])
         and "plugin.generic.lsp_apply_code_action"
+        in report.get("status_after_ensure", {}).get("connected_ppc_routes", [])
+        and "plugin.generic.lsp_format_document"
+        in report.get("status_after_ensure", {}).get("connected_ppc_routes", [])
+        and "plugin.generic.lsp_execute_command"
         in report.get("status_after_ensure", {}).get("connected_ppc_routes", [])
         and "plugin.generic.crash_probe"
         in report.get("status_after_ensure", {}).get("connected_ppc_routes", [])
@@ -5059,6 +5390,8 @@ def gate_pass(report: dict[str, Any]) -> bool:
         and report.get("pyright_code_action_seed", {}).get("success") is True
         and report.get("lsp_apply_workspace_edit_seed", {}).get("success") is True
         and report.get("lsp_apply_code_action_seed", {}).get("success") is True
+        and report.get("lsp_format_seed", {}).get("success") is True
+        and report.get("lsp_execute_command_seed", {}).get("success") is True
         and report.get("pyright_signature_seed", {}).get("success") is True
         and report.get("pyright_type_seed", {}).get("success") is True
         and report.get("pyright_call_hierarchy_seed", {}).get("success") is True
@@ -5287,6 +5620,28 @@ def gate_pass(report: dict[str, Any]) -> bool:
         and lsp_apply_code_action_readback.get("exists") is True
         and lsp_apply_code_action_readback.get("content")
         == LSP_APPLY_CODE_ACTION_CONTENT_AFTER
+        and lsp_format_document.get("from_lsp_formatting") is True
+        and lsp_format_document.get("from_self_managed") is True
+        and lsp_format_document.get("workspace_mounted") is True
+        and lsp_format_document.get("method") == LSP_FORMAT_METHOD
+        and int(lsp_format_document.get("edit_count", 0)) >= 1
+        and lsp_format_document_callback.get("success") is True
+        and LSP_FORMAT_TARGET_REL in lsp_format_document.get("changed_paths", [])
+        and lsp_format_readback.get("exists") is True
+        and lsp_format_readback.get("content") == LSP_FORMAT_CONTENT_AFTER
+        and lsp_execute_command.get("from_lsp_execute_command") is True
+        and lsp_execute_command.get("from_self_managed") is True
+        and lsp_execute_command.get("workspace_mounted") is True
+        and lsp_execute_command.get("method") == LSP_EXECUTE_COMMAND_METHOD
+        and lsp_execute_command.get("command") == LSP_EXECUTE_COMMAND_NAME
+        and lsp_execute_command.get("supported") is True
+        and lsp_execute_command.get("unsupported") is False
+        and lsp_execute_command_callback.get("success") is True
+        and LSP_EXECUTE_COMMAND_TARGET_REL
+        in lsp_execute_command.get("changed_paths", [])
+        and lsp_execute_command_readback.get("exists") is True
+        and lsp_execute_command_readback.get("content")
+        == LSP_EXECUTE_COMMAND_CONTENT_AFTER
         and pyright_status.get("state") == "ready"
         and int(pyright_status.get("refresh_count", 0)) >= 1
         and pyright_rename.get("from_pyright_adapter") is True
@@ -5463,6 +5818,10 @@ def markdown_report(report: dict[str, Any]) -> str:
         f"- lsp_apply_workspace_edit_readback: `{report.get('lsp_apply_workspace_edit_readback', {}).get('content')}`",
         f"- lsp_apply_code_action: `{report.get('lsp_apply_code_action')}`",
         f"- lsp_apply_code_action_readback: `{report.get('lsp_apply_code_action_readback', {}).get('content')}`",
+        f"- lsp_format_document: `{report.get('lsp_format_document')}`",
+        f"- lsp_format_readback: `{report.get('lsp_format_readback', {}).get('content')}`",
+        f"- lsp_execute_command: `{report.get('lsp_execute_command')}`",
+        f"- lsp_execute_command_readback: `{report.get('lsp_execute_command_readback', {}).get('content')}`",
         f"- pyright_refresh_count: `{pyright_status.get('refresh_count')}`",
         f"- pyright_rename: `{report.get('pyright_rename', {}).get('lsp')}`",
         f"- pyright_rename_callback: `{report.get('pyright_rename', {}).get('callback')}`",

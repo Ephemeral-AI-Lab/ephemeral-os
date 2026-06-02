@@ -6,8 +6,10 @@ from test_runner.scenarios.base import ScenarioContext
 
 
 def is_entry_origin_workflow(ctx: ScenarioContext) -> bool:
-    """True when the scenario context is still in the root request agent."""
-    return ctx.workflow is None
+    """True for the root request agent or its root-launched workflow."""
+    if ctx.workflow is None:
+        return True
+    return str(getattr(ctx.workflow, "parent_task_id", "") or "").startswith("root-")
 
 
 def is_recursive_workflow(ctx: ScenarioContext) -> bool:

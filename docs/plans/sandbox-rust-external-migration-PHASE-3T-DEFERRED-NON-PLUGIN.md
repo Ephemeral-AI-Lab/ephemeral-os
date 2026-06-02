@@ -15,10 +15,42 @@ implementation, intentionally excluding:
 
 ## Current Closeout Refresh - 2026-06-02
 
-Latest isolated-workspace command/PTY/network evidence is green on rebuilt
-amd64 artifact `2cd435f95b3de918c6344c647c84ee67b78990b6bc9ff9012d804342a5c5b699`.
-The broader non-plugin sidecar gates remain green on the 2026-06-01 artifact
-listed below.
+Current Rust migration bench-script sweep is green on rebuilt amd64 artifact
+`94a9fa39fdb8744f2f2dd31a6b34393870eb3a5e15d0b7e06add2f60a9e896ea`.
+The sweep used the Rust bench scripts directly, not `task_center_runner`.
+
+- `bench/bench-rust-all-phase2-20260602-current.json`
+  (`run_id=local-fe928a05c04f`) passed `gate_pass=true` with CP-3, AV-2,
+  readiness, TCP heartbeat, stale TCP invalidation, and read transport gates
+  green.
+- `bench/bench-rust-all-phase3-20260602-current.json`
+  (`run_id=local-7ad6bfb51cb0`) passed `gate_pass=true` with CP-4s and the
+  1/3/5/10 shell-string load matrix green.
+- `bench/bench-rust-all-phase3t-pty-20260602-current.json`
+  (`run_id=local-d7ecdcabb986`, `--privileged`) passed `gate_pass=true` with
+  finite command, PTY progress, PTY stdin, PTY cancel, isolated exit
+  inspection, embedded mixed non-plugin load, and cache churn green.
+- `bench/bench-rust-all-phase3t-mixed-non-plugin-20260602-current.json`
+  (`run_id=local-037cdd9a4a6f`) passed `gate_pass=true`, `cp4=true`, and
+  `av4=true`, with attached audit/performance artifacts
+  `bench/bench-rust-all-phase3t-mixed-non-plugin-20260602-current.sandbox_events.jsonl`,
+  `.performance_report.json`, and `.performance_report.md`.
+- `bench/bench-rust-all-phase3t-av7-20260602-current.json`
+  (`run_id=local-928c37d308c9`) passed `gate_pass=true` and `av7=true`.
+- `bench/bench-rust-all-phase3t-section7-20260602-current.json`
+  (`run_id=local-d2a345847fb3`) passed `gate_pass=true` and `section7=true`.
+- `bench/bench-rust-all-isolated-inspection-20260602-current.json`
+  (`run_id=local-b5492a01bc80`, `--privileged`) passed `gate_pass=true` with
+  74/74 isolated scenario checks green. Preflight showed
+  `cgroup_writable=true` and target image `ip=nft=`. The run covers isolated
+  PTY stdin/progress/natural completion/timeout/cancel behavior, scratch
+  no-OCC-publish behavior, clean force-exit cleanup, and two isolated agents
+  both binding TCP port `3000` while each reaches its own localhost server and
+  cross-agent access is blocked.
+- `bench/bench-rust-all-plugin-20260602-current.json`
+  (`run_id=local-6c4bab5ca7a0`) also passed `gate_pass=true` as a same-artifact
+  smoke check. Plugin implementation/AV-10 remains intentionally excluded from
+  this non-plugin closeout.
 
 - `bench/phase3t-rust-isolated-inspection-docker-20260602-pty-cancel-termination-fix.json`
   (`run_id=local-b913335431e4`) passed `gate_pass=true` with 74/74 scenario
@@ -59,9 +91,11 @@ listed below.
   stdin echo latency, so the stdin-write gate measures PTY input delivery rather
   than Python child startup timing.
 
-Non-plugin Phase 3T deferred items remain closed. The only Phase 3T work not
-closed by this document is plugin PPC execution/AV-10, intentionally excluded
-above.
+Non-plugin Phase 3T deferred items remain closed. No deferred Phase 3
+non-plugin item remains open after the current bench-script sweep. The only
+Phase 3T work not closed by this document is plugin implementation/AV-10,
+intentionally excluded above; broader Phase 3.5/AV-9/BYO-image/cutover scope
+remains later-phase work.
 
 ## Next Agent Handoff - 2026-06-01
 

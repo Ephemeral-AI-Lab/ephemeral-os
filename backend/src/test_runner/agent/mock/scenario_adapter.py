@@ -167,7 +167,7 @@ async def _advisor_script() -> TurnScript:
 
 async def _root_script(scenario: "Scenario", ctx: ScenarioContext) -> TurnScript:
     """Root request script: delegate the scenario workflow, then close root."""
-    goal = scenario.delegated_workflow_goal(ctx) or ctx.instruction or ctx.prompt
+    goal = ctx.instruction or ctx.prompt
     if not goal:
         goal = f"Run mocked scenario {scenario.name}."
     blocks = yield Turn(calls=(ToolCall("delegate_workflow", {"goal": goal}),))
@@ -200,13 +200,17 @@ async def _root_script(scenario: "Scenario", ctx: ScenarioContext) -> TurnScript
                     status_payload = json.loads(status_result.output)
                 except (TypeError, ValueError):
                     status_payload = {}
-                if str(status_payload.get("status") or "") in {
+                workflow_status = str(status_payload.get("status") or "")
+                if workflow_status in {
                     "closed",
                     "completed",
                     "succeeded",
                     "failed",
                     "cancelled",
                 }:
+                    if workflow_status in {"failed", "cancelled"}:
+                        status = "failed"
+                        outcome = f"Root delegated workflow {workflow_status}."
                     break
                 await asyncio.sleep(0.05)
             else:
@@ -264,27 +268,67 @@ async def _executor_script(
             delegate_args = {"goal": delegated_goal}
             blocks = yield Turn(calls=(ToolCall("delegate_workflow", delegate_args),))
             result = normalize_result(blocks)
+            status = "success"
+            outcome = "Delegated workflow completed."
+            workflow_id = ""
             workflow_task_id = ""
-            if not result.is_error:
+            if result.is_error:
+                status = "failed"
+                outcome = f"Delegated workflow launch failed: {result.output}"
+            else:
                 try:
-                    workflow_task_id = str(json.loads(result.output).get("workflow_task_id") or "")
+                    payload = json.loads(result.output)
                 except (TypeError, ValueError):
-                    workflow_task_id = ""
-            if workflow_task_id:
-                _ = yield Turn(
-                    calls=(
-                        ToolCall(
-                            "cancel_workflow",
-                            {
-                                "workflow_task_id": workflow_task_id,
-                                "reason": "Mock recursive lane cancelled by scenario adapter.",
-                            },
-                        ),
-                    )
-                )
+                    payload = {}
+                workflow_id = str(payload.get("workflow_id") or "")
+                workflow_task_id = str(payload.get("workflow_task_id") or "")
+            if workflow_id:
+                check_args = {
+                    "workflow_id": workflow_id,
+                    "workflow_task_id": workflow_task_id or None,
+                }
+                for _index in range(50):
+                    blocks = yield Turn(calls=(ToolCall("check_workflow_status", check_args),))
+                    status_result = normalize_result(blocks)
+                    if status_result.is_error:
+                        status = "failed"
+                        outcome = f"Delegated workflow status check failed: {status_result.output}"
+                        break
+                    try:
+                        status_payload = json.loads(status_result.output)
+                    except (TypeError, ValueError):
+                        status_payload = {}
+                    workflow_status = str(status_payload.get("status") or "")
+                    if workflow_status in {
+                        "closed",
+                        "completed",
+                        "succeeded",
+                        "failed",
+                        "cancelled",
+                    }:
+                        if workflow_status in {"failed", "cancelled"}:
+                            status = "failed"
+                            outcome = f"Delegated workflow {workflow_status}."
+                        break
+                    await asyncio.sleep(0.05)
+                else:
+                    status = "failed"
+                    outcome = "Delegated workflow did not finish before polling budget."
+                    if workflow_task_id:
+                        _ = yield Turn(
+                            calls=(
+                                ToolCall(
+                                    "cancel_workflow",
+                                    {
+                                        "workflow_task_id": workflow_task_id,
+                                        "reason": outcome,
+                                    },
+                                ),
+                            )
+                        )
             blocker_args = {
-                "status": "failed",
-                "outcome": "Delegated workflow requested by mock scenario adapter.",
+                "status": status,
+                "outcome": outcome,
             }
             _ = yield _ask_advisor_turn("submit_generator_outcome", blocker_args)
             _ = yield Turn(calls=(ToolCall("submit_generator_outcome", blocker_args),))

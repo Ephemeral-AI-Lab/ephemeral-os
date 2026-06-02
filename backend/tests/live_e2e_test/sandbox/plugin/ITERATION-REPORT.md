@@ -1,5 +1,25 @@
 # Plugin Live E2E Iteration Report
 
+## Iteration 52 - 2026-06-02 10:26 CST
+
+- Checkout/target summary: continued the Phase 3T Rust plugin implementation in the dirty multi-agent worktree; focused on shrinking the remaining AV-10 LSP parity gap with positive generic formatting coverage rather than pretending Pyright advertises formatting.
+- Plan path and target files: `docs/plans/sandbox-plugin-service-adversarial-plan.md`; `docs/plans/sandbox-rust-external-migration-PROGRESS.md`; `backend/scripts/bench_rust_daemon_plugin.py`; `backend/tests/live_e2e_test/sandbox/plugin/test_plugin_refresh_strategies.py`.
+- Coverage gap found: the suite routed Pyright `textDocument/formatting` as a structured unsupported operation because Pyright does not advertise `documentFormattingProvider`, but it still lacked a positive provider/harness path proving formatting-style LSP TextEdits can publish through the daemon OCC callback.
+- Tests, probes, and audit fields added: Added manifest route `plugin.generic.lsp_format_document`, seed/readback file `live_plugin_format.py`, benchmark gates, markdown fields, and pytest assertions. The gate requires route registration, `from_lsp_formatting=true`, `from_self_managed=true`, `workspace_mounted=true`, method `textDocument/formatting`, `edit_count>=1`, callback `success=true`, changed path `live_plugin_format.py`, and LayerStack readback `def format_me() -> int:\n    return 1\n`.
+- Exact commands run:
+  - `python3 -m py_compile backend/scripts/bench_rust_daemon_plugin.py backend/tests/live_e2e_test/sandbox/plugin/test_plugin_refresh_strategies.py`.
+  - `uv run ruff check backend/scripts/bench_rust_daemon_plugin.py backend/tests/live_e2e_test/sandbox/plugin/test_plugin_refresh_strategies.py`.
+  - `uv run pytest --collect-only -q backend/tests/live_e2e_test/sandbox/plugin/test_plugin_refresh_strategies.py`.
+  - `git diff --check -- backend/scripts/bench_rust_daemon_plugin.py backend/tests/live_e2e_test/sandbox/plugin/test_plugin_refresh_strategies.py`.
+  - `EOS_SANDBOX_PROVIDER=docker EOS_LIVE_E2E_IMAGE=xingyaoww/sweb.eval.x86_64.dask_s_dask-10042:latest EOS_PLUGIN_REFRESH_SAMPLES=1 EOS_PLUGIN_REFRESH_AUTO_SQUASH_WRITES=104 EOS_RUST_PLUGIN_BENCH_TIMEOUT_S=600 uv run pytest -q -x -rs --tb=short --durations=10 backend/tests/live_e2e_test/sandbox/plugin/test_plugin_refresh_strategies.py`.
+- Artifact paths inspected: `.omc/results/rust-daemon-plugin-generic-20260602T022610Z-10996.json`, `.omc/results/plugin-refresh-strategies-20260602T022610Z-10996.json`, plus pytest output.
+- Pass/fail/skip status: passed. The focused live test finished `1 passed in 73.77s`; packaged `eosd-linux-amd64` SHA was `94a9fa39fdb8744f2f2dd31a6b34393870eb3a5e15d0b7e06add2f60a9e896ea`; py_compile, ruff, collect-only, and scoped `git diff --check` passed before the live run.
+- Findings summary: The live Rust plugin case now proves a generic positive LSP formatting provider can publish through the same self-managed daemon OCC callback path as rename, workspace-edit, and code-action edits. `plugin.generic.lsp_format_document` returned through PPC from `pyright_harness`, used method `textDocument/formatting`, committed `live_plugin_format.py` at published manifest version `18`, and read back the formatted content from LayerStack.
+- Issues found and fixes applied: No runtime failure. Added the route, handler, seed, benchmark gate fields, generated markdown lines, and pytest assertions. The Pyright unsupported formatting route remains as the provider-capability boundary; the new route is the positive generic-provider formatting coverage.
+- Correctness result: PASS. The artifact shows `lsp_format_document.success=true`, callback `success=true`, changed path `live_plugin_format.py`, final manifest version `20`, final active leases `6`, post-cleanup active leases `0`, and zero final/post-cleanup orphan or missing layers.
+- Performance/O(1) result: PASS for this slice. The formatting write used a single daemon OCC callback with one changed path; direct readback had `workspace_tree_exists=0`, `upperdir_tree_exists=0`, and `run_dir_tree_exists=0`. The refresh-strategy report still recommends `workspace_snapshot_refresh`; refresh p95 was `9.818 ms` versus `commit_to_workspace` p95 `5.911 ms`; raw workspace watch remained stale without materialization.
+- Remaining risk or next iteration target: Broader AV-10 parity, positive execute-command coverage with a provider that advertises commands, true operation-level out-of-order multiplexing if a future protocol requires it, and broader crash recovery beyond the covered health/fail-closed/timeout-recovery/recover/cleanup/isolated-gate lanes remain open.
+
 ## Iteration 51 - 2026-06-02 10:09 CST
 
 - Checkout/target summary: continued the Phase 3T Rust plugin implementation in the dirty multi-agent worktree; focused on proving plugin-family operations stay shared-ephemeral only and are blocked while the same agent is in isolated workspace mode.

@@ -12,10 +12,13 @@ Pyright read-only `documentSymbol`/`workspace/symbol`/`completion`/
 `hover`/`typeDefinition`/`declaration`/`callHierarchy` incoming/outgoing/
 `documentHighlight`/`prepareRename`/`definition`/`references` refresh,
 Pyright-computed self-managed rename publish, and generic LSP
-`apply_workspace_edit`/`apply_code_action` publish paths are live. Pyright
-`document_formatting` and `workspace/executeCommand` are now routed through PPC
-as structured unsupported responses based on the server's advertised capability
-boundary. Live status health
+`apply_workspace_edit`/`apply_code_action`/`format_document`/`execute_command`
+publish paths are
+live. Pyright `document_formatting` and `workspace/executeCommand` are now
+routed through PPC as structured unsupported responses based on the server's
+advertised capability boundary, while a generic positive LSP formatting
+and execute-command provider path is covered separately through the daemon OCC
+callback. Live status health
 probes, failed-health isolation,
 service-crash, hung-service timeout fail-closed probes, timeout next-dispatch
 recovery, and next-dispatch service recovery after a PPC/process failure are
@@ -30,9 +33,9 @@ publish followed by long-lived plugin refresh/readback, explicit daemon cleanup
 that removes PPC routes/services and reaps plugin harness processes, and the current
 Pyright negative capability boundary:
 `document_formatting=false`, `document_range_formatting=false`, and
-`executeCommandProvider.commands=[]`, so formatting/execute-command are
+`executeCommandProvider.commands=[]`, so Pyright formatting/execute-command are
 unsupported-route gates for this Pyright harness, not positive provider parity
-targets yet.
+targets themselves.
 Broader AV-10 LSP parity, true operation-level out-of-order multiplexing if
 required, and
 broader crash recovery beyond the covered health/crash/timeout/recovery paths
@@ -288,7 +291,14 @@ Landed:
   `live_plugin_apply_workspace_edit.py`, verifies
   `plugin.generic.lsp_apply_code_action` applies a CodeAction `edit` through
   the same daemon-owned OCC callback path and publishes
-  `live_plugin_apply_code_action.py`, verifies a second read-only
+  `live_plugin_apply_code_action.py`, verifies
+  `plugin.generic.lsp_format_document` applies generic positive LSP
+  `textDocument/formatting` edits through the daemon-owned OCC callback path
+  and publishes `live_plugin_format.py`, verifies
+  `plugin.generic.lsp_execute_command` applies a positive generic
+  `workspace/executeCommand` provider command through the daemon-owned OCC
+  callback path and publishes `live_plugin_execute_command.py`, verifies a
+  second read-only
   `plugin.generic.restart_ping`
   triggers the `restart_service` fallback for a separate generic service,
   verifies that restarted service reads the post-write file through its mounted
@@ -312,8 +322,8 @@ Landed:
   refresh-strategy benchmark in the same integrated sandbox fixture.
 - Live verification passed:
   `EOS_SANDBOX_PROVIDER=docker EOS_LIVE_E2E_IMAGE=xingyaoww/sweb.eval.x86_64.dask_s_dask-10042:latest EOS_PLUGIN_REFRESH_SAMPLES=1 EOS_PLUGIN_REFRESH_AUTO_SQUASH_WRITES=104 EOS_RUST_PLUGIN_BENCH_TIMEOUT_S=600 uv run pytest -q -x -rs --tb=short --durations=10 backend/tests/live_e2e_test/sandbox/plugin/test_plugin_refresh_strategies.py`
-  (`1 passed in 51.58s` on the latest rerun). The Rust plugin artifact report
-  `.omc/results/rust-daemon-plugin-generic-20260602T020945Z-23569.json` used
+  (`1 passed in 49.30s` on the latest rerun). The Rust plugin artifact report
+  `.omc/results/rust-daemon-plugin-generic-20260602T023906Z-45132.json` used
   `eosd-linux-amd64` SHA
   `94a9fa39fdb8744f2f2dd31a6b34393870eb3a5e15d0b7e06add2f60a9e896ea` and
   proved registered routes `plugin.generic.adapter_query`,
@@ -322,6 +332,8 @@ Landed:
   `plugin.generic.hang_probe`, `plugin.generic.hang_recover_ping`,
   `plugin.generic.health_fail_ping`,
   `plugin.generic.lsp_apply_code_action`,
+  `plugin.generic.lsp_execute_command`,
+  `plugin.generic.lsp_format_document`,
   `plugin.generic.lsp_apply_workspace_edit`,
   `plugin.generic.oneshot_write`, `plugin.generic.ping`, and
   `plugin.generic.pyright_call_hierarchy`,
@@ -349,6 +361,8 @@ Landed:
   `plugin.generic.hang_recover_ping`/
   `plugin.generic.health_fail_ping`/
   `plugin.generic.lsp_apply_code_action`/
+  `plugin.generic.lsp_execute_command`/
+  `plugin.generic.lsp_format_document`/
   `plugin.generic.lsp_apply_workspace_edit`/
   `plugin.generic.ping`/`plugin.generic.pyright_call_hierarchy`/
   `plugin.generic.pyright_capabilities`/
@@ -496,6 +510,22 @@ Landed:
   `daemon.occ.apply_changeset` with callback status `success=true`, file
   status `committed`, published manifest version `15`, action kind `quickfix`,
   and LayerStack readback `after\nunchanged\n`;
+  generic positive LSP formatting evidence where
+  `plugin.generic.lsp_format_document` converted a `textDocument/formatting`
+  TextEdit for `file:///eos/plugin/rust-workspace/live_plugin_format.py` into
+  one write changeset, published through `daemon.occ.apply_changeset` with
+  callback status `success=true`, file status `committed`, published manifest
+  version `18`, method `textDocument/formatting`, `edit_count=1`, and
+  LayerStack readback `def format_me() -> int:\n    return 1\n`;
+  generic positive LSP execute-command evidence where
+  `plugin.generic.lsp_execute_command` ran advertised command
+  `generic.applyWorkspaceEdit`, converted its `workspace/executeCommand`
+  argument into one write changeset for
+  `file:///eos/plugin/rust-workspace/live_plugin_execute_command.py`,
+  published through `daemon.occ.apply_changeset` with callback status
+  `success=true`, file status `committed`, published manifest version `20`,
+  `supported=true`, `unsupported=false`, and LayerStack readback
+  `value = 'after'\n`;
   same-service concurrent dispatch evidence where two concurrent
   `plugin.generic.ping` calls against `harness` returned echoes
   `concurrent-a` and `concurrent-b`, both through PPC, both mounted, both
@@ -543,7 +573,7 @@ Landed:
   routes, `recover_harness.state == "stopped"`, second
   `plugin.generic.recover_probe` returning `from_recovered_service=true` with
   `workspace_mounted=true`, restored connected route, and
-  `recover_harness.restart_count == 1`; final manifest version `18`; final
+  `recover_harness.restart_count == 1`; final manifest version `22`; final
   active service leases before cleanup `6`; post-cleanup active leases `0`; and
   zero post-cleanup orphan layers and missing layers; isolated-workspace gate
   evidence where the daemon enabled `/eos/plugin/iws-scratch`, entered isolated
@@ -555,9 +585,9 @@ Landed:
   `connected_ppc_routes`, empty `connected_ppc_services`, and empty
   `running_service_processes` after cleanup. The paired
   refresh-strategy report
-  `.omc/results/plugin-refresh-strategies-20260602T020945Z-23569.json` still
-  recommends `workspace_snapshot_refresh`; refresh p95 was `5.934 ms` versus
-  `commit_to_workspace` p95 `3.732 ms`.
+  `.omc/results/plugin-refresh-strategies-20260602T023906Z-45132.json` still
+  recommends `workspace_snapshot_refresh`; refresh p95 was `5.432 ms` versus
+  `commit_to_workspace` p95 `4.398 ms`.
 
 Still open:
 
@@ -572,11 +602,12 @@ Still open:
   `signatureHelp` + `hover` + `typeDefinition` + `declaration` +
   `callHierarchy` incoming/outgoing +
   `documentHighlight` + `prepareRename` + `definition` + `references` +
-  `rename` + `apply_workspace_edit` + `apply_code_action` path. Current Pyright
-  live artifacts route document formatting and execute-command as structured
-  unsupported operations because this server does not advertise document/range
-  formatting or executable commands; positive coverage for those operations
-  still requires a broader provider/harness.
+  `rename` + `apply_workspace_edit` + `apply_code_action` +
+  `format_document` + `execute_command` path. Current Pyright live artifacts
+  route document formatting and execute-command as structured unsupported
+  operations because this server does not advertise document/range formatting
+  or executable commands; positive generic provider coverage for both operation
+  shapes is live separately.
 - Generic non-LSP PPC, package-adapter coverage, read-only Pyright refresh, and
   representative Pyright and generic LSP WRITE_ALLOWED/self-managed publish
   paths are live; canonical Python-importlib vs Rust-PPC LSP parity still needs

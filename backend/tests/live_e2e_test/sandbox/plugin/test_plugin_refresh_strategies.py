@@ -186,6 +186,14 @@ async def test_plugin_workspace_snapshot_refresh_strategy(
         in rust_payload["status_after_ensure"]["connected_ppc_routes"]
     )
     assert (
+        "plugin.generic.lsp_format_document"
+        in rust_payload["status_after_ensure"]["connected_ppc_routes"]
+    )
+    assert (
+        "plugin.generic.lsp_execute_command"
+        in rust_payload["status_after_ensure"]["connected_ppc_routes"]
+    )
+    assert (
         "plugin.generic.crash_probe"
         in rust_payload["status_after_ensure"]["connected_ppc_routes"]
     )
@@ -539,6 +547,38 @@ async def test_plugin_workspace_snapshot_refresh_strategy(
     assert (
         rust_payload["lsp_apply_code_action_readback"]["content"]
         == "after\nunchanged\n"
+    )
+    assert rust_payload["lsp_format_seed"]["success"] is True
+    assert rust_payload["lsp_format_document"]["from_lsp_formatting"] is True
+    assert rust_payload["lsp_format_document"]["from_self_managed"] is True
+    assert rust_payload["lsp_format_document"]["workspace_mounted"] is True
+    assert rust_payload["lsp_format_document"]["method"] == "textDocument/formatting"
+    assert rust_payload["lsp_format_document"]["edit_count"] >= 1
+    assert rust_payload["lsp_format_document"]["callback"]["success"] is True
+    assert (
+        "live_plugin_format.py"
+        in rust_payload["lsp_format_document"]["changed_paths"]
+    )
+    assert (
+        rust_payload["lsp_format_readback"]["content"]
+        == "def format_me() -> int:\n    return 1\n"
+    )
+    assert rust_payload["lsp_execute_command_seed"]["success"] is True
+    assert rust_payload["lsp_execute_command"]["from_lsp_execute_command"] is True
+    assert rust_payload["lsp_execute_command"]["from_self_managed"] is True
+    assert rust_payload["lsp_execute_command"]["workspace_mounted"] is True
+    assert rust_payload["lsp_execute_command"]["method"] == "workspace/executeCommand"
+    assert rust_payload["lsp_execute_command"]["command"] == "generic.applyWorkspaceEdit"
+    assert rust_payload["lsp_execute_command"]["supported"] is True
+    assert rust_payload["lsp_execute_command"]["unsupported"] is False
+    assert rust_payload["lsp_execute_command"]["callback"]["success"] is True
+    assert (
+        "live_plugin_execute_command.py"
+        in rust_payload["lsp_execute_command"]["changed_paths"]
+    )
+    assert (
+        rust_payload["lsp_execute_command_readback"]["content"]
+        == "value = 'after'\n"
     )
     pyright_status = _service_status(
         rust_payload["status_after_pyright"], "pyright_harness"
