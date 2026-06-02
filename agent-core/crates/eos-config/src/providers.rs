@@ -1,0 +1,75 @@
+//! Provider runtime configuration. The retry defaults here are the single
+//! source of truth consumed by `eos-llm-client` (GC-eos-config-04); the crate
+//! keeps no local retry constants.
+
+use std::collections::BTreeSet;
+
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
+
+/// Provider retry policy (`sections/providers.py:17-23`).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+#[non_exhaustive]
+pub struct RetryConfig {
+    /// Maximum retry attempts. `>= 0` is already enforced by `u32`.
+    pub max_retries: u32,
+    /// Initial backoff delay in seconds. Range-checked `>= 0`.
+    pub base_delay_s: f64,
+    /// Maximum backoff delay in seconds. Range-checked `>= 0`.
+    pub max_delay_s: f64,
+    /// HTTP status codes that trigger a retry. A [`BTreeSet`] (not a hash set)
+    /// for deterministic serialized ordering.
+    pub status_codes: BTreeSet<u16>,
+}
+
+impl Default for RetryConfig {
+    fn default() -> Self {
+        Self {
+            max_retries: 3,
+            base_delay_s: 1.0,
+            max_delay_s: 30.0,
+            status_codes: [429, 500, 502, 503, 529].into_iter().collect(),
+        }
+    }
+}
+
+/// Minimax provider routing config (`sections/providers.py:26-30`).
+#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+#[non_exhaustive]
+pub struct MinimaxConfig {
+    /// Minimax API base url (empty means unset).
+    pub base_url: String,
+    /// Minimax model key (empty means unset).
+    pub model: String,
+}
+
+/// Provider-level runtime configuration (`sections/providers.py:33-37`).
+#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+#[non_exhaustive]
+pub struct ProvidersConfig {
+    /// Retry policy applied across providers.
+    pub retry: RetryConfig,
+    /// Minimax routing config.
+    pub minimax: MinimaxConfig,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // AC-eos-config-02 (retry subset): defaults match the Python source.
+    #[test]
+    fn test_retry_defaults() {
+        let r = RetryConfig::default();
+        assert_eq!(r.max_retries, 3);
+        assert_eq!(r.base_delay_s, 1.0);
+        assert_eq!(r.max_delay_s, 30.0);
+        assert_eq!(
+            r.status_codes,
+            [429u16, 500, 502, 503, 529].into_iter().collect()
+        );
+    }
+}

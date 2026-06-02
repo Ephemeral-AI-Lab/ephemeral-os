@@ -44,6 +44,7 @@ async def test_two_agents_same_port(iws_clean_sandbox, iws_audit_jsonl) -> None:
             launched = await _iws_rpc.shell(
                 sandbox_id, agent,
                 f"cd /testbed && exec python3 -m http.server {_PORT}",
+                wait=False,
             )
             command_session_id = launched.get("command_session_id")
             if isinstance(command_session_id, str) and command_session_id:

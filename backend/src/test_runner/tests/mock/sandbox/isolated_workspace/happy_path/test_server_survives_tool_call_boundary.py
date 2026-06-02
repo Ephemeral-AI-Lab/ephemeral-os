@@ -37,15 +37,19 @@ async def test_server_survives_tool_call_boundary(
     sandbox_id = str(iws_clean_sandbox["sandbox_id"])
     agent_id = "agent-A"
     await _iws_rpc.enter(sandbox_id, agent_id, layer_stack_root=_iws_rpc.IWS_LAYER_STACK_ROOT)
+    server_session_id: str | None = None
     try:
         # Tool call A: launch the server in the background.
         launch = await _iws_rpc.shell(
             sandbox_id,
             agent_id,
             "cd /tmp && (python3 -m http.server 18080 >/tmp/http.log 2>&1 & "
-            "echo $! > /tmp/http.pid) && sleep 1",
+            "echo $! > /tmp/http.pid) && wait",
+            wait=False,
         )
-        assert launch.get("success") is True, launch
+        server_session_id = launch.get("command_session_id")
+        assert isinstance(server_session_id, str) and server_session_id, launch
+        assert launch.get("status") == "running", launch
 
         pid_a = await _iws_rpc.shell(sandbox_id, agent_id, "cat /tmp/http.pid")
         first_pid = pid_a.get("stdout", "").strip()
@@ -66,6 +70,12 @@ async def test_server_survives_tool_call_boundary(
             pid_b,
         )
     finally:
+        if server_session_id:
+            await _iws_rpc.cancel_command_session(
+                sandbox_id,
+                agent_id,
+                server_session_id,
+            )
         await _iws_rpc.exit_(sandbox_id, agent_id)
 
     # Sequence: enter, multiple tool_calls (≥4 shells above), exit.

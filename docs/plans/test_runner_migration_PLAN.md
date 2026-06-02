@@ -324,8 +324,8 @@ regression harness.
      background cancellation from model-facing assertions
 3. Plugin service:
    - route plugin scenarios through Rust PPC service operations
-   - do not open isolated workspace from plugin scenarios; isolated workspace
-     owns its own no-plugin/LSP active-mode boundary
+   - do not open isolated workspace from plugin scenarios, and do not use
+     plugin/LSP APIs to validate isolated workspace behavior
    - assert read-only service refresh does not publish
    - assert write/self-managed callbacks publish through the same daemon OCC
      writer/storage lock as primary publishes
@@ -356,7 +356,7 @@ regression harness.
    - run tests against `eosd ns-holder` + `eosd ns-runner` setns mode
    - assert enter rejects active sandbox-bound background work
    - assert exit drains/cancels active work and releases leases/scratch
-   - assert isolated mode never depends on plugin/LSP operations
+   - assert isolated mode never depends on or invokes plugin/LSP operations
    - assert isolated never links/publishes through OCC from runner-visible
      behavior: writes are captured for audit and discarded on exit
    - assert holder death, setup timeout, veth/network failure, and SIGTERM ->
@@ -547,12 +547,12 @@ least one runner scenario where the behavior crosses the real engine/tool path.
 | `sandbox-rust-external-migration-PLAN.md` | Runtime artifact | `put_archive` upload, SHA/version/mode verification, protocol fixture pin, minisign fail-closed, wrong arch rejected, no target-image toolchain dependency |
 | `sandbox-rust-external-migration-PLAN.md` | Command tools | `tty=false` finite command lifecycle, `tty=true` PTY lifecycle, non-login Bash, explicit PATH/env, cwd semantics, detached descendant cleanup, active-only PTY controls, result reported once |
 | `sandbox-rust-external-migration-PLAN.md` | OCC/LayerStack | canonical result parity, CAS byte identity, O(1) lowerdir disk/memory, single commit queue, storage-lock serialization, squash/deferred-GC lease retention, forward/back on-disk parity |
-| `sandbox-rust-external-migration-PLAN.md` | Isolated workspace | `eosd ns-holder` enter/exit, setns runner, no OCC publish, audit-only writes, network hardening without shell tools, plugin/LSP block, holder teardown and lease cleanup under failures |
+| `sandbox-rust-external-migration-PLAN.md` | Isolated workspace | `eosd ns-holder` enter/exit, setns runner, no OCC publish, audit-only writes, network hardening without shell tools, no plugin/LSP calls, holder teardown and lease cleanup under failures |
 | `sandbox-rust-external-migration-PLAN.md` | Cutover/deletion | Rust default only after AV/CP gates; capability-negative fallback/probe; no Python bundle/thin-client/runtime-bundle/importlib dispatch; runner import fence against deleted sandbox internals |
 | `sandbox-plugin-service-adversarial-plan.md` | Generic service registry | manifest validation, dynamic op route resolution, service key digest isolation, status shape, LRU eviction, crash/timeout/heartbeat teardown |
 | `sandbox-plugin-service-adversarial-plan.md` | Freshness | `workspace_snapshot_refresh` before every read, all three refresh strategies, retryable stale errors, non-LSP cached dummy service, no stale response after peer publish |
 | `sandbox-plugin-service-adversarial-plan.md` | Plugin writes | read-only never publishes, write workers publish through daemon overlay/OCC, self-managed callbacks use the same per-root writer/storage lock, interleave with direct write/edit/shell |
-| `sandbox-plugin-service-adversarial-plan.md` | Plugin/IWS boundary | Plugin live scenarios must not open isolated workspace; isolated workspace coverage owns the active-mode no-plugin/LSP boundary |
+| `sandbox-plugin-service-adversarial-plan.md` | Plugin/IWS boundary | Plugin live scenarios must not open isolated workspace; isolated workspace coverage must not call plugin/LSP APIs |
 
 ## 5. Verification commands
 

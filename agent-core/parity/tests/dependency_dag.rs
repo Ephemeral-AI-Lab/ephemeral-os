@@ -18,7 +18,10 @@ type Edges = BTreeMap<String, BTreeSet<String>>;
 fn frozen_edges() -> Edges {
     let rows: &[(&str, &[&str])] = &[
         ("eos-types", &[]),
-        ("eos-config", &["eos-types"]),
+        // Phase 2: the scaffold-only eos-config -> eos-types edge is pruned when
+        // eos-config is implemented (overview.md Phase-0 notes; impl-workspace.md
+        // §5). eos-config is a DAG-root leaf with no internal upstream edge.
+        ("eos-config", &[]),
         ("eos-state", &["eos-types"]),
         ("eos-db", &["eos-state", "eos-config"]),
         ("eos-audit", &["eos-types"]),

@@ -1,0 +1,267 @@
+---
+source: crates/eos-config/src/lib.rs
+expression: rust
+---
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "additionalProperties": false,
+  "definitions": {
+    "AttemptConfig": {
+      "additionalProperties": false,
+      "description": "Per-Attempt run-stage tunables.",
+      "properties": {
+        "max_concurrent_task_runs": {
+          "description": "Per-Attempt cap on concurrently-launched generator/reducer agent runs. Range-checked `>= 1`.",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "max_concurrent_task_runs"
+      ],
+      "type": "object"
+    },
+    "DatabaseConfig": {
+      "additionalProperties": false,
+      "description": "Sqlite-only database configuration. The new `busy_timeout_ms`/`wal`/ `foreign_keys` controls are the agent-core sqlite tunables (plan §4).",
+      "properties": {
+        "busy_timeout_ms": {
+          "description": "Sqlite `busy_timeout` in milliseconds.",
+          "type": "integer"
+        },
+        "echo": {
+          "description": "Echo executed sql statements.",
+          "type": "boolean"
+        },
+        "foreign_keys": {
+          "description": "Enable `PRAGMA foreign_keys`.",
+          "type": "boolean"
+        },
+        "pool_size": {
+          "description": "Connection-pool size. Range-checked `>= 1` during validation.",
+          "type": "integer"
+        },
+        "url": {
+          "description": "Database url; rejects network backends at parse time.",
+          "type": "string"
+        },
+        "wal": {
+          "description": "Enable write-ahead logging (`PRAGMA journal_mode=WAL`).",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "busy_timeout_ms",
+        "echo",
+        "foreign_keys",
+        "pool_size",
+        "url",
+        "wal"
+      ],
+      "type": "object"
+    },
+    "DockerConfig": {
+      "additionalProperties": false,
+      "description": "Docker-provider settings (`sections/sandbox.py:17-23`).",
+      "properties": {
+        "daemon_tcp": {
+          "description": "Connect to the docker daemon over TCP.",
+          "type": "boolean"
+        },
+        "default_snapshot": {
+          "description": "Default container snapshot/image tag (empty means provider default).",
+          "type": "string"
+        },
+        "no_privilege": {
+          "description": "Force-drop privileges (mutually exclusive with `privileged`).",
+          "type": "boolean"
+        },
+        "privileged": {
+          "description": "Run sandbox containers privileged.",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "daemon_tcp",
+        "default_snapshot",
+        "no_privilege",
+        "privileged"
+      ],
+      "type": "object"
+    },
+    "MinimaxConfig": {
+      "additionalProperties": false,
+      "description": "Minimax provider routing config (`sections/providers.py:26-30`).",
+      "properties": {
+        "base_url": {
+          "description": "Minimax API base url (empty means unset).",
+          "type": "string"
+        },
+        "model": {
+          "description": "Minimax model key (empty means unset).",
+          "type": "string"
+        }
+      },
+      "required": [
+        "base_url",
+        "model"
+      ],
+      "type": "object"
+    },
+    "ProvidersConfig": {
+      "additionalProperties": false,
+      "description": "Provider-level runtime configuration (`sections/providers.py:33-37`).",
+      "properties": {
+        "minimax": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/MinimaxConfig"
+            }
+          ],
+          "description": "Minimax routing config."
+        },
+        "retry": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/RetryConfig"
+            }
+          ],
+          "description": "Retry policy applied across providers."
+        }
+      },
+      "required": [
+        "minimax",
+        "retry"
+      ],
+      "type": "object"
+    },
+    "RetryConfig": {
+      "additionalProperties": false,
+      "description": "Provider retry policy (`sections/providers.py:17-23`).",
+      "properties": {
+        "base_delay_s": {
+          "description": "Initial backoff delay in seconds. Range-checked `>= 0`.",
+          "format": "double",
+          "type": "number"
+        },
+        "max_delay_s": {
+          "description": "Maximum backoff delay in seconds. Range-checked `>= 0`.",
+          "format": "double",
+          "type": "number"
+        },
+        "max_retries": {
+          "description": "Maximum retry attempts. `>= 0` is already enforced by `u32`.",
+          "type": "integer"
+        },
+        "status_codes": {
+          "description": "HTTP status codes that trigger a retry. A [`BTreeSet`] (not a hash set) for deterministic serialized ordering.",
+          "items": {
+            "type": "integer"
+          },
+          "type": "array",
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "base_delay_s",
+        "max_delay_s",
+        "max_retries",
+        "status_codes"
+      ],
+      "type": "object"
+    },
+    "SandboxConfig": {
+      "additionalProperties": false,
+      "description": "Sandbox provider defaults and Docker-specific config (`sections/sandbox.py`).",
+      "properties": {
+        "default_provider": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/SandboxProvider"
+            }
+          ],
+          "description": "The default sandbox backend (Docker only in agent-core)."
+        },
+        "docker": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/DockerConfig"
+            }
+          ],
+          "description": "Docker-provider settings."
+        },
+        "runtime_client_timeout_s": {
+          "description": "Runtime client (daemon) timeout in seconds. Range-checked `> 0`.",
+          "format": "double",
+          "type": "number"
+        },
+        "timeout_s": {
+          "description": "Per-operation sandbox timeout in seconds. Range-checked `> 0`.",
+          "format": "double",
+          "type": "number"
+        }
+      },
+      "required": [
+        "default_provider",
+        "docker",
+        "runtime_client_timeout_s",
+        "timeout_s"
+      ],
+      "type": "object"
+    },
+    "SandboxProvider": {
+      "description": "The sandbox backend. The seam is kept for future providers (spec-conventions §4), but Docker is the only supported variant; any other provider string fails to deserialize (`type-no-stringly`).",
+      "oneOf": [
+        {
+          "description": "The Docker sandbox backend (the only supported provider).",
+          "enum": [
+            "docker"
+          ],
+          "type": "string"
+        }
+      ]
+    }
+  },
+  "description": "The validated, immutable composition root for all runtime-tunable config.\n\nBuilt by [`load_central_config`] (and wrapped in `Arc` by `eos-runtime`); it is read-only after load and holds no secrets, connections, or tasks.\n\n[`load_central_config`]: crate::load_central_config",
+  "properties": {
+    "attempt": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/AttemptConfig"
+        }
+      ],
+      "description": "Per-Attempt run-stage tunables (Rust-only)."
+    },
+    "database": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/DatabaseConfig"
+        }
+      ],
+      "description": "Sqlite database config."
+    },
+    "providers": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/ProvidersConfig"
+        }
+      ],
+      "description": "Provider (retry/minimax) config."
+    },
+    "sandbox": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/SandboxConfig"
+        }
+      ],
+      "description": "Sandbox provider config."
+    }
+  },
+  "required": [
+    "attempt",
+    "database",
+    "providers",
+    "sandbox"
+  ],
+  "title": "CentralConfig",
+  "type": "object"
+}

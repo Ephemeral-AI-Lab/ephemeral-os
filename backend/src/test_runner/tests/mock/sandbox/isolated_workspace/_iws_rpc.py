@@ -194,12 +194,21 @@ async def shell(
     command: str,
     *,
     timeout: int = DEFAULT_TIMEOUT_S,
+    wait: bool = True,
 ) -> dict[str, Any]:
-    return await call_daemon_api(
+    response = await call_daemon_api(
         sandbox_id,
         "api.v1.shell",
         {"agent_id": agent_id, "command": command},
         timeout=timeout,
+    )
+    if not wait:
+        return response
+    return await complete_shell(
+        sandbox_id,
+        agent_id,
+        response,
+        timeout_s=float(timeout),
     )
 
 

@@ -1000,3 +1000,103 @@ Remaining risk:
 Next iteration entry point:
 - Start the broad Phase D/E live sandbox gate:
   `EOS_SANDBOX_PROVIDER=docker EOS_SANDBOX_RUNTIME=rust uv run pytest -q -n 3 backend/src/test_runner/tests/mock/sandbox --tb=short --durations=20`.
+
+## Iteration 15 - 2026-06-02 23:53:13 +0800 CST
+
+Checkout summary:
+- Current `HEAD`: `70bdf241f`.
+- New unrelated concurrent edits appeared under `agent-core/` and `backend/agent-core/`; this iteration did not modify or revert them.
+- This iteration started the broad Phase D/E live sandbox gate, then pivoted into the isolated-workspace failure cluster.
+
+Plan path and target files:
+- Plan: `docs/plans/test_runner_migration_PLAN.md`.
+- Target files:
+  - `backend/src/sandbox/isolated_workspace/pipeline.py`
+  - `backend/tests/unit_test/test_sandbox/test_isolated_pipeline_unified_lifecycle.py`
+  - `sandbox/crates/eos-isolated/src/session.rs`
+  - `sandbox/crates/eos-daemon/src/isolated.rs`
+  - `backend/src/sandbox/host/runtime_artifact/__init__.py`
+  - `bench/local-eosd-amd64-upload.json`
+
+Coverage gaps and findings:
+- Broad live command:
+  - `env EOS_SANDBOX_PROVIDER=docker EOS_SANDBOX_RUNTIME=rust EOS_LIVE_E2E_IMAGE=sweevo-dask__dask-10042:latest uv run pytest -q -n 3 backend/src/test_runner/tests/mock/sandbox --tb=short --durations=20`
+  - Result: failed with `45 failed, 106 passed, 2 skipped in 733.46s`.
+- The broad failure set was dominated by isolated-workspace tests on one xdist worker/container. The active container showed:
+  - `EOS_ISOLATED_WORKSPACE_ENABLED=true`
+  - `EOS_ISOLATED_WORKSPACE_TEST_HARNESS=true`
+  - stale `/eos/mount/runtime/isolated-workspace/manager.json` containing `{"schema_version":999,"handles":[{"workspace_handle_id":"ghost"}]}`.
+- Focused reproduction before Rust artifact rebuild:
+  - `test_manager_json_schema_mismatch_treated_as_empty.py`
+  - `test_manager_json_roundtrip.py`
+  - Result: failed with the same stale schema-999 manager content.
+- Root cause:
+  - Python `IsolatedPipeline.test_reset()` reaped orphans but did not rewrite `manager.json`, so invalid persisted state could survive cleanup.
+  - The live Rust runtime also did not maintain `manager.json` parity on enter/exit/reset. After the schema-mismatch test wrote a future schema, Rust enter did not rewrite it to schema 1.
+- After patching Rust, the first focused live retry skipped because the pinned `EOSD_SHA256["amd64"]` still referenced the old packaged daemon hash. Rebuilding/uploading `eosd` produced SHA `4fdf07a5acf63688844888a0a708e628a0e15c50d7ef52aa73a3ef353135c630`; the artifact pin was updated to match.
+
+Fixes applied:
+- Python parity:
+  - `IsolatedPipeline.test_reset()` now clears open handle maps and persists an empty schema-1 manager after orphan cleanup.
+  - Added a unit regression proving invalid `manager.json` is rewritten to `{"schema_version": 1, "handles": []}` by `test_reset()`.
+- Rust parity:
+  - `eos-isolated` now writes `runtime/isolated-workspace/manager.json` on enter and exit with schema version 1 and persisted handle rows containing the fields live tests inspect (`workspace_handle_id`, `lease_id`, `ns_ip`, `cgroup_path`, etc.).
+  - `eos-daemon` test-reset now removes/recreates the isolated workspace runtime directory and writes an empty schema-1 manager.
+  - Added a Rust daemon regression for test-reset rewriting invalid manager JSON.
+- Runtime artifact:
+  - Rebuilt/uploaded `eosd-linux-amd64` with `backend/scripts/build_upload_eosd_docker.py --arch amd64`.
+  - Updated `backend/src/sandbox/host/runtime_artifact/__init__.py` to pin the rebuilt SHA.
+
+Commands run:
+- `uv run ruff check backend/src/sandbox/isolated_workspace/pipeline.py backend/tests/unit_test/test_sandbox/test_isolated_pipeline_unified_lifecycle.py`
+  - Result: passed.
+- `uv run pytest -q backend/tests/unit_test/test_sandbox/test_isolated_pipeline_unified_lifecycle.py --tb=short`
+  - Result: passed with `7 passed in 0.24s`.
+- `cargo fmt --manifest-path sandbox/Cargo.toml --all`
+  - Result: passed after formatting.
+- `cargo test --manifest-path sandbox/Cargo.toml -p eos-isolated session::tests -- --nocapture`
+  - Result: passed with `4 passed`.
+- `cargo test --manifest-path sandbox/Cargo.toml -p eos-daemon isolated::tests -- --nocapture`
+  - Result: passed with `3 passed`.
+- `uv run python backend/scripts/build_upload_eosd_docker.py --arch amd64`
+  - Result: passed; `gate_pass=true`, local and remote SHA matched `4fdf07a5acf63688844888a0a708e628a0e15c50d7ef52aa73a3ef353135c630`.
+- Focused live manager-json rerun after artifact pin update:
+  - `env EOS_SANDBOX_PROVIDER=docker EOS_SANDBOX_RUNTIME=rust EOS_LIVE_E2E_IMAGE=sweevo-dask__dask-10042:latest uv run pytest -q backend/src/test_runner/tests/mock/sandbox/isolated_workspace/gc_and_persistence/test_manager_json_schema_mismatch_treated_as_empty.py backend/src/test_runner/tests/mock/sandbox/isolated_workspace/gc_and_persistence/test_manager_json_roundtrip.py --tb=short --durations=20`
+  - Result: passed with `2 passed in 35.84s`.
+- Isolated-workspace folder rerun after the manager fix:
+  - `env EOS_SANDBOX_PROVIDER=docker EOS_SANDBOX_RUNTIME=rust EOS_LIVE_E2E_IMAGE=sweevo-dask__dask-10042:latest uv run pytest -q backend/src/test_runner/tests/mock/sandbox/isolated_workspace --tb=short --durations=20`
+  - Result: failed with `32 failed, 54 passed, 1 skipped in 306.68s`.
+
+Fresh artifacts inspected:
+- `bench/local-eosd-amd64-upload.json`
+  - `gate_pass=true`
+  - `hashes_match=true`
+  - `local_sha256=remote_sha256=4fdf07a5acf63688844888a0a708e628a0e15c50d7ef52aa73a3ef353135c630`
+  - `target_requires_rust=false`
+- Broad-run scenario artifacts under `.sweevo_runs/scenario_logs/`, including:
+  - `.sweevo_runs/scenario_logs/sandbox.background_engine_restart_no_lease_leak/20260602T152816Z_d085157a66de`
+  - `.sweevo_runs/scenario_logs/full_stack_adversarial/20260602T152814Z_e641867be903`
+  - `.sweevo_runs/scenario_logs/sandbox.complex_project_build_shell_edit_lsp/20260602T153711Z_2ecfe97f4610`
+  - fresh plugin and project-build artifacts from the same `-n 3` run.
+
+Current remaining isolated-workspace failure clusters:
+- Rust isolated shell calls return `status=running` command-session envelopes where many tests expect completed `success=true` responses. This caused failures in network, server-boundary, performance, and stress cases and left active command sessions blocking `exit`.
+- Rust test-only injection knobs are not honored yet:
+  - `EOS_ISOLATED_WORKSPACE_TEST_FAIL_AT`
+  - `EOS_ISOLATED_WORKSPACE_TEST_HANG_AT`
+  - `EOS_ISOLATED_WORKSPACE_TEST_PHASE_DELAY`
+  - holder SIGTERM fallback timing expectations.
+- Restart/orphan cleanup remains incomplete in Rust:
+  - orphan veth/cgroup/scratch resources survived restart in several GC tests;
+  - expected `gc_orphan kind=lease` audit was missing.
+- Resource-control details differ from the Python contract:
+  - quota and host-RAM rejection detail payloads are incomplete or the configured caps are not being applied.
+- The isolated-workspace policy test still includes a plugin/LSP boundary assertion; it should be moved to isolated-owned no-plugin/LSP semantics or rewritten to avoid making plugin the subject.
+
+Current verdict:
+- Correctness: PARTIAL. Phase D static/import-fence is clean from Iteration 14, and the Rust/Python manager-json parity bug is fixed and live-proven for the focused two-test case. The isolated-workspace folder and broad sandbox `-n 3` gate still fail.
+- O(1) memory/disk: not re-established for the failing isolated-workspace folder after this fix.
+- Latency: not passing for isolated workspace; phase-delay and timing assertions still fail under Rust.
+
+Next iteration entry point:
+- Fix the Rust isolated command-session completion contract first. Many failures share the same symptom: `api.v1.shell` returns a running command-session envelope while the isolated-workspace tests expect the daemon/RPC helper to return a completed result.

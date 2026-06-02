@@ -88,6 +88,7 @@ async def test_3_workspaces_same_port_discarded_on_teardown(
                     f"printf '{_served_body(agent)}\\n' > {_served_path(agent)} && "
                     f"cd /testbed && "
                     f"exec python3 -m http.server {_PORT}",
+                    wait=False,
                 )
                 for agent in _AGENTS
             )

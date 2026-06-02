@@ -1,0 +1,134 @@
+---
+source: parity/tests/schema_snapshots.rs
+expression: value
+---
+{
+  "$defs": {
+    "AgentRole": {
+      "description": "Canonical category of an agent profile.\n\nPure identity: read as the ``metadata[\"role\"]`` audit tag (emitted by\n``factory.py`` and ``run_subagent.py``) and by the planner-submission gate.\n``GENERATOR`` covers the executor profile; ``REDUCER`` digests/gates;\n``HELPER`` is the advisor, ``SUBAGENT`` is the explorer.",
+      "enum": [
+        "root",
+        "planner",
+        "generator",
+        "reducer",
+        "helper",
+        "subagent"
+      ],
+      "title": "AgentRole",
+      "type": "string"
+    },
+    "AgentType": {
+      "description": "Runtime class of an agent profile.",
+      "enum": [
+        "agent",
+        "subagent"
+      ],
+      "title": "AgentType",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Full agent definition with all configuration fields.",
+  "properties": {
+    "agent_type": {
+      "$ref": "#/$defs/AgentType",
+      "default": "agent"
+    },
+    "allowed_tools": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Allowed Tools",
+      "type": "array"
+    },
+    "context_recipe": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Context Recipe"
+    },
+    "description": {
+      "title": "Description",
+      "type": "string"
+    },
+    "model": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Model"
+    },
+    "name": {
+      "title": "Name",
+      "type": "string"
+    },
+    "notification_triggers": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Notification Triggers",
+      "type": "array"
+    },
+    "role": {
+      "$ref": "#/$defs/AgentRole",
+      "default": "generator"
+    },
+    "skill": {
+      "anyOf": [
+        {
+          "format": "path",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Skill"
+    },
+    "system_prompt": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "System Prompt"
+    },
+    "terminals": {
+      "items": {
+        "type": "string"
+      },
+      "minItems": 1,
+      "title": "Terminals",
+      "type": "array"
+    },
+    "tool_call_limit": {
+      "exclusiveMinimum": 0,
+      "title": "Tool Call Limit",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "name",
+    "description",
+    "tool_call_limit",
+    "terminals"
+  ],
+  "title": "AgentDefinition",
+  "type": "object"
+}

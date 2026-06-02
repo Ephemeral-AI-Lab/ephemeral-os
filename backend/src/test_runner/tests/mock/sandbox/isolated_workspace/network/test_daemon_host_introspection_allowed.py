@@ -40,6 +40,7 @@ async def test_daemon_host_introspection_allowed(
         sandbox_id, "agent-A", layer_stack_root=_iws_rpc.IWS_LAYER_STACK_ROOT,
     )
     assert enter.get("success") is True, enter
+    server_session_id: str | None = None
     try:
         jsonl = await iws_audit_jsonl()
         ns_ip = next(
@@ -54,9 +55,12 @@ async def test_daemon_host_introspection_allowed(
         # Start an HTTP server inside the workspace.
         launch = await _iws_rpc.shell(
             sandbox_id, "agent-A",
-            "cd /tmp && (python3 -m http.server 18181 >/tmp/iws_http.log 2>&1 &) && sleep 1",
+            "cd /tmp && exec python3 -m http.server 18181 >/tmp/iws_http.log 2>&1",
+            wait=False,
         )
-        assert launch.get("success") is True, launch
+        server_session_id = launch.get("command_session_id")
+        assert isinstance(server_session_id, str) and server_session_id, launch
+        assert launch.get("status") == "running", launch
 
         # From the daemon host's own netns (NOT unshare -n), curl the ws.
         probe = await raw_exec(
@@ -71,4 +75,10 @@ async def test_daemon_host_introspection_allowed(
         )
         assert out != "TIMEOUT", probe
     finally:
+        if server_session_id:
+            await _iws_rpc.cancel_command_session(
+                sandbox_id,
+                "agent-A",
+                server_session_id,
+            )
         await _iws_rpc.exit_(sandbox_id, "agent-A")

@@ -15,7 +15,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{Instant, SystemTime, UNIX_EPOCH};
 
 use crate::audit::AuditSink;
-use crate::caps::{ResourceCaps, ISOLATED_WORKSPACE_ROOT};
+use crate::caps::{ResourceCaps, ISOLATED_WORKSPACE_ROOT, PERSISTED_HANDLES_SCHEMA_VERSION};
 use crate::error::IsolatedError;
 use crate::network::{IsolatedNetwork, VethAllocation};
 use serde_json::{json, Value};
@@ -382,6 +382,7 @@ where
             .insert(agent_id.clone(), workspace_handle_id.clone());
         self.handles
             .insert(workspace_handle_id.clone(), handle.clone());
+        let _ = self.persist_handles();
         let _ = self.audit.emit(
             "sandbox_isolated_workspace_enter",
             json!({
@@ -434,6 +435,7 @@ where
         let timer = Instant::now();
         let upperdir_bytes = directory_file_bytes(&handle.upperdir);
         let inspection = self.teardown_handle(&handle, grace_s.unwrap_or(self.caps.exit_grace_s));
+        let _ = self.persist_handles();
         let lifetime_s = (monotonic_seconds() - handle.created_at).max(0.0);
         let total_ms = timer.elapsed().as_secs_f64() * 1000.0;
         let _ = self.audit.emit(
@@ -496,6 +498,64 @@ where
 
     fn session_scratch_root(&self) -> PathBuf {
         self.scratch_root.join("runtime").join("isolated-workspace")
+    }
+
+    fn persisted_handles_path(&self) -> PathBuf {
+        self.session_scratch_root().join("manager.json")
+    }
+
+    fn persist_handles(&self) -> Result<(), IsolatedError> {
+        let root = self.session_scratch_root();
+        std::fs::create_dir_all(&root).map_err(|err| IsolatedError::SetupFailed {
+            step: format!("manager_root: {err}"),
+        })?;
+        let handles: Vec<Value> = self
+            .handles
+            .values()
+            .map(|handle| {
+                json!({
+                    "workspace_handle_id": handle.workspace_handle_id.0,
+                    "agent_id": handle.agent_id.0,
+                    "lease_id": handle.lease_id,
+                    "manifest_version": handle.manifest_version,
+                    "manifest_root_hash": handle.manifest_root_hash,
+                    "workspace_root": handle.workspace_root,
+                    "scratch_dir": handle.scratch_dir.to_string_lossy(),
+                    "upperdir": handle.upperdir.to_string_lossy(),
+                    "workdir": handle.workdir.to_string_lossy(),
+                    "layer_paths": handle.layer_paths,
+                    "holder_pid": handle.holder_pid,
+                    "veth_host_name": handle.veth.as_ref().map(|veth| veth.host_name.as_str()),
+                    "veth_ns_name": handle.veth.as_ref().map(|veth| veth.ns_name.as_str()),
+                    "ns_ip": handle.veth.as_ref().map(|veth| veth.ns_ip.to_string()),
+                    "cgroup_path": handle
+                        .cgroup_path
+                        .as_ref()
+                        .map(|path| path.to_string_lossy().into_owned()),
+                    "created_at": handle.created_at,
+                    "last_activity": handle.last_activity,
+                })
+            })
+            .collect();
+        let payload = json!({
+            "schema_version": PERSISTED_HANDLES_SCHEMA_VERSION,
+            "handles": handles,
+        });
+        let path = self.persisted_handles_path();
+        let tmp = path.with_extension("json.tmp");
+        std::fs::write(
+            &tmp,
+            serde_json::to_vec_pretty(&payload).map_err(|err| IsolatedError::SetupFailed {
+                step: format!("manager_serialize: {err}"),
+            })?,
+        )
+        .map_err(|err| IsolatedError::SetupFailed {
+            step: format!("manager_write: {err}"),
+        })?;
+        std::fs::rename(tmp, path).map_err(|err| IsolatedError::SetupFailed {
+            step: format!("manager_rename: {err}"),
+        })?;
+        Ok(())
     }
 
     fn check_host_capacity(&self) -> Result<(), IsolatedError> {

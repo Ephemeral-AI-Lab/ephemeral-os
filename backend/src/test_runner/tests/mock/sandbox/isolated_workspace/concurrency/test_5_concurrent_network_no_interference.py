@@ -53,6 +53,7 @@ async def test_5_concurrent_network_no_interference(
                 _iws_rpc.shell(
                     sandbox_id, agent,
                     "cd /testbed && exec python3 -m http.server 8080",
+                    wait=False,
                 )
                 for agent in _AGENTS
             )

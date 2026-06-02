@@ -454,6 +454,9 @@ class IsolatedPipeline(
         # made it into ``_handles`` (their _rollback_partial may have raised).
         with contextlib.suppress(Exception):
             self._reap_orphans(live_set=set())
+        self._handles.clear()
+        self._by_agent.clear()
+        self._persist()
         return {"exited_agents": agent_ids}
 
     # ------------------------------------------------------------------

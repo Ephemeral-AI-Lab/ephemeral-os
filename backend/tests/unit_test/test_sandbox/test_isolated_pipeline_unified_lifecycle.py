@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import time
 from pathlib import Path
 from typing import Any
@@ -188,6 +189,29 @@ async def test_enter_exit_error_kinds(tmp_path: Path) -> None:
     with pytest.raises(IsolatedWorkspaceError) as host_ram:
         await pressure.enter("agent-a")
     assert host_ram.value.kind == "host_ram_pressure"
+
+
+@pytest.mark.asyncio
+async def test_test_reset_rewrites_invalid_manager_json(tmp_path: Path) -> None:
+    pipeline = _pipeline(tmp_path)
+    manager = pipeline.persisted_handles_path
+    manager.parent.mkdir(parents=True)
+    manager.write_text(
+        json.dumps(
+            {
+                "schema_version": 999,
+                "handles": [{"workspace_handle_id": "ghost"}],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    await pipeline.test_reset()
+
+    assert json.loads(manager.read_text(encoding="utf-8")) == {
+        "schema_version": 1,
+        "handles": [],
+    }
 
 
 @pytest.mark.asyncio

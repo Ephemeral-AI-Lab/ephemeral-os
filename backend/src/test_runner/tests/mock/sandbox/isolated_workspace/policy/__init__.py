@@ -1,1 +1,1 @@
-"""Policy tier for isolated workspace plugin and LSP boundaries."""
+"""Policy tier for isolated workspace boundaries."""

@@ -62,6 +62,7 @@ def dump_schemas() -> None:
         SystemNotificationBlock,
     )
     from tools._framework.core.results import TextToolOutput
+    from agents.definition.model import AgentDefinition
 
     models = {
         "message": Message,
@@ -71,6 +72,9 @@ def dump_schemas() -> None:
         "tool_result_block": ToolResultBlock,
         "system_notification_block": SystemNotificationBlock,
         "text_tool_output": TextToolOutput,
+        # eos-agent-def golden: the schemars schema for AgentDefinition is
+        # compared against this on field names + enum values (AC-eos-agent-def-09).
+        "agent_definition": AgentDefinition,
     }
     for name, model in models.items():
         write_json(f"schemas/{name}.schema.json", model.model_json_schema())

@@ -516,6 +516,7 @@ pub fn op_test_reset(_args: &Value, _context: DispatchContext<'_>) -> Result<Val
         *guard = None;
         exited_agents
     };
+    reset_test_manager_file();
     Ok(json!({"success": true, "reset": true, "exited_agents": exited_agents}))
 }
 
@@ -946,6 +947,18 @@ fn scratch_root() -> PathBuf {
     PathBuf::from(eos_overlay::OVERLAY_WRITABLE_ROOT)
 }
 
+fn reset_test_manager_file() {
+    let session_root = scratch_root().join("runtime").join("isolated-workspace");
+    let _ = std::fs::remove_dir_all(&session_root);
+    if std::fs::create_dir_all(&session_root).is_err() {
+        return;
+    }
+    let _ = std::fs::write(
+        session_root.join("manager.json"),
+        br#"{"schema_version":1,"handles":[]}"#,
+    );
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1001,6 +1014,38 @@ mod tests {
         );
         let _ = op_test_reset(&json!({}), DispatchContext::empty());
         clear_env("EOS_ISOLATED_WORKSPACE_ENABLED");
+        clear_env(TEST_HARNESS_ENV);
+        clear_env(TEST_SCRATCH_ROOT_ENV);
+        let _ = std::fs::remove_dir_all(&root);
+        Ok(())
+    }
+
+    #[test]
+    fn test_reset_rewrites_invalid_manager_json() -> TestResult {
+        let _guard = TEST_LOCK.lock().map_err(|_| "test lock poisoned")?;
+        let root = std::env::temp_dir().join(format!(
+            "eos-daemon-iws-reset-manager-{}",
+            std::process::id()
+        ));
+        let scratch = root.join("scratch");
+        let manager_root = scratch.join("runtime").join("isolated-workspace");
+        let _ = std::fs::remove_dir_all(&root);
+        std::fs::create_dir_all(&manager_root)?;
+        std::fs::write(
+            manager_root.join("manager.json"),
+            r#"{"schema_version":999,"handles":[{"workspace_handle_id":"ghost"}]}"#,
+        )?;
+        set_env(TEST_HARNESS_ENV, "true");
+        set_env(TEST_SCRATCH_ROOT_ENV, &scratch.to_string_lossy());
+
+        let reset = op_test_reset(&json!({}), DispatchContext::empty())?;
+
+        assert_eq!(reset["success"], true);
+        let rewritten = std::fs::read_to_string(manager_root.join("manager.json"))?;
+        assert_eq!(
+            serde_json::from_str::<Value>(&rewritten)?,
+            json!({"schema_version": 1, "handles": []})
+        );
         clear_env(TEST_HARNESS_ENV);
         clear_env(TEST_SCRATCH_ROOT_ENV);
         let _ = std::fs::remove_dir_all(&root);
