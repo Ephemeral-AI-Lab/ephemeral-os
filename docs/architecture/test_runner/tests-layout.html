@@ -84,8 +84,8 @@ backend/src/test_runner/tests/
     _focused_scenario_contracts.py  # contract helpers for focused scenarios
     _layer_stack_occ_overlay_assertions.py
                                     # LayerStack/OCC/overlay assertion helpers
+    request/                        # marker: request_integration
     sandbox/                        # marker: sandbox_integration
-    workflow/                    # marker: workflow_integration
     ...
   real_agent/                       # real-LLM end-to-end
     conftest.py                     # marker: real_agent + sweevo image fixtures
@@ -104,7 +104,7 @@ backend/src/test_runner/tests/
 <div class="edge-list" aria-label="Marker assignment rules">
   <div><b>mock</b><span>Every item resolved under <code>tests/mock/</code> gets <code>pytest.mark.mock</code> via the suite conftest's <code>pytest_collection_modifyitems</code>.</span></div>
   <div><b>sandbox_integration</b><span>Items under <code>tests/mock/sandbox/</code> get this marker. Use it to select sandbox-focused runs: <code>pytest -m "mock and sandbox_integration"</code>.</span></div>
-  <div><b>workflow_integration</b><span>Items under <code>tests/mock/workflow/</code> get this marker. Use it to select pipeline-state-machine runs.</span></div>
+  <div><b>request_integration</b><span>Items under <code>tests/mock/request/</code> get this marker. Use it to select root request and delegated-workflow lifecycle runs.</span></div>
   <div><b>real_agent</b><span>Items under <code>tests/real_agent/</code> get this marker. Use it to gate slow live-LLM runs.</span></div>
 </div>
 <div class="summary">
@@ -177,6 +177,7 @@ async def test_some_pipeline_path(workspace):
   <div><b>database_configured()</b><span><code>bool(get_central_config().database.url)</code> — fixture-level prerequisite for tests that need the per-test store bundle.</span></div>
   <div><b>live_e2e_heavy_enabled()</b><span><code>runner.live_e2e.heavy_enabled</code> — flag for skipping heavy concurrency / build / LSP probes when the runner is not configured for them.</span></div>
   <div><b>live_e2e_capacity_enabled()</b><span><code>runner.live_e2e.capacity_enabled</code> — flag specifically for <code>FullSystemCapacityMatrix</code> and its pack-catalog walk.</span></div>
+  <div><b>concurrent_sandbox_runners</b><span><code>runner.live_e2e.concurrent_sandbox_runners</code> — explicit live E2E concurrency cap; the repository default is <code>3</code>.</span></div>
   <div><b>real_agent_max_duration_s()</b><span><code>runner.live_e2e.real_agent_max_duration_s</code> — wall-clock cap that real-agent tests pass to <code>RunConfig.max_duration_s</code>.</span></div>
 </div>
 <p>Tests call these helpers from <code>pytest.mark.skipif</code> / <code>pytest.mark.skip_if_false</code> so a misconfigured central config cleanly skips rather than failing.</p>

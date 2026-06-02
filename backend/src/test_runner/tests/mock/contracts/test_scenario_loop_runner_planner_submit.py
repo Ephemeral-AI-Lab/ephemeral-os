@@ -105,7 +105,7 @@ async def test_planner_submission_through_real_loop(
     workflows = report.graph_summary["workflows"]
     assert len(workflows) == 1, workflows
     workflow = workflows[0]
-    assert str(workflow["parent_task_id"]).endswith(":root"), workflow
+    assert str(workflow["parent_task_id"]).startswith("root-"), workflow
     # The executor task landed done in real store state.
     task_statuses = [
         task.get("status")

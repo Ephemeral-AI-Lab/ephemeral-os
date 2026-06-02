@@ -6,7 +6,11 @@ use base64::Engine as _;
 use eos_protocol::cas::{
     layer_digest, manifest_root_hash, LayerChange, LayerPath, LayerRef, Manifest,
 };
+use proptest as _;
+use serde as _;
 use serde_json::Value;
+use sha2 as _;
+use thiserror as _;
 
 type TestResult<T = ()> = Result<T, Box<dyn std::error::Error + Send + Sync>>;
 

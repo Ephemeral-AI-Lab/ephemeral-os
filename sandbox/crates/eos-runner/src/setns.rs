@@ -13,9 +13,13 @@
 //! still forces a `// SAFETY:` note on every FFI block.
 
 #[cfg(target_os = "linux")]
+use std::ffi::CString;
+#[cfg(target_os = "linux")]
 use std::fs;
 #[cfg(any(test, target_os = "linux"))]
 use std::os::fd::RawFd;
+#[cfg(target_os = "linux")]
+use std::os::unix::ffi::OsStrExt;
 #[cfg(any(test, target_os = "linux"))]
 use std::path::PathBuf;
 #[cfg(target_os = "linux")]
@@ -28,6 +32,9 @@ use crate::mount::MountInputs;
 #[cfg(any(test, target_os = "linux"))]
 use crate::request::NsFds;
 use crate::request::{RunRequest, RunResult};
+
+#[cfg(target_os = "linux")]
+const RESOLV_CONF: &str = "/etc/resolv.conf";
 
 /// `setns` into the held namespaces, then run the tool command.
 ///
@@ -139,6 +146,70 @@ pub fn setns_overlay_mount(
     Err(RunnerError::Unsupported)
 }
 
+/// Configure `/etc/resolv.conf` inside an existing workspace mount namespace.
+///
+/// The helper only applies the fallback when the current first nameserver is a
+/// loopback resolver such as systemd-resolved's `127.0.0.53` stub.
+///
+/// # Errors
+///
+/// Returns [`RunnerError`] when namespace FDs are missing, `setns` fails, the
+/// request lacks `fallback_dns`, or the private bind mount cannot be applied.
+// PORT backend/src/sandbox/isolated_workspace/scripts/configure_dns_in_ns.py:1-121 — setns(user,mnt) and fallback resolv.conf bind mount
+#[cfg(target_os = "linux")]
+pub fn configure_dns(request: &RunRequest) -> Result<serde_json::Value, RunnerError> {
+    let ns_fds = require_ns_fds(request)?;
+    let user = ns_fds.user.ok_or_else(|| {
+        RunnerError::InvalidRequest("configure_dns requires user ns fd".to_owned())
+    })?;
+    let mnt = ns_fds.mnt.ok_or_else(|| {
+        RunnerError::InvalidRequest("configure_dns requires mnt ns fd".to_owned())
+    })?;
+    let fallback_dns = request
+        .tool_call
+        .args
+        .get("fallback_dns")
+        .and_then(serde_json::Value::as_str)
+        .filter(|value| !value.trim().is_empty())
+        .ok_or_else(|| {
+            RunnerError::InvalidRequest("configure_dns requires fallback_dns".to_owned())
+        })?;
+
+    setns_fd("user", user.0, libc::CLONE_NEWUSER)?;
+    setns_fd("mnt", mnt.0, libc::CLONE_NEWNS)?;
+
+    let content = match fs::read_to_string(RESOLV_CONF) {
+        Ok(content) => content,
+        Err(err) if err.kind() == std::io::ErrorKind::NotFound => {
+            return Ok(serde_json::json!({
+                "applied_fallback": false,
+                "previous_first_nameserver": null,
+            }));
+        }
+        Err(err) => return Err(err.into()),
+    };
+    let previous = first_nameserver(&content).map(str::to_owned);
+    let applied = previous.as_deref().is_some_and(needs_fallback_dns);
+    if applied {
+        bind_mount_resolv_conf(fallback_dns)?;
+    }
+    Ok(serde_json::json!({
+        "applied_fallback": applied,
+        "previous_first_nameserver": previous,
+    }))
+}
+
+#[cfg(not(target_os = "linux"))]
+/// Return the non-Linux unsupported error for DNS configuration.
+///
+/// # Errors
+///
+/// Always returns [`RunnerError::Unsupported`] outside Linux because `setns(2)`
+/// and bind mounts are unavailable.
+pub const fn configure_dns(_request: &RunRequest) -> Result<serde_json::Value, RunnerError> {
+    Err(RunnerError::Unsupported)
+}
+
 #[cfg(any(test, target_os = "linux"))]
 fn require_ns_fds(request: &RunRequest) -> Result<NsFds, RunnerError> {
     request
@@ -200,6 +271,70 @@ fn overlay_layer_paths(request: &RunRequest) -> Vec<PathBuf> {
     }
 }
 
+#[cfg(any(test, target_os = "linux"))]
+fn first_nameserver(content: &str) -> Option<&str> {
+    content.lines().find_map(|line| {
+        let stripped = line.trim();
+        stripped
+            .strip_prefix("nameserver")
+            .and_then(|rest| rest.split_whitespace().next())
+    })
+}
+
+#[cfg(any(test, target_os = "linux"))]
+fn needs_fallback_dns(addr: &str) -> bool {
+    addr.starts_with("127.")
+}
+
+#[cfg(target_os = "linux")]
+fn bind_mount_resolv_conf(fallback_dns: &str) -> Result<(), RunnerError> {
+    let path = std::env::temp_dir().join(format!(
+        ".iws-resolv-{}-{}.conf",
+        std::process::id(),
+        unique_suffix()
+    ));
+    fs::write(&path, format!("nameserver {fallback_dns}\n"))?;
+    let source = cstring_path(&path)?;
+    let target = CString::new(RESOLV_CONF)
+        .map_err(|err| RunnerError::InvalidRequest(format!("invalid resolv.conf path: {err}")))?;
+    let fstype = CString::new("none")
+        .map_err(|err| RunnerError::InvalidRequest(format!("invalid mount fstype: {err}")))?;
+    // SAFETY: after `setns(user,mnt)` this dedicated single-threaded helper has
+    // CAP_SYS_ADMIN in the target namespace. `source`, `target`, and `fstype`
+    // are NUL-terminated C strings that live for the call, and the data pointer
+    // is null because MS_BIND ignores filesystem-specific data.
+    let rc = unsafe {
+        libc::mount(
+            source.as_ptr(),
+            target.as_ptr(),
+            fstype.as_ptr(),
+            libc::MS_BIND,
+            std::ptr::null(),
+        )
+    };
+    if rc == 0 {
+        return Ok(());
+    }
+    Err(RunnerError::Syscall(std::io::Error::last_os_error()))
+}
+
+#[cfg(target_os = "linux")]
+fn cstring_path(path: &std::path::Path) -> Result<CString, RunnerError> {
+    CString::new(path.as_os_str().as_bytes()).map_err(|err| {
+        RunnerError::InvalidRequest(format!(
+            "path contains an interior nul byte: {} ({err})",
+            path.display()
+        ))
+    })
+}
+
+#[cfg(target_os = "linux")]
+fn unique_suffix() -> u128 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_or(0, |duration| duration.as_nanos())
+}
+
 #[cfg(target_os = "linux")]
 fn join_cgroup(request: &RunRequest) {
     let Some(cgroup_path) = request.cgroup_path.as_ref() else {
@@ -237,16 +372,18 @@ fn setns_fd(name: &str, fd: RawFd, nstype: libc::c_int) -> Result<(), RunnerErro
 
 #[cfg(test)]
 mod tests {
-    use super::{namespace_fd_order, overlay_layer_paths, require_ns_fds, setns_output_dir};
+    use super::{
+        first_nameserver, namespace_fd_order, needs_fallback_dns, overlay_layer_paths,
+        require_ns_fds, setns_output_dir,
+    };
     use crate::request::{Fd, NsFds, RunMode, RunRequest, ToolCall, WorkspaceRoot};
     use eos_protocol::Intent;
     use std::path::Path;
 
     #[test]
     fn require_ns_fds_rejects_missing_setns_payload() -> Result<(), Box<dyn std::error::Error>> {
-        let error = match require_ns_fds(&request(None)) {
-            Ok(_) => return Err("ns_fds should be required".into()),
-            Err(error) => error,
+        let Err(error) = require_ns_fds(&request(None)) else {
+            return Err("ns_fds should be required".into());
         };
         assert!(error.to_string().contains("requires ns_fds"));
         Ok(())
@@ -283,6 +420,16 @@ mod tests {
             overlay_layer_paths(&request),
             vec![Path::new("/testbed").to_path_buf()]
         );
+    }
+
+    #[test]
+    fn dns_fallback_detection_matches_python_helper() {
+        let content = "search local\nnameserver 127.0.0.53\nnameserver 8.8.8.8\n";
+        let nameserver = first_nameserver(content);
+        assert_eq!(nameserver, Some("127.0.0.53"));
+        assert!(needs_fallback_dns(nameserver.unwrap_or_default()));
+        assert!(!needs_fallback_dns("10.244.0.1"));
+        assert_eq!(first_nameserver("search local\n"), None);
     }
 
     fn request(ns_fds: Option<NsFds>) -> RunRequest {

@@ -24,9 +24,9 @@ pub fn glob_tool_result(
     let root = search_root(args, workspace_root)?;
     let mut matches = Vec::new();
     for path in walk_files_no_follow(&root) {
-        let rel = display_workspace_path(&path, workspace_root);
-        if !has_git_component(&path) && glob_matches(&rel, &pattern) {
-            matches.push(rel);
+        let search_rel = display_workspace_path(&path, &root);
+        if !has_git_component(&path) && glob_matches(&search_rel, &pattern) {
+            matches.push(display_workspace_path(&path, workspace_root));
         }
     }
     matches.sort();
@@ -356,6 +356,25 @@ mod tests {
     }
 
     #[test]
+    fn glob_matches_basename_pattern_relative_to_search_root(
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        let fixture = Fixture::new("glob-subdir")?;
+        fixture.write("pkg/app.py", "hit")?;
+        fixture.write("pkg/nested/skip.py", "hit")?;
+
+        let result = glob_tool_result(
+            &json!({"pattern": "*.py", "path": "pkg"}),
+            &fixture.root,
+            0.1,
+            0.2,
+        )?;
+
+        assert_eq!(result["filenames"], json!(["pkg/app.py"]));
+        assert_eq!(result["num_files"], json!(1));
+        Ok(())
+    }
+
+    #[test]
     fn grep_content_counts_and_line_numbers_match_wire_contract(
     ) -> Result<(), Box<dyn std::error::Error>> {
         let fixture = Fixture::new("grep")?;
@@ -387,14 +406,13 @@ mod tests {
     #[test]
     fn search_root_rejects_parent_escape() -> Result<(), Box<dyn std::error::Error>> {
         let fixture = Fixture::new("escape")?;
-        let err = match grep_tool_result(
+        let Err(err) = grep_tool_result(
             &json!({"pattern": "x", "output_mode": "count", "path": "../outside"}),
             &fixture.root,
             0.0,
             0.0,
-        ) {
-            Ok(_) => return Err("parent escape should be rejected".into()),
-            Err(error) => error,
+        ) else {
+            return Err("parent escape should be rejected".into());
         };
         assert!(err.to_string().contains("invalid namespace runner request"));
         Ok(())

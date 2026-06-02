@@ -2,9 +2,14 @@
 //! canonical-equal (drop timings) for responses. Fixtures are immutable ground
 //! truth from the live Python (`json.dumps(separators=(",",":")) + "\n"`).
 
+use base64 as _;
 use eos_protocol::canonical::canonicalize;
 use eos_protocol::envelope::{decode, encode, Envelope};
+use proptest as _;
+use serde as _;
 use serde_json::Value;
+use sha2 as _;
+use thiserror as _;
 
 type TestResult<T = ()> = Result<T, Box<dyn std::error::Error + Send + Sync>>;
 

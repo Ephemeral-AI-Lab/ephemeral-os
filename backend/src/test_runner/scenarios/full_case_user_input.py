@@ -59,13 +59,13 @@ class FullCaseUserInput(ScenarioBase):
         instruction = ctx.instruction or ctx.prompt or ""
         if "ACTION inspect_user_input" in instruction:
             return ("inspect_user_input",)
-        if "ACTION request_recursive_workflow" in instruction:
+        if "ACTION delegate_workflow" in instruction:
             package_id = (
                 instruction_field(instruction, "package")
                 or self._recursive_package_id
                 or ""
             )
-            return (f"request_recursive_workflow:{package_id}",)
+            return (f"delegate_workflow:{package_id}",)
         if "ACTION execute_package" in instruction:
             package_id = instruction_field(instruction, "package") or "unknown"
             return (f"execute_package:{package_id}",)
@@ -95,7 +95,7 @@ class FullCaseUserInput(ScenarioBase):
             },
         )
 
-    def recursive_handoff_goal(self, ctx: ScenarioContext) -> str | None:
+    def delegated_workflow_goal(self, ctx: ScenarioContext) -> str | None:
         instruction = ctx.instruction or ""
         package_id = instruction_field(instruction, "package") or self._recursive_package_id
         if not package_id:
@@ -173,7 +173,7 @@ class FullCaseUserInput(ScenarioBase):
             delegate_id = f"delegate_{recursive.id}"
             tasks.append({"id": delegate_id, "agent_name": "executor", "needs": recursive_needs})
             task_specs[delegate_id] = (
-                f"ACTION request_recursive_workflow package={recursive.id} risk={recursive.risk}"
+                f"ACTION delegate_workflow package={recursive.id} risk={recursive.risk}"
             )
             recursive_guard = "verify_recursive_return"
             tasks.append(

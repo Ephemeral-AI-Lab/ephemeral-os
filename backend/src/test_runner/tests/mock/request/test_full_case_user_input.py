@@ -24,11 +24,13 @@ from test_runner.environments.sweevo_image.fixtures import run_scenario_on_sweev
 from test_runner.environments.sweevo_image.health import (
     require_sweevo_image_provider_healthy,
 )
+from test_runner.tests._live_config import rust_sandbox_runtime_unavailable_reason
 from test_runner.tests.mock._focused_scenario_contracts import recursive_workflows
 from test_runner.benchmarks.sweevo.models import SWEEvoInstance
 
 
 _DEFAULT_INSTANCE_ID = "dask__dask_2023.3.2_2023.4.0"
+_RUST_RUNTIME_UNAVAILABLE = rust_sandbox_runtime_unavailable_reason()
 
 
 @pytest.fixture
@@ -62,6 +64,10 @@ def test_sweevo_instance_fixture_default_contract(monkeypatch: pytest.MonkeyPatc
 
 
 @pytest.mark.asyncio
+@pytest.mark.skipif(
+    _RUST_RUNTIME_UNAVAILABLE is not None,
+    reason=_RUST_RUNTIME_UNAVAILABLE or "Rust sandbox runtime unavailable",
+)
 async def test_full_case_user_input_runs_dynamic_verifier_dag(
     sweevo_image_instance: SWEEvoInstance,
     workspace: dict[str, object],
@@ -198,7 +204,7 @@ def _has_multi_dependency_guard(graph_summary: dict[str, Any]) -> bool:
 
 def _entry_workflow(graph_summary: dict[str, Any]) -> dict[str, Any]:
     for workflow in graph_summary["workflows"]:
-        if str(workflow.get("parent_task_id") or "").endswith(":root"):
+        if str(workflow.get("parent_task_id") or "").startswith("root-"):
             return workflow
     raise AssertionError(f"no entry workflow in graph_summary: {graph_summary}")
 
@@ -266,8 +272,8 @@ def _assert_audit_tree_roles(run_dir: Path) -> None:
     assert list(run_dir.glob("workflow_*_*/iteration_*_*/attempt_*_*"))
     first_workflow = workflow_dirs[0]
     workflow = _json_file(first_workflow / "workflow.json")
-    # The entry workflow's parent is the synthetic ``<run_id>:root`` bootstrap task.
-    assert str(workflow["parent_task_id"]).endswith(":root")
+    # The entry workflow's parent is the root Task created for the request.
+    assert str(workflow["parent_task_id"]).startswith("root-")
     iteration_files = sorted(first_workflow.glob("iteration_*_*/iteration.json"))
     assert iteration_files
     first_iteration = _json_file(iteration_files[0])
@@ -294,7 +300,7 @@ def _assert_message_jsonl_contains_tool_scripts(run_dir: Path) -> None:
         for block in message.get("content", [])
         if isinstance(block, dict) and block.get("type") == "tool_use"
     }
-    assert {"write_file", "edit_file", "read_file", "shell"}.issubset(tool_calls)
+    assert {"write_file", "edit_file", "read_file", "exec_command"}.issubset(tool_calls)
     assert "system" in {str(message.get("role") or "") for message in messages}
     assert "user" in {str(message.get("role") or "") for message in messages}
     assert "assistant" in {
@@ -364,7 +370,7 @@ def _assert_sandbox_monitor_events(report: Any) -> None:
 
 async def _assert_daytona_workspace_tool_state(sandbox_id: str) -> None:
     import sandbox.api as sandbox_api
-    from sandbox.api import ReadFileRequest, SandboxCaller, ShellRequest
+    from sandbox.api import ExecCommandRequest, ReadFileRequest, SandboxCaller
     from sandbox.host.daemon_client import call_daemon_api
 
     caller = SandboxCaller(agent_id="sweevo-live-test")
@@ -388,19 +394,18 @@ async def _assert_daytona_workspace_tool_state(sandbox_id: str) -> None:
     assert proof.exists
     assert "declared_workspace=/testbed" in proof.content
 
-    shell = await sandbox_api.shell(
+    command = await sandbox_api.exec_command(
         sandbox_id,
-        ShellRequest(
-            command=f"test -s {proof_path} && printf 'workspace=/testbed\\n'",
-            cwd="/testbed",
+        ExecCommandRequest(
+            cmd=f"test -s {proof_path} && printf 'workspace=/testbed\\n'",
             timeout=60,
             caller=caller,
             description="verify SWE-EVO tool state in /testbed",
         ),
     )
-    assert shell.success
-    assert shell.exit_code == 0
-    assert "workspace=/testbed" in shell.stdout
+    assert command.success
+    assert command.exit_code == 0
+    assert "workspace=/testbed" in command.output.stdout
 
 
 def _jsonl_rows(path: Path) -> list[dict[str, Any]]:

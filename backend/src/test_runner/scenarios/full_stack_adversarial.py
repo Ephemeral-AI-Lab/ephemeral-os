@@ -84,13 +84,13 @@ class FullStackAdversarial(ScenarioBase):
             return ("layerstack_squash_lease",)
         if "ACTION lsp_refresh_semantics" in instruction:
             return ("lsp_refresh_semantics",)
-        if "ACTION request_recursive_matrix" in instruction:
+        if "ACTION delegate_workflow_matrix" in instruction:
             package_id = (
                 instruction_field(instruction, "package")
                 or self._recursive_package_id
                 or ""
             )
-            return (f"request_recursive_matrix:{package_id}",)
+            return (f"delegate_workflow_matrix:{package_id}",)
         if "ACTION recursive_oversized_matrix" in instruction:
             return ("recursive_oversized_matrix",)
         if "ACTION final_reconciliation" in instruction:
@@ -136,7 +136,7 @@ class FullStackAdversarial(ScenarioBase):
             },
         )
 
-    def recursive_handoff_goal(self, ctx: ScenarioContext) -> str | None:
+    def delegated_workflow_goal(self, ctx: ScenarioContext) -> str | None:
         instruction = ctx.instruction or ""
         package_id = instruction_field(instruction, "package") or self._recursive_package_id
         if not package_id:
@@ -249,26 +249,26 @@ class FullStackAdversarial(ScenarioBase):
         self._recursive_package_id = package_id
         tasks = [
             {
-                "id": "request_recursive_matrix",
+                "id": "delegate_workflow_matrix",
                 "agent_name": "executor",
                 "needs": [],
             },
             {
                 "id": "final_reconciliation",
                 "agent_name": "executor",
-                "needs": ["request_recursive_matrix"],
+                "needs": ["delegate_workflow_matrix"],
             },
             {
                 "id": "recursive_return_guard",
                 "agent_name": "executor",
-                "needs": ["request_recursive_matrix", "final_reconciliation"],
+                "needs": ["delegate_workflow_matrix", "final_reconciliation"],
             },
         ]
         return {
             "tasks": tasks,
             "task_specs": {
-                "request_recursive_matrix": (
-                    f"ACTION request_recursive_matrix package={package_id}"
+                "delegate_workflow_matrix": (
+                    f"ACTION delegate_workflow_matrix package={package_id}"
                 ),
                 "final_reconciliation": "ACTION final_reconciliation stage=retry",
                 "recursive_return_guard": ("VERIFY checkpoint=recursive_return dependency_count=2"),

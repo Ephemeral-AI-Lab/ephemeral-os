@@ -12,8 +12,8 @@ Combines three orthogonal composer branches into one live run so a single
    ``submit_reducer_outcome``. Attempt 2 then sees a fully-populated
    ``<iteration position="current">`` / ``<attempt attempt_no="1">`` block in
    its planner context: per-task ``<task id status>`` outcomes and a
-   ``<failure>`` line. Attempt 2 then submits a partial plan (handoff) to drive
-   the continuation branch (#2 below).
+   ``<failure>`` line. Attempt 2 then submits a partial plan to drive the
+   continuation branch (#2 below).
 
 2. **Continuation goal** — iteration 1 attempt 2 submits a *partial* plan
    with a ``deferred_goal_for_next_iteration``. The iteration coordinator spawns

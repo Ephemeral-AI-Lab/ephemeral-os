@@ -11,13 +11,17 @@ from test_runner.audit.events import EventType
 from test_runner.scenarios import SCENARIO_REGISTRY
 from test_runner.core.stores import TaskStoreBundle
 from test_runner.environments.sweevo_image.fixtures import run_scenario_on_sweevo_image
-from test_runner.tests._live_config import database_configured
+from test_runner.tests._live_config import (
+    database_configured,
+    rust_sandbox_runtime_unavailable_reason,
+)
 from test_runner.tests.mock._focused_scenario_contracts import (
     FocusedScenarioCase,
     assert_focused_scenario_report,
 )
 
 pytestmark = pytest.mark.asyncio
+_RUST_RUNTIME_UNAVAILABLE = rust_sandbox_runtime_unavailable_reason()
 
 
 _FOCUSED_CASES: tuple[FocusedScenarioCase, ...] = (
@@ -189,6 +193,10 @@ _FOCUSED_CASES: tuple[FocusedScenarioCase, ...] = (
 @pytest.mark.skipif(
     not database_configured(),
     reason="database URL not configured",
+)
+@pytest.mark.skipif(
+    _RUST_RUNTIME_UNAVAILABLE is not None,
+    reason=_RUST_RUNTIME_UNAVAILABLE or "Rust sandbox runtime unavailable",
 )
 @pytest.mark.parametrize("case", _FOCUSED_CASES, ids=[case.name for case in _FOCUSED_CASES])
 async def test_focused_reference_scenario_runs(

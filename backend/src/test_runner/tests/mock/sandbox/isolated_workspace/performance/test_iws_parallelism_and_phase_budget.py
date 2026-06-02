@@ -50,7 +50,7 @@ async def test_iws_parallelism_and_phase_budget(
         layer_stack_root=_iws_rpc.IWS_LAYER_STACK_ROOT,
     )
     assert opened.get("success") is True, opened
-    loop = asyncio.get_requestning_loop()
+    loop = asyncio.get_running_loop()
     try:
         baseline_t0 = loop.time()
         baseline = await _iws_rpc.shell(sandbox_id, agent_id, "sleep 1")

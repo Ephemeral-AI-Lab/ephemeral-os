@@ -29,7 +29,7 @@ use eos_layerstack::LayerStack;
 #[cfg(target_os = "linux")]
 use eos_protocol::Intent;
 #[cfg(target_os = "linux")]
-use eos_runner::{Fd, NsFds, RunMode, RunRequest, ToolCall, WorkspaceRoot};
+use eos_runner::{Fd, NsFds, RunMode, RunRequest, RunResult, ToolCall, WorkspaceRoot};
 #[cfg(target_os = "linux")]
 use nix::errno::Errno;
 #[cfg(target_os = "linux")]
@@ -252,10 +252,42 @@ impl NamespaceRuntimePort for DaemonNamespaceRuntime {
 
     fn configure_dns(
         &self,
-        _handle: &WorkspaceHandle,
-        _fallback_dns: &str,
+        handle: &WorkspaceHandle,
+        fallback_dns: &str,
     ) -> Result<bool, IsolatedError> {
-        Ok(false)
+        if env_true(TEST_HARNESS_ENV) || handle.holder_pid <= 0 {
+            return Ok(false);
+        }
+        #[cfg(not(target_os = "linux"))]
+        {
+            let _ = (handle, fallback_dns);
+            Ok(false)
+        }
+        #[cfg(target_os = "linux")]
+        {
+            let request = RunRequest {
+                mode: RunMode::SetNs,
+                tool_call: ToolCall {
+                    invocation_id: format!(
+                        "isolated-configure-dns-{}",
+                        handle.workspace_handle_id.0
+                    ),
+                    agent_id: handle.agent_id.0.clone(),
+                    verb: "configure_dns".to_owned(),
+                    intent: Intent::ReadOnly,
+                    args: json!({"fallback_dns": fallback_dns}),
+                    background: false,
+                },
+                workspace_root: WorkspaceRoot(PathBuf::from(&handle.workspace_root)),
+                layer_paths: vec![],
+                upperdir: Some(handle.upperdir.clone()),
+                workdir: Some(handle.workdir.clone()),
+                ns_fds: ns_fds_from_map(&handle.ns_fds),
+                cgroup_path: handle.cgroup_path.clone(),
+                timeout_seconds: None,
+            };
+            run_ns_runner_configure_dns_child(&request)
+        }
     }
 
     fn signal_net_ready(
@@ -592,20 +624,13 @@ fn ensure_state(root: &Path) -> Result<(), IsolatedError> {
     Ok(())
 }
 
-// Keep the state guard alive for exactly the caller closure; tightening around
-// the generic closure would make the lock lifetime less explicit.
-#[expect(
-    clippy::significant_drop_tightening,
-    reason = "state guard lifetime intentionally spans the caller closure"
-)]
 fn with_state<T>(
     f: impl FnOnce(&mut DaemonIsolatedState) -> Result<T, IsolatedError>,
 ) -> Result<T, IsolatedError> {
-    let mut guard = lock_state_cell();
-    let Some(state) = guard.as_mut() else {
-        return Err(IsolatedError::FeatureDisabled);
-    };
-    f(state)
+    lock_state_cell()
+        .as_mut()
+        .ok_or(IsolatedError::FeatureDisabled)
+        .and_then(f)
 }
 
 fn active_pty_ids(agent_id: &str) -> Vec<String> {
@@ -780,6 +805,47 @@ fn run_ns_runner_mount_overlay_child(request: &RunRequest) -> Result<(), Isolate
             String::from_utf8_lossy(&output.stderr)
         ),
     })
+}
+
+#[cfg(target_os = "linux")]
+fn run_ns_runner_configure_dns_child(request: &RunRequest) -> Result<bool, IsolatedError> {
+    let payload = serde_json::to_vec(request).map_err(setup_error)?;
+    let mut child = Command::new(std::env::current_exe().map_err(setup_error)?)
+        .arg("ns-runner")
+        .arg("--configure-dns")
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .map_err(setup_error)?;
+    child
+        .stdin
+        .as_mut()
+        .ok_or_else(|| IsolatedError::SetupFailed {
+            step: "ns-runner stdin unavailable".to_owned(),
+        })?
+        .write_all(&payload)
+        .map_err(setup_error)?;
+    let output = child.wait_with_output().map_err(setup_error)?;
+    if !output.status.success() {
+        return Err(IsolatedError::SetupFailed {
+            step: format!(
+                "ns-runner configure dns failed with status {}: {}",
+                output.status,
+                String::from_utf8_lossy(&output.stderr)
+            ),
+        });
+    }
+    let result = serde_json::from_slice::<RunResult>(&output.stdout).map_err(|err| {
+        IsolatedError::SetupFailed {
+            step: format!("invalid ns-runner configure dns output: {err}"),
+        }
+    })?;
+    Ok(result
+        .tool_result
+        .get("applied_fallback")
+        .and_then(Value::as_bool)
+        .unwrap_or(false))
 }
 
 fn state_cell() -> &'static Mutex<Option<DaemonIsolatedState>> {

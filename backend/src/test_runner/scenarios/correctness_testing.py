@@ -47,19 +47,19 @@ _INTEGRITY_PARTIAL_PLAN: dict = {
             "needs": [],
         },
     ],
-    "task_specs": {
-        "sandbox_integrity": (
-            "Exercise the sandbox filesystem with write_file, read_file, "
-            "edit_file, shell, a batch public edit, and an expected conflict."
-        ),
-    },
+        "task_specs": {
+            "sandbox_integrity": (
+                "Exercise the sandbox filesystem with write_file, read_file, "
+                "edit_file, exec_command, a batch public edit, and an expected conflict."
+            ),
+        },
     "reducers": [
         {
             "id": "reduce",
             "needs": ["sandbox_integrity"],
             "prompt": (
-                "Confirm sandbox read/write/edit/shell consistency, that the "
-                "final file content survives the shell/OCC squash boundary, and "
+                "Confirm sandbox read/write/edit/exec_command consistency, that the "
+                "final file content survives the command/OCC squash boundary, and "
                 "that a stale edit reports conflict."
             ),
         }

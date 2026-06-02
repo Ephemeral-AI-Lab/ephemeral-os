@@ -46,4 +46,5 @@ runner:
   live_e2e:
     heavy_enabled: true
     capacity_enabled: true
+    concurrent_sandbox_runners: 3
     real_agent_max_duration_s: 1800

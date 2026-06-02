@@ -93,6 +93,8 @@ def _command_result(
     stdout: str = "",
     stderr: str = "",
     pty_session_id: str | None = None,
+    error: dict[str, object] | None = None,
+    timings: dict[str, float] | None = None,
 ) -> dict[str, object]:
     payload: dict[str, object] = {
         "status": status,
@@ -101,6 +103,10 @@ def _command_result(
     }
     if pty_session_id:
         payload["pty_session_id"] = pty_session_id
+    if error is not None:
+        payload["error"] = error
+    if timings:
+        payload["timings"] = timings
     return payload
 
 
@@ -138,11 +144,24 @@ async def exec_command(args: dict[str, Any]) -> dict[str, object]:
         verb="shell",
         intent=Intent.WRITE_ALLOWED,
     )
+    raw_exit_code = result.get("exit_code")
+    exit_code = int(raw_exit_code) if isinstance(raw_exit_code, int) else None
+    error = result.get("error")
+    error_payload = dict(error) if isinstance(error, dict) else None
+    stderr = str(result.get("stderr") or "")
+    if not stderr and error_payload is not None:
+        stderr = str(error_payload.get("message") or "")
     return _command_result(
-        str(result.get("status") or "error"),
-        exit_code=int(result.get("exit_code") or 0),
+        str(result.get("status") or ("completed" if result.get("success") else "error")),
+        exit_code=exit_code,
         stdout=str(result.get("stdout") or ""),
-        stderr=str(result.get("stderr") or ""),
+        stderr=stderr,
+        error=error_payload,
+        timings=(
+            dict(result.get("timings"))
+            if isinstance(result.get("timings"), dict)
+            else None
+        ),
     )
 
 

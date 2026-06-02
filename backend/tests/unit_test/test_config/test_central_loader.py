@@ -35,6 +35,7 @@ _ENV_KEYS = {
     "EOS_DOCKER_PRIVILEGED",
     "EOS_SANDBOX_PROVIDER",
     "EOS_SWEEVO_FORCE_FRESH_SANDBOX",
+    "EOS_SWEEVO_CONCURRENT_SANDBOX_RUNNERS",
     "EOS_SWEEVO_REAL_AGENT_MAX_DURATION_S",
     "EOS_SWEEVO_REUSE_SANDBOX",
     "EOS_SWEEVO_SANDBOX_QUOTA",
@@ -74,6 +75,7 @@ runner:
   live_e2e:
     heavy_enabled: true
     capacity_enabled: true
+    concurrent_sandbox_runners: 3
 """,
         encoding="utf-8",
     )
@@ -89,8 +91,11 @@ runner:
     assert cfg.sandbox.daytona.default_snapshot == "daytona-snapshot"
     assert cfg.providers.retry.status_codes == frozenset({429, 503})
     assert cfg.runner.audit_dir == Path("custom-runs")
+    assert cfg.runner.run_label == "test_runner"
+    assert cfg.runner.sandbox_quota == 3
     assert cfg.runner.live_e2e.heavy_enabled is True
     assert cfg.runner.live_e2e.capacity_enabled is True
+    assert cfg.runner.live_e2e.concurrent_sandbox_runners == 3
 
 
 def test_unknown_top_level_key_fails(tmp_path: Path, clean_config_env: None) -> None:
@@ -173,12 +178,15 @@ runner:
     monkeypatch.setenv("EOS_SWEEVO_FORCE_FRESH_SANDBOX", "1")
     monkeypatch.setenv("EOS__RUNNER__LIVE_E2E__HEAVY_ENABLED", "true")
     monkeypatch.setenv("EOS__RUNNER__LIVE_E2E__CAPACITY_ENABLED", "true")
+    monkeypatch.setenv("EOS__RUNNER__LIVE_E2E__CONCURRENT_SANDBOX_RUNNERS", "9")
+    monkeypatch.setenv("EOS_SWEEVO_CONCURRENT_SANDBOX_RUNNERS", "9")
     monkeypatch.setenv("EOS__RUNNER__SANDBOX_REUSE_MODE", "force_fresh")
 
     cfg = load_central_config(path, dotenv_path=tmp_path / ".env")
 
     assert cfg.runner.live_e2e.heavy_enabled is False
     assert cfg.runner.live_e2e.capacity_enabled is False
+    assert cfg.runner.live_e2e.concurrent_sandbox_runners == 3
     assert cfg.runner.sandbox_reuse_mode == "fresh"
 
 

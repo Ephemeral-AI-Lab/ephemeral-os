@@ -209,9 +209,8 @@ mod tests {
     #[test]
     fn acquire_rejects_empty_owner_without_panicking() -> TestResult {
         let manifest = Manifest::new(0, Vec::new(), 1)?;
-        let err = match LeaseRegistry::new().acquire(manifest, "") {
-            Ok(_) => return Err(std::io::Error::other("empty owner id was accepted").into()),
-            Err(error) => error,
+        let Err(err) = LeaseRegistry::new().acquire(manifest, "") else {
+            return Err(std::io::Error::other("empty owner id was accepted").into());
         };
         assert!(matches!(err, LayerStackError::InvalidLeaseOwner(_)));
         Ok(())

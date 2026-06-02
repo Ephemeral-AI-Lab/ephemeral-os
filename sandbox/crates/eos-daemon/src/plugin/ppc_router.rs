@@ -178,7 +178,7 @@ mod tests {
         let mut client = PpcClient {
             stream: client_stream,
         };
-        let err = match client.round_trip(
+        let Err(err) = client.round_trip(
             &PpcEnvelope {
                 message_id: "msg-1".to_owned(),
                 direction: PpcDirection::Request,
@@ -186,9 +186,8 @@ mod tests {
                 body: "{}".to_owned(),
             },
             Duration::from_secs(1),
-        ) {
-            Ok(_) => return Err("mismatched reply unexpectedly succeeded".into()),
-            Err(error) => error,
+        ) else {
+            return Err("mismatched reply unexpectedly succeeded".into());
         };
 
         assert!(err.to_string().contains("did not match request msg-1"));
@@ -345,7 +344,7 @@ mod tests {
         let mut client = PpcClient {
             stream: client_stream,
         };
-        let err = match client.round_trip_with_callbacks(
+        let Err(err) = client.round_trip_with_callbacks(
             &PpcEnvelope {
                 message_id: "msg-1".to_owned(),
                 direction: PpcDirection::Request,
@@ -361,9 +360,8 @@ mod tests {
                     body: "{}".to_owned(),
                 })
             },
-        ) {
-            Ok(_) => return Err("bad callback reply id unexpectedly succeeded".into()),
-            Err(error) => error,
+        ) else {
+            return Err("bad callback reply id unexpectedly succeeded".into());
         };
 
         assert!(err
@@ -374,9 +372,8 @@ mod tests {
     }
 
     fn join_server(server: thread::JoinHandle<TestResult>) -> TestResult {
-        match server.join() {
-            Ok(result) => result,
-            Err(_) => Err(std::io::Error::other("server thread panicked").into()),
-        }
+        server
+            .join()
+            .unwrap_or_else(|_| Err(std::io::Error::other("server thread panicked").into()))
     }
 }

@@ -105,6 +105,8 @@ MULTI_TARGET_A_REL = "live_plugin_multi_a.txt"
 MULTI_TARGET_A_CONTENT = "from live rust plugin multi a\n"
 MULTI_TARGET_B_REL = "live_plugin_multi_b.txt"
 MULTI_TARGET_B_CONTENT = "from live rust plugin multi b\n"
+SHELL_TARGET_REL = "live_plugin_shell_result.txt"
+SHELL_CONTENT = "from live rust shell publish\n"
 ONESHOT_TARGET_REL = "live_plugin_oneshot_result.txt"
 ONESHOT_CONTENT = "from live rust oneshot plugin\n"
 PYRIGHT_TARGET_REL = "live_plugin_pyright.py"
@@ -119,6 +121,28 @@ PYRIGHT_DIAGNOSTICS_CONTENT = "value: List[int] = []\n"
 PYRIGHT_DIAGNOSTICS_LINE = 0
 PYRIGHT_DIAGNOSTICS_CHARACTER = len("value: Li")
 PYRIGHT_DIAGNOSTICS_SYMBOL = "List"
+PYRIGHT_CODE_ACTION_TARGET_REL = "live_plugin_code_actions.py"
+PYRIGHT_CODE_ACTION_CONTENT = (
+    "import sys\n"
+    "import os\n\n"
+    "VALUE = os.path.join('a', 'b')\n"
+)
+PYRIGHT_CODE_ACTION_LINE = 0
+PYRIGHT_CODE_ACTION_CHARACTER = 0
+PYRIGHT_CODE_ACTION_KIND = "source.organizeImports"
+PYRIGHT_DOCUMENT_FORMATTING_METHOD = "textDocument/formatting"
+PYRIGHT_DOCUMENT_FORMATTING_CAPABILITY = "documentFormattingProvider"
+PYRIGHT_EXECUTE_COMMAND_METHOD = "workspace/executeCommand"
+LSP_APPLY_EDIT_TARGET_REL = "live_plugin_apply_workspace_edit.py"
+LSP_APPLY_EDIT_CONTENT = "alpha\nbeta\n"
+LSP_APPLY_EDIT_REPLACEMENT = "edited"
+LSP_APPLY_EDIT_CONTENT_AFTER = "alpha\nedited\n"
+LSP_APPLY_CODE_ACTION_TARGET_REL = "live_plugin_apply_code_action.py"
+LSP_APPLY_CODE_ACTION_CONTENT = "before\nunchanged\n"
+LSP_APPLY_CODE_ACTION_REPLACEMENT = "after"
+LSP_APPLY_CODE_ACTION_CONTENT_AFTER = "after\nunchanged\n"
+LSP_APPLY_CODE_ACTION_TITLE = "Replace first line"
+LSP_APPLY_CODE_ACTION_KIND = "quickfix"
 PYRIGHT_SIGNATURE_TARGET_REL = "live_plugin_signature.py"
 PYRIGHT_SIGNATURE_CONTENT = (
     "def live_signature(left: int, right: str) -> str:\n"
@@ -469,6 +493,14 @@ class PyrightAdapter:
     def capabilities(self) -> dict[str, object]:
         self.ensure_started()
         capability_keys = sorted(str(key) for key in self.server_capabilities)
+        execute_command_provider = self.server_capabilities.get(
+            "executeCommandProvider",
+        )
+        execute_commands = (
+            execute_command_provider.get("commands", [])
+            if isinstance(execute_command_provider, dict)
+            else []
+        )
         return {
             "protocol": "lsp-jsonrpc",
             "server": "pyright-langserver",
@@ -509,9 +541,96 @@ class PyrightAdapter:
                 "call_hierarchy": bool(
                     self.server_capabilities.get("callHierarchyProvider")
                 ),
+                "document_formatting": bool(
+                    self.server_capabilities.get("documentFormattingProvider")
+                ),
+                "document_range_formatting": bool(
+                    self.server_capabilities.get("documentRangeFormattingProvider")
+                ),
+                "execute_command_provider": bool(execute_command_provider),
+                "execute_command": bool(execute_commands),
                 "folding_range": "foldingRangeProvider" in self.server_capabilities,
             },
             "raw": self.server_capabilities,
+        }
+
+    def document_formatting(self, path: str) -> dict[str, object]:
+        self.ensure_started()
+        uri = self.open_or_change(path)
+        provider = self.server_capabilities.get("documentFormattingProvider")
+        if not provider:
+            return {
+                "protocol": "lsp-jsonrpc",
+                "server": "pyright-langserver",
+                "pid": self.proc.pid if self.proc is not None else None,
+                "path": path,
+                "method": "textDocument/formatting",
+                "capability": "documentFormattingProvider",
+                "supported": False,
+                "unsupported": True,
+                "reason": "server did not advertise documentFormattingProvider",
+                "edits": [],
+                "edit_count": 0,
+            }
+        raw = self.request(
+            "textDocument/formatting",
+            {
+                "textDocument": {"uri": uri},
+                "options": {"tabSize": 4, "insertSpaces": True},
+            },
+            timeout_s=30,
+        )
+        edits = [edit for edit in raw if isinstance(edit, dict)] if isinstance(raw, list) else []
+        return {
+            "protocol": "lsp-jsonrpc",
+            "server": "pyright-langserver",
+            "pid": self.proc.pid if self.proc is not None else None,
+            "path": path,
+            "method": "textDocument/formatting",
+            "capability": "documentFormattingProvider",
+            "supported": True,
+            "unsupported": False,
+            "edits": edits,
+            "edit_count": len(edits),
+        }
+
+    def execute_command(self, command: str) -> dict[str, object]:
+        self.ensure_started()
+        provider = self.server_capabilities.get("executeCommandProvider")
+        commands = (
+            provider.get("commands", []) if isinstance(provider, dict) else []
+        )
+        if not command and commands:
+            command = str(commands[0])
+        if not command or command not in commands:
+            return {
+                "protocol": "lsp-jsonrpc",
+                "server": "pyright-langserver",
+                "pid": self.proc.pid if self.proc is not None else None,
+                "method": "workspace/executeCommand",
+                "capability": "executeCommandProvider.commands",
+                "supported": False,
+                "unsupported": True,
+                "reason": "server did not advertise executable commands",
+                "command": command,
+                "commands": commands,
+            }
+        raw = self.request(
+            "workspace/executeCommand",
+            {"command": command, "arguments": []},
+            timeout_s=30,
+        )
+        return {
+            "protocol": "lsp-jsonrpc",
+            "server": "pyright-langserver",
+            "pid": self.proc.pid if self.proc is not None else None,
+            "method": "workspace/executeCommand",
+            "capability": "executeCommandProvider.commands",
+            "supported": True,
+            "unsupported": False,
+            "command": command,
+            "commands": commands,
+            "result": raw,
         }
 
     def completion(
@@ -675,6 +794,52 @@ class PyrightAdapter:
                 for diagnostic in diagnostics
                 if isinstance(diagnostic, dict)
             ],
+        }
+
+    def code_actions(
+        self,
+        path: str,
+        line: int,
+        character: int,
+        only: list[str],
+        diagnostics: list[dict[str, object]],
+    ) -> dict[str, object]:
+        self.ensure_started()
+        uri = self.open_or_change(path)
+        range_obj: dict[str, object] = {
+            "start": {"line": line, "character": character},
+            "end": {"line": line, "character": character},
+        }
+        if diagnostics:
+            raw_range = diagnostics[0].get("range")
+            if isinstance(raw_range, dict):
+                range_obj = raw_range
+        context: dict[str, object] = {"diagnostics": diagnostics}
+        if only:
+            context["only"] = only
+        raw = self.request(
+            "textDocument/codeAction",
+            {
+                "textDocument": {"uri": uri},
+                "range": range_obj,
+                "context": context,
+            },
+            timeout_s=30,
+        )
+        actions = [action for action in raw if isinstance(action, dict)] if isinstance(raw, list) else []
+        return {
+            "protocol": "lsp-jsonrpc",
+            "server": "pyright-langserver",
+            "pid": self.proc.pid if self.proc is not None else None,
+            "path": path,
+            "position": {"line": line, "character": character},
+            "only": only,
+            "range": range_obj,
+            "diagnostic_count": len(diagnostics),
+            "actions": actions[:20],
+            "action_count": len(actions),
+            "action_titles": [str(action.get("title", "")) for action in actions],
+            "action_kinds": [str(action.get("kind", "")) for action in actions],
         }
 
     def hover(
@@ -1205,7 +1370,7 @@ def workspace_edit_to_changes(
     edit: object,
 ) -> list[dict[str, object]]:
     if not isinstance(edit, dict):
-        raise RuntimeError("pyright rename did not return a WorkspaceEdit object")
+        raise RuntimeError("LSP operation did not return a WorkspaceEdit object")
     edits_by_path: dict[str, list[dict[str, object]]] = {}
     raw_changes = edit.get("changes")
     if isinstance(raw_changes, dict):
@@ -1231,7 +1396,7 @@ def workspace_edit_to_changes(
                     text_edit for text_edit in text_edits if isinstance(text_edit, dict)
                 )
     if not edits_by_path:
-        raise RuntimeError("pyright rename returned no text edits")
+        raise RuntimeError("LSP operation returned no text edits")
 
     root = os.path.abspath(workspace_root)
     changes: list[dict[str, object]] = []
@@ -1647,6 +1812,82 @@ def handle_request(sock: socket.socket, request: dict[str, object]) -> None:
         )
         return
 
+    if op == "plugin.generic.pyright_document_formatting":
+        if PYRIGHT is None:
+            PYRIGHT = PyrightAdapter()
+        read_path = str(body.get("read_path") or "live_plugin_pyright.py")
+        try:
+            lsp_reply = PYRIGHT.document_formatting(read_path)
+        except Exception as exc:
+            reply(
+                sock,
+                request,
+                {
+                    "success": False,
+                    "from_ppc": True,
+                    "from_pyright_adapter": True,
+                    "error": str(exc),
+                    "plugin_id": os.environ.get("EOS_PLUGIN_ID"),
+                    "service_id": os.environ.get("EOS_PLUGIN_SERVICE_ID"),
+                    "workspace_mounted": os.environ.get("EOS_PLUGIN_WORKSPACE_MOUNTED") == "1",
+                    "manifest_key": CURRENT_MANIFEST_KEY,
+                },
+            )
+            return
+        reply(
+            sock,
+            request,
+            {
+                "success": not bool(lsp_reply.get("unsupported")),
+                "from_ppc": True,
+                "from_pyright_adapter": True,
+                "plugin_id": os.environ.get("EOS_PLUGIN_ID"),
+                "service_id": os.environ.get("EOS_PLUGIN_SERVICE_ID"),
+                "workspace_mounted": os.environ.get("EOS_PLUGIN_WORKSPACE_MOUNTED") == "1",
+                "manifest_key": CURRENT_MANIFEST_KEY,
+                "lsp": lsp_reply,
+            },
+        )
+        return
+
+    if op == "plugin.generic.pyright_execute_command":
+        if PYRIGHT is None:
+            PYRIGHT = PyrightAdapter()
+        command = str(body.get("command") or "")
+        try:
+            lsp_reply = PYRIGHT.execute_command(command)
+        except Exception as exc:
+            reply(
+                sock,
+                request,
+                {
+                    "success": False,
+                    "from_ppc": True,
+                    "from_pyright_adapter": True,
+                    "error": str(exc),
+                    "plugin_id": os.environ.get("EOS_PLUGIN_ID"),
+                    "service_id": os.environ.get("EOS_PLUGIN_SERVICE_ID"),
+                    "workspace_mounted": os.environ.get("EOS_PLUGIN_WORKSPACE_MOUNTED") == "1",
+                    "manifest_key": CURRENT_MANIFEST_KEY,
+                },
+            )
+            return
+        reply(
+            sock,
+            request,
+            {
+                "success": not bool(lsp_reply.get("unsupported")),
+                "from_ppc": True,
+                "from_pyright_adapter": True,
+                "plugin_id": os.environ.get("EOS_PLUGIN_ID"),
+                "service_id": os.environ.get("EOS_PLUGIN_SERVICE_ID"),
+                "workspace_mounted": os.environ.get("EOS_PLUGIN_WORKSPACE_MOUNTED") == "1",
+                "manifest_key": CURRENT_MANIFEST_KEY,
+                "lsp": lsp_reply,
+            },
+        )
+        return
+
     if op == "plugin.generic.pyright_completion":
         if PYRIGHT is None:
             PYRIGHT = PyrightAdapter()
@@ -1740,6 +1981,60 @@ def handle_request(sock: socket.socket, request: dict[str, object]) -> None:
         query = str(body.get("query") or "")
         try:
             lsp_reply = PYRIGHT.diagnostics(read_path, line, character, query)
+        except Exception as exc:
+            reply(
+                sock,
+                request,
+                {
+                    "success": False,
+                    "from_ppc": True,
+                    "from_pyright_adapter": True,
+                    "error": str(exc),
+                    "plugin_id": os.environ.get("EOS_PLUGIN_ID"),
+                    "service_id": os.environ.get("EOS_PLUGIN_SERVICE_ID"),
+                    "workspace_mounted": os.environ.get("EOS_PLUGIN_WORKSPACE_MOUNTED") == "1",
+                    "manifest_key": CURRENT_MANIFEST_KEY,
+                },
+            )
+            return
+        reply(
+            sock,
+            request,
+            {
+                "success": True,
+                "from_ppc": True,
+                "from_pyright_adapter": True,
+                "plugin_id": os.environ.get("EOS_PLUGIN_ID"),
+                "service_id": os.environ.get("EOS_PLUGIN_SERVICE_ID"),
+                "workspace_mounted": os.environ.get("EOS_PLUGIN_WORKSPACE_MOUNTED") == "1",
+                "manifest_key": CURRENT_MANIFEST_KEY,
+                "lsp": lsp_reply,
+            },
+        )
+        return
+
+    if op == "plugin.generic.pyright_code_actions":
+        if PYRIGHT is None:
+            PYRIGHT = PyrightAdapter()
+        read_path = str(body.get("read_path") or "live_plugin_diagnostics.py")
+        line = int(body.get("line") or 0)
+        character = int(body.get("character") or 0)
+        raw_only = body.get("only")
+        only = [str(item) for item in raw_only] if isinstance(raw_only, list) else []
+        raw_diagnostics = body.get("diagnostics")
+        diagnostics = [
+            item
+            for item in raw_diagnostics
+            if isinstance(item, dict)
+        ] if isinstance(raw_diagnostics, list) else []
+        try:
+            lsp_reply = PYRIGHT.code_actions(
+                read_path,
+                line,
+                character,
+                only,
+                diagnostics,
+            )
         except Exception as exc:
             reply(
                 sock,
@@ -2205,6 +2500,142 @@ def handle_request(sock: socket.socket, request: dict[str, object]) -> None:
         )
         return
 
+    if op == "plugin.generic.lsp_apply_workspace_edit":
+        raw_edit = body.get("edit")
+        try:
+            changes = workspace_edit_to_changes(
+                os.environ["EOS_PLUGIN_WORKSPACE_ROOT"],
+                raw_edit,
+            )
+        except Exception as exc:
+            reply(
+                sock,
+                request,
+                {
+                    "success": False,
+                    "from_ppc": True,
+                    "from_lsp_workspace_edit": True,
+                    "from_self_managed": True,
+                    "error": str(exc),
+                    "plugin_id": os.environ.get("EOS_PLUGIN_ID"),
+                    "service_id": os.environ.get("EOS_PLUGIN_SERVICE_ID"),
+                    "workspace_mounted": os.environ.get("EOS_PLUGIN_WORKSPACE_MOUNTED") == "1",
+                    "manifest_key": CURRENT_MANIFEST_KEY,
+                },
+            )
+            return
+        callback_id = f"{request['message_id']}:occ"
+        write_frame(
+            sock,
+            op="daemon.occ.apply_changeset",
+            message_id=callback_id,
+            direction="request",
+            body={
+                "layer_stack_root": os.environ["EOS_PLUGIN_LAYER_STACK_ROOT"],
+                "changes": changes,
+            },
+        )
+        callback_reply = read_frame(sock)
+        if callback_reply["direction"] != "reply":
+            raise RuntimeError(
+                "LSP apply WorkspaceEdit OCC callback did not return a reply frame"
+            )
+        if callback_reply["message_id"] != callback_id:
+            raise RuntimeError(
+                "LSP apply WorkspaceEdit callback reply message_id mismatch"
+            )
+        callback_body = callback_reply["body"]
+        if not isinstance(callback_body, dict):
+            raise RuntimeError("LSP apply WorkspaceEdit callback reply body was not an object")
+        reply(
+            sock,
+            request,
+            {
+                "success": bool(callback_body.get("success")),
+                "from_ppc": True,
+                "from_lsp_workspace_edit": True,
+                "from_self_managed": True,
+                "plugin_id": os.environ.get("EOS_PLUGIN_ID"),
+                "service_id": os.environ.get("EOS_PLUGIN_SERVICE_ID"),
+                "workspace_mounted": os.environ.get("EOS_PLUGIN_WORKSPACE_MOUNTED") == "1",
+                "manifest_key": CURRENT_MANIFEST_KEY,
+                "edit": raw_edit if isinstance(raw_edit, dict) else {},
+                "changed_paths": [str(change["path"]) for change in changes],
+                "changes": changes,
+                "callback": callback_body,
+            },
+        )
+        return
+
+    if op == "plugin.generic.lsp_apply_code_action":
+        raw_action = body.get("action")
+        raw_edit = raw_action.get("edit") if isinstance(raw_action, dict) else None
+        try:
+            changes = workspace_edit_to_changes(
+                os.environ["EOS_PLUGIN_WORKSPACE_ROOT"],
+                raw_edit,
+            )
+        except Exception as exc:
+            reply(
+                sock,
+                request,
+                {
+                    "success": False,
+                    "from_ppc": True,
+                    "from_lsp_code_action": True,
+                    "from_self_managed": True,
+                    "error": str(exc),
+                    "plugin_id": os.environ.get("EOS_PLUGIN_ID"),
+                    "service_id": os.environ.get("EOS_PLUGIN_SERVICE_ID"),
+                    "workspace_mounted": os.environ.get("EOS_PLUGIN_WORKSPACE_MOUNTED") == "1",
+                    "manifest_key": CURRENT_MANIFEST_KEY,
+                },
+            )
+            return
+        callback_id = f"{request['message_id']}:occ"
+        write_frame(
+            sock,
+            op="daemon.occ.apply_changeset",
+            message_id=callback_id,
+            direction="request",
+            body={
+                "layer_stack_root": os.environ["EOS_PLUGIN_LAYER_STACK_ROOT"],
+                "changes": changes,
+            },
+        )
+        callback_reply = read_frame(sock)
+        if callback_reply["direction"] != "reply":
+            raise RuntimeError(
+                "LSP apply CodeAction OCC callback did not return a reply frame"
+            )
+        if callback_reply["message_id"] != callback_id:
+            raise RuntimeError("LSP apply CodeAction callback reply message_id mismatch")
+        callback_body = callback_reply["body"]
+        if not isinstance(callback_body, dict):
+            raise RuntimeError("LSP apply CodeAction callback reply body was not an object")
+        action = raw_action if isinstance(raw_action, dict) else {}
+        reply(
+            sock,
+            request,
+            {
+                "success": bool(callback_body.get("success")),
+                "from_ppc": True,
+                "from_lsp_code_action": True,
+                "from_self_managed": True,
+                "plugin_id": os.environ.get("EOS_PLUGIN_ID"),
+                "service_id": os.environ.get("EOS_PLUGIN_SERVICE_ID"),
+                "workspace_mounted": os.environ.get("EOS_PLUGIN_WORKSPACE_MOUNTED") == "1",
+                "manifest_key": CURRENT_MANIFEST_KEY,
+                "action_title": str(action.get("title", "")),
+                "action_kind": str(action.get("kind", "")),
+                "action": action,
+                "changed_paths": [str(change["path"]) for change in changes],
+                "changes": changes,
+                "callback": callback_body,
+            },
+        )
+        return
+
     if op == "plugin.generic.adapter_query":
         if ADAPTER is None:
             reply(sock, request, {"success": False, "error": "adapter was not started"})
@@ -2260,7 +2691,11 @@ def handle_request(sock: socket.socket, request: dict[str, object]) -> None:
         )
         return
 
-    if op in {"plugin.generic.ping", "plugin.generic.restart_ping"}:
+    if op in {
+        "plugin.generic.ping",
+        "plugin.generic.restart_ping",
+        "plugin.generic.hang_recover_ping",
+    }:
         workspace_read: dict[str, object] = {"requested": False}
         read_path = body.get("read_path")
         if read_path:
@@ -2286,6 +2721,8 @@ def handle_request(sock: socket.socket, request: dict[str, object]) -> None:
                 "success": True,
                 "from_ppc": True,
                 "from_restart_service": op == "plugin.generic.restart_ping",
+                "from_timeout_recovered_service": op
+                == "plugin.generic.hang_recover_ping",
                 "plugin_id": os.environ.get("EOS_PLUGIN_ID"),
                 "service_id": os.environ.get("EOS_PLUGIN_SERVICE_ID"),
                 "workspace_mounted": os.environ.get("EOS_PLUGIN_WORKSPACE_MOUNTED") == "1",
@@ -2734,6 +3171,24 @@ async def run(args: argparse.Namespace) -> dict[str, Any]:
                 layer_stack_root=LAYER_STACK_ROOT,
                 timeout=30,
             )
+            report["concurrent_ping"] = list(
+                await asyncio.gather(
+                    daemon_client.call_daemon_api(
+                        bench.sandbox_id,
+                        "plugin.generic.ping",
+                        {"agent_id": AGENT_ID, "message": "concurrent-a"},
+                        layer_stack_root=LAYER_STACK_ROOT,
+                        timeout=30,
+                    ),
+                    daemon_client.call_daemon_api(
+                        bench.sandbox_id,
+                        "plugin.generic.ping",
+                        {"agent_id": AGENT_ID, "message": "concurrent-b"},
+                        layer_stack_root=LAYER_STACK_ROOT,
+                        timeout=30,
+                    ),
+                )
+            )
             report["apply"] = await daemon_client.call_daemon_api(
                 bench.sandbox_id,
                 "plugin.generic.apply",
@@ -2785,6 +3240,44 @@ async def run(args: argparse.Namespace) -> dict[str, Any]:
                 layer_stack_root=LAYER_STACK_ROOT,
                 timeout=30,
             )
+            report["shell_publish"] = await daemon_client.call_daemon_api(
+                bench.sandbox_id,
+                "api.v1.shell",
+                {
+                    "agent_id": AGENT_ID,
+                    "command": (
+                        f"printf %s {shlex.quote(SHELL_CONTENT)} > "
+                        f"{shlex.quote(f'{WORKSPACE_ROOT}/{SHELL_TARGET_REL}')}"
+                    ),
+                },
+                layer_stack_root=LAYER_STACK_ROOT,
+                timeout=30,
+            )
+            report["shell_readback"] = await daemon_client.call_daemon_api(
+                bench.sandbox_id,
+                "api.v1.read_file",
+                {"agent_id": AGENT_ID, "path": SHELL_TARGET_REL},
+                layer_stack_root=LAYER_STACK_ROOT,
+                timeout=30,
+            )
+            report["shell_refresh_ping"] = await daemon_client.call_daemon_api(
+                bench.sandbox_id,
+                "plugin.generic.ping",
+                {
+                    "agent_id": AGENT_ID,
+                    "message": "after-shell-publish",
+                    "read_path": SHELL_TARGET_REL,
+                },
+                layer_stack_root=LAYER_STACK_ROOT,
+                timeout=30,
+            )
+            report["status_after_shell_refresh"] = await daemon_client.call_daemon_api(
+                bench.sandbox_id,
+                "api.plugin.status",
+                {"agent_id": AGENT_ID},
+                layer_stack_root=LAYER_STACK_ROOT,
+                timeout=30,
+            )
             report["refresh_ping"] = await daemon_client.call_daemon_api(
                 bench.sandbox_id,
                 "plugin.generic.ping",
@@ -2820,6 +3313,11 @@ async def run(args: argparse.Namespace) -> dict[str, Any]:
                 layer_stack_root=LAYER_STACK_ROOT,
                 timeout=30,
             )
+            report["co_shared_refresh"] = co_shared_refresh_summary(
+                report["status_after_adapter"],
+                "harness",
+                "adapter_harness",
+            )
             report["pyright_seed"] = await daemon_client.call_daemon_api(
                 bench.sandbox_id,
                 "api.v1.write_file",
@@ -2851,6 +3349,42 @@ async def run(args: argparse.Namespace) -> dict[str, Any]:
                     "agent_id": AGENT_ID,
                     "path": f"{WORKSPACE_ROOT}/{PYRIGHT_DIAGNOSTICS_TARGET_REL}",
                     "content": PYRIGHT_DIAGNOSTICS_CONTENT,
+                    "overwrite": True,
+                },
+                layer_stack_root=LAYER_STACK_ROOT,
+                timeout=30,
+            )
+            report["pyright_code_action_seed"] = await daemon_client.call_daemon_api(
+                bench.sandbox_id,
+                "api.v1.write_file",
+                {
+                    "agent_id": AGENT_ID,
+                    "path": f"{WORKSPACE_ROOT}/{PYRIGHT_CODE_ACTION_TARGET_REL}",
+                    "content": PYRIGHT_CODE_ACTION_CONTENT,
+                    "overwrite": True,
+                },
+                layer_stack_root=LAYER_STACK_ROOT,
+                timeout=30,
+            )
+            report["lsp_apply_workspace_edit_seed"] = await daemon_client.call_daemon_api(
+                bench.sandbox_id,
+                "api.v1.write_file",
+                {
+                    "agent_id": AGENT_ID,
+                    "path": f"{WORKSPACE_ROOT}/{LSP_APPLY_EDIT_TARGET_REL}",
+                    "content": LSP_APPLY_EDIT_CONTENT,
+                    "overwrite": True,
+                },
+                layer_stack_root=LAYER_STACK_ROOT,
+                timeout=30,
+            )
+            report["lsp_apply_code_action_seed"] = await daemon_client.call_daemon_api(
+                bench.sandbox_id,
+                "api.v1.write_file",
+                {
+                    "agent_id": AGENT_ID,
+                    "path": f"{WORKSPACE_ROOT}/{LSP_APPLY_CODE_ACTION_TARGET_REL}",
+                    "content": LSP_APPLY_CODE_ACTION_CONTENT,
                     "overwrite": True,
                 },
                 layer_stack_root=LAYER_STACK_ROOT,
@@ -2944,6 +3478,39 @@ async def run(args: argparse.Namespace) -> dict[str, Any]:
                     "error": str(exc),
                 }
             try:
+                report["pyright_document_formatting"] = await daemon_client.call_daemon_api(
+                    bench.sandbox_id,
+                    "plugin.generic.pyright_document_formatting",
+                    {
+                        "agent_id": AGENT_ID,
+                        "read_path": PYRIGHT_TARGET_REL,
+                    },
+                    layer_stack_root=LAYER_STACK_ROOT,
+                    timeout=150,
+                )
+            except Exception as exc:
+                report["pyright_document_formatting"] = {
+                    "success": False,
+                    "from_pyright_adapter": False,
+                    "error": str(exc),
+                }
+            try:
+                report["pyright_execute_command"] = await daemon_client.call_daemon_api(
+                    bench.sandbox_id,
+                    "plugin.generic.pyright_execute_command",
+                    {
+                        "agent_id": AGENT_ID,
+                    },
+                    layer_stack_root=LAYER_STACK_ROOT,
+                    timeout=150,
+                )
+            except Exception as exc:
+                report["pyright_execute_command"] = {
+                    "success": False,
+                    "from_pyright_adapter": False,
+                    "error": str(exc),
+                }
+            try:
                 report["pyright_completion"] = await daemon_client.call_daemon_api(
                     bench.sandbox_id,
                     "plugin.generic.pyright_completion",
@@ -2999,6 +3566,26 @@ async def run(args: argparse.Namespace) -> dict[str, Any]:
                 )
             except Exception as exc:
                 report["pyright_diagnostics"] = {
+                    "success": False,
+                    "from_pyright_adapter": False,
+                    "error": str(exc),
+                }
+            try:
+                report["pyright_code_actions"] = await daemon_client.call_daemon_api(
+                    bench.sandbox_id,
+                    "plugin.generic.pyright_code_actions",
+                    {
+                        "agent_id": AGENT_ID,
+                        "read_path": PYRIGHT_CODE_ACTION_TARGET_REL,
+                        "line": PYRIGHT_CODE_ACTION_LINE,
+                        "character": PYRIGHT_CODE_ACTION_CHARACTER,
+                        "only": [PYRIGHT_CODE_ACTION_KIND],
+                    },
+                    layer_stack_root=LAYER_STACK_ROOT,
+                    timeout=150,
+                )
+            except Exception as exc:
+                report["pyright_code_actions"] = {
                     "success": False,
                     "from_pyright_adapter": False,
                     "error": str(exc),
@@ -3196,6 +3783,96 @@ async def run(args: argparse.Namespace) -> dict[str, Any]:
                     "from_pyright_adapter": False,
                     "error": str(exc),
                 }
+            lsp_apply_edit_uri = f"file://{WORKSPACE_ROOT}/{LSP_APPLY_EDIT_TARGET_REL}"
+            try:
+                report["lsp_apply_workspace_edit"] = await daemon_client.call_daemon_api(
+                    bench.sandbox_id,
+                    "plugin.generic.lsp_apply_workspace_edit",
+                    {
+                        "agent_id": AGENT_ID,
+                        "edit": {
+                            "changes": {
+                                lsp_apply_edit_uri: [
+                                    {
+                                        "range": {
+                                            "start": {"line": 1, "character": 0},
+                                            "end": {"line": 1, "character": 4},
+                                        },
+                                        "newText": LSP_APPLY_EDIT_REPLACEMENT,
+                                    }
+                                ]
+                            }
+                        },
+                    },
+                    layer_stack_root=LAYER_STACK_ROOT,
+                    timeout=150,
+                )
+            except Exception as exc:
+                report["lsp_apply_workspace_edit"] = {
+                    "success": False,
+                    "from_lsp_workspace_edit": False,
+                    "from_self_managed": False,
+                    "error": str(exc),
+                }
+            report["lsp_apply_workspace_edit_readback"] = (
+                await daemon_client.call_daemon_api(
+                    bench.sandbox_id,
+                    "api.v1.read_file",
+                    {"agent_id": AGENT_ID, "path": LSP_APPLY_EDIT_TARGET_REL},
+                    layer_stack_root=LAYER_STACK_ROOT,
+                    timeout=30,
+                )
+            )
+            lsp_apply_code_action_uri = (
+                f"file://{WORKSPACE_ROOT}/{LSP_APPLY_CODE_ACTION_TARGET_REL}"
+            )
+            try:
+                report["lsp_apply_code_action"] = await daemon_client.call_daemon_api(
+                    bench.sandbox_id,
+                    "plugin.generic.lsp_apply_code_action",
+                    {
+                        "agent_id": AGENT_ID,
+                        "action": {
+                            "title": LSP_APPLY_CODE_ACTION_TITLE,
+                            "kind": LSP_APPLY_CODE_ACTION_KIND,
+                            "edit": {
+                                "changes": {
+                                    lsp_apply_code_action_uri: [
+                                        {
+                                            "range": {
+                                                "start": {
+                                                    "line": 0,
+                                                    "character": 0,
+                                                },
+                                                "end": {
+                                                    "line": 0,
+                                                    "character": 6,
+                                                },
+                                            },
+                                            "newText": LSP_APPLY_CODE_ACTION_REPLACEMENT,
+                                        }
+                                    ]
+                                }
+                            },
+                        },
+                    },
+                    layer_stack_root=LAYER_STACK_ROOT,
+                    timeout=150,
+                )
+            except Exception as exc:
+                report["lsp_apply_code_action"] = {
+                    "success": False,
+                    "from_lsp_code_action": False,
+                    "from_self_managed": False,
+                    "error": str(exc),
+                }
+            report["lsp_apply_code_action_readback"] = await daemon_client.call_daemon_api(
+                bench.sandbox_id,
+                "api.v1.read_file",
+                {"agent_id": AGENT_ID, "path": LSP_APPLY_CODE_ACTION_TARGET_REL},
+                layer_stack_root=LAYER_STACK_ROOT,
+                timeout=30,
+            )
             report["status_after_pyright"] = await daemon_client.call_daemon_api(
                 bench.sandbox_id,
                 "api.plugin.status",
@@ -3318,6 +3995,30 @@ async def run(args: argparse.Namespace) -> dict[str, Any]:
                     "error": str(exc),
                 }
             report["status_after_hang"] = await daemon_client.call_daemon_api(
+                bench.sandbox_id,
+                "api.plugin.status",
+                {"agent_id": AGENT_ID},
+                layer_stack_root=LAYER_STACK_ROOT,
+                timeout=30,
+            )
+            try:
+                report["hang_recover_ping"] = await daemon_client.call_daemon_api(
+                    bench.sandbox_id,
+                    "plugin.generic.hang_recover_ping",
+                    {
+                        "agent_id": AGENT_ID,
+                        "message": "after-timeout-recover",
+                    },
+                    layer_stack_root=LAYER_STACK_ROOT,
+                    timeout=30,
+                )
+            except Exception as exc:
+                report["hang_recover_ping"] = {
+                    "success": False,
+                    "from_timeout_recovered_service": False,
+                    "error": str(exc),
+                }
+            report["status_after_hang_recover"] = await daemon_client.call_daemon_api(
                 bench.sandbox_id,
                 "api.plugin.status",
                 {"agent_id": AGENT_ID},
@@ -3524,6 +4225,18 @@ def plugin_manifest() -> dict[str, Any]:
                 "timeout_ms": 150000,
             },
             {
+                "op_name": "pyright_document_formatting",
+                "intent": "read_only",
+                "service_id": "pyright_harness",
+                "timeout_ms": 150000,
+            },
+            {
+                "op_name": "pyright_execute_command",
+                "intent": "read_only",
+                "service_id": "pyright_harness",
+                "timeout_ms": 150000,
+            },
+            {
                 "op_name": "pyright_completion",
                 "intent": "read_only",
                 "service_id": "pyright_harness",
@@ -3537,6 +4250,12 @@ def plugin_manifest() -> dict[str, Any]:
             },
             {
                 "op_name": "pyright_diagnostics",
+                "intent": "read_only",
+                "service_id": "pyright_harness",
+                "timeout_ms": 150000,
+            },
+            {
+                "op_name": "pyright_code_actions",
                 "intent": "read_only",
                 "service_id": "pyright_harness",
                 "timeout_ms": 150000,
@@ -3603,6 +4322,20 @@ def plugin_manifest() -> dict[str, Any]:
                 "timeout_ms": 150000,
             },
             {
+                "op_name": "lsp_apply_workspace_edit",
+                "intent": "write_allowed",
+                "auto_workspace_overlay": False,
+                "service_id": "pyright_harness",
+                "timeout_ms": 150000,
+            },
+            {
+                "op_name": "lsp_apply_code_action",
+                "intent": "write_allowed",
+                "auto_workspace_overlay": False,
+                "service_id": "pyright_harness",
+                "timeout_ms": 150000,
+            },
+            {
                 "op_name": "crash_probe",
                 "intent": "read_only",
                 "service_id": "crash_harness",
@@ -3613,6 +4346,12 @@ def plugin_manifest() -> dict[str, Any]:
                 "intent": "read_only",
                 "service_id": "hang_harness",
                 "timeout_ms": 1000,
+            },
+            {
+                "op_name": "hang_recover_ping",
+                "intent": "read_only",
+                "service_id": "hang_harness",
+                "timeout_ms": 5000,
             },
             {
                 "op_name": "recover_probe",
@@ -3826,12 +4565,28 @@ def gate_pass(report: dict[str, Any]) -> bool:
     readback = report.get("readback", {})
     multi_readback_a = report.get("multi_readback_a", {})
     multi_readback_b = report.get("multi_readback_b", {})
+    shell_publish = report.get("shell_publish", {})
+    shell_readback = report.get("shell_readback", {})
+    shell_refresh_ping = report.get("shell_refresh_ping", {})
+    concurrent_ping = [
+        item for item in report.get("concurrent_ping", []) if isinstance(item, dict)
+    ]
+    concurrent_echoes = {str(item.get("echo")) for item in concurrent_ping}
+    concurrent_manifest_keys = {
+        str(item.get("manifest_key"))
+        for item in concurrent_ping
+        if item.get("manifest_key")
+    }
     refresh_status = service_status(report.get("status_after_refresh", {}), "harness")
     adapter_status = service_status(report.get("status_after_adapter", {}), "adapter_harness")
     pyright_status = service_status(report.get("status_after_pyright", {}), "pyright_harness")
     restart_status = service_status(report.get("status_after_restart", {}), "restart_harness")
     crash_status = service_status(report.get("status_after_crash", {}), "crash_harness")
     hang_status = service_status(report.get("status_after_hang", {}), "hang_harness")
+    hang_recover_status = service_status(
+        report.get("status_after_hang_recover", {}),
+        "hang_harness",
+    )
     recover_failed_status = service_status(
         report.get("status_after_recover_failure", {}),
         "recover_harness",
@@ -3842,6 +4597,10 @@ def gate_pass(report: dict[str, Any]) -> bool:
         for item in report.get("status_after_health_probe", {}).get("service_health", [])
         if isinstance(item, dict)
     }
+    shell_refresh_status = service_status(
+        report.get("status_after_shell_refresh", {}),
+        "harness",
+    )
     health_fail_probe = health_probe.get("health_fail_harness", {})
     health_fail_status = service_status(
         report.get("status_after_health_probe", {}),
@@ -3860,8 +4619,12 @@ def gate_pass(report: dict[str, Any]) -> bool:
     oneshot_readback = report.get("oneshot_readback", {})
     final_metrics = report.get("final_metrics", {})
     post_cleanup_metrics = report.get("post_cleanup_metrics", {})
+    status_after_cleanup = report.get("status_after_cleanup", {})
+    processes_before_cleanup = report.get("processes_before_cleanup", {})
+    processes_after_cleanup = report.get("processes_after_cleanup", {})
     adapter_query = report.get("adapter_query", {})
     adapter_package = adapter_query.get("package", {}) if isinstance(adapter_query, dict) else {}
+    co_shared_refresh = report.get("co_shared_refresh", {})
     pyright_symbols = report.get("pyright_symbols", {})
     pyright_lsp = (
         pyright_symbols.get("lsp", {}) if isinstance(pyright_symbols, dict) else {}
@@ -3879,6 +4642,28 @@ def gate_pass(report: dict[str, Any]) -> bool:
         else {}
     )
     pyright_capability_supports = pyright_capabilities_lsp.get("supports", {})
+    pyright_code_action_provider = (
+        pyright_capabilities_lsp.get("raw", {}).get("codeActionProvider", {})
+        if isinstance(pyright_capabilities_lsp.get("raw"), dict)
+        else {}
+    )
+    pyright_code_action_provider_kinds = (
+        pyright_code_action_provider.get("codeActionKinds", [])
+        if isinstance(pyright_code_action_provider, dict)
+        else []
+    )
+    pyright_document_formatting = report.get("pyright_document_formatting", {})
+    pyright_document_formatting_lsp = (
+        pyright_document_formatting.get("lsp", {})
+        if isinstance(pyright_document_formatting, dict)
+        else {}
+    )
+    pyright_execute_command = report.get("pyright_execute_command", {})
+    pyright_execute_command_lsp = (
+        pyright_execute_command.get("lsp", {})
+        if isinstance(pyright_execute_command, dict)
+        else {}
+    )
     pyright_completion = report.get("pyright_completion", {})
     pyright_completion_lsp = (
         pyright_completion.get("lsp", {}) if isinstance(pyright_completion, dict) else {}
@@ -3899,6 +4684,13 @@ def gate_pass(report: dict[str, Any]) -> bool:
         "diagnostic_messages",
         [],
     )
+    pyright_code_actions = report.get("pyright_code_actions", {})
+    pyright_code_actions_lsp = (
+        pyright_code_actions.get("lsp", {})
+        if isinstance(pyright_code_actions, dict)
+        else {}
+    )
+    pyright_code_action_kinds = pyright_code_actions_lsp.get("action_kinds", [])
     pyright_signature_help = report.get("pyright_signature_help", {})
     pyright_signature_help_lsp = (
         pyright_signature_help.get("lsp", {})
@@ -3929,6 +4721,12 @@ def gate_pass(report: dict[str, Any]) -> bool:
     pyright_call_hierarchy_lsp = (
         pyright_call_hierarchy.get("lsp", {})
         if isinstance(pyright_call_hierarchy, dict)
+        else {}
+    )
+    pyright_call_hierarchy_outgoing = report.get("pyright_call_hierarchy_outgoing", {})
+    pyright_call_hierarchy_outgoing_lsp = (
+        pyright_call_hierarchy_outgoing.get("lsp", {})
+        if isinstance(pyright_call_hierarchy_outgoing, dict)
         else {}
     )
     pyright_document_highlight = report.get("pyright_document_highlight", {})
@@ -3965,6 +4763,26 @@ def gate_pass(report: dict[str, Any]) -> bool:
         for location in pyright_reference_locations
         if isinstance(location, dict) and location.get("path") == PYRIGHT_TARGET_REL
     }
+    lsp_apply_workspace_edit = report.get("lsp_apply_workspace_edit", {})
+    lsp_apply_workspace_edit_callback = (
+        lsp_apply_workspace_edit.get("callback", {})
+        if isinstance(lsp_apply_workspace_edit, dict)
+        else {}
+    )
+    lsp_apply_workspace_edit_readback = report.get(
+        "lsp_apply_workspace_edit_readback",
+        {},
+    )
+    lsp_apply_code_action = report.get("lsp_apply_code_action", {})
+    lsp_apply_code_action_callback = (
+        lsp_apply_code_action.get("callback", {})
+        if isinstance(lsp_apply_code_action, dict)
+        else {}
+    )
+    lsp_apply_code_action_readback = report.get(
+        "lsp_apply_code_action_readback",
+        {},
+    )
     pyright_rename = report.get("pyright_rename", {})
     pyright_rename_lsp = (
         pyright_rename.get("lsp", {}) if isinstance(pyright_rename, dict) else {}
@@ -3992,11 +4810,17 @@ def gate_pass(report: dict[str, Any]) -> bool:
         in report.get("status_after_ensure", {}).get("connected_ppc_routes", [])
         and "plugin.generic.pyright_capabilities"
         in report.get("status_after_ensure", {}).get("connected_ppc_routes", [])
+        and "plugin.generic.pyright_document_formatting"
+        in report.get("status_after_ensure", {}).get("connected_ppc_routes", [])
+        and "plugin.generic.pyright_execute_command"
+        in report.get("status_after_ensure", {}).get("connected_ppc_routes", [])
         and "plugin.generic.pyright_completion"
         in report.get("status_after_ensure", {}).get("connected_ppc_routes", [])
         and "plugin.generic.pyright_completion_resolve"
         in report.get("status_after_ensure", {}).get("connected_ppc_routes", [])
         and "plugin.generic.pyright_diagnostics"
+        in report.get("status_after_ensure", {}).get("connected_ppc_routes", [])
+        and "plugin.generic.pyright_code_actions"
         in report.get("status_after_ensure", {}).get("connected_ppc_routes", [])
         and "plugin.generic.pyright_signature_help"
         in report.get("status_after_ensure", {}).get("connected_ppc_routes", [])
@@ -4018,9 +4842,15 @@ def gate_pass(report: dict[str, Any]) -> bool:
         in report.get("status_after_ensure", {}).get("connected_ppc_routes", [])
         and "plugin.generic.pyright_rename"
         in report.get("status_after_ensure", {}).get("connected_ppc_routes", [])
+        and "plugin.generic.lsp_apply_workspace_edit"
+        in report.get("status_after_ensure", {}).get("connected_ppc_routes", [])
+        and "plugin.generic.lsp_apply_code_action"
+        in report.get("status_after_ensure", {}).get("connected_ppc_routes", [])
         and "plugin.generic.crash_probe"
         in report.get("status_after_ensure", {}).get("connected_ppc_routes", [])
         and "plugin.generic.hang_probe"
+        in report.get("status_after_ensure", {}).get("connected_ppc_routes", [])
+        and "plugin.generic.hang_recover_ping"
         in report.get("status_after_ensure", {}).get("connected_ppc_routes", [])
         and "plugin.generic.recover_probe"
         in report.get("status_after_ensure", {}).get("connected_ppc_routes", [])
@@ -4040,6 +4870,17 @@ def gate_pass(report: dict[str, Any]) -> bool:
         and health_fail_status.get("state") == "stopped"
         and report.get("ping", {}).get("from_ppc") is True
         and report.get("ping", {}).get("workspace_mounted") is True
+        and len(concurrent_ping) == 2
+        and concurrent_echoes == {"concurrent-a", "concurrent-b"}
+        and len(concurrent_manifest_keys) == 1
+        and report.get("ping", {}).get("manifest_key") in concurrent_manifest_keys
+        and all(
+            item.get("success") is True
+            and item.get("from_ppc") is True
+            and item.get("workspace_mounted") is True
+            and item.get("service_id") == "harness"
+            for item in concurrent_ping
+        )
         and apply.get("from_self_managed") is True
         and callback.get("success") is True
         and readback.get("exists") is True
@@ -4058,6 +4899,16 @@ def gate_pass(report: dict[str, Any]) -> bool:
         and multi_readback_a.get("content") == MULTI_TARGET_A_CONTENT
         and multi_readback_b.get("exists") is True
         and multi_readback_b.get("content") == MULTI_TARGET_B_CONTENT
+        and shell_publish.get("exit_code") == 0
+        and shell_publish.get("status") in {"ok", "committed"}
+        and shell_readback.get("exists") is True
+        and shell_readback.get("content") == SHELL_CONTENT
+        and shell_refresh_ping.get("from_ppc") is True
+        and shell_refresh_ping.get("workspace_mounted") is True
+        and shell_refresh_ping.get("workspace_read", {}).get("content")
+        == SHELL_CONTENT
+        and shell_refresh_status.get("state") == "ready"
+        and int(shell_refresh_status.get("refresh_count", 0)) >= 1
         and report.get("refresh_ping", {}).get("from_ppc") is True
         and report.get("refresh_ping", {}).get("workspace_mounted") is True
         and report.get("refresh_ping", {}).get("workspace_read", {}).get("content")
@@ -4071,9 +4922,21 @@ def gate_pass(report: dict[str, Any]) -> bool:
         and adapter_package.get("content") == TARGET_CONTENT
         and adapter_status.get("state") == "ready"
         and int(adapter_status.get("refresh_count", 0)) >= 1
+        and co_shared_refresh.get("same_manifest_key") is True
+        and co_shared_refresh.get("first_service_id") == "harness"
+        and co_shared_refresh.get("second_service_id") == "adapter_harness"
+        and co_shared_refresh.get("first_state") == "ready"
+        and co_shared_refresh.get("second_state") == "ready"
+        and int(co_shared_refresh.get("first_refresh_count", 0)) >= 1
+        and int(co_shared_refresh.get("second_refresh_count", 0)) >= 1
+        and int(co_shared_refresh.get("first_restart_count", -1)) == 0
+        and int(co_shared_refresh.get("second_restart_count", -1)) == 0
         and report.get("pyright_seed", {}).get("success") is True
         and report.get("pyright_completion_seed", {}).get("success") is True
         and report.get("pyright_diagnostics_seed", {}).get("success") is True
+        and report.get("pyright_code_action_seed", {}).get("success") is True
+        and report.get("lsp_apply_workspace_edit_seed", {}).get("success") is True
+        and report.get("lsp_apply_code_action_seed", {}).get("success") is True
         and report.get("pyright_signature_seed", {}).get("success") is True
         and report.get("pyright_type_seed", {}).get("success") is True
         and report.get("pyright_call_hierarchy_seed", {}).get("success") is True
@@ -4102,8 +4965,35 @@ def gate_pass(report: dict[str, Any]) -> bool:
         and pyright_capability_supports.get("references") is True
         and pyright_capability_supports.get("rename") is True
         and pyright_capability_supports.get("code_action") is True
+        and pyright_capability_supports.get("document_formatting") is False
+        and pyright_capability_supports.get("document_range_formatting") is False
+        and pyright_capability_supports.get("execute_command_provider") is True
+        and pyright_capability_supports.get("execute_command") is False
+        and PYRIGHT_CODE_ACTION_KIND in pyright_code_action_provider_kinds
         and pyright_capability_supports.get("call_hierarchy") is True
         and pyright_capability_supports.get("completion_resolve") is True
+        and pyright_document_formatting.get("from_pyright_adapter") is True
+        and pyright_document_formatting.get("workspace_mounted") is True
+        and pyright_document_formatting.get("success") is False
+        and pyright_document_formatting_lsp.get("protocol") == "lsp-jsonrpc"
+        and pyright_document_formatting_lsp.get("path") == PYRIGHT_TARGET_REL
+        and pyright_document_formatting_lsp.get("method")
+        == PYRIGHT_DOCUMENT_FORMATTING_METHOD
+        and pyright_document_formatting_lsp.get("capability")
+        == PYRIGHT_DOCUMENT_FORMATTING_CAPABILITY
+        and pyright_document_formatting_lsp.get("supported") is False
+        and pyright_document_formatting_lsp.get("unsupported") is True
+        and int(pyright_document_formatting_lsp.get("edit_count", -1)) == 0
+        and pyright_execute_command.get("from_pyright_adapter") is True
+        and pyright_execute_command.get("workspace_mounted") is True
+        and pyright_execute_command.get("success") is False
+        and pyright_execute_command_lsp.get("protocol") == "lsp-jsonrpc"
+        and pyright_execute_command_lsp.get("method") == PYRIGHT_EXECUTE_COMMAND_METHOD
+        and pyright_execute_command_lsp.get("capability")
+        == "executeCommandProvider.commands"
+        and pyright_execute_command_lsp.get("supported") is False
+        and pyright_execute_command_lsp.get("unsupported") is True
+        and pyright_execute_command_lsp.get("commands") == []
         and pyright_completion.get("from_pyright_adapter") is True
         and pyright_completion.get("workspace_mounted") is True
         and pyright_completion_lsp.get("protocol") == "lsp-jsonrpc"
@@ -4134,6 +5024,21 @@ def gate_pass(report: dict[str, Any]) -> bool:
         and any(
             isinstance(message, str) and PYRIGHT_DIAGNOSTICS_SYMBOL in message
             for message in pyright_diagnostic_messages
+        )
+        and pyright_code_actions.get("from_pyright_adapter") is True
+        and pyright_code_actions.get("workspace_mounted") is True
+        and pyright_code_actions_lsp.get("protocol") == "lsp-jsonrpc"
+        and pyright_code_actions_lsp.get("path") == PYRIGHT_CODE_ACTION_TARGET_REL
+        and pyright_code_actions_lsp.get("position", {}).get("line")
+        == PYRIGHT_CODE_ACTION_LINE
+        and pyright_code_actions_lsp.get("position", {}).get("character")
+        == PYRIGHT_CODE_ACTION_CHARACTER
+        and PYRIGHT_CODE_ACTION_KIND in pyright_code_actions_lsp.get("only", [])
+        and isinstance(pyright_code_actions_lsp.get("actions"), list)
+        and int(pyright_code_actions_lsp.get("action_count", -1)) >= 0
+        and (
+            int(pyright_code_actions_lsp.get("action_count", 0)) == 0
+            or PYRIGHT_CODE_ACTION_KIND in pyright_code_action_kinds
         )
         and pyright_signature_help.get("from_pyright_adapter") is True
         and pyright_signature_help.get("workspace_mounted") is True
@@ -4199,6 +5104,21 @@ def gate_pass(report: dict[str, Any]) -> bool:
         and int(pyright_call_hierarchy_lsp.get("incoming_count", 0)) >= 1
         and PYRIGHT_CALL_HIERARCHY_CALLER
         in pyright_call_hierarchy_lsp.get("incoming_names", [])
+        and pyright_call_hierarchy_outgoing.get("from_pyright_adapter") is True
+        and pyright_call_hierarchy_outgoing.get("workspace_mounted") is True
+        and pyright_call_hierarchy_outgoing_lsp.get("protocol") == "lsp-jsonrpc"
+        and pyright_call_hierarchy_outgoing_lsp.get("path")
+        == PYRIGHT_CALL_HIERARCHY_TARGET_REL
+        and pyright_call_hierarchy_outgoing_lsp.get("position", {}).get("line")
+        == PYRIGHT_CALL_HIERARCHY_OUTGOING_LINE
+        and pyright_call_hierarchy_outgoing_lsp.get("position", {}).get("character")
+        == PYRIGHT_CALL_HIERARCHY_OUTGOING_CHARACTER
+        and int(pyright_call_hierarchy_outgoing_lsp.get("item_count", 0)) >= 1
+        and PYRIGHT_CALL_HIERARCHY_CALLER
+        in pyright_call_hierarchy_outgoing_lsp.get("item_names", [])
+        and int(pyright_call_hierarchy_outgoing_lsp.get("outgoing_count", 0)) >= 1
+        and PYRIGHT_CALL_HIERARCHY_SYMBOL
+        in pyright_call_hierarchy_outgoing_lsp.get("outgoing_names", [])
         and pyright_document_highlight.get("from_pyright_adapter") is True
         and pyright_document_highlight.get("workspace_mounted") is True
         and pyright_document_highlight_lsp.get("protocol") == "lsp-jsonrpc"
@@ -4225,6 +5145,26 @@ def gate_pass(report: dict[str, Any]) -> bool:
         and pyright_references_lsp.get("protocol") == "lsp-jsonrpc"
         and int(pyright_references_lsp.get("reference_count", 0)) >= 2
         and {0, 3}.issubset(pyright_reference_start_lines)
+        and lsp_apply_workspace_edit.get("from_lsp_workspace_edit") is True
+        and lsp_apply_workspace_edit.get("from_self_managed") is True
+        and lsp_apply_workspace_edit.get("workspace_mounted") is True
+        and lsp_apply_workspace_edit_callback.get("success") is True
+        and LSP_APPLY_EDIT_TARGET_REL
+        in lsp_apply_workspace_edit.get("changed_paths", [])
+        and lsp_apply_workspace_edit_readback.get("exists") is True
+        and lsp_apply_workspace_edit_readback.get("content")
+        == LSP_APPLY_EDIT_CONTENT_AFTER
+        and lsp_apply_code_action.get("from_lsp_code_action") is True
+        and lsp_apply_code_action.get("from_self_managed") is True
+        and lsp_apply_code_action.get("workspace_mounted") is True
+        and lsp_apply_code_action.get("action_title") == LSP_APPLY_CODE_ACTION_TITLE
+        and lsp_apply_code_action.get("action_kind") == LSP_APPLY_CODE_ACTION_KIND
+        and lsp_apply_code_action_callback.get("success") is True
+        and LSP_APPLY_CODE_ACTION_TARGET_REL
+        in lsp_apply_code_action.get("changed_paths", [])
+        and lsp_apply_code_action_readback.get("exists") is True
+        and lsp_apply_code_action_readback.get("content")
+        == LSP_APPLY_CODE_ACTION_CONTENT_AFTER
         and pyright_status.get("state") == "ready"
         and int(pyright_status.get("refresh_count", 0)) >= 1
         and pyright_rename.get("from_pyright_adapter") is True
@@ -4256,7 +5196,19 @@ def gate_pass(report: dict[str, Any]) -> bool:
         and report.get("hang_probe", {}).get("expected_failure") is True
         and "plugin.generic.hang_probe"
         not in report.get("status_after_hang", {}).get("connected_ppc_routes", [])
+        and "plugin.generic.hang_recover_ping"
+        not in report.get("status_after_hang", {}).get("connected_ppc_routes", [])
         and hang_status.get("state") == "stopped"
+        and report.get("hang_recover_ping", {}).get("from_timeout_recovered_service")
+        is True
+        and report.get("hang_recover_ping", {}).get("from_ppc") is True
+        and report.get("hang_recover_ping", {}).get("workspace_mounted") is True
+        and report.get("hang_recover_ping", {}).get("echo")
+        == "after-timeout-recover"
+        and "plugin.generic.hang_recover_ping"
+        in report.get("status_after_hang_recover", {}).get("connected_ppc_routes", [])
+        and hang_recover_status.get("state") == "ready"
+        and int(hang_recover_status.get("restart_count", 0)) >= 1
         and report.get("recover_probe_first", {}).get("expected_failure") is True
         and "plugin.generic.recover_probe"
         not in report.get("status_after_recover_failure", {}).get("connected_ppc_routes", [])
@@ -4272,6 +5224,11 @@ def gate_pass(report: dict[str, Any]) -> bool:
         and post_cleanup_metrics.get("active_leases") == 0
         and post_cleanup_metrics.get("orphan_layer_count") == 0
         and post_cleanup_metrics.get("missing_layer_count") == 0
+        and int(processes_before_cleanup.get("count", 0)) >= 1
+        and int(processes_after_cleanup.get("count", -1)) == 0
+        and status_after_cleanup.get("connected_ppc_routes") == []
+        and status_after_cleanup.get("connected_ppc_services") == []
+        and status_after_cleanup.get("running_service_processes") == []
     )
 
 
@@ -4285,6 +5242,38 @@ def service_status(status_payload: dict[str, Any], service_id: str) -> dict[str,
     return {}
 
 
+def _status_count(status: dict[str, Any], key: str) -> int:
+    try:
+        return int(status.get(key, 0) or 0)
+    except (TypeError, ValueError):
+        return 0
+
+
+def co_shared_refresh_summary(
+    status_payload: dict[str, Any],
+    first_service_id: str,
+    second_service_id: str,
+) -> dict[str, Any]:
+    first = service_status(status_payload, first_service_id)
+    second = service_status(status_payload, second_service_id)
+    first_manifest = first.get("manifest_key")
+    second_manifest = second.get("manifest_key")
+    return {
+        "first_service_id": first_service_id,
+        "second_service_id": second_service_id,
+        "first_state": first.get("state"),
+        "second_state": second.get("state"),
+        "first_manifest_key": first_manifest,
+        "second_manifest_key": second_manifest,
+        "same_manifest_key": bool(first_manifest)
+        and first_manifest == second_manifest,
+        "first_refresh_count": _status_count(first, "refresh_count"),
+        "second_refresh_count": _status_count(second, "refresh_count"),
+        "first_restart_count": _status_count(first, "restart_count"),
+        "second_restart_count": _status_count(second, "restart_count"),
+    }
+
+
 def markdown_report(report: dict[str, Any]) -> str:
     refresh_status = service_status(report.get("status_after_refresh", {}), "harness")
     adapter_status = service_status(report.get("status_after_adapter", {}), "adapter_harness")
@@ -4292,6 +5281,10 @@ def markdown_report(report: dict[str, Any]) -> str:
     restart_status = service_status(report.get("status_after_restart", {}), "restart_harness")
     crash_status = service_status(report.get("status_after_crash", {}), "crash_harness")
     hang_status = service_status(report.get("status_after_hang", {}), "hang_harness")
+    hang_recover_status = service_status(
+        report.get("status_after_hang_recover", {}),
+        "hang_harness",
+    )
     recover_failed_status = service_status(
         report.get("status_after_recover_failure", {}),
         "recover_harness",
@@ -4308,32 +5301,45 @@ def markdown_report(report: dict[str, Any]) -> str:
         f"- status_health_probe: `{report.get('status_after_health_probe', {}).get('service_health')}`",
         f"- connected_routes_after_health_probe: `{report.get('status_after_health_probe', {}).get('connected_ppc_routes')}`",
         f"- ping_from_ppc: `{report.get('ping', {}).get('from_ppc')}`",
+        f"- concurrent_ping: `{report.get('concurrent_ping')}`",
         f"- apply_from_self_managed: `{report.get('apply', {}).get('from_self_managed')}`",
         f"- readback_exists: `{report.get('readback', {}).get('exists')}`",
         f"- apply_multi_callback_count: `{report.get('apply_multi', {}).get('callback_count')}`",
         f"- apply_multi_callbacks: `{report.get('apply_multi', {}).get('callbacks')}`",
         f"- multi_readback_a: `{report.get('multi_readback_a', {}).get('content')}`",
         f"- multi_readback_b: `{report.get('multi_readback_b', {}).get('content')}`",
+        f"- shell_publish: `{report.get('shell_publish')}`",
+        f"- shell_readback: `{report.get('shell_readback', {}).get('content')}`",
+        f"- shell_refresh_ping: `{report.get('shell_refresh_ping')}`",
         f"- refresh_ping_from_ppc: `{report.get('refresh_ping', {}).get('from_ppc')}`",
         f"- refresh_workspace_read: `{report.get('refresh_ping', {}).get('workspace_read')}`",
         f"- refresh_count: `{refresh_status.get('refresh_count')}`",
         f"- adapter_package: `{report.get('adapter_query', {}).get('package')}`",
         f"- adapter_refresh_count: `{adapter_status.get('refresh_count')}`",
+        f"- co_shared_refresh: `{report.get('co_shared_refresh')}`",
         f"- pyright_symbols: `{report.get('pyright_symbols', {}).get('lsp')}`",
         f"- pyright_workspace_symbols: `{report.get('pyright_workspace_symbols', {}).get('lsp')}`",
         f"- pyright_capabilities: `{report.get('pyright_capabilities', {}).get('lsp')}`",
+        f"- pyright_document_formatting: `{report.get('pyright_document_formatting', {}).get('lsp')}`",
+        f"- pyright_execute_command: `{report.get('pyright_execute_command', {}).get('lsp')}`",
         f"- pyright_completion: `{report.get('pyright_completion', {}).get('lsp')}`",
         f"- pyright_completion_resolve: `{report.get('pyright_completion_resolve', {}).get('lsp')}`",
         f"- pyright_diagnostics: `{report.get('pyright_diagnostics', {}).get('lsp')}`",
+        f"- pyright_code_actions: `{report.get('pyright_code_actions', {}).get('lsp')}`",
         f"- pyright_signature_help: `{report.get('pyright_signature_help', {}).get('lsp')}`",
         f"- pyright_hover: `{report.get('pyright_hover', {}).get('lsp')}`",
         f"- pyright_type_definition: `{report.get('pyright_type_definition', {}).get('lsp')}`",
         f"- pyright_declaration: `{report.get('pyright_declaration', {}).get('lsp')}`",
         f"- pyright_call_hierarchy: `{report.get('pyright_call_hierarchy', {}).get('lsp')}`",
+        f"- pyright_call_hierarchy_outgoing: `{report.get('pyright_call_hierarchy_outgoing', {}).get('lsp')}`",
         f"- pyright_document_highlight: `{report.get('pyright_document_highlight', {}).get('lsp')}`",
         f"- pyright_prepare_rename: `{report.get('pyright_prepare_rename', {}).get('lsp')}`",
         f"- pyright_definition: `{report.get('pyright_definition', {}).get('lsp')}`",
         f"- pyright_references: `{report.get('pyright_references', {}).get('lsp')}`",
+        f"- lsp_apply_workspace_edit: `{report.get('lsp_apply_workspace_edit')}`",
+        f"- lsp_apply_workspace_edit_readback: `{report.get('lsp_apply_workspace_edit_readback', {}).get('content')}`",
+        f"- lsp_apply_code_action: `{report.get('lsp_apply_code_action')}`",
+        f"- lsp_apply_code_action_readback: `{report.get('lsp_apply_code_action_readback', {}).get('content')}`",
         f"- pyright_refresh_count: `{pyright_status.get('refresh_count')}`",
         f"- pyright_rename: `{report.get('pyright_rename', {}).get('lsp')}`",
         f"- pyright_rename_callback: `{report.get('pyright_rename', {}).get('callback')}`",
@@ -4350,13 +5356,20 @@ def markdown_report(report: dict[str, Any]) -> str:
         f"- hang_probe: `{report.get('hang_probe')}`",
         f"- hang_service_state: `{hang_status.get('state')}`",
         f"- connected_routes_after_hang: `{report.get('status_after_hang', {}).get('connected_ppc_routes')}`",
+        f"- hang_recover_ping: `{report.get('hang_recover_ping')}`",
+        f"- hang_recover_restart_count: `{hang_recover_status.get('restart_count')}`",
+        f"- connected_routes_after_hang_recover: `{report.get('status_after_hang_recover', {}).get('connected_ppc_routes')}`",
         f"- recover_probe_first: `{report.get('recover_probe_first')}`",
         f"- recover_service_state_after_failure: `{recover_failed_status.get('state')}`",
         f"- recover_probe_second: `{report.get('recover_probe_second')}`",
         f"- recover_service_restart_count: `{recover_status.get('restart_count')}`",
         f"- connected_routes_after_recover: `{report.get('status_after_recover', {}).get('connected_ppc_routes')}`",
         f"- retained_service_leases_before_cleanup: `{report.get('final_metrics', {}).get('active_leases')}`",
+        f"- processes_before_cleanup: `{report.get('processes_before_cleanup')}`",
         f"- post_cleanup_active_leases: `{report.get('post_cleanup_metrics', {}).get('active_leases')}`",
+        f"- processes_after_cleanup: `{report.get('processes_after_cleanup')}`",
+        f"- connected_routes_after_cleanup: `{report.get('status_after_cleanup', {}).get('connected_ppc_routes')}`",
+        f"- running_processes_after_cleanup: `{report.get('status_after_cleanup', {}).get('running_service_processes')}`",
         f"- final_orphans: `{report.get('final_metrics', {}).get('orphan_layer_count')}`",
         f"- final_missing: `{report.get('final_metrics', {}).get('missing_layer_count')}`",
         f"- post_cleanup_orphans: `{report.get('post_cleanup_metrics', {}).get('orphan_layer_count')}`",

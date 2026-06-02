@@ -234,7 +234,16 @@ class ScenarioLoopRunner:
         role = agent_def.name
         checks: dict[str, bool]
         reason: str
-        if role == "planner":
+        if role == "root":
+            checks = {
+                "request_prompt": bool(prompt.strip()),
+                "no_workflow_context": "<context>" not in prompt,
+            }
+            reason = (
+                "Root context is the direct user request; it does not receive a "
+                "workflow ContextEngine packet."
+            )
+        elif role == "planner":
             _attempt, iteration = _attempt_and_iteration(metadata)
             checks = {
                 "goal": "<goal>" in prompt,

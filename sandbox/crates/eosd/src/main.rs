@@ -150,6 +150,18 @@ fn run_ns_runner(args: std::env::Args) -> Result<()> {
         write_payload(config.output_path.as_ref(), &output)?;
         return Ok(());
     }
+    if config.configure_dns {
+        let tool_result =
+            eos_runner::setns::configure_dns(&request).context("ns-runner configure dns failed")?;
+        let result = eos_runner::RunResult {
+            exit_code: 0,
+            tool_result,
+        };
+        let output =
+            serde_json::to_vec(&result).context("failed to encode ns-runner result JSON")?;
+        write_payload(config.output_path.as_ref(), &output)?;
+        return Ok(());
+    }
     let result = eos_runner::run(&request, &OverlayMountPort).context("ns-runner failed")?;
     let output = serde_json::to_vec(&result).context("failed to encode ns-runner result JSON")?;
     write_payload(config.output_path.as_ref(), &output)?;
@@ -407,6 +419,7 @@ struct RunnerCliConfig {
     output_path: Option<PathBuf>,
     mount_overlay: bool,
     remount_overlay: bool,
+    configure_dns: bool,
 }
 
 impl RunnerCliConfig {
@@ -415,12 +428,14 @@ impl RunnerCliConfig {
         let mut output_path = None;
         let mut mount_overlay = false;
         let mut remount_overlay = false;
+        let mut configure_dns = false;
         let mut positional = Vec::new();
         let mut args = args;
         while let Some(arg) = args.next() {
             match arg.as_str() {
                 "--mount-overlay" => mount_overlay = true,
                 "--remount-overlay" => remount_overlay = true,
+                "--configure-dns" => configure_dns = true,
                 "--request" => {
                     request_path = Some(PathBuf::from(
                         args.next()
@@ -435,7 +450,7 @@ impl RunnerCliConfig {
                 }
                 "--help" | "-h" => {
                     println!(
-                        "usage: eosd ns-runner [--mount-overlay | --remount-overlay] [--request PATH] [--output PATH]"
+                        "usage: eosd ns-runner [--mount-overlay | --remount-overlay | --configure-dns] [--request PATH] [--output PATH]"
                     );
                     std::process::exit(0);
                 }
@@ -452,9 +467,11 @@ impl RunnerCliConfig {
                 "ns-runner accepts at most one positional request path"
             ));
         }
-        if mount_overlay && remount_overlay {
+        let special_modes =
+            u8::from(mount_overlay) + u8::from(remount_overlay) + u8::from(configure_dns);
+        if special_modes > 1 {
             return Err(anyhow!(
-                "ns-runner accepts only one of --mount-overlay or --remount-overlay"
+                "ns-runner accepts only one of --mount-overlay, --remount-overlay, or --configure-dns"
             ));
         }
         Ok(Self {
@@ -462,6 +479,7 @@ impl RunnerCliConfig {
             output_path,
             mount_overlay,
             remount_overlay,
+            configure_dns,
         })
     }
 }

@@ -1,10 +1,10 @@
-"""Partial parent executor keeps one planner terminal across parent and child.
+"""Partial parent executor keeps one planner terminal across delegated workflow.
 
 The entry-origin workflow's first iteration submits a partial plan with
-``deferred_goal_for_next_iteration``. Its executor then requests a child
-workflow. Both parent and child planners use ``submit_planner_outcome``; nested
-deferral policy is enforced by prehooks while the profile terminal set stays
-unified.
+``deferred_goal_for_next_iteration``. Its executor then calls
+``delegate_workflow``. Both planner paths use ``submit_planner_outcome``;
+nested deferral policy is enforced by prehooks while the profile terminal set
+stays unified.
 """
 
 from __future__ import annotations
@@ -23,13 +23,13 @@ from test_runner.scenarios._scenario_helpers import (
 from test_runner.scenarios.base import ScenarioBase, ScenarioContext, ToolCallSpec
 
 
-_CHILD_PACKAGE_ID = "partial_parent_child"
-_CHILD_GOAL = (
-    "Resolve the delegated child workflow requested by an executor whose parent "
+_DELEGATED_PACKAGE_ID = "partial_parent_child"
+_DELEGATED_GOAL = (
+    "Resolve the delegated workflow requested by an executor whose parent "
     "attempt submitted a partial plan."
 )
 _CONTINUATION_GOAL = (
-    "Run the entry-origin follow-up iteration after the delegated child workflow has "
+    "Run the entry-origin follow-up iteration after the delegated workflow has "
     "returned its close report."
 )
 
@@ -46,7 +46,7 @@ def _entry_origin_defers_plan() -> dict[str, Any]:
         ],
         "task_specs": {
             "delegate_child": (
-                f"ACTION request_recursive_workflow package={_CHILD_PACKAGE_ID}"
+                f"ACTION delegate_workflow package={_DELEGATED_PACKAGE_ID}"
             ),
             "recursive_return_guard": "VERIFY checkpoint=recursive_return",
         },
@@ -55,7 +55,7 @@ def _entry_origin_defers_plan() -> dict[str, Any]:
                 "id": "reduce",
                 "needs": ["delegate_child", "recursive_return_guard"],
                 "prompt": (
-                    "Confirm the child workflow close report reached the parent."
+                    "Confirm the delegated workflow close report reached the parent."
                 ),
             }
         ],
@@ -63,9 +63,9 @@ def _entry_origin_defers_plan() -> dict[str, Any]:
     }
 
 
-def _child_full_plan() -> dict[str, Any]:
+def _delegated_full_plan() -> dict[str, Any]:
     return minimal_full_plan(
-        criteria=["The child workflow completes through a full plan."],
+        criteria=["The delegated workflow completes through a full plan."],
         task_id="child_reconcile",
         task_spec=(
             "ACTION recursive_reconcile slice=full_only_planner. Write the "
@@ -75,13 +75,13 @@ def _child_full_plan() -> dict[str, Any]:
 
 
 class DeferredParentPlannerUnifiedTerminal(ScenarioBase):
-    """Child workflow from a partial parent keeps the unified planner terminal."""
+    """Delegated workflow from a partial parent keeps the unified planner terminal."""
 
     name = "pipeline.deferred_parent_planner_unified_terminal"
 
     def planner_response(self, ctx: ScenarioContext) -> ToolCallSpec:
         if is_recursive_workflow(ctx):
-            return ToolCallSpec(submit_planner_outcome, _child_full_plan())
+            return ToolCallSpec(submit_planner_outcome, _delegated_full_plan())
         if ctx.iteration.sequence_no == 1:
             return ToolCallSpec(submit_planner_outcome, _entry_origin_defers_plan())
         return ToolCallSpec(
@@ -95,8 +95,8 @@ class DeferredParentPlannerUnifiedTerminal(ScenarioBase):
 
     def executor_actions(self, ctx: ScenarioContext) -> Sequence[str]:
         instruction = ctx.instruction or ""
-        if "request_recursive_workflow" in instruction:
-            return (f"request_recursive_workflow:{_CHILD_PACKAGE_ID}",)
+        if "delegate_workflow" in instruction:
+            return (f"delegate_workflow:{_DELEGATED_PACKAGE_ID}",)
         if "ACTION recursive_" in instruction:
             return ("recursive_step",)
         return ("preflight",)
@@ -107,8 +107,8 @@ class DeferredParentPlannerUnifiedTerminal(ScenarioBase):
             {"status": "success", "outcome": "Unified planner terminal scenario branch passed."},
         )
 
-    def recursive_handoff_goal(self, ctx: ScenarioContext) -> str | None:  # noqa: ARG002
-        return _CHILD_GOAL
+    def delegated_workflow_goal(self, ctx: ScenarioContext) -> str | None:  # noqa: ARG002
+        return _DELEGATED_GOAL
 
 
 __all__ = ["DeferredParentPlannerUnifiedTerminal"]

@@ -38,7 +38,7 @@ def _use_production_attempt_runner(_ctx: object) -> None:
 class RealAgentRunReport:
     """Compact result handed back to the CLI / pytest entrypoints.
 
-    ``sweevo_result`` is always populated — F2P/P2P only when the task center
+    ``sweevo_result`` is always populated — F2P/P2P only when the request
     reached ``done`` and the wall-clock cap was not hit; otherwise a failure
     sentinel with ``resolved=False`` and ``fix_rate=0.0``.
     """

@@ -258,7 +258,7 @@ pub fn dispatch_registered_op(
 }
 
 #[cfg(test)]
-pub fn reset_for_tests() {
+fn reset_for_tests() {
     if let Ok(mut state) = state_cell().lock() {
         let snapshots = state
             .service_snapshots
@@ -313,6 +313,7 @@ fn register_ppc_client_for_tests(
         service_instance_id,
         Arc::new(Mutex::new(ppc_router::PpcClient { stream })),
     );
+    drop(state);
     Ok(())
 }
 
@@ -758,11 +759,10 @@ fn service_overlay_for_snapshot(
 // Keep the same fallible signature as Linux so service snapshot setup remains
 // cfg-free for callers; off-Linux/test builds do not allocate overlay dirs.
 #[expect(
-    clippy::missing_const_for_fn,
     clippy::unnecessary_wraps,
     reason = "non-Linux/test parity keeps the Linux fallible helper signature"
 )]
-fn service_overlay_for_snapshot(
+const fn service_overlay_for_snapshot(
     _key: &PluginServiceKey,
     _snapshot: &PluginServiceSnapshot,
 ) -> Result<Option<PluginServiceOverlay>, DaemonError> {
@@ -2150,6 +2150,7 @@ mod tests {
                 !state.service_snapshots.contains_key(&service_instance_id),
                 "failed health probe should release retained snapshot"
             );
+            drop(state);
         }
         join_test_thread(server, "server thread panicked")?;
         remove_test_tree(&layer_stack_root)?;

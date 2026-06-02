@@ -66,6 +66,7 @@ def start_request(
         workflow_store=workflow_store,
         iteration_store=iteration_store,
         attempt_store=attempt_store,
+        runner=runner,
         sandbox_provisioner=sandbox_provisioner,
     ).start()
 
@@ -95,6 +96,7 @@ class RequestEntry:
         self._workflow_store = workflow_store
         self._iteration_store = iteration_store
         self._attempt_store = attempt_store
+        self._runner = runner
         self._sandbox_provisioner = sandbox_provisioner or RequestSandboxProvisioner()
 
     def start(self) -> RequestEntryHandle:
@@ -197,7 +199,8 @@ class RequestEntry:
         metadata["task_store"] = self._task_store
         metadata["active_terminals"] = list(root_def.terminals)
         try:
-            result: EphemeralRunResult = await run_ephemeral_agent(
+            runner = self._runner or run_ephemeral_agent
+            result: EphemeralRunResult = await runner(
                 self._config,
                 self._prompt,
                 agent_def=root_def,
@@ -255,6 +258,7 @@ class RequestEntry:
             deps_provider=lambda: runtime_ref,
             sandbox_id=self._sandbox_id,
             on_event=self._on_agent_event,
+            runner=self._runner,
         )
         runtime = AttemptDeps(
             workflow_store=self._workflow_store,

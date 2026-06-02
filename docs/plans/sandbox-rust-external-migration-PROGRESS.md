@@ -3,7 +3,7 @@
 Living status tracker for `docs/plans/sandbox-rust-external-migration-PLAN.md`.
 Spec = PLAN.md. Landed-status snapshot = PLAN §13. This file = done/next checklist.
 
-**Last updated:** 2026-06-02 · **Phase:** 3 is closed at the structural core boundary; Phase 3T has closed CP-4t and the deferred non-plugin sidecar through CP-4/AV-4, CP-5, AV-7, and §7. Plugin work has advanced from a pure deferred edge to a Rust contract/status/routing/PPC/lifecycle/freshness slice: `eos-plugin` owns generic service manifest/refresh/key/status types, `eos-daemon` owns `api.plugin.ensure/status`, manifest-declared `plugin.*` routing, service process lifecycle, private-overlay service launch, retained snapshot leases, in-place namespace remount, stale-read refresh sequencing, restart fallback, connected self-managed OCC callbacks including repeated callback frames before a final reply, daemon-owned `oneshot_overlay` execution, status health probes over the generic `Health { manifest_key }` frame, next-dispatch recovery for previously ready read-only services after PPC/process failure, a generic package-adapter harness over `remount_workspace`, real Pyright read-only LSP `documentSymbol`, `workspace/symbol`, `completion`, `completionItem/resolve`, `publishDiagnostics`, `signatureHelp`, `hover`, `typeDefinition`, `declaration`, `callHierarchy`, `documentHighlight`, `prepareRename`, `definition`, and `references` adapters over `remount_workspace_and_notify`, a Pyright-computed self-managed rename publish through the daemon OCC callback, cleanup-aware retained-lease release evidence, and live service-crash plus hung-service timeout fail-closed probes. Live plugin refresh strategy coverage and live Rust-runtime generic PPC/OCC/repeated-callback/refresh/status-health/recovery/remount-read/package-adapter/Pyright-read/Pyright-workspaceSymbol/Pyright-completion/Pyright-completionResolve/Pyright-diagnostics/Pyright-signatureHelp/Pyright-hover/Pyright-typeDefinition/Pyright-declaration/Pyright-callHierarchy/Pyright-documentHighlight/Pyright-prepareRename/Pyright-definition/Pyright-references/Pyright-rename/restart/crash/timeout/mounted-workspace/oneshot-overlay coverage are in the suite. Remaining Phase 3T plugin work is broader AV-10 LSP parity beyond the representative `documentSymbol` + `workspace/symbol` + `completion` + `completionItem/resolve` + `publishDiagnostics` + `signatureHelp` + `hover` + `typeDefinition` + `declaration` + `callHierarchy` + `documentHighlight` + `prepareRename` + `definition` + `references` + `rename` path, true operation-level out-of-order multiplexing if required, and broader crash recovery beyond the covered status health probe, closed PPC stream, PPC timeout, and next-dispatch restart paths.
+**Last updated:** 2026-06-02 · **Phase:** 3 is closed at the structural core boundary; Phase 3T has closed CP-4t and the deferred non-plugin sidecar through CP-4/AV-4, CP-5, AV-7, and §7. Plugin work has advanced from a pure deferred edge to a Rust contract/status/routing/PPC/lifecycle/freshness slice: `eos-plugin` owns generic service manifest/refresh/key/status types, `eos-daemon` owns `api.plugin.ensure/status`, manifest-declared `plugin.*` routing, service process lifecycle, private-overlay service launch, retained snapshot leases, in-place namespace remount, stale-read refresh sequencing, restart fallback, connected self-managed OCC callbacks including repeated callback frames before a final reply, daemon-owned `oneshot_overlay` execution, status health probes over the generic `Health { manifest_key }` frame, next-dispatch recovery for previously ready read-only services after PPC/process failure, same-service concurrent read-only dispatch preservation on the connected PPC client, mixed `api.v1.shell` overlay/OCC publish plus long-lived plugin refresh/readback, daemon cleanup that drops connected PPC routes/services and reaps plugin harness processes, a generic package-adapter harness over `remount_workspace`, explicit co-shared read-only refresh evidence across two services on one workspace, real Pyright read-only LSP `documentSymbol`, `workspace/symbol`, `completion`, `completionItem/resolve`, `publishDiagnostics`, `codeAction`, `signatureHelp`, `hover`, `typeDefinition`, `declaration`, `callHierarchy` incoming/outgoing, `documentHighlight`, `prepareRename`, `definition`, and `references` adapters over `remount_workspace_and_notify`, Pyright-computed rename plus generic LSP `apply_workspace_edit` and `apply_code_action` self-managed publishes through the daemon OCC callback, routed structured unsupported Pyright `document_formatting` and `workspace/executeCommand` responses matching the server's advertised capability boundary, cleanup-aware retained-lease release evidence, failed-health isolation, and live service-crash plus hung-service timeout fail-closed probes. Live plugin refresh strategy coverage and live Rust-runtime generic PPC/OCC/repeated-callback/concurrent-read-dispatch/shell-publish-refresh/cleanup-reap/refresh/status-health/failed-health/recovery/remount-read/co-shared-refresh/package-adapter/Pyright-read/Pyright-workspaceSymbol/Pyright-completion/Pyright-completionResolve/Pyright-diagnostics/Pyright-codeActions/Pyright-unsupportedDocumentFormatting/Pyright-unsupportedExecuteCommand/Pyright-signatureHelp/Pyright-hover/Pyright-typeDefinition/Pyright-declaration/Pyright-callHierarchy-incoming-outgoing/Pyright-documentHighlight/Pyright-prepareRename/Pyright-definition/Pyright-references/Pyright-rename/LSP-applyWorkspaceEdit/LSP-applyCodeAction/restart/crash/timeout/mounted-workspace/oneshot-overlay coverage are in the suite. Remaining Phase 3T plugin work is broader AV-10 LSP parity beyond the representative `documentSymbol` + `workspace/symbol` + `completion` + `completionItem/resolve` + `publishDiagnostics` + `codeAction` + routed unsupported `document_formatting`/`workspace.executeCommand` + `signatureHelp` + `hover` + `typeDefinition` + `declaration` + `callHierarchy` incoming/outgoing + `documentHighlight` + `prepareRename` + `definition` + `references` + `rename` + `apply_workspace_edit` + `apply_code_action` path, true operation-level out-of-order multiplexing if required, and broader crash recovery beyond the covered status health probe, failed-health isolation, closed PPC stream, PPC timeout, and next-dispatch restart paths.
 
 ---
 
@@ -15,7 +15,7 @@ Spec = PLAN.md. Landed-status snapshot = PLAN §13. This file = done/next checkl
 | 1 — ns-runner (fresh-ns) | `eos-runner` unshare→mount→exec | ✅ **scoped direct `eosd ns-runner` closeout complete; host dispatch is Phase 2** |
 | 2 — daemon + read paths | `eos-daemon` RPC, read verbs, readiness | ✅ **CP-3/AV-2 closed on local amd64 Docker/dask** |
 | 3 — write/publish + shell/search + background control core | OCC/LayerStack publish, structural shell/search, PPC scaffolding | ✅ **closed at the structural boundary:** direct `write_file`/`edit_file` publish flows through routed `eos-occ`; `api.v1.shell`/`glob`/`grep` overlay paths, background registry/control ops, PPC framing/no-OCC plugin edge, LayerStack squash/GC, and CP-4s structural live evidence are in place |
-| 3T — terminal sessions + deferred Phase 3 gates | non-login Bash shell/session tools, typed background/subagent controls, plugin PPC execution, CP-4/CP-5/AV gates | 🟡 **partial:** CP-4t and the deferred non-plugin sidecar are closed; plugin service manifest/refresh/status contracts plus `api.plugin.ensure/status`, manifest-declared `plugin.*` routing, service process specs, connected read-only AF_UNIX PPC round trips, opt-in service process lifecycle, daemon-side service socket accept/connect, private-overlay service launch on Linux, retained service snapshot leases, in-place namespace remount for stale remount strategies, stale-read refresh sequencing before dispatch, stale-service restart fallback, next-dispatch recovery for previously ready read-only services, status health probes, same-service concurrent read serialization, broken-client status cleanup, callback-frame servicing, connected self-managed OCC callbacks including repeated callback frames before a final reply, daemon-owned oneshot WRITE_ALLOWED overlay execution, cleanup-aware retained-lease release evidence, and live Rust-runtime generic PPC/OCC/repeated-callback/refresh/status-health/recovery/remount-read/package-adapter/Pyright-read/Pyright-workspaceSymbol/Pyright-completion/Pyright-completionResolve/Pyright-diagnostics/Pyright-signatureHelp/Pyright-hover/Pyright-typeDefinition/Pyright-declaration/Pyright-callHierarchy/Pyright-documentHighlight/Pyright-prepareRename/Pyright-definition/Pyright-references/Pyright-rename/restart/crash/timeout/mounted-workspace/oneshot-overlay coverage have landed; remaining skipped scope is broader AV-10 LSP parity beyond the representative `documentSymbol` + `workspace/symbol` + `completion` + `completionItem/resolve` + `publishDiagnostics` + `signatureHelp` + `hover` + `typeDefinition` + `declaration` + `callHierarchy` + `documentHighlight` + `prepareRename` + `definition` + `references` + `rename` path, true operation-level out-of-order multiplexing if required, and broader crash recovery beyond the covered status health probe, closed PPC stream, PPC timeout, and next-dispatch restart paths |
+| 3T — terminal sessions + deferred Phase 3 gates | non-login Bash shell/session tools, typed background/subagent controls, plugin PPC execution, CP-4/CP-5/AV gates | 🟡 **partial:** CP-4t and the deferred non-plugin sidecar are closed; plugin service manifest/refresh/status contracts plus `api.plugin.ensure/status`, manifest-declared `plugin.*` routing, service process specs, connected read-only AF_UNIX PPC round trips, opt-in service process lifecycle, daemon-side service socket accept/connect, private-overlay service launch on Linux, retained service snapshot leases, in-place namespace remount for stale remount strategies, stale-read refresh sequencing before dispatch, stale-service restart fallback, next-dispatch recovery for previously ready read-only services, status health probes, failed-health isolation, same-service concurrent read serialization, same-service concurrent read-only dispatch reply preservation, mixed `api.v1.shell` overlay/OCC publish plus plugin refresh/readback, broken-client status cleanup, cleanup route/process reap proof, callback-frame servicing, connected self-managed OCC callbacks including repeated callback frames before a final reply, daemon-owned oneshot WRITE_ALLOWED overlay execution, cleanup-aware retained-lease release evidence, explicit co-shared refresh evidence, explicit Pyright unsupported-surface gates for formatting/execute-command, and live Rust-runtime generic PPC/OCC/repeated-callback/concurrent-read-dispatch/shell-publish-refresh/cleanup-reap/refresh/status-health/failed-health/recovery/remount-read/co-shared-refresh/package-adapter/Pyright-read/Pyright-workspaceSymbol/Pyright-completion/Pyright-completionResolve/Pyright-diagnostics/Pyright-codeActions/Pyright-unsupportedDocumentFormatting/Pyright-unsupportedExecuteCommand/Pyright-signatureHelp/Pyright-hover/Pyright-typeDefinition/Pyright-declaration/Pyright-callHierarchy-incoming-outgoing/Pyright-documentHighlight/Pyright-prepareRename/Pyright-definition/Pyright-references/Pyright-rename/LSP-applyWorkspaceEdit/LSP-applyCodeAction/restart/crash/timeout/mounted-workspace/oneshot-overlay coverage have landed; remaining skipped scope is broader AV-10 LSP parity beyond the representative `documentSymbol` + `workspace/symbol` + `completion` + `completionItem/resolve` + `publishDiagnostics` + `codeAction` + routed unsupported `document_formatting`/`workspace.executeCommand` + `signatureHelp` + `hover` + `typeDefinition` + `declaration` + `callHierarchy` incoming/outgoing + `documentHighlight` + `prepareRename` + `definition` + `references` + `rename` + `apply_workspace_edit` + `apply_code_action` path, true operation-level out-of-order multiplexing if required, and broader crash recovery beyond the covered status health probe, failed-health isolation, closed PPC stream, PPC timeout, and next-dispatch restart paths |
 | 3.5 — isolated workspace | ns-holder + setns + shell-free net | 🟡 broader later-phase scope: the Phase 3T command-routing/control-plane slice is ✅ closed with ns-holder/setns handoff, shell-free bridge/veth/nft setup, local amd64 Docker/dask live proof, exit inspection, PTY controls, and same-port `3000` isolation; broader isolated soak/cutover gates remain later-phase work |
 | 5 — cutover | flip default, delete Python | ⬜ |
 
@@ -205,6 +205,10 @@ Legend: ✅ done · 🟡 partial · ⬜ not started.
   verifies `plugin.generic.pyright_diagnostics` consumes a real
   `textDocument/publishDiagnostics` notification from that same Pyright adapter
   with `diagnostic_codes=["reportUndefinedVariable"]` for an undefined `List`,
+  verifies `plugin.generic.pyright_code_actions` reaches that same Pyright
+  adapter, confirms `codeActionProvider.codeActionKinds` advertises
+  `source.organizeImports`, and parses the real LSP `textDocument/codeAction`
+  empty-list response for `live_plugin_code_actions.py`,
   verifies `plugin.generic.pyright_signature_help` reaches that same Pyright
   adapter and returns active-parameter evidence for a second argument in a typed
   function call, verifies `plugin.generic.pyright_hover` reaches that same
@@ -216,7 +220,9 @@ Legend: ✅ done · 🟡 partial · ⬜ not started.
   resolves the call site back to the seeded function declaration, verifies
   `plugin.generic.pyright_call_hierarchy` reaches that same Pyright adapter and
   proves `textDocument/prepareCallHierarchy` plus
-  `callHierarchy/incomingCalls` from `live_caller` to `live_callee`, verifies
+  `callHierarchy/incomingCalls` from `live_caller` to `live_callee` and
+  `callHierarchy/outgoingCalls` from `live_caller` back to `live_callee`,
+  verifies
   `plugin.generic.pyright_document_highlight` reaches that same Pyright adapter
   and returns declaration plus call-site highlights, verifies
   `plugin.generic.pyright_prepare_rename` reaches that same Pyright adapter and
@@ -228,6 +234,12 @@ Legend: ✅ done · 🟡 partial · ⬜ not started.
   `plugin.generic.pyright_rename` asks that same Pyright service for a real LSP
   `textDocument/rename` WorkspaceEdit and publishes the resulting write through
   the daemon-owned `daemon.occ.apply_changeset` callback, verifies
+  `plugin.generic.lsp_apply_workspace_edit` converts a generic LSP
+  `WorkspaceEdit` into a daemon-owned OCC callback and publishes
+  `live_plugin_apply_workspace_edit.py`, verifies
+  `plugin.generic.lsp_apply_code_action` applies a CodeAction `edit` through
+  the same daemon-owned OCC callback path and publishes
+  `live_plugin_apply_code_action.py`, verifies
   `plugin.generic.restart_ping` restarts a separate stale read-only service to
   the same post-write manifest and reads the post-write file through its mounted
   `EOS_PLUGIN_WORKSPACE_ROOT`, verifies `plugin.generic.oneshot_write` through
@@ -239,25 +251,39 @@ Legend: ✅ done · 🟡 partial · ⬜ not started.
   daemon health probe while unrelated services stay connected, verifies
   `plugin.generic.recover_probe` first fails closed by dropping only the
   recover route and then succeeds on the next dispatch after the daemon restarts
-  the previously ready service. Latest artifact
+  the previously ready service, verifies `harness` and `adapter_harness`
+  co-observe one refreshed manifest key without restart after a peer publish,
+  verifies two concurrent `plugin.generic.ping` calls against the same
+  connected `harness` service preserve distinct replies on one manifest key,
+  verifies cleanup drops all connected PPC routes/services and reaps all
+  plugin harness processes,
+  verifies a mixed `api.v1.shell` overlay/OCC publish is visible to the
+  long-lived plugin service after `workspace_snapshot_refresh`, and verifies
+  Pyright's current unsupported formatting/execute-command capability boundary
+  through routed structured unsupported PPC responses.
+  Latest artifact
   SHA:
-  `79f2592a55e565f00e2917c86cbeca2bfa26c073c316a1be6b6239d5830509fb`.
+  `ab3cada1569c18b02863d8298a0ec5f48090c7b69e5c909a34671d9f14b2a93b`.
 - ✅ Live verification:
   `EOS_SANDBOX_PROVIDER=docker EOS_LIVE_E2E_IMAGE=xingyaoww/sweb.eval.x86_64.dask_s_dask-10042:latest EOS_PLUGIN_REFRESH_SAMPLES=1 EOS_PLUGIN_REFRESH_AUTO_SQUASH_WRITES=104 EOS_RUST_PLUGIN_BENCH_TIMEOUT_S=600 uv run pytest -q -x -rs --tb=short --durations=10 backend/tests/live_e2e_test/sandbox/plugin/test_plugin_refresh_strategies.py`
-  passed (`1 passed in 45.19s` on the latest rerun). The generated Rust plugin
-  report `.omc/results/rust-daemon-plugin-generic-20260601T234314Z-87525.json`
+  passed (`1 passed in 60.82s` on the latest rerun). The generated Rust plugin
+  report `.omc/results/rust-daemon-plugin-generic-20260602T014118Z-68247.json`
   had `gate_pass=true`, registered routes `plugin.generic.adapter_query`,
   `plugin.generic.apply`, `plugin.generic.apply_multi`,
   `plugin.generic.crash_probe`,
   `plugin.generic.hang_probe`, `plugin.generic.health_fail_ping`,
-  `plugin.generic.oneshot_write`,
+  `plugin.generic.lsp_apply_code_action`,
+  `plugin.generic.lsp_apply_workspace_edit`, `plugin.generic.oneshot_write`,
   `plugin.generic.ping`, `plugin.generic.pyright_call_hierarchy`,
   `plugin.generic.pyright_completion`,
   `plugin.generic.pyright_completion_resolve`,
   `plugin.generic.pyright_declaration`,
   `plugin.generic.pyright_definition`,
   `plugin.generic.pyright_diagnostics`,
+  `plugin.generic.pyright_code_actions`,
+  `plugin.generic.pyright_document_formatting`,
   `plugin.generic.pyright_document_highlight`, `plugin.generic.pyright_hover`,
+  `plugin.generic.pyright_execute_command`,
   `plugin.generic.pyright_prepare_rename`,
   `plugin.generic.pyright_references`, `plugin.generic.pyright_rename`,
   `plugin.generic.pyright_signature_help`, `plugin.generic.pyright_symbols`,
@@ -270,13 +296,18 @@ Legend: ✅ done · 🟡 partial · ⬜ not started.
   `plugin.generic.crash_probe`/
   `plugin.generic.hang_probe`/
   `plugin.generic.health_fail_ping`/
+  `plugin.generic.lsp_apply_code_action`/
+  `plugin.generic.lsp_apply_workspace_edit`/
   `plugin.generic.ping`/`plugin.generic.pyright_call_hierarchy`/
   `plugin.generic.pyright_completion`/
   `plugin.generic.pyright_completion_resolve`/
   `plugin.generic.pyright_declaration`/
   `plugin.generic.pyright_definition`/
   `plugin.generic.pyright_diagnostics`/
+  `plugin.generic.pyright_code_actions`/
+  `plugin.generic.pyright_document_formatting`/
   `plugin.generic.pyright_document_highlight`/
+  `plugin.generic.pyright_execute_command`/
   `plugin.generic.pyright_hover`/`plugin.generic.pyright_prepare_rename`/
   `plugin.generic.pyright_references`/`plugin.generic.pyright_rename`/
   `plugin.generic.pyright_signature_help`/
@@ -300,6 +331,22 @@ Legend: ✅ done · 🟡 partial · ⬜ not started.
   callback index `1` committed `live_plugin_multi_b.txt` at published manifest
   version `4`, and LayerStack readbacks returned
   `from live rust plugin multi a\n` / `from live rust plugin multi b\n`,
+  mixed shell/plugin interleave evidence where `api.v1.shell` published
+  `live_plugin_shell_result.txt` with `status="ok"`, `exit_code=0`,
+  `mutation_source="overlay_capture"`, and
+  `changed_paths=["live_plugin_shell_result.txt"]`; daemon LayerStack readback
+  returned `from live rust shell publish\n`; then a still-running
+  `plugin.generic.ping` returned through PPC, mounted the refreshed workspace,
+  and read the same file through `EOS_PLUGIN_WORKSPACE_ROOT` on manifest key
+  `5:4dbd00d1c820f1f6d06454fae748741d69628484b6ba921065be63c22e729629`
+  with `refresh_count=1` and `restart_count=0`; the shell publish timing slice
+  recorded `api.shell.total_s=0.05478475`,
+  `command_exec.mount_workspace_s=0.001502042`,
+  `command_exec.run_command_s=0.034188958`,
+  `command_exec.capture_upperdir_s=0.001381875`,
+  `command_exec.occ_apply_s=0.003363041`,
+  `resource.command_exec.changed_path_count=1`, and zero
+  workspace/run/upperdir tree bytes or retained tree entries,
   remounted-service `workspace_read.content == "from live rust plugin\n"`,
   service `refresh_count=1`, adapter service `state=ready` with
   `refresh_count=1`, `workspace_mounted=true`, and cached package response
@@ -315,6 +362,10 @@ Legend: ✅ done · 🟡 partial · ⬜ not started.
   `diagnostic_codes=["reportUndefinedVariable"]`, and message
   `"List" is not defined` for `live_plugin_diagnostics.py` line `0`,
   character `9`,
+  Pyright code-action response where `codeActionProvider.codeActionKinds`
+  included `source.organizeImports`, the request targeted
+  `live_plugin_code_actions.py` line `0`, character `0`, and Pyright returned a
+  parsed empty action list (`action_count=0`) for that source-action seed,
   Pyright signature-help response `signature_count=1`,
   `active_parameter=1`, and label `(left: int, right: str) -> str` for
   `live_plugin_signature.py` line `3`, character `28`,
@@ -335,7 +386,9 @@ Legend: ✅ done · 🟡 partial · ⬜ not started.
   Pyright call-hierarchy response `item_count=1`,
   `item_names=["live_callee"]`, `incoming_count=1`, and
   `incoming_names=["live_caller"]` for `live_plugin_call_hierarchy.py` line
-  `0`, character `11`,
+  `0`, character `11`, plus a second call-hierarchy response for
+  `live_caller` at line `3`, character `11` with `outgoing_count=1` and
+  `outgoing_names=["live_callee"]`,
   Pyright document-highlight response `highlight_count=2` with
   `live_plugin_pyright.py` range start lines `0` and `3`,
   Pyright prepare-rename response with call-site range line `3`, characters
@@ -349,9 +402,43 @@ Legend: ✅ done · 🟡 partial · ⬜ not started.
   Pyright self-managed rename evidence where the same service returned a real
   LSP `documentChanges` WorkspaceEdit, changed only `live_plugin_pyright.py`,
   published through `daemon.occ.apply_changeset` with callback
-  `success=true`, file status `committed`, and published manifest version `11`,
+  `success=true`, file status `committed`, and published manifest version `16`,
   then read back
   `def live_total() -> int:\n    return 42\n\nRESULT = live_total()\n`,
+  generic LSP apply-workspace-edit evidence where
+  `plugin.generic.lsp_apply_workspace_edit` converted a `WorkspaceEdit` for
+  `file:///eos/plugin/rust-workspace/live_plugin_apply_workspace_edit.py`
+  into one write changeset, published through
+  `daemon.occ.apply_changeset` with callback `success=true`, file status
+  `committed`, published manifest version `14`, and read back
+  `alpha\nedited\n`,
+  generic LSP apply-code-action evidence where
+  `plugin.generic.lsp_apply_code_action` converted a CodeAction `edit` for
+  `file:///eos/plugin/rust-workspace/live_plugin_apply_code_action.py`
+  into one write changeset, published through
+  `daemon.occ.apply_changeset` with callback `success=true`, file status
+  `committed`, published manifest version `15`, action kind `quickfix`, and read
+  back `after\nunchanged\n`,
+  same-service concurrent dispatch evidence where two concurrent
+  `plugin.generic.ping` calls against `harness` returned echoes
+  `concurrent-a` and `concurrent-b`, both through PPC, both mounted, both
+  `success=true`, and both on manifest key
+  `1:f071e2d096b352b67daeb0f2e2f6dc503335246a98e209fa9f199d06314b5cb5`,
+  co-shared refresh evidence where `harness` and `adapter_harness` were both
+  `ready`, both had `refresh_count=1`, both had `restart_count=0`, and both
+  reported manifest key
+  `5:4dbd00d1c820f1f6d06454fae748741d69628484b6ba921065be63c22e729629`,
+  Pyright capability boundary evidence with `document_formatting=false`,
+  `document_range_formatting=false`, `execute_command_provider=true`,
+  `execute_command=false`, and raw `executeCommandProvider.commands == []`,
+  routed unsupported-operation evidence where
+  `plugin.generic.pyright_document_formatting` returned through PPC from
+  `pyright_harness` with `success=false`, `unsupported=true`, method
+  `textDocument/formatting`, capability `documentFormattingProvider`, path
+  `live_plugin_pyright.py`, and `edit_count=0`, plus
+  `plugin.generic.pyright_execute_command` returned through PPC with
+  `success=false`, `unsupported=true`, method `workspace/executeCommand`,
+  capability `executeCommandProvider.commands`, and advertised `commands=[]`,
   restart fallback `restart_count=1` with
   `refresh_count=0`, `workspace_mounted=true`, restart-service
   `workspace_read.content == "from live rust plugin\n"`, one-shot worker exit code `0`, readbacks
@@ -369,20 +456,29 @@ Legend: ✅ done · 🟡 partial · ⬜ not started.
   routes, `recover_harness.state == "stopped"`, second
   `plugin.generic.recover_probe` returning `from_recovered_service=true` with
   `workspace_mounted=true`, restored connected route,
-  `recover_harness.restart_count == 1`, final active service leases before
-  cleanup `5`, post-cleanup active leases `0`, and post-cleanup orphan/missing
-  layer counts `0`.
+  `recover_harness.restart_count == 1`, final manifest version `18`, final
+  active service leases before cleanup `5`, post-cleanup active leases `0`, and
+  post-cleanup orphan/missing layer counts `0`, plus cleanup evidence where
+  plugin harness process count went from `6` to `0`, connected PPC routes and
+  services were empty, and `running_service_processes` was empty after cleanup.
 - ✅ Durable benchmark refresh:
-  `.omc/results/plugin-refresh-strategies-20260601T234314Z-87525.json` / `.md`
-  recommend `workspace_snapshot_refresh`; p95 refresh `6.064 ms` vs
-  `commit_to_workspace` p95 `3.704 ms`; raw workspace watch without
+  `.omc/results/plugin-refresh-strategies-20260602T014118Z-68247.json` / `.md`
+  recommend `workspace_snapshot_refresh`; p95 refresh `7.315 ms` vs
+  `commit_to_workspace` p95 `12.197 ms`; raw workspace watch without
   materialization stayed stale; auto-squash plus post-drain commit passed with
   final active leases, orphan layers, and missing layers all `0`.
 - 🟡 Remaining plugin scope: broader AV-10 LSP parity beyond the representative
   Pyright `documentSymbol` + `workspace/symbol` + `completion` +
-  `completionItem/resolve` + `publishDiagnostics` + `signatureHelp` + `hover` + `typeDefinition` +
-  `declaration` + `callHierarchy` + `documentHighlight` + `prepareRename` +
-  `definition` + `references` + self-managed `rename` path,
+  `completionItem/resolve` + `publishDiagnostics` + `codeAction` +
+  routed unsupported `document_formatting`/`workspace.executeCommand` +
+  `signatureHelp` + `hover` + `typeDefinition` +
+  `declaration` + `callHierarchy` incoming/outgoing + `documentHighlight` + `prepareRename` +
+  `definition` + `references` + self-managed `rename` + `apply_workspace_edit` +
+  `apply_code_action` path. Current Pyright live artifacts route document
+  formatting and execute-command as structured unsupported operations because
+  this server does not advertise document/range formatting or executable
+  commands; positive coverage for those operations still requires a broader
+  provider/harness if they become AV-10 targets,
   true operation-level out-of-order multiplexing if required, and broader crash recovery beyond
   the covered status health probe, closed PPC stream, PPC timeout, and
   next-dispatch restart paths.
@@ -451,9 +547,10 @@ Legend: ✅ done · 🟡 partial · ⬜ not started.
   tightening `xtask` packaging helpers, daemon shutdown-token construction,
   plugin service lock lifetimes, and LayerStack shared lease-registry lock
   lifetimes.
-- ✅ Remaining production `#[allow(...)]` lint exceptions are documented at the
-  call site and scoped to dispatcher result ABI parity, cfg-mirrored non-Linux
-  stubs, worker-thread ownership, or serde predicate signatures.
+- ✅ Remaining production lint exceptions use checked `#[expect(...)]`
+  attributes with call-site reasons and are scoped to dispatcher result ABI
+  parity, cfg-mirrored non-Linux/test helper parity, kernel `repr(C)` field
+  naming, or Serde predicate signatures.
 - ✅ Shared-workspace PTY command rerun remains green on the prior CP-4t
   artifact:
   `bench/phase3t-pty-command-docker-20260601-current-eos-paths-post-notify.json`
@@ -765,6 +862,203 @@ Legend: ✅ done · 🟡 partial · ⬜ not started.
   `cfg_attr(..., expect(...))`). The legacy `cp4s_legacy_argv` shell escape
   hatch is no longer present in Rust code; plugin one-shot workers now route
   argv commands through the dedicated `plugin_service` runner verb.
+- ✅ Current production-surface legacy/dependency audit is clean for the
+  non-plugin Rust closeout slice. `rg` over `sandbox/crates` and
+  `sandbox/xtask/src` now finds no live `legacy` / `compat` / `stub` /
+  `todo` / `FIXME` / `dead_code` / `allow(...)` / `cp4s_legacy_argv` /
+  `eos-ephemeral` implementation hits outside intentional no-fallback
+  documentation and skipped plugin deferred responses. `cargo machete` is not
+  installed in this environment, so the production dependency check used
+  `RUSTFLAGS='-W unused-crate-dependencies' cargo check --workspace --lib
+  --bins`, which passed without unused production dependency warnings. The
+  non-Linux overlay comments now describe typed `Unsupported` cfg paths instead
+  of "stubs".
+- ✅ Latest Rust source-debt recheck remains clean: a current scan over
+  `sandbox/crates` and `sandbox/xtask/src` finds no live `todo!()`,
+  `unimplemented!()`, `panic!()`, `.unwrap()`, `.expect()`, `.expect_err()`,
+  or `#[allow(...)]` usage. The remaining `#[expect(...)]` attributes are narrow
+  and carry explicit `reason = ...` text. Verification: `RUSTFLAGS='-D
+  unused-crate-dependencies' cargo check --workspace --lib --bins` and `cargo
+  clippy --workspace --all-targets --no-deps -- -D warnings -D
+  clippy::unwrap_used -D clippy::expect_used -D
+  clippy::undocumented_unsafe_blocks -D clippy::allow_attributes`.
+- ✅ Current non-plugin strict best-practice pass is clean after converting the
+  remaining negative-result test matches in `eos-layerstack` and `eos-runner`
+  to idiomatic `let Err(...) = ... else { ... };` assertions. Verification:
+  `cargo clippy -p eos-protocol -p eos-overlay -p eos-occ -p eos-layerstack -p
+  eos-runner -p eos-isolated -p eos-ns-holder --all-targets --no-deps -- -D
+  warnings -W clippy::pedantic -W clippy::nursery` and `cargo test -p
+  eos-layerstack -p eos-runner --lib`.
+- ✅ Current daemon/eosd all-target best-practice pass is clean after tightening
+  PPC router negative-result tests to `let Err(...) = ... else { ... };`,
+  using typed thread-join error conversion without manual `match`, and dropping
+  plugin registry guards immediately after last use in test-only helper paths.
+  Verification: `cargo clippy -p eos-daemon -p eosd --all-targets --no-deps
+  -- -D warnings -W clippy::pedantic -W clippy::nursery`, focused
+  `cargo test -p eos-daemon plugin::ppc_router --lib -- --test-threads=1`,
+  focused `cargo test -p eos-daemon
+  plugin::tests::status_probe_failure_drops_connected_service --lib --
+  --test-threads=1`, and the workspace strict clippy gate.
+- ✅ Follow-up Phase 3T PTY startup cleanup removed the production
+  `clippy::too_many_lines` exceptions from `start_pty_command` and
+  `start_isolated_pty_command` by splitting PTY start metadata/request
+  preparation from the shared `openpty`/`ns-runner` spawn path. The remaining
+  `too_many_lines` expectations in the daemon surface are integration-test
+  scenarios only. Verification: host `cargo fmt --all --check`, host focused
+  `cargo test -p eos-daemon pty_ --lib -- --test-threads=1` (`4 passed`),
+  `cargo test -p eos-daemon --lib -- --skip plugin --test-threads=1` (`23
+  passed`),
+  host `cargo clippy -p eos-daemon --lib --bins --no-deps -- -D warnings -W
+  clippy::too_many_lines -D clippy::unwrap_used -D clippy::expect_used -D
+  clippy::undocumented_unsafe_blocks -D clippy::allow_attributes`, host
+  pedantic/nursery `cargo clippy -p eos-daemon -p eosd --all-targets --no-deps
+  -- -D warnings -W clippy::pedantic -W clippy::nursery -D
+  clippy::unwrap_used -D clippy::expect_used -D
+  clippy::undocumented_unsafe_blocks -D clippy::allow_attributes`, Linux-target
+  `cargo check -p eos-daemon --target x86_64-unknown-linux-musl --lib --bins`,
+  and Linux-target `cargo clippy -p eos-daemon --target
+  x86_64-unknown-linux-musl --lib --bins --no-deps -- -D warnings -W
+  clippy::too_many_lines -W clippy::pedantic -W clippy::nursery -D
+  clippy::unwrap_used -D clippy::expect_used -D
+  clippy::undocumented_unsafe_blocks -D clippy::allow_attributes`.
+- ✅ Follow-up Phase 3T PTY finalizer cleanup removed the production
+  `clippy::needless_pass_by_value` exceptions from the command module by
+  representing owned background cleanup as `PtyFinalizer` /
+  `IsolatedPtyFinalizer` values with consuming `finish(...)` methods. Follow-up
+  OCC cleanup applied the same pattern to the single-writer worker loop with an
+  owned `CommitWorker`, so the sandbox Rust source set now has no remaining
+  `clippy::needless_pass_by_value` expectations.
+  Verification: host `cargo fmt --all --check`, host `cargo check -p
+  eos-daemon --lib --bins`, host `cargo clippy -p eos-daemon --lib --bins
+  --no-deps -- -D warnings -D clippy::needless_pass_by_value -D
+  clippy::unwrap_used -D clippy::expect_used -D
+  clippy::undocumented_unsafe_blocks -D clippy::allow_attributes`, Linux-target
+  `cargo check -p eos-daemon --target x86_64-unknown-linux-musl --lib --bins`,
+  Linux-target `cargo clippy -p eos-daemon --target
+  x86_64-unknown-linux-musl --lib --bins --no-deps -- -D warnings -W
+  clippy::pedantic -W clippy::nursery -D clippy::needless_pass_by_value -D
+  clippy::unwrap_used -D clippy::expect_used -D
+  clippy::undocumented_unsafe_blocks -D clippy::allow_attributes`, focused
+  `cargo test -p eos-daemon pty_ --lib -- --test-threads=1` (`4 passed`), and
+  `cargo test -p eos-daemon --lib -- --skip plugin --test-threads=1` (`23
+  passed`), `cargo test -p eos-occ --lib -- --test-threads=1` (`6 passed`), and
+  `cargo clippy -p eos-occ --all-targets --no-deps -- -D warnings -W
+  clippy::pedantic -W clippy::nursery -D clippy::needless_pass_by_value -D
+  clippy::unwrap_used -D clippy::expect_used -D
+  clippy::undocumented_unsafe_blocks -D clippy::allow_attributes`. Full
+  workspace recheck also passed after the daemon/OCC ownership refactors:
+  `cargo clippy --workspace --all-targets --no-deps -- -D warnings -W
+  clippy::pedantic -W clippy::nursery -D clippy::needless_pass_by_value -D
+  clippy::unwrap_used -D clippy::expect_used -D
+  clippy::undocumented_unsafe_blocks -D clippy::allow_attributes`, `cargo
+  clippy --workspace --target x86_64-unknown-linux-musl --lib --bins --no-deps
+  -- -D warnings -W clippy::pedantic -W clippy::nursery -D
+  clippy::needless_pass_by_value -D clippy::unwrap_used -D
+  clippy::expect_used -D clippy::undocumented_unsafe_blocks -D
+  clippy::allow_attributes`, and `cargo test --workspace --all-targets`.
+- ✅ Follow-up Linux namespace setup cleanup removed the production
+  `clippy::similar_names` exceptions from `eos-runner` fresh namespace setup and
+  `eos-ns-holder` namespace-stack setup by capturing the pre-`unshare` parent
+  IDs in a small typed value instead of paired `caller_uid` / `caller_gid`
+  locals. The sandbox Rust source set now has no remaining `similar_names`
+  expectations. Verification: `cargo clippy -p eos-runner -p eos-ns-holder
+  --target x86_64-unknown-linux-musl --lib --bins --no-deps -- -D warnings -D
+  clippy::similar_names -D clippy::unwrap_used -D clippy::expect_used -D
+  clippy::undocumented_unsafe_blocks -D clippy::allow_attributes`, `cargo test
+  -p eos-runner -p eos-ns-holder --lib -- --test-threads=1` (`12 passed`),
+  `cargo clippy --workspace --all-targets --no-deps -- -D warnings -W
+  clippy::pedantic -W clippy::nursery -D clippy::similar_names -D
+  clippy::needless_pass_by_value -D clippy::unwrap_used -D
+  clippy::expect_used -D clippy::undocumented_unsafe_blocks -D
+  clippy::allow_attributes`, `cargo clippy --workspace --target
+  x86_64-unknown-linux-musl --lib --bins --no-deps -- -D warnings -W
+  clippy::pedantic -W clippy::nursery -D clippy::similar_names -D
+  clippy::needless_pass_by_value -D clippy::unwrap_used -D
+  clippy::expect_used -D clippy::undocumented_unsafe_blocks -D
+  clippy::allow_attributes`, and `cargo test --workspace --all-targets`.
+- ✅ Follow-up const/significant-drop cleanup removed the remaining
+  `clippy::missing_const_for_fn` and `clippy::significant_drop_tightening`
+  expectations from the sandbox Rust source set. Daemon/plugin non-Linux parity
+  helpers are now explicit `const fn` no-op / typed-unsupported cfg arms where
+  the public fallible ABI must remain shared; `isolated::with_state` keeps the
+  lock guard as an immediate temporary; and `eos-ns-holder` splits Linux syscall
+  helpers from non-Linux const no-op helpers for `/proc` rbind, loopback-up,
+  namespace-veth config, and IPv6-default-route flush. Current source scan over
+  `sandbox/crates` and `sandbox/xtask/src` finds no
+  `missing_const_for_fn`, `significant_drop_tightening`, `similar_names`, or
+  `needless_pass_by_value` expectations. Verification: `cargo fmt --all
+  --check`, `cargo check -p eos-ns-holder --target
+  x86_64-unknown-linux-musl --lib --bins`, `cargo test -p eos-ns-holder --lib
+  -- --test-threads=1` (`5 passed`), host and Linux-target `cargo clippy -p
+  eos-ns-holder` with `-D clippy::missing_const_for_fn`, workspace host
+  `cargo clippy --workspace --all-targets --no-deps -- -D warnings -W
+  clippy::pedantic -W clippy::nursery -D clippy::missing_const_for_fn -D
+  clippy::significant_drop_tightening -D clippy::similar_names -D
+  clippy::needless_pass_by_value -D clippy::unwrap_used -D
+  clippy::expect_used -D clippy::undocumented_unsafe_blocks -D
+  clippy::allow_attributes`, the same Linux-target workspace clippy gate, and
+  `cargo test --workspace --all-targets`.
+- ✅ Follow-up daemon integration-test cleanup removed the remaining
+  `clippy::too_many_lines` expectations from
+  `sandbox/crates/eos-daemon/tests/phase2_read_paths.rs` by splitting the
+  workspace-base and isolated-workspace lifecycle scenarios into focused
+  request/fixture/assertion helpers. The tests still cover the same wire
+  contracts: workspace-base build/ensure/binding/read/reset, symlink handling,
+  isolated enter/status/duplicate/list/exit/audit/reset, and daemon server
+  ready probes. Verification: `cargo test -p eos-daemon --test
+  phase2_read_paths -- --test-threads=1` (`10 passed`), `cargo clippy -p
+  eos-daemon --test phase2_read_paths --no-deps -- -D warnings -D
+  clippy::too_many_lines -D clippy::unwrap_used -D clippy::expect_used -D
+  clippy::undocumented_unsafe_blocks -D clippy::allow_attributes`, workspace
+  host clippy with `-D clippy::too_many_lines` plus the cleanup lint set,
+  Linux-target workspace clippy, and `cargo test --workspace --all-targets`.
+- ✅ Workspace dependency hygiene is now green for all Rust targets, not only
+  production lib/bin targets. `RUSTFLAGS='-D unused-crate-dependencies' cargo
+  check --workspace --all-targets` passes after documenting the unavoidable
+  integration-test crate behavior with explicit underscore imports in the
+  daemon phase2/phase3 integration test roots and protocol fixture test roots;
+  no crate-wide `allow(...)` suppression was added. The normal package deps
+  remain owned by their libraries (`eos-daemon` and `eos-protocol`), while the
+  test roots now keep rustc's dependency lint meaningful under `--all-targets`.
+  Rechecks also passed with host workspace pedantic/nursery clippy plus the
+  denied cleanup lint set, Linux-target workspace clippy, and `cargo test
+  --workspace --all-targets`.
+- ✅ Follow-up overlay test cleanup removed the last source-level `.expect(...)`
+  hits from the sandbox Rust tree by converting the Linux kernel-mount input
+  test helpers to fallible `TestResult` / `?` propagation. Current source scans
+  over `sandbox/crates` and `sandbox/xtask/src` find no live `allow(...)`,
+  `todo!()`, `unimplemented!()`, `panic!()`, `.unwrap()`, `.expect()`, or
+  `expect_err(...)` calls, and no remaining `too_many_lines`,
+  `missing_const_for_fn`, `significant_drop_tightening`, `similar_names`, or
+  `needless_pass_by_value` expectations. Verification: `cargo test -p
+  eos-overlay --lib -- --test-threads=1` (`3 passed`), focused overlay clippy
+  with `-D clippy::unwrap_used -D clippy::expect_used`, the all-target
+  unused-dependency gate, host workspace strict clippy, Linux-target workspace
+  clippy, and `cargo test --workspace --all-targets`.
+- ✅ Current workspace-wide strict best-practice sweep is clean:
+  `cargo clippy --workspace --all-targets --no-deps -- -D warnings -W
+  clippy::pedantic -W clippy::nursery` passes across the full sandbox Rust
+  workspace, including `eos-plugin` and `xtask`. This is stricter than the
+  normal migration gate and confirms the remaining checked exceptions are
+  explicit `#[expect(..., reason = "...")]` cases rather than broad
+  suppressions.
+- ✅ Current Linux-target syscall/cfg best-practice sweep is clean after
+  tightening the Linux-only overlay xattr error match to the idiomatic nested
+  or-pattern. Verification: `cargo clippy --workspace --target
+  x86_64-unknown-linux-musl --lib --bins --no-deps -- -D warnings -W
+  clippy::pedantic -W clippy::nursery -D clippy::unwrap_used -D
+  clippy::expect_used -D clippy::undocumented_unsafe_blocks`, `cargo check -p
+  eos-overlay --target x86_64-unknown-linux-musl --lib --tests`, `cargo test
+  -p eos-overlay --lib`, and the workspace strict clippy gate.
+- ✅ Current post-cleanup workspace test and arm64 target gates are green:
+  `cargo test --workspace --all-targets` passed across daemon unit tests,
+  phase2/phase3 integration tests, protocol fixtures, plugin contract tests,
+  runner/search/setns tests, overlay capture tests, OCC, isolated, ns-holder,
+  `eosd`, and `xtask`; `cargo check --workspace --target
+  aarch64-unknown-linux-musl --lib --bins` passed; and `cargo clippy
+  --workspace --target aarch64-unknown-linux-musl --lib --bins --no-deps -- -D
+  warnings -D clippy::unwrap_used -D clippy::expect_used -D
+  clippy::undocumented_unsafe_blocks` passed.
 - ✅ Latest unsafe/FFI audit pass confirms unsafe remains confined to syscall
   crates and documented raw libc gaps. Verification: source inventory over
   `eos-overlay`, `eos-runner`, `eos-ns-holder`, `eos-isolated`, `eos-daemon`,
@@ -833,9 +1127,20 @@ Legend: ✅ done · 🟡 partial · ⬜ not started.
   eos-daemon active_pty_records_block_exit_until_cleared` (`1 passed`),
   `cargo test -p eosd` (`0 tests`), `cargo fmt --all --check`, and
   `git diff --check`.
-- ✅ `cargo check --workspace` green (10 crates + `xtask`, 11 packages) · `cargo clippy --workspace --all-targets` clean · `cargo fmt --all --check` clean · Linux-target syscall subset check green for `x86_64-unknown-linux-musl` · `cargo clippy --workspace --target x86_64-unknown-linux-musl --lib --bins` clean. The Phase 3/3T/3.5 Rust cleanup removed the stale unused/dead-code skeleton warnings from `eos-daemon`, the old `eos-plugin` standalone warm-server/dispatch scaffold, and the old `eos-ephemeral` crate; `eos-ephemeral`'s final overlay-error wrapper is now folded into daemon-local `DaemonError::OverlayPipeline`. Linux PTY command wrappers use idiomatic tail expressions, protocol tests no longer rely on `unwrap()`, all Rust workspace packages now inherit the explicit MSRV `rust-version = "1.85"`, and `RUSTFLAGS='-W unused-crate-dependencies' cargo check --workspace --all-targets` is down to known test-target false positives from protocol fixtures and daemon integration-test crates.
+- ✅ `cargo check --workspace` green (10 crates + `xtask`, 11 packages) · `cargo clippy --workspace --all-targets` clean · `cargo fmt --all --check` clean · Linux-target syscall subset check green for `x86_64-unknown-linux-musl` · `cargo clippy --workspace --target x86_64-unknown-linux-musl --lib --bins` clean. The Phase 3/3T/3.5 Rust cleanup removed the stale unused/dead-code skeleton warnings from `eos-daemon`, the old `eos-plugin` standalone warm-server/dispatch scaffold, and the old `eos-ephemeral` crate; `eos-ephemeral`'s final overlay-error wrapper is now folded into daemon-local `DaemonError::OverlayPipeline`. Linux PTY command wrappers use idiomatic tail expressions, protocol tests no longer rely on `unwrap()`, all Rust workspace packages now inherit the explicit MSRV `rust-version = "1.85"`, and the current all-target unused-dependency gate is green with explicit test-root underscore imports rather than crate-wide suppressions.
 - ✅ `xtask package` implemented for `eosd-linux-{amd64,arm64}`: default builder is `rust-lld` (`cargo` with `RUSTFLAGS=-C linker=rust-lld`), with optional `cargo`/`cross`; writes binary-only `SHA256SUMS`, `protocol_version`, per-artifact JSON manifests, and optional minisign `.minisig` signatures. Latest local amd64 plugin artifact SHA is `f200673fd47526257e5ea0f2172526702cfb7d7800a0158deb7fdc60beaf9d5e`; prior arm64 package SHA is `e07a59546cecf931922386a91bf08a8ee5e1fa08747cbc45ee56462eeac4417b`.
-- ✅ **Build-time guarantee holds**: `cargo tree -p eos-isolated --edges normal --depth 1` has no `eos-occ` edge (direct/transitive). On the host target its direct normal graph is `eos-overlay`, `nix`, `serde_json`, and `thiserror`; Linux adds only target-gated netlink/syscall helpers (`futures-util`, `libc`, `netlink-sys`, `rtnetlink`, `tokio`) and still no OCC/publish edge. `cargo tree -p eos-plugin --edges normal --depth 1` is contract/framing-only (`eos-protocol`, `serde`, `serde_json`, `thiserror`) with no `eos-occ`, `eos-overlay`, `eos-layerstack`, `nix`, or `tokio` edge; the old `eos-ephemeral` crate is no longer a workspace member, while the live daemon dispatcher owns the concrete per-root OCC service cache and single-writer publish path.
+- ✅ **Build-time guarantee holds**: current `cargo metadata --no-deps
+  --format-version 1` lists `eos-daemon`, `eos-isolated`, `eos-layerstack`,
+  `eos-ns-holder`, `eos-occ`, `eos-overlay`, `eos-plugin`, `eos-protocol`,
+  `eos-runner`, `eosd`, and `xtask`, with no `eos-ephemeral` package. Current
+  `cargo tree -p eos-isolated --edges normal --depth 10` and the same command
+  with `--target x86_64-unknown-linux-musl` have no `eos-occ` edge; the Linux
+  graph adds only the target-gated netlink/syscall helpers and still no
+  OCC/publish edge. Current `cargo tree -p eos-plugin --edges normal --depth
+  10` on host and Linux remains contract/framing-only with no `eos-occ`,
+  `eos-overlay`, `eos-layerstack`, `nix`, or `tokio` edge; the live daemon
+  dispatcher owns the concrete per-root OCC service cache and single-writer
+  publish path.
 
 **Contracts & fixtures (ground truth)**
 - ✅ `sandbox/docs/contract/01-06.md` — source-verified wire/CAS/audit/models/provider/crate-map specs.
@@ -868,9 +1173,9 @@ Legend: ✅ done · 🟡 partial · ⬜ not started.
   green after the lint change.
 - ✅ Production lint exceptions for the Phase 3/3T/3.5 Rust cleanup path now
   use checked `#[expect(..., reason = "...")]` attributes instead of broad
-  `#[allow(...)]` suppressions for dispatcher ABI parity, non-Linux cfg parity,
-  Serde predicate ABI parity, explicit state-guard lifetime, and worker-thread
-  ownership. `rg '#\[(cfg_attr\([^\n]+allow|allow)\(' sandbox/crates -g
+  `#[allow(...)]` suppressions for dispatcher ABI parity, non-Linux/test cfg
+  parity, Serde predicate ABI parity, and Linux kernel `repr(C)` field names.
+  `rg '#\[(cfg_attr\([^\n]+allow|allow)\(' sandbox/crates -g
   '*.rs'` now returns no Rust crate suppressions. Targeted recheck: `cargo fmt
   --all --check`, `cargo clippy --workspace --all-targets -- -D warnings`,
   `cargo clippy -p eos-protocol --all-targets --no-deps -- -D warnings -W
@@ -948,7 +1253,7 @@ Legend: ✅ done · 🟡 partial · ⬜ not started.
 - ✅ `eos-daemon` now registers `api.v1.shell`, `api.glob` / `api.v1.glob`, and `api.grep` / `api.v1.grep`. The current daemon shell primitive acquires a LayerStack snapshot lease, allocates overlay upper/work dirs, accepts only the public shell-format command string wire shape, rejects raw argv, runs `eosd ns-runner`, captures upperdir changes, computes snapshot base hashes, publishes through OCC, and returns runner stdout/stderr/exit fields plus overlay timing aliases. CP-4s raw-argv results remain historical structural smoke evidence only; Phase 3T's `exec_command` contract rejects raw argv and CP-4 throughput/contention does not use raw argv. Glob/grep acquire the same read-only overlay lease and execute in-namespace Rust primitives via the runner without OCC publish.
 - ✅ `eos-runner` now supports fresh-ns `glob` and `grep` in addition to `shell`. The Rust primitives preserve the documented wire shape for sorted/sliced glob results, read-only grep filenames/content/count modes, regex flags, UTF-8/2 MiB skip behavior, inert `head_limit`/`offset`, and workspace escape rejection.
 - ✅ `eos-daemon` now registers `api.v1.cancel`, `api.v1.heartbeat`, and `api.v1.inflight_count` against the server-owned `InFlightRegistry`. Server dispatch registers invocation id / agent id / background flag around handler execution, runs a TTL sweep loop, and the registry tracks active-call guards so stale background entries are not TTL-reaped while a call is active.
-- 🟡 `eos-plugin` now has concrete PPC frame encode/decode over the shared `eos_protocol` newline-delimited request envelope plus pure manifest/service/refresh/op-name contracts. The old standalone warm-server/dispatch/context scaffold was removed; `eos-daemon` owns service process lifetime, route execution, OCC callbacks, refresh gating, restart fallback, and oneshot overlay execution. The plugin crate graph no longer reaches `eos-occ`, `eos-overlay`, `eos-layerstack`, `nix`, or `tokio`, and the old `eos-ephemeral` Rust crate has been removed from the workspace. `eos-daemon` now derives `/eos/plugin/ppc/*.sock` service process specs, can bind/accept the per-service PPC socket, can spawn declared service commands with the PPC harness environment via `start_services: true`, retains per-service snapshot leases, refreshes stale connected read-only services before dispatch, remounts stale service namespaces in place, restarts stale read-only services when the manifest strategy is `restart_service`, serializes same-service concurrent read-only dispatches on the shared client, drops broken PPC streams from connected-route status, services plugin-originated callback request frames before the final operation reply, routes connected self-managed `daemon.occ.apply_changeset` callbacks through the daemon OCC writer, runs `oneshot_overlay` WRITE_ALLOWED workers through a fresh overlay namespace plus OCC publish, and has live Rust-runtime generic PPC/OCC/refresh/remount-read/package-adapter/Pyright-read/Pyright-workspaceSymbol/Pyright-completion/Pyright-signatureHelp/Pyright-hover/Pyright-typeDefinition/Pyright-declaration/Pyright-callHierarchy/Pyright-documentHighlight/Pyright-prepareRename/Pyright-definition/Pyright-references/Pyright-rename/restart/oneshot-overlay coverage. Broader AV-10 LSP parity remains open beyond the representative `documentSymbol` + `workspace/symbol` + `completion` + `signatureHelp` + `hover` + `typeDefinition` + `declaration` + `callHierarchy` + `documentHighlight` + `prepareRename` + `definition` + `references` + self-managed `rename` path.
+- 🟡 `eos-plugin` now has concrete PPC frame encode/decode over the shared `eos_protocol` newline-delimited request envelope plus pure manifest/service/refresh/op-name contracts. The old standalone warm-server/dispatch/context scaffold was removed; `eos-daemon` owns service process lifetime, route execution, OCC callbacks, refresh gating, restart fallback, and oneshot overlay execution. The plugin crate graph no longer reaches `eos-occ`, `eos-overlay`, `eos-layerstack`, `nix`, or `tokio`, and the old `eos-ephemeral` Rust crate has been removed from the workspace. `eos-daemon` now derives `/eos/plugin/ppc/*.sock` service process specs, can bind/accept the per-service PPC socket, can spawn declared service commands with the PPC harness environment via `start_services: true`, retains per-service snapshot leases, refreshes stale connected read-only services before dispatch, remounts stale service namespaces in place, restarts stale read-only services when the manifest strategy is `restart_service`, serializes same-service concurrent read-only dispatches on the shared client, drops broken PPC streams from connected-route status, services plugin-originated callback request frames before the final operation reply, routes connected self-managed `daemon.occ.apply_changeset` callbacks through the daemon OCC writer, runs `oneshot_overlay` WRITE_ALLOWED workers through a fresh overlay namespace plus OCC publish, and has live Rust-runtime generic PPC/OCC/repeated-callback/refresh/status-health/failed-health/recovery/remount-read/package-adapter/Pyright-read/Pyright-workspaceSymbol/Pyright-completion/Pyright-completionResolve/Pyright-diagnostics/Pyright-codeActions/Pyright-signatureHelp/Pyright-hover/Pyright-typeDefinition/Pyright-declaration/Pyright-callHierarchy-incoming-outgoing/Pyright-documentHighlight/Pyright-prepareRename/Pyright-definition/Pyright-references/Pyright-rename/LSP-applyWorkspaceEdit/LSP-applyCodeAction/Pyright-negative-format-execute-capability/restart/crash/timeout/oneshot-overlay coverage. Broader AV-10 LSP parity remains open beyond the representative `documentSymbol` + `workspace/symbol` + `completion` + `completionItem/resolve` + `publishDiagnostics` + `codeAction` + `signatureHelp` + `hover` + `typeDefinition` + `declaration` + `callHierarchy` incoming/outgoing + `documentHighlight` + `prepareRename` + `definition` + `references` + self-managed `rename` + `apply_workspace_edit` + `apply_code_action` path.
 - ✅ `backend/scripts/bench_rust_daemon_phase3.py` now targets the current public shell-string daemon boundary: upload/seed/start Rust daemon through the repo Docker provider path, seed the LayerStack base layer from the image's real `/testbed` workspace, measure `api.v1.shell` no-op via `"command": "true"`, shell-string small-write publish via `"command": "touch <file>"`, `api.v1.glob`, `api.v1.grep`, 1/3/5/10 concurrent shell-string load waves, per-sample phase timings, final small-write readback hash, and daemon memory samples from `/proc/<pid>/smaps_rollup` with RSS fallback. The harness is target-explicit: `--arch` chooses the artifact, default report, and baseline paths; `--docker-platform` is forwarded into Docker creation; artifact metadata, baseline `uname -m`, and container `uname -m` must match before the daemon run starts. Historical `bench/phase3-rust-daemon-amd64.json` captured the retired raw-argv CP-4s evidence in `sweevo-dask__dask-10042:latest` with `--arch amd64 --docker-platform linux/amd64`, run `local-f1bd63a4b0f3`, artifact SHA `5fe3da1c879b9db0ad1776f39b4c2fdfe988de04c9d28772a1d085ad53d40f26`: raw-argv `["true"]` passed (`host-wall` p50/p95 `31.787/32.628 ms`; `command_exec.run_command_s` p50/p95 `16.109/16.498 ms` vs required p50 `<=95.468 ms`; mount p95 `1.409 ms`; host-minus-api p95 `2.369 ms`). The old 1/3/5/10 structural load matrix also passed: no-op host p95 `34.650/37.024/69.151/109.333 ms`, unique `touch` write host p95 `33.940/41.839/74.701/152.729 ms`, all well below Phase 1 host p95 `373.759 ms`; peak daemon PSS/RSS was `31,828/32,420 KiB`, still below the CP-0 Python idle RSS baseline `36,676 KiB`, with idle-return gate true via the Rosetta active-peak ceiling because the amd64 image runs under `/run/rosetta/rosetta` on this host. The repo Docker provider path is the intended route; the `docker` CLI does not need to be present for this benchmark.
 - ✅ Native container Bash/PTY viability was measured in the same Dask image family before implementation lock-in. Non-overlay process microbenchmarks remain diagnostic only; overlay-inclusive Bash/PTY measurements remain historical Phase 3T design evidence, superseded for closeout by the implemented `exec_command`, `write_pty_command_stdin`, `check_pty_command_progress`, and `cancel_pty_command` tools. Existing evidence includes `bench/phase3-overlay-bash-microbench-amd64.json` and `bench/phase3-overlay-pty-bash-microbench-amd64.json`: raw argv `true` host p50/p95 `31.918/34.731 ms`, Bash `--noprofile --norc -c true` host p50/p95 `43.940/45.100 ms`, Bash `--noprofile --norc -i -c true` host p50/p95 `43.801/46.312 ms`, Bash write+publish host p50/p95 `43.329/47.303 ms`, and `script(1)` PTY-proxy Bash host p50/p95 `79.735/83.213 ms` (`81.413/88.942 ms` for `-i -c`). Those historical samples went through `api.v1.shell` with LayerStack snapshot lease, overlay mount, capture, OCC publish/cleanup, and release. The PTY-proxy run is conservative because Rust `openpty` session management was not implemented at the time and `script(1)` adds wrapper overhead.
 - ✅ `sandbox/crates/eos-daemon/tests/phase3_write_paths.rs` covers Rust daemon direct write publish + readback, create-only existing-file conflict, edit publish + readback, duplicate-head idempotency, and `.git` path route-dropping. Daemon unit tests cover shell string validation, raw-argv rejection, GATED stale-base abort, DIRECT stale-base publish, atomic validation failure drop, root `.gitignore` routing, in-flight TTL active-call protection, and cancel/heartbeat/count control ops. `eos-runner` unit tests cover glob/grep primitive contract slices plus the dedicated `plugin_service` argv runner path for plugin workers. `eos-layerstack` unit tests cover squash read preservation, same-manager lease-retained GC, and cross-instance reopened lease retention/release. `eos-plugin` unit tests cover PPC frame round-trip/reject paths, registration/public-op helpers, manifest validation, refresh ack/request behavior, service key validation, and service registry state. `eos-occ` unit tests cover batching, atomic isolation, CAS retry success/exhaustion, and overlay-change conversion. `eos-overlay` unit tests cover upperdir file/delete/symlink/opaque capture. Local checks passed: `cargo fmt --all`; `cargo check -p eos-occ -p eos-overlay -p eos-layerstack -p eos-daemon -p eos-runner`; `cargo test -p eos-runner --lib`; `cargo test -p eos-daemon`; `cargo test -p eos-occ -p eos-overlay -p eos-layerstack`; `cargo check -p eos-plugin -p eos-daemon`; `cargo test -p eos-plugin -p eos-daemon`; `cargo clippy -p eos-occ -p eos-overlay -p eos-layerstack -p eos-daemon -p eos-runner --all-targets`; `cargo clippy -p eos-plugin -p eos-daemon --all-targets`; focused `cargo test -p eos-plugin`; focused `cargo clippy -p eos-plugin --all-targets`; focused `cargo test -p eos-daemon shell_command`; focused `cargo check -p eos-daemon`; Phase 3 harness `py_compile` + `ruff check` (only pre-existing adjacent skeleton warnings).
@@ -1072,7 +1377,26 @@ Legend: ✅ done · 🟡 partial · ⬜ not started.
   `unwrap_used`, `expect_used`, and `undocumented_unsafe_blocks` denied,
   `cargo test -p eos-isolated` (`4 passed`), `cargo fmt --all --check`, and a
   focused `panic!/expect/unwrap` source scan on `session.rs` are green.
-- ✅ Focused checks: `cargo fmt --all --check`; `cargo check -p eos-ns-holder -p eos-isolated -p eos-daemon --target x86_64-unknown-linux-musl`; `cargo check -p eos-ns-holder -p eos-isolated -p eos-daemon --target aarch64-unknown-linux-musl`; `cargo clippy -p eos-ns-holder -p eos-isolated -p eos-daemon --target x86_64-unknown-linux-musl --all-targets`; `cargo test -p eos-isolated` (`4 passed`, now covers ResourceCaps host-capacity helpers); `cargo test -p eos-runner` (`7 passed`); `cargo test -p eos-ns-holder` (`5 passed`); `cargo test -p eos-daemon isolated_workspace --test phase2_read_paths` (`3 passed`); `cargo test -p eos-daemon host_ram_pressure_error_keeps_capacity_details`; `cargo test -p eos-daemon active_pty_records_block_exit_until_cleared`; `cargo run -p xtask -- package --target x86_64-unknown-linux-musl --out-dir dist`; `cargo run -p xtask -- package --target aarch64-unknown-linux-musl --out-dir dist`; and `cargo tree -p eos-isolated --target x86_64-unknown-linux-musl --edges normal` with no `eos-occ` edge. The 2026-06-01 cleanup reran the touched syscall subset for `x86_64-unknown-linux-musl` warning-clean after removing the Linux `ENOATTR` branch; Linux musl test binary linking was not attempted as evidence because the macOS host linker rejects the target's `--as-needed` flag.
+- ✅ Rust isolated DNS configuration is no longer a daemon no-op:
+  `eos-runner::setns::configure_dns` now mirrors the Python
+  `configure_dns_in_ns.py` helper by entering `user`+`mnt` namespaces,
+  detecting loopback resolvers, and bind-mounting a private fallback
+  `/etc/resolv.conf`; `eosd ns-runner --configure-dns` exposes the one-shot
+  helper; and the daemon `NamespaceRuntimePort::configure_dns` calls it and
+  returns the `applied_fallback` result. Focused coverage includes the
+  host-safe first-nameserver/fallback detector test and Linux-target clippy over
+  the setns/bind-mount implementation. Live routable-DNS/symlinked-resolv.conf
+  parity remains part of the later AV-9/BYO matrix.
+- ✅ Follow-up daemon audit-classifier cleanup keeps the PTY completion mailbox
+  endpoint but stops treating `api.v1.pty.collect_completed` as an
+  overlay/lease lifecycle operation. It still emits `background_tool.completed`
+  audit when the Python background supervisor drains completions, but it no
+  longer fabricates `layer_stack.lease_released` /
+  `overlay_workspace.cleanup` events for a mailbox-only request. Focused
+  coverage:
+  `cargo test -p eos-daemon pty_collect_completed_is_background_only_not_overlay_lifecycle`
+  (`1 passed`) plus strict workspace clippy.
+- ✅ Focused checks: `cargo fmt --all --check`; `cargo check -p eos-ns-holder -p eos-isolated -p eos-daemon --target x86_64-unknown-linux-musl`; `cargo check -p eos-ns-holder -p eos-isolated -p eos-daemon --target aarch64-unknown-linux-musl`; `cargo clippy -p eos-ns-holder -p eos-isolated -p eos-daemon --target x86_64-unknown-linux-musl --all-targets`; `cargo test -p eos-isolated` (`4 passed`, now covers ResourceCaps host-capacity helpers); `cargo test -p eos-runner` (`8 passed`); `cargo test -p eos-ns-holder` (`5 passed`); `cargo test -p eos-daemon isolated_workspace --test phase2_read_paths` (`3 passed`); `cargo test -p eos-daemon host_ram_pressure_error_keeps_capacity_details`; `cargo test -p eos-daemon active_pty_records_block_exit_until_cleared`; `cargo test --workspace --all-targets`; `cargo run -p xtask -- package --target x86_64-unknown-linux-musl --out-dir dist`; `cargo run -p xtask -- package --target aarch64-unknown-linux-musl --out-dir dist`; `cargo clippy --workspace --all-targets --no-deps -- -D warnings -W clippy::pedantic -W clippy::nursery -D clippy::too_many_lines -D clippy::missing_const_for_fn -D clippy::significant_drop_tightening -D clippy::similar_names -D clippy::needless_pass_by_value -D clippy::unwrap_used -D clippy::expect_used -D clippy::undocumented_unsafe_blocks -D clippy::allow_attributes`; and `cargo tree -p eos-isolated --target x86_64-unknown-linux-musl --edges normal` with no `eos-occ` edge. The 2026-06-01 cleanup reran the touched syscall subset for `x86_64-unknown-linux-musl` warning-clean after removing the Linux `ENOATTR` branch; Linux musl test binary linking was not attempted as evidence because the macOS host linker rejects the target's `--as-needed` flag.
 
 **Docs**
 - ✅ PLAN §12 (verified Docker/dask/plugin config) + §13 (Phase-0 status + 8 source-verified corrections).
@@ -1094,6 +1418,21 @@ cd .. && .venv/bin/python -m pytest backend/tests/unit_test/test_sandbox/test_pr
 ---
 
 ## NEXT — ordered, concrete
+
+### Current remainder classification — 2026-06-02
+- **No remaining functional Phase 3 / Phase 3T non-plugin gates are open**
+  outside the explicitly excluded plugin AV-10 tail and broader
+  Phase 3.5/AV-9/BYO/cutover scope. CP-4t, typed subagent/background
+  surfaces, isolated command-routing proof, CP-4/AV-4 mixed non-plugin load,
+  CP-5 cache-lock churn, AV-7 forward/back parity, and §7 non-plugin
+  differential/property contention are closed by the artifacts listed below.
+- **Remaining nonfunctional closeout hygiene:** keep architecture docs refreshed
+  only when surfaces actually change; do not stage/commit the dirty worktree
+  accidentally; and keep the arm64 CP baseline leg separate from the already
+  captured local arm64 upload/run proof.
+- **Not a Phase 3T blocker:** release-grade minisign provenance remains the
+  later AV-8/cutover-adjacent gate; CP-1b minimal/BYO-image validation remains
+  the later BYO matrix gate.
 
 ### A. Phase 0 closeout follow-ups (not blocking local amd64)
 1. **Release-grade provenance** — minisign fail-closed verification remains a later AV-8 gate. Current Phase 0 local closeout is SHA-pinned but unsigned by design.
@@ -1121,7 +1460,10 @@ cd .. && .venv/bin/python -m pytest backend/tests/unit_test/test_sandbox/test_pr
 ### B. Phase 1 closeout guardrails
 - Treat Phase 1 as closed for the scoped direct `eosd ns-runner` fresh-ns boundary. Keep `bench/phase1-ns-runner-amd64.json` as the direct-runner dask evidence until a checked-in Phase 1 harness exists.
 - Do not flip the global default to `EOS_SANDBOX_RUNTIME=rust` from Phase 1 alone. Phase 2 now proves persistent daemon routing and endpoint readiness for the read path, but the global default flip still waits for the later cutover gates.
-- Remaining scope clarification: setns mode stays Phase 3.5. Current `eosd ns-runner` is an executable request/response subcommand for the fresh path, not a full daemon runtime cutover.
+- Current scope clarification: Phase 1's direct-runner evidence remains fresh-ns
+  only, but Linux setns command routing has since landed and is covered by the
+  Phase 3T isolated-workspace evidence below. The remaining Phase 3.5 work is
+  broader AV-9/BYO/cutover validation, not an unimplemented setns runner body.
 
 ### C. Phase 2 — daemon + read paths
 - ✅ Closed by `bench/phase2-rust-daemon-amd64.json`. Keep write/publish, shell/search, plugin, and isolated mode out of the Phase 2 result; those remain Phase 3/3.5 gates.
@@ -1131,7 +1473,7 @@ cd .. && .venv/bin/python -m pytest backend/tests/unit_test/test_sandbox/test_pr
 - CP-4s raw-argv live evidence is green and retained as historical structural evidence only: `bench/phase3-rust-daemon-amd64.json` run `local-f1bd63a4b0f3` cleared the 70% target (`command_exec.run_command_s` p50 `16.109 ms` vs required `<=95.468 ms`), `host-wall` p50/p95 was `31.787/32.628 ms`, concurrent no-op host p95 was `34.650/37.024/69.151/109.333 ms` at 1/3/5/10, and concurrent unique `touch` host p95 was `33.940/41.839/74.701/152.729 ms`. This closes CP-4s, not CP-4 throughput/contention.
 - The next shell contract no longer gates on raw argv. CP-4 and CP-4t must run against non-login Bash shell strings with overlay/OCC included.
 
-### E. Phase 3T — remaining ordered implementation and deferred gate closeout
+### E. Phase 3T — closed sidecar and deferred gate closeout
 1. **CP-4t is closed for Docker shared-workspace command/PTY paths.** Keep `bench/phase3t-pty-command-docker-20260601-current-eos-paths-post-notify.json`, `bench/phase3t-pty-command-docker-20260601-current-eos-paths-timeout-cancel-fix.json`, `bench/phase3t-pty-command-docker-20260601-review-cleanup.json`, and the tiered summaries above as the command/session evidence. Do not reintroduce model-facing raw argv gates.
 2. **Typed subagent surfaces and deeper loop evidence are closed.** The model-facing generic background tools are retired from runtime/catalog exposure, and the old `BaseTool.background` / `@tool(background=...)` policy is removed. `engine.background.policy` now hard-codes background-manager attachment for subagent launch and PTY sessions. `run_subagent(agent_name, prompt)` returns `subagent_session_id`; `check_subagent_progress(subagent_session_id, last_n_messages)` and `cancel_subagent(subagent_session_id)` are exposed for parent agents; subagent supervisor records use the same `subagent_session_id` rather than a hidden `bg_N` alias. Mocked query-loop coverage now proves natural completion, no-terminal failure, explicit cancel, and parent terminal submission while a subagent is active; parent terminal exit records `non_cancellation_tool_request` in typed notification/audit evidence.
 3. **Rust isolated Docker proof with exit inspection is closed.** Keep `bench/phase3t-rust-isolated-inspection-docker-20260602-post-ephemeral-removal.json` as the original leak-inspection proof and `bench/phase3t-rust-isolated-inspection-docker-20260602-host-ram-gate.json` as the current rebuilt-artifact proof after the host RAM admission gate landed. Together they show no leaked holder, mountinfo refs, cgroups, leases, scratch dirs, host veth, or active PTY records after force exit; isolated PTY stdin/progress/natural-exit/timeout/cancel notification behavior; and same-port network isolation with two agents binding port `3000`.
@@ -1146,12 +1488,12 @@ cd .. && .venv/bin/python -m pytest backend/tests/unit_test/test_sandbox/test_pr
 - **Closed inside Phase 3T:** isolated daemon RPC routing, daemon-local handle
   state, ns-holder/setns command routing, shell-free bridge/veth/nft setup,
   no-OCC isolated command/PTY writes, active-PTY exit blocking, leak inspection,
-  same-port `3000` network isolation, and ResourceCaps `TOTAL_CAP` plus
-  `host_ram_pressure` admission parity.
+  same-port `3000` network isolation, Rust setns DNS helper wiring, and
+  ResourceCaps `TOTAL_CAP` plus `host_ram_pressure` admission parity.
 - **Still later-phase non-plugin work:** AV-9 full isolated lifecycle parity
   against Python, including enter-gate/exit-drain/background-work semantics,
-  TTL/phase-budget lifecycle behavior, and the existing IWS concurrency and
-  phase-budget suites against Rust.
+  TTL/phase-budget lifecycle behavior, DNS resolver/fallback edge cases, and
+  the existing IWS concurrency and phase-budget suites against Rust.
 - **Still later-phase environment work:** CP-1b setns validation across the
   full BYO matrix (kernel floor/LTS, amd64 and arm64, non-root image, and
   read-only-rootfs image). The current proof is local amd64 Docker/dask.
@@ -1162,7 +1504,7 @@ cd .. && .venv/bin/python -m pytest backend/tests/unit_test/test_sandbox/test_pr
 ---
 
 ## Notes / risks for next session
-- **Deferred anchors are not logic.** There are no remaining Rust `todo!()` bodies in the Phase 3/3T/3.5 crates checked by the cleanup pass; the plugin PPC `// PORT` anchors remain as the precise skipped work-list and currently fail with typed deferred errors.
+- **Deferred anchors are not logic.** There are no remaining Rust `todo!()` bodies in the Phase 3/3T/3.5 crates checked by the cleanup pass. Plugin `// PORT` anchors remain useful source-evidence labels, while the skipped work-list is now the broader AV-10 parity/multiplexing/crash-recovery scope called out above.
 - **macOS can build/package the pure-Rust static musl amd64 artifact with `rust-lld`, but cannot validate Linux syscall behavior.** All syscall/overlay/OCC-contention work must be checked in the dask container (PLAN §12.2 recipe) — `cargo check` on macOS only validates the non-Linux `cfg` surface.
 - **Not committed.** Treat the worktree as parallel-agent dirty; stage intentionally.
 - **CAS byte-identity is the sharpest correctness lever** — any new code computing `manifest_root_hash`/`layer_digest` must pass `fixtures/cas/cases.json` (esp. the unicode cases).

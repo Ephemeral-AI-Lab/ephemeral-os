@@ -473,17 +473,17 @@ def build_helper_constructed(
 
 
 # ----------------------------------------------------------------------------
-# Synthesise the third message for main agents (user_msg_1 / context message).
+# Synthesise the third message for main agents (user_msg_1 / instruction packet).
 # ----------------------------------------------------------------------------
 
 
 def synthesise_main_user_msg_1(capture: CapturedAgent) -> str:
-    """Return a representative user_msg_1 (context message) for a main agent.
+    """Return a representative user_msg_1 (instruction packet) for a main agent.
 
     The runtime never persists this message into ``message.jsonl`` — the
     recorder only sees the task guidance spawn prompt (user_msg_2). The
     runner does pass ``initial_messages=[ConversationMessage.from_user_text(
-    context_message)]`` for the 2-message launch shape (see
+    instruction)]`` for the 2-message launch shape (see
     ``backend/src/request/attempt/launch.py:142``). We document that gap
     and reconstruct a faithful illustration by composing the public block
     headings the renderer would emit for this role + iteration position. Real
@@ -609,7 +609,7 @@ def coherence_verdict(
             checks["um2_terminal_catalog"] = (
                 "submit_execution_success" in um2
                 or "submit_execution_blocker" in um2
-                or "submit_execution_handoff" in um2
+                or "delegate_workflow" in um2
             )
             checks["um2_calls_advisor"] = "ask_advisor" in um2
     elif label.startswith("evaluator"):
@@ -672,7 +672,7 @@ _LEGACY_REPORT_REPLACEMENTS = (
         "tasks remain not-started.",
     ),
     ("submit_execution_failure", "submit_execution_blocker"),
-    ("executor_success_handoff", "executor"),
+    ("executor_success_delegate_workflow", "executor"),
     ("executor_success_failure", "executor"),
     ("planner_closes_or_defers", "planner"),
 )
@@ -899,7 +899,7 @@ def render_report(
         "`submit_resolver_result`, `submit_exploration_result`).\n"
         "- **Context quality:** role prompts now use recipe-shaped context "
         "plus task guidance. The executor uses a single profile and one "
-        "terminal catalogue containing success, handoff, and blocker.\n"
+        "terminal catalogue containing success, delegation, and blocker.\n"
         "- **Instruction quality:** main-agent system prompts (in "
         "`agents/profile/main/<name>.md`) embed selection criteria, hard "
         "validity rules, and design principles. Helper user_msg_2 enforces "

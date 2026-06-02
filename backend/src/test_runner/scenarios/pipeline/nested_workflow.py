@@ -29,7 +29,7 @@ def _entry_origin_nested_plan(*, failing_child: bool) -> dict[str, Any]:
             },
         ],
         "task_specs": {
-            "delegate_child": f"ACTION request_recursive_workflow package={package_id}",
+            "delegate_child": f"ACTION delegate_workflow package={package_id}",
             "recursive_return_guard": "VERIFY checkpoint=recursive_return",
             "parent_reconciliation": ("Run parent reconciliation after recursive close report."),
         },
@@ -41,7 +41,7 @@ def _entry_origin_nested_plan(*, failing_child: bool) -> dict[str, Any]:
                     "recursive_return_guard",
                     "parent_reconciliation",
                 ],
-                "prompt": ("Confirm the child workflow closed before parent reconciliation."),
+                "prompt": ("Confirm the delegated workflow closed before parent reconciliation."),
             }
         ],
     }
@@ -86,7 +86,7 @@ def _child_failure_plan() -> dict[str, Any]:
 
 
 class NestedWorkflow(ScenarioBase):
-    """Parent generator delegates to a child workflow, then reconciles."""
+    """Parent generator delegates to a delegated workflow, then reconciles."""
 
     name = "pipeline.nested_workflow"
 
@@ -100,8 +100,8 @@ class NestedWorkflow(ScenarioBase):
 
     def executor_actions(self, ctx: ScenarioContext) -> Sequence[str]:
         instruction = ctx.instruction or ""
-        if "request_recursive_workflow" in instruction:
-            return ("request_recursive_workflow:child_success",)
+        if "delegate_workflow" in instruction:
+            return ("delegate_workflow:child_success",)
         if "ACTION recursive_" in instruction:
             return ("recursive_step",)
         return ("preflight",)
@@ -115,12 +115,12 @@ class NestedWorkflow(ScenarioBase):
             },
         )
 
-    def recursive_handoff_goal(self, ctx: ScenarioContext) -> str | None:  # noqa: ARG002
-        return "Run the delegated child workflow and return a close report."
+    def delegated_workflow_goal(self, ctx: ScenarioContext) -> str | None:  # noqa: ARG002
+        return "Run the delegated workflow and return a close report."
 
 
 class NestedWorkflowFailure(ScenarioBase):
-    """Child workflow exhausts attempts and parent workflow fails cleanly."""
+    """Delegated workflow exhausts attempts and parent workflow fails cleanly."""
 
     name = "pipeline.nested_workflow_failure"
 
@@ -134,14 +134,14 @@ class NestedWorkflowFailure(ScenarioBase):
 
     def executor_actions(self, ctx: ScenarioContext) -> Sequence[str]:
         instruction = ctx.instruction or ""
-        if "request_recursive_workflow" in instruction:
-            return ("request_recursive_workflow:child_failure",)
+        if "delegate_workflow" in instruction:
+            return ("delegate_workflow:child_failure",)
         if "child_failure" in instruction:
-            return ("fail:Intentional child workflow failure.",)
+            return ("fail:Intentional delegated workflow failure.",)
         return ("preflight",)
 
     def reducer_response(self, ctx: ScenarioContext) -> ToolCallSpec:  # noqa: ARG002
-        # Never reached: the child workflow fails, so the delegating generator
+        # Never reached: the delegated workflow fails, so the delegating generator
         # fails the parent attempt before the reducer's needs are satisfied.
         return ToolCallSpec(
             submit_reducer_outcome,
@@ -151,8 +151,8 @@ class NestedWorkflowFailure(ScenarioBase):
             },
         )
 
-    def recursive_handoff_goal(self, ctx: ScenarioContext) -> str | None:  # noqa: ARG002
-        return "Run a child workflow that intentionally exhausts attempts."
+    def delegated_workflow_goal(self, ctx: ScenarioContext) -> str | None:  # noqa: ARG002
+        return "Run a delegated workflow that intentionally exhausts attempts."
 
 
 __all__ = ["NestedWorkflow", "NestedWorkflowFailure"]

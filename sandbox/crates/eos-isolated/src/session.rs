@@ -367,11 +367,16 @@ where
             last_activity: now,
         };
 
-        if let Err(err) = self.wire_handle(&mut handle) {
-            self.rollback_partial(&handle);
-            let _ = self.layer_stack.release_lease(&snapshot.lease_id);
-            return Err(err);
-        }
+        let enter_timer = Instant::now();
+        let phases_ms = match self.wire_handle(&mut handle) {
+            Ok(phases_ms) => phases_ms,
+            Err(err) => {
+                self.rollback_partial(&handle);
+                let _ = self.layer_stack.release_lease(&snapshot.lease_id);
+                return Err(err);
+            }
+        };
+        let total_ms = enter_timer.elapsed().as_secs_f64() * 1000.0;
 
         self.by_agent
             .insert(agent_id.clone(), workspace_handle_id.clone());
@@ -393,6 +398,8 @@ where
                 "veth_ns_name": handle.veth.as_ref().map(|veth| veth.ns_name.as_str()),
                 "ns_ip": handle.veth.as_ref().map(|veth| veth.ns_ip.to_string()),
                 "tree-copy": false,
+                "total_ms": total_ms,
+                "phases_ms": phases_ms,
             }),
         );
         Ok(handle)
@@ -495,27 +502,71 @@ where
         )
     }
 
-    fn wire_handle(&mut self, handle: &mut WorkspaceHandle) -> Result<(), IsolatedError> {
+    fn wire_handle(
+        &mut self,
+        handle: &mut WorkspaceHandle,
+    ) -> Result<HashMap<String, f64>, IsolatedError> {
+        let mut phases_ms = HashMap::new();
+        let mut phase_start = Instant::now();
         handle.holder_pid = self
             .runtime
             .spawn_ns_holder(handle, self.caps.setup_timeout_s)?;
+        phases_ms.insert(
+            "spawn_holder".to_owned(),
+            phase_start.elapsed().as_secs_f64() * 1000.0,
+        );
+        phase_start = Instant::now();
         handle.ns_fds = self.runtime.open_ns_fds(handle.holder_pid)?;
+        phases_ms.insert(
+            "open_ns_fds".to_owned(),
+            phase_start.elapsed().as_secs_f64() * 1000.0,
+        );
+        phase_start = Instant::now();
         self.network.initialize()?;
+        phases_ms.insert(
+            "network_initialize".to_owned(),
+            phase_start.elapsed().as_secs_f64() * 1000.0,
+        );
+        phase_start = Instant::now();
         handle.veth = Some(
             self.network
                 .install_veth(&handle.workspace_handle_id.0, handle.holder_pid)?,
         );
+        phases_ms.insert(
+            "install_veth".to_owned(),
+            phase_start.elapsed().as_secs_f64() * 1000.0,
+        );
+        phase_start = Instant::now();
         self.runtime.mount_overlay(handle, &handle.layer_paths)?;
+        phases_ms.insert(
+            "mount_overlay".to_owned(),
+            phase_start.elapsed().as_secs_f64() * 1000.0,
+        );
+        phase_start = Instant::now();
         let _dns_fallback_applied = self
             .runtime
             .configure_dns(handle, &self.caps.fallback_dns)?;
+        phases_ms.insert(
+            "configure_dns".to_owned(),
+            phase_start.elapsed().as_secs_f64() * 1000.0,
+        );
+        phase_start = Instant::now();
         self.runtime
             .signal_net_ready(handle, self.caps.setup_timeout_s)?;
+        phases_ms.insert(
+            "signal_net_ready".to_owned(),
+            phase_start.elapsed().as_secs_f64() * 1000.0,
+        );
+        phase_start = Instant::now();
         let cgroup_path = self.runtime.create_cgroup(handle)?;
+        phases_ms.insert(
+            "create_cgroup".to_owned(),
+            phase_start.elapsed().as_secs_f64() * 1000.0,
+        );
         if !cgroup_path.as_os_str().is_empty() {
             handle.cgroup_path = Some(cgroup_path);
         }
-        Ok(())
+        Ok(phases_ms)
     }
 
     fn rollback_partial(&mut self, handle: &WorkspaceHandle) {

@@ -40,7 +40,7 @@ async def test_same_agent_tool_calls_can_overlap(
     )
     assert opened.get("success") is True, opened
     try:
-        loop = asyncio.get_requestning_loop()
+        loop = asyncio.get_running_loop()
         t0 = loop.time()
         results = await asyncio.gather(
             _iws_rpc.shell(sandbox_id, "agent-A", "sleep 0.5"),

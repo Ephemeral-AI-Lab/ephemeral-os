@@ -114,6 +114,14 @@ async def test_plugin_workspace_snapshot_refresh_strategy(
         in rust_payload["status_after_ensure"]["connected_ppc_routes"]
     )
     assert (
+        "plugin.generic.pyright_document_formatting"
+        in rust_payload["status_after_ensure"]["connected_ppc_routes"]
+    )
+    assert (
+        "plugin.generic.pyright_execute_command"
+        in rust_payload["status_after_ensure"]["connected_ppc_routes"]
+    )
+    assert (
         "plugin.generic.pyright_completion"
         in rust_payload["status_after_ensure"]["connected_ppc_routes"]
     )
@@ -123,6 +131,10 @@ async def test_plugin_workspace_snapshot_refresh_strategy(
     )
     assert (
         "plugin.generic.pyright_diagnostics"
+        in rust_payload["status_after_ensure"]["connected_ppc_routes"]
+    )
+    assert (
+        "plugin.generic.pyright_code_actions"
         in rust_payload["status_after_ensure"]["connected_ppc_routes"]
     )
     assert (
@@ -166,11 +178,23 @@ async def test_plugin_workspace_snapshot_refresh_strategy(
         in rust_payload["status_after_ensure"]["connected_ppc_routes"]
     )
     assert (
+        "plugin.generic.lsp_apply_workspace_edit"
+        in rust_payload["status_after_ensure"]["connected_ppc_routes"]
+    )
+    assert (
+        "plugin.generic.lsp_apply_code_action"
+        in rust_payload["status_after_ensure"]["connected_ppc_routes"]
+    )
+    assert (
         "plugin.generic.crash_probe"
         in rust_payload["status_after_ensure"]["connected_ppc_routes"]
     )
     assert (
         "plugin.generic.hang_probe"
+        in rust_payload["status_after_ensure"]["connected_ppc_routes"]
+    )
+    assert (
+        "plugin.generic.hang_recover_ping"
         in rust_payload["status_after_ensure"]["connected_ppc_routes"]
     )
     assert (
@@ -219,6 +243,19 @@ async def test_plugin_workspace_snapshot_refresh_strategy(
     )
     assert rust_payload["ping"]["from_ppc"] is True
     assert rust_payload["ping"]["workspace_mounted"] is True
+    concurrent_ping = rust_payload["concurrent_ping"]
+    assert len(concurrent_ping) == 2
+    assert {item["echo"] for item in concurrent_ping} == {
+        "concurrent-a",
+        "concurrent-b",
+    }
+    assert {item["manifest_key"] for item in concurrent_ping} == {
+        rust_payload["ping"]["manifest_key"],
+    }
+    assert all(item["success"] is True for item in concurrent_ping)
+    assert all(item["from_ppc"] is True for item in concurrent_ping)
+    assert all(item["workspace_mounted"] is True for item in concurrent_ping)
+    assert all(item["service_id"] == "harness" for item in concurrent_ping)
     assert rust_payload["apply"]["from_self_managed"] is True
     assert rust_payload["apply"]["callback"]["success"] is True
     assert rust_payload["readback"]["content"] == "from live rust plugin\n"
@@ -241,6 +278,21 @@ async def test_plugin_workspace_snapshot_refresh_strategy(
         rust_payload["multi_readback_b"]["content"]
         == "from live rust plugin multi b\n"
     )
+    assert rust_payload["shell_publish"]["exit_code"] == 0
+    assert rust_payload["shell_publish"]["status"] in {"ok", "committed"}
+    assert rust_payload["shell_readback"]["content"] == "from live rust shell publish\n"
+    assert rust_payload["shell_refresh_ping"]["from_ppc"] is True
+    assert rust_payload["shell_refresh_ping"]["workspace_mounted"] is True
+    assert (
+        rust_payload["shell_refresh_ping"]["workspace_read"]["content"]
+        == "from live rust shell publish\n"
+    )
+    shell_refresh_status = _service_status(
+        rust_payload["status_after_shell_refresh"],
+        "harness",
+    )
+    assert shell_refresh_status["state"] == "ready"
+    assert shell_refresh_status["refresh_count"] >= 1
     assert rust_payload["refresh_ping"]["from_ppc"] is True
     assert rust_payload["refresh_ping"]["workspace_mounted"] is True
     assert (
@@ -263,6 +315,16 @@ async def test_plugin_workspace_snapshot_refresh_strategy(
     )
     assert adapter_status["state"] == "ready"
     assert adapter_status["refresh_count"] >= 1
+    co_shared_refresh = rust_payload["co_shared_refresh"]
+    assert co_shared_refresh["first_service_id"] == "harness"
+    assert co_shared_refresh["second_service_id"] == "adapter_harness"
+    assert co_shared_refresh["first_state"] == "ready"
+    assert co_shared_refresh["second_state"] == "ready"
+    assert co_shared_refresh["same_manifest_key"] is True
+    assert co_shared_refresh["first_refresh_count"] >= 1
+    assert co_shared_refresh["second_refresh_count"] >= 1
+    assert co_shared_refresh["first_restart_count"] == 0
+    assert co_shared_refresh["second_restart_count"] == 0
     assert rust_payload["pyright_seed"]["success"] is True
     assert rust_payload["pyright_symbols"]["from_pyright_adapter"] is True
     assert rust_payload["pyright_symbols"]["workspace_mounted"] is True
@@ -297,7 +359,42 @@ async def test_plugin_workspace_snapshot_refresh_strategy(
     assert capability_supports["references"] is True
     assert capability_supports["rename"] is True
     assert capability_supports["code_action"] is True
+    assert capability_supports["document_formatting"] is False
+    assert capability_supports["document_range_formatting"] is False
+    assert capability_supports["execute_command_provider"] is True
+    assert capability_supports["execute_command"] is False
+    assert (
+        rust_payload["pyright_capabilities"]["lsp"]["raw"]["executeCommandProvider"][
+            "commands"
+        ]
+        == []
+    )
+    code_action_provider = rust_payload["pyright_capabilities"]["lsp"]["raw"][
+        "codeActionProvider"
+    ]
+    assert "source.organizeImports" in code_action_provider["codeActionKinds"]
     assert capability_supports["call_hierarchy"] is True
+    assert rust_payload["pyright_document_formatting"]["from_pyright_adapter"] is True
+    assert rust_payload["pyright_document_formatting"]["workspace_mounted"] is True
+    assert rust_payload["pyright_document_formatting"]["success"] is False
+    formatting_lsp = rust_payload["pyright_document_formatting"]["lsp"]
+    assert formatting_lsp["protocol"] == "lsp-jsonrpc"
+    assert formatting_lsp["path"] == "live_plugin_pyright.py"
+    assert formatting_lsp["method"] == "textDocument/formatting"
+    assert formatting_lsp["capability"] == "documentFormattingProvider"
+    assert formatting_lsp["supported"] is False
+    assert formatting_lsp["unsupported"] is True
+    assert formatting_lsp["edit_count"] == 0
+    assert rust_payload["pyright_execute_command"]["from_pyright_adapter"] is True
+    assert rust_payload["pyright_execute_command"]["workspace_mounted"] is True
+    assert rust_payload["pyright_execute_command"]["success"] is False
+    execute_lsp = rust_payload["pyright_execute_command"]["lsp"]
+    assert execute_lsp["protocol"] == "lsp-jsonrpc"
+    assert execute_lsp["method"] == "workspace/executeCommand"
+    assert execute_lsp["capability"] == "executeCommandProvider.commands"
+    assert execute_lsp["supported"] is False
+    assert execute_lsp["unsupported"] is True
+    assert execute_lsp["commands"] == []
     assert rust_payload["pyright_hover"]["from_pyright_adapter"] is True
     assert rust_payload["pyright_hover"]["workspace_mounted"] is True
     assert rust_payload["pyright_hover"]["lsp"]["protocol"] == "lsp-jsonrpc"
@@ -351,6 +448,31 @@ async def test_plugin_workspace_snapshot_refresh_strategy(
         "live_caller"
         in rust_payload["pyright_call_hierarchy"]["lsp"]["incoming_names"]
     )
+    assert rust_payload["pyright_call_hierarchy_outgoing"]["from_pyright_adapter"] is True
+    assert rust_payload["pyright_call_hierarchy_outgoing"]["workspace_mounted"] is True
+    assert (
+        rust_payload["pyright_call_hierarchy_outgoing"]["lsp"]["protocol"]
+        == "lsp-jsonrpc"
+    )
+    assert (
+        rust_payload["pyright_call_hierarchy_outgoing"]["lsp"]["path"]
+        == "live_plugin_call_hierarchy.py"
+    )
+    assert rust_payload["pyright_call_hierarchy_outgoing"]["lsp"]["position"]["line"] == 3
+    assert (
+        rust_payload["pyright_call_hierarchy_outgoing"]["lsp"]["position"]["character"]
+        == len("def live_ca")
+    )
+    assert rust_payload["pyright_call_hierarchy_outgoing"]["lsp"]["item_count"] >= 1
+    assert (
+        "live_caller"
+        in rust_payload["pyright_call_hierarchy_outgoing"]["lsp"]["item_names"]
+    )
+    assert rust_payload["pyright_call_hierarchy_outgoing"]["lsp"]["outgoing_count"] >= 1
+    assert (
+        "live_callee"
+        in rust_payload["pyright_call_hierarchy_outgoing"]["lsp"]["outgoing_names"]
+    )
     assert rust_payload["pyright_document_highlight"]["from_pyright_adapter"] is True
     assert rust_payload["pyright_document_highlight"]["workspace_mounted"] is True
     assert (
@@ -390,6 +512,34 @@ async def test_plugin_workspace_snapshot_refresh_strategy(
         if location["path"] == "live_plugin_pyright.py"
     }
     assert {0, 3}.issubset(reference_lines)
+    assert rust_payload["lsp_apply_workspace_edit_seed"]["success"] is True
+    assert rust_payload["lsp_apply_workspace_edit"]["from_lsp_workspace_edit"] is True
+    assert rust_payload["lsp_apply_workspace_edit"]["from_self_managed"] is True
+    assert rust_payload["lsp_apply_workspace_edit"]["workspace_mounted"] is True
+    assert rust_payload["lsp_apply_workspace_edit"]["callback"]["success"] is True
+    assert (
+        "live_plugin_apply_workspace_edit.py"
+        in rust_payload["lsp_apply_workspace_edit"]["changed_paths"]
+    )
+    assert (
+        rust_payload["lsp_apply_workspace_edit_readback"]["content"]
+        == "alpha\nedited\n"
+    )
+    assert rust_payload["lsp_apply_code_action_seed"]["success"] is True
+    assert rust_payload["lsp_apply_code_action"]["from_lsp_code_action"] is True
+    assert rust_payload["lsp_apply_code_action"]["from_self_managed"] is True
+    assert rust_payload["lsp_apply_code_action"]["workspace_mounted"] is True
+    assert rust_payload["lsp_apply_code_action"]["action_title"] == "Replace first line"
+    assert rust_payload["lsp_apply_code_action"]["action_kind"] == "quickfix"
+    assert rust_payload["lsp_apply_code_action"]["callback"]["success"] is True
+    assert (
+        "live_plugin_apply_code_action.py"
+        in rust_payload["lsp_apply_code_action"]["changed_paths"]
+    )
+    assert (
+        rust_payload["lsp_apply_code_action_readback"]["content"]
+        == "after\nunchanged\n"
+    )
     pyright_status = _service_status(
         rust_payload["status_after_pyright"], "pyright_harness"
     )
@@ -427,6 +577,27 @@ async def test_plugin_workspace_snapshot_refresh_strategy(
     assert any(
         code == "reportUndefinedVariable"
         for code in rust_payload["pyright_diagnostics"]["lsp"]["diagnostic_codes"]
+    )
+    assert rust_payload["pyright_code_action_seed"]["success"] is True
+    assert rust_payload["pyright_code_actions"]["from_pyright_adapter"] is True
+    assert rust_payload["pyright_code_actions"]["workspace_mounted"] is True
+    assert rust_payload["pyright_code_actions"]["lsp"]["protocol"] == "lsp-jsonrpc"
+    assert (
+        rust_payload["pyright_code_actions"]["lsp"]["path"]
+        == "live_plugin_code_actions.py"
+    )
+    assert rust_payload["pyright_code_actions"]["lsp"]["position"]["line"] == 0
+    assert rust_payload["pyright_code_actions"]["lsp"]["position"]["character"] == 0
+    assert (
+        "source.organizeImports"
+        in rust_payload["pyright_code_actions"]["lsp"]["only"]
+    )
+    assert isinstance(rust_payload["pyright_code_actions"]["lsp"]["actions"], list)
+    assert rust_payload["pyright_code_actions"]["lsp"]["action_count"] >= 0
+    assert (
+        rust_payload["pyright_code_actions"]["lsp"]["action_count"] == 0
+        or "source.organizeImports"
+        in rust_payload["pyright_code_actions"]["lsp"]["action_kinds"]
     )
     assert rust_payload["pyright_signature_seed"]["success"] is True
     assert rust_payload["pyright_signature_help"]["from_pyright_adapter"] is True
@@ -488,8 +659,26 @@ async def test_plugin_workspace_snapshot_refresh_strategy(
         "plugin.generic.hang_probe"
         not in rust_payload["status_after_hang"]["connected_ppc_routes"]
     )
+    assert (
+        "plugin.generic.hang_recover_ping"
+        not in rust_payload["status_after_hang"]["connected_ppc_routes"]
+    )
     hang_status = _service_status(rust_payload["status_after_hang"], "hang_harness")
     assert hang_status["state"] == "stopped"
+    assert rust_payload["hang_recover_ping"]["from_timeout_recovered_service"] is True
+    assert rust_payload["hang_recover_ping"]["from_ppc"] is True
+    assert rust_payload["hang_recover_ping"]["workspace_mounted"] is True
+    assert rust_payload["hang_recover_ping"]["echo"] == "after-timeout-recover"
+    assert (
+        "plugin.generic.hang_recover_ping"
+        in rust_payload["status_after_hang_recover"]["connected_ppc_routes"]
+    )
+    hang_recover_status = _service_status(
+        rust_payload["status_after_hang_recover"],
+        "hang_harness",
+    )
+    assert hang_recover_status["state"] == "ready"
+    assert hang_recover_status["restart_count"] >= 1
     assert rust_payload["recover_probe_first"]["expected_failure"] is True
     assert (
         "plugin.generic.recover_probe"
@@ -514,6 +703,11 @@ async def test_plugin_workspace_snapshot_refresh_strategy(
     assert rust_payload["post_cleanup_metrics"]["active_leases"] == 0
     assert rust_payload["post_cleanup_metrics"]["orphan_layer_count"] == 0
     assert rust_payload["post_cleanup_metrics"]["missing_layer_count"] == 0
+    assert rust_payload["processes_before_cleanup"]["count"] >= 1
+    assert rust_payload["processes_after_cleanup"]["count"] == 0
+    assert rust_payload["status_after_cleanup"]["connected_ppc_routes"] == []
+    assert rust_payload["status_after_cleanup"]["connected_ppc_services"] == []
+    assert rust_payload["status_after_cleanup"]["running_service_processes"] == []
 
 
 def _service_status(status_payload: dict[str, Any], service_id: str) -> dict[str, Any]:

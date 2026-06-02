@@ -2,7 +2,7 @@
 
 Scenarios are pure descriptions; the mock runner translates them into actual
 tool calls. The protocol is intentionally narrow: planner/executor/reducer
-decisions and optional recursive-handoff goal text.
+decisions and optional delegated-workflow goal text.
 """
 
 from __future__ import annotations
@@ -50,7 +50,7 @@ class Scenario(Protocol):
 
     def reducer_response(self, ctx: ScenarioContext) -> ToolCallSpec: ...
 
-    def recursive_handoff_goal(self, ctx: ScenarioContext) -> str | None: ...
+    def delegated_workflow_goal(self, ctx: ScenarioContext) -> str | None: ...
 
 
 class ScenarioBase:
@@ -70,7 +70,7 @@ class ScenarioBase:
     def reducer_response(self, ctx: ScenarioContext) -> ToolCallSpec:  # noqa: ARG002
         raise NotImplementedError
 
-    def recursive_handoff_goal(self, ctx: ScenarioContext) -> str | None:  # noqa: ARG002
+    def delegated_workflow_goal(self, ctx: ScenarioContext) -> str | None:  # noqa: ARG002
         return None
 
 

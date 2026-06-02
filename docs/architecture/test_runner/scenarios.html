@@ -60,7 +60,7 @@
     <li>Scenarios live under <code>backend/src/test_runner/scenarios/</code>. Composite scenarios live at the top level; focused scenarios are grouped by concern under subpackages.</li>
     <li><code>SCENARIO_REGISTRY</code> is the catalog (~45 entries across pipeline, sandbox, capacity, planner-validation, and composite lanes).</li>
     <li>Scenarios never own runner state. The mock runner drives real Workflow tool calls, the bus carries mock side-channel events, and <code>ScenarioLifecycle</code> accumulates those records for the report.</li>
-    <li>The decision protocol is intentionally narrow: planner / executor / reducer responses and optional recursive-handoff goal text.</li>
+    <li>The decision protocol is intentionally narrow: planner / executor / reducer responses and optional delegated-workflow goal text.</li>
   </ul>
 </div>
 <div class="wiki-links" aria-label="Scenarios related pages">
@@ -77,11 +77,11 @@
 <div class="edge-list" aria-label="Scenario protocol methods">
   <div><b>name</b><span>Dotted-path identifier used by <code>SCENARIO_REGISTRY</code> and as the audit recorder's scenario label. Example: <code>pipeline.initial_workflow</code>, <code>sandbox.background_shell_golden</code>.</span></div>
   <div><b>planner_response(ctx)</b><span>Returns a <code>ToolCallSpec(submit_planner_outcome, args)</code>. <code>args</code> is the plan: <code>tasks</code> (each <code>{id, agent_name, needs}</code>), <code>task_specs</code> (per-task-id spec text), <code>reducers</code> (each <code>{id, needs, prompt}</code>), and optional <code>deferred_goal_for_next_iteration</code>. The plan is a DAG of generator + reducer tasks joined by <code>needs</code>; there is no <code>plan_spec</code> or <code>evaluation_criteria</code>.</span></div>
-  <div><b>executor_actions(ctx)</b><span>Returns a sequence of action tokens consumed by the runner's executor dispatcher: <code>"preflight"</code>, <code>"fail"</code>/<code>"fail:reason"</code>, <code>"request_recursive_workflow:&lt;pkg&gt;"</code>, probe action names. Default is empty.</span></div>
+  <div><b>executor_actions(ctx)</b><span>Returns a sequence of action tokens consumed by the runner's executor dispatcher: <code>"preflight"</code>, <code>"fail"</code>/<code>"fail:reason"</code>, <code>"delegate_workflow:&lt;pkg&gt;"</code>, probe action names. Default is empty.</span></div>
   <div><b>reducer_response(ctx)</b><span>Returns a <code>ToolCallSpec</code> targeting <code>submit_reducer_outcome</code>. The reducer is the plan task that decides whether the attempt passes; its task <code>prompt</code> can carry a <code>VERIFY checkpoint=...</code> directive that the executor lane reads back.</span></div>
-  <div><b>recursive_handoff_goal(ctx)</b><span>Optional goal text used when an executor action requests a recursive (child-workflow) handoff; defaults to <code>None</code> (the runner synthesizes a placeholder).</span></div>
+  <div><b>delegated_workflow_goal(ctx)</b><span>Optional goal text used when an executor action calls <code>delegate_workflow</code>; defaults to <code>None</code> (the runner synthesizes a placeholder).</span></div>
 </div>
-<p><code>ScenarioContext</code> is the live state visible to the scenario at each decision: <code>attempt</code>, <code>iteration</code>, <code>workflow</code>, <code>prompt</code>, <code>metadata</code>, <code>audit_recorder</code>, <code>task_id</code>, <code>agent_name</code>, <code>context_message</code>, plus optional <code>requirement_ledger</code>, <code>package_plan</code>, and <code>matrix_plan</code> for composite scenarios.</p>
+<p><code>ScenarioContext</code> is the live state visible to the scenario at each decision: <code>attempt</code>, <code>iteration</code>, <code>workflow</code>, <code>prompt</code>, <code>metadata</code>, <code>audit_recorder</code>, <code>task_id</code>, <code>agent_name</code>, <code>instruction</code>, plus optional <code>requirement_ledger</code>, <code>package_plan</code>, and <code>matrix_plan</code> for composite scenarios.</p>
 </section>
 
 <section id="scenario-lifecycle-wiring" data-last-reviewed-commit="d32994314" data-evidence-paths="backend/src/test_runner/scenarios/builder.py backend/src/test_runner/scenarios/lifecycle.py backend/src/test_runner/agent/mock/scenario_loop_runner.py backend/src/test_runner/agent/mock/scenario_adapter.py">
@@ -153,7 +153,7 @@ run_pipeline executes; per event:
 <div class="edge-list" aria-label="Graph-backed assertion helpers">
   <div><b>count_role_tasks(report, role, status=)</b><span>Counts plan tasks whose <code>agent_name</code> matches <em>role</em> (<code>planner</code> / <code>executor</code> / <code>reducer</code>) across <code>report.graph_summary</code>. Use <code>status="done"</code> or <code>status="failed"</code> for outcome-specific checks.</span></div>
   <div><b>count_deferred_attempts(report)</b><span>Counts attempts that wrote <code>deferred_goal_for_next_iteration</code>, replacing old planner deferral event assertions.</span></div>
-  <div><b>recursive_workflows(graph_summary)</b><span>Finds the delegated (child) workflows — those whose <code>parent_task_id</code> does NOT end in <code>:root</code> (the synthetic run-level bootstrap task that parents the entry workflow), replacing old recursive workflow lifecycle events.</span></div>
+  <div><b>recursive_workflows(graph_summary)</b><span>Finds nested delegated workflows — those whose <code>parent_task_id</code> does not start with <code>root-</code>. Entry-origin delegated workflows are parented by the request root Task; nested delegated workflows are parented by the launching generator task.</span></div>
 </div>
 <div class="summary">
   <ul>

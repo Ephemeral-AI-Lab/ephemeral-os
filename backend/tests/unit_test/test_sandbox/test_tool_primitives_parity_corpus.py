@@ -16,7 +16,7 @@ from sandbox.shared.tool_primitives.write import write_file
 _CORPUS = (
     Path(__file__).resolve().parents[3]
     / "src"
-    / "task_center_runner"
+    / "test_runner"
     / "tests"
     / "mock"
     / "sandbox"

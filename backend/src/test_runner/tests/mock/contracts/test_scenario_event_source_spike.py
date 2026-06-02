@@ -5,7 +5,7 @@ A scripted :class:`ScenarioEventSource` drives a mock agent through the REAL
 the production lifecycle, with only the event *source* swapped. This validates
 the scripted event-source approach:
 
-  1. **Tool effect through real dispatch** — a scripted ``shell`` call actually
+  1. **Tool effect through real dispatch** — a scripted ``exec_command`` call
      runs in the sandbox and its output reaches the agent.
   2. **Terminal-alone enforcement** — a terminal batched with a sibling is
      rejected by the real loop; nothing executes.
@@ -15,7 +15,7 @@ the scripted event-source approach:
        * foreground tool counted exactly once,
        * rejected-batch tools counted (at stream time) even though they never
          execute (the §7 Symptom A fix),
-       * background tool counted twice (stream delta + ungated body — Symptom B).
+       * typed PTY command controls use the current session tool surface.
   4. **Terminal tool_use exposed** in the returned transcript.
 
 The api_client is built by ``spawn_agent`` but never used — ``event_source``
@@ -25,6 +25,7 @@ model row suffice (no live LLM, no API key).
 
 from __future__ import annotations
 
+import json
 import uuid
 from collections.abc import Iterator
 from typing import Any
@@ -42,9 +43,13 @@ from test_runner.agent.mock.event_source import (
     TurnScript,
 )
 from test_runner.core.stores import TaskStoreBundle
-from test_runner.tests._live_config import database_configured
+from test_runner.tests._live_config import (
+    database_configured,
+    rust_sandbox_runtime_unavailable_reason,
+)
 
 pytestmark = pytest.mark.asyncio
+_RUST_RUNTIME_UNAVAILABLE = rust_sandbox_runtime_unavailable_reason()
 
 
 class _UnusedClient:
@@ -162,6 +167,10 @@ def _completions(
 
 
 @pytest.mark.skipif(not database_configured(), reason="database URL not configured")
+@pytest.mark.skipif(
+    _RUST_RUNTIME_UNAVAILABLE is not None,
+    reason=_RUST_RUNTIME_UNAVAILABLE or "Rust sandbox runtime unavailable",
+)
 async def test_foreground_tool_effect_and_budget_through_real_loop(
     workspace: dict[str, object],
     stores: TaskStoreBundle,
@@ -170,7 +179,7 @@ async def test_foreground_tool_effect_and_budget_through_real_loop(
     async def script() -> TurnScript:
         yield Turn(
             thinking="run the marker command",
-            calls=(ToolCall("shell", {"command": "echo spike-effect-ok"}),),
+            calls=(ToolCall("exec_command", {"cmd": "echo spike-effect-ok"}),),
         )
         yield Turn(
             calls=(
@@ -183,7 +192,7 @@ async def test_foreground_tool_effect_and_budget_through_real_loop(
 
     result, agent, events = await _run_script(
         workspace=workspace,
-        agent_def=_spike_agent_def(tools=["shell"]),
+        agent_def=_spike_agent_def(tools=["exec_command"]),
         script_factory=script,
     )
 
@@ -191,11 +200,11 @@ async def test_foreground_tool_effect_and_budget_through_real_loop(
     assert result.terminal_result is not None
     assert result.terminal_result.output == "spike ok"
 
-    shell_done = _completions(events, tool_name="shell", is_error=False)
-    assert shell_done, "shell never completed through real dispatch"
-    assert "spike-effect-ok" in shell_done[0].output
+    command_done = _completions(events, tool_name="exec_command", is_error=False)
+    assert command_done, "exec_command never completed through real dispatch"
+    assert "spike-effect-ok" in command_done[0].output
 
-    # Each tool_use counted exactly once at stream time: shell + terminal = 2.
+    # Each tool_use counted exactly once at stream time: command + terminal = 2.
     assert agent.query_context.tool_calls_used == 2
 
     assert "submit_advisor_feedback" in _tool_use_names(agent)
@@ -221,7 +230,7 @@ async def test_terminal_alone_enforced_and_rejected_batch_budget(
                     "submit_advisor_feedback",
                     {"verdict": "approve", "summary": "batched (should reject)"},
                 ),
-                ToolCall("shell", {"command": "echo should-not-run"}),
+                ToolCall("exec_command", {"cmd": "echo should-not-run"}),
             )
         )
         # Recover with the terminal alone.
@@ -236,7 +245,7 @@ async def test_terminal_alone_enforced_and_rejected_batch_budget(
 
     result, agent, events = await _run_script(
         workspace=workspace,
-        agent_def=_spike_agent_def(tools=["shell"]),
+        agent_def=_spike_agent_def(tools=["exec_command"]),
         script_factory=script,
     )
 
@@ -249,7 +258,7 @@ async def test_terminal_alone_enforced_and_rejected_batch_budget(
         e.output for e in rejected
     ]
     # The batched sibling must NOT have executed.
-    assert not _completions(events, tool_name="shell", is_error=False)
+    assert not _completions(events, tool_name="exec_command", is_error=False)
 
     # Stream-time counting fires for the 2 rejected tools (even though neither
     # executed) + the solo terminal = 3 — the §7 Symptom A parity guarantee.
@@ -257,54 +266,71 @@ async def test_terminal_alone_enforced_and_rejected_batch_budget(
 
 
 # ---------------------------------------------------------------------------
-# Criterion 3 (background): a background tool is counted twice (Symptom B).
+# Criterion 3 (PTY): typed command/session controls replace legacy background shell.
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.skipif(not database_configured(), reason="database URL not configured")
-async def test_background_tool_counted_twice(
+@pytest.mark.skipif(
+    _RUST_RUNTIME_UNAVAILABLE is not None,
+    reason=_RUST_RUNTIME_UNAVAILABLE or "Rust sandbox runtime unavailable",
+)
+async def test_pty_command_control_budget_through_real_loop(
     workspace: dict[str, object],
     stores: TaskStoreBundle,
     _active_spike_model: None,
 ) -> None:
     async def script() -> TurnScript:
-        # Launch a background shell.
-        yield Turn(
+        blocks = yield Turn(
             calls=(
                 ToolCall(
-                    "shell", {"command": "echo bg-done", "background": True}
+                    "exec_command",
+                    {
+                        "cmd": "bash --noprofile --norc",
+                        "tty": True,
+                        "yield_time_ms": 0,
+                    },
                 ),
             )
         )
-        # Block until it settles so its (ungated) body deterministically runs +
-        # counts before we terminate.
-        yield Turn(calls=(ToolCall("wait_background_tasks", {}),))
+        payload = json.loads(blocks[0].content)
+        pty_session_id = str(payload["pty_session_id"])
+        yield Turn(
+            calls=(
+                ToolCall(
+                    "write_pty_command_stdin",
+                    {
+                        "pty_session_id": pty_session_id,
+                        "chars": "echo pty-done; exit\n",
+                    },
+                ),
+            )
+        )
         yield Turn(
             calls=(
                 ToolCall(
                     "submit_advisor_feedback",
-                    {"verdict": "approve", "summary": "bg ok"},
+                    {"verdict": "approve", "summary": "pty ok"},
                 ),
             )
         )
 
     result, agent, events = await _run_script(
         workspace=workspace,
-        agent_def=_spike_agent_def(tools=["shell"]),
+        agent_def=_spike_agent_def(
+            tools=["exec_command", "write_pty_command_stdin"]
+        ),
         script_factory=script,
     )
 
     assert result.status == "completed", result.error
     assert result.terminal_result is not None
-    assert result.terminal_result.output == "bg ok"
+    assert result.terminal_result.output == "pty ok"
 
-    # Background body actually executed in the sandbox.
+    # PTY body actually executed in the sandbox.
     assert any(
-        "bg-done" in event.output for event in _completions(events, is_error=False)
+        "pty-done" in event.output for event in _completions(events, is_error=False)
     ), [e.output for e in _completions(events)]
 
-    # Accounting (stream-time deltas + the background body's ungated count):
-    #   shell-bg delta (1) + wait delta (1) + shell-bg body (1) + terminal (1) = 4.
-    # The background shell therefore contributes 2 — the foreground analog
-    # would contribute 1 — which is the Symptom B parity the real provider has.
-    assert agent.query_context.tool_calls_used == 4
+    # Accounting: exec_command + write_pty_command_stdin + terminal.
+    assert agent.query_context.tool_calls_used == 3

@@ -1,4 +1,4 @@
-"""Task-center runner config."""
+"""Test-runner config."""
 
 from __future__ import annotations
 
@@ -15,6 +15,7 @@ class LiveE2EConfig(ModuleConfigBase):
 
     heavy_enabled: bool = False
     capacity_enabled: bool = False
+    concurrent_sandbox_runners: int = Field(default=3, ge=0)
     real_agent_max_duration_s: float = Field(default=1800.0, gt=0)
 
 
@@ -26,7 +27,7 @@ class DaemonAuditPullConfig(ModuleConfigBase):
     ``docs/daemon-audit-pull-consolidation-v3/phase-3-report-and-release-gates.md``).
     Operators can opt out via ``EOS__RUNNER__DAEMON_AUDIT_PULL__ENABLED=false``
     or the shorter ``EOS_DAEMON_AUDIT_PULL_ENABLED=false`` env binding
-    consumed by :mod:`task_center_runner.audit.recorder`.
+    consumed by :mod:`test_runner.audit.recorder`.
 
     ``floor_ms`` mirrors ``EOS_DAEMON_AUDIT_PULL_FLOOR_MS``; ``stream_fallback``
     mirrors ``EOS_AUDIT_STREAM_FALLBACK``. Env vars retain precedence when
@@ -50,13 +51,13 @@ class AuditWarningsConfig(ModuleConfigBase):
 
 
 class RunnerConfig(ModuleConfigBase):
-    """Workflow runner defaults."""
+    """Test-runner defaults."""
 
     audit_dir: Path = Path(".sweevo_runs")
-    run_label: str = "task_center_runner"
+    run_label: str = "test_runner"
     live_e2e: LiveE2EConfig = Field(default_factory=LiveE2EConfig)
     sandbox_reuse_mode: Literal["fresh", "reuse", "force_fresh"] = "fresh"
-    sandbox_quota: int = Field(default=5, ge=0)
+    sandbox_quota: int = Field(default=3, ge=0)
     daemon_audit_pull: DaemonAuditPullConfig = Field(
         default_factory=DaemonAuditPullConfig
     )

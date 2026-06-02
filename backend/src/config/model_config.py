@@ -33,7 +33,7 @@ def get_active_model_kwargs() -> dict[str, Any]:
 
     Plan §A1/A5: ``class_path`` is the dispatch discriminator used by
     :func:`providers.provider.make_api_client` and the
-    ``coding_plan_mode_active`` derivation in ``task_center_runner.core.engine``.
+    ``coding_plan_mode_active`` derivation in ``test_runner.core.engine``.
     Both call sites read it from this dict, so we inject it from the row
     record rather than letting it stay siloed on the column.
 

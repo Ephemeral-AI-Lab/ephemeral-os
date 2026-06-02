@@ -54,22 +54,22 @@ def _ctx(
 def test_full_case_executor_actions_use_instruction() -> None:
     scenario = FullCaseUserInput()
     ctx = _ctx(
-        instruction="ACTION request_recursive_workflow package=pkg_42",
+        instruction="ACTION delegate_workflow package=pkg_42",
         prompt="this prompt should be ignored",
     )
 
-    assert scenario.executor_actions(ctx) == ("request_recursive_workflow:pkg_42",)
+    assert scenario.executor_actions(ctx) == ("delegate_workflow:pkg_42",)
 
 
 def test_full_stack_executor_actions_use_instruction() -> None:
     scenario = FullStackAdversarial()
     ctx = _ctx(
-        instruction="ACTION request_recursive_matrix package=matrix_pkg",
+        instruction="ACTION delegate_workflow_matrix package=matrix_pkg",
         prompt="fallback prompt",
     )
 
     assert scenario.executor_actions(ctx) == (
-        "request_recursive_matrix:matrix_pkg",
+        "delegate_workflow_matrix:matrix_pkg",
     )
 
 
@@ -78,11 +78,11 @@ def test_nested_workflow_dispatch_uses_instruction() -> None:
     failure = NestedWorkflowFailure()
 
     assert success.executor_actions(
-        _ctx(instruction="ACTION request_recursive_workflow package=child_success")
-    ) == ("request_recursive_workflow:child_success",)
+        _ctx(instruction="ACTION delegate_workflow package=child_success")
+    ) == ("delegate_workflow:child_success",)
     assert failure.executor_actions(
         _ctx(instruction="ACTION child_failure reason=nested_workflow")
-    ) == ("fail:Intentional child workflow failure.",)
+    ) == ("fail:Intentional delegated workflow failure.",)
 
 
 def test_generator_failure_quiescence_uses_instruction_on_attempt_one() -> None:

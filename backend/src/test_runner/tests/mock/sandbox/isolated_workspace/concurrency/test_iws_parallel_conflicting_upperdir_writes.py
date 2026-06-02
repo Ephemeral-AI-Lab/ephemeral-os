@@ -48,7 +48,7 @@ async def test_iws_parallel_conflicting_upperdir_writes(
     )
     assert opened.get("success") is True, opened
     try:
-        loop = asyncio.get_requestning_loop()
+        loop = asyncio.get_running_loop()
         started = loop.time()
         results = await asyncio.gather(
             _iws_rpc.shell(

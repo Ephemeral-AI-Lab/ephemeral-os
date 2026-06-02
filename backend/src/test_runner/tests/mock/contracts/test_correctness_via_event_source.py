@@ -22,9 +22,13 @@ from test_runner.environments.sweevo_image.fixtures import (
     run_scenario_on_sweevo_image,
 )
 from test_runner.scenarios.correctness_testing import CorrectnessTesting
-from test_runner.tests._live_config import database_configured
+from test_runner.tests._live_config import (
+    database_configured,
+    rust_sandbox_runtime_unavailable_reason,
+)
 
 pytestmark = pytest.mark.asyncio
+_RUST_RUNTIME_UNAVAILABLE = rust_sandbox_runtime_unavailable_reason()
 
 
 @pytest.fixture
@@ -50,6 +54,10 @@ def _active_mock_model(stores: TaskStoreBundle) -> Iterator[None]:
 
 
 @pytest.mark.skipif(not database_configured(), reason="database URL not configured")
+@pytest.mark.skipif(
+    _RUST_RUNTIME_UNAVAILABLE is not None,
+    reason=_RUST_RUNTIME_UNAVAILABLE or "Rust sandbox runtime unavailable",
+)
 async def test_correctness_testing_through_event_source(
     sweevo_image_instance: SWEEvoInstance,
     workspace: dict[str, object],
@@ -67,7 +75,7 @@ async def test_correctness_testing_through_event_source(
 
     # --- outcome via real store state --------------------------------------
     assert report.request_status == "done", report.metrics
-    # The re-homed probe sandbox checks (write/read/edit/shell/batch/conflict)
+    # The re-homed probe sandbox checks (write/read/edit/command/batch/conflict)
     # all passed — published by ProbeContext, collected by ScenarioLifecycle.
     assert report.sandbox_checks, "no sandbox checks recorded by probes"
     assert report.passed_sandbox_checks, [
@@ -84,9 +92,9 @@ async def test_correctness_testing_through_event_source(
 
     # --- the executor probe actually ran sandbox tools through real dispatch
     tool_names = {tc.tool_name for tc in report.tool_calls}
-    assert {"write_file", "read_file", "edit_file", "shell"}.issubset(tool_names), (
-        sorted(tool_names)
-    )
+    assert {"write_file", "read_file", "edit_file", "exec_command"}.issubset(
+        tool_names
+    ), sorted(tool_names)
 
     # --- iteration shape: eval-failure retry then a deferred continuation ----
     root = delegated[-1]

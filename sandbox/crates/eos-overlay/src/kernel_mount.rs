@@ -24,8 +24,8 @@ use std::path::{Path, PathBuf};
 use rustix::fd::AsFd;
 #[cfg(target_os = "linux")]
 use rustix::mount::{
-    fsconfig_create, fsconfig_set_flag, fsconfig_set_string, fsmount, fsopen, move_mount, unmount,
-    FsMountFlags, FsOpenFlags, MountAttrFlags, MoveMountFlags, UnmountFlags,
+    fsconfig_create, fsconfig_set_string, fsmount, fsopen, move_mount, unmount, FsMountFlags,
+    FsOpenFlags, MountAttrFlags, MoveMountFlags, UnmountFlags,
 };
 
 use crate::error::{OverlayError, Result};
@@ -89,11 +89,13 @@ impl Drop for OverlayMount {
 /// Mount an overlay filesystem at `workspace_root` from `handle`.
 ///
 /// Builds the mount via the raw API in this exact order (per the ordering
-/// invariant): `fsopen("overlay")`, `userxattr`, one
+/// invariant): `fsopen("overlay")`, one
 /// `fsconfig_string("lowerdir+", layer)` per layer in `handle.layer_paths`
-/// (newest-first), then `"upperdir"`, `"workdir"`, `fsconfig_create`,
-/// `fsmount`, and finally `move_mount` onto the real `workspace_root` (NOT a
-/// `/proc/self/fd` symlink — `move_mount(2)` rejects that as a destination).
+/// (newest-first), then real-path `"upperdir"` / `"workdir"`,
+/// `fsconfig_create`, `fsmount`, and finally `move_mount` onto the real
+/// `workspace_root` (NOT a `/proc/self/fd` symlink — `move_mount(2)` rejects
+/// that as a destination, and overlayfs rejects fd-backed upper/work paths on
+/// common kernels).
 ///
 /// # Errors
 ///
@@ -104,20 +106,23 @@ impl Drop for OverlayMount {
 pub fn mount_overlay(workspace_root: &Path, handle: &OverlayHandle) -> Result<OverlayMount> {
     // PORT backend/src/sandbox/overlay/kernel_mount.py:62-70 — fsopen/fsconfig/fsmount/move_mount
     let inputs = ValidatedMountInputs::open(workspace_root, handle)?;
-    let fsfd = fsopen("overlay", FsOpenFlags::FSOPEN_CLOEXEC).map_io()?;
-    fsconfig_set_flag(fsfd.as_fd(), "userxattr").map_io()?;
+    let fsfd =
+        fsopen("overlay", FsOpenFlags::FSOPEN_CLOEXEC).map_mount_syscall("fsopen overlay")?;
     for layer in &inputs.layer_paths {
-        fsconfig_set_string(fsfd.as_fd(), "lowerdir+", layer).map_io()?;
+        fsconfig_set_string(fsfd.as_fd(), "lowerdir+", layer)
+            .map_mount_syscall("fsconfig lowerdir+")?;
     }
-    fsconfig_set_string(fsfd.as_fd(), "upperdir", &inputs.upperdir).map_io()?;
-    fsconfig_set_string(fsfd.as_fd(), "workdir", &inputs.workdir).map_io()?;
-    fsconfig_create(fsfd.as_fd()).map_io()?;
+    fsconfig_set_string(fsfd.as_fd(), "upperdir", &inputs.upperdir)
+        .map_mount_syscall("fsconfig upperdir")?;
+    fsconfig_set_string(fsfd.as_fd(), "workdir", &inputs.workdir)
+        .map_mount_syscall("fsconfig workdir")?;
+    fsconfig_create(fsfd.as_fd()).map_mount_syscall("fsconfig create")?;
     let mount_fd = fsmount(
         fsfd.as_fd(),
         FsMountFlags::FSMOUNT_CLOEXEC,
         MountAttrFlags::empty(),
     )
-    .map_io()?;
+    .map_mount_syscall("fsmount")?;
     move_mount(
         mount_fd.as_fd(),
         "",
@@ -125,7 +130,7 @@ pub fn mount_overlay(workspace_root: &Path, handle: &OverlayHandle) -> Result<Ov
         &inputs.workspace_root,
         MoveMountFlags::MOVE_MOUNT_F_EMPTY_PATH,
     )
-    .map_io()?;
+    .map_mount_syscall("move_mount workspace_root")?;
     Ok(OverlayMount {
         workspace_root: inputs.workspace_root,
     })
@@ -148,7 +153,7 @@ pub fn unmount_overlay(workspace_root: &Path, lazy: bool) -> Result<()> {
     } else {
         UnmountFlags::empty()
     };
-    unmount(workspace_root, flags).map_io()
+    unmount(workspace_root, flags).map_mount_syscall("umount workspace_root")
 }
 
 /// Non-Linux unsupported path: overlayfs unmount syscalls do not exist off Linux.
@@ -231,14 +236,11 @@ impl ValidatedMountInputs {
         let layer_paths = (0..handle.layer_paths.len())
             .map(|idx| fd_path(&fds[idx + 1]))
             .collect();
-        let upperdir = fd_path(&fds[handle.layer_paths.len() + 1]);
-        let workdir = fd_path(&fds[handle.layer_paths.len() + 2]);
-
         Ok(Self {
             workspace_root: workspace_root.to_path_buf(),
             layer_paths,
-            upperdir,
-            workdir,
+            upperdir: handle.upperdir.clone(),
+            workdir: handle.workdir.clone(),
             _fds: fds,
         })
     }
@@ -270,7 +272,10 @@ fn open_dir_no_follow(path: &Path) -> Result<File> {
         .read(true)
         .custom_flags(libc::O_DIRECTORY | libc::O_NOFOLLOW | libc::O_CLOEXEC)
         .open(path)
-        .map_err(OverlayError::MountSyscall)
+        .map_err(|source| OverlayError::MountSyscall {
+            context: "open directory",
+            source,
+        })
 }
 
 #[cfg(target_os = "linux")]
@@ -347,20 +352,25 @@ fn decode_mountinfo_path(raw: &str) -> PathBuf {
 
 #[cfg(target_os = "linux")]
 trait MountIo<T> {
-    fn map_io(self) -> Result<T>;
+    fn map_mount_syscall(self, context: &'static str) -> Result<T>;
 }
 
 #[cfg(target_os = "linux")]
 impl<T> MountIo<T> for rustix::io::Result<T> {
-    fn map_io(self) -> Result<T> {
-        self.map_err(|err| OverlayError::MountSyscall(std::io::Error::from(err)))
+    fn map_mount_syscall(self, context: &'static str) -> Result<T> {
+        self.map_err(|err| OverlayError::MountSyscall {
+            context,
+            source: std::io::Error::from(err),
+        })
     }
 }
 
 #[cfg(all(test, target_os = "linux"))]
 mod tests {
-    use super::{decode_mountinfo_path, normalize_mount_path};
-    use std::path::Path;
+    use super::{decode_mountinfo_path, normalize_mount_path, OverlayHandle, ValidatedMountInputs};
+    use std::path::{Path, PathBuf};
+
+    type TestResult<T = ()> = std::result::Result<T, Box<dyn std::error::Error + Send + Sync>>;
 
     #[test]
     fn decodes_mountinfo_octal_escapes() {
@@ -376,5 +386,36 @@ mod tests {
             normalize_mount_path(Path::new("/tmp/./a/../b")),
             Path::new("/tmp/b")
         );
+    }
+
+    #[test]
+    fn mount_inputs_pin_only_lowerdirs_with_fd_paths() -> TestResult {
+        let root = test_dir("workspace-root")?;
+        let lower = test_dir("lower")?;
+        let upperdir = test_dir("upper")?;
+        let workdir = test_dir("work")?;
+        let inputs = ValidatedMountInputs::open(
+            &root,
+            &OverlayHandle {
+                upperdir: upperdir.clone(),
+                workdir: workdir.clone(),
+                layer_paths: vec![lower],
+            },
+        )?;
+
+        assert!(inputs.layer_paths[0].starts_with("/proc/self/fd/"));
+        assert_eq!(inputs.upperdir, upperdir);
+        assert_eq!(inputs.workdir, workdir);
+        Ok(())
+    }
+
+    fn test_dir(name: &str) -> TestResult<PathBuf> {
+        let path = std::env::temp_dir().join(format!(
+            "eos-overlay-kernel-mount-{name}-{}",
+            std::process::id()
+        ));
+        let _ = std::fs::remove_dir_all(&path);
+        std::fs::create_dir_all(&path)?;
+        Ok(path)
     }
 }

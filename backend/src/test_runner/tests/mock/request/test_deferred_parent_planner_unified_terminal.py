@@ -13,15 +13,23 @@ from test_runner.benchmarks.sweevo.models import SWEEvoInstance
 from test_runner.scenarios import SCENARIO_REGISTRY
 from test_runner.core.stores import TaskStoreBundle
 from test_runner.environments.sweevo_image.fixtures import run_scenario_on_sweevo_image
-from test_runner.tests._live_config import database_configured
+from test_runner.tests._live_config import (
+    database_configured,
+    rust_sandbox_runtime_unavailable_reason,
+)
 
 
 pytestmark = pytest.mark.asyncio
+_RUST_RUNTIME_UNAVAILABLE = rust_sandbox_runtime_unavailable_reason()
 
 
 @pytest.mark.skipif(
     not database_configured(),
     reason="database URL not configured",
+)
+@pytest.mark.skipif(
+    _RUST_RUNTIME_UNAVAILABLE is not None,
+    reason=_RUST_RUNTIME_UNAVAILABLE or "Rust sandbox runtime unavailable",
 )
 async def test_partial_parent_uses_unified_planner_terminal(
     sweevo_image_instance: SWEEvoInstance,
@@ -57,18 +65,18 @@ def _tool_count(tool_calls: list[Any], tool_name: str) -> int:
 def _assert_partial_parent_graph(graph_summary: dict[str, Any]) -> None:
     workflows = graph_summary["workflows"]
     assert len(workflows) == 2, graph_summary
-    # Entry vs child workflow is classified by parent_task_id: the root
-    # workflow's parent is the synthetic ``<run_id>:root`` bootstrap task;
-    # the child workflow's parent is the delegating generator task.
+    # Entry vs nested delegated workflow is classified by parent_task_id:
+    # the entry-origin workflow's parent is the root Task, while the nested
+    # workflow's parent is the delegating generator task.
     root = next(
         workflow
         for workflow in workflows
-        if str(workflow.get("parent_task_id") or "").endswith(":root")
+        if str(workflow.get("parent_task_id") or "").startswith("root-")
     )
     child = next(
         workflow
         for workflow in workflows
-        if not str(workflow.get("parent_task_id") or "").endswith(":root")
+        if not str(workflow.get("parent_task_id") or "").startswith("root-")
     )
 
     assert len(root["iterations"]) == 2

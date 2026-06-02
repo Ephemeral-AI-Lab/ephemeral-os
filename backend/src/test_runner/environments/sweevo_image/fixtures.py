@@ -127,7 +127,7 @@ async def sweevo_image_sandbox(
             sweevo_image_instance,
             sandbox_id,
             _REPO_DIR,
-            install_lsp=True,
+            install_lsp=False,
         )
         sandbox_info = service.get_sandbox(sandbox_id)
         yield {
@@ -156,7 +156,7 @@ async def workspace(
             reset_sweevo_workspace,
         )
 
-        await reset_sweevo_workspace(sandbox_id, install_lsp=True)
+        await reset_sweevo_workspace(sandbox_id, install_lsp=False)
     used_sandboxes.add(sandbox_id)
     return sweevo_image_sandbox
 

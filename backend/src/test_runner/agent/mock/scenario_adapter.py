@@ -17,6 +17,7 @@ source serves whichever task/attempt the launcher routes to it.
 
 from __future__ import annotations
 
+import asyncio
 import json
 from typing import TYPE_CHECKING, Any
 
@@ -79,16 +80,23 @@ def build_scenario_context(
     audit_recorder: Any | None,
 ) -> ScenarioContext:
     """Build the live :class:`ScenarioContext` from loop ``tool_metadata``."""
-    attempt, iteration = _attempt_and_iteration(metadata)
     runtime = metadata.get("attempt_runtime")
-    workflow = runtime.workflow_store.get(iteration.workflow_id)
     task_id = str(metadata.get("task_id") or "")
     task = runtime.task_store.get_task(task_id) if task_id else None
+    attempt_id = str(metadata.get("attempt_id") or "")
+    if attempt_id:
+        attempt, iteration = _attempt_and_iteration(metadata)
+        workflow = runtime.workflow_store.get(iteration.workflow_id)
+    else:
+        attempt = None
+        iteration = None
+        workflow = None
+    rendered_prompt = prompt or (str(task.get("instruction") or "") if task else "")
     return ScenarioContext(
         attempt=attempt,
         iteration=iteration,
         workflow=workflow,
-        prompt=prompt,
+        prompt=rendered_prompt,
         metadata=metadata,
         audit_recorder=audit_recorder,
         task_id=task_id or None,
@@ -157,6 +165,70 @@ async def _advisor_script() -> TurnScript:
     )
 
 
+async def _root_script(scenario: "Scenario", ctx: ScenarioContext) -> TurnScript:
+    """Root request script: delegate the scenario workflow, then close root."""
+    goal = scenario.delegated_workflow_goal(ctx) or ctx.instruction or ctx.prompt
+    if not goal:
+        goal = f"Run mocked scenario {scenario.name}."
+    blocks = yield Turn(calls=(ToolCall("delegate_workflow", {"goal": goal}),))
+    result = normalize_result(blocks)
+    status = "success"
+    outcome = "Root delegated workflow completed."
+    if result.is_error:
+        status = "failed"
+        outcome = f"Root failed to delegate workflow: {result.output}"
+    else:
+        try:
+            payload = json.loads(result.output)
+        except (TypeError, ValueError):
+            payload = {}
+        workflow_id = str(payload.get("workflow_id") or "")
+        workflow_task_id = str(payload.get("workflow_task_id") or "")
+        if workflow_id:
+            check_args = {
+                "workflow_id": workflow_id,
+                "workflow_task_id": workflow_task_id or None,
+            }
+            for _index in range(50):
+                blocks = yield Turn(calls=(ToolCall("check_workflow_status", check_args),))
+                status_result = normalize_result(blocks)
+                if status_result.is_error:
+                    status = "failed"
+                    outcome = f"Root failed to inspect delegated workflow: {status_result.output}"
+                    break
+                try:
+                    status_payload = json.loads(status_result.output)
+                except (TypeError, ValueError):
+                    status_payload = {}
+                if str(status_payload.get("status") or "") in {
+                    "closed",
+                    "completed",
+                    "succeeded",
+                    "failed",
+                    "cancelled",
+                }:
+                    break
+                await asyncio.sleep(0.05)
+            else:
+                status = "failed"
+                outcome = "Root delegated workflow did not finish before polling budget."
+                if workflow_task_id:
+                    _ = yield Turn(
+                        calls=(
+                            ToolCall(
+                                "cancel_workflow",
+                                {
+                                    "workflow_task_id": workflow_task_id,
+                                    "reason": outcome,
+                                },
+                            ),
+                        )
+                    )
+    _ = yield Turn(
+        calls=(ToolCall("submit_root_outcome", {"status": status, "outcome": outcome}),)
+    )
+
+
 async def _executor_script(
     scenario: "Scenario",
     ctx: ScenarioContext,
@@ -182,14 +254,14 @@ async def _executor_script(
             _ = yield _ask_advisor_turn("submit_generator_outcome", blocker_args)
             _ = yield Turn(calls=(ToolCall("submit_generator_outcome", blocker_args),))
             return
-        if action.startswith("request_recursive_workflow:") or action.startswith(
-            "request_recursive_matrix:"
+        if action.startswith("delegate_workflow:") or action.startswith(
+            "delegate_workflow_matrix:"
         ):
             package_id = action.split(":", 1)[1]
-            goal_handoff = scenario.recursive_handoff_goal(ctx) or (
+            delegated_goal = scenario.delegated_workflow_goal(ctx) or (
                 f"Resolve recursive package {package_id}."
             )
-            delegate_args = {"goal": goal_handoff}
+            delegate_args = {"goal": delegated_goal}
             blocks = yield Turn(calls=(ToolCall("delegate_workflow", delegate_args),))
             result = normalize_result(blocks)
             workflow_task_id = ""
@@ -297,6 +369,8 @@ def scenario_script_for(
         prompt="",
         audit_recorder=audit_recorder,
     )
+    if role == "root":
+        return _root_script(scenario, ctx)
     if role == "planner":
         return _planner_script(scenario, ctx)
     if role == "executor":

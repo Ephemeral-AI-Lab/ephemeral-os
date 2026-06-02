@@ -378,17 +378,15 @@ pub(super) fn remount_workspace_overlay(
 // Keep the same fallible signature as the Linux remount path so refresh callers
 // stay cfg-free; off-Linux/test builds only validate overlay metadata plumbing.
 #[expect(
-    clippy::missing_const_for_fn,
     clippy::unnecessary_wraps,
     reason = "non-Linux/test parity keeps the Linux fallible helper signature"
 )]
-pub(super) fn remount_workspace_overlay(
+pub(super) const fn remount_workspace_overlay(
     _target_pid: u32,
     _workspace_root: &str,
-    overlay: &PluginServiceOverlay,
+    _overlay: &PluginServiceOverlay,
     _timeout: Duration,
 ) -> Result<(), DaemonError> {
-    let _ = (&overlay.layer_paths, &overlay.upperdir, &overlay.workdir);
     Ok(())
 }
 

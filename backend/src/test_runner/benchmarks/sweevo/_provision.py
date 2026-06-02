@@ -92,7 +92,7 @@ async def setup_sweevo_sandbox(
     mock tests keep their pre-install-lsp behavior.
     """
     await _wait_for_sandbox_exec_ready(sandbox_id, attempts=exec_ready_attempts)
-    await _exec(sandbox_id, "test -d /eos && mkdir -p /eos/mount && test -w /eos/mount")
+    await _exec(sandbox_id, _overlay_writable_root_setup_command())
     await _exec(sandbox_id, f"test -d {repo_dir} && test -d {repo_dir}/.git")
     await _exec(sandbox_id, f"{_CONDA_ACTIVATE} && python --version")
     # Retry runs may reuse the same named sandbox. Always restore the repo to
@@ -148,6 +148,33 @@ async def setup_sweevo_sandbox(
         instance.base_commit[:12],
     )
     return repo_dir
+
+
+def _overlay_writable_root_setup_command() -> str:
+    """Ensure /eos/mount resolves to a writable non-overlay upper/work root."""
+    return r"""
+set -eu
+mkdir -p /eos
+if awk '$2 == "/eos" && $3 == "tmpfs" { found = 1 } END { exit found ? 0 : 1 }' /proc/mounts; then
+    mkdir -p /eos/mount
+elif awk '$2 == "/eos-mount-scratch" && $3 == "tmpfs" { found = 1 } END { exit found ? 0 : 1 }' /proc/mounts; then
+    if [ -f /eos/daemon/runtime.pid ]; then
+        pid=$(cat /eos/daemon/runtime.pid 2>/dev/null || true)
+        if [ -n "$pid" ]; then
+            kill "$pid" 2>/dev/null || true
+        fi
+    fi
+    rm -f /eos/daemon/runtime.sock /eos/daemon/runtime.pid
+    mkdir -p /eos-mount-scratch/eos-sandbox-runtime
+    if [ -e /eos/mount ] && [ ! -L /eos/mount ]; then
+        rm -rf /eos/mount
+    fi
+    ln -sfn /eos-mount-scratch/eos-sandbox-runtime /eos/mount
+else
+    mkdir -p /eos/mount
+fi
+test -d /eos/mount && test -w /eos/mount
+"""
 
 
 async def _rebuild_sweevo_workspace_base(sandbox_id: str, repo_dir: str) -> None:

@@ -44,7 +44,7 @@ from test_runner.audit.node_id import NodeId
 class EventType(StrEnum):
     """All audit event kinds. Plan §8."""
 
-    # task center lifecycle
+    # request/workflow lifecycle
     RUN_STARTED = "run_started"
     RUN_COMPLETED = "run_completed"
     WORKFLOW_STARTED = "workflow_started"

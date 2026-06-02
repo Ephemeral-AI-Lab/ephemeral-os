@@ -77,10 +77,8 @@ class ProbeContext:
             agent_run_id=str(md.agent_run_id or ""),
             task_id=str(md.get("task_id") or ""),
             request_id=str(md.get("request_id") or ""),
-            task_id=str(md.get("task_id") or ""),
             attempt_id=str(md.get("attempt_id") or ""),
             workflow_id=str(md.get("workflow_id") or ""),
-            request_id=str(md.get("request_id") or ""),
             tool_id=str(md.get("tool_use_id") or ""),
         )
 
@@ -227,26 +225,26 @@ class ProbeContext:
 
 async def preflight_probe(ctx: ProbeContext) -> ProbeStep:
     result = yield ToolCall(
-        "shell",
-        {"command": "pwd && git rev-parse --is-inside-work-tree", "timeout": 60},
+        "exec_command",
+        {"cmd": "pwd && git rev-parse --is-inside-work-tree", "timeout": 60},
     )
-    ctx.record_check("tool.shell.preflight", result)
+    ctx.record_check("tool.exec_command.preflight", result)
 
 
 async def sandbox_integrity_probe(ctx: ProbeContext) -> ProbeStep:
     probe_path = ctx.probe_path()
 
     mkdir = yield ToolCall(
-        "shell",
+        "exec_command",
         {
-            "command": (
+            "cmd": (
                 f"mkdir -p {_PROBE_DIR} && "
                 f"printf 'shell-created\\n' > {_PROBE_DIR}/shell.txt"
             ),
             "timeout": 60,
         },
     )
-    ctx.record_check("tool.shell.gated_merge", mkdir)
+    ctx.record_check("tool.exec_command.gated_merge", mkdir)
 
     written = yield ToolCall(
         "write_file", {"file_path": probe_path, "content": "alpha\nbeta\n"}
@@ -273,10 +271,10 @@ async def sandbox_integrity_probe(ctx: ProbeContext) -> ProbeStep:
     await ctx.run_expected_conflict(probe_path)
 
     squash = yield ToolCall(
-        "shell",
-        {"command": f"printf 'squash-check\\n' >> {probe_path}", "timeout": 60},
+        "exec_command",
+        {"cmd": f"printf 'squash-check\\n' >> {probe_path}", "timeout": 60},
     )
-    ctx.record_check("tool.shell.squash_append", squash)
+    ctx.record_check("tool.exec_command.squash_append", squash)
 
     final_read = yield ToolCall(
         "read_file", {"file_path": probe_path, "start_line": 1, "end_line": 20}
@@ -290,9 +288,10 @@ async def final_probe(ctx: ProbeContext) -> ProbeStep:
     )
     ctx.assert_read_contains(final_read, "squash-check", "tool.read_file.final_probe")
     verify = yield ToolCall(
-        "shell", {"command": f"grep -q 'squash-check' {ctx.probe_path()}", "timeout": 60}
+        "exec_command",
+        {"cmd": f"grep -q 'squash-check' {ctx.probe_path()}", "timeout": 60},
     )
-    ctx.record_check("tool.shell.final_probe", verify)
+    ctx.record_check("tool.exec_command.final_probe", verify)
 
 
 PROBE_BUILDERS = {

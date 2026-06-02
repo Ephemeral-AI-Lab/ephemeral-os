@@ -25,10 +25,20 @@ from test_runner.scenarios.correctness_testing import CorrectnessTesting
 from test_runner.environments.sweevo_image.health import (
     require_sweevo_image_provider_healthy,
 )
-from test_runner.tests._live_config import database_configured
+from test_runner.tests._live_config import (
+    database_configured,
+    rust_sandbox_runtime_unavailable_reason,
+)
+
+
+_RUST_RUNTIME_UNAVAILABLE = rust_sandbox_runtime_unavailable_reason()
 
 
 @pytest.mark.asyncio
+@pytest.mark.skipif(
+    _RUST_RUNTIME_UNAVAILABLE is not None,
+    reason=_RUST_RUNTIME_UNAVAILABLE or "Rust sandbox runtime unavailable",
+)
 async def test_correctness_testing_via_live_e2e(
     sweevo_image_instance: SWEEvoInstance,
     workspace: dict[str, object],

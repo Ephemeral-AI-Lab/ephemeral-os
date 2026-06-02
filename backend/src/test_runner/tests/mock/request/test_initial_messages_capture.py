@@ -34,7 +34,10 @@ from test_runner.benchmarks.sweevo.models import SWEEvoInstance
 from test_runner.environments.sweevo_image.fixtures import run_scenario_on_sweevo_image
 from test_runner.core.stores import TaskStoreBundle
 from test_runner.scenarios import SCENARIO_REGISTRY
-from test_runner.tests._live_config import database_configured
+from test_runner.tests._live_config import (
+    database_configured,
+    rust_sandbox_runtime_unavailable_reason,
+)
 from test_runner.tests.mock._focused_scenario_contracts import (
     count_deferred_attempts,
     count_role_tasks,
@@ -43,6 +46,7 @@ from tools._terminals.registry import render_terminal_catalog
 
 
 pytestmark = pytest.mark.asyncio
+_RUST_RUNTIME_UNAVAILABLE = rust_sandbox_runtime_unavailable_reason()
 
 
 _SCENARIO_NAME = "pipeline.initial_messages_capture"
@@ -59,6 +63,10 @@ def _main_agent_profile_dir() -> Path:
 @pytest.mark.skipif(
     not database_configured(),
     reason="database URL not configured",
+)
+@pytest.mark.skipif(
+    _RUST_RUNTIME_UNAVAILABLE is not None,
+    reason=_RUST_RUNTIME_UNAVAILABLE or "Rust sandbox runtime unavailable",
 )
 async def test_initial_messages_capture(
     sweevo_image_instance: SWEEvoInstance,

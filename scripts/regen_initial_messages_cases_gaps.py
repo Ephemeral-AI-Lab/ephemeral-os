@@ -104,11 +104,11 @@ def case_12_planner_child_workflow_close_only() -> None:
     """Capture case 12 from the deferred_parent_planner_terminal_routing scenario.
 
     The scenario submits a partial plan in the parent workflow, then delegates a
-    child workflow. The child workflow's planner keeps the single ``planner`` profile,
+    delegated workflow. The delegated workflow's planner keeps the single ``planner`` profile,
     but launch-time terminal routing removes ``submit_plan_defers_goal``.
     """
     run = _latest_run("pipeline.deferred_parent_planner_terminal_routing")
-    # The child workflow directory is ``workflow_02_*`` (root is workflow_01).
+    # The delegated workflow directory is ``workflow_02_*`` (root is workflow_01).
     candidates = list(run.rglob("workflow_02_*/iteration_01_*/attempt_01_*/01_planner_*:planner/message.jsonl"))
     assert len(candidates) == 1, candidates
     jsonl = candidates[0]
@@ -118,7 +118,7 @@ def case_12_planner_child_workflow_close_only() -> None:
         case_path=CASES_DIR
         / "12_planner__child_workflow__delegated_from_deferring_parent.md",
         title=(
-            "planner - child workflow delegated from a partial-plan parent "
+            "planner - delegated workflow delegated from a partial-plan parent "
             "(only `submit_plan_closes_goal` is available)"
         ),
         source=(
@@ -127,7 +127,7 @@ def case_12_planner_child_workflow_close_only() -> None:
         ),
         notes=(
             "The parent attempt submitted a partial plan that delegated work to a "
-            "child workflow. The child workflow still launches the ``planner`` profile, "
+            "delegated workflow. The delegated workflow still launches the ``planner`` profile, "
             "but terminal routing uses ``nested_workflow_depth_gt_1`` to expose only "
             "``submit_plan_closes_goal``. Row 4's "
             "``<terminal_tool_selection>`` block therefore lists only that "

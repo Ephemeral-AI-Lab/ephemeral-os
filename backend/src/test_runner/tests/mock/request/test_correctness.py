@@ -27,10 +27,18 @@ from test_runner.scenarios.correctness_testing import (
 from test_runner.core.stores import TaskStoreBundle
 from test_runner.environments.sweevo_image.fixtures import run_scenario_on_sweevo_image
 from test_runner.benchmarks.sweevo.models import SWEEvoInstance
+from test_runner.tests._live_config import rust_sandbox_runtime_unavailable_reason
 from test_runner.tests.mock._focused_scenario_contracts import count_role_tasks
 
 
+_RUST_RUNTIME_UNAVAILABLE = rust_sandbox_runtime_unavailable_reason()
+
+
 @pytest.mark.asyncio
+@pytest.mark.skipif(
+    _RUST_RUNTIME_UNAVAILABLE is not None,
+    reason=_RUST_RUNTIME_UNAVAILABLE or "Rust sandbox runtime unavailable",
+)
 async def test_correctness_testing_scenario_runs_end_to_end(
     sweevo_image_instance: SWEEvoInstance,
     workspace: dict[str, object],
@@ -50,7 +58,7 @@ async def test_correctness_testing_scenario_runs_end_to_end(
 
     # --- task/request outcome -------------------------------------------
     assert report.request_status == "done", (
-        f"task center status was {report.request_status!r}: {report.metrics}"
+        f"request status was {report.request_status!r}: {report.metrics}"
     )
     assert report.passed_prompt_inspections, [
         item for item in report.prompt_inspections if not item.passed
@@ -143,7 +151,7 @@ def _assert_message_jsonl_contains_sandbox_tools(run_dir: Path) -> None:
         for block in message.get("content", [])
         if isinstance(block, dict) and block.get("type") == "tool_use"
     }
-    assert {"write_file", "read_file", "edit_file", "shell"}.issubset(tool_calls)
+    assert {"write_file", "read_file", "edit_file", "exec_command"}.issubset(tool_calls)
     # Advisor approval data lives on per-call ``ExecutionMetadata`` and must not
     # leak into the on-disk transcript.
     leaked_tool_uses = [

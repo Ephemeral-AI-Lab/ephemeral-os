@@ -36,12 +36,16 @@ use eos_occ::{
 use eos_overlay::{
     allocate_overlay_writable_dirs, capture_upperdir, overlay_writable_root, OverlayWritableDirs,
 };
+#[cfg(target_os = "linux")]
+use eos_protocol::LayerRef;
 use eos_protocol::{
     apply_search_replace,
     audit::{build_event, Lane},
     models::{SearchReplaceEdit, MAX_READ_BYTES},
     ErrorKind, Intent, LayerChange, LayerPath, Manifest, Request, SearchReplaceError,
 };
+#[cfg(target_os = "linux")]
+use eos_runner::{Fd, NsFds};
 use eos_runner::{RunMode, RunRequest, RunResult, ToolCall, WorkspaceRoot};
 
 use crate::error::DaemonError;
@@ -483,6 +487,10 @@ fn op_audit_reset_floor(args: &Value, _context: DispatchContext<'_>) -> Result<V
 // PORT backend/src/sandbox/daemon/workspace_tool/dispatch.py:300-317 — _read_file_from_layer_stack
 fn op_read_file(args: &Value, _context: DispatchContext<'_>) -> Result<Value, DaemonError> {
     let total_start = Instant::now();
+    #[cfg(target_os = "linux")]
+    if let Some(handle) = crate::isolated::command_handle_for_args(args) {
+        return isolated_read_file(args, &handle, total_start);
+    }
     let root = PathBuf::from(require_string(args, "layer_stack_root")?);
     let raw_path = require_string(args, "path")?;
     let binding = require_workspace_binding(&root)?;
@@ -546,6 +554,10 @@ fn op_read_file(args: &Value, _context: DispatchContext<'_>) -> Result<Value, Da
 // PORT backend/src/sandbox/daemon/workspace_tool/dispatch.py:321-363 — _write_file_to_layer_stack
 fn op_write_file(args: &Value, _context: DispatchContext<'_>) -> Result<Value, DaemonError> {
     let total_start = Instant::now();
+    #[cfg(target_os = "linux")]
+    if let Some(handle) = crate::isolated::command_handle_for_args(args) {
+        return isolated_write_file(args, &handle, total_start);
+    }
     let root = PathBuf::from(require_string(args, "layer_stack_root")?);
     let layer_path = bound_layer_path(&root, args)?;
     let content = args
@@ -610,6 +622,10 @@ fn op_write_file(args: &Value, _context: DispatchContext<'_>) -> Result<Value, D
 // PORT backend/src/sandbox/daemon/workspace_tool/dispatch.py:366-387 — _edit_file_in_layer_stack
 fn op_edit_file(args: &Value, _context: DispatchContext<'_>) -> Result<Value, DaemonError> {
     let total_start = Instant::now();
+    #[cfg(target_os = "linux")]
+    if let Some(handle) = crate::isolated::command_handle_for_args(args) {
+        return isolated_edit_file(args, &handle, total_start);
+    }
     let root = PathBuf::from(require_string(args, "layer_stack_root")?);
     let layer_path = bound_layer_path(&root, args)?;
     let edits = parse_edits(args)?;
@@ -683,9 +699,157 @@ fn op_edit_file(args: &Value, _context: DispatchContext<'_>) -> Result<Value, Da
     ))
 }
 
-/// `api.v1.shell` — fresh overlay namespace, capture upperdir, publish via OCC.
+#[cfg(target_os = "linux")]
+fn isolated_read_file(
+    args: &Value,
+    handle: &crate::isolated::CommandHandle,
+    total_start: Instant,
+) -> Result<Value, DaemonError> {
+    let layer_path = isolated_layer_path(handle, args)?;
+    let read_start = Instant::now();
+    let (bytes, exists) = isolated_read_current(handle, &layer_path)?;
+    let content = if exists {
+        let bytes = bytes.unwrap_or_default();
+        if bytes.len() > MAX_READ_BYTES {
+            return Err(DaemonError::InvalidEnvelope(format!(
+                "file too large: {} > {} bytes",
+                bytes.len(),
+                MAX_READ_BYTES
+            )));
+        }
+        String::from_utf8_lossy(&bytes).into_owned()
+    } else {
+        String::new()
+    };
+    let mut timings = isolated_timings("read", total_start, 0);
+    timings.insert(
+        "api.read.layer_stack_read_s".to_owned(),
+        json!(read_start.elapsed().as_secs_f64()),
+    );
+    record_isolated_tool_call(handle, "read_file", "ok", &[], total_start);
+    Ok(json!({
+        "success": true,
+        "workspace": "isolated",
+        "workspace_mode": "isolated",
+        "content": content,
+        "exists": exists,
+        "encoding": "utf-8",
+        "timings": Value::Object(timings),
+    }))
+}
+
+#[cfg(target_os = "linux")]
+fn isolated_write_file(
+    args: &Value,
+    handle: &crate::isolated::CommandHandle,
+    total_start: Instant,
+) -> Result<Value, DaemonError> {
+    let layer_path = isolated_layer_path(handle, args)?;
+    if !args
+        .get("overwrite")
+        .and_then(Value::as_bool)
+        .unwrap_or(true)
+    {
+        let (_bytes, exists) = isolated_read_current(handle, &layer_path)?;
+        if exists {
+            return Ok(isolated_conflict_response(
+                "write",
+                &layer_path,
+                "create_only_existing",
+                "file already exists",
+                total_start,
+            ));
+        }
+    }
+    let content = args
+        .get("content")
+        .and_then(Value::as_str)
+        .unwrap_or_default()
+        .as_bytes()
+        .to_vec();
+    isolated_write_upper(handle, &layer_path, &content)?;
+    let changed_paths = vec![layer_path.as_str().to_owned()];
+    record_isolated_tool_call(
+        handle,
+        "write_file",
+        "committed",
+        &changed_paths,
+        total_start,
+    );
+    Ok(isolated_write_response(
+        "write",
+        &layer_path,
+        &changed_paths,
+        total_start,
+        None,
+    ))
+}
+
+#[cfg(target_os = "linux")]
+fn isolated_edit_file(
+    args: &Value,
+    handle: &crate::isolated::CommandHandle,
+    total_start: Instant,
+) -> Result<Value, DaemonError> {
+    let layer_path = isolated_layer_path(handle, args)?;
+    let edits = parse_edits(args)?;
+    let (base_bytes, exists) = isolated_read_current(handle, &layer_path)?;
+    if !exists {
+        return Ok(isolated_conflict_response(
+            "edit",
+            &layer_path,
+            "aborted_version",
+            "file does not exist",
+            total_start,
+        ));
+    }
+    let mut content = String::from_utf8(base_bytes.unwrap_or_default()).map_err(|err| {
+        eos_layerstack::LayerStackError::Storage(format!("file is not utf-8 text: {err}"))
+    })?;
+    for edit in &edits {
+        match apply_search_replace(&content, &edit.old_text, &edit.new_text, edit.replace_all) {
+            Ok(next) => content = next,
+            Err(err) => {
+                return Ok(isolated_conflict_response(
+                    "edit",
+                    &layer_path,
+                    "aborted_overlap",
+                    search_replace_message(&err),
+                    total_start,
+                ));
+            }
+        }
+    }
+    isolated_write_upper(handle, &layer_path, content.as_bytes())?;
+    let changed_paths = vec![layer_path.as_str().to_owned()];
+    record_isolated_tool_call(
+        handle,
+        "edit_file",
+        "committed",
+        &changed_paths,
+        total_start,
+    );
+    Ok(isolated_write_response(
+        "edit",
+        &layer_path,
+        &changed_paths,
+        total_start,
+        Some(usize_to_i64_saturating(edits.len())),
+    ))
+}
+
+/// `api.v1.shell` — isolated session when active, else overlay/OCC publish.
 // PORT backend/src/sandbox/ephemeral_workspace/pipeline.py:130-202 — run_tool_call overlay body
-fn op_shell(args: &Value, _context: DispatchContext<'_>) -> Result<Value, DaemonError> {
+fn op_shell(args: &Value, context: DispatchContext<'_>) -> Result<Value, DaemonError> {
+    let agent_id = args
+        .get("agent_id")
+        .and_then(Value::as_str)
+        .unwrap_or("default");
+    if crate::isolated::agent_has_active_handle(agent_id) {
+        let mut command_args = args.clone();
+        command_args["cmd"] = json!(require_shell_command(args)?);
+        return crate::command::op_exec_command(&command_args, context);
+    }
     run_shell_overlay(args, Instant::now())
 }
 
@@ -1108,12 +1272,20 @@ fn capture_upperdir_for_occ(upperdir: &Path) -> Result<CapturedOverlayChanges, D
 /// `api.v1.glob` — read-only overlay namespace search.
 // PORT backend/src/sandbox/shared/tool_primitives/glob.py:20-35 — glob_files
 fn op_glob(args: &Value, _context: DispatchContext<'_>) -> Result<Value, DaemonError> {
+    #[cfg(target_os = "linux")]
+    if let Some(handle) = crate::isolated::command_handle_for_args(args) {
+        return run_isolated_read_tool(args, "glob", &handle, Instant::now());
+    }
     run_overlay_read_tool(args, "glob")
 }
 
 /// `api.v1.grep` — read-only overlay namespace content search.
 // PORT backend/src/sandbox/shared/tool_primitives/grep.py:36-102 — grep_files
 fn op_grep(args: &Value, _context: DispatchContext<'_>) -> Result<Value, DaemonError> {
+    #[cfg(target_os = "linux")]
+    if let Some(handle) = crate::isolated::command_handle_for_args(args) {
+        return run_isolated_read_tool(args, "grep", &handle, Instant::now());
+    }
     run_overlay_read_tool(args, "grep")
 }
 
@@ -1186,6 +1358,60 @@ fn run_overlay_read_tool(args: &Value, verb: &str) -> Result<Value, DaemonError>
         json!(total_start.elapsed().as_secs_f64()),
     );
     response["timings"] = Value::Object(timings);
+    Ok(response)
+}
+
+#[cfg(target_os = "linux")]
+fn run_isolated_read_tool(
+    args: &Value,
+    verb: &str,
+    handle: &crate::isolated::CommandHandle,
+    total_start: Instant,
+) -> Result<Value, DaemonError> {
+    let invocation_id = args
+        .get("invocation_id")
+        .and_then(Value::as_str)
+        .unwrap_or(verb)
+        .to_owned();
+    let ns_fds = isolated_ns_fds(&handle.ns_fds);
+    let request = RunRequest {
+        mode: if ns_fds.is_some() {
+            RunMode::SetNs
+        } else {
+            RunMode::FreshNs
+        },
+        tool_call: ToolCall {
+            invocation_id,
+            agent_id: handle.agent_id.clone(),
+            verb: verb.to_owned(),
+            intent: Intent::ReadOnly,
+            args: args.clone(),
+            background: false,
+        },
+        workspace_root: WorkspaceRoot(handle.workspace_root.clone()),
+        layer_paths: handle.layer_paths.clone(),
+        upperdir: Some(handle.upperdir.clone()),
+        workdir: Some(handle.workdir.clone()),
+        ns_fds,
+        cgroup_path: handle.cgroup_path.clone(),
+        timeout_seconds: args.get("timeout_seconds").and_then(Value::as_f64),
+    };
+    let runner = run_ns_runner_child(&request)?;
+    let mut timings = resource_timings(&isolated_manifest(handle), 0);
+    merge_runner_timings(&mut timings, &runner);
+    timings.insert(
+        "command_exec.total_s".to_owned(),
+        json!(total_start.elapsed().as_secs_f64()),
+    );
+    timings.insert(
+        format!("api.{verb}.total_s"),
+        json!(total_start.elapsed().as_secs_f64()),
+    );
+    let mut response = runner.tool_result;
+    response["workspace"] = json!("isolated");
+    response["workspace_mode"] = json!("isolated");
+    response["timings"] = Value::Object(timings);
+    record_isolated_tool_call(handle, verb, "ok", &[], total_start);
     Ok(response)
 }
 
@@ -2292,6 +2518,211 @@ fn bound_layer_path(root: &Path, args: &Value) -> Result<String, DaemonError> {
     }
 }
 
+#[cfg(target_os = "linux")]
+fn isolated_layer_path(
+    handle: &crate::isolated::CommandHandle,
+    args: &Value,
+) -> Result<LayerPath, DaemonError> {
+    let raw_path = require_string(args, "path")?;
+    let binding = WorkspaceBinding {
+        workspace_root: handle.workspace_root.to_string_lossy().into_owned(),
+        layer_stack_root: handle.layer_stack_root.to_string_lossy().into_owned(),
+        active_manifest_version: handle.manifest_version,
+        active_root_hash: handle.manifest_root_hash.clone(),
+        base_manifest_version: handle.manifest_version,
+        base_root_hash: handle.manifest_root_hash.clone(),
+    };
+    let path = if raw_path.starts_with('/') {
+        binding.layer_path_from_absolute(&raw_path)?
+    } else {
+        binding.layer_path_from_relative(&raw_path)?
+    };
+    LayerPath::parse(&path)
+        .map_err(eos_layerstack::LayerStackError::from)
+        .map_err(DaemonError::from)
+}
+
+#[cfg(target_os = "linux")]
+fn isolated_upper_path(handle: &crate::isolated::CommandHandle, layer_path: &LayerPath) -> PathBuf {
+    handle.upperdir.join(layer_path.as_str())
+}
+
+#[cfg(target_os = "linux")]
+fn isolated_read_current(
+    handle: &crate::isolated::CommandHandle,
+    layer_path: &LayerPath,
+) -> Result<(Option<Vec<u8>>, bool), DaemonError> {
+    let upper_path = isolated_upper_path(handle, layer_path);
+    match std::fs::symlink_metadata(&upper_path) {
+        Ok(metadata) if metadata.is_file() => {
+            return Ok((Some(std::fs::read(upper_path)?), true));
+        }
+        Ok(metadata) if metadata.file_type().is_symlink() => {
+            return Ok((
+                Some(
+                    std::fs::read_link(upper_path)?
+                        .to_string_lossy()
+                        .as_bytes()
+                        .to_vec(),
+                ),
+                true,
+            ));
+        }
+        Ok(_) => return Ok((None, false)),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+        Err(error) => return Err(error.into()),
+    }
+    MergedView::new(handle.layer_stack_root.clone())
+        .read_bytes(layer_path.as_str(), &isolated_manifest(handle))
+        .map_err(DaemonError::from)
+}
+
+#[cfg(target_os = "linux")]
+fn isolated_write_upper(
+    handle: &crate::isolated::CommandHandle,
+    layer_path: &LayerPath,
+    content: &[u8],
+) -> Result<(), DaemonError> {
+    let path = isolated_upper_path(handle, layer_path);
+    if let Some(parent) = path.parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+    std::fs::write(path, content)?;
+    Ok(())
+}
+
+#[cfg(target_os = "linux")]
+fn isolated_manifest(handle: &crate::isolated::CommandHandle) -> Manifest {
+    Manifest {
+        version: handle.manifest_version,
+        schema_version: 1,
+        layers: handle
+            .layer_paths
+            .iter()
+            .enumerate()
+            .map(|(index, path)| LayerRef {
+                layer_id: format!("isolated-{index}"),
+                path: path.to_string_lossy().into_owned(),
+            })
+            .collect(),
+    }
+}
+
+#[cfg(target_os = "linux")]
+fn isolated_timings(
+    verb: &str,
+    total_start: Instant,
+    changed_path_count: usize,
+) -> serde_json::Map<String, Value> {
+    let mut timings = serde_json::Map::new();
+    timings.insert(
+        "resource.command_exec.changed_path_count".to_owned(),
+        json!(usize_to_f64_saturating(changed_path_count)),
+    );
+    timings.insert(
+        format!("api.{verb}.total_s"),
+        json!(total_start.elapsed().as_secs_f64()),
+    );
+    timings
+}
+
+#[cfg(target_os = "linux")]
+fn isolated_write_response(
+    verb: &str,
+    layer_path: &LayerPath,
+    changed_paths: &[String],
+    total_start: Instant,
+    applied_edits: Option<i64>,
+) -> Value {
+    let mut changed_path_kinds = serde_json::Map::new();
+    changed_path_kinds.insert(layer_path.as_str().to_owned(), json!("write"));
+    let mut response = json!({
+        "success": true,
+        "workspace": "isolated",
+        "workspace_mode": "isolated",
+        "changed_paths": changed_paths,
+        "changed_path_kinds": Value::Object(changed_path_kinds),
+        "mutation_source": "isolated_workspace",
+        "status": "committed",
+        "conflict": null,
+        "conflict_reason": null,
+        "error": null,
+        "timings": Value::Object(isolated_timings(verb, total_start, 1)),
+    });
+    if let Some(count) = applied_edits {
+        response["applied_edits"] = json!(count);
+    }
+    response
+}
+
+#[cfg(target_os = "linux")]
+fn isolated_conflict_response(
+    verb: &str,
+    layer_path: &LayerPath,
+    reason: &str,
+    message: &str,
+    total_start: Instant,
+) -> Value {
+    json!({
+        "success": false,
+        "workspace": "isolated",
+        "workspace_mode": "isolated",
+        "changed_paths": [],
+        "changed_path_kinds": {},
+        "mutation_source": "isolated_workspace",
+        "status": reason,
+        "conflict": {
+            "reason": reason,
+            "conflict_file": layer_path.as_str(),
+            "message": message,
+        },
+        "conflict_reason": message,
+        "error": null,
+        "timings": Value::Object(isolated_timings(verb, total_start, 0)),
+    })
+}
+
+#[cfg(target_os = "linux")]
+fn record_isolated_tool_call(
+    handle: &crate::isolated::CommandHandle,
+    tool_name: &str,
+    status: &str,
+    changed_paths: &[String],
+    total_start: Instant,
+) {
+    let duration_s = total_start.elapsed().as_secs_f64();
+    crate::isolated::record_tool_call(
+        &handle.agent_id,
+        json!({
+            "tool_name": tool_name,
+            "workspace_handle_id": handle.workspace_handle_id,
+            "argv0": tool_name,
+            "exit_code": 0,
+            "status": status,
+            "changed_paths": changed_paths,
+            "published": false,
+            "duration_s": duration_s,
+            "total_ms": duration_s * 1000.0,
+            "phases_ms": {
+                "exec": duration_s * 1000.0,
+            },
+        }),
+    );
+}
+
+#[cfg(target_os = "linux")]
+fn isolated_ns_fds(map: &HashMap<String, i32>) -> Option<NsFds> {
+    if map.is_empty() {
+        return None;
+    }
+    Some(NsFds {
+        user: map.get("user").copied().map(Fd),
+        mnt: map.get("mnt").copied().map(Fd),
+        pid: map.get("pid").copied().map(Fd),
+        net: map.get("net").copied().map(Fd),
+    })
+}
+
 fn parse_edits(args: &Value) -> Result<Vec<SearchReplaceEdit>, DaemonError> {
     let edits = args
         .get("edits")
@@ -2823,7 +3254,6 @@ fn uses_overlay_or_lease(op: &str, response: &Value) -> bool {
             | "api.v1.grep"
             | "api.v1.shell"
             | "api.v1.pty.cancel"
-            | "api.v1.pty.collect_completed"
     ) {
         return true;
     }
@@ -2991,6 +3421,24 @@ mod tests {
             args: json!({}),
         });
         assert_eq!(response["handler"], "first");
+    }
+
+    #[test]
+    fn pty_collect_completed_is_background_only_not_overlay_lifecycle() {
+        let request = Request {
+            op: "api.v1.pty.collect_completed".to_owned(),
+            invocation_id: "collect-completed".to_owned(),
+            args: json!({"pty_session_id": "pty-1", "agent_id": "agent-1"}),
+        };
+
+        assert_eq!(
+            background_event_kind(&request, &json!({"success": true})),
+            Some(("background_tool.completed", "pty"))
+        );
+        assert!(!uses_overlay_or_lease(
+            &request.op,
+            &json!({"success": true})
+        ));
     }
 
     #[test]

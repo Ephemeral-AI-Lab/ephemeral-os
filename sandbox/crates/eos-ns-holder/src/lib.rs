@@ -333,32 +333,26 @@ fn parse_network_config(buf: &[u8]) -> Option<NetworkConfig> {
 /// "--rbind", "/proc", "/proc"], check=False)` with a raw `mount(MS_BIND |
 /// MS_REC)` syscall. Failure must NOT abort the holder.
 // PORT backend/src/sandbox/isolated_workspace/scripts/ns_holder.py:81-86 — mount --rbind /proc /proc, best-effort (check=False)
-#[cfg_attr(
-    not(target_os = "linux"),
-    expect(
-        clippy::missing_const_for_fn,
-        reason = "non-Linux parity keeps the Linux syscall helper shape"
-    )
-)]
+#[cfg(target_os = "linux")]
 fn rbind_proc() {
-    #[cfg(target_os = "linux")]
-    {
-        let proc = b"/proc\0";
-        // SAFETY: both source and target are static NUL-terminated strings, the
-        // filesystem type and data pointers are null as required for a bind
-        // mount, and failure is intentionally ignored to preserve Python's
-        // best-effort `mount --rbind /proc /proc` behavior.
-        let _ = unsafe {
-            libc::mount(
-                proc.as_ptr().cast(),
-                proc.as_ptr().cast(),
-                std::ptr::null::<libc::c_char>(),
-                libc::MS_BIND | libc::MS_REC,
-                std::ptr::null::<c_void>(),
-            )
-        };
-    }
+    let proc = b"/proc\0";
+    // SAFETY: both source and target are static NUL-terminated strings, the
+    // filesystem type and data pointers are null as required for a bind
+    // mount, and failure is intentionally ignored to preserve Python's
+    // best-effort `mount --rbind /proc /proc` behavior.
+    let _ = unsafe {
+        libc::mount(
+            proc.as_ptr().cast(),
+            proc.as_ptr().cast(),
+            std::ptr::null::<libc::c_char>(),
+            libc::MS_BIND | libc::MS_REC,
+            std::ptr::null::<c_void>(),
+        )
+    };
 }
+
+#[cfg(not(target_os = "linux"))]
+const fn rbind_proc() {}
 
 /// Disable IPv6 router-advertisement acceptance on every interface, shell-free.
 ///
@@ -396,75 +390,61 @@ fn disable_ipv6_ra() {
 /// Replaces `ip link set lo up` with `RTM_NEWLINK` so holder readiness does not
 /// depend on `ip(8)` being present inside the image. Best-effort.
 // PORT backend/src/sandbox/isolated_workspace/scripts/ns_holder.py:109 — ip link set lo up
-#[cfg_attr(
-    not(target_os = "linux"),
-    expect(
-        clippy::missing_const_for_fn,
-        reason = "non-Linux parity keeps the Linux syscall helper shape"
-    )
-)]
+#[cfg(target_os = "linux")]
 fn bring_loopback_up() {
-    #[cfg(target_os = "linux")]
-    {
-        let Ok(lo) = CString::new("lo") else {
-            return;
-        };
-        // SAFETY: `lo` is a valid NUL-terminated C string and `if_nametoindex`
-        // does not retain the pointer after returning.
-        let index = unsafe { libc::if_nametoindex(lo.as_ptr()) };
-        if index == 0 {
-            return;
-        }
-        let Some(ifi_family) = libc_c_int_to_u8(libc::AF_UNSPEC) else {
-            return;
-        };
-        let Ok(ifi_index) = i32::try_from(index) else {
-            return;
-        };
-        let Some(iff_up) = libc_c_int_to_u32(libc::IFF_UP) else {
-            return;
-        };
-        let msg = IfInfoMsg {
-            ifi_family,
-            ifi_pad: 0,
-            ifi_type: 0,
-            ifi_index,
-            ifi_flags: iff_up,
-            ifi_change: iff_up,
-        };
-        let Some(flags) = netlink_request_flags() else {
-            return;
-        };
-        let _ = send_netlink_message(libc::RTM_NEWLINK, flags, &msg);
+    let Ok(lo) = CString::new("lo") else {
+        return;
+    };
+    // SAFETY: `lo` is a valid NUL-terminated C string and `if_nametoindex`
+    // does not retain the pointer after returning.
+    let index = unsafe { libc::if_nametoindex(lo.as_ptr()) };
+    if index == 0 {
+        return;
     }
+    let Some(ifi_family) = libc_c_int_to_u8(libc::AF_UNSPEC) else {
+        return;
+    };
+    let Ok(ifi_index) = i32::try_from(index) else {
+        return;
+    };
+    let Some(iff_up) = libc_c_int_to_u32(libc::IFF_UP) else {
+        return;
+    };
+    let msg = IfInfoMsg {
+        ifi_family,
+        ifi_pad: 0,
+        ifi_type: 0,
+        ifi_index,
+        ifi_flags: iff_up,
+        ifi_change: iff_up,
+    };
+    let Some(flags) = netlink_request_flags() else {
+        return;
+    };
+    let _ = send_netlink_message(libc::RTM_NEWLINK, flags, &msg);
 }
+
+#[cfg(not(target_os = "linux"))]
+const fn bring_loopback_up() {}
 
 /// Configure the namespace-side veth after the daemon moved it into this netns.
 ///
 /// The daemon owns veth creation and host-side bridge attachment. The holder is
 /// already in the target netns, so it configures the peer's link state, address,
 /// and default route without `nsenter(1)` or `ip(8)`. Best-effort.
-#[cfg_attr(
-    not(target_os = "linux"),
-    expect(
-        clippy::missing_const_for_fn,
-        reason = "non-Linux parity keeps the Linux syscall helper shape"
-    )
-)]
+#[cfg(target_os = "linux")]
 fn configure_namespace_veth(config: &NetworkConfig) {
-    #[cfg(not(target_os = "linux"))]
-    let _ = config;
-    #[cfg(target_os = "linux")]
-    {
-        let index = link_index(&config.iface);
-        if index == 0 {
-            return;
-        }
-        set_link_up(index);
-        add_ipv4_address(index, config.ns_ip, config.prefix_len);
-        add_ipv4_default_route(index, config.gateway);
+    let index = link_index(&config.iface);
+    if index == 0 {
+        return;
     }
+    set_link_up(index);
+    add_ipv4_address(index, config.ns_ip, config.prefix_len);
+    add_ipv4_default_route(index, config.gateway);
 }
+
+#[cfg(not(target_os = "linux"))]
+const fn configure_namespace_veth(_config: &NetworkConfig) {}
 
 #[cfg(target_os = "linux")]
 fn link_index(name: &str) -> libc::c_uint {
@@ -555,36 +535,30 @@ fn add_ipv4_default_route(index: libc::c_uint, gateway: Ipv4Addr) {
 /// dump+delete) so no bridge-side RA can repopulate a v6 default route and
 /// bypass the v4-only MASQUERADE filter. Best-effort.
 // PORT backend/src/sandbox/isolated_workspace/scripts/ns_holder.py:45 — ip -6 route flush default → rtnetlink RTM_DELROUTE, shell-free
-#[cfg_attr(
-    not(target_os = "linux"),
-    expect(
-        clippy::missing_const_for_fn,
-        reason = "non-Linux parity keeps the Linux syscall helper shape"
-    )
-)]
+#[cfg(target_os = "linux")]
 fn flush_ipv6_default_route() {
-    #[cfg(target_os = "linux")]
-    {
-        let Some(rtm_family) = libc_c_int_to_u8(libc::AF_INET6) else {
-            return;
-        };
-        let route = RouteMsg {
-            rtm_family,
-            rtm_dst_len: 0,
-            rtm_src_len: 0,
-            rtm_tos: 0,
-            rtm_table: libc::RT_TABLE_MAIN,
-            rtm_protocol: libc::RTPROT_UNSPEC,
-            rtm_scope: libc::RT_SCOPE_UNIVERSE,
-            rtm_type: libc::RTN_UNICAST,
-            rtm_flags: 0,
-        };
-        let Some(flags) = netlink_request_flags() else {
-            return;
-        };
-        let _ = send_netlink_message(libc::RTM_DELROUTE, flags, &route);
-    }
+    let Some(rtm_family) = libc_c_int_to_u8(libc::AF_INET6) else {
+        return;
+    };
+    let route = RouteMsg {
+        rtm_family,
+        rtm_dst_len: 0,
+        rtm_src_len: 0,
+        rtm_tos: 0,
+        rtm_table: libc::RT_TABLE_MAIN,
+        rtm_protocol: libc::RTPROT_UNSPEC,
+        rtm_scope: libc::RT_SCOPE_UNIVERSE,
+        rtm_type: libc::RTN_UNICAST,
+        rtm_flags: 0,
+    };
+    let Some(flags) = netlink_request_flags() else {
+        return;
+    };
+    let _ = send_netlink_message(libc::RTM_DELROUTE, flags, &route);
 }
+
+#[cfg(not(target_os = "linux"))]
+const fn flush_ipv6_default_route() {}
 
 #[cfg(target_os = "linux")]
 fn netlink_request_flags() -> Option<u16> {
@@ -850,16 +824,19 @@ struct NetlinkSocketAddress {
 /// subprocess.
 // PORT backend/src/sandbox/isolated_workspace/_control_plane/namespace_runtime.py:84-96 — `unshare --user --map-root-user --net --pid --mount --fork --kill-child --propagation private` consolidated into a single unshare(CLONE_NEWUSER|NEWNS|NEWPID|NEWNET) + uid/gid map + MS_PRIVATE in-process
 #[cfg(target_os = "linux")]
-#[expect(
-    clippy::similar_names,
-    reason = "uid/gid mapping code naturally handles the paired identifiers together"
-)]
 fn unshare_namespace_stack(
     readiness_fd: RawFd,
     control_fd: RawFd,
 ) -> Result<HeldNamespaces, NsHolderError> {
-    let caller_uid = rustix::process::getuid().as_raw();
-    let caller_gid = rustix::process::getgid().as_raw();
+    struct ParentIds {
+        user: u32,
+        group: u32,
+    }
+
+    let parent_ids = ParentIds {
+        user: rustix::process::getuid().as_raw(),
+        group: rustix::process::getgid().as_raw(),
+    };
     unshare(
         UnshareFlags::NEWUSER | UnshareFlags::NEWNS | UnshareFlags::NEWPID | UnshareFlags::NEWNET,
     )
@@ -867,11 +844,11 @@ fn unshare_namespace_stack(
     write_if_exists("/proc/self/setgroups", b"deny\n")?;
     write_setup_file(
         "/proc/self/uid_map",
-        format!("0 {caller_uid} 1\n").as_bytes(),
+        format!("0 {} 1\n", parent_ids.user).as_bytes(),
     )?;
     write_setup_file(
         "/proc/self/gid_map",
-        format!("0 {caller_gid} 1\n").as_bytes(),
+        format!("0 {} 1\n", parent_ids.group).as_bytes(),
     )?;
     set_thread_gid(rustix::process::Gid::ROOT).map_err(|_| NsHolderError::Unshare)?;
     set_thread_uid(rustix::process::Uid::ROOT).map_err(|_| NsHolderError::Unshare)?;

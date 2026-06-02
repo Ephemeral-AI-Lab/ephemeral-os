@@ -9,6 +9,10 @@ allowed_tools:
   - read_file
   - write_file
   - edit_file
+  - exec_command
+  - write_pty_command_stdin
+  - check_pty_command_progress
+  - cancel_pty_command
   - shell
   - glob
   - grep

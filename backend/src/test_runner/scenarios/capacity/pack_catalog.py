@@ -128,19 +128,19 @@ CAPACITY_PACK_SPECS: tuple[CapacityPackSpec, ...] = (
     ),
     CapacityPackSpec(
         "context.planner_attempt_retry_overflow",
-        test_path="backend/tests/unit_test/test_request/test_context_engine/test_agent_context.py",
+        test_path="backend/tests/unit_test/test_workflow/test_context_engine/test_agent_context.py",
     ),
     CapacityPackSpec(
         "context.generator_with_dependencies",
-        test_path="backend/tests/unit_test/test_request/test_context_engine/test_agent_context.py",
+        test_path="backend/tests/unit_test/test_workflow/test_context_engine/test_agent_context.py",
     ),
     CapacityPackSpec(
         "context.reducer_iterative_deferral",
-        test_path="backend/tests/unit_test/test_request/test_context_engine/test_agent_context.py",
+        test_path="backend/tests/unit_test/test_workflow/test_context_engine/test_agent_context.py",
     ),
     CapacityPackSpec(
         "context.workflow_entry_minimal",
-        test_path="backend/tests/unit_test/test_request/test_context_engine/test_agent_context.py",
+        test_path="backend/tests/unit_test/test_workflow/test_context_engine/test_agent_context.py",
     ),
     CapacityPackSpec(
         "planner_validation.unknown_dep",

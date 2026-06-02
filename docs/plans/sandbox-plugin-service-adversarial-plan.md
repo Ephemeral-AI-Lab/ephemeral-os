@@ -8,12 +8,27 @@ plugin coverage landed. Long-lived services now start in a daemon-owned private
 overlay namespace on Linux and stale remount strategies now perform daemon-owned
 in-place namespace remount; a generic package-adapter harness is live, while
 Pyright read-only `documentSymbol`/`workspace/symbol`/`completion`/
-`completionItem/resolve`/`publishDiagnostics`/`signatureHelp`/`hover`/
-`typeDefinition`/`declaration`/`callHierarchy`/`documentHighlight`/`prepareRename`/
-`definition`/`references` refresh and a Pyright-computed self-managed rename
-publish path are live. Live status health probes, failed-health isolation,
+`completionItem/resolve`/`publishDiagnostics`/`codeAction`/`signatureHelp`/
+`hover`/`typeDefinition`/`declaration`/`callHierarchy` incoming/outgoing/
+`documentHighlight`/`prepareRename`/`definition`/`references` refresh,
+Pyright-computed self-managed rename publish, and generic LSP
+`apply_workspace_edit`/`apply_code_action` publish paths are live. Pyright
+`document_formatting` and `workspace/executeCommand` are now routed through PPC
+as structured unsupported responses based on the server's advertised capability
+boundary. Live status health
+probes, failed-health isolation,
 service-crash, hung-service timeout fail-closed probes, and next-dispatch
-service recovery after a PPC/process failure are also green.
+service recovery after a PPC/process failure are also green. The latest live
+artifact records two read-only services co-observing the same refreshed
+manifest without restart, same-service concurrent read-only dispatch preserving
+distinct replies on the connected PPC client, mixed `api.v1.shell` overlay/OCC
+publish followed by long-lived plugin refresh/readback, explicit daemon cleanup
+that removes PPC routes/services and reaps plugin harness processes, and the current
+Pyright negative capability boundary:
+`document_formatting=false`, `document_range_formatting=false`, and
+`executeCommandProvider.commands=[]`, so formatting/execute-command are
+unsupported-route gates for this Pyright harness, not positive provider parity
+targets yet.
 Broader AV-10 LSP parity, true operation-level out-of-order multiplexing if
 required, and
 broader crash recovery beyond the covered health/crash/timeout/recovery paths
@@ -223,6 +238,10 @@ Landed:
   `textDocument/publishDiagnostics` notification for a separately seeded
   undefined `List` type and normalizes the `reportUndefinedVariable` diagnostic,
   verifies
+  `plugin.generic.pyright_code_actions` asks that same Pyright service for a
+  real LSP `textDocument/codeAction` response using the advertised
+  `source.organizeImports` kind and parses Pyright's empty action list for that
+  seed, verifies
   `plugin.generic.pyright_signature_help` asks that same Pyright service for a
   real LSP `textDocument/signatureHelp` response and returns active-parameter
   evidence for a second argument in a typed function call, verifies
@@ -236,9 +255,10 @@ Landed:
   real LSP `textDocument/declaration` response and resolves the call site back
   to the seeded function declaration, verifies
   `plugin.generic.pyright_call_hierarchy` asks that same Pyright service for a
-  real LSP `textDocument/prepareCallHierarchy` response and
-  `callHierarchy/incomingCalls` relationship from `live_caller` to
-  `live_callee`, verifies
+  real LSP `textDocument/prepareCallHierarchy` responses,
+  `callHierarchy/incomingCalls` from `live_caller` to `live_callee`, and
+  `callHierarchy/outgoingCalls` from `live_caller` back to `live_callee`,
+  verifies
   `plugin.generic.pyright_document_highlight` asks that same Pyright service
   for a real LSP `textDocument/documentHighlight` response and returns symbol
   highlights for both the declaration and call site, verifies
@@ -253,8 +273,13 @@ Landed:
   and call-site line inside the refreshed workspace, verifies
   `plugin.generic.pyright_rename` asks that same Pyright service for a real LSP
   `textDocument/rename` WorkspaceEdit and publishes the resulting write through
-  the daemon-owned `daemon.occ.apply_changeset` callback, verifies a second
-  read-only
+  the daemon-owned `daemon.occ.apply_changeset` callback, verifies
+  `plugin.generic.lsp_apply_workspace_edit` converts a generic LSP
+  `WorkspaceEdit` into a daemon-owned OCC callback and publishes
+  `live_plugin_apply_workspace_edit.py`, verifies
+  `plugin.generic.lsp_apply_code_action` applies a CodeAction `edit` through
+  the same daemon-owned OCC callback path and publishes
+  `live_plugin_apply_code_action.py`, verifies a second read-only
   `plugin.generic.restart_ping`
   triggers the `restart_service` fallback for a separate generic service,
   verifies that restarted service reads the post-write file through its mounted
@@ -273,14 +298,16 @@ Landed:
   refresh-strategy benchmark in the same integrated sandbox fixture.
 - Live verification passed:
   `EOS_SANDBOX_PROVIDER=docker EOS_LIVE_E2E_IMAGE=xingyaoww/sweb.eval.x86_64.dask_s_dask-10042:latest EOS_PLUGIN_REFRESH_SAMPLES=1 EOS_PLUGIN_REFRESH_AUTO_SQUASH_WRITES=104 EOS_RUST_PLUGIN_BENCH_TIMEOUT_S=600 uv run pytest -q -x -rs --tb=short --durations=10 backend/tests/live_e2e_test/sandbox/plugin/test_plugin_refresh_strategies.py`
-  (`1 passed in 45.19s` on the latest rerun). The Rust plugin artifact report
-  `.omc/results/rust-daemon-plugin-generic-20260601T234314Z-87525.json` used
+  (`1 passed in 60.82s` on the latest rerun). The Rust plugin artifact report
+  `.omc/results/rust-daemon-plugin-generic-20260602T014118Z-68247.json` used
   `eosd-linux-amd64` SHA
-  `79f2592a55e565f00e2917c86cbeca2bfa26c073c316a1be6b6239d5830509fb` and
+  `ab3cada1569c18b02863d8298a0ec5f48090c7b69e5c909a34671d9f14b2a93b` and
   proved registered routes `plugin.generic.adapter_query`,
   `plugin.generic.apply`, `plugin.generic.apply_multi`,
   `plugin.generic.crash_probe`,
   `plugin.generic.hang_probe`, `plugin.generic.health_fail_ping`,
+  `plugin.generic.lsp_apply_code_action`,
+  `plugin.generic.lsp_apply_workspace_edit`,
   `plugin.generic.oneshot_write`, `plugin.generic.ping`, and
   `plugin.generic.pyright_call_hierarchy`,
   `plugin.generic.pyright_completion`,
@@ -288,7 +315,10 @@ Landed:
   `plugin.generic.pyright_definition`,
   `plugin.generic.pyright_declaration`,
   `plugin.generic.pyright_diagnostics`,
+  `plugin.generic.pyright_code_actions`,
+  `plugin.generic.pyright_document_formatting`,
   `plugin.generic.pyright_document_highlight`, `plugin.generic.pyright_hover`,
+  `plugin.generic.pyright_execute_command`,
   `plugin.generic.pyright_prepare_rename`,
   `plugin.generic.pyright_references`, `plugin.generic.pyright_rename`,
   `plugin.generic.pyright_signature_help`, `plugin.generic.pyright_symbols`,
@@ -301,13 +331,18 @@ Landed:
   `plugin.generic.crash_probe`/
   `plugin.generic.hang_probe`/
   `plugin.generic.health_fail_ping`/
+  `plugin.generic.lsp_apply_code_action`/
+  `plugin.generic.lsp_apply_workspace_edit`/
   `plugin.generic.ping`/`plugin.generic.pyright_call_hierarchy`/
   `plugin.generic.pyright_completion`/
   `plugin.generic.pyright_completion_resolve`/
   `plugin.generic.pyright_declaration`/
   `plugin.generic.pyright_definition`/
   `plugin.generic.pyright_diagnostics`/
+  `plugin.generic.pyright_code_actions`/
+  `plugin.generic.pyright_document_formatting`/
   `plugin.generic.pyright_document_highlight`/
+  `plugin.generic.pyright_execute_command`/
   `plugin.generic.pyright_hover`/`plugin.generic.pyright_prepare_rename`/
   `plugin.generic.pyright_references`/`plugin.generic.pyright_rename`/
   `plugin.generic.pyright_signature_help`/
@@ -336,7 +371,23 @@ Landed:
   `from live rust plugin multi a\n` / `from live rust plugin multi b\n`;
   post-write refresh `state=ready` with
   `refresh_count=1` on manifest key
-  `4:97a4e2b61acb6c3488ba7f0b41580dffb0c6bccbe243d20d3da2f82738600a12`;
+  `5:4dbd00d1c820f1f6d06454fae748741d69628484b6ba921065be63c22e729629`;
+  mixed non-plugin/plugin interleave evidence where `api.v1.shell` published
+  `live_plugin_shell_result.txt` with `status="ok"`, `exit_code=0`,
+  `mutation_source="overlay_capture"`, and one changed path, LayerStack
+  readback returned `from live rust shell publish\n`, then a still-running
+  `plugin.generic.ping` read the same file through its mounted
+  `EOS_PLUGIN_WORKSPACE_ROOT` with `from_ppc=true`, `workspace_mounted=true`,
+  manifest key
+  `5:4dbd00d1c820f1f6d06454fae748741d69628484b6ba921065be63c22e729629`,
+  `refresh_count=1`, and `restart_count=0`; the shell publish timing slice
+  recorded `api.shell.total_s=0.05478475`,
+  `command_exec.mount_workspace_s=0.001502042`,
+  `command_exec.run_command_s=0.034188958`,
+  `command_exec.capture_upperdir_s=0.001381875`,
+  `command_exec.occ_apply_s=0.003363041`,
+  `resource.command_exec.changed_path_count=1`, and zero
+  workspace/run/upperdir tree bytes or retained tree entries;
   daemon-remount evidence from the original long-lived service
   `workspace_mounted=true` and
   `refresh_ping.workspace_read.content == "from live rust plugin\n"`;
@@ -365,6 +416,12 @@ Landed:
   `textDocument/publishDiagnostics` for `live_plugin_diagnostics.py`, returned
   `diagnostic_count=1`, `diagnostic_codes=["reportUndefinedVariable"]`, and
   diagnostic message `"List" is not defined`;
+  Pyright code-action evidence where
+  `plugin.generic.pyright_code_actions` advertised `code_action=true`, confirmed
+  `codeActionProvider.codeActionKinds` contains `source.organizeImports`, sent a
+  real `textDocument/codeAction` request for `live_plugin_code_actions.py` at
+  line `0`, character `0`, and parsed Pyright's empty action list
+  (`action_count=0`) for that source-action seed;
   Pyright signature-help evidence where
   `plugin.generic.pyright_signature_help` returned `signature_count=1`,
   `active_parameter=1`, and label `(left: int, right: str) -> str` for
@@ -384,8 +441,10 @@ Landed:
   `plugin.generic.pyright_call_hierarchy` advertised
   `call_hierarchy=true`, returned `item_count=1` and
   `item_names=["live_callee"]` for `live_plugin_call_hierarchy.py` at line `0`,
-  character `11`, then returned `incoming_count=1` with
-  `incoming_names=["live_caller"]`;
+  character `11`, returned `incoming_count=1` with
+  `incoming_names=["live_caller"]`, then separately queried `live_caller` at
+  line `3`, character `11` and returned `outgoing_count=1` with
+  `outgoing_names=["live_callee"]`;
   Pyright document-highlight evidence where
   `plugin.generic.pyright_document_highlight` returned `highlight_count=2` with
   `live_plugin_pyright.py` range start lines `0` and `3`;
@@ -402,9 +461,44 @@ Landed:
   returned a real LSP `documentChanges` WorkspaceEdit for
   `live_plugin_pyright.py`, converted it to one generic write changeset, and
   published through `daemon.occ.apply_changeset` with callback status
-  `success=true`, file status `committed`, and published manifest version `11`;
+  `success=true`, file status `committed`, and published manifest version `16`;
   LayerStack readback was
   `def live_total() -> int:\n    return 42\n\nRESULT = live_total()\n`;
+  generic LSP apply-workspace-edit evidence where
+  `plugin.generic.lsp_apply_workspace_edit` converted a `WorkspaceEdit` for
+  `file:///eos/plugin/rust-workspace/live_plugin_apply_workspace_edit.py`
+  into one write changeset, published through
+  `daemon.occ.apply_changeset` with callback status `success=true`, file
+  status `committed`, published manifest version `14`, and LayerStack readback
+  `alpha\nedited\n`;
+  generic LSP apply-code-action evidence where
+  `plugin.generic.lsp_apply_code_action` converted a CodeAction `edit` for
+  `file:///eos/plugin/rust-workspace/live_plugin_apply_code_action.py`
+  into one write changeset, published through
+  `daemon.occ.apply_changeset` with callback status `success=true`, file
+  status `committed`, published manifest version `15`, action kind `quickfix`,
+  and LayerStack readback `after\nunchanged\n`;
+  same-service concurrent dispatch evidence where two concurrent
+  `plugin.generic.ping` calls against `harness` returned echoes
+  `concurrent-a` and `concurrent-b`, both through PPC, both mounted, both
+  `success=true`, and both on manifest key
+  `1:f071e2d096b352b67daeb0f2e2f6dc503335246a98e209fa9f199d06314b5cb5`;
+  co-shared read-only refresh evidence where `harness` and `adapter_harness`
+  were both `ready`, both had `refresh_count=1`, both had `restart_count=0`,
+  and both reported manifest key
+  `5:4dbd00d1c820f1f6d06454fae748741d69628484b6ba921065be63c22e729629`;
+  Pyright negative capability evidence where the reported supports map had
+  `document_formatting=false`, `document_range_formatting=false`,
+  `execute_command_provider=true`, `execute_command=false`, and raw
+  `executeCommandProvider.commands == []`; routed unsupported-operation
+  evidence where `plugin.generic.pyright_document_formatting` returned through
+  PPC from `pyright_harness` with `success=false`, `unsupported=true`,
+  method `textDocument/formatting`, capability
+  `documentFormattingProvider`, path `live_plugin_pyright.py`, and
+  `edit_count=0`, while `plugin.generic.pyright_execute_command` returned
+  through PPC with `success=false`, `unsupported=true`, method
+  `workspace/executeCommand`, capability `executeCommandProvider.commands`,
+  and advertised `commands=[]`;
   restart fallback `state=ready` with `restart_count=1` and `refresh_count=0`
   on that same post-write manifest key; mounted workspace evidence
   `workspace_mounted=true` and `workspace_read.content == "from live rust plugin\n"`
@@ -424,28 +518,38 @@ Landed:
   routes, `recover_harness.state == "stopped"`, second
   `plugin.generic.recover_probe` returning `from_recovered_service=true` with
   `workspace_mounted=true`, restored connected route, and
-  `recover_harness.restart_count == 1`; final manifest version `12`; final
+  `recover_harness.restart_count == 1`; final manifest version `18`; final
   active service leases before cleanup `5`; post-cleanup active leases `0`; and
-  zero post-cleanup orphan layers and missing layers. The paired
+  zero post-cleanup orphan layers and missing layers; teardown evidence showed
+  six plugin harness processes before cleanup, zero after cleanup, empty
+  `connected_ppc_routes`, empty `connected_ppc_services`, and empty
+  `running_service_processes` after cleanup. The paired
   refresh-strategy report
-  `.omc/results/plugin-refresh-strategies-20260601T234314Z-87525.json` still
-  recommends `workspace_snapshot_refresh`; refresh p95 was `6.064 ms` versus
-  `commit_to_workspace` p95 `3.704 ms`.
+  `.omc/results/plugin-refresh-strategies-20260602T014118Z-68247.json` still
+  recommends `workspace_snapshot_refresh`; refresh p95 was `7.315 ms` versus
+  `commit_to_workspace` p95 `12.197 ms`.
 
 Still open:
 
 - True operation-level out-of-order multiplexing if needed by a future
   bidirectional protocol,
-  broader crash recovery beyond the now-covered health probe, closed PPC stream,
-  PPC timeout, and next-dispatch restart paths, and broader AV-10 LSP parity beyond the representative Pyright
+  broader crash recovery beyond the now-covered health probe, failed-health
+  isolation, closed PPC stream, PPC timeout, and next-dispatch restart paths,
+  and broader AV-10 LSP parity beyond the representative Pyright
   `documentSymbol` + `workspace/symbol` + `completion` +
-  `completionItem/resolve` + `publishDiagnostics` + `signatureHelp` + `hover` + `typeDefinition` +
-  `declaration` + `callHierarchy` + `documentHighlight` + `prepareRename` +
-  `definition` + `references` + `rename` path.
+  `completionItem/resolve` + `publishDiagnostics` + `codeAction` +
+  `signatureHelp` + `hover` + `typeDefinition` + `declaration` +
+  `callHierarchy` incoming/outgoing +
+  `documentHighlight` + `prepareRename` + `definition` + `references` +
+  `rename` + `apply_workspace_edit` + `apply_code_action` path. Current Pyright
+  live artifacts route document formatting and execute-command as structured
+  unsupported operations because this server does not advertise document/range
+  formatting or executable commands; positive coverage for those operations
+  still requires a broader provider/harness.
 - Generic non-LSP PPC, package-adapter coverage, read-only Pyright refresh, and
-  a representative Pyright WRITE_ALLOWED/self-managed rename path are live;
-  canonical Python-importlib vs Rust-PPC LSP parity still needs broader
-  operation coverage before claiming full AV-10.
+  representative Pyright and generic LSP WRITE_ALLOWED/self-managed publish
+  paths are live; canonical Python-importlib vs Rust-PPC LSP parity still needs
+  broader operation coverage before claiming full AV-10.
 
 ## Success Criteria
 
@@ -1084,9 +1188,9 @@ Checks:
 - Support `remount_workspace_and_notify`, `remount_workspace`, and `restart_service`.
 - Port Pyright/LSP as one adapter, not as the service model itself. The current
   live slice proves a representative read-only `pyright-langserver` operation
-  set after daemon remount plus a Pyright-computed self-managed
-  `textDocument/rename` publish through the daemon OCC callback; broader LSP
-  operation parity remains in AV-10.
+  set after daemon remount plus Pyright-computed `textDocument/rename` and
+  generic `apply_workspace_edit`/`apply_code_action` publishes through the
+  daemon OCC callback; broader LSP operation parity remains in AV-10.
 - Add a non-LSP read-only dummy service that caches workspace content and only
   stays correct if the daemon refresh protocol works.
 

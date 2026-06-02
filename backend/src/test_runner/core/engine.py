@@ -139,6 +139,12 @@ def _count_task_outcomes(task_rows: list[dict]) -> tuple[int, int, int]:
     return total, completed, failed
 
 
+async def _wait_for_request_idle(handle) -> None:  # type: ignore[no-untyped-def]
+    """Wait for the root task and any delegated workflow agents to drain."""
+    await asyncio.gather(handle.root_agent_task, handle.launcher.wait_for_idle())
+    await handle.launcher.wait_for_idle()
+
+
 async def run_pipeline(config: RunConfig) -> PipelineReport:
     """Drive a single request end-to-end.
 
@@ -254,13 +260,15 @@ async def run_pipeline(config: RunConfig) -> PipelineReport:
         try:
             if config.max_duration_s is not None:
                 await asyncio.wait_for(
-                    handle.launcher.wait_for_idle(), timeout=config.max_duration_s
+                    _wait_for_request_idle(handle), timeout=config.max_duration_s
                 )
             else:
-                await handle.launcher.wait_for_idle()
+                await _wait_for_request_idle(handle)
         except asyncio.TimeoutError:
             aborted_by_timeout = True
             pending = tuple(handle.launcher._pending)  # noqa: SLF001 — see launcher contract
+            if not handle.root_agent_task.done():
+                pending = (*pending, handle.root_agent_task)
             for task in pending:
                 task.cancel()
             await asyncio.gather(*pending, return_exceptions=True)

@@ -28,6 +28,7 @@ LegacyProcessor = tuple[tuple[str, ...], Any]
 _YAML_ONLY_ENV_PATHS: tuple[tuple[str, ...], ...] = (
     ("runner", "live_e2e", "heavy_enabled"),
     ("runner", "live_e2e", "capacity_enabled"),
+    ("runner", "live_e2e", "concurrent_sandbox_runners"),
     ("runner", "sandbox_reuse_mode"),
 )
 
@@ -59,6 +60,10 @@ _LEGACY_ENV_MAP: dict[str, LegacyProcessor] = {
     "MINIMAX_MODEL": (("providers", "minimax", "model"), str.strip),
     "EOS_SWEEVO_REAL_AGENT_MAX_DURATION_S": (
         ("runner", "live_e2e", "real_agent_max_duration_s"),
+        str.strip,
+    ),
+    "EOS_SWEEVO_CONCURRENT_SANDBOX_RUNNERS": (
+        ("runner", "live_e2e", "concurrent_sandbox_runners"),
         str.strip,
     ),
     "EOS_SWEEVO_SANDBOX_QUOTA": (("runner", "sandbox_quota"), str.strip),

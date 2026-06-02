@@ -125,6 +125,14 @@ pub struct CommitQueue<T: CommitTransactionPort + 'static> {
     closed: bool,
 }
 
+struct CommitWorker<T: CommitTransactionPort + 'static> {
+    receiver: mpsc::Receiver<QueueItem>,
+    transaction: T,
+    max_batch_size: usize,
+    batch_window_s: f64,
+    max_cas_retries: u32,
+}
+
 impl<T: CommitTransactionPort + 'static> CommitQueue<T> {
     /// Build a queue with default batching/retry tuning.
     pub fn new(transaction: T) -> Self {
@@ -190,19 +198,17 @@ impl<T: CommitTransactionPort + 'static> CommitQueue<T> {
             .map_err(|_| OccError::QueueStatePoisoned("transaction slot"))?
             .take()
             .ok_or(OccError::QueueNotStarted)?;
-        let max_batch_size = self.max_batch_size;
-        let batch_window_s = self.batch_window_s;
-        let max_cas_retries = self.max_cas_retries;
+        let worker = CommitWorker {
+            receiver,
+            transaction,
+            max_batch_size: self.max_batch_size,
+            batch_window_s: self.batch_window_s,
+            max_cas_retries: self.max_cas_retries,
+        };
         let handle = std::thread::Builder::new()
             .name(COMMIT_QUEUE_THREAD_NAME.to_owned())
             .spawn(move || {
-                Self::run(
-                    receiver,
-                    transaction,
-                    max_batch_size,
-                    batch_window_s,
-                    max_cas_retries,
-                );
+                worker.run();
             })
             .map_err(|err| OccError::WorkerStart(err.to_string()))?;
         self.handle = Some(handle);
@@ -261,40 +267,6 @@ impl<T: CommitTransactionPort + 'static> CommitQueue<T> {
         Ok(receiver)
     }
 
-    /// Consumer loop: block for the first item, non-blocking-drain the rest,
-    /// pay the batch window only with headroom, then commit disjoint batches.
-    /// Takes ownership because it is moved into the worker thread.
-    #[expect(
-        clippy::needless_pass_by_value,
-        reason = "worker thread owns the receiver and transaction"
-    )]
-    // PORT backend/src/sandbox/occ/commit_queue.py:131 — _run() consumer loop
-    fn run(
-        receiver: mpsc::Receiver<QueueItem>,
-        transaction: T,
-        max_batch_size: usize,
-        batch_window_s: f64,
-        max_cas_retries: u32,
-    ) {
-        while let Ok(first) = receiver.recv() {
-            let QueueItem::Work(first) = first else {
-                return;
-            };
-            let mut items = vec![first];
-            let mut stop_seen = drain_ready(&receiver, &mut items, max_batch_size);
-            if !stop_seen && batch_window_s > 0.0 && items.len() < max_batch_size {
-                std::thread::sleep(Duration::from_secs_f64(batch_window_s));
-                stop_seen = drain_ready(&receiver, &mut items, max_batch_size);
-            }
-            for batch in disjoint_batches(items) {
-                Self::commit_batch(&transaction, batch, max_cas_retries);
-            }
-            if stop_seen {
-                return;
-            }
-        }
-    }
-
     /// Commit one disjoint batch with the bounded CAS-retry loop, fanning each
     /// path's [`FileResult`](crate::FileResult) back to its submitter.
     // PORT backend/src/sandbox/occ/commit_queue.py:168 — _commit_batch(): retry + fan-out
@@ -321,6 +293,31 @@ impl<T: CommitTransactionPort + 'static> CommitQueue<T> {
                 published_manifest_version: result.published_manifest_version,
                 timings: result.timings.clone(),
             }));
+        }
+    }
+}
+
+impl<T: CommitTransactionPort + 'static> CommitWorker<T> {
+    /// Consumer loop: block for the first item, non-blocking-drain the rest,
+    /// pay the batch window only with headroom, then commit disjoint batches.
+    // PORT backend/src/sandbox/occ/commit_queue.py:131 — _run() consumer loop
+    fn run(self) {
+        while let Ok(first) = self.receiver.recv() {
+            let QueueItem::Work(first) = first else {
+                return;
+            };
+            let mut items = vec![first];
+            let mut stop_seen = drain_ready(&self.receiver, &mut items, self.max_batch_size);
+            if !stop_seen && self.batch_window_s > 0.0 && items.len() < self.max_batch_size {
+                std::thread::sleep(Duration::from_secs_f64(self.batch_window_s));
+                stop_seen = drain_ready(&self.receiver, &mut items, self.max_batch_size);
+            }
+            for batch in disjoint_batches(items) {
+                CommitQueue::<T>::commit_batch(&self.transaction, batch, self.max_cas_retries);
+            }
+            if stop_seen {
+                return;
+            }
         }
     }
 }

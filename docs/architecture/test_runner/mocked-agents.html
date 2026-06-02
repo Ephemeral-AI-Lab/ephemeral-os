@@ -126,7 +126,7 @@ EphemeralRunResult from the real query loop
 </pre>
 <div class="edge-list" aria-label="Handler responsibilities">
   <div><b>planner script</b><span>Reads <code>scenario.planner_response(ctx)</code>, calls <code>ask_advisor</code>, then emits <code>submit_planner_outcome</code>.</span></div>
-  <div><b>executor script</b><span>Walks <code>scenario.executor_actions(ctx)</code>. Failure tokens emit <code>submit_generator_outcome(status="failed", ...)</code>, handoff tokens emit <code>submit_workflow_handoff</code>, and probe / prepared-tool-script tokens bridge real-loop tool turns and end with <code>submit_generator_outcome(status="success", ...)</code>. Each gated terminal is preceded by an <code>ask_advisor</code> turn.</span></div>
+  <div><b>executor script</b><span>Walks <code>scenario.executor_actions(ctx)</code>. Failure tokens emit <code>submit_generator_outcome(status="failed", ...)</code>, delegation tokens call non-terminal <code>delegate_workflow</code>, and probe / prepared-tool-script tokens bridge real-loop tool turns and end with <code>submit_generator_outcome(status="success", ...)</code>. Each gated terminal is preceded by an <code>ask_advisor</code> turn.</span></div>
   <div><b>reducer script</b><span>Reads <code>scenario.reducer_response(ctx)</code>, calls <code>ask_advisor</code>, then emits <code>submit_reducer_outcome</code> as the reducer terminal. The reducer is the plan task whose outcome decides whether the attempt passes.</span></div>
   <div><b>advisor script</b><span>The helper sub-agent spawned by <code>ask_advisor</code>; carries no Workflow attempt context and emits one ungated <code>submit_advisor_feedback</code> (<code>verdict="approve"</code>) turn.</span></div>
 </div>
@@ -153,7 +153,7 @@ EphemeralRunResult from the real query loop
   </div>
   <div class="evidence-card">
     <h3>recursive_step_script</h3>
-    <p>Persists evidence for one delegated (child) workflow step. When the context message contains <code>recursive_reconcile</code>, also writes a close-report JSON read back by the parent's <code>recursive_return</code> checkpoint.</p>
+    <p>Persists evidence for one delegated Workflow step. When the task instruction contains <code>recursive_reconcile</code>, also writes a close-report JSON read back by the parent's <code>recursive_return</code> checkpoint.</p>
   </div>
   <div class="evidence-card">
     <h3>final_reconciliation_script</h3>

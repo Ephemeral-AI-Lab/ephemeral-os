@@ -35,6 +35,7 @@ _DAEMON_PID = DAEMON_PID_PATH
 _DAEMON_LOG = DAEMON_LOG_PATH
 _DAEMON_ENV = DAEMON_ENV_SIGNATURE_PATH
 _EOSD_REMOTE_PATH = f"{BUNDLE_REMOTE_DIR}/eosd"
+_EOSD_SHA_MARKER = f"{BUNDLE_REMOTE_DIR}/.eosd-sha256"
 _PYTHON_CANDIDATES = ("python3.13", "python3.12", "python3.11", "python3.10", "python3")
 _THIN_CLIENT_CONNECT_FAILED = 97
 _THIN_CLIENT_IO_FAILED = 98
@@ -656,7 +657,7 @@ def _daemon_spawn_command(
     sourced variable so the daemon inherits them.
     """
     if selected_sandbox_runtime() == "rust":
-        inner_parts = [
+        spawn_parts = [
             _EOSD_REMOTE_PATH,
             "daemon",
             "--spawn",
@@ -668,7 +669,7 @@ def _daemon_spawn_command(
             _DAEMON_LOG,
         ]
         if tcp_endpoint is not None:
-            inner_parts.extend(
+            spawn_parts.extend(
                 [
                     "--tcp-host",
                     "0.0.0.0",
@@ -677,8 +678,11 @@ def _daemon_spawn_command(
                 ]
             )
             if tcp_endpoint.auth_token:
-                inner_parts.extend(["--auth-token", tcp_endpoint.auth_token])
-        inner = " ".join(shlex.quote(part) for part in inner_parts)
+                spawn_parts.extend(["--auth-token", tcp_endpoint.auth_token])
+        inner = _rust_daemon_spawn_shell(
+            spawn_command=" ".join(shlex.quote(part) for part in spawn_parts),
+            signature=_daemon_env_signature(tcp_endpoint=tcp_endpoint),
+        )
     else:
         inner = " ".join(
             shlex.quote(part)
@@ -716,11 +720,46 @@ exit 127
 """
 
 
+def _rust_daemon_spawn_shell(*, spawn_command: str, signature: str) -> str:
+    """Restart a resident daemon when the selected Rust runtime signature changes."""
+    return " ".join(
+        [
+            f"daemon_env_sig={shlex.quote(signature)};",
+            (
+                f"if [ -f {shlex.quote(_EOSD_SHA_MARKER)} ]; then "
+                f'daemon_env_sig="$daemon_env_sig;eosd_sha=$(cat {shlex.quote(_EOSD_SHA_MARKER)})"; '
+                "fi;"
+            ),
+            (
+                f"if [ -S {shlex.quote(_DAEMON_SOCKET)} ] && "
+                f"[ -f {shlex.quote(_DAEMON_PID)} ]; then "
+                f"if [ ! -f {shlex.quote(_DAEMON_ENV)} ] || "
+                f"[ \"$(cat {shlex.quote(_DAEMON_ENV)})\" != \"$daemon_env_sig\" ]; then "
+                f"daemon_pid=$(cat {shlex.quote(_DAEMON_PID)} 2>/dev/null || true); "
+                'if [ -n "$daemon_pid" ]; then '
+                'kill "$daemon_pid" 2>/dev/null || true; '
+                'for _ in $(seq 1 50); do '
+                'kill -0 "$daemon_pid" 2>/dev/null || break; '
+                "sleep 0.02; "
+                "done; "
+                "fi; "
+                f"rm -f {shlex.quote(_DAEMON_SOCKET)} {shlex.quote(_DAEMON_PID)}; "
+                "fi; "
+                "fi;"
+            ),
+            f"{spawn_command} && printf %s \"$daemon_env_sig\" > {shlex.quote(_DAEMON_ENV)}",
+        ]
+    )
+
+
 def _daemon_env_signature(
     *,
     tcp_endpoint: _DaemonTcpEndpoint | None = None,
 ) -> str:
-    parts = [f"runtime_bundle_sha={bundle_hash()}"]
+    parts = [
+        f"sandbox_runtime={selected_sandbox_runtime()}",
+        f"runtime_bundle_sha={bundle_hash()}",
+    ]
     if tcp_endpoint is not None:
         tcp_port = tcp_endpoint.internal_port or tcp_endpoint.port
         parts.append(f"daemon_tcp_port={tcp_port}")

@@ -7,6 +7,11 @@
 //! and request/error envelopes; the AV-1 canonical-equal bar for responses).
 #![forbid(unsafe_code)]
 
+// Lib tests receive dev-dependencies used by fixture integration tests. Keep
+// `unused_crate_dependencies` usable under `--all-targets` without an allow.
+#[cfg(test)]
+use base64 as _;
+
 pub mod audit;
 pub mod canonical;
 pub mod cas;

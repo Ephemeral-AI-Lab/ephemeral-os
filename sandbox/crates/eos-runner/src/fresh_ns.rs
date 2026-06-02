@@ -116,13 +116,16 @@ pub fn run_fresh_ns(
 }
 
 #[cfg(target_os = "linux")]
-#[expect(
-    clippy::similar_names,
-    reason = "uid/gid mapping code naturally handles the paired identifiers together"
-)]
 fn enter_fresh_namespace() -> Result<(), RunnerError> {
-    let caller_uid = rustix::process::getuid().as_raw();
-    let caller_gid = rustix::process::getgid().as_raw();
+    struct ParentIds {
+        user: u32,
+        group: u32,
+    }
+
+    let parent_ids = ParentIds {
+        user: rustix::process::getuid().as_raw(),
+        group: rustix::process::getgid().as_raw(),
+    };
 
     if let Err(err) = setsid() {
         // Docker exec may launch the runner as a process-group leader. In that
@@ -134,8 +137,10 @@ fn enter_fresh_namespace() -> Result<(), RunnerError> {
     }
     unshare(UnshareFlags::NEWUSER | UnshareFlags::NEWNS).map_syscall()?;
     write_if_exists("/proc/self/setgroups", "deny\n")?;
-    fs::write("/proc/self/uid_map", format!("0 {caller_uid} 1\n")).map_err(RunnerError::Syscall)?;
-    fs::write("/proc/self/gid_map", format!("0 {caller_gid} 1\n")).map_err(RunnerError::Syscall)?;
+    fs::write("/proc/self/uid_map", format!("0 {} 1\n", parent_ids.user))
+        .map_err(RunnerError::Syscall)?;
+    fs::write("/proc/self/gid_map", format!("0 {} 1\n", parent_ids.group))
+        .map_err(RunnerError::Syscall)?;
     set_thread_gid(rustix::process::Gid::ROOT).map_syscall()?;
     set_thread_uid(rustix::process::Uid::ROOT).map_syscall()?;
     mount_change(

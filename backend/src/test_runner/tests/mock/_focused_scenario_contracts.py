@@ -89,7 +89,7 @@ def recursive_workflows(graph_summary: Mapping[str, object]) -> list[dict]:
     return [
         workflow
         for workflow in workflows  # type: ignore[union-attr]
-        if not str(workflow.get("parent_task_id") or "").endswith(":root")
+        if not str(workflow.get("parent_task_id") or "").startswith("root-")
     ]
 
 

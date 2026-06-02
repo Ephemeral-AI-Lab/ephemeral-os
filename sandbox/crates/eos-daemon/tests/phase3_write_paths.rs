@@ -1,9 +1,23 @@
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 
+// Integration test crates receive every normal `eos-daemon` dependency even
+// when the test only drives public daemon APIs. These imports keep
+// `unused_crate_dependencies` meaningful without suppressing it crate-wide.
 use eos_daemon::OpTable;
+use eos_isolated as _;
+use eos_layerstack as _;
+use eos_occ as _;
+use eos_overlay as _;
+use eos_plugin as _;
 use eos_protocol::Request;
+use eos_runner as _;
+use serde as _;
 use serde_json::{json, Value};
+use sha2 as _;
+use thiserror as _;
+use tokio as _;
+use tokio_util as _;
 
 type TestResult<T = ()> = Result<T, Box<dyn std::error::Error + Send + Sync>>;
 

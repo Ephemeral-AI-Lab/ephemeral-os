@@ -68,6 +68,7 @@ def test_rust_runtime_uses_eosd_client_command(monkeypatch: pytest.MonkeyPatch) 
 
 def test_rust_runtime_spawn_uses_eosd_spawn(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv(daemon_client_mod.SANDBOX_RUNTIME_ENV, "rust")
+    monkeypatch.setattr(daemon_client_mod, "bundle_hash", lambda: "bundle-sha")
     endpoint = daemon_client_mod._DaemonTcpEndpoint(
         host="127.0.0.1",
         port=49152,
@@ -82,6 +83,10 @@ def test_rust_runtime_spawn_uses_eosd_spawn(monkeypatch: pytest.MonkeyPatch) -> 
     assert "--tcp-host 0.0.0.0" in command
     assert "--tcp-port 40123" in command
     assert "--auth-token token-1" in command
+    assert "sandbox_runtime=rust;runtime_bundle_sha=bundle-sha;daemon_tcp_port=40123" in command
+    assert ".eosd-sha256" in command
+    assert "runtime.env" in command
+    assert "kill \"$daemon_pid\"" in command
 
 
 @pytest.mark.asyncio

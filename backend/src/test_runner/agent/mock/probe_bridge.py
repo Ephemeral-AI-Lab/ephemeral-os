@@ -110,7 +110,7 @@ class _CallToolBridge:
         return result
 
     async def _call_loop_tool(self, tool_name: str, raw_input: dict[str, Any]) -> ToolResult:
-        fut: asyncio.Future[ToolResult] = asyncio.get_requestning_loop().create_future()
+        fut: asyncio.Future[ToolResult] = asyncio.get_running_loop().create_future()
         await self._queue.put(("call", tool_name, self._loop_tool_input(tool_name, raw_input), fut))
         return await asyncio.shield(fut)
 

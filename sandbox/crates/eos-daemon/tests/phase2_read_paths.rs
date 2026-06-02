@@ -2,13 +2,26 @@ use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Mutex;
 
+// Integration test crates receive every normal `eos-daemon` dependency even
+// when the test only drives public daemon APIs. These imports keep
+// `unused_crate_dependencies` meaningful without suppressing it crate-wide.
 use eos_daemon::{DaemonServer, ServerConfig};
 use eos_daemon::{DispatchContext, InFlightRegistry, OpTable};
+use eos_isolated as _;
+use eos_layerstack as _;
+use eos_occ as _;
+use eos_overlay as _;
+use eos_plugin as _;
 use eos_protocol::{decode, encode, Envelope, Request, DAEMON_AUTH_FIELD};
+use eos_runner as _;
+use serde as _;
 use serde_json::{json, Value};
+use sha2 as _;
+use thiserror as _;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpListener, TcpStream, UnixStream};
 use tokio::time::{sleep, timeout, Duration};
+use tokio_util as _;
 
 static ISOLATED_ENV_LOCK: Mutex<()> = Mutex::new(());
 
@@ -61,134 +74,42 @@ fn dispatches_runtime_ready_probe() -> TestResult {
 }
 
 #[test]
-#[expect(
-    clippy::too_many_lines,
-    reason = "integration test keeps the workspace-base wire contract in one scenario"
-)]
 fn dispatches_workspace_base_control_ops_for_fresh_stack() -> TestResult {
-    let (root, workspace) = empty_workspace("workspace_base")?;
-    std::fs::create_dir_all(workspace.join("src"))?;
-    std::fs::write(workspace.join("README.md"), "# base\n")?;
-    std::fs::write(workspace.join("src").join("a.py"), "print('base')\n")?;
-    std::os::unix::fs::symlink("src/a.py", workspace.join("link.py"))?;
-    std::fs::create_dir_all(workspace.join("links"))?;
-    let outside_target = workspace
-        .parent()
-        .ok_or("workspace parent")?
-        .join("outside.txt");
-    std::fs::write(&outside_target, "outside\n")?;
-    std::os::unix::fs::symlink("../src/a.py", workspace.join("links").join("inside"))?;
-    std::os::unix::fs::symlink(&outside_target, workspace.join("links").join("outside"))?;
+    let (root, workspace, outside_target) = seed_workspace_base_fixture()?;
     let table = OpTable::with_builtins();
 
-    let ensure = table.dispatch(&Request {
-        op: "api.ensure_workspace_base".to_owned(),
-        invocation_id: "ensure".to_owned(),
-        args: json!({
+    let ensure = dispatch_request(
+        &table,
+        "api.ensure_workspace_base",
+        "ensure",
+        json!({
             "layer_stack_root": &root,
             "workspace_root": &workspace,
         }),
-    });
+    );
+    assert_workspace_base_created(&ensure, &root, &workspace);
+    assert_workspace_base_symlinks(&root, &outside_target)?;
 
-    assert_eq!(ensure["success"], Value::Bool(true));
-    assert_eq!(ensure["created"], Value::Bool(true));
-    assert_eq!(
-        ensure["binding"]["workspace_root"],
-        json!(workspace.to_string_lossy().as_ref())
+    let binding = dispatch_request(
+        &table,
+        "api.workspace_binding",
+        "binding",
+        json!({"layer_stack_root": &root}),
     );
-    assert_eq!(
-        ensure["binding"]["layer_stack_root"],
-        json!(root.to_string_lossy().as_ref())
-    );
-    assert_eq!(ensure["binding"]["base_manifest_version"], json!(1));
-    assert_eq!(
-        ensure["binding"]["base_root_hash"].as_str().map(str::len),
-        Some(64)
-    );
-    assert!(ensure["timings"]["api.workspace_base.total_s"].is_number());
-    assert_eq!(
-        std::fs::read_link(
-            root.join("layers")
-                .join("B000001-base")
-                .join("links")
-                .join("inside")
-        )?
-        .to_string_lossy(),
-        "../src/a.py"
-    );
-    assert_eq!(
-        std::fs::read_link(
-            root.join("layers")
-                .join("B000001-base")
-                .join("links")
-                .join("outside")
-        )?,
-        outside_target
-    );
-
-    let binding = table.dispatch(&Request {
-        op: "api.workspace_binding".to_owned(),
-        invocation_id: "binding".to_owned(),
-        args: json!({"layer_stack_root": &root}),
-    });
-    assert_eq!(binding["success"], Value::Bool(true));
     assert_eq!(
         binding["binding"]["base_root_hash"],
         ensure["binding"]["base_root_hash"]
     );
-
-    let read = table.dispatch(&Request {
-        op: "api.v1.read_file".to_owned(),
-        invocation_id: "read".to_owned(),
-        args: json!({
-            "layer_stack_root": &root,
-            "path": workspace.join("README.md"),
-        }),
-    });
-    assert_eq!(read["success"], Value::Bool(true));
-    assert_eq!(read["content"], Value::String("# base\n".to_owned()));
-
-    let ensure_again = table.dispatch(&Request {
-        op: "api.ensure_workspace_base".to_owned(),
-        invocation_id: "ensure-again".to_owned(),
-        args: json!({
-            "layer_stack_root": &root,
-            "workspace_root": &workspace,
-        }),
-    });
-    assert_eq!(ensure_again["success"], Value::Bool(true));
-    assert_eq!(ensure_again["created"], Value::Bool(false));
-
-    std::fs::write(workspace.join("README.md"), "# reset\n")?;
-    let rebuilt = table.dispatch(&Request {
-        op: "api.build_workspace_base".to_owned(),
-        invocation_id: "rebuild".to_owned(),
-        args: json!({
-            "layer_stack_root": &root,
-            "workspace_root": &workspace,
-            "reset": true,
-        }),
-    });
-    assert_eq!(rebuilt["success"], Value::Bool(true));
-    assert_eq!(rebuilt["created"], Value::Bool(true));
-    assert_ne!(
-        rebuilt["binding"]["base_root_hash"],
-        ensure["binding"]["base_root_hash"]
+    assert_read_content(
+        &table,
+        &root,
+        &json!(workspace.join("README.md")),
+        "# base\n",
     );
+    assert_workspace_base_idempotent(&table, &root, &workspace);
 
-    let read_after_reset = table.dispatch(&Request {
-        op: "api.v1.read_file".to_owned(),
-        invocation_id: "read-after-reset".to_owned(),
-        args: json!({
-            "layer_stack_root": &root,
-            "path": "README.md",
-        }),
-    });
-    assert_eq!(read_after_reset["success"], Value::Bool(true));
-    assert_eq!(
-        read_after_reset["content"],
-        Value::String("# reset\n".to_owned())
-    );
+    rebuild_workspace_base(&table, &root, &workspace, &ensure)?;
+    assert_read_content(&table, &root, &json!("README.md"), "# reset\n");
     Ok(())
 }
 
@@ -265,49 +186,23 @@ fn isolated_workspace_ops_are_registered_and_disabled_by_default() -> TestResult
 }
 
 #[test]
-#[expect(
-    clippy::too_many_lines,
-    reason = "integration test keeps the isolated lifecycle wire contract in one scenario"
-)]
 fn isolated_workspace_lifecycle_ops_open_status_list_and_exit_when_enabled() -> TestResult {
     let _guard = ISOLATED_ENV_LOCK
         .lock()
         .map_err(|_| "isolated env lock poisoned")?;
-    let (root, _workspace) = seed_layer_stack("isolated_lifecycle")?;
-    let scratch = root
-        .parent()
-        .ok_or("layer root parent")?
-        .join("isolated-scratch");
-    let audit_path = root
-        .parent()
-        .ok_or("layer root parent")?
-        .join("isolated-audit.jsonl");
-    std::env::set_var("EOS_ISOLATED_WORKSPACE_ENABLED", "true");
-    std::env::set_var("EOS_ISOLATED_WORKSPACE_TEST_HARNESS", "true");
-    std::env::set_var(
-        "EOS_ISOLATED_WORKSPACE_TEST_SCRATCH_ROOT",
-        scratch.to_string_lossy().as_ref(),
-    );
-    std::env::set_var(
-        "EOS_ISOLATED_WORKSPACE_AUDIT_PATH",
-        audit_path.to_string_lossy().as_ref(),
-    );
+    let env = IsolatedLifecycleEnv::new()?;
     let table = OpTable::with_builtins();
-    let reset = table.dispatch(&Request {
-        op: "api.isolated_workspace.test_reset".to_owned(),
-        invocation_id: "iws-reset".to_owned(),
-        args: json!({}),
-    });
-    assert_eq!(reset["success"], Value::Bool(true));
+    assert_isolated_test_reset(&table, "iws-reset");
 
-    let enter = table.dispatch(&Request {
-        op: "api.isolated_workspace.enter".to_owned(),
-        invocation_id: "iws-enter".to_owned(),
-        args: json!({
+    let enter = dispatch_request(
+        &table,
+        "api.isolated_workspace.enter",
+        "iws-enter",
+        json!({
             "agent_id": "agent-enabled",
-            "layer_stack_root": &root,
+            "layer_stack_root": &env.root,
         }),
-    });
+    );
     assert_eq!(enter["success"], Value::Bool(true));
     assert_eq!(enter["manifest_version"], json!(1));
     assert_eq!(enter["manifest_root_hash"].as_str().map(str::len), Some(64));
@@ -318,107 +213,24 @@ fn isolated_workspace_lifecycle_ops_open_status_list_and_exit_when_enabled() -> 
     let handle_id = enter["workspace_handle_id"]
         .as_str()
         .ok_or("workspace handle id")?;
-    let handle_scratch = scratch
+    let handle_scratch = env
+        .scratch
         .join("runtime")
         .join("isolated-workspace")
         .join(handle_id);
     let private_file = handle_scratch.join("upper").join("private.txt");
     std::fs::write(&private_file, "private scratch\n")?;
 
-    let status = table.dispatch(&Request {
-        op: "api.isolated_workspace.status".to_owned(),
-        invocation_id: "iws-status".to_owned(),
-        args: json!({"agent_id": "agent-enabled"}),
-    });
-    assert_eq!(status["success"], Value::Bool(true));
-    assert_eq!(status["open"], Value::Bool(true));
-    assert_eq!(status["manifest_version"], json!(1));
-
-    let duplicate = table.dispatch(&Request {
-        op: "api.isolated_workspace.enter".to_owned(),
-        invocation_id: "iws-enter-again".to_owned(),
-        args: json!({
-            "agent_id": "agent-enabled",
-            "layer_stack_root": &root,
-        }),
-    });
-    assert_eq!(duplicate["success"], Value::Bool(false));
-    assert_eq!(duplicate["error"]["kind"], "already_open");
-
-    let open = table.dispatch(&Request {
-        op: "api.isolated_workspace.list_open".to_owned(),
-        invocation_id: "iws-list".to_owned(),
-        args: json!({}),
-    });
-    assert_eq!(open["success"], Value::Bool(true));
-    assert_eq!(open["open_agent_ids"], json!(["agent-enabled"]));
-
-    let exit = table.dispatch(&Request {
-        op: "api.isolated_workspace.exit".to_owned(),
-        invocation_id: "iws-exit".to_owned(),
-        args: json!({"agent_id": "agent-enabled"}),
-    });
-    assert_eq!(exit["success"], Value::Bool(true));
-    assert_eq!(exit["force_cancel_requested"], Value::Bool(false));
-    assert_eq!(exit["force_cancelled_pty_session_ids"], json!([]));
-    assert_eq!(exit["stale_pty_session_ids"], json!([]));
-    assert_eq!(exit["active_pty_session_ids_after"], json!([]));
-    assert!(exit["evicted_upperdir_bytes"].as_u64().unwrap_or(0) > 0);
-    assert_eq!(exit["inspection"]["handle_registered_after"], json!(false));
-    assert_eq!(exit["inspection"]["agent_registered_after"], json!(false));
-    assert_eq!(exit["inspection"]["open_handle_count_after"], json!(0));
-    assert_eq!(exit["inspection"]["open_agent_count_after"], json!(0));
-    assert_eq!(exit["inspection"]["lease_released"], json!(true));
-    assert_eq!(exit["inspection"]["active_leases_after"], json!(0));
-    assert_eq!(exit["inspection"]["scratch_exists_after"], json!(false));
-    assert_eq!(exit["inspection"]["upperdir_exists_after"], json!(false));
-    assert_eq!(exit["inspection"]["workdir_exists_after"], json!(false));
-    assert_eq!(exit["inspection"]["cgroup_exists_after"], Value::Null);
-    assert!(!handle_scratch.exists());
-    assert!(audit_path.exists());
-    let audit_events = std::fs::read_to_string(&audit_path)?
-        .lines()
-        .map(serde_json::from_str::<Value>)
-        .collect::<Result<Vec<_>, _>>()?;
-    assert_eq!(
-        audit_events
-            .iter()
-            .map(|event| event["type"].as_str().unwrap_or_default())
-            .collect::<Vec<_>>(),
-        vec![
-            "sandbox_isolated_workspace_enter",
-            "sandbox_isolated_workspace_exit"
-        ]
+    assert_isolated_open_state(&table, &env.root);
+    let exit = dispatch_request(
+        &table,
+        "api.isolated_workspace.exit",
+        "iws-exit",
+        json!({"agent_id": "agent-enabled"}),
     );
-    let exit_audit = audit_events.last().ok_or("exit audit event")?;
-    assert_eq!(
-        exit_audit["payload"]["inspection"]["scratch_exists_after"],
-        json!(false)
-    );
-    assert_eq!(
-        exit_audit["payload"]["inspection"]["active_leases_after"],
-        json!(0)
-    );
-
-    let status_after_exit = table.dispatch(&Request {
-        op: "api.isolated_workspace.status".to_owned(),
-        invocation_id: "iws-status-closed".to_owned(),
-        args: json!({"agent_id": "agent-enabled"}),
-    });
-    assert_eq!(status_after_exit["success"], Value::Bool(true));
-    assert_eq!(status_after_exit["open"], Value::Bool(false));
-
-    let reset = table.dispatch(&Request {
-        op: "api.isolated_workspace.test_reset".to_owned(),
-        invocation_id: "iws-reset-end".to_owned(),
-        args: json!({}),
-    });
-    assert_eq!(reset["success"], Value::Bool(true));
-    std::env::remove_var("EOS_ISOLATED_WORKSPACE_ENABLED");
-    std::env::remove_var("EOS_ISOLATED_WORKSPACE_TEST_HARNESS");
-    std::env::remove_var("EOS_ISOLATED_WORKSPACE_TEST_SCRATCH_ROOT");
-    std::env::remove_var("EOS_ISOLATED_WORKSPACE_AUDIT_PATH");
-    let _ = std::fs::remove_dir_all(root.parent().ok_or("layer root parent")?);
+    assert_isolated_exit(&exit, &handle_scratch, &env.audit_path)?;
+    assert_isolated_status_closed(&table);
+    assert_isolated_test_reset(&table, "iws-reset-end");
     Ok(())
 }
 
@@ -623,6 +435,272 @@ async fn tcp_server_dispatches_authenticated_ready_request() -> TestResult {
     assert_eq!(response["success"], Value::Bool(true));
     assert_eq!(response["ready"], Value::Bool(true));
     Ok(())
+}
+
+fn dispatch_request(table: &OpTable, op: &str, invocation_id: &str, args: Value) -> Value {
+    table.dispatch(&Request {
+        op: op.to_owned(),
+        invocation_id: invocation_id.to_owned(),
+        args,
+    })
+}
+
+fn seed_workspace_base_fixture() -> TestResult<(PathBuf, PathBuf, PathBuf)> {
+    let (root, workspace) = empty_workspace("workspace_base")?;
+    std::fs::create_dir_all(workspace.join("src"))?;
+    std::fs::write(workspace.join("README.md"), "# base\n")?;
+    std::fs::write(workspace.join("src").join("a.py"), "print('base')\n")?;
+    std::os::unix::fs::symlink("src/a.py", workspace.join("link.py"))?;
+    std::fs::create_dir_all(workspace.join("links"))?;
+    let outside_target = workspace
+        .parent()
+        .ok_or("workspace parent")?
+        .join("outside.txt");
+    std::fs::write(&outside_target, "outside\n")?;
+    std::os::unix::fs::symlink("../src/a.py", workspace.join("links").join("inside"))?;
+    std::os::unix::fs::symlink(&outside_target, workspace.join("links").join("outside"))?;
+    Ok((root, workspace, outside_target))
+}
+
+fn assert_workspace_base_created(ensure: &Value, root: &Path, workspace: &Path) {
+    assert_eq!(ensure["success"], Value::Bool(true));
+    assert_eq!(ensure["created"], Value::Bool(true));
+    assert_eq!(
+        ensure["binding"]["workspace_root"],
+        json!(workspace.to_string_lossy().as_ref())
+    );
+    assert_eq!(
+        ensure["binding"]["layer_stack_root"],
+        json!(root.to_string_lossy().as_ref())
+    );
+    assert_eq!(ensure["binding"]["base_manifest_version"], json!(1));
+    assert_eq!(
+        ensure["binding"]["base_root_hash"].as_str().map(str::len),
+        Some(64)
+    );
+    assert!(ensure["timings"]["api.workspace_base.total_s"].is_number());
+}
+
+fn assert_workspace_base_symlinks(root: &Path, outside_target: &Path) -> TestResult {
+    assert_eq!(
+        std::fs::read_link(
+            root.join("layers")
+                .join("B000001-base")
+                .join("links")
+                .join("inside")
+        )?
+        .to_string_lossy(),
+        "../src/a.py"
+    );
+    assert_eq!(
+        std::fs::read_link(
+            root.join("layers")
+                .join("B000001-base")
+                .join("links")
+                .join("outside")
+        )?,
+        outside_target
+    );
+    Ok(())
+}
+
+fn assert_read_content(table: &OpTable, root: &Path, path: &Value, content: &str) {
+    let read = dispatch_request(
+        table,
+        "api.v1.read_file",
+        "read",
+        json!({
+            "layer_stack_root": root,
+            "path": path,
+        }),
+    );
+    assert_eq!(read["success"], Value::Bool(true));
+    assert_eq!(read["content"], Value::String(content.to_owned()));
+}
+
+fn assert_workspace_base_idempotent(table: &OpTable, root: &Path, workspace: &Path) {
+    let ensure_again = dispatch_request(
+        table,
+        "api.ensure_workspace_base",
+        "ensure-again",
+        json!({
+            "layer_stack_root": root,
+            "workspace_root": workspace,
+        }),
+    );
+    assert_eq!(ensure_again["success"], Value::Bool(true));
+    assert_eq!(ensure_again["created"], Value::Bool(false));
+}
+
+fn rebuild_workspace_base(
+    table: &OpTable,
+    root: &Path,
+    workspace: &Path,
+    original_ensure: &Value,
+) -> TestResult {
+    std::fs::write(workspace.join("README.md"), "# reset\n")?;
+    let rebuilt = dispatch_request(
+        table,
+        "api.build_workspace_base",
+        "rebuild",
+        json!({
+            "layer_stack_root": root,
+            "workspace_root": workspace,
+            "reset": true,
+        }),
+    );
+    assert_eq!(rebuilt["success"], Value::Bool(true));
+    assert_eq!(rebuilt["created"], Value::Bool(true));
+    assert_ne!(
+        rebuilt["binding"]["base_root_hash"],
+        original_ensure["binding"]["base_root_hash"]
+    );
+    Ok(())
+}
+
+struct IsolatedLifecycleEnv {
+    root: PathBuf,
+    scratch: PathBuf,
+    audit_path: PathBuf,
+}
+
+impl IsolatedLifecycleEnv {
+    fn new() -> TestResult<Self> {
+        let (root, _workspace) = seed_layer_stack("isolated_lifecycle")?;
+        let base = root.parent().ok_or("layer root parent")?;
+        let scratch = base.join("isolated-scratch");
+        let audit_path = base.join("isolated-audit.jsonl");
+        std::env::set_var("EOS_ISOLATED_WORKSPACE_ENABLED", "true");
+        std::env::set_var("EOS_ISOLATED_WORKSPACE_TEST_HARNESS", "true");
+        std::env::set_var(
+            "EOS_ISOLATED_WORKSPACE_TEST_SCRATCH_ROOT",
+            scratch.to_string_lossy().as_ref(),
+        );
+        std::env::set_var(
+            "EOS_ISOLATED_WORKSPACE_AUDIT_PATH",
+            audit_path.to_string_lossy().as_ref(),
+        );
+        Ok(Self {
+            root,
+            scratch,
+            audit_path,
+        })
+    }
+}
+
+impl Drop for IsolatedLifecycleEnv {
+    fn drop(&mut self) {
+        std::env::remove_var("EOS_ISOLATED_WORKSPACE_ENABLED");
+        std::env::remove_var("EOS_ISOLATED_WORKSPACE_TEST_HARNESS");
+        std::env::remove_var("EOS_ISOLATED_WORKSPACE_TEST_SCRATCH_ROOT");
+        std::env::remove_var("EOS_ISOLATED_WORKSPACE_AUDIT_PATH");
+        if let Some(base) = self.root.parent() {
+            let _ = std::fs::remove_dir_all(base);
+        }
+    }
+}
+
+fn assert_isolated_test_reset(table: &OpTable, invocation_id: &str) {
+    let reset = dispatch_request(
+        table,
+        "api.isolated_workspace.test_reset",
+        invocation_id,
+        json!({}),
+    );
+    assert_eq!(reset["success"], Value::Bool(true));
+}
+
+fn assert_isolated_open_state(table: &OpTable, root: &Path) {
+    let status = dispatch_request(
+        table,
+        "api.isolated_workspace.status",
+        "iws-status",
+        json!({"agent_id": "agent-enabled"}),
+    );
+    assert_eq!(status["success"], Value::Bool(true));
+    assert_eq!(status["open"], Value::Bool(true));
+    assert_eq!(status["manifest_version"], json!(1));
+
+    let duplicate = dispatch_request(
+        table,
+        "api.isolated_workspace.enter",
+        "iws-enter-again",
+        json!({
+            "agent_id": "agent-enabled",
+            "layer_stack_root": root,
+        }),
+    );
+    assert_eq!(duplicate["success"], Value::Bool(false));
+    assert_eq!(duplicate["error"]["kind"], "already_open");
+
+    let open = dispatch_request(
+        table,
+        "api.isolated_workspace.list_open",
+        "iws-list",
+        json!({}),
+    );
+    assert_eq!(open["success"], Value::Bool(true));
+    assert_eq!(open["open_agent_ids"], json!(["agent-enabled"]));
+}
+
+fn assert_isolated_exit(exit: &Value, handle_scratch: &Path, audit_path: &Path) -> TestResult {
+    assert_eq!(exit["success"], Value::Bool(true));
+    assert_eq!(exit["force_cancel_requested"], Value::Bool(false));
+    assert_eq!(exit["force_cancelled_pty_session_ids"], json!([]));
+    assert_eq!(exit["stale_pty_session_ids"], json!([]));
+    assert_eq!(exit["active_pty_session_ids_after"], json!([]));
+    assert!(exit["evicted_upperdir_bytes"].as_u64().unwrap_or(0) > 0);
+    assert_eq!(exit["inspection"]["handle_registered_after"], json!(false));
+    assert_eq!(exit["inspection"]["agent_registered_after"], json!(false));
+    assert_eq!(exit["inspection"]["open_handle_count_after"], json!(0));
+    assert_eq!(exit["inspection"]["open_agent_count_after"], json!(0));
+    assert_eq!(exit["inspection"]["lease_released"], json!(true));
+    assert_eq!(exit["inspection"]["active_leases_after"], json!(0));
+    assert_eq!(exit["inspection"]["scratch_exists_after"], json!(false));
+    assert_eq!(exit["inspection"]["upperdir_exists_after"], json!(false));
+    assert_eq!(exit["inspection"]["workdir_exists_after"], json!(false));
+    assert_eq!(exit["inspection"]["cgroup_exists_after"], Value::Null);
+    assert!(!handle_scratch.exists());
+    assert!(audit_path.exists());
+    assert_isolated_exit_audit(audit_path)
+}
+
+fn assert_isolated_exit_audit(audit_path: &Path) -> TestResult {
+    let audit_events = std::fs::read_to_string(audit_path)?
+        .lines()
+        .map(serde_json::from_str::<Value>)
+        .collect::<Result<Vec<_>, _>>()?;
+    assert_eq!(
+        audit_events
+            .iter()
+            .map(|event| event["type"].as_str().unwrap_or_default())
+            .collect::<Vec<_>>(),
+        vec![
+            "sandbox_isolated_workspace_enter",
+            "sandbox_isolated_workspace_exit"
+        ]
+    );
+    let exit_audit = audit_events.last().ok_or("exit audit event")?;
+    assert_eq!(
+        exit_audit["payload"]["inspection"]["scratch_exists_after"],
+        json!(false)
+    );
+    assert_eq!(
+        exit_audit["payload"]["inspection"]["active_leases_after"],
+        json!(0)
+    );
+    Ok(())
+}
+
+fn assert_isolated_status_closed(table: &OpTable) {
+    let status = dispatch_request(
+        table,
+        "api.isolated_workspace.status",
+        "iws-status-closed",
+        json!({"agent_id": "agent-enabled"}),
+    );
+    assert_eq!(status["success"], Value::Bool(true));
+    assert_eq!(status["open"], Value::Bool(false));
 }
 
 fn seed_layer_stack(label: &str) -> TestResult<(PathBuf, PathBuf)> {

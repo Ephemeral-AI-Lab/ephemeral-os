@@ -23,8 +23,12 @@ pub enum OverlayError {
 
     /// A raw mount syscall (`fsopen`/`fsconfig`/`fsmount`/`move_mount`) or an
     /// `umount` failed. `// PORT backend/src/sandbox/overlay/kernel_mount.py:62-70,97-121`
-    #[error("overlay mount syscall failed: {0}")]
-    MountSyscall(#[source] io::Error),
+    #[error("overlay mount syscall failed at {context}: {source}")]
+    MountSyscall {
+        context: &'static str,
+        #[source]
+        source: io::Error,
+    },
 
     /// An upper-dir walk / capture I/O error.
     /// `// PORT backend/src/sandbox/overlay/capture.py:49-89 — _walk_upperdir`
