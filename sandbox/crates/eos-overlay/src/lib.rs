@@ -22,9 +22,6 @@
 //! returning [`OverlayError::Unsupported`] so `cargo check` is green on the
 //! macOS dev host.
 //!
-//! `// PORT backend/src/sandbox/overlay/kernel_mount.py:49-75`
-//! `// PORT backend/src/sandbox/overlay/writable_dirs.py:13,29-52`
-//! `// PORT backend/src/sandbox/overlay/path_change.py`
 #![deny(unsafe_op_in_unsafe_fn)]
 
 pub mod error;

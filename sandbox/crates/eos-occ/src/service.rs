@@ -15,14 +15,12 @@ use crate::error::OccError;
 use crate::route::{ChangesetResult, PublishDecision, Route};
 
 /// Layer depth at which auto-squash maintenance kicks in.
-// PORT backend/src/sandbox/occ/service.py:34 — AUTO_SQUASH_MAX_DEPTH = 100
 pub const AUTO_SQUASH_MAX_DEPTH: u32 = 100;
 
 /// Post-publish maintenance hook run after a successful OCC commit.
 ///
 /// Mirrors the Python `MaintenancePolicy` Protocol; implementations are
 /// synchronous and return per-phase timings.
-// PORT backend/src/sandbox/occ/maintenance.py:15 — class MaintenancePolicy(Protocol)
 pub trait MaintenancePolicy {
     /// Run maintenance after a publish lands; returns timing keys.
     ///
@@ -36,7 +34,6 @@ pub trait MaintenancePolicy {
 ///
 /// Narrow maintenance interface implemented by the daemon's layer-stack-backed
 /// adapter.
-// PORT backend/src/sandbox/occ/maintenance.py:21 — class _LayerSquashPort(Protocol)
 pub trait LayerSquashPort {
     /// Can the active stack be squashed at `max_depth`?
     fn can_squash(&self, max_depth: u32) -> bool;
@@ -89,7 +86,6 @@ impl OccRouteProvider for AllGatedRouteProvider {
 /// Each policy owns its own squash lock (Python `_squash_lock`) so concurrent
 /// publishes do not double-squash; it re-reads the active manifest under the
 /// lock before deciding.
-// PORT backend/src/sandbox/occ/maintenance.py:29 — class AutoSquashMaintenancePolicy
 pub struct AutoSquashMaintenancePolicy<S: LayerSquashPort> {
     squasher: S,
     max_depth: u32,
@@ -107,7 +103,6 @@ impl<S: LayerSquashPort> AutoSquashMaintenancePolicy<S> {
 }
 
 impl<S: LayerSquashPort> MaintenancePolicy for AutoSquashMaintenancePolicy<S> {
-    // PORT backend/src/sandbox/occ/maintenance.py:44 — after_publish_sync(): depth gate + squash
     fn after_publish_sync(&self, result: &ChangesetResult) -> Result<(), OccError> {
         if result.published_manifest_version.is_some() && self.squasher.can_squash(self.max_depth) {
             let _ = self.squasher.squash(self.max_depth)?;
@@ -157,7 +152,6 @@ impl<T: CommitTransactionPort + 'static> OccService<T> {
     ///
     /// Returns [`OccError`] when preparation, queue submission, or the commit
     /// worker reply fails.
-    // PORT backend/src/sandbox/occ/service.py:63 — apply_changeset()
     pub fn apply_changeset(
         &self,
         changes: &[LayerChange],
@@ -199,7 +193,6 @@ impl<T: CommitTransactionPort + 'static> OccService<T> {
     /// # Errors
     ///
     /// Returns [`OccError`] when route or base-hash lookup fails.
-    // PORT backend/src/sandbox/occ/service.py:230 — prepare_changeset()
     pub fn prepare_changeset(
         &self,
         changes: &[LayerChange],
@@ -336,7 +329,6 @@ impl<T: CommitTransactionPort + 'static> Drop for OccService<T> {
 /// one `occ-commit-queue` writer — implementations MUST return the same bundle
 /// (and thus the same queue + storage lease) for a given `layer_stack_root`,
 /// never a second writer.
-// PORT backend/src/sandbox/daemon/occ_runtime_services.py:48 — get_occ_runtime_services(layer_stack_root)
 pub trait OccRuntimeServicesPort {
     /// Concrete commit-transaction implementation the queue drives.
     type Transaction: CommitTransactionPort + 'static;
@@ -349,7 +341,6 @@ pub trait OccRuntimeServicesPort {
     ///
     /// Returns [`OccError`] when the per-root service cannot be created or
     /// retrieved.
-    // PORT backend/src/sandbox/daemon/occ_runtime_services.py:48 — per-root LRU cache
     fn occ_runtime_services(
         &self,
         layer_stack_root: &str,

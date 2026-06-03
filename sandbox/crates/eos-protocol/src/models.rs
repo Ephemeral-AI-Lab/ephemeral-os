@@ -4,25 +4,19 @@
 //! response), NOT the Python dataclass front door. Field order/name/type follow
 //! the §6 serialization in `docs/contract/04-shared-models.md`. Two
 //! representations of the same types, kept canonically-equal by fixtures.
-//! `// PORT backend/src/sandbox/shared/models.py`
-//! `// PORT backend/src/sandbox/shared/edit_apply.py:21-48 — apply_search_replace`
 
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 use thiserror::Error;
 
 /// Read cap shared by `read_file` (over it raises `ValueError`).
-/// `// PORT backend/src/sandbox/shared/tool_primitives/read.py:14`
 pub const MAX_READ_BYTES: usize = 16 * 1024 * 1024;
 /// Per-file grep cap; over it the file is silently skipped.
-/// `// PORT backend/src/sandbox/shared/tool_primitives/grep.py:21`
 pub const MAX_FILE_BYTES: usize = 2 * 1024 * 1024;
 /// Glob result limit; results sorted then sliced, `truncated` if more.
-/// `// PORT backend/src/sandbox/shared/tool_primitives/glob.py:17`
 pub const DEFAULT_GLOB_LIMIT: usize = 100;
 
 /// The single enum in the verb model; serialized as its `.value` string.
-/// `// PORT backend/src/sandbox/shared/models.py:15-20`
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Intent {
@@ -35,7 +29,6 @@ pub enum Intent {
 }
 
 /// `{reason, conflict_file, message}` — serialized verbatim into guarded results.
-/// `// PORT backend/src/sandbox/shared/models.py:115-133`
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ConflictInfo {
     pub reason: String,
@@ -74,14 +67,13 @@ impl ConflictInfo {
 // matches "sent only when non-None" exactly.
 // ---------------------------------------------------------------------------
 
-/// `read_file` request args. `// PORT api/tool/read.py:26`
+/// `read_file` request args.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ReadFileArgs {
     pub path: String,
 }
 
 /// `write_file` request args. `overwrite` defaults `true` at the primitive.
-/// `// PORT api/tool/write.py:26-31, tool_primitives/write.py:14-21`
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct WriteFileArgs {
     pub path: String,
@@ -89,7 +81,7 @@ pub struct WriteFileArgs {
     pub overwrite: bool,
 }
 
-/// `edit_file` request args. `// PORT api/tool/edit.py:29-40`
+/// `edit_file` request args.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct EditFileArgs {
     pub path: String,
@@ -143,7 +135,6 @@ pub struct CommandSessionCancelArgs {
 }
 
 /// `glob` request args. `path` sent only when non-None.
-/// `// PORT api/tool/glob.py:26-28`
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct GlobArgs {
     pub pattern: String,
@@ -153,7 +144,6 @@ pub struct GlobArgs {
 
 /// `grep` request args. `path`/`glob_filter`/`head_limit` sent only when
 /// non-None; `head_limit`/`offset` are wire-present but primitive-inert.
-/// `// PORT api/tool/grep.py:26-39`
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct GrepArgs {
     pub pattern: String,
@@ -171,7 +161,6 @@ pub struct GrepArgs {
 }
 
 /// `read_file` response (`SandboxResultBase` + content/exists/encoding).
-/// `// PORT backend/src/sandbox/shared/models.py:162-166`
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ReadFileResult {
     pub success: bool,
@@ -187,7 +176,6 @@ pub struct ReadFileResult {
 }
 
 /// `write_file` response (`GuardedResultBase`, no added fields).
-/// `// PORT backend/src/sandbox/shared/models.py:176-178`
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct WriteFileResult {
     pub success: bool,
@@ -203,7 +191,6 @@ pub struct WriteFileResult {
 }
 
 /// `edit_file` response (`GuardedResultBase` + `applied_edits`).
-/// `// PORT backend/src/sandbox/shared/models.py:196-198`
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct EditFileResult {
     pub success: bool,
@@ -220,7 +207,6 @@ pub struct EditFileResult {
 }
 
 /// `glob` response (`SandboxResultBase` + `filenames/num_files/truncated`).
-/// `// PORT backend/src/sandbox/shared/models.py:226-230`
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct GlobResult {
     pub success: bool,
@@ -236,7 +222,6 @@ pub struct GlobResult {
 }
 
 /// `grep` response (`SandboxResultBase` + grep counters/content).
-/// `// PORT backend/src/sandbox/shared/models.py:246-256`
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct GrepResult {
     pub success: bool,
@@ -258,7 +243,6 @@ pub struct GrepResult {
 }
 
 /// A single search/replace edit on the wire: `{old_text, new_text, replace_all}`.
-/// `// PORT backend/src/sandbox/shared/models.py:181-187 — SearchReplaceEdit`
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SearchReplaceEdit {
     pub old_text: String,
@@ -268,7 +252,7 @@ pub struct SearchReplaceEdit {
 }
 
 /// Failure of [`apply_search_replace`]; the message strings are part of the
-/// contract. `// PORT backend/src/sandbox/shared/edit_apply.py:21-48`
+/// contract.
 #[derive(Debug, Clone, PartialEq, Eq, Error)]
 #[non_exhaustive]
 pub enum SearchReplaceError {
@@ -294,7 +278,6 @@ pub enum SearchReplaceError {
 /// [`SearchReplaceError::NotFound`] when the anchor is absent, or
 /// [`SearchReplaceError::CountMismatch`] when `replace_all=false` and the
 /// anchor appears more than once.
-/// `// PORT backend/src/sandbox/shared/edit_apply.py:21-48`
 pub fn apply_search_replace(
     text: &str,
     old: &str,

@@ -20,8 +20,6 @@
 //! single-threaded async plus boot-time emitters that may fire before the loop
 //! starts; a plain lock is correct for both — and the lock is NEVER held across
 //! an `.await` (the ring ops are synchronous).
-//! `// PORT backend/src/sandbox/daemon/audit_buffer.py — AuditBuffer ring`
-//! `// PORT backend/src/sandbox/daemon/audit_schema.py:294,310 — safe_emit / safe_record_phase`
 
 use std::collections::VecDeque;
 use std::panic::{catch_unwind, AssertUnwindSafe};
@@ -36,7 +34,6 @@ use eos_protocol::audit::{
 
 /// A single buffered event: its monotonic sequence, lane, encoded size, and the
 /// payload (already stamped with `seq`/`lane`).
-/// `// PORT backend/src/sandbox/daemon/audit_buffer.py:69-74 — BufferedEvent`
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct BufferedEvent {
     /// Monotonic per-buffer sequence number.
@@ -50,7 +47,6 @@ pub struct BufferedEvent {
 }
 
 /// Per-lane retained-event/byte/dropped counters.
-/// `// PORT backend/src/sandbox/daemon/audit_buffer.py:84-89 — _LaneCounters`
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct LaneCounters {
     /// Retained events in this lane.
@@ -94,7 +90,7 @@ struct RingState {
 
 impl AuditBuffer {
     /// Build a ring with the default caps (`50_000` events / 8 MiB) and a fresh
-    /// boot epoch id. `// PORT backend/src/sandbox/daemon/audit_buffer.py:122-152`
+    /// boot epoch id.
     #[must_use]
     pub fn new() -> Self {
         Self::with_caps(DEFAULT_MAX_EVENTS, DEFAULT_MAX_BYTES, None)
@@ -115,7 +111,6 @@ impl AuditBuffer {
                 counters: [LaneCounters::default(); 3],
                 pressure_above: false,
             }),
-            // PORT backend/src/sandbox/daemon/audit_buffer.py:134-136 — boot_epoch_id = monotonic_ns()
             boot_epoch_id: boot_epoch_id.unwrap_or_else(default_boot_epoch_id),
             pressure_threshold: DEFAULT_PRESSURE_THRESHOLD,
         }
@@ -138,7 +133,6 @@ impl AuditBuffer {
     /// Injects `seq`/`lane` into the payload, enforces the caps (evicting in
     /// lane priority), and on a rising pressure cross re-emits the
     /// `daemon.audit_buffer_pressure` event OUTSIDE the lock.
-    // PORT backend/src/sandbox/daemon/audit_buffer.py:160-200 — append(): seq/lane stamp, enforce caps, edge-triggered pressure emit
     pub fn append(&self, event: Value, lane: Lane) -> u64 {
         let encoded_bytes = encoded_size(&event);
         let mut state = self.lock_state();
@@ -171,7 +165,6 @@ impl AuditBuffer {
 
     /// Pull events strictly after `after_seq` (up to `limit`), with the buffer +
     /// snapshot blocks and the cursor. Backs `api.audit.pull`.
-    // PORT backend/src/sandbox/daemon/audit_buffer.py:202-225 — pull(after_seq, limit)
     pub fn pull(&self, after_seq: i64, limit: usize) -> Value {
         let limit = limit.max(1);
         let requested_after_seq = after_seq;
@@ -211,7 +204,6 @@ impl AuditBuffer {
     }
 
     /// Buffer + snapshot blocks with no events. Backs `api.audit.snapshot`.
-    // PORT backend/src/sandbox/daemon/audit_buffer.py:227-234 — snapshot()
     pub fn snapshot(&self) -> Value {
         let state = self.lock_state();
         serde_json::json!({
@@ -234,7 +226,6 @@ impl Default for AuditBuffer {
 /// the try/swallow discipline lives in one place. IMPURE: it reaches the
 /// process-wide buffer singleton (the future port resolves the singleton; the
 /// pure schema constructors stay in [`eos_protocol::audit`]).
-// PORT backend/src/sandbox/daemon/audit_schema.py:294-307 — safe_emit(event, lane): lazy get_audit_buffer().append, swallow
 pub fn safe_emit(event: Value, lane: Lane) {
     let _ = catch_unwind(AssertUnwindSafe(|| {
         let _ = global_audit_buffer().append(event, lane);
@@ -246,7 +237,6 @@ pub fn safe_emit(event: Value, lane: Lane) {
 /// Lazy-bound so the sandbox does not carry an unconditional engine dependency;
 /// no-ops when no per-call buffer is active. Used by the overlay/OCC publish
 /// boundaries. IMPURE: it reaches the (out-of-scope) engine package.
-// PORT backend/src/sandbox/daemon/audit_schema.py:310-326 — safe_record_phase(phase, duration_ms): lazy engine.tool_call.phase_buffer.record_phase, swallow
 pub const fn safe_record_phase(phase: &str, duration_ms: f64) {
     let _ = (phase, duration_ms);
 }

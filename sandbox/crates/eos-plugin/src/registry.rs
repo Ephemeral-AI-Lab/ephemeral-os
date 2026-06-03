@@ -7,7 +7,6 @@
 //!
 //! `Intent::Lifecycle` is rejected at registration — LIFECYCLE is reserved for
 //! sandbox lifecycle ops, not plugin tool dispatch.
-//! `// PORT backend/src/sandbox/ephemeral_workspace/plugin/op_registry.py:67-142`
 
 use eos_protocol::Intent;
 
@@ -19,11 +18,9 @@ use crate::error::{PluginError, Result};
 /// overlay+OCC publish path.
 /// `false` opts the plugin into self-managed publish (e.g. the LSP `apply.py`
 /// runtime), keeping the existing OCC publish path UNCHANGED.
-/// `// PORT backend/src/sandbox/ephemeral_workspace/plugin/op_registry.py:73 — auto_workspace_overlay default True`
 pub const DEFAULT_AUTO_WORKSPACE_OVERLAY: bool = true;
 
 /// Build the public op name the daemon dispatcher registers: `plugin.<plugin>.<op>`.
-/// `// PORT backend/src/sandbox/ephemeral_workspace/plugin/op_registry.py:206 — f"plugin.{plugin}.{op}"`
 #[must_use]
 pub fn public_op_name(plugin_name: &str, op_name: &str) -> String {
     format!("plugin.{plugin_name}.{op_name}")
@@ -33,7 +30,6 @@ pub fn public_op_name(plugin_name: &str, op_name: &str) -> String {
 ///
 /// The Rust daemon never holds a Python callable; the importlib path is replaced
 /// by a PPC service process.
-/// `// PORT backend/src/sandbox/ephemeral_workspace/plugin/op_registry.py:67-74 — _PendingRegistration`
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PluginOpRegistration {
     /// Owning plugin (must match `^[A-Za-z_][A-Za-z0-9_]*$`).
@@ -54,7 +50,6 @@ impl PluginOpRegistration {
     ///
     /// Returns [`PluginError::Registration`] if the plugin/op identity is invalid
     /// or if the registration tries to use [`Intent::Lifecycle`].
-    /// `// PORT backend/src/sandbox/ephemeral_workspace/plugin/op_registry.py:107-121 — register_plugin_op validation`
     pub fn new(
         plugin_name: &str,
         op_name: &str,
@@ -90,7 +85,6 @@ impl PluginOpRegistration {
 }
 
 /// Whether `name` matches the Python `_PLUGIN_NAME_RE` (`^[A-Za-z_][A-Za-z0-9_]*$`).
-/// `// PORT backend/src/sandbox/ephemeral_workspace/plugin/op_registry.py:78 — _PLUGIN_NAME_RE`
 fn is_valid_plugin_name(name: &str) -> bool {
     let mut chars = name.chars();
     match chars.next() {
@@ -104,7 +98,6 @@ fn is_valid_plugin_name(name: &str) -> bool {
 ///
 /// Keyed on `(plugin_name, op_name)`; identical re-registration is a no-op,
 /// conflicting registration with a different handler errors.
-/// `// PORT backend/src/sandbox/ephemeral_workspace/plugin/op_registry.py:76 — _PENDING`
 #[derive(Debug, Default)]
 pub struct OpRegistry {
     pending: Vec<PluginOpRegistration>,
@@ -124,7 +117,6 @@ impl OpRegistry {
     ///
     /// Returns [`PluginError::Conflict`] when the same public op is registered
     /// with different metadata.
-    /// `// PORT backend/src/sandbox/ephemeral_workspace/plugin/op_registry.py:123-142 — decorator`
     pub fn register(&mut self, registration: PluginOpRegistration) -> Result<()> {
         if let Some(existing) = self.pending.iter().find(|r| {
             r.plugin_name == registration.plugin_name && r.op_name == registration.op_name
@@ -139,7 +131,6 @@ impl OpRegistry {
     }
 
     /// Pending registrations, optionally filtered by plugin.
-    /// `// PORT backend/src/sandbox/ephemeral_workspace/plugin/op_registry.py:145-155 — pending_plugin_registrations`
     #[must_use]
     pub fn pending(&self, plugin_name: Option<&str>) -> Vec<&PluginOpRegistration> {
         self.pending
@@ -149,7 +140,6 @@ impl OpRegistry {
     }
 
     /// Drop pending registrations for one plugin before a runtime reload.
-    /// `// PORT backend/src/sandbox/ephemeral_workspace/plugin/op_registry.py:158-165 — clear_plugin_registrations`
     pub fn clear(&mut self, plugin_name: &str) {
         self.pending.retain(|r| r.plugin_name != plugin_name);
     }
@@ -157,7 +147,6 @@ impl OpRegistry {
     /// Drain pending registrations for `plugin_name`, returning the public op
     /// names the daemon dispatcher should register. The caller owns live route
     /// selection from each entry's intent plus `auto_workspace_overlay`.
-    /// `// PORT backend/src/sandbox/ephemeral_workspace/plugin/op_registry.py:168-221 — flush_plugin_registrations`
     pub fn flush(&mut self, plugin_name: &str) -> Vec<String> {
         let mut registered = Vec::new();
         self.pending.retain(|r| {

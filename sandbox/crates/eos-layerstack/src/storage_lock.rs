@@ -7,12 +7,10 @@
 //!    daemon *process* from owning the same root; a contended acquire returns
 //!    [`crate::LayerStackError::StorageRootOwned`] rather than blocking. Released
 //!    with `LOCK_UN` + `close` once the in-process refcount hits zero.
-//!    `// PORT backend/src/sandbox/layer_stack/storage_lock.py:71,55,69`
 //! 2. **In-process reentrant mutex + refcount** — a per-root registry keyed by
 //!    the canonical absolute path serializes multiple in-process `LayerStack`
 //!    managers that may coexist after cache drops / overlay resets. The mutex is
 //!    a **reentrant** `threading.RLock` in Python.
-//!    `// PORT backend/src/sandbox/layer_stack/storage_lock.py:13,14,22,78`
 //!
 //! # ⚠ THE REENTRANT-RLock → non-reentrant-Mutex DEADLOCK TRAP
 //!
@@ -26,8 +24,6 @@
 //! Do NOT 1:1-port. This module uses option (b): a small reentrant guard type
 //! that preserves the Python same-thread re-entry semantics without holding an
 //! async lock across awaits.
-//! `// PORT backend/src/sandbox/layer_stack/transaction.py:45`
-//! `// PORT backend/src/sandbox/layer_stack/stack.py:365`
 
 use std::collections::HashMap;
 use std::fs::{File, OpenOptions};
@@ -41,14 +37,12 @@ use rustix::fs::{flock, FlockOperation};
 use crate::error::LayerStackError;
 
 /// Lock-file name placed at the root of every storage root.
-/// `// PORT backend/src/sandbox/layer_stack/storage_lock.py:13`
 pub const STORAGE_WRITER_LOCK_FILE: &str = ".storage-writer.lock";
 
 /// A held cross-process + in-process writer lease for one storage root.
 ///
 /// RAII: dropping the last lease for a root releases the `flock` and closes the
 /// fd (refcount-gated). `exclusive()` returns the reentrant in-process guard.
-/// `// PORT backend/src/sandbox/layer_stack/storage_lock.py:25-43 — StorageWriterLockLease`
 #[derive(Debug)]
 pub struct StorageWriterLockLease {
     key: String,
@@ -64,7 +58,6 @@ impl StorageWriterLockLease {
     ///
     /// Returns [`LayerStackError`] when the storage root cannot be created,
     /// canonicalized/locked, or when the process-local registry is poisoned.
-    /// `// PORT backend/src/sandbox/layer_stack/storage_lock.py:59-84 — acquire_storage_writer_lock`
     pub fn acquire(storage_root: &Path) -> Result<Self, LayerStackError> {
         std::fs::create_dir_all(storage_root)?;
         let key = storage_root
@@ -116,7 +109,6 @@ impl StorageWriterLockLease {
     ///
     /// Returns [`LayerStackError`] when the registry or reentrant lock state is
     /// poisoned, or when this lease has already been closed.
-    /// `// PORT backend/src/sandbox/layer_stack/storage_lock.py:33-40 — exclusive`
     pub fn exclusive(&self) -> Result<ExclusiveGuard<'_>, LayerStackError> {
         let lock = {
             let registry = lock_registry()?;
@@ -152,7 +144,6 @@ impl Drop for StorageWriterLockLease {
 }
 
 /// In-process exclusive write guard. Reentrant on the same thread (see TRAP).
-/// `// PORT backend/src/sandbox/layer_stack/storage_lock.py:33-40`
 #[derive(Debug)]
 pub struct ExclusiveGuard<'lease> {
     lock: Arc<ReentrantMutex>,

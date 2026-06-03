@@ -68,7 +68,6 @@ pub use request::{Fd, NsFds, RunMode, RunRequest, RunResult, ToolCall, Workspace
 ///
 /// Returns [`RunnerError`] when the request is invalid for the selected mode,
 /// namespace setup fails, overlay mounting fails, or child execution fails.
-// PORT backend/src/sandbox/overlay/namespace_runner.py:48 — run_in_namespace dispatch
 pub fn run(request: &RunRequest, mount: &dyn KernelMountPort) -> Result<RunResult, RunnerError> {
     match request.mode {
         RunMode::FreshNs => fresh_ns::run_fresh_ns(request, mount),

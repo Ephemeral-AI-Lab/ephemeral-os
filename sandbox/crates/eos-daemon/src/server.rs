@@ -22,7 +22,6 @@
 //! SIGINT cancels it, the serve loops select on it, in-flight pipelines are
 //! drained, and (per the Python `start_new_session=True`) the cancel path kills
 //! the full child process group.
-//! `// PORT backend/src/sandbox/daemon/rpc/server.py:58,62,116-143,183,193 — caps/timeout/auth/listeners`
 
 use std::path::PathBuf;
 use std::sync::{mpsc as std_mpsc, Arc};
@@ -44,14 +43,13 @@ use crate::error::DaemonError;
 use crate::invocation_registry::InFlightRegistry;
 
 /// Maximum bytes read for a single request line (re-exported for the listener
-/// buffer cap). `// PORT backend/src/sandbox/daemon/rpc/server.py:58 — MAX_REQUEST_BYTES`
+/// buffer cap).
 pub const MAX_REQUEST_BYTES: usize = eos_protocol::MAX_REQUEST_BYTES;
 
-/// Per-request read timeout in seconds. `// PORT server.py:62 — REQUEST_READ_TIMEOUT_S`
+/// Per-request read timeout in seconds.
 pub const REQUEST_READ_TIMEOUT_S: f64 = eos_protocol::REQUEST_READ_TIMEOUT_S;
 
 /// Where the daemon binds + writes its pid, plus the optional TCP listener.
-/// `// PORT backend/src/sandbox/daemon/rpc/server.py:148-205 — serve(socket_path, pid_path, tcp_host, tcp_port, auth_token)`
 #[derive(Debug, Clone)]
 pub struct ServerConfig {
     /// `AF_UNIX` socket path (chmod 0o600 after bind).
@@ -110,7 +108,6 @@ impl DaemonServer {
     ///
     /// Returns an error when listener binding, pid-file setup, signal handling,
     /// request dispatch, or shutdown cleanup fails.
-    // PORT backend/src/sandbox/daemon/rpc/server.py:148-249 — serve(): listeners, signal handlers, pid/socket cleanup
     pub async fn serve(self) -> Result<(), DaemonError> {
         let shutdown = self.shutdown.clone();
         let server = Arc::new(self);
@@ -224,7 +221,6 @@ impl DaemonServer {
     /// Handle one accepted connection: read one capped, timed request line, pop
     /// the TCP-only auth token, decode the envelope, dispatch, write one framed
     /// response. Per-connection; never holds a lock across the await points.
-    // PORT backend/src/sandbox/daemon/rpc/server.py:64-143 — _handle_connection(): readline(timeout), LimitOverrun/Value -> request_too_large, auth pop (TCP), bad_json/invalid_envelope, dispatch, frame + drain
     async fn handle_connection<S>(&self, stream: S, is_tcp: bool) -> Result<(), DaemonError>
     where
         S: AsyncRead + AsyncWrite + Unpin,

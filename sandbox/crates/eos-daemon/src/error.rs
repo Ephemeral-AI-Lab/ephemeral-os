@@ -5,7 +5,6 @@
 //! punctuation. The lower-crate error types fold in via `#[from]` so a handler
 //! can `?`-propagate them; the dispatcher maps a [`DaemonError`] onto the wire
 //! [`eos_protocol::ErrorKind`] error envelope.
-//! `// PORT backend/src/sandbox/daemon/rpc/dispatcher.py:215-229 — _error_envelope`
 
 use thiserror::Error;
 
@@ -23,17 +22,14 @@ pub enum DaemonError {
     Io(#[from] std::io::Error),
 
     /// The op named in the request is not registered in the op table.
-    /// `// PORT backend/src/sandbox/daemon/rpc/dispatcher.py:155 — unknown_op`
     #[error("unknown op: {0}")]
     UnknownOp(String),
 
     /// The envelope was structurally invalid (missing/empty op, non-object args).
-    /// `// PORT backend/src/sandbox/daemon/rpc/dispatcher.py:165-199 — _validate_envelope`
     #[error("invalid envelope: {0}")]
     InvalidEnvelope(String),
 
     /// A request line exceeded [`eos_protocol::MAX_REQUEST_BYTES`].
-    /// `// PORT backend/src/sandbox/daemon/rpc/server.py:78-91 — request_too_large`
     #[error("request exceeds {limit} byte limit")]
     RequestTooLarge {
         /// The configured per-request byte ceiling.
@@ -41,12 +37,10 @@ pub enum DaemonError {
     },
 
     /// A TCP request's auth token did not match the configured token.
-    /// `// PORT backend/src/sandbox/daemon/rpc/server.py:116-119 — unauthorized`
     #[error("daemon request authentication failed")]
     Unauthorized,
 
     /// A handler/gate policy refusal (e.g. floor-reset env gate not set).
-    /// `// PORT backend/src/sandbox/daemon/rpc/dispatcher.py:392-399 — forbidden`
     #[error("forbidden: {0}")]
     Forbidden(String),
 
@@ -81,7 +75,6 @@ impl DaemonError {
     /// The dispatcher uses this to build the structured error envelope; an
     /// otherwise-unclassified handler failure becomes
     /// [`eos_protocol::ErrorKind::InternalError`] with a generated `error_id`.
-    /// `// PORT backend/src/sandbox/daemon/rpc/dispatcher.py:127-160 — internal_error wrap`
     #[must_use]
     pub const fn wire_kind(&self) -> eos_protocol::ErrorKind {
         use eos_protocol::ErrorKind;

@@ -60,15 +60,11 @@ const CHILD_WAIT_POLL: Duration = Duration::from_millis(5);
 ///
 /// Returns [`RunnerError`] when namespace setup, overlay mounting, request
 /// validation, or child execution fails.
-// PORT backend/src/sandbox/overlay/namespace_runner.py:72 — _run_tool_call_in_fresh_namespace
-// PORT backend/src/sandbox/overlay/namespace_runner.py:227-250 — _run_namespace_entrypoint_async (unshare -Urm, start_new_session=True)
-// PORT backend/src/sandbox/overlay/namespace_entrypoint.py:92-135 — mount_and_execute_tool_payload (mount overlay then exec)
 #[cfg(target_os = "linux")]
 pub fn run_fresh_ns(
     request: &RunRequest,
     mount: &dyn KernelMountPort,
 ) -> Result<RunResult, RunnerError> {
-    // PORT backend/src/sandbox/overlay/namespace_runner.py:72-135 — full fresh-ns
     //   sequence: unshare(CLONE_NEWUSER|CLONE_NEWNS) on this single-threaded child,
     //   write /proc/self/{uid_map,setgroups,gid_map}, KernelMountPort::mount_overlay
     //   at workspace_root, setsid + spawn the tool, then build the result JSON

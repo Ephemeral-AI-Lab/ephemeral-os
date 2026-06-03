@@ -4,76 +4,30 @@ expression: schema
 ---
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "definitions": {
-    "SandboxCaller": {
-      "description": "Caller identity threaded onto every audit-aware request.\n\nThe four required ids (`agent_id`, `run_id`, `agent_run_id`, `task_id`) are always present even when empty; the rest are optional. `tool_id` is the only id stored already-typed (it is `Option`, omitted when unset). The Python `tool_name` field is removed (GC-sandbox-api-01): it was empty in production and the audit fallback uses the operation name.",
-      "properties": {
-        "agent_id": {
-          "description": "Resolved agent identity. In production it is derived from `agent_run_id` (`agent_run_id.strip() or agent_name`, eos-tools source), so it frequently equals `agent_run_id` while staying a distinct field. eos-types owns no `AgentId` newtype, so this stays a raw `String`.",
-          "type": "string"
-        },
-        "agent_run_id": {
-          "default": "",
-          "description": "Agent-run id as a raw wire field (required-empty). Use [`Self::agent_run`] for the validated typed form.",
-          "type": "string"
-        },
-        "attempt_id": {
-          "default": "",
-          "description": "Attempt id as a raw wire field (optional-empty). Use [`Self::attempt`].",
-          "type": "string"
-        },
-        "request_id": {
-          "default": "",
-          "description": "Request id as a raw wire field (optional-empty). Use [`Self::request`].",
-          "type": "string"
-        },
-        "run_id": {
-          "default": "",
-          "description": "Run id (required-empty compatibility field).",
-          "type": "string"
-        },
-        "task_id": {
-          "default": "",
-          "description": "Task id as a raw wire field (required-empty). Use [`Self::task`].",
-          "type": "string"
-        },
-        "tool_id": {
-          "description": "Tool-use id, stored already-typed; omitted from the wire when unset.",
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "workflow_id": {
-          "default": "",
-          "description": "Workflow id as a raw wire field (optional-empty). Use [`Self::workflow`].",
-          "type": "string"
-        }
-      },
-      "required": [
-        "agent_id"
-      ],
-      "type": "object"
-    }
-  },
+  "title": "GrepRequest",
   "description": "Regex-scan workspace file contents.",
+  "type": "object",
+  "required": [
+    "caller",
+    "pattern"
+  ],
   "properties": {
     "caller": {
+      "description": "Caller identity for audit and routing.",
       "allOf": [
         {
           "$ref": "#/definitions/SandboxCaller"
         }
-      ],
-      "description": "Caller identity for audit and routing."
+      ]
     },
     "case_insensitive": {
-      "default": false,
       "description": "Case-insensitive matching.",
+      "default": false,
       "type": "boolean"
     },
     "description": {
-      "default": "",
       "description": "Human-readable operation description; falls back via [`Self::description_or`].",
+      "default": "",
       "type": "string"
     },
     "glob_filter": {
@@ -85,12 +39,12 @@ expression: schema
     },
     "head_limit": {
       "description": "Cap on returned matches.",
-      "format": "uint32",
-      "minimum": 0.0,
       "type": [
         "integer",
         "null"
-      ]
+      ],
+      "format": "uint32",
+      "minimum": 0.0
     },
     "invocation_id": {
       "description": "Optional in-flight correlation id, reused by the transport when present.",
@@ -100,25 +54,25 @@ expression: schema
       ]
     },
     "line_numbers": {
-      "default": false,
       "description": "Emit line numbers.",
+      "default": false,
       "type": "boolean"
     },
     "multiline": {
-      "default": false,
       "description": "Multiline matching.",
+      "default": false,
       "type": "boolean"
     },
     "offset": {
-      "default": 0,
       "description": "Offset into the match list.",
+      "default": 0,
+      "type": "integer",
       "format": "uint32",
-      "minimum": 0.0,
-      "type": "integer"
+      "minimum": 0.0
     },
     "output_mode": {
-      "default": "files_with_matches",
       "description": "Output mode (defaults to `files_with_matches`).",
+      "default": "files_with_matches",
       "type": "string"
     },
     "path": {
@@ -133,10 +87,56 @@ expression: schema
       "type": "string"
     }
   },
-  "required": [
-    "caller",
-    "pattern"
-  ],
-  "title": "GrepRequest",
-  "type": "object"
+  "definitions": {
+    "SandboxCaller": {
+      "description": "Caller identity threaded onto every audit-aware request.\n\nThe four required ids (`agent_id`, `run_id`, `agent_run_id`, `task_id`) are always present even when empty; the rest are optional. `tool_id` is the only id stored already-typed (it is `Option`, omitted when unset). The Python `tool_name` field is removed (GC-sandbox-api-01): it was empty in production and the audit fallback uses the operation name.",
+      "type": "object",
+      "required": [
+        "agent_id"
+      ],
+      "properties": {
+        "agent_id": {
+          "description": "Resolved agent identity. In production it is derived from `agent_run_id` (`agent_run_id.strip() or agent_name`, eos-tools source), so it frequently equals `agent_run_id` while staying a distinct field. eos-types owns no `AgentId` newtype, so this stays a raw `String`.",
+          "type": "string"
+        },
+        "agent_run_id": {
+          "description": "Agent-run id as a raw wire field (required-empty). Use [`Self::agent_run`] for the validated typed form.",
+          "default": "",
+          "type": "string"
+        },
+        "attempt_id": {
+          "description": "Attempt id as a raw wire field (optional-empty). Use [`Self::attempt`].",
+          "default": "",
+          "type": "string"
+        },
+        "request_id": {
+          "description": "Request id as a raw wire field (optional-empty). Use [`Self::request`].",
+          "default": "",
+          "type": "string"
+        },
+        "run_id": {
+          "description": "Run id (required-empty compatibility field).",
+          "default": "",
+          "type": "string"
+        },
+        "task_id": {
+          "description": "Task id as a raw wire field (required-empty). Use [`Self::task`].",
+          "default": "",
+          "type": "string"
+        },
+        "tool_id": {
+          "description": "Tool-use id, stored already-typed; omitted from the wire when unset.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "workflow_id": {
+          "description": "Workflow id as a raw wire field (optional-empty). Use [`Self::workflow`].",
+          "default": "",
+          "type": "string"
+        }
+      }
+    }
+  }
 }

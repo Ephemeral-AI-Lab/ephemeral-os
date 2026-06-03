@@ -20,7 +20,6 @@ pub use eos_overlay::OverlayPathChange;
 ///
 /// Returns [`OccError::InvalidOverlayChange`] when any captured overlay change
 /// cannot be converted into a storage-level mutation.
-// PORT backend/src/sandbox/occ/overlay_change_conversion.py:16 — overlay.path_change -> OCC changes
 pub fn overlay_path_changes_to_occ_changes(
     path_changes: &[OverlayPathChange],
 ) -> Result<Vec<LayerChange>, OccError> {

@@ -6,8 +6,6 @@
 //! atomically. A snapshot is O(1) — it acquires a lease and returns the
 //! EXISTING `layer_paths`, NEVER a rendered tree (rendering is the caller's
 //! overlay/projection concern).
-//! `// PORT backend/src/sandbox/layer_stack/stack.py:73-393 — LayerStack`
-//! `// PORT backend/src/sandbox/layer_stack/view.py:44 — MergedView`
 
 use std::collections::BTreeMap;
 use std::ffi::OsString;
@@ -47,7 +45,6 @@ const WHITEOUT_DEVICE_MINOR: u32 = 0;
 /// Immutable result of an O(1) snapshot: a lease id + the pinned manifest's
 /// existing on-disk layer paths. NEVER a rendered tree.
 ///
-/// `// PORT backend/src/sandbox/layer_stack/stack.py:52-70 — LayerStackSnapshotLease`
 // No `Eq`: `timings` holds `f64` (no total ordering).
 #[derive(Debug, Clone, PartialEq)]
 pub struct Lease {
@@ -65,7 +62,6 @@ pub struct Lease {
 ///
 /// Reads resolve through the manifest's layer directories without materializing
 /// a tree; this is the pure-read sibling of the overlay mount.
-/// `// PORT backend/src/sandbox/layer_stack/view.py:44-* — MergedView`
 #[derive(Debug)]
 pub struct MergedView {
     storage_root: PathBuf,
@@ -73,7 +69,6 @@ pub struct MergedView {
 
 impl MergedView {
     /// Bind a merged view to a storage root.
-    /// `// PORT backend/src/sandbox/layer_stack/view.py:45-* — MergedView.__init__`
     #[must_use]
     pub const fn new(storage_root: PathBuf) -> Self {
         Self { storage_root }
@@ -86,7 +81,6 @@ impl MergedView {
     /// Returns [`LayerStackError`] when `path` is invalid, a manifest layer is
     /// missing, or a referenced file cannot be read.
     ///
-    /// `// PORT backend/src/sandbox/layer_stack/view.py:66 — read_bytes`
     pub fn read_bytes(
         &self,
         path: &str,
@@ -128,7 +122,6 @@ impl MergedView {
     /// Returns [`LayerStackError`] when destination reset, directory creation,
     /// source layer reads, or file/symlink projection fails.
     ///
-    /// `// PORT backend/src/sandbox/layer_stack/view.py:195 — project`
     pub fn project(&self, destination: &Path, manifest: &Manifest) -> Result<(), LayerStackError> {
         remove_path(destination)?;
         std::fs::create_dir_all(destination)?;
@@ -279,7 +272,6 @@ impl MergedView {
 /// Owns the manifest pointer, the lease registry, the merged read view, the
 /// publisher, and the squasher. Holds the dual-layer storage-writer lease for
 /// its lifetime (acquired in [`LayerStack::open`]).
-/// `// PORT backend/src/sandbox/layer_stack/stack.py:73-96 — LayerStack.__init__`
 #[derive(Debug)]
 pub struct LayerStack {
     storage_root: PathBuf,
@@ -297,9 +289,7 @@ impl LayerStack {
     /// Returns [`LayerStackError`] when storage directories, the writer lock, or
     /// the initial manifest cannot be prepared.
     ///
-    /// `// PORT backend/src/sandbox/layer_stack/stack.py:76-96 — __init__`
     pub fn open(storage_root: PathBuf) -> Result<Self, LayerStackError> {
-        // PORT backend/src/sandbox/layer_stack/stack.py:80-96 — mkdir storage/layers/staging, acquire writer lock, seed empty manifest
         std::fs::create_dir_all(storage_root.join(LAYERS_DIR))?;
         std::fs::create_dir_all(storage_root.join(STAGING_DIR))?;
         let writer_lock = StorageWriterLockLease::acquire(&storage_root)?;
@@ -326,7 +316,6 @@ impl LayerStack {
     /// Returns [`LayerStackError`] when `manifest.json` cannot be read or
     /// decoded.
     ///
-    /// `// PORT backend/src/sandbox/layer_stack/stack.py:98-99 — read_active_manifest`
     pub fn read_active_manifest(&self) -> Result<Manifest, LayerStackError> {
         read_manifest(self.storage_root.join(ACTIVE_MANIFEST_FILE))
     }
@@ -339,7 +328,6 @@ impl LayerStack {
     /// Returns [`LayerStackError`] when the writer lock, active manifest, or
     /// lease registry cannot be acquired.
     ///
-    /// `// PORT backend/src/sandbox/layer_stack/stack.py:108-135 — acquire_snapshot`
     pub fn acquire_snapshot(&mut self, owner_request_id: &str) -> Result<Lease, LayerStackError> {
         let _guard = self.writer_lock.exclusive()?;
         let manifest = self.read_active_manifest()?;
@@ -379,7 +367,6 @@ impl LayerStack {
     /// Returns [`LayerStackError`] when the writer lock cannot be acquired or
     /// unreferenced layer cleanup fails.
     ///
-    /// `// PORT backend/src/sandbox/layer_stack/stack.py:137-149 — release_lease`
     pub fn release_lease(&mut self, lease_id: &str) -> Result<bool, LayerStackError> {
         let _guard = self.writer_lock.exclusive()?;
         let mut leases = lock_shared_registry(&self.leases)?;
@@ -392,7 +379,6 @@ impl LayerStack {
     ///
     /// Returns [`LayerStackError`] when manifest reads or squash planning fail.
     ///
-    /// `// PORT backend/src/sandbox/layer_stack/stack.py:157-168 — can_squash`
     pub fn can_squash(&self, max_depth: usize) -> Result<bool, LayerStackError> {
         let active = self.read_active_manifest()?;
         let squasher = LayerCheckpointSquasher::new(self.storage_root.clone());
@@ -410,7 +396,6 @@ impl LayerStack {
     /// Returns [`LayerStackError`] when locking, planning, checkpoint creation,
     /// manifest swapping, lease release, or rollback cleanup fails.
     ///
-    /// `// PORT backend/src/sandbox/layer_stack/stack.py:236-298 — squash`
     pub fn squash(&mut self, max_depth: usize) -> Result<Option<Manifest>, LayerStackError> {
         let _guard = self.writer_lock.exclusive()?;
         let active = self.read_active_manifest()?;
@@ -482,14 +467,12 @@ impl LayerStack {
     }
 
     /// Full retention keep-set (GC). DISTINCT from squash barriers.
-    /// `// PORT backend/src/sandbox/layer_stack/stack.py:151-152 — leased_layers`
     #[must_use]
     pub fn leased_layers(&self) -> Vec<LayerRef> {
         lock_shared_registry_recover(&self.leases).leased_layers()
     }
 
     /// Squash-keep barrier set. DISTINCT from the GC retention set.
-    /// `// PORT backend/src/sandbox/layer_stack/lease.py:68-85 — lease_head_layers`
     #[must_use]
     pub fn lease_head_layers(&self) -> Vec<LayerRef> {
         lock_shared_registry_recover(&self.leases).lease_head_layers()
@@ -512,7 +495,6 @@ impl LayerStack {
     /// Returns [`LayerStackError`] when the workspace is invalid, active leases
     /// exist, projection/replacement fails, or base rebuild fails.
     ///
-    /// `// PORT backend/src/sandbox/layer_stack/stack.py:300-359 — commit_to_workspace`
     pub fn commit_to_workspace(
         &mut self,
         workspace_root: &Path,
@@ -614,7 +596,6 @@ impl LayerStack {
     /// Returns [`LayerStackError`] when locking, staging, layer persistence,
     /// digest persistence, CAS validation, or manifest writes fail.
     ///
-    /// `// PORT backend/src/sandbox/layer_stack/publisher.py:49-138 — publish_layer`
     pub fn publish_layer(&mut self, changes: &[LayerChange]) -> Result<Manifest, LayerStackError> {
         let _guard = self.writer_lock.exclusive()?;
         let active = self.read_active_manifest()?;
@@ -1225,7 +1206,6 @@ fn write_atomic(path: impl AsRef<Path>, bytes: &[u8]) -> Result<(), LayerStackEr
 
 /// Write `bytes` to `path` (create/truncate) and fsync the file before
 /// returning; the caller fsyncs the parent dir after any rename.
-// PORT backend/src/sandbox/layer_stack/paths.py:52-64 — write_bytes_fsynced
 fn write_bytes_fsynced(path: &Path, bytes: &[u8]) -> Result<(), LayerStackError> {
     use std::io::Write as _;
     let mut file = std::fs::File::create(path)?;
@@ -1235,7 +1215,6 @@ fn write_bytes_fsynced(path: &Path, bytes: &[u8]) -> Result<(), LayerStackError>
 }
 
 /// fsync a directory so a prior create/rename into it is persisted.
-// PORT backend/src/sandbox/layer_stack/paths.py:43-49 — fsync_path (dir fd)
 pub(crate) fn fsync_dir(path: &Path) -> Result<(), LayerStackError> {
     std::fs::File::open(path)?.sync_all()?;
     Ok(())
@@ -1244,7 +1223,6 @@ pub(crate) fn fsync_dir(path: &Path) -> Result<(), LayerStackError> {
 /// fsync every non-symlink regular file under `root` (the staged layer tree),
 /// matching `os.walk(followlinks=False)` + `is_file()` filtering. Special
 /// files (char-device whiteouts) and symlinks are skipped — fsync is N/A.
-// PORT backend/src/sandbox/layer_stack/publisher.py:161-168 — _fsync_tree_files
 fn fsync_tree_files(root: &Path) -> Result<(), LayerStackError> {
     for entry in std::fs::read_dir(root)? {
         let entry = entry?;

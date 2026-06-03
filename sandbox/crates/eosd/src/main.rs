@@ -29,10 +29,6 @@
 //!   UNEXPECTED_TOKEN_EXIT, TEST_CRASH_EXIT}`.
 //! - thin-client / daemon connect path: `97` (`CONNECT_FAILED`), `98`
 //!   (`IO_FAILED`) — `eos_protocol::{CONNECT_FAILED, IO_FAILED}`.
-//!
-//! PORT `backend/src/sandbox/daemon/scripts/launch_daemon.sh` +
-//! `backend/src/sandbox/host/daemon_client.py` — the launcher + thin-client
-//! this binary replaces.
 #![forbid(unsafe_code)]
 
 use std::io::{Read, Write};
@@ -75,8 +71,6 @@ fn main() -> Result<()> {
 ///   starts a detached foreground child and returns.
 /// - `eosd daemon --client SOCKET JSON` is the Rust replacement for
 ///   `thin_client.py`, preserving exit codes 97/98.
-// PORT backend/src/sandbox/daemon/scripts/launch_daemon.sh:78-80 — daemon
-// foreground/spawn/client entrypoint replacement.
 fn run_daemon(args: std::env::Args) -> Result<()> {
     let config = DaemonCliConfig::parse(args)?;
     if let Some((socket_path, payload)) = config.client {
@@ -119,9 +113,6 @@ fn daemon_worker_threads() -> usize {
 /// This is a thin call into `eos-runner`: read the request payload from stdin
 /// or `--request <path>`, construct the overlay mount adapter, call `run`, and
 /// write compact JSON to stdout or `--output <path>`.
-// PORT backend/src/sandbox/overlay/namespace_entrypoint.py:1 +
-// backend/src/sandbox/isolated_workspace/scripts/setns_exec.py:1 — child
-// interpreter replacement.
 fn run_ns_runner(args: std::env::Args) -> Result<()> {
     let config = RunnerCliConfig::parse(args)?;
     let request_json = read_payload(config.request_path.as_ref())?;
@@ -177,7 +168,6 @@ fn run_ns_runner(args: std::env::Args) -> Result<()> {
 /// We parse the two positional FD ints and dispatch; the holder's typed errors
 /// carry exit codes (`1` / `2` / `7`) that we map onto the process status so the
 /// daemon-side crash-recovery sees the same codes as the Python holder.
-// PORT backend/src/sandbox/isolated_workspace/scripts/ns_holder.py:89-91 — readiness_fd = int(argv[1]); control_fd = int(argv[2])
 fn run_ns_holder(mut args: std::env::Args) -> Result<()> {
     let readiness_fd = parse_fd(args.next(), "readiness_fd")?;
     let control_fd = parse_fd(args.next(), "control_fd")?;
@@ -207,7 +197,6 @@ fn run_ns_holder(mut args: std::env::Args) -> Result<()> {
 }
 
 /// Parse a positional file-descriptor argument shared by the ns-holder arm.
-// PORT backend/src/sandbox/isolated_workspace/scripts/ns_holder.py:90-91 — int(argv[n])
 fn parse_fd(value: Option<String>, name: &str) -> Result<RawFd> {
     value
         .ok_or_else(|| anyhow!("missing {name} argument for ns-holder"))?

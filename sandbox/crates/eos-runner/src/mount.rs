@@ -21,16 +21,13 @@ use crate::error::RunnerError;
 ///
 /// This is the runner's mirror of the Python `MountInputs` the entrypoint
 /// builds: newest-first lower layers plus upper/work dirs.
-/// `// PORT backend/src/sandbox/overlay/kernel_mount.py — MountInputs / validate_mount_inputs`
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct MountInputs {
     /// Workspace root the overlay is moved onto (e.g. `/testbed`). `move_mount`
     /// rejects a `/proc/self/fd` symlink destination.
-    /// `// PORT backend/src/sandbox/overlay/kernel_mount.py:149 — move_mount dest constraint`
     pub workspace_root: PathBuf,
     /// Lower layer paths, **newest-first** — the order is hashed into the
     /// `lowerdir+` fsconfig sequence and is load-bearing.
-    /// `// PORT backend/src/sandbox/overlay/kernel_mount.py:6,65 — lowerdir+ newest-first`
     pub layer_paths: Vec<PathBuf>,
     pub upperdir: PathBuf,
     pub workdir: PathBuf,
@@ -42,7 +39,6 @@ pub struct MountInputs {
 /// (`mount_overlay`): `fsopen("overlay")` → per-layer `fsconfig("lowerdir+")` →
 /// `fsconfig("upperdir"/"workdir")` → `fsconfig_create` → `fsmount` →
 /// `move_mount(workspace_root)`.
-/// `// PORT backend/src/sandbox/overlay/kernel_mount.py:63-70 — mount_overlay raw new-mount API`
 pub trait MountedOverlay: Debug {}
 
 impl<T: Debug> MountedOverlay for T {}

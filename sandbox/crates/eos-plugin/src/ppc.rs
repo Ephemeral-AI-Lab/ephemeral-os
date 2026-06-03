@@ -16,8 +16,6 @@
 //! `parent_message_id` so the daemon can route callback replies while many
 //! callback-capable plugin ops are in flight on the same socket.
 //!
-//! `// PORT backend/src/sandbox/ephemeral_workspace/plugin/overlay_child.py:39-69 — JSON payload <-> reply framing`
-//! `// PORT backend/src/sandbox/ephemeral_workspace/plugin/overlay_dispatch.py:135-173 — request/output_ref handoff (becomes the PPC channel)`
 
 use eos_protocol::{decode, encode, Envelope, ProtocolError, Request};
 use serde_json::json;
@@ -39,7 +37,6 @@ pub enum PpcDirection {
 /// `op` carries the public op name (`plugin.<p>.<op>`) for a request, or a
 /// reply/callback sentinel for the return direction. `body` is opaque JSON text
 /// so PPC does not parse operation-specific payload schemas.
-/// `// PORT backend/src/sandbox/ephemeral_workspace/plugin/overlay_child.py:77-99 — _PluginOverlayInvocation payload`
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PpcEnvelope {
     /// Correlates a reply to its request (== the wire `invocation_id`).
@@ -81,7 +78,6 @@ impl PpcEnvelope {
     /// Project this frame onto an [`eos_protocol::Envelope::Request`], encoding
     /// `op`/`message_id`/`{direction, body}` into the request shape so the shared
     /// framing carries it. Body is opaque JSON text wrapped into the args object.
-    /// `// PORT backend/src/sandbox/ephemeral_workspace/plugin/overlay_dispatch.py:135-158 — payload_ref JSON shape`
     fn to_envelope(&self) -> Envelope {
         Envelope::Request(Request {
             op: self.op.clone(),
@@ -94,7 +90,6 @@ impl PpcEnvelope {
     }
 
     /// Recover a PPC frame from a decoded protocol envelope (the request shape).
-    /// `// PORT backend/src/sandbox/ephemeral_workspace/plugin/overlay_child.py:81-99 — read args/direction back out`
     fn from_envelope(envelope: Envelope) -> Result<Self, PluginError> {
         let Envelope::Request(request) = envelope else {
             return Err(PluginError::Ppc(

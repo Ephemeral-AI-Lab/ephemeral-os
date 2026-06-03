@@ -35,7 +35,6 @@ use crate::error::{OverlayError, Result};
 /// `layer_paths` is the leased lower stack in NEWEST-FIRST order (element 0 =
 /// highest-priority lower); `upperdir`/`workdir` are the writable side from
 /// [`crate::writable_dirs`].
-/// `// PORT backend/src/sandbox/overlay/kernel_mount.py:31-42 — MountInputs`
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct OverlayHandle {
     /// Writable upper directory.
@@ -51,7 +50,6 @@ pub struct OverlayHandle {
 /// Wraps the `fsmount` file descriptor returned by the new-mount API; the fd is
 /// `#[repr(transparent)]` so it crosses the syscall FFI as a bare `RawFd`, and
 /// owns its teardown — dropping the handle unmounts the workspace root.
-/// `// PORT backend/src/sandbox/overlay/kernel_mount.py:49-75 — mount_overlay (+ umount on teardown)`
 #[derive(Debug)]
 pub struct OverlayMount {
     /// The mountpoint this overlay was moved onto (`move_mount` destination).
@@ -71,7 +69,6 @@ impl Drop for OverlayMount {
         // Best-effort: peel every stacked mount at `workspace_root`. A Drop impl
         // cannot return an error, so failures are swallowed (matching the Python
         // non-raising default).
-        // PORT backend/src/sandbox/overlay/kernel_mount.py:78-121 — umount loop on teardown
         #[cfg(target_os = "linux")]
         {
             for _ in 0..64 {
@@ -101,10 +98,8 @@ impl Drop for OverlayMount {
 ///
 /// Returns [`OverlayError`] when mount inputs are invalid or a kernel mount
 /// syscall fails.
-/// `// PORT backend/src/sandbox/overlay/kernel_mount.py:49-75 — mount_overlay`
 #[cfg(target_os = "linux")]
 pub fn mount_overlay(workspace_root: &Path, handle: &OverlayHandle) -> Result<OverlayMount> {
-    // PORT backend/src/sandbox/overlay/kernel_mount.py:62-70 — fsopen/fsconfig/fsmount/move_mount
     let inputs = ValidatedMountInputs::open(workspace_root, handle)?;
     let fsfd =
         fsopen("overlay", FsOpenFlags::FSOPEN_CLOEXEC).map_mount_syscall("fsopen overlay")?;

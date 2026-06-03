@@ -8,8 +8,6 @@
 //! The protocol-version field `_eos_daemon_protocol_version` lives INSIDE `args`
 //! and the daemon NEVER reads it (an inert versioning hook). We reproduce its
 //! presence but do not validate it.
-//! `// PORT backend/src/sandbox/daemon/rpc/server.py:74-75,133`
-//! `// PORT backend/src/sandbox/daemon/rpc/dispatcher.py:215-229`
 
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -32,7 +30,6 @@ pub enum ProtocolError {
 ///
 /// Field order on the wire is exactly this; top-level keys are not sorted by the
 /// daemon.
-/// `// PORT backend/src/sandbox/host/daemon_client.py:114-117`
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Request {
     pub op: String,
@@ -42,7 +39,6 @@ pub struct Request {
 
 /// Daemon error envelope (`success:false`). `warnings`/`timings` are always
 /// `[]`/`{}` at the builder.
-/// `// PORT backend/src/sandbox/daemon/rpc/dispatcher.py:215-229 — _error_envelope`
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ErrorEnvelope {
     pub success: bool,
@@ -63,8 +59,6 @@ pub struct ErrorBody {
 }
 
 /// Verified daemon error `kind` values. Serialized `snake_case` on the wire.
-/// `// PORT backend/src/sandbox/daemon/rpc/dispatcher.py:147-273`
-/// `// PORT backend/src/sandbox/daemon/rpc/server.py:104-120`
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 #[non_exhaustive]

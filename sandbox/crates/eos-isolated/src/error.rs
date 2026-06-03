@@ -9,7 +9,6 @@ use std::path::PathBuf;
 ///
 /// Each variant's `kind()` reproduces the Python `kind` string fed onto the
 /// daemon RPC response envelope.
-/// `// PORT backend/src/sandbox/isolated_workspace/_control_plane/types.py:87-97 — IsolatedWorkspaceError`
 #[derive(Debug, thiserror::Error)]
 #[non_exhaustive]
 pub enum IsolatedError {
@@ -65,7 +64,6 @@ pub enum IsolatedError {
     },
 
     /// Linux network primitives (`ip`/`nft`/`CAP_NET_ADMIN`) unavailable.
-    /// `// PORT backend/src/sandbox/isolated_workspace/network.py:37-38`
     #[error("isolated network unavailable: {0}")]
     NetworkUnavailable(String),
 

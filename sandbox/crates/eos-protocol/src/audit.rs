@@ -7,26 +7,22 @@
 //! here as `Option<T>` with `skip_serializing_if = "Option::is_none"` for the
 //! droppable fields, and plain fields (with `Default`) for the always-emitted
 //! defaults (`workspace_mode`, the three `orphan_*_count`).
-//! `// PORT backend/src/sandbox/daemon/audit_schema.py:17-25 — _drop_none`
-//! `// PORT backend/src/sandbox/daemon/audit_buffer.py:19-65`
 
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 /// Ring-buffer pull/snapshot schema tag (lane changes => v2 break).
-/// `// PORT backend/src/sandbox/daemon/audit_buffer.py:57`
 pub const SCHEMA_VERSION: &str = "sandbox.daemon.audit.pull.v1";
 
-/// Default ring capacity (events). `// PORT audit_buffer.py:64`
+/// Default ring capacity (events).
 pub const DEFAULT_MAX_EVENTS: u64 = 50_000;
-/// Default ring capacity (bytes, 8 MiB). `// PORT audit_buffer.py:65`
+/// Default ring capacity (bytes, 8 MiB).
 pub const DEFAULT_MAX_BYTES: u64 = 8 * 1024 * 1024;
-/// Pressure threshold for the edge-triggered emitter. `// PORT audit_buffer.py:91,134`
+/// Pressure threshold for the edge-triggered emitter.
 pub const DEFAULT_PRESSURE_THRESHOLD: f64 = 0.8;
 
 /// Audit lane. Storage order is `_LANES`; eviction tries `sample` first and
 /// `critical` last (`_EVICTION_ORDER`).
-/// `// PORT backend/src/sandbox/daemon/audit_buffer.py:59-62`
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Lane {
@@ -45,7 +41,7 @@ impl Lane {
     pub const EVICTION_ORDER: [Self; 3] = [Self::Sample, Self::Normal, Self::Critical];
 }
 
-/// `daemon` section. `// PORT audit_schema.py:28-39`
+/// `daemon` section.
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 pub struct DaemonSection {
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -60,7 +56,7 @@ pub struct DaemonSection {
     pub retained_bytes: Option<i64>,
 }
 
-/// `layer_stack` section. `// PORT audit_schema.py:42-63`
+/// `layer_stack` section.
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 pub struct LayerStackSection {
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -96,7 +92,7 @@ pub struct LayerStackSection {
 }
 
 /// `overlay_workspace` section. `workspace_mode` defaults `"ephemeral"` (always
-/// emitted). `// PORT audit_schema.py:75-94`
+/// emitted).
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct OverlayWorkspaceSection {
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -148,7 +144,6 @@ impl Default for OverlayWorkspaceSection {
 
 /// `isolated_workspace` section. `workspace_mode` defaults `"isolated"`; the
 /// three `orphan_*_count` default `0` (all always emitted).
-/// `// PORT audit_schema.py:106-130`
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct IsolatedWorkspaceSection {
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -210,7 +205,7 @@ impl Default for IsolatedWorkspaceSection {
     }
 }
 
-/// `occ` section. `// PORT audit_schema.py:142-164`
+/// `occ` section.
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 pub struct OccSection {
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -248,7 +243,6 @@ pub struct OccSection {
 }
 
 /// `plugin` section. `plugin_id`/`plugin_kind` are required (always present).
-/// `// PORT audit_schema.py:174-193`
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct PluginSection {
     pub plugin_id: String,
@@ -278,7 +272,6 @@ pub struct PluginSection {
 }
 
 /// `background_tool` section. `background_task_id` required.
-/// `// PORT audit_schema.py:203-220`
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct BackgroundToolSection {
     pub background_task_id: String,
@@ -305,7 +298,6 @@ pub struct BackgroundToolSection {
 }
 
 /// `tool_call` section. `tool_use_id`/`tool_name` required.
-/// `// PORT audit_schema.py:232-250`
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ToolCallSection {
     pub tool_use_id: String,
@@ -333,7 +325,6 @@ pub struct ToolCallSection {
 }
 
 /// `os_resource` section. `sampled_at_monotonic_s` required.
-/// `// PORT audit_schema.py:262-277`
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct OsResourceSection {
     pub sampled_at_monotonic_s: f64,
@@ -357,7 +348,6 @@ pub struct OsResourceSection {
 
 /// Wrap a section into the channel-A event envelope:
 /// `{"type": <event_type>, "payload": {<section_key>: <section>}}`.
-/// `// PORT backend/src/sandbox/daemon/audit_schema.py — build_*_event`
 #[must_use]
 pub fn build_event(event_type: &str, section_key: &str, section: Value) -> Value {
     let mut payload = serde_json::Map::new();

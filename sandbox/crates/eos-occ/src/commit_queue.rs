@@ -32,22 +32,18 @@ use crate::error::OccError;
 use crate::route::{ChangesetResult, PublishDecision};
 
 /// Dedicated single-writer thread name (reproduce exactly).
-// PORT backend/src/sandbox/occ/commit_queue.py:90 — Thread(name="occ-commit-queue")
 pub const COMMIT_QUEUE_THREAD_NAME: &str = "occ-commit-queue";
 
 /// Default upper bound on changesets coalesced into one CAS attempt.
-// PORT backend/src/sandbox/occ/commit_queue.py:66 — max_batch_size: int = 64
 pub const MAX_BATCH_SIZE: usize = 64;
 
 /// Default batch-coalescing window in seconds (2 ms).
 ///
 /// Only paid when a non-blocking drain emptied the queue AND batch headroom
 /// remains; otherwise it is dead wall-clock on the single-commit hot path.
-// PORT backend/src/sandbox/occ/commit_queue.py:67 — batch_window_s: float = 0.002
 pub const BATCH_WINDOW_S: f64 = 0.002;
 
 /// Bounded CAS-mismatch retry budget before `AbortedVersion`.
-// PORT backend/src/sandbox/occ/commit_queue.py:27 — MAX_OCC_CAS_RETRIES: int = 3
 pub const MAX_OCC_CAS_RETRIES: u32 = 3;
 
 /// A routed changeset ready for the publish transaction.
@@ -74,7 +70,6 @@ pub struct PreparedChangeset {
 /// the layer-stack-backed implementation that revalidates the CAS base and
 /// publishes a new manifest version, returning [`PublishConflict`] on a stale
 /// base.
-// PORT backend/src/sandbox/occ/commit_transaction.py — CommitTransaction.revalidate_and_publish
 pub trait CommitTransactionPort: Send {
     /// Revalidate the base hash and atomically publish, or signal a CAS
     /// conflict so the queue can retry.
@@ -90,7 +85,6 @@ pub trait CommitTransactionPort: Send {
 
 /// Signals a manifest CAS mismatch (`ManifestConflictError`) so the writer
 /// retries against the fresh base.
-// PORT backend/src/sandbox/layer_stack/manifest.py — ManifestConflictError
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PublishConflict {
     /// The base version the publisher actually observed.
@@ -149,7 +143,6 @@ impl<T: CommitTransactionPort + 'static> CommitQueue<T> {
     ///
     /// Clamps to match Python: `max_batch_size >= 1`, `batch_window_s >= 0.0`,
     /// `max_cas_retries >= 1`.
-    // PORT backend/src/sandbox/occ/commit_queue.py:66-74 — __init__ clamps
     pub fn with_config(
         transaction: T,
         max_batch_size: usize,
@@ -175,7 +168,6 @@ impl<T: CommitTransactionPort + 'static> CommitQueue<T> {
     ///
     /// Returns [`OccError`] when the queue is closed, has already consumed its
     /// startup state, or the worker thread cannot be spawned.
-    // PORT backend/src/sandbox/occ/commit_queue.py:90 — Thread(target=_run, name="occ-commit-queue", daemon=True)
     pub fn start(&mut self) -> Result<(), OccError> {
         if self.closed {
             return Err(OccError::QueueClosed);
@@ -221,7 +213,6 @@ impl<T: CommitTransactionPort + 'static> CommitQueue<T> {
     /// # Errors
     ///
     /// Returns [`OccError::WorkerPanicked`] when the worker thread panicked.
-    // PORT backend/src/sandbox/occ/commit_queue.py — close(): put _STOP then join
     pub fn close(&mut self) -> Result<(), OccError> {
         if self.closed {
             return Ok(());
@@ -246,7 +237,6 @@ impl<T: CommitTransactionPort + 'static> CommitQueue<T> {
     ///
     /// Returns [`OccError::QueueClosed`] if the queue is closed/disconnected and
     /// [`OccError::QueueNotStarted`] if no live worker is available.
-    // PORT backend/src/sandbox/occ/commit_queue.py:108-124 — submit(): future + enqueue
     pub fn submit(
         &self,
         prepared: PreparedChangeset,
@@ -274,7 +264,6 @@ impl<T: CommitTransactionPort + 'static> CommitQueue<T> {
 
     /// Commit one disjoint batch with the bounded CAS-retry loop, fanning each
     /// path's [`FileResult`](crate::FileResult) back to its submitter.
-    // PORT backend/src/sandbox/occ/commit_queue.py:168 — _commit_batch(): retry + fan-out
     fn commit_batch(transaction: &T, batch: Vec<WorkItem>, max_cas_retries: u32) {
         let commit_start = Instant::now();
         let Some(combined) = combine_prepared(batch.iter().map(|item| &item.prepared)) else {
@@ -319,7 +308,6 @@ impl<T: CommitTransactionPort + 'static> CommitQueue<T> {
 impl<T: CommitTransactionPort + 'static> CommitWorker<T> {
     /// Consumer loop: block for the first item, non-blocking-drain the rest,
     /// pay the batch window only with headroom, then commit disjoint batches.
-    // PORT backend/src/sandbox/occ/commit_queue.py:131 — _run() consumer loop
     fn run(self) {
         while let Ok(first) = self.receiver.recv() {
             let QueueItem::Work(first) = first else {

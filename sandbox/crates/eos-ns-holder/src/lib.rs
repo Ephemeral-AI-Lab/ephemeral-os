@@ -64,7 +64,6 @@ pub const NS_UP: &[u8] = b"ns-up\n";
 ///
 /// The holder requires the newline-terminated control read to *start with* this
 /// prefix; it is a `startswith` check, not an equality compare.
-/// PORT `ns_holder.py:106` (`buf.startswith(b"net-ready")`).
 pub const NET_READY: &[u8] = b"net-ready";
 
 /// Final readiness token written to the readiness FD after the current
@@ -77,15 +76,12 @@ pub const READY: &[u8] = b"ready\n";
 /// [`NsHolderError::TEST_CRASH_EXIT`] after writing [`NS_UP`] and before
 /// reading the control pipe, to exercise the daemon's holder-crash recovery
 /// path.
-/// PORT `ns_holder.py:97` (`EOS_ISOLATED_WORKSPACE_TEST_HOLDER_CRASH`).
 pub const TEST_HOLDER_CRASH_ENV: &str = "EOS_ISOLATED_WORKSPACE_TEST_HOLDER_CRASH";
 
 /// `/proc` subtree the holder enumerates to find per-interface IPv6 config dirs.
-/// PORT `ns_holder.py:25` (`_IPV6_CONF_ROOT`).
 pub const IPV6_CONF_ROOT: &str = "/proc/sys/net/ipv6/conf";
 
 /// Interface names tried when `/proc/sys/net/ipv6/conf` cannot be listed.
-/// PORT `ns_holder.py:26` (`_FALLBACK_IPV6_CONF_INTERFACES`).
 pub const FALLBACK_IPV6_CONF_INTERFACES: [&str; 4] = ["all", "default", "lo", "eth0"];
 
 /// Failures raised by the holder lifecycle.
@@ -101,11 +97,9 @@ pub enum NsHolderError {
     #[error("failed to unshare namespace stack")]
     Unshare,
     /// The control pipe reached EOF before a full token arrived.
-    /// PORT `ns_holder.py:103-104` (`if not chunk: return 1`).
     #[error("control pipe closed before net-ready")]
     ControlPipeClosed,
     /// The control pipe delivered a line that did not start with [`NET_READY`].
-    /// PORT `ns_holder.py:106-107` (`if not buf.startswith(...): return 2`).
     #[error("control pipe sent unexpected token; expected net-ready prefix")]
     UnexpectedToken,
     /// Writing a readiness token or reading the control pipe failed.
@@ -127,13 +121,10 @@ pub enum NsHolderError {
 
 impl NsHolderError {
     /// Exit code for [`NsHolderError::ControlPipeClosed`].
-    /// PORT `ns_holder.py:104` (`return 1`).
     pub const CONTROL_CLOSED_EXIT: i32 = 1;
     /// Exit code for [`NsHolderError::UnexpectedToken`].
-    /// PORT `ns_holder.py:107` (`return 2`).
     pub const UNEXPECTED_TOKEN_EXIT: i32 = 2;
     /// Exit code for the test-only crash knob.
-    /// PORT `ns_holder.py:98` (`return 7`).
     pub const TEST_CRASH_EXIT: i32 = 7;
 }
 
@@ -252,7 +243,6 @@ impl Handshake {
     /// # Errors
     ///
     /// Returns [`NsHolderError::PipeIo`] when the readiness pipe write fails.
-    // PORT backend/src/sandbox/isolated_workspace/scripts/ns_holder.py:94 — os.write(readiness_fd, b"ns-up\n") after the /proc rbind
     pub fn signal_ns_up(&mut self) -> Result<(), NsHolderError> {
         write_all_fd(self.readiness_fd, NS_UP)?;
         self.state = HandshakeState::NsUpSent;
@@ -268,7 +258,6 @@ impl Handshake {
     /// Returns [`NsHolderError::ControlPipeClosed`] on EOF,
     /// [`NsHolderError::UnexpectedToken`] for a non-`net-ready` token, or
     /// [`NsHolderError::PipeIo`] for read failures.
-    // PORT backend/src/sandbox/isolated_workspace/scripts/ns_holder.py:100-107 — read 64-byte chunks until b"\n", reject EOF (exit 1) / wrong prefix (exit 2)
     pub fn await_net_ready(&mut self) -> Result<(), NsHolderError> {
         let mut buf = Vec::new();
         while !buf.contains(&b'\n') {
@@ -294,7 +283,6 @@ impl Handshake {
     ///
     /// Returns [`NsHolderError::PipeIo`] when the final readiness pipe write
     /// fails.
-    // PORT backend/src/sandbox/isolated_workspace/scripts/ns_holder.py:109-111 — `ip link set lo up`, _purge_ipv6_default_routes(), os.write(readiness_fd, b"ready\n")
     pub fn finish_ready(&mut self) -> Result<(), NsHolderError> {
         bring_loopback_up();
         if let Some(config) = self.network_config.as_ref() {
@@ -332,7 +320,6 @@ fn parse_network_config(buf: &[u8]) -> Option<NetworkConfig> {
 /// Best-effort, shell-free: replaces the Python `subprocess.run(["mount",
 /// "--rbind", "/proc", "/proc"], check=False)` with a raw `mount(MS_BIND |
 /// MS_REC)` syscall. Failure must NOT abort the holder.
-// PORT backend/src/sandbox/isolated_workspace/scripts/ns_holder.py:81-86 — mount --rbind /proc /proc, best-effort (check=False)
 #[cfg(target_os = "linux")]
 fn rbind_proc() {
     let proc = b"/proc\0";
@@ -359,7 +346,6 @@ const fn rbind_proc() {}
 /// Replaces `sysctl -w net.ipv6.conf.{iface}.accept_ra=0` with a write of `"0"`
 /// to `/proc/sys/net/ipv6/conf/{iface}/accept_ra`, iterating [`IPV6_CONF_ROOT`]
 /// (falling back to [`FALLBACK_IPV6_CONF_INTERFACES`]). Best-effort per iface.
-// PORT backend/src/sandbox/isolated_workspace/scripts/ns_holder.py:39 — sysctl -w net.ipv6.conf.{iface}.accept_ra=0 → write /proc/sys, shell-free
 fn disable_ipv6_ra() {
     let mut interfaces = Vec::new();
     if let Ok(entries) = fs::read_dir(IPV6_CONF_ROOT) {
@@ -389,7 +375,6 @@ fn disable_ipv6_ra() {
 ///
 /// Replaces `ip link set lo up` with `RTM_NEWLINK` so holder readiness does not
 /// depend on `ip(8)` being present inside the image. Best-effort.
-// PORT backend/src/sandbox/isolated_workspace/scripts/ns_holder.py:109 — ip link set lo up
 #[cfg(target_os = "linux")]
 fn bring_loopback_up() {
     let Ok(lo) = CString::new("lo") else {
@@ -534,7 +519,6 @@ fn add_ipv4_default_route(index: libc::c_uint, gateway: Ipv4Addr) {
 /// Replaces `ip -6 route flush default` with a netlink `RTM_DELROUTE` (or
 /// dump+delete) so no bridge-side RA can repopulate a v6 default route and
 /// bypass the v4-only MASQUERADE filter. Best-effort.
-// PORT backend/src/sandbox/isolated_workspace/scripts/ns_holder.py:45 — ip -6 route flush default → rtnetlink RTM_DELROUTE, shell-free
 #[cfg(target_os = "linux")]
 fn flush_ipv6_default_route() {
     let Some(rtm_family) = libc_c_int_to_u8(libc::AF_INET6) else {
@@ -822,7 +806,6 @@ struct NetlinkSocketAddress {
 /// `CLONE_NEWUSER` in a multithreaded process. The crate deliberately has no
 /// tokio dependency and is invoked through the dedicated `eosd ns-holder`
 /// subprocess.
-// PORT backend/src/sandbox/isolated_workspace/_control_plane/namespace_runtime.py:84-96 — `unshare --user --map-root-user --net --pid --mount --fork --kill-child --propagation private` consolidated into a single unshare(CLONE_NEWUSER|NEWNS|NEWPID|NEWNET) + uid/gid map + MS_PRIVATE in-process
 #[cfg(target_os = "linux")]
 fn unshare_namespace_stack(
     readiness_fd: RawFd,
@@ -890,7 +873,6 @@ const fn unshare_namespace_stack(
 ///
 /// Returns [`NsHolderError`] when namespace setup, handshake pipe I/O, or the
 /// test crash knob fails the holder before it reaches the paused state.
-// PORT backend/src/sandbox/isolated_workspace/scripts/ns_holder.py:89-115 — main(argv): rbind /proc, ns-up, crash-knob, net-ready read, lo up + purge, ready, SIGTERM handler + signal.pause()
 pub fn run(readiness_fd: RawFd, control_fd: RawFd) -> Result<(), NsHolderError> {
     let namespaces = unshare_namespace_stack(readiness_fd, control_fd)?;
     rbind_proc();

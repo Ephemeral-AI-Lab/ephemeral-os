@@ -19,7 +19,6 @@ const WHITEOUT_PREFIX: &str = ".wh.";
 const OPAQUE_MARKER: &str = ".wh..wh..opq";
 
 /// The kind of a captured overlay path change.
-/// `// PORT backend/src/sandbox/overlay/path_change.py:12 — OverlayPathChangeKind`
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum OverlayPathChangeKind {
     /// File content write; `content_path` + `final_hash` required.
@@ -36,7 +35,6 @@ pub enum OverlayPathChangeKind {
 ///
 /// Before layer-stack policy is applied. `path` is normalized; `write`/`symlink`
 /// carry a staged `content_path` + `final_hash`, the others carry neither.
-/// `// PORT backend/src/sandbox/overlay/path_change.py:15-35 — OverlayPathChange`
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct OverlayPathChange {
     /// Normalized relative layer path (root `""` allowed only for `opaque_dir`).
@@ -58,14 +56,12 @@ impl OverlayPathChange {
     ///
     /// Returns [`OverlayError::InvalidPathChange`] when path normalization or
     /// per-kind payload validation fails.
-    /// `// PORT backend/src/sandbox/overlay/path_change.py:22-35 — __post_init__`
     pub fn new(
         path: &str,
         kind: OverlayPathChangeKind,
         content_path: Option<String>,
         final_hash: Option<String>,
     ) -> Result<Self> {
-        // PORT backend/src/sandbox/overlay/path_change.py:22-35 — normalize + per-kind field gate
         let path = normalize_overlay_path(path, kind == OverlayPathChangeKind::OpaqueDir)?;
         match kind {
             OverlayPathChangeKind::Write | OverlayPathChangeKind::Symlink => {
@@ -110,9 +106,7 @@ impl OverlayPathChange {
     ///
     /// Returns [`OverlayError`] when the captured path is invalid or when staged
     /// content/link-target reads fail.
-    /// `// PORT backend/src/sandbox/occ/overlay_change_conversion.py:19-72 — overlay_path_changes_to_occ_changes`
     pub fn into_layer_change(self) -> Result<LayerChange> {
-        // PORT backend/src/sandbox/occ/overlay_change_conversion.py:32-71 — per-kind dispatch
         let path = LayerPath::parse(&self.path)?;
         match self.kind {
             OverlayPathChangeKind::Write => {
@@ -151,9 +145,7 @@ impl OverlayPathChange {
 ///
 /// Returns [`OverlayError`] when upperdir traversal, path normalization, xattr
 /// probing, hashing, or staged content conversion fails.
-/// `// PORT backend/src/sandbox/overlay/capture.py:19-32 — walk_upperdir`
 pub fn capture_upperdir(upperdir: &Path) -> Result<Vec<LayerChange>> {
-    // PORT backend/src/sandbox/overlay/capture.py:49-89 — _walk_upperdir (os.walk, whiteout/opaque/symlink/write)
     std::fs::create_dir_all(upperdir).map_err(OverlayError::Capture)?;
     let mut emitted_opaque_dirs = HashSet::new();
     let mut changes = Vec::new();

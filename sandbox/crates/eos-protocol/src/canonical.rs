@@ -6,7 +6,6 @@
 //! two structurally-equal responses compare equal regardless of measured values.
 //! Requests, error envelopes, and the CAS hashes are byte/structurally exact and
 //! must NOT be routed through this.
-//! `// PORT docs/contract/01-wire-protocol.md §2.2`
 
 use serde_json::{Map, Value};
 

@@ -13,7 +13,6 @@
 //!   We reproduce the source env vars; the heartbeat-interval naming is a
 //!   port-time reconciliation.
 //!
-//! `// PORT backend/src/sandbox/daemon/rpc/in_flight.py — InFlightInvocationRegistry`
 
 use std::collections::HashMap;
 use std::sync::{Mutex, MutexGuard, OnceLock, PoisonError};
@@ -26,23 +25,18 @@ use nix::unistd::Pid;
 use tokio::task::AbortHandle;
 
 /// Default TTL before an idle background invocation is reaped (seconds).
-/// `// PORT backend/src/sandbox/daemon/rpc/in_flight.py:14 — _DEFAULT_TTL_SECONDS`
 pub const DEFAULT_TTL_S: f64 = 300.0;
 
 /// Default reaper sweep interval (seconds).
-/// `// PORT backend/src/sandbox/daemon/rpc/in_flight.py:15 — _DEFAULT_REAPER_INTERVAL_S`
 pub const DEFAULT_REAPER_INTERVAL_S: f64 = 30.0;
 
 /// Env override for the TTL.
-/// `// PORT backend/src/sandbox/daemon/rpc/in_flight.py:16 — _ENV_TTL_S`
 pub const ENV_TTL_S: &str = "EOS_INFLIGHT_TTL_S";
 
 /// Env override for the reaper interval.
-/// `// PORT backend/src/sandbox/daemon/rpc/in_flight.py:17 — _ENV_REAPER_INTERVAL_S`
 pub const ENV_REAPER_INTERVAL_S: &str = "EOS_INFLIGHT_REAPER_INTERVAL_S";
 
 /// One tracked daemon-side invocation.
-/// `// PORT backend/src/sandbox/daemon/rpc/in_flight.py:20-29 — InFlightInvocation`
 #[derive(Debug)]
 pub struct InFlightInvocation {
     /// The invocation id (registry key).
@@ -95,7 +89,7 @@ impl InFlightRegistry {
     }
 
     /// Build a registry, sourcing TTL / reaper interval from env (falling back
-    /// to the defaults). `// PORT backend/src/sandbox/daemon/rpc/in_flight.py:34-52`
+    /// to the defaults).
     #[must_use]
     pub fn from_env() -> Self {
         Self::new(
@@ -117,7 +111,6 @@ impl InFlightRegistry {
     }
 
     /// Register a task under `invocation_id`. Empty ids are ignored.
-    // PORT backend/src/sandbox/daemon/rpc/in_flight.py:54-77 — register()
     pub fn register(
         &self,
         invocation_id: &str,
@@ -161,13 +154,11 @@ impl InFlightRegistry {
     }
 
     /// Remove the entry for `invocation_id` (the dispatch `finally` path).
-    // PORT backend/src/sandbox/daemon/rpc/in_flight.py:79-81 — deregister()
     pub fn deregister(&self, invocation_id: &str) {
         self.lock_state().by_invocation.remove(invocation_id);
     }
 
     /// Cancel the task for `invocation_id`; returns whether an entry existed.
-    // PORT backend/src/sandbox/daemon/rpc/in_flight.py:83-88 — cancel_task()
     pub fn cancel(&self, invocation_id: &str) -> bool {
         let Some((abort, process_group_id)) = ({
             let state = self.lock_state();
@@ -187,7 +178,6 @@ impl InFlightRegistry {
 
     /// Touch `last_seen` for every known id; returns how many were touched.
     /// Backs `api.v1.heartbeat`.
-    // PORT backend/src/sandbox/daemon/rpc/in_flight.py:90-98 — heartbeat()
     pub fn heartbeat(&self, invocation_ids: &[String]) -> usize {
         let mut state = self.lock_state();
         let now = monotonic_seconds();
@@ -203,7 +193,6 @@ impl InFlightRegistry {
 
     /// Count live background invocations for `agent_id`. Backs
     /// `api.v1.inflight_count`.
-    // PORT backend/src/sandbox/daemon/rpc/in_flight.py:100-106 — count_by_agent()
     pub fn count_by_agent(&self, agent_id: &str) -> usize {
         self.lock_state()
             .by_invocation
@@ -219,7 +208,6 @@ impl InFlightRegistry {
 
     /// Acquire an [`ActiveCallGuard`]: bumps `active_calls` for diagnostics.
     /// The guard decrements on drop.
-    // PORT backend/src/sandbox/daemon/rpc/in_flight.py:54-77 — active-call bookkeeping (Drop-guard structure per task)
     pub fn enter_call<'r>(&'r self, invocation_id: &str) -> ActiveCallGuard<'r> {
         if let Some(entry) = self.lock_state().by_invocation.get_mut(invocation_id) {
             entry.active_calls = entry.active_calls.saturating_add(1);
@@ -231,7 +219,6 @@ impl InFlightRegistry {
     }
 
     /// Cancel every background entry idle past the TTL.
-    // PORT backend/src/sandbox/daemon/rpc/in_flight.py:118-141 — reap_stale(): select stale background, cancel, mark ttl_reaped
     pub fn ttl_sweep(&self) {
         let mut state = self.lock_state();
         let now = monotonic_seconds();
@@ -248,7 +235,6 @@ impl InFlightRegistry {
     }
 
     /// `(active_invocations, ttl_reaped_total)` for diagnostics.
-    // PORT backend/src/sandbox/daemon/rpc/in_flight.py:108-113 — metrics()
     pub fn metrics(&self) -> (usize, u64) {
         let state = self.lock_state();
         (state.by_invocation.len(), state.ttl_reaped_total)
@@ -258,7 +244,6 @@ impl InFlightRegistry {
 /// RAII guard counting one active runtime call against an invocation.
 ///
 /// Holding it keeps `active_calls > 0`; dropping it decrements the counter.
-/// `// PORT backend/src/sandbox/daemon/rpc/in_flight.py — active_calls decrement (the `finally` analogue)`
 #[derive(Debug)]
 #[must_use = "dropping this guard decrements the active-call count; bind it for the call's duration"]
 pub struct ActiveCallGuard<'r> {
@@ -267,7 +252,6 @@ pub struct ActiveCallGuard<'r> {
 }
 
 impl Drop for ActiveCallGuard<'_> {
-    // PORT backend/src/sandbox/daemon/rpc/in_flight.py — decrement active_calls on call completion
     fn drop(&mut self) {
         if let Some(entry) = self
             .registry
@@ -281,7 +265,6 @@ impl Drop for ActiveCallGuard<'_> {
 }
 
 /// Read a positive `f64` env var, falling back to `default` on absent/invalid/<=0.
-/// `// PORT backend/src/sandbox/daemon/rpc/in_flight.py:144-158 — _env_float / _positive_float`
 fn env_positive_f64(name: &str, default: f64) -> f64 {
     std::env::var(name).map_or(default, |raw| {
         raw.trim()

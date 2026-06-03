@@ -18,16 +18,13 @@ use serde_json::Value;
 
 /// Which namespace strategy the runner uses for this call.
 ///
-/// `// PORT backend/src/sandbox/overlay/namespace_runner.py:48-71 — fresh vs existing dispatch`
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum RunMode {
     /// Create a brand-new private namespace stack via `unshare`, mount the
     /// overlay, then exec — one tool call per namespace.
-    /// `// PORT backend/src/sandbox/overlay/namespace_runner.py:72 — _run_tool_call_in_fresh_namespace`
     FreshNs,
     /// `setns` into the ns-holder's already-open namespace FDs, then exec.
-    /// `// PORT backend/src/sandbox/overlay/namespace_runner.py:138 — _run_tool_call_in_existing_namespace`
     SetNs,
 }
 
@@ -35,13 +32,11 @@ pub enum RunMode {
 ///
 /// `#[repr(transparent)]` lets this cross the FFI boundary into the `setns(2)`
 /// syscall unchanged.
-/// `// PORT backend/src/sandbox/isolated_workspace/scripts/setns_exec.py:14-19 — ns_fds`
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[repr(transparent)]
 pub struct Fd(pub RawFd);
 
 /// The validated workspace root the overlay is mounted at (e.g. `/testbed`).
-/// `// PORT backend/src/sandbox/isolated_workspace/_control_plane/types.py:21 — ISOLATED_WORKSPACE_ROOT`
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct WorkspaceRoot(pub PathBuf);
 
@@ -50,7 +45,6 @@ pub struct WorkspaceRoot(pub PathBuf);
 /// Applied in this exact order:
 /// `user` (privilege change), `mnt` (mount table), `pid` (descendants only,
 /// before `fork`), `net`. A wrong order breaks the setns sequence.
-/// `// PORT backend/src/sandbox/isolated_workspace/scripts/setns_exec.py:54-66 — setns order`
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub struct NsFds {
     /// User namespace FD (`CLONE_NEWUSER`) — applied first.
@@ -68,7 +62,6 @@ pub struct NsFds {
 /// `args` is the opaque verb payload forwarded to the in-namespace primitive;
 /// `intent` reuses the protocol enum so the runner does not redefine the verb
 /// taxonomy.
-/// `// PORT backend/src/sandbox/shared/models.py:80-98 — ToolCallRequest.to_payload`
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ToolCall {
     pub invocation_id: String,
@@ -83,8 +76,6 @@ pub struct ToolCall {
 /// A fully-resolved request to the runner: which mode, the tool call, the
 /// overlay layout (fresh-ns), and the held namespace FDs (setns).
 ///
-/// `// PORT backend/src/sandbox/overlay/namespace_runner.py:84-101 — fresh-ns request file`
-/// `// PORT backend/src/sandbox/isolated_workspace/scripts/setns_exec.py:14-19 — setns stdin payload`
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct RunRequest {
     /// Fresh-ns vs setns.
@@ -94,7 +85,6 @@ pub struct RunRequest {
     /// Where the overlay is (or will be) mounted; the exec cwd / `/testbed`.
     pub workspace_root: WorkspaceRoot,
     /// Overlay lower layers (newest-first), present for [`RunMode::FreshNs`].
-    /// `// PORT backend/src/sandbox/overlay/namespace_entrypoint.py:62-90 — _OverlayMountRequest`
     #[serde(default)]
     pub layer_paths: Vec<PathBuf>,
     /// Overlay upperdir (fresh-ns).
@@ -108,11 +98,9 @@ pub struct RunRequest {
     pub ns_fds: Option<NsFds>,
     /// Absolute iws cgroup path; the setns child joins it before `fork` so the
     /// child inherits cgroup membership.
-    /// `// PORT backend/src/sandbox/isolated_workspace/scripts/setns_exec.py:42-50 — cgroup join`
     #[serde(default)]
     pub cgroup_path: Option<PathBuf>,
     /// Hard timeout for the tool call (tool's own timeout + a fixed margin).
-    /// `// PORT backend/src/sandbox/overlay/namespace_runner.py:217-222 — _tool_timeout +10s`
     #[serde(default)]
     pub timeout_seconds: Option<f64>,
 }
@@ -122,7 +110,6 @@ pub struct RunRequest {
 /// Contains the in-namespace tool result JSON plus the child's exit code. The
 /// Python helpers return the tool primitive's `asdict` dict verbatim
 /// (defaulting `workspace`), which the runner forwards opaquely as [`Value`].
-/// `// PORT backend/src/sandbox/overlay/namespace_runner.py:192-205 — result forwarding`
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct RunResult {
     /// The tool primitive's result object (`SandboxResultBase`/`GuardedResultBase`

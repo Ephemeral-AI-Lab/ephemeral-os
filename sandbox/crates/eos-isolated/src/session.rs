@@ -7,7 +7,6 @@
 //! releases the lease, and DISCARDS the upperdir (writes are captured for audit
 //! only, never published). Daemon-side gates own active command-session quiescence
 //! for the current Rust slice.
-//! `// PORT backend/src/sandbox/isolated_workspace/_control_plane/workspace_handle_lifecycle.py:39-260`
 
 use std::collections::{HashMap, HashSet};
 use std::net::Ipv4Addr;
@@ -39,7 +38,6 @@ pub struct WorkspaceHandleId(pub String);
 /// Mirrors the `acquire_snapshot` result the isolated pipeline consumes; it
 /// carries the lease id, manifest coordinates, and the lower-layer paths the
 /// overlay mounts. NEVER a publish transaction.
-/// `// PORT backend/src/sandbox/isolated_workspace/_control_plane/workspace_handle_lifecycle.py:66-83 — acquire_snapshot result usage`
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SnapshotLease {
     /// Lease id to release on exit/rollback.
@@ -53,7 +51,6 @@ pub struct SnapshotLease {
 }
 
 /// Per-workspace state. Not a subclass of any overlay handle (C1).
-/// `// PORT backend/src/sandbox/isolated_workspace/_control_plane/types.py:103-141 — IsolatedWorkspaceHandle`
 #[derive(Debug, Clone)]
 pub struct WorkspaceHandle {
     /// Stable handle id (also the scratch dir / veth-name seed).
@@ -100,7 +97,6 @@ pub struct WorkspaceHandle {
 /// implementation). It exposes snapshot/lease + read methods ONLY — never the
 /// publish-transaction half — so this crate needs neither a direct
 /// `eos-layerstack` nor an `eos-occ` dependency.
-/// `// PORT backend/src/sandbox/occ/layer_stack_adapter.py:31-67 — snapshot/lease half`
 pub trait LayerStackSnapshotPort {
     /// Acquire a read snapshot + lease for `request_id`.
     ///
@@ -108,7 +104,6 @@ pub trait LayerStackSnapshotPort {
     ///
     /// Returns [`IsolatedError`] when the layer-stack snapshot or lease cannot
     /// be acquired.
-    // PORT backend/src/sandbox/occ/layer_stack_adapter.py:57 — acquire_snapshot
     fn acquire_snapshot(&self, request_id: &str) -> Result<SnapshotLease, IsolatedError>;
 
     /// Release the lease held by `lease_id`. Returns whether it was held.
@@ -117,7 +112,6 @@ pub trait LayerStackSnapshotPort {
     ///
     /// Returns [`IsolatedError`] when the layer-stack lease release cannot be
     /// checked or completed.
-    // PORT backend/src/sandbox/occ/layer_stack_adapter.py:66 — release_lease
     fn release_lease(&self, lease_id: &str) -> Result<bool, IsolatedError>;
 
     /// Optional daemon-local diagnostic count for active leases owned by this
@@ -139,8 +133,6 @@ pub trait LayerStackSnapshotPort {
 /// long-lived pidns PID 1) and drives `setns` mounts/exec via `eosd ns-runner`.
 /// Both are syscall-only single-threaded crates; this trait keeps the
 /// orchestration here free of those edges' details.
-/// `// PORT backend/src/sandbox/isolated_workspace/_control_plane/types.py:221-256 — NamespaceRuntimePort`
-/// `// PORT backend/src/sandbox/isolated_workspace/_control_plane/namespace_runtime.py:65-301 — _KernelNamespaceRuntime`
 pub trait NamespaceRuntimePort {
     /// Spawn `eosd ns-holder` under `unshare(--user --net --pid --mount ...)`,
     /// wait for the `ns-up` handshake token, and return its PID.
@@ -149,7 +141,6 @@ pub trait NamespaceRuntimePort {
     ///
     /// Returns [`IsolatedError`] when holder launch or readiness signaling
     /// fails.
-    // PORT backend/src/sandbox/isolated_workspace/_control_plane/namespace_runtime.py:79-116 — spawn_ns_holder (ns_holder.py handshake step 1)
     fn spawn_ns_holder(
         &self,
         handle: &mut WorkspaceHandle,
@@ -161,7 +152,6 @@ pub trait NamespaceRuntimePort {
     /// # Errors
     ///
     /// Returns [`IsolatedError`] when namespace FDs cannot be opened.
-    // PORT backend/src/sandbox/isolated_workspace/_control_plane/namespace_runtime.py:118-125 — open_ns_fds
     fn open_ns_fds(&self, holder_pid: i32) -> Result<HashMap<String, i32>, IsolatedError>;
 
     /// Mount the overlay inside the namespace (via `eosd ns-runner` setns helper).
@@ -169,7 +159,6 @@ pub trait NamespaceRuntimePort {
     /// # Errors
     ///
     /// Returns [`IsolatedError`] when the setns overlay mount helper fails.
-    // PORT backend/src/sandbox/isolated_workspace/_control_plane/namespace_runtime.py:127-165 — mount_overlay (setns_overlay_mount)
     fn mount_overlay(
         &self,
         handle: &WorkspaceHandle,
@@ -182,7 +171,6 @@ pub trait NamespaceRuntimePort {
     ///
     /// Returns [`IsolatedError`] when DNS configuration cannot be applied or
     /// inspected.
-    // PORT backend/src/sandbox/isolated_workspace/_control_plane/namespace_runtime.py:167-199 — configure_dns (configure_dns_in_ns)
     fn configure_dns(
         &self,
         handle: &WorkspaceHandle,
@@ -195,7 +183,6 @@ pub trait NamespaceRuntimePort {
     ///
     /// Returns [`IsolatedError`] when the holder control/readiness handshake
     /// fails or times out.
-    // PORT backend/src/sandbox/isolated_workspace/_control_plane/namespace_runtime.py:201-214 — signal_net_ready (ns_holder.py handshake)
     fn signal_net_ready(
         &self,
         handle: &WorkspaceHandle,
@@ -207,7 +194,6 @@ pub trait NamespaceRuntimePort {
     /// # Errors
     ///
     /// Returns [`IsolatedError`] when cgroup creation fails.
-    // PORT backend/src/sandbox/isolated_workspace/_control_plane/namespace_runtime.py:216-219 — create_cgroup
     fn create_cgroup(&self, handle: &WorkspaceHandle) -> Result<PathBuf, IsolatedError>;
 
     /// SIGTERM (then SIGKILL after `grace_s`) the ns-holder and reap children.
@@ -215,7 +201,6 @@ pub trait NamespaceRuntimePort {
     /// # Errors
     ///
     /// Returns [`IsolatedError`] when holder teardown fails.
-    // PORT backend/src/sandbox/isolated_workspace/_control_plane/namespace_runtime.py:221-253 — kill_holder
     fn kill_holder(&self, holder_pid: i32, grace_s: f64) -> Result<(), IsolatedError>;
 }
 
@@ -290,7 +275,6 @@ where
     ///
     /// Returns [`IsolatedError`] when the feature is disabled, network setup
     /// fails, or the session scratch root cannot be created.
-    // PORT backend/src/sandbox/isolated_workspace/pipeline.py:220 — IsolatedPipeline.initialize
     pub fn initialize(&mut self) -> Result<(), IsolatedError> {
         if !self.caps.enabled {
             return Err(IsolatedError::FeatureDisabled);
@@ -316,7 +300,6 @@ where
     /// Returns [`IsolatedError`] when the feature is disabled, `agent_id` is
     /// invalid, capacity is exhausted, snapshot acquisition fails, or namespace
     /// wiring fails.
-    // PORT backend/src/sandbox/isolated_workspace/_control_plane/workspace_handle_lifecycle.py:39-130 — _WorkspaceHandleLifecycleMixin.enter
     pub fn enter(&mut self, agent_id: &AgentId) -> Result<WorkspaceHandle, IsolatedError> {
         if !self.caps.enabled {
             return Err(IsolatedError::FeatureDisabled);
@@ -431,7 +414,6 @@ where
     ///
     /// Returns [`IsolatedError`] when `agent_id` is invalid or no isolated
     /// workspace is open for the agent.
-    // PORT backend/src/sandbox/isolated_workspace/_control_plane/workspace_handle_lifecycle.py:207-260 — _WorkspaceHandleLifecycleMixin.exit
     pub fn exit(
         &mut self,
         agent_id: &AgentId,

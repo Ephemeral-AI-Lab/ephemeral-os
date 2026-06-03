@@ -62,21 +62,16 @@ pub use workspace_binding::{
 };
 
 /// Auto-squash depth ceiling — distinct from the 16-layer overlay mount ceiling.
-/// `// PORT backend/src/sandbox/occ/service.py:34 — AUTO_SQUASH_MAX_DEPTH`
 pub const AUTO_SQUASH_MAX_DEPTH: usize = 100;
 
 /// Storage layout subdirectory for immutable layer directories.
-/// `// PORT backend/src/sandbox/layer_stack/manifest.py:24 — LAYERS_DIR`
 pub const LAYERS_DIR: &str = "layers";
 
 /// Storage layout subdirectory for in-flight commit/checkpoint staging dirs.
-/// `// PORT backend/src/sandbox/layer_stack/manifest.py:25 — STAGING_DIR`
 pub const STAGING_DIR: &str = "staging";
 
 /// Active-manifest pointer filename under a storage root.
-/// `// PORT backend/src/sandbox/layer_stack/manifest.py:23 — ACTIVE_MANIFEST_FILE`
 pub const ACTIVE_MANIFEST_FILE: &str = "manifest.json";
 
 /// Sidecar directory for per-layer digests used by head-layer idempotency.
-/// `// PORT backend/src/sandbox/layer_stack/manifest.py:26 — LAYER_METADATA_DIR`
 pub const LAYER_METADATA_DIR: &str = ".layer-metadata";

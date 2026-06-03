@@ -48,15 +48,11 @@ const RESOLV_CONF: &str = "/etc/resolv.conf";
 ///
 /// Returns [`RunnerError`] when namespace FDs are missing, `setns`/cgroup join
 /// fails, request validation fails, or child execution fails.
-// PORT backend/src/sandbox/overlay/namespace_runner.py:138 — _run_tool_call_in_existing_namespace
-// PORT backend/src/sandbox/isolated_workspace/scripts/setns_exec.py:34-94 — setns(order) → cgroup join → fork → execvp → waitpid
-// PORT backend/src/sandbox/isolated_workspace/scripts/_setns_libc.py:18-25 — libc setns(2) wrapper
 #[cfg(target_os = "linux")]
 pub fn run_setns(
     request: &RunRequest,
     _mount: &dyn KernelMountPort,
 ) -> Result<RunResult, RunnerError> {
-    // PORT backend/src/sandbox/isolated_workspace/scripts/setns_exec.py:54-94 —
     //   setns(user), setns(mnt), setns(pid), setns(net) in order; join cgroup.procs
     //   before fork; pipe stdin_b64 to the child; fork → execvp(argv); waitpid and
     //   map waitstatus → exit code. The group is its own session so cancel killpgs it.
@@ -94,13 +90,11 @@ pub fn run_setns(
 ///
 /// Returns [`RunnerError`] when required namespace/overlay paths are missing,
 /// `setns` fails, or the overlay mount port fails.
-// PORT backend/src/sandbox/isolated_workspace/scripts/setns_overlay_mount.py:43-86 — setns(user)→setns(mnt)→mount_overlay
 #[cfg(target_os = "linux")]
 pub fn setns_overlay_mount(
     request: &RunRequest,
     mount: &dyn KernelMountPort,
 ) -> Result<(), RunnerError> {
-    // PORT backend/src/sandbox/isolated_workspace/scripts/setns_overlay_mount.py:54-86 —
     //   setns(ns_fds.user, CLONE_NEWUSER); setns(ns_fds.mnt, CLONE_NEWNS); then build
     //   MountInputs (newest-first lowerdirs + upper/work) and KernelMountPort::mount_overlay.
     let ns_fds = require_ns_fds(request)?;
@@ -154,7 +148,6 @@ pub fn setns_overlay_mount(
 ///
 /// Returns [`RunnerError`] when namespace FDs are missing, `setns` fails, the
 /// request lacks `fallback_dns`, or the private bind mount cannot be applied.
-// PORT backend/src/sandbox/isolated_workspace/scripts/configure_dns_in_ns.py:1-121 — setns(user,mnt) and fallback resolv.conf bind mount
 #[cfg(target_os = "linux")]
 pub fn configure_dns(request: &RunRequest) -> Result<serde_json::Value, RunnerError> {
     let ns_fds = require_ns_fds(request)?;

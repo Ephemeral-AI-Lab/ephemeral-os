@@ -30,11 +30,6 @@
 //! points. Shutdown is a [`tokio_util::sync::CancellationToken`]; the cancel
 //! path kills the full child process group (the Python `start_new_session=True`).
 //!
-//! `// PORT backend/src/sandbox/daemon/rpc/server.py — serve loop`
-//! `// PORT backend/src/sandbox/daemon/rpc/dispatcher.py — OP_TABLE + dispatch`
-//! `// PORT backend/src/sandbox/daemon/audit_buffer.py — ring buffer`
-//! `// PORT backend/src/sandbox/daemon/audit_schema.py:294,310 — safe_emit / safe_record_phase`
-//! `// PORT backend/src/sandbox/daemon/rpc/in_flight.py — in-flight registry + TTL reaper`
 #![forbid(unsafe_code)]
 
 pub mod audit_buffer;

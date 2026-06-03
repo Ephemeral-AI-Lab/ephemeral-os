@@ -12,8 +12,6 @@
 //! (floor-reset gated by [`AUDIT_ALLOW_FLOOR_RESET_ENV`]). The full op table
 //! (workspace-tool, isolated-workspace, plugin, layer-stack control) folds in at
 //! port time through the same routing.
-//! `// PORT backend/src/sandbox/daemon/rpc/dispatcher.py:60-160 — dispatch_envelope_async`
-//! `// PORT backend/src/sandbox/daemon/rpc/dispatcher.py:404-449 — _register_builtin_operations / OP_TABLE`
 
 use std::collections::{BTreeMap, HashMap, HashSet, VecDeque};
 use std::fs;
@@ -55,7 +53,6 @@ use crate::error::DaemonError;
 use crate::invocation_registry::InFlightRegistry;
 
 /// Env gate for `api.audit.reset_floor` (must be `"true"`).
-/// `// PORT backend/src/sandbox/daemon/rpc/dispatcher.py:404 — EOS_DAEMON_AUDIT_ALLOW_FLOOR_RESET`
 pub const AUDIT_ALLOW_FLOOR_RESET_ENV: &str = "EOS_DAEMON_AUDIT_ALLOW_FLOOR_RESET";
 const TREE_RESOURCE_ENTRY_LIMIT: usize = 2_000;
 
@@ -64,7 +61,6 @@ const TREE_RESOURCE_ENTRY_LIMIT: usize = 2_000;
 /// The Python handlers are a mix of sync + async; the Rust dispatcher resolves
 /// that at the call site. The daemon keeps the routing surface explicit here
 /// and lets command/file/isolated handlers own their runtime details.
-/// `// PORT backend/src/sandbox/daemon/rpc/dispatcher.py:37 — Handler = Callable[[dict], Any]`
 type Handler = for<'ctx> fn(&Value, DispatchContext<'ctx>) -> Result<Value, DaemonError>;
 
 /// Per-dispatch daemon services used by handlers that need runtime state.
@@ -95,7 +91,6 @@ impl<'ctx> DispatchContext<'ctx> {
 ///
 /// Re-registering the same handler under an op is a no-op; a different handler
 /// under a claimed op is rejected so peer collisions surface.
-/// `// PORT backend/src/sandbox/daemon/rpc/dispatcher.py:42-57 — register_op + OP_TABLE`
 #[derive(Clone, Default)]
 pub struct OpTable {
     handlers: HashMap<String, Handler>,
@@ -104,7 +99,6 @@ pub struct OpTable {
 impl OpTable {
     /// Build the table pre-populated with the daemon-owned builtin ops this
     /// phase wires (NO `ping`).
-    // PORT backend/src/sandbox/daemon/rpc/dispatcher.py:404-449 — _register_builtin_operations
     pub fn with_builtins() -> Self {
         let mut table = Self::default();
         // The real registration also folds in plugin ops and the full
@@ -168,7 +162,6 @@ impl OpTable {
     /// Returns `true` when the handler was inserted or already registered.
     /// Returns `false` when `op` is already claimed by a different handler,
     /// leaving the original route intact.
-    // PORT backend/src/sandbox/daemon/rpc/dispatcher.py:42-57 — register_op (collision reject)
     #[must_use = "registration collisions are rejected; callers must check the result"]
     fn register(&mut self, op: &str, handler: Handler) -> bool {
         if let Some(existing) = self.handlers.get(op) {
@@ -188,7 +181,6 @@ impl OpTable {
     /// Route `request` to its handler, returning the response value or an error
     /// envelope value. Validates the envelope, runs the handler, and on an
     /// unknown op returns the `unknown_op` envelope.
-    // PORT backend/src/sandbox/daemon/rpc/dispatcher.py:60-160 — dispatch_envelope_async core
     #[must_use]
     pub fn dispatch(&self, request: &Request) -> Value {
         self.dispatch_with_context(request, DispatchContext::empty())
@@ -247,7 +239,6 @@ impl OpTable {
 ///
 /// `warnings`/`timings` are always `[]`/`{}` at the builder; `details` defaults
 /// to `{}`.
-/// `// PORT backend/src/sandbox/daemon/rpc/dispatcher.py:215-229 — _error_envelope`
 #[must_use]
 pub fn error_envelope(kind: ErrorKind, message: &str, details: Value) -> Value {
     let kind_str = serde_json::to_value(kind).unwrap_or(Value::Null);
@@ -265,7 +256,6 @@ pub fn error_envelope(kind: ErrorKind, message: &str, details: Value) -> Value {
 
 /// `api.runtime.ready` — binary readiness plus the three plane probes
 /// (`control_plane` / `data_plane` / `mutation_gate`). Requires `layer_stack_root`.
-// PORT backend/src/sandbox/daemon/builtin_operations.py:176-198 — runtime_ready: probe control_plane/data_plane/mutation_gate
 fn op_runtime_ready(args: &Value, _context: DispatchContext<'_>) -> Result<Value, DaemonError> {
     let total_start = Instant::now();
     let root = require_string(args, "layer_stack_root")?;
@@ -290,7 +280,6 @@ fn op_runtime_ready(args: &Value, _context: DispatchContext<'_>) -> Result<Value
 }
 
 /// `api.v1.cancel` — cancel one in-flight invocation id.
-// PORT backend/src/sandbox/daemon/builtin_operations.py:94-110 — cancel: registry.cancel_task(id), wait cleanup
 // Op handlers share the fallible dispatcher ABI even when this handler encodes
 // invalid/missing ids as ordinary JSON response fields.
 #[expect(
@@ -317,7 +306,6 @@ fn op_cancel(args: &Value, context: DispatchContext<'_>) -> Result<Value, Daemon
 }
 
 /// `api.v1.heartbeat` — touch `last_seen` for the given invocation ids.
-// PORT backend/src/sandbox/daemon/builtin_operations.py:113-117 — heartbeat: registry.heartbeat(ids) -> {success, touched}
 // Op handlers share the fallible dispatcher ABI even when this handler encodes
 // invalid/missing ids as ordinary JSON response fields.
 #[expect(
@@ -342,7 +330,6 @@ fn op_heartbeat(args: &Value, context: DispatchContext<'_>) -> Result<Value, Dae
 }
 
 /// `api.v1.inflight_count` — count background daemon invocations for one agent.
-// PORT backend/src/sandbox/daemon/builtin_operations.py:120-123 — inflight_count
 // Op handlers share the fallible dispatcher ABI even when this handler encodes
 // missing registry state as a zero count.
 #[expect(
@@ -363,7 +350,6 @@ fn op_inflight_count(args: &Value, context: DispatchContext<'_>) -> Result<Value
 }
 
 /// `api.layer_metrics` — summarize layer-stack storage + lease state for a root.
-// PORT backend/src/sandbox/daemon/builtin_operations.py:132-170 — layer_metrics
 fn op_layer_metrics(args: &Value, _context: DispatchContext<'_>) -> Result<Value, DaemonError> {
     let root = PathBuf::from(require_string(args, "layer_stack_root")?);
     let stack = LayerStack::open(root.clone())?;
@@ -468,7 +454,6 @@ fn op_workspace_binding(args: &Value, _context: DispatchContext<'_>) -> Result<V
 }
 
 /// `api.audit.pull` — drain ring events after a cursor (backs the pull API).
-// PORT backend/src/sandbox/daemon/rpc/dispatcher.py:413-421 — _audit_pull_handler
 // Op handlers share the fallible dispatcher ABI even when this handler only
 // reads the in-memory audit ring.
 #[expect(
@@ -487,7 +472,6 @@ fn op_audit_pull(args: &Value, _context: DispatchContext<'_>) -> Result<Value, D
 }
 
 /// `api.audit.snapshot` — ring buffer + snapshot blocks, no events.
-// PORT backend/src/sandbox/daemon/rpc/dispatcher.py:423-428 — _audit_snapshot_handler
 // Op handlers share the fallible dispatcher ABI even when this handler only
 // snapshots the in-memory audit ring.
 #[expect(
@@ -502,7 +486,6 @@ fn op_audit_snapshot(args: &Value, _context: DispatchContext<'_>) -> Result<Valu
 }
 
 /// `api.audit.reset_floor` — gated behind [`AUDIT_ALLOW_FLOOR_RESET_ENV`].
-// PORT backend/src/sandbox/daemon/rpc/dispatcher.py:430-438 — _audit_reset_floor_handler (env gate -> forbidden)
 fn op_audit_reset_floor(args: &Value, _context: DispatchContext<'_>) -> Result<Value, DaemonError> {
     let _ = args;
     if std::env::var(AUDIT_ALLOW_FLOOR_RESET_ENV).is_ok_and(|raw| raw == "true") {
@@ -515,7 +498,6 @@ fn op_audit_reset_floor(args: &Value, _context: DispatchContext<'_>) -> Result<V
 }
 
 /// `api.v1.read_file` — direct `LayerStack` read path.
-// PORT backend/src/sandbox/daemon/workspace_tool/dispatch.py:300-317 — _read_file_from_layer_stack
 fn op_read_file(args: &Value, _context: DispatchContext<'_>) -> Result<Value, DaemonError> {
     let total_start = Instant::now();
     #[cfg(target_os = "linux")]
@@ -582,7 +564,6 @@ fn op_read_file(args: &Value, _context: DispatchContext<'_>) -> Result<Value, Da
 }
 
 /// `api.v1.write_file` — direct `LayerStack` write publish path.
-// PORT backend/src/sandbox/daemon/workspace_tool/dispatch.py:321-363 — _write_file_to_layer_stack
 fn op_write_file(args: &Value, _context: DispatchContext<'_>) -> Result<Value, DaemonError> {
     let total_start = Instant::now();
     #[cfg(target_os = "linux")]
@@ -650,7 +631,6 @@ fn op_write_file(args: &Value, _context: DispatchContext<'_>) -> Result<Value, D
 }
 
 /// `api.v1.edit_file` — direct `LayerStack` edit publish path.
-// PORT backend/src/sandbox/daemon/workspace_tool/dispatch.py:366-387 — _edit_file_in_layer_stack
 fn op_edit_file(args: &Value, _context: DispatchContext<'_>) -> Result<Value, DaemonError> {
     let total_start = Instant::now();
     #[cfg(target_os = "linux")]
@@ -1166,7 +1146,6 @@ fn capture_upperdir_for_occ(upperdir: &Path) -> Result<CapturedOverlayChanges, D
 }
 
 /// `api.v1.glob` — read-only overlay namespace search.
-// PORT backend/src/sandbox/shared/tool_primitives/glob.py:20-35 — glob_files
 fn op_glob(args: &Value, _context: DispatchContext<'_>) -> Result<Value, DaemonError> {
     #[cfg(target_os = "linux")]
     if let Some(handle) = crate::isolated::command_handle_for_args(args) {
@@ -1176,7 +1155,6 @@ fn op_glob(args: &Value, _context: DispatchContext<'_>) -> Result<Value, DaemonE
 }
 
 /// `api.v1.grep` — read-only overlay namespace content search.
-// PORT backend/src/sandbox/shared/tool_primitives/grep.py:36-102 — grep_files
 fn op_grep(args: &Value, _context: DispatchContext<'_>) -> Result<Value, DaemonError> {
     #[cfg(target_os = "linux")]
     if let Some(handle) = crate::isolated::command_handle_for_args(args) {

@@ -4,57 +4,38 @@ expression: schema
 ---
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "definitions": {
-    "Intent": {
-      "description": "High-level execution intent for a foreground sandbox tool call.",
-      "oneOf": [
-        {
-          "description": "Read-only operation (no mutations).",
-          "enum": [
-            "read_only"
-          ],
-          "type": "string"
-        },
-        {
-          "description": "Operation permitted to mutate the workspace.",
-          "enum": [
-            "write_allowed"
-          ],
-          "type": "string"
-        },
-        {
-          "description": "Workspace lifecycle operation (e.g. isolated enter/exit).",
-          "enum": [
-            "lifecycle"
-          ],
-          "type": "string"
-        }
-      ]
-    }
-  },
+  "title": "ToolCallRequest",
   "description": "One tool invocation routed through a workspace pipeline.\n\n`invocation_id` is the typed [`InvocationId`]; [`Self::from_payload`] parses it at the boundary and is fallible (a spec-sanctioned tightening of the Python path, which tolerated an empty id string).",
+  "type": "object",
+  "required": [
+    "agent_id",
+    "args",
+    "intent",
+    "invocation_id",
+    "verb"
+  ],
   "properties": {
     "agent_id": {
       "description": "Calling agent id.",
       "type": "string"
     },
     "args": {
-      "additionalProperties": true,
       "description": "Untyped tool arguments.",
-      "type": "object"
+      "type": "object",
+      "additionalProperties": true
     },
     "background": {
-      "default": false,
       "description": "Whether the invocation runs in the background.",
+      "default": false,
       "type": "boolean"
     },
     "intent": {
+      "description": "Execution intent.",
       "allOf": [
         {
           "$ref": "#/definitions/Intent"
         }
-      ],
-      "description": "Execution intent."
+      ]
     },
     "invocation_id": {
       "description": "Correlation id for this invocation.",
@@ -65,13 +46,32 @@ expression: schema
       "type": "string"
     }
   },
-  "required": [
-    "agent_id",
-    "args",
-    "intent",
-    "invocation_id",
-    "verb"
-  ],
-  "title": "ToolCallRequest",
-  "type": "object"
+  "definitions": {
+    "Intent": {
+      "description": "High-level execution intent for a foreground sandbox tool call.",
+      "oneOf": [
+        {
+          "description": "Read-only operation (no mutations).",
+          "type": "string",
+          "enum": [
+            "read_only"
+          ]
+        },
+        {
+          "description": "Operation permitted to mutate the workspace.",
+          "type": "string",
+          "enum": [
+            "write_allowed"
+          ]
+        },
+        {
+          "description": "Workspace lifecycle operation (e.g. isolated enter/exit).",
+          "type": "string",
+          "enum": [
+            "lifecycle"
+          ]
+        }
+      ]
+    }
+  }
 }

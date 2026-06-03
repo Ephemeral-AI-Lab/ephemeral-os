@@ -15,7 +15,6 @@ use thiserror::Error;
 pub enum RunnerError {
     /// A namespace syscall (`unshare`, `setns`, `mount`, `move_mount`) failed.
     /// Wraps the raw `errno`-bearing OS error.
-    /// `// PORT backend/src/sandbox/isolated_workspace/scripts/_setns_libc.py:18-25`
     #[error("namespace syscall failed")]
     Syscall(#[source] std::io::Error),
 
@@ -29,12 +28,10 @@ pub enum RunnerError {
     Overlay(#[source] eos_overlay::OverlayError),
 
     /// Spawning, exec'ing, or waiting on the child process failed.
-    /// `// PORT backend/src/sandbox/overlay/namespace_runner.py:243-272`
     #[error("child process failed")]
     Child(#[source] std::io::Error),
 
     /// The tool call exceeded its timeout; the group was `SIGKILL`ed.
-    /// `// PORT backend/src/sandbox/overlay/namespace_runner.py:265-269`
     #[error("tool call timed out")]
     TimedOut,
 

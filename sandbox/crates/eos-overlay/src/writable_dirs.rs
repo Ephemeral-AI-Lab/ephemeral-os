@@ -11,11 +11,9 @@ use std::path::{Path, PathBuf};
 use crate::error::{OverlayError, Result};
 
 /// Canonical filesystem for overlay `upperdir`/`workdir`.
-/// `// PORT backend/src/sandbox/overlay/writable_dirs.py:13 — OVERLAY_WRITABLE_ROOT`
 pub const OVERLAY_WRITABLE_ROOT: &str = "/eos/mount";
 
 /// Per-overlay writable directories created beside each other under one run dir.
-/// `// PORT backend/src/sandbox/overlay/writable_dirs.py:20-26 — OverlayWritableDirs`
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct OverlayWritableDirs {
     /// The per-overlay run directory the upper/work dirs live under.
@@ -37,9 +35,7 @@ pub struct OverlayWritableDirs {
 /// Returns [`OverlayError::Capture`] when directory creation fails, or
 /// [`OverlayError::WritableRootUnavailable`] when the canonical root is not a
 /// directory.
-/// `// PORT backend/src/sandbox/overlay/writable_dirs.py:29-43 — overlay_writable_root`
 pub fn overlay_writable_root() -> Result<PathBuf> {
-    // PORT backend/src/sandbox/overlay/writable_dirs.py:36-42 — mkdir-if-parent then is_dir gate
     let root = PathBuf::from(OVERLAY_WRITABLE_ROOT);
     if root.parent().is_some_and(Path::is_dir) {
         std::fs::create_dir_all(&root).map_err(OverlayError::Capture)?;
@@ -59,9 +55,7 @@ pub fn overlay_writable_root() -> Result<PathBuf> {
 ///
 /// Returns [`OverlayError::Capture`] when either writable directory cannot be
 /// created.
-/// `// PORT backend/src/sandbox/overlay/writable_dirs.py:46-52 — allocate_overlay_writable_dirs`
 pub fn allocate_overlay_writable_dirs(run_dir: &Path) -> Result<OverlayWritableDirs> {
-    // PORT backend/src/sandbox/overlay/writable_dirs.py:48-52 — mkdir upper/work (parents, exist_ok)
     let upperdir = run_dir.join("upper");
     let workdir = run_dir.join("work");
     std::fs::create_dir_all(&upperdir).map_err(OverlayError::Capture)?;

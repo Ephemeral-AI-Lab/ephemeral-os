@@ -1,6 +1,5 @@
 //! Workspace-base construction for an empty layer stack.
 //!
-//! `// PORT backend/src/sandbox/layer_stack/workspace_base.py`
 
 use std::collections::BTreeMap;
 use std::io::{ErrorKind, Read};
@@ -18,7 +17,6 @@ use crate::workspace_binding::{read_workspace_binding, WorkspaceBinding, WORKSPA
 use crate::{ACTIVE_MANIFEST_FILE, LAYERS_DIR, LAYER_METADATA_DIR, STAGING_DIR};
 
 /// The immutable base-layer id used by the Python implementation.
-/// `// PORT backend/src/sandbox/layer_stack/workspace_base.py:31`
 pub const WORKSPACE_BASE_LAYER_ID: &str = "B000001-base";
 
 /// Build result: binding plus phase timings.
@@ -68,7 +66,6 @@ impl BaseEntry {
 /// Returns [`LayerStackError`] when the binding cannot be read, does not match
 /// the requested workspace root, or base construction fails.
 ///
-/// `// PORT backend/src/sandbox/daemon/layer_stack_runtime.py:119-134`
 pub fn ensure_workspace_base(
     layer_stack_root: impl AsRef<Path>,
     workspace_root: impl AsRef<Path>,
@@ -98,7 +95,6 @@ pub fn ensure_workspace_base(
 /// state already exists, source inventory cannot be collected, or base
 /// manifest/layer files cannot be written.
 ///
-/// `// PORT backend/src/sandbox/layer_stack/workspace_base.py:82-141`
 pub fn build_workspace_base(
     layer_stack_root: impl AsRef<Path>,
     workspace_root: impl AsRef<Path>,

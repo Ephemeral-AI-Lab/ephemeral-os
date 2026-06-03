@@ -1,11 +1,10 @@
 //! Resource caps and lifecycle config, sourced from the environment.
 //!
 //! Matches the `_PipelineConfig.from_env()` defaults and environment keys.
-//! `// PORT backend/src/sandbox/isolated_workspace/_control_plane/types.py:144-185 — _PipelineConfig`
 
 use std::env;
 
-/// Persisted-handles schema tag. `// PORT backend/src/sandbox/isolated_workspace/_control_plane/types.py:18`
+/// Persisted-handles schema tag.
 pub const PERSISTED_HANDLES_SCHEMA_VERSION: u32 = 1;
 
 /// Per-workspace handle / veth name prefix.
@@ -13,20 +12,18 @@ pub const PERSISTED_HANDLES_SCHEMA_VERSION: u32 = 1;
 /// This single literal is shared by both `HANDLE_PREFIX` (`types.py:19`) and
 /// `VETH_PREFIX` (`network.py:34`); the contract requires one source of truth
 /// (06-crate-map §D.2 — duplicate-literal drift risk).
-/// `// PORT backend/src/sandbox/isolated_workspace/_control_plane/types.py:19, network.py:34`
 pub const HANDLE_PREFIX: &str = "eos-iws-";
 
-/// cgroup root the per-workspace cgroup is created under. `// PORT backend/src/sandbox/isolated_workspace/_control_plane/types.py:20`
+/// cgroup root the per-workspace cgroup is created under.
 pub const CGROUP_ROOT: &str = "/sys/fs/cgroup";
 
-/// Mount target inside the isolated namespace. `// PORT backend/src/sandbox/isolated_workspace/_control_plane/types.py:21`
+/// Mount target inside the isolated namespace.
 pub const ISOLATED_WORKSPACE_ROOT: &str = "/testbed";
 
 /// RFC1918 egress policy.
 ///
 /// `allow` (default) leaves private-network egress open; `deny` installs the
 /// RFC1918 drop rules.
-/// `// PORT backend/src/sandbox/isolated_workspace/_control_plane/types.py:153,177-179`
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Rfc1918Egress {
     /// Private-network egress permitted (default).
@@ -84,7 +81,6 @@ impl ResourceCaps {
     /// This mirrors Python's defaults, environment keys, and clamped fields.
     /// Malformed numeric values fall back to defaults so daemon startup does
     /// not fail before it can return a structured isolated-workspace error.
-    // PORT backend/src/sandbox/isolated_workspace/_control_plane/types.py:161-185 — _PipelineConfig.from_env
     #[must_use]
     pub fn from_env() -> Self {
         let mut caps = Self::default();

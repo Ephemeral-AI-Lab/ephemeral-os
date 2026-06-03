@@ -11,9 +11,6 @@
 //!   raw UTF-8 and would diverge).
 //! - `layer_digest` hashes RAW UTF-8 path/source bytes with NUL framing.
 //!
-//! `// PORT backend/src/sandbox/layer_stack/manifest.py:134-138`
-//! `// PORT backend/src/sandbox/layer_stack/changes.py:27-40,145-165`
-//! `// PORT backend/src/sandbox/layer_stack/publisher.py:144-158`
 
 use std::collections::BTreeMap;
 use std::fmt;
@@ -41,7 +38,6 @@ pub enum CasError {
 /// A normalized, relative, NUL-free layer path (`api-parse-dont-validate`).
 ///
 /// Construct via [`LayerPath::parse`]; an invalid path is unrepresentable.
-/// `// PORT backend/src/sandbox/layer_stack/changes.py:27-40 — normalize_layer_path`
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct LayerPath(String);
 
@@ -94,7 +90,6 @@ impl fmt::Display for LayerPath {
 }
 
 /// One layer reference in a manifest: `{layer_id, path}` (both strings).
-/// `// PORT backend/src/sandbox/layer_stack/manifest.py:64-65 — LayerRef.to_dict`
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct LayerRef {
     pub layer_id: String,
@@ -103,7 +98,6 @@ pub struct LayerRef {
 
 /// The persisted manifest. `version`/`schema_version` are NOT hashed by
 /// [`manifest_root_hash`]; only `layers` (in given order) is.
-/// `// PORT backend/src/sandbox/layer_stack/manifest.py:72-114 — Manifest`
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Manifest {
     pub version: i64,
@@ -119,7 +113,6 @@ impl Manifest {
     ///
     /// Returns [`CasError::UnsupportedSchemaVersion`] when `schema_version`
     /// does not match [`MANIFEST_SCHEMA_VERSION`].
-    /// `// PORT backend/src/sandbox/layer_stack/manifest.py:78-82`
     pub fn new(version: i64, layers: Vec<LayerRef>, schema_version: i64) -> Result<Self, CasError> {
         if schema_version != MANIFEST_SCHEMA_VERSION {
             return Err(CasError::UnsupportedSchemaVersion(schema_version));
@@ -142,7 +135,6 @@ impl Manifest {
 /// surrounding quotes) to `out`. Matches `CPython`'s
 /// `c_encode_basestring_ascii`.
 ///
-/// `// PORT backend/src/sandbox/layer_stack/manifest.py:137 — json.dumps default ensure_ascii`
 fn push_json_ascii_escaped(out: &mut String, s: &str) {
     for ch in s.chars() {
         match ch {
@@ -206,7 +198,6 @@ fn manifest_layers_json(layers: &[LayerRef]) -> String {
 ///
 /// Hashes ONLY `{"layers":...}` in GIVEN order (order-sensitive);
 /// `ensure_ascii=True` escaping applied.
-/// `// PORT backend/src/sandbox/layer_stack/manifest.py:134-138`
 #[must_use]
 pub fn manifest_root_hash(manifest: &Manifest) -> String {
     let encoded = manifest_layers_json(&manifest.layers);
@@ -219,7 +210,6 @@ pub fn manifest_root_hash(manifest: &Manifest) -> String {
 ///
 /// Tagged union by kind. `path` is the post-normalization form; `Write` carries
 /// raw bytes hashed verbatim.
-/// `// PORT backend/src/sandbox/layer_stack/changes.py:42-` (`LayerChange`)
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum LayerChange {
     /// File write; `content` is hashed RAW (may be empty / contain NUL / binary).
@@ -261,7 +251,6 @@ impl LayerChange {
 
 /// Last-write-wins per `path`, then emit in ascending `path` order.
 /// Input-order-insensitive (the OPPOSITE of `manifest_root_hash`).
-/// `// PORT backend/src/sandbox/layer_stack/changes.py:160-165`
 #[must_use]
 pub fn aggregate_layer_changes(changes: &[LayerChange]) -> Vec<LayerChange> {
     // BTreeMap gives sorted-by-path emission; insertion overwrites (last-write-wins).
@@ -274,7 +263,6 @@ pub fn aggregate_layer_changes(changes: &[LayerChange]) -> Vec<LayerChange> {
 
 /// Feed one change's framed bytes into the running digest:
 /// `kind ‖ \0 ‖ path ‖ \0 ‖ <payload-or-nothing> ‖ \0`. Trailing `\0` always.
-/// `// PORT backend/src/sandbox/layer_stack/changes.py:145-157 — update_digest`
 fn update_digest(hasher: &mut Sha256, change: &LayerChange) {
     hasher.update(change.kind().as_bytes());
     hasher.update(b"\0");
@@ -289,7 +277,6 @@ fn update_digest(hasher: &mut Sha256, change: &LayerChange) {
 }
 
 /// Per-layer change-set digest: sha256 over `aggregate_layer_changes(changes)`.
-/// `// PORT backend/src/sandbox/layer_stack/publisher.py:144-158 — _prepare_changes`
 #[must_use]
 pub fn layer_digest(changes: &[LayerChange]) -> String {
     let mut hasher = Sha256::new();

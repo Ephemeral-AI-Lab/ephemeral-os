@@ -5,7 +5,6 @@
 //! opt-in RFC1918-deny rule. Per-workspace state: one veth pair and one `/32`
 //! from `10.244.0.2 - 10.244.0.254`.
 //!
-//! `// PORT backend/src/sandbox/isolated_workspace/network.py:27-34 — net constants`
 //!
 //! # IPv6 hardening — shell-free port
 //!
@@ -17,7 +16,6 @@
 //! `/proc/sys/net/ipv6/conf/<iface>/accept_ra` writes — NO `ip`/`sysctl`
 //! binaries. This work executes inside the namespace via `eos-ns-holder`
 //! (see `host_runtime`), not in this daemon-scope module.
-//! `// PORT backend/src/sandbox/isolated_workspace/scripts/ns_holder.py:29-49 — IPv6 hardening`
 
 #[cfg(target_os = "linux")]
 use std::future::Future;
@@ -34,24 +32,23 @@ use netlink_sys::{Socket as NlSocket, SocketAddr as NlSocketAddr};
 #[cfg(target_os = "linux")]
 use rtnetlink::{new_connection, Handle, LinkBridge, LinkBridgePort, LinkUnspec, LinkVeth};
 
-/// Shared bridge interface name. `// PORT backend/src/sandbox/isolated_workspace/network.py:27`
+/// Shared bridge interface name.
 pub const BRIDGE_NAME: &str = "eos-shared0";
-/// Shared bridge CIDR. `// PORT backend/src/sandbox/isolated_workspace/network.py:28`
+/// Shared bridge CIDR.
 pub const BRIDGE_CIDR: &str = "10.244.0.0/24";
-/// Bridge gateway address. `// PORT backend/src/sandbox/isolated_workspace/network.py:29`
+/// Bridge gateway address.
 pub const GATEWAY: &str = "10.244.0.1";
-/// nftables NAT table name. `// PORT backend/src/sandbox/isolated_workspace/network.py:30`
+/// nftables NAT table name.
 pub const NFT_NAT_TABLE: &str = "eos_iws_nat";
-/// nftables filter table name. `// PORT backend/src/sandbox/isolated_workspace/network.py:31`
+/// nftables filter table name.
 pub const NFT_FILTER_TABLE: &str = "eos_iws_filter";
 #[cfg(target_os = "linux")]
 const NFT_BRIDGE_FILTER_TABLE: &str = "eos_iws_bridge_filter";
-/// Cloud IMDS address dropped on the forward chain. `// PORT backend/src/sandbox/isolated_workspace/network.py:32`
+/// Cloud IMDS address dropped on the forward chain.
 pub const IMDS_ADDR: &str = "169.254.169.254";
-/// RFC1918 private networks (for the opt-in deny rule). `// PORT backend/src/sandbox/isolated_workspace/network.py:33`
+/// RFC1918 private networks (for the opt-in deny rule).
 pub const RFC1918_NETS: [&str; 3] = ["10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"];
 /// Per-workspace veth name prefix — the SAME literal as [`HANDLE_PREFIX`].
-/// `// PORT backend/src/sandbox/isolated_workspace/network.py:34`
 pub const VETH_PREFIX: &str = HANDLE_PREFIX;
 
 /// Bridge CIDR prefix length (matches `BRIDGE_CIDR`).
@@ -62,7 +59,6 @@ pub const POOL_FIRST_HOST: u8 = 2;
 pub const POOL_LAST_HOST: u8 = 254;
 
 /// One veth `/32` allocation for a workspace.
-/// `// PORT backend/src/sandbox/isolated_workspace/network.py:41-44 — VethAllocation`
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct VethAllocation {
     /// Host-side veth name (attached to the bridge).
@@ -77,7 +73,6 @@ pub struct VethAllocation {
 ///
 /// Linux `IFNAMSIZ` caps names at 15 chars: `eos-iws-` (8) + 6 handle chars +
 /// suffix (1) = 15 exactly. Host ends in `h`, peer ends in `n`.
-/// `// PORT backend/src/sandbox/isolated_workspace/network.py:231-235 — _veth_names`
 #[must_use]
 pub fn veth_names(workspace_handle_id: &str) -> (String, String) {
     // Python `_veth_names` takes the FIRST 6 chars (`workspace_handle_id[:6]`);
@@ -92,7 +87,6 @@ pub fn veth_names(workspace_handle_id: &str) -> (String, String) {
 /// Pure IPv4 `/32` allocator over `10.244.0.2 - 10.244.0.254`.
 ///
 /// Lowest-IP-first O(N) scan; N <= 253. No Linux deps.
-/// `// PORT backend/src/sandbox/isolated_workspace/network.py:47-75 — BridgeAddressPool`
 #[derive(Debug, Clone, Default)]
 pub struct BridgeAddressPool {
     allocated: Vec<Ipv4Addr>,
@@ -111,7 +105,6 @@ impl BridgeAddressPool {
     ///
     /// Returns [`IsolatedError::NetworkUnavailable`] when `ip` is outside
     /// [`BRIDGE_CIDR`].
-    // PORT backend/src/sandbox/isolated_workspace/network.py:60-64 — BridgeAddressPool.reserve
     pub fn reserve(&mut self, ip: Ipv4Addr) -> Result<(), IsolatedError> {
         if !is_pool_ip(ip) {
             return Err(IsolatedError::NetworkUnavailable(format!(
@@ -131,7 +124,6 @@ impl BridgeAddressPool {
     ///
     /// Returns [`IsolatedError::NetworkUnavailable`] when the address pool is
     /// exhausted.
-    // PORT backend/src/sandbox/isolated_workspace/network.py:66-72 — BridgeAddressPool.allocate
     pub fn allocate(&mut self) -> Result<Ipv4Addr, IsolatedError> {
         for host in POOL_FIRST_HOST..=POOL_LAST_HOST {
             let ip = Ipv4Addr::new(10, 244, 0, host);
@@ -147,7 +139,6 @@ impl BridgeAddressPool {
     }
 
     /// Release `ip` back into the pool.
-    // PORT backend/src/sandbox/isolated_workspace/network.py:74-75 — BridgeAddressPool.free
     pub fn free(&mut self, ip: Ipv4Addr) {
         self.allocated.retain(|allocated| *allocated != ip);
     }
@@ -158,7 +149,6 @@ impl BridgeAddressPool {
 /// The Python implementation shells out to `ip`/`nft`; the Rust port replaces
 /// the bridge/veth path with `rtnetlink` link/address operations and the static
 /// NAT/filter path with `NETLINK_NETFILTER` messages — NO `ip`/`nft` binaries.
-/// `// PORT backend/src/sandbox/isolated_workspace/network.py:78-228 — IsolatedNetwork`
 #[derive(Debug)]
 pub struct IsolatedNetwork {
     rfc1918_egress: Rfc1918Egress,
@@ -191,7 +181,6 @@ impl IsolatedNetwork {
     ///
     /// Returns [`IsolatedError::NetworkUnavailable`] when route or netfilter
     /// netlink setup fails.
-    // PORT backend/src/sandbox/isolated_workspace/network.py:95-100 — IsolatedNetwork.initialize (require_tools/ensure_bridge/install_static_rules)
     pub fn initialize(&mut self) -> Result<(), IsolatedError> {
         if test_harness_enabled() {
             self.initialized = true;
@@ -222,7 +211,6 @@ impl IsolatedNetwork {
     ///
     /// Returns [`IsolatedError::NetworkUnavailable`] when bridge initialization,
     /// IP allocation, holder PID conversion, or veth netlink wiring fails.
-    // PORT backend/src/sandbox/isolated_workspace/network.py:102-146 — IsolatedNetwork.install_veth
     pub fn install_veth(
         &mut self,
         workspace_handle_id: &str,
@@ -259,7 +247,6 @@ impl IsolatedNetwork {
     }
 
     /// Tear down a veth pair and return its `/32` to the pool.
-    // PORT backend/src/sandbox/isolated_workspace/network.py:148-150 — IsolatedNetwork.teardown_veth
     pub fn teardown_veth(&mut self, allocation: &VethAllocation) {
         self.teardown_host_veth(&allocation.host_name);
         self.pool.free(allocation.ns_ip);
