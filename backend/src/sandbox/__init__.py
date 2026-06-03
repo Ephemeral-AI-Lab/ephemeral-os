@@ -1,12 +1,10 @@
-"""Sandbox package - public API, host, daemon, provider, and workspaces.
+"""Sandbox package: public API, host bootstrap, provider adapters, and audit.
 
 Sub-packages:
-- ``sandbox.api``      — public verbs (lifecycle, read/write/edit/shell, raw_exec)
-- ``sandbox.host``     — orchestrator-side setup, daemon client, and recovery
+- ``sandbox.api``      — host public verbs and Rust daemon transport contracts
+- ``sandbox.host``     — orchestrator-side setup, daemon client, and bundle upload
 - ``sandbox.provider`` — provider adapter registry and provider implementations
-- ``sandbox.daemon``   — in-sandbox dispatcher and services
-- ``sandbox.ephemeral_workspace`` — per-tool-call pipeline and plugin dispatch
-- ``sandbox.isolated_workspace`` — opt-in per-agent pinned workspace handles
+- ``sandbox.audit``    — host-readable audit schemas and translation helpers
 
 The public API surface is documented in ``docs/architecture/sandbox``.
 """

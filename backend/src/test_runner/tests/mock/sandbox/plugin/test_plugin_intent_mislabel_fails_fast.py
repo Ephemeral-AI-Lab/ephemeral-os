@@ -49,7 +49,7 @@ async def test_plugin_intent_mislabel_fails_fast(
     assert summary["missing_intent_error"]["type"] == "TypeError"
     assert summary["lifecycle_error"]["type"] == "PluginOpRegistrationError"
     assert summary["read_only_result"]["path"] == "service"
-    assert summary["write_allowed_result"]["path"] == "overlay"
-    assert summary["write_allowed_result"]["overlay_runner_used"] is True
-    assert summary["overlay_calls"] == [{"plugin": "demo", "op": "write"}]
+    assert summary["write_allowed_result"]["path"] == "daemon_overlay"
+    assert summary["write_allowed_result"]["write_allowed_route"] == "rust_daemon_overlay_occ"
+    assert summary["overlay_owner"] == "rust_daemon"
     assert_no_internal_sandbox_errors(report.run_dir)

@@ -25,6 +25,8 @@ _API_ROOT = Path(sandbox_api.__file__).parent
 _EXPECTED_API_ROOT_ENTRIES = {
     "__init__.py",
     "provider_control.py",
+    "plugin_dispatch.py",
+    "plugin_install.py",
     "plugin_support.py",
     "raw_exec.py",
     "daemon_audit.py",
