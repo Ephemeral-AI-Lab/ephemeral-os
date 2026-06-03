@@ -15,8 +15,9 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
+use eos_engine::NotificationService;
 use eos_llm_client::Message;
-use eos_tools::SubagentSupervisorPort;
+use eos_tools::{CommandSessionSupervisorPort, NotificationSink, SubagentSupervisorPort};
 use eos_types::AgentRunId;
 use eos_workflow::{AgentLaunch, AgentRunReport, AgentRunner, Result as WorkflowResult};
 
@@ -28,6 +29,8 @@ use crate::tool_context::{build_metadata, MetadataParams};
 pub(crate) struct RuntimeAgentRunner {
     state: AppState,
     subagent_supervisor: Arc<dyn SubagentSupervisorPort>,
+    command_session_supervisor: Arc<dyn CommandSessionSupervisorPort>,
+    notifier: NotificationService,
 }
 
 impl std::fmt::Debug for RuntimeAgentRunner {
@@ -40,10 +43,14 @@ impl RuntimeAgentRunner {
     pub(crate) fn new(
         state: AppState,
         subagent_supervisor: Arc<dyn SubagentSupervisorPort>,
+        command_session_supervisor: Arc<dyn CommandSessionSupervisorPort>,
+        notifier: NotificationService,
     ) -> Self {
         Self {
             state,
             subagent_supervisor,
+            command_session_supervisor,
+            notifier,
         }
     }
 }
@@ -58,6 +65,7 @@ impl AgentRunner for RuntimeAgentRunner {
         };
 
         let agent_run_id = AgentRunId::new_v4();
+        let sink: Arc<dyn NotificationSink> = Arc::new(self.notifier.clone());
         let metadata = build_metadata(
             &self.state,
             MetadataParams {
@@ -70,6 +78,8 @@ impl AgentRunner for RuntimeAgentRunner {
                 workflow_id: launch.workflow_id.clone(),
                 workflow_control: None,
                 subagent_supervisor: Some(self.subagent_supervisor.clone()),
+                command_session_supervisor: Some(self.command_session_supervisor.clone()),
+                notifications: sink,
             },
         );
 
@@ -91,6 +101,7 @@ impl AgentRunner for RuntimeAgentRunner {
                 task_id: Some(launch.task_id.clone()),
                 agent_run_id,
                 tool_metadata: metadata,
+                notifier: self.notifier.clone(),
                 persist_agent_run: true,
             },
             None,

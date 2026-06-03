@@ -13,7 +13,9 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use eos_agent_def::AgentDefinition;
-use eos_engine::{build_query_context, run_query, BuildQueryContextInput, EventSource};
+use eos_engine::{
+    build_query_context, run_query, BuildQueryContextInput, EventSource, NotificationService,
+};
 use eos_llm_client::{Message, DEFAULT_MAX_TOKENS};
 use eos_tools::{build_default_registry, CallerScope, ExecutionMetadata, ToolResult};
 use eos_types::{AgentRunId, TaskId};
@@ -33,6 +35,9 @@ pub(crate) struct EphemeralRunInput {
     pub agent_run_id: AgentRunId,
     /// The typed tool execution context threaded through every tool call.
     pub tool_metadata: ExecutionMetadata,
+    /// The per-request notification sink shared with the tools/heartbeat; the
+    /// loop drains it each turn (anchor §7 instance identity).
+    pub notifier: NotificationService,
     /// Whether to record an `agent_run` row (create + finish).
     pub persist_agent_run: bool,
 }
@@ -57,6 +62,7 @@ pub(crate) async fn run_ephemeral_agent(
         task_id,
         agent_run_id,
         tool_metadata,
+        notifier,
         persist_agent_run,
     } = input;
 
@@ -108,6 +114,7 @@ pub(crate) async fn run_ephemeral_agent(
         agent_run_id: agent_run_id.clone(),
         task_id,
         tool_metadata,
+        notifier,
     });
 
     let mut ctx = match ctx_result {

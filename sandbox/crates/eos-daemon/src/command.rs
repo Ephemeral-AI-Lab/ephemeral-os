@@ -981,6 +981,19 @@ fn spawn_command_runner_session(
     Ok((session, child))
 }
 
+/// Length of the longest valid-UTF-8 prefix of `bytes`. A trailing incomplete
+/// multibyte sequence (≤3 bytes) is excluded so the reader can carry it over to
+/// the next read instead of corrupting it into replacement characters at the
+/// 8 KiB read boundary (sense-2 §2.6). Pure (platform-independent) so it is unit
+/// tested on every host.
+#[cfg_attr(not(target_os = "linux"), allow(dead_code))]
+fn utf8_valid_prefix_len(bytes: &[u8]) -> usize {
+    match std::str::from_utf8(bytes) {
+        Ok(_) => bytes.len(),
+        Err(err) => err.valid_up_to(),
+    }
+}
+
 #[cfg(target_os = "linux")]
 fn spawn_command_output_reader(
     mut master: File,
@@ -995,21 +1008,34 @@ fn spawn_command_output_reader(
             .open(transcript_path)
             .ok();
         let mut buf = [0_u8; 8192];
+        // Carry-over buffer: holds an incomplete trailing multibyte sequence
+        // until the next read completes it (§2.6).
+        let mut carry: Vec<u8> = Vec::new();
         loop {
             match master.read(&mut buf) {
                 Ok(0) => break,
                 Ok(n) => {
-                    let text = String::from_utf8_lossy(&buf[..n]).into_owned();
-                    output.append(text);
+                    // Transcript: byte-exact raw stream (decode-independent).
                     if output.note_spooled(u64::try_from(n).unwrap_or(u64::MAX)) {
                         if let Some(file) = transcript.as_mut() {
                             let _ = file.write_all(&buf[..n]);
                         }
                     }
+                    // Model output: decode the valid prefix, retain the tail.
+                    carry.extend_from_slice(&buf[..n]);
+                    let valid = utf8_valid_prefix_len(&carry);
+                    if valid > 0 {
+                        output.append(String::from_utf8_lossy(&carry[..valid]).into_owned());
+                        carry.drain(..valid);
+                    }
                 }
                 Err(err) if err.kind() == std::io::ErrorKind::Interrupted => {}
                 Err(_) => break,
             }
+        }
+        // EOF: flush any remaining (truly incomplete) bytes lossily.
+        if !carry.is_empty() {
+            output.append(String::from_utf8_lossy(&carry).into_owned());
         }
         let _ = done_tx.send(());
     });
@@ -1495,6 +1521,28 @@ mod tests {
             "  printf hi\n"
         );
         Ok(())
+    }
+
+    #[test]
+    fn utf8_carry_over_excludes_split_multibyte_tail() {
+        // A 3-byte char (€ = E2 82 AC) split across a read boundary: the first
+        // read ends mid-sequence, so only the complete prefix decodes; the tail
+        // is carried over and completed on the next read.
+        let euro = "€".as_bytes(); // [0xE2, 0x82, 0xAC]
+        let mut first = b"ab".to_vec();
+        first.extend_from_slice(&euro[..1]); // "ab" + first byte of €
+        let valid = utf8_valid_prefix_len(&first);
+        assert_eq!(valid, 2, "the split multibyte byte is excluded");
+        assert_eq!(&first[..valid], b"ab");
+
+        // Completing the sequence makes the whole buffer valid.
+        let mut completed = first[valid..].to_vec();
+        completed.extend_from_slice(&euro[1..]);
+        assert_eq!(utf8_valid_prefix_len(&completed), completed.len());
+        assert_eq!(String::from_utf8_lossy(&completed), "€");
+
+        // Fully valid input returns its whole length.
+        assert_eq!(utf8_valid_prefix_len(b"plain ascii"), 11);
     }
 
     #[test]

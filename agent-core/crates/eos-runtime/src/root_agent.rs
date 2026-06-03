@@ -6,9 +6,12 @@
 use std::sync::Arc;
 
 use eos_agent_def::AgentName;
+use eos_engine::NotificationService;
 use eos_llm_client::Message;
 use eos_state::TaskStatus;
-use eos_tools::{SubagentSupervisorPort, WorkflowControlPort};
+use eos_tools::{
+    CommandSessionSupervisorPort, NotificationSink, SubagentSupervisorPort, WorkflowControlPort,
+};
 use eos_types::{AgentRunId, JsonObject, RequestId, SandboxId, TaskId};
 use serde_json::json;
 
@@ -24,6 +27,12 @@ pub(crate) struct RootAgentParams {
     pub sandbox_id: SandboxId,
     pub workflow_control: Arc<dyn WorkflowControlPort>,
     pub subagent_supervisor: Arc<dyn SubagentSupervisorPort>,
+    /// Per-request command-session supervisor port (same instance as the
+    /// heartbeat's supervisor — anchor §7).
+    pub command_session_supervisor: Arc<dyn CommandSessionSupervisorPort>,
+    /// Per-request notification sink; its queue is shared with the heartbeat and
+    /// drained by the loop.
+    pub notifier: NotificationService,
     pub on_event: Option<EventCallback>,
 }
 
@@ -55,6 +64,7 @@ pub(crate) async fn run_root_agent(state: AppState, params: RootAgentParams) {
     };
 
     let agent_run_id = AgentRunId::new_v4();
+    let sink: Arc<dyn NotificationSink> = Arc::new(params.notifier.clone());
     let metadata = build_metadata(
         &state,
         MetadataParams {
@@ -67,6 +77,8 @@ pub(crate) async fn run_root_agent(state: AppState, params: RootAgentParams) {
             workflow_id: None,
             workflow_control: Some(params.workflow_control.clone()),
             subagent_supervisor: Some(params.subagent_supervisor.clone()),
+            command_session_supervisor: Some(params.command_session_supervisor.clone()),
+            notifications: sink,
         },
     );
 
@@ -78,6 +90,7 @@ pub(crate) async fn run_root_agent(state: AppState, params: RootAgentParams) {
             task_id: Some(params.root_task_id.clone()),
             agent_run_id,
             tool_metadata: metadata,
+            notifier: params.notifier.clone(),
             persist_agent_run: true,
         },
         params.on_event.as_ref(),

@@ -9,9 +9,11 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::{Context, Result};
-use eos_engine::SharedSubagentSupervisor;
+use eos_engine::{spawn_command_completion_heartbeat, NotificationService, SharedSubagentSupervisor};
 use eos_state::{Task, TaskRole, TaskStatus};
-use eos_tools::{SubagentSupervisorPort, WorkflowControlPort};
+use eos_tools::{
+    CommandSessionSupervisorPort, NotificationSink, SubagentSupervisorPort, WorkflowControlPort,
+};
 use eos_types::{RequestId, TaskId};
 use eos_workflow::{
     AgentEntryComposer, AgentRunner, AttemptDeps, AttemptOrchestratorRegistry, ContextEngine,
@@ -37,6 +39,9 @@ pub struct RequestEntryHandle {
     pub attempt_deps: AttemptDeps,
     pub(crate) root_agent_task: JoinHandle<()>,
     pub(crate) supervisor: Arc<SharedSubagentSupervisor>,
+    /// Per-request command-completion heartbeat (anchor §5.3); aborted at
+    /// request teardown.
+    pub(crate) heartbeat: JoinHandle<()>,
     pub(crate) state: AppState,
 }
 
@@ -55,7 +60,10 @@ impl RequestEntryHandle {
     /// a crash persists a failure instead of leaving the task running
     /// (AC-eos-runtime-03b).
     pub async fn join(self) {
-        if let Err(join_err) = self.root_agent_task.await {
+        let result = self.root_agent_task.await;
+        // The root run is done; the heartbeat has nothing left to deliver.
+        self.heartbeat.abort();
+        if let Err(join_err) = result {
             let summary = format!("root agent task did not complete: {join_err}");
             fail_unfinished_root(&self.state, &self.request_id, &self.root_task_id, &summary).await;
         }
@@ -66,6 +74,7 @@ impl RequestEntryHandle {
     /// unfinished-root guard, then flush audit (AC-eos-runtime-08b).
     pub async fn shutdown(self, reason: &str, grace: Duration) {
         self.state.shutdown.cancel();
+        self.heartbeat.abort();
         self.supervisor
             .inner()
             .lock()
@@ -115,6 +124,18 @@ pub async fn start_request(
     // Per-request delegated-workflow runtime (Python `_create_runtime`).
     let supervisor = Arc::new(SharedSubagentSupervisor::default());
     let supervisor_port: Arc<dyn SubagentSupervisorPort> = supervisor.clone();
+    // One NotificationService per request: its queue is shared by the tool sink,
+    // the heartbeat, and (via the loop's `notifier`) the query loop — the §7
+    // instance-identity invariant. The command-session port is the SAME
+    // supervisor instance the heartbeat pulls into.
+    let notifier = NotificationService::new();
+    let notification_sink: Arc<dyn NotificationSink> = Arc::new(notifier.clone());
+    let command_session_port: Arc<dyn CommandSessionSupervisorPort> = supervisor.clone();
+    let heartbeat = spawn_command_completion_heartbeat(
+        supervisor.inner(),
+        notification_sink,
+        state.transport.clone(),
+    );
     let iteration_coordinators = Arc::new(OpenIterationCoordinatorRegistry::new());
     let orchestrator_registry = Arc::new(AttemptOrchestratorRegistry::new());
     let context_engine = ContextEngine::new(ContextEngineDeps {
@@ -130,6 +151,8 @@ pub async fn start_request(
     let runner: Arc<dyn AgentRunner> = Arc::new(RuntimeAgentRunner::new(
         state.clone(),
         supervisor_port.clone(),
+        command_session_port.clone(),
+        notifier.clone(),
     ));
     let attempt_deps = AttemptDeps {
         workflow_store: state.workflow_store.clone(),
@@ -189,6 +212,8 @@ pub async fn start_request(
         sandbox_id: binding.sandbox_id,
         workflow_control,
         subagent_supervisor: supervisor_port,
+        command_session_supervisor: command_session_port,
+        notifier,
         on_event,
     };
     let root_state = state.clone();
@@ -202,6 +227,7 @@ pub async fn start_request(
         attempt_deps,
         root_agent_task,
         supervisor,
+        heartbeat,
         state: state.clone(),
     })
 }

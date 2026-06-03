@@ -47,12 +47,19 @@ fn frozen_edges() -> Edges {
                 "eos-llm-client",
             ],
         ),
+        // The command-session supervision design adds the eos-engine ->
+        // eos-sandbox-api edge (locked decision D2: one-way edge eos-engine ->
+        // eos-sandbox-api -> daemon). The background heartbeat
+        // (background/heartbeat.rs) names SandboxTransport and calls
+        // collect_command_completions to pull daemon completions, and no other
+        // upstream dep re-exports them — so the edge is required to compile.
         (
             "eos-engine",
             &[
                 "eos-types",
                 "eos-llm-client",
                 "eos-tools",
+                "eos-sandbox-api",
                 "eos-audit",
                 "eos-agent-def",
             ],

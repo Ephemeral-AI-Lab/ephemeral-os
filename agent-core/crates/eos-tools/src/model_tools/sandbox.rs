@@ -775,6 +775,7 @@ impl ToolExecutor for ExecCommand {
             .unwrap_or_else(InvocationId::new_v4);
         let mut base = request_base(ctx, "exec_command");
         base.invocation_id = Some(invocation_id);
+        let command = parsed.cmd.clone();
         let request = ExecCommandRequest {
             base,
             cmd: parsed.cmd,
@@ -787,6 +788,23 @@ impl ToolExecutor for ExecCommand {
                 Ok(result) => result,
                 Err(err) => return Ok(ToolResult::error(err.to_string())),
             };
+        // Register a backgrounded session with the supervisor so the heartbeat
+        // pulls its completion. The daemon scopes the session under the RPC's
+        // top-level `agent_id` (== `caller.agent_id`), so register under the same
+        // id or the heartbeat's `collect_completed` filter would never match.
+        if let (Some(port), Some(session_id)) =
+            (&ctx.command_session_supervisor, &result.command_session_id)
+        {
+            if result.status == "running" {
+                port.register(
+                    session_id,
+                    sandbox_id.as_str(),
+                    &ctx.caller.agent_id,
+                    &command,
+                )
+                .await;
+            }
+        }
         Ok(command_tool_result(&result))
     }
 }
@@ -853,7 +871,7 @@ impl ToolExecutor for WriteStdin {
         if parsed.chars.contains('\u{3}') && result.status == "running" {
             let cancel = CommandSessionCancelRequest {
                 base: request_base(ctx, "write_stdin"),
-                command_session_id,
+                command_session_id: command_session_id.clone(),
             };
             result =
                 match eos_sandbox_api::cancel_command_session(&*ctx.transport, sandbox_id, &cancel)
@@ -863,7 +881,98 @@ impl ToolExecutor for WriteStdin {
                     Err(err) => return Ok(ToolResult::error(err.to_string())),
                 };
         }
+        // Recover race + exactly-once latch (anchor §8). If the daemon already
+        // lost the live session, surface the supervisor's stored terminal;
+        // otherwise, once a terminal status is observed inline, latch it
+        // `Delivered` so the heartbeat never re-notifies the same completion.
+        if let Some(port) = &ctx.command_session_supervisor {
+            if is_command_session_not_found(&result) {
+                if let Some(stored) = port.command_session_result(&command_session_id).await {
+                    port.mark_command_session_reported(&command_session_id, stored.clone())
+                        .await;
+                    return Ok(command_tool_result_from_value(&stored));
+                }
+            } else if result.status != "running" {
+                port.mark_command_session_reported(
+                    &command_session_id,
+                    command_result_value(&result),
+                )
+                .await;
+            }
+        }
         Ok(command_tool_result(&result))
+    }
+}
+
+/// Whether a `write_stdin` result is the daemon's "live session is gone" signal
+/// (`command_session_not_found`), so the supervisor's stored terminal can be
+/// recovered.
+fn is_command_session_not_found(result: &ExecCommandResult) -> bool {
+    result.status == "error" && result.output.stderr.contains("command_session_not_found")
+}
+
+/// Project an [`ExecCommandResult`] into the daemon completion `result` shape the
+/// supervisor stores (status / `exit_code` / `output`).
+fn command_result_value(result: &ExecCommandResult) -> Value {
+    json!({
+        "status": result.status,
+        "exit_code": result.exit_code,
+        "output": {
+            "stdout": result.output.stdout,
+            "stderr": result.output.stderr,
+        },
+    })
+}
+
+/// Render a supervisor-stored terminal `result` value into the tool output DTO
+/// (the recover-race return path).
+fn command_tool_result_from_value(result: &Value) -> ToolResult {
+    let status = result
+        .get("status")
+        .and_then(Value::as_str)
+        .unwrap_or("ok")
+        .to_owned();
+    let exit_code = result
+        .get("exit_code")
+        .and_then(Value::as_i64)
+        .map(|code| code as i32);
+    let stdout = result
+        .get("output")
+        .and_then(|output| output.get("stdout"))
+        .and_then(Value::as_str)
+        .or_else(|| result.get("stdout").and_then(Value::as_str))
+        .unwrap_or("")
+        .to_owned();
+    let stderr = result
+        .get("output")
+        .and_then(|output| output.get("stderr"))
+        .and_then(Value::as_str)
+        .unwrap_or("")
+        .to_owned();
+    let is_error = matches!(status.as_str(), "error" | "timed_out");
+    let mut output_map = BTreeMap::new();
+    output_map.insert("stdout".to_owned(), stdout.clone());
+    output_map.insert("stderr".to_owned(), stderr.clone());
+    let payload = CommandToolOutput {
+        status: status.clone(),
+        exit_code,
+        output: output_map,
+        command_session_id: None,
+        stdout,
+        stderr,
+        changed_paths: Vec::new(),
+        changed_path_kinds: BTreeMap::new(),
+        mutation_source: String::new(),
+        conflict_reason: None,
+        error: None,
+    };
+    let mut metadata = JsonObject::new();
+    metadata.insert("status".to_owned(), json!(status));
+    ToolResult {
+        output: serialize(&payload),
+        is_error,
+        metadata,
+        is_terminal: false,
     }
 }
 

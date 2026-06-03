@@ -80,7 +80,7 @@ pub struct QueryContext {
     /// Optional prompt-report recorder.
     pub prompt_report: Option<PromptReportRecorder>,
     /// Declarative notification rules.
-    pub notification_rules: Vec<NotificationRule>,
+    pub notification_rules: Vec<Arc<dyn NotificationRule>>,
     /// Fire-once notification names already emitted.
     pub notification_fired: BTreeSet<String>,
     /// Per-rule scratchpad.

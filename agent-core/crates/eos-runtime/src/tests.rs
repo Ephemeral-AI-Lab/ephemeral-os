@@ -455,3 +455,219 @@ async fn shutdown_cancels_drains_and_fails_running_root() {
     let request = state.request_store.get(&request_id).await.unwrap().unwrap();
     assert_eq!(request.status, "failed");
 }
+
+// --- Slice 1 instance identity (anchor §7): a backgrounded command-session
+// completion is pulled by the per-request heartbeat and delivered to the model
+// as a `[BACKGROUND COMPLETED]` SystemNotification in a later provider request.
+// This goes through the real `start_request` wiring, proving the heartbeat sink
+// and the loop's `notifier` are the SAME `NotificationService`. If the wiring
+// handed the loop a different instance, the model would never see the
+// notification and `saw_notification` would stay false.
+mod command_session_delivery {
+    use std::num::NonZeroU32;
+    use std::sync::atomic::{AtomicBool, Ordering};
+    use std::sync::Arc;
+    use std::time::Duration;
+
+    use async_trait::async_trait;
+    use eos_agent_def::{AgentRegistry, AgentRole};
+    use eos_engine::{
+        AssistantMessageComplete, EngineError, EngineStream, EventSource, StreamEvent,
+    };
+    use eos_llm_client::{ContentBlock, LlmRequest, Message, MessageRole, UsageSnapshot};
+    use eos_sandbox_api::{DaemonOp, SandboxApiError, SandboxTransport};
+    use eos_state::TaskStatus;
+    use eos_types::{JsonObject, SandboxId};
+    use serde_json::json;
+
+    use crate::app_state::test_seams::{agent_def, ApprovingAdvisor, FakeProvisioner};
+    use crate::app_state::EventSourceFactory;
+    use crate::{start_request, AppState};
+
+    /// A fake daemon transport: `exec_command` starts a backgrounded session
+    /// `cmd_1`, `collect_completed` parks a successful completion for it, and the
+    /// terminal-gate count is 0.
+    #[derive(Debug, Default)]
+    struct CommandCompletionTransport;
+
+    #[async_trait]
+    impl SandboxTransport for CommandCompletionTransport {
+        async fn call(
+            &self,
+            _sandbox_id: &SandboxId,
+            op: DaemonOp,
+            _payload: JsonObject,
+            _timeout_s: u32,
+        ) -> Result<JsonObject, SandboxApiError> {
+            let value = match op {
+                DaemonOp::ExecCommand => json!({
+                    "status": "running",
+                    "command_session_id": "cmd_1",
+                    "output": {"stdout": "", "stderr": ""},
+                }),
+                DaemonOp::CommandCollectCompleted => json!({
+                    "success": true,
+                    "completions": [{
+                        "command_session_id": "cmd_1",
+                        "agent_id": "root",
+                        "command": "sleep 1",
+                        "result": {
+                            "status": "ok",
+                            "exit_code": 0,
+                            "output": {"stdout": "background done", "stderr": ""},
+                        },
+                    }],
+                }),
+                DaemonOp::CommandSessionCount => json!({"success": true, "count": 0}),
+                _ => json!({}),
+            };
+            Ok(value.as_object().cloned().unwrap_or_default())
+        }
+    }
+
+    fn stream_of(events: Vec<StreamEvent>) -> EngineStream {
+        Box::pin(futures::stream::iter(events.into_iter().map(Ok)))
+    }
+
+    fn tool_turn(tool_use_id: &str, name: &str, input: serde_json::Value) -> Vec<StreamEvent> {
+        let input = match input {
+            serde_json::Value::Object(map) => map,
+            _ => JsonObject::new(),
+        };
+        vec![StreamEvent::AssistantMessageComplete {
+            agent_name: String::new(),
+            agent_run_id: None,
+            payload: Box::new(AssistantMessageComplete {
+                message: Message {
+                    role: MessageRole::Assistant,
+                    content: vec![ContentBlock::ToolUse {
+                        tool_use_id: tool_use_id.parse().expect("tool use id"),
+                        name: name.to_owned(),
+                        input,
+                    }],
+                },
+                usage: UsageSnapshot::default(),
+                stop_reason: None,
+            }),
+        }]
+    }
+
+    fn text_turn(text: &str) -> Vec<StreamEvent> {
+        vec![StreamEvent::AssistantMessageComplete {
+            agent_name: String::new(),
+            agent_run_id: None,
+            payload: Box::new(AssistantMessageComplete {
+                message: Message {
+                    role: MessageRole::Assistant,
+                    content: vec![ContentBlock::Text {
+                        text: text.to_owned(),
+                    }],
+                },
+                usage: UsageSnapshot::default(),
+                stop_reason: None,
+            }),
+        }]
+    }
+
+    /// Drives the root: turn 1 launches a background command session, then it
+    /// keeps returning text turns until the `[BACKGROUND COMPLETED]` notification
+    /// for `cmd_1` lands in the transcript, at which point it submits the
+    /// terminal (recording that it saw the notification).
+    struct DeliveryProbeSource {
+        started: Arc<AtomicBool>,
+        saw_notification: Arc<AtomicBool>,
+    }
+
+    #[async_trait]
+    impl EventSource for DeliveryProbeSource {
+        async fn stream(&self, request: &LlmRequest) -> Result<EngineStream, EngineError> {
+            let seen = request.messages.iter().any(|message| {
+                message.content.iter().any(|block| {
+                    matches!(block, ContentBlock::SystemNotification { text }
+                        if text.contains("[BACKGROUND COMPLETED]") && text.contains("cmd_1"))
+                })
+            });
+            if seen {
+                self.saw_notification.store(true, Ordering::SeqCst);
+                return Ok(stream_of(tool_turn(
+                    "toolu_done",
+                    "submit_root_outcome",
+                    json!({"status": "success", "outcome": "saw background completion"}),
+                )));
+            }
+            if !self.started.swap(true, Ordering::SeqCst) {
+                return Ok(stream_of(tool_turn(
+                    "toolu_exec",
+                    "exec_command",
+                    json!({"cmd": "sleep 1"}),
+                )));
+            }
+            // Yield so the per-request heartbeat can pull and enqueue the parked
+            // completion before the next loop-top drain.
+            tokio::time::sleep(Duration::from_millis(20)).await;
+            Ok(stream_of(text_turn("waiting for the background command")))
+        }
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn backgrounded_completion_lands_as_system_notification() {
+        // A fast heartbeat keeps the test sub-second instead of waiting ~1 s.
+        std::env::set_var("EOS_COMMAND_HEARTBEAT_MS", "20");
+
+        let mut root = agent_def(
+            "root",
+            AgentRole::Root,
+            &["exec_command", "read_file"],
+            &["submit_root_outcome"],
+        );
+        // Generous budget so the wait-loop never trips the no-terminal ceiling
+        // before the (fast) heartbeat delivers.
+        root.tool_call_limit = NonZeroU32::new(40).expect("nonzero");
+
+        let started = Arc::new(AtomicBool::new(false));
+        let saw_notification = Arc::new(AtomicBool::new(false));
+        let started_factory = started.clone();
+        let saw_factory = saw_notification.clone();
+        let factory: EventSourceFactory = Arc::new(move |_def| {
+            Arc::new(DeliveryProbeSource {
+                started: started_factory.clone(),
+                saw_notification: saw_factory.clone(),
+            }) as Arc<dyn EventSource>
+        });
+
+        let dir = tempfile::tempdir().expect("tempdir");
+        let url = format!("sqlite://{}", dir.path().join("t.db").display());
+        let registry: AgentRegistry = vec![root].into_iter().collect();
+        let state = AppState::builder()
+            .database_url(url)
+            .cwd(dir.path().display().to_string())
+            .provisioner(Arc::new(FakeProvisioner {
+                id: "sb-test".to_owned(),
+            }))
+            .transport(Arc::new(CommandCompletionTransport))
+            .agent_registry(Arc::new(registry))
+            .event_source_factory(factory)
+            .advisor(Arc::new(ApprovingAdvisor))
+            .build()
+            .await
+            .expect("build state");
+
+        let handle = start_request(&state, "run a background command", Some("sb-test"), None)
+            .await
+            .expect("start request");
+        let root_task_id = handle.root_task_id.clone();
+        handle.join().await;
+
+        assert!(
+            saw_notification.load(Ordering::SeqCst),
+            "the backgrounded completion must reach the model as a SystemNotification \
+             (heartbeat sink and loop notifier must be the same instance)"
+        );
+        let task = state.task_store.get(&root_task_id).await.unwrap().unwrap();
+        assert_eq!(
+            task.status,
+            TaskStatus::Done,
+            "seeing the notification lets the root submit its terminal"
+        );
+    }
+}

@@ -4,7 +4,10 @@
 use std::sync::Arc;
 
 use eos_sandbox_api::SandboxCaller;
-use eos_tools::{ExecutionMetadata, SubagentSupervisorPort, WorkflowControlPort};
+use eos_tools::{
+    CommandSessionSupervisorPort, ExecutionMetadata, NotificationSink, SubagentSupervisorPort,
+    WorkflowControlPort,
+};
 use eos_types::{AgentRunId, AttemptId, RequestId, SandboxId, TaskId, WorkflowId};
 
 use crate::app_state::AppState;
@@ -22,6 +25,12 @@ pub(crate) struct MetadataParams {
     /// workflow agents in Phase 6 (nested delegation is deferred).
     pub workflow_control: Option<Arc<dyn WorkflowControlPort>>,
     pub subagent_supervisor: Option<Arc<dyn SubagentSupervisorPort>>,
+    /// The per-request command-session supervisor port (anchor §5), shared with
+    /// the heartbeat and loop notifier.
+    pub command_session_supervisor: Option<Arc<dyn CommandSessionSupervisorPort>>,
+    /// The per-request notification sink the `exec_command`/`write_stdin` tools
+    /// push to and the loop drains (anchor §7 instance identity).
+    pub notifications: Arc<dyn NotificationSink>,
 }
 
 /// Assemble the tool execution context from the shared app state plus per-run
@@ -80,8 +89,9 @@ pub(crate) fn build_metadata(state: &AppState, params: MetadataParams) -> Execut
         workflow_control: params.workflow_control,
         plan_submission: None,
         subagent_supervisor: params.subagent_supervisor,
+        command_session_supervisor: params.command_session_supervisor,
         advisor: Some(state.advisor.clone()),
         isolated_workspace: None,
-        notifications: Some(state.notifications.clone()),
+        notifications: Some(params.notifications),
     }
 }

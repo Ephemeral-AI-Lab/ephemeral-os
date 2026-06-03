@@ -14,7 +14,7 @@ use eos_agent_def::{load_agents_tree, AgentDefinition, AgentRegistry, AgentRegis
 use eos_audit::{AuditSink, BufferedAuditShutdown, BufferedJsonlSink, NoopAuditSink};
 use eos_config::{CentralConfig, DatabaseUrl};
 use eos_db::Database;
-use eos_engine::{AdvisorService, EventSource, NotificationService, StreamEvent};
+use eos_engine::{AdvisorService, EventSource, StreamEvent};
 use eos_llm_client::{Auth, LlmClient, LlmRequest, LlmStream, ProviderError};
 use eos_plugin_catalog::PluginCatalog;
 use eos_sandbox_api::SandboxTransport;
@@ -26,9 +26,7 @@ use eos_skills::{load_skill_registry, SkillRegistry};
 use eos_state::{
     AgentRunStore, AttemptStore, IterationStore, ModelStore, RequestStore, TaskStore, WorkflowStore,
 };
-use eos_tools::{
-    build_default_registry, AdvisorPort, CallerScope, NotificationSink, ToolName, ToolRegistry,
-};
+use eos_tools::{build_default_registry, AdvisorPort, CallerScope, ToolName, ToolRegistry};
 use eos_types::{Clock, RequestId, SystemClock};
 use tokio_util::sync::CancellationToken;
 
@@ -127,7 +125,6 @@ pub struct AppState {
     pub(crate) transport: Arc<dyn SandboxTransport>,
     pub(crate) provisioner: Arc<dyn RequestProvisioner>,
     pub(crate) advisor: Arc<dyn AdvisorPort>,
-    pub(crate) notifications: Arc<dyn NotificationSink>,
     pub(crate) shutdown: CancellationToken,
 }
 
@@ -482,7 +479,6 @@ impl AppStateBuilder {
             advisor: self
                 .advisor
                 .unwrap_or_else(|| Arc::new(AdvisorService)),
-            notifications: Arc::new(NotificationService::new()),
             shutdown: CancellationToken::new(),
         })
     }
