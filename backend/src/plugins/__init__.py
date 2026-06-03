@@ -5,10 +5,10 @@ declarative manifest (``plugin.md``), a setup script (``setup.sh``), one Python
 file per agent-visible tool under ``tools/``, and an optional in-sandbox
 runtime under ``runtime/``. See ``docs/architecture/plugins-refactor.md``.
 
-This package MUST NOT import ``sandbox.*`` except through the public plugin
-adapter surface (``sandbox.ephemeral_workspace.plugin.call_plugin`` host-side,
-``sandbox.ephemeral_workspace.plugin.op_registry.register_plugin_op`` and
-``sandbox.ephemeral_workspace.plugin.op_context.PluginOpContext`` in-sandbox).
+This package MUST NOT import ``sandbox.*`` except through the public host-side
+plugin API (``sandbox.api.plugin_dispatch`` / ``sandbox.api.plugin_install``).
+In-sandbox runtime services use ``plugins.runtime_bridge`` for registration,
+PPC framing, and daemon callback context.
 """
 
 from __future__ import annotations

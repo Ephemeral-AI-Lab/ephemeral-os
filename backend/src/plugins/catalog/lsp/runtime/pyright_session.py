@@ -6,11 +6,9 @@ import ast
 import asyncio
 import contextlib
 import hashlib
-import json
 import logging
 import os
 import shutil
-import sys
 import time
 from pathlib import Path
 from typing import Any
@@ -45,11 +43,11 @@ class PyrightSpawnError(RuntimeError):
 
 
 class PyrightOverlayRefreshError(RuntimeError):
-    """Raised when a live Pyright overlay cannot be refreshed in place."""
+    """Compatibility error for callers that still catch old overlay failures."""
 
 
 class PyrightSession:
-    """Long-lived Pyright session rooted at a leased workspace overlay."""
+    """Long-lived Pyright session rooted at the daemon-mounted workspace."""
 
     def __init__(
         self,
@@ -58,16 +56,12 @@ class PyrightSession:
         workspace_root: str,
         overlay_handle: Any | None = None,
     ) -> None:
+        del overlay_handle
         self.manifest_key = manifest_key
         self.workspace_root = str(workspace_root or "/testbed").rstrip("/") or "/"
-        self._overlay_handle = overlay_handle
-        self._uses_private_overlay_namespace = bool(
-            getattr(overlay_handle, "layer_paths", None)
-        )
-        self._overlay_layer_paths = tuple(
-            str(path) for path in getattr(overlay_handle, "layer_paths", ()) or ()
-        )
-        self._layer_index_cache: dict[str, Any] = {}
+        self._overlay_handle = None
+        self._uses_private_overlay_namespace = False
+        self._overlay_layer_paths: tuple[str, ...] = ()
         self._proc: asyncio.subprocess.Process | None = None
         self._client: LspJsonRpcClient | None = None
         self._opened: set[str] = set()
@@ -89,12 +83,13 @@ class PyrightSession:
         overlay_handle: Any | None = None,
         workspace_root: str | None = None,
     ) -> None:
-        """Mark the daemon overlay as refreshed and resync open documents."""
-        if manifest_key == self.manifest_key and overlay_handle is None:
+        """Mark the daemon manifest as refreshed and resync open documents."""
+        del overlay_handle
+        if manifest_key == self.manifest_key:
             return
 
         async with self._lock:
-            if manifest_key == self.manifest_key and overlay_handle is None:
+            if manifest_key == self.manifest_key:
                 return
             if workspace_root is not None:
                 normalized_root = str(workspace_root or "/testbed").rstrip("/") or "/"
@@ -102,14 +97,8 @@ class PyrightSession:
                     raise PyrightOverlayRefreshError(
                         "cannot refresh Pyright session across workspace roots"
                     )
-            old_handle = self._overlay_handle
-            if overlay_handle is not None:
-                await self._refresh_overlay_handle(overlay_handle)
             self.manifest_key = manifest_key
-            self._layer_index_cache.clear()
             self._diagnostic_cache.clear()
-            if overlay_handle is not None and old_handle is not overlay_handle:
-                _release_handle(old_handle)
             self.audit_refresh_count += 1
             await self._notify_workspace_refreshed()
 
@@ -583,129 +572,7 @@ class PyrightSession:
         self._client.start()
 
     def _build_argv(self) -> list[str]:
-        overlay_argv = self._build_overlay_argv()
-        if overlay_argv is not None:
-            return overlay_argv
         return self._build_pyright_argv()
-
-    def _build_overlay_argv(self) -> list[str] | None:
-        handle = self._overlay_handle
-        layer_paths = getattr(handle, "layer_paths", None)
-        if not layer_paths:
-            return None
-        unshare = shutil.which("unshare")
-        if not unshare:
-            return None
-        run_dir = Path(str(getattr(handle, "run_dir", "")))
-        if not str(run_dir):
-            return None
-        payload_ref = run_dir / "lsp-namespace-request.json"
-        payload_ref.parent.mkdir(parents=True, exist_ok=True)
-        payload_ref.write_text(
-            json.dumps(
-                {
-                    "workspace_root": self.workspace_root,
-                    "layer_paths": list(layer_paths),
-                    "upperdir": str(getattr(handle, "upperdir", "")),
-                    "workdir": str(getattr(handle, "workdir", "")),
-                    "argv": self._build_pyright_argv(),
-                    "env": os.environ.copy(),
-                },
-                separators=(",", ":"),
-                sort_keys=True,
-            ),
-            encoding="utf-8",
-        )
-        return [
-            unshare,
-            "-Urm",
-            sys.executable,
-            "-m",
-            "plugins.catalog.lsp.runtime.namespace_entrypoint",
-            str(payload_ref),
-        ]
-
-    async def _refresh_overlay_handle(self, overlay_handle: Any) -> None:
-        if self._started:
-            await self._remount_private_overlay(overlay_handle)
-        self._install_overlay_handle(overlay_handle)
-
-    def _install_overlay_handle(self, overlay_handle: Any) -> None:
-        self._overlay_handle = overlay_handle
-        self._uses_private_overlay_namespace = bool(
-            getattr(overlay_handle, "layer_paths", None)
-        )
-        self._overlay_layer_paths = tuple(
-            str(path) for path in getattr(overlay_handle, "layer_paths", ()) or ()
-        )
-
-    async def _remount_private_overlay(self, overlay_handle: Any) -> None:
-        if not self._uses_private_overlay_namespace:
-            raise PyrightOverlayRefreshError(
-                "running Pyright session does not own a private overlay namespace"
-            )
-        proc = self._proc
-        if proc is None or proc.pid is None:
-            raise PyrightOverlayRefreshError("running Pyright process is unavailable")
-        layer_paths = getattr(overlay_handle, "layer_paths", None)
-        if not layer_paths:
-            raise PyrightOverlayRefreshError(
-                "fresh overlay handle does not expose layer paths"
-            )
-        nsenter = shutil.which("nsenter")
-        if not nsenter:
-            raise PyrightOverlayRefreshError("nsenter is unavailable")
-        run_dir = Path(str(getattr(overlay_handle, "run_dir", "")))
-        if not str(run_dir):
-            raise PyrightOverlayRefreshError("fresh overlay handle has no run dir")
-        payload_ref = run_dir / "lsp-namespace-remount.json"
-        payload_ref.parent.mkdir(parents=True, exist_ok=True)
-        payload_ref.write_text(
-            json.dumps(
-                {
-                    "workspace_root": self.workspace_root,
-                    "layer_paths": list(layer_paths),
-                    "upperdir": str(getattr(overlay_handle, "upperdir", "")),
-                    "workdir": str(getattr(overlay_handle, "workdir", "")),
-                },
-                separators=(",", ":"),
-                sort_keys=True,
-            ),
-            encoding="utf-8",
-        )
-        start_s = time.monotonic()
-        helper = await asyncio.create_subprocess_exec(
-            nsenter,
-            "-t",
-            str(proc.pid),
-            "-U",
-            "-m",
-            "--preserve-credentials",
-            "--",
-            sys.executable,
-            "-m",
-            "plugins.catalog.lsp.runtime.namespace_remount",
-            str(payload_ref),
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
-            env=_runtime_subprocess_env(),
-            cwd=_runtime_subprocess_cwd(),
-        )
-        stdout, stderr = await asyncio.wait_for(helper.communicate(), timeout=10.0)
-        if helper.returncode != 0:
-            message = stderr.decode("utf-8", errors="replace").strip()
-            if not message:
-                message = stdout.decode("utf-8", errors="replace").strip()
-            raise PyrightOverlayRefreshError(
-                f"pyright overlay remount failed with exit {helper.returncode}: "
-                f"{message}"
-            )
-        self.audit_remount_count += 1
-        self.audit_last_remount_s = time.monotonic() - start_s
-        logger.info(
-            "pyright session overlay remounted",
-            extra={"duration_s": self.audit_last_remount_s},
-        )
 
     def _build_pyright_argv(self) -> list[str]:
         if os.path.exists(_CONDA_HOOK):
@@ -728,11 +595,7 @@ class PyrightSession:
         ]
 
     def _release_overlay_handle(self) -> None:
-        handle = self._overlay_handle
-        if handle is None:
-            return
         self._overlay_handle = None
-        _release_handle(handle)
 
     async def _initialize(self) -> None:
         client = self._client
@@ -787,89 +650,14 @@ class PyrightSession:
         return version
 
     def _read_document_text(self, file_path: str) -> str:
-        if self._uses_private_overlay_namespace:
-            return self._read_document_text_from_layers(file_path)
         try:
             with open(self._to_full_path(file_path), encoding="utf-8") as fh:
                 return fh.read()
         except OSError:
             return ""
 
-    def _read_document_text_from_layers(self, file_path: str) -> str:
-        rel = self._to_layer_relative_path(file_path)
-        if not rel:
-            return ""
-        for layer_path in self._overlay_layer_paths:
-            layer = Path(layer_path)
-            index = self._layer_index(layer)
-            if rel in index.whiteouts:
-                return ""
-            if rel in index.files:
-                from sandbox.layer_stack.paths import join_layer_path
-
-                candidate = join_layer_path(layer, rel)
-                try:
-                    if candidate.is_symlink():
-                        return os.readlink(candidate)
-                    if candidate.is_file():
-                        return candidate.read_text(encoding="utf-8")
-                except OSError:
-                    return ""
-                return ""
-            from sandbox.layer_stack.layer_index import has_ancestor_in
-
-            if has_ancestor_in(rel, index.files) or has_ancestor_in(
-                rel,
-                index.opaque_dirs,
-            ):
-                return ""
-        return ""
-
     def _document_exists(self, file_path: str) -> bool:
-        if self._uses_private_overlay_namespace:
-            return self._document_exists_in_layers(file_path)
         return os.path.exists(self._to_full_path(file_path))
-
-    def _document_exists_in_layers(self, file_path: str) -> bool:
-        rel = self._to_layer_relative_path(file_path)
-        if not rel:
-            return True
-        for layer_path in self._overlay_layer_paths:
-            index = self._layer_index(Path(layer_path))
-            if rel in index.whiteouts:
-                return False
-            if rel in index.files:
-                return True
-            from sandbox.layer_stack.layer_index import has_ancestor_in
-
-            if has_ancestor_in(rel, index.files) or has_ancestor_in(
-                rel,
-                index.opaque_dirs,
-            ):
-                return False
-        return False
-
-    def _layer_index(self, layer: Path) -> Any:
-        key = layer.as_posix()
-        cached = self._layer_index_cache.get(key)
-        if cached is not None:
-            return cached
-        from sandbox.layer_stack.layer_index import build_layer_index
-
-        index = build_layer_index(layer)
-        self._layer_index_cache[key] = index
-        return index
-
-    def _to_layer_relative_path(self, file_path: str) -> str:
-        full = self._to_full_path(file_path)
-        root = self.workspace_root
-        if full == root:
-            return ""
-        from sandbox.layer_stack.changes import normalize_layer_path
-
-        if full.startswith(f"{root}/"):
-            return normalize_layer_path(full[len(root) + 1 :])
-        return normalize_layer_path(str(file_path).lstrip("/"))
 
     def _forget_document(self, uri: str) -> None:
         self._opened.discard(uri)
@@ -1005,13 +793,3 @@ def _optional_positive_float(value: object, *, default: float) -> float:
         return default
     return parsed if parsed > 0 else default
 
-
-def _release_handle(handle: Any | None) -> None:
-    if handle is None:
-        return
-    release = getattr(handle, "release", None)
-    if callable(release):
-        release()
-    run_dir = getattr(handle, "run_dir", None)
-    if run_dir:
-        shutil.rmtree(run_dir, ignore_errors=True)
