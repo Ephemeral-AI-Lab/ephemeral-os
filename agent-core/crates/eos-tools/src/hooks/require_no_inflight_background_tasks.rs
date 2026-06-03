@@ -100,20 +100,25 @@ pub(crate) async fn run_require_no_inflight(
         None => return Ok(HookOutcome::pass()),
     };
 
-    let daemon =
-        match eos_sandbox_api::command_session_count(&*ctx.transport, sandbox_id, &agent_id).await {
-            Ok(count) => count as usize,
-            Err(_) => {
-                if is_bailout_submission(tool, raw_input) {
-                    // Fail-OPEN: stamp the override reason in the pass-phase
-                    // metadata so the audit trail distinguishes a bailout from a
-                    // normal pass (Python `daemon_unavailable_bailout`).
-                    let mut meta = JsonObject::new();
-                    meta.insert("policy".to_owned(), json!("no_inflight_background_tasks"));
-                    meta.insert("reason".to_owned(), json!("daemon_unavailable_bailout"));
-                    return Ok(HookOutcome::Pass(meta));
-                }
-                return Ok(HookOutcome::Deny(
+    let daemon = match eos_sandbox_api::command_session_count(
+        &*ctx.transport,
+        sandbox_id,
+        &agent_id,
+    )
+    .await
+    {
+        Ok(count) => count as usize,
+        Err(_) => {
+            if is_bailout_submission(tool, raw_input) {
+                // Fail-OPEN: stamp the override reason in the pass-phase
+                // metadata so the audit trail distinguishes a bailout from a
+                // normal pass (Python `daemon_unavailable_bailout`).
+                let mut meta = JsonObject::new();
+                meta.insert("policy".to_owned(), json!("no_inflight_background_tasks"));
+                meta.insert("reason".to_owned(), json!("daemon_unavailable_bailout"));
+                return Ok(HookOutcome::Pass(meta));
+            }
+            return Ok(HookOutcome::Deny(
                     HookDenial::new(
                         format!(
                             "BLOCKED: could not confirm background-task state from the sandbox daemon, \
@@ -124,8 +129,8 @@ pub(crate) async fn run_require_no_inflight(
                     )
                     .with_reason("command_session_count_unavailable"),
                 ));
-            }
-        };
+        }
+    };
     if daemon > 0 {
         return Ok(HookOutcome::Deny(
             HookDenial::new(

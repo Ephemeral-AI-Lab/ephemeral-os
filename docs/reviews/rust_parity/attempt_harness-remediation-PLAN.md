@@ -180,7 +180,7 @@ catches a dead agent."
 | 1 | `eos-workflow/attempt/launch.rs` | 🗑✎ | **Delete `AgentTerminal`** (4-variant enum, `:21-30`); thin `AgentRunReport` to `{ failure_summary: Option<String> }` (ctors → `ok()`/`failed(s)`) | Scaffolding for the capture round-trip; recording doesn't ferry a submission back. |
 | 2 | `eos-workflow/ports.rs` | ✎ | **Repurpose `PlanSubmissionAdapter`** (`:48-84`): `apply_plan`→`record_plan`, `submit_generator`→`record_generator_submission`, `apply_reducer`→`record_reducer_submission` | Turns the dead tool-port into the live **recording** driver — single-writer-safe (marks tasks only). |
 | 3 | `eos-workflow/attempt/orchestrator.rs` | 🗑✎✚ | **Delete** advancing `apply_generator_submission`/`apply_reducer_submission` (`:469-489`); **split** `record_plan` (materialize+RUN, *no* advance) out of `apply_plan_submission` (drop the `advance_run_stage()` tail at `:440-442`); **replace** `apply_planner_report` (`:132-164`) with `settle_planner` (task-status check, not enum-match); **add** D6 `AgentRole::Generator` gate in `materialize_plan_tasks` (`:224-229`) | Removes the second drive path (closes D4). `record_plan` lets the planner tool persist without blocking on the whole run stage. `settle_planner` swaps enum dispatch for a status check. |
-| 4 | `eos-workflow/attempt/run_stage.rs` | 🗑✎ | **Delete `apply_terminal`** (`:222-241`); replace `apply_report` (`:195-220`) with `settle_or_synthesize(launch)` = *"task still Running? → synthesize `run_exhausted` : noop"* | The loop stops applying a returned terminal; its only post-join job is Python's still-RUNNING exhaustion guard. |
+| 4 | `eos-workflow/attempt/run_stage.rs` | 🗑✎ | **Delete `apply_terminal`** (`:222-241`); replace `apply_report` (`:195-220`) with `settle_run_task(launch)` = *"task still Running? → synthesize `run_exhausted` : noop"* | The loop stops applying a returned terminal; its only post-join job is Python's still-RUNNING exhaustion guard. |
 | 5 | `eos-workflow/attempt/run_stage.rs` | ✚ | *(D8, separable)* emit `task_ready`/`task_launched`/`task_failed` via `self.orchestrator.deps().audit_sink` | Closes the dropped audit subsystem (observability only). |
 | 6 | `eos-runtime/agent_runner.rs` | ✎🗑 | `run()` wires `plan_submission = Some(recording)`, runs the engine, returns `AgentRunReport{ failure_summary: run.error }`. **No slot, no capture, no terminal build.** Rewrite the module doc | The runner collapses to a thin engine-run wrapper — simpler than capture (no per-run slot). |
 | 7 | `eos-runtime/tool_context.rs` | ✎ | Add `plan_submission: Option<Arc<dyn PlanSubmissionPort>>` to `MetadataParams` (`:16-34`, default `None`); stamp onto `ExecutionMetadata` (`:90`). **Root stays `None`** (`root_agent.rs:68`) | Carries the recording port into workflow-agent tool calls without gating root. |
@@ -260,7 +260,7 @@ agent-core/crates/
 │   │   ├── launch.rs            ✎  −AgentTerminal enum; AgentRunReport → {failure_summary}
 │   │   ├── orchestrator.rs      ✎  −apply_generator/reducer_submission; +record_plan;
 │   │   │                            apply_planner_report → settle_planner; +D6 role gate
-│   │   ├── run_stage.rs         ✎  −apply_terminal; apply_report → settle_or_synthesize;
+│   │   ├── run_stage.rs         ✎  −apply_terminal; apply_report → settle_run_task;
 │   │   │                            (+D8 audit emits, optional)
 │   │   ├── plan_dag.rs          ▷  readiness / dag_status / acyclic — unchanged
 │   │   ├── orchestrator_registry.rs  ▷  unchanged

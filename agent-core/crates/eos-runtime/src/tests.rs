@@ -227,11 +227,11 @@ async fn successful_root_keeps_engine_terminal() {
     assert_eq!(request.status, "done");
 }
 
-// --- Root is advisor-gated: under the default (denying) `AdvisorService` stub,
-// a well-formed `submit_root_outcome` is refused by the advisor pre-hook, so the
-// run exhausts and the unfinished-root guard fails the request. A real
-// `AdvisorPort` is the prerequisite for root to complete (contrast
-// `successful_root_keeps_engine_terminal`, which injects an approving advisor).
+// --- Root is advisor-gated: with no prior `ask_advisor` exchange in the
+// transcript, the stateless advisor pre-hook classifies `missing` and refuses
+// `submit_root_outcome`, so the run exhausts and the unfinished-root guard fails
+// the request. A real advisor `approve` is the prerequisite for root to complete
+// (contrast `successful_root_keeps_engine_terminal`, which drives a real advisor).
 
 #[tokio::test]
 async fn root_terminal_blocked_without_advisor_approval() {
@@ -240,7 +240,8 @@ async fn root_terminal_blocked_without_advisor_approval() {
         "submit_root_outcome",
         json!({"status": "success", "outcome": "all done"}),
     )]);
-    // No approving advisor → the production `AdvisorService` stub denies the gate.
+    // The root submits directly without ever calling `ask_advisor`, so the gate
+    // finds no advisor verdict in the transcript and denies with reason `missing`.
     let (state, _dir) = build_test_state(Some(factory), vec![root_agent()]).await;
     let handle = start_request(&state, "task", Some("sb-1"), None)
         .await

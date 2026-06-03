@@ -1,17 +1,14 @@
-//! Engine background policy, dispatch, supervisor, and command-session
-//! heartbeat.
+//! Engine background supervisor: subagent driver, command-session supervision,
+//! and the command-completion heartbeat.
 
 mod command_session;
-mod dispatch;
 mod heartbeat;
-mod policy;
+mod subagent;
 mod supervisor;
 
 pub use command_session::CommandSessionRecord;
-pub use dispatch::launch_background_tool;
 pub use heartbeat::spawn_command_completion_heartbeat;
-pub use policy::{is_engine_background_tool, needs_background_manager};
 pub use supervisor::{
-    BackgroundTaskKind, BackgroundTaskRecord, BackgroundTaskStatus, BackgroundTaskSupervisor,
-    SharedSubagentSupervisor, StopMode,
+    BackgroundSupervisorHandle, BackgroundTaskKind, BackgroundTaskRecord, BackgroundTaskStatus,
+    BackgroundTaskSupervisor, StopMode,
 };

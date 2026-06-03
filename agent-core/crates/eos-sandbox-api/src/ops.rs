@@ -27,8 +27,8 @@ pub enum DaemonOp {
     /// `api.v1.exec_command`
     #[serde(rename = "api.v1.exec_command")]
     ExecCommand,
-    /// `api.v1.exec_stdin`
-    #[serde(rename = "api.v1.exec_stdin")]
+    /// `api.v1.write_stdin`
+    #[serde(rename = "api.v1.write_stdin")]
     ExecStdin,
     /// `api.v1.command.cancel`
     #[serde(rename = "api.v1.command.cancel")]
@@ -48,12 +48,6 @@ pub enum DaemonOp {
     /// `api.v1.inflight_count`
     #[serde(rename = "api.v1.inflight_count")]
     InflightCount,
-    /// `api.isolated_workspace.enter`
-    #[serde(rename = "api.isolated_workspace.enter")]
-    IsolatedWorkspaceEnter,
-    /// `api.isolated_workspace.exit`
-    #[serde(rename = "api.isolated_workspace.exit")]
-    IsolatedWorkspaceExit,
     /// `api.isolated_workspace.status`
     #[serde(rename = "api.isolated_workspace.status")]
     IsolatedWorkspaceStatus,
@@ -85,15 +79,13 @@ impl DaemonOp {
             Self::WriteFile => "api.v1.write_file",
             Self::EditFile => "api.v1.edit_file",
             Self::ExecCommand => "api.v1.exec_command",
-            Self::ExecStdin => "api.v1.exec_stdin",
+            Self::ExecStdin => "api.v1.write_stdin",
             Self::CommandCancel => "api.v1.command.cancel",
             Self::CommandCollectCompleted => "api.v1.command.collect_completed",
             Self::CommandSessionCount => "api.v1.command_session_count",
             Self::InvocationCancel => "api.v1.cancel",
             Self::InvocationHeartbeat => "api.v1.heartbeat",
             Self::InflightCount => "api.v1.inflight_count",
-            Self::IsolatedWorkspaceEnter => "api.isolated_workspace.enter",
-            Self::IsolatedWorkspaceExit => "api.isolated_workspace.exit",
             Self::IsolatedWorkspaceStatus => "api.isolated_workspace.status",
             Self::Glob => "api.v1.glob",
             Self::Grep => "api.v1.grep",
@@ -117,7 +109,7 @@ mod tests {
             (DaemonOp::WriteFile, "api.v1.write_file"),
             (DaemonOp::EditFile, "api.v1.edit_file"),
             (DaemonOp::ExecCommand, "api.v1.exec_command"),
-            (DaemonOp::ExecStdin, "api.v1.exec_stdin"),
+            (DaemonOp::ExecStdin, "api.v1.write_stdin"),
             (DaemonOp::CommandCancel, "api.v1.command.cancel"),
             (
                 DaemonOp::CommandCollectCompleted,
@@ -130,14 +122,6 @@ mod tests {
             (DaemonOp::InvocationCancel, "api.v1.cancel"),
             (DaemonOp::InvocationHeartbeat, "api.v1.heartbeat"),
             (DaemonOp::InflightCount, "api.v1.inflight_count"),
-            (
-                DaemonOp::IsolatedWorkspaceEnter,
-                "api.isolated_workspace.enter",
-            ),
-            (
-                DaemonOp::IsolatedWorkspaceExit,
-                "api.isolated_workspace.exit",
-            ),
             (
                 DaemonOp::IsolatedWorkspaceStatus,
                 "api.isolated_workspace.status",

@@ -23,7 +23,9 @@ use parking_lot::Mutex;
 use serde_json::json;
 use tokio::sync::Notify;
 
-use crate::attempt::{AgentLaunch, AgentRunReport, AgentRunner, AttemptDeps, AttemptOrchestratorRegistry};
+use crate::attempt::{
+    AgentLaunch, AgentRunReport, AgentRunner, AttemptDeps, AttemptOrchestratorRegistry,
+};
 use crate::iteration::OpenIterationCoordinatorRegistry;
 use crate::{PlanSubmissionAdapter, Result};
 
@@ -67,6 +69,15 @@ impl RecordingAuditSink {
             .iter()
             .map(|event| event.event_type.clone())
             .collect()
+    }
+
+    /// The first published event of `event_type`, if any (for payload assertions).
+    pub(crate) fn event_of(&self, event_type: &str) -> Option<eos_audit::AuditEvent> {
+        self.events
+            .lock()
+            .iter()
+            .find(|event| event.event_type == event_type)
+            .cloned()
     }
 }
 
@@ -641,7 +652,10 @@ async fn record_scripted(
     match submission {
         ScriptedSubmission::NoSubmission(summary) => Ok(AgentRunReport::failed(summary)),
         ScriptedSubmission::Planner(plan) => {
-            bound(port).apply_plan(plan).await.expect("record plan via port");
+            bound(port)
+                .apply_plan(plan)
+                .await
+                .expect("record plan via port");
             Ok(AgentRunReport::ok())
         }
         ScriptedSubmission::Generator(submission) => {

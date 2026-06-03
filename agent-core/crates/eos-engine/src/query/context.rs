@@ -68,8 +68,6 @@ pub struct QueryContext {
     pub text_only_no_terminal_turns: u32,
     /// Tool execution metadata cloned per call.
     pub tool_metadata: ExecutionMetadata,
-    /// Whether engine-dispatched background tasks are enabled.
-    pub enable_background_tasks: bool,
     /// Terminal tools visible to this agent.
     pub terminal_tools: BTreeSet<ToolName>,
     /// Loop exit reason.
@@ -113,7 +111,6 @@ impl std::fmt::Debug for QueryContext {
                 "text_only_no_terminal_turns",
                 &self.text_only_no_terminal_turns,
             )
-            .field("enable_background_tasks", &self.enable_background_tasks)
             .field("terminal_tools", &self.terminal_tools)
             .field("exit_reason", &self.exit_reason)
             .finish_non_exhaustive()

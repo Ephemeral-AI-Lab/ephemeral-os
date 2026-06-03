@@ -940,7 +940,7 @@ mod tests {
     #[tokio::test]
     async fn record_plan_rejects_bad_shape_with_real_ack() {
         use eos_state::PlannerKind;
-        use eos_tools::{PlanReducer, PlanTask, PlanSubmissionPort, PlannerPlan, SubmissionAck};
+        use eos_tools::{PlanReducer, PlanSubmissionPort, PlanTask, PlannerPlan, SubmissionAck};
 
         use crate::PlanSubmissionAdapter;
 

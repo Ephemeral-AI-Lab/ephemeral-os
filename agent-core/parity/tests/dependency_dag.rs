@@ -53,6 +53,11 @@ fn frozen_edges() -> Edges {
         // (background/heartbeat.rs) names SandboxTransport and calls
         // collect_command_completions to pull daemon completions, and no other
         // upstream dep re-exports them — so the edge is required to compile.
+        //
+        // The advisor remediation (advisor-remediation-PLAN.md §2a) adds the
+        // eos-engine -> eos-state edge: `run_ephemeral_agent` is relocated here off
+        // `&AppState`, so `EngineRunHandles` names `AgentRunStore`/`ModelStore`
+        // (eos-state) directly. No cycle: eos-state depends only on eos-types.
         (
             "eos-engine",
             &[
@@ -62,6 +67,7 @@ fn frozen_edges() -> Edges {
                 "eos-sandbox-api",
                 "eos-audit",
                 "eos-agent-def",
+                "eos-state",
             ],
         ),
         (

@@ -415,7 +415,7 @@ pub struct ExecCommandResult {
     pub mutation_source: String,
 }
 
-/// Write characters to an open command session through `api.v1.exec_stdin`.
+/// Write characters to an open command session through `api.v1.write_stdin`.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub struct ExecStdinRequest {
     /// Caller identity / description / invocation id.

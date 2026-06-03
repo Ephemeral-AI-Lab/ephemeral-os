@@ -67,8 +67,11 @@ impl AttemptStageAdvancer {
                 // D8: task_ready (pending -> pending) on the still-pending row,
                 // then task_launched (pending -> running) on the transition.
                 if let Some(pending) = tasks.iter().find(|task| task.id == task_id) {
-                    let needs: Vec<&str> =
-                        pending.needs.iter().map(eos_state::TaskId::as_str).collect();
+                    let needs: Vec<&str> = pending
+                        .needs
+                        .iter()
+                        .map(eos_state::TaskId::as_str)
+                        .collect();
                     self.emit_task_event(
                         TASK_READY,
                         pending,
@@ -240,7 +243,11 @@ impl AttemptStageAdvancer {
         payload.insert("agent_name".to_owned(), json!(task.agent_name.clone()));
         payload.insert(
             "needs".to_owned(),
-            json!(task.needs.iter().map(eos_state::TaskId::as_str).collect::<Vec<_>>()),
+            json!(task
+                .needs
+                .iter()
+                .map(eos_state::TaskId::as_str)
+                .collect::<Vec<_>>()),
         );
         for (key, value) in extra {
             payload.insert((*key).to_owned(), value.clone());
@@ -384,13 +391,15 @@ mod tests {
             .unwrap();
         let generator_id = generator_task_id(&started.attempt_id, "g1").unwrap();
         runner.push(ScriptedSubmission::Planner(one_step_plan(&started)));
-        runner.push(ScriptedSubmission::Generator(eos_state::GeneratorSubmission {
-            attempt_id: started.attempt_id.clone(),
-            task_id: generator_id.clone(),
-            status: TaskOutcomeStatus::Success,
-            outcome: "generated".to_owned(),
-            terminal_tool_result: crate::testsupport::terminal_result(),
-        }));
+        runner.push(ScriptedSubmission::Generator(
+            eos_state::GeneratorSubmission {
+                attempt_id: started.attempt_id.clone(),
+                task_id: generator_id.clone(),
+                status: TaskOutcomeStatus::Success,
+                outcome: "generated".to_owned(),
+                terminal_tool_result: crate::testsupport::terminal_result(),
+            },
+        ));
         runner.push(ScriptedSubmission::Reducer(eos_state::ReducerSubmission {
             attempt_id: started.attempt_id.clone(),
             task_id: crate::reducer_task_id(&started.attempt_id, "r1").unwrap(),
@@ -543,6 +552,11 @@ mod tests {
         let runner = Arc::new(QueueRunner::default());
         let mut deps = stores.deps(runner);
         deps.lifecycle_config.default_attempt_budget = 1;
+        // D8: capture the workflow.task.* audit stream for this run. A launch
+        // failure exercises all three events on the one task (ready -> launched
+        // -> failed).
+        let audit = Arc::new(crate::testsupport::RecordingAuditSink::default());
+        deps.audit_sink = audit.clone();
         let parent = root_task("parent", TaskStatus::Running);
         stores.seed_task(parent.clone());
         let started = WorkflowStarter::new(deps.clone())
@@ -595,5 +609,26 @@ mod tests {
             stores.workflow(&started.workflow_id).unwrap().status,
             WorkflowStatus::Failed
         );
+
+        // D8: the three workflow.task.* events fired for the launched-then-failed
+        // task, in order.
+        let events = audit.event_types();
+        assert_eq!(
+            events,
+            vec![
+                "workflow.task.ready".to_owned(),
+                "workflow.task.launched".to_owned(),
+                "workflow.task.failed".to_owned(),
+            ],
+            "D8 audit stream: {events:?}"
+        );
+        // ...and the failed event carries the Python-shaped node + payload.
+        let failed = audit.event_of("workflow.task.failed").expect("task.failed event");
+        assert_eq!(failed.node.task_id.as_ref(), Some(&task_id));
+        assert_eq!(failed.node.attempt_id.as_ref(), Some(&started.attempt_id));
+        assert_eq!(failed.payload["role"], json!("generator"));
+        assert_eq!(failed.payload["status_from"], json!("running"));
+        assert_eq!(failed.payload["status_to"], json!("failed"));
+        assert_eq!(failed.payload["fail_reason"], json!("agent_launch_failed"));
     }
 }

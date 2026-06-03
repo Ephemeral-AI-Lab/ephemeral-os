@@ -14,7 +14,9 @@ use eos_tools::ports::CommandSessionSupervisorPort;
 use eos_tools::SystemNotification as ToolNotification;
 use serde_json::Value;
 
-use super::supervisor::{BackgroundTaskStatus, BackgroundTaskSupervisor, SharedSubagentSupervisor};
+use super::supervisor::{
+    BackgroundSupervisorHandle, BackgroundTaskStatus, BackgroundTaskSupervisor,
+};
 
 /// One tracked background command session. `status` reuses
 /// [`BackgroundTaskStatus`] (`Running` → `Completed`/`Failed`/`Cancelled` →
@@ -205,7 +207,7 @@ impl BackgroundTaskSupervisor {
 }
 
 #[async_trait]
-impl CommandSessionSupervisorPort for SharedSubagentSupervisor {
+impl CommandSessionSupervisorPort for BackgroundSupervisorHandle {
     async fn register(
         &self,
         command_session_id: &str,

@@ -2,9 +2,9 @@
 //! supervision, notifications, prompt reports, and the event-source seam.
 #![forbid(unsafe_code)]
 
+mod advisor;
 pub mod agent;
 pub mod agent_loop;
-mod advisor;
 pub mod audit;
 pub mod background;
 mod error;
@@ -24,8 +24,8 @@ pub use agent_loop::{
     EventSourceFactory,
 };
 pub use background::{
-    spawn_command_completion_heartbeat, BackgroundTaskStatus, BackgroundTaskSupervisor,
-    CommandSessionRecord, SharedSubagentSupervisor,
+    spawn_command_completion_heartbeat, BackgroundSupervisorHandle, BackgroundTaskStatus,
+    BackgroundTaskSupervisor, CommandSessionRecord,
 };
 pub use error::EngineError;
 pub use events::{stamp_identity, AssistantMessageComplete, StreamEvent};

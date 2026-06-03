@@ -86,7 +86,12 @@ pub async fn run_pre_hooks(
                 "metadata": meta,
             })),
             HookOutcome::Deny(denial) => {
-                return Ok(Some(hook_failure_result(hook, &denial, &hook_trace, raw_input)))
+                return Ok(Some(hook_failure_result(
+                    hook,
+                    &denial,
+                    &hook_trace,
+                    raw_input,
+                )))
             }
         }
     }

@@ -186,7 +186,10 @@ mod tests {
     #[test]
     fn missing_when_no_advisor_result() {
         let msgs = [Message::from_user_text("hi")];
-        assert_eq!(classify(&msgs, ToolName::SubmitRootOutcome), Some("missing"));
+        assert_eq!(
+            classify(&msgs, ToolName::SubmitRootOutcome),
+            Some("missing")
+        );
     }
 
     #[test]

@@ -116,15 +116,10 @@ impl OpTable {
         table.register_builtin("api.audit.pull", op_audit_pull);
         table.register_builtin("api.audit.snapshot", op_audit_snapshot);
         table.register_builtin("api.audit.reset_floor", op_audit_reset_floor);
-        table.register_builtin("api.read_file", op_read_file);
         table.register_builtin("api.v1.read_file", op_read_file);
-        table.register_builtin("api.write_file", op_write_file);
         table.register_builtin("api.v1.write_file", op_write_file);
-        table.register_builtin("api.edit_file", op_edit_file);
         table.register_builtin("api.v1.edit_file", op_edit_file);
-        table.register_builtin("api.glob", op_glob);
         table.register_builtin("api.v1.glob", op_glob);
-        table.register_builtin("api.grep", op_grep);
         table.register_builtin("api.v1.grep", op_grep);
         table.register_builtin("api.plugin.ensure", crate::plugin::op_ensure);
         table.register_builtin("api.plugin.status", crate::plugin::op_status);
@@ -141,10 +136,6 @@ impl OpTable {
         );
         table.register_builtin("api.v1.exec_command", crate::command::op_exec_command);
         table.register_builtin("api.v1.write_stdin", crate::command::op_command_write_stdin);
-        table.register_builtin(
-            "api.v1.command.write_stdin",
-            crate::command::op_command_write_stdin,
-        );
         table.register_builtin("api.v1.command.cancel", crate::command::op_command_cancel);
         table.register_builtin(
             "api.v1.command.collect_completed",
@@ -3320,9 +3311,7 @@ fn background_event_kind(
         "api.v1.exec_command" if response.get("command_session_id").is_some() => {
             Some(("background_tool.started", "command_session"))
         }
-        "api.v1.write_stdin" | "api.v1.command.write_stdin" => {
-            Some(("background_tool.input", "command_session"))
-        }
+        "api.v1.write_stdin" => Some(("background_tool.input", "command_session")),
         "api.v1.command.cancel" => Some(("background_tool.cancelled", "command_session")),
         "api.v1.command.collect_completed" => {
             Some(("background_tool.completed", "command_session"))
@@ -3334,18 +3323,14 @@ fn background_event_kind(
 fn is_occ_op(op: &str) -> bool {
     matches!(
         op,
-        "api.write_file"
-            | "api.v1.write_file"
-            | "api.edit_file"
-            | "api.v1.edit_file"
-            | "api.v1.exec_command"
+        "api.v1.write_file" | "api.v1.edit_file" | "api.v1.exec_command"
     )
 }
 
 fn uses_overlay_or_lease(op: &str, response: &Value) -> bool {
     if matches!(
         op,
-        "api.glob" | "api.v1.glob" | "api.grep" | "api.v1.grep" | "api.v1.command.cancel"
+        "api.v1.glob" | "api.v1.grep" | "api.v1.command.cancel"
     ) {
         return true;
     }

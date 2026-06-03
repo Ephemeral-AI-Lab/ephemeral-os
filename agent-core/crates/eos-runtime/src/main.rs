@@ -17,7 +17,7 @@ fn main() -> anyhow::Result<()> {
         .build()?;
 
     runtime.block_on(async {
-        let state = AppState::builder().build().await?;
+        let state = build_app_state().await?;
         tracing::info!("eos-runtime app state constructed");
 
         if let Some(prompt) = std::env::args().nth(1) {
@@ -28,4 +28,32 @@ fn main() -> anyhow::Result<()> {
         state.flush_audit();
         anyhow::Ok(())
     })
+}
+
+/// Repo-relative agent-profile tree used as the default registry source for the
+/// shipped binary (pre-cutover bridge; the canonical tree still lives under
+/// `backend/src` until that subtree is deleted).
+const DEFAULT_AGENTS_DIR: &str = "backend/src/agents/profile";
+
+/// Build the application state, seeding the agent registry so `root` resolves
+/// (request_completion NF1 — the binary otherwise ships with an empty registry
+/// and fails every request at root resolution).
+///
+/// `EOS_AGENTS_DIR` overrides the source and is validated normally. Otherwise we
+/// fall back to the repo-relative bundled tree when present (it only resolves
+/// when run from the repo root; a missing dir yields an empty registry, the
+/// prior no-op behavior). The bundled profiles name `lsp.*` tools not yet ported
+/// to the Rust tool registry, so `compatibility_mode` masks *that* known gap for
+/// this pre-cutover demo binary — it disables agent-tool validation wholesale, so
+/// it is scoped to the bundled path only, never an explicit override.
+async fn build_app_state() -> anyhow::Result<AppState> {
+    let mut builder = AppState::builder();
+    if let Ok(dir) = std::env::var("EOS_AGENTS_DIR") {
+        builder = builder.agents_dir(dir);
+    } else if std::path::Path::new(DEFAULT_AGENTS_DIR).is_dir() {
+        builder = builder
+            .agents_dir(DEFAULT_AGENTS_DIR)
+            .compatibility_mode(true);
+    }
+    builder.build().await
 }

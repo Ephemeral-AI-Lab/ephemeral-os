@@ -144,7 +144,6 @@ pub fn build_query_context(input: BuildQueryContextInput) -> Result<QueryContext
         tool_calls_used: 0,
         text_only_no_terminal_turns: 0,
         tool_metadata,
-        enable_background_tasks: true,
         terminal_tools,
         exit_reason: None,
         terminal_result: None,

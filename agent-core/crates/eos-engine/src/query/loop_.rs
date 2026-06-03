@@ -284,7 +284,6 @@ mod tests {
             tool_calls_used: 0,
             text_only_no_terminal_turns: 0,
             tool_metadata: metadata(),
-            enable_background_tasks: true,
             terminal_tools: BTreeSet::from([ToolName::SubmitRootOutcome]),
             exit_reason: None,
             terminal_result: None,

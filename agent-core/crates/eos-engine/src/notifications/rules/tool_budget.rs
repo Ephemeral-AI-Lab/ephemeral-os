@@ -34,7 +34,10 @@ impl ToolCallBudget {
 
 impl NotificationRule for ToolCallBudget {
     fn name(&self) -> String {
-        format!("tool_call_budget_{}_percent", self.label.trim_end_matches('%'))
+        format!(
+            "tool_call_budget_{}_percent",
+            self.label.trim_end_matches('%')
+        )
     }
 
     fn fire_once(&self) -> bool {

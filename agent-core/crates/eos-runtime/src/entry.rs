@@ -9,7 +9,9 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::{Context, Result};
-use eos_engine::{spawn_command_completion_heartbeat, NotificationService, SharedSubagentSupervisor};
+use eos_engine::{
+    spawn_command_completion_heartbeat, BackgroundSupervisorHandle, NotificationService,
+};
 use eos_state::{Task, TaskRole, TaskStatus};
 use eos_tools::{
     CommandSessionSupervisorPort, NotificationSink, PlanSubmissionPort, SubagentSupervisorPort,
@@ -39,7 +41,7 @@ pub struct RequestEntryHandle {
     /// The runtime-wired per-request delegated-workflow dependency bundle.
     pub attempt_deps: AttemptDeps,
     pub(crate) root_agent_task: JoinHandle<()>,
-    pub(crate) supervisor: Arc<SharedSubagentSupervisor>,
+    pub(crate) supervisor: Arc<BackgroundSupervisorHandle>,
     /// Per-request command-completion heartbeat (anchor §5.3); aborted at
     /// request teardown.
     pub(crate) heartbeat: JoinHandle<()>,
@@ -122,8 +124,14 @@ pub async fn start_request(
         .await
         .context("creating the request row")?;
 
-    // Per-request delegated-workflow runtime (Python `_create_runtime`).
-    let supervisor = Arc::new(SharedSubagentSupervisor::default());
+    // Per-request delegated-workflow runtime (Python `_create_runtime`). The
+    // single supervisor carries the engine run handles + audit sink + clock the
+    // subagent driver needs (it calls `run_ephemeral_agent` directly).
+    let supervisor = Arc::new(BackgroundSupervisorHandle::new(
+        state.engine_run_handles(),
+        state.audit.clone(),
+        state.clock.clone(),
+    ));
     let supervisor_port: Arc<dyn SubagentSupervisorPort> = supervisor.clone();
     // One NotificationService per request: its queue is shared by the tool sink,
     // the heartbeat, and (via the loop's `notifier`) the query loop — the §7
