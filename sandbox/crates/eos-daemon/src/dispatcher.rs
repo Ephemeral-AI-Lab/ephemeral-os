@@ -23,6 +23,8 @@ use std::process::{Command, Stdio};
 use std::sync::{Arc, Mutex, MutexGuard, OnceLock};
 use std::time::Instant;
 
+use ignore::gitignore::GitignoreBuilder;
+use ignore::Match;
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
 
@@ -1698,20 +1700,13 @@ struct LayerStackRouteProvider {
 
 impl OccRouteProvider for LayerStackRouteProvider {
     fn is_ignored(&self, path: &LayerPath) -> std::result::Result<bool, eos_occ::OccError> {
+        // Per-call re-read of the active merged manifest: opening a fresh
+        // `LayerStack` here is load-bearing, so a `.gitignore` edit committed
+        // between ops is observed by the next route decision.
         let stack = LayerStack::open(self.root.clone())
             .map_err(|err| eos_occ::OccError::RoutePreparation(err.to_string()))?;
-        let (bytes, exists) = stack
-            .read_bytes(".gitignore")
-            .map_err(|err| eos_occ::OccError::RoutePreparation(err.to_string()))?;
-        if !exists {
-            return Ok(false);
-        }
-        let Some(bytes) = bytes else {
-            return Ok(false);
-        };
-        let ignore = String::from_utf8(bytes)
-            .map_err(|err| eos_occ::OccError::RoutePreparation(err.to_string()))?;
-        Ok(gitignore_matches(&ignore, path.as_str()))
+        path_is_ignored(&stack, path.as_str())
+            .map_err(|err| eos_occ::OccError::RoutePreparation(err.to_string()))
     }
 
     fn base_hash(
@@ -1749,19 +1744,13 @@ pub(crate) fn occ_route_metrics(
     changes: &[LayerChange],
 ) -> Result<OccRouteMetrics, DaemonError> {
     let stack = LayerStack::open(root.to_path_buf())?;
-    let ignore = match stack.read_bytes(".gitignore")? {
-        (Some(bytes), true) => {
-            String::from_utf8(bytes).map_err(|err| DaemonError::InvalidEnvelope(err.to_string()))?
-        }
-        _ => String::new(),
-    };
     let mut metrics = OccRouteMetrics::default();
     for change in changes {
         let path = change.path().as_str();
         if path == ".git" || path.starts_with(".git/") {
             continue;
         }
-        if gitignore_matches(&ignore, path) {
+        if path_is_ignored(&stack, path)? {
             metrics.direct_path_count += 1;
         } else {
             metrics.gated_path_count += 1;
@@ -2345,70 +2334,122 @@ fn hex_lower(bytes: &[u8]) -> String {
     out
 }
 
-fn gitignore_matches(ignore: &str, path: &str) -> bool {
-    let mut matched = false;
-    for line in ignore.lines() {
-        let mut pattern = line.trim();
-        if pattern.is_empty() || pattern.starts_with('#') {
-            continue;
-        }
-        let negated = pattern.starts_with('!');
-        if negated {
-            pattern = pattern.trim_start_matches('!');
-        }
-        if pattern.is_empty() {
-            continue;
-        }
-        if gitignore_rule_matches(pattern, path) {
-            matched = !negated;
+/// OCC route oracle: does `path` (always a concrete file change) match a
+/// `.gitignore` rule in this layer-stack snapshot?
+///
+/// This is the one shared routine behind both `LayerStackRouteProvider::is_ignored`
+/// (DIRECT vs GATED) and `occ_route_metrics` (telemetry). It reproduces the Python
+/// `PathspecGitignoreOracle` semantics (`/tmp/oldpy/.../occ/gitignore.py`):
+/// per-directory `.gitignore` read from the merged snapshot, deeper-wins
+/// inheritance, and the directory-exclusion seal (an excluded ancestor dir seals
+/// its whole subtree — a deeper `!` re-include cannot rescue it).
+///
+/// All `.gitignore` reads go through `stack.read_bytes`, i.e. the active merged
+/// manifest (newest-layer-wins, whiteout-aware) — the same view the overlay mount
+/// projects, never a disk-walk. The per-pattern matching (dir-only-at-any-depth,
+/// `*`-not-crossing-`/`, `**`, `!` ordering, char classes) is delegated to the
+/// `ignore` crate's gitignore engine.
+fn path_is_ignored(stack: &LayerStack, path: &str) -> Result<bool, DaemonError> {
+    let rel = path.trim_start_matches('/');
+    if rel.is_empty() {
+        return Ok(false);
+    }
+    // Directory-exclusion seal: if any ancestor directory of `path` is excluded
+    // as a directory, `path` is ignored regardless of any deeper re-include.
+    let parts: Vec<&str> = rel.split('/').collect();
+    let mut accum = String::new();
+    for part in &parts[..parts.len() - 1] {
+        accum = join_rel(&accum, part);
+        if dir_is_excluded(stack, &accum)? {
+            return Ok(true);
         }
     }
-    matched
+    match_with_inheritance(stack, rel, false)
 }
 
-fn gitignore_rule_matches(pattern: &str, path: &str) -> bool {
-    let pattern = pattern.trim_start_matches('/');
-    let dir_only = pattern.ends_with('/');
-    let pattern = pattern.trim_end_matches('/');
-    if pattern.is_empty() {
-        return false;
-    }
-    if dir_only {
-        return path == pattern || path.starts_with(&format!("{pattern}/"));
-    }
-    if pattern.contains('*') {
-        return wildcard_match(pattern.as_bytes(), path.as_bytes());
-    }
-    if pattern.contains('/') {
-        return path == pattern;
-    }
-    path.split('/').any(|part| part == pattern)
-}
-
-fn wildcard_match(pattern: &[u8], value: &[u8]) -> bool {
-    let (mut p, mut v) = (0, 0);
-    let mut star = None;
-    let mut star_value = 0;
-    while v < value.len() {
-        if p < pattern.len() && (pattern[p] == b'?' || pattern[p] == value[v]) {
-            p += 1;
-            v += 1;
-        } else if p < pattern.len() && pattern[p] == b'*' {
-            star = Some(p);
-            p += 1;
-            star_value = v;
-        } else if let Some(star_index) = star {
-            p = star_index + 1;
-            star_value += 1;
-            v = star_value;
-        } else {
-            return false;
+/// Is directory `dir_rel` excluded? Walks its components root→leaf; once an
+/// ancestor is excluded the whole chain stays excluded (Git's directory seal).
+fn dir_is_excluded(stack: &LayerStack, dir_rel: &str) -> Result<bool, DaemonError> {
+    let mut accum = String::new();
+    let mut excluded = false;
+    for part in dir_rel.split('/').filter(|part| !part.is_empty()) {
+        accum = join_rel(&accum, part);
+        if !excluded {
+            excluded = match_with_inheritance(stack, &accum, true)?;
         }
     }
-    while p < pattern.len() && pattern[p] == b'*' {
-        p += 1;
+    Ok(excluded)
+}
+
+/// Last-match-wins evaluation across every `.gitignore` at or above `path`'s
+/// ancestor directories (root → `path`'s parent), deeper directories overriding
+/// shallower ones. The caller owns the directory seal; this is the unsealed
+/// evaluator. `as_dir` lets directory-only patterns (`foo/`) fire.
+fn match_with_inheritance(
+    stack: &LayerStack,
+    path: &str,
+    as_dir: bool,
+) -> Result<bool, DaemonError> {
+    let parts: Vec<&str> = path.split('/').collect();
+    let mut ignored = false;
+    let mut accum = String::new();
+    for part in &parts {
+        if let Some(matcher) = matcher_for(stack, &accum)? {
+            // Pass `path` relative to `accum`; the matcher rooted at `accum`
+            // treats a non-overlapping path as already-relative, so per-dir
+            // pattern anchoring (`/build`, `src/*.rs`) is preserved.
+            let sub = if accum.is_empty() {
+                path
+            } else {
+                path[accum.len()..].trim_start_matches('/')
+            };
+            if !sub.is_empty() {
+                match matcher.matched(sub, as_dir) {
+                    Match::Ignore(_) => ignored = true,
+                    Match::Whitelist(_) => ignored = false,
+                    Match::None => {}
+                }
+            }
+        }
+        accum = join_rel(&accum, part);
     }
-    p == pattern.len()
+    Ok(ignored)
+}
+
+/// Build the gitignore matcher for `dir_rel`'s own `.gitignore`, read from the
+/// merged snapshot. A missing, non-UTF-8, or unparseable file contributes no
+/// patterns (`Ok(None)`) — the safe, validated GATED route. Only a genuine
+/// `read_bytes` I/O error propagates.
+fn matcher_for(
+    stack: &LayerStack,
+    dir_rel: &str,
+) -> Result<Option<ignore::gitignore::Gitignore>, DaemonError> {
+    let rel = join_rel(dir_rel, ".gitignore");
+    let (bytes, exists) = stack.read_bytes(&rel)?;
+    if !exists {
+        return Ok(None);
+    }
+    let Some(bytes) = bytes else {
+        return Ok(None);
+    };
+    let Ok(text) = String::from_utf8(bytes) else {
+        return Ok(None);
+    };
+    let mut builder = GitignoreBuilder::new(dir_rel);
+    for line in text.lines() {
+        // `add_line` skips comments/blanks itself; ignore malformed patterns.
+        let _ = builder.add_line(None, line);
+    }
+    Ok(builder.build().ok())
+}
+
+/// Join a relative dir prefix with a child component (`""` + `c` -> `c`).
+fn join_rel(prefix: &str, child: &str) -> String {
+    if prefix.is_empty() {
+        child.to_owned()
+    } else {
+        format!("{prefix}/{child}")
+    }
 }
 
 fn failed_changeset_with_timings(
@@ -3707,6 +3748,152 @@ mod tests {
         Ok(())
     }
 
+    fn route_provider(fixture: &Fixture) -> LayerStackRouteProvider {
+        LayerStackRouteProvider {
+            root: fixture.root.clone(),
+        }
+    }
+
+    // N2 (HIGH): a no-slash dir-only pattern is anchored at *any* depth, so a
+    // file under `frontend/node_modules/` routes DIRECT — the most common
+    // misroute the old root-anchored prefix check produced.
+    #[test]
+    fn dir_only_pattern_matches_at_any_depth() -> TestResult {
+        let fixture = Fixture::new_with_gitignore("n2_dir_only", "node_modules/\n")?;
+        let provider = route_provider(&fixture);
+        assert!(provider.is_ignored(&lp("frontend/node_modules/index.js")?)?);
+        assert!(provider.is_ignored(&lp("node_modules/index.js")?)?);
+        assert!(!provider.is_ignored(&lp("frontend/src/index.js")?)?);
+        Ok(())
+    }
+
+    // N3 (HIGH, data-loss): `*` must not cross `/`. `logs/*.log` does NOT match
+    // `logs/sub/x.log`, so it routes GATED (base-hash validated) — not
+    // DIRECT-then-silently-clobber as the old `wildcard_match` allowed.
+    #[test]
+    fn star_does_not_cross_slash() -> TestResult {
+        let fixture = Fixture::new_with_gitignore("n3_star_slash", "logs/*.log\n")?;
+        let provider = route_provider(&fixture);
+        assert!(provider.is_ignored(&lp("logs/app.log")?)?);
+        assert!(!provider.is_ignored(&lp("logs/sub/x.log")?)?);
+        Ok(())
+    }
+
+    // Nested `.gitignore` is scoped to its own subtree.
+    #[test]
+    fn nested_gitignore_is_scoped_to_its_subtree() -> TestResult {
+        let fixture = Fixture::new_with_gitignores("nested", &[("frontend", "dist/\n")])?;
+        let provider = route_provider(&fixture);
+        assert!(provider.is_ignored(&lp("frontend/dist/bundle.js")?)?);
+        assert!(!provider.is_ignored(&lp("dist/bundle.js")?)?);
+        Ok(())
+    }
+
+    // `**` matches across path segments.
+    #[test]
+    fn double_star_matches_across_segments() -> TestResult {
+        let fixture = Fixture::new_with_gitignore("double_star", "**/build/\n")?;
+        let provider = route_provider(&fixture);
+        assert!(provider.is_ignored(&lp("a/b/build/out.o")?)?);
+        assert!(provider.is_ignored(&lp("build/out.o")?)?);
+        assert!(!provider.is_ignored(&lp("a/b/builder.rs")?)?);
+        Ok(())
+    }
+
+    // `!` re-includes within a non-sealed directory.
+    #[test]
+    fn bang_re_includes_in_unsealed_dir() -> TestResult {
+        let fixture = Fixture::new_with_gitignore("bang", "*.log\n!keep.log\n")?;
+        let provider = route_provider(&fixture);
+        assert!(provider.is_ignored(&lp("other.log")?)?);
+        assert!(!provider.is_ignored(&lp("keep.log")?)?);
+        Ok(())
+    }
+
+    // Directory seal: an excluded ancestor dir seals its subtree — a deeper `!`
+    // cannot rescue contents under it (Git semantics).
+    #[test]
+    fn excluded_dir_seals_against_deeper_reinclude() -> TestResult {
+        let fixture =
+            Fixture::new_with_gitignores("seal", &[("", "build/\n"), ("build", "!keep.txt\n")])?;
+        let provider = route_provider(&fixture);
+        assert!(provider.is_ignored(&lp("build/keep.txt")?)?);
+        Ok(())
+    }
+
+    // Telemetry shares the one routine, so counts equal the route decision for
+    // the same inputs (including the N2/N3/nested/seal cases above).
+    #[test]
+    fn occ_route_metrics_match_route_decision() -> TestResult {
+        let fixture = Fixture::new_with_gitignores(
+            "metrics_parity",
+            &[("", "node_modules/\nlogs/*.log\nbuild/\n"), ("build", "!keep.txt\n")],
+        )?;
+        let provider = route_provider(&fixture);
+        let paths = [
+            "frontend/node_modules/index.js", // DIRECT (N2 dir-only any depth)
+            "logs/sub/x.log",                 // GATED  (N3 star not crossing /)
+            "logs/app.log",                   // DIRECT
+            "build/keep.txt",                 // DIRECT (seal beats deeper !)
+            "src/main.rs",                    // GATED
+            ".git/config",                    // skipped by metrics
+        ];
+        let mut expected_direct = 0;
+        let mut expected_gated = 0;
+        for path in paths {
+            if path == ".git/config" {
+                continue;
+            }
+            if provider.is_ignored(&lp(path)?)? {
+                expected_direct += 1;
+            } else {
+                expected_gated += 1;
+            }
+        }
+        let changes: Vec<LayerChange> = paths
+            .iter()
+            .map(|path| {
+                Ok(LayerChange::Write {
+                    path: lp(path)?,
+                    content: b"x".to_vec(),
+                })
+            })
+            .collect::<TestResult<_>>()?;
+        let metrics = occ_route_metrics(&fixture.root, &changes)?;
+        assert_eq!(metrics.direct_path_count, expected_direct);
+        assert_eq!(metrics.gated_path_count, expected_gated);
+        assert_eq!(expected_direct, 3);
+        assert_eq!(expected_gated, 2);
+        Ok(())
+    }
+
+    // Overlay/layerstack composition: a `.gitignore` published into an *upper*
+    // layer (the base layer carries none) is resolved through the active merged
+    // manifest — the same newest-layer-wins, whiteout-aware view the overlay
+    // mount projects. Proves the oracle reads `.gitignore` via `read_bytes`/
+    // `MergedView` across layers, not just from a single seeded layer.
+    #[test]
+    fn gitignore_resolves_through_published_upper_layer() -> TestResult {
+        let fixture = Fixture::new("cross_layer")?;
+        LayerStack::open(fixture.root.clone())?.publish_layer(&[
+            LayerChange::Write {
+                path: lp(".gitignore")?,
+                content: b"node_modules/\n".to_vec(),
+            },
+            LayerChange::Write {
+                path: lp("frontend/.gitignore")?,
+                content: b"dist/\n".to_vec(),
+            },
+        ])?;
+        let provider = route_provider(&fixture);
+        // Root rule from the upper layer, matched at depth via the seal.
+        assert!(provider.is_ignored(&lp("frontend/node_modules/index.js")?)?);
+        // Nested rule, also published into the upper layer.
+        assert!(provider.is_ignored(&lp("frontend/dist/bundle.js")?)?);
+        assert!(!provider.is_ignored(&lp("src/main.rs")?)?);
+        Ok(())
+    }
+
     #[test]
     fn audit_pull_reads_shared_daemon_ring() -> TestResult {
         let marker = format!("phase3t-audit-test-{}", unique_suffix());
@@ -3812,10 +3999,21 @@ mod tests {
 
     impl Fixture {
         fn new(label: &str) -> TestResult<Self> {
-            Self::new_with_gitignore(label, "")
+            Self::new_with_gitignores(label, &[])
         }
 
         fn new_with_gitignore(label: &str, gitignore: &str) -> TestResult<Self> {
+            let seeds = if gitignore.is_empty() {
+                Vec::new()
+            } else {
+                vec![("", gitignore)]
+            };
+            Self::new_with_gitignores(label, &seeds)
+        }
+
+        /// Seed one base layer with a `.gitignore` per `(dir, contents)` entry
+        /// (`""` = workspace root) so nested / depth-sensitive routing is testable.
+        fn new_with_gitignores(label: &str, gitignores: &[(&str, &str)]) -> TestResult<Self> {
             static COUNTER: AtomicU64 = AtomicU64::new(0);
             let base = std::env::temp_dir().join(format!(
                 "eosd-occ-{label}-{}-{}",
@@ -3828,8 +4026,16 @@ mod tests {
             std::fs::create_dir_all(&layer)?;
             std::fs::create_dir_all(root.join("staging"))?;
             std::fs::write(layer.join("README.md"), "# README\n")?;
-            if !gitignore.is_empty() {
-                std::fs::write(layer.join(".gitignore"), gitignore)?;
+            for (dir, contents) in gitignores {
+                let target = if dir.is_empty() {
+                    layer.join(".gitignore")
+                } else {
+                    layer.join(dir).join(".gitignore")
+                };
+                if let Some(parent) = target.parent() {
+                    std::fs::create_dir_all(parent)?;
+                }
+                std::fs::write(target, contents)?;
             }
             std::fs::write(
                 root.join("manifest.json"),

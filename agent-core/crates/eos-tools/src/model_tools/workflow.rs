@@ -73,7 +73,10 @@ impl ToolExecutor for DelegateWorkflow {
                 "message": "A delegated workflow is already outstanding for this task. \
                     Use check_workflow_status or cancel_workflow before starting another.",
             });
-            return Ok(ToolResult::ok(payload.to_string()));
+            // Python returns this short-circuit with `is_error=True`
+            // (`delegate_workflow.py:67-81`); the flag is consumed downstream
+            // (supervisor/dispatch/audit), so it must be an in-band error.
+            return Ok(ToolResult::error(payload.to_string()));
         }
 
         let started = control.start(task_id, &agent_id, &parsed.goal).await?;
@@ -218,6 +221,9 @@ pub(crate) fn register(registry: &mut ToolRegistry) {
 mod tests {
     #![allow(clippy::unwrap_used)]
 
+    use eos_types::TaskId;
+
+    use crate::ports::{OutstandingWorkflow, StartedWorkflow, WorkflowControlPort};
     use crate::testsupport::metadata;
 
     use super::*;
@@ -227,6 +233,73 @@ mod tests {
             .iter()
             .map(|(k, v)| ((*k).to_owned(), v.clone()))
             .collect()
+    }
+
+    /// A `WorkflowControlPort` that always reports one outstanding workflow, to
+    /// drive the `delegate_workflow` already-outstanding short-circuit.
+    struct OutstandingControl;
+
+    impl crate::ports::Sealed for OutstandingControl {}
+
+    #[async_trait]
+    impl WorkflowControlPort for OutstandingControl {
+        async fn start(
+            &self,
+            _parent_task_id: &TaskId,
+            _agent_id: &str,
+            _workflow_goal: &str,
+        ) -> Result<StartedWorkflow, ToolError> {
+            unreachable!("outstanding short-circuit returns before start")
+        }
+
+        async fn status(
+            &self,
+            _workflow_id: &WorkflowId,
+            _workflow_task_id: Option<&WorkflowSessionId>,
+        ) -> Result<String, ToolError> {
+            unreachable!()
+        }
+
+        async fn cancel(
+            &self,
+            _workflow_task_id: &WorkflowSessionId,
+            _reason: &str,
+        ) -> Result<String, ToolError> {
+            unreachable!()
+        }
+
+        async fn find_outstanding(
+            &self,
+            _parent_task_id: &TaskId,
+            _agent_id: &str,
+        ) -> Result<Vec<OutstandingWorkflow>, ToolError> {
+            Ok(vec![OutstandingWorkflow {
+                workflow_id: WorkflowId::new_v4(),
+                workflow_task_id: WorkflowSessionId::new_v4(),
+                workflow_goal: "prior goal".to_owned(),
+            }])
+        }
+
+        async fn is_nested_workflow(&self, _workflow_id: &WorkflowId) -> Result<bool, ToolError> {
+            Ok(false)
+        }
+    }
+
+    // The already-outstanding short-circuit is an in-band error (`is_error=true`),
+    // matching Python `delegate_workflow.py:67-81`; the flag is consumed downstream.
+    #[tokio::test]
+    async fn delegate_workflow_outstanding_is_error() {
+        let mut ctx = metadata();
+        ctx.task_id = Some("parent".parse().unwrap());
+        ctx.workflow_control = Some(Arc::new(OutstandingControl));
+
+        let res = DelegateWorkflow
+            .execute(&obj(&[("goal", json!("do something"))]), &ctx)
+            .await
+            .expect("ok");
+
+        assert!(res.is_error, "outstanding-workflow branch must be is_error");
+        assert!(res.output.contains("already outstanding"), "{}", res.output);
     }
 
     #[tokio::test]

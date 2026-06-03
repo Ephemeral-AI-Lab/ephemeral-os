@@ -271,10 +271,23 @@ impl SubagentSupervisorPort for BackgroundSupervisorHandle {
         let task_id = {
             let mut supervisor = inner.lock().await;
             let task_id = supervisor.register_running(
-                "run_subagent",
                 tool_input,
                 BackgroundTaskKind::Subagent,
                 Some(caller_agent_id.clone()),
+            );
+            // Emit `started` while still holding the lock, before the driver can
+            // run: the driver cannot acquire the lock to settle + emit its terminal
+            // event until this block releases, so `started` strictly precedes any
+            // terminal emit and the supervisor stays the single, ordered emitter
+            // (D8). Mirrors Python emitting `started` synchronously inside launch().
+            emit_background_tool(
+                &self.audit,
+                &*self.clock,
+                "background_tool.started",
+                &task_id,
+                &caller_agent_id,
+                BackgroundTaskStatus::Running,
+                None,
             );
             let driver_task_id = task_id.clone();
             let join = tokio::spawn(async move {
@@ -298,16 +311,6 @@ impl SubagentSupervisorPort for BackgroundSupervisorHandle {
             supervisor.store_handle(task_id.clone(), join.abort_handle());
             task_id
         };
-
-        emit_background_tool(
-            &self.audit,
-            &*self.clock,
-            "background_tool.started",
-            &task_id,
-            &caller_agent_id,
-            BackgroundTaskStatus::Running,
-            None,
-        );
 
         Ok(SpawnedSubagent::Launched(StartedSubagent {
             subagent_session_id: task_id.parse()?,
@@ -422,13 +425,10 @@ mod tests {
         tool_input.insert("agent_name".to_owned(), json!("explorer"));
         BackgroundTaskRecord {
             task_id: "subagent_1".to_owned(),
-            tool_name: "run_subagent".to_owned(),
             tool_input,
             task_kind: BackgroundTaskKind::Subagent,
             status,
             agent_id: Some("root".to_owned()),
-            cancel_reason: None,
-            stop_mode: None,
             result,
         }
     }

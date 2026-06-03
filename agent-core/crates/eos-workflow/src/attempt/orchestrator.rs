@@ -214,6 +214,12 @@ impl AttemptOrchestrator {
             .ok_or_else(|| {
                 WorkflowError::not_found("planner task", plan.planner_task_id.as_str())
             })?;
+        // Validate every plan agent (registry / D6 role / task-spec presence)
+        // BEFORE writing any task row, so a rejected plan never leaves orphan
+        // Pending rows. Mirrors PLAN §3 ("validate shape / acyclic / ROLE, then
+        // materialize") and Python `build_planner_submission`, which resolves all
+        // agents up front before creating tasks.
+        self.validate_plan_agents(plan)?;
         let mut local_to_task = BTreeMap::new();
         for task in &plan.tasks {
             let id = generator_task_id(&attempt.id, &task.id)?;
@@ -240,21 +246,6 @@ impl AttemptOrchestrator {
                         .ok_or_else(|| WorkflowError::not_found("plan need", need))
                 })
                 .collect::<Result<Vec<_>>>()?;
-            let agent_name = AgentName::new(task.agent_name.clone())?;
-            let agent_def = self.deps.agent_registry.get(&agent_name).ok_or_else(|| {
-                WorkflowError::AgentDefinition(format!(
-                    "agent definition {:?} is not registered",
-                    task.agent_name
-                ))
-            })?;
-            // D6: a generator task must be bound to a generator-capable profile
-            // (Python `_schemas.py` requires `AgentRole.GENERATOR`).
-            if agent_def.role != AgentRole::Generator {
-                return Err(WorkflowError::invariant(format!(
-                    "generator task {:?} is bound to agent {:?} with role {:?}, expected generator",
-                    task.id, task.agent_name, agent_def.role
-                )));
-            }
             let instruction = plan
                 .task_specs
                 .get(&task.id)
@@ -281,12 +272,6 @@ impl AttemptOrchestrator {
         }
 
         let mut reducer_ids = Vec::with_capacity(plan.reducers.len());
-        let reducer_name = AgentName::new("reducer")?;
-        self.deps.agent_registry.get(&reducer_name).ok_or_else(|| {
-            WorkflowError::AgentDefinition(
-                "agent definition \"reducer\" is not registered".to_owned(),
-            )
-        })?;
         for reducer in &plan.reducers {
             let id = local_to_task
                 .get(&reducer.id)
@@ -427,6 +412,40 @@ impl AttemptOrchestrator {
             )));
         }
         assert_acyclic(plan)
+    }
+
+    /// Validate every plan agent before any task row is written: each generator
+    /// is bound to a registered generator-role profile (D6) and has a task spec,
+    /// and the fixed `reducer` profile is registered. Runs after the pure shape
+    /// checks and before materialization so a rejected plan leaves no orphan rows.
+    fn validate_plan_agents(&self, plan: &PlannerPlan) -> Result<()> {
+        for task in &plan.tasks {
+            let agent_name = AgentName::new(task.agent_name.clone())?;
+            let agent_def = self.deps.agent_registry.get(&agent_name).ok_or_else(|| {
+                WorkflowError::AgentDefinition(format!(
+                    "agent definition {:?} is not registered",
+                    task.agent_name
+                ))
+            })?;
+            // D6: a generator task must be bound to a generator-capable profile
+            // (Python `_schemas.py` requires `AgentRole.GENERATOR`).
+            if agent_def.role != AgentRole::Generator {
+                return Err(WorkflowError::invariant(format!(
+                    "generator task {:?} is bound to agent {:?} with role {:?}, expected generator",
+                    task.id, task.agent_name, agent_def.role
+                )));
+            }
+            if !plan.task_specs.contains_key(&task.id) {
+                return Err(WorkflowError::not_found("task spec", &task.id));
+            }
+        }
+        let reducer_name = AgentName::new("reducer")?;
+        self.deps.agent_registry.get(&reducer_name).ok_or_else(|| {
+            WorkflowError::AgentDefinition(
+                "agent definition \"reducer\" is not registered".to_owned(),
+            )
+        })?;
+        Ok(())
     }
 
     async fn record_plan_submission(&self, submission: PlannerSubmission) -> Result<()> {
@@ -1020,6 +1039,82 @@ mod tests {
 
         // The attempt is untouched by either rejection (still in PLAN, no plan
         // tasks materialized).
+        let attempt = stores.attempt(&started.attempt_id).unwrap();
+        assert_eq!(attempt.stage, eos_state::AttemptStage::Plan);
+        assert!(attempt.generator_task_ids.is_empty());
+    }
+
+    // The validation hoist (`validate_plan_agents` runs before any upsert): a plan
+    // whose FIRST generator is valid but a LATER one is bound to an unregistered
+    // agent is rejected with NO orphan Pending rows persisted. The prior
+    // interleaved materialize loop would have written the valid `g1` row before
+    // `g2`'s registry check failed.
+    #[tokio::test]
+    async fn record_plan_rejects_late_agent_without_orphan_rows() {
+        use eos_state::PlannerKind;
+        use eos_tools::{PlanReducer, PlanSubmissionPort, PlanTask, PlannerPlan, SubmissionAck};
+
+        use crate::PlanSubmissionAdapter;
+
+        let stores = Arc::new(MemoryStores::default());
+        let runner = Arc::new(QueueRunner::default());
+        let deps = stores.deps(runner);
+        let registry = deps.orchestrator_registry.clone();
+        let parent = root_task("parent", TaskStatus::Running);
+        stores.seed_task(parent.clone());
+        let started = WorkflowStarter::new(deps)
+            .start("delegated goal", &parent.id)
+            .await
+            .unwrap();
+        let adapter = PlanSubmissionAdapter::new(registry);
+
+        // g1 -> registered generator "coder"; g2 -> unregistered "ghost". Both
+        // feed the reducer, so the DAG shape is valid and validation reaches the
+        // per-agent pass (where g2 is rejected).
+        let ack = adapter
+            .apply_plan(PlannerPlan {
+                attempt_id: started.attempt_id.clone(),
+                planner_task_id: crate::planner_task_id(&started.attempt_id).unwrap(),
+                kind: PlannerKind::Completes,
+                deferred_goal_for_next_iteration: None,
+                tasks: vec![
+                    PlanTask {
+                        id: "g1".to_owned(),
+                        agent_name: "coder".to_owned(),
+                        needs: Vec::new(),
+                    },
+                    PlanTask {
+                        id: "g2".to_owned(),
+                        agent_name: "ghost".to_owned(),
+                        needs: Vec::new(),
+                    },
+                ],
+                task_specs: [
+                    ("g1".to_owned(), "do work 1".to_owned()),
+                    ("g2".to_owned(), "do work 2".to_owned()),
+                ]
+                .into_iter()
+                .collect(),
+                reducers: vec![PlanReducer {
+                    id: "r1".to_owned(),
+                    needs: vec!["g1".to_owned(), "g2".to_owned()],
+                    prompt: "reduce".to_owned(),
+                }],
+            })
+            .await
+            .unwrap();
+        assert!(
+            matches!(ack, SubmissionAck::Rejected(ref m) if m.contains("not registered")),
+            "a late unregistered generator must be rejected: {ack:?}"
+        );
+
+        // No orphan rows: neither generator task row was persisted.
+        assert!(stores
+            .task(&generator_task_id(&started.attempt_id, "g1").unwrap())
+            .is_none());
+        assert!(stores
+            .task(&generator_task_id(&started.attempt_id, "g2").unwrap())
+            .is_none());
         let attempt = stores.attempt(&started.attempt_id).unwrap();
         assert_eq!(attempt.stage, eos_state::AttemptStage::Plan);
         assert!(attempt.generator_task_ids.is_empty());

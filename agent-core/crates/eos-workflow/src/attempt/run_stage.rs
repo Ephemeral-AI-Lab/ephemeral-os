@@ -10,7 +10,6 @@ use eos_state::{
 use eos_types::SystemClock;
 use serde_json::{json, Value};
 use tokio::task::JoinSet;
-use tokio_util::sync::CancellationToken;
 
 use crate::attempt::plan_dag::{dag_status, ready_pending_plan_ids};
 use crate::attempt::{AgentLaunch, AgentLaunchFactory, AgentRunReport, AttemptDeps};
@@ -28,17 +27,13 @@ use super::AttemptOrchestrator;
 #[derive(Debug, Clone)]
 pub struct AttemptStageAdvancer {
     orchestrator: Arc<AttemptOrchestrator>,
-    cancel: CancellationToken,
 }
 
 impl AttemptStageAdvancer {
     /// Create a scheduler for an orchestrator.
     #[must_use]
     pub fn new(orchestrator: Arc<AttemptOrchestrator>) -> Self {
-        Self {
-            orchestrator,
-            cancel: CancellationToken::new(),
-        }
+        Self { orchestrator }
     }
 
     /// Drive RUN-stage tasks to quiescence or until no locally-spawned running
@@ -131,16 +126,13 @@ impl AttemptStageAdvancer {
             if set.is_empty() {
                 return Ok(());
             }
-            tokio::select! {
-                _ = self.cancel.cancelled() => {
-                    set.abort_all();
-                    return Ok(());
-                }
-                Some(joined) = set.join_next() => {
-                    let (launch, report) = joined
-                        .map_err(|err| WorkflowError::Join(err.to_string()))?;
-                    self.settle_run_task(launch, report).await?;
-                }
+            // The set is non-empty (guarded above), so `join_next` yields a
+            // finished run; settle it and loop. The JoinSet aborts any still-in-
+            // flight runs when it drops on return.
+            if let Some(joined) = set.join_next().await {
+                let (launch, report) =
+                    joined.map_err(|err| WorkflowError::Join(err.to_string()))?;
+                self.settle_run_task(launch, report).await?;
             }
         }
     }

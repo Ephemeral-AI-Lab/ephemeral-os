@@ -442,6 +442,194 @@ async fn delegate_workflow_leaves_parent_running() {
         .await;
 }
 
+// --- D5 closure (attempt_harness-remediation-PLAN §7, primary criterion): the
+// recording harness drives a delegated workflow planner -> generator -> reducer
+// to AttemptStatus::Passed -> WorkflowStatus::Succeeded through the REAL
+// RuntimeAgentRunner (recording port wired) — NOT the QueueRunner/ScriptedRunner
+// doubles. This is the proof Path A-recording closes D5 and §5's success cascade
+// is reachable in the live runtime. Each workflow terminal
+// (submit_planner/generator/reducer_outcome) is advisor-gated (meta.rs), so each
+// role first drives a real ask_advisor -> approve exchange in its own transcript,
+// exactly like a production run. The root delegates then blocks (parent never
+// mutated at close, GC-eos-runtime-03).
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn delegated_workflow_drives_to_succeeded_via_real_runner() {
+    use crate::app_state::test_seams::ScriptedSource;
+    use eos_engine::{EventSource, StreamEvent};
+
+    // One-step plan: a single generator `g1` (bound to the `coder` generator
+    // profile) and one reducer `r1` gating on it. Submit payloads carry only
+    // {status, outcome}; the task/attempt ids come from the run's metadata.
+    let planner_payload = json!({
+        "tasks": [{"id": "g1", "agent_name": "coder", "needs": []}],
+        "task_specs": {"g1": "implement g1"},
+        "reducers": [{"id": "r1", "needs": ["g1"], "prompt": "reduce g1"}],
+    });
+    let gen_payload = json!({"status": "success", "outcome": "generated g1"});
+    let red_payload = json!({"status": "success", "outcome": "reduced"});
+
+    // Each role: ask the advisor for its own terminal, then (with the approve
+    // verdict now in its transcript) submit. The advisor profile returns approve.
+    let delegate_turn = tool_use_turn(
+        "toolu_delegate",
+        "delegate_workflow",
+        json!({"goal": "do the subwork"}),
+    );
+    let planner_turns = vec![
+        tool_use_turn(
+            "toolu_p_advise",
+            "ask_advisor",
+            json!({"tool_name": "submit_planner_outcome", "tool_payload": planner_payload.clone()}),
+        ),
+        tool_use_turn("toolu_p_submit", "submit_planner_outcome", planner_payload),
+    ];
+    let coder_turns = vec![
+        tool_use_turn(
+            "toolu_g_advise",
+            "ask_advisor",
+            json!({"tool_name": "submit_generator_outcome", "tool_payload": gen_payload.clone()}),
+        ),
+        tool_use_turn("toolu_g_submit", "submit_generator_outcome", gen_payload),
+    ];
+    let reducer_turns = vec![
+        tool_use_turn(
+            "toolu_r_advise",
+            "ask_advisor",
+            json!({"tool_name": "submit_reducer_outcome", "tool_payload": red_payload.clone()}),
+        ),
+        tool_use_turn("toolu_r_submit", "submit_reducer_outcome", red_payload),
+    ];
+    let advisor_turns = vec![tool_use_turn(
+        "toolu_fb",
+        "submit_advisor_feedback",
+        json!({"verdict": "approve", "summary": "Tool and payload validated. Approve."}),
+    )];
+
+    // Root delegates then blocks (stays running); the workflow agents run their
+    // scripts; everyone else gets an empty (first-turn-erroring) source.
+    let factory: EventSourceFactory = Arc::new(move |def: &AgentDefinition| {
+        let turns = match def.name.as_str() {
+            "root" => {
+                return Arc::new(ScriptedSource::new_blocking(vec![delegate_turn.clone()]))
+                    as Arc<dyn EventSource>
+            }
+            "planner" => planner_turns.clone(),
+            "coder" => coder_turns.clone(),
+            "reducer" => reducer_turns.clone(),
+            "advisor" => advisor_turns.clone(),
+            _ => Vec::new(),
+        };
+        Arc::new(ScriptedSource::new(turns)) as Arc<dyn EventSource>
+    });
+
+    let mut planner = agent_def(
+        "planner",
+        AgentRole::Planner,
+        &["ask_advisor", "read_file"],
+        &["submit_planner_outcome"],
+    );
+    planner.context_recipe = Some("planner".to_owned());
+    let mut coder = agent_def(
+        "coder",
+        AgentRole::Generator,
+        &["ask_advisor", "read_file"],
+        &["submit_generator_outcome"],
+    );
+    coder.context_recipe = Some("generator".to_owned());
+    let mut reducer = agent_def(
+        "reducer",
+        AgentRole::Reducer,
+        &["ask_advisor", "read_file"],
+        &["submit_reducer_outcome"],
+    );
+    reducer.context_recipe = Some("reducer".to_owned());
+    let root = agent_def(
+        "root",
+        AgentRole::Root,
+        &["delegate_workflow", "ask_advisor", "read_file"],
+        &["submit_root_outcome"],
+    );
+
+    let (state, _dir) = build_test_state(
+        Some(factory),
+        vec![root, planner, coder, reducer, advisor_agent()],
+    )
+    .await;
+    let handle = start_request(&state, "delegate please", Some("sb-1"), None)
+        .await
+        .unwrap();
+    let root_task_id = handle.root_task_id.clone();
+
+    // The delegated workflow appears, then drives to Succeeded entirely through
+    // the real RuntimeAgentRunner + recording port.
+    let mut workflow_id = None;
+    for _ in 0..200 {
+        if let Some(workflow) = state
+            .workflow_store
+            .list_for_parent_task(&root_task_id)
+            .await
+            .unwrap()
+            .first()
+        {
+            workflow_id = Some(workflow.id.clone());
+            break;
+        }
+        tokio::time::sleep(Duration::from_millis(20)).await;
+    }
+    let workflow_id = workflow_id.expect("delegate_workflow must create a Workflow");
+
+    let mut final_status = None;
+    for _ in 0..500 {
+        let status = state
+            .workflow_store
+            .get(&workflow_id)
+            .await
+            .unwrap()
+            .unwrap()
+            .status;
+        if status != WorkflowStatus::Open {
+            final_status = Some(status);
+            break;
+        }
+        tokio::time::sleep(Duration::from_millis(20)).await;
+    }
+    assert_eq!(
+        final_status,
+        Some(WorkflowStatus::Succeeded),
+        "the recording harness must drive the delegated workflow to Succeeded via the real runner"
+    );
+
+    // The success cascade reached every level: attempt PASSED, iteration
+    // SUCCEEDED, and the parent root Task is untouched (still running).
+    let iterations = state
+        .iteration_store
+        .list_for_workflow(&workflow_id)
+        .await
+        .unwrap();
+    let attempts = state
+        .attempt_store
+        .list_for_iteration(&iterations[0].id)
+        .await
+        .unwrap();
+    assert_eq!(attempts[0].status, eos_state::AttemptStatus::Passed);
+    assert_eq!(iterations[0].status, eos_state::IterationStatus::Succeeded);
+    assert_eq!(
+        state
+            .task_store
+            .get(&root_task_id)
+            .await
+            .unwrap()
+            .unwrap()
+            .status,
+        TaskStatus::Running,
+        "the parent root task must remain running after the delegated workflow succeeds"
+    );
+
+    handle
+        .shutdown("test complete", Duration::from_secs(2))
+        .await;
+}
+
 // --- AC-eos-runtime-07: provisioning binds the request sandbox.
 //
 // The real `origin=workflow` label logic lives in `eos-sandbox-host`'s

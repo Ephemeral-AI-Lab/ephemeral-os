@@ -309,9 +309,6 @@ pub trait CommandSessionSupervisorPort: Sealed + Send + Sync {
     /// heartbeat). A late `write_stdin` poll uses this to return a terse
     /// already-reported note instead of re-dumping the completion (anchor §8/D8).
     async fn command_session_already_reported(&self, command_session_id: &str) -> bool;
-
-    /// Count of this agent's tracked, still-running command sessions.
-    async fn count_by_agent(&self, agent_id: &str) -> usize;
 }
 
 // ---------------------------------------------------------------------------

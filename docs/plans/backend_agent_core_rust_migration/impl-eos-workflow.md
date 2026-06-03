@@ -333,7 +333,12 @@ its absence → the scheduler synthesizes the matching failure, §8.4).
 
 ## 8. Behavior & Invariants
 
-State machine and ordering semantics preserved from the Python source (plan §9):
+State machine semantics preserved from the Python source (plan §9), with one
+documented ordering deviation (D2): the Rust port persists `generator_task_ids` /
+`reducer_task_ids` in **raw submission order**, not Python's Kahn-topo order
+(`ordered_plan_tasks`' reorder was not ported). RUN-stage dispatch is needs-driven
+so it is unaffected; only `project_attempt_outcomes` listing order differs
+(model-visible, cosmetic).
 
 1. **Starter leaves the parent running (anchor §3, GC-eos-workflow-02).** `WorkflowStarter::start`
    trims/validates a nonblank prompt, asserts the parent `Task` is `running` and has no open

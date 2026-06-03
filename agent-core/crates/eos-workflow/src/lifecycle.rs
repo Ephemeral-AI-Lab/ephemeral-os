@@ -161,27 +161,49 @@ impl WorkflowLifecycle {
             .get(&closed.iteration_id)
             .await?
             .ok_or_else(|| WorkflowError::not_found("iteration", closed.iteration_id.as_str()))?;
-        let result = if closed.succeeded {
-            if closed.deferred_goal.is_some() {
-                let (_next, coordinator) = self
-                    .create_iteration_with_coordinator(&iteration.workflow_id)
-                    .await?;
-                coordinator
-                    .create_and_start_first_attempt()
-                    .await
-                    .map(|_| ())
-            } else {
-                self.close_workflow(&iteration.workflow_id, true)
-                    .await
-                    .map(|_| ())
-            }
+        // The closed iteration's coordinator has finished its job; release it up
+        // front so no early return below can leak it (mirrors Python's `finally`).
+        self.iteration_coordinators.deregister(&iteration.id);
+
+        if closed.succeeded && closed.deferred_goal.is_some() {
+            self.start_continuation(&iteration.workflow_id).await
         } else {
-            self.close_workflow(&iteration.workflow_id, false)
+            // succeeded + no deferral -> SUCCEEDED; not succeeded -> FAILED.
+            self.close_workflow(&iteration.workflow_id, closed.succeeded)
                 .await
                 .map(|_| ())
-        };
-        self.iteration_coordinators.deregister(&iteration.id);
-        result
+        }
+    }
+
+    /// Start the deferred-goal continuation iteration, compensating on a
+    /// first-attempt start failure (parity with Python `_start_deferred_iteration`).
+    async fn start_continuation(&self, workflow_id: &WorkflowId) -> Result<()> {
+        let (next, coordinator) = self.create_iteration_with_coordinator(workflow_id).await?;
+        if let Err(err) = coordinator.create_and_start_first_attempt().await {
+            // Continuation could not start: cancel the new iteration, release its
+            // coordinator, and fail the workflow. The original error is swallowed
+            // after compensation, exactly as Python's `except` does — but log it
+            // first (parity with `_start_deferred_iteration`'s `logger.exception`),
+            // since the FAILED workflow status is otherwise the only trace.
+            tracing::warn!(
+                error = %err,
+                workflow_id = %workflow_id.as_str(),
+                iteration_id = %next.id.as_str(),
+                "continuation first-attempt start failed; compensating workflow to FAILED",
+            );
+            self.iteration_coordinators.deregister(&next.id);
+            self.deps
+                .iteration_store
+                .set_status(
+                    &next.id,
+                    IterationStatus::Cancelled,
+                    Some(eos_state::UtcDateTime::now()),
+                    None,
+                )
+                .await?;
+            self.close_workflow(workflow_id, false).await?;
+        }
+        Ok(())
     }
 
     /// Close a workflow without mutating the parent task.
@@ -244,7 +266,7 @@ mod tests {
     use std::sync::Arc;
 
     use super::*;
-    use crate::testsupport::{MemoryStores, QueueRunner};
+    use crate::testsupport::{agent_registry_without_planner, root_task, MemoryStores, QueueRunner};
 
     // AC-eos-workflow-05 / GC-eos-workflow-01: close_workflow sets the workflow
     // status + outcomes and performs ZERO TaskStore writes (the parent task is
@@ -287,5 +309,101 @@ mod tests {
         assert_eq!(closed.status, WorkflowStatus::Succeeded);
         assert!(closed.closed_at.is_some());
         assert_eq!(closed.outcomes.as_deref(), Some("[]"));
+    }
+
+    // AC-eos-workflow-10 (continuation compensation): a deferred-goal
+    // continuation whose first attempt fails to START runs the compensation saga
+    // — new iteration CANCELLED, workflow FAILED, and BOTH coordinators
+    // deregistered (the new one is FP1's leak, the old one FP2's) — and never
+    // mutates the parent. The error is swallowed (Ok), matching Python's
+    // `except`. The deferred-path analogue of starter::compensation_rolls_back.
+    #[tokio::test]
+    async fn continuation_start_failure_compensates() {
+        let stores = Arc::new(MemoryStores::default());
+        let runner = Arc::new(QueueRunner::default());
+        let mut deps = stores.deps(runner);
+        // No `planner` profile -> the continuation's first-attempt launch fails.
+        deps.agent_registry = Arc::new(agent_registry_without_planner());
+        let coordinators = deps.iteration_coordinators.clone().unwrap();
+        let lifecycle = WorkflowLifecycle::new(deps, coordinators.clone());
+
+        let parent = root_task("parent", eos_state::TaskStatus::Running);
+        stores.seed_task(parent.clone());
+
+        let workflow = lifecycle
+            .create_workflow(&eos_state::RequestId::new_v4(), &parent.id, "delegated goal")
+            .await
+            .unwrap();
+        // Iteration 1 + its coordinator (the predecessor of the continuation).
+        let (iter1, _coordinator1) = lifecycle
+            .create_iteration_with_coordinator(&workflow.id)
+            .await
+            .unwrap();
+        // Mark iter1 SUCCEEDED with a deferred goal so the continuation fires.
+        // `create_iteration_with_coordinator` reads the iteration's
+        // `deferred_goal_for_next_iteration`, not the signal, so both must be set.
+        eos_state::IterationStore::close_succeeded(
+            stores.as_ref(),
+            &iter1.id,
+            "[]",
+            Some(eos_state::UtcDateTime::now()),
+        )
+        .await
+        .unwrap();
+        eos_state::IterationStore::set_deferred_goal_for_next_iteration(
+            stores.as_ref(),
+            &iter1.id,
+            Some("continue"),
+        )
+        .await
+        .unwrap();
+
+        // Route the close: the continuation's planner launch fails, the saga
+        // runs, and the original error is swallowed (Ok).
+        lifecycle
+            .handle_iteration_closed(IterationClosed {
+                iteration_id: iter1.id.clone(),
+                succeeded: true,
+                deferred_goal: Some("continue".to_owned()),
+            })
+            .await
+            .unwrap();
+
+        // Workflow failed (the continuation path closes FAILED, not CANCELLED).
+        assert_eq!(
+            stores.workflow(&workflow.id).unwrap().status,
+            WorkflowStatus::Failed
+        );
+        // The continuation iteration (seq 2, DeferredGoalContinuation) is CANCELLED.
+        let iterations =
+            eos_state::IterationStore::list_for_workflow(stores.as_ref(), &workflow.id)
+                .await
+                .unwrap();
+        assert_eq!(
+            iterations.len(),
+            2,
+            "the deferred goal created a second iteration"
+        );
+        let iter2 = &iterations[1];
+        assert_eq!(iter2.sequence_no, 2);
+        assert_eq!(
+            iter2.creation_reason,
+            IterationCreationReason::DeferredGoalContinuation
+        );
+        assert_eq!(iter2.status, IterationStatus::Cancelled);
+        // BOTH coordinators deregistered: new (FP1 primary) + old (FP2 secondary).
+        assert!(
+            coordinators.get(&iter2.id).is_none(),
+            "new coordinator deregistered"
+        );
+        assert!(
+            coordinators.get(&iter1.id).is_none(),
+            "old coordinator deregistered"
+        );
+        // Parent untouched.
+        assert_eq!(
+            stores.task(&parent.id).unwrap().status,
+            eos_state::TaskStatus::Running
+        );
     }
 }

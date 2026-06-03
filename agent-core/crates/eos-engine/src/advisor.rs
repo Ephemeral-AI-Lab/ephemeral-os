@@ -183,15 +183,11 @@ fn advisor_metadata(ctx: &ExecutionMetadata, agent_run_id: &AgentRunId) -> Execu
 /// original task + the filtered parent transcript.
 fn build_advisor_user_msg_1(messages: &[Message], parent_def: Option<&AgentDefinition>) -> String {
     let parent_user_msg_1 = messages.first().map(extract_text).unwrap_or_default();
-    // Two-message contract (Python) when the caller has a non-empty second *user*
-    // message; otherwise the single-seed degradation (see module docs).
-    let (parent_user_msg_2, transcript_drop) = match messages.get(1) {
-        Some(m) if m.role == MessageRole::User && !extract_text(m).is_empty() => {
-            (extract_text(m), 2)
-        }
-        _ => (role_instruction(parent_def), 1),
-    };
-    let transcript = build_parent_transcript(messages, transcript_drop);
+    // The Rust runtime seeds every agent with a single user message, so the parent's
+    // role instruction stands in for Python's user_msg_2 and the transcript starts at
+    // `messages[1:]` (see the module header for the two-message contract this degrades).
+    let parent_user_msg_2 = role_instruction(parent_def);
+    let transcript = build_parent_transcript(messages);
 
     let mut sections = vec![
         PROMPT_INJECTION_GUARD.to_owned(),
@@ -273,11 +269,12 @@ fn render_pending_submission(tool_name: &str, tool_payload: &JsonObject) -> Stri
     )
 }
 
-/// `build_parent_transcript`: drop the leading seed messages, keep the last
-/// [`MAX_TRANSCRIPT_MESSAGES`], render each block, then byte-cap. Returns `None`
-/// when there is nothing to show. (Rust messages carry no `system` role, so the
-/// Python system-filter is a no-op; the first message must still be `user`.)
-fn build_parent_transcript(messages: &[Message], drop_leading: usize) -> Option<String> {
+/// `build_parent_transcript`: drop the leading seed message (shown verbatim as
+/// the parent's original context), keep the last [`MAX_TRANSCRIPT_MESSAGES`],
+/// render each block, then byte-cap. Returns `None` when there is nothing to show.
+/// (Rust messages carry no `system` role, so the Python system-filter is a no-op;
+/// the first message must still be `user`.)
+fn build_parent_transcript(messages: &[Message]) -> Option<String> {
     if messages.is_empty() {
         return None;
     }
@@ -287,7 +284,7 @@ fn build_parent_transcript(messages: &[Message], drop_leading: usize) -> Option<
         );
         return None;
     }
-    let working = messages.get(drop_leading..).unwrap_or(&[]);
+    let working = messages.get(1..).unwrap_or(&[]);
     if working.is_empty() {
         return None;
     }
@@ -415,8 +412,9 @@ fn apply_byte_cap(rendered: &[String]) -> String {
 }
 
 /// `json.dumps(value, indent=2, sort_keys=True)` — recursively sort object keys,
-/// then pretty-print with two-space indent. Deliberate divergence: Python defaults
-/// to `ensure_ascii=True` (`\uXXXX`-escaping non-ASCII), whereas serde keeps non-ASCII
+/// then pretty-print with two-space indent. Divergence (acceptable for advisor-facing
+/// prose): Python defaults to `ensure_ascii=True` (`\uXXXX`-escaping non-ASCII), whereas
+/// serde keeps non-ASCII
 /// scalars as UTF-8. The output is advisor-facing prose read by an LLM, so UTF-8 is
 /// equivalent (more readable) and at most shifts the *soft* [`apply_byte_cap`] elision
 /// point — never correctness.
@@ -437,5 +435,54 @@ fn sort_value(value: &Value) -> Value {
         }
         Value::Array(items) => Value::Array(items.iter().map(sort_value).collect()),
         other => other.clone(),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use eos_llm_client::{ContentBlock, Message, MessageRole};
+
+    use super::*;
+
+    fn assistant_text(text: &str) -> Message {
+        Message {
+            role: MessageRole::Assistant,
+            content: vec![ContentBlock::Text {
+                text: text.to_owned(),
+            }],
+        }
+    }
+
+    // The single seed user message is shown verbatim as "original context", so the
+    // transcript (messages[1:]) is empty and degrades to `None`.
+    #[test]
+    fn transcript_is_none_when_only_the_seed_message_exists() {
+        let msgs = [Message::from_user_text("seed prompt")];
+        assert!(build_parent_transcript(&msgs).is_none());
+    }
+
+    // The leading seed is dropped (drop-leading = 1); later turns are rendered.
+    #[test]
+    fn transcript_drops_the_seed_and_renders_later_turns() {
+        let msgs = [
+            Message::from_user_text("seed prompt"),
+            assistant_text("first assistant turn"),
+        ];
+        let transcript = build_parent_transcript(&msgs).expect("transcript present");
+        assert!(transcript.contains("first assistant turn"));
+        assert!(
+            !transcript.contains("seed prompt"),
+            "the leading seed is shown as original context, not in the transcript"
+        );
+    }
+
+    // user_msg_1 = injection guard + parent's verbatim user_msg_1; with no parent
+    // definition, user_msg_2 degrades to the documented role-instruction stub.
+    #[test]
+    fn user_msg_1_carries_guard_context_and_role_instruction_fallback() {
+        let msg = build_advisor_user_msg_1(&[Message::from_user_text("seed prompt")], None);
+        assert!(msg.contains(PROMPT_INJECTION_GUARD));
+        assert!(msg.contains("seed prompt"), "parent user_msg_1 shown verbatim");
+        assert!(msg.contains("delivered as a system prompt"));
     }
 }

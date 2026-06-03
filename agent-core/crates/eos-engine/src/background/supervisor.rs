@@ -66,15 +66,6 @@ pub enum BackgroundTaskKind {
     Workflow,
 }
 
-/// How a task was stopped.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum StopMode {
-    /// Explicit cancel.
-    Cancel,
-    /// Parent agent exited.
-    ParentExit,
-}
-
 /// One background task record. `Debug, Clone, PartialEq` are preserved for the
 /// tests; the non-cloneable [`AbortHandle`] rides in a side map on the
 /// supervisor, not on the record.
@@ -82,8 +73,6 @@ pub enum StopMode {
 pub struct BackgroundTaskRecord {
     /// Supervisor-local id.
     pub task_id: String,
-    /// Tool name.
-    pub tool_name: String,
     /// Original tool input.
     pub tool_input: JsonObject,
     /// Task kind.
@@ -92,21 +81,11 @@ pub struct BackgroundTaskRecord {
     pub status: BackgroundTaskStatus,
     /// Owning agent id (the launching agent), for the agent-scoped count.
     pub agent_id: Option<String>,
-    /// Cancellation reason.
-    pub cancel_reason: Option<String>,
-    /// Stop mode.
-    pub stop_mode: Option<StopMode>,
     /// Final result.
     pub result: Option<ToolResult>,
 }
 
 impl BackgroundTaskRecord {
-    /// Whether the task has already been delivered to the model.
-    #[must_use]
-    pub const fn delivered(&self) -> bool {
-        matches!(self.status, BackgroundTaskStatus::Delivered)
-    }
-
     /// Whether the task still needs delivery.
     #[must_use]
     pub const fn outstanding(&self) -> bool {
@@ -142,7 +121,6 @@ impl BackgroundTaskSupervisor {
     /// `BackgroundTaskRecord.agent_id`).
     pub fn register_running(
         &mut self,
-        tool_name: &str,
         tool_input: JsonObject,
         task_kind: BackgroundTaskKind,
         agent_id: Option<String>,
@@ -161,13 +139,10 @@ impl BackgroundTaskSupervisor {
             task_id.clone(),
             BackgroundTaskRecord {
                 task_id: task_id.clone(),
-                tool_name: tool_name.to_owned(),
                 tool_input,
                 task_kind,
                 status: BackgroundTaskStatus::Running,
                 agent_id,
-                cancel_reason: None,
-                stop_mode: None,
                 result: None,
             },
         );
@@ -205,8 +180,6 @@ impl BackgroundTaskSupervisor {
             return false;
         }
         record.status = BackgroundTaskStatus::Cancelled;
-        record.stop_mode = Some(StopMode::Cancel);
-        record.cancel_reason = Some(reason.to_owned());
         record.result = Some(
             ToolResult::error(format!("Background subagent cancelled: {reason}"))
                 .meta("subagent_cancelled", json!(true)),
@@ -226,8 +199,6 @@ impl BackgroundTaskSupervisor {
         for id in ids {
             if let Some(record) = self.records.get_mut(&id) {
                 record.status = BackgroundTaskStatus::Cancelled;
-                record.stop_mode = Some(StopMode::ParentExit);
-                record.cancel_reason = Some("parent agent exited".to_owned());
                 record.result = Some(ToolResult::error(
                     "Background task stopped because the parent agent exited.",
                 ));
@@ -254,8 +225,6 @@ impl BackgroundTaskSupervisor {
         for id in ids {
             if let Some(record) = self.records.get_mut(&id) {
                 record.status = BackgroundTaskStatus::Cancelled;
-                record.stop_mode = Some(StopMode::Cancel);
-                record.cancel_reason = Some("parent submitted its terminal".to_owned());
                 record.result = Some(
                     ToolResult::error(
                         "Background subagent cancelled: parent submitted its terminal.",
@@ -361,7 +330,6 @@ mod tests {
     fn parent_exit_then_cancel_finish_race() {
         let mut supervisor = BackgroundTaskSupervisor::new();
         let running = supervisor.register_running(
-            "run_subagent",
             JsonObject::new(),
             BackgroundTaskKind::Subagent,
             Some("agent".to_owned()),
@@ -369,11 +337,9 @@ mod tests {
         supervisor.terminate_for_parent_exit();
         let record = supervisor.get(&running).expect("record exists");
         assert_eq!(record.status, BackgroundTaskStatus::Cancelled);
-        assert_eq!(record.stop_mode, Some(StopMode::ParentExit));
         assert!(record.outstanding());
 
         let racing = supervisor.register_running(
-            "run_subagent",
             JsonObject::new(),
             BackgroundTaskKind::Subagent,
             Some("agent".to_owned()),
@@ -417,21 +383,11 @@ mod tests {
     fn background_ids_use_typed_prefixes() {
         let mut supervisor = BackgroundTaskSupervisor::new();
         assert_eq!(
-            supervisor.register_running(
-                "run_subagent",
-                JsonObject::new(),
-                BackgroundTaskKind::Subagent,
-                None,
-            ),
+            supervisor.register_running(JsonObject::new(), BackgroundTaskKind::Subagent, None),
             "subagent_1"
         );
         assert_eq!(
-            supervisor.register_running(
-                "delegate_workflow",
-                JsonObject::new(),
-                BackgroundTaskKind::Workflow,
-                None,
-            ),
+            supervisor.register_running(JsonObject::new(), BackgroundTaskKind::Workflow, None),
             "wf_1"
         );
     }
@@ -440,13 +396,11 @@ mod tests {
     fn inflight_report_is_subagent_and_agent_scoped() {
         let mut supervisor = BackgroundTaskSupervisor::new();
         let a = supervisor.register_running(
-            "run_subagent",
             JsonObject::new(),
             BackgroundTaskKind::Subagent,
             Some("agent-a".to_owned()),
         );
         supervisor.register_running(
-            "run_subagent",
             JsonObject::new(),
             BackgroundTaskKind::Subagent,
             Some("agent-b".to_owned()),

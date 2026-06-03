@@ -240,13 +240,6 @@ impl CommandSessionSupervisorPort for BackgroundSupervisorHandle {
             .await
             .command_session_already_reported(command_session_id)
     }
-
-    async fn count_by_agent(&self, agent_id: &str) -> usize {
-        self.inner()
-            .lock()
-            .await
-            .count_command_sessions_by_agent(agent_id)
-    }
 }
 
 #[cfg(test)]
