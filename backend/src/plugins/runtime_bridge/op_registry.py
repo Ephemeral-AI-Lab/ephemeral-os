@@ -11,16 +11,9 @@ importable as ``plugins.catalog.lsp.runtime.<something>``. The check walks
 live frames directly so wrapper functions cannot hide a caller outside the
 plugin namespace.
 
-Dispatch runner is picked from ``intent`` at flush time:
-
-* ``Intent.READ_ONLY`` → in-process: handler is invoked in the daemon process
-  with no per-call overlay, no namespace child, no publish_cycle. Read-only
-  handlers MUST query a long-lived ``PluginService`` (e.g.
-  :class:`PyrightSession`) rather than touch the filesystem directly.
-* ``Intent.WRITE_ALLOWED`` → existing overlay+OCC publish path via
-  :func:`run_plugin_op_with_workspace_overlay`.
-* ``Intent.LIFECYCLE`` → rejected at registration; LIFECYCLE is reserved for
-  sandbox lifecycle ops, not plugin tool dispatch.
+The bridge records intent metadata for the Rust daemon. The daemon owns the
+live READ_ONLY, WRITE_ALLOWED, overlay, and OCC routing; this Python module only
+loads runtime handlers and validates registration metadata.
 """
 
 from __future__ import annotations
@@ -96,13 +89,11 @@ def register_plugin_op(
     ``Intent.LIFECYCLE`` is reserved for sandbox lifecycle ops and is rejected
     here.
 
-    ``auto_workspace_overlay`` defaults to ``True`` so WRITE_ALLOWED handlers
-    are wrapped by ``run_plugin_op_with_workspace_overlay`` (the canonical
-    overlay+OCC publish path). Plugins that already manage their own overlay
-    (e.g. the LSP ``apply.py`` runtime) opt out with
-    ``auto_workspace_overlay=False`` to keep the existing OCC publish path
-    UNCHANGED; the intent label still flows through so observability and
-    auditing remain accurate.
+    ``auto_workspace_overlay`` defaults to ``True`` so the Rust daemon can
+    select its canonical overlay+OCC path. Plugins that manage their own
+    daemon callback flow (e.g. the LSP ``apply.py`` runtime) opt out with
+    ``auto_workspace_overlay=False``; the intent label still flows through so
+    observability and auditing remain accurate.
     """
     plugin_name = (plugin_name or "").strip()
     op_name = (op_name or "").strip()
@@ -177,12 +168,8 @@ def flush_plugin_registrations(
     When ``context_factory`` is provided, each plugin handler is wrapped so
     the dispatcher receives a 1-argument coroutine (``args -> response``)
     while the underlying plugin handler is invoked as
-    ``await handler(args, ctx)``. The dispatch runner is selected from the
-    pending registration's ``intent``:
-
-    * ``Intent.READ_ONLY`` → handler runs in-process directly.
-    * ``Intent.WRITE_ALLOWED`` → handler runs through the per-op overlay +
-      OCC publish path (see ``overlay_dispatch.run_plugin_op_with_workspace_overlay``).
+    ``await handler(args, ctx)``. Live overlay/OCC routing is daemon-owned; the
+    Python bridge does not import the retired overlay dispatcher.
 
     Without a factory, raw handlers are registered (used by tests that call
     handlers directly with mocked args).
@@ -222,18 +209,8 @@ def flush_plugin_registrations(
 
 
 def _dispatch_runner_for_entry(entry: _PendingRegistration) -> DispatchRunner | None:
-    """Pick the dispatch runner for one plugin op based on intent + opt-out."""
-    if not entry.auto_workspace_overlay:
-        # Plugin manages its own overlay + OCC (e.g. LSP apply.py); skip
-        # the standard wrapper to keep the existing publish path UNCHANGED.
-        return None
-    if entry.intent is Intent.WRITE_ALLOWED:
-        from sandbox.ephemeral_workspace.plugin.overlay_dispatch import (
-            run_plugin_op_with_workspace_overlay,
-        )
-
-        return run_plugin_op_with_workspace_overlay
-    # READ_ONLY runs in-process: no overlay, no namespace child, no publish.
+    """Return no Python dispatch runner; Rust daemon owns route selection."""
+    del entry
     return None
 
 

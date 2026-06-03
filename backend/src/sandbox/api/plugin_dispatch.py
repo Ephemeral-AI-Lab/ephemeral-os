@@ -4,7 +4,7 @@ Implements the host-to-daemon plugin dispatch sequence:
 
   1. Resolve sandbox_id + layer_stack_root + caller from the tool context.
   2. Ensure the plugin bundle is installed inside the sandbox
-     (:func:`sandbox.ephemeral_workspace.plugin.install.ensure_installed`).
+     (:func:`sandbox.api.plugin_install.ensure_installed`).
   3. Tell the daemon to load the plugin runtime via ``api.plugin.ensure``.
   4. Dispatch ``call_daemon_api(sandbox_id, "plugin.<name>.<op>", payload)``.
   5. Wrap the response in a :class:`ToolResult`.

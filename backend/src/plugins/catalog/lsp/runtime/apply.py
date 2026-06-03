@@ -2,15 +2,10 @@
 
 from __future__ import annotations
 
-import asyncio
-import json
 import os
-import shutil
-import sys
 from pathlib import Path
 from typing import Any
 from urllib.parse import unquote, urlparse
-from uuid import uuid4
 
 
 async def apply_workspace_edit(
@@ -30,12 +25,7 @@ async def apply_workspace_edit(
             expected_manifest_key=expected_manifest_key,
             publish_mounted=publish_mounted,
         )
-    return await _apply_with_operation_overlay(
-        edit,
-        ctx,
-        workspace_root=workspace_root,
-        expected_manifest_key=expected_manifest_key,
-    )
+    raise RuntimeError("LSP WorkspaceEdit requires daemon mounted-workspace callback")
 
 
 async def _apply_with_mounted_workspace_callback(
@@ -71,164 +61,6 @@ async def _apply_with_mounted_workspace_callback(
         "files": publish.get("files") or [],
         "timings": timings,
     }
-
-
-async def _apply_with_operation_overlay(
-    edit: dict[str, Any],
-    ctx: Any,
-    *,
-    workspace_root: str,
-    expected_manifest_key: str | None,
-) -> dict[str, Any]:
-    if not _overlay_namespace_available():
-        raise RuntimeError(
-            "LSP WorkspaceEdit requires private mount namespace and overlay mount syscalls"
-        )
-    acquire_overlay = getattr(
-        getattr(ctx, "overlay", None),
-        "acquire_operation_overlay",
-        None,
-    )
-    publish_cycle = getattr(ctx.overlay, "publish_cycle", None)
-    if not callable(acquire_overlay) or not callable(publish_cycle):
-        raise RuntimeError("LSP WorkspaceEdit requires daemon operation overlay")
-
-    metadata = getattr(ctx, "metadata", None) or {}
-    op_name = str(metadata.get("op_name", "apply_workspace_edit"))
-    handle = acquire_overlay(
-        invocation_id=f"lsp-apply:{op_name}:{uuid4().hex[:8]}",
-        workspace_root=workspace_root,
-    )
-    try:
-        if not getattr(handle, "layer_paths", None):
-            raise RuntimeError(
-                "LSP WorkspaceEdit operation overlay did not provide layer paths"
-            )
-        if expected_manifest_key and handle.manifest_key != expected_manifest_key:
-            raise RuntimeError(
-                "workspace changed before LSP edit could be applied; retry the tool"
-            )
-        changed_paths = await _run_apply_child(
-            edit,
-            workspace_root=workspace_root,
-            handle=handle,
-        )
-        from sandbox._shared.command_exec_contract import CommandExecRequest
-
-        request = CommandExecRequest(
-            invocation_id=f"lsp-apply-{uuid4().hex[:8]}",
-            workspace_ref=str(getattr(ctx, "layer_stack_root", "")),
-            workspace_root=workspace_root,
-            command=("lsp.apply_workspace_edit",),
-            cwd=".",
-            env={},
-            timeout_seconds=None,
-            agent_id=getattr(ctx.caller, "agent_id", ""),
-            description="lsp.apply_workspace_edit",
-        )
-        publish = await publish_cycle(
-            request=request,
-            upperdir=str(handle.upperdir),
-            snapshot=handle.snapshot_manifest,
-            run_maintenance=True,
-        )
-        return _format_apply_result(
-            getattr(publish, "changeset", publish),
-            changed_paths,
-            timings=getattr(publish, "timings", None),
-        )
-    finally:
-        await _release_handle(handle)
-
-
-async def _run_apply_child(
-    edit: dict[str, Any],
-    *,
-    workspace_root: str,
-    handle: Any,
-) -> list[str]:
-    unshare = shutil.which("unshare")
-    if not unshare:
-        raise RuntimeError("unshare is required for overlay-backed LSP apply")
-    run_dir = Path(str(handle.run_dir))
-    payload_ref = run_dir / "lsp-apply-request.json"
-    output_ref = run_dir / "lsp-apply-output.json"
-    payload_ref.write_text(
-        json.dumps(
-            {
-                "workspace_root": workspace_root,
-                "layer_paths": list(handle.layer_paths),
-                "upperdir": str(handle.upperdir),
-                "workdir": str(handle.workdir),
-                "output_ref": output_ref.as_posix(),
-                "edit": edit,
-            },
-            separators=(",", ":"),
-            sort_keys=True,
-        ),
-        encoding="utf-8",
-    )
-    proc = await asyncio.create_subprocess_exec(
-        unshare,
-        "-Urm",
-        sys.executable,
-        "-m",
-        "plugins.catalog.lsp.runtime.apply_child",
-        str(payload_ref),
-        stdout=asyncio.subprocess.DEVNULL,
-        stderr=asyncio.subprocess.PIPE,
-    )
-    _stdout, stderr = await proc.communicate()
-    if proc.returncode != 0:
-        detail = (stderr or b"").decode("utf-8", "replace").strip()
-        raise RuntimeError(detail or "overlay-backed LSP apply failed")
-    payload = json.loads(output_ref.read_text(encoding="utf-8"))
-    raw_paths = payload.get("changed_paths") if isinstance(payload, dict) else []
-    if not isinstance(raw_paths, list):
-        return []
-    return sorted({str(path) for path in raw_paths})
-
-
-def _overlay_namespace_available() -> bool:
-    from sandbox.overlay.mount_syscalls import mount_syscalls_supported
-    from sandbox.overlay.namespace_runner import detect_private_mount_namespace
-
-    return mount_syscalls_supported() and detect_private_mount_namespace()
-
-
-def _format_apply_result(
-    result: Any,
-    changed_paths: list[str],
-    *,
-    timings: dict[str, float] | None = None,
-) -> dict[str, Any]:
-    payload = {
-        "success": bool(getattr(result, "success", False)),
-        "changed_paths": changed_paths,
-        "manifest_version": getattr(result, "published_manifest_version", None),
-        "files": [
-            {
-                "path": getattr(file, "path", ""),
-                "status": str(getattr(file, "status", "")),
-                "message": getattr(file, "message", ""),
-            }
-            for file in getattr(result, "files", ())
-        ],
-    }
-    if timings:
-        payload["timings"] = dict(timings)
-    return payload
-
-
-async def _release_handle(handle: Any) -> None:
-    if hasattr(handle, "_release_lock") and hasattr(handle, "run_dir"):
-        from sandbox.overlay import lifecycle as overlay_lifecycle
-
-        await overlay_lifecycle.release_overlay(handle)
-        return
-    release = getattr(handle, "release", None)
-    if callable(release):
-        release()
 
 
 def _apply_edit_payload(edit: dict[str, Any], *, workspace_root: str) -> list[str]:

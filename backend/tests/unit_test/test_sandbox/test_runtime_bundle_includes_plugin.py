@@ -17,9 +17,9 @@ def test_bundle_contains_sandbox_plugin_modules() -> None:
     with tarfile.open(fileobj=io.BytesIO(raw), mode="r") as tar:
         names = set(tar.getnames())
     assert any(name.startswith("plugins/catalog/lsp/runtime/") for name in names)
-    assert "sandbox/ephemeral_workspace/plugin/op_context.py" in names
-    assert "sandbox/ephemeral_workspace/plugin/op_registry.py" in names
-    assert "sandbox/ephemeral_workspace/plugin/ppc_service.py" in names
+    assert "plugins/runtime_bridge/op_context.py" in names
+    assert "plugins/runtime_bridge/op_registry.py" in names
+    assert "plugins/runtime_bridge/ppc_service.py" in names
     assert "sandbox/_shared/models.py" in names
     assert "sandbox/_shared/command_exec_contract.py" in names
     assert "plugins/catalog/lsp/runtime/server.py" in names

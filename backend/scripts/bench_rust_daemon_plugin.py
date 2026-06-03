@@ -112,14 +112,13 @@ PPC_SERVICE_BUNDLE_FILES = (
     "plugins/catalog/lsp/runtime/pyright_session.py",
     "plugins/catalog/lsp/runtime/server.py",
     "plugins/catalog/lsp/runtime/session_manager.py",
+    "plugins/runtime_bridge/__init__.py",
+    "plugins/runtime_bridge/op_context.py",
+    "plugins/runtime_bridge/op_registry.py",
+    "plugins/runtime_bridge/ppc_service.py",
     "sandbox/__init__.py",
-    "sandbox/shared/__init__.py",
-    "sandbox/shared/models.py",
-    "sandbox/ephemeral_workspace/__init__.py",
-    "sandbox/ephemeral_workspace/plugin/__init__.py",
-    "sandbox/ephemeral_workspace/plugin/op_context.py",
-    "sandbox/ephemeral_workspace/plugin/op_registry.py",
-    "sandbox/ephemeral_workspace/plugin/ppc_service.py",
+    "sandbox/_shared/__init__.py",
+    "sandbox/_shared/models.py",
 )
 LAYER_STACK_ROOT = f"{PLUGIN_ROOT}/rust-layer-stack"
 WORKSPACE_ROOT = f"{PLUGIN_ROOT}/rust-workspace"
@@ -3179,7 +3178,7 @@ from pathlib import Path
 from typing import Any
 
 from plugins.runtime_bridge.op_registry import register_plugin_op
-from sandbox.shared.models import Intent
+from sandbox._shared.models import Intent
 
 
 def _workspace_read(workspace_root: str, rel_path: str) -> dict[str, object]:
@@ -6449,7 +6448,7 @@ async def install_harness(bench: DockerBench) -> dict[str, Any]:
         f"test -x {shlex.quote(ONESHOT_SCRIPT)} && "
         f"test -x {shlex.quote(VANILLA_PACKAGE_SCRIPT)} && "
         f"test -f {shlex.quote(RUNTIME_BRIDGE_SERVER)} && "
-        f"test -f {shlex.quote(f'{BUNDLE_REMOTE_DIR}/sandbox/ephemeral_workspace/plugin/ppc_service.py')} && "
+        f"test -f {shlex.quote(f'{BUNDLE_REMOTE_DIR}/plugins/runtime_bridge/ppc_service.py')} && "
         f"test -x {shlex.quote(PYRIGHT_SETUP_SCRIPT)} && "
         f"wc -c {shlex.quote(HARNESS_SCRIPT)} "
         f"{shlex.quote(ONESHOT_SCRIPT)} "
@@ -6502,7 +6501,7 @@ async def cleanup_processes(bench: DockerBench) -> None:
     await bench.exec(
         "pkill -f '[r]ust_ppc_harness.py' >/dev/null 2>&1 || true; "
         "pkill -f '[r]ust_vanilla_package.py' >/dev/null 2>&1 || true; "
-        "pkill -f '[s]andbox.ephemeral_workspace.plugin.ppc_service' "
+        "pkill -f '[p]lugins.runtime_bridge.ppc_service' "
         ">/dev/null 2>&1 || true; "
         "pkill -f '[p]yright-langserver' >/dev/null 2>&1 || true",
         timeout=15,
@@ -6650,7 +6649,7 @@ async def read_harness_log(bench: DockerBench) -> list[dict[str, Any]]:
 async def process_snapshot(bench: DockerBench) -> dict[str, Any]:
     result = await bench.exec(
         "pgrep -af '[r]ust_ppc_harness.py|"
-        "[s]andbox.ephemeral_workspace.plugin.ppc_service' || true",
+        "[p]lugins.runtime_bridge.ppc_service' || true",
         timeout=15,
     )
     lines = [

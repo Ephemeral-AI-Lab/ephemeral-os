@@ -86,17 +86,7 @@ def _runtime_bundle_bytes() -> bytes:
         for name in ("__init__.py", "models.py", "command_exec_contract.py"):
             _add_if_exists(tar, shared_dir / name, arcname=f"sandbox/_shared/{name}")
 
-        ephemeral_dir = sandbox_dir / "ephemeral_workspace"
-        for name in (
-            "__init__.py",
-        ):
-            _add_if_exists(
-                tar,
-                ephemeral_dir / name,
-                arcname=f"sandbox/ephemeral_workspace/{name}",
-            )
-
-        plugin_dir = ephemeral_dir / "plugin"
+        runtime_bridge_dir = src / "plugins" / "runtime_bridge"
         for name in (
             "__init__.py",
             "op_context.py",
@@ -105,8 +95,8 @@ def _runtime_bundle_bytes() -> bytes:
         ):
             _add_if_exists(
                 tar,
-                plugin_dir / name,
-                arcname=f"sandbox/ephemeral_workspace/plugin/{name}",
+                runtime_bridge_dir / name,
+                arcname=f"plugins/runtime_bridge/{name}",
             )
 
         plugins_dir = src / "plugins"
