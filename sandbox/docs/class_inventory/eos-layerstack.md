@@ -9,7 +9,7 @@
 
 **22 items (17 structs, 4 enums, 0 traits, 1 type alias) across 7 files.**
 
-`eos-layerstack` is the durable-truth layer of the `eosd` runtime: it owns the single linearization point (one mutable `manifest.json` over immutable, content-addressed layer directories swapped by an atomic pointer write) that ports the Python `backend/src/sandbox/layer_stack` subsystem. Its item groups cover the storage facade and merged read view (`LayerStack`, `MergedView`, `Lease`), the dual-set snapshot lease registry (`LeaseRegistry`, `LayerStackLeaseRecord`), non-destructive checkpoint squashing (`LayerCheckpointSquasher`, `SquashPlan`, `CheckpointSegment`, `SquashPlanEntry`), the dual-layer cross-process/in-process writer lock (`StorageWriterLockLease`, `ExclusiveGuard`, `ReentrantMutex`), workspace base construction and binding (`WorkspaceBaseBuild`, `WorkspaceBinding`, `BaseEntry`), and the error algebra (`LayerStackError`).
+`eos-layerstack` is the durable-truth layer of the `eosd` runtime: it owns the single linearization point (one mutable `manifest.json` over immutable, content-addressed layer directories swapped by an atomic pointer write). Its item groups cover the storage facade and merged read view (`LayerStack`, `MergedView`, `Lease`), the dual-set snapshot lease registry (`LeaseRegistry`, `LayerStackLeaseRecord`), non-destructive checkpoint squashing (`LayerCheckpointSquasher`, `SquashPlan`, `CheckpointSegment`, `SquashPlanEntry`), the dual-layer cross-process/in-process writer lock (`StorageWriterLockLease`, `ExclusiveGuard`, `ReentrantMutex`), workspace base construction and binding (`WorkspaceBaseBuild`, `WorkspaceBinding`, `BaseEntry`), and the error algebra (`LayerStackError`).
 
 ## Contents
 
@@ -48,7 +48,7 @@ One active snapshot lease: an id bound to the frozen manifest it pins.
 
 #### `LeaseRegistry`  ·  _struct_  ·  derives: `Debug, Default`  ·  [L39]
 
-Tracks active snapshot leases and the layers they retain on disk (mirrors the Python `RLock` + `Counter[LayerRef]` refcount semantics).
+Tracks active snapshot leases and the layers they retain on disk (a reentrant writer lock plus per-`LayerRef` refcounts).
 
 **Fields**
 
@@ -233,7 +233,7 @@ A held cross-process + in-process writer lease for one storage root; RAII releas
 
 #### `ExclusiveGuard`  ·  _struct_  ·  generics: `<'lease>`  ·  derives: `Debug`  ·  [L157]
 
-In-process exclusive write guard; reentrant on the same thread to avoid the RLock-to-Mutex deadlock trap.
+In-process exclusive write guard; reentrant on the same thread so re-acquisition never deadlocks against a non-reentrant `Mutex`.
 
 **Fields**
 
@@ -262,7 +262,7 @@ Per-root registry record holding the locked `flock` file handle, the in-process 
 
 #### `ReentrantMutex`  ·  _struct_  ·  derives: `Debug, Default`  ·  [L176]
 
-Reentrant mutex (state + condvar) reproducing Python `threading.RLock` same-thread re-entry semantics.
+Reentrant mutex (state + condvar) allowing same-thread re-entry.
 
 **Fields**
 

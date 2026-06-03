@@ -169,7 +169,7 @@ mod tests {
         let started_line = serde_json::to_string(&started).unwrap();
         assert_eq!(
             started_line,
-            r#"{"schema_version":1,"source":"engine","type":"engine.tool.started","node":{"request_id":"req-1","tool_name":"read_file","tool_use_id":"tu-1"},"payload":{"input_bytes":30,"input_digest":"sha256:eae28db122d085e97660cdaca234aa8fe92b68793608afd3c5391d10ab70a5d3","input_redacted":{"limit":"<redacted>","path":"<redacted>"},"input_shape":{"limit":"int","path":"str"},"status":"ok","tool_name":"read_file","tool_use_id":"tu-1"},"ts":"2026-06-02T19:47:00Z"}"#
+            r#"{"schema_version":1,"source":"engine","type":"engine.tool.started","node":{"request_id":"req-1","tool_name":"read_file","tool_use_id":"tu-1"},"payload":{"tool_name":"read_file","tool_use_id":"tu-1","status":"ok","input_shape":{"path":"str","limit":"int"},"input_redacted":{"path":"<redacted>","limit":"<redacted>"},"input_digest":"sha256:eae28db122d085e97660cdaca234aa8fe92b68793608afd3c5391d10ab70a5d3","input_bytes":30},"ts":"2026-06-02T19:47:00Z"}"#
         );
 
         let mut metadata = JsonObject::new();
@@ -179,7 +179,7 @@ mod tests {
         let completed_line = serde_json::to_string(&completed).unwrap();
         assert_eq!(
             completed_line,
-            r#"{"schema_version":1,"source":"engine","type":"engine.tool.completed","node":{"request_id":"req-1","tool_name":"read_file","tool_use_id":"tu-1"},"payload":{"error_kind":null,"is_error":false,"is_terminal":false,"metadata":{"domain_timings":{"queued_ms":1.5},"request_id":"req-1"},"output_bytes":4,"output_digest":"sha256:c48b5b1a9776c84602de2306d7903a7241158a5077e7a8519af75c33441b8334","output_shape":"str","status":"ok","timings":{},"tool_name":"read_file","tool_use_id":"tu-1"},"ts":"2026-06-02T19:47:00Z"}"#
+            r#"{"schema_version":1,"source":"engine","type":"engine.tool.completed","node":{"request_id":"req-1","tool_name":"read_file","tool_use_id":"tu-1"},"payload":{"tool_name":"read_file","tool_use_id":"tu-1","status":"ok","error_kind":null,"output_shape":"str","output_digest":"sha256:c48b5b1a9776c84602de2306d7903a7241158a5077e7a8519af75c33441b8334","output_bytes":4,"is_error":false,"is_terminal":false,"metadata":{"request_id":"req-1","domain_timings":{"queued_ms":1.5}},"timings":{}},"ts":"2026-06-02T19:47:00Z"}"#
         );
     }
 

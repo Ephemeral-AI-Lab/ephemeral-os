@@ -135,7 +135,7 @@ class DockerBench:
         return await self.adapter.exec(self.sandbox_id, command, timeout=timeout)
 
     async def direct_exec(self, argv: list[str], *, timeout: int | None = None) -> Any:
-        from sandbox.shared.models import RawExecResult
+        from sandbox._shared.models import RawExecResult
 
         def _run() -> RawExecResult:
             client = self.adapter._get_client()  # Docker-only benchmark helper.

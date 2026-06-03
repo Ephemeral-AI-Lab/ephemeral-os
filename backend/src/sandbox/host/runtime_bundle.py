@@ -1,9 +1,9 @@
 """Bundle helper + idempotent uploader for the sandbox-local runtime.
 
-The bundle is a tar.gz containing the project modules needed to import
-the deployed runtime server and setup orchestrator contract inside a sandbox.
-This module is host-side bootstrap code; bundle upload uses the registered
-provider adapter's raw exec primitive by sandbox id.
+The runtime payload contains the project modules needed to import the deployed
+plugin bridge and setup orchestrator contract inside a sandbox. This module is
+host-side bootstrap code; upload uses the registered provider adapter's archive
+primitive by sandbox id.
 """
 
 from __future__ import annotations
@@ -12,18 +12,16 @@ import gzip
 import hashlib
 import io
 import logging
-import os
 import shlex
 import tarfile
 import uuid
 from pathlib import Path
+from typing import Any, Protocol
 
 from sandbox.host.paths import (
     BUNDLE_HASH_MARKER as _BUNDLE_HASH_MARKER,
     BUNDLE_REMOTE_DIR as _BUNDLE_REMOTE_DIR,
-    BUNDLE_REMOTE_TARBALL as _BUNDLE_REMOTE_TARBALL,
 )
-from sandbox.host.chunked_upload import RawExecCallable, write_base64_chunks
 from sandbox.host.runtime_artifact import EOSD_SHA256
 from sandbox.provider.registry import get_adapter
 
@@ -37,6 +35,27 @@ __all__ = [
 ]
 
 logger = logging.getLogger(__name__)
+
+
+class RawExecCallable(Protocol):
+    async def __call__(
+        self,
+        sandbox_id: str,
+        command: str,
+        *,
+        cwd: str | None = None,
+        timeout: int | None = None,
+    ) -> Any: ...
+
+
+class PutArchiveCallable(Protocol):
+    async def __call__(
+        self,
+        sandbox_id: str,
+        *,
+        tar_stream: bytes,
+        dest_dir: str,
+    ) -> None: ...
 
 
 def _src_root() -> Path:
@@ -67,14 +86,14 @@ def _add_if_exists(tar: tarfile.TarFile, path: Path, *, arcname: str) -> None:
         tar.add(path, arcname=arcname, filter=_normalize_tarinfo)
 
 
-_BUNDLE_CACHE: bytes | None = None
+_BUNDLE_TAR_CACHE: bytes | None = None
 
 
-def _runtime_bundle_bytes() -> bytes:
-    """Build the Rust-daemon plugin bridge payload as a gzip tarball."""
-    global _BUNDLE_CACHE
-    if _BUNDLE_CACHE is not None:
-        return _BUNDLE_CACHE
+def _runtime_bundle_tar_bytes() -> bytes:
+    """Build the Rust-daemon plugin bridge payload as a plain tar archive."""
+    global _BUNDLE_TAR_CACHE
+    if _BUNDLE_TAR_CACHE is not None:
+        return _BUNDLE_TAR_CACHE
 
     src = _src_root()
     sandbox_dir = src / "sandbox"
@@ -116,9 +135,22 @@ def _runtime_bundle_bytes() -> bytes:
                 arcname=f"plugins/catalog/lsp/runtime/{name}",
             )
 
+    _BUNDLE_TAR_CACHE = raw.getvalue()
+    return _BUNDLE_TAR_CACHE
+
+
+_BUNDLE_CACHE: bytes | None = None
+
+
+def _runtime_bundle_bytes() -> bytes:
+    """Build the Rust-daemon plugin bridge payload as a gzip tarball."""
+    global _BUNDLE_CACHE
+    if _BUNDLE_CACHE is not None:
+        return _BUNDLE_CACHE
+
     compressed = io.BytesIO()
     with gzip.GzipFile(fileobj=compressed, mode="wb", mtime=0) as gz:
-        gz.write(raw.getvalue())
+        gz.write(_runtime_bundle_tar_bytes())
     _BUNDLE_CACHE = compressed.getvalue()
     return _BUNDLE_CACHE
 
@@ -142,28 +174,33 @@ def bundle_hash() -> str:
 
 def clear_bundle_caches() -> None:
     """Clear process-local runtime bundle caches. Test seam."""
-    global _BUNDLE_CACHE, _BUNDLE_HASH_CACHE
+    global _BUNDLE_CACHE, _BUNDLE_HASH_CACHE, _BUNDLE_TAR_CACHE
     _BUNDLE_CACHE = None
     _BUNDLE_HASH_CACHE = None
+    _BUNDLE_TAR_CACHE = None
 
 
 async def ensure_runtime_uploaded(sandbox_id: str) -> str:
     """Upload the runtime bundle through the registered provider if needed."""
     adapter = get_adapter(sandbox_id)
+    put_archive = getattr(adapter, "put_archive", None)
+    if not callable(put_archive):
+        raise RuntimeError("sandbox runtime upload requires provider put_archive")
     digest = await _ensure_runtime_uploaded_with_exec(
         sandbox_id,
         adapter.exec,
+        put_archive,
     )
-    if _selected_sandbox_runtime() == "rust":
-        await _ensure_eosd_uploaded(sandbox_id, adapter)
+    await _ensure_eosd_uploaded(sandbox_id, adapter)
     return digest
 
 
 async def _ensure_runtime_uploaded_with_exec(
     sandbox_id: str,
     exec_fn: RawExecCallable,
+    put_archive: PutArchiveCallable,
 ) -> str:
-    """Upload the runtime bundle using the provided un-guarded exec function."""
+    """Upload the runtime bundle using the provided un-guarded host primitives."""
     digest = bundle_hash()
     marker_check = await exec_fn(
         sandbox_id,
@@ -174,35 +211,29 @@ async def _ensure_runtime_uploaded_with_exec(
         logger.debug("sandbox runtime bundle already uploaded (%s) on %s", digest[:8], sandbox_id)
         return digest
 
-    bundle = _runtime_bundle_bytes()
-    staging_tarball = f"{_BUNDLE_REMOTE_TARBALL}.{uuid.uuid4().hex}.staging"
+    bundle = _runtime_bundle_tar_bytes()
+    staging_dir = f"{_BUNDLE_REMOTE_DIR}/.runtime-staging-{uuid.uuid4().hex}"
 
     setup = await exec_fn(
         sandbox_id,
-        (f"mkdir -p {shlex.quote(_BUNDLE_REMOTE_DIR)} && : > {shlex.quote(staging_tarball)}"),
+        f"rm -rf {shlex.quote(staging_dir)} && mkdir -p {shlex.quote(staging_dir)} {shlex.quote(_BUNDLE_REMOTE_DIR)}",
         timeout=30,
     )
     if _exit_code(setup) != 0:
         raise RuntimeError(
-            f"runtime bundle staging mkdir failed (sandbox={sandbox_id!r}): "
+            f"runtime bundle staging setup failed (sandbox={sandbox_id!r}): "
             f"{getattr(setup, 'stdout', '')}"
         )
 
-    chunk_count = await write_base64_chunks(
-        exec_fn,
+    await put_archive(
         sandbox_id,
-        content=bundle,
-        remote_path=staging_tarball,
-        check_result=_check_chunk_write,
-        failure_message=lambda offset: (
-            f"runtime bundle chunk write failed at offset {offset} (sandbox={sandbox_id!r})"
-        ),
+        tar_stream=bundle,
+        dest_dir=staging_dir,
     )
 
     finalize_cmd = (
-        f"cd {shlex.quote(_BUNDLE_REMOTE_DIR)} && "
-        f"tar -xzf {shlex.quote(staging_tarball)} && "
-        f"rm -f {shlex.quote(staging_tarball)} && "
+        f"cp -a {shlex.quote(staging_dir)}/. {shlex.quote(_BUNDLE_REMOTE_DIR)}/ && "
+        f"rm -rf {shlex.quote(staging_dir)} && "
         f"printf %s {shlex.quote(digest)} > {shlex.quote(_BUNDLE_HASH_MARKER)}"
     )
     result = await exec_fn(sandbox_id, finalize_cmd, timeout=60)
@@ -212,17 +243,12 @@ async def _ensure_runtime_uploaded_with_exec(
             f"{getattr(result, 'stdout', '')}"
         )
     logger.info(
-        "sandbox runtime bundle uploaded (%d bytes, %d chunks, sha=%s) to %s",
+        "sandbox runtime bundle uploaded (%d bytes, sha=%s) to %s",
         len(bundle),
-        chunk_count,
         digest[:8],
         sandbox_id,
     )
     return digest
-
-
-def _selected_sandbox_runtime() -> str:
-    return os.environ.get("EOS_SANDBOX_RUNTIME", "rust").strip().lower() or "rust"
 
 
 async def _ensure_eosd_uploaded(sandbox_id: str, adapter: object) -> None:
@@ -260,51 +286,34 @@ async def _ensure_eosd_uploaded(sandbox_id: str, adapter: object) -> None:
         message="eosd runtime directory setup failed",
     )
     put_archive = getattr(adapter, "put_archive", None)
-    if callable(put_archive):
-        staging_dir = f"/tmp/eosd-upload-{uuid.uuid4().hex}"
-        staging_file = f"{staging_dir}/eosd"
-        await _check_exec(
-            exec_fn,
-            sandbox_id,
-            f"mkdir -p {shlex.quote(staging_dir)}",
-            timeout=30,
-            message="eosd staging directory setup failed",
-        )
-        await put_archive(
-            sandbox_id,
-            tar_stream=_tar_file_at_path("eosd", payload, mode=0o755),
-            dest_dir=staging_dir,
-        )
-        await _check_exec(
-            exec_fn,
-            sandbox_id,
-            (
-                f"cat {shlex.quote(staging_file)} > {shlex.quote(remote)} && "
-                f"chmod 755 {shlex.quote(remote)} && "
-                f"rm -rf {shlex.quote(staging_dir)}"
-            ),
-            timeout=30,
-            message="eosd finalize failed",
-        )
-    else:
-        staging = f"{remote}.{uuid.uuid4().hex}.staging"
-        await write_base64_chunks(
-            exec_fn,
-            sandbox_id,
-            content=payload,
-            remote_path=staging,
-            check_result=_check_chunk_write,
-            failure_message=lambda offset: (
-                f"eosd chunk write failed at offset {offset} (sandbox={sandbox_id!r})"
-            ),
-        )
-        await _check_exec(
-            exec_fn,
-            sandbox_id,
-            f"chmod 755 {shlex.quote(staging)} && mv -f {shlex.quote(staging)} {shlex.quote(remote)}",
-            timeout=30,
-            message="eosd finalize failed",
-        )
+    if not callable(put_archive):
+        raise RuntimeError("eosd upload requires provider put_archive")
+
+    staging_dir = f"/tmp/eosd-upload-{uuid.uuid4().hex}"
+    staging_file = f"{staging_dir}/eosd"
+    await _check_exec(
+        exec_fn,
+        sandbox_id,
+        f"mkdir -p {shlex.quote(staging_dir)}",
+        timeout=30,
+        message="eosd staging directory setup failed",
+    )
+    await put_archive(
+        sandbox_id,
+        tar_stream=_tar_file_at_path("eosd", payload, mode=0o755),
+        dest_dir=staging_dir,
+    )
+    await _check_exec(
+        exec_fn,
+        sandbox_id,
+        (
+            f"cat {shlex.quote(staging_file)} > {shlex.quote(remote)} && "
+            f"chmod 755 {shlex.quote(remote)} && "
+            f"rm -rf {shlex.quote(staging_dir)}"
+        ),
+        timeout=30,
+        message="eosd finalize failed",
+    )
 
     await _check_exec(
         exec_fn,
@@ -370,11 +379,6 @@ def _tar_file_at_path(path: str, payload: bytes, *, mode: int) -> bytes:
         info.mode = mode
         tar.addfile(info, io.BytesIO(payload))
     return raw.getvalue()
-
-
-def _check_chunk_write(result: object, message: str) -> None:
-    if _exit_code(result) != 0:
-        raise RuntimeError(f"{message}: {getattr(result, 'stdout', '')}")
 
 
 def _exit_code(result: object) -> int:

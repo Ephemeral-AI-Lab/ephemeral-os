@@ -212,6 +212,7 @@ pub struct AppStateBuilder {
     model_registry_path: Option<PathBuf>,
     provisioner: Option<Arc<dyn RequestProvisioner>>,
     transport: Option<Arc<dyn SandboxTransport>>,
+    advisor: Option<Arc<dyn AdvisorPort>>,
     compatibility_mode: bool,
 }
 
@@ -253,6 +254,14 @@ impl AppStateBuilder {
     /// Inject an LLM client (an unconfigured placeholder by default).
     pub fn llm_client(mut self, client: Arc<dyn LlmClient>) -> Self {
         self.llm_client = Some(client);
+        self
+    }
+
+    /// Inject the advisor port (the engine `AdvisorService` stub by default). The
+    /// stub denies every terminal, so a real `AdvisorPort` is required for any
+    /// advisor-gated terminal — which now includes `submit_root_outcome` — to pass.
+    pub fn advisor(mut self, advisor: Arc<dyn AdvisorPort>) -> Self {
+        self.advisor = Some(advisor);
         self
     }
 
@@ -470,7 +479,9 @@ impl AppStateBuilder {
             provider_registry,
             transport,
             provisioner,
-            advisor: Arc::new(AdvisorService),
+            advisor: self
+                .advisor
+                .unwrap_or_else(|| Arc::new(AdvisorService)),
             notifications: Arc::new(NotificationService::new()),
             shutdown: CancellationToken::new(),
         })
@@ -577,6 +588,36 @@ pub(crate) mod test_seams {
             _timeout_s: u32,
         ) -> Result<JsonObject, SandboxApiError> {
             Ok(JsonObject::new())
+        }
+    }
+
+    /// An advisor port that approves every terminal — the test analogue of a
+    /// wired advisor runner. The production `AdvisorService` stub denies every
+    /// terminal, so a test that needs an advisor-gated terminal (now including
+    /// `submit_root_outcome`) to succeed injects this.
+    #[derive(Debug, Default)]
+    pub(crate) struct ApprovingAdvisor;
+
+    impl eos_tools::ports::Sealed for ApprovingAdvisor {}
+
+    #[async_trait]
+    impl eos_tools::AdvisorPort for ApprovingAdvisor {
+        async fn review(
+            &self,
+            _tool_name: &str,
+            _tool_payload: &JsonObject,
+        ) -> Result<String, eos_tools::ToolError> {
+            Ok("approved".to_owned())
+        }
+
+        async fn approval_status(
+            &self,
+            _target_tool: &str,
+        ) -> Result<eos_tools::AdvisorApproval, eos_tools::ToolError> {
+            Ok(eos_tools::AdvisorApproval {
+                approved: true,
+                reason: None,
+            })
         }
     }
 
@@ -742,6 +783,18 @@ pub(crate) mod test_seams {
         factory: Option<EventSourceFactory>,
         agents: Vec<AgentDefinition>,
     ) -> (super::AppState, tempfile::TempDir) {
+        build_test_state_with_advisor(factory, agents, None).await
+    }
+
+    /// Like [`build_test_state`] but injects an explicit advisor port. `None`
+    /// keeps the production `AdvisorService` stub (which denies every terminal),
+    /// so a caller that needs an advisor-gated terminal to pass injects
+    /// [`ApprovingAdvisor`].
+    pub(crate) async fn build_test_state_with_advisor(
+        factory: Option<EventSourceFactory>,
+        agents: Vec<AgentDefinition>,
+        advisor: Option<Arc<dyn eos_tools::AdvisorPort>>,
+    ) -> (super::AppState, tempfile::TempDir) {
         use eos_agent_def::AgentRegistry;
 
         let dir = tempfile::tempdir().expect("tempdir");
@@ -757,6 +810,9 @@ pub(crate) mod test_seams {
             .agent_registry(Arc::new(registry));
         if let Some(factory) = factory {
             builder = builder.event_source_factory(factory);
+        }
+        if let Some(advisor) = advisor {
+            builder = builder.advisor(advisor);
         }
         let state = builder.build().await.expect("build app state");
         (state, dir)

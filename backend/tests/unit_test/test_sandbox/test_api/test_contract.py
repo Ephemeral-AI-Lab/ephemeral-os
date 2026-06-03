@@ -52,12 +52,14 @@ _PUBLIC_VERB_IMPORT_ALLOWLIST = {
         "audit.base",
         "sandbox._shared.models",
     },
-    "tool/shell.py": {
+    "tool/command.py": {
         "audit.base",
-        "sandbox.audit",
-        "sandbox.audit.events",
-        "sandbox._shared.models",
+        "sandbox.api.timeouts",
+        "sandbox.api.transport",
+        "sandbox.api.tool._daemon_response_parsing",
+        "sandbox.api.tool._operation_audit",
         "sandbox._shared.clock",
+        "sandbox._shared.models",
     },
     "raw_exec.py": {
         "audit.base",

@@ -27,7 +27,7 @@ agent-core engine to test agent execution end-to-end. Modules:
 |---|---|---|
 | `config` | api-client creds via `.env`; sandbox + multi-node sizing in a per-run handle | `eos-config` (+ `providers.active` only) |
 | `audit` | **Unified, human-readable, correlated** trace — **bridged consumer-side** | `eos-audit::AuditSink` (in-proc) + `api.audit.pull` (sandbox ring) |
-| `agent` | one `MockedLlmClient` injected into the real loop; run→completion/partial; trivial live api smoke | `EventSource` seam; `eos-runtime::start_request` |
+| `agent-core` (`src/agent_core/`) | one `MockedLlmClient` injected into the real loop; run→completion/partial; trivial live api smoke | `EventSource` seam; `eos-runtime::start_request` |
 | `sandbox` | fast, reusable dask container; single + multi-node; **never mocked** | `eos-sandbox-host` + `/sandbox` wire protocol |
 
 **The two things the user explicitly asked, answered up front:**
@@ -120,10 +120,11 @@ loop consumes `Arc<dyn EventSource>`; concrete clients are built only in
 |---|---|---|---|
 | P1 | Stamp engine `tool_use_id` onto `sandbox_invocation_id` **upstream**; verify every mint/fallback site honors a present id | `eos-engine::tool_call::dispatch` (`metadata_for_call`), `eos-tools::model_tools::sandbox` (drop the `new_v4` fallback when present), `eos-sandbox-host::daemon_client` (`new_invocation_id` — reuse present id) | Per-call audit join. The daemon **already echoes** the wire id as `ToolCallSection.tool_use_id` (`emit_tool_call_event`); the gap is upstream that the id is never populated. **[rev: not a daemon change.]** |
 | P2 | `pub testsupport` feature exposing `ScriptedTurn`/`TurnScript`/`MockedLlmClient` (an `EventSource`) | `eos-engine` (model + emit helpers); reference impls `ScriptedSource`/`MockLlmClient` are `#[cfg(test)]` today | Let the external harness build scripted runs without re-implementing the trait (mirrors `eos-workflow/src/testsupport.rs`). **No loop change.** |
-| P3 | Add `AppStateBuilder::advisor(Arc<dyn AdvisorPort>)` setter + a `pub testsupport` **`AutoApproveAdvisor`** stub | `eos-runtime::app_state` (setter), `eos-engine`/`eos-tools` (stub; `AdvisorPort` is `Sealed`, so the stub ships in-tree) | **Unblocks gated terminals** (`submit_*_outcome`). Today `AdvisorService::approval_status` **always denies** ("advisor runner not wired"), so every gated scenario would block. An injected auto-approver is the *test-appropriate* fix — **not** building the real advisor runtime. |
+| P3 | Add `AppStateBuilder::advisor(Arc<dyn AdvisorPort>)` setter + a `pub testsupport` **auto-approve** `AdvisorPort` stub (**bootstrap scaffold only**) | `eos-runtime::app_state` (setter), `eos-engine`/`eos-tools` (`AdvisorPort` is `Sealed`, stub ships in-tree) | Lets **non-advisor** tiers run gated terminals before the real advisor helper runner (D1) lands. **[rev]** It **bypasses** the real `ask_advisor`→sub-agent→`submit_advisor_feedback` path, so advisor-branch scenarios and the §14 bundle use the real sub-agent path (D1), **not** this stub. The advisor is a mocked **sub-agent**, not a verdict service (§6.3). |
 | P4 | Wire the **dead** `engine.tool.*` audit path to publish on the injected sink; enrich `AuditNode` from `QueryContext`/`ExecutionMetadata` (request/task/attempt ids) | `eos-engine::query::loop_` + `eos-engine::audit::stream` (`audit_events_from_stream_event` has **zero** callers) | Without this the collector sees only `plugin.*`. Enrichment lets tool rows self-group into the §7 tree without an `eos-state` join. |
-| P5 | Daemon-side **emission widening**: add the breadcrumb ids the daemon already receives (`SandboxCaller::identity_block`: workflow/attempt/task) to `ToolCallSection` | `sandbox/eos-protocol::audit` + `eos-daemon::server::emit_tool_call_event` | The ids reach the daemon but are discarded at section-build time (only `agent_id` kept). No wire change. |
+| P5 | Daemon-side **audit emission widening** (a *family*, all emission-only, no wire change): (a) `ToolCallSection` carries the breadcrumb ids the daemon already receives (`SandboxCaller::identity_block`: workflow/attempt/task); (b) emit distinct `overlay_workspace.mounted`/`.published` (not one `cleanup`) populating mount_ms/lease_id/manifest_root_hash/committed_layer_id/publish_layer_ms/upperdir_bytes; (c) `OccSection` sets `changeset_id` + real base/current manifest_version (not `manifest_depth`) + `occ.conflict` on `Lane::Critical`; (d) propagate real `OverlayPathChangeKind` (delete/opaque_dir/symlink) into `changed_path_kinds` instead of hardcoded `"write"` | `eos-daemon::dispatcher` (`emit_workspace_lifecycle_audit`, `emit_occ_audit`, `command_exec` response) + `eos-protocol::audit` | Each field/event exists in the `*Section` schema but is never set, so the §14 sandbox assertions (overlay mounted↔cleaned pair, occ changeset causal-chain, delete/opaque_dir kinds) have no host. Consumer-side normalize cannot synthesize what the daemon never emits. |
 | P6 | Add `providers.active: ProviderKind` to `eos-config` (keys stay **env-only**, matching Python) | `eos-config::providers` | **Bugfix**: `default_llm_client`'s `if/else-if` makes OpenAI unreachable whenever `ANTHROPIC_API_KEY` is set. Update the `ProvidersConfig` parity case + insta snapshot. |
+| P7 | **Notification/reminder capture surface**: the run driver records the loop's appended notification/system-reminder user messages (off the `LlmRequest` message stream the mock already scans) into a queryable list | `test_runner` run driver (harness-side; the rules already exist in `eos-engine::notifications`) | The 75/100/125% tier reminders + `terminal_call_reminder` ride the **message stream**, not the audit `*Section`s, so §7's collector cannot see them. Assert **structurally** (rule fired, tier, order, once-vs-repeat, `exit_reason`); exact frozen text would need a separate engine change (`body()` is generic today) — out of scope. |
 
 ### 3b. Agent-core / sandbox migration work the harness DEPENDS ON — OUT OF SCOPE (flagged)
 > The **baseline** mock tier (non-gated correctness, no explorer subagents)
@@ -132,10 +133,11 @@ loop consumes `Arc<dyn EventSource>`; concrete clients are built only in
 
 | # | Dependency | Gates which tier | Workaround until done |
 |---|---|---|---|
-| D1 | `SubagentSupervisorPort::spawn` must drive `run_ephemeral_agent` for `subagent`-role agents (today it only `register_running`, never runs the loop) | Scenarios using `run_subagent`/explorer | Skip explorer-spawning scenarios; baseline uses `delegate_workflow` (a different, working path) |
+| D1 | **Sub-agent helper runner** (unified): BOTH `SubagentSupervisorPort::spawn` (explorer) AND `AdvisorPort::review` (advisor) must drive `run_ephemeral_agent` for the spawned profile, so the mock scripts them by name (§6.3). Today both are stubbed (`supervisor.rs` only `register_running`; `AdvisorService` is a placeholder "until eos-runtime wires a helper runner around the engine loop") | Real advisor gate (every gated terminal), explorer/`run_subagent` turns — **MANDATORY for the §14 bundle** (iter1 explorer-spawn + advisor branches are P0) | Non-advisor tiers use the P3 auto-approve stub + `delegate_workflow`; advisor/explorer/bundle cannot run until this lands |
 | D2 | Lifecycle audit emitters (`request/workflow/iteration/attempt started/completed`) in `eos-workflow` (it holds an unused `audit_sink`) | The **full** request→workflow→attempt timeline tree (§7.5) | Tool-level + sandbox-level timeline works; lifecycle nodes joined from `eos-state` instead |
 | D3 | **Cooperative cancellation** in tool dispatch (poll `shutdown.is_cancelled()` at await boundaries / thread the token to the daemon client) | Clean **mid-tool** early-abort (§6.4) | Baseline terminates via natural loop exits / between turns; mid-tool abort is best-effort (see §6.4 consistency contract) |
 | D4 | Per-test **OCC publish idempotency/atomicity across abort** (verify daemon-side) | Early-abort during a sandbox write | Drive early-abort at turn boundaries, not mid-write |
+| D5 | **Depth-aware planner terminal gating**: carry an `is_recursive`/depth flag through `WorkflowStarter::start` → planner launch and drop `submit_plan_defers_goal` at depth>1 (today `eos-workflow::attempt::launch` builds one static `AgentDef`, no depth filtering) | The depth-2 child "close-only terminals" assertion (`tcco:TCCO9`) | Either land it as an in-scope `eos-workflow` change or **drop** that one sub-assertion (state which in §14) |
 
 ---
 
@@ -144,16 +146,16 @@ loop consumes `Arc<dyn EventSource>`; concrete clients are built only in
 ```
                           test_runner/  (ONE new top-level crate)
    ┌─────────────────────────────────────────────────────────────────────────┐
-   │  config        audit            agent (mock|api)            sandbox       │
+   │  config        audit            agent-core (mock|api)       sandbox       │
    │  ──────        ─────            ────────────────            ───────       │
    │  RunConfig     Collector        MockedLlmClient             SandboxPool   │
    │  (.env→env)    Timeline+Render  (EventSource)               FastReset     │
    │  run params    normalize.rs     run→completion/partial      MultiNode     │
-   │                (TraceEvent)     AutoApproveAdvisor(inj.)     (rollback)    │
+   │                (TraceEvent)     mock subagents(advisor/expl) RawExec+commit│
    └───────┬───────────┬──────────────────┬───────────────────────┬──────────┘
            │           │                  │                        │
    reads   │  in-proc  │ AuditSink   inject EventSource +    wire: eos-protocol
-   .env+yaml│  capture │             advisor stub           api.v1.* / api.audit.*
+   .env+yaml│  capture │             scripted subagents    api.v1.* / api.audit.*
            ▼           ▼                  ▼                        ▼
    ┌──────────────┐  ┌──────────────────────────────┐   ┌─────────────────────┐
    │  eos-config  │  │          agent-core            │   │   eos-sandbox-host   │
@@ -239,7 +241,10 @@ Source change: P6 (`providers.active` + parity-case/snapshot update). **[rev: no
 
 ---
 
-## 6. Module: `agent` (mock + api)
+## 6. Module: `agent-core` (`src/agent_core/`) (mock + api)
+
+> Module dir is `agent_core/` (Rust module names cannot contain `-`); it is named
+> after the upstream `agent-core` crates it drives. **[rev c]**
 
 ### 6.1 The seam (one mock surface)
 ```
@@ -297,14 +302,47 @@ impl EventSource for MockedLlmClient {
    user message carrying `ToolResult` blocks (the loop appends a notification/reminder
    user message *after* the results — a naive "last message" read returns the reminder).
 
-### 6.3 Gated terminals & subagents (the §3 prerequisite, surfaced here)
-Gated terminals (`submit_generator_outcome`/`submit_reducer_outcome`/
-`submit_root_outcome`) call `ask_advisor` → `AdvisorPort::approval_status`. The
-harness injects **`AutoApproveAdvisor`** via the new `AppStateBuilder::advisor(...)`
-setter (P3). The harness also registers `main`+`helper`+`subagent` agent profiles
-into the **immutable** `AgentRegistry` (built once via `AgentRegistryBuilder`,
-injected through `AppStateBuilder::agent_registry`). Explorer (`run_subagent`)
-scenarios additionally require D1 (out of scope) and are skipped until then.
+### 6.3 Mocked sub-agents — the advisor and the explorer are the **same mechanism** [rev]
+**The advisor is a sub-agent, not a verdict service.** `ask_advisor(tool_name,
+tool_payload)` is a tool that calls `AdvisorPort::review` — documented in
+`eos-tools::ports` as *"the advisor helper-agent **runner**"* — which is meant to
+**spawn an advisor agent and run it through the real loop**, whose terminal is
+`submit_advisor_feedback`; the `AdvisorApproval` pre-hook
+(`eos-tools::hooks::run_advisor_approval`) later calls `approval_status`, which
+reads that feedback from the conversation. `AdvisorService` today is explicitly a
+placeholder *"until `eos-runtime` wires a helper runner around the engine loop."*
+
+So **every mocked sub-agent — advisor, explorer (`run_subagent`), and any helper —
+is driven by one mechanism**: the loop spawns the sub-agent → it runs through
+`run_ephemeral_agent` → the harness's `event_source_factory` returns a
+`MockedLlmClient` whose `TurnScript` is selected by **profile name**
+(`planner`/`executor`/`reducer`/`advisor`/`explorer`). This is exactly the Python
+mock's shape (`registered_mock_agents` = main+helper+subagent profiles;
+`scenario_script_for` dispatches by `agent_def.name`).
+
+**The advisor verdict branches are produced by scripting the advisor sub-agent,
+NOT by a `ScriptableAdvisor` Port** (that abstraction is dropped):
+| Branch | How the mock produces it |
+|---|---|
+| approve | advisor run scripts `submit_advisor_feedback` with an approving verdict |
+| reject | advisor feedback rejects → `approval_status` → `approved:false, reason:rejected` |
+| wrong_tool | advisor feedback reviews a different `tool_name` → `reason:wrong_tool` |
+| missing | the agent submits the terminal **without** calling `ask_advisor` → `reason:missing` |
+| advisor_failed | the advisor run is scripted to crash / yield no terminal → `review` errors |
+
+**Source-side prerequisite (D1, unified):** both `SubagentSupervisorPort::spawn`
+(explorer) and the real `AdvisorPort::review` (advisor helper runner) must
+actually drive `run_ephemeral_agent` for the spawned profile — today both are
+stubbed. This single "sub-agent helper runner" is what unblocks advisor gates,
+explorer turns, and the §14 bundle. The harness registers `main`+`helper`+
+`subagent` profiles into the **immutable** `AgentRegistry` (`AgentRegistryBuilder`
+→ `AppStateBuilder::agent_registry`).
+
+*(Optional bootstrap only:* an injected **auto-approve** `AdvisorPort` stub via
+`AppStateBuilder::advisor()` can unblock **non-advisor** tiers' gated terminals
+before the helper runner lands — but it **bypasses** the real
+`ask_advisor`→`submit_advisor_feedback` path, so the bundle and any advisor-branch
+scenario use the real sub-agent path, not the stub.)*
 
 ### 6.4 Run→completion + early-terminate (with the consistency contract)
 ```
@@ -343,13 +381,14 @@ Gated by key presence (`#[ignore]` + env preflight). Not a matrix.
 
 ### 6.6 Files & source-side change
 ```
-test_runner/src/agent/
+test_runner/src/agent_core/
   mod.rs
   script.rs         // ScriptedTurn, ScriptedCall, TurnScript, emit_stream, trailing_tool_results
   mocked_llm.rs     // MockedLlmClient (impl EventSource)
-  advisor_stub.rs   // wires AutoApproveAdvisor + registers main/helper/subagent profiles
+  subagents.rs      // mocked sub-agents (advisor/explorer) scripted by profile name; registers main/helper/subagent profiles; optional auto-approve AdvisorPort bootstrap stub
   run.rs            // RequestEntryHandle driver + early-terminate (select!)
   api_smoke.rs      // trivial live anthropic/openai test
+  // see §14 for the bundle-scenario additions (notification capture, spike companion)
 ```
 Source changes: P2, P3 (+ D1 flagged for explorer scenarios).
 
@@ -448,15 +487,52 @@ SUMMARY  tools 31 (write 8/read 6/exec 4/search 9/terminal 4) · sandbox occ.pub
 ### 8.1 Drive via the `/sandbox` wire (A3)
 Orchestrate **only** through `eos-sandbox-host`: provision
 (`RequestSandboxProvisioner::prepare_for_run`), lifecycle (`SandboxLifecycle`),
-transport (`DaemonClient: SandboxTransport`), tool ops (`tool_api::*` → `api.v1.*`),
-audit pull (`api.audit.*`), one-time eosd push (`runtime_artifact::
-ensure_eosd_uploaded`, marker-skip `/eos/daemon/.eosd-sha256`).
+transport (`DaemonClient: SandboxTransport`), typed tool ops (`tool_api::*` →
+`api.v1.*`), raw daemon ops (`DaemonClient::call_daemon_api(op: &str, …)` — the
+escape hatch for `api.build_workspace_base` / `api.commit_to_workspace` /
+`api.runtime.ready` / `api.isolated_workspace.*` / `plugin.*` that have no typed
+`DaemonOp` variant), audit pull (`api.audit.*`), one-time eosd push
+(`runtime_artifact::ensure_eosd_uploaded`, marker-skip `/eos/daemon/.eosd-sha256`).
 
-### 8.2 Fast reuse — **[rev] corrected per-test reset**
-The review verified that overlay-only reset **cannot** prevent contamination: the
-Python `reset_sweevo_workspace` does `git reset --hard / clean -fd / checkout -f
-base_commit` + `build_workspace_base{reset}` (+ `pip install -e .` + daemon rebind),
-and `commit_to_workspace` materializes overlays into the repo's `.git`.
+**`RawExec` (host docker exec — NOT a daemon op).** `eos-sandbox-host::
+ProviderAdapter::exec → RawExecResult{exit_code,stdout,stderr}` runs a command in
+the container **outside** the overlay, so it is the only way to (a) empty
+`/testbed` keeping `.git`, (b) read the **base disk** after commit-back
+(`api.v1.exec_command` is overlay-bound and cannot see materialized files), and
+(c) run host-side `git add -f` / `git diff --cached` / `test -d /testbed/.git`.
+The §14 commit-back capstone depends on it; `ops.rs` exposes it as `raw_exec(cmd)`.
+
+### 8.2 Fast reuse — the bench `bench_rust_daemon_phase3.py` setup (task b) + corrected reset
+**Canonical fast-setup sequence** (the authoritative reference, ported from
+`backend/scripts/bench_rust_daemon_phase3.py` → its Rust `eos-sandbox-host`
+equivalents):
+
+```
+1. SandboxLifecycle::create / prepare_for_run(reuse by sandbox_id|name)   # DockerBench.create(container_id, name_prefix)
+2. (verify arch)                                                           # collect_environment
+3. reset_runtime                                                          # kill pid, rm sock/pid/env/log + clear layer-stack root
+4. runtime_artifact::ensure_eosd_uploaded                                # upload_artifact (marker-skip on reuse)
+5. DaemonClient::ensure_daemon_current(sandbox_id)                       # invalidate endpoint → spawn (skip if pid+socket live)
+6. DaemonClient resolve TCP endpoint
+7. call_daemon_api("api.build_workspace_base", {workspace_root:"/testbed", reset:true}, timeout=180)   # version-1 base binding
+8. call_daemon_api("api.runtime.ready", {}, timeout=30)                  # readiness gate (control/data plane + mutation gate)
+```
+Steps 1–6 are **one-time/cacheable per warm container** (skip on reuse: cached
+image tag, eosd sha-marker, daemon pid+socket liveness). Steps 7–8 are the
+**per-test** binding. `WORKSPACE_ROOT=/testbed`, `LAYER_STACK_ROOT` are the bench
+constants.
+
+**From-scratch base variant (§14 bundle, `cap:SAND1`/`ls:SAND1`).** Before step 7,
+empty the repo keeping only `.git`:
+`raw_exec("find /testbed -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +")`,
+then `build_workspace_base{workspace_root:"/testbed", reset:true}` yields the
+version-1 base over the emptied repo. (Confirmed supported: `eos-layerstack::
+build_workspace_base` walks whatever exists and always emits `Manifest::new(1)`.)
+
+**Corrected per-test reset.** Overlay-only reset **cannot** prevent contamination:
+the SWE-EVO reset does `git reset --hard / clean -fd / checkout -f base_commit` +
+`build_workspace_base{reset}` (+ `pip install -e .` + daemon rebind), and
+`commit_to_workspace` materializes overlays into the repo's `.git`.
 
 ```
                        FIRST container in session         EVERY reused test
@@ -498,12 +574,19 @@ N-provisioner, the rollback, the reuse discovery, and per-node labelling.
 test_runner/src/sandbox/
   mod.rs
   pool.rs        // SandboxPool: provision / provision_n (+rollback) / reuse / teardown
-  fast_reset.rs  // real per-test reset; cacheable-skip logic
+  fast_reset.rs  // bench fast-setup + real per-test reset + from-scratch empty-/testbed bootstrap
   instance.rs    // SweevoInstance resolve (EOS_SWEEVO_INSTANCE → image/base_commit)
-  ops.rs         // thin typed facade over eos-sandbox-api tool_api (+ plugin if that tier is built)
+  ops.rs         // facade: typed tool_api (api.v1.*) + raw_exec (host docker exec)
+                 //   + call_daemon_api raw ops: build_workspace_base, commit_to_workspace,
+                 //     runtime.ready, isolated_workspace.{enter,exit,status}, plugin.{ensure,status}, plugin.lsp.*
 ```
-Source change: N-provisioner + rollback + reuse discovery (host-side); **plugin
-`DaemonOp` variants only if the plugin sandbox tier is built**.
+Source change: N-provisioner + rollback + reuse discovery (host-side). **[rev]**
+**Plugin/LSP needs no new typed surface to be reachable** — the daemon already
+serves `plugin.lsp.{hover,diagnostics,apply_workspace_edit}` / `api.plugin.{ensure,
+status}`, and the harness reaches them via the existing **raw-op**
+`DaemonClient::call_daemon_api(op: &str, …)`. Adding typed `DaemonOp::{PluginEnsure,
+PluginStatus, PluginLspOp, IsolatedWorkspace*}` variants is an optional ergonomic
+nicety, not a prerequisite (§14 LSP/plugin rows ride the raw-op path).
 
 ---
 
@@ -547,8 +630,21 @@ pub struct Expectation {
     pub dependency_prompt_xml: bool,                               // the real-XML-envelope gate [rev]
     pub sandbox_checks_pass: bool,                                 // [rev]
     pub forbidden_substrings: Vec<String>,    // no-internal-error gate: "internal_error","stale lowerdir",… [rev]
+    // ── §14 bundle-driven additions ───────────────────────────────────────────
+    pub exit_reason: Option<QueryExitReason>,        // assert TERMINAL_NOT_SUBMITTED (150% ceiling)
+    pub notifications: Vec<NotificationProbe>,        // {rule, tier, occurrence: Once|Repeats(n), order_index} — structural, not exact text
+    pub advisor_denials: Vec<String>,                 // rejected/wrong_tool/missing/advisor_failed observed
+    pub hook_denials: Vec<String>,                    // nested_workflow, destructive_git/shell, forbidden_in_isolated_workspace, …
+    pub iteration_axes: Vec<(IterationCreationReason, Option<String>)>, // (Initial|DeferredGoalContinuation, iteration_goal) — deferral-vs-retry axis
+    pub registry_profile_checks: bool,                // role==role.value, limits 100/100/50, executor triggers, no SkillLintError
+    pub commit_back: Option<CommitBackAssertion>,     // §14 capstone: {manifest_version==1, timings keys, host-git lists paths, .git survives}
 }
 ```
+`QueryExitReason` and `IterationCreationReason` are real `eos-engine`/`eos-state`
+types. `notifications`/`advisor_denials`/`hook_denials` are populated from the
+run driver's captured notification/system-reminder message stream (P7) + the
+audit timeline; `commit_back` from the `api.commit_to_workspace` RPC result + a
+`RawExec` post-check.
 
 ### 9.4 Scenario catalog (small, orthogonal, high-signal)
 - **Mock×AgentExecution**: `initial_workflow`, `initial_messages_capture` (root-request
@@ -591,7 +687,7 @@ test_runner/                       (NEW top-level crate)
     lib.rs
     config/                        // §5
     audit/                         // §7  (collector owns TraceEvent + normalize)
-    agent/                         // §6  (MockedLlmClient, run, advisor stub, api smoke)
+    agent_core/                    // §6  (MockedLlmClient, run, scripted subagents, api smoke) — named after the agent-core crates it drives
     sandbox/                       // §8
     core/                          // run_pipeline spine, LifecycleHooks, reports, Expectation, graph_summary
     scenarios/                     // §9  scenario turn-script data + catalog
@@ -612,7 +708,7 @@ Source changes live in their home crates (P1–P6 in agent-core/sandbox; D1–D4
 |---|---|
 | **SRP** | One module per job. Audit **emission** stays in source modules; audit **presentation/normalization** stays in the collector — the bridge is consumer-side, so there is one source of truth per side. |
 | **Open/Closed** | New scenario = new `ScriptedTurn` data. New audit source = new `From<…>` in `normalize.rs`. No engine/collector change. |
-| **Liskov** | `MockedLlmClient` is a drop-in `EventSource`; `AutoApproveAdvisor` a drop-in `AdvisorPort`; `SandboxPool` honors the `eos-sandbox-host` contract. |
+| **Liskov** | `MockedLlmClient` is a drop-in `EventSource` (advisor/explorer are just profiles it scripts); the bootstrap auto-approve `AdvisorPort` is a drop-in; `SandboxPool` honors the `eos-sandbox-host` contract. |
 | **ISP** | Four narrow facets; `TurnScript` is one method; `SandboxTransport` is one `call`. |
 | **DIP** | Harness depends on traits (`AuditSink`, `EventSource`, `AdvisorPort`, `SandboxTransport`), injected via existing `AppStateBuilder` setters (+ the new `advisor()`). |
 
@@ -638,10 +734,11 @@ layout; building the real advisor runtime (an injected stub suffices).
 - [ ] `config`: `RunConfig`, harness-only `dotenvy::dotenv()` (NOT `eos-runtime::main`)
 - [ ] verify: `.env` key hydrates env → correct provider client builds; env overrides `.env`
 
-### Phase 2 — Mock agent (baseline)
+### Phase 2 — Mock agent-core (baseline)
 - [ ] **P2** `pub testsupport` `ScriptedTurn`/`TurnScript`/`MockedLlmClient` (no loop change)
-- [ ] **P3** `AppStateBuilder::advisor()` setter + `AutoApproveAdvisor` stub; register main/helper/subagent profiles
-- [ ] `agent`: `MockedLlmClient`, `trailing_tool_results` (backward scan), run driver
+- [ ] **P3** `AppStateBuilder::advisor()` setter + auto-approve bootstrap stub; register main/helper/subagent profiles
+- [ ] **D1** (mandatory for advisor/explorer/§14): spawn + `AdvisorPort::review` drive `run_ephemeral_agent`; advisor/explorer scripted by profile name (§6.3)
+- [ ] `agent_core`: `MockedLlmClient`, `trailing_tool_results` (backward scan), run driver
 - [ ] verify: 1-tool mock script reaches `submit_root_outcome`; **gated terminal passes** via stub; budget parity holds
 - [ ] verify: condition-watcher terminates a run early → `Partial` (turn-boundary; audit best-effort noted)
 - [ ] **D1** (flagged): explorer/`run_subagent` scenarios deferred until `spawn` drives `run_ephemeral_agent`
@@ -689,8 +786,132 @@ layout; building the real advisor runtime (an injected stub suffices).
   seq in `eos-audit`.
 
 ### Genuinely open (need a user call)
-- **§3b scope**: do D1 (subagent spawn) / D2 (lifecycle audit emitters) / D3 (cooperative
-  cancellation) get done as part of this effort, or are they tracked as agent-core
-  migration work that the corresponding test tiers wait on? The **baseline** mock +
-  sandbox tiers do **not** need them.
+- **§3b scope**: do D1 (**sub-agent helper runner** — spawn + advisor `review` drive
+  the loop), D2 (lifecycle audit emitters), D3 (cooperative cancellation), D5
+  (depth-aware planner terminals) get done as part of this effort, or are they
+  tracked as agent-core migration work the corresponding tiers wait on? The
+  **baseline** non-advisor mock + sandbox tiers need only 3a; the **§14 ultra-complex
+  bundle** needs D1 (+ the P5 audit-emission family) before it can run.
+
+---
+
+## 14. Ultra-complex bundled scenario — conformance & closure
+
+> Reviews the spec against `docs/plans/ultra_complex_bundled_scenario_CHECKLIST.html`
+> (282 items / 17 areas). **That checklist is written in outdated pre-migration
+> terms** (TaskCenter, `backend/src/sandbox/*.py`, `loop.py`,
+> `submit_workflow_handoff`, `_advisor_script`); this section **adopts the new Rust
+> mechanism/terminology** and judges hosting on the *migrated* architecture.
+> A 6-cluster code-verified cross-check found the architecture **hosts the majority**
+> ("partial" everywhere, never "no"); the residual gaps are tight and enumerable below.
+
+### 14.1 Terminology translation (old checklist → new Rust)
+| Old (checklist) | New (this spec / migrated code) |
+|---|---|
+| TaskCenter / `task_center_runner` | Task-first `test_runner`; persisted `Workflow→Iteration→Attempt` under `eos-workflow`; root `Task(role=root)` via `eos-runtime::start_request` |
+| `loop.py` / `run_ephemeral_agent` | `eos-engine::query::run_query` / `eos-runtime::run_root_agent` |
+| `ScenarioLoopRunner` / `ScenarioEventSource` | `MockedLlmClient` (`EventSource`) via `AppState.event_source_factory`, scripted by **profile name** |
+| `submit_workflow_handoff` (terminal) | **non-terminal** `delegate_workflow(goal)` → `WorkflowStarter::start(prompt, parent_task_id)` (parent stays Running) |
+| `_advisor_script` always-approve | advisor is a **mocked sub-agent** (§6.3); `AdvisorPort::review` runs it through the loop; terminal `submit_advisor_feedback` |
+| `run_subagent`/explorer | same sub-agent mechanism; `SubagentSupervisorPort::spawn` → `run_ephemeral_agent` (D1) |
+| `backend/src/sandbox/{overlay,occ,layerstack,ephemeral,isolated}` | `sandbox/crates/eos-{overlay,occ,layerstack,daemon,isolated}` over `api.v1.*` |
+| daemon-ring audit + `sandbox.audit` events | `eos-protocol::audit` `*Section` (pull) + `eos-audit::AuditEvent` (in-proc), bridged **consumer-side** in `test_runner::audit::normalize` |
+| `commit_to_workspace` / `apply_layerstack_to_repo` | `api.commit_to_workspace` → `eos-layerstack::commit_to_workspace` (reducer exit-gate) |
+| `build_workspace_base` / `api.runtime.ready` | same op names, served by `eos-daemon` (`op_build_workspace_base`/`op_runtime_ready`); base layer `B000001-base` |
+| notification rules (`terminal_tool_call_count_reminder.py`) | `eos-engine::notifications` `ToolCallBudget{75/100/125%}` + `TerminalCallReminder`; 150% = `query::loop_::terminal_submission_failed` |
+| `_iws_rpc` in provider container | `DaemonClient::call_daemon_api(api.isolated_workspace.{enter,exit,status})` — the TCP channel terminates in-container, so no helper script |
+| `AUTO_SQUASH_MAX_DEPTH` (Python) | same constant in `eos-occ::service` / `eos-layerstack` (=100) |
+
+### 14.2 The bundle in new terms (the flagship Mock scenario)
+ONE scenario `bundle.ultra_from_scratch` builds a fresh `taskflow` Python package
+in an emptied `/testbed` (keep `.git`), driven through the **real loop**:
+
 ```
+root request ──▶ root Task(role=root) ──▶ root agent calls delegate_workflow(build goal)
+   │                                          │
+   │   iter1 (PLAN+RUN, deferring): explorer sub-agent confirms Python-only image (D1);
+   │       planner scripts the defer; scaffold generator builds the base; reducer closes
+   │                                          ▼  (DeferredGoalContinuation)
+   │   iter2 (PLAN+RUN, closing): mixed DAG — gen[scaffold|modA|modB|depthchain|bg|lsp|delegate|
+   │       consumer|verbose]; same-path OCC race; auto-squash depth>100; background lease across
+   │       squash; advisor-gated registry migration; delegate_workflow → depth-2 child (operators)
+   │                                          ▼
+   │   reducer (EXIT GATE): read-back verify → api.commit_to_workspace → /testbed/.git materialized
+   │
+   ├─ FOCUSED spike companion (limit=4/20): bespoke AgentDefinition through the SAME real loop
+   │     for exact budget-tier text/order (the Scenario protocol has no per-task limit)
+   └─ OUT-OF-BAND IWS same-port-3000 lane: api.isolated_workspace.enter + api.v1.shell via
+         call_daemon_api inside the provider container (netns/unshare — Live only)
+```
+
+**Failure containment (authoring contract, no code change).** One iteration resolves
+to exactly one SUCCEEDED/FAILED, and the reachability gate requires every generator
+transitively needed by a reducer — so retry-then-pass / exhaust-both / drop-defer /
+never-submit-`run_exhausted` lanes **MUST** each be a **separate standalone run or a
+depth-2 child workflow** (`delegate_workflow`), never sibling tasks of the top-level
+closing attempt. Otherwise outcome-projection + the reachability gate cross-contaminate
+and the closing attempt cannot PASS.
+
+### 14.3 17-area hosted matrix (new architecture)
+| Area (id) | Hosted | Lands in | Note |
+|---|---|---|---|
+| overlay (ov) | ✔/▲ | SandboxRpc + audit | response-assertable; some audit fields need P5 |
+| layerstack (ls) | ✔/▲ | SandboxRpc + audit | lease/squash via timings + audit |
+| OCC (occ) | ✔/▲ | SandboxRpc + audit | conflict/retry via response; changeset_id/versions need P5 |
+| API+squash (api) | ✔/▲ | SandboxRpc | `layer_metrics` orphan counts hardcoded 0 (D-flag) |
+| ephemeral (eph) | ✔/▲ | SandboxRpc | overlay capture/publish |
+| isolated workspace (iws) | ▲ | SandboxRpc (**Live**) | lifecycle JSONL not bridged (G2); netns = Live-only |
+| commit-back CAPSTONE (cap) | ▲ | **new capstone scenario** | needs RawExec + commit-back assertion (G5) |
+| workflow/iter/attempt (tcwo) | ✔ | AgentExecution + graph_summary | hosted |
+| ContextEngine (tcco) | ✔/▲ | Expectation.dependency_prompt_xml | depth-2 close-only needs D5 |
+| retry/continuation (tcre) | ✔ | Expectation (iteration_axes) | hosted |
+| sandbox tools (tsx) | ✔ | Mock×SandboxTools | fully hosted |
+| LSP/plugin (tlsp) | ✔/▲ | SandboxRpc (raw-op) | reachable via `call_daemon_api`; some lifecycle seams (G6) |
+| enter/exit IWS (tiws) | ▲ | SandboxRpc | JSONL bridge (G2) + ops.rs facade |
+| planner/gen/reducer (apgr) | ✔/▲ | AgentExecution | profile-bootstrap checks added to Expectation |
+| advisor/explorer (aadv) | ▲ | AgentExecution | **mocked sub-agents** (§6.3) need D1 |
+| hooks (hk) | ▲ | new Hooks assertions | denial reasons → Expectation.hook_denials |
+| notifications (noti) | ▲ | new Notification capture (P7) | structural assertion; exact frozen text out of scope |
+
+✔ hosted · ▲ partial (closure below). No area is unhostable.
+
+### 14.4 Closure ledger (what to add — grouped, in new terms)
+**(A) In-scope source-side `P5` audit-emission family** (emission-only, no wire change):
+overlay `mounted`/`published` events + fields; OCC `changeset_id` + real manifest
+versions + `Lane::Critical`; real `changed_path_kinds` (delete/opaque_dir). → §3a P5.
+
+**(B) Flagged agent-core/sandbox dependencies (§3b):** D1 (sub-agent helper runner —
+advisor + explorer; **bundle-mandatory**); D5 (depth-aware planner terminals for the
+depth-2 close-only assertion, or drop `tcco:TCCO9`); `api.layer_metrics` orphan/missing
+derivation (or re-express the lease-GC invariant via observable `leased_layers` deltas);
+shell-pre-mount-squash + `EOS_SHELL_MOUNT_SQUASH_MAX_DEPTH` (absent in Rust → port or
+drop `ov:SAND10`'s shell sub-claim).
+
+**(C) Harness additions (in scope, `test_runner`-side):**
+- **RawExec** (host docker exec, §8.1) for empty-`/testbed`, base-disk readback, host git.
+- **Commit-back capstone scenario** (§14.2) asserting `api.commit_to_workspace`
+  {`manifest_version==1`, commit timings keys} + RawExec post-checks (git lists every
+  path, `.git` survives).
+- **IWS lifecycle JSONL pull facet**: read `EOS_ISOLATED_WORKSPACE_AUDIT_PATH` in-container
+  via `api.v1.shell`/`read_file`, add `From<IwsLifecycleRecord>` to `normalize.rs`
+  (`eos-isolated` writes its own JSONL, *not* the `api.audit.pull` ring).
+- **Notification/reminder capture** (P7) + `Expectation.notifications`/`exit_reason`.
+- **Spike companion** lane: a bespoke `AgentDefinition` (`tool_call_limit` 4/20) via
+  `AgentRegistryBuilder`, one-tool-per-turn, through the real loop — for budget-tier
+  order/once/repeat (the Scenario protocol has no per-task limit).
+- **`ops.rs` facade** rows for `api.isolated_workspace.{enter,exit,status}` + plugin/LSP
+  raw-ops (no new typed `DaemonOp` strictly required).
+
+**(D) Expectation deltas** (added in §9.3): `exit_reason`, `notifications`,
+`advisor_denials`, `hook_denials`, `iteration_axes`, `registry_profile_checks`,
+`commit_back`. Each maps to a concrete checklist assertion.
+
+### 14.5 Bundle progress sub-checklist
+- [ ] **D1** lands (sub-agent helper runner) → advisor branches + explorer turn run through the real loop
+- [ ] **P5** audit-emission family lands → overlay/OCC/kind assertions have a host
+- [ ] from-scratch empty-`/testbed` bootstrap + bench fast-setup (§8.2) green on a warm dask container
+- [ ] commit-back capstone scenario asserts the materialization round-trip (RawExec + RPC)
+- [ ] IWS lifecycle JSONL pull facet + out-of-band same-port-3000 lane (Live, in-container)
+- [ ] notification/reminder capture (P7) + spike companion (limit 4/20) assert tier order/once/repeat + 150% `exit_reason`
+- [ ] failure-containment discipline enforced: each fail/exhaust/drop lane is its own standalone/child workflow
+- [ ] one `bundle.ultra_from_scratch` scenario wires it all through the real loop; 17/17 areas assert green (or explicitly dropped sub-claims recorded)

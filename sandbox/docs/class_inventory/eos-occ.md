@@ -175,7 +175,7 @@ Terminal outcome for one path after the publish transaction.
 
 #### `ChangesetResult`  ·  _struct_  ·  derives: `Debug, Clone, PartialEq`  ·  [L110]
 
-Aggregate result of a published (or aborted) changeset, with per-path outcomes, the produced manifest version, and Python-compatible `occ.commit.*` timings.
+Aggregate result of a published (or aborted) changeset, with per-path outcomes, the produced manifest version, and `occ.commit.*` timings.
 
 **Fields**
 
@@ -197,7 +197,7 @@ Aggregate result of a published (or aborted) changeset, with per-path outcomes, 
 
 #### `MaintenancePolicy`  ·  _trait_  ·  [L26]
 
-Post-publish maintenance hook run after a successful OCC commit (mirrors the Python `MaintenancePolicy` Protocol; implementations are synchronous).
+Post-publish maintenance hook run after a successful OCC commit; implementations are synchronous.
 
 <details><summary>Methods (1)</summary>
 

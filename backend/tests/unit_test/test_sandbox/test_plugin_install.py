@@ -1,4 +1,4 @@
-"""Unit tests for sandbox.ephemeral_workspace.plugin.install."""
+"""Unit tests for sandbox.api.plugin_install."""
 
 from __future__ import annotations
 
@@ -13,8 +13,8 @@ from pathlib import Path
 import pytest
 
 from plugins.core.manifest import parse_plugin_manifest
-from sandbox.ephemeral_workspace.plugin import install as install_mod
-from sandbox.ephemeral_workspace.plugin.install import (
+from sandbox.api import plugin_install as install_mod
+from sandbox.api.plugin_install import (
     PluginInstallError,
     ensure_installed,
     plugin_install_dir,
@@ -178,7 +178,7 @@ def test_marker_hit_after_remote_lock_skips_bundle_build(
         raise AssertionError("bundle should not be built after locked marker hit")
 
     fake = _SecondMarkerExec(marker_present=False)
-    monkeypatch.setattr(install_mod, "_build_tar", fail_build)
+    monkeypatch.setattr(install_mod, "_build_plain_tar", fail_build)
 
     digest = asyncio.run(ensure_installed("sb-1", manifest, exec_fn=fake))
 
@@ -192,8 +192,14 @@ def test_marker_miss_uploads_and_runs_setup(tmp_path: Path) -> None:
     manifest = parse_plugin_manifest(plugin_dir)
 
     fake = _FakeExec(marker_present=False)
+    put_archive = _FakePutArchive()
     digest = asyncio.run(
-        ensure_installed("sb-1", manifest, exec_fn=fake)
+        ensure_installed(
+            "sb-1",
+            manifest,
+            exec_fn=fake,
+            put_archive_fn=put_archive,
+        )
     )
 
     install_dir = plugin_install_dir("demo")
@@ -209,8 +215,8 @@ def test_marker_miss_uploads_and_runs_setup(tmp_path: Path) -> None:
         f"printf %s {shlex.quote(digest)} > {shlex.quote(marker)}" in c
         for c in fake.calls
     )
-    # At least one base64 chunk write happened.
-    assert any("base64 -d" in c for c in fake.calls)
+    assert len(put_archive.calls) == 1
+    assert any(name.endswith("/plugin.md") for name in put_archive.calls[0][2])
     assert any(".staging-" in c for c in fake.calls)
 
 
@@ -218,10 +224,25 @@ def test_hot_install_uses_process_cache_until_forget(tmp_path: Path) -> None:
     plugin_dir = _seed_demo_plugin(tmp_path)
     manifest = parse_plugin_manifest(plugin_dir)
     fake = _FakeExec(marker_present=False)
+    put_archive = _FakePutArchive()
 
-    asyncio.run(ensure_installed("sb-1", manifest, exec_fn=fake))
+    asyncio.run(
+        ensure_installed(
+            "sb-1",
+            manifest,
+            exec_fn=fake,
+            put_archive_fn=put_archive,
+        )
+    )
     cold_call_count = len(fake.calls)
-    asyncio.run(ensure_installed("sb-1", manifest, exec_fn=fake))
+    asyncio.run(
+        ensure_installed(
+            "sb-1",
+            manifest,
+            exec_fn=fake,
+            put_archive_fn=put_archive,
+        )
+    )
 
     setup_runs = [
         command
@@ -238,7 +259,14 @@ def test_hot_install_uses_process_cache_until_forget(tmp_path: Path) -> None:
     assert len(fake.calls) == cold_call_count
 
     install_mod.forget_plugin_install_state("sb-1")
-    asyncio.run(ensure_installed("sb-1", manifest, exec_fn=fake))
+    asyncio.run(
+        ensure_installed(
+            "sb-1",
+            manifest,
+            exec_fn=fake,
+            put_archive_fn=put_archive,
+        )
+    )
 
     setup_runs = [
         command
@@ -259,8 +287,16 @@ def test_setup_failure_surfaces_clear_error(tmp_path: Path) -> None:
     manifest = parse_plugin_manifest(plugin_dir)
 
     fake = _FakeExec(marker_present=False, setup_exit_code=2)
+    put_archive = _FakePutArchive()
     with pytest.raises(PluginInstallError, match="setup.sh failed"):
-        asyncio.run(ensure_installed("sb-1", manifest, exec_fn=fake))
+        asyncio.run(
+            ensure_installed(
+                "sb-1",
+                manifest,
+                exec_fn=fake,
+                put_archive_fn=put_archive,
+            )
+        )
 
 
 def test_concurrent_first_calls_share_one_setup(tmp_path: Path) -> None:
@@ -293,12 +329,28 @@ def test_concurrent_first_calls_share_one_setup(tmp_path: Path) -> None:
             )
 
     fake = _CountingExec(marker_present=False)
+    put_archive = _FakePutArchive()
 
     async def run() -> None:
         await asyncio.gather(
-            ensure_installed("sb-1", manifest, exec_fn=fake),
-            ensure_installed("sb-1", manifest, exec_fn=fake),
-            ensure_installed("sb-1", manifest, exec_fn=fake),
+            ensure_installed(
+                "sb-1",
+                manifest,
+                exec_fn=fake,
+                put_archive_fn=put_archive,
+            ),
+            ensure_installed(
+                "sb-1",
+                manifest,
+                exec_fn=fake,
+                put_archive_fn=put_archive,
+            ),
+            ensure_installed(
+                "sb-1",
+                manifest,
+                exec_fn=fake,
+                put_archive_fn=put_archive,
+            ),
         )
 
     asyncio.run(run())
@@ -332,7 +384,15 @@ def test_install_free_plugin_skips_setup(tmp_path: Path) -> None:
     manifest = parse_plugin_manifest(plugin_dir)
 
     fake = _FakeExec(marker_present=False)
-    asyncio.run(ensure_installed("sb-1", manifest, exec_fn=fake))
+    put_archive = _FakePutArchive()
+    asyncio.run(
+        ensure_installed(
+            "sb-1",
+            manifest,
+            exec_fn=fake,
+            put_archive_fn=put_archive,
+        )
+    )
 
     # No setup invocation in the call log.
     assert not any(

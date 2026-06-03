@@ -1,4 +1,4 @@
-"""Unit tests for sandbox.ephemeral_workspace.plugin.op_registry."""
+"""Unit tests for plugins.runtime_bridge.op_registry."""
 
 from __future__ import annotations
 
@@ -9,8 +9,8 @@ from types import SimpleNamespace
 import pytest
 
 from sandbox._shared.models import Intent
-from sandbox.ephemeral_workspace.plugin import op_registry as registry_mod
-from sandbox.ephemeral_workspace.plugin.op_registry import (
+from plugins.runtime_bridge import op_registry as registry_mod
+from plugins.runtime_bridge.op_registry import (
     PluginOpConflictError,
     PluginOpRegistrationError,
     flush_plugin_registrations,
@@ -177,10 +177,8 @@ register_plugin_op("demo", "hover", intent=Intent.READ_ONLY)(handler)
         flush_plugin_registrations("demo", lambda _op, _h: None)
 
 
-def test_context_wrapper_uses_overlay_runner_for_write_allowed() -> None:
-    """WRITE_ALLOWED ops default to the auto-overlay dispatch runner."""
-    from sandbox.ephemeral_workspace.plugin import overlay_dispatch
-
+def test_context_wrapper_preserves_write_allowed_metadata() -> None:
+    """WRITE_ALLOWED ops are registered; Rust daemon owns overlay/OCC routing."""
     _exec_in_plugin_namespace(
         "demo",
         """
@@ -191,31 +189,20 @@ register_plugin_op("demo", "write_op", intent=Intent.WRITE_ALLOWED)(handler)
         """.strip(),
     )
     registered: dict[str, object] = {}
-    calls: list[tuple[str, str]] = []
 
     async def context_factory(args, plugin_name, op_name):
         del args, plugin_name, op_name
         return SimpleNamespace(marker="ctx")
 
-    async def stub_runner(plugin_handler, args, ctx, plugin_name, op_name):
-        calls.append((plugin_name, op_name))
-        return await plugin_handler(args, ctx)
-
-    monkey_target = overlay_dispatch.run_plugin_op_with_workspace_overlay
-    try:
-        overlay_dispatch.run_plugin_op_with_workspace_overlay = stub_runner  # type: ignore[assignment]
-        flush_plugin_registrations(
-            "demo",
-            lambda op, handler: registered.setdefault(op, handler),
-            context_factory=context_factory,
-            trusted_caller=True,
-        )
-        result = asyncio.run(registered["plugin.demo.write_op"]({"value": 1}))
-    finally:
-        overlay_dispatch.run_plugin_op_with_workspace_overlay = monkey_target  # type: ignore[assignment]
+    flush_plugin_registrations(
+        "demo",
+        lambda op, handler: registered.setdefault(op, handler),
+        context_factory=context_factory,
+        trusted_caller=True,
+    )
+    result = asyncio.run(registered["plugin.demo.write_op"]({"value": 1}))
 
     assert result == {"ctx": "ctx", "args": {"value": 1}}
-    assert calls == [("demo", "write_op")]
 
 
 def test_context_wrapper_runs_in_process_for_read_only() -> None:

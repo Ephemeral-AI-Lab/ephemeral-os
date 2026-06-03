@@ -315,7 +315,7 @@ async def run_command_session_or_equivalent(
     progress = await call_api(
         bench,
         runtime,
-        "api.v1.command.write_stdin",
+        "api.v1.write_stdin",
         {
             "command_session_id": session_id,
             "chars": "",

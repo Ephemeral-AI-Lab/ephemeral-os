@@ -1,4 +1,4 @@
-"""Unit tests for sandbox.ephemeral_workspace.plugin.host_dispatch.call_plugin."""
+"""Unit tests for sandbox.api.plugin_dispatch.call_plugin."""
 
 from __future__ import annotations
 
@@ -13,10 +13,10 @@ import pytest
 from plugins.core.discovery import DEFAULT_CATALOG_DIR
 from plugins.core.manifest import PluginManifest, parse_plugin_manifest
 from sandbox.host.paths import BUNDLE_REMOTE_DIR
-from sandbox.ephemeral_workspace.plugin.op_registry import clear_plugin_registrations
-from sandbox.ephemeral_workspace.plugin import host_dispatch as host_dispatch_mod
+from plugins.runtime_bridge.op_registry import clear_plugin_registrations
+from sandbox.api import plugin_dispatch as host_dispatch_mod
 from sandbox._shared.models import Intent
-from sandbox.ephemeral_workspace.plugin.host_dispatch import call_plugin, call_plugin_write
+from sandbox.api.plugin_dispatch import call_plugin, call_plugin_write
 from tools._framework.core.context import ToolExecutionContextService
 
 

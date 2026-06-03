@@ -21,7 +21,13 @@ tokio       = { version = "1", features = ["rt-multi-thread", "macros", "sync", 
 tokio-util  = { version = "0.7", features = ["rt"] }
 futures     = "0.3"
 serde       = { version = "1", features = ["derive"] }
-serde_json  = "1"
+# Insertion-ordered JSON map keys, workspace-wide. The Python control plane this
+# crate ports emits insertion-ordered dicts (`json.dumps` over insertion-ordered
+# `dict`), so this is the parity-faithful default; it also makes the
+# `eos-protocol` wire-contract edge's `preserve_order` consistent across every
+# build scope (otherwise serialization would differ between `-p crate` and
+# `--workspace` builds).
+serde_json  = { version = "1", features = ["preserve_order"] }
 serde_yaml  = "0.9"
 schemars    = "0.8"
 sha2        = "0.10"
@@ -69,6 +75,11 @@ eos-workflow       = { path = "crates/eos-workflow" }
 eos-sandbox-host   = { path = "crates/eos-sandbox-host" }
 eos-plugin-catalog = { path = "crates/eos-plugin-catalog" }
 eos-runtime        = { path = "crates/eos-runtime" }
+# External edge into the sibling `sandbox/` workspace: the eosd wire-protocol
+# crate is the single source of truth for protocol version, field names, exit
+# codes, and reconnect schedule. Unilateral — `sandbox/` never depends back on
+# agent-core, mirroring the runtime direction (the host dials the daemon).
+eos-protocol       = { path = "../sandbox/crates/eos-protocol" }
 
 [profile.release]
 opt-level = 3

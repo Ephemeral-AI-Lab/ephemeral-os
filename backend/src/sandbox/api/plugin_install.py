@@ -2,7 +2,7 @@
 
 Mirrors :mod:`sandbox.host.runtime_bundle` but per-plugin: bundles
 ``plugin.md`` + ``tools/`` + optional ``runtime/`` + ``setup.sh`` from the
-host catalog into a gzip tarball, uploads it to
+host catalog into a tar archive, uploads it to
 ``/eos/daemon/plugins/catalog/<name>/`` on first call, runs
 ``setup.sh`` once, and writes a ``.installed-<hash>`` marker so subsequent
 calls are cheap.
@@ -14,7 +14,6 @@ first-callers share a single upload + setup cycle.
 from __future__ import annotations
 
 import asyncio
-import gzip
 import hashlib
 import io
 import logging
@@ -30,7 +29,6 @@ from plugins.core.discovery import DEFAULT_CATALOG_DIR
 from plugins.core.manifest import PluginManifest
 from sandbox.host.paths import BUNDLE_REMOTE_DIR
 from plugins.runtime_bridge.op_registry import _PLUGIN_NAME_RE
-from sandbox.host.chunked_upload import RawExecCallable, write_base64_chunks
 from sandbox.provider.registry import get_adapter
 
 __all__ = [
@@ -72,6 +70,17 @@ class PutArchiveCallable(Protocol):
         tar_stream: bytes,
         dest_dir: str,
     ) -> None: ...
+
+
+class RawExecCallable(Protocol):
+    async def __call__(
+        self,
+        sandbox_id: str,
+        command: str,
+        *,
+        cwd: str | None = None,
+        timeout: int | None = None,
+    ) -> Any: ...
 
 
 def _initial_trusted_setup_roots() -> set[Path]:
@@ -240,21 +249,6 @@ def _is_bundle_file(path: Path) -> bool:
     return True
 
 
-def _build_tar(bundle_files: list[tuple[str, Path]]) -> bytes:
-    raw = io.BytesIO()
-    with tarfile.open(fileobj=raw, mode="w") as tar:
-        for rel, path in bundle_files:
-            tar.add(
-                path,
-                arcname=rel,
-                filter=_normalize_tarinfo,
-            )
-    compressed = io.BytesIO()
-    with gzip.GzipFile(fileobj=compressed, mode="wb", mtime=0) as gz:
-        gz.write(raw.getvalue())
-    return compressed.getvalue()
-
-
 def _build_plain_tar(entries: list[tuple[str, Path]]) -> bytes:
     raw = io.BytesIO()
     with tarfile.open(fileobj=raw, mode="w") as tar:
@@ -286,16 +280,6 @@ def _build_plain_tar(entries: list[tuple[str, Path]]) -> bytes:
             info.mode = 0o755 if os.access(path, os.X_OK) else 0o644
             tar.addfile(info, io.BytesIO(data))
     return raw.getvalue()
-
-
-def _normalize_tarinfo(info: tarfile.TarInfo) -> tarfile.TarInfo:
-    info.mtime = 0
-    info.uid = 0
-    info.gid = 0
-    info.uname = ""
-    info.gname = ""
-    info.mode = 0o644
-    return info
 
 
 async def _marker_present(
@@ -350,8 +334,6 @@ async def _upload_and_run_setup(
             f"rm -rf {shlex.quote(staging_dir)} && "
             f"mkdir -p {shlex.quote(PLUGIN_BUNDLE_REMOTE_ROOT)}"
         )
-        if put_archive_fn is None:
-            setup_command += f" && mkdir -p {shlex.quote(staging_dir)}"
         setup_dir = await exec_fn(sandbox_id, setup_command, timeout=30)
         _check(setup_dir, f"plugin install: failed to prepare {staging_dir}")
 
@@ -500,62 +482,36 @@ async def _upload_entries(
     put_archive_fn: PutArchiveCallable | None,
     failure_prefix: str,
 ) -> None:
-    if put_archive_fn is not None:
-        staging_dir = f"{PLUGIN_ARCHIVE_STAGING_ROOT}/{uuid.uuid4().hex}"
-        prepare = await exec_fn(
-            sandbox_id,
-            (
-                f"rm -rf {shlex.quote(staging_dir)} && "
-                f"mkdir -p {shlex.quote(staging_dir)} {shlex.quote(dest_dir)}"
-            ),
-            timeout=30,
+    if put_archive_fn is None:
+        raise PluginInstallError(
+            f"{failure_prefix}: provider put_archive is required",
+            kind="plugin_upload_unsupported",
         )
-        _check(prepare, f"{failure_prefix}: failed to prepare archive staging")
-        await put_archive_fn(
-            sandbox_id,
-            tar_stream=_build_plain_tar(_prefixed_entries(entries, archive_prefix)),
-            dest_dir=staging_dir,
-        )
-        materialize = await exec_fn(
-            sandbox_id,
-            (
-                f"cp -a {shlex.quote(staging_dir)}/. "
-                f"{shlex.quote(dest_dir)}/ && "
-                f"rm -rf {shlex.quote(staging_dir)}"
-            ),
-            timeout=120,
-        )
-        _check(materialize, f"{failure_prefix}: failed to materialize archive")
-        return
-
-    tar_path = f"{dest_dir}/.upload-{uuid.uuid4().hex}.tar.gz"
-    bundle = _build_tar(entries)
-    setup_tar = await exec_fn(
-        sandbox_id,
-        f": > {shlex.quote(tar_path)}",
-        timeout=30,
-    )
-    _check(setup_tar, f"{failure_prefix}: failed to prepare tarball")
-    await write_base64_chunks(
-        exec_fn,
-        sandbox_id,
-        content=bundle,
-        remote_path=tar_path,
-        check_result=_check,
-        failure_message=lambda offset: (
-            f"{failure_prefix}: chunk write failed at offset {offset}"
-        ),
-    )
-    extract = await exec_fn(
+    staging_dir = f"{PLUGIN_ARCHIVE_STAGING_ROOT}/{uuid.uuid4().hex}"
+    prepare = await exec_fn(
         sandbox_id,
         (
-            f"cd {shlex.quote(dest_dir)} && "
-            f"tar -xzf {shlex.quote(tar_path)} && "
-            f"rm -f {shlex.quote(tar_path)}"
+            f"rm -rf {shlex.quote(staging_dir)} && "
+            f"mkdir -p {shlex.quote(staging_dir)} {shlex.quote(dest_dir)}"
         ),
-        timeout=60,
+        timeout=30,
     )
-    _check(extract, f"{failure_prefix}: extract failed")
+    _check(prepare, f"{failure_prefix}: failed to prepare archive staging")
+    await put_archive_fn(
+        sandbox_id,
+        tar_stream=_build_plain_tar(_prefixed_entries(entries, archive_prefix)),
+        dest_dir=staging_dir,
+    )
+    materialize = await exec_fn(
+        sandbox_id,
+        (
+            f"cp -a {shlex.quote(staging_dir)}/. "
+            f"{shlex.quote(dest_dir)}/ && "
+            f"rm -rf {shlex.quote(staging_dir)}"
+        ),
+        timeout=120,
+    )
+    _check(materialize, f"{failure_prefix}: failed to materialize archive")
 
 
 def _prefixed_entries(

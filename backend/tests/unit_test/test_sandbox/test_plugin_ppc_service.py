@@ -7,7 +7,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from sandbox.ephemeral_workspace.plugin import ppc_service
+from plugins.runtime_bridge import ppc_service
 
 
 class _FakePpcStream:

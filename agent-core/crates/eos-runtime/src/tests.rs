@@ -14,8 +14,8 @@ use eos_state::{TaskRole, TaskStatus, WorkflowStatus};
 use serde_json::json;
 
 use crate::app_state::test_seams::{
-    agent_def, build_test_state, factory_from, factory_root_blocks_after, tool_use_turn,
-    BlockingSource,
+    agent_def, build_test_state, build_test_state_with_advisor, factory_from,
+    factory_root_blocks_after, tool_use_turn, ApprovingAdvisor, BlockingSource,
 };
 use crate::app_state::EventSourceFactory;
 use crate::{start_request, AppState};
@@ -159,6 +159,9 @@ async fn start_request_mints_root_task_no_workflow() {
 }
 
 // --- AC-eos-runtime-02 / -08: root success keeps the engine-stamped terminal.
+// `submit_root_outcome` is advisor-gated, so success requires an approving
+// advisor; the production `AdvisorService` stub denies (see
+// `root_terminal_blocked_without_advisor_approval`).
 
 #[tokio::test]
 async fn successful_root_keeps_engine_terminal() {
@@ -167,7 +170,12 @@ async fn successful_root_keeps_engine_terminal() {
         "submit_root_outcome",
         json!({"status": "success", "outcome": "all done"}),
     )]);
-    let (state, _dir) = build_test_state(Some(factory), vec![root_agent()]).await;
+    let (state, _dir) = build_test_state_with_advisor(
+        Some(factory),
+        vec![root_agent()],
+        Some(Arc::new(ApprovingAdvisor)),
+    )
+    .await;
     let handle = start_request(&state, "task", Some("sb-1"), None)
         .await
         .unwrap();
@@ -189,6 +197,44 @@ async fn successful_root_keeps_engine_terminal() {
 
     let request = state.request_store.get(&request_id).await.unwrap().unwrap();
     assert_eq!(request.status, "done");
+}
+
+// --- Root is advisor-gated: under the default (denying) `AdvisorService` stub,
+// a well-formed `submit_root_outcome` is refused by the advisor pre-hook, so the
+// run exhausts and the unfinished-root guard fails the request. A real
+// `AdvisorPort` is the prerequisite for root to complete (contrast
+// `successful_root_keeps_engine_terminal`, which injects an approving advisor).
+
+#[tokio::test]
+async fn root_terminal_blocked_without_advisor_approval() {
+    let factory = factory_from(vec![tool_use_turn(
+        "toolu_1",
+        "submit_root_outcome",
+        json!({"status": "success", "outcome": "all done"}),
+    )]);
+    // No approving advisor → the production `AdvisorService` stub denies the gate.
+    let (state, _dir) = build_test_state(Some(factory), vec![root_agent()]).await;
+    let handle = start_request(&state, "task", Some("sb-1"), None)
+        .await
+        .unwrap();
+    let request_id = handle.request_id.clone();
+    let root_task_id = handle.root_task_id.clone();
+    handle.join().await;
+
+    let task = state.task_store.get(&root_task_id).await.unwrap().unwrap();
+    assert_eq!(
+        task.status,
+        TaskStatus::Failed,
+        "the advisor gate must block the root terminal under the denying stub"
+    );
+    let terminal = task.terminal_tool_result.expect("terminal tool result");
+    assert_eq!(
+        terminal.get("fail_reason").and_then(|v| v.as_str()),
+        Some("root_run_exhausted")
+    );
+
+    let request = state.request_store.get(&request_id).await.unwrap().unwrap();
+    assert_eq!(request.status, "failed");
 }
 
 // --- AC-eos-runtime-03: an unfinished root fails cleanly with run_exhausted.

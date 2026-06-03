@@ -40,13 +40,6 @@ impl ToolRegistry {
         }
     }
 
-    /// Register many tools, in order.
-    pub fn register_many(&mut self, tools: impl IntoIterator<Item = RegisteredTool>) {
-        for tool in tools {
-            self.register(tool);
-        }
-    }
-
     /// Look up a tool by name.
     #[must_use]
     pub fn get(&self, name: ToolName) -> Option<&RegisteredTool> {

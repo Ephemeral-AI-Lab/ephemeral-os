@@ -4,7 +4,7 @@ use std::collections::VecDeque;
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use eos_llm_client::Message;
+use eos_llm_client::{Message, MessageRole};
 use eos_tools::ports::{
     AdvisorApproval, AdvisorPort, NotificationSink, Sealed, SystemNotification as ToolNotification,
 };
@@ -60,12 +60,18 @@ impl NotificationRule {
 
     /// Whether this rule should fire for the current top-of-turn state.
     #[must_use]
-    pub fn trigger(&self, _messages: &[Message], ctx: &QueryContext) -> bool {
+    pub fn trigger(&self, messages: &[Message], ctx: &QueryContext) -> bool {
         if ctx.terminal_result.as_ref().is_some_and(|r| r.is_terminal) {
             return false;
         }
         match self {
-            Self::TerminalCallReminder => !ctx.terminal_tools.is_empty(),
+            // Parity with `must_submit_terminal_tool.py`: do not nudge until the
+            // model has actually spoken this run (an assistant message exists), so
+            // the reminder is never written into a user-only turn-1 transcript.
+            Self::TerminalCallReminder => {
+                !ctx.terminal_tools.is_empty()
+                    && messages.iter().any(|m| m.role == MessageRole::Assistant)
+            }
             Self::ToolCallBudget {
                 numerator,
                 denominator,
@@ -83,20 +89,35 @@ impl NotificationRule {
     /// Render the reminder text.
     #[must_use]
     pub fn body(&self, ctx: &QueryContext) -> String {
+        // `ceiling`/`turns_remaining` mirror the Python rule bodies: the run
+        // fails at `ceil(1.5 * tool_call_limit)` tool calls, and the displayed
+        // `turns_remaining` is derived from `tool_calls_used` alone (the
+        // hard-ceiling gate itself uses the call+text-turn sum — §8.4).
+        let used = ctx.tool_calls_used;
+        let limit = ctx.tool_call_limit;
+        let ceiling = limit.saturating_mul(3).div_ceil(2);
+        let turns_remaining = ceiling.saturating_sub(used);
         match self {
             Self::TerminalCallReminder => {
-                let names = ctx
+                let mut names: Vec<&str> = ctx
                     .terminal_tools
                     .iter()
-                    .map(|name| format!("`{}`", name.as_str()))
-                    .collect::<Vec<_>>()
-                    .join(", ");
-                format!("Remember to call a terminal tool when the task is complete. Available terminal tools: {names}.")
+                    .map(|name| name.as_str())
+                    .collect();
+                names.sort_unstable();
+                let names = names.join(", ");
+                format!(
+                    "You have not submitted a terminal tool. Deliver your result by \
+                     calling one of: {names}. Budget: {used}/{limit} tool calls used; \
+                     the run will fail at {ceiling} tool calls ({turns_remaining} remaining)."
+                )
             }
             Self::ToolCallBudget { label, .. } => {
-                let remaining = ctx.tool_call_limit.saturating_sub(ctx.tool_calls_used);
                 format!(
-                    "Tool-call budget reminder: {label} of the configured tool-call budget has been used; approximately {remaining} configured tool calls remain before terminal-submission pressure increases."
+                    "Tool-call budget warning: {label} of the planned budget has been \
+                     used ({used}/{limit} tool calls). Submit a terminal tool as soon \
+                     as the work is complete; the run will fail at {ceiling} tool calls \
+                     ({turns_remaining} remaining)."
                 )
             }
         }
@@ -250,16 +271,24 @@ mod tests {
         }
     }
 
+    fn assistant_turn() -> [Message; 1] {
+        [Message {
+            role: MessageRole::Assistant,
+            content: Vec::new(),
+        }]
+    }
+
     #[test]
     fn notification_rules_fire_in_order_with_dedup() {
         let mut ctx = ctx();
         ctx.tool_calls_used = 3;
-        let first = dispatch_rules(&[], &mut ctx);
+        let turn = assistant_turn();
+        let first = dispatch_rules(&turn, &mut ctx);
         assert_eq!(first.len(), 2, "75% budget + terminal reminder");
         assert!(first[0].text.contains("75%"));
         assert!(first[1].text.contains("terminal tool"));
 
-        let second = dispatch_rules(&[], &mut ctx);
+        let second = dispatch_rules(&turn, &mut ctx);
         assert_eq!(second.len(), 1, "budget tier is fire-once");
         assert!(second[0].text.contains("terminal tool"));
 
@@ -269,7 +298,25 @@ mod tests {
             metadata: JsonObject::new(),
             is_terminal: true,
         });
-        assert!(dispatch_rules(&[], &mut ctx).is_empty());
+        assert!(dispatch_rules(&turn, &mut ctx).is_empty());
+    }
+
+    #[test]
+    fn terminal_reminder_needs_assistant_turn_and_reports_budget() {
+        // Parity with `must_submit_terminal_tool.py` + the ported body text.
+        let mut ctx = ctx(); // tool_call_limit = 4 -> 75% threshold = 3
+        ctx.tool_calls_used = 2; // below the first budget tier; only the reminder can fire
+
+        // Turn 1: user-only transcript -> no terminal reminder (matches Python).
+        assert!(dispatch_rules(&[Message::from_user_text("hi")], &mut ctx).is_empty());
+
+        // After the model speaks, the reminder fires with the ceil(1.5*limit) ceiling.
+        let fired = dispatch_rules(&assistant_turn(), &mut ctx);
+        assert_eq!(fired.len(), 1);
+        let body = &fired[0].text;
+        assert!(body.contains("You have not submitted a terminal tool"));
+        assert!(body.contains("2/4 tool calls used"));
+        assert!(body.contains("the run will fail at 6 tool calls (4 remaining)"));
     }
 
     #[tokio::test]

@@ -116,13 +116,18 @@ def test_each_lsp_tool_creatable_via_factory() -> None:
 
 
 def test_lsp_tool_modules_do_not_import_sandbox_internals() -> None:
-    """Plugin tools must only import sandbox.* through sandbox.ephemeral_workspace.plugin."""
+    """Plugin tools dispatch through the public plugin API, never sandbox internals."""
     forbidden_prefixes = (
-        "sandbox.runtime",
-        "sandbox.layer_stack",
+        "sandbox.daemon",
+        "sandbox.ephemeral_workspace",
         "sandbox.host",
+        "sandbox.isolated_workspace",
+        "sandbox.layer_stack",
+        "sandbox.occ",
+        "sandbox.overlay",
         "sandbox.provider",
-        "sandbox.api",  # tools should not import sandbox.api directly
+        "sandbox.runtime",
+        "sandbox.shared",
     )
     for path in (_LSP_DIR / "tools").glob("*.py"):
         if path.name == "__init__.py":
@@ -132,6 +137,7 @@ def test_lsp_tool_modules_do_not_import_sandbox_internals() -> None:
             assert (
                 f"from {prefix}" not in text and f"import {prefix}" not in text
             ), f"{path.name} imports forbidden {prefix}"
+        assert "from sandbox.api.plugin_dispatch import " in text
 
 
 def test_lsp_setup_script_self_locates_and_installs_pyright(

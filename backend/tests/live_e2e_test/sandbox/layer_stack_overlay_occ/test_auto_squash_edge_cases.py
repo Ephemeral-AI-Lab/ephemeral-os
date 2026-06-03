@@ -21,7 +21,7 @@ from typing import Any
 import pytest
 
 import sandbox.host.daemon_client as daemon_client_mod
-from sandbox.ephemeral_workspace.plugin import call_plugin
+from sandbox.api.plugin_dispatch import call_plugin
 from sandbox.host.daemon_client import DEFAULT_LAYER_STACK_ROOT
 from tools._framework.core.base import ToolExecutionContextService
 

@@ -13,6 +13,7 @@ from typing import Any
 
 import pytest
 
+import engine.tool_call.dispatch as dispatch_mod
 from engine.tool_call.dispatch import (
     _emit_tool_call_phase_and_finished,
     _emit_tool_call_started,
@@ -29,38 +30,32 @@ from engine.tool_call.phase_buffer import (
     start_phase_buffer,
 )
 from message.message import ToolUseBlock
-from sandbox.daemon.audit_buffer import get_audit_buffer
 
 
-_AUDIT_CURSOR = {"seq": -1}
+_EVENTS: list[dict[str, Any]] = []
 
 
 def _drain_tool_call_events() -> list[dict[str, Any]]:
-    buf = get_audit_buffer()
-    snap = buf.pull(after_seq=_AUDIT_CURSOR["seq"], limit=200_000)
-    events = snap.get("events", [])
-    if events:
-        _AUDIT_CURSOR["seq"] = int(events[-1]["seq"])
-    return [
+    events = [
         evt
-        for evt in events
+        for evt in _EVENTS
         if str(evt.get("type", "")).startswith("tool_call.")
     ]
+    _EVENTS.clear()
+    return events
 
 
 @pytest.fixture(autouse=True)
-def _reset_state() -> None:
+def _reset_state(monkeypatch: pytest.MonkeyPatch) -> None:
     reset_for_tests()
-    buf = get_audit_buffer()
-    cursor = -1
-    while True:
-        snap = buf.pull(after_seq=cursor, limit=200_000)
-        events = snap.get("events", [])
-        if not events:
-            break
-        cursor = int(events[-1]["seq"])
-    _AUDIT_CURSOR["seq"] = cursor
+    _EVENTS.clear()
+
+    def _record(event: dict[str, Any], lane: str) -> None:
+        _EVENTS.append({**event, "lane": lane})
+
+    monkeypatch.setattr(dispatch_mod, "safe_emit", _record)
     yield
+    _EVENTS.clear()
 
 
 def _simulate_call(tool_name: str, call_index: int, *, total_ms: float) -> None:

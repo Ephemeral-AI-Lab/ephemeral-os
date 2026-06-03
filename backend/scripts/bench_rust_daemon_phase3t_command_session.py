@@ -289,7 +289,7 @@ class CommandClient:
         max_output_tokens: int = 1000,
     ) -> tuple[dict[str, Any], float]:
         return await self.call(
-            "api.v1.command.write_stdin",
+            "api.v1.write_stdin",
             {
                 "command_session_id": command_session_id,
                 "chars": chars,
@@ -306,7 +306,7 @@ class CommandClient:
         max_output_tokens: int = 1000,
     ) -> tuple[dict[str, Any], float]:
         return await self.call(
-            "api.v1.command.write_stdin",
+            "api.v1.write_stdin",
             {
                 "command_session_id": command_session_id,
                 "chars": "",

@@ -1,15 +1,8 @@
-"""Contract test: tool intent labels stay in sync with daemon operation routes.
+"""Contract test: tool intent labels stay in sync with public sandbox RPCs.
 
-For every BaseTool whose ``name`` matches a verb served by
-``sandbox.daemon.builtin_operations``, the tool's declared ``intent`` MUST equal the
-intent the daemon dispatches that verb with. This catches drift where
-``@tool(intent=READ_ONLY)`` for a verb the daemon routes as
-``WRITE_ALLOWED`` (or vice versa).
-
-Also asserts every @tool decoration produced a BaseTool with an ``intent``
-attribute set to an ``Intent`` member; this is the positive complement to
-the import-time ``TypeError`` in ``tools._framework.core.decorator.tool``
-that fires when the caller forgets ``intent=``.
+The Python daemon route table was deleted when the Rust sandbox became the only
+daemon-side truth. Tool contracts now compare against public transport constants
+and the tool registry, not ``sandbox.daemon`` implementation tables.
 """
 
 from __future__ import annotations
@@ -20,22 +13,17 @@ from collections.abc import Iterator
 import pytest
 
 from sandbox._shared.models import Intent
-from sandbox.daemon.builtin_operations import WORKSPACE_TOOL_ROUTES
+from sandbox.api import transport
 from tools._framework.core.base import BaseTool
-
-
-# Canonical source: backend/src/sandbox/daemon/builtin_operations.py.
-DAEMON_TOOL_ROUTE_INTENTS: dict[str, Intent] = dict(WORKSPACE_TOOL_ROUTES)
-DAEMON_VERB_TOOL_NAME_ALIASES = {
-    "shell": "exec_command",
-}
 
 
 _TOOL_MODULES = (
     "tools.sandbox.read_file.read_file",
     "tools.sandbox.write_file.write_file",
     "tools.sandbox.edit_file.edit_file",
+    "tools.sandbox.multi_edit.multi_edit",
     "tools.sandbox.exec_command.exec_command",
+    "tools.sandbox.write_stdin.write_stdin",
     "tools.sandbox.grep.grep",
     "tools.sandbox.glob.glob",
     "tools.ask_helper.ask_advisor.ask_advisor",
@@ -63,6 +51,30 @@ _TOOL_MODULES = (
     "plugins.catalog.lsp.tools.format",
 )
 
+SANDBOX_TOOL_INTENTS = {
+    "read_file": Intent.READ_ONLY,
+    "glob": Intent.READ_ONLY,
+    "grep": Intent.READ_ONLY,
+    "write_file": Intent.WRITE_ALLOWED,
+    "edit_file": Intent.WRITE_ALLOWED,
+    "multi_edit": Intent.WRITE_ALLOWED,
+    "exec_command": Intent.WRITE_ALLOWED,
+    "write_stdin": Intent.WRITE_ALLOWED,
+    "enter_isolated_workspace": Intent.LIFECYCLE,
+    "exit_isolated_workspace": Intent.LIFECYCLE,
+}
+
+SANDBOX_TOOL_TRANSPORT_OPS = {
+    "read_file": transport.DAEMON_OP_READ_FILE,
+    "write_file": transport.DAEMON_OP_WRITE_FILE,
+    "edit_file": transport.DAEMON_OP_EDIT_FILE,
+    "multi_edit": transport.DAEMON_OP_EDIT_FILE,
+    "exec_command": transport.DAEMON_OP_EXEC_COMMAND,
+    "write_stdin": transport.DAEMON_OP_COMMAND_WRITE_STDIN,
+    "glob": transport.DAEMON_OP_GLOB,
+    "grep": transport.DAEMON_OP_GREP,
+}
+
 
 def _iter_decorated_tools() -> Iterator[BaseTool]:
     for module_name in _TOOL_MODULES:
@@ -85,15 +97,22 @@ def test_every_decorated_tool_has_intent_attribute() -> None:
     assert not missing, f"@tool callsites missing intent=: {missing}"
 
 
-@pytest.mark.parametrize("verb,daemon_intent", sorted(DAEMON_TOOL_ROUTE_INTENTS.items()))
-def test_tool_intent_matches_daemon_handlers_table(verb: str, daemon_intent: Intent) -> None:
-    """Sibling @tool and daemon handler for the same verb MUST agree on intent."""
-    tool_name = DAEMON_VERB_TOOL_NAME_ALIASES.get(verb, verb)
-    matching = [t for t in _iter_decorated_tools() if t.name == tool_name]
-    assert matching, f"no @tool with name={tool_name!r} for daemon verb={verb!r}"
-    tool = matching[0]
-    assert tool.intent == daemon_intent, (
-        f"@tool {verb!r} declares intent={tool.intent.value} but daemon "
-        f"builtin_operations.py dispatches verb={verb!r} with intent={daemon_intent.value}; "
-        "edit both or neither"
-    )
+@pytest.mark.parametrize("tool_name,expected", sorted(SANDBOX_TOOL_INTENTS.items()))
+def test_sandbox_tool_intent_matches_public_rpc_contract(
+    tool_name: str,
+    expected: Intent,
+) -> None:
+    tools = {tool.name: tool for tool in _iter_decorated_tools()}
+    assert tool_name in tools
+    assert tools[tool_name].intent == expected
+
+
+def test_sandbox_tool_transport_contract_uses_exec_command_and_write_stdin() -> None:
+    tools = {tool.name for tool in _iter_decorated_tools()}
+    assert "exec_command" in tools
+    assert "write_stdin" in tools
+    assert "shell" not in tools
+    assert SANDBOX_TOOL_TRANSPORT_OPS["exec_command"] == "api.v1.exec_command"
+    assert SANDBOX_TOOL_TRANSPORT_OPS["write_stdin"] == "api.v1.write_stdin"
+    assert "api.v1.shell" not in SANDBOX_TOOL_TRANSPORT_OPS.values()
+    assert "api.v1.command.write_stdin" not in SANDBOX_TOOL_TRANSPORT_OPS.values()

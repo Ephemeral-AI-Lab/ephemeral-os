@@ -9,7 +9,7 @@
 
 **15 items (10 structs, 2 enums, 3 traits, 0 type aliases) across 5 files.**
 
-`eos-isolated` ports the Python `isolated_workspace` subsystem of `backend/src/sandbox`: a persistent, network-isolated PRIVATE session whose writes are captured for AUDIT ONLY and NEVER published (enforced at build time by not depending on `eos-occ`). Its item groups are the env-sourced lifecycle caps (`ResourceCaps`, `Rfc1918Egress`), the `eos-shared0` bridge + per-workspace veth/nftables wiring (`IsolatedNetwork`, `BridgeAddressPool`, `VethAllocation`), the enter/exit session orchestrator with its inverted snapshot/lease and namespace-runtime ports (`IsolatedSession`, `LayerStackSnapshotPort`, `NamespaceRuntimePort`, `WorkspaceHandle`, `SnapshotLease`), the append-only JSONL audit sink (`AuditSink`, `JsonlAuditSink`), and the wire-mapped lifecycle error (`IsolatedError`).
+`eos-isolated` owns the isolated-workspace subsystem: a persistent, network-isolated PRIVATE session whose writes are captured for AUDIT ONLY and NEVER published (enforced at build time by not depending on `eos-occ`). Its item groups are the env-sourced lifecycle caps (`ResourceCaps`, `Rfc1918Egress`), the `eos-shared0` bridge + per-workspace veth/nftables wiring (`IsolatedNetwork`, `BridgeAddressPool`, `VethAllocation`), the enter/exit session orchestrator with its inverted snapshot/lease and namespace-runtime ports (`IsolatedSession`, `LayerStackSnapshotPort`, `NamespaceRuntimePort`, `WorkspaceHandle`, `SnapshotLease`), the append-only JSONL audit sink (`AuditSink`, `JsonlAuditSink`), and the wire-mapped lifecycle error (`IsolatedError`).
 
 ## Contents
 
@@ -90,7 +90,7 @@ Resource caps + lifecycle config; the `Default` impl is the byte-for-byte `from_
 
 #### `IsolatedError`  ·  _enum_  ·  derives: `Debug, thiserror::Error`  ·  `#[non_exhaustive]`  ·  [L15]
 
-Lifecycle error for the enter/exit isolated-workspace flow; each variant's `kind()` reproduces the Python `kind` string fed onto the daemon RPC response envelope.
+Lifecycle error for the enter/exit isolated-workspace flow; each variant's `kind()` produces the `kind` string fed onto the daemon RPC response envelope.
 
 **Variants**: `FeatureDisabled`, `InvalidArgument(String)`, `AlreadyOpen { created_at: f64, last_activity: f64 }`, `NotOpen`, `QuotaExceeded { total_cap: u32 }`, `HostRamPressure { required_bytes: u64, budget_bytes: u64 }`, `SetupTimeout { step: String }`, `SetupFailed { step: String }`, `NetworkUnavailable(String)`, `AuditWrite { path: PathBuf, source: std::io::Error }`
 
@@ -134,7 +134,7 @@ Pure IPv4 `/32` allocator over `10.244.0.2 - 10.244.0.254`; lowest-IP-first O(N)
 
 #### `IsolatedNetwork`  ·  _struct_  ·  derives: `Debug`  ·  [L163]
 
-Owns the `eos-shared0` bridge + static nft rules + per-workspace veth wiring, replacing the Python `ip`/`nft` shell-out path with `rtnetlink` and `NETLINK_NETFILTER` messages.
+Owns the `eos-shared0` bridge + static nft rules + per-workspace veth wiring, driving it over `rtnetlink` and `NETLINK_NETFILTER` messages rather than `ip`/`nft` shell-outs.
 
 **Fields**
 

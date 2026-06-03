@@ -6,21 +6,35 @@ import ast
 from pathlib import Path
 
 
-SRC_ROOT = Path(__file__).resolve().parents[2] / "src"
+SRC_ROOT = Path(__file__).resolve().parents[4] / "src"
 SCAN_ROOTS = (
-    SRC_ROOT / "engine" / "runtime",
     SRC_ROOT / "tools",
 )
 FORBIDDEN_PREFIXES = (
-    "sandbox.host",
-    "sandbox.lifecycle",
-    "sandbox.provider",
     "sandbox.daemon",
+    "sandbox.ephemeral_workspace",
+    "sandbox.isolated_workspace",
+    "sandbox.layer_stack",
+    "sandbox.lifecycle",
+    "sandbox.occ",
+    "sandbox.overlay",
+    "sandbox.provider",
+    "sandbox.shared",
 )
 ALLOWED_API_IMPORT_NAMES = {
+    "CommandSessionCancelRequest",
+    "CommandSessionWriteRequest",
     "ConflictInfo",
     "EditFileRequest",
     "EditFileResult",
+    "ExecCommandRequest",
+    "ExecCommandResult",
+    "ExitIsolatedWorkspaceRequest",
+    "ExitIsolatedWorkspaceResult",
+    "GlobRequest",
+    "GlobResult",
+    "GrepRequest",
+    "GrepResult",
     "GuardedResultBase",
     "RawExecResult",
     "ReadFileRequest",
@@ -30,6 +44,14 @@ ALLOWED_API_IMPORT_NAMES = {
     "SearchReplaceEdit",
     "WriteFileRequest",
     "WriteFileResult",
+}
+ALLOWED_DIRECT_IMPORTS = {
+    Path("tools/isolated_workspace/enter_isolated_workspace/definition.py"): {
+        "sandbox.host.isolated_workspace_lifecycle",
+    },
+    Path("tools/isolated_workspace/exit_isolated_workspace/definition.py"): {
+        "sandbox.host.isolated_workspace_lifecycle",
+    },
 }
 
 def test_daemon_and_tools_reach_sandbox_through_api_facade() -> None:
@@ -41,12 +63,16 @@ def test_daemon_and_tools_reach_sandbox_through_api_facade() -> None:
             if isinstance(node, ast.Import):
                 for alias in node.names:
                     imported = alias.name
+                    if _is_allowed_direct_import(path, imported):
+                        continue
                     if _is_forbidden_import(imported):
                         offenders.append(_format(path, source, node))
                     elif imported.startswith("sandbox.api."):
                         offenders.append(_format(path, source, node))
             elif isinstance(node, ast.ImportFrom) and node.module:
                 imported = node.module
+                if _is_allowed_direct_import(path, imported):
+                    continue
                 if _is_forbidden_import(imported):
                     offenders.append(_format(path, source, node))
                 elif imported == "sandbox.api":
@@ -77,6 +103,11 @@ def _is_forbidden_import(imported: str) -> bool:
         imported == prefix or imported.startswith(f"{prefix}.")
         for prefix in FORBIDDEN_PREFIXES
     )
+
+
+def _is_allowed_direct_import(path: Path, imported: str) -> bool:
+    allowed = ALLOWED_DIRECT_IMPORTS.get(path.relative_to(SRC_ROOT), set())
+    return imported in allowed
 
 
 def _format(path: Path, source: str, node: ast.AST) -> str:

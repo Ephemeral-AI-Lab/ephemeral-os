@@ -16,6 +16,10 @@ eos-config.workspace = true
 # CoreError, RequestId, InvocationId) in its own signatures — see
 # impl-eos-sandbox-host.md §2. eos-sandbox-api does not re-export them.
 eos-types.workspace = true
+# Wire-protocol source of truth (sibling `sandbox/` workspace). Protocol version,
+# field names, exit codes, and the reconnect schedule are consumed from here so a
+# daemon-side bump cannot silently drift the host.
+eos-protocol.workspace = true
 
 tokio = { workspace = true, features = ["net", "process"] }
 bollard.workspace = true

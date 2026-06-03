@@ -15,7 +15,6 @@ SCRATCH_REMOTE_DIR = f"{EOS_REMOTE_ROOT}/mount"
 """Remote directory for overlay upper/work and transient command state."""
 
 BUNDLE_HASH_MARKER = f"{BUNDLE_REMOTE_DIR}/.bundle-hash"
-BUNDLE_REMOTE_TARBALL = f"{BUNDLE_REMOTE_DIR}/bundle.tar.gz"
 
 DAEMON_SOCKET_PATH = f"{BUNDLE_REMOTE_DIR}/runtime.sock"
 DAEMON_PID_PATH = f"{BUNDLE_REMOTE_DIR}/runtime.pid"
@@ -29,7 +28,6 @@ EOSD_SHA_MARKER = f"{BUNDLE_REMOTE_DIR}/.eosd-sha256"
 __all__ = [
     "BUNDLE_HASH_MARKER",
     "BUNDLE_REMOTE_DIR",
-    "BUNDLE_REMOTE_TARBALL",
     "DAEMON_ENV_SIGNATURE_PATH",
     "DAEMON_LOG_PATH",
     "DAEMON_PID_PATH",

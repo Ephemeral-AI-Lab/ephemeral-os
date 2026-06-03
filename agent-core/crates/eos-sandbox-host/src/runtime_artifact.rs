@@ -23,9 +23,10 @@ pub const EOSD_VERSION: &str = "0.1.0-local.20260602";
 // empty); the spec §6 mandates omitting a `MINISIGN_PUBLIC_KEY` const until it
 // carries a value, so none is declared here.
 
-/// The wire protocol version the pinned `eosd` speaks. Lockstep with
+/// The wire protocol version the pinned `eosd` speaks (from `eos_protocol`, the
+/// crate the artifact itself is built from). Lockstep with
 /// [`crate::daemon_client::DAEMON_PROTOCOL_VERSION`].
-pub const PROTOCOL_VERSION: u32 = 1;
+pub const PROTOCOL_VERSION: u32 = eos_protocol::DAEMON_PROTOCOL_VERSION as u32;
 
 // AC-eos-sandbox-host-08: the host and the pinned artifact must agree on the wire
 // protocol version. A drift fails the build.

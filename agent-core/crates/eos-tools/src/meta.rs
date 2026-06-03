@@ -65,7 +65,14 @@ pub(crate) fn tool_hooks(name: ToolName) -> Vec<Hook> {
         T::EnterIsolatedWorkspace | T::ExitIsolatedWorkspace => {
             vec![Hook::RequireNoInflightBackgroundTasks { tool: name }]
         }
-        T::SubmitRootOutcome => vec![Hook::RequireNoInflightBackgroundTasks { tool: name }],
+        // EOS decision: the root terminal is advisor-gated too. This diverges
+        // from the Python backend, which gates only the planner/generator/reducer
+        // main-role terminals and intentionally omits root. RequireNoInflight is
+        // kept first so a background rejection surfaces before the advisor gate.
+        T::SubmitRootOutcome => vec![
+            Hook::RequireNoInflightBackgroundTasks { tool: name },
+            Hook::AdvisorApproval { tool: name },
+        ],
         T::SubmitGeneratorOutcome | T::SubmitReducerOutcome => vec![
             Hook::RequireNoInflightBackgroundTasks { tool: name },
             Hook::AdvisorApproval { tool: name },

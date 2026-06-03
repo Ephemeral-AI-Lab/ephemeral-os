@@ -9,7 +9,7 @@
 
 **40 items (32 structs, 8 enums, 0 traits, 0 type aliases) across 4 files.**
 
-`eos-protocol` is the dependency-free source of truth for the `eosd` runtime's wire protocol and content-addressed-store byte identity. It owns the two correctness-bearing CAS hashes (`manifest_root_hash`, `layer_digest`) plus the framed newline-delimited-JSON envelope encode/decode, and ports the Python `backend/src/sandbox` schema for shared tool-verb request/response models, the daemon audit-event sections, and frozen protocol constants — all kept byte-identical or canonically-equal to the live Python.
+`eos-protocol` is the dependency-free source of truth for the `eosd` runtime's wire protocol and content-addressed-store byte identity. It owns the two correctness-bearing CAS hashes (`manifest_root_hash`, `layer_digest`) plus the framed newline-delimited-JSON envelope encode/decode, and the shared schema for tool-verb request/response models, the daemon audit-event sections, and frozen protocol constants — all with byte-stable, canonical serialization.
 
 ## Contents
 
@@ -36,7 +36,7 @@ Audit lane; storage order is `_LANES`, eviction tries `sample` first and `critic
 
 #### `DaemonSection`  ·  _struct_  ·  derives: `Debug, Clone, Default, PartialEq, Serialize, Deserialize`  ·  [L50]
 
-`daemon` audit section (PORT audit_schema.py:28-39).
+`daemon` audit section.
 
 **Fields**
 
@@ -50,7 +50,7 @@ Audit lane; storage order is `_LANES`, eviction tries `sample` first and `critic
 
 #### `LayerStackSection`  ·  _struct_  ·  derives: `Debug, Clone, Default, PartialEq, Serialize, Deserialize`  ·  [L65]
 
-`layer_stack` audit section (PORT audit_schema.py:42-63).
+`layer_stack` audit section.
 
 **Fields**
 
@@ -135,7 +135,7 @@ Audit lane; storage order is `_LANES`, eviction tries `sample` first and `critic
 
 #### `OccSection`  ·  _struct_  ·  derives: `Debug, Clone, Default, PartialEq, Serialize, Deserialize`  ·  [L215]
 
-`occ` audit section (PORT audit_schema.py:142-164).
+`occ` audit section.
 
 **Fields**
 

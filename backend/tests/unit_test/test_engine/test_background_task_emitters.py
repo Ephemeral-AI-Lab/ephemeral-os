@@ -8,39 +8,36 @@ from typing import Any
 
 import pytest
 
+import engine.background.task_supervisor as task_supervisor_mod
 from engine.background.task_supervisor import (
     BackgroundTaskStatus,
     BackgroundTaskSupervisor,
 )
 from notification import SystemNotificationService
-from sandbox.daemon.audit_buffer import get_audit_buffer
 from tools import ToolResult
 
 
-_AUDIT_CURSOR = {"seq": -1}
+_EVENTS: list[dict[str, Any]] = []
 
 
 def _drain_background_events() -> list[dict[str, Any]]:
-    buf = get_audit_buffer()
-    snap = buf.pull(after_seq=_AUDIT_CURSOR["seq"], limit=10_000)
-    events = snap.get("events", [])
-    if events:
-        _AUDIT_CURSOR["seq"] = int(events[-1]["seq"])
-    return [evt for evt in events if str(evt.get("type", "")).startswith("background_tool.")]
+    return [
+        evt
+        for evt in _EVENTS
+        if str(evt.get("type", "")).startswith("background_tool.")
+    ]
 
 
 @pytest.fixture(autouse=True)
-def _reset_audit_cursor() -> None:
-    buf = get_audit_buffer()
-    cursor = -1
-    while True:
-        snap = buf.pull(after_seq=cursor, limit=10_000)
-        events = snap.get("events", [])
-        if not events:
-            break
-        cursor = int(events[-1]["seq"])
-    _AUDIT_CURSOR["seq"] = cursor
+def _capture_safe_emit(monkeypatch: pytest.MonkeyPatch) -> None:
+    _EVENTS.clear()
+
+    def _record(event: dict[str, Any], lane: str) -> None:
+        _EVENTS.append({**event, "lane": lane})
+
+    monkeypatch.setattr(task_supervisor_mod, "safe_emit", _record)
     yield
+    _EVENTS.clear()
 
 
 @pytest.mark.asyncio

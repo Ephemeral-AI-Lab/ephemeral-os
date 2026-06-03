@@ -4,22 +4,31 @@ expression: rust
 ---
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "additionalProperties": false,
+  "title": "CentralConfig",
   "definitions": {
     "AttemptConfig": {
       "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "max_concurrent_task_runs"
+      ],
       "properties": {
         "max_concurrent_task_runs": {
           "type": "integer"
         }
-      },
-      "required": [
-        "max_concurrent_task_runs"
-      ],
-      "type": "object"
+      }
     },
     "DatabaseConfig": {
       "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "busy_timeout_ms",
+        "echo",
+        "foreign_keys",
+        "pool_size",
+        "url",
+        "wal"
+      ],
       "properties": {
         "busy_timeout_ms": {
           "type": "integer"
@@ -39,19 +48,17 @@ expression: rust
         "wal": {
           "type": "boolean"
         }
-      },
-      "required": [
-        "busy_timeout_ms",
-        "echo",
-        "foreign_keys",
-        "pool_size",
-        "url",
-        "wal"
-      ],
-      "type": "object"
+      }
     },
     "DockerConfig": {
       "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "daemon_tcp",
+        "default_snapshot",
+        "no_privilege",
+        "privileged"
+      ],
       "properties": {
         "daemon_tcp": {
           "type": "boolean"
@@ -65,17 +72,15 @@ expression: rust
         "privileged": {
           "type": "boolean"
         }
-      },
-      "required": [
-        "daemon_tcp",
-        "default_snapshot",
-        "no_privilege",
-        "privileged"
-      ],
-      "type": "object"
+      }
     },
     "MinimaxConfig": {
       "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "base_url",
+        "model"
+      ],
       "properties": {
         "base_url": {
           "type": "string"
@@ -83,15 +88,15 @@ expression: rust
         "model": {
           "type": "string"
         }
-      },
-      "required": [
-        "base_url",
-        "model"
-      ],
-      "type": "object"
+      }
     },
     "ProvidersConfig": {
       "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "minimax",
+        "retry"
+      ],
       "properties": {
         "minimax": {
           "allOf": [
@@ -107,15 +112,17 @@ expression: rust
             }
           ]
         }
-      },
-      "required": [
-        "minimax",
-        "retry"
-      ],
-      "type": "object"
+      }
     },
     "RetryConfig": {
       "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "base_delay_s",
+        "max_delay_s",
+        "max_retries",
+        "status_codes"
+      ],
       "properties": {
         "base_delay_s": {
           "format": "double",
@@ -129,23 +136,23 @@ expression: rust
           "type": "integer"
         },
         "status_codes": {
+          "uniqueItems": true,
+          "type": "array",
           "items": {
             "type": "integer"
-          },
-          "type": "array",
-          "uniqueItems": true
+          }
         }
-      },
-      "required": [
-        "base_delay_s",
-        "max_delay_s",
-        "max_retries",
-        "status_codes"
-      ],
-      "type": "object"
+      }
     },
     "SandboxConfig": {
       "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "default_provider",
+        "docker",
+        "runtime_client_timeout_s",
+        "timeout_s"
+      ],
       "properties": {
         "default_provider": {
           "allOf": [
@@ -169,14 +176,7 @@ expression: rust
           "format": "double",
           "type": "number"
         }
-      },
-      "required": [
-        "default_provider",
-        "docker",
-        "runtime_client_timeout_s",
-        "timeout_s"
-      ],
-      "type": "object"
+      }
     },
     "SandboxProvider": {
       "oneOf": [
@@ -189,6 +189,13 @@ expression: rust
       ]
     }
   },
+  "type": "object",
+  "required": [
+    "attempt",
+    "database",
+    "providers",
+    "sandbox"
+  ],
   "properties": {
     "attempt": {
       "allOf": [
@@ -219,12 +226,5 @@ expression: rust
       ]
     }
   },
-  "required": [
-    "attempt",
-    "database",
-    "providers",
-    "sandbox"
-  ],
-  "title": "CentralConfig",
-  "type": "object"
+  "additionalProperties": false
 }

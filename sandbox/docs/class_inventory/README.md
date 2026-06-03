@@ -35,27 +35,26 @@ where absent. Test-only `#[cfg(test)]` items are excluded.
 - `eos-protocol` — Dependency-free source of truth for the eosd runtime's wire
   protocol and content-addressed-store byte identity. It owns the two
   correctness-bearing CAS hashes (manifest_root_hash, layer_digest), the framed
-  newline-delimited-JSON envelope encode/decode, and ports the Python
-  backend/src/sandbox schema for shared tool-verb request/response models,
-  daemon audit-event sections, and frozen protocol constants.
+  newline-delimited-JSON envelope encode/decode, and the shared schema for
+  tool-verb request/response models, daemon audit-event sections, and frozen
+  protocol constants.
 - `eos-ns-holder` — The single-threaded child of the eosd runtime that unshares
   and pins the isolated workspace's full namespace stack (user/mount/pid/net),
   runs the daemon readiness/control-pipe handshake, applies best-effort
   shell-free network hardening (loopback, veth, IPv6 route flushing) via raw
   rtnetlink, then pauses until SIGTERM. It is a near-leaf syscall crate with no
-  tokio dependency, porting the Python ns_holder.py and the unshare(1) launcher
-  flags into one in-process step.
+  tokio dependency, folding the namespace-holder handshake and the unshare(1)
+  launcher flags into one in-process step.
 - `eos-runner` — The single-threaded, no-tokio namespace runner the eosd daemon
   execs as a dedicated child to perform the kernel syscalls (unshare, setns,
-  mount) that require a single-threaded caller, porting the Python
-  sandbox/overlay and sandbox/isolated_workspace namespace helpers. It owns the
+  mount) that require a single-threaded caller. It owns the
   runner's request/result wire types, the overlay-mount inversion port
   (KernelMountPort), the thiserror failure enum, and the fresh-ns / setns
   execution paths.
 - `eos-layerstack` — Durable-truth storage layer of the eosd runtime: it owns
   the single linearization point (one mutable manifest.json over immutable,
-  content-addressed layer directories swapped by an atomic pointer write) that
-  ports the Python backend/src/sandbox/layer_stack subsystem. Item groups cover
+  content-addressed layer directories swapped by an atomic pointer write). Item
+  groups cover
   the storage facade and merged read view, the dual-set snapshot lease
   registry, non-destructive checkpoint squashing, the dual-layer
   cross-process/in-process writer lock, and workspace base construction/binding.
@@ -76,7 +75,7 @@ where absent. Test-only `#[cfg(test)]` items are excluded.
   transaction port, the changeset-preparing service plus
   maintenance/route-provider/daemon-accessor ports, and the crate-local error
   algebra.
-- `eos-isolated` — Ports the Python isolated_workspace subsystem: a persistent,
+- `eos-isolated` — Owns the isolated-workspace subsystem: a persistent,
   network-isolated PRIVATE session whose writes are captured for audit only and
   never published (enforced at build time by not depending on eos-occ). Provides
   env-sourced lifecycle caps, the eos-shared0 bridge plus per-workspace
@@ -87,13 +86,12 @@ where absent. Test-only `#[cfg(test)]` items are excluded.
   plugin/service manifests, validated service keys and status,
   daemon-to-harness refresh messages, public op-name registration, and
   bidirectional message-id'd PPC frames. It deliberately holds no process,
-  overlay, OCC, or namespace state (those stay in eos-daemon), porting the
-  Python sandbox plugin import-handler path into a typed daemon-owned
-  service-process contract.
+  overlay, OCC, or namespace state (those stay in eos-daemon); it exposes a
+  typed daemon-owned service-process contract.
 - `eos-daemon` — The `eosd` tokio control-plane crate: it runs the protocol-v1
   RPC server on an AF_UNIX socket plus a loopback-TCP listener, routes ops
-  through the `OpTable` dispatcher, and owns the daemon-side impure ports severed
-  from the Python `backend/src/sandbox`. Item groups cover the RPC server/config,
+  through the `OpTable` dispatcher, and owns the daemon-side impure ports of the
+  runtime control plane. Item groups cover the RPC server/config,
   the op dispatcher with its per-root OCC single-writer service cache and
   LayerStack commit/route providers, the in-flight invocation registry + TTL
   reaper, the audit ring buffer, the command-session runtime, the daemon-local

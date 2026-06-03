@@ -7,10 +7,10 @@ sites across backend/. Strict invariants:
 - ``cst.SimpleString``, ``cst.FormattedString``, ``cst.Name``,
   ``cst.Attribute`` outside an Import context are left untouched.
 - The rewrite map is a prefix map: longest matching prefix wins so that
-  ``sandbox.overlay`` -> ``sandbox.overlay`` works even when
-  ``sandbox`` -> ``sandbox`` is a no-op rewrite. A prefix only matches a
-  whole dotted-segment boundary (so ``sandbox.overlayer`` does NOT match
-  the prefix ``sandbox.overlay``).
+  ``oldpkg.overlay`` -> ``newpkg.overlay`` works even when
+  ``oldpkg`` -> ``newpkg`` is also present. A prefix only matches a whole
+  dotted-segment boundary (so ``oldpkg.overlayer`` does NOT match the prefix
+  ``oldpkg.overlay``).
 
 Usage:
     codemod_sandbox_imports.py [--commit] --map JSON ROOTS...
@@ -154,26 +154,26 @@ def run_rewrite(
 
 
 _SELF_TEST_SRC = '''\
-"""docstring mentioning sandbox.command_exec for fun"""
+"""docstring mentioning oldpkg.command_exec for fun"""
 
-from sandbox.command_exec import foo
-from sandbox.command_exec.entrypoints import namespace_helper
-from sandbox.overlay.factory import build
-import sandbox.command_exec.policy
+from oldpkg.command_exec import foo
+from oldpkg.command_exec.entrypoints import namespace_helper
+from oldpkg.overlay.factory import build
+import oldpkg.command_exec.policy
 
-s = "sandbox.command_exec.X"
-url = "https://example/sandbox.command_exec/x"
+s = "oldpkg.command_exec.X"
+url = "https://example/oldpkg.command_exec/x"
 
 def f():
-    from sandbox.overlay import cli
-    return cli, foo, build, namespace_helper, sandbox.command_exec.policy
+    from oldpkg.overlay import cli
+    return cli, foo, build, namespace_helper, oldpkg.command_exec.policy
 '''
 
 
 def _self_test() -> int:
     rewrites = {
-        "sandbox.overlay": "sandbox.overlay",
-        "sandbox.command_exec": "sandbox.execution",
+        "oldpkg.overlay": "newpkg.overlay",
+        "oldpkg.command_exec": "newpkg.execution",
     }
     with tempfile.TemporaryDirectory() as td:
         p = Path(td) / "fixture.py"
@@ -181,20 +181,20 @@ def _self_test() -> int:
         rewrite_file(p, rewrites, commit=True)
         out = p.read_text()
     expected_changed = [
-        "from sandbox.execution import foo",
-        "from sandbox.execution.entrypoints import namespace_helper",
-        "from sandbox.overlay.factory import build",
-        "import sandbox.execution.policy",
-        "from sandbox.overlay import cli",
+        "from newpkg.execution import foo",
+        "from newpkg.execution.entrypoints import namespace_helper",
+        "from newpkg.overlay.factory import build",
+        "import newpkg.execution.policy",
+        "from newpkg.overlay import cli",
     ]
     # Strings/comments/docstrings MUST be preserved verbatim.
     expected_unchanged = [
-        '"sandbox.command_exec.X"',
-        '"https://example/sandbox.command_exec/x"',
-        '"""docstring mentioning sandbox.command_exec for fun"""',
+        '"oldpkg.command_exec.X"',
+        '"https://example/oldpkg.command_exec/x"',
+        '"""docstring mentioning oldpkg.command_exec for fun"""',
         # the identifier attribute access in a `return` is NOT an ImportFrom/Import
         # node — codemod must not touch it.
-        "sandbox.command_exec.policy",
+        "oldpkg.command_exec.policy",
     ]
     ok = True
     for want in expected_changed:

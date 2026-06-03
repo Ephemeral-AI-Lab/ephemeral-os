@@ -327,7 +327,7 @@ class DaemonClient:
 
     async def command_session_write(self, command_session_id: str, chars: str) -> dict[str, Any]:
         return await self.call(
-            "api.v1.command.write_stdin",
+            "api.v1.write_stdin",
             {
                 "command_session_id": command_session_id,
                 "chars": chars,
@@ -338,7 +338,7 @@ class DaemonClient:
 
     async def command_session_progress(self, command_session_id: str) -> dict[str, Any]:
         return await self.call(
-            "api.v1.command.write_stdin",
+            "api.v1.write_stdin",
             {
                 "command_session_id": command_session_id,
                 "chars": "",

@@ -9,7 +9,7 @@
 
 **18 items (11 structs, 6 enums, 0 traits, 1 type alias) across 7 files.**
 
-`eos-plugin` owns the pure plugin PPC contract layer of the eosd runtime: plugin/service manifests, validated service keys and status, daemon-to-harness refresh messages, public op-name registration, and bidirectional message-id'd PPC frames. It deliberately holds no process, overlay, OCC, or namespace state (those stay in `eos-daemon`), porting the Python `backend/src/sandbox/ephemeral_workspace/plugin` import-handler path into a typed daemon-owned service-process contract. Item groups: error surface (`error.rs`), manifests (`manifest.rs`), the PPC channel frame (`ppc.rs`), refresh protocol (`refresh.rs`), op registry (`registry.rs`), service identity (`service.rs`), and the logical service registry (`service_registry.rs`).
+`eos-plugin` owns the pure plugin PPC contract layer of the eosd runtime: plugin/service manifests, validated service keys and status, daemon-to-harness refresh messages, public op-name registration, and bidirectional message-id'd PPC frames. It deliberately holds no process, overlay, OCC, or namespace state (those stay in `eos-daemon`); it exposes a typed daemon-owned service-process contract. Item groups: error surface (`error.rs`), manifests (`manifest.rs`), the PPC channel frame (`ppc.rs`), refresh protocol (`refresh.rs`), op registry (`registry.rs`), service identity (`service.rs`), and the logical service registry (`service_registry.rs`).
 
 ## Contents
 
@@ -27,7 +27,7 @@
 
 #### `PluginError`  ·  _enum_  ·  derives: `Debug, Error`  ·  `#[non_exhaustive]`  ·  [L13]
 
-Failures surfaced by plugin contracts and the PPC channel; reproduces the Python `PluginOpRegistrationError`/`PluginOpConflictError`/`PluginEnsureError`/`RuntimeError` failure classes as a typed surface the daemon translates into the wire error envelope.
+Failures surfaced by plugin contracts and the PPC channel; a typed failure surface (registration, conflict, ensure, manifest, projection, and PPC errors) the daemon translates into the wire error envelope.
 
 **Variants**: `Registration(String)`, `Conflict(String)`, `Ensure(String)`, `Manifest(String)`, `ProjectionStale(String)`, `Ppc(String)`, `ForbiddenInIsolatedWorkspace`
 
@@ -169,7 +169,7 @@ Harness acknowledgement for a refresh request.
 
 #### `PluginOpRegistration`  ·  _struct_  ·  derives: `Debug, Clone, PartialEq, Eq`  ·  [L38]
 
-One pending plugin-op registration; the Rust daemon never holds a Python callable, so the importlib path is replaced by a PPC service process.
+One pending plugin-op registration; the daemon never holds an in-process plugin callable, so registration resolves to a PPC service process.
 
 **Fields**
 

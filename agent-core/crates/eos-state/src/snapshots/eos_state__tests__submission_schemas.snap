@@ -5,210 +5,94 @@ expression: schemas
 {
   "ExecutionTaskOutcome": {
     "$schema": "http://json-schema.org/draft-07/schema#",
-    "definitions": {
-      "ExecutionRole": {
-        "description": "The execution role an outcome belongs to (Python `ExecutionRole`). Only `generator`/`reducer` execution evidence ever appears in outcomes.",
-        "oneOf": [
-          {
-            "description": "A generator (execution) task.",
-            "enum": [
-              "generator"
-            ],
-            "type": "string"
-          },
-          {
-            "description": "A reducer task (the attempt's exit gate).",
-            "enum": [
-              "reducer"
-            ],
-            "type": "string"
-          }
-        ]
-      },
-      "TaskOutcomeStatus": {
-        "description": "Binary status of one execution outcome (Python `TaskOutcomeStatus`).",
-        "oneOf": [
-          {
-            "description": "The task completed successfully.",
-            "enum": [
-              "success"
-            ],
-            "type": "string"
-          },
-          {
-            "description": "The task failed.",
-            "enum": [
-              "failed"
-            ],
-            "type": "string"
-          }
-        ]
-      }
-    },
+    "title": "ExecutionTaskOutcome",
     "description": "One generator/reducer task's terminal execution evidence (Python `ExecutionTaskOutcome`). Bounded to a single persisted task.",
-    "properties": {
-      "outcome": {
-        "description": "Free-text outcome summary.",
-        "type": "string"
-      },
-      "role": {
-        "allOf": [
-          {
-            "$ref": "#/definitions/ExecutionRole"
-          }
-        ],
-        "description": "The execution role that produced this outcome."
-      },
-      "status": {
-        "allOf": [
-          {
-            "$ref": "#/definitions/TaskOutcomeStatus"
-          }
-        ],
-        "description": "Whether the task succeeded or failed."
-      },
-      "task_id": {
-        "description": "The task that produced this outcome.",
-        "type": "string"
-      }
-    },
+    "type": "object",
     "required": [
       "outcome",
       "role",
       "status",
       "task_id"
     ],
-    "title": "ExecutionTaskOutcome",
-    "type": "object"
-  },
-  "GeneratorSubmission": {
-    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "outcome": {
+        "description": "Free-text outcome summary.",
+        "type": "string"
+      },
+      "role": {
+        "description": "The execution role that produced this outcome.",
+        "allOf": [
+          {
+            "$ref": "#/definitions/ExecutionRole"
+          }
+        ]
+      },
+      "status": {
+        "description": "Whether the task succeeded or failed.",
+        "allOf": [
+          {
+            "$ref": "#/definitions/TaskOutcomeStatus"
+          }
+        ]
+      },
+      "task_id": {
+        "description": "The task that produced this outcome.",
+        "type": "string"
+      }
+    },
     "definitions": {
+      "ExecutionRole": {
+        "description": "The execution role an outcome belongs to (Python `ExecutionRole`). Only `generator`/`reducer` execution evidence ever appears in outcomes.",
+        "oneOf": [
+          {
+            "description": "A generator (execution) task.",
+            "type": "string",
+            "enum": [
+              "generator"
+            ]
+          },
+          {
+            "description": "A reducer task (the attempt's exit gate).",
+            "type": "string",
+            "enum": [
+              "reducer"
+            ]
+          }
+        ]
+      },
       "TaskOutcomeStatus": {
         "description": "Binary status of one execution outcome (Python `TaskOutcomeStatus`).",
         "oneOf": [
           {
             "description": "The task completed successfully.",
+            "type": "string",
             "enum": [
               "success"
-            ],
-            "type": "string"
+            ]
           },
           {
             "description": "The task failed.",
+            "type": "string",
             "enum": [
               "failed"
-            ],
-            "type": "string"
+            ]
           }
         ]
       }
-    },
-    "description": "Validated terminal outcome for one generator task (Python `GeneratorSubmission`).",
-    "properties": {
-      "attempt_id": {
-        "description": "Owning attempt.",
-        "type": "string"
-      },
-      "outcome": {
-        "description": "Free-text outcome summary.",
-        "type": "string"
-      },
-      "status": {
-        "allOf": [
-          {
-            "$ref": "#/definitions/TaskOutcomeStatus"
-          }
-        ],
-        "description": "Success or failure."
-      },
-      "task_id": {
-        "description": "The generator task.",
-        "type": "string"
-      },
-      "terminal_tool_result": {
-        "additionalProperties": true,
-        "description": "Flattened terminal tool result (always present on a terminal submit).",
-        "type": "object"
-      }
-    },
-    "required": [
-      "attempt_id",
-      "outcome",
-      "status",
-      "task_id",
-      "terminal_tool_result"
-    ],
-    "title": "GeneratorSubmission",
-    "type": "object"
-  },
-  "PlannerFailureSubmission": {
-    "$schema": "http://json-schema.org/draft-07/schema#",
-    "definitions": {
-      "PlannerFailReason": {
-        "description": "Why a planner submission failed (Python `Literal[\"run_exhausted\"]`). Distinct from `AttemptFailReason` (spec §6.10).",
-        "oneOf": [
-          {
-            "description": "The attempt's run budget was exhausted.",
-            "enum": [
-              "run_exhausted"
-            ],
-            "type": "string"
-          }
-        ]
-      }
-    },
-    "description": "Runtime-synthesized planner failure (Python `PlannerFailureSubmission`).",
-    "properties": {
-      "attempt_id": {
-        "description": "Owning attempt.",
-        "type": "string"
-      },
-      "fail_reason": {
-        "allOf": [
-          {
-            "$ref": "#/definitions/PlannerFailReason"
-          }
-        ],
-        "description": "The planner failure reason."
-      },
-      "planner_task_id": {
-        "description": "The planner task that failed.",
-        "type": "string"
-      }
-    },
-    "required": [
-      "attempt_id",
-      "fail_reason",
-      "planner_task_id"
-    ],
-    "title": "PlannerFailureSubmission",
-    "type": "object"
+    }
   },
   "PlannerSubmission": {
     "$schema": "http://json-schema.org/draft-07/schema#",
-    "definitions": {
-      "PlannerKind": {
-        "description": "Whether a planner submission completes the attempt or defers a goal (Python `Literal[\"completes\",\"defers\"]`).",
-        "oneOf": [
-          {
-            "description": "The plan completes the attempt.",
-            "enum": [
-              "completes"
-            ],
-            "type": "string"
-          },
-          {
-            "description": "The plan defers a goal to the next iteration.",
-            "enum": [
-              "defers"
-            ],
-            "type": "string"
-          }
-        ]
-      }
-    },
+    "title": "PlannerSubmission",
     "description": "Validated planner submission from a full or partial plan tool (Python `PlannerSubmission`).",
+    "type": "object",
+    "required": [
+      "attempt_id",
+      "generator_task_ids",
+      "kind",
+      "planner_task_id",
+      "reducer_task_ids"
+    ],
     "properties": {
       "attempt_id": {
         "description": "Owning attempt.",
@@ -223,18 +107,18 @@ expression: schemas
       },
       "generator_task_ids": {
         "description": "The plan's generator task ids.",
+        "type": "array",
         "items": {
           "type": "string"
-        },
-        "type": "array"
+        }
       },
       "kind": {
+        "description": "Whether the plan completes or defers.",
         "allOf": [
           {
             "$ref": "#/definitions/PlannerKind"
           }
-        ],
-        "description": "Whether the plan completes or defers."
+        ]
       },
       "planner_task_id": {
         "description": "The planner task that produced this submission.",
@@ -242,46 +126,89 @@ expression: schemas
       },
       "reducer_task_ids": {
         "description": "The plan's reducer task ids.",
+        "type": "array",
         "items": {
           "type": "string"
-        },
-        "type": "array"
+        }
       }
     },
-    "required": [
-      "attempt_id",
-      "generator_task_ids",
-      "kind",
-      "planner_task_id",
-      "reducer_task_ids"
-    ],
-    "title": "PlannerSubmission",
-    "type": "object"
-  },
-  "ReducerSubmission": {
-    "$schema": "http://json-schema.org/draft-07/schema#",
     "definitions": {
-      "TaskOutcomeStatus": {
-        "description": "Binary status of one execution outcome (Python `TaskOutcomeStatus`).",
+      "PlannerKind": {
+        "description": "Whether a planner submission completes the attempt or defers a goal (Python `Literal[\"completes\",\"defers\"]`).",
         "oneOf": [
           {
-            "description": "The task completed successfully.",
+            "description": "The plan completes the attempt.",
+            "type": "string",
             "enum": [
-              "success"
-            ],
-            "type": "string"
+              "completes"
+            ]
           },
           {
-            "description": "The task failed.",
+            "description": "The plan defers a goal to the next iteration.",
+            "type": "string",
             "enum": [
-              "failed"
-            ],
-            "type": "string"
+              "defers"
+            ]
           }
         ]
       }
+    }
+  },
+  "PlannerFailureSubmission": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "PlannerFailureSubmission",
+    "description": "Runtime-synthesized planner failure (Python `PlannerFailureSubmission`).",
+    "type": "object",
+    "required": [
+      "attempt_id",
+      "fail_reason",
+      "planner_task_id"
+    ],
+    "properties": {
+      "attempt_id": {
+        "description": "Owning attempt.",
+        "type": "string"
+      },
+      "fail_reason": {
+        "description": "The planner failure reason.",
+        "allOf": [
+          {
+            "$ref": "#/definitions/PlannerFailReason"
+          }
+        ]
+      },
+      "planner_task_id": {
+        "description": "The planner task that failed.",
+        "type": "string"
+      }
     },
-    "description": "Validated terminal outcome for one reducer task (Python `ReducerSubmission`).",
+    "definitions": {
+      "PlannerFailReason": {
+        "description": "Why a planner submission failed (Python `Literal[\"run_exhausted\"]`). Distinct from `AttemptFailReason` (spec §6.10).",
+        "oneOf": [
+          {
+            "description": "The attempt's run budget was exhausted.",
+            "type": "string",
+            "enum": [
+              "run_exhausted"
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "GeneratorSubmission": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "GeneratorSubmission",
+    "description": "Validated terminal outcome for one generator task (Python `GeneratorSubmission`).",
+    "type": "object",
+    "required": [
+      "attempt_id",
+      "outcome",
+      "status",
+      "task_id",
+      "terminal_tool_result"
+    ],
     "properties": {
       "attempt_id": {
         "description": "Owning attempt.",
@@ -292,23 +219,50 @@ expression: schemas
         "type": "string"
       },
       "status": {
+        "description": "Success or failure.",
         "allOf": [
           {
             "$ref": "#/definitions/TaskOutcomeStatus"
           }
-        ],
-        "description": "Success or failure."
+        ]
       },
       "task_id": {
-        "description": "The reducer task.",
+        "description": "The generator task.",
         "type": "string"
       },
       "terminal_tool_result": {
-        "additionalProperties": true,
         "description": "Flattened terminal tool result (always present on a terminal submit).",
-        "type": "object"
+        "type": "object",
+        "additionalProperties": true
       }
     },
+    "definitions": {
+      "TaskOutcomeStatus": {
+        "description": "Binary status of one execution outcome (Python `TaskOutcomeStatus`).",
+        "oneOf": [
+          {
+            "description": "The task completed successfully.",
+            "type": "string",
+            "enum": [
+              "success"
+            ]
+          },
+          {
+            "description": "The task failed.",
+            "type": "string",
+            "enum": [
+              "failed"
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "ReducerSubmission": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "ReducerSubmission",
+    "description": "Validated terminal outcome for one reducer task (Python `ReducerSubmission`).",
+    "type": "object",
     "required": [
       "attempt_id",
       "outcome",
@@ -316,7 +270,53 @@ expression: schemas
       "task_id",
       "terminal_tool_result"
     ],
-    "title": "ReducerSubmission",
-    "type": "object"
+    "properties": {
+      "attempt_id": {
+        "description": "Owning attempt.",
+        "type": "string"
+      },
+      "outcome": {
+        "description": "Free-text outcome summary.",
+        "type": "string"
+      },
+      "status": {
+        "description": "Success or failure.",
+        "allOf": [
+          {
+            "$ref": "#/definitions/TaskOutcomeStatus"
+          }
+        ]
+      },
+      "task_id": {
+        "description": "The reducer task.",
+        "type": "string"
+      },
+      "terminal_tool_result": {
+        "description": "Flattened terminal tool result (always present on a terminal submit).",
+        "type": "object",
+        "additionalProperties": true
+      }
+    },
+    "definitions": {
+      "TaskOutcomeStatus": {
+        "description": "Binary status of one execution outcome (Python `TaskOutcomeStatus`).",
+        "oneOf": [
+          {
+            "description": "The task completed successfully.",
+            "type": "string",
+            "enum": [
+              "success"
+            ]
+          },
+          {
+            "description": "The task failed.",
+            "type": "string",
+            "enum": [
+              "failed"
+            ]
+          }
+        ]
+      }
+    }
   }
 }

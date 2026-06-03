@@ -9,7 +9,7 @@
 
 **14 items (8 structs, 3 enums, 3 traits, 0 type aliases) across 4 files.**
 
-`eos-runner` is the single-threaded, no-tokio namespace runner: a dedicated child the `eosd` daemon execs to perform the kernel syscalls (`unshare`, `setns`, `mount`) that require a single-threaded caller, porting the Python `sandbox/overlay` and `sandbox/isolated_workspace` namespace helpers. Its item groups are the owned request/result wire types (`RunMode`, `RunRequest`, `RunResult`, `ToolCall`, `NsFds`, `Fd`, `WorkspaceRoot`), the overlay-mount inversion port (`KernelMountPort`, `MountInputs`, `MountedOverlay`), the `thiserror` failure enum (`RunnerError`), and small fresh-ns execution helpers (`TimeoutKill`, `SyscallResult`).
+`eos-runner` is the single-threaded, no-tokio namespace runner: a dedicated child the `eosd` daemon execs to perform the kernel syscalls (`unshare`, `setns`, `mount`) that require a single-threaded caller. Its item groups are the owned request/result wire types (`RunMode`, `RunRequest`, `RunResult`, `ToolCall`, `NsFds`, `Fd`, `WorkspaceRoot`), the overlay-mount inversion port (`KernelMountPort`, `MountInputs`, `MountedOverlay`), the `thiserror` failure enum (`RunnerError`), and small fresh-ns execution helpers (`TimeoutKill`, `SyscallResult`).
 
 ## Contents
 
@@ -139,7 +139,7 @@ The runner's result: the in-namespace tool result JSON plus the child's exit cod
 
 #### `MountInputs`  ·  _struct_  ·  derives: `Debug, Clone, PartialEq, Eq`  ·  [L26]
 
-Validated overlay-mount inputs: newest-first lower layers plus upper/work dirs, mirroring the Python `MountInputs`.
+Validated overlay-mount inputs: newest-first lower layers plus upper/work dirs.
 
 **Fields**
 

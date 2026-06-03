@@ -25,24 +25,36 @@ use crate::provider::{DaemonTcpEndpoint, ExecOpts, ProviderAdapter};
 use crate::registry::ProviderRegistry;
 use crate::runtime_artifact::EOSD_VERSION;
 
-// --- wire protocol constants (verbatim from daemon_client.py) -----------------
+// --- wire protocol constants --------------------------------------------------
+//
+// Owned by the sibling `sandbox/` workspace's `eos-protocol` crate (the same
+// crate the in-container `eosd` is built from). The host-typed forms below are
+// DERIVED from `eos_protocol`, never hand-pinned, so a daemon-side bump cannot
+// silently drift the host. Host-only operational knobs stay local.
 
-/// The wire protocol version the host speaks. Lockstep-asserted equal to
-/// [`crate::runtime_artifact::PROTOCOL_VERSION`] at compile time (AC-08).
-pub const DAEMON_PROTOCOL_VERSION: u32 = 1;
-const DAEMON_PROTOCOL_FIELD: &str = "_eos_daemon_protocol_version";
-const DAEMON_AUTH_FIELD: &str = "_eos_daemon_auth_token";
-const THIN_CLIENT_CONNECT_FAILED: i32 = 97;
-const THIN_CLIENT_IO_FAILED: i32 = 98;
+/// The wire protocol version the host speaks (from `eos_protocol`). Lockstep
+/// with [`crate::runtime_artifact::PROTOCOL_VERSION`].
+pub const DAEMON_PROTOCOL_VERSION: u32 = eos_protocol::DAEMON_PROTOCOL_VERSION as u32;
+const DAEMON_PROTOCOL_FIELD: &str = eos_protocol::DAEMON_PROTOCOL_FIELD;
+const DAEMON_AUTH_FIELD: &str = eos_protocol::DAEMON_AUTH_FIELD;
+const THIN_CLIENT_CONNECT_FAILED: i32 = eos_protocol::CONNECT_FAILED;
+const THIN_CLIENT_IO_FAILED: i32 = eos_protocol::IO_FAILED;
 const EMPTY_RESPONSE_MESSAGE: &str = "EOS_DAEMON_IO_FAILED:empty_response";
 const DAEMON_SPAWN_TIMEOUT_S: u32 = 20;
 const READINESS_TIMEOUT_S: u32 = 30;
 const TCP_DEFAULT_TIMEOUT_S: u32 = 60;
 
-const fn ms(n: u64) -> Duration {
-    Duration::from_millis(n)
+/// Reconnect backoff, derived from `eos_protocol::CONNECT_RETRY_DELAYS_S`
+/// (seconds) so the schedule stays single-sourced with the daemon contract.
+const fn secs_to_duration(secs: f64) -> Duration {
+    Duration::from_millis((secs * 1000.0) as u64)
 }
-const CONNECT_RETRY_DELAYS: [Duration; 4] = [ms(250), ms(500), ms(1000), ms(2000)];
+const CONNECT_RETRY_DELAYS: [Duration; 4] = [
+    secs_to_duration(eos_protocol::CONNECT_RETRY_DELAYS_S[0]),
+    secs_to_duration(eos_protocol::CONNECT_RETRY_DELAYS_S[1]),
+    secs_to_duration(eos_protocol::CONNECT_RETRY_DELAYS_S[2]),
+    secs_to_duration(eos_protocol::CONNECT_RETRY_DELAYS_S[3]),
+];
 
 // --- resolved container-side paths (from sandbox/daemon/paths.py) -------------
 
