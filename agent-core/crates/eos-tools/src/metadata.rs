@@ -27,8 +27,8 @@ use eos_types::{
 
 use crate::error::ToolError;
 use crate::ports::{
-    AdvisorPort, IsolatedWorkspacePort, NotificationSink, PlanSubmissionPort,
-    SubagentSupervisorPort, WorkflowControlPort,
+    AdvisorPort, CommandSessionSupervisorPort, IsolatedWorkspacePort, NotificationSink,
+    PlanSubmissionPort, SubagentSupervisorPort, WorkflowControlPort,
 };
 
 /// The typed bag of runtime context a tool executor reads. Built per tool call
@@ -76,6 +76,9 @@ pub struct ExecutionMetadata {
     pub plan_submission: Option<Arc<dyn PlanSubmissionPort>>,
     /// Subagent supervisor port (run/check/cancel subagent + bg count).
     pub subagent_supervisor: Option<Arc<dyn SubagentSupervisorPort>>,
+    /// Command-session supervisor port (register/recover/mark/count background
+    /// PTY command sessions).
+    pub command_session_supervisor: Option<Arc<dyn CommandSessionSupervisorPort>>,
     /// Advisor port (`ask_advisor` + `AdvisorApproval` hook).
     pub advisor: Option<Arc<dyn AdvisorPort>>,
     /// Isolated-workspace lifecycle port (enter/exit).

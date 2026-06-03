@@ -9,7 +9,7 @@ use eos_llm_client::LlmClient;
 use eos_tools::{ExecutionMetadata, ToolName, ToolRegistry};
 use eos_types::{AgentRunId, JsonObject, TaskId};
 
-use crate::notifications::make_default_notification_rules;
+use crate::notifications::{make_default_notification_rules, NotificationService};
 use crate::prompt::build_termination_condition_prompt;
 use crate::query::{EventSource, ProviderEventSource, QueryContext};
 use crate::EngineError;
@@ -38,6 +38,9 @@ pub struct BuildQueryContextInput {
     pub task_id: Option<TaskId>,
     /// Tool execution metadata.
     pub tool_metadata: ExecutionMetadata,
+    /// The per-request notification sink shared with the tools/heartbeat. The
+    /// loop drains this concrete handle each turn (anchor §7 instance identity).
+    pub notifier: NotificationService,
 }
 
 impl std::fmt::Debug for BuildQueryContextInput {
@@ -81,6 +84,7 @@ pub fn build_query_context(input: BuildQueryContextInput) -> Result<QueryContext
         agent_run_id,
         task_id,
         tool_metadata,
+        notifier,
     } = input;
 
     let mut allowed = parse_tool_names(&agent.allowed_tools)?;
@@ -144,6 +148,7 @@ pub fn build_query_context(input: BuildQueryContextInput) -> Result<QueryContext
         notification_rules: make_default_notification_rules(),
         notification_fired: BTreeSet::new(),
         notification_state: JsonObject::new(),
+        notifier,
     })
 }
 
@@ -239,6 +244,7 @@ mod tests {
             agent_run_id: AgentRunId::new_v4(),
             task_id: None,
             tool_metadata: metadata(),
+            notifier: NotificationService::new(),
         })
         .expect("context");
 

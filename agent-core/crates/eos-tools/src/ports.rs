@@ -18,6 +18,7 @@ use std::collections::BTreeMap;
 use async_trait::async_trait;
 use eos_state::{GeneratorSubmission, PlannerKind, ReducerSubmission};
 use eos_types::{JsonObject, SandboxId, SubagentSessionId, TaskId, WorkflowId, WorkflowSessionId};
+use serde_json::Value;
 
 use crate::error::ToolError;
 
@@ -221,6 +222,45 @@ pub trait SubagentSupervisorPort: Sealed + Send + Sync {
     /// Count of this agent's in-flight local background tasks (the
     /// `background_task_manager` count the no-inflight hook reads).
     async fn background_inflight_count(&self, agent_id: &str) -> usize;
+}
+
+// ---------------------------------------------------------------------------
+// CommandSessionSupervisorPort — register / recover / mark / count background
+// PTY command sessions.
+// ---------------------------------------------------------------------------
+
+/// The engine background supervisor's command-session surface, used by the
+/// `exec_command`/`write_stdin` tools to track sandbox-bound background command
+/// sessions and to recover a terminal result across the heartbeat race
+/// (anchor §5, §8). Implemented by `eos-engine` on the same supervisor instance
+/// as [`SubagentSupervisorPort`].
+///
+/// The `result` payloads are the daemon completion's `result` map (status,
+/// `exit_code`, `output.stdout`, …); they are opaque JSON to the supervisor and
+/// rendered by the engine when delivered.
+#[async_trait]
+pub trait CommandSessionSupervisorPort: Sealed + Send + Sync {
+    /// Register a freshly-started background command session as running. The
+    /// `command_session_id` is the daemon-minted `cmd_<n>` correlation key.
+    async fn register(
+        &self,
+        command_session_id: &str,
+        sandbox_id: &str,
+        agent_id: &str,
+        command: &str,
+    );
+
+    /// The stored terminal result for a session whose live daemon session is
+    /// already gone (the recover race), or `None` when it is still running or
+    /// untracked.
+    async fn command_session_result(&self, command_session_id: &str) -> Option<Value>;
+
+    /// Mark a session reported (delivered) with the terminal `result` a control
+    /// tool observed inline, so the heartbeat does not re-deliver it.
+    async fn mark_command_session_reported(&self, command_session_id: &str, result: Value);
+
+    /// Count of this agent's tracked, still-running command sessions.
+    async fn count_by_agent(&self, agent_id: &str) -> usize;
 }
 
 // ---------------------------------------------------------------------------

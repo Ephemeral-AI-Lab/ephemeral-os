@@ -70,6 +70,7 @@ mod tests {
             notification_rules: Vec::new(),
             notification_fired: BTreeSet::new(),
             notification_state: JsonObject::new(),
+            notifier: crate::NotificationService::new(),
         }
     }
 

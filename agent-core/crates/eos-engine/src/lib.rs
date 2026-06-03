@@ -17,7 +17,10 @@ pub mod tool_call;
 mod test_support;
 
 pub use agent::{build_query_context, BuildQueryContextInput};
-pub use background::{BackgroundTaskStatus, BackgroundTaskSupervisor, SharedSubagentSupervisor};
+pub use background::{
+    spawn_command_completion_heartbeat, BackgroundTaskStatus, BackgroundTaskSupervisor,
+    CommandSessionRecord, SharedSubagentSupervisor,
+};
 pub use error::EngineError;
 pub use events::{stamp_identity, AssistantMessageComplete, StreamEvent};
 pub use notifications::{

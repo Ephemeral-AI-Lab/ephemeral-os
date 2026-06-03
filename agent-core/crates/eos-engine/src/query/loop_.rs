@@ -9,7 +9,7 @@ use eos_types::{JsonObject, ToolUseId};
 use futures::{Stream, StreamExt};
 
 use crate::events::{stamp_identity, StreamEvent};
-use crate::notifications::dispatch_rules;
+use crate::notifications::enqueue_notification_rules;
 use crate::query::{build_query_run_request, QueryContext, QueryExitReason};
 use crate::tool_call::{dispatch_assistant_tools, ToolUseRequest};
 use crate::EngineError;
@@ -59,7 +59,10 @@ fn tool_uses_from_message(message: &Message) -> Vec<ToolUseRequest> {
         .collect()
 }
 
-fn append_notifications(messages: &mut Vec<Message>, notifications: &[crate::SystemNotification]) {
+fn append_notifications(
+    messages: &mut Vec<Message>,
+    notifications: &[eos_tools::SystemNotification],
+) {
     if notifications.is_empty() {
         return;
     }
@@ -68,7 +71,7 @@ fn append_notifications(messages: &mut Vec<Message>, notifications: &[crate::Sys
         content: notifications
             .iter()
             .map(|notification| ContentBlock::SystemNotification {
-                text: notification.text.clone(),
+                text: notification.message.clone(),
             })
             .collect(),
     });
@@ -105,12 +108,14 @@ pub fn run_query<'a>(ctx: &'a mut QueryContext, messages: &'a mut Vec<Message>) 
                 break;
             }
 
-            let notifications = dispatch_rules(messages, ctx);
+            let notifier = ctx.notifier.clone();
+            enqueue_notification_rules(messages, ctx, &notifier).await;
+            let notifications = notifier.drain().await;
             for notification in &notifications {
                 let event = StreamEvent::SystemNotification {
-                    agent_name: notification.agent_name.clone(),
+                    agent_name: ctx.agent_name.clone(),
                     agent_run_id: Some(ctx.agent_run_id.clone()),
-                    text: notification.text.clone(),
+                    text: notification.message.clone(),
                 };
                 yield (event, None);
             }
@@ -288,6 +293,7 @@ mod tests {
             notification_rules: Vec::new(),
             notification_fired: BTreeSet::new(),
             notification_state: JsonObject::new(),
+            notifier: crate::NotificationService::new(),
         }
     }
 

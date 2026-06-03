@@ -12,7 +12,9 @@ use eos_types::{AgentRunId, JsonObject, TaskId};
 use futures::Stream;
 use serde::{Deserialize, Serialize};
 
-use crate::{EngineError, NotificationRule, PromptReportRecorder, StreamEvent};
+use crate::{
+    EngineError, NotificationRule, NotificationService, PromptReportRecorder, StreamEvent,
+};
 
 /// The engine stream returned by one model turn.
 pub type EngineStream = Pin<Box<dyn Stream<Item = Result<StreamEvent, EngineError>> + Send>>;
@@ -83,6 +85,11 @@ pub struct QueryContext {
     pub notification_fired: BTreeSet<String>,
     /// Per-rule scratchpad.
     pub notification_state: JsonObject,
+    /// The per-request notification sink the loop drains at the top of every
+    /// turn (anchor §6). Shares its queue with the tool/heartbeat sink — the
+    /// instance-identity invariant (anchor §7): if these diverge it compiles and
+    /// silently delivers nothing.
+    pub notifier: NotificationService,
 }
 
 impl std::fmt::Debug for QueryContext {

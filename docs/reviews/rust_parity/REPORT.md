@@ -397,3 +397,130 @@ forward as an open item.
     `internal_error` uuid + `runtime.*` timings (daemon_protocol); prompt-report seq
     + reasoning-block golden row (model_provider D5/D7); migration-vs-canonical schema
     introspection test + FK-CASCADE test (persistence_state D2).
+
+---
+
+## 7. Phase rollout plan & progress tracker
+
+The §6 fixes, **grouped by area first** (the report's own domain / area vocabulary —
+each links to its `areas/*.html` page), then batched into **phases where every area
+in a phase is independent and can be worked in parallel**. Phase ordering follows
+real cross-area dependencies, **not** severity.
+
+**Dependency model.** There is exactly **one hard sequential edge**: the Phase 1
+*integration seams* must land before any later area can be exercised in a live,
+non-injected `root → delegate → terminal` run (exec-summary §1 — also the gate for
+deleting `backend/src`). That edge is on **integrated / e2e verification**, not on
+code: a Phase 2–4 area's fix can still be written and unit-tested independently.
+**Phases 2–4 have no hard edges between them** — they are parallel batches grouped by
+focus (correctness → sandbox robustness → tails); run them concurrently or in the
+shown order by team bandwidth. Two area pairs are **coupled** (one subsystem,
+co-developed in a single lane): `subagent ⊕ query_engine` (background supervisor +
+no-inflight gate) and `sandbox_tools ⊕ daemon_protocol` (the `write_stdin` op-name
+end-to-end).
+
+**Placement rule.** Each area sits in the phase of its **most-blocking** fix and
+carries all of its fixes; a lower-severity item (see **Sev**) inside an
+earlier-phase area is tagged *(deferrable)* and may slip to a later wave without
+moving the area.
+
+**How to track:** a fix is open `☐` or done `☑`. Progress lives in source — flip the
+glyph in `REPORT.md` and regenerate (`python3 _md2html.py REPORT.md`); the git
+history is the audit trail. (`REPORT.html` is generated — do not hand-edit it.)
+**Sev** is the verifier-preferred severity from §2; **Disparity · anchor** points
+back to the §2 row and the Rust `file:line`. Items not explicitly ranked in §6 are
+marked **(Derived)**.
+
+### Rollout at a glance
+
+| Phase | Dependency role | Parallel area lanes (‖ independent · ⊕ coupled) |
+|-------|-----------------|--------------------------------------------------|
+| **1** | **Hard gate** — must land before any e2e validation; unblocks `backend/src` deletion | advisor ‖ (subagent ⊕ query_engine) ‖ attempt_harness ‖ request_completion |
+| **2** | Parallel after Phase 1 (no edge to 3/4) — correctness / data-safety | (sandbox_tools ⊕ daemon_protocol) ‖ occ ‖ model_provider_prompt ‖ workflow_lifecycle ‖ deferred_goal_depth ‖ tools_framework |
+| **3** | Parallel after Phase 1 — sandbox robustness & parity | plugins ‖ overlay ‖ perf ‖ provider_network ‖ squash |
+| **4** | Parallel after Phase 1 — observability & low-severity tails | context_engine ‖ budget_notifications ‖ persistence_state ‖ low-severity backlog |
+
+### Phase 1 — Integration seams (hard gate)
+
+**Lanes (parallel):** `advisor` ‖ `subagent ⊕ query_engine` ‖ `attempt_harness` ‖
+`request_completion`. **Exit:** a non-injected `root → delegate → terminal` run —
+until this lands the runtime cannot complete a real request in a default build
+(exec-summary §1). **This is the only phase that gates `backend/src` deletion.**
+
+| ✓ | Area | Sev | Fix & verify | Disparity · anchor |
+|---|------|-----|--------------|--------------------|
+| ☐ | agent-core / [advisor](areas/advisor.html) | HIGH | Implement the production `AdvisorPort` in `eos-runtime`: `review` launches the advisor agent; `approval_status` reproduces the 6-way conversation scan; resolve the verdict-metadata channel (D3); reconcile root-gating (D2). *Verify:* a real `approve` lets `submit_root_outcome` pass without the `#[cfg(test)]` fake. | advisor D1/D2/D3, tools_framework D1 · `notifications.rs:226-231`, `meta.rs:72-75` |
+| ☐ | agent-core / [subagent](areas/subagent.html) ⊕ [query_engine](areas/query_engine.html) | CRITICAL | Implement the subagent runner: validate recursion / exists / is-subagent, `tokio::spawn` the child, settle the record on completion, forward the terminal result + status taxonomy. *Verify:* `run_subagent` → `check_subagent_progress` returns a finished result. | subagent D1/D2/D6 · `supervisor.rs:253-265` |
+| ☐ | agent-core / [subagent](areas/subagent.html) ⊕ [query_engine](areas/query_engine.html) | CRITICAL | Fix the inflight count: add `agent_id` + `uses_sandbox` filters so a live subagent does not wedge the parent terminal via the no-inflight gate. *Verify:* a running subagent does not block `submit_root_outcome`. | subagent D9, background_supervisor NF-3 · `supervisor.rs:212-217` |
+| ☐ | agent-core / [subagent](areas/subagent.html) ⊕ [query_engine](areas/query_engine.html) | HIGH | Wire `BackgroundTaskSupervisor` into `run_query`: create under `enable_background_tasks`, drain completions per turn, `terminate_for_parent_exit` on `ToolStop`, `cancel_all` on `TerminalNotSubmitted`, final cancel on drop. *Verify:* a backgrounded tool's completion reaches the transcript; terminal exit drains it. | query_engine D1, terminal_tools D2, background_supervisor §4/§5 · `loop_.rs:98-209` |
+| ☐ | agent-core / [attempt_harness](areas/attempt_harness.html) | HIGH | Complete Phase-7 `RuntimeAgentRunner`: capture the typed terminal into `AgentTerminal` so the reducer exit gate + DAG dispatch are reachable in the live runtime. *Verify:* a workflow attempt completes through the production runner, not an injected one. (**Derived:** exec-summary §1 "workflow agent runner"; §2 HIGH/Phase-7, not in the §6 P0 list.) | attempt_harness D5 · `agent_runner.rs:104` |
+| ☐ | agent-core / [attempt_harness](areas/attempt_harness.html) | MED | *(deferrable)* Wire `audit_sink` into `AttemptStageAdvancer`; emit `workflow.task.ready/launched/failed`. | attempt_harness D8 · `launch.rs:117,159` |
+| ☐ | agent-core / [attempt_harness](areas/attempt_harness.html) | LOW | *(deferrable)* Require `AgentRole::Generator` for generator tasks and union-dedup `tasks ∪ reducers` (reducer↔reducer dup-id). | attempt_harness D1/D6 · `orchestrator.rs:224-229,262` |
+| ☐ | agent-core / [request_completion](areas/request_completion.html) | MED | Seed the agent registry in the shipped binary: populate `agents_dir` or inject a registry so `root` resolves. *Verify:* a non-injected `start_request` resolves `root` and completes. | request_completion NF1 · `main.rs`, `app_state.rs:421-423` |
+
+### Phase 2 — Correctness & data-safety (parallel after Phase 1)
+
+**Lanes (parallel):** `sandbox_tools ⊕ daemon_protocol` ‖ `occ` ‖
+`model_provider_prompt` ‖ `workflow_lifecycle` ‖ `deferred_goal_depth` ‖
+`tools_framework`. **Exit:** each fix lands with a failing→passing reproduction.
+
+| ✓ | Area | Sev | Fix & verify | Disparity · anchor |
+|---|------|-----|--------------|--------------------|
+| ☐ | sandbox / [sandbox_tools](areas/sandbox_tools.html) ⊕ [daemon_protocol](areas/daemon_protocol.html) | HIGH | Fix `write_stdin` end-to-end: rename the client wire op `api.v1.exec_stdin` → `api.v1.write_stdin` **and** set the host fail-closed retry set to both real stdin ops (renaming alone re-opens a replay double-apply). *Verify:* integration against the real `eosd` (not a mocked `DaemonOp::ExecStdin`); respawn-during-`write_stdin` does not double-apply. | sandbox_tools D1/D2, daemon_protocol D1 · `tool_api/command.rs:74`, `daemon_client.rs:582-592` |
+| ☐ | sandbox / [sandbox_tools](areas/sandbox_tools.html) | LOW | *(deferrable)* Record `api.exec_command.dispatch_total_s` timing; pin the grep/glob wire contract in the arch doc. | sandbox_tools N1 · `tool_primitives.rs:233-248` |
+| ☐ | sandbox / [daemon_protocol](areas/daemon_protocol.html) | LOW | *(deferrable)* Add `internal_error` uuid + real `runtime.*` timings; honor the bounded 5s `cancel` cleanup-wait. | daemon_protocol · `dispatcher.rs:300-317,234-243` |
+| ☐ | sandbox / [occ](areas/occ.html) | HIGH | Replace the hand-rolled root-only gitignore matcher with the `ignore`/`gitignore` crate reading per-dir `.gitignore` from the snapshot (nested, `**`, dir-only `node_modules/`, `!`, `*`-not-crossing-`/`). Prevents DIRECT↔GATED misroute + silent clobber. *Verify:* `logs/*.log` routes GATED, not DIRECT-then-clobber. | occ D1, N2, N3 · `dispatcher.rs:1731-1746,2379-2417` |
+| ☐ | agent-core / [model_provider_prompt](areas/model_provider_prompt.html) | HIGH | Port `sanitize_tool_sequence` into a `provider_history.rs` and route `build_query_run_request` through it. *Verify:* a transcript with an orphaned `tool_use` yields a sanitized request, not an Anthropic 400. | query_engine D2, model_provider NF1 · `request.rs:25-30` |
+| ☐ | agent-core / [model_provider_prompt](areas/model_provider_prompt.html) | HIGH | Restore `build_termination_condition_prompt` verbatim (the `<Termination Condition>` wrapper, one-way-exit WARNING lines, sorted rows) or get redesign sign-off. *Verify:* golden-string assertion on the block. | model_provider D1 · `runtime_prompt.rs:13-27` |
+| ☐ | agent-core / [model_provider_prompt](areas/model_provider_prompt.html) | LOW | *(deferrable)* Add a reasoning-block golden row, mint a default `tool_use` id, and pre-increment `next_seq` to match Python. | model_provider D5/D7 · `message.rs:62-67` |
+| ☐ | agent-core / [workflow_lifecycle](areas/workflow_lifecycle.html) | HIGH | Add continuation-iteration compensation: unconditional old-iter deregister; on `create_and_start_first_attempt` failure cancel the new iteration + deregister + `close_workflow(false)`. *Verify:* inject a deferred-handoff launch failure; the workflow closes FAILED with no coordinator leak. | workflow_lifecycle D5, deferred_goal_depth inv-1 · `lifecycle.rs:164-184` |
+| ☐ | agent-core / [workflow_lifecycle](areas/workflow_lifecycle.html) | MED | Return `ToolResult::error(...)` for the `delegate_workflow` "already outstanding" branch (Python `is_error=True`). | workflow_lifecycle D3 · `model_tools/workflow.rs:67-77` |
+| ☐ | agent-core / [deferred_goal_depth](areas/deferred_goal_depth.html) | HIGH | Make the nested-planner-deferral hook fail-CLOSED and populate `workflow_control` for planner contexts (or enforce in `apply_plan_submission`). *Verify:* a nested planner with a deferred goal is rejected. | deferred_goal_depth D1 · `hooks.rs:614-616` |
+| ☐ | agent-core / [tools_framework](areas/tools_framework.html) | HIGH | Scope `load_skill_reference` per-agent from the bound `AgentDefinition.skill`; stop leaking all skill names on not-found. *Verify:* agent A cannot read agent B's references; the not-found error lists only A's skill. | tools_framework D7 · `model_tools/skills.rs:47-64` |
+| ☐ | agent-core / [tools_framework](areas/tools_framework.html) | MED | Parse before pre-hooks (restore the validated-model order) or document the seam + add a defaulted-field hook test. | tools_framework NF1 · `execution.rs:48,65` |
+
+### Phase 3 — Sandbox robustness & parity (parallel after Phase 1)
+
+**Lanes (parallel):** `plugins` ‖ `overlay` ‖ `perf` ‖ `provider_network` ‖ `squash`.
+**Exit:** parity tests green; no leaked mounts or lock regressions.
+
+| ✓ | Area | Sev | Fix & verify | Disparity · anchor |
+|---|------|-----|--------------|--------------------|
+| ☐ | sandbox / [plugins](areas/plugins.html) | HIGH | Port the host `call_plugin` orchestration + `install.py` (setup.sh trust allowlist, marker idempotency, node/pyright) — the setup-trust gate is a real sandbox-escape mitigation. *Verify:* an untrusted `setup.sh` is refused. | plugins D1/D6 · ABSENT (`host_dispatch.py` / `install.py`) |
+| ☐ | sandbox / [plugins](areas/plugins.html) | MED | Validate manifest `plugin_id` with `^[A-Za-z_][A-Za-z0-9_]*$` and relax `op_name` to non-empty (use the faithful `is_valid_plugin_name`). | plugins (manifest) · `service.rs:127-148` |
+| ☐ | sandbox / [plugins](areas/plugins.html) | MED | Emit `oneshot_overlay` for WRITE_ALLOWED + auto-overlay ops (or add a default-overlay fallback) so the WRITE path has a producer. *Intra-area edge: needs the host facade (HIGH item above).* (**Derived:** §2 MEDIUM, dormant today.) | plugins (auto-overlay) · `mod.rs:1413` |
+| ☐ | sandbox / [plugins](areas/plugins.html) | LOW | *(deferrable)* Add the plugin `8 MiB` response cap + caller-field caps. | plugins D7 |
+| ☐ | sandbox / [overlay](areas/overlay.html) | MED | Give `unmount_overlay` a peel-loop (≤64, plain umount, lazy fallback, stop at non-mountpoint) so stacked mounts do not leak across bundle upgrades. | overlay D1 · `kernel_mount.rs:149-157` |
+| ☐ | sandbox / [perf](areas/perf.html) | MED | Give `acquire_snapshot` a shared/read lock mode instead of the exclusive storage-writer lock; re-baseline throughput. | perf D2 · `stack.rs:343-344` |
+| ☐ | sandbox / [provider_network](areas/provider_network.html) | MED | Seed the Docker provider into the production composition root (`set_default`) when provider wiring lands; revisit the dropped first-call-wins sentinel then. (**Derived:** §2 NF-2 reachability gap.) | provider_network NF-2 · `app_state.rs:444` |
+| ☐ | sandbox / [squash](areas/squash.html) | MED | Emit `squash_triggered` (`post_publish_depth`) + `squash_failed`; align the reason and add the manifest root hash. | squash D3 · `dispatcher.rs:3286-3307` |
+
+### Phase 4 — Observability & low-severity tails (parallel after Phase 1)
+
+**Lanes (parallel):** `context_engine` ‖ `budget_notifications` ‖ `persistence_state`
+‖ the low-severity backlog below. **Exit:** audit / golden / timing parity. No
+control-flow impact.
+
+| ✓ | Area | Sev | Fix & verify | Disparity · anchor |
+|---|------|-----|--------------|--------------------|
+| ☐ | agent-core / [context_engine](areas/context_engine.html) | MED | Mirror `render_terminal_catalog` for the `<terminal_tool_selection>` block (backtick rows, `\n\n`, no extra header) — live prompt bytes diverge each workflow launch. (**Derived:** §2 verifier kept MEDIUM; not in the §6 P3 list.) | context_engine D1 · `composer.rs:172-184` |
+| ☐ | agent-core / [budget_notifications](areas/budget_notifications.html) | LOW | Thread `agent.notification_triggers` into `build_query_context`, deduped by name (restores the planner's `nested_planner_deferral_disabled` reminder). | budget_notifications · `factory.rs:144` |
+| ☐ | agent-core / [persistence_state](areas/persistence_state.html) | LOW | Add a `PRAGMA table_info` introspection test against the executed migration + an FK-CASCADE test. | persistence_state D2 · `sqlite_schema.rs:16-55` |
+
+**Phase 4 — remaining low-severity parity backlog (tracked as one batch):** the §2
+LOW rows with a concrete suggested fix not broken out above — overlay-write re-reads
+bytes + drops the precomputed hash (overlay/occ D4, thread `content_path`+hash);
+isolated-workspace sampler tick + `/proc` orphan-reaper scan; layerstack
+binding-path symlink resolution; overlay symlink-to-existing-dir capture semantics;
+provider first-call-wins `OnceCell` + targeted "daytona unsupported" message;
+`is_nested_workflow` ancestry-walk + cycle guard; ephemeral prepare-error
+`RunDirCleanup`; `terminal_not_submitted` structured counts in the message;
+empty-`task_id` outcome-drop loud error; delete the dead
+`AutoSquashMaintenancePolicy` (or fix its doc comment).
+
+**Excluded — investigated and refuted (not rollout work):** ephemeral_workspace D1
+atomic-flag "silent-success" (REFUTED → benign batching nuance); isolated_workspace
+D1/D2 (REFUTED → belong to deleted control-plane / already wired in `meta.rs`);
+model_provider D2/D3/D4 (false alarms — `OpenaiClient` is a net-new generic client
+with no Python ground truth); attempt_harness D1 gen↔red-collision headline (false
+alarm — caught by lane-shape + dangling checks).

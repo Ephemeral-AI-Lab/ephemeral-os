@@ -241,6 +241,7 @@ pub(crate) fn metadata() -> ExecutionMetadata {
         workflow_control: None,
         plan_submission: None,
         subagent_supervisor: None,
+        command_session_supervisor: None,
         advisor: None,
         isolated_workspace: None,
         notifications: None,

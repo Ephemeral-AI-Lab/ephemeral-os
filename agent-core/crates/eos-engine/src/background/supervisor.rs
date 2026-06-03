@@ -109,6 +109,10 @@ pub struct BackgroundTaskSupervisor {
     subagent_counter: u64,
     workflow_counter: u64,
     records: HashMap<String, BackgroundTaskRecord>,
+    /// Tracked background PTY command sessions, keyed by daemon-minted
+    /// `command_session_id` (anchor §5). Visible to the sibling
+    /// `command_session` module that owns their lifecycle methods.
+    pub(super) command_sessions: HashMap<String, super::command_session::CommandSessionRecord>,
 }
 
 impl BackgroundTaskSupervisor {

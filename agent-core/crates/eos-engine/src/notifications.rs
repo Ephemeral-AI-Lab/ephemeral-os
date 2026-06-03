@@ -4,7 +4,7 @@ use std::collections::VecDeque;
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use eos_llm_client::{Message, MessageRole};
+use eos_llm_client::{ContentBlock, Message, MessageRole};
 use eos_tools::ports::{
     AdvisorApproval, AdvisorPort, NotificationSink, Sealed, SystemNotification as ToolNotification,
 };
@@ -65,12 +65,12 @@ impl NotificationRule {
             return false;
         }
         match self {
-            // Parity with `must_submit_terminal_tool.py`: do not nudge until the
-            // model has actually spoken this run (an assistant message exists), so
-            // the reminder is never written into a user-only turn-1 transcript.
+            // The nudge fires only when the most recent assistant turn was a
+            // *text return* — a `Text` block and no `ToolUse` (anchor §6.2). A
+            // reasoning-only turn has no `Text` block, so it never nudges; a
+            // tool-use turn is making progress, so it never nudges either.
             Self::TerminalCallReminder => {
-                !ctx.terminal_tools.is_empty()
-                    && messages.iter().any(|m| m.role == MessageRole::Assistant)
+                !ctx.terminal_tools.is_empty() && last_assistant_was_text_return(messages)
             }
             Self::ToolCallBudget {
                 numerator,
@@ -152,10 +152,36 @@ pub fn make_default_notification_rules() -> Vec<NotificationRule> {
         .collect()
 }
 
-/// Evaluate notification rules in list order.
-#[must_use]
-pub fn dispatch_rules(messages: &[Message], ctx: &mut QueryContext) -> Vec<SystemNotification> {
-    let mut notifications = Vec::new();
+/// Whether the most recent assistant turn was a *text return*: it carries a
+/// [`ContentBlock::Text`] and no [`ContentBlock::ToolUse`] (anchor §6.2). A
+/// reasoning-only turn (no `Text`) returns `false`.
+fn last_assistant_was_text_return(messages: &[Message]) -> bool {
+    let Some(message) = messages
+        .iter()
+        .rev()
+        .find(|message| message.role == MessageRole::Assistant)
+    else {
+        return false;
+    };
+    let has_text = message
+        .content
+        .iter()
+        .any(|block| matches!(block, ContentBlock::Text { .. }));
+    let has_tool_use = message
+        .content
+        .iter()
+        .any(|block| matches!(block, ContentBlock::ToolUse { .. }));
+    has_text && !has_tool_use
+}
+
+/// Evaluate notification rules in list order and enqueue the firing ones onto
+/// the sink (anchor D4: every notification is a sink producer). Fire-once budget
+/// tiers are latched in `ctx.notification_fired`; the loop drains the sink.
+pub async fn enqueue_notification_rules(
+    messages: &[Message],
+    ctx: &mut QueryContext,
+    sink: &dyn NotificationSink,
+) {
     for rule in ctx.notification_rules.clone() {
         let name = rule.name();
         if rule.fire_once() && ctx.notification_fired.contains(&name) {
@@ -163,16 +189,16 @@ pub fn dispatch_rules(messages: &[Message], ctx: &mut QueryContext) -> Vec<Syste
         }
         if rule.trigger(messages, ctx) {
             if rule.fire_once() {
-                ctx.notification_fired.insert(name);
+                ctx.notification_fired.insert(name.clone());
             }
-            notifications.push(SystemNotification {
-                text: rule.body(ctx),
-                agent_name: ctx.agent_name.clone(),
-                agent_run_id: ctx.agent_run_id.to_string(),
-            });
+            let _ = sink
+                .notify_system(ToolNotification {
+                    event: name,
+                    message: rule.body(ctx),
+                })
+                .await;
         }
     }
-    notifications
 }
 
 /// Queue-backed notification sink for tools and hooks.
@@ -268,29 +294,38 @@ mod tests {
             notification_rules: make_default_notification_rules(),
             notification_fired: BTreeSet::new(),
             notification_state: JsonObject::new(),
+            notifier: NotificationService::new(),
         }
     }
 
     fn assistant_turn() -> [Message; 1] {
         [Message {
             role: MessageRole::Assistant,
-            content: Vec::new(),
+            content: vec![ContentBlock::Text {
+                text: "done".to_owned(),
+            }],
         }]
     }
 
-    #[test]
-    fn notification_rules_fire_in_order_with_dedup() {
+    async fn fire_rules(messages: &[Message], ctx: &mut QueryContext) -> Vec<ToolNotification> {
+        let notifier = ctx.notifier.clone();
+        enqueue_notification_rules(messages, ctx, &notifier).await;
+        notifier.drain().await
+    }
+
+    #[tokio::test]
+    async fn notification_rules_fire_in_order_with_dedup() {
         let mut ctx = ctx();
         ctx.tool_calls_used = 3;
         let turn = assistant_turn();
-        let first = dispatch_rules(&turn, &mut ctx);
+        let first = fire_rules(&turn, &mut ctx).await;
         assert_eq!(first.len(), 2, "75% budget + terminal reminder");
-        assert!(first[0].text.contains("75%"));
-        assert!(first[1].text.contains("terminal tool"));
+        assert!(first[0].message.contains("75%"));
+        assert!(first[1].message.contains("terminal tool"));
 
-        let second = dispatch_rules(&turn, &mut ctx);
+        let second = fire_rules(&turn, &mut ctx).await;
         assert_eq!(second.len(), 1, "budget tier is fire-once");
-        assert!(second[0].text.contains("terminal tool"));
+        assert!(second[0].message.contains("terminal tool"));
 
         ctx.terminal_result = Some(ToolResult {
             output: "done".to_owned(),
@@ -298,22 +333,24 @@ mod tests {
             metadata: JsonObject::new(),
             is_terminal: true,
         });
-        assert!(dispatch_rules(&turn, &mut ctx).is_empty());
+        assert!(fire_rules(&turn, &mut ctx).await.is_empty());
     }
 
-    #[test]
-    fn terminal_reminder_needs_assistant_turn_and_reports_budget() {
+    #[tokio::test]
+    async fn terminal_reminder_needs_assistant_turn_and_reports_budget() {
         // Parity with `must_submit_terminal_tool.py` + the ported body text.
         let mut ctx = ctx(); // tool_call_limit = 4 -> 75% threshold = 3
         ctx.tool_calls_used = 2; // below the first budget tier; only the reminder can fire
 
         // Turn 1: user-only transcript -> no terminal reminder (matches Python).
-        assert!(dispatch_rules(&[Message::from_user_text("hi")], &mut ctx).is_empty());
+        assert!(fire_rules(&[Message::from_user_text("hi")], &mut ctx)
+            .await
+            .is_empty());
 
         // After the model speaks, the reminder fires with the ceil(1.5*limit) ceiling.
-        let fired = dispatch_rules(&assistant_turn(), &mut ctx);
+        let fired = fire_rules(&assistant_turn(), &mut ctx).await;
         assert_eq!(fired.len(), 1);
-        let body = &fired[0].text;
+        let body = &fired[0].message;
         assert!(body.contains("You have not submitted a terminal tool"));
         assert!(body.contains("2/4 tool calls used"));
         assert!(body.contains("the run will fail at 6 tool calls (4 remaining)"));
