@@ -1,0 +1,4 @@
+interface:
+  display_name: "Autonomous Refactor Loop"
+  short_description: "Parallel naming cleanup with verification"
+  default_prompt: "Use $refactor-naming-semantics to orchestrate an autonomous refactor loop on this target code, using parallel read-only audits and non-overlapping subagent work units with verification gates."

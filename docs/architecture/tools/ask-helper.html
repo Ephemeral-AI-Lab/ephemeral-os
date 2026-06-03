@@ -63,6 +63,7 @@
   </tbody>
 </table>
 <p>Verifier and evaluator agents apply trivial inline fixes themselves via <code>edit_file</code> / <code>write_file</code> on their own tool surface; there is no separate edit-capable helper. Scope is enforced by profile prose plus the advisor's pre-terminal audit, which sees full edit-input transcripts.</p>
+<p><strong>Rust port divergence:</strong> in the Rust engine, <code>ask_advisor</code> execution is engine-driven — <code>dispatch_assistant_tools</code> intercepts <code>ToolName::AskAdvisor</code> and runs <code>run_ephemeral_agent</code> directly (no <code>AdvisorPort</code> seam), and the advisor approval pre-hook is a stateless transcript scan that additionally gates <code>submit_root_outcome</code> (Python leaves root purely advisory). See <code>docs/reviews/rust_parity/advisor-remediation-PLAN.md</code>.</p>
 </section>
 
 <section id="message-composition" data-last-reviewed-commit="422aa57100f55131995ca73977c22ea0f9402a09" data-evidence-paths="backend/src/tools/ask_helper/_lib/_compose.py backend/src/tools/ask_helper/_lib/_transcript.py backend/src/tools/ask_helper/ask_advisor/ask_advisor.py backend/src/message/message.py backend/tests/unit_test/test_tools/test_submission_helper_tools.py">

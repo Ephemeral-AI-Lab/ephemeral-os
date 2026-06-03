@@ -2,10 +2,10 @@
 // planner, executor, reducer, explorer, advisor) succeeds and the `executor`
 // profile resolves to `role == AgentRole::Generator`.
 //
-// This reads the live Python profile tree (read-only) so the Rust loader is
+// This reads the bundled profile tree (read-only) so the Rust loader is
 // validated against the same source the runtime consumes. The path is relative
 // to this crate's manifest: agent-core sits at the repo root, so three `..`
-// segments reach `backend/src/agents/profile`.
+// segments reach the repo-root `.eos-agents/profile`.
 #![allow(clippy::unwrap_used)] // unwrap is permitted in tests (err-no-unwrap-prod)
 
 use std::path::PathBuf;
@@ -13,7 +13,7 @@ use std::path::PathBuf;
 use eos_agent_def::{load_agents_tree, AgentName, AgentRegistry, AgentRole, AgentType};
 
 fn profile_dir() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../../backend/src/agents/profile")
+    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../../.eos-agents/profile")
 }
 
 #[test]

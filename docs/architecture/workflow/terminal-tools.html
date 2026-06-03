@@ -196,6 +196,7 @@
   <div><b>transcript filter</b><span>Advisor mode drops the first two parent user messages from the transcript because they are shown separately, strips state-mutating edit/write inputs, caps Bash command text, drops thinking blocks, and enforces byte/message caps.</span></div>
   <div><b>terminal output</b><span><code>submit_advisor_feedback</code> accepts only <code>approve</code> or <code>reject</code> plus summary text. Its metadata carries <code>helper_role=&quot;advisor&quot;</code> and <code>verdict</code>.</span></div>
   <div><b>error return</b><span>If the child helper crashes or exits without <code>submit_advisor_feedback</code>, <code>ask_advisor</code> returns an error result to the parent. It does not silently convert helper failure into approval.</span></div>
+  <div><b>Rust port divergence</b><span>The Rust port gates <code>submit_root_outcome</code> with the advisor pre-hook too — a deliberate divergence from Python, which gates only planner / generator / reducer and leaves the root terminal purely advisory. In Rust the gate is a stateless transcript scan and <code>ask_advisor</code> is engine-driven (the <code>AdvisorPort</code> seam is deleted; the engine intercepts the call and runs <code>run_ephemeral_agent</code>). See <code>docs/reviews/rust_parity/advisor-remediation-PLAN.md</code> and the advisor lane in <code>docs/reviews/rust_parity/REPORT.html</code>.</span></div>
 </div>
 </section>
 

@@ -31,12 +31,13 @@ fn main() -> anyhow::Result<()> {
 }
 
 /// Repo-relative agent-profile tree used as the default registry source for the
-/// shipped binary (pre-cutover bridge; the canonical tree still lives under
-/// `backend/src` until that subtree is deleted).
-const DEFAULT_AGENTS_DIR: &str = "backend/src/agents/profile";
+/// shipped binary. The canonical bundle lives at `.eos-agents/` (profiles under
+/// `profile/`, their coupled skills under `skills/`), relocated off the retiring
+/// Python backend.
+const DEFAULT_AGENTS_DIR: &str = ".eos-agents/profile";
 
 /// Build the application state, seeding the agent registry so `root` resolves
-/// (request_completion NF1 — the binary otherwise ships with an empty registry
+/// (`request_completion` NF1 — the binary otherwise ships with an empty registry
 /// and fails every request at root resolution).
 ///
 /// `EOS_AGENTS_DIR` overrides the source and is validated normally. Otherwise we

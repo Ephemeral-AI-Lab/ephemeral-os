@@ -270,9 +270,9 @@ fn command_session_not_found() -> Value {
 const fn should_publish_command_session_completion(
     publish_completion: bool,
     cancelled: bool,
-    finalizer_owned_live_session: bool,
+    owned_live_session: bool,
 ) -> bool {
-    publish_completion && !cancelled && finalizer_owned_live_session
+    publish_completion && !cancelled && owned_live_session
 }
 
 #[cfg(target_os = "linux")]
@@ -1141,17 +1141,29 @@ fn spawn_command_runner_session(
     Ok(session)
 }
 
-/// Length of the longest valid-UTF-8 prefix of `bytes`. A trailing incomplete
-/// multibyte sequence (≤3 bytes) is excluded so the reader can carry it over to
-/// the next read instead of corrupting it into replacement characters at the
-/// 8 KiB read boundary (sense-2 §2.6). Pure (platform-independent) so it is unit
-/// tested on every host.
+/// Number of leading bytes to decode and consume now: everything except a
+/// trailing *incomplete* multibyte sequence (≤3 bytes), which is carried to the
+/// next read instead of being corrupted into replacement characters at the
+/// 8 KiB read boundary (sense-2 §2.6). A genuinely *invalid* byte is consumed
+/// (lossily decoded to U+FFFD), never carried — otherwise a single non-UTF-8
+/// byte (binary output, a killed program dumping bytes) would wedge the carry
+/// buffer and withhold all further model output until EOF. Pure
+/// (platform-independent) so it is unit tested on every host.
 #[cfg_attr(not(target_os = "linux"), allow(dead_code))]
-fn utf8_valid_prefix_len(bytes: &[u8]) -> usize {
-    match std::str::from_utf8(bytes) {
-        Ok(_) => bytes.len(),
-        Err(err) => err.valid_up_to(),
+fn utf8_consumable_prefix_len(bytes: &[u8]) -> usize {
+    let mut offset = 0;
+    while offset < bytes.len() {
+        match std::str::from_utf8(&bytes[offset..]) {
+            Ok(_) => return bytes.len(),
+            // An incomplete trailing multibyte sequence carries to the next read.
+            Err(err) if err.error_len().is_none() => return offset + err.valid_up_to(),
+            // An invalid byte run is consumed (lossy); keep scanning the rest.
+            Err(err) => {
+                offset += err.valid_up_to() + err.error_len().unwrap_or(1);
+            }
+        }
     }
+    bytes.len()
 }
 
 #[cfg(target_os = "linux")]
@@ -1181,12 +1193,13 @@ fn spawn_command_output_reader(
                             let _ = file.write_all(&buf[..n]);
                         }
                     }
-                    // Model output: decode the valid prefix, retain the tail.
+                    // Model output: decode the consumable prefix, retain only an
+                    // incomplete trailing multibyte tail.
                     carry.extend_from_slice(&buf[..n]);
-                    let valid = utf8_valid_prefix_len(&carry);
-                    if valid > 0 {
-                        output.append(String::from_utf8_lossy(&carry[..valid]).into_owned());
-                        carry.drain(..valid);
+                    let consume = utf8_consumable_prefix_len(&carry);
+                    if consume > 0 {
+                        output.append(String::from_utf8_lossy(&carry[..consume]).into_owned());
+                        carry.drain(..consume);
                     }
                 }
                 Err(err) if err.kind() == std::io::ErrorKind::Interrupted => {}
@@ -1615,18 +1628,37 @@ mod tests {
         let euro = "€".as_bytes(); // [0xE2, 0x82, 0xAC]
         let mut first = b"ab".to_vec();
         first.extend_from_slice(&euro[..1]); // "ab" + first byte of €
-        let valid = utf8_valid_prefix_len(&first);
-        assert_eq!(valid, 2, "the split multibyte byte is excluded");
-        assert_eq!(&first[..valid], b"ab");
+        let consume = utf8_consumable_prefix_len(&first);
+        assert_eq!(consume, 2, "the split multibyte tail is carried, not consumed");
+        assert_eq!(&first[..consume], b"ab");
 
-        // Completing the sequence makes the whole buffer valid.
-        let mut completed = first[valid..].to_vec();
+        // Completing the sequence makes the whole buffer consumable.
+        let mut completed = first[consume..].to_vec();
         completed.extend_from_slice(&euro[1..]);
-        assert_eq!(utf8_valid_prefix_len(&completed), completed.len());
+        assert_eq!(utf8_consumable_prefix_len(&completed), completed.len());
         assert_eq!(String::from_utf8_lossy(&completed), "€");
 
-        // Fully valid input returns its whole length.
-        assert_eq!(utf8_valid_prefix_len(b"plain ascii"), 11);
+        // Fully valid input is consumed whole.
+        assert_eq!(utf8_consumable_prefix_len(b"plain ascii"), 11);
+    }
+
+    #[test]
+    fn utf8_consumable_prefix_consumes_invalid_bytes_so_the_buffer_never_wedges() {
+        // A genuinely invalid byte (0xFF) mid-stream must be CONSUMED (lossily
+        // decoded to U+FFFD), never carried — otherwise the carry buffer wedges
+        // and withholds all further output until EOF.
+        let invalid = [b'a', 0xFF, b'b'];
+        assert_eq!(utf8_consumable_prefix_len(&invalid), 3);
+        assert_eq!(String::from_utf8_lossy(&invalid), "a\u{FFFD}b");
+
+        // An invalid byte followed by an incomplete multibyte lead: consume
+        // through the invalid byte, carry only the trailing incomplete tail.
+        let mut mixed = vec![0xFF];
+        mixed.extend_from_slice(&"€".as_bytes()[..1]); // 0xFF then start of €
+        assert_eq!(utf8_consumable_prefix_len(&mixed), 1);
+
+        // A lone leading continuation byte (invalid start) is consumed, not held.
+        assert_eq!(utf8_consumable_prefix_len(&[0x80]), 1);
     }
 
     #[test]
@@ -1681,47 +1713,55 @@ mod tests {
         Ok(())
     }
 
+    /// A minimal live `CommandSession` for registry/count tests. The workspace is
+    /// an empty isolated stub (never finalized here), so only `id`/`agent_id`
+    /// matter. One constructor keeps the 16-field literal in a single place.
+    #[cfg(target_os = "linux")]
+    fn test_command_session(id: &str, agent_id: &str) -> TestResult<CommandSession> {
+        let writer = Mutex::new(OpenOptions::new().read(true).write(true).open("/dev/null")?);
+        Ok(CommandSession {
+            id: id.to_owned(),
+            agent_id: agent_id.to_owned(),
+            command: "test".to_owned(),
+            started_at: Instant::now(),
+            pgid: 0,
+            writer,
+            output: Arc::new(CommandSessionOutput::new()),
+            reader_done: Mutex::new(None),
+            cancelled: Mutex::new(false),
+            interrupted: Mutex::new(false),
+            model_cursor: Mutex::new(CommandSessionOutputCursor::default()),
+            notification_cursor: Mutex::new(CommandSessionOutputCursor::default()),
+            child: Mutex::new(None),
+            workspace: CommandWorkspaceKind::Isolated(IsolatedCommandWorkspace {
+                handle: crate::isolated::CommandHandle {
+                    agent_id: String::new(),
+                    workspace_handle_id: String::new(),
+                    layer_stack_root: PathBuf::new(),
+                    manifest_version: 0,
+                    manifest_root_hash: String::new(),
+                    workspace_root: PathBuf::new(),
+                    scratch_dir: PathBuf::new(),
+                    upperdir: PathBuf::new(),
+                    workdir: PathBuf::new(),
+                    layer_paths: Vec::new(),
+                    ns_fds: HashMap::new(),
+                    cgroup_path: None,
+                },
+                output_path: PathBuf::new(),
+                final_path: PathBuf::new(),
+            }),
+            finalized: Mutex::new(None),
+            timeout_deadline: None,
+        })
+    }
+
     #[test]
     #[cfg(target_os = "linux")]
     fn command_session_count_counts_live_sessions_by_agent() -> TestResult {
         let registry = CommandSessionRegistry::new();
-        let output = Arc::new(CommandSessionOutput::new());
-        let writer = || -> TestResult<_> {
-            Ok(Mutex::new(
-                OpenOptions::new()
-                    .read(true)
-                    .write(true)
-                    .open("/dev/null")?,
-            ))
-        };
-        registry.insert(Arc::new(CommandSession {
-            id: "cmd_a".to_owned(),
-            agent_id: "agent-a".to_owned(),
-            command: "python".to_owned(),
-            started_at: Instant::now(),
-            pgid: 1,
-            writer: writer()?,
-            output: Arc::clone(&output),
-            reader_done: Mutex::new(None),
-            cancelled: Mutex::new(false),
-            interrupted: Mutex::new(false),
-            model_cursor: Mutex::new(CommandSessionOutputCursor::default()),
-            notification_cursor: Mutex::new(CommandSessionOutputCursor::default()),
-        }));
-        registry.insert(Arc::new(CommandSession {
-            id: "cmd_b".to_owned(),
-            agent_id: "agent-b".to_owned(),
-            command: "bash".to_owned(),
-            started_at: Instant::now(),
-            pgid: 2,
-            writer: writer()?,
-            output,
-            reader_done: Mutex::new(None),
-            cancelled: Mutex::new(false),
-            interrupted: Mutex::new(false),
-            model_cursor: Mutex::new(CommandSessionOutputCursor::default()),
-            notification_cursor: Mutex::new(CommandSessionOutputCursor::default()),
-        }));
+        registry.insert(Arc::new(test_command_session("cmd_a", "agent-a")?));
+        registry.insert(Arc::new(test_command_session("cmd_b", "agent-b")?));
 
         assert_eq!(registry.count_by_agent("agent-a"), 1);
         assert_eq!(registry.count_by_agent("agent-b"), 1);

@@ -1,0 +1,7 @@
+interface:
+  display_name: "Codebase Wiki Builder"
+  short_description: "Build code graph wikis as project memory"
+  default_prompt: "Use $codebase-wiki-builder to coordinate graph exploration and page writing for this repository, using parallel explorers or disjoint page writers only when useful."
+
+policy:
+  allow_implicit_invocation: true
