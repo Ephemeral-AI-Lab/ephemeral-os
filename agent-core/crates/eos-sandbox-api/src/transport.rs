@@ -30,6 +30,22 @@ pub trait SandboxTransport: Send + Sync {
         payload: JsonObject,
         timeout_s: u32,
     ) -> Result<JsonObject, SandboxApiError>;
+
+    /// Call one dynamically named sandbox RPC, used for plugin operations such
+    /// as `plugin.lsp.hover` whose operation names are manifest/catalog data
+    /// rather than built-in daemon enum variants.
+    async fn call_dynamic(
+        &self,
+        _sandbox_id: &SandboxId,
+        op: &str,
+        _payload: JsonObject,
+        _timeout_s: u32,
+    ) -> Result<JsonObject, SandboxApiError> {
+        Err(SandboxApiError::transport(
+            None,
+            format!("dynamic sandbox op {op:?} is not supported by this transport"),
+        ))
+    }
 }
 
 #[cfg(test)]
@@ -57,6 +73,16 @@ pub(crate) mod mock {
             &self,
             _sandbox_id: &SandboxId,
             _op: DaemonOp,
+            _payload: JsonObject,
+            _timeout_s: u32,
+        ) -> Result<JsonObject, SandboxApiError> {
+            self.outcome.clone()
+        }
+
+        async fn call_dynamic(
+            &self,
+            _sandbox_id: &SandboxId,
+            _op: &str,
             _payload: JsonObject,
             _timeout_s: u32,
         ) -> Result<JsonObject, SandboxApiError> {

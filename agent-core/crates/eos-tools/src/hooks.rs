@@ -44,11 +44,15 @@ pub enum Hook {
         /// The protected tool.
         tool: ToolName,
     },
-    /// Refuse a nested-workflow planner that sets a deferred goal (Python
-    /// `DisallowNestedPlannerDeferral`).
+    /// Refuse a planner that sets a deferred goal while its workflow depth
+    /// exceeds `max_depth` (Python `DisallowNestedPlannerDeferral`).
     DisallowNestedPlannerDeferral {
         /// The protected tool.
         tool: ToolName,
+        /// Deepest workflow depth still allowed to defer; deny when the
+        /// submitting workflow's depth exceeds it. Configured per-tool in the
+        /// `.eos-agents/tools/<wire>.md` `hooks:` entry.
+        max_depth: u32,
     },
     /// Refuse git working-tree / metadata mutation shell commands (Python
     /// `DestructiveGitShellPreHook`).
@@ -130,7 +134,7 @@ impl Hook {
         match self {
             Hook::RequireNoInflightBackgroundTasks { tool }
             | Hook::AdvisorApproval { tool }
-            | Hook::DisallowNestedPlannerDeferral { tool }
+            | Hook::DisallowNestedPlannerDeferral { tool, .. }
             | Hook::DestructiveGitShell { tool }
             | Hook::DestructiveShell { tool }
             | Hook::BlockInIsolatedMode { tool } => tool,
@@ -190,9 +194,9 @@ impl Hook {
             Hook::AdvisorApproval { tool } => {
                 advisor_approval::run_advisor_approval(tool, ctx).await
             }
-            Hook::DisallowNestedPlannerDeferral { .. } => {
+            Hook::DisallowNestedPlannerDeferral { max_depth, .. } => {
                 disallow_nested_planner_deferral::run_disallow_nested_planner_deferral(
-                    raw_input, ctx,
+                    max_depth, raw_input, ctx,
                 )
                 .await
             }

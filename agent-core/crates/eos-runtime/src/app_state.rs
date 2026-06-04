@@ -25,7 +25,7 @@ use eos_skills::{load_skill_registry, SkillRegistry};
 use eos_state::{
     AgentRunStore, AttemptStore, IterationStore, ModelStore, RequestStore, TaskStore, WorkflowStore,
 };
-use eos_tools::{build_default_registry, CallerScope, ToolConfigSet, ToolName, ToolRegistry};
+use eos_tools::{build_default_registry, CallerScope, ToolConfigSet, ToolKey, ToolRegistry};
 use eos_types::{Clock, RequestId, SystemClock};
 use tokio_util::sync::CancellationToken;
 
@@ -34,6 +34,8 @@ use tokio_util::sync::CancellationToken;
 // can resolve a source without a runtime back-edge) and re-exported here for the
 // composition root and the `start_request` signature.
 pub use eos_engine::{EventCallback, EventSourceFactory};
+
+use crate::plugin_tools::register_plugin_tools;
 
 /// Request-scoped sandbox provisioning seam.
 ///
@@ -155,6 +157,7 @@ impl AppState {
             event_source_factory: self.event_source_factory.clone(),
             agent_registry: self.agent_registry.clone(),
             tool_config: self.tool_config.clone(),
+            tool_registry_extender: Some(Arc::new(register_plugin_tools)),
             cwd: self.cwd.clone(),
         }
     }
@@ -448,8 +451,9 @@ impl AppStateBuilder {
             None => Arc::new(build_tool_config(self.tools_root.as_deref())?),
         };
 
-        let tool_registry =
-            Arc::new(build_default_registry(&tool_config, &CallerScope::default()));
+        let mut tool_registry = build_default_registry(&tool_config, &CallerScope::default());
+        register_plugin_tools(&mut tool_registry);
+        let tool_registry = Arc::new(tool_registry);
 
         // Cross-registry validation: unknown agent tool names fail fast unless
         // compatibility mode is enabled (anchor §10 / AC-eos-runtime-09).
@@ -548,9 +552,8 @@ fn build_skill_registry(root: Option<&std::path::Path>) -> Result<SkillRegistry>
 /// inject via [`AppStateBuilder::tool_config`] or point at a `.eos-agents/tools`
 /// tree via [`AppStateBuilder::tools_root`].
 fn build_tool_config(root: Option<&std::path::Path>) -> Result<ToolConfigSet> {
-    let root = root.context(
-        "tool config root not set: call AppStateBuilder::tools_root or ::tool_config",
-    )?;
+    let root = root
+        .context("tool config root not set: call AppStateBuilder::tools_root or ::tool_config")?;
     ToolConfigSet::load_from_dir(root).context("loading tool config")
 }
 
@@ -566,7 +569,7 @@ fn build_plugin_catalog(root: Option<&std::path::Path>) -> Result<PluginCatalog>
 fn validate_agent_tools(agents: &AgentRegistry, registry: &ToolRegistry) -> Result<()> {
     for def in agents.list() {
         for tool in def.allowed_tools.iter().chain(def.terminals.iter()) {
-            let known = ToolName::from_wire(tool).is_some_and(|name| registry.get(name).is_some());
+            let known = ToolKey::from_wire(tool).is_some_and(|name| registry.get(name).is_some());
             if !known {
                 anyhow::bail!(
                     "agent profile {:?} names unknown tool {:?}; enable compatibility mode to skip",

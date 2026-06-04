@@ -14,6 +14,7 @@
 //! `String` or a typed outcome), which the tool wraps into a [`ToolResult`].
 
 use std::collections::BTreeMap;
+use std::sync::Arc;
 
 use async_trait::async_trait;
 use eos_state::{GeneratorSubmission, PlannerKind, ReducerSubmission};
@@ -95,10 +96,10 @@ pub trait WorkflowControlPort: Sealed + Send + Sync {
         agent_id: &str,
     ) -> Result<Vec<OutstandingWorkflow>, ToolError>;
 
-    /// Whether `workflow_id` is itself a nested (delegated-within-a-workflow)
-    /// workflow. Read by the `DisallowNestedPlannerDeferral` pre-hook (Python
-    /// `is_nested_workflow`).
-    async fn is_nested_workflow(&self, workflow_id: &WorkflowId) -> Result<bool, ToolError>;
+    /// The delegation-ancestry depth of `workflow_id` (1 = top-level, 2 = nested
+    /// once, ...). Read by the `DisallowNestedPlannerDeferral` pre-hook to compare
+    /// against its configured `max_depth` (Python `workflow_depth`).
+    async fn workflow_depth(&self, workflow_id: &WorkflowId) -> Result<u32, ToolError>;
 }
 
 // ---------------------------------------------------------------------------
@@ -221,11 +222,9 @@ pub struct BackgroundInflightReport {
     pub total: usize,
     /// In-flight subagent runs for this agent.
     pub subagent: usize,
-    /// Outstanding delegated workflows for this agent. Workflow lifecycle is
-    /// owned by the workflow lane (a sibling crate) with authoritative persisted
-    /// state, so the supervisor does not track it: the supervisor leaves this `0`
-    /// and the terminal hook populates the count from the authoritative
-    /// [`WorkflowControlPort::find_outstanding`].
+    /// Outstanding delegated workflows for this agent. The supervisor owns the
+    /// background handle bookkeeping; [`WorkflowControlPort`] remains the source
+    /// of truth for persisted workflow lifecycle.
     pub workflow: usize,
     /// In-flight, supervisor-tracked command sessions for this agent
     /// (diagnostic; the authoritative live-session gate is the daemon RPC).
@@ -273,6 +272,35 @@ pub trait SubagentSupervisorPort: Sealed + Send + Sync {
     /// and return the post-drain report — the drain-to-0 path the terminal /
     /// exit prehook runs so a live or phantom subagent never wedges the terminal.
     async fn drain_for_agent(&self, agent_id: &str) -> BackgroundInflightReport;
+
+    /// Track a workflow that was just delegated by this agent. The workflow
+    /// control port owns persisted workflow state; the background supervisor owns
+    /// the handle for in-flight accounting and parent-exit cancellation.
+    async fn register_workflow(
+        &self,
+        parent_task_id: &TaskId,
+        agent_id: &str,
+        workflow_goal: &str,
+        workflow: &StartedWorkflow,
+    );
+
+    /// Mark a tracked workflow handle cancelled in the supervisor ledger.
+    async fn cancel_workflow_record(
+        &self,
+        workflow_task_id: &WorkflowSessionId,
+        reason: &str,
+    ) -> bool;
+
+    /// Cancel all background work known to this supervisor for the parent agent.
+    /// Workflow cancellation is delegated through the optional authoritative
+    /// workflow-control port; missing workflow control still settles the in-memory
+    /// record so the parent exit cannot leave a phantom running handle.
+    async fn cancel_for_parent_exit(
+        &self,
+        agent_id: &str,
+        workflow_control: Option<Arc<dyn WorkflowControlPort>>,
+        reason: &str,
+    ) -> BackgroundInflightReport;
 }
 
 // ---------------------------------------------------------------------------

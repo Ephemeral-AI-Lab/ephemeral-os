@@ -47,18 +47,14 @@ const DEFAULT_TOOLS_DIR: &str = ".eos-agents/tools";
 /// `EOS_AGENTS_DIR` overrides the source and is validated normally. Otherwise we
 /// fall back to the repo-relative bundled tree when present (it only resolves
 /// when run from the repo root; a missing dir yields an empty registry, the
-/// prior no-op behavior). The bundled profiles name `lsp.*` tools not yet ported
-/// to the Rust tool registry, so `compatibility_mode` masks *that* known gap for
-/// this pre-cutover demo binary — it disables agent-tool validation wholesale, so
-/// it is scoped to the bundled path only, never an explicit override.
+/// prior no-op behavior). Bundled profiles are validated normally; dynamic
+/// plugin tools such as `lsp.*` are registered through the Rust plugin facade.
 async fn build_app_state() -> anyhow::Result<AppState> {
     let mut builder = AppState::builder();
     if let Ok(dir) = std::env::var("EOS_AGENTS_DIR") {
         builder = builder.agents_dir(dir);
     } else if std::path::Path::new(DEFAULT_AGENTS_DIR).is_dir() {
-        builder = builder
-            .agents_dir(DEFAULT_AGENTS_DIR)
-            .compatibility_mode(true);
+        builder = builder.agents_dir(DEFAULT_AGENTS_DIR);
     }
     // The tool config is mandatory (the registry needs every tool). `EOS_TOOLS_DIR`
     // overrides; otherwise use the repo-relative bundled tree (resolves when run

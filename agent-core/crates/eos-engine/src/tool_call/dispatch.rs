@@ -86,8 +86,8 @@ fn first_terminal_result(
     ctx: &QueryContext,
 ) -> Option<ToolResult> {
     calls.iter().find_map(|call| {
-        ToolName::from_wire(&call.name)
-            .and_then(|name| ctx.tool_registry.get(name))
+        ctx.tool_registry
+            .get_wire(&call.name)
             .filter(|tool| tool.is_terminal)
             .and_then(|_| results.get(call.tool_use_id.as_str()))
             .filter(|result| result.is_terminal)
@@ -309,14 +309,7 @@ pub async fn dispatch_assistant_tools(
             continue;
         }
 
-        let Some(name) = ToolName::from_wire(&call.name) else {
-            let result = rejection_result(format!("Unknown tool `{}`.", call.name));
-            events.push(completed_event(call, &result));
-            tool_results.push(result_block(&call.tool_use_id, &result));
-            results_by_id.insert(call.tool_use_id.as_str().to_owned(), result);
-            continue;
-        };
-        let Some(tool) = ctx.tool_registry.get(name) else {
+        let Some(tool) = ctx.tool_registry.get_wire(&call.name) else {
             let result = rejection_result(format!("Unknown tool `{}`.", call.name));
             events.push(completed_event(call, &result));
             tool_results.push(result_block(&call.tool_use_id, &result));
@@ -327,7 +320,7 @@ pub async fn dispatch_assistant_tools(
         events.push(started_event(call));
         // `ask_advisor` is engine-driven (an ephemeral advisor agent), not a
         // generic foreground executor — route it out of the parallel fan-out.
-        if name == ToolName::AskAdvisor {
+        if tool.name.as_builtin() == Some(ToolName::AskAdvisor) {
             advisor_runnable.push((call.clone(), tool.clone()));
         } else {
             runnable.push((call.clone(), tool.clone()));
@@ -378,7 +371,7 @@ mod tests {
     use async_trait::async_trait;
     use eos_llm_client::ToolSpec;
     use eos_tools::{
-        OutputShape, RegisteredTool, ToolExecutor, ToolIntent, ToolRegistry, ToolResult,
+        OutputShape, RegisteredTool, ToolExecutor, ToolIntent, ToolKey, ToolRegistry, ToolResult,
     };
     use eos_types::{AgentRunId, JsonObject};
     use serde_json::json;
@@ -426,8 +419,12 @@ mod tests {
     }
 
     fn spec(name: ToolName) -> ToolSpec {
+        wire_spec(name.as_str())
+    }
+
+    fn wire_spec(name: &str) -> ToolSpec {
         ToolSpec::new(
-            name.as_str(),
+            name,
             "test",
             json!({"type":"object"})
                 .as_object()
@@ -455,6 +452,20 @@ mod tests {
 
     fn tool(name: ToolName, terminal: bool, count: Arc<AtomicUsize>) -> RegisteredTool {
         tool_with_result(name, terminal, count, ToolResult::ok("ok"))
+    }
+
+    fn dynamic_tool(name: &str, count: Arc<AtomicUsize>) -> RegisteredTool {
+        RegisteredTool::new(
+            ToolKey::dynamic(name),
+            ToolIntent::ReadOnly,
+            false,
+            wire_spec(name),
+            OutputShape::Text,
+            Arc::new(CountingExecutor {
+                count,
+                result: ToolResult::ok("ok"),
+            }),
+        )
     }
 
     fn barrier_tool(
@@ -497,6 +508,34 @@ mod tests {
             notifier: crate::NotificationService::new(),
             run_handles: None,
         }
+    }
+
+    #[tokio::test]
+    async fn dynamic_plugin_tool_dispatches_by_wire_name() {
+        let count = Arc::new(AtomicUsize::new(0));
+        let mut registry = ToolRegistry::new();
+        registry.register(dynamic_tool("lsp.hover", count.clone()));
+        let mut ctx = ctx(registry);
+
+        let calls = vec![ToolUseRequest {
+            tool_use_id: "toolu-1".parse().expect("valid id"),
+            name: "lsp.hover".to_owned(),
+            input: JsonObject::new(),
+        }];
+        let outcome = dispatch_assistant_tools(&mut ctx, &calls, &[])
+            .await
+            .expect("dispatch");
+
+        assert_eq!(count.load(Ordering::SeqCst), 1);
+        assert_eq!(outcome.tool_results.len(), 1);
+        assert!(matches!(
+            &outcome.tool_results[0],
+            ContentBlock::ToolResult {
+                content,
+                is_error: false,
+                ..
+            } if content == "ok"
+        ));
     }
 
     #[tokio::test]

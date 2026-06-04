@@ -4,9 +4,10 @@
 //! `tools/_hooks/disallow_nested_planner_deferral.py`.
 //!
 //! It denies a planner terminal that carries a nonblank
-//! `deferred_goal_for_next_iteration` while the submitting workflow is nested
-//! (`WorkflowControlPort::is_nested_workflow`). A nested planner cannot extend
-//! its iteration chain, so deferral is the bounded-nesting guard.
+//! `deferred_goal_for_next_iteration` when the submitting workflow's delegation
+//! depth exceeds the configured `max_depth`. Depth is inferred from the workflow
+//! context at hook execution via [`WorkflowControlPort::workflow_depth`]. A
+//! too-deep planner cannot extend its iteration chain, bounding nesting.
 
 use eos_types::JsonObject;
 use serde_json::Value;
@@ -19,9 +20,11 @@ use super::{HookDenial, HookOutcome};
 const NESTED_PLANNER_DEFERRAL_MESSAGE: &str = "BLOCKED: nested workflow planners cannot set deferred_goal_for_next_iteration. Submit a plan that covers all current child-workflow goal items and leaves no remaining items.";
 
 /// `DisallowNestedPlannerDeferral.run`: deny when a nonblank deferred goal is set
-/// and the submitting workflow is nested. Passes when no deferred goal is set, or
-/// when the nesting context (`workflow_id` + `workflow_control`) is unavailable.
+/// and the submitting workflow's depth exceeds `max_depth`. Passes when no
+/// deferred goal is set, or when the workflow context (`workflow_id` +
+/// `workflow_control`) is unavailable to infer depth.
 pub(crate) async fn run_disallow_nested_planner_deferral(
+    max_depth: u32,
     raw_input: &JsonObject,
     ctx: &ExecutionMetadata,
 ) -> Result<HookOutcome, ToolError> {
@@ -36,7 +39,7 @@ pub(crate) async fn run_disallow_nested_planner_deferral(
     let (Some(workflow_id), Some(control)) = (&ctx.workflow_id, &ctx.workflow_control) else {
         return Ok(HookOutcome::pass());
     };
-    if control.is_nested_workflow(workflow_id).await? {
+    if control.workflow_depth(workflow_id).await? > max_depth {
         Ok(HookOutcome::Deny(
             HookDenial::new(NESTED_PLANNER_DEFERRAL_MESSAGE, "nested_planner_deferral")
                 .with_reason("nested_workflow"),

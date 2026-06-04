@@ -73,10 +73,8 @@ pub fn build_default_registry(config: &ToolConfigSet, caller: &CallerScope) -> T
 
 #[cfg(test)]
 pub(crate) fn repo_tools_config() -> ToolConfigSet {
-    let root =
-        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../.eos-agents/tools");
-    ToolConfigSet::load_from_dir(&root)
-        .expect("repo .eos-agents/tools loads and validates")
+    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../.eos-agents/tools");
+    ToolConfigSet::load_from_dir(&root).expect("repo .eos-agents/tools loads and validates")
 }
 
 #[cfg(test)]
@@ -95,11 +93,11 @@ mod tests {
                 skill_slug: None,
             },
         );
-        // The 24-tool default set, all keyed by ToolName.
+        // The 24-tool default set, all keyed by ToolKey.
         assert_eq!(registry.len(), 24);
         let mut seen = std::collections::BTreeSet::new();
         for tool in registry.list() {
-            assert!(seen.insert(tool.name), "duplicate {}", tool.name);
+            assert!(seen.insert(tool.name.clone()), "duplicate {}", tool.name);
             // intent is a ToolIntent (not Option) — its presence is structural.
             let _ = tool.intent;
         }
@@ -127,7 +125,10 @@ mod tests {
     fn terminal_tools_have_descriptors() {
         let registry = build_default_registry(&repo_tools_config(), &CallerScope::default());
         for tool in registry.list().filter(|t| t.is_terminal) {
-            let terminal = crate::terminal::TerminalTool::from_tool_name(tool.name)
+            let terminal = tool
+                .name
+                .as_builtin()
+                .and_then(crate::terminal::TerminalTool::from_tool_name)
                 .expect("terminal tool has a TerminalTool");
             let d = crate::terminal::descriptor(terminal);
             assert!(!d.selection_guidance.is_empty());
@@ -163,10 +164,15 @@ mod tests {
                 "{gated:?} must carry exactly one AdvisorApproval hook"
             );
             assert!(
-                registry.get(gated).expect("registered").hooks.iter().any(|hook| matches!(
-                    hook,
-                    Hook::AdvisorApproval { tool } if *tool == gated
-                )),
+                registry
+                    .get(gated)
+                    .expect("registered")
+                    .hooks
+                    .iter()
+                    .any(|hook| matches!(
+                        hook,
+                        Hook::AdvisorApproval { tool } if *tool == gated
+                    )),
                 "{gated:?}'s AdvisorApproval hook must target itself"
             );
         }
@@ -207,6 +213,56 @@ mod tests {
                 "{gated:?}: RequireNoInflight must precede AdvisorApproval"
             );
         }
+    }
+
+    // Lock the externalized security/policy wiring for the non-terminal tools
+    // (the `submit_*` advisor gates are covered above). Because intent + hooks now
+    // live in editable `.eos-agents/tools/*.md`, this is the regression guard that
+    // a future markdown edit cannot silently drop a destructive-shell gate, the
+    // isolated-mode block, or a no-inflight guard, or flip an intent.
+    #[test]
+    fn security_policy_wiring_is_locked() {
+        use crate::intent::ToolIntent;
+        let registry = build_default_registry(&repo_tools_config(), &CallerScope::default());
+        let hooks = |name: ToolName| registry.get(name).expect("registered").hooks.clone();
+        let intent = |name: ToolName| registry.get(name).expect("registered").intent;
+
+        assert_eq!(
+            hooks(ToolName::ExecCommand),
+            vec![
+                Hook::DestructiveGitShell {
+                    tool: ToolName::ExecCommand
+                },
+                Hook::DestructiveShell {
+                    tool: ToolName::ExecCommand
+                },
+            ],
+            "exec_command must keep both destructive-shell gates, in order"
+        );
+        assert_eq!(
+            hooks(ToolName::AskAdvisor),
+            vec![Hook::BlockInIsolatedMode {
+                tool: ToolName::AskAdvisor
+            }],
+            "ask_advisor must be blocked in isolated mode"
+        );
+        for iso in [
+            ToolName::EnterIsolatedWorkspace,
+            ToolName::ExitIsolatedWorkspace,
+        ] {
+            assert_eq!(
+                hooks(iso),
+                vec![Hook::RequireNoInflightBackgroundTasks { tool: iso }],
+                "{iso:?} must reject while background work is in flight"
+            );
+        }
+
+        assert_eq!(intent(ToolName::ReadFile), ToolIntent::ReadOnly);
+        assert_eq!(intent(ToolName::WriteFile), ToolIntent::WriteAllowed);
+        assert_eq!(intent(ToolName::ExecCommand), ToolIntent::WriteAllowed);
+        assert_eq!(intent(ToolName::RunSubagent), ToolIntent::WriteAllowed);
+        assert_eq!(intent(ToolName::DelegateWorkflow), ToolIntent::Lifecycle);
+        assert_eq!(intent(ToolName::CancelWorkflow), ToolIntent::Lifecycle);
     }
 
     // AC-tools-08: `registry.specs()` is a stable, ordered Vec<ToolSpec> for the

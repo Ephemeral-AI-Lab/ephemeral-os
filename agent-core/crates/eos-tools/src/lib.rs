@@ -45,7 +45,7 @@ pub use hooks::{Hook, HookDenial, HookOutcome};
 pub use intent::ToolIntent;
 pub use metadata::ExecutionMetadata;
 pub use model_tools::{build_default_registry, CallerScope};
-pub use name::ToolName;
+pub use name::{ToolKey, ToolName};
 pub use ports::{
     BackgroundInflightReport, CommandSessionSupervisorPort, IsolatedWorkspacePort,
     NotificationSink, OutstandingWorkflow, PlanReducer, PlanSubmissionPort, PlanTask, PlannerPlan,

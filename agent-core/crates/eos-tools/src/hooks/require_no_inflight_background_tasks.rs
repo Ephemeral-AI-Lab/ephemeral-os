@@ -268,8 +268,8 @@ mod tests {
                     workflow_goal: "prior goal".to_owned(),
                 }])
             }
-            async fn is_nested_workflow(&self, _: &WorkflowId) -> Result<bool, ToolError> {
-                Ok(false)
+            async fn workflow_depth(&self, _: &WorkflowId) -> Result<u32, ToolError> {
+                Ok(1)
             }
         }
 
@@ -277,9 +277,10 @@ mod tests {
         ctx.task_id = Some("parent".parse().expect("task id"));
         ctx.workflow_control = Some(Arc::new(OneOutstanding));
 
-        let outcome = run_require_no_inflight(ToolName::SubmitRootOutcome, &JsonObject::new(), &ctx)
-            .await
-            .expect("hook ran");
+        let outcome =
+            run_require_no_inflight(ToolName::SubmitRootOutcome, &JsonObject::new(), &ctx)
+                .await
+                .expect("hook ran");
         match outcome {
             HookOutcome::Deny(denial) => {
                 assert!(

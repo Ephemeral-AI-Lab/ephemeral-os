@@ -15,7 +15,7 @@ use eos_agent_def::{AgentDefinition, AgentRegistry};
 use eos_llm_client::{LlmClient, Message, DEFAULT_MAX_TOKENS};
 use eos_state::{AgentRunStore, ModelStore};
 use eos_tools::{
-    build_default_registry, CallerScope, ExecutionMetadata, ToolConfigSet, ToolResult,
+    build_default_registry, CallerScope, ExecutionMetadata, ToolConfigSet, ToolRegistry, ToolResult,
 };
 use eos_types::{AgentRunId, TaskId};
 use futures::StreamExt;
@@ -36,6 +36,11 @@ pub type EventSourceFactory = Arc<dyn Fn(&AgentDefinition) -> Arc<dyn EventSourc
 /// Per-run stream-event callback (the Python `AgentStreamEmitter`).
 pub type EventCallback = Arc<dyn Fn(&StreamEvent) + Send + Sync>;
 
+/// Runtime-supplied extension point for non-core model tools, such as plugin
+/// catalog tools. The engine owns per-agent registry construction but stays
+/// ignorant of plugin catalog internals.
+pub type ToolRegistryExtender = Arc<dyn Fn(&mut ToolRegistry) + Send + Sync>;
+
 /// The explicit run handles `run_ephemeral_agent` needs, in place of `&AppState`
 /// (constraint 6). Cheap to clone (every field is an `Arc` or a small value); it
 /// rides on the [`QueryContext`](crate::query::QueryContext) so the advisor
@@ -55,6 +60,9 @@ pub struct EngineRunHandles {
     /// Externalized tool config (`.eos-agents/tools`), loaded once at composition
     /// and read by `build_default_registry` for every per-agent registry.
     pub tool_config: Arc<ToolConfigSet>,
+    /// Optional runtime extender that registers dynamic plugin tools into each
+    /// per-agent registry after the built-in tools are registered.
+    pub tool_registry_extender: Option<ToolRegistryExtender>,
     /// Working directory.
     pub cwd: String,
 }
@@ -160,6 +168,10 @@ pub async fn run_ephemeral_agent(
             .map(|s| s.to_string_lossy().into_owned()),
     };
     let registry = build_default_registry(&handles.tool_config, &caller_scope);
+    let mut registry = registry;
+    if let Some(extender) = &handles.tool_registry_extender {
+        extender(&mut registry);
+    }
 
     let ctx_result = build_query_context(BuildQueryContextInput {
         agent,

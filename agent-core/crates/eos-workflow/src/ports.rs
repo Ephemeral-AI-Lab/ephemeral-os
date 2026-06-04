@@ -232,14 +232,29 @@ impl WorkflowControlPort for WorkflowControlAdapter {
             .collect()
     }
 
-    async fn is_nested_workflow(&self, workflow_id: &WorkflowId) -> Result<bool, ToolError> {
-        let Some(workflow) = self.workflow_store.get(workflow_id).await? else {
-            return Ok(false);
-        };
-        let Some(parent) = self.task_store.get(&workflow.parent_task_id).await? else {
-            return Ok(false);
-        };
-        Ok(parent.workflow_id.is_some())
+    async fn workflow_depth(&self, workflow_id: &WorkflowId) -> Result<u32, ToolError> {
+        // Walk delegation ancestry via each workflow's parent task's owning
+        // workflow (`task.workflow_id`), counting hops; 1 = top-level. The `seen`
+        // guard stops a malformed cycle from looping forever (Python parity).
+        let mut depth: u32 = 1;
+        let mut current = workflow_id.clone();
+        let mut seen = std::collections::HashSet::new();
+        while seen.insert(current.clone()) {
+            let Some(workflow) = self.workflow_store.get(&current).await? else {
+                break;
+            };
+            let Some(parent) = self.task_store.get(&workflow.parent_task_id).await? else {
+                break;
+            };
+            match parent.workflow_id {
+                Some(parent_workflow_id) => {
+                    depth += 1;
+                    current = parent_workflow_id;
+                }
+                None => break,
+            }
+        }
+        Ok(depth)
     }
 }
 

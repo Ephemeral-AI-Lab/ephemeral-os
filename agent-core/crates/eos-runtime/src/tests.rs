@@ -131,6 +131,29 @@ async fn unknown_profile_tool_fails_startup() {
     );
 }
 
+#[tokio::test]
+async fn plugin_profile_tool_passes_startup_validation() {
+    let root = agent_def(
+        "root",
+        AgentRole::Root,
+        &["read_file", "lsp.hover"],
+        &["submit_root_outcome"],
+    );
+    let dir = tempfile::tempdir().unwrap();
+
+    let registry: AgentRegistry = vec![root].into_iter().collect();
+    let state = AppState::builder()
+        .database_url(sqlite_url(dir.path()))
+        .tools_root(test_tools_root())
+        .agent_registry(Arc::new(registry))
+        .build()
+        .await;
+    assert!(
+        state.is_ok(),
+        "catalog plugin tools must be registered without compatibility mode"
+    );
+}
+
 // --- request_completion NF1: the non-injected build path seeds a registry from
 // `agents_dir` so `root` resolves (the shipped-binary seam, exercised without the
 // `agent_registry` injection every other test uses). A synthetic profile keeps
@@ -460,7 +483,7 @@ async fn delegate_workflow_leaves_parent_running() {
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn delegated_workflow_drives_to_succeeded_via_real_runner() {
     use crate::app_state::test_seams::ScriptedSource;
-    use eos_engine::{EventSource, StreamEvent};
+    use eos_engine::EventSource;
 
     // One-step plan: a single generator `g1` (bound to the `coder` generator
     // profile) and one reducer `r1` gating on it. Submit payloads carry only
@@ -975,7 +998,9 @@ mod subagent_lifecycle {
     use eos_state::TaskStatus;
     use serde_json::json;
 
-    use crate::app_state::test_seams::{agent_def, build_test_state, tool_use_turn, ScriptedSource};
+    use crate::app_state::test_seams::{
+        agent_def, build_test_state, tool_use_turn, ScriptedSource,
+    };
     use crate::app_state::EventSourceFactory;
     use crate::start_request;
 
@@ -1151,8 +1176,8 @@ mod subagent_lifecycle {
             json!({"summary": "the bug is at foo.rs:10", "findings": ["foo.rs:10"]}),
         )];
         let advisor_turns = vec![approve_turn()];
-        let factory: EventSourceFactory = Arc::new(move |def: &AgentDefinition| {
-            match def.name.as_str() {
+        let factory: EventSourceFactory =
+            Arc::new(move |def: &AgentDefinition| match def.name.as_str() {
                 "explorer" => {
                     Arc::new(ScriptedSource::new(explorer_turns.clone())) as Arc<dyn EventSource>
                 }
@@ -1164,8 +1189,7 @@ mod subagent_lifecycle {
                     asked_advisor: Arc::new(AtomicBool::new(false)),
                     saw_finished: saw_finished_factory.clone(),
                 }) as Arc<dyn EventSource>,
-            }
-        });
+            });
 
         let (state, _dir) = build_test_state(
             Some(factory),
@@ -1237,10 +1261,11 @@ mod subagent_lifecycle {
             tool_use_turn("toolu_root", "submit_root_outcome", payload.clone()),
         ];
         let advisor_turns = vec![approve_turn()];
-        let rejection: Arc<std::sync::Mutex<Option<String>>> = Arc::new(std::sync::Mutex::new(None));
+        let rejection: Arc<std::sync::Mutex<Option<String>>> =
+            Arc::new(std::sync::Mutex::new(None));
         let rejection_probe = rejection.clone();
-        let factory: EventSourceFactory = Arc::new(move |def: &AgentDefinition| {
-            match def.name.as_str() {
+        let factory: EventSourceFactory =
+            Arc::new(move |def: &AgentDefinition| match def.name.as_str() {
                 "advisor" => {
                     Arc::new(ScriptedSource::new(advisor_turns.clone())) as Arc<dyn EventSource>
                 }
@@ -1248,8 +1273,7 @@ mod subagent_lifecycle {
                     turns: std::sync::Mutex::new(root_turns.clone()),
                     rejection: rejection_probe.clone(),
                 }) as Arc<dyn EventSource>,
-            }
-        });
+            });
 
         // No "explorer" agent registered → run_subagent must reject "not registered".
         let (state, _dir) =

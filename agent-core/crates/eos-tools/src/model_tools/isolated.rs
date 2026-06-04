@@ -9,10 +9,10 @@ use eos_types::JsonObject;
 use schemars::{schema_for, JsonSchema};
 use serde::{Deserialize, Serialize};
 
+use crate::config::ToolConfigSet;
 use crate::error::ToolError;
 use crate::execution::parse_input;
 use crate::executor::ToolExecutor;
-use crate::config::ToolConfigSet;
 use crate::metadata::ExecutionMetadata;
 use crate::name::ToolName;
 use crate::registry::ToolRegistry;

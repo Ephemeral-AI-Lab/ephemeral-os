@@ -45,7 +45,7 @@ pub use timeouts::{
 };
 pub use tool_api::{
     cancel, cancel_command_session, collect_command_completions, command_session_count, edit_file,
-    exec_command, exec_stdin, glob, grep, heartbeat, inflight_count, isolated_active, read_file,
-    write_file, write_stdin,
+    exec_command, exec_stdin, glob, grep, heartbeat, inflight_count, isolated_active,
+    plugin_dispatch, read_file, write_file, write_stdin, PluginDispatchRequest,
 };
 pub use transport::SandboxTransport;

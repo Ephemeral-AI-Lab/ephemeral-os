@@ -112,11 +112,7 @@ impl ToolExecutor for LoadSkillReference {
     }
 }
 
-pub(crate) fn register(
-    registry: &mut ToolRegistry,
-    config: &ToolConfigSet,
-    caller: &CallerScope,
-) {
+pub(crate) fn register(registry: &mut ToolRegistry, config: &ToolConfigSet, caller: &CallerScope) {
     // Scope to the caller's own skill folder slug (0-or-1 entries), mirroring
     // Python `make_load_skill_reference_for_skill(allowed_slugs=[skill_slug])`.
     let allowed: Vec<SkillName> = caller
@@ -181,9 +177,15 @@ mod tests {
 
     /// A two-skill registry: `a` (reference `ref_a`) and `b` (reference `secret`).
     fn two_skill_registry(scratch: &Scratch) -> SkillRegistry {
-        scratch.write("a/SKILL.md", "---\nname: a\ndescription: skill a\n---\nbody a\n");
+        scratch.write(
+            "a/SKILL.md",
+            "---\nname: a\ndescription: skill a\n---\nbody a\n",
+        );
         scratch.write("a/references/ref_a.md", "REF A CONTENT");
-        scratch.write("b/SKILL.md", "---\nname: b\ndescription: skill b\n---\nbody b\n");
+        scratch.write(
+            "b/SKILL.md",
+            "---\nname: b\ndescription: skill b\n---\nbody b\n",
+        );
         scratch.write("b/references/secret.md", "SECRET B CONTENT");
         SkillRegistry::load_from_dir(scratch.path()).unwrap()
     }
@@ -197,7 +199,10 @@ mod tests {
     fn input(skill: &str, reference: &str) -> JsonObject {
         let mut m = JsonObject::new();
         m.insert("skill_name".to_owned(), Value::String(skill.to_owned()));
-        m.insert("reference_name".to_owned(), Value::String(reference.to_owned()));
+        m.insert(
+            "reference_name".to_owned(),
+            Value::String(reference.to_owned()),
+        );
         m
     }
 

@@ -6,7 +6,7 @@ use std::sync::Arc;
 
 use eos_agent_def::AgentDefinition;
 use eos_llm_client::LlmClient;
-use eos_tools::{ExecutionMetadata, ToolName, ToolRegistry};
+use eos_tools::{ExecutionMetadata, ToolKey, ToolName, ToolRegistry};
 use eos_types::{AgentRunId, JsonObject, TaskId};
 
 use crate::notifications::{make_default_notification_rules, NotificationService};
@@ -61,7 +61,16 @@ impl std::fmt::Debug for BuildQueryContextInput {
     }
 }
 
-fn parse_tool_names(names: &[String]) -> Result<Vec<ToolName>, EngineError> {
+fn parse_tool_keys(names: &[String]) -> Result<Vec<ToolKey>, EngineError> {
+    names
+        .iter()
+        .map(|name| {
+            ToolKey::from_wire(name).ok_or_else(|| EngineError::UnknownTool(name.to_owned()))
+        })
+        .collect()
+}
+
+fn parse_terminal_names(names: &[String]) -> Result<Vec<ToolName>, EngineError> {
     names
         .iter()
         .map(|name| {
@@ -92,9 +101,9 @@ pub fn build_query_context(input: BuildQueryContextInput) -> Result<QueryContext
         run_handles,
     } = input;
 
-    let mut allowed = parse_tool_names(&agent.allowed_tools)?;
-    let terminal_vec = parse_tool_names(&agent.terminals)?;
-    allowed.extend(terminal_vec.iter().copied());
+    let mut allowed = parse_tool_keys(&agent.allowed_tools)?;
+    let terminal_vec = parse_terminal_names(&agent.terminals)?;
+    allowed.extend(terminal_vec.iter().copied().map(ToolKey::from));
     allowed.sort_unstable();
     allowed.dedup();
     if !allowed.is_empty() {

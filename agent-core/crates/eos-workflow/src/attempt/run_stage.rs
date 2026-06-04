@@ -615,7 +615,9 @@ mod tests {
             "D8 audit stream: {events:?}"
         );
         // ...and the failed event carries the Python-shaped node + payload.
-        let failed = audit.event_of("workflow.task.failed").expect("task.failed event");
+        let failed = audit
+            .event_of("workflow.task.failed")
+            .expect("task.failed event");
         assert_eq!(failed.node.task_id.as_ref(), Some(&task_id));
         assert_eq!(failed.node.attempt_id.as_ref(), Some(&started.attempt_id));
         assert_eq!(failed.payload["role"], json!("generator"));

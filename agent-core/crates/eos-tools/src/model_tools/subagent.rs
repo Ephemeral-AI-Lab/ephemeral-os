@@ -17,12 +17,12 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 
 use super::CallerScope;
+use crate::config::ToolConfigSet;
 use crate::error::ToolError;
 use crate::execution::parse_input;
 use crate::executor::ToolExecutor;
 use crate::metadata::ExecutionMetadata;
 use crate::name::ToolName;
-use crate::config::ToolConfigSet;
 use crate::ports::{SpawnedSubagent, StartedSubagent};
 use crate::registry::ToolRegistry;
 use crate::result::{OutputShape, ToolResult};

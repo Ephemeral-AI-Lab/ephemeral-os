@@ -282,8 +282,8 @@ mod tests {
             }])
         }
 
-        async fn is_nested_workflow(&self, _workflow_id: &WorkflowId) -> Result<bool, ToolError> {
-            Ok(false)
+        async fn workflow_depth(&self, _workflow_id: &WorkflowId) -> Result<u32, ToolError> {
+            Ok(1)
         }
     }
 

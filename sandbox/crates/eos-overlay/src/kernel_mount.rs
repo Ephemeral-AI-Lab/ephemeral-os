@@ -50,9 +50,8 @@ pub struct OverlayHandle {
 
 /// A live overlay mount at a workspace root. RAII: [`Drop`] unmounts.
 ///
-/// Wraps the `fsmount` file descriptor returned by the new-mount API; the fd is
-/// `#[repr(transparent)]` so it crosses the syscall FFI as a bare `RawFd`, and
-/// owns its teardown — dropping the handle unmounts the workspace root.
+/// The raw mount fd is closed after `move_mount`; this guard owns teardown by
+/// unmounting the workspace root when it is dropped.
 #[derive(Debug)]
 pub struct OverlayMount {
     /// The mountpoint this overlay was moved onto (`move_mount` destination).
@@ -62,7 +61,7 @@ pub struct OverlayMount {
 impl OverlayMount {
     /// The workspace root this overlay is mounted at.
     #[must_use]
-    pub fn workspace_root(&self) -> &std::path::Path {
+    pub fn workspace_root(&self) -> &Path {
         &self.workspace_root
     }
 }

@@ -1,4 +1,4 @@
-//! [`ToolName`] — the typed name of every public model-facing tool.
+//! [`ToolName`] / [`ToolKey`] — typed names for model-facing tools.
 //!
 //! Ports `_names.py` **plus** the four names that module omits (`write_stdin`,
 //! `enter_isolated_workspace`, `exit_isolated_workspace`, `load_skill_reference`)
@@ -140,6 +140,90 @@ impl ToolName {
     }
 }
 
+/// The registry key for a public model-facing tool.
+///
+/// Built-in tools still use [`ToolName`]. Plugin tools are validated dynamic
+/// names such as `lsp.hover`, carried as a typed key so the registry can accept
+/// plugin-provided tools without extending the built-in enum.
+#[derive(
+    Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize, JsonSchema,
+)]
+#[serde(transparent)]
+#[schemars(transparent)]
+pub struct ToolKey(String);
+
+impl ToolKey {
+    /// Parse a wire tool name into a registry key.
+    ///
+    /// Built-ins are always accepted. Dynamic plugin names must be a dotted
+    /// `<plugin>.<op>` name with non-empty identifier segments; this is enough
+    /// for agent-profile validation to reach the registry lookup while rejecting
+    /// arbitrary strings that are neither built-ins nor plugin tools.
+    #[must_use]
+    pub fn from_wire(value: &str) -> Option<Self> {
+        if let Some(name) = ToolName::from_wire(value) {
+            return Some(Self::from(name));
+        }
+        if is_valid_dynamic_tool_name(value) {
+            Some(Self(value.to_owned()))
+        } else {
+            None
+        }
+    }
+
+    /// Build a dynamic tool key from a catalog-validated name.
+    #[must_use]
+    pub fn dynamic(value: impl Into<String>) -> Self {
+        Self(value.into())
+    }
+
+    /// The model/provider wire string.
+    #[must_use]
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+
+    /// The built-in tool name, when this key names one.
+    #[must_use]
+    pub fn as_builtin(&self) -> Option<ToolName> {
+        ToolName::from_wire(&self.0)
+    }
+}
+
+impl From<ToolName> for ToolKey {
+    fn from(name: ToolName) -> Self {
+        Self(name.as_str().to_owned())
+    }
+}
+
+impl From<&ToolKey> for ToolKey {
+    fn from(name: &ToolKey) -> Self {
+        name.clone()
+    }
+}
+
+impl fmt::Display for ToolKey {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(self.as_str())
+    }
+}
+
+fn is_valid_dynamic_tool_name(value: &str) -> bool {
+    let Some((plugin, op)) = value.split_once('.') else {
+        return false;
+    };
+    is_valid_tool_segment(plugin) && op.split('.').all(is_valid_tool_segment)
+}
+
+fn is_valid_tool_segment(value: &str) -> bool {
+    let mut chars = value.chars();
+    match chars.next() {
+        Some(c) if c.is_ascii_alphabetic() || c == '_' => {}
+        _ => return false,
+    }
+    chars.all(|c| c.is_ascii_alphanumeric() || c == '_')
+}
+
 impl fmt::Display for ToolName {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str(self.as_str())
@@ -181,5 +265,19 @@ mod tests {
             assert_eq!(back, name);
         }
         assert_eq!(ToolName::from_wire("not_a_tool"), None);
+    }
+
+    #[test]
+    fn tool_key_accepts_builtin_and_plugin_names() {
+        assert_eq!(
+            ToolKey::from_wire("read_file").and_then(|key| key.as_builtin()),
+            Some(ToolName::ReadFile)
+        );
+        let plugin = ToolKey::from_wire("lsp.hover").expect("plugin key");
+        assert_eq!(plugin.as_str(), "lsp.hover");
+        assert_eq!(plugin.as_builtin(), None);
+        assert!(ToolKey::from_wire("not_a_builtin").is_none());
+        assert!(ToolKey::from_wire("lsp.").is_none());
+        assert!(ToolKey::from_wire(".hover").is_none());
     }
 }

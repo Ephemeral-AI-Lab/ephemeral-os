@@ -10,6 +10,7 @@ mod control;
 mod edit;
 mod glob;
 mod grep;
+mod plugin;
 mod read;
 mod write;
 
@@ -20,5 +21,6 @@ pub use control::{cancel, command_session_count, heartbeat, inflight_count, isol
 pub use edit::edit_file;
 pub use glob::glob;
 pub use grep::grep;
+pub use plugin::{plugin_dispatch, PluginDispatchRequest};
 pub use read::read_file;
 pub use write::write_file;

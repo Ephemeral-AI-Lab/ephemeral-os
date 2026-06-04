@@ -9,7 +9,6 @@
 //! here).
 
 use crate::intent::ToolIntent;
-use crate::name::ToolName;
 use crate::registry::ToolRegistry;
 
 /// One call in a model-emitted tool-use batch. The `name` is the raw wire string
@@ -41,15 +40,11 @@ pub struct LifecycleBatchDecision {
 }
 
 fn is_terminal(name: &str, registry: &ToolRegistry) -> bool {
-    ToolName::from_wire(name)
-        .and_then(|n| registry.get(n))
-        .is_some_and(|tool| tool.is_terminal)
+    registry.get_wire(name).is_some_and(|tool| tool.is_terminal)
 }
 
 fn intent_of(name: &str, registry: &ToolRegistry) -> Option<ToolIntent> {
-    ToolName::from_wire(name)
-        .and_then(|n| registry.get(n))
-        .map(|tool| tool.intent)
+    registry.get_wire(name).map(|tool| tool.intent)
 }
 
 fn backticked(name: &str) -> String {
@@ -184,6 +179,7 @@ pub fn lifecycle_batch_decision(
 mod tests {
     use super::*;
     use crate::testsupport::registry_with;
+    use crate::ToolName;
 
     fn call<'a>(id: &'a str, name: &'a str) -> DispatchCall<'a> {
         DispatchCall {

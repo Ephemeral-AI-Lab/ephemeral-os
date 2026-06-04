@@ -482,6 +482,19 @@ impl SandboxTransport for DaemonClient {
         .await
         .map_err(map_host_error_to_api_error)
     }
+
+    async fn call_dynamic(
+        &self,
+        sandbox_id: &SandboxId,
+        op: &str,
+        payload: JsonObject,
+        timeout_s: u32,
+    ) -> Result<JsonObject, SandboxApiError> {
+        let payload = with_daemon_protocol_version(payload);
+        self.call_daemon_api(sandbox_id, op, payload, timeout_s, DEFAULT_LAYER_STACK_ROOT)
+            .await
+            .map_err(map_host_error_to_api_error)
+    }
 }
 
 // --- free helpers (pub(crate) for tests; private otherwise) -------------------

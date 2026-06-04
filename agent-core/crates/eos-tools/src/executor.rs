@@ -11,7 +11,7 @@ use crate::error::ToolError;
 use crate::hooks::Hook;
 use crate::intent::ToolIntent;
 use crate::metadata::ExecutionMetadata;
-use crate::name::ToolName;
+use crate::name::ToolKey;
 use crate::result::{OutputShape, ToolResult};
 
 /// Execute against already-parsed, hook-validated input.
@@ -37,7 +37,7 @@ pub trait ToolExecutor: Send + Sync {
 #[derive(Clone)]
 pub struct RegisteredTool {
     /// The typed tool name (the registry key).
-    pub name: ToolName,
+    pub name: ToolKey,
     /// Batch-dispatch / sandbox-routing classification.
     pub intent: ToolIntent,
     /// Whether a successful call ends the agent run (stamped by the pipeline).
@@ -68,7 +68,7 @@ impl RegisteredTool {
     /// Build a registered tool with no hooks.
     #[must_use]
     pub fn new(
-        name: ToolName,
+        name: impl Into<ToolKey>,
         intent: ToolIntent,
         is_terminal: bool,
         spec: ToolSpec,
@@ -76,7 +76,7 @@ impl RegisteredTool {
         executor: Arc<dyn ToolExecutor>,
     ) -> Self {
         Self {
-            name,
+            name: name.into(),
             intent,
             is_terminal,
             spec,

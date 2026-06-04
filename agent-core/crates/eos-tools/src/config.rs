@@ -66,9 +66,12 @@ impl ToolConfigSet {
             if !path.is_file() || extension(&path) != Some("md") {
                 continue;
             }
-            let stem = path.file_stem().and_then(|s| s.to_str()).unwrap_or_default();
-            let name =
-                ToolName::from_wire(stem).ok_or_else(|| ToolConfigError::UnknownToolFile(path.clone()))?;
+            let stem = path
+                .file_stem()
+                .and_then(|s| s.to_str())
+                .unwrap_or_default();
+            let name = ToolName::from_wire(stem)
+                .ok_or_else(|| ToolConfigError::UnknownToolFile(path.clone()))?;
             let content = fs::read_to_string(&path).map_err(|cause| ToolConfigError::ReadFile {
                 path: path.clone(),
                 cause,
@@ -237,7 +240,9 @@ fn hook_from_token(tool: ToolName, token: &str) -> Option<Hook> {
     Some(match token {
         "no_inflight_background_tasks" => Hook::RequireNoInflightBackgroundTasks { tool },
         "advisor_approval" => Hook::AdvisorApproval { tool },
-        "disallow_nested_planner_deferral" => Hook::DisallowNestedPlannerDeferral { tool },
+        "disallow_nested_planner_deferral" => {
+            Hook::DisallowNestedPlannerDeferral { tool, max_depth: 1 }
+        }
         "destructive_git_shell" => Hook::DestructiveGitShell { tool },
         "destructive_shell" => Hook::DestructiveShell { tool },
         "block_in_isolated_mode" => Hook::BlockInIsolatedMode { tool },
@@ -278,7 +283,10 @@ mod tests {
 
     impl Scratch {
         fn new(tag: &str) -> Self {
-            let dir = std::env::temp_dir().join(format!("eos-tools-cfg-{tag}-{:?}", std::thread::current().id()));
+            let dir = std::env::temp_dir().join(format!(
+                "eos-tools-cfg-{tag}-{:?}",
+                std::thread::current().id()
+            ));
             let _ = fs::remove_dir_all(&dir);
             fs::create_dir_all(&dir).unwrap();
             Self(dir)
@@ -301,7 +309,9 @@ mod tests {
     /// catalog, intent valid, non-empty body, no hooks).
     fn valid_file(name: ToolName) -> String {
         let terminal = TerminalTool::from_tool_name(name).is_some();
-        format!("---\nintent: read_only\nterminal: {terminal}\nhooks: []\n---\n{name} description\n")
+        format!(
+            "---\nintent: read_only\nterminal: {terminal}\nhooks: []\n---\n{name} description\n"
+        )
     }
 
     #[test]
@@ -317,8 +327,12 @@ mod tests {
         assert_eq!(
             cfg.hooks,
             vec![
-                Hook::DestructiveGitShell { tool: ToolName::ExecCommand },
-                Hook::DestructiveShell { tool: ToolName::ExecCommand },
+                Hook::DestructiveGitShell {
+                    tool: ToolName::ExecCommand
+                },
+                Hook::DestructiveShell {
+                    tool: ToolName::ExecCommand
+                },
             ]
         );
     }
@@ -340,7 +354,10 @@ mod tests {
             "---\nintent: bogus\nterminal: false\n---\nbody\n",
         )
         .unwrap_err();
-        assert!(matches!(err, ToolConfigError::UnknownIntent { .. }), "{err:?}");
+        assert!(
+            matches!(err, ToolConfigError::UnknownIntent { .. }),
+            "{err:?}"
+        );
     }
 
     #[test]
@@ -357,7 +374,10 @@ mod tests {
             "---\nintent: read_only\nterminal: false\nhooks: [made_up]\n---\nbody\n",
         )
         .unwrap_err();
-        assert!(matches!(err, ToolConfigError::UnknownHook { .. }), "{err:?}");
+        assert!(
+            matches!(err, ToolConfigError::UnknownHook { .. }),
+            "{err:?}"
+        );
     }
 
     #[test]
@@ -368,7 +388,10 @@ mod tests {
             "---\nintent: read_only\nterminal: true\n---\nbody\n",
         )
         .unwrap_err();
-        assert!(matches!(err, ToolConfigError::TerminalMismatch { .. }), "{err:?}");
+        assert!(
+            matches!(err, ToolConfigError::TerminalMismatch { .. }),
+            "{err:?}"
+        );
     }
 
     #[test]
@@ -378,7 +401,10 @@ mod tests {
             "---\nintent: read_only\nterminal: false\n---\n   \n",
         )
         .unwrap_err();
-        assert!(matches!(err, ToolConfigError::EmptyDescription(_)), "{err:?}");
+        assert!(
+            matches!(err, ToolConfigError::EmptyDescription(_)),
+            "{err:?}"
+        );
     }
 
     #[test]
@@ -395,7 +421,10 @@ mod tests {
         }
         scratch.write("not_a_tool.md", &valid_file(ToolName::ReadFile));
         let err = ToolConfigSet::load_from_dir(scratch.path()).unwrap_err();
-        assert!(matches!(err, ToolConfigError::UnknownToolFile(_)), "{err:?}");
+        assert!(
+            matches!(err, ToolConfigError::UnknownToolFile(_)),
+            "{err:?}"
+        );
     }
 
     #[test]
@@ -434,7 +463,7 @@ mod tests {
         for hook in [
             Hook::RequireNoInflightBackgroundTasks { tool },
             Hook::AdvisorApproval { tool },
-            Hook::DisallowNestedPlannerDeferral { tool },
+            Hook::DisallowNestedPlannerDeferral { tool, max_depth: 1 },
             Hook::DestructiveGitShell { tool },
             Hook::DestructiveShell { tool },
             Hook::BlockInIsolatedMode { tool },

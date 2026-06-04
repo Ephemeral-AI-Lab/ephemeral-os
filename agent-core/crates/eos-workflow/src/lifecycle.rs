@@ -266,7 +266,9 @@ mod tests {
     use std::sync::Arc;
 
     use super::*;
-    use crate::testsupport::{agent_registry_without_planner, root_task, MemoryStores, QueueRunner};
+    use crate::testsupport::{
+        agent_registry_without_planner, root_task, MemoryStores, QueueRunner,
+    };
 
     // AC-eos-workflow-05 / GC-eos-workflow-01: close_workflow sets the workflow
     // status + outcomes and performs ZERO TaskStore writes (the parent task is
@@ -331,7 +333,11 @@ mod tests {
         stores.seed_task(parent.clone());
 
         let workflow = lifecycle
-            .create_workflow(&eos_state::RequestId::new_v4(), &parent.id, "delegated goal")
+            .create_workflow(
+                &eos_state::RequestId::new_v4(),
+                &parent.id,
+                "delegated goal",
+            )
             .await
             .unwrap();
         // Iteration 1 + its coordinator (the predecessor of the continuation).
