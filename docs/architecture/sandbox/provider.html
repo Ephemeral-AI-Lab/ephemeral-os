@@ -42,8 +42,8 @@
   <span class="nav-pair"><a href="daemon.html">← 6. Daemon and Background Tasks</a><a href="plugins.html">8. Plugin in ephemeral_workspace →</a></span>
 </div>
 <section id="provider"
-  data-last-reviewed-commit="72d7dd95a"
-  data-evidence-paths="agent-core/crates/eos-sandbox-host/src/docker.rs agent-core/crates/eos-sandbox-host/src/lifecycle.rs agent-core/crates/eos-sandbox-host/src/runtime_artifact.rs agent-core/crates/eos-sandbox-host/src/error.rs agent-core/crates/eos-sandbox-host/src/registry.rs agent-core/crates/eos-sandbox-api/src/lib.rs sandbox/crates/eosd/src/main.rs sandbox/crates/eos-daemon/src/server.rs sandbox/crates/eos-daemon/src/dispatcher.rs">
+  data-last-reviewed-commit="d147c29fa"
+  data-evidence-paths="agent-core/crates/eos-sandbox-host/src/docker.rs agent-core/crates/eos-sandbox-host/src/lifecycle.rs agent-core/crates/eos-sandbox-host/src/bootstrap_artifact.rs agent-core/crates/eos-sandbox-host/src/sandbox_upload.rs agent-core/crates/eos-sandbox-host/src/error.rs agent-core/crates/eos-sandbox-host/src/registry.rs agent-core/crates/eos-sandbox-api/src/lib.rs sandbox/crates/eosd/src/main.rs sandbox/crates/eos-daemon/src/server.rs sandbox/crates/eos-daemon/src/dispatcher.rs">
 <h2>7. Provider <a class="anchor" href="#provider">§</a></h2>
 <nav class="page-toc" aria-labelledby="page-toc-heading">
   <h3 id="page-toc-heading">Contents</h3>
@@ -57,7 +57,7 @@
 <div class="summary">
   <ul>
     <li>The Rust sandbox host is Docker-only today; non-Docker provider names fail fast instead of selecting an adapter.</li>
-    <li><code>eos-sandbox-host</code> owns Docker container CRUD, raw exec, host lifecycle, runtime artifact upload, and host error mapping.</li>
+    <li><code>eos-sandbox-host</code> owns Docker container CRUD, raw exec, host lifecycle, daemon bootstrap upload, <code>/eos</code> upload transport, and host error mapping.</li>
     <li><code>eos-sandbox-api</code> is the typed daemon protocol boundary; it does not select providers or own runtime state.</li>
     <li>The resident sandbox runtime is the static <code>eosd</code> binary plus <code>eos-daemon</code> workspace, command, plugin, and isolated-workspace handlers.</li>
   </ul>
@@ -69,8 +69,8 @@
 </div>
 </section>
 <section id="provider-boundary"
-  data-last-reviewed-commit="72d7dd95a"
-  data-evidence-paths="agent-core/crates/eos-sandbox-host/src/docker.rs agent-core/crates/eos-sandbox-host/src/lifecycle.rs agent-core/crates/eos-sandbox-host/src/runtime_artifact.rs agent-core/crates/eos-sandbox-host/src/error.rs agent-core/crates/eos-sandbox-host/src/registry.rs agent-core/crates/eos-sandbox-api/src/lib.rs">
+  data-last-reviewed-commit="d147c29fa"
+  data-evidence-paths="agent-core/crates/eos-sandbox-host/src/docker.rs agent-core/crates/eos-sandbox-host/src/lifecycle.rs agent-core/crates/eos-sandbox-host/src/bootstrap_artifact.rs agent-core/crates/eos-sandbox-host/src/sandbox_upload.rs agent-core/crates/eos-sandbox-host/src/error.rs agent-core/crates/eos-sandbox-host/src/registry.rs agent-core/crates/eos-sandbox-api/src/lib.rs">
 <h3>7.1 Provider Boundary <a class="anchor" href="#provider-boundary">§</a></h3>
 <p>The Rust provider boundary is a narrow host-side Docker contract, not an active provider matrix. <code>DockerProviderAdapter</code> is documented as the only Rust production provider <span class="file-ref">agent-core/crates/eos-sandbox-host/src/docker.rs:1-7</span>, provider resolution accepts only <code>docker</code> from config or <code>EOS_SANDBOX_PROVIDER</code> and rejects other values <span class="file-ref">agent-core/crates/eos-sandbox-host/src/registry.rs:18-43</span>, and the host error contract surfaces non-Docker selections as <code>UnknownProviderKind</code> with <code>expected docker</code> <span class="file-ref">agent-core/crates/eos-sandbox-host/src/error.rs:20-23</span>.</p>
 
@@ -86,15 +86,15 @@
   <tbody>
     <tr><td>Docker adapter</td><td>Creates long-running containers, injects daemon TCP env/auth labels when enabled, exposes the daemon TCP endpoint, runs raw commands, uploads tar archives, and prepares provider context.</td><td><span class="file-ref">agent-core/crates/eos-sandbox-host/src/docker.rs:115-212</span>, <span class="file-ref">agent-core/crates/eos-sandbox-host/src/docker.rs:319-370</span>, <span class="file-ref">agent-core/crates/eos-sandbox-host/src/docker.rs:399-459</span></td></tr>
     <tr><td>Lifecycle</td><td>Registers created containers, starts/stops/deletes through the adapter, and treats post-create and post-start setup as the host-side readiness gate.</td><td><span class="file-ref">agent-core/crates/eos-sandbox-host/src/lifecycle.rs:60-100</span>, <span class="file-ref">agent-core/crates/eos-sandbox-host/src/lifecycle.rs:150-170</span>, <span class="file-ref">agent-core/crates/eos-sandbox-host/src/lifecycle.rs:211-273</span></td></tr>
-    <tr><td>Runtime artifact</td><td>Uploads one pinned static <code>eosd</code> binary per container architecture, verifies sha256 and <code>eosd --version</code>, and intentionally drops the old Python tarball/chunked-upload path.</td><td><span class="file-ref">agent-core/crates/eos-sandbox-host/src/runtime_artifact.rs:1-9</span>, <span class="file-ref">agent-core/crates/eos-sandbox-host/src/runtime_artifact.rs:151-253</span></td></tr>
+    <tr><td>Bootstrap artifact</td><td>Uploads one pinned static <code>eosd</code> binary per container architecture under <code>/eos/runtime/daemon</code>, verifies sha256 and <code>eosd --version</code>, and keeps plugin packages out of daemon bootstrap.</td><td><span class="file-ref">agent-core/crates/eos-sandbox-host/src/bootstrap_artifact.rs:1-8</span>, <span class="file-ref">agent-core/crates/eos-sandbox-host/src/bootstrap_artifact.rs:141-250</span>, <span class="file-ref">agent-core/crates/eos-sandbox-host/src/sandbox_upload.rs:1-81</span></td></tr>
     <tr><td>Python parity / historical</td><td>The legacy Python provider stack had Docker and Daytona adapters. In the Rust architecture, Daytona is comparison material only and must not be presented as an active provider branch.</td><td><span class="file-ref">agent-core/crates/eos-sandbox-host/src/registry.rs:128-148</span>, <span class="file-ref">agent-core/crates/eos-sandbox-host/src/error.rs:20-23</span></td></tr>
   </tbody>
 </table>
 
 </section>
 <section id="provider-bootstrap-workflow"
-  data-last-reviewed-commit="72d7dd95a"
-  data-evidence-paths="agent-core/crates/eos-sandbox-host/src/docker.rs agent-core/crates/eos-sandbox-host/src/lifecycle.rs agent-core/crates/eos-sandbox-host/src/runtime_artifact.rs agent-core/crates/eos-sandbox-api/src/lib.rs sandbox/crates/eosd/src/main.rs sandbox/crates/eos-daemon/src/server.rs sandbox/crates/eos-daemon/src/dispatcher.rs">
+  data-last-reviewed-commit="d147c29fa"
+  data-evidence-paths="agent-core/crates/eos-sandbox-host/src/docker.rs agent-core/crates/eos-sandbox-host/src/lifecycle.rs agent-core/crates/eos-sandbox-host/src/bootstrap_artifact.rs agent-core/crates/eos-sandbox-host/src/sandbox_upload.rs agent-core/crates/eos-sandbox-api/src/lib.rs sandbox/crates/eosd/src/main.rs sandbox/crates/eos-daemon/src/server.rs sandbox/crates/eos-daemon/src/dispatcher.rs">
 <h3>7.2 Bootstrap Workflow <a class="anchor" href="#provider-bootstrap-workflow">§</a></h3>
 <pre class="diagram" aria-label="Provider bootstrap technical route">
 [sandbox config / EOS_SANDBOX_PROVIDER]
@@ -141,8 +141,8 @@
 
 </section>
 <section id="provider-evidence-refresh"
-  data-last-reviewed-commit="72d7dd95a"
-  data-evidence-paths="agent-core/crates/eos-sandbox-host/src/docker.rs agent-core/crates/eos-sandbox-host/src/lifecycle.rs agent-core/crates/eos-sandbox-host/src/runtime_artifact.rs agent-core/crates/eos-sandbox-host/src/error.rs agent-core/crates/eos-sandbox-api/src/lib.rs agent-core/crates/eos-sandbox-api/src/ops.rs sandbox/crates/eosd/src/main.rs sandbox/crates/eos-daemon/src/server.rs sandbox/crates/eos-daemon/src/dispatcher.rs">
+  data-last-reviewed-commit="d147c29fa"
+  data-evidence-paths="agent-core/crates/eos-sandbox-host/src/docker.rs agent-core/crates/eos-sandbox-host/src/lifecycle.rs agent-core/crates/eos-sandbox-host/src/bootstrap_artifact.rs agent-core/crates/eos-sandbox-host/src/sandbox_upload.rs agent-core/crates/eos-sandbox-host/src/error.rs agent-core/crates/eos-sandbox-api/src/lib.rs agent-core/crates/eos-sandbox-api/src/ops.rs sandbox/crates/eosd/src/main.rs sandbox/crates/eos-daemon/src/server.rs sandbox/crates/eos-daemon/src/dispatcher.rs">
 <h3>7.3 Evidence and Refresh <a class="anchor" href="#provider-evidence-refresh">§</a></h3>
 <div class="evidence-grid">
   <div class="evidence-card">
@@ -150,7 +150,8 @@
     <ul>
       <li><span class="file-ref">agent-core/crates/eos-sandbox-host/src/docker.rs</span> Docker adapter, container CRUD, raw exec, daemon TCP endpoint, and tar upload.</li>
       <li><span class="file-ref">agent-core/crates/eos-sandbox-host/src/lifecycle.rs</span> create/start/delete lifecycle and post-lifecycle bootstrap.</li>
-      <li><span class="file-ref">agent-core/crates/eos-sandbox-host/src/runtime_artifact.rs</span> pinned <code>eosd</code> artifact upload and verification.</li>
+      <li><span class="file-ref">agent-core/crates/eos-sandbox-host/src/bootstrap_artifact.rs</span> pinned <code>eosd</code> bootstrap upload and verification.</li>
+      <li><span class="file-ref">agent-core/crates/eos-sandbox-host/src/sandbox_upload.rs</span> typed <code>/eos</code>-only upload requests and tar payload construction.</li>
       <li><span class="file-ref">agent-core/crates/eos-sandbox-host/src/error.rs</span> host error contract, including Docker-only provider rejection.</li>
       <li><span class="file-ref">agent-core/crates/eos-sandbox-host/src/registry.rs</span> Docker-only provider selection and per-sandbox adapter bindings.</li>
       <li><span class="file-ref">agent-core/crates/eos-sandbox-api/src/lib.rs</span> typed daemon protocol boundary; no provider selection.</li>
@@ -169,16 +170,16 @@
   </div>
   <div class="evidence-card">
     <h4>Refresh triggers</h4>
-    <p>Docker adapter changes, provider-selection changes, runtime artifact pin/upload changes, daemon transport changes, or workspace-base readiness changes should update this page plus Daemon startup and LayerStack Storage.</p>
+    <p>Docker adapter changes, provider-selection changes, bootstrap artifact pin/upload changes, daemon transport changes, or workspace-base readiness changes should update this page plus Daemon startup and LayerStack Storage.</p>
   </div>
 </div>
 <div class="maintenance-note">
   Backlinks: daemon transport details live in <a class="wiki-link" href="daemon.html#startup-transport">Startup and Transport</a>; workspace base and binding details live in <a class="wiki-link" href="layerstack.html#layerstack-storage">Storage</a> and <a class="wiki-link" href="workspaces.html#main-workspace">main_workspace</a>.
 </div>
 </section>
-<div class="page-baseline" data-page-baseline-commit="72d7dd95a">
+<div class="page-baseline" data-page-baseline-commit="d147c29fa">
   <strong>Maintenance baseline</strong>
-  <span>Local section metadata reviewed at <code>72d7dd95a</code>.</span>
+  <span>Local section metadata reviewed at <code>d147c29fa</code>.</span>
   <code>git diff 72d7dd95a..HEAD -- &lt;section data-evidence-paths&gt;</code>
 </div>
 <div class="page-footer-nav"><span><a href="daemon.html">← 6. Daemon and Background Tasks</a></span><span><a href="plugins.html">8. Plugin in ephemeral_workspace →</a></span></div>

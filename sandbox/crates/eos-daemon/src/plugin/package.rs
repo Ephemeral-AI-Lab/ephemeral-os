@@ -102,9 +102,9 @@ fn warm_probe(manifest: &PluginManifest, paths: &PackagePaths) -> PackageEnsureR
         &paths.package_root.join(PACKAGE_SHA256_MARKER),
         manifest.package_marker_digest(),
     );
-    let setup_current = manifest.setup_marker_digest().map_or(true, |digest| {
-        marker_matches(&paths.package_root.join(SETUP_SHA256_MARKER), digest)
-    });
+    let setup_current = manifest
+        .setup_marker_digest()
+        .is_none_or(|digest| marker_matches(&paths.package_root.join(SETUP_SHA256_MARKER), digest));
     PackageEnsureReport {
         active: true,
         needs_upload: !(package_current && setup_current),
@@ -243,43 +243,75 @@ fn publish_package(staged_package_root: &Path, paths: &PackagePaths) -> Result<b
     if let Some(parent) = paths.package_root.parent() {
         fs::create_dir_all(parent)?;
     }
-    if paths.package_root.exists() {
-        fs::remove_dir_all(&paths.package_root)?;
-    }
-    match fs::rename(staged_package_root, &paths.package_root) {
-        Ok(()) => {}
-        Err(err) if err.kind() == ErrorKind::CrossesDevices => {
-            publish_package_across_filesystems(staged_package_root, &paths.package_root)?;
-        }
-        Err(err) => return Err(err.into()),
-    }
+    let prepared_root = prepare_package_publish_root(staged_package_root, &paths.package_root)?;
+    replace_package_root(&prepared_root, &paths.package_root)?;
     Ok(true)
 }
 
-fn publish_package_across_filesystems(
+fn prepare_package_publish_root(
     staged_package_root: &Path,
     package_root: &Path,
-) -> Result<(), DaemonError> {
+) -> Result<PathBuf, DaemonError> {
+    let temp_root = package_sibling_temp_root(package_root, "publish")?;
+    match fs::rename(staged_package_root, &temp_root) {
+        Ok(()) => Ok(temp_root),
+        Err(err) if err.kind() == ErrorKind::CrossesDevices => {
+            copy_package_tree(staged_package_root, &temp_root).inspect_err(|_| {
+                let _ = fs::remove_dir_all(&temp_root);
+            })?;
+            Ok(temp_root)
+        }
+        Err(err) => Err(err.into()),
+    }
+}
+
+fn replace_package_root(prepared_root: &Path, package_root: &Path) -> Result<(), DaemonError> {
+    if !package_root.exists() {
+        return fs::rename(prepared_root, package_root)
+            .inspect_err(|_| {
+                let _ = fs::remove_dir_all(prepared_root);
+            })
+            .map_err(Into::into);
+    }
+
+    let previous_root = package_sibling_temp_root(package_root, "previous")?;
+    fs::rename(package_root, &previous_root)?;
+    match fs::rename(prepared_root, package_root) {
+        Ok(()) => {
+            let _ = fs::remove_dir_all(previous_root);
+            Ok(())
+        }
+        Err(publish_err) => {
+            let restore_err = fs::rename(&previous_root, package_root).err();
+            let _ = fs::remove_dir_all(prepared_root);
+            if let Some(restore_err) = restore_err {
+                return Err(PluginError::Ensure(format!(
+                    "failed to publish package root {} and failed to restore previous package root: publish error: {publish_err}; restore error: {restore_err}",
+                    package_root.display()
+                ))
+                .into());
+            }
+            Err(publish_err.into())
+        }
+    }
+}
+
+fn package_sibling_temp_root(package_root: &Path, label: &str) -> Result<PathBuf, DaemonError> {
     let parent = package_root.parent().ok_or_else(|| {
         PluginError::Ensure(format!(
             "package root has no parent: {}",
             package_root.display()
         ))
     })?;
-    let temp_root = parent.join(format!(
-        ".{}.publish-{}",
+    Ok(parent.join(format!(
+        ".{}.{}-{}",
         package_root
             .file_name()
             .and_then(|name| name.to_str())
             .unwrap_or("package"),
-        std::process::id()
-    ));
-    let _ = fs::remove_dir_all(&temp_root);
-    copy_package_tree(staged_package_root, &temp_root)?;
-    fs::rename(&temp_root, package_root).inspect_err(|_| {
-        let _ = fs::remove_dir_all(&temp_root);
-    })?;
-    Ok(())
+        label,
+        uuid::Uuid::new_v4().simple()
+    )))
 }
 
 fn copy_package_tree(source_root: &Path, target_root: &Path) -> Result<(), DaemonError> {
@@ -507,6 +539,46 @@ mod tests {
                 & 0o777,
             0o755
         );
+        let _ = fs::remove_dir_all(&root);
+        Ok(())
+    }
+
+    #[test]
+    fn publish_package_replaces_existing_root_without_leaving_temps() -> TestResult {
+        let root = unique_temp_dir("publish-package");
+        let staged = root.join("upload").join("package");
+        let package_root = root.join("runtime").join("plugins").join("lsp").join("new");
+        fs::create_dir_all(&staged)?;
+        fs::create_dir_all(&package_root)?;
+        fs::write(staged.join(PACKAGE_SHA256_MARKER), "new\n")?;
+        fs::write(staged.join("server.js"), "new")?;
+        fs::write(package_root.join(PACKAGE_SHA256_MARKER), "old\n")?;
+        fs::write(package_root.join("stale.js"), "old")?;
+        let paths = PackagePaths {
+            package_root: package_root.clone(),
+            dependency_root: root
+                .join("runtime")
+                .join("packages")
+                .join("lsp")
+                .join("new"),
+            upload_digest_root: root.join("upload"),
+            setup_tmp_root: root.join("setup"),
+        };
+
+        assert!(publish_package(&staged, &paths)?);
+
+        assert_eq!(
+            fs::read_to_string(package_root.join(PACKAGE_SHA256_MARKER))?,
+            "new\n"
+        );
+        assert_eq!(fs::read_to_string(package_root.join("server.js"))?, "new");
+        assert!(!package_root.join("stale.js").exists());
+        let runtime_parent = package_root.parent().expect("package root has parent");
+        let temp_entries = fs::read_dir(runtime_parent)?
+            .filter_map(Result::ok)
+            .filter(|entry| entry.file_name().to_string_lossy().starts_with(".new."))
+            .count();
+        assert_eq!(temp_entries, 0);
         let _ = fs::remove_dir_all(&root);
         Ok(())
     }

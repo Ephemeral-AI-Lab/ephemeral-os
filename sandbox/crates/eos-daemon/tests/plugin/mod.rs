@@ -248,7 +248,7 @@ fn package_rejects_staging_outside_digest_upload_root() -> TestResult {
         ),
         DispatchContext::empty(),
     )
-    .unwrap_err();
+    .expect_err("staging outside digest upload root must be rejected");
     assert!(err
         .to_string()
         .contains("staged_package_root must be under"));
@@ -268,7 +268,7 @@ fn package_setup_failure_is_visible_in_status_and_prevents_service_start() -> Te
         ),
         DispatchContext::empty(),
     )
-    .unwrap_err();
+    .expect_err("setup failure must reject package ensure");
     assert!(err.to_string().contains("plugin setup failed"));
 
     let status = op_status(&json!({}), DispatchContext::empty())?;
@@ -296,7 +296,7 @@ touch /root/plugin
         ),
         DispatchContext::empty(),
     )
-    .unwrap_err();
+    .expect_err("setup script with forbidden rootfs write must be rejected");
     assert!(err.to_string().contains("forbidden managed root /root"));
     roots.cleanup();
     Ok(())
