@@ -1073,4 +1073,5 @@ pub fn command_session_reaper_sweep() {}
 pub fn recover_orphaned_command_sessions() {}
 
 #[cfg(test)]
+#[path = "../tests/command/mod.rs"]
 mod tests;

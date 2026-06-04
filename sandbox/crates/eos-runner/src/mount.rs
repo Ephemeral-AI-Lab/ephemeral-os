@@ -23,7 +23,7 @@ use crate::error::RunnerError;
 /// builds: newest-first lower layers plus upper/work dirs.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct MountInputs {
-    /// Workspace root the overlay is moved onto (e.g. `/testbed`). `move_mount`
+    /// Workspace root the overlay is moved onto. `move_mount`
     /// rejects a `/proc/self/fd` symlink destination.
     pub workspace_root: PathBuf,
     /// Lower layer paths, **newest-first** — the order is hashed into the

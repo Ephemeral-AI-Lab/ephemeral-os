@@ -13,7 +13,7 @@ use std::path::PathBuf;
 use std::time::Instant;
 
 use crate::audit::AuditSink;
-use crate::caps::{ResourceCaps, ISOLATED_WORKSPACE_ROOT};
+use crate::caps::ResourceCaps;
 use crate::error::IsolatedError;
 use crate::network::{IsolatedNetwork, VethAllocation};
 use serde_json::{json, Value};
@@ -24,8 +24,10 @@ mod capacity;
 mod gc;
 mod lifecycle;
 mod persistence;
+#[path = "../tests/session/support.rs"]
 mod support;
 #[cfg(test)]
+#[path = "../tests/session/mod.rs"]
 mod tests;
 
 /// Newtype for an agent identity (the enter/exit key).
@@ -66,7 +68,7 @@ pub struct WorkspaceHandle {
     pub manifest_version: i64,
     /// Manifest root hash captured at acquire time.
     pub manifest_root_hash: String,
-    /// Mount target inside the namespace (`/testbed`).
+    /// Visible EOS workspace mount target inside the namespace.
     pub workspace_root: String,
     /// Scratch directory root (parent of upper/work).
     pub scratch_dir: PathBuf,
@@ -312,6 +314,7 @@ where
                 "agent_id is required".to_owned(),
             ));
         }
+        let workspace_root = self.validated_workspace_root()?;
         if self.by_agent.contains_key(agent_id) {
             let existing = self
                 .by_agent
@@ -354,7 +357,7 @@ where
             lease_id: snapshot.lease_id.clone(),
             manifest_version: snapshot.manifest_version,
             manifest_root_hash: snapshot.root_hash.clone(),
-            workspace_root: ISOLATED_WORKSPACE_ROOT.to_owned(),
+            workspace_root,
             scratch_dir,
             upperdir,
             workdir,
@@ -406,6 +409,21 @@ where
             }),
         );
         Ok(handle)
+    }
+
+    fn validated_workspace_root(&self) -> Result<String, IsolatedError> {
+        let workspace_root = self.caps.eos_workspace_root.trim();
+        if workspace_root.is_empty() {
+            return Err(IsolatedError::InvalidArgument(
+                "eos_workspace_root is required".to_owned(),
+            ));
+        }
+        if !std::path::Path::new(workspace_root).is_absolute() {
+            return Err(IsolatedError::InvalidArgument(format!(
+                "eos_workspace_root must be absolute: {workspace_root}"
+            )));
+        }
+        Ok(workspace_root.to_owned())
     }
 
     /// Exit the isolated workspace for `agent_id`.

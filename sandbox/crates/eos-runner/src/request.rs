@@ -36,7 +36,7 @@ pub enum RunMode {
 #[repr(transparent)]
 pub struct Fd(pub RawFd);
 
-/// The validated workspace root the overlay is mounted at (e.g. `/testbed`).
+/// The validated workspace root the overlay is mounted at.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct WorkspaceRoot(pub PathBuf);
 
@@ -151,7 +151,7 @@ pub struct RunRequest {
     pub mode: RunMode,
     /// The tool invocation to execute inside the namespace.
     pub tool_call: ToolCall,
-    /// Where the overlay is (or will be) mounted; the exec cwd / `/testbed`.
+    /// Where the overlay is (or will be) mounted; the exec cwd.
     pub workspace_root: WorkspaceRoot,
     /// Overlay lower layers (newest-first), present for [`RunMode::FreshNs`].
     #[serde(default)]

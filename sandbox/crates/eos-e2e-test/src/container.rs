@@ -98,10 +98,12 @@ impl DaemonContainer {
             "EOS_ISOLATED_WORKSPACE_UPPERDIR_BYTES={}",
             config.isolated_upperdir_bytes
         );
+        let workspace_root = format!("EOS_WORKSPACE_ROOT={}", config.workspace_root);
         for env_kv in [
             "EOS_ISOLATED_WORKSPACE_ENABLED=true",
             isolated_upperdir.as_str(),
             "EOS_ISOLATED_WORKSPACE_MEMAVAIL_FRACTION=0.9",
+            workspace_root.as_str(),
         ] {
             run.push("-e".to_owned());
             run.push(env_kv.to_owned());

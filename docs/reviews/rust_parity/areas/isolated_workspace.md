@@ -79,7 +79,7 @@ Additional constant/behavior parity (verified literals):
 | veth name shape | `eos-iws-`+`hid[:6]`+`h/n`, IFNAMSIZ 15 (network.py:231-235) | `veth_names` chars().take(6) (network.rs:82-90) | match |
 | IMDS drop | `169.254.169.254` (network.py:32,213) | `IMDS_ADDR` drop (network.rs:50,401,560-566) | match |
 | persisted schema version | `1` (types.py:18) | `1` (caps.rs:9) | match |
-| ISOLATED_WORKSPACE_ROOT | `/testbed` (types.py:21) | `/testbed` (caps.rs:23) | match |
+| EOS workspace root | `/testbed` default via `EOS_WORKSPACE_ROOT` | `/testbed` default via `EOS_WORKSPACE_ROOT` (caps.rs) | match |
 | audit default path | `/tmp/sandbox_isolated_workspace_events.jsonl` (registry) | same (audit.rs:19) | match |
 | ns FD order user,mnt,pid,net | namespace_runtime.py:118-125 | isolated.rs:203-208 | match |
 | sample_interval default | `0.5`, clamp ≥0.01 (types.py:159,181-184) | `0.5`, `.max(0.01)` (caps.rs:61,115-119) | match (but sampler loop unused — see D3) |

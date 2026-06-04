@@ -206,13 +206,13 @@ fn isolated_workspace_lifecycle_ops_open_status_list_and_exit_when_enabled() -> 
     assert_eq!(enter["success"], Value::Bool(true));
     assert_eq!(enter["manifest_version"], json!(1));
     assert_eq!(enter["manifest_root_hash"].as_str().map(str::len), Some(64));
-    assert_eq!(
-        enter["workspace_handle_id"].as_str().map(str::len),
-        Some(20)
-    );
     let handle_id = enter["workspace_handle_id"]
         .as_str()
         .ok_or("workspace handle id")?;
+    assert!(
+        handle_id.len() >= 6 && handle_id.bytes().all(|byte| byte.is_ascii_hexdigit()),
+        "workspace handle id should be a hex filesystem component: {handle_id}"
+    );
     let handle_scratch = env
         .scratch
         .join("runtime")

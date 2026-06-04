@@ -35,7 +35,7 @@ pub mod session;
 
 pub use audit::{AuditSink, JsonlAuditSink, AUDIT_PATH_ENV, DEFAULT_AUDIT_JSONL_PATH};
 pub use caps::{
-    ResourceCaps, Rfc1918Egress, CGROUP_ROOT, HANDLE_PREFIX, ISOLATED_WORKSPACE_ROOT,
+    ResourceCaps, Rfc1918Egress, CGROUP_ROOT, EOS_WORKSPACE_ROOT_ENV, HANDLE_PREFIX,
     PERSISTED_HANDLES_SCHEMA_VERSION,
 };
 pub use error::IsolatedError;

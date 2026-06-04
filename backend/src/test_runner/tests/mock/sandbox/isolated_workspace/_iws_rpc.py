@@ -16,6 +16,7 @@ Lifecycle calls use ``api.isolated_workspace.*``. Tool calls use
 from __future__ import annotations
 
 import asyncio
+import os
 import time
 from typing import Any
 
@@ -23,11 +24,11 @@ from sandbox.host.daemon_client import _DaemonDispatchError, call_daemon_api
 
 
 DEFAULT_TIMEOUT_S = 30
+IWS_WORKSPACE_ROOT = os.environ.get("EOS_WORKSPACE_ROOT", "/testbed")
 
-# Per-iws layer-stack metadata path. The iws workspace_root is fixed
-# (/testbed via ISOLATED_WORKSPACE_ROOT) but the binding metadata must live
-# at a DIFFERENT path per the workspace-binding constraint (layer_stack_root
-# cannot equal or be inside workspace_root). Tests use this constant.
+# Per-iws layer-stack metadata path. The binding metadata must live at a
+# DIFFERENT path per the workspace-binding constraint (layer_stack_root cannot
+# equal or be inside workspace_root). Tests use this constant.
 IWS_LAYER_STACK_ROOT = "/eos/layer-stack"
 
 
@@ -287,7 +288,7 @@ async def grep(
     agent_id: str,
     pattern: str,
     *,
-    path: str = "/testbed",
+    path: str = IWS_WORKSPACE_ROOT,
     glob_filter: str | None = None,
     output_mode: str | None = None,
     case_insensitive: bool | None = None,
@@ -323,7 +324,7 @@ async def glob(
     agent_id: str,
     pattern: str,
     *,
-    path: str = "/testbed",
+    path: str = IWS_WORKSPACE_ROOT,
     timeout: int = DEFAULT_TIMEOUT_S,
 ) -> dict[str, Any]:
     return await call_daemon_api(

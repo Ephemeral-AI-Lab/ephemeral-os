@@ -212,7 +212,7 @@ The "RLock" the task warns about is the **layer-stack storage writer lock**, NOT
 | Enabled | `False` | `EOS_ISOLATED_WORKSPACE_ENABLED` | `types.py:165` |
 | `HANDLE_PREFIX` | `"eos-iws-"` | n/a (module const) | `types.py:19` |
 | `PERSISTED_HANDLES_SCHEMA_VERSION` | `1` | n/a | `types.py:18` |
-| `ISOLATED_WORKSPACE_ROOT` | `"/testbed"` | n/a | `types.py:21` |
+| EOS workspace root | `"/testbed"` | `EOS_WORKSPACE_ROOT` | `caps.rs` |
 | `CGROUP_ROOT` | `Path("/sys/fs/cgroup")` | n/a | `types.py:20` |
 
 ### C.10 Isolated-workspace NETWORK constants — `isolated_workspace/network.py` (NOT types.py)

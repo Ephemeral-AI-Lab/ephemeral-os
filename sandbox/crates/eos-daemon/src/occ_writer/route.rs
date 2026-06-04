@@ -1,9 +1,111 @@
+use std::path::{Path, PathBuf};
+
 use ignore::gitignore::GitignoreBuilder;
 use ignore::Match;
+use serde_json::{json, Value};
 
 use eos_layerstack::LayerStack;
+use eos_occ::OccRouteProvider;
+use eos_protocol::{LayerChange, LayerPath};
 
 use crate::error::DaemonError;
+use crate::response_timings::usize_to_f64_saturating;
+
+use super::hash_current;
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub(crate) struct OccRouteMetrics {
+    pub(crate) gated_path_count: usize,
+    pub(crate) direct_path_count: usize,
+}
+
+#[derive(Clone)]
+pub(crate) struct LayerStackRouteProvider {
+    pub(crate) root: PathBuf,
+}
+
+impl OccRouteProvider for LayerStackRouteProvider {
+    fn is_ignored(&self, path: &LayerPath) -> std::result::Result<bool, eos_occ::OccError> {
+        // Per-call re-read of the active merged manifest: opening a fresh
+        // `LayerStack` here is load-bearing, so a `.gitignore` edit committed
+        // between ops is observed by the next route decision.
+        let stack = LayerStack::open(self.root.clone())
+            .map_err(|err| eos_occ::OccError::RoutePreparation(err.to_string()))?;
+        path_is_ignored(&stack, path.as_str())
+            .map_err(|err| eos_occ::OccError::RoutePreparation(err.to_string()))
+    }
+
+    fn base_hash(
+        &self,
+        path: &LayerPath,
+    ) -> std::result::Result<Option<String>, eos_occ::OccError> {
+        let stack = LayerStack::open(self.root.clone())
+            .map_err(|err| eos_occ::OccError::RoutePreparation(err.to_string()))?;
+        let (bytes, exists) = stack
+            .read_bytes(path.as_str())
+            .map_err(|err| eos_occ::OccError::RoutePreparation(err.to_string()))?;
+        Ok(hash_current(bytes.as_deref(), exists))
+    }
+}
+
+pub(crate) fn occ_route_metrics(
+    root: &Path,
+    changes: &[LayerChange],
+) -> Result<OccRouteMetrics, DaemonError> {
+    let stack = LayerStack::open(root.to_path_buf())?;
+    let mut metrics = OccRouteMetrics::default();
+    for change in changes {
+        let path = change.path().as_str();
+        if path == ".git" || path.starts_with(".git/") {
+            continue;
+        }
+        if path_is_ignored(&stack, path)? {
+            metrics.direct_path_count += 1;
+        } else {
+            metrics.gated_path_count += 1;
+        }
+    }
+    Ok(metrics)
+}
+
+pub(crate) fn insert_occ_route_timings(
+    timings: &mut serde_json::Map<String, Value>,
+    metrics: OccRouteMetrics,
+    route_s: f64,
+    occ_s: f64,
+) {
+    for (key, value) in [
+        ("occ.prepare.prepare_groups_s", route_s),
+        ("occ.prepare.group_by_route_s", route_s),
+        ("occ.prepare.route_and_base_hash_s", route_s),
+        ("occ.prepare.total_s", route_s),
+        ("occ.commit.total_s", occ_s),
+        (
+            "occ.commit.gated_path_count",
+            usize_to_f64_saturating(metrics.gated_path_count),
+        ),
+        (
+            "occ.commit.direct_path_count",
+            usize_to_f64_saturating(metrics.direct_path_count),
+        ),
+    ] {
+        timings.insert(key.to_owned(), json!(value));
+    }
+    for key in [
+        "occ.commit.validate_groups_s",
+        "occ.commit.publish_layer_s",
+        "occ.commit.stager_write_total_s",
+        "occ.commit.stager_write_count",
+        "occ.commit.gated_read_current_total_s",
+        "occ.commit.gated_apply_changes_total_s",
+        "occ.commit.gated_stage_delta_total_s",
+        "occ.commit.direct_read_current_total_s",
+        "occ.commit.direct_apply_changes_total_s",
+        "occ.commit.direct_stage_delta_total_s",
+    ] {
+        timings.entry(key.to_owned()).or_insert_with(|| json!(0.0));
+    }
+}
 
 /// This is the one shared routine behind both `LayerStackRouteProvider::is_ignored`
 /// (DIRECT vs GATED) and `occ_route_metrics` (telemetry). It reproduces the Python

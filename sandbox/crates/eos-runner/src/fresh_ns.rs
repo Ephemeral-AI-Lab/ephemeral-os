@@ -659,8 +659,8 @@ mod tests {
     #[test]
     fn normalizes_paths_without_touching_fs() {
         assert_eq!(
-            normalize_lexical(Path::new("/testbed/./a/../b")),
-            Path::new("/testbed/b")
+            normalize_lexical(Path::new("/workspace/./a/../b")),
+            Path::new("/workspace/b")
         );
     }
 
@@ -675,7 +675,7 @@ mod tests {
                 args,
                 background: false,
             },
-            workspace_root: WorkspaceRoot(Path::new("/testbed").to_path_buf()),
+            workspace_root: WorkspaceRoot(Path::new("/workspace").to_path_buf()),
             layer_paths: vec![],
             upperdir: None,
             workdir: None,

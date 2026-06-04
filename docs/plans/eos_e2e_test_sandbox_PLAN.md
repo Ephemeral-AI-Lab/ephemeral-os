@@ -273,7 +273,7 @@ Harness invariants
   - tmpfs: `--tmpfs /eos/e2e:rw,exec,size=2g,mode=1777` plus
     `--tmpfs /eos/mount:rw,exec,size=2g,mode=1777`; keep `/eos/daemon` on the
     container rootfs so Docker Engine `put_archive` can see it
-  - eosd: Docker Engine `put_archive` host musl binary → `/eos/daemon/eosd`
+  - eosd: Docker Engine `put_archive` host Linux binary → `/eos/daemon/eosd`
   - TCP: env `EOS_DOCKER_DAEMON_TCP=1` + auth token, `-p 127.0.0.1::37657`, resolve via
     `docker port`; **caps are mandatory** — without SYS_ADMIN/NET_ADMIN the overlay/ns/OCC
     tier fails at runtime.
@@ -333,7 +333,7 @@ env var.** Precedence: **env > selected `[profile.*]` > `[default]` table > buil
 
 [docker]
 image          = "sweevo-dask__dask-10042" # testing image (default dask)   [env EOS_E2E_IMAGE]
-eosd           = "sandbox/dist/eosd-musl"  # host binary to `put_archive`, or "build"
+eosd           = "dist/eosd-linux-amd64"   # host binary to `put_archive`, or "build"
 privileged     = false                     # else use cap_add below
 cap_add        = ["SYS_ADMIN", "NET_ADMIN"]
 tmpfs          = [

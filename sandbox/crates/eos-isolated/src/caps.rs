@@ -17,8 +17,10 @@ pub const HANDLE_PREFIX: &str = "eos-iws-";
 /// cgroup root the per-workspace cgroup is created under.
 pub const CGROUP_ROOT: &str = "/sys/fs/cgroup";
 
-/// Mount target inside the isolated namespace.
-pub const ISOLATED_WORKSPACE_ROOT: &str = "/testbed";
+const DEFAULT_EOS_WORKSPACE_ROOT: &str = "/testbed";
+
+/// Environment key for the visible EOS workspace mount root.
+pub const EOS_WORKSPACE_ROOT_ENV: &str = "EOS_WORKSPACE_ROOT";
 
 /// RFC1918 egress policy.
 ///
@@ -54,6 +56,8 @@ pub struct ResourceCaps {
     pub rfc1918_egress: Rfc1918Egress,
     /// Fallback DNS resolver written into the namespace. Default `"1.1.1.1"`.
     pub fallback_dns: String,
+    /// Visible EOS workspace mount root. Default `"/testbed"`.
+    pub eos_workspace_root: String,
     /// Phase-sampler tick interval (clamped `>= 0.01`). Default `0.5` s.
     pub sample_interval_s: f64,
 }
@@ -70,6 +74,7 @@ impl Default for ResourceCaps {
             exit_grace_s: 0.25,
             rfc1918_egress: Rfc1918Egress::Allow,
             fallback_dns: "1.1.1.1".to_owned(),
+            eos_workspace_root: DEFAULT_EOS_WORKSPACE_ROOT.to_owned(),
             sample_interval_s: 0.5,
         }
     }
@@ -107,6 +112,10 @@ impl ResourceCaps {
         let fallback_dns = env_string("EOS_ISOLATED_WORKSPACE_FALLBACK_DNS");
         if !fallback_dns.is_empty() {
             caps.fallback_dns = fallback_dns;
+        }
+        let eos_workspace_root = env_string(EOS_WORKSPACE_ROOT_ENV);
+        if !eos_workspace_root.is_empty() {
+            caps.eos_workspace_root = eos_workspace_root;
         }
         caps.sample_interval_s = env_f64(
             "EOS_ISOLATED_WORKSPACE_SAMPLE_INTERVAL_S",

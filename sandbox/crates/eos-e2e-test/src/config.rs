@@ -11,6 +11,8 @@ use std::time::Duration;
 use anyhow::{Context, Result};
 use serde::Deserialize;
 
+const DEFAULT_EOS_WORKSPACE_ROOT: &str = "/testbed";
+
 /// How nodes (containers) map to tests.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum NodeMode {
@@ -65,6 +67,8 @@ pub struct Config {
     pub request_timeout: Duration,
     /// Base-build budget (slow on first warm).
     pub base_build_timeout: Duration,
+    /// Canonical workload workspace root inside the sandbox container.
+    pub workspace_root: String,
     /// Skip container teardown for inspection.
     pub keep_container: bool,
     /// `limit` passed to `api.audit.pull`.
@@ -79,6 +83,7 @@ struct FileConfig {
     concurrency: Option<ConcurrencyCfg>,
     timeouts: Option<TimeoutsCfg>,
     run: Option<RunCfg>,
+    workspace: Option<WorkspaceCfg>,
     isolated: Option<IsolatedCfg>,
     profile: Option<BTreeMap<String, ProfileCfg>>,
 }
@@ -115,6 +120,11 @@ struct RunCfg {
 }
 
 #[derive(Debug, Default, Deserialize)]
+struct WorkspaceCfg {
+    root: Option<String>,
+}
+
+#[derive(Debug, Default, Deserialize)]
 struct IsolatedCfg {
     upperdir_bytes: Option<u64>,
 }
@@ -138,6 +148,7 @@ impl Config {
         let concurrency = file.concurrency.unwrap_or_default();
         let timeouts = file.timeouts.unwrap_or_default();
         let run = file.run.unwrap_or_default();
+        let workspace = file.workspace.unwrap_or_default();
         let isolated = file.isolated.unwrap_or_default();
         let profile = select_profile(file.profile.as_ref());
 
@@ -192,6 +203,10 @@ impl Config {
             ready_timeout: Duration::from_secs(timeouts.ready.unwrap_or(60)),
             request_timeout: Duration::from_secs(timeouts.request.unwrap_or(30)),
             base_build_timeout: Duration::from_secs(timeouts.base_build.unwrap_or(180)),
+            workspace_root: env_str("EOS_E2E_WORKSPACE_ROOT")
+                .or_else(|| env_str("EOS_WORKSPACE_ROOT"))
+                .or(workspace.root)
+                .unwrap_or_else(|| DEFAULT_EOS_WORKSPACE_ROOT.to_owned()),
             keep_container: env_bool("EOS_E2E_KEEP_CONTAINER")
                 .or(run.keep_container)
                 .unwrap_or(true),

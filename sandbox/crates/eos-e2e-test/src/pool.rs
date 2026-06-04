@@ -1,6 +1,7 @@
 //! `NodePool` — up to `sandboxes` daemon containers behind a blocking semaphore,
 //! plus `NodeLease`, the ergonomic per-test handle that mints a fresh
-//! `layer_stack_root`, resets `/testbed`, and injects the standard envelope members.
+//! `layer_stack_root`, resets the configured workspace root, and injects the
+//! standard envelope members.
 //!
 //! A lease holds its node exclusively for the test's duration; the node (and its
 //! daemon) is reused across leases until `recycle_after` checkouts bound scratch
@@ -17,9 +18,6 @@ use crate::client::{error_kind, is_success, ProtocolClient};
 use crate::config::{Config, NodeMode};
 use crate::container::{reap_e2e_containers, DaemonContainer, E2E_ROOT_DIR};
 use crate::{next_invocation_id, unique_suffix};
-
-/// Canonical workload workspace path inside every sandbox mode.
-pub const WORKSPACE_ROOT: &str = "/testbed";
 
 struct Node {
     container: DaemonContainer,
@@ -155,7 +153,7 @@ impl<'p> NodeLease<'p> {
         let id = unique_suffix();
         let base = format!("{E2E_ROOT_DIR}/{id}");
         let stack_root = format!("{base}/stack");
-        let workspace_root = WORKSPACE_ROOT.to_owned();
+        let workspace_root = pool.config.workspace_root.clone();
         let agent_id = format!("agent-{id}");
 
         if let Err(err) = node
@@ -163,7 +161,11 @@ impl<'p> NodeLease<'p> {
             .exec(&["mkdir", "-p", &stack_root])
             .and_then(|_| {
                 node.container
-                    .exec(&["sh", "-lc", "rm -rf -- /testbed && mkdir -p -- /testbed"])
+                    .exec(&["rm", "-rf", "--", workspace_root.as_str()])
+            })
+            .and_then(|_| {
+                node.container
+                    .exec(&["mkdir", "-p", "--", workspace_root.as_str()])
             })
         {
             return Err((node, err));

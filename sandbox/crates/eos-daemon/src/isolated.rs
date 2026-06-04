@@ -16,7 +16,7 @@ use std::thread;
 use std::time::{Duration, Instant};
 
 use eos_isolated::{AgentId, IsolatedError, IsolatedSession, JsonlAuditSink, ResourceCaps};
-use eos_layerstack::LayerStack;
+use eos_layerstack::{read_workspace_binding, LayerStack};
 use serde_json::{json, Value};
 
 use crate::command;
@@ -63,6 +63,7 @@ pub fn op_enter(args: &Value, _context: DispatchContext<'_>) -> Result<Value, Da
             "manifest_version": handle.manifest_version,
             "manifest_root_hash": handle.manifest_root_hash,
             "workspace_handle_id": handle.workspace_handle_id.0,
+            "workspace_root": handle.workspace_root,
         })),
         Err(error) => Ok(error_payload(&error)),
     }
@@ -139,6 +140,7 @@ pub fn op_status(args: &Value, _context: DispatchContext<'_>) -> Result<Value, D
             "open": true,
             "manifest_version": handle.manifest_version,
             "manifest_root_hash": handle.manifest_root_hash,
+            "workspace_root": handle.workspace_root,
             "created_at": handle.created_at,
             "last_activity": handle.last_activity,
         })),
@@ -288,9 +290,12 @@ fn ensure_state(root: &Path) -> Result<(), IsolatedError> {
     {
         let mut guard = lock_state_cell();
         if guard.is_none() {
-            let caps = ResourceCaps::from_env();
+            let mut caps = ResourceCaps::from_env();
             if !caps.enabled {
                 return Err(IsolatedError::FeatureDisabled);
+            }
+            if let Some(binding) = read_workspace_binding(root).map_err(setup_error)? {
+                caps.eos_workspace_root = binding.workspace_root;
             }
             let scratch_root = scratch_root();
             let stack = LayerStack::open(root.to_path_buf()).map_err(setup_error)?;
@@ -539,6 +544,62 @@ mod tests {
             json!(false)
         );
         let _ = op_test_reset(&json!({}), DispatchContext::empty());
+        clear_env("EOS_ISOLATED_WORKSPACE_ENABLED");
+        clear_env(TEST_HARNESS_ENV);
+        clear_env(TEST_SCRATCH_ROOT_ENV);
+        let _ = std::fs::remove_dir_all(&root);
+        Ok(())
+    }
+
+    #[test]
+    fn enter_uses_workspace_binding_over_eos_workspace_root_env() -> TestResult {
+        let _guard = TEST_LOCK.lock().map_err(|_| "test lock poisoned")?;
+        let root = std::env::temp_dir().join(format!(
+            "eos-daemon-iws-bound-workspace-root-{}",
+            std::process::id()
+        ));
+        let scratch = root.join("scratch");
+        let stack_root = root.join("stack");
+        let workspace_root = root.join("workspace");
+        let _ = std::fs::remove_dir_all(&root);
+        std::fs::create_dir_all(&workspace_root)?;
+        std::fs::write(workspace_root.join("seed.txt"), "seed\n")?;
+        eos_layerstack::build_workspace_base(&stack_root, &workspace_root, true)?;
+        set_env("EOS_ISOLATED_WORKSPACE_ENABLED", "true");
+        set_env(TEST_HARNESS_ENV, "true");
+        set_env(TEST_SCRATCH_ROOT_ENV, &scratch.to_string_lossy());
+        set_env("EOS_WORKSPACE_ROOT", "/configured-fallback");
+        let _ = op_test_reset(&json!({}), DispatchContext::empty());
+
+        let entered = op_enter(
+            &json!({"agent_id": "agent-bound-root", "layer_stack_root": stack_root}),
+            DispatchContext::empty(),
+        )?;
+
+        assert_eq!(entered["success"], true);
+        let expected_workspace_root = workspace_root.to_string_lossy().into_owned();
+        assert_eq!(
+            entered["workspace_root"],
+            json!(expected_workspace_root.clone())
+        );
+        let status = op_status(
+            &json!({"agent_id": "agent-bound-root"}),
+            DispatchContext::empty(),
+        )?;
+        assert_eq!(status["success"], true);
+        assert_eq!(status["open"], true);
+        assert_eq!(
+            status["workspace_root"],
+            json!(expected_workspace_root.clone())
+        );
+
+        let exited = op_exit(
+            &json!({"agent_id": "agent-bound-root", "force_cancel": true}),
+            DispatchContext::empty(),
+        )?;
+        assert_eq!(exited["success"], true);
+        let _ = op_test_reset(&json!({}), DispatchContext::empty());
+        clear_env("EOS_WORKSPACE_ROOT");
         clear_env("EOS_ISOLATED_WORKSPACE_ENABLED");
         clear_env(TEST_HARNESS_ENV);
         clear_env(TEST_SCRATCH_ROOT_ENV);

@@ -647,4 +647,5 @@ const fn error_type(err: &DaemonError) -> &'static str {
 }
 
 #[cfg(test)]
+#[path = "../tests/dispatcher/mod.rs"]
 mod tests;

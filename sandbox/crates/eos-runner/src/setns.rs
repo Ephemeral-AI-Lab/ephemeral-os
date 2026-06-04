@@ -389,7 +389,7 @@ mod tests {
         let request = request(Some(default_ns_fds()));
         assert_eq!(
             overlay_layer_paths(&request),
-            vec![Path::new("/testbed").to_path_buf()]
+            vec![Path::new("/workspace").to_path_buf()]
         );
     }
 
@@ -414,7 +414,7 @@ mod tests {
                 args: serde_json::json!({"command": "true"}),
                 background: false,
             },
-            workspace_root: WorkspaceRoot(Path::new("/testbed").to_path_buf()),
+            workspace_root: WorkspaceRoot(Path::new("/workspace").to_path_buf()),
             layer_paths: vec![],
             upperdir: Some(Path::new("/tmp/iws/upper").to_path_buf()),
             workdir: Some(Path::new("/tmp/iws/work").to_path_buf()),
