@@ -18,6 +18,32 @@ consumer is a Rust collector/test runner that validates:
 The design goal is a small, coherent consumption path, not a richer audit
 framework.
 
+## Rust-Only Boundary
+
+This plan assumes the Python backend will be dropped later. All new audit,
+observability, normalization, and runner/report behavior must therefore land in
+Rust.
+
+Allowed implementation targets:
+
+- `base/crates/eos-obs-contract` for the shared row contract only.
+- `agent-core/crates/*` for agent-control-plane producers, state/transcript
+  joins, and future Rust runner logic.
+- `sandbox/crates/*` for daemon audit pull/snapshot records and sandbox-local
+  typed sections.
+
+Disallowed targets:
+
+- no new `backend/src` audit code
+- no Python collector
+- no Python report builder as a target contract
+- no compatibility shim whose only purpose is preserving old Python event/report
+  shapes
+- no producer dependency on tracing output for runner pass/fail checks
+
+Historical Python code can be read to understand old behavior, but the
+implementation source of truth is the Rust checkout plus this plan.
+
 ## Current Direction
 
 The shared layer now lives in:
@@ -25,7 +51,7 @@ The shared layer now lives in:
 - `base/crates/eos-obs-contract`
 
 That crate is the only shared audit/observability module. It owns the normalized
-contract row used by collectors:
+contract row used by Rust collectors:
 
 - `ObsEnvelope`
 - `ObsIds`
@@ -36,6 +62,27 @@ contract row used by collectors:
 
 It must stay contract-only. It must not own sinks, daemon rings, tracing setup,
 producer policy, plugin wrappers, report rendering, or test-runner orchestration.
+
+## Target Module Shape
+
+```mermaid
+flowchart LR
+  Contract["base/eos-obs-contract\nObsEnvelope only"]
+  AgentCore["agent-core\nminimal obs JSONL writer"]
+  Sandbox["sandbox\ndaemon audit ring + typed sections"]
+  Collector["Rust collector\nparse + normalize"]
+  Runner["Rust test runner\nstate/transcript joins + gates"]
+
+  Contract --> AgentCore
+  Contract --> Collector
+  AgentCore --> Collector
+  Sandbox --> Collector
+  Collector --> Runner
+```
+
+The shared module is intentionally narrower than an audit framework. `agent-core`
+and `sandbox` keep their own local producer mechanics; only the normalized row is
+shared.
 
 ## Architecture
 
@@ -54,6 +101,9 @@ flowchart LR
 | Agent-core obs JSONL | `agent-core` | complete or counted-loss in test mode | Rust runner | agent/tool durations, process resource samples |
 | Sandbox audit ring | `sandbox` | bounded ring with seq/lane/loss counters | Rust runner through normalizer | sandbox timings, OCC, layer stack, overlay, background command, plugin/resource records |
 | Tracing | owning Rust crate | best effort | humans only | reconstructable lifecycle shadows and diagnostics |
+
+No row in this table is produced by Python, consumed by a Python runner, or
+specified by a Python report shape.
 
 ## Event Routing Rule
 
@@ -157,6 +207,33 @@ Required sandbox cleanup:
 - Keep sandbox-native sections local to `sandbox`; do not force agent-core to use
   sandbox section structs.
 
+### Rust Collector
+
+The collector is a reader-side Rust component. Its job is to normalize inputs
+into `ObsEnvelope` rows and hand them to the Rust runner.
+
+Inputs:
+
+- agent-core `ObsEnvelope` JSONL
+- sandbox `api.audit.pull` / `api.audit.snapshot` records
+- Rust state/transcript stores for correctness joins
+
+Responsibilities:
+
+- parse agent-core JSONL rows with `eos-obs-contract`
+- convert sandbox-native records to `ObsEnvelope`
+- canonicalize aliases such as `tool_call.finished` to `tool_call.completed`
+- attach/join stable ids such as `request_id`, `task_id`, `agent_run_id`,
+  `tool_use_id`, and `sandbox_id`
+- report counted loss from bounded audit surfaces
+
+Non-responsibilities:
+
+- no producer framework
+- no sink abstraction shared with producers
+- no tracing ingestion for pass/fail gates
+- no Python report compatibility layer
+
 ### Tracing
 
 Tracing is for human diagnostics only. It may carry:
@@ -209,19 +286,21 @@ The Rust runner must not validate pass/fail criteria from tracing.
    - Pull sandbox daemon audit events.
    - Normalize both into `ObsEnvelope`.
    - Join with Rust state/transcript for correctness checks.
+   - Do not depend on Python code, Python reports, or legacy Python event
+     schemas.
 
 ## Staged Execution
 
 | Stage | Work | Verification |
 |---|---|---|
 | 0 | `base/crates/eos-obs-contract` contract crate | `cargo test --manifest-path base/Cargo.toml -p eos-obs-contract`; clippy |
-| 1 | Update plan/docs to Rust-only contract direction | markdown review; no Python target paths |
+| 1 | Update plan/docs to Rust-only contract direction | markdown review; no Python target paths or compatibility steps |
 | 2 | Agent-core audit deletion pass | `cargo test -p eos-audit`; affected agent-core crates |
 | 3 | Agent-core obs JSONL using `ObsEnvelope` | `cargo test -p eos-audit`; `cargo check -p eos-runtime`; JSONL smoke test |
 | 4 | Shadow events to tracing + dependency edge cleanup | affected crate tests; dependency guard updates if still present |
 | 5 | Sandbox typed emitters + resource samples | `cargo test -p eos-protocol -p eos-daemon`; pull smoke test |
-| 6 | Rust collector normalizer | normalization tests from agent-core row + sandbox pull event |
-| 7 | Rust runner/report gates | state/transcript correctness + obs perf/resource gates |
+| 6 | Rust collector normalizer | normalization tests from agent-core row + sandbox pull event; no Python runner dependency |
+| 7 | Rust runner/report gates | state/transcript correctness + obs perf/resource gates; no Python report contract |
 
 Stages 2-4 and 5 can proceed in parallel if the only shared dependency is the
 stable `base/eos-obs-contract` crate.
@@ -232,6 +311,8 @@ stable `base/eos-obs-contract` crate.
 - `base`: `cargo clippy --manifest-path base/Cargo.toml -p eos-obs-contract --all-targets -- -D warnings`
 - `agent-core`: targeted crate tests from the owning workspace.
 - `sandbox`: targeted crate tests from the owning workspace.
+- Rust-only doc guard: `rg -n "backend/src|Python collector|Python report|compatibility shim" docs/plans/audit_observability_test_consumption_PLAN.md`
+  should only match the Rust-only boundary and explicit non-goals.
 - Normalization smoke:
   - one agent-core `ObsEnvelope` JSONL row parses
   - one sandbox `api.audit.pull` event normalizes to `ObsEnvelope`

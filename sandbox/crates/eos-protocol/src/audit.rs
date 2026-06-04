@@ -82,6 +82,8 @@ pub struct LayerStackSection {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub prepare_snapshot_ms: Option<f64>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub total_ms: Option<f64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub squash_trigger_reason: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub squash_input_layers: Option<i64>,
@@ -327,6 +329,12 @@ pub struct ToolCallSection {
 /// `os_resource` section. `sampled_at_monotonic_s` required.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct OsResourceSection {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub operation_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tool_use_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub agent_id: Option<String>,
     pub sampled_at_monotonic_s: f64,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub rss_bytes: Option<i64>,

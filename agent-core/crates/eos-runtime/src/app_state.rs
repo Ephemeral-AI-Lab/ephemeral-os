@@ -15,7 +15,6 @@ use eos_audit::{AuditSink, BufferedAuditShutdown, BufferedJsonlSink, NoopAuditSi
 use eos_config::{CentralConfig, DatabaseUrl};
 use eos_db::Database;
 use eos_llm_client::{Auth, LlmClient, LlmRequest, LlmStream, ProviderError};
-use eos_plugin_catalog::PluginCatalog;
 use eos_sandbox_api::SandboxTransport;
 use eos_sandbox_host::{
     DaemonClient, ProviderRegistry, RequestSandboxBinding, RequestSandboxProvisioner,
@@ -26,7 +25,7 @@ use eos_state::{
     AgentRunStore, AttemptStore, IterationStore, ModelStore, RequestStore, TaskStore, WorkflowStore,
 };
 use eos_tools::{build_default_registry, CallerScope, ToolConfigSet, ToolKey, ToolRegistry};
-use eos_types::{Clock, RequestId, SystemClock};
+use eos_types::RequestId;
 use tokio_util::sync::CancellationToken;
 
 // The per-agent event-source factory and per-run stream-event callback are owned
@@ -98,7 +97,6 @@ impl LlmClient for UnconfiguredLlmClient {
 #[non_exhaustive]
 pub struct AppState {
     pub(crate) config: Arc<CentralConfig>,
-    pub(crate) clock: Arc<dyn Clock>,
     pub(crate) cwd: String,
     pub(crate) repo_root: String,
     pub(crate) task_store: Arc<dyn TaskStore>,
@@ -112,12 +110,9 @@ pub struct AppState {
     pub(crate) event_source_factory: Option<EventSourceFactory>,
     pub(crate) audit: Arc<dyn AuditSink>,
     pub(crate) audit_shutdown: Arc<StdMutex<Option<BufferedAuditShutdown>>>,
-    pub(crate) tool_registry: Arc<ToolRegistry>,
     pub(crate) tool_config: Arc<ToolConfigSet>,
     pub(crate) agent_registry: Arc<AgentRegistry>,
     pub(crate) skill_registry: Arc<SkillRegistry>,
-    pub(crate) plugin_catalog: Arc<PluginCatalog>,
-    pub(crate) provider_registry: Arc<ProviderRegistry>,
     pub(crate) transport: Arc<dyn SandboxTransport>,
     pub(crate) provisioner: Arc<dyn RequestProvisioner>,
     pub(crate) shutdown: CancellationToken,
@@ -128,7 +123,6 @@ impl std::fmt::Debug for AppState {
         f.debug_struct("AppState")
             .field("cwd", &self.cwd)
             .field("repo_root", &self.repo_root)
-            .field("tools", &self.tool_registry.len())
             .field("agents", &self.agent_registry.list().count())
             .finish_non_exhaustive()
     }
@@ -169,24 +163,6 @@ impl AppState {
         &self.config
     }
 
-    /// The injected clock (system clock in production, a test clock in tests).
-    #[must_use]
-    pub fn clock(&self) -> Arc<dyn Clock> {
-        self.clock.clone()
-    }
-
-    /// The discovered plugin catalog (read-only after build).
-    #[must_use]
-    pub fn plugin_catalog(&self) -> Arc<PluginCatalog> {
-        self.plugin_catalog.clone()
-    }
-
-    /// The sandbox provider registry (holds the per-process provider adapters).
-    #[must_use]
-    pub fn provider_registry(&self) -> Arc<ProviderRegistry> {
-        self.provider_registry.clone()
-    }
-
     /// Flush and join the buffered audit writer thread, if any (graceful
     /// shutdown). Idempotent: a second call is a no-op.
     pub fn flush_audit(&self) {
@@ -206,7 +182,6 @@ impl AppState {
 pub struct AppStateBuilder {
     config: Option<CentralConfig>,
     database_url: Option<String>,
-    clock: Option<Arc<dyn Clock>>,
     cwd: Option<String>,
     llm_client: Option<Arc<dyn LlmClient>>,
     event_source_factory: Option<EventSourceFactory>,
@@ -218,8 +193,6 @@ pub struct AppStateBuilder {
     tools_root: Option<PathBuf>,
     skill_registry: Option<Arc<SkillRegistry>>,
     skill_root: Option<PathBuf>,
-    plugin_catalog: Option<Arc<PluginCatalog>>,
-    plugin_root: Option<PathBuf>,
     model_registry_path: Option<PathBuf>,
     provisioner: Option<Arc<dyn RequestProvisioner>>,
     transport: Option<Arc<dyn SandboxTransport>>,
@@ -246,12 +219,6 @@ impl AppStateBuilder {
     /// fast).
     pub fn database_url(mut self, url: impl Into<String>) -> Self {
         self.database_url = Some(url.into());
-        self
-    }
-
-    /// Inject a clock (system clock by default).
-    pub fn clock(mut self, clock: Arc<dyn Clock>) -> Self {
-        self.clock = Some(clock);
         self
     }
 
@@ -318,18 +285,6 @@ impl AppStateBuilder {
     /// Load skills from this root directory.
     pub fn skill_root(mut self, root: impl Into<PathBuf>) -> Self {
         self.skill_root = Some(root.into());
-        self
-    }
-
-    /// Inject a prebuilt plugin catalog (else discover under `plugin_root`, else empty).
-    pub fn plugin_catalog(mut self, catalog: Arc<PluginCatalog>) -> Self {
-        self.plugin_catalog = Some(catalog);
-        self
-    }
-
-    /// Discover plugins under this catalog root.
-    pub fn plugin_root(mut self, root: impl Into<PathBuf>) -> Self {
-        self.plugin_root = Some(root.into());
         self
     }
 
@@ -413,8 +368,6 @@ impl AppStateBuilder {
             }
         }
 
-        let clock: Arc<dyn Clock> = self.clock.unwrap_or_else(|| Arc::new(SystemClock));
-
         let llm_client: Arc<dyn LlmClient> = self
             .llm_client
             .unwrap_or_else(|| default_llm_client(&config));
@@ -442,11 +395,6 @@ impl AppStateBuilder {
             None => Arc::new(build_skill_registry(self.skill_root.as_deref())?),
         };
 
-        let plugin_catalog = match self.plugin_catalog {
-            Some(catalog) => catalog,
-            None => Arc::new(build_plugin_catalog(self.plugin_root.as_deref())?),
-        };
-
         let tool_config = match self.tool_config {
             Some(config) => config,
             None => Arc::new(build_tool_config(self.tools_root.as_deref())?),
@@ -454,7 +402,6 @@ impl AppStateBuilder {
 
         let mut tool_registry = build_default_registry(&tool_config, &CallerScope::default());
         register_plugin_tools(&mut tool_registry);
-        let tool_registry = Arc::new(tool_registry);
 
         // Cross-registry validation: unknown agent tool names fail fast unless
         // compatibility mode is enabled (anchor §10 / AC-eos-runtime-09).
@@ -479,7 +426,6 @@ impl AppStateBuilder {
 
         Ok(AppState {
             config: Arc::new(config),
-            clock,
             cwd,
             repo_root,
             task_store: database.tasks(),
@@ -493,12 +439,9 @@ impl AppStateBuilder {
             event_source_factory: self.event_source_factory,
             audit,
             audit_shutdown: Arc::new(StdMutex::new(audit_shutdown)),
-            tool_registry,
             tool_config,
             agent_registry,
             skill_registry,
-            plugin_catalog,
-            provider_registry,
             transport,
             provisioner,
             shutdown: CancellationToken::new(),
@@ -556,13 +499,6 @@ fn build_tool_config(root: Option<&std::path::Path>) -> Result<ToolConfigSet> {
     let root = root
         .context("tool config root not set: call AppStateBuilder::tools_root or ::tool_config")?;
     ToolConfigSet::load_from_dir(root).context("loading tool config")
-}
-
-fn build_plugin_catalog(root: Option<&std::path::Path>) -> Result<PluginCatalog> {
-    // A missing root yields an empty catalog (the loader's empty-vs-RootNotDir
-    // split), so the `None` default points at a path that does not exist.
-    let root = root.unwrap_or_else(|| std::path::Path::new("/nonexistent-eos-plugin-root"));
-    PluginCatalog::discover_under(root).context("discovering plugins")
 }
 
 /// Validate that every `allowed_tools`/`terminals` entry on every agent profile

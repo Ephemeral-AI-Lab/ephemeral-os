@@ -33,6 +33,8 @@
 #![forbid(unsafe_code)]
 
 pub mod audit_buffer;
+pub(crate) mod audit_events;
+pub(crate) mod audit_ops;
 pub(crate) mod command;
 pub mod dispatcher;
 pub mod error;
@@ -41,8 +43,10 @@ pub(crate) mod isolated;
 pub(crate) mod occ_writer;
 pub(crate) mod overlay_runner;
 pub(crate) mod plugin;
+pub(crate) mod request_args;
 pub(crate) mod response_timings;
 pub mod server;
+pub(crate) mod workspace_ops;
 
 pub use audit_buffer::{safe_emit, safe_record_phase, AuditBuffer, BufferedEvent, LaneCounters};
 pub use dispatcher::{error_envelope, DispatchContext, OpTable, AUDIT_ALLOW_FLOOR_RESET_ENV};

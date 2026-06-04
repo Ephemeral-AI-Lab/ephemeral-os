@@ -77,7 +77,7 @@ fn append_notifications(messages: &mut Vec<Message>, notifications: &[SystemNoti
 
 async fn collect_notifications(
     ctx: &mut QueryContext,
-    messages: &mut Vec<Message>,
+    messages: &[Message],
 ) -> Vec<SystemNotification> {
     let notifier = ctx.notifier.clone();
     enqueue_notification_rules(messages, ctx, &notifier).await;

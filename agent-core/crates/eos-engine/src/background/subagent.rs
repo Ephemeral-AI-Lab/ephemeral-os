@@ -258,7 +258,7 @@ impl BackgroundSupervisorPort for BackgroundSupervisorHandle {
         // concurrent cancellation can never miss a not-yet-stored handle.
         let task_id = {
             let mut supervisor = inner.lock().await;
-            let task_id = supervisor.register_subagent(tool_input, Some(caller_agent_id.clone()));
+            let task_id = supervisor.register_subagent(tool_input, caller_agent_id.clone());
             // Emit `started` while still holding the lock, before the driver can
             // run: the driver cannot acquire the lock to settle + emit its terminal
             // event until this block releases, so `started` strictly precedes any
@@ -344,7 +344,7 @@ impl BackgroundSupervisorPort for BackgroundSupervisorHandle {
             let mut guard = supervisor.lock().await;
             let agent_id = guard
                 .get_subagent(subagent_session_id)
-                .and_then(|record| record.agent_id.clone())
+                .map(|record| record.agent_id.clone())
                 .unwrap_or_default();
             let cancelled = guard.cancel_subagent(subagent_session_id, reason);
             if cancelled {
@@ -430,7 +430,7 @@ mod tests {
             subagent_session_id: "subagent_1".parse().expect("subagent id"),
             tool_input,
             status,
-            agent_id: Some("root".to_owned()),
+            agent_id: "root".to_owned(),
             result,
         }
     }

@@ -8,12 +8,11 @@ type Edges = BTreeMap<String, BTreeSet<String>>;
 
 fn expected_edges() -> Edges {
     let rows: &[(&str, &[&str])] = &[
-        ("eos-obs-contract", &[]),
         ("eos-types", &[]),
         ("eos-config", &[]),
         ("eos-state", &["eos-types"]),
         ("eos-db", &["eos-state", "eos-config"]),
-        ("eos-audit", &["eos-obs-contract", "eos-types"]),
+        ("eos-audit", &["eos-types"]),
         ("eos-llm-client", &["eos-types", "eos-config"]),
         ("eos-agent-def", &[]),
         ("eos-sandbox-api", &["eos-types"]),
@@ -37,7 +36,6 @@ fn expected_edges() -> Edges {
                 "eos-tools",
                 "eos-sandbox-api",
                 "eos-audit",
-                "eos-obs-contract",
                 "eos-agent-def",
                 "eos-state",
             ],

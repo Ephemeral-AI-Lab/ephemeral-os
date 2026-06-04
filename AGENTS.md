@@ -159,6 +159,17 @@ cross-module map now lives under `docs/architecture`.
 - Treat LOC guidance as a final-code standard, not a net-diff target: if a file
   implements something in 200 lines that can be expressed clearly in 50, rewrite
   it toward the smaller shape.
+- Keep `lib.rs`, `main.rs`, and `mod.rs` thin, usually under 100-200 LOC. Normal
+  implementation modules should aim for 300-600 LOC when practical.
+- Treat 800-1000+ LOC implementation files as a review smell: split when the
+  file mixes multiple concepts, lifecycle phases, backends, DTOs, tests, or
+  helper layers. Very large files are acceptable only when mechanically
+  cohesive, such as generated code, big enum/table definitions, or tightly
+  coupled parser/state-machine code.
+- Do not enforce a hard file-size cap in this repo. The better standard is final
+  files as small as the request allows, with splits following real ownership
+  boundaries like `eos-engine`, `eos-workflow`, `eos-tools`, or sandbox modules,
+  not arbitrary LOC.
 - If the solution is growing large and a smaller design would solve the same
   problem, simplify before continuing.
 - In Rust, prefer typed IDs, enums, DTOs, ports, and explicit dependency edges
@@ -169,6 +180,43 @@ cross-module map now lives under `docs/architecture`.
   already requires that style.
 - Match the existing code's style and ownership boundaries even when you would
   design greenfield code differently.
+
+## Rust Best Practices
+
+- Respect crate ownership before reaching for a helper. Put engine-loop,
+  workflow-lifecycle, model-tool, sandbox-host, daemon, and protocol behavior in
+  the crate that owns that surface, and do not add cross-workspace back-edges or
+  broad dependencies to avoid a local design decision.
+- Keep dependency edges explicit. Declare shared dependencies in the owning
+  workspace `Cargo.toml`, consume them with `workspace = true`, and treat
+  internal path dependencies as architecture edges that need a clear reason.
+- Encode contracts in Rust types. Prefer typed IDs, enums, DTO structs, ports,
+  and explicit state transitions over strings, bool flag bags, ad hoc JSON, or
+  compatibility shims.
+- Keep public APIs narrow. Use `pub(crate)` until another crate genuinely needs
+  the item, keep `lib.rs` / `mod.rs` as routing and export surfaces, and document
+  public invariants where the workspace enables missing-docs linting.
+- Handle errors deliberately. Use `?` and error context instead of `unwrap` or
+  `expect` in production code; use `thiserror` for library/domain errors and
+  `anyhow` near binary, orchestration, or test edges where concrete error types
+  add little value.
+- Treat async boundaries as lifecycle boundaries. Do not hold locks across
+  `.await`, avoid blocking work inside async tasks, use cancellation and bounded
+  concurrency where background work can outlive a call, and make lock ordering
+  explicit when multiple locks are required.
+- Keep unsafe exceptional and local. `agent-core` code should remain
+  `unsafe`-free; sandbox crates may use unsafe only where namespace, syscall, or
+  FFI boundaries require it, with a tight safety invariant and safe wrapper.
+- Treat wire, persisted-state, and serde DTOs as contracts. Field renames,
+  defaults, versioning, and JSON shape changes need focused tests or golden
+  coverage because they affect daemon protocol, audit, and database behavior.
+- Use Rust conventions consistently: `iter` / `iter_mut` / `into_iter`,
+  `as_` / `to_` / `into_` conversion names, `&str` / `&Path` / slices for
+  borrowed inputs, owned values for cross-task state, and `tracing` rather than
+  `println` or `dbg!` for diagnostics.
+- Localized lint allows are acceptable only when they explain the invariant or
+  compatibility reason. Prefer fixing the code over suppressing Clippy, and keep
+  test-only `unwrap` / `expect` allowances scoped to tests or test helpers.
 
 ## Surgical Scope
 
@@ -192,5 +240,12 @@ cross-module map now lives under `docs/architecture`.
   workspace (`cargo check`, `cargo test -p <crate>`, targeted tests, then
   clippy when risk warrants it). Run Python checks only for legacy Python,
   parity, or migration-glue changes.
+- Use a concrete Cargo check ladder for Rust changes: `cargo check -p <crate>
+  --all-targets` for syntax/type sanity, `cargo test -p <crate> <targeted_test>`
+  or `cargo test -p <crate>` for behavior, and `cargo clippy -p <crate>
+  --all-targets -- -D warnings` for lint-sensitive changes. Broaden to
+  `--workspace --all-targets` only when the change crosses crates or dependency
+  edges, and report pre-existing workspace lint noise instead of hiding it with
+  broad `allow` attributes.
 - For multi-step tasks, keep a short plan with a verification step for each
   meaningful phase, then iterate until the criteria are met.

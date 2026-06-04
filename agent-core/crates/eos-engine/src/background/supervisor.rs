@@ -51,10 +51,6 @@ impl BackgroundTaskStatus {
             Self::Delivered => 4,
         }
     }
-
-    const fn is_terminal_undelivered(self) -> bool {
-        matches!(self, Self::Completed | Self::Failed | Self::Cancelled)
-    }
 }
 
 /// One tracked subagent run. `Debug, Clone, PartialEq` are preserved for tests;
@@ -69,19 +65,12 @@ pub struct SubagentRecord {
     /// Current status.
     pub status: BackgroundTaskStatus,
     /// Owning agent id (the launching agent), for the agent-scoped count.
-    pub agent_id: Option<String>,
+    pub agent_id: String,
     /// Final result.
     pub result: Option<ToolResult>,
 }
 
 impl SubagentRecord {
-    /// Whether the task still needs delivery.
-    #[must_use]
-    pub const fn outstanding(&self) -> bool {
-        matches!(self.status, BackgroundTaskStatus::Running)
-            || self.status.is_terminal_undelivered()
-    }
-
     /// Cancel this record in-place. External side effects (aborting the subagent
     /// driver) are handled by the supervisor handle; this method owns the shared
     /// status/result transition.
@@ -158,7 +147,7 @@ impl BackgroundTaskSupervisor {
     pub fn register_subagent(
         &mut self,
         tool_input: JsonObject,
-        agent_id: Option<String>,
+        agent_id: String,
     ) -> SubagentSessionId {
         self.subagent_counter = self.subagent_counter.saturating_add(1);
         let subagent_session_id: SubagentSessionId =
@@ -252,7 +241,7 @@ impl BackgroundTaskSupervisor {
             .values()
             .filter(|record| {
                 matches!(record.status, BackgroundTaskStatus::Running)
-                    && (agent_id.is_empty() || record.agent_id.as_deref() == Some(agent_id))
+                    && (agent_id.is_empty() || record.agent_id == agent_id)
             })
             .map(|record| record.subagent_session_id.clone())
             .collect();
@@ -325,7 +314,7 @@ impl BackgroundTaskSupervisor {
             .values()
             .filter(|record| {
                 matches!(record.status, BackgroundTaskStatus::Running)
-                    && (agent_id.is_empty() || record.agent_id.as_deref() == Some(agent_id))
+                    && (agent_id.is_empty() || record.agent_id == agent_id)
             })
             .count();
         let workflow = self
@@ -488,13 +477,13 @@ mod tests {
     #[test]
     fn parent_exit_then_cancel_finish_race() {
         let mut supervisor = BackgroundTaskSupervisor::new();
-        let running = supervisor.register_subagent(JsonObject::new(), Some("agent".to_owned()));
+        let running = supervisor.register_subagent(JsonObject::new(), "agent".to_owned());
         supervisor.cancel_subagents_for_agent("agent");
         let record = supervisor.get_subagent(&running).expect("record exists");
         assert_eq!(record.status, BackgroundTaskStatus::Cancelled);
-        assert!(record.outstanding());
+        assert!(record.result.is_some());
 
-        let racing = supervisor.register_subagent(JsonObject::new(), Some("agent".to_owned()));
+        let racing = supervisor.register_subagent(JsonObject::new(), "agent".to_owned());
         // A cancel racing a finish resolves to Completed via the precedence latch.
         supervisor.cancel_subagent(&racing, "no longer needed");
         supervisor.settle_subagent(
@@ -535,7 +524,7 @@ mod tests {
         let mut supervisor = BackgroundTaskSupervisor::new();
         assert_eq!(
             supervisor
-                .register_subagent(JsonObject::new(), None)
+                .register_subagent(JsonObject::new(), "agent".to_owned())
                 .as_str(),
             "subagent_1"
         );
@@ -568,8 +557,8 @@ mod tests {
     #[test]
     fn inflight_report_is_subagent_and_agent_scoped() {
         let mut supervisor = BackgroundTaskSupervisor::new();
-        let a = supervisor.register_subagent(JsonObject::new(), Some("agent-a".to_owned()));
-        supervisor.register_subagent(JsonObject::new(), Some("agent-b".to_owned()));
+        let a = supervisor.register_subagent(JsonObject::new(), "agent-a".to_owned());
+        supervisor.register_subagent(JsonObject::new(), "agent-b".to_owned());
         assert_eq!(supervisor.inflight_report("agent-a").subagent, 1);
         assert_eq!(supervisor.inflight_report("agent-b").subagent, 1);
 
