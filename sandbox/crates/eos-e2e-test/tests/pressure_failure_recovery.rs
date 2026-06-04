@@ -27,11 +27,21 @@ fn daemon_recovers_after_midflight_cancel() -> Result<()> {
     };
     let lease = pool.acquire()?;
     let id = start_sleep(&lease, "midflight")?;
-    lease.call_ok(ops::API_V1_COMMAND_CANCEL, json!({"command_session_id": id}))?;
+    lease.call_ok(
+        ops::API_V1_COMMAND_CANCEL,
+        json!({"command_session_id": id}),
+    )?;
     let ready = lease.call_ok(ops::API_RUNTIME_READY, json!({}))?;
-    assert!(as_bool(&ready, "ready")?, "daemon should remain ready after midflight cancel: {ready}");
+    assert!(
+        as_bool(&ready, "ready")?,
+        "daemon should remain ready after midflight cancel: {ready}"
+    );
     let count = lease.call_ok(ops::API_V1_COMMAND_SESSION_COUNT, json!({}))?;
-    assert_eq!(as_i64(&count, "count")?, 0, "cancel should not strand sessions: {count}");
+    assert_eq!(
+        as_i64(&count, "count")?,
+        0,
+        "cancel should not strand sessions: {count}"
+    );
     Ok(())
 }
 
@@ -45,7 +55,10 @@ fn cancel_storm() -> Result<()> {
         .map(|index| start_sleep(&lease, &format!("storm-{index}")))
         .collect::<Result<_>>()?;
     for id in ids {
-        let cancel = lease.call_ok(ops::API_V1_COMMAND_CANCEL, json!({"command_session_id": id}))?;
+        let cancel = lease.call_ok(
+            ops::API_V1_COMMAND_CANCEL,
+            json!({"command_session_id": id}),
+        )?;
         assert!(
             matches!(as_str(&cancel, "status")?, "cancelled" | "ok" | "error"),
             "cancel storm should return structured status: {cancel}"
@@ -93,8 +106,14 @@ fn iws_same_port_discard() -> Result<()> {
         "running",
         "same isolated port should be reusable after exit discard: {second}"
     );
-    if let Some(id) = second.get("command_session_id").and_then(serde_json::Value::as_str) {
-        lease.call_ok(ops::API_V1_COMMAND_CANCEL, json!({"command_session_id": id}))?;
+    if let Some(id) = second
+        .get("command_session_id")
+        .and_then(serde_json::Value::as_str)
+    {
+        lease.call_ok(
+            ops::API_V1_COMMAND_CANCEL,
+            json!({"command_session_id": id}),
+        )?;
     }
     lease.call_ok(
         ops::API_ISOLATED_WORKSPACE_EXIT,

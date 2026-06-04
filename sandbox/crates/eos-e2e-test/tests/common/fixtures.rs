@@ -7,7 +7,7 @@ use anyhow::Result;
 use eos_protocol::ops;
 use serde_json::{json, Value};
 
-use crate::pool::NodeLease;
+use eos_e2e_test::NodeLease;
 
 /// `write_file` (overwrite). Asserts success.
 ///

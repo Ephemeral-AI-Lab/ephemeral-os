@@ -13,7 +13,7 @@ pub(super) mod outputs;
 mod registration;
 
 #[cfg(test)]
-#[path = "../../../../tests/tools/sandbox/mod.rs"]
+#[path = "../../../tests/tools/sandbox/mod.rs"]
 mod tests;
 
 use outputs::{CommandToolOutput, MutationOutput};

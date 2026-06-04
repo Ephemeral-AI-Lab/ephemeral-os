@@ -6,6 +6,8 @@ use anyhow::{Context, Result};
 use eos_e2e_test::{live_pool, NodePool};
 use serde_json::Value;
 
+pub mod fixtures;
+
 pub fn live_pool_or_skip() -> Result<Option<Arc<NodePool>>> {
     let Some(pool) = live_pool()? else {
         eprintln!("skipping live eos-e2e-test; enable with `--features e2e`");

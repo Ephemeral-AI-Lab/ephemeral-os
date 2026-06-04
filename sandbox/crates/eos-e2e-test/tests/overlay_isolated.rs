@@ -4,7 +4,7 @@ use anyhow::Result;
 use eos_protocol::ops;
 use serde_json::json;
 
-use common::{as_bool, as_i64, as_str, array, live_pool_or_skip};
+use common::{array, as_bool, as_i64, as_str, live_pool_or_skip};
 
 #[test]
 fn isolated_enter_status_reports_manifest_pin() -> Result<()> {
@@ -15,9 +15,16 @@ fn isolated_enter_status_reports_manifest_pin() -> Result<()> {
     let enter = lease.call_ok(ops::API_ISOLATED_WORKSPACE_ENTER, json!({}))?;
     let version = as_i64(&enter, "manifest_version")?;
     let hash = as_str(&enter, "manifest_root_hash")?.to_owned();
-    assert_eq!(hash.len(), 64, "enter should report CAS-shaped manifest hash: {enter}");
+    assert_eq!(
+        hash.len(),
+        64,
+        "enter should report CAS-shaped manifest hash: {enter}"
+    );
     let status = lease.call_ok(ops::API_ISOLATED_WORKSPACE_STATUS, json!({}))?;
-    assert!(as_bool(&status, "open")?, "status should report open: {status}");
+    assert!(
+        as_bool(&status, "open")?,
+        "status should report open: {status}"
+    );
     assert_eq!(as_i64(&status, "manifest_version")?, version);
     assert_eq!(as_str(&status, "manifest_root_hash")?, hash);
     lease.call_ok(ops::API_ISOLATED_WORKSPACE_EXIT, json!({}))?;
@@ -102,6 +109,9 @@ fn isolated_exit_discards_private_upperdir() -> Result<()> {
         "private isolated write must not survive exit: {read}"
     );
     let closed = lease.call_ok(ops::API_ISOLATED_WORKSPACE_STATUS, json!({}))?;
-    assert!(!as_bool(&closed, "open")?, "status after exit should be closed: {closed}");
+    assert!(
+        !as_bool(&closed, "open")?,
+        "status after exit should be closed: {closed}"
+    );
     Ok(())
 }

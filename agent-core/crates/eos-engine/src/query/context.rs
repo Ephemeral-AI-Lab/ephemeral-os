@@ -13,9 +13,9 @@ use eos_types::{AgentRunId, JsonObject, TaskId};
 use futures::Stream;
 use serde::{Deserialize, Serialize};
 
-use crate::agent_loop::EngineRunHandles;
 use crate::{
-    EngineError, NotificationRule, NotificationService, PromptReportRecorder, StreamEvent,
+    EngineError, EngineRunHandles, NotificationRule, NotificationService, PromptReportRecorder,
+    StreamEvent,
 };
 
 /// The engine stream returned by one model turn.

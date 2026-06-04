@@ -4,7 +4,7 @@ use anyhow::Result;
 use eos_protocol::ops;
 use serde_json::json;
 
-use common::{as_i64, as_str, array, live_pool_or_skip, stdout};
+use common::{array, as_i64, as_str, live_pool_or_skip, stdout};
 
 #[test]
 fn exec_overlay_mount_publishes_changed_paths() -> Result<()> {
@@ -115,13 +115,20 @@ fn read_only_overlay_does_not_publish_mutations() -> Result<()> {
         ops::API_V1_GREP,
         json!({"pattern": "needle", "path": "overlay", "output_mode": "content"}),
     )?;
-    assert_eq!(array(&grep, "changed_paths")?.len(), 0, "grep is read-only: {grep}");
+    assert_eq!(
+        array(&grep, "changed_paths")?.len(),
+        0,
+        "grep is read-only: {grep}"
+    );
     let after = lease.call_ok(ops::API_LAYER_METRICS, json!({}))?;
     assert_eq!(
         before.get("manifest_version"),
         after.get("manifest_version"),
         "read-only overlay should not publish a new manifest"
     );
-    assert!(stdout(&grep).is_empty(), "grep response should use content field, not stdout");
+    assert!(
+        stdout(&grep).is_empty(),
+        "grep response should use content field, not stdout"
+    );
     Ok(())
 }

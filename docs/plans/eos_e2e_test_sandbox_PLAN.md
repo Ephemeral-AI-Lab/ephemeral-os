@@ -261,15 +261,19 @@ existing daemon/isolated files.
 Harness invariants
 - `ProtocolClient` is the only egress to eosd. All ops go through `call(op, args)`.
 - Containers are obtained from a `NodePool` (§5.1), never constructed ad hoc. A test acquires
-  a node lease + a fresh `layer_stack_root`; warm spin-up (dominated by `build_workspace_base`,
-  10–180s) is paid **once per node** at pool init, then amortized across that node's tests.
+  a node lease + a fresh `layer_stack_root` under `/eos/e2e/<id>/stack`; `/testbed` remains
+  the canonical workload workspace path for isolated and non-isolated calls and is reset on
+  each lease. Warm spin-up (dominated by `build_workspace_base`, 10–180s) is paid **once per
+  node** at pool init, then amortized across that node's tests.
 - Container recipe (from `backend/scripts/bench_sandbox_e2e.py:46`,
   `provider/docker/client.py:25-69`, `preflight_docker_a2_caps.sh:40-81`):
   - image: default dask (e.g. `sweevo-dask__dask-*`), `sleep infinity`, `--init`
   - caps: `--cap-add=SYS_ADMIN --cap-add=NET_ADMIN`
     `--security-opt seccomp=unconfined --security-opt apparmor=unconfined`
-  - tmpfs: `--tmpfs /eos:rw,exec,size=2g,mode=1777` (overlay upper/work scratch)
-  - eosd: `docker cp` host musl binary → container, spawn with `--layer-stack-root`
+  - tmpfs: `--tmpfs /eos/e2e:rw,exec,size=2g,mode=1777` plus
+    `--tmpfs /eos/mount:rw,exec,size=2g,mode=1777`; keep `/eos/daemon` on the
+    container rootfs so Docker Engine `put_archive` can see it
+  - eosd: Docker Engine `put_archive` host musl binary → `/eos/daemon/eosd`
   - TCP: env `EOS_DOCKER_DAEMON_TCP=1` + auth token, `-p 127.0.0.1::37657`, resolve via
     `docker port`; **caps are mandatory** — without SYS_ADMIN/NET_ADMIN the overlay/ns/OCC
     tier fails at runtime.
@@ -288,7 +292,7 @@ grounded in how the daemon holds state:
   per-root registry (`storage_lock.rs:10`). So **one daemon multiplexes many independent
   `layer_stack_root`s concurrently.** A test gets isolation by using a fresh root — no new
   container, no rebuild.
-- **Cross-node (expensive, but sometimes required):** `/eos` tmpfs scratch, ns-holder PIDs,
+- **Cross-node (expensive, but sometimes required):** `/eos/e2e` + `/eos/mount` tmpfs scratch, ns-holder PIDs,
   cgroups, and the network bridge are **container-global, not per-root**. Overlay/isolated
   tests therefore can interfere across roots on the same daemon → they need separate nodes.
 
@@ -329,10 +333,13 @@ env var.** Precedence: **env > selected `[profile.*]` > `[default]` table > buil
 
 [docker]
 image          = "sweevo-dask__dask-10042" # testing image (default dask)   [env EOS_E2E_IMAGE]
-eosd           = "sandbox/dist/eosd-musl"  # host binary to `docker cp`, or "build"
+eosd           = "sandbox/dist/eosd-musl"  # host binary to `put_archive`, or "build"
 privileged     = false                     # else use cap_add below
 cap_add        = ["SYS_ADMIN", "NET_ADMIN"]
-tmpfs          = "/eos:rw,exec,size=2g,mode=1777"
+tmpfs          = [
+  "/eos/e2e:rw,exec,size=2g,mode=1777",
+  "/eos/mount:rw,exec,size=2g,mode=1777",
+]
 tcp_port       = 37657
 
 [concurrency]
@@ -620,14 +627,14 @@ target set.
 7. **Python parity scope** — `commit_to_workspace` currently has **no** dedicated Python
    test; that surface is **new test authoring**, not a port.
 8. **Multi-node resource scaling (§5.1)** — each node is a privileged container
-   (SYS_ADMIN/NET_ADMIN + 2 GiB `/eos` tmpfs + daemon RSS + base seed). N parallel nodes
+   (SYS_ADMIN/NET_ADMIN + `/eos/e2e` and `/eos/mount` tmpfs + daemon RSS + base seed). N parallel nodes
    multiply host RAM/CPU/disk and the per-node warm-up cost; CI must size
    `EOS_E2E_SANDBOXES` to the runner. Long-lived pool nodes accumulate scratch/orphan state
    across many roots → recycle a node after K checkouts and rely on the orphan reaper.
    Because **`keep_container` defaults to `true`** (warm-pool reuse), kept containers persist
    across runs — local dev reaps with `e2e-reap`, and **CI must export
    `EOS_E2E_KEEP_CONTAINER=false`** so ephemeral agents tear down on drop and never leak.
-9. **Container-global interference** — `/eos` tmpfs, ns-holder PIDs, cgroups, and the bridge
+9. **Container-global interference** — `/eos/e2e`/`/eos/mount` tmpfs, ns-holder PIDs, cgroups, and the bridge
    are not per-root, so overlay/isolated tests must run `per-test` (or one-node-at-a-time),
    not multiplexed on a `shared` node. Layerstack/OCC/tool/command tiers are safe to multiplex
    roots on one node.

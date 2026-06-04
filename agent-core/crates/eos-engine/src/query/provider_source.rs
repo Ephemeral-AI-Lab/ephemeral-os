@@ -6,8 +6,8 @@ use async_trait::async_trait;
 use eos_llm_client::{LlmClient, LlmRequest, LlmStreamEvent};
 use futures::StreamExt;
 
-use crate::events::{AssistantMessageComplete, StreamEvent};
 use crate::query::EngineStream;
+use crate::telemetry::{AssistantMessageComplete, StreamEvent};
 use crate::EngineError;
 
 /// Provider-backed event source.

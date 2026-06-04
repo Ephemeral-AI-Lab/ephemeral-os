@@ -15,21 +15,21 @@
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
 
-#[path = "../core/mod.rs"]
+#[path = "core/mod.rs"]
 mod core;
-#[path = "../hooks/mod.rs"]
+#[path = "hooks/mod.rs"]
 mod hooks;
-#[path = "../ports/mod.rs"]
+#[path = "ports/mod.rs"]
 pub mod ports;
-#[path = "../registry/mod.rs"]
+#[path = "registry/mod.rs"]
 mod registry;
-#[path = "../runtime/mod.rs"]
+#[path = "runtime/mod.rs"]
 mod runtime;
-#[path = "../tools/mod.rs"]
+#[path = "tools/mod.rs"]
 mod tools;
 
 #[cfg(test)]
-#[path = "../../tests/support/mod.rs"]
+#[path = "../tests/support/mod.rs"]
 mod testsupport;
 
 pub use core::error::ToolError;

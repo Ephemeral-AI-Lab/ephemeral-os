@@ -10,15 +10,13 @@ mod occ_callbacks;
 mod overlay;
 mod ppc_router;
 mod process;
+mod service;
 
 use std::collections::BTreeMap;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex, MutexGuard, OnceLock};
 use std::time::{Duration, Instant};
 
-use eos_layerstack::{manifest_root_hash, LayerStack, Lease};
-#[cfg(all(target_os = "linux", not(test)))]
-use eos_overlay::{allocate_overlay_writable_dirs, overlay_writable_root};
 use eos_plugin::{
     PluginError, PluginServiceKey, PluginServiceState, PluginServiceStatus, PpcDirection,
     PpcEnvelope, RefreshAck, RefreshRequest, RefreshStrategy, ServiceMode,
@@ -28,12 +26,18 @@ use serde_json::{json, Value};
 
 use crate::dispatcher::DispatchContext;
 use crate::error::DaemonError;
-#[cfg(all(target_os = "linux", not(test)))]
-use crate::overlay_runner::overlay_daemon_error;
 use crate::response_timings::u64_to_f64_saturating;
 use ensure_args::{loaded_matches_parsed, validate_plugin_caller_fields, ParsedEnsure};
 use overlay::PluginOverlayCommand;
-use process::{PluginProcessSpec, PluginServiceOverlay};
+use process::PluginProcessSpec;
+use service::{
+    acquire_service_snapshot, active_manifest_key, insert_started_service_processes,
+    mark_service_ready, mark_service_restarted, mark_service_stale, mark_service_stopped,
+    release_service_snapshot, running_process_values, service_specs_to_start, service_status_mut,
+    spawn_service_processes, stop_plugin_service_processes,
+    stop_services_for_layer_stack_root as stop_services_for_layer_stack_root_in_state,
+    PluginServiceSnapshot,
+};
 
 type SharedPpcClient = Arc<ppc_router::PpcClient>;
 const MAX_PLUGIN_RESPONSE_BYTES: usize = 8 * 1024 * 1024;
@@ -49,15 +53,6 @@ struct LoadedPluginRuntime {
     services: Vec<PluginServiceStatus>,
     service_processes: Vec<PluginProcessSpec>,
     runtime_loaded: bool,
-}
-
-#[derive(Debug, Clone)]
-struct PluginServiceSnapshot {
-    layer_stack_root: String,
-    lease_id: String,
-    manifest_key: String,
-    layer_paths: Vec<String>,
-    overlay: Option<PluginServiceOverlay>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -374,322 +369,14 @@ fn connected_ppc_services(state: &DaemonPluginState) -> Vec<String> {
     state.service_ppc_clients.keys().cloned().collect()
 }
 
-struct StartedPluginService {
-    service_instance_id: String,
-    process: process::PluginServiceProcess,
-    client: SharedPpcClient,
-    snapshot: PluginServiceSnapshot,
-}
-
-fn service_specs_to_start(
-    state: &DaemonPluginState,
-    specs: &[PluginProcessSpec],
-) -> Vec<PluginProcessSpec> {
-    specs
-        .iter()
-        .filter(|spec| {
-            !state
-                .service_processes
-                .contains_key(&spec.service_instance_id())
-        })
-        .cloned()
-        .collect()
-}
-
-fn spawn_service_processes(
-    specs: &[PluginProcessSpec],
-) -> Result<Vec<StartedPluginService>, DaemonError> {
-    let mut started = Vec::with_capacity(specs.len());
-    for spec in specs {
-        let snapshot = acquire_service_snapshot(spec.key(), "start")?;
-        let (process, client) = match spec.spawn_connected_with_overlay(
-            snapshot.overlay.as_ref(),
-            Duration::from_millis(ppc_router::DEFAULT_PLUGIN_PPC_TIMEOUT_MS),
-        ) {
-            Ok(started) => started,
-            Err(err) => {
-                release_service_snapshot(&snapshot);
-                return Err(err);
-            }
-        };
-        started.push(StartedPluginService {
-            service_instance_id: spec.service_instance_id(),
-            process,
-            client: Arc::new(client),
-            snapshot,
-        });
-    }
-    Ok(started)
-}
-
-fn insert_started_service_processes(
-    state: &mut DaemonPluginState,
-    started_services: Vec<StartedPluginService>,
-) -> Result<usize, DaemonError> {
-    let mut started_count = 0;
-    for started in started_services {
-        if state
-            .service_processes
-            .contains_key(&started.service_instance_id)
-            || !service_process_still_declared(state, &started.service_instance_id)
-        {
-            release_service_snapshot(&started.snapshot);
-            continue;
-        }
-        mark_service_ready(
-            state,
-            &started.service_instance_id,
-            &started.snapshot,
-            false,
-        )?;
-        state
-            .service_ppc_clients
-            .insert(started.service_instance_id.clone(), started.client);
-        state
-            .service_snapshots
-            .insert(started.service_instance_id.clone(), started.snapshot);
-        state
-            .service_processes
-            .insert(started.service_instance_id, started.process);
-        started_count += 1;
-    }
-    Ok(started_count)
-}
-
-fn acquire_service_snapshot(
-    key: &PluginServiceKey,
-    reason: &str,
-) -> Result<PluginServiceSnapshot, DaemonError> {
-    let mut stack = LayerStack::open(PathBuf::from(&key.layer_stack_root))?;
-    let lease = stack.acquire_snapshot(&format!(
-        "plugin-service:{}:{}:{reason}",
-        key.plugin_id, key.service_id
-    ))?;
-    let mut snapshot = service_snapshot_from_lease(&key.layer_stack_root, lease);
-    snapshot.overlay = service_overlay_for_snapshot(key, &snapshot)?;
-    Ok(snapshot)
-}
-
-fn service_snapshot_from_lease(layer_stack_root: &str, lease: Lease) -> PluginServiceSnapshot {
-    PluginServiceSnapshot {
-        layer_stack_root: layer_stack_root.to_owned(),
-        lease_id: lease.lease_id,
-        manifest_key: manifest_key(lease.manifest_version, &lease.root_hash),
-        layer_paths: lease.layer_paths,
-        overlay: None,
-    }
-}
-
-#[cfg(all(target_os = "linux", not(test)))]
-fn service_overlay_for_snapshot(
-    key: &PluginServiceKey,
-    snapshot: &PluginServiceSnapshot,
-) -> Result<Option<PluginServiceOverlay>, DaemonError> {
-    let run_dir = overlay_writable_root()
-        .map_err(|err| overlay_daemon_error("overlay writable root", &err))?
-        .join("runtime")
-        .join("plugin-service")
-        .join(format!(
-            "{}-{}-{}",
-            std::process::id(),
-            sanitize_path_component(&key.service_id),
-            sanitize_path_component(&snapshot.manifest_key)
-        ));
-    let dirs = allocate_overlay_writable_dirs(&run_dir)
-        .map_err(|err| overlay_daemon_error("allocate overlay dirs", &err))?;
-    Ok(Some(PluginServiceOverlay {
-        run_dir: dirs.run_dir,
-        layer_paths: snapshot.layer_paths.iter().map(PathBuf::from).collect(),
-        upperdir: dirs.upperdir,
-        workdir: dirs.workdir,
-    }))
-}
-
-#[cfg(any(not(target_os = "linux"), test))]
-// Keep the same fallible signature as Linux so service snapshot setup remains
-// cfg-free for callers; off-Linux/test builds do not allocate overlay dirs.
-#[expect(
-    clippy::unnecessary_wraps,
-    reason = "non-Linux/test parity keeps the Linux fallible helper signature"
-)]
-const fn service_overlay_for_snapshot(
-    _key: &PluginServiceKey,
-    _snapshot: &PluginServiceSnapshot,
-) -> Result<Option<PluginServiceOverlay>, DaemonError> {
-    Ok(None)
-}
-
-#[cfg(all(target_os = "linux", not(test)))]
-fn sanitize_path_component(value: &str) -> String {
-    let cleaned: String = value
-        .chars()
-        .map(|ch| {
-            if ch.is_ascii_alphanumeric() || matches!(ch, '-' | '_' | '.') {
-                ch
-            } else {
-                '_'
-            }
-        })
-        .collect();
-    if cleaned.is_empty() {
-        "service".to_owned()
-    } else {
-        cleaned
-    }
-}
-
-fn active_manifest_key(layer_stack_root: &str) -> Result<String, DaemonError> {
-    let manifest = LayerStack::open(PathBuf::from(layer_stack_root))?.read_active_manifest()?;
-    Ok(manifest_key(
-        manifest.version,
-        &manifest_root_hash(&manifest),
-    ))
-}
-
-fn manifest_key(version: i64, root_hash: &str) -> String {
-    format!("{version}:{root_hash}")
-}
-
-fn release_service_snapshot(snapshot: &PluginServiceSnapshot) {
-    if let Some(overlay) = &snapshot.overlay {
-        let _ = std::fs::remove_dir_all(&overlay.run_dir);
-    }
-    if let Ok(mut stack) = LayerStack::open(PathBuf::from(&snapshot.layer_stack_root)) {
-        let _ = stack.release_lease(&snapshot.lease_id);
-    }
-}
-
-fn mark_service_ready(
-    state: &mut DaemonPluginState,
-    service_instance_id: &str,
-    snapshot: &PluginServiceSnapshot,
-    refreshed: bool,
-) -> Result<(), DaemonError> {
-    let status = service_status_mut(state, service_instance_id)?;
-    status.state = PluginServiceState::Ready;
-    status.manifest_key = Some(snapshot.manifest_key.clone());
-    if refreshed {
-        status.refresh_count = status.refresh_count.saturating_add(1);
-    }
-    status.last_error = None;
-    Ok(())
-}
-
-fn mark_service_restarted(
-    state: &mut DaemonPluginState,
-    service_instance_id: &str,
-) -> Result<(), DaemonError> {
-    let status = service_status_mut(state, service_instance_id)?;
-    status.restart_count = status.restart_count.saturating_add(1);
-    Ok(())
-}
-
-fn mark_service_stale(
-    state: &mut DaemonPluginState,
-    service_instance_id: &str,
-    reason: impl Into<String>,
-) -> Result<(), DaemonError> {
-    let status = service_status_mut(state, service_instance_id)?;
-    status.state = PluginServiceState::Stale;
-    status.last_error = Some(reason.into());
-    Ok(())
-}
-
-fn mark_service_stopped(state: &mut DaemonPluginState, service_instance_id: &str) {
-    if let Ok(status) = service_status_mut(state, service_instance_id) {
-        status.state = PluginServiceState::Stopped;
-        status.last_error = Some("service process stopped".to_owned());
-    }
-}
-
-fn service_status_mut<'a>(
-    state: &'a mut DaemonPluginState,
-    service_instance_id: &str,
-) -> Result<&'a mut PluginServiceStatus, DaemonError> {
-    state
-        .loaded
-        .values_mut()
-        .flat_map(|loaded| loaded.services.iter_mut())
-        .find(|status| status.key.service_instance_id() == service_instance_id)
-        .ok_or_else(|| {
-            DaemonError::Plugin(PluginError::Ensure(format!(
-                "service {service_instance_id} is not registered"
-            )))
-        })
-}
-
-fn service_process_still_declared(state: &DaemonPluginState, service_instance_id: &str) -> bool {
-    state.loaded.values().any(|loaded| {
-        loaded
-            .service_processes
-            .iter()
-            .any(|spec| spec.service_instance_id() == service_instance_id)
-    })
-}
-
-fn stop_plugin_service_processes(state: &mut DaemonPluginState, plugin_id: &str) {
-    let stale_service_ids = state
-        .loaded
-        .get(plugin_id)
-        .map(|loaded| {
-            loaded
-                .service_processes
-                .iter()
-                .map(PluginProcessSpec::service_instance_id)
-                .collect::<Vec<_>>()
-        })
-        .unwrap_or_default();
-    for service_instance_id in stale_service_ids {
-        state.service_processes.remove(&service_instance_id);
-        state.service_ppc_clients.remove(&service_instance_id);
-        if let Some(snapshot) = state.service_snapshots.remove(&service_instance_id) {
-            release_service_snapshot(&snapshot);
-        }
-        mark_service_stopped(state, &service_instance_id);
-    }
-}
-
 pub(crate) fn stop_services_for_layer_stack_root(
     layer_stack_root: &str,
 ) -> Result<usize, DaemonError> {
     let mut state = lock_state()?;
-    let service_instance_ids = state
-        .service_snapshots
-        .iter()
-        .filter(|(_, snapshot)| snapshot.layer_stack_root == layer_stack_root)
-        .map(|(service_instance_id, _)| service_instance_id.clone())
-        .collect::<Vec<_>>();
-    let stopped_count = service_instance_ids.len();
-    for service_instance_id in service_instance_ids {
-        state.service_processes.remove(&service_instance_id);
-        state.service_ppc_clients.remove(&service_instance_id);
-        if let Some(snapshot) = state.service_snapshots.remove(&service_instance_id) {
-            release_service_snapshot(&snapshot);
-        }
-        mark_service_stopped(&mut state, &service_instance_id);
-    }
-    Ok(stopped_count)
-}
-
-fn running_process_values(state: &mut DaemonPluginState) -> Vec<Value> {
-    let mut closed = Vec::new();
-    let mut values = Vec::new();
-    for (service_instance_id, process) in &mut state.service_processes {
-        let status = process.status_json();
-        if status["running"] != true {
-            closed.push(service_instance_id.clone());
-        }
-        values.push(status);
-    }
-    for service_instance_id in closed {
-        state.service_processes.remove(&service_instance_id);
-        state.service_ppc_clients.remove(&service_instance_id);
-        if let Some(snapshot) = state.service_snapshots.remove(&service_instance_id) {
-            release_service_snapshot(&snapshot);
-        }
-        mark_service_stopped(state, &service_instance_id);
-    }
-    values
+    Ok(stop_services_for_layer_stack_root_in_state(
+        &mut state,
+        layer_stack_root,
+    ))
 }
 
 fn loaded_plugin_values(state: &DaemonPluginState) -> Vec<Value> {
@@ -1353,4 +1040,5 @@ fn dispatch_deferred_route(
 }
 
 #[cfg(test)]
+#[path = "../../tests/plugin/mod.rs"]
 mod tests;

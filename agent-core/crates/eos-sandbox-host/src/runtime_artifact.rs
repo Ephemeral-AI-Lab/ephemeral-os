@@ -365,7 +365,10 @@ pub(crate) async fn ensure_eosd_uploaded(
     .await?;
 
     // 7. upload via the put_archive fast path through a random staging dir.
-    let staging_dir = format!("{BUNDLE_REMOTE_DIR}/.eosd-upload-{}", uuid::Uuid::new_v4().simple());
+    let staging_dir = format!(
+        "{BUNDLE_REMOTE_DIR}/.eosd-upload-{}",
+        uuid::Uuid::new_v4().simple()
+    );
     let staging_file = format!("{staging_dir}/eosd");
     check_exec(
         adapter,
@@ -442,7 +445,7 @@ pub(crate) async fn ensure_builtin_lsp_plugin_runtime_uploaded(
     check_exec(
         adapter,
         id,
-        "mkdir -p /eos/daemon/plugins/catalog/lsp/runtime /eos/daemon/plugins/runtime_bridge /eos/daemon/sandbox/_shared /eos/plugin-packages/lsp",
+        "mkdir -p /eos/daemon/plugins/catalog/lsp/runtime /eos/daemon/plugins/runtime_bridge /eos/daemon/sandbox/_shared /eos/plugin-packages/lsp /eos/env/eos-node22",
         30,
         "builtin lsp runtime directory setup failed",
     )

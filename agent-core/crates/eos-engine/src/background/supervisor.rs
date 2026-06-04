@@ -22,7 +22,7 @@ use serde_json::{json, Value};
 use tokio::sync::Mutex;
 use tokio::task::AbortHandle;
 
-use crate::agent_loop::EngineRunHandles;
+use crate::EngineRunHandles;
 
 /// Background task status.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

@@ -23,8 +23,8 @@ use eos_types::{AgentRunId, JsonObject, SubagentSessionId, WorkflowSessionId};
 use serde_json::{json, Value};
 
 use super::supervisor::{BackgroundSupervisorHandle, BackgroundTaskStatus, SubagentRecord};
-use crate::agent_loop::{run_ephemeral_agent, EphemeralRun, EphemeralRunInput};
 use crate::notifications::NotificationService;
+use crate::{run_ephemeral_agent, EphemeralRun, EphemeralRunInput};
 
 const RECURSION_MESSAGE: &str = "run_subagent: subagents may not spawn further subagents. \
      This is a hard contract — handle the work directly or submit your findings via the terminal tool.";

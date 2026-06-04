@@ -9,9 +9,9 @@ use eos_tools::SystemNotification;
 use eos_types::{JsonObject, ToolUseId};
 use futures::{Stream, StreamExt};
 
-use crate::events::{stamp_identity, StreamEvent};
 use crate::notifications::{budget_figures, enqueue_notification_rules};
 use crate::query::{build_query_run_request, QueryContext, QueryExitReason};
+use crate::telemetry::{stamp_identity, StreamEvent};
 use crate::tool_call::{dispatch_assistant_tools, ToolUseRequest};
 use crate::EngineError;
 

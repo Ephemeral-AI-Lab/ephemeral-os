@@ -1,5 +1,8 @@
 use serde_json::json;
 
+use super::session::should_publish_command_session_completion;
+#[cfg(target_os = "linux")]
+use super::session::CommandSessionRegistry;
 use super::*;
 
 type TestResult<T = ()> = Result<T, Box<dyn std::error::Error + Send + Sync>>;

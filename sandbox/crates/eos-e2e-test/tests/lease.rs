@@ -57,7 +57,10 @@ fn lease_pins_layers_vs_squash() -> Result<()> {
     let lease = pool.acquire()?;
     let enter = lease.call_ok(ops::API_ISOLATED_WORKSPACE_ENTER, json!({}))?;
     let pinned_version = enter.get("manifest_version").and_then(Value::as_i64);
-    let pinned_hash = enter.get("manifest_root_hash").and_then(Value::as_str).map(str::to_owned);
+    let pinned_hash = enter
+        .get("manifest_root_hash")
+        .and_then(Value::as_str)
+        .map(str::to_owned);
     let root = lease.root().to_owned();
     for version in 0..105 {
         lease.client().request(
@@ -77,7 +80,10 @@ fn lease_pins_layers_vs_squash() -> Result<()> {
         held.get("open").and_then(Value::as_bool).unwrap_or(false),
         "isolated status should remain open while public squash pressure runs: {held}"
     );
-    assert_eq!(held.get("manifest_version").and_then(Value::as_i64), pinned_version);
+    assert_eq!(
+        held.get("manifest_version").and_then(Value::as_i64),
+        pinned_version
+    );
     assert_eq!(
         held.get("manifest_root_hash").and_then(Value::as_str),
         pinned_hash.as_deref()
@@ -101,7 +107,10 @@ fn lease_hold_time_ordering() -> Result<()> {
         .get("lifetime_s")
         .and_then(Value::as_f64)
         .unwrap_or(0.0);
-    assert!(lifetime_s >= 0.0, "isolated exit lifetime should be nonnegative: {exit}");
+    assert!(
+        lifetime_s >= 0.0,
+        "isolated exit lifetime should be nonnegative: {exit}"
+    );
     Ok(())
 }
 

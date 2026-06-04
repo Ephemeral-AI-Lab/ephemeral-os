@@ -1,6 +1,6 @@
 //! `NodePool` — up to `sandboxes` daemon containers behind a blocking semaphore,
 //! plus `NodeLease`, the ergonomic per-test handle that mints a fresh
-//! `layer_stack_root` and injects the standard envelope members.
+//! `layer_stack_root`, resets `/testbed`, and injects the standard envelope members.
 //!
 //! A lease holds its node exclusively for the test's duration; the node (and its
 //! daemon) is reused across leases until `recycle_after` checkouts bound scratch
@@ -17,6 +17,9 @@ use crate::client::{error_kind, is_success, ProtocolClient};
 use crate::config::{Config, NodeMode};
 use crate::container::{reap_e2e_containers, DaemonContainer, E2E_ROOT_DIR};
 use crate::{next_invocation_id, unique_suffix};
+
+/// Canonical workload workspace path inside every sandbox mode.
+pub const WORKSPACE_ROOT: &str = "/testbed";
 
 struct Node {
     container: DaemonContainer,
@@ -58,10 +61,7 @@ impl NodePool {
         let created = available.len();
         Self {
             config,
-            inner: Mutex::new(Inner {
-                available,
-                created,
-            }),
+            inner: Mutex::new(Inner { available, created }),
             cvar: Condvar::new(),
         }
     }
@@ -155,12 +155,16 @@ impl<'p> NodeLease<'p> {
         let id = unique_suffix();
         let base = format!("{E2E_ROOT_DIR}/{id}");
         let stack_root = format!("{base}/stack");
-        let workspace_root = format!("{base}/work");
+        let workspace_root = WORKSPACE_ROOT.to_owned();
         let agent_id = format!("agent-{id}");
 
         if let Err(err) = node
             .container
-            .exec(&["mkdir", "-p", &stack_root, &workspace_root])
+            .exec(&["mkdir", "-p", &stack_root])
+            .and_then(|_| {
+                node.container
+                    .exec(&["sh", "-lc", "rm -rf -- /testbed && mkdir -p -- /testbed"])
+            })
         {
             return Err((node, err));
         }
@@ -212,7 +216,7 @@ impl<'p> NodeLease<'p> {
         &self.stack_root
     }
 
-    /// This lease's `workspace_root` (the base-seed / commit target dir).
+    /// This lease's canonical workload `workspace_root` (the base-seed / commit target dir).
     #[must_use]
     pub fn workspace_root(&self) -> &str {
         &self.workspace_root
@@ -275,8 +279,8 @@ impl<'p> NodeLease<'p> {
 impl Drop for NodeLease<'_> {
     fn drop(&mut self) {
         if let Some(node) = self.node.take() {
-            let recycle =
-                self.pool.config.mode == NodeMode::PerTest || node.checkouts >= self.pool.config.recycle_after;
+            let recycle = self.pool.config.mode == NodeMode::PerTest
+                || node.checkouts >= self.pool.config.recycle_after;
             self.pool.give_back(node, recycle);
         }
     }

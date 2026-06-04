@@ -15,7 +15,10 @@ platform     = "linux/amd64"                    # match eosd arch [env EOS_E2E_P
 eosd         = "dist/eosd-linux-amd64"          # host binary to put_archive [env EOS_E2E_EOSD]
 cap_add      = ["SYS_ADMIN", "NET_ADMIN"]
 security_opt = ["seccomp=unconfined", "apparmor=unconfined"]
-tmpfs        = "/eos:rw,exec,size=2g,mode=1777" # overlay upper/work scratch
+tmpfs        = [
+  "/eos/e2e:rw,exec,size=2g,mode=1777",   # per-test layer-stack scratch
+  "/eos/mount:rw,exec,size=2g,mode=1777", # overlay upper/work scratch
+]
 tcp_port     = 37657                            # daemon TCP port inside container
 
 [concurrency]

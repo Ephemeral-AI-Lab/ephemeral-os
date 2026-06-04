@@ -15,7 +15,6 @@ pub mod cas;
 pub mod client;
 pub mod config;
 pub mod container;
-pub mod fixtures;
 pub mod pool;
 
 pub use pool::{NodeLease, NodePool};

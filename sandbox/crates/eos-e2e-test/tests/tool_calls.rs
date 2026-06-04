@@ -2,10 +2,13 @@ mod common;
 
 use anyhow::{Context, Result};
 use eos_e2e_test::client::error_kind;
-use eos_protocol::{models::{MAX_FILE_BYTES, MAX_READ_BYTES}, ops};
+use eos_protocol::{
+    models::{MAX_FILE_BYTES, MAX_READ_BYTES},
+    ops,
+};
 use serde_json::{json, Value};
 
-use common::{as_bool, as_i64, as_str, array, conflict_message, live_pool_or_skip};
+use common::{array, as_bool, as_i64, as_str, conflict_message, live_pool_or_skip};
 
 #[test]
 fn write_read_roundtrip() -> Result<()> {
@@ -165,7 +168,10 @@ fn glob_matches() -> Result<()> {
     )?;
     let glob = lease.call_ok(ops::API_V1_GLOB, json!({"pattern": "tool/glob/*.rs"}))?;
     assert_eq!(as_i64(&glob, "num_files")?, 1);
-    assert_eq!(array(&glob, "filenames")?[0], Value::String("tool/glob/a.rs".to_owned()));
+    assert_eq!(
+        array(&glob, "filenames")?[0],
+        Value::String("tool/glob/a.rs".to_owned())
+    );
     Ok(())
 }
 
@@ -202,7 +208,11 @@ fn read_max_bytes_guard() -> Result<()> {
             "max_output_tokens": 1000
         }),
     )?;
-    assert_eq!(as_str(&exec, "status")?, "ok", "seed command should publish big file: {exec}");
+    assert_eq!(
+        as_str(&exec, "status")?,
+        "ok",
+        "seed command should publish big file: {exec}"
+    );
     let read = lease.call(
         ops::API_V1_READ_FILE,
         json!({"path": "tool/too-big-read.txt"}),

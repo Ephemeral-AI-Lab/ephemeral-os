@@ -8,7 +8,7 @@ use eos_e2e_test::next_invocation_id;
 use eos_protocol::ops;
 use serde_json::{json, Value};
 
-use common::{as_bool, as_str, array, conflict_reason, live_pool_or_skip};
+use common::{array, as_bool, as_str, conflict_reason, live_pool_or_skip};
 
 #[test]
 fn concurrent_conflicting_writes() -> Result<()> {
@@ -95,7 +95,10 @@ fn concurrent_disjoint_writes() -> Result<()> {
         .collect();
     for handle in handles {
         let response = handle.join().expect("writer thread panicked")?;
-        assert!(as_bool(&response, "success")?, "disjoint write should commit: {response}");
+        assert!(
+            as_bool(&response, "success")?,
+            "disjoint write should commit: {response}"
+        );
     }
     for index in 0..6 {
         let read = lease.call_ok(
@@ -124,7 +127,11 @@ fn edit_overlap_conflict() -> Result<()> {
             "edits": [{"old_text": "dup", "new_text": "x", "replace_all": false}]
         }),
     )?;
-    assert_eq!(conflict_reason(&edit), "aborted_overlap", "overlap conflict expected: {edit}");
+    assert_eq!(
+        conflict_reason(&edit),
+        "aborted_overlap",
+        "overlap conflict expected: {edit}"
+    );
     Ok(())
 }
 
@@ -164,7 +171,10 @@ fn retry_budget_3x_surfaces_coherent_result() -> Result<()> {
             "concurrent writer should return a structured protocol payload: {response}"
         );
     }
-    let read = lease.call_ok(ops::API_V1_READ_FILE, json!({"path": "occ/retry-budget.txt"}))?;
+    let read = lease.call_ok(
+        ops::API_V1_READ_FILE,
+        json!({"path": "occ/retry-budget.txt"}),
+    )?;
     assert!(
         as_str(&read, "content")?.trim().parse::<usize>().is_ok(),
         "final content should be one whole writer output: {read}"

@@ -9,6 +9,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
+import socket
 import secrets
 import shlex
 from typing import Any
@@ -401,6 +402,14 @@ class DockerProviderAdapter:
 
         def _run() -> None:
             container = client.containers.get(sandbox_id)
+            if dest_dir == "/eos" or dest_dir.startswith("/eos/"):
+                self._put_archive_into_eos_tmpfs(
+                    client,
+                    container,
+                    tar_stream=tar_stream,
+                    dest_dir=dest_dir,
+                )
+                return
             ok = container.put_archive(path=dest_dir, data=tar_stream)
             if not ok:
                 raise RuntimeError(
@@ -409,6 +418,63 @@ class DockerProviderAdapter:
                 )
 
         await asyncio.to_thread(_run)
+
+    def _put_archive_into_eos_tmpfs(
+        self,
+        client: Any,
+        container: Any,
+        *,
+        tar_stream: bytes,
+        dest_dir: str,
+    ) -> None:
+        exec_id = client.api.exec_create(
+            container.id,
+            ["tar", "-xf", "-", "-C", dest_dir],
+            stdin=True,
+            stdout=True,
+            stderr=True,
+            tty=False,
+        )["Id"]
+        sock = client.api.exec_start(exec_id, socket=True)
+        raw_sock = getattr(sock, "_sock", sock)
+        response = getattr(sock, "_response", None)
+        try:
+            raw_sock.sendall(tar_stream)
+            try:
+                raw_sock.shutdown(socket.SHUT_WR)
+            except OSError:
+                pass
+            output = bytearray()
+            while True:
+                chunk = raw_sock.recv(4096)
+                if not chunk:
+                    break
+                output.extend(chunk)
+        finally:
+            if response is not None:
+                raw_response = getattr(response, "raw", None)
+                http_response = getattr(raw_response, "_fp", None)
+                try:
+                    if http_response is not None:
+                        http_response.fp = None
+                    if raw_response is not None:
+                        raw_response._fp = None
+                except Exception:
+                    pass
+            try:
+                sock.close()
+            except Exception:
+                pass
+
+        inspected = client.api.exec_inspect(exec_id)
+        exit_code = int(inspected.get("ExitCode") or 0)
+        if exit_code != 0:
+            detail = bytes(output).decode("utf-8", errors="replace")
+            raise RuntimeError(
+                "docker put_archive tar extraction failed "
+                f"(sandbox={container.id!r}, dest_dir={dest_dir!r}, "
+                f"exit_code={exit_code}, output={detail!r})"
+            )
 
     # -- Context preparation -------------------------------------------------
 

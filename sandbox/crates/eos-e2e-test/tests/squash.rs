@@ -62,7 +62,10 @@ fn checkpoint_layer_reduces_result_depth() -> Result<()> {
         .get("squash_result_layers")
         .and_then(Value::as_i64)
         .context("squash_result_layers")?;
-    assert!(output < input, "squash should replace many inputs with a checkpoint: {completed}");
+    assert!(
+        output < input,
+        "squash should replace many inputs with a checkpoint: {completed}"
+    );
     Ok(())
 }
 

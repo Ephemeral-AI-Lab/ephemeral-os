@@ -112,8 +112,12 @@ fn commit_emits_audit() -> Result<()> {
         .context("layer_stack.commit_completed audit event")?;
     let layer_stack = section(event, "layer_stack").context("layer_stack audit section")?;
     assert_eq!(
-        layer_stack.get("manifest_version").and_then(serde_json::Value::as_i64),
-        commit.get("manifest_version").and_then(serde_json::Value::as_i64),
+        layer_stack
+            .get("manifest_version")
+            .and_then(serde_json::Value::as_i64),
+        commit
+            .get("manifest_version")
+            .and_then(serde_json::Value::as_i64),
         "commit audit should report response manifest version: {event}"
     );
     assert!(

@@ -5,7 +5,7 @@ edition.workspace = true
 rust-version.workspace = true
 
 [lib]
-path = "src/eos_tools/mod.rs"
+path = "src/mod.rs"
 
 [dependencies]
 # Direct eos-types edge: this crate names InvocationId, ToolUseId,

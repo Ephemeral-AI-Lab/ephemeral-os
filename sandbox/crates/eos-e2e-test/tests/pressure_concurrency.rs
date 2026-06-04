@@ -67,7 +67,11 @@ fn n_concurrent_mixed_ops() -> Result<()> {
         );
     }
     let metrics = lease.call_ok(ops::API_LAYER_METRICS, json!({}))?;
-    assert_eq!(as_i64(&metrics, "active_leases")?, 0, "mixed ops should not leak leases: {metrics}");
+    assert_eq!(
+        as_i64(&metrics, "active_leases")?,
+        0,
+        "mixed ops should not leak leases: {metrics}"
+    );
     Ok(())
 }
 

@@ -24,12 +24,10 @@ use crate::client::{is_success, ProtocolClient};
 use crate::config::{Config, NodeMode};
 use crate::unique_suffix;
 
-/// Remote directory where the uploaded `eosd` binary lives inside the container.
-const EOS_BIN_DIR: &str = "/eos/bin";
-/// Remote daemon executable path. Keep all EphemeralOS-owned runtime files under `/eos`.
-const EOSD_REMOTE_PATH: &str = "/eos/bin/eosd";
-/// Daemon runtime dir on the `/eos` tmpfs.
+/// Daemon runtime dir under the EphemeralOS-owned root.
 const DAEMON_DIR: &str = "/eos/daemon";
+/// Remote daemon executable path. Keep this aligned with host runtime paths.
+const EOSD_REMOTE_PATH: &str = "/eos/daemon/eosd";
 /// Root under which the pool mints per-test `layer_stack_root`s.
 pub const E2E_ROOT_DIR: &str = "/eos/e2e";
 /// A non-kept container self-removes after this long (`--rm` + `timeout`), so an
@@ -108,8 +106,10 @@ impl DaemonContainer {
             run.push("-e".to_owned());
             run.push(env_kv.to_owned());
         }
-        run.push("--tmpfs".to_owned());
-        run.push(config.tmpfs.clone());
+        for tmpfs in &config.tmpfs {
+            run.push("--tmpfs".to_owned());
+            run.push(tmpfs.clone());
+        }
         run.push("--init".to_owned());
         run.push("-p".to_owned());
         run.push(format!("127.0.0.1::{}", config.tcp_port));
@@ -206,7 +206,7 @@ impl DaemonContainer {
     }
 
     fn bringup(&self, config: &Config, token: &str) -> Result<ProtocolClient> {
-        self.exec(&["mkdir", "-p", EOS_BIN_DIR, DAEMON_DIR, E2E_ROOT_DIR])
+        self.exec(&["mkdir", "-p", DAEMON_DIR, E2E_ROOT_DIR])
             .context("mkdir daemon dirs")?;
         self.exec(&[
             "sh",
@@ -216,14 +216,14 @@ impl DaemonContainer {
         .context("make cgroup v2 writable for isolated-workspace tests")?;
         put_archive_file(
             &self.name,
-            EOS_BIN_DIR,
+            DAEMON_DIR,
             "eosd",
             &config.eosd_path,
             config.request_timeout,
         )
         .with_context(|| {
             format!(
-                "Docker put_archive eosd ({}) into {EOS_BIN_DIR}",
+                "Docker put_archive eosd ({}) into {DAEMON_DIR}",
                 config.eosd_path.display()
             )
         })?;
@@ -461,8 +461,12 @@ fn docker_socket_path() -> Result<PathBuf> {
             candidates.push(path);
         }
     }
-    if let Ok(host) = docker_str(&["context", "inspect", "--format", "{{.Endpoints.docker.Host}}"])
-    {
+    if let Ok(host) = docker_str(&[
+        "context",
+        "inspect",
+        "--format",
+        "{{.Endpoints.docker.Host}}",
+    ]) {
         if let Some(path) = docker_unix_socket_from_host(&host) {
             candidates.push(path);
         }
@@ -557,7 +561,10 @@ fn write_octal(field: &mut [u8], value: u64) -> Result<()> {
         .context("tar octal field too short")?;
     let encoded = format!("{value:0width$o}", width = digits);
     if encoded.len() > digits {
-        bail!("tar octal value {value} does not fit in {} bytes", field.len());
+        bail!(
+            "tar octal value {value} does not fit in {} bytes",
+            field.len()
+        );
     }
     field[..digits].copy_from_slice(encoded.as_bytes());
     field[digits] = 0;
@@ -610,12 +617,7 @@ pub fn docker_available() -> bool {
 /// fails.
 pub fn reap_e2e_containers() -> Result<usize> {
     let out = Command::new("docker")
-        .args([
-            "ps",
-            "-aq",
-            "--filter",
-            &format!("label={POOL_LABEL}"),
-        ])
+        .args(["ps", "-aq", "--filter", &format!("label={POOL_LABEL}")])
         .output()
         .context("list eos-e2e containers")?;
     if !out.status.success() {
@@ -670,8 +672,11 @@ mod tests {
 
     #[test]
     fn docker_helpers_parse_http_and_unix_host() {
-        assert_eq!(docker_http_status("HTTP/1.1 200 OK\r\n\r\n").expect("status"), 200);
-        assert_eq!(percent_encode("/eos/bin"), "%2Feos%2Fbin");
+        assert_eq!(
+            docker_http_status("HTTP/1.1 200 OK\r\n\r\n").expect("status"),
+            200
+        );
+        assert_eq!(percent_encode("/eos/daemon"), "%2Feos%2Fdaemon");
         assert_eq!(
             docker_unix_socket_from_host("unix:///var/run/docker.sock").expect("socket"),
             PathBuf::from("/var/run/docker.sock")

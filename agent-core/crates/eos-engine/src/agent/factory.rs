@@ -47,7 +47,7 @@ pub struct BuildQueryContextInput {
     /// The explicit run handles carried onto the [`QueryContext`] so the
     /// engine-driven advisor dispatch can spawn a child `run_ephemeral_agent`
     /// (advisor remediation plan §2a). `None` for runs that never advise.
-    pub run_handles: Option<crate::agent_loop::EngineRunHandles>,
+    pub run_handles: Option<crate::EngineRunHandles>,
 }
 
 impl std::fmt::Debug for BuildQueryContextInput {

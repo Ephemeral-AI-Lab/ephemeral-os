@@ -4,7 +4,7 @@ use anyhow::Result;
 use eos_protocol::ops;
 use serde_json::{json, Value};
 
-use common::{as_i64, array, live_pool_or_skip};
+use common::{array, as_i64, live_pool_or_skip};
 
 #[test]
 fn mount_failure_no_partial_result() -> Result<()> {

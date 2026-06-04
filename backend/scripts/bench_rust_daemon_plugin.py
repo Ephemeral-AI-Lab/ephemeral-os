@@ -107,8 +107,6 @@ PLUGIN_ROOT = "/eos/plugin"
 BUNDLE_REMOTE_DIR = "/eos/daemon"
 LSP_PACKAGE_REMOTE_DIR = "/eos/plugin-packages/lsp"
 LSP_NODE_HOME = "/eos/env/eos-node22"
-LSP_NODE_VERSION = "22.13.1"
-LSP_PYRIGHT_VERSION = "1.1.409"
 PPC_SERVICE_BUNDLE_FILES = (
     "plugins/__init__.py",
     "plugins/catalog/lsp/runtime/__init__.py",
@@ -6546,7 +6544,8 @@ async def upload_lsp_runtime_packages(bench: DockerBench) -> dict[str, Any]:
         }
 
     prepare = await bench.exec(
-        f"mkdir -p {shlex.quote(LSP_PACKAGE_REMOTE_DIR)} {shlex.quote(LSP_NODE_HOME)}",
+        f"mkdir -p {shlex.quote(LSP_PACKAGE_REMOTE_DIR)} "
+        f"{shlex.quote(LSP_NODE_HOME)}",
         timeout=30,
     )
     if getattr(prepare, "exit_code", 1) != 0:

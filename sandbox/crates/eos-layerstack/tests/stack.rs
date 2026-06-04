@@ -1,4 +1,7 @@
-use super::*;
+use std::path::PathBuf;
+use std::sync::atomic::{AtomicU64, Ordering};
+
+use eos_layerstack::{build_workspace_base, LayerChange, LayerPath, LayerRef, LayerStack};
 
 type TestResult<T = ()> = std::result::Result<T, Box<dyn std::error::Error + Send + Sync>>;
 
@@ -98,17 +101,15 @@ fn delete_layer_hides_files_in_reads_and_projection() -> TestResult {
     assert_eq!(stack.read_text("dir/a.txt")?, (String::new(), false));
     assert_eq!(stack.read_text("dir/b.txt")?, ("two\n".to_owned(), true));
 
-    let projected = fixture.root.join("projected");
-    stack
-        .view
-        .project(&projected, &stack.read_active_manifest()?)?;
-    assert!(!projected.join("dir/a.txt").exists());
+    std::fs::create_dir_all(&fixture.workspace)?;
+    let _ = stack.commit_to_workspace(&fixture.workspace)?;
+    assert!(!fixture.workspace.join("dir/a.txt").exists());
     assert_eq!(
-        std::fs::read_to_string(projected.join("dir/b.txt"))?,
+        std::fs::read_to_string(fixture.workspace.join("dir/b.txt"))?,
         "two\n"
     );
     assert!(
-        !projected.join("dir/.wh.a.txt").exists(),
+        !fixture.workspace.join("dir/.wh.a.txt").exists(),
         "logical whiteout marker must not leak into projections"
     );
     Ok(())
@@ -182,3 +183,5 @@ impl Drop for Fixture {
         let _ = std::fs::remove_dir_all(&self.workspace);
     }
 }
+
+static NEXT_TMP_WRITE: AtomicU64 = AtomicU64::new(0);

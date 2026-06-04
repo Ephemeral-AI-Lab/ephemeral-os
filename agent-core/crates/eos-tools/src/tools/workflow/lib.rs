@@ -2,7 +2,7 @@ use crate::core::name::ToolName;
 use crate::core::result::ToolResult;
 
 #[cfg(test)]
-#[path = "../../../../tests/tools/workflow/mod.rs"]
+#[path = "../../../tests/tools/workflow/mod.rs"]
 mod tests;
 
 pub(super) fn empty_workflow_id_error(tool: ToolName, field: &str) -> ToolResult {

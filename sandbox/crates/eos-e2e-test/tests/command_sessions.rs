@@ -7,12 +7,9 @@ use anyhow::{bail, Context, Result};
 use eos_protocol::ops;
 use serde_json::{json, Value};
 
-use common::{as_i64, as_str, array, live_pool_or_skip, stdout};
+use common::{array, as_i64, as_str, live_pool_or_skip, stdout};
 
-fn start_sleeping_session(
-    lease: &eos_e2e_test::NodeLease<'_>,
-    marker: &str,
-) -> Result<String> {
+fn start_sleeping_session(lease: &eos_e2e_test::NodeLease<'_>, marker: &str) -> Result<String> {
     let started = lease.call_ok(
         ops::API_V1_EXEC_COMMAND,
         json!({
@@ -169,11 +166,19 @@ fn session_count_accuracy() -> Result<()> {
     let first = start_sleeping_session(&lease, "count-one")?;
     let second = start_sleeping_session(&lease, "count-two")?;
     let count = lease.call_ok(ops::API_V1_COMMAND_SESSION_COUNT, json!({}))?;
-    assert_eq!(as_i64(&count, "count")?, 2, "two live sessions expected: {count}");
+    assert_eq!(
+        as_i64(&count, "count")?,
+        2,
+        "two live sessions expected: {count}"
+    );
     cancel_session(&lease, &first)?;
     cancel_session(&lease, &second)?;
     let count = lease.call_ok(ops::API_V1_COMMAND_SESSION_COUNT, json!({}))?;
-    assert_eq!(as_i64(&count, "count")?, 0, "cancel should remove sessions: {count}");
+    assert_eq!(
+        as_i64(&count, "count")?,
+        0,
+        "cancel should remove sessions: {count}"
+    );
     Ok(())
 }
 
@@ -216,7 +221,10 @@ fn output_token_cap() -> Result<()> {
         stdout(&exec).len()
     );
     let id = as_str(&exec, "command_session_id")?;
-    lease.call_ok(ops::API_V1_COMMAND_CANCEL, json!({"command_session_id": id}))?;
+    lease.call_ok(
+        ops::API_V1_COMMAND_CANCEL,
+        json!({"command_session_id": id}),
+    )?;
     Ok(())
 }
 

@@ -16,8 +16,8 @@ use serde_json::{json, Value};
 use tokio::sync::mpsc;
 use tokio::task::JoinSet;
 
-use crate::events::StreamEvent;
 use crate::query::QueryContext;
+use crate::telemetry::StreamEvent;
 use crate::EngineError;
 
 /// One model-emitted tool request.
@@ -249,7 +249,7 @@ async fn run_advisor_call(
             .and_then(|v| v.as_object())
             .cloned()
             .unwrap_or_default();
-        crate::advisor::run_advisor(&handles, &metadata, conversation, tool_name, &tool_payload)
+        crate::runtime::run_advisor(&handles, &metadata, conversation, tool_name, &tool_payload)
             .await
     } else {
         rejection_result(

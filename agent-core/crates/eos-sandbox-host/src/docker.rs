@@ -22,6 +22,7 @@ use bollard::models::{
 use bollard::Docker;
 use eos_types::SandboxId;
 use futures::StreamExt;
+use tokio::io::AsyncWriteExt;
 
 use crate::error::SandboxHostError;
 use crate::provider::{
@@ -352,6 +353,13 @@ impl ProviderAdapter for DockerProviderAdapter {
         tar_stream: &[u8],
         dest_dir: &str,
     ) -> Result<(), SandboxHostError> {
+        if dest_dir == EOS_RUNTIME_TMPFS_TARGET
+            || dest_dir.starts_with(&format!("{EOS_RUNTIME_TMPFS_TARGET}/"))
+        {
+            return self
+                .put_archive_into_eos_tmpfs(id, tar_stream, dest_dir)
+                .await;
+        }
         let options = UploadToContainerOptions {
             path: dest_dir.to_owned(),
             ..Default::default()
@@ -368,6 +376,77 @@ impl ProviderAdapter for DockerProviderAdapter {
 
     fn context_preparer(&self, id: &SandboxId) -> ContextPreparer {
         ContextPreparer::Docker(DockerContextPreparer::new(id.clone()))
+    }
+}
+
+impl DockerProviderAdapter {
+    async fn put_archive_into_eos_tmpfs(
+        &self,
+        id: &SandboxId,
+        tar_stream: &[u8],
+        dest_dir: &str,
+    ) -> Result<(), SandboxHostError> {
+        let exec = self
+            .docker
+            .create_exec(
+                id.as_str(),
+                CreateExecOptions {
+                    attach_stdin: Some(true),
+                    attach_stdout: Some(true),
+                    attach_stderr: Some(true),
+                    tty: Some(false),
+                    cmd: Some(vec!["tar", "-xf", "-", "-C", dest_dir]),
+                    ..Default::default()
+                },
+            )
+            .await
+            .map_err(SandboxHostError::Docker)?
+            .id;
+
+        let StartExecResults::Attached {
+            mut output,
+            mut input,
+        } = self
+            .docker
+            .start_exec(&exec, None)
+            .await
+            .map_err(SandboxHostError::Docker)?
+        else {
+            return Err(SandboxHostError::ExecFailed {
+                exit_code: -1,
+                message: "docker put_archive tar exec detached unexpectedly".to_owned(),
+            });
+        };
+
+        input.write_all(tar_stream).await?;
+        input.shutdown().await?;
+
+        let mut captured = Vec::new();
+        while let Some(chunk) = output.next().await {
+            let chunk = chunk.map_err(SandboxHostError::Docker)?;
+            captured.extend_from_slice(chunk.into_bytes().as_ref());
+        }
+
+        let inspected = self
+            .docker
+            .inspect_exec(&exec)
+            .await
+            .map_err(SandboxHostError::Docker)?;
+        let exit_code = inspected
+            .exit_code
+            .and_then(|code| i32::try_from(code).ok())
+            .unwrap_or(-1);
+        if exit_code != 0 {
+            return Err(SandboxHostError::ExecFailed {
+                exit_code,
+                message: format!(
+                    "docker put_archive tar extraction failed for {dest_dir}: {}",
+                    String::from_utf8_lossy(&captured)
+                ),
+            });
+        }
+
+        Ok(())
     }
 }
 

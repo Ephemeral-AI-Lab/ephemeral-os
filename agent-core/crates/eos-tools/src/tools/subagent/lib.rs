@@ -2,7 +2,7 @@ use crate::core::name::ToolName;
 use crate::core::result::ToolResult;
 
 #[cfg(test)]
-#[path = "../../../../tests/tools/subagent/mod.rs"]
+#[path = "../../../tests/tools/subagent/mod.rs"]
 mod tests;
 
 pub(super) fn default_five() -> u8 {

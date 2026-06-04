@@ -26,10 +26,11 @@ use futures::StreamExt;
 use serde_json::{json, Value};
 
 use crate::agent::{build_query_context, BuildQueryContextInput};
-use crate::events::StreamEvent;
 use crate::notifications::NotificationService;
 use crate::query::{run_query, EventSource, QueryExitReason};
-use crate::resource_sample::capture_process_resource_sample;
+use crate::telemetry::StreamEvent;
+
+use super::resource_sample::capture_process_resource_sample;
 
 /// Per-agent event-source factory seam (the Python `event_source_factory`).
 ///

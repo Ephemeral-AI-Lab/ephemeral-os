@@ -545,13 +545,15 @@ class PyrightSession:
 
     async def _spawn(self) -> None:
         argv = self._build_argv()
+        env = os.environ.copy()
+        env["PATH"] = _pyright_search_path()
         try:
             proc = await asyncio.create_subprocess_exec(
                 *argv,
                 stdin=asyncio.subprocess.PIPE,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.DEVNULL,
-                env=os.environ.copy(),
+                env=env,
                 cwd=_runtime_subprocess_cwd(),
             )
         except FileNotFoundError as exc:

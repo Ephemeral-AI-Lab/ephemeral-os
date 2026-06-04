@@ -49,8 +49,8 @@ pub struct Config {
     pub cap_add: Vec<String>,
     /// `--security-opt` values.
     pub security_opt: Vec<String>,
-    /// `--tmpfs` spec for the overlay scratch mount.
-    pub tmpfs: String,
+    /// `--tmpfs` specs for writable e2e and overlay scratch mounts.
+    pub tmpfs: Vec<String>,
     /// Daemon TCP port inside the container.
     pub tcp_port: u16,
     /// Node-pool cap (concurrent sandboxes).
@@ -90,7 +90,7 @@ struct DockerCfg {
     eosd: Option<String>,
     cap_add: Option<Vec<String>>,
     security_opt: Option<Vec<String>>,
-    tmpfs: Option<String>,
+    tmpfs: Option<TmpfsCfg>,
     tcp_port: Option<u16>,
 }
 
@@ -183,7 +183,8 @@ impl Config {
             }),
             tmpfs: docker
                 .tmpfs
-                .unwrap_or_else(|| "/eos:rw,exec,size=2g,mode=1777".to_owned()),
+                .map(TmpfsCfg::into_vec)
+                .unwrap_or_else(default_tmpfs),
             tcp_port: docker.tcp_port.unwrap_or(37657),
             sandboxes,
             mode: NodeMode::parse(&mode_str)?,
@@ -215,6 +216,29 @@ fn load_file_config() -> Result<FileConfig> {
         Err(err) if err.kind() == std::io::ErrorKind::NotFound => Ok(FileConfig::default()),
         Err(err) => Err(err).with_context(|| format!("read e2e config {}", path.display())),
     }
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(untagged)]
+enum TmpfsCfg {
+    One(String),
+    Many(Vec<String>),
+}
+
+impl TmpfsCfg {
+    fn into_vec(self) -> Vec<String> {
+        match self {
+            Self::One(value) => vec![value],
+            Self::Many(values) => values,
+        }
+    }
+}
+
+fn default_tmpfs() -> Vec<String> {
+    vec![
+        "/eos/e2e:rw,exec,size=2g,mode=1777".to_owned(),
+        "/eos/mount:rw,exec,size=2g,mode=1777".to_owned(),
+    ]
 }
 
 fn select_profile(profiles: Option<&BTreeMap<String, ProfileCfg>>) -> Option<ProfileCfg> {

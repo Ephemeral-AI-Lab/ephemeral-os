@@ -52,7 +52,15 @@ fn squash_storage_no_orphan() -> Result<()> {
         )?;
     }
     let metrics = lease.call_ok(ops::API_LAYER_METRICS, json!({}))?;
-    assert_eq!(as_i64(&metrics, "orphan_layer_count")?, 0, "no orphan layers expected: {metrics}");
-    assert_eq!(as_i64(&metrics, "missing_layer_count")?, 0, "no missing layers expected: {metrics}");
+    assert_eq!(
+        as_i64(&metrics, "orphan_layer_count")?,
+        0,
+        "no orphan layers expected: {metrics}"
+    );
+    assert_eq!(
+        as_i64(&metrics, "missing_layer_count")?,
+        0,
+        "no missing layers expected: {metrics}"
+    );
     Ok(())
 }
