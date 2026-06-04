@@ -12,14 +12,12 @@ use serde::{Deserialize, Serialize};
 use crate::error::ToolError;
 use crate::execution::parse_input;
 use crate::executor::ToolExecutor;
+use crate::config::ToolConfigSet;
 use crate::metadata::ExecutionMetadata;
 use crate::name::ToolName;
 use crate::registry::ToolRegistry;
 use crate::result::{OutputShape, ToolResult};
 use crate::spec::text_spec;
-
-const ENTER_DESCRIPTION: &str = "Open a private isolated workspace for this agent.";
-const EXIT_DESCRIPTION: &str = "Close and discard this agent's isolated workspace.";
 
 fn default_grace_s() -> f64 {
     5.0
@@ -86,24 +84,28 @@ impl ToolExecutor for ExitIsolatedWorkspace {
     }
 }
 
-pub(crate) fn register(registry: &mut ToolRegistry) {
+pub(crate) fn register(registry: &mut ToolRegistry, config: &ToolConfigSet) {
+    let enter = config.get(ToolName::EnterIsolatedWorkspace);
     super::register_tool(
         registry,
         ToolName::EnterIsolatedWorkspace,
+        enter,
         text_spec(
             ToolName::EnterIsolatedWorkspace,
-            ENTER_DESCRIPTION,
+            &enter.description,
             schema_for!(EnterIsolatedWorkspaceInput),
         ),
         OutputShape::Text,
         Arc::new(EnterIsolatedWorkspace),
     );
+    let exit = config.get(ToolName::ExitIsolatedWorkspace);
     super::register_tool(
         registry,
         ToolName::ExitIsolatedWorkspace,
+        exit,
         text_spec(
             ToolName::ExitIsolatedWorkspace,
-            EXIT_DESCRIPTION,
+            &exit.description,
             schema_for!(ExitIsolatedWorkspaceInput),
         ),
         OutputShape::Text,

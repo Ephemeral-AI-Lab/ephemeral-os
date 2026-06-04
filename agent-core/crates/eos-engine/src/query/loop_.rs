@@ -127,7 +127,7 @@ pub fn run_query<'a>(ctx: &'a mut QueryContext, messages: &'a mut Vec<Message>) 
                     .record_llm_request(
                         run_request.prompt_report_seq,
                         &ctx.system_prompt,
-                        messages,
+                        &run_request.request.messages,
                         &run_request.request.tools,
                     )
                     .await?;

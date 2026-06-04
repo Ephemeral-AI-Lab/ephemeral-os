@@ -1,8 +1,9 @@
 //! The model-facing tools: one module per tool family (sandbox, isolated,
 //! submission, `ask_advisor`, workflow, subagent, skills). Each tool authors its
-//! Input/Output DTOs, its colocated `ToolSpec` description, and a
-//! [`ToolExecutor`](crate::ToolExecutor) impl; the registry builder wires them
-//! with their intent / terminal flag / hooks (`meta.rs`).
+//! Input/Output DTOs and a [`ToolExecutor`](crate::ToolExecutor) impl; the
+//! description and the intent / terminal flag / hooks come from the externalized
+//! [`ToolConfigSet`](crate::config::ToolConfigSet) (`.eos-agents/tools/*.md`),
+//! which the registry builder stamps onto each `RegisteredTool`.
 
 mod advisor;
 mod isolated;
@@ -16,71 +17,84 @@ use std::sync::Arc;
 
 use eos_llm_client::ToolSpec;
 
+use crate::config::{ToolConfig, ToolConfigSet};
 use crate::executor::{RegisteredTool, ToolExecutor};
-use crate::meta;
 use crate::name::ToolName;
 use crate::registry::ToolRegistry;
 use crate::result::OutputShape;
 
-/// The per-caller scope a tool registry is built for. Today this is the caller's
-/// dispatchable-subagent allow-list, which patches the `run_subagent` input
-/// schema's `agent_name` enum (§6.6).
+/// The per-caller scope a tool registry is built for: the caller's
+/// dispatchable-subagent allow-list (which patches the `run_subagent` input
+/// schema's `agent_name` enum, §6.6) and the bound agent's own skill slug (which
+/// scopes `load_skill_reference` to that one skill).
 #[derive(Debug, Clone, Default)]
 pub struct CallerScope {
     /// The subagent profile names this caller may dispatch.
     pub dispatchable_subagents: Vec<String>,
+    /// The bound agent's own skill folder slug, if it declares one. Scopes
+    /// `load_skill_reference` so the caller can read only that skill's
+    /// references (Python `make_load_skill_reference_from_context`:
+    /// `AgentDefinition.skill.parent.name`). `None` ⇒ a no-op tool.
+    pub skill_slug: Option<String>,
 }
 
-/// Register one tool, attaching its canonical intent / terminal flag / hooks
-/// (`meta.rs`) so each registration site is a single line.
+/// Register one tool, stamping its intent / terminal flag / hooks from the loaded
+/// [`ToolConfig`] so each registration site is a single line.
 pub(crate) fn register_tool(
     registry: &mut ToolRegistry,
     name: ToolName,
+    config: &ToolConfig,
     spec: ToolSpec,
     output: OutputShape,
     executor: Arc<dyn ToolExecutor>,
 ) {
     registry.register(
-        RegisteredTool::new(
-            name,
-            meta::tool_intent(name),
-            meta::is_terminal(name),
-            spec,
-            output,
-            executor,
-        )
-        .with_hooks(meta::tool_hooks(name)),
+        RegisteredTool::new(name, config.intent, config.terminal, spec, output, executor)
+            .with_hooks(config.hooks.clone()),
     );
 }
 
-/// Build the default tool registry for one caller scope. Insertion order matches
-/// the Python factory (sandbox → isolated → submission → `ask_advisor` → workflow →
-/// subagent → skills); the order backs the Phase-4 schema snapshot and is the
-/// agent-spawn default before `restrict`/`remove`.
+/// Build the default tool registry for one caller scope from the externalized
+/// tool config. Insertion order matches the Python factory (sandbox → isolated →
+/// submission → `ask_advisor` → workflow → subagent → skills); the order backs the
+/// schema snapshot and is the agent-spawn default before `restrict`/`remove`.
 #[must_use]
-pub fn build_default_registry(caller: &CallerScope) -> ToolRegistry {
+pub fn build_default_registry(config: &ToolConfigSet, caller: &CallerScope) -> ToolRegistry {
     let mut registry = ToolRegistry::new();
-    sandbox::register(&mut registry);
-    isolated::register(&mut registry);
-    submission::register(&mut registry);
-    advisor::register(&mut registry);
-    workflow::register(&mut registry);
-    subagent::register(&mut registry, caller);
-    skills::register(&mut registry);
+    sandbox::register(&mut registry, config);
+    isolated::register(&mut registry, config);
+    submission::register(&mut registry, config);
+    advisor::register(&mut registry, config);
+    workflow::register(&mut registry, config);
+    subagent::register(&mut registry, config, caller);
+    skills::register(&mut registry, config, caller);
     registry
+}
+
+#[cfg(test)]
+pub(crate) fn repo_tools_config() -> ToolConfigSet {
+    let root =
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../.eos-agents/tools");
+    ToolConfigSet::load_from_dir(&root)
+        .expect("repo .eos-agents/tools loads and validates")
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::hooks::Hook;
 
     // AC-tools-09: every registered tool has a typed ToolName + an intent (no
     // String keys; intent is mandatory). Covers GC-tools-04/05.
     #[test]
     fn all_tools_named_and_intented() {
-        let registry = build_default_registry(&CallerScope {
-            dispatchable_subagents: vec!["explorer".to_owned()],
-        });
+        let registry = build_default_registry(
+            &repo_tools_config(),
+            &CallerScope {
+                dispatchable_subagents: vec!["explorer".to_owned()],
+                skill_slug: None,
+            },
+        );
         // The 24-tool default set, all keyed by ToolName.
         assert_eq!(registry.len(), 24);
         let mut seen = std::collections::BTreeSet::new();
@@ -93,11 +107,11 @@ mod tests {
         assert_eq!(seen.len(), ToolName::ALL.len());
     }
 
-    // GC-tools-02: every spec description is non-empty (single colocated source,
-    // not a doc comment).
+    // GC-tools-02: every spec description is non-empty (loaded from the
+    // externalized config, validated at load).
     #[test]
     fn every_spec_has_a_nonempty_description() {
-        let registry = build_default_registry(&CallerScope::default());
+        let registry = build_default_registry(&repo_tools_config(), &CallerScope::default());
         for tool in registry.list() {
             assert!(
                 !tool.spec.description.trim().is_empty(),
@@ -111,7 +125,7 @@ mod tests {
     // TerminalTool descriptor.
     #[test]
     fn terminal_tools_have_descriptors() {
-        let registry = build_default_registry(&CallerScope::default());
+        let registry = build_default_registry(&repo_tools_config(), &CallerScope::default());
         for tool in registry.list().filter(|t| t.is_terminal) {
             let terminal = crate::terminal::TerminalTool::from_tool_name(tool.name)
                 .expect("terminal tool has a TerminalTool");
@@ -120,15 +134,94 @@ mod tests {
         }
     }
 
+    fn advisor_hook_count(registry: &ToolRegistry, name: ToolName) -> usize {
+        registry
+            .get(name)
+            .expect("tool registered")
+            .hooks
+            .iter()
+            .filter(|hook| matches!(hook, Hook::AdvisorApproval { .. }))
+            .count()
+    }
+
+    // Relocated from the deleted `meta.rs`: exactly the four `submit_*_outcome`
+    // terminals carry one `AdvisorApproval` hook (targeting themselves); the
+    // helper/explorer terminals and `ask_advisor` carry none. Now asserted against
+    // the registry built from the real `.eos-agents/tools` config.
+    #[test]
+    fn advisor_gate_wired_on_exactly_the_four_main_terminals() {
+        let registry = build_default_registry(&repo_tools_config(), &CallerScope::default());
+        for gated in [
+            ToolName::SubmitRootOutcome,
+            ToolName::SubmitPlannerOutcome,
+            ToolName::SubmitGeneratorOutcome,
+            ToolName::SubmitReducerOutcome,
+        ] {
+            assert_eq!(
+                advisor_hook_count(&registry, gated),
+                1,
+                "{gated:?} must carry exactly one AdvisorApproval hook"
+            );
+            assert!(
+                registry.get(gated).expect("registered").hooks.iter().any(|hook| matches!(
+                    hook,
+                    Hook::AdvisorApproval { tool } if *tool == gated
+                )),
+                "{gated:?}'s AdvisorApproval hook must target itself"
+            );
+        }
+        for ungated in [
+            ToolName::AskAdvisor,
+            ToolName::SubmitAdvisorFeedback,
+            ToolName::SubmitExplorationResult,
+        ] {
+            assert_eq!(
+                advisor_hook_count(&registry, ungated),
+                0,
+                "{ungated:?} must NOT be advisor-gated (else ask_advisor self-gates / deadlocks)"
+            );
+        }
+    }
+
+    // Relocated from `meta.rs`: `RequireNoInflightBackgroundTasks` precedes
+    // `AdvisorApproval` on every gated terminal so a background rejection surfaces
+    // before the advisor gate (load-bearing ordering, advisor remediation plan §3).
+    #[test]
+    fn no_inflight_precedes_advisor_on_gated_terminals() {
+        let registry = build_default_registry(&repo_tools_config(), &CallerScope::default());
+        for gated in [
+            ToolName::SubmitRootOutcome,
+            ToolName::SubmitPlannerOutcome,
+            ToolName::SubmitGeneratorOutcome,
+            ToolName::SubmitReducerOutcome,
+        ] {
+            let hooks = &registry.get(gated).expect("registered").hooks;
+            let no_inflight = hooks
+                .iter()
+                .position(|hook| matches!(hook, Hook::RequireNoInflightBackgroundTasks { .. }));
+            let advisor = hooks
+                .iter()
+                .position(|hook| matches!(hook, Hook::AdvisorApproval { .. }));
+            assert!(
+                matches!((no_inflight, advisor), (Some(n), Some(a)) if n < a),
+                "{gated:?}: RequireNoInflight must precede AdvisorApproval"
+            );
+        }
+    }
+
     // AC-tools-08: `registry.specs()` is a stable, ordered Vec<ToolSpec> for the
-    // default tool set, snapshotted (the crate-owned Phase-4 snapshot). The
-    // `run_subagent` spec reproduces the restricted schema: `agent_name` carries
-    // the caller-scoped enum, so the fixture is built for a fixed allow-list.
+    // default tool set, snapshotted. The `run_subagent` spec reproduces the
+    // restricted schema: `agent_name` carries the caller-scoped enum, so the
+    // fixture is built for a fixed allow-list.
     #[test]
     fn specs_snapshot() {
-        let registry = build_default_registry(&CallerScope {
-            dispatchable_subagents: vec!["explorer".to_owned(), "coder".to_owned()],
-        });
+        let registry = build_default_registry(
+            &repo_tools_config(),
+            &CallerScope {
+                dispatchable_subagents: vec!["explorer".to_owned(), "coder".to_owned()],
+                skill_slug: None,
+            },
+        );
         let specs = registry.specs();
         // Guard the run_subagent patched-enum invariant explicitly (it is easy to
         // miss in a large snapshot).

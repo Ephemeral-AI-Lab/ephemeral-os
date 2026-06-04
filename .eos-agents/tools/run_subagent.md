@@ -1,3 +1,8 @@
+---
+intent: write_allowed
+terminal: false
+hooks: []
+---
 Spawn a registered subagent as a supervised async session. You hand it `prompt` as
 its only input. It must finish by calling its terminal tool; whatever that
 terminal tool emits becomes your result.

@@ -269,18 +269,22 @@ struct StubInput {}
 /// A registry of stub tools (correct intent/terminal/hooks, no-op bodies) for the
 /// named tools — used by the dispatch predicate tests.
 pub(crate) fn registry_with(names: &[ToolName]) -> crate::registry::ToolRegistry {
+    // Stub specs, but real intent/terminal/hooks sourced from the externalized
+    // config so the dispatch-predicate tests see production policy.
+    let config = crate::model_tools::repo_tools_config();
     let mut registry = crate::registry::ToolRegistry::new();
     for &name in names {
+        let cfg = config.get(name);
         let spec = crate::spec::text_spec(name, "stub", schemars::schema_for!(StubInput));
         let tool = RegisteredTool::new(
             name,
-            crate::meta::tool_intent(name),
-            crate::meta::is_terminal(name),
+            cfg.intent,
+            cfg.terminal,
             spec,
             OutputShape::Text,
             Arc::new(NoopExecutor),
         )
-        .with_hooks(crate::meta::tool_hooks(name));
+        .with_hooks(cfg.hooks.clone());
         registry.register(tool);
     }
     registry

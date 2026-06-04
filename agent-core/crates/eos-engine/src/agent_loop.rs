@@ -14,7 +14,9 @@ use std::sync::Arc;
 use eos_agent_def::{AgentDefinition, AgentRegistry};
 use eos_llm_client::{LlmClient, Message, DEFAULT_MAX_TOKENS};
 use eos_state::{AgentRunStore, ModelStore};
-use eos_tools::{build_default_registry, CallerScope, ExecutionMetadata, ToolResult};
+use eos_tools::{
+    build_default_registry, CallerScope, ExecutionMetadata, ToolConfigSet, ToolResult,
+};
 use eos_types::{AgentRunId, TaskId};
 use futures::StreamExt;
 
@@ -50,6 +52,9 @@ pub struct EngineRunHandles {
     pub event_source_factory: Option<EventSourceFactory>,
     /// Agent registry (caller scope + advisor `AgentDefinition` resolution).
     pub agent_registry: Arc<AgentRegistry>,
+    /// Externalized tool config (`.eos-agents/tools`), loaded once at composition
+    /// and read by `build_default_registry` for every per-agent registry.
+    pub tool_config: Arc<ToolConfigSet>,
     /// Working directory.
     pub cwd: String,
 }
@@ -145,8 +150,16 @@ pub async fn run_ephemeral_agent(
             .iter()
             .map(|name| name.as_str().to_owned())
             .collect(),
+        // The bound agent's own skill folder name scopes `load_skill_reference`
+        // (Python `make_load_skill_reference_from_context`: `skill.parent.name`).
+        skill_slug: agent
+            .skill
+            .as_deref()
+            .and_then(|p| p.parent())
+            .and_then(|p| p.file_name())
+            .map(|s| s.to_string_lossy().into_owned()),
     };
-    let registry = build_default_registry(&caller_scope);
+    let registry = build_default_registry(&handles.tool_config, &caller_scope);
 
     let ctx_result = build_query_context(BuildQueryContextInput {
         agent,

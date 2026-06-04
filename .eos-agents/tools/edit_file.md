@@ -1,3 +1,8 @@
+---
+intent: write_allowed
+terminal: false
+hooks: []
+---
 Apply one exact search-and-replace edit to an existing file.
 
 Use this when:

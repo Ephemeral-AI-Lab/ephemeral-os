@@ -57,12 +57,13 @@ INCOMPLETE. `backend/src` deletion is NOT yet safe.**
      creation, no per-turn completion drain, no `terminate_for_parent_exit` on
      `TOOL_STOP`, no `cancel_all` on hard-ceiling exit (HIGH; one root cause behind
      query_engine D1, terminal_tools D2, background_supervisor §4/§5).
-  4. **Provider-message sanitization missing** — Rust sends the raw durable
-     transcript to the provider; orphaned `tool_use`/`tool_result` pairs can produce
-     Anthropic 400s (HIGH; query_engine D2 = model_provider NF1).
-  5. **Termination-condition prompt rewritten** — the one-way-exit WARNING block
-     and `<Termination Condition>` wrapper are gone; the model receives materially
-     different guardrail text (HIGH; model_provider D1).
+  4. **Provider-message sanitization was missing; fixed in this revision** — Rust now
+     sends a provider-safe copy of the durable transcript, so orphaned `tool_use` /
+     `tool_result` pairs are dropped before Anthropic validation (HIGH; query_engine
+     D2 = model_provider NF1).
+  5. **Termination-condition prompt rewrite closed by sign-off** — the requested
+     remediation was dropped; Rust keeps the current prompt text as an accepted
+     redesign rather than restoring the Python `<Termination Condition>` wrapper.
   6. **Continuation deferred-iteration start-failure has no compensation** — a
      single planner-launch failure on a deferred handoff leaves the workflow
      permanently OPEN and leaks the coordinator (HIGH; workflow_lifecycle D5 =
@@ -112,8 +113,8 @@ verifier wins and the disagreement is marked. "Sev" is the final
 | HIGH | agent-core | advisor / tools_framework | Pass verdict required before terminal; decision logic + runner are production stubs | `advisor_approval.py:66-119`; `ask_advisor.py:184-211` | `AdvisorService::approval_status` always denies `"missing"` (`notifications.rs:226-231`); `review` canned string; only approver is `#[cfg(test)] ApprovingAdvisor` | CONFIRMED high; verifier sharpens inv-2 partial→`confirmed_disparity`. Flagged "engine-only phase" | Production `AdvisorPort` in `eos-runtime`: `review` launches the advisor agent; `approval_status` reproduces the 6-way conversation scan |
 | HIGH | agent-core | advisor / request_completion / tools_framework | Rust gates `submit_root_outcome`; Python does not → root cannot complete under deny-all stub | `submit_root_outcome.py:42` (only `RequireNoInflight`) | `meta.rs:72-75` adds `Hook::AdvisorApproval`; `tests.rs:208-238` proves root blocked under default stub | CONFIRMED high/intentional divergence; undocumented in arch bundle | Confirm root-gating intended; if so document + ship a working advisor; else drop the hook |
 | HIGH | agent-core | query_engine / terminal_tools / background_supervisor | Background supervisor lifecycle unwired in the query loop (create / drain / `terminate_for_parent_exit` / `cancel_all`) | `loop.py:113-116,238-241,305-307,313-315,329-331` | Loop never constructs/drains/cancels a supervisor; `enable_background_tasks` set but never read (`loop_.rs:98-209`) | CONFIRMED high (both areas; one root cause). terminal_tools D2 rated medium there — take HIGH | Wire `BackgroundTaskSupervisor` into `run_query`: create under flag, drain top-of-turn, terminate on `ToolStop`, cancel-all on `TerminalNotSubmitted`, final cancel on drop |
-| HIGH | agent-core | query_engine / model_provider | Provider-message sanitization missing (`build_provider_messages`/`sanitize_tool_sequence`) | `request.py:29`; `provider_history.py:20-39` | `request.rs:25-30` sends raw `messages.to_vec()`; no sanitize anywhere | CONFIRMED (query_engine D2 high); model_provider verifier raises it as investigator_missed NF1. Same gap. Orphaned tool-use/result → Anthropic 400 | Port `sanitize_tool_sequence` into a `provider_history.rs`; route `build_query_run_request` through it |
-| HIGH | agent-core | model_provider | `build_termination_condition_prompt` text fully rewritten (no `<Termination Condition>` wrapper, no one-way-exit WARNING lines) | `runtime_prompt.py:52-61` | `prompt/runtime_prompt.rs:13-27` emits unrelated string + `: selection_guidance` suffix + skips unknown terminals | CONFIRMED high (verifier: ported from a stale docstring, no migration doc) | Port the Python literal verbatim (wrapper + WARNING lines + sorted `` - `name` `` rows), or get sign-off |
+| HIGH | agent-core | query_engine / model_provider | Provider-message sanitization missing (`build_provider_messages`/`sanitize_tool_sequence`) | `request.py:29`; `provider_history.py:20-39` | FIXED in this revision: `query/provider_messages.rs` builds a provider-safe copy; `request.rs:25-30` routes `build_query_run_request` through it; `loop_.rs` records prompt reports from the provider view | CONFIRMED gap, now remediated. Orphaned `tool_use`/`tool_result` pairs are filtered from the provider request without mutating durable history | Done: `build_provider_messages` ports the sanitizer under the clearer `provider_messages.rs` name. Verified with `cargo fmt -p eos-engine`, `cargo test -p eos-engine provider_messages`, and `cargo test -p eos-engine build_request_uses_provider_safe_history` |
+| HIGH | agent-core | model_provider | `build_termination_condition_prompt` text fully rewritten (no `<Termination Condition>` wrapper, no one-way-exit WARNING lines) | `runtime_prompt.py:52-61` | `prompt/runtime_prompt.rs:13-27` still emits the Rust prompt text | CLOSED by sign-off: terminal-condition restoration was dropped from active remediation | No code change; leave Rust prompt unchanged as the accepted redesign |
 | HIGH | agent-core | workflow_lifecycle / deferred_goal_depth | Continuation (deferred-goal) iteration start-failure has NO compensation | `lifecycle.py:122-147,207-231` (cancel new iter, deregister, close FAILED; `finally` deregister) | `lifecycle.rs:164-184` bare `create_and_start_first_attempt()` no rollback; `?` skips old-iter deregister | CONFIRMED high. deferred_goal_depth verifier reclassifies its inv-1 match → `investigator_missed` (same code). Init path *does* compensate → proves it's a gap | Unconditional old-iter deregister; on failure cancel new iter + deregister + `close_workflow(false)` |
 | HIGH | sandbox | sandbox_tools / daemon_protocol | `write_stdin` wire op-name mismatch: client `api.v1.exec_stdin` vs daemon-registered `api.v1.write_stdin` → `unknown_op` | `transport.py:17`; daemon `dispatcher.rs:149-152` | `tool_api/command.rs:74` → `DaemonOp::ExecStdin` = `"api.v1.exec_stdin"`, unregistered | CONFIRMED high (both areas, end-to-end). Mocked unit tests pass by asserting the wrong op | Rename `DaemonOp::ExecStdin` wire string to `"api.v1.write_stdin"` (or register the alias) |
 | HIGH | sandbox | sandbox_tools / daemon_protocol | Host empty-response fail-closed set lists `exec_stdin`, drops both real `write_stdin` ops → stdin writes replay-eligible (double-apply) | `host/daemon_client.py:619-624` | `daemon_client.rs:582-592` lists `api.v1.exec_stdin`, omits both real ops | CONFIRMED (sandbox_tools D2 medium; daemon_protocol D1 high — take HIGH; no-dedupe replay harm). Two bugs on one string: fixing the op-name alone re-opens this | Set the fail-closed set to both real stdin ops; fix the mis-asserting test |
@@ -229,10 +230,10 @@ constants + tool_result/system_notification wire shapes (`anthropic.rs`,
   `meta.rs:72-75` vs `advisor_approval.py`, `submit_root_outcome.py:42`). HIGH.
 - Background supervisor unwired in the query loop (`loop_.rs:98-209` vs
   `loop.py:113-331`). HIGH.
-- Provider-message sanitization missing (`request.rs:25-30` vs
-  `provider_history.py:20-39`). HIGH.
-- Termination-condition prompt rewritten (`runtime_prompt.rs:13-27` vs
-  `runtime_prompt.py:52-61`). HIGH.
+- Provider-message sanitization gap closed in this revision (`request.rs:25-30`,
+  `query/provider_messages.rs` vs `provider_history.py:20-39`). HIGH.
+- Termination-condition prompt restoration dropped by sign-off; Rust keeps the
+  current prompt text (`runtime_prompt.rs:13-27` vs `runtime_prompt.py:52-61`).
 - Continuation deferred-iteration no-compensation leak (`lifecycle.rs:164-184` vs
   `lifecycle.py:122-147,207-231`). HIGH.
 - Per-agent skill scoping dropped (`model_tools/skills.rs:47-64` vs
@@ -302,7 +303,7 @@ forward as an open item.
 | subagent | agent-core | 3/3 invariants disparity, CRITICAL | unflagged silent miss; `ports.rs` claim false; D9 active harm |
 | background_supervisor | agent-core | 2 match / 3 disparity (no investigation file existed) | gate fires (match); supervisor unwired (HIGH); NF-3 phantom wedge |
 | request_completion | agent-core | Logic faithful (5/5); NF1 shipped-binary empty registry MEDIUM | logic proven only by injection-based tests |
-| model_provider_prompt | agent-core | Anthropic faithful; D1 prompt HIGH; NF1 sanitization | **unproven:** whole `OpenaiClient` (no Python source — Codex comparison refuted); D7 seq LOW |
+| model_provider_prompt | agent-core | Anthropic faithful; NF1 sanitization FIXED; D1 prompt dropped by sign-off | **unproven:** whole `OpenaiClient` (no Python source — Codex comparison refuted); D7 seq LOW |
 | tools_framework | agent-core | 12 match / 7 disparity + NF1 investigator_missed | D1 advisor + D7 skills HIGH; NF1 pipeline-order MEDIUM |
 | persistence_state | agent-core | High fidelity; 2 LOW disparities, tests green | NF-1 message snapshot self-referential; D2 migration-never-diffed coverage hole |
 
@@ -368,17 +369,18 @@ forward as an open item.
    per-directory `.gitignore` from the snapshot (occ D1, N2, N3). *Test:* nested
    `.gitignore`, dir-only `node_modules/`, `**`, `!`, and `*`-not-crossing-`/`; assert
    `logs/*.log` routes GATED (not DIRECT-then-clobber).
-7. **Port provider-message sanitization** (`sanitize_tool_sequence`) before every
-   request (query_engine D2 / model_provider NF1). *Test:* a transcript with an
-   orphaned `tool_use` produces a sanitized request, not a 400.
+7. **Provider-message sanitization landed** (`sanitize_tool_sequence`) before every
+   request (query_engine D2 / model_provider NF1). `build_query_run_request` now
+   sends the sanitized provider copy, not the raw durable transcript. *Test:* a
+   transcript with an orphaned `tool_use` produces a sanitized request, not a 400.
 8. **Add continuation-iteration compensation** (workflow_lifecycle D5,
    deferred_goal_depth inv-1): unconditional old-iter deregister; on
    `create_and_start_first_attempt` failure cancel the new iteration + deregister +
    `close_workflow(false)`. *Test:* inject a planner-launch failure on a deferred
    handoff; assert the workflow closes FAILED and no coordinator leaks.
-9. **Restore the termination-condition prompt** verbatim (model_provider D1) or get
-   redesign sign-off. *Test:* golden-string assertion on the `<Termination Condition>`
-   block.
+9. **Termination-condition prompt remediation dropped by sign-off** (model_provider
+   D1). No active code change; Rust keeps the current prompt text instead of
+   restoring the Python `<Termination Condition>` block.
 10. **Scope `load_skill_reference` per-agent** (tools_framework D7). *Test:* agent A
     cannot read agent B's skill references; not-found error lists only A's skill.
 11. **Make the nested-planner-deferral hook fail-CLOSED + wire it** (deferred_goal_depth
@@ -400,6 +402,43 @@ forward as an open item.
     `internal_error` uuid + `runtime.*` timings (daemon_protocol); prompt-report seq
     + reasoning-block golden row (model_provider D5/D7); migration-vs-canonical schema
     introspection test + FK-CASCADE test (persistence_state D2).
+
+**Phase 2 `model_provider_prompt` implementation note (this revision):**
+
+```mermaid
+flowchart LR
+    A["Durable transcript"] --> B["build_provider_messages"]
+    B --> C{"Pending tool_use id=A?"}
+    C -->|"next user has tool_result A"| D["keep matched pair"]
+    C -->|"terminated before tool_result"| E["drop orphan tool_use from provider copy"]
+    D --> F["LlmRequest.messages"]
+    E --> F
+    F --> G["provider stream"]
+    G --> H["durable transcript append stays unchanged"]
+```
+
+| Surface | Before | After | Key highlight |
+|---|---|---|---|
+| Provider request | `request.rs` sent `messages.to_vec()` directly | `request.rs` calls `build_provider_messages(messages)` | Provider sees only matched tool-use/result pairs |
+| Prompt report | Recorded raw `messages` | Records `run_request.request.messages` | Report matches the exact provider-facing transcript |
+| Durable transcript | Needed to carry all local state | Still unchanged | Sanitization is a projection, not state mutation |
+| Termination prompt | Proposed Python literal restore | Dropped by sign-off | No `<Termination Condition>` wrapper change is made |
+
+Resulting structure:
+
+```text
+agent-core/crates/eos-engine/src/query/
+  mod.rs
+  request.rs
+  loop_.rs
+  provider_messages.rs
+```
+
+Class and field impact: no new public class/type and no persisted field. The only
+new API is crate-private `build_provider_messages(messages: &[Message]) ->
+Vec<Message>`. Blast radius is limited to query request construction, prompt-report
+recording, and unit tests in `eos-engine`; provider clients and durable message
+storage are untouched.
 
 ---
 
@@ -484,9 +523,9 @@ until this lands the runtime cannot complete a real request in a default build
 | ☑ | sandbox / [sandbox_tools](areas/sandbox_tools.html) ⊕ [daemon_protocol](areas/daemon_protocol.html) | HIGH | Fix `write_stdin` end-to-end: rename the client wire op `api.v1.exec_stdin` → `api.v1.write_stdin` **and** set the host fail-closed retry set to both real stdin ops (renaming alone re-opens a replay double-apply). *Verify:* integration against the real `eosd` (not a mocked `DaemonOp::ExecStdin`); respawn-during-`write_stdin` does not double-apply. **Landed:** `ops.rs` wire string + `daemon_client.rs` fail-closed set (both `api.v1.write_stdin` + `api.v1.command.write_stdin`) + pinning tests (`daemon_op_wire_strings`, `empty_response_gating_matches_python_set`, `exec_stdin_request` snapshot) green; live-`eosd` respawn check still pending (Phase-1-gated). | sandbox_tools D1/D2, daemon_protocol D1 · `tool_api/command.rs:74`, `daemon_client.rs:582-592` |
 | ☐ | sandbox / [sandbox_tools](areas/sandbox_tools.html) | LOW | *(deferrable)* Record `api.exec_command.dispatch_total_s` timing; pin the grep/glob wire contract in the arch doc. | sandbox_tools N1 · `tool_primitives.rs:233-248` |
 | ☐ | sandbox / [daemon_protocol](areas/daemon_protocol.html) | LOW | *(deferrable)* Add `internal_error` uuid + real `runtime.*` timings; honor the bounded 5s `cancel` cleanup-wait. | daemon_protocol · `dispatcher.rs:300-317,234-243` |
-| ☑ | sandbox / [occ](areas/occ.html) | HIGH | Replace the hand-rolled root-only gitignore matcher with the `ignore`/`gitignore` crate reading per-dir `.gitignore` from the snapshot (nested, `**`, dir-only `node_modules/`, `!`, `*`-not-crossing-`/`). Prevents DIRECT↔GATED misroute + silent clobber. *Verify:* `logs/*.log` routes GATED, not DIRECT-then-clobber. **Landed (`occ-remediation-PLAN.md`):** the three root-only matchers (`gitignore_matches`/`gitignore_rule_matches`/`wildcard_match`) deleted and replaced by one shared free fn `path_is_ignored` (+ `dir_is_excluded`/`match_with_inheritance`/`matcher_for`/`join_rel`) — an ancestor-dir snapshot walk with a **per-level** `ignore::gitignore::Gitignore`, a caller-owned **directory seal**, and a deeper-wins fold, porting Python `PathspecGitignoreOracle`. Every `.gitignore` is read via `LayerStack::read_bytes` (the active **merged manifest**, newest-layer-wins + whiteout-aware — the same view the overlay mount projects, never a disk-walk); the `ignore` crate is fed in-memory bytes only. `is_ignored` is now a thin per-call-re-read adapter and `occ_route_metrics` calls the same routine (its independent root-`.gitignore` read deleted, so telemetry can no longer diverge from routing). `ignore = "0.4"` added to `[workspace.dependencies]` + `ignore.workspace = true` on `eos-daemon`. **0 new files / types / fields**; `LayerStackRouteProvider` stays `{ root }`. *Verified:* 8 new parity tests (N2 dir-only any-depth, N3 `*`-not-crossing-`/` → GATED, nested scoping, `**`, `!` re-include, directory seal, metrics-match-route, **cross-layer published-`.gitignore` resolution through the merged manifest**) + the two existing routing tests + 74/74 `eos-daemon` lib tests green, `cargo clippy -p eos-daemon --all-targets` clean. (Syscall-bound publish paths compile-verified; routing is in-process unit-tested.) | occ D1, N2, N3 · `dispatcher.rs` `path_is_ignored`/`is_ignored`/`occ_route_metrics` |
-| ☐ | agent-core / [model_provider_prompt](areas/model_provider_prompt.html) | HIGH | Port `sanitize_tool_sequence` into a `provider_history.rs` and route `build_query_run_request` through it. *Verify:* a transcript with an orphaned `tool_use` yields a sanitized request, not an Anthropic 400. | query_engine D2, model_provider NF1 · `request.rs:25-30` |
-| ☐ | agent-core / [model_provider_prompt](areas/model_provider_prompt.html) | HIGH | Restore `build_termination_condition_prompt` verbatim (the `<Termination Condition>` wrapper, one-way-exit WARNING lines, sorted rows) or get redesign sign-off. *Verify:* golden-string assertion on the block. | model_provider D1 · `runtime_prompt.rs:13-27` |
+| ☑ | sandbox / [occ](areas/occ.html) | HIGH | Replace the hand-rolled root-only gitignore matcher with the `ignore`/`gitignore` crate reading per-dir `.gitignore` from the snapshot (nested, `**`, dir-only `node_modules/`, `!`, `*`-not-crossing-`/`). Prevents DIRECT↔GATED misroute + silent clobber. *Verify:* `logs/*.log` routes GATED, not DIRECT-then-clobber. **Landed (`occ-remediation-PLAN.md`):** the three root-only matchers (`gitignore_matches`/`gitignore_rule_matches`/`wildcard_match`) deleted and replaced by one shared free fn `path_is_ignored` (+ `dir_is_excluded`/`match_with_inheritance`/`matcher_for`/`join_rel`) — an ancestor-dir snapshot walk with a **per-level** `ignore::gitignore::Gitignore`, a caller-owned **directory seal**, and a deeper-wins fold, porting Python `PathspecGitignoreOracle`. Every `.gitignore` is read via `LayerStack::read_bytes` (the active **merged manifest**, newest-layer-wins + whiteout-aware — the same view the overlay mount projects, never a disk-walk); the `ignore` crate is fed in-memory bytes only. `is_ignored` is now a thin per-call-re-read adapter and `occ_route_metrics` calls the same routine (its independent root-`.gitignore` read deleted, so telemetry can no longer diverge from routing). `ignore = "0.4"` added to `[workspace.dependencies]` + `ignore.workspace = true` on `eos-daemon`. **0 new files / types / fields**; `LayerStackRouteProvider` stays `{ root }`. *Verified:* 8 new parity tests (N2 dir-only any-depth, N3 `*`-not-crossing-`/` → GATED, nested scoping, `**`, `!` re-include, directory seal, metrics-match-route, **cross-layer published-`.gitignore` resolution through the merged manifest**) + the two existing routing tests + 74/74 `eos-daemon` lib tests green, `cargo clippy -p eos-daemon --all-targets` clean. (Syscall-bound publish paths compile-verified; routing is in-process unit-tested.) **Follow-up fix (this review — double-strip / data-loss):** per-level matchers were built `GitignoreBuilder::new(dir_rel)`, whose `matched()` re-strips its root by raw byte prefix — so a candidate whose child component repeats the dir name (`a/.gitignore` `/x` vs `a/a/x`) double-stripped to `x`, matched the anchored `/x`, and routed the *tracked* file `a/a/x` DIRECT (gate bypassed → silent clobber); `git check-ignore` confirms `a/a/x` is NOT ignored. Root-caused against the locked `ignore 0.4.25` `strip()` (`self.root != Path::new(".")` guard). Fixed by rooting per-level matchers at `.` (the caller already relativizes the candidate; anchoring is pattern-driven, not root-driven) — a one-line change in `matcher_for`. Added `git-check-ignore`-grounded regression `nested_anchored_pattern_not_double_stripped_on_prefix_replay` (9 parity tests now); 21/21 dispatcher tests + `cargo clippy --all-targets` green. | occ D1, N2, N3 · `dispatcher.rs` `path_is_ignored`/`is_ignored`/`occ_route_metrics`/`matcher_for` |
+| ☑ | agent-core / [model_provider_prompt](areas/model_provider_prompt.html) | HIGH | **Done.** Ported provider-facing message sanitization into `query/provider_messages.rs` and routed `build_query_run_request` through it; prompt-report recording now uses `run_request.request.messages`, so the report matches the provider view. Added sanitizer parity tests plus a request-boundary test that proves the durable transcript input is not mutated. *Verified:* `cargo fmt -p eos-engine`; `cargo test -p eos-engine provider_messages`; `cargo test -p eos-engine build_request_uses_provider_safe_history`. | query_engine D2, model_provider NF1 · `provider_messages.rs`, `request.rs`, `loop_.rs` |
+| ☑ | agent-core / [model_provider_prompt](areas/model_provider_prompt.html) | HIGH | **Dropped by sign-off.** Terminal-condition prompt restoration is no longer active remediation; Rust prompt remains unchanged as the accepted prompt redesign/scope decision. | model_provider D1 · `runtime_prompt.rs:13-27` |
 | ☐ | agent-core / [model_provider_prompt](areas/model_provider_prompt.html) | LOW | *(deferrable)* Add a reasoning-block golden row, mint a default `tool_use` id, and pre-increment `next_seq` to match Python. | model_provider D5/D7 · `message.rs:62-67` |
 | ☑ | agent-core / [workflow_lifecycle](areas/workflow_lifecycle.html) | HIGH | **Done — `workflow_lifecycle-remediation-PLAN.md`.** `handle_iteration_closed` deregisters the closed iteration's coordinator **up front** (mirrors Python's `finally`, closing FP2's old-coordinator leak), then routes succeeded+deferred → a new private `start_continuation`, else `close_workflow(succeeded)`. `start_continuation` creates the next iteration+coordinator and, on a first-attempt **start** failure (FP1), runs the bespoke compensation saga — deregister the new coordinator, set the new iteration `Cancelled`, `close_workflow(false)` — then logs the error via `tracing::warn!` and **swallows** it (Python's `except` + `logger.exception`; the attempt is already closed `StartupFailed` by `start_attempt`, so it is not re-closed). Retry + deferral dynamics are untouched (they live in `iteration/mod.rs`). *Verified:* `continuation_start_failure_compensates` (deferred handoff whose planner launch fails via `agent_registry_without_planner` → workflow **FAILED**, new iteration **CANCELLED**, **both** coordinators deregistered, parent untouched); guards `retry_and_continue`, `deferred_goal_starts_next_iteration`, `close_does_not_touch_parent`, `compensation_rolls_back` still green (`cargo test -p eos-workflow` 24/24, clippy-clean). | workflow_lifecycle D5, deferred_goal_depth inv-1 · `lifecycle.rs:156-199` |
 | ☑ | agent-core / [workflow_lifecycle](areas/workflow_lifecycle.html) | MED | **Done.** The `delegate_workflow` already-outstanding short-circuit now returns `ToolResult::error(payload)` (was `ToolResult::ok`), matching Python `delegate_workflow.py:67-81` (`is_error=True`); the flag is consumed downstream (supervisor/dispatch/audit). The cosmetic `"status":"running"` literal is left as-is — `OutstandingWorkflow` carries no `status` field, so aligning it to `existing.status.value` would be the structural change the plan defers. *Verified:* `delegate_workflow_outstanding_is_error` asserts `is_error` on the outstanding branch (`cargo test -p eos-tools` 40/40, clippy-clean). | workflow_lifecycle D3 · `model_tools/workflow.rs:67-80` |

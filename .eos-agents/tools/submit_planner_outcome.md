@@ -1,3 +1,8 @@
+---
+intent: read_only
+terminal: true
+hooks: [no_inflight_background_tasks, disallow_nested_planner_deferral, advisor_approval]
+---
 Terminate your planner run by submitting the generator/reducer DAG for this attempt.
 
 ## Inputs

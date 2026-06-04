@@ -1,3 +1,8 @@
+---
+intent: read_only
+terminal: true
+hooks: []
+---
 Terminate as an explorer subagent with your read-only findings.
 
 Call this when:

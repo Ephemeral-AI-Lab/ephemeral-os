@@ -1,3 +1,8 @@
+---
+intent: write_allowed
+terminal: false
+hooks: []
+---
 Apply an ordered batch of search-and-replace edits to a single file in
 one atomic call.
 

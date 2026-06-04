@@ -21,6 +21,7 @@ use schemars::{schema_for, JsonSchema};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 
+use crate::config::ToolConfigSet;
 use crate::error::ToolError;
 use crate::execution::parse_input;
 use crate::executor::ToolExecutor;
@@ -85,8 +86,6 @@ fn meta_obj(pairs: &[(&str, Value)]) -> JsonObject {
 // ---------------------------------------------------------------------------
 // submit_root_outcome — pure TaskStore/RequestStore path (§8.7).
 // ---------------------------------------------------------------------------
-
-const SUBMIT_ROOT_DESCRIPTION: &str = "Terminate the root request with SUCCESS or FAILED.\n\n- `status`: \"success\" when the user request is complete and verified; \"failed\" when it cannot be completed.\n- `outcome`: the user-facing request result (for success) or the concrete blocker (for failure). The outcome is returned to the user.";
 
 #[derive(Debug, Deserialize, Serialize, JsonSchema)]
 struct SubmitRootOutcomeInput {
@@ -186,9 +185,6 @@ impl ToolExecutor for SubmitRootOutcome {
 // ---------------------------------------------------------------------------
 // submit_generator_outcome / submit_reducer_outcome — PlanSubmissionPort.
 // ---------------------------------------------------------------------------
-
-const SUBMIT_GENERATOR_DESCRIPTION: &str = include_str!("descriptions/submit_generator_outcome.md");
-const SUBMIT_REDUCER_DESCRIPTION: &str = include_str!("descriptions/submit_reducer_outcome.md");
 
 #[derive(Debug, Deserialize, Serialize, JsonSchema)]
 struct OutcomeInput {
@@ -310,8 +306,6 @@ fn submission_ack_result(ack: SubmissionAck, success: &str, metadata: &JsonObjec
 // ---------------------------------------------------------------------------
 // submit_planner_outcome — structural validation + PlanSubmissionPort.
 // ---------------------------------------------------------------------------
-
-const SUBMIT_PLANNER_DESCRIPTION: &str = include_str!("descriptions/submit_planner_outcome.md");
 
 #[derive(Debug, Deserialize, Serialize, JsonSchema)]
 struct PlanTaskInput {
@@ -498,10 +492,6 @@ fn validate_planner_structure(input: &SubmitPlannerOutcomeInput) -> Result<(), S
 // submit_advisor_feedback / submit_exploration_result — helper terminals.
 // ---------------------------------------------------------------------------
 
-const SUBMIT_ADVISOR_DESCRIPTION: &str = include_str!("descriptions/submit_advisor_feedback.md");
-const SUBMIT_EXPLORATION_DESCRIPTION: &str =
-    include_str!("descriptions/submit_exploration_result.md");
-
 #[derive(Debug, Deserialize, Serialize, JsonSchema)]
 struct SubmitAdvisorFeedbackInput {
     verdict: Verdict,
@@ -570,68 +560,80 @@ impl ToolExecutor for SubmitExplorationResult {
 // Registration (Python make_submission_tools order).
 // ---------------------------------------------------------------------------
 
-pub(crate) fn register(registry: &mut ToolRegistry) {
+pub(crate) fn register(registry: &mut ToolRegistry, config: &ToolConfigSet) {
+    let planner = config.get(ToolName::SubmitPlannerOutcome);
     super::register_tool(
         registry,
         ToolName::SubmitPlannerOutcome,
+        planner,
         text_spec(
             ToolName::SubmitPlannerOutcome,
-            SUBMIT_PLANNER_DESCRIPTION,
+            &planner.description,
             schema_for!(SubmitPlannerOutcomeInput),
         ),
         OutputShape::Text,
         Arc::new(SubmitPlannerOutcome),
     );
+    let root = config.get(ToolName::SubmitRootOutcome);
     super::register_tool(
         registry,
         ToolName::SubmitRootOutcome,
+        root,
         text_spec(
             ToolName::SubmitRootOutcome,
-            SUBMIT_ROOT_DESCRIPTION,
+            &root.description,
             schema_for!(SubmitRootOutcomeInput),
         ),
         OutputShape::Text,
         Arc::new(SubmitRootOutcome),
     );
+    let generator = config.get(ToolName::SubmitGeneratorOutcome);
     super::register_tool(
         registry,
         ToolName::SubmitGeneratorOutcome,
+        generator,
         text_spec(
             ToolName::SubmitGeneratorOutcome,
-            SUBMIT_GENERATOR_DESCRIPTION,
+            &generator.description,
             schema_for!(OutcomeInput),
         ),
         OutputShape::Text,
         Arc::new(SubmitGeneratorOutcome),
     );
+    let reducer = config.get(ToolName::SubmitReducerOutcome);
     super::register_tool(
         registry,
         ToolName::SubmitReducerOutcome,
+        reducer,
         text_spec(
             ToolName::SubmitReducerOutcome,
-            SUBMIT_REDUCER_DESCRIPTION,
+            &reducer.description,
             schema_for!(OutcomeInput),
         ),
         OutputShape::Text,
         Arc::new(SubmitReducerOutcome),
     );
+    let advisor = config.get(ToolName::SubmitAdvisorFeedback);
     super::register_tool(
         registry,
         ToolName::SubmitAdvisorFeedback,
+        advisor,
         text_spec(
             ToolName::SubmitAdvisorFeedback,
-            SUBMIT_ADVISOR_DESCRIPTION,
+            &advisor.description,
             schema_for!(SubmitAdvisorFeedbackInput),
         ),
         OutputShape::Text,
         Arc::new(SubmitAdvisorFeedback),
     );
+    let exploration = config.get(ToolName::SubmitExplorationResult);
     super::register_tool(
         registry,
         ToolName::SubmitExplorationResult,
+        exploration,
         text_spec(
             ToolName::SubmitExplorationResult,
-            SUBMIT_EXPLORATION_DESCRIPTION,
+            &exploration.description,
             schema_for!(SubmitExplorationResultInput),
         ),
         OutputShape::Text,

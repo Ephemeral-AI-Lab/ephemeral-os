@@ -750,6 +750,7 @@ version = "0.1.0"
 dependencies = [
  "async-trait",
  "eos-audit",
+ "eos-config",
  "eos-llm-client",
  "eos-sandbox-api",
  "eos-skills",
@@ -761,6 +762,7 @@ dependencies = [
  "schemars 0.8.22",
  "serde",
  "serde_json",
+ "serde_yaml",
  "thiserror 2.0.18",
  "tokio",
 ]

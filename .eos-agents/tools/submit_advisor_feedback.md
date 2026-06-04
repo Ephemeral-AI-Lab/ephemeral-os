@@ -1,3 +1,8 @@
+---
+intent: read_only
+terminal: true
+hooks: []
+---
 Terminate the advisor with your verdict + summary.
 
 Call this exactly once when:

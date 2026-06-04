@@ -1,3 +1,8 @@
+---
+intent: read_only
+terminal: false
+hooks: []
+---
 Enumerate workspace files matching a glob pattern.
 
 Use this when:

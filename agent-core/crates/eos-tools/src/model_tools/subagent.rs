@@ -22,14 +22,11 @@ use crate::execution::parse_input;
 use crate::executor::ToolExecutor;
 use crate::metadata::ExecutionMetadata;
 use crate::name::ToolName;
+use crate::config::ToolConfigSet;
 use crate::ports::{SpawnedSubagent, StartedSubagent};
 use crate::registry::ToolRegistry;
 use crate::result::{OutputShape, ToolResult};
 use crate::spec::{text_spec, text_spec_with_agent_enum};
-
-const RUN_SUBAGENT_DESCRIPTION: &str = include_str!("descriptions/run_subagent.md");
-const CHECK_DESCRIPTION: &str = "Check a running or finished subagent by subagent_session_id. Returns the latest child-agent message snapshot while running and the terminal result after successful completion.";
-const CANCEL_DESCRIPTION: &str = "Cancel a running subagent by subagent_session_id.";
 
 fn default_five() -> u8 {
     5
@@ -169,36 +166,42 @@ impl ToolExecutor for CancelSubagent {
     }
 }
 
-pub(crate) fn register(registry: &mut ToolRegistry, caller: &CallerScope) {
+pub(crate) fn register(registry: &mut ToolRegistry, config: &ToolConfigSet, caller: &CallerScope) {
+    let run = config.get(ToolName::RunSubagent);
     super::register_tool(
         registry,
         ToolName::RunSubagent,
+        run,
         text_spec_with_agent_enum(
             ToolName::RunSubagent,
-            RUN_SUBAGENT_DESCRIPTION,
+            &run.description,
             schema_for!(RunSubagentInput),
             &caller.dispatchable_subagents,
         ),
         OutputShape::Text,
         Arc::new(RunSubagent),
     );
+    let check = config.get(ToolName::CheckSubagentProgress);
     super::register_tool(
         registry,
         ToolName::CheckSubagentProgress,
+        check,
         text_spec(
             ToolName::CheckSubagentProgress,
-            CHECK_DESCRIPTION,
+            &check.description,
             schema_for!(CheckSubagentProgressInput),
         ),
         OutputShape::Text,
         Arc::new(CheckSubagentProgress),
     );
+    let cancel = config.get(ToolName::CancelSubagent);
     super::register_tool(
         registry,
         ToolName::CancelSubagent,
+        cancel,
         text_spec(
             ToolName::CancelSubagent,
-            CANCEL_DESCRIPTION,
+            &cancel.description,
             schema_for!(CancelSubagentInput),
         ),
         OutputShape::Text,

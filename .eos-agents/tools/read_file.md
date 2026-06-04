@@ -1,3 +1,8 @@
+---
+intent: read_only
+terminal: false
+hooks: []
+---
 Read a UTF-8 text file from the workspace, returned with line numbers.
 
 Use this when:

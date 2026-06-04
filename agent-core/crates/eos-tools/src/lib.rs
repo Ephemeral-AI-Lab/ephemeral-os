@@ -14,13 +14,13 @@
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
 
+mod config;
 mod dispatch;
 mod error;
 mod execution;
 mod executor;
 mod hooks;
 mod intent;
-mod meta;
 mod metadata;
 mod model_tools;
 mod name;
@@ -33,6 +33,7 @@ mod terminal;
 #[cfg(test)]
 mod testsupport;
 
+pub use config::{ToolConfig, ToolConfigError, ToolConfigSet};
 pub use dispatch::{
     lifecycle_batch_decision, reject_terminal_batch, BatchRejection, DispatchCall,
     LifecycleBatchDecision,

@@ -15,6 +15,7 @@ use eos_types::JsonObject;
 use schemars::{schema_for, JsonSchema};
 use serde::{Deserialize, Serialize};
 
+use crate::config::ToolConfigSet;
 use crate::error::ToolError;
 use crate::executor::ToolExecutor;
 use crate::metadata::ExecutionMetadata;
@@ -22,8 +23,6 @@ use crate::name::ToolName;
 use crate::registry::ToolRegistry;
 use crate::result::{OutputShape, ToolResult};
 use crate::spec::text_spec;
-
-const ASK_ADVISOR_DESCRIPTION: &str = include_str!("descriptions/ask_advisor.md");
 
 #[derive(Debug, Deserialize, Serialize, JsonSchema)]
 struct AskAdvisorInput {
@@ -51,13 +50,15 @@ impl ToolExecutor for AskAdvisor {
     }
 }
 
-pub(crate) fn register(registry: &mut ToolRegistry) {
+pub(crate) fn register(registry: &mut ToolRegistry, config: &ToolConfigSet) {
+    let ask_advisor = config.get(ToolName::AskAdvisor);
     super::register_tool(
         registry,
         ToolName::AskAdvisor,
+        ask_advisor,
         text_spec(
             ToolName::AskAdvisor,
-            ASK_ADVISOR_DESCRIPTION,
+            &ask_advisor.description,
             schema_for!(AskAdvisorInput),
         ),
         OutputShape::Text,

@@ -11,6 +11,7 @@ use schemars::{schema_for, JsonSchema};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 
+use crate::config::ToolConfigSet;
 use crate::error::ToolError;
 use crate::execution::parse_input;
 use crate::executor::ToolExecutor;
@@ -19,11 +20,6 @@ use crate::name::ToolName;
 use crate::registry::ToolRegistry;
 use crate::result::{OutputShape, ToolResult};
 use crate::spec::text_spec;
-
-const DELEGATE_DESCRIPTION: &str = "Start non-terminal delegated workflow work. Returns a workflow handle; continue running and use check_workflow_status or cancel_workflow later.";
-const CHECK_DESCRIPTION: &str =
-    "Inspect delegated workflow progress and print terminal outcomes when available.";
-const CANCEL_DESCRIPTION: &str = "Cancel an outstanding delegated workflow by workflow_task_id.";
 
 #[derive(Debug, Deserialize, Serialize, JsonSchema)]
 struct DelegateWorkflowInput {
@@ -181,35 +177,41 @@ impl ToolExecutor for CancelWorkflow {
     }
 }
 
-pub(crate) fn register(registry: &mut ToolRegistry) {
+pub(crate) fn register(registry: &mut ToolRegistry, config: &ToolConfigSet) {
+    let delegate = config.get(ToolName::DelegateWorkflow);
     super::register_tool(
         registry,
         ToolName::DelegateWorkflow,
+        delegate,
         text_spec(
             ToolName::DelegateWorkflow,
-            DELEGATE_DESCRIPTION,
+            &delegate.description,
             schema_for!(DelegateWorkflowInput),
         ),
         OutputShape::Text,
         Arc::new(DelegateWorkflow),
     );
+    let check = config.get(ToolName::CheckWorkflowStatus);
     super::register_tool(
         registry,
         ToolName::CheckWorkflowStatus,
+        check,
         text_spec(
             ToolName::CheckWorkflowStatus,
-            CHECK_DESCRIPTION,
+            &check.description,
             schema_for!(CheckWorkflowStatusInput),
         ),
         OutputShape::Text,
         Arc::new(CheckWorkflowStatus),
     );
+    let cancel = config.get(ToolName::CancelWorkflow);
     super::register_tool(
         registry,
         ToolName::CancelWorkflow,
+        cancel,
         text_spec(
             ToolName::CancelWorkflow,
-            CANCEL_DESCRIPTION,
+            &cancel.description,
             schema_for!(CancelWorkflowInput),
         ),
         OutputShape::Text,

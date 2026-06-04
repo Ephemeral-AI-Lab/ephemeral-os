@@ -1,3 +1,8 @@
+---
+intent: write_allowed
+terminal: false
+hooks: []
+---
 Create a new file, or completely overwrite an existing one, with UTF-8 text.
 
 Use this when:

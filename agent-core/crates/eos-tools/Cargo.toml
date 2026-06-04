@@ -17,9 +17,15 @@ eos-sandbox-api.workspace = true
 eos-skills.workspace = true
 eos-audit.workspace = true
 eos-llm-client.workspace = true
+# Direct eos-config edge: `config.rs` names `eos_config::parse_markdown_frontmatter`
+# to split the `.eos-agents/tools/*.md` frontmatter (the shared config-format
+# contract owned upstream, as eos-skills already does). serde_yaml is named to
+# read the parsed frontmatter mapping (intent / terminal / hooks fields).
+eos-config.workspace = true
 
 serde.workspace = true
 serde_json.workspace = true
+serde_yaml.workspace = true
 schemars.workspace = true
 thiserror.workspace = true
 async-trait.workspace = true

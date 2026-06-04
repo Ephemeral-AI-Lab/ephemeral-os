@@ -1,3 +1,8 @@
+---
+intent: read_only
+terminal: true
+hooks: [no_inflight_background_tasks, advisor_approval]
+---
 Terminate your generator run with SUCCESS or FAILED for the current generator task.
 
 ## Inputs

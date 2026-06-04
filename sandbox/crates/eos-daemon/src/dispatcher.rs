@@ -2395,9 +2395,9 @@ fn match_with_inheritance(
     let mut accum = String::new();
     for part in &parts {
         if let Some(matcher) = matcher_for(stack, &accum)? {
-            // Pass `path` relative to `accum`; the matcher rooted at `accum`
-            // treats a non-overlapping path as already-relative, so per-dir
-            // pattern anchoring (`/build`, `src/*.rs`) is preserved.
+            // Pass `path` relative to `accum`. The matcher is rooted at `.`
+            // (see `matcher_for`), so the crate performs no further stripping and
+            // per-dir pattern anchoring (`/build`, `src/*.rs`) is preserved.
             let sub = if accum.is_empty() {
                 path
             } else {
@@ -2435,7 +2435,13 @@ fn matcher_for(
     let Ok(text) = String::from_utf8(bytes) else {
         return Ok(None);
     };
-    let mut builder = GitignoreBuilder::new(dir_rel);
+    // Root `.` (not `dir_rel`): the caller in `match_with_inheritance` already
+    // makes the candidate relative to this directory, and the `ignore` crate's
+    // `Gitignore::matched` re-strips its root by raw byte prefix — rooting at
+    // `dir_rel` would strip it a second time whenever a child component repeats
+    // the directory name (e.g. `a/.gitignore` `/x` vs `a/a/x`). Root `.` disables
+    // that strip; per-pattern anchoring comes from the pattern text, not the root.
+    let mut builder = GitignoreBuilder::new(".");
     for line in text.lines() {
         // `add_line` skips comments/blanks itself; ignore malformed patterns.
         let _ = builder.add_line(None, line);
@@ -3891,6 +3897,34 @@ mod tests {
         // Nested rule, also published into the upper layer.
         assert!(provider.is_ignored(&lp("frontend/dist/bundle.js")?)?);
         assert!(!provider.is_ignored(&lp("src/main.rs")?)?);
+        Ok(())
+    }
+
+    // Regression (double-strip on prefix replay, data-loss-class): a per-level
+    // matcher for dir `D` must not strip `D` from a path whose next component
+    // repeats `D`'s name. The caller already makes the path relative to `D`, so
+    // the matcher must be rooted at `.` — `GitignoreBuilder::new(D)` would strip
+    // `D` a SECOND time (raw byte prefix), turning `a/x` into `x` and matching an
+    // anchored `/x`. Ground truth below is `git check-ignore --no-index`.
+    #[test]
+    fn nested_anchored_pattern_not_double_stripped_on_prefix_replay() -> TestResult {
+        let fixture = Fixture::new_with_gitignores(
+            "prefix_replay",
+            &[("a", "/x\n/b\n"), ("build", "/build/x\n")],
+        )?;
+        let provider = route_provider(&fixture);
+        // `/x` anchored at `a/` matches `a/x` (DIRECT) but NOT `a/a/x` — routing
+        // the tracked `a/a/x` DIRECT would bypass the gate and silently clobber.
+        assert!(provider.is_ignored(&lp("a/x")?)?);
+        assert!(!provider.is_ignored(&lp("a/a/x")?)?);
+        // Seal variant: `/b` seals `a/b`'s subtree, but `a/a/b` is not the
+        // anchored `a/b`, so its whole subtree must stay GATED.
+        assert!(provider.is_ignored(&lp("a/b/file.txt")?)?);
+        assert!(!provider.is_ignored(&lp("a/a/b/file.txt")?)?);
+        // Opposite (false-GATED) direction: `/build/x` anchored at `build/` DOES
+        // match `build/build/x`; the old double-strip dropped it to `x` and missed.
+        assert!(provider.is_ignored(&lp("build/build/x")?)?);
+        assert!(!provider.is_ignored(&lp("build/x")?)?);
         Ok(())
     }
 

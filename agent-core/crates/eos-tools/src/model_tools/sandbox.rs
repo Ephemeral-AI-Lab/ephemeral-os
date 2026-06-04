@@ -23,6 +23,7 @@ use schemars::{schema_for, JsonSchema};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 
+use crate::config::ToolConfigSet;
 use crate::error::ToolError;
 use crate::execution::parse_input;
 use crate::executor::ToolExecutor;
@@ -161,8 +162,6 @@ struct CommandToolOutput {
 // read_file
 // ---------------------------------------------------------------------------
 
-const READ_FILE_DESCRIPTION: &str = include_str!("descriptions/read_file.md");
-
 fn default_one() -> u32 {
     1
 }
@@ -281,8 +280,6 @@ fn build_read_file_output(
 // write_file
 // ---------------------------------------------------------------------------
 
-const WRITE_FILE_DESCRIPTION: &str = include_str!("descriptions/write_file.md");
-
 #[derive(Debug, Deserialize, Serialize, JsonSchema)]
 struct WriteFileInput {
     file_path: String,
@@ -338,9 +335,6 @@ impl ToolExecutor for WriteFile {
 // ---------------------------------------------------------------------------
 // edit_file + multi_edit
 // ---------------------------------------------------------------------------
-
-const EDIT_FILE_DESCRIPTION: &str = include_str!("descriptions/edit_file.md");
-const MULTI_EDIT_DESCRIPTION: &str = include_str!("descriptions/multi_edit.md");
 
 fn default_false() -> bool {
     false
@@ -532,8 +526,6 @@ fn mutation_result(success: bool, output: MutationOutput) -> ToolResult {
 // grep
 // ---------------------------------------------------------------------------
 
-const GREP_DESCRIPTION: &str = include_str!("descriptions/grep.md");
-
 /// `output_mode` literal.
 #[derive(Debug, Clone, Copy, Deserialize, Serialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
@@ -644,8 +636,6 @@ impl ToolExecutor for Grep {
 // glob
 // ---------------------------------------------------------------------------
 
-const GLOB_DESCRIPTION: &str = include_str!("descriptions/glob.md");
-
 #[derive(Debug, Deserialize, Serialize, JsonSchema)]
 struct GlobInput {
     pattern: String,
@@ -697,18 +687,6 @@ impl ToolExecutor for Glob {
 // ---------------------------------------------------------------------------
 // exec_command + write_stdin (command sessions).
 // ---------------------------------------------------------------------------
-
-const EXEC_COMMAND_DESCRIPTION: &str = "Run a command in a managed PTY session inside the sandbox. \
-If the command finishes within `yield_time_ms` you get the final result; otherwise the session \
-keeps running in the background and you get `status: running` with a `command_session_id` — use \
-`write_stdin` to feed input, poll for more output, or tear it down. Set `timeout` (seconds) to bound \
-the run and `max_output_tokens` to cap returned output. Output is a merged PTY stream: everything \
-(including the program's stderr) arrives in `stdout`, and the `stderr` field is always empty.";
-const WRITE_STDIN_DESCRIPTION: &str = "Interact with a running command session by `command_session_id`. \
-Write literal text to its stdin (e.g. `\"y\\n\"`), or poll for more output with empty `chars`. A `\\x03` \
-(Ctrl-C) character only interrupts the foreground program (SIGINT); to end the session entirely set \
-`terminate: true` (SIGTERM→SIGKILL). Returns the final result once the command exits, otherwise \
-`status: running` with output so far. Output is the merged PTY stream in `stdout`; `stderr` is always empty.";
 
 fn default_yield_ms() -> u32 {
     1000
@@ -1025,97 +1003,113 @@ fn command_tool_result(result: &ExecCommandResult) -> ToolResult {
 // Registration.
 // ---------------------------------------------------------------------------
 
-pub(crate) fn register(registry: &mut ToolRegistry) {
+pub(crate) fn register(registry: &mut ToolRegistry, config: &ToolConfigSet) {
+    let read_file = config.get(ToolName::ReadFile);
     super::register_tool(
         registry,
         ToolName::ReadFile,
+        read_file,
         json_spec(
             ToolName::ReadFile,
-            READ_FILE_DESCRIPTION,
+            &read_file.description,
             schema_for!(ReadFileInput),
             schema_for!(ReadFileOutput),
         ),
         OutputShape::json::<ReadFileOutput>("ReadFileOutput"),
         Arc::new(ReadFile),
     );
+    let write_file = config.get(ToolName::WriteFile);
     super::register_tool(
         registry,
         ToolName::WriteFile,
+        write_file,
         json_spec(
             ToolName::WriteFile,
-            WRITE_FILE_DESCRIPTION,
+            &write_file.description,
             schema_for!(WriteFileInput),
             schema_for!(MutationOutput),
         ),
         OutputShape::json::<MutationOutput>("WriteFileOutput"),
         Arc::new(WriteFile),
     );
+    let edit_file = config.get(ToolName::EditFile);
     super::register_tool(
         registry,
         ToolName::EditFile,
+        edit_file,
         json_spec(
             ToolName::EditFile,
-            EDIT_FILE_DESCRIPTION,
+            &edit_file.description,
             schema_for!(EditFileInput),
             schema_for!(MutationOutput),
         ),
         OutputShape::json::<MutationOutput>("EditFileOutput"),
         Arc::new(EditFile),
     );
+    let multi_edit = config.get(ToolName::MultiEdit);
     super::register_tool(
         registry,
         ToolName::MultiEdit,
+        multi_edit,
         json_spec(
             ToolName::MultiEdit,
-            MULTI_EDIT_DESCRIPTION,
+            &multi_edit.description,
             schema_for!(MultiEditInput),
             schema_for!(MutationOutput),
         ),
         OutputShape::json::<MutationOutput>("MultiEditOutput"),
         Arc::new(MultiEdit),
     );
+    let exec_command = config.get(ToolName::ExecCommand);
     super::register_tool(
         registry,
         ToolName::ExecCommand,
+        exec_command,
         json_spec(
             ToolName::ExecCommand,
-            EXEC_COMMAND_DESCRIPTION,
+            &exec_command.description,
             schema_for!(ExecCommandInput),
             schema_for!(CommandToolOutput),
         ),
         OutputShape::json::<CommandToolOutput>("CommandToolOutput"),
         Arc::new(ExecCommand),
     );
+    let write_stdin = config.get(ToolName::WriteStdin);
     super::register_tool(
         registry,
         ToolName::WriteStdin,
+        write_stdin,
         json_spec(
             ToolName::WriteStdin,
-            WRITE_STDIN_DESCRIPTION,
+            &write_stdin.description,
             schema_for!(WriteStdinInput),
             schema_for!(CommandToolOutput),
         ),
         OutputShape::json::<CommandToolOutput>("CommandToolOutput"),
         Arc::new(WriteStdin),
     );
+    let glob = config.get(ToolName::Glob);
     super::register_tool(
         registry,
         ToolName::Glob,
+        glob,
         json_spec(
             ToolName::Glob,
-            GLOB_DESCRIPTION,
+            &glob.description,
             schema_for!(GlobInput),
             schema_for!(GlobOutput),
         ),
         OutputShape::json::<GlobOutput>("GlobOutput"),
         Arc::new(Glob),
     );
+    let grep = config.get(ToolName::Grep);
     super::register_tool(
         registry,
         ToolName::Grep,
+        grep,
         json_spec(
             ToolName::Grep,
-            GREP_DESCRIPTION,
+            &grep.description,
             schema_for!(GrepInput),
             schema_for!(GrepOutput),
         ),

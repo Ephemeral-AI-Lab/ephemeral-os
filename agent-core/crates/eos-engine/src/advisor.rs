@@ -482,7 +482,10 @@ mod tests {
     fn user_msg_1_carries_guard_context_and_role_instruction_fallback() {
         let msg = build_advisor_user_msg_1(&[Message::from_user_text("seed prompt")], None);
         assert!(msg.contains(PROMPT_INJECTION_GUARD));
-        assert!(msg.contains("seed prompt"), "parent user_msg_1 shown verbatim");
+        assert!(
+            msg.contains("seed prompt"),
+            "parent user_msg_1 shown verbatim"
+        );
         assert!(msg.contains("delivered as a system prompt"));
     }
 }

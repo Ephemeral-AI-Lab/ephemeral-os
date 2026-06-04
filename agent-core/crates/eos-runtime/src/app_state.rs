@@ -25,7 +25,7 @@ use eos_skills::{load_skill_registry, SkillRegistry};
 use eos_state::{
     AgentRunStore, AttemptStore, IterationStore, ModelStore, RequestStore, TaskStore, WorkflowStore,
 };
-use eos_tools::{build_default_registry, CallerScope, ToolName, ToolRegistry};
+use eos_tools::{build_default_registry, CallerScope, ToolConfigSet, ToolName, ToolRegistry};
 use eos_types::{Clock, RequestId, SystemClock};
 use tokio_util::sync::CancellationToken;
 
@@ -111,6 +111,7 @@ pub struct AppState {
     pub(crate) audit: Arc<dyn AuditSink>,
     pub(crate) audit_shutdown: Arc<StdMutex<Option<BufferedAuditShutdown>>>,
     pub(crate) tool_registry: Arc<ToolRegistry>,
+    pub(crate) tool_config: Arc<ToolConfigSet>,
     pub(crate) agent_registry: Arc<AgentRegistry>,
     pub(crate) skill_registry: Arc<SkillRegistry>,
     pub(crate) plugin_catalog: Arc<PluginCatalog>,
@@ -153,6 +154,7 @@ impl AppState {
             llm_client: self.llm_client.clone(),
             event_source_factory: self.event_source_factory.clone(),
             agent_registry: self.agent_registry.clone(),
+            tool_config: self.tool_config.clone(),
             cwd: self.cwd.clone(),
         }
     }
@@ -208,6 +210,8 @@ pub struct AppStateBuilder {
     audit_path: Option<PathBuf>,
     agent_registry: Option<Arc<AgentRegistry>>,
     agents_dir: Option<PathBuf>,
+    tool_config: Option<Arc<ToolConfigSet>>,
+    tools_root: Option<PathBuf>,
     skill_registry: Option<Arc<SkillRegistry>>,
     skill_root: Option<PathBuf>,
     plugin_catalog: Option<Arc<PluginCatalog>>,
@@ -286,6 +290,18 @@ impl AppStateBuilder {
     /// Load agent profiles from this directory tree.
     pub fn agents_dir(mut self, dir: impl Into<PathBuf>) -> Self {
         self.agents_dir = Some(dir.into());
+        self
+    }
+
+    /// Inject a prebuilt tool config (else load from `tools_root`).
+    pub fn tool_config(mut self, config: Arc<ToolConfigSet>) -> Self {
+        self.tool_config = Some(config);
+        self
+    }
+
+    /// Load the externalized tool config from this `.eos-agents/tools` root.
+    pub fn tools_root(mut self, root: impl Into<PathBuf>) -> Self {
+        self.tools_root = Some(root.into());
         self
     }
 
@@ -427,7 +443,13 @@ impl AppStateBuilder {
             None => Arc::new(build_plugin_catalog(self.plugin_root.as_deref())?),
         };
 
-        let tool_registry = Arc::new(build_default_registry(&CallerScope::default()));
+        let tool_config = match self.tool_config {
+            Some(config) => config,
+            None => Arc::new(build_tool_config(self.tools_root.as_deref())?),
+        };
+
+        let tool_registry =
+            Arc::new(build_default_registry(&tool_config, &CallerScope::default()));
 
         // Cross-registry validation: unknown agent tool names fail fast unless
         // compatibility mode is enabled (anchor §10 / AC-eos-runtime-09).
@@ -467,6 +489,7 @@ impl AppStateBuilder {
             audit,
             audit_shutdown: Arc::new(StdMutex::new(audit_shutdown)),
             tool_registry,
+            tool_config,
             agent_registry,
             skill_registry,
             plugin_catalog,
@@ -518,6 +541,17 @@ fn build_skill_registry(root: Option<&std::path::Path>) -> Result<SkillRegistry>
         Some(root) => load_skill_registry(root).context("loading skills"),
         None => Ok(SkillRegistry::new()),
     }
+}
+
+/// Load the externalized tool config. Unlike skills/plugins, the tool config is
+/// **mandatory** (the registry needs all tools), so a missing root is an error:
+/// inject via [`AppStateBuilder::tool_config`] or point at a `.eos-agents/tools`
+/// tree via [`AppStateBuilder::tools_root`].
+fn build_tool_config(root: Option<&std::path::Path>) -> Result<ToolConfigSet> {
+    let root = root.context(
+        "tool config root not set: call AppStateBuilder::tools_root or ::tool_config",
+    )?;
+    ToolConfigSet::load_from_dir(root).context("loading tool config")
 }
 
 fn build_plugin_catalog(root: Option<&std::path::Path>) -> Result<PluginCatalog> {

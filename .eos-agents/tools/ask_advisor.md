@@ -1,3 +1,8 @@
+---
+intent: read_only
+terminal: false
+hooks: [block_in_isolated_mode]
+---
 Ask the advisor for a blocking, read-only audit of the terminal submission
 you're about to make.
 

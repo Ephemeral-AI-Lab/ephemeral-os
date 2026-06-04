@@ -2,6 +2,7 @@
 
 mod context;
 mod loop_;
+mod provider_messages;
 mod provider_source;
 mod request;
 

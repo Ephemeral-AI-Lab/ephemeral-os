@@ -24,6 +24,7 @@ use crate::name::ToolName;
 use crate::result::ToolResult;
 
 mod advisor_approval;
+mod disallow_nested_planner_deferral;
 mod require_no_inflight_background_tasks;
 
 /// One wired pre-hook. `#[non_exhaustive]`: hooks are added here, never as an
@@ -136,6 +137,22 @@ impl Hook {
         }
     }
 
+    /// The canonical config token for this hook — the string authored in a
+    /// `.eos-agents/tools/*.md` `hooks:` list. The inverse map (token → variant,
+    /// filling the `{ tool }` field) lives in `config.rs`; a round-trip test keeps
+    /// the two in sync.
+    #[must_use]
+    pub const fn config_token(self) -> &'static str {
+        match self {
+            Hook::RequireNoInflightBackgroundTasks { .. } => "no_inflight_background_tasks",
+            Hook::AdvisorApproval { .. } => "advisor_approval",
+            Hook::DisallowNestedPlannerDeferral { .. } => "disallow_nested_planner_deferral",
+            Hook::DestructiveGitShell { .. } => "destructive_git_shell",
+            Hook::DestructiveShell { .. } => "destructive_shell",
+            Hook::BlockInIsolatedMode { .. } => "block_in_isolated_mode",
+        }
+    }
+
     /// The Python hook `name` (used in the `hook_failure` trace).
     #[must_use]
     pub fn hook_name(self) -> String {
@@ -174,7 +191,10 @@ impl Hook {
                 advisor_approval::run_advisor_approval(tool, ctx).await
             }
             Hook::DisallowNestedPlannerDeferral { .. } => {
-                run_disallow_nested_planner_deferral(raw_input, ctx).await
+                disallow_nested_planner_deferral::run_disallow_nested_planner_deferral(
+                    raw_input, ctx,
+                )
+                .await
             }
         }
     }
@@ -454,8 +474,6 @@ fn run_destructive_shell(raw_input: &JsonObject) -> HookOutcome {
 
 const BLOCK_IN_ISOLATED_MESSAGE: &str = "BLOCKED: ask_advisor is unavailable inside an isolated workspace; call exit_isolated_workspace first, then ask_advisor and submit your terminal.";
 
-const NESTED_PLANNER_DEFERRAL_MESSAGE: &str = "BLOCKED: nested workflow planners cannot set deferred_goal_for_next_iteration. Submit a plan that covers all current child-workflow goal items and leaves no remaining items.";
-
 /// `BlockInIsolatedMode`: fail-OPEN on any daemon RPC error (Python parity).
 async fn run_block_in_isolated_mode(ctx: &ExecutionMetadata) -> Result<HookOutcome, ToolError> {
     let sandbox_id = match &ctx.sandbox_id {
@@ -470,34 +488,6 @@ async fn run_block_in_isolated_mode(ctx: &ExecutionMetadata) -> Result<HookOutco
         )),
         // Active=false OR any daemon error → fail-open (pass).
         Ok(false) | Err(_) => Ok(HookOutcome::pass()),
-    }
-}
-
-/// `DisallowNestedPlannerDeferral`: only fires when a nonblank deferred goal is
-/// set; passes when nesting cannot be determined (the orchestrator still
-/// enforces on apply).
-async fn run_disallow_nested_planner_deferral(
-    raw_input: &JsonObject,
-    ctx: &ExecutionMetadata,
-) -> Result<HookOutcome, ToolError> {
-    let deferred = raw_input
-        .get("deferred_goal_for_next_iteration")
-        .and_then(Value::as_str)
-        .map(str::trim)
-        .filter(|s| !s.is_empty());
-    if deferred.is_none() {
-        return Ok(HookOutcome::pass());
-    }
-    let (Some(workflow_id), Some(control)) = (&ctx.workflow_id, &ctx.workflow_control) else {
-        return Ok(HookOutcome::pass());
-    };
-    if control.is_nested_workflow(workflow_id).await? {
-        Ok(HookOutcome::Deny(
-            HookDenial::new(NESTED_PLANNER_DEFERRAL_MESSAGE, "nested_planner_deferral")
-                .with_reason("nested_workflow"),
-        ))
-    } else {
-        Ok(HookOutcome::pass())
     }
 }
 

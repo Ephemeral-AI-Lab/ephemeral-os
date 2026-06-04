@@ -449,7 +449,10 @@ mod tests {
             error: None,
         });
         assert_eq!(status, BackgroundTaskStatus::Completed);
-        assert!(result.is_error, "the terminal's is_error rides through verbatim");
+        assert!(
+            result.is_error,
+            "the terminal's is_error rides through verbatim"
+        );
         assert_eq!(exit_code, 1);
         assert_eq!(terminal_called_flag(&result), Some(true));
         let record = record_with(BackgroundTaskStatus::Completed, Some(result));
@@ -481,7 +484,9 @@ mod tests {
         });
         assert_eq!(status, BackgroundTaskStatus::Failed);
         assert_eq!(exit_code, 1);
-        assert!(result.output.contains("subagent crashed: provider exploded"));
+        assert!(result
+            .output
+            .contains("subagent crashed: provider exploded"));
         assert_eq!(terminal_called_flag(&result), Some(false));
         assert_eq!(
             subagent_status_and_result(&record_with(BackgroundTaskStatus::Failed, Some(result))).0,

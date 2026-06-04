@@ -1,3 +1,8 @@
+---
+intent: read_only
+terminal: false
+hooks: []
+---
 Regex-scan workspace file contents.
 
 Use this when:

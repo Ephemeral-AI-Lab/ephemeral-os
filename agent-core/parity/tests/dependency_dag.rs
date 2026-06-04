@@ -36,6 +36,11 @@ fn frozen_edges() -> Edges {
         // upstream deps re-export them (eos-state re-exports only a subset) — so
         // the edge is required to compile, per the crate's own impl-eos-tools.md
         // §2. Mirrors the eos-sandbox-host / eos-plugin-catalog precedent.
+        // The externalized tool config (`config.rs`) adds the eos-tools ->
+        // eos-config edge: it names `eos_config::parse_markdown_frontmatter` to
+        // split `.eos-agents/tools/*.md` frontmatter (the shared config-format
+        // contract owned upstream, as eos-skills already does). No cycle:
+        // eos-config is a DAG-root leaf with no internal upstream edge.
         (
             "eos-tools",
             &[
@@ -45,6 +50,7 @@ fn frozen_edges() -> Edges {
                 "eos-skills",
                 "eos-audit",
                 "eos-llm-client",
+                "eos-config",
             ],
         ),
         // The command-session supervision design adds the eos-engine ->

@@ -1,5 +1,5 @@
-//! The inner execution pipeline: parse → pre-hooks → execute → validate output →
-//! stamp-terminal-on-success.
+//! The inner execution pipeline: reject-`background` → pre-hooks → execute (the
+//! body parses) → validate output → stamp-terminal-on-success.
 //!
 //! Ports the inner half of `_framework/execution/tool_call.py::execute_tool_once`
 //! and `_framework/core/validation.py`. The async query/dispatch loop, budget
@@ -7,6 +7,26 @@
 //! are **`eos-engine`** (this crate owns the *decisions*, the engine owns the
 //! *loop*). The unexercised post-hook stage is dropped (every wired hook is a
 //! pre-hook).
+//!
+//! ## Pre-hook input order — intentional divergence from Python (NF1)
+//!
+//! Python parses input into the validated model *first*, then runs pre-hooks on
+//! that model (`tool_call.py:157` then `:163`). This generic pipeline instead runs
+//! pre-hooks on the **raw** [`JsonObject`] and parses inside each executor body
+//! (`execute` → [`parse_input`]). A hook author must know two consequences:
+//!
+//! 1. **Pre-hooks see raw, pre-`serde`-default input** — a `#[serde(default)]`
+//!    field is observed *absent* here, where Python shows the default-applied value.
+//! 2. **A pre-hook `Deny` precedes a parse error** — for input that is both
+//!    malformed *and* hook-denied, this pipeline returns the `Deny`; Python returns
+//!    the parse error first.
+//!
+//! This is behavior-equivalent for every wired hook: all read **required** fields
+//! (`command`/`cmd`, `tool_name`) that carry no `serde` default, and none inspects
+//! a defaulted field. The order is observable only by a hypothetical future hook
+//! that reads a defaulted field — revisit then (parse-before-hooks would need a
+//! per-tool "normalize raw → default-applied JSON" seam, since the loop is generic
+//! over `JsonObject`). `pre_hook_denies_before_parse` locks the precedence half.
 
 use eos_types::JsonObject;
 use serde::de::DeserializeOwned;
@@ -41,7 +61,8 @@ pub async fn execute_tool_once(
         )));
     }
 
-    // 2. Pre-hooks: the first Deny short-circuits to an in-band error.
+    // 2. Pre-hooks run on RAW (unparsed, pre-default) input — see the module-level
+    //    NF1 note. The first Deny short-circuits to an in-band error before parse.
     if let Some(denial) = run_pre_hooks(tool, raw_input, ctx).await? {
         return Ok(denial);
     }
@@ -420,6 +441,79 @@ mod tests {
                 .await
                 .expect("ok")
                 .is_error
+        );
+    }
+
+    // ---- NF1: pre-hooks run on raw input, before the body parses ----
+
+    #[derive(Serialize, Deserialize, schemars::JsonSchema)]
+    struct Needs {
+        // Required field: `parse_input` fails when it is absent.
+        needed: String,
+    }
+
+    // Records that the body ran, then parses `Needs` (surfacing the in-band parse
+    // error like a real executor). Lets a test prove the body — and its parse — is
+    // never reached when a pre-hook denies first.
+    struct ParsesAndRecords(Arc<AtomicBool>);
+    #[async_trait]
+    impl ToolExecutor for ParsesAndRecords {
+        async fn execute(
+            &self,
+            input: &JsonObject,
+            _ctx: &ExecutionMetadata,
+        ) -> Result<ToolResult, ToolError> {
+            self.0.store(true, Ordering::SeqCst);
+            match parse_input::<Needs>(ToolName::ExecCommand, input) {
+                Ok(_) => Ok(ToolResult::ok("ran")),
+                Err(in_band) => Ok(in_band),
+            }
+        }
+    }
+
+    // NF1: an input that is BOTH hook-denied (destructive `cmd`) AND unparseable by
+    // the body's DTO (missing required `needed`). Pre-hooks run on the raw input
+    // first, so the Deny wins and the body never parses — locking the documented
+    // precedence (Python surfaces the parse error first; this pipeline does not).
+    #[tokio::test]
+    async fn pre_hook_denies_before_parse() {
+        let ctx = metadata();
+        let reached = Arc::new(AtomicBool::new(false));
+        let exec_tool = RegisteredTool::new(
+            ToolName::ExecCommand,
+            ToolIntent::WriteAllowed,
+            false,
+            crate::spec::text_spec(ToolName::ExecCommand, "desc", schemars::schema_for!(Needs)),
+            OutputShape::Text,
+            Arc::new(ParsesAndRecords(reached.clone())),
+        )
+        .with_hooks(vec![Hook::DestructiveShell {
+            tool: ToolName::ExecCommand,
+        }]);
+
+        let mut input = JsonObject::new();
+        input.insert(
+            "cmd".to_owned(),
+            Value::String("rm -rf /testbed".to_owned()),
+        );
+        let res = execute_tool_once(&exec_tool, &input, &ctx)
+            .await
+            .expect("ok");
+
+        assert!(res.is_error);
+        assert_eq!(
+            res.metadata["policy"],
+            json!("destructive_shell"),
+            "the hook Deny is returned, not a parse error"
+        );
+        assert!(
+            !res.output.contains("Invalid input"),
+            "the body's parse never ran: {}",
+            res.output
+        );
+        assert!(
+            !reached.load(Ordering::SeqCst),
+            "the executor body (and its parse) is never reached"
         );
     }
 }

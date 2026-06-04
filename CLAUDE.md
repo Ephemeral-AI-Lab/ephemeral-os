@@ -6,13 +6,26 @@ not as a reason to stop.
 
 ## Project Context
 
-- Python package metadata lives in `pyproject.toml`. The project supports Python
-  `>=3.10`; lint/type tooling is configured for Python 3.11.
-- Use `uv` for dependency management and command execution. Typical setup is
-  `uv sync --extra dev`; run project commands with `uv run ...` when the virtual
-  environment is not already active.
-- Main backend areas are `backend/src/task`, `backend/src/workflow`,
-  `backend/src/runtime`, `backend/src/engine`, and `backend/src/sandbox`.
+- Rust is the main implementation language and the default target for new
+  backend behavior. Treat the top-level `agent-core/` and `sandbox/` Rust
+  workspaces as the primary project roots.
+- `agent-core/` owns the Rust agent control plane: runtime entry, task/workflow
+  state, engine/query loop, tool framework, provider clients, sandbox host API,
+  config, audit, skills, and plugin catalog.
+- `sandbox/` owns the Rust sandbox substrate: `eosd`, daemon RPC/dispatch,
+  command sessions, LayerStack, OCC, overlay execution, isolated workspaces,
+  plugin PPC, terminal pairs, runner helpers, and the shared wire protocol.
+- Use Cargo from the owning Rust workspace first (`cd agent-core && cargo ...`
+  or `cd sandbox && cargo ...`). Keep dependencies in the workspace
+  `Cargo.toml`, respect the existing Rust 2021 / `rust-version = "1.85"`
+  contract, and follow the workspace lint posture.
+- Python package metadata still lives in `pyproject.toml` for legacy backend
+  code, tests, scripts, and migration glue. Use `uv` only when touching that
+  Python surface.
+- `backend/src` is the legacy Python backend during the Rust migration. It will
+  be deprecated once the migration is complete; prefer the Rust implementation
+  when behavior exists in both places unless the task explicitly asks for Python
+  parity, migration glue, or a legacy backend fix.
 
 ## Codebase Memory And Architecture
 
@@ -27,60 +40,74 @@ as historical background and stale-claim comparison material; the maintained
 cross-module map now lives under `docs/architecture`.
 
 - Treat the code checkout as source truth and `docs/architecture` as the
-  curated memory layer. If an architectural claim matters, verify the current
-  code anchor and update the smallest affected architecture page rather than
-  adding disconnected notes. When refreshing architecture docs, follow each
-  page's `data-last-reviewed-commit` and `data-evidence-paths` metadata.
+  curated memory layer. For Rust-owned behavior, verify the current anchor in
+  `agent-core/` or `sandbox/` even when an architecture page still lists
+  `backend/src` evidence paths. When refreshing architecture docs, update the
+  smallest affected page and convert stale Python evidence paths to Rust
+  evidence paths instead of adding disconnected notes.
+- Use this Rust ownership map before falling back to legacy Python:
+  `agent-core/crates/eos-runtime` owns request bootstrap and root-agent entry;
+  `eos-state` and `eos-db` own persisted Request/Task/Workflow/Iteration/Attempt
+  state and stores; `eos-workflow` owns delegated workflow lifecycle, context
+  packets, attempt orchestration, and plan DAG handling; `eos-engine` owns the
+  query loop, provider stream handling, tool dispatch, background supervisor,
+  and notifications; `eos-tools` owns tool definitions, terminal tools, hooks,
+  and model-facing tool surfaces; `eos-sandbox-api` and `eos-sandbox-host` own
+  host-side sandbox protocol, provisioning, and lifecycle; `sandbox/crates/*`
+  owns the daemon/runtime substrate.
 - Task is the persisted agent interface. A top-level request mints a root
   `Task(role=root, workflow_id=None)` and runs the root agent directly through
-  `backend/src/runtime/entry.py`; the request finishes through
-  `submit_root_outcome`. Delegated decomposition is launched by agents with the
-  non-terminal `delegate_workflow` tool and persists Workflow -> Iteration ->
-  Attempt state under `backend/src/workflow`. Coordination still flows through
-  persisted state, terminal submissions, context packets, and outcomes; do not
-  introduce peer-to-peer agent communication or a global agent orchestrator.
-  Each Attempt owns one planner-authored DAG of generator and reducer Task rows
-  whose edges are `needs`. Stages are PLAN -> RUN -> CLOSED, and the reducer is
-  the exit gate.
+  `agent-core/crates/eos-runtime/src/entry.rs` and
+  `agent-core/crates/eos-runtime/src/root_agent.rs`; the request finishes
+  through `submit_root_outcome`. Delegated decomposition is launched by agents
+  with the non-terminal `delegate_workflow` tool and persists Workflow ->
+  Iteration -> Attempt state through `agent-core/crates/eos-workflow` plus
+  `eos-state` / `eos-db`. Coordination still flows through persisted state,
+  terminal submissions, context packets, and outcomes; do not introduce
+  peer-to-peer agent communication or a global agent orchestrator. Each Attempt
+  owns one planner-authored DAG of generator and reducer Task rows whose edges
+  are `needs`. Stages are PLAN -> RUN -> CLOSED, and the reducer is the exit
+  gate.
 - `ContextEngine` builds role packets from store state for workflow agents only.
   Keep lifecycle policy in workflow handlers/managers, not hidden in context
-  construction. The context code lives under
-  `backend/src/workflow/context_engine`.
-- Workflow state is consolidated in `backend/src/workflow/_core/state.py`
-  (Workflow, Iteration, Attempt) and results in
-  `backend/src/workflow/_core/outcomes.py`. `WorkflowStarter.start(prompt,
-  parent_task_id)` creates delegated workflow state from a running Task and
-  leaves the parent Task running. Agents inspect or cancel the background handle
-  with `check_workflow_status` / `cancel_workflow`, then submit their own
-  terminal outcome. There is no synthetic root workflow, legacy waiting status,
-  legacy delegation link column, or close-time parent mutation.
+  construction. The Rust context code lives under
+  `agent-core/crates/eos-workflow/src/context`.
+- Workflow state DTOs live in `agent-core/crates/eos-state`; SQL-backed stores
+  live in `agent-core/crates/eos-db`; workflow lifecycle and outcomes are
+  coordinated by `agent-core/crates/eos-workflow`. `WorkflowStarter::start`
+  creates delegated workflow state from a running Task and leaves the parent
+  Task running. Agents inspect or cancel the background handle with
+  `check_workflow_status` / `cancel_workflow`, then submit their own terminal
+  outcome. There is no synthetic root workflow, legacy waiting status, legacy
+  delegation link column, or close-time parent mutation.
 - `AttemptOrchestrator` is per-Attempt lifecycle machinery, not permission to
   add a global orchestration layer. Related launch, stage-advance, and close
-  behavior lives under `backend/src/workflow/attempt`.
+  behavior lives under `agent-core/crates/eos-workflow/src/attempt`.
 - The engine loop owns agent execution and terminal-tool enforcement.
   Successful terminal tools are stamped as terminating by
-  `backend/src/tools/_framework/execution/tool_call.py`; dispatch and loop exit
-  run through `backend/src/engine/tool_call/dispatch.py` and
-  `backend/src/engine/query/loop.py`. Terminal tools must be called alone;
-  those terminal results are persisted task/workflow state inputs, not just user-facing
-  messages. Background execution is an engine dispatch mode, not a provider-level
-  persistent shell session.
+  `agent-core/crates/eos-tools`; dispatch and loop exit run through
+  `agent-core/crates/eos-engine/src/tool_call/dispatch.rs` and
+  `agent-core/crates/eos-engine/src/query/loop_.rs`. Terminal tools must be
+  called alone; those terminal results are persisted task/workflow state inputs,
+  not just user-facing messages. Background execution is an engine dispatch
+  mode, not a provider-level persistent shell session.
 - Sandbox is the tool-execution environment. Agents run outside the sandbox and
   call provider-backed sandbox APIs for file, shell, plugin, and workspace
-  actions. Provider selection lives in
-  `backend/src/sandbox/provider/bootstrap.py` and
-  `backend/src/config/sections/sandbox.py`; Docker is default unless
-  `EOS_SANDBOX_PROVIDER` or central config selects Daytona. Provider bootstrap
-  is process-global and first-call-wins.
-- Workspace routing lives in
-  `backend/src/sandbox/daemon/workspace_tool_dispatch.py`. Shared workspace
-  `read_file`, `write_file`, and `edit_file` use daemon-owned LayerStack/OCC
-  fast paths when a workspace binding exists. Shell, search, and plugin-style
-  operations use the overlay pipeline; write-capable overlay results publish
-  through OCC-gated paths. LayerStack/OCC services live in
-  `backend/src/sandbox/layer_stack` and `backend/src/sandbox/occ`; overlay
-  execution lives in `backend/src/sandbox/ephemeral_workspace` and
-  `backend/src/sandbox/overlay`.
+  actions. The Rust host/API layer lives in
+  `agent-core/crates/eos-sandbox-api` and
+  `agent-core/crates/eos-sandbox-host`; the daemon and wire protocol live in
+  `sandbox/crates/eos-daemon`, `sandbox/crates/eosd`, and
+  `sandbox/crates/eos-protocol`. Rust sandbox config is Docker-only today; do
+  not reintroduce Daytona or non-Docker provider branches unless the task is
+  explicitly a legacy Python migration task.
+- Workspace routing in Rust lives in `sandbox/crates/eos-daemon/src/dispatcher.rs`
+  and the daemon command/plugin/isolated modules. Shared workspace `read_file`,
+  `write_file`, and `edit_file` use daemon-owned LayerStack/OCC fast paths when
+  a workspace binding exists. Shell, search, and plugin-style operations use
+  the overlay pipeline; write-capable overlay results publish through OCC-gated
+  paths. LayerStack/OCC services live in `sandbox/crates/eos-layerstack` and
+  `sandbox/crates/eos-occ`; overlay and namespace execution live in
+  `sandbox/crates/eos-overlay` and `sandbox/crates/eos-runner`.
 - Isolated workspace mode is an explicit `enter_isolated_workspace` /
   `exit_isolated_workspace` lifecycle. It gives an agent a persistent private
   workspace for that isolated session through the active `agent_id` handle, not
@@ -88,11 +115,11 @@ cross-module map now lives under `docs/architecture`.
   captured and audited but not OCC-published; exit tears down the namespace,
   releases the snapshot lease, and removes scratch state. Enter rejects active
   sandbox-bound background work, exit cancels or drains it, and plugin/LSP
-  operations are blocked while isolated mode is active for that agent. The code
-  lives in
-  `backend/src/tools/isolated_workspace`,
-  `backend/src/sandbox/host/isolated_workspace_lifecycle.py`, and
-  `backend/src/sandbox/isolated_workspace`; the architecture references are
+  operations are blocked while isolated mode is active for that agent. The Rust
+  model tool lives in `agent-core/crates/eos-tools/src/model_tools/isolated.rs`;
+  host lifecycle code lives in `agent-core/crates/eos-sandbox-host`; daemon ops
+  live in `sandbox/crates/eos-daemon/src/isolated.rs`; core isolated lifecycle
+  lives in `sandbox/crates/eos-isolated`. The architecture references are
   `docs/architecture/tools/isolated-workspace.html` and
   `docs/architecture/sandbox/workspaces.html`.
 
@@ -134,6 +161,10 @@ cross-module map now lives under `docs/architecture`.
   it toward the smaller shape.
 - If the solution is growing large and a smaller design would solve the same
   problem, simplify before continuing.
+- In Rust, prefer typed IDs, enums, DTOs, ports, and explicit dependency edges
+  over stringly or ad hoc compatibility shims. Keep workspace dependency DAGs
+  intentional; do not add cross-workspace back-edges or broad dependencies just
+  to reach a helper.
 - Avoid defensive branches for impossible states unless the surrounding codebase
   already requires that style.
 - Match the existing code's style and ownership boundaries even when you would
@@ -157,5 +188,9 @@ cross-module map now lives under `docs/architecture`.
   practical.
 - For refactors, preserve behavior and run the narrowest convincing checks before
   and after risky changes when practical.
+- For Rust-owned changes, prefer scoped Cargo verification from the owning
+  workspace (`cargo check`, `cargo test -p <crate>`, targeted tests, then
+  clippy when risk warrants it). Run Python checks only for legacy Python,
+  parity, or migration-glue changes.
 - For multi-step tasks, keep a short plan with a verification step for each
   meaningful phase, then iterate until the criteria are met.
