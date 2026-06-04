@@ -20,7 +20,7 @@ pub async fn grep(
     payload.insert("pattern".to_owned(), Value::String(request.pattern.clone()));
     payload.insert(
         "output_mode".to_owned(),
-        Value::String(request.output_mode.clone()),
+        Value::String(request.output_mode.as_wire().to_owned()),
     );
     payload.insert("offset".to_owned(), Value::from(request.offset));
     payload.insert(

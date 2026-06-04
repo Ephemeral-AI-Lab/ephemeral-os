@@ -218,14 +218,16 @@ mod tests {
         let path = dir.path.join("nested/audit.jsonl");
         let sink = JsonlSink::new(&path);
 
-        sink.publish(&event("engine.tool.started")).unwrap();
-        sink.publish(&event("engine.tool.completed")).unwrap();
+        sink.publish(&event(eos_obs_contract::AGENT_RUN_COMPLETED))
+            .unwrap();
+        sink.publish(&event(eos_obs_contract::TOOL_CALL_COMPLETED))
+            .unwrap();
 
         let contents = std::fs::read_to_string(&path).unwrap();
         let lines: Vec<&str> = contents.lines().collect();
         assert_eq!(lines.len(), 2);
-        assert!(lines[0].contains("engine.tool.started"));
-        assert!(lines[1].contains("engine.tool.completed"));
+        assert!(lines[0].contains(eos_obs_contract::AGENT_RUN_COMPLETED));
+        assert!(lines[1].contains(eos_obs_contract::TOOL_CALL_COMPLETED));
         // Each line is a complete normalized JSON object.
         for line in lines {
             let row = eos_obs_contract::from_jsonl_line(line).unwrap();
@@ -243,7 +245,8 @@ mod tests {
 
         const N: usize = 20;
         for _ in 0..N {
-            sink.publish(&event("engine.tool.completed")).unwrap();
+            sink.publish(&event(eos_obs_contract::TOOL_CALL_COMPLETED))
+                .unwrap();
         }
         shutdown.shutdown();
 
@@ -252,7 +255,7 @@ mod tests {
         assert_eq!(lines.len(), N);
         for line in lines {
             let row = eos_obs_contract::from_jsonl_line(line).unwrap();
-            assert_eq!(row.event_type, "engine.tool.completed");
+            assert_eq!(row.event_type, eos_obs_contract::TOOL_CALL_COMPLETED);
         }
     }
 }

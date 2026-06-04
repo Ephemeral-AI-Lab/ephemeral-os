@@ -5,6 +5,7 @@ members = [
   "crates/eos-db", "crates/eos-audit", "crates/eos-llm-client",
   "crates/eos-agent-def", "crates/eos-sandbox-api", "crates/eos-skills",
   "crates/eos-tools", "crates/eos-engine", "crates/eos-workflow",
+  "crates/eos-obs-collector",
   "crates/eos-sandbox-host", "crates/eos-plugin-catalog", "crates/eos-runtime",
   "workspace-guard",
 ]
@@ -55,7 +56,6 @@ console-subscriber = "0.4"
 insta             = { version = "1", features = ["json"] }
 proptest          = "1"
 wiremock          = "0.6"
-pretty_assertions = "1"
 tracing-test      = "0.2"
 loom              = "0.7"
 tempfile          = "3"
@@ -73,6 +73,7 @@ eos-skills         = { path = "crates/eos-skills" }
 eos-tools          = { path = "crates/eos-tools" }
 eos-engine         = { path = "crates/eos-engine" }
 eos-workflow       = { path = "crates/eos-workflow" }
+eos-obs-collector  = { path = "crates/eos-obs-collector" }
 eos-sandbox-host   = { path = "crates/eos-sandbox-host" }
 eos-plugin-catalog = { path = "crates/eos-plugin-catalog" }
 eos-runtime        = { path = "crates/eos-runtime" }

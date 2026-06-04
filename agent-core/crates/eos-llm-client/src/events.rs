@@ -1,10 +1,10 @@
 //! The normalized model-stream events.
 //!
 //! Source: `message/events.py`. Only the **four model-stream variants** move
-//! here. `ToolExecution*`, `BackgroundTaskStarted`, and `SystemNotification`
-//! are engine-domain `EventSource` events owned by `eos-engine`, not provider
-//! stream events — they are intentionally absent. The `agent_name`/`agent_run_id`
-//! identity fields are dropped (the engine stamps those on its own envelope).
+//! here. Tool execution and notification events are engine-domain `EventSource`
+//! events owned by `eos-engine`, not provider stream events — they are
+//! intentionally absent. The `agent_name`/`agent_run_id` identity fields are
+//! dropped (the engine stamps those on its own envelope).
 
 use eos_types::{JsonObject, ToolUseId};
 use serde::{Deserialize, Serialize};

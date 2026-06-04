@@ -48,3 +48,95 @@ pub(crate) async fn run_disallow_nested_planner_deferral(
         Ok(HookOutcome::pass())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use std::sync::Arc;
+
+    use async_trait::async_trait;
+    use serde_json::json;
+
+    use super::*;
+    use crate::ports::{OutstandingWorkflow, Sealed, StartedWorkflow, WorkflowControlPort};
+    use crate::testsupport::metadata;
+    use eos_types::{TaskId, WorkflowId, WorkflowSessionId};
+
+    struct FixedDepth(u32);
+    impl Sealed for FixedDepth {}
+
+    #[async_trait]
+    impl WorkflowControlPort for FixedDepth {
+        async fn start(&self, _: &TaskId, _: &str, _: &str) -> Result<StartedWorkflow, ToolError> {
+            unreachable!("depth hook never starts workflows")
+        }
+
+        async fn status(
+            &self,
+            _: &WorkflowId,
+            _: Option<&WorkflowSessionId>,
+        ) -> Result<String, ToolError> {
+            unreachable!("depth hook never reads status")
+        }
+
+        async fn cancel(&self, _: &WorkflowSessionId, _: &str) -> Result<String, ToolError> {
+            unreachable!("depth hook never cancels workflows")
+        }
+
+        async fn find_outstanding(
+            &self,
+            _: &TaskId,
+            _: &str,
+        ) -> Result<Vec<OutstandingWorkflow>, ToolError> {
+            unreachable!("depth hook never checks outstanding workflows")
+        }
+
+        async fn workflow_depth(&self, _: &WorkflowId) -> Result<u32, ToolError> {
+            Ok(self.0)
+        }
+    }
+
+    #[tokio::test]
+    async fn denies_deferred_goal_when_depth_exceeds_max() {
+        let mut input = JsonObject::new();
+        input.insert(
+            "deferred_goal_for_next_iteration".to_owned(),
+            json!("finish child work"),
+        );
+
+        let mut ctx = metadata();
+        ctx.workflow_id = Some(WorkflowId::new_v4());
+        ctx.workflow_control = Some(Arc::new(FixedDepth(2)));
+
+        let outcome = run_disallow_nested_planner_deferral(1, &input, &ctx)
+            .await
+            .expect("hook ran");
+
+        match outcome {
+            HookOutcome::Deny(denial) => {
+                assert_eq!(denial.policy, "nested_planner_deferral");
+                assert_eq!(denial.reason.as_deref(), Some("nested_workflow"));
+                assert!(denial.message.contains("nested workflow planners"));
+            }
+            HookOutcome::Pass(_) => panic!("nested planner deferral should be denied"),
+        }
+    }
+
+    #[tokio::test]
+    async fn allows_deferred_goal_at_max_depth() {
+        let mut input = JsonObject::new();
+        input.insert(
+            "deferred_goal_for_next_iteration".to_owned(),
+            json!("finish child work"),
+        );
+
+        let mut ctx = metadata();
+        ctx.workflow_id = Some(WorkflowId::new_v4());
+        ctx.workflow_control = Some(Arc::new(FixedDepth(1)));
+
+        let outcome = run_disallow_nested_planner_deferral(1, &input, &ctx)
+            .await
+            .expect("hook ran");
+
+        assert!(matches!(outcome, HookOutcome::Pass(_)));
+    }
+}

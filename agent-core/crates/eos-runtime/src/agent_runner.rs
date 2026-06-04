@@ -36,7 +36,7 @@ pub(crate) struct RuntimeAgentRunner {
     /// over the shared attempt registry). Stateless and shared across all runs.
     plan_submission: Arc<dyn PlanSubmissionPort>,
     /// The workflow-control port, late-bound at composition (it is built
-    /// downstream of this runner via the starter→attempt_deps→runner chain).
+    /// downstream of this runner via the `starter→attempt_deps→runner` chain).
     /// `get()` is `Some` by the time any run starts, so workflow agents' hooks
     /// can read `workflow_depth` (deferral) and `find_outstanding` (no-inflight).
     workflow_control: Arc<OnceLock<Arc<dyn WorkflowControlPort>>>,

@@ -3,7 +3,7 @@
 use std::fs;
 use std::path::{Component, Path, PathBuf};
 
-use eos_protocol::models::{DEFAULT_GLOB_LIMIT, MAX_FILE_BYTES};
+use eos_protocol::models::{GrepArgs, GrepOutputMode, DEFAULT_GLOB_LIMIT, MAX_FILE_BYTES};
 use regex::RegexBuilder;
 use serde_json::{json, Value};
 
@@ -49,21 +49,22 @@ pub fn grep_tool_result(
     mount_s: f64,
     tool_s: f64,
 ) -> Result<Value, RunnerError> {
-    let pattern = string_arg(args, "pattern");
-    if pattern.is_empty() {
+    let grep_args: GrepArgs = serde_json::from_value(args.clone())
+        .map_err(|err| RunnerError::InvalidRequest(err.to_string()))?;
+    if grep_args.pattern.is_empty() {
         return Err(RunnerError::InvalidRequest(
             "pattern is required".to_owned(),
         ));
     }
-    let output_mode = string_arg(args, "output_mode");
-    let regex = RegexBuilder::new(&pattern)
+    let output_mode = grep_args.output_mode;
+    let regex = RegexBuilder::new(&grep_args.pattern)
         .multi_line(true)
-        .case_insensitive(bool_arg(args, "case_insensitive"))
-        .dot_matches_new_line(bool_arg(args, "multiline"))
+        .case_insensitive(grep_args.case_insensitive)
+        .dot_matches_new_line(grep_args.multiline)
         .build()
         .map_err(|err| RunnerError::InvalidRequest(err.to_string()))?;
     let root = search_root(args, workspace_root)?;
-    let glob_filter = optional_string_arg(args, "glob_filter");
+    let glob_filter = grep_args.glob_filter;
     let mut files = candidate_files_no_follow(&root);
     files.sort();
 
@@ -87,17 +88,12 @@ pub fn grep_tool_result(
         }
         filenames.push(rel.clone());
         num_matches = num_matches.saturating_add(usize_to_i64_saturating(matches.len()));
-        match output_mode.as_str() {
-            "count" => content_lines.push(format!("{}:{}", rel, matches.len())),
-            "content" => {
-                content_lines.extend(matching_lines(
-                    &rel,
-                    &text,
-                    &regex,
-                    bool_arg(args, "line_numbers"),
-                ));
+        match output_mode {
+            GrepOutputMode::Count => content_lines.push(format!("{}:{}", rel, matches.len())),
+            GrepOutputMode::Content => {
+                content_lines.extend(matching_lines(&rel, &text, &regex, grep_args.line_numbers));
             }
-            _ => {}
+            GrepOutputMode::FilesWithMatches => {}
         }
     }
     let content = if content_lines.is_empty() {
@@ -113,7 +109,7 @@ pub fn grep_tool_result(
             "filenames": filenames,
             "content": content,
             "num_files": usize_to_i64_saturating(filenames.len()),
-            "num_lines": if output_mode == "content" { usize_to_i64_saturating(content_lines.len()) } else { 0 },
+            "num_lines": if output_mode == GrepOutputMode::Content { usize_to_i64_saturating(content_lines.len()) } else { 0 },
             "num_matches": num_matches,
             "applied_limit": null,
             "applied_offset": 0,
@@ -303,10 +299,6 @@ fn optional_string_arg(args: &Value, key: &str) -> Option<String> {
         .map(str::to_owned)
 }
 
-fn bool_arg(args: &Value, key: &str) -> bool {
-    args.get(key).and_then(Value::as_bool).unwrap_or(false)
-}
-
 fn display_workspace_path(path: &Path, workspace_root: &Path) -> String {
     path.strip_prefix(workspace_root)
         .unwrap_or(path)
@@ -400,6 +392,24 @@ mod tests {
         assert_eq!(result["num_lines"], json!(1));
         assert_eq!(result["num_matches"], json!(1));
         assert_eq!(result["applied_limit"], Value::Null);
+        Ok(())
+    }
+
+    #[test]
+    fn grep_rejects_unknown_output_mode() -> Result<(), Box<dyn std::error::Error>> {
+        let fixture = Fixture::new("grep-mode")?;
+        fixture.write("a.py", "hit\n")?;
+
+        let Err(err) = grep_tool_result(
+            &json!({"pattern": "hit", "output_mode": "bogus"}),
+            &fixture.root,
+            0.0,
+            0.0,
+        ) else {
+            return Err("unknown output_mode should be rejected".into());
+        };
+
+        assert!(err.to_string().contains("invalid namespace runner request"));
         Ok(())
     }
 

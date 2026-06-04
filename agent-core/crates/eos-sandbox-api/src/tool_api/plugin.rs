@@ -1,12 +1,28 @@
-//! Pure plugin-dispatch helper: build payload -> call dynamic daemon op.
+//! Pure plugin helpers: build daemon payloads -> call typed or dynamic daemon ops.
 
 use eos_types::{JsonObject, SandboxId};
 use serde_json::Value;
 
 use crate::error::SandboxApiError;
 use crate::models::{Intent, SandboxRequestBase};
+use crate::ops::DaemonOp;
 use crate::tool_api::parse::daemon_request_identity_fields;
 use crate::transport::SandboxTransport;
+
+/// A plugin manifest ensure request.
+#[derive(Debug, Clone)]
+pub struct PluginEnsureRequest {
+    /// Shared sandbox caller identity for this tool call.
+    pub base: SandboxRequestBase,
+    /// Repository root visible to the plugin runtime.
+    pub workspace_root: String,
+    /// Manifest consumed by the daemon `api.plugin.ensure` operation.
+    pub manifest: JsonObject,
+    /// Whether daemon-managed service processes should be started immediately.
+    pub start_services: bool,
+    /// Daemon ensure timeout in seconds.
+    pub timeout_s: u32,
+}
 
 /// A catalog plugin operation request.
 #[derive(Debug, Clone)]
@@ -25,6 +41,36 @@ pub struct PluginDispatchRequest {
     pub args: JsonObject,
     /// Daemon dispatch timeout in seconds.
     pub timeout_s: u32,
+}
+
+/// Ensure one plugin manifest is loaded in the sandbox daemon.
+///
+/// The daemon op is the built-in `api.plugin.ensure`. The transport injects the
+/// standard layer-stack root; this helper adds the standard daemon caller
+/// identity, workspace root, manifest, and service-start policy.
+pub async fn plugin_ensure(
+    transport: &dyn SandboxTransport,
+    sandbox_id: &SandboxId,
+    request: PluginEnsureRequest,
+) -> Result<JsonObject, SandboxApiError> {
+    let mut payload = daemon_request_identity_fields(&request.base);
+    payload.insert(
+        "workspace_root".to_owned(),
+        Value::String(request.workspace_root),
+    );
+    payload.insert("manifest".to_owned(), Value::Object(request.manifest));
+    payload.insert(
+        "start_services".to_owned(),
+        Value::Bool(request.start_services),
+    );
+    transport
+        .call(
+            sandbox_id,
+            DaemonOp::PluginEnsure,
+            payload,
+            request.timeout_s,
+        )
+        .await
 }
 
 /// Dispatch one catalog plugin operation through the sandbox daemon.

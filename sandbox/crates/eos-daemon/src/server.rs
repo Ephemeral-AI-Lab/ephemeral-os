@@ -354,7 +354,7 @@ impl DaemonServer {
         registry.deregister(&invocation_id);
         if emit_tool_events {
             emit_tool_call_event(
-                "tool_call.finished",
+                "tool_call.completed",
                 &invocation_id,
                 &op,
                 &agent_id,

@@ -1,13 +1,12 @@
 //! Request-scoped sandbox provisioning: `prepare_for_run` either starts an
 //! explicit sandbox id or creates a fresh one labelled `origin=workflow,
-//! request_id=<id>`. Faithful port of `runtime/sandbox_provisioning.py`.
+//! request_id=<id>`.
 //!
-//! The Python `create_fn`/`start_fn` callable injection is dropped in favor of
-//! typed calls into [`SandboxLifecycle`] (wired by `eos-runtime`); test
-//! substitutability comes from the `#[cfg(test)]` mock adapter. The Python
-//! `RuntimeError("create_sandbox returned no id")` branch is eliminated by
-//! typing: [`SandboxInfo::id`](crate::SandboxInfo) is a non-empty `SandboxId`,
-//! so a created sandbox always has a valid id (parse-don't-validate).
+//! The production path uses typed calls into [`SandboxLifecycle`] wired by
+//! `eos-runtime`; test substitutability comes from the `#[cfg(test)]` mock
+//! adapter. A created sandbox always has a valid id because
+//! [`SandboxInfo::id`](crate::SandboxInfo) is a non-empty `SandboxId`
+//! (parse-don't-validate).
 
 use std::sync::Arc;
 
@@ -27,8 +26,12 @@ pub struct RequestSandboxBinding {
 }
 
 /// Builds the create spec for the fresh-sandbox branch: a `request-<8 hex>`
-/// name and the `origin=workflow, request_id=<id>` labels (AC-09).
-pub(crate) fn fresh_create_spec(request_id: &RequestId) -> CreateSandboxSpec {
+/// name, the `origin=workflow, request_id=<id>` labels, and the configured
+/// Docker default snapshot when present (AC-09).
+pub(crate) fn fresh_create_spec(
+    request_id: &RequestId,
+    default_snapshot: Option<&str>,
+) -> CreateSandboxSpec {
     let mut labels = Labels::new();
     labels.insert("origin".to_owned(), "workflow".to_owned());
     labels.insert("request_id".to_owned(), request_id.to_string());
@@ -37,22 +40,38 @@ pub(crate) fn fresh_create_spec(request_id: &RequestId) -> CreateSandboxSpec {
             "request-{}",
             &uuid::Uuid::new_v4().simple().to_string()[..8]
         ),
+        snapshot: clean_optional_text(default_snapshot),
         labels,
         ..Default::default()
     }
+}
+
+fn clean_optional_text(value: Option<&str>) -> Option<String> {
+    value
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(str::to_owned)
 }
 
 /// Provisions the sandbox a request runs in, over the typed lifecycle seam.
 #[derive(Debug)]
 pub struct RequestSandboxProvisioner {
     lifecycle: Arc<SandboxLifecycle>,
+    default_snapshot: Option<String>,
 }
 
 impl RequestSandboxProvisioner {
-    /// Build a provisioner over a shared lifecycle.
+    /// Build a provisioner with the configured Docker default snapshot used for
+    /// fresh sandbox creation when the caller did not provide an explicit id.
     #[must_use]
-    pub fn new(lifecycle: Arc<SandboxLifecycle>) -> Self {
-        Self { lifecycle }
+    pub fn with_default_snapshot(
+        lifecycle: Arc<SandboxLifecycle>,
+        default_snapshot: Option<&str>,
+    ) -> Self {
+        Self {
+            lifecycle,
+            default_snapshot: clean_optional_text(default_snapshot),
+        }
     }
 
     /// Prepare the sandbox for a run: start an explicit id (return value
@@ -78,7 +97,10 @@ impl RequestSandboxProvisioner {
         }
         let info = self
             .lifecycle
-            .create(&fresh_create_spec(request_id))
+            .create(&fresh_create_spec(
+                request_id,
+                self.default_snapshot.as_deref(),
+            ))
             .await?;
         Ok(RequestSandboxBinding {
             sandbox_id: info.id,
@@ -105,7 +127,7 @@ mod tests {
             Arc::new(DaemonClient::new(Arc::new(registry))),
             PathBuf::from("/nonexistent"),
         );
-        RequestSandboxProvisioner::new(Arc::new(lifecycle))
+        RequestSandboxProvisioner::with_default_snapshot(Arc::new(lifecycle), None)
     }
 
     fn rid() -> RequestId {
@@ -114,7 +136,7 @@ mod tests {
 
     #[test]
     fn fresh_create_spec_has_request_name_and_labels() {
-        let spec = fresh_create_spec(&rid());
+        let spec = fresh_create_spec(&rid(), None);
         assert!(spec.name.starts_with("request-"));
         assert_eq!(spec.name.len(), "request-".len() + 8);
         assert!(spec.name["request-".len()..]
@@ -129,6 +151,16 @@ mod tests {
             Some("req-1")
         );
         assert_eq!(spec.language, "python");
+        assert!(spec.snapshot.is_none());
+    }
+
+    #[test]
+    fn fresh_create_spec_applies_configured_snapshot() {
+        let spec = fresh_create_spec(&rid(), Some("  py:3.11  "));
+        assert_eq!(spec.snapshot.as_deref(), Some("py:3.11"));
+
+        let blank = fresh_create_spec(&rid(), Some("  "));
+        assert!(blank.snapshot.is_none());
     }
 
     // AC-09: explicit-id path starts that id and binds it; fresh path creates and

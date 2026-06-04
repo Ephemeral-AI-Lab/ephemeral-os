@@ -1144,6 +1144,43 @@ mod tests {
         );
     }
 
+    #[tokio::test]
+    async fn write_stdin_empty_response_fails_closed_without_replay() {
+        let (client, calls) = client_with(MockAdapter::new().with_exec(|_cmd| empty_response()));
+        let mut args = JsonObject::new();
+        args.insert(
+            "command_session_id".to_owned(),
+            Value::String("cmd_1".to_owned()),
+        );
+        args.insert("chars".to_owned(), Value::String("payload".to_owned()));
+
+        let err = client
+            .call_daemon_api(&sid(), "api.v1.write_stdin", args, 60, "/eos/layer-stack")
+            .await
+            .unwrap_err();
+
+        assert!(matches!(
+            err,
+            SandboxHostError::ExecFailed { exit_code: 98, .. }
+        ));
+        let log = calls.lock().unwrap().clone();
+        assert_eq!(
+            log.len(),
+            1,
+            "write_stdin empty response must not spawn or replay"
+        );
+        assert!(!log[0].contains("--spawn"));
+        assert!(!log[0].contains("api.runtime.ready"));
+
+        let env = envelope_from_command(&log[0]);
+        assert_eq!(env["op"], serde_json::json!("api.v1.write_stdin"));
+        assert_eq!(
+            env["args"]["command_session_id"],
+            serde_json::json!("cmd_1")
+        );
+        assert_eq!(env["args"]["chars"], serde_json::json!("payload"));
+    }
+
     // AC-05: a non-policy daemon error decodes to DaemonDispatch; a handler-level
     // policy result (success=false + non-empty status) is returned, not raised.
     #[test]

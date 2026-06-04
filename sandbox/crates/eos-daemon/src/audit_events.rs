@@ -8,13 +8,13 @@ use std::time::Instant;
 use eos_layerstack::LayerStack;
 use eos_protocol::{
     audit::{
-        build_event, Lane, LayerStackSection, OccSection, OsResourceSection,
+        build_event, BackgroundToolSection, Lane, LayerStackSection, OccSection, OsResourceSection,
         OverlayWorkspaceSection, ToolCallSection,
     },
     manifest_root_hash, Request,
 };
 use serde::Serialize;
-use serde_json::{json, Value};
+use serde_json::Value;
 
 use crate::response_timings::{f64_to_i64_rounded_saturating, usize_to_i64_saturating};
 
@@ -25,62 +25,6 @@ fn emit_section<T: Serialize>(event_type: &str, section_key: &str, section: &T, 
         return;
     };
     crate::audit_buffer::safe_emit(build_event(event_type, section_key, section), lane);
-}
-
-fn string_field(value: &Value, key: &str) -> Option<String> {
-    value.get(key).and_then(Value::as_str).map(str::to_owned)
-}
-
-fn string_arg(request: &Request, key: &str) -> Option<String> {
-    request
-        .args
-        .get(key)
-        .and_then(Value::as_str)
-        .map(str::to_owned)
-}
-
-fn phase_totals_rollup(response: &Value) -> Option<BTreeMap<String, f64>> {
-    let timings = response.get("timings").and_then(Value::as_object)?;
-    let rollup = timings
-        .iter()
-        .filter_map(|(key, value)| value.as_f64().map(|value| (key.clone(), value)))
-        .collect::<BTreeMap<_, _>>();
-    (!rollup.is_empty()).then_some(rollup)
-}
-
-fn emit_os_resource_audit(request: &Request, response: &Value) {
-    let has_os_resource_timing = response
-        .get("timings")
-        .and_then(Value::as_object)
-        .is_some_and(|timings| timings.keys().any(|key| key.starts_with("resource.os.")));
-    if !has_os_resource_timing {
-        return;
-    }
-    emit_section(
-        OS_RESOURCE_SAMPLED,
-        "os_resource",
-        &OsResourceSection {
-            operation_id: Some(request.invocation_id.clone()),
-            tool_use_id: string_arg(request, "invocation_id")
-                .or_else(|| Some(request.invocation_id.clone())),
-            agent_id: string_arg(request, "agent_id"),
-            sampled_at_monotonic_s: audit_monotonic_s(),
-            rss_bytes: timing_i64(response, "resource.os.rss_bytes"),
-            cpu_user_s: timing_f64(response, "resource.os.cpu_user_s"),
-            cpu_system_s: timing_f64(response, "resource.os.cpu_system_s"),
-            cpu_throttled_us: timing_i64(response, "resource.os.cpu_throttled_us"),
-            io_read_bytes: timing_i64(response, "resource.os.io_read_bytes"),
-            io_write_bytes: timing_i64(response, "resource.os.io_write_bytes"),
-            io_read_ops: timing_i64(response, "resource.os.io_read_ops"),
-            io_write_ops: timing_i64(response, "resource.os.io_write_ops"),
-        },
-        Lane::Sample,
-    );
-}
-
-fn audit_monotonic_s() -> f64 {
-    static START: OnceLock<Instant> = OnceLock::new();
-    START.get_or_init(Instant::now).elapsed().as_secs_f64()
 }
 
 pub(crate) fn emit_dispatch_audit(request: &Request, response: &Value, dispatch_s: f64) {
@@ -416,8 +360,7 @@ fn emit_os_resource_audit(request: &Request, response: &Value) {
         sampled_at_monotonic_s: audit_monotonic_s(),
         rss_bytes: None,
         cpu_user_s: timing_f64(response, "resource.cgroup.cpu_user_usec").map(usec_to_seconds),
-        cpu_system_s: timing_f64(response, "resource.cgroup.cpu_system_usec")
-            .map(usec_to_seconds),
+        cpu_system_s: timing_f64(response, "resource.cgroup.cpu_system_usec").map(usec_to_seconds),
         cpu_throttled_us: timing_i64(response, "resource.cgroup.cpu_throttled_usec"),
         io_read_bytes: timing_i64(response, "resource.cgroup.io_rbytes"),
         io_write_bytes: timing_i64(response, "resource.cgroup.io_wbytes"),
@@ -485,4 +428,129 @@ fn timing_f64(response: &Value, key: &str) -> Option<f64> {
         .and_then(Value::as_object)
         .and_then(|timings| timings.get(key))
         .and_then(Value::as_f64)
+}
+
+#[cfg(test)]
+mod tests {
+    use std::sync::atomic::{AtomicU64, Ordering};
+
+    use serde_json::{json, Value};
+
+    use super::*;
+
+    type TestResult<T = ()> = Result<T, Box<dyn std::error::Error + Send + Sync>>;
+
+    #[test]
+    fn dispatch_audit_emits_typed_tool_call_and_resource_sample() -> TestResult {
+        let suffix = unique_suffix();
+        let invocation_id = format!("dispatch-{suffix}");
+        let tool_use_id = format!("toolu-{suffix}");
+        let request = Request {
+            op: "api.v1.read_file".to_owned(),
+            invocation_id: invocation_id.clone(),
+            args: json!({"invocation_id": &tool_use_id, "agent_id": "agent-1"}),
+        };
+        let response = json!({
+            "status": "ok",
+            "workspace_mode": "ephemeral",
+            "timings": {
+                "custom.phase": 0.125,
+                "resource.cgroup.cpu_user_usec": 2_500_000.0,
+                "resource.cgroup.cpu_system_usec": 500_000.0,
+                "resource.cgroup.cpu_throttled_usec": 7.0,
+                "resource.cgroup.io_rbytes": 1024.0,
+                "resource.cgroup.io_wbytes": 2048.0,
+                "resource.cgroup.io_rios": 3.0,
+                "resource.cgroup.io_wios": 4.0
+            }
+        });
+        let after_seq = audit_after_seq()?;
+
+        emit_dispatch_audit(&request, &response, 0.010);
+
+        let events = events_after(after_seq)?;
+        let tool_event = events
+            .iter()
+            .find(|event| {
+                event["type"].as_str() == Some("tool_call.completed")
+                    && event["payload"]["tool_call"]["tool_use_id"].as_str()
+                        == Some(tool_use_id.as_str())
+            })
+            .ok_or("tool_call.completed event")?;
+        assert_eq!(tool_event["lane"], json!("normal"));
+        assert_eq!(
+            tool_event["payload"]["tool_call"]["tool_name"],
+            json!("api.v1.read_file")
+        );
+        assert_eq!(
+            tool_event["payload"]["tool_call"]["phase_totals_rollup"]["custom.phase"],
+            json!(0.125)
+        );
+        assert!(tool_event["payload"]["tool_call"]
+            .get("workspace_handle_id")
+            .is_none());
+
+        let resource_event = events
+            .iter()
+            .find(|event| {
+                event["type"].as_str() == Some(OS_RESOURCE_SAMPLED)
+                    && event["payload"]["os_resource"]["tool_use_id"].as_str()
+                        == Some(tool_use_id.as_str())
+            })
+            .ok_or("os_resource.sampled event")?;
+        assert_eq!(resource_event["lane"], json!("sample"));
+        assert_eq!(
+            resource_event["payload"]["os_resource"]["operation_id"],
+            json!(invocation_id)
+        );
+        assert_eq!(
+            resource_event["payload"]["os_resource"]["agent_id"],
+            json!("agent-1")
+        );
+        assert_eq!(
+            resource_event["payload"]["os_resource"]["cpu_user_s"],
+            json!(2.5)
+        );
+        assert_eq!(
+            resource_event["payload"]["os_resource"]["cpu_system_s"],
+            json!(0.5)
+        );
+        assert_eq!(
+            resource_event["payload"]["os_resource"]["cpu_throttled_us"],
+            json!(7)
+        );
+        assert_eq!(
+            resource_event["payload"]["os_resource"]["io_read_bytes"],
+            json!(1024)
+        );
+        assert!(
+            resource_event["payload"]["os_resource"]["sampled_at_monotonic_s"]
+                .as_f64()
+                .unwrap_or(-1.0)
+                >= 0.0
+        );
+        Ok(())
+    }
+
+    fn audit_after_seq() -> TestResult<i64> {
+        let snapshot = crate::audit_buffer::global_audit_buffer().snapshot();
+        Ok(snapshot["snapshot"]["daemon"]["next_seq"]
+            .as_i64()
+            .unwrap_or(0)
+            - 1)
+    }
+
+    fn events_after(after_seq: i64) -> TestResult<Vec<Value>> {
+        let pulled = crate::audit_buffer::global_audit_buffer().pull(after_seq, 256);
+        Ok(pulled["events"].as_array().ok_or("events array")?.clone())
+    }
+
+    fn unique_suffix() -> String {
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
+        format!(
+            "{}-{}",
+            std::process::id(),
+            COUNTER.fetch_add(1, Ordering::Relaxed)
+        )
+    }
 }

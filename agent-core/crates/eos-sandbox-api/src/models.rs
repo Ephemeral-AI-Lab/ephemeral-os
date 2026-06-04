@@ -437,9 +437,6 @@ pub struct ExecStdinRequest {
     pub terminate: bool,
 }
 
-/// Model-facing `write_stdin` request alias for [`ExecStdinRequest`].
-pub type CommandSessionWriteRequest = ExecStdinRequest;
-
 /// Cancel an open command session.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub struct CommandSessionCancelRequest {
@@ -480,6 +477,31 @@ pub struct GlobResult {
     pub truncated: bool,
 }
 
+/// `grep.output_mode` wire values.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum GrepOutputMode {
+    /// Return matching file paths and rendered matching lines.
+    Content,
+    /// Return only matching file paths.
+    #[default]
+    FilesWithMatches,
+    /// Return per-file match counts.
+    Count,
+}
+
+impl GrepOutputMode {
+    /// The daemon wire string for this mode.
+    #[must_use]
+    pub const fn as_wire(self) -> &'static str {
+        match self {
+            Self::Content => "content",
+            Self::FilesWithMatches => "files_with_matches",
+            Self::Count => "count",
+        }
+    }
+}
+
 /// Regex-scan workspace file contents.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub struct GrepRequest {
@@ -496,7 +518,7 @@ pub struct GrepRequest {
     pub glob_filter: Option<String>,
     /// Output mode (defaults to `files_with_matches`).
     #[serde(default = "default_output_mode")]
-    pub output_mode: String,
+    pub output_mode: GrepOutputMode,
     /// Cap on returned matches.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub head_limit: Option<u32>,
@@ -522,7 +544,7 @@ pub struct GrepResult {
     pub base: SandboxResultBase,
     /// Echoed output mode.
     #[serde(default = "default_output_mode")]
-    pub output_mode: String,
+    pub output_mode: GrepOutputMode,
     /// Matching file paths.
     #[serde(default)]
     pub filenames: Vec<String>,
@@ -727,8 +749,8 @@ fn default_true() -> bool {
     true
 }
 
-fn default_output_mode() -> String {
-    "files_with_matches".to_owned()
+fn default_output_mode() -> GrepOutputMode {
+    GrepOutputMode::FilesWithMatches
 }
 
 fn default_grace_s() -> f64 {

@@ -15,7 +15,7 @@ use std::time::Instant;
 use eos_agent_def::{AgentDefinition, AgentRegistry};
 use eos_audit::{AuditEvent, AuditNode, AuditSink, AuditSource};
 use eos_llm_client::{LlmClient, Message, DEFAULT_MAX_TOKENS};
-use eos_obs_contract::AGENT_RUN_COMPLETED;
+use eos_obs_contract::{AGENT_RUN_COMPLETED, OS_RESOURCE_SAMPLED};
 use eos_state::{AgentRunStore, ModelStore};
 use eos_tools::{
     build_default_registry, BackgroundSupervisorPort, CallerScope, ExecutionMetadata,
@@ -29,6 +29,7 @@ use crate::agent::{build_query_context, BuildQueryContextInput};
 use crate::events::StreamEvent;
 use crate::notifications::NotificationService;
 use crate::query::{run_query, EventSource, QueryExitReason};
+use crate::resource_sample::capture_process_resource_sample;
 
 /// Per-agent event-source factory seam (the Python `event_source_factory`).
 ///
@@ -300,6 +301,7 @@ pub async fn run_ephemeral_agent(
         run_started.elapsed().as_secs_f64() * 1000.0,
         error.as_deref(),
     );
+    publish_os_resource_sampled(handles, &ctx);
     if persisted {
         finish_run(handles, &agent_run_id, error.as_deref()).await;
     }
@@ -315,23 +317,6 @@ fn publish_agent_run_completed(
     duration_ms: f64,
     error: Option<&str>,
 ) {
-    let mut node = AuditNode::builder()
-        .agent_name(ctx.agent_name.clone())
-        .agent_run_id(ctx.agent_run_id.clone());
-    if let Some(request_id) = &ctx.tool_metadata.request_id {
-        node = node.request_id(request_id.clone());
-    }
-    if let Some(task_id) = ctx
-        .task_id
-        .clone()
-        .or_else(|| ctx.tool_metadata.task_id.clone())
-    {
-        node = node.task_id(task_id);
-    }
-    if let Some(sandbox_id) = &ctx.tool_metadata.sandbox_id {
-        node = node.sandbox_id(sandbox_id.clone());
-    }
-
     let mut section = JsonObject::new();
     section.insert("duration_ms".to_owned(), json!(duration_ms));
     section.insert(
@@ -351,13 +336,58 @@ fn publish_agent_run_completed(
     let event = AuditEvent::new(
         AuditSource::Engine,
         AGENT_RUN_COMPLETED,
-        node.build(),
+        agent_run_audit_node(ctx),
         payload,
         &SystemClock,
     );
     if let Err(err) = handles.audit.publish(&event) {
         tracing::warn!(error = %err, agent_run_id = ctx.agent_run_id.as_str(), "agent-run obs publish failed");
     }
+}
+
+fn publish_os_resource_sampled(handles: &EngineRunHandles, ctx: &crate::query::QueryContext) {
+    if !handles.audit.enabled() {
+        return;
+    }
+    let Some(sample) = capture_process_resource_sample() else {
+        return;
+    };
+
+    let mut payload = JsonObject::new();
+    payload.insert(
+        "os_resource".to_owned(),
+        Value::Object(sample.into_payload()),
+    );
+    let event = AuditEvent::new(
+        AuditSource::Engine,
+        OS_RESOURCE_SAMPLED,
+        agent_run_audit_node(ctx),
+        payload,
+        &SystemClock,
+    );
+    if let Err(err) = handles.audit.publish(&event) {
+        tracing::warn!(error = %err, agent_run_id = ctx.agent_run_id.as_str(), "os-resource obs publish failed");
+    }
+}
+
+fn agent_run_audit_node(ctx: &crate::query::QueryContext) -> AuditNode {
+    let mut node = AuditNode::builder()
+        .agent_name(ctx.agent_name.clone())
+        .agent_run_id(ctx.agent_run_id.clone());
+    if let Some(request_id) = &ctx.tool_metadata.request_id {
+        node = node.request_id(request_id.clone());
+    }
+    if let Some(task_id) = ctx
+        .task_id
+        .clone()
+        .or_else(|| ctx.tool_metadata.task_id.clone())
+    {
+        node = node.task_id(task_id);
+    }
+    if let Some(sandbox_id) = &ctx.tool_metadata.sandbox_id {
+        node = node.sandbox_id(sandbox_id.clone());
+    }
+    node.build()
 }
 
 const fn exit_reason_value(reason: QueryExitReason) -> &'static str {

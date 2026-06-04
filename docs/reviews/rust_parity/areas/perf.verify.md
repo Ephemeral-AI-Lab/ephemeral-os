@@ -20,7 +20,7 @@ substantive. All verdicts below cite the line numbers I actually read.
 | 1 | Lower-dir O(1): layers shared read-only (CoW), no per-overlay full copy | **confirmed_match** (with D2 concurrency caveat) | none (D2 = medium, tracked separately) | PY `stack.py:108-135` (`acquire_snapshot` = lease + `manifest.layers`→paths, no render) ⟷ RS `stack.rs:331-360` (maps `manifest.layers`→paths, never calls `project`). `project` callers in RS = `squash.rs:222`, `stack.rs:522` (commit), `stack.rs:1359` (test) only — never on snapshot/mount path. |
 | 2 | Upper-dir O(n·delta): each op stores only its own delta in its own upperdir | **confirmed_match** | none | PY `writable_dirs.py:46-52` (`run_dir/upper`+`/work` per overlay) + `capture.py:49-89` (`os.walk(upper_root)` only) ⟷ RS `writable_dirs.rs:58-67` (`run_dir/upper`+`/work`) + `path_change.rs:152,159-201` (`walk_upperdir` recurses `std::fs::read_dir` on upperdir only, never lower layers). `OVERLAY_WRITABLE_ROOT = "/eos/mount"`, no fallback, both sides. |
 | 3 | Fast: kernel overlayfs mount + manifest CAS pointer-swap, no deep per-op copy | **confirmed_match** | none | mount: PY `kernel_mount.py:49-75` ⟷ RS `kernel_mount.rs:102-132` (`fsopen`→`lowerdir+`/layer→`upperdir`→`workdir`→`fsconfig_create`→`fsmount`→`move_mount(workspace_root)`); fd-pinned lowerdirs PY `kernel_mount.py:~185` ⟷ RS `kernel_mount.rs:231-233` (`fd_path` for lowers only; upper/work/target real). publish: PY `publisher.py:49-138` ⟷ RS `stack.rs:599-662` (read-active → idempotent head short-circuit → stage → fsync → rename → digest → CAS re-read conflict → prepend newest-first → atomic manifest). |
-| 4 | Benchmarks exercise the Rust daemon (eosd) and measure these properties | **confirmed_disparity (partial)** — adjudicated as D1 | medium | RS-only: `bench_rust_daemon_phase2.py:56` (`EOSD_REMOTE_PATH`), `:61,:280` (1-file `B000001-base`); `phase3.py:11-13,98,339-427,435-440` gate on latency (`shell_noop_70pct_faster_than_phase1`) + RSS (`sample_daemon_memory`/`summarize_memory`). grep for `du|disk|byte|space|O(repo)|O(N` in phase3 = **no space-accounting hits**. Property holds by construction; no in-tree bench proves it. |
+| 4 | Benchmarks exercise the Rust daemon (eosd) and measure these properties | **confirmed_disparity (partial)** — adjudicated as D1 | medium | RS-only: `bench_rust_daemon_phase2.py:56` (`EOSD_REMOTE_PATH`), `:61,:280` (1-file baseline `B000001-base`); `phase3.py:305-323` builds the image workspace base through `api.build_workspace_base`; `phase3.py:98,339-427,435-440` gate on latency (`shell_noop_70pct_faster_than_phase1`) + RSS (`sample_daemon_memory`/`summarize_memory`). grep for `du|disk|byte|space|O(repo)|O(N` in phase3 = **no space-accounting hits**. Property holds by construction; no in-tree bench proves it. |
 
 ### Supporting constant / operator parity (all confirmed_match, re-extracted)
 
@@ -41,19 +41,21 @@ substantive. All verdicts below cite the line numbers I actually read.
 ## Disparity adjudication
 
 ### D1 — Benches prove latency/RSS, not space-complexity → **CONFIRMED (medium, partial on Inv 4)**
-Re-derived firsthand. `phase2.py:61,280` seeds a single-file `B000001-base`
-(`README_CONTENT`), so the `O(repo)` term is negligible and the bench cannot
-distinguish `O(repo)+O(N·delta)` from `O(N·repo)`. `phase3.py` gate set
-(`:435-440`) = artifact + final_state + cp4s(latency) + load + memory; grep for
-disk/byte/du/space/O(repo)/O(N returns nothing. The space moat is real **by
-construction** (verified in code above) but **unguarded by any in-tree
+Re-derived firsthand. Current Phase 3 builds the base from the target image
+workspace through `api.build_workspace_base`, so it no longer relies on the
+removed ad hoc tar-seeding helper. That improves fixture realism, but the gate
+set (`:435-440`) is still artifact + final_state + cp4s(latency) + load +
+memory; grep for disk/byte/du/space/O(repo)/O(N returns nothing. The older phase2
+baseline still seeds a single-file `B000001-base` (`README_CONTENT`), so the
+baseline fixture does not prove the disk-space moat either. The space moat is
+real **by construction** (verified in code above) but **unguarded by any in-tree
 benchmark**. The report's framing — "not a Rust regression, a pre-existing gap
-shared with the Python/CP-0 baseline" — is fair: these are the same bench
-scripts compared against `bench/baseline-amd64.json`. Adjudication: **confirmed,
+shared with the Python/CP-0 baseline" — remains fair. Adjudication: **confirmed,
 severity medium, correctly scoped as a shared gap not a Rust drop.**
 
-### D2 — Rust `acquire_snapshot` takes the exclusive storage-writer lock; Python did NOT → **CONFIRMED (medium); severity premise independently validated**
-This is the load-bearing finding; I verified every link.
+### D2 — Rust `acquire_snapshot` took the exclusive storage-writer lock; source remediation landed → **SOURCE-FIXED; throughput re-baseline pending**
+This was the load-bearing finding; the original verification remains useful for
+why the fix matters.
 - **Python lock topology** (`/tmp/oldpy/.../stack.py`): `acquire_snapshot`
   (`:113`) body is `with self._lock:` — a `threading.RLock` (`:92`). The
   `_storage_write_guard()` (= cross-process `StorageWriterLockLease.exclusive()`,
@@ -62,14 +64,18 @@ This is the load-bearing finding; I verified every link.
   `can_squash` take only `self._lock`; the write guard is a **different, heavier**
   lock the snapshot path never enters. So Python snapshots overlap concurrent
   publishes/squashes.
-- **Rust lock topology** (`stack.rs`): `acquire_snapshot` (`:332`)
-  `let _guard = self.writer_lock.exclusive()?;` — the **same**
-  `StorageWriterLockLease::exclusive()` taken by `release_lease` (`:371`),
-  `squash` (`:400`), `commit_to_workspace` (`:503`), `publish_layer` (`:600`).
-  `storage_lock.rs:112-125,166-222`: `exclusive()` returns a guard over a single
-  `ReentrantMutex` (mutual-exclusion only — no shared/read mode). So in Rust every
-  snapshot acquire mutually excludes every writer **and** every other snapshot on
-  the same root.
+- **Original Rust lock topology** (`stack.rs`): `acquire_snapshot` used
+  `self.writer_lock.exclusive()?` — the same guard taken by `release_lease`,
+  `squash`, `commit_to_workspace`, and `publish_layer`. `exclusive()` returned a
+  guard over a single `ReentrantMutex` with no shared/read mode, so every snapshot
+  acquire mutually excluded every writer **and** every other snapshot on the same
+  root.
+- **Current Rust remediation:** `StorageWriterLockLease` now has `shared()` for
+  read/snapshot traffic and `exclusive()` for reentrant writers.
+  `LayerStack::acquire_snapshot` now calls `self.writer_lock.shared()?`; write-side
+  methods keep `exclusive()?`. New storage-lock tests prove shared guards overlap,
+  shared guards block writers, and reentrant exclusive guards still block shared
+  readers until the outer write guard drops.
 - **Severity premise (the advisor's decisive check):** the daemon is genuinely
   concurrent. `server.rs:171,192` spawns a `tokio::spawn` per accepted
   connection; `server.rs:305` dispatches each request via `spawn_blocking`. Every
@@ -83,12 +89,9 @@ This is the load-bearing finding; I verified every link.
   `acquire_snapshot` + `publish_layer` on one root **do** collide on that mutex,
   exactly where Python's lighter `self._lock` did not. **The contention is not
   moot; medium severity stands.**
-- Per-snapshot *work* is still O(1) (no `project` on the path). The divergence is
-  a throughput/concurrency-profile regression, not a complexity regression — the
-  report frames it precisely this way. Adjudication: **confirmed, medium.** Open
-  Question 3 (intentional atomicity vs over-tightening) remains a genuine open
-  design question; flagged below as the one thing I could not settle from code
-  alone.
+- Per-snapshot *work* remains O(1) (no `project` on the path). The source-level
+  lock divergence is fixed; the remaining work is to re-run the live concurrent
+  throughput benchmark and update the measured baseline.
 
 ### D3 — `acquire_snapshot` timings relocated stack→daemon → **CONFIRMED (low, divergent-but-equivalent)**
 `stack.rs:358` returns `timings: BTreeMap::new()` (empty) vs Python
@@ -143,19 +146,15 @@ RPC-observable behavior identical; only a direct unit-level
 
 ## Overall verdict
 
-The investigation is **accurate and well-anchored**. All 4 invariants
+The investigation was **accurate and well-anchored**. All 4 invariants were
 re-derived: Inv 1/2/3 = confirmed_match at the operator/constant level (no false
-matches — I specifically hunted them per the brief and found none); Inv 4 =
-confirmed_disparity (partial), correctly adjudicated as D1. The two flagged
-disparities are both real:
-- **D2 (medium)** is the substantive one and survives the severity stress-test:
-  Rust snapshot acquire takes the same per-root `ReentrantMutex` as all mutators
-  (Python used a separate lighter RLock), and the daemon is genuinely concurrent
-  with fresh-`LayerStack`-per-request + lock-only serialization, so the
-  contention is **not moot**. A throughput/concurrency regression on the O(1)
-  hot path, not a complexity regression.
-- **D1 (medium)** and **D3 (low)** confirmed as written; D1 correctly scoped as a
-  pre-existing shared gap, not a Rust drop.
+matches); Inv 4 = confirmed_disparity (partial), correctly adjudicated as D1.
+Current status:
+- **D2 source-level fix landed.** Snapshot acquire now uses a shared storage lock;
+  write-side operations keep the reentrant exclusive lock. Live concurrent
+  throughput re-baselining remains open.
+- **D1 (medium)** and **D3 (low)** remain as written; D1 is correctly scoped as a
+  pre-existing shared benchmark gap, not a Rust drop.
 
 One item the investigator left open is now firmed up with a negative result:
 the Python shell-pre-mount squash (`EOS_SHELL_MOUNT_SQUASH_MAX_DEPTH`, default

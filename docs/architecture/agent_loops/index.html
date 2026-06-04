@@ -19,6 +19,7 @@
     <li><a href="../sandbox/index.html" data-doc-module="sandbox">Sandbox Workspace</a></li>
     <li><a href="../tools/index.html" data-doc-module="tools">Tools</a></li>
     <li><a href="index.html" data-doc-module="agent-loops" class="active">Agent Loops</a></li>
+    <li><a href="../rust-migration.html" data-doc-module="migration">Rust Migration</a></li>
   </ol>
   <h2>Agent Loops Pages</h2>
   <ol>
@@ -49,20 +50,21 @@
   </ol>
 </nav>
 
-<p class="lead">This wiki maps how an EphemeralOS agent run is assembled, executed, monitored, and terminated. It connects the engine loop, model-provider streaming, tool framework, sandbox-provider boundary, Workflow context engine, notifications, and message artifacts.</p>
+<p class="lead">This wiki maps how an EphemeralOS agent run is assembled, executed, monitored, and terminated in the Rust control plane. It connects <code>eos-engine</code>, <code>eos-llm-client</code>, <code>eos-tools</code>, <code>eos-workflow</code>, <code>eos-sandbox-api</code>, <code>eos-sandbox-host</code>, notifications, and message artifacts.</p>
 
-<section id="wiki-scope" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="backend/src/engine backend/src/message backend/src/notification backend/src/prompt backend/src/workflow/context_engine backend/src/workflow/agent_launch backend/src/sandbox/provider backend/src/sandbox/api backend/src/sandbox/daemon backend/src/tools docs/architecture">
+<section id="wiki-scope" data-last-reviewed-commit="HEAD-plus-worktree" data-evidence-paths="agent-core/crates/eos-engine agent-core/crates/eos-llm-client agent-core/crates/eos-tools agent-core/crates/eos-workflow agent-core/crates/eos-sandbox-api agent-core/crates/eos-sandbox-host agent-core/crates/eos-audit docs/architecture/rust-migration.html">
 <h2>Scope And Verdict <a class="anchor" href="#wiki-scope">#</a></h2>
 <div class="summary">
   <ul>
     <li>The main agent loop is engine-owned. Workflow submits and resumes state through terminal tools and persisted attempt/workflow state, not peer-to-peer agent messaging.</li>
-    <li>The model-provider package is <code>backend/src/providers</code>. It owns the LLM API request/streaming contract, active model dispatch, auth strategies, provider errors, and Anthropic/Codex client translations.</li>
+    <li>The Rust model-provider boundary lives in <code>eos-llm-client</code> plus engine request assembly. It owns the LLM API request/streaming contract, active model dispatch, auth strategies, provider errors, and Anthropic/Codex client translations.</li>
     <li>Prompt configuration has two layers: stable runtime/profile system prompt text, then Workflow launch rows built from role-scoped <code>AgentContext</code> XML, task guidance, and optional skill text.</li>
-    <li>Tool execution crosses into sandbox through typed tool wrappers and <code>sandbox.api</code>. Normal file and command operations use daemon workspace routing; provider raw <code>exec</code> is a transport and diagnostic primitive.</li>
+    <li>Tool execution crosses into sandbox through <code>eos-tools</code> model tools and <code>eos-sandbox-api</code>. Normal file and command operations use daemon workspace routing; Docker raw <code>exec</code> is a bootstrap and diagnostic primitive.</li>
     <li>Termination is a stamped tool-result condition. A successful terminal tool gets <code>is_terminal=true</code>, the query loop exits with <code>TOOL_STOP</code>, and Workflow lifecycle code reads the structured submission.</li>
   </ul>
 </div>
 <div class="wiki-links" aria-label="Agent loop related pages">
+  <a href="../rust-migration.html">Rust Migration Status</a>
   <a href="../tools/framework.html">Tools Framework</a>
   <a href="../tools/terminals.html">Terminal Tools</a>
   <a href="../tools/background.html">Typed Background</a>
@@ -71,7 +73,7 @@
 </div>
 </section>
 
-<section id="workflow-map" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="backend/src/engine/agent/factory.py backend/src/engine/agent/lifecycle.py backend/src/engine/query/loop.py backend/src/engine/tool_call/dispatch.py backend/src/tools/_framework/execution/tool_call.py backend/src/sandbox/daemon/workspace_tool/dispatch.py backend/src/workflow/attempt/launch.py backend/src/workflow/agent_launch/composer.py">
+<section id="workflow-map" data-last-reviewed-commit="HEAD-plus-worktree" data-evidence-paths="agent-core/crates/eos-engine/src agent-core/crates/eos-tools/src agent-core/crates/eos-workflow/src/attempt/launch.rs agent-core/crates/eos-workflow/src/context agent-core/crates/eos-sandbox-api/src agent-core/crates/eos-sandbox-host/src sandbox/crates/eos-daemon/src/dispatcher.rs">
 <h2>Workflow Map <a class="anchor" href="#workflow-map">#</a></h2>
 <div class="diagram" aria-label="Agent loop cross-module workflow">
   <div class="flow-row">
@@ -84,7 +86,7 @@
     <div class="node warn"><strong>Tool dispatch</strong><small>terminal gate, foreground, background</small></div>
     <div class="node"><strong>Sandbox tools</strong><small>typed requests through sandbox.api</small></div>
     <div class="node"><strong>Daemon routing</strong><small>isolated, direct OCC, overlay</small></div>
-    <div class="node"><strong>Provider runtime</strong><small>Docker or Daytona transport</small></div>
+    <div class="node"><strong>Provider runtime</strong><small>Docker transport</small></div>
     <div class="node good"><strong>Terminal submission</strong><small>Workflow state mutation</small></div>
   </div>
 </div>
@@ -152,15 +154,15 @@
 </div>
 </section>
 
-<section id="ownership-edges" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="backend/src/engine backend/src/tools backend/src/sandbox backend/src/workflow backend/src/message backend/src/notification">
+<section id="ownership-edges" data-last-reviewed-commit="HEAD-plus-worktree" data-evidence-paths="agent-core/crates/eos-engine agent-core/crates/eos-tools agent-core/crates/eos-workflow agent-core/crates/eos-sandbox-api agent-core/crates/eos-sandbox-host agent-core/crates/eos-llm-client agent-core/crates/eos-audit sandbox/crates/eos-daemon">
 <h2>Ownership Edges <a class="anchor" href="#ownership-edges">#</a></h2>
 <div class="edge-list">
-  <div><b>engine owns loop state</b><span><code>QueryContext</code> owns terminal tools, terminal result, exit reason, tool budget, notification state, and the background-task manager.</span></div>
-  <div><b>providers own model streaming</b><span><code>providers</code> owns active model client construction, provider request/event dataclasses, upstream auth, retry/error translation, and stream-to-engine event normalization.</span></div>
-  <div><b>tools own execution contracts</b><span><code>BaseTool</code> metadata owns intent, background policy, terminal flag, hooks, and context requirements consumed by the query loop and sandbox dispatch path.</span></div>
+  <div><b>engine owns loop state</b><span><code>eos-engine</code> owns terminal tools, terminal result, exit reason, tool budget, notification state, and background supervisors.</span></div>
+  <div><b>providers own model streaming</b><span><code>eos-llm-client</code> and engine request assembly own provider request/event DTOs, upstream auth, retry/error translation, and stream-to-engine event normalization.</span></div>
+  <div><b>tools own execution contracts</b><span><code>eos-tools</code> owns tool metadata, intent, background policy, terminal flag, hooks, and context requirements consumed by the query loop and sandbox dispatch path.</span></div>
   <div><b>Workflow owns lifecycle</b><span>Submission tools mutate attempts, workflows, and tasks. Sandbox tools only inspect or mutate workspace state that those submissions reference.</span></div>
-  <div><b>sandbox owns workspace semantics</b><span>Provider adapters own containers and raw command execution. Daemon/workspace code owns LayerStack, OCC, overlay, isolated workspace, and plugin/LSP routing.</span></div>
-  <div><b>message owns artifact shape</b><span><code>Message</code>, stream events, event printing, and <code>message.jsonl</code> recording are kept outside the query-loop implementation.</span></div>
+  <div><b>sandbox owns workspace semantics</b><span><code>eos-sandbox-host</code> owns Docker containers and bootstrap exec. <code>sandbox/crates/*</code> owns daemon routing, LayerStack, OCC, overlay, isolated workspace, command sessions, and plugin/PPC routing.</span></div>
+  <div><b>message owns artifact shape</b><span><code>eos-llm-client</code> message DTOs, stream events, event printing, and <code>message.jsonl</code> recording are kept outside the query-loop implementation.</span></div>
   <div><b>notification owns reminders</b><span>Rules produce system reminders that are both stream events and provider-visible user-message blocks.</span></div>
 </div>
 </section>

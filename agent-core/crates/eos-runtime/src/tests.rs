@@ -57,11 +57,9 @@ fn stream_of(events: Vec<StreamEvent>) -> EngineStream {
     Box::pin(futures::stream::iter(events.into_iter().map(Ok)))
 }
 
-fn one_step_workflow_turns() -> (
-    Vec<Vec<StreamEvent>>,
-    Vec<Vec<StreamEvent>>,
-    Vec<Vec<StreamEvent>>,
-) {
+type AgentTurns = Vec<Vec<StreamEvent>>;
+
+fn one_step_workflow_turns() -> (AgentTurns, AgentTurns, AgentTurns) {
     let planner_payload = json!({
         "tasks": [{"id": "g1", "agent_name": "coder", "needs": []}],
         "task_specs": {"g1": "implement g1"},
@@ -416,7 +414,11 @@ async fn join_error_marks_unfinished_root_failed() {
 
     // Let the spawned task reach the blocking stream, then abort it.
     tokio::time::sleep(Duration::from_millis(50)).await;
-    handle.root_agent_task.abort();
+    handle
+        .root_agent_task
+        .as_ref()
+        .expect("root agent task")
+        .abort();
     handle.join().await; // observes a JoinError → runs the still-running guard.
 
     let task = state.task_store.get(&root_task_id).await.unwrap().unwrap();

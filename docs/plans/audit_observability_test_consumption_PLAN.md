@@ -3,12 +3,12 @@
 ## Goal
 
 Build a Rust-only audit/observability contract for `agent-core/`, `sandbox/`, and
-the future Rust test runner.
+the Rust test runner gates.
 
-Python under `backend/src` is legacy migration context only. This plan does not
-add new Python audit code, does not preserve Python-specific report shapes as a
-target, and should not introduce new Python compatibility shims. The target
-consumer is a Rust collector/test runner that validates:
+Python under `backend/src` is legacy migration context only and will be dropped.
+This plan does not add new Python audit code, does not preserve Python-specific
+report shapes as a target, and must not introduce Python compatibility shims.
+The target consumer is a Rust collector/test runner that validates:
 
 - tool use
 - performance stats
@@ -41,8 +41,9 @@ Disallowed targets:
   shapes
 - no producer dependency on tracing output for runner pass/fail checks
 
-Historical Python code can be read to understand old behavior, but the
-implementation source of truth is the Rust checkout plus this plan.
+Historical Python code can be read to understand old behavior, but it is not a
+target, migration contract, or compatibility surface. The implementation source
+of truth is the Rust checkout plus this plan.
 
 ## Current Direction
 
@@ -70,8 +71,8 @@ flowchart LR
   Contract["base/eos-obs-contract\nObsEnvelope only"]
   AgentCore["agent-core\nminimal obs JSONL writer"]
   Sandbox["sandbox\ndaemon audit ring + typed sections"]
-  Collector["Rust collector\nparse + normalize"]
-  Runner["Rust test runner\nstate/transcript joins + gates"]
+  Collector["agent-core/eos-obs-collector\nparse + normalize"]
+  Runner["Rust runner gates\nstate/transcript joins + obs checks"]
 
   Contract --> AgentCore
   Contract --> Collector
@@ -88,10 +89,11 @@ shared.
 
 ```mermaid
 flowchart LR
-  State["Rust state + transcript"] --> Runner["Rust collector / test runner"]
-  AgentObs["agent-core ObsEnvelope JSONL"] --> Runner
+  State["Rust state + transcript"] --> Runner["Rust test runner gates"]
+  AgentObs["agent-core ObsEnvelope JSONL"] --> Collector["eos-obs-collector"]
   SandboxRing["sandbox api.audit.pull"] --> Normalize["normalize to ObsEnvelope"]
-  Normalize --> Runner
+  Normalize --> Collector
+  Collector --> Runner
   Trace["tracing"] -. "human diagnostics only" .-> Human["operators"]
 ```
 
@@ -209,8 +211,8 @@ Required sandbox cleanup:
 
 ### Rust Collector
 
-The collector is a reader-side Rust component. Its job is to normalize inputs
-into `ObsEnvelope` rows and hand them to the Rust runner.
+`agent-core/crates/eos-obs-collector` is the reader-side Rust component. Its job
+is to normalize inputs into `ObsEnvelope` rows and hand them to the Rust runner.
 
 Inputs:
 
@@ -281,13 +283,25 @@ The Rust runner must not validate pass/fail criteria from tracing.
    - Use canonical event names for new/changed emissions.
    - Add tests that pulled events normalize to valid `ObsEnvelope` rows.
 
-6. **Build the Rust collector later.**
+6. **Keep the Rust collector narrow.**
    - Read agent-core obs JSONL.
-   - Pull sandbox daemon audit events.
-   - Normalize both into `ObsEnvelope`.
-   - Join with Rust state/transcript for correctness checks.
+   - Normalize sandbox daemon audit pull/snapshot events into `ObsEnvelope`.
+   - Canonicalize aliases and extract join ids.
+   - Report bounded-ring cursor/loss metadata.
    - Do not depend on Python code, Python reports, or legacy Python event
      schemas.
+
+7. **Add Rust runner gates.**
+   - Join normalized obs rows with Rust state/transcript evidence.
+   - Fail on counted sandbox audit loss in strict test mode.
+   - Require every expected `tool_use_id` from state/transcript to have a
+     canonical `tool_call.completed` obs row.
+   - Require tool duration/status payloads to be valid when a tool row exists.
+   - Require at least one real `os_resource.sampled` metric row when resource
+     gates are enabled.
+   - Treat tool correctness and message correctness as external
+     state/transcript assertions, not audit rows.
+   - Do not render or preserve a Python report shape.
 
 ## Staged Execution
 
@@ -299,17 +313,70 @@ The Rust runner must not validate pass/fail criteria from tracing.
 | 3 | Agent-core obs JSONL using `ObsEnvelope` | `cargo test -p eos-audit`; `cargo check -p eos-runtime`; JSONL smoke test |
 | 4 | Shadow events to tracing + dependency edge cleanup | affected crate tests; dependency guard updates if still present |
 | 5 | Sandbox typed emitters + resource samples | `cargo test -p eos-protocol -p eos-daemon`; pull smoke test |
-| 6 | Rust collector normalizer | normalization tests from agent-core row + sandbox pull event; no Python runner dependency |
-| 7 | Rust runner/report gates | state/transcript correctness + obs perf/resource gates; no Python report contract |
+| 6 | Rust collector normalizer in `agent-core/crates/eos-obs-collector` | normalization tests from agent-core row + sandbox pull event; no Python runner dependency |
+| 7 | Rust runner gate API | state/transcript correctness evidence + obs perf/resource gates; no Python report contract |
 
 Stages 2-4 and 5 can proceed in parallel if the only shared dependency is the
 stable `base/eos-obs-contract` crate.
+
+## Current Implementation Status
+
+As of 2026-06-04, the Rust-only producer and normalizer path has moved forward
+in the current checkout:
+
+| Stage | Current status | Evidence |
+|---|---|---|
+| 0 | implemented | `base/crates/eos-obs-contract` owns `ObsEnvelope`, ids, source enum, canonical event aliases, and JSONL helpers |
+| 1 | implemented | this plan has an explicit Rust-only boundary and no Python implementation target |
+| 2 | implemented for agent-core writer scope | `agent-core/crates/eos-audit` is a small sink/event/jsonl crate with no downstream EphemeralOS deps |
+| 3 | implemented for minimum agent-core events | `eos-engine` emits `agent_run.completed`, `tool_call.completed`, and `os_resource.sampled`; `eos-audit` JSONL serializes `ObsEnvelope` rows |
+| 4 | implemented for the named shadows | `workflow.task.*` and agent-core `background_tool.*` are tracing diagnostics; `eos-workflow` has no audit dependency |
+| 5 | first daemon dispatch slice implemented | `sandbox/crates/eos-daemon/src/audit_events.rs` emits typed `eos-protocol::audit::*Section` payloads and sample-lane `os_resource.sampled` rows |
+| 6 | implemented for normalizer | `agent-core/crates/eos-obs-collector` parses agent-core JSONL, normalizes sandbox pull events to `ObsEnvelope`, canonicalizes aliases, extracts join ids, and reports pull loss metadata |
+| 7 | first gate API implemented | `eos-obs-collector::evaluate_runner_gates` accepts normalized rows, sandbox loss metadata, expected tool-use ids, external state/transcript correctness evidence, and strict/resource gate settings; `evaluate_runner_gate_batches` flattens agent-core rows plus normalized sandbox batches and merges sandbox loss; `RunnerGateReport` serializes as a self-contained Rust JSON artifact with pass/fail, failures, metrics, settings, correctness evidence, and sandbox loss |
+
+## Next Rust Implementation Step
+
+The first Stage 7 API lives in `agent-core/crates/eos-obs-collector/src/gates.rs`.
+It returns a typed `RunnerGateReport` with pass/fail, failure kinds, and basic
+metrics. `RunnerGateReport`, `RunnerGateFailure`, `RunnerGateMetrics`,
+`RunnerGateSettings`, `RunnerCorrectnessEvidence`, `SandboxPullBatch`, and
+`SandboxAuditLoss` are serializable Rust artifact types. They intentionally do
+not ingest tracing, call Python, render a Python-shaped report, or invent audit
+rows for state facts that are already authoritative.
+
+The report artifact carries enough context to explain a gate result without
+replaying the evaluator: gate settings, supplied state/transcript correctness
+evidence, optional sandbox loss metadata, aggregate metrics, and typed failure
+kinds are serialized together.
+
+For the future runner's normal input shape, `evaluate_runner_gate_batches`
+accepts agent-core rows plus one or more `SandboxPullBatch` values, flattens all
+normalized rows, merges sandbox loss with `SandboxAuditLoss::merge`, and then
+uses the same gate evaluator. This keeps batch handling in the collector instead
+of making every runner duplicate row-flattening and loss-summary logic.
+
+Remaining Stage 7 integration work is to wire the future Rust test runner so it
+supplies:
+
+- normalized obs rows from `eos-obs-collector`
+- sandbox loss metadata from `SandboxAuditLoss`
+- expected tool-use ids from Rust state/transcript
+- typed evidence that Rust state/transcript checks already verified tool
+  correctness and message correctness
+
+Current resource sampling cadence:
+
+- agent-core samples once at agent-run completion when the audit sink is enabled
+- sandbox samples per audited daemon dispatch when cgroup CPU/IO timings are
+  present, on the sample lane
 
 ## Verification Gates
 
 - `base`: `cargo test --manifest-path base/Cargo.toml -p eos-obs-contract`
 - `base`: `cargo clippy --manifest-path base/Cargo.toml -p eos-obs-contract --all-targets -- -D warnings`
 - `agent-core`: targeted crate tests from the owning workspace.
+- `agent-core`: `cargo test -p eos-obs-collector`; `cargo clippy -p eos-obs-collector --all-targets -- -D warnings`
 - `sandbox`: targeted crate tests from the owning workspace.
 - Rust-only doc guard: `rg -n "backend/src|Python collector|Python report|compatibility shim" docs/plans/audit_observability_test_consumption_PLAN.md`
   should only match the Rust-only boundary and explicit non-goals.
@@ -318,14 +385,27 @@ stable `base/eos-obs-contract` crate.
   - one sandbox `api.audit.pull` event normalizes to `ObsEnvelope`
   - `tool_call.finished` aliases to `tool_call.completed`
   - `tool_use_id` joins agent-core and sandbox rows for the same tool call
+- Runner gate smoke:
+  - strict audit loss fails
+  - missing expected `tool_use_id` fails
+  - missing external state/transcript correctness evidence fails
+  - invalid tool duration/status payloads fail
+  - resource gate requires a real metric-bearing `os_resource.sampled` row
+  - `RunnerGateReport` round-trips through stable JSON with snake_case failure
+    kinds, settings, correctness evidence, metrics, and sandbox loss metadata
+  - sandbox pull losses merge across multiple batches before strict loss gates
+  - batch evaluator flattens agent-core rows plus sandbox batch rows
 
 ## Open Decisions
 
 - Whether agent-core keeps the crate name `eos-audit` for its local writer or
   renames to an obs-focused name.
-- Exact process-resource sampling cadence for agent-core.
+- Whether resource sampling needs additional cadence beyond the current
+  agent-run-completion and audited-dispatch samples.
 - Whether isolated-workspace JSONL remains a separate sandbox source or is
   mirrored into the daemon audit ring.
+- Where the future Rust test runner crate should live and how it supplies
+  state/transcript correctness evidence to `evaluate_runner_gates`.
 
 ## Risks
 

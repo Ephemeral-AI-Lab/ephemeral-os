@@ -42,8 +42,8 @@
   <span class="nav-pair"><a href="daemon.html">← 6. Daemon and Background Tasks</a><a href="plugins.html">8. Plugin in ephemeral_workspace →</a></span>
 </div>
 <section id="provider"
-  data-last-reviewed-commit="2a3e6cc7c"
-  data-evidence-paths="backend/src/sandbox/provider/protocol.py backend/src/sandbox/provider/bootstrap.py backend/src/sandbox/provider/registry.py backend/src/sandbox/host/bootstrap.py backend/src/sandbox/host/daemon_client.py">
+  data-last-reviewed-commit="72d7dd95a"
+  data-evidence-paths="agent-core/crates/eos-sandbox-host/src/docker.rs agent-core/crates/eos-sandbox-host/src/lifecycle.rs agent-core/crates/eos-sandbox-host/src/runtime_artifact.rs agent-core/crates/eos-sandbox-host/src/error.rs agent-core/crates/eos-sandbox-host/src/registry.rs agent-core/crates/eos-sandbox-api/src/lib.rs sandbox/crates/eosd/src/main.rs sandbox/crates/eos-daemon/src/server.rs sandbox/crates/eos-daemon/src/dispatcher.rs">
 <h2>7. Provider <a class="anchor" href="#provider">§</a></h2>
 <nav class="page-toc" aria-labelledby="page-toc-heading">
   <h3 id="page-toc-heading">Contents</h3>
@@ -56,10 +56,10 @@
 
 <div class="summary">
   <ul>
-    <li>The sandbox runtime can run on different backends without changing workspace logic.</li>
-    <li>The provider boundary defines provider-neutral CRUD, exec, preview/log, and context-preparation primitives.</li>
-    <li>Host lifecycle bootstraps runtime and workspace base through the selected adapter.</li>
-    <li>Providers own containers; sandbox workspace logic stays provider-agnostic.</li>
+    <li>The Rust sandbox host is Docker-only today; non-Docker provider names fail fast instead of selecting an adapter.</li>
+    <li><code>eos-sandbox-host</code> owns Docker container CRUD, raw exec, host lifecycle, runtime artifact upload, and host error mapping.</li>
+    <li><code>eos-sandbox-api</code> is the typed daemon protocol boundary; it does not select providers or own runtime state.</li>
+    <li>The resident sandbox runtime is the static <code>eosd</code> binary plus <code>eos-daemon</code> workspace, command, plugin, and isolated-workspace handlers.</li>
   </ul>
 </div>
 <div class="wiki-links" aria-label="Provider page links">
@@ -69,109 +69,117 @@
 </div>
 </section>
 <section id="provider-boundary"
-  data-last-reviewed-commit="2a3e6cc7c"
-  data-evidence-paths="backend/src/sandbox/provider/protocol.py backend/src/sandbox/provider/registry.py backend/src/sandbox/provider/bootstrap.py backend/src/sandbox/provider/docker/adapter.py backend/src/sandbox/provider/daytona/adapter.py backend/src/sandbox/host/bootstrap.py backend/src/sandbox/host/daemon_client.py">
+  data-last-reviewed-commit="72d7dd95a"
+  data-evidence-paths="agent-core/crates/eos-sandbox-host/src/docker.rs agent-core/crates/eos-sandbox-host/src/lifecycle.rs agent-core/crates/eos-sandbox-host/src/runtime_artifact.rs agent-core/crates/eos-sandbox-host/src/error.rs agent-core/crates/eos-sandbox-host/src/registry.rs agent-core/crates/eos-sandbox-api/src/lib.rs">
 <h3>7.1 Provider Boundary <a class="anchor" href="#provider-boundary">§</a></h3>
-<p><code>ProviderAdapter</code> is the single protocol for Docker and Daytona. It includes health/discovery, container CRUD, preview/build logs, async <code>exec</code>, and <code>context_preparer()</code> <span class="file-ref">backend/src/sandbox/provider/protocol.py:21-79</span>. The registry supports one process-wide default plus explicit per-sandbox bindings; fallback to default is intentionally uncached <span class="file-ref">backend/src/sandbox/provider/registry.py:1-95</span>. Startup chooses <code>EOS_SANDBOX_PROVIDER</code> or central config and bootstraps Docker or Daytona once <span class="file-ref">backend/src/sandbox/provider/bootstrap.py:33-77</span>.</p>
+<p>The Rust provider boundary is a narrow host-side Docker contract, not an active provider matrix. <code>DockerProviderAdapter</code> is documented as the only Rust production provider <span class="file-ref">agent-core/crates/eos-sandbox-host/src/docker.rs:1-7</span>, provider resolution accepts only <code>docker</code> from config or <code>EOS_SANDBOX_PROVIDER</code> and rejects other values <span class="file-ref">agent-core/crates/eos-sandbox-host/src/registry.rs:18-43</span>, and the host error contract surfaces non-Docker selections as <code>UnknownProviderKind</code> with <code>expected docker</code> <span class="file-ref">agent-core/crates/eos-sandbox-host/src/error.rs:20-23</span>.</p>
 
 <div class="edge-list">
-  <div><b>exports</b><span><code>ProviderAdapter</code> exposes only provider primitives: health, discovery, CRUD, preview/log URLs, exec, and context preparation <span class="file-ref">backend/src/sandbox/provider/protocol.py:21-79</span>.</span></div>
-  <div><b>calls</b><span><code>setup_post_lifecycle()</code> overlaps runtime upload with git bootstrap, joins the upload, runs runtime bootstrap, then ensures the workspace base <span class="file-ref">backend/src/sandbox/host/bootstrap.py:300-312</span>.</span></div>
-  <div><b>calls</b><span><code>call_daemon_api()</code> resolves the provider adapter, injects <code>layer_stack_root</code>, and chooses TCP or thin-client transport <span class="file-ref">backend/src/sandbox/host/daemon_client.py:161-183</span>.</span></div>
-  <div><b>owns-state</b><span>Providers own container lifecycle and optional daemon TCP exposure; the daemon and LayerStack own workspace semantics after bootstrap.</span></div>
+  <div><b>implements</b><span><code>DockerProviderAdapter</code> holds the async Docker client and reports <code>ProviderKind::Docker</code>; <code>SandboxLifecycle</code> is the host lifecycle orchestrator over the provider registry and daemon client <span class="file-ref">agent-core/crates/eos-sandbox-host/src/docker.rs:47-74</span>, <span class="file-ref">agent-core/crates/eos-sandbox-host/src/lifecycle.rs:39-47</span>.</span></div>
+  <div><b>selects</b><span>Provider selection is Docker-only; a future Rust provider requires an explicit plan instead of reviving the old Python branch by config name <span class="file-ref">agent-core/crates/eos-sandbox-host/src/registry.rs:18-43</span>.</span></div>
+  <div><b>calls</b><span><code>SandboxLifecycle</code> creates or starts the container, then runs the same post-lifecycle setup path for runtime upload, git bootstrap, workspace-base binding, and readiness <span class="file-ref">agent-core/crates/eos-sandbox-host/src/lifecycle.rs:60-76</span>, <span class="file-ref">agent-core/crates/eos-sandbox-host/src/lifecycle.rs:150-170</span>.</span></div>
+  <div><b>owns-state</b><span>Docker owns container lifecycle and optional daemon TCP exposure; <code>eos-daemon</code>, LayerStack, and OCC own workspace semantics after bootstrap.</span></div>
 </div>
 
 <table>
-  <thead><tr><th>Provider</th><th>Responsibilities in code</th><th>Evidence</th></tr></thead>
+  <thead><tr><th>Rust surface</th><th>Responsibilities in code</th><th>Evidence</th></tr></thead>
   <tbody>
-    <tr><td>Docker</td><td>Creates long-running containers, injects daemon TCP env/auth labels when enabled, exposes a host TCP endpoint, and executes commands through <code>container.exec_run</code>.</td><td><span class="file-ref">backend/src/sandbox/provider/docker/adapter.py:150-214</span>, <span class="file-ref">backend/src/sandbox/provider/docker/adapter.py:292-342</span>, <span class="file-ref">backend/src/sandbox/provider/docker/adapter.py:344-399</span></td></tr>
-    <tr><td>Daytona</td><td>Creates/starts/stops/deletes SDK sandboxes, wraps exec commands, returns preview URLs, and injects runtime context.</td><td><span class="file-ref">backend/src/sandbox/provider/daytona/adapter.py:192-283</span>, <span class="file-ref">backend/src/sandbox/provider/daytona/adapter.py:323-356</span></td></tr>
-    <tr><td>Host lifecycle</td><td>Uploads runtime bundle, ensures git, runs runtime bootstrap, and ensures the workspace base after create/start.</td><td><span class="file-ref">backend/src/sandbox/host/bootstrap.py:31-115</span>, <span class="file-ref">backend/src/sandbox/host/bootstrap.py:300-322</span></td></tr>
+    <tr><td>Docker adapter</td><td>Creates long-running containers, injects daemon TCP env/auth labels when enabled, exposes the daemon TCP endpoint, runs raw commands, uploads tar archives, and prepares provider context.</td><td><span class="file-ref">agent-core/crates/eos-sandbox-host/src/docker.rs:115-212</span>, <span class="file-ref">agent-core/crates/eos-sandbox-host/src/docker.rs:319-370</span>, <span class="file-ref">agent-core/crates/eos-sandbox-host/src/docker.rs:399-459</span></td></tr>
+    <tr><td>Lifecycle</td><td>Registers created containers, starts/stops/deletes through the adapter, and treats post-create and post-start setup as the host-side readiness gate.</td><td><span class="file-ref">agent-core/crates/eos-sandbox-host/src/lifecycle.rs:60-100</span>, <span class="file-ref">agent-core/crates/eos-sandbox-host/src/lifecycle.rs:150-170</span>, <span class="file-ref">agent-core/crates/eos-sandbox-host/src/lifecycle.rs:211-273</span></td></tr>
+    <tr><td>Runtime artifact</td><td>Uploads one pinned static <code>eosd</code> binary per container architecture, verifies sha256 and <code>eosd --version</code>, and intentionally drops the old Python tarball/chunked-upload path.</td><td><span class="file-ref">agent-core/crates/eos-sandbox-host/src/runtime_artifact.rs:1-9</span>, <span class="file-ref">agent-core/crates/eos-sandbox-host/src/runtime_artifact.rs:151-253</span></td></tr>
+    <tr><td>Python parity / historical</td><td>The legacy Python provider stack had Docker and Daytona adapters. In the Rust architecture, Daytona is comparison material only and must not be presented as an active provider branch.</td><td><span class="file-ref">agent-core/crates/eos-sandbox-host/src/registry.rs:128-148</span>, <span class="file-ref">agent-core/crates/eos-sandbox-host/src/error.rs:20-23</span></td></tr>
   </tbody>
 </table>
 
 </section>
 <section id="provider-bootstrap-workflow"
-  data-last-reviewed-commit="2a3e6cc7c"
-  data-evidence-paths="backend/src/sandbox/provider/bootstrap.py backend/src/sandbox/provider/protocol.py backend/src/sandbox/provider/docker/adapter.py backend/src/sandbox/provider/daytona/adapter.py backend/src/sandbox/host/bootstrap.py backend/src/sandbox/host/daemon_client.py">
+  data-last-reviewed-commit="72d7dd95a"
+  data-evidence-paths="agent-core/crates/eos-sandbox-host/src/docker.rs agent-core/crates/eos-sandbox-host/src/lifecycle.rs agent-core/crates/eos-sandbox-host/src/runtime_artifact.rs agent-core/crates/eos-sandbox-api/src/lib.rs sandbox/crates/eosd/src/main.rs sandbox/crates/eos-daemon/src/server.rs sandbox/crates/eos-daemon/src/dispatcher.rs">
 <h3>7.2 Bootstrap Workflow <a class="anchor" href="#provider-bootstrap-workflow">§</a></h3>
 <pre class="diagram" aria-label="Provider bootstrap technical route">
-[sandbox config]
+[sandbox config / EOS_SANDBOX_PROVIDER]
         |
         v
-[resolve provider]
+[resolve provider: docker only]
         |
-        +--&gt; [EOS_SANDBOX_PROVIDER / config selects Daytona]
-        |       -&gt; [Daytona provider client]
-        |
-        +--&gt; [default]
-                -&gt; [Docker provider]
+        +--&gt; [non-docker] -&gt; [UnknownProviderKind]
         |
         v
-[create or attach sandbox]
+[DockerProviderAdapter]
         |
         v
-[install daemon + workspace bindings]
+[create or start container]
         |
         v
-[return provider-backed sandbox API]
+[upload pinned eosd + ensure workspace base]
+        |
+        v
+[eosd daemon: AF_UNIX / optional TCP]
+        |
+        v
+[eos-sandbox-api typed ops -&gt; eos-daemon handlers]
 </pre>
 <div class="sequence" aria-label="Provider bootstrap workflow">
   <ol>
-    <li><span>Provider bootstrap chooses and initializes a Docker or Daytona adapter, then the registry binds the adapter globally or per sandbox.</span></li>
-    <li><span>Container create/start returns provider metadata, including the workspace root when the provider can report it.</span></li>
-    <li><span>Host post-lifecycle setup uploads the runtime bundle, ensures git, finishes upload, runs runtime bootstrap, and calls <code>ensure_workspace_base</code> <span class="file-ref">backend/src/sandbox/host/bootstrap.py:300-312</span>.</span></li>
-    <li><span>The daemon client later uses the same adapter for TCP endpoint discovery or AF_UNIX thin-client exec.</span></li>
-    <li><span>Workspace code below the daemon boundary receives <code>layer_stack_root</code> and <code>workspace_root</code>; it does not care which provider created the container.</span></li>
+    <li><span>Runtime composition resolves provider config to Docker; <code>daytona</code> or any other value is rejected before lifecycle work begins.</span></li>
+    <li><span>The Docker adapter creates or starts a long-running container with the runtime tmpfs, capability/security settings, daemon TCP labels, and raw exec/put-archive primitives <span class="file-ref">agent-core/crates/eos-sandbox-host/src/docker.rs:145-181</span>, <span class="file-ref">agent-core/crates/eos-sandbox-host/src/docker.rs:478-529</span>.</span></li>
+    <li><span>Post-lifecycle setup overlaps a best-effort background <code>eosd</code> upload with git bootstrap, then performs the authoritative upload and gates on workspace-base readiness <span class="file-ref">agent-core/crates/eos-sandbox-host/src/lifecycle.rs:150-170</span>, <span class="file-ref">agent-core/crates/eos-sandbox-host/src/lifecycle.rs:319-383</span>.</span></li>
+    <li><span>The uploaded <code>eosd</code> binary routes <code>daemon</code>, <code>ns-runner</code>, and <code>ns-holder</code> subcommands; the daemon listens on AF_UNIX and optional loopback TCP <span class="file-ref">sandbox/crates/eosd/src/main.rs:1-15</span>, <span class="file-ref">sandbox/crates/eos-daemon/src/server.rs:1-24</span>.</span></li>
+    <li><span><code>eos-sandbox-api</code> defines request/result DTOs, daemon op constants, timeout policy, and the transport trait; <code>eos-daemon</code> registers the concrete workspace, command, plugin, audit, and isolated-workspace handlers <span class="file-ref">agent-core/crates/eos-sandbox-api/src/lib.rs:1-19</span>, <span class="file-ref">sandbox/crates/eos-daemon/src/dispatcher.rs:97-149</span>.</span></li>
   </ol>
 </div>
 
 <table>
-  <thead><tr><th>Boundary</th><th>Provider owns</th><th>Sandbox runtime owns</th></tr></thead>
+  <thead><tr><th>Boundary</th><th>Docker host owns</th><th>Sandbox runtime owns</th></tr></thead>
   <tbody>
-    <tr><td>Container lifecycle</td><td>Create, start, stop, delete, labels, snapshot/image options, preview URLs, and build-log URLs.</td><td>Post-create/start runtime setup and workspace base creation.</td></tr>
-    <tr><td>Command execution</td><td>The primitive that runs a command inside the container.</td><td>Daemon envelope shape, thin-client protocol, shell policy, overlay namespace execution, and result projection.</td></tr>
-    <tr><td>Workspace path</td><td>Reporting or preparing provider-specific project directory context.</td><td>Binding that workspace root to LayerStack storage and translating tool paths.</td></tr>
-    <tr><td>Network exposure</td><td>Optional daemon TCP endpoint and provider-specific reachability.</td><td>Daemon authentication, request validation, and fallback to in-container AF_UNIX socket.</td></tr>
+    <tr><td>Provider selection</td><td>Resolve Docker only, seed the provider registry, and fail fast on non-Docker names.</td><td>No provider selection; it receives daemon envelopes after bootstrap.</td></tr>
+    <tr><td>Container lifecycle</td><td>Create, start, stop, delete, labels, host config, daemon TCP exposure, raw exec, and tar upload.</td><td>Post-upload daemon readiness, workspace binding, and request dispatch.</td></tr>
+    <tr><td>Command execution</td><td>Run host bootstrap probes and daemon thin-client commands inside the container.</td><td>Model-facing shell sessions, overlay namespace execution, result projection, and cancellation.</td></tr>
+    <tr><td>Workspace semantics</td><td>Pass <code>workspace_root</code> and <code>layer_stack_root</code> into daemon calls during setup.</td><td>LayerStack, OCC, audit, plugin PPC, and isolated-workspace lifecycle.</td></tr>
   </tbody>
 </table>
 
 </section>
 <section id="provider-evidence-refresh"
-  data-last-reviewed-commit="2a3e6cc7c"
-  data-evidence-paths="backend/src/sandbox/provider/protocol.py backend/src/sandbox/provider/docker/adapter.py backend/src/sandbox/provider/daytona/adapter.py backend/src/sandbox/host/bootstrap.py backend/tests/live_e2e_test/sandbox/_harness/workspace_base_public.py backend/tests/live_e2e_test/sandbox/phase-01-workspace-base-report.md backend/tests/live_e2e_test/sandbox/phase-04-pure-sandbox-api-load-report.md">
+  data-last-reviewed-commit="72d7dd95a"
+  data-evidence-paths="agent-core/crates/eos-sandbox-host/src/docker.rs agent-core/crates/eos-sandbox-host/src/lifecycle.rs agent-core/crates/eos-sandbox-host/src/runtime_artifact.rs agent-core/crates/eos-sandbox-host/src/error.rs agent-core/crates/eos-sandbox-api/src/lib.rs agent-core/crates/eos-sandbox-api/src/ops.rs sandbox/crates/eosd/src/main.rs sandbox/crates/eos-daemon/src/server.rs sandbox/crates/eos-daemon/src/dispatcher.rs">
 <h3>7.3 Evidence and Refresh <a class="anchor" href="#provider-evidence-refresh">§</a></h3>
 <div class="evidence-grid">
   <div class="evidence-card">
     <h4>Source files</h4>
     <ul>
-      <li><span class="file-ref">backend/src/sandbox/provider/protocol.py</span> provider contract.</li>
-      <li><span class="file-ref">backend/src/sandbox/provider/docker/adapter.py</span> Docker CRUD, exec, daemon TCP endpoint.</li>
-      <li><span class="file-ref">backend/src/sandbox/provider/daytona/adapter.py</span> Daytona CRUD, exec, preview/logs.</li>
-      <li><span class="file-ref">backend/src/sandbox/host/bootstrap.py</span> post-create/start bootstrap sequence.</li>
+      <li><span class="file-ref">agent-core/crates/eos-sandbox-host/src/docker.rs</span> Docker adapter, container CRUD, raw exec, daemon TCP endpoint, and tar upload.</li>
+      <li><span class="file-ref">agent-core/crates/eos-sandbox-host/src/lifecycle.rs</span> create/start/delete lifecycle and post-lifecycle bootstrap.</li>
+      <li><span class="file-ref">agent-core/crates/eos-sandbox-host/src/runtime_artifact.rs</span> pinned <code>eosd</code> artifact upload and verification.</li>
+      <li><span class="file-ref">agent-core/crates/eos-sandbox-host/src/error.rs</span> host error contract, including Docker-only provider rejection.</li>
+      <li><span class="file-ref">agent-core/crates/eos-sandbox-host/src/registry.rs</span> Docker-only provider selection and per-sandbox adapter bindings.</li>
+      <li><span class="file-ref">agent-core/crates/eos-sandbox-api/src/lib.rs</span> typed daemon protocol boundary; no provider selection.</li>
+      <li><span class="file-ref">agent-core/crates/eos-sandbox-api/src/ops.rs</span> daemon operation constants and wire names.</li>
+      <li><span class="file-ref">sandbox/crates/eosd/src/main.rs</span> static binary dispatcher for daemon, namespace runner, and namespace holder.</li>
+      <li><span class="file-ref">sandbox/crates/eos-daemon/src/server.rs</span> AF_UNIX / optional TCP server, auth, framing, and shutdown.</li>
+      <li><span class="file-ref">sandbox/crates/eos-daemon/src/dispatcher.rs</span> daemon op routing for runtime, workspace, command, plugin, audit, and isolated-workspace calls.</li>
     </ul>
   </div>
   <div class="evidence-card">
-    <h4>Tests and reports</h4>
+    <h4>Historical comparison</h4>
     <ul>
-      <li><span class="file-ref">backend/tests/live_e2e_test/sandbox/_harness/workspace_base_public.py</span></li>
-      <li><span class="file-ref">backend/tests/live_e2e_test/sandbox/phase-01-workspace-base-report.md</span></li>
-      <li><span class="file-ref">backend/tests/live_e2e_test/sandbox/phase-04-pure-sandbox-api-load-report.md</span></li>
+      <li>Legacy Python provider files may still be useful for parity archaeology, but they are not active Rust evidence.</li>
+      <li>Do not describe Daytona as a Rust provider unless a future Rust implementation and config path land in <code>agent-core</code>.</li>
     </ul>
   </div>
   <div class="evidence-card">
     <h4>Refresh triggers</h4>
-    <p>Provider adapter method changes, daemon TCP exposure changes, runtime upload changes, or workspace base bootstrap changes should update this page plus Daemon startup and LayerStack Storage.</p>
+    <p>Docker adapter changes, provider-selection changes, runtime artifact pin/upload changes, daemon transport changes, or workspace-base readiness changes should update this page plus Daemon startup and LayerStack Storage.</p>
   </div>
 </div>
 <div class="maintenance-note">
   Backlinks: daemon transport details live in <a class="wiki-link" href="daemon.html#startup-transport">Startup and Transport</a>; workspace base and binding details live in <a class="wiki-link" href="layerstack.html#layerstack-storage">Storage</a> and <a class="wiki-link" href="workspaces.html#main-workspace">main_workspace</a>.
 </div>
 </section>
-<div class="page-baseline" data-page-baseline-commit="2a3e6cc7c">
+<div class="page-baseline" data-page-baseline-commit="72d7dd95a">
   <strong>Maintenance baseline</strong>
-  <span>Local section metadata reviewed at <code>2a3e6cc7c</code>.</span>
-  <code>git diff 2a3e6cc7c..HEAD -- &lt;section data-evidence-paths&gt;</code>
+  <span>Local section metadata reviewed at <code>72d7dd95a</code>.</span>
+  <code>git diff 72d7dd95a..HEAD -- &lt;section data-evidence-paths&gt;</code>
 </div>
 <div class="page-footer-nav"><span><a href="daemon.html">← 6. Daemon and Background Tasks</a></span><span><a href="plugins.html">8. Plugin in ephemeral_workspace →</a></span></div>
 </main>

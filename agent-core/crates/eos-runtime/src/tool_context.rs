@@ -21,8 +21,8 @@ pub(crate) struct MetadataParams {
     pub task_id: Option<TaskId>,
     pub attempt_id: Option<AttemptId>,
     pub workflow_id: Option<WorkflowId>,
-    /// Wired for the root agent (delegate/check/cancel workflow); `None` for
-    /// workflow agents in Phase 6 (nested delegation is deferred).
+    /// Workflow control for delegate/check/cancel workflow and workflow-agent
+    /// hooks that need workflow state.
     pub workflow_control: Option<Arc<dyn WorkflowControlPort>>,
     /// The recording plan-submission port (planner/generator/reducer terminals).
     /// Wired for delegated-workflow agents so their submit tools record straight

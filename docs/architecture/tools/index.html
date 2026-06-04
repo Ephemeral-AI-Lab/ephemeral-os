@@ -18,6 +18,7 @@
   <ol class="module-list">
     <li><a href="../sandbox/index.html" data-doc-module="sandbox">Sandbox Workspace</a></li>
     <li><a href="../tools/index.html" data-doc-module="tools" class="active">Tools</a></li>
+    <li><a href="../rust-migration.html" data-doc-module="migration">Rust Migration</a></li>
   </ol>
   <h2>Tools Pages</h2>
   <ol>
@@ -37,7 +38,7 @@
 </nav>
 <main>
       <header class="page-header">
-        <p class="eyebrow">backend/src/tools</p>
+        <p class="eyebrow">agent-core/crates/eos-tools</p>
         <h1>Tools Architecture Wiki</h1>
 <nav class="page-toc" aria-labelledby="page-toc-heading">
   <h3 id="page-toc-heading">Contents</h3>
@@ -50,48 +51,47 @@
 </nav>
 
 <p class="lead">
-          This wiki maps every immediate tool folder plus the shared hook modules to the engine dispatch loop,
-          sandbox workspace routing, Workflow terminal state, and background execution behavior. It is a
-          documentation artifact only; the runtime code was not refactored as part of this pass.
+          This wiki maps the Rust model-facing tool crate to the engine dispatch loop,
+          sandbox workspace routing, Workflow terminal state, helper launches, and background execution behavior.
+          Legacy Python tool folders are parity/history references unless a page explicitly names <code>test_runner</code>.
         </p>
       </header>
 
-      <section id="wiki-scope" data-last-reviewed-commit="HEAD-plus-worktree" data-evidence-paths="backend/src/tools;backend/src/engine/query;backend/src/engine/tool_call;backend/src/engine/background;backend/src/sandbox;backend/src/workflow">
+      <section id="wiki-scope" data-last-reviewed-commit="HEAD-plus-worktree" data-evidence-paths="agent-core/crates/eos-tools agent-core/crates/eos-engine agent-core/crates/eos-workflow agent-core/crates/eos-sandbox-api agent-core/crates/eos-sandbox-host sandbox/crates docs/architecture/rust-migration.html">
         <h3>Scope And Ownership</h3>
         <div class="grid">
           <div class="card">
             <h3>Tool surface</h3>
             <p>
-              <code>backend/src/tools</code> owns the agent-facing tool definitions, factories, terminal submissions,
-              helper launches, background management tools, and sandbox wrappers.
+              <code>eos-tools</code> owns the agent-facing tool names, specs, metadata, execution lifecycle,
+              terminal submissions, helper launches, workflow tools, isolated workspace tools, skills, and sandbox wrappers.
             </p>
           </div>
           <div class="card">
             <h3>Engine integration</h3>
             <p>
-              <code>engine.query.loop</code>, <code>engine.tool_call.streaming</code>, and
-              <code>engine.tool_call.dispatch</code> decide when tool calls execute, defer, run in background,
+              <code>eos-engine</code> query and tool-call modules decide when tool calls execute, defer, run in background,
               or terminate the agent loop.
             </p>
           </div>
           <div class="card">
             <h3>Sandbox dispatch</h3>
             <p>
-              Sandbox wrappers call typed <code>sandbox.api.tool</code> requests, then daemon routing chooses
-              layer-stack/OCC, per-call ephemeral overlay, or explicit isolated workspace execution.
+              Sandbox wrappers call typed <code>eos-sandbox-api</code> requests, then Rust daemon routing chooses
+              LayerStack/OCC, per-call overlay, command session, plugin PPC, or explicit isolated workspace execution.
             </p>
           </div>
           <div class="card">
             <h3>Workflow boundary</h3>
             <p>
               Submission and terminal tools are the persistent handoff channel between agents and Workflow
-              state: planner rows, generator DAG tasks, delegated workflows, evaluator outcomes, and helper outputs.
+              state: root outcomes, planner rows, generator DAG tasks, reducer outcomes, delegated workflows, and helper outputs.
             </p>
           </div>
         </div>
       </section>
 
-      <section id="end-to-end-flow" data-last-reviewed-commit="569f12c3f39471dbaa643906856a8daf81a21a2d" data-evidence-paths="backend/src/tools/_framework;backend/src/tools/submission;backend/src/tools/sandbox;backend/src/engine/query/loop.py;backend/src/engine/tool_call/dispatch.py;backend/src/engine/tool_call/streaming.py;backend/src/sandbox/daemon/workspace_tool_dispatch.py;backend/src/workflow">
+      <section id="end-to-end-flow" data-last-reviewed-commit="HEAD-plus-worktree" data-evidence-paths="agent-core/crates/eos-tools/src agent-core/crates/eos-engine/src/tool_call agent-core/crates/eos-engine/src/query agent-core/crates/eos-workflow/src agent-core/crates/eos-sandbox-api/src sandbox/crates/eos-daemon/src/dispatcher.rs">
         <h3>End-To-End Tool Workflow</h3>
         <div class="diagram" aria-label="Tool dispatch workflow">
           <div class="flow-row">
@@ -113,9 +113,8 @@
             <div>
               <strong>Agent registry is built.</strong>
               <p>
-                <code>engine.agent.factory</code> asks the tools facade and factory for allowed tool instances.
-                Tool metadata comes from <code>BaseTool</code>: intent, background policy, task type,
-                terminal flag, hooks, and context requirements.
+                Runtime agent definitions select allowed tools and terminals. <code>eos-tools</code> exposes
+                <code>ToolName</code>, specs, metadata, intent, background policy, terminal flag, hooks, and context requirements.
               </p>
             </div>
           </div>
@@ -144,7 +143,7 @@
             <div>
               <strong>One tool lifecycle runs.</strong>
               <p>
-                <code>execute_tool_once</code> parses input, runs pre-hooks, executes the body, validates output,
+                Rust tool execution parses input, runs pre-hooks, executes the body, validates output,
                 runs post-hooks, and stamps successful terminal tools with <code>is_terminal=True</code>.
               </p>
             </div>
@@ -163,7 +162,7 @@
         </div>
       </section>
 
-      <section id="folder-pages" data-last-reviewed-commit="HEAD-plus-worktree" data-evidence-paths="backend/src/tools/_framework;backend/src/tools/_terminals;backend/src/tools/sandbox;backend/src/tools/isolated_workspace;backend/src/tools/subagent;backend/src/tools/ask_helper;backend/src/tools/submission;backend/src/tools/skills">
+      <section id="folder-pages" data-last-reviewed-commit="HEAD-plus-worktree" data-evidence-paths="agent-core/crates/eos-tools/src agent-core/crates/eos-tools/src/model_tools agent-core/crates/eos-tools/src/hooks.rs agent-core/crates/eos-sandbox-api/src agent-core/crates/eos-workflow/src">
         <h3>Folder Page Matrix</h3>
         <div class="table-wrap">
           <table>
@@ -177,61 +176,61 @@
             </thead>
             <tbody>
               <tr>
-                <td><code>_framework</code></td>
+                <td><code>executor.rs</code><br><code>dispatch.rs</code><br><code>registry.rs</code></td>
                 <td><a href="framework.html">Framework</a></td>
                 <td>Tool contract, registry, factories, decorator, execution lifecycle.</td>
                 <td>Engine registry construction, schema exposure, hooks, terminal stamping.</td>
               </tr>
               <tr>
-                <td><code>_framework/core/hooks.py</code><br><code>_framework/execution/hook_pipeline.py</code></td>
+                <td><code>hooks.rs</code><br><code>hooks/*</code></td>
                 <td><a href="hooks.html">Hooks</a></td>
                 <td>Explicit pre/post hook contracts, target validation, hook trace, and hook-failure metadata.</td>
                 <td>Decorator construction, <code>execute_tool_once</code> lifecycle, sandbox command pre-hooks.</td>
               </tr>
               <tr>
-                <td><code>_terminals</code></td>
+                <td><code>terminal.rs</code><br><code>model_tools/submission.rs</code></td>
                 <td><a href="terminals.html">Terminals</a></td>
                 <td>Terminal descriptor catalog and prompt rendering.</td>
                 <td>Workflow launch profiles, batch exclusivity, query loop stop condition.</td>
               </tr>
               <tr>
-                <td><code>sandbox</code></td>
+                <td><code>model_tools/sandbox.rs</code></td>
                 <td><a href="sandbox.html">Sandbox</a></td>
                 <td>Agent-facing read/write/edit/command/search wrappers.</td>
                 <td>Typed sandbox API, daemon workspace routing, layer-stack/OCC, ephemeral overlay.</td>
               </tr>
               <tr>
-                <td><code>isolated_workspace</code></td>
+                <td><code>model_tools/isolated.rs</code></td>
                 <td><a href="isolated-workspace.html">Isolated Workspace</a></td>
                 <td>Explicit enter/exit lifecycle tools.</td>
                 <td>Persistent private scratch namespace, background gates, plugin blocking, no publish.</td>
               </tr>
               <tr>
-                <td><code>background</code></td>
+                <td><code>ports.rs</code><br><code>model_tools/sandbox.rs</code></td>
                 <td><a href="background.html">Background</a></td>
-                <td>Polling, waiting, and cancellation tools for engine background records.</td>
-                <td>Supervisor status lattice, sandbox heartbeat/cancel, query loop cleanup.</td>
+                <td>Typed control ports for subagents, delegated workflows, and daemon command sessions.</td>
+                <td>Supervisor status lattice, sandbox heartbeat/cancel, command completion heartbeat, query loop cleanup.</td>
               </tr>
               <tr>
-                <td><code>subagent</code></td>
+                <td><code>model_tools/subagent.rs</code></td>
                 <td><a href="subagent.html">Subagent</a></td>
                 <td>Always-background nested agent launch.</td>
                 <td><code>run_ephemeral_agent</code>, progress provider, terminal result projection.</td>
               </tr>
               <tr>
-                <td><code>ask_helper</code></td>
+                <td><code>model_tools/advisor.rs</code></td>
                 <td><a href="ask-helper.html">Ask Helper</a></td>
-                <td>Blocking advisor helper launches; verifier/evaluator inline edits via direct edit tools.</td>
+                <td>Blocking advisor helper launches and advisor-feedback terminal output.</td>
                 <td>Helper transcripts, terminal catalog focus, helper terminal submissions.</td>
               </tr>
               <tr>
-                <td><code>submission</code></td>
+                <td><code>model_tools/submission.rs</code><br><code>model_tools/workflow.rs</code></td>
                 <td><a href="submission.html">Submission</a></td>
-                <td>Planner, executor, verifier, evaluator, helper, and explorer terminal tools.</td>
-                <td>AttemptOrchestrator, WorkflowStarter, WorkflowClosureReportRouter, Workflow state.</td>
+                <td>Root, planner, generator, reducer, advisor, and explorer terminal tools plus non-terminal workflow controls.</td>
+                <td>AttemptOrchestrator, WorkflowStarter/control ports, root request completion, Workflow state.</td>
               </tr>
               <tr>
-                <td><code>skills</code></td>
+                <td><code>model_tools/skills.rs</code></td>
                 <td><a href="skills.html">Skills</a></td>
                 <td>Scoped skill reference loading.</td>
                 <td>ToolFactoryContext metadata and explicit reference availability errors.</td>
@@ -241,7 +240,7 @@
         </div>
       </section>
 
-      <section id="critical-routes" data-last-reviewed-commit="HEAD-plus-worktree" data-evidence-paths="backend/src/engine/background;backend/src/tools/sandbox/exec_command;backend/src/tools/subagent;backend/src/tools/isolated_workspace;backend/src/sandbox/host/isolated_workspace_lifecycle.py;backend/src/sandbox/ephemeral_workspace/pipeline.py">
+      <section id="critical-routes" data-last-reviewed-commit="HEAD-plus-worktree" data-evidence-paths="agent-core/crates/eos-engine/src/background agent-core/crates/eos-tools/src/model_tools agent-core/crates/eos-sandbox-host/src/isolated_workspace.rs sandbox/crates/eos-daemon/src/command.rs sandbox/crates/eos-daemon/src/dispatcher.rs">
         <h3>Critical Routes To Keep Straight</h3>
         <div class="grid">
           <div class="callout ok">

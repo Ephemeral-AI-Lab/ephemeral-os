@@ -32,7 +32,6 @@ regex.workspace = true
 [dev-dependencies]
 tokio = { workspace = true }
 insta.workspace = true
-pretty_assertions.workspace = true
 
 [lints]
 workspace = true

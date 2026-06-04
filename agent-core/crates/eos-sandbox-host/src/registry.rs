@@ -1,9 +1,9 @@
 //! The provider registry as explicit application state (GC-02), plus the
-//! Docker-only provider-selection resolver (folded in from `bootstrap.py`).
+//! Docker-only provider-selection resolver.
 //!
-//! Replaces the Python `provider/registry.py` module globals + the
-//! `bootstrap.py` first-call-wins sentinel with an `Arc<ProviderRegistry>` built
-//! and seeded once at the `eos-runtime` composition root.
+//! `eos-runtime` builds one `Arc<ProviderRegistry>` at the composition root and
+//! seeds the default provider there. The default binding is first-call-wins, so
+//! no separate bootstrap singleton is needed.
 
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -21,9 +21,7 @@ use crate::provider::{ProviderAdapter, ProviderKind};
 /// `EOS_SANDBOX_PROVIDER` (the `eos-runtime` composition root reads the process
 /// env); `None` falls back to `config.default_provider`.
 ///
-/// Mirrors `bootstrap.py::_resolve_provider_name` (strip + lowercase) plus the
-/// validity check; the Python sentinel/first-call-wins global is dropped (the
-/// registry app state replaces it).
+/// The registry owns first-call-wins default binding locally.
 pub fn resolve_provider_kind(
     env_override: Option<&str>,
     config: &SandboxConfig,
@@ -68,9 +66,22 @@ impl ProviderRegistry {
         }
     }
 
-    /// Bind the process-wide default provider adapter (idempotent overwrite).
+    /// Bind the process-wide default provider adapter. The first seed wins:
+    /// repeat calls are no-ops, with a warning if a different provider kind tries
+    /// to replace the live default.
     pub fn set_default(&self, adapter: Arc<dyn ProviderAdapter>) {
-        *self.default.write() = Some(adapter);
+        let mut default = self.default.write();
+        if let Some(existing) = default.as_ref() {
+            if existing.kind() != adapter.kind() {
+                tracing::warn!(
+                    first = existing.kind().as_str(),
+                    now = adapter.kind().as_str(),
+                    "sandbox default provider already seeded; ignoring replacement"
+                );
+            }
+            return;
+        }
+        *default = Some(adapter);
     }
 
     /// The process-wide default provider adapter, or [`SandboxHostError::NoDefaultProvider`].
@@ -193,6 +204,18 @@ mod tests {
             &registry.adapter(&sid("bound")).unwrap(),
             &default
         ));
+    }
+
+    #[test]
+    fn default_seed_is_first_call_wins() {
+        let registry = ProviderRegistry::new();
+        let first: Arc<dyn ProviderAdapter> = Arc::new(MockAdapter::new().with_id("first"));
+        let second: Arc<dyn ProviderAdapter> = Arc::new(MockAdapter::new().with_id("second"));
+
+        registry.set_default(Arc::clone(&first));
+        registry.set_default(second);
+
+        assert!(Arc::ptr_eq(&registry.default().unwrap(), &first));
     }
 
     proptest::proptest! {

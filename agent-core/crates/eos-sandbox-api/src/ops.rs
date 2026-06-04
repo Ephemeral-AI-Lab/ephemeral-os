@@ -51,6 +51,9 @@ pub enum DaemonOp {
     /// `api.isolated_workspace.status`
     #[serde(rename = "api.isolated_workspace.status")]
     IsolatedWorkspaceStatus,
+    /// `api.plugin.ensure`
+    #[serde(rename = "api.plugin.ensure")]
+    PluginEnsure,
     /// `api.v1.glob`
     #[serde(rename = "api.v1.glob")]
     Glob,
@@ -87,6 +90,7 @@ impl DaemonOp {
             Self::InvocationHeartbeat => "api.v1.heartbeat",
             Self::InflightCount => "api.v1.inflight_count",
             Self::IsolatedWorkspaceStatus => "api.isolated_workspace.status",
+            Self::PluginEnsure => "api.plugin.ensure",
             Self::Glob => "api.v1.glob",
             Self::Grep => "api.v1.grep",
             Self::AuditPull => "api.audit.pull",
@@ -126,6 +130,7 @@ mod tests {
                 DaemonOp::IsolatedWorkspaceStatus,
                 "api.isolated_workspace.status",
             ),
+            (DaemonOp::PluginEnsure, "api.plugin.ensure"),
             (DaemonOp::Glob, "api.v1.glob"),
             (DaemonOp::Grep, "api.v1.grep"),
             (DaemonOp::AuditPull, "api.audit.pull"),

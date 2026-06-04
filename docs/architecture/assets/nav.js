@@ -9,6 +9,7 @@
     { module: 'tools', href: 'tools/index.html', title: 'Tools' },
     { module: 'agent-loops', href: 'agent_loops/index.html', title: 'Agent Loops' },
     { module: 'workflow', href: 'workflow/index.html', title: 'Workflow' },
+    { module: 'migration', href: 'rust-migration.html', title: 'Rust Migration' },
     { module: 'test-runner', href: 'test_runner/index.html', title: 'Test Runner' }
   ];
 

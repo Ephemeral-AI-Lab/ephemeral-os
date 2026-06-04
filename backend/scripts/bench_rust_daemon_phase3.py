@@ -21,18 +21,15 @@ from __future__ import annotations
 
 import argparse
 import asyncio
-import copy
 import hashlib
-import io
 import json
 import os
 import platform
 import sys
-import tarfile
 import time
 import uuid
 from collections.abc import Callable
-from pathlib import Path, PurePosixPath
+from pathlib import Path
 from typing import Any
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -45,7 +42,6 @@ if str(SCRIPT_DIR) not in sys.path:
 
 from bench_rust_daemon_phase2 import (  # noqa: E402
     LAYER_STACK_ROOT,
-    RUNTIME_ROOT,
     WORKSPACE_ROOT,
     call_tcp,
     read_pid,
@@ -62,7 +58,6 @@ from bench_sandbox_e2e import (  # noqa: E402
 )
 
 AGENT_ID = "phase3-cp4s-bench"
-BASE_LAYER_ID = "B000001-base"
 ROSETTA_ACTIVE_MEMORY_HEADROOM_KB = 2048
 TARGETS: dict[str, dict[str, Any]] = {
     "amd64": {
@@ -442,197 +437,6 @@ async def run_phase3(args: argparse.Namespace) -> dict[str, Any]:
         return report
     finally:
         await bench.close(keep=args.keep_container)
-
-
-async def seed_layer_stack_from_workspace(bench: DockerBench) -> dict[str, Any]:
-    workspace_archive = await read_workspace_archive(bench)
-    tar_stream, seed = layer_stack_archive_from_workspace(workspace_archive)
-    await bench.adapter.put_archive(
-        bench.sandbox_id,
-        tar_stream=tar_stream,
-        dest_dir="/",
-    )
-    return seed
-
-
-async def read_workspace_archive(bench: DockerBench) -> bytes:
-    def _run() -> bytes:
-        client = bench.adapter._get_client()  # Docker-only benchmark helper.
-        container = client.containers.get(bench.sandbox_id)
-        chunks, _stat = container.get_archive(WORKSPACE_ROOT)
-        return b"".join(chunks)
-
-    return await asyncio.to_thread(_run)
-
-
-def layer_stack_archive_from_workspace(workspace_archive: bytes) -> tuple[bytes, dict[str, Any]]:
-    manifest = {
-        "schema_version": 1,
-        "version": 1,
-        "layers": [
-            {
-                "layer_id": BASE_LAYER_ID,
-                "path": f"layers/{BASE_LAYER_ID}",
-            }
-        ],
-    }
-    binding = {
-        "workspace_root": WORKSPACE_ROOT,
-        "layer_stack_root": LAYER_STACK_ROOT,
-        "active_manifest_version": 1,
-        "active_root_hash": "phase3-active-root",
-        "base_manifest_version": 1,
-        "base_root_hash": "phase3-base-root",
-    }
-    base_prefix = f"{LAYER_STACK_ROOT.strip('/')}/layers/{BASE_LAYER_ID}"
-    raw = io.BytesIO()
-    stats: dict[str, Any] = {
-        "source_workspace": WORKSPACE_ROOT,
-        "base_layer_id": BASE_LAYER_ID,
-        "file_count": 0,
-        "dir_count": 0,
-        "symlink_count": 0,
-        "other_count": 0,
-        "file_bytes": 0,
-        "source_archive_bytes": len(workspace_archive),
-    }
-    added_dirs: set[str] = set()
-
-    with tarfile.open(fileobj=raw, mode="w") as out:
-        for directory in (
-            RUNTIME_ROOT,
-            LAYER_STACK_ROOT,
-            f"{LAYER_STACK_ROOT}/layers",
-            f"{LAYER_STACK_ROOT}/layers/{BASE_LAYER_ID}",
-            f"{LAYER_STACK_ROOT}/staging",
-            WORKSPACE_ROOT,
-        ):
-            add_tar_dir(out, directory, added_dirs)
-        add_tar_file(
-            out,
-            f"{LAYER_STACK_ROOT}/manifest.json",
-            json.dumps(manifest, indent=2, sort_keys=True).encode(),
-            added_dirs,
-        )
-        add_tar_file(
-            out,
-            f"{LAYER_STACK_ROOT}/workspace.json",
-            json.dumps(binding, indent=2, sort_keys=True).encode(),
-            added_dirs,
-        )
-
-        with tarfile.open(fileobj=io.BytesIO(workspace_archive), mode="r:*") as source:
-            for member in source:
-                rel = workspace_member_relpath(member.name)
-                if rel is None or rel == "":
-                    continue
-                target = f"{base_prefix}/{rel}"
-                add_parent_tar_dirs(out, target, added_dirs)
-                copied = copy_tar_info(member, target)
-                if copied.isdir():
-                    add_tar_dir(out, f"/{target}", added_dirs)
-                    stats["dir_count"] += 1
-                elif copied.isfile():
-                    extracted = source.extractfile(member)
-                    if extracted is None:
-                        stats["other_count"] += 1
-                        continue
-                    out.addfile(copied, extracted)
-                    stats["file_count"] += 1
-                    stats["file_bytes"] += int(copied.size)
-                elif copied.issym():
-                    out.addfile(copied)
-                    stats["symlink_count"] += 1
-                elif copied.islnk():
-                    copied.linkname = rewrite_workspace_linkname(copied.linkname, base_prefix)
-                    out.addfile(copied)
-                    stats["other_count"] += 1
-                else:
-                    out.addfile(copied)
-                    stats["other_count"] += 1
-
-    payload = raw.getvalue()
-    stats["layer_stack_archive_bytes"] = len(payload)
-    return payload, stats
-
-
-def workspace_member_relpath(name: str) -> str | None:
-    normalized = PurePosixPath(name).as_posix().lstrip("./").lstrip("/")
-    root = WORKSPACE_ROOT.strip("/")
-    if normalized in {"", "."}:
-        return ""
-    if normalized == root:
-        return ""
-    prefix = f"{root}/"
-    if normalized.startswith(prefix):
-        return normalized[len(prefix) :]
-    return None
-
-
-def rewrite_workspace_linkname(linkname: str, base_prefix: str) -> str:
-    rel = workspace_member_relpath(linkname)
-    if rel is None:
-        return linkname
-    return base_prefix if rel == "" else f"{base_prefix}/{rel}"
-
-
-def copy_tar_info(member: tarfile.TarInfo, name: str) -> tarfile.TarInfo:
-    copied = copy.copy(member)
-    copied.name = name
-    copied.uid = 0
-    copied.gid = 0
-    copied.uname = ""
-    copied.gname = ""
-    copied.mtime = 0
-    return copied
-
-
-def add_parent_tar_dirs(
-    tar: tarfile.TarFile,
-    target_name: str,
-    added: set[str],
-) -> None:
-    parent = PurePosixPath(target_name).parent
-    current = PurePosixPath("")
-    for part in parent.parts:
-        current = current / part
-        add_tar_dir(tar, f"/{current.as_posix()}", added)
-
-
-def add_tar_dir(tar: tarfile.TarFile, path: str, added: set[str]) -> None:
-    name = path.strip("/")
-    if not name or name in added:
-        return
-    add_parent_tar_dirs(tar, name, added)
-    info = tarfile.TarInfo(name)
-    info.type = tarfile.DIRTYPE
-    info.mtime = 0
-    info.uid = 0
-    info.gid = 0
-    info.uname = ""
-    info.gname = ""
-    info.mode = 0o755
-    tar.addfile(info)
-    added.add(name)
-
-
-def add_tar_file(
-    tar: tarfile.TarFile,
-    path: str,
-    payload: bytes,
-    added: set[str],
-) -> None:
-    name = path.strip("/")
-    add_parent_tar_dirs(tar, name, added)
-    info = tarfile.TarInfo(name)
-    info.size = len(payload)
-    info.mtime = 0
-    info.uid = 0
-    info.gid = 0
-    info.uname = ""
-    info.gname = ""
-    info.mode = 0o644
-    tar.addfile(info, io.BytesIO(payload))
 
 
 def small_write_request(index: int, invocation_id: str) -> tuple[str, dict[str, Any]]:

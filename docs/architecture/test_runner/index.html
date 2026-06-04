@@ -50,17 +50,19 @@
   </ol>
 </nav>
 
-<p class="lead">The <code>test_runner</code> package is the test-only harness that drives a real <a class="wiki-link" href="../workflow/index.html">Workflow</a> run end-to-end. One coroutine, <code>run_pipeline</code>, serves three modes: mocked-agent scenario tests, real-LLM freeform runs, and the SWE-EVO benchmark CLI. The five mode-specific seams (runner factory, bootstrap, lifecycle, sandbox provisioner, run label) are the only differences between modes.</p>
+<p class="lead">The Python <code>test_runner</code> package is the remaining Python-owned architecture module after the Rust <code>agent-core</code> / <code>sandbox</code> migration: it is a test and benchmark harness, not the owner of request runtime, workflow lifecycle, engine loop, tool dispatch, or sandbox infrastructure. One coroutine, <code>run_pipeline</code>, serves three validation modes: mocked-agent scenario tests, real-LLM freeform runs, and the SWE-EVO benchmark CLI. The five mode-specific seams (runner factory, bootstrap, lifecycle, sandbox provisioner, run label) are the only differences between modes.</p>
 
 <section id="scope-verdict" data-last-reviewed-commit="d32994314" data-evidence-paths="backend/src/test_runner/__init__.py backend/src/test_runner/core/runner.py backend/src/test_runner/core/engine.py backend/src/test_runner/core/config.py backend/src/test_runner/scenarios/__init__.py backend/src/test_runner/benchmarks/sweevo/pipeline.py">
 <h2>Scope And Verdict <a class="anchor" href="#scope-verdict">#</a></h2>
 <div class="summary">
   <ul>
+    <li><strong>Remaining Python-owned module.</strong> The target boundary is intentional: Rust owns the agent control plane and sandbox substrate; Python <code>test_runner</code> owns validation harness code, scenario definitions, benchmark adapters, and report assembly.</li>
     <li>The harness is <em>dataset-agnostic</em>. The generic scenario runner lives at <code>core/runner.py</code> + <code>core/engine.py</code>; SWE-EVO is one benchmark adapter under <code>benchmarks/sweevo/</code>.</li>
     <li><strong>One engine, three modes.</strong> <code>core/engine.py::run_pipeline</code> is the only orchestrator; <code>RunConfig</code> swaps in a <code>ScenarioLoopRunner</code> for mock scenarios, returns <code>None</code> for real-agent (delegating to <code>start_workflow_run</code>'s default runner), or wraps the production runner via <code>build_agent_delegate</code> for the benchmark.</li>
-    <li><strong>The harness is NOT Workflow.</strong> It binds stores, audit bus, sandbox lease, and lifecycle around a real Workflow run; it does not own Workflow, Iteration, Attempt, or terminal-tool policy.</li>
+    <li><strong>The harness is NOT runtime.</strong> Rust owns request bootstrap, root <code>Task</code> execution, delegated Workflow / Iteration / Attempt state, the engine query loop, terminal-tool policy, model-facing tools, and sandbox host / daemon behavior. Python <code>test_runner</code> drives validation over those surfaces.</li>
     <li><strong>Mocked agents call real tools.</strong> <code>ScenarioLoopRunner</code> injects a deterministic <code>ScenarioEventSource</code> into the real query loop, so scripted mock turns still dispatch through production tool execution; agent definitions come from <code>backend/src/agents/profile/main/*.md</code>, the same markdown the real launcher resolves.</li>
     <li><strong>Persistent sandbox per SWE-EVO instance.</strong> Naming is deterministic (<code>sweevo-&lt;instance_id&gt;</code>); back-to-back runs reuse the container, and the CLI does NOT destroy it on exit. Reclaim with <code>docker container prune</code>.</li>
+    <li><strong>Migration anchors are not completion claims.</strong> <code>docs/plans/test_runner_migration_PLAN.md</code> sets live concurrent sandbox runners to <code>3</code> and keeps current benchmark/setup evidence in the root scripts; this page records that harness boundary without claiming every migration gate has passed.</li>
   </ul>
 </div>
 <div class="wiki-links" aria-label="Test Runner related pages">
@@ -74,7 +76,7 @@
 
 <section id="workflow-map" data-last-reviewed-commit="d32994314" data-evidence-paths="backend/src/test_runner/core/engine.py backend/src/test_runner/core/runner.py backend/src/test_runner/scenarios/builder.py backend/src/test_runner/agent/mock/scenario_loop_runner.py backend/src/test_runner/agent/mock/scenario_adapter.py backend/src/test_runner/benchmarks/sweevo/pipeline.py backend/src/test_runner/benchmarks/sweevo/run.py">
 <h2>Workflow Map <a class="anchor" href="#workflow-map">#</a></h2>
-<p>Two lanes share one engine. The mock lane is for fast deterministic coverage of the planner / plan-DAG (generator + reducer) / RUN-stage control flow. The benchmark lane runs a real LLM against the SWE-EVO image and scores the result.</p>
+<p>Two lanes share one harness engine. The mock lane is for fast deterministic coverage of root request, delegated workflow, plan-DAG (generator + reducer), and RUN-stage control flow. The benchmark lane runs a real LLM against the SWE-EVO image and scores the result. Both lanes validate Rust-owned runtime and sandbox behavior from Python; neither lane owns that behavior.</p>
 <pre class="diagram" aria-label="test_runner two-lane workflow">
         mock lane                                 benchmark lane
         ---------                                 --------------
@@ -116,7 +118,7 @@
 </pre>
 <div class="edge-list" aria-label="Mode seams across the two lanes">
   <div><b>runner factory</b><span>Mock returns <code>ScenarioLoopRunner</code>; benchmark returns a delegate around <code>engine.api.run_ephemeral_agent</code>; real-LLM freeform returns <code>None</code> so <code>start_workflow_run</code> falls back to its default runner.</span></div>
-  <div><b>bootstrap</b><span>Only the benchmark sets <code>config.bootstrap = bootstrap_real_agent_runtime</code> — seeds Daytona provider, runtime stores, and the markdown-defined agent registry.</span></div>
+  <div><b>bootstrap</b><span>Only the benchmark sets <code>config.bootstrap = bootstrap_real_agent_runtime</code> — seeds runtime stores, sandbox bindings, and the markdown-defined agent registry.</span></div>
   <div><b>lifecycle</b><span><code>ScenarioLifecycle</code> accumulates <code>MOCK_*</code> events for the rich <code>RunReport</code> view; <code>SweevoLifecycle</code> materializes the active overlay onto <code>/testbed</code> and runs the F2P/P2P pytest grader.</span></div>
   <div><b>sandbox provisioner</b><span><code>AttachExisting(sandbox_id)</code> reuses a fixture-managed container; <code>SweevoProvisioner</code> reverifies the SWE-EVO image checkout and leaves the container alive on release.</span></div>
   <div><b>run label</b><span>Mock uses <code>scenario_logs/&lt;name&gt;</code>; benchmark uses <code>benchmark/sweevo/&lt;instance_id&gt;</code>. Both feed the canonical <code>audit_dir/&lt;label&gt;/&lt;utc&gt;_&lt;self_id&gt;/</code> run-dir layout so <code>run_tiered.py</code> globs both.</span></div>
@@ -156,6 +158,9 @@
 <section id="ownership-map" data-last-reviewed-commit="d32994314" data-evidence-paths="backend/src/test_runner/core backend/src/test_runner/scenarios backend/src/test_runner/agent/mock backend/src/test_runner/audit backend/src/test_runner/benchmarks/sweevo backend/src/test_runner/environments/sweevo_image backend/src/test_runner/tests">
 <h2>Ownership Map <a class="anchor" href="#ownership-map">#</a></h2>
 <div class="edge-list">
+  <div><b>boundary</b><span>Rust owns request bootstrap and root-agent entry in <code>agent-core/crates/eos-runtime</code>, persisted Request / Task / Workflow state in <code>eos-state</code> + <code>eos-db</code>, delegated lifecycle in <code>eos-workflow</code>, query loop / provider stream / dispatch in <code>eos-engine</code>, model tools in <code>eos-tools</code>, host sandbox APIs in <code>eos-sandbox-api</code> + <code>eos-sandbox-host</code>, and daemon execution under <code>sandbox/crates/*</code>.</span></div>
+  <div><b>boundary</b><span>Python <code>test_runner</code> drives validation: mocked-agent scenarios, SWE-EVO runs, audit/report capture, fixture setup, and current benchmark scripts such as <code>bench_sandbox_e2e.py</code>, <code>bench_rust_daemon_phase2.py</code>, <code>bench_rust_daemon_phase3.py</code>, <code>bench_rust_daemon_phase3t_command_session.py</code>, <code>bench_rust_daemon_phase3t_av7_parity.py</code>, <code>bench_rust_daemon_phase3t_mixed_non_plugin.py</code>, <code>bench_rust_daemon_phase3t_section7_non_plugin.py</code>, <code>bench_rust_daemon_plugin.py</code>, and <code>bench_plugin_refresh_strategies.py</code>.</span></div>
+  <div><b>boundary</b><span>Live E2E validation uses the migration-plan cap of <code>3</code> concurrent sandbox runners so runner coverage exercises Rust sandbox behavior without exceeding the configured sandbox quota.</span></div>
   <div><b>owns-state</b><span><code>core/engine.py::run_pipeline</code> owns the per-run audit-bus subscription, sandbox lease lifecycle, recorder start/stop, timeout-driven cancellation, and final perf-report scheduling.</span></div>
   <div><b>owns-state</b><span><code>core/stores.py::WorkflowStoreBundle</code> owns the per-test database carving (PostgreSQL schema or SQLite file) and releases it via <code>close()</code>.</span></div>
   <div><b>owns-state</b><span><code>scenarios/lifecycle.py::ScenarioLifecycle</code> accumulates captured events, launches, tool calls, prompt inspections, and sandbox checks for the mock-rich <code>RunReport</code> view.</span></div>

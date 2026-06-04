@@ -18,6 +18,7 @@
   <ol class="module-list">
     <li><a href="../sandbox/index.html" data-doc-module="sandbox" class="active">Sandbox Workspace</a></li>
     <li><a href="../tools/index.html" data-doc-module="tools">Tools</a></li>
+    <li><a href="../rust-migration.html" data-doc-module="migration">Rust Migration</a></li>
   </ol>
   <h2>Sandbox Workspace Pages</h2>
   <ol>
@@ -48,27 +49,28 @@
   </ol>
 </nav>
 
-<p class="lead">Current code-backed guide to <code>backend/src/sandbox</code>, focused on LayerStack, overlay, OCC, workspace modes, daemon/background handling, provider adapters, and ephemeral-workspace plugins.</p>
+<p class="lead">Current code-backed guide to the Rust sandbox substrate: <code>agent-core/crates/eos-sandbox-api</code>, <code>agent-core/crates/eos-sandbox-host</code>, and <code>sandbox/crates/*</code>. It covers LayerStack, overlay, OCC, workspace modes, daemon/background handling, Docker host lifecycle, command sessions, terminal pairs, plugin PPC, and isolated workspaces.</p>
 <div class="callout">
   <span class="label">Wiki Contract</span>
   This directory is the maintained wiki layer over the sandbox source tree. The code checkout is the raw source of truth; these pages synthesize structure, workflows, invariants, and backlinks so a future reader does not have to rediscover the architecture from scratch.
 </div>
 
 <div class="inline-kv">
-  <div>Raw sources</div><div><code>backend/src/sandbox</code>, <code>backend/src/tools</code>, provider adapters, plugin runtime code, tests, and live artifacts.</div>
+  <div>Raw sources</div><div><code>agent-core/crates/eos-sandbox-api</code>, <code>agent-core/crates/eos-sandbox-host</code>, <code>sandbox/crates/eos-daemon</code>, <code>sandbox/crates/eosd</code>, <code>sandbox/crates/eos-layerstack</code>, <code>sandbox/crates/eos-occ</code>, <code>sandbox/crates/eos-overlay</code>, <code>sandbox/crates/eos-isolated</code>, <code>sandbox/crates/eos-plugin</code>, tests, and live artifacts.</div>
   <div>Wiki pages</div><div>One concept page per stable architecture node, with normal HTML links such as <a class="wiki-link" href="workspaces.html#isolated-workspace">isolated_workspace</a> and <a class="wiki-link" href="workflow-cookbook.html#cookbook-occ-publish">OCC Publish</a>.</div>
   <div>Schema</div><div>Every page separates durable invariants, current workflow, ownership boundary, code evidence, refresh triggers, and related pages. Search index entries should be updated when a new section becomes a useful query target.</div>
   <div>Maintenance loop</div><div>When code changes, update the smallest affected node, then update nearby backlinks and the search catalog. Do not bury contradictions: link the newer evidence and explain the mismatch.</div>
 </div>
-<section id="source-graph" data-last-reviewed-commit="2a3e6cc7c" data-evidence-paths="backend/src/sandbox/api/tool/_daemon_request_payloads.py backend/src/sandbox/api/tool/_daemon_response_parsing.py backend/src/sandbox/daemon/rpc/dispatcher.py backend/src/sandbox/daemon/workspace_tool_dispatch.py backend/src/sandbox/layer_stack/stack.py backend/src/sandbox/isolated_workspace/pipeline.py backend/tests/live_e2e_test/sandbox backend/src/test_runner/tests/mock/sandbox">
+<section id="source-graph" data-last-reviewed-commit="HEAD-plus-worktree" data-evidence-paths="agent-core/crates/eos-sandbox-api/src/tool_api agent-core/crates/eos-sandbox-host/src sandbox/crates/eos-daemon/src/dispatcher.rs sandbox/crates/eos-daemon/src/workspace_ops.rs sandbox/crates/eos-daemon/src/command.rs sandbox/crates/eos-layerstack sandbox/crates/eos-occ sandbox/crates/eos-overlay sandbox/crates/eos-isolated sandbox/crates/eos-plugin backend/tests/live_e2e_test/sandbox backend/src/test_runner/tests/mock/sandbox">
 <h2>Source Graph <a class="anchor" href="#source-graph">§</a></h2>
 <p>The current sandbox workspace runtime is best read as a graph of ownership boundaries rather than a stack of folders. The daemon receives tool/API envelopes, routes work into direct LayerStack/OCC paths, per-operation overlay paths, or isolated private scratch, and every durable mutation converges on OCC before LayerStack publishes a new manifest.</p>
 <div class="edge-list">
-  <div><b>imports</b><span><code>sandbox.api.tool.read/write/edit/glob/grep/shell</code> share request identity construction through <code>_daemon_request_payloads.py</code> and parse daemon responses through <code>_daemon_response_parsing.py</code> before returning public result models <span class="file-ref">backend/src/sandbox/api/tool/read.py:6-32</span>, <span class="file-ref">backend/src/sandbox/api/tool/_daemon_response_parsing.py:67-169</span>.</span></div>
-  <div><b>registers</b><span><code>sandbox.daemon.rpc.dispatcher</code> registers built-in workspace ops, isolated lifecycle ops, daemon control ops, and plugin runtime ops through <code>OP_TABLE</code> <span class="file-ref">backend/src/sandbox/daemon/rpc/dispatcher.py:344-373</span>.</span></div>
-  <div><b>calls</b><span><code>dispatch_workspace_tool_call()</code> chooses isolated pipeline first, then direct file fast paths, then the ephemeral overlay pipeline <span class="file-ref">backend/src/sandbox/daemon/workspace_tool_dispatch.py:53-75</span>.</span></div>
-  <div><b>owns-state</b><span><code>LayerStack</code> owns active manifests, immutable layer directories, leases, merged reads, publish transactions, squash, and flush <span class="file-ref">backend/src/sandbox/layer_stack/stack.py:69-343</span>.</span></div>
-  <div><b>owns-state</b><span><code>IsolatedPipeline</code> owns per-agent private handle maps, namespace holders, veth resources, TTL, persisted handle state, and JSONL audit events <span class="file-ref">backend/src/sandbox/isolated_workspace/pipeline.py:44-188</span>.</span></div>
+  <div><b>imports</b><span><code>eos-sandbox-api/src/tool_api</code> builds typed daemon payloads for read/write/edit/grep/glob/command/plugin/control/isolation calls and parses daemon responses into public result models.</span></div>
+  <div><b>owns-provider</b><span><code>eos-sandbox-host</code> owns Docker lifecycle, runtime artifact upload, daemon connection, and host-side isolated enter/exit wrappers. Rust sandbox host config is Docker-only today.</span></div>
+  <div><b>registers</b><span><code>eos-daemon/src/dispatcher.rs</code> registers built-in workspace ops, command-session ops, isolated lifecycle ops, daemon control ops, and plugin runtime ops.</span></div>
+  <div><b>calls</b><span>Daemon workspace routing chooses isolated handles first, then direct file fast paths, then overlay-backed execution. Durable mutations still publish through OCC.</span></div>
+  <div><b>owns-state</b><span><code>eos-layerstack</code> owns active manifests, immutable layer directories, leases, merged reads, publish transactions, squash, and flush.</span></div>
+  <div><b>owns-state</b><span><code>eos-isolated</code> and daemon isolated handlers own per-agent private handle maps, namespace holders, veth resources, TTL, persisted handle state, and audit events.</span></div>
   <div><b>tested-by</b><span>Live and mock suites cover workspace base, LayerStack/OCC/overlay, background tools, plugins, and isolated workspace behavior under <span class="file-ref">backend/tests/live_e2e_test/sandbox</span> and <span class="file-ref">backend/src/test_runner/tests/mock/sandbox</span>.</span></div>
 </div>
 </section>
@@ -98,7 +100,7 @@
   </div>
   <div class="wiki-node">
     <strong>Provider boundary</strong>
-    <p>Use this path for Docker/Daytona lifecycle, runtime bundle upload, daemon bootstrap, and workspace base setup.</p>
+    <p>Use this path for Docker lifecycle, runtime artifact upload, daemon bootstrap, and workspace base setup. Daytona references are legacy Python comparison material, not the active Rust provider branch.</p>
     <div class="wiki-links"><a href="provider.html">Provider</a><a href="daemon.html#startup-transport">Startup and Transport</a></div>
   </div>
   <div class="wiki-node">
@@ -118,7 +120,7 @@
 <a class="section-card" href="occ.html"><strong>4. OCC</strong><span>Typed changes, routing, base-hash validation, commit queue, staging, transaction, and publish semantics.</span></a>
 <a class="section-card" href="workspaces.html"><strong>5. Workspace Modes</strong><span>main_workspace, ephemeral_workspace, isolated_workspace, fast paths, and enter/exit lifecycle details.</span></a>
 <a class="section-card" href="daemon.html"><strong>6. Daemon and Background Tasks</strong><span>Wiki graph, startup transport, RPC dispatch, operation routing, workflow traces, background lifecycle, heartbeats, cancellation, and isolated gating.</span></a>
-<a class="section-card" href="provider.html"><strong>7. Provider</strong><span>Provider-neutral sandbox lifecycle, Docker/Daytona adapters, daemon transport, and runtime bootstrap boundary.</span></a>
+<a class="section-card" href="provider.html"><strong>7. Provider</strong><span>Docker-only Rust sandbox host lifecycle, daemon transport, runtime artifact upload, and workspace bootstrap boundary.</span></a>
 <a class="section-card" href="plugins.html"><strong>8. Plugin in ephemeral_workspace</strong><span>Plugin runtime ensure, operation registry, projection APIs, write overlays, Pyright refresh, and LSP apply.</span></a>
 <a class="section-card" href="plugin-setup.html"><strong>Plugin Setup</strong><span>How to install a plugin payload, declare a daemon manifest, start services, dispatch plugin ops, and verify status.</span></a>
 <a class="section-card" href="space-model.html"><strong>9. Space Model</strong><span>O(1) lowerdir repository bytes and O(n * per-operation changed bytes) writable scratch for concurrent work.</span></a>

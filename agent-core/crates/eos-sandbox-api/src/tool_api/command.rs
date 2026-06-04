@@ -1,4 +1,4 @@
-//! Pure command-session helpers: `exec_command`, `exec_stdin`/`write_stdin`,
+//! Pure command-session helpers: `exec_command`, `exec_stdin`,
 //! `cancel_command_session`, and `collect_command_completions`. The first three
 //! return [`ExecCommandResult`]; `collect_command_completions` returns the raw
 //! completion maps (the only verb without a typed result struct).
@@ -8,8 +8,7 @@ use serde_json::Value;
 
 use crate::error::SandboxApiError;
 use crate::models::{
-    CommandSessionCancelRequest, CommandSessionWriteRequest, ExecCommandRequest, ExecCommandResult,
-    ExecStdinRequest,
+    CommandSessionCancelRequest, ExecCommandRequest, ExecCommandResult, ExecStdinRequest,
 };
 use crate::ops::DaemonOp;
 use crate::timeouts::exec_dispatch_timeout;
@@ -80,15 +79,6 @@ pub async fn exec_stdin(
         )
         .await?;
     parse_exec_command_result(&response)
-}
-
-/// Model-facing alias for [`exec_stdin`].
-pub async fn write_stdin(
-    transport: &dyn SandboxTransport,
-    sandbox_id: &SandboxId,
-    request: &CommandSessionWriteRequest,
-) -> Result<ExecCommandResult, SandboxApiError> {
-    exec_stdin(transport, sandbox_id, request).await
 }
 
 /// Cancel an open command session.

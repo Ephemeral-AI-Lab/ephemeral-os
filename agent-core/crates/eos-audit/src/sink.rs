@@ -14,6 +14,14 @@ use crate::event::AuditEvent;
 /// Implementations must not panic; recoverable failures are reported through
 /// [`AuditError`]. The event is borrowed, not consumed.
 pub trait AuditSink: Send + Sync {
+    /// Whether this sink persists events.
+    ///
+    /// Emitters can use this to skip expensive audit-only sampling work when the
+    /// composition root installed the no-op sink.
+    fn enabled(&self) -> bool {
+        true
+    }
+
     /// Persist one event.
     ///
     /// # Errors
@@ -27,6 +35,10 @@ pub trait AuditSink: Send + Sync {
 pub struct NoopAuditSink;
 
 impl AuditSink for NoopAuditSink {
+    fn enabled(&self) -> bool {
+        false
+    }
+
     fn publish(&self, _event: &AuditEvent) -> Result<(), AuditError> {
         Ok(())
     }

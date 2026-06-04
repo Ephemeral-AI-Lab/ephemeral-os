@@ -40,7 +40,7 @@ pub struct RequestEntryHandle {
     pub root_task_id: TaskId,
     /// The runtime-wired per-request delegated-workflow dependency bundle.
     pub attempt_deps: AttemptDeps,
-    pub(crate) root_agent_task: JoinHandle<()>,
+    pub(crate) root_agent_task: Option<JoinHandle<()>>,
     pub(crate) supervisor: Arc<BackgroundSupervisorHandle>,
     pub(crate) workflow_control: Arc<dyn WorkflowControlPort>,
     /// Per-request command-completion heartbeat (anchor §5.3); aborted at
@@ -66,7 +66,9 @@ impl Drop for RequestEntryHandle {
         }
         self.state.shutdown.cancel();
         self.heartbeat.abort();
-        self.root_agent_task.abort();
+        if let Some(root_agent_task) = &self.root_agent_task {
+            root_agent_task.abort();
+        }
 
         let supervisor = self.supervisor.clone();
         let workflow_control = self.workflow_control.clone();
@@ -106,8 +108,10 @@ impl RequestEntryHandle {
     /// a crash persists a failure instead of leaving the task running
     /// (AC-eos-runtime-03b).
     pub async fn join(mut self) {
-        let root_agent_task = std::mem::replace(&mut self.root_agent_task, tokio::spawn(async {}));
-        let result = root_agent_task.await;
+        let result = match self.root_agent_task.take() {
+            Some(root_agent_task) => root_agent_task.await,
+            None => return,
+        };
         // The root run is done; the heartbeat has nothing left to deliver.
         self.heartbeat.abort();
         self.supervisor
@@ -134,10 +138,11 @@ impl RequestEntryHandle {
             .cancel_for_parent_exit("", Some(self.workflow_control.clone()), reason)
             .await;
 
-        let root_agent_task = std::mem::replace(&mut self.root_agent_task, tokio::spawn(async {}));
-        let abort = root_agent_task.abort_handle();
-        if tokio::time::timeout(grace, root_agent_task).await.is_err() {
-            abort.abort();
+        if let Some(root_agent_task) = self.root_agent_task.take() {
+            let abort = root_agent_task.abort_handle();
+            if tokio::time::timeout(grace, root_agent_task).await.is_err() {
+                abort.abort();
+            }
         }
         let summary = format!("request shutdown: {reason}");
         fail_unfinished_root(&self.state, &self.request_id, &self.root_task_id, &summary).await;
@@ -297,7 +302,7 @@ pub async fn start_request(
         request_id,
         root_task_id,
         attempt_deps,
-        root_agent_task,
+        root_agent_task: Some(root_agent_task),
         supervisor,
         workflow_control: workflow_control_handle,
         heartbeat,

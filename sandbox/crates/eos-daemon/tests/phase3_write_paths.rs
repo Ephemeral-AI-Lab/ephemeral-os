@@ -66,6 +66,31 @@ fn dispatches_layerstack_write_file_and_reads_published_bytes() -> TestResult {
 }
 
 #[test]
+fn write_file_missing_content_is_invalid_envelope() -> TestResult {
+    let fixture = seed_layer_stack("write_missing_content")?;
+    let request = Request {
+        op: "api.v1.write_file".to_owned(),
+        invocation_id: "inv-write".to_owned(),
+        args: json!({
+            "layer_stack_root": &fixture.root,
+            "path": fixture.workspace.join("new.txt"),
+        }),
+    };
+
+    let response = OpTable::with_builtins().dispatch(&request);
+
+    assert_eq!(response["success"], Value::Bool(false));
+    assert_eq!(
+        response["error"]["kind"],
+        Value::String("invalid_envelope".to_owned())
+    );
+    assert!(response["error"]["message"]
+        .as_str()
+        .is_some_and(|message| message.contains("content is required")));
+    Ok(())
+}
+
+#[test]
 fn write_file_create_only_existing_returns_guarded_conflict() -> TestResult {
     let fixture = seed_layer_stack("write_create_only")?;
     let request = Request {

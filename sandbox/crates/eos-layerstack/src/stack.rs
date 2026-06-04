@@ -325,11 +325,11 @@ impl LayerStack {
     ///
     /// # Errors
     ///
-    /// Returns [`LayerStackError`] when the writer lock, active manifest, or
+    /// Returns [`LayerStackError`] when the storage lock, active manifest, or
     /// lease registry cannot be acquired.
     ///
     pub fn acquire_snapshot(&mut self, owner_request_id: &str) -> Result<Lease, LayerStackError> {
-        let _guard = self.writer_lock.exclusive()?;
+        let _guard = self.writer_lock.shared()?;
         let manifest = self.read_active_manifest()?;
         let lease = {
             let mut leases = lock_shared_registry(&self.leases)?;

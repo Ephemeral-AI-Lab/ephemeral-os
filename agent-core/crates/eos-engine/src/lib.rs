@@ -12,6 +12,7 @@ mod notifications;
 pub mod prompt;
 mod prompt_report;
 pub mod query;
+mod resource_sample;
 pub mod tool_call;
 
 #[cfg(test)]

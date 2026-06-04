@@ -24,7 +24,7 @@ use crate::dispatcher::DispatchContext;
 use crate::error::DaemonError;
 use crate::occ_writer::{apply_occ_changeset, hash_current, manifest_version_u64};
 use crate::overlay_runner::{overlay_run_dirs, run_ns_runner_child, RunDirCleanup};
-use crate::request_args::require_string;
+use crate::request_args::{require_raw_string, require_string};
 use crate::response_timings::{
     guarded_changeset_response, guarded_conflict_response, merge_runner_timings,
     published_file_count, resource_timings, usize_to_f64_saturating, usize_to_i64_saturating,
@@ -111,12 +111,7 @@ pub(crate) fn op_write_file(
     }
     let root = PathBuf::from(require_string(args, "layer_stack_root")?);
     let layer_path = bound_layer_path(&root, args)?;
-    let content = args
-        .get("content")
-        .and_then(Value::as_str)
-        .unwrap_or_default()
-        .as_bytes()
-        .to_vec();
+    let content = require_raw_string(args, "content")?.into_bytes();
     let stack = LayerStack::open(root.clone())?;
 
     if !args
@@ -314,12 +309,7 @@ fn isolated_write_file(
             ));
         }
     }
-    let content = args
-        .get("content")
-        .and_then(Value::as_str)
-        .unwrap_or_default()
-        .as_bytes()
-        .to_vec();
+    let content = require_raw_string(args, "content")?.into_bytes();
     isolated_write_upper(handle, &layer_path, &content)?;
     let changed_paths = vec![layer_path.as_str().to_owned()];
     record_isolated_tool_call(

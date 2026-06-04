@@ -17,8 +17,8 @@ use eos_db::Database;
 use eos_llm_client::{Auth, LlmClient, LlmRequest, LlmStream, ProviderError};
 use eos_sandbox_api::SandboxTransport;
 use eos_sandbox_host::{
-    DaemonClient, ProviderRegistry, RequestSandboxBinding, RequestSandboxProvisioner,
-    SandboxLifecycle, DEFAULT_LAYER_STACK_ROOT,
+    resolve_provider_kind, DaemonClient, DockerProviderAdapter, ProviderRegistry,
+    RequestSandboxBinding, RequestSandboxProvisioner, SandboxLifecycle, DEFAULT_LAYER_STACK_ROOT,
 };
 use eos_skills::{load_skill_registry, SkillRegistry};
 use eos_state::{
@@ -42,8 +42,7 @@ use crate::plugin_tools::register_plugin_tools;
 /// sealed `ProviderAdapter`/`SandboxLifecycle` seam (a parallel agent moved the
 /// work there). Because that adapter is sealed, `eos-runtime` cannot build a mock
 /// of it, so this narrow runtime seam exists purely for testability: production
-/// wraps the host provisioner; tests inject a fake. Mirrors the Python
-/// `RequestSandboxProvisioner` create/start injection.
+/// wraps the host provisioner; tests inject a fake.
 #[async_trait]
 pub trait RequestProvisioner: Send + Sync + std::fmt::Debug {
     /// Resolve the sandbox binding for one request (start an explicit id, or
@@ -409,18 +408,25 @@ impl AppStateBuilder {
             validate_agent_tools(&agent_registry, &tool_registry)?;
         }
 
+        let needs_host_provider = self.transport.is_none() || self.provisioner.is_none();
         let provider_registry = Arc::new(ProviderRegistry::new());
-        let transport: Arc<dyn SandboxTransport> = self
-            .transport
-            .unwrap_or_else(|| Arc::new(DaemonClient::new(provider_registry.clone())));
+        if needs_host_provider {
+            seed_default_sandbox_provider(&provider_registry, &config)?;
+        }
+        let daemon_client = Arc::new(DaemonClient::new(provider_registry));
+        let transport: Arc<dyn SandboxTransport> =
+            self.transport.unwrap_or_else(|| daemon_client.clone());
 
         let provisioner: Arc<dyn RequestProvisioner> = self.provisioner.unwrap_or_else(|| {
             let lifecycle = SandboxLifecycle::new(
-                Arc::new(DaemonClient::new(provider_registry.clone())),
+                daemon_client.clone(),
                 PathBuf::from(DEFAULT_LAYER_STACK_ROOT),
             );
             Arc::new(HostProvisioner {
-                inner: Arc::new(RequestSandboxProvisioner::new(Arc::new(lifecycle))),
+                inner: Arc::new(RequestSandboxProvisioner::with_default_snapshot(
+                    Arc::new(lifecycle),
+                    Some(&config.sandbox.docker.default_snapshot),
+                )),
             })
         });
 
@@ -467,6 +473,23 @@ fn default_llm_client(config: &CentralConfig) -> Arc<dyn LlmClient> {
         }
     }
     Arc::new(UnconfiguredLlmClient)
+}
+
+fn seed_default_sandbox_provider(
+    registry: &ProviderRegistry,
+    config: &CentralConfig,
+) -> Result<()> {
+    let env_override = std::env::var("EOS_SANDBOX_PROVIDER").ok();
+    let provider_kind = resolve_provider_kind(env_override.as_deref(), &config.sandbox)
+        .context("resolving sandbox provider")?;
+
+    let docker = DockerProviderAdapter::connect().context("connecting docker sandbox provider")?;
+    registry.set_default(Arc::new(docker));
+    tracing::info!(
+        sandbox_provider = provider_kind.as_str(),
+        "sandbox provider configured"
+    );
+    Ok(())
 }
 
 fn build_agent_registry(dir: Option<&std::path::Path>) -> Result<AgentRegistry> {

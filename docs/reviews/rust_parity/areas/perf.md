@@ -86,10 +86,12 @@ manifest, layer_paths, timings={"layer_stack.acquire_snapshot.total_s": ...})`.
   locally packaged `eosd` (`EOSD_REMOTE_PATH = "{RUNTIME_ROOT}/eosd"`,
   default artifact `sandbox/dist/eosd-linux-amd64`), seeds a LayerStack with
   `B000001-base`, starts the Rust daemon.
-- `backend/scripts/bench_rust_daemon_phase3.py:8-12,339-427,721-759` — measures
-  `api.v1.exec_command` (no-op + small-write publish), `api.v1.glob`,
-  `api.v1.grep`, and a **1/3/5/10 concurrent** shell-exec load matrix (no-op +
-  unique-write), plus daemon RSS before/between/after.
+- `backend/scripts/bench_rust_daemon_phase3.py:305-323,339-427` — starts the
+  Rust daemon, builds the base from the image workspace via
+  `api.build_workspace_base`, then measures `api.v1.exec_command` (no-op +
+  small-write publish), `api.v1.glob`, `api.v1.grep`, and a **1/3/5/10
+  concurrent** shell-exec load matrix (no-op + unique-write), plus daemon RSS
+  before/between/after.
 
 ---
 
@@ -125,7 +127,7 @@ are on the real shell path, not dead code):
 | 1 | Lower-dir O(1): layers shared read-only (CoW), no per-overlay full copy | **match** (with caveat D2) | none | `stack.py:108-135` (lease + existing `layer_paths`, no render) | `stack.rs:343-372` (`acquire_snapshot` maps `manifest.layers`→paths, no `project`) | Per-snapshot work is O(1) lease+path-list (no render). BUT Rust serializes it under the exclusive writer lock (D2) — Python did not. |
 | 2 | Upper-dir O(n·delta): each op stores only its own delta in its own upperdir | **match** | none | `writable_dirs.py:46-52`; `capture.py:49-89` | `writable_dirs.rs:65-79` (per-`run_dir` `upper`/`work`); `path_change.rs:155-269` (walks only upperdir) | Per-op `run_dir/upper`; capture walks only upperdir → cost ∝ writes. |
 | 3 | Fast: kernel overlayfs mount + manifest CAS pointer-swap, no deep per-op copy | **match** | none | `kernel_mount.py:49-75`; `publisher.py:49-138` | `kernel_mount.rs:106-137`; `stack.rs:618-681` | `lowerdir+` per layer newest-first; fd-backed lowerdirs; `move_mount` onto `workspace_root`; publish = stage→rename→CAS→prepend→atomic manifest. |
-| 4 | Benchmarks exercise the Rust daemon (eosd) and measure these properties | **partial** | medium | `bench_rust_daemon_phase2.py:56,202-304`; `phase3.py:8-12,339-427,721-759` | (bench scripts target `eosd`; see below) | Targets eosd + concurrent load, BUT measures **latency + RSS only**; never asserts disk-space O(repo)+O(N·delta) vs O(N·repo); seeds a 1-file base. |
+| 4 | Benchmarks exercise the Rust daemon (eosd) and measure these properties | **partial** | medium | `bench_rust_daemon_phase2.py:56,202-304`; `phase3.py:305-427` | (bench scripts target `eosd`; see below) | Targets eosd + concurrent load, BUT measures **latency + RSS only**; never asserts disk-space O(repo)+O(N·delta) vs O(N·repo). Phase 3 now builds a real workspace base through the daemon; the old phase2 baseline still uses a tiny one-file fixture. |
 
 Supporting constant-parity checks (all **match**):
 
@@ -150,11 +152,13 @@ Supporting constant-parity checks (all **match**):
 - Evidence: `bench_rust_daemon_phase3.py` gates on latency
   (`shell_noop_70pct_faster_than_phase1`, line 98) and daemon RSS
   (`sample_daemon_memory`, summarized lines 339-427); there is **no** `du`,
-  on-disk byte accounting, or O(N·repo) regression check. The seeded base is a
-  single file: `bench_rust_daemon_phase2.py:61` `README_CONTENT = "# README\n…"`,
-  `:297` `…/layers/B000001-base/README.md`. With a 1-file repo the O(repo) term
-  is negligible, so the bench cannot distinguish O(repo)+O(N·delta) from
-  O(N·repo).
+  on-disk byte accounting, or O(N·repo) regression check. Current Phase 3 builds
+  the base through `api.build_workspace_base` against the target image workspace,
+  which is a stronger fixture than the removed ad hoc tar seeding helper, but it
+  still does not measure the disk-space invariant. The older phase2 baseline
+  remains a one-file fixture: `bench_rust_daemon_phase2.py:61`
+  `README_CONTENT = "# README\n…"`, `:297`
+  `…/layers/B000001-base/README.md`.
 - Why it matters: invariant 4 asks for a benchmark that *proves* the space
   properties. The current benches prove the daemon is fast and memory-stable
   under concurrency (real and useful), but the headline disk-space moat
@@ -171,57 +175,31 @@ Supporting constant-parity checks (all **match**):
   baseline, not a check the Rust port dropped. "partial" here means "no benchmark
   proves the space property on either side", not "Rust lost a Python check".
 
-### D2 — Rust `acquire_snapshot` takes the exclusive storage-writer lock; Python did NOT (concurrency divergence on the O(1) hot path)
-- Evidence (Python, parent `a8c987845`):
-  - `stack.py:108-116` — `acquire_snapshot` body is `with self._lock:` (a
-    process-local `threading.RLock`, `stack.py:__init__` `self._lock =
-    threading.RLock()`) around `read_active_manifest()` + `self._leases.acquire(...)`.
-    It does **not** call `_storage_write_guard()`.
-  - `stack.py:137-138,236-237,313,364-366` — only the **mutating** methods
-    (`release_lease`, `publish_changes`, `squash`, `commit_to_workspace`) take
-    `with self._storage_write_guard():`, which is the cross-process
-    `StorageWriterLockLease.exclusive()`. The snapshot path and the write guard
-    are therefore two **different** locks.
-  - The write methods hold `self._lock` only briefly: `release_lease`
-    (`stack.py:137-149`) computes the lease drop + unreferenced layers under
-    `self._lock`, then **releases `self._lock` before** the slow
-    `_remove_layers` filesystem I/O — so readers/snapshots are not blocked on
-    write I/O. This is the concurrency profile the Rust port loses.
-- Daemon dispatch model (the load-bearing fact for D2's severity): the daemon
-  opens a **fresh `LayerStack::open(root)` per request** (`dispatcher.rs:895,1203`;
-  `command.rs:737`) — there is no shared `Mutex<LayerStack>` or single manager
-  instance. Cross-request serialization is provided entirely by
-  `StorageWriterLockLease`: same-process opens refcount-share **one**
-  `Arc<ReentrantMutex>` keyed by the canonicalized root
-  (`storage_lock.rs:75-105`; cross-process opens are excluded by
-  `flock(LOCK_EX|LOCK_NB)`, `storage_lock.rs:88`). So the shared `ReentrantMutex`
-  **is** the real cross-instance serializer, and because Rust `acquire_snapshot`
-  enters it, snapshots genuinely contend with writers here — not at some upstream
-  daemon mutex. This is what keeps D2 at medium rather than moot.
-- Evidence (Rust): `stack.rs:343-344` — `acquire_snapshot` opens with
-  `let _guard = self.writer_lock.exclusive()?;` — the **same**
-  `StorageWriterLockLease::exclusive()` (`storage_lock.rs:120-133`, a single
-  `ReentrantMutex`, mutual-exclusion only — no shared/read mode) that
-  `publish_layer` (`stack.rs:619`), `squash` (`stack.rs:415`), and
-  `release_lease` (`stack.rs:384`) take.
-- Why it matters: this is the core area invariant — "N concurrent agents are
-  cheap … every snapshot is constant-cost" (layerstack.html 2.3). In Python a
-  snapshot acquire serialized only on a short process-local critical section and
-  could overlap with a concurrent publish/squash. In Rust, **every snapshot
-  acquire now mutually excludes against every publish/squash/release and against
-  other snapshot acquires** on the same root. The per-snapshot work is still O(1),
-  but throughput of N concurrent readers under mixed read/write load is tightened
-  versus the ground truth. The `phase3` 1/3/5/10 concurrent matrix does exercise
-  concurrency, but its writes are unique-path (so it stresses publish latency,
-  not reader/writer lock contention specifically), so this regression would not
-  necessarily surface in the current gate.
-- Suggested fix: confirm whether the exclusive guard on `acquire_snapshot` is
-  intentional (e.g. to make the manifest-read + lease-acquire atomic against a
-  concurrent manifest swap). If atomicity is the goal, a shared/read mode on the
-  storage-writer lock (or reverting snapshot to a lighter process-local lock as
-  in Python) would restore the original concurrency profile. If intentional,
-  document the divergence and re-baseline the N-concurrent throughput
-  expectation.
+### D2 — Rust `acquire_snapshot` used the exclusive storage-writer lock; source-level remediation landed
+- Original evidence (Python, parent `a8c987845`): `acquire_snapshot` used the
+  process-local `self._lock` around `read_active_manifest()` +
+  `self._leases.acquire(...)` and did **not** enter `_storage_write_guard()`.
+  Mutating methods (`release_lease`, `publish_changes`, `squash`,
+  `commit_to_workspace`) used the heavier storage-writer guard.
+- Original Rust gap: `LayerStack::acquire_snapshot` took
+  `self.writer_lock.exclusive()`, the same in-process serializer used by
+  `publish_layer`, `squash`, `release_lease`, and `commit_to_workspace`. Because
+  daemon requests open fresh `LayerStack` instances per request, that per-root
+  serializer was the real cross-request contention point.
+- Remediation update: `StorageWriterLockLease` now exposes a shared read guard
+  and a reentrant exclusive write guard. `LayerStack::acquire_snapshot` now takes
+  `self.writer_lock.shared()?`; storage mutations keep `exclusive()?`. This
+  restores the intended shape: concurrent snapshots can overlap, while publish,
+  squash, release, and commit still serialize.
+- Verification: `storage_lock::tests::shared_guards_overlap_and_block_exclusive`
+  proves shared guards overlap and block a writer;
+  `storage_lock::tests::exclusive_guard_is_reentrant_and_blocks_shared` proves
+  writer re-entry still works and blocks readers until the outer write guard
+  drops. The focused lock tests, full `eos-layerstack` lib tests, and scoped
+  Clippy passed.
+- Remaining follow-up: re-baseline the Phase 3/Phase 3T N-concurrent throughput
+  matrix on a live Docker image. The source-level contention bug is closed; the
+  measured throughput gate is not refreshed by this note.
 
 ### D3 — `acquire_snapshot` timings relocated from stack to daemon (divergent, equivalent)
 - Evidence: Python `stack.py:108-135` records

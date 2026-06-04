@@ -29,13 +29,13 @@ mod transport;
 
 pub use error::SandboxApiError;
 pub use models::{
-    CommandOutput, CommandSessionCancelRequest, CommandSessionWriteRequest, ConflictInfo,
-    EditFileRequest, EditFileResult, EnterIsolatedWorkspaceRequest, EnterIsolatedWorkspaceResult,
-    ExecCommandRequest, ExecCommandResult, ExecStdinRequest, ExitIsolatedWorkspaceRequest,
-    ExitIsolatedWorkspaceResult, GlobRequest, GlobResult, GrepRequest, GrepResult, Intent,
-    LifecycleError, LifecycleResultBase, ReadFileRequest, ReadFileResult, SandboxCaller,
-    SandboxRequestBase, SandboxResultBase, SearchReplaceEdit, ToolCallRequest, Workspace,
-    WriteFileRequest, WriteFileResult,
+    CommandOutput, CommandSessionCancelRequest, ConflictInfo, EditFileRequest, EditFileResult,
+    EnterIsolatedWorkspaceRequest, EnterIsolatedWorkspaceResult, ExecCommandRequest,
+    ExecCommandResult, ExecStdinRequest, ExitIsolatedWorkspaceRequest, ExitIsolatedWorkspaceResult,
+    GlobRequest, GlobResult, GrepOutputMode, GrepRequest, GrepResult, Intent, LifecycleError,
+    LifecycleResultBase, ReadFileRequest, ReadFileResult, SandboxCaller, SandboxRequestBase,
+    SandboxResultBase, SearchReplaceEdit, ToolCallRequest, Workspace, WriteFileRequest,
+    WriteFileResult,
 };
 pub use ops::DaemonOp;
 pub use timeouts::{
@@ -46,6 +46,7 @@ pub use timeouts::{
 pub use tool_api::{
     cancel, cancel_command_session, collect_command_completions, command_session_count, edit_file,
     exec_command, exec_stdin, glob, grep, heartbeat, inflight_count, isolated_active,
-    plugin_dispatch, read_file, write_file, write_stdin, PluginDispatchRequest,
+    plugin_dispatch, plugin_ensure, read_file, write_file, PluginDispatchRequest,
+    PluginEnsureRequest,
 };
 pub use transport::SandboxTransport;

@@ -18,6 +18,18 @@ pub(crate) fn require_string(args: &Value, key: &str) -> Result<String, DaemonEr
     Ok(value)
 }
 
+pub(crate) fn require_raw_string(args: &Value, key: &str) -> Result<String, DaemonError> {
+    let Some(value) = args.get(key) else {
+        return Err(DaemonError::InvalidEnvelope(format!("{key} is required")));
+    };
+    let Some(value) = value.as_str() else {
+        return Err(DaemonError::InvalidEnvelope(format!(
+            "{key} must be a string"
+        )));
+    };
+    Ok(value.to_owned())
+}
+
 pub(crate) fn binding_to_value(binding: &WorkspaceBinding) -> Result<Value, DaemonError> {
     serde_json::to_value(binding).map_err(|err| DaemonError::InvalidEnvelope(err.to_string()))
 }

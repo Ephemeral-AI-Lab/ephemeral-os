@@ -16,8 +16,8 @@ pub struct AssistantMessageComplete {
     pub stop_reason: Option<StopReason>,
 }
 
-/// A broad agent-run stream event: provider deltas plus engine-domain tool,
-/// background, and notification events.
+/// A broad agent-run stream event: provider deltas plus engine-domain tool and
+/// notification events.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 #[non_exhaustive]
@@ -136,21 +136,6 @@ pub enum StreamEvent {
         /// Cancellation reason.
         reason: String,
     },
-    /// Engine-dispatched background task started.
-    BackgroundTaskStarted {
-        /// Agent label; filled by [`stamp_identity`] when empty.
-        #[serde(default)]
-        agent_name: String,
-        /// Agent run id; filled by [`stamp_identity`] when absent.
-        #[serde(default)]
-        agent_run_id: Option<AgentRunId>,
-        /// Supervisor-local background task id.
-        task_id: String,
-        /// Tool name.
-        tool_name: String,
-        /// Tool input.
-        tool_input: JsonObject,
-    },
     /// Engine/system notification.
     SystemNotification {
         /// Agent label; filled by [`stamp_identity`] when empty.
@@ -226,11 +211,6 @@ pub fn stamp_identity(
             ..
         }
         | StreamEvent::ToolExecutionCancelled {
-            agent_name,
-            agent_run_id,
-            ..
-        }
-        | StreamEvent::BackgroundTaskStarted {
             agent_name,
             agent_run_id,
             ..

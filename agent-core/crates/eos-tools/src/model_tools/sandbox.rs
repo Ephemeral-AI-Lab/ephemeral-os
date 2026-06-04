@@ -14,8 +14,8 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use eos_sandbox_api::{
-    CommandSessionWriteRequest, EditFileRequest, ExecCommandRequest, ExecCommandResult,
-    GlobRequest, GrepRequest, ReadFileRequest, SandboxRequestBase, SearchReplaceEdit,
+    EditFileRequest, ExecCommandRequest, ExecCommandResult, ExecStdinRequest, GlobRequest,
+    GrepOutputMode, GrepRequest, ReadFileRequest, SandboxRequestBase, SearchReplaceEdit,
     WriteFileRequest,
 };
 use eos_types::{CommandSessionId, InvocationId, JsonObject};
@@ -66,8 +66,16 @@ fn cwd(ctx: &ExecutionMetadata) -> String {
     ctx.repo_root.trim().to_owned()
 }
 
-fn serialize<T: Serialize>(value: &T) -> String {
-    serde_json::to_string(value).expect("tool output DTO serializes")
+fn serialize_output<T: Serialize>(value: &T) -> Result<String, ToolResult> {
+    serde_json::to_string(value)
+        .map_err(|err| ToolResult::error(format!("failed to serialize tool output: {err}")))
+}
+
+fn ok_json<T: Serialize>(value: &T) -> ToolResult {
+    match serialize_output(value) {
+        Ok(output) => ToolResult::ok(output),
+        Err(result) => result,
+    }
 }
 
 fn invalid_input(tool: ToolName, message: impl std::fmt::Display) -> ToolResult {
@@ -121,7 +129,7 @@ struct MutationOutput {
 struct GrepOutput {
     cwd: String,
     pattern: String,
-    mode: String,
+    mode: GrepOutputMode,
     filenames: Vec<String>,
     content: String,
     num_files: u32,
@@ -239,7 +247,7 @@ impl ToolExecutor for ReadFile {
 
         let output =
             build_read_file_output(ctx, &path, &result.content, parsed.start_line, end_line);
-        Ok(ToolResult::ok(serialize(&output)))
+        Ok(ok_json(&output))
     }
 }
 
@@ -508,7 +516,10 @@ fn edit_output(
 }
 
 fn mutation_result(success: bool, output: MutationOutput) -> ToolResult {
-    let serialized = serialize(&output);
+    let serialized = match serialize_output(&output) {
+        Ok(output) => output,
+        Err(result) => return result,
+    };
     let mut result = if success {
         ToolResult::ok(serialized)
     } else {
@@ -526,27 +537,8 @@ fn mutation_result(success: bool, output: MutationOutput) -> ToolResult {
 // grep
 // ---------------------------------------------------------------------------
 
-/// `output_mode` literal.
-#[derive(Debug, Clone, Copy, Deserialize, Serialize, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-enum GrepMode {
-    Content,
-    FilesWithMatches,
-    Count,
-}
-
-impl GrepMode {
-    fn as_wire(self) -> &'static str {
-        match self {
-            GrepMode::Content => "content",
-            GrepMode::FilesWithMatches => "files_with_matches",
-            GrepMode::Count => "count",
-        }
-    }
-}
-
-fn default_grep_mode() -> GrepMode {
-    GrepMode::FilesWithMatches
+fn default_grep_mode() -> GrepOutputMode {
+    GrepOutputMode::FilesWithMatches
 }
 fn default_head_limit() -> u32 {
     250
@@ -564,7 +556,7 @@ struct GrepInput {
     glob_filter: Option<String>,
     #[serde(default = "default_grep_mode")]
     #[schemars(default = "default_grep_mode")]
-    output_mode: GrepMode,
+    output_mode: GrepOutputMode,
     #[serde(default = "default_head_limit")]
     #[schemars(default = "default_head_limit")]
     head_limit: u32,
@@ -598,7 +590,7 @@ impl ToolExecutor for Grep {
             pattern: parsed.pattern.clone(),
             path: resolved,
             glob_filter: parsed.glob_filter,
-            output_mode: parsed.output_mode.as_wire().to_owned(),
+            output_mode: parsed.output_mode,
             head_limit: Some(parsed.head_limit),
             offset: parsed.offset,
             case_insensitive: parsed.case_insensitive,
@@ -628,7 +620,7 @@ impl ToolExecutor for Grep {
             applied_offset: result.applied_offset,
             truncated: result.truncated,
         };
-        Ok(ToolResult::ok(serialize(&output)))
+        Ok(ok_json(&output))
     }
 }
 
@@ -680,7 +672,7 @@ impl ToolExecutor for Glob {
             num_files: result.num_files,
             truncated: result.truncated,
         };
-        Ok(ToolResult::ok(serialize(&output)))
+        Ok(ok_json(&output))
     }
 }
 
@@ -848,7 +840,7 @@ impl ToolExecutor for WriteStdin {
         // Ctrl-C decoupling (sense-2 D7): `\x03` rides through as ordinary stdin
         // and the daemon raises SIGINT; teardown is the explicit `terminate`
         // flag (SIGTERM→SIGKILL), so the tool no longer escalates to a cancel RPC.
-        let write_request = CommandSessionWriteRequest {
+        let write_request = ExecStdinRequest {
             base: request_base(ctx, "write_stdin"),
             command_session_id: command_session_id.clone(),
             chars: parsed.chars.clone(),
@@ -857,7 +849,7 @@ impl ToolExecutor for WriteStdin {
             terminate: parsed.terminate,
         };
         let result =
-            match eos_sandbox_api::write_stdin(&*ctx.transport, sandbox_id, &write_request).await {
+            match eos_sandbox_api::exec_stdin(&*ctx.transport, sandbox_id, &write_request).await {
                 Ok(result) => result,
                 Err(err) => return Ok(ToolResult::error(err.to_string())),
             };
@@ -960,7 +952,10 @@ fn command_tool_result_from_value(result: &Value) -> ToolResult {
     let mut metadata = JsonObject::new();
     metadata.insert("status".to_owned(), json!(status));
     ToolResult {
-        output: serialize(&payload),
+        output: match serialize_output(&payload) {
+            Ok(output) => output,
+            Err(result) => return result,
+        },
         is_error,
         metadata,
         is_terminal: false,
@@ -992,7 +987,10 @@ fn command_tool_result(result: &ExecCommandResult) -> ToolResult {
         metadata.insert("command_session_id".to_owned(), json!(id));
     }
     ToolResult {
-        output: serialize(&payload),
+        output: match serialize_output(&payload) {
+            Ok(output) => output,
+            Err(result) => return result,
+        },
         is_error,
         metadata,
         is_terminal: false,

@@ -75,9 +75,10 @@ fn set_nested(map: &mut Mapping, path: &[impl AsRef<str>], value: Value) {
         if !entry.is_mapping() {
             *entry = Value::Mapping(Mapping::new());
         }
-        cursor = entry
-            .as_mapping_mut()
-            .expect("entry was just ensured to be a mapping");
+        let Value::Mapping(next) = entry else {
+            return;
+        };
+        cursor = next;
     }
     cursor.insert(Value::String(last.as_ref().to_owned()), value);
 }

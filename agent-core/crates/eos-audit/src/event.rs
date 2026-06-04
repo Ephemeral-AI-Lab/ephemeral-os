@@ -46,7 +46,7 @@ pub struct AuditEvent {
     pub schema_version: u32,
     /// The emitting package.
     pub source: AuditSource,
-    /// The event-type string (e.g. `"engine.tool.started"`).
+    /// The event-type string (e.g. `"tool_call.completed"`).
     #[serde(rename = "type")]
     pub event_type: String,
     /// Correlation envelope of known ids.
@@ -147,14 +147,14 @@ mod tests {
         payload.insert("status".to_owned(), Value::String("ok".to_owned()));
         let event = AuditEvent::new(
             AuditSource::Engine,
-            "engine.tool.started",
+            eos_obs_contract::TOOL_CALL_COMPLETED,
             node,
             payload,
             &fixed_clock(),
         );
 
         let value = serde_json::to_value(&event).unwrap();
-        assert_eq!(value["type"], json!("engine.tool.started"));
+        assert_eq!(value["type"], json!(eos_obs_contract::TOOL_CALL_COMPLETED));
         assert_eq!(value["schema_version"], json!(1));
         assert!(value.get("node").unwrap().is_object());
         assert_eq!(value["node"]["request_id"], json!("req-1"));
