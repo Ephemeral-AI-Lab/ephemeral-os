@@ -333,22 +333,24 @@ in the current checkout:
 | 4 | implemented for the named shadows | `workflow.task.*` and agent-core `background_tool.*` are tracing diagnostics; `eos-workflow` has no audit dependency |
 | 5 | first daemon dispatch slice implemented | `sandbox/crates/eos-daemon/src/audit_events.rs` emits typed `eos-protocol::audit::*Section` payloads and sample-lane `os_resource.sampled` rows |
 | 6 | implemented for normalizer | `agent-core/crates/eos-obs-collector` parses agent-core JSONL, normalizes sandbox pull events to `ObsEnvelope`, canonicalizes aliases, extracts join ids, and reports pull loss metadata |
-| 7 | first gate API implemented | `eos-obs-collector::evaluate_runner_gates` accepts normalized rows, sandbox loss metadata, expected tool-use ids, external state/transcript correctness evidence, and strict/resource gate settings; `evaluate_runner_gate_batches` flattens agent-core rows plus normalized sandbox batches and merges sandbox loss; `RunnerGateReport` serializes as a self-contained Rust JSON artifact with pass/fail, failures, metrics, settings, correctness evidence, and sandbox loss |
+| 7 | first gate API implemented | `eos-obs-collector::evaluate_runner_gates` accepts normalized rows, sandbox loss metadata, typed `ExpectedToolUse` records, typed external state/transcript correctness evidence, and strict/resource gate settings; `evaluate_runner_gate_batches` flattens agent-core rows plus normalized sandbox batches and merges sandbox loss; `RunnerGateReport` serializes as a self-contained Rust JSON artifact with pass/fail, failures, metrics, expected tool uses, settings, correctness evidence, and sandbox loss |
 
 ## Next Rust Implementation Step
 
 The first Stage 7 API lives in `agent-core/crates/eos-obs-collector/src/gates.rs`.
 It returns a typed `RunnerGateReport` with pass/fail, failure kinds, and basic
 metrics. `RunnerGateReport`, `RunnerGateFailure`, `RunnerGateMetrics`,
-`RunnerGateSettings`, `RunnerCorrectnessEvidence`, `SandboxPullBatch`, and
-`SandboxAuditLoss` are serializable Rust artifact types. They intentionally do
-not ingest tracing, call Python, render a Python-shaped report, or invent audit
-rows for state facts that are already authoritative.
+`RunnerGateSettings`, `RunnerCorrectnessEvidence`, `ExpectedToolUse`,
+`SandboxPullBatch`, and `SandboxAuditLoss` are serializable Rust artifact types.
+They intentionally do not ingest tracing, call Python, render a Python-shaped
+report, or invent audit rows for state facts that are already authoritative.
 
 The report artifact carries enough context to explain a gate result without
 replaying the evaluator: gate settings, supplied state/transcript correctness
 evidence, optional sandbox loss metadata, aggregate metrics, and typed failure
-kinds are serialized together.
+kinds are serialized together. `RunnerCorrectnessEvidence` records both the
+boolean gate evidence and the checked counts for tool-use and message/transcript
+assertions.
 
 For the future runner's normal input shape, `evaluate_runner_gate_batches`
 accepts agent-core rows plus one or more `SandboxPullBatch` values, flattens all
@@ -361,9 +363,9 @@ supplies:
 
 - normalized obs rows from `eos-obs-collector`
 - sandbox loss metadata from `SandboxAuditLoss`
-- expected tool-use ids from Rust state/transcript
+- typed `ExpectedToolUse` records from Rust state/transcript
 - typed evidence that Rust state/transcript checks already verified tool
-  correctness and message correctness
+  correctness and message correctness, including checked counts
 
 Current resource sampling cadence:
 
@@ -392,7 +394,9 @@ Current resource sampling cadence:
   - invalid tool duration/status payloads fail
   - resource gate requires a real metric-bearing `os_resource.sampled` row
   - `RunnerGateReport` round-trips through stable JSON with snake_case failure
-    kinds, settings, correctness evidence, metrics, and sandbox loss metadata
+    kinds, expected tool uses, settings, correctness evidence, metrics, and
+    sandbox loss metadata
+  - correctness evidence round-trips with tool/message checked counts
   - sandbox pull losses merge across multiple batches before strict loss gates
   - batch evaluator flattens agent-core rows plus sandbox batch rows
 

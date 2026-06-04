@@ -22,8 +22,76 @@ const RESOURCE_METRIC_KEYS: &[&str] = &[
 pub struct RunnerCorrectnessEvidence {
     /// The runner checked expected tool-use ids and terminal tool outcomes against state/transcript.
     pub tool_use_verified: bool,
+    /// Number of expected tool-use ids checked against state/transcript.
+    pub tool_use_checked_count: usize,
     /// The runner checked model/user-facing message correctness against transcript state.
     pub message_correctness_verified: bool,
+    /// Number of message/transcript assertions checked by the runner.
+    pub message_checked_count: usize,
+}
+
+impl RunnerCorrectnessEvidence {
+    /// Build evidence for successful state/transcript checks.
+    #[must_use]
+    pub const fn verified(tool_use_checked_count: usize, message_checked_count: usize) -> Self {
+        Self {
+            tool_use_verified: true,
+            tool_use_checked_count,
+            message_correctness_verified: true,
+            message_checked_count,
+        }
+    }
+
+    /// Return true when the runner supplied external tool correctness evidence.
+    #[must_use]
+    pub const fn has_tool_use_evidence(self) -> bool {
+        self.tool_use_verified
+    }
+
+    /// Return true when the runner supplied external message correctness evidence.
+    #[must_use]
+    pub const fn has_message_correctness_evidence(self) -> bool {
+        self.message_correctness_verified
+    }
+}
+
+/// Tool-use expectation supplied by Rust state/transcript evidence.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ExpectedToolUse {
+    /// Provider/tool-call id that must have a `tool_call.completed` obs row.
+    pub tool_use_id: String,
+    /// Optional tool name copied from state/transcript for diagnostics.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tool_name: Option<String>,
+    /// Whether state/transcript expected the call to be terminal.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub terminal_expected: Option<bool>,
+}
+
+impl ExpectedToolUse {
+    /// Build the minimum expected tool-use record.
+    #[must_use]
+    pub fn new(tool_use_id: impl Into<String>) -> Self {
+        Self {
+            tool_use_id: tool_use_id.into(),
+            tool_name: None,
+            terminal_expected: None,
+        }
+    }
+
+    /// Attach a state/transcript tool name for diagnostics.
+    #[must_use]
+    pub fn with_tool_name(mut self, tool_name: impl Into<String>) -> Self {
+        self.tool_name = Some(tool_name.into());
+        self
+    }
+
+    /// Attach whether state/transcript expected a terminal tool call.
+    #[must_use]
+    pub const fn with_terminal_expected(mut self, terminal_expected: bool) -> Self {
+        self.terminal_expected = Some(terminal_expected);
+        self
+    }
 }
 
 /// Runner gate switches.
@@ -51,8 +119,8 @@ pub struct RunnerGateInput<'a> {
     pub rows: &'a [ObsEnvelope],
     /// Optional loss metadata from the sandbox audit ring.
     pub sandbox_loss: Option<&'a SandboxAuditLoss>,
-    /// Tool-use ids the Rust state/transcript says must be observed.
-    pub expected_tool_use_ids: &'a [String],
+    /// Tool-use records the Rust state/transcript says must be observed.
+    pub expected_tool_uses: &'a [ExpectedToolUse],
     /// State/transcript correctness checks already performed by the runner.
     pub correctness: RunnerCorrectnessEvidence,
     /// Gate settings for this runner invocation.
@@ -66,8 +134,8 @@ pub struct RunnerGateBatchInput<'a> {
     pub agent_core_rows: &'a [ObsEnvelope],
     /// Normalized sandbox pull/snapshot batches.
     pub sandbox_batches: &'a [SandboxPullBatch],
-    /// Tool-use ids the Rust state/transcript says must be observed.
-    pub expected_tool_use_ids: &'a [String],
+    /// Tool-use records the Rust state/transcript says must be observed.
+    pub expected_tool_uses: &'a [ExpectedToolUse],
     /// State/transcript correctness checks already performed by the runner.
     pub correctness: RunnerCorrectnessEvidence,
     /// Gate settings for this runner invocation.
@@ -127,6 +195,8 @@ pub struct RunnerGateReport {
     pub failures: Vec<RunnerGateFailure>,
     /// Basic obs metrics useful for runner reports.
     pub metrics: RunnerGateMetrics,
+    /// Tool-use records the Rust state/transcript expected to observe.
+    pub expected_tool_uses: Vec<ExpectedToolUse>,
     /// Gate settings used for this evaluation.
     pub settings: RunnerGateSettings,
     /// State/transcript correctness evidence supplied by the runner.
@@ -141,7 +211,7 @@ pub struct RunnerGateReport {
 pub fn evaluate_runner_gates(input: RunnerGateInput<'_>) -> RunnerGateReport {
     let mut failures = Vec::new();
     let mut metrics = RunnerGateMetrics::default();
-    let expected_tool_use_ids = unique_tool_use_ids(input.expected_tool_use_ids);
+    let expected_tool_use_ids = unique_tool_use_ids(input.expected_tool_uses);
     metrics.expected_tool_use_count = expected_tool_use_ids.len();
 
     if input.settings.strict_audit_loss {
@@ -158,13 +228,13 @@ pub fn evaluate_runner_gates(input: RunnerGateInput<'_>) -> RunnerGateReport {
         }
     }
 
-    if !input.correctness.tool_use_verified {
+    if !input.correctness.has_tool_use_evidence() {
         failures.push(failure(
             RunnerGateFailureKind::ToolCorrectnessNotVerified,
             "state/transcript tool correctness evidence was not supplied",
         ));
     }
-    if !input.correctness.message_correctness_verified {
+    if !input.correctness.has_message_correctness_evidence() {
         failures.push(failure(
             RunnerGateFailureKind::MessageCorrectnessNotVerified,
             "state/transcript message correctness evidence was not supplied",
@@ -229,6 +299,7 @@ pub fn evaluate_runner_gates(input: RunnerGateInput<'_>) -> RunnerGateReport {
         passed: failures.is_empty(),
         failures,
         metrics,
+        expected_tool_uses: input.expected_tool_uses.to_vec(),
         settings: input.settings,
         correctness: input.correctness,
         sandbox_loss: input.sandbox_loss.cloned(),
@@ -263,14 +334,16 @@ pub fn evaluate_runner_gate_batches(input: RunnerGateBatchInput<'_>) -> RunnerGa
     evaluate_runner_gates(RunnerGateInput {
         rows: &rows,
         sandbox_loss: sandbox_loss.as_ref(),
-        expected_tool_use_ids: input.expected_tool_use_ids,
+        expected_tool_uses: input.expected_tool_uses,
         correctness: input.correctness,
         settings: input.settings,
     })
 }
 
-fn unique_tool_use_ids(ids: &[String]) -> BTreeSet<&str> {
-    ids.iter().map(String::as_str).collect()
+fn unique_tool_use_ids(ids: &[ExpectedToolUse]) -> BTreeSet<&str> {
+    ids.iter()
+        .map(|expected| expected.tool_use_id.as_str())
+        .collect()
 }
 
 fn contains_tool_use_id(ids: &BTreeSet<&str>, needle: &str) -> bool {
@@ -341,7 +414,9 @@ mod tests {
 
     #[test]
     fn runner_gates_pass_with_state_evidence_tool_obs_and_resource_metric() {
-        let expected_tool_ids = vec!["toolu-1".to_owned()];
+        let expected_tool_uses = vec![ExpectedToolUse::new("toolu-1")
+            .with_tool_name("exec_command")
+            .with_terminal_expected(false)];
         let rows = vec![
             tool_row("toolu-1", json!({"duration_ms": 12.0, "status": "ok"})),
             resource_row(json!({"sampled_at_monotonic_s": 1.0, "rss_bytes": 1024})),
@@ -350,11 +425,8 @@ mod tests {
         let report = evaluate_runner_gates(RunnerGateInput {
             rows: &rows,
             sandbox_loss: Some(&SandboxAuditLoss::default()),
-            expected_tool_use_ids: &expected_tool_ids,
-            correctness: RunnerCorrectnessEvidence {
-                tool_use_verified: true,
-                message_correctness_verified: true,
-            },
+            expected_tool_uses: &expected_tool_uses,
+            correctness: RunnerCorrectnessEvidence::verified(1, 1),
             settings: RunnerGateSettings::default(),
         });
 
@@ -370,11 +442,12 @@ mod tests {
                 resource_metric_count: 1,
             }
         );
+        assert_eq!(report.expected_tool_uses, expected_tool_uses);
     }
 
     #[test]
     fn runner_gates_fail_on_missing_expected_tool_obs() {
-        let expected_tool_ids = vec!["toolu-expected".to_owned()];
+        let expected_tool_uses = vec![ExpectedToolUse::new("toolu-expected")];
         let rows = vec![resource_row(
             json!({"sampled_at_monotonic_s": 1.0, "cpu_user_s": 0.2}),
         )];
@@ -382,7 +455,7 @@ mod tests {
         let report = evaluate_runner_gates(RunnerGateInput {
             rows: &rows,
             sandbox_loss: None,
-            expected_tool_use_ids: &expected_tool_ids,
+            expected_tool_uses: &expected_tool_uses,
             correctness: verified_correctness(),
             settings: RunnerGateSettings::default(),
         });
@@ -393,7 +466,7 @@ mod tests {
 
     #[test]
     fn runner_gates_fail_on_counted_audit_loss() {
-        let expected_tool_ids = Vec::new();
+        let expected_tool_uses = Vec::new();
         let rows = vec![resource_row(
             json!({"sampled_at_monotonic_s": 1.0, "io_read_bytes": 12}),
         )];
@@ -406,7 +479,7 @@ mod tests {
         let report = evaluate_runner_gates(RunnerGateInput {
             rows: &rows,
             sandbox_loss: Some(&loss),
-            expected_tool_use_ids: &expected_tool_ids,
+            expected_tool_uses: &expected_tool_uses,
             correctness: verified_correctness(),
             settings: RunnerGateSettings::default(),
         });
@@ -417,7 +490,7 @@ mod tests {
 
     #[test]
     fn runner_gates_fail_without_external_correctness_evidence() {
-        let expected_tool_ids = Vec::new();
+        let expected_tool_uses = Vec::new();
         let rows = vec![resource_row(
             json!({"sampled_at_monotonic_s": 1.0, "io_write_ops": 2}),
         )];
@@ -425,7 +498,7 @@ mod tests {
         let report = evaluate_runner_gates(RunnerGateInput {
             rows: &rows,
             sandbox_loss: None,
-            expected_tool_use_ids: &expected_tool_ids,
+            expected_tool_uses: &expected_tool_uses,
             correctness: RunnerCorrectnessEvidence::default(),
             settings: RunnerGateSettings::default(),
         });
@@ -440,7 +513,7 @@ mod tests {
 
     #[test]
     fn runner_gates_fail_on_invalid_tool_payload_and_empty_resource_sample() {
-        let expected_tool_ids = vec!["toolu-1".to_owned()];
+        let expected_tool_uses = vec![ExpectedToolUse::new("toolu-1")];
         let rows = vec![
             tool_row("toolu-1", json!({"duration_ms": -1.0, "status": ""})),
             resource_row(json!({"sampled_at_monotonic_s": 1.0})),
@@ -449,7 +522,7 @@ mod tests {
         let report = evaluate_runner_gates(RunnerGateInput {
             rows: &rows,
             sandbox_loss: None,
-            expected_tool_use_ids: &expected_tool_ids,
+            expected_tool_uses: &expected_tool_uses,
             correctness: verified_correctness(),
             settings: RunnerGateSettings::default(),
         });
@@ -474,6 +547,9 @@ mod tests {
                 resource_sample_count: 1,
                 resource_metric_count: 1,
             },
+            expected_tool_uses: vec![ExpectedToolUse::new("toolu-1")
+                .with_tool_name("exec_command")
+                .with_terminal_expected(false)],
             settings: RunnerGateSettings {
                 strict_audit_loss: true,
                 require_resource_sample: false,
@@ -493,14 +569,28 @@ mod tests {
         assert_eq!(value["failures"][0]["kind"], json!("audit_loss"));
         assert_eq!(value["metrics"]["resource_metric_count"], json!(1));
         assert_eq!(value["settings"]["require_resource_sample"], json!(false));
+        assert_eq!(
+            value["expected_tool_uses"][0]["tool_use_id"],
+            json!("toolu-1")
+        );
+        assert_eq!(
+            value["expected_tool_uses"][0]["tool_name"],
+            json!("exec_command")
+        );
+        assert_eq!(
+            value["expected_tool_uses"][0]["terminal_expected"],
+            json!(false)
+        );
         assert_eq!(value["correctness"]["tool_use_verified"], json!(true));
+        assert_eq!(value["correctness"]["tool_use_checked_count"], json!(1));
+        assert_eq!(value["correctness"]["message_checked_count"], json!(1));
         assert_eq!(value["sandbox_loss"]["dropped_event_count"], json!(2));
         assert_eq!(round_trip, report);
     }
 
     #[test]
     fn runner_gate_batches_flatten_rows_and_merge_sandbox_loss() {
-        let expected_tool_ids = vec!["toolu-1".to_owned()];
+        let expected_tool_uses = vec![ExpectedToolUse::new("toolu-1")];
         let agent_rows = vec![tool_row(
             "toolu-1",
             json!({"duration_ms": 12.0, "status": "ok"}),
@@ -529,7 +619,7 @@ mod tests {
         let report = evaluate_runner_gate_batches(RunnerGateBatchInput {
             agent_core_rows: &agent_rows,
             sandbox_batches: &sandbox_batches,
-            expected_tool_use_ids: &expected_tool_ids,
+            expected_tool_uses: &expected_tool_uses,
             correctness: verified_correctness(),
             settings: RunnerGateSettings::default(),
         });
@@ -549,10 +639,7 @@ mod tests {
     }
 
     fn verified_correctness() -> RunnerCorrectnessEvidence {
-        RunnerCorrectnessEvidence {
-            tool_use_verified: true,
-            message_correctness_verified: true,
-        }
+        RunnerCorrectnessEvidence::verified(1, 1)
     }
 
     fn tool_row(tool_use_id: &str, section: Value) -> ObsEnvelope {

@@ -13,7 +13,7 @@ use std::os::unix::io::RawFd;
 use std::path::PathBuf;
 
 use eos_protocol::Intent;
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use serde_json::Value;
 
 /// Which namespace strategy the runner uses for this call.
@@ -57,6 +57,75 @@ pub struct NsFds {
     pub net: Option<Fd>,
 }
 
+/// Runner-supported tool verbs.
+///
+/// Unknown verbs stay representable so the runner can preserve the current
+/// `unsupported_runner_verb` result instead of failing JSON decoding before
+/// dispatch.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum RunnerVerb {
+    ExecCommand,
+    PluginService,
+    Glob,
+    Grep,
+    Unknown(String),
+}
+
+impl RunnerVerb {
+    #[must_use]
+    pub fn as_str(&self) -> &str {
+        match self {
+            Self::ExecCommand => "exec_command",
+            Self::PluginService => "plugin_service",
+            Self::Glob => "glob",
+            Self::Grep => "grep",
+            Self::Unknown(verb) => verb,
+        }
+    }
+}
+
+impl From<&str> for RunnerVerb {
+    fn from(value: &str) -> Self {
+        match value {
+            "exec_command" => Self::ExecCommand,
+            "plugin_service" => Self::PluginService,
+            "glob" => Self::Glob,
+            "grep" => Self::Grep,
+            other => Self::Unknown(other.to_owned()),
+        }
+    }
+}
+
+impl From<String> for RunnerVerb {
+    fn from(value: String) -> Self {
+        match value.as_str() {
+            "exec_command" => Self::ExecCommand,
+            "plugin_service" => Self::PluginService,
+            "glob" => Self::Glob,
+            "grep" => Self::Grep,
+            _ => Self::Unknown(value),
+        }
+    }
+}
+
+impl Serialize for RunnerVerb {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.serialize_str(self.as_str())
+    }
+}
+
+impl<'de> Deserialize<'de> for RunnerVerb {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        String::deserialize(deserializer).map(Self::from)
+    }
+}
+
 /// One tool invocation, the runner's view of `ToolCallRequest`.
 ///
 /// `args` is the opaque verb payload forwarded to the in-namespace primitive;
@@ -66,7 +135,7 @@ pub struct NsFds {
 pub struct ToolCall {
     pub invocation_id: String,
     pub agent_id: String,
-    pub verb: String,
+    pub verb: RunnerVerb,
     pub intent: Intent,
     pub args: Value,
     #[serde(default)]
@@ -117,4 +186,27 @@ pub struct RunResult {
     pub tool_result: Value,
     /// The child process exit code.
     pub exit_code: i32,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::RunnerVerb;
+
+    #[test]
+    fn runner_verb_preserves_wire_strings_and_unknowns() {
+        assert_eq!(
+            serde_json::to_value(&RunnerVerb::ExecCommand).expect("serialize"),
+            serde_json::json!("exec_command")
+        );
+        assert_eq!(
+            serde_json::from_value::<RunnerVerb>(serde_json::json!("plugin_service"))
+                .expect("deserialize"),
+            RunnerVerb::PluginService
+        );
+        assert_eq!(
+            serde_json::from_value::<RunnerVerb>(serde_json::json!("future_verb"))
+                .expect("deserialize"),
+            RunnerVerb::Unknown("future_verb".to_owned())
+        );
+    }
 }

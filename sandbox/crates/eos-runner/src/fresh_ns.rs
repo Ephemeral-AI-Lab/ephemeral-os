@@ -41,6 +41,8 @@ use crate::error::RunnerError;
 use crate::mount::KernelMountPort;
 #[cfg(target_os = "linux")]
 use crate::mount::MountInputs;
+#[cfg(target_os = "linux")]
+use crate::request::RunnerVerb;
 use crate::request::{RunRequest, RunResult};
 #[cfg(target_os = "linux")]
 use crate::tool_primitives::{glob_tool_result, grep_tool_result};
@@ -146,10 +148,10 @@ pub(crate) fn execute_tool(
     mount_s: f64,
     run_start: Instant,
 ) -> Result<RunResult, RunnerError> {
-    match request.tool_call.verb.as_str() {
-        "exec_command" => execute_shell(request, mount_s, run_start),
-        "plugin_service" => execute_plugin_service(request, mount_s, run_start),
-        "glob" => Ok(RunResult {
+    match &request.tool_call.verb {
+        RunnerVerb::ExecCommand => execute_shell(request, mount_s, run_start),
+        RunnerVerb::PluginService => execute_plugin_service(request, mount_s, run_start),
+        RunnerVerb::Glob => Ok(RunResult {
             exit_code: 0,
             tool_result: glob_tool_result(
                 &request.tool_call.args,
@@ -158,7 +160,7 @@ pub(crate) fn execute_tool(
                 run_start.elapsed().as_secs_f64(),
             )?,
         }),
-        "grep" => Ok(RunResult {
+        RunnerVerb::Grep => Ok(RunResult {
             exit_code: 0,
             tool_result: grep_tool_result(
                 &request.tool_call.args,
@@ -167,13 +169,10 @@ pub(crate) fn execute_tool(
                 run_start.elapsed().as_secs_f64(),
             )?,
         }),
-        _ => Ok(error_result(
+        RunnerVerb::Unknown(verb) => Ok(error_result(
             2,
             "unsupported_runner_verb",
-            &format!(
-                "fresh namespace runner does not support verb {}",
-                request.tool_call.verb
-            ),
+            &format!("fresh namespace runner does not support verb {}", verb),
         )),
     }
 }
@@ -592,7 +591,7 @@ impl<T> SyscallResult<T> for rustix::io::Result<T> {
 #[cfg(all(test, target_os = "linux"))]
 mod tests {
     use super::{normalize_lexical, plugin_service_argv, shell_argv};
-    use crate::request::{RunMode, RunRequest, ToolCall, WorkspaceRoot};
+    use crate::request::{RunMode, RunRequest, RunnerVerb, ToolCall, WorkspaceRoot};
     use eos_protocol::Intent;
     use std::path::Path;
 
@@ -671,7 +670,7 @@ mod tests {
             tool_call: ToolCall {
                 invocation_id: "test".to_owned(),
                 agent_id: "agent".to_owned(),
-                verb: verb.to_owned(),
+                verb: RunnerVerb::from(verb),
                 intent: Intent::WriteAllowed,
                 args,
                 background: false,

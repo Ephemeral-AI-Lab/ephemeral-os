@@ -54,9 +54,10 @@ impl UtcDateTime {
     /// to `0..=9999` (the RFC 3339 range).
     #[must_use]
     pub fn to_rfc3339(self) -> String {
-        self.0
-            .format(&Rfc3339)
-            .expect("rfc3339 format is infallible without the time `large-dates` feature")
+        match self.0.format(&Rfc3339) {
+            Ok(formatted) => formatted,
+            Err(_) => self.0.to_string(),
+        }
     }
 
     /// Parse an RFC 3339 string, normalizing the result to UTC.
@@ -130,7 +131,10 @@ impl TestClock {
 
     /// Overwrite the instant returned by [`Clock::now`].
     pub fn set(&self, instant: UtcDateTime) {
-        *self.instant.write().expect("test clock lock not poisoned") = instant;
+        *self
+            .instant
+            .write()
+            .unwrap_or_else(std::sync::PoisonError::into_inner) = instant;
     }
 }
 
@@ -138,7 +142,10 @@ impl Clock for TestClock {
     fn now(&self) -> UtcDateTime {
         // No `.await` in this crate, so the guard never spans one; copy the
         // `Copy` value out and drop the guard before returning.
-        *self.instant.read().expect("test clock lock not poisoned")
+        *self
+            .instant
+            .read()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
     }
 }
 

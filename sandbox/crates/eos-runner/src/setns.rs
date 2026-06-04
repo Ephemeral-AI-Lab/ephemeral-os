@@ -357,7 +357,7 @@ mod tests {
         first_nameserver, namespace_fd_order, needs_fallback_dns, overlay_layer_paths,
         require_ns_fds,
     };
-    use crate::request::{Fd, NsFds, RunMode, RunRequest, ToolCall, WorkspaceRoot};
+    use crate::request::{Fd, NsFds, RunMode, RunRequest, RunnerVerb, ToolCall, WorkspaceRoot};
     use eos_protocol::Intent;
     use std::path::Path;
 
@@ -409,7 +409,7 @@ mod tests {
             tool_call: ToolCall {
                 invocation_id: "test".to_owned(),
                 agent_id: "agent".to_owned(),
-                verb: "exec_command".to_owned(),
+                verb: RunnerVerb::ExecCommand,
                 intent: Intent::WriteAllowed,
                 args: serde_json::json!({"command": "true"}),
                 background: false,

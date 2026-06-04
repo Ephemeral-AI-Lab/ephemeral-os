@@ -239,19 +239,6 @@ impl ContextPreparer {
         }
         Ok(())
     }
-
-    /// Inject provider-aware runtime metadata into `ctx` (async path). Kept async
-    /// to preserve the Python `prepare_context_async` seam for future
-    /// docker-client round-trips.
-    pub async fn prepare_context_async(
-        &self,
-        ctx: &mut JsonObject,
-    ) -> Result<(), SandboxHostError> {
-        match self {
-            Self::Docker(p) => p.inject(ctx),
-        }
-        Ok(())
-    }
 }
 
 /// Docker context-preparer payload (GC-07 typed fixed point). Carries the

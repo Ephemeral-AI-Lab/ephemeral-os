@@ -51,7 +51,7 @@ mod tool_primitives;
 
 pub use error::RunnerError;
 pub use mount::{KernelMountPort, MountInputs, MountedOverlay};
-pub use request::{Fd, NsFds, RunMode, RunRequest, RunResult, ToolCall, WorkspaceRoot};
+pub use request::{Fd, NsFds, RunMode, RunRequest, RunResult, RunnerVerb, ToolCall, WorkspaceRoot};
 
 /// Execute one tool call through the runner, dispatching on [`RunRequest::mode`].
 ///
