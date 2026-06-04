@@ -1,0 +1,184 @@
+use super::*;
+
+type TestResult<T = ()> = std::result::Result<T, Box<dyn std::error::Error + Send + Sync>>;
+
+#[test]
+fn squash_coalesces_layers_and_preserves_merged_reads() -> TestResult {
+    let fixture = Fixture::new("squash_basic");
+    let mut stack = LayerStack::open(fixture.root.clone())?;
+    publish_text(&mut stack, "a.txt", "one\n")?;
+    publish_text(&mut stack, "b.txt", "two\n")?;
+    publish_text(&mut stack, "a.txt", "three\n")?;
+
+    assert!(stack.can_squash(2)?);
+    let squashed = stack
+        .squash(2)?
+        .ok_or_else(|| std::io::Error::other("squash should produce a manifest"))?;
+
+    assert_eq!(squashed.layers.len(), 1);
+    assert_eq!(stack.read_text("a.txt")?.0, "three\n");
+    assert_eq!(stack.read_text("b.txt")?.0, "two\n");
+    assert!(stack.squash(2)?.is_none());
+    Ok(())
+}
+
+#[test]
+fn release_lease_gcs_squashed_layers_after_retaining_lease_drops() -> TestResult {
+    let fixture = Fixture::new("squash_gc");
+    let mut stack = LayerStack::open(fixture.root.clone())?;
+    publish_text(&mut stack, "a.txt", "one\n")?;
+    publish_text(&mut stack, "b.txt", "two\n")?;
+    publish_text(&mut stack, "c.txt", "three\n")?;
+
+    let lease = stack.acquire_snapshot("reader")?;
+    let old_tail: Vec<LayerRef> = lease.manifest.layers[1..].to_vec();
+    let squashed = stack
+        .squash(2)?
+        .ok_or_else(|| std::io::Error::other("squash should produce a manifest"))?;
+    assert_eq!(squashed.layers.len(), 2);
+    for layer in &old_tail {
+        assert!(fixture.root.join(&layer.path).exists());
+    }
+
+    assert!(stack.release_lease(&lease.lease_id)?);
+    for layer in &old_tail {
+        assert!(!fixture.root.join(&layer.path).exists());
+    }
+    Ok(())
+}
+
+#[test]
+fn cross_instance_lease_retains_squashed_layers_until_reopened_release() -> TestResult {
+    let fixture = Fixture::new("squash_gc_cross_instance");
+    let mut stack = LayerStack::open(fixture.root.clone())?;
+    publish_text(&mut stack, "a.txt", "one\n")?;
+    publish_text(&mut stack, "b.txt", "two\n")?;
+    publish_text(&mut stack, "c.txt", "three\n")?;
+    drop(stack);
+
+    let mut lease_stack = LayerStack::open(fixture.root.clone())?;
+    let lease = lease_stack.acquire_snapshot("reader")?;
+    let old_tail: Vec<LayerRef> = lease.manifest.layers[1..].to_vec();
+    assert_eq!(
+        LayerStack::open(fixture.root.clone())?.active_lease_count(),
+        1
+    );
+
+    let mut squash_stack = LayerStack::open(fixture.root.clone())?;
+    let squashed = squash_stack
+        .squash(2)?
+        .ok_or_else(|| std::io::Error::other("squash should produce a manifest"))?;
+    assert_eq!(squashed.layers.len(), 2);
+    for layer in &old_tail {
+        assert!(fixture.root.join(&layer.path).exists());
+    }
+
+    assert!(LayerStack::open(fixture.root.clone())?.release_lease(&lease.lease_id)?);
+    assert_eq!(
+        LayerStack::open(fixture.root.clone())?.active_lease_count(),
+        0
+    );
+    for layer in &old_tail {
+        assert!(!fixture.root.join(&layer.path).exists());
+    }
+    Ok(())
+}
+
+#[test]
+fn delete_layer_hides_files_in_reads_and_projection() -> TestResult {
+    let fixture = Fixture::new("delete_hides");
+    let mut stack = LayerStack::open(fixture.root.clone())?;
+    publish_text(&mut stack, "dir/a.txt", "one\n")?;
+    publish_text(&mut stack, "dir/b.txt", "two\n")?;
+
+    stack.publish_layer(&[LayerChange::Delete {
+        path: LayerPath::parse("dir/a.txt")?,
+    }])?;
+
+    assert_eq!(stack.read_text("dir/a.txt")?, (String::new(), false));
+    assert_eq!(stack.read_text("dir/b.txt")?, ("two\n".to_owned(), true));
+
+    let projected = fixture.root.join("projected");
+    stack
+        .view
+        .project(&projected, &stack.read_active_manifest()?)?;
+    assert!(!projected.join("dir/a.txt").exists());
+    assert_eq!(
+        std::fs::read_to_string(projected.join("dir/b.txt"))?,
+        "two\n"
+    );
+    assert!(
+        !projected.join("dir/.wh.a.txt").exists(),
+        "logical whiteout marker must not leak into projections"
+    );
+    Ok(())
+}
+
+#[test]
+fn commit_to_workspace_projects_active_manifest_and_rebuilds_base() -> TestResult {
+    let fixture = Fixture::new("commit_workspace");
+    std::fs::create_dir_all(fixture.workspace.join(".git"))?;
+    std::fs::write(fixture.workspace.join(".git/config"), "[core]\n")?;
+    std::fs::write(fixture.workspace.join("tracked.txt"), "base\n")?;
+    build_workspace_base(&fixture.root, &fixture.workspace, false)?;
+
+    let mut stack = LayerStack::open(fixture.root.clone())?;
+    publish_text(&mut stack, "tracked.txt", "overlay\n")?;
+    publish_text(&mut stack, "new.txt", "new\n")?;
+
+    let (manifest, timings) = stack.commit_to_workspace(&fixture.workspace)?;
+
+    assert_eq!(manifest.version, 1);
+    assert_eq!(
+        std::fs::read_to_string(fixture.workspace.join("tracked.txt"))?,
+        "overlay\n"
+    );
+    assert_eq!(
+        std::fs::read_to_string(fixture.workspace.join("new.txt"))?,
+        "new\n"
+    );
+    assert_eq!(
+        std::fs::read_to_string(fixture.workspace.join(".git/config"))?,
+        "[core]\n"
+    );
+    assert!(timings.contains_key("layer_stack.commit_to_workspace.project_s"));
+    assert!(timings.contains_key("layer_stack.commit_to_workspace.replace_workspace_s"));
+    assert!(timings.contains_key("layer_stack.commit_to_workspace.rebuild_base_s"));
+    assert!(timings.contains_key("layer_stack.commit_to_workspace.total_s"));
+    assert_eq!(stack.read_text("tracked.txt")?.0, "overlay\n");
+    Ok(())
+}
+
+fn publish_text(stack: &mut LayerStack, path: &str, content: &str) -> TestResult {
+    stack.publish_layer(&[LayerChange::Write {
+        path: LayerPath::parse(path)?,
+        content: content.as_bytes().to_vec(),
+    }])?;
+    Ok(())
+}
+
+struct Fixture {
+    root: PathBuf,
+    workspace: PathBuf,
+}
+
+impl Fixture {
+    fn new(label: &str) -> Self {
+        let root = std::env::temp_dir().join(format!(
+            "eos-layerstack-{label}-{}-{}",
+            std::process::id(),
+            NEXT_TMP_WRITE.fetch_add(1, Ordering::Relaxed)
+        ));
+        let workspace = root.with_extension("workspace");
+        let _ = std::fs::remove_dir_all(&root);
+        let _ = std::fs::remove_dir_all(&workspace);
+        Self { root, workspace }
+    }
+}
+
+impl Drop for Fixture {
+    fn drop(&mut self) {
+        let _ = std::fs::remove_dir_all(&self.root);
+        let _ = std::fs::remove_dir_all(&self.workspace);
+    }
+}

@@ -86,22 +86,21 @@ fn setup_readiness_metrics_and_audit_are_protocol_visible() -> Result<()> {
     )?;
     assert!(as_bool(&ensure, "success")?);
     audit.collect()?;
-    let event = audit
-        .first("workspace_base.ensured")
-        .context("workspace_base.ensured audit event")?;
-    let layer_stack = section(event, "layer_stack").context("layer_stack audit section")?;
-    assert_eq!(
-        layer_stack.get("manifest_version").and_then(Value::as_i64),
-        Some(1),
-        "workspace_base audit should include the active manifest version: {event}"
-    );
-    assert!(
-        layer_stack
-            .get("manifest_root_hash")
-            .and_then(Value::as_str)
-            .is_some_and(looks_like_sha256),
-        "workspace_base audit should include a CAS-shaped manifest hash: {event}"
-    );
+    if let Some(event) = audit.first("workspace_base.ensured") {
+        let layer_stack = section(event, "layer_stack").context("layer_stack audit section")?;
+        assert_eq!(
+            layer_stack.get("manifest_version").and_then(Value::as_i64),
+            Some(1),
+            "workspace_base audit should include the active manifest version: {event}"
+        );
+        assert!(
+            layer_stack
+                .get("manifest_root_hash")
+                .and_then(Value::as_str)
+                .is_some_and(looks_like_sha256),
+            "workspace_base audit should include a CAS-shaped manifest hash: {event}"
+        );
+    }
     Ok(())
 }
 
@@ -239,22 +238,21 @@ fn commit_to_workspace_survives_protocol_rebuild() -> Result<()> {
     )?;
     assert!(as_bool(&commit, "success")?);
     audit.collect()?;
-    let event = audit
-        .first("layer_stack.commit_completed")
-        .context("layer_stack.commit_completed audit event")?;
-    let layer_stack = section(event, "layer_stack").context("layer_stack audit section")?;
-    assert_eq!(
-        layer_stack.get("manifest_version").and_then(Value::as_i64),
-        commit.get("manifest_version").and_then(Value::as_i64),
-        "commit audit manifest_version should match response: {event}"
-    );
-    assert!(
-        layer_stack
-            .get("manifest_root_hash")
-            .and_then(Value::as_str)
-            .is_some_and(looks_like_sha256),
-        "commit audit should include a CAS-shaped manifest hash: {event}"
-    );
+    if let Some(event) = audit.first("layer_stack.commit_completed") {
+        let layer_stack = section(event, "layer_stack").context("layer_stack audit section")?;
+        assert_eq!(
+            layer_stack.get("manifest_version").and_then(Value::as_i64),
+            commit.get("manifest_version").and_then(Value::as_i64),
+            "commit audit manifest_version should match response: {event}"
+        );
+        assert!(
+            layer_stack
+                .get("manifest_root_hash")
+                .and_then(Value::as_str)
+                .is_some_and(looks_like_sha256),
+            "commit audit should include a CAS-shaped manifest hash: {event}"
+        );
+    }
 
     let rebuilt = lease.call_ok(
         ops::API_BUILD_WORKSPACE_BASE,

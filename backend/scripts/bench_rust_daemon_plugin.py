@@ -4256,6 +4256,10 @@ async def run(args: argparse.Namespace) -> dict[str, Any]:
                 layer_stack_root=LAYER_STACK_ROOT,
                 timeout=30,
             )
+            report["isolated_plugin_gate"] = await probe_isolated_plugin_gate(
+                daemon_client,
+                bench.sandbox_id,
+            )
             report["ping"] = await daemon_client.call_daemon_api(
                 bench.sandbox_id,
                 "plugin.generic.ping",
@@ -5273,6 +5277,36 @@ async def run(args: argparse.Namespace) -> dict[str, Any]:
                 layer_stack_root=LAYER_STACK_ROOT,
                 timeout=30,
             )
+            report["runtime_bridge_pre_lsp_bridge_ping"] = (
+                await daemon_client.call_daemon_api(
+                    bench.sandbox_id,
+                    "plugin.generic.runtime_bridge_ping",
+                    {
+                        "agent_id": AGENT_ID,
+                        "read_path": LSP_BRIDGE_TARGET_REL,
+                    },
+                    layer_stack_root=LAYER_STACK_ROOT,
+                    timeout=30,
+                )
+            )
+            try:
+                report["lsp_bridge_warm_symbols"] = await daemon_client.call_daemon_api(
+                    bench.sandbox_id,
+                    "plugin.generic.lsp_bridge_query_symbols",
+                    {
+                        "agent_id": AGENT_ID,
+                        "read_path": LSP_BRIDGE_TARGET_REL,
+                        "query": LSP_BRIDGE_SYMBOL,
+                    },
+                    layer_stack_root=LAYER_STACK_ROOT,
+                    timeout=150,
+                )
+            except Exception as exc:
+                report["lsp_bridge_warm_symbols"] = {
+                    "success": False,
+                    "from_lsp_importlib_bridge": False,
+                    "error": str(exc),
+                }
             try:
                 report["lsp_bridge_rename"] = await daemon_client.call_daemon_api(
                     bench.sandbox_id,
@@ -5868,10 +5902,6 @@ async def run(args: argparse.Namespace) -> dict[str, Any]:
                 {"agent_id": AGENT_ID},
                 layer_stack_root=LAYER_STACK_ROOT,
                 timeout=30,
-            )
-            report["isolated_plugin_gate"] = await probe_isolated_plugin_gate(
-                daemon_client,
-                bench.sandbox_id,
             )
             report["final_metrics"] = await daemon_client.call_daemon_api(
                 bench.sandbox_id,

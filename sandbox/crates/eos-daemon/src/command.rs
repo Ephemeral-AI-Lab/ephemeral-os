@@ -1,7 +1,10 @@
 //! Command-session operations for the daemon dispatcher.
 
+#[cfg(any(target_os = "linux", test))]
+mod output;
+
 #[cfg(target_os = "linux")]
-use std::collections::{HashMap, HashSet, VecDeque};
+use std::collections::{HashMap, HashSet};
 #[cfg(target_os = "linux")]
 use std::fs::{File, OpenOptions};
 #[cfg(target_os = "linux")]
@@ -37,6 +40,9 @@ use eos_overlay::{capture_upperdir, overlay_writable_root};
 use eos_protocol::Intent;
 #[cfg(target_os = "linux")]
 use eos_runner::{Fd, NsFds, RunMode, RunRequest, RunResult, ToolCall, WorkspaceRoot};
+
+#[cfg(target_os = "linux")]
+use output::{CommandSessionOutput, CommandSessionOutputCursor};
 
 use crate::dispatcher::DispatchContext;
 use crate::error::DaemonError;
@@ -263,10 +269,6 @@ const fn should_publish_command_session_completion(
 }
 
 #[cfg(target_os = "linux")]
-const COMMAND_SESSION_RING_MAX_BYTES: usize = 1024 * 1024;
-#[cfg(target_os = "linux")]
-const COMMAND_SESSION_SPOOL_MAX_BYTES: u64 = 32 * 1024 * 1024;
-#[cfg(target_os = "linux")]
 const COMMAND_SESSION_OUTPUT_DRAIN_GRACE_MS: u64 = 500;
 
 #[cfg(target_os = "linux")]
@@ -274,173 +276,6 @@ fn lock_command_session_state<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
     mutex
         .lock()
         .unwrap_or_else(std::sync::PoisonError::into_inner)
-}
-
-#[cfg(target_os = "linux")]
-struct CommandSessionOutput {
-    chunks: Mutex<VecDeque<CommandSessionOutputChunk>>,
-    bytes: Mutex<usize>,
-    next_byte_offset: Mutex<u64>,
-    spool_bytes: Mutex<u64>,
-    spool_truncated: Mutex<bool>,
-}
-
-#[cfg(target_os = "linux")]
-struct CommandSessionOutputChunk {
-    start: u64,
-    end: u64,
-    text: String,
-}
-
-#[cfg(target_os = "linux")]
-#[derive(Clone, Copy, Default)]
-struct CommandSessionOutputCursor {
-    next_seq: u64,
-    next_byte_offset: u64,
-}
-
-#[cfg(target_os = "linux")]
-impl CommandSessionOutput {
-    const fn new() -> Self {
-        Self {
-            chunks: Mutex::new(VecDeque::new()),
-            bytes: Mutex::new(0),
-            next_byte_offset: Mutex::new(0),
-            spool_bytes: Mutex::new(0),
-            spool_truncated: Mutex::new(false),
-        }
-    }
-
-    fn append(&self, text: String) {
-        let byte_len = text.len();
-        let mut next_byte_offset = lock_command_session_state(&self.next_byte_offset);
-        let start = *next_byte_offset;
-        let end = start.saturating_add(u64::try_from(byte_len).unwrap_or(u64::MAX));
-        *next_byte_offset = end;
-        drop(next_byte_offset);
-        let mut chunks = lock_command_session_state(&self.chunks);
-        let mut bytes = lock_command_session_state(&self.bytes);
-        chunks.push_back(CommandSessionOutputChunk { start, end, text });
-        *bytes += byte_len;
-        while *bytes > COMMAND_SESSION_RING_MAX_BYTES {
-            let Some(chunk) = chunks.pop_front() else {
-                break;
-            };
-            *bytes = bytes.saturating_sub(chunk.text.len());
-        }
-        drop(bytes);
-        drop(chunks);
-    }
-
-    fn read_since(
-        &self,
-        cursor: &mut CommandSessionOutputCursor,
-        max_tokens: Option<u64>,
-    ) -> String {
-        let chunks = lock_command_session_state(&self.chunks);
-        let Some(first) = chunks.front() else {
-            return String::new();
-        };
-        let mut out = String::new();
-        if cursor.next_byte_offset < first.start {
-            out.push_str("[output truncated before cursor]\n");
-            cursor.next_byte_offset = first.start;
-        }
-        let max_bytes = max_output_bytes(max_tokens);
-        for chunk in chunks.iter() {
-            if chunk.end <= cursor.next_byte_offset {
-                continue;
-            }
-            let start_offset = cursor.next_byte_offset.saturating_sub(chunk.start);
-            let start = usize::try_from(start_offset).unwrap_or(usize::MAX);
-            let text = slice_from_byte(&chunk.text, start);
-            if text.is_empty() {
-                continue;
-            }
-            let remaining = max_bytes.saturating_sub(out.len());
-            if remaining == 0 {
-                break;
-            }
-            let take = text.len().min(remaining);
-            let take = floor_char_boundary(text, take);
-            if take == 0 {
-                break;
-            }
-            out.push_str(&text[..take]);
-            cursor.next_byte_offset = cursor
-                .next_byte_offset
-                .saturating_add(u64::try_from(take).unwrap_or(u64::MAX));
-            cursor.next_seq = cursor.next_seq.saturating_add(1);
-            if take < text.len() {
-                break;
-            }
-        }
-        out
-    }
-
-    fn all_recent(&self, max_tokens: Option<u64>) -> String {
-        let chunks = lock_command_session_state(&self.chunks);
-        let mut out = String::new();
-        let max_bytes = max_output_bytes(max_tokens);
-        for chunk in chunks.iter() {
-            let remaining = max_bytes.saturating_sub(out.len());
-            if remaining == 0 {
-                break;
-            }
-            let take = floor_char_boundary(&chunk.text, chunk.text.len().min(remaining));
-            if take == 0 {
-                break;
-            }
-            out.push_str(&chunk.text[..take]);
-        }
-        out
-    }
-
-    fn note_spooled(&self, bytes: u64) -> bool {
-        let mut spool_bytes = lock_command_session_state(&self.spool_bytes);
-        if *spool_bytes >= COMMAND_SESSION_SPOOL_MAX_BYTES {
-            *lock_command_session_state(&self.spool_truncated) = true;
-            return false;
-        }
-        *spool_bytes = (*spool_bytes + bytes).min(COMMAND_SESSION_SPOOL_MAX_BYTES);
-        true
-    }
-
-    fn spool_truncated(&self) -> bool {
-        *lock_command_session_state(&self.spool_truncated)
-    }
-
-    /// The next byte offset (total bytes appended) — the progress signal
-    /// `wait_for_yield` watches for quiet-after-output settling.
-    fn next_byte_offset(&self) -> u64 {
-        *lock_command_session_state(&self.next_byte_offset)
-    }
-}
-
-#[cfg(target_os = "linux")]
-fn max_output_bytes(max_tokens: Option<u64>) -> usize {
-    max_tokens
-        .and_then(|tokens| usize::try_from(tokens.saturating_mul(4)).ok())
-        .filter(|value| *value > 0)
-        .unwrap_or(80_000)
-}
-
-#[cfg(target_os = "linux")]
-fn floor_char_boundary(text: &str, mut index: usize) -> usize {
-    index = index.min(text.len());
-    while index > 0 && !text.is_char_boundary(index) {
-        index -= 1;
-    }
-    index
-}
-
-#[cfg(target_os = "linux")]
-fn slice_from_byte(text: &str, start: usize) -> &str {
-    if start >= text.len() {
-        return "";
-    }
-    let start = floor_char_boundary(text, start);
-    &text[start..]
 }
 
 #[cfg(target_os = "linux")]
@@ -878,17 +713,15 @@ fn start_isolated_command_session(
     };
     let id = spec.id.clone();
     let session = prepare_isolated_command_session(&spec, handle)?;
+    command_session_registry().insert(Arc::clone(&session));
+    crate::isolated::register_command_session(&session.agent_id, &session.id);
     match wait_for_yield(
         &session,
         yield_time_ms,
         optional_u64(args, "max_output_tokens"),
     ) {
         WaitOutcome::Completed(response) => Ok(strip_session_id(response)),
-        WaitOutcome::Running(stdout) => {
-            command_session_registry().insert(Arc::clone(&session));
-            crate::isolated::register_command_session(&session.agent_id, &session.id);
-            Ok(command_result("running", None, &stdout, "", Some(id)))
-        }
+        WaitOutcome::Running(stdout) => Ok(command_result("running", None, &stdout, "", Some(id))),
     }
 }
 
@@ -923,6 +756,7 @@ fn start_command_session(
     let id = spec.id.clone();
     match prepare_command_session(&root, &binding, &lease, &spec) {
         Ok(session) => {
+            command_session_registry().insert(Arc::clone(&session));
             match wait_for_yield(
                 &session,
                 yield_time_ms,
@@ -930,7 +764,6 @@ fn start_command_session(
             ) {
                 WaitOutcome::Completed(response) => Ok(strip_session_id(response)),
                 WaitOutcome::Running(stdout) => {
-                    command_session_registry().insert(Arc::clone(&session));
                     Ok(command_result("running", None, &stdout, "", Some(id)))
                 }
             }
@@ -1133,31 +966,6 @@ fn spawn_command_runner_session(
     Ok(session)
 }
 
-/// Number of leading bytes to decode and consume now: everything except a
-/// trailing *incomplete* multibyte sequence (≤3 bytes), which is carried to the
-/// next read instead of being corrupted into replacement characters at the
-/// 8 KiB read boundary (sense-2 §2.6). A genuinely *invalid* byte is consumed
-/// (lossily decoded to U+FFFD), never carried — otherwise a single non-UTF-8
-/// byte (binary output, a killed program dumping bytes) would wedge the carry
-/// buffer and withhold all further model output until EOF. Pure
-/// (platform-independent) so it is unit tested on every host.
-#[cfg_attr(not(target_os = "linux"), allow(dead_code))]
-fn utf8_consumable_prefix_len(bytes: &[u8]) -> usize {
-    let mut offset = 0;
-    while offset < bytes.len() {
-        match std::str::from_utf8(&bytes[offset..]) {
-            Ok(_) => return bytes.len(),
-            // An incomplete trailing multibyte sequence carries to the next read.
-            Err(err) if err.error_len().is_none() => return offset + err.valid_up_to(),
-            // An invalid byte run is consumed (lossy); keep scanning the rest.
-            Err(err) => {
-                offset += err.valid_up_to() + err.error_len().unwrap_or(1);
-            }
-        }
-    }
-    bytes.len()
-}
-
 #[cfg(target_os = "linux")]
 fn spawn_command_output_reader(
     mut master: File,
@@ -1188,7 +996,7 @@ fn spawn_command_output_reader(
                     // Model output: decode the consumable prefix, retain only an
                     // incomplete trailing multibyte tail.
                     carry.extend_from_slice(&buf[..n]);
-                    let consume = utf8_consumable_prefix_len(&carry);
+                    let consume = output::utf8_consumable_prefix_len(&carry);
                     if consume > 0 {
                         output.append(String::from_utf8_lossy(&carry[..consume]).into_owned());
                         carry.drain(..consume);
@@ -1619,241 +1427,4 @@ pub fn command_session_reaper_sweep() {}
 pub fn recover_orphaned_command_sessions() {}
 
 #[cfg(test)]
-mod tests {
-    use serde_json::json;
-
-    use super::*;
-
-    type TestResult<T = ()> = Result<T, Box<dyn std::error::Error + Send + Sync>>;
-
-    #[test]
-    fn exec_command_requires_string_wire_shape() {
-        assert!(require_command_string(&json!({"cmd": "echo hi"}), "cmd").is_ok());
-        assert!(require_command_string(&json!({"cmd": ["true"]}), "cmd").is_err());
-    }
-
-    #[test]
-    fn exec_command_preserves_shell_string_bytes_after_validation() -> TestResult {
-        assert_eq!(
-            require_command_string(&json!({"cmd": "  printf hi\n"}), "cmd")?,
-            "  printf hi\n"
-        );
-        Ok(())
-    }
-
-    #[test]
-    fn utf8_carry_over_excludes_split_multibyte_tail() {
-        // A 3-byte char (€ = E2 82 AC) split across a read boundary: the first
-        // read ends mid-sequence, so only the complete prefix decodes; the tail
-        // is carried over and completed on the next read.
-        let euro = "€".as_bytes(); // [0xE2, 0x82, 0xAC]
-        let mut first = b"ab".to_vec();
-        first.extend_from_slice(&euro[..1]); // "ab" + first byte of €
-        let consume = utf8_consumable_prefix_len(&first);
-        assert_eq!(
-            consume, 2,
-            "the split multibyte tail is carried, not consumed"
-        );
-        assert_eq!(&first[..consume], b"ab");
-
-        // Completing the sequence makes the whole buffer consumable.
-        let mut completed = first[consume..].to_vec();
-        completed.extend_from_slice(&euro[1..]);
-        assert_eq!(utf8_consumable_prefix_len(&completed), completed.len());
-        assert_eq!(String::from_utf8_lossy(&completed), "€");
-
-        // Fully valid input is consumed whole.
-        assert_eq!(utf8_consumable_prefix_len(b"plain ascii"), 11);
-    }
-
-    #[test]
-    fn utf8_consumable_prefix_consumes_invalid_bytes_so_the_buffer_never_wedges() {
-        // A genuinely invalid byte (0xFF) mid-stream must be CONSUMED (lossily
-        // decoded to U+FFFD), never carried — otherwise the carry buffer wedges
-        // and withholds all further output until EOF.
-        let invalid = [b'a', 0xFF, b'b'];
-        assert_eq!(utf8_consumable_prefix_len(&invalid), 3);
-        assert_eq!(String::from_utf8_lossy(&invalid), "a\u{FFFD}b");
-
-        // An invalid byte followed by an incomplete multibyte lead: consume
-        // through the invalid byte, carry only the trailing incomplete tail.
-        let mut mixed = vec![0xFF];
-        mixed.extend_from_slice(&"€".as_bytes()[..1]); // 0xFF then start of €
-        assert_eq!(utf8_consumable_prefix_len(&mixed), 1);
-
-        // A lone leading continuation byte (invalid start) is consumed, not held.
-        assert_eq!(utf8_consumable_prefix_len(&[0x80]), 1);
-    }
-
-    #[test]
-    fn optional_u64_accepts_unsigned_and_nonnegative_signed_numbers() {
-        assert_eq!(optional_u64(&json!({"timeout": 7_u64}), "timeout"), Some(7));
-        assert_eq!(optional_u64(&json!({"timeout": 7_i64}), "timeout"), Some(7));
-        assert_eq!(optional_u64(&json!({"timeout": -1_i64}), "timeout"), None);
-    }
-
-    #[test]
-    fn command_session_cancel_suppresses_background_completion_publication() {
-        assert!(should_publish_command_session_completion(true, false, true));
-        assert!(!should_publish_command_session_completion(true, true, true));
-        assert!(!should_publish_command_session_completion(
-            true, false, false
-        ));
-        assert!(!should_publish_command_session_completion(
-            false, false, true
-        ));
-        assert!(!should_publish_command_session_completion(
-            false, true, false
-        ));
-    }
-
-    #[test]
-    #[cfg(target_os = "linux")]
-    fn command_session_completion_result_can_be_claimed_by_control_tool() -> TestResult {
-        let registry = CommandSessionRegistry::new();
-        registry.push_completed(json!({
-            "command_session_id": "cmd_keep",
-            "result": {"status": "ok", "exit_code": 0},
-        }));
-        registry.push_completed(json!({
-            "command_session_id": "cmd_done",
-            "result": {"status": "ok", "exit_code": 0},
-        }));
-
-        let result = registry
-            .take_completed_result("cmd_done")
-            .ok_or("matching completion should be returned")?;
-        assert_eq!(result["status"], "ok");
-        assert!(registry.take_completed_result("cmd_done").is_none());
-
-        let remaining = registry.collect_completed(&json!({"command_session_ids": ["cmd_keep"]}));
-        assert_eq!(
-            remaining["completions"]
-                .as_array()
-                .ok_or("completions should be an array")?
-                .len(),
-            1
-        );
-
-        // Remove-on-deliver: a second collect finds nothing — the map is bounded,
-        // not accumulating delivered entries forever.
-        let redelivered = registry.collect_completed(&json!({"command_session_ids": ["cmd_keep"]}));
-        assert_eq!(
-            redelivered["completions"]
-                .as_array()
-                .ok_or("completions should be an array")?
-                .len(),
-            0
-        );
-        Ok(())
-    }
-
-    /// A minimal live `CommandSession` for registry/count tests. The workspace is
-    /// an empty isolated stub (never finalized here), so only `id`/`agent_id`
-    /// matter. One constructor keeps the 16-field literal in a single place.
-    #[cfg(target_os = "linux")]
-    fn test_command_session(id: &str, agent_id: &str) -> TestResult<CommandSession> {
-        let writer = Mutex::new(
-            OpenOptions::new()
-                .read(true)
-                .write(true)
-                .open("/dev/null")?,
-        );
-        Ok(CommandSession {
-            id: id.to_owned(),
-            agent_id: agent_id.to_owned(),
-            command: "test".to_owned(),
-            started_at: Instant::now(),
-            pgid: 0,
-            writer,
-            output: Arc::new(CommandSessionOutput::new()),
-            reader_done: Mutex::new(None),
-            cancelled: Mutex::new(false),
-            interrupted: Mutex::new(false),
-            model_cursor: Mutex::new(CommandSessionOutputCursor::default()),
-            notification_cursor: Mutex::new(CommandSessionOutputCursor::default()),
-            child: Mutex::new(None),
-            workspace: CommandWorkspaceKind::Isolated(IsolatedCommandWorkspace {
-                handle: crate::isolated::CommandHandle {
-                    agent_id: String::new(),
-                    workspace_handle_id: String::new(),
-                    layer_stack_root: PathBuf::new(),
-                    manifest_version: 0,
-                    manifest_root_hash: String::new(),
-                    workspace_root: PathBuf::new(),
-                    scratch_dir: PathBuf::new(),
-                    upperdir: PathBuf::new(),
-                    workdir: PathBuf::new(),
-                    layer_paths: Vec::new(),
-                    ns_fds: HashMap::new(),
-                    cgroup_path: None,
-                },
-                output_path: PathBuf::new(),
-                final_path: PathBuf::new(),
-            }),
-            finalized: Mutex::new(None),
-            timeout_deadline: None,
-        })
-    }
-
-    #[test]
-    #[cfg(target_os = "linux")]
-    fn command_session_count_counts_live_sessions_by_agent() -> TestResult {
-        let registry = CommandSessionRegistry::new();
-        registry.insert(Arc::new(test_command_session("cmd_a", "agent-a")?));
-        registry.insert(Arc::new(test_command_session("cmd_b", "agent-b")?));
-
-        assert_eq!(registry.count_by_agent("agent-a"), 1);
-        assert_eq!(registry.count_by_agent("agent-b"), 1);
-        assert_eq!(registry.count_by_agent(""), 2);
-        Ok(())
-    }
-
-    #[test]
-    #[cfg(target_os = "linux")]
-    fn command_session_write_stdin_returns_completed_result_when_live_session_is_gone() -> TestResult
-    {
-        let id = "cmd_stdin_done_unit";
-        command_session_registry().push_completed(json!({
-            "command_session_id": id,
-            "result": {
-                "status": "ok",
-                "exit_code": 0,
-                "output": {"stdout": "written\n", "stderr": ""},
-            },
-        }));
-
-        let response =
-            command_session_write_stdin(&json!({"command_session_id": id, "chars": "ignored"}))?;
-
-        assert_eq!(response["status"], "ok");
-        assert_eq!(response["output"]["stdout"], "written\n");
-        assert!(command_session_registry()
-            .take_completed_result(id)
-            .is_none());
-        Ok(())
-    }
-
-    #[test]
-    #[cfg(target_os = "linux")]
-    fn command_session_cancel_returns_completed_result_when_live_session_is_gone() -> TestResult {
-        let id = "command_session_cancel_done_unit";
-        command_session_registry().push_completed(json!({
-            "command_session_id": id,
-            "result": {
-                "status": "ok",
-                "exit_code": 0,
-                "output": {"stdout": "already-finished\n", "stderr": ""},
-            },
-        }));
-
-        let response = command_session_cancel(&json!({"command_session_id": id}))?;
-
-        assert_eq!(response["status"], "ok");
-        assert_eq!(response["output"]["stdout"], "already-finished\n");
-        assert!(command_session_registry()
-            .take_completed_result(id)
-            .is_none());
-        Ok(())
-    }
-}
+mod tests;

@@ -17,7 +17,7 @@ use eos_protocol::ops;
 use serde_json::json;
 
 use crate::client::{is_success, ProtocolClient};
-use crate::config::Config;
+use crate::config::{Config, NodeMode};
 use crate::unique_suffix;
 
 /// Where the uploaded `eosd` binary lives inside the container (rootfs, not the
@@ -30,6 +30,8 @@ pub const E2E_ROOT_DIR: &str = "/eos/e2e";
 /// A non-kept container self-removes after this long (`--rm` + `timeout`), so an
 /// aborted run cannot strand privileged containers even if teardown never runs.
 const CONTAINER_TTL_SECONDS: u64 = 1800;
+const POOL_LABEL: &str = "eos.e2e.pool";
+const AUTH_LABEL: &str = "eos.e2e.auth";
 
 /// A live daemon container.
 #[derive(Debug)]
@@ -48,14 +50,19 @@ impl DaemonContainer {
     pub fn start(config: &Config) -> Result<Self> {
         let name = format!("eos-e2e-{}", unique_suffix());
         let token = format!("tok-{}", unique_suffix());
+        let keep = config.keep_container && config.mode != NodeMode::PerTest;
 
         let mut run = vec![
             "run".to_owned(),
             "-d".to_owned(),
             "--name".to_owned(),
             name.clone(),
+            "--label".to_owned(),
+            format!("{POOL_LABEL}={}", config.image),
+            "--label".to_owned(),
+            format!("{AUTH_LABEL}={token}"),
         ];
-        if !config.keep_container {
+        if !keep {
             run.push("--rm".to_owned());
         }
         // The isolated-workspace tier creates a per-workspace cgroup under
@@ -104,7 +111,7 @@ impl DaemonContainer {
         run.push(config.image.clone());
         // Keep the container alive but self-terminating: `timeout` bounds the
         // lifetime so a leaked (`--rm`) container is reclaimed automatically.
-        if config.keep_container {
+        if keep {
             run.extend(["sleep".to_owned(), "infinity".to_owned()]);
         } else {
             run.extend([
@@ -126,7 +133,7 @@ impl DaemonContainer {
                 Some(token.clone()),
                 config.request_timeout,
             ),
-            keep: config.keep_container,
+            keep,
         };
         match container.bringup(config, &token) {
             Ok(client) => {
@@ -139,6 +146,58 @@ impl DaemonContainer {
                 Err(err.context(format!("daemon bringup failed; log tail:\n{log}")))
             }
         }
+    }
+
+    /// Adopt already-running warm e2e containers for this image.
+    ///
+    /// Containers are accepted only when their auth label is present, their
+    /// published daemon port resolves, and the daemon answers heartbeat.
+    pub fn adopt_healthy(config: &Config) -> Vec<Self> {
+        let out = Command::new("docker")
+            .args([
+                "ps",
+                "-q",
+                "--filter",
+                &format!("label={POOL_LABEL}={}", config.image),
+            ])
+            .output();
+        let Ok(out) = out else {
+            return Vec::new();
+        };
+        if !out.status.success() {
+            return Vec::new();
+        }
+        std::str::from_utf8(&out.stdout)
+            .unwrap_or("")
+            .split_whitespace()
+            .filter_map(|id| Self::adopt_one(id, config).ok())
+            .collect()
+    }
+
+    fn adopt_one(id: &str, config: &Config) -> Result<Self> {
+        let token = docker(&[
+            "inspect".to_owned(),
+            "-f".to_owned(),
+            format!("{{{{ index .Config.Labels \"{AUTH_LABEL}\" }}}}"),
+            id.to_owned(),
+        ])?;
+        if token.is_empty() || token == "<no value>" {
+            bail!("missing {AUTH_LABEL} label on {id}");
+        }
+        let mut container = Self {
+            name: id.to_owned(),
+            client: ProtocolClient::new(
+                "127.0.0.1:1".parse().expect("valid placeholder addr"),
+                Some(token.clone()),
+                config.request_timeout,
+            ),
+            keep: true,
+        };
+        let addr = container.resolve_addr(config.tcp_port)?;
+        let client = ProtocolClient::new(addr, Some(token), config.request_timeout);
+        container.await_ready(&client, config.ready_timeout)?;
+        container.client = client;
+        Ok(container)
     }
 
     fn bringup(&self, config: &Config, token: &str) -> Result<ProtocolClient> {
@@ -338,7 +397,12 @@ pub fn docker_available() -> bool {
 /// fails.
 pub fn reap_e2e_containers() -> Result<usize> {
     let out = Command::new("docker")
-        .args(["ps", "-aq", "--filter", "name=eos-e2e-"])
+        .args([
+            "ps",
+            "-aq",
+            "--filter",
+            &format!("label={POOL_LABEL}"),
+        ])
         .output()
         .context("list eos-e2e containers")?;
     if !out.status.success() {

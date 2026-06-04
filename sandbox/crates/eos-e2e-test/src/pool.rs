@@ -36,16 +36,31 @@ pub struct NodePool {
 }
 
 impl NodePool {
-    /// Build a pool from `config`, reaping any stale `eos-e2e-*` containers from
-    /// prior runs first.
+    /// Build a pool from `config`, adopting warm kept containers when enabled.
     #[must_use]
     pub fn new(config: Config) -> Self {
-        reap_stale_containers();
+        if !config.keep_container || config.mode == NodeMode::PerTest {
+            reap_stale_containers();
+        }
+        let cap = cap_for(&config);
+        let available: Vec<Node> = if config.keep_container && config.mode != NodeMode::PerTest {
+            DaemonContainer::adopt_healthy(&config)
+                .into_iter()
+                .take(cap)
+                .map(|container| Node {
+                    container,
+                    checkouts: 0,
+                })
+                .collect()
+        } else {
+            Vec::new()
+        };
+        let created = available.len();
         Self {
             config,
             inner: Mutex::new(Inner {
-                available: Vec::new(),
-                created: 0,
+                available,
+                created,
             }),
             cvar: Condvar::new(),
         }
@@ -53,10 +68,7 @@ impl NodePool {
 
     /// The effective cap (1 for `shared`, else `sandboxes`).
     fn cap(&self) -> usize {
-        match self.config.mode {
-            NodeMode::Shared => 1,
-            _ => self.config.sandboxes,
-        }
+        cap_for(&self.config)
     }
 
     fn lock(&self) -> MutexGuard<'_, Inner> {
@@ -258,9 +270,17 @@ impl<'p> NodeLease<'p> {
 impl Drop for NodeLease<'_> {
     fn drop(&mut self) {
         if let Some(node) = self.node.take() {
-            let recycle = node.checkouts >= self.pool.config.recycle_after;
+            let recycle =
+                self.pool.config.mode == NodeMode::PerTest || node.checkouts >= self.pool.config.recycle_after;
             self.pool.give_back(node, recycle);
         }
+    }
+}
+
+fn cap_for(config: &Config) -> usize {
+    match config.mode {
+        NodeMode::Shared | NodeMode::PerFile => 1,
+        NodeMode::Pool | NodeMode::PerTest => config.sandboxes,
     }
 }
 

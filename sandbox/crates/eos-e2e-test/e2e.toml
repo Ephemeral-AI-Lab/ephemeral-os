@@ -29,7 +29,7 @@ request    = 30
 base_build = 180
 
 [run]
-keep_container   = false # skip teardown for inspection  [env EOS_E2E_KEEP_CONTAINER]
+keep_container   = true  # keep warm sandboxes for reuse  [env EOS_E2E_KEEP_CONTAINER]
 audit_pull_limit = 2000
 
 [isolated]

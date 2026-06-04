@@ -10,7 +10,7 @@ use eos_layerstack::{require_workspace_binding, LayerStack};
 use eos_layerstack::{MergedView, WorkspaceBinding};
 use eos_protocol::{
     apply_search_replace,
-    models::{SearchReplaceEdit, MAX_READ_BYTES},
+    models::{SearchReplaceEdit, MAX_FILE_BYTES, MAX_READ_BYTES},
     Intent, LayerChange, LayerPath, SearchReplaceError,
 };
 #[cfg(target_os = "linux")]
@@ -112,6 +112,13 @@ pub(crate) fn op_write_file(
     let root = PathBuf::from(require_string(args, "layer_stack_root")?);
     let layer_path = bound_layer_path(&root, args)?;
     let content = require_raw_string(args, "content")?.into_bytes();
+    if content.len() > MAX_FILE_BYTES {
+        return Err(DaemonError::InvalidEnvelope(format!(
+            "file too large: {} > {} bytes",
+            content.len(),
+            MAX_FILE_BYTES
+        )));
+    }
     let stack = LayerStack::open(root.clone())?;
 
     if !args
@@ -310,6 +317,13 @@ fn isolated_write_file(
         }
     }
     let content = require_raw_string(args, "content")?.into_bytes();
+    if content.len() > MAX_FILE_BYTES {
+        return Err(DaemonError::InvalidEnvelope(format!(
+            "file too large: {} > {} bytes",
+            content.len(),
+            MAX_FILE_BYTES
+        )));
+    }
     isolated_write_upper(handle, &layer_path, &content)?;
     let changed_paths = vec![layer_path.as_str().to_owned()];
     record_isolated_tool_call(

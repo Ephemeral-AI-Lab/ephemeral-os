@@ -10,17 +10,13 @@
 use std::collections::BTreeMap;
 use std::ffi::OsString;
 use std::io::ErrorKind;
-#[cfg(unix)]
-use std::os::unix::fs::{FileTypeExt, MetadataExt};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Instant;
 
-use serde_json::{json, Value};
-
 use eos_protocol::{
     aggregate_layer_changes, layer_digest, manifest_root_hash, LayerChange, LayerPath, LayerRef,
-    Manifest, MANIFEST_SCHEMA_VERSION,
+    Manifest,
 };
 
 use crate::error::LayerStackError;
@@ -33,14 +29,16 @@ use crate::storage_lock::{StorageWriterLockLease, STORAGE_WRITER_LOCK_FILE};
 use crate::workspace_base::build_workspace_base;
 use crate::{ACTIVE_MANIFEST_FILE, LAYERS_DIR, LAYER_METADATA_DIR, STAGING_DIR};
 
-const LOGICAL_WHITEOUT_PREFIX: &str = ".wh.";
-const OPAQUE_MARKER: &str = ".wh..wh..opq";
-const TRUSTED_OVERLAY_WHITEOUT_XATTR: &str = "trusted.overlay.whiteout";
-const USER_OVERLAY_WHITEOUT_XATTR: &str = "user.overlay.whiteout";
-#[cfg(target_os = "linux")]
-const WHITEOUT_DEVICE_MAJOR: u32 = 0;
-#[cfg(target_os = "linux")]
-const WHITEOUT_DEVICE_MINOR: u32 = 0;
+mod manifest_io;
+#[cfg(test)]
+mod tests;
+mod whiteout;
+
+use manifest_io::{read_manifest, validate_layer_ref, write_manifest};
+use whiteout::{
+    is_kernel_whiteout, is_kernel_whiteout_meta, write_kernel_whiteout, LOGICAL_WHITEOUT_PREFIX,
+    OPAQUE_MARKER,
+};
 
 /// Immutable result of an O(1) snapshot: a lease id + the pinned manifest's
 /// existing on-disk layer paths. NEVER a rendered tree.
@@ -919,103 +917,6 @@ fn ensure_directory(path: &Path) -> Result<(), LayerStackError> {
     Ok(())
 }
 
-fn read_manifest(path: impl AsRef<Path>) -> Result<Manifest, LayerStackError> {
-    let path = path.as_ref();
-    if !path.exists() {
-        return Manifest::new(0, vec![], MANIFEST_SCHEMA_VERSION).map_err(LayerStackError::from);
-    }
-    let payload = std::fs::read_to_string(path)?;
-    let value: Value =
-        serde_json::from_str(&payload).map_err(|err| LayerStackError::Manifest(err.to_string()))?;
-    let obj = value.as_object().ok_or_else(|| {
-        LayerStackError::Manifest("manifest payload must be an object".to_owned())
-    })?;
-    let version = obj.get("version").and_then(Value::as_i64).ok_or_else(|| {
-        LayerStackError::Manifest("manifest payload missing required field: version".to_owned())
-    })?;
-    let schema_version = obj
-        .get("schema_version")
-        .and_then(Value::as_i64)
-        .unwrap_or(MANIFEST_SCHEMA_VERSION);
-    if schema_version > MANIFEST_SCHEMA_VERSION {
-        return Err(LayerStackError::Manifest(format!(
-            "manifest schema_version is newer than this runtime supports: {schema_version}"
-        )));
-    }
-    let raw_layers = obj.get("layers").and_then(Value::as_array).ok_or_else(|| {
-        LayerStackError::Manifest("manifest payload missing required field: layers".to_owned())
-    })?;
-    let mut layers = Vec::with_capacity(raw_layers.len());
-    for item in raw_layers {
-        let item = item.as_object().ok_or_else(|| {
-            LayerStackError::Manifest("manifest layer entries must be objects".to_owned())
-        })?;
-        let layer = LayerRef {
-            layer_id: item
-                .get("layer_id")
-                .and_then(Value::as_str)
-                .unwrap_or_default()
-                .to_owned(),
-            path: item
-                .get("path")
-                .and_then(Value::as_str)
-                .unwrap_or_default()
-                .to_owned(),
-        };
-        validate_layer_ref(&layer)?;
-        layers.push(layer);
-    }
-    Manifest::new(version, layers, schema_version).map_err(LayerStackError::from)
-}
-
-fn write_manifest(path: impl AsRef<Path>, manifest: &Manifest) -> Result<(), LayerStackError> {
-    let value = json!({
-        "schema_version": manifest.schema_version,
-        "version": manifest.version,
-        "layers": manifest
-            .layers
-            .iter()
-            .map(|layer| json!({"layer_id": &layer.layer_id, "path": &layer.path}))
-            .collect::<Vec<_>>(),
-    });
-    let encoded = serde_json::to_vec_pretty(&value)
-        .map_err(|err| LayerStackError::Manifest(err.to_string()))?;
-    write_atomic(path, &encoded)
-}
-
-fn validate_layer_ref(layer: &LayerRef) -> Result<(), LayerStackError> {
-    if layer.layer_id.is_empty() {
-        return Err(LayerStackError::Manifest(
-            "layer_id must not be empty".to_owned(),
-        ));
-    }
-    if layer.path.is_empty() {
-        return Err(LayerStackError::Manifest(
-            "layer path must not be empty".to_owned(),
-        ));
-    }
-    if layer.path.contains('\0') {
-        return Err(LayerStackError::Manifest(format!(
-            "layer path must not contain NUL bytes: {:?}",
-            layer.path
-        )));
-    }
-    let path = Path::new(&layer.path);
-    if path.is_absolute() {
-        return Err(LayerStackError::Manifest(format!(
-            "layer path must be relative: {}",
-            layer.path
-        )));
-    }
-    if path.components().any(|part| part.as_os_str() == "..") {
-        return Err(LayerStackError::Manifest(format!(
-            "layer path must not contain '..': {}",
-            layer.path
-        )));
-    }
-    Ok(())
-}
-
 fn join_layer_path(root: &Path, rel: &str) -> PathBuf {
     rel.split('/').fold(root.to_path_buf(), |path, part| {
         if part.is_empty() {
@@ -1063,96 +964,6 @@ fn write_layer_changes(layer_dir: &Path, changes: &[LayerChange]) -> Result<(), 
         }
     }
     Ok(())
-}
-
-#[cfg(target_os = "linux")]
-fn write_kernel_whiteout(path: &Path) -> Result<(), LayerStackError> {
-    let device = rustix::fs::makedev(WHITEOUT_DEVICE_MAJOR, WHITEOUT_DEVICE_MINOR);
-    let mknod = rustix::fs::mknodat(
-        rustix::fs::CWD,
-        path,
-        rustix::fs::FileType::CharacterDevice,
-        rustix::fs::Mode::from_raw_mode(0o644),
-        device,
-    );
-    if mknod.is_ok() {
-        return Ok(());
-    }
-
-    std::fs::write(path, b"")?;
-    let trusted = rustix::fs::setxattr(
-        path,
-        TRUSTED_OVERLAY_WHITEOUT_XATTR,
-        b"y",
-        rustix::fs::XattrFlags::empty(),
-    );
-    let user = rustix::fs::setxattr(
-        path,
-        USER_OVERLAY_WHITEOUT_XATTR,
-        b"y",
-        rustix::fs::XattrFlags::empty(),
-    );
-    if trusted.is_err() && user.is_err() {
-        let _ = std::fs::remove_file(path);
-        return Err(LayerStackError::Storage(format!(
-            "failed to mark overlay whiteout {}: mknod={:?}, trusted={:?}, user={:?}",
-            path.display(),
-            mknod.err(),
-            trusted.err(),
-            user.err()
-        )));
-    }
-    Ok(())
-}
-
-#[cfg(not(target_os = "linux"))]
-fn write_kernel_whiteout(path: &Path) -> Result<(), LayerStackError> {
-    let logical = logical_whiteout_path_for_target(path);
-    if let Some(parent) = logical.parent() {
-        std::fs::create_dir_all(parent)?;
-    }
-    std::fs::write(logical, b"")?;
-    Ok(())
-}
-
-#[cfg(not(target_os = "linux"))]
-fn logical_whiteout_path_for_target(path: &Path) -> PathBuf {
-    let name = path.file_name().unwrap_or_default();
-    let mut whiteout_name = OsString::from(LOGICAL_WHITEOUT_PREFIX);
-    whiteout_name.push(name);
-    match path
-        .parent()
-        .filter(|parent| !parent.as_os_str().is_empty())
-    {
-        Some(parent) => parent.join(whiteout_name),
-        None => PathBuf::from(whiteout_name),
-    }
-}
-
-fn is_kernel_whiteout(path: &Path) -> bool {
-    std::fs::symlink_metadata(path).is_ok_and(|meta| is_kernel_whiteout_meta(path, &meta))
-}
-
-#[cfg(unix)]
-fn is_kernel_whiteout_meta(path: &Path, meta: &std::fs::Metadata) -> bool {
-    if meta.file_type().is_char_device() && meta.rdev() == 0 {
-        return true;
-    }
-    meta.is_file()
-        && meta.len() == 0
-        && (has_xattr(path, TRUSTED_OVERLAY_WHITEOUT_XATTR)
-            || has_xattr(path, USER_OVERLAY_WHITEOUT_XATTR))
-}
-
-#[cfg(not(unix))]
-fn is_kernel_whiteout_meta(_path: &Path, _meta: &std::fs::Metadata) -> bool {
-    false
-}
-
-#[cfg(unix)]
-fn has_xattr(path: &Path, name: &str) -> bool {
-    let mut value = [0_u8; 1];
-    rustix::fs::lgetxattr(path, name, &mut value).is_ok()
 }
 
 fn remove_path(path: &Path) -> Result<(), LayerStackError> {
@@ -1249,192 +1060,4 @@ fn stale_layer_error_value(layer: &LayerRef, rel: &str) -> LayerStackError {
         "layer no longer present while reading {rel}: {}",
         layer.layer_id
     ))
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    type TestResult<T = ()> = std::result::Result<T, Box<dyn std::error::Error + Send + Sync>>;
-
-    #[test]
-    fn squash_coalesces_layers_and_preserves_merged_reads() -> TestResult {
-        let fixture = Fixture::new("squash_basic");
-        let mut stack = LayerStack::open(fixture.root.clone())?;
-        publish_text(&mut stack, "a.txt", "one\n")?;
-        publish_text(&mut stack, "b.txt", "two\n")?;
-        publish_text(&mut stack, "a.txt", "three\n")?;
-
-        assert!(stack.can_squash(2)?);
-        let squashed = stack
-            .squash(2)?
-            .ok_or_else(|| std::io::Error::other("squash should produce a manifest"))?;
-
-        assert_eq!(squashed.layers.len(), 1);
-        assert_eq!(stack.read_text("a.txt")?.0, "three\n");
-        assert_eq!(stack.read_text("b.txt")?.0, "two\n");
-        assert!(stack.squash(2)?.is_none());
-        Ok(())
-    }
-
-    #[test]
-    fn release_lease_gcs_squashed_layers_after_retaining_lease_drops() -> TestResult {
-        let fixture = Fixture::new("squash_gc");
-        let mut stack = LayerStack::open(fixture.root.clone())?;
-        publish_text(&mut stack, "a.txt", "one\n")?;
-        publish_text(&mut stack, "b.txt", "two\n")?;
-        publish_text(&mut stack, "c.txt", "three\n")?;
-
-        let lease = stack.acquire_snapshot("reader")?;
-        let old_tail: Vec<LayerRef> = lease.manifest.layers[1..].to_vec();
-        let squashed = stack
-            .squash(2)?
-            .ok_or_else(|| std::io::Error::other("squash should produce a manifest"))?;
-        assert_eq!(squashed.layers.len(), 2);
-        for layer in &old_tail {
-            assert!(fixture.root.join(&layer.path).exists());
-        }
-
-        assert!(stack.release_lease(&lease.lease_id)?);
-        for layer in &old_tail {
-            assert!(!fixture.root.join(&layer.path).exists());
-        }
-        Ok(())
-    }
-
-    #[test]
-    fn cross_instance_lease_retains_squashed_layers_until_reopened_release() -> TestResult {
-        let fixture = Fixture::new("squash_gc_cross_instance");
-        let mut stack = LayerStack::open(fixture.root.clone())?;
-        publish_text(&mut stack, "a.txt", "one\n")?;
-        publish_text(&mut stack, "b.txt", "two\n")?;
-        publish_text(&mut stack, "c.txt", "three\n")?;
-        drop(stack);
-
-        let mut lease_stack = LayerStack::open(fixture.root.clone())?;
-        let lease = lease_stack.acquire_snapshot("reader")?;
-        let old_tail: Vec<LayerRef> = lease.manifest.layers[1..].to_vec();
-        assert_eq!(
-            LayerStack::open(fixture.root.clone())?.active_lease_count(),
-            1
-        );
-
-        let mut squash_stack = LayerStack::open(fixture.root.clone())?;
-        let squashed = squash_stack
-            .squash(2)?
-            .ok_or_else(|| std::io::Error::other("squash should produce a manifest"))?;
-        assert_eq!(squashed.layers.len(), 2);
-        for layer in &old_tail {
-            assert!(fixture.root.join(&layer.path).exists());
-        }
-
-        assert!(LayerStack::open(fixture.root.clone())?.release_lease(&lease.lease_id)?);
-        assert_eq!(
-            LayerStack::open(fixture.root.clone())?.active_lease_count(),
-            0
-        );
-        for layer in &old_tail {
-            assert!(!fixture.root.join(&layer.path).exists());
-        }
-        Ok(())
-    }
-
-    #[test]
-    fn delete_layer_hides_files_in_reads_and_projection() -> TestResult {
-        let fixture = Fixture::new("delete_hides");
-        let mut stack = LayerStack::open(fixture.root.clone())?;
-        publish_text(&mut stack, "dir/a.txt", "one\n")?;
-        publish_text(&mut stack, "dir/b.txt", "two\n")?;
-
-        stack.publish_layer(&[LayerChange::Delete {
-            path: LayerPath::parse("dir/a.txt")?,
-        }])?;
-
-        assert_eq!(stack.read_text("dir/a.txt")?, (String::new(), false));
-        assert_eq!(stack.read_text("dir/b.txt")?, ("two\n".to_owned(), true));
-
-        let projected = fixture.root.join("projected");
-        stack
-            .view
-            .project(&projected, &stack.read_active_manifest()?)?;
-        assert!(!projected.join("dir/a.txt").exists());
-        assert_eq!(
-            std::fs::read_to_string(projected.join("dir/b.txt"))?,
-            "two\n"
-        );
-        assert!(
-            !projected.join("dir/.wh.a.txt").exists(),
-            "logical whiteout marker must not leak into projections"
-        );
-        Ok(())
-    }
-
-    #[test]
-    fn commit_to_workspace_projects_active_manifest_and_rebuilds_base() -> TestResult {
-        let fixture = Fixture::new("commit_workspace");
-        std::fs::create_dir_all(fixture.workspace.join(".git"))?;
-        std::fs::write(fixture.workspace.join(".git/config"), "[core]\n")?;
-        std::fs::write(fixture.workspace.join("tracked.txt"), "base\n")?;
-        build_workspace_base(&fixture.root, &fixture.workspace, false)?;
-
-        let mut stack = LayerStack::open(fixture.root.clone())?;
-        publish_text(&mut stack, "tracked.txt", "overlay\n")?;
-        publish_text(&mut stack, "new.txt", "new\n")?;
-
-        let (manifest, timings) = stack.commit_to_workspace(&fixture.workspace)?;
-
-        assert_eq!(manifest.version, 1);
-        assert_eq!(
-            std::fs::read_to_string(fixture.workspace.join("tracked.txt"))?,
-            "overlay\n"
-        );
-        assert_eq!(
-            std::fs::read_to_string(fixture.workspace.join("new.txt"))?,
-            "new\n"
-        );
-        assert_eq!(
-            std::fs::read_to_string(fixture.workspace.join(".git/config"))?,
-            "[core]\n"
-        );
-        assert!(timings.contains_key("layer_stack.commit_to_workspace.project_s"));
-        assert!(timings.contains_key("layer_stack.commit_to_workspace.replace_workspace_s"));
-        assert!(timings.contains_key("layer_stack.commit_to_workspace.rebuild_base_s"));
-        assert!(timings.contains_key("layer_stack.commit_to_workspace.total_s"));
-        assert_eq!(stack.read_text("tracked.txt")?.0, "overlay\n");
-        Ok(())
-    }
-
-    fn publish_text(stack: &mut LayerStack, path: &str, content: &str) -> TestResult {
-        stack.publish_layer(&[LayerChange::Write {
-            path: LayerPath::parse(path)?,
-            content: content.as_bytes().to_vec(),
-        }])?;
-        Ok(())
-    }
-
-    struct Fixture {
-        root: PathBuf,
-        workspace: PathBuf,
-    }
-
-    impl Fixture {
-        fn new(label: &str) -> Self {
-            let root = std::env::temp_dir().join(format!(
-                "eos-layerstack-{label}-{}-{}",
-                std::process::id(),
-                NEXT_TMP_WRITE.fetch_add(1, Ordering::Relaxed)
-            ));
-            let workspace = root.with_extension("workspace");
-            let _ = std::fs::remove_dir_all(&root);
-            let _ = std::fs::remove_dir_all(&workspace);
-            Self { root, workspace }
-        }
-    }
-
-    impl Drop for Fixture {
-        fn drop(&mut self) {
-            let _ = std::fs::remove_dir_all(&self.root);
-            let _ = std::fs::remove_dir_all(&self.workspace);
-        }
-    }
 }

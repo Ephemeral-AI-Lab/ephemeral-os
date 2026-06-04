@@ -30,9 +30,9 @@ logger = logging.getLogger(__name__)
 _CONDA_HOOK = "/opt/miniconda3/etc/profile.d/conda.sh"
 _PYRIGHT_NODE_BIN = "/eos/plugin-packages/lsp/node/bin"
 _DEFAULT_INIT_TIMEOUT_S = 30.0
-_DEFAULT_REQUEST_TIMEOUT_S = 30.0
-_REFERENCES_TIMEOUT_S = 5.0
-_DIAGNOSTICS_WAIT_S = 5.0
+_DEFAULT_REQUEST_TIMEOUT_S = 90.0
+_REFERENCES_TIMEOUT_S = 30.0
+_DIAGNOSTICS_WAIT_S = 10.0
 _DIAGNOSTICS_POLL_S = 0.05
 _RUNTIME_BUNDLE_ROOT = "/eos/daemon"
 
@@ -65,6 +65,7 @@ class PyrightSession:
         self._client: LspJsonRpcClient | None = None
         self._opened: set[str] = set()
         self._lock = asyncio.Lock()
+        self._request_lock = asyncio.Lock()
         self._started = False
         self._document_versions: dict[str, int] = {}
         self._document_hashes: dict[str, str] = {}
@@ -465,10 +466,11 @@ class PyrightSession:
         client = self._client
         if client is None:
             raise RuntimeError("pyright client is not started")
-        try:
-            return await client.request(method, params)
-        except JsonRpcError as exc:
-            return {"error": {"code": exc.code, "message": exc.message}}
+        async with self._request_lock:
+            try:
+                return await client.request(method, params)
+            except JsonRpcError as exc:
+                return {"error": {"code": exc.code, "message": exc.message}}
 
     async def _pull_diagnostics(self, uri: str) -> dict[str, Any]:
         raw = await self._send_request(

@@ -57,7 +57,7 @@ pub fn run_setns(
     //   before fork; pipe stdin_b64 to the child; fork → execvp(argv); waitpid and
     //   map waitstatus → exit code. The group is its own session so cancel killpgs it.
     let ns_fds = require_ns_fds(request)?;
-    join_cgroup(request);
+    join_cgroup(request)?;
     join_namespaces(&ns_fds)?;
     crate::fresh_ns::execute_tool(request, 0.0, Instant::now())
 }
@@ -317,12 +317,12 @@ fn unique_suffix() -> u128 {
 }
 
 #[cfg(target_os = "linux")]
-fn join_cgroup(request: &RunRequest) {
+fn join_cgroup(request: &RunRequest) -> Result<(), RunnerError> {
     let Some(cgroup_path) = request.cgroup_path.as_ref() else {
-        return;
+        return Ok(());
     };
     let procs = cgroup_path.join("cgroup.procs");
-    let _ = fs::write(procs, format!("{}\n", std::process::id()));
+    fs::write(procs, format!("{}\n", std::process::id())).map_err(RunnerError::Syscall)
 }
 
 #[cfg(target_os = "linux")]

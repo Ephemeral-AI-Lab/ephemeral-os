@@ -193,7 +193,7 @@ impl Config {
             base_build_timeout: Duration::from_secs(timeouts.base_build.unwrap_or(180)),
             keep_container: env_bool("EOS_E2E_KEEP_CONTAINER")
                 .or(run.keep_container)
-                .unwrap_or(false),
+                .unwrap_or(true),
             audit_pull_limit: run.audit_pull_limit.unwrap_or(2000),
             isolated_upperdir_bytes: env_parse_u64("EOS_E2E_ISOLATED_UPPERDIR_BYTES")?
                 .or(isolated.upperdir_bytes)

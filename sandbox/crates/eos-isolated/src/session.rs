@@ -330,10 +330,10 @@ where
         }
         self.check_host_capacity()?;
 
+        let workspace_handle_id = WorkspaceHandleId(next_handle_id());
         let snapshot = self
             .layer_stack
-            .acquire_snapshot(&format!("isolated-{}", next_handle_id()))?;
-        let workspace_handle_id = WorkspaceHandleId(next_handle_id());
+            .acquire_snapshot(&format!("isolated-{}", workspace_handle_id.0))?;
         let scratch_dir = self.session_scratch_root().join(&workspace_handle_id.0);
         let upperdir = scratch_dir.join("upper");
         let workdir = scratch_dir.join("work");
@@ -1088,11 +1088,8 @@ fn next_handle_id() -> String {
     let nanos = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .map_or(0, |duration| duration.as_nanos());
-    format!(
-        "{:016x}{:04x}",
-        nanos,
-        COUNTER.fetch_add(1, Ordering::Relaxed)
-    )
+    let counter = COUNTER.fetch_add(1, Ordering::Relaxed) & 0x00ff_ffff;
+    format!("{counter:06x}{nanos:016x}")
 }
 
 fn monotonic_seconds() -> f64 {
@@ -1245,5 +1242,15 @@ mod tests {
         assert_eq!(required_bytes, 30);
         assert_eq!(budget_bytes, 29);
         Ok(())
+    }
+
+    #[test]
+    fn next_handle_id_puts_counter_in_veth_name_prefix() {
+        let first = next_handle_id();
+        let second = next_handle_id();
+
+        assert_eq!(first.len(), 22);
+        assert_eq!(second.len(), 22);
+        assert_ne!(&first[..6], &second[..6]);
     }
 }

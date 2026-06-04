@@ -61,7 +61,7 @@ pub use workspace_binding::{
     read_workspace_binding, require_workspace_binding, WorkspaceBinding, WORKSPACE_BINDING_FILE,
 };
 
-/// Auto-squash depth ceiling — distinct from the 16-layer overlay mount ceiling.
+/// Auto-squash depth target — distinct from the kernel overlayfs layer ceiling.
 pub const AUTO_SQUASH_MAX_DEPTH: usize = 100;
 
 /// Storage layout subdirectory for immutable layer directories.

@@ -1,6 +1,6 @@
 ---
-source: crates/eos-tools/src/model_tools/mod.rs
-assertion_line: 235
+source: crates/eos-tools/src/model_tools/tests.rs
+assertion_line: 210
 expression: specs
 ---
 [
@@ -471,7 +471,7 @@ expression: specs
           "minimum": 1.0
         },
         "terminate": {
-          "description": "Tear the session down after writing. A `\\x03` char only interrupts (SIGINT); set this to end the session (SIGTERM→SIGKILL).",
+          "description": "Tear the session down after writing. A `\\x03` char only interrupts (SIGINT); set this to end the session (SIGTERM->SIGKILL).",
           "default": false,
           "type": "boolean"
         },
@@ -662,7 +662,7 @@ expression: specs
           "default": "files_with_matches",
           "allOf": [
             {
-              "$ref": "#/definitions/GrepMode"
+              "$ref": "#/definitions/GrepOutputMode"
             }
           ]
         },
@@ -678,13 +678,30 @@ expression: specs
         }
       },
       "definitions": {
-        "GrepMode": {
-          "description": "`output_mode` literal.",
-          "type": "string",
-          "enum": [
-            "content",
-            "files_with_matches",
-            "count"
+        "GrepOutputMode": {
+          "description": "`grep.output_mode` wire values.",
+          "oneOf": [
+            {
+              "description": "Return matching file paths and rendered matching lines.",
+              "type": "string",
+              "enum": [
+                "content"
+              ]
+            },
+            {
+              "description": "Return only matching file paths.",
+              "type": "string",
+              "enum": [
+                "files_with_matches"
+              ]
+            },
+            {
+              "description": "Return per-file match counts.",
+              "type": "string",
+              "enum": [
+                "count"
+              ]
+            }
           ]
         }
       }
@@ -732,7 +749,7 @@ expression: specs
           }
         },
         "mode": {
-          "type": "string"
+          "$ref": "#/definitions/GrepOutputMode"
         },
         "num_files": {
           "type": "integer",
@@ -754,6 +771,34 @@ expression: specs
         },
         "truncated": {
           "type": "boolean"
+        }
+      },
+      "definitions": {
+        "GrepOutputMode": {
+          "description": "`grep.output_mode` wire values.",
+          "oneOf": [
+            {
+              "description": "Return matching file paths and rendered matching lines.",
+              "type": "string",
+              "enum": [
+                "content"
+              ]
+            },
+            {
+              "description": "Return only matching file paths.",
+              "type": "string",
+              "enum": [
+                "files_with_matches"
+              ]
+            },
+            {
+              "description": "Return per-file match counts.",
+              "type": "string",
+              "enum": [
+                "count"
+              ]
+            }
+          ]
         }
       }
     }
@@ -1142,7 +1187,7 @@ expression: specs
       ],
       "properties": {
         "agent_name": {
-          "description": "Name of a registered dispatchable subagent (caller-scoped enum, §6.6).",
+          "description": "Name of a registered dispatchable subagent (caller-scoped enum, section 6.6).",
           "type": "string",
           "enum": [
             "explorer",
