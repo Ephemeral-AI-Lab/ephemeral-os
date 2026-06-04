@@ -31,7 +31,4 @@ pub use commit_queue::{
 pub use error::OccError;
 pub use overlay_change_conversion::{overlay_path_changes_to_occ_changes, OverlayPathChange};
 pub use route::{ChangesetResult, FileResult, OccStatus, PublishDecision, Route};
-pub use service::{
-    AutoSquashMaintenancePolicy, LayerSquashPort, MaintenancePolicy, OccRouteProvider,
-    OccRuntimeServicesPort, OccService, AUTO_SQUASH_MAX_DEPTH,
-};
+pub use service::{OccRouteProvider, OccRuntimeServicesPort, OccService};

@@ -44,6 +44,7 @@ use eos_protocol::LayerRef;
 use eos_protocol::{
     apply_search_replace,
     audit::{build_event, Lane},
+    manifest_root_hash,
     models::{SearchReplaceEdit, MAX_READ_BYTES},
     ErrorKind, Intent, LayerChange, LayerPath, Manifest, Request, SearchReplaceError,
 };
@@ -1478,7 +1479,7 @@ impl CommitTransactionPort for LayerStackCommitTransaction {
         match stack.publish_layer(&publishable_changes) {
             Ok(manifest) => {
                 let publish_s = publish_start.elapsed().as_secs_f64();
-                let maintenance_timings = run_auto_squash_maintenance(&mut stack);
+                let auto_squash_timings = run_auto_squash(&mut stack);
                 Ok(committed_changeset_result(
                     combined,
                     validations,
@@ -1486,7 +1487,7 @@ impl CommitTransactionPort for LayerStackCommitTransaction {
                     PublishedCommitTimings {
                         validate_s,
                         publish_s,
-                        maintenance_timings,
+                        auto_squash_timings,
                         total_start,
                     },
                 ))
@@ -1590,15 +1591,9 @@ fn no_publish_result(
     }
 }
 
-fn run_auto_squash_maintenance(stack: &mut LayerStack) -> BTreeMap<String, f64> {
-    let maintenance_start = Instant::now();
+fn run_auto_squash(stack: &mut LayerStack) -> BTreeMap<String, f64> {
     let mut timings = BTreeMap::new();
     let Some(active) = stack.read_active_manifest().ok() else {
-        timings.insert(
-            "occ.maintenance.total_s".to_owned(),
-            maintenance_start.elapsed().as_secs_f64(),
-        );
-        timings.insert("occ.maintenance.squash_applied".to_owned(), 0.0);
         return timings;
     };
     if active.depth() <= AUTO_SQUASH_MAX_DEPTH
@@ -1606,11 +1601,6 @@ fn run_auto_squash_maintenance(stack: &mut LayerStack) -> BTreeMap<String, f64> 
             .can_squash(AUTO_SQUASH_MAX_DEPTH)
             .is_ok_and(|can_squash| can_squash)
     {
-        timings.insert(
-            "occ.maintenance.total_s".to_owned(),
-            maintenance_start.elapsed().as_secs_f64(),
-        );
-        timings.insert("occ.maintenance.squash_applied".to_owned(), 0.0);
         return timings;
     }
 
@@ -1631,8 +1621,6 @@ fn run_auto_squash_maintenance(stack: &mut LayerStack) -> BTreeMap<String, f64> 
     );
     match squashed {
         Some(manifest) => {
-            timings.insert("occ.maintenance.squash_applied".to_owned(), 1.0);
-            timings.insert("layer_stack.auto_squash.applied".to_owned(), 1.0);
             timings.insert(
                 "layer_stack.auto_squash.depth_after".to_owned(),
                 usize_to_f64_saturating(manifest.depth()),
@@ -1643,14 +1631,9 @@ fn run_auto_squash_maintenance(stack: &mut LayerStack) -> BTreeMap<String, f64> 
             );
         }
         None => {
-            timings.insert("occ.maintenance.squash_applied".to_owned(), 0.0);
             timings.insert("layer_stack.auto_squash.raced".to_owned(), 1.0);
         }
     }
-    timings.insert(
-        "occ.maintenance.total_s".to_owned(),
-        maintenance_start.elapsed().as_secs_f64(),
-    );
     timings
 }
 
@@ -1666,7 +1649,7 @@ fn committed_changeset_result(
         phases.publish_s,
         phases.total_start.elapsed().as_secs_f64(),
     );
-    timings.extend(phases.maintenance_timings);
+    timings.extend(phases.auto_squash_timings);
     ChangesetResult {
         files: validations
             .into_iter()
@@ -1689,7 +1672,7 @@ fn committed_changeset_result(
 struct PublishedCommitTimings {
     validate_s: f64,
     publish_s: f64,
-    maintenance_timings: BTreeMap<String, f64>,
+    auto_squash_timings: BTreeMap<String, f64>,
     total_start: Instant,
 }
 
@@ -3167,7 +3150,7 @@ fn emit_dispatch_audit(request: &Request, response: &Value, dispatch_s: f64) {
     );
 
     emit_occ_audit(request, response);
-    emit_layer_stack_maintenance_audit(request, response);
+    emit_auto_squash_audit(request, response);
     emit_workspace_lifecycle_audit(request, response, total_ms);
     emit_background_audit(request, response, total_ms);
 }
@@ -3299,12 +3282,46 @@ fn emit_workspace_lifecycle_audit(request: &Request, response: &Value, total_ms:
     );
 }
 
-fn emit_layer_stack_maintenance_audit(request: &Request, response: &Value) {
-    if timing_f64(response, "layer_stack.auto_squash.applied").unwrap_or(0.0) <= 0.0 {
+fn emit_auto_squash_audit(request: &Request, response: &Value) {
+    let Some(input_layers) = timing_i64(response, "layer_stack.auto_squash.depth_before") else {
+        return;
+    };
+    let total_ms = timing_ms(response, "layer_stack.auto_squash.total_s");
+    crate::audit_buffer::safe_emit(
+        build_event(
+            "layer_stack.squash_triggered",
+            "layer_stack",
+            json!({
+                "operation_id": request.invocation_id,
+                "owner_request_id": request.invocation_id,
+                "squash_trigger_reason": "post_publish_depth",
+                "squash_input_layers": input_layers,
+            }),
+        ),
+        Lane::Critical,
+    );
+    if timing_f64(response, "layer_stack.auto_squash.raced").unwrap_or(0.0) > 0.0 {
+        crate::audit_buffer::safe_emit(
+            build_event(
+                "layer_stack.squash_failed",
+                "layer_stack",
+                json!({
+                    "operation_id": request.invocation_id,
+                    "owner_request_id": request.invocation_id,
+                    "squash_trigger_reason": "post_publish_depth",
+                    "squash_input_layers": input_layers,
+                    "squash_failure_kind": "raced_or_plan_aborted",
+                    "total_ms": total_ms,
+                }),
+            ),
+            Lane::Critical,
+        );
         return;
     }
-    let input_layers = timing_i64(response, "resource.layer_stack.manifest_path_count");
-    let result_layers = timing_i64(response, "resource.layer_stack.manifest_depth");
+    let Some(result_layers) = timing_i64(response, "layer_stack.auto_squash.depth_after") else {
+        return;
+    };
+    let manifest_version = timing_i64(response, "layer_stack.auto_squash.manifest_version");
     crate::audit_buffer::safe_emit(
         build_event(
             "layer_stack.squash_completed",
@@ -3312,14 +3329,28 @@ fn emit_layer_stack_maintenance_audit(request: &Request, response: &Value) {
             json!({
                 "operation_id": request.invocation_id,
                 "owner_request_id": request.invocation_id,
-                "squash_trigger_reason": "auto_squash",
+                "manifest_root_hash": active_manifest_root_hash(request, manifest_version),
+                "squash_trigger_reason": "post_publish_depth",
                 "squash_input_layers": input_layers,
                 "squash_result_layers": result_layers,
-                "total_ms": timing_ms(response, "layer_stack.auto_squash.total_s"),
+                "total_ms": total_ms,
             }),
         ),
         Lane::Critical,
     );
+}
+
+fn active_manifest_root_hash(request: &Request, expected_version: Option<i64>) -> Option<String> {
+    let expected_version = expected_version?;
+    let root = request
+        .args
+        .get("layer_stack_root")
+        .and_then(Value::as_str)?;
+    let manifest = LayerStack::open(PathBuf::from(root))
+        .ok()?
+        .read_active_manifest()
+        .ok()?;
+    (manifest.version == expected_version).then(|| manifest_root_hash(&manifest))
 }
 
 fn emit_background_audit(request: &Request, response: &Value, total_ms: f64) {
@@ -3375,10 +3406,7 @@ fn is_occ_op(op: &str) -> bool {
 }
 
 fn uses_overlay_or_lease(op: &str, response: &Value) -> bool {
-    if matches!(
-        op,
-        "api.v1.glob" | "api.v1.grep" | "api.v1.command.cancel"
-    ) {
+    if matches!(op, "api.v1.glob" | "api.v1.grep" | "api.v1.command.cancel") {
         return true;
     }
     if op == "api.v1.exec_command" {
@@ -3833,7 +3861,10 @@ mod tests {
     fn occ_route_metrics_match_route_decision() -> TestResult {
         let fixture = Fixture::new_with_gitignores(
             "metrics_parity",
-            &[("", "node_modules/\nlogs/*.log\nbuild/\n"), ("build", "!keep.txt\n")],
+            &[
+                ("", "node_modules/\nlogs/*.log\nbuild/\n"),
+                ("build", "!keep.txt\n"),
+            ],
         )?;
         let provider = route_provider(&fixture);
         let paths = [
@@ -3931,11 +3962,7 @@ mod tests {
     #[test]
     fn audit_pull_reads_shared_daemon_ring() -> TestResult {
         let marker = format!("phase3t-audit-test-{}", unique_suffix());
-        let snapshot = op_audit_snapshot(&json!({}), DispatchContext::empty())?;
-        let after_seq = snapshot["snapshot"]["daemon"]["next_seq"]
-            .as_i64()
-            .unwrap_or(0)
-            - 1;
+        let after_seq = audit_after_seq()?;
         crate::audit_buffer::safe_emit(
             json!({"type": marker, "payload": {"source": "unit-test"}}),
             Lane::Normal,
@@ -3950,6 +3977,91 @@ mod tests {
         assert!(events
             .iter()
             .any(|event| event["type"].as_str() == Some(marker.as_str())));
+        Ok(())
+    }
+
+    #[test]
+    fn auto_squash_audit_emits_triggered_and_completed() -> TestResult {
+        let fixture = Fixture::new("auto_squash_completed")?;
+        let manifest = LayerStack::open(fixture.root.clone())?.read_active_manifest()?;
+        let expected_hash = eos_protocol::manifest_root_hash(&manifest);
+        let invocation_id = format!("autosquash-completed-{}", unique_suffix());
+        let request = Request {
+            op: "api.v1.write_file".to_owned(),
+            invocation_id: invocation_id.clone(),
+            args: json!({"layer_stack_root": &fixture.root}),
+        };
+        let response = json!({
+            "timings": {
+                "layer_stack.auto_squash.depth_before": 101.0,
+                "layer_stack.auto_squash.depth_after": 3.0,
+                "layer_stack.auto_squash.total_s": 0.25,
+                "layer_stack.auto_squash.manifest_version": i64_to_f64_saturating(manifest.version),
+            }
+        });
+        let after_seq = audit_after_seq()?;
+
+        emit_auto_squash_audit(&request, &response);
+
+        let events = layer_stack_events_after(after_seq, &invocation_id)?;
+        assert_eq!(
+            event_types(&events),
+            vec![
+                "layer_stack.squash_triggered",
+                "layer_stack.squash_completed"
+            ]
+        );
+        assert_eq!(
+            events[0]["payload"]["layer_stack"]["squash_trigger_reason"],
+            "post_publish_depth"
+        );
+        assert_eq!(
+            events[0]["payload"]["layer_stack"]["squash_input_layers"],
+            101
+        );
+        assert_eq!(
+            events[1]["payload"]["layer_stack"]["squash_result_layers"],
+            3
+        );
+        assert_eq!(
+            events[1]["payload"]["layer_stack"]["manifest_root_hash"],
+            expected_hash
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn auto_squash_audit_emits_triggered_and_failed_for_race() -> TestResult {
+        let invocation_id = format!("autosquash-raced-{}", unique_suffix());
+        let request = Request {
+            op: "api.v1.write_file".to_owned(),
+            invocation_id: invocation_id.clone(),
+            args: json!({}),
+        };
+        let response = json!({
+            "timings": {
+                "layer_stack.auto_squash.depth_before": 102.0,
+                "layer_stack.auto_squash.total_s": 0.10,
+                "layer_stack.auto_squash.raced": 1.0,
+            }
+        });
+        let after_seq = audit_after_seq()?;
+
+        emit_auto_squash_audit(&request, &response);
+
+        let events = layer_stack_events_after(after_seq, &invocation_id)?;
+        assert_eq!(
+            event_types(&events),
+            vec!["layer_stack.squash_triggered", "layer_stack.squash_failed"]
+        );
+        assert_eq!(
+            events[1]["payload"]["layer_stack"]["squash_failure_kind"],
+            "raced_or_plan_aborted"
+        );
+        assert_eq!(
+            events[1]["payload"]["layer_stack"]["squash_trigger_reason"],
+            "post_publish_depth"
+        );
         Ok(())
     }
 
@@ -4024,6 +4136,37 @@ mod tests {
 
     fn timing_f64_value(timings: &serde_json::Map<String, Value>, key: &str) -> f64 {
         timings.get(key).and_then(Value::as_f64).unwrap_or(0.0)
+    }
+
+    fn audit_after_seq() -> TestResult<i64> {
+        let snapshot = op_audit_snapshot(&json!({}), DispatchContext::empty())?;
+        Ok(snapshot["snapshot"]["daemon"]["next_seq"]
+            .as_i64()
+            .unwrap_or(0)
+            - 1)
+    }
+
+    fn layer_stack_events_after(after_seq: i64, invocation_id: &str) -> TestResult<Vec<Value>> {
+        let pulled = op_audit_pull(
+            &json!({"after_seq": after_seq, "limit": 128}),
+            DispatchContext::empty(),
+        )?;
+        Ok(pulled["events"]
+            .as_array()
+            .ok_or("events array")?
+            .iter()
+            .filter(|event| {
+                event["payload"]["layer_stack"]["operation_id"].as_str() == Some(invocation_id)
+            })
+            .cloned()
+            .collect())
+    }
+
+    fn event_types(events: &[Value]) -> Vec<&str> {
+        events
+            .iter()
+            .filter_map(|event| event["type"].as_str())
+            .collect()
     }
 
     struct Fixture {

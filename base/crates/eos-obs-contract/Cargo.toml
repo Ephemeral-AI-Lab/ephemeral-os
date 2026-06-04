@@ -1,17 +1,12 @@
 [package]
-name = "eos-agent-def"
+name = "eos-obs-contract"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
+license.workspace = true
 
 [dependencies]
-eos-types.workspace = true
 serde.workspace = true
-serde_yaml.workspace = true
-schemars.workspace = true
-thiserror.workspace = true
-
-[dev-dependencies]
 serde_json.workspace = true
 
 [lints]

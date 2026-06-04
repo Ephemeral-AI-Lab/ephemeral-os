@@ -18,13 +18,12 @@
 //! and unnecessary to close D9 — so it is deliberately out of scope here.
 //!
 //! **Workflow dimension (§3e, all-three-kinds invariant).** Delegated workflows
-//! are owned by the workflow lane (a sibling crate) with authoritative persisted
-//! state, so the supervisor cannot hold workflow records without duplicating that
-//! state and risking a never-settled phantom (a D9 re-run for workflows). Instead
-//! this hook gates on the authoritative [`WorkflowControlPort::find_outstanding`]
-//! and **denies** the terminal while a delegated workflow is open — Python
-//! `count_by_agent` parity (workflows are never auto-cancelled; the agent resolves
-//! them via `check_workflow_status` / `cancel_workflow`).
+//! are background-supervisor-aware for handle bookkeeping and parent-exit cleanup,
+//! while the workflow lane (a sibling crate) remains the authoritative persisted
+//! state owner. This hook therefore keeps the persisted
+//! [`WorkflowControlPort::find_outstanding`] gate and **denies** terminal submission
+//! while a delegated workflow is open — Python `count_by_agent` parity (the agent
+//! resolves it via `check_workflow_status` / `cancel_workflow`).
 
 use eos_types::JsonObject;
 use serde_json::{json, Value};
@@ -104,13 +103,10 @@ pub(crate) async fn run_require_no_inflight(
         }
     }
 
-    // Workflow dimension (BackgroundInflightReport.workflow): delegated workflows
-    // are owned by the workflow lane (a sibling crate) with authoritative
-    // persisted state, so the supervisor cannot track them. Gate on the
-    // authoritative `WorkflowControlPort::find_outstanding` instead — Python
-    // `count_by_agent` parity: DENY while a delegated workflow is still open
-    // (never auto-cancel; the agent collects/cancels it explicitly via
-    // check_workflow_status / cancel_workflow).
+    // Workflow dimension: the supervisor tracks workflow handles, but persisted
+    // workflow lifecycle remains authoritative here. Gate on
+    // `WorkflowControlPort::find_outstanding` — Python `count_by_agent` parity:
+    // DENY while a delegated workflow is still open.
     if let (Some(control), Some(task_id)) = (&ctx.workflow_control, &ctx.task_id) {
         let outstanding = control.find_outstanding(task_id, &agent_id).await?;
         if !outstanding.is_empty() {

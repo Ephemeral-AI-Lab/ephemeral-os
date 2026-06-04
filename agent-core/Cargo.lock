@@ -515,7 +515,6 @@ name = "eos-agent-def"
 version = "0.1.0"
 dependencies = [
  "eos-types",
- "pretty_assertions",
  "schemars 0.8.22",
  "serde",
  "serde_json",
@@ -609,15 +608,6 @@ dependencies = [
  "tokio",
  "tracing",
  "tracing-test",
-]
-
-[[package]]
-name = "eos-parity"
-version = "0.1.0"
-dependencies = [
- "insta",
- "pretty_assertions",
- "serde_json",
 ]
 
 [[package]]

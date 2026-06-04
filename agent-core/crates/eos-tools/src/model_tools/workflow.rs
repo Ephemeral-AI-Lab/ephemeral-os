@@ -59,6 +59,7 @@ impl ToolExecutor for DelegateWorkflow {
         let task_id = ctx.require_task_id()?;
         let agent_id = ctx.agent_id();
         let control = ctx.require_workflow_control()?;
+        let supervisor = ctx.require_subagent_supervisor()?;
 
         let outstanding = control.find_outstanding(task_id, &agent_id).await?;
         if let Some(existing) = outstanding.first() {
@@ -76,6 +77,9 @@ impl ToolExecutor for DelegateWorkflow {
         }
 
         let started = control.start(task_id, &agent_id, &parsed.goal).await?;
+        supervisor
+            .register_workflow(task_id, &agent_id, &parsed.goal, &started)
+            .await;
         let payload = json!({
             "workflow_task_id": started.workflow_task_id.as_str(),
             "workflow_id": started.workflow_id.as_str(),
@@ -173,6 +177,11 @@ impl ToolExecutor for CancelWorkflow {
             .require_workflow_control()?
             .cancel(&parsed.workflow_task_id, &parsed.reason)
             .await?;
+        if let Some(supervisor) = &ctx.subagent_supervisor {
+            supervisor
+                .cancel_workflow_record(&parsed.workflow_task_id, &parsed.reason)
+                .await;
+        }
         Ok(ToolResult::ok(output))
     }
 }
@@ -223,9 +232,14 @@ pub(crate) fn register(registry: &mut ToolRegistry, config: &ToolConfigSet) {
 mod tests {
     #![allow(clippy::unwrap_used)]
 
-    use eos_types::TaskId;
+    use std::sync::Mutex;
 
-    use crate::ports::{OutstandingWorkflow, StartedWorkflow, WorkflowControlPort};
+    use eos_types::{SubagentSessionId, TaskId};
+
+    use crate::ports::{
+        BackgroundInflightReport, OutstandingWorkflow, Sealed, SpawnedSubagent, StartedWorkflow,
+        SubagentSupervisorPort, WorkflowControlPort,
+    };
     use crate::testsupport::metadata;
 
     use super::*;
@@ -235,6 +249,89 @@ mod tests {
             .iter()
             .map(|(k, v)| ((*k).to_owned(), v.clone()))
             .collect()
+    }
+
+    #[derive(Default)]
+    struct RecordingSupervisor {
+        workflows: Mutex<Vec<String>>,
+        cancelled_workflows: Mutex<Vec<String>>,
+    }
+
+    impl Sealed for RecordingSupervisor {}
+
+    #[async_trait]
+    impl SubagentSupervisorPort for RecordingSupervisor {
+        async fn spawn(
+            &self,
+            _ctx: &ExecutionMetadata,
+            _agent_name: &str,
+            _prompt: &str,
+        ) -> Result<SpawnedSubagent, ToolError> {
+            unreachable!()
+        }
+
+        async fn progress(
+            &self,
+            _subagent_session_id: &SubagentSessionId,
+            _last_n_messages: u8,
+        ) -> Result<ToolResult, ToolError> {
+            unreachable!()
+        }
+
+        async fn cancel(
+            &self,
+            _subagent_session_id: &SubagentSessionId,
+            _reason: &str,
+        ) -> Result<ToolResult, ToolError> {
+            unreachable!()
+        }
+
+        async fn inflight_report(&self, _agent_id: &str) -> BackgroundInflightReport {
+            BackgroundInflightReport {
+                total: 0,
+                subagent: 0,
+                workflow: 0,
+                command_session: 0,
+            }
+        }
+
+        async fn drain_for_agent(&self, agent_id: &str) -> BackgroundInflightReport {
+            self.inflight_report(agent_id).await
+        }
+
+        async fn register_workflow(
+            &self,
+            _parent_task_id: &TaskId,
+            _agent_id: &str,
+            _workflow_goal: &str,
+            workflow: &StartedWorkflow,
+        ) {
+            self.workflows
+                .lock()
+                .unwrap()
+                .push(workflow.workflow_task_id.as_str().to_owned());
+        }
+
+        async fn cancel_workflow_record(
+            &self,
+            workflow_task_id: &WorkflowSessionId,
+            _reason: &str,
+        ) -> bool {
+            self.cancelled_workflows
+                .lock()
+                .unwrap()
+                .push(workflow_task_id.as_str().to_owned());
+            true
+        }
+
+        async fn cancel_for_parent_exit(
+            &self,
+            agent_id: &str,
+            _workflow_control: Option<Arc<dyn WorkflowControlPort>>,
+            _reason: &str,
+        ) -> BackgroundInflightReport {
+            self.inflight_report(agent_id).await
+        }
     }
 
     /// A `WorkflowControlPort` that always reports one outstanding workflow, to
@@ -294,6 +391,7 @@ mod tests {
         let mut ctx = metadata();
         ctx.task_id = Some("parent".parse().unwrap());
         ctx.workflow_control = Some(Arc::new(OutstandingControl));
+        ctx.subagent_supervisor = Some(Arc::new(RecordingSupervisor::default()));
 
         let res = DelegateWorkflow
             .execute(&obj(&[("goal", json!("do something"))]), &ctx)
@@ -302,6 +400,74 @@ mod tests {
 
         assert!(res.is_error, "outstanding-workflow branch must be is_error");
         assert!(res.output.contains("already outstanding"), "{}", res.output);
+    }
+
+    struct StartingControl;
+
+    impl Sealed for StartingControl {}
+
+    #[async_trait]
+    impl WorkflowControlPort for StartingControl {
+        async fn start(
+            &self,
+            _parent_task_id: &TaskId,
+            _agent_id: &str,
+            _workflow_goal: &str,
+        ) -> Result<StartedWorkflow, ToolError> {
+            Ok(StartedWorkflow {
+                workflow_id: WorkflowId::new_v4(),
+                workflow_task_id: "wf_1".parse()?,
+            })
+        }
+
+        async fn status(
+            &self,
+            _workflow_id: &WorkflowId,
+            _workflow_task_id: Option<&WorkflowSessionId>,
+        ) -> Result<String, ToolError> {
+            unreachable!()
+        }
+
+        async fn cancel(
+            &self,
+            _workflow_task_id: &WorkflowSessionId,
+            _reason: &str,
+        ) -> Result<String, ToolError> {
+            unreachable!()
+        }
+
+        async fn find_outstanding(
+            &self,
+            _parent_task_id: &TaskId,
+            _agent_id: &str,
+        ) -> Result<Vec<OutstandingWorkflow>, ToolError> {
+            Ok(Vec::new())
+        }
+
+        async fn workflow_depth(&self, _workflow_id: &WorkflowId) -> Result<u32, ToolError> {
+            Ok(1)
+        }
+    }
+
+    #[tokio::test]
+    async fn delegate_workflow_registers_background_record() {
+        let supervisor = Arc::new(RecordingSupervisor::default());
+        let mut ctx = metadata();
+        ctx.task_id = Some("parent".parse().unwrap());
+        ctx.workflow_control = Some(Arc::new(StartingControl));
+        ctx.subagent_supervisor = Some(supervisor.clone());
+
+        let res = DelegateWorkflow
+            .execute(&obj(&[("goal", json!("do something"))]), &ctx)
+            .await
+            .expect("ok");
+
+        assert!(!res.is_error, "{res:?}");
+        assert_eq!(
+            supervisor.workflows.lock().unwrap().as_slice(),
+            ["wf_1"],
+            "delegate_workflow must register the workflow as background work"
+        );
     }
 
     #[tokio::test]

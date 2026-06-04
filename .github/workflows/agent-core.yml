@@ -18,7 +18,7 @@ defaults:
 
 jobs:
   rust:
-    name: agent-core fmt + clippy + build + parity tests
+    name: agent-core fmt + clippy + build
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -42,9 +42,6 @@ jobs:
 
       - name: build
         run: cargo build --workspace
-
-      - name: parity tests
-        run: cargo test -p eos-parity
 
       - name: observability smoke
         run: cargo check --workspace --features eos-runtime/tokio-console

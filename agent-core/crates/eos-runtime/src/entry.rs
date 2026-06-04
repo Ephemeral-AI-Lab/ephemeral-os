@@ -42,6 +42,7 @@ pub struct RequestEntryHandle {
     pub attempt_deps: AttemptDeps,
     pub(crate) root_agent_task: JoinHandle<()>,
     pub(crate) supervisor: Arc<BackgroundSupervisorHandle>,
+    pub(crate) workflow_control: Arc<dyn WorkflowControlPort>,
     /// Per-request command-completion heartbeat (anchor §5.3); aborted at
     /// request teardown.
     pub(crate) heartbeat: JoinHandle<()>,
@@ -66,6 +67,13 @@ impl RequestEntryHandle {
         let result = self.root_agent_task.await;
         // The root run is done; the heartbeat has nothing left to deliver.
         self.heartbeat.abort();
+        self.supervisor
+            .cancel_for_parent_exit(
+                "",
+                Some(self.workflow_control.clone()),
+                "request root task joined",
+            )
+            .await;
         if let Err(join_err) = result {
             let summary = format!("root agent task did not complete: {join_err}");
             fail_unfinished_root(&self.state, &self.request_id, &self.root_task_id, &summary).await;
@@ -79,10 +87,8 @@ impl RequestEntryHandle {
         self.state.shutdown.cancel();
         self.heartbeat.abort();
         self.supervisor
-            .inner()
-            .lock()
-            .await
-            .terminate_for_parent_exit();
+            .cancel_for_parent_exit("", Some(self.workflow_control.clone()), reason)
+            .await;
 
         let abort = self.root_agent_task.abort_handle();
         if tokio::time::timeout(grace, self.root_agent_task)
@@ -131,6 +137,7 @@ pub async fn start_request(
         state.engine_run_handles(),
         state.audit.clone(),
         state.clock.clone(),
+        state.transport.clone(),
     ));
     let supervisor_port: Arc<dyn SubagentSupervisorPort> = supervisor.clone();
     // One NotificationService per request: its queue is shared by the tool sink,
@@ -220,6 +227,7 @@ pub async fn start_request(
         .await
         .context("recording the root task id")?;
 
+    let workflow_control_handle = workflow_control.clone();
     let params = RootAgentParams {
         request_id: request_id.clone(),
         root_task_id: root_task_id.clone(),
@@ -242,6 +250,7 @@ pub async fn start_request(
         attempt_deps,
         root_agent_task,
         supervisor,
+        workflow_control: workflow_control_handle,
         heartbeat,
         state: state.clone(),
     })

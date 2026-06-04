@@ -1,9 +1,8 @@
 //! OCC service: prepare typed changesets, commit through the single writer,
-//! run post-publish maintenance, and the inverted daemon-accessor port.
+//! and expose the inverted daemon-accessor port.
 //!
 //! The service routes changes into [`PublishDecision`]s, submits the prepared
-//! changeset to the per-root [`CommitQueue`], and (optionally) runs an
-//! auto-squash maintenance policy once a publish lands.
+//! changeset to the per-root [`CommitQueue`].
 
 use std::sync::Arc;
 use std::time::Instant;
@@ -13,38 +12,6 @@ use eos_protocol::{LayerChange, LayerPath};
 use crate::commit_queue::{CommitQueue, CommitTransactionPort, PreparedChangeset};
 use crate::error::OccError;
 use crate::route::{ChangesetResult, PublishDecision, Route};
-
-/// Layer depth at which auto-squash maintenance kicks in.
-pub const AUTO_SQUASH_MAX_DEPTH: u32 = 100;
-
-/// Post-publish maintenance hook run after a successful OCC commit.
-///
-/// Mirrors the Python `MaintenancePolicy` Protocol; implementations are
-/// synchronous and return per-phase timings.
-pub trait MaintenancePolicy {
-    /// Run maintenance after a publish lands; returns timing keys.
-    ///
-    /// # Errors
-    ///
-    /// Returns [`OccError`] when post-publish maintenance fails.
-    fn after_publish_sync(&self, result: &ChangesetResult) -> Result<(), OccError>;
-}
-
-/// Layer-stack squash capability consumed by [`AutoSquashMaintenancePolicy`].
-///
-/// Narrow maintenance interface implemented by the daemon's layer-stack-backed
-/// adapter.
-pub trait LayerSquashPort {
-    /// Can the active stack be squashed at `max_depth`?
-    fn can_squash(&self, max_depth: u32) -> bool;
-
-    /// Squash to `max_depth`; returns the new active manifest version, if any.
-    ///
-    /// # Errors
-    ///
-    /// Returns [`OccError`] when squash maintenance fails.
-    fn squash(&self, max_depth: u32) -> Result<Option<u64>, OccError>;
-}
 
 /// Route/base-hash provider used while preparing OCC changesets.
 ///
@@ -81,40 +48,10 @@ impl OccRouteProvider for AllGatedRouteProvider {
     }
 }
 
-/// Synchronous layer-stack squash after successful publishes.
-///
-/// Each policy owns its own squash lock (Python `_squash_lock`) so concurrent
-/// publishes do not double-squash; it re-reads the active manifest under the
-/// lock before deciding.
-pub struct AutoSquashMaintenancePolicy<S: LayerSquashPort> {
-    squasher: S,
-    max_depth: u32,
-}
-
-impl<S: LayerSquashPort> AutoSquashMaintenancePolicy<S> {
-    /// Build a policy that squashes above `max_depth`.
-    #[must_use]
-    pub const fn new(squasher: S, max_depth: u32) -> Self {
-        Self {
-            squasher,
-            max_depth,
-        }
-    }
-}
-
-impl<S: LayerSquashPort> MaintenancePolicy for AutoSquashMaintenancePolicy<S> {
-    fn after_publish_sync(&self, result: &ChangesetResult) -> Result<(), OccError> {
-        if result.published_manifest_version.is_some() && self.squasher.can_squash(self.max_depth) {
-            let _ = self.squasher.squash(self.max_depth)?;
-        }
-        Ok(())
-    }
-}
-
 /// Prepare typed OCC changesets and commit them through the single writer.
 ///
-/// Holds the per-root [`CommitQueue`] and an optional maintenance policy. There
-/// is exactly one `OccService` per `layer_stack_root` (the MF-1 owner).
+/// Holds the per-root [`CommitQueue`]. There is exactly one `OccService` per
+/// `layer_stack_root` (the MF-1 owner).
 pub struct OccService<T: CommitTransactionPort + 'static> {
     commit_queue: CommitQueue<T>,
     route_provider: Arc<dyn OccRouteProvider>,

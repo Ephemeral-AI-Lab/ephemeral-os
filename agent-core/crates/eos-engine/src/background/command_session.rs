@@ -12,6 +12,7 @@
 use async_trait::async_trait;
 use eos_tools::ports::CommandSessionSupervisorPort;
 use eos_tools::SystemNotification as ToolNotification;
+use eos_types::{CommandSessionId, SandboxId};
 use serde_json::Value;
 
 use super::supervisor::{
@@ -24,9 +25,9 @@ use super::supervisor::{
 #[derive(Debug, Clone)]
 pub struct CommandSessionRecord {
     /// Daemon-minted `cmd_<n>` — the correlation key.
-    pub command_session_id: String,
+    pub command_session_id: CommandSessionId,
     /// Owning sandbox id.
-    pub sandbox_id: String,
+    pub sandbox_id: SandboxId,
     /// Owning agent id (`agent_run_id`) — per-task-run ownership.
     pub agent_id: String,
     /// The launched command, for the notification body.
@@ -74,7 +75,8 @@ fn render_command_completion(record: &CommandSessionRecord) -> String {
     format!(
         "[BACKGROUND COMPLETED] command_session_id={} status={status} exit_code={exit}\n\
          command: {}\nstdout: {stdout}",
-        record.command_session_id, record.command,
+        record.command_session_id.as_str(),
+        record.command,
     )
 }
 
@@ -88,11 +90,17 @@ impl BackgroundTaskSupervisor {
         agent_id: &str,
         command: &str,
     ) {
-        self.command_sessions
-            .entry(command_session_id.to_owned())
+        let Ok(command_session_id): Result<CommandSessionId, _> = command_session_id.parse() else {
+            return;
+        };
+        let Ok(sandbox_id): Result<SandboxId, _> = sandbox_id.parse() else {
+            return;
+        };
+        self.commands
+            .entry(command_session_id.clone())
             .or_insert_with(|| CommandSessionRecord {
-                command_session_id: command_session_id.to_owned(),
-                sandbox_id: sandbox_id.to_owned(),
+                command_session_id,
+                sandbox_id,
                 agent_id: agent_id.to_owned(),
                 command: command.to_owned(),
                 status: BackgroundTaskStatus::Running,
@@ -107,7 +115,10 @@ impl BackgroundTaskSupervisor {
         let Some(id) = completion.get("command_session_id").and_then(Value::as_str) else {
             return;
         };
-        let Some(record) = self.command_sessions.get_mut(id) else {
+        let Ok(id) = id.parse() else {
+            return;
+        };
+        let Some(record) = self.commands.get_mut(&id) else {
             return;
         };
         if !matches!(record.status, BackgroundTaskStatus::Running) {
@@ -122,7 +133,7 @@ impl BackgroundTaskSupervisor {
     /// record and latch it to `Delivered` (exactly-once).
     pub fn drain_command_session_notifications(&mut self) -> Vec<ToolNotification> {
         let mut notifications = Vec::new();
-        for record in self.command_sessions.values_mut() {
+        for record in self.commands.values_mut() {
             let terminal = matches!(
                 record.status,
                 BackgroundTaskStatus::Completed
@@ -131,7 +142,7 @@ impl BackgroundTaskSupervisor {
             );
             if terminal && record.result.is_some() {
                 notifications.push(ToolNotification {
-                    event: record.command_session_id.clone(),
+                    event: record.command_session_id.as_str().to_owned(),
                     message: render_command_completion(record),
                 });
                 record.status = BackgroundTaskStatus::Delivered;
@@ -144,7 +155,8 @@ impl BackgroundTaskSupervisor {
     /// recover race), else `None`.
     #[must_use]
     pub fn command_session_result(&self, command_session_id: &str) -> Option<Value> {
-        let record = self.command_sessions.get(command_session_id)?;
+        let command_session_id: CommandSessionId = command_session_id.parse().ok()?;
+        let record = self.commands.get(&command_session_id)?;
         if matches!(record.status, BackgroundTaskStatus::Running) {
             return None;
         }
@@ -154,7 +166,10 @@ impl BackgroundTaskSupervisor {
     /// Latch a session to `Delivered` with the terminal `result` a control tool
     /// observed inline, so the heartbeat does not re-deliver it.
     pub fn mark_command_session_reported(&mut self, command_session_id: &str, result: Value) {
-        if let Some(record) = self.command_sessions.get_mut(command_session_id) {
+        let Ok(command_session_id) = command_session_id.parse() else {
+            return;
+        };
+        if let Some(record) = self.commands.get_mut(&command_session_id) {
             record.status = BackgroundTaskStatus::Delivered;
             record.result = Some(result);
         }
@@ -165,8 +180,11 @@ impl BackgroundTaskSupervisor {
     /// answer with a terse already-reported note instead of the full payload.
     #[must_use]
     pub fn command_session_already_reported(&self, command_session_id: &str) -> bool {
-        self.command_sessions
-            .get(command_session_id)
+        let Ok(command_session_id) = command_session_id.parse() else {
+            return false;
+        };
+        self.commands
+            .get(&command_session_id)
             .is_some_and(|record| matches!(record.status, BackgroundTaskStatus::Delivered))
     }
 
@@ -178,12 +196,15 @@ impl BackgroundTaskSupervisor {
     ) -> Vec<((String, String), Vec<String>)> {
         let mut groups: std::collections::BTreeMap<(String, String), Vec<String>> =
             std::collections::BTreeMap::new();
-        for record in self.command_sessions.values() {
+        for record in self.commands.values() {
             if matches!(record.status, BackgroundTaskStatus::Running) {
                 groups
-                    .entry((record.sandbox_id.clone(), record.agent_id.clone()))
+                    .entry((
+                        record.sandbox_id.as_str().to_owned(),
+                        record.agent_id.clone(),
+                    ))
                     .or_default()
-                    .push(record.command_session_id.clone());
+                    .push(record.command_session_id.as_str().to_owned());
             }
         }
         groups.into_iter().collect()
@@ -192,8 +213,8 @@ impl BackgroundTaskSupervisor {
     /// Count this agent's tracked, still-running command sessions (empty
     /// `agent_id` counts all).
     #[must_use]
-    pub fn count_command_sessions_by_agent(&self, agent_id: &str) -> usize {
-        self.command_sessions
+    pub fn count_commands_by_agent(&self, agent_id: &str) -> usize {
+        self.commands
             .values()
             .filter(|record| {
                 matches!(record.status, BackgroundTaskStatus::Running)
@@ -265,11 +286,11 @@ mod tests {
     fn register_pull_completed_flips_count_and_renders_once() {
         let mut supervisor = BackgroundTaskSupervisor::new();
         supervisor.register_command_session("cmd_1", "sb", "agent-a", "pytest -q");
-        assert_eq!(supervisor.count_command_sessions_by_agent("agent-a"), 1);
+        assert_eq!(supervisor.count_commands_by_agent("agent-a"), 1);
 
         supervisor.ingest_completion(&completion("cmd_1", "agent-a", "ok", "3 passed"));
         // Terminal → no longer counted as running.
-        assert_eq!(supervisor.count_command_sessions_by_agent("agent-a"), 0);
+        assert_eq!(supervisor.count_commands_by_agent("agent-a"), 0);
 
         let first = supervisor.drain_command_session_notifications();
         assert_eq!(first.len(), 1);

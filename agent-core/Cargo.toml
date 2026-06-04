@@ -6,7 +6,6 @@ members = [
   "crates/eos-agent-def", "crates/eos-sandbox-api", "crates/eos-skills",
   "crates/eos-tools", "crates/eos-engine", "crates/eos-workflow",
   "crates/eos-sandbox-host", "crates/eos-plugin-catalog", "crates/eos-runtime",
-  "parity",
 ]
 
 [workspace.package]

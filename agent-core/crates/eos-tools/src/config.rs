@@ -221,28 +221,51 @@ fn parse_hooks(name: ToolName, frontmatter: &Mapping) -> Result<Vec<Hook>, ToolC
     };
     items
         .iter()
-        .map(|item| {
-            let token = item.as_str().ok_or_else(|| ToolConfigError::UnknownHook {
-                tool: name,
-                token: format!("{item:?}"),
-            })?;
-            hook_from_token(name, token).ok_or_else(|| ToolConfigError::UnknownHook {
-                tool: name,
-                token: token.to_owned(),
-            })
-        })
+        .map(|item| parse_hook_item(name, item))
         .collect()
 }
 
+/// Parse one `hooks` entry: a bare `token` string, or a single-key
+/// `{token: {params}}` mapping (currently only `max_depth` for
+/// `disallow_nested_planner_deferral`).
+fn parse_hook_item(name: ToolName, item: &Value) -> Result<Hook, ToolConfigError> {
+    let unknown = || ToolConfigError::UnknownHook {
+        tool: name,
+        token: format!("{item:?}"),
+    };
+    if let Some(token) = item.as_str() {
+        return hook_from_token(name, token, None).ok_or_else(unknown);
+    }
+    let one_entry = item
+        .as_mapping()
+        .filter(|map| map.len() == 1)
+        .and_then(|map| map.iter().next());
+    if let Some((key, params)) = one_entry {
+        if let Some(token) = key.as_str() {
+            return hook_from_token(name, token, Some(params)).ok_or_else(unknown);
+        }
+    }
+    Err(unknown())
+}
+
+/// Default deepest workflow depth still allowed to defer when a
+/// `disallow_nested_planner_deferral` entry omits `max_depth` (depth > 1 ⇒
+/// nested ⇒ denied — the historical emergent cap).
+const DEFAULT_MAX_WORKFLOW_DEPTH: u32 = 1;
+
 /// Map a config token (see [`Hook::config_token`]) to its [`Hook`], filling the
-/// `{ tool }` field from the owning tool.
-fn hook_from_token(tool: ToolName, token: &str) -> Option<Hook> {
+/// `{ tool }` field from the owning tool and any per-hook `params`.
+fn hook_from_token(tool: ToolName, token: &str, params: Option<&Value>) -> Option<Hook> {
     Some(match token {
         "no_inflight_background_tasks" => Hook::RequireNoInflightBackgroundTasks { tool },
         "advisor_approval" => Hook::AdvisorApproval { tool },
-        "disallow_nested_planner_deferral" => {
-            Hook::DisallowNestedPlannerDeferral { tool, max_depth: 1 }
-        }
+        "disallow_nested_planner_deferral" => Hook::DisallowNestedPlannerDeferral {
+            tool,
+            max_depth: params
+                .and_then(|p| p.get("max_depth"))
+                .and_then(Value::as_u64)
+                .map_or(DEFAULT_MAX_WORKFLOW_DEPTH, |d| d as u32),
+        },
         "destructive_git_shell" => Hook::DestructiveGitShell { tool },
         "destructive_shell" => Hook::DestructiveShell { tool },
         "block_in_isolated_mode" => Hook::BlockInIsolatedMode { tool },
@@ -468,7 +491,32 @@ mod tests {
             Hook::DestructiveShell { tool },
             Hook::BlockInIsolatedMode { tool },
         ] {
-            assert_eq!(hook_from_token(tool, hook.config_token()), Some(hook));
+            assert_eq!(hook_from_token(tool, hook.config_token(), None), Some(hook));
         }
+    }
+
+    /// The parameterized `{disallow_nested_planner_deferral: {max_depth: N}}`
+    /// hooks entry parses the configured depth; the bare token defaults.
+    #[test]
+    fn disallow_nested_max_depth_parses_from_entry() {
+        let name = ToolName::SubmitPlannerOutcome;
+        let configured: Value =
+            serde_yaml::from_str("{disallow_nested_planner_deferral: {max_depth: 3}}").unwrap();
+        assert_eq!(
+            parse_hook_item(name, &configured).unwrap(),
+            Hook::DisallowNestedPlannerDeferral {
+                tool: name,
+                max_depth: 3,
+            }
+        );
+
+        let bare: Value = serde_yaml::from_str("disallow_nested_planner_deferral").unwrap();
+        assert_eq!(
+            parse_hook_item(name, &bare).unwrap(),
+            Hook::DisallowNestedPlannerDeferral {
+                tool: name,
+                max_depth: DEFAULT_MAX_WORKFLOW_DEPTH,
+            }
+        );
     }
 }

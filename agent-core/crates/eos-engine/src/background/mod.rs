@@ -9,6 +9,6 @@ mod supervisor;
 pub use command_session::CommandSessionRecord;
 pub use heartbeat::spawn_command_completion_heartbeat;
 pub use supervisor::{
-    BackgroundSupervisorHandle, BackgroundTaskKind, BackgroundTaskRecord, BackgroundTaskStatus,
-    BackgroundTaskSupervisor,
+    BackgroundSupervisorHandle, BackgroundTaskStatus, BackgroundTaskSupervisor, SubagentRecord,
+    WorkflowBackgroundRecord,
 };

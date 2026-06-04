@@ -215,8 +215,12 @@ mod tests {
 
     use std::sync::Mutex;
 
-    use crate::ports::{BackgroundInflightReport, Sealed, SubagentSupervisorPort};
+    use crate::ports::{
+        BackgroundInflightReport, Sealed, StartedWorkflow, SubagentSupervisorPort,
+        WorkflowControlPort,
+    };
     use crate::testsupport::metadata;
+    use eos_types::{TaskId, WorkflowSessionId};
 
     use super::*;
 
@@ -270,6 +274,37 @@ mod tests {
         }
 
         async fn drain_for_agent(&self, _agent_id: &str) -> BackgroundInflightReport {
+            BackgroundInflightReport {
+                total: 0,
+                subagent: 0,
+                workflow: 0,
+                command_session: 0,
+            }
+        }
+
+        async fn register_workflow(
+            &self,
+            _parent_task_id: &TaskId,
+            _agent_id: &str,
+            _workflow_goal: &str,
+            _workflow: &StartedWorkflow,
+        ) {
+        }
+
+        async fn cancel_workflow_record(
+            &self,
+            _workflow_task_id: &WorkflowSessionId,
+            _reason: &str,
+        ) -> bool {
+            false
+        }
+
+        async fn cancel_for_parent_exit(
+            &self,
+            _agent_id: &str,
+            _workflow_control: Option<Arc<dyn WorkflowControlPort>>,
+            _reason: &str,
+        ) -> BackgroundInflightReport {
             BackgroundInflightReport {
                 total: 0,
                 subagent: 0,

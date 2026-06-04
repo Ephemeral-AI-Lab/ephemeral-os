@@ -23,7 +23,7 @@ use futures::StreamExt;
 use crate::agent::{build_query_context, BuildQueryContextInput};
 use crate::events::StreamEvent;
 use crate::notifications::NotificationService;
-use crate::query::{run_query, EventSource};
+use crate::query::{run_query, EventSource, QueryExitReason};
 
 /// Per-agent event-source factory seam (the Python `event_source_factory`).
 ///
@@ -220,6 +220,7 @@ pub async fn run_ephemeral_agent(
             }
         }
     }
+    finalize_background_for_agent(&ctx, error.as_deref()).await;
 
     let terminal_result = ctx.terminal_result.clone();
     if persisted {
@@ -229,6 +230,28 @@ pub async fn run_ephemeral_agent(
         terminal_result,
         error,
     }
+}
+
+async fn finalize_background_for_agent(ctx: &crate::query::QueryContext, error: Option<&str>) {
+    let Some(supervisor) = &ctx.tool_metadata.subagent_supervisor else {
+        return;
+    };
+    let reason = match (ctx.exit_reason, error) {
+        (_, Some(error)) => format!("engine run failed: {error}"),
+        (Some(QueryExitReason::TerminalNotSubmitted), None) => {
+            "parent agent exited without submitting a terminal tool".to_owned()
+        }
+        (Some(QueryExitReason::ToolStop), None) => "parent agent submitted its terminal".to_owned(),
+        (None, None) => "parent agent exited".to_owned(),
+    };
+    let agent_id = ctx.tool_metadata.agent_id();
+    supervisor
+        .cancel_for_parent_exit(
+            &agent_id,
+            ctx.tool_metadata.workflow_control.clone(),
+            &reason,
+        )
+        .await;
 }
 
 async fn finish_run(handles: &EngineRunHandles, agent_run_id: &AgentRunId, error: Option<&str>) {

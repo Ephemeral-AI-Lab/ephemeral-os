@@ -16,15 +16,14 @@ use eos_agent_def::{AgentName, AgentType};
 use eos_audit::{AuditEvent, AuditNode, AuditSink, AuditSource};
 use eos_llm_client::Message;
 use eos_tools::ports::{
-    BackgroundInflightReport, SpawnedSubagent, StartedSubagent, SubagentSupervisorPort,
+    BackgroundInflightReport, SpawnedSubagent, StartedSubagent, StartedWorkflow,
+    SubagentSupervisorPort,
 };
-use eos_tools::{ExecutionMetadata, ToolError, ToolResult};
-use eos_types::{AgentRunId, Clock, JsonObject, SubagentSessionId};
+use eos_tools::{ExecutionMetadata, ToolError, ToolResult, WorkflowControlPort};
+use eos_types::{AgentRunId, Clock, JsonObject, SubagentSessionId, TaskId, WorkflowSessionId};
 use serde_json::{json, Value};
 
-use super::supervisor::{
-    BackgroundSupervisorHandle, BackgroundTaskKind, BackgroundTaskRecord, BackgroundTaskStatus,
-};
+use super::supervisor::{BackgroundSupervisorHandle, BackgroundTaskStatus, SubagentRecord};
 use crate::agent_loop::{run_ephemeral_agent, EphemeralRun, EphemeralRunInput};
 use crate::notifications::NotificationService;
 
@@ -144,7 +143,7 @@ fn classify_run(run: EphemeralRun) -> (BackgroundTaskStatus, ToolResult, i64) {
 }
 
 /// Whether a settled record carries `subagent_terminal_called:true`.
-fn terminal_called(record: &BackgroundTaskRecord) -> bool {
+fn terminal_called(record: &SubagentRecord) -> bool {
     record
         .result
         .as_ref()
@@ -155,7 +154,7 @@ fn terminal_called(record: &BackgroundTaskRecord) -> bool {
 
 /// Port of `control.py::_subagent_status_and_result` (live-peek cut, so the
 /// running/failed message tail is empty).
-fn subagent_status_and_result(record: &BackgroundTaskRecord) -> (&'static str, String) {
+fn subagent_status_and_result(record: &SubagentRecord) -> (&'static str, String) {
     let metadata = record.result.as_ref().map(|result| &result.metadata);
     if let Some(reason) = metadata
         .and_then(|m| m.get("subagent_termination_reason"))
@@ -270,11 +269,7 @@ impl SubagentSupervisorPort for BackgroundSupervisorHandle {
         // a concurrent drain can never miss a not-yet-stored handle.
         let task_id = {
             let mut supervisor = inner.lock().await;
-            let task_id = supervisor.register_running(
-                tool_input,
-                BackgroundTaskKind::Subagent,
-                Some(caller_agent_id.clone()),
-            );
+            let task_id = supervisor.register_subagent(tool_input, Some(caller_agent_id.clone()));
             // Emit `started` while still holding the lock, before the driver can
             // run: the driver cannot acquire the lock to settle + emit its terminal
             // event until this block releases, so `started` strictly precedes any
@@ -284,7 +279,7 @@ impl SubagentSupervisorPort for BackgroundSupervisorHandle {
                 &self.audit,
                 &*self.clock,
                 "background_tool.started",
-                &task_id,
+                task_id.as_str(),
                 &caller_agent_id,
                 BackgroundTaskStatus::Running,
                 None,
@@ -295,14 +290,14 @@ impl SubagentSupervisorPort for BackgroundSupervisorHandle {
                 let (status, result, exit_code) = classify_run(run);
                 {
                     let mut supervisor = driver_inner.lock().await;
-                    supervisor.settle(&driver_task_id, status, result);
+                    supervisor.settle_subagent(&driver_task_id, status, result);
                     supervisor.forget_handle(&driver_task_id);
                 }
                 emit_background_tool(
                     &driver_audit,
                     &*driver_clock,
                     terminal_event_type(status),
-                    &driver_task_id,
+                    driver_task_id.as_str(),
                     &driver_agent_id,
                     status,
                     Some(exit_code),
@@ -313,7 +308,7 @@ impl SubagentSupervisorPort for BackgroundSupervisorHandle {
         };
 
         Ok(SpawnedSubagent::Launched(StartedSubagent {
-            subagent_session_id: task_id.parse()?,
+            subagent_session_id: task_id,
         }))
     }
 
@@ -324,7 +319,7 @@ impl SubagentSupervisorPort for BackgroundSupervisorHandle {
     ) -> Result<ToolResult, ToolError> {
         let supervisor = self.inner();
         let guard = supervisor.lock().await;
-        let Some(record) = guard.get(subagent_session_id.as_str()) else {
+        let Some(record) = guard.get_subagent(subagent_session_id) else {
             // E5: a missing session is an in-band error (control.py:116-123).
             return Ok(ToolResult::error(format!(
                 "No subagent session found with ID: {}",
@@ -363,12 +358,12 @@ impl SubagentSupervisorPort for BackgroundSupervisorHandle {
             let supervisor = self.inner();
             let mut guard = supervisor.lock().await;
             let agent_id = guard
-                .get(subagent_session_id.as_str())
+                .get_subagent(subagent_session_id)
                 .and_then(|record| record.agent_id.clone())
                 .unwrap_or_default();
-            let cancelled = guard.cancel_subagent(subagent_session_id.as_str(), reason);
+            let cancelled = guard.cancel_subagent(subagent_session_id, reason);
             if cancelled {
-                guard.take_and_abort_handle(subagent_session_id.as_str());
+                guard.take_and_abort_handle(subagent_session_id);
             }
             (cancelled, agent_id)
         };
@@ -411,22 +406,54 @@ impl SubagentSupervisorPort for BackgroundSupervisorHandle {
             .await
             .drain_subagents_for_agent(agent_id)
     }
+
+    async fn register_workflow(
+        &self,
+        parent_task_id: &TaskId,
+        agent_id: &str,
+        workflow_goal: &str,
+        workflow: &StartedWorkflow,
+    ) {
+        self.inner().lock().await.register_workflow(
+            parent_task_id,
+            agent_id,
+            workflow_goal,
+            workflow,
+        );
+    }
+
+    async fn cancel_workflow_record(
+        &self,
+        workflow_task_id: &WorkflowSessionId,
+        reason: &str,
+    ) -> bool {
+        self.inner()
+            .lock()
+            .await
+            .cancel_workflow_record(workflow_task_id, reason)
+    }
+
+    async fn cancel_for_parent_exit(
+        &self,
+        agent_id: &str,
+        workflow_control: Option<Arc<dyn WorkflowControlPort>>,
+        reason: &str,
+    ) -> BackgroundInflightReport {
+        BackgroundSupervisorHandle::cancel_for_parent_exit(self, agent_id, workflow_control, reason)
+            .await
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    fn record_with(
-        status: BackgroundTaskStatus,
-        result: Option<ToolResult>,
-    ) -> BackgroundTaskRecord {
+    fn record_with(status: BackgroundTaskStatus, result: Option<ToolResult>) -> SubagentRecord {
         let mut tool_input = JsonObject::new();
         tool_input.insert("agent_name".to_owned(), json!("explorer"));
-        BackgroundTaskRecord {
-            task_id: "subagent_1".to_owned(),
+        SubagentRecord {
+            subagent_session_id: "subagent_1".parse().expect("subagent id"),
             tool_input,
-            task_kind: BackgroundTaskKind::Subagent,
             status,
             agent_id: Some("root".to_owned()),
             result,
