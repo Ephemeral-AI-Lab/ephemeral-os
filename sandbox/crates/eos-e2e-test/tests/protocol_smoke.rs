@@ -158,8 +158,8 @@ fn command_sessions_accept_stdin_and_release_on_cancel() -> Result<()> {
     let started = lease.call_ok(
         ops::API_V1_EXEC_COMMAND,
         json!({
-            "cmd": "sh -c 'echo ready; read line; echo got:$line; sleep 60'",
-            "yield_time_ms": 150,
+            "cmd": "python3 -u -c 'import sys,time; print(\"ready\", flush=True); line=sys.stdin.readline().strip(); print(\"got:\" + line, flush=True); time.sleep(60)'",
+            "yield_time_ms": 500,
             "timeout_seconds": 120,
             "max_output_tokens": 2000
         }),
@@ -184,7 +184,7 @@ fn command_sessions_accept_stdin_and_release_on_cancel() -> Result<()> {
         json!({
             "command_session_id": session_id,
             "chars": "line-one\n",
-            "yield_time_ms": 150,
+            "yield_time_ms": 2000,
             "max_output_tokens": 2000
         }),
     )?;

@@ -2,6 +2,8 @@
 
 #[cfg(any(target_os = "linux", test))]
 mod output;
+#[cfg(target_os = "linux")]
+mod pty;
 
 #[cfg(target_os = "linux")]
 use std::collections::{HashMap, HashSet};
@@ -25,8 +27,6 @@ use std::thread;
 use std::time::{Duration, Instant};
 
 #[cfg(target_os = "linux")]
-use eos_terminal_pair::open_terminal_pair;
-#[cfg(target_os = "linux")]
 use nix::sys::signal::{killpg, Signal};
 #[cfg(target_os = "linux")]
 use nix::unistd::Pid;
@@ -43,6 +43,8 @@ use eos_runner::{Fd, NsFds, RunMode, RunRequest, RunResult, ToolCall, WorkspaceR
 
 #[cfg(target_os = "linux")]
 use output::{CommandSessionOutput, CommandSessionOutputCursor};
+#[cfg(target_os = "linux")]
+use pty::open_pty_pair;
 
 use crate::dispatcher::DispatchContext;
 use crate::error::DaemonError;
@@ -916,10 +918,8 @@ fn spawn_command_runner_session(
     transcript_path: PathBuf,
     workspace: CommandWorkspaceKind,
 ) -> Result<Arc<CommandSession>, DaemonError> {
-    let terminal_pair = open_terminal_pair()
-        .map_err(|err| DaemonError::OverlayPipeline(format!("open terminal pair: {err}")))?;
-    let master = terminal_pair.controller;
-    let slave = terminal_pair.attached;
+    let (master, slave) = open_pty_pair()
+        .map_err(|err| DaemonError::OverlayPipeline(format!("open pty pair: {err}")))?;
     let mut child_command = Command::new(std::env::current_exe()?);
     child_command
         .arg("ns-runner")

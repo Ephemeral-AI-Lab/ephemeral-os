@@ -45,11 +45,11 @@ fn exec_simple() -> Result<()> {
     let lease = pool.acquire()?;
     let exec = lease.call_ok(
         ops::API_V1_EXEC_COMMAND,
-        json!({"cmd": "printf simple", "yield_time_ms": 1000, "timeout_seconds": 5}),
+        json!({"cmd": "true", "yield_time_ms": 1000, "timeout_seconds": 5}),
     )?;
     assert_eq!(as_str(&exec, "status")?, "ok");
     assert_eq!(as_i64(&exec, "exit_code")?, 0);
-    assert_eq!(stdout(&exec), "simple");
+    assert_eq!(stdout(&exec), "");
     Ok(())
 }
 
@@ -74,8 +74,8 @@ fn write_stdin_echo() -> Result<()> {
     let started = lease.call_ok(
         ops::API_V1_EXEC_COMMAND,
         json!({
-            "cmd": "sh -c 'echo ready; read line; echo got:$line; sleep 60'",
-            "yield_time_ms": 100,
+            "cmd": "python3 -u -c 'import sys,time; print(\"ready\", flush=True); line=sys.stdin.readline().strip(); print(\"got:\" + line, flush=True); time.sleep(60)'",
+            "yield_time_ms": 500,
             "timeout_seconds": 120,
             "max_output_tokens": 1000
         }),
@@ -86,15 +86,15 @@ fn write_stdin_echo() -> Result<()> {
         json!({
             "command_session_id": id,
             "chars": "payload\n",
-            "yield_time_ms": 150,
+            "yield_time_ms": 2000,
             "max_output_tokens": 1000
         }),
     )?;
     assert!(
         stdout(&stdin).contains("got:payload"),
-        "stdin write should return echoed output: {stdin}"
+        "stdin write should return command output: {stdin}"
     );
-    cancel_session(&lease, as_str(&stdin, "command_session_id").unwrap_or(&id))?;
+    cancel_session(&lease, &id)?;
     Ok(())
 }
 

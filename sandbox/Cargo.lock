@@ -152,9 +152,9 @@ dependencies = [
  "eos-plugin",
  "eos-protocol",
  "eos-runner",
- "eos-terminal-pair",
  "ignore",
  "nix 0.29.0",
+ "rustix 0.38.44",
  "serde",
  "serde_json",
  "sha2",
@@ -267,13 +267,6 @@ dependencies = [
  "serde",
  "serde_json",
  "thiserror 2.0.18",
-]
-
-[[package]]
-name = "eos-terminal-pair"
-version = "0.1.0"
-dependencies = [
- "libc",
 ]
 
 [[package]]
@@ -875,6 +868,7 @@ checksum = "fdb5bc1ae2baa591800df16c9ca78619bf65c0488b41b96ccec5d11220d8c154"
 dependencies = [
  "bitflags",
  "errno",
+ "itoa",
  "libc",
  "linux-raw-sys 0.4.15",
  "windows-sys 0.59.0",

@@ -17,9 +17,9 @@ use eos_occ::{
 };
 use eos_protocol::{LayerChange, LayerPath, Manifest};
 
-use route::path_is_ignored;
 use crate::error::DaemonError;
 use crate::response_timings::{i64_to_f64_saturating, usize_to_f64_saturating};
+use route::path_is_ignored;
 
 #[derive(Clone)]
 pub(crate) struct LayerStackCommitTransaction {

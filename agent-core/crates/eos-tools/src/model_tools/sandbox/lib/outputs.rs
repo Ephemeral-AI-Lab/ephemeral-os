@@ -55,7 +55,7 @@ pub(in crate::model_tools::sandbox) struct GlobOutput {
     pub(in crate::model_tools::sandbox) truncated: bool,
 }
 
-/// `CommandToolOutput` (`command_session_tool.py`).
+/// Shared output shape for `exec_command` and `write_stdin`.
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub(in crate::model_tools::sandbox) struct CommandToolOutput {
     pub(in crate::model_tools::sandbox) status: String,

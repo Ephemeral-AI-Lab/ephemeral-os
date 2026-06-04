@@ -208,7 +208,8 @@ fn route_fileresult_catalog() -> Result<()> {
         ops::API_V1_WRITE_FILE,
         json!({"path": "occ/catalog.txt", "content": "two\n", "overwrite": false}),
     )?;
-    assert_eq!(conflict_reason(&rejected), "rejected");
+    assert_eq!(as_str(&rejected, "status")?, "rejected");
+    assert_eq!(conflict_reason(&rejected), "create_only_existing");
     let missing_edit = lease.call(
         ops::API_V1_EDIT_FILE,
         json!({

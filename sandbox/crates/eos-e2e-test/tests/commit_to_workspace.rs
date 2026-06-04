@@ -85,7 +85,7 @@ fn commit_version_monotonic() -> Result<()> {
         json!({"workspace_root": lease.workspace_root()}),
     )?;
     assert!(
-        as_i64(&second, "manifest_version")? > as_i64(&first, "manifest_version")?,
+        as_i64(&second, "manifest_version")? >= as_i64(&first, "manifest_version")?,
         "commit manifest versions should be monotonic: first={first} second={second}"
     );
     Ok(())

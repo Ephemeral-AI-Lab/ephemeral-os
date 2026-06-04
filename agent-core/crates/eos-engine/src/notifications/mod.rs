@@ -134,4 +134,5 @@ impl NotificationSink for NotificationService {
 }
 
 #[cfg(test)]
+#[path = "../../tests/notifications/mod.rs"]
 mod tests;

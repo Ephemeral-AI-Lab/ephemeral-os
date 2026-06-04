@@ -64,10 +64,8 @@ fn advisor_hook_count(registry: &ToolRegistry, name: ToolName) -> usize {
         .count()
 }
 
-// Relocated from the deleted `meta.rs`: exactly the four `submit_*_outcome`
-// terminals carry one `AdvisorApproval` hook (targeting themselves); the
-// helper/explorer terminals and `ask_advisor` carry none. Now asserted against
-// the registry built from the real `.eos-agents/tools` config.
+// Exactly the four main submission terminals carry one `AdvisorApproval` hook;
+// helper/explorer terminals and `ask_advisor` carry none.
 #[test]
 fn advisor_gate_wired_on_exactly_the_four_main_terminals() {
     let registry = build_default_registry(&repo_tools_config(), &CallerScope::default());
@@ -108,9 +106,8 @@ fn advisor_gate_wired_on_exactly_the_four_main_terminals() {
     }
 }
 
-// Relocated from `meta.rs`: `RequireNoInflightBackgroundTasks` precedes
-// `AdvisorApproval` on every gated terminal so a background rejection surfaces
-// before the advisor gate (load-bearing ordering, advisor remediation plan §3).
+// `RequireNoInflightBackgroundTasks` precedes `AdvisorApproval` on every gated
+// terminal so a background rejection surfaces before the advisor gate.
 #[test]
 fn no_inflight_precedes_advisor_on_gated_terminals() {
     let registry = build_default_registry(&repo_tools_config(), &CallerScope::default());

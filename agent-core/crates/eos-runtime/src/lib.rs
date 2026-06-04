@@ -31,6 +31,7 @@ mod root_agent;
 mod tool_context;
 
 #[cfg(test)]
+#[path = "../tests/unit/mod.rs"]
 mod tests;
 
 pub use app_state::{

@@ -22,7 +22,7 @@ use crate::spec::text_spec_with_agent_enum;
 
 #[derive(Debug, Deserialize, Serialize, JsonSchema)]
 struct RunSubagentInput {
-    /// Name of a registered dispatchable subagent (caller-scoped enum, section 6.6).
+    /// Name of a registered dispatchable subagent (caller-scoped enum).
     agent_name: String,
     prompt: String,
 }

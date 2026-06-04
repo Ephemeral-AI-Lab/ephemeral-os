@@ -2,9 +2,9 @@
 //! from the bound agent's own skill. The skill *content* comes from the shared
 //! [`SkillRegistry`](eos_skills::SkillRegistry) in [`ExecutionMetadata`]; the
 //! per-agent **allowlist** ([`CallerScope::skill_slug`](super::CallerScope),
-//! baked in at registration) scopes which skill the caller may read, mirroring
-//! Python `make_load_skill_reference_from_context` — an agent reads only its own
-//! skill's references, and a not-found error lists only that skill.
+//! baked in at registration) scopes which skill the caller may read: an agent
+//! reads only its own skill's references, and a not-found error lists only that
+//! skill.
 
 use std::sync::Arc;
 
@@ -35,9 +35,8 @@ struct LoadSkillReferenceInput {
 }
 
 /// The `load_skill_reference` executor, scoped to the caller's own skill(s). The
-/// `allowed` list is the per-agent allowlist (Python `available`), built from the
-/// bound agent's declared skill at registration; empty ⇒ a no-op tool that errors
-/// on every call (the agent declared no skill).
+/// `allowed` list is built from the bound agent's declared skill at
+/// registration; empty ⇒ a no-op tool that errors on every call.
 struct LoadSkillReference {
     allowed: Vec<SkillName>,
 }
@@ -54,9 +53,8 @@ impl ToolExecutor for LoadSkillReference {
             Ok(v) => v,
             Err(err) => return Ok(err),
         };
-        // The allowlist of skill names this caller may read (Python `available`):
-        // only the agent's own declared skill(s), resolved against the shared
-        // registry — NOT the whole registry.
+        // Only the agent's own declared skill(s), resolved against the shared
+        // registry, are readable.
         let available: Vec<String> = self
             .allowed
             .iter()
@@ -64,8 +62,6 @@ impl ToolExecutor for LoadSkillReference {
             .map(|s| s.name.as_str().to_owned())
             .collect();
 
-        // Authorization gate: reject any skill outside the caller's scope before
-        // touching the shared registry (Python `load_skill_reference.py:52-61`).
         if !available.iter().any(|name| name == &parsed.skill_name) {
             return Ok(ToolResult::error(
                 json!({
@@ -112,9 +108,8 @@ impl ToolExecutor for LoadSkillReference {
     }
 }
 
-pub(crate) fn register(registry: &mut ToolRegistry, config: &ToolConfigSet, caller: &CallerScope) {
-    // Scope to the caller's own skill folder slug (0-or-1 entries), mirroring
-    // Python `make_load_skill_reference_for_skill(allowed_slugs=[skill_slug])`.
+pub(super) fn register(registry: &mut ToolRegistry, config: &ToolConfigSet, caller: &CallerScope) {
+    // Scope to the caller's own skill folder slug (0-or-1 entries).
     let allowed: Vec<SkillName> = caller
         .skill_slug
         .as_deref()

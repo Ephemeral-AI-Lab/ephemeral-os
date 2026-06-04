@@ -355,4 +355,5 @@ impl OpenIterationCoordinatorRegistry {
 }
 
 #[cfg(test)]
+#[path = "../../tests/iteration/mod.rs"]
 mod tests;

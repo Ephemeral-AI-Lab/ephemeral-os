@@ -22,7 +22,7 @@ use super::lib::{default_five, empty_subagent_session_error};
 #[derive(Debug, Deserialize, Serialize, JsonSchema)]
 struct CheckSubagentProgressInput {
     subagent_session_id: SubagentSessionId,
-    // Matches Python `Field(ge=1, le=10)` in both schema and runtime validation.
+    // Keep schema and runtime validation aligned.
     #[serde(default = "default_five")]
     #[schemars(default = "default_five", range(min = 1, max = 10))]
     last_n_messages: u8,

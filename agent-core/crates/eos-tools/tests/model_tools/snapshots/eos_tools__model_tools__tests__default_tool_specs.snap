@@ -1,6 +1,6 @@
 ---
-source: crates/eos-tools/src/model_tools/tests.rs
-assertion_line: 210
+source: crates/eos-tools/src/model_tools/../../tests/model_tools/mod.rs
+assertion_line: 207
 expression: specs
 ---
 [
@@ -372,7 +372,7 @@ expression: specs
     "output_schema": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "CommandToolOutput",
-      "description": "`CommandToolOutput` (`command_session_tool.py`).",
+      "description": "Shared output shape for `exec_command` and `write_stdin`.",
       "type": "object",
       "required": [
         "changed_path_kinds",
@@ -471,7 +471,7 @@ expression: specs
           "minimum": 1.0
         },
         "terminate": {
-          "description": "Tear the session down after writing. A `\\x03` char only interrupts (SIGINT); set this to end the session (SIGTERM->SIGKILL).",
+          "description": "Tear the session down after writing. A `\\x03` char only interrupts (SIGINT); set this to end the session.",
           "default": false,
           "type": "boolean"
         },
@@ -487,7 +487,7 @@ expression: specs
     "output_schema": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "CommandToolOutput",
-      "description": "`CommandToolOutput` (`command_session_tool.py`).",
+      "description": "Shared output shape for `exec_command` and `write_stdin`.",
       "type": "object",
       "required": [
         "changed_path_kinds",
@@ -1187,7 +1187,7 @@ expression: specs
       ],
       "properties": {
         "agent_name": {
-          "description": "Name of a registered dispatchable subagent (caller-scoped enum, section 6.6).",
+          "description": "Name of a registered dispatchable subagent (caller-scoped enum).",
           "type": "string",
           "enum": [
             "explorer",

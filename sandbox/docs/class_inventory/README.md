@@ -4,8 +4,8 @@ Generated inventory of every struct, enum, trait, and notable public type
 alias under the `sandbox/` Rust workspace (the `eosd` runtime), organized by
 crate. One page per crate.
 
-**210 items** — **161 structs**, **33 enums**, **12 traits**, and
-**4 type aliases** — across **50 files** in **12 crates**.
+**209 items** — **160 structs**, **33 enums**, **12 traits**, and
+**4 type aliases** — across **49 files** in **11 crates**.
 
 Item, field, variant, and method data is extracted directly from the Rust
 source. One-line purposes come from `///` doc comments, or a reviewer summary
@@ -26,7 +26,6 @@ where absent. Test-only `#[cfg(test)]` items are excluded.
 | `eos-plugin` | 18 | 11 | 6 | 0 | 1 | 7 | [eos-plugin.md](./eos-plugin.md) |
 | `eos-daemon` | 55 | 52 | 2 | 0 | 1 | 11 | [eos-daemon.md](./eos-daemon.md) |
 | `eosd` | 3 | 3 | 0 | 0 | 0 | 1 | [eosd.md](./eosd.md) |
-| `eos-terminal-pair` | 1 | 1 | 0 | 0 | 0 | 1 | [eos-terminal-pair.md](./eos-terminal-pair.md) |
 | `xtask` | 1 | 1 | 0 | 0 | 0 | 1 | [xtask.md](./xtask.md) |
 | **TOTAL** | **210** | **161** | **33** | **12** | **4** | **50** | |
 
@@ -102,11 +101,6 @@ where absent. Test-only `#[cfg(test)]` items are excluded.
   holder) while preserving each library's typed exit codes. Its only items are
   two argv-parser config structs plus a local overlay-mount adapter implementing
   `eos_runner::KernelMountPort`.
-- `eos-terminal-pair` — Provides safe allocation of a PTY controller/attached
-  File pair for command sessions in the eosd shell-execution path, wrapping the
-  Linux posix_openpt/grantpt/unlockpt/ptsname_r FFI sequence behind a single
-  owned struct. Its sole item is the TerminalPair handle returned by the crate's
-  open_terminal_pair function.
 - `xtask` — The dev-only build and release tooling binary for the eosd runtime
   workspace. It packages the eosd daemon for musl Linux targets, copies and
   chmods the artifact, and emits checksums, a protocol-version stamp, a JSON

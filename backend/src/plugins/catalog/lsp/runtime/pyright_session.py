@@ -29,6 +29,7 @@ logger = logging.getLogger(__name__)
 
 _CONDA_HOOK = "/opt/miniconda3/etc/profile.d/conda.sh"
 _PYRIGHT_NODE_BIN = "/eos/plugin-packages/lsp/node/bin"
+_LEGACY_RUNNER_NODE_BIN = "/tmp/eos-node22/bin"
 _DEFAULT_INIT_TIMEOUT_S = 30.0
 _DEFAULT_REQUEST_TIMEOUT_S = 90.0
 _REFERENCES_TIMEOUT_S = 30.0
@@ -576,23 +577,24 @@ class PyrightSession:
         return self._build_pyright_argv()
 
     def _build_pyright_argv(self) -> list[str]:
+        search_path = _pyright_search_path()
+        binary = shutil.which("pyright-langserver", path=search_path)
+        if binary:
+            return [binary, "--stdio"]
         if os.path.exists(_CONDA_HOOK):
             return [
                 "bash",
                 "-lc",
                 (
                     f". {_CONDA_HOOK} && conda activate testbed "
-                    f"&& export PATH={_PYRIGHT_NODE_BIN}:$PATH "
+                    f"&& export PATH={search_path}:$PATH "
                     "&& exec pyright-langserver --stdio"
                 ),
             ]
-        binary = shutil.which("pyright-langserver")
-        if binary:
-            return [binary, "--stdio"]
         return [
             "bash",
             "-lc",
-            f"export PATH={_PYRIGHT_NODE_BIN}:$PATH && exec pyright-langserver --stdio",
+            f"export PATH={search_path}:$PATH && exec pyright-langserver --stdio",
         ]
 
     def _release_overlay_handle(self) -> None:
@@ -714,6 +716,15 @@ def _text_hash(text: str) -> str:
 
 def _runtime_subprocess_cwd() -> str | None:
     return _RUNTIME_BUNDLE_ROOT if os.path.isdir(_RUNTIME_BUNDLE_ROOT) else None
+
+
+def _pyright_search_path() -> str:
+    candidates = [
+        _PYRIGHT_NODE_BIN,
+        _LEGACY_RUNNER_NODE_BIN,
+        os.environ.get("PATH", ""),
+    ]
+    return ":".join(path for path in candidates if path)
 
 
 def _ast_document_symbols(

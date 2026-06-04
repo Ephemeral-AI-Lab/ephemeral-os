@@ -1,5 +1,6 @@
 ---
-source: crates/eos-state/src/lib.rs
+source: crates/eos-state/src/../tests/unit/mod.rs
+assertion_line: 141
 expression: schemas
 ---
 {

@@ -48,7 +48,7 @@
 <h2>Migration Verdict <a class="anchor" href="#migration-verdict">#</a></h2>
 <div class="summary">
   <ul>
-    <li><strong>Runtime owners are Rust.</strong> Request bootstrap, root-agent execution, workflow lifecycle, context packets, engine query loop, tool framework, sandbox host/API, daemon dispatch, command sessions, LayerStack/OCC/overlay, isolated workspaces, plugin PPC, and terminal pairs live in <code>agent-core/crates/*</code> and <code>sandbox/crates/*</code>.</li>
+    <li><strong>Runtime owners are Rust.</strong> Request bootstrap, root-agent execution, workflow lifecycle, context packets, engine query loop, tool framework, sandbox host/API, daemon dispatch, command sessions, LayerStack/OCC/overlay, isolated workspaces, plugin PPC, and PTY allocation live in <code>agent-core/crates/*</code> and <code>sandbox/crates/*</code>.</li>
     <li><strong>Python is comparison material except the runner.</strong> Old <code>backend/src/workflow</code>, <code>backend/src/engine</code>, <code>backend/src/tools</code>, and <code>backend/src/sandbox</code> paths explain the source behavior the Rust code ports, but docs should not present them as current owners.</li>
     <li><strong>Rust mostly follows Python's workflows.</strong> The shape is intentionally preserved: root Task first, optional <code>delegate_workflow</code>, <code>Workflow -&gt; Iteration -&gt; Attempt</code>, planner-authored generator/reducer DAG, terminal submissions, OCC publish, explicit isolated enter/exit, and background/session controls.</li>
     <li><strong>Rust removes Python redundancy.</strong> Stringly op dispatch, compatibility-only fields, provider branches, runtime bundle shims, hidden close-time parent mutation, and split evaluator/verifier concepts are collapsed into typed IDs, enums, DTOs, crate ports, Docker-only sandbox host paths, reducer plan tasks, and explicit state transitions.</li>
@@ -134,10 +134,10 @@
       <td>Parity: O(1) snapshot leases, per-operation overlay upper/work dirs, typed changesets, direct vs gated routing, CAS publish, conflict projection, and deferred squash remain the storage contract. Optimization: Rust separates storage, overlay, runner, and OCC crates by ownership.</td>
     </tr>
     <tr>
-      <td>Command sessions and terminal pairs</td>
+      <td>Command sessions and PTY allocation</td>
       <td><span class="file-ref">backend/src/tools/sandbox/exec_command</span>, <span class="file-ref">backend/src/sandbox/api/tool/command.py</span></td>
-      <td><span class="file-ref">agent-core/crates/eos-sandbox-api/src/tool_api/command.rs</span>, <span class="file-ref">sandbox/crates/eos-daemon/src/command.rs</span>, <span class="file-ref">sandbox/crates/eos-terminal-pair</span></td>
-      <td>Parity: commands are daemon-owned sessions with stdin, progress, cancellation, and completion delivery. Optimization: Rust command sessions use non-login Bash semantics and typed terminal-pair plumbing; old generic background task tools are no longer the model surface.</td>
+      <td><span class="file-ref">agent-core/crates/eos-sandbox-api/src/tool_api/command.rs</span>, <span class="file-ref">sandbox/crates/eos-daemon/src/command.rs</span>, <span class="file-ref">sandbox/crates/eos-daemon/src/command/pty.rs</span></td>
+      <td>Parity: commands are daemon-owned sessions with stdin, progress, cancellation, and completion delivery. Optimization: Rust command sessions use non-login Bash semantics and daemon-private PTY plumbing; old generic background task tools are no longer the model surface.</td>
     </tr>
     <tr>
       <td>Isolated workspace lifecycle</td>

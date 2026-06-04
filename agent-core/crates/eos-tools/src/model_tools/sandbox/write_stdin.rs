@@ -33,7 +33,7 @@ pub(super) struct WriteStdinInput {
     #[schemars(range(min = 1))]
     max_output_tokens: Option<u32>,
     /// Tear the session down after writing. A `\x03` char only interrupts
-    /// (SIGINT); set this to end the session (SIGTERM->SIGKILL).
+    /// (SIGINT); set this to end the session.
     #[serde(default = "default_false")]
     terminate: bool,
 }
@@ -83,10 +83,9 @@ impl ToolExecutor for WriteStdin {
                 Ok(result) => result,
                 Err(err) => return Ok(ToolResult::error(err.to_string())),
             };
-        // Recover race + exactly-once latch (anchor section 8). If the daemon
-        // already lost the live session, surface the supervisor's stored
-        // terminal; otherwise, once a terminal status is observed inline, latch
-        // it as delivered so the heartbeat never re-notifies the same result.
+        // If the daemon already lost the live session, surface the supervisor's
+        // stored terminal; otherwise, once a terminal status is observed inline,
+        // latch it as delivered so the heartbeat never re-notifies the same result.
         if let Some(port) = &ctx.command_session_supervisor {
             if is_command_session_not_found(&result) {
                 if port

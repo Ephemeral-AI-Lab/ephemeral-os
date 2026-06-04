@@ -10,9 +10,10 @@ use crate::name::ToolName;
 use crate::result::ToolResult;
 
 pub(super) mod outputs;
-pub(super) mod registration;
+mod registration;
 
 #[cfg(test)]
+#[path = "../../../../tests/model_tools/sandbox.rs"]
 mod tests;
 
 use outputs::{CommandToolOutput, MutationOutput};
@@ -20,9 +21,12 @@ use outputs::{CommandToolOutput, MutationOutput};
 pub(super) const MAX_READ_FILE_LINES: u32 = 200;
 pub(super) const MAX_YIELD_TIME_MS: u32 = 30_000;
 
-// ---------------------------------------------------------------------------
-// Shared helpers (ported from sandbox/_lib/tool_context.py).
-// ---------------------------------------------------------------------------
+pub(super) fn register(
+    registry: &mut crate::registry::ToolRegistry,
+    config: &crate::config::ToolConfigSet,
+) {
+    registration::register(registry, config);
+}
 
 pub(super) fn request_base(ctx: &ExecutionMetadata, description: &str) -> SandboxRequestBase {
     SandboxRequestBase {
@@ -32,8 +36,7 @@ pub(super) fn request_base(ctx: &ExecutionMetadata, description: &str) -> Sandbo
     }
 }
 
-/// `resolve_tool_sandbox_path`: absolute paths pass through; otherwise join under
-/// `repo_root`.
+/// Absolute paths pass through; relative paths resolve under `repo_root`.
 pub(super) fn resolve_path(ctx: &ExecutionMetadata, path: &str) -> String {
     if path.starts_with('/') {
         return path.to_owned();
@@ -69,7 +72,6 @@ pub(super) fn invalid_input(tool: ToolName, message: impl std::fmt::Display) -> 
     ))
 }
 
-/// `_failure_status(conflict_reason)`.
 pub(super) fn failure_status(conflict_reason: Option<&str>) -> String {
     match conflict_reason {
         Some("base_mismatch" | "version_conflict" | "drift") => "aborted_version",
@@ -155,15 +157,14 @@ pub(super) fn validate_command_timing(
     None
 }
 
-/// Whether a `write_stdin` result is the daemon's "live session is gone" signal
-/// (`command_session_not_found`), so the supervisor's stored terminal can be
-/// recovered.
+/// Whether the daemon says the live session is gone, so the supervisor's stored
+/// terminal result can be recovered.
 pub(super) fn is_command_session_not_found(result: &ExecCommandResult) -> bool {
     result.status == "error" && result.output.stderr.contains("command_session_not_found")
 }
 
-/// Project an [`ExecCommandResult`] into the daemon completion `result` shape the
-/// supervisor stores (status / `exit_code` / `output`).
+/// Project an [`ExecCommandResult`] into the completion payload the supervisor
+/// stores.
 pub(super) fn command_result_value(result: &ExecCommandResult) -> Value {
     json!({
         "status": result.status,
@@ -230,7 +231,6 @@ pub(super) fn command_tool_result_from_value(result: &Value) -> ToolResult {
     }
 }
 
-/// `command_tool_result`.
 pub(super) fn command_tool_result(result: &ExecCommandResult) -> ToolResult {
     let is_error = matches!(result.status.as_str(), "error" | "timed_out");
     let mut output_map = BTreeMap::new();

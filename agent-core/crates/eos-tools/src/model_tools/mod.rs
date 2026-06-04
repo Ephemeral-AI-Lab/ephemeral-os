@@ -25,16 +25,15 @@ use crate::result::OutputShape;
 
 /// The per-caller scope a tool registry is built for: the caller's
 /// dispatchable-subagent allow-list (which patches the `run_subagent` input
-/// schema's `agent_name` enum, §6.6) and the bound agent's own skill slug (which
-/// scopes `load_skill_reference` to that one skill).
+/// schema's `agent_name` enum) and the bound agent's own skill slug (which scopes
+/// `load_skill_reference` to that one skill).
 #[derive(Debug, Clone, Default)]
 pub struct CallerScope {
     /// The subagent profile names this caller may dispatch.
     pub dispatchable_subagents: Vec<String>,
     /// The bound agent's own skill folder slug, if it declares one. Scopes
-    /// `load_skill_reference` so the caller can read only that skill's
-    /// references (Python `make_load_skill_reference_from_context`:
-    /// `AgentDefinition.skill.parent.name`). `None` ⇒ a no-op tool.
+    /// `load_skill_reference` so the caller can read only that skill's references.
+    /// `None` ⇒ a no-op tool.
     pub skill_slug: Option<String>,
 }
 
@@ -54,10 +53,9 @@ pub(crate) fn register_tool(
     );
 }
 
-/// Build the default tool registry for one caller scope from the externalized
-/// tool config. Insertion order matches the Python factory (sandbox → isolated →
-/// submission → `ask_advisor` → workflow → subagent → skills); the order backs the
-/// schema snapshot and is the agent-spawn default before `restrict`/`remove`.
+/// Build the default tool registry for one caller scope from the externalized tool
+/// config. Insertion order is stable because it backs the schema snapshot and is
+/// the agent-spawn default before `restrict`/`remove`.
 #[must_use]
 pub fn build_default_registry(config: &ToolConfigSet, caller: &CallerScope) -> ToolRegistry {
     let mut registry = ToolRegistry::new();
@@ -78,4 +76,5 @@ pub(crate) fn repo_tools_config() -> ToolConfigSet {
 }
 
 #[cfg(test)]
+#[path = "../../tests/model_tools/mod.rs"]
 mod tests;

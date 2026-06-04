@@ -1,13 +1,8 @@
 //! Sandbox tools: `read_file`, `write_file`, `edit_file`, `multi_edit`, `grep`,
-//! `glob`, `exec_command`, `write_stdin`. Each builds a typed request, calls the
-//! `eos-sandbox-api` `tool_api` helper over the [`SandboxTransport`], and projects
-//! the typed result into a serialized output DTO.
-//!
-//! Command-session **registration** with the background supervisor and the
-//! `recover-from-supervisor` / `mark-reported` steps are engine-dispatch concerns
-//! (anchor §3, "background execution is an engine dispatch mode"), relocated to
-//! `eos-engine`; the tool body surfaces `command_session_id` and issues the
-//! Ctrl-C cancel.
+//! `glob`, `exec_command`, `write_stdin`. Each builds a typed `eos-sandbox-api`
+//! request and projects the daemon result into the model-facing output DTO.
+//! Command-session tools additionally coordinate running-session registration and
+//! exactly-once terminal recovery through the command-session supervisor port.
 
 mod edit_file;
 mod exec_command;
@@ -23,5 +18,5 @@ pub(crate) fn register(
     registry: &mut crate::registry::ToolRegistry,
     config: &crate::config::ToolConfigSet,
 ) {
-    lib::registration::register(registry, config);
+    lib::register(registry, config);
 }

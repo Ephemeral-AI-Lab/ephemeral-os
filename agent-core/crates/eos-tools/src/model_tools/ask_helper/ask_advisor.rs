@@ -3,10 +3,10 @@
 //!
 //! Only the model-facing spec/registration lives here. *Execution* is the engine
 //! running an ephemeral advisor agent: `dispatch_assistant_tools` intercepts
-//! `ToolName::AskAdvisor` and routes it to `eos_engine::advisor::run_advisor`
-//! (advisor remediation plan §2a). `eos-tools` is upstream of `eos-engine`, so the
-//! run cannot be driven from this crate; the executor below is therefore never
-//! reached in the engine loop and exists only so the tool registers with a body.
+//! `ToolName::AskAdvisor` and routes it to `eos_engine::advisor::run_advisor`.
+//! `eos-tools` is upstream of `eos-engine`, so the run cannot be driven from this
+//! crate; the executor below is therefore never reached in the engine loop and
+//! exists only so the tool registers with a body.
 
 use std::sync::Arc;
 
@@ -50,7 +50,7 @@ impl ToolExecutor for AskAdvisor {
     }
 }
 
-pub(crate) fn register(registry: &mut ToolRegistry, config: &ToolConfigSet) {
+pub(super) fn register(registry: &mut ToolRegistry, config: &ToolConfigSet) {
     let ask_advisor = config.get(ToolName::AskAdvisor);
     super::super::register_tool(
         registry,

@@ -52,4 +52,5 @@ pub use eos_types::{
 };
 
 #[cfg(test)]
+#[path = "../tests/unit/mod.rs"]
 mod tests;

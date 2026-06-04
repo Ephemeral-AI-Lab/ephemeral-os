@@ -80,15 +80,20 @@ impl NodePool {
     /// # Errors
     /// Returns an error if a container fails to start or its base cannot be built.
     pub fn acquire(&self) -> Result<NodeLease<'_>> {
-        let node = self.take_node()?;
-        match NodeLease::open(self, node) {
-            Ok(lease) => Ok(lease),
-            Err((node, err)) => {
-                // Minting the root failed; return the node so the slot frees.
-                self.give_back(node, false);
-                Err(err)
+        let mut last_err = None;
+        for _ in 0..2 {
+            let node = self.take_node()?;
+            match NodeLease::open(self, node) {
+                Ok(lease) => return Ok(lease),
+                Err((node, err)) => {
+                    // A failed root-mint usually means the container/daemon died
+                    // after checkout. Drop it and retry once with a fresh node.
+                    self.give_back(node, true);
+                    last_err = Some(err);
+                }
             }
         }
+        Err(last_err.unwrap_or_else(|| anyhow::anyhow!("node checkout failed")))
     }
 
     fn take_node(&self) -> Result<Node> {

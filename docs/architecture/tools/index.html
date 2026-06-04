@@ -188,49 +188,49 @@
                 <td>Decorator construction, <code>execute_tool_once</code> lifecycle, sandbox command pre-hooks.</td>
               </tr>
               <tr>
-                <td><code>terminal.rs</code><br><code>model_tools/submission.rs</code></td>
+                <td><code>terminal.rs</code><br><code>model_tools/submission/</code></td>
                 <td><a href="terminals.html">Terminals</a></td>
                 <td>Terminal descriptor catalog and prompt rendering.</td>
                 <td>Workflow launch profiles, batch exclusivity, query loop stop condition.</td>
               </tr>
               <tr>
-                <td><code>model_tools/sandbox.rs</code></td>
+                <td><code>model_tools/sandbox/</code><br><code>model_tools/sandbox/support/</code></td>
                 <td><a href="sandbox.html">Sandbox</a></td>
                 <td>Agent-facing read/write/edit/command/search wrappers.</td>
                 <td>Typed sandbox API, daemon workspace routing, layer-stack/OCC, ephemeral overlay.</td>
               </tr>
               <tr>
-                <td><code>model_tools/isolated.rs</code></td>
+                <td><code>model_tools/isolated_workspace/</code></td>
                 <td><a href="isolated-workspace.html">Isolated Workspace</a></td>
                 <td>Explicit enter/exit lifecycle tools.</td>
                 <td>Persistent private scratch namespace, background gates, plugin blocking, no publish.</td>
               </tr>
               <tr>
-                <td><code>ports.rs</code><br><code>model_tools/sandbox.rs</code></td>
+                <td><code>ports.rs</code><br><code>model_tools/sandbox/</code></td>
                 <td><a href="background.html">Background</a></td>
                 <td>Typed control ports for subagents, delegated workflows, and daemon command sessions.</td>
                 <td>Supervisor status lattice, sandbox heartbeat/cancel, command completion heartbeat, query loop cleanup.</td>
               </tr>
               <tr>
-                <td><code>model_tools/subagent.rs</code></td>
+                <td><code>model_tools/subagent/</code><br><code>model_tools/subagent/support/</code></td>
                 <td><a href="subagent.html">Subagent</a></td>
                 <td>Always-background nested agent launch.</td>
                 <td><code>run_ephemeral_agent</code>, progress provider, terminal result projection.</td>
               </tr>
               <tr>
-                <td><code>model_tools/advisor.rs</code></td>
+                <td><code>model_tools/ask_helper/</code></td>
                 <td><a href="ask-helper.html">Ask Helper</a></td>
                 <td>Blocking advisor helper launches and advisor-feedback terminal output.</td>
                 <td>Helper transcripts, terminal catalog focus, helper terminal submissions.</td>
               </tr>
               <tr>
-                <td><code>model_tools/submission.rs</code><br><code>model_tools/workflow.rs</code></td>
+                <td><code>model_tools/submission/</code><br><code>model_tools/submission/support/</code><br><code>model_tools/workflow/</code><br><code>model_tools/workflow/support/</code></td>
                 <td><a href="submission.html">Submission</a></td>
                 <td>Root, planner, generator, reducer, advisor, and explorer terminal tools plus non-terminal workflow controls.</td>
                 <td>AttemptOrchestrator, WorkflowStarter/control ports, root request completion, Workflow state.</td>
               </tr>
               <tr>
-                <td><code>model_tools/skills.rs</code></td>
+                <td><code>model_tools/skills/</code></td>
                 <td><a href="skills.html">Skills</a></td>
                 <td>Scoped skill reference loading.</td>
                 <td>ToolFactoryContext metadata and explicit reference availability errors.</td>

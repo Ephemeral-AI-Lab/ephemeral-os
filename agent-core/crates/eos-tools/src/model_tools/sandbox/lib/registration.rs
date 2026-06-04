@@ -21,7 +21,7 @@ use super::super::{
 };
 use super::outputs::{CommandToolOutput, GlobOutput, GrepOutput, MutationOutput, ReadFileOutput};
 
-pub(in super::super) fn register(registry: &mut ToolRegistry, config: &ToolConfigSet) {
+pub(super) fn register(registry: &mut ToolRegistry, config: &ToolConfigSet) {
     let read_file = config.get(ToolName::ReadFile);
     register_tool(
         registry,

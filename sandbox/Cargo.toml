@@ -11,7 +11,6 @@ members = [
     "crates/eos-occ",
     "crates/eos-isolated",
     "crates/eos-plugin",
-    "crates/eos-terminal-pair",
     "crates/eos-e2e-test",
     "xtask",
 ]
@@ -52,7 +51,6 @@ eos-overlay = { path = "crates/eos-overlay" }
 eos-occ = { path = "crates/eos-occ" }
 eos-isolated = { path = "crates/eos-isolated" }
 eos-plugin = { path = "crates/eos-plugin" }
-eos-terminal-pair = { path = "crates/eos-terminal-pair" }
 eos-runner = { path = "crates/eos-runner" }
 eos-ns-holder = { path = "crates/eos-ns-holder" }
 eos-daemon = { path = "crates/eos-daemon" }
