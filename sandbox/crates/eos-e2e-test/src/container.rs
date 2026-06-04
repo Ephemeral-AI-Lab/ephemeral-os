@@ -13,6 +13,7 @@ use std::thread;
 use std::time::{Duration, Instant};
 
 use anyhow::{bail, Context, Result};
+use eos_protocol::ops;
 use serde_json::json;
 
 use crate::client::{is_success, ProtocolClient};
@@ -26,6 +27,9 @@ const EOSD_REMOTE_PATH: &str = "/usr/local/bin/eosd";
 const DAEMON_DIR: &str = "/eos/daemon";
 /// Root under which the pool mints per-test `layer_stack_root`s.
 pub const E2E_ROOT_DIR: &str = "/eos/e2e";
+/// A non-kept container self-removes after this long (`--rm` + `timeout`), so an
+/// aborted run cannot strand privileged containers even if teardown never runs.
+const CONTAINER_TTL_SECONDS: u64 = 1800;
 
 /// A live daemon container.
 #[derive(Debug)]
@@ -51,6 +55,9 @@ impl DaemonContainer {
             "--name".to_owned(),
             name.clone(),
         ];
+        if !config.keep_container {
+            run.push("--rm".to_owned());
+        }
         if let Some(platform) = &config.platform {
             run.push("--platform".to_owned());
             run.push(platform.clone());
@@ -69,13 +76,23 @@ impl DaemonContainer {
         run.push("-p".to_owned());
         run.push(format!("127.0.0.1::{}", config.tcp_port));
         run.push(config.image.clone());
-        run.push("sleep".to_owned());
-        run.push("infinity".to_owned());
+        // Keep the container alive but self-terminating: `timeout` bounds the
+        // lifetime so a leaked (`--rm`) container is reclaimed automatically.
+        if config.keep_container {
+            run.extend(["sleep".to_owned(), "infinity".to_owned()]);
+        } else {
+            run.extend([
+                "timeout".to_owned(),
+                CONTAINER_TTL_SECONDS.to_string(),
+                "sleep".to_owned(),
+                "infinity".to_owned(),
+            ]);
+        }
 
         docker(&run).with_context(|| format!("docker run for {name}"))?;
 
         // From here, any failure must still tear the container down.
-        let container = Self {
+        let mut container = Self {
             name: name.clone(),
             // Placeholder client; replaced once the port is resolved.
             client: ProtocolClient::new(
@@ -86,7 +103,10 @@ impl DaemonContainer {
             keep: config.keep_container,
         };
         match container.bringup(config, &token) {
-            Ok(client) => Ok(Self { client, ..container }),
+            Ok(client) => {
+                container.client = client;
+                Ok(container)
+            }
             Err(err) => {
                 let log = container.daemon_log().unwrap_or_default();
                 drop(container);
@@ -99,9 +119,9 @@ impl DaemonContainer {
         self.exec(&["mkdir", "-p", DAEMON_DIR, E2E_ROOT_DIR])
             .context("mkdir daemon dirs")?;
         docker(&[
-            "cp",
-            &config.eosd_path.to_string_lossy(),
-            &format!("{}:{EOSD_REMOTE_PATH}", self.name),
+            "cp".to_owned(),
+            config.eosd_path.to_string_lossy().into_owned(),
+            format!("{}:{EOSD_REMOTE_PATH}", self.name),
         ])
         .with_context(|| format!("docker cp eosd ({})", config.eosd_path.display()))?;
         self.exec(&["chmod", "0755", EOSD_REMOTE_PATH])
@@ -138,13 +158,20 @@ impl DaemonContainer {
     fn resolve_addr(&self, container_port: u16) -> Result<SocketAddr> {
         let deadline = Instant::now() + Duration::from_secs(15);
         loop {
-            if let Ok(out) = docker(&["port", &self.name, &format!("{container_port}/tcp")]) {
+            if let Ok(out) = docker(&[
+                "port".to_owned(),
+                self.name.clone(),
+                format!("{container_port}/tcp"),
+            ]) {
                 if let Some(addr) = parse_published_addr(&out) {
                     return Ok(addr);
                 }
             }
             if Instant::now() >= deadline {
-                bail!("could not resolve published port {container_port} for {}", self.name);
+                bail!(
+                    "could not resolve published port {container_port} for {}",
+                    self.name
+                );
             }
             thread::sleep(Duration::from_millis(200));
         }
@@ -152,16 +179,15 @@ impl DaemonContainer {
 
     fn await_ready(&self, client: &ProtocolClient, budget: Duration) -> Result<()> {
         let deadline = Instant::now() + budget;
-        let mut last_err = String::from("never connected");
         let mut delay = Duration::from_millis(150);
         loop {
-            match client.request("api.v1.heartbeat", "ready-probe", &json!({})) {
+            let observed = match client.request(ops::API_V1_HEARTBEAT, "ready-probe", &json!({})) {
                 Ok(resp) if is_success(&resp) => return Ok(()),
-                Ok(resp) => last_err = format!("non-success heartbeat: {resp}"),
-                Err(err) => last_err = err.to_string(),
-            }
+                Ok(resp) => format!("non-success heartbeat: {resp}"),
+                Err(err) => err.to_string(),
+            };
             if Instant::now() >= deadline {
-                bail!("daemon not ready within {budget:?}: {last_err}");
+                bail!("daemon not ready within {budget:?}: {observed}");
             }
             thread::sleep(delay);
             delay = (delay * 2).min(Duration::from_secs(2));
@@ -186,9 +212,9 @@ impl DaemonContainer {
     /// # Errors
     /// Returns an error if the exec exits non-zero.
     pub fn exec(&self, argv: &[&str]) -> Result<String> {
-        let mut full = vec!["exec"];
-        full.extend_from_slice(argv);
-        // `exec` argv may start with flags like `-d`; insert the name after them.
+        // `exec` argv may start with docker flags like `-d`; the container name
+        // goes after them and before the command. Everything after the command
+        // token is passed through verbatim.
         let mut rebuilt: Vec<String> = vec!["exec".to_owned()];
         let mut rest = argv.iter();
         for token in rest.by_ref() {
@@ -201,19 +227,18 @@ impl DaemonContainer {
             }
         }
         rebuilt.extend(rest.map(|s| (*s).to_owned()));
-        let _ = full;
         docker(&rebuilt)
     }
 
     /// Best-effort tail of the daemon log for diagnostics (not an oracle).
     fn daemon_log(&self) -> Option<String> {
         docker(&[
-            "exec",
-            &self.name,
-            "tail",
-            "-n",
-            "40",
-            &format!("{DAEMON_DIR}/runtime.log"),
+            "exec".to_owned(),
+            self.name.clone(),
+            "tail".to_owned(),
+            "-n".to_owned(),
+            "40".to_owned(),
+            format!("{DAEMON_DIR}/runtime.log"),
         ])
         .ok()
     }
@@ -224,7 +249,7 @@ impl Drop for DaemonContainer {
         if self.keep {
             return;
         }
-        let _ = docker(&["rm", "-f", &self.name]);
+        let _ = docker(&["rm".to_owned(), "-f".to_owned(), self.name.clone()]);
     }
 }
 

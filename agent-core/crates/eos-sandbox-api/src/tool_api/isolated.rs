@@ -53,6 +53,7 @@ pub async fn exit_isolated_workspace(
         "description".to_owned(),
         Value::String(request.base.description_or("exit isolated workspace")),
     );
+    payload.insert("grace_s".to_owned(), Value::from(request.grace_s));
     let response = transport
         .call(
             sandbox_id,
@@ -96,20 +97,21 @@ fn parse_exit_result(response: &JsonObject) -> ExitIsolatedWorkspaceResult {
 }
 
 fn lifecycle_base(response: &JsonObject) -> LifecycleResultBase {
+    let error = response
+        .get("error")
+        .filter(|value| !value.is_null())
+        .map(lifecycle_error);
     LifecycleResultBase {
         success: response
             .get("success")
             .and_then(Value::as_bool)
-            .unwrap_or(true),
+            .unwrap_or(error.is_none()),
         timings: response
             .get("timings")
             .and_then(Value::as_object)
             .map(f64_map)
             .unwrap_or_default(),
-        error: response
-            .get("error")
-            .filter(|value| !value.is_null())
-            .map(lifecycle_error),
+        error,
     }
 }
 
@@ -185,7 +187,10 @@ mod tests {
             payload: JsonObject,
             timeout_s: u32,
         ) -> Result<JsonObject, SandboxApiError> {
-            self.calls.lock().expect("calls lock").push((op, payload, timeout_s));
+            self.calls
+                .lock()
+                .expect("calls lock")
+                .push((op, payload, timeout_s));
             Ok(match op {
                 DaemonOp::IsolatedWorkspaceEnter => object(json!({
                     "success": true,
@@ -248,6 +253,24 @@ mod tests {
         let calls = transport.calls.lock().expect("calls lock");
         assert_eq!(calls[0].0, DaemonOp::IsolatedWorkspaceExit);
         assert_eq!(calls[0].1["agent_id"], json!("agent-1"));
+        assert_eq!(calls[0].1["grace_s"], json!(0.25));
+    }
+
+    #[test]
+    fn lifecycle_error_defaults_to_failure() {
+        let result = parse_enter_result(&object(json!({
+            "error": {
+                "kind": "already_active",
+                "message": "isolated workspace already active",
+                "details": {"agent_id": "agent-1"}
+            }
+        })));
+
+        assert!(!result.base.success);
+        assert_eq!(
+            result.base.error.expect("lifecycle error").kind,
+            "already_active"
+        );
     }
 
     fn base() -> SandboxRequestBase {

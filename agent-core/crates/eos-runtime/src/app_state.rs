@@ -20,11 +20,14 @@ use eos_sandbox_host::{
     resolve_provider_kind, DaemonClient, DockerProviderAdapter, ProviderRegistry,
     RequestSandboxBinding, RequestSandboxProvisioner, SandboxLifecycle,
 };
-use eos_skills::{load_skill_registry, SkillRegistry};
+use eos_skills::SkillRegistry;
 use eos_state::{
     AgentRunStore, AttemptStore, IterationStore, ModelStore, RequestStore, TaskStore, WorkflowStore,
 };
-use eos_tools::{build_default_registry, CallerScope, ToolConfigSet, ToolKey, ToolRegistry};
+use eos_tools::{
+    build_default_registry, CallerScope, IsolatedWorkspacePort, ToolConfigSet, ToolKey,
+    ToolRegistry,
+};
 use eos_types::RequestId;
 use tokio_util::sync::CancellationToken;
 
@@ -34,6 +37,7 @@ use tokio_util::sync::CancellationToken;
 // composition root and the `start_request` signature.
 pub use eos_engine::{EventCallback, EventSourceFactory};
 
+use crate::isolated_workspace::RuntimeIsolatedWorkspace;
 use crate::plugin_tools::register_plugin_tools;
 
 /// Request-scoped sandbox provisioning seam.
@@ -113,6 +117,7 @@ pub struct AppState {
     pub(crate) agent_registry: Arc<AgentRegistry>,
     pub(crate) skill_registry: Arc<SkillRegistry>,
     pub(crate) transport: Arc<dyn SandboxTransport>,
+    pub(crate) isolated_workspace: Arc<dyn IsolatedWorkspacePort>,
     pub(crate) provisioner: Arc<dyn RequestProvisioner>,
     pub(crate) shutdown: CancellationToken,
 }
@@ -416,6 +421,8 @@ impl AppStateBuilder {
         let daemon_client = Arc::new(DaemonClient::new(provider_registry));
         let transport: Arc<dyn SandboxTransport> =
             self.transport.unwrap_or_else(|| daemon_client.clone());
+        let isolated_workspace: Arc<dyn IsolatedWorkspacePort> =
+            Arc::new(RuntimeIsolatedWorkspace::new(transport.clone()));
         let eosd_artifact_dir = default_eosd_artifact_dir(&repo_root);
 
         let provisioner: Arc<dyn RequestProvisioner> = self.provisioner.unwrap_or_else(|| {
@@ -447,6 +454,7 @@ impl AppStateBuilder {
             agent_registry,
             skill_registry,
             transport,
+            isolated_workspace,
             provisioner,
             shutdown: CancellationToken::new(),
         })
@@ -511,7 +519,7 @@ fn build_agent_registry(dir: Option<&std::path::Path>) -> Result<AgentRegistry> 
 
 fn build_skill_registry(root: Option<&std::path::Path>) -> Result<SkillRegistry> {
     match root {
-        Some(root) => load_skill_registry(root).context("loading skills"),
+        Some(root) => SkillRegistry::load_from_dir(root).context("loading skills"),
         None => Ok(SkillRegistry::new()),
     }
 }

@@ -52,11 +52,9 @@ impl ToolExecutor for EnterIsolatedWorkspace {
             };
         let sandbox_id = ctx.require_sandbox_id()?;
         let agent_id = ctx.agent_id();
-        let output = ctx
-            .require_isolated_workspace()?
+        ctx.require_isolated_workspace()?
             .enter(&agent_id, sandbox_id, &parsed.layer_stack_root)
-            .await?;
-        Ok(ToolResult::ok(output))
+            .await
     }
 }
 
@@ -76,11 +74,9 @@ impl ToolExecutor for ExitIsolatedWorkspace {
             };
         let sandbox_id = ctx.require_sandbox_id()?;
         let agent_id = ctx.agent_id();
-        let output = ctx
-            .require_isolated_workspace()?
+        ctx.require_isolated_workspace()?
             .exit(&agent_id, sandbox_id, parsed.grace_s)
-            .await?;
-        Ok(ToolResult::ok(output))
+            .await
     }
 }
 

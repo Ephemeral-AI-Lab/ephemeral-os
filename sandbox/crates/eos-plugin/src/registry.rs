@@ -85,7 +85,7 @@ impl PluginOpRegistration {
 }
 
 /// Whether `name` matches the Python `_PLUGIN_NAME_RE` (`^[A-Za-z_][A-Za-z0-9_]*$`).
-fn is_valid_plugin_name(name: &str) -> bool {
+pub(crate) fn is_valid_plugin_name(name: &str) -> bool {
     let mut chars = name.chars();
     match chars.next() {
         Some(c) if c == '_' || c.is_ascii_alphabetic() => {}

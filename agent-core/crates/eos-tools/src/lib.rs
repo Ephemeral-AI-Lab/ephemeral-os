@@ -2,8 +2,9 @@
 //! [`ToolIntent`] classification, the [`ToolError`] framework-fault enum, the
 //! [`ToolExecutor`] seam, the [`ToolRegistry`], the colocated `ToolSpec` sources
 //! (one per model-facing tool), the terminal-descriptor catalog, the inner
-//! [`execute_tool_once`] pipeline (parse → pre-hooks → execute → validate output →
-//! stamp-terminal-on-success), and the pure batch-dispatch decision functions
+//! [`execute_tool_once`] pipeline (reject background → pre-hooks on raw input →
+//! execute/body parse → validate output → stamp-terminal-on-success), and the
+//! pure batch-dispatch decision functions
 //! ([`reject_terminal_batch`], [`lifecycle_batch_decision`]).
 //!
 //! It owns the *decisions*; `eos-engine` owns the async query/dispatch *loop*,

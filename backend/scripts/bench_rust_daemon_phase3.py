@@ -25,6 +25,7 @@ import hashlib
 import json
 import os
 import platform
+import shlex
 import sys
 import time
 import uuid
@@ -90,6 +91,7 @@ def main(argv: list[str] | None = None) -> int:
     print(
         f"wrote {out} "
         f"(cp4s={report['cp4s']['gate_pass']} all={report['gate_pass']} "
+        f"space={report.get('space', {}).get('gate_pass')} "
         f"shell_noop={report['cp4s']['gates'].get('shell_noop_70pct_faster_than_phase1')} "
         f"run_id={report['run_id']})"
     )
@@ -169,6 +171,24 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
         "--skip-load",
         action="store_true",
         help="Skip the concurrent shell-string load matrix.",
+    )
+    parser.add_argument(
+        "--space-fixture-mib",
+        type=int,
+        default=8,
+        help=(
+            "Size of the base-only fixture file used by the disk-space gate. "
+            "Set 0 to disable fixture seeding and skip the space gate."
+        ),
+    )
+    parser.add_argument(
+        "--space-layer-overhead-bytes",
+        type=int,
+        default=1024 * 1024,
+        help=(
+            "Allowed apparent-size overhead for each non-base layer before the "
+            "space gate treats it as a likely full-base copy."
+        ),
     )
     parser.add_argument(
         "--keep-container",
@@ -293,8 +313,16 @@ async def run_phase3(args: argparse.Namespace) -> dict[str, Any]:
                 "rounds_per_concurrency": max(0, args.load_rounds),
                 "skipped": bool(args.skip_load),
             },
+            "space": {
+                "fixture_mib": max(0, args.space_fixture_mib),
+                "layer_overhead_bytes": max(0, args.space_layer_overhead_bytes),
+            },
         }
         await reset_runtime(bench)
+        report["space"]["fixture"] = await seed_space_fixture(
+            bench,
+            size_mib=max(0, args.space_fixture_mib),
+        )
         report["artifact"] = await upload_artifact(bench, args.artifact)
 
         with temporary_env("EOS_SANDBOX_RUNTIME", "rust"):
@@ -322,6 +350,10 @@ async def run_phase3(args: argparse.Namespace) -> dict[str, Any]:
                 {"workspace_root": WORKSPACE_ROOT, "reset": True},
                 layer_stack_root=LAYER_STACK_ROOT,
                 timeout=180,
+            )
+            report["space"]["after_base"] = await sample_layer_stack_space(
+                bench,
+                "after_base",
             )
             report["ready"] = await daemon_client.call_daemon_api(
                 bench.sandbox_id,
@@ -399,6 +431,10 @@ async def run_phase3(args: argparse.Namespace) -> dict[str, Any]:
                 lambda response: expect_search_count(response, 1),
             )
             memory_samples.append(await sample_daemon_memory(bench, "after_grep"))
+            report["space"]["before_load_matrix"] = await sample_layer_stack_space(
+                bench,
+                "before_load_matrix",
+            )
             if args.skip_load:
                 report["load"]["gate_pass"] = True
                 report["load"]["operations"] = {}
@@ -414,6 +450,18 @@ async def run_phase3(args: argparse.Namespace) -> dict[str, Any]:
                 report["load"]["gate_pass"] = bool(
                     report["load"]["evaluation"]["gate_pass"]
                 )
+            report["space"]["after_load_matrix"] = await sample_layer_stack_space(
+                bench,
+                "after_load_matrix",
+            )
+            report["space"]["evaluation"] = evaluate_space_accounting(
+                report["space"],
+                report["load"],
+                layer_overhead_bytes=max(0, args.space_layer_overhead_bytes),
+            )
+            report["space"]["gate_pass"] = bool(
+                report["space"]["evaluation"]["gate_pass"]
+            )
             memory_samples.append(await sample_daemon_memory(bench, "after_load_matrix"))
             await asyncio.sleep(max(0.0, float(args.drain_seconds)))
             memory_samples.append(await sample_daemon_memory(bench, "idle_after_drain"))
@@ -433,10 +481,214 @@ async def run_phase3(args: argparse.Namespace) -> dict[str, Any]:
             and report["final_state"]["gate_pass"]
             and report["cp4s"]["gate_pass"]
             and report["load"]["gate_pass"]
+            and report["space"]["gate_pass"]
         )
         return report
     finally:
         await bench.close(keep=args.keep_container)
+
+
+async def seed_space_fixture(bench: DockerBench, *, size_mib: int) -> dict[str, Any]:
+    if size_mib <= 0:
+        return {"enabled": False, "gate_pass": True}
+    fixture_dir = f"{WORKSPACE_ROOT}/.phase3-space-fixture"
+    fixture_path = f"{fixture_dir}/base-{size_mib}m.bin"
+    target_bytes = size_mib * 1024 * 1024
+    command = f"""
+set -eu
+fixture_dir={shlex.quote(fixture_dir)}
+fixture_path={shlex.quote(fixture_path)}
+rm -rf "$fixture_dir"
+mkdir -p "$fixture_dir"
+dd if=/dev/zero of="$fixture_path" bs=1048576 count={size_mib} status=none
+sync
+printf 'enabled=1\\n'
+printf 'path=%s\\n' "$fixture_path"
+printf 'target_bytes={target_bytes}\\n'
+printf 'actual_bytes='
+stat -c %s "$fixture_path"
+"""
+    result = await bench.exec(command, timeout=max(30, size_mib * 2))
+    if not bool(getattr(result, "success", False)):
+        raise RuntimeError(
+            "failed to seed Phase 3 space fixture:\n"
+            f"stdout={getattr(result, 'stdout', '')}\n"
+            f"stderr={getattr(result, 'stderr', '')}"
+        )
+    values = parse_shell_kv(getattr(result, "stdout", ""))
+    actual_bytes = int_or_none(values.get("actual_bytes"))
+    return {
+        "enabled": True,
+        "path": values.get("path", fixture_path),
+        "target_bytes": target_bytes,
+        "actual_bytes": actual_bytes,
+        "gate_pass": actual_bytes == target_bytes,
+    }
+
+
+async def sample_layer_stack_space(bench: DockerBench, label: str) -> dict[str, Any]:
+    command = f"""
+set -eu
+root={shlex.quote(LAYER_STACK_ROOT)}
+printf 'label={shlex.quote(label)}\\n'
+if [ ! -d "$root/layers" ]; then
+  printf 'available=0\\n'
+  exit 0
+fi
+printf 'available=1\\n'
+printf 'total_apparent_bytes='
+du -sb "$root" | awk '{{print $1}}'
+printf 'total_disk_bytes='
+du -sB1 "$root" | awk '{{print $1}}'
+base="$root/layers/B000001-base"
+if [ -d "$base" ]; then
+  printf 'base_layer_present=1\\n'
+  printf 'base_apparent_bytes='
+  du -sb "$base" | awk '{{print $1}}'
+  printf 'base_disk_bytes='
+  du -sB1 "$base" | awk '{{print $1}}'
+else
+  printf 'base_layer_present=0\\n'
+fi
+find "$root/layers" -mindepth 1 -maxdepth 1 -type d -print | sort | while IFS= read -r layer; do
+  name=${{layer##*/}}
+  apparent=$(du -sb "$layer" | awk '{{print $1}}')
+  disk=$(du -sB1 "$layer" | awk '{{print $1}}')
+  printf 'layer\\t%s\\t%s\\t%s\\n' "$name" "$apparent" "$disk"
+done
+"""
+    result = await bench.exec(command, timeout=30)
+    if not bool(getattr(result, "success", False)):
+        raise RuntimeError(
+            "failed to sample Phase 3 layer-stack space:\n"
+            f"stdout={getattr(result, 'stdout', '')}\n"
+            f"stderr={getattr(result, 'stderr', '')}"
+        )
+    values: dict[str, Any] = {}
+    layers: list[dict[str, Any]] = []
+    for line in getattr(result, "stdout", "").splitlines():
+        if line.startswith("layer\t"):
+            _, name, apparent, disk = line.split("\t", 3)
+            layers.append(
+                {
+                    "name": name,
+                    "apparent_bytes": int(apparent),
+                    "disk_bytes": int(disk),
+                    "is_base": name == "B000001-base",
+                }
+            )
+            continue
+        if "=" not in line:
+            continue
+        key, raw = line.split("=", 1)
+        values[key] = int(raw) if raw.isdigit() else raw
+    non_base_layers = [layer for layer in layers if not layer["is_base"]]
+    return {
+        "label": label,
+        "available": values.get("available") == 1,
+        "total_apparent_bytes": values.get("total_apparent_bytes"),
+        "total_disk_bytes": values.get("total_disk_bytes"),
+        "base_layer_present": values.get("base_layer_present") == 1,
+        "base_apparent_bytes": values.get("base_apparent_bytes"),
+        "base_disk_bytes": values.get("base_disk_bytes"),
+        "layer_count": len(layers),
+        "non_base_layer_count": len(non_base_layers),
+        "max_non_base_apparent_bytes": max(
+            [int(layer["apparent_bytes"]) for layer in non_base_layers],
+            default=0,
+        ),
+        "total_non_base_apparent_bytes": sum(
+            int(layer["apparent_bytes"]) for layer in non_base_layers
+        ),
+        "layers": layers,
+    }
+
+
+def evaluate_space_accounting(
+    space: dict[str, Any],
+    load: dict[str, Any],
+    *,
+    layer_overhead_bytes: int,
+) -> dict[str, Any]:
+    fixture = space.get("fixture", {})
+    if not fixture.get("enabled"):
+        return {
+            "skipped": True,
+            "reason": "space fixture disabled",
+            "gate_pass": True,
+        }
+    if load.get("skipped"):
+        return {
+            "skipped": True,
+            "reason": "load matrix skipped",
+            "gate_pass": True,
+        }
+    after_base = space.get("after_base", {})
+    after_load = space.get("after_load_matrix", {})
+    base_bytes = int_or_none(after_base.get("base_apparent_bytes"))
+    fixture_bytes = int_or_none(fixture.get("target_bytes"))
+    max_non_base = int_or_none(after_load.get("max_non_base_apparent_bytes"))
+    total_non_base = int_or_none(after_load.get("total_non_base_apparent_bytes"))
+    successful_load_writes = successful_load_small_writes(load)
+    per_layer_limit = max(
+        layer_overhead_bytes,
+        int(float(base_bytes or 0) * 0.10),
+    )
+    samples_available = bool(after_base.get("available")) and bool(
+        after_load.get("available")
+    )
+    base_fixture_present = (
+        base_bytes is not None
+        and fixture_bytes is not None
+        and base_bytes >= fixture_bytes
+    )
+    no_full_base_copy_layer = (
+        max_non_base is not None and max_non_base <= per_layer_limit
+    )
+    return {
+        "skipped": False,
+        "samples_available": samples_available,
+        "successful_load_writes": successful_load_writes,
+        "base_apparent_bytes": base_bytes,
+        "fixture_target_bytes": fixture_bytes,
+        "non_base_layer_count": after_load.get("non_base_layer_count"),
+        "max_non_base_apparent_bytes": max_non_base,
+        "total_non_base_apparent_bytes": total_non_base,
+        "per_layer_full_copy_limit_bytes": per_layer_limit,
+        "base_fixture_present": base_fixture_present,
+        "no_full_base_copy_layer": no_full_base_copy_layer,
+        "gate_pass": bool(
+            samples_available
+            and bool(fixture.get("gate_pass"))
+            and base_fixture_present
+            and no_full_base_copy_layer
+        ),
+    }
+
+
+def successful_load_small_writes(load: dict[str, Any]) -> int:
+    total = 0
+    for summary in load.get("operations", {}).get("small_write", {}).values():
+        total += int(summary.get("success_count") or 0)
+    return total
+
+
+def parse_shell_kv(raw: str) -> dict[str, str]:
+    values: dict[str, str] = {}
+    for line in raw.splitlines():
+        if "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        values[key.strip()] = value.strip()
+    return values
+
+
+def int_or_none(value: object) -> int | None:
+    if isinstance(value, int):
+        return value
+    if isinstance(value, str) and value.isdigit():
+        return int(value)
+    return None
 
 
 def small_write_request(index: int, invocation_id: str) -> tuple[str, dict[str, Any]]:

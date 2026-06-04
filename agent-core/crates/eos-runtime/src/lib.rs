@@ -24,6 +24,7 @@
 mod agent_runner;
 mod app_state;
 mod entry;
+mod isolated_workspace;
 pub mod observability;
 mod plugin_tools;
 mod root_agent;

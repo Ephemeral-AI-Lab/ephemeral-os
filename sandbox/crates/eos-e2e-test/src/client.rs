@@ -39,6 +39,16 @@ impl ProtocolClient {
         self.addr
     }
 
+    /// A clone of this client with a different auth token (for auth tests).
+    #[must_use]
+    pub fn with_token(&self, auth_token: Option<String>) -> Self {
+        Self {
+            addr: self.addr,
+            auth_token,
+            timeout: self.timeout,
+        }
+    }
+
     /// Issue one op with the client's configured auth token.
     ///
     /// Returns the decoded response `Value` (a success payload OR a daemon error

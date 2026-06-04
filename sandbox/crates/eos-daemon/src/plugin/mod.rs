@@ -35,6 +35,8 @@ use overlay::PluginOverlayCommand;
 use process::{PluginProcessSpec, PluginServiceOverlay};
 
 type SharedPpcClient = Arc<ppc_router::PpcClient>;
+const MAX_PLUGIN_RESPONSE_BYTES: usize = 8 * 1024 * 1024;
+const MAX_PLUGIN_CALLER_FIELD_CHARS: usize = 256;
 
 const WORKSPACE_SNAPSHOT_REFRESH_OP: &str = "daemon.workspace_snapshot_refresh";
 
@@ -328,6 +330,7 @@ fn register_ppc_client_for_tests(
 }
 
 fn ensure_plugin_family_allowed(args: &Value) -> Result<(), DaemonError> {
+    validate_plugin_caller_fields(args)?;
     let agent_id = args
         .get("agent_id")
         .and_then(Value::as_str)
@@ -337,6 +340,52 @@ fn ensure_plugin_family_allowed(args: &Value) -> Result<(), DaemonError> {
         return Err(DaemonError::Plugin(
             PluginError::ForbiddenInIsolatedWorkspace,
         ));
+    }
+    Ok(())
+}
+
+fn validate_plugin_caller_fields(args: &Value) -> Result<(), DaemonError> {
+    const TOP_LEVEL_FIELDS: &[&str] = &["agent_id", "invocation_id"];
+    const CALLER_FIELDS: &[&str] = &[
+        "agent_id",
+        "run_id",
+        "agent_run_id",
+        "task_id",
+        "request_id",
+        "attempt_id",
+        "workflow_id",
+        "tool_id",
+    ];
+
+    for field in TOP_LEVEL_FIELDS {
+        validate_plugin_audit_field(field, args.get(*field))?;
+    }
+    if let Some(caller) = args.get("caller").and_then(Value::as_object) {
+        for field in CALLER_FIELDS {
+            validate_plugin_audit_field(field, caller.get(*field))?;
+        }
+    }
+    Ok(())
+}
+
+fn validate_plugin_audit_field(field: &str, value: Option<&Value>) -> Result<(), DaemonError> {
+    let Some(value) = value else {
+        return Ok(());
+    };
+    let Some(text) = value.as_str() else {
+        return Err(DaemonError::Plugin(PluginError::Ppc(format!(
+            "plugin caller field {field} must be a string"
+        ))));
+    };
+    if text.contains('\0') {
+        return Err(DaemonError::Plugin(PluginError::Ppc(format!(
+            "plugin caller field {field} contains NUL"
+        ))));
+    }
+    if text.chars().count() > MAX_PLUGIN_CALLER_FIELD_CHARS {
+        return Err(DaemonError::Plugin(PluginError::Ppc(format!(
+            "plugin caller field {field} exceeds {MAX_PLUGIN_CALLER_FIELD_CHARS} characters"
+        ))));
     }
     Ok(())
 }
@@ -1519,6 +1568,11 @@ fn dispatch_connected_self_managed_route(
 }
 
 fn response_payload_from_reply(reply: &PpcEnvelope) -> Result<Option<Value>, DaemonError> {
+    if reply.body.len() > MAX_PLUGIN_RESPONSE_BYTES {
+        return Err(DaemonError::Plugin(PluginError::Ppc(format!(
+            "plugin response exceeds {MAX_PLUGIN_RESPONSE_BYTES} byte limit"
+        ))));
+    }
     let payload: Value =
         serde_json::from_str(&reply.body).map_err(|err| PluginError::Ppc(err.to_string()))?;
     if payload.is_object() {

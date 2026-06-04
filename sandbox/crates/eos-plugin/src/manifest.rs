@@ -1,15 +1,18 @@
 //! Plugin manifest contracts.
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 
 use eos_protocol::Intent;
 use serde::{Deserialize, Serialize};
 
 use crate::error::{PluginError, Result};
-use crate::service::{require_non_empty, validate_identifier, RefreshStrategy, ServiceMode};
+use crate::service::{
+    require_non_empty, validate_identifier, validate_plugin_id, RefreshStrategy, ServiceMode,
+};
 
 /// Top-level plugin manifest consumed by `api.plugin.ensure`.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct PluginManifest {
     pub plugin_id: String,
     pub plugin_version: String,
@@ -29,11 +32,12 @@ impl PluginManifest {
     /// fields are empty, services or operations are duplicated, or an operation
     /// references an unknown service.
     pub fn validate(&self) -> Result<()> {
-        validate_identifier("plugin_id", &self.plugin_id)?;
+        validate_plugin_id("plugin_id", &self.plugin_id)?;
         require_non_empty("plugin_version", &self.plugin_version)?;
         require_non_empty("plugin_digest", &self.plugin_digest)?;
 
         let mut service_ids = BTreeSet::new();
+        let mut service_modes = BTreeMap::new();
         for service in &self.services {
             service.validate()?;
             if !service_ids.insert(service.service_id.as_str()) {
@@ -42,11 +46,12 @@ impl PluginManifest {
                     service.service_id
                 )));
             }
+            service_modes.insert(service.service_id.as_str(), service.service_mode);
         }
 
         let mut op_names = BTreeSet::new();
         for operation in &self.operations {
-            operation.validate(&service_ids)?;
+            operation.validate(&service_modes)?;
             if !op_names.insert(operation.op_name.as_str()) {
                 return Err(PluginError::Manifest(format!(
                     "duplicate op_name {}",
@@ -60,6 +65,7 @@ impl PluginManifest {
 
 /// One service declared by a plugin payload.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct PluginServiceManifest {
     pub service_id: String,
     pub service_profile_digest: String,
@@ -103,6 +109,7 @@ impl PluginServiceManifest {
 
 /// One public `plugin.<plugin>.<op>` operation.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct PluginOperationManifest {
     pub op_name: String,
     pub intent: Intent,
@@ -115,8 +122,8 @@ pub struct PluginOperationManifest {
 }
 
 impl PluginOperationManifest {
-    fn validate(&self, service_ids: &BTreeSet<&str>) -> Result<()> {
-        validate_identifier("op_name", &self.op_name)?;
+    fn validate(&self, service_modes: &BTreeMap<&str, ServiceMode>) -> Result<()> {
+        require_non_empty("op_name", &self.op_name)?;
         if self.intent == Intent::Lifecycle {
             return Err(PluginError::Manifest(
                 "Intent::Lifecycle is reserved for sandbox lifecycle ops".to_owned(),
@@ -130,10 +137,24 @@ impl PluginOperationManifest {
         }
         if let Some(service_id) = &self.service_id {
             validate_identifier("service_id", service_id)?;
-            if !service_ids.contains(service_id.as_str()) {
+            if !service_modes.contains_key(service_id.as_str()) {
                 return Err(PluginError::Manifest(format!(
                     "op {} references unknown service_id {}",
                     self.op_name, service_id
+                )));
+            }
+        }
+        if self.intent == Intent::WriteAllowed && self.auto_workspace_overlay {
+            let Some(service_id) = &self.service_id else {
+                return Err(PluginError::Manifest(format!(
+                    "write op {} with auto_workspace_overlay requires an oneshot_overlay service",
+                    self.op_name
+                )));
+            };
+            if service_modes.get(service_id.as_str()) != Some(&ServiceMode::OneshotOverlay) {
+                return Err(PluginError::Manifest(format!(
+                    "write op {} with auto_workspace_overlay requires an oneshot_overlay service",
+                    self.op_name
                 )));
             }
         }
@@ -208,6 +229,64 @@ mod tests {
             manifest.validate(),
             Err(PluginError::Manifest(message)) if message.contains("duplicate op_name")
         ));
+    }
+
+    #[test]
+    fn plugin_id_matches_python_name_rule() {
+        let mut manifest = manifest();
+        manifest.plugin_id = "_Lsp9".to_owned();
+        assert!(manifest.validate().is_ok());
+
+        for invalid in ["my-plugin", "my.plugin", "9lsp", ""] {
+            let mut manifest = manifest();
+            manifest.plugin_id = invalid.to_owned();
+            assert!(matches!(
+                manifest.validate(),
+                Err(PluginError::Manifest(message)) if message.contains("plugin_id")
+            ));
+        }
+    }
+
+    #[test]
+    fn op_name_is_only_non_empty_at_manifest_boundary() -> TestResult {
+        let mut manifest = manifest();
+        manifest.operations[0].op_name = "1 weird.op".to_owned();
+        manifest.validate()?;
+
+        manifest.operations[0].op_name = "   ".to_owned();
+        assert!(matches!(
+            manifest.validate(),
+            Err(PluginError::Manifest(message)) if message.contains("op_name is required")
+        ));
+        Ok(())
+    }
+
+    #[test]
+    fn rejects_unknown_setup_field() {
+        let value = serde_json::json!({
+            "plugin_id": "lsp",
+            "plugin_version": "0.1.0",
+            "plugin_digest": "digest-a",
+            "setup": "setup.sh",
+            "services": [],
+            "operations": []
+        });
+        assert!(serde_json::from_value::<PluginManifest>(value).is_err());
+    }
+
+    #[test]
+    fn auto_overlay_write_requires_oneshot_service() {
+        let mut manifest = manifest();
+        manifest.operations[0].intent = Intent::WriteAllowed;
+        manifest.operations[0].auto_workspace_overlay = true;
+        assert!(matches!(
+            manifest.validate(),
+            Err(PluginError::Manifest(message)) if message.contains("oneshot_overlay")
+        ));
+
+        manifest.services[0].service_mode = ServiceMode::OneshotOverlay;
+        manifest.services[0].refresh_strategy = RefreshStrategy::RestartService;
+        assert!(manifest.validate().is_ok());
     }
 
     #[test]

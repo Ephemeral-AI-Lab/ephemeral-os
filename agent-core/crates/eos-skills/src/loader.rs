@@ -1,9 +1,8 @@
 //! Config-rooted load orchestration (`skills/core/loader.py`).
 //!
-//! Adds the filesystem constructor [`SkillRegistry::load_from_dir`] and the
-//! free-function alias [`load_skill_registry`] that `eos-runtime` calls. The
-//! Python `cwd` parameter is **dropped** (it was always ignored, `del cwd`); the
-//! root is the explicit `skill_root` passed in by `eos-config` resolution
+//! Adds the filesystem constructor [`SkillRegistry::load_from_dir`]. The Python
+//! `cwd` parameter is **dropped** (it was always ignored, `del cwd`); the root
+//! is the explicit `skill_root` passed in by `eos-config` resolution
 //! (GC-skills-01).
 
 use std::path::Path;
@@ -36,18 +35,6 @@ impl SkillRegistry {
         }
         Ok(registry)
     }
-}
-
-/// Composition-root entry point: load the skill registry from `skill_root`.
-///
-/// A thin alias for [`SkillRegistry::load_from_dir`] giving `eos-runtime` a name
-/// parallel to the Python `load_skill_registry`; the filesystem logic lives in
-/// exactly one place.
-///
-/// # Errors
-/// Propagates [`SkillLoadError`] from [`SkillRegistry::load_from_dir`].
-pub fn load_skill_registry(skill_root: &Path) -> Result<SkillRegistry, SkillLoadError> {
-    SkillRegistry::load_from_dir(skill_root)
 }
 
 #[cfg(test)]
@@ -89,7 +76,7 @@ mod tests {
     #[test]
     fn loads_directory_skills_with_metadata_fallback() {
         let scratch = alpha_beta_fixture("dir-skills");
-        let registry = load_skill_registry(scratch.path()).unwrap();
+        let registry = SkillRegistry::load_from_dir(scratch.path()).unwrap();
         assert_eq!(registry.list_skills().count(), 2);
 
         // alpha: frontmatter name + description, source = Bundled.
@@ -115,8 +102,8 @@ mod tests {
     #[test]
     fn load_is_deterministic() {
         let scratch = alpha_beta_fixture("determinism");
-        let first = load_skill_registry(scratch.path()).unwrap();
-        let second = load_skill_registry(scratch.path()).unwrap();
+        let first = SkillRegistry::load_from_dir(scratch.path()).unwrap();
+        let second = SkillRegistry::load_from_dir(scratch.path()).unwrap();
         assert_eq!(first, second);
     }
 
@@ -128,11 +115,11 @@ mod tests {
         let _guard = CwdGuard::capture();
 
         std::env::set_current_dir(std::env::temp_dir()).unwrap();
-        let first = load_skill_registry(&root).unwrap();
+        let first = SkillRegistry::load_from_dir(&root).unwrap();
 
         let elsewhere = Scratch::new("ignore-cwd-elsewhere");
         std::env::set_current_dir(elsewhere.path()).unwrap();
-        let second = load_skill_registry(&root).unwrap();
+        let second = SkillRegistry::load_from_dir(&root).unwrap();
 
         assert_eq!(first, second);
     }
@@ -142,13 +129,16 @@ mod tests {
     fn missing_root_empty_nondir_root_errors() {
         let missing = Path::new("/no/such/skills/root");
         assert_eq!(
-            load_skill_registry(missing).unwrap().list_skills().count(),
+            SkillRegistry::load_from_dir(missing)
+                .unwrap()
+                .list_skills()
+                .count(),
             0
         );
 
         let scratch = Scratch::new("nondir-root");
         let file = scratch.write("not_a_dir", "x");
-        let err = load_skill_registry(&file).unwrap_err();
+        let err = SkillRegistry::load_from_dir(&file).unwrap_err();
         assert!(matches!(err, SkillLoadError::RootNotDir(_)), "{err:?}");
     }
 }

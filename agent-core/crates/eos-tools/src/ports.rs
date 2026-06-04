@@ -345,29 +345,30 @@ pub trait CommandSessionSupervisorPort: Sealed + Send + Sync {
 // IsolatedWorkspacePort — enter / exit isolated workspace.
 // ---------------------------------------------------------------------------
 
-/// The `eos-runtime` adapter over the `eos-sandbox-host` isolated-workspace
-/// lifecycle. The adapter enforces *no in-flight ephemeral jobs / command
-/// sessions* before `enter`, and cancels per-agent background work before
-/// `exit`. Wired at the composition root (sandbox-host is upstream of
-/// `eos-tools`, so no direct `eos-sandbox-host -> eos-tools` edge).
+/// The `eos-runtime` adapter over the sandbox isolated-workspace lifecycle.
+/// The tool pre-hooks enforce *no in-flight ephemeral jobs / command sessions*
+/// before `enter`, and cancel per-agent background work before `exit`. Wired at
+/// the composition root (sandbox-host is upstream of `eos-tools`, so no direct
+/// `eos-sandbox-host -> eos-tools` edge).
 #[async_trait]
 pub trait IsolatedWorkspacePort: Sealed + Send + Sync {
-    /// Open this agent's private isolated workspace; returns model-facing text.
+    /// Open this agent's private isolated workspace; returns the model-facing
+    /// in-band result.
     async fn enter(
         &self,
         agent_id: &str,
         sandbox_id: &SandboxId,
         layer_stack_root: &str,
-    ) -> Result<String, ToolError>;
+    ) -> Result<ToolResult, ToolError>;
 
-    /// Close and discard this agent's isolated workspace; returns model-facing
-    /// text.
+    /// Close and discard this agent's isolated workspace; returns the
+    /// model-facing in-band result.
     async fn exit(
         &self,
         agent_id: &str,
         sandbox_id: &SandboxId,
         grace_s: f64,
-    ) -> Result<String, ToolError>;
+    ) -> Result<ToolResult, ToolError>;
 }
 
 // ---------------------------------------------------------------------------

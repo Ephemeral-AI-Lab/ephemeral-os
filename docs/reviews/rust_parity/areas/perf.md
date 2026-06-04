@@ -86,12 +86,14 @@ manifest, layer_paths, timings={"layer_stack.acquire_snapshot.total_s": ...})`.
   locally packaged `eosd` (`EOSD_REMOTE_PATH = "{RUNTIME_ROOT}/eosd"`,
   default artifact `sandbox/dist/eosd-linux-amd64`), seeds a LayerStack with
   `B000001-base`, starts the Rust daemon.
-- `backend/scripts/bench_rust_daemon_phase3.py:305-323,339-427` — starts the
-  Rust daemon, builds the base from the image workspace via
-  `api.build_workspace_base`, then measures `api.v1.exec_command` (no-op +
-  small-write publish), `api.v1.glob`, `api.v1.grep`, and a **1/3/5/10
-  concurrent** shell-exec load matrix (no-op + unique-write), plus daemon RSS
-  before/between/after.
+- `backend/scripts/bench_rust_daemon_phase3.py` — starts the Rust daemon, seeds
+  an 8 MiB base-only fixture by default (`--space-fixture-mib`), builds the base
+  from the image workspace via `api.build_workspace_base`, then measures
+  `api.v1.exec_command` (no-op + small-write publish), `api.v1.glob`,
+  `api.v1.grep`, and a **1/3/5/10 concurrent** shell-exec load matrix (no-op +
+  unique-write), plus daemon RSS before/between/after. The script now samples
+  LayerStack disk usage after base build / before load / after load and folds
+  `space.gate_pass` into the top-level gate.
 
 ---
 
@@ -127,7 +129,7 @@ are on the real shell path, not dead code):
 | 1 | Lower-dir O(1): layers shared read-only (CoW), no per-overlay full copy | **match** (with caveat D2) | none | `stack.py:108-135` (lease + existing `layer_paths`, no render) | `stack.rs:343-372` (`acquire_snapshot` maps `manifest.layers`→paths, no `project`) | Per-snapshot work is O(1) lease+path-list (no render). BUT Rust serializes it under the exclusive writer lock (D2) — Python did not. |
 | 2 | Upper-dir O(n·delta): each op stores only its own delta in its own upperdir | **match** | none | `writable_dirs.py:46-52`; `capture.py:49-89` | `writable_dirs.rs:65-79` (per-`run_dir` `upper`/`work`); `path_change.rs:155-269` (walks only upperdir) | Per-op `run_dir/upper`; capture walks only upperdir → cost ∝ writes. |
 | 3 | Fast: kernel overlayfs mount + manifest CAS pointer-swap, no deep per-op copy | **match** | none | `kernel_mount.py:49-75`; `publisher.py:49-138` | `kernel_mount.rs:106-137`; `stack.rs:618-681` | `lowerdir+` per layer newest-first; fd-backed lowerdirs; `move_mount` onto `workspace_root`; publish = stage→rename→CAS→prepend→atomic manifest. |
-| 4 | Benchmarks exercise the Rust daemon (eosd) and measure these properties | **partial** | medium | `bench_rust_daemon_phase2.py:56,202-304`; `phase3.py:305-427` | (bench scripts target `eosd`; see below) | Targets eosd + concurrent load, BUT measures **latency + RSS only**; never asserts disk-space O(repo)+O(N·delta) vs O(N·repo). Phase 3 now builds a real workspace base through the daemon; the old phase2 baseline still uses a tiny one-file fixture. |
+| 4 | Benchmarks exercise the Rust daemon (eosd) and measure these properties | **source-covered; live artifact pending** | medium | `bench_rust_daemon_phase2.py:56,202-304`; `phase3.py` | (bench scripts target `eosd`; see below) | Targets eosd + concurrent load and now has a disk-space gate: seed a non-trivial base, sample LayerStack `du`, and fail if any non-base layer looks like a full base copy. The checked-in live report still needs to be rerun after this source change. |
 
 Supporting constant-parity checks (all **match**):
 
@@ -148,32 +150,37 @@ Supporting constant-parity checks (all **match**):
 
 ## Disparities
 
-### D1 — Benchmarks prove latency/RSS, not the space-complexity property (Invariant 4 partial)
-- Evidence: `bench_rust_daemon_phase3.py` gates on latency
-  (`shell_noop_70pct_faster_than_phase1`, line 98) and daemon RSS
-  (`sample_daemon_memory`, summarized lines 339-427); there is **no** `du`,
-  on-disk byte accounting, or O(N·repo) regression check. Current Phase 3 builds
-  the base through `api.build_workspace_base` against the target image workspace,
-  which is a stronger fixture than the removed ad hoc tar seeding helper, but it
-  still does not measure the disk-space invariant. The older phase2 baseline
-  remains a one-file fixture: `bench_rust_daemon_phase2.py:61`
+### D1 — Space-complexity gate added to Phase 3 bench; live artifact pending
+- Original evidence: `bench_rust_daemon_phase3.py` gated on latency
+  (`shell_noop_70pct_faster_than_phase1`) and daemon RSS
+  (`sample_daemon_memory`), but had no `du`, on-disk byte accounting, or
+  O(N·repo) regression check. Current Phase 3 already built the base through
+  `api.build_workspace_base` against the target image workspace, which is a
+  stronger fixture than the removed ad hoc tar seeding helper, but it still did
+  not measure the disk-space invariant. The older phase2 baseline remains a
+  one-file fixture: `bench_rust_daemon_phase2.py:61`
   `README_CONTENT = "# README\n…"`, `:297`
   `…/layers/B000001-base/README.md`.
+- Remediation update: the Phase 3 benchmark now seeds an 8 MiB base-only fixture
+  by default (`--space-fixture-mib`, set `0` to skip), samples LayerStack disk
+  usage with `sample_layer_stack_space` after base build / before load / after
+  load, and evaluates `space.gate_pass` with `evaluate_space_accounting`. The
+  gate verifies the fixture made it into `B000001-base` and fails if any
+  non-base layer's apparent size exceeds the larger of `--space-layer-overhead-bytes`
+  (default 1 MiB) or 10% of the base layer. A regression that copies the whole
+  base into each operation layer should therefore fail on the first copied layer,
+  instead of hiding behind aggregate latency/RSS success.
 - Why it matters: invariant 4 asks for a benchmark that *proves* the space
-  properties. The current benches prove the daemon is fast and memory-stable
-  under concurrency (real and useful), but the headline disk-space moat
-  (`O(repo)+O(N·changed_bytes)`, not `O(N·repo)`) is unverified by any in-tree
-  benchmark. The property holds **by construction** in the code (D-analysis
-  above), but is not empirically guarded against regression.
-- Suggested fix: add a bench/test that seeds a non-trivial base (e.g. MBs across
-  many files), runs N concurrent unique-write ops, and asserts post-run on-disk
-  size ≈ `base + Σ deltas` (and that no `layers/` dir holds a full copy of the
-  base per op). A `tests/live_e2e_test` space-accounting case would close it.
+  properties. The benches now have a source-level guard for the headline
+  disk-space moat (`O(repo)+O(N·changed_bytes)`, not `O(N·repo)`), in addition to
+  the existing latency/RSS gates.
+- Remaining follow-up: rerun the live Phase 3 benchmark on the target Docker
+  image and check in / cite the resulting JSON report. Until that artifact
+  exists, D1 is source-covered but not live-evidence-closed.
 - NOT a Rust regression: these are the same bench scripts used for the Python/CP-0
   baseline (`phase2.py:97-100` compares against `bench/baseline-amd64.json`). The
-  missing space-accounting gate is a **pre-existing** gap shared with the Python
-  baseline, not a check the Rust port dropped. "partial" here means "no benchmark
-  proves the space property on either side", not "Rust lost a Python check".
+  missing space-accounting gate was a **pre-existing** gap shared with the Python
+  baseline, not a check the Rust port dropped.
 
 ### D2 — Rust `acquire_snapshot` used the exclusive storage-writer lock; source-level remediation landed
 - Original evidence (Python, parent `a8c987845`): `acquire_snapshot` used the
@@ -199,7 +206,8 @@ Supporting constant-parity checks (all **match**):
   Clippy passed.
 - Remaining follow-up: re-baseline the Phase 3/Phase 3T N-concurrent throughput
   matrix on a live Docker image. The source-level contention bug is closed; the
-  measured throughput gate is not refreshed by this note.
+  measured throughput gate is not refreshed by this note. The same run should
+  also produce the first live `space.gate_pass` evidence for D1.
 
 ### D3 — `acquire_snapshot` timings relocated from stack to daemon (divergent, equivalent)
 - Evidence: Python `stack.py:108-135` records
@@ -251,18 +259,10 @@ Supporting constant-parity checks (all **match**):
 
 ## Open questions
 
-1. Is there any intent to add a disk-space (du / byte-accounting) gate to the
-   bench suite, or is the space property considered "proven by construction" and
-   guarded only by the live-e2e capture/squash correctness suites? (D1.)
-2. The shell-pre-mount squash default `64`
+1. The shell-pre-mount squash default `64`
    (`EOS_SHELL_MOUNT_SQUASH_MAX_DEPTH`, `pipeline.py:455-463`) lived in the
    now-deleted Python `ephemeral_workspace`. Does the Rust daemon implement an
    equivalent shell-pre-mount squash, or does it rely solely on the post-publish
    `AUTO_SQUASH_MAX_DEPTH=100` path? (Out of this area's core 4 invariants, but
    relevant to mount(8) depth-cap performance; not located in eos-daemon during
    this pass.)
-3. (See D2.) Is Rust taking `writer_lock.exclusive()` inside `acquire_snapshot`
-   intentional (atomicity of manifest-read + lease-acquire against a concurrent
-   swap), or an over-tightening of the lock relative to Python's process-local
-   `self._lock`? This determines whether D2 is a deliberate trade or a
-   throughput regression to fix.

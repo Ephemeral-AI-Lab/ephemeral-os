@@ -7,6 +7,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::error::{PluginError, Result};
+use crate::registry::is_valid_plugin_name;
 
 /// The daemon-managed service mode for long-lived read-only services.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
@@ -99,7 +100,7 @@ impl PluginServiceKey {
     pub fn validate(&self) -> Result<()> {
         require_absolute("layer_stack_root", &self.layer_stack_root)?;
         require_absolute("workspace_root", &self.workspace_root)?;
-        validate_identifier("plugin_id", &self.plugin_id)?;
+        validate_plugin_id("plugin_id", &self.plugin_id)?;
         require_non_empty("plugin_digest", &self.plugin_digest)?;
         validate_identifier("service_id", &self.service_id)?;
         require_non_empty("service_profile_digest", &self.service_profile_digest)?;
@@ -147,6 +148,20 @@ pub(crate) fn validate_identifier(field: &str, value: &str) -> Result<()> {
     }
 }
 
+pub(crate) fn validate_plugin_id(field: &str, value: &str) -> Result<()> {
+    let value = value.trim();
+    if value.is_empty() {
+        return Err(PluginError::Manifest(format!("{field} is required")));
+    }
+    if is_valid_plugin_name(value) {
+        Ok(())
+    } else {
+        Err(PluginError::Manifest(format!(
+            "{field} must match ^[A-Za-z_][A-Za-z0-9_]*$"
+        )))
+    }
+}
+
 pub(crate) fn require_non_empty(field: &str, value: &str) -> Result<()> {
     if value.trim().is_empty() {
         return Err(PluginError::Manifest(format!("{field} is required")));
@@ -189,6 +204,20 @@ mod tests {
         assert!(matches!(
             PluginServiceKey::new(parts),
             Err(PluginError::Manifest(message)) if message.contains("absolute")
+        ));
+    }
+
+    #[test]
+    fn plugin_id_uses_python_name_rule() {
+        assert!(validate_plugin_id("plugin_id", "_ok").is_ok());
+        assert!(validate_plugin_id("plugin_id", "Lsp").is_ok());
+        assert!(matches!(
+            validate_plugin_id("plugin_id", "my-plugin"),
+            Err(PluginError::Manifest(message)) if message.contains("must match")
+        ));
+        assert!(matches!(
+            validate_plugin_id("plugin_id", "my.plugin"),
+            Err(PluginError::Manifest(message)) if message.contains("must match")
         ));
     }
 

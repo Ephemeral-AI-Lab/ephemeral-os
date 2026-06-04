@@ -17,6 +17,7 @@ pub mod canonical;
 pub mod cas;
 pub mod envelope;
 pub mod models;
+pub mod ops;
 pub mod version;
 
 pub use canonical::canonicalize;

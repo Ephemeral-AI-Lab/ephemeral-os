@@ -17,7 +17,7 @@
 //! `docs/plans/backend_agent_core_rust_migration/impl-eos-skills.md`.
 //!
 //! The public surface is re-exported flatly:
-//! `use eos_skills::{SkillRegistry, load_skill_registry};`.
+//! `use eos_skills::{SkillDefinition, SkillRegistry};`.
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
 
@@ -31,5 +31,4 @@ mod test_support;
 
 pub use definition::{ReferenceName, SkillDefinition, SkillName, SkillSource};
 pub use error::SkillLoadError;
-pub use loader::load_skill_registry;
 pub use registry::SkillRegistry;
