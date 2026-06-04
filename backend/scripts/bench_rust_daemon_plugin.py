@@ -101,9 +101,14 @@ from bench_sandbox_e2e import (  # noqa: E402
     elapsed_ms,
     tar_file_at_path,
 )
+from sandbox.api import plugin_install as plugin_install_api  # noqa: E402
 
 PLUGIN_ROOT = "/eos/plugin"
 BUNDLE_REMOTE_DIR = "/eos/daemon"
+LSP_PACKAGE_REMOTE_DIR = "/eos/plugin-packages/lsp"
+LSP_NODE_HOME = "/eos/env/eos-node22"
+LSP_NODE_VERSION = "22.13.1"
+LSP_PYRIGHT_VERSION = "1.1.409"
 PPC_SERVICE_BUNDLE_FILES = (
     "plugins/__init__.py",
     "plugins/catalog/lsp/runtime/__init__.py",
@@ -427,7 +432,7 @@ class PyrightAdapter:
         if self.proc is not None and self.proc.poll() is None:
             return
         env = os.environ.copy()
-        env["PATH"] = "/tmp/eos-node22/bin:" + env.get("PATH", "")
+        env["PATH"] = "/eos/env/eos-node22/bin:" + env.get("PATH", "")
         setup = subprocess.run(
             [PYRIGHT_SETUP_SCRIPT],
             capture_output=True,
@@ -3928,11 +3933,12 @@ async def runtime_bridge_apply(args: dict[str, Any], ctx: Any) -> dict[str, Any]
 PYRIGHT_SETUP_SOURCE = r'''#!/usr/bin/env bash
 set -eu
 
-NODE_HOME="${EOS_NODE_HOME:-/tmp/eos-node22}"
+PACKAGE_DIR="${EOS_PLUGIN_PACKAGE_DIR:-/eos/plugin-packages/lsp}"
+NODE_HOME="${EOS_NODE_HOME:-/eos/env/eos-node22}"
 NODE_VERSION="${EOS_NODE_VERSION:-22.13.1}"
 PYRIGHT_VERSION="${EOS_PYRIGHT_VERSION:-1.1.409}"
-MARKER="/eos/plugin/.rust_pyright_installed"
-LOCK_DIR="/eos/plugin/.rust_pyright_setup.lock"
+MARKER="$PACKAGE_DIR/.rust_pyright_installed"
+LOCK_DIR="$PACKAGE_DIR/.rust_pyright_setup.lock"
 LOCK_OWNER="$LOCK_DIR/owner"
 LOCK_STALE_AFTER_S="${EOS_PYRIGHT_SETUP_LOCK_STALE_AFTER_S:-900}"
 
@@ -3988,42 +3994,26 @@ if [ -f "$MARKER" ] && command -v pyright-langserver >/dev/null 2>&1; then
     exit 0
 fi
 
-download_node() {
-    arch="$(uname -m)"
-    case "$arch" in
-        x86_64) node_arch=x64 ;;
-        aarch64|arm64) node_arch=arm64 ;;
-        *) echo "unsupported arch: $arch" >&2; return 2 ;;
-    esac
-
-    archive="node-v${NODE_VERSION}-linux-${node_arch}.tar.xz"
-    urls="${EOS_NODE_DOWNLOAD_URLS:-https://registry.npmmirror.com/-/binary/node/v${NODE_VERSION}/${archive} https://nodejs.org/dist/v${NODE_VERSION}/${archive}}"
-    mkdir -p "$NODE_HOME"
-    cd "$NODE_HOME"
-    for url in $urls; do
-        rm -f node.tar.xz
-        if curl -fL --retry 2 --connect-timeout 10 --max-time 240 "$url" -o node.tar.xz; then
-            break
-        fi
-        echo "node download failed from $url" >&2
-    done
-    if [ ! -s node.tar.xz ]; then
-        echo "failed to download Node ${NODE_VERSION}" >&2
-        return 35
+if [ ! -x "$NODE_HOME/bin/node" ] || [ ! -x "$NODE_HOME/bin/npm" ]; then
+    if [ ! -s "$PACKAGE_DIR/node.tar.xz" ]; then
+        echo "missing host-uploaded Node archive: $PACKAGE_DIR/node.tar.xz" >&2
+        exit 35
     fi
-    tar --no-same-owner --no-same-permissions -xJf node.tar.xz --strip-components=1
-}
-
-if ! command -v node >/dev/null 2>&1 || ! command -v npm >/dev/null 2>&1; then
-    download_node
+    mkdir -p "$NODE_HOME"
+    tar --no-same-owner --no-same-permissions -xJf "$PACKAGE_DIR/node.tar.xz" \
+        -C "$NODE_HOME" --strip-components=1
 fi
 
 export PATH="$NODE_HOME/bin:$PATH"
 cd "$NODE_HOME"
 npm config set prefix "$NODE_HOME"
-if ! command -v pyright-langserver >/dev/null 2>&1; then
-    npm install -g --omit=optional "pyright@${PYRIGHT_VERSION}" || \
-        npm --registry=https://registry.npmmirror.com install -g --omit=optional "pyright@${PYRIGHT_VERSION}"
+if [ ! -x "$NODE_HOME/bin/pyright-langserver" ]; then
+    if [ ! -s "$PACKAGE_DIR/pyright.tgz" ]; then
+        echo "missing host-uploaded Pyright package: $PACKAGE_DIR/pyright.tgz" >&2
+        exit 36
+    fi
+    npm install -g --offline --cache "$PACKAGE_DIR/npm-cache" \
+        --omit=optional "$PACKAGE_DIR/pyright.tgz"
 fi
 
 node -v
@@ -4142,6 +4132,8 @@ async def run(args: argparse.Namespace) -> dict[str, Any]:
                 "oneshot_script": ONESHOT_SCRIPT,
                 "vanilla_package_script": VANILLA_PACKAGE_SCRIPT,
                 "pyright_setup_script": PYRIGHT_SETUP_SCRIPT,
+                "lsp_package_dir": LSP_PACKAGE_REMOTE_DIR,
+                "lsp_node_home": LSP_NODE_HOME,
                 "runtime_bridge_server": RUNTIME_BRIDGE_SERVER,
                 "recover_marker": RECOVER_MARKER,
                 "target": TARGET_REL,
@@ -4158,6 +4150,7 @@ async def run(args: argparse.Namespace) -> dict[str, Any]:
         report["artifact"] = await upload_artifact(bench, args.artifact)
         report["harness"] = await install_harness(bench)
         report["experiment_dirs"] = await prepare_experiment_dirs(bench)
+        report["lsp_package_upload"] = await upload_lsp_runtime_packages(bench)
         report["isolated_gate_environment"] = await configure_isolated_gate_environment(
             bench,
         )
@@ -4166,6 +4159,7 @@ async def run(args: argparse.Namespace) -> dict[str, Any]:
         if (
             not report["harness"]["gate_pass"]
             or not report["experiment_dirs"]["gate_pass"]
+            or not report["lsp_package_upload"]["gate_pass"]
             or not report["isolated_gate_environment"]["gate_pass"]
             or report["pyright_setup"]["exit_code"] != 0
         ):
@@ -6374,7 +6368,7 @@ async def install_harness(bench: DockerBench) -> dict[str, Any]:
     runtime_bridge_payload = RUNTIME_BRIDGE_SERVER_SOURCE.encode("utf-8")
     pyright_setup_payload = PYRIGHT_SETUP_SOURCE.encode("utf-8")
     ppc_service_bundle_bytes: dict[str, int] = {}
-    staging_dir = f"/tmp/eos-plugin-harness-{uuid.uuid4().hex}"
+    staging_dir = f"/eos/plugin-harness-staging/eos-plugin-harness-{uuid.uuid4().hex}"
     staging_file = f"{staging_dir}/rust_ppc_harness.py"
     staging_oneshot = f"{staging_dir}/rust_oneshot_worker.py"
     staging_vanilla_package = f"{staging_dir}/rust_vanilla_package.py"
@@ -6507,6 +6501,114 @@ async def install_harness(bench: DockerBench) -> dict[str, Any]:
             getattr(finalize, "exit_code", 1) == 0
             and getattr(stat, "exit_code", 1) == 0
         ),
+    }
+
+
+async def upload_lsp_runtime_packages(bench: DockerBench) -> dict[str, Any]:
+    arch_probe = await bench.exec("uname -m", timeout=15)
+    stdout = str(getattr(arch_probe, "stdout", "") or "").strip()
+    if getattr(arch_probe, "exit_code", 1) != 0:
+        return {
+            "gate_pass": False,
+            "arch_probe": result_block(arch_probe),
+        }
+
+    try:
+        node_arch = plugin_install_api._node_arch(stdout)
+        package_dir = plugin_install_api._plugin_package_cache_dir("lsp")
+        package_dir.mkdir(parents=True, exist_ok=True)
+        node_archive = (
+            package_dir
+            / f"node-v{plugin_install_api._LSP_NODE_VERSION}-linux-{node_arch}.tar.xz"
+        )
+        pyright_archive = (
+            package_dir
+            / f"pyright-{plugin_install_api._LSP_PYRIGHT_VERSION}.tgz"
+        )
+        plugin_install_api._download_file(
+            plugin_install_api._node_urls(node_arch),
+            node_archive,
+            label=(
+                f"Node {plugin_install_api._LSP_NODE_VERSION} "
+                f"linux-{node_arch}"
+            ),
+        )
+        plugin_install_api._download_file(
+            plugin_install_api._pyright_urls(),
+            pyright_archive,
+            label=f"pyright {plugin_install_api._LSP_PYRIGHT_VERSION}",
+        )
+    except Exception as exc:
+        return {
+            "gate_pass": False,
+            "arch_probe": result_block(arch_probe),
+            "error": f"{type(exc).__name__}: {exc}",
+        }
+
+    prepare = await bench.exec(
+        f"mkdir -p {shlex.quote(LSP_PACKAGE_REMOTE_DIR)} {shlex.quote(LSP_NODE_HOME)}",
+        timeout=30,
+    )
+    if getattr(prepare, "exit_code", 1) != 0:
+        return {
+            "gate_pass": False,
+            "arch_probe": result_block(arch_probe),
+            "prepare": result_block(prepare),
+        }
+
+    await bench.adapter.put_archive(
+        bench.sandbox_id,
+        tar_stream=tar_file_at_path(
+            "node.tar.xz",
+            node_archive.read_bytes(),
+            mode=0o644,
+        ),
+        dest_dir=LSP_PACKAGE_REMOTE_DIR,
+    )
+    await bench.adapter.put_archive(
+        bench.sandbox_id,
+        tar_stream=tar_file_at_path(
+            "pyright.tgz",
+            pyright_archive.read_bytes(),
+            mode=0o644,
+        ),
+        dest_dir=LSP_PACKAGE_REMOTE_DIR,
+    )
+    manifest = (
+        f"plugin=lsp\n"
+        f"node_version={plugin_install_api._LSP_NODE_VERSION}\n"
+        f"node_arch={node_arch}\n"
+        f"pyright_version={plugin_install_api._LSP_PYRIGHT_VERSION}\n"
+    ).encode("utf-8")
+    await bench.adapter.put_archive(
+        bench.sandbox_id,
+        tar_stream=tar_file_at_path(
+            "PACKAGE_MANIFEST.txt",
+            manifest,
+            mode=0o644,
+        ),
+        dest_dir=LSP_PACKAGE_REMOTE_DIR,
+    )
+    verify = await bench.exec(
+        f"test -s {shlex.quote(f'{LSP_PACKAGE_REMOTE_DIR}/node.tar.xz')} && "
+        f"test -s {shlex.quote(f'{LSP_PACKAGE_REMOTE_DIR}/pyright.tgz')} && "
+        f"test -d {shlex.quote(LSP_NODE_HOME)}",
+        timeout=15,
+    )
+    return {
+        "gate_pass": getattr(verify, "exit_code", 1) == 0,
+        "arch_probe": result_block(arch_probe),
+        "node_arch": node_arch,
+        "package_dir": str(package_dir),
+        "remote_package_dir": LSP_PACKAGE_REMOTE_DIR,
+        "remote_node_home": LSP_NODE_HOME,
+        "bytes": {
+            "node.tar.xz": node_archive.stat().st_size,
+            "pyright.tgz": pyright_archive.stat().st_size,
+            "PACKAGE_MANIFEST.txt": len(manifest),
+        },
+        "prepare": result_block(prepare),
+        "verify": result_block(verify),
     }
 
 

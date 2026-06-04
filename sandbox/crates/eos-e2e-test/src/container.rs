@@ -1,5 +1,5 @@
 //! `DaemonContainer` — one Docker container running one `eosd`, driven entirely
-//! through the `docker` CLI.
+//! through the Docker CLI plus the Engine archive API for binary upload.
 //!
 //! Container lifecycle (create / upload / spawn / teardown) is *infrastructure*,
 //! not a sandbox operation, so it is allowed to use `docker` directly. The
@@ -7,7 +7,11 @@
 //! the wire (D1/D4). Container-filesystem peeking is never used as a verification
 //! oracle.
 
+use std::fmt::Write as FmtWrite;
+use std::fs;
+use std::io::{Read, Write as IoWrite};
 use std::net::SocketAddr;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::thread;
 use std::time::{Duration, Instant};
@@ -20,9 +24,10 @@ use crate::client::{is_success, ProtocolClient};
 use crate::config::{Config, NodeMode};
 use crate::unique_suffix;
 
-/// Where the uploaded `eosd` binary lives inside the container (rootfs, not the
-/// `/eos` tmpfs — so `current_exe()` can re-exec it as `ns-runner`).
-const EOSD_REMOTE_PATH: &str = "/usr/local/bin/eosd";
+/// Remote directory where the uploaded `eosd` binary lives inside the container.
+const EOS_BIN_DIR: &str = "/eos/bin";
+/// Remote daemon executable path. Keep all EphemeralOS-owned runtime files under `/eos`.
+const EOSD_REMOTE_PATH: &str = "/eos/bin/eosd";
 /// Daemon runtime dir on the `/eos` tmpfs.
 const DAEMON_DIR: &str = "/eos/daemon";
 /// Root under which the pool mints per-test `layer_stack_root`s.
@@ -201,7 +206,7 @@ impl DaemonContainer {
     }
 
     fn bringup(&self, config: &Config, token: &str) -> Result<ProtocolClient> {
-        self.exec(&["mkdir", "-p", DAEMON_DIR, E2E_ROOT_DIR])
+        self.exec(&["mkdir", "-p", EOS_BIN_DIR, DAEMON_DIR, E2E_ROOT_DIR])
             .context("mkdir daemon dirs")?;
         self.exec(&[
             "sh",
@@ -209,14 +214,19 @@ impl DaemonContainer {
             "mount -o remount,rw /sys/fs/cgroup 2>/dev/null || true; test -w /sys/fs/cgroup",
         ])
         .context("make cgroup v2 writable for isolated-workspace tests")?;
-        docker(&[
-            "cp".to_owned(),
-            config.eosd_path.to_string_lossy().into_owned(),
-            format!("{}:{EOSD_REMOTE_PATH}", self.name),
-        ])
-        .with_context(|| format!("docker cp eosd ({})", config.eosd_path.display()))?;
-        self.exec(&["chmod", "0755", EOSD_REMOTE_PATH])
-            .context("chmod eosd")?;
+        put_archive_file(
+            &self.name,
+            EOS_BIN_DIR,
+            "eosd",
+            &config.eosd_path,
+            config.request_timeout,
+        )
+        .with_context(|| {
+            format!(
+                "Docker put_archive eosd ({}) into {EOS_BIN_DIR}",
+                config.eosd_path.display()
+            )
+        })?;
 
         // Detached foreground daemon (no --spawn needed: `exec -d` backgrounds it).
         self.exec(&[
@@ -365,6 +375,209 @@ fn docker_str(args: &[&str]) -> Result<String> {
     Ok(String::from_utf8_lossy(&output.stdout).trim().to_owned())
 }
 
+fn put_archive_file(
+    container: &str,
+    dest_dir: &str,
+    remote_name: &str,
+    source: &Path,
+    timeout: Duration,
+) -> Result<()> {
+    let payload = fs::read(source).with_context(|| format!("read eosd {}", source.display()))?;
+    let tar_stream = tar_single_file(remote_name, &payload, 0o755)?;
+    docker_put_archive(container, dest_dir, &tar_stream, timeout)
+}
+
+#[cfg(unix)]
+fn docker_put_archive(
+    container: &str,
+    dest_dir: &str,
+    tar_stream: &[u8],
+    timeout: Duration,
+) -> Result<()> {
+    use std::os::unix::net::UnixStream;
+
+    let socket = docker_socket_path()?;
+    let mut stream = UnixStream::connect(&socket)
+        .with_context(|| format!("connect Docker socket {}", socket.display()))?;
+    stream
+        .set_read_timeout(Some(timeout))
+        .context("set Docker socket read timeout")?;
+    stream
+        .set_write_timeout(Some(timeout))
+        .context("set Docker socket write timeout")?;
+
+    let api_version = docker_api_version();
+    let request_path = format!(
+        "/v{}/containers/{}/archive?path={}",
+        api_version.trim_start_matches('v'),
+        percent_encode(container),
+        percent_encode(dest_dir)
+    );
+    let request = format!(
+        "PUT {request_path} HTTP/1.1\r\n\
+         Host: docker\r\n\
+         User-Agent: eos-e2e-test\r\n\
+         Content-Type: application/x-tar\r\n\
+         Content-Length: {}\r\n\
+         Connection: close\r\n\
+         \r\n",
+        tar_stream.len()
+    );
+    stream
+        .write_all(request.as_bytes())
+        .context("write Docker put_archive request headers")?;
+    stream
+        .write_all(tar_stream)
+        .context("write Docker put_archive tar stream")?;
+    stream.flush().context("flush Docker put_archive request")?;
+
+    let mut response = Vec::new();
+    stream
+        .read_to_end(&mut response)
+        .context("read Docker put_archive response")?;
+    let response_text = String::from_utf8_lossy(&response);
+    let status = docker_http_status(&response_text)?;
+    if !(200..300).contains(&status) {
+        bail!("Docker put_archive failed with HTTP {status}: {response_text}");
+    }
+    Ok(())
+}
+
+#[cfg(not(unix))]
+fn docker_put_archive(
+    _container: &str,
+    _dest_dir: &str,
+    _tar_stream: &[u8],
+    _timeout: Duration,
+) -> Result<()> {
+    bail!("Docker put_archive over a Unix socket is only supported on Unix hosts")
+}
+
+#[cfg(unix)]
+fn docker_socket_path() -> Result<PathBuf> {
+    let mut candidates = Vec::new();
+    if let Ok(host) = std::env::var("DOCKER_HOST") {
+        if let Some(path) = docker_unix_socket_from_host(&host) {
+            candidates.push(path);
+        }
+    }
+    if let Ok(host) = docker_str(&["context", "inspect", "--format", "{{.Endpoints.docker.Host}}"])
+    {
+        if let Some(path) = docker_unix_socket_from_host(&host) {
+            candidates.push(path);
+        }
+    }
+    if let Some(home) = std::env::var_os("HOME") {
+        candidates.push(PathBuf::from(home).join(".docker/run/docker.sock"));
+    }
+    candidates.push(PathBuf::from("/var/run/docker.sock"));
+
+    candidates
+        .into_iter()
+        .find(|path| path.exists())
+        .ok_or_else(|| anyhow::anyhow!("could not locate Docker Unix socket for put_archive"))
+}
+
+fn docker_unix_socket_from_host(host: &str) -> Option<PathBuf> {
+    host.trim()
+        .strip_prefix("unix://")
+        .filter(|path| !path.is_empty())
+        .map(PathBuf::from)
+}
+
+fn docker_api_version() -> String {
+    docker_str(&["version", "--format", "{{.Server.APIVersion}}"])
+        .ok()
+        .filter(|version| !version.is_empty())
+        .unwrap_or_else(|| "1.41".to_owned())
+}
+
+fn docker_http_status(response: &str) -> Result<u16> {
+    let status_line = response
+        .lines()
+        .next()
+        .context("Docker put_archive response missing status line")?;
+    let status = status_line
+        .split_whitespace()
+        .nth(1)
+        .context("Docker put_archive response missing status code")?;
+    status
+        .parse::<u16>()
+        .with_context(|| format!("parse Docker HTTP status from {status_line:?}"))
+}
+
+fn percent_encode(value: &str) -> String {
+    let mut encoded = String::with_capacity(value.len());
+    for byte in value.bytes() {
+        if byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'_' | b'.' | b'~') {
+            encoded.push(char::from(byte));
+        } else {
+            let _ = write!(&mut encoded, "%{byte:02X}");
+        }
+    }
+    encoded
+}
+
+fn tar_single_file(name: &str, payload: &[u8], mode: u32) -> Result<Vec<u8>> {
+    if name.is_empty() || name.starts_with('/') || name.split('/').any(|part| part == "..") {
+        bail!("invalid tar entry name {name:?}");
+    }
+    let name_bytes = name.as_bytes();
+    if name_bytes.len() > 100 {
+        bail!("tar entry name too long: {name}");
+    }
+
+    let mut header = [0_u8; 512];
+    header[..name_bytes.len()].copy_from_slice(name_bytes);
+    write_octal(&mut header[100..108], u64::from(mode))?;
+    write_octal(&mut header[108..116], 0)?;
+    write_octal(&mut header[116..124], 0)?;
+    write_octal(&mut header[124..136], payload.len() as u64)?;
+    write_octal(&mut header[136..148], 0)?;
+    header[148..156].fill(b' ');
+    header[156] = b'0';
+    header[257..263].copy_from_slice(b"ustar\0");
+    header[263..265].copy_from_slice(b"00");
+    let checksum = header.iter().map(|byte| u32::from(*byte)).sum::<u32>();
+    write_checksum(&mut header[148..156], checksum)?;
+
+    let mut archive = Vec::with_capacity(512 + payload.len() + 1536);
+    archive.extend_from_slice(&header);
+    archive.extend_from_slice(payload);
+    let padding = (512 - (payload.len() % 512)) % 512;
+    archive.resize(archive.len() + padding, 0);
+    archive.resize(archive.len() + 1024, 0);
+    Ok(archive)
+}
+
+fn write_octal(field: &mut [u8], value: u64) -> Result<()> {
+    let digits = field
+        .len()
+        .checked_sub(1)
+        .context("tar octal field too short")?;
+    let encoded = format!("{value:0width$o}", width = digits);
+    if encoded.len() > digits {
+        bail!("tar octal value {value} does not fit in {} bytes", field.len());
+    }
+    field[..digits].copy_from_slice(encoded.as_bytes());
+    field[digits] = 0;
+    Ok(())
+}
+
+fn write_checksum(field: &mut [u8], value: u32) -> Result<()> {
+    if field.len() != 8 {
+        bail!("tar checksum field must be 8 bytes");
+    }
+    let encoded = format!("{value:06o}");
+    if encoded.len() > 6 {
+        bail!("tar checksum {value} does not fit");
+    }
+    field[..6].copy_from_slice(encoded.as_bytes());
+    field[6] = 0;
+    field[7] = b' ';
+    Ok(())
+}
+
 /// Parse `docker port` output (`0.0.0.0:54321` / `127.0.0.1:54321`, possibly
 /// multiple lines) into a loopback `SocketAddr`.
 fn parse_published_addr(output: &str) -> Option<SocketAddr> {
@@ -434,4 +647,34 @@ pub fn reap_e2e_containers() -> Result<usize> {
         );
     }
     Ok(ids.len())
+}
+
+#[cfg(test)]
+mod tests {
+    use std::path::PathBuf;
+
+    use super::{
+        docker_http_status, docker_unix_socket_from_host, percent_encode, tar_single_file,
+    };
+
+    #[test]
+    fn tar_single_file_builds_executable_ustar_stream() {
+        let tar = tar_single_file("eosd", b"payload", 0o755).expect("tar stream");
+        assert_eq!(&tar[0..4], b"eosd");
+        assert_eq!(&tar[100..108], b"0000755\0");
+        assert_eq!(&tar[124..136], b"00000000007\0");
+        assert_eq!(tar[156], b'0');
+        assert_eq!(&tar[257..263], b"ustar\0");
+        assert_eq!(tar.len() % 512, 0);
+    }
+
+    #[test]
+    fn docker_helpers_parse_http_and_unix_host() {
+        assert_eq!(docker_http_status("HTTP/1.1 200 OK\r\n\r\n").expect("status"), 200);
+        assert_eq!(percent_encode("/eos/bin"), "%2Feos%2Fbin");
+        assert_eq!(
+            docker_unix_socket_from_host("unix:///var/run/docker.sock").expect("socket"),
+            PathBuf::from("/var/run/docker.sock")
+        );
+    }
 }

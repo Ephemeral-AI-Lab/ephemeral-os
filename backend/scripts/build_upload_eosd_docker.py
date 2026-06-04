@@ -133,7 +133,7 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
     )
     parser.add_argument(
         "--remote-path",
-        default="/tmp/eosd-local/eosd",
+        default="/eos/daemon/eosd",
         help="Path to place eosd inside the target container.",
     )
     parser.add_argument(

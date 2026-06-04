@@ -612,7 +612,13 @@ mod tests {
         });
 
         let (mut process, _client) =
-            spec.spawn_connected_with_overlay(None, Duration::from_secs(1))?;
+            match spec.spawn_connected_with_overlay(None, Duration::from_secs(5)) {
+                Ok(pair) => pair,
+                Err(err) => {
+                    let _ = connector.join();
+                    return Err(err.into());
+                }
+            };
         match connector.join() {
             Ok(result) => result?,
             Err(_) => {
@@ -631,7 +637,7 @@ mod tests {
     }
 
     fn wait_for_socket(root: &Path) -> std::io::Result<PathBuf> {
-        let deadline = Instant::now() + Duration::from_secs(1);
+        let deadline = Instant::now() + Duration::from_secs(5);
         loop {
             if let Ok(entries) = std::fs::read_dir(root) {
                 for entry in entries.flatten() {

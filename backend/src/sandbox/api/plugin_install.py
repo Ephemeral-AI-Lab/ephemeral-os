@@ -51,7 +51,7 @@ logger = logging.getLogger(__name__)
 # — so ``import plugins.catalog.<name>.runtime.server`` resolves naturally.
 PLUGIN_BUNDLE_REMOTE_ROOT = f"{BUNDLE_REMOTE_DIR}/plugins/catalog"
 PLUGIN_PACKAGE_REMOTE_ROOT = "/eos/plugin-packages"
-PLUGIN_ARCHIVE_STAGING_ROOT = "/var/lib/ephemeralos/plugin-archives"
+PLUGIN_ARCHIVE_STAGING_ROOT = "/eos/plugin-archives"
 
 # 600s headroom for plugin setup scripts that download runtime binaries or
 # install small dependencies over the network while staying inside Daytona's

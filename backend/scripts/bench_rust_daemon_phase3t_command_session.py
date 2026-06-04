@@ -1160,7 +1160,7 @@ async def seed_cache_churn_roots(bench: DockerBench, root_count: int) -> list[st
                 b"# cache churn\n",
                 added_dirs,
             )
-    staging_dir = f"/tmp/eos-cache-churn-{uuid.uuid4().hex}"
+    staging_dir = f"/eos/daemon/.eos-cache-churn-{uuid.uuid4().hex}"
     staging_tar = f"{staging_dir}/cache-roots.tar"
     require_success(
         await bench.exec(f"mkdir -p {shlex.quote(staging_dir)}", timeout=30),

@@ -840,5 +840,5 @@ fn assert_acyclic(plan: &PlannerPlan) -> Result<()> {
 }
 
 #[cfg(test)]
-#[path = "../../tests/attempt/orchestrator.rs"]
+#[path = "../../tests/attempt/orchestrator/mod.rs"]
 mod tests;

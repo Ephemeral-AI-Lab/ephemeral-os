@@ -153,6 +153,8 @@ mod tests {
             path: Some(PathBuf::from("/skills/planner")),
             references,
         };
-        insta::assert_json_snapshot!("skill_definition", definition);
+        insta::with_settings!({ snapshot_path => "../tests/definition/snapshots" }, {
+            insta::assert_json_snapshot!("skill_definition", definition);
+        });
     }
 }

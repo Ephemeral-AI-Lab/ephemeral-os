@@ -1,5 +1,5 @@
-//! The disallow-nested-planner-deferral prehook — relocated out of the
-//! `hooks.rs` monolith into its own file (mirrors `hooks/advisor_approval.rs`
+//! The disallow-nested-planner-deferral prehook — relocated out of the hooks
+//! module into its own file (mirrors `hooks/advisor_approval.rs`
 //! and `hooks/require_no_inflight_background_tasks.rs`), porting Python
 //! `tools/_hooks/disallow_nested_planner_deferral.py`.
 //!
@@ -12,8 +12,8 @@
 use eos_types::JsonObject;
 use serde_json::Value;
 
-use crate::error::ToolError;
-use crate::metadata::ExecutionMetadata;
+use crate::core::error::ToolError;
+use crate::core::metadata::ExecutionMetadata;
 
 use super::{HookDenial, HookOutcome};
 

@@ -199,7 +199,7 @@ async def upload_artifact(bench: DockerBench, artifact: Path) -> dict[str, Any]:
         await bench.exec(f"mkdir -p {shlex.quote(RUNTIME_ROOT)}", timeout=30),
         "create rust runtime dir",
     )
-    staging_dir = f"/tmp/eosd-upload-{uuid.uuid4().hex}"
+    staging_dir = f"{RUNTIME_ROOT}/.eosd-upload-{uuid.uuid4().hex}"
     staging_file = f"{staging_dir}/eosd"
     require_success(
         await bench.exec(f"mkdir -p {shlex.quote(staging_dir)}", timeout=30),
@@ -252,7 +252,7 @@ async def upload_artifact(bench: DockerBench, artifact: Path) -> dict[str, Any]:
 
 async def seed_layer_stack(bench: DockerBench) -> None:
     payload = seed_archive()
-    staging_dir = f"/tmp/eos-layer-stack-{uuid.uuid4().hex}"
+    staging_dir = f"{RUNTIME_ROOT}/.eos-layer-stack-{uuid.uuid4().hex}"
     staging_tar = f"{staging_dir}/seed.tar"
     require_success(
         await bench.exec(f"mkdir -p {shlex.quote(staging_dir)}", timeout=30),

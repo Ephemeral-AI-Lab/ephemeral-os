@@ -35,7 +35,7 @@ fn write_publishes_changed_paths() -> Result<()> {
         json!({"path": "tool/changed.txt", "content": "changed\n", "overwrite": true}),
     )?;
     assert_eq!(as_str(&write, "status")?, "committed");
-    assert_eq!(as_str(&write, "mutation_source")?, "tool_call");
+    assert_eq!(as_str(&write, "mutation_source")?, "api_write");
     assert!(
         array(&write, "changed_paths")?
             .iter()

@@ -435,5 +435,5 @@ pub async fn dispatch_assistant_tools(
 }
 
 #[cfg(test)]
-#[path = "../../tests/tool_call/dispatch.rs"]
+#[path = "../../tests/tool_call/dispatch/mod.rs"]
 mod tests;

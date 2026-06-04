@@ -289,7 +289,7 @@ async def _ensure_eosd_uploaded(sandbox_id: str, adapter: object) -> None:
     if not callable(put_archive):
         raise RuntimeError("eosd upload requires provider put_archive")
 
-    staging_dir = f"/tmp/eosd-upload-{uuid.uuid4().hex}"
+    staging_dir = f"{_BUNDLE_REMOTE_DIR}/.eosd-upload-{uuid.uuid4().hex}"
     staging_file = f"{staging_dir}/eosd"
     await _check_exec(
         exec_fn,

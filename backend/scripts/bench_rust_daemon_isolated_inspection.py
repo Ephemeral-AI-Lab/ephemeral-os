@@ -41,7 +41,7 @@ from bench_sandbox_e2e import (  # noqa: E402
 )
 
 AGENT_ID = "phase3t-isolated-inspection"
-AUDIT_PATH = "/tmp/eos-iws-inspection-audit.jsonl"
+AUDIT_PATH = "/eos/daemon/iws-inspection-audit.jsonl"
 
 
 def main(argv: list[str] | None = None) -> int:

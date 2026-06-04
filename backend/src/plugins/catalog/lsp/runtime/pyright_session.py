@@ -28,8 +28,7 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 _CONDA_HOOK = "/opt/miniconda3/etc/profile.d/conda.sh"
-_PYRIGHT_NODE_BIN = "/eos/plugin-packages/lsp/node/bin"
-_LEGACY_RUNNER_NODE_BIN = "/tmp/eos-node22/bin"
+_PYRIGHT_NODE_BIN = "/eos/env/eos-node22/bin"
 _DEFAULT_INIT_TIMEOUT_S = 30.0
 _DEFAULT_REQUEST_TIMEOUT_S = 90.0
 _REFERENCES_TIMEOUT_S = 30.0
@@ -721,7 +720,6 @@ def _runtime_subprocess_cwd() -> str | None:
 def _pyright_search_path() -> str:
     candidates = [
         _PYRIGHT_NODE_BIN,
-        _LEGACY_RUNNER_NODE_BIN,
         os.environ.get("PATH", ""),
     ]
     return ":".join(path for path in candidates if path)

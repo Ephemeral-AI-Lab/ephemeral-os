@@ -453,15 +453,6 @@ class ThinClient:
     async def exec_shell(self, command: str, *, timeout: int = 60) -> subprocess.CompletedProcess[str]:
         return await self.exec(["sh", "-lc", command], timeout=timeout)
 
-    async def cp_to_container(self, local: Path, remote: str, *, timeout: int = 60) -> None:
-        result = await run_host(
-            ["docker", "cp", str(local), f"{self.container_id}:{remote}"],
-            timeout=timeout,
-        )
-        if result.returncode != 0:
-            raise RuntimeError(f"docker cp failed: {result.stderr.strip()}")
-
-
 async def reset_experiment_workspace(client: ThinClient) -> None:
     command = (
         f"rm -rf {shlex.quote(PLUGIN_ROOT)}; "

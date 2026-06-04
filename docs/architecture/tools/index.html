@@ -162,7 +162,7 @@
         </div>
       </section>
 
-      <section id="folder-pages" data-last-reviewed-commit="HEAD-plus-worktree" data-evidence-paths="agent-core/crates/eos-tools/src agent-core/crates/eos-tools/src/model_tools agent-core/crates/eos-tools/src/hooks.rs agent-core/crates/eos-sandbox-api/src agent-core/crates/eos-workflow/src">
+      <section id="folder-pages" data-last-reviewed-commit="HEAD-plus-worktree" data-evidence-paths="agent-core/crates/eos-tools/src agent-core/crates/eos-tools/src/tools agent-core/crates/eos-tools/src/hooks agent-core/crates/eos-tools/src/runtime agent-core/crates/eos-tools/src/registry agent-core/crates/eos-sandbox-api/src agent-core/crates/eos-workflow/src">
         <h3>Folder Page Matrix</h3>
         <div class="table-wrap">
           <table>
@@ -176,61 +176,61 @@
             </thead>
             <tbody>
               <tr>
-                <td><code>executor.rs</code><br><code>dispatch.rs</code><br><code>registry.rs</code></td>
+                <td><code>runtime/executor.rs</code><br><code>runtime/dispatch.rs</code><br><code>registry/tool_registry.rs</code></td>
                 <td><a href="framework.html">Framework</a></td>
                 <td>Tool contract, registry, factories, decorator, execution lifecycle.</td>
                 <td>Engine registry construction, schema exposure, hooks, terminal stamping.</td>
               </tr>
               <tr>
-                <td><code>hooks.rs</code><br><code>hooks/*</code></td>
+                <td><code>hooks/mod.rs</code><br><code>hooks/*</code></td>
                 <td><a href="hooks.html">Hooks</a></td>
                 <td>Explicit pre/post hook contracts, target validation, hook trace, and hook-failure metadata.</td>
                 <td>Decorator construction, <code>execute_tool_once</code> lifecycle, sandbox command pre-hooks.</td>
               </tr>
               <tr>
-                <td><code>terminal.rs</code><br><code>model_tools/submission/</code></td>
+                <td><code>tools/terminal.rs</code><br><code>tools/submission/</code></td>
                 <td><a href="terminals.html">Terminals</a></td>
                 <td>Terminal descriptor catalog and prompt rendering.</td>
                 <td>Workflow launch profiles, batch exclusivity, query loop stop condition.</td>
               </tr>
               <tr>
-                <td><code>model_tools/sandbox/</code><br><code>model_tools/sandbox/support/</code></td>
+                <td><code>tools/sandbox/</code><br><code>tools/sandbox/lib/</code></td>
                 <td><a href="sandbox.html">Sandbox</a></td>
                 <td>Agent-facing read/write/edit/command/search wrappers.</td>
                 <td>Typed sandbox API, daemon workspace routing, layer-stack/OCC, ephemeral overlay.</td>
               </tr>
               <tr>
-                <td><code>model_tools/isolated_workspace/</code></td>
+                <td><code>tools/isolated_workspace/</code></td>
                 <td><a href="isolated-workspace.html">Isolated Workspace</a></td>
                 <td>Explicit enter/exit lifecycle tools.</td>
                 <td>Persistent private scratch namespace, background gates, plugin blocking, no publish.</td>
               </tr>
               <tr>
-                <td><code>ports.rs</code><br><code>model_tools/sandbox/</code></td>
+                <td><code>ports/mod.rs</code><br><code>tools/sandbox/</code></td>
                 <td><a href="background.html">Background</a></td>
                 <td>Typed control ports for subagents, delegated workflows, and daemon command sessions.</td>
                 <td>Supervisor status lattice, sandbox heartbeat/cancel, command completion heartbeat, query loop cleanup.</td>
               </tr>
               <tr>
-                <td><code>model_tools/subagent/</code><br><code>model_tools/subagent/support/</code></td>
+                <td><code>tools/subagent/</code><br><code>tools/subagent/lib/</code></td>
                 <td><a href="subagent.html">Subagent</a></td>
                 <td>Always-background nested agent launch.</td>
                 <td><code>run_ephemeral_agent</code>, progress provider, terminal result projection.</td>
               </tr>
               <tr>
-                <td><code>model_tools/ask_helper/</code></td>
+                <td><code>tools/ask_helper/</code></td>
                 <td><a href="ask-helper.html">Ask Helper</a></td>
                 <td>Blocking advisor helper launches and advisor-feedback terminal output.</td>
                 <td>Helper transcripts, terminal catalog focus, helper terminal submissions.</td>
               </tr>
               <tr>
-                <td><code>model_tools/submission/</code><br><code>model_tools/submission/support/</code><br><code>model_tools/workflow/</code><br><code>model_tools/workflow/support/</code></td>
+                <td><code>tools/submission/</code><br><code>tools/submission/lib/</code><br><code>tools/workflow/</code><br><code>tools/workflow/lib/</code></td>
                 <td><a href="submission.html">Submission</a></td>
                 <td>Root, planner, generator, reducer, advisor, and explorer terminal tools plus non-terminal workflow controls.</td>
                 <td>AttemptOrchestrator, WorkflowStarter/control ports, root request completion, Workflow state.</td>
               </tr>
               <tr>
-                <td><code>model_tools/skills/</code></td>
+                <td><code>tools/skills/</code></td>
                 <td><a href="skills.html">Skills</a></td>
                 <td>Scoped skill reference loading.</td>
                 <td>ToolFactoryContext metadata and explicit reference availability errors.</td>
@@ -240,7 +240,7 @@
         </div>
       </section>
 
-      <section id="critical-routes" data-last-reviewed-commit="HEAD-plus-worktree" data-evidence-paths="agent-core/crates/eos-engine/src/background agent-core/crates/eos-tools/src/model_tools agent-core/crates/eos-sandbox-host/src/isolated_workspace.rs sandbox/crates/eos-daemon/src/command.rs sandbox/crates/eos-daemon/src/dispatcher.rs">
+      <section id="critical-routes" data-last-reviewed-commit="HEAD-plus-worktree" data-evidence-paths="agent-core/crates/eos-engine/src/background agent-core/crates/eos-tools/src/tools agent-core/crates/eos-sandbox-host/src/isolated_workspace.rs sandbox/crates/eos-daemon/src/command.rs sandbox/crates/eos-daemon/src/dispatcher.rs">
         <h3>Critical Routes To Keep Straight</h3>
         <div class="grid">
           <div class="callout ok">

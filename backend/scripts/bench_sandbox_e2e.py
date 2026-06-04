@@ -361,7 +361,7 @@ async def measure_cp1(
         expected_sha = hashlib.sha256(payload).hexdigest()
         name = f"payload-{size}.bin"
 
-        put_dir = f"/tmp/eos-phase0-put-{uuid.uuid4().hex[:8]}"
+        put_dir = f"/eos/bench/phase0-put-{uuid.uuid4().hex[:8]}"
         await require_success(bench, f"mkdir -p {put_dir}", "create put_archive dest")
         put_start = time.perf_counter()
         await bench.adapter.put_archive(
@@ -372,7 +372,7 @@ async def measure_cp1(
         put_ms = elapsed_ms(put_start)
         put_sha = await remote_sha256(bench, f"{put_dir}/{name}")
 
-        base64_dir = f"/tmp/eos-phase0-b64-{uuid.uuid4().hex[:8]}"
+        base64_dir = f"/eos/bench/phase0-b64-{uuid.uuid4().hex[:8]}"
         await require_success(bench, f"mkdir -p {base64_dir}", "create base64 dest")
         remote_path = f"{base64_dir}/{name}"
         base64_start = time.perf_counter()
@@ -680,7 +680,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument(
         "--eosd-dest-dir",
-        default="/tmp/eosd-local",
+        default="/eos/daemon",
         help="Destination directory inside the sandbox for --eosd-binary.",
     )
     parser.add_argument(

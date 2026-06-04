@@ -56,8 +56,8 @@ projection paths.
 The host-side plugin installer downloads the pinned Linux Node archive and
 Pyright npm tarball locally, uploads them with `put_archive` into
 `/eos/plugin-packages/lsp`, then runs `setup.sh` offline in the sandbox.
-`setup.sh` extracts Node into `/eos/plugin-packages/lsp/node`, installs the
-uploaded Pyright tarball there, and writes a marker so re-runs are cheap.
+`setup.sh` extracts Node into `/eos/env/eos-node22`, installs the uploaded
+Pyright tarball there, and writes a marker so re-runs are cheap.
 
 ## Constraints
 

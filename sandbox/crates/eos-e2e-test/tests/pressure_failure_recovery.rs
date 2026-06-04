@@ -66,7 +66,7 @@ fn iws_same_port_discard() -> Result<()> {
     let first = lease.call_ok(
         ops::API_V1_EXEC_COMMAND,
         json!({
-            "cmd": "python3 -m http.server 39001 >/tmp/eos-e2e-http.log 2>&1",
+            "cmd": "python3 -m http.server 39001 >/eos/e2e/eos-e2e-http.log 2>&1",
             "yield_time_ms": 100,
             "timeout_seconds": 120,
             "max_output_tokens": 500
@@ -82,7 +82,7 @@ fn iws_same_port_discard() -> Result<()> {
     let second = lease.call_ok(
         ops::API_V1_EXEC_COMMAND,
         json!({
-            "cmd": "python3 -m http.server 39001 >/tmp/eos-e2e-http.log 2>&1",
+            "cmd": "python3 -m http.server 39001 >/eos/e2e/eos-e2e-http.log 2>&1",
             "yield_time_ms": 100,
             "timeout_seconds": 120,
             "max_output_tokens": 500

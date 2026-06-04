@@ -11,9 +11,9 @@ host, then sent into the sandbox with provider `put_archive` under
 `/eos/plugin-packages/lsp`.
 
 `setup.sh` runs offline. It extracts the uploaded Node archive into
-`/eos/plugin-packages/lsp/node` only when `node`/`npm` are not already
+`/eos/env/eos-node22` only when that pinned `node`/`npm` runtime is not already
 available. After Node is available, setup installs the uploaded Pyright tarball
-with npm:
+with npm under the same runtime home:
 
 ```bash
 npm install -g --offline --cache /eos/plugin-packages/lsp/npm-cache --omit=optional /eos/plugin-packages/lsp/pyright.tgz
@@ -31,7 +31,7 @@ pyright-langserver --stdio
 ```
 
 If the sandbox has the standard `testbed` conda environment, the session starts
-through that environment and prepends `/eos/plugin-packages/lsp/node/bin` to
+through that environment and prepends `/eos/env/eos-node22/bin` to
 `PATH`. Missing setup fails closed rather than falling back to a different
 language server.
 

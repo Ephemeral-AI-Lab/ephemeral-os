@@ -12,10 +12,10 @@
 use eos_llm_client::{ContentBlock, Message, MessageRole};
 use eos_types::ToolUseId;
 
-use crate::error::ToolError;
+use crate::core::error::ToolError;
+use crate::core::metadata::ExecutionMetadata;
+use crate::core::name::ToolName;
 use crate::hooks::{HookDenial, HookOutcome};
-use crate::metadata::ExecutionMetadata;
-use crate::name::ToolName;
 
 const ADVISOR_HELPER_ROLE: &str = "advisor";
 const VALID_VERDICTS: [&str; 2] = ["approve", "reject"];

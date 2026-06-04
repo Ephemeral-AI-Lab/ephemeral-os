@@ -158,6 +158,8 @@ mod schema_parity {
     fn test_central_config_json_schema_snapshot() {
         let mut rust: Value = serde_json::to_value(schema_for!(CentralConfig)).unwrap();
         normalize(&mut rust);
-        insta::assert_json_snapshot!("central_config_schema", rust);
+        insta::with_settings!({ snapshot_path => "../tests/schema_parity/snapshots" }, {
+            insta::assert_json_snapshot!("central_config_schema", rust);
+        });
     }
 }

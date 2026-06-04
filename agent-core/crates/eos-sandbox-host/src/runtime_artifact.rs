@@ -171,17 +171,17 @@ const LSP_PPC_SERVICE_WRAPPER: &str = r#"#!/usr/bin/env sh
 set -eu
 
 PACKAGE_DIR="${EOS_PLUGIN_PACKAGE_DIR:-/eos/plugin-packages/lsp}"
-NODE_HOME="${EOS_NODE_HOME:-$PACKAGE_DIR/node}"
+NODE_HOME="${EOS_NODE_HOME:-/eos/env/eos-node22}"
 export PATH="$NODE_HOME/bin:$PATH"
 
-if ! command -v pyright-langserver >/dev/null 2>&1; then
-    if [ -s "$PACKAGE_DIR/node.tar.xz" ] && [ -s "$PACKAGE_DIR/pyright.tgz" ]; then
-        mkdir -p "$NODE_HOME"
-        if [ ! -x "$NODE_HOME/bin/node" ]; then
-            tar -xJf "$PACKAGE_DIR/node.tar.xz" -C "$NODE_HOME" --strip-components=1
-        fi
-        export PATH="$NODE_HOME/bin:$PATH"
-        npm config set prefix "$NODE_HOME"
+if [ -s "$PACKAGE_DIR/node.tar.xz" ] && [ -s "$PACKAGE_DIR/pyright.tgz" ]; then
+    mkdir -p "$NODE_HOME"
+    if [ ! -x "$NODE_HOME/bin/node" ] || [ ! -x "$NODE_HOME/bin/npm" ]; then
+        tar -xJf "$PACKAGE_DIR/node.tar.xz" -C "$NODE_HOME" --strip-components=1
+    fi
+    export PATH="$NODE_HOME/bin:$PATH"
+    npm config set prefix "$NODE_HOME"
+    if [ ! -x "$NODE_HOME/bin/pyright-langserver" ]; then
         npm install -g --offline --cache "$PACKAGE_DIR/npm-cache" --omit=optional "$PACKAGE_DIR/pyright.tgz"
     fi
 fi
@@ -365,7 +365,7 @@ pub(crate) async fn ensure_eosd_uploaded(
     .await?;
 
     // 7. upload via the put_archive fast path through a random staging dir.
-    let staging_dir = format!("/tmp/eosd-upload-{}", uuid::Uuid::new_v4().simple());
+    let staging_dir = format!("{BUNDLE_REMOTE_DIR}/.eosd-upload-{}", uuid::Uuid::new_v4().simple());
     let staging_file = format!("{staging_dir}/eosd");
     check_exec(
         adapter,

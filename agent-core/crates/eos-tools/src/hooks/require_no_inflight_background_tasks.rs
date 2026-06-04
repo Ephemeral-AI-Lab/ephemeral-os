@@ -1,4 +1,4 @@
-//! The no-inflight-background-tasks prehook — relocated out of the `hooks.rs`
+//! The no-inflight-background-tasks prehook — relocated out of the hooks
 //! monolith into its own file (mirrors `hooks/advisor_approval.rs`), porting
 //! Python `tools/_hooks/require_no_inflight_background_tasks.py`.
 //!
@@ -25,9 +25,9 @@
 use eos_types::JsonObject;
 use serde_json::{json, Value};
 
-use crate::error::ToolError;
-use crate::metadata::ExecutionMetadata;
-use crate::name::ToolName;
+use crate::core::error::ToolError;
+use crate::core::metadata::ExecutionMetadata;
+use crate::core::name::ToolName;
 
 use super::{HookDenial, HookOutcome};
 

@@ -1,6 +1,8 @@
-use super::*;
-
+mod connected_ppc;
+mod status;
 mod support;
+
+use super::*;
 
 use support::*;
 
@@ -8,7 +10,7 @@ use crate::dispatcher::OpTable;
 use eos_protocol::Request;
 use std::io::Write;
 use std::sync::{mpsc, Arc};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 #[test]
 fn ensure_records_manifest_services_and_status_lists_them() -> TestResult {
@@ -281,8 +283,12 @@ fn exited_service_process_fails_closed_before_dispatch() -> TestResult {
         )?
     };
     let service_instance_id = spec.service_instance_id();
-    let process = spec.spawn()?;
-    std::thread::sleep(Duration::from_millis(50));
+    let mut process = spec.spawn()?;
+    let deadline = Instant::now() + Duration::from_secs(1);
+    while process.status_json()["running"].as_bool().unwrap_or(true) && Instant::now() < deadline {
+        std::thread::sleep(Duration::from_millis(10));
+    }
+    assert_eq!(process.status_json()["running"], false);
     {
         let mut state = lock_state()?;
         state.service_processes.insert(service_instance_id, process);
@@ -394,51 +400,6 @@ fn digest_reload_replaces_dynamic_plugin_routes() -> TestResult {
 }
 
 #[test]
-fn connected_read_only_plugin_op_round_trips_over_ppc() -> TestResult {
-    let _guard = PluginTestGuard::new()?;
-    let table = OpTable::with_builtins();
-    let (layer_stack_root, workspace_root) = test_bound_workspace("read-only-ppc")?;
-    let ensure = table.dispatch(&Request {
-        op: "api.plugin.ensure".to_owned(),
-        invocation_id: "plugin-ensure-test".to_owned(),
-        args: json!({
-            "manifest": lsp_manifest("digest-a", "hover"),
-            "layer_stack_root": layer_stack_root.to_string_lossy().into_owned(),
-            "workspace_root": workspace_root.to_string_lossy().into_owned()
-        }),
-    });
-    assert_eq!(ensure["success"], true);
-
-    let (client_stream, mut server_stream) = ppc_stream_pair()?;
-    register_ppc_client_for_tests("plugin.lsp.hover", client_stream)?;
-    let server = std::thread::spawn(move || -> TestResult {
-        let request = read_ppc_request(&mut server_stream, "read ppc request")?;
-        assert_eq!(request.message_id, "plugin-hover-test");
-        assert_eq!(request.op, "plugin.lsp.hover");
-        assert!(request.body.contains("agent-plugin"));
-        let reply = PpcEnvelope {
-            message_id: request.message_id,
-            direction: PpcDirection::Reply,
-            op: "reply".to_owned(),
-            body: r#"{"success":true,"from_ppc":true}"#.to_owned(),
-        };
-        server_stream.write_all(&reply.encode()?)?;
-        Ok(())
-    });
-
-    let routed = table.dispatch(&Request {
-        op: "plugin.lsp.hover".to_owned(),
-        invocation_id: "plugin-hover-test".to_owned(),
-        args: json!({"agent_id": "agent-plugin"}),
-    });
-    assert_eq!(routed["success"], true);
-    assert_eq!(routed["from_ppc"], true);
-    join_test_thread(server, "server thread panicked")?;
-    remove_test_tree(&layer_stack_root)?;
-    Ok(())
-}
-
-#[test]
 fn plugin_response_payload_rejects_over_8_mib_body() {
     let reply = PpcEnvelope {
         message_id: "plugin-large-reply".to_owned(),
@@ -473,122 +434,6 @@ fn plugin_caller_fields_reject_nul_long_and_non_string_values() {
         Err(DaemonError::Plugin(PluginError::Ppc(message)))
             if message.contains("must be a string")
     ));
-}
-
-#[test]
-fn status_probe_services_sends_health_request() -> TestResult {
-    let _guard = PluginTestGuard::new()?;
-    let table = OpTable::with_builtins();
-    let (layer_stack_root, workspace_root) = test_bound_workspace("status-health-ok")?;
-    let ensure = table.dispatch(&Request {
-        op: "api.plugin.ensure".to_owned(),
-        invocation_id: "plugin-ensure-health-ok".to_owned(),
-        args: json!({
-            "manifest": lsp_manifest("digest-a", "hover"),
-            "layer_stack_root": layer_stack_root.to_string_lossy().into_owned(),
-            "workspace_root": workspace_root.to_string_lossy().into_owned()
-        }),
-    });
-    assert_eq!(ensure["success"], true);
-
-    let (client_stream, mut server_stream) = ppc_stream_pair()?;
-    register_ppc_client_for_tests("plugin.lsp.hover", client_stream)?;
-    let (_service_instance_id, manifest_key) =
-        attach_service_snapshot_for_tests("plugin.lsp.hover")?;
-    let expected_manifest_key = manifest_key.clone();
-    let server = std::thread::spawn(move || -> TestResult {
-        let request = read_ppc_request(&mut server_stream, "read health request")?;
-        assert_eq!(request.op, WORKSPACE_SNAPSHOT_REFRESH_OP);
-        let body: Value = serde_json::from_str(&request.body)?;
-        assert_eq!(body["type"], "health");
-        assert_eq!(body["manifest_key"], expected_manifest_key);
-        write_ppc_reply_json_result(
-            &mut server_stream,
-            request.message_id,
-            &json!({"manifest_key": expected_manifest_key, "accepted": true}),
-        )?;
-        Ok(())
-    });
-
-    let status = table.dispatch(&Request {
-        op: "api.plugin.status".to_owned(),
-        invocation_id: "plugin-status-health-ok".to_owned(),
-        args: json!({"probe_services": true, "probe_timeout_ms": 1000}),
-    });
-    assert_eq!(status["success"], true);
-    assert_eq!(status["service_health"][0]["success"], true);
-    assert_eq!(status["service_health"][0]["service_id"], "pyright");
-    assert_eq!(status["service_health"][0]["manifest_key"], manifest_key);
-    assert_eq!(status["loaded_plugins"][0]["services"][0]["state"], "ready");
-    assert_eq!(status["connected_ppc_routes"], json!(["plugin.lsp.hover"]));
-    join_test_thread(server, "server thread panicked")?;
-    remove_test_tree(&layer_stack_root)?;
-    Ok(())
-}
-
-#[test]
-fn status_probe_failure_drops_connected_service() -> TestResult {
-    let _guard = PluginTestGuard::new()?;
-    let table = OpTable::with_builtins();
-    let (layer_stack_root, workspace_root) = test_bound_workspace("status-health-fail")?;
-    let ensure = table.dispatch(&Request {
-        op: "api.plugin.ensure".to_owned(),
-        invocation_id: "plugin-ensure-health-fail".to_owned(),
-        args: json!({
-            "manifest": lsp_manifest("digest-a", "hover"),
-            "layer_stack_root": layer_stack_root.to_string_lossy().into_owned(),
-            "workspace_root": workspace_root.to_string_lossy().into_owned()
-        }),
-    });
-    assert_eq!(ensure["success"], true);
-
-    let (client_stream, mut server_stream) = ppc_stream_pair()?;
-    register_ppc_client_for_tests("plugin.lsp.hover", client_stream)?;
-    let (service_instance_id, manifest_key) =
-        attach_service_snapshot_for_tests("plugin.lsp.hover")?;
-    let server = std::thread::spawn(move || -> TestResult {
-        let request = read_ppc_request(&mut server_stream, "read health request")?;
-        assert_eq!(request.op, WORKSPACE_SNAPSHOT_REFRESH_OP);
-        write_ppc_reply_json_result(
-            &mut server_stream,
-            request.message_id,
-            &json!({"manifest_key": "wrong-manifest", "accepted": true}),
-        )?;
-        Ok(())
-    });
-
-    let status = table.dispatch(&Request {
-        op: "api.plugin.status".to_owned(),
-        invocation_id: "plugin-status-health-fail".to_owned(),
-        args: json!({"probe_services": true, "probe_timeout_ms": 1000}),
-    });
-    assert_eq!(status["success"], true);
-    assert_eq!(status["service_health"][0]["success"], false);
-    assert!(
-        value_str(
-            &status["service_health"][0]["error"],
-            "probe error must be a string"
-        )?
-        .contains(&manifest_key),
-        "status response: {status:?}"
-    );
-    assert_eq!(status["connected_ppc_routes"], json!([]));
-    assert_eq!(status["connected_ppc_services"], json!([]));
-    assert_eq!(
-        status["loaded_plugins"][0]["services"][0]["state"],
-        "stopped"
-    );
-    {
-        let state = lock_state()?;
-        assert!(
-            !state.service_snapshots.contains_key(&service_instance_id),
-            "failed health probe should release retained snapshot"
-        );
-        drop(state);
-    }
-    join_test_thread(server, "server thread panicked")?;
-    remove_test_tree(&layer_stack_root)?;
-    Ok(())
 }
 
 #[test]
@@ -911,285 +756,6 @@ fn restart_service_strategy_restarts_after_peer_publish_before_request() -> Test
         )?,
         initial_manifest_key
     );
-
-    join_test_thread(connector, "connector thread panicked")?;
-    let _ = std::fs::remove_dir_all(socket_root);
-    remove_test_tree(&layer_stack_root)?;
-    Ok(())
-}
-
-#[test]
-fn concurrent_read_only_plugin_ops_share_one_ppc_client() -> TestResult {
-    let _guard = PluginTestGuard::new()?;
-    let table = Arc::new(OpTable::with_builtins());
-    let (layer_stack_root, workspace_root) = test_bound_workspace("concurrent-read-only")?;
-    let ensure = table.dispatch(&Request {
-        op: "api.plugin.ensure".to_owned(),
-        invocation_id: "plugin-ensure-test".to_owned(),
-        args: json!({
-            "manifest": lsp_manifest("digest-a", "hover"),
-            "layer_stack_root": layer_stack_root.to_string_lossy().into_owned(),
-            "workspace_root": workspace_root.to_string_lossy().into_owned()
-        }),
-    });
-    assert_eq!(ensure["success"], true);
-
-    let (client_stream, mut server_stream) = ppc_stream_pair()?;
-    register_ppc_client_for_tests("plugin.lsp.hover", client_stream)?;
-    let (first_seen_tx, first_seen_rx) = mpsc::channel();
-    let (second_seen_tx, second_seen_rx) = mpsc::channel();
-    let (reply_first_tx, reply_first_rx) = mpsc::channel();
-    let server = std::thread::spawn(move || -> TestResult {
-        let first = read_ppc_request(&mut server_stream, "read first ppc request")?;
-        first_seen_tx.send(first.message_id.clone())?;
-        let second = read_ppc_request(&mut server_stream, "read second ppc request")?;
-        second_seen_tx.send(second.message_id.clone())?;
-        reply_first_rx.recv()?;
-        write_ppc_reply_result(
-            &mut server_stream,
-            second.message_id,
-            r#"{"success":true,"seq":2}"#,
-        )?;
-        write_ppc_reply_result(
-            &mut server_stream,
-            first.message_id,
-            r#"{"success":true,"seq":1}"#,
-        )?;
-        Ok(())
-    });
-
-    let first_table = Arc::clone(&table);
-    let first = std::thread::spawn(move || -> Result<Value, TestError> {
-        Ok(first_table.dispatch(&Request {
-            op: "plugin.lsp.hover".to_owned(),
-            invocation_id: "plugin-hover-concurrent-a".to_owned(),
-            args: json!({"agent_id": "agent-plugin", "request": "a"}),
-        }))
-    });
-    assert_eq!(
-        first_seen_rx.recv_timeout(Duration::from_secs(1))?,
-        "plugin-hover-concurrent-a"
-    );
-
-    let (second_started_tx, second_started_rx) = mpsc::channel();
-    let second_table = Arc::clone(&table);
-    let second = std::thread::spawn(move || -> Result<Value, TestError> {
-        second_started_tx.send(())?;
-        Ok(second_table.dispatch(&Request {
-            op: "plugin.lsp.hover".to_owned(),
-            invocation_id: "plugin-hover-concurrent-b".to_owned(),
-            args: json!({"agent_id": "agent-plugin", "request": "b"}),
-        }))
-    });
-    second_started_rx.recv_timeout(Duration::from_secs(1))?;
-    assert_eq!(
-        second_seen_rx.recv_timeout(Duration::from_secs(1))?,
-        "plugin-hover-concurrent-b"
-    );
-    reply_first_tx.send(())?;
-
-    let first_response = join_value_thread(first, "first dispatch thread panicked")?;
-    let second_response = join_value_thread(second, "second dispatch thread panicked")?;
-    assert_eq!(first_response["success"], true);
-    assert_eq!(first_response["seq"], 1);
-    assert_eq!(second_response["success"], true);
-    assert_eq!(second_response["seq"], 2);
-    join_test_thread(server, "server thread panicked")?;
-    remove_test_tree(&layer_stack_root)?;
-    Ok(())
-}
-
-#[test]
-fn concurrent_read_only_plugin_ops_match_out_of_order_replies() -> TestResult {
-    let _guard = PluginTestGuard::new()?;
-    let table = Arc::new(OpTable::with_builtins());
-    let (layer_stack_root, workspace_root) =
-        test_bound_workspace("concurrent-read-only-out-of-order")?;
-    let ensure = table.dispatch(&Request {
-        op: "api.plugin.ensure".to_owned(),
-        invocation_id: "plugin-ensure-test".to_owned(),
-        args: json!({
-            "manifest": lsp_manifest("digest-a", "hover"),
-            "layer_stack_root": layer_stack_root.to_string_lossy().into_owned(),
-            "workspace_root": workspace_root.to_string_lossy().into_owned()
-        }),
-    });
-    assert_eq!(ensure["success"], true);
-
-    let (client_stream, mut server_stream) = ppc_stream_pair()?;
-    register_ppc_client_for_tests("plugin.lsp.hover", client_stream)?;
-    let (both_seen_tx, both_seen_rx) = mpsc::channel();
-    let server = std::thread::spawn(move || -> TestResult {
-        let first = read_ppc_request(&mut server_stream, "read first ppc request")?;
-        let second = read_ppc_request(&mut server_stream, "read second ppc request")?;
-        let mut message_ids = vec![first.message_id.clone(), second.message_id.clone()];
-        message_ids.sort();
-        both_seen_tx.send(message_ids)?;
-        let request_a = "plugin-hover-concurrent-a";
-        let request_b = "plugin-hover-concurrent-b";
-        let reply_a = if first.message_id == request_a {
-            first.message_id.clone()
-        } else if second.message_id == request_a {
-            second.message_id.clone()
-        } else {
-            return Err("missing concurrent request a".into());
-        };
-        let reply_b = if first.message_id == request_b {
-            first.message_id.clone()
-        } else if second.message_id == request_b {
-            second.message_id.clone()
-        } else {
-            return Err("missing concurrent request b".into());
-        };
-        write_ppc_reply_result(&mut server_stream, reply_b, r#"{"success":true,"seq":2}"#)?;
-        write_ppc_reply_result(&mut server_stream, reply_a, r#"{"success":true,"seq":1}"#)?;
-        Ok(())
-    });
-
-    let first_table = Arc::clone(&table);
-    let first = std::thread::spawn(move || -> Result<Value, TestError> {
-        Ok(first_table.dispatch(&Request {
-            op: "plugin.lsp.hover".to_owned(),
-            invocation_id: "plugin-hover-concurrent-a".to_owned(),
-            args: json!({"agent_id": "agent-plugin", "request": "a"}),
-        }))
-    });
-    let second_table = Arc::clone(&table);
-    let second = std::thread::spawn(move || -> Result<Value, TestError> {
-        Ok(second_table.dispatch(&Request {
-            op: "plugin.lsp.hover".to_owned(),
-            invocation_id: "plugin-hover-concurrent-b".to_owned(),
-            args: json!({"agent_id": "agent-plugin", "request": "b"}),
-        }))
-    });
-
-    let seen = both_seen_rx.recv_timeout(Duration::from_secs(1))?;
-    assert_eq!(
-        seen,
-        vec![
-            "plugin-hover-concurrent-a".to_owned(),
-            "plugin-hover-concurrent-b".to_owned()
-        ]
-    );
-    let first_response = join_value_thread(first, "first dispatch thread panicked")?;
-    let second_response = join_value_thread(second, "second dispatch thread panicked")?;
-    assert_eq!(first_response["success"], true);
-    assert_eq!(first_response["seq"], 1);
-    assert_eq!(second_response["success"], true);
-    assert_eq!(second_response["seq"], 2);
-    join_test_thread(server, "server thread panicked")?;
-    remove_test_tree(&layer_stack_root)?;
-    Ok(())
-}
-
-#[test]
-fn read_only_ppc_failure_drops_connected_route() -> TestResult {
-    let _guard = PluginTestGuard::new()?;
-    let table = OpTable::with_builtins();
-    let (layer_stack_root, workspace_root) = test_bound_workspace("read-only-broken-ppc")?;
-    let ensure = table.dispatch(&Request {
-        op: "api.plugin.ensure".to_owned(),
-        invocation_id: "plugin-ensure-test".to_owned(),
-        args: json!({
-            "manifest": lsp_manifest("digest-a", "hover"),
-            "layer_stack_root": layer_stack_root.to_string_lossy().into_owned(),
-            "workspace_root": workspace_root.to_string_lossy().into_owned()
-        }),
-    });
-    assert_eq!(ensure["success"], true);
-
-    let (client_stream, server_stream) = ppc_stream_pair()?;
-    register_ppc_client_for_tests("plugin.lsp.hover", client_stream)?;
-    drop(server_stream);
-
-    let routed = table.dispatch(&Request {
-        op: "plugin.lsp.hover".to_owned(),
-        invocation_id: "plugin-hover-broken-ppc".to_owned(),
-        args: json!({"agent_id": "agent-plugin"}),
-    });
-    assert_eq!(routed["error"]["kind"], "internal_error");
-
-    let status = table.dispatch(&Request {
-        op: "api.plugin.status".to_owned(),
-        invocation_id: "plugin-status-after-broken-ppc".to_owned(),
-        args: json!({}),
-    });
-    assert_eq!(status["connected_ppc_routes"], json!([]));
-    assert_eq!(status["connected_ppc_services"], json!([]));
-    remove_test_tree(&layer_stack_root)?;
-    Ok(())
-}
-
-#[test]
-fn read_only_service_recovers_on_next_dispatch_after_ppc_failure() -> TestResult {
-    let _guard = PluginTestGuard::new()?;
-    let table = OpTable::with_builtins();
-    let socket_root = test_socket_root("recover-after-ppc-failure");
-    let (layer_stack_root, workspace_root) = test_bound_workspace("recover-after-ppc-failure")?;
-    let command = vec![
-        "/bin/sh",
-        "-c",
-        "test \"$EOS_PLUGIN_SERVICE_ID\" = pyright && sleep 30",
-    ];
-    let ensure = table.dispatch(&Request {
-        op: "api.plugin.ensure".to_owned(),
-        invocation_id: "plugin-ensure-recover-after-ppc-failure".to_owned(),
-        args: json!({
-            "manifest": lsp_manifest_with_command("digest-a", "hover", command),
-            "layer_stack_root": layer_stack_root.to_string_lossy().into_owned(),
-            "workspace_root": workspace_root.to_string_lossy().into_owned(),
-            "ppc_socket_root": socket_root.to_string_lossy().into_owned()
-        }),
-    });
-    assert_eq!(ensure["success"], true);
-
-    let (client_stream, server_stream) = ppc_stream_pair()?;
-    register_ppc_client_for_tests("plugin.lsp.hover", client_stream)?;
-    attach_service_snapshot_for_tests("plugin.lsp.hover")?;
-    drop(server_stream);
-
-    let failed = table.dispatch(&Request {
-        op: "plugin.lsp.hover".to_owned(),
-        invocation_id: "plugin-hover-broken-before-recovery".to_owned(),
-        args: json!({"agent_id": "agent-plugin"}),
-    });
-    assert_eq!(failed["error"]["kind"], "internal_error");
-
-    let after_failure = table.dispatch(&Request {
-        op: "api.plugin.status".to_owned(),
-        invocation_id: "plugin-status-after-recoverable-failure".to_owned(),
-        args: json!({}),
-    });
-    assert_eq!(after_failure["connected_ppc_routes"], json!([]));
-    assert_eq!(
-        after_failure["loaded_plugins"][0]["services"][0]["state"],
-        "stopped"
-    );
-
-    let connector = spawn_replying_connector(
-        socket_root.clone(),
-        r#"{"success":true,"from_recovered_service":true}"#,
-    );
-    let recovered = table.dispatch(&Request {
-        op: "plugin.lsp.hover".to_owned(),
-        invocation_id: "plugin-hover-after-recovery".to_owned(),
-        args: json!({"agent_id": "agent-plugin"}),
-    });
-    assert_eq!(
-        recovered["success"], true,
-        "recovered response: {recovered:?}"
-    );
-    assert_eq!(recovered["from_recovered_service"], true);
-
-    let status = table.dispatch(&Request {
-        op: "api.plugin.status".to_owned(),
-        invocation_id: "plugin-status-after-recovery".to_owned(),
-        args: json!({}),
-    });
-    let service = &status["loaded_plugins"][0]["services"][0];
-    assert_eq!(service["state"], "ready");
-    assert_eq!(service["restart_count"], 1);
-    assert_eq!(status["connected_ppc_routes"], json!(["plugin.lsp.hover"]));
 
     join_test_thread(connector, "connector thread panicked")?;
     let _ = std::fs::remove_dir_all(socket_root);

@@ -4,6 +4,9 @@ version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 
+[lib]
+path = "src/eos_tools/mod.rs"
+
 [dependencies]
 # Direct eos-types edge: this crate names InvocationId, ToolUseId,
 # WorkflowSessionId, CommandSessionId, SubagentSessionId, and JsonObject/CoreError
@@ -15,10 +18,11 @@ eos-state.workspace = true
 eos-sandbox-api.workspace = true
 eos-skills.workspace = true
 eos-llm-client.workspace = true
-# Direct eos-config edge: `config.rs` names `eos_config::parse_markdown_frontmatter`
-# to split the `.eos-agents/tools/*.md` frontmatter (the shared config-format
-# contract owned upstream, as eos-skills already does). serde_yaml is named to
-# read the parsed frontmatter mapping (intent / terminal / hooks fields).
+# Direct eos-config edge: `registry/config.rs` names
+# `eos_config::parse_markdown_frontmatter` to split the
+# `.eos-agents/tools/*.md` frontmatter (the shared config-format contract owned
+# upstream, as eos-skills already does). serde_yaml is named to read the parsed
+# frontmatter mapping (intent / terminal / hooks fields).
 eos-config.workspace = true
 
 serde.workspace = true

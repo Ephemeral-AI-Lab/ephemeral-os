@@ -553,4 +553,5 @@ fn validate_agent_tools(agents: &AgentRegistry, registry: &ToolRegistry) -> Resu
 }
 
 #[cfg(test)]
+#[path = "../tests/unit/app_state_test_seams.rs"]
 pub(crate) mod test_seams;
